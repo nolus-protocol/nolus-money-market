@@ -180,7 +180,7 @@ where
 
     type Error = <Platform::Of<Unit> as Validate>::Error;
 
-    fn validate(&self, ctx: Self::Context<'_>) -> ::std::result::Result<(), Self::Error> {
+    fn validate(&self, ctx: Self::Context<'_>) -> Result<(), Self::Error> {
         self.platform
             .validate(ctx)
             .and_then(|()| ValidateValues::new(&self.protocol).validate(ctx))
@@ -198,9 +198,9 @@ pub(super) trait AsRef {
 pub(super) trait TryForEach {
     type Item;
 
-    fn try_for_each<U, F, E>(self, accumulator: U, functor: F) -> std::result::Result<U, E>
+    fn try_for_each<F, Err>(self, f: F) -> Result<(), Err>
     where
-        F: FnMut(Self::Item, U) -> Result<U, E>;
+        F: FnMut(Self::Item) -> Result<(), Err>;
 }
 
 pub(super) trait ForEachPair {

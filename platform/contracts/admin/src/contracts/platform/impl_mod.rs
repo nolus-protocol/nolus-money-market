@@ -21,12 +21,11 @@ impl<T> AsRef for PlatformContracts<T> {
 impl<T> TryForEach for PlatformContracts<T> {
     type Item = T;
 
-    fn try_for_each<U, F, E>(self, accumulator: U, mut functor: F) -> Result<U, E>
+    fn try_for_each<F, Err>(self, mut f: F) -> Result<(), Err>
     where
-        F: FnMut(Self::Item, U) -> Result<U, E>,
+        F: FnMut(Self::Item) -> Result<(), Err>,
     {
-        functor(self.timealarms, accumulator)
-            .and_then(|accumulator| functor(self.treasury, accumulator))
+        f(self.timealarms).and_then(|()| f(self.treasury))
     }
 }
 
@@ -60,6 +59,6 @@ where
 
     fn validate(&self, ctx: Self::Context<'_>) -> Result<(), Self::Error> {
         self.as_ref()
-            .try_for_each((), |contract, ()| contract.validate(ctx))
+            .try_for_each(|contract| contract.validate(ctx))
     }
 }

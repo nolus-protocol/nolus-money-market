@@ -49,15 +49,15 @@ impl<T> AsRef for ProtocolContracts<T> {
 impl<T> TryForEach for ProtocolContracts<T> {
     type Item = T;
 
-    fn try_for_each<U, F, E>(self, accumulator: U, mut functor: F) -> Result<U, E>
+    fn try_for_each<F, Err>(self, mut f: F) -> Result<(), Err>
     where
-        F: FnMut(Self::Item, U) -> Result<U, E>,
+        F: FnMut(Self::Item) -> Result<(), Err>,
     {
-        functor(self.leaser, accumulator)
-            .and_then(|accumulator| functor(self.lpp, accumulator))
-            .and_then(|accumulator| functor(self.oracle, accumulator))
-            .and_then(|accumulator| functor(self.profit, accumulator))
-            .and_then(|accumulator| functor(self.reserve, accumulator))
+        f(self.leaser)
+            .and_then(|()| f(self.lpp))
+            .and_then(|()| f(self.oracle))
+            .and_then(|()| f(self.profit))
+            .and_then(|()| f(self.reserve))
     }
 }
 
@@ -97,7 +97,7 @@ where
 
     fn validate(&self, ctx: Self::Context<'_>) -> Result<(), Self::Error> {
         self.as_ref()
-            .try_for_each((), |contract, ()| contract.validate(ctx))
+            .try_for_each(|contract| contract.validate(ctx))
     }
 }
 
