@@ -1,7 +1,7 @@
 use crate::validate::Validate;
 
 use super::{
-    super::{AsRef, ForEachPair, HigherOrderType, TryForEach},
+    super::{AsRef, TryForEach, TryForEachPair},
     PlatformContracts,
 };
 
@@ -10,7 +10,7 @@ impl<T> AsRef for PlatformContracts<T> {
 
     type HigherOrderType = super::HigherOrderType;
 
-    fn as_ref(&self) -> <Self::HigherOrderType as HigherOrderType>::Of<&Self::Item> {
+    fn as_ref(&self) -> PlatformContracts<&Self::Item> {
         PlatformContracts {
             timealarms: &self.timealarms,
             treasury: &self.treasury,
@@ -21,32 +21,33 @@ impl<T> AsRef for PlatformContracts<T> {
 impl<T> TryForEach for PlatformContracts<T> {
     type Item = T;
 
-    fn try_for_each<U, F, E>(self, accumulator: U, mut functor: F) -> Result<U, E>
+    fn try_for_each<F, Err>(self, f: F) -> Result<(), Err>
     where
-        F: FnMut(Self::Item, U) -> Result<U, E>,
+        F: FnMut(Self::Item) -> Result<(), Err>,
     {
-        functor(self.timealarms, accumulator)
-            .and_then(|accumulator| functor(self.treasury, accumulator))
+        [self.timealarms, self.treasury].into_iter().try_for_each(f)
     }
 }
 
-impl<T> ForEachPair for PlatformContracts<T> {
+impl<T> TryForEachPair for PlatformContracts<T> {
     type Item = T;
 
     type HigherOrderType = super::HigherOrderType;
 
-    fn for_each_pair<U, V, F>(
+    fn try_for_each_pair<CounterpartUnit, F, Err>(
         self,
-        counter_part: PlatformContracts<U>,
-        mut accumulator: V,
-        mut functor: F,
-    ) -> V
+        counterpart: PlatformContracts<CounterpartUnit>,
+        mut f: F,
+    ) -> Result<(), Err>
     where
-        F: FnMut(Self::Item, U, V) -> V,
+        F: FnMut(Self::Item, CounterpartUnit) -> Result<(), Err>,
     {
-        accumulator = functor(self.timealarms, counter_part.timealarms, accumulator);
-
-        functor(self.treasury, counter_part.treasury, accumulator)
+        [
+            (self.timealarms, counterpart.timealarms),
+            (self.treasury, counterpart.treasury),
+        ]
+        .into_iter()
+        .try_for_each(|(unit, counter_part)| f(unit, counter_part))
     }
 }
 
@@ -60,6 +61,6 @@ where
 
     fn validate(&self, ctx: Self::Context<'_>) -> Result<(), Self::Error> {
         self.as_ref()
-            .try_for_each((), |contract, ()| contract.validate(ctx))
+            .try_for_each(|contract| contract.validate(ctx))
     }
 }

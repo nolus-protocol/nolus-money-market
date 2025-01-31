@@ -1,10 +1,10 @@
 use platform::batch::Batch;
 use sdk::cosmwasm_std::Addr;
 
-use crate::validate::Validate;
+use crate::{result::Result, validate::Validate};
 
 use super::{
-    super::{impl_mod::migrate_contract, AsRef, ForEachPair, MigrationSpec, TryForEach},
+    super::{impl_mod::migrate_contract, AsRef, MigrationSpec, TryForEach, TryForEachPair},
     higher_order_type, Protocol, ProtocolContracts,
 };
 
@@ -12,21 +12,20 @@ impl ProtocolContracts<Addr> {
     pub(crate) fn migrate_standalone(
         self,
         migration_msgs: ProtocolContracts<MigrationSpec>,
-    ) -> Batch {
+    ) -> Result<Batch> {
         let mut migration_batch = Batch::default();
 
         let mut post_migration_execute_batch = Batch::default();
 
-        () = self.for_each_pair(migration_msgs, (), |address, migration_spec, ()| {
-            () = migrate_contract(
+        self.try_for_each_pair(migration_msgs, |address, migration_spec| {
+            migrate_contract(
                 &mut migration_batch,
                 &mut post_migration_execute_batch,
                 address,
                 migration_spec,
-            );
-        });
-
-        migration_batch.merge(post_migration_execute_batch)
+            )
+        })
+        .map(|()| migration_batch.merge(post_migration_execute_batch))
     }
 }
 
@@ -49,41 +48,44 @@ impl<T> AsRef for ProtocolContracts<T> {
 impl<T> TryForEach for ProtocolContracts<T> {
     type Item = T;
 
-    fn try_for_each<U, F, E>(self, accumulator: U, mut functor: F) -> Result<U, E>
+    fn try_for_each<F, Err>(self, f: F) -> Result<(), Err>
     where
-        F: FnMut(Self::Item, U) -> Result<U, E>,
+        F: FnMut(Self::Item) -> Result<(), Err>,
     {
-        functor(self.leaser, accumulator)
-            .and_then(|accumulator| functor(self.lpp, accumulator))
-            .and_then(|accumulator| functor(self.oracle, accumulator))
-            .and_then(|accumulator| functor(self.profit, accumulator))
-            .and_then(|accumulator| functor(self.reserve, accumulator))
+        [
+            self.leaser,
+            self.lpp,
+            self.oracle,
+            self.profit,
+            self.reserve,
+        ]
+        .into_iter()
+        .try_for_each(f)
     }
 }
 
-impl<T> ForEachPair for ProtocolContracts<T> {
+impl<T> TryForEachPair for ProtocolContracts<T> {
     type Item = T;
 
     type HigherOrderType = higher_order_type::ProtocolContracts;
 
-    fn for_each_pair<U, V, F>(
+    fn try_for_each_pair<CounterpartUnit, F, Err>(
         self,
-        counter_part: ProtocolContracts<U>,
-        mut accumulator: V,
-        mut functor: F,
-    ) -> V
+        counterpart: ProtocolContracts<CounterpartUnit>,
+        mut f: F,
+    ) -> Result<(), Err>
     where
-        F: FnMut(T, U, V) -> V,
+        F: FnMut(T, CounterpartUnit) -> Result<(), Err>,
     {
-        accumulator = functor(self.leaser, counter_part.leaser, accumulator);
-
-        accumulator = functor(self.lpp, counter_part.lpp, accumulator);
-
-        accumulator = functor(self.oracle, counter_part.oracle, accumulator);
-
-        accumulator = functor(self.profit, counter_part.profit, accumulator);
-
-        functor(self.reserve, counter_part.reserve, accumulator)
+        [
+            (self.leaser, counterpart.leaser),
+            (self.lpp, counterpart.lpp),
+            (self.oracle, counterpart.oracle),
+            (self.profit, counterpart.profit),
+            (self.reserve, counterpart.reserve),
+        ]
+        .into_iter()
+        .try_for_each(|(unit, counter_part)| f(unit, counter_part))
     }
 }
 
@@ -97,7 +99,7 @@ where
 
     fn validate(&self, ctx: Self::Context<'_>) -> Result<(), Self::Error> {
         self.as_ref()
-            .try_for_each((), |contract, ()| contract.validate(ctx))
+            .try_for_each(|contract| contract.validate(ctx))
     }
 }
 
