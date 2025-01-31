@@ -5,11 +5,11 @@ use sdk::{
     cosmwasm_std::{Addr, Uint64},
     schemars::{self, JsonSchema},
 };
-use versioning::ReleaseId;
+use versioning::SoftwareReleaseId;
 
 pub use crate::contracts::{
-    Contracts, ContractsExecute, ContractsMigration, Dex, Granularity, HigherOrderGranularity,
-    HigherOrderOption, HigherOrderPlatformContracts, HigherOrderProtocol,
+    Contracts, ContractsExecute, ContractsMigration, Dex, ExecuteSpec, Granularity,
+    HigherOrderGranularity, HigherOrderOption, HigherOrderPlatformContracts, HigherOrderProtocol,
     HigherOrderProtocolContracts, HigherOrderType, MigrationSpec, Network, PlatformContracts,
     Protocol, ProtocolContracts,
 };
@@ -47,13 +47,6 @@ where
         protocol: Protocol<Addr>,
     },
     DeregisterProtocol(ProtocolContracts<MigrationSpec>),
-    /// A message for **internal purposes only**.
-    ///
-    /// It is meant to clean up any temporary storage changes.
-    ///
-    /// Manual execution by an outside sender is considered an
-    /// error, thus execution has to fail.
-    EndOfMigration {},
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
@@ -79,7 +72,7 @@ pub enum SudoMsg {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case", deny_unknown_fields)]
 pub struct MigrateContracts {
-    pub release: ReleaseId,
+    pub release: SoftwareReleaseId,
     pub migration_spec: ContractsMigration,
 }
 

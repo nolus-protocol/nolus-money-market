@@ -1,47 +1,38 @@
-use std::collections::BTreeMap;
+use serde::Serialize;
 
 use platform::{batch::Batch, message::Response as MessageResponse};
-use sdk::cosmwasm_std::{Addr, Binary, Storage, WasmMsg};
-use versioning::ReleaseId;
+use sdk::cosmwasm_std::{self, Addr, Binary, Storage, WasmMsg};
+use versioning::{
+    MigrationMessage, PlatformPackageRelease, ProtocolPackageRelease, ProtocolPackageReleaseId,
+    SoftwareReleaseId, UpdatablePackage,
+};
 
 use crate::{
     error::Error,
-    msg::ExecuteMsg,
     result::Result,
-    state::{contract::Contract as ContractState, contracts as state_contracts},
+    state::contracts as state_contracts,
     validate::{Validate, ValidateValues},
 };
 
 use super::{
-    Contracts, ContractsExecute, ContractsMigration, ContractsTemplate, Granularity,
-    HigherOrderType, MigrationSpec, Protocol, ProtocolContracts,
+    Contracts, ContractsExecute, ContractsMigration, ContractsTemplate, ExecuteSpec, Granularity,
+    HigherOrderOption, HigherOrderPlatformContracts, HigherOrderProtocolContracts, HigherOrderType,
+    MigrationSpec, PlatformContractAddresses, PlatformExecute, PlatformMigration, Protocol,
+    ProtocolContractAddresses, ProtocolExecute, ProtocolMigration, Protocols,
 };
 
 pub(crate) fn migrate(
     storage: &mut dyn Storage,
-    admin_contract_addr: Addr,
-    release: ReleaseId,
+    to_software_release: SoftwareReleaseId,
     migration_spec: ContractsMigration,
 ) -> Result<MessageResponse> {
-    ContractState::AwaitContractsMigrationReply { release }.store(storage)?;
-
-    load_and_run(storage, |contracts| {
-        contracts.migrate(migration_spec).and_then(
+    state_contracts::load_all(storage).and_then(|contracts| {
+        contracts.migrate(to_software_release, migration_spec).map(
             |Batches {
-                 mut migration_batch,
+                 migration_batch,
                  post_migration_execute_batch,
              }| {
-                migration_batch
-                    .schedule_execute_wasm_no_reply_no_funds(
-                        admin_contract_addr,
-                        &ExecuteMsg::EndOfMigration {},
-                    )
-                    .map(|()| {
-                        MessageResponse::messages_only(
-                            migration_batch.merge(post_migration_execute_batch),
-                        )
-                    })
-                    .map_err(Into::into)
+                MessageResponse::messages_only(migration_batch.merge(post_migration_execute_batch))
             },
         )
     })
@@ -51,127 +42,216 @@ pub(crate) fn execute(
     storage: &mut dyn Storage,
     execute_messages: ContractsExecute,
 ) -> Result<MessageResponse> {
-    load_and_run(storage, |contracts| contracts.execute(execute_messages))
+    state_contracts::load_all(storage)
+        .and_then(|contracts| contracts.execute(execute_messages))
         .map(MessageResponse::messages_only)
 }
 
-pub(super) fn migrate_contract(
+pub(super) fn migrate_contract<Package>(
     migration_batch: &mut Batch,
     post_migration_execute_batch: &mut Batch,
     address: Addr,
-    migrate: MigrationSpec,
-) -> Result<()> {
-    migrate
-        .post_migrate_execute_msg
-        .map_or(const { Ok(()) }, |post_migrate_execute_msg| {
-            execute_contract(
-                post_migration_execute_batch,
-                address.clone(),
-                post_migrate_execute_msg,
-            )
+    /* TODO Add field once deployed contracts can be queried about their version
+        and release information.
+    migrate_from: Package,
+    */
+    to_release: Package::ReleaseId,
+    migration: MigrationSpec,
+) -> Result<()>
+where
+    Package: UpdatablePackage,
+    Package::ReleaseId: Serialize,
+{
+    if let Some(execute_spec) = migration.post_migrate_execute {
+        execute_contract(post_migration_execute_batch, address.clone(), execute_spec)?;
+    }
+
+    cosmwasm_std::to_json_vec(&MigrationMessage::<Package, _>::new(
+        /* TODO Add field once deployed contracts can be queried about their version
+            and release information.
+        migrate_from,
+        */
+        to_release,
+        migration.migrate_message,
+    ))
+    .map(|message| {
+        migration_batch.schedule_execute_no_reply(WasmMsg::Migrate {
+            contract_addr: address.into_string(),
+            new_code_id: migration.code_id.u64(),
+            msg: Binary::new(message),
         })
-        .map(|()| {
-            migration_batch.schedule_execute_reply_on_success(
-                WasmMsg::Migrate {
-                    contract_addr: address.into_string(),
-                    new_code_id: migrate.code_id.u64(),
-                    msg: Binary::new(migrate.migrate_msg.into_bytes()),
-                },
-                0,
-            )
-        })
+    })
+    .map_err(Into::into)
 }
 
 impl Contracts {
-    fn migrate(self, migration_msgs: ContractsMigration) -> Result<Batches> {
+    fn migrate(
+        self,
+        software_release: SoftwareReleaseId,
+        ContractsMigration { platform, protocol }: ContractsMigration,
+    ) -> Result<Batches> {
         let mut migration_batch: Batch = Batch::default();
 
         let mut post_migration_execute_batch: Batch = Batch::default();
 
-        match migration_msgs.platform {
-            Granularity::Some { some: platform } => {
-                () = self.platform.maybe_migrate(
-                    &mut migration_batch,
-                    &mut post_migration_execute_batch,
-                    platform,
-                )?;
-            }
-            Granularity::All(Some(platform)) => {
-                () = self.platform.migrate(
-                    &mut migration_batch,
-                    &mut post_migration_execute_batch,
-                    platform,
-                )?;
-            }
-            Granularity::All(None) => {}
-        }
-
-        Self::try_for_each_protocol(
-            self.protocol,
-            migration_msgs.protocol,
-            |contracts, protocol| match protocol {
-                Granularity::Some { some: protocol } => contracts.maybe_migrate(
-                    &mut migration_batch,
-                    &mut post_migration_execute_batch,
-                    protocol,
-                ),
-                Granularity::All(Some(protocol)) => contracts.migrate(
-                    &mut migration_batch,
-                    &mut post_migration_execute_batch,
-                    protocol,
-                ),
-                Granularity::All(None) => Ok(()),
-            },
+        Self::migrate_platform(
+            &mut migration_batch,
+            &mut post_migration_execute_batch,
+            &software_release,
+            self.platform,
+            platform,
         )
-        .map(|()| Batches {
-            migration_batch,
-            post_migration_execute_batch,
+        .and_then(|()| {
+            Self::migrate_protocols(
+                &mut migration_batch,
+                &mut post_migration_execute_batch,
+                software_release,
+                self.protocol,
+                protocol,
+            )
+            .map(|()| Batches {
+                migration_batch,
+                post_migration_execute_batch,
+            })
         })
     }
 
-    fn execute(self, execute_msgs: ContractsExecute) -> Result<Batch> {
-        let mut batch: Batch = Batch::default();
-
-        match execute_msgs.platform {
-            Granularity::Some { some: platform } => {
-                () = self.platform.maybe_execute(&mut batch, platform)?;
-            }
-            Granularity::All(Some(platform)) => {
-                () = self.platform.execute(&mut batch, platform)?;
-            }
-            Granularity::All(None) => {}
-        }
-
-        Self::try_for_each_protocol(
-            self.protocol,
-            execute_msgs.protocol,
-            |contracts, protocol| match protocol {
-                Granularity::Some { some: protocol } => {
-                    contracts.maybe_execute(&mut batch, protocol)
-                }
-                Granularity::All(Some(protocol)) => contracts.execute(&mut batch, protocol),
-                Granularity::All(None) => Ok(()),
+    fn migrate_platform(
+        migration_batch: &mut Batch,
+        post_migration_execute_batch: &mut Batch,
+        software_release: &SoftwareReleaseId,
+        contracts: PlatformContractAddresses,
+        migration_specs: PlatformMigration,
+    ) -> Result<(), Error> {
+        Self::try_paired_with_granular::<HigherOrderPlatformContracts, _, _, _>(
+            contracts,
+            migration_specs,
+            |address, migration_spec| {
+                migrate_contract::<PlatformPackageRelease>(
+                    migration_batch,
+                    post_migration_execute_batch,
+                    address,
+                    software_release.clone(),
+                    migration_spec,
+                )
             },
         )
-        .map(|()| batch)
     }
 
-    fn try_for_each_protocol<T, F>(
-        protocols: BTreeMap<String, Protocol<Addr>>,
-        mut counterparts: BTreeMap<String, T>,
+    fn migrate_protocols(
+        migration_batch: &mut Batch,
+        post_migration_execute_batch: &mut Batch,
+        software_release: SoftwareReleaseId,
+        protocols: Protocols<Protocol<Addr>>,
+        migration_specs: Protocols<ProtocolMigration>,
+    ) -> Result<()> {
+        Self::try_for_each_protocol_pair(
+            protocols,
+            migration_specs,
+            |contracts, (protocol_release, migration_specs)| {
+                Self::try_paired_with_granular::<HigherOrderProtocolContracts, _, _, _>(
+                    contracts,
+                    migration_specs,
+                    |address, migrate_spec| {
+                        migrate_contract::<ProtocolPackageRelease>(
+                            migration_batch,
+                            post_migration_execute_batch,
+                            address,
+                            ProtocolPackageReleaseId::new(
+                                software_release.clone(),
+                                protocol_release.clone(),
+                            ),
+                            migrate_spec,
+                        )
+                    },
+                )
+            },
+        )
+    }
+
+    fn execute(self, ContractsExecute { platform, protocol }: ContractsExecute) -> Result<Batch> {
+        let mut batch: Batch = Batch::default();
+
+        Self::execute_platform(&mut batch, self.platform, platform).and_then(|()| {
+            Self::execute_protocols(&mut batch, self.protocol, protocol).map(|()| batch)
+        })
+    }
+
+    fn execute_platform(
+        batch: &mut Batch,
+        contracts: PlatformContractAddresses,
+        execute_specs: PlatformExecute,
+    ) -> Result<(), Error> {
+        Self::try_paired_with_granular::<HigherOrderPlatformContracts, _, _, _>(
+            contracts,
+            execute_specs,
+            |address, execute_spec| execute_contract(batch, address, execute_spec),
+        )
+    }
+
+    fn execute_protocols(
+        batch: &mut Batch,
+        contracts: Protocols<Protocol<Addr>>,
+        execute_specs: Protocols<ProtocolExecute>,
+    ) -> Result<()> {
+        Self::try_for_each_protocol_pair(contracts, execute_specs, |contracts, execute_specs| {
+            Self::try_paired_with_granular::<HigherOrderProtocolContracts, _, _, _>(
+                contracts,
+                execute_specs,
+                |address, execute_spec| execute_contract(batch, address, execute_spec),
+            )
+        })
+    }
+
+    fn try_for_each_protocol_pair<T, F>(
+        protocols: Protocols<Protocol<Addr>>,
+        mut paired_with: Protocols<T>,
         mut f: F,
     ) -> Result<()>
     where
-        F: FnMut(ProtocolContracts<Addr>, T) -> Result<()>,
+        F: FnMut(ProtocolContractAddresses, T) -> Result<()>,
     {
         protocols
             .into_iter()
             .try_for_each(|(name, Protocol { contracts, .. })| {
-                counterparts
+                paired_with
                     .remove(&name)
                     .ok_or_else(|| Error::MissingProtocol(name))
                     .and_then(|protocol| f(contracts, protocol))
             })
+            .and_then(|()| {
+                paired_with
+                    .pop_first()
+                    .map_or(const { Ok(()) }, |(name, _)| {
+                        Err(Error::UnknownProtocol(name))
+                    })
+            })
+    }
+
+    fn try_paired_with_granular<HigherOrderType, F, Unit, Err>(
+        contracts: HigherOrderType::Of<Addr>,
+        paired_with: Granularity<HigherOrderType, HigherOrderOption, Unit>,
+        mut f: F,
+    ) -> Result<(), Err>
+    where
+        HigherOrderType: TryForEachPair,
+        F: FnMut(Addr, Unit) -> Result<(), Err>,
+    {
+        match paired_with {
+            Granularity::Some { some: paired_with } => HigherOrderType::try_for_each_pair(
+                contracts,
+                paired_with,
+                |address, paired_with| {
+                    paired_with.map_or(const { Ok(()) }, |paired_with| f(address, paired_with))
+                },
+            ),
+            Granularity::All(Some(paired_with)) => HigherOrderType::try_for_each_pair(
+                contracts,
+                paired_with,
+                |address, paired_with| f(address, paired_with),
+            ),
+            Granularity::All(None) => const { Ok(()) },
+        }
     }
 }
 
@@ -196,115 +276,64 @@ where
     }
 }
 
-pub(super) trait AsRef {
-    type Item;
-
-    type HigherOrderType: HigherOrderType<Of<Self::Item> = Self>;
-
-    fn as_ref(&self) -> <Self::HigherOrderType as HigherOrderType>::Of<&Self::Item>;
-}
-
-pub(super) trait TryForEach {
-    type Item;
-
-    fn try_for_each<F, Err>(self, f: F) -> Result<(), Err>
+pub(super) trait TryForEach
+where
+    Self: HigherOrderType,
+{
+    fn try_for_each<Unit, F, Err>(this: Self::Of<Unit>, f: F) -> Result<(), Err>
     where
-        F: FnMut(Self::Item) -> Result<(), Err>;
+        F: FnMut(Unit) -> Result<(), Err>;
 }
 
-pub(super) trait TryForEachPair {
-    type Item;
-
-    type HigherOrderType: HigherOrderType<Of<Self::Item> = Self>;
-
-    fn try_for_each_pair<CounterpartUnit, F, Err>(
-        self,
-        counterpart: <Self::HigherOrderType as HigherOrderType>::Of<CounterpartUnit>,
-        f: F,
+pub(super) trait TryForEachPair
+where
+    Self: TryForEach + Zip,
+{
+    fn try_for_each_pair<LeftUnit, RightUnit, F, Err>(
+        left: Self::Of<LeftUnit>,
+        right: Self::Of<RightUnit>,
+        mut f: F,
     ) -> Result<(), Err>
     where
-        F: FnMut(Self::Item, CounterpartUnit) -> Result<(), Err>;
-}
-
-trait MigrateContracts: TryForEachPair<Item = Addr> + Sized {
-    fn migrate(
-        self,
-        migration_batch: &mut Batch,
-        post_migration_execute_batch: &mut Batch,
-        migration_msgs: <Self::HigherOrderType as HigherOrderType>::Of<MigrationSpec>,
-    ) -> Result<()> {
-        self.try_for_each_pair(migration_msgs, |address, migration_spec| {
-            migrate_contract(
-                migration_batch,
-                post_migration_execute_batch,
-                address,
-                migration_spec,
-            )
-        })
-    }
-
-    fn maybe_migrate(
-        self,
-        migration_batch: &mut Batch,
-        post_migration_execute_batch: &mut Batch,
-        migration_msgs: <Self::HigherOrderType as HigherOrderType>::Of<Option<MigrationSpec>>,
-    ) -> Result<()> {
-        self.try_for_each_pair(migration_msgs, |address, migration_spec: Option<_>| {
-            migration_spec.map_or(const { Ok(()) }, |migration_spec| {
-                migrate_contract(
-                    migration_batch,
-                    post_migration_execute_batch,
-                    address,
-                    migration_spec,
-                )
-            })
-        })
+        F: FnMut(LeftUnit, RightUnit) -> Result<(), Err>,
+    {
+        Self::try_for_each(Self::zip(left, right), |(left, right)| f(left, right))
     }
 }
 
-trait ExecuteContracts: TryForEachPair<Item = Addr> + Sized {
-    fn execute(
-        self,
-        batch: &mut Batch,
-        execute_messages: <Self::HigherOrderType as HigherOrderType>::Of<String>,
-    ) -> Result<()> {
-        self.try_for_each_pair(execute_messages, |address, migration_spec| {
-            execute_contract(batch, address, migration_spec)
-        })
-    }
+impl<T> TryForEachPair for T where T: TryForEach + Zip {}
 
-    fn maybe_execute(
-        self,
-        batch: &mut Batch,
-        messages: <Self::HigherOrderType as HigherOrderType>::Of<Option<String>>,
-    ) -> Result<()> {
-        self.try_for_each_pair(messages, |address, message: Option<_>| {
-            message.map_or(const { Ok(()) }, |message| {
-                execute_contract(batch, address, message)
-            })
-        })
-    }
-}
-
-impl<T: TryForEachPair<Item = Addr>> MigrateContracts for T {}
-
-impl<T: TryForEachPair<Item = Addr>> ExecuteContracts for T {}
-
-fn load_and_run<F, R>(storage: &mut dyn Storage, f: F) -> Result<R>
+pub(super) trait MapAsRef
 where
-    F: FnOnce(Contracts) -> Result<R>,
+    Self: HigherOrderType,
 {
-    state_contracts::load_all(storage).and_then(f)
+    fn map_as_ref<T>(this: &Self::Of<T>) -> Self::Of<&T>;
 }
 
-fn execute_contract(batch: &mut Batch, address: Addr, message: String) -> Result<()> {
-    batch.schedule_execute_no_reply(WasmMsg::Execute {
-        contract_addr: address.into_string(),
-        msg: Binary::new(message.into_bytes()),
-        funds: vec![],
-    });
+pub(super) trait Zip
+where
+    Self: HigherOrderType,
+{
+    fn zip<LeftUnit, RightUnit>(
+        left: Self::Of<LeftUnit>,
+        right: Self::Of<RightUnit>,
+    ) -> Self::Of<(LeftUnit, RightUnit)>;
+}
 
-    Ok(())
+fn execute_contract(
+    batch: &mut Batch,
+    address: Addr,
+    ExecuteSpec { message }: ExecuteSpec,
+) -> Result<()> {
+    cosmwasm_std::to_json_vec(&message)
+        .map(|message| {
+            batch.schedule_execute_no_reply(WasmMsg::Execute {
+                contract_addr: address.into_string(),
+                msg: Binary::new(message),
+                funds: vec![],
+            })
+        })
+        .map_err(Into::into)
 }
 
 struct Batches {

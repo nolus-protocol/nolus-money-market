@@ -198,13 +198,16 @@ mod test {
     use cosmwasm_std::Addr;
     use currencies::Lpn;
     use finance::{coin::Coin, duration::Duration, liability::Liability, percent::Percent};
+    use json_value::JsonValue;
     use lease::api::{
         open::{ConnectionParams, Ics20Channel, PositionSpecDTO},
         MigrateMsg,
     };
     use platform::{contract::Code, response};
     use sdk::cosmwasm_std::testing::MockStorage;
-    use versioning::{ProtocolMigrationMessage, ProtocolPackageReleaseId, ReleaseId};
+    use versioning::{
+        ProtocolMigrationMessage, ProtocolPackageReleaseId, ProtocolReleaseId, SoftwareReleaseId,
+    };
 
     use crate::{
         msg::{Config, ForceClose, InstantiateMsg, MaxLeases},
@@ -314,8 +317,8 @@ mod test {
     fn dummy_spec() -> ProtocolContracts<MigrationSpec> {
         let migration_spec = MigrationSpec {
             code_id: 23u64.into(),
-            migrate_msg: "{}".into(),
-            post_migrate_execute_msg: None,
+            migrate_message: JsonValue::Object(vec![]),
+            post_migrate_execute: None,
         };
         ProtocolContracts {
             leaser: migration_spec.clone(),
@@ -329,9 +332,9 @@ mod test {
     const fn migrate_msg() -> ProtocolMigrationMessage<MigrateMsg> {
         const {
             ProtocolMigrationMessage {
-                to_release: ProtocolPackageReleaseId::sample(
-                    ReleaseId::new_test("v0.5.4"),
-                    ReleaseId::new_test("v0.2.1"),
+                to_release: ProtocolPackageReleaseId::new(
+                    SoftwareReleaseId::new_test("v0.5.4"),
+                    ProtocolReleaseId::new_test("v0.2.1"),
                 ),
                 message: MigrateMsg {},
             }

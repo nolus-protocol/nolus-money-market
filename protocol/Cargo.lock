@@ -17,6 +17,7 @@ dependencies = [
  "access-control",
  "currency",
  "finance",
+ "json-value",
  "platform",
  "sdk",
  "serde",
@@ -1147,6 +1148,14 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d75a2a4b1b190afb6f5425f10f6a8f959d2ea0b9c2b1d79553551850539e4674"
 
 [[package]]
+name = "json-value"
+version = "0.0.0"
+dependencies = [
+ "sdk",
+ "serde",
+]
+
+[[package]]
 name = "k256"
 version = "0.13.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1196,6 +1205,7 @@ dependencies = [
  "currencies",
  "currency",
  "finance",
+ "json-value",
  "lease",
  "lpp",
  "oracle-platform",

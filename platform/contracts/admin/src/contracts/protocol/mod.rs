@@ -2,6 +2,8 @@ use serde::{Deserialize, Serialize};
 
 use sdk::schemars::{self, JsonSchema};
 
+use crate::contracts::higher_order_type::FirstOrderType;
+
 pub(super) mod higher_order_type;
 #[cfg(feature = "contract")]
 mod impl_mod;
@@ -16,12 +18,20 @@ pub struct Contracts<T> {
     pub reserve: T,
 }
 
+impl<T> FirstOrderType<higher_order_type::Contracts> for Contracts<T> {
+    type Unit = T;
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case", deny_unknown_fields)]
 pub struct Protocol<T> {
     pub network: Network,
     pub dex: Dex,
     pub contracts: Contracts<T>,
+}
+
+impl<T> FirstOrderType<higher_order_type::Protocol> for Protocol<T> {
+    type Unit = T;
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
@@ -48,6 +58,8 @@ pub enum Dex {
 
 #[cfg(test)]
 mod tests {
+    use sdk::cosmwasm_std;
+
     #[test]
     fn test_dex_serde() {
         const ASTROPORT_ROUTER_ADDRESS: &str = "neutron0123456789ABCDEF";
@@ -66,7 +78,7 @@ mod tests {
         );
 
         assert_eq!(
-            sdk::cosmwasm_std::from_json(r#""Osmosis""#),
+            cosmwasm_std::from_json(r#""Osmosis""#),
             Ok(super::Dex::Osmosis {})
         );
     }

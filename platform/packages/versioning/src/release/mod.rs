@@ -26,6 +26,44 @@ where
     ) -> Result<(), Error>;
 }
 
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[repr(transparent)]
+#[serde(transparent)]
+pub struct SoftwareReleaseId(pub(crate) Id);
+
+impl SoftwareReleaseId {
+    pub const VOID: Self = Self(Id::VOID);
+
+    #[cfg(feature = "testing")]
+    pub const fn new_test(s: &'static str) -> Self {
+        Self(Id::new_test(s))
+    }
+}
+
+impl From<SoftwareReleaseId> for String {
+    fn from(value: SoftwareReleaseId) -> Self {
+        value.0.into()
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[repr(transparent)]
+#[serde(transparent)]
+pub struct ProtocolReleaseId(pub(crate) Id);
+
+impl ProtocolReleaseId {
+    #[cfg(feature = "testing")]
+    pub const fn new_test(s: &'static str) -> Self {
+        Self(Id::new_test(s))
+    }
+}
+
+impl From<ProtocolReleaseId> for String {
+    fn from(value: ProtocolReleaseId) -> Self {
+        value.0.into()
+    }
+}
+
 pub type PlatformPackageRelease = SoftwarePackageRelease;
 #[derive(Serialize, Deserialize)]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
@@ -37,21 +75,23 @@ pub struct ProtocolPackageRelease {
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub struct ProtocolPackageReleaseId {
-    software: Id,
-    protocol: Id,
+    software: SoftwareReleaseId,
+    protocol: ProtocolReleaseId,
 }
 
 impl ProtocolPackageReleaseId {
-    pub const fn void() -> Self {
-        Self {
-            software: Id::VOID,
-            protocol: Id::VOID,
-        }
+    #[inline]
+    pub const fn new(software: SoftwareReleaseId, protocol: ProtocolReleaseId) -> Self {
+        Self { software, protocol }
     }
 
-    #[cfg(feature = "testing")]
-    pub const fn sample(software: Id, protocol: Id) -> Self {
-        Self { software, protocol }
+    pub const fn void() -> Self {
+        const {
+            Self {
+                software: SoftwareReleaseId(Id::VOID),
+                protocol: ProtocolReleaseId(Id::VOID),
+            }
+        }
     }
 }
 

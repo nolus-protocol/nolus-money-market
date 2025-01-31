@@ -140,7 +140,9 @@ mod test {
     use lease::api::MigrateMsg;
     use platform::contract::Code;
     use sdk::cosmwasm_std::Addr;
-    use versioning::{ProtocolMigrationMessage, ProtocolPackageReleaseId, ReleaseId};
+    use versioning::{
+        ProtocolMigrationMessage, ProtocolPackageReleaseId, ProtocolReleaseId, SoftwareReleaseId,
+    };
 
     use crate::{
         migrate::{Customer, MigrationResult},
@@ -345,9 +347,9 @@ mod test {
     const fn migrate_msg() -> ProtocolMigrationMessage<MigrateMsg> {
         const {
             ProtocolMigrationMessage {
-                to_release: ProtocolPackageReleaseId::sample(
-                    ReleaseId::new_test("v0.7.6"),
-                    ReleaseId::new_test("v0.0.5"),
+                to_release: ProtocolPackageReleaseId::new(
+                    SoftwareReleaseId::new_test("v0.7.6"),
+                    ProtocolReleaseId::new_test("v0.0.5"),
                 ),
                 message: MigrateMsg {},
             }
