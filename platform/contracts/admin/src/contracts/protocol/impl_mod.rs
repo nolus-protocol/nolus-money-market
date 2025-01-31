@@ -1,10 +1,10 @@
 use platform::batch::Batch;
 use sdk::cosmwasm_std::Addr;
 
-use crate::validate::Validate;
+use crate::{result::Result, validate::Validate};
 
 use super::{
-    super::{impl_mod::migrate_contract, AsRef, ForEachPair, MigrationSpec, TryForEach},
+    super::{impl_mod::migrate_contract, AsRef, MigrationSpec, TryForEach, TryForEachPair},
     higher_order_type, Protocol, ProtocolContracts,
 };
 
@@ -12,21 +12,22 @@ impl ProtocolContracts<Addr> {
     pub(crate) fn migrate_standalone(
         self,
         migration_msgs: ProtocolContracts<MigrationSpec>,
-    ) -> Batch {
+    ) -> Result<Batch> {
         let mut migration_batch = Batch::default();
 
         let mut post_migration_execute_batch = Batch::default();
 
-        () = self.for_each_pair(migration_msgs, |address, migration_spec| {
+        self.try_for_each_pair(migration_msgs, |address, migration_spec| {
             () = migrate_contract(
                 &mut migration_batch,
                 &mut post_migration_execute_batch,
                 address,
                 migration_spec,
             );
-        });
 
-        migration_batch.merge(post_migration_execute_batch)
+            Ok(())
+        })
+        .map(|()| migration_batch.merge(post_migration_execute_batch))
     }
 }
 
@@ -65,17 +66,18 @@ impl<T> TryForEach for ProtocolContracts<T> {
     }
 }
 
-impl<T> ForEachPair for ProtocolContracts<T> {
+impl<T> TryForEachPair for ProtocolContracts<T> {
     type Item = T;
 
     type HigherOrderType = higher_order_type::ProtocolContracts;
 
-    fn for_each_pair<CounterpartUnit, F>(
+    fn try_for_each_pair<CounterpartUnit, F, Err>(
         self,
         counterpart: ProtocolContracts<CounterpartUnit>,
         mut f: F,
-    ) where
-        F: FnMut(T, CounterpartUnit),
+    ) -> Result<(), Err>
+    where
+        F: FnMut(T, CounterpartUnit) -> Result<(), Err>,
     {
         [
             (self.leaser, counterpart.leaser),
@@ -85,7 +87,7 @@ impl<T> ForEachPair for ProtocolContracts<T> {
             (self.reserve, counterpart.reserve),
         ]
         .into_iter()
-        .for_each(|(unit, counter_part)| f(unit, counter_part));
+        .try_for_each(|(unit, counter_part)| f(unit, counter_part))
     }
 }
 

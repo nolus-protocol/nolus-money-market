@@ -295,8 +295,9 @@ fn deregister_protocol(
                 release: ReleaseId::VOID,
             }
             .store(storage)
-            .map(|()| response::response_only_messages(protocol.migrate_standalone(migration_spec)))
             .map_err(Into::into)
+            .and_then(|()| protocol.migrate_standalone(migration_spec))
+            .map(response::response_only_messages)
         })
 }
 

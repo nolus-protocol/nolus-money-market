@@ -1,7 +1,7 @@
 use crate::validate::Validate;
 
 use super::{
-    super::{AsRef, ForEachPair, TryForEach},
+    super::{AsRef, TryForEach, TryForEachPair},
     PlatformContracts,
 };
 
@@ -29,24 +29,25 @@ impl<T> TryForEach for PlatformContracts<T> {
     }
 }
 
-impl<T> ForEachPair for PlatformContracts<T> {
+impl<T> TryForEachPair for PlatformContracts<T> {
     type Item = T;
 
     type HigherOrderType = super::HigherOrderType;
 
-    fn for_each_pair<CounterpartUnit, F>(
+    fn try_for_each_pair<CounterpartUnit, F, Err>(
         self,
         counterpart: PlatformContracts<CounterpartUnit>,
         mut f: F,
-    ) where
-        F: FnMut(Self::Item, CounterpartUnit),
+    ) -> Result<(), Err>
+    where
+        F: FnMut(Self::Item, CounterpartUnit) -> Result<(), Err>,
     {
         [
             (self.timealarms, counterpart.timealarms),
             (self.treasury, counterpart.treasury),
         ]
         .into_iter()
-        .for_each(|(unit, counter_part)| f(unit, counter_part))
+        .try_for_each(|(unit, counter_part)| f(unit, counter_part))
     }
 }
 

@@ -11,7 +11,7 @@ use sdk::{
 #[cfg(feature = "contract")]
 pub(crate) use self::impl_mod::{execute, migrate};
 #[cfg(feature = "contract")]
-use self::impl_mod::{AsRef, ForEachPair, TryForEach};
+use self::impl_mod::{AsRef, TryForEach, TryForEachPair};
 pub use self::{
     granular::{Granularity, HigherOrderType as HigherOrderGranularity},
     higher_order_type::{HigherOrderType, Option as HigherOrderOption},
