@@ -17,7 +17,7 @@ impl ProtocolContracts<Addr> {
 
         let mut post_migration_execute_batch = Batch::default();
 
-        () = self.for_each_pair(migration_msgs, (), |address, migration_spec, ()| {
+        () = self.for_each_pair(migration_msgs, |address, migration_spec| {
             () = migrate_contract(
                 &mut migration_batch,
                 &mut post_migration_execute_batch,
@@ -66,24 +66,22 @@ impl<T> ForEachPair for ProtocolContracts<T> {
 
     type HigherOrderType = higher_order_type::ProtocolContracts;
 
-    fn for_each_pair<U, V, F>(
+    fn for_each_pair<CounterpartUnit, F>(
         self,
-        counter_part: ProtocolContracts<U>,
-        mut accumulator: V,
-        mut functor: F,
-    ) -> V
-    where
-        F: FnMut(T, U, V) -> V,
+        counterpart: ProtocolContracts<CounterpartUnit>,
+        mut f: F,
+    ) where
+        F: FnMut(T, CounterpartUnit),
     {
-        accumulator = functor(self.leaser, counter_part.leaser, accumulator);
+        f(self.leaser, counterpart.leaser);
 
-        accumulator = functor(self.lpp, counter_part.lpp, accumulator);
+        f(self.lpp, counterpart.lpp);
 
-        accumulator = functor(self.oracle, counter_part.oracle, accumulator);
+        f(self.oracle, counterpart.oracle);
 
-        accumulator = functor(self.profit, counter_part.profit, accumulator);
+        f(self.profit, counterpart.profit);
 
-        functor(self.reserve, counter_part.reserve, accumulator)
+        f(self.reserve, counterpart.reserve)
     }
 }
 

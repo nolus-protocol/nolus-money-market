@@ -208,14 +208,12 @@ pub(super) trait ForEachPair {
 
     type HigherOrderType: HigherOrderType<Of<Self::Item> = Self>;
 
-    fn for_each_pair<U, V, F>(
+    fn for_each_pair<CounterpartUnit, F>(
         self,
-        counter_part: <Self::HigherOrderType as HigherOrderType>::Of<U>,
-        accumulator: V,
-        functor: F,
-    ) -> V
-    where
-        F: FnMut(Self::Item, U, V) -> V;
+        counterpart: <Self::HigherOrderType as HigherOrderType>::Of<CounterpartUnit>,
+        f: F,
+    ) where
+        F: FnMut(Self::Item, CounterpartUnit);
 }
 
 trait MigrateContracts: ForEachPair<Item = Addr> + Sized {
@@ -225,7 +223,7 @@ trait MigrateContracts: ForEachPair<Item = Addr> + Sized {
         post_migration_execute_batch: &mut Batch,
         migration_msgs: <Self::HigherOrderType as HigherOrderType>::Of<MigrationSpec>,
     ) {
-        () = self.for_each_pair(migration_msgs, (), |address, migration_spec, ()| {
+        () = self.for_each_pair(migration_msgs, |address, migration_spec| {
             () = migrate_contract(
                 migration_batch,
                 post_migration_execute_batch,
@@ -241,7 +239,7 @@ trait MigrateContracts: ForEachPair<Item = Addr> + Sized {
         post_migration_execute_batch: &mut Batch,
         migration_msgs: <Self::HigherOrderType as HigherOrderType>::Of<Option<MigrationSpec>>,
     ) {
-        () = self.for_each_pair(migration_msgs, (), |address, migration_spec, ()| {
+        () = self.for_each_pair(migration_msgs, |address, migration_spec| {
             if let Some(migration_spec) = migration_spec {
                 () = migrate_contract(
                     migration_batch,
@@ -260,7 +258,7 @@ trait ExecuteContracts: ForEachPair<Item = Addr> + Sized {
         batch: &mut Batch,
         execute_messages: <Self::HigherOrderType as HigherOrderType>::Of<String>,
     ) {
-        () = self.for_each_pair(execute_messages, (), |address, migration_spec, ()| {
+        () = self.for_each_pair(execute_messages, |address, migration_spec| {
             () = execute_contract(batch, address, migration_spec);
         });
     }
@@ -270,7 +268,7 @@ trait ExecuteContracts: ForEachPair<Item = Addr> + Sized {
         batch: &mut Batch,
         execute_messages: <Self::HigherOrderType as HigherOrderType>::Of<Option<String>>,
     ) {
-        () = self.for_each_pair(execute_messages, (), |address, migration_spec, ()| {
+        () = self.for_each_pair(execute_messages, |address, migration_spec| {
             if let Some(migration_spec) = migration_spec {
                 () = execute_contract(batch, address, migration_spec);
             }
