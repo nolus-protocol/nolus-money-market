@@ -1,8 +1,9 @@
 use std::{borrow::Cow, iter};
 
 use anyhow::Result;
+use either::Either;
 
-use crate::{either::Either, subtype_lifetime::SubtypeLifetime};
+use crate::subtype_lifetime::SubtypeLifetime;
 
 use super::{super::generator, FinalizedSources, Writer};
 
