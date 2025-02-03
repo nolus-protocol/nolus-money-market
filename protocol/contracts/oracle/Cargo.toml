@@ -23,13 +23,13 @@ contract = [
     "stub_price",
     "stub_swap",
     "sdk/contract",
+    "marketprice/testing",
     "dep:cosmwasm-std",
-    "dep:marketprice",
     "dep:versioning",
 ]
 stub_alarms = ["dep:currencies", "dep:oracle-platform"]
 stub_price = ["dep:oracle-platform"]
-stub_swap = ["dep:currencies", "dep:oracle-platform", "testing"]
+stub_swap = ["dep:currencies", "dep:oracle-platform"]
 testing = [
     "stub_alarms",
     "stub_price",
@@ -58,6 +58,5 @@ serde = { workspace = true, features = ["derive"] }
 currencies = { workspace = true, features = ["testing"] }
 currency = { workspace = true, features = ["testing"] }
 finance = { workspace = true }
-marketprice = { workspace = true, features = ["testing"] }
 platform = { workspace = true, features = ["testing"] }
 tree = { workspace = true, features = ["testing"] }
