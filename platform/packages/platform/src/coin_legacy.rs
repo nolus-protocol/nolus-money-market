@@ -45,6 +45,10 @@ where
     .map_err(|transformer| transformer.2)
 }
 
+/// Transform CW coin to Nolus coin and then return the [WithCoin] result
+///
+/// If seeking for the corresponding Nolus coin is not successfull an [Error::from(CurrencyError::NotInCurrencyGroup)]  is returned.
+/// Otherwise, an `v.on(Nolus_coin)` is returned
 pub(crate) fn from_cosmwasm_any<VisitedG, V>(coin: &CosmWasmCoin, v: V) -> Result<V::Outcome>
 where
     VisitedG: Group,
