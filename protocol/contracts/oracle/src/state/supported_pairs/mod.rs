@@ -275,8 +275,8 @@ mod tests {
                     }}
                 ]
             }}"#,
-            lease1 = LeaseC1::definition().dto(),
-            stable = Lpn::definition().dto(),
+            lease1 = LeaseC1::dto(),
+            stable = Lpn::dto(),
         ))
         .unwrap();
 
@@ -308,9 +308,9 @@ mod tests {
                     }}
                 ]
             }}"#,
-            base = TheCurrency::definition().dto(),
-            lease1 = LeaseC1::definition().dto(),
-            lease2 = LeaseC2::definition().dto(),
+            base = TheCurrency::dto(),
+            lease1 = LeaseC1::dto(),
+            lease2 = LeaseC2::dto(),
         ))
         .unwrap();
 
@@ -331,8 +331,8 @@ mod tests {
                     }}
                 ]
             }}"#,
-            base = TheCurrency::definition().dto(),
-            lease1 = LeaseC1::definition().dto(),
+            base = TheCurrency::dto(),
+            lease1 = LeaseC1::dto(),
         ))
         .unwrap();
 

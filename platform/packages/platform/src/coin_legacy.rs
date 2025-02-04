@@ -114,10 +114,7 @@ where
     C::Group: MemberOf<S::Group>,
     S: Symbol,
 {
-    CosmWasmCoin::new(
-        Amount::from(coin),
-        S::symbol(C::definition().dto().definition()),
-    )
+    CosmWasmCoin::new(Amount::from(coin), S::symbol(C::dto().definition()))
 }
 
 struct CoinTransformer<'a, COut>(&'a CosmWasmCoin, PhantomData<COut>);
@@ -160,10 +157,7 @@ where
     CDef: CurrencyDef,
     COut: 'static,
 {
-    debug_assert_eq!(
-        CDef::definition().dto().definition().bank_symbol,
-        coin.denom
-    );
+    debug_assert_eq!(CDef::dto().definition().bank_symbol, coin.denom);
     assert!(currency::equal::<COut, CDef>());
     Amount::from(coin.amount).into()
 }
@@ -209,7 +203,7 @@ mod test {
             Err(Error::Currency(
                 currency::error::Error::unexpected_symbol::<_, BankSymbols::<SuperGroup>>(
                     SuperGroupTestC1::bank(),
-                    SuperGroupTestC2::definition().dto().definition()
+                    SuperGroupTestC2::dto().definition()
                 )
             )),
         );
@@ -224,7 +218,7 @@ mod test {
             Err(Error::Currency(
                 currency::error::Error::unexpected_symbol::<_, BankSymbols::<SuperGroup>>(
                     SuperGroupTestC2::bank(),
-                    SuperGroupTestC1::definition().dto().definition()
+                    SuperGroupTestC1::dto().definition()
                 )
             )),
         );

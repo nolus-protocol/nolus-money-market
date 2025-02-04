@@ -10,23 +10,13 @@ use crate::{
 #[derive(
     Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Serialize, Deserialize, JsonSchema,
 )]
-pub struct Stable(CurrencyDTO<PlatformGroup>);
+pub struct Stable();
 
 impl CurrencyDef for Stable {
     type Group = PlatformGroup;
 
-    fn definition() -> &'static Self {
-        const INSTANCE: &Stable = &Stable(CurrencyDTO::new(&Definition::new(
-            "STABLE",
-            "N/A_N/A_N/A",
-            "N/A_N/A_N/A",
-            0,
-        )));
-        INSTANCE
-    }
-
-    fn dto(&self) -> &CurrencyDTO<Self::Group> {
-        &self.0
+    fn dto() -> &'static CurrencyDTO<Self::Group> {
+        const { &CurrencyDTO::new(const { &Definition::new("STABLE", "N/A_N/A_N/A", "N/A_N/A_N/A", 0) }) }
     }
 }
 impl PairsGroup for Stable {
@@ -54,21 +44,21 @@ pub struct Nls(CurrencyDTO<PlatformGroup>);
 impl CurrencyDef for Nls {
     type Group = PlatformGroup;
 
-    fn definition() -> &'static Self {
-        const INSTANCE: &Nls = &Nls(CurrencyDTO::new(&Definition::new(
-            "NLS",
-            "unls",
-            // TODO Define trait PlatformCurrency as a super trait of Currency and
-            // merge NlsPlatform and Nls
-            "N/A_N/A_N/A",
-            6,
-        )));
-
-        INSTANCE
-    }
-
-    fn dto(&self) -> &CurrencyDTO<Self::Group> {
-        &self.0
+    fn dto() -> &'static CurrencyDTO<Self::Group> {
+        &const {
+            CurrencyDTO::new(
+                const {
+                    &Definition::new(
+                        "NLS",
+                        "unls",
+                        // TODO Define trait PlatformCurrency as a super trait of Currency and
+                        // merge NlsPlatform and Nls
+                        "N/A_N/A_N/A",
+                        6,
+                    )
+                },
+            )
+        }
     }
 }
 
@@ -104,7 +94,7 @@ impl Group for PlatformGroup {
         V: AnyVisitor<Self::TopG>,
     {
         crate::maybe_visit_member::<_, Nls, Self::TopG, _>(matcher, visitor)
-            .or_else(|v| MaybeAnyVisitResult::Ok(v.on::<Stable>(Stable::definition().dto())))
+            .or_else(|v| MaybeAnyVisitResult::Ok(v.on::<Stable>(Stable::dto())))
         // we accept ANY currency to allow any stable@protocol to be a member
     }
 }

@@ -20,18 +20,8 @@ pub(super) mod definitions {
     impl CurrencyDef for Nls {
         type Group = NativeGroup;
 
-        #[inline]
-        fn definition() -> &'static Self {
-            const {
-                &Nls(CurrencyDTO::new(
-                    const { &Definition::new("NLS", "unls", "ibc/dex_NLS", 6) },
-                ))
-            }
-        }
-
-        #[inline]
-        fn dto(&self) -> &CurrencyDTO<Self::Group> {
-            &self.0
+        fn dto() -> &'static CurrencyDTO<Self::Group> {
+            &const { CurrencyDTO::new(const { &Definition::new("NLS", "unls", "ibc/dex_NLS", 6) }) }
         }
     }
 

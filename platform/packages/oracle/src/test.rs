@@ -71,8 +71,8 @@ where
             .map(|price| price::total_of(1.into()).is(price.into()))
             .ok_or_else(|| {
                 error::failed_to_fetch_price(
-                    C::definition().dto(),
-                    QuoteC::definition().dto(),
+                    C::dto(),
+                    QuoteC::dto(),
                     StdError::generic_err("Test failing Oracle::price_of()"),
                 )
             })

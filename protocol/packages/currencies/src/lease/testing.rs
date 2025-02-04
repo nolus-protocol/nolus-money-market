@@ -50,17 +50,12 @@ pub(super) mod definitions {
         type Group = LeaseGroup;
 
         #[inline]
-        fn definition() -> &'static Self {
-            const {
-                &Self(CurrencyDTO::new(
+        fn dto() -> &'static CurrencyDTO<Self::Group> {
+            &const {
+                CurrencyDTO::new(
                     const { &Definition::new("LC1", "ibc/bank_LC1", "ibc/dex_LC1", 6) },
-                ))
+                )
             }
-        }
-
-        #[inline]
-        fn dto(&self) -> &CurrencyDTO<Self::Group> {
-            &self.0
         }
     }
 
@@ -90,17 +85,12 @@ pub(super) mod definitions {
         type Group = LeaseGroup;
 
         #[inline]
-        fn definition() -> &'static Self {
-            const {
-                &Self(CurrencyDTO::new(
+        fn dto() -> &'static CurrencyDTO<Self::Group> {
+            &const {
+                CurrencyDTO::new(
                     const { &Definition::new("LC2", "ibc/bank_LC2", "ibc/dex_LC2", 6) },
-                ))
+                )
             }
-        }
-
-        #[inline]
-        fn dto(&self) -> &CurrencyDTO<Self::Group> {
-            &self.0
         }
     }
 
@@ -134,18 +124,12 @@ pub(super) mod definitions {
     impl CurrencyDef for LeaseC3 {
         type Group = LeaseGroup;
 
-        #[inline]
-        fn definition() -> &'static Self {
-            const {
-                &Self(CurrencyDTO::new(
+        fn dto() -> &'static CurrencyDTO<Self::Group> {
+            &const {
+                CurrencyDTO::new(
                     const { &Definition::new("LC3", "ibc/bank_LC3", "ibc/dex_LC3", 6) },
-                ))
+                )
             }
-        }
-
-        #[inline]
-        fn dto(&self) -> &CurrencyDTO<Self::Group> {
-            &self.0
         }
     }
 
@@ -175,18 +159,12 @@ pub(super) mod definitions {
     impl CurrencyDef for LeaseC4 {
         type Group = LeaseGroup;
 
-        #[inline]
-        fn definition() -> &'static Self {
-            const {
-                &Self(CurrencyDTO::new(
-                    const { &Definition::new("LC4", "ibc/bank_LC4", "ibc/dex_LC4", 18) },
-                ))
+        fn dto() -> &'static CurrencyDTO<Self::Group> {
+            &const {
+                CurrencyDTO::new(
+                    const { &Definition::new("LC4", "ibc/bank_LC4", "ibc/dex_LC4", 6) },
+                )
             }
-        }
-
-        #[inline]
-        fn dto(&self) -> &CurrencyDTO<Self::Group> {
-            &self.0
         }
     }
 
@@ -214,18 +192,12 @@ pub(super) mod definitions {
     impl CurrencyDef for LeaseC5 {
         type Group = LeaseGroup;
 
-        #[inline]
-        fn definition() -> &'static Self {
-            const {
-                &Self(CurrencyDTO::new(
+        fn dto() -> &'static CurrencyDTO<Self::Group> {
+            &const {
+                CurrencyDTO::new(
                     const { &Definition::new("LC5", "ibc/bank_LC5", "ibc/dex_LC5", 6) },
-                ))
+                )
             }
-        }
-
-        #[inline]
-        fn dto(&self) -> &CurrencyDTO<Self::Group> {
-            &self.0
         }
     }
 
@@ -253,18 +225,12 @@ pub(super) mod definitions {
     impl CurrencyDef for LeaseC6 {
         type Group = LeaseGroup;
 
-        #[inline]
-        fn definition() -> &'static Self {
-            const {
-                &Self(CurrencyDTO::new(
-                    const { &Definition::new("LC6", "ibc/bank_LC6", "ibc/dex_LC6", 8) },
-                ))
+        fn dto() -> &'static CurrencyDTO<Self::Group> {
+            &const {
+                CurrencyDTO::new(
+                    const { &Definition::new("LC6", "ibc/bank_LC6", "ibc/dex_LC6", 6) },
+                )
             }
-        }
-
-        #[inline]
-        fn dto(&self) -> &CurrencyDTO<Self::Group> {
-            &self.0
         }
     }
 
@@ -291,18 +257,12 @@ pub(super) mod definitions {
     impl CurrencyDef for LeaseC7 {
         type Group = LeaseGroup;
 
-        #[inline]
-        fn definition() -> &'static Self {
-            const {
-                &Self(CurrencyDTO::new(
-                    const { &Definition::new("LC7", "ibc/bank_LC7", "ibc/dex_LC7", 4) },
-                ))
+        fn dto() -> &'static CurrencyDTO<Self::Group> {
+            &const {
+                CurrencyDTO::new(
+                    const { &Definition::new("LC7", "ibc/bank_LC7", "ibc/dex_LC7", 6) },
+                )
             }
-        }
-
-        #[inline]
-        fn dto(&self) -> &CurrencyDTO<Self::Group> {
-            &self.0
         }
     }
 

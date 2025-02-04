@@ -44,32 +44,22 @@ pub trait CurrencyDef: Currency {
     /// The group this currency belongs to
     type Group: Group;
 
-    fn definition() -> &'static Self;
-
-    fn dto(&self) -> &CurrencyDTO<Self::Group>;
+    fn dto() -> &'static CurrencyDTO<Self::Group>;
 
     #[cfg(any(test, feature = "testing"))]
     fn ticker() -> SymbolStatic {
-        Self::definition().dto().definition().ticker
+        Self::dto().definition().ticker
     }
 
     #[cfg(any(test, feature = "testing"))]
     fn bank() -> SymbolStatic {
-        Self::definition().dto().definition().bank_symbol
+        Self::dto().definition().bank_symbol
     }
 
     #[cfg(any(test, feature = "testing"))]
     fn dex() -> SymbolStatic {
-        Self::definition().dto().definition().dex_symbol
+        Self::dto().definition().dex_symbol
     }
-}
-
-pub fn into_super_group<C, SuperG>(c_def: C) -> CurrencyDTO<SuperG>
-where
-    C: CurrencyDef<Group = SuperG>,
-    SuperG: Group,
-{
-    *c_def.dto()
 }
 
 impl<T> Currency for T where T: CurrencyDef {}
@@ -103,7 +93,7 @@ where
     V: AnyVisitor<VisitedG>,
     VisitedG: Group,
 {
-    let member = C::definition().dto();
+    let member = C::dto();
     if matcher.r#match(member.definition()) {
         Ok(visitor.on::<C>(member))
     } else {
@@ -120,7 +110,7 @@ where
     C::Group: MemberOf<<V::Pivot as PairsGroup>::CommonGroup>,
     V: PairsVisitor,
 {
-    let buddy = C::definition().dto();
+    let buddy = C::dto();
     if matcher.r#match(buddy.definition()) {
         Ok(visitor.on::<C>(buddy))
     } else {

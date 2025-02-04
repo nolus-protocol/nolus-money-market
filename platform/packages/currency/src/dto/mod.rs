@@ -181,11 +181,13 @@ where
 }
 
 /// Prepare a human-friendly representation of a currency
-pub fn to_string<C>(def: &C) -> SymbolStatic
+pub fn to_string<G>(dto: &CurrencyDTO<G>) -> SymbolStatic
 where
-    C: CurrencyDef,
+    G: Group,
 {
-    Tickers::<C::Group>::symbol(def.dto().definition())
+    let res = dto.into_symbol::<Tickers<G>>();
+    debug_assert_eq!(dto.to_string(), res);
+    res
 }
 
 pub fn dto<C, G>() -> CurrencyDTO<G>
@@ -194,7 +196,7 @@ where
     C::Group: MemberOf<G>,
     G: Group,
 {
-    C::definition().dto().into_super_group::<G>()
+    C::dto().into_super_group::<G>()
 }
 
 impl<G> Display for CurrencyDTO<G>
@@ -289,7 +291,7 @@ mod test {
     fn to_string() {
         assert_eq!(
             dto::<<SubGroupTestC10 as CurrencyDef>::Group, SubGroupTestC10>().to_string(),
-            super::to_string(SubGroupTestC10::definition())
+            super::to_string(SubGroupTestC10::dto())
         );
     }
 

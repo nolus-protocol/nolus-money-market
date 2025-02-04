@@ -71,18 +71,18 @@ pub enum Error {
 }
 
 impl Error {
-    pub fn no_funds<C>(def: &C) -> Self
+    pub fn no_funds<C>() -> Self
     where
         C: CurrencyDef,
     {
-        Self::NoFunds(currency::to_string::<C>(def))
+        Self::NoFunds(currency::to_string(C::dto()))
     }
 
-    pub fn unexpected_funds<C>(def: &C) -> Self
+    pub fn unexpected_funds<C>() -> Self
     where
         C: CurrencyDef,
     {
-        Self::UnexpectedFunds(currency::to_string::<C>(def))
+        Self::UnexpectedFunds(currency::to_string(C::dto()))
     }
 
     pub fn unexpected_code<A>(exp_code_id: CodeId, instance: A) -> Self

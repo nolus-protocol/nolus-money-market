@@ -52,8 +52,8 @@ where
 {
     received_one_impl(
         cw_amount,
-        || Error::no_funds::<C>(C::definition()),
-        || Error::unexpected_funds::<C>(C::definition()),
+        || Error::no_funds::<C>(),
+        || Error::unexpected_funds::<C>(),
     )
     .and_then(coin_legacy::from_cosmwasm::<C>)
 }
@@ -110,10 +110,9 @@ impl BankAccountView for BankView<'_> {
         C::Group: MemberOf<G>,
         G: Group,
     {
-        self.cw_balance(C::definition().dto())
-            .and_then(|ref cw_coin| {
-                coin_legacy::from_cosmwasm_currency_not_definition::<C, C>(cw_coin)
-            })
+        self.cw_balance(C::dto()).and_then(|ref cw_coin| {
+            coin_legacy::from_cosmwasm_currency_not_definition::<C, _>(cw_coin)
+        })
     }
 
     fn balances<G, Cmd>(&self, cmd: Cmd) -> BalancesResult<G, Cmd>
@@ -576,9 +575,9 @@ mod test {
     #[derive(Clone)]
     struct Cmd<G>
     where
-        G: Group,
+        G: 'static + Group,
     {
-        expected: Option<CurrencyDTO<G>>,
+        expected: Option<&'static CurrencyDTO<G>>,
     }
 
     impl<G> Cmd<G>
@@ -590,7 +589,7 @@ mod test {
             C: CurrencyDef<Group = G>,
         {
             Cmd::<C::Group> {
-                expected: Some(*C::definition().dto()),
+                expected: Some(C::dto()),
             }
         }
 
@@ -622,11 +621,7 @@ mod test {
             C: CurrencyDef,
             C::Group: MemberOf<G>,
         {
-            assert_eq!(
-                Some(C::definition().dto().into_super_group::<G>()),
-                self.expected
-            );
-
+            assert_eq!(Some(&C::dto().into_super_group::<G>()), self.expected);
             Ok(())
         }
     }

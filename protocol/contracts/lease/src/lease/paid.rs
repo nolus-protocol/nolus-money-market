@@ -114,8 +114,8 @@ mod tests {
             } else {
                 unreachable!(
                     "Expected {}, found {}",
-                    currency::to_string(TestAsset::definition()),
-                    currency::to_string(C::definition())
+                    currency::to_string(TestAsset::dto()),
+                    currency::to_string(C::dto())
                 );
             }
         }

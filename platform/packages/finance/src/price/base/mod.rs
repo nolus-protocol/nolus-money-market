@@ -156,7 +156,7 @@ where
     QuoteG: Group,
 {
     fn from(price: &Price<C, QuoteC>) -> Self {
-        Self::from_price(price, C::definition().dto().into_super_group())
+        Self::from_price(price, C::dto().into_super_group())
     }
 }
 
@@ -188,7 +188,7 @@ where
     type Error = Error;
 
     fn try_from(base: &BasePrice<G, QuoteC, QuoteG>) -> Result<Self, Self::Error> {
-        base.try_as_specific(C::definition().dto())
+        base.try_as_specific(C::dto())
     }
 }
 
@@ -217,7 +217,7 @@ mod test_invariant {
     fn base_zero_json() {
         let json = format!(
             r#"{{"amount": {{"amount": "0", "ticker": "{}"}}, "amount_quote": {{"amount": "3", "ticker": "{}"}}}}"#,
-            SuperGroupTestC1::definition().dto().definition().ticker,
+            SuperGroupTestC1::dto().definition().ticker,
             ticker::<SuperGroupTestC2>()
         );
 
@@ -324,6 +324,6 @@ mod test_invariant {
     where
         C: CurrencyDef,
     {
-        C::definition().dto().definition().ticker
+        C::dto().definition().ticker
     }
 }

@@ -35,14 +35,14 @@ pub fn dummy_swap_tree() -> HumanReadableTree<SwapTarget<PriceCurrencies>> {
                 }}
             ]
         }}"#,
-        lpn = BaseCurrency::definition().dto(),
-        p4 = PaymentC4::definition().dto(),
-        p5 = PaymentC5::definition().dto(),
-        p3 = PaymentC3::definition().dto(),
-        p1 = PaymentC1::definition().dto(),
-        p6 = PaymentC6::definition().dto(),
-        p7 = PaymentC7::definition().dto(),
-        p9 = PaymentC9::definition().dto(),
+        lpn = BaseCurrency::dto(),
+        p4 = PaymentC4::dto(),
+        p5 = PaymentC5::dto(),
+        p3 = PaymentC3::dto(),
+        p1 = PaymentC1::dto(),
+        p6 = PaymentC6::dto(),
+        p7 = PaymentC7::dto(),
+        p9 = PaymentC9::dto(),
     ))
     .expect("The dummy swap tree is valid")
 }
@@ -57,8 +57,8 @@ pub fn minimal_swap_tree() -> HumanReadableTree<SwapTarget<PriceCurrencies>> {
                 }}
             ]
         }}"#,
-        lpn = BaseCurrency::definition().dto(),
-        p9 = PaymentC9::definition().dto(),
+        lpn = BaseCurrency::dto(),
+        p9 = PaymentC9::dto(),
     ))
     .expect("The dummy swap tree is valid")
 }
@@ -73,8 +73,8 @@ pub fn invalid_pair_swap_tree() -> HumanReadableTree<SwapTarget<PriceCurrencies>
                 }}
             ]
         }}"#,
-        lpn = BaseCurrency::definition().dto(),
-        p5 = PaymentC5::definition().dto(),
+        lpn = BaseCurrency::dto(),
+        p5 = PaymentC5::dto(),
     ))
     .expect("The dummy swap tree is valid")
 }

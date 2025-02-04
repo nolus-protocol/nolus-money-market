@@ -114,10 +114,10 @@ pub fn execute(
 #[entry_point]
 pub fn query(deps: Deps<'_>, _env: Env, msg: QueryMsg) -> Result<Binary> {
     match msg {
-        QueryMsg::ReserveLpn() => cosmwasm_std::to_json_binary(
-            &currency::to_string::<LpnCurrency>(LpnCurrency::definition()),
-        )
-        .map_err(Into::into),
+        QueryMsg::ReserveLpn() => {
+            cosmwasm_std::to_json_binary(&currency::to_string(LpnCurrency::dto()))
+                .map_err(Into::into)
+        }
         QueryMsg::Config() => Config::load(deps.storage)
             .map(ConfigResponse::from)
             .and_then(|config| cosmwasm_std::to_json_binary(&config).map_err(Into::into)),

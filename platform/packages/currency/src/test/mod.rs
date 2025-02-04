@@ -11,7 +11,7 @@ mod group;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Expect<CDef, VisitedG, VisitorG>(
-    &'static CDef,
+    PhantomData<CDef>,
     PhantomData<VisitedG>,
     PhantomData<VisitorG>,
 )
@@ -23,7 +23,7 @@ where
     CDef: CurrencyDef,
 {
     pub fn new() -> Self {
-        Self(CDef::definition(), PhantomData, PhantomData)
+        Self(PhantomData, PhantomData, PhantomData)
     }
 }
 
@@ -50,7 +50,7 @@ where
     where
         Cin: CurrencyDef,
     {
-        Ok(def == self.0.dto())
+        Ok(def == CDef::dto())
     }
 }
 

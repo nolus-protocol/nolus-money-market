@@ -12,6 +12,7 @@ use super::CurrencyDTO as ValidatedDTO;
 /// Brings invariant checking as a step in deserializing a CurrencyDTO
 #[derive(Serialize, Deserialize, JsonSchema)]
 #[serde(transparent, deny_unknown_fields, rename_all = "snake_case")]
+//TODO use Cow<'static, SymbolOwned> to avoid extra String instantiations
 pub(super) struct TickerDTO(SymbolOwned);
 
 impl Display for TickerDTO {
@@ -53,7 +54,7 @@ mod test {
 
     #[test]
     fn deser_same_group() {
-        let coin = SuperGroupTestC1::definition().dto();
+        let coin = SuperGroupTestC1::dto();
         let coin_deser: SuperGroupCurrency = cosmwasm_std::to_json_vec(coin)
             .and_then(cosmwasm_std::from_json)
             .expect("correct raw bytes");
@@ -64,7 +65,7 @@ mod test {
     fn deser_parent_group() {
         type ParentGroup = SuperGroupCurrency;
 
-        let coin = SubGroupTestC10::definition().dto();
+        let coin = SubGroupTestC10::dto();
         let coin_deser: ParentGroup = cosmwasm_std::to_json_vec(coin)
             .and_then(cosmwasm_std::from_json)
             .expect("correct raw bytes");
@@ -74,7 +75,7 @@ mod test {
 
     #[test]
     fn deser_wrong_group() {
-        let coin = *SuperGroupTestC1::definition().dto();
+        let coin = *SuperGroupTestC1::dto();
         let coin_raw = cosmwasm_std::to_json_vec(&coin).unwrap();
 
         assert!(cosmwasm_std::from_json::<SubGroupCurrency>(&coin_raw).is_err());

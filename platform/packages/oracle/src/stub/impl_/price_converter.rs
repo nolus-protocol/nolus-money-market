@@ -68,13 +68,7 @@ where
         let msg = PriceReqT::price::<C>();
         self.querier
             .query_wasm_smart(self.addr(), &msg)
-            .map_err(|error| {
-                error::failed_to_fetch_price(
-                    C::definition().dto(),
-                    QuoteC::definition().dto(),
-                    error,
-                )
-            })
+            .map_err(|error| error::failed_to_fetch_price(C::dto(), QuoteC::dto(), error))
             .and_then(|price: BasePrice<CurrencyG, QuoteC, QuoteG>| {
                 price.try_into().map_err(Into::into)
             })
