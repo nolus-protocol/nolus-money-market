@@ -26,37 +26,33 @@ contract = [
     "marketprice/testing",
     "dep:cosmwasm-std",
     "dep:versioning",
+    "platform/testing",
 ]
-stub_alarms = ["dep:currencies", "dep:oracle-platform"]
+stub_alarms = ["dep:currencies", "dep:oracle-platform", "dep:finance", "dep:platform", "dep:serde", "dep:thiserror"]
 stub_price = ["dep:oracle-platform"]
-stub_swap = ["currencies/testing", "dep:oracle-platform"]
+stub_swap = ["currencies/testing", "dep:oracle-platform", "dep:currency", "dep:tree", "dep:sdk", "dep:serde", "dep:thiserror"]
 testing = [
     "stub_alarms",
     "stub_price",
     "stub_swap",
     "currencies/testing",
+    "platform/testing",
+    "dep:thiserror",
 ]
 
 [dependencies]
 currencies = { workspace = true, optional = true }
-currency = { workspace = true }
-finance = { workspace = true }
+currency = { workspace = true,  optional = true }
+finance = { workspace = true, optional = true }
 marketprice = { workspace = true, optional = true }
 oracle-platform = { workspace = true, optional = true }
-platform = { workspace = true }
-sdk = { workspace = true }
-tree = { workspace = true }
+platform = { workspace = true, optional = true }
+sdk = { workspace = true, optional = true }
+tree = { workspace = true, optional = true }
 versioning = { workspace = true, optional = true, features = ["protocol_contract"] }
 
 # Required as a dependency by `entry_point` attribute macro
 cosmwasm-std = { workspace = true, optional = true }
 
-thiserror = { workspace = true }
-serde = { workspace = true, features = ["derive"] }
-
-[dev-dependencies]
-currencies = { workspace = true, features = ["testing"] }
-currency = { workspace = true, features = ["testing"] }
-finance = { workspace = true }
-platform = { workspace = true, features = ["testing"] }
-tree = { workspace = true, features = ["testing"] }
+thiserror = { workspace = true, optional = true }
+serde = { workspace = true, optional = true, features = ["derive"] }
