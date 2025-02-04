@@ -16,9 +16,7 @@ impl CurrencyDef for Stable {
     type Group = PlatformGroup;
 
     fn dto() -> &'static CurrencyDTO<Self::Group> {
-        const DTO: CurrencyDTO<<Stable as CurrencyDef>::Group> =
-            CurrencyDTO::new(&Definition::new("STABLE", "N/A_N/A_N/A", "N/A_N/A_N/A", 0));
-        &DTO
+        const { &CurrencyDTO::new(const { &Definition::new("STABLE", "N/A_N/A_N/A", "N/A_N/A_N/A", 0) }) }
     }
 }
 impl PairsGroup for Stable {
@@ -47,16 +45,20 @@ impl CurrencyDef for Nls {
     type Group = PlatformGroup;
 
     fn dto() -> &'static CurrencyDTO<Self::Group> {
-        const DTO: CurrencyDTO<<Nls as CurrencyDef>::Group> = CurrencyDTO::new(&Definition::new(
-            "NLS",
-            "unls",
-            // TODO Define trait PlatformCurrency as a super trait of Currency and
-            // merge NlsPlatform and Nls
-            "N/A_N/A_N/A",
-            6,
-        ));
-
-        &DTO
+        &const {
+            CurrencyDTO::new(
+                const {
+                    &Definition::new(
+                        "NLS",
+                        "unls",
+                        // TODO Define trait PlatformCurrency as a super trait of Currency and
+                        // merge NlsPlatform and Nls
+                        "N/A_N/A_N/A",
+                        6,
+                    )
+                },
+            )
+        }
     }
 }
 

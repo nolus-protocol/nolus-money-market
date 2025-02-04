@@ -21,9 +21,11 @@ pub(super) mod definitions {
         type Group = LpnGroup;
 
         fn dto() -> &'static CurrencyDTO<Self::Group> {
-            const DTO: CurrencyDTO<LpnGroup> =
-                CurrencyDTO::new(&Definition::new("LPN", "ibc/bank_LPN", "ibc/dex_LPN", 6));
-            &DTO
+            &const {
+                CurrencyDTO::new(
+                    const { &Definition::new("LPN", "ibc/bank_LPN", "ibc/dex_LPN", 6) },
+                )
+            }
         }
     }
 

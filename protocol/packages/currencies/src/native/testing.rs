@@ -21,9 +21,7 @@ pub(super) mod definitions {
         type Group = NativeGroup;
 
         fn dto() -> &'static CurrencyDTO<Self::Group> {
-            const DTO: CurrencyDTO<NativeGroup> =
-                CurrencyDTO::new(&Definition::new("NLS", "unls", "ibc/dex_NLS", 6));
-            &DTO
+            &const { CurrencyDTO::new(const { &Definition::new("NLS", "unls", "ibc/dex_NLS", 6) }) }
         }
     }
 
