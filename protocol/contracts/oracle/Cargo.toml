@@ -28,7 +28,7 @@ contract = [
     "dep:versioning",
     "platform/testing",
 ]
-stub_alarms = ["dep:currencies", "dep:oracle-platform", "dep:finance", "dep:platform", "dep:serde", "dep:thiserror"]
+stub_alarms = ["currencies/testing", "dep:oracle-platform", "dep:finance", "dep:platform", "dep:serde", "dep:thiserror", "dep:sdk", "dep:currency"]
 stub_price = ["dep:oracle-platform", "dep:finance", "dep:sdk", "dep:currency"]
 stub_swap = ["currencies/testing", "dep:oracle-platform", "dep:currency", "dep:tree", "dep:sdk", "dep:serde", "dep:thiserror"]
 testing = [
