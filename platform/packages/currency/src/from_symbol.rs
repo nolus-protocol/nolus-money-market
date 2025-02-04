@@ -2,7 +2,7 @@ use crate::{
     error::Error,
     matcher::{self, Matcher},
     symbol::Symbol,
-    CurrencyDef, MemberOf, SymbolSlice,
+    CurrencyDef, MemberOf,
 };
 
 pub trait SingleVisitor<CDef> {
@@ -14,7 +14,7 @@ pub trait SingleVisitor<CDef> {
 
 pub trait CurrencyVisit: Symbol {
     //TODO check if we can remove the `CDef` type arg and pass &Definition
-    fn visit<CDef, V>(symbol: &SymbolSlice, visitor: V) -> Result<V::Output, V::Error>
+    fn visit<CDef, V>(symbol: &str, visitor: V) -> Result<V::Output, V::Error>
     where
         CDef: CurrencyDef,
         CDef::Group: MemberOf<Self::Group>,

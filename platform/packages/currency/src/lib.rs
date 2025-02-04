@@ -30,8 +30,7 @@ pub mod test;
 
 // TODO get rid of these definitions. Move some to much smaller scope, for example move SymbolOwned close to CurrencyDTO
 // and SymbolStatic close to Symbols
-pub type SymbolSlice = str;
-pub type SymbolStatic = &'static SymbolSlice;
+pub type SymbolStatic = &'static str;
 pub type SymbolOwned = String;
 
 /// Currency market trait

@@ -1,6 +1,6 @@
 use std::marker::PhantomData;
 
-use currency::{self, DexSymbols, Group, SymbolSlice};
+use currency::{self, DexSymbols, Group};
 use dex::swap::{Error, ExactAmountIn, Result};
 use finance::coin::{Amount, CoinDTO};
 use oracle::api::swap::{SwapPath, SwapTarget};
@@ -118,14 +118,14 @@ impl Router for NeutronTest {
 enum Never {}
 
 fn to_operations<'a, G>(
-    token_in_denom: &'a SymbolSlice,
+    token_in_denom: &'a str,
     swap_path: &'a [SwapTarget<G>],
 ) -> Vec<SwapOperation>
 where
     G: Group,
 {
     struct OperationScan<'a> {
-        last_denom: &'a SymbolSlice,
+        last_denom: &'a str,
     }
 
     let scanner = OperationScan {

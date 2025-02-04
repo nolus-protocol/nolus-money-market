@@ -1,6 +1,6 @@
 use crate::{
     error::Error, group::MemberOf, matcher, pairs::PairsGroup, Currency, CurrencyDTO, CurrencyDef,
-    MaybeAnyVisitResult, Symbol, SymbolSlice,
+    MaybeAnyVisitResult, Symbol,
 };
 
 use super::Group;
@@ -50,7 +50,7 @@ pub trait GroupVisit
 where
     Self: Symbol,
 {
-    fn visit_any<V>(symbol: &SymbolSlice, visitor: V) -> Result<V::Output, V::Error>
+    fn visit_any<V>(symbol: &str, visitor: V) -> Result<V::Output, V::Error>
     where
         V: AnyVisitor<Self::Group>,
         Error: Into<V::Error>,
@@ -60,7 +60,7 @@ where
         })
     }
 
-    fn maybe_visit_any<V>(symbol: &SymbolSlice, visitor: V) -> MaybeAnyVisitResult<Self::Group, V>
+    fn maybe_visit_any<V>(symbol: &str, visitor: V) -> MaybeAnyVisitResult<Self::Group, V>
     where
         V: AnyVisitor<Self::Group>,
     {

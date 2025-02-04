@@ -1,19 +1,19 @@
 use std::marker::PhantomData;
 
-use crate::{definition::DefinitionRef, symbol::Symbol, SymbolSlice};
+use crate::{definition::DefinitionRef, symbol::Symbol};
 
 pub trait Matcher {
     fn r#match(&self, def: DefinitionRef) -> bool;
 }
 
-pub(crate) fn symbol_matcher<'a, S>(symbol: &'a SymbolSlice) -> impl Matcher + 'a
+pub(crate) fn symbol_matcher<'a, S>(symbol: &'a str) -> impl Matcher + 'a
 where
     S: 'a + Symbol + ?Sized,
 {
     SymbolMatcher::<'a, S>(symbol, PhantomData)
 }
 
-struct SymbolMatcher<'a, S>(&'a SymbolSlice, PhantomData<S>)
+struct SymbolMatcher<'a, S>(&'a str, PhantomData<S>)
 where
     S: ?Sized;
 impl<S> Matcher for SymbolMatcher<'_, S>

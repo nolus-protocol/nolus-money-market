@@ -1,6 +1,6 @@
 use currency::{
     error::Error, test::Expect, BankSymbols, CurrencyDef, Group, GroupVisit, MemberOf, Symbol,
-    SymbolSlice, Tickers,
+    Tickers,
 };
 
 #[track_caller]
@@ -14,7 +14,7 @@ where
 }
 
 #[track_caller]
-pub fn maybe_visit_on_ticker_err<C, VisitorG>(unknown_ticker: &SymbolSlice)
+pub fn maybe_visit_on_ticker_err<C, VisitorG>(unknown_ticker: &str)
 where
     C: CurrencyDef,
     C::Group: Group + MemberOf<VisitorG>,
@@ -34,7 +34,7 @@ where
 }
 
 #[track_caller]
-pub fn maybe_visit_on_bank_symbol_err<C, VisitorG>(unknown_ticker: &SymbolSlice)
+pub fn maybe_visit_on_bank_symbol_err<C, VisitorG>(unknown_ticker: &str)
 where
     C: CurrencyDef,
     C::Group: Group + MemberOf<VisitorG>,
@@ -43,7 +43,7 @@ where
     visit_on_symbol_err::<C, VisitorG, BankSymbols<C::Group>>(unknown_ticker)
 }
 
-fn visit_on_symbol<C, VisitorG, Symbols>(symbol: &SymbolSlice)
+fn visit_on_symbol<C, VisitorG, Symbols>(symbol: &str)
 where
     C: CurrencyDef,
     C::Group: MemberOf<VisitorG>,
@@ -56,7 +56,7 @@ where
     );
 }
 
-fn visit_on_symbol_err<C, VisitorG, Symbols>(unknown_symbol: &SymbolSlice)
+fn visit_on_symbol_err<C, VisitorG, Symbols>(unknown_symbol: &str)
 where
     C: CurrencyDef,
     C::Group: MemberOf<VisitorG>,

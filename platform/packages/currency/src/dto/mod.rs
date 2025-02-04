@@ -11,8 +11,7 @@ use crate::{
     error::{Error, Result},
     group::MemberOf,
     pairs::{MaybePairsVisitorResult, PairsGroup, PairsVisitor, PairsVisitorResult},
-    CurrencyDef, Group, MaybeAnyVisitResult, Symbol, SymbolSlice, SymbolStatic, Tickers,
-    TypeMatcher,
+    CurrencyDef, Group, MaybeAnyVisitResult, Symbol, SymbolStatic, Tickers, TypeMatcher,
 };
 
 use super::{AnyVisitor, AnyVisitorResult};
@@ -112,14 +111,14 @@ where
     }
 
     #[cfg(any(test, feature = "testing"))]
-    pub fn from_symbol_testing<S>(symbol: &SymbolSlice) -> Result<CurrencyDTO<S::Group>>
+    pub fn from_symbol_testing<S>(symbol: &str) -> Result<CurrencyDTO<S::Group>>
     where
         S: Symbol<Group = G>,
     {
         Self::from_symbol::<S>(symbol)
     }
 
-    fn from_symbol<S>(symbol: &SymbolSlice) -> Result<CurrencyDTO<S::Group>>
+    fn from_symbol<S>(symbol: &str) -> Result<CurrencyDTO<S::Group>>
     where
         S: Symbol<Group = G>,
     {

@@ -1,7 +1,7 @@
 use std::slice;
 
 use currencies::PaymentGroup;
-use currency::{BankSymbols, CurrencyDTO, DexSymbols, Symbol, SymbolSlice, SymbolStatic};
+use currency::{BankSymbols, CurrencyDTO, DexSymbols, Symbol, SymbolStatic};
 use finance::coin::Amount;
 use sdk::{
     cosmos_sdk_proto::traits::{Message, Name},
@@ -151,15 +151,15 @@ fn send_blank_response(app: &mut App, addr: Addr) -> ResponseWithInterChainMsgs<
     send_response(app, addr, Binary::new(vec![]))
 }
 
-fn dex_to_bank(symbol: &SymbolSlice) -> SymbolStatic {
+fn dex_to_bank(symbol: &str) -> SymbolStatic {
     symbol_net_to_net::<DexSymbols<PaymentGroup>, BankSymbols<PaymentGroup>>(symbol)
 }
 
-fn bank_to_dex(symbol: &SymbolSlice) -> SymbolStatic {
+fn bank_to_dex(symbol: &str) -> SymbolStatic {
     symbol_net_to_net::<BankSymbols<PaymentGroup>, DexSymbols<PaymentGroup>>(symbol)
 }
 
-fn symbol_net_to_net<FromS, IntoS>(symbol: &SymbolSlice) -> SymbolStatic
+fn symbol_net_to_net<FromS, IntoS>(symbol: &str) -> SymbolStatic
 where
     FromS: Symbol<Group = PaymentGroup>,
     IntoS: Symbol<Group = PaymentGroup>,
