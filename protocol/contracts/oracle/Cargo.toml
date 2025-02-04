@@ -23,21 +23,41 @@ contract = [
     "stub_price",
     "stub_swap",
     "sdk/contract",
-    "marketprice/testing",
     "dep:cosmwasm-std",
     "dep:versioning",
+    "marketprice/testing",
     "platform/testing",
 ]
-stub_alarms = ["currencies/testing", "dep:oracle-platform", "finance/testing", "dep:platform", "dep:serde", "dep:thiserror", "dep:sdk", "currency/testing"]
-stub_price = ["dep:oracle-platform", "dep:finance", "dep:sdk", "dep:currency"]
-stub_swap = ["currencies/testing", "dep:oracle-platform", "dep:currency", "dep:tree", "dep:sdk", "dep:serde", "dep:thiserror"]
+stub_alarms = [
+    "dep:oracle-platform",
+    "dep:platform",
+    "dep:serde",
+    "dep:thiserror",
+    "dep:sdk",
+    "currencies/testing",
+    "finance/testing",
+    "currency/testing",
+]
+stub_price = [
+    "dep:oracle-platform",
+    "dep:finance",
+    "dep:sdk",
+    "dep:currency",
+]
+stub_swap = [
+    "dep:oracle-platform",
+    "dep:currency",
+    "dep:tree",
+    "dep:sdk",
+    "dep:serde",
+    "dep:thiserror",
+    "currencies/testing",
+]
 testing = [
     "stub_alarms",
     "stub_price",
     "stub_swap",
-    "currencies/testing",
     "platform/testing",
-    "dep:thiserror",
 ]
 
 [dependencies]
