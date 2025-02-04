@@ -108,7 +108,7 @@ where
     BaseC: CurrencyDef,
 {
     ContractError::UnsupportedCurrency {
-        base: currency::to_string::<BaseC>(BaseC::definition()),
+        base: currency::to_string(BaseC::dto()),
         unsupported: unsupported.to_string(),
     }
 }
@@ -120,7 +120,7 @@ where
     BaseC: CurrencyDef,
 {
     ContractError::InvalidBaseCurrency(
-        currency::to_string::<BaseC>(BaseC::definition()),
+        currency::to_string(BaseC::dto()),
         configured_base.to_string(),
     )
 }

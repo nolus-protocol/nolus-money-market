@@ -919,11 +919,11 @@ where
                     }}
                 ]
             }}"#,
-        lpn = Lpn::definition().dto(),
-        base_c = BaseC::definition().dto(),
-        p5 = PaymentC5::definition().dto(),
-        p6 = PaymentC6::definition().dto(),
-        p1 = LpnDescendantC::definition().dto(),
+        lpn = Lpn::dto(),
+        base_c = BaseC::dto(),
+        p5 = PaymentC5::dto(),
+        p6 = PaymentC6::dto(),
+        p1 = LpnDescendantC::dto(),
     ))
     .unwrap()
 }

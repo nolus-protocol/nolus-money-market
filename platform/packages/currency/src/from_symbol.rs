@@ -22,7 +22,7 @@ pub trait CurrencyVisit: Symbol {
         Error: Into<V::Error>,
     {
         let matcher = matcher::symbol_matcher::<Self>(symbol);
-        let def = CDef::definition().dto().definition();
+        let def = CDef::dto().definition();
         if matcher.r#match(def) {
             visitor.on()
         } else {
@@ -69,7 +69,7 @@ mod test {
             ),
             Err(Error::unexpected_symbol::<_, Tickers<SuperGroup>>(
                 UNKNOWN_TICKER,
-                SuperGroupTestC2::definition().dto().definition()
+                SuperGroupTestC2::dto().definition()
             )),
         );
 
@@ -80,7 +80,7 @@ mod test {
             ),
             Err(Error::unexpected_symbol::<_, Tickers<SuperGroup>>(
                 SuperGroupTestC1::ticker(),
-                SuperGroupTestC2::definition().dto().definition(),
+                SuperGroupTestC2::dto().definition(),
             )),
         );
     }
@@ -111,7 +111,7 @@ mod test {
             ),
             Err(Error::unexpected_symbol::<_, BankSymbols::<SuperGroup>>(
                 DENOM,
-                SuperGroupTestC2::definition().dto().definition()
+                SuperGroupTestC2::dto().definition()
             )),
         );
     }

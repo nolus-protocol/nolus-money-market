@@ -70,8 +70,8 @@ where
             .query_wasm_smart(self.addr(), &msg)
             .map_err(|error| {
                 error::failed_to_fetch_price(
-                    C::definition().dto(),
-                    QuoteC::definition().dto(),
+                    C::dto(),
+                    QuoteC::dto(),
                     error,
                 )
             })

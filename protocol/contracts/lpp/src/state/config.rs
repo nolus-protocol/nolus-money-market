@@ -26,7 +26,7 @@ impl Config {
         Lpn: CurrencyDef,
         Lpn::Group: MemberOf<Lpns>,
     {
-        debug_assert_eq!(Ok(()), msg.lpn.of_currency(Lpn::definition().dto()));
+        debug_assert_eq!(Ok(()), msg.lpn.of_currency(Lpn::dto()));
         Self {
             lease_code,
             borrow_rate: msg.borrow_rate,

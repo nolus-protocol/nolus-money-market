@@ -243,125 +243,99 @@ mod impl_ {
 
     #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Serialize, Deserialize)]
     pub struct TestC1(CurrencyDTO<SuperGroup>);
-    pub const TESTC1_DEFINITION: Definition =
-        Definition::new("ticker#1", "ibc/bank_ticker#1", "ibc/dex_ticker#1", 6);
-    pub const TESTC1: TestC1 = TestC1(CurrencyDTO::new(&TESTC1_DEFINITION));
 
     impl CurrencyDef for TestC1 {
         type Group = SuperGroup;
 
-        fn definition() -> &'static Self {
-            &TESTC1
-        }
-
-        fn dto(&self) -> &CurrencyDTO<Self::Group> {
-            &self.0
+        fn dto() -> &'static CurrencyDTO<Self::Group> {
+            const DTO: CurrencyDTO<<TestC1 as CurrencyDef>::Group> = CurrencyDTO::new(
+                &Definition::new("ticker#1", "ibc/bank_ticker#1", "ibc/dex_ticker#1", 6),
+            );
+            &DTO
         }
     }
 
     #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Serialize, Deserialize)]
     pub struct TestC2(CurrencyDTO<SuperGroup>);
-    pub const TESTC2_DEFINITION: Definition =
-        Definition::new("ticker#2", "ibc/bank_ticker#2", "ibc/dex_ticker#2", 6);
-    pub const TESTC2: TestC2 = TestC2(CurrencyDTO::new(&TESTC2_DEFINITION));
 
     impl CurrencyDef for TestC2 {
         type Group = SuperGroup;
 
-        fn definition() -> &'static Self {
-            &TESTC2
-        }
-        fn dto(&self) -> &CurrencyDTO<Self::Group> {
-            &self.0
+        fn dto() -> &'static CurrencyDTO<Self::Group> {
+            const DTO: CurrencyDTO<<TestC2 as CurrencyDef>::Group> = CurrencyDTO::new(
+                &Definition::new("ticker#2", "ibc/bank_ticker#2", "ibc/dex_ticker#2", 6),
+            );
+            &DTO
         }
     }
 
     #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Serialize, Deserialize)]
     pub struct TestC3(CurrencyDTO<SuperGroup>);
-    const TESTC3_DEFINITION: Definition =
-        Definition::new("ticker#3", "ibc/bank_ticker#3", "ibc/dex_ticker#3", 6);
-    const TESTC3: TestC3 = TestC3(CurrencyDTO::new(&TESTC3_DEFINITION));
 
     impl CurrencyDef for TestC3 {
         type Group = SuperGroup;
 
-        fn definition() -> &'static Self {
-            &TESTC3
-        }
-
-        fn dto(&self) -> &CurrencyDTO<Self::Group> {
-            &self.0
+        fn dto() -> &'static CurrencyDTO<Self::Group> {
+            const DTO: CurrencyDTO<<TestC3 as CurrencyDef>::Group> = CurrencyDTO::new(
+                &Definition::new("ticker#3", "ibc/bank_ticker#3", "ibc/dex_ticker#3", 6),
+            );
+            &DTO
         }
     }
+
     #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Serialize, Deserialize)]
     pub struct TestC4(CurrencyDTO<SuperGroup>);
-    pub const TESTC4_DEFINITION: Definition =
-        Definition::new("ticker#4", "ibc/bank_ticker#4", "ibc/dex_ticker#4", 6);
-    pub const TESTC4: TestC4 = TestC4(CurrencyDTO::new(&TESTC4_DEFINITION));
 
     impl CurrencyDef for TestC4 {
         type Group = SuperGroup;
 
-        fn definition() -> &'static Self {
-            &TESTC4
-        }
-
-        fn dto(&self) -> &CurrencyDTO<Self::Group> {
-            &self.0
+        fn dto() -> &'static CurrencyDTO<Self::Group> {
+            const DTO: CurrencyDTO<<TestC4 as CurrencyDef>::Group> = CurrencyDTO::new(
+                &Definition::new("ticker#4", "ibc/bank_ticker#4", "ibc/dex_ticker#4", 6),
+            );
+            &DTO
         }
     }
 
     #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Serialize, Deserialize)]
     pub struct TestC5(CurrencyDTO<SuperGroup>);
-    pub const TESTC5_DEFINITION: Definition =
-        Definition::new("ticker#5", "ibc/bank_ticker#5", "ibc/dex_ticker#5", 6);
-    pub const TESTC5: TestC5 = TestC5(CurrencyDTO::new(&TESTC5_DEFINITION));
 
     impl CurrencyDef for TestC5 {
         type Group = SuperGroup;
 
-        fn definition() -> &'static Self {
-            &TESTC5
-        }
-
-        fn dto(&self) -> &CurrencyDTO<Self::Group> {
-            &self.0
+        fn dto() -> &'static CurrencyDTO<Self::Group> {
+            const DTO: CurrencyDTO<<TestC5 as CurrencyDef>::Group> = CurrencyDTO::new(
+                &Definition::new("ticker#5", "ibc/bank_ticker#5", "ibc/dex_ticker#5", 6),
+            );
+            &DTO
         }
     }
 
     #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Serialize, Deserialize)]
     pub struct TestC6(CurrencyDTO<SubGroup>);
-    pub const TESTC6_DEFINITION: Definition =
-        Definition::new("ticker#6", "ibc/bank_ticker#6", "ibc/dex_ticker#6", 6);
-    pub const TESTC6: TestC6 = TestC6(CurrencyDTO::new(&TESTC6_DEFINITION));
 
     impl CurrencyDef for TestC6 {
         type Group = SubGroup;
 
-        fn definition() -> &'static Self {
-            &TESTC6
-        }
-
-        fn dto(&self) -> &CurrencyDTO<Self::Group> {
-            &self.0
+        fn dto() -> &'static CurrencyDTO<Self::Group> {
+            const DTO: CurrencyDTO<<TestC6 as CurrencyDef>::Group> = CurrencyDTO::new(
+                &Definition::new("ticker#6", "ibc/bank_ticker#6", "ibc/dex_ticker#6", 6),
+            );
+            &DTO
         }
     }
 
     #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Serialize, Deserialize)]
     pub struct TestC10(CurrencyDTO<SubGroup>);
-    pub const TESTC10_DEFINITION: Definition =
-        Definition::new("ticker#10", "ibc/bank_ticker#10", "ibc/dex_ticker#10", 6);
-    pub const TESTC10: TestC10 = TestC10(CurrencyDTO::new(&TESTC10_DEFINITION));
 
     impl CurrencyDef for TestC10 {
         type Group = SubGroup;
 
-        fn definition() -> &'static Self {
-            &TESTC10
-        }
-
-        fn dto(&self) -> &CurrencyDTO<Self::Group> {
-            &self.0
+        fn dto() -> &'static CurrencyDTO<Self::Group> {
+            const DTO: CurrencyDTO<<TestC10 as CurrencyDef>::Group> = CurrencyDTO::new(
+                &Definition::new("ticker#10", "ibc/bank_ticker#10", "ibc/dex_ticker#10", 6),
+            );
+            &DTO
         }
     }
 }

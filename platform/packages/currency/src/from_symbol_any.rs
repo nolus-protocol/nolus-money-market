@@ -320,8 +320,8 @@ mod test {
     {
         assert_eq!(
             Err(Error::not_in_pool_with(
-                &CDef1::definition().dto().into_super_group::<VisitedG>(),
-                &CDef2::definition().dto().into_super_group::<VisitedG>()
+                &CDef1::dto().into_super_group::<VisitedG>(),
+                &CDef2::dto().into_super_group::<VisitedG>()
             )),
             visit_any_currencies_int::<VisitedG, CDef1, CDef2>()
         );

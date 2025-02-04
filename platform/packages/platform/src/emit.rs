@@ -46,7 +46,7 @@ where
         K: Into<String>,
         C: CurrencyDef,
     {
-        self.emit(event_key, C::definition().dto().definition().ticker)
+        self.emit(event_key, C::dto().definition().ticker)
     }
 
     /// Specialization of [`emit`](Self::emit) for [`Currency`]'s symbol.

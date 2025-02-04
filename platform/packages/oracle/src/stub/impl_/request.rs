@@ -27,7 +27,7 @@ impl RequestBuilder for BasePriceRequest {
         C: CurrencyDef,
     {
         BaseCurrencyQueryMsg::BasePrice {
-            currency: *C::definition().dto(),
+            currency: *C::dto(),
         }
     }
 }
@@ -46,7 +46,7 @@ impl RequestBuilder for StablePriceRequest {
         C: CurrencyDef,
     {
         StableCurrencyQueryMsg::StablePrice {
-            currency: *C::definition().dto(),
+            currency: *C::dto(),
         }
     }
 }

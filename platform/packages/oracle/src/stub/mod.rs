@@ -110,7 +110,7 @@ where
             .map_err(Error::StubConfigQuery)
             .and_then(|quote_c: CurrencyDTO<QuoteG>| {
                 quote_c
-                    .of_currency(QuoteC::definition().dto())
+                    .of_currency(QuoteC::dto())
                     .map_err(Error::StubConfigInvalid)
             })
             .map(|()| Self::new_internal(addr))

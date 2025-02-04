@@ -155,7 +155,7 @@ mod test {
     {
         CosmosSdkCoin {
             amount: Amount::from(coin).to_string(),
-            denom: C::definition().dto().definition().dex_symbol.into(),
+            denom: C::dex().into(),
         }
     }
 }

@@ -119,8 +119,7 @@ where
     type Error = Error;
 
     fn try_from(coin: CoinDTO<G>) -> Result<Self> {
-        let dto = C::definition().dto();
-        coin.of_currency_dto(dto).map(|()| coin.as_specific(dto))
+        coin.of_currency_dto(C::dto()).map(|()| coin.as_specific(C::dto()))
     }
 }
 
@@ -131,7 +130,7 @@ where
     C::Group: MemberOf<G>,
 {
     fn from(coin: Coin<C>) -> Self {
-        Self::from_coin(coin, C::definition().dto().into_super_group::<G>())
+        Self::from_coin(coin, C::dto().into_super_group::<G>())
     }
 }
 
@@ -218,7 +217,7 @@ mod test {
         type TheGroup = <TheCurrency as CurrencyDef>::Group;
         assert_eq!(
             test_coin::<TheCurrency, TheGroup>(amount),
-            super::from_amount_ticker::<TheGroup>(amount, *TheCurrency::definition().dto())
+            super::from_amount_ticker::<TheGroup>(amount, *TheCurrency::dto())
         );
     }
 
