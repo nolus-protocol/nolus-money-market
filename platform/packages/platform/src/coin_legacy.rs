@@ -114,10 +114,7 @@ where
     C::Group: MemberOf<S::Group>,
     S: Symbol,
 {
-    CosmWasmCoin::new(
-        Amount::from(coin),
-        S::symbol(C::dto().definition()),
-    )
+    CosmWasmCoin::new(Amount::from(coin), S::symbol(C::dto().definition()))
 }
 
 struct CoinTransformer<'a, COut>(&'a CosmWasmCoin, PhantomData<COut>);
@@ -160,10 +157,7 @@ where
     CDef: CurrencyDef,
     COut: 'static,
 {
-    debug_assert_eq!(
-        CDef::dto().definition().bank_symbol,
-        coin.denom
-    );
+    debug_assert_eq!(CDef::dto().definition().bank_symbol, coin.denom);
     assert!(currency::equal::<COut, CDef>());
     Amount::from(coin.amount).into()
 }

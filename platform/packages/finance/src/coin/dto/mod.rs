@@ -119,7 +119,8 @@ where
     type Error = Error;
 
     fn try_from(coin: CoinDTO<G>) -> Result<Self> {
-        coin.of_currency_dto(C::dto()).map(|()| coin.as_specific(C::dto()))
+        coin.of_currency_dto(C::dto())
+            .map(|()| coin.as_specific(C::dto()))
     }
 }
 
