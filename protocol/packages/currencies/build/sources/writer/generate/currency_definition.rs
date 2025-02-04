@@ -220,9 +220,9 @@ fn currency_definition<'r>(
         r#" {
         type Group = super::super::Group;
 
-        fn definition() -> &'static Self {
+        fn dto() -> &'static currency::CurrencyDTO<Self::Group> {
             const {
-                &Self(currency::CurrencyDTO::new(
+                &currency::CurrencyDTO::new(
                     const {
                         &currency::Definition::new(
                             ""#,
@@ -253,12 +253,8 @@ fn currency_definition<'r>(
                 r#",
                         )
                     },
-                ))
+                )
             }
-        }
-
-        fn dto(&self) -> &currency::CurrencyDTO<Self::Group> {
-            &self.0
         }
     }
 "#,
