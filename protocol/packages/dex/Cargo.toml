@@ -12,6 +12,9 @@ combinations = [
     { tags = ["ci", "@agnostic"], include-rest = true },
 ]
 
+[package.metadata.cargo-udeps]
+ignore = { development = ["currencies"] }
+
 [features]
 impl = ["dep:timealarms"]
 migration = []
@@ -30,3 +33,4 @@ thiserror = { workspace = true }
 
 [dev-dependencies]
 currency = { workspace = true, features = ["testing"] }
+currencies = { workspace = true, features = ["testing"] }

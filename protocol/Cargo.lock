@@ -818,6 +818,7 @@ dependencies = [
 name = "dex"
 version = "0.2.0"
 dependencies = [
+ "currencies",
  "currency",
  "finance",
  "oracle",
@@ -1347,6 +1348,7 @@ dependencies = [
  "currency",
  "finance",
  "marketprice",
+ "oracle",
  "oracle-platform",
  "platform",
  "sdk",
@@ -1966,6 +1968,7 @@ version = "0.1.1"
 dependencies = [
  "astroport",
  "base64 0.22.1",
+ "currencies",
  "currency",
  "dex",
  "finance",

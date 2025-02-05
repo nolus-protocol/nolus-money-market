@@ -5,9 +5,8 @@ use crate::{
     MaybePairsVisitorResult, MemberOf, PairsGroup, PairsVisitor,
 };
 
-#[derive(
-    Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Serialize, Deserialize,
-)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Serialize, Deserialize)]
+
 pub struct Stable();
 
 impl CurrencyDef for Stable {

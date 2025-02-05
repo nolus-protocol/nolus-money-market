@@ -14,6 +14,9 @@ combinations = [
 ]
 feature-groups = { contract-and-testing = { members = ["contract", "testing"], at-least-one = true, mutually-exclusive = false }, stubs ={ members = ["stub_alarms", "stub_price", "stub_swap"], at-least-one = false, mutually-exclusive = false} }
 
+[package.metadata.cargo-udeps]
+ignore = { development = ["oracle"] }
+
 [lib]
 crate-type = ["cdylib", "rlib"]
 
@@ -25,8 +28,7 @@ contract = [
     "sdk/contract",
     "dep:cosmwasm-std",
     "dep:versioning",
-    "marketprice/testing",
-    "platform/testing",
+    "dep:marketprice",
 ]
 stub_alarms = [
     "dep:oracle-platform",
@@ -34,9 +36,9 @@ stub_alarms = [
     "dep:serde",
     "dep:thiserror",
     "dep:sdk",
-    "currencies/testing",
-    "finance/testing",
-    "currency/testing",
+    "dep:currencies",
+    "dep:finance",
+    "dep:currency",
 ]
 stub_price = [
     "dep:oracle-platform",
@@ -51,13 +53,12 @@ stub_swap = [
     "dep:sdk",
     "dep:serde",
     "dep:thiserror",
-    "currencies/testing",
+    "dep:currencies",
 ]
 testing = [
     "stub_alarms",
     "stub_price",
     "stub_swap",
-    "platform/testing",
 ]
 
 [dependencies]
@@ -76,3 +77,12 @@ cosmwasm-std = { workspace = true, optional = true }
 
 thiserror = { workspace = true, optional = true }
 serde = { workspace = true, optional = true, features = ["derive"] }
+
+[dev-dependencies]
+currencies = { workspace = true, features = ["testing"] }
+currency = { workspace = true, features = ["testing"] }
+finance = { workspace = true }
+platform = { workspace = true, features = ["testing"] }
+marketprice = { workspace = true, features = ["testing"] }
+tree = { workspace = true, features = ["testing"] }
+oracle = { workspace = true, features = ["contract"] }
