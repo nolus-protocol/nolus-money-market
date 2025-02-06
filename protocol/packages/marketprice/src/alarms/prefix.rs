@@ -1,17 +1,21 @@
-use currency::{CurrencyDTO, Group, SymbolStatic, Tickers};
+use currency::{CurrencyDTO, Group};
 
 use super::NormalizedPrice;
 
 pub trait Prefix {
-    fn first_key(&self) -> SymbolStatic;
+    type G: Group;
+
+    fn first_key(&self) -> CurrencyDTO<Self::G>;
 }
 
 impl<G> Prefix for CurrencyDTO<G>
 where
     G: Group,
 {
-    fn first_key(&self) -> SymbolStatic {
-        self.into_symbol::<Tickers<G>>()
+    type G = G;
+
+    fn first_key(&self) -> CurrencyDTO<Self::G> {
+        *self
     }
 }
 
@@ -19,7 +23,9 @@ impl<G> Prefix for NormalizedPrice<G>
 where
     G: Group,
 {
-    fn first_key(&self) -> SymbolStatic {
-        self.0.currency().first_key()
+    type G = G;
+
+    fn first_key(&self) -> CurrencyDTO<Self::G> {
+        self.0.currency()
     }
 }

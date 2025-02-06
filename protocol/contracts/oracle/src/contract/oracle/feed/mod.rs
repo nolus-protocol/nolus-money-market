@@ -126,7 +126,7 @@ mod test {
     use std::collections::HashMap;
 
     use currencies::{Lpn as BaseCurrency, PaymentGroup as PriceCurrencies};
-    use currency::{Currency, CurrencyDTO, CurrencyDef, MemberOf, SymbolStatic};
+    use currency::{Currency, CurrencyDTO, CurrencyDef, MemberOf};
     use finance::{
         coin::Amount,
         price::{dto::PriceDTO, Price},
@@ -138,7 +138,12 @@ mod test {
     use super::price_querier::PriceQuerier;
 
     #[derive(Clone)]
-    pub struct TestFeeds(pub HashMap<(SymbolStatic, SymbolStatic), PriceDTO<PriceCurrencies>>);
+    pub struct TestFeeds(
+        pub  HashMap<
+            (CurrencyDTO<PriceCurrencies>, CurrencyDTO<PriceCurrencies>),
+            PriceDTO<PriceCurrencies>,
+        >,
+    );
     impl TestFeeds {
         pub fn add<B, Q>(&mut self, total_of: Amount, is: Amount)
         where
@@ -148,7 +153,7 @@ mod test {
             Q::Group: MemberOf<PriceCurrencies>,
         {
             self.0.insert(
-                (B::ticker(), Q::ticker()),
+                (B::dto().into_super_group(), Q::dto().into_super_group()),
                 tests::dto_price::<B, PriceCurrencies, Q>(total_of, is),
             );
         }

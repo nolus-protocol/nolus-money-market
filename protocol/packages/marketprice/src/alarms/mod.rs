@@ -79,7 +79,7 @@ where
 
     fn key(&self) -> Vec<Key<'_>> {
         vec![
-            Key::Ref(self.first_key().as_bytes()),
+            Key::Ref(currency::to_string::<G>(&self.first_key()).as_bytes()),
             Key::Val128(self.0.amount().to_cw_bytes()),
         ]
     }
@@ -182,7 +182,7 @@ where
         self.alarms_below
             .idx
             .0
-            .sub_prefix(price.first_key().into())
+            .sub_prefix(price.first_key().to_string())
             .range(
                 self.storage.deref(),
                 None,
@@ -195,7 +195,7 @@ where
         self.alarms_above_or_equal
             .idx
             .0
-            .sub_prefix(price.first_key().into())
+            .sub_prefix(price.first_key().to_string())
             .range(
                 self.storage.deref(),
                 Some(Bound::exclusive((price.0.amount(), Addr::unchecked("")))),
