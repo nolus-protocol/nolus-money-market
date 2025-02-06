@@ -18,8 +18,8 @@ use oracle::{
         swap::{SwapPath, SwapTarget},
         MigrateMsg, QueryMsg as OracleQ, SudoMsg, SwapTreeResponse,
     },
-    result::ContractResult,
-    ContractError,
+    error::Error,
+    result::Result as OracleResult,
 };
 use platform::{batch::Batch, coin_legacy, contract::Code};
 use sdk::{
@@ -480,8 +480,8 @@ fn migrate_invalid_swap_tree() {
         )
         .unwrap_err();
     assert!(matches!(
-        err.downcast_ref::<ContractError>(),
-        Some(&ContractError::BrokenSwapTree(_))
+        err.downcast_ref::<Error::<PriceCurrencies>>(),
+        Some(&Error::<PriceCurrencies>::BrokenSwapTree(_))
     ));
 }
 
@@ -525,7 +525,7 @@ fn schedule_alarm(
     storage: &dyn Storage,
     base: Amount,
     quote: Amount,
-) -> ContractResult<CwResponse> {
+) -> OracleResult<CwResponse, PriceCurrencies> {
     Ok(platform::response::response_only_messages(
         platform::message::Response::messages_only({
             let mut batch: Batch = Batch::default();

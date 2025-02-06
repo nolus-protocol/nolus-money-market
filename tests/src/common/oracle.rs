@@ -13,7 +13,9 @@ use marketprice::config::Config as PriceConfig;
 use oracle::{
     api::{Config, ExecuteMsg, InstantiateMsg, PricesResponse, QueryMsg, SudoMsg},
     contract::{execute, instantiate, query, reply, sudo},
-    test_tree, ContractError,
+    error::Error,
+    result::Result,
+    test_tree,
 };
 use sdk::{
     cosmwasm_std::{to_json_binary, wasm_execute, Addr, Binary, Deps, Env, Event},
@@ -72,7 +74,7 @@ pub(crate) fn mock_query(
     deps: Deps<'_>,
     env: Env,
     msg: QueryMsg<PriceCurrencies>,
-) -> Result<Binary, ContractError> {
+) -> Result<Binary, PriceCurrencies> {
     let price =
         price::total_of(Coin::<Nls>::new(123456789)).is(Coin::<BaseCurrency>::new(100000000));
 
@@ -83,7 +85,7 @@ pub(crate) fn mock_query(
                     prices: vec![price.into()],
                 },
             )
-            .map_err(ContractError::ConvertToBinary)
+            .map_err(Error::ConvertToBinary)
         }
         _ => query(deps, env, msg),
     }

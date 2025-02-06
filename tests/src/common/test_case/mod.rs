@@ -40,19 +40,20 @@ type OptionalLppEndpoints = Option<
     >,
 >;
 
+type OracleError = oracle::error::Error<PriceCurrencies>;
 type OptionalOracleWrapper = Option<
     CwContractWrapper<
         oracle::api::ExecuteMsg<BaseCurrency, BaseCurrencies, AlarmCurrencies, PriceCurrencies>,
-        oracle::ContractError,
+        OracleError,
         oracle::api::InstantiateMsg<PriceCurrencies>,
-        oracle::ContractError,
+        OracleError,
         oracle::api::QueryMsg<PriceCurrencies>,
-        oracle::ContractError,
+        OracleError,
         oracle::api::SudoMsg<PriceCurrencies>,
-        oracle::ContractError,
-        oracle::ContractError,
+        OracleError,
+        OracleError,
         ProtocolMigrationMessage<oracle::api::MigrateMsg>,
-        oracle::ContractError,
+        OracleError,
     >,
 >;
 
