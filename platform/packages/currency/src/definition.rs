@@ -1,8 +1,10 @@
+use std::hash::{Hash, Hasher};
+
 use serde::Serialize;
 
 use crate::SymbolStatic;
 
-#[derive(Copy, Clone, Debug, Eq, Ord, Hash, PartialOrd, Serialize)]
+#[derive(Copy, Clone, Debug, Eq, Ord, PartialOrd, Serialize)]
 pub struct Definition {
     /// Identifier of the currency
     pub ticker: SymbolStatic,
@@ -40,5 +42,11 @@ impl Definition {
 impl PartialEq for Definition {
     fn eq(&self, other: &Self) -> bool {
         self.ticker.eq(other.ticker)
+    }
+}
+
+impl Hash for Definition {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.ticker.hash(state);
     }
 }
