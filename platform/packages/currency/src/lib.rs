@@ -1,7 +1,7 @@
 use std::{any::TypeId, fmt::Debug};
 
 pub use crate::{
-    definition::Definition,
+    definition::{Definition, DefinitionRef},
     dto::{dto, to_string, CurrencyDTO},
     from_symbol::{CurrencyVisit, SingleVisitor},
     from_symbol_any::{

@@ -1,6 +1,8 @@
+use serde::Serialize;
+
 use crate::SymbolStatic;
 
-#[derive(Copy, Clone, Debug, Eq, Ord, PartialOrd)]
+#[derive(Copy, Clone, Debug, Eq, Ord, PartialOrd, Serialize)]
 pub struct Definition {
     /// Identifier of the currency
     pub ticker: SymbolStatic,

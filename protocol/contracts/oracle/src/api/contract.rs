@@ -1,6 +1,6 @@
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
-use currency::{CurrencyDTO, CurrencyDef, Definition, Group, MemberOf, SymbolOwned};
+use currency::{CurrencyDTO, CurrencyDef, DefinitionRef, Group, MemberOf};
 use finance::price::{base::BasePrice, dto::PriceDTO};
 use marketprice::config::Config as PriceConfig;
 use sdk::{
@@ -171,27 +171,19 @@ pub type SupportedCurrencyPairsResponse<PriceCurrencies> = Vec<SwapLeg<PriceCurr
 
 pub type CurrenciesResponse = Vec<Currency>;
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize)]
 #[cfg_attr(any(test, feature = "testing"), derive(Debug, PartialEq, Eq))]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub struct Currency {
-    pub ticker: SymbolOwned,
-    pub bank_symbol: SymbolOwned,
-    pub dex_symbol: SymbolOwned,
-    pub decimal_digits: u8,
+    #[serde(flatten)]
+    pub definition: DefinitionRef,
     pub group: CurrencyGroup,
 }
 
 impl Currency {
-    pub fn new(def: &Definition, group: CurrencyGroup) -> Self
+    pub fn new(definition: DefinitionRef, group: CurrencyGroup) -> Self
 where {
-        Self {
-            ticker: def.ticker.into(),
-            bank_symbol: def.bank_symbol.into(),
-            dex_symbol: def.dex_symbol.into(),
-            decimal_digits: def.decimal_digits,
-            group,
-        }
+        Self { definition, group }
     }
 }
 
@@ -274,15 +266,52 @@ where
 
 #[cfg(test)]
 mod test {
+    use crate::api::{Currency, CurrencyGroup};
+
     use super::QueryMsg;
-    use currencies::Lpns;
+    use currencies::{testing::LeaseC1, Lpns};
+    use currency::{CurrencyDef, SymbolOwned};
     use platform::tests as platform_tests;
+    use serde::Deserialize;
 
     #[test]
     fn release() {
         assert_eq!(
             Ok(QueryMsg::<Lpns>::ProtocolPackageRelease {}),
             platform_tests::ser_de(&versioning::query::ProtocolPackage::Release {}),
+        );
+
+        platform_tests::ser_de::<_, QueryMsg<Lpns>>(
+            &versioning::query::PlatformPackage::Release {},
+        )
+        .unwrap_err();
+    }
+
+    #[test]
+    fn currency() {
+        #[derive(Debug, Deserialize, PartialEq, Eq)]
+        struct ExpectedCurrency {
+            ticker: SymbolOwned,
+            bank_symbol: SymbolOwned,
+            dex_symbol: SymbolOwned,
+            decimal_digits: u8,
+            group: CurrencyGroup,
+        }
+        let definition_in = LeaseC1::dto().definition();
+        let currency_in = Currency {
+            definition: definition_in,
+            group: CurrencyGroup::PaymentOnly,
+        };
+
+        assert_eq!(
+            Ok(ExpectedCurrency {
+                ticker: definition_in.ticker.into(),
+                bank_symbol: definition_in.bank_symbol.into(),
+                dex_symbol: definition_in.dex_symbol.into(),
+                decimal_digits: definition_in.decimal_digits,
+                group: currency_in.group
+            }),
+            platform_tests::ser_de(&currency_in),
         );
 
         platform_tests::ser_de::<_, QueryMsg<Lpns>>(
