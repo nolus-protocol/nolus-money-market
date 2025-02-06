@@ -42,7 +42,7 @@ pub enum Error {
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, JsonSchema)]
-#[schemars(with = "(PoolId, SymbolOwned)")]
+#[schemars(with = "(PoolId, CurrencyDTO<G>)")]
 pub struct SwapTarget<G>
 where
     G: Group,

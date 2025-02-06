@@ -1,21 +1,21 @@
-use std::{num::TryFromIntError, result::Result as StdResult};
+use std::num::TryFromIntError;
 
 use thiserror::Error;
 
 #[cfg(feature = "contract")]
-use currency::{CurrencyDTO, CurrencyDef, Group};
-use currency::{SymbolOwned, SymbolStatic};
+use currency::{CurrencyDTO, CurrencyDef, Group, MemberOf};
+
 #[cfg(feature = "contract")]
 use finance::price::dto::PriceDTO;
 use marketprice::{alarms::errors::AlarmError, error::PriceFeedsError, feeders::PriceFeedersError};
 use sdk::cosmwasm_std::{Addr, StdError};
 use versioning::Error as VersioningError;
 
-//TODO migrate to the same type defined at oracle::result
-pub type Result<T> = StdResult<T, ContractError>;
-
 #[derive(Error, Debug, PartialEq)]
-pub enum ContractError {
+pub enum Error<PriceG>
+where
+    PriceG: Group,
+{
     #[error("[Oracle] Failed to validate address while trying to register feeder! Cause: {0}")]
     RegisterFeederAddressValidation(StdError),
 
@@ -70,11 +70,11 @@ pub enum ContractError {
     #[error("[Oracle] Invalid feeder address")]
     InvalidAddress {},
 
-    #[error("[Oracle] Invalid denom pair ({0}, {1})")]
-    InvalidDenomPair(SymbolOwned, SymbolOwned),
-
-    #[error("[Oracle][Base='{0}'] Invalid base currency '{1}'")]
-    InvalidBaseCurrency(SymbolStatic, SymbolOwned),
+    #[error("[Oracle][Base='{base}'] Invalid base currency '{invalid}'")]
+    InvalidBaseCurrency {
+        base: CurrencyDTO<PriceG>,
+        invalid: CurrencyDTO<PriceG>,
+    },
 
     #[error("[Oracle] Specified stable currency is not in the currency tree")]
     StableCurrencyNotInTree {},
@@ -93,8 +93,8 @@ pub enum ContractError {
 
     #[error("[Oracle][Base='{base}'] Unsupported currency '{unsupported}'")]
     UnsupportedCurrency {
-        base: SymbolStatic,
-        unsupported: SymbolOwned,
+        base: CurrencyDTO<PriceG>,
+        unsupported: CurrencyDTO<PriceG>,
     },
 
     #[error("[Oracle] integer conversion {0}")]
@@ -102,33 +102,35 @@ pub enum ContractError {
 }
 
 #[cfg(feature = "contract")]
-pub(crate) fn unsupported_currency<G, BaseC>(unsupported: &CurrencyDTO<G>) -> ContractError
+pub(crate) fn unsupported_currency<G, BaseC>(unsupported: CurrencyDTO<G>) -> Error<G>
 where
     G: Group,
     BaseC: CurrencyDef,
+    BaseC::Group: MemberOf<G>,
 {
-    ContractError::UnsupportedCurrency {
-        base: currency::to_string(BaseC::dto()),
-        unsupported: unsupported.to_string(),
+    Error::UnsupportedCurrency {
+        base: BaseC::dto().into_super_group(),
+        unsupported,
     }
 }
 
 #[cfg(feature = "contract")]
-pub(crate) fn invalid_base_currency<G, BaseC>(configured_base: &CurrencyDTO<G>) -> ContractError
+pub(crate) fn invalid_base_currency<G, BaseC>(configured_base: CurrencyDTO<G>) -> Error<G>
 where
     G: Group,
     BaseC: CurrencyDef,
+    BaseC::Group: MemberOf<G>,
 {
-    ContractError::InvalidBaseCurrency(
-        currency::to_string(BaseC::dto()),
-        configured_base.to_string(),
-    )
+    Error::InvalidBaseCurrency {
+        base: BaseC::dto().into_super_group(),
+        invalid: configured_base,
+    }
 }
 
 #[cfg(feature = "contract")]
-pub(crate) fn unsupported_denom_pairs<G>(price: &PriceDTO<G>) -> ContractError
+pub(crate) fn unsupported_denom_pairs<G>(price: &PriceDTO<G>) -> Error<G>
 where
     G: Group,
 {
-    ContractError::UnsupportedDenomPairs(price.to_string())
+    Error::UnsupportedDenomPairs(price.to_string())
 }

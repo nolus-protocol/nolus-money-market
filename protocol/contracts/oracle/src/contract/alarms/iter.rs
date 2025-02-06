@@ -5,39 +5,42 @@ use finance::price::{self, base::with_price::WithPrice, Price};
 use marketprice::alarms::{errors::AlarmError, AlarmsIterator, PriceAlarms};
 use sdk::cosmwasm_std::{Addr, Storage};
 
-use crate::{contract::alarms::PriceResult, error::ContractError, result::ContractResult};
+use crate::{contract::alarms::PriceResult, error::Error, result::Result};
 
-type AlarmIterMapFn = fn(Result<Addr, AlarmError>) -> ContractResult<Addr>;
-type AlarmIter<'alarms, G> = iter::Map<AlarmsIterator<'alarms, G>, AlarmIterMapFn>;
+type AlarmIterMapFn<ErrorG> = fn(std::result::Result<Addr, AlarmError>) -> Result<Addr, ErrorG>;
+type AlarmIter<'alarms, AlarmG, ErrorG> =
+    iter::Map<AlarmsIterator<'alarms, AlarmG>, AlarmIterMapFn<ErrorG>>;
 
-pub struct Iter<'storage, 'alarms, S, I, PriceG, BaseC, BaseG>
+pub struct Iter<'storage, 'alarms, S, I, AlarmsG, BaseC, BaseG, ErrorG>
 where
     S: Deref<Target = (dyn Storage + 'storage)>,
-    I: Iterator<Item = PriceResult<PriceG, BaseC, BaseG>>,
-    PriceG: Group,
+    I: Iterator<Item = PriceResult<AlarmsG, BaseC, BaseG, ErrorG>>,
+    AlarmsG: Group,
     BaseC: CurrencyDef,
-    BaseC::Group: MemberOf<BaseG> + MemberOf<PriceG::TopG>,
+    BaseC::Group: MemberOf<BaseG> + MemberOf<AlarmsG::TopG>,
     BaseG: Group,
+    ErrorG: Group,
 {
-    alarms: &'alarms PriceAlarms<'storage, PriceG, S>,
+    alarms: &'alarms PriceAlarms<'storage, AlarmsG, S>,
     price_iter: I,
-    alarm_iter: Option<AlarmIter<'alarms, PriceG>>,
+    alarm_iter: Option<AlarmIter<'alarms, AlarmsG, ErrorG>>,
 }
 
-impl<'storage, 'alarms, S, I, PriceG, BaseC, BaseG>
-    Iter<'storage, 'alarms, S, I, PriceG, BaseC, BaseG>
+impl<'storage, 'alarms, S, I, AlarmsG, BaseC, BaseG, ErrorG>
+    Iter<'storage, 'alarms, S, I, AlarmsG, BaseC, BaseG, ErrorG>
 where
     S: Deref<Target = (dyn Storage + 'storage)>,
-    I: Iterator<Item = PriceResult<PriceG, BaseC, BaseG>>,
-    PriceG: Group,
+    I: Iterator<Item = PriceResult<AlarmsG, BaseC, BaseG, ErrorG>>,
+    AlarmsG: Group,
     BaseC: CurrencyDef,
-    BaseC::Group: MemberOf<BaseG> + MemberOf<PriceG::TopG>,
+    BaseC::Group: MemberOf<BaseG> + MemberOf<AlarmsG::TopG>,
     BaseG: Group,
+    ErrorG: Group,
 {
     pub fn new(
-        alarms: &'alarms PriceAlarms<'storage, PriceG, S>,
+        alarms: &'alarms PriceAlarms<'storage, AlarmsG, S>,
         price_iter: I,
-    ) -> ContractResult<Self> {
+    ) -> Result<Self, ErrorG> {
         let mut iter = Self {
             alarms,
             price_iter,
@@ -47,23 +50,24 @@ where
         Ok(iter)
     }
 
-    fn move_to_next_alarms(&mut self) -> ContractResult<()> {
+    fn move_to_next_alarms(&mut self) -> Result<(), ErrorG> {
         debug_assert!(self.next_alarm().is_none());
 
         self.alarm_iter = self.next_alarms()?;
         Ok(())
     }
 
-    fn next_alarms(&mut self) -> ContractResult<Option<AlarmIter<'alarms, PriceG>>> {
+    fn next_alarms(&mut self) -> Result<Option<AlarmIter<'alarms, AlarmsG, ErrorG>>, ErrorG> {
         self.price_iter
             .next()
-            .map(|price_result: PriceResult<PriceG, BaseC, BaseG>| {
+            .map(|price_result| {
                 price_result.and_then(|ref price| {
                     price::base::with_price::execute(
                         price,
                         Cmd {
                             alarms: self.alarms,
                             _base_c: PhantomData::<BaseC>,
+                            _error_g: PhantomData::<ErrorG>,
                         },
                     )
                 })
@@ -71,7 +75,7 @@ where
             .transpose()
     }
 
-    fn next_alarm(&mut self) -> Option<ContractResult<Addr>> {
+    fn next_alarm(&mut self) -> Option<Result<Addr, ErrorG>> {
         match self.alarm_iter.as_mut() {
             None => unimplemented!("calling 'next_alarm' on Some price alarms"),
             Some(iter) => iter.next(),
@@ -79,17 +83,18 @@ where
     }
 }
 
-impl<'storage, S, I, PriceG, BaseC, BaseG> Iterator
-    for Iter<'storage, '_, S, I, PriceG, BaseC, BaseG>
+impl<'storage, S, I, AlarmsG, BaseC, BaseG, ErrorG> Iterator
+    for Iter<'storage, '_, S, I, AlarmsG, BaseC, BaseG, ErrorG>
 where
     S: Deref<Target = (dyn Storage + 'storage)>,
-    I: Iterator<Item = PriceResult<PriceG, BaseC, BaseG>>,
-    PriceG: Group,
+    I: Iterator<Item = PriceResult<AlarmsG, BaseC, BaseG, ErrorG>>,
+    AlarmsG: Group,
     BaseC: CurrencyDef,
-    BaseC::Group: MemberOf<BaseG> + MemberOf<PriceG::TopG>,
+    BaseC::Group: MemberOf<BaseG> + MemberOf<AlarmsG::TopG>,
     BaseG: Group,
+    ErrorG: Group,
 {
-    type Item = ContractResult<Addr>;
+    type Item = Result<Addr, ErrorG>;
 
     #[expect(tail_expr_drop_order)] // TODO remove once stop linting with the 'rust-2024-compatibility' group
     fn next(&mut self) -> Option<Self::Item> {
@@ -113,29 +118,31 @@ where
     }
 }
 
-struct Cmd<'storage, 'alarms, S, PriceG, BaseC>
+struct Cmd<'storage, 'alarms, S, AlarmsG, BaseC, ErrorG>
 where
     S: Deref<Target = (dyn Storage + 'storage)>,
-    PriceG: Group + Clone,
+    AlarmsG: Group + Clone,
     BaseC: Currency,
 {
-    alarms: &'alarms PriceAlarms<'storage, PriceG, S>,
+    alarms: &'alarms PriceAlarms<'storage, AlarmsG, S>,
     _base_c: PhantomData<BaseC>,
+    _error_g: PhantomData<ErrorG>,
 }
 
-impl<'storage, 'alarms, S, PriceG, BaseC> WithPrice<BaseC>
-    for Cmd<'storage, 'alarms, S, PriceG, BaseC>
+impl<'storage, 'alarms, S, AlarmsG, BaseC, ErrorG> WithPrice<BaseC>
+    for Cmd<'storage, 'alarms, S, AlarmsG, BaseC, ErrorG>
 where
     S: Deref<Target = (dyn Storage + 'storage)>,
-    PriceG: Group,
+    AlarmsG: Group,
     BaseC: CurrencyDef,
+    ErrorG: Group,
 {
-    type PriceG = PriceG;
+    type PriceG = AlarmsG;
 
-    type Output = AlarmIter<'alarms, PriceG>;
-    type Error = ContractError;
+    type Output = AlarmIter<'alarms, AlarmsG, ErrorG>;
+    type Error = Error<ErrorG>;
 
-    fn exec<C>(self, price: Price<C, BaseC>) -> Result<Self::Output, Self::Error>
+    fn exec<C>(self, price: Price<C, BaseC>) -> std::result::Result<Self::Output, Self::Error>
     where
         C: CurrencyDef,
         C::Group: MemberOf<Self::PriceG>,
@@ -143,8 +150,6 @@ where
         Ok(self
             .alarms
             .alarms(price)
-            .map::<ContractResult<Addr>, AlarmIterMapFn>(|result: Result<Addr, AlarmError>| {
-                result.map_err(Into::into)
-            }))
+            .map(|may_alarm| may_alarm.map_err(Into::into)))
     }
 }

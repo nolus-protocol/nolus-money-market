@@ -3,7 +3,7 @@ use finance::price::Price;
 use marketprice::{error::PriceFeedsError, market_price::PriceFeeds, ObservationsReadRepo};
 use sdk::cosmwasm_std::Timestamp;
 
-use crate::ContractError;
+use crate::result::Result;
 
 pub struct FedPrices<'a, 'config, G, Observations>
 where
@@ -38,7 +38,7 @@ pub trait PriceQuerier {
         &self,
         amount_c: &CurrencyDTO<Self::CurrencyGroup>,
         quote_c: &CurrencyDTO<Self::CurrencyGroup>,
-    ) -> Result<Option<Price<C, QuoteC>>, ContractError>
+    ) -> Result<Option<Price<C, QuoteC>>, Self::CurrencyGroup>
     where
         C: Currency + MemberOf<Self::CurrencyGroup>,
         QuoteC: Currency + MemberOf<Self::CurrencyGroup>;
@@ -55,7 +55,7 @@ where
         &self,
         amount_c: &CurrencyDTO<Self::CurrencyGroup>,
         quote_c: &CurrencyDTO<Self::CurrencyGroup>,
-    ) -> Result<Option<Price<C, QuoteC>>, ContractError>
+    ) -> Result<Option<Price<C, QuoteC>>, Self::CurrencyGroup>
     where
         C: Currency + MemberOf<Self::CurrencyGroup>,
         QuoteC: Currency + MemberOf<Self::CurrencyGroup>,
@@ -63,16 +63,17 @@ where
         let price = self
             .feeds
             .price_of_feed(amount_c, quote_c, self.at, self.total_feeders);
-        maybe_price(price)
+        maybe_price::<_, _, Self::CurrencyGroup>(price)
     }
 }
 
-fn maybe_price<B, Q>(
-    price: Result<Price<B, Q>, PriceFeedsError>,
-) -> Result<Option<Price<B, Q>>, ContractError>
+fn maybe_price<B, Q, CurrencyGroup>(
+    price: std::result::Result<Price<B, Q>, PriceFeedsError>,
+) -> Result<Option<Price<B, Q>>, CurrencyGroup>
 where
     B: Currency,
     Q: Currency,
+    CurrencyGroup: Group,
 {
     price
         .map(Some)
@@ -85,7 +86,10 @@ where
 
 #[cfg(test)]
 mod test {
-    use currencies::testing::{PaymentC3, PaymentC7};
+    use currencies::{
+        testing::{PaymentC3, PaymentC7},
+        LeaseGroup,
+    };
     use finance::{coin::Coin, price::total_of};
 
     use super::*;
@@ -93,15 +97,15 @@ mod test {
     #[test]
     fn test_maybe_price() {
         let price = total_of(Coin::<PaymentC3>::new(1)).is(Coin::<PaymentC7>::new(2));
-        assert_eq!(maybe_price(Ok(price)), Ok(Some(price)));
+        assert_eq!(maybe_price::<_, _, LeaseGroup>(Ok(price)), Ok(Some(price)));
         assert_eq!(
-            maybe_price::<PaymentC3, PaymentC7>(Err(PriceFeedsError::NoPrice())),
+            maybe_price::<PaymentC3, PaymentC7, LeaseGroup>(Err(PriceFeedsError::NoPrice())),
             Ok(None)
         );
         // other errors
         let err_msg: String = "test_err".into();
         assert_eq!(
-            maybe_price::<PaymentC3, PaymentC7>(Err(PriceFeedsError::Configuration(
+            maybe_price::<PaymentC3, PaymentC7, LeaseGroup>(Err(PriceFeedsError::Configuration(
                 err_msg.clone()
             ))),
             Err(PriceFeedsError::Configuration(err_msg).into())

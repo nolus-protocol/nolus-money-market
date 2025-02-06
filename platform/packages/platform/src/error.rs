@@ -10,6 +10,7 @@ use sdk::{
 
 use crate::contract::CodeId;
 
+// TODO replace SymbolStatic and SymbolOwned with CurrencyDTO<G> where approptiate, i.e. the string represent a currency
 #[derive(Error, Debug, PartialEq)]
 pub enum Error {
     #[error("[Platform] Expecting funds of {0} but found none")]

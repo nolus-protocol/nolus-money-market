@@ -1,3 +1,3 @@
-use crate::error::ContractError;
+use crate::error::Error;
 
-pub type ContractResult<T> = Result<T, ContractError>;
+pub type Result<T, ErrorG> = std::result::Result<T, Error<ErrorG>>;

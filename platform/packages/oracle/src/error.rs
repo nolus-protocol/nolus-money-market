@@ -18,6 +18,7 @@ pub enum Error {
     #[error("[Oracle] {0}")]
     Finance(#[from] finance::error::Error),
 
+    // TODO replace SymbolStatic and SymbolOwned with CurrencyDTO<G> where approptiate, i.e. the string represent a currency
     #[error("[Oracle] Failed to fetch price for the pair {from}/{to}! Possibly no price is available! Cause: {error}")]
     FailedToFetchPrice {
         from: SymbolStatic,

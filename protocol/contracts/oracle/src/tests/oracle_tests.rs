@@ -18,8 +18,8 @@ use sdk::{
 use crate::{
     api::{Alarm, AlarmsCount, DispatchAlarmsResponse, ExecuteMsg, QueryMsg},
     contract, error,
+    error::Error,
     tests::{dummy_default_instantiate_msg, setup_test},
-    ContractError,
 };
 
 use super::dummy_feed_prices_msg;
@@ -36,7 +36,7 @@ fn feed_prices_unknown_feeder() {
     };
 
     let err = contract::execute(deps.as_mut(), cw_testing::mock_env(), info, msg).unwrap_err();
-    assert_eq!(ContractError::UnknownFeeder {}, err)
+    assert_eq!(Error::UnknownFeeder {}, err)
 }
 
 #[test]
@@ -107,7 +107,7 @@ fn query_prices_unsupported_denom() {
 
     let detached = currency::dto::<PaymentC8, PriceCurrencies>().into_super_group();
     assert_eq!(
-        error::unsupported_currency::<_, Lpn>(&detached),
+        error::unsupported_currency::<_, Lpn>(detached),
         contract::query(
             deps.as_ref(),
             cw_testing::mock_env(),

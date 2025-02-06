@@ -1,6 +1,3 @@
-#[cfg(feature = "contract")]
-pub use crate::error::ContractError;
-
 pub mod api;
 #[cfg(feature = "contract")]
 pub mod contract;

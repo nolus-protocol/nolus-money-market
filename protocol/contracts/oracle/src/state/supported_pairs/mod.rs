@@ -9,8 +9,8 @@ use tree::{FindBy as _, NodeRef};
 
 use crate::{
     api::{self, swap::SwapTarget, SwapLeg},
-    error::{self, ContractError},
-    result::ContractResult,
+    error::{self, Error},
+    result::Result,
 };
 
 mod currencies;
@@ -36,7 +36,7 @@ where
 {
     const DB_ITEM: Item<SupportedPairs<PriceG, BaseC>> = Item::new("supported_pairs");
 
-    pub fn new<StableC>(tree: Tree<PriceG>) -> Result<Self, ContractError>
+    pub fn new<StableC>(tree: Tree<PriceG>) -> Result<Self, PriceG>
     where
         StableC: CurrencyDef,
         StableC::Group: MemberOf<PriceG>,
@@ -47,16 +47,16 @@ where
         })
     }
 
-    pub fn load(storage: &dyn Storage) -> ContractResult<Self> {
+    pub fn load(storage: &dyn Storage) -> Result<Self, PriceG> {
         Self::DB_ITEM
             .load(storage)
-            .map_err(ContractError::LoadSupportedPairs)
+            .map_err(Error::LoadSupportedPairs)
     }
 
-    pub fn save(&self, storage: &mut dyn Storage) -> ContractResult<()> {
+    pub fn save(&self, storage: &mut dyn Storage) -> Result<(), PriceG> {
         Self::DB_ITEM
             .save(storage, self)
-            .map_err(ContractError::StoreSupportedPairs)
+            .map_err(Error::StoreSupportedPairs)
     }
 
     pub fn load_path<'r>(
@@ -64,7 +64,7 @@ where
         currency: &CurrencyDTO<PriceG>,
     ) -> Result<
         impl DoubleEndedIterator<Item = &'r CurrencyDTO<PriceG>> + 'r + use<'r, PriceG, BaseC>,
-        ContractError,
+        PriceG,
     > {
         self.internal_load_path(currency)
             .map(|iter| iter.map(|node| &node.value().target))
@@ -74,7 +74,7 @@ where
         &self,
         from: &CurrencyDTO<PriceG>,
         to: &CurrencyDTO<PriceG>,
-    ) -> Result<Vec<SwapTarget<PriceG>>, ContractError> {
+    ) -> Result<Vec<SwapTarget<PriceG>>, PriceG> {
         let path_from = self.internal_load_path(from)?;
 
         let mut path_to: Vec<_> = self.internal_load_path(to)?.collect();
@@ -142,22 +142,23 @@ where
         query: &CurrencyDTO<PriceG>,
     ) -> Result<
         impl DoubleEndedIterator<Item = NodeRef<'r, SwapTarget<PriceG>>> + 'r + use<'r, PriceG, BaseC>,
-        ContractError,
+        PriceG,
     > {
         self.tree
             .find_by(|target| &target.target == query)
             .map(|node| std::iter::once(node).chain(node.parents_iter()))
-            .ok_or_else(|| error::unsupported_currency::<PriceG, BaseC>(query))
+            .ok_or_else(|| error::unsupported_currency::<PriceG, BaseC>(*query))
+        // intentionally copy-ed a CurrencyDTO and not following the best practices since this case should be extremely rare
     }
 
-    fn check_tree<StableC>(tree: &Tree<PriceG>) -> Result<(), ContractError>
+    fn check_tree<StableC>(tree: &Tree<PriceG>) -> Result<(), PriceG>
     where
         StableC: CurrencyDef,
         StableC::Group: MemberOf<PriceG>,
     {
         let root_currency = tree.root().value().target;
         if root_currency != currency::dto::<BaseC, _>() {
-            Err(error::invalid_base_currency::<_, BaseC>(&root_currency))
+            Err(error::invalid_base_currency::<_, BaseC>(root_currency))
         } else {
             let mut supported_currencies: Vec<&CurrencyDTO<PriceG>> =
                 tree.iter().map(|ref node| &node.value().target).collect();
@@ -168,12 +169,12 @@ where
                 .binary_search(&&currency::dto::<StableC, _>())
                 .is_err()
             {
-                Err(ContractError::StableCurrencyNotInTree {})
+                Err(Error::StableCurrencyNotInTree {})
             } else if supported_currencies
                 .windows(2)
                 .any(|window| window[0] == window[1])
             {
-                Err(ContractError::DuplicatedNodes {})
+                Err(Error::DuplicatedNodes {})
             } else {
                 Ok(())
             }
@@ -209,7 +210,7 @@ mod tests {
 
     use crate::{
         api::{self, swap::SwapTarget, SwapLeg},
-        ContractError,
+        error::{self, Error},
     };
 
     type SupportedPairs = super::SupportedPairs<PriceCurrencies, TheCurrency>;
@@ -282,9 +283,8 @@ mod tests {
 
         assert_eq!(
             SupportedPairs::new::<Lpn>(tree.into_tree()),
-            Err(ContractError::InvalidBaseCurrency(
-                Lpn::ticker(),
-                LeaseC1::ticker().into(),
+            Err(error::invalid_base_currency::<PriceCurrencies, Lpn>(
+                LeaseC1::dto().into_super_group()
             ))
         );
     }
@@ -316,7 +316,7 @@ mod tests {
 
         assert_eq!(
             SupportedPairs::new::<TheCurrency>(tree.into_tree()),
-            Err(ContractError::DuplicatedNodes {})
+            Err(Error::DuplicatedNodes {})
         );
     }
 
@@ -338,7 +338,7 @@ mod tests {
 
         assert_eq!(
             SupportedPairs::new::<PaymentC4>(tree.into_tree()),
-            Err(ContractError::StableCurrencyNotInTree {})
+            Err(Error::StableCurrencyNotInTree {})
         );
     }
 

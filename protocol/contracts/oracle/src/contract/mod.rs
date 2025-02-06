@@ -25,8 +25,8 @@ use crate::{
         SwapTreeResponse,
     },
     contract::{alarms::MarketAlarms, oracle::Oracle as GenericOracle},
-    error::ContractError,
-    result::ContractResult,
+    error::Error,
+    result::Result,
     state::supported_pairs::SupportedPairs,
 };
 
@@ -51,7 +51,7 @@ pub fn instantiate(
     env: Env,
     _info: MessageInfo,
     msg: InstantiateMsg<PriceCurrencies>,
-) -> ContractResult<CwResponse> {
+) -> Result<CwResponse, PriceCurrencies> {
     msg.config
         .store(deps.storage)
         .and_then(|()| {
@@ -72,27 +72,31 @@ pub fn migrate(
         to_release,
         message: MigrateMsg {},
     }: ProtocolMigrationMessage<MigrateMsg>,
-) -> ContractResult<CwResponse> {
+) -> Result<CwResponse, PriceCurrencies> {
     ProtocolPackageRelease::pull_prev(package_name!(), deps.storage)
         .and_then(|previous| previous.update_software(&CURRENT_RELEASE, &to_release))
-        .map_err(ContractError::UpdateSoftware)
+        .map_err(Error::UpdateSoftware)
         .and_then(|out| validate_swap_tree(deps.storage, env.block.time).map(|()| out))
         .and_then(response::response)
         .inspect_err(platform_error::log(deps.api))
 }
 
 #[entry_point]
-pub fn query(deps: Deps<'_>, env: Env, msg: QueryMsg<PriceCurrencies>) -> ContractResult<Binary> {
+pub fn query(
+    deps: Deps<'_>,
+    env: Env,
+    msg: QueryMsg<PriceCurrencies>,
+) -> Result<Binary, PriceCurrencies> {
     match msg {
         QueryMsg::ContractVersion {} => to_json_binary(CURRENT_VERSION),
         QueryMsg::ProtocolPackageRelease {} => to_json_binary(&CURRENT_RELEASE),
         QueryMsg::Config {} => to_json_binary(&query_config(deps.storage)?),
-        QueryMsg::Feeders {} => Feeders::get(deps.storage)
-            .map_err(ContractError::LoadFeeders)
-            .and_then(|ref feeders| to_json_binary(feeders)),
-        QueryMsg::IsFeeder { address } => Feeders::is_feeder(deps.storage, &address)
-            .map_err(ContractError::LoadFeeders)
-            .and_then(|ref f| to_json_binary(&f)),
+        QueryMsg::Feeders {} => {
+            Feeders::get(deps.storage).and_then(|ref feeders| to_json_binary(feeders))
+        }
+        QueryMsg::IsFeeder { address } => {
+            Feeders::is_feeder(deps.storage, &address).and_then(|ref f| to_json_binary(&f))
+        }
         QueryMsg::BaseCurrency {} => {
             to_json_binary(&currency::dto::<BaseCurrency, BaseCurrencies>())
         }
@@ -142,7 +146,7 @@ pub fn execute(
     env: Env,
     info: MessageInfo,
     msg: ExecuteMsg<BaseCurrency, BaseCurrencies, AlarmCurrencies, PriceCurrencies>,
-) -> ContractResult<CwResponse> {
+) -> Result<CwResponse, PriceCurrencies> {
     exec::do_executute(deps, env, msg, info.sender)
 }
 
@@ -151,7 +155,7 @@ pub fn sudo(
     deps: DepsMut<'_>,
     env: Env,
     msg: SudoMsg<PriceCurrencies>,
-) -> ContractResult<CwResponse> {
+) -> Result<CwResponse, PriceCurrencies> {
     match msg {
         SudoMsg::UpdateConfig(price_config) => Config::update(deps.storage, price_config),
         SudoMsg::RegisterFeeder { feeder_address } => Feeders::try_register(deps, feeder_address),
@@ -168,7 +172,7 @@ pub fn sudo(
 
 // TODO: compare gas usage of this solution vs reply on error
 #[entry_point]
-pub fn reply(deps: DepsMut<'_>, _env: Env, msg: Reply) -> ContractResult<CwResponse> {
+pub fn reply(deps: DepsMut<'_>, _env: Env, msg: Reply) -> Result<CwResponse, PriceCurrencies> {
     const EVENT_TYPE: &str = "market-alarm";
     const KEY_DELIVERED: &str = "delivered";
     const KEY_DETAILS: &str = "details";
@@ -191,23 +195,23 @@ pub fn reply(deps: DepsMut<'_>, _env: Env, msg: Reply) -> ContractResult<CwRespo
     .map(response::response_only_messages)
 }
 
-fn validate_swap_tree(store: &dyn Storage, now: Timestamp) -> ContractResult<()> {
+fn validate_swap_tree(store: &dyn Storage, now: Timestamp) -> Result<(), PriceCurrencies> {
     // we use calculation of all prices since it does not add a significant overhead over the swap tree validation
     // otherwise we would have to implement a separate and mostly mirroring algorithm
     Oracle::load(store)
         .and_then(|oracle| {
             oracle
                 .try_query_prices(now)
-                .map_err(|e| ContractError::BrokenSwapTree(e.to_string()))
+                .map_err(|e| Error::BrokenSwapTree(e.to_string()))
         })
         .map(std::mem::drop)
 }
 
-fn to_json_binary<T>(data: &T) -> ContractResult<Binary>
+fn to_json_binary<T>(data: &T) -> Result<Binary, PriceCurrencies>
 where
     T: Serialize + ?Sized,
 {
-    cosmwasm_std::to_json_binary(data).map_err(ContractError::ConvertToBinary)
+    cosmwasm_std::to_json_binary(data).map_err(Error::ConvertToBinary)
 }
 
 #[cfg(test)]

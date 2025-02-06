@@ -1,12 +1,13 @@
 use std::mem;
 
+use currency::Group;
 use marketprice::config::Config as PriceConfig;
 use sdk::{
     cosmwasm_std::{StdResult, Storage},
     cw_storage_plus::Item,
 };
 
-use crate::{api::Config, error::Result as ContractResult, ContractError};
+use crate::{api::Config, error::Error, result::Result};
 
 impl Config {
     const STORAGE: Item<Self> = Item::new("config");
@@ -15,25 +16,37 @@ impl Config {
         Self { price_config }
     }
 
-    pub fn store(self, storage: &mut dyn Storage) -> ContractResult<()> {
+    pub fn store<PriceG>(self, storage: &mut dyn Storage) -> Result<(), PriceG>
+    where
+        PriceG: Group,
+    {
         Self::STORAGE
             .save(storage, &self)
-            .map_err(ContractError::StoreConfig)
+            .map_err(Error::<PriceG>::StoreConfig)
     }
 
-    pub fn load(storage: &dyn Storage) -> ContractResult<Self> {
+    pub fn load<PriceG>(storage: &dyn Storage) -> Result<Self, PriceG>
+    where
+        PriceG: Group,
+    {
         Self::STORAGE
             .load(storage)
-            .map_err(ContractError::LoadConfig)
+            .map_err(Error::<PriceG>::LoadConfig)
     }
 
-    pub fn update(storage: &mut dyn Storage, price_config: PriceConfig) -> ContractResult<()> {
+    pub fn update<PriceG>(
+        storage: &mut dyn Storage,
+        price_config: PriceConfig,
+    ) -> Result<(), PriceG>
+    where
+        PriceG: Group,
+    {
         Self::STORAGE
             .update(storage, |mut c| -> StdResult<_> {
                 c.price_config = price_config;
                 Ok(c)
             })
             .map(mem::drop)
-            .map_err(ContractError::UpdateConfig)
+            .map_err(Error::<PriceG>::UpdateConfig)
     }
 }

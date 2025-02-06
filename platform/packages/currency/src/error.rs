@@ -2,6 +2,7 @@ use thiserror::Error;
 
 use crate::{CurrencyDTO, Definition, Group, MemberOf, Symbol, SymbolOwned, SymbolStatic, Tickers};
 
+// TODO replace SymbolStatic and SymbolOwned with CurrencyDTO<G> where approptiate, i.e. the string represent a currency
 #[derive(Error, Debug, PartialEq)]
 pub enum Error {
     #[error("[Currency] Found a symbol '{0}' pretending to be the {1} of the currency with ticker '{2}'")]

@@ -1,8 +1,12 @@
+use currency::Group;
 use sdk::cosmwasm_std::Storage;
 
-use crate::{api::Config, ContractError};
+use crate::{api::Config, result::Result};
 
-pub(super) fn query_config(storage: &dyn Storage) -> Result<Config, ContractError> {
+pub(super) fn query_config<PriceG>(storage: &dyn Storage) -> Result<Config, PriceG>
+where
+    PriceG: Group,
+{
     Config::load(storage)
 }
 
@@ -18,7 +22,8 @@ mod tests {
     use crate::{
         api::{swap::SwapTarget, Config, QueryMsg, SudoMsg, SwapLeg},
         contract::{query, sudo},
-        test_tree, tests, ContractError,
+        error::Error,
+        test_tree, tests,
     };
 
     #[test]
@@ -113,6 +118,6 @@ mod tests {
         )
         .unwrap_err();
 
-        assert!(matches!(err, ContractError::BrokenSwapTree(_)));
+        assert!(matches!(err, Error::BrokenSwapTree(_)));
     }
 }

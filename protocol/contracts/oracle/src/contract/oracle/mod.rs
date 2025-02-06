@@ -22,8 +22,8 @@ use sdk::cosmwasm_std::{Addr, Storage, Timestamp};
 use crate::{
     api::{AlarmsStatusResponse, Config, ExecuteAlarmMsg},
     contract::{alarms::MarketAlarms, oracle::feed::Feeds},
-    error::ContractError,
-    result::ContractResult,
+    error::Error,
+    result::Result,
     state::supported_pairs::SupportedPairs,
 };
 
@@ -34,9 +34,13 @@ pub mod feeder;
 
 const ROOT_NAMESPACE: &str = "o11s";
 
-pub(crate) type PriceResult<PriceG, OracleBase, OracleBaseG> =
-    ContractResult<BasePrice<PriceG, OracleBase, OracleBaseG>>;
+pub(crate) type PriceResult<PriceG, OracleBase, OracleBaseG, ErrorG> =
+    Result<BasePrice<PriceG, OracleBase, OracleBaseG>, ErrorG>;
 
+// TODO intro AlarmG as a sub-group of PriceG to stricter express
+// the contraint of having alarms only for currencies of AlarmsG.
+// Now alarms for non-alarm currencies are looked for in the DB!
+// Filter out all currencies that are not alarm ones beforehand!
 pub(crate) struct Oracle<'storage, S, PriceG, BaseC, BaseG>
 where
     S: Deref<Target = dyn Storage + 'storage>,
@@ -57,31 +61,29 @@ where
     S: Deref<Target = dyn Storage + 'storage>,
     PriceG: Group<TopG = PriceG>,
     BaseC: CurrencyDef,
-    BaseC::Group: MemberOf<BaseG> + MemberOf<PriceG>,
+    BaseC::Group: MemberOf<BaseG> + MemberOf<PriceG::TopG>,
     BaseG: Group + MemberOf<PriceG>,
 {
-    pub fn load(storage: S) -> ContractResult<Self> {
-        Feeders::total_registered(storage.deref())
-            .map_err(ContractError::LoadFeeders)
-            .and_then(|feeders| {
-                Config::load(storage.deref()).map(|config| Self {
-                    storage,
-                    feeders,
-                    config,
-                    _price_g: PhantomData,
-                    _base_c: PhantomData,
-                    _base_g: PhantomData,
-                })
+    pub fn load(storage: S) -> Result<Self, PriceG> {
+        Feeders::total_registered(storage.deref()).and_then(|feeders| {
+            Config::load(storage.deref()).map(|config| Self {
+                storage,
+                feeders,
+                config,
+                _price_g: PhantomData,
+                _base_c: PhantomData,
+                _base_g: PhantomData,
             })
+        })
     }
 
     pub(super) fn try_query_alarms(
         &self,
         block_time: Timestamp,
-    ) -> ContractResult<AlarmsStatusResponse> {
+    ) -> Result<AlarmsStatusResponse, PriceG> {
         self.tree().and_then(|tree| {
             MarketAlarms::new(self.storage.deref())
-                .try_query_alarms::<_, BaseC, BaseG>(self.calc_all_prices(
+                .try_query_alarms::<_, BaseC, BaseG, PriceG>(self.calc_all_prices(
                     &tree,
                     &self.feeds_read_only(),
                     block_time,
@@ -93,7 +95,7 @@ where
     pub(super) fn try_query_prices(
         &self,
         block_time: Timestamp,
-    ) -> ContractResult<Vec<BasePrice<PriceG, BaseC, BaseG>>> {
+    ) -> Result<Vec<BasePrice<PriceG, BaseC, BaseG>>, PriceG> {
         self.tree().and_then(|tree| {
             self.calc_all_prices(&tree, &self.feeds_read_only(), block_time)
                 .collect()
@@ -104,7 +106,7 @@ where
         &self,
         at: Timestamp,
         currency: &CurrencyDTO<PriceG>,
-    ) -> ContractResult<BasePrice<PriceG, BaseC, BaseG>> {
+    ) -> Result<BasePrice<PriceG, BaseC, BaseG>, PriceG> {
         self.tree().and_then(|tree| {
             self.feeds_read_only()
                 .calc_base_price(&tree, currency, at, self.feeders)
@@ -115,7 +117,7 @@ where
         &self,
         at: Timestamp,
         currency: &CurrencyDTO<PriceG>,
-    ) -> ContractResult<BasePrice<PriceG, StableCurrency, PriceG>>
+    ) -> Result<BasePrice<PriceG, StableCurrency, PriceG>, PriceG>
     where
         StableCurrency: CurrencyDef,
         StableCurrency::Group: MemberOf<PriceG>,
@@ -138,12 +140,12 @@ where
 
             type Output = BasePrice<G, StableCurrency, StableG>;
 
-            type Error = ContractError;
+            type Error = Error<Self::PriceG>;
 
             fn exec<BaseC>(
                 self,
                 base_price: Price<BaseC, BaseCurrency>,
-            ) -> Result<Self::Output, Self::Error>
+            ) -> std::result::Result<Self::Output, Self::Error>
             where
                 BaseC: CurrencyDef,
                 BaseC::Group: MemberOf<Self::PriceG>,
@@ -153,7 +155,7 @@ where
         }
         self.try_query_base_price(at, &currency::dto::<StableCurrency, _>())
             .and_then(|stable_price| {
-                Price::try_from(&stable_price).map_err(Into::<ContractError>::into)
+                Price::try_from(&stable_price).map_err(Into::<Error<PriceG>>::into)
             })
             .and_then(|stable_price: Price<StableCurrency, BaseC>| {
                 self.try_query_base_price(at, currency)
@@ -175,7 +177,7 @@ where
         tree: &'tree SupportedPairs<PriceG, BaseC>,
         feeds: &'feeds Feeds<'_, PriceG, BaseC, BaseG, Repo<'st, &(dyn Storage + 'st), PriceG>>,
         at: Timestamp,
-    ) -> impl Iterator<Item = PriceResult<PriceG, BaseC, BaseG>> + 'feeds
+    ) -> impl Iterator<Item = PriceResult<PriceG, BaseC, BaseG, PriceG>> + 'feeds
     where
         'storage: 'self_,
         'self_: 'feeds,
@@ -185,7 +187,7 @@ where
         feeds.all_prices_iter(tree.swap_pairs_df(), at, self.feeders)
     }
 
-    fn tree(&self) -> ContractResult<SupportedPairs<PriceG, BaseC>> {
+    fn tree(&self) -> Result<SupportedPairs<PriceG, BaseC>, PriceG> {
         SupportedPairs::load(self.storage.deref())
     }
 
@@ -222,7 +224,7 @@ where
         block_time: Timestamp,
         sender: Addr,
         prices: Vec<PriceDTO<PriceG>>,
-    ) -> ContractResult<()> {
+    ) -> Result<(), PriceG> {
         self.tree().and_then(|tree| {
             self.feeds_read_write()
                 .feed_prices(&tree, block_time, sender, &prices)
@@ -233,17 +235,17 @@ where
         &mut self,
         block_time: Timestamp,
         max_count: u32,
-    ) -> ContractResult<(u32, MessageResponse)> {
+    ) -> Result<(u32, MessageResponse), PriceG> {
         let subscribers: Vec<Addr> = self.tree().and_then(|tree| {
             MarketAlarms::new(self.storage.deref())
                 .ensure_no_in_delivery()?
-                .notify_alarms_iter::<_, BaseC, BaseG>(self.calc_all_prices(
+                .notify_alarms_iter::<_, BaseC, BaseG, PriceG>(self.calc_all_prices(
                     &tree,
                     &self.feeds_read_only(),
                     block_time,
                 ))?
                 .take(max_count.try_into()?)
-                .collect::<ContractResult<Vec<Addr>>>()
+                .collect::<Result<Vec<Addr>, PriceG>>()
         })?;
 
         #[cfg(debug_assertions)]
@@ -348,7 +350,7 @@ mod test_normalized_price_not_found {
 
     // #[track_caller]
     fn init(storage: &mut dyn Storage, price_config: &PriceConfig) {
-        Feeders::try_register(
+        Feeders::try_register::<PriceCurrencies>(
             DepsMut {
                 storage,
                 api: &MockApi::default(),
@@ -358,7 +360,9 @@ mod test_normalized_price_not_found {
         )
         .unwrap();
 
-        Config::new(price_config.clone()).store(storage).unwrap();
+        Config::new(price_config.clone())
+            .store::<PriceCurrencies>(storage)
+            .unwrap();
 
         TestSupportedPairs::new::<StableCurrency>(test_tree::dummy_swap_tree().into_tree())
             .unwrap()
@@ -371,7 +375,7 @@ mod test_normalized_price_not_found {
         let mut alarms: MarketAlarms<'_, &mut dyn Storage, _> = MarketAlarms::new(storage);
 
         alarms
-            .try_add_price_alarm::<BaseCurrency, BaseCurrencies>(
+            .try_add_price_alarm::<BaseCurrency, BaseCurrencies, PriceCurrencies>(
                 Addr::unchecked("1"),
                 Alarm::<AlarmCurrencies, BaseCurrency, BaseCurrencies>::new(
                     price::total_of(PRICE_BASE).is(PRICE_QUOTE),

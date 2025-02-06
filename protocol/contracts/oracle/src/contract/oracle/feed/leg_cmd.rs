@@ -1,7 +1,7 @@
 use currency::{AnyVisitorPair, Currency, CurrencyDTO, CurrencyDef, Group, MemberOf};
 use finance::price::{base::BasePrice, Price};
 
-use crate::ContractError;
+use crate::error::Error;
 
 use super::price_querier::PriceQuerier;
 
@@ -44,7 +44,7 @@ where
     type VisitedG = PriceG;
 
     type Output = Option<BasePrice<PriceG, BaseC, BaseG>>;
-    type Error = ContractError;
+    type Error = Error<PriceG>;
 
     fn on<B, Q>(
         self,

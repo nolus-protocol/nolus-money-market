@@ -9,7 +9,8 @@ use sdk::cosmwasm_std::{Addr, Timestamp};
 
 use crate::{
     api::{swap::SwapTarget, SwapLeg},
-    error::{self, ContractError},
+    error::{self, Error},
+    result::Result,
     state::supported_pairs::SupportedPairs,
 };
 
@@ -51,7 +52,7 @@ where
         swap_pairs_df: I,
         at: Timestamp,
         total_feeders: usize,
-    ) -> impl Iterator<Item = PriceResult<PriceG, BaseC, BaseG>>
+    ) -> impl Iterator<Item = PriceResult<PriceG, BaseC, BaseG, PriceG>>
            + use<'self_, 'iterator, PriceG, BaseC, BaseG, Observations, I>
     where
         I: Iterator<Item = SwapLeg<PriceG>> + 'iterator,
@@ -72,12 +73,12 @@ where
         currency: &CurrencyDTO<PriceG>,
         at: Timestamp,
         total_feeders: usize,
-    ) -> Result<BasePrice<PriceG, BaseC, BaseG>, ContractError> {
+    ) -> Result<BasePrice<PriceG, BaseC, BaseG>, PriceG> {
         tree.load_path(currency)
             .and_then(|leaf_to_base_currencies| {
                 self.feeds
                     .price::<BaseC, _, _>(at, total_feeders, leaf_to_base_currencies)
-                    .map_err(Into::<ContractError>::into)
+                    .map_err(Into::<Error<PriceG>>::into)
             })
     }
 }
@@ -96,7 +97,7 @@ where
         block_time: Timestamp,
         sender_raw: Addr,
         prices: &[PriceDTO<PriceG>],
-    ) -> Result<(), ContractError> {
+    ) -> Result<(), PriceG> {
         if let Some(unsupported) = prices.iter().find(|price| {
             !tree.swap_pairs_df().any(
                 |SwapLeg {
@@ -132,7 +133,7 @@ mod test {
     };
     use marketprice::alarms::prefix::Prefix;
 
-    use crate::{tests, ContractError};
+    use crate::{result::Result, tests};
 
     use super::price_querier::PriceQuerier;
 
@@ -160,7 +161,7 @@ mod test {
             &self,
             amount_c: &CurrencyDTO<Self::CurrencyGroup>,
             quote_c: &CurrencyDTO<Self::CurrencyGroup>,
-        ) -> Result<Option<Price<C, QuoteC>>, ContractError>
+        ) -> Result<Option<Price<C, QuoteC>>, Self::CurrencyGroup>
         where
             C: Currency + MemberOf<Self::CurrencyGroup>,
             QuoteC: Currency + MemberOf<Self::CurrencyGroup>,

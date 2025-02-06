@@ -1,11 +1,12 @@
 use std::collections::HashSet;
 
+use currency::Group;
 use serde::{Deserialize, Serialize};
 
 use marketprice::feeders::PriceFeeders;
-use sdk::cosmwasm_std::{Addr, DepsMut, StdResult, Storage};
+use sdk::cosmwasm_std::{Addr, DepsMut, Storage};
 
-use crate::{api::Config, result::ContractResult, ContractError};
+use crate::{api::Config, error::Error, result::Result};
 
 #[derive(Serialize, Deserialize, PartialEq, Eq)]
 pub struct Feeders {
@@ -15,36 +16,57 @@ pub struct Feeders {
 impl Feeders {
     const FEEDERS: PriceFeeders = PriceFeeders::new("feeders");
 
-    pub(crate) fn get(storage: &dyn Storage) -> StdResult<HashSet<Addr>> {
-        Self::FEEDERS.get(storage)
+    pub(crate) fn get<PriceG>(storage: &dyn Storage) -> Result<HashSet<Addr>, PriceG>
+    where
+        PriceG: Group,
+    {
+        Self::FEEDERS
+            .get(storage)
+            .map_err(Error::<PriceG>::LoadFeeders)
     }
 
-    pub(crate) fn is_feeder(storage: &dyn Storage, address: &Addr) -> StdResult<bool> {
-        Self::FEEDERS.is_registered(storage, address)
+    pub(crate) fn is_feeder<PriceG>(storage: &dyn Storage, address: &Addr) -> Result<bool, PriceG>
+    where
+        PriceG: Group,
+    {
+        Self::FEEDERS
+            .is_registered(storage, address)
+            .map_err(Error::<PriceG>::LoadFeeders)
     }
 
-    pub(crate) fn try_register(deps: DepsMut<'_>, feeder_txt: String) -> ContractResult<()> {
+    pub(crate) fn try_register<PriceG>(deps: DepsMut<'_>, feeder_txt: String) -> Result<(), PriceG>
+    where
+        PriceG: Group,
+    {
         deps.api
             .addr_validate(&feeder_txt)
-            .map_err(ContractError::RegisterFeederAddressValidation)
+            .map_err(Error::<PriceG>::RegisterFeederAddressValidation)
             .and_then(|feeder| Self::FEEDERS.register(deps, feeder).map_err(Into::into))
     }
 
-    pub(crate) fn try_remove(deps: DepsMut<'_>, address: String) -> ContractResult<()> {
-        let f_address = deps
-            .api
+    pub(crate) fn try_remove<PriceG>(deps: DepsMut<'_>, address: String) -> Result<(), PriceG>
+    where
+        PriceG: Group,
+    {
+        deps.api
             .addr_validate(&address)
-            .map_err(ContractError::UnregisterFeederAddressValidation)?;
-
-        if !Self::is_feeder(deps.storage, &f_address).map_err(ContractError::LoadFeeders)? {
-            return Err(ContractError::UnknownFeeder {});
-        }
-
-        Self::FEEDERS.remove(deps, &f_address).map_err(Into::into)
+            .map_err(Error::<PriceG>::UnregisterFeederAddressValidation)
+            .and_then(|f_address| {
+                Self::is_feeder(deps.storage, &f_address).and_then(|is_feeder| {
+                    if is_feeder {
+                        Self::FEEDERS.remove(deps, &f_address).map_err(Into::into)
+                    } else {
+                        Err(Error::<PriceG>::UnknownFeeder {})
+                    }
+                })
+            })
     }
 
-    pub(crate) fn total_registered(storage: &dyn Storage) -> StdResult<usize> {
-        Self::get(storage).map(|c| c.len())
+    pub(crate) fn total_registered<PriceG>(storage: &dyn Storage) -> Result<usize, PriceG>
+    where
+        PriceG: Group,
+    {
+        Self::get(storage).map(|ref c| c.len())
     }
 }
 
@@ -52,6 +74,7 @@ impl Feeders {
 mod tests {
     use std::collections::HashSet;
 
+    use currencies::PaymentGroup as PriceCurrencies;
     use sdk::{
         cosmwasm_ext::Response as CwResponse,
         cosmwasm_std::{from_json, testing::mock_env, Addr, DepsMut},
@@ -61,7 +84,7 @@ mod tests {
     use crate::{
         api::{QueryMsg, SudoMsg},
         contract::{query, sudo},
-        result::ContractResult,
+        result::Result,
         tests::{dummy_default_instantiate_msg, setup_test},
     };
 
@@ -124,7 +147,7 @@ mod tests {
         assert!(!resp.contains(&feeder1));
     }
 
-    fn register(deps: DepsMut<'_>, feeder: &Addr) -> ContractResult<CwResponse> {
+    fn register(deps: DepsMut<'_>, feeder: &Addr) -> Result<CwResponse, PriceCurrencies> {
         sudo(
             deps,
             mock_env(),
