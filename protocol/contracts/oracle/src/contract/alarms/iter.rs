@@ -141,6 +141,7 @@ where
     type PriceG = AlarmsG;
 
     type Output = AlarmIter<'alarms, AlarmsG, ErrorG>;
+
     type Error = Error<ErrorG>;
 
     fn exec<C>(self, price: Price<C, BaseC>) -> std::result::Result<Self::Output, Self::Error>
