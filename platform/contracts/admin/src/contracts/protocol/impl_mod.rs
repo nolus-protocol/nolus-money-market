@@ -1,5 +1,6 @@
 use platform::batch::Batch;
 use sdk::cosmwasm_std::Addr;
+use versioning::{ProtocolPackageRelease, ProtocolPackageReleaseId};
 
 use crate::{result::Result, validate::Validate};
 
@@ -15,6 +16,7 @@ use super::{
 impl Contracts<Addr> {
     pub(crate) fn migrate_standalone(
         self,
+        to_release: ProtocolPackageReleaseId,
         migration_msgs: Contracts<MigrationSpec>,
     ) -> Result<Batch> {
         let mut migration_batch = Batch::default();
@@ -25,10 +27,11 @@ impl Contracts<Addr> {
             self,
             migration_msgs,
             |address, migration_spec| {
-                migrate_contract(
+                migrate_contract::<ProtocolPackageRelease>(
                     &mut migration_batch,
                     &mut post_migration_execute_batch,
                     address,
+                    to_release.clone(),
                     migration_spec,
                 )
             },
