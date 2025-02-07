@@ -1,5 +1,6 @@
 use std::{
     fmt::{Debug, Display, Formatter},
+    hash::{Hash, Hasher},
     marker::PhantomData,
 };
 
@@ -218,6 +219,15 @@ where
 
     fn json_schema(r#gen: &mut SchemaGenerator) -> Schema {
         unchecked::TickerDTO::json_schema(r#gen)
+    }
+}
+
+impl<G> Hash for CurrencyDTO<G>
+where
+    G: Group,
+{
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.def.hash(state);
     }
 }
 
