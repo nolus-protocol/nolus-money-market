@@ -123,6 +123,7 @@ where
     S: Deref<Target = (dyn Storage + 'storage)>,
     AlarmsG: Group + Clone,
     BaseC: Currency,
+    ErrorG: Group,
 {
     alarms: &'alarms PriceAlarms<'storage, AlarmsG, S>,
     _base_c: PhantomData<BaseC>,
