@@ -150,6 +150,6 @@ where
         Ok(self
             .alarms
             .alarms(price)
-            .map(|may_alarm| may_alarm.map_err(Into::into)))
+            .map(|alarm_result| alarm_result.map_err(Into::into)))
     }
 }
