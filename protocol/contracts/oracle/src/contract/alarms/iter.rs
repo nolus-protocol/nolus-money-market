@@ -66,8 +66,8 @@ where
                         price,
                         Cmd {
                             alarms: self.alarms,
-                            _base_c: PhantomData::<BaseC>,
-                            _error_g: PhantomData::<ErrorG>,
+                            _base_c: PhantomData,
+                            _error_g: PhantomData,
                         },
                     )
                 })
