@@ -76,8 +76,8 @@ pub fn migrate(
     ProtocolPackageRelease::pull_prev(package_name!(), deps.storage)
         .and_then(|previous| previous.update_software(&CURRENT_RELEASE, &to_release))
         .map_err(Error::UpdateSoftware)
-        .and_then(|out| validate_swap_tree(deps.storage, env.block.time).map(|()| out))
-        .and_then(response::response)
+        .and_then(|()| validate_swap_tree(deps.storage, env.block.time))
+        .map(|()| response::empty_response())
         .inspect_err(platform_error::log(deps.api))
 }
 
