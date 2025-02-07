@@ -8,8 +8,8 @@ use sdk::{
     },
 };
 use versioning::{
-    package_name, package_version, PlatformMigrationMessage, PlatformPackageRelease, ReleaseId,
-    UpdatablePackage as _, VersionSegment,
+    package_name, package_version, PlatformMigrationMessage, PlatformPackageRelease,
+    SoftwareReleaseId, UpdatablePackage as _, VersionSegment,
 };
 
 use crate::{
@@ -66,7 +66,7 @@ pub fn migrate(
         .map_err(Into::into)
         .and_then(|()| {
             //TODO remove the check!!!
-            check_release_label(ReleaseId::VOID, to_release.clone())
+            check_release_label(SoftwareReleaseId::VOID, to_release.clone())
                 .and_then(|()| crate::contracts::migrate(deps.storage, contracts_migration))
                 .map(response::response_only_messages)
         })
@@ -261,15 +261,15 @@ fn deregister_protocol(
 }
 
 fn check_release_label(
-    reported_release: ReleaseId,
-    expected_release: ReleaseId,
+    reported_release: SoftwareReleaseId,
+    expected_release: SoftwareReleaseId,
 ) -> ContractResult<()> {
     ensure_eq!(
         reported_release,
         expected_release,
         ContractError::WrongRelease {
-            reported: reported_release.into(),
-            expected: expected_release.into()
+            reported: reported_release,
+            expected: expected_release,
         }
     );
 
