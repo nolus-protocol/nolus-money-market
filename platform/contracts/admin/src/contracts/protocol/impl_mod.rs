@@ -5,13 +5,13 @@ use crate::{result::Result, validate::Validate};
 
 use super::{
     super::{impl_mod::migrate_contract, AsRef, MigrationSpec, TryForEach, TryForEachPair},
-    higher_order_type, Protocol, ProtocolContracts,
+    higher_order_type, Contracts, Protocol,
 };
 
-impl ProtocolContracts<Addr> {
+impl Contracts<Addr> {
     pub(crate) fn migrate_standalone(
         self,
-        migration_msgs: ProtocolContracts<MigrationSpec>,
+        migration_msgs: Contracts<MigrationSpec>,
     ) -> Result<Batch> {
         let mut migration_batch = Batch::default();
 
@@ -29,13 +29,13 @@ impl ProtocolContracts<Addr> {
     }
 }
 
-impl<T> AsRef for ProtocolContracts<T> {
+impl<T> AsRef for Contracts<T> {
     type Item = T;
 
-    type HigherOrderType = higher_order_type::ProtocolContracts;
+    type HigherOrderType = higher_order_type::Contracts;
 
-    fn as_ref(&self) -> ProtocolContracts<&T> {
-        ProtocolContracts {
+    fn as_ref(&self) -> Contracts<&T> {
+        Contracts {
             leaser: &self.leaser,
             lpp: &self.lpp,
             oracle: &self.oracle,
@@ -45,7 +45,7 @@ impl<T> AsRef for ProtocolContracts<T> {
     }
 }
 
-impl<T> TryForEach for ProtocolContracts<T> {
+impl<T> TryForEach for Contracts<T> {
     type Item = T;
 
     fn try_for_each<F, Err>(self, f: F) -> Result<(), Err>
@@ -64,14 +64,14 @@ impl<T> TryForEach for ProtocolContracts<T> {
     }
 }
 
-impl<T> TryForEachPair for ProtocolContracts<T> {
+impl<T> TryForEachPair for Contracts<T> {
     type Item = T;
 
-    type HigherOrderType = higher_order_type::ProtocolContracts;
+    type HigherOrderType = higher_order_type::Contracts;
 
     fn try_for_each_pair<CounterpartUnit, F, Err>(
         self,
-        counterpart: ProtocolContracts<CounterpartUnit>,
+        counterpart: Contracts<CounterpartUnit>,
         mut f: F,
     ) -> Result<(), Err>
     where
@@ -89,7 +89,7 @@ impl<T> TryForEachPair for ProtocolContracts<T> {
     }
 }
 
-impl<T> Validate for ProtocolContracts<T>
+impl<T> Validate for Contracts<T>
 where
     T: Validate,
 {

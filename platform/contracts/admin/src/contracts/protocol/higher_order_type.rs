@@ -5,10 +5,10 @@ use sdk::schemars::{self, JsonSchema};
 use super::super::HigherOrderType;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
-pub struct ProtocolContracts;
+pub struct Contracts;
 
-impl HigherOrderType for ProtocolContracts {
-    type Of<T> = super::ProtocolContracts<T>;
+impl HigherOrderType for Contracts {
+    type Of<T> = super::Contracts<T>;
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]

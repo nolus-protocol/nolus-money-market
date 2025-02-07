@@ -9,12 +9,12 @@ mod impl_mod;
 pub struct HigherOrderType;
 
 impl super::HigherOrderType for HigherOrderType {
-    type Of<T> = PlatformContracts<T>;
+    type Of<T> = Contracts<T>;
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case", deny_unknown_fields)]
-pub struct PlatformContracts<T> {
+pub struct Contracts<T> {
     pub timealarms: T,
     pub treasury: T,
 }

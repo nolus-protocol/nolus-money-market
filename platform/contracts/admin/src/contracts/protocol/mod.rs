@@ -8,7 +8,7 @@ mod impl_mod;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case", deny_unknown_fields)]
-pub struct ProtocolContracts<T> {
+pub struct Contracts<T> {
     pub leaser: T,
     pub lpp: T,
     pub oracle: T,
@@ -21,7 +21,7 @@ pub struct ProtocolContracts<T> {
 pub struct Protocol<T> {
     pub network: Network,
     pub dex: Dex,
-    pub contracts: ProtocolContracts<T>,
+    pub contracts: Contracts<T>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
