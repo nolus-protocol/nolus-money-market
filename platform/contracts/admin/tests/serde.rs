@@ -3,7 +3,8 @@ use std::collections::BTreeMap;
 use serde_test::{assert_tokens, Token};
 
 use admin_contract::msg::{
-    ContractsExecute, ExecuteSpec, Granularity, PlatformContracts, ProtocolContracts,
+    ContractsExecute, ExecuteSpec, PlatformContractsWithoutAdmin, PlatformExecute,
+    ProtocolContracts, ProtocolExecute,
 };
 use json_value::JsonValue;
 
@@ -50,7 +51,7 @@ fn contracts_execute() {
     const NULL_PROTOCOL: &str = "3-null";
 
     let value = ContractsExecute {
-        platform: Granularity::All(Some(PlatformContracts {
+        platform: PlatformExecute::All(Some(PlatformContractsWithoutAdmin {
             timealarms: ExecuteSpec {
                 message: JsonValue::Object(vec![(
                     TIME_ALARMS_MESSAGE_FIELD_NAME.into(),
@@ -67,7 +68,7 @@ fn contracts_execute() {
         protocol: BTreeMap::from([
             (
                 SOME_PROTOCOL.into(),
-                Granularity::Some {
+                ProtocolExecute::Some {
                     some: ProtocolContracts {
                         leaser: Some(ExecuteSpec {
                             message: JsonValue::Object(vec![(
@@ -99,7 +100,7 @@ fn contracts_execute() {
             ),
             (
                 ALL_PROTOCOL.into(),
-                Granularity::All(Some(ProtocolContracts {
+                ProtocolExecute::All(Some(ProtocolContracts {
                     leaser: ExecuteSpec {
                         message: JsonValue::Object(vec![(
                             ALL_PROTOCOL_LEASER_MESSAGE_FIELD_NAME.into(),
@@ -132,7 +133,7 @@ fn contracts_execute() {
                     },
                 })),
             ),
-            (NULL_PROTOCOL.into(), Granularity::All(None)),
+            (NULL_PROTOCOL.into(), ProtocolExecute::All(None)),
         ]),
     };
 
