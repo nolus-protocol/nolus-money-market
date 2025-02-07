@@ -46,28 +46,35 @@ where
             price_iter,
             alarm_iter: None,
         };
-        iter.alarm_iter = iter.next_alarms()?;
-        Ok(iter)
+
+        #[expect(if_let_rescope)]
+        // TODO remove once stop linting with the 'rust-2024-compatibility' group
+        if let Some(alarms_iter) = iter.next_alarms() {
+            alarms_iter.map(|alarms_iter| {
+                iter.alarm_iter = Some(alarms_iter);
+
+                iter
+            })
+        } else {
+            Ok(iter)
+        }
     }
 
-    fn next_alarms(&mut self) -> Result<Option<AlarmIter<'alarms, AlarmsG, ErrorG>>, ErrorG> {
+    fn next_alarms(&mut self) -> Option<Result<AlarmIter<'alarms, AlarmsG, ErrorG>, ErrorG>> {
         debug_assert!(self.alarm_iter.is_none());
 
-        self.price_iter
-            .next()
-            .map(|price_result| {
-                price_result.and_then(|ref price| {
-                    price::base::with_price::execute(
-                        price,
-                        Cmd {
-                            alarms: self.alarms,
-                            _base_c: PhantomData,
-                            _error_g: PhantomData,
-                        },
-                    )
-                })
+        self.price_iter.next().map(|price_result| {
+            price_result.and_then(|ref price| {
+                price::base::with_price::execute(
+                    price,
+                    Cmd {
+                        alarms: self.alarms,
+                        _base_c: PhantomData,
+                        _error_g: PhantomData,
+                    },
+                )
             })
-            .transpose()
+        })
     }
 }
 
@@ -100,12 +107,13 @@ where
             }
 
             self.alarm_iter = match self.next_alarms() {
-                Ok(iter) => iter,
-                Err(error) => {
+                Some(Ok(iter)) => Some(iter),
+                Some(Err(error)) => {
                     result = Some(Err(error));
 
                     None
                 }
+                None => None,
             };
         }
 
