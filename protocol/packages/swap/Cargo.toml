@@ -13,9 +13,6 @@ combinations = [
 ]
 feature-groups = { dex = { members = ["dex-astroport_main", "dex-astroport_test", "dex-osmosis", "dex-test_impl"], at-least-one = true, mutually-exclusive = true } }
 
-[package.metadata.cargo-udeps]
-ignore = { development = ["currencies"] }
-
 [features]
 # Mandatory features
 dex-astroport_test = [

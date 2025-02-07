@@ -15,6 +15,7 @@ combinations = [
 feature-groups = { contract-and-testing = { members = ["contract", "testing"], at-least-one = true, mutually-exclusive = false }, stubs ={ members = ["stub_alarms", "stub_price", "stub_swap"], at-least-one = false, mutually-exclusive = false} }
 
 [package.metadata.cargo-udeps]
+# cargo is flagging it as `unused dependency`, however we need it for tests' imports like alarms or errors which are gated behind feature flags
 ignore = { development = ["oracle"] }
 
 [lib]
@@ -27,33 +28,33 @@ contract = [
     "stub_swap",
     "sdk/contract",
     "dep:cosmwasm-std",
-    "dep:versioning",
     "dep:marketprice",
+    "dep:versioning",
 ]
 stub_alarms = [
+    "dep:currencies",
+    "dep:currency",
+    "dep:finance",
     "dep:oracle-platform",
     "dep:platform",
+    "dep:sdk",
     "dep:serde",
     "dep:thiserror",
-    "dep:sdk",
-    "dep:currencies",
-    "dep:finance",
-    "dep:currency",
 ]
 stub_price = [
-    "dep:oracle-platform",
-    "dep:finance",
-    "dep:sdk",
     "dep:currency",
+    "dep:finance",
+    "dep:oracle-platform",
+    "dep:sdk",
 ]
 stub_swap = [
-    "dep:oracle-platform",
+    "dep:currencies",
     "dep:currency",
-    "dep:tree",
+    "dep:oracle-platform",
     "dep:sdk",
     "dep:serde",
     "dep:thiserror",
-    "dep:currencies",
+    "dep:tree",
 ]
 testing = [
     "stub_alarms",
@@ -82,7 +83,7 @@ serde = { workspace = true, optional = true, features = ["derive"] }
 currencies = { workspace = true, features = ["testing"] }
 currency = { workspace = true, features = ["testing"] }
 finance = { workspace = true }
-platform = { workspace = true, features = ["testing"] }
 marketprice = { workspace = true, features = ["testing"] }
-tree = { workspace = true, features = ["testing"] }
 oracle = { workspace = true, features = ["contract"] }
+platform = { workspace = true, features = ["testing"] }
+tree = { workspace = true, features = ["testing"] }

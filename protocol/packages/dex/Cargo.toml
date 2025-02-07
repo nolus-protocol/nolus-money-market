@@ -12,9 +12,6 @@ combinations = [
     { tags = ["ci", "@agnostic"], include-rest = true },
 ]
 
-[package.metadata.cargo-udeps]
-ignore = { development = ["currencies"] }
-
 [features]
 impl = ["dep:timealarms"]
 migration = []

@@ -28,7 +28,6 @@ use crate::{
     test_tree,
 };
 
-#[cfg(test)]
 mod oracle_tests;
 
 pub(crate) const CREATOR: &str = "creator";
@@ -101,7 +100,6 @@ pub(crate) fn dummy_feed_prices_msg(
     }
 }
 
-#[cfg(test)]
 pub(crate) fn setup_test(
     msg: InstantiateMsg<PriceCurrencies>,
 ) -> (OwnedDeps<MemoryStorage, MockApi, MockQuerier>, MessageInfo) {
