@@ -1,10 +1,12 @@
+use std::fmt::{self, Display, Formatter};
+
 use serde::{Deserialize, Serialize};
 
 use sdk::schemars::{self, JsonSchema};
 
 use crate::{Error, ProtocolRelease, SoftwarePackageRelease};
 
-pub use self::id::Id;
+pub(crate) use self::id::Id;
 
 #[cfg(feature = "protocol_contract")]
 mod current;
@@ -26,6 +28,50 @@ where
     ) -> Result<(), Error>;
 }
 
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[repr(transparent)]
+#[serde(transparent)]
+pub struct SoftwareReleaseId(pub(crate) Id);
+
+impl SoftwareReleaseId {
+    pub const VOID: Self = Self(Id::VOID);
+
+    #[cfg(feature = "testing")]
+    #[inline]
+    pub const fn new_test(s: &'static str) -> Self {
+        Self(Id::new_static(s))
+    }
+}
+
+impl Display for SoftwareReleaseId {
+    #[inline]
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        Display::fmt(&self.0, f)
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[repr(transparent)]
+#[serde(transparent)]
+pub struct ProtocolReleaseId(pub(crate) Id);
+
+impl ProtocolReleaseId {
+    pub const VOID: Self = Self(Id::VOID);
+
+    #[cfg(feature = "testing")]
+    #[inline]
+    pub const fn new_test(s: &'static str) -> Self {
+        Self(Id::new_static(s))
+    }
+}
+
+impl Display for ProtocolReleaseId {
+    #[inline]
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        Display::fmt(&self.0, f)
+    }
+}
+
 pub type PlatformPackageRelease = SoftwarePackageRelease;
 #[derive(Serialize, Deserialize)]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
@@ -37,20 +83,18 @@ pub struct ProtocolPackageRelease {
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub struct ProtocolPackageReleaseId {
-    software: Id,
-    protocol: Id,
+    software: SoftwareReleaseId,
+    protocol: ProtocolReleaseId,
 }
 
 impl ProtocolPackageReleaseId {
-    pub const fn void() -> Self {
-        Self {
-            software: Id::VOID,
-            protocol: Id::VOID,
-        }
-    }
+    pub const VOID: Self = Self {
+        software: SoftwareReleaseId::VOID,
+        protocol: ProtocolReleaseId::VOID,
+    };
 
-    #[cfg(feature = "testing")]
-    pub const fn sample(software: Id, protocol: Id) -> Self {
+    #[inline]
+    pub const fn new(software: SoftwareReleaseId, protocol: ProtocolReleaseId) -> Self {
         Self { software, protocol }
     }
 }
