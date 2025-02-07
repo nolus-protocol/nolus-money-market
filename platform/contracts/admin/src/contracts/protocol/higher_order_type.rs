@@ -8,12 +8,12 @@ use super::super::HigherOrderType;
 pub struct Contracts;
 
 impl HigherOrderType for Contracts {
-    type Of<T> = super::Contracts<T>;
+    type Of<Unit> = super::Contracts<Unit>;
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub struct Protocol;
 
 impl HigherOrderType for Protocol {
-    type Of<T> = super::Protocol<T>;
+    type Of<Unit> = super::Protocol<Unit>;
 }

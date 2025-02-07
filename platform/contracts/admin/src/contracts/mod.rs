@@ -10,8 +10,6 @@ use sdk::{
 
 #[cfg(feature = "contract")]
 pub(crate) use self::impl_mod::{execute, migrate};
-#[cfg(feature = "contract")]
-use self::impl_mod::{AsRef, TryForEach, TryForEachPair};
 pub use self::{
     granular::{Granularity, HigherOrderType as HigherOrderGranularity},
     higher_order_type::{HigherOrderType, Option as HigherOrderOption},
@@ -30,6 +28,42 @@ mod higher_order_type;
 mod impl_mod;
 mod platform;
 mod protocol;
+
+#[cfg(feature = "contract")]
+pub type PlatformContractAddresses = PlatformContracts<Addr>;
+
+#[cfg(feature = "contract")]
+pub type ProtocolContractAddresses = ProtocolContracts<Addr>;
+
+pub type HigherOrderGranularOptional<T> = HigherOrderGranularity<T, HigherOrderOption>;
+
+pub type HigherOrderGranularOptionalPlatformContracts =
+    HigherOrderGranularOptional<HigherOrderPlatformContracts>;
+
+pub type HigherOrderGranularOptionalProtocolContracts =
+    HigherOrderGranularOptional<HigherOrderProtocolContracts>;
+
+pub type HigherOrderPlatformMigration = HigherOrderGranularOptionalPlatformContracts;
+
+#[cfg(feature = "contract")]
+pub type PlatformMigration = <HigherOrderPlatformMigration as HigherOrderType>::Of<MigrationSpec>;
+
+pub type HigherOrderProtocolMigration = HigherOrderGranularOptionalProtocolContracts;
+
+#[cfg(feature = "contract")]
+pub type ProtocolMigration = <HigherOrderProtocolMigration as HigherOrderType>::Of<MigrationSpec>;
+
+pub type HigherOrderPlatformExecute = HigherOrderGranularOptionalPlatformContracts;
+
+#[cfg(feature = "contract")]
+pub type PlatformExecute = <HigherOrderPlatformExecute as HigherOrderType>::Of<String>;
+
+pub type HigherOrderProtocolExecute = HigherOrderGranularOptionalProtocolContracts;
+
+#[cfg(feature = "contract")]
+pub type ProtocolExecute = <HigherOrderProtocolExecute as HigherOrderType>::Of<String>;
+
+pub type Protocols<Protocol> = BTreeMap<String, Protocol>;
 
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(
@@ -53,22 +87,16 @@ where
     Protocol: HigherOrderType,
 {
     pub platform: Platform::Of<Unit>,
-    pub protocol: BTreeMap<String, Protocol::Of<Unit>>,
+    pub protocol: Protocols<Protocol::Of<Unit>>,
 }
 
 pub type Contracts = ContractsTemplate<HigherOrderPlatformContracts, HigherOrderProtocol, Addr>;
 
-pub type ContractsMigration = ContractsTemplate<
-    HigherOrderGranularity<HigherOrderPlatformContracts, HigherOrderOption>,
-    HigherOrderGranularity<HigherOrderProtocolContracts, HigherOrderOption>,
-    MigrationSpec,
->;
+pub type ContractsMigration =
+    ContractsTemplate<HigherOrderPlatformMigration, HigherOrderProtocolMigration, MigrationSpec>;
 
-pub type ContractsExecute = ContractsTemplate<
-    HigherOrderGranularity<HigherOrderPlatformContracts, HigherOrderOption>,
-    HigherOrderGranularity<HigherOrderProtocolContracts, HigherOrderOption>,
-    String,
->;
+pub type ContractsExecute =
+    ContractsTemplate<HigherOrderPlatformExecute, HigherOrderProtocolExecute, String>;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case", deny_unknown_fields)]
