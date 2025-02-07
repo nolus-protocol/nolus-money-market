@@ -1,12 +1,10 @@
 use platform::{batch::Batch, message::Response as MessageResponse};
 use sdk::cosmwasm_std::{Addr, Binary, Storage, WasmMsg};
-use versioning::ReleaseId;
 
 use crate::{
     error::Error,
-    msg::ExecuteMsg,
     result::Result,
-    state::{contract::Contract as ContractState, contracts as state_contracts},
+    state::contracts as state_contracts,
     validate::{Validate, ValidateValues},
 };
 
@@ -20,31 +18,12 @@ use super::{
 
 pub(crate) fn migrate(
     storage: &mut dyn Storage,
-    admin_contract_addr: Addr,
-    release: ReleaseId,
     migration_spec: ContractsMigration,
 ) -> Result<MessageResponse> {
-    ContractState::AwaitContractsMigrationReply { release }.store(storage)?;
-
     state_contracts::load_all(storage).and_then(|contracts| {
-        contracts.migrate(migration_spec).and_then(
-            |Batches {
-                 mut migration_batch,
-                 post_migration_execute_batch,
-             }| {
-                migration_batch
-                    .schedule_execute_wasm_no_reply_no_funds(
-                        admin_contract_addr,
-                        &ExecuteMsg::EndOfMigration {},
-                    )
-                    .map(|()| {
-                        MessageResponse::messages_only(
-                            migration_batch.merge(post_migration_execute_batch),
-                        )
-                    })
-                    .map_err(Into::into)
-            },
-        )
+        contracts
+            .migrate(migration_spec)
+            .map(|batches| MessageResponse::messages_only(batches.merge()))
     })
 }
 
@@ -73,14 +52,11 @@ pub(super) fn migrate_contract(
             )
         })
         .map(|()| {
-            migration_batch.schedule_execute_reply_on_success(
-                WasmMsg::Migrate {
-                    contract_addr: address.into_string(),
-                    new_code_id: migrate.code_id.u64(),
-                    msg: Binary::new(migrate.migrate_msg.into_bytes()),
-                },
-                0,
-            )
+            migration_batch.schedule_execute_no_reply(WasmMsg::Migrate {
+                contract_addr: address.into_string(),
+                new_code_id: migrate.code_id.u64(),
+                msg: Binary::new(migrate.migrate_msg.into_bytes()),
+            })
         })
 }
 
@@ -277,4 +253,11 @@ fn execute_contract(batch: &mut Batch, address: Addr, message: String) -> Result
 struct Batches {
     migration_batch: Batch,
     post_migration_execute_batch: Batch,
+}
+
+impl Batches {
+    fn merge(self) -> Batch {
+        self.migration_batch
+            .merge(self.post_migration_execute_batch)
+    }
 }
