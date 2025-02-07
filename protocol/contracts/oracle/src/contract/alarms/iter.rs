@@ -96,7 +96,6 @@ where
 {
     type Item = Result<Addr, ErrorG>;
 
-    #[expect(tail_expr_drop_order)] // TODO remove once stop linting with the 'rust-2024-compatibility' group
     fn next(&mut self) -> Option<Self::Item> {
         let mut result = None;
 
