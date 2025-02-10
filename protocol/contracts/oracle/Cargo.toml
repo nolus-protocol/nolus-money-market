@@ -14,9 +14,7 @@ combinations = [
 ]
 feature-groups = { contract-and-testing = { members = ["contract", "testing"], at-least-one = true, mutually-exclusive = false }, stubs ={ members = ["stub_alarms", "stub_price", "stub_swap"], at-least-one = false, mutually-exclusive = false} }
 
-[package.metadata.cargo-udeps]
-# cargo is flagging it as `unused dependency`, however we need it for tests' imports like alarms or errors which are gated behind feature flags
-ignore = { development = ["oracle"] }
+
 
 [lib]
 crate-type = ["cdylib", "rlib"]
@@ -84,6 +82,6 @@ currencies = { workspace = true, features = ["testing"] }
 currency = { workspace = true, features = ["testing"] }
 finance = { workspace = true }
 marketprice = { workspace = true, features = ["testing"] }
-oracle = { workspace = true, features = ["contract"] }
+oracle = { workspace = true, features = ["testing"] }
 platform = { workspace = true, features = ["testing"] }
 tree = { workspace = true, features = ["testing"] }
