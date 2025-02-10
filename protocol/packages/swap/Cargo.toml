@@ -34,6 +34,7 @@ dex-test_impl = [
 # Optional features
 testing = [
     "currency/testing",
+    "currencies/testing",
     "dex/testing",
     "finance/testing",
     "sdk/cosmos_ibc",
@@ -54,7 +55,7 @@ serde = { workspace = true, features = ["derive"] }
 
 [dev-dependencies]
 currency = { workspace = true, features = ["testing"] }
-currencies = { workspace = true, features = ["testing"] }
+currencies = { workspace = true }
 platform = { workspace = true, features = ["testing"] }
 
 base64 = { workspace = true, features = ["alloc"] }
