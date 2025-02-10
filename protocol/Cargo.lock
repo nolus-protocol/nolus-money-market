@@ -1043,7 +1043,6 @@ dependencies = [
  "currency",
  "finance",
  "marketprice",
- "oracle",
  "oracle-platform",
  "platform",
  "sdk",
