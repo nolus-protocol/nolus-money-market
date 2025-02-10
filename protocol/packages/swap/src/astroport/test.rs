@@ -4,24 +4,11 @@ use currency::{
 };
 use finance::coin::Coin;
 use oracle::api::swap::SwapTarget;
-use sdk::{cosmos_sdk_proto::cosmos::base::v1beta1::Coin as ProtoCoin, cosmwasm_std::Decimal};
+use sdk::cosmos_sdk_proto::cosmos::base::v1beta1::Coin as ProtoCoin;
 
 use crate::testing;
 
-use super::{
-    api::{AssetInfo, SwapOperation},
-    MAX_IMPACT,
-};
-
-#[test]
-fn const_eq_max_allowed_slippage() {
-    assert_eq!(
-        MAX_IMPACT,
-        astroport::pair::MAX_ALLOWED_SLIPPAGE
-            .parse::<Decimal>()
-            .unwrap()
-    );
-}
+use super::api::{AssetInfo, SwapOperation};
 
 #[test]
 fn to_dex_cwcoin() {

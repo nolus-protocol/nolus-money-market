@@ -16,25 +16,21 @@ feature-groups = { dex = { members = ["dex-astroport_main", "dex-astroport_test"
 [features]
 # Mandatory features
 dex-astroport_test = [
-    "dep:astroport",
     "sdk/cosmos_proto",
 ]
 dex-astroport_main = [
-    "dep:astroport",
     "sdk/cosmos_proto",
 ]
 dex-osmosis = [
     "dep:osmosis-std",
 ]
 dex-test_impl = [
-    "dep:astroport",
     "sdk/cosmos_proto",
 ]
 
 # Optional features
 testing = [
     "currency/testing",
-    "currencies/testing",
     "dex/testing",
     "finance/testing",
     "sdk/cosmos_ibc",
@@ -49,13 +45,11 @@ finance = { workspace = true }
 platform = { workspace = true }
 sdk = { workspace = true }
 
-astroport = { workspace = true, optional = true }
 osmosis-std = { workspace = true, optional = true }
 serde = { workspace = true, features = ["derive"] }
 
 [dev-dependencies]
 currency = { workspace = true, features = ["testing"] }
-currencies = { workspace = true }
 platform = { workspace = true, features = ["testing"] }
 
 base64 = { workspace = true, features = ["alloc"] }
