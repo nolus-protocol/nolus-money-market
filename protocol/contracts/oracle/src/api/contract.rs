@@ -12,7 +12,7 @@ use super::swap::SwapTarget;
 pub type AlarmsCount = platform::dispatcher::AlarmsCount;
 
 #[derive(Serialize, Deserialize, PartialEq, Eq)]
-#[cfg_attr(any(test, feature = "testing"), derive(Debug, Clone))]
+#[cfg_attr(test, derive(Debug, Clone))]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub struct InstantiateMsg<PriceCurrencies>
 where
@@ -23,12 +23,11 @@ where
 }
 
 #[derive(Serialize, Deserialize)]
-#[cfg_attr(feature = "testing", derive(Debug))]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub struct MigrateMsg {}
 
 #[derive(Serialize, Deserialize, PartialEq, Eq)]
-#[cfg_attr(any(test, feature = "testing"), derive(Debug, Clone))]
+#[cfg_attr(test, derive(Debug, Clone))]
 #[serde(
     deny_unknown_fields,
     rename_all = "snake_case",
@@ -53,7 +52,7 @@ where
 }
 
 #[derive(Serialize, Deserialize, PartialEq, Eq)]
-#[cfg_attr(any(test, feature = "testing"), derive(Debug, Clone))]
+#[cfg_attr(test, derive(Debug, Clone))]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub enum SudoMsg<PriceCurrencies>
 where
@@ -72,7 +71,7 @@ where
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Eq)]
-#[cfg_attr(any(test, feature = "testing"), derive(Debug))]
+#[cfg_attr(test, derive(Debug))]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub enum QueryMsg<PriceCurrencies>
 where
@@ -146,21 +145,20 @@ where
 }
 
 #[derive(Serialize, Deserialize, PartialEq, Eq)]
-#[cfg_attr(any(test, feature = "testing"), derive(Debug, Clone))]
+#[cfg_attr(test, derive(Debug, Clone))]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub struct Config {
     pub price_config: PriceConfig,
 }
 
 #[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Eq)]
-#[cfg_attr(any(test, feature = "testing"), derive(Debug))]
+#[cfg_attr(test, derive(Debug))]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub enum ExecuteAlarmMsg {
     PriceAlarm(),
 }
 
 #[derive(Serialize, Deserialize)]
-#[cfg_attr(feature = "testing", derive(PartialEq, Debug))]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub struct DispatchAlarmsResponse(pub AlarmsCount);
 
@@ -169,7 +167,7 @@ pub type SupportedCurrencyPairsResponse<PriceCurrencies> = Vec<SwapLeg<PriceCurr
 pub type CurrenciesResponse = Vec<Currency>;
 
 #[derive(Serialize)]
-#[cfg_attr(any(test, feature = "testing"), derive(Debug, PartialEq, Eq))]
+#[cfg_attr(test, derive(Debug, PartialEq, Eq))]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub struct Currency {
     #[serde(flatten)]
@@ -185,7 +183,7 @@ where {
 }
 
 #[derive(Clone, Copy, Serialize, Deserialize)]
-#[cfg_attr(any(test, feature = "testing"), derive(Debug, PartialEq, Eq))]
+#[cfg_attr(test, derive(Debug, PartialEq, Eq))]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub enum CurrencyGroup {
     Native,
@@ -195,7 +193,7 @@ pub enum CurrencyGroup {
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Eq)]
-#[cfg_attr(any(test, feature = "testing"), derive(Debug))]
+#[cfg_attr(test, derive(Debug))]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub struct SwapTreeResponse<G>
 where
@@ -205,7 +203,7 @@ where
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Eq)]
-#[cfg_attr(any(test, feature = "testing"), derive(Debug))]
+#[cfg_attr(test, derive(Debug))]
 #[serde(
     deny_unknown_fields,
     rename_all = "snake_case",
@@ -222,7 +220,7 @@ where
 }
 
 #[derive(Serialize, Deserialize)]
-#[cfg_attr(any(test, feature = "testing"), derive(Debug))]
+#[cfg_attr(test, derive(Debug))]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub struct AlarmsStatusResponse {
     pub remaining_alarms: bool,

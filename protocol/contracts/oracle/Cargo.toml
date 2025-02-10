@@ -12,9 +12,7 @@ combinations = [
     { tags = ["build", "@agnostic"], always-on = ["contract"], include-rest = false },
     { tags = ["ci", "@agnostic"], feature-groups = ["$[contract-and-testing]-or-stubs"], include-rest = false, generics = { "$[contract-and-testing]-or-stubs" = ["contract-and-testing", "stubs"] } },
 ]
-feature-groups = { contract-and-testing = { members = ["contract", "testing"], at-least-one = true, mutually-exclusive = false }, stubs ={ members = ["stub_alarms", "stub_price", "stub_swap"], at-least-one = false, mutually-exclusive = false} }
-
-
+feature-groups = { contract-and-testing = { members = ["contract"], at-least-one = false, mutually-exclusive = false }, stubs ={ members = ["stub_alarms", "stub_price", "stub_swap"], at-least-one = false, mutually-exclusive = false} }
 
 [lib]
 crate-type = ["cdylib", "rlib"]
@@ -53,11 +51,6 @@ stub_swap = [
     "dep:serde",
     "dep:thiserror",
     "dep:tree",
-]
-testing = [
-    "stub_alarms",
-    "stub_price",
-    "stub_swap",
 ]
 
 [dependencies]
