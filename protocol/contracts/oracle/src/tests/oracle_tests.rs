@@ -26,7 +26,7 @@ use super::dummy_feed_prices_msg;
 
 #[test]
 fn feed_prices_unknown_feeder() {
-    let (mut deps, _) = setup_test(dummy_default_instantiate_msg());
+    let (mut deps, _) = setup_test(dummy_default_instantiate_msg()).unwrap();
 
     let msg = dummy_feed_prices_msg();
 
@@ -46,7 +46,7 @@ fn feed_direct_price() {
             .is(Coin::<Lpn>::new(120))
             .into()
     }
-    let (mut deps, info) = setup_test(dummy_default_instantiate_msg());
+    let (mut deps, info) = setup_test(dummy_default_instantiate_msg()).unwrap();
 
     // Feed direct price PaymentC1/OracleBaseAsset
     let msg = ExecuteMsg::FeedPrices {
@@ -69,7 +69,7 @@ fn feed_direct_price() {
 
 #[test]
 fn feed_indirect_price() {
-    let (mut deps, info) = setup_test(dummy_default_instantiate_msg());
+    let (mut deps, info) = setup_test(dummy_default_instantiate_msg()).unwrap();
 
     let price_a_to_b =
         PriceDTO::from(price::total_of(Coin::<PaymentC3>::new(10)).is(Coin::<PaymentC5>::new(120)));
@@ -103,7 +103,7 @@ fn feed_indirect_price() {
 
 #[test]
 fn query_prices_unsupported_denom() {
-    let (deps, _) = setup_test(dummy_default_instantiate_msg());
+    let (deps, _) = setup_test(dummy_default_instantiate_msg()).unwrap();
 
     let detached = currency::dto::<PaymentC8, PriceCurrencies>().into_super_group();
     assert_eq!(
@@ -119,7 +119,7 @@ fn query_prices_unsupported_denom() {
 
 #[test]
 fn feed_prices_unsupported_pairs() {
-    let (mut deps, info) = setup_test(dummy_default_instantiate_msg());
+    let (mut deps, info) = setup_test(dummy_default_instantiate_msg()).unwrap();
 
     let unsupported =
         PriceDTO::from(price::total_of(Coin::<PaymentC3>::new(10)).is(Coin::<PaymentC4>::new(12)));
@@ -135,7 +135,7 @@ fn feed_prices_unsupported_pairs() {
 
 #[test]
 fn deliver_alarm() {
-    let (mut deps, info) = setup_test(dummy_default_instantiate_msg());
+    let (mut deps, info) = setup_test(dummy_default_instantiate_msg()).unwrap();
     setup_receiver(&mut deps.querier);
 
     let current_price = price::total_of(Coin::<PaymentC4>::new(10)).is(Coin::<Lpn>::new(23451));

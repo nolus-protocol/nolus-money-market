@@ -90,7 +90,7 @@ mod tests {
 
     #[test]
     fn register_feeder() {
-        let (mut deps, _info) = setup_test(dummy_default_instantiate_msg());
+        let (mut deps, _info) = setup_test(dummy_default_instantiate_msg()).unwrap();
 
         let feeder0 = testing::user("addr0000");
         let feeder1 = testing::user("addr0001");
@@ -119,7 +119,7 @@ mod tests {
 
     #[test]
     fn remove_feeder() {
-        let (mut deps, _info) = setup_test(dummy_default_instantiate_msg());
+        let (mut deps, _info) = setup_test(dummy_default_instantiate_msg()).unwrap();
 
         let feeder0 = testing::user("addr0000");
         let feeder1 = testing::user("addr0001");
