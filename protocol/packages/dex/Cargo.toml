@@ -15,7 +15,7 @@ combinations = [
 [features]
 impl = ["dep:timealarms"]
 migration = []
-testing = ["currencies/testing"]
+testing = []
 
 [dependencies]
 currency = { workspace = true }
@@ -30,4 +30,3 @@ thiserror = { workspace = true }
 
 [dev-dependencies]
 currency = { workspace = true, features = ["testing"] }
-currencies = { workspace = true }

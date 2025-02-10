@@ -818,7 +818,6 @@ dependencies = [
 name = "dex"
 version = "0.2.0"
 dependencies = [
- "currencies",
  "currency",
  "finance",
  "oracle",
