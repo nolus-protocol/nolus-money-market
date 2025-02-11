@@ -61,8 +61,8 @@ pub fn migrate(
 ) -> ContractResult<CwResponse> {
     ProtocolPackageRelease::pull_prev(package_name!(), deps.storage)
         .and_then(|previous| previous.update_software(&CURRENT_RELEASE, &to_release))
+        .map(|()| response::empty_response())
         .map_err(ContractError::UpdateSoftware)
-        .and_then(response::response)
         .inspect_err(platform_error::log(deps.api))
 }
 
