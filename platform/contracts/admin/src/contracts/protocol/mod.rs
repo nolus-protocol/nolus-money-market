@@ -2,6 +2,8 @@ use serde::{Deserialize, Serialize};
 
 use sdk::schemars::{self, JsonSchema};
 
+use super::higher_order_type::FirstOrderType;
+
 pub(super) mod higher_order_type;
 #[cfg(feature = "contract")]
 mod impl_mod;
@@ -20,12 +22,20 @@ pub struct Contracts<T> {
     pub reserve: T,
 }
 
+impl<T> FirstOrderType<higher_order_type::Contracts> for Contracts<T> {
+    type Unit = T;
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case", deny_unknown_fields)]
 pub struct Protocol<T> {
     pub network: Network,
     pub dex: Dex,
     pub contracts: Contracts<T>,
+}
+
+impl<T> FirstOrderType<higher_order_type::Protocol> for Protocol<T> {
+    type Unit = T;
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
