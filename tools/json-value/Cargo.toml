@@ -20,5 +20,13 @@ cosmwasm-schema = { workspace = true, optional = true }
 # General packages
 serde = { workspace = true }
 
+[dev-dependencies]
+# Own packages
+either = { workspace = true }
+
+# General packages
+serde_json = { workspace = true }
+serde_test = { workspace = true }
+
 [lints]
 workspace = true

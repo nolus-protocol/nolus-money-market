@@ -30,6 +30,9 @@ sha2 = "0.10.8"
 # CosmWasm packages
 cosmwasm-schema = "2"
 
+# Testing packages
+serde_test = "1"
+
 [profile.dev.build-override]
 opt-level = 3
 
