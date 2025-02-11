@@ -92,10 +92,13 @@ impl PackageRelease {
     }
 
     fn check_release_match(&self, target: &Id) -> Result<(), Error> {
-        if &self.id == target {
+        if self.id == *target {
             Ok(())
         } else {
-            Err(Error::release_mismatch(&self.id, target))
+            Err(Error::software_release_mismatch(
+                self.id.clone(),
+                target.clone(),
+            ))
         }
     }
 
@@ -153,7 +156,6 @@ impl UpdatablePackage for PackageRelease {
 
 #[cfg(test)]
 mod test {
-
     use crate::{
         release::{Id, UpdatablePackage},
         Error,
@@ -201,14 +203,14 @@ mod test {
             current_release
                 .clone()
                 .update_software(&current_release, &prod2_id()),
-            Err(Error::ReleaseMismatch(_, _))
+            Err(Error::SoftwareReleaseMismatch(_, _))
         ));
 
         assert!(matches!(
             current_release
                 .clone()
                 .update_software(&next_release, &prod1_id()),
-            Err(Error::ReleaseMismatch(_, _))
+            Err(Error::SoftwareReleaseMismatch(_, _))
         ));
 
         assert!(matches!(
@@ -274,7 +276,7 @@ mod test {
             current_release
                 .clone()
                 .update_software_and_storage(&next_release, &prod1_id()),
-            Err(Error::ReleaseMismatch(_, _))
+            Err(Error::SoftwareReleaseMismatch(_, _))
         ));
 
         assert!(matches!(

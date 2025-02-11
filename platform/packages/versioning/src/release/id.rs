@@ -29,13 +29,6 @@ impl Id {
     pub const VOID: Self = Self::new_static("void-release");
 }
 
-// TODO get rid of when the check in the admin gets removed
-impl From<Id> for String {
-    fn from(value: Id) -> Self {
-        value.0.to_string()
-    }
-}
-
 impl Display for Id {
     fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
         f.write_str(&self.0)
