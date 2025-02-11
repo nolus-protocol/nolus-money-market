@@ -26,10 +26,13 @@ impl Release {
     }
 
     fn check_release_match(&self, target: &Id) -> Result<(), Error> {
-        if &self.id == target {
+        if self.id == *target {
             Ok(())
         } else {
-            Err(Error::release_mismatch(&self.id, target))
+            Err(Error::protocol_release_mismatch(
+                self.id.clone(),
+                target.clone(),
+            ))
         }
     }
 

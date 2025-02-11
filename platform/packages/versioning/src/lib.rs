@@ -4,6 +4,7 @@ use sdk::cosmwasm_std::Storage;
 pub use crate::software::SemVer;
 pub use crate::{
     error::Error,
+    migration::MigrationMessage,
     protocol::Release as ProtocolRelease,
     release::{
         query, Id as ReleaseId, PlatformPackageRelease, ProtocolPackageRelease,
@@ -19,10 +20,10 @@ mod release;
 mod software;
 
 pub type PlatformMigrationMessage<ContractMsg> =
-    migration::MigrationMessage<PlatformPackageRelease, ContractMsg>;
+    MigrationMessage<PlatformPackageRelease, ContractMsg>;
 
 pub type ProtocolMigrationMessage<ContractMsg> =
-    migration::MigrationMessage<ProtocolPackageRelease, ContractMsg>;
+    MigrationMessage<ProtocolPackageRelease, ContractMsg>;
 
 pub struct FullUpdateOutput<MigrateStorageOutput> {
     pub to: ReleaseId,

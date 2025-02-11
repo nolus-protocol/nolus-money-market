@@ -44,7 +44,8 @@ macro_rules! protocol_network {
 }
 
 impl Protocol {
-    pub const fn new_static(name: &'static str, network: &'static str) -> Self {
+    #[cfg(feature = "protocol_contract")]
+    pub(crate) const fn new_static(name: &'static str, network: &'static str) -> Self {
         Self {
             name: Cow::Borrowed(name),
             network: Cow::Borrowed(network),
