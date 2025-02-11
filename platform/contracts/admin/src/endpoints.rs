@@ -268,8 +268,8 @@ fn check_release_label(
         reported_release,
         expected_release,
         ContractError::WrongRelease {
-            reported: reported_release.into(),
-            expected: expected_release.into()
+            reported: reported_release,
+            expected: expected_release,
         }
     );
 
