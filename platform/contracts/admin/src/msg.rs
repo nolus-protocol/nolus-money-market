@@ -47,13 +47,6 @@ where
         protocol: Protocol<Addr>,
     },
     DeregisterProtocol(ProtocolContracts<MigrationSpec>),
-    /// A message for **internal purposes only**.
-    ///
-    /// It is meant to clean up any temporary storage changes.
-    ///
-    /// Manual execution by an outside sender is considered an
-    /// error, thus execution has to fail.
-    EndOfMigration {},
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
