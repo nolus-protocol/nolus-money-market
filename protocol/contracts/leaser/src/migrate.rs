@@ -345,7 +345,7 @@ mod test {
     const fn migrate_msg() -> ProtocolMigrationMessage<MigrateMsg> {
         const {
             ProtocolMigrationMessage {
-                to_release: ProtocolPackageReleaseId::sample(
+                to_release: ProtocolPackageReleaseId::new(
                     ReleaseId::new_test("v0.7.6"),
                     ReleaseId::new_test("v0.0.5"),
                 ),
