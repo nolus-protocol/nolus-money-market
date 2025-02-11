@@ -1,17 +1,29 @@
 use std::convert::Infallible;
 
-use serde::{Deserialize, Serialize};
-
 use platform::response;
 use sdk::{
     cosmwasm_ext::Response as CwResponse,
-    cosmwasm_std::{entry_point, Binary, Deps, DepsMut, Env, MessageInfo},
+    cosmwasm_std::{self, entry_point, Binary, Deps, DepsMut, Env, MessageInfo},
 };
 use timealarms::msg::ExecuteAlarmMsg;
-use versioning::{self, ReleaseId};
+use versioning::{
+    self, package_name, package_version, ProtocolPackageRelease, ReleaseId, VersionSegment,
+};
 
-#[derive(Serialize, Deserialize)]
-pub struct EmptyMsg {}
+use crate::{
+    error::Error,
+    msg::{EmptyMsg, QueryMsg},
+};
+
+mod error;
+mod msg;
+
+const CONTRACT_STORAGE_VERSION: VersionSegment = 0;
+const CURRENT_RELEASE: ProtocolPackageRelease = ProtocolPackageRelease::current(
+    package_name!(),
+    package_version!(),
+    CONTRACT_STORAGE_VERSION,
+);
 
 #[entry_point]
 pub fn instantiate(
@@ -45,6 +57,10 @@ pub fn execute(
 }
 
 #[entry_point]
-pub fn query(_deps: Deps<'_>, _env: Env, EmptyMsg {}: EmptyMsg) -> Result<Binary, Infallible> {
-    unimplemented!("No query is availabve on a Void contract!");
+pub fn query(_deps: Deps<'_>, _env: Env, msg: QueryMsg) -> Result<Binary, Error> {
+    match msg {
+        QueryMsg::ProtocolPackageRelease {} => {
+            cosmwasm_std::to_json_binary(&CURRENT_RELEASE).map_err(Into::into)
+        }
+    }
 }

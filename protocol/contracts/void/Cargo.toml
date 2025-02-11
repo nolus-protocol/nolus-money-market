@@ -26,3 +26,4 @@ versioning = { workspace = true, features = ["protocol_contract"] }
 cosmwasm-std = { workspace = true }
 
 serde = { workspace = true, features = ["derive"] }
+thiserror = { workspace = true }
