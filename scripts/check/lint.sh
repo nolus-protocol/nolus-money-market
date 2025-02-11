@@ -23,7 +23,6 @@ set -eu
 append_lint_flags() {
   "${@:?}" \
     -- \
-    --allow "clippy::large_enum_variant" \
     --deny "clippy::all" \
     --deny "clippy::unwrap_used" \
     --deny "clippy::unwrap_in_result" \
@@ -33,10 +32,11 @@ append_lint_flags() {
     --deny "rust-2018-idioms" \
     --deny "rust-2021-compatibility" \
     --deny "rust-2024-compatibility" \
-    --allow "impl-trait-overcaptures" \
     --forbid "unfulfilled_lint_expectations" \
     --deny "unused" \
-    --deny "warnings"
+    --deny "warnings" \
+    --allow "impl-trait-overcaptures" \
+    --allow "clippy::large_enum_variant"
 }
 
 append_quiet_and_lints() {
