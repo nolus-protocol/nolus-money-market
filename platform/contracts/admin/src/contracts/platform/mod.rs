@@ -22,8 +22,8 @@ impl<T> FirstOrderType<HigherOrderType> for Contracts<T> {
     type Unit = T;
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
-pub struct HigherOrderType;
+#[derive(Debug, Clone, Copy, PartialEq, Eq, JsonSchema)]
+pub enum HigherOrderType {}
 
 impl super::HigherOrderType for HigherOrderType {
     type Of<Unit> = Contracts<Unit>;
