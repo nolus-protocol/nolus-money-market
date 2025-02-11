@@ -15,12 +15,12 @@ use self::impl_mod::{AsRef, TryForEach, TryForEachPair};
 pub use self::{
     granular::{Granularity, HigherOrderType as HigherOrderGranularity},
     higher_order_type::{HigherOrderType, Option as HigherOrderOption},
-    platform::{HigherOrderType as HigherOrderPlatformContracts, PlatformContracts},
+    platform::{Contracts as PlatformContracts, HigherOrderType as HigherOrderPlatformContracts},
     protocol::{
         higher_order_type::{
-            Protocol as HigherOrderProtocol, ProtocolContracts as HigherOrderProtocolContracts,
+            Contracts as HigherOrderProtocolContracts, Protocol as HigherOrderProtocol,
         },
-        Dex, Network, Protocol, ProtocolContracts,
+        Contracts as ProtocolContracts, Dex, Network, Protocol,
     },
 };
 
