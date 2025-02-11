@@ -2,6 +2,7 @@ use thiserror::Error as ThisError;
 
 use platform::contract::CodeId;
 use sdk::cosmwasm_std::{Addr, StdError};
+use versioning::ReleaseId;
 
 #[derive(Debug, ThisError)]
 pub enum Error {
@@ -21,7 +22,10 @@ pub enum Error {
         "[Admin] Contract returned wrong release string! \"{reported}\" was \
         returned, but \"{expected}\" was expected!"
     )]
-    WrongRelease { reported: String, expected: String },
+    WrongRelease {
+        reported: ReleaseId,
+        expected: ReleaseId,
+    },
     #[error(
         "[Admin] Contract returned wrong address! Expected \"{expected}\", \
         but got \"{reported}\"!"
