@@ -102,7 +102,7 @@ pub(crate) fn dummy_feed_prices_msg(
 
 pub(crate) fn setup_test(
     msg: InstantiateMsg<PriceCurrencies>,
-) -> (OwnedDeps<MemoryStorage, MockApi, MockQuerier>, MessageInfo) {
+) -> Result<(OwnedDeps<MemoryStorage, MockApi, MockQuerier>, MessageInfo), PriceCurrencies> {
     let mut deps = testing::mock_dependencies();
 
     let info = MessageInfo {
@@ -110,8 +110,7 @@ pub(crate) fn setup_test(
         funds: coins(1000, Nls::ticker()),
     };
 
-    let res: CwResponse = instantiate(deps.as_mut(), testing::mock_env(), info.clone(), msg)
-        .expect("Contract should be instantiatable");
+    let res: CwResponse = instantiate(deps.as_mut(), testing::mock_env(), info.clone(), msg)?;
     assert!(res.messages.is_empty());
 
     // register single feeder address
@@ -127,13 +126,12 @@ pub(crate) fn setup_test(
         SudoMsg::RegisterFeeder {
             feeder_address: sdk_testing::user(CREATOR).to_string(),
         },
-    )
-    .expect("Sudo endpoint should be able to register feeder");
+    )?;
 
     assert!(messages.is_empty());
     assert!(attributes.is_empty());
     assert!(events.is_empty());
     assert!(data.is_none());
 
-    (deps, info)
+    Ok((deps, info))
 }

@@ -241,7 +241,7 @@ mod tests {
             Percent::from_percent(50),
             test_tree::minimal_swap_tree(),
         );
-        let (deps, _info) = setup_test(msg);
+        let (deps, _info) = setup_test(msg).unwrap();
 
         let res = query(deps.as_ref(), mock_env(), QueryMsg::Config {}).unwrap();
         let value: Config = cosmwasm_std::from_json(res).unwrap();

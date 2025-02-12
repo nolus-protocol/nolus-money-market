@@ -31,9 +31,7 @@ contract = [
     "dep:currencies",
     "dep:marketprice",
     "dep:platform",
-    "dep:sdk",
     "sdk/contract",
-    "dep:serde",
     "dep:tree",
     "dep:versioning",
 ]
