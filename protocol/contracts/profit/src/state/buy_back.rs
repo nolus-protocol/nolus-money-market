@@ -215,7 +215,6 @@ mod tests {
         )
     }
 
-    #[repr(transparent)]
     struct Visitor {
         stop_after: Option<usize>,
     }

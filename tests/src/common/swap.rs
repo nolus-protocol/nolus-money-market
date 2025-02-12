@@ -24,7 +24,6 @@ use super::{
     ADMIN,
 };
 
-#[repr(transparent)]
 #[derive(Debug, Eq)]
 pub struct DexDenom<'r>(&'r str);
 

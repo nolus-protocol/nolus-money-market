@@ -60,7 +60,6 @@ enum StateEnum {
 }
 
 #[derive(Serialize, Deserialize)]
-#[repr(transparent)]
 #[serde(transparent)]
 pub(crate) struct State(StateEnum);
 

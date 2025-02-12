@@ -11,7 +11,6 @@ use serde::Deserialize;
 use topology::currency;
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Deserialize)]
-#[repr(transparent)]
 #[serde(try_from = "BTreeMap<currency::Id, PairTargets>")]
 pub struct SwapPairs(BTreeMap<currency::Id, PairTargets>);
 
@@ -57,7 +56,6 @@ impl Display for InPoolWithSelf {
 impl Error for InPoolWithSelf {}
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Deserialize)]
-#[repr(transparent)]
 #[serde(try_from = "BTreeSet<currency::Id>")]
 pub struct PairTargets(BTreeSet<currency::Id>);
 

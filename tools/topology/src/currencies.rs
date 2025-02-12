@@ -5,7 +5,6 @@ use serde::Deserialize;
 use crate::currency::{self, Currency};
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Deserialize)]
-#[repr(transparent)]
 #[serde(transparent)]
 pub(crate) struct Currencies(BTreeMap<currency::Id, Currency>);
 

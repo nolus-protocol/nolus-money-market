@@ -5,7 +5,6 @@ use serde::Deserialize;
 use crate::{channel, network};
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
-#[repr(transparent)]
 #[serde(transparent)]
 pub(crate) struct Channels(BTreeMap<network::Id, ConnectedNetworks>);
 
@@ -17,7 +16,6 @@ impl Channels {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
-#[repr(transparent)]
 #[serde(transparent)]
 pub(crate) struct ConnectedNetworks(BTreeMap<network::Id, channel::Id>);
 

@@ -19,7 +19,6 @@ impl Symbol {
 }
 
 #[derive(Debug)]
-#[repr(transparent)]
 pub(crate) struct Builder(Inner);
 
 impl Builder {
@@ -57,7 +56,6 @@ enum Inner {
 }
 
 #[derive(Debug)]
-#[repr(transparent)]
 struct Ibc {
     path: String,
 }

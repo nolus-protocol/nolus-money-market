@@ -87,7 +87,6 @@ impl<'parent, 'child> CurrenciesTree<'_, 'parent, '_, 'child> {
     }
 }
 
-#[repr(transparent)]
 pub(crate) struct SetNewtype<'ticker, Marker> {
     set: BTreeSet<&'ticker str>,
     _marker: PhantomData<Marker>,

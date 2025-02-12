@@ -91,7 +91,6 @@ pub struct CurrencyDefinitions {
 }
 
 #[derive(Debug)]
-#[repr(transparent)]
 pub struct HostCurrency(CurrencyDefinition);
 
 impl HostCurrency {

@@ -12,7 +12,6 @@ use crate::{
 
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
-#[repr(transparent)]
 #[serde(transparent)]
 pub struct HumanReadableTree<T> {
     root: HrtNode<T>,

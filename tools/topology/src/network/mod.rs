@@ -9,7 +9,6 @@ pub(crate) use self::host::Host;
 mod host;
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Deserialize)]
-#[repr(transparent)]
 #[serde(transparent)]
 pub(crate) struct Id(String);
 

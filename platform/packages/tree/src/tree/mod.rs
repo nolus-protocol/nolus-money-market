@@ -24,7 +24,6 @@ type Nodes<T> = Vec<Node<T>>;
 
 #[derive(Debug, Clone, Eq, PartialEq, Serialize)]
 #[cfg_attr(not(debug_assertions), derive(Deserialize))]
-#[repr(transparent)]
 #[serde(transparent, rename_all = "snake_case")]
 pub struct Tree<T> {
     nodes: Nodes<T>,
