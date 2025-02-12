@@ -3,16 +3,21 @@ use std::collections::BTreeMap;
 use serde::{Deserialize, Serialize};
 
 use ::platform::contract::CodeId;
+use json_value::JsonValue;
 use sdk::{
     cosmwasm_std::{Addr, Uint64},
     schemars::{self, JsonSchema},
 };
+use versioning::ReleaseId;
 
 #[cfg(feature = "contract")]
 pub(crate) use self::impl_mod::{execute, migrate};
 pub use self::{
     granular::{Granularity, HigherOrderType as HigherOrderGranularity},
-    higher_order_type::{HigherOrderType, Option as HigherOrderOption},
+    higher_order_type::{
+        Compose as HigherOrderCompose, HigherOrderTuple, HigherOrderType,
+        Option as HigherOrderOption,
+    },
     platform::{Contracts as PlatformContracts, HigherOrderType as HigherOrderPlatformContracts},
     protocol::{
         higher_order_type::{
@@ -48,7 +53,10 @@ pub type HigherOrderPlatformMigration = HigherOrderGranularOptionalPlatformContr
 #[cfg(feature = "contract")]
 pub type PlatformMigration = <HigherOrderPlatformMigration as HigherOrderType>::Of<MigrationSpec>;
 
-pub type HigherOrderProtocolMigration = HigherOrderGranularOptionalProtocolContracts;
+pub type HigherOrderProtocolMigration = HigherOrderCompose<
+    HigherOrderTuple<false, ReleaseId>,
+    HigherOrderGranularOptionalProtocolContracts,
+>;
 
 #[cfg(feature = "contract")]
 pub type ProtocolMigration = <HigherOrderProtocolMigration as HigherOrderType>::Of<MigrationSpec>;
@@ -56,12 +64,12 @@ pub type ProtocolMigration = <HigherOrderProtocolMigration as HigherOrderType>::
 pub type HigherOrderPlatformExecute = HigherOrderGranularOptionalPlatformContracts;
 
 #[cfg(feature = "contract")]
-pub type PlatformExecute = <HigherOrderPlatformExecute as HigherOrderType>::Of<String>;
+pub type PlatformExecute = <HigherOrderPlatformExecute as HigherOrderType>::Of<ExecuteSpec>;
 
 pub type HigherOrderProtocolExecute = HigherOrderGranularOptionalProtocolContracts;
 
 #[cfg(feature = "contract")]
-pub type ProtocolExecute = <HigherOrderProtocolExecute as HigherOrderType>::Of<String>;
+pub type ProtocolExecute = <HigherOrderProtocolExecute as HigherOrderType>::Of<ExecuteSpec>;
 
 pub type Protocols<Protocol> = BTreeMap<String, Protocol>;
 
@@ -96,7 +104,7 @@ pub type ContractsMigration =
     ContractsTemplate<HigherOrderPlatformMigration, HigherOrderProtocolMigration, MigrationSpec>;
 
 pub type ContractsExecute =
-    ContractsTemplate<HigherOrderPlatformExecute, HigherOrderProtocolExecute, String>;
+    ContractsTemplate<HigherOrderPlatformExecute, HigherOrderProtocolExecute, ExecuteSpec>;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case", deny_unknown_fields)]
@@ -106,38 +114,67 @@ where
     CodeId: Into<Uint64>,
 {
     pub code_id: Uint64,
-    pub migrate_msg: String,
-    pub post_migrate_execute_msg: Option<String>,
+    pub migrate_message: JsonValue,
+    pub post_migrate_execute: Option<ExecuteSpec>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[repr(transparent)]
+#[serde(rename_all = "snake_case", deny_unknown_fields)]
+pub struct ExecuteSpec {
+    pub message: JsonValue,
 }
 
 #[cfg(test)]
 const _: fn() = || {
     let _: ContractsExecute = ContractsExecute {
         platform: Granularity::All(Some(PlatformContracts {
-            timealarms: String::new(),
-            treasury: String::new(),
+            timealarms: ExecuteSpec {
+                message: JsonValue::Null,
+            },
+            treasury: ExecuteSpec {
+                message: JsonValue::Null,
+            },
         })),
         protocol: BTreeMap::from([
             (
                 String::new(),
                 Granularity::Some {
                     some: ProtocolContracts {
-                        leaser: Some(String::new()),
+                        leaser: Some(ExecuteSpec {
+                            message: JsonValue::Null,
+                        }),
                         lpp: None,
-                        oracle: Some(String::new()),
-                        profit: Some(String::new()),
-                        reserve: Some(String::new()),
+                        oracle: Some(ExecuteSpec {
+                            message: JsonValue::Null,
+                        }),
+                        profit: Some(ExecuteSpec {
+                            message: JsonValue::Null,
+                        }),
+                        reserve: Some(ExecuteSpec {
+                            message: JsonValue::Null,
+                        }),
                     },
                 },
             ),
             (
                 String::new(),
                 Granularity::All(Some(ProtocolContracts {
-                    leaser: String::new(),
-                    lpp: String::new(),
-                    oracle: String::new(),
-                    profit: String::new(),
-                    reserve: String::new(),
+                    leaser: ExecuteSpec {
+                        message: JsonValue::Null,
+                    },
+                    lpp: ExecuteSpec {
+                        message: JsonValue::Null,
+                    },
+                    oracle: ExecuteSpec {
+                        message: JsonValue::Null,
+                    },
+                    profit: ExecuteSpec {
+                        message: JsonValue::Null,
+                    },
+                    reserve: ExecuteSpec {
+                        message: JsonValue::Null,
+                    },
                 })),
             ),
             (String::new(), Granularity::All(None)),

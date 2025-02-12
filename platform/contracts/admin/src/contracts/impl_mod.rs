@@ -1,5 +1,11 @@
+use serde::Serialize;
+
 use platform::{batch::Batch, message::Response as MessageResponse};
-use sdk::cosmwasm_std::{Addr, Binary, Storage, WasmMsg};
+use sdk::cosmwasm_std::{self, Addr, Binary, Storage, WasmMsg};
+use versioning::{
+    MigrationMessage, PlatformPackageRelease, ProtocolPackageRelease, ProtocolPackageReleaseId,
+    ReleaseId, UpdatablePackage,
+};
 
 use crate::{
     error::Error,
@@ -10,7 +16,7 @@ use crate::{
 
 use super::{
     higher_order_type::TryForEachPair, Contracts, ContractsExecute, ContractsMigration,
-    ContractsTemplate, Granularity, HigherOrderOption, HigherOrderPlatformContracts,
+    ContractsTemplate, ExecuteSpec, Granularity, HigherOrderOption, HigherOrderPlatformContracts,
     HigherOrderProtocolContracts, HigherOrderType, MigrationSpec, PlatformContractAddresses,
     PlatformExecute, PlatformMigration, Protocol, ProtocolContractAddresses, ProtocolExecute,
     ProtocolMigration, Protocols,
@@ -18,11 +24,12 @@ use super::{
 
 pub(crate) fn migrate(
     storage: &mut dyn Storage,
+    to_software_release: ReleaseId,
     migration_spec: ContractsMigration,
 ) -> Result<MessageResponse> {
     state_contracts::load_all(storage).and_then(|contracts| {
         contracts
-            .migrate(migration_spec)
+            .migrate(to_software_release, migration_spec)
             .map(|batches| MessageResponse::messages_only(batches.merge()))
     })
 }
@@ -36,14 +43,23 @@ pub(crate) fn execute(
         .map(MessageResponse::messages_only)
 }
 
-pub(super) fn migrate_contract(
+pub(super) fn migrate_contract<Package>(
     migration_batch: &mut Batch,
     post_migration_execute_batch: &mut Batch,
     address: Addr,
-    migrate: MigrationSpec,
-) -> Result<()> {
-    migrate
-        .post_migrate_execute_msg
+    /* TODO Add field once deployed contracts can be queried about their version
+        and release information.
+    migrate_from: Package,
+    */
+    to_release: Package::ReleaseId,
+    migration: MigrationSpec,
+) -> Result<()>
+where
+    Package: UpdatablePackage,
+    Package::ReleaseId: Serialize,
+{
+    migration
+        .post_migrate_execute
         .map_or(const { Ok(()) }, |post_migrate_execute_msg| {
             execute_contract(
                 post_migration_execute_batch,
@@ -51,18 +67,26 @@ pub(super) fn migrate_contract(
                 post_migrate_execute_msg,
             )
         })
-        .map(|()| {
-            migration_batch.schedule_execute_no_reply(WasmMsg::Migrate {
-                contract_addr: address.into_string(),
-                new_code_id: migrate.code_id.u64(),
-                msg: Binary::new(migrate.migrate_msg.into_bytes()),
+        .and_then(|()| {
+            cosmwasm_std::to_json_vec(&MigrationMessage::<Package, _>::new(
+                to_release,
+                migration.migrate_message,
+            ))
+            .map(|message| {
+                migration_batch.schedule_execute_no_reply(WasmMsg::Migrate {
+                    contract_addr: address.into_string(),
+                    new_code_id: migration.code_id.u64(),
+                    msg: Binary::new(message),
+                })
             })
+            .map_err(Into::into)
         })
 }
 
 impl Contracts {
     fn migrate(
         self,
+        to_software_release: ReleaseId,
         ContractsMigration { platform, protocol }: ContractsMigration,
     ) -> Result<Batches> {
         let mut migration_batch: Batch = Batch::default();
@@ -72,6 +96,7 @@ impl Contracts {
         Self::migrate_platform(
             &mut migration_batch,
             &mut post_migration_execute_batch,
+            &to_software_release,
             self.platform,
             platform,
         )
@@ -79,6 +104,7 @@ impl Contracts {
             Self::migrate_protocols(
                 &mut migration_batch,
                 &mut post_migration_execute_batch,
+                to_software_release,
                 self.protocol,
                 protocol,
             )
@@ -92,6 +118,7 @@ impl Contracts {
     fn migrate_platform(
         migration_batch: &mut Batch,
         post_migration_execute_batch: &mut Batch,
+        to_software_release: &ReleaseId,
         contracts: PlatformContractAddresses,
         migration_specs: PlatformMigration,
     ) -> Result<(), Error> {
@@ -99,10 +126,11 @@ impl Contracts {
             contracts,
             migration_specs,
             |address, migration_spec| {
-                migrate_contract(
+                migrate_contract::<PlatformPackageRelease>(
                     migration_batch,
                     post_migration_execute_batch,
                     address,
+                    to_software_release.clone(),
                     migration_spec,
                 )
             },
@@ -112,21 +140,26 @@ impl Contracts {
     fn migrate_protocols(
         migration_batch: &mut Batch,
         post_migration_execute_batch: &mut Batch,
+        software_release: ReleaseId,
         protocols: Protocols<Protocol<Addr>>,
         migration_specs: Protocols<ProtocolMigration>,
     ) -> Result<()> {
         Self::try_for_each_protocol_pair(
             protocols,
             migration_specs,
-            |contracts, migration_specs| {
+            |contracts, (protocol_release, migration_specs)| {
                 Self::try_paired_with_granular::<HigherOrderProtocolContracts, _, _, _, _>(
                     contracts,
                     migration_specs,
                     |address, migrate_spec| {
-                        migrate_contract(
+                        migrate_contract::<ProtocolPackageRelease>(
                             migration_batch,
                             post_migration_execute_batch,
                             address,
+                            ProtocolPackageReleaseId::new(
+                                software_release.clone(),
+                                protocol_release.clone(),
+                            ),
                             migrate_spec,
                         )
                     },
@@ -240,14 +273,20 @@ where
     }
 }
 
-fn execute_contract(batch: &mut Batch, address: Addr, message: String) -> Result<()> {
-    batch.schedule_execute_no_reply(WasmMsg::Execute {
-        contract_addr: address.into_string(),
-        msg: Binary::new(message.into_bytes()),
-        funds: vec![],
-    });
-
-    Ok(())
+fn execute_contract(
+    batch: &mut Batch,
+    address: Addr,
+    ExecuteSpec { message }: ExecuteSpec,
+) -> Result<()> {
+    cosmwasm_std::to_json_vec(&message)
+        .map(|message| {
+            batch.schedule_execute_no_reply(WasmMsg::Execute {
+                contract_addr: address.into_string(),
+                msg: Binary::new(message),
+                funds: vec![],
+            })
+        })
+        .map_err(Into::into)
 }
 
 struct Batches {
