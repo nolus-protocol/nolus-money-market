@@ -8,15 +8,6 @@ use super::higher_order_type::FirstOrderType;
 mod impl_mod;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-pub struct HigherOrderType<StructuralTypeConstructor, GranularUnitWrapperTypeConstructor>(
-    PhantomData<StructuralTypeConstructor>,
-    PhantomData<GranularUnitWrapperTypeConstructor>,
-)
-where
-    StructuralTypeConstructor: super::HigherOrderType,
-    GranularUnitWrapperTypeConstructor: super::HigherOrderType;
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(
     rename_all = "snake_case",
     deny_unknown_fields,
