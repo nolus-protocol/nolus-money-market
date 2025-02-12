@@ -8,8 +8,8 @@ use sdk::{
     },
 };
 use versioning::{
-    package_name, package_version, PlatformMigrationMessage, PlatformPackageRelease, ReleaseId,
-    UpdatablePackage as _, VersionSegment,
+    package_name, package_version, PlatformMigrationMessage, PlatformPackageRelease,
+    ProtocolPackageReleaseId, ReleaseId, UpdatablePackage as _, VersionSegment,
 };
 
 use crate::{
@@ -67,7 +67,9 @@ pub fn migrate(
         .and_then(|()| {
             //TODO remove the check!!!
             check_release_label(ReleaseId::VOID, to_release.clone())
-                .and_then(|()| crate::contracts::migrate(deps.storage, contracts_migration))
+                .and_then(|()| {
+                    crate::contracts::migrate(deps.storage, to_release, contracts_migration)
+                })
                 .map(response::response_only_messages)
         })
 }
@@ -135,9 +137,9 @@ pub fn sudo(deps: DepsMut<'_>, _: Env, msg: SudoMsg) -> ContractResult<CwRespons
             register_protocol(deps.storage, deps.querier, name, protocol)
         }
         SudoMsg::MigrateContracts(MigrateContracts {
-            release: _,
+            to_release,
             migration_spec,
-        }) => crate::contracts::migrate(deps.storage, migration_spec)
+        }) => crate::contracts::migrate(deps.storage, to_release, migration_spec)
             .map(response::response_only_messages),
         SudoMsg::ExecuteContracts(execute_messages) => {
             crate::contracts::execute(deps.storage, execute_messages)
@@ -255,7 +257,7 @@ fn deregister_protocol(
         .unwrap_or(Err(ContractError::SenderNotARegisteredLeaser {}))
         .and_then(|protocol| {
             protocol
-                .migrate_standalone(migration_spec)
+                .migrate_standalone(ProtocolPackageReleaseId::VOID, migration_spec)
                 .map(response::response_only_messages)
         })
 }

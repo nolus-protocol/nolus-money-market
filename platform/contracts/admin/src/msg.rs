@@ -8,8 +8,8 @@ use sdk::{
 use versioning::ReleaseId;
 
 pub use crate::contracts::{
-    Contracts, ContractsExecute, ContractsMigration, Dex, Granularity, HigherOrderGranularity,
-    HigherOrderOption, HigherOrderPlatformContracts, HigherOrderProtocol,
+    Contracts, ContractsExecute, ContractsMigration, Dex, ExecuteSpec, Granularity,
+    HigherOrderGranularity, HigherOrderOption, HigherOrderPlatformContracts, HigherOrderProtocol,
     HigherOrderProtocolContracts, HigherOrderType, MigrationSpec, Network, PlatformContracts,
     Protocol, ProtocolContracts,
 };
@@ -72,7 +72,7 @@ pub enum SudoMsg {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case", deny_unknown_fields)]
 pub struct MigrateContracts {
-    pub release: ReleaseId,
+    pub to_release: ReleaseId,
     pub migration_spec: ContractsMigration,
 }
 
