@@ -470,7 +470,7 @@ fn migrate_invalid_swap_tree() {
             test_case.address_book.protocols_registry().clone(),
             test_case.address_book.oracle().clone(),
             &ProtocolMigrationMessage {
-                to_release: ProtocolPackageReleaseId::sample(
+                to_release: ProtocolPackageReleaseId::new(
                     ReleaseId::new_test("v0.7.6"),
                     ReleaseId::new_test("v0.2.0"),
                 ),

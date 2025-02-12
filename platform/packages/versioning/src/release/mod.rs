@@ -42,15 +42,13 @@ pub struct ProtocolPackageReleaseId {
 }
 
 impl ProtocolPackageReleaseId {
-    pub const fn void() -> Self {
-        Self {
-            software: Id::VOID,
-            protocol: Id::VOID,
-        }
-    }
+    pub const VOID: Self = Self {
+        software: Id::VOID,
+        protocol: Id::VOID,
+    };
 
-    #[cfg(feature = "testing")]
-    pub const fn sample(software: Id, protocol: Id) -> Self {
+    #[inline]
+    pub const fn new(software: Id, protocol: Id) -> Self {
         Self { software, protocol }
     }
 }

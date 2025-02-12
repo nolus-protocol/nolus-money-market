@@ -166,7 +166,7 @@ pub fn sudo(deps: DepsMut<'_>, _env: Env, msg: SudoMsg) -> ContractResult<Respon
                 deps.storage,
                 new_lease_code,
                 MaxLeases::MAX,
-                migrate_msg(ProtocolPackageReleaseId::void()),
+                migrate_msg(ProtocolPackageReleaseId::VOID),
                 protocols_registry_load,
                 migration_spec,
                 force,
