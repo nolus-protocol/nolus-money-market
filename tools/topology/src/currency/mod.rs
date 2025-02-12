@@ -8,7 +8,6 @@ mod ibc;
 mod native;
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Deserialize)]
-#[repr(transparent)]
 #[serde(transparent)]
 pub struct Id(String);
 

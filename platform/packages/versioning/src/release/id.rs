@@ -8,7 +8,6 @@ use serde::{Deserialize, Serialize};
 use sdk::schemars::{self, JsonSchema};
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, JsonSchema)]
-#[repr(transparent)]
 #[serde(transparent)]
 // The two usecases, building the current release, and deserializing a release, call for `&'static str` and String, respectively.
 // We use Cow since it is an enum of the two. We do not need to mutate it.

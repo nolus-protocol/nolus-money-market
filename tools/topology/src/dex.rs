@@ -3,12 +3,10 @@ use std::{borrow::Borrow, collections::BTreeMap};
 use serde::Deserialize;
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Default, Deserialize)]
-#[repr(transparent)]
 #[serde(transparent)]
 pub(crate) struct Dexes(BTreeMap<Id, Dex>);
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Deserialize)]
-#[repr(transparent)]
 #[serde(transparent)]
 struct Id(String);
 

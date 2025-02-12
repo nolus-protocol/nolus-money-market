@@ -128,7 +128,6 @@ where
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
-#[repr(transparent)]
 #[serde(rename_all = "snake_case", deny_unknown_fields)]
 pub struct ExecuteSpec {
     pub message: JsonValue,

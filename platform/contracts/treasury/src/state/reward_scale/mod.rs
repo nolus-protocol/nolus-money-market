@@ -15,7 +15,6 @@ mod unchecked;
 #[derive(
     Debug, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Default, Serialize, Deserialize, JsonSchema,
 )]
-#[repr(transparent)]
 #[serde(transparent)]
 pub struct TotalValueLocked(u32);
 
