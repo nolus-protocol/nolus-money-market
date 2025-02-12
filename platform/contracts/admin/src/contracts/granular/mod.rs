@@ -49,7 +49,7 @@ where
     type Unit = Unit;
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub struct HigherOrderType<StructuralTypeConstructor, GranularUnitWrapperTypeConstructor>(
     PhantomData<StructuralTypeConstructor>,
     PhantomData<GranularUnitWrapperTypeConstructor>,
