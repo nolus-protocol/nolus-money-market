@@ -22,8 +22,3 @@ pub type PlatformMigrationMessage<ContractMsg> =
 
 pub type ProtocolMigrationMessage<ContractMsg> =
     MigrationMessage<ProtocolPackageRelease, ContractMsg>;
-
-pub struct FullUpdateOutput<MigrateStorageOutput> {
-    pub to: ReleaseId,
-    pub storage_migration_output: MigrateStorageOutput,
-}
