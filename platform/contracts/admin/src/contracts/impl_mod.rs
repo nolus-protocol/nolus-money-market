@@ -17,19 +17,21 @@ use crate::{
 use super::{
     higher_order_type::TryForEachPair, Contracts, ContractsExecute, ContractsMigration,
     ContractsTemplate, ExecuteSpec, Granularity, HigherOrderOption, HigherOrderPlatformContracts,
-    HigherOrderProtocolContracts, HigherOrderType, MigrationSpec, PlatformContractAddresses,
+    HigherOrderPlatformContractsWithoutAdmin, HigherOrderProtocolContracts, HigherOrderType,
+    MigrationSpec, PlatformContractAddresses, PlatformContractAddressesWithoutAdmin,
     PlatformExecute, PlatformMigration, Protocol, ProtocolContractAddresses, ProtocolExecute,
     ProtocolMigration, Protocols,
 };
 
 pub(crate) fn migrate(
     storage: &mut dyn Storage,
+    admin_contract: Addr,
     to_software_release: ReleaseId,
     migration_spec: ContractsMigration,
 ) -> Result<MessageResponse> {
     state_contracts::load_all(storage).and_then(|contracts| {
         contracts
-            .migrate(to_software_release, migration_spec)
+            .migrate(admin_contract, to_software_release, migration_spec)
             .map(|batches| MessageResponse::messages_only(batches.merge()))
     })
 }
@@ -86,6 +88,7 @@ where
 impl Contracts {
     fn migrate(
         self,
+        admin_contract: Addr,
         to_software_release: ReleaseId,
         ContractsMigration { platform, protocol }: ContractsMigration,
     ) -> Result<Batches> {
@@ -97,7 +100,7 @@ impl Contracts {
             &mut migration_batch,
             &mut post_migration_execute_batch,
             &to_software_release,
-            self.platform,
+            self.platform.with_admin(admin_contract),
             platform,
         )
         .and_then(|()| {
@@ -178,10 +181,10 @@ impl Contracts {
 
     fn execute_platform(
         batch: &mut Batch,
-        contracts: PlatformContractAddresses,
+        contracts: PlatformContractAddressesWithoutAdmin,
         execute_specs: PlatformExecute,
     ) -> Result<(), Error> {
-        Self::try_paired_with_granular::<HigherOrderPlatformContracts, _, _, _, _>(
+        Self::try_paired_with_granular::<HigherOrderPlatformContractsWithoutAdmin, _, _, _, _>(
             contracts,
             execute_specs,
             |address, execute_spec| execute_contract(batch, address, execute_spec),
