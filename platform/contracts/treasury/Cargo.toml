@@ -2,7 +2,7 @@ lints = { workspace = true }
 
 [package]
 name = "treasury"
-version = "0.4.6"
+version = "0.5.0"
 edition.workspace = true
 authors.workspace = true
 license.workspace = true

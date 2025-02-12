@@ -12,7 +12,7 @@ dependencies = [
 
 [[package]]
 name = "admin_contract"
-version = "0.5.4"
+version = "0.6.0"
 dependencies = [
  "access-control",
  "currency",
@@ -1162,7 +1162,7 @@ dependencies = [
 
 [[package]]
 name = "lease"
-version = "0.10.0"
+version = "0.11.0"
 dependencies = [
  "access-control",
  "cosmwasm-std 2.1.6",
@@ -1188,7 +1188,7 @@ dependencies = [
 
 [[package]]
 name = "leaser"
-version = "0.9.5"
+version = "0.10.0"
 dependencies = [
  "access-control",
  "admin_contract",
@@ -1217,7 +1217,7 @@ checksum = "b5aba8db14291edd000dfcc4d620c7ebfb122c613afb886ca8803fa4e128a20a"
 
 [[package]]
 name = "lpp"
-version = "0.5.7"
+version = "0.6.0"
 dependencies = [
  "access-control",
  "cosmwasm-std 2.1.6",
@@ -1345,7 +1345,7 @@ checksum = "c08d65885ee38876c4f86fa503fb49d7b507c2b62552df7c70b2fce627e06381"
 
 [[package]]
 name = "oracle"
-version = "0.5.23"
+version = "0.6.0"
 dependencies = [
  "cosmwasm-std 2.1.6",
  "currencies",
@@ -1477,7 +1477,7 @@ dependencies = [
 
 [[package]]
 name = "profit"
-version = "0.6.9"
+version = "0.7.0"
 dependencies = [
  "access-control",
  "cosmwasm-std 2.1.6",
@@ -1687,7 +1687,7 @@ dependencies = [
 
 [[package]]
 name = "reserve"
-version = "0.1.7"
+version = "0.2.0"
 dependencies = [
  "access-control",
  "cosmwasm-std 2.1.6",
@@ -2137,7 +2137,7 @@ dependencies = [
 
 [[package]]
 name = "timealarms"
-version = "0.4.10"
+version = "0.5.0"
 dependencies = [
  "platform",
  "sdk",
@@ -2211,7 +2211,7 @@ dependencies = [
 
 [[package]]
 name = "void"
-version = "0.0.2"
+version = "0.1.0"
 dependencies = [
  "cosmwasm-std 2.1.6",
  "platform",
