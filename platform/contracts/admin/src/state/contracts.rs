@@ -9,7 +9,9 @@ use crate::{
     result::Result,
 };
 
-const PLATFORM: Item<PlatformContractAddressesWithoutAdmin> = Item::new("platform_contracts");
+const PLATFORM_STORE_KEY: &str = "platform_contracts";
+
+const PLATFORM: Item<PlatformContractAddressesWithoutAdmin> = Item::new(PLATFORM_STORE_KEY);
 
 const PROTOCOL: Map<String, Protocol<Addr>> = Map::new("protocol_contracts");
 
@@ -68,4 +70,31 @@ pub(crate) fn load_all(storage: &dyn Storage) -> Result<Contracts> {
             .map(|protocol| ContractsTemplate { platform, protocol })
             .map_err(Into::into)
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use sdk::cosmwasm_std::{self, testing::MockStorage, Storage as _};
+
+    use super::{PLATFORM, PLATFORM_STORE_KEY};
+
+    #[test]
+    fn test_platform_store() {
+        const STORED_JSON: &str = r#"{
+            "timealarms": "timealarms/address",
+            "treasury": "treasury/address"
+        }"#;
+
+        let mut storage = MockStorage::new();
+
+        storage.set(PLATFORM_STORE_KEY.as_bytes(), STORED_JSON.as_bytes());
+
+        assert_eq!(
+            PLATFORM
+                .load(&storage)
+                .expect("Platform contracts should be deserializable"),
+            cosmwasm_std::from_json(STORED_JSON)
+                .expect("Platform contracts structure should deserialize correctly")
+        );
+    }
 }
