@@ -18,7 +18,13 @@ pub use self::{
         Compose as HigherOrderCompose, HigherOrderTuple, HigherOrderType,
         Option as HigherOrderOption,
     },
-    platform::{Contracts as PlatformContracts, HigherOrderType as HigherOrderPlatformContracts},
+    platform::{
+        higher_order_type::{
+            Contracts as HigherOrderPlatformContracts,
+            ContractsWithoutAdmin as HigherOrderPlatformContractsWithoutAdmin,
+        },
+        Contracts as PlatformContracts, ContractsWithoutAdmin as PlatformContractsWithoutAdmin,
+    },
     protocol::{
         higher_order_type::{
             Contracts as HigherOrderProtocolContracts, Protocol as HigherOrderProtocol,
@@ -34,13 +40,17 @@ mod impl_mod;
 mod platform;
 mod protocol;
 
+pub type PlatformContractAddressesWithoutAdmin = PlatformContractsWithoutAdmin<Addr>;
+
 #[cfg(feature = "contract")]
 pub type PlatformContractAddresses = PlatformContracts<Addr>;
 
-#[cfg(feature = "contract")]
 pub type ProtocolContractAddresses = ProtocolContracts<Addr>;
 
 pub type HigherOrderGranularOptional<T> = HigherOrderGranularity<T, HigherOrderOption>;
+
+pub type HigherOrderGranularOptionalPlatformContractsWithoutAdmin =
+    HigherOrderGranularOptional<HigherOrderPlatformContractsWithoutAdmin>;
 
 pub type HigherOrderGranularOptionalPlatformContracts =
     HigherOrderGranularOptional<HigherOrderPlatformContracts>;
@@ -61,14 +71,12 @@ pub type HigherOrderProtocolMigration = HigherOrderCompose<
 #[cfg(feature = "contract")]
 pub type ProtocolMigration = <HigherOrderProtocolMigration as HigherOrderType>::Of<MigrationSpec>;
 
-pub type HigherOrderPlatformExecute = HigherOrderGranularOptionalPlatformContracts;
+pub type HigherOrderPlatformExecute = HigherOrderGranularOptionalPlatformContractsWithoutAdmin;
 
-#[cfg(feature = "contract")]
 pub type PlatformExecute = <HigherOrderPlatformExecute as HigherOrderType>::Of<ExecuteSpec>;
 
 pub type HigherOrderProtocolExecute = HigherOrderGranularOptionalProtocolContracts;
 
-#[cfg(feature = "contract")]
 pub type ProtocolExecute = <HigherOrderProtocolExecute as HigherOrderType>::Of<ExecuteSpec>;
 
 pub type Protocols<Protocol> = BTreeMap<String, Protocol>;
@@ -98,7 +106,8 @@ where
     pub protocol: Protocols<Protocol::Of<Unit>>,
 }
 
-pub type Contracts = ContractsTemplate<HigherOrderPlatformContracts, HigherOrderProtocol, Addr>;
+pub type Contracts =
+    ContractsTemplate<HigherOrderPlatformContractsWithoutAdmin, HigherOrderProtocol, Addr>;
 
 pub type ContractsMigration =
     ContractsTemplate<HigherOrderPlatformMigration, HigherOrderProtocolMigration, MigrationSpec>;
@@ -128,7 +137,7 @@ pub struct ExecuteSpec {
 #[cfg(test)]
 const _: fn() = || {
     let _: ContractsExecute = ContractsExecute {
-        platform: Granularity::All(Some(PlatformContracts {
+        platform: Granularity::All(Some(PlatformContractsWithoutAdmin {
             timealarms: ExecuteSpec {
                 message: JsonValue::Null,
             },

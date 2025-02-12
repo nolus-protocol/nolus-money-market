@@ -10,23 +10,21 @@ use versioning::ReleaseId;
 pub use crate::contracts::{
     Contracts, ContractsExecute, ContractsMigration, Dex, ExecuteSpec, Granularity,
     HigherOrderGranularity, HigherOrderOption, HigherOrderPlatformContracts, HigherOrderProtocol,
-    HigherOrderProtocolContracts, HigherOrderType, MigrationSpec, Network, PlatformContracts,
-    Protocol, ProtocolContracts,
+    HigherOrderProtocolContracts, HigherOrderType, MigrationSpec, Network,
+    PlatformContractAddressesWithoutAdmin, PlatformContracts, PlatformContractsWithoutAdmin,
+    PlatformExecute, Protocol, ProtocolContractAddresses, ProtocolContracts, ProtocolExecute,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
-#[serde(rename_all = "snake_case", deny_unknown_fields)]
+#[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub struct InstantiateMsg {
     pub dex_admin: Addr,
     pub contracts: Contracts,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize, JsonSchema)]
-#[repr(transparent)]
-#[serde(transparent)]
-pub struct MigrateMsg {
-    pub contracts_migration: ContractsMigration,
-}
+#[serde(deny_unknown_fields, rename_all = "snake_case")]
+pub struct MigrateMsg {}
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
@@ -96,8 +94,6 @@ where
 
 pub type ProtocolsQueryResponse = Vec<String>;
 
-pub type PlatformQueryResponse = PlatformContracts<Addr>;
+pub type PlatformQueryResponse = PlatformContractAddressesWithoutAdmin;
 
 pub type ProtocolQueryResponse = Protocol<Addr>;
-
-pub type ProtocolContractAddresses = ProtocolContracts<Addr>;

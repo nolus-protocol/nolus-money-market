@@ -3,13 +3,13 @@ use platform::{batch::Batch, response};
 use sdk::{
     cosmwasm_ext::Response as CwResponse,
     cosmwasm_std::{
-        self, ensure_eq, entry_point, Addr, Api, Binary, CodeInfoResponse, Deps, DepsMut, Env,
-        MessageInfo, QuerierWrapper, Reply, Storage, WasmMsg,
+        self, entry_point, Addr, Api, Binary, CodeInfoResponse, Deps, DepsMut, Env, MessageInfo,
+        QuerierWrapper, Reply, Storage, WasmMsg,
     },
 };
 use versioning::{
     package_name, package_version, PlatformMigrationMessage, PlatformPackageRelease,
-    ProtocolPackageReleaseId, ReleaseId, UpdatablePackage as _, VersionSegment,
+    ProtocolPackageReleaseId, UpdatablePackage as _, VersionSegment,
 };
 
 use crate::{
@@ -56,22 +56,13 @@ pub fn migrate(
     _: Env,
     PlatformMigrationMessage {
         to_release,
-        message: MigrateMsg {
-            contracts_migration,
-        },
+        message: MigrateMsg {},
     }: PlatformMigrationMessage<MigrateMsg>,
 ) -> ContractResult<CwResponse> {
     PlatformPackageRelease::pull_prev(package_name!(), deps.storage)
         .and_then(|previous| previous.update_software(&CURRENT_RELEASE, &to_release))
+        .map(|()| response::empty_response())
         .map_err(Into::into)
-        .and_then(|()| {
-            //TODO remove the check!!!
-            check_release_label(ReleaseId::VOID, to_release.clone())
-                .and_then(|()| {
-                    crate::contracts::migrate(deps.storage, to_release, contracts_migration)
-                })
-                .map(response::response_only_messages)
-        })
 }
 
 #[entry_point]
@@ -121,7 +112,7 @@ pub fn execute(
 }
 
 #[entry_point]
-pub fn sudo(deps: DepsMut<'_>, _: Env, msg: SudoMsg) -> ContractResult<CwResponse> {
+pub fn sudo(deps: DepsMut<'_>, env: Env, msg: SudoMsg) -> ContractResult<CwResponse> {
     match msg {
         SudoMsg::ChangeDexAdmin { new_dex_admin } => deps
             .api
@@ -139,8 +130,13 @@ pub fn sudo(deps: DepsMut<'_>, _: Env, msg: SudoMsg) -> ContractResult<CwRespons
         SudoMsg::MigrateContracts(MigrateContracts {
             to_release,
             migration_spec,
-        }) => crate::contracts::migrate(deps.storage, to_release, migration_spec)
-            .map(response::response_only_messages),
+        }) => crate::contracts::migrate(
+            deps.storage,
+            env.contract.address,
+            to_release,
+            migration_spec,
+        )
+        .map(response::response_only_messages),
         SudoMsg::ExecuteContracts(execute_messages) => {
             crate::contracts::execute(deps.storage, execute_messages)
                 .map(response::response_only_messages)
@@ -260,22 +256,6 @@ fn deregister_protocol(
                 .migrate_standalone(ProtocolPackageReleaseId::VOID, migration_spec)
                 .map(response::response_only_messages)
         })
-}
-
-fn check_release_label(
-    reported_release: ReleaseId,
-    expected_release: ReleaseId,
-) -> ContractResult<()> {
-    ensure_eq!(
-        reported_release,
-        expected_release,
-        ContractError::WrongRelease {
-            reported: reported_release,
-            expected: expected_release,
-        }
-    );
-
-    Ok(())
 }
 
 #[test]
