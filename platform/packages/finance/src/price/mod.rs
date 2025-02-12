@@ -174,11 +174,13 @@ where
     /// the right both amounts of the price with a bigger denominator
     /// until a * d + b * c and b * d do not overflow.
     fn lossy_add(self, rhs: Self) -> Option<Self> {
-        const FACTOR: Amount = 1_000_000_000_000_000_000; // 1*10^18
-        let factored_amount = FACTOR.into();
-        let may_factored_total =
-            total(factored_amount, self).checked_add(total(factored_amount, rhs));
-        may_factored_total.map(|factored_total| total_of(factored_amount).is(factored_total))
+        let factor: Coin<C> = Coin::new(1_000_000_000_000_000_000); // 1*10^18
+
+        total(factor, self)
+            .and_then(|total_self| {
+                total(factor, rhs).and_then(|total_rhs| total_self.checked_add(total_rhs))
+            })
+            .map(|factored_total| total_of(factor).is(factored_total))
     }
 
     #[track_caller]
@@ -289,6 +291,24 @@ where
     }
 }
 
+impl<C, QuoteC> From<Price<C, QuoteC>> for Rational<Amount> {
+    fn from(price: Price<C, QuoteC>) -> Self {
+        Rational::new(price.amount_quote.into(), price.amount.into())
+    }
+}
+
+impl<C, QuoteC> CheckedAdd for Price<C, QuoteC>
+where
+    C: 'static,
+    QuoteC: 'static,
+{
+    type Output = Self;
+
+    fn checked_add(self, rhs: Self) -> Option<Self::Output> {
+        self.checked_add(rhs)
+    }
+}
+
 // TODO for completeness implement the Sub and SubAssign counterparts
 
 impl<C, QuoteC, QuoteQuoteC> Mul<Price<QuoteC, QuoteQuoteC>> for Price<C, QuoteC>
@@ -312,9 +332,9 @@ where
 /// Calculates the amount of given coins in another currency, referred here as `quote currency`
 ///
 /// For example, total(10 EUR, 1.01 EURUSD) = 10.1 USD
-pub fn total<C, QuoteC>(of: Coin<C>, price: Price<C, QuoteC>) -> Coin<QuoteC> {
+pub fn total<C, QuoteC>(of: Coin<C>, price: Price<C, QuoteC>) -> Option<Coin<QuoteC>> {
     let ratio_impl = Rational::new(of, price.amount);
-    Ratio::<Coin<C>>::of(&ratio_impl, price.amount_quote)
+    ratio_impl.checked_mul(price.amount_quote)
 }
 
 #[cfg(test)]
@@ -327,7 +347,7 @@ mod test {
     use crate::{
         coin::{Amount, Coin as CoinT},
         price::{self, Price},
-        ratio::Rational,
+        ratio::Ratio,
     };
 
     type QuoteQuoteCoin = CoinT<SubGroupTestC10>;
@@ -387,29 +407,29 @@ mod test {
     fn total() {
         let amount_quote = 647;
         let amount = 48;
-        let price = price::total_of(amount.into()).is(amount_quote.into());
+        let price = super::total_of(amount.into()).is(amount_quote.into());
         let factor = 17;
         let coin_quote = QuoteCoin::new(amount_quote * factor);
         let coin = Coin::new(amount * factor);
 
-        assert_eq!(coin_quote, super::total(coin, price));
-        assert_eq!(coin, super::total(coin_quote, price.inv()));
+        assert_eq!(coin_quote, super::total(coin, price).unwrap());
+        assert_eq!(coin, super::total(coin_quote, price.inv()).unwrap());
     }
 
     #[test]
     fn total_rounding() {
-        let amount_quote = 647;
-        let amount = 48;
+        let amount_quote: u128 = 647;
+        let amount: u128 = 48;
         let price = super::total_of(amount.into()).is(amount_quote.into());
         let coin_quote = QuoteCoin::new(633);
 
         // 47 * 647 / 48 -> 633.5208333333334
         let coin_in = Coin::new(47);
-        assert_eq!(coin_quote, super::total(coin_in, price));
+        assert_eq!(coin_quote, super::total(coin_in, price).unwrap());
 
         // 633 * 48 / 647 -> 46.9613601236476
         let coin_out = Coin::new(46);
-        assert_eq!(coin_out, super::total(coin_quote, price.inv()));
+        assert_eq!(coin_out, super::total(coin_quote, price.inv()).unwrap());
     }
 
     #[test]
@@ -420,11 +440,10 @@ mod test {
     }
 
     #[test]
-    #[should_panic]
     fn total_overflow() {
-        let price = price::total_of::<SuperGroupTestC2>(1.into())
+        let price = price::total_of::<SuperGroupTestC2>(Coin::new(1))
             .is::<SuperGroupTestC1>((Amount::MAX / 2 + 1).into());
-        super::total(2.into(), price);
+        assert!(super::total(Coin::new(2), price).is_none());
     }
 
     #[test]
@@ -475,12 +494,11 @@ mod test {
     }
 
     #[test]
-    #[should_panic]
     fn lossy_add_overflow() {
         // 2^128 / FACTOR (10^18) / 2^64 ~ 18.446744073709553
         let p1 = price::total_of(c(1)).is(q(u128::from(u64::MAX) * 19u128));
         let p2 = Price::identity();
-        p1.lossy_add(p2);
+        assert!(p1.lossy_add(p2).is_none());
     }
 
     #[test]
@@ -500,8 +518,7 @@ mod test {
 
     #[test]
     fn lossy_mul_few_shifts() {
-        lossy_mul_shifts_impl(5, 1);
-        lossy_mul_shifts_impl(5, 2);
+        lossy_mul_shifts_impl(5, 5);
         lossy_mul_shifts_impl(5, 7);
         lossy_mul_shifts_impl(5, 16);
         lossy_mul_shifts_impl(5, 63);
@@ -544,8 +561,8 @@ mod test {
         let price2 = Price::new(amount.into(), QuoteCoin::new(amount_quote + 1));
         assert!(price1 < price2);
 
-        let total1 = super::total(Coin::new(amount), price1);
-        assert!(total1 < super::total(Coin::new(amount), price2));
+        let total1 = super::total(Coin::new(amount), price1).unwrap();
+        assert!(total1 < super::total(Coin::new(amount), price2).unwrap());
         assert_eq!(QuoteCoin::new(amount_quote), total1);
     }
 
@@ -559,8 +576,8 @@ mod test {
         let expected = QuoteCoin::new(expected);
         let input = Coin::new(amount);
 
-        assert_eq!(expected, super::total(input, price));
-        assert_eq!(input, super::total(expected, price.inv()));
+        assert_eq!(expected, super::total(input, price).unwrap());
+        assert_eq!(input, super::total(expected, price.inv()).unwrap());
     }
 
     fn add_impl(
@@ -630,7 +647,7 @@ mod test {
         assert_eq!(exp, price1.mul(price2));
 
         let price3 = price::total_of(amount1).is(quote2);
-        let ratio = Rational::new(quote1, amount2);
+        let ratio = Ratio::new(quote1.into(), amount2.into());
         assert_eq!(exp, price3.lossy_mul(&ratio));
     }
 
