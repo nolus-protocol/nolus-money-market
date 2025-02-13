@@ -50,11 +50,4 @@ thiserror = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 
 [dev-dependencies]
-lease = { workspace = true, features = ["testing"] }
-finance = { workspace = true, features = ["testing"] }
-currency = { workspace = true, features = ["testing"] }
-platform = { workspace = true, features = ["testing"] }
-reserve = { workspace = true, features = ["testing"] }
-versioning = { workspace = true, features = ["testing"] }
-
 json-value = { workspace = true }
