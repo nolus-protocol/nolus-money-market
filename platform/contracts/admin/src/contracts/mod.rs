@@ -119,7 +119,7 @@ where
     pub post_migrate_execute: Option<ExecuteSpec>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case", deny_unknown_fields)]
 pub struct ExecuteSpec {
     pub message: JsonValue,

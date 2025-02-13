@@ -36,7 +36,7 @@ impl<T> FirstOrderType<higher_order_type::ContractsWithoutAdmin> for ContractsWi
     type Unit = T;
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(
     rename = "PlatformContracts",
     rename_all = "snake_case",
