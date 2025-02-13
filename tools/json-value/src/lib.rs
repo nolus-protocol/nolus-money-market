@@ -5,7 +5,6 @@ use serde::{
     ser::{Serialize, Serializer},
 };
 
-
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum JsonValue {
     Null,
