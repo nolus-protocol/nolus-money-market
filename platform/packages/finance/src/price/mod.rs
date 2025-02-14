@@ -1,5 +1,5 @@
 use std::{
-    fmt::Debug,
+    fmt::{Debug, Display, Formatter, Result as FmtResult},
     ops::{Add, AddAssign, Mul},
 };
 
@@ -326,6 +326,12 @@ where
 
         Self::Output::new(self.amount, rhs.amount_quote)
             .lossy_mul(&Ratio::new(self.amount_quote.into(), rhs.amount.into()))
+    }
+}
+
+impl<C, QuoteC> Display for Price<C, QuoteC> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
+        write!(f, "{}/{}", self.amount, self.amount_quote)
     }
 }
 
