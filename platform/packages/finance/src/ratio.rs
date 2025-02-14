@@ -144,7 +144,7 @@ where
         let (a1, c1) = Rational::into_coprime(self.denominator, rhs.denominator);
         debug_assert_eq!(self.denominator % a1, Zero::ZERO);
         debug_assert_eq!(rhs.denominator % c1, Zero::ZERO);
-        let gcd = match self.nominator.checked_div(a1) {
+        let gcd = match self.denominator.checked_div(a1) {
             None => unreachable!("invariant on amount != 0 should have passed!"),
             Some(gcd) => gcd,
         };
