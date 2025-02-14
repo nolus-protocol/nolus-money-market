@@ -6,13 +6,13 @@ use std::{
 use serde::{Deserialize, Serialize};
 
 use sdk::{
-    cosmwasm_std::{OverflowError, OverflowOperation, Uint256},
+    cosmwasm_std::Uint256,
     schemars::{self, JsonSchema},
 };
 
 use crate::{
     coin::{Amount, Coin},
-    error::Result as FinanceResult,
+    error::{Error, Result as FinanceResult},
     fractionable::Fractionable,
     ratio::{CheckedAdd, CheckedMul, Ratio, Rational},
     zero::Zero,
@@ -99,14 +99,14 @@ impl Percent {
         self.0
             .checked_add(other.0)
             .map(Self::from_permille)
-            .ok_or_else(|| OverflowError::new(OverflowOperation::Add).into())
+            .ok_or(Error::overflow_err("while adding", self, other))
     }
 
     pub fn checked_sub(self, other: Self) -> FinanceResult<Self> {
         self.0
             .checked_sub(other.0)
             .map(Self::from_permille)
-            .ok_or_else(|| OverflowError::new(OverflowOperation::Sub).into())
+            .ok_or(Error::overflow_err("while subtracting", self, other))
     }
 }
 
