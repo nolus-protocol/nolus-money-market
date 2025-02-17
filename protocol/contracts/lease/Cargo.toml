@@ -26,7 +26,6 @@ dex-test_impl = ["swap/dex-test_impl"]
 
 contract = [
     "skel",
-    "dep:thiserror",
     "dep:access-control",
     "dep:enum_dispatch",
     "dep:lpp",
@@ -35,6 +34,7 @@ contract = [
     "dep:platform",
     "dep:profit",
     "dep:reserve",
+    "dep:thiserror",
     "dep:timealarms",
     "dep:versioning",
 ]
