@@ -148,7 +148,7 @@ where
     fn check(invariant: bool, msg: &str) -> Result<()> {
         Error::broken_invariant_if::<Self>(!invariant, msg)
     }
-    
+
     fn to_rational(self) -> Rational<Amount> {
         self.amount_quote.to_rational(self.amount)
     }
