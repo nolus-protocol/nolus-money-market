@@ -1,11 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use finance::{
-    coin::Coin,
-    fraction::Fraction,
-    percent::{Percent, Units},
-    ratio::Rational,
-};
+use finance::{coin::Coin, percent::Percent, ratio::Rational};
 use sdk::schemars::{self, JsonSchema};
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Serialize, Deserialize, JsonSchema)]
@@ -56,15 +51,19 @@ impl InterestRate {
         self.addon_optimal_interest_rate
     }
 
-    pub fn calculate<Lpn>(&self, total_liability: Coin<Lpn>, balance: Coin<Lpn>) -> Percent {
-        let utilization_max = Percent::from_ratio(
-            self.utilization_optimal.units(),
-            (Percent::HUNDRED - self.utilization_optimal).units(),
-        );
-        let utilization = if balance.is_zero() {
-            utilization_max
+    pub fn calculate<Lpn>(
+        &self,
+        total_liability: Coin<Lpn>,
+        balance: Coin<Lpn>,
+    ) -> Option<Percent> {
+        let utilization_max = self
+            .utilization_optimal
+            .of(Percent::HUNDRED - self.utilization_optimal);
+        let may_utilization = if balance.is_zero() {
+            Some(utilization_max)
         } else {
-            Percent::from_ratio(total_liability, balance).min(utilization_max)
+            Percent::from_rational(total_liability, balance)
+                .and_then(|utilization| Some(utilization.min(utilization_max)))
         };
 
         let config = Rational::new(
@@ -72,7 +71,7 @@ impl InterestRate {
             self.utilization_optimal.units(),
         );
 
-        self.base_interest_rate + Fraction::<Units>::of(&config, utilization)
+        may_utilization.and_then(|utilization| config.checked_mul(utilization))
     }
 
     fn validate(&self) -> bool {
@@ -194,7 +193,7 @@ mod tests {
         }
 
         fn ratio(n: Units, d: Units) -> Percent {
-            Percent::from_ratio(n, d)
+            Percent::from_rational(n, d).unwrap()
         }
 
         #[derive(Copy, Clone)]
@@ -208,7 +207,7 @@ mod tests {
             for ((liability, balance), output) in in_out_set.iter().copied().map(in_out) {
                 assert_eq!(
                     rate.calculate(liability, balance),
-                    output,
+                    Some(output),
                     "Interest rate: {rate:?}\nLiability: {liability}\nBalance: {balance}",
                 );
             }

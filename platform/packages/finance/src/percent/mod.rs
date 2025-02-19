@@ -80,6 +80,19 @@ impl Percent {
         Self(permille)
     }
 
+    pub fn from_rational<FractionUnit>(
+        nominator: FractionUnit,
+        denominator: FractionUnit,
+    ) -> Option<Self>
+    where
+        FractionUnit:
+            Copy + Debug + Div + PartialEq + PartialOrd + Rem<Output = FractionUnit> + Zero,
+        <FractionUnit as Div>::Output: CheckedMul<Self, Output = Self>,
+        Self: Fractionable<FractionUnit>,
+    {
+        Rational::new(nominator, denominator).checked_mul(Percent::HUNDRED)
+    }
+
     pub const fn units(&self) -> Units {
         self.0
     }

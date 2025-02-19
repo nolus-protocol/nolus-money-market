@@ -24,34 +24,37 @@ where
 }
 
 impl<Lpn> Loan<Lpn> {
-    pub fn interest_due(&self, by: &Timestamp) -> Coin<Lpn> {
+    const STORAGE: Map<Addr, Loan<Lpn>> = Map::new("loans");
+
+    pub fn interest_due(&self, by: &Timestamp) -> Option<Coin<Lpn>> {
         interest::interest(
-            self.annual_interest_rate,
+            self.annual_interest_rate.into(),
             self.principal_due,
             self.due_period(by),
         )
     }
 
-    pub fn repay(&mut self, by: &Timestamp, repayment: Coin<Lpn>) -> RepayShares<Lpn> {
-        let (paid_for, interest_change) = interest::pay(
-            self.annual_interest_rate,
+    pub fn repay(&mut self, by: &Timestamp, repayment: Coin<Lpn>) -> Option<RepayShares<Lpn>> {
+        interest::pay(
+            self.annual_interest_rate.into(),
             self.principal_due,
             repayment,
             self.due_period(by),
-        );
+        )
+        .map(|(paid_for, interest_change)| {
+            let interest_paid = repayment - interest_change;
+            let principal_paid = interest_change.min(self.principal_due);
+            let excess = interest_change - principal_paid;
 
-        let interest_paid = repayment - interest_change;
-        let principal_paid = interest_change.min(self.principal_due);
-        let excess = interest_change - principal_paid;
+            self.principal_due -= principal_paid;
+            self.interest_paid += paid_for;
 
-        self.principal_due -= principal_paid;
-        self.interest_paid += paid_for;
-
-        RepayShares {
-            interest: interest_paid,
-            principal: principal_paid,
-            excess,
-        }
+            RepayShares {
+                interest: interest_paid,
+                principal: principal_paid,
+                excess,
+            }
+        })
     }
 
     fn due_period(&self, by: &Timestamp) -> Duration {
@@ -62,9 +65,7 @@ impl<Lpn> Loan<Lpn> {
 #[cfg(test)]
 mod test {
     use currencies::Lpn;
-    use finance::{
-        coin::Coin, duration::Duration, fraction::Fraction, percent::Percent, zero::Zero,
-    };
+    use finance::{coin::Coin, duration::Duration, percent::Percent, zero::Zero};
     use sdk::cosmwasm_std::Timestamp;
 
     use crate::loan::{Loan, RepayShares};
@@ -79,11 +80,14 @@ mod test {
 
         assert_eq!(
             Coin::<Lpn>::from(50),
-            l.interest_due(&(l.interest_paid + Duration::YEAR))
+            l.interest_due(&(l.interest_paid + Duration::YEAR)).unwrap()
         );
 
-        assert_eq!(Coin::ZERO, l.interest_due(&l.interest_paid));
-        assert_eq!(Coin::ZERO, l.interest_due(&l.interest_paid.minus_nanos(1)));
+        assert_eq!(Coin::ZERO, l.interest_due(&l.interest_paid).unwrap());
+        assert_eq!(
+            Coin::ZERO,
+            l.interest_due(&l.interest_paid.minus_nanos(1)).unwrap()
+        );
     }
 
     #[test]
@@ -105,7 +109,7 @@ mod test {
                 principal: payment1,
                 excess: Coin::ZERO
             },
-            l.repay(&interest_paid, payment1)
+            l.repay(&interest_paid, payment1).unwrap()
         );
         assert_eq!(
             Loan {
@@ -135,7 +139,7 @@ mod test {
                 principal: Coin::ZERO,
                 excess: Coin::ZERO
             },
-            l.repay(&at_first_year_end, interest_a_year)
+            l.repay(&at_first_year_end, interest_a_year).unwrap()
         );
         assert_eq!(
             Loan {
@@ -168,6 +172,7 @@ mod test {
                 excess,
             },
             l.repay(&at_first_hour_end, exp_interest + principal_start + excess)
+                .unwrap()
         );
         assert_eq!(
             Loan {
@@ -177,5 +182,64 @@ mod test {
             },
             l
         );
+    }
+
+    mod persistence {
+        use currencies::Lpn;
+        use finance::{coin::Coin, duration::Duration, percent::Percent, zero::Zero};
+        use sdk::cosmwasm_std::{testing, Addr, Timestamp};
+
+        use crate::{error::ContractError, loan::Loan};
+
+        #[test]
+        fn test_open_and_repay_loan() {
+            let mut deps = testing::mock_dependencies();
+
+            let mut time = Timestamp::from_nanos(0);
+
+            let addr = Addr::unchecked("leaser");
+            let loan = Loan {
+                principal_due: Coin::<Lpn>::new(1000),
+                annual_interest_rate: Percent::from_percent(20),
+                interest_paid: time,
+            };
+            Loan::open(deps.as_mut().storage, addr.clone(), &loan).expect("should open loan");
+
+            let result = Loan::open(deps.as_mut().storage, addr.clone(), &loan);
+            assert_eq!(result, Err(ContractError::LoanExists {}));
+
+            let mut loan: Loan<Lpn> =
+                Loan::load(deps.as_ref().storage, addr.clone()).expect("should load loan");
+
+            time = Timestamp::from_nanos(Duration::YEAR.nanos() / 2);
+            let interest: Coin<Lpn> = loan.interest_due(&time).unwrap();
+            assert_eq!(interest, 100u128.into());
+
+            // partial repay
+            let payment = loan.repay(&time, 600u128.into()).unwrap();
+            assert_eq!(payment.interest, 100u128.into());
+            assert_eq!(payment.principal, 500u128.into());
+            assert_eq!(payment.excess, 0u128.into());
+
+            assert_eq!(loan.principal_due, 500u128.into());
+            Loan::save(deps.as_mut().storage, addr.clone(), loan).unwrap();
+
+            let mut loan: Loan<Lpn> =
+                Loan::load(deps.as_ref().storage, addr.clone()).expect("should load loan");
+
+            // repay with excess, should close the loan
+            let payment = loan.repay(&time, 600u128.into()).unwrap();
+            assert_eq!(payment.interest, 0u128.into());
+            assert_eq!(payment.principal, 500u128.into());
+            assert_eq!(payment.excess, 100u128.into());
+            assert_eq!(loan.principal_due, Coin::ZERO);
+            Loan::save(deps.as_mut().storage, addr.clone(), loan).unwrap();
+
+            // is it cleaned up?
+            let is_none = Loan::<Lpn>::query(deps.as_ref().storage, addr)
+                .expect("should query loan")
+                .is_none();
+            assert!(is_none);
+        }
     }
 }
