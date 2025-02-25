@@ -20,7 +20,7 @@ pub enum Error {
     },
 
     #[error("[Finance] {0}")]
-    Overflow(&'static str),
+    Overflow(String),
 
     #[error("[Finance] {0}")]
     CurrencyError(#[from] CurrencyError),
