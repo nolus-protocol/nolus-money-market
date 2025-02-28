@@ -15,6 +15,7 @@ use currency::{Currency, CurrencyDef, Group, MemberOf};
 
 use crate::{
     duration::Duration,
+    percent::{Percent, Units as PercentUnits},
     ratio::{CheckedAdd, CheckedDiv, CheckedMul, Rational},
     zero::Zero,
 };
@@ -47,15 +48,41 @@ impl CheckedMul<Duration> for Amount {
     type Output = Duration;
 
     fn checked_mul(self, rhs: Duration) -> Option<Self::Output> {
-        let rhs_amount: Amount = rhs.into();
-
-        rhs_amount.checked_mul(self).and_then(|result| {
+        checked_mul_and_convert(self, rhs, |result| {
             result
                 .try_into()
                 .ok()
-                .map(|units: u64| Duration::from_nanos(units))
+                .map(|units| Duration::from_nanos(units))
         })
     }
+}
+
+impl CheckedMul<PercentUnits> for Amount {
+    type Output = PercentUnits;
+
+    fn checked_mul(self, rhs: PercentUnits) -> Option<Self::Output> {
+        checked_mul_and_convert(self, rhs, |result| result.try_into().ok())
+    }
+}
+
+impl CheckedMul<Percent> for Amount {
+    type Output = Percent;
+
+    fn checked_mul(self, rhs: Percent) -> Option<Self::Output> {
+        checked_mul_and_convert(self, rhs, |result| {
+            result.try_into().ok().map(Percent::from_permille)
+        })
+    }
+}
+
+fn checked_mul_and_convert<T, F, U>(lhs: Amount, rhs: T, convert: F) -> Option<U>
+where
+    T: Into<Amount>,
+    F: FnOnce(Amount) -> Option<U>,
+{
+    let rhs_amount: Amount = rhs.into();
+
+    rhs_amount.checked_mul(lhs).and_then(convert)
 }
 
 #[cfg(feature = "testing")]
