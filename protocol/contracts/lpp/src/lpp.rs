@@ -2,8 +2,8 @@ use currencies::Lpns;
 use currency::{CurrencyDef, MemberOf};
 use finance::{
     coin::Coin,
-    fraction::Fraction,
-    percent::{Percent, Units},
+    error::Error as FinanceError,
+    percent::Percent,
     price::{self, Price},
     ratio::Rational,
     zero::Zero,
@@ -123,16 +123,13 @@ where
                 .map(|balance: Coin<Lpn>| {
                     if self.utilization(balance, total_due) > min_utilization {
                         // a followup from the above true value is (total_due * 100 / min_utilization) > (balance + total_due)
-                        Fraction::<Units>::of(
-                            &Rational::new(Percent::HUNDRED, min_utilization),
-                            total_due,
-                        ) - balance
-                            - total_due
+                        Rational::new(Percent::HUNDRED, min_utilization)
+                            .checked_mul(total_due)
+                            .map(|res| res - balance - total_due)
                     } else {
-                        Coin::ZERO
+                        Some(Coin::ZERO)
                     }
                 })
-                .map(Some)
         }
     }
 
@@ -189,14 +186,26 @@ where
         env: &Env,
         amount_nlpn: Coin<NLpn>,
     ) -> Result<Coin<Lpn>> {
-        let price = self.calculate_price(deps, env, Coin::ZERO)?.get();
-        let amount_lpn = price::total(amount_nlpn, price);
-
-        if self.balance(&env.contract.address, deps.querier)? < amount_lpn {
-            return Err(ContractError::NoLiquidity {});
-        }
-
-        Ok(amount_lpn)
+        self.calculate_price(deps, env, Coin::ZERO)
+            .and_then(|price| {
+                price::total(amount_nlpn, price.get()).ok_or(ContractError::Finance(
+                    FinanceError::overflow_err(
+                        "while calculating the total",
+                        amount_nlpn,
+                        price.get(),
+                    ),
+                ))
+            })
+            .and_then(|amount_lpn| {
+                self.balance(&env.contract.address, deps.querier)
+                    .and_then(|contract_balance| {
+                        if contract_balance < amount_lpn {
+                            Err(ContractError::NoLiquidity {})
+                        } else {
+                            Ok(amount_lpn)
+                        }
+                    })
+            })
     }
 
     pub fn query_quote(
@@ -217,10 +226,10 @@ where
         let total_liability_past_quote = total_principal_due + quote + total_interest;
         let total_balance_past_quote = balance - quote;
 
-        Ok(Some(self.config.borrow_rate().calculate(
-            total_liability_past_quote,
-            total_balance_past_quote,
-        )))
+        Ok(self
+            .config
+            .borrow_rate()
+            .calculate(total_liability_past_quote, total_balance_past_quote))
     }
 
     pub(super) fn try_open_loan(
@@ -267,19 +276,29 @@ where
     ) -> Result<Coin<Lpn>> {
         let mut loan = Repo::load(deps.storage, lease_addr.clone())?;
         let loan_annual_interest_rate = loan.annual_interest_rate;
-        let payment = loan.repay(&env.block.time, repay_amount);
-        Repo::save(deps.storage, lease_addr, loan)?;
-
-        self.total
-            .repay(
-                env.block.time,
-                payment.interest,
-                payment.principal,
-                loan_annual_interest_rate,
-            )
-            .store(deps.storage)?;
-
-        Ok(payment.excess)
+        loan.repay(&env.block.time, repay_amount)
+            .ok_or(ContractError::Finance(FinanceError::Overflow(format!(
+                "Oveflow while repaying {:?}",
+                repay_amount
+            ))))
+            .and_then(|payment| {
+                Repo::save(deps.storage, lease_addr, loan)?;
+                self.total
+                    .repay(
+                        env.block.time,
+                        payment.interest,
+                        payment.principal,
+                        loan_annual_interest_rate,
+                    )
+                    .ok_or(ContractError::Finance(FinanceError::Overflow(format!(
+                        "Oveflow while repaying {:?}",
+                        payment
+                    ))))
+                    .and_then(|total| {
+                        total.store(deps.storage)?;
+                        Ok(payment.excess)
+                    })
+            })
     }
 
     fn balance(&self, account: &Addr, querier: QuerierWrapper<'_>) -> Result<Coin<Lpn>> {
@@ -325,7 +344,7 @@ where
         if balance.is_zero() {
             Percent::HUNDRED
         } else {
-            Percent::from_ratio(total_due, total_due + balance)
+            Percent::from_rational(total_due, total_due + balance)
         }
     }
 }

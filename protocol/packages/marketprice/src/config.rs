@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use finance::{duration::Duration, fraction::Fraction, percent::Percent};
+use finance::{duration::Duration, percent::Percent};
 use sdk::{
     cosmwasm_std::Timestamp,
     schemars::{self, JsonSchema},

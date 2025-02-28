@@ -3,7 +3,6 @@ use serde::{Deserialize, Serialize};
 use finance::{
     coin::{Amount, Coin},
     duration::Duration,
-    fraction::Fraction,
     interest,
     percent::Percent,
     ratio::Rational,
@@ -57,7 +56,7 @@ impl<Lpn> Total<Lpn> {
     }
 
     pub fn total_interest_due_by_now(&self, ctime: &Timestamp) -> Coin<Lpn> {
-        interest::interest::<Coin<Lpn>, _, _>(
+        interest::interest::<Coin<Lpn>, _>(
             self.annual_interest_rate,
             self.total_principal_due,
             Duration::between(&self.last_update_time, ctime),
@@ -77,13 +76,19 @@ impl<Lpn> Total<Lpn> {
             .checked_add(amount)
             .ok_or(ContractError::OverflowError("Total principal due overflow"))?;
 
-        // TODO: get rid of fully qualified syntax
-        let new_annual_interest =
-            Fraction::<Coin<Lpn>>::of(&self.annual_interest_rate, self.total_principal_due)
-                .checked_add(loan_interest_rate.of(amount))
-                .ok_or(ContractError::OverflowError(
-                    "Annual interest calculation overflow",
-                ))?;
+        let new_annual_interest = self
+            .annual_interest_rate
+            .checked_mul(self.total_principal_due)
+            .ok_or(ContractError::OverflowError(
+                "Total interest due calculation overflow",
+            ))
+            .and_then(|total_interest_due| {
+                total_interest_due
+                    .checked_add(loan_interest_rate.of(amount))
+                    .ok_or(ContractError::OverflowError(
+                        "Annual interest calculation overflow",
+                    ))
+            })?;
 
         self.annual_interest_rate = Rational::new(new_annual_interest, new_total_principal_due);
 
@@ -100,7 +105,7 @@ impl<Lpn> Total<Lpn> {
         loan_interest_payment: Coin<Lpn>,
         loan_principal_payment: Coin<Lpn>,
         loan_interest_rate: Percent,
-    ) -> &Self {
+    ) -> Option<&Self> {
         // The interest payment calculation of loans is the source of truth.
         // Therefore, it is possible for the rounded-down total interest due from `total_interest_due_by_now`
         // to become less than the sum of loans' interests. Taking 0 when subtracting a loan's interest from the total is a safe solution.
@@ -120,18 +125,19 @@ impl<Lpn> Total<Lpn> {
             // Please refer to the comment above for more detailed information on why using `saturating_sub` is a safe solution
             // for updating the annual interest
 
-            Rational::new(
-                Fraction::<Coin<Lpn>>::of(&self.annual_interest_rate, self.total_principal_due)
-                    .saturating_sub(loan_interest_rate.of(loan_principal_payment)),
-                new_total_principal_due,
-            )
+            self.annual_interest_rate
+                .checked_mul(self.total_principal_due)
+                .and_then(|total_interest_due| {
+                    total_interest_due.saturating_sub(loan_interest_rate.of(loan_principal_payment))
+                })
+                .map(|res| Rational::new(res, new_total_principal_due))
         };
 
         self.total_principal_due = new_total_principal_due;
 
         self.last_update_time = ctime;
 
-        self
+        Some(self)
     }
 }
 
@@ -171,12 +177,14 @@ mod test {
         let interest_due = total.total_interest_due_by_now(&block_time);
         assert_eq!(interest_due, Coin::new(1000));
 
-        total.repay(
-            block_time,
-            Coin::new(1000),
-            Coin::new(5000),
-            Percent::from_percent(20),
-        );
+        total
+            .repay(
+                block_time,
+                Coin::new(1000),
+                Coin::new(5000),
+                Percent::from_percent(20),
+            )
+            .unwrap();
         assert_eq!(total.total_principal_due(), Coin::new(5000));
 
         block_time = block_time.plus_nanos(Duration::YEAR.nanos() / 2);
@@ -231,23 +239,27 @@ mod test {
         block_time = block_time.plus_days(147);
 
         // Fully repay loan1 after 147 days
-        total.repay(
-            block_time,
-            loan1.interest_due(&block_time),
-            loan1.principal_due,
-            loan1.annual_interest_rate,
-        );
+        total
+            .repay(
+                block_time,
+                loan1.interest_due(&block_time),
+                loan1.principal_due,
+                loan1.annual_interest_rate,
+            )
+            .unwrap();
         assert_eq!(total.total_principal_due(), borrow_loan2);
 
         block_time = block_time.plus_days(67);
 
         // Fully repay loan2 after 67 days
-        total.repay(
-            block_time,
-            loan2.interest_due(&block_time),
-            loan2.principal_due,
-            loan2.annual_interest_rate,
-        );
+        total
+            .repay(
+                block_time,
+                loan2.interest_due(&block_time),
+                loan2.principal_due,
+                loan2.annual_interest_rate,
+            )
+            .unwrap();
 
         assert!(total.total_interest_due.is_zero());
         assert!(total.total_principal_due.is_zero());

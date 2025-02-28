@@ -147,9 +147,11 @@ where
         C: CurrencyDef,
         C::Group: MemberOf<Self::PriceG>,
     {
+        //TODO remove unwrap()
         Ok(self
             .alarms
             .alarms(price)
+            .unwrap()
             .map(|may_alarm| may_alarm.map_err(Into::into)))
     }
 }
