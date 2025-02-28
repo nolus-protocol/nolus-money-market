@@ -49,10 +49,7 @@ impl CheckedMul<Duration> for Amount {
 
     fn checked_mul(self, rhs: Duration) -> Option<Self::Output> {
         checked_mul_and_convert(self, rhs, |result| {
-            result
-                .try_into()
-                .ok()
-                .map(|units| Duration::from_nanos(units))
+            result.try_into().ok().map(Duration::from_nanos)
         })
     }
 }
