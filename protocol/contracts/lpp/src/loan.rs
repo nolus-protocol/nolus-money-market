@@ -24,8 +24,6 @@ where
 }
 
 impl<Lpn> Loan<Lpn> {
-    const STORAGE: Map<Addr, Loan<Lpn>> = Map::new("loans");
-
     pub fn interest_due(&self, by: &Timestamp) -> Option<Coin<Lpn>> {
         interest::interest(
             self.annual_interest_rate.into(),
@@ -182,64 +180,5 @@ mod test {
             },
             l
         );
-    }
-
-    mod persistence {
-        use currencies::Lpn;
-        use finance::{coin::Coin, duration::Duration, percent::Percent, zero::Zero};
-        use sdk::cosmwasm_std::{testing, Addr, Timestamp};
-
-        use crate::{error::ContractError, loan::Loan};
-
-        #[test]
-        fn test_open_and_repay_loan() {
-            let mut deps = testing::mock_dependencies();
-
-            let mut time = Timestamp::from_nanos(0);
-
-            let addr = Addr::unchecked("leaser");
-            let loan = Loan {
-                principal_due: Coin::<Lpn>::new(1000),
-                annual_interest_rate: Percent::from_percent(20),
-                interest_paid: time,
-            };
-            Loan::open(deps.as_mut().storage, addr.clone(), &loan).expect("should open loan");
-
-            let result = Loan::open(deps.as_mut().storage, addr.clone(), &loan);
-            assert_eq!(result, Err(ContractError::LoanExists {}));
-
-            let mut loan: Loan<Lpn> =
-                Loan::load(deps.as_ref().storage, addr.clone()).expect("should load loan");
-
-            time = Timestamp::from_nanos(Duration::YEAR.nanos() / 2);
-            let interest: Coin<Lpn> = loan.interest_due(&time).unwrap();
-            assert_eq!(interest, 100u128.into());
-
-            // partial repay
-            let payment = loan.repay(&time, 600u128.into()).unwrap();
-            assert_eq!(payment.interest, 100u128.into());
-            assert_eq!(payment.principal, 500u128.into());
-            assert_eq!(payment.excess, 0u128.into());
-
-            assert_eq!(loan.principal_due, 500u128.into());
-            Loan::save(deps.as_mut().storage, addr.clone(), loan).unwrap();
-
-            let mut loan: Loan<Lpn> =
-                Loan::load(deps.as_ref().storage, addr.clone()).expect("should load loan");
-
-            // repay with excess, should close the loan
-            let payment = loan.repay(&time, 600u128.into()).unwrap();
-            assert_eq!(payment.interest, 0u128.into());
-            assert_eq!(payment.principal, 500u128.into());
-            assert_eq!(payment.excess, 100u128.into());
-            assert_eq!(loan.principal_due, Coin::ZERO);
-            Loan::save(deps.as_mut().storage, addr.clone(), loan).unwrap();
-
-            // is it cleaned up?
-            let is_none = Loan::<Lpn>::query(deps.as_ref().storage, addr)
-                .expect("should query loan")
-                .is_none();
-            assert!(is_none);
-        }
     }
 }

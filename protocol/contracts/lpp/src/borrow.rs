@@ -63,7 +63,7 @@ impl InterestRate {
             Some(utilization_max)
         } else {
             Percent::from_rational(total_liability, balance)
-                .and_then(|utilization| Some(utilization.min(utilization_max)))
+                .map(|utilization| utilization.min(utilization_max))
         };
 
         let config = Rational::new(
