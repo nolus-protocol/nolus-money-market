@@ -11,6 +11,7 @@ combinations = [
 ]
 
 [workspace.lints.rust]
+deprecated_safe = { level = "forbid" }
 unexpected_cfgs = { level = "forbid", check-cfg = ["cfg(test)"] }
 
 [features]

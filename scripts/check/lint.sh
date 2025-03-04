@@ -32,6 +32,7 @@ append_lint_flags() {
   # Allowed Lints
   "${@:?}" \
     -- \
+    --forbid "deprecated-safe" \
     --deny "future-incompatible" \
     --deny "nonstandard-style" \
     --deny "refining-impl-trait" \

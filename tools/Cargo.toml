@@ -9,6 +9,7 @@ authors = ["The Dev Nolus Team <dev@nolus.io>"]
 license = "Apache-2.0"
 
 [workspace.lints.rust]
+deprecated_safe = { level = "forbid" }
 unexpected_cfgs = { level = "forbid", check-cfg = ["cfg(test)"] }
 
 [workspace.dependencies]
