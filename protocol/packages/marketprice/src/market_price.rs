@@ -38,24 +38,24 @@ where
     PriceG: Group<TopG = PriceG>,
     ObservationsRepoImpl: ObservationsReadRepo<Group = PriceG>,
 {
-    pub fn price<'m, 'a, BaseC, BaseG, CurrenciesToBaseC>(
-        &'m self,
+    pub fn price<'self_, 'currency_dto, BaseC, BaseG, CurrenciesToBaseC>(
+        &'self_ self,
         at: Timestamp,
         total_feeders: usize,
         mut leaf_to_base: CurrenciesToBaseC,
     ) -> Result<BasePrice<PriceG, BaseC, BaseG>, PriceFeedsError>
     where
-        'm: 'a,
-        PriceG: Group<TopG = PriceG>,
+        PriceG: Group<TopG = PriceG> + 'currency_dto,
         BaseC: CurrencyDef,
         BaseC::Group: MemberOf<BaseG> + MemberOf<PriceG>,
         BaseG: Group + MemberOf<PriceG>,
-        CurrenciesToBaseC: Iterator<Item = &'a CurrencyDTO<PriceG>> + DoubleEndedIterator,
+        CurrenciesToBaseC:
+            Iterator<Item = &'currency_dto CurrencyDTO<PriceG>> + DoubleEndedIterator,
     {
         struct CurrencyResolver<
             'config,
             'feeds,
-            'currencies,
+            'currency_dto,
             G,
             BaseC,
             BaseG,
@@ -65,20 +65,19 @@ where
         where
             G: Group,
         {
-            _currencies_lifetime: PhantomData<&'currencies CurrencyDTO<G>>,
             feeds: &'feeds PriceFeeds<'config, G, ObservationsRepoImpl>,
             at: Timestamp,
             total_feeders: usize,
+            leaf_to_base: CurrenciesToBaseC,
             _base_c: PhantomData<BaseC>,
             _base_g: PhantomData<BaseG>,
-            leaf_to_base: CurrenciesToBaseC,
+            _currency_dto: PhantomData<&'currency_dto CurrencyDTO<G>>,
         }
-        impl<'config, 'feeds, 'currencies, G, BaseC, BaseG, CurrenciesToBaseC, ObservationsRepoImpl>
-            AnyVisitor<G>
+        impl<'currency_dto, G, BaseC, BaseG, CurrenciesToBaseC, ObservationsRepoImpl> AnyVisitor<G>
             for CurrencyResolver<
-                'config,
-                'feeds,
-                'currencies,
+                '_,
+                '_,
+                'currency_dto,
                 G,
                 BaseC,
                 BaseG,
@@ -86,13 +85,11 @@ where
                 ObservationsRepoImpl,
             >
         where
-            'config: 'currencies,
-            'feeds: 'currencies,
-            G: 'currencies + Group<TopG = G>,
+            G: Group<TopG = G> + 'currency_dto,
             BaseC: CurrencyDef,
             BaseC::Group: MemberOf<BaseG> + MemberOf<G::TopG>,
             BaseG: Group,
-            CurrenciesToBaseC: Iterator<Item = &'currencies CurrencyDTO<G>> + DoubleEndedIterator,
+            CurrenciesToBaseC: Iterator<Item = &'currency_dto CurrencyDTO<G>> + DoubleEndedIterator,
             ObservationsRepoImpl: ObservationsReadRepo<Group = G>,
         {
             type Output = BasePrice<G, BaseC, BaseG>;
@@ -121,13 +118,13 @@ where
 
         if let Some(c) = leaf_to_base.next() {
             c.into_currency_type(CurrencyResolver {
-                _currencies_lifetime: PhantomData,
                 feeds: self,
                 at,
                 total_feeders,
+                leaf_to_base,
                 _base_c: PhantomData,
                 _base_g: PhantomData,
-                leaf_to_base,
+                _currency_dto: PhantomData,
             })
         } else {
             unreachable!("a non-empty chain of currencies to calculate price for the first one")
@@ -236,7 +233,8 @@ where
 }
 
 struct PriceCollect<
-    'a,
+    'currency_dto,
+    'feeds,
     'config,
     'currency,
     CurrenciesToBaseC,
@@ -247,13 +245,14 @@ struct PriceCollect<
     BaseG,
     ObservationsRepoImpl,
 > where
-    CurrenciesToBaseC: Iterator<Item = &'a CurrencyDTO<G>>,
+    CurrenciesToBaseC: Iterator<Item = &'currency_dto CurrencyDTO<G>>,
     C: Currency + MemberOf<G>,
-    G: Group,
+    CurrentC: 'static,
+    G: Group + 'currency_dto,
     BaseC: Currency,
 {
     leaf_to_base: CurrenciesToBaseC,
-    feeds: &'a PriceFeeds<'config, G, ObservationsRepoImpl>,
+    feeds: &'feeds PriceFeeds<'config, G, ObservationsRepoImpl>,
     at: Timestamp,
     total_feeders: usize,
     current_c: &'currency CurrencyDTO<G>,
@@ -261,11 +260,23 @@ struct PriceCollect<
     _base_g: PhantomData<BaseG>,
     price: Price<C, CurrentC>,
 }
-impl<'a, 'config, 'currency, CurrenciesToBaseC, C, CurrentC, G, BaseC, BaseG, ObservationsRepoImpl>
+impl<
+    'currency_dto,
+    'feeds,
+    'config,
+    CurrenciesToBaseC,
+    C,
+    CurrentC,
+    G,
+    BaseC,
+    BaseG,
+    ObservationsRepoImpl,
+>
     PriceCollect<
-        'a,
+        'currency_dto,
+        'feeds,
         'config,
-        'currency,
+        '_,
         CurrenciesToBaseC,
         C,
         CurrentC,
@@ -275,11 +286,11 @@ impl<'a, 'config, 'currency, CurrenciesToBaseC, C, CurrentC, G, BaseC, BaseG, Ob
         ObservationsRepoImpl,
     >
 where
-    CurrenciesToBaseC: Iterator<Item = &'a CurrencyDTO<G>>,
+    CurrenciesToBaseC: Iterator<Item = &'currency_dto CurrencyDTO<G>>,
     C: CurrencyDef,
     C::Group: MemberOf<G>,
     CurrentC: Currency + MemberOf<G> + PairsGroup<CommonGroup = G>,
-    G: 'a + Group<TopG = G>,
+    G: Group<TopG = G> + 'currency_dto,
     BaseC: CurrencyDef,
     BaseC::Group: MemberOf<BaseG> + MemberOf<G::TopG>,
     BaseG: Group,
@@ -290,7 +301,8 @@ where
         accumulator: Price<C, QuoteC>,
         quote_c_dto: &'new_currency CurrencyDTO<G>,
     ) -> PriceCollect<
-        'a,
+        'currency_dto,
+        'feeds,
         'config,
         'new_currency,
         CurrenciesToBaseC,
@@ -302,7 +314,6 @@ where
         ObservationsRepoImpl,
     >
     where
-        'currency: 'new_currency,
         QuoteC: Currency + MemberOf<G>,
     {
         PriceCollect {
@@ -327,9 +338,11 @@ where
         }
     }
 }
-impl<'a, CurrenciesToBaseC, C, CurrentC, G, BaseC, BaseG, ObservationsRepoImpl> PairsVisitor
+impl<'currency_dto, CurrenciesToBaseC, C, CurrentC, G, BaseC, BaseG, ObservationsRepoImpl>
+    PairsVisitor
     for PriceCollect<
-        'a,
+        'currency_dto,
+        '_,
         '_,
         '_,
         CurrenciesToBaseC,
@@ -341,11 +354,11 @@ impl<'a, CurrenciesToBaseC, C, CurrentC, G, BaseC, BaseG, ObservationsRepoImpl> 
         ObservationsRepoImpl,
     >
 where
-    CurrenciesToBaseC: Iterator<Item = &'a CurrencyDTO<G>>,
+    CurrenciesToBaseC: Iterator<Item = &'currency_dto CurrencyDTO<G>>,
     C: CurrencyDef,
     C::Group: MemberOf<G>,
     CurrentC: Currency + MemberOf<G> + PairsGroup<CommonGroup = G>,
-    G: Group<TopG = G>,
+    G: Group<TopG = G> + 'currency_dto,
     BaseC: CurrencyDef,
     BaseC::Group: MemberOf<BaseG> + MemberOf<G>,
     BaseG: Group,
