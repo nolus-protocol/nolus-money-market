@@ -8,10 +8,7 @@ use sdk::cosmwasm_std::Storage;
 
 use crate::{
     alarms::prefix::Prefix,
-    feed::{
-        Observations, ObservationsRead,
-        observations::{ObservationsReadRepo, ObservationsRepo},
-    },
+    feed::observations::{ObservationsReadRepo, ObservationsRepo},
 };
 
 use super::observations::Deque;
@@ -50,11 +47,20 @@ where
 {
     type Group = G;
 
+    type ObservationsRead<'r, C, QuoteC>
+        = Deque<'r, C, QuoteC, &'r (dyn Storage + 'r)>
+    where
+        Self: 'r,
+        C: 'static,
+        QuoteC: 'static;
+
+    // TODO[feature(precise_capturing_in_traits)]
+    //  Refactor to use precise capturing when stabilized.
     fn observations_read<'self_, C, QuoteC>(
         &'self_ self,
         c: &CurrencyDTO<Self::Group>,
         quote_c: &CurrencyDTO<Self::Group>,
-    ) -> impl ObservationsRead<C = C, QuoteC = QuoteC> + 'self_
+    ) -> Self::ObservationsRead<'self_, C, QuoteC>
     where
         C: 'static,
         QuoteC: 'static,
@@ -68,11 +74,20 @@ where
     S: Deref<Target = dyn Storage + 'storage> + DerefMut,
     G: Group,
 {
+    type Observations<'r, C, QuoteC>
+        = Deque<'r, C, QuoteC, &'r mut (dyn Storage + 'r)>
+    where
+        Self: 'r,
+        C: 'static,
+        QuoteC: 'static;
+
+    // TODO[feature(precise_capturing_in_traits)]
+    //  Refactor to use precise capturing when stabilized.
     fn observations<'self_, C, QuoteC>(
         &'self_ mut self,
         c: &CurrencyDTO<Self::Group>,
         quote_c: &CurrencyDTO<Self::Group>,
-    ) -> impl Observations<C = C, QuoteC = QuoteC> + 'self_
+    ) -> Self::Observations<'self_, C, QuoteC>
     where
         C: 'static,
         QuoteC: 'static,
