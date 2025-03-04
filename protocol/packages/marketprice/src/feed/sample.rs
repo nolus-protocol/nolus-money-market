@@ -15,9 +15,9 @@ pub fn from_observations<'a, Observations, C, QuoteC>(
     observations: Observations,
     start_from: Timestamp,
     sample_span: Duration,
-) -> impl Iterator<Item = Sample<C, QuoteC>> + 'a + use<'a, Observations, C, QuoteC>
+) -> impl Iterator<Item = Sample<C, QuoteC>>
 where
-    Observations: Iterator<Item = &'a Observation<C, QuoteC>> + 'a,
+    Observations: Iterator<Item = &'a Observation<C, QuoteC>>,
     C: 'static,
     QuoteC: 'static,
 {

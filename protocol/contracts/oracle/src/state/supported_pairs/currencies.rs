@@ -10,14 +10,14 @@ use currency::{
 
 use crate::api::{swap::SwapTarget, Currency as ApiCurrency, CurrencyGroup};
 
-pub fn currencies<'r, TopG, Nodes>(nodes: Nodes) -> impl Iterator<Item = ApiCurrency> + 'r
+pub fn currencies<'r, TopG, Nodes>(nodes: Nodes) -> impl Iterator<Item = ApiCurrency>
 where
     TopG: Group + 'r,
     LeaseGroup: MemberOf<TopG>,
     Lpns: MemberOf<TopG>,
     Native: MemberOf<TopG>,
     PaymentOnlyGroup: MemberOf<TopG>,
-    Nodes: Iterator<Item = NodeRef<'r, SwapTarget<TopG>>> + 'r,
+    Nodes: Iterator<Item = NodeRef<'r, SwapTarget<TopG>>>,
 {
     nodes.map(|node| {
         never::safe_unwrap(

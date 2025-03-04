@@ -172,18 +172,19 @@ where
             })
     }
 
-    fn calc_all_prices<'self_, 'tree, 'feeds, 'st>(
-        &'self_ self,
+    fn calc_all_prices<'tree, 'feeds, 'repo_storage>(
+        &self,
         tree: &'tree SupportedPairs<PriceG, BaseC>,
-        feeds: &'feeds Feeds<'_, PriceG, BaseC, BaseG, Repo<'st, &(dyn Storage + 'st), PriceG>>,
+        feeds: &'feeds Feeds<
+            '_,
+            PriceG,
+            BaseC,
+            BaseG,
+            Repo<'repo_storage, &(dyn Storage + 'repo_storage), PriceG>,
+        >,
         at: Timestamp,
-    ) -> impl Iterator<Item = PriceResult<PriceG, BaseC, BaseG, PriceG>> + 'feeds
-    where
-        'storage: 'self_,
-        'self_: 'feeds,
-        'tree: 'feeds,
-        'storage: 'feeds,
-    {
+    ) -> impl Iterator<Item = PriceResult<PriceG, BaseC, BaseG, PriceG>>
+    + use<'tree, 'feeds, S, PriceG, BaseC, BaseG> {
         feeds.all_prices_iter(tree.swap_pairs_df(), at, self.feeders)
     }
 

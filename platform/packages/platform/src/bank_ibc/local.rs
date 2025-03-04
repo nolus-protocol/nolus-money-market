@@ -52,7 +52,7 @@ impl<'c> Sender<'c> {
         })
     }
 
-    fn into_ibc_msgs(self) -> impl Iterator<Item = NeutronMsg> + 'c {
+    fn into_ibc_msgs(self) -> impl Iterator<Item = NeutronMsg> {
         let Self {
             channel,
             sender,

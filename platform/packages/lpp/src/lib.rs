@@ -26,9 +26,6 @@ pub trait Lpp {
     fn distribute(self, reward: Coin<Nls>) -> Result<MessageResponse>;
 }
 
-pub fn new_stub<'a, 'q>(lpp: Addr, querier: QuerierWrapper<'q>, env: &'a Env) -> impl Lpp + 'a
-where
-    'q: 'a,
-{
+pub fn new_stub(lpp: Addr, querier: QuerierWrapper<'_>, env: &Env) -> impl Lpp {
     Stub::new(lpp, querier, env)
 }

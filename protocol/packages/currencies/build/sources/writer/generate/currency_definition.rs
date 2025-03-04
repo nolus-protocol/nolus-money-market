@@ -202,7 +202,7 @@ fn currency_definition<'r>(
     name: &'r str,
     ticker: &'r str,
     currency: &'r topology::CurrencyDefinition,
-) -> impl Iterator<Item = Cow<'r, str>> + use<'r> {
+) -> impl Iterator<Item = Cow<'r, str>> {
     [
         r#"
     #[derive(

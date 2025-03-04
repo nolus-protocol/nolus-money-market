@@ -47,15 +47,14 @@ where
     BaseG: Group + MemberOf<PriceG>,
     Observations: ObservationsReadRepo<Group = PriceG>,
 {
-    pub fn all_prices_iter<'self_, 'iterator, I>(
-        &'self_ self,
+    pub fn all_prices_iter<I>(
+        &self,
         swap_pairs_df: I,
         at: Timestamp,
         total_feeders: usize,
     ) -> impl Iterator<Item = PriceResult<PriceG, BaseC, BaseG, PriceG>>
-           + use<'self_, 'iterator, PriceG, BaseC, BaseG, Observations, I>
     where
-        I: Iterator<Item = SwapLeg<PriceG>> + 'iterator,
+        I: Iterator<Item = SwapLeg<PriceG>>,
     {
         let cmd: LegCmd<PriceG, BaseC, BaseG, FedPrices<'_, '_, PriceG, Observations>> =
             LegCmd::new(FedPrices::new(&self.feeds, at, total_feeders));

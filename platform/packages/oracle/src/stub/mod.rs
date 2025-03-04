@@ -13,12 +13,12 @@ use self::impl_::{BasePriceRequest, OracleStub, RequestBuilder};
 mod impl_;
 
 #[cfg(feature = "unchecked-stable-quote")]
-pub fn new_unchecked_stable_quote_stub<'a, G, StableC>(
+pub fn new_unchecked_stable_quote_stub<G, StableC>(
     oracle: Addr,
-    querier: QuerierWrapper<'a>,
-) -> impl Oracle<G, QuoteC = StableC, QuoteG = G> + AsRef<OracleRef<StableC, G>> + 'a
+    querier: QuerierWrapper<'_>,
+) -> impl Oracle<G, QuoteC = StableC, QuoteG = G> + AsRef<OracleRef<StableC, G>>
 where
-    G: Group<TopG = G> + 'a,
+    G: Group<TopG = G>,
     StableC: CurrencyDef,
     StableC::Group: MemberOf<G>,
 {

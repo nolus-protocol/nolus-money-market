@@ -69,7 +69,7 @@ impl Leases {
     pub fn iter(
         storage: &dyn Storage,
         next_customer: Option<Addr>,
-    ) -> impl Iterator<Item = MaybeCustomer<IntoIter<Addr>>> + '_ {
+    ) -> impl Iterator<Item = MaybeCustomer<IntoIter<Addr>>> {
         let start_bound = next_customer.map(Bound::<Addr>::inclusive);
         Self::CUSTOMER_LEASES
             .prefix(())

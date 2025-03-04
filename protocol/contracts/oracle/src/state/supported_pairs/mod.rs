@@ -112,7 +112,7 @@ where
         Ok(path)
     }
 
-    pub fn swap_pairs_df(&self) -> impl Iterator<Item = SwapLeg<PriceG>> + '_ {
+    pub fn swap_pairs_df(&self) -> impl Iterator<Item = SwapLeg<PriceG>> {
         self.tree
             .iter()
             .filter_map(|node: NodeRef<'_, SwapTarget<PriceG>>| {
@@ -191,7 +191,7 @@ where
     Native: MemberOf<PriceG>,
     PaymentOnlyGroup: MemberOf<PriceG>,
 {
-    pub fn currencies(&self) -> impl Iterator<Item = api::Currency> + '_ {
+    pub fn currencies(&self) -> impl Iterator<Item = api::Currency> {
         currencies::currencies(self.tree.iter())
     }
 }

@@ -45,7 +45,7 @@ impl<'c> Sender<'c> {
             })
     }
 
-    fn into_ibc_msgs(self) -> impl Iterator<Item = MsgTransfer> + 'c {
+    fn into_ibc_msgs(self) -> impl Iterator<Item = MsgTransfer> {
         let channel = self.ics20_channel_at_dex;
         let sender = self.sender;
         let receiver = self.receiver;

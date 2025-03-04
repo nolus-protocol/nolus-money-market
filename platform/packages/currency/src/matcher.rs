@@ -6,11 +6,11 @@ pub trait Matcher {
     fn r#match(&self, def: DefinitionRef) -> bool;
 }
 
-pub(crate) fn symbol_matcher<'a, S>(symbol: &'a str) -> impl Matcher + 'a
+pub(crate) fn symbol_matcher<S>(symbol: &str) -> impl Matcher
 where
-    S: 'a + Symbol + ?Sized,
+    S: Symbol + ?Sized,
 {
-    SymbolMatcher::<'a, S>(symbol, PhantomData)
+    SymbolMatcher::<'_, S>(symbol, PhantomData)
 }
 
 struct SymbolMatcher<'a, S>(&'a str, PhantomData<S>)

@@ -250,7 +250,7 @@ fn maybe_visit_definition_with_currencies<'r, MaybeVisit>(
     matcher_parameter: &'static str,
     visitor_parameter: &'static str,
     maybe_visit: MaybeVisit,
-) -> impl Iterator<Item = &'r str> + use<'r, MaybeVisit>
+) -> impl Iterator<Item = &'r str>
 where
     MaybeVisit: IntoIterator<Item = &'r str>,
 {
@@ -276,7 +276,7 @@ fn maybe_visit_definition<'r, MaybeVisit>(
     matcher_parameter: &'static str,
     visitor_parameter: &'static str,
     maybe_visit: MaybeVisit,
-) -> impl Iterator<Item = &'r str> + use<'r, MaybeVisit>
+) -> impl Iterator<Item = &'r str>
 where
     MaybeVisit: IntoIterator<Item = &'r str>,
 {

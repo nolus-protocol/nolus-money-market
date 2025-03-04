@@ -48,7 +48,7 @@ impl Config {
         &self.treasury
     }
 
-    pub fn oracle<GSwap>(&self) -> &impl SwapPath<GSwap>
+    pub fn oracle<GSwap>(&self) -> &(impl SwapPath<GSwap> + use<GSwap>)
     where
         GSwap: Group,
     {

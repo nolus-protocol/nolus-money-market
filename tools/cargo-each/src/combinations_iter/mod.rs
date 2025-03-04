@@ -49,7 +49,7 @@ fn configured_package_combinations<'r>(
     package: &'r Package,
     config: &'r Config<'r>,
     tags: Tags<'r>,
-) -> impl Iterator<Item = String> + 'r {
+) -> impl Iterator<Item = String> {
     let combinations = config.combinations.iter();
 
     let mut includes_empty = false;
@@ -76,7 +76,7 @@ fn package_combination_variants<'r>(
     package: &'r Package,
     config: &'r Config<'r>,
     combination: &'r Combination<'r>,
-) -> impl Iterator<Item = String> + 'r {
+) -> impl Iterator<Item = String> {
     let explicit_features = explicit_combination_features(config, combination);
 
     if combination.include_rest {
@@ -92,7 +92,7 @@ fn package_combination_variants<'r>(
 fn explicit_combination_features<'r>(
     config: &'r Config<'r>,
     combination: &'r Combination<'r>,
-) -> impl Iterator<Item = String> + 'r {
+) -> impl Iterator<Item = String> {
     combination_sets_variants(config, combination).map(|mut features| {
         combination.always_on.iter().copied().for_each(|feature| {
             if features.is_empty() {
@@ -111,7 +111,7 @@ fn explicit_combination_features<'r>(
 fn combination_sets_variants<'r>(
     config: &'r Config<'r>,
     combination: &'r Combination<'r>,
-) -> impl Iterator<Item = String> + 'r {
+) -> impl Iterator<Item = String> {
     combination
         .feature_groups
         .iter()
@@ -138,7 +138,7 @@ fn combination_sets_variants<'r>(
 fn non_exclusive_sets_variants<'r>(
     config: &'r Config<'r>,
     combination: &'r Combination<'r>,
-) -> impl Iterator<Item = String> + 'r {
+) -> impl Iterator<Item = String> {
     cross_join(
         optional_non_exclusive_sets_variants(config, combination),
         required_non_exclusive_sets_variants(config, combination),
@@ -148,7 +148,7 @@ fn non_exclusive_sets_variants<'r>(
 fn required_non_exclusive_sets_variants<'r>(
     config: &'r Config<'r>,
     combination: &'r Combination<'r>,
-) -> impl Iterator<Item = String> + 'r {
+) -> impl Iterator<Item = String> {
     let mut combination_variants = combination
         .feature_groups
         .iter()
@@ -176,7 +176,7 @@ fn required_non_exclusive_sets_variants<'r>(
 fn optional_non_exclusive_sets_variants<'r>(
     config: &'r Config<'r>,
     combination: &'r Combination<'r>,
-) -> impl Iterator<Item = String> + Clone + 'r {
+) -> impl Iterator<Item = String> + Clone {
     build_combinations(
         combination
             .feature_groups
@@ -194,7 +194,7 @@ fn combination_left_over_features<'r>(
     package: &'r Package,
     config: &'r Config<'r>,
     combination: &'r Combination<'r>,
-) -> impl Iterator<Item = String> + Clone + 'r {
+) -> impl Iterator<Item = String> + Clone {
     build_combinations(
         package
             .features
@@ -212,26 +212,26 @@ fn combination_left_over_features<'r>(
 }
 
 fn from_group_members_disjoint_from_always_on<'r>(
-    combination: &'r Combination<'r>,
-    feature_group: &'r FeatureGroup<'r>,
-) -> impl Iterator<Item = &'r str> + Clone + 'r {
+    combination: &'r Combination<'_>,
+    feature_group: &'r FeatureGroup<'_>,
+) -> impl Iterator<Item = &'r str> + Clone {
     from_group_members(feature_group).filter(|member| !combination.always_on.contains(member))
 }
 
 fn from_group_members<'r>(
-    feature_group: &'r FeatureGroup<'r>,
-) -> impl Iterator<Item = &'r str> + Clone + 'r {
+    feature_group: &'r FeatureGroup<'_>,
+) -> impl Iterator<Item = &'r str> + Clone {
     feature_group.members.iter().copied()
 }
 
-fn cross_join<'r, LeftIter, RightIter>(
+fn cross_join<LeftIter, RightIter>(
     left_set: LeftIter,
     right_set: RightIter,
-) -> impl Iterator<Item = String> + 'r
+) -> impl Iterator<Item = String>
 where
-    LeftIter: Iterator<Item = String> + Clone + 'r,
-    RightIter: Iterator + 'r,
-    RightIter::Item: AsRef<str> + 'r,
+    LeftIter: Iterator<Item = String> + Clone,
+    RightIter: Iterator,
+    RightIter::Item: AsRef<str>,
 {
     let cloned = left_set.clone();
 
@@ -266,18 +266,18 @@ where
     )
 }
 
-fn build_combinations<'r, I>(iter: I) -> impl Iterator<Item = String> + Clone + 'r
+fn build_combinations<'r, I>(iter: I) -> impl Iterator<Item = String> + Clone
 where
-    I: Iterator<Item = &'r str> + Clone + 'r,
+    I: Iterator<Item = &'r str> + Clone,
 {
     Some(String::new())
         .into_iter()
         .chain(build_combinations_with_at_least_one(iter))
 }
 
-fn build_combinations_with_at_least_one<'r, I>(iter: I) -> impl Iterator<Item = String> + Clone + 'r
+fn build_combinations_with_at_least_one<'r, I>(iter: I) -> impl Iterator<Item = String> + Clone
 where
-    I: Iterator<Item = &'r str> + Clone + 'r,
+    I: Iterator<Item = &'r str> + Clone,
 {
     let mut stack = Vec::with_capacity({
         let (min, max) = iter.size_hint();
