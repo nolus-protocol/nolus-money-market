@@ -7,7 +7,7 @@ use crate::result::Result;
 
 pub(super) struct FedPrices<'a, 'config, G, Observations>
 where
-    G: Group,
+    G: Group<TopG = G>,
 {
     feeds: &'a PriceFeeds<'config, G, Observations>,
     at: Timestamp,
@@ -16,7 +16,7 @@ where
 
 impl<'a, 'config, G, Observations> FedPrices<'a, 'config, G, Observations>
 where
-    G: Group,
+    G: Group<TopG = G>,
 {
     pub fn new(
         feeds: &'a PriceFeeds<'config, G, Observations>,
@@ -32,7 +32,7 @@ where
 }
 
 pub trait PriceQuerier {
-    type CurrencyGroup: Group;
+    type CurrencyGroup: Group<TopG = Self::CurrencyGroup>;
 
     fn price<C, QuoteC>(
         &self,
