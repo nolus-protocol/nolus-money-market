@@ -100,6 +100,7 @@ where
         self.alarm_iter.as_ref()?;
 
         let mut result = self.next_alarm();
+
         while result.is_none() && self.alarm_iter.is_some() {
             result = if let Err(error) = self.move_to_next_alarms() {
                 Some(Err(error))
@@ -109,6 +110,7 @@ where
                 self.next_alarm()
             };
         }
+
         result
     }
 }
