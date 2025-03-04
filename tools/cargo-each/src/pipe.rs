@@ -12,18 +12,13 @@ pub(crate) trait Pipe: Sized {
     where
         F: FnOnce(Self) -> Self,
     {
-        if value {
-            f(self)
-        } else {
-            self
-        }
+        if value { f(self) } else { self }
     }
 
     fn pipe_if_some<T, F>(self, value: Option<T>, f: F) -> Self
     where
         F: FnOnce(Self, T) -> Self,
     {
-        #[expect(if_let_rescope)]
         if let Some(value) = value {
             f(self, value)
         } else {

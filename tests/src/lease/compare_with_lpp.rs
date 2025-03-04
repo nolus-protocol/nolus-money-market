@@ -9,7 +9,7 @@ use crate::{
     lease::{self, LeaseCoin},
 };
 
-use super::{LpnCoin, LpnCurrency, PaymentCurrency, DOWNPAYMENT};
+use super::{DOWNPAYMENT, LpnCoin, LpnCurrency, PaymentCurrency};
 
 #[test]
 fn manual_calculation() {
@@ -77,8 +77,6 @@ fn lpp_state_implicit_time() {
         )
         .unwrap();
 
-    #[expect(if_let_rescope)]
-    // TODO remove once stop linting with the 'rust-2024-compatibility' group
     let query_result = if let StateResponse::Opened {
         principal_due,
         overdue_interest,
@@ -131,8 +129,6 @@ fn lpp_state_explicit_time() {
         )
         .unwrap();
 
-    #[expect(if_let_rescope)]
-    // TODO remove once stop linting with the 'rust-2024-compatibility' group
     let query_result = if let StateResponse::Opened {
         overdue_interest,
         due_interest,

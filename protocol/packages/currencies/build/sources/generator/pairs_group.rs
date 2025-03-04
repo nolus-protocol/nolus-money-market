@@ -27,8 +27,6 @@ where
 {
     let matcher;
 
-    #[expect(if_let_rescope)]
-    // TODO remove once stop linting with the 'rust-2024-compatibility' group
     if let Some(ticker) = parents.next() {
         matcher = "matcher";
 
@@ -93,13 +91,7 @@ struct PairsGroupTemplate<
     visitor_parameter_name: &'static str,
 }
 
-impl<
-        'protocol,
-        'host_currency,
-        'dex_currencies,
-        'dex_currency_ticker,
-        'dex_currency_definition,
-    >
+impl<'protocol, 'host_currency, 'dex_currencies, 'dex_currency_ticker, 'dex_currency_definition>
     PairsGroupTemplate<
         'protocol,
         'host_currency,
@@ -197,13 +189,7 @@ struct VisitEntryTemplate<
     visitor_parameter_name: &'static str,
 }
 
-impl<
-        'protocol,
-        'host_currency,
-        'dex_currencies,
-        'dex_currency_ticker,
-        'dex_currency_definition,
-    >
+impl<'protocol, 'host_currency, 'dex_currencies, 'dex_currency_ticker, 'dex_currency_definition>
     VisitEntryTemplate<
         'protocol,
         'host_currency,

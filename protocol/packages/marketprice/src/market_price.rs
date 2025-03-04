@@ -5,9 +5,9 @@ use currency::{
     MemberOf, PairsGroup, PairsVisitor, PairsVisitorResult,
 };
 use finance::price::{
-    base::BasePrice,
-    dto::{with_price, PriceDTO, WithPrice},
     Price,
+    base::BasePrice,
+    dto::{PriceDTO, WithPrice, with_price},
 };
 use sdk::cosmwasm_std::{Addr, Timestamp};
 
@@ -73,16 +73,8 @@ where
             _base_g: PhantomData<BaseG>,
             leaf_to_base: CurrenciesToBaseC,
         }
-        impl<
-                'config,
-                'feeds,
-                'currencies,
-                G,
-                BaseC,
-                BaseG,
-                CurrenciesToBaseC,
-                ObservationsRepoImpl,
-            > AnyVisitor<G>
+        impl<'config, 'feeds, 'currencies, G, BaseC, BaseG, CurrenciesToBaseC, ObservationsRepoImpl>
+            AnyVisitor<G>
             for CurrencyResolver<
                 'config,
                 'feeds,
@@ -127,8 +119,6 @@ where
             }
         }
 
-        #[expect(if_let_rescope)]
-        // TODO remove once stop linting with the 'rust-2024-compatibility' group
         if let Some(c) = leaf_to_base.next() {
             c.into_currency_type(CurrencyResolver {
                 _currencies_lifetime: PhantomData,
@@ -271,18 +261,7 @@ struct PriceCollect<
     _base_g: PhantomData<BaseG>,
     price: Price<C, CurrentC>,
 }
-impl<
-        'a,
-        'config,
-        'currency,
-        CurrenciesToBaseC,
-        C,
-        CurrentC,
-        G,
-        BaseC,
-        BaseG,
-        ObservationsRepoImpl,
-    >
+impl<'a, 'config, 'currency, CurrenciesToBaseC, C, CurrentC, G, BaseC, BaseG, ObservationsRepoImpl>
     PriceCollect<
         'a,
         'config,
@@ -339,8 +318,6 @@ where
     }
 
     fn do_collect(mut self) -> Result<BasePrice<G, BaseC, BaseG>, PriceFeedsError> {
-        #[expect(if_let_rescope)]
-        // TODO remove once stop linting with the 'rust-2024-compatibility' group
         if let Some(next_currency) = self.leaf_to_base.next() {
             next_currency.into_pair_member_type(self)
         } else {
@@ -411,9 +388,9 @@ mod test {
         percent::Percent,
         price::{self, Price},
     };
-    use sdk::cosmwasm_std::{testing::MockStorage, Addr, Storage, Timestamp};
+    use sdk::cosmwasm_std::{Addr, Storage, Timestamp, testing::MockStorage};
 
-    use crate::{error::PriceFeedsError, market_price::Config, Repo};
+    use crate::{Repo, error::PriceFeedsError, market_price::Config};
 
     use super::PriceFeeds;
 
