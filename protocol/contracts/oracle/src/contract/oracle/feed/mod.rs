@@ -56,7 +56,7 @@ where
     where
         I: Iterator<Item = SwapLeg<PriceG>>,
     {
-        let cmd: LegCmd<PriceG, BaseC, BaseG, _> =
+        let cmd: LegCmd<BaseC, BaseG, _> =
             LegCmd::new(FedPrices::new(&self.feeds, at, total_feeders));
 
         swap_pairs_df

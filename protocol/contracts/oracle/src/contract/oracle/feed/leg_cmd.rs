@@ -5,24 +5,22 @@ use crate::error::Error;
 
 use super::price_querier::PriceQuerier;
 
-pub(super) struct LegCmd<PriceG, BaseC, BaseG, Querier>
+pub(super) struct LegCmd<BaseC, BaseG, Querier>
 where
-    PriceG: Group,
     BaseC: CurrencyDef,
-    BaseC::Group: MemberOf<BaseG> + MemberOf<PriceG::TopG>,
+    BaseC::Group: MemberOf<BaseG> + MemberOf<Querier::CurrencyGroup>,
     BaseG: Group,
     Querier: PriceQuerier,
 {
     price_querier: Querier,
-    stack: Vec<BasePrice<PriceG, BaseC, BaseG>>,
+    stack: Vec<BasePrice<Querier::CurrencyGroup, BaseC, BaseG>>,
 }
 
-impl<PriceG, BaseC, BaseG, Querier> LegCmd<PriceG, BaseC, BaseG, Querier>
+impl<BaseC, BaseG, Querier> LegCmd<BaseC, BaseG, Querier>
 where
-    PriceG: Group<TopG = PriceG>,
     BaseC: CurrencyDef,
-    BaseC::Group: MemberOf<BaseG> + MemberOf<PriceG>,
-    BaseG: Group + MemberOf<PriceG>,
+    BaseC::Group: MemberOf<BaseG> + MemberOf<Querier::CurrencyGroup>,
+    BaseG: Group + MemberOf<Querier::CurrencyGroup>,
     Querier: PriceQuerier,
 {
     pub fn new(price_querier: Querier) -> Self {
@@ -33,19 +31,18 @@ where
     }
 }
 
-impl<PriceG, BaseC, BaseG, Querier> AnyVisitorPair for &mut LegCmd<PriceG, BaseC, BaseG, Querier>
+impl<BaseC, BaseG, Querier> AnyVisitorPair for &mut LegCmd<BaseC, BaseG, Querier>
 where
-    PriceG: Group<TopG = PriceG>,
     BaseC: CurrencyDef,
-    BaseC::Group: MemberOf<BaseG> + MemberOf<PriceG>,
-    BaseG: Group + MemberOf<PriceG>,
-    Querier: PriceQuerier<CurrencyGroup = PriceG>,
+    BaseC::Group: MemberOf<BaseG> + MemberOf<Querier::CurrencyGroup>,
+    BaseG: Group + MemberOf<Querier::CurrencyGroup>,
+    Querier: PriceQuerier,
 {
-    type VisitedG = PriceG;
+    type VisitedG = Querier::CurrencyGroup;
 
-    type Output = Option<BasePrice<PriceG, BaseC, BaseG>>;
+    type Output = Option<BasePrice<Querier::CurrencyGroup, BaseC, BaseG>>;
 
-    type Error = Error<PriceG>;
+    type Error = Error<Querier::CurrencyGroup>;
 
     fn on<B, Q>(
         self,
@@ -109,8 +106,7 @@ mod test {
         feeds.add::<PaymentC1, BaseCurrency>(2, 1);
         feeds.add::<PaymentC5, PaymentC4>(2, 1);
 
-        let mut cmd =
-            LegCmd::<PaymentCurrencies, BaseCurrency, BaseCurrencies, _>::new(feeds.clone());
+        let mut cmd = LegCmd::<BaseCurrency, BaseCurrencies, _>::new(feeds.clone());
         assert_eq!(
             cmd.on::<PaymentC4, BaseCurrency>(
                 &currency::dto::<PaymentC4, PaymentCurrencies>(),
@@ -143,8 +139,7 @@ mod test {
         let mut feeds = TestFeeds(HashMap::new());
         feeds.add::<PaymentC4, BaseCurrency>(2, 1);
 
-        let mut cmd =
-            LegCmd::<PaymentCurrencies, BaseCurrency, BaseCurrencies, _>::new(feeds.clone());
+        let mut cmd = LegCmd::<BaseCurrency, BaseCurrencies, _>::new(feeds.clone());
 
         assert_eq!(
             cmd.on::<PaymentC6, PaymentC4>(
@@ -170,8 +165,7 @@ mod test {
         feeds.add::<PaymentC5, PaymentC4>(5, 1);
         feeds.add::<PaymentC3, PaymentC5>(3, 1);
 
-        let mut cmd =
-            LegCmd::<PaymentCurrencies, BaseCurrency, BaseCurrencies, _>::new(feeds.clone());
+        let mut cmd = LegCmd::<BaseCurrency, BaseCurrencies, _>::new(feeds.clone());
 
         assert_eq!(
             cmd.on::<PaymentC3, PaymentC5>(
@@ -218,8 +212,7 @@ mod test {
         feeds.add::<PaymentC5, PaymentC4>(3, 1);
         feeds.add::<PaymentC6, PaymentC4>(4, 1);
 
-        let mut cmd =
-            LegCmd::<PaymentCurrencies, BaseCurrency, BaseCurrencies, _>::new(feeds.clone());
+        let mut cmd = LegCmd::<BaseCurrency, BaseCurrencies, _>::new(feeds.clone());
 
         assert_eq!(
             cmd.on::<PaymentC4, BaseCurrency>(
@@ -260,8 +253,7 @@ mod test {
         feeds.add::<PaymentC4, BaseCurrency>(2, 1);
         feeds.add::<PaymentC1, BaseCurrency>(4, 1);
 
-        let mut cmd =
-            LegCmd::<PaymentCurrencies, BaseCurrency, BaseCurrencies, _>::new(feeds.clone());
+        let mut cmd = LegCmd::<BaseCurrency, BaseCurrencies, _>::new(feeds.clone());
 
         assert_eq!(
             cmd.on::<PaymentC1, BaseCurrency>(
@@ -277,8 +269,7 @@ mod test {
         let mut feeds = TestFeeds(HashMap::new());
         feeds.add::<PaymentC1, BaseCurrency>(4, 1);
 
-        let mut cmd =
-            LegCmd::<PaymentCurrencies, BaseCurrency, BaseCurrencies, _>::new(feeds.clone());
+        let mut cmd = LegCmd::<BaseCurrency, BaseCurrencies, _>::new(feeds.clone());
 
         assert_eq!(
             Ok(Some(tests::base_price::<PaymentC1>(4, 1))),
@@ -294,8 +285,7 @@ mod test {
         let mut feeds = TestFeeds(HashMap::new());
         feeds.add::<PaymentC4, BaseCurrency>(2, 1);
 
-        let mut cmd =
-            LegCmd::<PaymentCurrencies, BaseCurrency, BaseCurrencies, _>::new(feeds.clone());
+        let mut cmd = LegCmd::<BaseCurrency, BaseCurrencies, _>::new(feeds.clone());
 
         assert_eq!(
             cmd.on::<PaymentC1, BaseCurrency>(
