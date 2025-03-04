@@ -5,7 +5,7 @@ use sdk::cosmwasm_std::Timestamp;
 
 use crate::result::Result;
 
-pub struct FedPrices<'a, 'config, G, Observations>
+pub(super) struct FedPrices<'a, 'config, G, Observations>
 where
     G: Group,
 {

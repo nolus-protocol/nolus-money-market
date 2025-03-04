@@ -5,7 +5,7 @@ use crate::error::Error;
 
 use super::price_querier::PriceQuerier;
 
-pub struct LegCmd<PriceG, BaseC, BaseG, Querier>
+pub(super) struct LegCmd<PriceG, BaseC, BaseG, Querier>
 where
     PriceG: Group,
     BaseC: CurrencyDef,
