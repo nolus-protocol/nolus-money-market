@@ -5,21 +5,21 @@ use sdk::cosmwasm_std::Timestamp;
 
 use crate::result::Result;
 
-pub(super) struct FedPrices<'a, 'config, G, Observations>
+pub(super) struct FedPrices<'feeds, 'config, G, Observations>
 where
     G: Group<TopG = G>,
 {
-    feeds: &'a PriceFeeds<'config, G, Observations>,
+    feeds: &'feeds PriceFeeds<'config, G, Observations>,
     at: Timestamp,
     total_feeders: usize,
 }
 
-impl<'a, 'config, G, Observations> FedPrices<'a, 'config, G, Observations>
+impl<'feeds, 'config, G, Observations> FedPrices<'feeds, 'config, G, Observations>
 where
     G: Group<TopG = G>,
 {
     pub fn new(
-        feeds: &'a PriceFeeds<'config, G, Observations>,
+        feeds: &'feeds PriceFeeds<'config, G, Observations>,
         at: Timestamp,
         total_feeders: usize,
     ) -> Self {
