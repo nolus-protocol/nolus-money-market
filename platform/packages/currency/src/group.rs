@@ -6,8 +6,7 @@ use super::{AnyVisitor, AnyVisitorResult, matcher::Matcher};
 
 pub trait Group
 where
-    Self: Copy + Clone + Debug + Ord + PartialEq + MemberOf<Self>,
-    Self: MemberOf<Self::TopG>,
+    Self: Copy + Clone + Debug + Ord + PartialEq + MemberOf<Self> + MemberOf<Self::TopG>,
 {
     const DESCR: &'static str;
 
