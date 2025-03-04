@@ -5,14 +5,14 @@ use std::{
 
 use currency::{Currency, CurrencyDTO, CurrencyDef, Group, MemberOf};
 use finance::price::{
+    Price,
     base::{
-        with_price::{self, WithPrice},
         BasePrice,
+        with_price::{self, WithPrice},
     },
     dto::PriceDTO,
-    Price,
 };
-use marketprice::{config::Config as PriceConfig, Repo};
+use marketprice::{Repo, config::Config as PriceConfig};
 use platform::{
     dispatcher::{AlarmsDispatcher, Id},
     message::Response as MessageResponse,
@@ -245,7 +245,7 @@ where
                     block_time,
                 ))?
                 .take(max_count.try_into()?)
-                .collect::<Result<Vec<Addr>, PriceG>>()
+                .collect::<std::result::Result<_, _>>()
         })?;
 
         #[cfg(debug_assertions)]
@@ -294,11 +294,11 @@ mod test_normalized_price_not_found {
         PaymentGroup as AlarmCurrencies, Stable as StableCurrency,
     };
     use finance::{coin::Coin, duration::Duration, percent::Percent, price};
-    use marketprice::{config::Config as PriceConfig, Repo};
+    use marketprice::{Repo, config::Config as PriceConfig};
     use sdk::{
         cosmwasm_std::{
-            testing::{MockApi, MockQuerier, MockStorage},
             Addr, DepsMut, Empty, QuerierWrapper, Storage, Timestamp,
+            testing::{MockApi, MockQuerier, MockStorage},
         },
         testing,
     };
@@ -310,7 +310,7 @@ mod test_normalized_price_not_found {
         test_tree,
     };
 
-    use super::{feed::Feeds, feeder::Feeders, Oracle, ROOT_NAMESPACE};
+    use super::{Oracle, ROOT_NAMESPACE, feed::Feeds, feeder::Feeders};
 
     type NlsCoin = Coin<Nls>;
     type BaseCoin = Coin<BaseCurrency>;
