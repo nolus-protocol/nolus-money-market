@@ -72,12 +72,12 @@ where
 #[cfg(test)]
 mod test {
     use currency::{
-        test::{SubGroupTestC10, SuperGroup, SuperGroupTestC1, SuperGroupTestC2},
         CurrencyDef, Group, MemberOf,
+        test::{SubGroupTestC10, SuperGroup, SuperGroupTestC1, SuperGroupTestC2},
     };
     use finance::coin::{Amount, Coin, CoinDTO};
 
-    use crate::impl_::{swap_coins::TestVisitor, swap_task::IterNext, CoinVisitor};
+    use crate::impl_::{CoinVisitor, swap_coins::TestVisitor, swap_task::IterNext};
 
     use super::CurrencyFilter;
 

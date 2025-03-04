@@ -1,9 +1,10 @@
 [package]
 name = "integration_tests"
 version = "0.3.0"
-edition = "2021"
+edition = "2024"
 authors = ["The Dev Nolus Team <dev@nolus.io>"]
 license = "Apache-2.0"
+resolver = "3"
 
 [package.metadata.cargo-each]
 combinations = [
@@ -11,6 +12,7 @@ combinations = [
 ]
 
 [workspace.lints.rust]
+deprecated_safe = { level = "forbid" }
 unexpected_cfgs = { level = "forbid", check-cfg = ["cfg(test)"] }
 
 [features]

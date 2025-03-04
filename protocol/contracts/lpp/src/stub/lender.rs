@@ -119,12 +119,12 @@ mod test {
     use platform::response::{self};
     use sdk::{
         cosmwasm_ext::{CosmosMsg, Response as CwResponse},
-        cosmwasm_std::{from_json, testing::MockQuerier, Addr, QuerierWrapper, ReplyOn, WasmMsg},
+        cosmwasm_std::{Addr, QuerierWrapper, ReplyOn, WasmMsg, from_json, testing::MockQuerier},
     };
 
     use crate::{
         msg::ExecuteMsg,
-        stub::{lender::LppLender, LppBatch, LppRef},
+        stub::{LppBatch, LppRef, lender::LppLender},
     };
     #[test]
     fn open_loan_req() {

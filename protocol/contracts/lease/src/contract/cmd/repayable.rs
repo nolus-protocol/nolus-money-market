@@ -11,18 +11,18 @@ use timealarms::stub::TimeAlarmsRef;
 
 use crate::{
     api::{
-        position::{ChangeCmd, ClosePolicyChange},
         LeaseAssetCurrencies, LeasePaymentCurrencies,
+        position::{ChangeCmd, ClosePolicyChange},
     },
     contract::SplitDTOOut,
     error::{ContractError, ContractResult},
     finance::{LpnCoin, LpnCoinDTO, LpnCurrencies, LpnCurrency, OracleRef, ReserveRef},
-    lease::{with_lease::WithLease, IntoDTOResult, Lease as LeaseDO, LeaseDTO},
+    lease::{IntoDTOResult, Lease as LeaseDO, LeaseDTO, with_lease::WithLease},
     loan::RepayReceipt,
     position::CloseStrategy,
 };
 
-use super::{close_policy::check, CloseStatusDTO};
+use super::{CloseStatusDTO, close_policy::check};
 
 pub(crate) trait RepayFn {
     fn do_repay<Asset, Lpp, Oracle, Profit>(
@@ -217,7 +217,7 @@ mod test {
         api::position::{ChangeCmd, ClosePolicyChange},
         contract::cmd::RepayLeaseFn,
         lease::{
-            tests::{self, TestLease, TestLpn, FIRST_LIQ_WARN},
+            tests::{self, FIRST_LIQ_WARN, TestLease, TestLpn},
             with_lease::WithLease,
         },
     };

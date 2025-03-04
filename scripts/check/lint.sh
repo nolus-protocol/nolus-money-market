@@ -21,21 +21,32 @@
 set -eu
 
 append_lint_flags() {
+  # Deny/Forbid Lint Groups
+  # \
+  # Deny/Forbid Individual lints
+  # \
+  # Deny/Forbid Clippy Lints
+  # \
+  # Deny Forbid "warnings" Lint Group
+  # \
+  # Allowed Lints
   "${@:?}" \
     -- \
-    --deny "clippy::all" \
-    --deny "clippy::unwrap_used" \
-    --deny "clippy::unwrap_in_result" \
+    --forbid "deprecated-safe" \
     --deny "future-incompatible" \
     --deny "nonstandard-style" \
     --deny "refining-impl-trait" \
     --deny "rust-2018-idioms" \
-    --deny "rust-2021-compatibility" \
-    --deny "rust-2024-compatibility" \
-    --forbid "unfulfilled_lint_expectations" \
     --deny "unused" \
+    \
+    --forbid "unfulfilled_lint_expectations" \
+    \
+    --deny "clippy::all" \
+    --deny "clippy::unwrap_used" \
+    --deny "clippy::unwrap_in_result" \
+    \
     --deny "warnings" \
-    --allow "impl-trait-overcaptures" \
+    \
     --allow "clippy::large_enum_variant"
 }
 

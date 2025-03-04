@@ -4,8 +4,8 @@ use admin_contract::msg::{MigrationSpec, ProtocolContracts};
 use currency::CurrencyDTO;
 use finance::{duration::Duration, percent::Percent};
 use lease::api::{
-    open::{ConnectionParams, PositionSpecDTO},
     DownpaymentCoin, LeaseCoin, LpnCoinDTO,
+    open::{ConnectionParams, PositionSpecDTO},
 };
 use sdk::cosmwasm_std::{Addr, Uint64};
 use versioning::ProtocolPackageReleaseId;

@@ -1,6 +1,6 @@
 use std::marker::PhantomData;
 
-use currency::{platform::Nls, CurrencyDTO, Group, MemberOf};
+use currency::{CurrencyDTO, Group, MemberOf, platform::Nls};
 use finance::{
     coin::{Coin, CoinDTO},
     duration::Duration,

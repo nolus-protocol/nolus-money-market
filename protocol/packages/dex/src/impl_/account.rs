@@ -8,11 +8,11 @@ use platform::{
 };
 use sdk::cosmwasm_std::{Addr, QuerierWrapper, Timestamp};
 
-use crate::{error::Result, ConnectionParams};
+use crate::{ConnectionParams, error::Result};
 
 use super::{
-    trx::{SwapTrx, TransferInTrx, TransferOutTrx},
     DexConnectable,
+    trx::{SwapTrx, TransferInTrx, TransferOutTrx},
 };
 
 #[derive(Serialize, Deserialize)]

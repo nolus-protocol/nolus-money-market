@@ -15,12 +15,12 @@ use crate::{
 };
 
 use super::{
-    higher_order_type::TryForEachPair, Contracts, ContractsExecute, ContractsMigration,
-    ContractsTemplate, ExecuteSpec, Granularity, HigherOrderOption, HigherOrderPlatformContracts,
-    HigherOrderPlatformContractsWithoutAdmin, HigherOrderProtocolContracts, HigherOrderType,
-    MigrationSpec, PlatformContractAddresses, PlatformContractAddressesWithoutAdmin,
-    PlatformExecute, PlatformMigration, Protocol, ProtocolContractAddresses, ProtocolExecute,
-    ProtocolMigration, Protocols,
+    Contracts, ContractsExecute, ContractsMigration, ContractsTemplate, ExecuteSpec, Granularity,
+    HigherOrderOption, HigherOrderPlatformContracts, HigherOrderPlatformContractsWithoutAdmin,
+    HigherOrderProtocolContracts, HigherOrderType, MigrationSpec, PlatformContractAddresses,
+    PlatformContractAddressesWithoutAdmin, PlatformExecute, PlatformMigration, Protocol,
+    ProtocolContractAddresses, ProtocolExecute, ProtocolMigration, Protocols,
+    higher_order_type::TryForEachPair,
 };
 
 pub(crate) fn migrate(
@@ -261,9 +261,9 @@ where
     Platform::Of<Unit>: Validate,
     Protocol: HigherOrderType,
     Protocol::Of<Unit>: for<'r> Validate<
-        Context<'r> = <Platform::Of<Unit> as Validate>::Context<'r>,
-        Error = <Platform::Of<Unit> as Validate>::Error,
-    >,
+            Context<'r> = <Platform::Of<Unit> as Validate>::Context<'r>,
+            Error = <Platform::Of<Unit> as Validate>::Error,
+        >,
 {
     type Context<'r> = <Platform::Of<Unit> as Validate>::Context<'r>;
 

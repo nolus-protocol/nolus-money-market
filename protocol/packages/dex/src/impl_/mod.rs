@@ -7,17 +7,18 @@ use sdk::cosmwasm_std::{Binary, Env, QuerierWrapper, Timestamp};
 pub use crate::error::Result as DexResult;
 
 pub use self::{
+    SwapTask as SwapTaskT,
     account::Account,
     connectable::DexConnectable,
     ica_connector::{
-        Enterable, IcaConnectee, IcaConnector, ICS27_MESSAGE_ENTERING_NEXT_STATE,
+        Enterable, ICS27_MESSAGE_ENTERING_NEXT_STATE, IcaConnectee, IcaConnector,
         NO_ICS27_MESSAGE_ENTERING_NEXT_STATE,
     },
     out_local::{
-        start_local_local, start_remote_local, StartLocalLocalState, StartRemoteLocalState,
-        StartTransferInState, State as StateLocalOut,
+        StartLocalLocalState, StartRemoteLocalState, StartTransferInState, State as StateLocalOut,
+        start_local_local, start_remote_local,
     },
-    out_remote::{start as start_local_remote, StartLocalRemoteState, State as StateRemoteOut},
+    out_remote::{StartLocalRemoteState, State as StateRemoteOut, start as start_local_remote},
     resp_delivery::{ICAOpenResponseDelivery, ResponseDelivery},
     response::{ContinueResult, Handler, Response, Result},
     swap_coins::{on_coin, on_coins},
@@ -26,7 +27,6 @@ pub use self::{
     transfer_in_finish::TransferInFinish,
     transfer_in_init::TransferInInit,
     transfer_out::TransferOut,
-    SwapTask as SwapTaskT,
 };
 #[cfg(feature = "migration")]
 pub use migration::{InspectSpec, MigrateSpec};

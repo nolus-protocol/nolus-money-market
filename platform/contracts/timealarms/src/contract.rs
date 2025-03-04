@@ -5,13 +5,13 @@ use platform::{
 use sdk::{
     cosmwasm_ext::Response as CwResponse,
     cosmwasm_std::{
-        entry_point, to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Storage,
-        SubMsgResult,
+        Binary, Deps, DepsMut, Env, MessageInfo, Reply, Storage, SubMsgResult, entry_point,
+        to_json_binary,
     },
 };
 use versioning::{
-    package_name, package_version, PlatformMigrationMessage, PlatformPackageRelease,
-    UpdatablePackage as _, VersionSegment,
+    PlatformMigrationMessage, PlatformPackageRelease, UpdatablePackage as _, VersionSegment,
+    package_name, package_version,
 };
 
 use crate::{
@@ -121,9 +121,8 @@ pub fn reply(deps: DepsMut<'_>, env: Env, msg: Reply) -> ContractResult<CwRespon
 #[cfg(test)]
 mod tests {
     use sdk::cosmwasm_std::{
-        self,
+        self, Addr, MessageInfo,
         testing::{mock_dependencies, mock_env},
-        Addr, MessageInfo,
     };
 
     use crate::msg::InstantiateMsg;

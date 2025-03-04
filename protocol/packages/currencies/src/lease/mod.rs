@@ -65,7 +65,7 @@ mod test {
         },
     };
 
-    use super::{impl_mod::definitions::LeaseC1, Group};
+    use super::{Group, impl_mod::definitions::LeaseC1};
 
     #[test]
     fn maybe_visit_on_ticker() {

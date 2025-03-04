@@ -11,7 +11,7 @@ use crate::{
     error::ContractResult,
 };
 
-use super::{handler::Handler as LeaseHandler, Contract, Response};
+use super::{Contract, Response, handler::Handler as LeaseHandler};
 
 #[derive(Serialize, Deserialize)]
 #[serde(transparent)]

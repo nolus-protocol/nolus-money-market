@@ -12,7 +12,7 @@ use sdk::{
         },
         prost::Message,
     },
-    cosmwasm_std::{from_json, Addr, Api, Reply, SubMsgResponse},
+    cosmwasm_std::{Addr, Api, Reply, SubMsgResponse, from_json},
 };
 
 use crate::{error::Error, result::Result};
@@ -116,7 +116,6 @@ where
     resp.data
         .as_ref()
         .ok_or(Error::EmptyReply())
-        .map_err(Into::into)
         .and_then(|data| decode_raw(data))
 }
 

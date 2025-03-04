@@ -1,8 +1,8 @@
 use serde::{Deserialize, Serialize};
 
 use crate::impl_::{
-    resp_delivery::ICAOpenResponseDelivery, DexConnectable, IcaConnectee, IcaConnector,
-    SwapExactIn, SwapExactInRespDelivery, TransferOut, TransferOutRespDelivery,
+    DexConnectable, IcaConnectee, IcaConnector, SwapExactIn, SwapExactInRespDelivery, TransferOut,
+    TransferOutRespDelivery, resp_delivery::ICAOpenResponseDelivery,
 };
 
 use super::swap_task::SwapTask as SwapTaskT;
@@ -50,20 +50,14 @@ where
 
 mod impl_into {
     use crate::impl_::{
-        swap_task::SwapTask as SwapTaskT, IcaConnector, SwapExactIn, SwapExactInRespDelivery,
-        TransferOut, TransferOutRespDelivery,
+        IcaConnector, SwapExactIn, SwapExactInRespDelivery, TransferOut, TransferOutRespDelivery,
+        swap_task::SwapTask as SwapTaskT,
     };
 
     use super::{OpenIcaRespDelivery, State};
 
-    impl<
-            OpenIca,
-            SwapTask,
-            SwapGroup,
-            SwapClient,
-            ForwardToInnerMsg,
-            ForwardToInnerContinueMsg,
-        > From<IcaConnector<OpenIca, SwapTask::Result>>
+    impl<OpenIca, SwapTask, SwapGroup, SwapClient, ForwardToInnerMsg, ForwardToInnerContinueMsg>
+        From<IcaConnector<OpenIca, SwapTask::Result>>
         for State<
             OpenIca,
             SwapTask,
@@ -80,14 +74,8 @@ mod impl_into {
         }
     }
 
-    impl<
-            OpenIca,
-            SwapTask,
-            SwapGroup,
-            SwapClient,
-            ForwardToInnerMsg,
-            ForwardToInnerContinueMsg,
-        > From<OpenIcaRespDelivery<OpenIca, SwapTask::Result, ForwardToInnerContinueMsg>>
+    impl<OpenIca, SwapTask, SwapGroup, SwapClient, ForwardToInnerMsg, ForwardToInnerContinueMsg>
+        From<OpenIcaRespDelivery<OpenIca, SwapTask::Result, ForwardToInnerContinueMsg>>
         for State<
             OpenIca,
             SwapTask,
@@ -106,14 +94,8 @@ mod impl_into {
         }
     }
 
-    impl<
-            OpenIca,
-            SwapTask,
-            SwapGroup,
-            SwapClient,
-            ForwardToInnerMsg,
-            ForwardToInnerContinueMsg,
-        > From<TransferOut<SwapTask, Self, SwapGroup, SwapClient>>
+    impl<OpenIca, SwapTask, SwapGroup, SwapClient, ForwardToInnerMsg, ForwardToInnerContinueMsg>
+        From<TransferOut<SwapTask, Self, SwapGroup, SwapClient>>
         for State<
             OpenIca,
             SwapTask,
@@ -130,14 +112,7 @@ mod impl_into {
         }
     }
 
-    impl<
-            OpenIca,
-            SwapTask,
-            SwapGroup,
-            SwapClient,
-            ForwardToInnerMsg,
-            ForwardToInnerContinueMsg,
-        >
+    impl<OpenIca, SwapTask, SwapGroup, SwapClient, ForwardToInnerMsg, ForwardToInnerContinueMsg>
         From<TransferOutRespDelivery<SwapTask, Self, SwapGroup, SwapClient, ForwardToInnerMsg>>
         for State<
             OpenIca,
@@ -163,14 +138,8 @@ mod impl_into {
         }
     }
 
-    impl<
-            OpenIca,
-            SwapTask,
-            SwapGroup,
-            SwapClient,
-            ForwardToInnerMsg,
-            ForwardToInnerContinueMsg,
-        > From<SwapExactIn<SwapTask, Self, SwapGroup, SwapClient>>
+    impl<OpenIca, SwapTask, SwapGroup, SwapClient, ForwardToInnerMsg, ForwardToInnerContinueMsg>
+        From<SwapExactIn<SwapTask, Self, SwapGroup, SwapClient>>
         for State<
             OpenIca,
             SwapTask,
@@ -187,14 +156,7 @@ mod impl_into {
         }
     }
 
-    impl<
-            OpenIca,
-            SwapTask,
-            SwapGroup,
-            SwapClient,
-            ForwardToInnerMsg,
-            ForwardToInnerContinueMsg,
-        >
+    impl<OpenIca, SwapTask, SwapGroup, SwapClient, ForwardToInnerMsg, ForwardToInnerContinueMsg>
         From<SwapExactInRespDelivery<SwapTask, Self, SwapGroup, SwapClient, ForwardToInnerMsg>>
         for State<
             OpenIca,
@@ -229,23 +191,17 @@ mod impl_handler {
 
     use crate::{
         impl_::{
+            DexConnectable, ForwardToInner, Handler, IcaConnectee, TimeAlarm,
             response::{ContinueResult, Result},
             swap_task::SwapTask as SwapTaskT,
-            DexConnectable, ForwardToInner, Handler, IcaConnectee, TimeAlarm,
         },
         swap::ExactAmountIn,
     };
 
     use super::State;
 
-    impl<
-            OpenIca,
-            SwapTask,
-            SwapGroup,
-            SwapClient,
-            ForwardToInnerMsg,
-            ForwardToInnerContinueMsg,
-        > Handler
+    impl<OpenIca, SwapTask, SwapGroup, SwapClient, ForwardToInnerMsg, ForwardToInnerContinueMsg>
+        Handler
         for State<
             OpenIca,
             SwapTask,
@@ -431,19 +387,13 @@ mod impl_contract {
     use sdk::cosmwasm_std::{QuerierWrapper, Timestamp};
 
     use crate::impl_::{
-        swap_task::SwapTask as SwapTaskT, Contract, ContractInSwap, SwapState, TransferOutState,
+        Contract, ContractInSwap, SwapState, TransferOutState, swap_task::SwapTask as SwapTaskT,
     };
 
     use super::State;
 
-    impl<
-            OpenIca,
-            SwapTask,
-            SwapGroup,
-            SwapClient,
-            ForwardToInnerMsg,
-            ForwardToInnerContinueMsg,
-        > Contract
+    impl<OpenIca, SwapTask, SwapGroup, SwapClient, ForwardToInnerMsg, ForwardToInnerContinueMsg>
+        Contract
         for State<
             OpenIca,
             SwapTask,
@@ -490,14 +440,8 @@ mod impl_display {
     use super::State;
     use crate::impl_::swap_task::SwapTask as SwapTaskT;
 
-    impl<
-            OpenIca,
-            SwapTask,
-            SwapGroup,
-            SwapClient,
-            ForwardToInnerMsg,
-            ForwardToInnerContinueMsg,
-        > Display
+    impl<OpenIca, SwapTask, SwapGroup, SwapClient, ForwardToInnerMsg, ForwardToInnerContinueMsg>
+        Display
         for State<
             OpenIca,
             SwapTask,
@@ -531,21 +475,14 @@ mod impl_migration {
     use super::{OpenIcaRespDelivery, State};
     use crate::{
         impl_::{
-            migration::MigrateSpec, swap_task::SwapTask as SwapTaskT, DexConnectable,
-            ForwardToInner, IcaConnectee, IcaConnector,
+            DexConnectable, ForwardToInner, IcaConnectee, IcaConnector, migration::MigrateSpec,
+            swap_task::SwapTask as SwapTaskT,
         },
         swap::ExactAmountIn,
     };
 
     //cannot impl MigrateSpec due to the need to migrate OpenIca as well
-    impl<
-            SwapTask,
-            OpenIca,
-            SwapGroup,
-            SwapClient,
-            ForwardToInnerMsg,
-            ForwardToInnerContinueMsg,
-        >
+    impl<SwapTask, OpenIca, SwapGroup, SwapClient, ForwardToInnerMsg, ForwardToInnerContinueMsg>
         State<
             OpenIca,
             SwapTask,
@@ -574,17 +511,17 @@ mod impl_migration {
         >
         where
             OpenIca: MigrateSpec<
-                OpenIca,
-                OpenIcaNew,
-                State<
+                    OpenIca,
                     OpenIcaNew,
-                    SwapTaskNew,
-                    SwapGroup,
-                    SwapClient,
-                    ForwardToInnerMsg,
-                    ForwardToInnerContinueMsg,
+                    State<
+                        OpenIcaNew,
+                        SwapTaskNew,
+                        SwapGroup,
+                        SwapClient,
+                        ForwardToInnerMsg,
+                        ForwardToInnerContinueMsg,
+                    >,
                 >,
-            >,
             OpenIca::Out: IcaConnectee + DexConnectable,
             IcaConnector<OpenIca::Out, SwapTask::Result>: Into<
                 State<

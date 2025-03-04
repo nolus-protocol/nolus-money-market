@@ -1,7 +1,7 @@
 use std::fmt::{self, Formatter};
 
 use serde::{
-    de::{self, value::SeqAccessDeserializer, Deserialize, Deserializer, MapAccess, SeqAccess},
+    de::{self, Deserialize, Deserializer, MapAccess, SeqAccess, value::SeqAccessDeserializer},
     ser::{Serialize, Serializer},
 };
 

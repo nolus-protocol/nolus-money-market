@@ -119,7 +119,7 @@ mod test {
     use crate::{
         loan::Loan,
         msg::ExecuteMsg,
-        stub::{loan::LppLoan, LppBatch, LppRef},
+        stub::{LppBatch, LppRef, loan::LppLoan},
     };
 
     use super::LppLoanImpl;

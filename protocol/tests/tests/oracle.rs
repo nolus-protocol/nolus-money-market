@@ -1,9 +1,8 @@
 use currencies::{Lpn, Lpns, PaymentGroup};
 use sdk::{
     cosmwasm_std::{
-        self,
+        self, Binary, Deps, Env, Storage, Timestamp,
         testing::{self as cw_testing},
-        Binary, Deps, Env, Storage, Timestamp,
     },
     testing::manage_state,
 };

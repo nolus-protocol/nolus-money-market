@@ -24,16 +24,16 @@ where
     ) -> Result<
         FinalizedSources<
             impl Iterator<Item = Cow<'r, str>>
-                + use<
-                    'r,
-                    'dex_currencies,
-                    'dex_currency_ticker,
-                    'dex_currency_definition,
-                    'currencies_tree,
-                    'generator,
-                    Generator,
-                    Tickers,
-                >,
+            + use<
+                'r,
+                'dex_currencies,
+                'dex_currency_ticker,
+                'dex_currency_definition,
+                'currencies_tree,
+                'generator,
+                Generator,
+                Tickers,
+            >,
         >,
     >
     where
@@ -45,8 +45,6 @@ where
             + generator::InPoolWith<'dex_currencies, 'dex_currency_ticker, 'dex_currency_definition>,
         Tickers: Iterator<Item = &'ticker str>,
     {
-        #[expect(if_let_rescope)]
-        // TODO remove once stop linting with the 'rust-2024-compatibility' group
         if let Some(head_ticker) = tickers.next() {
             with_currencies_sources(
                 CurrencyDefinition::new(
@@ -93,18 +91,18 @@ fn with_currencies_sources<
 ) -> Result<
     NonFinalizedSources<
         impl Iterator<Item = &'dex_currencies str>
-            + use<'dex_currencies, 'generator, Generator, Tickers>,
+        + use<'dex_currencies, 'generator, Generator, Tickers>,
         impl Iterator<Item = Cow<'r, str>>
-            + use<
-                'r,
-                'dex_currencies,
-                'dex_currency_ticker,
-                'dex_currency_definition,
-                'currencies_tree,
-                'generator,
-                Generator,
-                Tickers,
-            >,
+        + use<
+            'r,
+            'dex_currencies,
+            'dex_currency_ticker,
+            'dex_currency_definition,
+            'currencies_tree,
+            'generator,
+            Generator,
+            Tickers,
+        >,
     >,
 >
 where
@@ -179,16 +177,16 @@ fn per_currency_sources<
     'dex_currencies,
     impl Iterator<Item = &'dex_currencies str> + use<'dex_currencies, 'generator, Generator, Tickers>,
     impl Iterator<Item = Cow<'r, str>>
-        + use<
-            'r,
-            'dex_currencies,
-            'dex_currency_ticker,
-            'dex_currency_definition,
-            'currencies_tree,
-            'generator,
-            Generator,
-            Tickers,
-        >,
+    + use<
+        'r,
+        'dex_currencies,
+        'dex_currency_ticker,
+        'dex_currency_definition,
+        'currencies_tree,
+        'generator,
+        Generator,
+        Tickers,
+    >,
 >
 where
     'host_currency: 'definition,
@@ -252,7 +250,7 @@ fn maybe_visit_definition_with_currencies<'r, MaybeVisit>(
     matcher_parameter: &'static str,
     visitor_parameter: &'static str,
     maybe_visit: MaybeVisit,
-) -> impl Iterator<Item = &'r str> + use<'r, MaybeVisit>
+) -> impl Iterator<Item = &'r str>
 where
     MaybeVisit: IntoIterator<Item = &'r str>,
 {
@@ -278,7 +276,7 @@ fn maybe_visit_definition<'r, MaybeVisit>(
     matcher_parameter: &'static str,
     visitor_parameter: &'static str,
     maybe_visit: MaybeVisit,
-) -> impl Iterator<Item = &'r str> + use<'r, MaybeVisit>
+) -> impl Iterator<Item = &'r str>
 where
     MaybeVisit: IntoIterator<Item = &'r str>,
 {
@@ -451,7 +449,7 @@ where
         self,
     ) -> FinalizedSources<
         impl Iterator<Item = Cow<'r, str>>
-            + use<'r, 'maybe_visit, 'currency_definition, MaybeVisit, CurrencyDefinitions>,
+        + use<'r, 'maybe_visit, 'currency_definition, MaybeVisit, CurrencyDefinitions>,
     > {
         FinalizedSources {
             currencies_count: self.currencies_count,

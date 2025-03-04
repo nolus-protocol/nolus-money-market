@@ -15,7 +15,7 @@ use currency::{Currency, CurrencyDef, Group, MemberOf};
 
 use crate::zero::Zero;
 
-pub use self::dto::{from_amount_ticker, CoinDTO, IntoDTO};
+pub use self::dto::{CoinDTO, IntoDTO, from_amount_ticker};
 
 mod amount_serde;
 mod dto;

@@ -77,11 +77,11 @@ pub(super) fn query_rewards(storage: &dyn Storage, addr: Addr) -> Result<Rewards
 #[cfg(test)]
 mod test {
     use access_control::ContractOwnerAccess;
-    use finance::percent::{bound::BoundToHundredPercent, Percent};
+    use finance::percent::{Percent, bound::BoundToHundredPercent};
     use platform::contract::Code;
     use sdk::cosmwasm_std::{
-        testing::{mock_dependencies, mock_env, MOCK_CONTRACT_ADDR},
         Addr,
+        testing::{MOCK_CONTRACT_ADDR, mock_dependencies, mock_env},
     };
 
     use crate::{

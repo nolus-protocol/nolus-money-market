@@ -54,7 +54,7 @@ impl<Lpn> Repo<Lpn> {
 mod test {
     use currencies::Lpn;
     use finance::{coin::Coin, duration::Duration, percent::Percent, zero::Zero};
-    use sdk::cosmwasm_std::{testing, Addr, Timestamp};
+    use sdk::cosmwasm_std::{Addr, Timestamp, testing};
 
     use crate::{contract::ContractError, loan::Loan, loans::Repo};
 

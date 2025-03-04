@@ -4,8 +4,8 @@ use currencies::{LeaseGroup, PaymentGroup};
 use currency::{CurrencyDef, MemberOf};
 use finance::{coin::Coin, duration::Duration, liability::Liability, percent::Percent, test};
 use lease::api::{
-    open::{ConnectionParams, Ics20Channel, PositionSpecDTO},
     LpnCoinDTO,
+    open::{ConnectionParams, Ics20Channel, PositionSpecDTO},
 };
 use leaser::{
     execute, instantiate,
@@ -16,8 +16,8 @@ use platform::contract::{Code, CodeId};
 use sdk::{cosmwasm_std::Addr, testing};
 
 use super::{
-    test_case::{app::App, TestCase},
-    CwContractWrapper, ADMIN,
+    ADMIN, CwContractWrapper,
+    test_case::{TestCase, app::App},
 };
 
 pub(crate) struct Instantiator;

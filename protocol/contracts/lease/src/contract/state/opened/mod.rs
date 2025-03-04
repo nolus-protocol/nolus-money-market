@@ -2,8 +2,8 @@ use finance::duration::Duration;
 use sdk::cosmwasm_std::{QuerierWrapper, Timestamp};
 
 use crate::{
-    api::query::{opened::OngoingTrx, StateResponse},
-    contract::{cmd::LeaseState, Lease},
+    api::query::{StateResponse, opened::OngoingTrx},
+    contract::{Lease, cmd::LeaseState},
     error::ContractResult,
 };
 

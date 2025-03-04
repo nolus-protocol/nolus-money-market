@@ -4,10 +4,10 @@ use lpp::stub::loan::LppLoan as LppLoanTrait;
 use oracle_platform::Oracle as OracleTrait;
 
 use crate::{
-    api::{position::PartialClose, LeaseAssetCurrencies, LeasePaymentCurrencies},
+    api::{LeaseAssetCurrencies, LeasePaymentCurrencies, position::PartialClose},
     error::ContractError,
     finance::{LpnCurrencies, LpnCurrency, OracleRef},
-    lease::{with_lease::WithLease, Lease},
+    lease::{Lease, with_lease::WithLease},
 };
 
 pub(in crate::contract) struct Cmd<'spec> {

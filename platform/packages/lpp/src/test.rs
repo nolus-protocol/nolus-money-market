@@ -7,8 +7,8 @@ use platform::{
 use sdk::cosmwasm_std::{Addr, StdError};
 
 use crate::{
-    error::{Error, Result},
     CoinStable, Lpp,
+    error::{Error, Result},
 };
 
 pub struct DummyLpp {
@@ -59,8 +59,7 @@ impl Lpp for DummyLpp {
 
         let mut msgs = Batch::default();
 
-        msgs.schedule_execute_wasm_no_reply(Addr::unchecked("Dummy_Lpp"), "message", Some(reward))
-            .map_err(platform::error::Error::from)?;
+        msgs.schedule_execute_wasm_no_reply(Addr::unchecked("Dummy_Lpp"), "message", Some(reward))?;
 
         let events = Emitter::of_type("eventX").emit_coin("reward", reward);
 

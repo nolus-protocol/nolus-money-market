@@ -3,18 +3,18 @@ use platform::{error as platform_error, message::Response as MessageResponse, re
 use sdk::{
     cosmwasm_ext::Response as CwResponse,
     cosmwasm_std::{
-        entry_point, to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, QuerierWrapper,
-        Reply, Storage,
+        Binary, Deps, DepsMut, Env, MessageInfo, QuerierWrapper, Reply, Storage, entry_point,
+        to_json_binary,
     },
     neutron_sdk::sudo::msg::SudoMsg,
 };
 use versioning::{
-    package_name, package_version, ProtocolMigrationMessage, ProtocolPackageRelease,
-    UpdatablePackage as _, VersionSegment,
+    ProtocolMigrationMessage, ProtocolPackageRelease, UpdatablePackage as _, VersionSegment,
+    package_name, package_version,
 };
 
 use crate::{
-    api::{open::NewLeaseContract, query::QueryMsg, ExecuteMsg, MigrateMsg},
+    api::{ExecuteMsg, MigrateMsg, open::NewLeaseContract, query::QueryMsg},
     contract::api::Contract,
     error::{ContractError, ContractResult},
 };

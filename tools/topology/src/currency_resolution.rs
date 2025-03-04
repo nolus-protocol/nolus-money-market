@@ -1,12 +1,13 @@
 use std::ops::ControlFlow;
 
 use crate::{
+    Topology,
     channels::Channels,
     currency::{self, Currency},
     currency_definition::CurrencyDefinition,
     error, host_to_dex, network,
     networks::Networks,
-    symbol, Topology,
+    symbol,
 };
 
 impl Topology {
@@ -228,7 +229,7 @@ where
     ) -> (
         symbol::Builder,
         impl Iterator<Item = [&'traversed_network_id network::Id; 2]>
-            + use<'traversed_networks, 'traversed_network_id>,
+        + use<'traversed_networks, 'traversed_network_id>,
     ) {
         let mut bank_symbol = symbol::Builder::NEW;
 
@@ -272,7 +273,7 @@ where
         symbol::Builder,
         [&'network_id network::Id; 2],
     ) -> Result<symbol::Builder, error::ResolveCurrency>
-           + use<'channels, 'network_id> {
+    + use<'channels, 'network_id> {
         |mut bank_symbol, [source_network, remote_network]| {
             channels
                 .get(source_network)

@@ -6,7 +6,7 @@ use std::{
 
 use serde::{Deserialize, Serialize};
 
-use currency::{never::Never, Currency, CurrencyDTO, CurrencyDef, Group, MemberOf};
+use currency::{Currency, CurrencyDTO, CurrencyDef, Group, MemberOf, never::Never};
 use transformer::CoinTransformerAny;
 
 use crate::{
@@ -178,11 +178,11 @@ where
 mod test {
     use std::fmt::Debug;
 
-    use serde::{de::DeserializeOwned, Deserialize, Serialize};
+    use serde::{Deserialize, Serialize, de::DeserializeOwned};
 
     use currency::{
-        test::{SubGroup, SubGroupTestC10, SuperGroup, SuperGroupTestC1, SuperGroupTestC2},
         CurrencyDef, Group, MemberOf,
+        test::{SubGroup, SubGroupTestC10, SuperGroup, SuperGroupTestC1, SuperGroupTestC2},
     };
     use sdk::cosmwasm_std;
 

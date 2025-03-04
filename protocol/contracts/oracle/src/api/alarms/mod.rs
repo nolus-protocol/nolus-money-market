@@ -6,11 +6,11 @@ use currency::{CurrencyDef, Group, MemberOf};
 use finance::{
     error,
     price::{
-        base::{
-            with_price::{self, WithPrice},
-            BasePrice,
-        },
         Price,
+        base::{
+            BasePrice,
+            with_price::{self, WithPrice},
+        },
     },
 };
 use thiserror::Error;
@@ -172,15 +172,15 @@ mod test {
     use serde::Serialize;
 
     use currencies::{
-        testing::{LeaseC1, LeaseC2, LeaseC3},
         LeaseGroup, Lpn, Lpns, PaymentGroup,
+        testing::{LeaseC1, LeaseC2, LeaseC3},
     };
     use currency::{CurrencyDef, Group, MemberOf};
     use finance::{
         coin::{Coin, CoinDTO},
         price::base::BasePrice,
     };
-    use sdk::cosmwasm_std::{from_json, to_json_vec, StdError};
+    use sdk::cosmwasm_std::{StdError, from_json, to_json_vec};
 
     use super::Alarm;
 

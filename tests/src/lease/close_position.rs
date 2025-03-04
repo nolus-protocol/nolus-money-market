@@ -1,4 +1,4 @@
-use currencies::{testing::PaymentC5, LeaseGroup, PaymentGroup};
+use currencies::{LeaseGroup, PaymentGroup, testing::PaymentC5};
 use currency::CurrencyDef;
 use finance::{
     coin::{Amount, Coin},
@@ -7,9 +7,9 @@ use finance::{
 };
 use lease::{
     api::{
+        ExecuteMsg,
         position::{FullClose, PartialClose, PositionClose},
         query::StateResponse,
-        ExecuteMsg,
     },
     error::{ContractError, PositionError},
 };
@@ -22,15 +22,14 @@ use sdk::{
 use swap::testing::SwapRequest;
 
 use crate::common::{
-    self, ibc,
+    self, ADMIN, CwCoin, USER, ibc,
     leaser::{self, Instantiator},
-    test_case::{response::ResponseWithInterChainMsgs, TestCase},
-    CwCoin, ADMIN, USER,
+    test_case::{TestCase, response::ResponseWithInterChainMsgs},
 };
 
 use super::{
-    LeaseCoin, LeaseCurrency, LeaseTestCase, LpnCoin, LpnCurrency, PaymentCoin, PaymentCurrency,
-    DOWNPAYMENT,
+    DOWNPAYMENT, LeaseCoin, LeaseCurrency, LeaseTestCase, LpnCoin, LpnCurrency, PaymentCoin,
+    PaymentCurrency,
 };
 
 #[test]

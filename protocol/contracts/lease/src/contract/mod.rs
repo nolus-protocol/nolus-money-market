@@ -4,7 +4,7 @@ use dex::{Account, ConnectionParams, DexConnectable};
 use sdk::cosmwasm_std::QuerierWrapper;
 
 use crate::{
-    lease::{with_lease::WithLease, LeaseDTO},
+    lease::{LeaseDTO, with_lease::WithLease},
     position::PositionError,
 };
 

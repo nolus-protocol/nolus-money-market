@@ -5,7 +5,7 @@ use sdk::cosmwasm_std::{Env, MessageInfo, QuerierWrapper, Timestamp};
 
 use crate::{api::query::StateResponse, error::ContractResult};
 
-use super::{drain::DrainAll, Handler, Response};
+use super::{Handler, Response, drain::DrainAll};
 
 #[derive(Serialize, Deserialize, Default)]
 pub struct Closed {}

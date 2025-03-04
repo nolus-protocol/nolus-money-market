@@ -11,17 +11,16 @@ use sdk::{
     testing,
 };
 use swap::{
-    testing::{ExactAmountInSkel, SwapRequest},
     Impl,
+    testing::{ExactAmountInSkel, SwapRequest},
 };
 
 use super::{
-    ibc,
+    ADMIN, ibc,
     test_case::{
         app::App,
         response::{RemoteChain as _, ResponseWithInterChainMsgs},
     },
-    ADMIN,
 };
 
 #[derive(Debug, Eq)]

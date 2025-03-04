@@ -18,14 +18,14 @@ use oracle::{
     test_tree,
 };
 use sdk::{
-    cosmwasm_std::{to_json_binary, wasm_execute, Addr, Binary, Deps, Env, Event},
+    cosmwasm_std::{Addr, Binary, Deps, Env, Event, to_json_binary, wasm_execute},
     cw_multi_test::AppResponse,
     testing::{self, CwContract, CwContractWrapper},
 };
 
 use super::{
-    test_case::{app::App, response::ResponseWithInterChainMsgs, TestCase},
     ADMIN,
+    test_case::{TestCase, app::App, response::ResponseWithInterChainMsgs},
 };
 
 pub(crate) struct Instantiator;

@@ -9,7 +9,7 @@ use crate::{
     api::{LeaseAssetCurrencies, LeasePaymentCurrencies, PaymentCoin},
     error::ContractError,
     finance::{LpnCurrencies, LpnCurrency},
-    lease::{with_lease::WithLease, Lease},
+    lease::{Lease, with_lease::WithLease},
 };
 
 pub(crate) struct ObtainPayment {

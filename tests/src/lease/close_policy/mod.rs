@@ -1,7 +1,7 @@
 use ::lease::{
     api::{
-        position::{ChangeCmd, ClosePolicyChange},
         ExecuteMsg,
+        position::{ChangeCmd, ClosePolicyChange},
     },
     error::ContractError,
 };
@@ -9,7 +9,7 @@ use anyhow::Error;
 use sdk::{cosmwasm_std::Addr, cw_multi_test::AppResponse, testing};
 
 use crate::{
-    common::{test_case::response::ResponseWithInterChainMsgs, ADMIN, USER},
+    common::{ADMIN, USER, test_case::response::ResponseWithInterChainMsgs},
     lease::LeaseTestCase,
 };
 

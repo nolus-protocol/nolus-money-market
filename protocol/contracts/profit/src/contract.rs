@@ -10,14 +10,14 @@ use platform::{
 use sdk::{
     cosmwasm_ext::Response as CwResponse,
     cosmwasm_std::{
-        entry_point, to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, QuerierWrapper, Reply,
+        Binary, Deps, DepsMut, Env, MessageInfo, QuerierWrapper, Reply, entry_point, to_json_binary,
     },
     neutron_sdk::sudo::msg::SudoMsg as NeutronSudoMsg,
 };
 use timealarms::stub::TimeAlarmsRef;
 use versioning::{
-    package_name, package_version, ProtocolMigrationMessage, ProtocolPackageRelease,
-    UpdatablePackage as _, VersionSegment,
+    ProtocolMigrationMessage, ProtocolPackageRelease, UpdatablePackage as _, VersionSegment,
+    package_name, package_version,
 };
 
 use crate::{
@@ -190,10 +190,7 @@ where
         next_state,
     } = handler(state, deps.querier, env).into()?;
 
-    next_state
-        .store(deps.storage)
-        .map(|()| response)
-        .map_err(Into::into)
+    next_state.store(deps.storage).map(|()| response)
 }
 
 fn try_handle_reply_message<F>(
@@ -212,10 +209,7 @@ where
         next_state,
     } = handler(state, deps.querier, env, msg)?;
 
-    next_state
-        .store(deps.storage)
-        .map(|()| response)
-        .map_err(Into::into)
+    next_state.store(deps.storage).map(|()| response)
 }
 
 #[entry_point]

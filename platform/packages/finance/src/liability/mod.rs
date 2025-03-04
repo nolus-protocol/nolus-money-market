@@ -185,7 +185,7 @@ fn check(invariant: bool, msg: &str) -> Result<()> {
 #[cfg(test)]
 mod test {
     use currency::test::SubGroupTestC10;
-    use sdk::cosmwasm_std::{from_json, StdError};
+    use sdk::cosmwasm_std::{StdError, from_json};
 
     use crate::{
         coin::{Amount, Coin},

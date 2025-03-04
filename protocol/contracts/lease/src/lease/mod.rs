@@ -161,7 +161,7 @@ pub(crate) mod tests {
     use serde::{Deserialize, Serialize};
 
     pub(super) use currencies::PaymentGroup as PriceG;
-    use currencies::{testing::PaymentC7, Lpn};
+    use currencies::{Lpn, testing::PaymentC7};
     use currency::{Currency, Group, MemberOf};
     use finance::{
         coin::Coin, duration::Duration, fraction::Fraction, liability::Liability, percent::Percent,
@@ -171,9 +171,9 @@ pub(crate) mod tests {
         error::{Error as LppError, Result as LppResult},
         loan::RepayShares,
         msg::LoanResponse,
-        stub::{loan::LppLoan, LppBatch, LppRef},
+        stub::{LppBatch, LppRef, loan::LppLoan},
     };
-    use oracle_platform::{error::Result as PriceOracleResult, Oracle};
+    use oracle_platform::{Oracle, error::Result as PriceOracleResult};
     use platform::batch::Batch;
     use sdk::cosmwasm_std::{Addr, Timestamp};
 

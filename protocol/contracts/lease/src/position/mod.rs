@@ -2,7 +2,7 @@ use currency::{Currency, CurrencyDef, MemberOf};
 use finance::{coin::Coin, duration::Duration};
 
 use crate::{
-    api::{position::ClosePolicyChange, query::opened::ClosePolicy, LeasePaymentCurrencies},
+    api::{LeasePaymentCurrencies, position::ClosePolicyChange, query::opened::ClosePolicy},
     finance::Price,
 };
 

@@ -2,20 +2,19 @@ use std::collections::HashMap;
 
 use currencies::PaymentGroup;
 use finance::{coin::Amount, duration::Duration, price};
-use lease::api::{query::StateResponse, ExecuteMsg};
+use lease::api::{ExecuteMsg, query::StateResponse};
 use platform::coin_legacy::to_cosmwasm_on_dex;
 use sdk::{cosmwasm_std::Addr, cw_multi_test::AppResponse};
 use swap::testing::SwapRequest;
 
 use crate::common::{
-    ibc,
+    CwCoin, ibc,
     leaser::Instantiator as LeaserInstantiator,
-    test_case::{response::ResponseWithInterChainMsgs, TestCase},
-    CwCoin,
+    test_case::{TestCase, response::ResponseWithInterChainMsgs},
 };
 
 use super::{
-    super::{create_test_case, feed_price, open_lease, price_lpn_of, state_query, LeaseTestCase},
+    super::{LeaseTestCase, create_test_case, feed_price, open_lease, price_lpn_of, state_query},
     LeaseCoin, PaymentCoin, PaymentCurrency,
 };
 

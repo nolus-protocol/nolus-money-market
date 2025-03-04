@@ -6,7 +6,7 @@ use reserve::{
 use sdk::{cosmwasm_std::Addr, testing};
 
 use super::{
-    leaser::Instantiator as LeaserInstantiator, test_case::app::App, CwContractWrapper, ADMIN,
+    ADMIN, CwContractWrapper, leaser::Instantiator as LeaserInstantiator, test_case::app::App,
 };
 
 pub(crate) struct Instantiator;

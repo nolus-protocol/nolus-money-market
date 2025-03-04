@@ -6,12 +6,12 @@ use sdk::cosmwasm_std::Timestamp;
 
 use crate::{
     api::{
-        query::{opened::OngoingTrx, StateResponse},
         LeaseAssetCurrencies, LeasePaymentCurrencies,
+        query::{StateResponse, opened::OngoingTrx},
     },
     error::ContractError,
     finance::{LpnCurrencies, LpnCurrency},
-    lease::{with_lease::WithLease, Lease},
+    lease::{Lease, with_lease::WithLease},
 };
 
 pub struct LeaseState {

@@ -1,8 +1,8 @@
 use crate::{
+    CurrencyDef, MemberOf,
     error::Error,
     matcher::{self, Matcher},
     symbol::Symbol,
-    CurrencyDef, MemberOf,
 };
 
 pub trait SingleVisitor<CDef> {
@@ -34,13 +34,13 @@ impl<T> CurrencyVisit for T where T: Symbol {}
 
 #[cfg(test)]
 mod test {
+    use crate::{BankSymbols, Tickers};
     use crate::{
+        CurrencyDef,
         error::Error,
         from_symbol::CurrencyVisit,
         test::{Expect, ExpectUnknownCurrency, SuperGroup, SuperGroupTestC1, SuperGroupTestC2},
-        CurrencyDef,
     };
-    use crate::{BankSymbols, Tickers};
 
     #[test]
     fn visit_on_ticker() {

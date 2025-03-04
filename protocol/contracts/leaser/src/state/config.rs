@@ -71,7 +71,6 @@ impl Config {
                 })
             })
             .map(mem::drop)
-            .map_err(Into::into)
     }
 
     pub fn update_lease_code(storage: &mut dyn Storage, new_code: Code) -> ContractResult<()> {
@@ -83,6 +82,5 @@ impl Config {
                 })
             })
             .map(mem::drop)
-            .map_err(Into::into)
     }
 }

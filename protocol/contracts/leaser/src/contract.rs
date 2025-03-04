@@ -11,13 +11,13 @@ use platform::{
 use sdk::{
     cosmwasm_ext::Response,
     cosmwasm_std::{
-        entry_point, to_json_binary, Addr, Api, Binary, Deps, DepsMut, Env, MessageInfo,
-        QuerierWrapper, Reply, Storage,
+        Addr, Api, Binary, Deps, DepsMut, Env, MessageInfo, QuerierWrapper, Reply, Storage,
+        entry_point, to_json_binary,
     },
 };
 use versioning::{
-    package_name, package_version, ProtocolMigrationMessage, ProtocolPackageRelease,
-    ProtocolPackageReleaseId, UpdatablePackage, VersionSegment,
+    ProtocolMigrationMessage, ProtocolPackageRelease, ProtocolPackageReleaseId, UpdatablePackage,
+    VersionSegment, package_name, package_version,
 };
 
 use crate::{
@@ -54,7 +54,6 @@ pub fn instantiate(
     ContractOwnerAccess::new(deps.storage.deref_mut()).grant_to(&info.sender)?;
 
     new_code(msg.lease_code, deps.querier)
-        .map_err(Into::into)
         .map(|lease_code| Config::new(lease_code, msg))
         .and_then(|config| config.store(deps.storage))
         .map(|()| response::empty_response())
@@ -99,9 +98,7 @@ pub fn execute(
                 .and_then(|customer| {
                     validate_lease(info.sender, deps.as_ref()).map(|lease| (customer, lease))
                 })
-                .and_then(|(customer, lease)| {
-                    Leases::remove(deps.storage, customer, &lease).map_err(Into::into)
-                })
+                .and_then(|(customer, lease)| Leases::remove(deps.storage, customer, &lease))
                 .map(|removed| {
                     debug_assert!(removed);
                     MessageResponse::default()

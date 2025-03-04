@@ -1,6 +1,6 @@
 use std::{ffi::OsString, path::PathBuf};
 
-use super::{list::Arguments as ListArguments, run::Arguments as RunArguments, Mode};
+use super::{Mode, list::Arguments as ListArguments, run::Arguments as RunArguments};
 
 mod consts;
 

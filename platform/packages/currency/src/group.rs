@@ -2,7 +2,7 @@ use std::fmt::Debug;
 
 use crate::CurrencyDef;
 
-use super::{matcher::Matcher, AnyVisitor, AnyVisitorResult};
+use super::{AnyVisitor, AnyVisitorResult, matcher::Matcher};
 
 pub trait Group
 where

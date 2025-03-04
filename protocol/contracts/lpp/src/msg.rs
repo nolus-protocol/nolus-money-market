@@ -2,14 +2,14 @@ use currencies::Lpns;
 use platform::contract::Code;
 use serde::{Deserialize, Serialize};
 
-use currency::{platform::Nls, CurrencyDTO, Group};
+use currency::{CurrencyDTO, Group, platform::Nls};
 use finance::{
     coin::{Coin, CoinDTO},
-    percent::{bound::BoundToHundredPercent, Percent},
+    percent::{Percent, bound::BoundToHundredPercent},
     price::Price,
 };
 use lpp_platform::NLpn;
-use sdk::cosmwasm_std::{Addr, Uint128, Uint64};
+use sdk::cosmwasm_std::{Addr, Uint64, Uint128};
 
 use crate::{borrow::InterestRate, loan::Loan};
 

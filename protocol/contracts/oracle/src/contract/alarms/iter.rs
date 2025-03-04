@@ -1,8 +1,8 @@
 use std::{iter, marker::PhantomData, ops::Deref};
 
 use currency::{Currency, CurrencyDef, Group, MemberOf};
-use finance::price::{self, base::with_price::WithPrice, Price};
-use marketprice::alarms::{errors::AlarmError, AlarmsIterator, PriceAlarms};
+use finance::price::{self, Price, base::with_price::WithPrice};
+use marketprice::alarms::{AlarmsIterator, PriceAlarms, errors::AlarmError};
 use sdk::cosmwasm_std::{Addr, Storage};
 
 use crate::{contract::alarms::PriceResult, error::Error, result::Result};
@@ -96,24 +96,21 @@ where
 {
     type Item = Result<Addr, ErrorG>;
 
-    #[expect(tail_expr_drop_order)] // TODO remove once stop linting with the 'rust-2024-compatibility' group
     fn next(&mut self) -> Option<Self::Item> {
         self.alarm_iter.as_ref()?;
 
         let mut result = self.next_alarm();
+
         while result.is_none() && self.alarm_iter.is_some() {
-            result = {
-                // TODO remove once stop linting with the 'rust-2024-compatibility' group
-                #[expect(if_let_rescope)]
-                if let Err(error) = self.move_to_next_alarms() {
-                    Some(Err(error))
-                } else if self.alarm_iter.is_none() {
-                    None
-                } else {
-                    self.next_alarm()
-                }
+            result = if let Err(error) = self.move_to_next_alarms() {
+                Some(Err(error))
+            } else if self.alarm_iter.is_none() {
+                None
+            } else {
+                self.next_alarm()
             };
         }
+
         result
     }
 }

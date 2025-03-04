@@ -6,7 +6,7 @@ use currency::CurrencyDef;
 use finance::coin::Coin;
 use sdk::{
     cosmwasm_ext::{CosmosMsg, SubMsg},
-    cosmwasm_std::{to_json_binary, Addr, Coin as CoinCw, WasmMsg},
+    cosmwasm_std::{Addr, Coin as CoinCw, WasmMsg, to_json_binary},
 };
 
 pub use crate::emit::{Emit, Emitter};
@@ -184,7 +184,6 @@ impl Batch {
                 },
                 msg,
             })
-            .map_err(Into::into)
     }
 
     fn wasm_init_msg<M>(
@@ -206,7 +205,6 @@ impl Batch {
                 label,
                 msg,
             })
-            .map_err(Into::into)
     }
 
     fn wasm_migrate_msg<M>(addr: Addr, msg: &M, new_code: Code) -> Result<WasmMsg>
@@ -220,7 +218,6 @@ impl Batch {
                 new_code_id: new_code.into(),
                 msg,
             })
-            .map_err(Into::into)
     }
 
     fn schedule_no_reply<M>(&mut self, msg: M)

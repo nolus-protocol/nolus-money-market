@@ -128,7 +128,7 @@ mod test {
     use std::ops::DerefMut as _;
 
     use access_control::ContractOwnerAccess;
-    use finance::percent::{bound::BoundToHundredPercent, Percent};
+    use finance::percent::{Percent, bound::BoundToHundredPercent};
     use platform::contract::Code;
     use sdk::cosmwasm_std::{Addr, Storage};
 
@@ -165,13 +165,13 @@ mod test {
     mod deposit_withdraw_price {
         use finance::coin::Amount;
         use sdk::cosmwasm_std::{
-            testing::{self, MockApi, MockQuerier, MockStorage, MOCK_CONTRACT_ADDR},
             Env, OwnedDeps,
+            testing::{self, MOCK_CONTRACT_ADDR, MockApi, MockQuerier, MockStorage},
         };
 
         use crate::contract::test;
 
-        use super::{TheCurrency, DEFAULT_MIN_UTILIZATION};
+        use super::{DEFAULT_MIN_UTILIZATION, TheCurrency};
 
         const DEPOSIT: Amount = 100;
 
@@ -194,7 +194,7 @@ mod test {
         mod deposit {
             use crate::contract::{lender, test};
 
-            use super::{TheCurrency, DEPOSIT};
+            use super::{DEPOSIT, TheCurrency};
 
             #[test]
             fn test_deposit_zero() {
@@ -235,7 +235,7 @@ mod test {
 
             use crate::contract::{lender, test};
 
-            use super::{TheCurrency, DEPOSIT};
+            use super::{DEPOSIT, TheCurrency};
 
             #[test]
             fn test_withdraw_zero() {
@@ -347,7 +347,7 @@ mod test {
 
             use crate::contract::{lender, test};
 
-            use super::{TheCurrency, DEPOSIT};
+            use super::{DEPOSIT, TheCurrency};
 
             #[test]
             fn test_nlpn_price() {
@@ -395,11 +395,11 @@ mod test {
     mod min_utilization {
         use finance::{
             coin::Amount,
-            percent::{bound::BoundToHundredPercent, Percent},
+            percent::{Percent, bound::BoundToHundredPercent},
         };
         use sdk::cosmwasm_std::{
-            testing::{self, MOCK_CONTRACT_ADDR},
             Addr, MessageInfo,
+            testing::{self, MOCK_CONTRACT_ADDR},
         };
 
         use crate::contract::{lender, test};

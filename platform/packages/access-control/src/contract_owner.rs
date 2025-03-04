@@ -2,7 +2,7 @@ use std::ops::{Deref, DerefMut};
 
 use sdk::cosmwasm_std::{Addr, Storage};
 
-use crate::{error::Result, SingleUserAccess};
+use crate::{SingleUserAccess, error::Result};
 
 const CONTRACT_OWNER_NAMESPACE: &str = "contract_owner";
 
@@ -39,9 +39,9 @@ where
 
 #[cfg(test)]
 mod tests {
-    use sdk::cosmwasm_std::{testing::MockStorage, Addr, Storage};
+    use sdk::cosmwasm_std::{Addr, Storage, testing::MockStorage};
 
-    use crate::{error::Error, ContractOwnerAccess};
+    use crate::{ContractOwnerAccess, error::Error};
 
     #[test]
     fn grant_check() {

@@ -1,8 +1,8 @@
 use std::{marker::PhantomData, result::Result as StdResult};
 
 use currency::{
-    error::Error as CurrencyError, AnyVisitorPair, AnyVisitorPairResult, Currency, CurrencyDTO,
-    Group, InPoolWith, MemberOf,
+    AnyVisitorPair, AnyVisitorPairResult, Currency, CurrencyDTO, Group, InPoolWith, MemberOf,
+    error::Error as CurrencyError,
 };
 
 use crate::{

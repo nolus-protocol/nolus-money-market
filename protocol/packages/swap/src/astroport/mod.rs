@@ -11,10 +11,10 @@ use platform::{
 };
 use sdk::{
     cosmos_sdk_proto::{
+        Any as CosmosAny,
         cosmos::base::v1beta1::Coin as ProtoCoin,
         cosmwasm::wasm::v1::{MsgExecuteContract, MsgExecuteContractResponse},
         traits::Name,
-        Any as CosmosAny,
     },
     cosmwasm_std::{self, Coin as CwCoin, Decimal},
 };

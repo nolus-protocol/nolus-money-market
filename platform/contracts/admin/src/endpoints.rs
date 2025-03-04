@@ -3,13 +3,13 @@ use platform::{batch::Batch, response};
 use sdk::{
     cosmwasm_ext::Response as CwResponse,
     cosmwasm_std::{
-        self, entry_point, Addr, Api, Binary, CodeInfoResponse, Deps, DepsMut, Env, MessageInfo,
-        QuerierWrapper, Reply, Storage, WasmMsg,
+        self, Addr, Api, Binary, CodeInfoResponse, Deps, DepsMut, Env, MessageInfo, QuerierWrapper,
+        Reply, Storage, WasmMsg, entry_point,
     },
 };
 use versioning::{
-    package_name, package_version, PlatformMigrationMessage, PlatformPackageRelease,
-    ProtocolPackageReleaseId, UpdatablePackage as _, VersionSegment,
+    PlatformMigrationMessage, PlatformPackageRelease, ProtocolPackageReleaseId,
+    UpdatablePackage as _, VersionSegment, package_name, package_version,
 };
 
 use crate::{

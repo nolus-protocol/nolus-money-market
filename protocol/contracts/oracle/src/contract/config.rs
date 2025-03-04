@@ -12,7 +12,7 @@ where
 
 #[cfg(all(feature = "internal.test.contract", test))]
 mod tests {
-    use currencies::{testing::PaymentC9, Lpn, PaymentGroup as PriceCurrencies};
+    use currencies::{Lpn, PaymentGroup as PriceCurrencies, testing::PaymentC9};
     use finance::{duration::Duration, percent::Percent};
     use sdk::{
         cosmwasm_ext::Response,
@@ -20,7 +20,7 @@ mod tests {
     };
 
     use crate::{
-        api::{swap::SwapTarget, Config, QueryMsg, SudoMsg, SwapLeg},
+        api::{Config, QueryMsg, SudoMsg, SwapLeg, swap::SwapTarget},
         contract::{query, sudo},
         error::Error,
         test_tree, tests,

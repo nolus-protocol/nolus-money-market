@@ -1,7 +1,7 @@
 use currency::platform::{PlatformGroup, Stable};
 use finance::{duration::Duration, interest, percent::Percent};
 use lpp_platform::{CoinStable, Lpp as LppTrait};
-use oracle_platform::{convert, Oracle, OracleRef};
+use oracle_platform::{Oracle, OracleRef, convert};
 use platform::message::Response as MessageResponse;
 
 use crate::ContractError;
@@ -61,13 +61,13 @@ where
 mod test {
     use currency::platform::Nls;
     use finance::{coin::Coin, duration::Duration, fraction::Fraction, percent::Percent, price};
-    use lpp_platform::{test::DummyLpp, CoinStable};
-    use oracle_platform::{test::DummyOracle, Oracle};
+    use lpp_platform::{CoinStable, test::DummyLpp};
+    use oracle_platform::{Oracle, test::DummyOracle};
     use platform::response;
 
     use crate::{
-        pool::{Pool, PoolImpl},
         ContractError,
+        pool::{Pool, PoolImpl},
     };
 
     #[test]

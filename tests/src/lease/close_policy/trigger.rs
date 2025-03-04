@@ -13,8 +13,8 @@ use sdk::{
 use crate::{
     common::swap,
     lease::{
-        self, LeaseCurrency, LeaserInstantiator, LpnCurrency, PaymentCurrency, TestCase,
-        DOWNPAYMENT,
+        self, DOWNPAYMENT, LeaseCurrency, LeaserInstantiator, LpnCurrency, PaymentCurrency,
+        TestCase,
     },
 };
 

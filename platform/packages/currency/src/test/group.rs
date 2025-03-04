@@ -1,10 +1,10 @@
 use serde::Deserialize;
 
 use crate::{
+    AnyVisitor, CurrencyDTO, Group, Matcher, MaybeAnyVisitResult,
     from_symbol_any::InPoolWith,
     group::MemberOf,
     pairs::{MaybePairsVisitorResult, PairsGroup, PairsVisitor},
-    AnyVisitor, CurrencyDTO, Group, Matcher, MaybeAnyVisitResult,
 };
 
 pub type SuperGroupTestC1 = impl_::TestC1;

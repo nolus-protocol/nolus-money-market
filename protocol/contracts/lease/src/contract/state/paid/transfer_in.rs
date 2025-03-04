@@ -18,17 +18,17 @@ use timealarms::stub::TimeAlarmsRef;
 
 use crate::{
     api::{
-        query::{paid::ClosingTrx, StateResponse as QueryStateResponse},
         LeaseAssetCurrencies, LeasePaymentCurrencies,
+        query::{StateResponse as QueryStateResponse, paid::ClosingTrx},
     },
     contract::{
-        cmd::Close,
-        state::{closed::Closed, resp_delivery::ForwardToDexEntry, SwapClient, SwapResult},
         Lease,
+        cmd::Close,
+        state::{SwapClient, SwapResult, closed::Closed, resp_delivery::ForwardToDexEntry},
     },
     error::ContractResult,
     event::Type,
-    lease::{with_lease_paid, LeaseDTO},
+    lease::{LeaseDTO, with_lease_paid},
 };
 
 type AssetGroup = LeaseAssetCurrencies;

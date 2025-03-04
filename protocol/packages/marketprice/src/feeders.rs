@@ -74,7 +74,7 @@ impl PriceFeeders {
 
 #[cfg(test)]
 mod tests {
-    use sdk::cosmwasm_std::{testing, Addr};
+    use sdk::cosmwasm_std::{Addr, testing};
 
     use crate::feeders::PriceFeeders;
 

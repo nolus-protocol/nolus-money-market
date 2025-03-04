@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     api::open::PositionSpecDTO,
-    position::{close::Policy as ClosePolicy, PositionError, PositionResult, Spec},
+    position::{PositionError, PositionResult, Spec, close::Policy as ClosePolicy},
 };
 
 mod migrate_v0_7_5;

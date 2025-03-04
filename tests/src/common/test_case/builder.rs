@@ -2,7 +2,7 @@ use std::marker::PhantomData;
 
 use currencies::Lpns;
 use currency::{Currency, CurrencyDef, MemberOf};
-use finance::percent::{bound::BoundToHundredPercent, Percent};
+use finance::percent::{Percent, bound::BoundToHundredPercent};
 use lpp::borrow::InterestRate;
 use platform::ica::OpenAckVersion;
 use profit::{
@@ -340,8 +340,6 @@ where
         )
         .expect("Couldn't construct interest rate value!");
 
-        #[expect(if_let_rescope)]
-        // TODO remove once stop linting with the 'rust-2024-compatibility' group
         let lpp: Addr = if let Some(endpoints) = endpoints {
             LppInstantiator::instantiate::<Lpn>(
                 &mut test_case.app,
@@ -387,8 +385,6 @@ where
             _lpn,
         } = self;
 
-        #[expect(if_let_rescope)]
-        // TODO remove once stop linting with the 'rust-2024-compatibility' group
         let oracle_addr: Addr = if let Some(contract) = custom_wrapper {
             OracleInstantiator::instantiate(
                 &mut test_case.app,

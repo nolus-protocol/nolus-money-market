@@ -6,11 +6,11 @@ use crate::{result::Result, validate::Validate};
 
 use super::{
     super::{
+        MigrationSpec,
         higher_order_type::{Map, MapAsRef, TryForEach, TryForEachPair as _, Zip},
         impl_mod::migrate_contract,
-        MigrationSpec,
     },
-    higher_order_type, Contracts, Protocol,
+    Contracts, Protocol, higher_order_type,
 };
 
 impl Contracts<Addr> {

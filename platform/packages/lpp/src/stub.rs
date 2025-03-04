@@ -7,24 +7,24 @@ use platform::{
 use sdk::cosmwasm_std::{Addr, Env, QuerierWrapper};
 
 use crate::{
+    CoinStable, Lpp,
     error::Result,
     msg::{ExecuteMsg, QueryMsg},
-    CoinStable, Lpp,
 };
 
-pub struct Stub<'a> {
+pub struct Stub<'querier, 'env> {
     lpp: Addr,
-    querier: QuerierWrapper<'a>,
-    env: &'a Env,
+    querier: QuerierWrapper<'querier>,
+    env: &'env Env,
 }
 
-impl<'a> Stub<'a> {
-    pub(crate) fn new(lpp: Addr, querier: QuerierWrapper<'a>, env: &'a Env) -> Self {
+impl<'querier, 'env> Stub<'querier, 'env> {
+    pub(crate) fn new(lpp: Addr, querier: QuerierWrapper<'querier>, env: &'env Env) -> Self {
         Self { lpp, querier, env }
     }
 }
 
-impl Lpp for Stub<'_> {
+impl Lpp for Stub<'_, '_> {
     fn balance(&self, oracle: Addr) -> Result<CoinStable> {
         self.querier
             .query_wasm_smart::<CoinDTO<PlatformGroup>>(
@@ -66,8 +66,8 @@ impl Lpp for Stub<'_> {
 mod test {
     use platform::message::Response as MessageResponse;
     use sdk::cosmwasm_std::{
-        testing::{self, MockQuerier},
         Addr, QuerierWrapper,
+        testing::{self, MockQuerier},
     };
 
     use crate::Lpp;

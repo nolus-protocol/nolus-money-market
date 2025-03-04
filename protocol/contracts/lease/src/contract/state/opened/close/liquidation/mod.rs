@@ -2,7 +2,7 @@ use platform::message::Response as MessageResponse;
 use sdk::cosmwasm_std::{Env, QuerierWrapper};
 
 use crate::{
-    contract::{cmd::LiquidationDTO, state::Response, Lease},
+    contract::{Lease, cmd::LiquidationDTO, state::Response},
     error::ContractResult,
 };
 
@@ -22,5 +22,4 @@ pub(in crate::contract::state) fn start(
         LiquidationDTO::Partial(spec) => spec.start(lease, curr_request_response, env, querier),
         LiquidationDTO::Full(spec) => spec.start(lease, curr_request_response, env, querier),
     }
-    .map_err(Into::into)
 }

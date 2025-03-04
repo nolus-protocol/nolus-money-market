@@ -1,5 +1,5 @@
 use sdk::{
-    cosmos_sdk_proto::{cosmos::base::abci::v1beta1::TxMsgData, traits::Message, Any},
+    cosmos_sdk_proto::{Any, cosmos::base::abci::v1beta1::TxMsgData, traits::Message},
     neutron_sdk::bindings::types::ProtobufAny,
 };
 
@@ -73,7 +73,7 @@ where
 
 #[cfg(test)]
 mod test {
-    use base64::{engine::general_purpose, Engine as _};
+    use base64::{Engine as _, engine::general_purpose};
 
     use sdk::cosmos_sdk_proto::Any;
 

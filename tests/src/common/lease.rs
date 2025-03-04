@@ -26,13 +26,12 @@ use sdk::{
 use swap::testing::SwapRequest;
 
 use super::{
-    ibc,
+    ADMIN, CwContractWrapper, USER, ibc,
     test_case::{
+        TestCase,
         app::App,
         response::{RemoteChain as _, ResponseWithInterChainMsgs},
-        TestCase,
     },
-    CwContractWrapper, ADMIN, USER,
 };
 
 pub(crate) struct Instantiator;

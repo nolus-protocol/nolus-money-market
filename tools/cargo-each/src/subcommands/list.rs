@@ -5,7 +5,7 @@ use cargo_metadata::{Metadata, Package};
 
 use crate::{combinations_iter, config::deserialize_config_if_any};
 
-use super::{get_packages_iter, Mode, Tags};
+use super::{Mode, Tags, get_packages_iter};
 
 pub(crate) struct Arguments {}
 

@@ -5,7 +5,7 @@ use osmosis_std::types::osmosis::poolmanager::v1beta1::SwapAmountInRoute;
 use currency::Group;
 use finance::coin::Amount;
 use oracle::api::swap::SwapTarget;
-use sdk::{cosmos_sdk_proto::prost::Message as _, cosmos_sdk_proto::Any as CosmosAny};
+use sdk::{cosmos_sdk_proto::Any as CosmosAny, cosmos_sdk_proto::prost::Message as _};
 
 use crate::testing::{self, ExactAmountInSkel, SwapRequest};
 

@@ -41,7 +41,9 @@ pub enum AlarmError {
     )]
     InDeliveryRemoveAboveOrEqual(StdError),
 
-    #[error("[Market Price; Alarm; In Delivery] Failed to append alarm in \"in delivery\" queue! Cause: {0}")]
+    #[error(
+        "[Market Price; Alarm; In Delivery] Failed to append alarm in \"in delivery\" queue! Cause: {0}"
+    )]
     InDeliveryAppend(StdError),
 
     #[error("[Market Price; Alarm] Failed to remove last delivered alarm from queue! Cause: {0}")]

@@ -8,7 +8,7 @@ use sdk::{cosmwasm_std::Storage, cw_storage_plus::Item};
 use tree::{FindBy as _, NodeRef};
 
 use crate::{
-    api::{self, swap::SwapTarget, SwapLeg},
+    api::{self, SwapLeg, swap::SwapTarget},
     error::{self, Error},
     result::Result,
 };
@@ -112,7 +112,7 @@ where
         Ok(path)
     }
 
-    pub fn swap_pairs_df(&self) -> impl Iterator<Item = SwapLeg<PriceG>> + '_ {
+    pub fn swap_pairs_df(&self) -> impl Iterator<Item = SwapLeg<PriceG>> {
         self.tree
             .iter()
             .filter_map(|node: NodeRef<'_, SwapTarget<PriceG>>| {
@@ -191,7 +191,7 @@ where
     Native: MemberOf<PriceG>,
     PaymentOnlyGroup: MemberOf<PriceG>,
 {
-    pub fn currencies(&self) -> impl Iterator<Item = api::Currency> + '_ {
+    pub fn currencies(&self) -> impl Iterator<Item = api::Currency> {
         currencies::currencies(self.tree.iter())
     }
 }
@@ -201,15 +201,15 @@ mod tests {
     use std::cmp::Ordering;
 
     use ::currencies::{
-        testing::{LeaseC1, LeaseC2, LeaseC3, LeaseC4, LeaseC5, PaymentC4},
         Lpn, Nls, PaymentGroup as PriceCurrencies,
+        testing::{LeaseC1, LeaseC2, LeaseC3, LeaseC4, LeaseC5, PaymentC4},
     };
     use currency::{CurrencyDTO, CurrencyDef, MemberOf};
     use sdk::cosmwasm_std::{self, testing};
     use tree::HumanReadableTree;
 
     use crate::{
-        api::{self, swap::SwapTarget, SwapLeg},
+        api::{self, SwapLeg, swap::SwapTarget},
         error::{self, Error},
     };
 
@@ -366,10 +366,11 @@ mod tests {
     fn test_load_swap_path() {
         let tree = SupportedPairs::new::<TheCurrency>(test_case().into_tree()).unwrap();
 
-        assert!(tree
-            .load_swap_path(&currency_dto::<LeaseC5>(), &currency_dto::<LeaseC5>())
-            .unwrap()
-            .is_empty());
+        assert!(
+            tree.load_swap_path(&currency_dto::<LeaseC5>(), &currency_dto::<LeaseC5>())
+                .unwrap()
+                .is_empty()
+        );
 
         let resp = tree
             .load_swap_path(&currency_dto::<LeaseC5>(), &currency_dto::<TheCurrency>())

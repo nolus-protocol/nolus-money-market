@@ -1,12 +1,12 @@
 use std::marker::PhantomData;
 
 use currency::{Currency, CurrencyDef, Group, MemberOf};
-use finance::price::{base::BasePrice, Price};
+use finance::price::{Price, base::BasePrice};
 use sdk::cosmwasm_std::{Addr, QuerierWrapper};
 
 use crate::{
-    error::{self, Result},
     Oracle, OracleRef,
+    error::{self, Result},
 };
 
 use super::RequestBuilder;

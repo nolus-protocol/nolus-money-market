@@ -38,9 +38,9 @@ mod test {
     use std::marker::PhantomData;
 
     use currency::{
+        Group, MemberOf,
         never::{self, Never},
         test::{SubGroupTestC10, SuperGroup, SuperGroupTestC1},
-        Group, MemberOf,
     };
 
     use finance::coin::{Amount, Coin, CoinDTO};

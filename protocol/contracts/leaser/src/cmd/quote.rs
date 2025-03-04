@@ -16,9 +16,9 @@ use oracle_platform::{Oracle as OracleTrait, WithOracle};
 use sdk::cosmwasm_std::{QuerierWrapper, StdResult};
 
 use crate::{
+    ContractError,
     finance::{LeaseCurrencies, LpnCurrencies, LpnCurrency, OracleRef, PaymentCurrencies},
     msg::QuoteResponse,
-    ContractError,
 };
 
 pub struct Quote<'r> {

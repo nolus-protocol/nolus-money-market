@@ -3,8 +3,8 @@ pub use crate::{
     migration::MigrationMessage,
     protocol::Release as ProtocolRelease,
     release::{
-        query, Id as ReleaseId, PlatformPackageRelease, ProtocolPackageRelease,
-        ProtocolPackageReleaseId, UpdatablePackage,
+        Id as ReleaseId, PlatformPackageRelease, ProtocolPackageRelease, ProtocolPackageReleaseId,
+        UpdatablePackage, query,
     },
     software::{PackageRelease as SoftwarePackageRelease, VersionSegment},
 };

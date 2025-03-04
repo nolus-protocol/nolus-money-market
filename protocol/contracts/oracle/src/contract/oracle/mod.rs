@@ -5,14 +5,14 @@ use std::{
 
 use currency::{Currency, CurrencyDTO, CurrencyDef, Group, MemberOf};
 use finance::price::{
+    Price,
     base::{
-        with_price::{self, WithPrice},
         BasePrice,
+        with_price::{self, WithPrice},
     },
     dto::PriceDTO,
-    Price,
 };
-use marketprice::{config::Config as PriceConfig, Repo};
+use marketprice::{Repo, config::Config as PriceConfig};
 use platform::{
     dispatcher::{AlarmsDispatcher, Id},
     message::Response as MessageResponse,
@@ -172,18 +172,19 @@ where
             })
     }
 
-    fn calc_all_prices<'self_, 'tree, 'feeds, 'st>(
-        &'self_ self,
+    fn calc_all_prices<'tree, 'feeds, 'repo_storage>(
+        &self,
         tree: &'tree SupportedPairs<PriceG, BaseC>,
-        feeds: &'feeds Feeds<'_, PriceG, BaseC, BaseG, Repo<'st, &(dyn Storage + 'st), PriceG>>,
+        feeds: &'feeds Feeds<
+            '_,
+            PriceG,
+            BaseC,
+            BaseG,
+            Repo<'repo_storage, &(dyn Storage + 'repo_storage), PriceG>,
+        >,
         at: Timestamp,
-    ) -> impl Iterator<Item = PriceResult<PriceG, BaseC, BaseG, PriceG>> + 'feeds
-    where
-        'storage: 'self_,
-        'self_: 'feeds,
-        'tree: 'feeds,
-        'storage: 'feeds,
-    {
+    ) -> impl Iterator<Item = PriceResult<PriceG, BaseC, BaseG, PriceG>>
+    + use<'tree, 'feeds, S, PriceG, BaseC, BaseG> {
         feeds.all_prices_iter(tree.swap_pairs_df(), at, self.feeders)
     }
 
@@ -245,7 +246,7 @@ where
                     block_time,
                 ))?
                 .take(max_count.try_into()?)
-                .collect::<Result<Vec<Addr>, PriceG>>()
+                .collect::<std::result::Result<_, _>>()
         })?;
 
         #[cfg(debug_assertions)]
@@ -294,11 +295,11 @@ mod test_normalized_price_not_found {
         PaymentGroup as AlarmCurrencies, Stable as StableCurrency,
     };
     use finance::{coin::Coin, duration::Duration, percent::Percent, price};
-    use marketprice::{config::Config as PriceConfig, Repo};
+    use marketprice::{Repo, config::Config as PriceConfig};
     use sdk::{
         cosmwasm_std::{
-            testing::{MockApi, MockQuerier, MockStorage},
             Addr, DepsMut, Empty, QuerierWrapper, Storage, Timestamp,
+            testing::{MockApi, MockQuerier, MockStorage},
         },
         testing,
     };
@@ -310,7 +311,7 @@ mod test_normalized_price_not_found {
         test_tree,
     };
 
-    use super::{feed::Feeds, feeder::Feeders, Oracle, ROOT_NAMESPACE};
+    use super::{Oracle, ROOT_NAMESPACE, feed::Feeds, feeder::Feeders};
 
     type NlsCoin = Coin<Nls>;
     type BaseCoin = Coin<BaseCurrency>;

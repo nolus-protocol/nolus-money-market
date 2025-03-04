@@ -1,8 +1,8 @@
 use sdk::cosmwasm_std::{Binary, Env, QuerierWrapper};
 
 use crate::impl_::{
-    response::{self, ContinueResult as ResponseContinueResult, Result as ResponseResult},
     Handler,
+    response::{self, ContinueResult as ResponseContinueResult, Result as ResponseResult},
 };
 
 pub trait DeliveryAdapter<H, Response>

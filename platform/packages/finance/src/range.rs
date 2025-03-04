@@ -47,7 +47,7 @@ where
     }
 
     pub fn contains(&self, t: &T) -> bool {
-        self.may_above_or_equal().map_or(true, |start| start <= t) && t < &self.end
+        self.may_above_or_equal().is_none_or(|start| start <= t) && t < &self.end
     }
 
     pub fn invert<R, MapFn>(self, mut map_fn: MapFn) -> RightOpenRange<R, Descending>
@@ -85,7 +85,7 @@ where
 
     fn invariant(&self) -> bool {
         self.may_above_or_equal()
-            .map_or(true, |start| start <= &self.end)
+            .is_none_or(|start| start <= &self.end)
     }
 }
 
@@ -117,7 +117,7 @@ where
 
     fn invariant(&self) -> bool {
         self.may_below_or_equal()
-            .map_or(true, |start| start >= &self.end)
+            .is_none_or(|start| start >= &self.end)
     }
 }
 

@@ -12,12 +12,12 @@ use sdk::cosmwasm_std::{Addr, Binary, Env, QuerierWrapper, Reply, Timestamp};
 
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    error::Result as DexResult,
-    impl_::{response::Result, ContinueResult, Contract, ForwardToInner, Handler, TimeAlarm},
-};
 #[cfg(feature = "migration")]
 use crate::{InspectSpec, MigrateSpec};
+use crate::{
+    error::Result as DexResult,
+    impl_::{ContinueResult, Contract, ForwardToInner, Handler, TimeAlarm, response::Result},
+};
 
 use self::adapter::{DeliveryAdapter, ICAOpenDeliveryAdapter, ResponseDeliveryAdapter};
 

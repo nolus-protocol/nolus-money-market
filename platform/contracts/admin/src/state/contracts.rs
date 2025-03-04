@@ -74,7 +74,7 @@ pub(crate) fn load_all(storage: &dyn Storage) -> Result<Contracts> {
 
 #[cfg(test)]
 mod tests {
-    use sdk::cosmwasm_std::{self, testing::MockStorage, Storage as _};
+    use sdk::cosmwasm_std::{self, Storage as _, testing::MockStorage};
 
     use super::{PLATFORM, PLATFORM_STORE_KEY};
 

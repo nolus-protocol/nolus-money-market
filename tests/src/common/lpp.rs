@@ -1,19 +1,19 @@
 use currencies::Lpns;
 use currency::{CurrencyDef, MemberOf};
-use finance::percent::{bound::BoundToHundredPercent, Percent};
+use finance::percent::{Percent, bound::BoundToHundredPercent};
 use lpp::{
     borrow::InterestRate,
-    contract::{sudo, ContractError},
+    contract::{ContractError, sudo},
     msg::{ExecuteMsg, InstantiateMsg, QueryMsg},
 };
 use platform::contract::{Code, CodeId};
 use sdk::{
-    cosmwasm_std::{to_json_binary, Addr, Binary, Coin as CwCoin, Deps, Env},
+    cosmwasm_std::{Addr, Binary, Coin as CwCoin, Deps, Env, to_json_binary},
     testing::{self, CwContract},
 };
 
 use super::{
-    leaser::Instantiator as LeaserInstantiator, test_case::app::App, CwContractWrapper, ADMIN,
+    ADMIN, CwContractWrapper, leaser::Instantiator as LeaserInstantiator, test_case::app::App,
 };
 
 pub type LppExecuteMsg = ExecuteMsg<Lpns>;

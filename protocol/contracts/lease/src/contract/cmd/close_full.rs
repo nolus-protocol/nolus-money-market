@@ -8,7 +8,7 @@ use crate::{
     api::{LeaseAssetCurrencies, LeasePaymentCurrencies},
     error::ContractError,
     finance::{LpnCoinDTO, LpnCurrencies, LpnCurrency, OracleRef, ReserveRef},
-    lease::{with_lease::WithLease, Lease},
+    lease::{Lease, with_lease::WithLease},
 };
 
 use super::repayable::Emitter;

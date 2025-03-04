@@ -1,4 +1,4 @@
-use currencies::{testing::PaymentC3, Lpn};
+use currencies::{Lpn, testing::PaymentC3};
 use finance::{
     coin::Coin,
     duration::Duration,
@@ -9,7 +9,7 @@ use finance::{
 
 use crate::{
     finance::LpnCoin,
-    position::{close::Policy as ClosePolicy, DueTrait, OverdueCollection},
+    position::{DueTrait, OverdueCollection, close::Policy as ClosePolicy},
 };
 
 use super::Spec;
@@ -170,7 +170,7 @@ mod test_debt {
         range::RightOpenRange,
     };
 
-    use crate::position::{close::Policy as ClosePolicy, Cause, Debt, Spec, Steadiness};
+    use crate::position::{Cause, Debt, Spec, Steadiness, close::Policy as ClosePolicy};
 
     use super::TestCurrency;
 

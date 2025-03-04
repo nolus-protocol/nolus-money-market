@@ -13,11 +13,12 @@ use sdk::{
 use versioning::ProtocolMigrationMessage;
 
 use super::{
+    ADMIN, CwContractWrapper,
     lease::{
         InitConfig, Instantiator as LeaseInstantiator, InstantiatorAddresses,
         InstantiatorConfig as LeaseInstantiatorConfig,
     },
-    mock_app, CwContractWrapper, ADMIN,
+    mock_app,
 };
 
 use self::{address_book::AddressBook, app::App};

@@ -5,7 +5,7 @@ use crate::{
     api::LeaseAssetCurrencies,
     error::ContractError,
     finance::LpnCurrencies,
-    lease::{with_lease_paid::WithLeaseTypes, LeaseDTO, LeasePaid},
+    lease::{LeaseDTO, LeasePaid, with_lease_paid::WithLeaseTypes},
     position::Position,
 };
 

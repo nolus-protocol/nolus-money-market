@@ -1,4 +1,4 @@
-use currency::{platform::Nls, BankSymbols, Group};
+use currency::{BankSymbols, Group, platform::Nls};
 use finance::coin::{Coin, CoinDTO};
 use sdk::{
     cosmwasm_std::{Addr, Coin as CwCoin, Timestamp},
@@ -52,7 +52,7 @@ impl<'c> Sender<'c> {
         })
     }
 
-    fn into_ibc_msgs(self) -> impl Iterator<Item = NeutronMsg> + 'c {
+    fn into_ibc_msgs(self) -> impl Iterator<Item = NeutronMsg> {
         let Self {
             channel,
             sender,
@@ -131,7 +131,7 @@ mod test {
     use sdk::cosmwasm_std::{Addr, Timestamp};
 
     use crate::{
-        bank_ibc::local::{new_msg, Sender},
+        bank_ibc::local::{Sender, new_msg},
         batch::Batch,
         coin_legacy::{self},
         ica::HostAccount,

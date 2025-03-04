@@ -1,7 +1,7 @@
 use sdk::cosmwasm_std::{Env, QuerierWrapper};
 
 use crate::{
-    contract::{cmd::RepayLeaseFn, state::Response, Lease},
+    contract::{Lease, cmd::RepayLeaseFn, state::Response},
     error::ContractResult,
     finance::LpnCoinDTO,
 };

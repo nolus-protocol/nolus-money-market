@@ -6,9 +6,9 @@ use finance::coin::{Amount, CoinDTO};
 use oracle::api::swap::{SwapPath, SwapTarget};
 use sdk::{
     cosmos_sdk_proto::{
+        Any as CosmosAny,
         cosmos::base::v1beta1::Coin as ProtoCoin,
         prost::{Message as _, Name as _},
-        Any as CosmosAny,
     },
     cosmwasm_std,
 };
@@ -16,8 +16,8 @@ use sdk::{
 use crate::testing::{self, ExactAmountInSkel, SwapRequest};
 
 use super::{
-    api::{AssetInfo, ExecuteMsg, SwapOperation, SwapResponseData},
     Impl, RequestMsg, ResponseMsg, Router,
+    api::{AssetInfo, ExecuteMsg, SwapOperation, SwapResponseData},
 };
 
 impl<R> ExactAmountInSkel for Impl<R>

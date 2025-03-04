@@ -1,6 +1,6 @@
 use currency::{
-    error::Error, test::Expect, BankSymbols, CurrencyDef, Group, GroupVisit, MemberOf, Symbol,
-    Tickers,
+    BankSymbols, CurrencyDef, Group, GroupVisit, MemberOf, Symbol, Tickers, error::Error,
+    test::Expect,
 };
 
 #[track_caller]

@@ -120,8 +120,8 @@ mod tests {
 
     use platform::contract;
     use sdk::cosmwasm_std::{
-        testing::{self, mock_dependencies, MockQuerier},
         Addr, QuerierWrapper, Timestamp,
+        testing::{self, MockQuerier, mock_dependencies},
     };
 
     use crate::error::ContractError;
@@ -136,14 +136,16 @@ mod tests {
         env.block.time = Timestamp::from_seconds(0);
 
         let msg_sender = Addr::unchecked("some address");
-        assert!(TimeAlarms::new(deps.storage.deref_mut())
-            .try_add(
-                deps.querier,
-                &env,
-                msg_sender.clone(),
-                Timestamp::from_nanos(8),
-            )
-            .is_err());
+        assert!(
+            TimeAlarms::new(deps.storage.deref_mut())
+                .try_add(
+                    deps.querier,
+                    &env,
+                    msg_sender.clone(),
+                    Timestamp::from_nanos(8),
+                )
+                .is_err()
+        );
 
         let expected_error: ContractError = contract::validate_addr(deps.querier, &msg_sender)
             .unwrap_err()
@@ -168,9 +170,11 @@ mod tests {
         env.block.time = Timestamp::from_seconds(0);
 
         let msg_sender = Addr::unchecked("some address");
-        assert!(TimeAlarms::new(deps.storage)
-            .try_add(deps.querier, &env, msg_sender, Timestamp::from_nanos(4),)
-            .is_ok());
+        assert!(
+            TimeAlarms::new(deps.storage)
+                .try_add(deps.querier, &env, msg_sender, Timestamp::from_nanos(4),)
+                .is_ok()
+        );
     }
 
     #[test]

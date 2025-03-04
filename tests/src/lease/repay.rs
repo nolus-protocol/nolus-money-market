@@ -13,8 +13,8 @@ use finance::{
     zero::Zero,
 };
 use lease::api::{
-    query::{ClosePolicy, StateResponse},
     ExecuteMsg,
+    query::{ClosePolicy, StateResponse},
 };
 use platform::coin_legacy::to_cosmwasm_on_dex;
 use sdk::{
@@ -24,16 +24,15 @@ use sdk::{
 };
 
 use crate::common::{
-    self, cwcoin, ibc,
+    self, CwCoin, USER, cwcoin, ibc,
     leaser::Instantiator as LeaserInstantiator,
     swap::{self, DexDenom},
-    test_case::{app::App, response::ResponseWithInterChainMsgs, TestCase},
-    CwCoin, USER,
+    test_case::{TestCase, app::App, response::ResponseWithInterChainMsgs},
 };
 
 use super::{
-    price_lpn_of, LeaseCoin, LeaseCurrency, LeaseTestCase, LpnCoin, LpnCurrency, PaymentCoin,
-    PaymentCurrency, DOWNPAYMENT,
+    DOWNPAYMENT, LeaseCoin, LeaseCurrency, LeaseTestCase, LpnCoin, LpnCurrency, PaymentCoin,
+    PaymentCurrency, price_lpn_of,
 };
 
 #[test]

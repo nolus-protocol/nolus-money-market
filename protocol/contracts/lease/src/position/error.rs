@@ -24,7 +24,9 @@ pub enum Error {
     #[error("[Position] The position past this close should worth at least {0}")]
     PositionCloseAmountTooBig(LpnCoinDTO),
 
-    #[error("[Position] Invalid close policy! The current lease LTV '{lease_ltv}' would trigger '{strategy}'!")]
+    #[error(
+        "[Position] Invalid close policy! The current lease LTV '{lease_ltv}' would trigger '{strategy}'!"
+    )]
     TriggerClose {
         lease_ltv: Percent,
         strategy: CloseStrategy,
@@ -33,7 +35,9 @@ pub enum Error {
     #[error("[Position] The close policy '{0}' should not be zero!")]
     ZeroClosePolicy(&'static str),
 
-    #[error("[Position] Invalid close policy! The new strategy '{strategy}' is not less than the max lease liability LTV '{top_bound}'!")]
+    #[error(
+        "[Position] Invalid close policy! The new strategy '{strategy}' is not less than the max lease liability LTV '{top_bound}'!"
+    )]
     LiquidationConflict {
         strategy: CloseStrategy,
         top_bound: Percent,

@@ -62,7 +62,7 @@ pub(crate) fn pattern_match_else(message_name: &str) -> ! {
 
 #[cfg(test)]
 pub(crate) fn validate_a_response(resp_base64: &str, exp_amount1: Amount, exp_amount2: Amount) {
-    use base64::{engine::general_purpose, Engine};
+    use base64::{Engine, engine::general_purpose};
 
     use dex::swap::ExactAmountIn;
     use platform::trx;

@@ -115,52 +115,66 @@ mod tests {
             ""
         );
         assert!(InterestRate::new(Percent::ZERO, Percent::HUNDRED, Percent::ZERO).is_none());
-        assert!(InterestRate::new(
-            Percent::from_percent(25),
-            Percent::from_percent(50),
-            Percent::from_percent(75)
-        )
-        .is_some());
+        assert!(
+            InterestRate::new(
+                Percent::from_percent(25),
+                Percent::from_percent(50),
+                Percent::from_percent(75)
+            )
+            .is_some()
+        );
         assert!(InterestRate::new(Percent::HUNDRED, Percent::HUNDRED, Percent::HUNDRED).is_none());
 
         assert!(InterestRate::new(Percent::ZERO, Percent::ZERO, Percent::ZERO).is_none());
-        assert!(InterestRate::new(
-            Percent::from_percent(25),
-            Percent::ZERO,
-            Percent::from_percent(75)
-        )
-        .is_none());
+        assert!(
+            InterestRate::new(
+                Percent::from_percent(25),
+                Percent::ZERO,
+                Percent::from_percent(75)
+            )
+            .is_none()
+        );
         assert!(InterestRate::new(Percent::HUNDRED, Percent::ZERO, Percent::HUNDRED).is_none());
-        assert!(InterestRate::new(
-            Percent::from_percent(101),
-            Percent::HUNDRED,
-            Percent::HUNDRED
-        )
-        .is_none());
-        assert!(InterestRate::new(
-            Percent::HUNDRED,
-            Percent::from_percent(101),
-            Percent::HUNDRED
-        )
-        .is_none());
-        assert!(InterestRate::new(
-            Percent::HUNDRED,
-            Percent::HUNDRED,
-            Percent::from_percent(101)
-        )
-        .is_none());
-        assert!(InterestRate::new(
-            Percent::from_percent(101),
-            Percent::ZERO,
-            Percent::from_percent(101)
-        )
-        .is_none());
-        assert!(InterestRate::new(
-            Percent::from_percent(101),
-            Percent::from_percent(101),
-            Percent::from_percent(101)
-        )
-        .is_none());
+        assert!(
+            InterestRate::new(
+                Percent::from_percent(101),
+                Percent::HUNDRED,
+                Percent::HUNDRED
+            )
+            .is_none()
+        );
+        assert!(
+            InterestRate::new(
+                Percent::HUNDRED,
+                Percent::from_percent(101),
+                Percent::HUNDRED
+            )
+            .is_none()
+        );
+        assert!(
+            InterestRate::new(
+                Percent::HUNDRED,
+                Percent::HUNDRED,
+                Percent::from_percent(101)
+            )
+            .is_none()
+        );
+        assert!(
+            InterestRate::new(
+                Percent::from_percent(101),
+                Percent::ZERO,
+                Percent::from_percent(101)
+            )
+            .is_none()
+        );
+        assert!(
+            InterestRate::new(
+                Percent::from_percent(101),
+                Percent::from_percent(101),
+                Percent::from_percent(101)
+            )
+            .is_none()
+        );
     }
 
     /// Test suit specifically for verifying correctness of [`InterestRate::calculate`](InterestRate::calculate).cargo fmt

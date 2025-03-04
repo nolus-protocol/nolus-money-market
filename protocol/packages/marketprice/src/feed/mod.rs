@@ -165,7 +165,7 @@ mod test {
 
     use crate::{config::Config, error::PriceFeedsError};
 
-    use super::{memory::InMemoryObservations, observations::Observations, PriceFeed};
+    use super::{PriceFeed, memory::InMemoryObservations, observations::Observations};
 
     const ONE_FEEDER: usize = 1;
     const SAMPLE_PERIOD: Duration = Duration::from_secs(5);

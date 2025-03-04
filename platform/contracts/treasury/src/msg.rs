@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 
 use sdk::cosmwasm_std::Addr;
 
-use crate::state::{reward_scale::RewardScale, CadenceHours};
+use crate::state::{CadenceHours, reward_scale::RewardScale};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]

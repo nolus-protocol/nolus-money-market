@@ -27,6 +27,7 @@ use crate::{
 #[cfg(debug_assertions)]
 use crate::impl_::swap_task::IterState;
 use crate::impl_::{
+    ContractInSwap, ForwardToInner, TimeAlarm,
     connectable::DexConnectable,
     filter::CurrencyFilter,
     ica_connector::Enterable,
@@ -35,7 +36,6 @@ use crate::impl_::{
     timeout,
     transfer_in_init::TransferInInit,
     trx::SwapTrx,
-    ContractInSwap, ForwardToInner, TimeAlarm,
 };
 #[cfg(feature = "migration")]
 use crate::{InspectSpec, MigrateSpec};

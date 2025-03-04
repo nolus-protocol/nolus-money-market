@@ -163,7 +163,7 @@ mod unchecked {
 #[cfg(test)]
 mod test {
     use finance::{duration::Duration, percent::Percent};
-    use sdk::cosmwasm_std::{from_json, to_json_vec, StdError, Timestamp};
+    use sdk::cosmwasm_std::{StdError, Timestamp, from_json, to_json_vec};
 
     use crate::config::Config;
 

@@ -14,22 +14,21 @@ use platform::{
 };
 use sdk::cosmwasm_std::{Binary, Env, QuerierWrapper, Timestamp};
 
+#[cfg(feature = "migration")]
+use crate::{InspectSpec, MigrateSpec};
 use crate::{
     error::{Error, Result},
     swap::ExactAmountIn,
 };
-#[cfg(feature = "migration")]
-use crate::{InspectSpec, MigrateSpec};
 
 use super::{
-    coin_index,
+    Contract, ContractInSwap, TimeAlarm, TransferOutState, coin_index,
     ica_connector::Enterable,
     response::{self, ContinueResult, Handler, Result as HandlerResult},
     swap_exact_in::SwapExactIn,
     swap_task::{CoinVisitor, CoinsNb, IterNext, IterState, SwapTask as SwapTaskT},
     timeout,
     trx::TransferOutTrx,
-    Contract, ContractInSwap, TimeAlarm, TransferOutState,
 };
 
 /// Transfer out a list of coins to DEX

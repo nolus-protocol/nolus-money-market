@@ -2,8 +2,8 @@ use currency::{CurrencyDef, MemberOf};
 
 use crate::{
     api::{
-        query::{opened, paid, StateResponse},
         LeaseAssetCurrencies,
+        query::{StateResponse, opened, paid},
     },
     lease::{LeaseDTO, State},
 };

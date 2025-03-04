@@ -20,11 +20,11 @@ use sdk::{
 use crate::common::ADMIN;
 
 use super::{
+    CwCoin,
     test_case::{
         app::App,
         response::{RemoteChain as _, ResponseWithInterChainMsgs},
     },
-    CwCoin,
 };
 
 pub(crate) fn expect_transfer<T>(

@@ -73,16 +73,16 @@ fn query_info(
 #[cfg(test)]
 pub mod tests {
     use sdk::{
-        cosmwasm_std::{self, testing::MockQuerier, QuerierWrapper},
+        cosmwasm_std::{self, QuerierWrapper, testing::MockQuerier},
         testing as sdk_testing,
     };
 
     use crate::contract::{
-        testing::{self, CODE},
         Code,
+        testing::{self, CODE},
     };
 
-    use super::{validate_addr, CodeId};
+    use super::{CodeId, validate_addr};
 
     const USER: &str = "user";
 
@@ -125,8 +125,8 @@ pub mod tests {
 pub mod testing {
     use sdk::{
         cosmwasm_std::{
-            to_json_binary, ContractInfoResponse, ContractResult, QuerierResult, SystemResult,
-            WasmQuery,
+            ContractInfoResponse, ContractResult, QuerierResult, SystemResult, WasmQuery,
+            to_json_binary,
         },
         testing,
     };

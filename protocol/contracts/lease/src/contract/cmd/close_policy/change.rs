@@ -7,11 +7,11 @@ use sdk::cosmwasm_std::Timestamp;
 use timealarms::stub::TimeAlarmsRef;
 
 use crate::{
-    api::{position::ClosePolicyChange, LeaseAssetCurrencies, LeasePaymentCurrencies},
+    api::{LeaseAssetCurrencies, LeasePaymentCurrencies, position::ClosePolicyChange},
     contract::SplitDTOOut,
     error::ContractError,
     finance::{LpnCurrencies, LpnCurrency, OracleRef, ReserveRef},
-    lease::{with_lease::WithLease, IntoDTOResult, Lease as LeaseDO, LeaseDTO},
+    lease::{IntoDTOResult, Lease as LeaseDO, LeaseDTO, with_lease::WithLease},
 };
 
 use super::CloseStatusDTO;

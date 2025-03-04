@@ -9,8 +9,8 @@ use sdk::{cosmwasm_std::Addr, testing};
 use crate::common::test_case::response::RemoteChain;
 
 use super::{
-    test_case::{app::App, TestCase},
-    CwContractWrapper, ADMIN,
+    ADMIN, CwContractWrapper,
+    test_case::{TestCase, app::App},
 };
 
 pub(crate) struct Instantiator;

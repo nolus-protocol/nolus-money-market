@@ -387,7 +387,7 @@ where
 pub mod tests {
     use currency::test::{SuperGroup, SuperGroupTestC2, SuperGroupTestC3, SuperGroupTestC4};
     use finance::{coin::Coin, price};
-    use sdk::cosmwasm_std::{testing::MockStorage, Addr};
+    use sdk::cosmwasm_std::{Addr, testing::MockStorage};
 
     use super::*;
 

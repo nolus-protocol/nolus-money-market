@@ -52,7 +52,10 @@ impl SemVer {
             version_index += 1;
         }
 
-        assert!(segment_index + 1 == segments.len(), "Invalid version string! Expected three segments (major, minor and patch), but got less!");
+        assert!(
+            segment_index + 1 == segments.len(),
+            "Invalid version string! Expected three segments (major, minor and patch), but got less!"
+        );
 
         let [major, minor, patch]: [VersionSegment; 3] = segments;
 

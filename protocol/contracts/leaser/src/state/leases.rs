@@ -1,4 +1,4 @@
-use std::collections::{hash_set::IntoIter, HashSet};
+use std::collections::{HashSet, hash_set::IntoIter};
 
 use sdk::{
     cosmwasm_std::{Addr, Order, StdResult, Storage},
@@ -69,7 +69,7 @@ impl Leases {
     pub fn iter(
         storage: &dyn Storage,
         next_customer: Option<Addr>,
-    ) -> impl Iterator<Item = MaybeCustomer<IntoIter<Addr>>> + '_ {
+    ) -> impl Iterator<Item = MaybeCustomer<IntoIter<Addr>>> {
         let start_bound = next_customer.map(Bound::<Addr>::inclusive);
         Self::CUSTOMER_LEASES
             .prefix(())
@@ -84,9 +84,9 @@ impl Leases {
 
 #[cfg(all(feature = "internal.test.testing", test))]
 mod test {
-    use sdk::cosmwasm_std::{testing::MockStorage, Addr, Storage};
+    use sdk::cosmwasm_std::{Addr, Storage, testing::MockStorage};
 
-    use crate::{state::leases::Leases, ContractError};
+    use crate::{ContractError, state::leases::Leases};
 
     #[test]
     fn test_save_customer_not_cached() {

@@ -18,8 +18,8 @@ use crate::error::Result;
 use crate::impl_::{InspectSpec, MigrateSpec};
 
 use super::{
-    response::{ContinueResult, Handler},
     Account, Contract, DexConnectable, Response, TimeAlarm,
+    response::{ContinueResult, Handler},
 };
 
 pub trait Enterable {
@@ -177,6 +177,6 @@ where
     Connectee: TimeAlarm,
 {
     fn setup_alarm(&self, forr: Timestamp) -> Result<Batch> {
-        self.connectee.setup_alarm(forr).map_err(Into::into)
+        self.connectee.setup_alarm(forr)
     }
 }

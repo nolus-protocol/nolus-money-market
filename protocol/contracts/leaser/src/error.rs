@@ -48,6 +48,8 @@ pub enum ContractError {
     #[error("[Leaser] The protocol is still in use. There are open leases")]
     ProtocolStillInUse(),
 
-    #[error("[Leaser][ProtocolsRegistry] The protocol deregistration request preparation failed! Cause: {0}")]
+    #[error(
+        "[Leaser][ProtocolsRegistry] The protocol deregistration request preparation failed! Cause: {0}"
+    )]
     ProtocolDeregistration(platform::error::Error),
 }

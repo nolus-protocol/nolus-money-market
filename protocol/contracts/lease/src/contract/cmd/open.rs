@@ -6,16 +6,16 @@ use sdk::cosmwasm_std::{Addr, Timestamp};
 use timealarms::stub::TimeAlarmsRef;
 
 use crate::{
-    api::{open::NewLeaseForm, LeaseAssetCurrencies, LeasePaymentCurrencies},
+    api::{LeaseAssetCurrencies, LeasePaymentCurrencies, open::NewLeaseForm},
     contract::SplitDTOOut,
     error::ContractError,
     finance::{LpnCurrencies, LpnCurrency, OracleRef, ReserveRef},
-    lease::{with_lease_deps::WithLeaseDeps, Lease, LeaseDTO},
+    lease::{Lease, LeaseDTO, with_lease_deps::WithLeaseDeps},
     loan::Loan,
     position::Position,
 };
 
-use super::{close_policy::check, CloseStatusDTO};
+use super::{CloseStatusDTO, close_policy::check};
 
 pub struct LeaseFactory<'a> {
     form: NewLeaseForm,

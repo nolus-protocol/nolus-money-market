@@ -9,14 +9,14 @@ use platform::{
 use sdk::{
     cosmwasm_ext::Response as CwResponse,
     cosmwasm_std::{
-        self, entry_point, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Storage, SubMsgResult,
-        Timestamp,
+        self, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Storage, SubMsgResult, Timestamp,
+        entry_point,
     },
 };
 use serde::Serialize;
 use versioning::{
-    package_name, package_version, ProtocolMigrationMessage, ProtocolPackageRelease,
-    UpdatablePackage as _, VersionSegment,
+    ProtocolMigrationMessage, ProtocolPackageRelease, UpdatablePackage as _, VersionSegment,
+    package_name, package_version,
 };
 
 use crate::{
@@ -217,15 +217,15 @@ where
 #[cfg(all(feature = "internal.test.contract", test))]
 mod tests {
     use currencies::{
-        testing::{LeaseC1, PaymentC1, PaymentC9},
         LeaseGroup, Lpn, Lpns, PaymentGroup,
+        testing::{LeaseC1, PaymentC1, PaymentC9},
     };
     use finance::{duration::Duration, percent::Percent, price};
     use platform::tests as platform_tests;
     use sdk::cosmwasm_std::{self, testing::mock_env};
 
     use crate::{
-        api::{swap::SwapTarget, Alarm, Config, ExecuteMsg, QueryMsg, SwapLeg},
+        api::{Alarm, Config, ExecuteMsg, QueryMsg, SwapLeg, swap::SwapTarget},
         contract::query,
         test_tree,
         tests::{dummy_instantiate_msg, setup_test},
