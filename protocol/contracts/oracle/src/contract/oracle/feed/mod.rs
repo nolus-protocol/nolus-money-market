@@ -56,11 +56,11 @@ where
     where
         I: Iterator<Item = SwapLeg<PriceG>>,
     {
-        let cmd: LegCmd<PriceG, BaseC, BaseG, FedPrices<'_, '_, PriceG, Observations>> =
+        let cmd: LegCmd<PriceG, BaseC, BaseG, _> =
             LegCmd::new(FedPrices::new(&self.feeds, at, total_feeders));
 
         swap_pairs_df
-            .scan(cmd, |cmd, leg: SwapLeg<PriceG>| {
+            .scan(cmd, |cmd, leg| {
                 Some(currency::visit_any_on_currencies(leg.from, leg.to.target, cmd).transpose())
             })
             .flatten()
