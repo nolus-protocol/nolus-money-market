@@ -12,19 +12,19 @@ use crate::{
     CoinStable, Lpp,
 };
 
-pub struct Stub<'a> {
+pub struct Stub<'querier, 'env> {
     lpp: Addr,
-    querier: QuerierWrapper<'a>,
-    env: &'a Env,
+    querier: QuerierWrapper<'querier>,
+    env: &'env Env,
 }
 
-impl<'a> Stub<'a> {
-    pub(crate) fn new(lpp: Addr, querier: QuerierWrapper<'a>, env: &'a Env) -> Self {
+impl<'querier, 'env> Stub<'querier, 'env> {
+    pub(crate) fn new(lpp: Addr, querier: QuerierWrapper<'querier>, env: &'env Env) -> Self {
         Self { lpp, querier, env }
     }
 }
 
-impl Lpp for Stub<'_> {
+impl Lpp for Stub<'_, '_> {
     fn balance(&self, oracle: Addr) -> Result<CoinStable> {
         self.querier
             .query_wasm_smart::<CoinDTO<PlatformGroup>>(
