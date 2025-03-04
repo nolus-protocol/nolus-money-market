@@ -16,6 +16,7 @@ where
 struct SymbolMatcher<'a, S>(&'a str, PhantomData<S>)
 where
     S: ?Sized;
+
 impl<S> Matcher for SymbolMatcher<'_, S>
 where
     S: Symbol + ?Sized,
@@ -27,11 +28,13 @@ where
 
 #[derive(Debug)]
 pub struct TypeMatcher(DefinitionRef);
+
 impl TypeMatcher {
     pub fn new(def: DefinitionRef) -> Self {
         Self(def)
     }
 }
+
 impl Matcher for TypeMatcher {
     fn r#match(&self, def: DefinitionRef) -> bool {
         def == self.0

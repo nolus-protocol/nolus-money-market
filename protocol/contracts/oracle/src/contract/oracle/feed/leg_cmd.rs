@@ -44,6 +44,7 @@ where
     type VisitedG = PriceG;
 
     type Output = Option<BasePrice<PriceG, BaseC, BaseG>>;
+
     type Error = Error<PriceG>;
 
     fn on<B, Q>(

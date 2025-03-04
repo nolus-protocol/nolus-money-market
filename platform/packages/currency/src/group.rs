@@ -10,6 +10,7 @@ where
     Self: MemberOf<Self::TopG>,
 {
     const DESCR: &'static str;
+
     type TopG: Group<TopG = Self::TopG>;
 
     // Visit this group directly by a visitor

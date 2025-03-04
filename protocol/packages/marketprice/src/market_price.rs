@@ -73,6 +73,7 @@ where
             _base_g: PhantomData<BaseG>,
             _currency_dto: PhantomData<&'currency_dto CurrencyDTO<G>>,
         }
+
         impl<'currency_dto, G, BaseC, BaseG, CurrenciesToBaseC, ObservationsRepoImpl> AnyVisitor<G>
             for CurrencyResolver<
                 '_,
@@ -182,6 +183,7 @@ where
         valid_since: &Timestamp,
     ) -> Result<(), PriceFeedsError> {
         debug_assert!(valid_since < &at);
+
         struct AddObservation<'feeds, 'since, G, ObservationsRepoImpl>
         where
             G: Group,
@@ -201,7 +203,9 @@ where
             ObservationsRepoImpl: ObservationsRepo<Group = G>,
         {
             type G = G;
+
             type Output = ();
+
             type Error = PriceFeedsError;
 
             fn exec<C, QuoteC>(self, price: Price<C, QuoteC>) -> Result<Self::Output, Self::Error>
@@ -217,6 +221,7 @@ where
                 .map(mem::drop)
             }
         }
+
         with_price::execute(
             price,
             AddObservation {
@@ -260,6 +265,7 @@ struct PriceCollect<
     _base_g: PhantomData<BaseG>,
     price: Price<C, CurrentC>,
 }
+
 impl<
     'currency_dto,
     'feeds,
@@ -338,6 +344,7 @@ where
         }
     }
 }
+
 impl<'currency_dto, CurrenciesToBaseC, C, CurrentC, G, BaseC, BaseG, ObservationsRepoImpl>
     PairsVisitor
     for PriceCollect<
