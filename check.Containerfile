@@ -64,6 +64,14 @@ USER 1000:1000
 
 ENTRYPOINT ["/check.sh"]
 
+ENV SOFTWARE_RELEASE_ID="dev"
+
+ENV PROTOCOL_NETWORK="dev"
+
+ENV PROTOCOL_NAME="dev"
+
+ENV PROTOCOL_RELEASE_ID="dev"
+
 COPY \
     --chmod="0555" \
     --chown=0:0 \
