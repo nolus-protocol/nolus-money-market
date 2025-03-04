@@ -11,13 +11,13 @@ use platform::{
 use sdk::{
     cosmwasm_ext::Response,
     cosmwasm_std::{
-        entry_point, to_json_binary, Addr, Api, Binary, Deps, DepsMut, Env, MessageInfo,
-        QuerierWrapper, Reply, Storage,
+        Addr, Api, Binary, Deps, DepsMut, Env, MessageInfo, QuerierWrapper, Reply, Storage,
+        entry_point, to_json_binary,
     },
 };
 use versioning::{
-    package_name, package_version, ProtocolMigrationMessage, ProtocolPackageRelease,
-    ProtocolPackageReleaseId, UpdatablePackage, VersionSegment,
+    ProtocolMigrationMessage, ProtocolPackageRelease, ProtocolPackageReleaseId, UpdatablePackage,
+    VersionSegment, package_name, package_version,
 };
 
 use crate::{

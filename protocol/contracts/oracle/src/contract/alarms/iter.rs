@@ -1,8 +1,8 @@
 use std::{iter, marker::PhantomData, ops::Deref};
 
 use currency::{Currency, CurrencyDef, Group, MemberOf};
-use finance::price::{self, base::with_price::WithPrice, Price};
-use marketprice::alarms::{errors::AlarmError, AlarmsIterator, PriceAlarms};
+use finance::price::{self, Price, base::with_price::WithPrice};
+use marketprice::alarms::{AlarmsIterator, PriceAlarms, errors::AlarmError};
 use sdk::cosmwasm_std::{Addr, Storage};
 
 use crate::{contract::alarms::PriceResult, error::Error, result::Result};
