@@ -7,8 +7,7 @@ use super::price_querier::PriceQuerier;
 
 pub(super) struct LegCmd<BaseC, BaseG, Querier>
 where
-    BaseC: CurrencyDef,
-    BaseC::Group: MemberOf<BaseG> + MemberOf<Querier::CurrencyGroup>,
+    BaseC: CurrencyDef<Group: MemberOf<BaseG> + MemberOf<Querier::CurrencyGroup>>,
     BaseG: Group,
     Querier: PriceQuerier,
 {
@@ -18,8 +17,7 @@ where
 
 impl<BaseC, BaseG, Querier> LegCmd<BaseC, BaseG, Querier>
 where
-    BaseC: CurrencyDef,
-    BaseC::Group: MemberOf<BaseG> + MemberOf<Querier::CurrencyGroup>,
+    BaseC: CurrencyDef<Group: MemberOf<BaseG> + MemberOf<Querier::CurrencyGroup>>,
     BaseG: Group + MemberOf<Querier::CurrencyGroup>,
     Querier: PriceQuerier,
 {
@@ -33,8 +31,7 @@ where
 
 impl<BaseC, BaseG, Querier> AnyVisitorPair for &mut LegCmd<BaseC, BaseG, Querier>
 where
-    BaseC: CurrencyDef,
-    BaseC::Group: MemberOf<BaseG> + MemberOf<Querier::CurrencyGroup>,
+    BaseC: CurrencyDef<Group: MemberOf<BaseG> + MemberOf<Querier::CurrencyGroup>>,
     BaseG: Group + MemberOf<Querier::CurrencyGroup>,
     Querier: PriceQuerier,
 {

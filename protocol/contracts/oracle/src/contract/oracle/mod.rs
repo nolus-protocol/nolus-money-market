@@ -60,8 +60,7 @@ impl<'storage, S, PriceG, BaseC, BaseG> Oracle<'storage, S, PriceG, BaseC, BaseG
 where
     S: Deref<Target = dyn Storage + 'storage>,
     PriceG: Group<TopG = PriceG>,
-    BaseC: CurrencyDef,
-    BaseC::Group: MemberOf<BaseG> + MemberOf<PriceG::TopG>,
+    BaseC: CurrencyDef<Group: MemberOf<BaseG> + MemberOf<PriceG::TopG>>,
     BaseG: Group + MemberOf<PriceG>,
 {
     pub fn load(storage: S) -> Result<Self, PriceG> {

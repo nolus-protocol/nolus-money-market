@@ -46,8 +46,7 @@ where
     ) -> Result<BasePrice<PriceG, BaseC, BaseG>, PriceFeedsError>
     where
         PriceG: Group<TopG = PriceG> + 'currency_dto,
-        BaseC: CurrencyDef,
-        BaseC::Group: MemberOf<BaseG> + MemberOf<PriceG>,
+        BaseC: CurrencyDef<Group: MemberOf<BaseG> + MemberOf<PriceG>>,
         BaseG: Group + MemberOf<PriceG>,
         CurrenciesToBaseC:
             Iterator<Item = &'currency_dto CurrencyDTO<PriceG>> + DoubleEndedIterator,
@@ -87,8 +86,7 @@ where
             >
         where
             G: Group<TopG = G> + 'currency_dto,
-            BaseC: CurrencyDef,
-            BaseC::Group: MemberOf<BaseG> + MemberOf<G::TopG>,
+            BaseC: CurrencyDef<Group: MemberOf<BaseG> + MemberOf<G::TopG>>,
             BaseG: Group,
             CurrenciesToBaseC: Iterator<Item = &'currency_dto CurrencyDTO<G>> + DoubleEndedIterator,
             ObservationsRepoImpl: ObservationsReadRepo<Group = G>,
@@ -293,12 +291,10 @@ impl<
     >
 where
     CurrenciesToBaseC: Iterator<Item = &'currency_dto CurrencyDTO<G>>,
-    C: CurrencyDef,
-    C::Group: MemberOf<G>,
+    C: CurrencyDef<Group: MemberOf<G>>,
     CurrentC: Currency + MemberOf<G> + PairsGroup<CommonGroup = G>,
     G: Group<TopG = G> + 'currency_dto,
-    BaseC: CurrencyDef,
-    BaseC::Group: MemberOf<BaseG> + MemberOf<G::TopG>,
+    BaseC: CurrencyDef<Group: MemberOf<BaseG> + MemberOf<G::TopG>>,
     BaseG: Group,
     ObservationsRepoImpl: ObservationsReadRepo<Group = G>,
 {
@@ -362,12 +358,10 @@ impl<'currency_dto, CurrenciesToBaseC, C, CurrentC, G, BaseC, BaseG, Observation
     >
 where
     CurrenciesToBaseC: Iterator<Item = &'currency_dto CurrencyDTO<G>>,
-    C: CurrencyDef,
-    C::Group: MemberOf<G>,
+    C: CurrencyDef<Group: MemberOf<G>>,
     CurrentC: Currency + MemberOf<G> + PairsGroup<CommonGroup = G>,
     G: Group<TopG = G> + 'currency_dto,
-    BaseC: CurrencyDef,
-    BaseC::Group: MemberOf<BaseG> + MemberOf<G>,
+    BaseC: CurrencyDef<Group: MemberOf<BaseG> + MemberOf<G>>,
     BaseG: Group,
     ObservationsRepoImpl: ObservationsReadRepo<Group = G>,
 {
