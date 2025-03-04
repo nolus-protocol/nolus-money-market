@@ -12,23 +12,23 @@ use platform::{
 use sdk::{
     cosmwasm_ext::Response as CwResponse,
     cosmwasm_std::{
-        entry_point, to_json_binary, Addr, Api, Binary, Deps, DepsMut, Env, MessageInfo,
-        QuerierWrapper, Storage, Timestamp,
+        Addr, Api, Binary, Deps, DepsMut, Env, MessageInfo, QuerierWrapper, Storage, Timestamp,
+        entry_point, to_json_binary,
     },
 };
 use timealarms::stub::TimeAlarmsRef;
 use versioning::{
-    package_name, package_version, PlatformMigrationMessage, PlatformPackageRelease,
-    UpdatablePackage as _, VersionSegment,
+    PlatformMigrationMessage, PlatformPackageRelease, UpdatablePackage as _, VersionSegment,
+    package_name, package_version,
 };
 
 use crate::{
+    ContractError,
     cmd::RewardCalculator,
     msg::{ConfigResponse, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg, SudoMsg},
     pool::{Pool, PoolImpl},
     result::ContractResult,
     state::{Config, DispatchLog},
-    ContractError,
 };
 
 const CONTRACT_STORAGE_VERSION_FROM: VersionSegment = 0;
@@ -204,7 +204,6 @@ fn protocols(
                 })
                 .collect::<ContractResult<Vec<_>>>()
         })
-        .map_err(Into::into)
 }
 
 fn setup_alarm(
@@ -261,9 +260,8 @@ mod tests {
     use sdk::{
         cosmwasm_ext::Response as CwResponse,
         cosmwasm_std::{
-            coins, from_json,
+            DepsMut, coins, from_json,
             testing::{mock_dependencies_with_balance, mock_env},
-            DepsMut,
         },
         testing,
     };

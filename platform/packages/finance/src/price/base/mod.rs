@@ -90,7 +90,7 @@ where
     where
         SubG: Group + MemberOf<BaseG>,
     {
-        self.amount.of_currency_dto(amount_c).map_err(Into::into)
+        self.amount.of_currency_dto(amount_c)
     }
 
     fn invariant_held(&self) -> FinanceResult<()> {
@@ -193,10 +193,10 @@ where
 #[cfg(test)]
 mod test_invariant {
     use currency::{
-        test::{SubGroup, SubGroupTestC10, SuperGroup, SuperGroupTestC1, SuperGroupTestC2},
         CurrencyDef, Group, MemberOf, SymbolStatic,
+        test::{SubGroup, SubGroupTestC10, SuperGroup, SuperGroupTestC1, SuperGroupTestC2},
     };
-    use sdk::cosmwasm_std::{from_json, to_json_string, StdError, StdResult};
+    use sdk::cosmwasm_std::{StdError, StdResult, from_json, to_json_string};
 
     use crate::coin::Coin;
 

@@ -134,7 +134,6 @@ where
         self.amount
             .of_currency_dto(amount_c)
             .and_then(|()| self.amount_quote.of_currency_dto(quote_c))
-            .map_err(Into::into)
     }
 }
 
@@ -227,8 +226,8 @@ mod test_invariant {
     use currency::test::{
         SuperGroup, SuperGroupTestC1, SuperGroupTestC2, SuperGroupTestC4, SuperGroupTestC5,
     };
-    use currency::{error::Error as CurrencyError, CurrencyDef, Group, MemberOf};
-    use sdk::cosmwasm_std::{from_json, StdError as CWError, StdResult as CWResult};
+    use currency::{CurrencyDef, Group, MemberOf, error::Error as CurrencyError};
+    use sdk::cosmwasm_std::{StdError as CWError, StdResult as CWResult, from_json};
 
     use crate::{
         coin::{Coin, CoinDTO},

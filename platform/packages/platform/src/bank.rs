@@ -130,7 +130,6 @@ impl BankAccountView for BankView<'_> {
                     .filter_map(|cw_coin| maybe_from_cosmwasm_any::<G, _>(cw_coin, cmd.clone()))
                     .reduce_results(Aggregate::aggregate)
             })
-            .map_err(Into::into)
     }
 }
 
@@ -414,25 +413,25 @@ where
 mod test {
 
     use currency::{
+        CurrencyDTO, CurrencyDef, Group, MemberOf,
         test::{
-            SubGroup, SubGroupTestC10, SubGroupTestC6, SuperGroup, SuperGroupTestC1,
+            SubGroup, SubGroupTestC6, SubGroupTestC10, SuperGroup, SuperGroupTestC1,
             SuperGroupTestC4,
         },
-        CurrencyDTO, CurrencyDef, Group, MemberOf,
     };
     use finance::{
         coin::{Amount, Coin, WithCoin, WithCoinResult},
         test::coin::Expect,
     };
     use sdk::{
-        cosmwasm_std::{coin as cw_coin, Addr, Coin as CwCoin, QuerierWrapper},
+        cosmwasm_std::{Addr, Coin as CwCoin, QuerierWrapper, coin as cw_coin},
         cw_multi_test::BasicApp,
         testing,
     };
 
     use crate::{coin_legacy, error::Error};
 
-    use super::{may_received, BankAccountView as _, BankView, ReduceResults as _};
+    use super::{BankAccountView as _, BankView, ReduceResults as _, may_received};
 
     type TheCurrency = SubGroupTestC10;
     type ExtraCurrency = SuperGroupTestC1;
