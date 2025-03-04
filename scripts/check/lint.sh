@@ -36,8 +36,6 @@ append_lint_flags() {
     --deny "nonstandard-style" \
     --deny "refining-impl-trait" \
     --deny "rust-2018-idioms" \
-    --deny "rust-2021-compatibility" \
-    --deny "rust-2024-compatibility" \
     --deny "unused" \
     \
     --forbid "unfulfilled_lint_expectations" \
@@ -48,7 +46,6 @@ append_lint_flags() {
     \
     --deny "warnings" \
     \
-    --allow "impl-trait-overcaptures" \
     --allow "clippy::large_enum_variant"
 }
 
