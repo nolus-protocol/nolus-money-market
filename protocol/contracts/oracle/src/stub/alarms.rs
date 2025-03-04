@@ -2,7 +2,7 @@ use oracle_platform::OracleRef;
 
 use currency::{Currency, CurrencyDef, Group, MemberOf};
 use platform::batch::Batch;
-use sdk::cosmwasm_std::{wasm_execute, Addr};
+use sdk::cosmwasm_std::{Addr, wasm_execute};
 
 use crate::api::alarms::{Alarm, Error, ExecuteMsg, Result};
 

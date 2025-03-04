@@ -14,15 +14,15 @@ use finance::{
 
 use crate::{
     api::{
-        position::ClosePolicyChange, query::opened::ClosePolicy as APIClosePolicy,
-        LeasePaymentCurrencies,
+        LeasePaymentCurrencies, position::ClosePolicyChange,
+        query::opened::ClosePolicy as APIClosePolicy,
     },
     finance::{LpnCoin, Price},
 };
 
 use super::{
-    close::Policy as ClosePolicy, interest::OverdueCollection, steady::Steadiness, Cause,
-    CloseStrategy, Debt, DueTrait, Liquidation, PositionError, PositionResult,
+    Cause, CloseStrategy, Debt, DueTrait, Liquidation, PositionError, PositionResult,
+    close::Policy as ClosePolicy, interest::OverdueCollection, steady::Steadiness,
 };
 pub use dto::SpecDTO;
 
@@ -363,9 +363,11 @@ impl Spec {
             debug_assert!(zone.range().contains(&position_ltv_capped));
             let steady_within = self.close.no_close(zone.range());
             #[cfg(debug_assertions)]
-            debug_assert!(steady_within
-                .map(|ltv| ltv.of(asset))
-                .contains(&_due_assets_capped));
+            debug_assert!(
+                steady_within
+                    .map(|ltv| ltv.of(asset))
+                    .contains(&_due_assets_capped)
+            );
 
             Debt::Ok {
                 zone,

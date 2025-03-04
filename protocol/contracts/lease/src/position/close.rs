@@ -163,7 +163,7 @@ mod test {
     mod may_trigger {
         use finance::{coin::Amount, percent::Percent};
 
-        use crate::position::{close::Policy, CloseStrategy};
+        use crate::position::{CloseStrategy, close::Policy};
 
         #[test]
         fn no_sl_no_tp() {
@@ -271,7 +271,7 @@ mod test {
 
         use crate::{
             api::position::{ChangeCmd, ClosePolicyChange},
-            position::{close::Policy, error::Error as PositionError, CloseStrategy},
+            position::{CloseStrategy, close::Policy, error::Error as PositionError},
         };
 
         #[test]
@@ -440,7 +440,7 @@ mod test {
         use crate::{
             api::position::{ChangeCmd, ClosePolicyChange},
             error::PositionError,
-            position::{close::Policy, CloseStrategy},
+            position::{CloseStrategy, close::Policy},
         };
 
         #[test]

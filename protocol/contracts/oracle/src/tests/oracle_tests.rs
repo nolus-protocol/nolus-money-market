@@ -1,6 +1,6 @@
 use currencies::{
-    testing::{PaymentC1, PaymentC3, PaymentC4, PaymentC5, PaymentC8},
     LeaseGroup, Lpn, Lpns, PaymentGroup as PriceCurrencies,
+    testing::{PaymentC1, PaymentC3, PaymentC4, PaymentC5, PaymentC8},
 };
 use finance::{
     coin::Coin,
@@ -10,9 +10,8 @@ use platform::{contract::testing, tests};
 use sdk::{
     cosmwasm_ext::Response as CwResponse,
     cosmwasm_std::{
-        self,
+        self, Addr, Event, MessageInfo,
         testing::{self as cw_testing, MockQuerier},
-        Addr, Event, MessageInfo,
     },
 };
 

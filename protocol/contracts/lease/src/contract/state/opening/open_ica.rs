@@ -12,9 +12,9 @@ use timealarms::stub::TimeAlarmsRef;
 
 use crate::{
     api::{
-        open::NewLeaseContract,
-        query::{opening::OngoingTrx, StateResponse as QueryStateResponse},
         DownpaymentCoin, LeasePaymentCurrencies,
+        open::NewLeaseContract,
+        query::{StateResponse as QueryStateResponse, opening::OngoingTrx},
     },
     contract::{cmd::OpenLoanRespResult, finalize::FinalizerRef, state::SwapClient},
     error::ContractResult,

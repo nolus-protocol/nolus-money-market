@@ -4,19 +4,20 @@ use sdk::cosmwasm_std::{Env, QuerierWrapper};
 
 use crate::{
     api::{
-        query::opened::{OngoingTrx, PositionCloseTrx},
         LeaseCoin,
+        query::opened::{OngoingTrx, PositionCloseTrx},
     },
     contract::{
+        Lease,
         cmd::{CloseStatusDTO, Repay as RepayCmd, RepayEmitter, RepayFn, RepayResult},
         state::{
+            Response,
             opened::{
                 active, alarm,
-                close::{customer_close, liquidation, Closable},
+                close::{Closable, customer_close, liquidation},
             },
-            paid, Response,
+            paid,
         },
-        Lease,
     },
     error::ContractResult,
     event::Type,

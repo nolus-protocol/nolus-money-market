@@ -2,8 +2,8 @@ use platform::batch::{Emit, Emitter};
 use sdk::cosmwasm_std::{Addr, Env};
 
 use crate::{
-    api::LeaseCoin, contract::cmd::RepayEmitter, event::Type, loan::RepayReceipt, position::Cause,
-    CloseStrategy,
+    CloseStrategy, api::LeaseCoin, contract::cmd::RepayEmitter, event::Type, loan::RepayReceipt,
+    position::Cause,
 };
 
 pub(crate) struct LiquidationEmitter<'liq, 'env> {

@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use platform::response;
 use sdk::{
     cosmwasm_ext::Response as CwResponse,
-    cosmwasm_std::{entry_point, Binary, Deps, DepsMut, Env, MessageInfo},
+    cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, entry_point},
 };
 use timealarms::msg::ExecuteAlarmMsg;
 

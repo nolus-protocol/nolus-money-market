@@ -9,7 +9,7 @@ use platform::{bank, batch::Batch};
 use sdk::cosmwasm_std::{Addr, QuerierWrapper, Timestamp};
 use timealarms::stub::TimeAlarmsRef;
 
-use crate::{error::Result, Error};
+use crate::{Error, error::Result};
 
 const POLLING_INTERVAL: Duration = Duration::from_secs(5);
 

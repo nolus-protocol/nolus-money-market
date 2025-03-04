@@ -12,15 +12,15 @@ use timealarms::stub::TimeAlarmsRef;
 
 use crate::{
     api::{
-        query::{opened::PositionCloseTrx, StateResponse as QueryStateResponse},
         LeaseAssetCurrencies, LeasePaymentCurrencies,
+        query::{StateResponse as QueryStateResponse, opened::PositionCloseTrx},
     },
     contract::{
-        state::{
-            opened::{self, payment::Repayable},
-            SwapResult,
-        },
         Lease,
+        state::{
+            SwapResult,
+            opened::{self, payment::Repayable},
+        },
     },
     error::ContractResult,
     event::Type,

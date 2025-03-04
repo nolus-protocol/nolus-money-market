@@ -1,6 +1,6 @@
 use currency::{
-    test::{SubGroupTestC10, SubGroupTestC6, SuperGroup, SuperGroupTestC1},
     CurrencyDef as _,
+    test::{SubGroupTestC6, SubGroupTestC10, SuperGroup, SuperGroupTestC1},
 };
 use finance::coin::Coin;
 use oracle::api::swap::SwapTarget;
@@ -9,8 +9,8 @@ use sdk::{cosmos_sdk_proto::cosmos::base::v1beta1::Coin as ProtoCoin, cosmwasm_s
 use crate::testing;
 
 use super::{
-    api::{AssetInfo, SwapOperation},
     MAX_IMPACT,
+    api::{AssetInfo, SwapOperation},
 };
 
 #[test]

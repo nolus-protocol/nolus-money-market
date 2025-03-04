@@ -9,8 +9,8 @@ use sdk::cosmwasm_std::Storage;
 use crate::{
     alarms::prefix::Prefix,
     feed::{
-        observations::{ObservationsReadRepo, ObservationsRepo},
         Observations, ObservationsRead,
+        observations::{ObservationsReadRepo, ObservationsRepo},
     },
 };
 

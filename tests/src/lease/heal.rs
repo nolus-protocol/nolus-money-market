@@ -4,15 +4,14 @@ use sdk::{cosmwasm_std::Addr, cw_multi_test::AppResponse, testing};
 
 use crate::{
     common::{
-        self, cwcoin, swap as test_swap,
+        self, USER, cwcoin, swap as test_swap,
         test_case::{
+            TestCase,
             app::App,
             response::{RemoteChain, ResponseWithInterChainMsgs},
-            TestCase,
         },
-        USER,
     },
-    lease::{repay, LeaseCoin, LeaseCurrency, LpnCoin, LpnCurrency},
+    lease::{LeaseCoin, LeaseCurrency, LpnCoin, LpnCurrency, repay},
 };
 
 #[test]

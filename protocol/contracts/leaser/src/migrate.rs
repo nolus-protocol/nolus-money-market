@@ -143,9 +143,9 @@ mod test {
     use versioning::{ProtocolMigrationMessage, ProtocolPackageReleaseId, ReleaseId};
 
     use crate::{
+        ContractError,
         migrate::{Customer, MigrationResult},
         result::ContractResult,
-        ContractError,
     };
 
     const LEASE1: &str = "lease1";

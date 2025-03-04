@@ -4,7 +4,7 @@ use admin_contract::msg::{ExecuteMsg, MigrationSpec, ProtocolContracts};
 use currencies::LeaseGroup;
 use currency::CurrencyDTO;
 use finance::{duration::Duration, percent::Percent};
-use lease::api::{open::PositionSpecDTO, DownpaymentCoin, MigrateMsg};
+use lease::api::{DownpaymentCoin, MigrateMsg, open::PositionSpecDTO};
 use lpp::{msg::ExecuteMsg as LppExecuteMsg, stub::LppRef};
 use platform::{
     batch::{Batch, Emit, Emitter},
@@ -16,17 +16,17 @@ use sdk::cosmwasm_std::{Addr, Deps, Storage};
 use versioning::ProtocolMigrationMessage;
 
 use crate::{
+    ContractError,
+    finance::{LpnCurrency, OracleRef},
+    msg::ForceClose,
+};
+use crate::{
     cmd::Quote,
     finance::LpnCurrencies,
     migrate,
     msg::{ConfigResponse, MaxLeases, QuoteResponse},
     result::ContractResult,
     state::{config::Config, leases::Leases},
-};
-use crate::{
-    finance::{LpnCurrency, OracleRef},
-    msg::ForceClose,
-    ContractError,
 };
 
 pub struct Leaser<'a> {
@@ -200,17 +200,17 @@ mod test {
     use finance::{coin::Coin, duration::Duration, liability::Liability, percent::Percent};
     use json_value::JsonValue;
     use lease::api::{
-        open::{ConnectionParams, Ics20Channel, PositionSpecDTO},
         MigrateMsg,
+        open::{ConnectionParams, Ics20Channel, PositionSpecDTO},
     };
     use platform::{contract::Code, response};
     use sdk::cosmwasm_std::testing::MockStorage;
     use versioning::{ProtocolMigrationMessage, ProtocolPackageReleaseId, ReleaseId};
 
     use crate::{
+        ContractError,
         msg::{Config, ForceClose, InstantiateMsg, MaxLeases},
         state::leases::Leases,
-        ContractError,
     };
 
     const MAX_LEASES: MaxLeases = 100_000;

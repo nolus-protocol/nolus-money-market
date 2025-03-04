@@ -12,19 +12,19 @@ use timealarms::stub::TimeAlarmsRef;
 
 use crate::{
     api::{
-        query::{
-            opened::{OngoingTrx, RepayTrx},
-            StateResponse as QueryStateResponse,
-        },
         LeasePaymentCurrencies, PaymentCoin,
+        query::{
+            StateResponse as QueryStateResponse,
+            opened::{OngoingTrx, RepayTrx},
+        },
     },
     contract::{
+        Lease,
         state::{
+            StateResponse as ContractStateResponse, SwapClient, SwapResult,
             opened::{self, repay},
             resp_delivery::ForwardToDexEntry,
-            StateResponse as ContractStateResponse, SwapClient, SwapResult,
         },
-        Lease,
     },
     error::ContractResult,
     event::Type,

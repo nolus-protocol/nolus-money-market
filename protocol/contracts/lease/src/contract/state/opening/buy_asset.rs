@@ -17,19 +17,19 @@ use timealarms::stub::TimeAlarmsRef;
 
 use crate::{
     api::{
-        open::{NewLeaseContract, NewLeaseForm},
-        query::{opening::OngoingTrx, StateResponse as QueryStateResponse},
         DownpaymentCoin, LeaseAssetCurrencies, LeasePaymentCurrencies,
+        open::{NewLeaseContract, NewLeaseForm},
+        query::{StateResponse as QueryStateResponse, opening::OngoingTrx},
     },
     contract::{
+        Lease,
         cmd::{CloseStatusDTO, LeaseFactory, OpenLeaseResult, OpenLoanRespResult},
         finalize::FinalizerRef,
         state::{
+            SwapClient, SwapResult,
             opened::{active::Active, close::liquidation},
             resp_delivery::{ForwardToDexEntry, ForwardToDexEntryContinue},
-            SwapClient, SwapResult,
         },
-        Lease,
     },
     error::ContractResult,
     event::Type,

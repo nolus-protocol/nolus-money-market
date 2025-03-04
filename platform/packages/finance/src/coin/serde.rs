@@ -2,11 +2,11 @@
 mod test {
     use std::fmt::Debug;
 
-    use serde::{de::DeserializeOwned, Deserialize, Serialize};
+    use serde::{Deserialize, Serialize, de::DeserializeOwned};
 
     use currency::{
-        test::{SuperGroupTestC1, SuperGroupTestC2},
         Currency,
+        test::{SuperGroupTestC1, SuperGroupTestC2},
     };
     use sdk::cosmwasm_std::{from_json, to_json_vec};
 

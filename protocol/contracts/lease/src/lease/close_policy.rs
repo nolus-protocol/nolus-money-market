@@ -5,7 +5,7 @@ use oracle_platform::Oracle as OracleTrait;
 use sdk::cosmwasm_std::Timestamp;
 
 use crate::{
-    api::{position::ClosePolicyChange, LeaseAssetCurrencies, LeasePaymentCurrencies},
+    api::{LeaseAssetCurrencies, LeasePaymentCurrencies, position::ClosePolicyChange},
     error::ContractResult,
     finance::{LpnCurrencies, LpnCurrency, Price},
     position::{CloseStrategy, Debt, Liquidation, Steadiness},

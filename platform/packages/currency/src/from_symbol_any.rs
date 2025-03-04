@@ -1,6 +1,6 @@
 use crate::{
-    error::Error, group::MemberOf, matcher, pairs::PairsGroup, Currency, CurrencyDTO, CurrencyDef,
-    MaybeAnyVisitResult, Symbol,
+    Currency, CurrencyDTO, CurrencyDef, MaybeAnyVisitResult, Symbol, error::Error, group::MemberOf,
+    matcher, pairs::PairsGroup,
 };
 
 use super::Group;
@@ -91,9 +91,9 @@ mod impl_any_tickers {
     use std::marker::PhantomData;
 
     use crate::{
+        Currency, CurrencyDTO, CurrencyDef, Group, MemberOf,
         error::Error,
         pairs::{PairsGroup, PairsVisitor, PairsVisitorResult},
-        Currency, CurrencyDTO, CurrencyDef, Group, MemberOf,
     };
 
     use super::{AnyVisitor, AnyVisitorPair, AnyVisitorResult, InPoolWith};
@@ -186,13 +186,13 @@ mod impl_any_tickers {
 #[cfg(test)]
 mod test {
     use crate::{
+        CurrencyDef, Group, MemberOf, Tickers,
         error::Error,
         from_symbol_any::GroupVisit,
         test::{
-            Expect, ExpectPair, ExpectUnknownCurrency, SubGroup, SubGroupTestC10, SubGroupTestC6,
+            Expect, ExpectPair, ExpectUnknownCurrency, SubGroup, SubGroupTestC6, SubGroupTestC10,
             SuperGroup, SuperGroupTestC1, SuperGroupTestC2, SuperGroupTestC3, SuperGroupTestC4,
         },
-        CurrencyDef, Group, MemberOf, Tickers,
     };
 
     #[test]

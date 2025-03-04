@@ -55,7 +55,7 @@ where
 mod tests {
     use std::marker::PhantomData;
 
-    use currencies::{testing::PaymentC3, Lpn};
+    use currencies::{Lpn, testing::PaymentC3};
     use currency::{Currency, CurrencyDef, Group};
     use finance::{
         coin::{Coin, WithCoin},

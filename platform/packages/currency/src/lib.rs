@@ -2,11 +2,11 @@ use std::{any::TypeId, fmt::Debug};
 
 pub use crate::{
     definition::{Definition, DefinitionRef},
-    dto::{dto, to_string, CurrencyDTO},
+    dto::{CurrencyDTO, dto, to_string},
     from_symbol::{CurrencyVisit, SingleVisitor},
     from_symbol_any::{
-        visit_any_on_currencies, AnyVisitor, AnyVisitorPair, AnyVisitorPairResult,
-        AnyVisitorResult, GroupVisit, InPoolWith,
+        AnyVisitor, AnyVisitorPair, AnyVisitorPairResult, AnyVisitorResult, GroupVisit, InPoolWith,
+        visit_any_on_currencies,
     },
     group::{Group, MaybeAnyVisitResult, MemberOf},
     matcher::{Matcher, TypeMatcher},

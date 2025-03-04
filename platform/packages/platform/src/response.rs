@@ -48,7 +48,7 @@ where
 mod test {
     use sdk::{
         cosmwasm_ext::{CosmosMsg, Response},
-        cosmwasm_std::{to_json_binary, Event, WasmMsg},
+        cosmwasm_std::{Event, WasmMsg, to_json_binary},
     };
 
     use crate::{

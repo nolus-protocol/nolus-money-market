@@ -6,9 +6,9 @@ use platform::message::Response as MessageResponse;
 use sdk::cosmwasm_std::{Addr, Coin, Storage};
 
 use crate::{
+    ContractError,
     finance::LeaseCurrencies,
     state::{config::Config, leases::Leases},
-    ContractError,
 };
 
 pub struct Borrow {}

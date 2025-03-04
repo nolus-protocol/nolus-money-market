@@ -4,9 +4,9 @@ use sdk::cosmwasm_std::{Env, QuerierWrapper};
 use crate::{
     api::position::{FullClose, PositionClose},
     contract::{
-        cmd::ValidateClosePosition,
-        state::{event, Response},
         Lease,
+        cmd::ValidateClosePosition,
+        state::{Response, event},
     },
     error::ContractResult,
     position::CloseStrategy,

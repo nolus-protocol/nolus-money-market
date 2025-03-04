@@ -16,17 +16,17 @@ pub use self::{
         Option as HigherOrderOption,
     },
     platform::{
+        Contracts as PlatformContracts, ContractsWithoutAdmin as PlatformContractsWithoutAdmin,
         higher_order_type::{
             Contracts as HigherOrderPlatformContracts,
             ContractsWithoutAdmin as HigherOrderPlatformContractsWithoutAdmin,
         },
-        Contracts as PlatformContracts, ContractsWithoutAdmin as PlatformContractsWithoutAdmin,
     },
     protocol::{
+        Contracts as ProtocolContracts, Dex, Network, Protocol,
         higher_order_type::{
             Contracts as HigherOrderProtocolContracts, Protocol as HigherOrderProtocol,
         },
-        Contracts as ProtocolContracts, Dex, Network, Protocol,
     },
 };
 

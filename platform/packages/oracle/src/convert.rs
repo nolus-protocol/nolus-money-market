@@ -43,7 +43,7 @@ mod impl_ {
     use currency::{Currency, CurrencyDef, Group, MemberOf};
     use finance::{coin::Coin, price};
 
-    use crate::{error::Error, Oracle};
+    use crate::{Oracle, error::Error};
 
     pub(super) struct PriceConvert<InC, InG, OutC, OutG>
     where

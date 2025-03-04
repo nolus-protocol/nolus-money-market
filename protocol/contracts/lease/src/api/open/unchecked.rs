@@ -31,7 +31,7 @@ impl TryFrom<PositionSpecDTO> for ValidatedPositionSpec {
 #[cfg(all(feature = "internal.test.skel", test))]
 mod test {
     use finance::{duration::Duration, percent::Percent};
-    use sdk::cosmwasm_std::{from_json, to_json_vec, Addr};
+    use sdk::cosmwasm_std::{Addr, from_json, to_json_vec};
 
     use crate::api::open::LoanForm;
 

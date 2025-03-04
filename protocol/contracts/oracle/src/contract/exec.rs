@@ -12,7 +12,7 @@ use crate::{
     result::Result,
 };
 
-use super::oracle::{feeder::Feeders, Oracle};
+use super::oracle::{Oracle, feeder::Feeders};
 
 pub fn do_executute<BaseCurrency, BaseCurrencies, AlarmCurrencies, PriceCurrencies>(
     deps: DepsMut<'_>,

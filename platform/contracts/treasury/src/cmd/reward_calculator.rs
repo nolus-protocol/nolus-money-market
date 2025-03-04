@@ -2,7 +2,7 @@ use finance::{duration::Duration, percent::Percent};
 use lpp_platform::CoinStable;
 use platform::message::Response as MessageResponse;
 
-use crate::{pool::Pool as PoolTrait, state::reward_scale::RewardScale, ContractError};
+use crate::{ContractError, pool::Pool as PoolTrait, state::reward_scale::RewardScale};
 
 // TODO rename to Rewards and move out of 'cmd'
 #[cfg_attr(test, derive(Debug))]
@@ -52,9 +52,9 @@ mod tests {
     use platform::response;
 
     use crate::{
+        ContractError,
         pool::mock::MockPool,
         state::reward_scale::{Bar, RewardScale, TotalValueLocked},
-        ContractError,
     };
 
     use super::RewardCalculator;

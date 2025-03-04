@@ -7,8 +7,8 @@ use topology::HostCurrency;
 use crate::{currencies_tree, protocol::Protocol};
 
 use super::{
-    resolved_currency::{CurrentModule, ResolvedCurrency},
     DexCurrencies,
+    resolved_currency::{CurrentModule, ResolvedCurrency},
 };
 
 mod pairs_group;
@@ -41,13 +41,7 @@ pub(super) struct StaticContext<
     dex_currencies: &'dex_currencies DexCurrencies<'dex_currency_ticker, 'dex_currency_definition>,
 }
 
-impl<
-        'protocol,
-        'host_currency,
-        'dex_currencies,
-        'dex_currency_ticker,
-        'dex_currency_definition,
-    >
+impl<'protocol, 'host_currency, 'dex_currencies, 'dex_currency_ticker, 'dex_currency_definition>
     StaticContext<
         'protocol,
         'host_currency,
@@ -92,13 +86,13 @@ pub(super) struct Builder<
 }
 
 impl<
-        'static_context,
-        'protocol,
-        'host_currency,
-        'dex_currencies,
-        'dex_currency_ticker,
-        'dex_currency_definition,
-    >
+    'static_context,
+    'protocol,
+    'host_currency,
+    'dex_currencies,
+    'dex_currency_ticker,
+    'dex_currency_definition,
+>
     Builder<
         'static_context,
         'protocol,
@@ -222,13 +216,8 @@ pub(super) trait Resolver<'name, 'definition> {
     fn resolve(&self, ticker: &str) -> Result<ResolvedCurrency<'name, 'definition>>;
 }
 
-impl<
-        'host_currency,
-        'dex_currencies,
-        'definition,
-        const MAYBE_VISIT: bool,
-        const PAIRS_GROUP: bool,
-    > Resolver<'dex_currencies, 'definition>
+impl<'host_currency, 'dex_currencies, 'definition, const MAYBE_VISIT: bool, const PAIRS_GROUP: bool>
+    Resolver<'dex_currencies, 'definition>
     for Generator<'_, '_, 'host_currency, 'dex_currencies, '_, '_, MAYBE_VISIT, PAIRS_GROUP>
 where
     'host_currency: 'definition,
@@ -251,12 +240,12 @@ pub(super) trait MaybeVisit {
 }
 
 impl<
-        'dex_currencies,
-        'dex_currency_ticker,
-        'dex_currency_definition,
-        const MAYBE_VISIT: bool,
-        const PAIRS_GROUP: bool,
-    > MaybeVisit
+    'dex_currencies,
+    'dex_currency_ticker,
+    'dex_currency_definition,
+    const MAYBE_VISIT: bool,
+    const PAIRS_GROUP: bool,
+> MaybeVisit
     for Generator<
         '_,
         '_,
@@ -285,9 +274,9 @@ where
         parents: &'parents currencies_tree::Parents<'parent>,
     ) -> Result<
         impl Iterator<Item = &'r str>
-            + Captures<&'dex_currencies DexCurrencies<'dex_currency_ticker, 'dex_currency_definition>>
-            + Captures<&'name str>
-            + Captures<&'parents currencies_tree::Parents<'parent>>,
+        + Captures<&'dex_currencies DexCurrencies<'dex_currency_ticker, 'dex_currency_definition>>
+        + Captures<&'name str>
+        + Captures<&'parents currencies_tree::Parents<'parent>>,
     >
     where
         'dex_currencies: 'r,
@@ -317,9 +306,9 @@ where
         _: &'parents currencies_tree::Parents<'parent>,
     ) -> Result<
         impl Iterator<Item = &'r str>
-            + Captures<&'dex_currencies DexCurrencies<'dex_currency_ticker, 'dex_currency_definition>>
-            + Captures<&'name str>
-            + Captures<&'parents currencies_tree::Parents<'parent>>,
+        + Captures<&'dex_currencies DexCurrencies<'dex_currency_ticker, 'dex_currency_definition>>
+        + Captures<&'name str>
+        + Captures<&'parents currencies_tree::Parents<'parent>>,
     >
     where
         'dex_currencies: 'r,
@@ -352,9 +341,9 @@ where
         parents: &'parents currencies_tree::Parents<'parent>,
     ) -> Result<
         impl Iterator<Item = &'r str>
-            + Captures<&'dex_currencies DexCurrencies<'dex_currency_ticker, 'dex_currency_definition>>
-            + Captures<&'name str>
-            + Captures<&'parents currencies_tree::Parents<'parent>>,
+        + Captures<&'dex_currencies DexCurrencies<'dex_currency_ticker, 'dex_currency_definition>>
+        + Captures<&'name str>
+        + Captures<&'parents currencies_tree::Parents<'parent>>,
     >
     where
         'dex_currencies: 'r,
@@ -382,9 +371,9 @@ where
         children: &'children currencies_tree::Children<'child>,
     ) -> Result<
         impl Iterator<Item = &'r str>
-            + Captures<&'dex_currencies DexCurrencies<'dex_currency_ticker, 'dex_currency_definition>>
-            + Captures<&'name str>
-            + Captures<&'children currencies_tree::Children<'child>>,
+        + Captures<&'dex_currencies DexCurrencies<'dex_currency_ticker, 'dex_currency_definition>>
+        + Captures<&'name str>
+        + Captures<&'children currencies_tree::Children<'child>>,
     >
     where
         'dex_currencies: 'r,
@@ -392,12 +381,12 @@ where
 }
 
 impl<
-        'dex_currencies,
-        'dex_currency_ticker,
-        'dex_currency_definition,
-        const MAYBE_VISIT: bool,
-        const PAIRS_GROUP: bool,
-    > InPoolWith<'dex_currencies, 'dex_currency_ticker, 'dex_currency_definition>
+    'dex_currencies,
+    'dex_currency_ticker,
+    'dex_currency_definition,
+    const MAYBE_VISIT: bool,
+    const PAIRS_GROUP: bool,
+> InPoolWith<'dex_currencies, 'dex_currency_ticker, 'dex_currency_definition>
     for Generator<
         '_,
         '_,
@@ -416,9 +405,9 @@ impl<
         children: &'children currencies_tree::Children<'child>,
     ) -> Result<
         impl Iterator<Item = &'r str>
-            + Captures<&'dex_currencies DexCurrencies<'dex_currency_ticker, 'dex_currency_definition>>
-            + Captures<&'name str>
-            + Captures<&'children currencies_tree::Children<'child>>,
+        + Captures<&'dex_currencies DexCurrencies<'dex_currency_ticker, 'dex_currency_definition>>
+        + Captures<&'name str>
+        + Captures<&'children currencies_tree::Children<'child>>,
     >
     where
         'dex_currencies: 'r,

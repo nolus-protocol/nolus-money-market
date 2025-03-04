@@ -1,7 +1,7 @@
 use dex::swap::ExactAmountIn;
 use finance::coin::Amount;
 
-use crate::{testing::ExactAmountInSkel, Impl};
+use crate::{Impl, testing::ExactAmountInSkel};
 
 #[test]
 fn build_and_parse() {

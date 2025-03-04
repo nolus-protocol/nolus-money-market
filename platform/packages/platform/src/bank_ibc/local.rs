@@ -1,4 +1,4 @@
-use currency::{platform::Nls, BankSymbols, Group};
+use currency::{BankSymbols, Group, platform::Nls};
 use finance::coin::{Coin, CoinDTO};
 use sdk::{
     cosmwasm_std::{Addr, Coin as CwCoin, Timestamp},
@@ -131,7 +131,7 @@ mod test {
     use sdk::cosmwasm_std::{Addr, Timestamp};
 
     use crate::{
-        bank_ibc::local::{new_msg, Sender},
+        bank_ibc::local::{Sender, new_msg},
         batch::Batch,
         coin_legacy::{self},
         ica::HostAccount,

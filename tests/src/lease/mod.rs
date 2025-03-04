@@ -1,6 +1,6 @@
 use currencies::{
-    testing::{LeaseC2, PaymentC1},
     LeaseGroup, Lpn, PaymentGroup,
+    testing::{LeaseC2, PaymentC1},
 };
 use currency::{Currency, CurrencyDef, MemberOf};
 use finance::{
@@ -13,21 +13,21 @@ use finance::{
 use lease::api::query::{ClosePolicy, StateResponse};
 use leaser::msg::QuoteResponse;
 use sdk::{
-    cosmwasm_std::{coin, Addr},
+    cosmwasm_std::{Addr, coin},
     cw_multi_test::AppResponse,
     testing,
 };
 
 use crate::common::{
-    self, cwcoin, cwcoin_dex,
+    self, ADDON_OPTIMAL_INTEREST_RATE, ADMIN, BASE_INTEREST_RATE, USER, UTILIZATION_OPTIMAL,
+    cwcoin, cwcoin_dex,
     leaser::{self as leaser_mod, Instantiator as LeaserInstantiator},
     protocols::Registry,
     test_case::{
+        TestCase,
         builder::Builder as TestCaseBuilder,
         response::{RemoteChain, ResponseWithInterChainMsgs},
-        TestCase,
     },
-    ADDON_OPTIMAL_INTEREST_RATE, ADMIN, BASE_INTEREST_RATE, USER, UTILIZATION_OPTIMAL,
 };
 
 mod close;

@@ -1,7 +1,7 @@
 use currencies::{
-    testing::{PaymentC1, PaymentC3, PaymentC4, PaymentC5},
     LeaseGroup as AlarmCurrencies, Lpn as BaseCurrency, Lpns as BaseCurrencies, Nls,
     PaymentGroup as PriceCurrencies,
+    testing::{PaymentC1, PaymentC3, PaymentC4, PaymentC5},
 };
 use currency::{CurrencyDef, Group, MemberOf};
 use finance::{
@@ -14,16 +14,15 @@ use marketprice::config::Config as PriceConfig;
 use sdk::{
     cosmwasm_ext::Response as CwResponse,
     cosmwasm_std::{
-        coins,
+        MemoryStorage, MessageInfo, OwnedDeps, coins,
         testing::{self, MockApi, MockQuerier},
-        MemoryStorage, MessageInfo, OwnedDeps,
     },
     testing as sdk_testing,
 };
 use tree::HumanReadableTree;
 
 use crate::{
-    api::{swap::SwapTarget, Config, ExecuteMsg, InstantiateMsg, SudoMsg},
+    api::{Config, ExecuteMsg, InstantiateMsg, SudoMsg, swap::SwapTarget},
     contract::{instantiate, sudo},
     test_tree,
 };
@@ -80,8 +79,8 @@ pub(crate) fn dummy_default_instantiate_msg() -> InstantiateMsg<PriceCurrencies>
     dummy_instantiate_msg(60, Percent::from_percent(50), test_tree::dummy_swap_tree())
 }
 
-pub(crate) fn dummy_feed_prices_msg(
-) -> ExecuteMsg<BaseCurrency, BaseCurrencies, AlarmCurrencies, PriceCurrencies> {
+pub(crate) fn dummy_feed_prices_msg()
+-> ExecuteMsg<BaseCurrency, BaseCurrencies, AlarmCurrencies, PriceCurrencies> {
     ExecuteMsg::FeedPrices {
         prices: vec![
             PriceDTO::from(

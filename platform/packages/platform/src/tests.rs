@@ -1,7 +1,7 @@
 use std::fmt::Debug;
 
-use sdk::cosmwasm_std::{self, from_json, Binary, Event, StdError};
-use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use sdk::cosmwasm_std::{self, Binary, Event, StdError, from_json};
+use serde::{Deserialize, Serialize, de::DeserializeOwned};
 
 pub trait EventSource<'a> {
     type EventIter: Iterator<Item = &'a Event>;

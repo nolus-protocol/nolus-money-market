@@ -13,10 +13,10 @@ pub use sdk::cosmwasm_std::Coin as CwCoin;
 use sdk::{
     cosmwasm_ext::InterChainMsg,
     cosmwasm_std::{
-        testing::mock_env, to_json_binary, Binary, BlockInfo, Deps, Empty, Env, StdResult,
-        Timestamp,
+        Binary, BlockInfo, Deps, Empty, Env, StdResult, Timestamp, testing::mock_env,
+        to_json_binary,
     },
-    testing::{self, new_app, CwApp, InterChainMsgSender},
+    testing::{self, CwApp, InterChainMsgSender, new_app},
 };
 
 pub(crate) const BASE_INTEREST_RATE: Percent = Percent::from_permille(70);

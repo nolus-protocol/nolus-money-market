@@ -3,11 +3,12 @@ use sdk::cosmwasm_std::Env;
 
 use crate::{
     api::{
+        LeaseCoin,
         position::FullClose,
         query::opened::{OngoingTrx, PositionCloseTrx},
-        LeaseCoin,
     },
     contract::{
+        Lease,
         state::{
             closed::Closed,
             event::PositionCloseEmitter,
@@ -16,7 +17,6 @@ use crate::{
                 payment::{Close, CloseAlgo},
             },
         },
-        Lease,
     },
     event::Type,
 };

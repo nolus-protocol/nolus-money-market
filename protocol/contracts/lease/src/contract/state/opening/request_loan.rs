@@ -10,7 +10,7 @@ use sdk::cosmwasm_std::{Addr, Env, MessageInfo, QuerierWrapper, Reply, Timestamp
 use timealarms::stub::TimeAlarmsRef;
 
 use crate::{
-    api::{open::NewLeaseContract, query::StateResponse as QueryStateResponse, DownpaymentCoin},
+    api::{DownpaymentCoin, open::NewLeaseContract, query::StateResponse as QueryStateResponse},
     contract::{
         cmd::{OpenLoanReq, OpenLoanReqResult, OpenLoanResp},
         finalize::FinalizerRef,

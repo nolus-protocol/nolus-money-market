@@ -8,7 +8,7 @@ use sdk::cosmwasm_std::{QuerierWrapper, Timestamp};
 
 use crate::msg::ConfigResponse;
 
-use super::{idle::Idle, Config, ConfigManagement, IcaConnector, State};
+use super::{Config, ConfigManagement, IcaConnector, State, idle::Idle};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub(super) struct OpenIca {

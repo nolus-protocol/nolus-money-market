@@ -15,11 +15,11 @@ use sdk::cosmwasm_std::{Env, QuerierWrapper, Timestamp};
 use crate::{InspectSpec, MigrateSpec};
 
 use super::{
+    Contract, ContractInSwap, Enterable, TransferInFinishState,
     response::{self, Handler, Result as HandlerResult},
     swap_task::SwapTask as SwapTaskT,
     transfer_in,
     transfer_in_init::TransferInInit,
-    Contract, ContractInSwap, Enterable, TransferInFinishState,
 };
 
 #[derive(Serialize, Deserialize)]

@@ -116,7 +116,7 @@ mod test {
         duration::Duration,
         price::{self, Price},
     };
-    use sdk::cosmwasm_std::{testing::MockStorage, Addr, Storage, Timestamp};
+    use sdk::cosmwasm_std::{Addr, Storage, Timestamp, testing::MockStorage};
 
     use crate::feed::observations::{Observations, ObservationsRead};
 

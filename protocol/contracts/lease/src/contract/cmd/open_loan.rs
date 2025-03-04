@@ -11,7 +11,7 @@ use platform::{bank, batch::Batch};
 use sdk::cosmwasm_std::{Coin as CwCoin, QuerierWrapper, Reply};
 
 use crate::{
-    api::{open::PositionSpecDTO, DownpaymentCoin, LeasePaymentCurrencies},
+    api::{DownpaymentCoin, LeasePaymentCurrencies, open::PositionSpecDTO},
     error::ContractError,
     finance::{LpnCoin, LpnCoinDTO, LpnCurrencies, LpnCurrency, OracleRef},
     position::Spec as PositionSpec,

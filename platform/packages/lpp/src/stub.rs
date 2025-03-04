@@ -7,9 +7,9 @@ use platform::{
 use sdk::cosmwasm_std::{Addr, Env, QuerierWrapper};
 
 use crate::{
+    CoinStable, Lpp,
     error::Result,
     msg::{ExecuteMsg, QueryMsg},
-    CoinStable, Lpp,
 };
 
 pub struct Stub<'querier, 'env> {
@@ -66,8 +66,8 @@ impl Lpp for Stub<'_, '_> {
 mod test {
     use platform::message::Response as MessageResponse;
     use sdk::cosmwasm_std::{
-        testing::{self, MockQuerier},
         Addr, QuerierWrapper,
+        testing::{self, MockQuerier},
     };
 
     use crate::Lpp;

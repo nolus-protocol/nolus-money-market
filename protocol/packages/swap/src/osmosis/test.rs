@@ -1,6 +1,6 @@
 use currency::{
-    test::{SuperGroup, SuperGroupTestC1},
     CurrencyDef as _,
+    test::{SuperGroup, SuperGroupTestC1},
 };
 use finance::coin::{Amount, Coin};
 use sdk::cosmwasm_std::Coin as CwCoin;

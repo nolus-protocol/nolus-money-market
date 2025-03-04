@@ -13,20 +13,19 @@ use profit::{
     typedefs::CadenceHours,
 };
 use sdk::{
-    cosmwasm_std::{from_json, Addr, Event},
+    cosmwasm_std::{Addr, Event, from_json},
     cw_multi_test::AppResponse,
     testing,
 };
 use timealarms::msg::DispatchAlarmsResponse;
 
 use crate::common::{
-    self, cwcoin, cwcoin_dex, ibc,
+    self, ADMIN, CwCoin, USER, cwcoin, cwcoin_dex, ibc,
     protocols::Registry,
     swap::DexDenom,
     test_case::{
-        builder::BlankBuilder as TestCaseBuilder, response::ResponseWithInterChainMsgs, TestCase,
+        TestCase, builder::BlankBuilder as TestCaseBuilder, response::ResponseWithInterChainMsgs,
     },
-    CwCoin, ADMIN, USER,
 };
 
 fn test_case_with<Lpn>(
@@ -109,20 +108,22 @@ fn update_config_unauthorized() {
 
     let mut test_case = test_case_with::<Lpn>(INITIAL_CACDENCE_HOURS, None);
 
-    assert!(test_case
-        .app
-        .execute(
-            testing::user(USER),
-            test_case.address_book.profit().clone(),
-            &ExecuteMsg::Config {
-                cadence_hours: UPDATED_CACDENCE_HOURS
-            },
-            &[],
-        )
-        .unwrap_err()
-        .root_cause()
-        .to_string()
-        .contains("Unauthorized"));
+    assert!(
+        test_case
+            .app
+            .execute(
+                testing::user(USER),
+                test_case.address_book.profit().clone(),
+                &ExecuteMsg::Config {
+                    cadence_hours: UPDATED_CACDENCE_HOURS
+                },
+                &[],
+            )
+            .unwrap_err()
+            .root_cause()
+            .to_string()
+            .contains("Unauthorized")
+    );
 }
 
 #[test]
@@ -541,13 +542,15 @@ fn integration_with_time_alarms() {
         &[cwcoin::<Nls, _>(500)],
     );
 
-    assert!(!test_case
-        .app
-        .query()
-        .query_balance(test_case.address_book.profit().clone(), Nls::bank())
-        .unwrap()
-        .amount
-        .is_zero());
+    assert!(
+        !test_case
+            .app
+            .query()
+            .query_balance(test_case.address_book.profit().clone(), Nls::bank())
+            .unwrap()
+            .amount
+            .is_zero()
+    );
 
     let resp = test_case
         .app

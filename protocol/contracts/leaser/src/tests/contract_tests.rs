@@ -1,9 +1,9 @@
 use cosmwasm_std::{
-    testing::{MockApi, MockQuerier, MockStorage},
     OwnedDeps,
+    testing::{MockApi, MockQuerier, MockStorage},
 };
 
-use currencies::{testing::LeaseC1, LeaseGroup, Lpn};
+use currencies::{LeaseGroup, Lpn, testing::LeaseC1};
 use currency::{CurrencyDTO, CurrencyDef as _};
 use finance::{
     coin::{Amount, Coin},
@@ -12,15 +12,15 @@ use finance::{
     percent::Percent,
 };
 use lease::api::{
-    open::{ConnectionParams, Ics20Channel, PositionSpecDTO},
     LpnCoinDTO,
+    open::{ConnectionParams, Ics20Channel, PositionSpecDTO},
 };
 use platform::contract::{Code, CodeId};
 
 use sdk::{
     cosmwasm_std::{
-        coins, from_json, testing, to_json_binary, Addr, CosmosMsg, Deps, DepsMut, MessageInfo,
-        SubMsg, WasmMsg,
+        Addr, CosmosMsg, Deps, DepsMut, MessageInfo, SubMsg, WasmMsg, coins, from_json, testing,
+        to_json_binary,
     },
     testing as sdk_testing,
 };

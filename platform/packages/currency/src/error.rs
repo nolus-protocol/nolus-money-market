@@ -5,10 +5,14 @@ use crate::{CurrencyDTO, Definition, Group, MemberOf, Symbol, SymbolOwned, Symbo
 // TODO replace SymbolStatic and SymbolOwned with CurrencyDTO<G> where approptiate, i.e. the string represent a currency
 #[derive(Error, Debug, PartialEq)]
 pub enum Error {
-    #[error("[Currency] Found a symbol '{0}' pretending to be the {1} of the currency with ticker '{2}'")]
+    #[error(
+        "[Currency] Found a symbol '{0}' pretending to be the {1} of the currency with ticker '{2}'"
+    )]
     UnexpectedSymbol(String, &'static str, SymbolStatic),
 
-    #[error("[Currency] Found a symbol '{0}' pretending to be {1} of a currency pertaining to the {2} group")]
+    #[error(
+        "[Currency] Found a symbol '{0}' pretending to be {1} of a currency pertaining to the {2} group"
+    )]
     NotInCurrencyGroup(String, &'static str, &'static str),
 
     #[error("[Currency] No records for a pool with '{buddy1}' and '{buddy2}'")]

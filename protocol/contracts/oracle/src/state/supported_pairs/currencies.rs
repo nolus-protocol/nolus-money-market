@@ -4,11 +4,11 @@ use currencies::{LeaseGroup, Lpns, Native, PaymentOnlyGroup};
 use tree::NodeRef;
 
 use currency::{
-    never::{self, Never},
     AnyVisitor, AnyVisitorResult, CurrencyDTO, CurrencyDef, Group, MaybeAnyVisitResult, MemberOf,
+    never::{self, Never},
 };
 
-use crate::api::{swap::SwapTarget, Currency as ApiCurrency, CurrencyGroup};
+use crate::api::{Currency as ApiCurrency, CurrencyGroup, swap::SwapTarget};
 
 pub fn currencies<'r, TopG, Nodes>(nodes: Nodes) -> impl Iterator<Item = ApiCurrency>
 where

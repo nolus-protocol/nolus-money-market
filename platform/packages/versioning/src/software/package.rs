@@ -98,7 +98,7 @@ impl PartialOrd for Package {
 mod test {
     use std::cmp::Ordering;
 
-    use crate::{software::SemVer, VersionSegment};
+    use crate::{VersionSegment, software::SemVer};
 
     use super::Package;
 

@@ -2,8 +2,8 @@ pub(super) use close_full::Close as FullClose;
 pub(super) use close_paid::Close;
 pub(super) use close_partial::CloseFn as PartialCloseFn;
 pub(super) use close_policy::{
-    change::ChangeCmd as ChangeClosePolicy, check::CheckCmd as CloseStatusCmd, CloseStatusDTO,
-    FullLiquidationDTO, LiquidationDTO, PartialLiquidationDTO,
+    CloseStatusDTO, FullLiquidationDTO, LiquidationDTO, PartialLiquidationDTO,
+    change::ChangeCmd as ChangeClosePolicy, check::CheckCmd as CloseStatusCmd,
 };
 pub(super) use obtain_payment::ObtainPayment;
 pub(super) use open::{LeaseFactory, OpenLeaseResult};

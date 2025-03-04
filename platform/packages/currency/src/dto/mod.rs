@@ -7,11 +7,11 @@ use std::{
 use serde::{Deserialize, Serialize};
 
 use crate::{
+    CurrencyDef, Group, MaybeAnyVisitResult, Symbol, SymbolStatic, Tickers, TypeMatcher,
     definition::DefinitionRef,
     error::{Error, Result},
     group::MemberOf,
     pairs::{MaybePairsVisitorResult, PairsGroup, PairsVisitor, PairsVisitorResult},
-    CurrencyDef, Group, MaybeAnyVisitResult, Symbol, SymbolStatic, Tickers, TypeMatcher,
 };
 
 use super::{AnyVisitor, AnyVisitorResult};
@@ -220,8 +220,8 @@ where
 #[cfg(test)]
 mod test {
     use crate::{
-        test::{self, SubGroup, SubGroupTestC10, SuperGroup, SuperGroupTestC1, SuperGroupTestC2},
         BankSymbols, CurrencyDTO, CurrencyDef, DexSymbols, Group, MemberOf, Tickers,
+        test::{self, SubGroup, SubGroupTestC10, SuperGroup, SuperGroupTestC1, SuperGroupTestC2},
     };
 
     #[test]

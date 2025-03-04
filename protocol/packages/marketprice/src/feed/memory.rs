@@ -2,7 +2,7 @@ use sdk::cosmwasm_std::Timestamp;
 
 use crate::error::PriceFeedsError;
 
-use super::{observation::Observation, Observations, ObservationsRead};
+use super::{Observations, ObservationsRead, observation::Observation};
 
 pub(crate) struct InMemoryObservations<C, QuoteC>(Vec<Observation<C, QuoteC>>)
 where

@@ -1,4 +1,4 @@
-use currencies::{testing::LeaseC1, Lpn, Lpns, Native, Nls};
+use currencies::{Lpn, Lpns, Native, Nls, testing::LeaseC1};
 use finance::{
     coin::{Amount, Coin},
     duration::Duration,
@@ -25,7 +25,7 @@ use sdk::{
 };
 
 use crate::common::{
-    cwcoin,
+    ADDON_OPTIMAL_INTEREST_RATE, ADMIN, BASE_INTEREST_RATE, CwCoin, UTILIZATION_OPTIMAL, cwcoin,
     lease::{
         InitConfig as LeaseInitConfig, Instantiator as LeaseInstantiator,
         InstantiatorAddresses as LeaseInstantiatorAddresses,
@@ -33,8 +33,7 @@ use crate::common::{
     },
     lpp::{LppExecuteMsg, LppQueryMsg},
     protocols::Registry,
-    test_case::{builder::BlankBuilder as TestCaseBuilder, TestCase},
-    CwCoin, ADDON_OPTIMAL_INTEREST_RATE, ADMIN, BASE_INTEREST_RATE, UTILIZATION_OPTIMAL,
+    test_case::{TestCase, builder::BlankBuilder as TestCaseBuilder},
 };
 type LeaseCurrency = LeaseC1;
 

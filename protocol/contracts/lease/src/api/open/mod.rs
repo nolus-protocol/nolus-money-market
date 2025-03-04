@@ -155,7 +155,7 @@ mod test_position_spec {
     use currencies::Lpn;
     use currency::CurrencyDef;
     use finance::{coin::Coin, duration::Duration, liability::Liability, percent::Percent};
-    use sdk::cosmwasm_std::{from_json, StdError};
+    use sdk::cosmwasm_std::{StdError, from_json};
 
     use super::PositionSpecDTO;
 

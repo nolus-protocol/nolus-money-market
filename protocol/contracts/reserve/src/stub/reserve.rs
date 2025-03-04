@@ -4,7 +4,7 @@ use platform::batch::Batch;
 
 use crate::api::{ExecuteMsg, LpnCurrencies};
 
-use super::{error::Error, Ref};
+use super::{Ref, error::Error};
 
 pub trait Reserve<Lpn>
 where

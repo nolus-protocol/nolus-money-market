@@ -5,7 +5,7 @@ use treasury::{
     state::reward_scale::{Bar, RewardScale, TotalValueLocked},
 };
 
-use super::{test_case::app::App, CwContractWrapper, ADMIN};
+use super::{ADMIN, CwContractWrapper, test_case::app::App};
 
 #[derive(Default)]
 pub(crate) struct Instantiator;

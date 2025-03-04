@@ -8,8 +8,8 @@ pub use self::{
 };
 
 use crate::{
-    release::{Id, UpdatablePackage},
     Error,
+    release::{Id, UpdatablePackage},
 };
 
 mod package;
@@ -153,11 +153,11 @@ impl UpdatablePackage for PackageRelease {
 #[cfg(test)]
 mod test {
     use crate::{
-        release::{Id, UpdatablePackage},
         Error,
+        release::{Id, UpdatablePackage},
     };
 
-    use super::{version::VersionSegment, Package, PackageRelease, SemVer};
+    use super::{Package, PackageRelease, SemVer, version::VersionSegment};
 
     const CURRENT_NAME: &str = "package_A";
     const CURRENT_VERSION: SemVer = SemVer::parse("0.3.4");

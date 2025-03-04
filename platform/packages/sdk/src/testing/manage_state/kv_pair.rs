@@ -15,7 +15,7 @@ impl KvPair {
         HexBinary::from_hex(key_encoded)
             .map_err(LoadIntoStorageFromFileError::DecodeKey)
             .and_then(|key| {
-                use base64::{engine::general_purpose, Engine};
+                use base64::{Engine, engine::general_purpose};
                 general_purpose::STANDARD
                     .decode(value_encoded)
                     .map_err(LoadIntoStorageFromFileError::DecodeValue)

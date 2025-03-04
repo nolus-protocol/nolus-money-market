@@ -1,5 +1,5 @@
 use currencies::{Lpn, Nls as NlsProtocol};
-use currency::{platform::Nls as NlsPlatform, CurrencyDef};
+use currency::{CurrencyDef, platform::Nls as NlsPlatform};
 use finance::{
     coin::{Amount, Coin},
     duration::Duration,
@@ -13,12 +13,11 @@ use sdk::{
 use treasury::msg::ConfigResponse;
 
 use crate::common::{
-    cwcoin,
+    ADDON_OPTIMAL_INTEREST_RATE, BASE_INTEREST_RATE, USER, UTILIZATION_OPTIMAL, cwcoin,
     lpp::{LppExecuteMsg, LppQueryMsg},
     oracle as oracle_mod,
     protocols::Registry,
-    test_case::{builder::BlankBuilder as TestCaseBuilder, TestCase},
-    ADDON_OPTIMAL_INTEREST_RATE, BASE_INTEREST_RATE, USER, UTILIZATION_OPTIMAL,
+    test_case::{TestCase, builder::BlankBuilder as TestCaseBuilder},
 };
 
 type DispatcherTestCase = TestCase<Addr, Addr, (), (), (), Addr, Addr, Addr>;

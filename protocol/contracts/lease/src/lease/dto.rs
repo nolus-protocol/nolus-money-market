@@ -14,9 +14,9 @@ use crate::{
 };
 
 use super::{
+    Lease,
     with_lease::WithLease,
     with_lease_deps::{self, WithLeaseDeps},
-    Lease,
 };
 
 #[derive(Serialize, Deserialize, Clone)]

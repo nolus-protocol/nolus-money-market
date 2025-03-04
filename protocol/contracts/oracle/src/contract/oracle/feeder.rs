@@ -77,7 +77,7 @@ mod tests {
     use currencies::PaymentGroup as PriceCurrencies;
     use sdk::{
         cosmwasm_ext::Response as CwResponse,
-        cosmwasm_std::{from_json, testing::mock_env, Addr, DepsMut},
+        cosmwasm_std::{Addr, DepsMut, from_json, testing::mock_env},
         testing,
     };
 

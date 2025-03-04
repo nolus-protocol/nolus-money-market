@@ -12,8 +12,8 @@ use crate::{
         cwcoin,
         leaser::Instantiator as LeaserInstantiator,
         test_case::{
-            app::App, builder::BlankBuilder as TestCaseBuilder,
-            response::ResponseWithInterChainMsgs, TestCase,
+            TestCase, app::App, builder::BlankBuilder as TestCaseBuilder,
+            response::ResponseWithInterChainMsgs,
         },
     },
     lease::LeaseTestCase,

@@ -63,11 +63,11 @@ where
 
 #[cfg(test)]
 mod tests {
-    use sdk::cosmwasm_std::{testing::MockStorage, Addr, Storage};
+    use sdk::cosmwasm_std::{Addr, Storage, testing::MockStorage};
 
     use crate::{
-        error::{Error, Result},
         SingleUserAccess,
+        error::{Error, Result},
     };
 
     const NAMESPACE: &str = "my-nice-permission";

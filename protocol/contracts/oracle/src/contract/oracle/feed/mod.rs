@@ -3,12 +3,12 @@ use std::marker::PhantomData;
 use currency::{CurrencyDTO, CurrencyDef, Group, MemberOf};
 use finance::price::{base::BasePrice, dto::PriceDTO};
 use marketprice::{
-    config::Config, market_price::PriceFeeds, ObservationsReadRepo, ObservationsRepo,
+    ObservationsReadRepo, ObservationsRepo, config::Config, market_price::PriceFeeds,
 };
 use sdk::cosmwasm_std::{Addr, Timestamp};
 
 use crate::{
-    api::{swap::SwapTarget, SwapLeg},
+    api::{SwapLeg, swap::SwapTarget},
     error::{self, Error},
     result::Result,
     state::supported_pairs::SupportedPairs,
@@ -128,7 +128,7 @@ mod test {
     use currency::{Currency, CurrencyDTO, CurrencyDef, MemberOf};
     use finance::{
         coin::Amount,
-        price::{dto::PriceDTO, Price},
+        price::{Price, dto::PriceDTO},
     };
     use marketprice::alarms::prefix::Prefix;
 
@@ -179,14 +179,14 @@ mod test {
 
     mod all_prices_iter {
         use currencies::{
-            testing::{PaymentC1, PaymentC3, PaymentC4, PaymentC5, PaymentC6, PaymentC7},
             Lpns as BaseCurrencies, PaymentGroup as PriceCurrencies,
+            testing::{PaymentC1, PaymentC3, PaymentC4, PaymentC5, PaymentC6, PaymentC7},
         };
         use finance::{duration::Duration, percent::Percent, price::base::BasePrice};
-        use marketprice::{config::Config, Repo};
+        use marketprice::{Repo, config::Config};
         use sdk::cosmwasm_std::{
-            testing::{self, MockStorage},
             Addr, Storage,
+            testing::{self, MockStorage},
         };
 
         use super::BaseCurrency;

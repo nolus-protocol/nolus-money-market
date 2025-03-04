@@ -8,16 +8,16 @@ use sdk::cosmwasm_std::{Coin as CwCoin, Env, MessageInfo, QuerierWrapper, Timest
 
 use crate::{
     api::{
+        DownpaymentCoin,
         position::{ClosePolicyChange, PositionClose},
         query::StateResponse,
-        DownpaymentCoin,
     },
     contract::{
+        Lease,
         cmd::{
             ChangeClosePolicy, CloseStatusCmd, CloseStatusDTO, ObtainPayment, OpenLoanRespResult,
         },
         state::{Handler, Response},
-        Lease,
     },
     error::{ContractError, ContractResult},
     finance::LpnCurrencies,

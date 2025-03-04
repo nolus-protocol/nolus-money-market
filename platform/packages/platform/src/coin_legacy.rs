@@ -165,15 +165,15 @@ where
 #[cfg(test)]
 mod test {
     use currency::{
-        test::{SuperGroup, SuperGroupTestC1, SuperGroupTestC2},
         BankSymbols, CurrencyDef,
+        test::{SuperGroup, SuperGroupTestC1, SuperGroupTestC2},
     };
     use finance::test::coin;
     use sdk::cosmwasm_std::Coin as CosmWasmCoin;
 
     use crate::error::Error;
 
-    use super::{to_cosmwasm_impl, Coin};
+    use super::{Coin, to_cosmwasm_impl};
 
     #[test]
     fn test_add() {

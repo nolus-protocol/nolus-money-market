@@ -4,13 +4,13 @@ use std::{
     process::{Command, ExitStatus},
 };
 
-use anyhow::{anyhow, bail, Context, Result};
+use anyhow::{Context, Result, anyhow, bail};
 use cargo_metadata::{Metadata, Package};
 use either::Either;
 
 use crate::{combinations_iter, config::deserialize_config_if_any, pipe::Pipe as _};
 
-use super::{get_packages_iter, Mode, Tags};
+use super::{Mode, Tags, get_packages_iter};
 
 pub(crate) struct Arguments {
     pub(super) exact: bool,

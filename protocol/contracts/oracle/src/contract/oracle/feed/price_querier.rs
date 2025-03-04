@@ -1,6 +1,6 @@
 use currency::{Currency, CurrencyDTO, Group, MemberOf};
 use finance::price::Price;
-use marketprice::{error::PriceFeedsError, market_price::PriceFeeds, ObservationsReadRepo};
+use marketprice::{ObservationsReadRepo, error::PriceFeedsError, market_price::PriceFeeds};
 use sdk::cosmwasm_std::Timestamp;
 
 use crate::result::Result;
@@ -87,8 +87,8 @@ where
 #[cfg(all(feature = "internal.test.contract", test))]
 mod test {
     use currencies::{
-        testing::{PaymentC3, PaymentC7},
         LeaseGroup,
+        testing::{PaymentC3, PaymentC7},
     };
     use finance::{coin::Coin, price::total_of};
 

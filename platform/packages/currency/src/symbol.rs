@@ -1,6 +1,6 @@
 use std::marker::PhantomData;
 
-use crate::{definition::Definition, Group, SymbolStatic};
+use crate::{Group, SymbolStatic, definition::Definition};
 
 pub trait Symbol {
     const DESCR: &'static str;

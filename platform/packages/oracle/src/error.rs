@@ -2,7 +2,7 @@ use std::result::Result as StdResult;
 
 use thiserror::Error;
 
-use currency::{error::Error as CurrencyError, CurrencyDTO, Group, SymbolStatic, Tickers};
+use currency::{CurrencyDTO, Group, SymbolStatic, Tickers, error::Error as CurrencyError};
 use sdk::cosmwasm_std::StdError;
 
 pub type Result<T> = StdResult<T, Error>;
@@ -19,7 +19,9 @@ pub enum Error {
     Finance(#[from] finance::error::Error),
 
     // TODO replace SymbolStatic and SymbolOwned with CurrencyDTO<G> where approptiate, i.e. the string represent a currency
-    #[error("[Oracle] Failed to fetch price for the pair {from}/{to}! Possibly no price is available! Cause: {error}")]
+    #[error(
+        "[Oracle] Failed to fetch price for the pair {from}/{to}! Possibly no price is available! Cause: {error}"
+    )]
     FailedToFetchPrice {
         from: SymbolStatic,
         to: SymbolStatic,

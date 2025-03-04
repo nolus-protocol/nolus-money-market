@@ -1,20 +1,20 @@
 use ::lease::{
+    CloseStrategy,
     api::{
         position::ChangeCmd,
         query::{ClosePolicy, StateResponse},
     },
     error::{ContractError, PositionError},
-    CloseStrategy,
 };
 use anyhow::Error;
 use finance::{coin::Coin, percent::Percent};
 use sdk::{cosmwasm_std::Addr, testing};
 
 use crate::{
-    common::{oracle, ADMIN},
+    common::{ADMIN, oracle},
     lease::{
-        self, LeaseCurrency, LeaseTestCase, LeaserInstantiator, LpnCurrency, PaymentCurrency,
-        DOWNPAYMENT,
+        self, DOWNPAYMENT, LeaseCurrency, LeaseTestCase, LeaserInstantiator, LpnCurrency,
+        PaymentCurrency,
     },
 };
 

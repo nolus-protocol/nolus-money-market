@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 
 pub use protocol_::Protocol;
 
-use crate::{release::Id, Error};
+use crate::{Error, release::Id};
 
 #[cfg(feature = "protocol_contract")]
 mod current;

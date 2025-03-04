@@ -21,8 +21,8 @@ use timealarms::stub::TimeAlarmsRef;
 use crate::{msg::ConfigResponse, profit::Profit, result::ContractResult};
 
 use super::{
-    idle::Idle, resp_delivery::ForwardToDexEntry, Config, ConfigManagement, ProfitCurrencies,
-    State, StateEnum, SwapClient,
+    Config, ConfigManagement, ProfitCurrencies, State, StateEnum, SwapClient, idle::Idle,
+    resp_delivery::ForwardToDexEntry,
 };
 
 #[derive(Serialize, Deserialize)]
@@ -174,10 +174,10 @@ impl<I> TryFind for I where I: Iterator {}
 #[cfg(all(feature = "internal.test.contract", test))]
 mod tests {
     use currencies::{
-        testing::{PaymentC3, PaymentC4, PaymentC5, PaymentC6, PaymentC7},
         Lpn, Lpns, PaymentGroup,
+        testing::{PaymentC3, PaymentC4, PaymentC5, PaymentC6, PaymentC7},
     };
-    use currency::{never::Never, Group, MemberOf};
+    use currency::{Group, MemberOf, never::Never};
     use dex::{CoinVisitor, IterNext, IterState, SwapTask as _};
     use finance::coin::{Coin, CoinDTO};
 

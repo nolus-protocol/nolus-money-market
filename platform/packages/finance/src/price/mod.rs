@@ -665,8 +665,8 @@ mod test {
 #[cfg(test)]
 mod test_invariant {
     use currency::{
-        test::{SuperGroupTestC1, SuperGroupTestC2},
         Currency,
+        test::{SuperGroupTestC1, SuperGroupTestC2},
     };
 
     use crate::{coin::Coin, price::Price};

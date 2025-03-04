@@ -7,11 +7,11 @@ use admin_contract::{
 };
 use sdk::{
     cosmwasm_ext::Response as CwResponse,
-    cosmwasm_std::{to_json_binary, Addr, Binary, Deps, DepsMut, Empty, Env, MessageInfo},
+    cosmwasm_std::{Addr, Binary, Deps, DepsMut, Empty, Env, MessageInfo, to_json_binary},
     testing,
 };
 
-use super::{dummy_query, test_case::app::App, CwContractWrapper, MockQueryMsg, ADMIN};
+use super::{ADMIN, CwContractWrapper, MockQueryMsg, dummy_query, test_case::app::App};
 
 pub(crate) type QueryFn =
     fn(deps: Deps<'_, Empty>, env: Env, msg: QueryMsg) -> ContractResult<Binary>;

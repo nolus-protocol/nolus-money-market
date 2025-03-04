@@ -1,6 +1,6 @@
 use std::{borrow::Cow, iter};
 
-use anyhow::{anyhow, Context as _, Result};
+use anyhow::{Context as _, Result, anyhow};
 use either::Either;
 
 use crate::currencies_tree::{self, CurrenciesTree};
@@ -85,14 +85,14 @@ impl<'currencies_tree, 'parents_of, 'parent, 'children_of, 'child, 'generator, G
 }
 
 impl<
-        'dex_currencies,
-        'definition,
-        'dex_currency_ticker,
-        'dex_currency_definition,
-        'currencies_tree,
-        'generator,
-        Generator,
-    > CurrencyDefinition<'currencies_tree, '_, '_, '_, '_, 'generator, Generator>
+    'dex_currencies,
+    'definition,
+    'dex_currency_ticker,
+    'dex_currency_definition,
+    'currencies_tree,
+    'generator,
+    Generator,
+> CurrencyDefinition<'currencies_tree, '_, '_, '_, '_, 'generator, Generator>
 where
     'dex_currencies: 'definition,
     'dex_currency_ticker: 'dex_currencies,
@@ -109,15 +109,15 @@ where
         'dex_currencies,
         impl IntoIterator<Item = &'dex_currencies str> + use<'dex_currencies, Generator>,
         impl Iterator<Item = Cow<'r, str>>
-            + use<
-                'r,
-                'dex_currencies,
-                'dex_currency_ticker,
-                'dex_currency_definition,
-                'currencies_tree,
-                'generator,
-                Generator,
-            >,
+        + use<
+            'r,
+            'dex_currencies,
+            'dex_currency_ticker,
+            'dex_currency_definition,
+            'currencies_tree,
+            'generator,
+            Generator,
+        >,
     >
     where
         'definition: 'r,
@@ -145,17 +145,17 @@ where
         'dex_currencies,
         impl IntoIterator<Item = &'dex_currencies str> + use<'dex_currencies, Generator>,
         impl Iterator<Item = Cow<'r, str>>
-            + use<
-                'r,
-                'dex_currencies,
-                'dex_currency_ticker,
-                'dex_currency_definition,
-                'currencies_tree,
-                'children,
-                'parents,
-                'generator,
-                Generator,
-            >,
+        + use<
+            'r,
+            'dex_currencies,
+            'dex_currency_ticker,
+            'dex_currency_definition,
+            'currencies_tree,
+            'children,
+            'parents,
+            'generator,
+            Generator,
+        >,
     >
     where
         'definition: 'r,

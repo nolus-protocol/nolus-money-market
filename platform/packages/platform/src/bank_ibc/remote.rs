@@ -97,8 +97,8 @@ impl<'c> From<Sender<'c>> for Transaction {
 #[cfg(test)]
 mod test {
     use currency::{
-        test::{SuperGroup, SuperGroupTestC1, SuperGroupTestC2},
         CurrencyDef,
+        test::{SuperGroup, SuperGroupTestC1, SuperGroupTestC2},
     };
     use finance::coin::{Amount, Coin};
     use sdk::{
@@ -111,7 +111,7 @@ mod test {
     };
 
     use crate::{
-        bank_ibc::remote::{new_msg, Sender},
+        bank_ibc::remote::{Sender, new_msg},
         ica::HostAccount,
         trx::Transaction,
     };

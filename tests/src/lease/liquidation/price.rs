@@ -12,15 +12,14 @@ use swap::testing::SwapRequest;
 
 use crate::{
     common::{
-        self, cwcoin, ibc,
+        self, CwCoin, USER, cwcoin, ibc,
         leaser::{self, Instantiator as LeaserInstantiator},
-        test_case::{response::ResponseWithInterChainMsgs, TestCase},
-        CwCoin, USER,
+        test_case::{TestCase, response::ResponseWithInterChainMsgs},
     },
     lease::{self as lease_mod, LpnCurrency},
 };
 
-use super::{LeaseCoin, LeaseCurrency, LpnCoin, PaymentCurrency, DOWNPAYMENT};
+use super::{DOWNPAYMENT, LeaseCoin, LeaseCurrency, LpnCoin, PaymentCurrency};
 
 #[test]
 #[should_panic = "No liquidation warning emitted!"]

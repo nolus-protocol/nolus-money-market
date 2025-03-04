@@ -8,9 +8,9 @@ use finance::{
 use sdk::cosmwasm_std::{Addr, StdError};
 
 use crate::{
+    OracleRef,
     error::{self, Result},
     stub::Oracle,
-    OracleRef,
 };
 
 pub struct DummyOracle<G, QuoteC, QuoteG>

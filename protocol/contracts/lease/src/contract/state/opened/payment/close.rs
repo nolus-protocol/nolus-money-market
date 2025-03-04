@@ -5,13 +5,13 @@ use sdk::cosmwasm_std::{Env, QuerierWrapper};
 
 use crate::{
     api::{
-        query::opened::{OngoingTrx, PositionCloseTrx},
         LeaseCoin,
+        query::opened::{OngoingTrx, PositionCloseTrx},
     },
     contract::{
-        cmd::{FullClose as FullCloseCmd, RepayEmitter},
-        state::{opened::close::Closable, Response, State},
         Lease,
+        cmd::{FullClose as FullCloseCmd, RepayEmitter},
+        state::{Response, State, opened::close::Closable},
     },
     error::ContractResult,
     event::Type,

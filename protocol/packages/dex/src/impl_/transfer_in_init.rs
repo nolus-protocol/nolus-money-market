@@ -8,17 +8,17 @@ use finance::coin::CoinDTO;
 use platform::batch::Batch;
 use sdk::cosmwasm_std::{Binary, Env, QuerierWrapper, Timestamp};
 
-use crate::{connection::ConnectionParams, error::Result};
 #[cfg(feature = "migration")]
 use crate::{InspectSpec, MigrateSpec};
+use crate::{connection::ConnectionParams, error::Result};
 
 use super::{
+    Contract, ContractInSwap, DexConnectable, Enterable, TimeAlarm, TransferInInitState,
     response::{ContinueResult, Handler, Result as HandlerResult},
     swap_task::SwapTask as SwapTaskT,
     timeout,
     transfer_in_finish::TransferInFinish,
     trx::IBC_TIMEOUT,
-    Contract, ContractInSwap, DexConnectable, Enterable, TimeAlarm, TransferInInitState,
 };
 
 /// Transfer in a coin from DEX

@@ -12,7 +12,7 @@ where
 }
 
 pub mod coin {
-    use currency::{equal, Currency, CurrencyDef};
+    use currency::{Currency, CurrencyDef, equal};
 
     use crate::{
         coin::{Amount, Coin, WithCoin, WithCoinResult},

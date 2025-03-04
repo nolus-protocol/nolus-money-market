@@ -4,12 +4,12 @@ use sdk::cosmwasm_std::{Env, QuerierWrapper};
 
 use crate::{
     api::{
-        query::opened::{OngoingTrx, PositionCloseTrx},
         LeaseCoin, LeasePaymentCurrencies,
+        query::opened::{OngoingTrx, PositionCloseTrx},
     },
     contract::{
-        state::{resp_delivery::ForwardToDexEntry, Response, State, SwapClient},
         Lease,
+        state::{Response, State, SwapClient, resp_delivery::ForwardToDexEntry},
     },
     error::ContractResult,
     event::Type,

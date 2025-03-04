@@ -8,8 +8,8 @@ use sdk::{
 };
 
 use crate::{
-    testing::{ExactAmountInSkel, SwapRequest},
     Impl,
+    testing::{ExactAmountInSkel, SwapRequest},
 };
 
 #[test]

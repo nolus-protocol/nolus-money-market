@@ -2,7 +2,7 @@ use finance::{coin::Coin, zero::Zero};
 
 use crate::{common::leaser::Instantiator, lease::heal};
 
-use super::{LeaseCoin, LeaseCurrency, PaymentCurrency, DOWNPAYMENT};
+use super::{DOWNPAYMENT, LeaseCoin, LeaseCurrency, PaymentCurrency};
 
 #[test]
 #[should_panic = "[Lease] No payment sent"]

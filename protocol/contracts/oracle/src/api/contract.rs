@@ -266,7 +266,7 @@ mod test {
     use crate::api::{Currency, CurrencyGroup};
 
     use super::QueryMsg;
-    use currencies::{testing::LeaseC1, Lpns};
+    use currencies::{Lpns, testing::LeaseC1};
     use currency::{CurrencyDef, SymbolOwned};
     use platform::tests as platform_tests;
     use serde::Deserialize;

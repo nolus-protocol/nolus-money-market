@@ -1,6 +1,6 @@
 use std::borrow::Borrow;
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 
 use topology::{CurrencyDefinition, HostCurrency};
 

@@ -1,7 +1,7 @@
 use cosmwasm_std::{
-    testing::{mock_dependencies, MockApi, MockQuerier, MockStorage},
     Addr, Checksum, CodeInfoResponse, ContractInfoResponse, ContractResult, Empty, GovMsg, IbcMsg,
     IbcQuery, OwnedDeps, SystemError, SystemResult, WasmQuery,
+    testing::{MockApi, MockQuerier, MockStorage, mock_dependencies},
 };
 use cw_multi_test::{
     AddressGenerator, BankKeeper, BasicAppBuilder as BasicCwAppBuilder, DistributionKeeper,
@@ -117,7 +117,7 @@ impl AddressGenerator for TestAddressGenerator {
 }
 
 mod custom_msg {
-    use anyhow::{bail, Result as AnyResult};
+    use anyhow::{Result as AnyResult, bail};
     use cosmwasm_std::{Addr, Api, Binary, BlockInfo, CustomQuery, Empty, Querier, Storage};
     use cw_multi_test::{AppResponse, CosmosRouter, Module as ModuleTrait};
     use serde::de::DeserializeOwned;

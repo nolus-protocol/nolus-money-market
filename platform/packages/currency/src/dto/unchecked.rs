@@ -45,10 +45,10 @@ mod test {
     use sdk::cosmwasm_std;
 
     use crate::{
+        CurrencyDef,
         test::{
             SubGroupCurrency, SubGroupTestC10, SuperGroup, SuperGroupCurrency, SuperGroupTestC1,
         },
-        CurrencyDef,
     };
 
     #[test]

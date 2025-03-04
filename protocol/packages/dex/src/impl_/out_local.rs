@@ -66,8 +66,8 @@ where
 
 mod impl_into {
     use crate::impl_::{
-        swap_task::SwapTask as SwapTaskT, ForwardToInner, SwapExactIn, TransferInFinish,
-        TransferInInit, TransferInInitRespDelivery, TransferOut, TransferOutRespDelivery,
+        ForwardToInner, SwapExactIn, TransferInFinish, TransferInInit, TransferInInitRespDelivery,
+        TransferOut, TransferOutRespDelivery, swap_task::SwapTask as SwapTaskT,
     };
 
     use super::{State, SwapExactInRespDelivery};
@@ -175,9 +175,9 @@ mod impl_handler {
 
     use crate::{
         impl_::{
+            Handler,
             response::{ContinueResult, Result},
             swap_task::SwapTask as SwapTaskT,
-            Handler,
         },
         swap::ExactAmountIn,
     };
@@ -382,8 +382,8 @@ mod impl_contract {
     use sdk::cosmwasm_std::{QuerierWrapper, Timestamp};
 
     use crate::impl_::{
-        swap_task::SwapTask as SwapTaskT, Contract, ContractInSwap, ForwardToInner, SwapState,
-        TransferInFinishState, TransferInInitState, TransferOutState,
+        Contract, ContractInSwap, ForwardToInner, SwapState, TransferInFinishState,
+        TransferInInitState, TransferOutState, swap_task::SwapTask as SwapTaskT,
     };
 
     use super::State;
@@ -467,7 +467,7 @@ mod impl_migration {
     use super::State;
     use crate::{
         impl_::{
-            migration::MigrateSpec, swap_task::SwapTask as SwapTaskT, ForwardToInner, InspectSpec,
+            ForwardToInner, InspectSpec, migration::MigrateSpec, swap_task::SwapTask as SwapTaskT,
         },
         swap::ExactAmountIn,
     };

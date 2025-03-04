@@ -30,8 +30,8 @@ use crate::{
 };
 
 use super::{
-    buy_back::BuyBack, resp_delivery::ForwardToDexEntry, Config, ConfigManagement,
-    ProfitCurrencies, State, StateEnum, SwapClient,
+    Config, ConfigManagement, ProfitCurrencies, State, StateEnum, SwapClient, buy_back::BuyBack,
+    resp_delivery::ForwardToDexEntry,
 };
 
 #[derive(Serialize, Deserialize)]

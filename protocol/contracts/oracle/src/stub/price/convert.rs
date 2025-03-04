@@ -5,8 +5,8 @@ use finance::coin::Coin;
 use sdk::cosmwasm_std::QuerierWrapper;
 
 use oracle_platform::{
-    error::{Error, Result},
     Oracle, OracleRef, WithOracle,
+    error::{Error, Result},
 };
 
 pub fn from_quote<QuoteC, QuoteG, OutC, OutG>(

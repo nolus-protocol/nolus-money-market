@@ -3,8 +3,8 @@
 use std::fmt::Formatter;
 
 use serde::{
-    de::{Unexpected, Visitor},
     Deserializer, Serializer,
+    de::{Unexpected, Visitor},
 };
 
 use crate::coin::Amount;

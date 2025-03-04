@@ -1,5 +1,5 @@
 use currency::{AnyVisitorPair, Currency, CurrencyDTO, CurrencyDef, Group, MemberOf};
-use finance::price::{base::BasePrice, Price};
+use finance::price::{Price, base::BasePrice};
 
 use crate::error::Error;
 
@@ -93,8 +93,8 @@ mod test {
     use std::collections::HashMap;
 
     use currencies::{
-        testing::{PaymentC1, PaymentC3, PaymentC4, PaymentC5, PaymentC6},
         Lpn as BaseCurrency, Lpns as BaseCurrencies, PaymentGroup as PaymentCurrencies,
+        testing::{PaymentC1, PaymentC3, PaymentC4, PaymentC5, PaymentC6},
     };
 
     use crate::tests;

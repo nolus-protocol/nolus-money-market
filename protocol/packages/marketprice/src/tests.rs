@@ -1,7 +1,7 @@
 use std::time::SystemTime;
 
 use currency::test::{
-    SubGroupTestC10, SubGroupTestC6, SuperGroup, SuperGroupTestC1, SuperGroupTestC2,
+    SubGroupTestC6, SubGroupTestC10, SuperGroup, SuperGroupTestC1, SuperGroupTestC2,
     SuperGroupTestC3, SuperGroupTestC4, SuperGroupTestC5,
 };
 use currency::{CurrencyDef, Group, MemberOf};
@@ -10,17 +10,17 @@ use finance::{
     coin::Coin,
     duration::Duration,
     percent::Percent,
-    price::{self, dto::PriceDTO, Price},
+    price::{self, Price, dto::PriceDTO},
 };
-use sdk::cosmwasm_std::testing::MockStorage;
 use sdk::cosmwasm_std::Storage;
+use sdk::cosmwasm_std::testing::MockStorage;
 use sdk::{
-    cosmwasm_std::{testing::mock_dependencies, Timestamp},
+    cosmwasm_std::{Timestamp, testing::mock_dependencies},
     testing,
 };
 
-use crate::feed::ObservationsRepo;
 use crate::Repo;
+use crate::feed::ObservationsRepo;
 use crate::{
     config::Config, error::PriceFeedsError, feeders::PriceFeeders, market_price::PriceFeeds,
 };

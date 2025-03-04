@@ -5,11 +5,11 @@ use std::{
 
 use currency::{CurrencyDef, Group, MemberOf};
 use finance::price::{
-    base::{
-        with_price::{self, WithPrice},
-        BasePrice,
-    },
     Price,
+    base::{
+        BasePrice,
+        with_price::{self, WithPrice},
+    },
 };
 use marketprice::alarms::PriceAlarms;
 use sdk::cosmwasm_std::{Addr, Storage};
@@ -188,8 +188,8 @@ where
 #[cfg(all(feature = "internal.test.contract", test))]
 mod test {
     use currencies::{
-        testing::{PaymentC5, PaymentC6, PaymentC7},
         Lpn as BaseCurrency, Lpns as BaseCurrencies, PaymentGroup as PriceCurrencies,
+        testing::{PaymentC5, PaymentC6, PaymentC7},
     };
     use sdk::cosmwasm_std::testing::MockStorage;
 
@@ -263,30 +263,36 @@ mod test {
             )
             .unwrap();
 
-        assert!(!alarms
-            .try_query_alarms::<_, _, _, PriceCurrencies>(
-                [
-                    tests::base_price::<PaymentC5>(1, 20),
-                    tests::base_price::<PaymentC6>(1, 20)
-                ]
-                .into_iter()
-                .map(Ok),
-            )
-            .unwrap());
+        assert!(
+            !alarms
+                .try_query_alarms::<_, _, _, PriceCurrencies>(
+                    [
+                        tests::base_price::<PaymentC5>(1, 20),
+                        tests::base_price::<PaymentC6>(1, 20)
+                    ]
+                    .into_iter()
+                    .map(Ok),
+                )
+                .unwrap()
+        );
 
-        assert!(alarms
-            .try_query_alarms::<_, _, _, PriceCurrencies>(
-                [tests::base_price::<PaymentC6>(1, 35)].into_iter().map(Ok),
-            )
-            .unwrap());
+        assert!(
+            alarms
+                .try_query_alarms::<_, _, _, PriceCurrencies>(
+                    [tests::base_price::<PaymentC6>(1, 35)].into_iter().map(Ok),
+                )
+                .unwrap()
+        );
 
         alarms.remove(receiver2).unwrap();
 
-        assert!(!alarms
-            .try_query_alarms::<_, _, _, PriceCurrencies>(
-                [tests::base_price::<PaymentC6>(1, 10)].into_iter().map(Ok)
-            )
-            .unwrap());
+        assert!(
+            !alarms
+                .try_query_alarms::<_, _, _, PriceCurrencies>(
+                    [tests::base_price::<PaymentC6>(1, 10)].into_iter().map(Ok)
+                )
+                .unwrap()
+        );
     }
 
     #[test]

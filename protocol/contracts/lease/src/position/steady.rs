@@ -69,7 +69,7 @@ where
 
 #[cfg(all(feature = "internal.test.contract", test))]
 mod tests {
-    use currencies::{testing::PaymentC3, LeaseGroup, Lpn, Lpns};
+    use currencies::{LeaseGroup, Lpn, Lpns, testing::PaymentC3};
     use finance::{
         coin::Coin, duration::Duration, fraction::Fraction, percent::Percent, price,
         range::RightOpenRange,

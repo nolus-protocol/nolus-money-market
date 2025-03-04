@@ -67,6 +67,8 @@ pub enum ContractError {
     #[error("[Treasury] {0}")]
     Unauthorized(#[from] access_control::error::Error),
 
-    #[error("[Treasury] Invalid time configuration. Current reward distribution time is before the last distribution time")]
+    #[error(
+        "[Treasury] Invalid time configuration. Current reward distribution time is before the last distribution time"
+    )]
     InvalidTimeConfiguration {},
 }

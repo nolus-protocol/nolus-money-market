@@ -106,8 +106,8 @@ mod test {
     use sdk::cosmwasm_std::{from_json, to_json_vec};
 
     use crate::api::{
-        position::{FullClose, PositionClose},
         ExecuteMsg,
+        position::{FullClose, PositionClose},
     };
 
     #[test]

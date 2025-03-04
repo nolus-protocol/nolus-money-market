@@ -8,7 +8,7 @@ use crate::{
     api::{LeaseAssetCurrencies, LeasePaymentCurrencies},
     error::{ContractError, ContractResult},
     finance::{LpnCurrencies, LpnCurrency, OracleRef},
-    lease::{with_lease::WithLease, Lease as LeaseDO},
+    lease::{Lease as LeaseDO, with_lease::WithLease},
 };
 
 use super::CloseStatusDTO;

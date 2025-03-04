@@ -337,15 +337,15 @@ mod test {
     use finance::{
         coin::{Amount, Coin},
         duration::Duration,
-        percent::{bound::BoundToHundredPercent, Percent},
+        percent::{Percent, bound::BoundToHundredPercent},
         price::{self, Price},
         zero::Zero,
     };
     use lpp_platform::NLpn;
     use platform::{coin_legacy, contract::Code};
     use sdk::cosmwasm_std::{
-        testing::{self, MOCK_CONTRACT_ADDR},
         Addr, Coin as CwCoin, DepsMut, Timestamp,
+        testing::{self, MOCK_CONTRACT_ADDR},
     };
 
     use crate::{
@@ -922,13 +922,13 @@ mod test {
     mod min_utilization {
         use finance::{
             coin::{Amount, Coin},
-            percent::{bound::BoundToHundredPercent, Percent},
+            percent::{Percent, bound::BoundToHundredPercent},
             zero::Zero,
         };
         use platform::contract::Code;
         use sdk::cosmwasm_std::{
-            testing::{mock_env, MockQuerier},
             Env, QuerierWrapper, Timestamp,
+            testing::{MockQuerier, mock_env},
         };
 
         use crate::{
@@ -936,7 +936,7 @@ mod test {
             state::{Config, Total},
         };
 
-        use super::{super::LiquidityPool, coin_cw, TheCurrency};
+        use super::{super::LiquidityPool, TheCurrency, coin_cw};
 
         const FIFTY_PERCENT_MIN_UTILIZATION: fn() -> BoundToHundredPercent =
             || Percent::from_permille(500).try_into().unwrap();

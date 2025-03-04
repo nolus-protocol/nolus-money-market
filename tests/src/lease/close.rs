@@ -1,18 +1,17 @@
 use currencies::{LeaseGroup, PaymentGroup};
 use finance::price;
-use lease::api::{query::StateResponse, ExecuteMsg};
+use lease::api::{ExecuteMsg, query::StateResponse};
 use platform::coin_legacy::to_cosmwasm_on_dex;
 use sdk::{cosmwasm_std::Addr, cw_multi_test::AppResponse, testing};
 
 use crate::common::{
-    ibc, leaser as leaser_mod,
-    test_case::{response::ResponseWithInterChainMsgs, TestCase},
-    CwCoin, USER,
+    CwCoin, USER, ibc, leaser as leaser_mod,
+    test_case::{TestCase, response::ResponseWithInterChainMsgs},
 };
 
 use super::{
-    heal, repay, LeaseCoin, LeaseCurrency, LeaseTestCase, LpnCoin, PaymentCoin, PaymentCurrency,
-    DOWNPAYMENT,
+    DOWNPAYMENT, LeaseCoin, LeaseCurrency, LeaseTestCase, LpnCoin, PaymentCoin, PaymentCurrency,
+    heal, repay,
 };
 
 #[test]

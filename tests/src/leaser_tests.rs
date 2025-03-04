@@ -1,31 +1,31 @@
 use currencies::{
-    testing::{LeaseC1, LeaseC2, LeaseC3, LeaseC6, LeaseC7, PaymentC1},
     LeaseGroup as LeaseCurrencies, Lpn, Lpns, PaymentGroup as PriceCurrencies,
+    testing::{LeaseC1, LeaseC2, LeaseC3, LeaseC6, LeaseC7, PaymentC1},
 };
 use currency::{CurrencyDef, MemberOf};
 use finance::{
     coin::{Amount, Coin},
     percent::Percent,
-    price::{total, total_of, Price},
+    price::{Price, total, total_of},
 };
 use sdk::{
     cosmwasm_ext::Response,
-    cosmwasm_std::{coin, Addr, DepsMut, Env, Event, MessageInfo},
-    cw_multi_test::{next_block, AppResponse, ContractWrapper},
+    cosmwasm_std::{Addr, DepsMut, Env, Event, MessageInfo, coin},
+    cw_multi_test::{AppResponse, ContractWrapper, next_block},
     testing,
 };
 
 use crate::common::{
-    cwcoin, cwcoin_dex, lease as lease_mod, leaser as leaser_mod,
+    ADDON_OPTIMAL_INTEREST_RATE, BASE_INTEREST_RATE, USER, UTILIZATION_OPTIMAL, cwcoin, cwcoin_dex,
+    lease as lease_mod, leaser as leaser_mod,
     lpp::{self as lpp_mod, LppExecuteMsg},
     oracle as oracle_mod,
     protocols::Registry,
     test_case::{
+        TestCase,
         builder::BlankBuilder as TestCaseBuilder,
         response::{RemoteChain as _, ResponseWithInterChainMsgs},
-        TestCase,
     },
-    ADDON_OPTIMAL_INTEREST_RATE, BASE_INTEREST_RATE, USER, UTILIZATION_OPTIMAL,
 };
 
 type TheCurrency = Lpn;

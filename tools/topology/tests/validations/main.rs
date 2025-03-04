@@ -1,4 +1,4 @@
-use topology::{error, Topology};
+use topology::{Topology, error};
 
 fn currency_definitions_error(source: &str, dex: &str) -> error::CurrencyDefinitions {
     serde_json::from_str::<'_, Topology>(source)
