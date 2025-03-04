@@ -35,6 +35,7 @@ append_lint_flags() {
     --forbid "deprecated-safe" \
     --deny "future-incompatible" \
     --deny "keyword-idents" \
+    --deny "let-underscore" \
     --deny "nonstandard-style" \
     --deny "refining-impl-trait" \
     --deny "rust-2018-idioms" \
