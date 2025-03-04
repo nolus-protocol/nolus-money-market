@@ -20,8 +20,6 @@ pub trait ObservationsRead {
 pub trait Observations
 where
     Self: ObservationsRead,
-    Self::C: 'static,
-    Self::QuoteC: 'static,
 {
     fn retain(&mut self, valid_since: &Timestamp) -> Result<()>;
 
