@@ -16,7 +16,11 @@ where
     price: Price<C, QuoteC>,
 }
 
-impl<C, QuoteC> Observation<C, QuoteC> {
+impl<C, QuoteC> Observation<C, QuoteC>
+where
+    C: 'static,
+    QuoteC: 'static,
+{
     pub fn new(
         feeder_addr: Addr,
         time: Timestamp,

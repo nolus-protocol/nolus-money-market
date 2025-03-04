@@ -60,8 +60,7 @@ impl<'storage, S, PriceG, BaseC, BaseG> Oracle<'storage, S, PriceG, BaseC, BaseG
 where
     S: Deref<Target = dyn Storage + 'storage>,
     PriceG: Group<TopG = PriceG>,
-    BaseC: CurrencyDef,
-    BaseC::Group: MemberOf<BaseG> + MemberOf<PriceG::TopG>,
+    BaseC: CurrencyDef<Group: MemberOf<BaseG> + MemberOf<PriceG::TopG>>,
     BaseG: Group + MemberOf<PriceG>,
 {
     pub fn load(storage: S) -> Result<Self, PriceG> {
@@ -122,11 +121,16 @@ where
         StableCurrency: CurrencyDef,
         StableCurrency::Group: MemberOf<PriceG>,
     {
-        struct StablePriceCalc<G, StableCurrency, StableG, BaseCurrency> {
+        struct StablePriceCalc<G, StableCurrency, StableG, BaseCurrency>
+        where
+            StableCurrency: 'static,
+            BaseCurrency: 'static,
+        {
             _currency_group: PhantomData<G>,
             stable_to_base: Price<StableCurrency, BaseCurrency>,
             _quote_group: PhantomData<StableG>,
         }
+
         impl<G, StableCurrency, StableG, BaseCurrency> WithPrice<BaseCurrency>
             for StablePriceCalc<G, StableCurrency, StableG, BaseCurrency>
         where
@@ -153,6 +157,7 @@ where
                 Ok((base_price * self.stable_to_base.inv()).into())
             }
         }
+
         self.try_query_base_price(at, &currency::dto::<StableCurrency, _>())
             .and_then(|stable_price| {
                 Price::try_from(&stable_price).map_err(Into::<Error<PriceG>>::into)
