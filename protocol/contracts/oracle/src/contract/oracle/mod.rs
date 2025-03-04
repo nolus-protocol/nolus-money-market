@@ -122,7 +122,11 @@ where
         StableCurrency: CurrencyDef,
         StableCurrency::Group: MemberOf<PriceG>,
     {
-        struct StablePriceCalc<G, StableCurrency, StableG, BaseCurrency> {
+        struct StablePriceCalc<G, StableCurrency, StableG, BaseCurrency>
+        where
+            StableCurrency: 'static,
+            BaseCurrency: 'static,
+        {
             _currency_group: PhantomData<G>,
             stable_to_base: Price<StableCurrency, BaseCurrency>,
             _quote_group: PhantomData<StableG>,
