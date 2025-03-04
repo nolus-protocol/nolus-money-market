@@ -66,8 +66,10 @@ is assumed to the active workspace."
           ;;
         (*)
           "echo" \
-            "" \
+            "Unknown argument! Got: \"${1:?}\"!" \
             >&2
+
+          exit "1"
           ;;
       esac
 
