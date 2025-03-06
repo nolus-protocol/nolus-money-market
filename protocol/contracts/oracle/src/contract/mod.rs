@@ -173,7 +173,7 @@ pub fn sudo(
 // TODO: compare gas usage of this solution vs reply on error
 #[entry_point]
 pub fn reply(deps: DepsMut<'_>, _env: Env, msg: Reply) -> Result<CwResponse, PriceCurrencies> {
-    const EVENT_TYPE: &str = "results-pricealarm";
+    const EVENT_TYPE: &str = "pricealarm-delivery";
     const KEY_DELIVERED: &str = "delivered";
     const KEY_DETAILS: &str = "details";
 
