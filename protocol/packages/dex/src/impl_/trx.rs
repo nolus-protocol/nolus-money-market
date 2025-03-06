@@ -16,7 +16,7 @@ use sdk::cosmwasm_std::{Addr, QuerierWrapper, Timestamp};
 
 use crate::{error::Result, swap::ExactAmountIn};
 
-pub(super) const IBC_TIMEOUT: Duration = Duration::from_days(100); //enough for the IBC channels migration to complete
+pub(super) const IBC_TIMEOUT: Duration = Duration::from_days(1); //enough for the relayers to process
 
 //TODO take them as input from the client
 const ICA_TRANSFER_ACK_TIP: Coin<Nls> = Coin::new(1);
