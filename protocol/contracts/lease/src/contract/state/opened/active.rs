@@ -75,12 +75,7 @@ impl Active {
         env: &Env,
         info: MessageInfo,
     ) -> ContractResult<Response> {
-        // TODO ref. the TODO in try_on_time_alarm
-        if !self.lease.lease.oracle.owned_by(&info.sender) {
-            return Err(ContractError::Unauthorized(
-                access_control::error::Error::Unauthorized {},
-            ));
-        }
+        access_control::check(self.lease.lease.oracle, &info.sender)?;
 
         self.try_on_alarm(querier, env)
     }
@@ -91,13 +86,7 @@ impl Active {
         env: &Env,
         info: MessageInfo,
     ) -> ContractResult<Response> {
-        // TODO define a trait 'RestrictedResource' with 'fn owner(&Addr) -> bool'
-        // and move this check to the 'access_control' package
-        if !self.lease.lease.time_alarms.owned_by(&info.sender) {
-            return Err(ContractError::Unauthorized(
-                access_control::error::Error::Unauthorized {},
-            ));
-        }
+        access_control::check(self.lease.lease.time_alarms, &info.sender)?;
 
         self.try_on_alarm(querier, env)
     }
