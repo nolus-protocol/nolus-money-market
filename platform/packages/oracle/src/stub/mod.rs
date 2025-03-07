@@ -2,6 +2,7 @@ use std::{fmt::Debug, marker::PhantomData, result::Result as StdResult};
 
 use serde::{Deserialize, Serialize};
 
+use access_control::RestrictedAccessResource;
 use currency::{Currency, CurrencyDTO, CurrencyDef, Group, MemberOf};
 use finance::price::Price;
 use sdk::cosmwasm_std::{Addr, QuerierWrapper};
@@ -141,5 +142,11 @@ where
             _quote: PhantomData,
             _quote_g: PhantomData,
         }
+    }
+}
+
+impl RestrictedAccessResource for OracleRef {
+    fn permit_access(&self, caller: &Addr) -> bool {
+        self.addr == caller
     }
 }

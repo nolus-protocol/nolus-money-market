@@ -75,6 +75,19 @@ impl Active {
         querier: QuerierWrapper<'_>,
         env: &Env,
     ) -> ContractResult<Response> {
+        access_control::check(self.lease.lease.oracle, &info.sender)?;
+
+        self.try_on_alarm(querier, env)
+    }
+
+    fn try_on_time_alarm(
+        self,
+        querier: QuerierWrapper<'_>,
+        env: &Env,
+        info: MessageInfo,
+    ) -> ContractResult<Response> {
+        access_control::check(self.lease.lease.time_alarms, &info.sender)?;
+
         self.try_on_alarm(querier, env)
     }
 
