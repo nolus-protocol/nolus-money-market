@@ -146,7 +146,11 @@ where
     }
 }
 
-impl RestrictedAccessResource for OracleRef {
+impl<QuoteC, QuoteG> RestrictedAccessResource for OracleRef<QuoteC, QuoteG>
+where
+    QuoteC: Currency + MemberOf<QuoteG>,
+    QuoteG: Group,
+{
     fn permit_access(&self, caller: &Addr) -> bool {
         self.addr == caller
     }
