@@ -11,11 +11,25 @@ use self::error::{Error, Result};
 mod contract_owner;
 pub mod error;
 
-pub fn check(permitted_to: &Addr, accessed_by: &Addr) -> Result {
-    if permitted_to == accessed_by {
+pub trait RestrictedAccessResource {
+    fn permit_access(&self, caller: &Addr) -> bool;
+}
+
+/// Checks if access is permitted for the given caller.
+pub fn check<R>(resource: &R, caller: &Addr) -> Result
+where
+    R: RestrictedAccessResource,
+{
+    if resource.permit_access(caller) {
         Ok(())
     } else {
         Err(Error::Unauthorized {})
+    }
+}
+
+impl RestrictedAccessResource for Addr {
+    fn permit_access(&self, caller: &Addr) -> bool {
+        self == caller
     }
 }
 
