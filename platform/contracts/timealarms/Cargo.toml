@@ -23,6 +23,7 @@ stub = []
 testing = []
 
 [dependencies]
+access-control = { workspace = true }
 platform = { workspace = true }
 sdk = { workspace = true, features = ["contract"] }
 time-oracle = { workspace = true, optional = true }
