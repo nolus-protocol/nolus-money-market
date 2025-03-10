@@ -1361,6 +1361,7 @@ dependencies = [
 name = "oracle-platform"
 version = "0.1.1"
 dependencies = [
+ "access-control",
  "currency",
  "finance",
  "sdk",
@@ -2123,6 +2124,7 @@ dependencies = [
 name = "timealarms"
 version = "0.5.1"
 dependencies = [
+ "access-control",
  "platform",
  "sdk",
  "serde",
