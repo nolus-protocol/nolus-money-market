@@ -1393,6 +1393,7 @@ dependencies = [
 name = "oracle-platform"
 version = "0.1.1"
 dependencies = [
+ "access-control",
  "currency",
  "finance",
  "sdk",
@@ -2156,7 +2157,11 @@ name = "timealarms"
 version = "0.5.1"
 dependencies = [
  "access-control",
+<<<<<<< HEAD
  "cosmwasm-std 2.1.7",
+=======
+ "cosmwasm-std 2.1.6",
+>>>>>>> fe27cab3a (chore: include access control package in respective cargo.tomls)
  "platform",
  "sdk",
  "serde",
