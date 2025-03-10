@@ -1390,6 +1390,7 @@ dependencies = [
 name = "oracle-platform"
 version = "0.1.1"
 dependencies = [
+ "access-control",
  "currency",
  "finance",
  "sdk",
@@ -2152,6 +2153,7 @@ dependencies = [
 name = "timealarms"
 version = "0.5.1"
 dependencies = [
+ "access-control",
  "cosmwasm-std 2.1.7",
  "platform",
  "sdk",
