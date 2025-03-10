@@ -6,22 +6,6 @@ use crate::{SingleUserAccess, error::Result};
 
 const CONTRACT_OWNER_NAMESPACE: &str = "contract_owner";
 
-pub trait RestrictedAccessResource {
-    fn permit_access(&self, caller: &Addr) -> bool;
-}
-
-/// Checks if access is permitted for the given caller.
-pub fn check<R>(resource: &R, caller: &Addr) -> Result<(), Error>
-where
-    R: RestrictedAccessResource,
-{
-    if resource.permit_access(caller) {
-        Ok(())
-    } else {
-        Err(Error::Unauthorized)
-    }
-}
-
 pub struct ContractOwnerAccess<'storage, S>
 where
     S: Deref<Target = dyn Storage + 'storage>,
