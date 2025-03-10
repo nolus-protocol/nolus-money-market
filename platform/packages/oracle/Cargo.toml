@@ -16,6 +16,7 @@ unchecked-stable-quote = []
 testing = ["currency/testing"]
 
 [dependencies]
+access-control = { workspace = true }
 currency = { workspace = true }
 finance = { workspace = true }
 sdk = { workspace = true }
