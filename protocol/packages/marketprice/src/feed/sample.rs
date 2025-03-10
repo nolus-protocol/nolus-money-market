@@ -11,13 +11,13 @@ use super::observation::Observation;
 /// takes the last by feeder, and computes an average for each period.
 /// If there are no observations for a period, the sample from the last
 /// period is yielded again.
-pub fn from_observations<'a, Observations, C, QuoteC>(
+pub fn from_observations<'observation, Observations, C, QuoteC>(
     observations: Observations,
     start_from: Timestamp,
     sample_span: Duration,
 ) -> impl Iterator<Item = Sample<C, QuoteC>>
 where
-    Observations: Iterator<Item = &'a Observation<C, QuoteC>>,
+    Observations: Iterator<Item = &'observation Observation<C, QuoteC>>,
     C: 'static,
     QuoteC: 'static,
 {

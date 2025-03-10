@@ -35,6 +35,7 @@ where
     G: Group,
 {
     type QuoteC: Currency + MemberOf<Self::QuoteG>;
+
     type QuoteG: Group;
 
     fn price_of<C>(&self) -> Result<Price<C, Self::QuoteC>>
@@ -51,6 +52,7 @@ where
     type G: Group;
 
     type Output;
+
     type Error;
 
     fn exec<OracleImpl>(self, oracle: OracleImpl) -> StdResult<Self::Output, Self::Error>
@@ -93,7 +95,6 @@ where
     where
         V: WithOracle<QuoteC, QuoteG, G = G>,
         G: Group,
-        // QuoteC::Group: MemberOf<G> + MemberOf<G::TopG>,
         QuoteC::Group: MemberOf<G::TopG>,
     {
         cmd.exec(OracleStub::<'_, G, QuoteC, QuoteG, BasePriceRequest>::new(
