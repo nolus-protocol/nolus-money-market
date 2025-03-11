@@ -14,10 +14,7 @@ use finance::{
 };
 use marketprice::config::Config as PriceConfig;
 use oracle::{
-    api::{
-        MigrateMsg, QueryMsg as OracleQ, SudoMsg, SwapTreeResponse,
-        swap::{SwapPath, SwapTarget},
-    },
+    api::{MigrateMsg, QueryMsg as OracleQ, SudoMsg, SwapTreeResponse, swap::SwapTarget},
     error::Error,
     result::Result as OracleResult,
 };
@@ -413,7 +410,7 @@ fn test_swap_path() {
 
     update_tree(&mut test_case, swap_tree());
 
-    let resp: SwapPath<PriceCurrencies> = test_case
+    let resp: Vec<SwapTarget<PriceCurrencies>> = test_case
         .app
         .query()
         .query_wasm_smart(
