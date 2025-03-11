@@ -112,8 +112,14 @@ where
             where
                 G: Group + MemberOf<Self::GIn>,
             {
+                //START TODO add a `SwapTask::min_out_coin(&self, &CoinDTO<Self::InG>) -> CoinDTO<Self::OutG>`
+                //use oracle_platform::convert::{from|to}_quote(..) in the SwapTask implementations
+                const MIN_AMOUNT_OUT: Amount = 1;
+                let min_amount_out = coin::from_amount_ticker(MIN_AMOUNT_OUT, self.2);
+                //END TODO
+
                 self.0
-                    .swap_exact_in::<_, SwapIn, SwapOut, SwapClient>(*coin, self.2)?;
+                    .swap_exact_in::<_, SwapIn, SwapOut, SwapClient>(coin, &min_amount_out)?;
                 Ok(IterNext::Continue)
             }
         }

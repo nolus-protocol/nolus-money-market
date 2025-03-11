@@ -3,7 +3,7 @@ use std::any;
 use currency::{CurrencyDTO, Group, MemberOf};
 use dex::swap::ExactAmountIn;
 use finance::coin::{Amount, CoinDTO};
-use oracle::api::swap::{SwapPath, SwapTarget};
+use oracle::api::swap::SwapTarget;
 use sdk::{
     cosmos_sdk_proto::{
         Any as CosmosAny,
@@ -47,7 +47,7 @@ where
 
         let ExecuteMsg::ExecuteSwapOperations {
             operations,
-            minimum_receive: None {},
+            minimum_receive: Some(min_token_out),
             to: None {},
             max_spread: Some(super::MAX_IMPACT),
         } = cosmwasm_std::from_json(msg).unwrap_or_else(|_| {
@@ -65,6 +65,7 @@ where
 
         SwapRequest {
             token_in,
+            min_token_out: min_token_out.into(),
             swap_path,
         }
     }
@@ -85,7 +86,7 @@ where
 fn collect_swap_path<GSwap>(
     operations: Vec<SwapOperation>,
     expected_first_currency: CurrencyDTO<GSwap>,
-) -> SwapPath<GSwap>
+) -> Vec<SwapTarget<GSwap>>
 where
     GSwap: Group,
 {
