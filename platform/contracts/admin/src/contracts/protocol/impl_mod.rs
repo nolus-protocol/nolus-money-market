@@ -1,5 +1,5 @@
 use platform::batch::Batch;
-use sdk::cosmwasm_std::Addr;
+use sdk::cosmwasm_std::{Addr, QuerierWrapper};
 use versioning::{ProtocolPackageRelease, ProtocolPackageReleaseId};
 
 use crate::{result::Result, validate::Validate};
@@ -16,6 +16,7 @@ use super::{
 impl Contracts<Addr> {
     pub(crate) fn migrate_standalone(
         self,
+        querier: QuerierWrapper<'_>,
         to_release: ProtocolPackageReleaseId,
         migration_msgs: Contracts<MigrationSpec>,
     ) -> Result<Batch> {
@@ -27,10 +28,16 @@ impl Contracts<Addr> {
             self,
             migration_msgs,
             |address, migration_spec| {
-                migrate_contract::<ProtocolPackageRelease>(
+                let migrate_from: ProtocolPackageRelease = querier.query_wasm_smart(
+                    address.clone(),
+                    &versioning::query::ProtocolPackage::Release {},
+                )?;
+
+                migrate_contract(
                     &mut migration_batch,
                     &mut post_migration_execute_batch,
                     address,
+                    migrate_from,
                     to_release.clone(),
                     migration_spec,
                 )

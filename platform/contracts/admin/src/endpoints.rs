@@ -106,7 +106,7 @@ pub fn execute(
             register_protocol(deps.storage, deps.querier, name, protocol)
         }
         ExecuteMsg::DeregisterProtocol(migration_spec) => {
-            deregister_protocol(deps.storage, &info.sender, migration_spec)
+            deregister_protocol(deps.storage, deps.querier, &info.sender, migration_spec)
         }
     }
 }
@@ -132,6 +132,7 @@ pub fn sudo(deps: DepsMut<'_>, env: Env, msg: SudoMsg) -> ContractResult<CwRespo
             migration_spec,
         }) => crate::contracts::migrate(
             deps.storage,
+            deps.querier,
             env.contract.address,
             to_release,
             migration_spec,
@@ -236,6 +237,7 @@ fn register_protocol(
 
 fn deregister_protocol(
     storage: &mut dyn Storage,
+    querier: QuerierWrapper<'_>,
     sender: &Addr,
     migration_spec: ProtocolContracts<MigrationSpec>,
 ) -> ContractResult<CwResponse> {
@@ -253,7 +255,7 @@ fn deregister_protocol(
         .unwrap_or(Err(ContractError::SenderNotARegisteredLeaser {}))
         .and_then(|protocol| {
             protocol
-                .migrate_standalone(ProtocolPackageReleaseId::VOID, migration_spec)
+                .migrate_standalone(querier, ProtocolPackageReleaseId::VOID, migration_spec)
                 .map(response::response_only_messages)
         })
 }
