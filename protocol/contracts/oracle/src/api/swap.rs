@@ -21,14 +21,12 @@ where
 {
     /// Provides a path in the swap tree between two arbitrary currencies
     ///
-    /// Returns `self::SwapPath`
+    /// Returns [Vec<crate::api::SwapTarget>]
     SwapPath {
         from: CurrencyDTO<PriceCurrencies>,
         to: CurrencyDTO<PriceCurrencies>,
     },
 }
-
-pub type SwapPath<G> = Vec<SwapTarget<G>>;
 
 pub type Result<T> = StdResult<T, Error>;
 

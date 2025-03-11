@@ -135,7 +135,7 @@ where
 
     /// Provides a path in the swap tree between two arbitrary currencies
     ///
-    /// Returns `oracle::api::swap::SwapPath`
+    /// Returns [Vec<crate::api::SwapTarget>]
     /// Implementation of [crate::api::swap::QueryMsg::SwapPath]
     SwapPath {
         from: CurrencyDTO<PriceCurrencies>,

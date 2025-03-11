@@ -1,6 +1,6 @@
 use std::marker::PhantomData;
 
-use currency::{CurrencyDTO, Group, MemberOf, platform::Nls};
+use currency::{Group, MemberOf, platform::Nls};
 use finance::{
     coin::{Coin, CoinDTO},
     duration::Duration,
@@ -98,8 +98,8 @@ where
 
     pub fn swap_exact_in<GIn, SwapGIn, SwapGOut, SwapClient>(
         &mut self,
-        amount: CoinDTO<GIn>,
-        currency_out: CurrencyDTO<SwapGOut>,
+        amount_in: &CoinDTO<GIn>,
+        min_amount_out: &CoinDTO<SwapGOut>,
     ) -> Result<()>
     where
         GIn: Group + MemberOf<SwapGIn>,
@@ -109,17 +109,18 @@ where
     {
         self.swap_path
             .swap_path(
-                amount.currency().into_super_group::<SwapGIn>(),
-                currency_out,
+                amount_in.currency().into_super_group::<SwapGIn>(),
+                min_amount_out.currency(),
                 self.querier,
             )
             .map_err(Into::into)
-            .and_then(|swap_path| {
+            .and_then(|ref swap_path| {
                 SwapClient::build_request(
                     &mut self.trx,
                     self.ica_account.clone(),
-                    &amount,
-                    &swap_path,
+                    amount_in,
+                    min_amount_out,
+                    swap_path,
                 )
                 .map_err(Into::into)
             })
