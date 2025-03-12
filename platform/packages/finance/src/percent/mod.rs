@@ -53,7 +53,7 @@ impl CheckedAdd for Units {
 
 #[derive(Copy, Clone, Default, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
-#[serde(transparent)]
+#[serde(try_from = "Units")]
 pub struct Percent(Units); //value in permille
 
 impl Percent {
@@ -81,7 +81,7 @@ impl Percent {
     ) -> Option<Self>
     where
         FractionUnit:
-            Copy + Debug + Div + PartialEq + PartialOrd + Rem<Output = FractionUnit> + Zero,
+            Copy + Debug + Div + Ord + PartialEq + PartialOrd + Rem<Output = FractionUnit> + Zero,
         <FractionUnit as Div>::Output: CheckedMul<Self, Output = Self>,
         Self: Fractionable<FractionUnit>,
     {
@@ -115,6 +115,18 @@ impl Percent {
             .checked_sub(other.0)
             .map(Self::from_permille)
             .ok_or(Error::overflow_err("while subtracting", self, other))
+    }
+}
+
+impl TryFrom<Units> for Percent {
+    type Error = &'static str;
+
+    fn try_from(permille: Units) -> Result<Self, Self::Error> {
+        if permille > Percent::PERMILLE {
+            Err("Percent cannot be greater than 100%")
+        } else {
+            Ok(Percent(permille))
+        }
     }
 }
 
@@ -252,12 +264,15 @@ pub(super) mod test {
     fn from_percent() {
         assert_eq!(Percent::from_percent(0), Percent(0));
         assert_eq!(Percent::from_percent(10), Percent(100));
+        assert_eq!(Percent::from_percent(99), Percent(990));
+        assert_eq!(Percent::from_percent(100), Percent(1000));
     }
 
     #[test]
     fn from_permille() {
         assert_eq!(Percent::from_permille(0), Percent(0));
         assert_eq!(Percent::from_permille(10), Percent(10));
+        assert_eq!(Percent::from_permille(1000), Percent(1000));
     }
 
     #[test]

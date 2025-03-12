@@ -117,7 +117,7 @@ impl Duration {
 
     pub fn into_slice_per_ratio<U>(self, amount: U, annual_amount: U) -> Option<Self>
     where
-        U: Zero + Copy + Debug + PartialOrd + Div + Rem<Output = U>,
+        U: Copy + Debug + Div + Ord + PartialOrd + Rem<Output = U> + Zero,
         <U as Div>::Output: CheckedMul<Self, Output = Self>,
         Self: Fractionable<U> + CheckedAdd<Output = Self>,
     {
