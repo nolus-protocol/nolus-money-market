@@ -64,7 +64,7 @@ where
 {
     post_migrate_execute
         .map_or(const { Ok(()) }, |post_migrate_execute_msg| {
-            execute_contract(
+            schedule_execute_message(
                 post_migration_execute_batch,
                 address.clone(),
                 post_migrate_execute_msg,
@@ -222,7 +222,7 @@ impl Contracts {
         Self::try_paired_with_granular::<HigherOrderPlatformContractsWithoutAdmin, _, _, _, _>(
             contracts,
             execute_specs,
-            |address, execute_spec| execute_contract(batch, address, execute_spec),
+            |address, execute_spec| schedule_execute_message(batch, address, execute_spec),
         )
     }
 
@@ -235,7 +235,7 @@ impl Contracts {
             Self::try_paired_with_granular::<HigherOrderProtocolContracts, _, _, _, _>(
                 contracts,
                 execute_specs,
-                |address, execute_spec| execute_contract(batch, address, execute_spec),
+                |address, execute_spec| schedule_execute_message(batch, address, execute_spec),
             )
         })
     }
@@ -311,7 +311,7 @@ where
     }
 }
 
-fn execute_contract(
+fn schedule_execute_message(
     batch: &mut Batch,
     address: Addr,
     ExecuteSpec { message }: ExecuteSpec,
