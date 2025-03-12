@@ -4,7 +4,7 @@ use std::{fmt::Debug, marker::PhantomData, result::Result as StdResult};
 use currency::platform::{PlatformGroup, Stable};
 use serde::{Deserialize, Serialize};
 
-use access_control::RestrictedAccessResource;
+use access_control::AccessPermission;
 use currency::{Currency, CurrencyDTO, CurrencyDef, Group, MemberOf};
 use finance::price::Price;
 use sdk::cosmwasm_std::{Addr, QuerierWrapper};

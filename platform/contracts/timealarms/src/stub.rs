@@ -71,7 +71,7 @@ impl TimeAlarmsRef {
     }
 }
 
-impl RestrictedAccessResource for TimeAlarmsRef {
+impl AccessPermission for TimeAlarmsRef {
     fn permit_access(&self, caller: &Addr) -> bool {
         self.owned_by(caller)
     }
