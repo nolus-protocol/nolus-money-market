@@ -14,10 +14,7 @@ use finance::{
 };
 use marketprice::config::Config as PriceConfig;
 use oracle::{
-    api::{
-        MigrateMsg, QueryMsg as OracleQ, SudoMsg, SwapTreeResponse,
-        swap::{SwapPath, SwapTarget},
-    },
+    api::{MigrateMsg, QueryMsg as OracleQ, SudoMsg, SwapTreeResponse, swap::SwapTarget},
     error::Error,
     result::Result as OracleResult,
 };
@@ -33,7 +30,9 @@ use sdk::{
     testing::{self, CwContractWrapper},
 };
 use tree::HumanReadableTree;
-use versioning::{ProtocolMigrationMessage, ProtocolPackageReleaseId, ReleaseId};
+use versioning::{
+    ProtocolMigrationMessage, ProtocolPackageRelease, ProtocolPackageReleaseId, ReleaseId,
+};
 
 use crate::common::{
     ADDON_OPTIMAL_INTEREST_RATE, ADMIN, BASE_INTEREST_RATE, CwCoin, USER, UTILIZATION_OPTIMAL,
@@ -413,7 +412,7 @@ fn test_swap_path() {
 
     update_tree(&mut test_case, swap_tree());
 
-    let resp: SwapPath<PriceCurrencies> = test_case
+    let resp: Vec<SwapTarget<PriceCurrencies>> = test_case
         .app
         .query()
         .query_wasm_smart(
@@ -470,6 +469,7 @@ fn migrate_invalid_swap_tree() {
             test_case.address_book.protocols_registry().clone(),
             test_case.address_book.oracle().clone(),
             &ProtocolMigrationMessage {
+                migrate_from: ProtocolPackageRelease::current("package", "0.3.2", 2),
                 to_release: ProtocolPackageReleaseId::new(
                     ReleaseId::new_test("v0.7.6"),
                     ReleaseId::new_test("v0.2.0"),
