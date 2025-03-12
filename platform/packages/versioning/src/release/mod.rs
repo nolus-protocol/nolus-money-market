@@ -13,8 +13,9 @@ pub mod query;
 pub trait UpdatablePackage
 where
     Self: Sized,
+    Self::VersionQuery: Serialize + 'static,
 {
-    type VersionQuery: Serialize + 'static;
+    type VersionQuery;
 
     const VERSION_QUERY: &'static Self::VersionQuery;
 

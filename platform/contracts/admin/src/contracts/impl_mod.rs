@@ -62,55 +62,23 @@ where
     Package: UpdatablePackage + Serialize + DeserializeOwned,
     Package::ReleaseId: Serialize,
 {
-    post_migrate_execute
-        .map_or(const { Ok(()) }, |post_migrate_execute_msg| {
+    schedule_migration_message::<Package>(
+        querier,
+        migration_batch,
+        address.clone(),
+        to_release,
+        code_id,
+        migrate_message,
+    )
+    .and_then(|()| {
+        post_migrate_execute.map_or(const { Ok(()) }, |post_migrate_execute_msg| {
             schedule_execute_message(
                 post_migration_execute_batch,
-                address.clone(),
+                address,
                 post_migrate_execute_msg,
             )
         })
-        .and_then(|()| {
-            schedule_migration_message::<Package>(
-                querier,
-                migration_batch,
-                address,
-                to_release,
-                code_id,
-                migrate_message,
-            )
-        })
-}
-
-fn schedule_migration_message<Package>(
-    querier: QuerierWrapper<'_>,
-    migration_batch: &mut Batch,
-    address: Addr,
-    to_release: <Package as UpdatablePackage>::ReleaseId,
-    code_id: cosmwasm_std::Uint64,
-    migrate_message: json_value::JsonValue,
-) -> Result<()>
-where
-    Package: UpdatablePackage + Serialize + DeserializeOwned,
-    Package::ReleaseId: Serialize,
-{
-    querier
-        .query_wasm_smart::<Package>(address.clone(), &Package::VERSION_QUERY)
-        .and_then(|migrate_from| {
-            cosmwasm_std::to_json_vec(&MigrationMessage::new(
-                migrate_from,
-                to_release,
-                migrate_message,
-            ))
-        })
-        .map(|message| {
-            migration_batch.schedule_execute_no_reply(WasmMsg::Migrate {
-                contract_addr: address.into_string(),
-                new_code_id: code_id.u64(),
-                msg: Binary::new(message),
-            })
-        })
-        .map_err(Into::into)
+    })
 }
 
 impl Contracts {
@@ -309,6 +277,37 @@ where
             .validate(ctx)
             .and_then(|()| ValidateValues::new(&self.protocol).validate(ctx))
     }
+}
+
+fn schedule_migration_message<Package>(
+    querier: QuerierWrapper<'_>,
+    migration_batch: &mut Batch,
+    address: Addr,
+    to_release: <Package as UpdatablePackage>::ReleaseId,
+    code_id: cosmwasm_std::Uint64,
+    migrate_message: json_value::JsonValue,
+) -> Result<()>
+where
+    Package: UpdatablePackage + Serialize + DeserializeOwned,
+    Package::ReleaseId: Serialize,
+{
+    querier
+        .query_wasm_smart::<Package>(address.clone(), &Package::VERSION_QUERY)
+        .and_then(|migrate_from| {
+            cosmwasm_std::to_json_vec(&MigrationMessage::new(
+                migrate_from,
+                to_release,
+                migrate_message,
+            ))
+        })
+        .map(|message| {
+            migration_batch.schedule_execute_no_reply(WasmMsg::Migrate {
+                contract_addr: address.into_string(),
+                new_code_id: code_id.u64(),
+                msg: Binary::new(message),
+            })
+        })
+        .map_err(Into::into)
 }
 
 fn schedule_execute_message(
