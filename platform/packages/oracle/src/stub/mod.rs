@@ -2,7 +2,7 @@ use std::{fmt::Debug, marker::PhantomData, result::Result as StdResult};
 
 use serde::{Deserialize, Serialize};
 
-use access_control::RestrictedAccessResource;
+use access_control::AccessPermission;
 use currency::{Currency, CurrencyDTO, CurrencyDef, Group, MemberOf};
 use finance::price::Price;
 use sdk::cosmwasm_std::{Addr, QuerierWrapper};
@@ -145,7 +145,7 @@ where
     }
 }
 
-impl<QuoteC, QuoteG> RestrictedAccessResource for OracleRef<QuoteC, QuoteG>
+impl<QuoteC, QuoteG> AccessPermission for OracleRef<QuoteC, QuoteG>
 where
     QuoteC: Currency + MemberOf<QuoteG>,
     QuoteG: Group,
