@@ -244,15 +244,13 @@ where
     QuoteC: 'static,
 {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        // a/b < c/d if and only if a * d < b * c
         // Please note that Price(amount, amount_quote) is like Ratio(amount_quote / amount).
 
-        let a: DoubleAmount = self.amount_quote.into();
-        let d: DoubleAmount = other.amount.into();
-
-        let b: DoubleAmount = self.amount.into();
-        let c: DoubleAmount = other.amount_quote.into();
-        (a * d).cmp(&(b * c))
+        let left: Rational<DoubleAmount> =
+            Rational::new(self.amount_quote.into(), self.amount.into());
+        let right: Rational<DoubleAmount> =
+            Rational::new(other.amount_quote.into(), other.amount.into());
+        left.cmp(&right)
     }
 }
 

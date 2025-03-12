@@ -1,6 +1,7 @@
 use std::{
+    cmp::Ordering,
     fmt::Debug,
-    ops::{Div, Rem},
+    ops::{Div, Mul, Rem},
 };
 
 use gcd::Gcd;
@@ -40,7 +41,7 @@ where
     }
 }
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, Deserialize, Eq, JsonSchema, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub struct Rational<U> {
     nominator: U,
@@ -49,7 +50,7 @@ pub struct Rational<U> {
 
 impl<U> Rational<U>
 where
-    U: Zero + Debug + PartialEq<U> + Copy,
+    U: Copy + Debug + Ord + PartialEq<U> + Zero,
 {
     #[track_caller]
     pub fn new(nominator: U, denominator: U) -> Self {
@@ -68,22 +69,60 @@ where
     pub fn denominator(&self) -> U {
         self.denominator
     }
+}
 
-    fn into_coprime(a: U, b: U) -> (U, U)
-    where
-        U: Gcd + Div<Output = U>,
-    {
-        debug_assert_ne!(a, Zero::ZERO, "LHS-value is zero!");
-        debug_assert_ne!(b, Zero::ZERO, "RHS-value is zero!");
+pub(crate) fn into_coprime<U>(a: U, b: U) -> (U, U)
+where
+    U: Copy + Debug + Div<Output = U> + Gcd + Mul<Output = U> + Ord + Rem + Zero,
+    <U as Rem>::Output: Debug + PartialEq + Zero,
+{
+    debug_assert_ne!(a, Zero::ZERO, "LHS-value is zero!");
+    debug_assert_ne!(b, Zero::ZERO, "RHS-value is zero!");
 
-        let gcd = a.gcd(b);
+    let gcd = a.gcd(b);
 
-        debug_assert_ne!(gcd, Zero::ZERO);
+    debug_assert_ne!(gcd, Zero::ZERO);
+    debug_assert!(
+        a % gcd == Zero::ZERO,
+        "LHS-value is not divisible by the GCD!"
+    );
+    debug_assert!(
+        b % gcd == Zero::ZERO,
+        "RHS-value is not divisible by the GCD!"
+    );
 
-        (a / gcd, b / gcd)
+    (a / gcd, b / gcd)
+}
+
+impl<U: PartialEq> PartialEq for Rational<U> {
+    fn eq(&self, other: &Self) -> bool {
+        self.nominator == other.nominator && self.denominator == other.denominator
     }
 }
 
+impl<U: PartialOrd> PartialOrd for Rational<U>
+where
+    U: Copy + Mul<Output = U> + Ord,
+{
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl<U> Ord for Rational<U>
+where
+    U: Copy + Mul<Output = U> + Ord,
+{
+    fn cmp(&self, other: &Self) -> Ordering {
+        // a/b < c/d if and only if a * d < b * c
+
+        let a = self.nominator;
+        let d = other.denominator;
+        let b = self.denominator;
+        let c = other.nominator;
+        (a * d).cmp(&(b * c))
+    }
+}
 pub trait CheckedMul<Rhs = Self> {
     type Output;
 
@@ -128,23 +167,25 @@ where
 
 impl<U> CheckedAdd for Rational<U>
 where
-    U: Zero
-        + Debug
-        + PartialEq<U>
-        + CheckedMul<Output = U>
+    U: CheckedMul<Output = U>
         + CheckedAdd<Output = U>
         + CheckedDiv<Output = U>
         + Copy
-        + Gcd
+        + Debug
         + Div<Output = U>
-        + Rem<Output = U>,
+        + Gcd
+        + Mul<Output = U>
+        + Ord
+        + PartialEq<U>
+        + Rem<Output = U>
+        + Zero,
 {
     type Output = Self;
 
     fn checked_add(self, rhs: Self) -> Option<Self::Output> {
         // let a1 = a / gcd(a, c), and c1 = c / gcd(a, c), then
         // b / a + d / c = (b * c1 + d * a1) / (a1 * c1 * gcd(a, c))
-        let (a1, c1) = Rational::into_coprime(self.denominator, rhs.denominator);
+        let (a1, c1) = self::into_coprime(self.denominator, rhs.denominator);
         debug_assert_eq!(self.denominator % a1, Zero::ZERO);
         debug_assert_eq!(rhs.denominator % c1, Zero::ZERO);
         let gcd = match self.denominator.checked_div(a1) {

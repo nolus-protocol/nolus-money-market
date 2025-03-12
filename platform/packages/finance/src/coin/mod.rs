@@ -16,7 +16,7 @@ use currency::{Currency, CurrencyDef, Group, MemberOf};
 use crate::{
     duration::Duration,
     percent::{Percent, Units as PercentUnits},
-    ratio::{CheckedAdd, CheckedDiv, CheckedMul, Rational},
+    ratio::{self, CheckedAdd, CheckedDiv, CheckedMul, Rational},
     zero::Zero,
 };
 
@@ -130,34 +130,17 @@ impl<C> Coin<C> {
         self.checked_operation(self.amount.checked_div(rhs))
     }
 
-    pub(crate) fn to_rational<OtherC>(self, denominator: Coin<OtherC>) -> Rational<Amount> {
+    pub fn to_rational<OtherC>(self, denominator: Coin<OtherC>) -> Rational<Amount> {
         Rational::new(self.amount, denominator.amount)
     }
 
     #[track_caller]
-    pub(super) const fn into_coprime_with<OtherC>(
-        self,
-        other: Coin<OtherC>,
-    ) -> (Self, Coin<OtherC>) {
-        debug_assert!(!self.is_zero(), "LHS-value's amount is zero!");
-        debug_assert!(!other.is_zero(), "RHS-value's amount is zero!");
-
-        let gcd: Amount = gcd::binary_u128(self.amount, other.amount);
-
-        debug_assert!(gcd > 0);
-
-        debug_assert!(
-            self.amount % gcd == 0,
-            "LHS-value's amount is not divisible by the GCD!"
-        );
-        debug_assert!(
-            other.amount % gcd == 0,
-            "RHS-value's amount is not divisible by the GCD!"
-        );
+    pub(super) fn into_coprime_with<OtherC>(self, other: Coin<OtherC>) -> (Self, Coin<OtherC>) {
+        let (new_self_amount, new_other_amount) = ratio::into_coprime(self.amount, other.amount);
 
         (
-            Self::new(self.amount / gcd),
-            Coin::<OtherC>::new(other.amount / gcd),
+            Self::new(new_self_amount),
+            Coin::<OtherC>::new(new_other_amount),
         )
     }
 
