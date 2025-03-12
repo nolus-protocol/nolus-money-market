@@ -52,17 +52,17 @@ pub(super) fn migrate_contract<Package>(
     post_migration_execute_batch: &mut Batch,
     address: Addr,
     to_release: Package::ReleaseId,
-    migration: MigrationSpec,
+    MigrationSpec {
+        code_id,
+        migrate_message,
+        post_migrate_execute,
+    }: MigrationSpec,
 ) -> Result<()>
 where
     Package: UpdatablePackage + Serialize + DeserializeOwned,
     Package::ReleaseId: Serialize,
 {
-    let migrate_from: Package =
-        querier.query_wasm_smart(address.clone(), &Package::VERSION_QUERY)?;
-
-    migration
-        .post_migrate_execute
+    post_migrate_execute
         .map_or(const { Ok(()) }, |post_migrate_execute_msg| {
             execute_contract(
                 post_migration_execute_batch,
@@ -71,20 +71,46 @@ where
             )
         })
         .and_then(|()| {
+            schedule_migration_message::<Package>(
+                querier,
+                migration_batch,
+                address,
+                to_release,
+                code_id,
+                migrate_message,
+            )
+        })
+}
+
+fn schedule_migration_message<Package>(
+    querier: QuerierWrapper<'_>,
+    migration_batch: &mut Batch,
+    address: Addr,
+    to_release: <Package as UpdatablePackage>::ReleaseId,
+    code_id: cosmwasm_std::Uint64,
+    migrate_message: json_value::JsonValue,
+) -> Result<()>
+where
+    Package: UpdatablePackage + Serialize + DeserializeOwned,
+    Package::ReleaseId: Serialize,
+{
+    querier
+        .query_wasm_smart::<Package>(address.clone(), &Package::VERSION_QUERY)
+        .and_then(|migrate_from| {
             cosmwasm_std::to_json_vec(&MigrationMessage::new(
                 migrate_from,
                 to_release,
-                migration.migrate_message,
+                migrate_message,
             ))
-            .map(|message| {
-                migration_batch.schedule_execute_no_reply(WasmMsg::Migrate {
-                    contract_addr: address.into_string(),
-                    new_code_id: migration.code_id.u64(),
-                    msg: Binary::new(message),
-                })
-            })
-            .map_err(Into::into)
         })
+        .map(|message| {
+            migration_batch.schedule_execute_no_reply(WasmMsg::Migrate {
+                contract_addr: address.into_string(),
+                new_code_id: code_id.u64(),
+                msg: Binary::new(message),
+            })
+        })
+        .map_err(Into::into)
 }
 
 impl Contracts {
