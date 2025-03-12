@@ -11,14 +11,14 @@ use self::error::{Error, Result};
 mod contract_owner;
 pub mod error;
 
-pub trait RestrictedAccessResource {
+pub trait AccessPermission {
     fn permit_access(&self, caller: &Addr) -> bool;
 }
 
 /// Checks if access is permitted for the given caller.
 pub fn check<R>(resource: &R, caller: &Addr) -> Result
 where
-    R: RestrictedAccessResource,
+    R: AccessPermission,
 {
     if resource.permit_access(caller) {
         Ok(())
@@ -27,7 +27,7 @@ where
     }
 }
 
-impl RestrictedAccessResource for Addr {
+impl AccessPermission for Addr {
     fn permit_access(&self, caller: &Addr) -> bool {
         self == caller
     }
