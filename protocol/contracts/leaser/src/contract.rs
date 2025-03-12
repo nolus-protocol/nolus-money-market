@@ -65,12 +65,13 @@ pub fn migrate(
     deps: DepsMut<'_>,
     _env: Env,
     ProtocolMigrationMessage {
+        migrate_from,
         to_release,
         message: MigrateMsg {},
     }: ProtocolMigrationMessage<MigrateMsg>,
 ) -> ContractResult<Response> {
-    ProtocolPackageRelease::pull_prev(package_name!(), deps.storage)
-        .and_then(|previous| previous.update_software(&CURRENT_RELEASE, &to_release))
+    migrate_from
+        .update_software(&CURRENT_RELEASE, &to_release)
         .map(|()| response::empty_response())
         .map_err(ContractError::UpdateSoftware)
         .inspect_err(platform_error::log(deps.api))
@@ -246,10 +247,13 @@ where
     Code::try_new(new_code_id.into(), &querier).map_err(Into::into)
 }
 
+#[allow(unused_variables)]
 fn migrate_msg(
     to_release: ProtocolPackageReleaseId,
 ) -> impl Fn() -> ProtocolMigrationMessage<LeaseMigrateMsg> {
+    #[allow(unreachable_code)]
     move || ProtocolMigrationMessage {
+        migrate_from: todo!(),
         to_release: to_release.clone(),
         message: LeaseMigrateMsg {},
     }

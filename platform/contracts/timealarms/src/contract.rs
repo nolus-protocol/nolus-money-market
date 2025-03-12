@@ -42,12 +42,13 @@ pub fn migrate(
     deps: DepsMut<'_>,
     _env: Env,
     PlatformMigrationMessage {
+        migrate_from,
         to_release,
         message: MigrateMsg {},
     }: PlatformMigrationMessage<MigrateMsg>,
 ) -> ContractResult<CwResponse> {
-    PlatformPackageRelease::pull_prev(package_name!(), deps.storage)
-        .and_then(|previous| previous.update_software(&CURRENT_RELEASE, &to_release))
+    migrate_from
+        .update_software(&CURRENT_RELEASE, &to_release)
         .map(|()| response::empty_response())
         .map_err(Into::into)
         .inspect_err(platform_error::log(deps.api))
