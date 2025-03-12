@@ -13,6 +13,10 @@ pub trait UpdatablePackage
 where
     Self: Sized,
 {
+    type VersionQuery: Serialize + 'static;
+
+    const VERSION_QUERY: &'static Self::VersionQuery;
+
     type ReleaseId;
 
     fn update_software(&self, to: &Self, to_release: &Self::ReleaseId) -> Result<(), Error>;
@@ -52,6 +56,10 @@ impl ProtocolPackageReleaseId {
 }
 
 impl UpdatablePackage for ProtocolPackageRelease {
+    type VersionQuery = query::ProtocolPackage;
+
+    const VERSION_QUERY: &'static Self::VersionQuery = &query::ProtocolPackage::Release {};
+
     type ReleaseId = ProtocolPackageReleaseId;
 
     fn update_software(&self, to: &Self, to_release: &Self::ReleaseId) -> Result<(), Error> {

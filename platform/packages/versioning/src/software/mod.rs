@@ -1,13 +1,13 @@
 use serde::{Deserialize, Serialize};
 
+use crate::{
+    Error,
+    release::{Id, UpdatablePackage, query},
+};
+
 pub use self::{
     package::Package,
     version::{SemVer, VersionSegment},
-};
-
-use crate::{
-    Error,
-    release::{Id, UpdatablePackage},
 };
 
 mod package;
@@ -97,6 +97,10 @@ impl PackageRelease {
 }
 
 impl UpdatablePackage for PackageRelease {
+    type VersionQuery = query::ProtocolPackage;
+
+    const VERSION_QUERY: &'static Self::VersionQuery = &query::ProtocolPackage::Release {};
+
     type ReleaseId = Id;
 
     fn update_software(&self, to: &Self, to_release: &Self::ReleaseId) -> Result<(), Error> {
