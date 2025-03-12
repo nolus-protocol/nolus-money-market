@@ -28,16 +28,11 @@ impl Contracts<Addr> {
             self,
             migration_msgs,
             |address, migration_spec| {
-                let migrate_from: ProtocolPackageRelease = querier.query_wasm_smart(
-                    address.clone(),
-                    &versioning::query::ProtocolPackage::Release {},
-                )?;
-
-                migrate_contract(
+                migrate_contract::<ProtocolPackageRelease>(
+                    querier,
                     &mut migration_batch,
                     &mut post_migration_execute_batch,
                     address,
-                    migrate_from,
                     to_release.clone(),
                     migration_spec,
                 )

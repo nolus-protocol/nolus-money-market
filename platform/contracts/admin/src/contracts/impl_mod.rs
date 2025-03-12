@@ -1,4 +1,4 @@
-use serde::Serialize;
+use serde::{Serialize, de::DeserializeOwned};
 
 use platform::{batch::Batch, message::Response as MessageResponse};
 use sdk::cosmwasm_std::{self, Addr, Binary, QuerierWrapper, Storage, WasmMsg};
@@ -47,17 +47,20 @@ pub(crate) fn execute(
 }
 
 pub(super) fn migrate_contract<Package>(
+    querier: QuerierWrapper<'_>,
     migration_batch: &mut Batch,
     post_migration_execute_batch: &mut Batch,
     address: Addr,
-    migrate_from: Package,
     to_release: Package::ReleaseId,
     migration: MigrationSpec,
 ) -> Result<()>
 where
-    Package: UpdatablePackage + Serialize,
+    Package: UpdatablePackage + Serialize + DeserializeOwned,
     Package::ReleaseId: Serialize,
 {
+    let migrate_from: Package =
+        querier.query_wasm_smart(address.clone(), &Package::VERSION_QUERY)?;
+
     migration
         .post_migrate_execute
         .map_or(const { Ok(()) }, |post_migrate_execute_msg| {
@@ -132,16 +135,11 @@ impl Contracts {
             contracts,
             migration_specs,
             |address, migration_spec| {
-                let migrate_from: PlatformPackageRelease = querier.query_wasm_smart(
-                    address.clone(),
-                    &versioning::query::PlatformPackage::Release {},
-                )?;
-
-                migrate_contract(
+                migrate_contract::<PlatformPackageRelease>(
+                    querier,
                     migration_batch,
                     post_migration_execute_batch,
                     address,
-                    migrate_from,
                     to_software_release.clone(),
                     migration_spec,
                 )
@@ -165,16 +163,11 @@ impl Contracts {
                     contracts,
                     migration_specs,
                     |address, migrate_spec| {
-                        let migrate_from: ProtocolPackageRelease = querier.query_wasm_smart(
-                            address.clone(),
-                            &versioning::query::ProtocolPackage::Release {},
-                        )?;
-
-                        migrate_contract(
+                        migrate_contract::<ProtocolPackageRelease>(
+                            querier,
                             migration_batch,
                             post_migration_execute_batch,
                             address,
-                            migrate_from,
                             ProtocolPackageReleaseId::new(
                                 software_release.clone(),
                                 protocol_release.clone(),

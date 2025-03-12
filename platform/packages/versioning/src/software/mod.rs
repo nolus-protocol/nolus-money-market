@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     Error,
-    release::{Id, UpdatablePackage, query},
+    release::{Id, UpdatablePackage, query::ProtocolPackage},
 };
 
 pub use self::{
@@ -97,9 +97,9 @@ impl PackageRelease {
 }
 
 impl UpdatablePackage for PackageRelease {
-    type VersionQuery = query::ProtocolPackage;
+    type VersionQuery = ProtocolPackage;
 
-    const VERSION_QUERY: &'static Self::VersionQuery = &query::ProtocolPackage::Release {};
+    const VERSION_QUERY: &'static Self::VersionQuery = &ProtocolPackage::Release {};
 
     type ReleaseId = Id;
 

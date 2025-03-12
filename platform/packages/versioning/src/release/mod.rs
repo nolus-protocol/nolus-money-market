@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 use crate::{Error, ProtocolRelease, SoftwarePackageRelease};
 
 pub use self::id::Id;
+use self::query::ProtocolPackage;
 
 #[cfg(feature = "protocol_contract")]
 mod current;
@@ -56,9 +57,9 @@ impl ProtocolPackageReleaseId {
 }
 
 impl UpdatablePackage for ProtocolPackageRelease {
-    type VersionQuery = query::ProtocolPackage;
+    type VersionQuery = ProtocolPackage;
 
-    const VERSION_QUERY: &'static Self::VersionQuery = &query::ProtocolPackage::Release {};
+    const VERSION_QUERY: &'static Self::VersionQuery = &ProtocolPackage::Release {};
 
     type ReleaseId = ProtocolPackageReleaseId;
 
