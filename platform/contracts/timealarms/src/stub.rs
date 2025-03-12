@@ -2,7 +2,7 @@ use std::result::Result as StdResult;
 
 use serde::{Deserialize, Serialize};
 
-use access_control::RestrictedAccessResource;
+use access_control::AccessPermission;
 use platform::{batch::Batch, contract};
 use sdk::cosmwasm_std::{Addr, QuerierWrapper, StdError as SdkError, Timestamp, wasm_execute};
 
@@ -67,7 +67,7 @@ impl TimeAlarmsRef {
     }
 }
 
-impl RestrictedAccessResource for TimeAlarmsRef {
+impl AccessPermission for TimeAlarmsRef {
     fn permit_access(&self, caller: &Addr) -> bool {
         self.owned_by(caller)
     }
