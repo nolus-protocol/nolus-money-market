@@ -41,6 +41,7 @@ impl Closable for Spec {
     fn transaction(&self, lease: &Lease, in_progress: PositionCloseTrx) -> OngoingTrx {
         OngoingTrx::Liquidation {
             liquidation: *self.amount(lease),
+            cause: self.cause.into(),
             in_progress,
         }
     }

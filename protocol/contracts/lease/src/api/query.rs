@@ -111,6 +111,20 @@ pub(crate) mod opened {
         stop_loss: Option<Percent>,
     }
 
+    /// The data transport type of the liquidation cause
+    ///
+    /// Designed for use in query responses only!
+    #[derive(Serialize)]
+    #[cfg_attr(
+        feature = "skel_testing",
+        derive(Clone, PartialEq, Eq, Debug, Deserialize)
+    )]
+    #[serde(deny_unknown_fields, rename_all = "snake_case")]
+    pub enum Cause {
+        Overdue,
+        Liability,
+    }
+
     #[derive(Serialize)]
     #[cfg_attr(
         feature = "skel_testing",
@@ -124,6 +138,7 @@ pub(crate) mod opened {
         },
         Liquidation {
             liquidation: LeaseCoin,
+            cause: Cause,
             in_progress: PositionCloseTrx,
         },
         Close {
