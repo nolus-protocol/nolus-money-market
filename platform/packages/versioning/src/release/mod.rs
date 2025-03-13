@@ -31,7 +31,7 @@ where
 }
 
 pub type PlatformPackageRelease = SoftwarePackageRelease;
-#[derive(Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub struct ProtocolPackageRelease {
     software: SoftwarePackageRelease,

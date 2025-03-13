@@ -10,6 +10,7 @@ use sdk::{
 use timealarms::msg::ExecuteAlarmMsg;
 
 #[derive(Serialize, Deserialize)]
+// deliberetly not #[serde(deny_unknown_fields)] to allow migration with any message
 pub struct EmptyMsg {}
 
 #[entry_point]

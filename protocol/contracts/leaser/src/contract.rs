@@ -23,6 +23,7 @@ use versioning::{
 use crate::{
     cmd::Borrow,
     error::ContractError,
+    lease::CacheFirstRelease,
     leaser::{self, Leaser},
     msg::{ExecuteMsg, InstantiateMsg, MaxLeases, MigrateMsg, QueryMsg, SudoMsg},
     result::ContractResult,
@@ -116,6 +117,7 @@ pub fn execute(
             .and_then(|new_lease_code| {
                 leaser::try_migrate_leases(
                     deps.storage,
+                    CacheFirstRelease::new(deps.querier),
                     new_lease_code,
                     max_leases,
                     migrate_msg(to_release),
@@ -132,6 +134,7 @@ pub fn execute(
             .and_then(|next_customer_validated| {
                 leaser::try_migrate_leases_cont(
                     deps.storage,
+                    CacheFirstRelease::new(deps.querier),
                     next_customer_validated,
                     max_leases,
                     migrate_msg(to_release),
@@ -159,17 +162,21 @@ pub fn sudo(deps: DepsMut<'_>, _env: Env, msg: SudoMsg) -> ContractResult<Respon
             new_lease_code_id,
             migration_spec,
             force,
-        } => new_code(new_lease_code_id, deps.querier).and_then(|new_lease_code| {
-            leaser::try_close_protocol(
-                deps.storage,
-                new_lease_code,
-                MaxLeases::MAX,
-                migrate_msg(ProtocolPackageReleaseId::VOID),
-                protocols_registry_load,
-                migration_spec,
-                force,
-            )
-        }),
+        } => new_code(new_lease_code_id, deps.querier)
+            .and_then(|new_lease_code| {
+                leaser::try_close_leases(
+                    deps.storage,
+                    CacheFirstRelease::new(deps.querier),
+                    new_lease_code,
+                    MaxLeases::MAX,
+                    migrate_msg(ProtocolPackageReleaseId::VOID),
+                    force,
+                )
+            })
+            .and_then(|leases_resp| {
+                leaser::try_close_protocol(deps.storage, protocols_registry_load, migration_spec)
+                    .map(|protocol_resp| leases_resp.merge_with(protocol_resp))
+            }),
     }
     .map(response::response_only_messages)
     .inspect_err(platform_error::log(deps.api))
@@ -247,13 +254,11 @@ where
     Code::try_new(new_code_id.into(), &querier).map_err(Into::into)
 }
 
-#[allow(unused_variables)]
 fn migrate_msg(
     to_release: ProtocolPackageReleaseId,
-) -> impl Fn() -> ProtocolMigrationMessage<LeaseMigrateMsg> {
-    #[allow(unreachable_code)]
-    move || ProtocolMigrationMessage {
-        migrate_from: todo!(),
+) -> impl Fn(ProtocolPackageRelease) -> ProtocolMigrationMessage<LeaseMigrateMsg> {
+    move |migrate_from| ProtocolMigrationMessage {
+        migrate_from,
         to_release: to_release.clone(),
         message: LeaseMigrateMsg {},
     }

@@ -7,6 +7,7 @@ mod cmd;
 mod contract;
 pub mod error;
 mod finance;
+mod lease;
 mod leaser;
 mod migrate;
 pub mod msg;
