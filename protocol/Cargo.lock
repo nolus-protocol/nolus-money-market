@@ -4,7 +4,7 @@ version = 4
 
 [[package]]
 name = "access-control"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "sdk",
  "thiserror 2.0.12",
@@ -12,7 +12,7 @@ dependencies = [
 
 [[package]]
 name = "admin_contract"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "access-control",
  "currency",
@@ -572,7 +572,7 @@ dependencies = [
 
 [[package]]
 name = "currencies"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "anyhow",
  "currency",
@@ -585,7 +585,7 @@ dependencies = [
 
 [[package]]
 name = "currency"
-version = "0.6.1"
+version = "0.6.2"
 dependencies = [
  "sdk",
  "serde",
@@ -817,7 +817,7 @@ dependencies = [
 
 [[package]]
 name = "dex"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "currency",
  "finance",
@@ -964,7 +964,7 @@ checksum = "28dea519a9695b9977216879a3ebfddf92f1c08c05d984f8996aecd6ecdc811d"
 
 [[package]]
 name = "finance"
-version = "0.2.2"
+version = "0.2.3"
 dependencies = [
  "currency",
  "gcd",
@@ -1160,7 +1160,7 @@ dependencies = [
 
 [[package]]
 name = "lease"
-version = "0.11.0"
+version = "0.11.1"
 dependencies = [
  "access-control",
  "cosmwasm-std 2.1.7",
@@ -1185,7 +1185,7 @@ dependencies = [
 
 [[package]]
 name = "leaser"
-version = "0.10.0"
+version = "0.10.1"
 dependencies = [
  "access-control",
  "admin_contract",
@@ -1213,7 +1213,7 @@ checksum = "c19937216e9d3aa9956d9bb8dfc0b0c8beb6058fc4f7a4dc4d850edf86a237d6"
 
 [[package]]
 name = "lpp"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "access-control",
  "cosmwasm-std 2.1.7",
@@ -1232,7 +1232,7 @@ dependencies = [
 
 [[package]]
 name = "lpp-platform"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "currency",
  "finance",
@@ -1244,7 +1244,7 @@ dependencies = [
 
 [[package]]
 name = "marketprice"
-version = "0.4.0"
+version = "0.4.1"
 dependencies = [
  "currency",
  "finance",
@@ -1339,7 +1339,7 @@ checksum = "c08d65885ee38876c4f86fa503fb49d7b507c2b62552df7c70b2fce627e06381"
 
 [[package]]
 name = "oracle"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "cosmwasm-std 2.1.7",
  "currencies",
@@ -1357,7 +1357,7 @@ dependencies = [
 
 [[package]]
 name = "oracle-platform"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "currency",
  "finance",
@@ -1425,7 +1425,7 @@ dependencies = [
 
 [[package]]
 name = "platform"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
  "currency",
  "finance",
@@ -1469,7 +1469,7 @@ dependencies = [
 
 [[package]]
 name = "profit"
-version = "0.7.0"
+version = "0.7.1"
 dependencies = [
  "access-control",
  "cosmwasm-std 2.1.7",
@@ -1678,7 +1678,7 @@ dependencies = [
 
 [[package]]
 name = "reserve"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "access-control",
  "cosmwasm-std 2.1.7",
@@ -1749,7 +1749,7 @@ dependencies = [
 
 [[package]]
 name = "sdk"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "anyhow",
  "base64 0.22.1",
@@ -1961,7 +1961,7 @@ dependencies = [
 
 [[package]]
 name = "swap"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "astroport",
  "base64 0.22.1",
@@ -2119,7 +2119,7 @@ dependencies = [
 
 [[package]]
 name = "timealarms"
-version = "0.5.0"
+version = "0.5.1"
 dependencies = [
  "platform",
  "sdk",
@@ -2140,7 +2140,7 @@ dependencies = [
 
 [[package]]
 name = "tree"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "serde",
 ]
@@ -2183,7 +2183,7 @@ checksum = "0b928f33d975fc6ad9f86c8f283853ad26bdd5b10b7f1542aa2fa15e2289105a"
 
 [[package]]
 name = "versioning"
-version = "0.2.1"
+version = "0.2.2"
 dependencies = [
  "sdk",
  "serde",
