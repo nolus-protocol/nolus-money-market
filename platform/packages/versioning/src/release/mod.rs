@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 use crate::{Error, ProtocolRelease, SoftwarePackageRelease};
 
 pub use self::id::Id;
+use self::query::ProtocolPackage;
 
 #[cfg(feature = "protocol_contract")]
 mod current;
@@ -12,7 +13,12 @@ pub mod query;
 pub trait UpdatablePackage
 where
     Self: Sized,
+    Self::VersionQuery: Serialize + 'static,
 {
+    type VersionQuery;
+
+    const VERSION_QUERY: &'static Self::VersionQuery;
+
     type ReleaseId;
 
     fn update_software(&self, to: &Self, to_release: &Self::ReleaseId) -> Result<(), Error>;
@@ -25,7 +31,7 @@ where
 }
 
 pub type PlatformPackageRelease = SoftwarePackageRelease;
-#[derive(Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub struct ProtocolPackageRelease {
     software: SoftwarePackageRelease,
@@ -52,6 +58,10 @@ impl ProtocolPackageReleaseId {
 }
 
 impl UpdatablePackage for ProtocolPackageRelease {
+    type VersionQuery = ProtocolPackage;
+
+    const VERSION_QUERY: &'static Self::VersionQuery = &ProtocolPackage::Release {};
+
     type ReleaseId = ProtocolPackageReleaseId;
 
     fn update_software(&self, to: &Self, to_release: &Self::ReleaseId) -> Result<(), Error> {

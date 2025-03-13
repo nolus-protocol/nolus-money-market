@@ -1,7 +1,7 @@
-use serde::Serialize;
+use serde::{Serialize, de::DeserializeOwned};
 
 use platform::{batch::Batch, message::Response as MessageResponse};
-use sdk::cosmwasm_std::{self, Addr, Binary, Storage, WasmMsg};
+use sdk::cosmwasm_std::{self, Addr, Binary, QuerierWrapper, Storage, WasmMsg};
 use versioning::{
     MigrationMessage, PlatformPackageRelease, ProtocolPackageRelease, ProtocolPackageReleaseId,
     ReleaseId, UpdatablePackage,
@@ -25,13 +25,14 @@ use super::{
 
 pub(crate) fn migrate(
     storage: &mut dyn Storage,
+    querier: QuerierWrapper<'_>,
     admin_contract: Addr,
     to_software_release: ReleaseId,
     migration_spec: ContractsMigration,
 ) -> Result<MessageResponse> {
     state_contracts::load_all(storage).and_then(|contracts| {
         contracts
-            .migrate(admin_contract, to_software_release, migration_spec)
+            .migrate(querier, admin_contract, to_software_release, migration_spec)
             .map(|batches| MessageResponse::messages_only(batches.merge()))
     })
 }
@@ -46,48 +47,44 @@ pub(crate) fn execute(
 }
 
 pub(super) fn migrate_contract<Package>(
+    querier: QuerierWrapper<'_>,
     migration_batch: &mut Batch,
     post_migration_execute_batch: &mut Batch,
     address: Addr,
-    /* TODO Add field once deployed contracts can be queried about their version
-        and release information.
-    migrate_from: Package,
-    */
     to_release: Package::ReleaseId,
-    migration: MigrationSpec,
+    MigrationSpec {
+        code_id,
+        migrate_message,
+        post_migrate_execute,
+    }: MigrationSpec,
 ) -> Result<()>
 where
-    Package: UpdatablePackage,
+    Package: UpdatablePackage + Serialize + DeserializeOwned,
     Package::ReleaseId: Serialize,
 {
-    migration
-        .post_migrate_execute
-        .map_or(const { Ok(()) }, |post_migrate_execute_msg| {
-            execute_contract(
+    schedule_migration_message::<Package>(
+        querier,
+        migration_batch,
+        address.clone(),
+        to_release,
+        code_id,
+        migrate_message,
+    )
+    .and_then(|()| {
+        post_migrate_execute.map_or(const { Ok(()) }, |post_migrate_execute_msg| {
+            schedule_execute_message(
                 post_migration_execute_batch,
-                address.clone(),
+                address,
                 post_migrate_execute_msg,
             )
         })
-        .and_then(|()| {
-            cosmwasm_std::to_json_vec(&MigrationMessage::<Package, _>::new(
-                to_release,
-                migration.migrate_message,
-            ))
-            .map(|message| {
-                migration_batch.schedule_execute_no_reply(WasmMsg::Migrate {
-                    contract_addr: address.into_string(),
-                    new_code_id: migration.code_id.u64(),
-                    msg: Binary::new(message),
-                })
-            })
-            .map_err(Into::into)
-        })
+    })
 }
 
 impl Contracts {
     fn migrate(
         self,
+        querier: QuerierWrapper<'_>,
         admin_contract: Addr,
         to_software_release: ReleaseId,
         ContractsMigration { platform, protocol }: ContractsMigration,
@@ -97,6 +94,7 @@ impl Contracts {
         let mut post_migration_execute_batch: Batch = Batch::default();
 
         Self::migrate_platform(
+            querier,
             &mut migration_batch,
             &mut post_migration_execute_batch,
             &to_software_release,
@@ -105,6 +103,7 @@ impl Contracts {
         )
         .and_then(|()| {
             Self::migrate_protocols(
+                querier,
                 &mut migration_batch,
                 &mut post_migration_execute_batch,
                 to_software_release,
@@ -119,6 +118,7 @@ impl Contracts {
     }
 
     fn migrate_platform(
+        querier: QuerierWrapper<'_>,
         migration_batch: &mut Batch,
         post_migration_execute_batch: &mut Batch,
         to_software_release: &ReleaseId,
@@ -130,6 +130,7 @@ impl Contracts {
             migration_specs,
             |address, migration_spec| {
                 migrate_contract::<PlatformPackageRelease>(
+                    querier,
                     migration_batch,
                     post_migration_execute_batch,
                     address,
@@ -141,6 +142,7 @@ impl Contracts {
     }
 
     fn migrate_protocols(
+        querier: QuerierWrapper<'_>,
         migration_batch: &mut Batch,
         post_migration_execute_batch: &mut Batch,
         software_release: ReleaseId,
@@ -156,6 +158,7 @@ impl Contracts {
                     migration_specs,
                     |address, migrate_spec| {
                         migrate_contract::<ProtocolPackageRelease>(
+                            querier,
                             migration_batch,
                             post_migration_execute_batch,
                             address,
@@ -187,7 +190,7 @@ impl Contracts {
         Self::try_paired_with_granular::<HigherOrderPlatformContractsWithoutAdmin, _, _, _, _>(
             contracts,
             execute_specs,
-            |address, execute_spec| execute_contract(batch, address, execute_spec),
+            |address, execute_spec| schedule_execute_message(batch, address, execute_spec),
         )
     }
 
@@ -200,7 +203,7 @@ impl Contracts {
             Self::try_paired_with_granular::<HigherOrderProtocolContracts, _, _, _, _>(
                 contracts,
                 execute_specs,
-                |address, execute_spec| execute_contract(batch, address, execute_spec),
+                |address, execute_spec| schedule_execute_message(batch, address, execute_spec),
             )
         })
     }
@@ -276,7 +279,38 @@ where
     }
 }
 
-fn execute_contract(
+fn schedule_migration_message<Package>(
+    querier: QuerierWrapper<'_>,
+    migration_batch: &mut Batch,
+    address: Addr,
+    to_release: <Package as UpdatablePackage>::ReleaseId,
+    code_id: cosmwasm_std::Uint64,
+    migrate_message: json_value::JsonValue,
+) -> Result<()>
+where
+    Package: UpdatablePackage + Serialize + DeserializeOwned,
+    Package::ReleaseId: Serialize,
+{
+    querier
+        .query_wasm_smart::<Package>(address.clone(), &Package::VERSION_QUERY)
+        .and_then(|migrate_from| {
+            cosmwasm_std::to_json_vec(&MigrationMessage::new(
+                migrate_from,
+                to_release,
+                migrate_message,
+            ))
+        })
+        .map(|message| {
+            migration_batch.schedule_execute_no_reply(WasmMsg::Migrate {
+                contract_addr: address.into_string(),
+                new_code_id: code_id.u64(),
+                msg: Binary::new(message),
+            })
+        })
+        .map_err(Into::into)
+}
+
+fn schedule_execute_message(
     batch: &mut Batch,
     address: Addr,
     ExecuteSpec { message }: ExecuteSpec,

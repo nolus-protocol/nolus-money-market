@@ -1,15 +1,13 @@
 use serde::{Deserialize, Serialize};
 
-use sdk::cw_storage_plus::Item;
+use crate::{
+    Error,
+    release::{Id, UpdatablePackage, query::ProtocolPackage},
+};
 
 pub use self::{
     package::Package,
     version::{SemVer, VersionSegment},
-};
-
-use crate::{
-    Error,
-    release::{Id, UpdatablePackage},
 };
 
 mod package;
@@ -23,40 +21,6 @@ pub struct PackageRelease {
 }
 
 impl PackageRelease {
-    pub fn pull_prev(
-        name: &'static str,
-        storage: &mut dyn sdk::cosmwasm_std::Storage,
-    ) -> Result<Self, Error> {
-        #[derive(Deserialize)]
-        pub struct LegacyPackage {
-            storage: VersionSegment,
-            software: SemVer,
-        }
-
-        const VERSION_STORAGE_KEY: Item<LegacyPackage> = Item::new("contract_version");
-        const PREV_ID: Id = Id::new_static("v0.7.6");
-
-        impl LegacyPackage {
-            fn migrate_to(self, name: &'static str) -> Package {
-                Package::new(name, self.software, self.storage)
-            }
-        }
-        impl Serialize for LegacyPackage {
-            fn serialize<S>(&self, _: S) -> Result<S::Ok, S::Error>
-            where
-                S: serde::Serializer,
-            {
-                unimplemented!("LegacyPackage is not meant to be serialized")
-            }
-        }
-
-        VERSION_STORAGE_KEY
-            .load(storage)
-            .map_err(Error::loading)
-            .inspect(|_| VERSION_STORAGE_KEY.remove(storage))
-            .map(|code| Self::instance(PREV_ID, code.migrate_to(name)))
-    }
-
     pub const fn current(name: &'static str, version: &str, storage: VersionSegment) -> Self {
         const ID: &str = env!(
             "SOFTWARE_RELEASE_ID",
@@ -133,6 +97,10 @@ impl PackageRelease {
 }
 
 impl UpdatablePackage for PackageRelease {
+    type VersionQuery = ProtocolPackage;
+
+    const VERSION_QUERY: &'static Self::VersionQuery = &ProtocolPackage::Release {};
+
     type ReleaseId = Id;
 
     fn update_software(&self, to: &Self, to_release: &Self::ReleaseId) -> Result<(), Error> {

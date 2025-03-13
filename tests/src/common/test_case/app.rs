@@ -111,7 +111,7 @@ impl App {
         new_code_id: u64,
     ) -> anyhow::Result<ResponseWithInterChainMsgs<'r, AppResponse>>
     where
-        T: Debug + Serialize,
+        T: Serialize,
     {
         self.with_mock_app(|app: &mut MockApp| {
             app.migrate_contract(sender, contract_addr, msg, new_code_id)

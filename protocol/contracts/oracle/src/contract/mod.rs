@@ -69,12 +69,13 @@ pub fn migrate(
     deps: DepsMut<'_>,
     env: Env,
     ProtocolMigrationMessage {
+        migrate_from,
         to_release,
         message: MigrateMsg {},
     }: ProtocolMigrationMessage<MigrateMsg>,
 ) -> Result<CwResponse, PriceCurrencies> {
-    ProtocolPackageRelease::pull_prev(package_name!(), deps.storage)
-        .and_then(|previous| previous.update_software(&CURRENT_RELEASE, &to_release))
+    migrate_from
+        .update_software(&CURRENT_RELEASE, &to_release)
         .map_err(Error::UpdateSoftware)
         .and_then(|()| validate_swap_tree(deps.storage, env.block.time))
         .map(|()| response::empty_response())

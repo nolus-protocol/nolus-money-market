@@ -5,6 +5,11 @@ ignore = [
     # Title: Timing variability in `curve25519-dalek`'s `Scalar29::sub`/`Scalar52::sub`
     # Ignore reason: Affected functions not used.
     "RUSTSEC-2024-0344",
+    # https://rustsec.org/advisories/RUSTSEC-2024-0437
+    # Crate: protobuf
+    # Title: Crash due to uncontrolled recursion in protobuf crate
+    # Ignore reason: 'netron-sdk', the only crate that pulls it, would be patched in a timely manner
+    "RUSTSEC-2024-0437",
 ]
 informational_warnings = ["unmaintained"]
 severity_threshold = "none"
