@@ -1192,6 +1192,7 @@ dependencies = [
  "cosmwasm-std 2.1.7",
  "currencies",
  "currency",
+ "either",
  "finance",
  "json-value",
  "lease",
