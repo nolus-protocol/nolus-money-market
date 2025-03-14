@@ -43,6 +43,8 @@ platform = { workspace = true }
 sdk = { workspace = true, features = ["contract"] }
 versioning = { workspace = true, features = ["protocol_contract"] }
 
+either = { workspace = true }
+
 # Required as a dependency by `entry_point` attribute macro
 cosmwasm-std = { workspace = true }
 
