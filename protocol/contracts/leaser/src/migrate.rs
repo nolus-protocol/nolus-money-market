@@ -10,10 +10,7 @@ pub(crate) struct Customer<Leases> {
     leases: Leases,
 }
 
-impl<Leases> Customer<Leases>
-where
-    Leases: Iterator<Item = Addr>,
-{
+impl<Leases> Customer<Leases> {
     pub fn from(customer: Addr, leases: Leases) -> Self {
         Self { customer, leases }
     }
