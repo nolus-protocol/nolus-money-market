@@ -5,16 +5,16 @@ use versioning::{ProtocolMigrationMessage, ProtocolPackageRelease};
 
 use crate::{lease::Release as LeaseReleaseTrait, msg::MaxLeases, result::ContractResult};
 
-pub struct Customer<LeaseIter> {
+pub struct Customer<Leases> {
     customer: Addr,
-    leases: LeaseIter,
+    leases: Leases,
 }
 
-impl<LeaseIter> Customer<LeaseIter>
+impl<Leases> Customer<Leases>
 where
-    LeaseIter: Iterator<Item = Addr>,
+    Leases: Iterator<Item = Addr>,
 {
-    pub fn from(customer: Addr, leases: LeaseIter) -> Self {
+    pub fn from(customer: Addr, leases: Leases) -> Self {
         Self { customer, leases }
     }
 }
