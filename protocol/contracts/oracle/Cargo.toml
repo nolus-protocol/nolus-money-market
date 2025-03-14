@@ -28,6 +28,7 @@ contract = [
     "stub_alarms",
     "stub_price",
     "stub_swap",
+    "dep:cosmwasm-std",
     "dep:currencies",
     "dep:marketprice",
     "dep:platform",

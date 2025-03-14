@@ -27,6 +27,7 @@ dex-test_impl = ["swap/dex-test_impl"]
 contract = [
     "skel",
     "dep:access-control",
+    "dep:cosmwasm-std",
     "dep:enum_dispatch",
     "dep:lpp",
     "dep:oracle",
