@@ -10,11 +10,29 @@ pub struct Customer<LeaseIter> {
     leases: LeaseIter,
 }
 
+impl<LeaseIter> Customer<LeaseIter>
+where
+    LeaseIter: Iterator<Item = Addr>,
+{
+    pub fn from(customer: Addr, leases: LeaseIter) -> Self {
+        Self { customer, leases }
+    }
+}
+
 #[derive(Default)]
 #[cfg_attr(feature = "testing", derive(Debug, Eq, PartialEq))]
 pub struct MigrationResult {
     pub msgs: Batch,
     pub next_customer: Option<Addr>,
+}
+
+impl MigrationResult {
+    pub fn try_add_msgs<F>(mut self, add_fn: F) -> ContractResult<Self>
+    where
+        F: FnOnce(&mut Batch) -> ContractResult<()>,
+    {
+        add_fn(&mut self.msgs).map(|()| self)
+    }
 }
 
 pub type MaybeCustomer<LI> = ContractResult<Customer<LI>>;
@@ -50,24 +68,6 @@ where
             msgs: msgs.into(),
             next_customer,
         })
-}
-
-impl<LeaseIter> Customer<LeaseIter>
-where
-    LeaseIter: Iterator<Item = Addr>,
-{
-    pub fn from(customer: Addr, leases: LeaseIter) -> Self {
-        Self { customer, leases }
-    }
-}
-
-impl MigrationResult {
-    pub fn try_add_msgs<F>(mut self, add_fn: F) -> ContractResult<Self>
-    where
-        F: FnOnce(&mut Batch) -> ContractResult<()>,
-    {
-        add_fn(&mut self.msgs).map(|()| self)
-    }
 }
 
 struct MigrateBatch<LeaseRelease> {
