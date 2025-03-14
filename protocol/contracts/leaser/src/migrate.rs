@@ -52,16 +52,15 @@ pub(crate) type MaybeCustomer<LI> = ContractResult<Customer<LI>>;
 /// If there are still pending customers, then the next customer is returned as a key to start from the next chunk of leases.
 ///
 /// Consumes the customers iterator to the next customer or error.
-pub(crate) fn migrate_leases<I, LI, LeaseRelease, MsgFactory>(
-    mut customers: I,
+pub(crate) fn migrate_leases<Customers, LI, LeaseRelease, MsgFactory>(
+    mut customers: Customers,
     lease_code: Code,
     release_from: LeaseRelease,
     max_leases: MaxLeases,
     migrate_msg: MsgFactory,
 ) -> ContractResult<MigrationResult>
 where
-    I: Iterator<Item = MaybeCustomer<LI>>,
-    LI: ExactSizeIterator<Item = Addr>,
+    Customers: CustomersIterator,
     LeaseRelease: LeaseReleaseTrait,
     MsgFactory: Fn(ProtocolPackageRelease) -> ProtocolMigrationMessage<MigrateMsg>,
 {
