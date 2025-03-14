@@ -1,10 +1,10 @@
 use std::collections::HashSet;
 
+use ::lease::api::{DownpaymentCoin, MigrateMsg, open::PositionSpecDTO};
 use admin_contract::msg::{ExecuteMsg, MigrationSpec, ProtocolContracts};
 use currencies::LeaseGroup;
 use currency::CurrencyDTO;
 use finance::{duration::Duration, percent::Percent};
-use lease::api::{DownpaymentCoin, MigrateMsg, open::PositionSpecDTO};
 use lpp::{msg::ExecuteMsg as LppExecuteMsg, stub::LppRef};
 use platform::{
     batch::{Batch, Emit, Emitter},
@@ -19,8 +19,7 @@ use crate::{
     ContractError,
     cmd::Quote,
     finance::{LpnCurrencies, LpnCurrency, OracleRef},
-    lease::Release as LeaseReleaseTrait,
-    migrate,
+    migrate::{self, CustomersIterator, MigrationResult},
     msg::{ConfigResponse, ForceClose, MaxLeases, QuoteResponse},
     result::ContractResult,
     state::{config::Config, leases::Leases},
@@ -84,64 +83,87 @@ pub(super) fn try_configure(
     .map(|()| MessageResponse::default())
 }
 
-pub(super) fn try_migrate_leases<LeaseRelease, MsgFactory>(
+pub(super) fn try_migrate_leases_start<QueryLeaseRelease, MsgFactory>(
     storage: &mut dyn Storage,
-    release_from: LeaseRelease,
+    query_lease_release: QueryLeaseRelease,
     new_lease: Code,
     max_leases: MaxLeases,
     migrate_msg: MsgFactory,
 ) -> ContractResult<MessageResponse>
 where
-    LeaseRelease: LeaseReleaseTrait,
-    MsgFactory: Fn(ProtocolPackageRelease) -> ProtocolMigrationMessage<MigrateMsg>,
+    QueryLeaseRelease: FnOnce(Addr) -> ContractResult<ProtocolPackageRelease>,
+    MsgFactory: FnOnce(ProtocolPackageRelease) -> ProtocolMigrationMessage<MigrateMsg>,
 {
-    Config::update_lease_code(storage, new_lease)?;
+    let update_refs_addresses = {
+        let mut config = Config::load(storage)?;
 
-    let cusomers = Leases::iter(storage, None);
-    migrate::migrate_leases(cusomers, new_lease, release_from, max_leases, migrate_msg)
-        .and_then(|result| result.try_add_msgs(|msgs| update_remote_refs(storage, new_lease, msgs)))
-        .map(|result| {
-            MessageResponse::messages_with_events(result.msgs, emit_status(result.next_customer))
-        })
+        config.lease_code = new_lease;
+
+        config.store(storage)?;
+
+        UpdateRefsAddresses {
+            lpp_address: config.lpp,
+            reserve_address: config.reserve,
+        }
+    };
+
+    try_migrate_leases(
+        query_lease_release,
+        update_refs_addresses,
+        new_lease,
+        max_leases,
+        migrate_msg,
+        Leases::iter(storage, None),
+    )
 }
 
-pub(super) fn try_migrate_leases_cont<LeaseRelease, MsgFactory>(
-    storage: &mut dyn Storage,
-    release_from: LeaseRelease,
+pub(super) fn try_migrate_leases_cont<QueryLeaseRelease, MsgFactory>(
+    storage: &dyn Storage,
+    query_lease_release: QueryLeaseRelease,
     next_customer: Addr,
     max_leases: MaxLeases,
     migrate_msg: MsgFactory,
 ) -> ContractResult<MessageResponse>
 where
-    LeaseRelease: LeaseReleaseTrait,
-    MsgFactory: Fn(ProtocolPackageRelease) -> ProtocolMigrationMessage<MigrateMsg>,
+    QueryLeaseRelease: FnOnce(Addr) -> ContractResult<ProtocolPackageRelease>,
+    MsgFactory: FnOnce(ProtocolPackageRelease) -> ProtocolMigrationMessage<MigrateMsg>,
 {
-    let lease_code = Config::load(storage)?.lease_code;
+    let Config {
+        lease_code,
+        lpp: lpp_address,
+        reserve: reserve_address,
+        ..
+    } = Config::load(storage)?;
 
-    let customers = Leases::iter(storage, Some(next_customer));
-    migrate::migrate_leases(customers, lease_code, release_from, max_leases, migrate_msg).map(
-        |result| {
-            MessageResponse::messages_with_events(result.msgs, emit_status(result.next_customer))
+    try_migrate_leases(
+        query_lease_release,
+        UpdateRefsAddresses {
+            lpp_address,
+            reserve_address,
         },
+        lease_code,
+        max_leases,
+        migrate_msg,
+        Leases::iter(storage, Some(next_customer)),
     )
 }
 
-pub(super) fn try_close_leases<LeaseRelease, MsgFactory>(
+pub(super) fn try_close_leases<QueryLeaseRelease, MsgFactory>(
     storage: &mut dyn Storage,
-    release_from: LeaseRelease,
+    query_lease_release: QueryLeaseRelease,
     new_lease_code: Code,
     max_leases: MaxLeases,
     migrate_msg: MsgFactory,
     force: ForceClose,
 ) -> ContractResult<MessageResponse>
 where
-    LeaseRelease: LeaseReleaseTrait,
-    MsgFactory: Fn(ProtocolPackageRelease) -> ProtocolMigrationMessage<MigrateMsg>,
+    QueryLeaseRelease: FnOnce(Addr) -> ContractResult<ProtocolPackageRelease>,
+    MsgFactory: FnOnce(ProtocolPackageRelease) -> ProtocolMigrationMessage<MigrateMsg>,
 {
     match force {
-        ForceClose::KillProtocol => try_migrate_leases(
+        ForceClose::KillProtocol => try_migrate_leases_start(
             storage,
-            release_from,
+            query_lease_release,
             new_lease_code,
             max_leases,
             migrate_msg,
@@ -171,30 +193,73 @@ where
     })
 }
 
+fn try_migrate_leases<QueryLeaseRelease, MsgFactory, Customers>(
+    query_lease_release: QueryLeaseRelease,
+    update_refs_addresses: UpdateRefsAddresses,
+    new_lease: Code,
+    max_leases: MaxLeases,
+    migrate_msg: MsgFactory,
+    customers: Customers,
+) -> Result<MessageResponse, ContractError>
+where
+    QueryLeaseRelease: FnOnce(Addr) -> ContractResult<ProtocolPackageRelease>,
+    MsgFactory: FnOnce(ProtocolPackageRelease) -> ProtocolMigrationMessage<MigrateMsg>,
+    Customers: CustomersIterator,
+{
+    migrate::extract_first_lease_address(customers)?.map_or_else(
+        || Ok(MessageResponse::default()),
+        |(customers, lease)| {
+            let migration_message = query_lease_release(lease).map(migrate_msg)?;
+
+            migrate::migrate_leases(customers, new_lease, migration_message, max_leases)
+                .and_then(|result| {
+                    result.try_add_msgs(|msgs| {
+                        update_remote_refs(update_refs_addresses, new_lease, msgs)
+                    })
+                })
+                .map(
+                    |MigrationResult {
+                         msgs,
+                         next_customer,
+                     }| {
+                        MessageResponse::messages_with_events(msgs, emit_status(next_customer))
+                    },
+                )
+        },
+    )
+}
+
 fn has_lease(storage: &dyn Storage) -> bool {
     Leases::iter(storage, None).next().is_some()
 }
 
+struct UpdateRefsAddresses {
+    lpp_address: Addr,
+    reserve_address: Addr,
+}
+
 fn update_remote_refs(
-    storage: &dyn Storage,
+    UpdateRefsAddresses {
+        lpp_address,
+        reserve_address,
+    }: UpdateRefsAddresses,
     new_lease: Code,
     batch: &mut Batch,
 ) -> ContractResult<()> {
-    let cfg = Config::load(storage)?;
     {
         let update_msg = LppExecuteMsg::<LpnCurrencies>::NewLeaseCode {
             lease_code: new_lease,
         };
 
         batch
-            .schedule_execute_wasm_no_reply_no_funds(cfg.lpp, &update_msg)
+            .schedule_execute_wasm_no_reply_no_funds(lpp_address, &update_msg)
             .map_err(Into::into)
     }
     .and_then(|()| {
         let update_msg = ReserveExecuteMsg::NewLeaseCode(new_lease);
 
         batch
-            .schedule_execute_wasm_no_reply_no_funds(cfg.reserve, &update_msg)
+            .schedule_execute_wasm_no_reply_no_funds(reserve_address, &update_msg)
             .map_err(Into::into)
     })
 }
@@ -226,7 +291,6 @@ mod test {
 
     use crate::{
         ContractError,
-        lease::{Release, test::FixedRelease},
         msg::{Config, ForceClose, InstantiateMsg, MaxLeases},
         result::ContractResult,
         state::leases::Leases,
@@ -243,7 +307,7 @@ mod test {
             .unwrap();
         let resp = super::try_close_leases(
             &mut store,
-            dummy_release(),
+            dummy_release_query,
             LEASE_VOID_CODE,
             MAX_LEASES,
             migrate_msg,
@@ -273,7 +337,7 @@ mod test {
             Err(ContractError::ProtocolStillInUse()),
             super::try_close_leases(
                 &mut store,
-                dummy_release(),
+                dummy_release_query,
                 LEASE_VOID_CODE,
                 MAX_LEASES,
                 migrate_msg,
@@ -283,7 +347,7 @@ mod test {
 
         let resp = super::try_close_leases(
             &mut store,
-            dummy_release(),
+            dummy_release_query,
             LEASE_VOID_CODE,
             MAX_LEASES,
             migrate_msg,
@@ -347,8 +411,8 @@ mod test {
         }
     }
 
-    fn dummy_release() -> impl Release {
-        FixedRelease::with(ProtocolPackageRelease::current("moduleX", "0.1.2", 1))
+    fn dummy_release_query(_: Addr) -> ContractResult<ProtocolPackageRelease> {
+        Ok(ProtocolPackageRelease::current("moduleX", "0.1.2", 1))
     }
 
     fn migrate_msg(migrate_from: ProtocolPackageRelease) -> ProtocolMigrationMessage<MigrateMsg> {

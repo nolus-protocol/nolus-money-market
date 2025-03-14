@@ -1,9 +1,11 @@
+use std::iter;
+
 use lease::api::MigrateMsg;
 use platform::{batch::Batch, contract::Code};
 use sdk::cosmwasm_std::Addr;
-use versioning::{ProtocolMigrationMessage, ProtocolPackageRelease};
+use versioning::ProtocolMigrationMessage;
 
-use crate::{lease::Release as LeaseReleaseTrait, msg::MaxLeases, result::ContractResult};
+use crate::{msg::MaxLeases, result::ContractResult};
 
 pub(crate) struct Customer<Leases> {
     customer: Addr,
@@ -52,23 +54,20 @@ pub(crate) type MaybeCustomer<LI> = ContractResult<Customer<LI>>;
 /// If there are still pending customers, then the next customer is returned as a key to start from the next chunk of leases.
 ///
 /// Consumes the customers iterator to the next customer or error.
-pub(crate) fn migrate_leases<Customers, LI, LeaseRelease, MsgFactory>(
+pub(crate) fn migrate_leases<Customers>(
     mut customers: Customers,
     lease_code: Code,
-    release_from: LeaseRelease,
+    migration_message: ProtocolMigrationMessage<MigrateMsg>,
     max_leases: MaxLeases,
-    migrate_msg: MsgFactory,
 ) -> ContractResult<MigrationResult>
 where
     Customers: CustomersIterator,
-    LeaseRelease: LeaseReleaseTrait,
-    MsgFactory: Fn(ProtocolPackageRelease) -> ProtocolMigrationMessage<MigrateMsg>,
 {
-    let mut msgs = MigrateBatch::new(lease_code, release_from, max_leases);
+    let mut msgs = MigrateBatch::new(lease_code, migration_message, max_leases);
 
     customers
         .find_map(|maybe_customer| match maybe_customer {
-            Ok(customer) => msgs.migrate_or_be_next(customer, &migrate_msg),
+            Ok(customer) => msgs.migrate_or_be_next(customer),
             Err(err) => Some(Err(err)),
         })
         .transpose()
@@ -94,48 +93,77 @@ where
     type Leases = Leases;
 }
 
-struct MigrateBatch<LeaseRelease> {
+pub(crate) fn extract_first_lease_address<Customers>(
+    mut customers: Customers,
+) -> ContractResult<Option<(impl CustomersIterator, Addr)>>
+where
+    Customers: CustomersIterator,
+{
+    customers
+        .find_map(|result| {
+            result
+                .map(|customer| {
+                    let mut customer = customer.map_leases(Iterator::peekable);
+
+                    customer
+                        .leases
+                        .peek()
+                        .cloned()
+                        .map(|lease| (customer.map_leases(either::Left), lease))
+                })
+                .transpose()
+        })
+        .map(|result| {
+            result.map(|(customer, lease)| {
+                (
+                    iter::once(Ok(customer)).chain(
+                        customers.map(|result| {
+                            result.map(|customer| customer.map_leases(either::Right))
+                        }),
+                    ),
+                    lease,
+                )
+            })
+        })
+        .transpose()
+}
+
+struct MigrateBatch {
     new_code: Code,
-    release_from: LeaseRelease,
+    migration_message: ProtocolMigrationMessage<MigrateMsg>,
     leases_left: MaxLeases,
     msgs: Batch,
 }
-impl<LeaseRelease> MigrateBatch<LeaseRelease>
-where
-    LeaseRelease: LeaseReleaseTrait,
-{
-    fn new(new_code: Code, release_from: LeaseRelease, max_leases: MaxLeases) -> Self {
+impl MigrateBatch {
+    fn new(
+        new_code: Code,
+        migration_message: ProtocolMigrationMessage<MigrateMsg>,
+        max_leases: MaxLeases,
+    ) -> Self {
         Self {
             new_code,
-            release_from,
+            migration_message,
             leases_left: max_leases,
             msgs: Default::default(),
         }
     }
 
     /// None if there is enough room for all customer's leases, otherwise return the customer
-    fn migrate_or_be_next<LI, MsgFactory>(
+    fn migrate_or_be_next<Leases>(
         &mut self,
-        customer: Customer<LI>,
-        migrate_msg: &MsgFactory,
+        customer: Customer<Leases>,
     ) -> Option<ContractResult<Addr>>
     where
-        LI: ExactSizeIterator<Item = Addr>,
-        MsgFactory: Fn(ProtocolPackageRelease) -> ProtocolMigrationMessage<MigrateMsg>,
+        Leases: ExactSizeIterator<Item = Addr>,
     {
-        self.migrate_leases(customer.leases, migrate_msg)
+        self.migrate_leases(customer.leases)
             .map(|completed| completed.map(|()| customer.customer))
     }
 
     /// None if there is enough capacity for all leases, Some(Ok(())) - none migrated due to less available seats, Some(Err) - if an error occurs at some point
-    fn migrate_leases<Leases, MsgFactory>(
-        &mut self,
-        mut leases: Leases,
-        migrate_msg: &MsgFactory,
-    ) -> Option<ContractResult<()>>
+    fn migrate_leases<Leases>(&mut self, mut leases: Leases) -> Option<ContractResult<()>>
     where
         Leases: ExactSizeIterator<Item = Addr>,
-        MsgFactory: Fn(ProtocolPackageRelease) -> ProtocolMigrationMessage<MigrateMsg>,
     {
         let maybe_leases_nb: Result<MaxLeases, _> = leases.len().try_into();
         match maybe_leases_nb {
@@ -143,11 +171,8 @@ where
             Ok(leases_nb) => {
                 if let Some(left) = self.leases_left.checked_sub(leases_nb) {
                     self.leases_left = left;
-                    leases.find_map(|lease| {
-                        self.schedule_migration(lease, migrate_msg)
-                            .map(|()| None)
-                            .transpose()
-                    })
+                    leases
+                        .find_map(|lease| self.schedule_migration(lease).map(|()| None).transpose())
                 } else {
                     Some(Ok(()))
                 }
@@ -155,30 +180,15 @@ where
         }
     }
 
-    fn schedule_migration<MsgFactory>(
-        &mut self,
-        lease: Addr,
-        migrate_msg: &MsgFactory,
-    ) -> ContractResult<()>
-    where
-        MsgFactory: Fn(ProtocolPackageRelease) -> ProtocolMigrationMessage<MigrateMsg>,
-    {
-        self.release_from
-            .package_release(lease.clone())
-            .and_then(|release_from| {
-                self.msgs
-                    .schedule_migrate_wasm_no_reply(
-                        lease,
-                        &migrate_msg(release_from),
-                        self.new_code,
-                    )
-                    .map_err(Into::into)
-            })
+    fn schedule_migration(&mut self, lease: Addr) -> ContractResult<()> {
+        self.msgs
+            .schedule_migrate_wasm_no_reply(lease, &self.migration_message, self.new_code)
+            .map_err(Into::into)
     }
 }
 
-impl<LeaseRelease> From<MigrateBatch<LeaseRelease>> for Batch {
-    fn from(this: MigrateBatch<LeaseRelease>) -> Self {
+impl From<MigrateBatch> for Batch {
+    fn from(this: MigrateBatch) -> Self {
         this.msgs
     }
 }
@@ -196,7 +206,6 @@ mod test {
 
     use crate::{
         ContractError,
-        lease::{Release, test::FixedRelease},
         migrate::{Customer, MigrationResult},
         result::ContractResult,
     };
@@ -220,13 +229,7 @@ mod test {
         let no_leases: Vec<Customer<IntoIter<Addr, 0>>> = vec![];
         assert_eq!(
             Ok(MigrationResult::default()),
-            super::migrate_leases(
-                no_leases.into_iter().map(Ok),
-                new_code,
-                dummy_release(),
-                2,
-                migrate_msg
-            )
+            super::migrate_leases(no_leases.into_iter().map(Ok), new_code, migrate_msg(), 2,)
         );
     }
 
@@ -247,13 +250,7 @@ mod test {
             };
             assert_eq!(
                 Ok(exp),
-                super::migrate_leases(
-                    customers.into_iter(),
-                    new_code,
-                    dummy_release(),
-                    2,
-                    migrate_msg
-                )
+                super::migrate_leases(customers.into_iter(), new_code, migrate_msg(), 2,)
             );
         }
     }
@@ -288,7 +285,7 @@ mod test {
             };
             assert_eq!(
                 Ok(exp),
-                super::migrate_leases(test_customers(), new_code, dummy_release(), 0, migrate_msg)
+                super::migrate_leases(test_customers(), new_code, migrate_msg(), 0,)
             );
         }
         {
@@ -296,7 +293,7 @@ mod test {
             exp.next_customer = Some(customer2());
             assert_eq!(
                 Ok(exp),
-                super::migrate_leases(test_customers(), new_code, dummy_release(), 1, migrate_msg)
+                super::migrate_leases(test_customers(), new_code, migrate_msg(), 1,)
             );
         }
         {
@@ -304,7 +301,7 @@ mod test {
             exp.next_customer = Some(customer2());
             assert_eq!(
                 Ok(exp),
-                super::migrate_leases(test_customers(), new_code, dummy_release(), 2, migrate_msg)
+                super::migrate_leases(test_customers(), new_code, migrate_msg(), 2,)
             );
         }
         {
@@ -314,7 +311,7 @@ mod test {
             exp.next_customer = Some(customer3());
             assert_eq!(
                 Ok(exp),
-                super::migrate_leases(test_customers(), new_code, dummy_release(), 3, migrate_msg)
+                super::migrate_leases(test_customers(), new_code, migrate_msg(), 3,)
             );
         }
         {
@@ -325,7 +322,7 @@ mod test {
             exp.next_customer = Some(customer4());
             assert_eq!(
                 Ok(exp),
-                super::migrate_leases(test_customers(), new_code, dummy_release(), 4, migrate_msg)
+                super::migrate_leases(test_customers(), new_code, migrate_msg(), 4,)
             );
         }
         {
@@ -336,7 +333,7 @@ mod test {
             exp.next_customer = Some(customer4());
             assert_eq!(
                 Ok(exp),
-                super::migrate_leases(test_customers(), new_code, dummy_release(), 5, migrate_msg)
+                super::migrate_leases(test_customers(), new_code, migrate_msg(), 5,)
             );
         }
         {
@@ -350,7 +347,7 @@ mod test {
             exp.next_customer = None;
             assert_eq!(
                 Ok(exp),
-                super::migrate_leases(test_customers(), new_code, dummy_release(), 7, migrate_msg)
+                super::migrate_leases(test_customers(), new_code, migrate_msg(), 7,)
             );
         }
     }
@@ -373,27 +370,13 @@ mod test {
         ];
         assert_eq!(
             Err(ContractError::ParseError { err: err.into() }),
-            super::migrate_leases(
-                customers.into_iter(),
-                new_code,
-                dummy_release(),
-                3,
-                migrate_msg
-            )
+            super::migrate_leases(customers.into_iter(), new_code, migrate_msg(), 3,)
         );
     }
 
     fn add_expected(mut exp: MigrationResult, lease_addr: Addr, new_code: Code) -> MigrationResult {
         exp.msgs
-            .schedule_migrate_wasm_no_reply(
-                lease_addr.clone(),
-                &migrate_msg(
-                    dummy_release()
-                        .package_release(lease_addr)
-                        .expect("test impl succeeds"),
-                ),
-                new_code,
-            )
+            .schedule_migrate_wasm_no_reply(lease_addr.clone(), &migrate_msg(), new_code)
             .expect("Migration message should be serializable");
         exp
     }
@@ -421,17 +404,9 @@ mod test {
         vec![Ok(cust1), Ok(cust2), Ok(cust3), Ok(cust4)].into_iter()
     }
 
-    const fn dummy_release() -> impl Release {
-        FixedRelease::with(dummy_release_from())
-    }
-
-    const fn dummy_release_from() -> ProtocolPackageRelease {
-        ProtocolPackageRelease::current("moduleX", "0.1.2", 1)
-    }
-
-    fn migrate_msg(migrate_from: ProtocolPackageRelease) -> ProtocolMigrationMessage<MigrateMsg> {
+    fn migrate_msg() -> ProtocolMigrationMessage<MigrateMsg> {
         ProtocolMigrationMessage {
-            migrate_from,
+            migrate_from: ProtocolPackageRelease::current("moduleX", "0.1.2", 1),
             to_release: ProtocolPackageReleaseId::new(
                 ReleaseId::new_test("v0.7.6"),
                 ReleaseId::new_test("v0.0.5"),

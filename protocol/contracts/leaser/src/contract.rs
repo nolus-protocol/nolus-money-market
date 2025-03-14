@@ -1,7 +1,7 @@
 use std::ops::{Deref, DerefMut};
 
+use ::lease::api::MigrateMsg as LeaseMigrateMsg;
 use access_control::ContractOwnerAccess;
-use lease::api::MigrateMsg as LeaseMigrateMsg;
 use platform::{
     contract::{self, Code, CodeId},
     error as platform_error,
@@ -23,7 +23,7 @@ use versioning::{
 use crate::{
     cmd::Borrow,
     error::ContractError,
-    lease::CacheFirstRelease,
+    lease,
     leaser::{self, Leaser},
     msg::{ExecuteMsg, InstantiateMsg, MaxLeases, MigrateMsg, QueryMsg, SudoMsg},
     result::ContractResult,
@@ -115,9 +115,9 @@ pub fn execute(
             .map_err(Into::into)
             .and_then(|()| new_code(new_code_id, deps.querier))
             .and_then(|new_lease_code| {
-                leaser::try_migrate_leases(
+                leaser::try_migrate_leases_start(
                     deps.storage,
-                    CacheFirstRelease::new(deps.querier),
+                    lease::query_release(deps.querier),
                     new_lease_code,
                     max_leases,
                     migrate_msg(to_release),
@@ -134,7 +134,7 @@ pub fn execute(
             .and_then(|next_customer_validated| {
                 leaser::try_migrate_leases_cont(
                     deps.storage,
-                    CacheFirstRelease::new(deps.querier),
+                    lease::query_release(deps.querier),
                     next_customer_validated,
                     max_leases,
                     migrate_msg(to_release),
@@ -166,7 +166,7 @@ pub fn sudo(deps: DepsMut<'_>, _env: Env, msg: SudoMsg) -> ContractResult<Respon
             .and_then(|new_lease_code| {
                 leaser::try_close_leases(
                     deps.storage,
-                    CacheFirstRelease::new(deps.querier),
+                    lease::query_release(deps.querier),
                     new_lease_code,
                     MaxLeases::MAX,
                     migrate_msg(ProtocolPackageReleaseId::VOID),
@@ -256,10 +256,10 @@ where
 
 fn migrate_msg(
     to_release: ProtocolPackageReleaseId,
-) -> impl Fn(ProtocolPackageRelease) -> ProtocolMigrationMessage<LeaseMigrateMsg> {
+) -> impl FnOnce(ProtocolPackageRelease) -> ProtocolMigrationMessage<LeaseMigrateMsg> {
     move |migrate_from| ProtocolMigrationMessage {
         migrate_from,
-        to_release: to_release.clone(),
+        to_release,
         message: LeaseMigrateMsg {},
     }
 }
