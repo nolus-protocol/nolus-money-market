@@ -70,6 +70,22 @@ where
         })
 }
 
+pub(crate) trait CustomersIterator
+where
+    Self: Iterator<Item = MaybeCustomer<Self::Leases>>,
+    Self::Leases: ExactSizeIterator<Item = Addr>,
+{
+    type Leases;
+}
+
+impl<T, Leases> CustomersIterator for T
+where
+    T: Iterator<Item = MaybeCustomer<Leases>>,
+    Leases: ExactSizeIterator<Item = Addr>,
+{
+    type Leases = Leases;
+}
+
 struct MigrateBatch<LeaseRelease> {
     new_code: Code,
     release_from: LeaseRelease,
