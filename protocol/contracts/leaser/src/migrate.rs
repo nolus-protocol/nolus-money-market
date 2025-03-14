@@ -14,6 +14,18 @@ impl<Leases> Customer<Leases> {
     pub fn from(customer: Addr, leases: Leases) -> Self {
         Self { customer, leases }
     }
+
+    fn map_leases<F, R>(self, f: F) -> Customer<R>
+    where
+        F: FnOnce(Leases) -> R,
+    {
+        let Self { customer, leases } = self;
+
+        Customer {
+            customer,
+            leases: f(leases),
+        }
+    }
 }
 
 #[derive(Default)]
