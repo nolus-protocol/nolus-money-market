@@ -48,7 +48,11 @@ type IntermediateAmount = <Amount as HigherRank<Amount>>::Intermediate;
 /// Not designed to be used in public APIs
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(bound(serialize = "", deserialize = ""))]
-pub struct Price<C, QuoteC> {
+pub struct Price<C, QuoteC>
+where
+    C: 'static,
+    QuoteC: 'static,
+{
     amount: Coin<C>,
     amount_quote: Coin<QuoteC>,
 }

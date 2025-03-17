@@ -10,7 +10,7 @@ use crate::{
     feed::{Observation, Observations, ObservationsRead},
 };
 
-pub(super) struct Deque<'storage, C, QuoteC, S>
+pub struct Deque<'storage, C, QuoteC, S>
 where
     C: 'static,
     QuoteC: 'static,

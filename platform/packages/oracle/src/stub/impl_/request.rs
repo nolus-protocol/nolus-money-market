@@ -14,6 +14,7 @@ pub trait RequestBuilder {
 }
 
 pub struct BasePriceRequest {}
+
 impl RequestBuilder for BasePriceRequest {
     fn currency<G>() -> impl Serialize
     where
@@ -33,6 +34,7 @@ impl RequestBuilder for BasePriceRequest {
 }
 
 pub struct StablePriceRequest {}
+
 impl RequestBuilder for StablePriceRequest {
     fn currency<G>() -> impl Serialize
     where
