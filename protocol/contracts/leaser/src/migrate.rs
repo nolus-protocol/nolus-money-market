@@ -48,7 +48,7 @@ impl MigrationResult {
 pub(crate) fn migrate_leases<Customers, LeaseRelease, MsgFactory>(
     mut customers: Customers,
     lease_code: Code,
-    release_from: LeaseRelease,
+    migrate_from: LeaseRelease,
     max_leases: MaxLeases,
     migrate_msg: MsgFactory,
 ) -> ContractResult<MigrationResult>
@@ -57,7 +57,7 @@ where
     LeaseRelease: LeaseReleaseTrait,
     MsgFactory: Fn(ProtocolPackageRelease) -> ProtocolMigrationMessage<MigrateMsg>,
 {
-    let mut msgs = MigrateBatch::new(lease_code, release_from, max_leases);
+    let mut msgs = MigrateBatch::new(lease_code, migrate_from, max_leases);
 
     customers
         .find_map(|maybe_customer| match maybe_customer {
@@ -113,16 +113,16 @@ pub(crate) struct ExtractFirstLeaseAddressOutput<Customers> {
 
 struct MigrateBatch<LeaseRelease> {
     new_code: Code,
-    release_from: LeaseRelease,
+    migrate_from: LeaseRelease,
     leases_left: MaxLeases,
     msgs: Batch,
 }
 
 impl<LeaseRelease> MigrateBatch<LeaseRelease> {
-    fn new(new_code: Code, release_from: LeaseRelease, max_leases: MaxLeases) -> Self {
+    fn new(new_code: Code, migrate_from: LeaseRelease, max_leases: MaxLeases) -> Self {
         Self {
             new_code,
-            release_from,
+            migrate_from,
             leases_left: max_leases,
             msgs: Default::default(),
         }
@@ -185,13 +185,13 @@ where
     where
         MsgFactory: Fn(ProtocolPackageRelease) -> ProtocolMigrationMessage<MigrateMsg>,
     {
-        self.release_from
+        self.migrate_from
             .package_release(lease.clone())
-            .and_then(|release_from| {
+            .and_then(|migrate_from| {
                 self.msgs
                     .schedule_migrate_wasm_no_reply(
                         lease,
-                        &migrate_msg(release_from),
+                        &migrate_msg(migrate_from),
                         self.new_code,
                     )
                     .map_err(Into::into)
