@@ -149,6 +149,9 @@ impl MigrateBatch {
             .map(|completed| completed.map(|()| customer.customer))
     }
 
+    // TODO Switch to using `std::ops::ControlFlow`, or purpose-built
+    //  enumerator, instead of relying on loosely defined adhoc semantics with
+    //  `Option` and `Result`.
     /// None if there is enough capacity for all leases, Some(Ok(())) - none migrated due to less available seats, Some(Err) - if an error occurs at some point
     fn migrate_leases<Leases>(&mut self, mut leases: Leases) -> Option<ContractResult<()>>
     where
