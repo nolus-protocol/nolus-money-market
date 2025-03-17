@@ -20,7 +20,7 @@ use crate::{
     cmd::Quote,
     finance::{LpnCurrencies, LpnCurrency, OracleRef},
     lease::Release as LeaseReleaseTrait,
-    migrate,
+    migrate::{self, MigrationResult},
     msg::{ConfigResponse, ForceClose, MaxLeases, QuoteResponse},
     result::ContractResult,
     state::{config::Config, leases::Leases},
@@ -84,7 +84,7 @@ pub(super) fn try_configure(
     .map(|()| MessageResponse::default())
 }
 
-pub(super) fn try_migrate_leases<LeaseRelease, MsgFactory>(
+pub(super) fn try_migrate_new_leases_batch<LeaseRelease, MsgFactory>(
     storage: &mut dyn Storage,
     release_from: LeaseRelease,
     new_lease: Code,
@@ -97,16 +97,19 @@ where
 {
     Config::update_lease_code(storage, new_lease)?;
 
-    let cusomers = Leases::iter(storage, None);
-    migrate::migrate_leases(cusomers, new_lease, release_from, max_leases, migrate_msg)
-        .and_then(|result| result.try_add_msgs(|msgs| update_remote_refs(storage, new_lease, msgs)))
-        .map(|result| {
-            MessageResponse::messages_with_events(result.msgs, emit_status(result.next_customer))
-        })
+    migrate::migrate_leases(
+        Leases::iter(storage, None),
+        new_lease,
+        release_from,
+        max_leases,
+        migrate_msg,
+    )
+    .and_then(|result| result.try_add_msgs(|msgs| update_remote_refs(storage, new_lease, msgs)))
+    .map(finalize_batch_migration)
 }
 
 pub(super) fn try_migrate_leases_cont<LeaseRelease, MsgFactory>(
-    storage: &mut dyn Storage,
+    storage: &dyn Storage,
     release_from: LeaseRelease,
     next_customer: Addr,
     max_leases: MaxLeases,
@@ -118,12 +121,14 @@ where
 {
     let lease_code = Config::load(storage)?.lease_code;
 
-    let customers = Leases::iter(storage, Some(next_customer));
-    migrate::migrate_leases(customers, lease_code, release_from, max_leases, migrate_msg).map(
-        |result| {
-            MessageResponse::messages_with_events(result.msgs, emit_status(result.next_customer))
-        },
+    migrate::migrate_leases(
+        Leases::iter(storage, Some(next_customer)),
+        lease_code,
+        release_from,
+        max_leases,
+        migrate_msg,
     )
+    .map(finalize_batch_migration)
 }
 
 pub(super) fn try_close_leases<LeaseRelease, MsgFactory>(
@@ -139,7 +144,7 @@ where
     MsgFactory: Fn(ProtocolPackageRelease) -> ProtocolMigrationMessage<MigrateMsg>,
 {
     match force {
-        ForceClose::KillProtocol => try_migrate_leases(
+        ForceClose::KillProtocol => try_migrate_new_leases_batch(
             storage,
             release_from,
             new_lease_code,
@@ -169,6 +174,10 @@ where
             .map_err(ContractError::ProtocolDeregistration)
             .map(|()| batch.into())
     })
+}
+
+fn finalize_batch_migration(result: MigrationResult) -> MessageResponse {
+    MessageResponse::messages_with_events(result.msgs, emit_status(result.next_customer))
 }
 
 fn has_lease(storage: &dyn Storage) -> bool {

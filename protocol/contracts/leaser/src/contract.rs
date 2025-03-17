@@ -115,7 +115,7 @@ pub fn execute(
             .map_err(Into::into)
             .and_then(|()| new_code(new_code_id, deps.querier))
             .and_then(|new_lease_code| {
-                leaser::try_migrate_leases(
+                leaser::try_migrate_new_leases_batch(
                     deps.storage,
                     CacheFirstRelease::new(deps.querier),
                     new_lease_code,
