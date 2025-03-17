@@ -5,7 +5,7 @@ use versioning::{ProtocolMigrationMessage, ProtocolPackageRelease};
 
 use crate::{lease::Release as LeaseReleaseTrait, msg::MaxLeases, result::ContractResult};
 
-pub struct Customer<Leases> {
+pub(crate) struct Customer<Leases> {
     customer: Addr,
     leases: Leases,
 }
@@ -19,11 +19,11 @@ where
     }
 }
 
-pub type MaybeCustomer<Leases> = ContractResult<Customer<Leases>>;
+pub(crate) type MaybeCustomer<Leases> = ContractResult<Customer<Leases>>;
 
 #[derive(Default)]
 #[cfg_attr(feature = "testing", derive(Debug, Eq, PartialEq))]
-pub struct MigrationResult {
+pub(crate) struct MigrationResult {
     pub msgs: Batch,
     pub next_customer: Option<Addr>,
 }
@@ -43,7 +43,7 @@ impl MigrationResult {
 /// If there are still pending customers, then the next customer is returned as a key to start from the next chunk of leases.
 ///
 /// Consumes the customers iterator to the next customer or error.
-pub fn migrate_leases<I, LI, LeaseRelease, MsgFactory>(
+pub(crate) fn migrate_leases<I, LI, LeaseRelease, MsgFactory>(
     mut customers: I,
     lease_code: Code,
     release_from: LeaseRelease,
