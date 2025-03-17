@@ -1,3 +1,5 @@
+use std::iter;
+
 use lease::api::MigrateMsg;
 use platform::{batch::Batch, contract::Code};
 use sdk::cosmwasm_std::Addr;
@@ -67,6 +69,46 @@ where
             msgs: msgs.into(),
             next_customer,
         })
+}
+
+pub(crate) fn extract_first_lease_address<Customers>(
+    mut customers: Customers,
+) -> ContractResult<Option<ExtractFirstLeaseAddressOutput<impl CustomerWithLeasesIterator>>>
+where
+    Customers: CustomerWithLeasesIterator,
+{
+    customers
+        .find_map(|result| {
+            result
+                .map(|customer| {
+                    let mut customer = customer.map_leases(Iterator::peekable);
+
+                    customer
+                        .leases
+                        .peek()
+                        .cloned()
+                        .map(|lease| (customer.map_leases(either::Left), lease))
+                })
+                .transpose()
+        })
+        .map(|result| {
+            result.map(
+                |(customer, first_lease_address)| ExtractFirstLeaseAddressOutput {
+                    customers: iter::once(Ok(customer)).chain(
+                        customers.map(|result| {
+                            result.map(|customer| customer.map_leases(either::Right))
+                        }),
+                    ),
+                    first_lease_address,
+                },
+            )
+        })
+        .transpose()
+}
+
+pub(crate) struct ExtractFirstLeaseAddressOutput<Customers> {
+    pub customers: Customers,
+    pub first_lease_address: Addr,
 }
 
 struct MigrateBatch<LeaseRelease> {
