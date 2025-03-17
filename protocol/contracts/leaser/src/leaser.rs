@@ -17,15 +17,11 @@ use versioning::{ProtocolMigrationMessage, ProtocolPackageRelease};
 
 use crate::{
     ContractError,
-    finance::{LpnCurrency, OracleRef},
-    lease::Release as LeaseReleaseTrait,
-    msg::ForceClose,
-};
-use crate::{
     cmd::Quote,
-    finance::LpnCurrencies,
+    finance::{LpnCurrencies, LpnCurrency, OracleRef},
+    lease::Release as LeaseReleaseTrait,
     migrate,
-    msg::{ConfigResponse, MaxLeases, QuoteResponse},
+    msg::{ConfigResponse, ForceClose, MaxLeases, QuoteResponse},
     result::ContractResult,
     state::{config::Config, leases::Leases},
 };
