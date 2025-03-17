@@ -19,6 +19,8 @@ where
     }
 }
 
+pub type MaybeCustomer<LI> = ContractResult<Customer<LI>>;
+
 #[derive(Default)]
 #[cfg_attr(feature = "testing", derive(Debug, Eq, PartialEq))]
 pub struct MigrationResult {
@@ -34,8 +36,6 @@ impl MigrationResult {
         add_fn(&mut self.msgs).map(|()| self)
     }
 }
-
-pub type MaybeCustomer<LI> = ContractResult<Customer<LI>>;
 
 /// Builds a batch of messages for the migration of up to `max_leases`
 ///
