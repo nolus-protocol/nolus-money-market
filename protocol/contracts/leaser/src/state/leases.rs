@@ -1,4 +1,4 @@
-use std::collections::{HashSet, hash_set::IntoIter};
+use std::collections::HashSet;
 
 use sdk::{
     cosmwasm_std::{Addr, Order, StdResult, Storage},
@@ -74,7 +74,7 @@ impl Leases {
     pub fn iter(
         storage: &dyn Storage,
         next_customer: Option<Addr>,
-    ) -> impl Iterator<Item = MaybeCustomer<IntoIter<Addr>>> {
+    ) -> impl CustomerWithLeasesIterator {
         let start_bound = next_customer.map(Bound::<Addr>::inclusive);
 
         Self::CUSTOMER_LEASES
@@ -86,6 +86,22 @@ impl Leases {
                     .map_err(Into::into)
             })
     }
+}
+
+pub(crate) trait CustomerWithLeasesIterator
+where
+    Self: Iterator<Item = MaybeCustomer<Self::Leases>>,
+    Self::Leases: ExactSizeIterator<Item = Addr>,
+{
+    type Leases;
+}
+
+impl<Customers, Leases> CustomerWithLeasesIterator for Customers
+where
+    Customers: Iterator<Item = MaybeCustomer<Leases>>,
+    Leases: ExactSizeIterator<Item = Addr>,
+{
+    type Leases = Leases;
 }
 
 #[cfg(all(feature = "internal.test.testing", test))]
