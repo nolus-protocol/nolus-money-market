@@ -76,6 +76,7 @@ struct MigrateBatch<LeaseRelease> {
     leases_left: MaxLeases,
     msgs: Batch,
 }
+
 impl<LeaseRelease> MigrateBatch<LeaseRelease>
 where
     LeaseRelease: LeaseReleaseTrait,
@@ -114,11 +115,13 @@ where
         MsgFactory: Fn(ProtocolPackageRelease) -> ProtocolMigrationMessage<MigrateMsg>,
     {
         let maybe_leases_nb: Result<MaxLeases, _> = leases.len().try_into();
+
         match maybe_leases_nb {
             Err(err) => Some(Err(err.into())),
             Ok(leases_nb) => {
                 if let Some(left) = self.leases_left.checked_sub(leases_nb) {
                     self.leases_left = left;
+
                     leases.find_map(|lease| {
                         self.schedule_migration(lease, migrate_msg)
                             .map(|()| None)
