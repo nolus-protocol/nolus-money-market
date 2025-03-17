@@ -13,14 +13,13 @@ use platform::{
 };
 use reserve::api::ExecuteMsg as ReserveExecuteMsg;
 use sdk::cosmwasm_std::{Addr, Deps, Storage};
-use versioning::{ProtocolMigrationMessage, ProtocolPackageRelease};
+use versioning::ProtocolMigrationMessage;
 
 use crate::{
     ContractError,
     cmd::Quote,
     finance::{LpnCurrencies, LpnCurrency, OracleRef},
-    lease::Release as LeaseReleaseTrait,
-    migrate::{self, MigrationResult},
+    migrate::{self, ExtractFirstLeaseAddressOutput, MigrationResult},
     msg::{ConfigResponse, ForceClose, MaxLeases, QuoteResponse},
     result::ContractResult,
     state::{config::Config, leases::Leases},
@@ -84,73 +83,57 @@ pub(super) fn try_configure(
     .map(|()| MessageResponse::default())
 }
 
-pub(super) fn try_migrate_new_leases_batch<LeaseRelease, MsgFactory>(
+pub(super) fn try_migrate_new_leases_batch<MsgFactory>(
     storage: &mut dyn Storage,
-    release_from: LeaseRelease,
+    migrate_msg: MsgFactory,
     new_lease: Code,
     max_leases: MaxLeases,
-    migrate_msg: MsgFactory,
 ) -> ContractResult<MessageResponse>
 where
-    LeaseRelease: LeaseReleaseTrait,
-    MsgFactory: Fn(ProtocolPackageRelease) -> ProtocolMigrationMessage<MigrateMsg>,
+    MsgFactory: FnOnce(Addr) -> ContractResult<ProtocolMigrationMessage<MigrateMsg>>,
 {
     Config::update_lease_code(storage, new_lease)?;
 
-    migrate::migrate_leases(
-        Leases::iter(storage, None),
-        new_lease,
-        release_from,
-        max_leases,
-        migrate_msg,
-    )
-    .and_then(|result| result.try_add_msgs(|msgs| update_remote_refs(storage, new_lease, msgs)))
-    .map(finalize_batch_migration)
+    try_migrate_leases(storage, migrate_msg, new_lease, max_leases, None)
+        .and_then(|result| result.try_add_msgs(|msgs| update_remote_refs(storage, new_lease, msgs)))
+        .map(finalize_batch_migration)
 }
 
-pub(super) fn try_migrate_leases_cont<LeaseRelease, MsgFactory>(
+pub(super) fn try_migrate_leases_cont<MsgFactory>(
     storage: &dyn Storage,
-    release_from: LeaseRelease,
-    next_customer: Addr,
-    max_leases: MaxLeases,
     migrate_msg: MsgFactory,
+    max_leases: MaxLeases,
+    next_customer: Addr,
 ) -> ContractResult<MessageResponse>
 where
-    LeaseRelease: LeaseReleaseTrait,
-    MsgFactory: Fn(ProtocolPackageRelease) -> ProtocolMigrationMessage<MigrateMsg>,
+    MsgFactory: FnOnce(Addr) -> ContractResult<ProtocolMigrationMessage<MigrateMsg>>,
 {
     let lease_code = Config::load(storage)?.lease_code;
 
-    migrate::migrate_leases(
-        Leases::iter(storage, Some(next_customer)),
-        lease_code,
-        release_from,
-        max_leases,
+    try_migrate_leases(
+        storage,
         migrate_msg,
+        lease_code,
+        max_leases,
+        Some(next_customer),
     )
     .map(finalize_batch_migration)
 }
 
-pub(super) fn try_close_leases<LeaseRelease, MsgFactory>(
+pub(super) fn try_close_leases<MsgFactory>(
     storage: &mut dyn Storage,
-    release_from: LeaseRelease,
+    migrate_msg: MsgFactory,
     new_lease_code: Code,
     max_leases: MaxLeases,
-    migrate_msg: MsgFactory,
     force: ForceClose,
 ) -> ContractResult<MessageResponse>
 where
-    LeaseRelease: LeaseReleaseTrait,
-    MsgFactory: Fn(ProtocolPackageRelease) -> ProtocolMigrationMessage<MigrateMsg>,
+    MsgFactory: FnOnce(Addr) -> ContractResult<ProtocolMigrationMessage<MigrateMsg>>,
 {
     match force {
-        ForceClose::KillProtocol => try_migrate_new_leases_batch(
-            storage,
-            release_from,
-            new_lease_code,
-            max_leases,
-            migrate_msg,
-        ),
+        ForceClose::KillProtocol => {
+            try_migrate_new_leases_batch(storage, migrate_msg, new_lease_code, max_leases)
+        }
         ForceClose::No if has_lease(storage) => Err(ContractError::ProtocolStillInUse()),
         ForceClose::No => Ok(MessageResponse::default()),
     }
@@ -174,6 +157,40 @@ where
             .map_err(ContractError::ProtocolDeregistration)
             .map(|()| batch.into())
     })
+}
+
+fn try_migrate_leases<MigrateMessage>(
+    storage: &dyn Storage,
+    migrate_msg: MigrateMessage,
+    lease_code: Code,
+    max_leases: MaxLeases,
+    next_customer: Option<Addr>,
+) -> ContractResult<MigrationResult>
+where
+    MigrateMessage: FnOnce(Addr) -> ContractResult<ProtocolMigrationMessage<MigrateMsg>>,
+{
+    let customers = Leases::iter(storage, next_customer);
+
+    migrate::extract_first_lease_address(customers).map_or_else(
+        || Ok(MigrationResult::default()),
+        |result| {
+            result.and_then(
+                |ExtractFirstLeaseAddressOutput {
+                     customers,
+                     first_lease_address,
+                 }| {
+                    migrate_msg(first_lease_address).and_then(|migration_message| {
+                        migrate::migrate_leases(
+                            customers,
+                            lease_code,
+                            migration_message,
+                            max_leases,
+                        )
+                    })
+                },
+            )
+        },
+    )
 }
 
 fn finalize_batch_migration(result: MigrationResult) -> MessageResponse {
@@ -235,7 +252,6 @@ mod test {
 
     use crate::{
         ContractError,
-        lease::{Release, test::FixedRelease},
         msg::{Config, ForceClose, InstantiateMsg, MaxLeases},
         result::ContractResult,
         state::leases::Leases,
@@ -252,10 +268,9 @@ mod test {
             .unwrap();
         let resp = super::try_close_leases(
             &mut store,
-            dummy_release(),
+            migrate_msg,
             LEASE_VOID_CODE,
             MAX_LEASES,
-            migrate_msg,
             ForceClose::No,
         )
         .and_then(|leases_resp| {
@@ -282,20 +297,18 @@ mod test {
             Err(ContractError::ProtocolStillInUse()),
             super::try_close_leases(
                 &mut store,
-                dummy_release(),
+                migrate_msg,
                 LEASE_VOID_CODE,
                 MAX_LEASES,
-                migrate_msg,
                 ForceClose::No
             )
         );
 
         let resp = super::try_close_leases(
             &mut store,
-            dummy_release(),
+            migrate_msg,
             LEASE_VOID_CODE,
             MAX_LEASES,
-            migrate_msg,
             ForceClose::KillProtocol,
         )
         .unwrap();
@@ -356,19 +369,15 @@ mod test {
         }
     }
 
-    fn dummy_release() -> impl Release {
-        FixedRelease::with(ProtocolPackageRelease::current("moduleX", "0.1.2", 1))
-    }
-
-    fn migrate_msg(migrate_from: ProtocolPackageRelease) -> ProtocolMigrationMessage<MigrateMsg> {
-        ProtocolMigrationMessage {
-            migrate_from,
+    fn migrate_msg(_: Addr) -> ContractResult<ProtocolMigrationMessage<MigrateMsg>> {
+        Ok(ProtocolMigrationMessage {
+            migrate_from: ProtocolPackageRelease::current("moduleX", "0.1.2", 1),
             to_release: ProtocolPackageReleaseId::new(
                 ReleaseId::new_test("v0.5.4"),
                 ReleaseId::new_test("v0.2.1"),
             ),
             message: MigrateMsg {},
-        }
+        })
     }
 
     fn protocols_registry(_storage: &dyn Storage) -> ContractResult<Addr> {
