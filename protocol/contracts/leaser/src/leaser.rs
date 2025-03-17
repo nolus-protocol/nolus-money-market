@@ -92,10 +92,24 @@ pub(super) fn try_migrate_new_leases_batch<MsgFactory>(
 where
     MsgFactory: FnOnce(Addr) -> ContractResult<ProtocolMigrationMessage<MigrateMsg>>,
 {
-    Config::update_lease_code(storage, new_lease)?;
+    let update_refs_addresses = {
+        let config = Config {
+            lease_code: new_lease,
+            ..Config::load(storage)?
+        };
+
+        config.store(storage)?;
+
+        UpdateRefsAddresses {
+            lpp_addresses: config.lpp,
+            reserve_addresses: config.reserve,
+        }
+    };
 
     try_migrate_leases(storage, migrate_msg, new_lease, max_leases, None)
-        .and_then(|result| result.try_add_msgs(|msgs| update_remote_refs(storage, new_lease, msgs)))
+        .and_then(|result| {
+            result.try_add_msgs(|msgs| update_remote_refs(update_refs_addresses, new_lease, msgs))
+        })
         .map(finalize_batch_migration)
 }
 
@@ -201,26 +215,33 @@ fn has_lease(storage: &dyn Storage) -> bool {
     Leases::iter(storage, None).next().is_some()
 }
 
+struct UpdateRefsAddresses {
+    lpp_addresses: Addr,
+    reserve_addresses: Addr,
+}
+
 fn update_remote_refs(
-    storage: &dyn Storage,
+    UpdateRefsAddresses {
+        lpp_addresses,
+        reserve_addresses,
+    }: UpdateRefsAddresses,
     new_lease: Code,
     batch: &mut Batch,
 ) -> ContractResult<()> {
-    let cfg = Config::load(storage)?;
     {
         let update_msg = LppExecuteMsg::<LpnCurrencies>::NewLeaseCode {
             lease_code: new_lease,
         };
 
         batch
-            .schedule_execute_wasm_no_reply_no_funds(cfg.lpp, &update_msg)
+            .schedule_execute_wasm_no_reply_no_funds(lpp_addresses, &update_msg)
             .map_err(Into::into)
     }
     .and_then(|()| {
         let update_msg = ReserveExecuteMsg::NewLeaseCode(new_lease);
 
         batch
-            .schedule_execute_wasm_no_reply_no_funds(cfg.reserve, &update_msg)
+            .schedule_execute_wasm_no_reply_no_funds(reserve_addresses, &update_msg)
             .map_err(Into::into)
     })
 }
