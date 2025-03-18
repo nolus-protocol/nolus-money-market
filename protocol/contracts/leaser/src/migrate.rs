@@ -43,10 +43,7 @@ pub(crate) struct Customer<Leases> {
     leases: Leases,
 }
 
-impl<Leases> Customer<Leases>
-where
-    Leases: Iterator<Item = Addr>,
-{
+impl<Leases> Customer<Leases> {
     pub fn from(customer: Addr, leases: Leases) -> Self {
         Self { customer, leases }
     }
@@ -77,10 +74,7 @@ struct MigrateBatch<LeaseRelease> {
     msgs: Batch,
 }
 
-impl<LeaseRelease> MigrateBatch<LeaseRelease>
-where
-    LeaseRelease: LeaseReleaseTrait,
-{
+impl<LeaseRelease> MigrateBatch<LeaseRelease> {
     fn new(new_code: Code, release_from: LeaseRelease, max_leases: MaxLeases) -> Self {
         Self {
             new_code,
@@ -89,7 +83,12 @@ where
             msgs: Default::default(),
         }
     }
+}
 
+impl<LeaseRelease> MigrateBatch<LeaseRelease>
+where
+    LeaseRelease: LeaseReleaseTrait,
+{
     /// None if there is enough room for all customer's leases, otherwise return the customer
     fn migrate_or_be_next<Leases, MsgFactory>(
         &mut self,
