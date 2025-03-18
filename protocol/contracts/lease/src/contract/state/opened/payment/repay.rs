@@ -38,13 +38,9 @@ pub(crate) trait RepayAlgo {
 }
 
 #[derive(Serialize, Deserialize)]
-pub(crate) struct Repay<RepayAlgoT>(RepayAlgoT)
-where
-    RepayAlgoT: RepayAlgo;
-impl<RepayAlgoT> From<RepayAlgoT> for Repay<RepayAlgoT>
-where
-    RepayAlgoT: RepayAlgo,
-{
+pub(crate) struct Repay<RepayAlgoT>(RepayAlgoT);
+
+impl<RepayAlgoT> From<RepayAlgoT> for Repay<RepayAlgoT> {
     fn from(value: RepayAlgoT) -> Self {
         Self(value)
     }
@@ -52,7 +48,7 @@ where
 
 impl<RepayAlgoT> Closable for Repay<RepayAlgoT>
 where
-    RepayAlgoT: RepayAlgo + Closable,
+    RepayAlgoT: Closable,
 {
     fn amount<'a>(&'a self, lease: &'a Lease) -> &'a LeaseCoin {
         self.0.amount(lease)

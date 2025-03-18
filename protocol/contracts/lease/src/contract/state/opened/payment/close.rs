@@ -46,14 +46,9 @@ pub(crate) trait CloseAlgo {
 }
 
 #[derive(Serialize, Deserialize)]
-pub(crate) struct Close<CloseAlgoT>(CloseAlgoT)
-where
-    CloseAlgoT: CloseAlgo + Closable;
+pub(crate) struct Close<CloseAlgoT>(CloseAlgoT);
 
-impl<CloseAlgoT> From<CloseAlgoT> for Close<CloseAlgoT>
-where
-    CloseAlgoT: CloseAlgo + Closable,
-{
+impl<CloseAlgoT> From<CloseAlgoT> for Close<CloseAlgoT> {
     fn from(value: CloseAlgoT) -> Self {
         Self(value)
     }
@@ -61,7 +56,7 @@ where
 
 impl<CloseAlgoT> Closable for Close<CloseAlgoT>
 where
-    CloseAlgoT: CloseAlgo + Closable,
+    CloseAlgoT: Closable,
 {
     fn amount<'a>(&'a self, lease: &'a Lease) -> &'a LeaseCoin {
         self.0.amount(lease)
@@ -78,7 +73,7 @@ where
 
 impl<CloseAlgoT> Repayable for Close<CloseAlgoT>
 where
-    CloseAlgoT: CloseAlgo + Closable,
+    CloseAlgoT: CloseAlgo,
 {
     fn try_repay(
         &self,
