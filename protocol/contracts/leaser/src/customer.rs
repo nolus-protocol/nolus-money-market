@@ -14,3 +14,19 @@ impl<Leases> Customer<Leases> {
 }
 
 pub(crate) type MaybeCustomer<Leases> = ContractResult<Customer<Leases>>;
+
+pub(crate) trait CustomerLeases
+where
+    Self: Iterator<Item = MaybeCustomer<Self::Leases>>,
+    Self::Leases: ExactSizeIterator<Item = Addr>,
+{
+    type Leases;
+}
+
+impl<Customers, Leases> CustomerLeases for Customers
+where
+    Customers: Iterator<Item = MaybeCustomer<Leases>>,
+    Leases: ExactSizeIterator<Item = Addr>,
+{
+    type Leases = Leases;
+}

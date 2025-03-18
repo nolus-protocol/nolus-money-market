@@ -1,4 +1,4 @@
-use std::collections::{HashSet, hash_set::IntoIter};
+use std::collections::HashSet;
 
 use sdk::{
     cosmwasm_std::{Addr, Order, StdResult, Storage},
@@ -6,7 +6,7 @@ use sdk::{
 };
 
 use crate::{
-    customer::{Customer, MaybeCustomer},
+    customer::{Customer, CustomerLeases},
     result::ContractResult,
 };
 
@@ -71,10 +71,7 @@ impl Leases {
             .map_err(Into::into)
     }
 
-    pub fn iter(
-        storage: &dyn Storage,
-        next_customer: Option<Addr>,
-    ) -> impl Iterator<Item = MaybeCustomer<IntoIter<Addr>>> {
+    pub fn iter(storage: &dyn Storage, next_customer: Option<Addr>) -> impl CustomerLeases {
         let start_bound = next_customer.map(Bound::<Addr>::inclusive);
 
         Self::CUSTOMER_LEASES
