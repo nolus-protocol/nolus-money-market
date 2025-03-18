@@ -1,4 +1,4 @@
-use std::collections::{HashSet, hash_set::IntoIter};
+use std::collections::HashSet;
 
 use sdk::{
     cosmwasm_std::{Addr, Order, StdResult, Storage},
@@ -6,7 +6,7 @@ use sdk::{
 };
 
 use crate::{
-    migrate::{Customer, MaybeCustomer},
+    customer::{Customer, CustomerLeases},
     result::ContractResult,
 };
 
@@ -14,6 +14,7 @@ pub(crate) struct Leases {}
 
 impl Leases {
     const PENDING_CUSTOMER: Item<Addr> = Item::new("pending_customer");
+
     const CUSTOMER_LEASES: Map<Addr, HashSet<Addr>> = Map::new("loans");
 
     pub fn cache_open_req(storage: &mut dyn Storage, customer: &Addr) -> ContractResult<()> {
@@ -25,6 +26,7 @@ impl Leases {
     /// Return true if the lease has been stored or false if there has already been the same lease
     pub fn save(storage: &mut dyn Storage, lease: Addr) -> ContractResult<bool> {
         let mut stored = false;
+
         let update_fn = |may_leases: Option<HashSet<Addr>>| -> StdResult<HashSet<Addr>> {
             let mut leases = may_leases.unwrap_or_default();
 
@@ -54,9 +56,12 @@ impl Leases {
     /// Return whether the lease was present before the removal
     pub fn remove(storage: &mut dyn Storage, customer: Addr, lease: &Addr) -> ContractResult<bool> {
         let mut removed = false;
+
         let update_fn = |may_leases: Option<HashSet<Addr>>| -> StdResult<HashSet<Addr>> {
             let mut leases = may_leases.unwrap_or_default();
+
             removed = leases.remove(lease);
+
             Ok(leases)
         };
 
@@ -66,11 +71,9 @@ impl Leases {
             .map_err(Into::into)
     }
 
-    pub fn iter(
-        storage: &dyn Storage,
-        next_customer: Option<Addr>,
-    ) -> impl Iterator<Item = MaybeCustomer<IntoIter<Addr>>> {
+    pub fn iter(storage: &dyn Storage, next_customer: Option<Addr>) -> impl CustomerLeases {
         let start_bound = next_customer.map(Bound::<Addr>::inclusive);
+
         Self::CUSTOMER_LEASES
             .prefix(())
             .range(storage, start_bound, None, Order::Ascending)

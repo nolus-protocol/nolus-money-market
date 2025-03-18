@@ -1,5 +1,4 @@
-use cosmwasm_std::QuerierWrapper;
-use sdk::cosmwasm_std::Addr;
+use sdk::cosmwasm_std::{Addr, QuerierWrapper};
 use versioning::{ProtocolPackageRelease, UpdatablePackage};
 
 use crate::{ContractError, result::ContractResult};

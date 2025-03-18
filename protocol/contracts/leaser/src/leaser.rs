@@ -17,15 +17,11 @@ use versioning::{ProtocolMigrationMessage, ProtocolPackageRelease};
 
 use crate::{
     ContractError,
-    finance::{LpnCurrency, OracleRef},
-    lease::Release as LeaseReleaseTrait,
-    msg::ForceClose,
-};
-use crate::{
     cmd::Quote,
-    finance::LpnCurrencies,
-    migrate,
-    msg::{ConfigResponse, MaxLeases, QuoteResponse},
+    finance::{LpnCurrencies, LpnCurrency, OracleRef},
+    lease::Release as LeaseReleaseTrait,
+    migrate::{self, MigrationResult},
+    msg::{ConfigResponse, ForceClose, MaxLeases, QuoteResponse},
     result::ContractResult,
     state::{config::Config, leases::Leases},
 };
@@ -101,16 +97,15 @@ where
 {
     let config = Config::update_lease_code(storage, new_lease)?;
 
-    let cusomers = Leases::iter(storage, None);
-    migrate::migrate_leases(cusomers, new_lease, release_from, max_leases, migrate_msg)
+    let customers = Leases::iter(storage, None);
+
+    migrate::migrate_leases(customers, new_lease, release_from, max_leases, migrate_msg)
         .and_then(|result| result.try_add_msgs(|msgs| update_remote_refs(config, msgs)))
-        .map(|result| {
-            MessageResponse::messages_with_events(result.msgs, emit_status(result.next_customer))
-        })
+        .map(build_response)
 }
 
 pub(super) fn try_migrate_leases_cont<LeaseRelease, MsgFactory>(
-    storage: &mut dyn Storage,
+    storage: &dyn Storage,
     release_from: LeaseRelease,
     next_customer: Addr,
     max_leases: MaxLeases,
@@ -123,11 +118,9 @@ where
     let lease_code = Config::load(storage)?.lease_code;
 
     let customers = Leases::iter(storage, Some(next_customer));
-    migrate::migrate_leases(customers, lease_code, release_from, max_leases, migrate_msg).map(
-        |result| {
-            MessageResponse::messages_with_events(result.msgs, emit_status(result.next_customer))
-        },
-    )
+
+    migrate::migrate_leases(customers, lease_code, release_from, max_leases, migrate_msg)
+        .map(build_response)
 }
 
 pub(super) fn try_close_leases<LeaseRelease, MsgFactory>(
@@ -175,6 +168,10 @@ where
     })
 }
 
+fn build_response(result: MigrationResult) -> MessageResponse {
+    MessageResponse::messages_with_events(result.msgs, emit_status(result.next_customer))
+}
+
 fn has_lease(storage: &dyn Storage) -> bool {
     Leases::iter(storage, None).next().is_some()
 }
@@ -185,12 +182,14 @@ fn update_remote_refs(config: Config, batch: &mut Batch) -> ContractResult<()> {
         let update_msg = LppExecuteMsg::<LpnCurrencies>::NewLeaseCode {
             lease_code: new_lease,
         };
+
         batch
             .schedule_execute_wasm_no_reply_no_funds(config.lpp, &update_msg)
             .map_err(Into::into)
     }
     .and_then(|()| {
         let update_msg = ReserveExecuteMsg::NewLeaseCode(new_lease);
+
         batch
             .schedule_execute_wasm_no_reply_no_funds(config.reserve, &update_msg)
             .map_err(Into::into)

@@ -63,7 +63,7 @@ impl Config {
     ) -> ContractResult<()> {
         Self::STORAGE
             .update(storage, |c| {
-                ContractResult::Ok(Self {
+                Ok(Self {
                     lease_interest_rate_margin,
                     lease_position_spec,
                     lease_due_period,

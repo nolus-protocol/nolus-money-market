@@ -3,21 +3,12 @@ use platform::{batch::Batch, contract::Code};
 use sdk::cosmwasm_std::Addr;
 use versioning::{ProtocolMigrationMessage, ProtocolPackageRelease};
 
-use crate::{lease::Release as LeaseReleaseTrait, msg::MaxLeases, result::ContractResult};
-
-pub struct Customer<LeaseIter> {
-    customer: Addr,
-    leases: LeaseIter,
-}
-
-#[derive(Default)]
-#[cfg_attr(feature = "testing", derive(Debug, Eq, PartialEq))]
-pub struct MigrationResult {
-    pub msgs: Batch,
-    pub next_customer: Option<Addr>,
-}
-
-pub type MaybeCustomer<LI> = ContractResult<Customer<LI>>;
+use crate::{
+    customer::{Customer, CustomerLeases},
+    lease::Release as LeaseReleaseTrait,
+    msg::MaxLeases,
+    result::ContractResult,
+};
 
 /// Builds a batch of messages for the migration of up to `max_leases`
 ///
@@ -25,16 +16,15 @@ pub type MaybeCustomer<LI> = ContractResult<Customer<LI>>;
 /// If there are still pending customers, then the next customer is returned as a key to start from the next chunk of leases.
 ///
 /// Consumes the customers iterator to the next customer or error.
-pub fn migrate_leases<I, LI, LeaseRelease, MsgFactory>(
-    mut customers: I,
+pub(crate) fn migrate_leases<Customers, LeaseRelease, MsgFactory>(
+    mut customers: Customers,
     lease_code: Code,
     release_from: LeaseRelease,
     max_leases: MaxLeases,
     migrate_msg: MsgFactory,
 ) -> ContractResult<MigrationResult>
 where
-    I: Iterator<Item = MaybeCustomer<LI>>,
-    LI: ExactSizeIterator<Item = Addr>,
+    Customers: CustomerLeases,
     LeaseRelease: LeaseReleaseTrait,
     MsgFactory: Fn(ProtocolPackageRelease) -> ProtocolMigrationMessage<MigrateMsg>,
 {
@@ -52,13 +42,11 @@ where
         })
 }
 
-impl<LeaseIter> Customer<LeaseIter>
-where
-    LeaseIter: Iterator<Item = Addr>,
-{
-    pub fn from(customer: Addr, leases: LeaseIter) -> Self {
-        Self { customer, leases }
-    }
+#[derive(Default)]
+#[cfg_attr(feature = "testing", derive(Debug, Eq, PartialEq))]
+pub(crate) struct MigrationResult {
+    pub msgs: Batch,
+    pub next_customer: Option<Addr>,
 }
 
 impl MigrationResult {
@@ -76,10 +64,8 @@ struct MigrateBatch<LeaseRelease> {
     leases_left: MaxLeases,
     msgs: Batch,
 }
-impl<LeaseRelease> MigrateBatch<LeaseRelease>
-where
-    LeaseRelease: LeaseReleaseTrait,
-{
+
+impl<LeaseRelease> MigrateBatch<LeaseRelease> {
     fn new(new_code: Code, release_from: LeaseRelease, max_leases: MaxLeases) -> Self {
         Self {
             new_code,
@@ -88,15 +74,20 @@ where
             msgs: Default::default(),
         }
     }
+}
 
+impl<LeaseRelease> MigrateBatch<LeaseRelease>
+where
+    LeaseRelease: LeaseReleaseTrait,
+{
     /// None if there is enough room for all customer's leases, otherwise return the customer
-    fn migrate_or_be_next<LI, MsgFactory>(
+    fn migrate_or_be_next<Leases, MsgFactory>(
         &mut self,
-        customer: Customer<LI>,
+        customer: Customer<Leases>,
         migrate_msg: &MsgFactory,
     ) -> Option<ContractResult<Addr>>
     where
-        LI: ExactSizeIterator<Item = Addr>,
+        Leases: ExactSizeIterator<Item = Addr>,
         MsgFactory: Fn(ProtocolPackageRelease) -> ProtocolMigrationMessage<MigrateMsg>,
     {
         self.migrate_leases(customer.leases, migrate_msg)
@@ -114,11 +105,13 @@ where
         MsgFactory: Fn(ProtocolPackageRelease) -> ProtocolMigrationMessage<MigrateMsg>,
     {
         let maybe_leases_nb: Result<MaxLeases, _> = leases.len().try_into();
+
         match maybe_leases_nb {
             Err(err) => Some(Err(err.into())),
             Ok(leases_nb) => {
                 if let Some(left) = self.leases_left.checked_sub(leases_nb) {
                     self.leases_left = left;
+
                     leases.find_map(|lease| {
                         self.schedule_migration(lease, migrate_msg)
                             .map(|()| None)
@@ -161,8 +154,6 @@ impl<LeaseRelease> From<MigrateBatch<LeaseRelease>> for Batch {
 
 #[cfg(all(feature = "internal.test.testing", test))]
 mod test {
-    use std::vec::IntoIter;
-
     use lease::api::MigrateMsg;
     use platform::contract::Code;
     use sdk::cosmwasm_std::Addr;
@@ -173,9 +164,9 @@ mod test {
     use crate::{
         ContractError,
         lease::{Release, test::FixedRelease},
-        migrate::{Customer, MigrationResult},
-        result::ContractResult,
     };
+
+    use super::{Customer, CustomerLeases, MigrationResult};
 
     const LEASE1: &str = "lease1";
     const LEASE21: &str = "lease21";
@@ -374,7 +365,7 @@ mod test {
         exp
     }
 
-    fn test_customers() -> impl Iterator<Item = ContractResult<Customer<IntoIter<Addr>>>> {
+    fn test_customers() -> impl CustomerLeases {
         let lease1 = Addr::unchecked(LEASE1);
         let customer_addr1 = Addr::unchecked(CUSTOMER_ADDR1);
         let cust1 = Customer::from(customer_addr1, vec![lease1].into_iter());
