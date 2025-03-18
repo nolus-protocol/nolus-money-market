@@ -1,4 +1,4 @@
-use std::{any::type_name, str::FromStr};
+use std::any::type_name;
 
 use osmosis_std::types::osmosis::poolmanager::v1beta1::SwapAmountInRoute;
 
@@ -31,7 +31,7 @@ impl ExactAmountInSkel for Impl {
 
         SwapRequest {
             token_in,
-            min_token_out: Amount::from_str(&token_out_min_amount).expect("valid amount integer"),
+            min_token_out: token_out_min_amount.parse().expect("valid amount integer"),
             swap_path: routes
                 .into_iter()
                 .map(
