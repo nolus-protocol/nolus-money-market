@@ -125,18 +125,18 @@ where
 
     /// Lists configured swap pairs
     ///
-    /// Return `oracle;:api::SupportedCurrencyPairsResponse`
+    /// Return [`oracle;:api::SupportedCurrencyPairsResponse`]
     SupportedCurrencyPairs {},
 
     /// Lists configured currencies
     ///
-    /// Return a `Vec<oracle::api::Currency>`
+    /// Return a [`Vec<oracle::api::Currency>`]
     Currencies {},
 
     /// Provides a path in the swap tree between two arbitrary currencies
-    ///
-    /// Returns `oracle::api::swap::SwapPath`
-    /// Implementation of [crate::api::swap::QueryMsg::SwapPath]
+    ///testing.rs osmosis
+    /// Returns ['Vec<crate::api::SwapTarget>']
+    /// Implementation of [`crate::api::swap::QueryMsg::SwapPath`]
     SwapPath {
         from: CurrencyDTO<PriceCurrencies>,
         to: CurrencyDTO<PriceCurrencies>,

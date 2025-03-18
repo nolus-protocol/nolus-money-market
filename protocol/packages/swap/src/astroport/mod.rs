@@ -1,9 +1,8 @@
 use std::marker::PhantomData;
 
 use currency::{self, DexSymbols, Group};
-use dex::swap::{Error, ExactAmountIn, Result};
+use dex::swap::{Error, ExactAmountIn, Result, SwapPathSlice};
 use finance::coin::{Amount, CoinDTO};
-use oracle::api::swap::{SwapPath, SwapTarget};
 use platform::{
     coin_legacy,
     ica::HostAccount,
@@ -46,14 +45,16 @@ impl<R> ExactAmountIn for Impl<R>
 where
     R: Router,
 {
-    fn build_request<GIn, GSwap>(
+    fn build_request<GIn, GOut, GSwap>(
         trx: &mut Transaction,
         sender: HostAccount,
         token_in: &CoinDTO<GIn>,
-        swap_path: &SwapPath<GSwap>,
+        min_amount_out: &CoinDTO<GOut>,
+        swap_path: SwapPathSlice<'_, GSwap>,
     ) -> Result<()>
     where
         GIn: Group,
+        GOut: Group,
         GSwap: Group,
     {
         debug_assert!(!swap_path.is_empty());
@@ -61,9 +62,10 @@ where
 
         cosmwasm_std::to_json_vec(&ExecuteMsg::ExecuteSwapOperations {
             operations: to_operations::<GSwap>(&token_in.denom, swap_path),
-            minimum_receive: None, // disable checks on the received amount
-            to: None,              // means the sender
-            max_spread: Some(MAX_IMPACT), // if None that would be equivalent to `astroport::pair::DEFAULT_SLIPPAGE`, i.e. 0.5%
+            minimum_receive: Some(min_amount_out.amount().into()), // request a check on the received amount
+            to: None,                                              // means the sender
+            max_spread: Some(MAX_IMPACT), // checked on each individual swap operation, if None that would be equivalent to `astroport::pair::DEFAULT_SLIPPAGE`, i.e. 0.5%,
+                                          // fails if greater-than MAX_IMPACT https://github.com/astroport-fi/astroport-core/blob/b558de92ef4bf8f3dc3a272f2ec45a317eff43bf/contracts/pair/src/contract.rs#L1363C20-L1363C57
         })
         .map_err(Into::into)
         .map(|msg| RequestMsg {
@@ -117,10 +119,7 @@ impl Router for NeutronTest {
 
 enum Never {}
 
-fn to_operations<'a, G>(
-    token_in_denom: &'a str,
-    swap_path: &'a [SwapTarget<G>],
-) -> Vec<SwapOperation>
+fn to_operations<G>(token_in_denom: &str, swap_path: SwapPathSlice<'_, G>) -> Vec<SwapOperation>
 where
     G: Group,
 {

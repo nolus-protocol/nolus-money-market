@@ -5,7 +5,7 @@ use currency::{
     MemberOf,
 };
 use finance::coin::{Amount, Coin, CoinDTO, NonZeroAmount};
-use oracle::api::swap::SwapPath;
+use oracle::api::swap::SwapTarget;
 use sdk::cosmos_sdk_proto::Any as CosmosAny;
 
 #[cfg(test)]
@@ -26,7 +26,8 @@ where
     GSwap: Group,
 {
     pub token_in: CoinDTO<GIn>,
-    pub swap_path: SwapPath<GSwap>,
+    pub min_token_out: Amount,
+    pub swap_path: Vec<SwapTarget<GSwap>>,
 }
 
 pub(crate) fn parse_dex_token<G>(amount: &str, denom: &str) -> CoinDTO<G>

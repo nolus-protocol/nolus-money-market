@@ -2,23 +2,28 @@ use thiserror::Error;
 
 use currency::Group;
 use finance::coin::{Amount, CoinDTO};
-use oracle::api::swap::SwapPath;
+use oracle::api::swap::SwapTarget;
 use platform::{ica::HostAccount, trx::Transaction};
 use sdk::{cosmos_sdk_proto::Any as CosmosAny, cosmwasm_std::StdError};
+
+pub type SwapPathSlice<'a, G> = &'a [SwapTarget<G>];
 
 pub trait ExactAmountIn {
     /// `swap_path` should be a non-empty list
     ///
     /// `GIn` - the group of the input token
+    /// `GOut` - the group of the output token
     /// `GSwap` - the group common for all tokens in the swap path
-    fn build_request<GIn, GSwap>(
+    fn build_request<GIn, GOut, GSwap>(
         trx: &mut Transaction,
         sender: HostAccount,
-        token_in: &CoinDTO<GIn>,
-        swap_path: &SwapPath<GSwap>,
+        amount_in: &CoinDTO<GIn>,
+        min_amount_out: &CoinDTO<GOut>,
+        swap_path: SwapPathSlice<'_, GSwap>,
     ) -> Result<()>
     where
         GIn: Group,
+        GOut: Group,
         GSwap: Group;
 
     fn parse_response<I>(trx_resps: &mut I) -> Result<Amount>

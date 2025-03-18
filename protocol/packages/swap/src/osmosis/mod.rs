@@ -3,9 +3,9 @@ use osmosis_std::types::osmosis::poolmanager::v1beta1::{
 };
 
 use currency::{DexSymbols, Group};
-use dex::swap::{Error, ExactAmountIn, Result};
+use dex::swap::{Error, ExactAmountIn, Result, SwapPathSlice};
 use finance::coin::{Amount, CoinDTO};
-use oracle::api::swap::{SwapPath, SwapTarget};
+use oracle::api::swap::SwapTarget;
 use platform::{
     coin_legacy,
     ica::HostAccount,
@@ -26,14 +26,16 @@ where
     Self: ExactAmountIn, {}
 
 impl ExactAmountIn for Impl {
-    fn build_request<GIn, GSwap>(
+    fn build_request<GIn, GOut, GSwap>(
         trx: &mut Transaction,
         sender: HostAccount,
-        token_in: &CoinDTO<GIn>,
-        swap_path: &SwapPath<GSwap>,
+        amount_in: &CoinDTO<GIn>,
+        min_amount_out: &CoinDTO<GOut>,
+        swap_path: SwapPathSlice<'_, GSwap>,
     ) -> Result<()>
     where
         GIn: Group,
+        GOut: Group,
         GSwap: Group,
     {
         // TODO bring the token balances, weights and swapFee-s from the DEX pools
@@ -41,10 +43,9 @@ impl ExactAmountIn for Impl {
         // https://docs.osmosis.zone/osmosis-core/modules/gamm/#swap.
         // Then apply the parameterized maximum slippage to get the minimum amount.
         // For the first version, we accept whatever price impact and slippage.
-        const MIN_OUT_AMOUNT: &str = "1";
         let routes = to_route::<GSwap>(swap_path);
-        let token_in = Some(to_dex_cwcoin(token_in)?);
-        let token_out_min_amount = MIN_OUT_AMOUNT.into();
+        let token_in = Some(to_dex_cwcoin(amount_in)?);
+        let token_out_min_amount = min_amount_out.amount().to_string();
         let msg = RequestMsg {
             sender: sender.into(),
             routes,
