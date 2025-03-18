@@ -95,6 +95,7 @@ where
     }
 
     /// None if there is enough capacity for all leases, Some(Ok(())) - none migrated due to less available seats, Some(Err) - if an error occurs at some point
+    // TODO consider defining an enum to better map the existing 3 outputs to their meaning
     fn migrate_leases<Leases, MsgFactory>(
         &mut self,
         mut leases: Leases,
