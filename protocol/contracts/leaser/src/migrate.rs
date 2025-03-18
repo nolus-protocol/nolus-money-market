@@ -3,7 +3,12 @@ use platform::{batch::Batch, contract::Code};
 use sdk::cosmwasm_std::Addr;
 use versioning::{ProtocolMigrationMessage, ProtocolPackageRelease};
 
-use crate::{lease::Release as LeaseReleaseTrait, msg::MaxLeases, result::ContractResult};
+use crate::{
+    customer::{Customer, MaybeCustomer},
+    lease::Release as LeaseReleaseTrait,
+    msg::MaxLeases,
+    result::ContractResult,
+};
 
 /// Builds a batch of messages for the migration of up to `max_leases`
 ///
@@ -37,19 +42,6 @@ where
             next_customer,
         })
 }
-
-pub(crate) struct Customer<Leases> {
-    customer: Addr,
-    leases: Leases,
-}
-
-impl<Leases> Customer<Leases> {
-    pub fn from(customer: Addr, leases: Leases) -> Self {
-        Self { customer, leases }
-    }
-}
-
-pub(crate) type MaybeCustomer<Leases> = ContractResult<Customer<Leases>>;
 
 #[derive(Default)]
 #[cfg_attr(feature = "testing", derive(Debug, Eq, PartialEq))]

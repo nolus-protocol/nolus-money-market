@@ -5,6 +5,7 @@ pub use self::{
 
 mod cmd;
 mod contract;
+mod customer;
 pub mod error;
 mod finance;
 mod lease;

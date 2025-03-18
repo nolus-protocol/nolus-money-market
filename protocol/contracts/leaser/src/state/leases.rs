@@ -6,7 +6,7 @@ use sdk::{
 };
 
 use crate::{
-    migrate::{Customer, MaybeCustomer},
+    customer::{Customer, MaybeCustomer},
     result::ContractResult,
 };
 
