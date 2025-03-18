@@ -5,38 +5,6 @@ use versioning::{ProtocolMigrationMessage, ProtocolPackageRelease};
 
 use crate::{lease::Release as LeaseReleaseTrait, msg::MaxLeases, result::ContractResult};
 
-pub struct Customer<LeaseIter> {
-    customer: Addr,
-    leases: LeaseIter,
-}
-
-impl<LeaseIter> Customer<LeaseIter>
-where
-    LeaseIter: Iterator<Item = Addr>,
-{
-    pub fn from(customer: Addr, leases: LeaseIter) -> Self {
-        Self { customer, leases }
-    }
-}
-
-#[derive(Default)]
-#[cfg_attr(feature = "testing", derive(Debug, Eq, PartialEq))]
-pub struct MigrationResult {
-    pub msgs: Batch,
-    pub next_customer: Option<Addr>,
-}
-
-impl MigrationResult {
-    pub fn try_add_msgs<F>(mut self, add_fn: F) -> ContractResult<Self>
-    where
-        F: FnOnce(&mut Batch) -> ContractResult<()>,
-    {
-        add_fn(&mut self.msgs).map(|()| self)
-    }
-}
-
-pub type MaybeCustomer<LI> = ContractResult<Customer<LI>>;
-
 /// Builds a batch of messages for the migration of up to `max_leases`
 ///
 /// The customer connected leases are migrated up to the `max_leases` boundary and atomically for a customer.
@@ -68,6 +36,38 @@ where
             msgs: msgs.into(),
             next_customer,
         })
+}
+
+pub struct Customer<LeaseIter> {
+    customer: Addr,
+    leases: LeaseIter,
+}
+
+impl<LeaseIter> Customer<LeaseIter>
+where
+    LeaseIter: Iterator<Item = Addr>,
+{
+    pub fn from(customer: Addr, leases: LeaseIter) -> Self {
+        Self { customer, leases }
+    }
+}
+
+pub type MaybeCustomer<LI> = ContractResult<Customer<LI>>;
+
+#[derive(Default)]
+#[cfg_attr(feature = "testing", derive(Debug, Eq, PartialEq))]
+pub struct MigrationResult {
+    pub msgs: Batch,
+    pub next_customer: Option<Addr>,
+}
+
+impl MigrationResult {
+    pub fn try_add_msgs<F>(mut self, add_fn: F) -> ContractResult<Self>
+    where
+        F: FnOnce(&mut Batch) -> ContractResult<()>,
+    {
+        add_fn(&mut self.msgs).map(|()| self)
+    }
 }
 
 struct MigrateBatch<LeaseRelease> {
