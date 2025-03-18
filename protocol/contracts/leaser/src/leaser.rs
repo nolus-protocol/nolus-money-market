@@ -99,11 +99,11 @@ where
     LeaseRelease: LeaseReleaseTrait,
     MsgFactory: Fn(ProtocolPackageRelease) -> ProtocolMigrationMessage<MigrateMsg>,
 {
-    Config::update_lease_code(storage, new_lease)?;
+    let config = Config::update_lease_code(storage, new_lease)?;
 
     let cusomers = Leases::iter(storage, None);
     migrate::migrate_leases(cusomers, new_lease, release_from, max_leases, migrate_msg)
-        .and_then(|result| result.try_add_msgs(|msgs| update_remote_refs(storage, new_lease, msgs)))
+        .and_then(|result| result.try_add_msgs(|msgs| update_remote_refs(config, msgs)))
         .map(|result| {
             MessageResponse::messages_with_events(result.msgs, emit_status(result.next_customer))
         })
@@ -179,24 +179,20 @@ fn has_lease(storage: &dyn Storage) -> bool {
     Leases::iter(storage, None).next().is_some()
 }
 
-fn update_remote_refs(
-    storage: &dyn Storage,
-    new_lease: Code,
-    batch: &mut Batch,
-) -> ContractResult<()> {
-    let cfg = Config::load(storage)?;
+fn update_remote_refs(config: Config, batch: &mut Batch) -> ContractResult<()> {
+    let new_lease = config.lease_code;
     {
         let update_msg = LppExecuteMsg::<LpnCurrencies>::NewLeaseCode {
             lease_code: new_lease,
         };
         batch
-            .schedule_execute_wasm_no_reply_no_funds(cfg.lpp, &update_msg)
+            .schedule_execute_wasm_no_reply_no_funds(config.lpp, &update_msg)
             .map_err(Into::into)
     }
     .and_then(|()| {
         let update_msg = ReserveExecuteMsg::NewLeaseCode(new_lease);
         batch
-            .schedule_execute_wasm_no_reply_no_funds(cfg.reserve, &update_msg)
+            .schedule_execute_wasm_no_reply_no_funds(config.reserve, &update_msg)
             .map_err(Into::into)
     })
 }

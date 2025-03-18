@@ -73,14 +73,12 @@ impl Config {
             .map(mem::drop)
     }
 
-    pub fn update_lease_code(storage: &mut dyn Storage, new_code: Code) -> ContractResult<()> {
-        Self::STORAGE
-            .update(storage, |c| -> ContractResult<Config> {
-                Ok(Self {
-                    lease_code: new_code,
-                    ..c
-                })
+    pub fn update_lease_code(storage: &mut dyn Storage, new_code: Code) -> ContractResult<Self> {
+        Self::STORAGE.update(storage, |c| -> ContractResult<Config> {
+            Ok(Self {
+                lease_code: new_code,
+                ..c
             })
-            .map(mem::drop)
+        })
     }
 }
