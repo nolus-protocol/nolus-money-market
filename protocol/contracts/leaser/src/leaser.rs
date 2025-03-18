@@ -185,12 +185,14 @@ fn update_remote_refs(config: Config, batch: &mut Batch) -> ContractResult<()> {
         let update_msg = LppExecuteMsg::<LpnCurrencies>::NewLeaseCode {
             lease_code: new_lease,
         };
+
         batch
             .schedule_execute_wasm_no_reply_no_funds(config.lpp, &update_msg)
             .map_err(Into::into)
     }
     .and_then(|()| {
         let update_msg = ReserveExecuteMsg::NewLeaseCode(new_lease);
+
         batch
             .schedule_execute_wasm_no_reply_no_funds(config.reserve, &update_msg)
             .map_err(Into::into)
