@@ -38,21 +38,21 @@ where
         })
 }
 
-pub struct Customer<LeaseIter> {
+pub struct Customer<Leases> {
     customer: Addr,
-    leases: LeaseIter,
+    leases: Leases,
 }
 
-impl<LeaseIter> Customer<LeaseIter>
+impl<Leases> Customer<Leases>
 where
-    LeaseIter: Iterator<Item = Addr>,
+    Leases: Iterator<Item = Addr>,
 {
-    pub fn from(customer: Addr, leases: LeaseIter) -> Self {
+    pub fn from(customer: Addr, leases: Leases) -> Self {
         Self { customer, leases }
     }
 }
 
-pub type MaybeCustomer<LI> = ContractResult<Customer<LI>>;
+pub type MaybeCustomer<Leases> = ContractResult<Customer<Leases>>;
 
 #[derive(Default)]
 #[cfg_attr(feature = "testing", derive(Debug, Eq, PartialEq))]
@@ -91,13 +91,13 @@ where
     }
 
     /// None if there is enough room for all customer's leases, otherwise return the customer
-    fn migrate_or_be_next<LI, MsgFactory>(
+    fn migrate_or_be_next<Leases, MsgFactory>(
         &mut self,
-        customer: Customer<LI>,
+        customer: Customer<Leases>,
         migrate_msg: &MsgFactory,
     ) -> Option<ContractResult<Addr>>
     where
-        LI: ExactSizeIterator<Item = Addr>,
+        Leases: ExactSizeIterator<Item = Addr>,
         MsgFactory: Fn(ProtocolPackageRelease) -> ProtocolMigrationMessage<MigrateMsg>,
     {
         self.migrate_leases(customer.leases, migrate_msg)
