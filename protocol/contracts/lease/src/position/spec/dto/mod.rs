@@ -5,6 +5,8 @@ use crate::{
     position::{PositionError, PositionResult, Spec, close::Policy as ClosePolicy},
 };
 
+mod migrate_v0_7_5;
+
 /// Position specification past position open
 ///
 /// It is created from an initial specification and a default policy.
@@ -13,7 +15,11 @@ use crate::{
 /// Designed to be used as a non-public API component! Invariant checks are not done on deserialization!
 #[derive(Serialize, Deserialize, Clone, Copy)]
 #[cfg_attr(feature = "contract_testing", derive(Debug, PartialEq, Eq))]
-#[serde(deny_unknown_fields, rename_all = "snake_case")]
+#[serde(
+    deny_unknown_fields,
+    rename_all = "snake_case",
+    try_from = "migrate_v0_7_5::SpecDTO"
+)]
 pub struct SpecDTO {
     r#const: PositionSpecDTO,
     close: ClosePolicy,
