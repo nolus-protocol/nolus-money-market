@@ -72,7 +72,7 @@ testing = [
 access-control = { workspace = true, optional = true }
 currencies = { workspace = true, optional = true }
 currency = { workspace = true, optional = true }
-dex = { workspace = true }
+dex = { workspace = true, features = ["impl"] }
 finance = { workspace = true, optional = true }
 oracle = { workspace = true, optional = true }
 oracle-platform = { workspace = true, optional = true }
