@@ -10,7 +10,7 @@ pub use self::{
     SwapTask as SwapTaskT,
     account::Account,
     ica_connector::{
-        Enterable, ICS27_MESSAGE_ENTERING_NEXT_STATE, IcaConnectee, IcaConnector,
+        ICS27_MESSAGE_ENTERING_NEXT_STATE, IcaConnectee, IcaConnector,
         NO_ICS27_MESSAGE_ENTERING_NEXT_STATE,
     },
     out_local::{

@@ -27,11 +27,10 @@ use crate::{
 #[cfg(debug_assertions)]
 use crate::impl_::swap_task::IterState;
 use crate::{
-    Connectable,
+    Connectable, Enterable,
     impl_::{
         ContractInSwap, ForwardToInner, TimeAlarm,
         filter::CurrencyFilter,
-        ica_connector::Enterable,
         response::{self, ContinueResult, Handler, Result as HandlerResult},
         swap_task::{CoinVisitor, IterNext, SwapTask as SwapTaskT},
         timeout,

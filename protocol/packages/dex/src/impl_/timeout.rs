@@ -5,9 +5,7 @@ use platform::{
 };
 use sdk::cosmwasm_std::{Addr, Env, QuerierWrapper};
 
-use crate::error::Result;
-
-use super::ica_connector::Enterable;
+use crate::{Enterable, error::Result};
 
 pub(crate) fn on_timeout_retry<S, SEnum, L>(
     current_state: S,

@@ -15,16 +15,12 @@ use sdk::cosmwasm_std::{Addr, Env, QuerierWrapper, Timestamp};
 
 #[cfg(feature = "migration")]
 use crate::impl_::{InspectSpec, MigrateSpec};
-use crate::{Connectable, error::Result};
+use crate::{Account, Connectable, Enterable, error::Result};
 
 use super::{
-    Account, Contract, Response, TimeAlarm,
+    Contract, Response, TimeAlarm,
     response::{ContinueResult, Handler},
 };
-
-pub trait Enterable {
-    fn enter(&self, now: Timestamp, querier: QuerierWrapper<'_>) -> Result<Batch>;
-}
 
 pub const ICS27_MESSAGE_ENTERING_NEXT_STATE: bool = true;
 pub const NO_ICS27_MESSAGE_ENTERING_NEXT_STATE: bool = !ICS27_MESSAGE_ENTERING_NEXT_STATE;

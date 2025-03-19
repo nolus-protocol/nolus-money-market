@@ -11,11 +11,12 @@ use platform::{
 };
 use sdk::cosmwasm_std::{Env, QuerierWrapper, Timestamp};
 
+use crate::Enterable;
 #[cfg(feature = "migration")]
 use crate::{InspectSpec, MigrateSpec};
 
 use super::{
-    Contract, ContractInSwap, Enterable, TransferInFinishState,
+    Contract, ContractInSwap, TransferInFinishState,
     response::{self, Handler, Result as HandlerResult},
     swap_task::SwapTask as SwapTaskT,
     transfer_in,

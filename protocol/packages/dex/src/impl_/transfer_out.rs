@@ -14,16 +14,16 @@ use platform::{
 };
 use sdk::cosmwasm_std::{Binary, Env, QuerierWrapper, Timestamp};
 
-#[cfg(feature = "migration")]
-use crate::{InspectSpec, MigrateSpec};
 use crate::{
+    Enterable,
     error::{Error, Result},
     swap::ExactAmountIn,
 };
+#[cfg(feature = "migration")]
+use crate::{InspectSpec, MigrateSpec};
 
 use super::{
     Contract, ContractInSwap, TimeAlarm, TransferOutState, coin_index,
-    ica_connector::Enterable,
     response::{self, ContinueResult, Handler, Result as HandlerResult},
     swap_exact_in::SwapExactIn,
     swap_task::{CoinVisitor, CoinsNb, IterNext, IterState, SwapTask as SwapTaskT},

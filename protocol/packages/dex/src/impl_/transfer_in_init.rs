@@ -8,12 +8,13 @@ use finance::coin::CoinDTO;
 use platform::batch::Batch;
 use sdk::cosmwasm_std::{Binary, Env, QuerierWrapper, Timestamp};
 
+use crate::Enterable;
 use crate::{Connectable, ConnectionParams, error::Result};
 #[cfg(feature = "migration")]
 use crate::{InspectSpec, MigrateSpec};
 
 use super::{
-    Contract, ContractInSwap, Enterable, TimeAlarm, TransferInInitState,
+    Contract, ContractInSwap, TimeAlarm, TransferInInitState,
     response::{ContinueResult, Handler, Result as HandlerResult},
     swap_task::SwapTask as SwapTaskT,
     timeout,
