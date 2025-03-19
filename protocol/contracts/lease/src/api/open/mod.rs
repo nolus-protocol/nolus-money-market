@@ -3,7 +3,7 @@ use serde::Deserialize;
 use serde::Serialize;
 
 use currency::CurrencyDTO;
-pub use dex::{ConnectionParams, Ics20Channel};
+use dex::ConnectionParams;
 use finance::{duration::Duration, liability::Liability, percent::Percent};
 use sdk::cosmwasm_std::Addr;
 

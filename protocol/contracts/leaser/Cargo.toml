@@ -38,6 +38,7 @@ reserve = { workspace = true, features = ["stub"] }
 access-control = { workspace = true }
 currencies = { workspace = true }
 currency = { workspace = true }
+dex = { workspace = true }
 finance = { workspace = true }
 platform = { workspace = true }
 sdk = { workspace = true, features = ["contract"] }

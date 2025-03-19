@@ -209,12 +209,10 @@ fn emit_status(next_customer: Option<Addr>) -> Emitter {
 mod test {
     use admin_contract::msg::{MigrationSpec, ProtocolContracts};
     use currencies::Lpn;
+    use dex::{ConnectionParams, Ics20Channel};
     use finance::{coin::Coin, duration::Duration, liability::Liability, percent::Percent};
     use json_value::JsonValue;
-    use lease::api::{
-        MigrateMsg,
-        open::{ConnectionParams, Ics20Channel, PositionSpecDTO},
-    };
+    use lease::api::{MigrateMsg, open::PositionSpecDTO};
     use platform::{contract::Code, response};
     use sdk::cosmwasm_std::{Addr, Storage, testing::MockStorage};
     use versioning::{

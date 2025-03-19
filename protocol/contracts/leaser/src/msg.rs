@@ -2,11 +2,9 @@ use serde::{Deserialize, Serialize};
 
 use admin_contract::msg::{MigrationSpec, ProtocolContracts};
 use currency::CurrencyDTO;
+use dex::ConnectionParams;
 use finance::{duration::Duration, percent::Percent};
-use lease::api::{
-    DownpaymentCoin, LeaseCoin, LpnCoinDTO,
-    open::{ConnectionParams, PositionSpecDTO},
-};
+use lease::api::{DownpaymentCoin, LeaseCoin, LpnCoinDTO, open::PositionSpecDTO};
 use sdk::cosmwasm_std::{Addr, Uint64};
 use versioning::ProtocolPackageReleaseId;
 

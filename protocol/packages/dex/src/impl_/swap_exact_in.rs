@@ -19,7 +19,7 @@ use sdk::{
 };
 
 use crate::{
-    connection::ConnectionParams,
+    ConnectionParams,
     error::{Error, Result},
     swap::ExactAmountIn,
 };

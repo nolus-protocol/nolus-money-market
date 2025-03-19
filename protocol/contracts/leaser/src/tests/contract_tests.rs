@@ -5,16 +5,14 @@ use cosmwasm_std::{
 
 use currencies::{LeaseGroup, Lpn, testing::LeaseC1};
 use currency::{CurrencyDTO, CurrencyDef as _};
+use dex::{ConnectionParams, Ics20Channel};
 use finance::{
     coin::{Amount, Coin},
     duration::Duration,
     liability::Liability,
     percent::Percent,
 };
-use lease::api::{
-    LpnCoinDTO,
-    open::{ConnectionParams, Ics20Channel, PositionSpecDTO},
-};
+use lease::api::{LpnCoinDTO, open::PositionSpecDTO};
 use platform::contract::{Code, CodeId};
 
 use sdk::{

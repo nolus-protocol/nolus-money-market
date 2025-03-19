@@ -8,7 +8,7 @@ use finance::coin::CoinDTO;
 use platform::batch::Batch;
 use sdk::cosmwasm_std::{Binary, Env, QuerierWrapper, Timestamp};
 
-use crate::{Connectable, connection::ConnectionParams, error::Result};
+use crate::{Connectable, ConnectionParams, error::Result};
 #[cfg(feature = "migration")]
 use crate::{InspectSpec, MigrateSpec};
 

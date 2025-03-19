@@ -2,8 +2,9 @@ use std::mem;
 
 use serde::{Deserialize, Serialize};
 
+use dex::ConnectionParams;
 use finance::{duration::Duration, percent::Percent};
-use lease::api::open::{ConnectionParams, PositionSpecDTO};
+use lease::api::open::PositionSpecDTO;
 use platform::contract::Code;
 use sdk::{
     cosmwasm_std::{Addr, Storage},
