@@ -2,11 +2,9 @@ use std::collections::HashSet;
 
 use currencies::{LeaseGroup, PaymentGroup};
 use currency::{CurrencyDef, MemberOf};
+use dex::{ConnectionParams, Ics20Channel};
 use finance::{coin::Coin, duration::Duration, liability::Liability, percent::Percent, test};
-use lease::api::{
-    LpnCoinDTO,
-    open::{ConnectionParams, Ics20Channel, PositionSpecDTO},
-};
+use lease::api::{LpnCoinDTO, open::PositionSpecDTO};
 use leaser::{
     execute, instantiate,
     msg::{InstantiateMsg, QueryMsg, QuoteResponse},

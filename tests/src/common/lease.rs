@@ -1,5 +1,6 @@
 use currencies::{LeaseGroup, PaymentGroup};
 use currency::{Currency, CurrencyDTO, CurrencyDef};
+use dex::{ConnectionParams, Ics20Channel};
 use finance::{
     coin::Coin,
     duration::{Duration, Seconds},
@@ -8,10 +9,7 @@ use finance::{
 };
 use lease::{
     api::{
-        open::{
-            ConnectionParams, Ics20Channel, LoanForm, NewLeaseContract, NewLeaseForm,
-            PositionSpecDTO,
-        },
+        open::{LoanForm, NewLeaseContract, NewLeaseForm, PositionSpecDTO},
         query::{QueryMsg, StateResponse},
     },
     contract::{execute, instantiate, query, reply, sudo},
