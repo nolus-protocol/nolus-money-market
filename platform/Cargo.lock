@@ -909,6 +909,7 @@ checksum = "d75b0bedcc4fe52caa0e03d9f1151a323e4aa5e2d78ba3580400cd3c9e2bc4bc"
 name = "oracle-platform"
 version = "0.1.1"
 dependencies = [
+ "access-control",
  "currency",
  "finance",
  "sdk",
@@ -1487,6 +1488,7 @@ dependencies = [
 name = "timealarms"
 version = "0.5.1"
 dependencies = [
+ "access-control",
  "cosmwasm-std",
  "platform",
  "sdk",
