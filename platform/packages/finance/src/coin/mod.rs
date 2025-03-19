@@ -15,7 +15,7 @@ use currency::{Currency, CurrencyDef, Group, MemberOf};
 
 use crate::{
     duration::Duration,
-    percent::{Percent, Units as PercentUnits},
+    percent::{Percent100, Units as PercentUnits},
     ratio::{self, CheckedAdd, CheckedDiv, CheckedMul, Rational},
     zero::Zero,
 };
@@ -62,12 +62,12 @@ impl CheckedMul<PercentUnits> for Amount {
     }
 }
 
-impl CheckedMul<Percent> for Amount {
-    type Output = Percent;
+impl CheckedMul<Percent100> for Amount {
+    type Output = Percent100;
 
-    fn checked_mul(self, rhs: Percent) -> Option<Self::Output> {
+    fn checked_mul(self, rhs: Percent100) -> Option<Self::Output> {
         checked_mul_and_convert(self, rhs, |result| {
-            result.try_into().ok().map(Percent::from_permille)
+            result.try_into().ok().map(Percent100::from_permille)
         })
     }
 }
@@ -333,11 +333,17 @@ impl<C> AsRef<Self> for Coin<C> {
 
 #[cfg(test)]
 mod test {
-    use std::any;
+    use std::{
+        any,
+        fmt::{Debug, Display},
+    };
 
     use currency::test::{SuperGroupTestC1, SuperGroupTestC2};
 
-    use crate::percent::test::test_of;
+    use crate::{
+        fractionable::Percentable,
+        percent::{Percent100, Units},
+    };
 
     use super::{Amount, Coin};
 
@@ -492,6 +498,20 @@ mod test {
         let exp_sum = coin1(15);
         assert_eq!(coins.iter().sum::<Coin<SuperGroupTestC1>>(), exp_sum);
         assert_eq!(coins.into_iter().sum::<Coin<SuperGroupTestC1>>(), exp_sum);
+    }
+
+    fn test_of<P>(permille: Units, quantity: P, exp: P)
+    where
+        P: Clone + Debug + Display + PartialEq + Percentable,
+    {
+        let perm = Percent100::from_permille(permille);
+        assert_eq!(
+            exp,
+            perm.of(quantity.clone()),
+            "Calculating {} of {}",
+            perm,
+            quantity
+        );
     }
 
     fn coprime_impl(gcd: Amount, a1: Amount, a2: Amount) {

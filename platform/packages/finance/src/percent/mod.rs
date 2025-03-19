@@ -1,23 +1,16 @@
-use std::{
-    fmt::{Debug, Display, Formatter, Result as FmtResult, Write},
-    ops::{Add, Div, Rem, Sub},
-};
-
-use serde::{Deserialize, Serialize};
-
-use sdk::cosmwasm_std::{OverflowError, OverflowOperation};
+use bound::{BoundPercent, HundredBound, MaxBound};
 
 use crate::{
     coin::{Amount, Coin},
-    error::{Error, Result as FinanceResult},
-    fractionable::Fractionable,
-    ratio::{CheckedAdd, CheckedMul, Ratio, Rational},
-    zero::Zero,
+    ratio::{CheckedAdd, CheckedMul},
 };
 
 pub mod bound;
 
 pub type Units = u32;
+
+pub type Percent100 = BoundPercent<HundredBound>;
+pub type Percent = BoundPercent<MaxBound>;
 
 impl CheckedMul for Units {
     type Output = Self;
@@ -51,274 +44,95 @@ impl CheckedAdd for Units {
     }
 }
 
-#[derive(Copy, Clone, Default, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-#[serde(try_from = "Units")]
-pub struct Percent(Units); //value in permille
-
-impl Percent {
-    pub const ZERO: Self = Self::from_permille(0);
-    pub const HUNDRED: Self = Self::from_permille(Self::PERMILLE);
-
-    const UNITS_TO_PERCENT_RATIO: Units = 10;
-    const PERMILLE: Units = 1000;
-
-    pub fn from_percent(percent: u16) -> Self {
-        Self::from_permille(Units::from(percent) * Self::UNITS_TO_PERCENT_RATIO)
-    }
-
-    pub const fn from_permille(permille: Units) -> Self {
-        debug_assert!(
-            permille <= Self::PERMILLE,
-            "Percent cannot be greater than 100%"
-        );
-        Self(permille)
-    }
-
-    pub fn from_rational<FractionUnit>(
-        nominator: FractionUnit,
-        denominator: FractionUnit,
-    ) -> Option<Self>
-    where
-        FractionUnit:
-            Copy + Debug + Div + Ord + PartialEq + PartialOrd + Rem<Output = FractionUnit> + Zero,
-        <FractionUnit as Div>::Output: CheckedMul<Self, Output = Self>,
-        Self: Fractionable<FractionUnit>,
-    {
-        Rational::new(nominator, denominator).checked_mul(Percent::HUNDRED)
-    }
-
-    pub const fn units(&self) -> Units {
-        self.0
-    }
-
-    pub fn of<A>(&self, whole: A) -> A
-    where
-        A: Fractionable<Units>,
-    {
-        whole.safe_mul(&(*self).into())
-    }
-
-    pub fn is_zero(&self) -> bool {
-        self == &Self::ZERO
-    }
-
-    pub fn checked_add(self, other: Self) -> FinanceResult<Self> {
-        self.0
-            .checked_add(other.0)
-            .map(Self::from_permille)
-            .ok_or(Error::overflow_err("while adding", self, other))
-    }
-
-    pub fn checked_sub(self, other: Self) -> FinanceResult<Self> {
-        self.0
-            .checked_sub(other.0)
-            .map(Self::from_permille)
-            .ok_or(Error::overflow_err("while subtracting", self, other))
-    }
-}
-
-impl TryFrom<Units> for Percent {
-    type Error = &'static str;
-
-    fn try_from(permille: Units) -> Result<Self, Self::Error> {
-        if permille > Percent::PERMILLE {
-            Err("Percent cannot be greater than 100%")
-        } else {
-            Ok(Percent(permille))
-        }
-    }
-}
-
-impl Zero for Percent {
-    const ZERO: Self = Self::ZERO;
-}
-
-impl From<Percent> for Ratio<Units> {
-    fn from(percent: Percent) -> Self {
-        Self::new(percent.units(), Percent::HUNDRED.units())
-    }
-}
-
-impl From<Percent> for Rational<Units> {
-    fn from(percent: Percent) -> Self {
-        Self::new(percent.units(), Percent::HUNDRED.units())
-    }
-}
-
-impl From<Percent> for u128 {
-    fn from(percent: Percent) -> Self {
-        u128::from(percent.units())
-    }
-}
-
-impl CheckedAdd for Percent {
-    type Output = Self;
-
-    fn checked_add(self, rhs: Self) -> Option<Self::Output> {
-        self.checked_add(rhs).ok()
-    }
-}
-
-impl Add<Percent> for Percent {
-    type Output = Self;
-
-    #[track_caller]
-    fn add(self, rhs: Self) -> Self {
-        Self(
-            self.0
-                .checked_add(rhs.0)
-                .expect("attempt to add with overflow"),
-        )
-    }
-}
-
-impl<'a> Add<&'a Percent> for Percent {
-    type Output = Self;
-
-    #[track_caller]
-    fn add(self, rhs: &'a Percent) -> Self {
-        self + *rhs
-    }
-}
-
-impl Sub<Percent> for Percent {
-    type Output = Self;
-
-    #[track_caller]
-    fn sub(self, rhs: Self) -> Self {
-        Self(
-            self.0
-                .checked_sub(rhs.0)
-                .expect("attempt to subtract with overflow"),
-        )
-    }
-}
-
-impl<'a> Sub<&'a Percent> for Percent {
-    type Output = Self;
-
-    #[track_caller]
-    fn sub(self, rhs: &'a Percent) -> Self {
-        self - *rhs
-    }
-}
-
-impl Div for Percent {
-    type Output = Units;
-
-    fn div(self, rhs: Self) -> Self::Output {
-        debug_assert!(!rhs.is_zero());
-
-        self.0 / rhs.0
-    }
-}
-
-impl Rem for Percent {
-    type Output = Self;
-
-    fn rem(self, rhs: Self) -> Self::Output {
-        debug_assert!(!rhs.is_zero());
-
-        Percent(self.0 % rhs.0)
-    }
-}
-
-impl CheckedMul<Percent> for Units {
-    type Output = Percent;
-
-    fn checked_mul(self, rhs: Percent) -> Option<Self::Output> {
-        self.checked_mul(rhs.units()).map(Percent::from_permille)
-    }
-}
-
-impl Display for Percent {
-    #[track_caller]
-    fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
-        let whole = (self.0) / Self::UNITS_TO_PERCENT_RATIO;
-        let (no_fraction, overflow) = whole.overflowing_mul(Self::UNITS_TO_PERCENT_RATIO);
-        debug_assert!(!overflow);
-        let (fractional, overflow) = (self.0).overflowing_sub(no_fraction);
-        debug_assert!(!overflow);
-
-        f.write_fmt(format_args!("{}", whole))?;
-        if fractional != Units::default() {
-            f.write_fmt(format_args!(".{}", fractional))?;
-        }
-        f.write_char('%')?;
-        Ok(())
-    }
-}
-
 #[cfg(test)]
 pub(super) mod test {
-    use std::fmt::{Debug, Display};
-
     use currency::test::SubGroupTestC10;
 
-    use crate::{coin::Coin, fractionable::Percentable, percent::Percent, ratio::Rational};
+    use crate::{
+        coin::Coin,
+        percent::{Percent, Percent100},
+        ratio::Rational,
+    };
 
     use super::Units;
 
     #[test]
     fn from_percent() {
-        assert_eq!(Percent::from_percent(0), Percent(0));
-        assert_eq!(Percent::from_percent(10), Percent(100));
-        assert_eq!(Percent::from_percent(99), Percent(990));
-        assert_eq!(Percent::from_percent(100), Percent(1000));
+        assert_eq!(Percent100::from_percent(0), Percent100::new(0));
+        assert_eq!(Percent100::from_percent(10), Percent100::new(100));
+        assert_eq!(Percent100::from_percent(99), Percent100::new(990));
+        assert_eq!(Percent100::from_percent(100), Percent100::new(1000));
+
+        assert_eq!(Percent::from_percent(0), Percent::new(0));
+        assert_eq!(Percent::from_percent(101), Percent::new(1010));
     }
 
     #[test]
     fn from_permille() {
-        assert_eq!(Percent::from_permille(0), Percent(0));
-        assert_eq!(Percent::from_permille(10), Percent(10));
-        assert_eq!(Percent::from_permille(1000), Percent(1000));
+        assert_eq!(Percent100::from_permille(0), Percent100::new(0));
+        assert_eq!(Percent100::from_permille(10), Percent100::new(10));
+        assert_eq!(Percent100::from_permille(1000), Percent100::new(1000));
+
+        assert_eq!(Percent::from_permille(0), Percent::new(0));
+        assert_eq!(Percent::from_permille(1001), Percent::new(1001));
+        assert_eq!(Percent::from_permille(Units::MAX), Percent::new(Units::MAX));
     }
 
     #[test]
     fn test_zero() {
+        let zero_amount = Coin::<SubGroupTestC10>::new(0);
         assert_eq!(
-            Coin::<SubGroupTestC10>::new(0),
-            Percent::ZERO.of(Coin::<SubGroupTestC10>::new(10))
+            zero_amount,
+            Percent100::ZERO.of(Coin::<SubGroupTestC10>::new(10))
+        );
+        assert_eq!(
+            zero_amount,
+            Percent::ZERO.of(Coin::<SubGroupTestC10>::new(10)).unwrap()
         )
     }
 
     #[test]
     fn test_hundred() {
-        let amount = 123;
-        assert_eq!(
-            Coin::<SubGroupTestC10>::new(amount),
-            Percent::HUNDRED.of(Coin::<SubGroupTestC10>::new(amount))
-        )
+        let amount = Coin::<SubGroupTestC10>::new(123);
+        assert_eq!(amount, Percent100::HUNDRED.of(amount));
+        assert_eq!(amount, Percent::HUNDRED.of(amount).unwrap())
     }
 
     #[test]
-    fn add() {
-        assert_eq!(from(40), from(25) + from(15));
-        assert_eq!(from(39), from(0) + from(39));
-        assert_eq!(from(39), from(39) + from(0));
-        assert_eq!(Percent::HUNDRED, from(999) + from(1));
+    fn checked_add() {
+        assert_eq!(from(40), from(25).checked_add(from(15)).unwrap());
+        assert_eq!(from(39), from(0).checked_add(from(39)).unwrap());
+        assert_eq!(from(39), from(39).checked_add(from(0)).unwrap());
+        assert_eq!(Percent100::HUNDRED, from(999).checked_add(from(1)).unwrap());
     }
 
     #[test]
     #[should_panic]
     fn add_overflow() {
-        let _ = from(Units::MAX) + from(1);
+        let _ = Percent100::HUNDRED.checked_add(from(1));
+        let _ = Percent::from_permille(Units::MAX).checked_add(Percent::from_permille(1));
     }
 
     #[test]
-    fn sub() {
-        assert_eq!(from(67), from(79) - from(12));
-        assert_eq!(from(0), from(34) - from(34));
-        assert_eq!(from(39), from(39) - from(0));
-        assert_eq!(from(990), Percent::HUNDRED - from(10));
-        assert_eq!(from(0), Percent::HUNDRED - from(Percent::PERMILLE));
+    fn checked_sub() {
+        assert_eq!(from(67), from(79).checked_sub(from(12)).unwrap());
+        assert_eq!(from(0), from(34).checked_sub(from(34)).unwrap());
+        assert_eq!(from(39), from(39).checked_sub(from(0)).unwrap());
+        assert_eq!(
+            from(990),
+            Percent100::HUNDRED.checked_sub(from(10)).unwrap()
+        );
+        assert_eq!(
+            from(0),
+            Percent100::HUNDRED
+                .checked_sub(from(Percent100::PERMILLE))
+                .unwrap()
+        );
     }
 
     #[test]
-    #[should_panic]
     fn sub_overflow() {
-        let _ = from(34) - from(35);
+        assert!(from(34).checked_sub(from(35)).is_err())
     }
 
     #[test]
@@ -335,31 +149,46 @@ pub(super) mod test {
 
     #[test]
     fn of() {
-        test_of(100, Percent::from_percent(40), Percent::from_percent(4));
-        test_of(100, Percent::from_percent(40), Percent::from_permille(40));
-        test_of(10, Percent::from_permille(800), Percent::from_permille(8));
-        test_of(10, Percent::from_permille(890), Percent::from_permille(8));
-        test_of(1, Percent::from_permille(123), Percent::ZERO);
-        test_of(0, Percent::HUNDRED, Percent::from_percent(0));
+        test_of(
+            100,
+            Percent100::from_percent(40),
+            Percent100::from_percent(4),
+        );
+        test_of(
+            100,
+            Percent100::from_percent(40),
+            Percent100::from_permille(40),
+        );
+        test_of(
+            10,
+            Percent100::from_permille(800),
+            Percent100::from_permille(8),
+        );
+        test_of(
+            10,
+            Percent100::from_permille(890),
+            Percent100::from_permille(8),
+        );
+        test_of(1, Percent100::from_permille(123), Percent100::ZERO);
+        test_of(0, Percent100::HUNDRED, Percent100::from_percent(0));
         test_of(
             1000,
-            Percent::from_permille(Percent::PERMILLE),
-            Percent::from_permille(1000),
+            Percent100::from_permille(Percent100::PERMILLE),
+            Percent100::from_permille(1000),
         );
-        test_of(1000, Percent::HUNDRED, Percent::HUNDRED);
-        test_of(100, Percent::ZERO, Percent::ZERO);
+        test_of(1000, Percent100::HUNDRED, Percent100::HUNDRED);
+        test_of(100, Percent100::ZERO, Percent100::ZERO);
     }
 
     #[test]
-    #[should_panic]
     fn of_overflow() {
-        Percent::from_permille(1001).of(Percent::from_permille(Units::MAX));
+        assert!(Percent::from_permille(Units::MAX).of(Units::MAX).is_none())
     }
 
     #[test]
     fn rational_of_percents() {
         let v = 14u32;
-        let r = Rational::new(Percent::HUNDRED.units(), Percent::HUNDRED.units());
+        let r = Rational::new(Percent100::HUNDRED.units(), Percent100::HUNDRED.units());
         assert_eq!(v, r.checked_mul(v).unwrap());
     }
 
@@ -368,27 +197,26 @@ pub(super) mod test {
         let n: Units = 189;
         let d: Units = 1890;
         let r = Rational::new(n, d);
-        let res: Percent = r.checked_mul(Percent::HUNDRED).unwrap();
-        assert_eq!(Percent::from_permille(n * 1000 / d), res);
+        let res: Percent100 = r.checked_mul(Percent100::HUNDRED).unwrap();
+        assert_eq!(Percent100::from_permille(n * 1000 / d), res);
     }
 
-    pub(crate) fn test_of<P>(permille: Units, quantity: P, exp: P)
-    where
-        P: Percentable + PartialEq + Debug + Clone + Display,
-    {
-        let perm = Percent::from_permille(permille);
+    fn test_of(permille: Units, quantity: Percent100, exp: Percent100) {
+        let perm = Percent100::from_permille(permille);
         assert_eq!(
             exp,
-            perm.of(quantity.clone()),
-            "Calculating {perm} of {quantity}",
+            perm.of(quantity),
+            "Calculating {} of {}",
+            perm,
+            quantity
         );
     }
 
-    fn from(permille: Units) -> Percent {
-        Percent::from_permille(permille)
+    fn from(permille: Units) -> Percent100 {
+        Percent100::from_permille(permille)
     }
 
     fn test_display(exp: &str, permilles: Units) {
-        assert_eq!(exp, format!("{}", Percent::from_permille(permilles)));
+        assert_eq!(exp, format!("{}", Percent100::from_permille(permilles)));
     }
 }
