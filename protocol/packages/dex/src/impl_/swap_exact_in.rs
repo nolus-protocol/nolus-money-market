@@ -26,16 +26,18 @@ use crate::{
 
 #[cfg(debug_assertions)]
 use crate::impl_::swap_task::IterState;
-use crate::impl_::{
-    ContractInSwap, ForwardToInner, TimeAlarm,
-    connectable::DexConnectable,
-    filter::CurrencyFilter,
-    ica_connector::Enterable,
-    response::{self, ContinueResult, Handler, Result as HandlerResult},
-    swap_task::{CoinVisitor, IterNext, SwapTask as SwapTaskT},
-    timeout,
-    transfer_in_init::TransferInInit,
-    trx::SwapTrx,
+use crate::{
+    DexConnectable,
+    impl_::{
+        ContractInSwap, ForwardToInner, TimeAlarm,
+        filter::CurrencyFilter,
+        ica_connector::Enterable,
+        response::{self, ContinueResult, Handler, Result as HandlerResult},
+        swap_task::{CoinVisitor, IterNext, SwapTask as SwapTaskT},
+        timeout,
+        transfer_in_init::TransferInInit,
+        trx::SwapTrx,
+    },
 };
 #[cfg(feature = "migration")]
 use crate::{InspectSpec, MigrateSpec};
@@ -113,6 +115,10 @@ where
                 G: Group + MemberOf<Self::GIn>,
             {
                 //START TODO add a `SwapTask::min_out_coin(&self, &CoinDTO<Self::InG>) -> CoinDTO<Self::OutG>`
+                //or add a `SwapTask::slippage_tolerance(&self) -> Option<Percent100>`
+                //or add a `SwapTask::slippage_calculator(&self) -> SlippageCalculator`,
+                //    where the latter is a trait with a `fn min_out_coin(&self, &CoinDTO<Self::InG>) -> CoinDTO<Self::OutG>`
+                //before, it was None on Astroport and "1" on Osmosis.
                 //use oracle_platform::convert::{from|to}_quote(..) in the SwapTask implementations
                 const MIN_AMOUNT_OUT: Amount = 1;
                 let min_amount_out = coin::from_amount_ticker(MIN_AMOUNT_OUT, self.2);

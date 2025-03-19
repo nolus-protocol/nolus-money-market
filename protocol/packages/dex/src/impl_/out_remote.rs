@@ -1,8 +1,11 @@
 use serde::{Deserialize, Serialize};
 
-use crate::impl_::{
-    DexConnectable, IcaConnectee, IcaConnector, SwapExactIn, SwapExactInRespDelivery, TransferOut,
-    TransferOutRespDelivery, resp_delivery::ICAOpenResponseDelivery,
+use crate::{
+    DexConnectable,
+    impl_::{
+        IcaConnectee, IcaConnector, SwapExactIn, SwapExactInRespDelivery, TransferOut,
+        TransferOutRespDelivery, resp_delivery::ICAOpenResponseDelivery,
+    },
 };
 
 use super::swap_task::SwapTask as SwapTaskT;
@@ -190,8 +193,9 @@ mod impl_handler {
     use sdk::cosmwasm_std::{Binary, Env, QuerierWrapper, Reply};
 
     use crate::{
+        DexConnectable,
         impl_::{
-            DexConnectable, ForwardToInner, Handler, IcaConnectee, TimeAlarm,
+            ForwardToInner, Handler, IcaConnectee, TimeAlarm,
             response::{ContinueResult, Result},
             swap_task::SwapTask as SwapTaskT,
         },
@@ -474,8 +478,9 @@ mod impl_migration {
 
     use super::{OpenIcaRespDelivery, State};
     use crate::{
+        DexConnectable,
         impl_::{
-            DexConnectable, ForwardToInner, IcaConnectee, IcaConnector, migration::MigrateSpec,
+            ForwardToInner, IcaConnectee, IcaConnector, migration::MigrateSpec,
             swap_task::SwapTask as SwapTaskT,
         },
         swap::ExactAmountIn,

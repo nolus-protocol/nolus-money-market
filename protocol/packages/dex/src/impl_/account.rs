@@ -8,12 +8,9 @@ use platform::{
 };
 use sdk::cosmwasm_std::{Addr, QuerierWrapper, Timestamp};
 
-use crate::{ConnectionParams, error::Result};
+use crate::{ConnectionParams, DexConnectable, error::Result};
 
-use super::{
-    DexConnectable,
-    trx::{SwapTrx, TransferInTrx, TransferOutTrx},
-};
+use super::trx::{SwapTrx, TransferInTrx, TransferOutTrx};
 
 #[derive(Serialize, Deserialize)]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]

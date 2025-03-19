@@ -13,12 +13,12 @@ use platform::{
 };
 use sdk::cosmwasm_std::{Addr, Env, QuerierWrapper, Timestamp};
 
-use crate::error::Result;
 #[cfg(feature = "migration")]
 use crate::impl_::{InspectSpec, MigrateSpec};
+use crate::{DexConnectable, error::Result};
 
 use super::{
-    Account, Contract, DexConnectable, Response, TimeAlarm,
+    Account, Contract, Response, TimeAlarm,
     response::{ContinueResult, Handler},
 };
 

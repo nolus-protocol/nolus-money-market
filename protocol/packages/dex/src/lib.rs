@@ -1,9 +1,12 @@
 pub use self::connection::{ConnectionParams, Ics20Channel};
 #[cfg(feature = "impl")]
 pub use self::error::Error;
+// TODO get rid of the glob use below
 #[cfg(feature = "impl")]
-pub use self::impl_::*;
+pub use self::{connect::Connectable as DexConnectable, impl_::*};
 
+#[cfg(feature = "impl")]
+mod connect;
 mod connection;
 #[cfg(feature = "impl")]
 mod error;
