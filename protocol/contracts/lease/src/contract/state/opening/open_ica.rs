@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter, Result as FmtResult};
 
 use dex::{
-    Account, ConnectionParams, Contract as DexContract, DexConnectable, DexResult, IcaConnectee,
+    Account, Connectable, ConnectionParams, Contract as DexContract, DexResult, IcaConnectee,
     TimeAlarm, TransferOut,
 };
 use platform::batch::Batch;
@@ -66,7 +66,7 @@ impl IcaConnectee for OpenIcaAccount {
     }
 }
 
-impl DexConnectable for OpenIcaAccount {
+impl Connectable for OpenIcaAccount {
     fn dex(&self) -> &ConnectionParams {
         &self.new_lease.dex
     }

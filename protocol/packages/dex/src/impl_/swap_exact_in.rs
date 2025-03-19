@@ -27,7 +27,7 @@ use crate::{
 #[cfg(debug_assertions)]
 use crate::impl_::swap_task::IterState;
 use crate::{
-    DexConnectable,
+    Connectable,
     impl_::{
         ContractInSwap, ForwardToInner, TimeAlarm,
         filter::CurrencyFilter,
@@ -243,7 +243,7 @@ where
     }
 }
 
-impl<SwapTask, SEnum, SwapGroup, SwapClient> DexConnectable
+impl<SwapTask, SEnum, SwapGroup, SwapClient> Connectable
     for SwapExactIn<SwapTask, SEnum, SwapGroup, SwapClient>
 where
     SwapTask: SwapTaskT,

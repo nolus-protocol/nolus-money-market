@@ -8,7 +8,7 @@ use platform::{
 };
 use sdk::cosmwasm_std::{Addr, QuerierWrapper, Timestamp};
 
-use crate::{ConnectionParams, DexConnectable, error::Result};
+use crate::{Connectable, ConnectionParams, error::Result};
 
 use super::trx::{SwapTrx, TransferInTrx, TransferOutTrx};
 
@@ -91,7 +91,7 @@ impl From<Account> for HostAccount {
     }
 }
 
-impl DexConnectable for Account {
+impl Connectable for Account {
     fn dex(&self) -> &ConnectionParams {
         &self.dex
     }

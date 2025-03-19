@@ -3,7 +3,7 @@ use std::fmt::{Display, Formatter, Result as FmtResult};
 use finance::duration::Duration;
 use serde::{Deserialize, Serialize};
 
-use dex::{Account, ConnectionParams, Contract, DexConnectable, IcaConnectee};
+use dex::{Account, Connectable, ConnectionParams, Contract, IcaConnectee};
 use sdk::cosmwasm_std::{QuerierWrapper, Timestamp};
 
 use crate::msg::ConfigResponse;
@@ -34,7 +34,7 @@ impl IcaConnectee for OpenIca {
     }
 }
 
-impl DexConnectable for OpenIca {
+impl Connectable for OpenIca {
     fn dex(&self) -> &ConnectionParams {
         &self.dex
     }

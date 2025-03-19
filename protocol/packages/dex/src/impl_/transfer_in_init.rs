@@ -8,7 +8,7 @@ use finance::coin::CoinDTO;
 use platform::batch::Batch;
 use sdk::cosmwasm_std::{Binary, Env, QuerierWrapper, Timestamp};
 
-use crate::{DexConnectable, connection::ConnectionParams, error::Result};
+use crate::{Connectable, connection::ConnectionParams, error::Result};
 #[cfg(feature = "migration")]
 use crate::{InspectSpec, MigrateSpec};
 
@@ -102,7 +102,7 @@ where
     }
 }
 
-impl<SwapTask, SEnum> DexConnectable for TransferInInit<SwapTask, SEnum>
+impl<SwapTask, SEnum> Connectable for TransferInInit<SwapTask, SEnum>
 where
     SwapTask: SwapTaskT,
 {

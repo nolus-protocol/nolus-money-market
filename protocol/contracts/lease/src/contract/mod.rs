@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use dex::{Account, ConnectionParams, DexConnectable};
+use dex::{Account, Connectable, ConnectionParams};
 use sdk::cosmwasm_std::QuerierWrapper;
 
 use crate::{
@@ -61,7 +61,7 @@ impl Lease {
     }
 }
 
-impl DexConnectable for Lease {
+impl Connectable for Lease {
     fn dex(&self) -> &ConnectionParams {
         self.dex.dex()
     }

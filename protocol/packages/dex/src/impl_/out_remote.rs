@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    DexConnectable,
+    Connectable,
     impl_::{
         IcaConnectee, IcaConnector, SwapExactIn, SwapExactInRespDelivery, TransferOut,
         TransferOutRespDelivery, resp_delivery::ICAOpenResponseDelivery,
@@ -45,7 +45,7 @@ pub type StartLocalRemoteState<OpenIca, SwapTask> =
 
 pub fn start<OpenIca, SwapTask>(connectee: OpenIca) -> StartLocalRemoteState<OpenIca, SwapTask>
 where
-    OpenIca: IcaConnectee + DexConnectable,
+    OpenIca: IcaConnectee + Connectable,
     SwapTask: SwapTaskT,
 {
     StartLocalRemoteState::<OpenIca, SwapTask>::new(connectee)
@@ -193,7 +193,7 @@ mod impl_handler {
     use sdk::cosmwasm_std::{Binary, Env, QuerierWrapper, Reply};
 
     use crate::{
-        DexConnectable,
+        Connectable,
         impl_::{
             ForwardToInner, Handler, IcaConnectee, TimeAlarm,
             response::{ContinueResult, Result},
@@ -215,7 +215,7 @@ mod impl_handler {
             ForwardToInnerContinueMsg,
         >
     where
-        OpenIca: DexConnectable + IcaConnectee<State = Self> + TimeAlarm + Display,
+        OpenIca: Connectable + IcaConnectee<State = Self> + TimeAlarm + Display,
         SwapTask: SwapTaskT,
         SwapTask::OutG: Clone,
         SwapGroup: Group,
@@ -478,7 +478,7 @@ mod impl_migration {
 
     use super::{OpenIcaRespDelivery, State};
     use crate::{
-        DexConnectable,
+        Connectable,
         impl_::{
             ForwardToInner, IcaConnectee, IcaConnector, migration::MigrateSpec,
             swap_task::SwapTask as SwapTaskT,
@@ -527,7 +527,7 @@ mod impl_migration {
                         ForwardToInnerContinueMsg,
                     >,
                 >,
-            OpenIca::Out: IcaConnectee + DexConnectable,
+            OpenIca::Out: IcaConnectee + Connectable,
             IcaConnector<OpenIca::Out, SwapTask::Result>: Into<
                 State<
                     OpenIcaNew,

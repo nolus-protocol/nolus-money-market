@@ -15,7 +15,7 @@ use sdk::cosmwasm_std::{Addr, Env, QuerierWrapper, Timestamp};
 
 #[cfg(feature = "migration")]
 use crate::impl_::{InspectSpec, MigrateSpec};
-use crate::{DexConnectable, error::Result};
+use crate::{Connectable, error::Result};
 
 use super::{
     Account, Contract, Response, TimeAlarm,
@@ -50,7 +50,7 @@ pub struct IcaConnector<Connectee, SwapResult> {
 
 impl<Connectee, SwapResult> IcaConnector<Connectee, SwapResult>
 where
-    Connectee: IcaConnectee + DexConnectable,
+    Connectee: IcaConnectee + Connectable,
 {
     const STATE_LABEL: &'static str = "register-ica";
 
@@ -86,7 +86,7 @@ impl<SwapTask, SwapTaskNew, SEnumNew, Connectee, SwapResult>
     MigrateSpec<SwapTask, SwapTaskNew, SEnumNew> for IcaConnector<Connectee, SwapResult>
 where
     Connectee: MigrateSpec<SwapTask, SwapTaskNew, SEnumNew>,
-    Connectee::Out: IcaConnectee + DexConnectable,
+    Connectee::Out: IcaConnectee + Connectable,
 {
     type Out = IcaConnector<Connectee::Out, SwapResult>;
 
@@ -114,7 +114,7 @@ where
 
 impl<Connectee, SwapResult> Enterable for IcaConnector<Connectee, SwapResult>
 where
-    Connectee: IcaConnectee + DexConnectable,
+    Connectee: IcaConnectee + Connectable,
 {
     fn enter(&self, _now: Timestamp, _querier: QuerierWrapper<'_>) -> Result<Batch> {
         Ok(self.enter())
@@ -123,7 +123,7 @@ where
 
 impl<Connectee, SwapResult> Handler for IcaConnector<Connectee, SwapResult>
 where
-    Connectee: IcaConnectee + DexConnectable + Display,
+    Connectee: IcaConnectee + Connectable + Display,
 {
     type Response = Connectee::State;
     type SwapResult = SwapResult;
