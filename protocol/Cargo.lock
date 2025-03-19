@@ -1160,7 +1160,7 @@ dependencies = [
 
 [[package]]
 name = "lease"
-version = "0.11.1"
+version = "0.11.2"
 dependencies = [
  "access-control",
  "cosmwasm-std 2.1.7",
