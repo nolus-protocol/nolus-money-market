@@ -33,7 +33,7 @@ mod test {
     use crate::{
         coin::{Amount, Coin},
         fractionable::Fractionable,
-        percent::Percent,
+        percent::Percent100,
         ratio::Ratio,
     };
 
@@ -41,7 +41,7 @@ mod test {
     fn safe_mul() {
         assert_eq!(
             Coin::<SuperGroupTestC1>::new(30),
-            Percent::from_percent(100).of(Coin::<SuperGroupTestC1>::new(30))
+            Percent100::from_percent(100).of(Coin::<SuperGroupTestC1>::new(30))
         );
 
         assert_eq!(

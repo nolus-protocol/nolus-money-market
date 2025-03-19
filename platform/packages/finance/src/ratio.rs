@@ -41,8 +41,7 @@ where
     }
 }
 
-#[derive(Clone, Copy, Debug, Deserialize, Eq, JsonSchema, Serialize)]
-#[serde(rename_all = "snake_case")]
+#[derive(Clone, Copy, Debug, Eq, JsonSchema)]
 pub struct Rational<U> {
     nominator: U,
     denominator: U,
