@@ -24,5 +24,6 @@ versioning = { workspace = true, features = ["protocol_contract"] }
 
 # Required as a dependency by `entry_point` attribute macro
 cosmwasm-std = { workspace = true }
+ibc.workspace = true
 
 serde = { workspace = true, features = ["derive"] }

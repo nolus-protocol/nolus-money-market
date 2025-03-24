@@ -68,6 +68,7 @@ cosmwasm-std = { version = "~2.1", default-features = false, features = [
     "iterator",
     "std",
 ] }
+ibc = { version = "0.57.0", default-features = false }
 
 # Other
 astroport = { version = "5", default-features = false }
