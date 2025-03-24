@@ -16,14 +16,18 @@ use sdk::{
 // deliberetly not #[serde(deny_unknown_fields)] to allow migration with any message
 pub struct EmptyMsg {}
 
+#[derive(Serialize, Deserialize, Clone, Eq, PartialEq)]
+#[serde(deny_unknown_fields, rename_all = "snake_case")]
+pub struct InstantiateMsg {}
+
 #[entry_point]
 pub fn instantiate(
     _deps: DepsMut<'_>,
     _env: Env,
     _info: MessageInfo,
-    EmptyMsg {}: EmptyMsg,
-) -> Result<CwResponse, Infallible> {
-    unimplemented!("Instantiation of a Void contract is not allowed!");
+    _msg: InstantiateMsg,
+) -> Result<CwResponse, StdError> {
+    Ok(response::empty_response())
 }
 
 #[entry_point]
