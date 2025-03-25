@@ -14,7 +14,9 @@ use platform::{
 };
 use sdk::cosmwasm_std::{Addr, QuerierWrapper, Timestamp};
 
-use crate::{error::Result, swap::ExactAmountIn};
+use crate::{Connectable, error::Result, swap::ExactAmountIn};
+
+use super::Account;
 
 pub(super) const IBC_TIMEOUT: Duration = Duration::from_days(1); //enough for the relayers to process
 
@@ -26,29 +28,27 @@ const ICA_TRANSFER_TIMEOUT_TIP: Coin<Nls> = ICA_TRANSFER_ACK_TIP;
 const ICA_SWAP_ACK_TIP: Coin<Nls> = Coin::new(1);
 const ICA_SWAP_TIMEOUT_TIP: Coin<Nls> = ICA_SWAP_ACK_TIP;
 
-pub(super) struct TransferOutTrx<'a> {
-    sender: LocalSender<'a>,
+pub(super) struct TransferOutTrx<'ica> {
+    sender: LocalSender<'ica>,
 }
 
-impl<'a> TransferOutTrx<'a> {
-    pub(super) fn new(
-        channel: &'a str,
-        sender: &Addr,
-        receiver: &HostAccount,
-        now: Timestamp,
-        memo: String,
-    ) -> Self {
-        let sender = LocalSender::new(
-            channel,
-            sender.clone(),
-            receiver.clone(),
-            now + IBC_TIMEOUT,
-            ICA_TRANSFER_ACK_TIP,
-            ICA_TRANSFER_TIMEOUT_TIP,
-            memo,
-        );
-
-        TransferOutTrx { sender }
+impl<'ica> TransferOutTrx<'ica> {
+    pub(super) fn new(ica: &'ica Account, now: Timestamp) -> Self {
+        Self {
+            sender: LocalSender::new(
+                &ica.dex().transfer_channel.local_endpoint,
+                ica.owner(),
+                ica.host(),
+                now + IBC_TIMEOUT,
+                ICA_TRANSFER_ACK_TIP,
+                ICA_TRANSFER_TIMEOUT_TIP,
+                format!(
+                    "Transfer out: {sender} -> {receiver}",
+                    sender = ica.owner(),
+                    receiver = ica.host()
+                ),
+            ),
+        }
     }
 
     pub fn send<G>(&mut self, amount: &CoinDTO<G>) -> Result<()>
@@ -59,8 +59,8 @@ impl<'a> TransferOutTrx<'a> {
     }
 }
 
-impl<'r> From<TransferOutTrx<'r>> for LocalBatch {
-    fn from(value: TransferOutTrx<'r>) -> Self {
+impl<'ica> From<TransferOutTrx<'ica>> for LocalBatch {
+    fn from(value: TransferOutTrx<'ica>) -> Self {
         value.sender.into()
     }
 }

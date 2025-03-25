@@ -10,7 +10,7 @@ use sdk::cosmwasm_std::{Addr, QuerierWrapper, Timestamp};
 
 use crate::{Connectable, ConnectionParams, error::Result};
 
-use super::trx::{SwapTrx, TransferInTrx, TransferOutTrx};
+use super::trx::{SwapTrx, TransferInTrx};
 
 #[derive(Serialize, Deserialize)]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
@@ -41,20 +41,6 @@ impl Account {
     ) -> Result<Self> {
         let host = ica::parse_register_response(response)?;
         Ok(Self { owner, host, dex })
-    }
-
-    pub(super) fn transfer_to(&self, now: Timestamp) -> TransferOutTrx<'_> {
-        TransferOutTrx::new(
-            &self.dex.transfer_channel.local_endpoint,
-            &self.owner,
-            &self.host,
-            now,
-            format!(
-                "Transfer out: {sender} -> {receiver}",
-                sender = self.owner,
-                receiver = self.host
-            ),
-        )
     }
 
     pub(super) fn swap<'a, SwapGroup, SwapPathImpl>(

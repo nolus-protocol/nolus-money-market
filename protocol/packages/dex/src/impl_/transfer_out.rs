@@ -101,7 +101,7 @@ where
         }
 
         let mut sender = SendWorker {
-            trx: self.spec.dex_account().transfer_to(now),
+            trx: TransferOutTrx::new(self.spec.dex_account(), now),
             sent: false,
             _group: PhantomData::<SwapTask::InG>,
         };

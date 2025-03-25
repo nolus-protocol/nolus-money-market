@@ -10,10 +10,10 @@ use sdk::{
 
 use crate::{batch::Batch, coin_legacy, ica::HostAccount, result::Result};
 
-pub struct Sender<'c> {
-    channel: &'c str,
-    sender: Addr,
-    receiver: HostAccount,
+pub struct Sender<'conn> {
+    channel: &'conn str,
+    sender: &'conn Addr,
+    receiver: &'conn HostAccount,
     timeout: Timestamp,
     ack_tip: CwCoin,
     timeout_tip: CwCoin,
@@ -21,11 +21,11 @@ pub struct Sender<'c> {
     memo: String,
 }
 
-impl<'c> Sender<'c> {
+impl<'conn> Sender<'conn> {
     pub fn new(
-        channel: &'c str,
-        sender: Addr,
-        receiver: HostAccount,
+        channel: &'conn str,
+        sender: &'conn Addr,
+        receiver: &'conn HostAccount,
         timeout: Timestamp,
         ack_tip: Coin<Nls>,
         timeout_tip: Coin<Nls>,
@@ -147,8 +147,8 @@ mod test {
         let timeout_fee = Coin::<Nls>::new(50);
         let mut funds_sender = Sender::new(
             channel,
-            sender.clone(),
-            receiver.clone(),
+            &sender,
+            &receiver,
             timeout,
             ack_fee,
             timeout_fee,
