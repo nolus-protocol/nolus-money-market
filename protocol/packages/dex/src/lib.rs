@@ -3,13 +3,14 @@ pub use self::error::Error;
 // TODO get rid of the glob use below
 #[cfg(feature = "impl")]
 pub use self::{
+    account::Account,
     connect::{Connectable, ConnectionParams, Ics20Channel},
     enterable::Enterable,
     impl_::*,
 };
 
-// #[cfg(feature = "impl")]
-// mod account;
+#[cfg(feature = "impl")]
+mod account;
 #[cfg(feature = "impl")]
 mod connect;
 #[cfg(feature = "impl")]

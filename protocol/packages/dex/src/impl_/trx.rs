@@ -14,9 +14,7 @@ use platform::{
 };
 use sdk::cosmwasm_std::{QuerierWrapper, Timestamp};
 
-use crate::{Connectable, error::Result, swap::ExactAmountIn};
-
-use super::Account;
+use crate::{Account, Connectable, error::Result, swap::ExactAmountIn};
 
 pub(super) const IBC_TIMEOUT: Duration = Duration::from_days(1); //enough for the relayers to process
 

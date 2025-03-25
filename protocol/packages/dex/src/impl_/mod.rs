@@ -8,7 +8,6 @@ pub use crate::error::Result as DexResult;
 
 pub use self::{
     SwapTask as SwapTaskT,
-    account::Account,
     ica_connector::{
         ICS27_MESSAGE_ENTERING_NEXT_STATE, IcaConnectee, IcaConnector,
         NO_ICS27_MESSAGE_ENTERING_NEXT_STATE,
@@ -30,7 +29,6 @@ pub use self::{
 #[cfg(feature = "migration")]
 pub use migration::{InspectSpec, MigrateSpec};
 
-mod account;
 mod coin_index;
 mod filter;
 mod ica_connector;
