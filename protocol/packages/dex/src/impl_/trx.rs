@@ -65,30 +65,30 @@ impl<'ica> From<TransferOutTrx<'ica>> for LocalBatch {
     }
 }
 
-pub(super) struct SwapTrx<'a, SwapGroup, SwapPathImpl> {
-    conn: &'a str,
-    ica_account: &'a HostAccount,
+pub(super) struct SwapTrx<'ica, 'swap_path, 'querier, SwapGroup, SwapPathImpl> {
+    conn: &'ica str,
+    ica_account: &'ica HostAccount,
     trx: Transaction,
-    swap_path: &'a SwapPathImpl,
-    querier: QuerierWrapper<'a>,
+    swap_path: &'swap_path SwapPathImpl,
+    querier: QuerierWrapper<'querier>,
     _group: PhantomData<SwapGroup>,
 }
 
-impl<'a, SwapGroup, SwapPathImpl> SwapTrx<'a, SwapGroup, SwapPathImpl>
+impl<'ica, 'swap_path, 'querier, SwapGroup, SwapPathImpl>
+    SwapTrx<'ica, 'swap_path, 'querier, SwapGroup, SwapPathImpl>
 where
     SwapGroup: Group,
     SwapPathImpl: SwapPath<SwapGroup>,
 {
     pub(super) fn new(
-        conn: &'a str,
-        ica_account: &'a HostAccount,
-        swap_path: &'a SwapPathImpl,
-        querier: QuerierWrapper<'a>,
+        ica: &'ica Account,
+        swap_path: &'swap_path SwapPathImpl,
+        querier: QuerierWrapper<'querier>,
     ) -> Self {
         let trx = Transaction::default();
         Self {
-            conn,
-            ica_account,
+            conn: &ica.dex().connection_id,
+            ica_account: ica.host(),
             trx,
             swap_path,
             querier,
@@ -127,8 +127,8 @@ where
     }
 }
 
-impl<SwapGroup, SwapPathImpl> From<SwapTrx<'_, SwapGroup, SwapPathImpl>> for LocalBatch {
-    fn from(value: SwapTrx<'_, SwapGroup, SwapPathImpl>) -> Self {
+impl<SwapGroup, SwapPathImpl> From<SwapTrx<'_, '_, '_, SwapGroup, SwapPathImpl>> for LocalBatch {
+    fn from(value: SwapTrx<'_, '_, '_, SwapGroup, SwapPathImpl>) -> Self {
         ica::submit_transaction(
             value.conn,
             value.trx,

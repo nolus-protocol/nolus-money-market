@@ -1,16 +1,14 @@
-use currency::Group;
 use serde::{Deserialize, Serialize};
 
-use oracle::stub::SwapPath;
 use platform::{
     batch::Batch as LocalBatch,
     ica::{self, HostAccount},
 };
-use sdk::cosmwasm_std::{Addr, QuerierWrapper, Timestamp};
+use sdk::cosmwasm_std::{Addr, Timestamp};
 
 use crate::{Connectable, ConnectionParams, error::Result};
 
-use super::trx::{SwapTrx, TransferInTrx};
+use super::trx::TransferInTrx;
 
 #[derive(Serialize, Deserialize)]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
@@ -41,18 +39,6 @@ impl Account {
     ) -> Result<Self> {
         let host = ica::parse_register_response(response)?;
         Ok(Self { owner, host, dex })
-    }
-
-    pub(super) fn swap<'a, SwapGroup, SwapPathImpl>(
-        &'a self,
-        swap_path: &'a SwapPathImpl,
-        querier: QuerierWrapper<'a>,
-    ) -> SwapTrx<'a, SwapGroup, SwapPathImpl>
-    where
-        SwapGroup: Group,
-        SwapPathImpl: SwapPath<SwapGroup>,
-    {
-        SwapTrx::new(&self.dex.connection_id, &self.host, swap_path, querier)
     }
 
     pub(super) fn transfer_from(&self, now: Timestamp) -> TransferInTrx<'_> {

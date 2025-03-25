@@ -83,10 +83,10 @@ where
         _now: Timestamp,
         querier: QuerierWrapper<'_>,
     ) -> Result<Batch> {
-        let swap_trx = self.spec.dex_account().swap(self.spec.oracle(), querier);
+        let swap_trx = SwapTrx::new(self.spec.dex_account(), self.spec.oracle(), querier);
         // TODO apply nls_swap_fee on the downpayment only!
-        struct SwapWorker<'a, SwapPathImpl, SwapIn, SwapOut, SwapInOut, SwapClient>(
-            SwapTrx<'a, SwapInOut, SwapPathImpl>,
+        struct SwapWorker<'ica, 'swap_path, 'querier, SwapPathImpl, SwapIn, SwapOut, SwapInOut, SwapClient>(
+            SwapTrx<'ica, 'swap_path, 'querier, SwapInOut, SwapPathImpl>,
             PhantomData<SwapIn>,
             CurrencyDTO<SwapOut>,
             PhantomData<SwapClient>,
@@ -95,7 +95,7 @@ where
             SwapOut: Group;
 
         impl<SwapPathImpl, SwapIn, SwapOut, SwapInOut, SwapClient> CoinVisitor
-            for SwapWorker<'_, SwapPathImpl, SwapIn, SwapOut, SwapInOut, SwapClient>
+            for SwapWorker<'_, '_, '_, SwapPathImpl, SwapIn, SwapOut, SwapInOut, SwapClient>
         where
             SwapPathImpl: SwapPath<SwapInOut>,
             SwapIn: Group + MemberOf<SwapInOut>,
