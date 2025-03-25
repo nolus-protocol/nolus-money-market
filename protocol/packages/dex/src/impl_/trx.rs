@@ -12,7 +12,7 @@ use platform::{
     ica::{self, HostAccount},
     trx::Transaction,
 };
-use sdk::cosmwasm_std::{Addr, QuerierWrapper, Timestamp};
+use sdk::cosmwasm_std::{QuerierWrapper, Timestamp};
 
 use crate::{Connectable, error::Result, swap::ExactAmountIn};
 
@@ -145,17 +145,18 @@ pub(super) struct TransferInTrx<'a> {
     sender: RemoteSender<'a>,
 }
 
-impl<'a> TransferInTrx<'a> {
-    pub(super) fn new(
-        conn: &'a str,
-        channel: &'a str,
-        sender: &HostAccount,
-        receiver: &Addr,
-        now: Timestamp,
-    ) -> Self {
-        let sender =
-            RemoteSender::new(channel, sender.clone(), receiver.clone(), now + IBC_TIMEOUT);
-        TransferInTrx { conn, sender }
+impl<'ica> TransferInTrx<'ica> {
+    pub(super) fn new(ica: &'ica Account, now: Timestamp) -> Self {
+        let sender = RemoteSender::new(
+            &ica.dex().transfer_channel.remote_endpoint,
+            ica.host(),
+            ica.owner(),
+            now + IBC_TIMEOUT,
+        );
+        TransferInTrx {
+            conn: &ica.dex().connection_id,
+            sender,
+        }
     }
 
     pub fn send<G>(&mut self, amount: &CoinDTO<G>) -> Result<()>

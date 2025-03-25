@@ -10,19 +10,19 @@ use sdk::{
 
 use crate::{coin_legacy, ica::HostAccount, result::Result, trx::Transaction};
 
-pub struct Sender<'c> {
-    ics20_channel_at_dex: &'c str,
-    sender: HostAccount,
-    receiver: Addr,
+pub struct Sender<'ica> {
+    ics20_channel_at_dex: &'ica str,
+    sender: &'ica HostAccount,
+    receiver: &'ica Addr,
     timeout: Timestamp,
     amounts: Vec<CosmosSdkCoin>,
 }
 
-impl<'c> Sender<'c> {
+impl<'ica> Sender<'ica> {
     pub fn new(
-        ics20_channel_at_dex: &'c str,
-        sender: HostAccount,
-        receiver: Addr,
+        ics20_channel_at_dex: &'ica str,
+        sender: &'ica HostAccount,
+        receiver: &'ica Addr,
         timeout: Timestamp,
     ) -> Self {
         Self {

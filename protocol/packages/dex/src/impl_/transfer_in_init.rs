@@ -13,6 +13,7 @@ use crate::{Connectable, ConnectionParams, error::Result};
 #[cfg(feature = "migration")]
 use crate::{InspectSpec, MigrateSpec};
 
+use super::trx::TransferInTrx;
 use super::{
     Contract, ContractInSwap, TimeAlarm, TransferInInitState,
     response::{ContinueResult, Handler, Result as HandlerResult},
@@ -83,7 +84,7 @@ where
     SwapTask: SwapTaskT,
 {
     fn enter_state(&self, now: Timestamp) -> Result<Batch> {
-        let mut sender = self.spec.dex_account().transfer_from(now);
+        let mut sender = TransferInTrx::new(self.spec.dex_account(), now);
         sender.send(&self.amount_in)?;
         Ok(sender.into())
     }

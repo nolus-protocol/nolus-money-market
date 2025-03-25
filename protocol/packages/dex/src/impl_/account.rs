@@ -4,11 +4,9 @@ use platform::{
     batch::Batch as LocalBatch,
     ica::{self, HostAccount},
 };
-use sdk::cosmwasm_std::{Addr, Timestamp};
+use sdk::cosmwasm_std::Addr;
 
 use crate::{Connectable, ConnectionParams, error::Result};
-
-use super::trx::TransferInTrx;
 
 #[derive(Serialize, Deserialize)]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
@@ -39,16 +37,6 @@ impl Account {
     ) -> Result<Self> {
         let host = ica::parse_register_response(response)?;
         Ok(Self { owner, host, dex })
-    }
-
-    pub(super) fn transfer_from(&self, now: Timestamp) -> TransferInTrx<'_> {
-        TransferInTrx::new(
-            &self.dex.connection_id,
-            &self.dex.transfer_channel.remote_endpoint,
-            &self.host,
-            &self.owner,
-            now,
-        )
     }
 
     #[cfg(feature = "testing")]
