@@ -66,7 +66,7 @@ fn send_ibc_transfer(
         channel_id,
         recipient.clone(),
         Coin::new(amount, "unls"),
-        Timestamp::from_seconds(12345),
+        Timestamp::from_seconds(0),
     )
     .with_src_callback(IbcSrcCallback {
         address: env.contract.address,
