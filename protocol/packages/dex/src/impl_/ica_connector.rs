@@ -13,25 +13,13 @@ use platform::{
 };
 use sdk::cosmwasm_std::{Addr, Env, QuerierWrapper, Timestamp};
 
-#[cfg(feature = "migration")]
-use crate::impl_::{InspectSpec, MigrateSpec};
-use crate::{Account, Connectable, Enterable, error::Result};
-
-use super::{
-    Contract, Response, TimeAlarm,
-    response::{ContinueResult, Handler},
+use crate::{
+    Account, Connectable, ContinueResult, Contract, Enterable, Handler, IcaConnectee, Response,
+    TimeAlarm, error::Result,
 };
 
-pub const ICS27_MESSAGE_ENTERING_NEXT_STATE: bool = true;
-pub const NO_ICS27_MESSAGE_ENTERING_NEXT_STATE: bool = !ICS27_MESSAGE_ENTERING_NEXT_STATE;
-
-/// Entity expecting to be connected to ICA
-pub trait IcaConnectee {
-    type State;
-    type NextState: Enterable + Into<Self::State>;
-
-    fn connected(self, ica_account: Account) -> Self::NextState;
-}
+#[cfg(feature = "migration")]
+use super::migration::{InspectSpec, MigrateSpec};
 
 #[derive(Serialize, Deserialize)]
 #[serde(bound(

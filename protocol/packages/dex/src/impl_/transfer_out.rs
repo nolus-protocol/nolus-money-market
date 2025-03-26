@@ -15,18 +15,18 @@ use platform::{
 use sdk::cosmwasm_std::{Binary, Env, QuerierWrapper, Timestamp};
 
 use crate::{
-    Enterable,
+    CoinVisitor, CoinsNb, Contract, ContractInSwap, Enterable, IterNext, IterState, Stage,
+    SwapTask as SwapTaskT, TimeAlarm,
     error::{Error, Result},
     swap::ExactAmountIn,
 };
-#[cfg(feature = "migration")]
-use crate::{InspectSpec, MigrateSpec};
 
+#[cfg(feature = "migration")]
+use super::migration::{InspectSpec, MigrateSpec};
 use super::{
-    Contract, ContractInSwap, TimeAlarm, TransferOutState, coin_index,
+    coin_index,
     response::{self, ContinueResult, Handler, Result as HandlerResult},
     swap_exact_in::SwapExactIn,
-    swap_task::{CoinVisitor, CoinsNb, IterNext, IterState, SwapTask as SwapTaskT},
     timeout,
     trx::TransferOutTrx,
 };
@@ -228,8 +228,7 @@ where
 impl<SwapTask, SEnum, SwapGroup, SwapClient> Contract
     for TransferOut<SwapTask, SEnum, SwapGroup, SwapClient>
 where
-    SwapTask: SwapTaskT
-        + ContractInSwap<TransferOutState, StateResponse = <SwapTask as SwapTaskT>::StateResponse>,
+    SwapTask: SwapTaskT + ContractInSwap<StateResponse = <SwapTask as SwapTaskT>::StateResponse>,
 {
     type StateResponse = <SwapTask as SwapTaskT>::StateResponse;
 
@@ -239,7 +238,8 @@ where
         due_projection: Duration,
         querier: QuerierWrapper<'_>,
     ) -> Self::StateResponse {
-        self.spec.state(now, due_projection, querier)
+        self.spec
+            .state(Stage::TransferOut, now, due_projection, querier)
     }
 }
 
@@ -354,7 +354,7 @@ mod test {
     use currency::test::{SuperGroup, SuperGroupTestC1};
     use finance::coin::{Coin, CoinDTO};
 
-    use crate::impl_::swap_task::{CoinVisitor, CoinsNb, IterNext};
+    use crate::{CoinVisitor, CoinsNb, IterNext};
 
     use super::Counter;
 

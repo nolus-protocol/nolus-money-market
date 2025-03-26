@@ -19,29 +19,28 @@ use sdk::{
 };
 
 use crate::{
-    ConnectionParams,
+    ConnectionParams, Contract, Stage,
     error::{Error, Result},
     swap::ExactAmountIn,
 };
 
 #[cfg(debug_assertions)]
-use crate::impl_::swap_task::IterState;
+use crate::IterState;
 use crate::{
-    Connectable, Enterable,
+    CoinVisitor, Connectable, ContractInSwap, Enterable, IterNext, SwapTask as SwapTaskT,
+    TimeAlarm,
     impl_::{
-        ContractInSwap, ForwardToInner, TimeAlarm,
+        ForwardToInner,
         filter::CurrencyFilter,
         response::{self, ContinueResult, Handler, Result as HandlerResult},
-        swap_task::{CoinVisitor, IterNext, SwapTask as SwapTaskT},
         timeout,
         transfer_in_init::TransferInInit,
         trx::SwapTrx,
     },
 };
-#[cfg(feature = "migration")]
-use crate::{InspectSpec, MigrateSpec};
 
-use super::{Contract, SwapState};
+#[cfg(feature = "migration")]
+use super::migration::{InspectSpec, MigrateSpec};
 
 #[derive(Serialize, Deserialize)]
 #[serde(bound(
@@ -351,8 +350,7 @@ where
 impl<SwapTask, SEnum, SwapGroup, SwapClient> Contract
     for SwapExactIn<SwapTask, SEnum, SwapGroup, SwapClient>
 where
-    SwapTask: SwapTaskT
-        + ContractInSwap<SwapState, StateResponse = <SwapTask as SwapTaskT>::StateResponse>,
+    SwapTask: SwapTaskT + ContractInSwap<StateResponse = <SwapTask as SwapTaskT>::StateResponse>,
 {
     type StateResponse = <SwapTask as SwapTaskT>::StateResponse;
 
@@ -362,7 +360,7 @@ where
         due_projection: Duration,
         querier: QuerierWrapper<'_>,
     ) -> Self::StateResponse {
-        self.spec.state(now, due_projection, querier)
+        self.spec.state(Stage::Swap, now, due_projection, querier)
     }
 }
 

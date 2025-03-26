@@ -129,9 +129,9 @@ impl Contract for Idle {
 
     fn state(
         self,
-        _: Timestamp,
+        _now: Timestamp,
         _due_projection: Duration,
-        _: QuerierWrapper<'_>,
+        _querier: QuerierWrapper<'_>,
     ) -> Self::StateResponse {
         ConfigResponse {
             cadence_hours: self.config.cadence_hours(),

@@ -4,7 +4,7 @@ use currencies::{Native, Nls, PaymentGroup};
 use currency::CurrencyDTO;
 use dex::{
     Account, CoinVisitor, ContractInSwap, Enterable, IterNext, IterState, Response as DexResponse,
-    StateLocalOut, SwapTask,
+    Stage, StateLocalOut, SwapTask,
 };
 use finance::{
     coin::{Coin, CoinDTO},
@@ -135,14 +135,15 @@ impl SwapTask for BuyBack {
     }
 }
 
-impl<DexState> ContractInSwap<DexState> for BuyBack {
+impl ContractInSwap for BuyBack {
     type StateResponse = <Self as SwapTask>::StateResponse;
 
     fn state(
         self,
-        _: Timestamp,
+        _in_progress: Stage,
+        _now: Timestamp,
         _due_projection: Duration,
-        _: QuerierWrapper<'_>,
+        _querier: QuerierWrapper<'_>,
     ) -> <Self as SwapTask>::StateResponse {
         ConfigResponse {
             cadence_hours: self.config.cadence_hours(),

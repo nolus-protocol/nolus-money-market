@@ -1,7 +1,7 @@
 use currency::{Group, MemberOf};
 use finance::coin::CoinDTO;
 
-use super::swap_task::{CoinVisitor, CoinsNb, IterNext, IterState, SwapTask};
+use crate::{CoinVisitor, CoinsNb, IterNext, IterState, SwapTask};
 
 pub(super) fn visit_at_index<T, V>(
     spec: &T,
@@ -55,10 +55,9 @@ mod test {
     use currency::test::{SubGroupTestC10, SuperGroup, SuperGroupTestC1};
     use finance::coin::{Coin, CoinDTO};
 
-    use crate::impl_::{
-        coin_index::CoinsIndexVisitor,
-        swap_coins::TestVisitor,
-        swap_task::{CoinVisitor, IterNext},
+    use crate::{
+        CoinVisitor, IterNext,
+        impl_::{coin_index::CoinsIndexVisitor, swap_coins::TestVisitor},
     };
 
     fn coin1() -> CoinDTO<SuperGroup> {

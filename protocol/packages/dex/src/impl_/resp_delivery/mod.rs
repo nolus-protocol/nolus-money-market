@@ -12,16 +12,17 @@ use sdk::cosmwasm_std::{Addr, Binary, Env, QuerierWrapper, Reply, Timestamp};
 
 use serde::{Deserialize, Serialize};
 
-#[cfg(feature = "migration")]
-use crate::{InspectSpec, MigrateSpec};
 use crate::{
+    Contract, Response, TimeAlarm,
     error::Result as DexResult,
-    impl_::{ContinueResult, Contract, ForwardToInner, Handler, TimeAlarm, response::Result},
+    impl_::{ContinueResult, ForwardToInner, Handler, response::Result},
 };
+
+#[cfg(feature = "migration")]
+use super::migration::{InspectSpec, MigrateSpec};
 
 use self::adapter::{DeliveryAdapter, ICAOpenDeliveryAdapter, ResponseDeliveryAdapter};
 
-use super::Response;
 mod adapter;
 
 const REPLY_ID: u64 = 12345678901;

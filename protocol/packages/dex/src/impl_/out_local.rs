@@ -1,11 +1,11 @@
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    ForwardToInner, SwapExactIn, SwapExactInRespDelivery, TransferInFinish, TransferInInit,
+use crate::{ForwardToInner, SwapTask as SwapTaskT};
+
+use super::{
+    SwapExactIn, SwapExactInRespDelivery, TransferInFinish, TransferInInit,
     TransferInInitRespDelivery, TransferOut, TransferOutRespDelivery,
 };
-
-use super::swap_task::SwapTask as SwapTaskT;
 
 #[derive(Serialize, Deserialize)]
 #[serde(bound(
@@ -65,9 +65,12 @@ where
 }
 
 mod impl_into {
-    use crate::impl_::{
-        ForwardToInner, SwapExactIn, TransferInFinish, TransferInInit, TransferInInitRespDelivery,
-        TransferOut, TransferOutRespDelivery, swap_task::SwapTask as SwapTaskT,
+    use crate::{
+        SwapTask as SwapTaskT,
+        impl_::{
+            ForwardToInner, SwapExactIn, TransferInFinish, TransferInInit,
+            TransferInInitRespDelivery, TransferOut, TransferOutRespDelivery,
+        },
     };
 
     use super::{State, SwapExactInRespDelivery};
@@ -174,10 +177,10 @@ mod impl_handler {
     use sdk::cosmwasm_std::{Binary, Env, QuerierWrapper, Reply};
 
     use crate::{
+        SwapTask as SwapTaskT,
         impl_::{
-            Handler,
+            self, Handler,
             response::{ContinueResult, Result},
-            swap_task::SwapTask as SwapTaskT,
         },
         swap::ExactAmountIn,
     };
@@ -235,19 +238,19 @@ mod impl_handler {
         ) -> Result<Self> {
             match self {
                 State::TransferOut(inner) => {
-                    crate::forward_to_inner::<_, ForwardToInnerMsg, Self>(inner, response, env)
+                    impl_::forward_to_inner::<_, ForwardToInnerMsg, Self>(inner, response, env)
                 }
                 State::TransferOutRespDelivery(inner) => {
                     Handler::on_response(inner, response, querier, env).map_into()
                 }
                 State::SwapExactIn(inner) => {
-                    crate::forward_to_inner::<_, ForwardToInnerMsg, Self>(inner, response, env)
+                    impl_::forward_to_inner::<_, ForwardToInnerMsg, Self>(inner, response, env)
                 }
                 State::SwapExactInRespDelivery(inner) => {
                     Handler::on_response(inner, response, querier, env).map_into()
                 }
                 State::TransferInInit(inner) => {
-                    crate::forward_to_inner::<_, ForwardToInnerMsg, Self>(inner, response, env)
+                    impl_::forward_to_inner::<_, ForwardToInnerMsg, Self>(inner, response, env)
                 }
 
                 State::TransferInInitRespDelivery(inner) => {
@@ -381,26 +384,15 @@ mod impl_contract {
     use finance::duration::Duration;
     use sdk::cosmwasm_std::{QuerierWrapper, Timestamp};
 
-    use crate::impl_::{
-        Contract, ContractInSwap, ForwardToInner, SwapState, TransferInFinishState,
-        TransferInInitState, TransferOutState, swap_task::SwapTask as SwapTaskT,
-    };
+    use crate::{Contract, ContractInSwap, ForwardToInner, SwapTask as SwapTaskT};
 
     use super::State;
 
     impl<SwapTask, SwapGroup, SwapClient, ForwardToInnerMsg> Contract
         for State<SwapTask, SwapGroup, SwapClient, ForwardToInnerMsg>
     where
-        SwapTask: SwapTaskT
-            + ContractInSwap<TransferOutState, StateResponse = <SwapTask as SwapTaskT>::StateResponse>
-            + ContractInSwap<SwapState, StateResponse = <SwapTask as SwapTaskT>::StateResponse>
-            + ContractInSwap<
-                TransferInInitState,
-                StateResponse = <SwapTask as SwapTaskT>::StateResponse,
-            > + ContractInSwap<
-                TransferInFinishState,
-                StateResponse = <SwapTask as SwapTaskT>::StateResponse,
-            >,
+        SwapTask:
+            SwapTaskT + ContractInSwap<StateResponse = <SwapTask as SwapTaskT>::StateResponse>,
         ForwardToInnerMsg: ForwardToInner,
     {
         type StateResponse = <SwapTask as SwapTaskT>::StateResponse;
@@ -438,7 +430,7 @@ mod impl_display {
     use std::fmt::Display;
 
     use super::State;
-    use crate::impl_::swap_task::SwapTask as SwapTaskT;
+    use crate::SwapTask as SwapTaskT;
 
     impl<SwapTask, SwapGroup, SwapClient, ForwardToInnerMsg> Display
         for State<SwapTask, SwapGroup, SwapClient, ForwardToInnerMsg>
@@ -464,11 +456,10 @@ mod impl_migration {
 
     use currency::Group;
 
-    use super::State;
+    use super::{super::migration::InspectSpec, State};
     use crate::{
-        impl_::{
-            ForwardToInner, InspectSpec, migration::MigrateSpec, swap_task::SwapTask as SwapTaskT,
-        },
+        SwapTask as SwapTaskT,
+        impl_::{ForwardToInner, migration::MigrateSpec},
         swap::ExactAmountIn,
     };
 

@@ -4,8 +4,8 @@ use serde::{Deserialize, Serialize};
 
 use currency::CurrencyDTO;
 use dex::{
-    Account, CoinVisitor, ContractInSwap, IterNext, IterState, StartLocalRemoteState, SwapState,
-    SwapTask, TransferOutState,
+    Account, CoinVisitor, ContractInSwap, IterNext, IterState, Stage, StartLocalRemoteState,
+    SwapTask,
 };
 use finance::{coin::CoinDTO, duration::Duration};
 use platform::{
@@ -195,31 +195,22 @@ impl SwapTask for BuyAsset {
     }
 }
 
-impl ContractInSwap<TransferOutState> for BuyAsset {
+impl ContractInSwap for BuyAsset {
     type StateResponse = <Self as SwapTask>::StateResponse;
 
     fn state(
         self,
+        in_progress: Stage,
         _now: Timestamp,
         _due_projection: Duration,
         _querier: QuerierWrapper<'_>,
     ) -> Self::StateResponse {
-        let in_progress_fn = |ica_account| OngoingTrx::TransferOut { ica_account };
-        self.state(in_progress_fn)
-    }
-}
-
-impl ContractInSwap<SwapState> for BuyAsset {
-    type StateResponse = <Self as SwapTask>::StateResponse;
-
-    fn state(
-        self,
-        _now: Timestamp,
-        _due_projection: Duration,
-        _querier: QuerierWrapper<'_>,
-    ) -> Self::StateResponse {
-        let in_progress_fn = |ica_account| OngoingTrx::BuyAsset { ica_account };
-        self.state(in_progress_fn)
+        match in_progress {
+            Stage::TransferOut => self.state(|ica_account| OngoingTrx::TransferOut { ica_account }),
+            Stage::Swap => self.state(|ica_account| OngoingTrx::BuyAsset { ica_account }),
+            Stage::TransferInInit => unimplemented!(),
+            Stage::TransferInFinish => unimplemented!(),
+        }
     }
 }
 

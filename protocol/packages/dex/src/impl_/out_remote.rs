@@ -1,14 +1,12 @@
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    Connectable,
+    Connectable, IcaConnectee, SwapTask as SwapTaskT,
     impl_::{
-        IcaConnectee, IcaConnector, SwapExactIn, SwapExactInRespDelivery, TransferOut,
-        TransferOutRespDelivery, resp_delivery::ICAOpenResponseDelivery,
+        IcaConnector, SwapExactIn, SwapExactInRespDelivery, TransferOut, TransferOutRespDelivery,
+        resp_delivery::ICAOpenResponseDelivery,
     },
 };
-
-use super::swap_task::SwapTask as SwapTaskT;
 
 pub type OpenIcaRespDelivery<OpenIca, SwapResult, ForwardToInnerMsg> =
     ICAOpenResponseDelivery<IcaConnector<OpenIca, SwapResult>, ForwardToInnerMsg>;
@@ -52,9 +50,12 @@ where
 }
 
 mod impl_into {
-    use crate::impl_::{
-        IcaConnector, SwapExactIn, SwapExactInRespDelivery, TransferOut, TransferOutRespDelivery,
-        swap_task::SwapTask as SwapTaskT,
+    use crate::{
+        SwapTask as SwapTaskT,
+        impl_::{
+            IcaConnector, SwapExactIn, SwapExactInRespDelivery, TransferOut,
+            TransferOutRespDelivery,
+        },
     };
 
     use super::{OpenIcaRespDelivery, State};
@@ -193,11 +194,10 @@ mod impl_handler {
     use sdk::cosmwasm_std::{Binary, Env, QuerierWrapper, Reply};
 
     use crate::{
-        Connectable,
+        Connectable, IcaConnectee, SwapTask as SwapTaskT, TimeAlarm,
         impl_::{
-            ForwardToInner, Handler, IcaConnectee, TimeAlarm,
+            self, ForwardToInner, Handler,
             response::{ContinueResult, Result},
-            swap_task::SwapTask as SwapTaskT,
         },
         swap::ExactAmountIn,
     };
@@ -233,7 +233,7 @@ mod impl_handler {
             env: Env,
         ) -> ContinueResult<Self> {
             match self {
-                State::OpenIca(inner) => crate::forward_to_inner_ica::<
+                State::OpenIca(inner) => impl_::forward_to_inner_ica::<
                     _,
                     ForwardToInnerContinueMsg,
                     Self,
@@ -270,14 +270,14 @@ mod impl_handler {
                     Handler::on_response(inner, response, querier, env).map_into()
                 }
                 State::TransferOut(inner) => {
-                    crate::forward_to_inner::<_, ForwardToInnerMsg, Self>(inner, response, env)
+                    impl_::forward_to_inner::<_, ForwardToInnerMsg, Self>(inner, response, env)
                 }
 
                 State::TransferOutRespDelivery(inner) => {
                     Handler::on_response(inner, response, querier, env).map_into()
                 }
                 State::SwapExactIn(inner) => {
-                    crate::forward_to_inner::<_, ForwardToInnerMsg, Self>(inner, response, env)
+                    impl_::forward_to_inner::<_, ForwardToInnerMsg, Self>(inner, response, env)
                 }
                 State::SwapExactInRespDelivery(inner) => {
                     Handler::on_response(inner, response, querier, env).map_into()
@@ -390,9 +390,7 @@ mod impl_contract {
     use finance::duration::Duration;
     use sdk::cosmwasm_std::{QuerierWrapper, Timestamp};
 
-    use crate::impl_::{
-        Contract, ContractInSwap, SwapState, TransferOutState, swap_task::SwapTask as SwapTaskT,
-    };
+    use crate::{Contract, ContractInSwap, SwapTask as SwapTaskT};
 
     use super::State;
 
@@ -409,8 +407,7 @@ mod impl_contract {
     where
         OpenIca: Contract,
         SwapTask: SwapTaskT<StateResponse = OpenIca::StateResponse>
-            + ContractInSwap<TransferOutState, StateResponse = OpenIca::StateResponse>
-            + ContractInSwap<SwapState, StateResponse = OpenIca::StateResponse>,
+            + ContractInSwap<StateResponse = OpenIca::StateResponse>,
     {
         type StateResponse = OpenIca::StateResponse;
 
@@ -441,8 +438,9 @@ mod impl_contract {
 mod impl_display {
     use std::fmt::Display;
 
+    use crate::SwapTask as SwapTaskT;
+
     use super::State;
-    use crate::impl_::swap_task::SwapTask as SwapTaskT;
 
     impl<OpenIca, SwapTask, SwapGroup, SwapClient, ForwardToInnerMsg, ForwardToInnerContinueMsg>
         Display
@@ -478,11 +476,8 @@ mod impl_migration {
 
     use super::{OpenIcaRespDelivery, State};
     use crate::{
-        Connectable,
-        impl_::{
-            ForwardToInner, IcaConnectee, IcaConnector, migration::MigrateSpec,
-            swap_task::SwapTask as SwapTaskT,
-        },
+        Connectable, IcaConnectee, SwapTask as SwapTaskT,
+        impl_::{ForwardToInner, IcaConnector, migration::MigrateSpec},
         swap::ExactAmountIn,
     };
 

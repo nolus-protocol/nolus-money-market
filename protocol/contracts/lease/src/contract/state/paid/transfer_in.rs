@@ -3,8 +3,8 @@ use serde::{Deserialize, Serialize};
 
 use currency::CurrencyDTO;
 use dex::{
-    Account, CoinVisitor, ContractInSwap, IterNext, IterState, StartTransferInState, SwapState,
-    SwapTask, TransferInFinishState, TransferInInitState, TransferOutState,
+    Account, CoinVisitor, ContractInSwap, IterNext, IterState, Stage, StartTransferInState,
+    SwapTask,
 };
 use finance::{coin::CoinDTO, duration::Duration};
 use platform::{
@@ -130,50 +130,37 @@ impl SwapTask for TransferIn {
     }
 }
 
-impl<DexState> ContractInSwap<DexState> for TransferIn
-where
-    DexState: InProgressTrx,
-{
+impl ContractInSwap for TransferIn {
     type StateResponse = <Self as SwapTask>::StateResponse;
 
     fn state(
         self,
+        in_progress: Stage,
         _now: Timestamp,
         _due_projection: Duration,
         _querier: QuerierWrapper<'_>,
     ) -> Self::StateResponse {
-        self.state(DexState::trx_in_progress())
+        self.state(in_progress.into())
     }
 }
 
-trait InProgressTrx {
-    fn trx_in_progress() -> ClosingTrx;
-}
-
-impl InProgressTrx for TransferOutState {
-    fn trx_in_progress() -> ClosingTrx {
-        // it's due to reusing the same enum dex::State
-        // have to define a tailored enum dex::State that starts from TransferIn
-        unreachable!("The lease asset transfer-in task never goes through a 'TransferOut' state!")
-    }
-}
-
-impl InProgressTrx for SwapState {
-    fn trx_in_progress() -> ClosingTrx {
-        // it's due to reusing the same enum dex::State
-        // have to define a tailored enum dex::State that starts from TransferIn
-        unreachable!("The lease asset transfer-in task never goes through a 'Swap'!")
-    }
-}
-
-impl InProgressTrx for TransferInInitState {
-    fn trx_in_progress() -> ClosingTrx {
-        ClosingTrx::TransferInInit
-    }
-}
-
-impl InProgressTrx for TransferInFinishState {
-    fn trx_in_progress() -> ClosingTrx {
-        ClosingTrx::TransferInFinish
+impl From<Stage> for ClosingTrx {
+    fn from(value: Stage) -> Self {
+        match value {
+            Stage::TransferOut => {
+                // it's due to reusing the same enum dex::State
+                // have to define a tailored enum dex::State that starts from TransferIn
+                unreachable!(
+                    "The lease asset transfer-in task never goes through a 'TransferOut' state!"
+                )
+            }
+            Stage::Swap => {
+                // it's due to reusing the same enum dex::State
+                // have to define a tailored enum dex::State that starts from TransferIn
+                unreachable!("The lease asset transfer-in task never goes through a 'Swap'!")
+            }
+            Stage::TransferInInit => Self::TransferInInit,
+            Stage::TransferInFinish => Self::TransferInFinish,
+        }
     }
 }

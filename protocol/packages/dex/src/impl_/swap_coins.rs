@@ -1,7 +1,7 @@
 use currency::{Group, MemberOf};
 use finance::coin::CoinDTO;
 
-use super::swap_task::{CoinVisitor, IterNext, IterState};
+use crate::{CoinVisitor, IterNext, IterState};
 
 #[cfg(test)]
 pub(super) use self::test::TestVisitor;
@@ -45,7 +45,7 @@ mod test {
 
     use finance::coin::{Amount, Coin, CoinDTO};
 
-    use crate::impl_::swap_task::{CoinVisitor, IterNext, IterState};
+    use crate::{CoinVisitor, IterNext, IterState};
 
     fn coin1() -> CoinDTO<SuperGroup> {
         Coin::<SuperGroupTestC1>::new(32).into()

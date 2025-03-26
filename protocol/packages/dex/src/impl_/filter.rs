@@ -77,7 +77,7 @@ mod test {
     };
     use finance::coin::{Amount, Coin, CoinDTO};
 
-    use crate::impl_::{CoinVisitor, swap_coins::TestVisitor, swap_task::IterNext};
+    use crate::{CoinVisitor, IterNext, impl_::swap_coins::TestVisitor};
 
     use super::CurrencyFilter;
 

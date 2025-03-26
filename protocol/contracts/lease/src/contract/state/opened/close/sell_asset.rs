@@ -2,10 +2,7 @@ use oracle::stub::SwapPath;
 use serde::{Deserialize, Serialize};
 
 use currency::CurrencyDTO;
-use dex::{
-    Account, CoinVisitor, ContractInSwap, IterNext, IterState, SwapState, SwapTask,
-    TransferInFinishState, TransferInInitState, TransferOutState,
-};
+use dex::{Account, CoinVisitor, ContractInSwap, IterNext, IterState, Stage, SwapTask};
 use finance::{coin::CoinDTO, duration::Duration};
 use sdk::cosmwasm_std::{Env, QuerierWrapper, Timestamp};
 use timealarms::stub::TimeAlarmsRef;
@@ -106,51 +103,32 @@ where
     }
 }
 
-impl<DexState, RepayableT> ContractInSwap<DexState> for SellAsset<RepayableT>
+impl<RepayableT> ContractInSwap for SellAsset<RepayableT>
 where
-    DexState: InProgressTrx,
     RepayableT: Closable + Repayable,
 {
     type StateResponse = <Self as SwapTask>::StateResponse;
 
     fn state(
         self,
+        in_progress: Stage,
         now: Timestamp,
         due_projection: Duration,
         querier: QuerierWrapper<'_>,
     ) -> Self::StateResponse {
-        self.query(DexState::trx_in_progress(), now, due_projection, querier)
+        self.query(in_progress.into(), now, due_projection, querier)
     }
 }
 
-trait InProgressTrx {
-    fn trx_in_progress() -> PositionCloseTrx;
-}
-
-impl InProgressTrx for TransferOutState {
-    fn trx_in_progress() -> PositionCloseTrx {
-        // it's due to reusing the same enum dex::State
-        // have to define a tailored enum dex::State that starts from SwapExactIn
-        unreachable!(
-            "The sell lease asset on liquidation task never goes through a 'TransferOut' state!"
-        )
-    }
-}
-
-impl InProgressTrx for SwapState {
-    fn trx_in_progress() -> PositionCloseTrx {
-        PositionCloseTrx::Swap
-    }
-}
-
-impl InProgressTrx for TransferInInitState {
-    fn trx_in_progress() -> PositionCloseTrx {
-        PositionCloseTrx::TransferInInit
-    }
-}
-
-impl InProgressTrx for TransferInFinishState {
-    fn trx_in_progress() -> PositionCloseTrx {
-        PositionCloseTrx::TransferInFinish
+impl From<Stage> for PositionCloseTrx {
+    fn from(value: Stage) -> Self {
+        match value {
+            Stage::TransferOut => unreachable!(
+                "The sell lease asset on liquidation task never goes through a 'TransferOut' state!"
+            ),
+            Stage::Swap => Self::Swap,
+            Stage::TransferInInit => Self::TransferInInit,
+            Stage::TransferInFinish => Self::TransferInFinish,
+        }
     }
 }

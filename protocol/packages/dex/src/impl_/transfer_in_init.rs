@@ -8,19 +8,19 @@ use finance::coin::CoinDTO;
 use platform::batch::Batch;
 use sdk::cosmwasm_std::{Binary, Env, QuerierWrapper, Timestamp};
 
-use crate::Enterable;
-use crate::{Connectable, ConnectionParams, error::Result};
-#[cfg(feature = "migration")]
-use crate::{InspectSpec, MigrateSpec};
+use crate::{
+    Connectable, ConnectionParams, Contract, ContractInSwap, Enterable, Stage, TimeAlarm,
+    error::Result,
+};
 
-use super::trx::TransferInTrx;
+#[cfg(feature = "migration")]
+use super::migration::{InspectSpec, MigrateSpec};
 use super::{
-    Contract, ContractInSwap, TimeAlarm, TransferInInitState,
+    SwapTask as SwapTaskT,
     response::{ContinueResult, Handler, Result as HandlerResult},
-    swap_task::SwapTask as SwapTaskT,
     timeout,
     transfer_in_finish::TransferInFinish,
-    trx::IBC_TIMEOUT,
+    trx::{IBC_TIMEOUT, TransferInTrx},
 };
 
 /// Transfer in a coin from DEX
@@ -152,8 +152,7 @@ where
 
 impl<SwapTask, SEnum> Contract for TransferInInit<SwapTask, SEnum>
 where
-    SwapTask: SwapTaskT
-        + ContractInSwap<TransferInInitState, StateResponse = <SwapTask as SwapTaskT>::StateResponse>,
+    SwapTask: SwapTaskT + ContractInSwap<StateResponse = <SwapTask as SwapTaskT>::StateResponse>,
 {
     type StateResponse = <SwapTask as SwapTaskT>::StateResponse;
 
@@ -163,7 +162,8 @@ where
         due_projection: Duration,
         querier: QuerierWrapper<'_>,
     ) -> Self::StateResponse {
-        self.spec.state(now, due_projection, querier)
+        self.spec
+            .state(Stage::TransferInInit, now, due_projection, querier)
     }
 }
 
@@ -183,7 +183,10 @@ impl<SwapTask, SEnum> TimeAlarm for TransferInInit<SwapTask, SEnum>
 where
     SwapTask: SwapTaskT,
 {
-    fn setup_alarm(&self, forr: Timestamp) -> Result<Batch> {
-        self.spec.time_alarm().setup_alarm(forr).map_err(Into::into)
+    fn setup_alarm(&self, r#for: Timestamp) -> Result<Batch> {
+        self.spec
+            .time_alarm()
+            .setup_alarm(r#for)
+            .map_err(Into::into)
     }
 }

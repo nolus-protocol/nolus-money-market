@@ -3,8 +3,8 @@ use serde::{Deserialize, Serialize};
 
 use currency::CurrencyDTO;
 use dex::{
-    Account, CoinVisitor, ContractInSwap, IterNext, IterState, StartLocalLocalState, SwapState,
-    SwapTask, TransferInFinishState, TransferInInitState, TransferOutState,
+    Account, CoinVisitor, ContractInSwap, IterNext, IterState, Stage, StartLocalLocalState,
+    SwapTask,
 };
 use finance::{coin::CoinDTO, duration::Duration};
 use sdk::cosmwasm_std::{Env, QuerierWrapper, Timestamp};
@@ -112,46 +112,27 @@ impl SwapTask for BuyLpn {
     }
 }
 
-impl<DexState> ContractInSwap<DexState> for BuyLpn
-where
-    DexState: InProgressTrx,
-{
+impl ContractInSwap for BuyLpn {
     type StateResponse = <Self as SwapTask>::StateResponse;
 
     fn state(
         self,
+        in_progress: Stage,
         now: Timestamp,
         due_projection: Duration,
         querier: QuerierWrapper<'_>,
     ) -> Self::StateResponse {
-        self.query(DexState::trx_in_progress(), now, due_projection, querier)
+        self.query(in_progress.into(), now, due_projection, querier)
     }
 }
 
-trait InProgressTrx {
-    fn trx_in_progress() -> RepayTrx;
-}
-
-impl InProgressTrx for TransferOutState {
-    fn trx_in_progress() -> RepayTrx {
-        RepayTrx::TransferOut
-    }
-}
-
-impl InProgressTrx for SwapState {
-    fn trx_in_progress() -> RepayTrx {
-        RepayTrx::Swap
-    }
-}
-
-impl InProgressTrx for TransferInInitState {
-    fn trx_in_progress() -> RepayTrx {
-        RepayTrx::TransferInInit
-    }
-}
-
-impl InProgressTrx for TransferInFinishState {
-    fn trx_in_progress() -> RepayTrx {
-        RepayTrx::TransferInFinish
+impl From<Stage> for RepayTrx {
+    fn from(value: Stage) -> Self {
+        match value {
+            Stage::TransferOut => Self::TransferOut,
+            Stage::Swap => Self::Swap,
+            Stage::TransferInInit => Self::TransferInInit,
+            Stage::TransferInFinish => Self::TransferInFinish,
+        }
     }
 }

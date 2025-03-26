@@ -11,14 +11,12 @@ use platform::{
 };
 use sdk::cosmwasm_std::{Env, QuerierWrapper, Timestamp};
 
-use crate::Enterable;
-#[cfg(feature = "migration")]
-use crate::{InspectSpec, MigrateSpec};
+use crate::{Contract, ContractInSwap, Enterable, Stage, SwapTask as SwapTaskT};
 
+#[cfg(feature = "migration")]
+use super::migration::{InspectSpec, MigrateSpec};
 use super::{
-    Contract, ContractInSwap, TransferInFinishState,
     response::{self, Handler, Result as HandlerResult},
-    swap_task::SwapTask as SwapTaskT,
     transfer_in,
     transfer_in_init::TransferInInit,
 };
@@ -163,11 +161,7 @@ where
 
 impl<SwapTask, SEnum> Contract for TransferInFinish<SwapTask, SEnum>
 where
-    SwapTask: SwapTaskT
-        + ContractInSwap<
-            TransferInFinishState,
-            StateResponse = <SwapTask as SwapTaskT>::StateResponse,
-        >,
+    SwapTask: SwapTaskT + ContractInSwap<StateResponse = <SwapTask as SwapTaskT>::StateResponse>,
 {
     type StateResponse = <SwapTask as SwapTaskT>::StateResponse;
 
@@ -177,7 +171,8 @@ where
         due_projection: Duration,
         querier: QuerierWrapper<'_>,
     ) -> Self::StateResponse {
-        self.spec.state(now, due_projection, querier)
+        self.spec
+            .state(Stage::TransferInFinish, now, due_projection, querier)
     }
 }
 
