@@ -117,9 +117,9 @@ impl Spec {
     }
 
     /// Calculate the borrow amount.
-    /// Return 'error::PositionError::InsufficientTransactionAmount' when either the downpayment
+    /// Return [`PositionError::InsufficientTransactionAmount`] when either the downpayment
     /// or the borrow amount is less than the minimum transaction amount.
-    /// Return 'error::PositionError::InsufficientAssetAmount' when the lease (downpayment + borrow)
+    /// Return [`PositionError::InsufficientAssetAmount`] when the lease (downpayment + borrow)
     /// is less than the minimum asset amount.
     pub fn calc_borrow_amount(
         &self,

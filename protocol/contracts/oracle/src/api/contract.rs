@@ -125,23 +125,23 @@ where
 
     /// Lists configured swap pairs
     ///
-    /// Return [`oracle;:api::SupportedCurrencyPairsResponse`]
+    /// Return [`SupportedCurrencyPairsResponse`]
     SupportedCurrencyPairs {},
 
     /// Lists configured currencies
     ///
-    /// Return a [`Vec<oracle::api::Currency>`]
+    /// Return a [`Vec<Currency>`]
     Currencies {},
 
     /// Provides a path in the swap tree between two arbitrary currencies
     ///testing.rs osmosis
-    /// Returns ['Vec<crate::api::SwapTarget>']
+    /// Return [`Vec<SwapTarget>`]
     /// Implementation of [`crate::api::swap::QueryMsg::SwapPath`]
     SwapPath {
         from: CurrencyDTO<PriceCurrencies>,
         to: CurrencyDTO<PriceCurrencies>,
     },
-    /// Returns [`Status`] as response data.
+    /// Returns [`AlarmsStatusResponse`] as response data.
     AlarmsStatus {},
 }
 

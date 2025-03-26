@@ -21,7 +21,7 @@ where
 {
     /// Provides a path in the swap tree between two arbitrary currencies
     ///
-    /// Returns [`Vec<crate::api::SwapTarget>`]
+    /// Returns [`Vec<SwapTarget>`]
     SwapPath {
         from: CurrencyDTO<PriceCurrencies>,
         to: CurrencyDTO<PriceCurrencies>,
