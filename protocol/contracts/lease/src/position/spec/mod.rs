@@ -17,7 +17,7 @@ use crate::{
         LeasePaymentCurrencies, position::ClosePolicyChange,
         query::opened::ClosePolicy as APIClosePolicy,
     },
-    finance::{LpnCoin, Price},
+    finance::{LpnCoin, LpnCoinDTO, Price},
 };
 
 use super::{
@@ -128,24 +128,24 @@ impl Spec {
     ) -> PositionResult<LpnCoin> {
         let one = Price::identity();
 
-        if !self.valid_transaction(downpayment, one) {
-            Err(PositionError::InsufficientTransactionAmount(
-                self.min_transaction.into(),
-            ))
-        } else {
+        self.validate_transaction(
+            downpayment,
+            one,
+            PositionError::InsufficientTransactionAmount,
+        )
+        .and_then(|()| {
             let borrow = self.liability.init_borrow_amount(downpayment, may_max_ltd);
-            if !self.valid_transaction(borrow, one) {
-                Err(PositionError::InsufficientTransactionAmount(
-                    self.min_transaction.into(),
-                ))
-            } else if !self.valid_asset(downpayment.add(borrow), one) {
-                Err(PositionError::InsufficientAssetAmount(
-                    self.min_asset.into(),
-                ))
-            } else {
-                Ok(borrow)
-            }
-        }
+            self.validate_transaction(borrow, one, PositionError::InsufficientTransactionAmount)
+                .and_then(|()| {
+                    if !self.valid_asset(downpayment.add(borrow), one) {
+                        Err(PositionError::InsufficientAssetAmount(
+                            self.min_asset.into(),
+                        ))
+                    } else {
+                        Ok(borrow)
+                    }
+                })
+        })
     }
 
     pub fn overdue_collection_in<Due>(&self, due: &Due) -> Duration
@@ -216,13 +216,11 @@ impl Spec {
         PaymentC: CurrencyDef,
         PaymentC::Group: MemberOf<LeasePaymentCurrencies>,
     {
-        if self.valid_transaction(payment, payment_currency_in_lpns) {
-            Ok(())
-        } else {
-            Err(PositionError::InsufficientTransactionAmount(
-                self.min_transaction.into(),
-            ))
-        }
+        self.validate_transaction(
+            payment,
+            payment_currency_in_lpns,
+            PositionError::InsufficientTransactionAmount,
+        )
     }
 
     /// Check if the amount can be used to close the position.
@@ -242,7 +240,12 @@ impl Spec {
     where
         Asset: Currency,
     {
-        if self.valid_transaction(close_amount, asset_in_lpns) {
+        self.validate_transaction(
+            close_amount,
+            asset_in_lpns,
+            PositionError::PositionCloseAmountTooSmall,
+        )
+        .and_then(|()| {
             if self.valid_asset(asset.saturating_sub(close_amount), asset_in_lpns) {
                 Ok(())
             } else {
@@ -250,24 +253,26 @@ impl Spec {
                     self.min_asset.into(),
                 ))
             }
-        } else {
-            Err(PositionError::PositionCloseAmountTooSmall(
-                self.min_transaction.into(),
-            ))
-        }
+        })
     }
 
-    fn valid_transaction<TransactionC>(
+    fn validate_transaction<TransactionC, ErrFn>(
         &self,
         amount: Coin<TransactionC>,
         transaction_currency_in_lpn: Price<TransactionC>,
-    ) -> bool
+        err_fn: ErrFn,
+    ) -> Result<(), PositionError>
     where
         TransactionC: Currency,
+        ErrFn: FnOnce(LpnCoinDTO) -> PositionError,
     {
-        let amount = price::total(amount, transaction_currency_in_lpn);
+        let amountin_in_lpn = price::total(amount, transaction_currency_in_lpn);
 
-        amount >= self.min_transaction
+        if amountin_in_lpn >= self.min_transaction {
+            Ok(())
+        } else {
+            Err(err_fn(self.min_transaction.into()))
+        }
     }
 
     fn valid_asset<TransactionC>(
