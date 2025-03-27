@@ -137,14 +137,13 @@ impl Spec {
             let borrow = self.liability.init_borrow_amount(downpayment, may_max_ltd);
             self.validate_transaction(borrow, one, PositionError::InsufficientTransactionAmount)
                 .and_then(|()| {
-                    if !self.valid_asset(downpayment.add(borrow), one) {
-                        Err(PositionError::InsufficientAssetAmount(
-                            self.min_asset.into(),
-                        ))
-                    } else {
-                        Ok(borrow)
-                    }
+                    self.validate_asset(
+                        downpayment.add(borrow),
+                        one,
+                        PositionError::InsufficientAssetAmount,
+                    )
                 })
+                .map(|()| borrow)
         })
     }
 
@@ -246,13 +245,11 @@ impl Spec {
             PositionError::PositionCloseAmountTooSmall,
         )
         .and_then(|()| {
-            if self.valid_asset(asset.saturating_sub(close_amount), asset_in_lpns) {
-                Ok(())
-            } else {
-                Err(PositionError::PositionCloseAmountTooBig(
-                    self.min_asset.into(),
-                ))
-            }
+            self.validate_asset(
+                asset.saturating_sub(close_amount),
+                asset_in_lpns,
+                PositionError::PositionCloseAmountTooBig,
+            )
         })
     }
 
@@ -266,26 +263,32 @@ impl Spec {
         TransactionC: Currency,
         ErrFn: FnOnce(LpnCoinDTO) -> PositionError,
     {
-        let amountin_in_lpn = price::total(amount, transaction_currency_in_lpn);
+        let amount_in_lpn = price::total(amount, transaction_currency_in_lpn);
 
-        if amountin_in_lpn >= self.min_transaction {
+        if amount_in_lpn >= self.min_transaction {
             Ok(())
         } else {
             Err(err_fn(self.min_transaction.into()))
         }
     }
 
-    fn valid_asset<TransactionC>(
+    fn validate_asset<TransactionC, ErrFn>(
         &self,
         asset_amount: Coin<TransactionC>,
         transaction_currency_in_lpn: Price<TransactionC>,
-    ) -> bool
+        err_fn: ErrFn,
+    ) -> Result<(), PositionError>
     where
         TransactionC: Currency,
+        ErrFn: FnOnce(LpnCoinDTO) -> PositionError,
     {
-        let asset_amount = price::total(asset_amount, transaction_currency_in_lpn);
+        let asset_amount_in_lpn = price::total(asset_amount, transaction_currency_in_lpn);
 
-        asset_amount >= self.min_asset
+        if asset_amount_in_lpn >= self.min_asset {
+            Ok(())
+        } else {
+            Err(err_fn(self.min_asset.into()))
+        }
     }
 
     fn may_ask_liquidation_liability<Asset>(
