@@ -145,13 +145,3 @@ where
         }
     }
 }
-
-impl<QuoteC, QuoteG> AccessPermission for OracleRef<QuoteC, QuoteG>
-where
-    QuoteC: Currency + MemberOf<QuoteG>,
-    QuoteG: Group,
-{
-    fn permit_access(&self, caller: &Addr) -> bool {
-        self.addr == caller
-    }
-}
