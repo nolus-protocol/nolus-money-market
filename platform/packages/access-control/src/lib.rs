@@ -1,4 +1,4 @@
-use std::ops::{Deref, DerefMut};
+use std::ops::{Add, Deref, DerefMut};
 
 use sdk::{
     cosmwasm_std::{Addr, Storage},
@@ -12,24 +12,18 @@ mod contract_owner;
 pub mod error;
 
 pub trait AccessPermission {
-    fn permit_access(&self, caller: &Addr) -> bool;
+    fn is_granted_to(&self, caller: &Addr) -> bool;
 }
 
-/// Checks if access is permitted for the given caller.
-pub fn check<R>(resource: &R, caller: &Addr) -> Result
+/// Checks if access is granted to the given caller.
+pub fn check<P>(permission: &P, caller: &Addr) -> Result
 where
-    R: AccessPermission,
+    P: AccessPermission,
 {
-    if resource.permit_access(caller) {
+    if permission.is_granted_to(caller) {
         Ok(())
     } else {
         Err(Error::Unauthorized {})
-    }
-}
-
-impl AccessPermission for Addr {
-    fn permit_access(&self, caller: &Addr) -> bool {
-        self == caller
     }
 }
 
