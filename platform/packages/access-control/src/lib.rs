@@ -1,4 +1,4 @@
-use std::ops::{Deref, DerefMut};
+use std::ops::{Add, Deref, DerefMut};
 
 use sdk::{
     cosmwasm_std::{Addr, Storage},
