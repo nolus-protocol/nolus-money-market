@@ -70,6 +70,22 @@ impl TimeAlarmsRef {
     }
 }
 
+pub struct TimeAlarmDelivery<'a> {
+    time_alarms_ref: &'a TimeAlarmsRef,
+}
+
+impl<'a> TimeAlarmDelivery<'a> {
+    pub fn new(time_alarms_ref: &'a TimeAlarmsRef) -> Self {
+        Self { time_alarms_ref } 
+    }
+}
+
+impl<'a> AccessPermission for TimeAlarmDelivery<'a>{
+    fn is_granted_to(&self, caller: &Addr) -> bool {
+        self.time_alarms_ref.owned_by(caller)
+    }
+}
+
 #[cfg(feature = "testing")]
 impl TimeAlarmsRef {
     pub fn unchecked<A>(addr: A) -> Self
