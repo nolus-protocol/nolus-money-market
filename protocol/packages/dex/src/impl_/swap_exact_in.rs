@@ -6,7 +6,7 @@ use std::{
 use oracle::stub::SwapPath;
 use serde::{Deserialize, Serialize};
 
-use currency::{CurrencyDTO, Group, MemberOf};
+use currency::{Group, MemberOf};
 use finance::{
     coin::{self, Amount, CoinDTO},
     duration::Duration,
@@ -19,7 +19,7 @@ use sdk::{
 };
 
 use crate::{
-    ConnectionParams, Contract, Stage,
+    AnomalyMonitoredTask, AnomalyPolicy, ConnectionParams, Contract, Stage,
     error::{Error, Result},
     swap::ExactAmountIn,
 };
@@ -73,7 +73,7 @@ where
 
 impl<SwapTask, SEnum, SwapGroup, SwapClient> SwapExactIn<SwapTask, SEnum, SwapGroup, SwapClient>
 where
-    SwapTask: SwapTaskT,
+    SwapTask: AnomalyMonitoredTask,
     SwapGroup: Group,
     SwapClient: ExactAmountIn,
 {
@@ -84,25 +84,22 @@ where
     ) -> Result<Batch> {
         let swap_trx = SwapTrx::new(self.spec.dex_account(), self.spec.oracle(), querier);
         // TODO apply nls_swap_fee on the downpayment only!
-        struct SwapWorker<'ica, 'swap_path, 'querier, SwapPathImpl, SwapIn, SwapOut, SwapInOut, SwapClient>(
-            SwapTrx<'ica, 'swap_path, 'querier, SwapInOut, SwapPathImpl>,
-            PhantomData<SwapIn>,
-            CurrencyDTO<SwapOut>,
+        struct SwapWorker<'ica, 'swap_path, 'querier, 'task, SwapPathImpl, SwapTask, SwapClient>(
+            SwapTrx<'ica, 'swap_path, 'querier, SwapTask::InOutG, SwapPathImpl>,
+            &'task SwapTask,
             PhantomData<SwapClient>,
         )
         where
-            SwapOut: Group;
+            SwapTask: AnomalyMonitoredTask;
 
-        impl<SwapPathImpl, SwapIn, SwapOut, SwapInOut, SwapClient> CoinVisitor
-            for SwapWorker<'_, '_, '_, SwapPathImpl, SwapIn, SwapOut, SwapInOut, SwapClient>
+        impl<SwapPathImpl, SwapTask, SwapClient> CoinVisitor
+            for SwapWorker<'_, '_, '_, '_, SwapPathImpl, SwapTask, SwapClient>
         where
-            SwapPathImpl: SwapPath<SwapInOut>,
-            SwapIn: Group + MemberOf<SwapInOut>,
-            SwapOut: Group + MemberOf<SwapInOut>,
-            SwapInOut: Group,
+            SwapPathImpl: SwapPath<SwapTask::InOutG>,
+            SwapTask: AnomalyMonitoredTask,
             SwapClient: ExactAmountIn,
         {
-            type GIn = SwapIn;
+            type GIn = SwapTask::InG;
 
             type Result = IterNext;
 
@@ -112,28 +109,15 @@ where
             where
                 G: Group + MemberOf<Self::GIn>,
             {
-                //START TODO add a `SwapTask::min_out_coin(&self, &CoinDTO<Self::InG>) -> CoinDTO<Self::OutG>`
-                //or add a `SwapTask::slippage_tolerance(&self) -> Option<Percent100>`
-                //or add a `SwapTask::slippage_calculator(&self) -> SlippageCalculator`,
-                //    where the latter is a trait with a `fn min_out_coin(&self, &CoinDTO<Self::InG>) -> CoinDTO<Self::OutG>`
-                //before, it was None on Astroport and "1" on Osmosis.
-                //use oracle_platform::convert::{from|to}_quote(..) in the SwapTask implementations
-                const MIN_AMOUNT_OUT: Amount = 1;
-                let min_amount_out = coin::from_amount_ticker(MIN_AMOUNT_OUT, self.2);
-                //END TODO
+                let min_out = self.1.policy().min_output(coin);
 
                 self.0
-                    .swap_exact_in::<_, SwapIn, SwapOut, SwapClient>(coin, &min_amount_out)?;
-                Ok(IterNext::Continue)
+                    .swap_exact_in::<_, SwapTask::InG, SwapTask::OutG, SwapClient>(coin, &min_out)
+                    .map(|()| IterNext::Continue)
             }
         }
 
-        let mut swapper = SwapWorker(
-            swap_trx,
-            PhantomData::<SwapTask::InG>,
-            self.spec.out_currency(),
-            PhantomData::<SwapClient>,
-        );
+        let mut swapper = SwapWorker(swap_trx, &self.spec, PhantomData::<SwapClient>);
 
         let mut filtered_swapper =
             CurrencyFilter::<_, _, _>::new(&mut swapper, self.spec.out_currency());
@@ -218,7 +202,7 @@ where
 
 impl<SwapTask, SEnum, SwapGroup, SwapClient> SwapExactIn<SwapTask, SEnum, SwapGroup, SwapClient>
 where
-    SwapTask: SwapTaskT,
+    SwapTask: AnomalyMonitoredTask,
     SwapGroup: Group,
     SwapClient: ExactAmountIn,
     Self: Handler<Response = SEnum> + Into<SEnum>,
@@ -232,7 +216,7 @@ where
 impl<SwapTask, SEnum, SwapGroup, SwapClient> Enterable
     for SwapExactIn<SwapTask, SEnum, SwapGroup, SwapClient>
 where
-    SwapTask: SwapTaskT,
+    SwapTask: AnomalyMonitoredTask,
     SwapGroup: Group,
     SwapClient: ExactAmountIn,
 {
@@ -259,7 +243,7 @@ impl<SwapTask, SwapGroup, SwapClient, ForwardToInnerMsg> Handler
         SwapClient,
     >
 where
-    SwapTask: SwapTaskT,
+    SwapTask: AnomalyMonitoredTask,
     SwapGroup: Group,
     SwapClient: ExactAmountIn,
     ForwardToInnerMsg: ForwardToInner,
@@ -282,6 +266,11 @@ where
                     .and_then(|resp| response::res_continue::<_, _, Self>(resp, next_state))
             })
             .into()
+    }
+
+    fn on_error(self, _querier: QuerierWrapper<'_>, _env: Env) -> ContinueResult<Self> {
+        // self.spec.anomaly_policy()
+        todo!()
     }
 
     fn on_timeout(self, querier: QuerierWrapper<'_>, env: Env) -> ContinueResult<Self> {
@@ -309,7 +298,7 @@ impl<OpenIca, SwapTask, SwapGroup, SwapClient, ForwardToInnerMsg, ForwardToInner
         SwapClient,
     >
 where
-    SwapTask: SwapTaskT,
+    SwapTask: AnomalyMonitoredTask,
     SwapGroup: Group,
     SwapClient: ExactAmountIn,
 {
@@ -335,6 +324,11 @@ where
                 |err| HandlerResult::Continue(Err(err)),
                 |amount_out| response::res_finished(self.spec.finish(amount_out, &env, querier)),
             )
+    }
+
+    fn on_error(self, _querier: QuerierWrapper<'_>, _env: Env) -> ContinueResult<Self> {
+        // self.spec.policy()
+        todo!()
     }
 
     fn on_timeout(self, querier: QuerierWrapper<'_>, env: Env) -> ContinueResult<Self> {

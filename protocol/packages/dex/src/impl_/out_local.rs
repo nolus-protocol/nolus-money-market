@@ -177,7 +177,7 @@ mod impl_handler {
     use sdk::cosmwasm_std::{Binary, Env, QuerierWrapper, Reply};
 
     use crate::{
-        SwapTask as SwapTaskT,
+        AnomalyMonitoredTask,
         impl_::{
             self, Handler,
             response::{ContinueResult, Result},
@@ -190,7 +190,7 @@ mod impl_handler {
     impl<SwapTask, SwapGroup, SwapClient, ForwardToInnerMsg> Handler
         for State<SwapTask, SwapGroup, SwapClient, ForwardToInnerMsg>
     where
-        SwapTask: SwapTaskT,
+        SwapTask: AnomalyMonitoredTask,
         SwapTask::OutG: Clone,
         SwapGroup: Group,
         SwapClient: ExactAmountIn,

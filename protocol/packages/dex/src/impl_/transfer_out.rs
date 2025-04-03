@@ -15,8 +15,8 @@ use platform::{
 use sdk::cosmwasm_std::{Binary, Env, QuerierWrapper, Timestamp};
 
 use crate::{
-    CoinVisitor, CoinsNb, Contract, ContractInSwap, Enterable, IterNext, IterState, Stage,
-    SwapTask as SwapTaskT, TimeAlarm,
+    AnomalyMonitoredTask, CoinVisitor, CoinsNb, Contract, ContractInSwap, Enterable, IterNext,
+    IterState, Stage, SwapTask as SwapTaskT, TimeAlarm,
     error::{Error, Result},
     swap::ExactAmountIn,
 };
@@ -53,7 +53,7 @@ pub struct TransferOut<SwapTask, SEnum, SwapGroup, SwapClient> {
 
 impl<SwapTask, SEnum, SwapGroup, SwapClient> TransferOut<SwapTask, SEnum, SwapGroup, SwapClient>
 where
-    SwapTask: SwapTaskT,
+    SwapTask: AnomalyMonitoredTask,
     SwapGroup: Group,
     SwapClient: ExactAmountIn,
     Self: Into<SEnum>,
@@ -174,7 +174,7 @@ where
 impl<SwapTask, SEnum, SwapGroup, SwapClient> Enterable
     for TransferOut<SwapTask, SEnum, SwapGroup, SwapClient>
 where
-    SwapTask: SwapTaskT,
+    SwapTask: AnomalyMonitoredTask,
     SwapGroup: Group,
     SwapClient: ExactAmountIn,
     Self: Into<SEnum>,
@@ -188,7 +188,7 @@ where
 impl<SwapTask, SEnum, SwapGroup, SwapClient> Handler
     for TransferOut<SwapTask, SEnum, SwapGroup, SwapClient>
 where
-    SwapTask: SwapTaskT,
+    SwapTask: AnomalyMonitoredTask,
     SwapGroup: Group,
     SwapClient: ExactAmountIn,
     Self: Into<SEnum>,

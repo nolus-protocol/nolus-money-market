@@ -22,7 +22,7 @@ use crate::{
 };
 
 pub(crate) use self::handler::{Handler, Response};
-use self::{dex::State as DexState, lease::State as LeaseState};
+use self::{dex::State as DexState, lease::State as LeaseState, opened::close::SlippageAnomaly};
 
 mod closed;
 mod dex;
@@ -46,7 +46,12 @@ type BuyLpn = DexState<opened::repay::buy_lpn::DexState>;
 
 type PartialLiquidation = DexState<opened::close::liquidation::partial::DexState>;
 
+type PartialLiquidationSlippageAnomaly =
+    LeaseState<opened::close::liquidation::partial::AnomalyState>;
+
 type FullLiquidation = DexState<opened::close::liquidation::full::DexState>;
+
+type FullLiquidationSlippageAnomaly = LeaseState<opened::close::liquidation::full::AnomalyState>;
 
 type PartialClose = DexState<opened::close::customer_close::partial::DexState>;
 
@@ -72,7 +77,9 @@ pub(crate) enum State {
     OpenedActive,
     BuyLpn,
     PartialLiquidation,
+    PartialLiquidationSlippageAnomaly,
     FullLiquidation,
+    FullLiquidationSlippageAnomaly,
     PartialClose,
     FullClose,
     PaidActive,
@@ -109,8 +116,9 @@ where
 
 mod impl_from {
     use super::{
-        BuyAsset, BuyLpn, Closed, ClosingTransferIn, FullClose, FullLiquidation, Liquidated,
-        OpenedActive, PaidActive, PartialClose, PartialLiquidation, RequestLoan, State,
+        BuyAsset, BuyLpn, Closed, ClosingTransferIn, FullClose, FullLiquidation,
+        FullLiquidationSlippageAnomaly, Liquidated, OpenedActive, PaidActive, PartialClose,
+        PartialLiquidation, PartialLiquidationSlippageAnomaly, RequestLoan, State,
     };
 
     impl From<super::opening::request_loan::RequestLoan> for State {
@@ -143,9 +151,21 @@ mod impl_from {
         }
     }
 
+    impl From<super::opened::close::liquidation::partial::AnomalyState> for State {
+        fn from(value: super::opened::close::liquidation::partial::AnomalyState) -> Self {
+            PartialLiquidationSlippageAnomaly::new(value).into()
+        }
+    }
+
     impl From<super::opened::close::liquidation::full::DexState> for State {
         fn from(value: super::opened::close::liquidation::full::DexState) -> Self {
             FullLiquidation::new(value).into()
+        }
+    }
+
+    impl From<super::opened::close::liquidation::full::AnomalyState> for State {
+        fn from(value: super::opened::close::liquidation::full::AnomalyState) -> Self {
+            FullLiquidationSlippageAnomaly::new(value).into()
         }
     }
 

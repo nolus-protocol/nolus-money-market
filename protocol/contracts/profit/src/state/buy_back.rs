@@ -3,8 +3,9 @@ use serde::{Deserialize, Serialize};
 use currencies::{Native, Nls, PaymentGroup};
 use currency::CurrencyDTO;
 use dex::{
-    Account, CoinVisitor, ContractInSwap, Enterable, IterNext, IterState, Response as DexResponse,
-    Stage, StateLocalOut, SwapTask,
+    AcceptAnyNonZeroSwap, Account, AnomalyMonitoredTask, AnomalyPolicy, CoinVisitor,
+    ContractInSwap, Enterable, IterNext, IterState, Response as DexResponse, Stage, StateLocalOut,
+    SwapTask,
 };
 use finance::{
     coin::{Coin, CoinDTO},
@@ -132,6 +133,12 @@ impl SwapTask for BuyBack {
                 .map(|state_response: PlatformResponse| state_response.merge_with(bank_response))?,
             next_state: State(StateEnum::Idle(next_state)),
         })
+    }
+}
+
+impl AnomalyMonitoredTask for BuyBack {
+    fn policy(&self) -> impl AnomalyPolicy<Self> {
+        AcceptAnyNonZeroSwap::on_task(self)
     }
 }
 

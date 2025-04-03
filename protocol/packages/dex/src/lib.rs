@@ -3,6 +3,10 @@ pub use self::error::Error;
 #[cfg(feature = "impl")]
 pub use self::{
     account::Account,
+    anomaly::{
+        AcceptAnyNonZeroSwap, MonitoredTask as AnomalyMonitoredTask, PanicPolicy,
+        Policy as AnomalyPolicy, Treatment as AnomalyTreatment,
+    },
     connect::{Connectable, ConnectionParams, Ics20Channel},
     enterable::Enterable,
     error::Result as DexResult,
@@ -21,6 +25,8 @@ pub use self::{
 
 #[cfg(feature = "impl")]
 mod account;
+#[cfg(feature = "impl")]
+mod anomaly;
 #[cfg(feature = "impl")]
 mod connect;
 #[cfg(feature = "impl")]

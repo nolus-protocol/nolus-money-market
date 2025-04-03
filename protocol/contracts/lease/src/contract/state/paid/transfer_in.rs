@@ -3,8 +3,8 @@ use serde::{Deserialize, Serialize};
 
 use currency::CurrencyDTO;
 use dex::{
-    Account, CoinVisitor, ContractInSwap, IterNext, IterState, Stage, StartTransferInState,
-    SwapTask,
+    Account, AnomalyMonitoredTask, AnomalyPolicy, CoinVisitor, ContractInSwap, IterNext, IterState,
+    PanicPolicy, Stage, StartTransferInState, SwapTask,
 };
 use finance::{coin::CoinDTO, duration::Duration};
 use platform::{
@@ -127,6 +127,12 @@ impl SwapTask for TransferIn {
             })
             .map(|all_messages| MessageResponse::messages_with_events(all_messages, emitter))
             .map(|response| StateMachineResponse::from(response, Closed::default()))
+    }
+}
+
+impl AnomalyMonitoredTask for TransferIn {
+    fn policy(&self) -> impl AnomalyPolicy<Self> {
+        PanicPolicy {}
     }
 }
 

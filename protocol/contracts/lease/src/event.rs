@@ -12,6 +12,7 @@ pub enum Type {
     Liquidation,
     ClosePosition,
     AutoClosePosition,
+    SlippageAnomaly,
 }
 
 impl Type {
@@ -31,6 +32,7 @@ impl Type {
             Self::Liquidation => "ls-liquidation",
             Self::ClosePosition => "ls-close-position",
             Self::AutoClosePosition => "ls-auto-close-position",
+            Self::SlippageAnomaly => "ls-slippage-anomaly",
         }
     }
 }

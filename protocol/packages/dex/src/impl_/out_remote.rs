@@ -194,7 +194,7 @@ mod impl_handler {
     use sdk::cosmwasm_std::{Binary, Env, QuerierWrapper, Reply};
 
     use crate::{
-        Connectable, IcaConnectee, SwapTask as SwapTaskT, TimeAlarm,
+        AnomalyMonitoredTask, Connectable, IcaConnectee, TimeAlarm,
         impl_::{
             self, ForwardToInner, Handler,
             response::{ContinueResult, Result},
@@ -216,7 +216,7 @@ mod impl_handler {
         >
     where
         OpenIca: Connectable + IcaConnectee<State = Self> + TimeAlarm + Display,
-        SwapTask: SwapTaskT,
+        SwapTask: AnomalyMonitoredTask,
         SwapTask::OutG: Clone,
         SwapGroup: Group,
         SwapClient: ExactAmountIn,

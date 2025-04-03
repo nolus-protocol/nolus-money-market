@@ -1,3 +1,4 @@
+use dex::{AcceptAnyNonZeroSwap, AnomalyMonitoredTask, AnomalyPolicy};
 use profit::stub::ProfitStub;
 use sdk::cosmwasm_std::Env;
 
@@ -10,10 +11,11 @@ use crate::{
         Lease,
         cmd::FullLiquidationDTO,
         state::{
+            SlippageAnomaly,
             event::LiquidationEmitter,
             liquidated::Liquidated,
             opened::{
-                close::{self, Closable, IntoRepayable},
+                close::{self, Closable, IntoRepayable, sell_asset::SellAsset},
                 payment::{Close, CloseAlgo},
             },
         },
@@ -24,6 +26,7 @@ use crate::{
 type Spec = FullLiquidationDTO;
 pub(in super::super) type RepayableImpl = Close<Spec>;
 pub(crate) type DexState = close::DexState<RepayableImpl>;
+pub(crate) type AnomalyState = SlippageAnomaly<RepayableImpl>;
 
 impl IntoRepayable for Spec {
     type Repayable = RepayableImpl;
@@ -82,5 +85,12 @@ impl CloseAlgo for Spec {
         'this: 'lease,
     {
         Self::PaymentEmitter::new(&self.cause, *self.amount(lease), env)
+    }
+}
+
+impl AnomalyMonitoredTask for SellAsset<RepayableImpl> {
+    fn policy(&self) -> impl AnomalyPolicy<Self> {
+        // TODO switch to MaxSlippage::on_task(self) once the MaxSlippage TODO's get resolved
+        AcceptAnyNonZeroSwap::on_task(self)
     }
 }

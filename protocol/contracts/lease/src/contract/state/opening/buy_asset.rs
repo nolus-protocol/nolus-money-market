@@ -4,8 +4,8 @@ use serde::{Deserialize, Serialize};
 
 use currency::CurrencyDTO;
 use dex::{
-    Account, CoinVisitor, ContractInSwap, IterNext, IterState, Stage, StartLocalRemoteState,
-    SwapTask,
+    AcceptAnyNonZeroSwap, Account, AnomalyMonitoredTask, AnomalyPolicy, CoinVisitor,
+    ContractInSwap, IterNext, IterState, Stage, StartLocalRemoteState, SwapTask,
 };
 use finance::{coin::CoinDTO, duration::Duration};
 use platform::{
@@ -192,6 +192,12 @@ impl SwapTask for BuyAsset {
             }
             CloseStatusDTO::CloseAsked(_) => unimplemented!("no triggers have been set"),
         }
+    }
+}
+
+impl AnomalyMonitoredTask for BuyAsset {
+    fn policy(&self) -> impl AnomalyPolicy<Self> {
+        AcceptAnyNonZeroSwap::on_task(self)
     }
 }
 

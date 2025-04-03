@@ -1,3 +1,4 @@
+use dex::{AcceptAnyNonZeroSwap, AnomalyMonitoredTask, AnomalyPolicy};
 use profit::stub::ProfitStub;
 use sdk::cosmwasm_std::Env;
 
@@ -13,7 +14,7 @@ use crate::{
             closed::Closed,
             event::PositionCloseEmitter,
             opened::{
-                close::{self, Closable, IntoRepayable},
+                close::{self, Closable, IntoRepayable, sell_asset::SellAsset},
                 payment::{Close, CloseAlgo},
             },
         },
@@ -81,5 +82,11 @@ impl CloseAlgo for Spec {
         'this: 'lease,
     {
         Self::PaymentEmitter::new(*self.amount(lease), env)
+    }
+}
+
+impl AnomalyMonitoredTask for SellAsset<RepayableImpl> {
+    fn policy(&self) -> impl AnomalyPolicy<Self> {
+        AcceptAnyNonZeroSwap::on_task(self)
     }
 }

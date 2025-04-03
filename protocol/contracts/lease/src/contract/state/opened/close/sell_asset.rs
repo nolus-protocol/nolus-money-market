@@ -36,6 +36,10 @@ impl<RepayableT> SellAsset<RepayableT> {
     pub(in super::super) fn new(lease: Lease, repayable: RepayableT) -> Self {
         Self { lease, repayable }
     }
+
+    pub(super) fn drop(self) -> (Lease, RepayableT) {
+        (self.lease, self.repayable)
+    }
 }
 
 impl<RepayableT> SellAsset<RepayableT>
@@ -91,6 +95,10 @@ where
     {
         dex::on_coin(self.repayable.amount(&self.lease), visitor)
     }
+
+    // fn anomaly_policy(&self) -> impl AnomalyPolicy<Self> {
+    //     MaxSlippage::on_task(self)
+    // }
 
     fn finish(
         self,

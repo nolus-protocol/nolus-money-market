@@ -3,8 +3,8 @@ use serde::{Deserialize, Serialize};
 
 use currency::CurrencyDTO;
 use dex::{
-    Account, CoinVisitor, ContractInSwap, IterNext, IterState, Stage, StartLocalLocalState,
-    SwapTask,
+    AcceptAnyNonZeroSwap, Account, AnomalyMonitoredTask, AnomalyPolicy, CoinVisitor,
+    ContractInSwap, IterNext, IterState, Stage, StartLocalLocalState, SwapTask,
 };
 use finance::{coin::CoinDTO, duration::Duration};
 use sdk::cosmwasm_std::{Env, QuerierWrapper, Timestamp};
@@ -109,6 +109,12 @@ impl SwapTask for BuyLpn {
         querier: QuerierWrapper<'_>,
     ) -> Self::Result {
         repay::repay(self.lease, amount_out, env, querier)
+    }
+}
+
+impl AnomalyMonitoredTask for BuyLpn {
+    fn policy(&self) -> impl AnomalyPolicy<Self> {
+        AcceptAnyNonZeroSwap::on_task(self)
     }
 }
 

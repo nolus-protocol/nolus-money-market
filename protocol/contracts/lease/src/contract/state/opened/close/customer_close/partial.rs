@@ -1,3 +1,4 @@
+use dex::{AcceptAnyNonZeroSwap, AnomalyMonitoredTask, AnomalyPolicy};
 use sdk::cosmwasm_std::Env;
 
 use crate::{
@@ -12,7 +13,7 @@ use crate::{
         state::{
             event::PositionCloseEmitter,
             opened::{
-                close::{self, Closable, IntoRepayable},
+                close::{self, Closable, IntoRepayable, sell_asset::SellAsset},
                 payment::{Repay, RepayAlgo},
             },
         },
@@ -60,5 +61,11 @@ impl RepayAlgo for Spec {
 
     fn emitter_fn<'this, 'env>(&'this self, env: &'env Env) -> Self::PaymentEmitter<'this, 'env> {
         Self::PaymentEmitter::new(self.amount, env)
+    }
+}
+
+impl AnomalyMonitoredTask for SellAsset<RepayableImpl> {
+    fn policy(&self) -> impl AnomalyPolicy<Self> {
+        AcceptAnyNonZeroSwap::on_task(self)
     }
 }

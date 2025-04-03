@@ -34,6 +34,12 @@ pub trait SwapTask {
     where
         Visitor: CoinVisitor<GIn = Self::InG, Result = IterNext>;
 
+    /// The final transition of this DEX composite state machine
+    ///
+    /// The states involve TransferOut, SwapExactIn, TransferIn, etc. This transition originates from one of them,
+    /// and should point to a next state, sibling to this one in the higher-level state machine.
+    /// For example, the DEX [`Lease::BuyAsset`] state transition to [`Lease::Active`] on finish.
+    ///
     fn finish(
         self,
         amount_out: CoinDTO<Self::OutG>,
