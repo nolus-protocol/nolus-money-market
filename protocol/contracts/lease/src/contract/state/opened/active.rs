@@ -5,6 +5,8 @@ use dex::Enterable;
 use finance::{coin::IntoDTO, duration::Duration};
 use platform::{bank, batch::Emitter, message::Response as MessageResponse};
 use sdk::cosmwasm_std::{Coin as CwCoin, Env, MessageInfo, QuerierWrapper, Timestamp};
+use timealarms::stub::TimeAlarmDelivery;
+
 
 use crate::{
     api::{
@@ -86,7 +88,7 @@ impl Active {
         env: &Env,
         info: MessageInfo,
     ) -> ContractResult<Response> {
-        access_control::check(&self.lease.lease.time_alarms, &info.sender)?;
+        access_control::check(&TimeAlarmDelivery::new(&self.lease.lease.time_alarms), &info.sender)?;
 
         self.try_on_alarm(querier, env)
     }
