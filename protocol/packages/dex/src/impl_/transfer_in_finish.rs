@@ -6,6 +6,7 @@ use finance::duration::Duration;
 use serde::{Deserialize, Serialize};
 
 use finance::coin::CoinDTO;
+use oracle_platform::stub::OracleDelivery;
 use platform::{
     batch::{Emit, Emitter},
     message::Response as MessageResponse,
@@ -234,10 +235,7 @@ where
     }
 
     fn on_time_alarm(self, querier: QuerierWrapper<'_>, env: Env) -> HandlerResult<Self> {
-       let res = access_control::check(self.spec.time_alarm(), &env.contract.address);
-        if res.is_err() {
-            // TODO ?
-        }
+        access_control::check(&OracleDelivery::new(&self.lease.lease.time_alarms), &info.sender)?;
 
         self.try_complete(querier, env)
     }
