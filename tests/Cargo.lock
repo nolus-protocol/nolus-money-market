@@ -824,6 +824,7 @@ dependencies = [
  "currency",
  "finance",
  "oracle",
+ "oracle-platform",
  "platform",
  "sdk",
  "serde",
