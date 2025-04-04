@@ -145,3 +145,20 @@ where
         }
     }
 }
+
+
+pub struct OracleDelivery<'a> {
+    oracle_delivery: &'a OracleRef,
+}
+
+impl<'a> OracleDelivery<'a> {
+    pub fn new(oracle_delivery: &'a OracleRef<QuoteC, QuoteG>) -> Self {
+        Self { oracle_delivery } 
+    }
+}
+
+impl<'a> AccessPermission for OracleDelivery<'a>{
+    fn is_granted_to(&self, caller: &Addr) -> bool {
+        self.addr == caller
+    }
+}

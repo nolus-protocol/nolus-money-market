@@ -20,7 +20,11 @@ access-control = { workspace = true, optional = true }
 currency = { workspace = true }
 finance = { workspace = true }
 oracle = { workspace = true, features = ["stub_swap"] }
+<<<<<<< HEAD
 oracle-platform = { workspace = true, optional = true }
+=======
+oracle-platform = { workspace = true }
+>>>>>>> d72b1f7d1 (wip: introduce oracleDelivery struct)
 timealarms = { workspace = true, optional = true, features = ["stub"] }
 platform = { workspace = true }
 sdk = { workspace = true }
