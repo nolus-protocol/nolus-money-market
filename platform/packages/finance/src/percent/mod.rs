@@ -50,6 +50,7 @@ pub(super) mod test {
 
     use crate::{
         coin::Coin,
+        fraction::Fraction,
         percent::{Percent, Percent100},
         ratio::Rational,
     };
@@ -110,7 +111,7 @@ pub(super) mod test {
     #[should_panic]
     fn add_overflow() {
         let _ = Percent100::HUNDRED.checked_add(from(1));
-        let _ = Percent::from_permille(Units::MAX).checked_add(Percent::from_permille(1));
+        let _ = Percent100::from_permille(Units::MAX).checked_add(Percent100::from_permille(1));
     }
 
     #[test]

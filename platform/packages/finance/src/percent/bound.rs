@@ -4,13 +4,14 @@ use sdk::{
 };
 use serde::{Deserialize, Serialize};
 use std::{
-    fmt::{Display, Formatter, Result as FmtResult, Write},
+    fmt::{Debug, Display, Formatter, Result as FmtResult, Write},
     marker::PhantomData,
     ops::{Div, Rem},
 };
 
 use crate::{
     error::{Error, Result as FinanceResult},
+    fraction::Fraction,
     fractionable::Fractionable,
     ratio::{CheckedAdd, CheckedMul, Ratio, Rational},
     zero::Zero,
@@ -21,10 +22,10 @@ use super::{Percent100, Units};
 #[derive(
     Clone, Copy, Debug, Default, Deserialize, Eq, JsonSchema, Ord, PartialEq, PartialOrd, Serialize,
 )]
-#[serde(try_from = "Units")]
+#[serde(try_from = "Units", into = "Units")]
 pub struct BoundPercent<B>
 where
-    B: UpperBound,
+    B: Clone + UpperBound,
 {
     units: Units,
     #[serde(skip)]
@@ -33,7 +34,7 @@ where
 
 impl<B> BoundPercent<B>
 where
-    B: UpperBound,
+    B: Clone + UpperBound,
 {
     pub const ZERO: Self = Self::from_permille(0);
     pub const HUNDRED: Self = Self::from_permille(Self::PERMILLE);
@@ -50,7 +51,7 @@ where
         debug_assert!(units <= B::BOUND, "Value exceeds upper bound!");
         Self {
             units,
-            _bound: PhantomData,
+            _bound: PhantomData::<B>,
         }
     }
 
@@ -60,6 +61,20 @@ where
 
     pub const fn from_permille(permille: Units) -> Self {
         Self::new_internal(permille)
+    }
+
+    pub fn from_ratio<FractionUnit>(
+        nominator: FractionUnit,
+        denominator: FractionUnit,
+    ) -> Option<Self>
+    where
+        FractionUnit: Copy + Debug + Div + Ord + PartialEq + Rem<Output = FractionUnit> + Zero,
+        <FractionUnit as Div>::Output: CheckedMul<Self, Output = Self>,
+        Self: Fractionable<FractionUnit>,
+        B: Copy,
+    {
+        println!("nominator: {:?}, denominator: {:?}", nominator, denominator);
+        Rational::new(nominator, denominator).checked_mul(Self::HUNDRED)
     }
 
     pub const fn units(&self) -> Units {
@@ -88,8 +103,8 @@ where
     }
 }
 
-impl BoundPercent<HundredBound> {
-    pub fn of<A>(&self, whole: A) -> A
+impl Fraction<Units> for BoundPercent<HundredBound> {
+    fn of<A>(&self, whole: A) -> A
     where
         A: Fractionable<Units>,
     {
@@ -121,32 +136,55 @@ impl From<&BoundPercent<MaxBound>> for Rational<Units> {
     }
 }
 
-impl<U> From<Ratio<U>> for BoundPercent<HundredBound>
-where
-    U: Copy,
-    Self: Fractionable<U>,
-{
-    fn from(ratio: Ratio<U>) -> Self {
-        Self::HUNDRED.safe_mul(&ratio)
+impl From<BoundPercent<HundredBound>> for BoundPercent<MaxBound> {
+    fn from(percent: BoundPercent<HundredBound>) -> Self {
+        Self::from_permille(percent.units)
     }
 }
 
+impl TryFrom<BoundPercent<MaxBound>> for BoundPercent<HundredBound> {
+    type Error = Error;
+
+    fn try_from(percent: BoundPercent<MaxBound>) -> Result<Self, Self::Error> {
+        (percent.units <= HundredBound::BOUND)
+            .then(|| Self::from_permille(percent.units))
+            .ok_or_else(|| Error::UpperBoundCrossed {
+                bound: HundredBound::BOUND,
+                value: percent.units,
+            })
+    }
+}
+
+// Method used for deserialization
 impl<B> TryFrom<Units> for BoundPercent<B>
 where
-    B: UpperBound,
+    B: Clone + UpperBound,
 {
-    type Error = &'static str;
+    type Error = Error;
 
     fn try_from(permille: Units) -> Result<Self, Self::Error> {
-        (permille <= Self::PERMILLE)
+        (permille <= B::BOUND)
             .then(|| Self::new_internal(permille))
-            .ok_or("Percent cannot be greater than 100%")
+            .ok_or(Error::UpperBoundCrossed {
+                bound: B::BOUND,
+                value: permille,
+            })
+    }
+}
+
+// Method used for serialization
+impl<B> From<BoundPercent<B>> for Units
+where
+    B: Clone + UpperBound,
+{
+    fn from(percent: BoundPercent<B>) -> Self {
+        percent.units
     }
 }
 
 impl<B> From<BoundPercent<B>> for u128
 where
-    B: UpperBound,
+    B: Clone + UpperBound,
 {
     fn from(percent: BoundPercent<B>) -> Self {
         u128::from(percent.units())
@@ -155,7 +193,7 @@ where
 
 impl<B> From<BoundPercent<B>> for Uint256
 where
-    B: UpperBound,
+    B: Clone + UpperBound,
 {
     fn from(p: BoundPercent<B>) -> Self {
         Uint256::from(p.units())
@@ -164,7 +202,7 @@ where
 
 impl<B> CheckedAdd for BoundPercent<B>
 where
-    B: UpperBound,
+    B: Clone + UpperBound,
 {
     type Output = Self;
 
@@ -175,7 +213,7 @@ where
 
 impl<B> CheckedMul<BoundPercent<B>> for Units
 where
-    B: UpperBound,
+    B: Clone + UpperBound,
 {
     type Output = BoundPercent<B>;
 
@@ -187,14 +225,14 @@ where
 
 impl<B> Zero for BoundPercent<B>
 where
-    B: UpperBound,
+    B: Clone + UpperBound,
 {
     const ZERO: Self = Self::ZERO;
 }
 
 impl<B> Div for BoundPercent<B>
 where
-    B: PartialEq + UpperBound,
+    B: Clone + PartialEq + UpperBound,
 {
     type Output = Units;
 
@@ -207,7 +245,7 @@ where
 
 impl<B> Rem for BoundPercent<B>
 where
-    B: PartialEq + UpperBound,
+    B: Clone + PartialEq + UpperBound,
 {
     type Output = Self;
 
@@ -219,7 +257,7 @@ where
 
 impl<B> Display for BoundPercent<B>
 where
-    B: UpperBound,
+    B: Clone + UpperBound,
 {
     #[track_caller]
     fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {

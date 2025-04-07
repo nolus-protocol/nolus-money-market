@@ -15,7 +15,10 @@ use currency::{Currency, CurrencyDef, Group, MemberOf};
 
 use crate::{
     duration::Duration,
-    percent::{Percent100, Units as PercentUnits},
+    percent::{
+        bound::{BoundPercent, UpperBound},
+        Units as PercentUnits,
+    },
     ratio::{self, CheckedAdd, CheckedDiv, CheckedMul, Rational},
     zero::Zero,
 };
@@ -62,12 +65,15 @@ impl CheckedMul<PercentUnits> for Amount {
     }
 }
 
-impl CheckedMul<Percent100> for Amount {
-    type Output = Percent100;
+impl<B> CheckedMul<BoundPercent<B>> for Amount
+where
+    B: Clone + UpperBound,
+{
+    type Output = BoundPercent<B>;
 
-    fn checked_mul(self, rhs: Percent100) -> Option<Self::Output> {
+    fn checked_mul(self, rhs: BoundPercent<B>) -> Option<Self::Output> {
         checked_mul_and_convert(self, rhs, |result| {
-            result.try_into().ok().map(Percent100::from_permille)
+            result.try_into().ok().map(BoundPercent::from_permille)
         })
     }
 }
@@ -341,6 +347,7 @@ mod test {
     use currency::test::{SuperGroupTestC1, SuperGroupTestC2};
 
     use crate::{
+        fraction::Fraction,
         fractionable::Percentable,
         percent::{Percent100, Units},
     };
