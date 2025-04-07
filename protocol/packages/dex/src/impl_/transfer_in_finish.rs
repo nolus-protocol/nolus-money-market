@@ -6,16 +6,16 @@ use finance::duration::Duration;
 use serde::{Deserialize, Serialize};
 
 use finance::coin::CoinDTO;
-use oracle_platform::stub::OracleDelivery;
 use platform::{
     batch::{Emit, Emitter},
     message::Response as MessageResponse,
 };
 use sdk::cosmwasm_std::{Env, QuerierWrapper, Timestamp};
+use timealarms::stub::TimeAlarmDelivery;
 
 use crate::{
     Contract, ContractInSwap, Enterable, Stage, SwapOutputTask, SwapTask as SwapTaskT,
-    WithOutputTask,
+    WithOutputTask, TimeAlarm
 };
 
 #[cfg(feature = "migration")]
@@ -231,11 +231,11 @@ where
     type SwapResult = SwapTask::Result;
 
     fn heal(self, querier: QuerierWrapper<'_>, env: Env) -> HandlerResult<Self> {
-        self.on_time_alarm(querier, env)
+        self.try_complete(querier, env)
     }
 
     fn on_time_alarm(self, querier: QuerierWrapper<'_>, env: Env) -> HandlerResult<Self> {
-        access_control::check(&OracleDelivery::new(&self.lease.lease.time_alarms), &info.sender)?;
+        access_control::check(&TimeAlarmDelivery::new(self.spec.time_alarm()), &info.sender)?;
 
         self.try_complete(querier, env)
     }

@@ -1,4 +1,4 @@
-use std::ops::{Add, Deref, DerefMut};
+use std::ops::{Deref, DerefMut};
 
 use sdk::{
     cosmwasm_std::{Addr, Storage},
@@ -27,6 +27,22 @@ where
     }
 }
 
+pub struct AddressDelivery<'a> {
+    addr: &'a Addr,
+}
+
+impl<'a> AddressDelivery<'a> {
+    pub fn new(addr: &'a Addr) -> Self {
+        Self { addr } 
+    }
+}
+
+impl<'a> AccessPermission for AddressDelivery<'a>{
+    fn is_granted_to(&self, caller: &Addr) -> bool {
+        self.addr == caller
+    }
+}
+
 pub struct SingleUserAccess<'storage, S>
 where
     S: Deref<Target = dyn Storage + 'storage>,
@@ -50,7 +66,7 @@ where
         self.storage_item
             .load(self.storage.deref())
             .map_err(Into::into)
-            .and_then(|granted_to| check(&granted_to, user))
+            .and_then(|granted_to| check(&AddressDelivery::new(&granted_to), user))
     }
 }
 
@@ -74,8 +90,7 @@ mod tests {
     use sdk::cosmwasm_std::{Addr, Storage, testing::MockStorage};
 
     use crate::{
-        SingleUserAccess,
-        error::{Error, Result},
+        error::{Error, Result}, AddressDelivery, SingleUserAccess
     };
 
     const NAMESPACE: &str = "my-nice-permission";
@@ -121,6 +136,6 @@ mod tests {
     }
 
     fn check_permission(granted_to: &str, asked_for: &str) -> Result {
-        super::check(&Addr::unchecked(granted_to), &Addr::unchecked(asked_for))
+        super::check(&AddressDelivery::new(&Addr::unchecked(granted_to)), &Addr::unchecked(asked_for))
     }
 }
