@@ -40,7 +40,10 @@ impl Handler for Active {
         env: Env,
         info: MessageInfo,
     ) -> ContractResult<Response> {
-        access_control::check(&AddressDelivery::new(&self.lease.lease.customer), &info.sender)?;
+        access_control::check(
+            &AddressDelivery::new(&self.lease.lease.customer),
+            &info.sender,
+        )?;
 
         let start_transfer_in = transfer_in::start(self.lease);
         start_transfer_in
