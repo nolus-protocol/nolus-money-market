@@ -820,7 +820,6 @@ dependencies = [
 name = "dex"
 version = "0.2.2"
 dependencies = [
- "access-control",
  "currency",
  "finance",
  "oracle",
