@@ -118,13 +118,13 @@ pub fn execute(
             Ok(response::response_only_messages(response))
         }
         ExecuteMsg::DexCallback() => {
-            access_control::check(&env.contract.address, &info.sender)?;
+            access_control::check(&AddressDelivery::new(&env.contract.address), &info.sender)?;
 
             try_handle_execute_message(deps, env, State::on_inner)
                 .map(response::response_only_messages)
         }
         ExecuteMsg::DexCallbackContinue() => {
-            access_control::check(&env.contract.address, &info.sender)?;
+            access_control::check(&AddressDelivery::new(&env.contract.address), &info.sender)?;
 
             try_handle_execute_message(deps, env, State::on_inner_continue)
                 .map(response::response_only_messages)

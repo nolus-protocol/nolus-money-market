@@ -146,18 +146,30 @@ where
 }
 
 
-pub struct OracleDelivery<'a> {
-    oracle_delivery: &'a OracleRef,
+pub struct OracleDelivery<'a, QuoteC, QuoteG>
+where
+    QuoteC: Currency + MemberOf<QuoteG>,
+    QuoteG: Group,
+{
+    oracle_ref: &'a OracleRef<QuoteC, QuoteG>,
 }
 
-impl<'a> OracleDelivery<'a> {
-    pub fn new(oracle_delivery: &'a OracleRef<QuoteC, QuoteG>) -> Self {
-        Self { oracle_delivery } 
+impl<'a, QuoteC, QuoteG> OracleDelivery<'a, QuoteC, QuoteG>
+where
+    QuoteC: Currency + MemberOf<QuoteG>,
+    QuoteG: Group,
+{
+    pub fn new(oracle_ref: &'a OracleRef<QuoteC, QuoteG>) -> Self {
+        Self { oracle_ref }
     }
 }
 
-impl<'a> AccessPermission for OracleDelivery<'a>{
+impl<'a, QuoteC, QuoteG> AccessPermission for OracleDelivery<'a, QuoteC, QuoteG>
+where
+    QuoteC: Currency + MemberOf<QuoteG>,
+    QuoteG: Group,
+{
     fn is_granted_to(&self, caller: &Addr) -> bool {
-        self.addr == caller
+        self.oracle_ref.owned_by(caller)
     }
 }
