@@ -9,7 +9,7 @@ use crate::{
     coin::{Amount, Coin},
     error::{Error, Result},
     fractionable::HigherRank,
-    ratio::{CheckedAdd, Ratio, Rational},
+    ratio::{CheckedAdd, Rational},
 };
 
 pub mod base;
@@ -100,12 +100,13 @@ where
     /// Price(amount, amount_quote) * Ratio(nominator / denominator) = Price(amount * denominator, amount_quote * nominator)
     /// where the pairs (amount, nominator) and (amount_quote, denominator) are transformed into co-prime numbers.
     /// Please note that Price(amount, amount_quote) is like Ratio(amount_quote / amount).
-    pub(crate) fn lossy_mul(self, rhs: &Ratio<Amount>) -> Self {
-        let (amount_normalized, rhs_nominator_normalized) =
-            self.amount.into_coprime_with(Coin::<C>::from(rhs.parts()));
+    pub(crate) fn lossy_mul(self, rhs: &Rational<Amount>) -> Self {
+        let (amount_normalized, rhs_nominator_normalized) = self
+            .amount
+            .into_coprime_with(Coin::<C>::from(rhs.nominator()));
         let (amount_quote_normalized, rhs_denominator_normalized) = self
             .amount_quote
-            .into_coprime_with(Coin::<QuoteC>::from(rhs.total()));
+            .into_coprime_with(Coin::<QuoteC>::from(rhs.denominator()));
 
         let double_amount =
             DoubleAmount::from(amount_normalized) * DoubleAmount::from(rhs_denominator_normalized);
@@ -323,7 +324,7 @@ where
         // Please note that Price(amount, amount_quote) is like Ratio(amount_quote / amount).
 
         Self::Output::new(self.amount, rhs.amount_quote)
-            .lossy_mul(&Ratio::new(self.amount_quote.into(), rhs.amount.into()))
+            .lossy_mul(&Rational::new(self.amount_quote.into(), rhs.amount.into()))
     }
 }
 
@@ -351,7 +352,7 @@ mod test {
     use crate::{
         coin::{Amount, Coin as CoinT},
         price::{self, Price},
-        ratio::Ratio,
+        ratio::Rational,
     };
 
     type QuoteQuoteCoin = CoinT<SubGroupTestC10>;
@@ -651,7 +652,7 @@ mod test {
         assert_eq!(exp, price1.mul(price2));
 
         let price3 = price::total_of(amount1).is(quote2);
-        let ratio = Ratio::new(quote1.into(), amount2.into());
+        let ratio = Rational::new(quote1.into(), amount2.into());
         assert_eq!(exp, price3.lossy_mul(&ratio));
     }
 

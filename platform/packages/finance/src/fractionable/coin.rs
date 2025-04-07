@@ -32,6 +32,7 @@ mod test {
 
     use crate::{
         coin::{Amount, Coin},
+        fraction::Fraction,
         fractionable::Fractionable,
         percent::Percent100,
         ratio::Ratio,

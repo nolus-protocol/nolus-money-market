@@ -5,18 +5,13 @@ use std::{
 };
 
 use gcd::Gcd;
+
+use sdk::schemars::{self, JsonSchema};
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    fraction::Fraction,
-    fractionable::Fractionable,
-    percent::{Percent, Units},
-    zero::Zero,
-};
+use crate::{fraction::Fraction, fractionable::Fractionable, zero::Zero};
 
-// TODO review whether it may gets simpler if extend Fraction
-#[derive(Debug, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
+#[cfg_attr(any(test, feature = "testing"), derive(Debug))]
 pub struct Ratio<U> {
     parts: U,
     total: U,
@@ -41,7 +36,16 @@ where
     }
 }
 
-#[derive(Clone, Copy, Debug, Eq, JsonSchema)]
+impl<U> Fraction<U> for Ratio<U> {
+    fn of<A>(&self, whole: A) -> A
+    where
+        A: Fractionable<U>,
+    {
+        whole.safe_mul(self)
+    }
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Eq, JsonSchema, Serialize)]
 pub struct Rational<U> {
     nominator: U,
     denominator: U,
@@ -67,6 +71,18 @@ where
 
     pub fn denominator(&self) -> U {
         self.denominator
+    }
+
+    pub fn map<F, T>(&self, f: F) -> Rational<T>
+    where
+        F: Fn(U) -> T,
+        T: Copy + Debug + Ord + Zero,
+    {
+        Rational::new(f(self.nominator), f(self.denominator))
+    }
+
+    pub fn to_ratio(&self) -> Option<Ratio<U>> {
+        (self.nominator <= self.denominator).then(|| Ratio::new(self.nominator, self.denominator))
     }
 }
 

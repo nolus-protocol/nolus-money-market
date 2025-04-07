@@ -1,6 +1,12 @@
-use std::marker::PhantomData;
+use std::{fmt::Debug, marker::PhantomData};
 
-use crate::{coin::Amount, percent::Units as PercentUnits, price::Price, ratio::Ratio};
+use crate::{
+    coin::Amount,
+    percent::Units as PercentUnits,
+    price::Price,
+    ratio::{Ratio, Rational},
+    zero::Zero,
+};
 
 use super::Fractionable;
 
@@ -10,18 +16,24 @@ where
     QuoteC: 'static,
 {
     fn safe_mul(self, fraction: &Ratio<PercentUnits>) -> Self {
-        self.lossy_mul(&RatioUpcast(PhantomData, fraction).into())
+        self.lossy_mul(
+            &RatioUpcast(
+                PhantomData,
+                &Rational::new(fraction.parts(), fraction.total()),
+            )
+            .into(),
+        )
     }
 }
 
-struct RatioUpcast<'a, U>(PhantomData<U>, &'a Ratio<U>);
+struct RatioUpcast<'a, U>(PhantomData<U>, &'a Rational<U>);
 
-impl<'a, U> From<RatioUpcast<'a, U>> for Ratio<Amount>
+impl<'a, U> From<RatioUpcast<'a, U>> for Rational<Amount>
 where
-    U: PartialEq + PartialOrd + Copy + Into<Amount>,
+    U: Copy + Debug + Into<Amount> + Ord + Zero,
 {
     fn from(upcast: RatioUpcast<'a, U>) -> Self {
-        Self::new(upcast.1.parts().into(), upcast.1.total().into())
+        Self::new(upcast.1.nominator().into(), upcast.1.denominator().into())
     }
 }
 
@@ -32,6 +44,7 @@ mod test {
     use crate::coin::{Amount, Coin};
 
     mod percent {
+        use crate::fraction::Fraction;
         use crate::fractionable::price::test::{c, q};
         use crate::{percent::Percent100, price};
 

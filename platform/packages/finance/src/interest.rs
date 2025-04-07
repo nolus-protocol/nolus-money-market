@@ -6,6 +6,7 @@ use std::{
 
 use crate::{
     duration::Duration,
+    fraction::Fraction,
     fractionable::Fractionable,
     percent::{Percent100, Units},
     ratio::{CheckedAdd, CheckedMul},
@@ -13,9 +14,10 @@ use crate::{
 };
 
 /// Computes how much interest is accrued
-pub fn interest<P>(rate: Percent100, principal: P, period: Duration) -> Option<P>
+pub fn interest<U, F, P>(rate: F, principal: P, period: Duration) -> Option<P>
 where
-    P: CheckedAdd<Output = P> + Copy + Fractionable<Duration> + Fractionable<Units>,
+    F: Fraction<U>,
+    P: CheckedAdd<Output = P> + Copy + Fractionable<Duration> + Fractionable<U>,
     <Duration as Div>::Output: CheckedMul<P, Output = P>,
 {
     let interest_per_year = rate.of(principal);
@@ -62,7 +64,9 @@ where
 mod tests {
     use currency::test::SubGroupTestC10;
 
-    use crate::{coin::Coin, duration::Duration, percent::Percent100, ratio::Ratio, zero::Zero};
+    use crate::{
+        coin::Coin, duration::Duration, fraction::Fraction, percent::Percent100, zero::Zero,
+    };
 
     type MyCoin = Coin<SubGroupTestC10>;
     const PERIOD_LENGTH: Duration = Duration::YEAR;
@@ -158,7 +162,7 @@ mod tests {
     fn interest() {
         let whole = MyCoin::new(1000);
         let part = MyCoin::new(125);
-        let r = Ratio::new(part, whole).into();
+        let r = Percent100::from_ratio(part, whole).unwrap();
 
         let res = super::interest(r, whole, PERIOD_LENGTH);
         assert_eq!(part, res.unwrap());
