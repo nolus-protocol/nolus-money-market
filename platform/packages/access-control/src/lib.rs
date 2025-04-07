@@ -64,7 +64,7 @@ impl<'a> AddressDelivery<'a> {
     }
 }
 
-impl<'a> AccessPermission for AddressDelivery<'a>{
+impl AccessPermission for AddressDelivery<'_> {
     fn is_granted_to(&self, caller: &Addr) -> bool {
         self.addr == caller
     }
