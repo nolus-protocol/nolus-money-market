@@ -6,7 +6,7 @@ use finance::{coin::IntoDTO, duration::Duration};
 use platform::{bank, batch::Emitter, message::Response as MessageResponse};
 use sdk::cosmwasm_std::{Coin as CwCoin, Env, MessageInfo, QuerierWrapper, Timestamp};
 use timealarms::stub::TimeAlarmDelivery;
-
+use oracle_platform::stub::OracleDelivery;
 
 use crate::{
     api::{
@@ -77,7 +77,7 @@ impl Active {
         querier: QuerierWrapper<'_>,
         env: &Env,
     ) -> ContractResult<Response> {
-        access_control::check(&self.lease.lease.oracle, &info.sender)?;
+        access_control::check(&OracleDelivery::new(&self.lease.lease.oracle), &info.sender)?;
 
         self.try_on_alarm(querier, env)
     }
@@ -177,7 +177,7 @@ impl Handler for Active {
         env: Env,
         info: MessageInfo,
     ) -> ContractResult<Response> {
-        access_control::check(&self.lease.lease.customer, &info.sender)
+        access_control::check(&AddressDelivery::new(&self.lease.lease.customer), &info.sender)
             .map_err(Into::into)
             .and_then(|()| {
                 let profit = self.lease.lease.loan.profit().clone();
@@ -221,7 +221,7 @@ impl Handler for Active {
         env: Env,
         info: MessageInfo,
     ) -> ContractResult<Response> {
-        access_control::check(&self.lease.lease.customer, &info.sender)
+        access_control::check(&AddressDelivery::new(&self.lease.lease.customer), &info.sender)
             .map_err(Into::into)
             .and_then(|()| customer_close::start(spec, self.lease, &env, querier))
     }
