@@ -4,7 +4,7 @@ use finance::{
     coin::{Amount, Coin},
     duration::Duration,
     fraction::Fraction,
-    percent::{Percent, Units as PercentUnits},
+    percent::{Percent, Percent100},
     price,
     ratio::Rational,
     test,
@@ -48,30 +48,41 @@ type LeaseCurrency = LeaseC1;
 fn general_interest_rate(
     loan: u32,
     balance: u32,
-    base_rate: Percent,
-    addon_rate: Percent,
-    optimal_rate: Percent,
-) -> Percent {
-    let utilization_rate = Percent::from_ratio(loan, balance).min(Percent::from_ratio(
-        optimal_rate.units(),
-        (Percent::HUNDRED - optimal_rate).units(),
-    ));
-
-    base_rate
-        + Fraction::<PercentUnits>::of(
-            &Rational::new(addon_rate.units(), optimal_rate.units()),
-            utilization_rate,
+    base_rate: Percent100,
+    addon_rate: Percent100,
+    optimal_rate: Percent100,
+) -> Option<Percent100> {
+    assert!(optimal_rate > Percent100::ZERO);
+    assert!(optimal_rate <= Percent100::HUNDRED);
+    let utilization_rate = Percent::from_ratio(loan, balance).unwrap().min(
+        Percent::from_ratio(
+            optimal_rate.units(),
+            Percent100::HUNDRED
+                .checked_sub(optimal_rate)
+                .unwrap()
+                .units(),
         )
+        .unwrap(),
+    );
+
+    Rational::new(addon_rate.units(), optimal_rate.units())
+        .checked_mul(utilization_rate)
+        .and_then(|utilization_config| {
+            utilization_config
+                .checked_add(base_rate.into())
+                .and_then(|res| res.try_into())
+                .ok()
+        })
 }
 
 #[test]
 fn config_update_parameters() {
     let app_balance = 10_000_000_000u128;
 
-    let base_interest_rate = Percent::from_permille(210);
-    let addon_optimal_interest_rate = Percent::from_permille(200);
-    let utilization_optimal = Percent::from_permille(550);
-    let min_utilization = Percent::from_permille(500).try_into().unwrap();
+    let base_interest_rate = Percent100::from_permille(210);
+    let addon_optimal_interest_rate = Percent100::from_permille(200);
+    let utilization_optimal = Percent100::from_permille(550);
+    let min_utilization = Percent100::from_permille(500).try_into().unwrap();
 
     assert_ne!(base_interest_rate, BASE_INTEREST_RATE);
     assert_ne!(addon_optimal_interest_rate, ADDON_OPTIMAL_INTEREST_RATE);
@@ -296,7 +307,7 @@ fn deposit_and_withdraw() {
         .query_wasm_smart(test_case.address_book.lpp().clone(), &LppQueryMsg::Price())
         .unwrap();
     assert_eq!(
-        price::total(Coin::new(1_000), price.0),
+        price::total(Coin::new(1_000), price.0).unwrap(),
         Coin::<Lpn>::new(1_000 * pushed_price)
     );
 
@@ -329,7 +340,7 @@ fn deposit_and_withdraw() {
         .query_wasm_smart(test_case.address_book.lpp().clone(), &LppQueryMsg::Price())
         .unwrap();
     assert_eq!(
-        price::total(balance_nlpn.balance.into(), price.0),
+        price::total(balance_nlpn.balance.into(), price.0).unwrap(),
         Coin::<Lpn>::new(test_deposit - rounding_error)
     );
 
@@ -361,7 +372,7 @@ fn deposit_and_withdraw() {
         .query_wasm_smart(test_case.address_book.lpp().clone(), &LppQueryMsg::Price())
         .unwrap();
     assert_eq!(
-        price::total(balance_nlpn.balance.into(), price.0),
+        price::total(balance_nlpn.balance.into(), price.0).unwrap(),
         Coin::<Lpn>::new(test_deposit - rounding_error)
     );
 
@@ -379,7 +390,7 @@ fn deposit_and_withdraw() {
         },
         LeaseInitConfig::new(currency::dto::<LeaseCurrency, _>(), loan.into(), None),
         LeaseInstantiatorConfig {
-            liability_init_percent: Percent::from_percent(50), // simplify case: borrow == downpayment
+            liability_init_percent: Percent100::from_percent(50), // simplify case: borrow == downpayment
             ..LeaseInstantiatorConfig::default()
         },
         TestCase::DEX_CONNECTION_ID,
@@ -402,7 +413,7 @@ fn deposit_and_withdraw() {
         .query_wasm_smart(test_case.address_book.lpp().clone(), &LppQueryMsg::Price())
         .unwrap();
     assert_eq!(
-        price::total(balance_nlpn2.balance.into(), price.0),
+        price::total(balance_nlpn2.balance.into(), price.0).unwrap(),
         Coin::<Lpn>::new(test_deposit - rounding_error)
     );
 
@@ -513,11 +524,11 @@ fn loan_open_wrong_id() {
 
 #[test]
 fn loan_open_and_repay() {
-    const LOCAL_BASE_INTEREST_RATE: Percent = Percent::from_permille(210);
-    const LOCAL_ADDON_OPTIMAL_INTEREST_RATE: Percent = Percent::from_permille(200);
-    const LOCAL_UTILIZATION_OPTIMAL_RATE: Percent = Percent::from_permille(550);
+    const LOCAL_BASE_INTEREST_RATE: Percent100 = Percent100::from_permille(210);
+    const LOCAL_ADDON_OPTIMAL_INTEREST_RATE: Percent100 = Percent100::from_permille(200);
+    const LOCAL_UTILIZATION_OPTIMAL_RATE: Percent100 = Percent100::from_permille(550);
 
-    fn interest_rate(loan: u32, balance: u32) -> Percent {
+    fn interest_rate(loan: u32, balance: u32) -> Percent100 {
         general_interest_rate(
             loan,
             balance,
@@ -525,6 +536,7 @@ fn loan_open_and_repay() {
             LOCAL_ADDON_OPTIMAL_INTEREST_RATE,
             LOCAL_UTILIZATION_OPTIMAL_RATE,
         )
+        .unwrap()
     }
 
     const YEAR: u64 = Duration::YEAR.nanos();
@@ -634,7 +646,7 @@ fn loan_open_and_repay() {
         lease_addresses.clone(),
         LeaseInitConfig::new(currency::dto::<LeaseCurrency, _>(), loan1.into(), None),
         LeaseInstantiatorConfig {
-            liability_init_percent: Percent::from_percent(50), // simplify case: borrow == downpayment
+            liability_init_percent: Percent100::from_percent(50), // simplify case: borrow == downpayment
             ..LeaseInstantiatorConfig::default()
         },
         TestCase::DEX_CONNECTION_ID,
@@ -697,7 +709,7 @@ fn loan_open_and_repay() {
         lease_addresses,
         LeaseInitConfig::new(currency::dto::<LeaseCurrency, _>(), loan2.into(), None),
         LeaseInstantiatorConfig {
-            liability_init_percent: Percent::from_percent(50), // simplify case: borrow == downpayment
+            liability_init_percent: Percent100::from_percent(50), // simplify case: borrow == downpayment
             ..LeaseInstantiatorConfig::default()
         },
         TestCase::DEX_CONNECTION_ID,
@@ -843,11 +855,11 @@ fn loan_open_and_repay() {
 
 #[test]
 fn compare_lpp_states() {
-    const LOCAL_BASE_INTEREST_RATE: Percent = Percent::from_permille(210);
-    const LOCAL_ADDON_OPTIMAL_INTEREST_RATE: Percent = Percent::from_permille(200);
-    const LOCAL_UTILIZATION_OPTIMAL_RATE: Percent = Percent::from_permille(550);
+    const LOCAL_BASE_INTEREST_RATE: Percent100 = Percent100::from_permille(210);
+    const LOCAL_ADDON_OPTIMAL_INTEREST_RATE: Percent100 = Percent100::from_permille(200);
+    const LOCAL_UTILIZATION_OPTIMAL_RATE: Percent100 = Percent100::from_permille(550);
 
-    fn interest_rate(loan: u32, balance: u32) -> Percent {
+    fn interest_rate(loan: u32, balance: u32) -> Percent100 {
         general_interest_rate(
             loan,
             balance,
@@ -855,6 +867,7 @@ fn compare_lpp_states() {
             LOCAL_ADDON_OPTIMAL_INTEREST_RATE,
             LOCAL_UTILIZATION_OPTIMAL_RATE,
         )
+        .unwrap()
     }
 
     const YEAR: u64 = Duration::YEAR.nanos();
@@ -962,7 +975,7 @@ fn compare_lpp_states() {
         },
         LeaseInitConfig::new(currency::dto::<LeaseCurrency, _>(), loan1.into(), None),
         LeaseInstantiatorConfig {
-            liability_init_percent: Percent::from_percent(50), // simplify case: borrow == downpayment
+            liability_init_percent: Percent100::from_percent(50), // simplify case: borrow == downpayment
             ..LeaseInstantiatorConfig::default()
         },
         TestCase::DEX_CONNECTION_ID,
@@ -1031,7 +1044,7 @@ fn compare_lpp_states() {
         },
         LeaseInitConfig::new(currency::dto::<LeaseCurrency, _>(), loan2.into(), None),
         LeaseInstantiatorConfig {
-            liability_init_percent: Percent::from_percent(50), // simplify case: borrow == downpayment
+            liability_init_percent: Percent100::from_percent(50), // simplify case: borrow == downpayment
             ..LeaseInstantiatorConfig::default()
         },
         TestCase::DEX_CONNECTION_ID,

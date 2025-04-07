@@ -9,8 +9,8 @@ use currency::CurrencyDef;
 use finance::{
     coin::{Amount, Coin},
     duration::Duration,
-    percent::Percent,
-    price::{self, Price, base::BasePrice},
+    percent::Percent100,
+    price::{self, base::BasePrice, dto::PriceDTO, Price},
 };
 use marketprice::config::Config as PriceConfig;
 use oracle::{
@@ -377,10 +377,10 @@ fn test_config_update() {
         .sudo(
             test_case.address_book.oracle().clone(),
             &SudoMsg::<PriceCurrencies>::UpdateConfig(PriceConfig::new(
-                Percent::from_percent(100),
+                Percent100::from_percent(100),
                 Duration::from_secs(5),
                 12,
-                Percent::from_percent(75),
+                Percent100::from_percent(75),
             )),
         )
         .expect("Oracle not properly connected!")

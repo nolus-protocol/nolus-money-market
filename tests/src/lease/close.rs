@@ -14,9 +14,9 @@ fn close_with_full_repay() {
 
     let borrowed_lpn: LpnCoin = super::quote_borrow(&test_case, downpayment);
     let borrowed: PaymentCoin =
-        price::total(borrowed_lpn, super::price_lpn_of::<PaymentCurrency>().inv());
+        price::total(borrowed_lpn, super::price_lpn_of::<PaymentCurrency>().inv()).unwrap();
     let lease_amount: LeaseCoin = price::total(
-        price::total(downpayment, super::price_lpn_of()) + borrowed_lpn,
+        price::total(downpayment, super::price_lpn_of()).unwrap() + borrowed_lpn,
         super::price_lpn_of::<LeaseCurrency>().inv(),
     );
 

@@ -57,7 +57,7 @@ fn full_close() {
     let mut test_case = super::create_test_case::<PaymentCurrency>();
 
     let exp_loan_close = true;
-    let exp_change = price::total(DOWNPAYMENT, super::price_lpn_of());
+    let exp_change = price::total(DOWNPAYMENT, super::price_lpn_of()).unwrap();
     let lease = do_close(
         &mut test_case,
         &customer,
@@ -90,11 +90,11 @@ fn full_close() {
 #[test]
 fn partial_close_loan_not_closed() {
     let lease_amount: LeaseCoin = lease_amount();
-    let principal: LpnCoin = price::total(lease_amount, super::price_lpn_of())
-        - price::total(DOWNPAYMENT, super::price_lpn_of());
+    let principal: LpnCoin = price::total(lease_amount, super::price_lpn_of()).unwrap()
+        - price::total(DOWNPAYMENT, super::price_lpn_of()).unwrap();
     let close_amount: LeaseCoin =
-        price::total(principal - 1234567.into(), super::price_lpn_of().inv());
-    let repay_principal = price::total(close_amount, super::price_lpn_of());
+        price::total(principal - 1234567.into(), super::price_lpn_of().inv()).unwrap();
+    let repay_principal = price::total(close_amount, super::price_lpn_of()).unwrap();
     let customer = testing::user(USER);
     let mut test_case = super::create_test_case::<PaymentCurrency>();
 
@@ -140,12 +140,13 @@ fn partial_close_loan_not_closed() {
 #[test]
 fn partial_close_loan_closed() {
     let lease_amount: LeaseCoin = lease_amount();
-    let principal: LpnCoin = price::total(lease_amount, super::price_lpn_of())
-        - price::total(DOWNPAYMENT, super::price_lpn_of());
+    let principal: LpnCoin = price::total(lease_amount, super::price_lpn_of()).unwrap()
+        - price::total(DOWNPAYMENT, super::price_lpn_of()).unwrap();
     let exp_change: LpnCoin = 345.into();
 
     let repay_principal = principal + exp_change;
-    let close_amount: LeaseCoin = price::total(repay_principal, super::price_lpn_of().inv());
+    let close_amount: LeaseCoin =
+        price::total(repay_principal, super::price_lpn_of().inv()).unwrap();
 
     let customer = testing::user(USER);
     let mut test_case = super::create_test_case::<PaymentCurrency>();
@@ -218,7 +219,7 @@ fn partial_close_invalid_currency() {
 #[test]
 fn partial_close_min_asset() {
     let min_asset_lpn = Instantiator::min_asset().try_into().unwrap();
-    let min_asset = price::total(min_asset_lpn, super::price_lpn_of().inv());
+    let min_asset = price::total(min_asset_lpn, super::price_lpn_of().inv()).unwrap();
     let lease_amount: LeaseCoin = lease_amount();
 
     let mut test_case = super::create_test_case::<PaymentCurrency>();
@@ -243,7 +244,8 @@ fn partial_close_min_asset() {
 #[test]
 fn partial_close_min_transaction() {
     let min_transaction_lpn = Instantiator::min_transaction().try_into().unwrap();
-    let min_transaction: LeaseCoin = price::total(min_transaction_lpn, super::price_lpn_of().inv());
+    let min_transaction: LeaseCoin =
+        price::total(min_transaction_lpn, super::price_lpn_of().inv()).unwrap();
 
     let mut test_case = super::create_test_case::<PaymentCurrency>();
 
@@ -282,8 +284,8 @@ fn do_close(
         StateResponse::Opened { .. }
     ));
 
-    let close_amount_in_lpn: LpnCoin = price::total(close_amount, super::price_lpn_of());
-    let response_close = send_close(
+    let close_amount_in_lpn: LpnCoin = price::total(close_amount, super::price_lpn_of()).unwrap();
+    let mut response_close: ResponseWithInterChainMsgs<'_, ()> = send_close(
         test_case,
         lease_addr.clone(),
         &ExecuteMsg::ClosePosition(close_msg),

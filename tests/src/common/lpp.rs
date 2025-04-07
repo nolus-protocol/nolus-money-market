@@ -1,6 +1,6 @@
 use currencies::Lpns;
 use currency::{CurrencyDef, MemberOf};
-use finance::percent::{Percent, bound::BoundToHundredPercent};
+use finance::percent::Percent100;
 use lpp::{
     borrow::InterestRate,
     contract::{ContractError, sudo},
@@ -28,7 +28,7 @@ impl Instantiator {
         lease_code: Code,
         init_balance: &[CwCoin],
         borrow_rate: InterestRate,
-        min_utilization: BoundToHundredPercent,
+        min_utilization: Percent100,
     ) -> Addr
     where
         Lpn: CurrencyDef,
@@ -59,7 +59,7 @@ impl Instantiator {
         lease_code: Code,
         init_balance: &[CwCoin],
         borrow_rate: InterestRate,
-        min_utilization: BoundToHundredPercent,
+        min_utilization: Percent100,
     ) -> Addr
     where
         Lpn: CurrencyDef,
@@ -94,7 +94,7 @@ pub(crate) fn mock_quote_query(
 ) -> Result<Binary, ContractError> {
     let res = match msg {
         QueryMsg::Quote { amount: _amount } => to_json_binary(
-            &lpp::msg::QueryQuoteResponse::QuoteInterestRate(Percent::HUNDRED),
+            &lpp::msg::QueryQuoteResponse::QuoteInterestRate(Percent100::HUNDRED),
         ),
         _ => Ok(lpp::contract::query(deps, env, msg)?),
     }?;
