@@ -54,6 +54,22 @@ where
     }
 }
 
+pub struct AddressDelivery<'a> {
+    addr: &'a Addr,
+}
+
+impl<'a> AddressDelivery<'a> {
+    pub fn new(addr: &'a Addr) -> Self {
+        Self { addr } 
+    }
+}
+
+impl<'a> AccessPermission for AddressDelivery<'a>{
+    fn is_granted_to(&self, caller: &Addr) -> bool {
+        self.addr == caller
+    }
+}
+
 pub struct SingleUserAccess<'storage, S>
 where
     S: Deref<Target = dyn Storage + 'storage>,
