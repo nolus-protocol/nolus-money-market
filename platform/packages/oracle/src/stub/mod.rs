@@ -146,7 +146,6 @@ where
     }
 }
 
-
 pub struct OracleDelivery<'a, QuoteC, QuoteG>
 where
     QuoteC: Currency + MemberOf<QuoteG>,
