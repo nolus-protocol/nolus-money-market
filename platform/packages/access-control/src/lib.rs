@@ -37,7 +37,7 @@ impl<'a> AddressDelivery<'a> {
     }
 }
 
-impl<'a> AccessPermission for AddressDelivery<'a>{
+impl AccessPermission for AddressDelivery<'_> {
     fn is_granted_to(&self, caller: &Addr) -> bool {
         self.addr == caller
     }
@@ -90,7 +90,8 @@ mod tests {
     use sdk::cosmwasm_std::{Addr, Storage, testing::MockStorage};
 
     use crate::{
-        error::{Error, Result}, AddressDelivery, SingleUserAccess
+        AddressDelivery, SingleUserAccess,
+        error::{Error, Result},
     };
 
     const NAMESPACE: &str = "my-nice-permission";
@@ -136,6 +137,9 @@ mod tests {
     }
 
     fn check_permission(granted_to: &str, asked_for: &str) -> Result {
-        super::check(&AddressDelivery::new(&Addr::unchecked(granted_to)), &Addr::unchecked(asked_for))
+        super::check(
+            &AddressDelivery::new(&Addr::unchecked(granted_to)),
+            &Addr::unchecked(asked_for),
+        )
     }
 }

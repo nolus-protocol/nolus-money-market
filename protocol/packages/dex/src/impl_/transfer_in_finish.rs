@@ -12,7 +12,7 @@ use platform::{
 use sdk::cosmwasm_std::{Env, QuerierWrapper, Timestamp};
 use timealarms::stub::TimeAlarmDelivery;
 
-use crate::{Contract, ContractInSwap, Enterable, Stage, SwapTask as SwapTaskT, TimeAlarm};
+use crate::{Contract, ContractInSwap, Enterable, Stage, SwapTask as SwapTaskT};
 
 #[cfg(feature = "migration")]
 use super::migration::{InspectSpec, MigrateSpec};
@@ -156,7 +156,10 @@ where
     }
 
     fn on_time_alarm(self, querier: QuerierWrapper<'_>, env: Env) -> HandlerResult<Self> {
-        access_control::check(&TimeAlarmDelivery::new(self.spec.time_alarm()), &info.sender)?;
+        access_control::check(
+            &TimeAlarmDelivery::new(self.spec.time_alarm()),
+            &env.contract.address,
+        )?;
 
         self.try_complete(querier, env)
     }
