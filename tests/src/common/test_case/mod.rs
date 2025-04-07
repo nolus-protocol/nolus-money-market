@@ -3,7 +3,7 @@ use currencies::{
     Lpns as BaseCurrencies, Lpns, PaymentGroup as PriceCurrencies,
 };
 use currency::{CurrencyDTO, CurrencyDef};
-use finance::percent::bound::BoundToHundredPercent;
+use finance::percent::Percent100;
 use platform::contract::Code;
 use sdk::{
     cosmwasm_std::{Addr, Coin as CwCoin},
@@ -84,7 +84,7 @@ impl TestCase<(), (), (), (), (), (), (), ()> {
     pub const PROFIT_IBC_CHANNEL: &'static str = "channel-1";
     pub const PROFIT_ICA_ID: &'static str = "0";
 
-    pub const DEFAULT_LPP_MIN_UTILIZATION: BoundToHundredPercent = BoundToHundredPercent::ZERO;
+    pub const DEFAULT_LPP_MIN_UTILIZATION: Percent100 = Percent100::ZERO;
 
     pub fn ica_addr(local: &Addr, id: &str) -> Addr {
         testing::user(&format!("{local}-ica{id}"))

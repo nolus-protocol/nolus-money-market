@@ -2,9 +2,17 @@ use std::collections::HashSet;
 
 use currencies::{LeaseGroup, PaymentGroup};
 use currency::{CurrencyDef, MemberOf};
-use dex::{ConnectionParams, Ics20Channel};
-use finance::{coin::Coin, duration::Duration, liability::Liability, percent::Percent, test};
-use lease::api::{LpnCoinDTO, open::PositionSpecDTO};
+use finance::{
+    coin::Coin,
+    duration::Duration,
+    liability::Liability,
+    percent::{Percent, Percent100},
+    test,
+};
+use lease::api::{
+    open::{ConnectionParams, Ics20Channel, PositionSpecDTO},
+    LpnCoinDTO,
+};
 use leaser::{
     execute, instantiate,
     msg::{InstantiateMsg, QueryMsg, QuoteResponse},
@@ -21,21 +29,21 @@ use super::{
 pub(crate) struct Instantiator;
 
 impl Instantiator {
-    pub const INTEREST_RATE_MARGIN: Percent = Percent::from_permille(30);
+    pub const INTEREST_RATE_MARGIN: Percent100 = Percent100::from_permille(30);
 
     pub const REPAYMENT_PERIOD: Duration = Duration::from_days(90);
 
-    pub const INITIAL_LTV: Percent = Percent::from_permille(650);
-    pub const FIRST_LIQ_WARN: Percent = Percent::from_permille(730);
-    pub const SECOND_LIQ_WARN: Percent = Percent::from_permille(750);
-    pub const THIRD_LIQ_WARN: Percent = Percent::from_permille(780);
-    pub const MAX_LTV: Percent = Percent::from_permille(800);
+    pub const INITIAL_LTV: Percent100 = Percent100::from_permille(650);
+    pub const FIRST_LIQ_WARN: Percent100 = Percent100::from_permille(730);
+    pub const SECOND_LIQ_WARN: Percent100 = Percent100::from_permille(750);
+    pub const THIRD_LIQ_WARN: Percent100 = Percent100::from_permille(780);
+    pub const MAX_LTV: Percent100 = Percent100::from_permille(800);
     pub const RECALC_TIME: Duration = Duration::from_hours(1);
 
     pub fn liability() -> Liability {
         Liability::new(
             Self::INITIAL_LTV,
-            Percent::from_percent(70),
+            Percent100::from_percent(70),
             Self::FIRST_LIQ_WARN,
             Self::SECOND_LIQ_WARN,
             Self::THIRD_LIQ_WARN,

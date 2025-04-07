@@ -5,8 +5,8 @@ use currencies::{
 use currency::{CurrencyDef, MemberOf};
 use finance::{
     coin::{Amount, Coin},
-    percent::Percent,
-    price::{Price, total, total_of},
+    percent::Percent100,
+    price::{total, total_of, Price},
 };
 use sdk::{
     cosmwasm_ext::Response,
@@ -182,15 +182,18 @@ fn test_quote() {
     assert_eq!(resp.borrow.try_into(), Ok(borrow));
     assert_eq!(
         resp.total.try_into(),
-        Ok(total(downpayment + borrow, price_lease_lpn.inv()))
+        Ok(total(downpayment + borrow, price_lease_lpn.inv()).unwrap())
     );
 
     /*   TODO: test with different time periods and amounts in LPP
      */
 
-    assert_eq!(resp.annual_interest_rate, Percent::from_permille(72),);
+    assert_eq!(resp.annual_interest_rate, Percent100::from_permille(72),);
 
-    assert_eq!(resp.annual_interest_rate_margin, Percent::from_permille(30),);
+    assert_eq!(
+        resp.annual_interest_rate_margin,
+        Percent100::from_permille(30),
+    );
 
     let leaser = test_case.address_book.leaser().clone();
     let resp = leaser_mod::query_quote::<Downpayment, LeaseCurrency>(
@@ -297,9 +300,10 @@ fn common_quote_with_conversion(
     assert_eq!(
         resp.total.try_into(),
         Ok(total(
-            total(downpayment, dpn_lpn_price) + borrow_after_mul2,
+            total(downpayment, dpn_lpn_price).unwrap() + borrow_after_mul2,
             lpn_asset_price
-        )),
+        )
+        .unwrap()),
         "Total amount is different!"
     );
 }
@@ -376,9 +380,12 @@ fn test_quote_fixed_rate() {
         3% margin_interest_rate of the leaser
     */
 
-    assert_eq!(resp.annual_interest_rate, Percent::HUNDRED);
+    assert_eq!(resp.annual_interest_rate, Percent100::HUNDRED);
 
-    assert_eq!(resp.annual_interest_rate_margin, Percent::from_percent(3));
+    assert_eq!(
+        resp.annual_interest_rate_margin,
+        Percent100::from_percent(3)
+    );
 }
 
 fn setup_feeder<ProtocolsRegistry, Treasury, Profit, Reserve, Leaser, Lpp, TimeAlarms>(
