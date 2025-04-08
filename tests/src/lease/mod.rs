@@ -216,7 +216,7 @@ where
                 currency: currency::dto::<LeaseCurrency, _>(),
                 max_ltd,
             },
-            downpayment.as_ref().map_or(&[], std::slice::from_ref),
+            downpayment.as_slice(),
         )
         .unwrap();
 

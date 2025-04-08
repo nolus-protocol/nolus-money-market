@@ -97,14 +97,15 @@ fn test_lease_serde() {
     use oracle::api::ExecuteAlarmMsg::PriceAlarm;
     use sdk::cosmwasm_std;
 
-    let LeasePriceAlarm {} =
-        cosmwasm_std::from_json(cosmwasm_std::to_json_vec(&PriceAlarm {}).unwrap()).unwrap()
-    else {
-        unreachable!()
+    match cosmwasm_std::from_json(cosmwasm_std::to_json_vec(&PriceAlarm {}).unwrap()).unwrap() {
+        LeasePriceAlarm() => (),
+        _ => unreachable!(),
     };
 
-    let PriceAlarm {} =
-        cosmwasm_std::from_json(cosmwasm_std::to_json_vec(&LeasePriceAlarm {}).unwrap()).unwrap();
+    match cosmwasm_std::from_json(cosmwasm_std::to_json_vec(&LeasePriceAlarm {}).unwrap()).unwrap()
+    {
+        PriceAlarm() => (),
+    }
 }
 
 #[test]
