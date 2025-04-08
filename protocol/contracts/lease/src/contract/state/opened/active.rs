@@ -1,4 +1,4 @@
-use access_control::AddressDelivery;
+use access_control::GrantedAddress;
 use currency::{CurrencyDef, never};
 use dex::Enterable;
 use finance::{coin::IntoDTO, duration::Duration};
@@ -82,7 +82,6 @@ impl Active {
         env: &Env,
     ) -> ContractResult<Response> {
         access_control::check(self.lease.lease.oracle, &info.sender)?;
-
         self.try_on_alarm(querier, env)
     }
 

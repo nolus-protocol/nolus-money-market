@@ -71,12 +71,6 @@ impl TimeAlarmsRef {
     }
 }
 
-impl AccessPermission for TimeAlarmsRef {
-    fn permit_access(&self, caller: &Addr) -> bool {
-        self.owned_by(caller)
-    }
-}
-
 #[cfg(feature = "testing")]
 impl TimeAlarmsRef {
     pub fn unchecked<A>(addr: A) -> Self
