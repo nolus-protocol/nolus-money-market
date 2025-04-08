@@ -33,7 +33,7 @@ pub struct GrantedAddress<'a> {
 
 impl<'a> GrantedAddress<'a> {
     pub fn new(addr: &'a Addr) -> Self {
-        Self { addr } 
+        Self { addr }
     }
 }
 
