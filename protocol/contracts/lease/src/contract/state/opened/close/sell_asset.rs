@@ -96,10 +96,6 @@ where
         dex::on_coin(self.repayable.amount(&self.lease), visitor)
     }
 
-    // fn anomaly_policy(&self) -> impl AnomalyPolicy<Self> {
-    //     MaxSlippage::on_task(self)
-    // }
-
     fn finish(
         self,
         amount_out: CoinDTO<Self::OutG>,

@@ -10,6 +10,7 @@ use crate::{CoinVisitor, IterNext};
 
 type PassedThrough = bool;
 
+/// A [`CoinVisitor`] that filters out coins of a given currency
 pub(super) struct CurrencyFilter<'a, V, GIn, GFilter>
 where
     GIn: Group,

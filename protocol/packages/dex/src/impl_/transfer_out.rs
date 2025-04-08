@@ -62,8 +62,9 @@ where
     fn next(self) -> Self {
         debug_assert!(!self.last_coin());
 
-        debug_assert!(self.coin_index < CoinsNb::MAX); // though already checked implicitly with the `self.last_coin()`
-        let next_index = self.coin_index + 1;
+        let next_index = self.coin_index.checked_add(1).expect(
+            "the method contract precondition `!self.last_coin()` should have been respected",
+        );
 
         Self::new_with_index(self.spec, next_index, self.last_coin_index)
     }

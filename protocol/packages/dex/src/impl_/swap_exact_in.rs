@@ -126,7 +126,7 @@ where
         let res = self.spec.on_coins(&mut filtered_swapper)?;
 
         #[cfg(debug_assertions)]
-        self.debug_check(&filtered_swapper, res);
+        self.postcondition_check(&filtered_swapper, res);
 
         Ok(swapper.0.into())
     }
@@ -175,7 +175,7 @@ where
         let res = self.spec.on_coins(&mut filtered_resp)?;
 
         #[cfg(debug_assertions)]
-        self.debug_check(&filtered_resp, res);
+        self.postcondition_check(&filtered_resp, res);
 
         Ok(coin::from_amount_ticker(
             filtered_resp.filtered() + resp.1,
@@ -184,7 +184,7 @@ where
     }
 
     #[cfg(debug_assertions)]
-    fn debug_check<V>(
+    fn postcondition_check<V>(
         &self,
         filter: &CurrencyFilter<'_, V, SwapTask::InG, SwapTask::OutG>,
         res: IterState,
