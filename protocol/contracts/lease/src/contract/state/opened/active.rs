@@ -1,4 +1,4 @@
-use access_control::AddressDelivery;
+use access_control::GrantedAddress;
 use currency::{CurrencyDef, never};
 use serde::{Deserialize, Serialize};
 
@@ -7,10 +7,6 @@ use finance::{coin::IntoDTO, duration::Duration};
 use platform::{bank, batch::Emitter, message::Response as MessageResponse};
 use sdk::cosmwasm_std::{Coin as CwCoin, Env, MessageInfo, QuerierWrapper, Timestamp};
 use timealarms::stub::TimeAlarmDelivery;
-<<<<<<< HEAD
-=======
-
->>>>>>> 4adc65491 (wip)
 
 use crate::{
     api::{
@@ -87,7 +83,6 @@ impl Active {
         env: &Env,
     ) -> ContractResult<Response> {
         access_control::check(self.lease.lease.oracle, &info.sender)?;
-
         self.try_on_alarm(querier, env)
     }
 
