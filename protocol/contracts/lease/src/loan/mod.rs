@@ -297,9 +297,7 @@ mod tests {
             loan::{
                 Loan, Overdue, State,
                 repay::Receipt as RepayReceipt,
-                repay::Receipt as RepayReceipt,
                 tests::{PROFIT_ADDR, ZERO_COIN, create_loan_custom, profit_stub},
-                tests::{PROFIT_ADDR, create_loan_custom, profit_stub},
             },
         };
 
