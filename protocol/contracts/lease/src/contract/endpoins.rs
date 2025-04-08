@@ -1,4 +1,4 @@
-use access_control::AddressDelivery;
+use access_control::GrantedAddress;
 use finance::duration::Duration;
 use platform::{error as platform_error, message::Response as MessageResponse, response};
 use sdk::{
@@ -146,11 +146,11 @@ fn process_execute(
         ExecuteMsg::TimeAlarm {} => state.on_time_alarm(querier, env, info),
         ExecuteMsg::PriceAlarm() => state.on_price_alarm(querier, env, info),
         ExecuteMsg::DexCallback() => {
-            access_control::check(&AddressDelivery::new(&info.sender), &env.contract.address)?;
+            access_control::check(&GrantedAddress::new(&info.sender), &env.contract.address)?;
             state.on_dex_inner(querier, env)
         }
         ExecuteMsg::DexCallbackContinue() => {
-            access_control::check(&AddressDelivery::new(&info.sender), &env.contract.address)?;
+            access_control::check(&GrantedAddress::new(&info.sender), &env.contract.address)?;
             state.on_dex_inner_continue(querier, env)
         }
         ExecuteMsg::Heal() => state.heal(querier, env, info),
