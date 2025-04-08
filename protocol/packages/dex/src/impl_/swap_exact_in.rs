@@ -268,11 +268,6 @@ where
             .into()
     }
 
-    fn on_error(self, _querier: QuerierWrapper<'_>, _env: Env) -> ContinueResult<Self> {
-        // self.spec.anomaly_policy()
-        todo!()
-    }
-
     fn on_timeout(self, querier: QuerierWrapper<'_>, env: Env) -> ContinueResult<Self> {
         let state_label = self.spec.label();
         timeout::on_timeout_retry(self, state_label, querier, env)
