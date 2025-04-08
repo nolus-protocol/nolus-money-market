@@ -48,7 +48,7 @@ where
         let ExecuteMsg::ExecuteSwapOperations {
             operations,
             minimum_receive: Some(min_token_out),
-            to: None {},
+            to: None,
             max_spread: Some(super::MAX_IMPACT),
         } = cosmwasm_std::from_json(msg).unwrap_or_else(|_| {
             panic!(
