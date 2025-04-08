@@ -2,7 +2,7 @@ use currency::{AnyVisitor, AnyVisitorResult, CurrencyDTO, CurrencyDef, MemberOf}
 
 use crate::{
     api::{LeaseAssetCurrencies, LeasePaymentCurrencies},
-    finance::LpnCurrencies,
+    finance::{LpnCurrencies, LpnCurrency},
     position::{Position, PositionError, WithPosition, WithPositionResult},
 };
 
@@ -58,12 +58,12 @@ where
         Asset: CurrencyDef,
         Asset::Group: MemberOf<LeaseAssetCurrencies> + MemberOf<LeasePaymentCurrencies>,
     {
-        let lpn = self.lease_dto.loan.lpp().lpn().to_owned();
-        lpn.into_currency_type(FactoryStage2 {
+        FactoryStage2 {
             lease_dto: self.lease_dto,
             cmd: self.cmd,
             position,
-        })
+        }
+        .on::<LpnCurrency>(LpnCurrency::dto())
     }
 }
 struct FactoryStage2<Cmd, Asset> {

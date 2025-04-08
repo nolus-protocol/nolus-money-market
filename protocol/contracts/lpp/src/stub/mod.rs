@@ -50,11 +50,6 @@ where
             })
     }
 
-    // TODO DEPRECATED since the Lpn type is statically known TODO remove
-    pub fn lpn(&self) -> CurrencyDTO<Lpns> {
-        currency::dto::<Lpn, _>().into_super_group()
-    }
-
     pub fn addr(&self) -> &Addr {
         &self.addr
     }

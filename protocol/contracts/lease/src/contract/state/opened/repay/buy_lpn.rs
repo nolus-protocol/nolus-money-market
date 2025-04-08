@@ -1,7 +1,7 @@
 use oracle::stub::SwapPath;
 use serde::{Deserialize, Serialize};
 
-use currency::CurrencyDTO;
+use currency::{CurrencyDTO, CurrencyDef};
 use dex::{
     AcceptAnyNonZeroSwap, Account, AnomalyMonitoredTask, AnomalyPolicy, CoinVisitor,
     ContractInSwap, IterNext, IterState, Stage, StartLocalLocalState, SwapTask,
@@ -28,7 +28,7 @@ use crate::{
     },
     error::ContractResult,
     event::Type,
-    finance::LpnCurrencies,
+    finance::{LpnCurrencies, LpnCurrency},
 };
 
 pub(super) type StartState =
@@ -92,7 +92,7 @@ impl SwapTask for BuyLpn {
     }
 
     fn out_currency(&self) -> CurrencyDTO<Self::OutG> {
-        self.lease.lease.loan.lpp().lpn()
+        *LpnCurrency::dto()
     }
 
     fn on_coins<Visitor>(&self, visitor: &mut Visitor) -> Result<IterState, Visitor::Error>

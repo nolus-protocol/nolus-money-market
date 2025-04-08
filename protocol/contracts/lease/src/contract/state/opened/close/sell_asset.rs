@@ -1,7 +1,7 @@
 use oracle::stub::SwapPath;
 use serde::{Deserialize, Serialize};
 
-use currency::CurrencyDTO;
+use currency::{CurrencyDTO, CurrencyDef};
 use dex::{Account, CoinVisitor, ContractInSwap, IterNext, IterState, Stage, SwapTask};
 use finance::{coin::CoinDTO, duration::Duration};
 use sdk::cosmwasm_std::{Env, QuerierWrapper, Timestamp};
@@ -21,7 +21,7 @@ use crate::{
     },
     error::ContractResult,
     event::Type,
-    finance::LpnCurrencies,
+    finance::{LpnCurrencies, LpnCurrency},
 };
 
 use super::Closable;
@@ -86,7 +86,7 @@ where
     }
 
     fn out_currency(&self) -> CurrencyDTO<Self::OutG> {
-        self.lease.lease.loan.lpp().lpn()
+        *LpnCurrency::dto()
     }
 
     fn on_coins<Visitor>(&self, visitor: &mut Visitor) -> Result<IterState, Visitor::Error>
