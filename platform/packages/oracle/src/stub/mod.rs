@@ -145,7 +145,7 @@ where
     }
 }
 
-pub struct OracleDelivery<'a, QuoteC, QuoteG>
+pub struct GrantedOracle<'a, QuoteC, QuoteG>
 where
     QuoteC: Currency + MemberOf<QuoteG>,
     QuoteG: Group,
@@ -153,7 +153,7 @@ where
     oracle_ref: &'a OracleRef<QuoteC, QuoteG>,
 }
 
-impl<'a, QuoteC, QuoteG> OracleDelivery<'a, QuoteC, QuoteG>
+impl<'a, QuoteC, QuoteG> GrantedOracle<'a, QuoteC, QuoteG>
 where
     QuoteC: Currency + MemberOf<QuoteG>,
     QuoteG: Group,
@@ -163,7 +163,7 @@ where
     }
 }
 
-impl<'a, QuoteC, QuoteG> AccessPermission for OracleDelivery<'a, QuoteC, QuoteG>
+impl<'a, QuoteC, QuoteG> AccessPermission for GrantedOracle<'a, QuoteC, QuoteG>
 where
     QuoteC: Currency + MemberOf<QuoteG>,
     QuoteG: Group,
