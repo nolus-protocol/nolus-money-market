@@ -1,6 +1,6 @@
 use std::result::Result as StdResult;
 
-use finance::{error::Error as FinanceError, percent::Percent};
+use finance::{error::Error as FinanceError, percent::Percent100};
 use thiserror::Error;
 
 use crate::finance::LpnCoinDTO;
@@ -28,7 +28,7 @@ pub enum Error {
         "[Position] Invalid close policy! The current lease LTV '{lease_ltv}' would trigger '{strategy}'!"
     )]
     TriggerClose {
-        lease_ltv: Percent,
+        lease_ltv: Percent100,
         strategy: CloseStrategy,
     },
 
@@ -40,12 +40,12 @@ pub enum Error {
     )]
     LiquidationConflict {
         strategy: CloseStrategy,
-        top_bound: Percent,
+        top_bound: Percent100,
     },
 }
 
 impl Error {
-    pub fn trigger_close(lease_ltv: Percent, strategy: CloseStrategy) -> Self {
+    pub fn trigger_close(lease_ltv: Percent100, strategy: CloseStrategy) -> Self {
         Self::TriggerClose {
             lease_ltv,
             strategy,
@@ -60,7 +60,7 @@ impl Error {
         Self::ZeroClosePolicy("stop loss")
     }
 
-    pub fn liquidation_conflict(liquidation_ltv: Percent, strategy: CloseStrategy) -> Self {
+    pub fn liquidation_conflict(liquidation_ltv: Percent100, strategy: CloseStrategy) -> Self {
         Self::LiquidationConflict {
             top_bound: liquidation_ltv,
             strategy,

@@ -1,6 +1,6 @@
 use std::{collections::HashSet, marker::PhantomData};
 
-use finance::{fraction::Fraction, percent::Percent, price::Price};
+use finance::{fraction::Fraction, percent::Percent100, price::Price};
 use observations::{Observations, ObservationsRead};
 use sdk::cosmwasm_std::{Addr, Timestamp};
 
@@ -87,7 +87,11 @@ where
             .skip_while(Option::is_none)
             .map(|price| Option::expect(price, "sample prices should keep being present"))
             .reduce(|acc, sample_price| {
-                discount_factor.of(sample_price) + (Percent::HUNDRED - discount_factor).of(acc)
+                discount_factor.of(sample_price)
+                    + Percent100::HUNDRED
+                        .checked_sub(discount_factor)
+                        .expect("Config invariant to be held")
+                        .of(acc)
             })
             .ok_or(PriceFeedsError::NoPrice {})
     }
@@ -158,7 +162,7 @@ mod test {
     use finance::{
         coin::{Amount, Coin},
         duration::Duration,
-        percent::Percent,
+        percent::Percent100,
         price::{self, Price},
     };
     use sdk::cosmwasm_std::{Addr, Timestamp};
@@ -171,7 +175,7 @@ mod test {
     const SAMPLE_PERIOD: Duration = Duration::from_secs(5);
     const SAMPLES_NUMBER: u16 = 12;
     const VALIDITY: Duration = Duration::from_secs(60);
-    const DISCOUNTING_FACTOR: Percent = Percent::from_permille(750);
+    const DISCOUNTING_FACTOR: Percent100 = Percent100::from_permille(750);
 
     type TestC = SuperGroupTestC4;
     type TestQuoteC = SuperGroupTestC5;
@@ -184,7 +188,7 @@ mod test {
     fn old_observations() {
         let block_time = Timestamp::from_seconds(100);
         let config = Config::new(
-            Percent::HUNDRED,
+            Percent100::HUNDRED,
             SAMPLE_PERIOD,
             SAMPLES_NUMBER,
             DISCOUNTING_FACTOR,
@@ -240,7 +244,7 @@ mod test {
             .unwrap();
 
         let config = Config::new(
-            Percent::HUNDRED,
+            Percent100::HUNDRED,
             SAMPLE_PERIOD,
             SAMPLES_NUMBER,
             DISCOUNTING_FACTOR,
@@ -288,7 +292,7 @@ mod test {
             .unwrap();
 
         let config = Config::new(
-            Percent::from_percent(50),
+            Percent100::from_percent(50),
             SAMPLE_PERIOD,
             SAMPLES_NUMBER,
             DISCOUNTING_FACTOR,
@@ -324,7 +328,7 @@ mod test {
     fn ema_price() {
         let block_time = Timestamp::from_seconds(100);
         let config = Config::new(
-            Percent::HUNDRED,
+            Percent100::HUNDRED,
             SAMPLE_PERIOD,
             SAMPLES_NUMBER,
             DISCOUNTING_FACTOR,

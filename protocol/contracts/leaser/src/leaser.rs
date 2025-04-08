@@ -3,7 +3,10 @@ use std::collections::HashSet;
 use admin_contract::msg::{ExecuteMsg, MigrationSpec, ProtocolContracts};
 use currencies::LeaseGroup;
 use currency::CurrencyDTO;
-use finance::{duration::Duration, percent::Percent};
+use finance::{
+    duration::Duration,
+    percent::{Percent, Percent100},
+};
 use lease::api::{DownpaymentCoin, MigrateMsg, open::PositionSpecDTO};
 use lpp::{msg::ExecuteMsg as LppExecuteMsg, stub::LppRef};
 use platform::{
@@ -71,7 +74,7 @@ impl<'a> Leaser<'a> {
 
 pub(super) fn try_configure(
     storage: &mut dyn Storage,
-    lease_interest_rate_margin: Percent,
+    lease_interest_rate_margin: Percent100,
     lease_position_spec: PositionSpecDTO,
     lease_due_period: Duration,
 ) -> ContractResult<MessageResponse> {
@@ -209,8 +212,7 @@ fn emit_status(next_customer: Option<Addr>) -> Emitter {
 mod test {
     use admin_contract::msg::{MigrationSpec, ProtocolContracts};
     use currencies::Lpn;
-    use dex::{ConnectionParams, Ics20Channel};
-    use finance::{coin::Coin, duration::Duration, liability::Liability, percent::Percent};
+    use finance::{coin::Coin, duration::Duration, liability::Liability, percent::Percent100};
     use json_value::JsonValue;
     use lease::api::{MigrateMsg, open::PositionSpecDTO};
     use platform::{contract::Code, response};
@@ -304,18 +306,18 @@ mod test {
             protocols_registry: Addr::unchecked("protocols"),
             lease_position_spec: PositionSpecDTO {
                 liability: Liability::new(
-                    Percent::from_percent(10),
-                    Percent::from_percent(65),
-                    Percent::from_percent(72),
-                    Percent::from_percent(74),
-                    Percent::from_percent(76),
-                    Percent::from_percent(80),
+                    Percent100::from_percent(10),
+                    Percent100::from_percent(65),
+                    Percent100::from_percent(72),
+                    Percent100::from_percent(74),
+                    Percent100::from_percent(76),
+                    Percent100::from_percent(80),
                     Duration::from_hours(12),
                 ),
                 min_asset: Coin::<Lpn>::from(120_000).into(),
                 min_transaction: Coin::<Lpn>::from(12_000).into(),
             },
-            lease_interest_rate_margin: Percent::from_percent(3),
+            lease_interest_rate_margin: Percent100::from_percent(3),
             lease_due_period: Duration::from_days(14),
             dex: ConnectionParams {
                 connection_id: "conn-12".into(),

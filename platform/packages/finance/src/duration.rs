@@ -5,10 +5,7 @@ use std::{
 
 use serde::{Deserialize, Serialize};
 
-use sdk::{
-    cosmwasm_std::{Timestamp, Uint128, Uint256},
-    schemars::{self, JsonSchema},
-};
+use sdk::cosmwasm_std::{Timestamp, Uint128, Uint256};
 
 use crate::{
     coin::Coin,

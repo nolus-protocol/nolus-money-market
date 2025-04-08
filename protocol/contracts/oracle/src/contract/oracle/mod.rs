@@ -294,7 +294,7 @@ mod test_normalized_price_not_found {
         Lpn as BaseCurrency, Lpns as BaseCurrencies, Nls, PaymentGroup as PriceCurrencies,
         PaymentGroup as AlarmCurrencies, Stable as StableCurrency,
     };
-    use finance::{coin::Coin, duration::Duration, percent::Percent, price};
+    use finance::{coin::Coin, duration::Duration, percent::Percent100, price};
     use marketprice::{Repo, config::Config as PriceConfig};
     use sdk::{
         cosmwasm_std::{
@@ -327,10 +327,10 @@ mod test_normalized_price_not_found {
         let mut storage: MockStorage = MockStorage::new();
 
         let price_config: PriceConfig = PriceConfig::new(
-            Percent::HUNDRED,
+            Percent100::HUNDRED,
             Duration::from_secs(1),
             1,
-            Percent::HUNDRED,
+            Percent100::HUNDRED,
         );
 
         init(&mut storage, &price_config);

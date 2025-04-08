@@ -10,7 +10,7 @@ use finance::{
     coin::{Amount, Coin},
     duration::Duration,
     liability::Liability,
-    percent::Percent,
+    percent::{Percent, Percent100},
 };
 use lease::api::{LpnCoinDTO, open::PositionSpecDTO};
 use platform::contract::{Code, CodeId};
@@ -44,7 +44,7 @@ fn lease_currency() -> CurrencyDTO<LeaseGroup> {
     currency::dto::<LeaseC1, _>()
 }
 
-const MARGIN_INTEREST_RATE: Percent = Percent::from_permille(30);
+const MARGIN_INTEREST_RATE: Percent100 = Percent100::from_permille(30);
 
 fn leaser_instantiate_msg(lease_code: Code, lpp: Addr) -> crate::msg::InstantiateMsg {
     crate::msg::InstantiateMsg {
@@ -57,12 +57,12 @@ fn leaser_instantiate_msg(lease_code: Code, lpp: Addr) -> crate::msg::Instantiat
         protocols_registry: sdk_testing::user(PROTOCOLS_REGISTRY_ADDR),
         lease_position_spec: PositionSpecDTO::new(
             Liability::new(
-                Percent::from_percent(65),
-                Percent::from_percent(70),
-                Percent::from_percent(73),
-                Percent::from_percent(75),
-                Percent::from_percent(78),
-                Percent::from_percent(80),
+                Percent100::from_percent(65),
+                Percent100::from_percent(70),
+                Percent100::from_percent(73),
+                Percent100::from_percent(75),
+                Percent100::from_percent(78),
+                Percent100::from_percent(80),
                 Duration::from_hours(1),
             ),
             lpn_coin(1000),
@@ -136,12 +136,12 @@ fn test_update_config() {
     let mut deps = deps();
 
     let expected_liability = Liability::new(
-        Percent::from_percent(55),
-        Percent::from_percent(60),
-        Percent::from_percent(61),
-        Percent::from_percent(62),
-        Percent::from_percent(64),
-        Percent::from_percent(65),
+        Percent100::from_percent(55),
+        Percent100::from_percent(60),
+        Percent100::from_percent(61),
+        Percent100::from_percent(62),
+        Percent100::from_percent(64),
+        Percent100::from_percent(65),
         Duration::from_hours(12),
     );
     let expected_position_spec = PositionSpecDTO::new(
@@ -154,7 +154,7 @@ fn test_update_config() {
     setup_test_case(deps.as_mut());
 
     let msg = SudoMsg::Config {
-        lease_interest_rate_margin: Percent::from_percent(5),
+        lease_interest_rate_margin: Percent100::from_percent(5),
         lease_position_spec: expected_position_spec,
         lease_due_period: expected_due_period,
     };

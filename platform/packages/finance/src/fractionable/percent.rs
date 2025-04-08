@@ -1,8 +1,8 @@
 use crate::{
     coin::Coin,
     percent::{
-        bound::{BoundPercent, UpperBound},
         Units,
+        bound::{BoundPercent, UpperBound},
     },
     ratio::Ratio,
 };

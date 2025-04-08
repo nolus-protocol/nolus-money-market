@@ -3,7 +3,7 @@ use std::mem;
 use serde::{Deserialize, Serialize};
 
 use dex::ConnectionParams;
-use finance::{duration::Duration, percent::Percent};
+use finance::{duration::Duration, percent::Percent100};
 use lease::api::open::PositionSpecDTO;
 use platform::contract::Code;
 use sdk::{
@@ -24,7 +24,7 @@ pub struct Config {
     pub market_price_oracle: Addr,
     pub protocols_registry: Addr,
     pub lease_position_spec: PositionSpecDTO,
-    pub lease_interest_rate_margin: Percent,
+    pub lease_interest_rate_margin: Percent100,
     pub lease_due_period: Duration,
     pub dex: ConnectionParams,
 }
@@ -58,7 +58,7 @@ impl Config {
 
     pub fn update(
         storage: &mut dyn Storage,
-        lease_interest_rate_margin: Percent,
+        lease_interest_rate_margin: Percent100,
         lease_position_spec: PositionSpecDTO,
         lease_due_period: Duration,
     ) -> ContractResult<()> {

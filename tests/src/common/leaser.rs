@@ -10,8 +10,8 @@ use finance::{
     test,
 };
 use lease::api::{
-    open::{ConnectionParams, Ics20Channel, PositionSpecDTO},
     LpnCoinDTO,
+    open::{ConnectionParams, Ics20Channel, PositionSpecDTO},
 };
 use leaser::{
     execute, instantiate,

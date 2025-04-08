@@ -6,7 +6,7 @@ use currency::{CurrencyDef, MemberOf};
 use finance::{
     coin::{Amount, Coin},
     percent::Percent100,
-    price::{total, total_of, Price},
+    price::{Price, total, total_of},
 };
 use sdk::{
     cosmwasm_ext::Response,

@@ -1,6 +1,6 @@
 use currency::{CurrencyDTO, Group, MemberOf};
 use dex::{AnomalyPolicy, AnomalyTreatment, SwapTask};
-use finance::{coin::CoinDTO, percent::Percent};
+use finance::{coin::CoinDTO, percent::Percent100};
 use platform::state_machine::Response;
 
 use crate::contract::state::{
@@ -18,7 +18,7 @@ pub struct MaxSlippage<G>
 where
     G: Group,
 {
-    max_slippage: Percent,
+    max_slippage: Percent100,
     out_currency: CurrencyDTO<G>,
 }
 

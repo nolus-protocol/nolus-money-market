@@ -182,7 +182,7 @@ mod test {
             Lpns as BaseCurrencies, PaymentGroup as PriceCurrencies,
             testing::{PaymentC1, PaymentC3, PaymentC4, PaymentC5, PaymentC6, PaymentC7},
         };
-        use finance::{duration::Duration, percent::Percent, price::base::BasePrice};
+        use finance::{duration::Duration, percent::Percent100, price::base::BasePrice};
         use marketprice::{Repo, config::Config};
         use sdk::cosmwasm_std::{
             Addr, Storage,
@@ -208,10 +208,10 @@ mod test {
             tree.save(&mut storage).unwrap();
 
             let config = Config::new(
-                Percent::HUNDRED,
+                Percent100::HUNDRED,
                 Duration::from_secs(5),
                 10,
-                Percent::from_percent(50),
+                Percent100::from_percent(50),
             );
 
             let storage_ptr: &mut dyn Storage = &mut storage;
@@ -262,10 +262,10 @@ mod test {
             tree.save(&mut storage).unwrap();
 
             let config = Config::new(
-                Percent::HUNDRED,
+                Percent100::HUNDRED,
                 Duration::from_secs(5),
                 10,
-                Percent::from_percent(50),
+                Percent100::from_percent(50),
             );
 
             let storage_ptr: &mut dyn Storage = &mut storage;

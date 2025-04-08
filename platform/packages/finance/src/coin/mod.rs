@@ -16,8 +16,8 @@ use currency::{Currency, CurrencyDef, Group, MemberOf};
 use crate::{
     duration::Duration,
     percent::{
-        bound::{BoundPercent, UpperBound},
         Units as PercentUnits,
+        bound::{BoundPercent, UpperBound},
     },
     ratio::{self, CheckedAdd, CheckedDiv, CheckedMul, Rational},
     zero::Zero,
