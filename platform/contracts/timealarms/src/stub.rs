@@ -71,17 +71,21 @@ impl TimeAlarmsRef {
     }
 }
 
-pub struct TimeAlarmDelivery<'a> {
+pub struct GrantedTimeAlarm<'a> {
     time_alarms_ref: &'a TimeAlarmsRef,
 }
 
-impl<'a> TimeAlarmDelivery<'a> {
+impl<'a> GrantedTimeAlarm<'a> {
     pub fn new(time_alarms_ref: &'a TimeAlarmsRef) -> Self {
         Self { time_alarms_ref } 
     }
 }
 
+<<<<<<< HEAD
 impl<'a> AccessPermission for TimeAlarmDelivery<'a>{
+=======
+impl<'a> AccessPermission for GrantedTimeAlarm<'a> {
+>>>>>>> 97bbb1580 (refactor: better naming)
     fn is_granted_to(&self, caller: &Addr) -> bool {
         self.time_alarms_ref.owned_by(caller)
     }
