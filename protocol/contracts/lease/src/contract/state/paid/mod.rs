@@ -1,4 +1,4 @@
-use access_control::AddressDelivery;
+use access_control::GrantedAddress;
 use finance::duration::Duration;
 use serde::{Deserialize, Serialize};
 
@@ -41,7 +41,7 @@ impl Handler for Active {
         info: MessageInfo,
     ) -> ContractResult<Response> {
         access_control::check(
-            &AddressDelivery::new(&self.lease.lease.customer),
+            &GrantedAddress::new(&self.lease.lease.customer),
             &info.sender,
         )?;
 

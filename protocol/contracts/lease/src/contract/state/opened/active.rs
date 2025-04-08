@@ -1,13 +1,13 @@
-use access_control::AddressDelivery;
+use access_control::GrantedAddress;
 use currency::{CurrencyDef, never};
 use serde::{Deserialize, Serialize};
 
 use dex::Enterable;
 use finance::{coin::IntoDTO, duration::Duration};
-use oracle_platform::stub::OracleDelivery;
+use oracle_platform::stub::GrantedOracle;
 use platform::{bank, batch::Emitter, message::Response as MessageResponse};
 use sdk::cosmwasm_std::{Coin as CwCoin, Env, MessageInfo, QuerierWrapper, Timestamp};
-use timealarms::stub::TimeAlarmDelivery;
+use timealarms::stub::GrantedTimeAlarm;
 
 use crate::{
     api::{
@@ -78,7 +78,7 @@ impl Active {
         querier: QuerierWrapper<'_>,
         env: &Env,
     ) -> ContractResult<Response> {
-        access_control::check(&OracleDelivery::new(&self.lease.lease.oracle), &info.sender)?;
+        access_control::check(&GrantedOracle::new(&self.lease.lease.oracle), &info.sender)?;
 
         self.try_on_alarm(querier, env)
     }
@@ -90,7 +90,7 @@ impl Active {
         info: MessageInfo,
     ) -> ContractResult<Response> {
         access_control::check(
-            &TimeAlarmDelivery::new(&self.lease.lease.time_alarms),
+            &GrantedTimeAlarm::new(&self.lease.lease.time_alarms),
             &info.sender,
         )?;
 
@@ -182,7 +182,7 @@ impl Handler for Active {
         info: MessageInfo,
     ) -> ContractResult<Response> {
         access_control::check(
-            &AddressDelivery::new(&self.lease.lease.customer),
+            &GrantedAddress::new(&self.lease.lease.customer),
             &info.sender,
         )
         .map_err(Into::into)
@@ -229,7 +229,7 @@ impl Handler for Active {
         info: MessageInfo,
     ) -> ContractResult<Response> {
         access_control::check(
-            &AddressDelivery::new(&self.lease.lease.customer),
+            &GrantedAddress::new(&self.lease.lease.customer),
             &info.sender,
         )
         .map_err(Into::into)
