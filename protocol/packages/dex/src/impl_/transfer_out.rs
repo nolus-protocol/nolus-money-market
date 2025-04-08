@@ -6,7 +6,7 @@ use std::{
 
 use serde::{Deserialize, Serialize};
 
-use currency::{Group, MemberOf};
+use currency::Group;
 use finance::{coin::CoinDTO, duration::Duration, zero::Zero};
 use platform::{
     batch::{Batch, Emitter},
@@ -91,10 +91,7 @@ where
 
             type Error = Error;
 
-            fn visit<G>(&mut self, coin: &CoinDTO<G>) -> Result<Self::Result>
-            where
-                G: Group + MemberOf<Self::GIn>,
-            {
+            fn visit(&mut self, coin: &CoinDTO<Self::GIn>) -> Result<Self::Result> {
                 debug_assert!(!self.sent, "already visited");
                 self.sent = true;
                 self.trx.send(coin)
@@ -320,10 +317,7 @@ where
 
     type Error = TooManyCoins;
 
-    fn visit<G>(&mut self, _coin: &CoinDTO<G>) -> StdResult<Self::Result, Self::Error>
-    where
-        G: Group + MemberOf<Self::GIn>,
-    {
+    fn visit(&mut self, _coin: &CoinDTO<Self::GIn>) -> StdResult<Self::Result, Self::Error> {
         self.last_index = Some(
             self.last_index
                 .map(|last_index| last_index.checked_add(1).ok_or(const { TooManyCoins {} }))

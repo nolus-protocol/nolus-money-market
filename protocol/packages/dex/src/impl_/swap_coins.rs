@@ -1,4 +1,3 @@
-use currency::{Group, MemberOf};
 use finance::coin::CoinDTO;
 
 use crate::{CoinVisitor, IterNext, IterState};
@@ -6,25 +5,22 @@ use crate::{CoinVisitor, IterNext, IterState};
 #[cfg(test)]
 pub(super) use self::test::TestVisitor;
 
-pub fn on_coin<G, Visitor>(
-    coin: &CoinDTO<G>,
+pub fn on_coin<Visitor>(
+    coin: &CoinDTO<Visitor::GIn>,
     visitor: &mut Visitor,
 ) -> Result<IterState, Visitor::Error>
 where
-    G: Group + MemberOf<Visitor::GIn>,
     Visitor: CoinVisitor,
 {
     visitor.visit(coin).map(|_iter_next| IterState::Complete)
 }
 
-pub fn on_coins<G1, G2, Visitor>(
-    coin1: &CoinDTO<G1>,
-    coin2: &CoinDTO<G2>,
+pub fn on_coins<Visitor>(
+    coin1: &CoinDTO<Visitor::GIn>,
+    coin2: &CoinDTO<Visitor::GIn>,
     visitor: &mut Visitor,
 ) -> Result<IterState, Visitor::Error>
 where
-    G1: Group + MemberOf<Visitor::GIn>,
-    G2: Group + MemberOf<Visitor::GIn>,
     Visitor: CoinVisitor<Result = IterNext>,
 {
     visitor.visit(coin1).and_then(|next| match next {
@@ -38,7 +34,7 @@ mod test {
     use std::marker::PhantomData;
 
     use currency::{
-        Group, MemberOf,
+        Group,
         never::{self, Never},
         test::{SubGroupTestC10, SuperGroup, SuperGroupTestC1},
     };
@@ -102,10 +98,7 @@ mod test {
 
         type Error = Never;
 
-        fn visit<GG>(&mut self, coin: &CoinDTO<GG>) -> Result<Self::Result, Self::Error>
-        where
-            GG: Group + MemberOf<Self::GIn>,
-        {
+        fn visit(&mut self, coin: &CoinDTO<Self::GIn>) -> Result<Self::Result, Self::Error> {
             assert!(self.2.is_none());
             let res = if self.0.is_none() {
                 self.0 = Some(coin.amount());

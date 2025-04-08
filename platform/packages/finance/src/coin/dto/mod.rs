@@ -96,6 +96,14 @@ where
     {
         self.currency.of_currency(dto).map_err(Into::into)
     }
+
+    pub fn into_super_group<SuperG>(self) -> CoinDTO<SuperG>
+    where
+        SuperG: Group,
+        G: MemberOf<SuperG>,
+    {
+        CoinDTO::new(self.amount, self.currency.into_super_group())
+    }
 }
 
 impl<G> Display for CoinDTO<G>

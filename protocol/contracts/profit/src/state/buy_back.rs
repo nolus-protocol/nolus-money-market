@@ -185,7 +185,7 @@ mod tests {
         Lpn, Lpns, PaymentGroup,
         testing::{PaymentC3, PaymentC4, PaymentC5, PaymentC6, PaymentC7},
     };
-    use currency::{Group, MemberOf, never::Never};
+    use currency::never::Never;
     use dex::{CoinVisitor, IterNext, IterState, SwapTask as _};
     use finance::coin::{Coin, CoinDTO};
 
@@ -241,10 +241,7 @@ mod tests {
 
         type Error = Never;
 
-        fn visit<G>(&mut self, _: &CoinDTO<G>) -> Result<Self::Result, Self::Error>
-        where
-            G: Group + MemberOf<Self::GIn>,
-        {
+        fn visit(&mut self, _: &CoinDTO<Self::GIn>) -> Result<Self::Result, Self::Error> {
             if let Some(stop_after) = &mut self.stop_after {
                 if *stop_after == 0 {
                     return Ok(IterNext::Stop);

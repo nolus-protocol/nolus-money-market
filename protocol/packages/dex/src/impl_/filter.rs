@@ -1,6 +1,6 @@
 use std::marker::PhantomData;
 
-use currency::{CurrencyDTO, Group, MemberOf};
+use currency::{CurrencyDTO, Group};
 use finance::{
     coin::{Amount, CoinDTO},
     zero::Zero,
@@ -56,10 +56,7 @@ where
     type Result = V::Result;
     type Error = V::Error;
 
-    fn visit<GG>(&mut self, coin: &CoinDTO<GG>) -> Result<Self::Result, Self::Error>
-    where
-        GG: Group + MemberOf<Self::GIn>,
-    {
+    fn visit(&mut self, coin: &CoinDTO<Self::GIn>) -> Result<Self::Result, Self::Error> {
         if coin.currency() == self.filter {
             self.filtered += coin.amount();
             Ok(IterNext::Continue)

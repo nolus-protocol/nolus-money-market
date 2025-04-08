@@ -1,4 +1,3 @@
-use currency::{Group, MemberOf};
 use finance::coin::CoinDTO;
 
 use crate::{CoinVisitor, CoinsNb, IterNext, IterState, SwapTask};
@@ -35,10 +34,7 @@ where
     type Result = IterNext;
     type Error = V::Error;
 
-    fn visit<G>(&mut self, coin: &CoinDTO<G>) -> Result<Self::Result, Self::Error>
-    where
-        G: Group + MemberOf<Self::GIn>,
-    {
+    fn visit(&mut self, coin: &CoinDTO<Self::GIn>) -> Result<Self::Result, Self::Error> {
         let res = if self.at_coin() {
             self.1.visit(coin)?;
             IterNext::Stop

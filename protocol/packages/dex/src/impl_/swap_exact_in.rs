@@ -6,7 +6,7 @@ use std::{
 use oracle::stub::SwapPath;
 use serde::{Deserialize, Serialize};
 
-use currency::{Group, MemberOf};
+use currency::Group;
 use finance::{
     coin::{self, Amount, CoinDTO},
     duration::Duration,
@@ -105,10 +105,7 @@ where
 
             type Error = Error;
 
-            fn visit<G>(&mut self, coin: &CoinDTO<G>) -> Result<Self::Result>
-            where
-                G: Group + MemberOf<Self::GIn>,
-            {
+            fn visit(&mut self, coin: &CoinDTO<Self::GIn>) -> Result<Self::Result> {
                 let min_out = self.1.policy().min_output(coin);
 
                 self.0
@@ -151,10 +148,7 @@ where
 
             type Error = Error;
 
-            fn visit<G>(&mut self, _coin: &CoinDTO<G>) -> Result<Self::Result>
-            where
-                G: Group + MemberOf<Self::GIn>,
-            {
+            fn visit(&mut self, _coin: &CoinDTO<Self::GIn>) -> Result<Self::Result> {
                 SwapClient::parse_response(&mut self.0)
                     .inspect(|&amount| self.1 += amount)
                     .map(|_| IterNext::Continue)

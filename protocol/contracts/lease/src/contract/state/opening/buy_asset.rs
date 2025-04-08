@@ -144,7 +144,11 @@ impl SwapTask for BuyAsset {
     where
         Visitor: CoinVisitor<GIn = Self::InG, Result = IterNext>,
     {
-        dex::on_coins(&self.downpayment, &self.loan.principal, visitor)
+        dex::on_coins(
+            &self.downpayment,
+            &self.loan.principal.into_super_group(),
+            visitor,
+        )
     }
 
     fn finish(

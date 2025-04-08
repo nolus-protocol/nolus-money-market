@@ -69,7 +69,5 @@ pub trait CoinVisitor {
 
     type Error;
 
-    fn visit<G>(&mut self, coin: &CoinDTO<G>) -> Result<Self::Result, Self::Error>
-    where
-        G: Group + MemberOf<Self::GIn>;
+    fn visit(&mut self, coin: &CoinDTO<Self::GIn>) -> Result<Self::Result, Self::Error>;
 }
