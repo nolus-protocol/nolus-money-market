@@ -64,7 +64,11 @@ where
         BaseC: CurrencyDef,
     {
         const NORM_SCALE: Amount = 10u128.pow(18);
-        NormalizedPrice::<G>(price::total(NORM_SCALE.into(), price.inv()).into())
+        NormalizedPrice::<G>(
+            price::total(NORM_SCALE.into(), price.inv())
+                .expect("TODO: propagate up the stack potential overflow")
+                .into(),
+        )
     }
 }
 

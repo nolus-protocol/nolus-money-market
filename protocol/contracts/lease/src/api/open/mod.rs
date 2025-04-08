@@ -4,7 +4,11 @@ use serde::Serialize;
 
 use currency::CurrencyDTO;
 use dex::ConnectionParams;
-use finance::{duration::Duration, liability::Liability, percent::Percent};
+use finance::{
+    duration::Duration,
+    liability::Liability,
+    percent::{Percent, Percent100},
+};
 use sdk::cosmwasm_std::Addr;
 
 #[cfg(feature = "skel")]
@@ -69,7 +73,7 @@ pub struct LoanForm {
     /// The delta added on top of the LPP Loan interest rate.
     ///
     /// The amount, a part of any payment, goes to the Profit contract.
-    pub annual_margin_interest: Percent,
+    pub annual_margin_interest: Percent100,
     /// How long the accrued interest is due before getting overdue.
     pub due_period: Duration,
 }
@@ -154,7 +158,7 @@ impl PositionSpecDTO {
 mod test_position_spec {
     use currencies::Lpn;
     use currency::CurrencyDef;
-    use finance::{coin::Coin, duration::Duration, liability::Liability, percent::Percent};
+    use finance::{coin::Coin, duration::Duration, liability::Liability, percent::Percent100};
     use sdk::cosmwasm_std::{StdError, from_json};
 
     use super::PositionSpecDTO;
@@ -221,12 +225,12 @@ mod test_position_spec {
 
     fn spec_dto() -> PositionSpecDTO {
         let liability = Liability::new(
-            Percent::from_percent(65),
-            Percent::from_percent(70),
-            Percent::from_percent(73),
-            Percent::from_percent(75),
-            Percent::from_percent(78),
-            Percent::from_percent(80),
+            Percent100::from_percent(65),
+            Percent100::from_percent(70),
+            Percent100::from_percent(73),
+            Percent100::from_percent(75),
+            Percent100::from_percent(78),
+            Percent100::from_percent(80),
             Duration::from_hours(1),
         );
         PositionSpecDTO::new(

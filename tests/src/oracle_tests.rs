@@ -10,7 +10,7 @@ use finance::{
     coin::{Amount, Coin},
     duration::Duration,
     percent::Percent100,
-    price::{self, base::BasePrice, dto::PriceDTO, Price},
+    price::{self, Price, base::BasePrice, dto::PriceDTO},
 };
 use marketprice::config::Config as PriceConfig;
 use oracle::{

@@ -3,7 +3,7 @@ use std::fmt::{Debug, Display, Formatter, Result as FmtResult};
 use finance::{
     fraction::Fraction,
     fractionable::Percentable,
-    percent::Percent,
+    percent::Percent100,
     range::{Ascending, RightOpenRange},
 };
 use serde::{Deserialize, Serialize};
@@ -29,8 +29,8 @@ use super::error::{Error as PositionError, Result as PositionResult};
 #[cfg_attr(feature = "contract_testing", derive(Debug))]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub struct Policy {
-    take_profit: Option<Percent>,
-    stop_loss: Option<Percent>,
+    take_profit: Option<Percent100>,
+    stop_loss: Option<Percent100>,
 }
 
 /// A strategy triggered to close the position automatically
@@ -43,11 +43,11 @@ pub struct Policy {
 /// - a Take Profit is set up and a price rise have the position's LTV become lower than the specified percent.
 #[derive(Debug, Eq, PartialEq)]
 pub enum Strategy {
-    StopLoss(Percent),
-    TakeProfit(Percent),
+    StopLoss(Percent100),
+    TakeProfit(Percent100),
 }
 
-impl From<ChangeCmd> for Option<Percent> {
+impl From<ChangeCmd> for Option<Percent100> {
     fn from(cmd: ChangeCmd) -> Self {
         match cmd {
             ChangeCmd::Reset => None,
@@ -61,10 +61,10 @@ impl Policy {
         Self {
             stop_loss: cmd
                 .stop_loss
-                .map_or_else(|| self.stop_loss, Option::<Percent>::from),
+                .map_or_else(|| self.stop_loss, Option::<Percent100>::from),
             take_profit: cmd
                 .take_profit
-                .map_or_else(|| self.take_profit, Option::<Percent>::from),
+                .map_or_else(|| self.take_profit, Option::<Percent100>::from),
         }
         .invariant_check()
     }
@@ -72,8 +72,8 @@ impl Policy {
     /// Determine the 'no-close' intersection with the provided range
     pub fn no_close(
         &self,
-        during: RightOpenRange<Percent, Ascending>,
-    ) -> RightOpenRange<Percent, Ascending> {
+        during: RightOpenRange<Percent100, Ascending>,
+    ) -> RightOpenRange<Percent100, Ascending> {
         // we may have implemented this in a more conscise form if we have introduced other kind of ranges,
         // for example, RangeFrom
         let tp_cut = self
@@ -93,7 +93,7 @@ impl Policy {
             .or_else(|| self.may_take_profit(lease_asset, total_due))
     }
 
-    pub(super) fn liquidation_check(self, top_bound: Percent) -> PositionResult<Self> {
+    pub(super) fn liquidation_check(self, top_bound: Percent100) -> PositionResult<Self> {
         match self.take_profit {
             Some(tp) if tp >= top_bound => Err(PositionError::liquidation_conflict(
                 top_bound,
@@ -112,11 +112,11 @@ impl Policy {
 
     fn invariant_check(self) -> PositionResult<Self> {
         match self.take_profit {
-            Some(tp) if tp == Percent::ZERO => Err(PositionError::zero_take_profit()),
+            Some(tp) if tp == Percent100::ZERO => Err(PositionError::zero_take_profit()),
             _ => Ok(self),
         }
         .and_then(|this| match this.stop_loss {
-            Some(sl) if sl == Percent::ZERO => Err(PositionError::zero_stop_loss()),
+            Some(sl) if sl == Percent100::ZERO => Err(PositionError::zero_stop_loss()),
             _ => Ok(this),
         })
         .and_then(|this| match (this.take_profit, this.stop_loss) {
@@ -158,7 +158,7 @@ impl From<Policy> for ClosePolicy {
 
 impl Display for Strategy {
     fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
-        fn dump(description: &str, arg: &Percent, f: &mut Formatter<'_>) -> FmtResult {
+        fn dump(description: &str, arg: &Percent100, f: &mut Formatter<'_>) -> FmtResult {
             f.write_str(description).and_then(|()| Display::fmt(arg, f))
         }
 
@@ -173,7 +173,7 @@ impl Display for Strategy {
 mod test {
 
     mod may_trigger {
-        use finance::{coin::Amount, percent::Percent};
+        use finance::{coin::Amount, percent::Percent100};
 
         use crate::position::{CloseStrategy, close::Policy};
 
@@ -185,7 +185,7 @@ mod test {
 
         #[test]
         fn sl_no_tp() {
-            let sl_tvl = Percent::from_permille(567);
+            let sl_tvl = Percent100::from_permille(567);
             assert_eq!(
                 Some(CloseStrategy::StopLoss(sl_tvl)),
                 may_trigger(Some(sl_tvl), None, 100, 67)
@@ -205,7 +205,7 @@ mod test {
 
         #[test]
         fn no_sl_tp() {
-            let tp_tvl = Percent::from_permille(342);
+            let tp_tvl = Percent100::from_permille(342);
             assert_eq!(None, may_trigger(None, Some(tp_tvl), 100, 35));
             assert_eq!(None, may_trigger(None, Some(tp_tvl), 1000, 342));
 
@@ -227,8 +227,8 @@ mod test {
 
         #[test]
         fn sl_tp() {
-            let sl_tvl = Percent::from_permille(567);
-            let tp_tvl = Percent::from_permille(342);
+            let sl_tvl = Percent100::from_permille(567);
+            let tp_tvl = Percent100::from_permille(342);
             assert_eq!(
                 Some(CloseStrategy::StopLoss(sl_tvl)),
                 may_trigger(Some(sl_tvl), Some(tp_tvl), 100, 64)
@@ -265,8 +265,8 @@ mod test {
         }
 
         fn may_trigger(
-            sl: Option<Percent>,
-            tp: Option<Percent>,
+            sl: Option<Percent100>,
+            tp: Option<Percent100>,
             asset: Amount,
             due: Amount,
         ) -> Option<CloseStrategy> {
@@ -279,7 +279,7 @@ mod test {
     }
 
     mod change_policy {
-        use finance::percent::Percent;
+        use finance::percent::Percent100;
 
         use crate::{
             api::position::{ChangeCmd, ClosePolicyChange},
@@ -301,16 +301,16 @@ mod test {
         fn zero() {
             assert!(matches!(
                 Policy::default().change_policy(ClosePolicyChange {
-                    stop_loss: Some(ChangeCmd::Set(Percent::from_percent(24))),
-                    take_profit: Some(ChangeCmd::Set(Percent::ZERO)),
+                    stop_loss: Some(ChangeCmd::Set(Percent100::from_percent(24))),
+                    take_profit: Some(ChangeCmd::Set(Percent100::ZERO)),
                 },),
                 Err(PositionError::ZeroClosePolicy(_)),
             ));
 
             assert!(matches!(
                 Policy::default().change_policy(ClosePolicyChange {
-                    stop_loss: Some(ChangeCmd::Set(Percent::ZERO)),
-                    take_profit: Some(ChangeCmd::Set(Percent::from_percent(26))),
+                    stop_loss: Some(ChangeCmd::Set(Percent100::ZERO)),
+                    take_profit: Some(ChangeCmd::Set(Percent100::from_percent(26))),
                 },),
                 Err(PositionError::ZeroClosePolicy(_)),
             ));
@@ -318,7 +318,7 @@ mod test {
 
         #[test]
         fn stop_loss_set_reset() {
-            let sl = Percent::from_percent(45);
+            let sl = Percent100::from_percent(45);
             assert_eq!(
                 Ok(Policy {
                     take_profit: None,
@@ -341,7 +341,7 @@ mod test {
 
         #[test]
         fn take_profit_set_reset() {
-            let tp = Percent::from_percent(45);
+            let tp = Percent100::from_percent(45);
             assert_eq!(
                 Ok(Policy {
                     take_profit: Some(tp),
@@ -394,8 +394,8 @@ mod test {
 
         #[test]
         fn invariant_no_current_ltv() {
-            let lower = Percent::from_percent(45);
-            let higher = Percent::from_percent(55);
+            let lower = Percent100::from_percent(45);
+            let higher = Percent100::from_percent(55);
 
             let may_p = Policy::default()
                 .change_policy(ClosePolicyChange {
@@ -410,7 +410,7 @@ mod test {
                 },
                 may_p
             );
-            assert_eq!(None, may_p.may_trigger(Percent::HUNDRED, lower));
+            assert_eq!(None, may_p.may_trigger(Percent100::HUNDRED, lower));
 
             let may_p_1 = may_p
                 .change_policy(ClosePolicyChange {
@@ -427,7 +427,7 @@ mod test {
             );
             assert_eq!(
                 Some(CloseStrategy::StopLoss(lower)),
-                may_p_1.may_trigger(Percent::HUNDRED, lower)
+                may_p_1.may_trigger(Percent100::HUNDRED, lower)
             );
 
             let may_p_2 = may_p_1
@@ -454,9 +454,9 @@ mod test {
 
         #[test]
         fn invariant_full() {
-            let lower = Percent::from_percent(45);
-            let higher = Percent::from_percent(55);
-            let lease_invalid1 = higher - Percent::from_permille(1);
+            let lower = Percent100::from_percent(45);
+            let higher = Percent100::from_percent(55);
+            let lease_invalid1 = higher.checked_sub(Percent100::from_permille(1)).unwrap();
 
             let p = Policy::default()
                 .change_policy(ClosePolicyChange {
@@ -464,7 +464,7 @@ mod test {
                     stop_loss: Some(ChangeCmd::Set(higher)),
                 })
                 .unwrap();
-            assert_eq!(None, p.may_trigger(Percent::HUNDRED, lower));
+            assert_eq!(None, p.may_trigger(Percent100::HUNDRED, lower));
             assert_eq!(
                 Some(CloseStrategy::TakeProfit(higher),),
                 p.change_policy(ClosePolicyChange {
@@ -472,7 +472,7 @@ mod test {
                     stop_loss: Some(ChangeCmd::Reset),
                 })
                 .unwrap()
-                .may_trigger(Percent::HUNDRED, lease_invalid1)
+                .may_trigger(Percent100::HUNDRED, lease_invalid1)
             );
 
             assert_eq!(
@@ -483,13 +483,13 @@ mod test {
                         stop_loss: Some(ChangeCmd::Set(lower)),
                     },)
                     .unwrap()
-                    .may_trigger(Percent::HUNDRED, lower)
+                    .may_trigger(Percent100::HUNDRED, lower)
             );
         }
     }
 
     mod liquidation_check {
-        use finance::percent::Percent;
+        use finance::percent::Percent100;
 
         use crate::{
             api::position::{ChangeCmd, ClosePolicyChange},
@@ -499,15 +499,15 @@ mod test {
 
         #[test]
         fn check() {
-            const DELTA: Percent = Percent::from_permille(1);
+            const DELTA: Percent100 = Percent100::from_permille(1);
 
-            let lower = Percent::from_percent(45);
-            let higher = Percent::from_percent(55);
-            let liquidation = Percent::from_percent(80);
+            let lower = Percent100::from_percent(45);
+            let higher = Percent100::from_percent(55);
+            let liquidation = Percent100::from_percent(80);
 
             assert_eq!(
                 Ok(Policy::default()),
-                Policy::default().liquidation_check(Percent::from_percent(80))
+                Policy::default().liquidation_check(Percent100::from_percent(80))
             );
             let p = Policy::default()
                 .change_policy(ClosePolicyChange {
@@ -517,7 +517,10 @@ mod test {
                 .unwrap();
 
             assert_eq!(Ok(p), p.liquidation_check(liquidation));
-            assert_eq!(Ok(p), p.liquidation_check(higher + DELTA));
+            assert_eq!(
+                Ok(p),
+                p.liquidation_check(higher.checked_add(DELTA).unwrap())
+            );
             assert_eq!(
                 Err(PositionError::liquidation_conflict(
                     higher,
@@ -527,10 +530,10 @@ mod test {
             );
             assert_eq!(
                 Err(PositionError::liquidation_conflict(
-                    lower + DELTA,
+                    lower.checked_add(DELTA).unwrap(),
                     CloseStrategy::StopLoss(higher)
                 )),
-                p.liquidation_check(lower + DELTA)
+                p.liquidation_check(lower.checked_add(DELTA).unwrap())
             );
             assert_eq!(
                 Err(PositionError::liquidation_conflict(
@@ -543,7 +546,7 @@ mod test {
     }
 
     mod display {
-        use finance::percent::Percent;
+        use finance::percent::Percent100;
 
         use crate::position::CloseStrategy;
 
@@ -551,7 +554,10 @@ mod test {
         fn take_profit() {
             assert_eq!(
                 "take profit below 45%",
-                format!("{}", CloseStrategy::TakeProfit(Percent::from_percent(45)))
+                format!(
+                    "{}",
+                    CloseStrategy::TakeProfit(Percent100::from_percent(45))
+                )
             )
         }
 
@@ -559,14 +565,17 @@ mod test {
         fn stop_loss() {
             assert_eq!(
                 "stop loss above or equal to 55.4%",
-                format!("{}", CloseStrategy::StopLoss(Percent::from_permille(554)))
+                format!(
+                    "{}",
+                    CloseStrategy::StopLoss(Percent100::from_permille(554))
+                )
             )
         }
     }
 
     mod no_close {
         use finance::{
-            percent::Percent,
+            percent::Percent100,
             range::{Ascending, RightOpenRange},
         };
 
@@ -574,13 +583,13 @@ mod test {
 
         #[test]
         fn unbound() {
-            const GAP: Percent = Percent::from_permille(50);
+            const GAP: Percent100 = Percent100::from_permille(50);
 
-            let below = Percent::from_percent(36);
-            let tp_in = below - GAP - GAP;
-            let sl_in = below - GAP;
-            let tp_out = below + GAP;
-            let sl_out = below + GAP + GAP;
+            let below = Percent100::from_percent(36);
+            let tp_in = below.checked_sub(GAP).unwrap().checked_sub(GAP).unwrap();
+            let sl_in = below.checked_sub(GAP).unwrap();
+            let tp_out = below.checked_add(GAP).unwrap();
+            let sl_out = below.checked_add(GAP).unwrap().checked_add(GAP).unwrap();
 
             let range = RightOpenRange::up_to(below);
             no_close(None, None, range, range);
@@ -604,14 +613,14 @@ mod test {
 
         #[test]
         fn bound() {
-            const GAP: Percent = Percent::from_permille(50);
+            const GAP: Percent100 = Percent100::from_permille(50);
 
-            let below = Percent::from_percent(36);
-            let above = below - GAP - GAP;
-            let tp_out = above - GAP;
+            let below = Percent100::from_percent(36);
+            let above = sub(sub(below, GAP), GAP);
+            let tp_out = sub(above, GAP);
             let tp_in = above;
-            let sl_in = below - GAP;
-            let sl_out = below + GAP;
+            let sl_in = sub(below, GAP);
+            let sl_out = add(below, GAP);
 
             let range = RightOpenRange::up_to(below).cut_to(above);
             no_close(None, None, range, range);
@@ -634,10 +643,10 @@ mod test {
         }
 
         fn no_close(
-            sl: Option<Percent>,
-            tp: Option<Percent>,
-            during: RightOpenRange<Percent, Ascending>,
-            exp: RightOpenRange<Percent, Ascending>,
+            sl: Option<Percent100>,
+            tp: Option<Percent100>,
+            during: RightOpenRange<Percent100, Ascending>,
+            exp: RightOpenRange<Percent100, Ascending>,
         ) {
             assert_eq!(
                 exp,
@@ -647,6 +656,14 @@ mod test {
                 }
                 .no_close(during)
             );
+        }
+
+        fn add(addend1: Percent100, addend2: Percent100) -> Percent100 {
+            addend1.checked_add(addend2).unwrap()
+        }
+
+        fn sub(minuend: Percent100, subtrahend: Percent100) -> Percent100 {
+            minuend.checked_sub(subtrahend).unwrap()
         }
     }
 }

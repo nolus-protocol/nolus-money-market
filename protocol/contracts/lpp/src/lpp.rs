@@ -2,9 +2,9 @@ use currencies::Lpns;
 use currency::{CurrencyDef, MemberOf};
 use finance::{
     coin::Coin,
-    fraction::Fraction,
-    percent::{Percent, Units},
-    price,
+    error::Error as FinanceError,
+    percent::Percent100,
+    price::{self, Price},
     ratio::Rational,
     zero::Zero,
 };
@@ -85,7 +85,7 @@ where
         env: &Env,
         pending_deposit: Coin<Lpn>,
     ) -> Result<Option<Coin<Lpn>>> {
-        let min_utilization: Percent = self.config.min_utilization().percent();
+        let min_utilization = self.config.min_utilization();
 
         if min_utilization.is_zero() {
             Ok(None)
@@ -96,16 +96,13 @@ where
                 .map(|balance: Coin<Lpn>| {
                     if self.utilization(balance, total_due) > min_utilization {
                         // a followup from the above true value is (total_due * 100 / min_utilization) > (balance + total_due)
-                        Fraction::<Units>::of(
-                            &Rational::new(Percent::HUNDRED, min_utilization),
-                            total_due,
-                        ) - balance
-                            - total_due
+                        Rational::new(Percent100::HUNDRED, min_utilization)
+                            .checked_mul(total_due)
+                            .map(|res| res - balance - total_due)
                     } else {
-                        Coin::ZERO
+                        Some(Coin::ZERO)
                     }
                 })
-                .map(Some)
         }
     }
 
@@ -161,14 +158,26 @@ where
         env: &Env,
         amount_nlpn: Coin<NLpn>,
     ) -> Result<Coin<Lpn>> {
-        let price = self.calculate_price(deps, env, Coin::ZERO)?;
-        let amount_lpn = price::total(amount_nlpn, price);
-
-        if self.balance(&env.contract.address, deps.querier)? < amount_lpn {
-            Err(ContractError::NoLiquidity {})
-        } else {
-            Ok(amount_lpn)
-        }
+        self.calculate_price(deps, env, Coin::ZERO)
+            .and_then(|price| {
+                price::total(amount_nlpn, price.get()).ok_or(ContractError::Finance(
+                    FinanceError::overflow_err(
+                        "while calculating the total",
+                        amount_nlpn,
+                        price.get(),
+                    ),
+                ))
+            })
+            .and_then(|amount_lpn| {
+                self.balance(&env.contract.address, deps.querier)
+                    .and_then(|contract_balance| {
+                        if contract_balance < amount_lpn {
+                            Err(ContractError::NoLiquidity {})
+                        } else {
+                            Ok(amount_lpn)
+                        }
+                    })
+            })
     }
 
     pub fn query_quote(
@@ -177,7 +186,7 @@ where
         account: &Addr,
         querier: QuerierWrapper<'_>,
         now: &Timestamp,
-    ) -> Result<Option<Percent>> {
+    ) -> Result<Option<Percent100>> {
         let balance = self.balance(account, querier)?;
 
         if quote > balance {
@@ -293,11 +302,12 @@ where
             .map(|balance: Coin<Lpn>| balance + self.total_due(now))
     }
 
-    fn utilization(&self, balance: Coin<Lpn>, total_due: Coin<Lpn>) -> Percent {
+    fn utilization(&self, balance: Coin<Lpn>, total_due: Coin<Lpn>) -> Percent100 {
         if balance.is_zero() {
-            Percent::HUNDRED
+            Percent100::HUNDRED
         } else {
-            Percent::from_ratio(total_due, total_due + balance)
+            Percent100::from_ratio(total_due, total_due + balance)
+                .expect("TODO: propagate up the stack potential overflow")
         }
     }
 }
@@ -309,7 +319,7 @@ mod test {
     use finance::{
         coin::{Amount, Coin},
         duration::Duration,
-        percent::{Percent, bound::BoundToHundredPercent},
+        percent::Percent100,
         price::{self, Price},
         zero::Zero,
     };
@@ -332,10 +342,10 @@ mod test {
 
     type TheCurrency = Lpn;
 
-    const BASE_INTEREST_RATE: Percent = Percent::from_permille(70);
-    const UTILIZATION_OPTIMAL: Percent = Percent::from_permille(700);
-    const ADDON_OPTIMAL_INTEREST_RATE: Percent = Percent::from_permille(20);
-    const DEFAULT_MIN_UTILIZATION: BoundToHundredPercent = BoundToHundredPercent::ZERO;
+    const BASE_INTEREST_RATE: Percent100 = Percent100::from_permille(70);
+    const UTILIZATION_OPTIMAL: Percent100 = Percent100::from_permille(700);
+    const ADDON_OPTIMAL_INTEREST_RATE: Percent100 = Percent100::from_permille(20);
+    const DEFAULT_MIN_UTILIZATION: Percent100 = Percent100::ZERO;
 
     #[test]
     fn test_balance() {
@@ -421,7 +431,7 @@ mod test {
             .expect("can't query quote")
             .expect("should return some interest_rate");
 
-        assert_eq!(result, Percent::from_permille(136));
+        assert_eq!(result, Percent100::from_permille(136));
 
         lpp.try_open_loan(&mut deps.as_mut(), &env, loan, Coin::new(7_000_000))
             .expect("can't open loan");
@@ -442,7 +452,7 @@ mod test {
             .expect("can't query quote")
             .expect("should return some interest_rate");
 
-        assert_eq!(result, Percent::from_permille(136));
+        assert_eq!(result, Percent100::from_permille(136));
     }
 
     #[test]
@@ -458,12 +468,16 @@ mod test {
         let utilization_relative = ((lpp_balance - amount) * 1000) / amount;
         let utilization = utilization_relative.min(utilization_const);
 
-        let annual_interest_rate = Percent::from_permille(
+        println!(
+            "utilization_const:{}, utilization_relative:{}, utilization:{}",
+            utilization_const, utilization_relative, utilization
+        );
+        let annual_interest_rate = Percent100::from_permille(
             (base_rate + ((utilization * addon_rate) / optimal_rate))
                 .try_into()
                 .unwrap(),
         );
-
+        println!("annual_interest_rate:{}", annual_interest_rate);
         let mut deps = testing::mock_dependencies_with_balance(&[coin_cw(lpp_balance)]);
         let mut env = testing::mock_env();
         let admin = Addr::unchecked("admin");
@@ -775,9 +789,9 @@ mod test {
         Config::update_borrow_rate(
             deps.as_mut().storage,
             InterestRate::new(
-                Percent::from_percent(18),
-                Percent::from_percent(50),
-                Percent::from_percent(2),
+                Percent100::from_percent(18),
+                Percent100::from_percent(50),
+                Percent100::from_percent(2),
             )
             .expect("Couldn't construct interest rate value!"),
         )
@@ -814,7 +828,7 @@ mod test {
             .expect("can't query quote")
             .expect("should return some interest_rate");
 
-        assert_eq!(annual_interest_rate, Percent::from_permille(220));
+        assert_eq!(annual_interest_rate, Percent100::from_permille(220));
 
         lpp.try_open_loan(&mut deps.as_mut(), &env, loan.clone(), Coin::new(5_000_000))
             .expect("can't open loan");
@@ -911,7 +925,7 @@ mod test {
     mod min_utilization {
         use finance::{
             coin::{Amount, Coin},
-            percent::{Percent, bound::BoundToHundredPercent},
+            percent::Percent100,
             zero::Zero,
         };
         use platform::contract::Code;
@@ -924,26 +938,29 @@ mod test {
 
         use super::{super::LiquidityPool, TheCurrency, coin_cw};
 
-        const FIFTY_PERCENT_MIN_UTILIZATION: fn() -> BoundToHundredPercent =
-            || Percent::from_permille(500).try_into().unwrap();
+        const FIFTY_PERCENT_MIN_UTILIZATION: fn() -> Percent100 = || Percent100::from_permille(500);
 
         fn test_case(
             borrowed: Amount,
             lpp_balance: Amount,
-            min_utilization: BoundToHundredPercent,
+            min_utilization: Percent100,
             expected_limit: Option<Amount>,
         ) {
             let mut total: Total<TheCurrency> = Total::new();
 
             total
-                .borrow(Timestamp::default(), borrowed.into(), Percent::ZERO)
+                .borrow(Timestamp::default(), borrowed.into(), Percent100::ZERO)
                 .unwrap();
 
             let lpp: LiquidityPool<TheCurrency> = LiquidityPool {
                 config: ApiConfig::new(
                     Code::unchecked(0xDEADC0DE_u64),
-                    InterestRate::new(Percent::ZERO, Percent::from_permille(500), Percent::HUNDRED)
-                        .unwrap(),
+                    InterestRate::new(
+                        Percent100::ZERO,
+                        Percent100::from_permille(500),
+                        Percent100::HUNDRED,
+                    )
+                    .unwrap(),
                     min_utilization,
                 ),
                 total,
@@ -963,22 +980,22 @@ mod test {
 
         #[test]
         fn test_deposit_capacity_no_min_util_below_50() {
-            test_case(50, 100, BoundToHundredPercent::ZERO, None);
+            test_case(50, 100, Percent100::ZERO, None);
         }
 
         #[test]
         fn test_deposit_capacity_no_min_util_at_50() {
-            test_case(50, 50, BoundToHundredPercent::ZERO, None);
+            test_case(50, 50, Percent100::ZERO, None);
         }
 
         #[test]
         fn test_deposit_capacity_no_min_util_above_50() {
-            test_case(100, 50, BoundToHundredPercent::ZERO, None);
+            test_case(100, 50, Percent100::ZERO, None);
         }
 
         #[test]
         fn test_deposit_capacity_no_min_util_at_100() {
-            test_case(50, 0, BoundToHundredPercent::ZERO, None);
+            test_case(50, 0, Percent100::ZERO, None);
         }
 
         #[test]

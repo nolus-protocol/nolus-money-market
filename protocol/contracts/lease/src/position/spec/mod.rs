@@ -1,4 +1,7 @@
-use std::{fmt::Debug, ops::Add};
+use std::{
+    fmt::Debug,
+    ops::{Add, Div, Rem},
+};
 
 use currency::{CurrencyDef, MemberOf};
 use finance::{
@@ -9,6 +12,7 @@ use finance::{
     liability::{Liability, Zone},
     percent::Percent,
     price::{self},
+    ratio::CheckedMul,
     zero::Zero,
 };
 
@@ -134,7 +138,10 @@ impl Spec {
             PositionError::InsufficientTransactionAmount,
         )
         .and_then(|()| {
-            let borrow = self.liability.init_borrow_amount(downpayment, may_max_ltd);
+            let borrow = self
+                .liability
+                .init_borrow_amount(downpayment, may_max_ltd)
+                .expect("TODO: propagate up the stack potential overflow");
             self.validate_transaction(borrow, one, PositionError::InsufficientTransactionAmount)
                 .and_then(|()| {
                     self.validate_asset(
@@ -279,9 +286,10 @@ impl Spec {
         TransactionC: 'static,
         ErrFn: FnOnce(LpnCoinDTO) -> PositionError,
     {
-        let amount_in_lpn = price::total(amount, transaction_currency_in_lpn);
+        let amount = price::total(amount, transaction_currency_in_lpn)
+            .expect("TODO: propagate up the stack potential overflow");
 
-        if amount_in_lpn >= self.min_transaction {
+        if amount >= self.min_transaction {
             Ok(())
         } else {
             Err(err_fn(self.min_transaction.into()))
@@ -298,9 +306,10 @@ impl Spec {
         TransactionC: 'static,
         ErrFn: FnOnce(LpnCoinDTO) -> PositionError,
     {
-        let asset_amount_in_lpn = price::total(asset_amount, transaction_currency_in_lpn);
+        let asset_amount = price::total(asset_amount, transaction_currency_in_lpn)
+            .expect("TODO: propagate up the stack potential overflow");
 
-        if asset_amount_in_lpn >= self.min_asset {
+        if asset_amount >= self.min_asset {
             Ok(())
         } else {
             Err(err_fn(self.min_asset.into()))
@@ -316,7 +325,10 @@ impl Spec {
     where
         Asset: 'static,
     {
-        let liquidation_amount = self.liability.amount_to_liquidate(asset, total_due);
+        let liquidation_amount = self
+            .liability
+            .amount_to_liquidate(asset, total_due)
+            .expect("TODO: propagate up the stack potential overflow");
         self.may_ask_liquidation(
             asset,
             Cause::Liability {
@@ -395,12 +407,13 @@ impl Spec {
         due.overdue_collection(self.min_transaction)
     }
 
-    fn ltv<P>(total_due: P, lease_asset: P) -> Percent
+    fn ltv<P>(total_due: P, lease_asset: P) -> Percent100
     where
-        P: Copy + Debug + PartialEq + Zero,
-        Percent: Fractionable<P>,
+        P: Copy + Debug + Div + Ord + PartialEq + PartialOrd + Rem<Output = P> + Zero,
+        <P as Div>::Output: CheckedMul<Percent100, Output = Percent100>,
+        Percent100: Fractionable<P>,
     {
-        Percent::from_ratio(total_due, lease_asset)
+        Percent100::from_ratio(total_due, lease_asset).expect("LTV must not exceed 100%")
     }
 
     fn zone<Asset>(&self, asset: Coin<Asset>, due_asset: Coin<Asset>) -> Zone
@@ -430,5 +443,6 @@ impl Spec {
         Asset: 'static,
     {
         price::total(lpn_coin, asset_in_lpns.inv())
+            .expect("TODO: propagate up the stack potential overflow")
     }
 }

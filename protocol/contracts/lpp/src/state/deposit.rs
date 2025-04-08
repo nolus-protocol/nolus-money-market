@@ -75,7 +75,8 @@ impl Deposit {
         let mut globals = Self::GLOBALS.may_load(storage)?.unwrap_or_default();
         self.update_rewards(&globals);
 
-        let deposited_nlpn = price::total(amount_lpn, price.inv());
+        let deposited_nlpn = price::total(amount_lpn, price.get().inv())
+            .ok_or(ContractError::OverflowError("Deposited nlpn overflow"))?;
         self.data.deposited_nlpn += deposited_nlpn;
 
         Self::DEPOSITS.save(storage, self.addr.clone(), &self.data)?;
@@ -151,12 +152,18 @@ impl Deposit {
 
         let global_reward = globals
             .reward_per_token
-            .map(|price| price::total(deposit.deposited_nlpn, price))
+            .map(|price| {
+                price::total(deposit.deposited_nlpn, price)
+                    .expect("TODO: propagate up the stack potential overflow")
+            })
             .unwrap_or_default();
 
         let deposit_reward = deposit
             .reward_per_token
-            .map(|price| price::total(deposit.deposited_nlpn, price))
+            .map(|price| {
+                price::total(deposit.deposited_nlpn, price)
+                    .expect("TODO: propagate up the stack potential overflow")
+            })
             .unwrap_or_default();
 
         deposit.pending_rewards_nls + global_reward - deposit_reward

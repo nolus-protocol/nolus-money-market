@@ -176,8 +176,8 @@ pub(crate) mod tests {
     use currencies::{Lpn, testing::PaymentC7};
     use currency::{Currency, Group, MemberOf};
     use finance::{
-        coin::Coin, duration::Duration, fraction::Fraction, liability::Liability, percent::Percent,
-        price::Price,
+        coin::Coin, duration::Duration, fraction::Fraction, liability::Liability,
+        percent::Percent100, price::Price,
     };
     use lpp::{
         loan::RepayShares,
@@ -206,12 +206,12 @@ pub(crate) mod tests {
     const CUSTOMER: &str = "customer";
     const LEASE_ADDR: &str = "lease_addr";
     const ORACLE_ADDR: &str = "oracle_addr";
-    const MARGIN_INTEREST_RATE: Percent = Percent::from_permille(23);
+    const MARGIN_INTEREST_RATE: Percent100 = Percent100::from_permille(23);
     pub(super) const LEASE_START: Timestamp = Timestamp::from_nanos(100);
     pub(super) const DUE_PERIOD: Duration = Duration::from_days(100);
-    pub(crate) const FIRST_LIQ_WARN: Percent = Percent::from_permille(730);
-    pub(super) const SECOND_LIQ_WARN: Percent = Percent::from_permille(750);
-    pub(super) const THIRD_LIQ_WARN: Percent = Percent::from_permille(780);
+    pub(crate) const FIRST_LIQ_WARN: Percent100 = Percent100::from_permille(730);
+    pub(super) const SECOND_LIQ_WARN: Percent100 = Percent100::from_permille(750);
+    pub(super) const THIRD_LIQ_WARN: Percent100 = Percent100::from_permille(780);
     pub(super) const RECHECK_TIME: Duration = Duration::from_hours(24);
     pub(super) const MIN_TRANSACTION: Coin<TestLpn> = Coin::new(10_000);
     pub(crate) type TestLpn = Lpn;
@@ -243,7 +243,7 @@ pub(crate) mod tests {
             self.loan.repay(by, repayment)
         }
 
-        fn annual_interest_rate(&self) -> Percent {
+        fn annual_interest_rate(&self) -> Percent100 {
             self.loan.annual_interest_rate
         }
     }
@@ -320,12 +320,12 @@ pub(crate) mod tests {
         let loan = loan.into();
         let loan = Loan::new(loan, LEASE_START, MARGIN_INTEREST_RATE, due_period);
         let liability = Liability::new(
-            Percent::from_percent(65),
-            Percent::from_percent(70),
+            Percent100::from_percent(65),
+            Percent100::from_percent(70),
             FIRST_LIQ_WARN,
             SECOND_LIQ_WARN,
             THIRD_LIQ_WARN,
-            Percent::from_percent(80),
+            Percent100::from_percent(80),
             RECHECK_TIME,
         );
         let position_spec =
@@ -350,7 +350,7 @@ pub(crate) mod tests {
     #[test]
     fn state_opened() {
         let lease_amount = coin(1000);
-        let interest_rate = Percent::from_permille(50);
+        let interest_rate = Percent100::from_permille(50);
         let overdue_collect_in = Duration::from_days(500); //=min_transaction/principal_due/(interest+margin)*1000*365
 
         let principal_due = lpn_coin(100_000);
@@ -363,7 +363,7 @@ pub(crate) mod tests {
 
         let state_since_open = Duration::from_nanos(150);
         let state_at = LEASE_START.add(state_since_open);
-        let take_profit = Percent::from_percent(20);
+        let take_profit = Percent100::from_percent(20);
         lease
             .price_of_lease_currency()
             .and_then(|asset_in_lpns| {
@@ -424,16 +424,19 @@ pub(crate) mod tests {
 
     fn assert_state(
         principal_due: Coin<TestLpn>,
-        interest_rate: Percent,
+        interest_rate: Percent100,
         lease_amount: Coin<TestCurrency>,
-        take_profit: Percent,
+        take_profit: Percent100,
         state_at: Timestamp,
         lease: &TestLease,
         due_projection: Duration,
     ) {
-        let exp_due_margin =
-            due_projection.annualized_slice_of(MARGIN_INTEREST_RATE.of(principal_due));
-        let exp_due_interest = due_projection.annualized_slice_of(interest_rate.of(principal_due));
+        let exp_due_margin = due_projection
+            .annualized_slice_of(MARGIN_INTEREST_RATE.of(principal_due))
+            .unwrap();
+        let exp_due_interest = due_projection
+            .annualized_slice_of(interest_rate.of(principal_due))
+            .unwrap();
         assert_eq!(
             State {
                 amount: lease_amount,
@@ -442,10 +445,15 @@ pub(crate) mod tests {
                 principal_due,
                 overdue_margin: lpn_coin(0),
                 overdue_interest: lpn_coin(0),
-                overdue_collect_in: Duration::YEAR.into_slice_per_ratio(
-                    MIN_TRANSACTION - exp_due_interest - exp_due_margin,
-                    (interest_rate + MARGIN_INTEREST_RATE).of(principal_due)
-                ),
+                overdue_collect_in: Duration::YEAR
+                    .into_slice_per_ratio(
+                        MIN_TRANSACTION - exp_due_interest - exp_due_margin,
+                        interest_rate
+                            .checked_add(MARGIN_INTEREST_RATE)
+                            .unwrap()
+                            .of(principal_due)
+                    )
+                    .unwrap(),
                 due_margin: exp_due_margin,
                 due_interest: exp_due_interest,
                 due_projection,

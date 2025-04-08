@@ -127,7 +127,7 @@ mod test {
     use std::ops::DerefMut as _;
 
     use access_control::ContractOwnerAccess;
-    use finance::percent::{Percent, bound::BoundToHundredPercent};
+    use finance::percent::Percent100;
     use platform::contract::Code;
     use sdk::cosmwasm_std::{Addr, Storage};
 
@@ -135,12 +135,12 @@ mod test {
 
     use super::LiquidityPool;
 
-    const BASE_INTEREST_RATE: Percent = Percent::from_permille(70);
-    const UTILIZATION_OPTIMAL: Percent = Percent::from_permille(700);
-    const ADDON_OPTIMAL_INTEREST_RATE: Percent = Percent::from_permille(20);
-    const DEFAULT_MIN_UTILIZATION: BoundToHundredPercent = BoundToHundredPercent::ZERO;
+    const BASE_INTEREST_RATE: Percent100 = Percent100::from_permille(70);
+    const UTILIZATION_OPTIMAL: Percent100 = Percent100::from_permille(700);
+    const ADDON_OPTIMAL_INTEREST_RATE: Percent100 = Percent100::from_permille(20);
+    const DEFAULT_MIN_UTILIZATION: Percent100 = Percent100::ZERO;
 
-    fn setup_storage(mut storage: &mut dyn Storage, min_utilization: BoundToHundredPercent) {
+    fn setup_storage(mut storage: &mut dyn Storage, min_utilization: Percent100) {
         ContractOwnerAccess::new(storage.deref_mut())
             .grant_to(&Addr::unchecked("admin"))
             .unwrap();
@@ -394,10 +394,7 @@ mod test {
     }
 
     mod min_utilization {
-        use finance::{
-            coin::Amount,
-            percent::{Percent, bound::BoundToHundredPercent},
-        };
+        use finance::{coin::Amount, percent::Percent100};
         use sdk::cosmwasm_std::{
             Addr, MessageInfo,
             testing::{self, MOCK_CONTRACT_ADDR},
@@ -411,7 +408,7 @@ mod test {
             lpp_balance_at_deposit: Amount,
             borrowed: Amount,
             deposit: Amount,
-            min_utilization: BoundToHundredPercent,
+            min_utilization: Percent100,
             expect_error: bool,
         ) {
             let mut deps = testing::mock_dependencies();
@@ -452,73 +449,37 @@ mod test {
 
         #[test]
         fn test_no_leases() {
-            test_case(
-                0,
-                0,
-                100,
-                Percent::from_permille(500).try_into().unwrap(),
-                true,
-            );
+            test_case(0, 0, 100, Percent100::from_permille(500), true);
         }
 
         #[test]
         fn test_below_before_deposit() {
-            test_case(
-                100,
-                0,
-                100,
-                Percent::from_permille(500).try_into().unwrap(),
-                true,
-            );
+            test_case(100, 0, 100, Percent100::from_permille(500), true);
         }
 
         #[test]
         fn test_below_on_pending_deposit() {
-            test_case(
-                50,
-                50,
-                100,
-                Percent::from_permille(500).try_into().unwrap(),
-                true,
-            );
+            test_case(50, 50, 100, Percent100::from_permille(500), true);
         }
 
         #[test]
         fn test_at_limit_on_pending_deposit() {
-            test_case(
-                0,
-                50,
-                50,
-                Percent::from_permille(500).try_into().unwrap(),
-                false,
-            );
+            test_case(0, 50, 50, Percent100::from_permille(500), false);
         }
 
         #[test]
         fn test_at_limit_after_deposit() {
-            test_case(
-                0,
-                50,
-                50,
-                Percent::from_permille(500).try_into().unwrap(),
-                false,
-            );
+            test_case(0, 50, 50, Percent100::from_permille(500), false);
         }
 
         #[test]
         fn test_above_after_deposit() {
-            test_case(
-                0,
-                100,
-                50,
-                Percent::from_permille(500).try_into().unwrap(),
-                false,
-            );
+            test_case(0, 100, 50, Percent100::from_permille(500), false);
         }
 
         #[test]
         fn test_uncapped() {
-            test_case(50, 0, 50, BoundToHundredPercent::ZERO, false);
+            test_case(50, 0, 50, Percent100::ZERO, false);
         }
     }
 }

@@ -77,7 +77,7 @@ pub(super) fn query_rewards(storage: &dyn Storage, addr: Addr) -> Result<Rewards
 #[cfg(test)]
 mod test {
     use access_control::ContractOwnerAccess;
-    use finance::percent::{Percent, bound::BoundToHundredPercent};
+    use finance::percent::Percent100;
     use platform::contract::Code;
     use sdk::cosmwasm_std::{
         Addr,
@@ -95,10 +95,10 @@ mod test {
         lpp::LiquidityPool,
     };
 
-    const BASE_INTEREST_RATE: Percent = Percent::from_permille(70);
-    const UTILIZATION_OPTIMAL: Percent = Percent::from_permille(700);
-    const ADDON_OPTIMAL_INTEREST_RATE: Percent = Percent::from_permille(20);
-    const DEFAULT_MIN_UTILIZATION: BoundToHundredPercent = BoundToHundredPercent::ZERO;
+    const BASE_INTEREST_RATE: Percent100 = Percent100::from_permille(70);
+    const UTILIZATION_OPTIMAL: Percent100 = Percent100::from_permille(700);
+    const ADDON_OPTIMAL_INTEREST_RATE: Percent100 = Percent100::from_permille(20);
+    const DEFAULT_MIN_UTILIZATION: Percent100 = Percent100::ZERO;
 
     #[test]
     fn test_claim_zero_rewards() {

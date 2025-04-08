@@ -6,7 +6,6 @@ use std::{
 
 use gcd::Gcd;
 
-use sdk::schemars::{self, JsonSchema};
 use serde::{Deserialize, Serialize};
 
 use crate::{fraction::Fraction, fractionable::Fractionable, zero::Zero};
@@ -45,7 +44,7 @@ impl<U> Fraction<U> for Ratio<U> {
     }
 }
 
-#[derive(Clone, Copy, Debug, Deserialize, Eq, JsonSchema, Serialize)]
+#[derive(Clone, Copy, Debug, Deserialize, Eq, Serialize)]
 pub struct Rational<U> {
     nominator: U,
     denominator: U,

@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use finance::{duration::Duration, fraction::Fraction, percent::Percent};
+use finance::{duration::Duration, fraction::Fraction, percent::Percent100};
 use sdk::cosmwasm_std::Timestamp;
 
 use crate::error::{self, PriceFeedsError};
@@ -10,7 +10,7 @@ use crate::error::{self, PriceFeedsError};
 #[serde(try_from = "unchecked::Config")]
 #[serde(into = "unchecked::Config")]
 pub struct Config {
-    min_feeders: Percent,
+    min_feeders: Percent100,
     sample_period: Duration,
     /// The number of samples to take into account on price calculation
     ///
@@ -18,26 +18,26 @@ pub struct Config {
     samples_number: u16,
     /// transient property equals to `sample_period` * `samples_number`
     feed_validity: Duration,
-    discount_factor: Percent,
+    discount_factor: Percent100,
 }
 
 impl Config {
     #[cfg(any(test, feature = "testing"))]
     pub fn new(
-        min_feeders: Percent,
+        min_feeders: Percent100,
         sample_period: Duration,
         samples_number: u16,
-        discount_factor: Percent,
+        discount_factor: Percent100,
     ) -> Self {
         Self::new_private(min_feeders, sample_period, samples_number, discount_factor)
             .expect("reasonable input test data")
     }
 
     fn new_private(
-        min_feeders: Percent,
+        min_feeders: Percent100,
         sample_period: Duration,
         samples_number: u16,
-        discount_factor: Percent,
+        discount_factor: Percent100,
     ) -> Result<Self, PriceFeedsError> {
         if let Some(feed_validity) = sample_period.checked_mul(samples_number) {
             Self {
@@ -79,13 +79,13 @@ impl Config {
         ret
     }
 
-    pub fn discount_factor(&self) -> Percent {
+    pub fn discount_factor(&self) -> Percent100 {
         self.discount_factor
     }
 
     fn check_invariant(self) -> Result<Self, PriceFeedsError> {
         error::config_error_if(
-            self.min_feeders == Percent::ZERO || self.min_feeders > Percent::HUNDRED,
+            self.min_feeders == Percent100::ZERO || self.min_feeders > Percent100::HUNDRED,
             "The minumum feeders should be greater than 0 and less or equal to 100%",
         )?;
 
@@ -103,7 +103,7 @@ impl Config {
         debug_assert!(self.sample_period <= self.feed_validity);
 
         error::config_error_if(
-            self.discount_factor == Percent::ZERO || self.discount_factor > Percent::HUNDRED,
+            self.discount_factor == Percent100::ZERO || self.discount_factor > Percent100::HUNDRED,
             "The discounting factor should be greater than 0 and less or equal to 100%",
         )?;
 
@@ -114,7 +114,7 @@ impl Config {
 mod unchecked {
     use serde::{Deserialize, Serialize};
 
-    use finance::{duration::Duration, percent::Percent};
+    use finance::{duration::Duration, percent::Percent100};
 
     use crate::error::PriceFeedsError;
 
@@ -122,10 +122,10 @@ mod unchecked {
 
     #[derive(Serialize, Deserialize)]
     pub(super) struct Config {
-        min_feeders: Percent,
+        min_feeders: Percent100,
         sample_period_secs: u32,
         samples_number: u16,
-        discount_factor: Percent,
+        discount_factor: Percent100,
     }
 
     impl From<ValidatedConfig> for Config {
@@ -162,7 +162,7 @@ mod unchecked {
 
 #[cfg(test)]
 mod test {
-    use finance::{duration::Duration, percent::Percent};
+    use finance::{duration::Duration, percent::Percent100};
     use platform::tests as platform_tests;
     use sdk::cosmwasm_std::{StdError, Timestamp, from_json};
 
@@ -171,10 +171,10 @@ mod test {
     #[test]
     fn feed_valid_since() {
         let c = Config::new(
-            Percent::from_permille(1),
+            Percent100::from_permille(1),
             Duration::from_secs(5),
             12,
-            Percent::from_permille(1000),
+            Percent100::from_permille(1000),
         );
         assert_eq!(
             Timestamp::from_seconds(0),
@@ -200,10 +200,10 @@ mod test {
 
     fn min_feders_impl(min_feeders: u16, total: usize, exp: usize) {
         let c = Config::new(
-            Percent::from_percent(min_feeders),
+            Percent100::from_percent(min_feeders),
             Duration::HOUR,
             1,
-            Percent::from_percent(75),
+            Percent100::from_percent(75),
         );
         assert_eq!(exp, c.min_feeders(total));
     }
@@ -258,10 +258,10 @@ mod test {
 
     fn serde_impl(min_feeders: u32, sample_period: u32, samples_number: u16, discount_factor: u32) {
         let c = Config::new(
-            Percent::from_permille(min_feeders),
+            Percent100::from_permille(min_feeders),
             Duration::from_secs(sample_period),
             samples_number,
-            Percent::from_permille(discount_factor),
+            Percent100::from_permille(discount_factor),
         );
         assert_eq!(Ok(c.clone()), platform_tests::ser_de(&c));
     }
@@ -274,10 +274,10 @@ mod test {
     ) {
         assert_eq!(
             Config::new(
-                Percent::from_permille(min_feeders),
+                Percent100::from_permille(min_feeders),
                 Duration::from_secs(sample_period),
                 samples_number,
-                Percent::from_permille(discount_factor),
+                Percent100::from_permille(discount_factor),
             ),
             deserialize(min_feeders, sample_period, samples_number, discount_factor).unwrap()
         );

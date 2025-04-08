@@ -1,7 +1,4 @@
-use sdk::{
-    cosmwasm_std::Uint256,
-    schemars::{self, JsonSchema},
-};
+use sdk::cosmwasm_std::Uint256;
 use serde::{Deserialize, Serialize};
 use std::{
     fmt::{Debug, Display, Formatter, Result as FmtResult, Write},
@@ -19,9 +16,7 @@ use crate::{
 
 use super::{Percent100, Units};
 
-#[derive(
-    Clone, Copy, Debug, Default, Deserialize, Eq, JsonSchema, Ord, PartialEq, PartialOrd, Serialize,
-)]
+#[derive(Clone, Copy, Debug, Default, Deserialize, Eq, Ord, PartialEq, PartialOrd, Serialize)]
 #[serde(try_from = "Units", into = "Units")]
 pub struct BoundPercent<B>
 where
@@ -280,14 +275,14 @@ pub trait UpperBound {
     const BOUND: Units;
 }
 
-#[derive(Copy, Clone, Debug, Default, Eq, JsonSchema, Ord, PartialEq, PartialOrd)]
+#[derive(Copy, Clone, Debug, Default, Eq, Ord, PartialEq, PartialOrd)]
 pub struct HundredBound;
 
 impl UpperBound for HundredBound {
     const BOUND: Units = 1000;
 }
 
-#[derive(Copy, Clone, Eq, JsonSchema, Ord, PartialEq, PartialOrd)]
+#[derive(Copy, Clone, Eq, Ord, PartialEq, PartialOrd)]
 #[cfg_attr(any(test, feature = "testing"), derive(Debug))]
 pub struct MaxBound;
 

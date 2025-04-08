@@ -1,4 +1,4 @@
-use finance::{coin::Coin, duration::Duration, percent::Percent};
+use finance::{coin::Coin, duration::Duration, percent::Percent100};
 use sdk::cosmwasm_std::Timestamp;
 
 use crate::{api::query::opened::ClosePolicy, finance::LpnCoin};
@@ -6,8 +6,8 @@ use crate::{api::query::opened::ClosePolicy, finance::LpnCoin};
 #[cfg_attr(feature = "contract_testing", derive(Debug, Eq, PartialEq))]
 pub struct State<Asset> {
     pub amount: Coin<Asset>,
-    pub interest_rate: Percent,
-    pub interest_rate_margin: Percent,
+    pub interest_rate: Percent100,
+    pub interest_rate_margin: Percent100,
     pub principal_due: LpnCoin,
     pub overdue_margin: LpnCoin,
     pub overdue_interest: LpnCoin,
