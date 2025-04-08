@@ -161,7 +161,7 @@ where
             &env.contract.address,
         );
         if res.is_err() {
-            return Err(res.unwrap_err());
+            // TODO
         }
 
         self.try_complete(querier, env)
