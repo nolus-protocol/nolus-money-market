@@ -1,4 +1,4 @@
-use access_control::AddressDelivery;
+use access_control::GrantedAddress;
 use currency::{CurrencyDef, never};
 use oracle_platform::GrantedOracle;
 use serde::{Deserialize, Serialize};
@@ -6,10 +6,10 @@ use serde::{Deserialize, Serialize};
 use access_control::Sender;
 use dex::Enterable;
 use finance::{coin::IntoDTO, duration::Duration};
-use oracle_platform::stub::OracleDelivery;
+use oracle_platform::stub::GrantedOracle;
 use platform::{bank, batch::Emitter, message::Response as MessageResponse};
 use sdk::cosmwasm_std::{Coin as CwCoin, Env, MessageInfo, QuerierWrapper, Timestamp};
-use timealarms::stub::TimeAlarmDelivery;
+use timealarms::stub::GrantedTimeAlarm;
 
 use crate::{
     api::{
