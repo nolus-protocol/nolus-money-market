@@ -11,7 +11,7 @@ use platform::{
     message::Response as MessageResponse,
 };
 use sdk::cosmwasm_std::{Env, QuerierWrapper, Timestamp};
-use timealarms::stub::TimeAlarmDelivery;
+use timealarms::stub::GrantedTimeAlarm;
 
 use crate::{
     Contract, ContractInSwap, Enterable, Stage, SwapOutputTask, SwapTask as SwapTaskT,
@@ -235,10 +235,13 @@ where
     }
 
     fn on_time_alarm(self, querier: QuerierWrapper<'_>, env: Env) -> HandlerResult<Self> {
-        access_control::check(
-            &TimeAlarmDelivery::new(self.spec.time_alarm()),
+        let res = access_control::check(
+            &GrantedTimeAlarm::new(self.spec.time_alarm()),
             &env.contract.address,
-        )?;
+        );
+        if res.is_err() {
+            return Err(res.unwrap_err());
+        }
 
         self.try_complete(querier, env)
     }
