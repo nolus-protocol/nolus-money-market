@@ -1,6 +1,6 @@
 use std::ops::{Deref, DerefMut};
 
-use access_control::{ContractOwnerAccess, SingleUserAccess, AddressDelivery};
+use access_control::{AddressDelivery, ContractOwnerAccess, SingleUserAccess};
 use dex::{ContinueResult as DexResult, Handler as _, Response as DexResponse};
 use oracle_platform::OracleRef;
 use platform::{
