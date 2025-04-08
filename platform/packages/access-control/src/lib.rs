@@ -29,17 +29,17 @@ where
     }
 }
 
-pub struct AddressDelivery<'a> {
+pub struct GrantedAddress<'a> {
     addr: &'a Addr,
 }
 
-impl<'a> AddressDelivery<'a> {
+impl<'a> GrantedAddress<'a> {
     pub fn new(addr: &'a Addr) -> Self {
         Self { addr } 
     }
 }
 
-impl AccessPermission for AddressDelivery<'_> {
+impl AccessPermission for GrantedAddress<'_> {
     fn is_granted_to(&self, caller: &Addr) -> bool {
         self.addr == caller
     }
@@ -68,9 +68,13 @@ where
         self.storage_item
             .load(self.storage.deref())
             .map_err(Into::into)
+<<<<<<< HEAD
             .and_then(|granted_to| {
                 check(&SingleUserPermission::new(&granted_to), info)
             })
+=======
+            .and_then(|granted_to| check(&GrantedAddress::new(&granted_to), user))
+>>>>>>> 5b03cdaf5 (refactor: better naming)
     }
 }
 
@@ -94,7 +98,11 @@ mod tests {
     use sdk::cosmwasm_std::{Addr, ContractInfo, MessageInfo, Storage, testing::MockStorage};
 
     use crate::{
+<<<<<<< HEAD
         SingleUserAccess,
+=======
+        GrantedAddress, SingleUserAccess,
+>>>>>>> 5b03cdaf5 (refactor: better naming)
         error::{Error, Result},
         permissions::{SameContractOnly, SingleUserPermission},
     };
