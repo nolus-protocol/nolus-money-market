@@ -54,17 +54,17 @@ where
     }
 }
 
-pub struct AddressDelivery<'a> {
+pub struct GrantedAddress<'a> {
     addr: &'a Addr,
 }
 
-impl<'a> AddressDelivery<'a> {
+impl<'a> GrantedAddress<'a> {
     pub fn new(addr: &'a Addr) -> Self {
         Self { addr } 
     }
 }
 
-impl AccessPermission for AddressDelivery<'_> {
+impl AccessPermission for GrantedAddress<'_> {
     fn is_granted_to(&self, caller: &Addr) -> bool {
         self.addr == caller
     }
@@ -123,7 +123,7 @@ mod tests {
     use sdk::cosmwasm_std::{Addr, ContractInfo, Storage, testing::MockStorage};
 
     use crate::{
-        Sender, SingleUserAccess,
+        GrantedAddress, Sender, SingleUserAccess,
         error::{Error, Result},
         permissions::{SameContractOnly, SingleUserPermission},
     };
