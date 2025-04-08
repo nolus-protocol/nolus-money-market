@@ -86,8 +86,17 @@ where
     pub fn checked_add(self, other: Self) -> FinanceResult<Self> {
         self.units
             .checked_add(other.units)
-            .map(Self::from_permille)
             .ok_or(Error::overflow_err("while adding", self, other))
+            .and_then(|sum| {
+                if sum <= B::BOUND {
+                    Ok(Self::from_permille(sum))
+                } else {
+                    Err(Error::UpperBoundCrossed {
+                        bound: HundredBound::BOUND,
+                        value: sum,
+                    })
+                }
+            })
     }
 
     pub fn checked_sub(self, other: Self) -> FinanceResult<Self> {

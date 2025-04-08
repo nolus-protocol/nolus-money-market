@@ -108,10 +108,13 @@ pub(super) mod test {
     }
 
     #[test]
-    #[should_panic]
     fn add_overflow() {
-        let _ = Percent100::HUNDRED.checked_add(from(1));
-        let _ = Percent100::from_permille(Units::MAX).checked_add(Percent100::from_permille(1));
+        assert!(Percent100::HUNDRED.checked_add(from(1)).is_err());
+        assert!(
+            Percent::from_permille(Units::MAX)
+                .checked_add(Percent::from_permille(1))
+                .is_err()
+        );
     }
 
     #[test]
