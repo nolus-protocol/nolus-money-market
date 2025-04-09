@@ -105,10 +105,7 @@ where
         let prices_number = self.sample_prices.len();
         if prices_number > 0 {
             let mut values = self.sample_prices.values();
-            let first = values
-                .next()
-                .expect("should have been checked that there is at least one member");
-
+            let first = values.next()?;
             let sum = values.fold(*first, |acc, current| acc + *current);
             let denominator = u32::try_from(prices_number).ok()?;
             let part: Ratio<u32> = Ratio::new(1, denominator);
