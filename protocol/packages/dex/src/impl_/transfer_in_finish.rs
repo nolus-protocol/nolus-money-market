@@ -2,6 +2,7 @@ use std::fmt::{Display, Formatter, Result as FmtResult};
 use std::marker::PhantomData;
 
 use currency::{CurrencyDef, MemberOf};
+use crate::Error as DexError;
 use finance::duration::Duration;
 use serde::{Deserialize, Serialize};
 
@@ -238,9 +239,10 @@ where
         access_control::check(
             &GrantedTimeAlarm::new(self.spec.time_alarm()),
             &env.contract.address,
-        ).map_or_else(
-            |err| Err(DexError::Unauthorized(err).into()),
-            || self.try_complete(querier, env),
+        )
+        .map_or_else(
+            |err| DexError::Unauthorized(err).into(),
+            |_| self.try_complete(querier, env),
         )
     }
 }
