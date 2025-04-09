@@ -15,10 +15,7 @@ use currency::{Currency, CurrencyDef, Group, MemberOf};
 
 use crate::{
     duration::Duration,
-    percent::{
-        Units as PercentUnits,
-        bound::{BoundPercent, UpperBound},
-    },
+    percent::{Units as PercentUnits, bound::BoundPercent},
     ratio::{self, CheckedAdd, CheckedDiv, CheckedMul, Rational},
     zero::Zero,
 };
@@ -65,13 +62,10 @@ impl CheckedMul<PercentUnits> for Amount {
     }
 }
 
-impl<B> CheckedMul<BoundPercent<B>> for Amount
-where
-    B: Clone + UpperBound,
-{
-    type Output = BoundPercent<B>;
+impl<const UPPER_BOUND: PercentUnits> CheckedMul<BoundPercent<UPPER_BOUND>> for Amount {
+    type Output = BoundPercent<UPPER_BOUND>;
 
-    fn checked_mul(self, rhs: BoundPercent<B>) -> Option<Self::Output> {
+    fn checked_mul(self, rhs: BoundPercent<UPPER_BOUND>) -> Option<Self::Output> {
         checked_mul_and_convert(self, rhs, |result| {
             result.try_into().ok().map(BoundPercent::from_permille)
         })
