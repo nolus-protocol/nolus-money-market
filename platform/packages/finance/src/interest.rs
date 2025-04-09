@@ -8,7 +8,6 @@ use crate::{
     duration::Duration,
     fraction::Fraction,
     fractionable::Fractionable,
-    percent::{Percent100, Units},
     ratio::{CheckedAdd, CheckedMul},
     zero::Zero,
 };
@@ -27,14 +26,15 @@ where
 /// Computes how much time this payment covers, return.0, and the change, return.1
 ///
 /// The actual payment is equal to the payment minus the returned change.
-pub fn pay<P>(rate: Percent100, principal: P, payment: P, period: Duration) -> Option<(Duration, P)>
+pub fn pay<U, F, P>(rate: F, principal: P, payment: P, period: Duration) -> Option<(Duration, P)>
 where
+    F: Fraction<U>,
     P: CheckedAdd<Output = P>
         + Copy
         + Debug
         + Div
         + Fractionable<Duration>
-        + Fractionable<Units>
+        + Fractionable<U>
         + Ord
         + PartialEq
         + Rem<Output = P>
@@ -184,7 +184,7 @@ mod tests {
         exp_paid_for: Duration,
         exp_change: MyCoin,
     ) {
-        let (paid_for, change) = super::pay::<MyCoin>(rate, principal, payment, pay_for).unwrap();
+        let (paid_for, change) = super::pay(rate, principal, payment, pay_for).unwrap();
         assert_eq!(exp_paid_for, paid_for);
         assert_eq!(exp_change, change);
     }
