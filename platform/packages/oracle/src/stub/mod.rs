@@ -164,7 +164,7 @@ where
     }
 }
 
-impl<'a, QuoteC, QuoteG> AccessPermission for GrantedOracle<'a, QuoteC, QuoteG>
+impl<QuoteC, QuoteG> AccessPermission for GrantedOracle<'_, QuoteC, QuoteG>
 where
     QuoteC: Currency + MemberOf<QuoteG>,
     QuoteG: Group,
