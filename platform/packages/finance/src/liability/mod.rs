@@ -129,12 +129,7 @@ impl Liability {
         debug_assert!(self.initial > Percent100::ZERO);
         debug_assert!(self.initial < Percent100::HUNDRED);
 
-        let default_ltd = Rational::new(
-            self.initial,
-            Percent100::HUNDRED
-                .checked_sub(self.initial)
-                .expect("Invariant to be held"),
-        );
+        let default_ltd = Rational::new(self.initial, Self::remaining_percent(self.initial));
         default_ltd
             .checked_mul(downpayment)
             .and_then(|default_borrow| {
@@ -168,12 +163,7 @@ impl Liability {
 
         // from 'due - liquidation = healthy% of (lease - liquidation)' follows
         // liquidation = 100% / (100% - healthy%) of (due - healthy% of lease)
-        let multiplier = Rational::new(
-            Percent100::HUNDRED,
-            Percent100::HUNDRED
-                .checked_sub(self.healthy)
-                .expect("Invariant to be held"),
-        );
+        let multiplier = Rational::new(Percent100::HUNDRED, Self::remaining_percent(self.healthy));
         let extra_liability_lpn = total_due - total_due.min(self.healthy.of(lease_amount));
         multiplier.checked_mul(extra_liability_lpn)
     }
@@ -213,6 +203,15 @@ impl Liability {
         )?;
 
         Ok(())
+    }
+
+    fn remaining_percent(percent: Percent100) -> Percent100 {
+        debug_assert!(percent > Percent100::ZERO);
+        debug_assert!(percent < Percent100::HUNDRED);
+
+        Percent100::HUNDRED
+            .checked_sub(percent)
+            .expect("Invariant to be held")
     }
 }
 

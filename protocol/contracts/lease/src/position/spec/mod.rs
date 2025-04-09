@@ -138,10 +138,8 @@ impl Spec {
             PositionError::InsufficientTransactionAmount,
         )
         .and_then(|()| {
-            let borrow = self
-                .liability
-                .init_borrow_amount(downpayment, may_max_ltd)
-                .expect("TODO: propagate up the stack potential overflow");
+            let borrow = self.init_borrow_amount(downpayment, may_max_ltd);
+
             self.validate_transaction(borrow, one, PositionError::InsufficientTransactionAmount)
                 .and_then(|()| {
                     self.validate_asset(
@@ -270,8 +268,7 @@ impl Spec {
         TransactionC: Currency,
         ErrFn: FnOnce(LpnCoinDTO) -> PositionError,
     {
-        let amount = price::total(amount, transaction_currency_in_lpn)
-            .expect("TODO: propagate up the stack potential overflow");
+        let amount = total(amount, transaction_currency_in_lpn);
 
         if amount >= self.min_transaction {
             Ok(())
@@ -290,14 +287,19 @@ impl Spec {
         TransactionC: Currency,
         ErrFn: FnOnce(LpnCoinDTO) -> PositionError,
     {
-        let asset_amount = price::total(asset_amount, transaction_currency_in_lpn)
-            .expect("TODO: propagate up the stack potential overflow");
+        let asset_amount = total(asset_amount, transaction_currency_in_lpn);
 
         if asset_amount >= self.min_asset {
             Ok(())
         } else {
             Err(err_fn(self.min_asset.into()))
         }
+    }
+
+    fn init_borrow_amount(&self, downpayment: LpnCoin, may_max_ltd: Option<Percent>) -> LpnCoin {
+        self.liability
+            .init_borrow_amount(downpayment, may_max_ltd)
+            .expect("TODO: propagate up the stack potential overflow")
     }
 
     fn may_ask_liquidation_liability<Asset>(
@@ -309,10 +311,8 @@ impl Spec {
     where
         Asset: Currency,
     {
-        let liquidation_amount = self
-            .liability
-            .amount_to_liquidate(asset, total_due)
-            .expect("TODO: propagate up the stack potential overflow");
+        let liquidation_amount = self.amount_to_liquidate(asset, total_due);
+
         self.may_ask_liquidation(
             asset,
             Cause::Liability {
@@ -322,6 +322,15 @@ impl Spec {
             liquidation_amount,
             asset_in_lpns,
         )
+    }
+
+    fn amount_to_liquidate<Asset>(&self, asset: Coin<Asset>, total_due: Coin<Asset>) -> Coin<Asset>
+    where
+        Asset: Currency,
+    {
+        self.liability
+            .amount_to_liquidate(asset, total_due)
+            .expect("TODO: propagate up the stack potential overflow")
     }
 
     fn may_ask_liquidation_overdue<Asset, Due>(
@@ -426,4 +435,11 @@ impl Spec {
         price::total(lpn_coin, asset_in_lpns.inv())
             .expect("TODO: propagate up the stack potential overflow")
     }
+}
+
+fn total<TransactionC>(amount: Coin<TransactionC>, price: Price<TransactionC>) -> LpnCoin
+where
+    TransactionC: Currency,
+{
+    price::total(amount, price).expect("TODO: propagate up the stack potential overflow")
 }

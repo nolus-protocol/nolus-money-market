@@ -212,6 +212,7 @@ fn emit_status(next_customer: Option<Addr>) -> Emitter {
 mod test {
     use admin_contract::msg::{MigrationSpec, ProtocolContracts};
     use currencies::Lpn;
+    use dex::{ConnectionParams, Ics20Channel};
     use finance::{coin::Coin, duration::Duration, liability::Liability, percent::Percent100};
     use json_value::JsonValue;
     use lease::api::{MigrateMsg, open::PositionSpecDTO};
