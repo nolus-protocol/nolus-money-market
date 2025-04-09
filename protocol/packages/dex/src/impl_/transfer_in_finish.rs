@@ -235,15 +235,13 @@ where
     }
 
     fn on_time_alarm(self, querier: QuerierWrapper<'_>, env: Env) -> HandlerResult<Self> {
-        let res = access_control::check(
+        access_control::check(
             &GrantedTimeAlarm::new(self.spec.time_alarm()),
             &env.contract.address,
-        );
-        if res.is_err() {
-            // TODO
-        }
-
-        self.try_complete(querier, env)
+        ).map_or_else(
+            |err| Err(DexError::Unauthorized(err).into()),
+            || self.try_complete(querier, env),
+        )
     }
 }
 
