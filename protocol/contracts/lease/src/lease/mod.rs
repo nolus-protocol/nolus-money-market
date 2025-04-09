@@ -433,10 +433,10 @@ pub(crate) mod tests {
     ) {
         let exp_due_margin = due_projection
             .annualized_slice_of(MARGIN_INTEREST_RATE.of(principal_due))
-            .unwrap();
+            .expect("should calculate annualized_slice_of");
         let exp_due_interest = due_projection
             .annualized_slice_of(interest_rate.of(principal_due))
-            .unwrap();
+            .expect("should calculate annualized_slice_of");
         assert_eq!(
             State {
                 amount: lease_amount,
@@ -450,10 +450,10 @@ pub(crate) mod tests {
                         MIN_TRANSACTION - exp_due_interest - exp_due_margin,
                         interest_rate
                             .checked_add(MARGIN_INTEREST_RATE)
-                            .unwrap()
+                            .expect("should add without overflow")
                             .of(principal_due)
                     )
-                    .unwrap(),
+                    .expect("should calculate into_slice_per_ratio"),
                 due_margin: exp_due_margin,
                 due_interest: exp_due_interest,
                 due_projection,

@@ -170,8 +170,24 @@ impl Display for Strategy {
 }
 
 #[cfg(all(feature = "internal.test.contract", test))]
-mod test {
+pub(crate) mod common_methods {
+    use finance::percent::Percent100;
 
+    pub(crate) fn add(addend1: Percent100, addend2: Percent100) -> Percent100 {
+        addend1
+            .checked_add(addend2)
+            .expect("should add without overflow")
+    }
+
+    pub(crate) fn sub(minuend: Percent100, subtrahend: Percent100) -> Percent100 {
+        minuend
+            .checked_sub(subtrahend)
+            .expect("should sub without overflow")
+    }
+}
+
+#[cfg(all(feature = "internal.test.contract", test))]
+mod test {
     mod may_trigger {
         use finance::{coin::Amount, percent::Percent100};
 
@@ -283,7 +299,11 @@ mod test {
 
         use crate::{
             api::position::{ChangeCmd, ClosePolicyChange},
-            position::{CloseStrategy, close::Policy, error::Error as PositionError},
+            position::{
+                CloseStrategy,
+                close::{Policy, common_methods},
+                error::Error as PositionError,
+            },
         };
 
         #[test]
@@ -456,7 +476,7 @@ mod test {
         fn invariant_full() {
             let lower = Percent100::from_percent(45);
             let higher = Percent100::from_percent(55);
-            let lease_invalid1 = higher.checked_sub(Percent100::from_permille(1)).unwrap();
+            let lease_invalid1 = common_methods::sub(higher, Percent100::from_permille(1));
 
             let p = Policy::default()
                 .change_policy(ClosePolicyChange {
@@ -494,7 +514,10 @@ mod test {
         use crate::{
             api::position::{ChangeCmd, ClosePolicyChange},
             error::PositionError,
-            position::{CloseStrategy, close::Policy},
+            position::{
+                CloseStrategy,
+                close::{Policy, common_methods},
+            },
         };
 
         #[test]
@@ -519,7 +542,7 @@ mod test {
             assert_eq!(Ok(p), p.liquidation_check(liquidation));
             assert_eq!(
                 Ok(p),
-                p.liquidation_check(higher.checked_add(DELTA).unwrap())
+                p.liquidation_check(common_methods::add(higher, DELTA))
             );
             assert_eq!(
                 Err(PositionError::liquidation_conflict(
@@ -530,10 +553,10 @@ mod test {
             );
             assert_eq!(
                 Err(PositionError::liquidation_conflict(
-                    lower.checked_add(DELTA).unwrap(),
+                    common_methods::add(lower, DELTA),
                     CloseStrategy::StopLoss(higher)
                 )),
-                p.liquidation_check(lower.checked_add(DELTA).unwrap())
+                p.liquidation_check(common_methods::add(lower, DELTA))
             );
             assert_eq!(
                 Err(PositionError::liquidation_conflict(
@@ -579,17 +602,17 @@ mod test {
             range::{Ascending, RightOpenRange},
         };
 
-        use crate::position::close::Policy;
+        use crate::position::close::{Policy, common_methods};
 
         #[test]
         fn unbound() {
             const GAP: Percent100 = Percent100::from_permille(50);
 
             let below = Percent100::from_percent(36);
-            let tp_in = below.checked_sub(GAP).unwrap().checked_sub(GAP).unwrap();
-            let sl_in = below.checked_sub(GAP).unwrap();
-            let tp_out = below.checked_add(GAP).unwrap();
-            let sl_out = below.checked_add(GAP).unwrap().checked_add(GAP).unwrap();
+            let tp_in = common_methods::sub(common_methods::sub(below, GAP), GAP);
+            let sl_in = common_methods::sub(below, GAP);
+            let tp_out = common_methods::add(below, GAP);
+            let sl_out = common_methods::add(common_methods::add(below, GAP), GAP);
 
             let range = RightOpenRange::up_to(below);
             no_close(None, None, range, range);
@@ -616,11 +639,11 @@ mod test {
             const GAP: Percent100 = Percent100::from_permille(50);
 
             let below = Percent100::from_percent(36);
-            let above = sub(sub(below, GAP), GAP);
-            let tp_out = sub(above, GAP);
+            let above = common_methods::sub(common_methods::sub(below, GAP), GAP);
+            let tp_out = common_methods::sub(above, GAP);
             let tp_in = above;
-            let sl_in = sub(below, GAP);
-            let sl_out = add(below, GAP);
+            let sl_in = common_methods::sub(below, GAP);
+            let sl_out = common_methods::add(below, GAP);
 
             let range = RightOpenRange::up_to(below).cut_to(above);
             no_close(None, None, range, range);
@@ -656,14 +679,6 @@ mod test {
                 }
                 .no_close(during)
             );
-        }
-
-        fn add(addend1: Percent100, addend2: Percent100) -> Percent100 {
-            addend1.checked_add(addend2).unwrap()
-        }
-
-        fn sub(minuend: Percent100, subtrahend: Percent100) -> Percent100 {
-            minuend.checked_sub(subtrahend).unwrap()
         }
     }
 }

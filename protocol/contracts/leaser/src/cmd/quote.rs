@@ -5,7 +5,7 @@ use finance::{
     coin::{Coin, WithCoin, WithCoinResult},
     liability::Liability,
     percent::{Percent, Percent100},
-    price::total,
+    price::{self, Price},
 };
 use lease::api::DownpaymentCoin;
 use lpp::{
@@ -196,6 +196,23 @@ where
     max_ltd: Option<Percent>,
 }
 
+impl<Lpn, Dpc, Lpp, Oracle> QuoteStage4<Lpn, Dpc, Lpp, Oracle>
+where
+    Dpc: Currency + MemberOf<PaymentCurrencies>,
+    Lpp: LppLenderTrait<Lpn, LpnCurrencies>,
+    Oracle: OracleTrait<PaymentCurrencies, QuoteC = Lpn, QuoteG = LpnCurrencies>,
+{
+    fn init_borrow_amount(
+        &self,
+        downpayment: Coin<Lpn>,
+        may_max_ltd: Option<Percent>,
+    ) -> Coin<Lpn> {
+        self.liability
+            .init_borrow_amount(downpayment, may_max_ltd)
+            .expect("TODO: propagate up the stack potential overflow")
+    }
+}
+
 impl<Lpn, Dpc, Lpp, Oracle> AnyVisitor<LeaseCurrencies> for QuoteStage4<Lpn, Dpc, Lpp, Oracle>
 where
     Lpn: CurrencyDef,
@@ -213,22 +230,17 @@ where
         Asset: CurrencyDef,
         Asset::Group: MemberOf<LeaseCurrencies> + MemberOf<PaymentCurrencies>,
     {
-        let downpayment_lpn = total(self.downpayment, self.oracle.price_of::<Dpc>()?)
-            .expect("TODO: propagate up the stack potential overflow");
+        let downpayment_lpn = total(self.downpayment, self.oracle.price_of::<Dpc>()?);
 
         if downpayment_lpn.is_zero() {
             return Err(ContractError::ZeroDownpayment {});
         }
 
-        let borrow = self
-            .liability
-            .init_borrow_amount(downpayment_lpn, self.max_ltd)
-            .expect("TODO: propagate up the stack potential overflow");
+        let borrow = self.init_borrow_amount(downpayment_lpn, self.max_ltd);
 
         let asset_price = self.oracle.price_of::<Asset>()?.inv();
 
-        let total_asset = total(downpayment_lpn + borrow, asset_price)
-            .expect("TODO: propagate up the stack potential overflow");
+        let total_asset = total(downpayment_lpn + borrow, asset_price);
 
         let annual_interest_rate = self.lpp_quote.with(borrow)?;
 
@@ -239,4 +251,12 @@ where
             annual_interest_rate_margin: self.lease_interest_rate_margin,
         })
     }
+}
+
+fn total<C, QuoteC>(amount: Coin<C>, price: Price<C, QuoteC>) -> Coin<QuoteC>
+where
+    C: 'static,
+    QuoteC: 'static,
+{
+    price::total(amount, price).expect("TODO: propagate up the stack potential overflow")
 }
