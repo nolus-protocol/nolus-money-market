@@ -87,11 +87,7 @@ where
             .skip_while(Option::is_none)
             .map(|price| Option::expect(price, "sample prices should keep being present"))
             .reduce(|acc, sample_price| {
-                discount_factor.of(sample_price)
-                    + Percent100::HUNDRED
-                        .checked_sub(discount_factor)
-                        .expect("Config invariant to be held")
-                        .of(acc)
+                discount_factor.of(sample_price) + remaining_factor(discount_factor).of(acc)
             })
             .ok_or(PriceFeedsError::NoPrice {})
     }
@@ -154,6 +150,15 @@ where
             })
             .map(|()| self)
     }
+}
+
+fn remaining_factor(factor: Percent100) -> Percent100 {
+    debug_assert!(factor > Percent100::ZERO);
+    debug_assert!(factor < Percent100::HUNDRED);
+
+    Percent100::HUNDRED
+        .checked_sub(factor)
+        .expect("Invariant to be held")
 }
 
 #[cfg(test)]
