@@ -77,7 +77,7 @@ impl<'a> GrantedTimeAlarm<'a> {
     }
 }
 
-impl<'a> AccessPermission for GrantedTimeAlarm<'a> {
+impl AccessPermission for GrantedTimeAlarm<'_> {
     fn is_granted_to(&self, caller: &Addr) -> bool {
         self.time_alarms_ref.owned_by(caller)
     }
