@@ -1,4 +1,4 @@
-use bound::{BoundPercent, HundredBound, MaxBound};
+use bound::BoundPercent;
 
 use crate::{
     coin::{Amount, Coin},
@@ -9,8 +9,11 @@ pub mod bound;
 
 pub type Units = u32;
 
-pub type Percent100 = BoundPercent<HundredBound>;
-pub type Percent = BoundPercent<MaxBound>;
+pub const HUNDRED_BOUND: Units = 1000;
+pub const MAX_BOUND: Units = Units::MAX;
+
+pub type Percent100 = BoundPercent<HUNDRED_BOUND>;
+pub type Percent = BoundPercent<MAX_BOUND>;
 
 impl CheckedMul for Units {
     type Output = Self;

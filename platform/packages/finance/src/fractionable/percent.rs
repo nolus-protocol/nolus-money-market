@@ -1,9 +1,6 @@
 use crate::{
     coin::Coin,
-    percent::{
-        Units,
-        bound::{BoundPercent, UpperBound},
-    },
+    percent::{Units, bound::BoundPercent},
     ratio::Ratio,
 };
 
@@ -17,20 +14,14 @@ where
     type Intermediate = Self;
 }
 
-impl<B> Fractionable<Units> for BoundPercent<B>
-where
-    B: Clone + UpperBound,
-{
+impl<const UPPER_BOUND: Units> Fractionable<Units> for BoundPercent<UPPER_BOUND> {
     #[track_caller]
     fn safe_mul(self, ratio: &Ratio<Units>) -> Self {
         Self::from_permille(self.units().safe_mul(ratio))
     }
 }
 
-impl<C, B> Fractionable<Coin<C>> for BoundPercent<B>
-where
-    B: Clone + UpperBound,
-{
+impl<C, const UPPER_BOUND: Units> Fractionable<Coin<C>> for BoundPercent<UPPER_BOUND> {
     #[track_caller]
     fn safe_mul(self, fraction: &Ratio<Coin<C>>) -> Self {
         let p128: u128 = self.units().into();
