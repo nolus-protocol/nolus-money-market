@@ -10,28 +10,22 @@ use serde::{Deserialize, Serialize};
 
 use crate::{fraction::Fraction, fractionable::Fractionable, zero::Zero};
 
+/// A wrapper over `Rational` where the ratio is no more than 1.
 #[cfg_attr(any(test, feature = "testing"), derive(Debug))]
-pub struct Ratio<U> {
-    parts: U,
-    total: U,
-}
+pub struct Ratio<U>(Rational<U>);
 
 impl<U> Ratio<U>
 where
-    U: Copy + PartialEq + PartialOrd<U>,
+    U: Copy + Debug + Ord + PartialEq<U> + Zero,
 {
     pub fn new(parts: U, total: U) -> Self {
         debug_assert!(parts <= total);
 
-        Self { parts, total }
+        Self(Rational::new(parts, total))
     }
 
-    pub(crate) fn parts(&self) -> U {
-        self.parts
-    }
-
-    pub(crate) fn total(&self) -> U {
-        self.total
+    pub fn as_rational(&self) -> &Rational<U> {
+        &self.0
     }
 }
 
@@ -157,7 +151,7 @@ pub trait CheckedDiv<Rhs = Self> {
 
 impl<U> Rational<U>
 where
-    U: PartialEq<U> + Copy + PartialOrd + Div + Rem<Output = U>,
+    U: Copy + Debug + Div + Ord + PartialEq<U> + PartialOrd + Rem<Output = U> + Zero,
 {
     pub fn checked_mul<F>(self, rhs: F) -> Option<F>
     where

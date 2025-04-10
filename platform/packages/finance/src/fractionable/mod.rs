@@ -32,18 +32,21 @@ where
     D: TryInto<DIntermediate>,
     <D as TryInto<DIntermediate>>::Error: Debug,
     DIntermediate: Into<T>,
-    D: Mul<D, Output = D> + Div<D, Output = D>,
-    U: Zero + PartialEq + Into<D> + PartialOrd + Copy,
+    D: Div<D, Output = D> + Mul<D, Output = D>,
+    U: Copy + Debug + Into<D> + PartialEq + Ord + Zero,
 {
     #[track_caller]
     fn safe_mul(self, ratio: &Ratio<U>) -> Self {
         // TODO debug_assert_eq!(T::BITS * 2, D::BITS);
 
-        if ratio.parts() == ratio.total() {
+        let parts = ratio.as_rational().nominator();
+        let total = ratio.as_rational().denominator();
+
+        if parts == total {
             self
         } else {
-            let res_double: D = self.into() * ratio.parts().into();
-            let res_double = res_double / ratio.total().into();
+            let res_double: D = self.into() * parts.into();
+            let res_double = res_double / total.into();
             let res_intermediate: DIntermediate =
                 res_double.try_into().expect("unexpected overflow");
             res_intermediate.into()
