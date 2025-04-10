@@ -1,6 +1,7 @@
 use std::fmt::{Display, Formatter, Result as FmtResult};
 use std::marker::PhantomData;
 
+use crate::Error as DexError;
 use finance::duration::Duration;
 use serde::{Deserialize, Serialize};
 
@@ -10,6 +11,7 @@ use platform::{
     message::Response as MessageResponse,
 };
 use sdk::cosmwasm_std::{Env, QuerierWrapper, Timestamp};
+use timealarms::stub::GrantedTimeAlarm;
 
 use crate::{Contract, ContractInSwap, Enterable, Stage, SwapTask as SwapTaskT};
 
@@ -151,11 +153,18 @@ where
     type SwapResult = SwapTask::Result;
 
     fn heal(self, querier: QuerierWrapper<'_>, env: Env) -> HandlerResult<Self> {
-        self.on_time_alarm(querier, env)
+        self.try_complete(querier, env)
     }
 
     fn on_time_alarm(self, querier: QuerierWrapper<'_>, env: Env) -> HandlerResult<Self> {
-        self.try_complete(querier, env)
+        access_control::check(
+            &GrantedTimeAlarm::new(self.spec.time_alarm()),
+            &env.contract.address,
+        )
+        .map_or_else(
+            |err| DexError::Unauthorized(err).into(),
+            |_| self.try_complete(querier, env),
+        )
     }
 }
 

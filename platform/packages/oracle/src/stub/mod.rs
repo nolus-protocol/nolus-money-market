@@ -2,6 +2,7 @@ use std::{fmt::Debug, marker::PhantomData, result::Result as StdResult};
 
 use serde::{Deserialize, Serialize};
 
+use access_control::AccessPermission;
 use currency::{Currency, CurrencyDTO, CurrencyDef, Group, MemberOf};
 use finance::price::Price;
 use sdk::cosmwasm_std::{Addr, QuerierWrapper};
@@ -141,5 +142,33 @@ where
             _quote: PhantomData,
             _quote_g: PhantomData,
         }
+    }
+}
+
+pub struct GrantedOracle<'a, QuoteC, QuoteG>
+where
+    QuoteC: Currency + MemberOf<QuoteG>,
+    QuoteG: Group,
+{
+    oracle_ref: &'a OracleRef<QuoteC, QuoteG>,
+}
+
+impl<'a, QuoteC, QuoteG> GrantedOracle<'a, QuoteC, QuoteG>
+where
+    QuoteC: Currency + MemberOf<QuoteG>,
+    QuoteG: Group,
+{
+    pub fn new(oracle_ref: &'a OracleRef<QuoteC, QuoteG>) -> Self {
+        Self { oracle_ref }
+    }
+}
+
+impl<QuoteC, QuoteG> AccessPermission for GrantedOracle<'_, QuoteC, QuoteG>
+where
+    QuoteC: Currency + MemberOf<QuoteG>,
+    QuoteG: Group,
+{
+    fn is_granted_to(&self, caller: &Addr) -> bool {
+        self.oracle_ref.owned_by(caller)
     }
 }
