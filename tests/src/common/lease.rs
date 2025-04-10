@@ -284,7 +284,10 @@ where
 
     () = response.unwrap_response();
 
-    assert_eq!(downpayment, coin_legacy::to_cosmwasm_on_nolus(exp_downpayment));
+    assert_eq!(
+        downpayment,
+        coin_legacy::to_cosmwasm_on_nolus(exp_downpayment)
+    );
 
     check_state_opening(app, lease_addr.clone());
 
