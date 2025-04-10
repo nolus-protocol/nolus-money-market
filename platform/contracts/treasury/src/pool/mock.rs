@@ -27,7 +27,7 @@ impl MockPool {
     pub fn reward_none(balance: CoinStable) -> Self {
         Self {
             balance,
-            apr: Default::default(),
+            apr: Percent100::ZERO,
             period: Default::default(),
             rewards_result: DistributeRewards::None,
         }

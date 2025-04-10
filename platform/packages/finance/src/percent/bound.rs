@@ -17,7 +17,7 @@ use crate::{
 
 use super::{HUNDRED_BOUND, MAX_BOUND, Percent100, Units};
 
-#[derive(Clone, Copy, Debug, Default, Deserialize, Eq, Ord, PartialEq, PartialOrd, Serialize)]
+#[derive(Clone, Copy, Debug, Deserialize, Eq, Ord, PartialEq, PartialOrd, Serialize)]
 #[serde(try_from = "Units", into = "Units")]
 pub struct BoundPercent<const UPPER_BOUND: Units>(Units);
 
