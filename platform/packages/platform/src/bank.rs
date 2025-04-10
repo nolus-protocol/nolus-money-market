@@ -528,10 +528,10 @@ mod test {
     #[test]
     fn may_received_not_in_group() {
         let coin_1 = Coin::<ExtraCurrency>::new(AMOUNT);
-        let in_coin_1 = coin_legacy::to_cosmwasm(coin_1);
+        let in_coin_1 = coin_legacy::to_cosmwasm_on_nolus(coin_1);
 
         let coin_2 = Coin::<ExtraCurrency>::new(AMOUNT + AMOUNT);
-        let in_coin_2 = coin_legacy::to_cosmwasm(coin_2);
+        let in_coin_2 = coin_legacy::to_cosmwasm_on_nolus(coin_2);
 
         assert_eq!(
             None,
@@ -545,19 +545,20 @@ mod test {
     #[test]
     fn may_received_in_group() {
         let coin = Coin::<TheCurrency>::new(AMOUNT);
-        let in_coin_1 = coin_legacy::to_cosmwasm(coin);
+        let in_coin_1 = coin_legacy::to_cosmwasm_on_nolus(coin);
         assert_eq!(Some(Ok(true)), may_received(&vec![in_coin_1], Expect(coin)));
     }
 
     #[test]
     fn may_received_in_group_others_arround() {
-        let in_coin_1 = coin_legacy::to_cosmwasm(Coin::<ExtraCurrency>::new(AMOUNT + AMOUNT));
+        let in_coin_1 =
+            coin_legacy::to_cosmwasm_on_nolus(Coin::<ExtraCurrency>::new(AMOUNT + AMOUNT));
 
         let coin_2 = Coin::<TheCurrency>::new(AMOUNT);
-        let in_coin_2 = coin_legacy::to_cosmwasm(coin_2);
+        let in_coin_2 = coin_legacy::to_cosmwasm_on_nolus(coin_2);
 
         let coin_3 = Coin::<TheCurrency>::new(AMOUNT + AMOUNT);
-        let in_coin_3 = coin_legacy::to_cosmwasm(coin_3);
+        let in_coin_3 = coin_legacy::to_cosmwasm_on_nolus(coin_3);
         assert_eq!(
             Some(Ok(true)),
             may_received(

@@ -256,6 +256,6 @@ mod test {
     where
         A: Into<Coin<TheCurrency>>,
     {
-        coin_legacy::to_cosmwasm::<TheCurrency>(amount.into())
+        coin_legacy::to_cosmwasm_on_nolus::<TheCurrency>(amount.into())
     }
 }

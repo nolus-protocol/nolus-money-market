@@ -910,7 +910,7 @@ mod test {
     where
         IntoCoin: Into<Coin<TheCurrency>>,
     {
-        coin_legacy::to_cosmwasm::<TheCurrency>(into_coin.into())
+        coin_legacy::to_cosmwasm_on_nolus::<TheCurrency>(into_coin.into())
     }
 
     fn grant_admin_access(deps: DepsMut<'_>, admin: &Addr) {

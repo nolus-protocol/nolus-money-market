@@ -61,7 +61,7 @@ where
 }
 
 #[cfg(any(test, feature = "testing"))]
-pub fn to_cosmwasm<C>(coin: Coin<C>) -> CosmWasmCoin
+pub fn to_cosmwasm_on_nolus<C>(coin: Coin<C>) -> CosmWasmCoin
 where
     C: CurrencyDef,
 {
