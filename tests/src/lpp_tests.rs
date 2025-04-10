@@ -744,7 +744,7 @@ fn loan_open_and_repay() {
         .send_tokens(
             admin,
             loan_addr2.clone(),
-            &[coin_legacy::to_cosmwasm::<Nls>(repay_interest_part.into())],
+            &[coin_legacy::to_cosmwasm_on_nolus::<Nls>(repay_interest_part.into())],
         )
         .unwrap();
 
@@ -754,7 +754,7 @@ fn loan_open_and_repay() {
             loan_addr2,
             test_case.address_book.lpp().clone(),
             &LppExecuteMsg::RepayLoan(),
-            &[coin_legacy::to_cosmwasm::<Nls>(repay_interest_part.into())],
+            &[coin_legacy::to_cosmwasm_on_nolus::<Nls>(repay_interest_part.into())],
         )
         .unwrap_err();
 
@@ -909,7 +909,7 @@ fn compare_lpp_states() {
 
     let mut test_case = TestCaseBuilder::<Lpn>::with_reserve(&[
         lpn_cwcoin(app_balance),
-        coin_legacy::to_cosmwasm::<Nls>(app_balance.into()),
+        coin_legacy::to_cosmwasm_on_nolus::<Nls>(app_balance.into()),
     ])
     .init_lpp_with_funds(
         None,
@@ -1115,7 +1115,7 @@ fn compare_lpp_states() {
         .send_tokens(
             admin,
             loan_addr2.clone(),
-            &[coin_legacy::to_cosmwasm::<Nls>(repay_interest_part.into())],
+            &[coin_legacy::to_cosmwasm_on_nolus::<Nls>(repay_interest_part.into())],
         )
         .unwrap();
 
@@ -1125,7 +1125,7 @@ fn compare_lpp_states() {
             loan_addr2,
             test_case.address_book.lpp().clone(),
             &LppExecuteMsg::RepayLoan(),
-            &[coin_legacy::to_cosmwasm::<Nls>(repay_interest_part.into())],
+            &[coin_legacy::to_cosmwasm_on_nolus::<Nls>(repay_interest_part.into())],
         )
         .unwrap_err();
 
@@ -1285,7 +1285,7 @@ fn test_rewards() {
         .send_funds_from_admin(lender2.clone(), &[lpn_cwcoin(deposit2)])
         .send_funds_from_admin(
             treasury.clone(),
-            &[coin_legacy::to_cosmwasm::<Nls>(treasury_balance.into())],
+            &[coin_legacy::to_cosmwasm_on_nolus::<Nls>(treasury_balance.into())],
         );
 
     // rewards before deposits
@@ -1295,7 +1295,7 @@ fn test_rewards() {
             treasury.clone(),
             test_case.address_book.lpp().clone(),
             &LppExecuteMsg::DistributeRewards(),
-            &[coin_legacy::to_cosmwasm::<Nls>(tot_rewards0.into())],
+            &[coin_legacy::to_cosmwasm_on_nolus::<Nls>(tot_rewards0.into())],
         )
         .unwrap_err();
 
@@ -1324,7 +1324,7 @@ fn test_rewards() {
             treasury.clone(),
             test_case.address_book.lpp().clone(),
             &LppExecuteMsg::DistributeRewards(),
-            &[coin_legacy::to_cosmwasm::<Nls>(tot_rewards1.into())],
+            &[coin_legacy::to_cosmwasm_on_nolus::<Nls>(tot_rewards1.into())],
         )
         .unwrap()
         .ignore_response()
@@ -1432,7 +1432,7 @@ fn test_rewards() {
             treasury,
             test_case.address_book.lpp().clone(),
             &LppExecuteMsg::DistributeRewards(),
-            &[coin_legacy::to_cosmwasm::<Nls>(tot_rewards2.into())],
+            &[coin_legacy::to_cosmwasm_on_nolus::<Nls>(tot_rewards2.into())],
         )
         .unwrap()
         .ignore_response()

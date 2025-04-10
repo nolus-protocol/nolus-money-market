@@ -10,7 +10,7 @@ use sdk::{
 };
 
 pub use crate::emit::{Emit, Emitter};
-use crate::{coin_legacy::to_cosmwasm_impl, contract::Code, error::Error, result::Result};
+use crate::{coin_legacy, contract::Code, error::Error, result::Result};
 
 pub type ReplyId = u64;
 
@@ -178,7 +178,7 @@ impl Batch {
             .map(|msg| WasmMsg::Execute {
                 contract_addr: addr.into_string(),
                 funds: if let Some(funds) = funds {
-                    vec![to_cosmwasm_impl(funds)]
+                    vec![coin_legacy::to_cosmwasm_on_nolus(funds)]
                 } else {
                     vec![]
                 },

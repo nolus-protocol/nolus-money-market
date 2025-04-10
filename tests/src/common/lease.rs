@@ -14,7 +14,7 @@ use lease::{
     },
     contract::{execute, instantiate, query, reply, sudo},
 };
-use platform::{coin_legacy::to_cosmwasm, contract::Code};
+use platform::{coin_legacy, contract::Code};
 use sdk::{
     cosmwasm_std::{Addr, Coin as CwCoin},
     cw_multi_test::AppResponse,
@@ -68,7 +68,7 @@ impl Instantiator {
                 code,
                 testing::user(ADMIN),
                 &msg,
-                &[to_cosmwasm(lease_config.downpayment)],
+                &[coin_legacy::to_cosmwasm_on_nolus(lease_config.downpayment)],
                 "lease",
                 None,
             )
@@ -284,7 +284,7 @@ where
 
     () = response.unwrap_response();
 
-    assert_eq!(downpayment, to_cosmwasm(exp_downpayment));
+    assert_eq!(downpayment, coin_legacy::to_cosmwasm_on_nolus(exp_downpayment));
 
     check_state_opening(app, lease_addr.clone());
 
@@ -306,7 +306,7 @@ where
 
     () = response.unwrap_response();
 
-    assert_eq!(borrow, to_cosmwasm(exp_borrow));
+    assert_eq!(borrow, coin_legacy::to_cosmwasm_on_nolus(exp_borrow));
 
     check_state_opening(app, lease_addr.clone());
 

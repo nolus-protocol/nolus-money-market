@@ -59,7 +59,7 @@ fn cw_coin<CoinT>(coin: CoinT) -> CwCoin
 where
     CoinT: Into<Coin<Lpn>>,
 {
-    coin_legacy::to_cosmwasm(coin.into())
+    coin_legacy::to_cosmwasm_on_nolus(coin.into())
 }
 
 fn create_test_case() -> TestCase<Addr, Addr, Addr, Addr, Addr, Addr, Addr, Addr> {

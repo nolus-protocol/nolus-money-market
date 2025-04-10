@@ -83,7 +83,7 @@ where
     C: CurrencyDef,
     A: Into<Coin<C>>,
 {
-    coin_legacy::to_cosmwasm(amount.into())
+    coin_legacy::to_cosmwasm_on_nolus(amount.into())
 }
 pub fn cwcoin_as_balance<C, A>(amount: A) -> Vec<CwCoin>
 where

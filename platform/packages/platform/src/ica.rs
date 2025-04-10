@@ -89,8 +89,8 @@ where
         timeout.secs(),
         IbcFee {
             recv_fee: vec![],
-            ack_fee: vec![coin_legacy::to_cosmwasm_impl(ack_tip)],
-            timeout_fee: vec![coin_legacy::to_cosmwasm_impl(timeout_tip)],
+            ack_fee: vec![coin_legacy::to_cosmwasm_on_nolus(ack_tip)],
+            timeout_fee: vec![coin_legacy::to_cosmwasm_on_nolus(timeout_tip)],
         },
     ));
     batch

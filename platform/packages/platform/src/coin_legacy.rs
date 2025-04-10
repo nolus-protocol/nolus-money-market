@@ -60,12 +60,11 @@ where
     .ok()
 }
 
-#[cfg(any(test, feature = "testing"))]
 pub fn to_cosmwasm_on_nolus<C>(coin: Coin<C>) -> CosmWasmCoin
 where
     C: CurrencyDef,
 {
-    to_cosmwasm_impl(coin)
+    to_cosmwasm_on_network_impl::<C, BankSymbols<C::Group>>(coin)
 }
 
 #[cfg(any(test, feature = "testing"))]
@@ -76,13 +75,6 @@ where
     use currency::DexSymbols;
 
     to_cosmwasm_on_network_impl::<C, DexSymbols<C::Group>>(coin)
-}
-
-pub(crate) fn to_cosmwasm_impl<C>(coin: Coin<C>) -> CosmWasmCoin
-where
-    C: CurrencyDef,
-{
-    to_cosmwasm_on_network_impl::<C, BankSymbols<C::Group>>(coin)
 }
 
 pub fn to_cosmwasm_on_network<S>(coin_dto: &CoinDTO<S::Group>) -> Result<CosmWasmCoin>
@@ -171,9 +163,9 @@ mod test {
     use finance::test::coin;
     use sdk::cosmwasm_std::Coin as CosmWasmCoin;
 
-    use crate::error::Error;
+    use crate::{coin_legacy::to_cosmwasm_on_nolus, error::Error};
 
-    use super::{Coin, to_cosmwasm_impl};
+    use super::Coin;
 
     #[test]
     fn test_add() {
@@ -271,20 +263,26 @@ mod test {
         let amount = 326;
         assert_eq!(
             CosmWasmCoin::new(amount, SuperGroupTestC2::bank()),
-            to_cosmwasm_impl(Coin::<SuperGroupTestC2>::new(amount))
+            super::to_cosmwasm_on_nolus(Coin::<SuperGroupTestC2>::new(amount))
         );
         assert_eq!(
             CosmWasmCoin::new(amount, SuperGroupTestC1::bank()),
-            to_cosmwasm_impl(Coin::<SuperGroupTestC1>::new(amount))
+            super::to_cosmwasm_on_nolus(Coin::<SuperGroupTestC1>::new(amount))
         );
     }
 
     #[test]
     fn from_to_cosmwasm() {
         let c_nls = Coin::<SuperGroupTestC2>::new(24563);
-        assert_eq!(Ok(c_nls), super::from_cosmwasm(&to_cosmwasm_impl(c_nls)));
+        assert_eq!(
+            Ok(c_nls),
+            super::from_cosmwasm(&to_cosmwasm_on_nolus(c_nls))
+        );
 
         let c_usdc = Coin::<SuperGroupTestC1>::new(u128::MAX);
-        assert_eq!(Ok(c_usdc), super::from_cosmwasm(&to_cosmwasm_impl(c_usdc)));
+        assert_eq!(
+            Ok(c_usdc),
+            super::from_cosmwasm(&to_cosmwasm_on_nolus(c_usdc))
+        );
     }
 }

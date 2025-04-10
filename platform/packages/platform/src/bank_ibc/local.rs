@@ -36,8 +36,8 @@ impl<'conn> Sender<'conn> {
             sender,
             receiver,
             timeout,
-            ack_tip: coin_legacy::to_cosmwasm_impl(ack_tip),
-            timeout_tip: coin_legacy::to_cosmwasm_impl(timeout_tip),
+            ack_tip: coin_legacy::to_cosmwasm_on_nolus(ack_tip),
+            timeout_tip: coin_legacy::to_cosmwasm_on_nolus(timeout_tip),
             amounts: vec![],
             memo,
         }
@@ -166,11 +166,11 @@ mod test {
                 channel,
                 sender.clone(),
                 receiver.clone(),
-                coin_legacy::to_cosmwasm_impl(coin1),
+                coin_legacy::to_cosmwasm_on_nolus(coin1),
                 timeout,
                 (
-                    coin_legacy::to_cosmwasm_impl(ack_fee),
-                    coin_legacy::to_cosmwasm_impl(timeout_fee),
+                    coin_legacy::to_cosmwasm_on_nolus(ack_fee),
+                    coin_legacy::to_cosmwasm_on_nolus(timeout_fee),
                 ),
                 "MEMO".into(),
             ));
@@ -178,11 +178,11 @@ mod test {
                 channel,
                 sender,
                 receiver,
-                coin_legacy::to_cosmwasm_impl(coin2),
+                coin_legacy::to_cosmwasm_on_nolus(coin2),
                 timeout,
                 (
-                    coin_legacy::to_cosmwasm_impl(ack_fee),
-                    coin_legacy::to_cosmwasm_impl(timeout_fee),
+                    coin_legacy::to_cosmwasm_on_nolus(ack_fee),
+                    coin_legacy::to_cosmwasm_on_nolus(timeout_fee),
                 ),
                 "MEMO".into(),
             ));

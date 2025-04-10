@@ -4,12 +4,7 @@ use currency::{CurrencyDTO, CurrencyDef, Group, MemberOf};
 use finance::coin::{Coin, WithCoin, WithCoinResult};
 use sdk::cosmwasm_std::{Addr, BankMsg, Coin as CwCoin, QuerierWrapper};
 
-use crate::{
-    batch::Batch,
-    coin_legacy::{self, from_cosmwasm_seek_any, maybe_from_cosmwasm_any, to_cosmwasm_impl},
-    error::Error,
-    result::Result,
-};
+use crate::{batch::Batch, coin_legacy, error::Error, result::Result};
 
 pub type BalancesResult<G, Cmd> = StdResult<Option<WithCoinResult<G, Cmd>>, Error>;
 
@@ -70,7 +65,7 @@ where
     let mut may_res = None;
 
     for coin in cw_amount {
-        cmd = match from_cosmwasm_seek_any(coin, cmd) {
+        cmd = match coin_legacy::from_cosmwasm_seek_any(coin, cmd) {
             Ok(res) => {
                 may_res = Some(res);
 
@@ -127,7 +122,9 @@ impl BankAccountView for BankView<'_> {
             .map(|cw_coins| {
                 cw_coins
                     .into_iter()
-                    .filter_map(|cw_coin| maybe_from_cosmwasm_any::<G, _>(cw_coin, cmd.clone()))
+                    .filter_map(|cw_coin| {
+                        coin_legacy::maybe_from_cosmwasm_any::<G, _>(cw_coin, cmd.clone())
+                    })
                     .reduce_results(Aggregate::aggregate)
             })
     }
@@ -298,7 +295,7 @@ where
         to,
         amount
             .iter()
-            .map(|coin| to_cosmwasm_impl(coin.to_owned()))
+            .map(|coin| coin_legacy::to_cosmwasm_on_nolus(coin.to_owned()))
             .collect(),
     )
 }
@@ -333,7 +330,7 @@ where
         C: CurrencyDef,
     {
         if !amount.is_zero() {
-            self.amounts.push(to_cosmwasm_impl(amount));
+            self.amounts.push(coin_legacy::to_cosmwasm_on_nolus(amount));
         }
     }
 }
