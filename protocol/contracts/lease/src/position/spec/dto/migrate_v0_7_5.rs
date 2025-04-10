@@ -39,7 +39,7 @@ mod test_two_versions {
         coin::{Coin, CoinDTO},
         duration::Duration,
         liability::Liability,
-        percent::Percent,
+        percent::Percent100,
     };
     use sdk::cosmwasm_std;
 
@@ -55,12 +55,12 @@ mod test_two_versions {
 
         let position_spec = PositionSpecDTO::new(
             Liability::new(
-                Percent::from_permille(600),
-                Percent::from_permille(830),
-                Percent::from_permille(850),
-                Percent::from_permille(865),
-                Percent::from_permille(880),
-                Percent::from_permille(900),
+                Percent100::from_permille(600),
+                Percent100::from_permille(830),
+                Percent100::from_permille(850),
+                Percent100::from_permille(865),
+                Percent100::from_permille(880),
+                Percent100::from_permille(900),
                 Duration::from_nanos(432000000000000),
             ),
             CoinDTO::from(Coin::<Lpn>::from(15000000)),

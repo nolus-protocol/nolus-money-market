@@ -6,14 +6,19 @@ use std::{
     fmt::{Debug, Display, Formatter},
     iter::Sum,
     marker::PhantomData,
-    ops::{Add, AddAssign, Sub, SubAssign},
+    ops::{Add, AddAssign, Div, Rem, Sub, SubAssign},
 };
 
 use ::serde::{Deserialize, Serialize};
 
 use currency::{Currency, CurrencyDef, Group, MemberOf};
 
-use crate::zero::Zero;
+use crate::{
+    duration::Duration,
+    percent::{Units as PercentUnits, bound::BoundPercent},
+    ratio::{self, CheckedAdd, CheckedDiv, CheckedMul, Rational},
+    zero::Zero,
+};
 
 pub use self::dto::{CoinDTO, IntoDTO, from_amount_ticker};
 
@@ -22,6 +27,61 @@ mod dto;
 mod serde;
 
 pub type Amount = u128;
+
+impl CheckedMul for Amount {
+    type Output = Self;
+
+    fn checked_mul(self, rhs: Self) -> Option<Self::Output> {
+        self.checked_mul(rhs)
+    }
+}
+
+impl CheckedDiv for Amount {
+    type Output = Self;
+
+    fn checked_div(self, rhs: Self) -> Option<Self::Output> {
+        self.checked_div(rhs)
+    }
+}
+
+impl CheckedMul<Duration> for Amount {
+    type Output = Duration;
+
+    fn checked_mul(self, rhs: Duration) -> Option<Self::Output> {
+        checked_mul_and_convert(self, rhs, |result| {
+            result.try_into().ok().map(Duration::from_nanos)
+        })
+    }
+}
+
+impl CheckedMul<PercentUnits> for Amount {
+    type Output = PercentUnits;
+
+    fn checked_mul(self, rhs: PercentUnits) -> Option<Self::Output> {
+        checked_mul_and_convert(self, rhs, |result| result.try_into().ok())
+    }
+}
+
+impl<const UPPER_BOUND: PercentUnits> CheckedMul<BoundPercent<UPPER_BOUND>> for Amount {
+    type Output = BoundPercent<UPPER_BOUND>;
+
+    fn checked_mul(self, rhs: BoundPercent<UPPER_BOUND>) -> Option<Self::Output> {
+        checked_mul_and_convert(self, rhs, |result| {
+            result.try_into().ok().map(BoundPercent::from_permille)
+        })
+    }
+}
+
+fn checked_mul_and_convert<T, F, U>(lhs: Amount, rhs: T, convert: F) -> Option<U>
+where
+    T: Into<Amount>,
+    F: FnOnce(Amount) -> Option<U>,
+{
+    let rhs_amount: Amount = rhs.into();
+
+    rhs_amount.checked_mul(lhs).and_then(convert)
+}
+
 #[cfg(feature = "testing")]
 pub type NonZeroAmount = NonZeroU128;
 
@@ -51,11 +111,7 @@ impl<C> Coin<C> {
 
     #[track_caller]
     pub fn checked_add(self, rhs: Self) -> Option<Self> {
-        let may_amount = self.amount.checked_add(rhs.amount);
-        may_amount.map(|amount| Self {
-            amount,
-            ticker: self.ticker,
-        })
+        self.checked_operation(self.amount.checked_add(rhs.amount))
     }
 
     #[track_caller]
@@ -65,56 +121,39 @@ impl<C> Coin<C> {
 
     #[track_caller]
     pub fn checked_sub(self, rhs: Self) -> Option<Self> {
-        let may_amount = self.amount.checked_sub(rhs.amount);
-        may_amount.map(|amount| Self {
-            amount,
-            ticker: self.ticker,
-        })
+        self.checked_operation(self.amount.checked_sub(rhs.amount))
     }
 
     #[track_caller]
     pub fn checked_mul(self, rhs: Amount) -> Option<Self> {
-        let may_amount = self.amount.checked_mul(rhs);
-        may_amount.map(|amount| Self {
-            amount,
-            ticker: self.ticker,
-        })
+        self.checked_operation(self.amount.checked_mul(rhs))
     }
 
     #[track_caller]
     pub fn checked_div(self, rhs: Amount) -> Option<Self> {
-        let may_amount = self.amount.checked_div(rhs);
-        may_amount.map(|amount| Self {
-            amount,
-            ticker: self.ticker,
-        })
+        self.checked_operation(self.amount.checked_div(rhs))
+    }
+
+    pub fn to_rational<OtherC>(self, denominator: Coin<OtherC>) -> Rational<Amount> {
+        Rational::new(self.amount, denominator.amount)
     }
 
     #[track_caller]
-    pub(super) const fn into_coprime_with<OtherC>(
-        self,
-        other: Coin<OtherC>,
-    ) -> (Self, Coin<OtherC>) {
-        debug_assert!(!self.is_zero(), "LHS-value's amount is zero!");
-        debug_assert!(!other.is_zero(), "RHS-value's amount is zero!");
-
-        let gcd: Amount = gcd::binary_u128(self.amount, other.amount);
-
-        debug_assert!(gcd > 0);
-
-        debug_assert!(
-            self.amount % gcd == 0,
-            "LHS-value's amount is not divisible by the GCD!"
-        );
-        debug_assert!(
-            other.amount % gcd == 0,
-            "RHS-value's amount is not divisible by the GCD!"
-        );
+    pub(super) fn into_coprime_with<OtherC>(self, other: Coin<OtherC>) -> (Self, Coin<OtherC>) {
+        let (new_self_amount, new_other_amount) = ratio::into_coprime(self.amount, other.amount);
 
         (
-            Self::new(self.amount / gcd),
-            Coin::<OtherC>::new(other.amount / gcd),
+            Self::new(new_self_amount),
+            Coin::<OtherC>::new(new_other_amount),
         )
+    }
+
+    #[track_caller]
+    fn checked_operation(self, res: Option<Amount>) -> Option<Self> {
+        res.map(|amount| Self {
+            amount,
+            ticker: self.ticker,
+        })
     }
 }
 
@@ -223,6 +262,48 @@ impl<C> From<Coin<C>> for Amount {
     }
 }
 
+impl<C> Div for Coin<C> {
+    type Output = Amount;
+
+    fn div(self, rhs: Self) -> Self::Output {
+        debug_assert!(!rhs.is_zero());
+
+        self.amount.div(rhs.amount)
+    }
+}
+
+impl<C> Rem for Coin<C> {
+    type Output = Self;
+
+    fn rem(self, rhs: Self) -> Self::Output {
+        self.amount.rem(rhs.amount).into()
+    }
+}
+
+impl<C> CheckedAdd for Coin<C> {
+    type Output = Self;
+
+    fn checked_add(self, rhs: Self) -> Option<Self::Output> {
+        self.checked_add(rhs)
+    }
+}
+
+impl CheckedAdd for Amount {
+    type Output = Self;
+
+    fn checked_add(self, rhs: Self) -> Option<Self::Output> {
+        self.checked_add(rhs)
+    }
+}
+
+impl<C> CheckedMul<Coin<C>> for Amount {
+    type Output = Coin<C>;
+
+    fn checked_mul(self, rhs: Coin<C>) -> Option<Self::Output> {
+        rhs.checked_mul(self)
+    }
+}
+
 pub type WithCoinResult<G, V> = Result<<V as WithCoin<G>>::Output, <V as WithCoin<G>>::Error>;
 
 pub trait WithCoin<VisitedG>
@@ -256,11 +337,18 @@ impl<C> AsRef<Self> for Coin<C> {
 
 #[cfg(test)]
 mod test {
-    use std::any;
+    use std::{
+        any,
+        fmt::{Debug, Display},
+    };
 
     use currency::test::{SuperGroupTestC1, SuperGroupTestC2};
 
-    use crate::percent::test::test_of;
+    use crate::{
+        fraction::Fraction,
+        fractionable::Percentable,
+        percent::{Percent100, Units},
+    };
 
     use super::{Amount, Coin};
 
@@ -415,6 +503,20 @@ mod test {
         let exp_sum = coin1(15);
         assert_eq!(coins.iter().sum::<Coin<SuperGroupTestC1>>(), exp_sum);
         assert_eq!(coins.into_iter().sum::<Coin<SuperGroupTestC1>>(), exp_sum);
+    }
+
+    fn test_of<P>(permille: Units, quantity: P, exp: P)
+    where
+        P: Clone + Debug + Display + PartialEq + Percentable,
+    {
+        let perm = Percent100::from_permille(permille);
+        assert_eq!(
+            exp,
+            perm.of(quantity.clone()),
+            "Calculating {} of {}",
+            perm,
+            quantity
+        );
     }
 
     fn coprime_impl(gcd: Amount, a1: Amount, a2: Amount) {
