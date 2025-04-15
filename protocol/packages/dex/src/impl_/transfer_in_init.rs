@@ -93,7 +93,6 @@ where
 impl<SwapTask, SEnum> TransferInInit<SwapTask, SEnum>
 where
     SwapTask: SwapTaskT,
-    SwapTask::OutG: Clone,
     Self: Into<SEnum>,
     TransferInFinish<SwapTask, SEnum>: Into<SEnum>,
 {
@@ -125,7 +124,6 @@ where
 impl<SwapTask, SEnum> Handler for TransferInInit<SwapTask, SEnum>
 where
     SwapTask: SwapTaskT,
-    SwapTask::OutG: Clone,
     Self: Into<SEnum>,
     TransferInFinish<SwapTask, SEnum>: Into<SEnum>,
 {

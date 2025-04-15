@@ -217,7 +217,6 @@ mod impl_handler {
     where
         OpenIca: Connectable + IcaConnectee<State = Self> + TimeAlarm + Display,
         SwapTask: AnomalyMonitoredTask,
-        SwapTask::OutG: Clone,
         SwapGroup: Group,
         SwapClient: ExactAmountIn,
         ForwardToInnerMsg: ForwardToInner,
@@ -545,7 +544,7 @@ mod impl_migration {
             >,
             MigrateOpenIcaFn: FnOnce(OpenIca) -> OpenIcaNew,
             MigrateSpecFn: FnOnce(SwapTask) -> SwapTaskNew,
-            SwapTaskNew: SwapTaskT<OutG = SwapTask::OutG, Result = SwapTask::Result>,
+            SwapTaskNew: SwapTaskT<OutG = SwapTask::OutG>,
         {
             match self {
                 State::OpenIca(inner) => inner.migrate_spec(migrate_open_ica).into(),

@@ -191,7 +191,6 @@ mod impl_handler {
         for State<SwapTask, SwapGroup, SwapClient, ForwardToInnerMsg>
     where
         SwapTask: AnomalyMonitoredTask,
-        SwapTask::OutG: Clone,
         SwapGroup: Group,
         SwapClient: ExactAmountIn,
         ForwardToInnerMsg: ForwardToInner,
@@ -471,7 +470,7 @@ mod impl_migration {
         SwapGroup: Group,
         SwapClient: ExactAmountIn,
         ForwardToInnerMsg: ForwardToInner,
-        SwapTaskNew: SwapTaskT<OutG = SwapTask::OutG, Result = SwapTask::Result>,
+        SwapTaskNew: SwapTaskT<OutG = SwapTask::OutG>,
     {
         type Out = State<SwapTaskNew, SwapGroup, SwapClient, ForwardToInnerMsg>;
 
