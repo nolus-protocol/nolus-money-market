@@ -9,7 +9,7 @@ use crate::{
     coin::{Amount, Coin},
     error::{Error, Result},
     fractionable::HigherRank,
-    ratio::{CheckedAdd, Rational},
+    ratio::{CheckedAdd, ComparableBounds, Gcd, Rational},
 };
 
 pub mod base;
@@ -37,6 +37,24 @@ where
 
 type DoubleAmount = <Amount as HigherRank<Amount>>::Type;
 type IntermediateAmount = <Amount as HigherRank<Amount>>::Intermediate;
+
+impl ComparableBounds for DoubleAmount {}
+
+impl Gcd for DoubleAmount {
+    fn gcd(self, other: Self) -> Self {
+        let (mut a, mut b) = if self > other {
+            (self, other)
+        } else {
+            (other, self)
+        };
+
+        while b != DoubleAmount::zero() {
+            std::mem::swap(&mut a, &mut b);
+            b %= a;
+        }
+        a
+    }
+}
 
 /// Represents the price of a currency in a quote currency, ref: <https://en.wikipedia.org/wiki/Currency_pair>
 ///
@@ -243,6 +261,7 @@ impl<C, QuoteC> Ord for Price<C, QuoteC>
 where
     C: 'static,
     QuoteC: 'static,
+    DoubleAmount: ComparableBounds + Mul<Output = DoubleAmount> + Ord,
 {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         // Please note that Price(amount, amount_quote) is like Ratio(amount_quote / amount).

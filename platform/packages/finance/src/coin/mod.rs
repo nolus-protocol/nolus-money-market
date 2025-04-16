@@ -10,13 +10,16 @@ use std::{
 };
 
 use ::serde::{Deserialize, Serialize};
+use gcd::Gcd;
 
 use currency::{Currency, CurrencyDef, Group, MemberOf};
 
 use crate::{
     duration::Duration,
     percent::{Units as PercentUnits, bound::BoundPercent},
-    ratio::{self, CheckedAdd, CheckedDiv, CheckedMul, Rational},
+    ratio::{
+        self, CheckedAdd, CheckedDiv, CheckedMul, ComparableBounds, Gcd as GcdTrait, Rational,
+    },
     zero::Zero,
 };
 
@@ -27,6 +30,14 @@ mod dto;
 mod serde;
 
 pub type Amount = u128;
+
+impl ComparableBounds for Amount {}
+
+impl GcdTrait for Amount {
+    fn gcd(self, other: Self) -> Self {
+        Gcd::gcd(self, other)
+    }
+}
 
 impl CheckedMul for Amount {
     type Output = Self;
@@ -51,14 +62,6 @@ impl CheckedMul<Duration> for Amount {
         checked_mul_and_convert(self, rhs, |result| {
             result.try_into().ok().map(Duration::from_nanos)
         })
-    }
-}
-
-impl CheckedMul<PercentUnits> for Amount {
-    type Output = PercentUnits;
-
-    fn checked_mul(self, rhs: PercentUnits) -> Option<Self::Output> {
-        checked_mul_and_convert(self, rhs, |result| result.try_into().ok())
     }
 }
 

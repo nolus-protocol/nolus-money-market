@@ -4,11 +4,18 @@ use std::{
     ops::{Div, Mul, Rem},
 };
 
-use gcd::Gcd;
-
 use serde::{Deserialize, Serialize};
 
 use crate::{fraction::Fraction, fractionable::Fractionable, zero::Zero};
+
+pub(crate) trait ComparableBounds:
+    Copy + Debug + Div<Output = Self> + Gcd + PartialEq + Rem<Output = Self> + Zero
+{
+}
+
+pub(crate) trait Gcd {
+    fn gcd(self, other: Self) -> Self;
+}
 
 /// A wrapper over `Rational` where the ratio is no more than 1.
 #[cfg_attr(any(test, feature = "testing"), derive(Debug))]
@@ -38,7 +45,8 @@ impl<U> Fraction<U> for Ratio<U> {
     }
 }
 
-#[derive(Clone, Copy, Debug, Deserialize, Eq, Serialize)]
+#[derive(Clone, Copy, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "snake_case")]
 pub struct Rational<U> {
     nominator: U,
     denominator: U,
@@ -81,8 +89,8 @@ where
 
 pub(crate) fn into_coprime<U>(a: U, b: U) -> (U, U)
 where
-    U: Copy + Debug + Div<Output = U> + Gcd + Mul<Output = U> + Ord + Rem + Zero,
-    <U as Rem>::Output: Debug + PartialEq + Zero,
+    U: ComparableBounds,
+    <U as Rem>::Output: Debug,
 {
     debug_assert_ne!(a, Zero::ZERO, "LHS-value is zero!");
     debug_assert_ne!(b, Zero::ZERO, "RHS-value is zero!");
@@ -102,15 +110,23 @@ where
     (a / gcd, b / gcd)
 }
 
-impl<U: PartialEq> PartialEq for Rational<U> {
+impl<U> Eq for Rational<U> where U: ComparableBounds {}
+
+impl<U> PartialEq for Rational<U>
+where
+    U: ComparableBounds,
+{
     fn eq(&self, other: &Self) -> bool {
-        self.nominator == other.nominator && self.denominator == other.denominator
+        let (self_numerator, self_denominator) = into_coprime(self.nominator, self.denominator);
+        let (other_numerator, other_denominator) = into_coprime(other.nominator, other.denominator);
+
+        self_numerator == other_numerator && self_denominator == other_denominator
     }
 }
 
-impl<U: PartialOrd> PartialOrd for Rational<U>
+impl<U> PartialOrd for Rational<U>
 where
-    U: Copy + Mul<Output = U> + Ord,
+    U: ComparableBounds + Mul<Output = U> + Ord,
 {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
@@ -119,7 +135,7 @@ where
 
 impl<U> Ord for Rational<U>
 where
-    U: Copy + Mul<Output = U> + Ord,
+    U: ComparableBounds + Mul<Output = U> + Ord,
 {
     fn cmp(&self, other: &Self) -> Ordering {
         // a/b < c/d if and only if a * d < b * c
@@ -178,15 +194,9 @@ where
     U: CheckedMul<Output = U>
         + CheckedAdd<Output = U>
         + CheckedDiv<Output = U>
-        + Copy
-        + Debug
-        + Div<Output = U>
-        + Gcd
+        + ComparableBounds
         + Mul<Output = U>
-        + Ord
-        + PartialEq<U>
-        + Rem<Output = U>
-        + Zero,
+        + Ord,
 {
     type Output = Self;
 
