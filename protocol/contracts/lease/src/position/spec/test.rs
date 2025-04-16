@@ -3,7 +3,7 @@ use finance::{
     coin::Coin,
     duration::Duration,
     liability::Liability,
-    percent::Percent,
+    percent::Percent100,
     price::{self, Price},
 };
 
@@ -14,7 +14,7 @@ use crate::{
 
 use super::Spec;
 
-const MAX_DEBT: Percent = Percent::from_permille(800);
+const MAX_DEBT: Percent100 = Percent100::from_permille(800);
 
 type TestCurrency = PaymentC3;
 type TestLpn = Lpn;
@@ -53,11 +53,11 @@ where
     Lpn: Into<LpnCoin>,
 {
     let liability = Liability::new(
-        Percent::from_percent(65),
-        Percent::from_percent(70),
-        Percent::from_percent(73),
-        Percent::from_percent(75),
-        Percent::from_percent(78),
+        Percent100::from_percent(65),
+        Percent100::from_percent(70),
+        Percent100::from_percent(73),
+        Percent100::from_percent(75),
+        Percent100::from_percent(78),
         MAX_DEBT,
         Duration::from_hours(1),
     );
@@ -165,12 +165,15 @@ mod test_debt {
         duration::Duration,
         fraction::Fraction,
         liability::{Liability, Zone},
-        percent::Percent,
+        percent::Percent100,
         price::Price,
         range::RightOpenRange,
     };
 
-    use crate::position::{Cause, Debt, Spec, Steadiness, close::Policy as ClosePolicy};
+    use crate::position::{
+        Cause, Debt, Spec, Steadiness,
+        close::{Policy as ClosePolicy, common_methods},
+    };
 
     use super::TestCurrency;
 
@@ -179,7 +182,7 @@ mod test_debt {
     const RECALC_IN: Duration = Duration::from_hours(1);
     #[test]
     fn no_debt() {
-        let warn_ltv = Percent::from_permille(11);
+        let warn_ltv = Percent100::from_permille(11);
         let spec = spec_with_first(warn_ltv, 1, 1);
         let asset = 100.into();
 
@@ -195,7 +198,7 @@ mod test_debt {
 
     #[test]
     fn warnings_none_zero_liq() {
-        let warn_ltv = Percent::from_percent(51);
+        let warn_ltv = Percent100::from_percent(51);
         let spec = spec_with_first(warn_ltv, 1, 1);
         let asset = 100.into();
 
@@ -230,22 +233,22 @@ mod test_debt {
         assert_eq!(
             spec.debt(asset, &super::due(51, 0), super::price(1, 1)),
             Debt::Ok {
-                zone: Zone::first(warn_ltv, warn_ltv + STEP),
-                steadiness: steady_in(warn_ltv, warn_ltv + STEP, asset, 51)
+                zone: Zone::first(warn_ltv, common_methods::add(warn_ltv, STEP)),
+                steadiness: steady_in(warn_ltv, common_methods::add(warn_ltv, STEP), asset, 51)
             },
         );
         assert_eq!(
             spec.debt(asset, &super::due(17, 0), super::price(3, 1)),
             Debt::Ok {
-                zone: Zone::first(warn_ltv, warn_ltv + STEP),
-                steadiness: steady_in(warn_ltv, warn_ltv + STEP, asset, 17)
+                zone: Zone::first(warn_ltv, common_methods::add(warn_ltv, STEP)),
+                steadiness: steady_in(warn_ltv, common_methods::add(warn_ltv, STEP), asset, 17)
             },
         );
     }
 
     #[test]
     fn warnings_none_min_transaction() {
-        let warn_ltv = Percent::from_percent(51);
+        let warn_ltv = Percent100::from_percent(51);
         let spec = spec_with_first(warn_ltv, 1, 15);
         let asset = 100.into();
 
@@ -266,22 +269,22 @@ mod test_debt {
         assert_eq!(
             spec.debt(asset, &super::due(51, 14), super::price(1, 1)),
             Debt::Ok {
-                zone: Zone::first(warn_ltv, warn_ltv + STEP),
-                steadiness: steady_in(warn_ltv, warn_ltv + STEP, asset, 51)
+                zone: Zone::first(warn_ltv, common_methods::add(warn_ltv, STEP)),
+                steadiness: steady_in(warn_ltv, common_methods::add(warn_ltv, STEP), asset, 51)
             },
         );
         assert_eq!(
             spec.debt(asset, &super::due(17, 4), super::price(3, 1)),
             Debt::Ok {
-                zone: Zone::first(warn_ltv, warn_ltv + STEP),
-                steadiness: steady_in(warn_ltv, warn_ltv + STEP, asset, 17)
+                zone: Zone::first(warn_ltv, common_methods::add(warn_ltv, STEP)),
+                steadiness: steady_in(warn_ltv, common_methods::add(warn_ltv, STEP), asset, 17)
             },
         );
     }
 
     #[test]
     fn warnings_first() {
-        let warn_ltv = Percent::from_permille(712);
+        let warn_ltv = Percent100::from_permille(712);
         let spec = spec_with_first(warn_ltv, 10, 1);
         let asset = 1000.into();
 
@@ -302,15 +305,15 @@ mod test_debt {
         assert_eq!(
             spec.debt(asset, &super::due(712, 0), super::price(1, 1)),
             Debt::Ok {
-                zone: Zone::first(warn_ltv, warn_ltv + STEP),
-                steadiness: steady_in(warn_ltv, warn_ltv + STEP, asset, 712)
+                zone: Zone::first(warn_ltv, common_methods::add(warn_ltv, STEP)),
+                steadiness: steady_in(warn_ltv, common_methods::add(warn_ltv, STEP), asset, 712)
             },
         );
         assert_eq!(
             spec.debt(asset, &super::due(178, 0), super::price(4, 1)),
             Debt::Ok {
-                zone: Zone::first(warn_ltv, warn_ltv + STEP),
-                steadiness: steady_in(warn_ltv, warn_ltv + STEP, asset, 178)
+                zone: Zone::first(warn_ltv, common_methods::add(warn_ltv, STEP)),
+                steadiness: steady_in(warn_ltv, common_methods::add(warn_ltv, STEP), asset, 178)
             },
         );
         assert_eq!(
@@ -324,58 +327,74 @@ mod test_debt {
         assert_eq!(
             spec.debt(asset, &super::due(712, 0), super::price(1, 1)),
             Debt::Ok {
-                zone: Zone::first(warn_ltv, warn_ltv + STEP),
-                steadiness: steady_in(warn_ltv, warn_ltv + STEP, asset, 712)
+                zone: Zone::first(warn_ltv, common_methods::add(warn_ltv, STEP)),
+                steadiness: steady_in(warn_ltv, common_methods::add(warn_ltv, STEP), asset, 712)
             },
         );
         assert_eq!(
             spec.debt(asset, &super::due(103, 0), super::price(7, 1)),
             Debt::Ok {
-                zone: Zone::first(warn_ltv, warn_ltv + STEP),
-                steadiness: steady_in(warn_ltv, warn_ltv + STEP, asset, 103)
+                zone: Zone::first(warn_ltv, common_methods::add(warn_ltv, STEP)),
+                steadiness: steady_in(warn_ltv, common_methods::add(warn_ltv, STEP), asset, 103)
             },
         );
         assert_eq!(
             spec.debt(asset, &super::due(722, 0), super::price(1, 1)),
             Debt::Ok {
-                zone: Zone::second(warn_ltv + STEP, warn_ltv + STEP + STEP),
-                steadiness: steady_in(warn_ltv + STEP, warn_ltv + STEP + STEP, asset, 722)
+                zone: Zone::second(
+                    common_methods::add(warn_ltv, STEP),
+                    common_methods::add(common_methods::add(warn_ltv, STEP), STEP)
+                ),
+                steadiness: steady_in(
+                    common_methods::add(warn_ltv, STEP),
+                    common_methods::add(common_methods::add(warn_ltv, STEP), STEP),
+                    asset,
+                    722
+                )
             },
         );
         assert_eq!(
             spec.debt(asset, &super::due(361, 0), super::price(2, 1)),
             Debt::Ok {
-                zone: Zone::second(warn_ltv + STEP, warn_ltv + STEP + STEP),
-                steadiness: steady_in(warn_ltv + STEP, warn_ltv + STEP + STEP, asset, 361)
+                zone: Zone::second(
+                    common_methods::add(warn_ltv, STEP),
+                    common_methods::add(common_methods::add(warn_ltv, STEP), STEP)
+                ),
+                steadiness: steady_in(
+                    common_methods::add(warn_ltv, STEP),
+                    common_methods::add(common_methods::add(warn_ltv, STEP), STEP),
+                    asset,
+                    361
+                )
             },
         );
     }
 
     #[test]
     fn warnings_first_min_transaction() {
-        let warn_ltv = Percent::from_permille(712);
+        let warn_ltv = Percent100::from_permille(712);
         let spec = spec_with_first(warn_ltv, 10, 3);
         let asset = 1000.into();
 
         assert_eq!(
             spec.debt(asset, &super::due(712, 2), super::price(1, 1)),
             Debt::Ok {
-                zone: Zone::first(warn_ltv, warn_ltv + STEP),
-                steadiness: steady_in(warn_ltv, warn_ltv + STEP, asset, 712)
+                zone: Zone::first(warn_ltv, common_methods::add(warn_ltv, STEP)),
+                steadiness: steady_in(warn_ltv, common_methods::add(warn_ltv, STEP), asset, 712)
             },
         );
         assert_eq!(
             spec.debt(asset, &super::due(356, 1), super::price(2, 1)),
             Debt::Ok {
-                zone: Zone::first(warn_ltv, warn_ltv + STEP),
-                steadiness: steady_in(warn_ltv, warn_ltv + STEP, asset, 356)
+                zone: Zone::first(warn_ltv, common_methods::add(warn_ltv, STEP)),
+                steadiness: steady_in(warn_ltv, common_methods::add(warn_ltv, STEP), asset, 356)
             },
         );
         assert_eq!(
             spec.debt(asset, &super::due(721, 2), super::price(1, 1)),
             Debt::Ok {
-                zone: Zone::first(warn_ltv, warn_ltv + STEP),
-                steadiness: steady_in(warn_ltv, warn_ltv + STEP, asset, 721)
+                zone: Zone::first(warn_ltv, common_methods::add(warn_ltv, STEP)),
+                steadiness: steady_in(warn_ltv, common_methods::add(warn_ltv, STEP), asset, 721)
             },
         );
         assert_eq!(
@@ -390,36 +409,36 @@ mod test_debt {
 
     #[test]
     fn warnings_second() {
-        let warn_ltv = Percent::from_permille(123);
+        let warn_ltv = Percent100::from_permille(123);
         let spec = spec_with_second(warn_ltv, 10, 1);
         let asset = 1000.into();
 
         assert_eq!(
             spec.debt(asset, &super::due(122, 0), super::price(1, 1)),
             Debt::Ok {
-                zone: Zone::first(warn_ltv - STEP, warn_ltv),
-                steadiness: steady_in(warn_ltv - STEP, warn_ltv, asset, 122)
+                zone: Zone::first(common_methods::sub(warn_ltv, STEP), warn_ltv),
+                steadiness: steady_in(common_methods::sub(warn_ltv, STEP), warn_ltv, asset, 122)
             },
         );
         assert_eq!(
             spec.debt(asset, &super::due(15, 0), super::price(8, 1)),
             Debt::Ok {
-                zone: Zone::first(warn_ltv - STEP, warn_ltv),
-                steadiness: steady_in(warn_ltv - STEP, warn_ltv, asset, 15)
+                zone: Zone::first(common_methods::sub(warn_ltv, STEP), warn_ltv),
+                steadiness: steady_in(common_methods::sub(warn_ltv, STEP), warn_ltv, asset, 15)
             },
         );
         assert_eq!(
             spec.debt(asset, &super::due(123, 0), super::price(1, 1)),
             Debt::Ok {
-                zone: Zone::second(warn_ltv, warn_ltv + STEP),
-                steadiness: steady_in(warn_ltv, warn_ltv + STEP, asset, 123)
+                zone: Zone::second(warn_ltv, common_methods::add(warn_ltv, STEP)),
+                steadiness: steady_in(warn_ltv, common_methods::add(warn_ltv, STEP), asset, 123)
             },
         );
         assert_eq!(
             spec.debt(asset, &super::due(82, 0), super::price(3, 2)),
             Debt::Ok {
-                zone: Zone::second(warn_ltv, warn_ltv + STEP),
-                steadiness: steady_in(warn_ltv, warn_ltv + STEP, asset, 82)
+                zone: Zone::second(warn_ltv, common_methods::add(warn_ltv, STEP)),
+                steadiness: steady_in(warn_ltv, common_methods::add(warn_ltv, STEP), asset, 82)
             },
         );
         assert_eq!(
@@ -429,44 +448,52 @@ mod test_debt {
         assert_eq!(
             spec.debt(asset, &super::due(132, 0), super::price(1, 1)),
             Debt::Ok {
-                zone: Zone::second(warn_ltv, warn_ltv + STEP),
-                steadiness: steady_in(warn_ltv, warn_ltv + STEP, asset, 132)
+                zone: Zone::second(warn_ltv, common_methods::add(warn_ltv, STEP)),
+                steadiness: steady_in(warn_ltv, common_methods::add(warn_ltv, STEP), asset, 132)
             },
         );
         assert_eq!(
             spec.debt(asset, &super::due(66, 0), super::price(2, 1)),
             Debt::Ok {
-                zone: Zone::second(warn_ltv, warn_ltv + STEP),
-                steadiness: steady_in(warn_ltv, warn_ltv + STEP, asset, 66)
+                zone: Zone::second(warn_ltv, common_methods::add(warn_ltv, STEP)),
+                steadiness: steady_in(warn_ltv, common_methods::add(warn_ltv, STEP), asset, 66)
             },
         );
         assert_eq!(
             spec.debt(asset, &super::due(133, 0), super::price(1, 1)),
             Debt::Ok {
-                zone: Zone::third(warn_ltv + STEP, warn_ltv + STEP + STEP),
-                steadiness: steady_in(warn_ltv + STEP, warn_ltv + STEP + STEP, asset, 133)
+                zone: Zone::third(
+                    common_methods::add(warn_ltv, STEP),
+                    common_methods::add(common_methods::add(warn_ltv, STEP), STEP)
+                ),
+                steadiness: steady_in(
+                    common_methods::add(warn_ltv, STEP),
+                    common_methods::add(common_methods::add(warn_ltv, STEP), STEP),
+                    asset,
+                    133
+                )
             },
         );
     }
 
     #[test]
     fn warnings_second_min_transaction() {
-        let warn_ltv = Percent::from_permille(123);
+        let warn_ltv = Percent100::from_permille(123);
         let spec = spec_with_second(warn_ltv, 10, 5);
         let asset = 1000.into();
 
         assert_eq!(
             spec.debt(asset, &super::due(128, 4), super::price(1, 1)),
             Debt::Ok {
-                zone: Zone::second(warn_ltv, warn_ltv + STEP),
-                steadiness: steady_in(warn_ltv, warn_ltv + STEP, asset, 128)
+                zone: Zone::second(warn_ltv, common_methods::add(warn_ltv, STEP)),
+                steadiness: steady_in(warn_ltv, common_methods::add(warn_ltv, STEP), asset, 128)
             },
         );
         assert_eq!(
             spec.debt(asset, &super::due(32, 1), super::price(4, 1)),
             Debt::Ok {
-                zone: Zone::second(warn_ltv, warn_ltv + STEP),
-                steadiness: steady_in(warn_ltv, warn_ltv + STEP, asset, 32)
+                zone: Zone::second(warn_ltv, common_methods::add(warn_ltv, STEP)),
+                steadiness: steady_in(warn_ltv, common_methods::add(warn_ltv, STEP), asset, 32)
             },
         );
         assert_eq!(
@@ -477,23 +504,33 @@ mod test_debt {
 
     #[test]
     fn warnings_third() {
-        let warn_third_ltv = Percent::from_permille(381);
-        let max_ltv = warn_third_ltv + STEP;
+        let warn_third_ltv = Percent100::from_permille(381);
+        let max_ltv = common_methods::add(warn_third_ltv, STEP);
         let spec = spec_with_third(warn_third_ltv, 100, 1);
         let asset = 1000.into();
 
         assert_eq!(
             spec.debt(asset, &super::due(380, 0), super::price(1, 1)),
             Debt::Ok {
-                zone: Zone::second(warn_third_ltv - STEP, warn_third_ltv),
-                steadiness: steady_in(warn_third_ltv - STEP, warn_third_ltv, asset, 380)
+                zone: Zone::second(common_methods::sub(warn_third_ltv, STEP), warn_third_ltv),
+                steadiness: steady_in(
+                    common_methods::sub(warn_third_ltv, STEP),
+                    warn_third_ltv,
+                    asset,
+                    380
+                )
             },
         );
         assert_eq!(
             spec.debt(asset, &super::due(190, 0), super::price(2, 1)),
             Debt::Ok {
-                zone: Zone::second(warn_third_ltv - STEP, warn_third_ltv),
-                steadiness: steady_in(warn_third_ltv - STEP, warn_third_ltv, asset, 190)
+                zone: Zone::second(common_methods::sub(warn_third_ltv, STEP), warn_third_ltv),
+                steadiness: steady_in(
+                    common_methods::sub(warn_third_ltv, STEP),
+                    warn_third_ltv,
+                    asset,
+                    190
+                )
             },
         );
         assert_eq!(
@@ -532,23 +569,33 @@ mod test_debt {
 
     #[test]
     fn warnings_third_min_transaction() {
-        let warn_third_ltv = Percent::from_permille(381);
-        let max_ltv = warn_third_ltv + STEP;
+        let warn_third_ltv = Percent100::from_permille(381);
+        let max_ltv = common_methods::add(warn_third_ltv, STEP);
         let spec = spec_with_third(warn_third_ltv, 100, 386);
         let asset = 1000.into();
 
         assert_eq!(
             spec.debt(asset, &super::due(380, 1), super::price(1, 1)),
             Debt::Ok {
-                zone: Zone::second(warn_third_ltv - STEP, warn_third_ltv),
-                steadiness: steady_in(warn_third_ltv - STEP, warn_third_ltv, asset, 380)
+                zone: Zone::second(common_methods::sub(warn_third_ltv, STEP), warn_third_ltv),
+                steadiness: steady_in(
+                    common_methods::sub(warn_third_ltv, STEP),
+                    warn_third_ltv,
+                    asset,
+                    380
+                )
             },
         );
         assert_eq!(
             spec.debt(asset, &super::due(126, 1), super::price(3, 1)),
             Debt::Ok {
-                zone: Zone::second(warn_third_ltv - STEP, warn_third_ltv),
-                steadiness: steady_in(warn_third_ltv - STEP, warn_third_ltv, asset, 126)
+                zone: Zone::second(common_methods::sub(warn_third_ltv, STEP), warn_third_ltv),
+                steadiness: steady_in(
+                    common_methods::sub(warn_third_ltv, STEP),
+                    warn_third_ltv,
+                    asset,
+                    126
+                )
             },
         );
         assert_eq!(
@@ -607,7 +654,7 @@ mod test_debt {
 
     #[test]
     fn liquidate_partial() {
-        let max_ltv = Percent::from_permille(881);
+        let max_ltv = Percent100::from_permille(881);
         let spec = spec_with_max(max_ltv, 100, 1);
         let asset = 1000.into();
 
@@ -655,7 +702,7 @@ mod test_debt {
 
     #[test]
     fn liquidate_partial_min_asset() {
-        let max_ltv = Percent::from_permille(881);
+        let max_ltv = Percent100::from_permille(881);
         let spec = spec_with_max(max_ltv, 100, 1);
         let asset = 1000.into();
 
@@ -698,7 +745,7 @@ mod test_debt {
 
     #[test]
     fn liquidate_full() {
-        let max_ltv = Percent::from_permille(768);
+        let max_ltv = Percent100::from_permille(768);
         let spec = spec_with_max(max_ltv, 230, 1);
         let asset = 1000.into();
 
@@ -741,7 +788,7 @@ mod test_debt {
 
     #[test]
     fn liquidate_full_liability() {
-        let max_ltv = Percent::from_permille(673);
+        let max_ltv = Percent100::from_permille(673);
         let spec = spec_with_max(max_ltv, 120, 15);
         let asset = 1000.into();
 
@@ -780,7 +827,7 @@ mod test_debt {
 
     #[test]
     fn liquidate_full_overdue() {
-        let max_ltv = Percent::from_permille(773);
+        let max_ltv = Percent100::from_permille(773);
         let spec = spec_with_max(max_ltv, 326, 15);
         let asset = 1000.into();
 
@@ -802,41 +849,58 @@ mod test_debt {
         );
     }
 
-    const STEP: Percent = Percent::from_permille(10);
+    const STEP: Percent100 = Percent100::from_permille(10);
 
-    fn spec_with_first<Lpn>(warn: Percent, min_asset: Lpn, min_transaction: Lpn) -> Spec
+    fn spec_with_first<Lpn>(warn: Percent100, min_asset: Lpn, min_transaction: Lpn) -> Spec
     where
         Lpn: Into<Coin<TestLpn>>,
     {
-        spec_with_max(warn + STEP + STEP + STEP, min_asset, min_transaction)
+        spec_with_max(
+            common_methods::add(
+                common_methods::add(common_methods::add(warn, STEP), STEP),
+                STEP,
+            ),
+            min_asset,
+            min_transaction,
+        )
     }
 
-    fn spec_with_second<Lpn>(warn: Percent, min_asset: Lpn, min_transaction: Lpn) -> Spec
+    fn spec_with_second<Lpn>(warn: Percent100, min_asset: Lpn, min_transaction: Lpn) -> Spec
     where
         Lpn: Into<Coin<TestLpn>>,
     {
-        spec_with_max(warn + STEP + STEP, min_asset, min_transaction)
+        spec_with_max(
+            common_methods::add(common_methods::add(warn, STEP), STEP),
+            min_asset,
+            min_transaction,
+        )
     }
 
-    fn spec_with_third<Lpn>(warn: Percent, min_asset: Lpn, min_transaction: Lpn) -> Spec
+    fn spec_with_third<Lpn>(warn: Percent100, min_asset: Lpn, min_transaction: Lpn) -> Spec
     where
         Lpn: Into<Coin<TestLpn>>,
     {
-        spec_with_max(warn + STEP, min_asset, min_transaction)
+        spec_with_max(common_methods::add(warn, STEP), min_asset, min_transaction)
     }
 
     // init = 1%, healthy = 1%, first = max - 3, second = max - 2, third = max - 1
-    fn spec_with_max<Lpn>(max: Percent, min_asset: Lpn, min_transaction: Lpn) -> Spec
+    fn spec_with_max<Lpn>(max: Percent100, min_asset: Lpn, min_transaction: Lpn) -> Spec
     where
         Lpn: Into<Coin<TestLpn>>,
     {
         let initial = STEP;
-        assert!(initial < max - STEP - STEP - STEP);
+        assert!(
+            initial
+                < common_methods::sub(
+                    common_methods::sub(common_methods::sub(max, STEP), STEP),
+                    STEP
+                )
+        );
 
-        let healthy = initial + Percent::ZERO;
-        let third_liquidity_warning = max - STEP;
-        let second_liquidity_warning = third_liquidity_warning - STEP;
-        let first_liquidity_warning = second_liquidity_warning - STEP;
+        let healthy = common_methods::add(initial, Percent100::ZERO);
+        let third_liquidity_warning = common_methods::sub(max, STEP);
+        let second_liquidity_warning = common_methods::sub(third_liquidity_warning, STEP);
+        let first_liquidity_warning = common_methods::sub(second_liquidity_warning, STEP);
 
         let liability = Liability::new(
             initial,
@@ -855,7 +919,7 @@ mod test_debt {
         )
     }
 
-    fn steady_to<C, D>(ltv: Percent, asset: C, due: D) -> Steadiness<TestCurrency>
+    fn steady_to<C, D>(ltv: Percent100, asset: C, due: D) -> Steadiness<TestCurrency>
     where
         C: Into<Coin<TestCurrency>> + Copy,
         D: Into<Coin<TestLpn>> + Copy,
@@ -867,8 +931,8 @@ mod test_debt {
     }
 
     fn steady_in<C, D>(
-        ltv_from: Percent,
-        ltv_to: Percent,
+        ltv_from: Percent100,
+        ltv_to: Percent100,
         asset: C,
         due: D,
     ) -> Steadiness<TestCurrency>
@@ -884,7 +948,10 @@ mod test_debt {
         )
     }
 
-    fn ltv_to_price<C, D>(asset: C, due: D) -> impl FnMut(Percent) -> Price<TestCurrency, TestLpn>
+    fn ltv_to_price<C, D>(
+        asset: C,
+        due: D,
+    ) -> impl FnMut(Percent100) -> Price<TestCurrency, TestLpn>
     where
         C: Into<Coin<TestCurrency>> + Copy,
         D: Into<Coin<TestLpn>> + Copy,
@@ -994,7 +1061,7 @@ mod test_validate_close {
 }
 
 mod test_check_close {
-    use finance::percent::Percent;
+    use finance::percent::Percent100;
 
     use crate::{
         api::position::{ChangeCmd, ClosePolicyChange},
@@ -1033,10 +1100,10 @@ mod test_check_close {
             spec.check_close(asset, &super::due(90, 0), super::price(1, 2))
         );
 
-        let stop_loss_trigger = Percent::from_percent(46);
+        let stop_loss_trigger = Percent100::from_percent(46);
         assert_eq!(
             Err(PositionError::trigger_close(
-                Percent::from_ratio(920, 1000 * 2),
+                Percent100::from_ratio(920, 1000 * 2).unwrap(),
                 CloseStrategy::StopLoss(stop_loss_trigger)
             )),
             spec.change_close_policy(
@@ -1107,10 +1174,10 @@ mod test_check_close {
             spec.check_close(asset, &super::due(90, 0), super::price(1, 2))
         );
 
-        let take_profit_trigger = Percent::from_percent(46);
+        let take_profit_trigger = Percent100::from_percent(46);
         assert_eq!(
             Err(PositionError::trigger_close(
-                Percent::from_ratio(919, 1000 * 2),
+                Percent100::from_ratio(919, 1000 * 2).unwrap(),
                 CloseStrategy::TakeProfit(take_profit_trigger)
             )),
             spec.change_close_policy(

@@ -6,7 +6,7 @@ use currency::{CurrencyDef, MemberOf};
 use finance::{
     coin::Coin,
     duration::Duration,
-    percent::Percent,
+    percent::Percent100,
     price::{self, Price},
 };
 use marketprice::config::Config as PriceConfig;
@@ -47,10 +47,10 @@ impl Instantiator {
         let msg = InstantiateMsg {
             config: Config {
                 price_config: PriceConfig::new(
-                    Percent::from_percent(1),
+                    Percent100::from_percent(1),
                     Duration::from_secs(5),
                     12,
-                    Percent::from_percent(75),
+                    Percent100::from_percent(75),
                 ),
             },
 

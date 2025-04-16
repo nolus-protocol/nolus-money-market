@@ -4,7 +4,7 @@ use currencies::Lpns;
 use serde::{Deserialize, Serialize};
 
 use currency::{CurrencyDef, MemberOf};
-use finance::{percent::bound::BoundToHundredPercent, price::Price};
+use finance::{percent::Percent100, price::Price};
 use lpp_platform::NLpn;
 use platform::contract::Code;
 use sdk::{cosmwasm_std::Storage, cw_storage_plus::Item};
@@ -15,7 +15,7 @@ use crate::{borrow::InterestRate, contract::Result, msg::InstantiateMsg};
 pub struct Config {
     lease_code: Code,
     borrow_rate: InterestRate,
-    min_utilization: BoundToHundredPercent,
+    min_utilization: Percent100,
 }
 
 impl Config {
@@ -38,7 +38,7 @@ impl Config {
     pub fn new_unchecked(
         lease_code: Code,
         borrow_rate: InterestRate,
-        min_utilization: BoundToHundredPercent,
+        min_utilization: Percent100,
     ) -> Self {
         Self {
             lease_code,
@@ -55,7 +55,7 @@ impl Config {
         &self.borrow_rate
     }
 
-    pub const fn min_utilization(&self) -> BoundToHundredPercent {
+    pub const fn min_utilization(&self) -> Percent100 {
         self.min_utilization
     }
 
@@ -90,7 +90,7 @@ impl Config {
 
     pub fn update_min_utilization(
         storage: &mut dyn Storage,
-        min_utilization: BoundToHundredPercent,
+        min_utilization: Percent100,
     ) -> Result<()> {
         Self::update_field(storage, |config| Self {
             min_utilization,
