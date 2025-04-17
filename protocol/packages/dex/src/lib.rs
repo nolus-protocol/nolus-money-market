@@ -13,13 +13,13 @@ pub use self::{
     ica_connectee::IcaConnectee,
     impl_::{
         IcaConnector, StartLocalLocalState, StartLocalRemoteState, StartTransferInState,
-        StateLocalOut, StateRemoteOut, TransferOut, on_coin, on_coins, start_local_local,
-        start_local_remote, start_remote_local,
+        StateLocalOut, StateRemoteOut, TransferOut, start_local_local, start_local_remote,
+        start_remote_local,
     },
     resp_delivery::ForwardToInner,
     response::{ContinueResult, Handler, Response, Result},
     state::{Contract, ContractInSwap, Stage},
-    swap_task::{CoinVisitor, CoinsNb, IterNext, IterState, SwapTask},
+    swap_task::{CoinsNb, SwapTask},
     time_alarm::TimeAlarm,
 };
 

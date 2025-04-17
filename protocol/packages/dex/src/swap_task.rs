@@ -25,14 +25,13 @@ pub trait SwapTask {
     fn time_alarm(&self) -> &TimeAlarmsRef;
     fn out_currency(&self) -> CurrencyDTO<Self::OutG>;
 
-    /// Call back the worker with each coin this swap is about.
-    /// The iteration is done over the coins always in the same order.
-    /// It continues either until there are no more coins or the worker has responded
-    /// with `IterNext::Stop` to the last call back.
-    /// There should be at least one coin.
-    fn on_coins<Visitor>(&self, visitor: &mut Visitor) -> Result<IterState, Visitor::Error>
-    where
-        Visitor: CoinVisitor<GIn = Self::InG, Result = IterNext>;
+    /// Provide the coins, at least one, this swap is about.
+    /// The iteration is done always in the same order.
+    //
+    // TODO define the Item type as an associative : AsRef<CoinDTO<Self::InG>> to allow iterating over values and references.
+    // This would avoid clone-ing of values kept in the task. At the same time, we cannot iterate over '&' due to
+    // having temporary instances in some of the tasks.
+    fn coins(&self) -> impl IntoIterator<Item = CoinDTO<Self::InG>>;
 
     /// The final transition of this DEX composite state machine
     ///
@@ -46,28 +45,4 @@ pub trait SwapTask {
         env: &Env,
         querier: QuerierWrapper<'_>,
     ) -> Self::Result;
-}
-
-#[derive(PartialEq, Eq)]
-#[cfg_attr(any(debug_assertions, test, feature = "testing"), derive(Debug))]
-pub enum IterState {
-    Complete,
-    Incomplete,
-}
-
-#[derive(PartialEq, Eq)]
-#[cfg_attr(any(debug_assertions, test, feature = "testing"), derive(Clone, Debug))]
-pub enum IterNext {
-    Stop,
-    Continue,
-}
-
-pub trait CoinVisitor {
-    type GIn: Group;
-
-    type Result;
-
-    type Error;
-
-    fn visit(&mut self, coin: &CoinDTO<Self::GIn>) -> Result<Self::Result, Self::Error>;
 }

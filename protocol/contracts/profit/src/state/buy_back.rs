@@ -3,9 +3,8 @@ use serde::{Deserialize, Serialize};
 use currencies::{Native, Nls, PaymentGroup};
 use currency::CurrencyDTO;
 use dex::{
-    AcceptAnyNonZeroSwap, Account, AnomalyMonitoredTask, AnomalyPolicy, CoinVisitor,
-    ContractInSwap, Enterable, IterNext, IterState, Response as DexResponse, Stage, StateLocalOut,
-    SwapTask,
+    AcceptAnyNonZeroSwap, Account, AnomalyMonitoredTask, AnomalyPolicy, ContractInSwap, Enterable,
+    Response as DexResponse, Stage, StateLocalOut, SwapTask,
 };
 use finance::{
     coin::{Coin, CoinDTO},
@@ -91,24 +90,8 @@ impl SwapTask for BuyBack {
         currency::dto::<Nls, Self::OutG>()
     }
 
-    fn on_coins<Visitor>(&self, visitor: &mut Visitor) -> Result<IterState, Visitor::Error>
-    where
-        Visitor: CoinVisitor<GIn = Self::InG, Result = IterNext>,
-    {
-        let mut coins_iter = self.coins.iter();
-
-        TryFind::try_find(&mut coins_iter, |coin| {
-            visitor
-                .visit(coin)
-                .map(|result| matches!(result, IterNext::Stop))
-        })
-        .map(|_| {
-            if coins_iter.as_slice().is_empty() {
-                IterState::Complete
-            } else {
-                IterState::Incomplete
-            }
-        })
+    fn coins(&self) -> impl IntoIterator<Item = CoinDTO<Self::InG>> {
+        self.coins.clone().into_iter()
     }
 
     fn finish(
@@ -159,137 +142,3 @@ impl ContractInSwap for BuyBack {
 }
 
 impl ConfigManagement for StateLocalOut<BuyBack, ProfitCurrencies, SwapClient, ForwardToDexEntry> {}
-
-trait TryFind
-where
-    Self: Iterator + Sized,
-{
-    fn try_find<F, E>(&mut self, mut f: F) -> Result<Option<Self::Item>, E>
-    where
-        F: FnMut(&Self::Item) -> Result<bool, E>,
-    {
-        self.find_map(move |item| match f(&item) {
-            Ok(true) => Some(Ok(item)),
-            Ok(false) => None,
-            Err(error) => Some(Err(error)),
-        })
-        .transpose()
-    }
-}
-
-impl<I> TryFind for I where I: Iterator {}
-
-#[cfg(all(feature = "internal.test.contract", test))]
-mod tests {
-    use currencies::{
-        Lpn, Lpns, PaymentGroup,
-        testing::{PaymentC3, PaymentC4, PaymentC5, PaymentC6, PaymentC7},
-    };
-    use currency::never::Never;
-    use dex::{CoinVisitor, IterNext, IterState, SwapTask as _};
-    use finance::coin::{Coin, CoinDTO};
-
-    use super::BuyBack;
-
-    fn buy_back_instance(coins: Vec<CoinDTO<PaymentGroup>>) -> BuyBack {
-        use dex::{Account, ConnectionParams, Ics20Channel};
-        use oracle_platform::OracleRef;
-        use platform::ica::HostAccount;
-        use sdk::cosmwasm_std::Addr;
-        use timealarms::stub::TimeAlarmsRef;
-
-        use crate::state::Config;
-
-        BuyBack::new(
-            Addr::unchecked("DEADCODE"),
-            Config::new(
-                24,
-                Addr::unchecked("DEADCODE"),
-                OracleRef::<Lpn, Lpns>::unchecked(Addr::unchecked("DEADCODE")),
-                TimeAlarmsRef::unchecked("DEADCODE"),
-            ),
-            Account::unchecked(
-                Addr::unchecked("DEADCODE"),
-                HostAccount::try_from(String::from("DEADCODE"))
-                    .expect("Address should be a non-empty string"),
-                ConnectionParams {
-                    connection_id: String::from("DEADCODE"),
-                    transfer_channel: Ics20Channel {
-                        local_endpoint: String::from("DEADCODE"),
-                        remote_endpoint: String::from("DEADCODE"),
-                    },
-                },
-            ),
-            coins,
-        )
-    }
-
-    struct Visitor {
-        stop_after: Option<usize>,
-    }
-
-    impl Visitor {
-        fn new(stop_after: Option<usize>) -> Self {
-            Self { stop_after }
-        }
-    }
-
-    impl CoinVisitor for Visitor {
-        type GIn = PaymentGroup;
-
-        type Result = IterNext;
-
-        type Error = Never;
-
-        fn visit(&mut self, _: &CoinDTO<Self::GIn>) -> Result<Self::Result, Self::Error> {
-            if let Some(stop_after) = &mut self.stop_after {
-                if *stop_after == 0 {
-                    return Ok(IterNext::Stop);
-                }
-
-                *stop_after -= 1;
-            }
-
-            Ok(IterNext::Continue)
-        }
-    }
-
-    #[test]
-    fn always_continue() {
-        let buy_back: BuyBack = buy_back_instance(vec![
-            Coin::<PaymentC7>::new(100).into(),
-            Coin::<PaymentC4>::new(200).into(),
-        ]);
-
-        assert_eq!(
-            buy_back.on_coins(&mut Visitor::new(None)).unwrap(),
-            IterState::Complete
-        );
-    }
-
-    #[test]
-    fn stop_on_first() {
-        let buy_back: BuyBack = buy_back_instance(vec![
-            Coin::<PaymentC3>::new(100).into(),
-            Coin::<Lpn>::new(200).into(),
-        ]);
-
-        assert_eq!(
-            buy_back.on_coins(&mut Visitor::new(Some(0))).unwrap(),
-            IterState::Incomplete
-        );
-    }
-
-    #[test]
-    fn stop_on_second() {
-        let buy_back: BuyBack = buy_back_instance(vec![
-            Coin::<PaymentC6>::new(100).into(),
-            Coin::<PaymentC5>::new(200).into(),
-        ]);
-
-        assert_eq!(
-            buy_back.on_coins(&mut Visitor::new(Some(1))).unwrap(),
-            IterState::Complete
-        );
-    }
-}

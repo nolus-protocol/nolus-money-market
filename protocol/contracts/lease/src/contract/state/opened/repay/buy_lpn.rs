@@ -1,10 +1,12 @@
+use std::iter;
+
 use oracle::stub::SwapPath;
 use serde::{Deserialize, Serialize};
 
 use currency::{CurrencyDTO, CurrencyDef};
 use dex::{
-    AcceptAnyNonZeroSwap, Account, AnomalyMonitoredTask, AnomalyPolicy, CoinVisitor,
-    ContractInSwap, IterNext, IterState, Stage, StartLocalLocalState, SwapTask,
+    AcceptAnyNonZeroSwap, Account, AnomalyMonitoredTask, AnomalyPolicy, ContractInSwap, Stage,
+    StartLocalLocalState, SwapTask,
 };
 use finance::{coin::CoinDTO, duration::Duration};
 use sdk::cosmwasm_std::{Env, QuerierWrapper, Timestamp};
@@ -95,11 +97,8 @@ impl SwapTask for BuyLpn {
         *LpnCurrency::dto()
     }
 
-    fn on_coins<Visitor>(&self, visitor: &mut Visitor) -> Result<IterState, Visitor::Error>
-    where
-        Visitor: CoinVisitor<GIn = Self::InG, Result = IterNext>,
-    {
-        dex::on_coin(&self.payment, visitor)
+    fn coins(&self) -> impl IntoIterator<Item = CoinDTO<Self::InG>> {
+        iter::once(self.payment)
     }
 
     fn finish(

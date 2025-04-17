@@ -3,7 +3,6 @@ use std::{
     marker::PhantomData,
 };
 
-use oracle::stub::SwapPath;
 use serde::{Deserialize, Serialize};
 
 use currency::Group;
@@ -13,25 +12,17 @@ use finance::{
     zero::Zero,
 };
 use platform::{batch::Batch, trx};
-use sdk::{
-    cosmos_sdk_proto::Any,
-    cosmwasm_std::{Binary, Env, QuerierWrapper, Timestamp},
-};
+use sdk::cosmwasm_std::{Binary, Env, QuerierWrapper, Timestamp};
 
 use crate::{
-    AnomalyMonitoredTask, AnomalyPolicy, ConnectionParams, Contract, Stage,
-    error::{Error, Result},
+    AnomalyMonitoredTask, AnomalyPolicy, ConnectionParams, Contract, Stage, error::Result,
     swap::ExactAmountIn,
 };
 
-#[cfg(debug_assertions)]
-use crate::IterState;
 use crate::{
-    CoinVisitor, Connectable, ContractInSwap, Enterable, IterNext, SwapTask as SwapTaskT,
-    TimeAlarm,
+    Connectable, ContractInSwap, Enterable, SwapTask as SwapTaskT, TimeAlarm,
     impl_::{
         ForwardToInner,
-        filter::CurrencyFilter,
         response::{self, ContinueResult, Handler, Result as HandlerResult},
         timeout,
         transfer_in_init::TransferInInit,
@@ -82,115 +73,96 @@ where
         _now: Timestamp,
         querier: QuerierWrapper<'_>,
     ) -> Result<Batch> {
-        let swap_trx = SwapTrx::new(self.spec.dex_account(), self.spec.oracle(), querier);
-        // TODO apply nls_swap_fee on the downpayment only!
-        struct SwapWorker<'ica, 'swap_path, 'querier, 'task, SwapPathImpl, SwapTask, SwapClient>(
-            SwapTrx<'ica, 'swap_path, 'querier, SwapTask::InOutG, SwapPathImpl>,
-            &'task SwapTask,
-            PhantomData<SwapClient>,
-        )
-        where
-            SwapTask: AnomalyMonitoredTask;
+        let mut filtered = false;
 
-        impl<SwapPathImpl, SwapTask, SwapClient> CoinVisitor
-            for SwapWorker<'_, '_, '_, '_, SwapPathImpl, SwapTask, SwapClient>
-        where
-            SwapPathImpl: SwapPath<SwapTask::InOutG>,
-            SwapTask: AnomalyMonitoredTask,
-            SwapClient: ExactAmountIn,
-        {
-            type GIn = SwapTask::InG;
-
-            type Result = IterNext;
-
-            type Error = Error;
-
-            fn visit(&mut self, coin: &CoinDTO<Self::GIn>) -> Result<Self::Result> {
-                let min_out = self.1.policy().min_output(coin);
-
-                self.0
-                    .swap_exact_in::<_, SwapTask::InG, SwapTask::OutG, SwapClient>(coin, &min_out)
-                    .map(|()| IterNext::Continue)
-            }
-        }
-
-        let mut swapper = SwapWorker(swap_trx, &self.spec, PhantomData::<SwapClient>);
-
-        let mut filtered_swapper =
-            CurrencyFilter::<_, _, _>::new(&mut swapper, self.spec.out_currency());
-
-        #[cfg_attr(not(debug_assertions), expect(unused_variables))]
-        let res = self.spec.on_coins(&mut filtered_swapper)?;
-
-        #[cfg(debug_assertions)]
-        self.postcondition_check(&filtered_swapper, res);
-
-        Ok(swapper.0.into())
+        let swap_trx = SwapTrx::<'_, '_, '_, SwapTask::InOutG, _>::new(
+            self.spec.dex_account(),
+            self.spec.oracle(),
+            querier,
+        );
+        self.try_filter_fold_coins(self.not_out_coins_filter(), swap_trx, |mut trx, coin_in| {
+            filtered = true;
+            trx.swap_exact_in::<_, _, SwapClient>(
+                &coin_in,
+                &self.spec.policy().min_output(&coin_in),
+            )
+            .map(|()| trx)
+        })
+        .inspect(|_| {
+            self.expect_at_lease_one_filtered(filtered);
+        })
+        .map(Into::into)
     }
 
-    fn decode_response(&self, resp: &[u8], spec: &SwapTask) -> Result<CoinDTO<SwapTask::OutG>> {
-        struct ExactInResponse<I, SwapIn, SwapClient>(
-            I,
-            Amount,
-            PhantomData<SwapIn>,
-            PhantomData<SwapClient>,
-        );
+    fn decode_response(&self, resp: &[u8]) -> Result<CoinDTO<SwapTask::OutG>> {
+        self.try_filter_fold_coins(self.out_coins_filter(), Amount::ZERO, |total_out, r#in| {
+            Ok(total_out + r#in.amount())
+        })
+        .and_then(|non_swapped: Amount| {
+            trx::decode_msg_responses(resp)
+                .map_err(Into::into)
+                .and_then(|mut responses| {
+                    let mut filtered = false;
 
-        impl<I, SwapIn, SwapClient> CoinVisitor for ExactInResponse<I, SwapIn, SwapClient>
-        where
-            SwapIn: Group,
-            I: Iterator<Item = Any>,
-            SwapClient: ExactAmountIn,
-        {
-            type GIn = SwapIn;
-
-            type Result = IterNext;
-
-            type Error = Error;
-
-            fn visit(&mut self, _coin: &CoinDTO<Self::GIn>) -> Result<Self::Result> {
-                SwapClient::parse_response(&mut self.0)
-                    .inspect(|&amount| self.1 += amount)
-                    .map(|_| IterNext::Continue)
-                    .map_err(Into::into)
-            }
-        }
-
-        let mut resp = ExactInResponse(
-            trx::decode_msg_responses(resp)?,
-            Amount::ZERO,
-            PhantomData::<SwapTask::InG>,
-            PhantomData::<SwapClient>,
-        );
-
-        let mut filtered_resp = CurrencyFilter::new(&mut resp, self.spec.out_currency());
-
-        #[cfg_attr(not(debug_assertions), expect(unused_variables))]
-        let res = self.spec.on_coins(&mut filtered_resp)?;
-
-        #[cfg(debug_assertions)]
-        self.postcondition_check(&filtered_resp, res);
-
-        Ok(coin::from_amount_ticker(
-            filtered_resp.filtered() + resp.1,
-            spec.out_currency(),
-        ))
+                    self.try_filter_fold_coins(
+                        self.not_out_coins_filter(),
+                        non_swapped,
+                        |total_out, _in| {
+                            filtered = true;
+                            SwapClient::parse_response(&mut responses)
+                                .map(|out| total_out + out)
+                                .map_err(Into::into)
+                        },
+                    )
+                    .inspect(|_| {
+                        self.expect_at_lease_one_filtered(filtered);
+                    })
+                })
+        })
+        .map(|amount| coin::from_amount_ticker(amount, self.spec.out_currency()))
     }
 
-    #[cfg(debug_assertions)]
-    fn postcondition_check<V>(
+    fn try_filter_fold_coins<FilterFn, Acc, FoldFn>(
         &self,
-        filter: &CurrencyFilter<'_, V, SwapTask::InG, SwapTask::OutG>,
-        res: IterState,
-    ) where
-        V: CoinVisitor,
+        filter: FilterFn,
+        init: Acc,
+        fold: FoldFn,
+    ) -> Result<Acc>
+    where
+        FilterFn: Fn(&CoinDTO<SwapTask::InG>) -> bool,
+        FoldFn: FnMut(Acc, CoinDTO<SwapTask::InG>) -> Result<Acc>,
     {
-        debug_assert!(
-            filter.passed_any(),
+        self.spec
+            .coins()
+            .into_iter()
+            .filter(filter)
+            .try_fold(init, fold)
+    }
+
+    fn out_coins_filter(&self) -> impl Fn(&CoinDTO<SwapTask::InG>) -> bool {
+        let coin_out_super = self
+            .spec
+            .out_currency()
+            .into_super_group::<SwapTask::InOutG>();
+
+        move |coin_in| {
+            coin_in
+                .into_super_group::<SwapTask::InOutG>()
+                .of_currency_dto(&coin_out_super)
+                .is_ok()
+        }
+    }
+
+    fn not_out_coins_filter(&self) -> impl Fn(&CoinDTO<SwapTask::InG>) -> bool {
+        |coin_in| !self.out_coins_filter()(coin_in)
+    }
+
+    fn expect_at_lease_one_filtered(&self, filtered: bool) {
+        assert!(
+            filtered,
             "No coins with currency != {}",
             self.spec.out_currency()
-        );
-        debug_assert_eq!(res, IterState::Complete);
+        )
     }
 }
 
@@ -252,7 +224,7 @@ where
         env: Env,
     ) -> HandlerResult<Self> {
         // TODO transfer (downpayment - transferred_and_swapped), i.e. the nls_swap_fee to the profit
-        self.decode_response(resp.as_slice(), &self.spec)
+        self.decode_response(resp.as_slice())
             .map(|amount_out| TransferInInit::new(self.spec, amount_out))
             .and_then(|next_state| {
                 next_state
@@ -308,11 +280,10 @@ where
         env: Env,
     ) -> HandlerResult<Self> {
         // TODO transfer (downpayment - transferred_and_swapped), i.e. the nls_swap_fee to the profit
-        self.decode_response(resp.as_slice(), &self.spec)
-            .map_or_else(
-                |err| HandlerResult::Continue(Err(err)),
-                |amount_out| response::res_finished(self.spec.finish(amount_out, &env, querier)),
-            )
+        self.decode_response(resp.as_slice()).map_or_else(
+            |err| HandlerResult::Continue(Err(err)),
+            |amount_out| response::res_finished(self.spec.finish(amount_out, &env, querier)),
+        )
     }
 
     fn on_error(self, _querier: QuerierWrapper<'_>, _env: Env) -> ContinueResult<Self> {

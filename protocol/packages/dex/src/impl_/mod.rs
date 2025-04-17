@@ -10,22 +10,18 @@ pub use self::{
     },
     out_remote::{StartLocalRemoteState, State as StateRemoteOut, start as start_local_remote},
     resp_delivery::{ICAOpenResponseDelivery, ResponseDelivery},
-    swap_coins::{on_coin, on_coins},
     swap_exact_in::SwapExactIn,
     transfer_in_finish::TransferInFinish,
     transfer_in_init::TransferInInit,
     transfer_out::TransferOut,
 };
 
-mod coin_index;
-mod filter;
 mod ica_connector;
 #[cfg(feature = "migration")]
 mod migration;
 mod out_local;
 mod out_remote;
 mod resp_delivery;
-mod swap_coins;
 mod swap_exact_in;
 mod timeout;
 mod transfer_in;

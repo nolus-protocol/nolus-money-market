@@ -1,10 +1,12 @@
+use std::iter;
+
 use oracle::stub::SwapPath;
 use serde::{Deserialize, Serialize};
 
 use currency::CurrencyDTO;
 use dex::{
-    Account, AnomalyMonitoredTask, AnomalyPolicy, CoinVisitor, ContractInSwap, IterNext, IterState,
-    PanicPolicy, Stage, StartTransferInState, SwapTask,
+    Account, AnomalyMonitoredTask, AnomalyPolicy, ContractInSwap, PanicPolicy, Stage,
+    StartTransferInState, SwapTask,
 };
 use finance::{coin::CoinDTO, duration::Duration};
 use platform::{
@@ -99,11 +101,8 @@ impl SwapTask for TransferIn {
         self.amount().currency()
     }
 
-    fn on_coins<Visitor>(&self, visitor: &mut Visitor) -> Result<IterState, Visitor::Error>
-    where
-        Visitor: CoinVisitor<GIn = Self::InG, Result = IterNext>,
-    {
-        dex::on_coin(self.amount(), visitor)
+    fn coins(&self) -> impl IntoIterator<Item = CoinDTO<Self::InG>> {
+        iter::once(*self.amount())
     }
 
     fn finish(

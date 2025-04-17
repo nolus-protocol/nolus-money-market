@@ -4,8 +4,8 @@ use serde::{Deserialize, Serialize};
 
 use currency::CurrencyDTO;
 use dex::{
-    AcceptAnyNonZeroSwap, Account, AnomalyMonitoredTask, AnomalyPolicy, CoinVisitor,
-    ContractInSwap, IterNext, IterState, Stage, StartLocalRemoteState, SwapTask,
+    AcceptAnyNonZeroSwap, Account, AnomalyMonitoredTask, AnomalyPolicy, ContractInSwap, Stage,
+    StartLocalRemoteState, SwapTask,
 };
 use finance::{coin::CoinDTO, duration::Duration};
 use platform::{
@@ -140,15 +140,8 @@ impl SwapTask for BuyAsset {
         self.form.currency
     }
 
-    fn on_coins<Visitor>(&self, visitor: &mut Visitor) -> Result<IterState, Visitor::Error>
-    where
-        Visitor: CoinVisitor<GIn = Self::InG, Result = IterNext>,
-    {
-        dex::on_coins(
-            &self.downpayment,
-            &self.loan.principal.into_super_group(),
-            visitor,
-        )
+    fn coins(&self) -> impl IntoIterator<Item = CoinDTO<Self::InG>> {
+        [self.downpayment, self.loan.principal.into_super_group()].into_iter()
     }
 
     fn finish(

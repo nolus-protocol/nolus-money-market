@@ -94,13 +94,12 @@ where
         }
     }
 
-    pub fn swap_exact_in<GIn, SwapGIn, SwapGOut, SwapClient>(
+    pub fn swap_exact_in<SwapGIn, SwapGOut, SwapClient>(
         &mut self,
-        amount_in: &CoinDTO<GIn>,
+        amount_in: &CoinDTO<SwapGIn>,
         min_amount_out: &CoinDTO<SwapGOut>,
     ) -> Result<()>
     where
-        GIn: Group + MemberOf<SwapGIn>,
         SwapGIn: Group + MemberOf<SwapGroup>,
         SwapGOut: Group + MemberOf<SwapGroup>,
         SwapClient: ExactAmountIn,
