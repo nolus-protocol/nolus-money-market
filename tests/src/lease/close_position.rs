@@ -394,7 +394,7 @@ fn user_balance<C>(customer: &Addr, test_case: &LeaseTestCase) -> Coin<C>
 where
     C: CurrencyDef,
 {
-    platform::bank::balance::<C, C::Group>(customer, test_case.app.query()).unwrap()
+    platform::bank::balance::<C>(customer, test_case.app.query()).unwrap()
 }
 
 fn lease_balance(test_case: &LeaseTestCase, lease: Addr) -> Vec<CwCoin> {

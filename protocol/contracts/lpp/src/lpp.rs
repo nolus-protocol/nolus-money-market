@@ -303,7 +303,7 @@ where
     }
 
     fn uncommited_balance(&self, account: &Addr, querier: QuerierWrapper<'_>) -> Result<Coin<Lpn>> {
-        bank::balance::<_, Lpn::Group>(account, querier).map_err(Into::into)
+        bank::balance(account, querier).map_err(Into::into)
     }
 
     fn total_due(&self, now: &Timestamp) -> Coin<Lpn> {

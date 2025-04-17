@@ -1,6 +1,6 @@
 use std::slice;
 
-use currencies::{Lpn, Lpns, Native, Nls};
+use currencies::{Lpn, Lpns, Nls};
 use currency::{CurrencyDef, MemberOf};
 use finance::{
     coin::{Amount, Coin},
@@ -204,11 +204,7 @@ where
     Lpn::Group: MemberOf<Lpns>,
 {
     InitTreasuryBalancesResult {
-        native: bank::balance::<_, Native>(
-            test_case.address_book.treasury(),
-            test_case.app.query(),
-        )
-        .unwrap(),
+        native: bank::balance(test_case.address_book.treasury(), test_case.app.query()).unwrap(),
         lpn: bank::balance(test_case.address_book.treasury(), test_case.app.query()).unwrap(),
     }
 }
@@ -416,20 +412,17 @@ fn expect_balances<Lpn, ProtocolsRegistry, Reserve, Leaser, Lpp, Oracle, TimeAla
     Lpn: CurrencyDef,
 {
     assert_eq!(
-        bank::balance::<Nls, Native>(test_case.address_book.treasury(), test_case.app.query())
-            .unwrap(),
+        bank::balance(test_case.address_book.treasury(), test_case.app.query()).unwrap(),
         init_treasury_native_balance + total_native_profit,
     );
 
     assert_eq!(
-        bank::balance::<Lpn, Lpn::Group>(test_case.address_book.profit(), test_case.app.query())
-            .unwrap(),
+        bank::balance::<Lpn>(test_case.address_book.profit(), test_case.app.query()).unwrap(),
         Zero::ZERO,
     );
 
     assert_eq!(
-        bank::balance::<Lpn, Lpn::Group>(test_case.address_book.treasury(), test_case.app.query())
-            .unwrap(),
+        bank::balance::<Lpn>(test_case.address_book.treasury(), test_case.app.query()).unwrap(),
         init_treasury_lpn_balance,
     );
 }

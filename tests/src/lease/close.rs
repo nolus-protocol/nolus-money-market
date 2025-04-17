@@ -1,4 +1,3 @@
-use currencies::{LeaseGroup, PaymentGroup};
 use finance::price;
 use lease::api::{ExecuteMsg, query::StateResponse};
 use platform::coin_legacy::to_cosmwasm_on_dex;
@@ -30,7 +29,7 @@ fn state_closed() {
 
     let customer_addr: Addr = testing::user(USER);
     let user_balance: LeaseCoin =
-        platform::bank::balance::<_, LeaseGroup>(&customer_addr, test_case.app.query()).unwrap();
+        platform::bank::balance(&customer_addr, test_case.app.query()).unwrap();
 
     close(&mut test_case, lease_addr.clone(), lease_amount);
 
@@ -40,7 +39,7 @@ fn state_closed() {
     assert_eq!(query_result, expected_result);
 
     assert_eq!(
-        platform::bank::balance::<_, PaymentGroup>(&customer_addr, test_case.app.query()).unwrap(),
+        platform::bank::balance(&customer_addr, test_case.app.query()).unwrap(),
         user_balance + lease_amount
     );
 

@@ -155,11 +155,9 @@ pub fn account<'a>(account: &'a Addr, querier: QuerierWrapper<'a>) -> BankStub<B
     BankStub::new(BankView::account(account, querier))
 }
 
-pub fn balance<'a, C, G>(account: &'a Addr, querier: QuerierWrapper<'a>) -> Result<Coin<C>>
+pub fn balance<'a, C>(account: &'a Addr, querier: QuerierWrapper<'a>) -> Result<Coin<C>>
 where
     C: CurrencyDef,
-    C::Group: MemberOf<G>,
-    G: Group,
 {
     BankView { account, querier }.balance()
 }

@@ -1,4 +1,4 @@
-use currencies::{Lpns, PaymentGroup};
+use currencies::PaymentGroup;
 use currency::CurrencyDef as _;
 use finance::{coin::Amount, percent::Percent};
 use lease::api::query::StateResponse;
@@ -143,7 +143,7 @@ fn full_liquidation() {
             .add_attribute("loan-close", "true"),
     );
     assert!(
-        platform::bank::balance::<LpnCurrency, Lpns>(&reserve, test_case.app.query())
+        platform::bank::balance::<LpnCurrency>(&reserve, test_case.app.query())
             .unwrap()
             .is_zero()
     );

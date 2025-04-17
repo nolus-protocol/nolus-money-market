@@ -1,4 +1,4 @@
-use currencies::{Lpn, Lpns};
+use currencies::Lpn;
 use finance::coin::{Amount, Coin};
 use platform::{contract::Code, error::Error as PlatformError};
 use reserve::{
@@ -120,7 +120,7 @@ fn cover_losses_enough_balance() {
 
     let _resp = cover_losses_ok(&mut test_case, reserve.clone(), lease_addr, losses);
     let balance_past_cover =
-        platform::bank::balance::<Lpn, Lpns>(&reserve, test_case.app.query()).unwrap();
+        platform::bank::balance::<Lpn>(&reserve, test_case.app.query()).unwrap();
 
     assert!(balance_past_cover.is_zero());
 }
