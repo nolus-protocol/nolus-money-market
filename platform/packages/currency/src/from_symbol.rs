@@ -1,5 +1,5 @@
 use crate::{
-    CurrencyDef, MemberOf,
+    CurrencyDef,
     error::Error,
     matcher::{self, Matcher},
     symbol::Symbol,
@@ -17,7 +17,6 @@ pub trait CurrencyVisit: Symbol {
     fn visit<CDef, V>(symbol: &str, visitor: V) -> Result<V::Output, V::Error>
     where
         CDef: CurrencyDef,
-        CDef::Group: MemberOf<Self::Group>,
         V: SingleVisitor<CDef>,
         Error: Into<V::Error>,
     {

@@ -59,7 +59,8 @@ where
     where
         V: AnyVisitor<G>,
     {
-        G::maybe_visit(&TypeMatcher::new(self.def), visitor).unwrap_or_else(|_| self.unexpected())
+        self.may_into_currency_type(visitor)
+            .unwrap_or_else(|_| self.unexpected())
     }
 
     pub fn may_into_pair_member_type<V>(self, visitor: V) -> MaybePairsVisitorResult<V>
