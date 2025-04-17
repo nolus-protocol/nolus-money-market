@@ -9,11 +9,9 @@ use crate::{batch::Batch, coin_legacy, error::Error, result::Result};
 pub type BalancesResult<G, Cmd> = StdResult<Option<WithCoinResult<G, Cmd>>, Error>;
 
 pub trait BankAccountView {
-    fn balance<C, G>(&self) -> Result<Coin<C>>
+    fn balance<C>(&self) -> Result<Coin<C>>
     where
-        C: CurrencyDef,
-        C::Group: MemberOf<G>,
-        G: Group;
+        C: CurrencyDef;
 
     fn balances<G, Cmd>(&self, cmd: Cmd) -> BalancesResult<G, Cmd>
     where
@@ -99,11 +97,9 @@ impl<'a> BankView<'a> {
 }
 
 impl BankAccountView for BankView<'_> {
-    fn balance<C, G>(&self) -> Result<Coin<C>>
+    fn balance<C>(&self) -> Result<Coin<C>>
     where
         C: CurrencyDef,
-        C::Group: MemberOf<G>,
-        G: Group,
     {
         self.cw_balance(C::dto()).and_then(|ref cw_coin| {
             coin_legacy::from_cosmwasm_currency_not_definition::<C, _>(cw_coin)
@@ -225,11 +221,9 @@ impl<View> BankAccountView for BankStub<View>
 where
     View: BankAccountView,
 {
-    fn balance<C, G>(&self) -> Result<Coin<C>>
+    fn balance<C>(&self) -> Result<Coin<C>>
     where
         C: CurrencyDef,
-        C::Group: MemberOf<G>,
-        G: Group,
     {
         self.view.balance()
     }

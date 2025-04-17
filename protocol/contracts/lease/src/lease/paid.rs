@@ -39,7 +39,7 @@ where
     where
         B: BankAccount,
     {
-        let surplus = lease_account.balance::<Lpn, LpnCurrencies>()?;
+        let surplus = lease_account.balance::<Lpn>()?;
 
         if !surplus.is_zero() {
             lease_account.send(surplus, self.customer.clone());
@@ -103,7 +103,7 @@ mod tests {
     }
 
     impl BankAccountView for MockBankView {
-        fn balance<C, G>(&self) -> PlatformResult<Coin<C>>
+        fn balance<C>(&self) -> PlatformResult<Coin<C>>
         where
             C: CurrencyDef,
         {

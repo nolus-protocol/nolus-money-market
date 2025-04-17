@@ -1,7 +1,7 @@
 use std::ops::DerefMut;
 
 use access_control::SingleUserAccess;
-use currencies::{Lpn as LpnCurrency, Lpns};
+use currencies::Lpn as LpnCurrency;
 use currency::CurrencyDef;
 use finance::coin::Coin;
 use platform::{
@@ -136,7 +136,7 @@ fn do_cover_losses(
     querier: QuerierWrapper<'_>,
 ) -> Result<PlatformResponse> {
     let mut bank = bank::account(this_contract, querier);
-    bank.balance::<LpnCurrency, Lpns>()
+    bank.balance::<LpnCurrency>()
         .map_err(Into::into)
         .and_then(|balance| {
             if balance < amount {

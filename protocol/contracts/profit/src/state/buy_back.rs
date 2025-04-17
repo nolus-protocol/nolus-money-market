@@ -102,7 +102,7 @@ impl SwapTask for BuyBack {
     ) -> Self::Result {
         let account = bank::account(&self.profit_contract, querier);
 
-        let balance_nls: Coin<Nls> = account.balance::<_, Native>()?;
+        let balance_nls: Coin<Nls> = account.balance()?;
 
         let bank_response: PlatformResponse =
             Profit::transfer_nls(account, self.config.treasury().clone(), balance_nls, env);

@@ -296,11 +296,11 @@ mod tests {
         }
 
         impl BankAccountView for BankStub {
-            fn balance<C, G>(&self) -> PlatformResult<Coin<C>>
+            fn balance<C>(&self) -> PlatformResult<Coin<C>>
             where
                 C: Currency,
             {
-                Ok(Coin::<C>::new(self.balance))
+                Ok(Coin::new(self.balance))
             }
 
             fn balances<G, Cmd>(&self, _: Cmd) -> BalancesResult<G, Cmd>
