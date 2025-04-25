@@ -36,11 +36,24 @@ where
     }
 }
 
-impl<U> Fraction<U> for Ratio<U> {
+impl<U> Fraction<U> for Ratio<U>
+where
+    U: Copy + PartialOrd,
+{
+    fn parts(&self) -> U {
+        self.0.nominator
+    }
+
+    fn total(&self) -> U {
+        self.0.denominator
+    }
+
     fn of<A>(&self, whole: A) -> A
     where
         A: Fractionable<U>,
     {
+        debug_assert!(self.parts() <= self.total());
+
         whole.safe_mul(self)
     }
 }

@@ -92,10 +92,20 @@ impl<const UPPER_BOUND: Units> BoundPercent<UPPER_BOUND> {
 }
 
 impl Fraction<Units> for BoundPercent<HUNDRED_BOUND> {
+    fn parts(&self) -> Units {
+        self.units()
+    }
+
+    fn total(&self) -> Units {
+        Self::HUNDRED.0
+    }
+
     fn of<A>(&self, whole: A) -> A
     where
         A: Fractionable<Units>,
     {
+        debug_assert!(self.parts() <= self.total());
+
         let ratio: Ratio<Units> = self.into();
         whole.safe_mul(&ratio)
     }
