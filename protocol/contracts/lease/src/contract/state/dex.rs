@@ -54,10 +54,7 @@ where
     }
 
     fn on_dex_error(self, querier: QuerierWrapper<'_>, env: Env) -> ContractResult<Response> {
-        self.handler
-            .on_error(querier, env)
-            .map(state_machine::from)
-            .map_err(Into::into)
+        self.handler.on_error(querier, env).into()
     }
 
     fn on_dex_timeout(self, querier: QuerierWrapper<'_>, env: Env) -> ContractResult<Response> {

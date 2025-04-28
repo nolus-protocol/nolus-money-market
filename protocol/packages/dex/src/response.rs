@@ -56,8 +56,8 @@ where
     }
 
     /// The entry point of an error delivery
-    fn on_error(self, _querier: QuerierWrapper<'_>, _env: Env) -> ContinueResult<Self> {
-        Err(err(self, "handle transaction error"))
+    fn on_error(self, _querier: QuerierWrapper<'_>, _env: Env) -> Result<Self> {
+        Err(err(self, "handle transaction error")).into()
     }
 
     /// The entry point of a timeout delivery

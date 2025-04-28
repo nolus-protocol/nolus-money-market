@@ -284,14 +284,20 @@ mod impl_handler {
             }
         }
 
-        fn on_error(self, querier: QuerierWrapper<'_>, env: Env) -> ContinueResult<Self> {
+        fn on_error(self, querier: QuerierWrapper<'_>, env: Env) -> Result<Self> {
             match self {
-                State::OpenIca(inner) => Handler::on_error(inner, querier, env),
-                State::OpenIcaRespDelivery(inner) => Handler::on_error(inner, querier, env),
-                State::TransferOut(inner) => Handler::on_error(inner, querier, env),
-                State::TransferOutRespDelivery(inner) => Handler::on_error(inner, querier, env),
-                State::SwapExactIn(inner) => Handler::on_error(inner, querier, env),
-                State::SwapExactInRespDelivery(inner) => Handler::on_error(inner, querier, env),
+                State::OpenIca(inner) => Handler::on_error(inner, querier, env).map_into(),
+                State::OpenIcaRespDelivery(inner) => {
+                    Handler::on_error(inner, querier, env).map_into()
+                }
+                State::TransferOut(inner) => Handler::on_error(inner, querier, env).map_into(),
+                State::TransferOutRespDelivery(inner) => {
+                    Handler::on_error(inner, querier, env).map_into()
+                }
+                State::SwapExactIn(inner) => Handler::on_error(inner, querier, env).map_into(),
+                State::SwapExactInRespDelivery(inner) => {
+                    Handler::on_error(inner, querier, env).map_into()
+                }
             }
         }
 

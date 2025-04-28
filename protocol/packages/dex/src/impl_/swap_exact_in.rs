@@ -286,7 +286,7 @@ where
         )
     }
 
-    fn on_error(self, _querier: QuerierWrapper<'_>, _env: Env) -> ContinueResult<Self> {
+    fn on_error(self, _querier: QuerierWrapper<'_>, _env: Env) -> HandlerResult<Self> {
         // self.spec.policy()
         todo!()
     }

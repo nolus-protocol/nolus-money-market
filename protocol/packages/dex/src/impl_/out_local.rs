@@ -261,15 +261,21 @@ mod impl_handler {
             }
         }
 
-        fn on_error(self, querier: QuerierWrapper<'_>, env: Env) -> ContinueResult<Self> {
+        fn on_error(self, querier: QuerierWrapper<'_>, env: Env) -> Result<Self> {
             match self {
-                State::TransferOut(inner) => Handler::on_error(inner, querier, env),
-                State::TransferOutRespDelivery(inner) => Handler::on_error(inner, querier, env),
-                State::SwapExactIn(inner) => Handler::on_error(inner, querier, env),
-                State::SwapExactInRespDelivery(inner) => Handler::on_error(inner, querier, env),
-                State::TransferInInit(inner) => Handler::on_error(inner, querier, env),
-                State::TransferInInitRespDelivery(inner) => Handler::on_error(inner, querier, env),
-                State::TransferInFinish(inner) => Handler::on_error(inner, querier, env),
+                State::TransferOut(inner) => Handler::on_error(inner, querier, env).map_into(),
+                State::TransferOutRespDelivery(inner) => {
+                    Handler::on_error(inner, querier, env).map_into()
+                }
+                State::SwapExactIn(inner) => Handler::on_error(inner, querier, env).map_into(),
+                State::SwapExactInRespDelivery(inner) => {
+                    Handler::on_error(inner, querier, env).map_into()
+                }
+                State::TransferInInit(inner) => Handler::on_error(inner, querier, env).map_into(),
+                State::TransferInInitRespDelivery(inner) => {
+                    Handler::on_error(inner, querier, env).map_into()
+                }
+                State::TransferInFinish(inner) => Handler::on_error(inner, querier, env).map_into(),
             }
         }
 

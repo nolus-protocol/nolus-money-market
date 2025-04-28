@@ -187,8 +187,8 @@ where
 
     // occasionslly, we get errors from handling the transfer receive message at the remote network
     // we cannot do anything else except keep trying to transfer again
-    fn on_error(self, querier: QuerierWrapper<'_>, env: Env) -> ContinueResult<Self> {
-        self.on_timeout(querier, env)
+    fn on_error(self, querier: QuerierWrapper<'_>, env: Env) -> HandlerResult<Self> {
+        self.on_timeout(querier, env).into()
     }
 }
 
