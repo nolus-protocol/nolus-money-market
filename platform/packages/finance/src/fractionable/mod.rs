@@ -3,7 +3,7 @@ use std::{
     ops::{Div, Mul},
 };
 
-use crate::{percent::Units as PercentUnits, ratio::Ratio, zero::Zero};
+use crate::{fraction::Fraction, percent::Units as PercentUnits, zero::Zero};
 
 mod coin;
 mod duration;
@@ -13,7 +13,9 @@ mod usize;
 
 pub trait Fractionable<U> {
     #[track_caller]
-    fn safe_mul(self, fraction: &Ratio<U>) -> Self;
+    fn safe_mul<F>(self, fraction: &F) -> Self
+    where
+        F: Fraction<U>;
 }
 
 // TODO revisit its usability
@@ -36,11 +38,16 @@ where
     U: Copy + Debug + Into<D> + PartialEq + Ord + Zero,
 {
     #[track_caller]
-    fn safe_mul(self, ratio: &Ratio<U>) -> Self {
+    fn safe_mul<F>(self, ratio: &F) -> Self
+    where
+        F: Fraction<U>,
+    {
         // TODO debug_assert_eq!(T::BITS * 2, D::BITS);
 
-        let parts = ratio.as_rational().nominator();
-        let total = ratio.as_rational().denominator();
+        let parts = ratio.parts();
+        let total = ratio.total();
+
+        debug_assert!(parts <= total, "Fraction broken invariant: parts > total");
 
         if parts == total {
             self

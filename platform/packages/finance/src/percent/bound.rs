@@ -55,7 +55,6 @@ impl<const UPPER_BOUND: Units> BoundPercent<UPPER_BOUND> {
         <FractionUnit as Div>::Output: CheckedMul<Self, Output = Self>,
         Self: Fractionable<FractionUnit>,
     {
-        println!("nominator: {:?}, denominator: {:?}", nominator, denominator);
         Rational::new(nominator, denominator).checked_mul(Self::HUNDRED)
     }
 

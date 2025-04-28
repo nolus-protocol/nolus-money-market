@@ -1,4 +1,4 @@
-use crate::{percent::Units as PercentUnits, price::Price, ratio::Ratio};
+use crate::{fraction::Fraction, percent::Units as PercentUnits, price::Price, ratio::Rational};
 
 use super::Fractionable;
 
@@ -7,8 +7,14 @@ where
     C: 'static,
     QuoteC: 'static,
 {
-    fn safe_mul(self, fraction: &Ratio<PercentUnits>) -> Self {
-        self.lossy_mul(&fraction.as_rational().map(|units| units.into()))
+    fn safe_mul<F>(self, fraction: &F) -> Self
+    where
+        F: Fraction<PercentUnits>,
+    {
+        let parts = fraction.parts().into();
+        let total = fraction.total().into();
+
+        self.lossy_mul(&Rational::new(parts, total))
     }
 }
 

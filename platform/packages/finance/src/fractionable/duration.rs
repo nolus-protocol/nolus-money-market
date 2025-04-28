@@ -1,6 +1,6 @@
 use sdk::cosmwasm_std::{Uint128, Uint256};
 
-use crate::{coin::Coin, duration::Duration, ratio::Ratio};
+use crate::{coin::Coin, duration::Duration, fraction::Fraction};
 
 use super::{Fractionable, HigherRank};
 
@@ -14,7 +14,10 @@ where
 
 impl<C> Fractionable<Coin<C>> for Duration {
     #[track_caller]
-    fn safe_mul(self, fraction: &Ratio<Coin<C>>) -> Self {
+    fn safe_mul<F>(self, fraction: &F) -> Self
+    where
+        F: Fraction<Coin<C>>,
+    {
         let d128: u128 = self.into();
         d128.safe_mul(fraction)
             .try_into()
