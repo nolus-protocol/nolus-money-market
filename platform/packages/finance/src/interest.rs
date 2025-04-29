@@ -6,35 +6,33 @@ use std::{
 
 use crate::{
     duration::Duration,
-    fraction::Fraction,
     fractionable::Fractionable,
     ratio::{CheckedAdd, CheckedMul},
     zero::Zero,
 };
 
 /// Computes how much interest is accrued
-pub fn interest<U, F, P>(rate: F, principal: P, period: Duration) -> Option<P>
+pub fn interest<R, P>(rate: R, principal: P, period: Duration) -> Option<P>
 where
-    F: Fraction<U>,
-    P: CheckedAdd<Output = P> + Copy + Fractionable<Duration> + Fractionable<U>,
+    R: CheckedMul<P, Output = P>,
+    P: CheckedAdd<Output = P> + Copy + Fractionable<Duration>,
     <Duration as Div>::Output: CheckedMul<P, Output = P>,
 {
-    let interest_per_year = rate.of(principal);
-    period.annualized_slice_of(interest_per_year)
+    rate.checked_mul(principal)
+        .and_then(|interest_per_year| period.annualized_slice_of(interest_per_year))
 }
 
 /// Computes how much time this payment covers, return.0, and the change, return.1
 ///
 /// The actual payment is equal to the payment minus the returned change.
-pub fn pay<U, F, P>(rate: F, principal: P, payment: P, period: Duration) -> Option<(Duration, P)>
+pub fn pay<R, P>(rate: R, principal: P, payment: P, period: Duration) -> Option<(Duration, P)>
 where
-    F: Fraction<U>,
+    R: CheckedMul<P, Output = P>,
     P: CheckedAdd<Output = P>
         + Copy
         + Debug
         + Div
         + Fractionable<Duration>
-        + Fractionable<U>
         + Ord
         + PartialEq
         + Rem<Output = P>

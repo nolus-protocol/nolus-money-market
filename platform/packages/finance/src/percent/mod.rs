@@ -31,6 +31,14 @@ impl<C> CheckedMul<Coin<C>> for Units {
     }
 }
 
+impl<C> CheckedMul<Coin<C>> for Percent100 {
+    type Output = Coin<C>;
+
+    fn checked_mul(self, rhs: Coin<C>) -> Option<Self::Output> {
+        rhs.checked_mul(self.into())
+    }
+}
+
 impl CheckedMul<Amount> for Units {
     type Output = Amount;
 
