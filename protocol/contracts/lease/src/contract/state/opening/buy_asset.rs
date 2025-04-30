@@ -2,7 +2,7 @@ use oracle::stub::SwapPath;
 use profit::stub::ProfitRef;
 use serde::{Deserialize, Serialize};
 
-use currency::CurrencyDTO;
+use currency::{CurrencyDTO, Group};
 use dex::{
     AcceptAnyNonZeroSwap, Account, AnomalyMonitoredTask, AnomalyPolicy, ContractInSwap, Stage,
     StartLocalRemoteState, SwapTask,
@@ -115,7 +115,6 @@ impl BuyAsset {
 impl SwapTask for BuyAsset {
     type InG = LeasePaymentCurrencies;
     type OutG = AssetGroup;
-    type InOutG = LeasePaymentCurrencies;
     type Label = Type;
     type StateResponse = ContractResult<QueryStateResponse>;
     type Result = SwapResult;
@@ -128,7 +127,7 @@ impl SwapTask for BuyAsset {
         &self.dex_account
     }
 
-    fn oracle(&self) -> &impl SwapPath<Self::InOutG> {
+    fn oracle(&self) -> &impl SwapPath<<Self::InG as Group>::TopG> {
         &self.deps.1
     }
 

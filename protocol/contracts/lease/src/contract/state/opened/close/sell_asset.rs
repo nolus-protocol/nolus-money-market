@@ -3,7 +3,7 @@ use std::iter;
 use oracle::stub::SwapPath;
 use serde::{Deserialize, Serialize};
 
-use currency::{CurrencyDTO, CurrencyDef};
+use currency::{CurrencyDTO, CurrencyDef, Group};
 use dex::{Account, ContractInSwap, Stage, SwapTask};
 use finance::{coin::CoinDTO, duration::Duration};
 use sdk::cosmwasm_std::{Env, QuerierWrapper, Timestamp};
@@ -11,7 +11,7 @@ use timealarms::stub::TimeAlarmsRef;
 
 use crate::{
     api::{
-        LeaseAssetCurrencies, LeasePaymentCurrencies,
+        LeaseAssetCurrencies,
         query::{StateResponse as QueryStateResponse, opened::PositionCloseTrx},
     },
     contract::{
@@ -66,7 +66,6 @@ where
 {
     type InG = LeaseAssetCurrencies;
     type OutG = LpnCurrencies;
-    type InOutG = LeasePaymentCurrencies;
     type Label = Type;
     type StateResponse = ContractResult<QueryStateResponse>;
     type Result = SwapResult;
@@ -79,7 +78,7 @@ where
         &self.lease.dex
     }
 
-    fn oracle(&self) -> &impl SwapPath<Self::InOutG> {
+    fn oracle(&self) -> &impl SwapPath<<Self::InG as Group>::TopG> {
         &self.lease.lease.oracle
     }
 

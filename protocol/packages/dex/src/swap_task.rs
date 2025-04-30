@@ -1,4 +1,4 @@
-use currency::{CurrencyDTO, Group, MemberOf};
+use currency::{CurrencyDTO, Group};
 use finance::coin::CoinDTO;
 use oracle::stub::SwapPath;
 use sdk::cosmwasm_std::{Env, QuerierWrapper};
@@ -12,16 +12,15 @@ pub type CoinsNb = u8;
 ///
 /// Supports up to `CoinsNb::MAX` coins.
 pub trait SwapTask {
-    type InG: Group + MemberOf<Self::InOutG>;
-    type OutG: Group + MemberOf<Self::InOutG>;
-    type InOutG: Group;
+    type InG: Group;
+    type OutG: Group<TopG = <Self::InG as Group>::TopG>;
     type Label: Into<String>;
     type StateResponse;
     type Result;
 
     fn label(&self) -> Self::Label;
     fn dex_account(&self) -> &Account;
-    fn oracle(&self) -> &impl SwapPath<Self::InOutG>;
+    fn oracle(&self) -> &impl SwapPath<<Self::InG as Group>::TopG>;
     fn time_alarm(&self) -> &TimeAlarmsRef;
     fn out_currency(&self) -> CurrencyDTO<Self::OutG>;
 

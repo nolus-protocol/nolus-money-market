@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 use currencies::{Native, Nls, PaymentGroup};
-use currency::CurrencyDTO;
+use currency::{CurrencyDTO, Group};
 use dex::{
     AcceptAnyNonZeroSwap, Account, AnomalyMonitoredTask, AnomalyPolicy, ContractInSwap, Enterable,
     Response as DexResponse, Stage, StateLocalOut, SwapTask,
@@ -65,7 +65,6 @@ impl BuyBack {
 impl SwapTask for BuyBack {
     type InG = PaymentGroup;
     type OutG = Native;
-    type InOutG = PaymentGroup;
     type Label = String;
     type StateResponse = ConfigResponse;
     type Result = ContractResult<DexResponse<State>>;
@@ -78,7 +77,7 @@ impl SwapTask for BuyBack {
         &self.account
     }
 
-    fn oracle(&self) -> &impl SwapPath<Self::InOutG> {
+    fn oracle(&self) -> &impl SwapPath<<Self::InG as Group>::TopG> {
         self.config.oracle()
     }
 

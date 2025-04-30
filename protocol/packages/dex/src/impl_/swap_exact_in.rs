@@ -5,7 +5,7 @@ use std::{
 
 use serde::{Deserialize, Serialize};
 
-use currency::Group;
+use currency::{CurrencyDTO, Group, MemberOf};
 use finance::{
     coin::{self, Amount, CoinDTO},
     duration::Duration,
@@ -75,37 +75,49 @@ where
     ) -> Result<Batch> {
         let mut filtered = false;
 
-        let swap_trx = SwapTrx::<'_, '_, '_, SwapTask::InOutG, _>::new(
+        let swap_trx = SwapTrx::<'_, '_, '_, <SwapTask::InG as Group>::TopG, _>::new(
             self.spec.dex_account(),
             self.spec.oracle(),
             querier,
         );
-        self.try_filter_fold_coins(self.not_out_coins_filter(), swap_trx, |mut trx, coin_in| {
-            filtered = true;
-            trx.swap_exact_in::<_, _, SwapClient>(
-                &coin_in,
-                &self.spec.policy().min_output(&coin_in),
-            )
-            .map(|()| trx)
-        })
+        let out_currency = self.spec.out_currency().into_super_group();
+        try_filter_fold_coins(
+            &self.spec,
+            not_out_coins_filter::<_, <SwapTask::InG as Group>::TopG>(&out_currency),
+            swap_trx,
+            |mut trx, coin_in| {
+                filtered = true;
+                trx.swap_exact_in::<_, _, SwapClient>(
+                    &coin_in,
+                    &self.spec.policy().min_output(&coin_in),
+                )
+                .map(|()| trx)
+            },
+        )
         .inspect(|_| {
-            self.expect_at_lease_one_filtered(filtered);
+            expect_at_lease_one_filtered(filtered, &out_currency);
         })
         .map(Into::into)
     }
 
     fn decode_response(&self, resp: &[u8]) -> Result<CoinDTO<SwapTask::OutG>> {
-        self.try_filter_fold_coins(self.out_coins_filter(), Amount::ZERO, |total_out, r#in| {
-            Ok(total_out + r#in.amount())
-        })
+        let out_currency: CurrencyDTO<<SwapTask::InG as Group>::TopG> =
+            self.spec.out_currency().into_super_group();
+        try_filter_fold_coins(
+            &self.spec,
+            out_coins_filter(&out_currency),
+            Amount::ZERO,
+            |total_out, r#in| Ok(total_out + r#in.amount()),
+        )
         .and_then(|non_swapped: Amount| {
             trx::decode_msg_responses(resp)
                 .map_err(Into::into)
                 .and_then(|mut responses| {
                     let mut filtered = false;
 
-                    self.try_filter_fold_coins(
-                        self.not_out_coins_filter(),
+                    try_filter_fold_coins(
+                        &self.spec,
+                        not_out_coins_filter(&out_currency),
                         non_swapped,
                         |total_out, _in| {
                             filtered = true;
@@ -115,54 +127,11 @@ where
                         },
                     )
                     .inspect(|_| {
-                        self.expect_at_lease_one_filtered(filtered);
+                        expect_at_lease_one_filtered(filtered, &out_currency);
                     })
                 })
         })
         .map(|amount| coin::from_amount_ticker(amount, self.spec.out_currency()))
-    }
-
-    fn try_filter_fold_coins<FilterFn, Acc, FoldFn>(
-        &self,
-        filter: FilterFn,
-        init: Acc,
-        fold: FoldFn,
-    ) -> Result<Acc>
-    where
-        FilterFn: Fn(&CoinDTO<SwapTask::InG>) -> bool,
-        FoldFn: FnMut(Acc, CoinDTO<SwapTask::InG>) -> Result<Acc>,
-    {
-        self.spec
-            .coins()
-            .into_iter()
-            .filter(filter)
-            .try_fold(init, fold)
-    }
-
-    fn out_coins_filter(&self) -> impl Fn(&CoinDTO<SwapTask::InG>) -> bool {
-        let coin_out_super = self
-            .spec
-            .out_currency()
-            .into_super_group::<SwapTask::InOutG>();
-
-        move |coin_in| {
-            coin_in
-                .into_super_group::<SwapTask::InOutG>()
-                .of_currency_dto(&coin_out_super)
-                .is_ok()
-        }
-    }
-
-    fn not_out_coins_filter(&self) -> impl Fn(&CoinDTO<SwapTask::InG>) -> bool {
-        |coin_in| !self.out_coins_filter()(coin_in)
-    }
-
-    fn expect_at_lease_one_filtered(&self, filtered: bool) {
-        assert!(
-            filtered,
-            "No coins with currency != {}",
-            self.spec.out_currency()
-        )
     }
 }
 
@@ -366,4 +335,46 @@ impl<SwapTask, R, SEnum, SwapGroup, SwapClient> InspectSpec<SwapTask, R>
     {
         inspect_fn(&self.spec)
     }
+}
+
+fn try_filter_fold_coins<SwapTask, FilterFn, Acc, FoldFn>(
+    spec: &SwapTask,
+    filter: FilterFn,
+    init: Acc,
+    fold: FoldFn,
+) -> Result<Acc>
+where
+    SwapTask: SwapTaskT,
+    FilterFn: Fn(&CoinDTO<SwapTask::InG>) -> bool,
+    FoldFn: FnMut(Acc, CoinDTO<SwapTask::InG>) -> Result<Acc>,
+{
+    spec.coins().into_iter().filter(filter).try_fold(init, fold)
+}
+
+fn out_coins_filter<InG, InOutG>(out_c: &CurrencyDTO<InOutG>) -> impl Fn(&CoinDTO<InG>) -> bool
+where
+    InG: Group + MemberOf<InOutG>,
+    InOutG: Group,
+{
+    move |coin_in| {
+        coin_in
+            .into_super_group::<InOutG>()
+            .of_currency_dto(out_c)
+            .is_ok()
+    }
+}
+
+fn not_out_coins_filter<InG, InOutG>(out_c: &CurrencyDTO<InOutG>) -> impl Fn(&CoinDTO<InG>) -> bool
+where
+    InG: Group + MemberOf<InOutG>,
+    InOutG: Group,
+{
+    move |coin_in| !out_coins_filter::<InG, InOutG>(out_c)(coin_in)
+}
+
+fn expect_at_lease_one_filtered<G>(filtered: bool, out_c: &CurrencyDTO<G>)
+where
+    G: Group,
+{
+    assert!(filtered, "No coins with currency != {}", out_c)
 }

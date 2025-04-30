@@ -3,7 +3,7 @@ use std::iter;
 use oracle::stub::SwapPath;
 use serde::{Deserialize, Serialize};
 
-use currency::CurrencyDTO;
+use currency::{CurrencyDTO, Group};
 use dex::{
     Account, AnomalyMonitoredTask, AnomalyPolicy, ContractInSwap, PanicPolicy, Stage,
     StartTransferInState, SwapTask,
@@ -76,7 +76,6 @@ impl TransferIn {
 impl SwapTask for TransferIn {
     type InG = AssetGroup;
     type OutG = AssetGroup;
-    type InOutG = LeasePaymentCurrencies;
     type Label = Type;
     type StateResponse = ContractResult<QueryStateResponse>;
     type Result = SwapResult;
@@ -89,7 +88,7 @@ impl SwapTask for TransferIn {
         &self.lease.dex
     }
 
-    fn oracle(&self) -> &impl SwapPath<Self::InOutG> {
+    fn oracle(&self) -> &impl SwapPath<<Self::InG as Group>::TopG> {
         &self.lease.lease.oracle
     }
 
