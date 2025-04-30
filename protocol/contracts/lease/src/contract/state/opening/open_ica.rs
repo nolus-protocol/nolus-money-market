@@ -12,7 +12,7 @@ use timealarms::stub::TimeAlarmsRef;
 
 use crate::{
     api::{
-        DownpaymentCoin, LeasePaymentCurrencies,
+        DownpaymentCoin,
         open::NewLeaseContract,
         query::{StateResponse as QueryStateResponse, opening::OngoingTrx},
     },
@@ -52,7 +52,7 @@ impl OpenIcaAccount {
 
 impl IcaConnectee for OpenIcaAccount {
     type State = DexState;
-    type NextState = TransferOut<BuyAsset, Self::State, LeasePaymentCurrencies, SwapClient>;
+    type NextState = TransferOut<BuyAsset, Self::State, SwapClient>;
 
     fn connected(self, dex_account: Account) -> Self::NextState {
         TransferOut::new(BuyAsset::new(

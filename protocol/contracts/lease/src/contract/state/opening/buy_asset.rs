@@ -45,7 +45,6 @@ pub(super) type StartState = StartLocalRemoteState<OpenIcaAccount, BuyAsset>;
 pub(in super::super) type DexState = dex::StateRemoteOut<
     OpenIcaAccount,
     BuyAsset,
-    LeasePaymentCurrencies,
     SwapClient,
     ForwardToDexEntry,
     ForwardToDexEntryContinue,

@@ -33,10 +33,8 @@ use crate::{
     finance::{LpnCurrencies, LpnCurrency},
 };
 
-pub(super) type StartState =
-    StartLocalLocalState<BuyLpn, LeasePaymentCurrencies, SwapClient, ForwardToDexEntry>;
-pub(crate) type DexState =
-    dex::StateLocalOut<BuyLpn, LeasePaymentCurrencies, SwapClient, ForwardToDexEntry>;
+pub(super) type StartState = StartLocalLocalState<BuyLpn, SwapClient, ForwardToDexEntry>;
+pub(crate) type DexState = dex::StateLocalOut<BuyLpn, SwapClient, ForwardToDexEntry>;
 
 pub(in super::super) fn start(lease: Lease, payment: PaymentCoin) -> StartState {
     dex::start_local_local(BuyLpn::new(lease, payment))

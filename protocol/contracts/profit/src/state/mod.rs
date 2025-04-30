@@ -1,6 +1,5 @@
 use std::fmt::{Display, Formatter};
 
-use currencies::PaymentGroup;
 use finance::duration::Duration;
 use serde::{Deserialize, Serialize};
 
@@ -34,7 +33,6 @@ mod resp_delivery;
 const STATE: Item<State> = Item::new("contract_state");
 
 type IcaConnector = dex::IcaConnector<OpenIca, ContractResult<DexResponse<Idle>>>;
-type ProfitCurrencies = PaymentGroup;
 type SwapClient = Impl;
 
 pub(crate) trait ConfigManagement
@@ -56,7 +54,7 @@ where
 enum StateEnum {
     OpenIca(IcaConnector),
     Idle(Idle),
-    BuyBack(StateLocalOut<BuyBack, PaymentGroup, SwapClient, ForwardToDexEntry>),
+    BuyBack(StateLocalOut<BuyBack, SwapClient, ForwardToDexEntry>),
 }
 
 #[derive(Serialize, Deserialize)]
@@ -113,10 +111,8 @@ impl From<Idle> for State {
     }
 }
 
-impl From<StateLocalOut<BuyBack, ProfitCurrencies, SwapClient, ForwardToDexEntry>> for State {
-    fn from(
-        value: StateLocalOut<BuyBack, ProfitCurrencies, SwapClient, ForwardToDexEntry>,
-    ) -> Self {
+impl From<StateLocalOut<BuyBack, SwapClient, ForwardToDexEntry>> for State {
+    fn from(value: StateLocalOut<BuyBack, SwapClient, ForwardToDexEntry>) -> Self {
         Self(StateEnum::BuyBack(value))
     }
 }

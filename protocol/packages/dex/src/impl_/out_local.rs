@@ -12,41 +12,29 @@ use super::{
     serialize = "SwapTask: Serialize",
     deserialize = "SwapTask: Deserialize<'de>",
 ))]
-pub enum State<SwapTask, SwapGroup, SwapClient, ForwardToInnerMsg>
+pub enum State<SwapTask, SwapClient, ForwardToInnerMsg>
 where
     SwapTask: SwapTaskT,
 {
-    TransferOut(TransferOut<SwapTask, Self, SwapGroup, SwapClient>),
-    TransferOutRespDelivery(
-        TransferOutRespDelivery<SwapTask, Self, SwapGroup, SwapClient, ForwardToInnerMsg>,
-    ),
-    SwapExactIn(SwapExactIn<SwapTask, Self, SwapGroup, SwapClient>),
-    SwapExactInRespDelivery(
-        SwapExactInRespDelivery<SwapTask, Self, SwapGroup, SwapClient, ForwardToInnerMsg>,
-    ),
+    TransferOut(TransferOut<SwapTask, Self, SwapClient>),
+    TransferOutRespDelivery(TransferOutRespDelivery<SwapTask, Self, SwapClient, ForwardToInnerMsg>),
+    SwapExactIn(SwapExactIn<SwapTask, Self, SwapClient>),
+    SwapExactInRespDelivery(SwapExactInRespDelivery<SwapTask, Self, SwapClient, ForwardToInnerMsg>),
     TransferInInit(TransferInInit<SwapTask, Self>),
     TransferInInitRespDelivery(TransferInInitRespDelivery<SwapTask, Self, ForwardToInnerMsg>),
     TransferInFinish(TransferInFinish<SwapTask, Self>),
 }
 
-pub type StartLocalLocalState<SwapTask, SwapGroup, SwapClient, ForwardToInnerMsg> = TransferOut<
-    SwapTask,
-    State<SwapTask, SwapGroup, SwapClient, ForwardToInnerMsg>,
-    SwapGroup,
-    SwapClient,
->;
-pub type StartRemoteLocalState<SwapTask, SwapGroup, SwapClient, ForwardToInnerMsg> = SwapExactIn<
-    SwapTask,
-    State<SwapTask, SwapGroup, SwapClient, ForwardToInnerMsg>,
-    SwapGroup,
-    SwapClient,
->;
-pub type StartTransferInState<SwapTask, SwapGroup, SwapClient, ForwardToInnerMsg> =
-    TransferInInit<SwapTask, State<SwapTask, SwapGroup, SwapClient, ForwardToInnerMsg>>;
+pub type StartLocalLocalState<SwapTask, SwapClient, ForwardToInnerMsg> =
+    TransferOut<SwapTask, State<SwapTask, SwapClient, ForwardToInnerMsg>, SwapClient>;
+pub type StartRemoteLocalState<SwapTask, SwapClient, ForwardToInnerMsg> =
+    SwapExactIn<SwapTask, State<SwapTask, SwapClient, ForwardToInnerMsg>, SwapClient>;
+pub type StartTransferInState<SwapTask, SwapClient, ForwardToInnerMsg> =
+    TransferInInit<SwapTask, State<SwapTask, SwapClient, ForwardToInnerMsg>>;
 
-pub fn start_local_local<SwapTask, SwapGroup, SwapClient, ForwardToInnerMsg>(
+pub fn start_local_local<SwapTask, SwapClient, ForwardToInnerMsg>(
     spec: SwapTask,
-) -> StartLocalLocalState<SwapTask, SwapGroup, SwapClient, ForwardToInnerMsg>
+) -> StartLocalLocalState<SwapTask, SwapClient, ForwardToInnerMsg>
 where
     SwapTask: SwapTaskT,
     ForwardToInnerMsg: ForwardToInner,
@@ -54,9 +42,9 @@ where
     StartLocalLocalState::new(spec)
 }
 
-pub fn start_remote_local<SwapTask, SwapGroup, SwapClient, ForwardToInnerMsg>(
+pub fn start_remote_local<SwapTask, SwapClient, ForwardToInnerMsg>(
     spec: SwapTask,
-) -> StartRemoteLocalState<SwapTask, SwapGroup, SwapClient, ForwardToInnerMsg>
+) -> StartRemoteLocalState<SwapTask, SwapClient, ForwardToInnerMsg>
 where
     SwapTask: SwapTaskT,
     ForwardToInnerMsg: ForwardToInner,
@@ -75,70 +63,56 @@ mod impl_into {
 
     use super::{State, SwapExactInRespDelivery};
 
-    impl<SwapTask, SwapGroup, SwapClient, ForwardToInnerMsg>
-        From<TransferOut<SwapTask, Self, SwapGroup, SwapClient>>
-        for State<SwapTask, SwapGroup, SwapClient, ForwardToInnerMsg>
+    impl<SwapTask, SwapClient, ForwardToInnerMsg> From<TransferOut<SwapTask, Self, SwapClient>>
+        for State<SwapTask, SwapClient, ForwardToInnerMsg>
     where
         SwapTask: SwapTaskT,
         ForwardToInnerMsg: ForwardToInner,
     {
-        fn from(value: TransferOut<SwapTask, Self, SwapGroup, SwapClient>) -> Self {
+        fn from(value: TransferOut<SwapTask, Self, SwapClient>) -> Self {
             Self::TransferOut(value)
         }
     }
 
-    impl<SwapTask, SwapGroup, SwapClient, ForwardToInnerMsg>
-        From<TransferOutRespDelivery<SwapTask, Self, SwapGroup, SwapClient, ForwardToInnerMsg>>
-        for State<SwapTask, SwapGroup, SwapClient, ForwardToInnerMsg>
+    impl<SwapTask, SwapClient, ForwardToInnerMsg>
+        From<TransferOutRespDelivery<SwapTask, Self, SwapClient, ForwardToInnerMsg>>
+        for State<SwapTask, SwapClient, ForwardToInnerMsg>
     where
         SwapTask: SwapTaskT,
         ForwardToInnerMsg: ForwardToInner,
     {
         fn from(
-            value: TransferOutRespDelivery<
-                SwapTask,
-                Self,
-                SwapGroup,
-                SwapClient,
-                ForwardToInnerMsg,
-            >,
+            value: TransferOutRespDelivery<SwapTask, Self, SwapClient, ForwardToInnerMsg>,
         ) -> Self {
             Self::TransferOutRespDelivery(value)
         }
     }
 
-    impl<SwapTask, SwapGroup, SwapClient, ForwardToInnerMsg>
-        From<SwapExactIn<SwapTask, Self, SwapGroup, SwapClient>>
-        for State<SwapTask, SwapGroup, SwapClient, ForwardToInnerMsg>
+    impl<SwapTask, SwapClient, ForwardToInnerMsg> From<SwapExactIn<SwapTask, Self, SwapClient>>
+        for State<SwapTask, SwapClient, ForwardToInnerMsg>
     where
         SwapTask: SwapTaskT,
     {
-        fn from(value: SwapExactIn<SwapTask, Self, SwapGroup, SwapClient>) -> Self {
+        fn from(value: SwapExactIn<SwapTask, Self, SwapClient>) -> Self {
             Self::SwapExactIn(value)
         }
     }
 
-    impl<SwapTask, SwapGroup, SwapClient, ForwardToInnerMsg>
-        From<SwapExactInRespDelivery<SwapTask, Self, SwapGroup, SwapClient, ForwardToInnerMsg>>
-        for State<SwapTask, SwapGroup, SwapClient, ForwardToInnerMsg>
+    impl<SwapTask, SwapClient, ForwardToInnerMsg>
+        From<SwapExactInRespDelivery<SwapTask, Self, SwapClient, ForwardToInnerMsg>>
+        for State<SwapTask, SwapClient, ForwardToInnerMsg>
     where
         SwapTask: SwapTaskT,
     {
         fn from(
-            value: SwapExactInRespDelivery<
-                SwapTask,
-                Self,
-                SwapGroup,
-                SwapClient,
-                ForwardToInnerMsg,
-            >,
+            value: SwapExactInRespDelivery<SwapTask, Self, SwapClient, ForwardToInnerMsg>,
         ) -> Self {
             Self::SwapExactInRespDelivery(value)
         }
     }
 
-    impl<SwapTask, SwapGroup, SwapClient, ForwardToInnerMsg> From<TransferInInit<SwapTask, Self>>
-        for State<SwapTask, SwapGroup, SwapClient, ForwardToInnerMsg>
+    impl<SwapTask, SwapClient, ForwardToInnerMsg> From<TransferInInit<SwapTask, Self>>
+        for State<SwapTask, SwapClient, ForwardToInnerMsg>
     where
         SwapTask: SwapTaskT,
         ForwardToInnerMsg: ForwardToInner,
@@ -148,9 +122,9 @@ mod impl_into {
         }
     }
 
-    impl<SwapTask, SwapGroup, SwapClient, ForwardToInnerMsg>
+    impl<SwapTask, SwapClient, ForwardToInnerMsg>
         From<TransferInInitRespDelivery<SwapTask, Self, ForwardToInnerMsg>>
-        for State<SwapTask, SwapGroup, SwapClient, ForwardToInnerMsg>
+        for State<SwapTask, SwapClient, ForwardToInnerMsg>
     where
         SwapTask: SwapTaskT,
         ForwardToInnerMsg: ForwardToInner,
@@ -160,8 +134,8 @@ mod impl_into {
         }
     }
 
-    impl<SwapTask, SwapGroup, SwapClient, ForwardToInnerMsg> From<TransferInFinish<SwapTask, Self>>
-        for State<SwapTask, SwapGroup, SwapClient, ForwardToInnerMsg>
+    impl<SwapTask, SwapClient, ForwardToInnerMsg> From<TransferInFinish<SwapTask, Self>>
+        for State<SwapTask, SwapClient, ForwardToInnerMsg>
     where
         SwapTask: SwapTaskT,
         ForwardToInnerMsg: ForwardToInner,
@@ -173,7 +147,7 @@ mod impl_into {
 }
 
 mod impl_handler {
-    use currency::Group;
+
     use sdk::cosmwasm_std::{Binary, Env, QuerierWrapper, Reply};
 
     use crate::{
@@ -187,11 +161,10 @@ mod impl_handler {
 
     use super::{ForwardToInner, State};
 
-    impl<SwapTask, SwapGroup, SwapClient, ForwardToInnerMsg> Handler
-        for State<SwapTask, SwapGroup, SwapClient, ForwardToInnerMsg>
+    impl<SwapTask, SwapClient, ForwardToInnerMsg> Handler
+        for State<SwapTask, SwapClient, ForwardToInnerMsg>
     where
         SwapTask: AnomalyMonitoredTask,
-        SwapGroup: Group,
         SwapClient: ExactAmountIn,
         ForwardToInnerMsg: ForwardToInner,
     {
@@ -393,8 +366,8 @@ mod impl_contract {
 
     use super::State;
 
-    impl<SwapTask, SwapGroup, SwapClient, ForwardToInnerMsg> Contract
-        for State<SwapTask, SwapGroup, SwapClient, ForwardToInnerMsg>
+    impl<SwapTask, SwapClient, ForwardToInnerMsg> Contract
+        for State<SwapTask, SwapClient, ForwardToInnerMsg>
     where
         SwapTask:
             SwapTaskT + ContractInSwap<StateResponse = <SwapTask as SwapTaskT>::StateResponse>,
@@ -437,8 +410,8 @@ mod impl_display {
     use super::State;
     use crate::SwapTask as SwapTaskT;
 
-    impl<SwapTask, SwapGroup, SwapClient, ForwardToInnerMsg> Display
-        for State<SwapTask, SwapGroup, SwapClient, ForwardToInnerMsg>
+    impl<SwapTask, SwapClient, ForwardToInnerMsg> Display
+        for State<SwapTask, SwapClient, ForwardToInnerMsg>
     where
         SwapTask: SwapTaskT,
     {
@@ -459,8 +432,6 @@ mod impl_display {
 #[cfg(feature = "migration")]
 mod impl_migration {
 
-    use currency::Group;
-
     use super::{super::migration::InspectSpec, State};
     use crate::{
         SwapTask as SwapTaskT,
@@ -468,17 +439,16 @@ mod impl_migration {
         swap::ExactAmountIn,
     };
 
-    impl<SwapTask, SwapTaskNew, SEnumNew, SwapGroup, SwapClient, ForwardToInnerMsg>
+    impl<SwapTask, SwapTaskNew, SEnumNew, SwapClient, ForwardToInnerMsg>
         MigrateSpec<SwapTask, SwapTaskNew, SEnumNew>
-        for State<SwapTask, SwapGroup, SwapClient, ForwardToInnerMsg>
+        for State<SwapTask, SwapClient, ForwardToInnerMsg>
     where
         SwapTask: SwapTaskT,
-        SwapGroup: Group,
         SwapClient: ExactAmountIn,
         ForwardToInnerMsg: ForwardToInner,
         SwapTaskNew: SwapTaskT<OutG = SwapTask::OutG>,
     {
-        type Out = State<SwapTaskNew, SwapGroup, SwapClient, ForwardToInnerMsg>;
+        type Out = State<SwapTaskNew, SwapClient, ForwardToInnerMsg>;
 
         fn migrate_spec<MigrateFn>(self, migrate_fn: MigrateFn) -> Self::Out
         where
@@ -496,8 +466,8 @@ mod impl_migration {
         }
     }
 
-    impl<SwapTask, R, SwapGroup, SwapClient, ForwardToInnerMsg> InspectSpec<SwapTask, R>
-        for State<SwapTask, SwapGroup, SwapClient, ForwardToInnerMsg>
+    impl<SwapTask, R, SwapClient, ForwardToInnerMsg> InspectSpec<SwapTask, R>
+        for State<SwapTask, SwapClient, ForwardToInnerMsg>
     where
         SwapTask: SwapTaskT,
         ForwardToInnerMsg: ForwardToInner,

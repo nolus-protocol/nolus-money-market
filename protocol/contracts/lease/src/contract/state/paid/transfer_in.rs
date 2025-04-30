@@ -20,7 +20,7 @@ use timealarms::stub::TimeAlarmsRef;
 
 use crate::{
     api::{
-        LeaseAssetCurrencies, LeasePaymentCurrencies,
+        LeaseAssetCurrencies,
         query::{StateResponse as QueryStateResponse, paid::ClosingTrx},
     },
     contract::{
@@ -34,10 +34,8 @@ use crate::{
 };
 
 type AssetGroup = LeaseAssetCurrencies;
-pub(super) type StartState =
-    StartTransferInState<TransferIn, LeasePaymentCurrencies, SwapClient, ForwardToDexEntry>;
-pub(in super::super) type DexState =
-    dex::StateLocalOut<TransferIn, LeasePaymentCurrencies, SwapClient, ForwardToDexEntry>;
+pub(super) type StartState = StartTransferInState<TransferIn, SwapClient, ForwardToDexEntry>;
+pub(in super::super) type DexState = dex::StateLocalOut<TransferIn, SwapClient, ForwardToDexEntry>;
 
 pub(in super::super) fn start(lease: Lease) -> StartState {
     let transfer = TransferIn::new(lease);

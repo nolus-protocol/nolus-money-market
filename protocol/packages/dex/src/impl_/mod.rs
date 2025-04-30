@@ -30,11 +30,11 @@ mod transfer_in_init;
 mod transfer_out;
 mod trx;
 
-pub type TransferOutRespDelivery<SwapTask, SEnum, SwapGroup, SwapClient, ForwardToInnerMsg> =
-    ResponseDelivery<TransferOut<SwapTask, SEnum, SwapGroup, SwapClient>, ForwardToInnerMsg>;
+pub type TransferOutRespDelivery<SwapTask, SEnum, SwapClient, ForwardToInnerMsg> =
+    ResponseDelivery<TransferOut<SwapTask, SEnum, SwapClient>, ForwardToInnerMsg>;
 
-pub type SwapExactInRespDelivery<SwapTask, SEnum, SwapGroup, SwapClient, ForwardToInnerMsg> =
-    ResponseDelivery<SwapExactIn<SwapTask, SEnum, SwapGroup, SwapClient>, ForwardToInnerMsg>;
+pub type SwapExactInRespDelivery<SwapTask, SEnum, SwapClient, ForwardToInnerMsg> =
+    ResponseDelivery<SwapExactIn<SwapTask, SEnum, SwapClient>, ForwardToInnerMsg>;
 
 pub type TransferInInitRespDelivery<SwapTask, SEnum, ForwardToInnerMsg> =
     ResponseDelivery<TransferInInit<SwapTask, SEnum>, ForwardToInnerMsg>;
