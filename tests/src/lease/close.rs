@@ -20,11 +20,12 @@ fn state_closed() {
     let lease_addr: Addr = super::open_lease(&mut test_case, downpayment, None);
     let borrowed_lpn: LpnCoin = super::quote_borrow(&test_case, downpayment);
     let borrowed: PaymentCoin =
-        price::total(borrowed_lpn, super::price_lpn_of::<PaymentCurrency>().inv());
+        price::total(borrowed_lpn, super::price_lpn_of::<PaymentCurrency>().inv()).unwrap();
     let lease_amount: LeaseCoin = price::total(
-        price::total(downpayment, super::price_lpn_of()) + borrowed_lpn,
+        price::total(downpayment, super::price_lpn_of()).unwrap() + borrowed_lpn,
         super::price_lpn_of::<LeaseCurrency>().inv(),
-    );
+    )
+    .unwrap();
     repay::repay(&mut test_case, lease_addr.clone(), borrowed);
 
     let customer_addr: Addr = testing::user(USER);

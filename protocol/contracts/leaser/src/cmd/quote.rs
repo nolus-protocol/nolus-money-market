@@ -4,8 +4,8 @@ use currency::{AnyVisitor, AnyVisitorResult, Currency, CurrencyDTO, CurrencyDef,
 use finance::{
     coin::{Coin, WithCoin, WithCoinResult},
     liability::Liability,
-    percent::Percent,
-    price::total,
+    percent::{Percent, Percent100},
+    price::{self, Price},
 };
 use lease::api::DownpaymentCoin;
 use lpp::{
@@ -27,7 +27,7 @@ pub struct Quote<'r> {
     downpayment: DownpaymentCoin,
     oracle: OracleRef,
     liability: Liability,
-    lease_interest_rate_margin: Percent,
+    lease_interest_rate_margin: Percent100,
     max_ltd: Option<Percent>,
 }
 
@@ -38,7 +38,7 @@ impl<'r> Quote<'r> {
         lease_asset: CurrencyDTO<LeaseCurrencies>,
         oracle: OracleRef,
         liability: Liability,
-        lease_interest_rate_margin: Percent,
+        lease_interest_rate_margin: Percent100,
         max_ltd: Option<Percent>,
     ) -> Self {
         Self {
@@ -91,7 +91,7 @@ where
         })
     }
 
-    pub fn with(&self, borrow: Coin<Lpn>) -> Result<Percent, ContractError> {
+    pub fn with(&self, borrow: Coin<Lpn>) -> Result<Percent100, ContractError> {
         if borrow.is_zero() {
             return Err(ContractError::ZeroDownpayment {});
         }
@@ -114,7 +114,7 @@ where
     lease_asset: CurrencyDTO<LeaseCurrencies>,
     lpp_quote: LppQuote<Lpn, Lpp>,
     liability: Liability,
-    lease_interest_rate_margin: Percent,
+    lease_interest_rate_margin: Percent100,
     max_ltd: Option<Percent>,
 }
 
@@ -152,7 +152,7 @@ where
     lpp_quote: LppQuote<Lpn, Lpp>,
     oracle: Oracle,
     liability: Liability,
-    lease_interest_rate_margin: Percent,
+    lease_interest_rate_margin: Percent100,
     max_ltd: Option<Percent>,
 }
 
@@ -192,8 +192,25 @@ where
     lpp_quote: LppQuote<Lpn, Lpp>,
     oracle: Oracle,
     liability: Liability,
-    lease_interest_rate_margin: Percent,
+    lease_interest_rate_margin: Percent100,
     max_ltd: Option<Percent>,
+}
+
+impl<Lpn, Dpc, Lpp, Oracle> QuoteStage4<Lpn, Dpc, Lpp, Oracle>
+where
+    Dpc: Currency + MemberOf<PaymentCurrencies>,
+    Lpp: LppLenderTrait<Lpn, LpnCurrencies>,
+    Oracle: OracleTrait<PaymentCurrencies, QuoteC = Lpn, QuoteG = LpnCurrencies>,
+{
+    fn init_borrow_amount(
+        &self,
+        downpayment: Coin<Lpn>,
+        may_max_ltd: Option<Percent>,
+    ) -> Coin<Lpn> {
+        self.liability
+            .init_borrow_amount(downpayment, may_max_ltd)
+            .expect("TODO: propagate up the stack potential overflow")
+    }
 }
 
 impl<Lpn, Dpc, Lpp, Oracle> AnyVisitor<LeaseCurrencies> for QuoteStage4<Lpn, Dpc, Lpp, Oracle>
@@ -219,9 +236,7 @@ where
             return Err(ContractError::ZeroDownpayment {});
         }
 
-        let borrow = self
-            .liability
-            .init_borrow_amount(downpayment_lpn, self.max_ltd);
+        let borrow = self.init_borrow_amount(downpayment_lpn, self.max_ltd);
 
         let asset_price = self.oracle.price_of::<Asset>()?.inv();
 
@@ -236,4 +251,12 @@ where
             annual_interest_rate_margin: self.lease_interest_rate_margin,
         })
     }
+}
+
+fn total<C, QuoteC>(amount: Coin<C>, price: Price<C, QuoteC>) -> Coin<QuoteC>
+where
+    C: 'static,
+    QuoteC: 'static,
+{
+    price::total(amount, price).expect("TODO: propagate up the stack potential overflow")
 }

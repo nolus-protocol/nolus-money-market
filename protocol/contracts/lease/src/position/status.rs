@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use finance::{coin::Coin, liability::Zone, percent::Percent};
+use finance::{coin::Coin, liability::Zone, percent::Percent100};
 
 use super::steady::Steadiness;
 
@@ -8,7 +8,10 @@ use super::steady::Steadiness;
 #[cfg_attr(feature = "contract_testing", derive(Debug))]
 pub enum Cause {
     Overdue(),
-    Liability { ltv: Percent, healthy_ltv: Percent },
+    Liability {
+        ltv: Percent100,
+        healthy_ltv: Percent100,
+    },
 }
 
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd)]
@@ -51,7 +54,7 @@ impl<Asset> Debt<Asset> {
 #[cfg(all(feature = "internal.test.contract", test))]
 mod test_status {
     use currencies::Lpn;
-    use finance::percent::Percent;
+    use finance::percent::Percent100;
 
     use crate::position::Liquidation;
 
@@ -62,17 +65,17 @@ mod test_status {
         assert!(
             Liquidation::<Lpn>::Full(Cause::Overdue())
                 < Liquidation::Full(Cause::Liability {
-                    ltv: Percent::from_percent(20),
-                    healthy_ltv: Percent::from_percent(40)
+                    ltv: Percent100::from_percent(20),
+                    healthy_ltv: Percent100::from_percent(40)
                 })
         );
         assert!(
             Liquidation::<Lpn>::Full(Cause::Liability {
-                ltv: Percent::from_percent(19),
-                healthy_ltv: Percent::from_percent(40)
+                ltv: Percent100::from_percent(19),
+                healthy_ltv: Percent100::from_percent(40)
             }) < Liquidation::Full(Cause::Liability {
-                ltv: Percent::from_percent(20),
-                healthy_ltv: Percent::from_percent(40)
+                ltv: Percent100::from_percent(20),
+                healthy_ltv: Percent100::from_percent(40)
             })
         )
     }
