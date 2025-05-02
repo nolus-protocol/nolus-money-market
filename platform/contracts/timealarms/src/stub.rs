@@ -2,6 +2,7 @@ use std::result::Result as StdResult;
 
 use serde::{Deserialize, Serialize};
 
+use access_control::AccessPermission;
 use platform::{batch::Batch, contract};
 use sdk::cosmwasm_std::{Addr, QuerierWrapper, StdError as SdkError, Timestamp, wasm_execute};
 
@@ -63,6 +64,22 @@ impl TimeAlarmsRef {
             time_alarms_ref: self,
             batch: Default::default(),
         }
+    }
+}
+
+pub struct GrantedTimeAlarm<'a> {
+    time_alarms_ref: &'a TimeAlarmsRef,
+}
+
+impl<'a> GrantedTimeAlarm<'a> {
+    pub fn new(time_alarms_ref: &'a TimeAlarmsRef) -> Self {
+        Self { time_alarms_ref }
+    }
+}
+
+impl AccessPermission for GrantedTimeAlarm<'_> {
+    fn is_granted_to(&self, caller: &Addr) -> bool {
+        self.time_alarms_ref.owned_by(caller)
     }
 }
 

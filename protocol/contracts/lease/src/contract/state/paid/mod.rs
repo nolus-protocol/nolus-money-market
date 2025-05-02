@@ -1,3 +1,4 @@
+use access_control::GrantedAddress;
 use finance::duration::Duration;
 use serde::{Deserialize, Serialize};
 
@@ -39,7 +40,10 @@ impl Handler for Active {
         env: Env,
         info: MessageInfo,
     ) -> ContractResult<Response> {
-        access_control::check(&self.lease.lease.customer, &info.sender)?;
+        access_control::check(
+            &GrantedAddress::new(&self.lease.lease.customer),
+            &info.sender,
+        )?;
 
         let start_transfer_in = transfer_in::start(self.lease);
         start_transfer_in
