@@ -1,4 +1,5 @@
-use dex::Enterable;
+use currency::{CurrencyDef, Group, MemberOf};
+use dex::{AnomalyHandler, Enterable, SlippageCalculatorFactory};
 use platform::message::Response as MessageResponse;
 use sdk::cosmwasm_std::{Env, QuerierWrapper};
 
@@ -13,6 +14,7 @@ use crate::{
     },
     error::ContractResult,
     event::Type,
+    finance::LpnCurrencies,
 };
 
 use self::sell_asset::SellAsset;
@@ -47,6 +49,11 @@ trait ClosePositionTask
 where
     Self: IntoRepayable + Sized,
     DexState<Self::Repayable>: Into<State>,
+    SellAsset<Self::Repayable>:
+        SlippageCalculatorFactory<SellAsset<Self::Repayable>> + AnomalyHandler<SellAsset<Self::Repayable>>,
+    <<SellAsset<Self::Repayable> as SlippageCalculatorFactory<SellAsset<Self::Repayable>>>::OutC as CurrencyDef>::Group:
+        MemberOf<LpnCurrencies> + MemberOf<<LpnCurrencies as Group>::TopG>,
+
 {
     fn start(
         self,
@@ -68,5 +75,9 @@ impl<T> ClosePositionTask for T
 where
     T: IntoRepayable,
     DexState<T::Repayable>: Into<State>,
+    SellAsset<Self::Repayable>:
+    SlippageCalculatorFactory<SellAsset<Self::Repayable>> + AnomalyHandler<SellAsset<Self::Repayable>>,
+    <<SellAsset<Self::Repayable> as SlippageCalculatorFactory<SellAsset<Self::Repayable>>>::OutC as CurrencyDef>::Group:
+       MemberOf<LpnCurrencies> + MemberOf<<LpnCurrencies as Group>::TopG>,
 {
 }

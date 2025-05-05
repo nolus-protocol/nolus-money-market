@@ -1,10 +1,11 @@
-use currency::{CurrencyDTO, CurrencyDef, Group};
+use currency::{CurrencyDef, Group};
 use serde::{Deserialize, Serialize};
 
 use currencies::{Native, Nls, PaymentGroup};
 use dex::{
-    Account, ContractInSwap, Enterable, Response as DexResponse, Stage, StateLocalOut,
-    SwapOutputTask, SwapTask, WithOutputTask,
+    AcceptAnyNonZeroSwap, Account, AnomalyTreatment, ContractInSwap, Enterable,
+    Response as DexResponse, Stage, StateLocalOut, SwapOutputTask, SwapTask, WithCalculator,
+    WithOutputTask,
 };
 use finance::{
     coin::{Coin, CoinDTO},
@@ -86,12 +87,19 @@ impl SwapTask for BuyBack {
         self.config.time_alarms()
     }
 
-    fn out_currency(&self) -> CurrencyDTO<Self::OutG> {
-        currency::dto::<Nls, Self::OutG>()
-    }
-
     fn coins(&self) -> impl IntoIterator<Item = CoinDTO<Self::InG>> {
         self.coins.clone().into_iter()
+    }
+
+    fn with_slippage_calc<WithCalc>(&self, with_calc: WithCalc) -> WithCalc::Output
+    where
+        WithCalc: WithCalculator<Self>,
+    {
+        with_calc.on(AcceptAnyNonZeroSwap::<
+            '_,
+            _,
+            <Self as SwapOutputTask<Self>>::OutC,
+        >::from(self))
     }
 
     fn into_output_task<Cmd>(self, cmd: Cmd) -> Cmd::Output
@@ -111,6 +119,10 @@ impl SwapOutputTask<Self> for BuyBack {
 
     fn into_spec(self) -> Self {
         self
+    }
+
+    fn on_anomaly(self) -> AnomalyTreatment<Self> {
+        AnomalyTreatment::Retry(self)
     }
 
     fn finish(

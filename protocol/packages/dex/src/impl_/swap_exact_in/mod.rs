@@ -4,18 +4,22 @@ use std::{
 };
 
 use decode_resp::{DecodeThenFinish, DecodeThenTransferIn};
+use encode_req::EncodeRequest;
+use report_anomaly::ReportAnomalyCmd;
 use serde::{Deserialize, Serialize};
 
 use currency::{CurrencyDTO, CurrencyDef, Group, MemberOf};
 use finance::{
-    coin::{self, Coin, CoinDTO},
+    coin::{Coin, CoinDTO},
     duration::Duration,
     zero::Zero,
 };
 use platform::{batch::Batch, trx};
 use sdk::cosmwasm_std::{Binary, Env, QuerierWrapper, Timestamp};
 
-use crate::{ConnectionParams, Contract, Stage, error::Result, swap::ExactAmountIn};
+use crate::{
+    AnomalyTreatment, ConnectionParams, Contract, Stage, error::Result, swap::ExactAmountIn,
+};
 
 use crate::{
     Connectable, ContractInSwap, Enterable, SwapTask as SwapTaskT, TimeAlarm,
@@ -28,9 +32,10 @@ use crate::{
 
 #[cfg(feature = "migration")]
 use super::migration::{InspectSpec, MigrateSpec};
-use super::trx::SwapTrx;
 
 mod decode_resp;
+mod encode_req;
+mod report_anomaly;
 
 #[derive(Serialize, Deserialize)]
 #[serde(bound(
@@ -68,32 +73,28 @@ where
         _now: Timestamp,
         querier: QuerierWrapper<'_>,
     ) -> Result<Batch> {
-        let mut filtered = false;
+        self.spec
+            .with_slippage_calc(EncodeRequest::<'_, _, SwapClient>::from(querier))
+    }
+}
 
-        let swap_trx = SwapTrx::<'_, '_, '_, <SwapTask::InG as Group>::TopG, _>::new(
-            self.spec.dex_account(),
-            self.spec.oracle(),
-            querier,
-        );
-        let out_currency = self.spec.out_currency();
-        let out_currency_top = out_currency.into_super_group();
-        try_filter_fold_coins(
-            &self.spec,
-            not_out_coins_filter::<_, <SwapTask::InG as Group>::TopG>(&out_currency_top),
-            swap_trx,
-            |mut trx, coin_in| {
-                filtered = true;
-                trx.swap_exact_in::<_, SwapTask::OutG, SwapClient>(
-                    &coin_in,
-                    &coin::from_amount_ticker(1, out_currency),
-                )
-                .map(|()| trx)
-            },
-        )
-        .inspect(|_| {
-            expect_at_lease_one_filtered(filtered, &out_currency_top);
-        })
-        .map(Into::into)
+impl<SwapTask, SEnum, SwapClient> SwapExactIn<SwapTask, SEnum, SwapClient>
+where
+    SwapTask: SwapTaskT,
+    SwapClient: ExactAmountIn,
+    Self: Handler<Response = SEnum, SwapResult = SwapTask::Result> + Into<SEnum>,
+{
+    fn handle_error(self, querier: QuerierWrapper<'_>, env: Env) -> HandlerResult<Self> {
+        match self.spec.into_output_task(ReportAnomalyCmd::default()) {
+            AnomalyTreatment::Retry(spec) => {
+                let swap_exact_in = SwapExactIn::new(spec);
+                swap_exact_in
+                    .enter(env.block.time, querier)
+                    .and_then(|batch| response::res_continue::<_, _, Self>(batch, swap_exact_in))
+                    .into()
+            }
+            AnomalyTreatment::Exit(result) => response::res_finished(result),
+        }
     }
 }
 
@@ -160,6 +161,10 @@ where
             .into()
     }
 
+    fn on_error(self, querier: QuerierWrapper<'_>, env: Env) -> HandlerResult<Self> {
+        self.handle_error(querier, env)
+    }
+
     fn on_timeout(self, querier: QuerierWrapper<'_>, env: Env) -> ContinueResult<Self> {
         let state_label = self.spec.label();
         timeout::on_timeout_retry(self, state_label, querier, env)
@@ -207,6 +212,10 @@ where
                 querier,
                 &env,
             ))
+    }
+
+    fn on_error(self, querier: QuerierWrapper<'_>, env: Env) -> HandlerResult<Self> {
+        self.handle_error(querier, env)
     }
 
     fn on_timeout(self, querier: QuerierWrapper<'_>, env: Env) -> ContinueResult<Self> {

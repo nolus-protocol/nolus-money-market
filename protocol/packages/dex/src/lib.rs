@@ -3,18 +3,22 @@ pub use self::error::Error;
 #[cfg(feature = "impl")]
 pub use self::{
     account::Account,
-    anomaly::Treatment as AnomalyTreatment,
+    anomaly::{Handler as AnomalyHandler, Treatment as AnomalyTreatment},
     connect::{Connectable, ConnectionParams, Ics20Channel},
     enterable::Enterable,
     error::Result as DexResult,
     ica_connectee::IcaConnectee,
     impl_::{
-        IcaConnector, StartLocalLocalState, StartLocalRemoteState, StartTransferInState,
-        StateLocalOut, StateRemoteOut, TransferOut, start_local_local, start_local_remote,
-        start_remote_local,
+        AcceptAnyNonZeroSwap, IcaConnector, StartLocalLocalState, StartLocalRemoteState,
+        StartTransferInState, StateLocalOut, StateRemoteOut, TransferOut, start_local_local,
+        start_local_remote, start_remote_local,
     },
     resp_delivery::ForwardToInner,
     response::{ContinueResult, Handler, Response, Result},
+    slippage::{
+        Calculator as SlippageCalculator, CalculatorFactory as SlippageCalculatorFactory,
+        WithCalculator,
+    },
     state::{Contract, ContractInSwap, Stage},
     swap_task::{CoinsNb, SwapOutputTask, SwapTask, WithOutputTask},
     time_alarm::TimeAlarm,
@@ -38,6 +42,8 @@ mod impl_;
 mod resp_delivery;
 #[cfg(feature = "impl")]
 mod response;
+#[cfg(feature = "impl")]
+mod slippage;
 #[cfg(feature = "impl")]
 mod state;
 pub mod swap;

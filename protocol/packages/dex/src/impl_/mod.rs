@@ -10,6 +10,7 @@ pub use self::{
     },
     out_remote::{StartLocalRemoteState, State as StateRemoteOut, start as start_local_remote},
     resp_delivery::{ICAOpenResponseDelivery, ResponseDelivery},
+    slippage::AcceptAnyNonZeroSwap,
     swap_exact_in::SwapExactIn,
     transfer_in_finish::TransferInFinish,
     transfer_in_init::TransferInInit,
@@ -22,6 +23,7 @@ mod migration;
 mod out_local;
 mod out_remote;
 mod resp_delivery;
+mod slippage;
 mod swap_exact_in;
 mod timeout;
 mod transfer_in;

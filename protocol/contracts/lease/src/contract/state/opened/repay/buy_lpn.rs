@@ -1,11 +1,12 @@
 use std::iter;
 
-use currency::{CurrencyDTO, CurrencyDef, Group};
+use currency::Group;
 use oracle::stub::SwapPath;
 use serde::{Deserialize, Serialize};
 
 use dex::{
-    Account, ContractInSwap, Stage, StartLocalLocalState, SwapOutputTask, SwapTask, WithOutputTask,
+    AcceptAnyNonZeroSwap, Account, AnomalyTreatment, ContractInSwap, Stage, StartLocalLocalState,
+    SwapOutputTask, SwapTask, WithCalculator, WithOutputTask,
 };
 use finance::{
     coin::{Coin, CoinDTO},
@@ -92,12 +93,19 @@ impl SwapTask for BuyLpn {
         &self.lease.lease.time_alarms
     }
 
-    fn out_currency(&self) -> CurrencyDTO<Self::OutG> {
-        *LpnCurrency::dto()
-    }
-
     fn coins(&self) -> impl IntoIterator<Item = CoinDTO<Self::InG>> {
         iter::once(self.payment)
+    }
+
+    fn with_slippage_calc<WithCalc>(&self, with_calc: WithCalc) -> WithCalc::Output
+    where
+        WithCalc: WithCalculator<Self>,
+    {
+        with_calc.on(AcceptAnyNonZeroSwap::<
+            '_,
+            _,
+            <Self as SwapOutputTask<Self>>::OutC,
+        >::from(self))
     }
 
     fn into_output_task<Cmd>(self, cmd: Cmd) -> Cmd::Output
@@ -117,6 +125,13 @@ impl SwapOutputTask<Self> for BuyLpn {
 
     fn into_spec(self) -> Self {
         self
+    }
+
+    fn on_anomaly(self) -> AnomalyTreatment<Self>
+    where
+        Self: Sized,
+    {
+        AnomalyTreatment::Retry(self)
     }
 
     fn finish(

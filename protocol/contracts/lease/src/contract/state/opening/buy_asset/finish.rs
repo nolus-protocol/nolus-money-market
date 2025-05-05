@@ -3,7 +3,7 @@ use std::marker::PhantomData;
 use currency::{CurrencyDef, Group, MemberOf};
 use profit::stub::ProfitRef;
 
-use dex::{SwapOutputTask, SwapTask};
+use dex::{AnomalyTreatment, SwapOutputTask, SwapTask};
 use finance::coin::Coin;
 use platform::{
     message::Response as MessageResponse, state_machine::Response as StateMachineResponse,
@@ -51,6 +51,13 @@ where
 
     fn into_spec(self) -> BuyAsset {
         self.swap_task
+    }
+
+    fn on_anomaly(self) -> AnomalyTreatment<BuyAsset>
+    where
+        Self: Sized,
+    {
+        AnomalyTreatment::Retry(self.into_spec())
     }
 
     fn finish(

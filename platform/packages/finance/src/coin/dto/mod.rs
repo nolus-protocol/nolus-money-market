@@ -141,15 +141,6 @@ where
     }
 }
 
-// TODO remove usages from non-testing code and put behind `#[cfg(...)]
-// #[cfg(any(test, feature = "testing"))]
-pub fn from_amount_ticker<G>(amount: Amount, currency: CurrencyDTO<G>) -> CoinDTO<G>
-where
-    G: Group,
-{
-    CoinDTO::new(amount, currency)
-}
-
 pub struct IntoDTO<G> {
     _g: PhantomData<G>,
 }
@@ -214,17 +205,6 @@ mod test {
             cosmwasm_std::to_json_vec(&CoinDTO::<SuperGroup>::from(coin))
                 .and_then(cosmwasm_std::from_json::<Coin<SuperGroupTestC1>>)
                 .unwrap()
-        );
-    }
-
-    #[test]
-    fn from_amount_ticker_ok() {
-        let amount = 20;
-        type TheCurrency = SuperGroupTestC1;
-        type TheGroup = <TheCurrency as CurrencyDef>::Group;
-        assert_eq!(
-            test_coin::<TheCurrency, TheGroup>(amount),
-            super::from_amount_ticker::<TheGroup>(amount, *TheCurrency::dto())
         );
     }
 

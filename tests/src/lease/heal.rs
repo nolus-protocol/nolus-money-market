@@ -57,25 +57,14 @@ fn swap_on_repay() {
     test_case.send_funds_from_admin(testing::user(USER), &[cwcoin(payment)]);
 
     repay::repay_with_hook_on_swap(&mut test_case, lease.clone(), payment, |ref mut app| {
-        let swap_response_err = common::swap::do_swap_with_error(app, lease.clone())
-            .expect_err("should have resulted in \"not supported in this state\"");
-
-        assert!(matches!(
-            swap_response_err.downcast::<lease::error::ContractError>(),
-            Ok(lease::error::ContractError::DexError(
-                dex::Error::UnsupportedOperation(_, _)
-            ))
-        ));
-
-        let mut response = heal_ok(app, lease.clone());
+        let mut swap_response_retry = common::swap::do_swap_with_error(app, lease.clone())
+            .expect("should have retried again the swap");
 
         test_swap::expect_swap(
-            &mut response,
+            &mut swap_response_retry,
             TestCase::DEX_CONNECTION_ID,
             TestCase::LEASE_ICA_ID,
         );
-
-        () = response.unwrap_response();
     });
 
     let query_result = super::state_query(&test_case, lease.clone());

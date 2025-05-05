@@ -1,10 +1,10 @@
-use currency::{CurrencyDTO, CurrencyDef, Group, MemberOf};
+use currency::{CurrencyDef, Group, MemberOf};
 use finance::coin::{Coin, CoinDTO};
 use oracle::stub::SwapPath;
 use sdk::cosmwasm_std::{Env, QuerierWrapper};
 use timealarms::stub::TimeAlarmsRef;
 
-use crate::Account;
+use crate::{Account, AnomalyTreatment, slippage::WithCalculator};
 
 pub type CoinsNb = u8;
 
@@ -25,7 +25,6 @@ where
     fn dex_account(&self) -> &Account;
     fn oracle(&self) -> &impl SwapPath<<Self::InG as Group>::TopG>;
     fn time_alarm(&self) -> &TimeAlarmsRef;
-    fn out_currency(&self) -> CurrencyDTO<Self::OutG>;
 
     /// Provide the coins, at least one, this swap is about.
     /// The iteration is done always in the same order.
@@ -34,6 +33,10 @@ where
     // This would avoid clone-ing of values kept in the task. At the same time, we cannot iterate over '&' due to
     // having temporary instances in some of the tasks.
     fn coins(&self) -> impl IntoIterator<Item = CoinDTO<Self::InG>>;
+
+    fn with_slippage_calc<WithCalc>(&self, with_calc: WithCalc) -> WithCalc::Output
+    where
+        WithCalc: WithCalculator<Self>;
 
     fn into_output_task<Cmd>(self, cmd: Cmd) -> Cmd::Output
     where
@@ -62,6 +65,20 @@ where
     fn as_spec(&self) -> &SwapTaskT;
 
     fn into_spec(self) -> SwapTaskT;
+
+    /// Called when an anomaly is detected
+    ///
+    /// Determine how the current workflow should procceed.
+    /// Simmilarly to [`SwapTask::finish`], this function may exit the current DEX swap task,
+    /// a state composed of TransferOut, SwapExactIn, TransferIn, etc., and transition to a next state,
+    /// or ask for a retry of the last operation.
+    ///
+    /// Due to the immaturity of the DEX Swap APIs' the particular error cannot be determined.
+    /// If/once the APIs' get more mature we may want to recognize the error cause.
+    /// An unsatisfied minimum output amount is always assumed whenever a swap error is received.
+    fn on_anomaly(self) -> AnomalyTreatment<SwapTaskT>
+    where
+        Self: Sized;
 
     /// The final transition of this DEX composite state machine
     ///

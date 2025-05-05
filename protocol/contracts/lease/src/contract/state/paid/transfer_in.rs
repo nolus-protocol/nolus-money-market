@@ -3,9 +3,10 @@ use std::{iter, marker::PhantomData};
 use oracle::stub::SwapPath;
 use serde::{Deserialize, Serialize};
 
-use currency::{CurrencyDTO, CurrencyDef, Group, MemberOf, never};
+use currency::{CurrencyDef, Group, MemberOf, never};
 use dex::{
-    Account, ContractInSwap, Stage, StartTransferInState, SwapOutputTask, SwapTask, WithOutputTask,
+    Account, AnomalyTreatment, ContractInSwap, Stage, StartTransferInState, SwapOutputTask,
+    SwapTask, WithCalculator, WithOutputTask,
 };
 use finance::{
     coin::{Coin, CoinDTO},
@@ -101,12 +102,15 @@ impl SwapTask for TransferIn {
         &self.lease.lease.time_alarms
     }
 
-    fn out_currency(&self) -> CurrencyDTO<Self::OutG> {
-        self.amount().currency()
-    }
-
     fn coins(&self) -> impl IntoIterator<Item = CoinDTO<Self::InG>> {
         iter::once(*self.amount())
+    }
+
+    fn with_slippage_calc<Cmd>(&self, _cmd: Cmd) -> Cmd::Output
+    where
+        Cmd: WithCalculator<Self>,
+    {
+        unimplemented!("TransferIn is not subject to monitoring! No swaps included!")
     }
 
     fn into_output_task<Cmd>(self, cmd: Cmd) -> Cmd::Output
@@ -195,6 +199,13 @@ where
 
     fn into_spec(self) -> TransferIn {
         self.swap_task
+    }
+
+    fn on_anomaly(self) -> AnomalyTreatment<TransferIn>
+    where
+        Self: Sized,
+    {
+        AnomalyTreatment::Retry(self.into_spec())
     }
 
     fn finish(

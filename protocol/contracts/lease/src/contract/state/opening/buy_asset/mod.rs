@@ -1,5 +1,6 @@
+use calculator::Factory as CalculatorFactory;
 use currency::{
-    CurrencyDTO, CurrencyDef, Group, MemberOf,
+    CurrencyDef, Group, MemberOf,
     never::{self},
 };
 use finish::BuyAssetFinish;
@@ -7,7 +8,8 @@ use oracle::stub::SwapPath;
 use serde::{Deserialize, Serialize};
 
 use dex::{
-    Account, ContractInSwap, Stage, StartLocalRemoteState, SwapOutputTask, SwapTask, WithOutputTask,
+    Account, ContractInSwap, Stage, StartLocalRemoteState, SwapOutputTask, SwapTask,
+    WithCalculator, WithOutputTask,
 };
 use finance::{coin::CoinDTO, duration::Duration};
 use platform::ica::HostAccount;
@@ -36,6 +38,7 @@ use crate::{
 
 use super::open_ica::OpenIcaAccount;
 
+mod calculator;
 mod finish;
 
 type AssetGroup = LeaseAssetCurrencies;
@@ -136,8 +139,16 @@ impl SwapTask for BuyAsset {
         [self.downpayment, self.loan.principal.into_super_group()].into_iter()
     }
 
-    fn out_currency(&self) -> CurrencyDTO<Self::OutG> {
-        self.form.currency
+    fn with_slippage_calc<WithCalc>(&self, with_calc: WithCalc) -> WithCalc::Output
+    where
+        WithCalc: WithCalculator<Self>,
+    {
+        never::safe_unwrap(
+            self.form
+                .currency
+                .into_super_group()
+                .into_currency_type(CalculatorFactory::from(self, with_calc)),
+        )
     }
 
     fn into_output_task<Cmd>(self, cmd: Cmd) -> Cmd::Output

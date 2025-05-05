@@ -1,13 +1,18 @@
 use std::iter;
 
-use currency::{CurrencyDTO, CurrencyDef, Group};
+use currency::{CurrencyDef, Group, MemberOf};
 use oracle::stub::SwapPath;
+use platform::state_machine::Response;
 use serde::{Deserialize, Serialize};
 
-use dex::{Account, ContractInSwap, Stage, SwapOutputTask, SwapTask, WithOutputTask};
+use dex::{
+    Account, AnomalyTreatment, ContractInSwap, SlippageCalculatorFactory, Stage, SwapOutputTask,
+    SwapTask, WithCalculator, WithOutputTask,
+};
 use finance::{
     coin::{Coin, CoinDTO},
     duration::Duration,
+    percent::Percent,
 };
 use sdk::cosmwasm_std::{Env, QuerierWrapper, Timestamp};
 use timealarms::stub::TimeAlarmsRef;
@@ -20,8 +25,8 @@ use crate::{
     contract::{
         Lease,
         state::{
-            SwapResult,
-            opened::{self, payment::Repayable},
+            State, SwapResult,
+            opened::{self, event, payment::Repayable},
         },
     },
     error::ContractResult,
@@ -29,7 +34,7 @@ use crate::{
     finance::{LpnCurrencies, LpnCurrency},
 };
 
-use super::Closable;
+use super::{AnomalyHandler, Closable, SlippageAnomaly};
 
 #[derive(Serialize, Deserialize)]
 pub(crate) struct SellAsset<RepayableT> {
@@ -40,6 +45,37 @@ pub(crate) struct SellAsset<RepayableT> {
 impl<RepayableT> SellAsset<RepayableT> {
     pub(in super::super) fn new(lease: Lease, repayable: RepayableT) -> Self {
         Self { lease, repayable }
+    }
+}
+
+impl<RepayableT> SellAsset<RepayableT>
+where
+    RepayableT: Closable + Repayable,
+    Self: SlippageCalculatorFactory<Self>,
+    <<Self as SlippageCalculatorFactory<Self>>::OutC as CurrencyDef>::Group:
+        MemberOf<LpnCurrencies> + MemberOf<<LpnCurrencies as Group>::TopG>,
+    Self: AnomalyHandler<Self>,
+{
+    pub(super) fn retry_on_anomaly(self) -> AnomalyTreatment<Self> {
+        AnomalyTreatment::Retry(self)
+    }
+}
+
+impl<RepayableT> SellAsset<RepayableT>
+where
+    RepayableT: Closable + Repayable,
+    Self: SlippageCalculatorFactory<Self>,
+    <<Self as SlippageCalculatorFactory<Self>>::OutC as CurrencyDef>::Group:
+        MemberOf<LpnCurrencies> + MemberOf<<LpnCurrencies as Group>::TopG>,
+    Self: AnomalyHandler<Self>,
+    State: From<SlippageAnomaly<RepayableT>>,
+{
+    pub(super) fn exit_on_anomaly(self) -> AnomalyTreatment<Self> {
+        //TODO move this code into the impl of Calculator that would have access to the `max_slipage`
+        //or pass it in as a fn argument
+        let emitter = event::emit_slippage_anomaly(&self.lease.lease, Percent::from_percent(20)); //self.max_slippage
+        let next_state = SlippageAnomaly::new(self.lease, self.repayable);
+        AnomalyTreatment::Exit(Ok(Response::from(emitter, next_state)))
     }
 }
 
@@ -62,6 +98,10 @@ where
 impl<RepayableT> SwapTask for SellAsset<RepayableT>
 where
     RepayableT: Closable + Repayable,
+    Self: SlippageCalculatorFactory<Self>,
+    <<Self as SlippageCalculatorFactory<Self>>::OutC as CurrencyDef>::Group:
+        MemberOf<LpnCurrencies> + MemberOf<<LpnCurrencies as Group>::TopG>,
+    Self: AnomalyHandler<Self>,
 {
     type InG = LeaseAssetCurrencies;
     type OutG = LpnCurrencies;
@@ -85,12 +125,15 @@ where
         &self.lease.lease.time_alarms
     }
 
-    fn out_currency(&self) -> CurrencyDTO<Self::OutG> {
-        *LpnCurrency::dto()
-    }
-
     fn coins(&self) -> impl IntoIterator<Item = CoinDTO<Self::InG>> {
         iter::once(*self.repayable.amount(&self.lease))
+    }
+
+    fn with_slippage_calc<WithCalc>(&self, with_calc: WithCalc) -> WithCalc::Output
+    where
+        WithCalc: WithCalculator<Self>,
+    {
+        with_calc.on(self.new_calc())
     }
 
     fn into_output_task<Cmd>(self, cmd: Cmd) -> Cmd::Output
@@ -104,6 +147,10 @@ where
 impl<RepayableT> SwapOutputTask<Self> for SellAsset<RepayableT>
 where
     RepayableT: Closable + Repayable,
+    Self: SlippageCalculatorFactory<Self>,
+    <<Self as SlippageCalculatorFactory<Self>>::OutC as CurrencyDef>::Group:
+        MemberOf<LpnCurrencies> + MemberOf<<LpnCurrencies as Group>::TopG>,
+    Self: AnomalyHandler<Self>,
 {
     type OutC = LpnCurrency;
 
@@ -113,6 +160,13 @@ where
 
     fn into_spec(self) -> Self {
         self
+    }
+
+    fn on_anomaly(self) -> AnomalyTreatment<Self>
+    where
+        Self: Sized,
+    {
+        <Self as AnomalyHandler<Self>>::on_anomaly(self)
     }
 
     fn finish(
@@ -130,6 +184,10 @@ where
 impl<RepayableT> ContractInSwap for SellAsset<RepayableT>
 where
     RepayableT: Closable + Repayable,
+    Self: SlippageCalculatorFactory<Self>,
+    <<Self as SlippageCalculatorFactory<Self>>::OutC as CurrencyDef>::Group:
+        MemberOf<LpnCurrencies> + MemberOf<<LpnCurrencies as Group>::TopG>,
+    Self: AnomalyHandler<Self>,
 {
     type StateResponse = <Self as SwapTask>::StateResponse;
 

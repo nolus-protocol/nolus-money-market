@@ -1,3 +1,7 @@
+use dex::{
+    AcceptAnyNonZeroSwap, AnomalyTreatment, SlippageCalculator, SlippageCalculatorFactory,
+    SwapOutputTask,
+};
 use sdk::cosmwasm_std::Env;
 
 use crate::{
@@ -11,12 +15,16 @@ use crate::{
         state::{
             event::LiquidationEmitter,
             opened::{
-                close::{self, Closable, IntoRepayable, SlippageAnomaly},
+                close::{
+                    self, AnomalyHandler, Closable, IntoRepayable, SlippageAnomaly,
+                    sell_asset::SellAsset,
+                },
                 payment::{Repay, RepayAlgo},
             },
         },
     },
     event::Type,
+    finance::LpnCurrency,
 };
 
 type Spec = PartialLiquidationDTO;
@@ -61,5 +69,23 @@ impl RepayAlgo for Spec {
 
     fn emitter_fn<'liq, 'env>(&'liq self, env: &'env Env) -> Self::PaymentEmitter<'liq, 'env> {
         Self::PaymentEmitter::new(&self.cause, self.amount, env)
+    }
+}
+
+impl SlippageCalculatorFactory<SellAsset<RepayableImpl>> for SellAsset<RepayableImpl> {
+    type OutC = LpnCurrency;
+
+    fn new_calc(&self) -> impl SlippageCalculator<SellAsset<RepayableImpl>, OutC = Self::OutC> {
+        AcceptAnyNonZeroSwap::<
+            '_,
+            _,
+            <SellAsset<RepayableImpl> as SwapOutputTask<SellAsset<RepayableImpl>>>::OutC,
+        >::from(self)
+    }
+}
+
+impl AnomalyHandler<SellAsset<RepayableImpl>> for SellAsset<RepayableImpl> {
+    fn on_anomaly(self) -> AnomalyTreatment<SellAsset<RepayableImpl>> {
+        self.exit_on_anomaly()
     }
 }

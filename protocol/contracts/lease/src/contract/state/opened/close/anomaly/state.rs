@@ -23,6 +23,12 @@ pub(crate) struct SlippageAnomaly<RepayableT> {
     repayable: RepayableT,
 }
 
+impl<RepayableT> SlippageAnomaly<RepayableT> {
+    pub(in crate::contract::state) fn new(lease: Lease, repayable: RepayableT) -> Self {
+        Self { lease, repayable }
+    }
+}
+
 // RepayableT: Closable + Repayable
 impl<RepayableT> Handler for SlippageAnomaly<RepayableT> {
     fn state(
