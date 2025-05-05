@@ -1,4 +1,4 @@
-use finance::{liability::Level, percent::Percent};
+use finance::liability::Level;
 use platform::batch::{Emit, Emitter};
 use sdk::cosmwasm_std::{Addr, Env};
 
@@ -49,11 +49,6 @@ pub(super) fn emit_liquidation_warning(lease: &LeaseDTO, level: &Level) -> Emitt
     emit_lease(Emitter::of_type(Type::LiquidationWarning), lease)
         .emit_percent_amount("ltv", level.ltv())
         .emit_to_string_value("level", level.ordinal())
-}
-
-pub(super) fn emit_slippage_anomaly(lease: &LeaseDTO, max_slippage: Percent) -> Emitter {
-    emit_lease(Emitter::of_type(Type::SlippageAnomaly), lease)
-        .emit_percent_amount("max_slippage", max_slippage)
 }
 
 fn emit_lease(emitter: Emitter, lease: &LeaseDTO) -> Emitter {

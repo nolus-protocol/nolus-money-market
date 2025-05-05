@@ -1,14 +1,16 @@
 use std::iter;
 
+use currency::{CurrencyDTO, CurrencyDef, Group};
 use oracle::stub::SwapPath;
 use serde::{Deserialize, Serialize};
 
-use currency::{CurrencyDTO, CurrencyDef, Group};
 use dex::{
-    AcceptAnyNonZeroSwap, Account, AnomalyMonitoredTask, AnomalyPolicy, ContractInSwap, Stage,
-    StartLocalLocalState, SwapTask,
+    Account, ContractInSwap, Stage, StartLocalLocalState, SwapOutputTask, SwapTask, WithOutputTask,
 };
-use finance::{coin::CoinDTO, duration::Duration};
+use finance::{
+    coin::{Coin, CoinDTO},
+    duration::Duration,
+};
 use sdk::cosmwasm_std::{Env, QuerierWrapper, Timestamp};
 use timealarms::stub::TimeAlarmsRef;
 
@@ -98,19 +100,33 @@ impl SwapTask for BuyLpn {
         iter::once(self.payment)
     }
 
-    fn finish(
-        self,
-        amount_out: CoinDTO<Self::OutG>,
-        env: &Env,
-        querier: QuerierWrapper<'_>,
-    ) -> Self::Result {
-        repay::repay(self.lease, amount_out, env, querier)
+    fn into_output_task<Cmd>(self, cmd: Cmd) -> Cmd::Output
+    where
+        Cmd: WithOutputTask<Self>,
+    {
+        cmd.on(self)
     }
 }
 
-impl AnomalyMonitoredTask for BuyLpn {
-    fn policy(&self) -> impl AnomalyPolicy<Self> {
-        AcceptAnyNonZeroSwap::on_task(self)
+impl SwapOutputTask<Self> for BuyLpn {
+    type OutC = LpnCurrency;
+
+    fn as_spec(&self) -> &Self {
+        self
+    }
+
+    fn into_spec(self) -> Self {
+        self
+    }
+
+    fn finish(
+        self,
+        amount_out: Coin<Self::OutC>,
+        env: &Env,
+        querier: QuerierWrapper<'_>,
+    ) -> <Self as SwapTask>::Result {
+        // TODO repay with Coin, not CoinDTO
+        repay::repay(self.lease, amount_out.into(), env, querier)
     }
 }
 

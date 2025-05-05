@@ -1,14 +1,16 @@
-use std::iter;
+use std::{iter, marker::PhantomData};
 
 use oracle::stub::SwapPath;
 use serde::{Deserialize, Serialize};
 
-use currency::{CurrencyDTO, Group};
+use currency::{CurrencyDTO, CurrencyDef, Group, MemberOf, never};
 use dex::{
-    Account, AnomalyMonitoredTask, AnomalyPolicy, ContractInSwap, PanicPolicy, Stage,
-    StartTransferInState, SwapTask,
+    Account, ContractInSwap, Stage, StartTransferInState, SwapOutputTask, SwapTask, WithOutputTask,
 };
-use finance::{coin::CoinDTO, duration::Duration};
+use finance::{
+    coin::{Coin, CoinDTO},
+    duration::Duration,
+};
 use platform::{
     bank,
     batch::{Emit, Emitter},
@@ -26,7 +28,12 @@ use crate::{
     contract::{
         Lease,
         cmd::Close,
-        state::{SwapClient, SwapResult, closed::Closed, resp_delivery::ForwardToDexEntry},
+        state::{
+            SwapClient, SwapResult,
+            closed::Closed,
+            out_task::{OutTaskFactory, WithOutCurrency},
+            resp_delivery::ForwardToDexEntry,
+        },
     },
     error::ContractResult,
     event::Type,
@@ -60,7 +67,7 @@ impl TransferIn {
         ))
     }
 
-    fn amount(&self) -> &CoinDTO<LeaseAssetCurrencies> {
+    fn amount(&self) -> &CoinDTO<AssetGroup> {
         self.lease.lease.position.amount()
     }
 
@@ -102,33 +109,26 @@ impl SwapTask for TransferIn {
         iter::once(*self.amount())
     }
 
-    fn finish(
-        self,
-        amount_out: CoinDTO<Self::OutG>,
-        env: &Env,
-        querier: QuerierWrapper<'_>,
-    ) -> Self::Result {
-        debug_assert!(&amount_out == self.amount());
-        let lease_addr = self.lease.lease.addr.clone();
-        let lease_account = bank::account(&lease_addr, querier);
-        let emitter = self.emit_ok(env, &self.lease.lease);
-        let customer = self.lease.lease.customer.clone();
-
-        with_lease_paid::execute(self.lease.lease, Close::new(lease_account))
-            .and_then(|close_msgs| {
-                self.lease
-                    .finalizer
-                    .notify(customer)
-                    .map(|finalizer_msgs| close_msgs.merge(finalizer_msgs)) //make sure the finalizer messages go out last
-            })
-            .map(|all_messages| MessageResponse::messages_with_events(all_messages, emitter))
-            .map(|response| StateMachineResponse::from(response, Closed::default()))
-    }
-}
-
-impl AnomalyMonitoredTask for TransferIn {
-    fn policy(&self) -> impl AnomalyPolicy<Self> {
-        PanicPolicy {}
+    fn into_output_task<Cmd>(self, cmd: Cmd) -> Cmd::Output
+    where
+        Cmd: WithOutputTask<Self>,
+    {
+        struct OutputTaskFactory {}
+        impl OutTaskFactory<TransferIn> for OutputTaskFactory {
+            fn new_task<OutC>(swap_task: TransferIn) -> impl SwapOutputTask<TransferIn, OutC = OutC>
+            where
+                OutC: CurrencyDef,
+                OutC::Group: MemberOf<<TransferIn as SwapTask>::OutG>
+                    + MemberOf<<<TransferIn as SwapTask>::InG as Group>::TopG>,
+            {
+                TransferInFinish::<_, OutC>::from(swap_task)
+            }
+        }
+        never::safe_unwrap(
+            self.amount()
+                .currency()
+                .into_currency_type(WithOutCurrency::<_, OutputTaskFactory, _>::from(self, cmd)),
+        )
     }
 }
 
@@ -164,5 +164,63 @@ impl From<Stage> for ClosingTrx {
             Stage::TransferInInit => Self::TransferInInit,
             Stage::TransferInFinish => Self::TransferInFinish,
         }
+    }
+}
+
+struct TransferInFinish<SwapTask, OutC> {
+    swap_task: SwapTask,
+    _out_c: PhantomData<OutC>,
+}
+
+impl<SwapTask, OutC> TransferInFinish<SwapTask, OutC> {
+    fn from(swap_task: SwapTask) -> Self {
+        Self {
+            swap_task,
+            _out_c: PhantomData,
+        }
+    }
+}
+
+impl<OutC> SwapOutputTask<TransferIn> for TransferInFinish<TransferIn, OutC>
+where
+    OutC: CurrencyDef,
+    OutC::Group: MemberOf<<TransferIn as SwapTask>::OutG>
+        + MemberOf<<<TransferIn as SwapTask>::InG as Group>::TopG>,
+{
+    type OutC = OutC;
+
+    fn as_spec(&self) -> &TransferIn {
+        &self.swap_task
+    }
+
+    fn into_spec(self) -> TransferIn {
+        self.swap_task
+    }
+
+    fn finish(
+        self,
+        amount_out: Coin<Self::OutC>,
+        env: &Env,
+        querier: QuerierWrapper<'_>,
+    ) -> <TransferIn as SwapTask>::Result {
+        debug_assert!(
+            &CoinDTO::<<TransferIn as SwapTask>::OutG>::from(amount_out) == self.as_spec().amount()
+        );
+
+        let spec = self.into_spec();
+        let lease_addr = spec.lease.lease.addr.clone();
+        let lease_account = bank::account(&lease_addr, querier);
+        let emitter = spec.emit_ok(env, &spec.lease.lease);
+        let customer = spec.lease.lease.customer.clone();
+
+        with_lease_paid::execute(spec.lease.lease, Close::new(lease_account))
+            .and_then(|close_msgs| {
+                spec.lease
+                    .finalizer
+                    .notify(customer)
+                    .map(|finalizer_msgs| close_msgs.merge(finalizer_msgs)) //make sure the finalizer messages go out last
+            })
+            .map(|all_messages| MessageResponse::messages_with_events(all_messages, emitter))
+            .map(|response| StateMachineResponse::from(response, Closed::default()))
     }
 }

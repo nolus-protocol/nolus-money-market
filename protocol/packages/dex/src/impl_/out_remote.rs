@@ -129,7 +129,7 @@ mod impl_handler {
     use sdk::cosmwasm_std::{Binary, Env, QuerierWrapper, Reply};
 
     use crate::{
-        AnomalyMonitoredTask, Connectable, IcaConnectee, TimeAlarm,
+        Connectable, IcaConnectee, SwapTask as SwapTaskT, TimeAlarm,
         impl_::{
             self, ForwardToInner, Handler,
             response::{ContinueResult, Result},
@@ -143,7 +143,7 @@ mod impl_handler {
         for State<OpenIca, SwapTask, SwapClient, ForwardToInnerMsg, ForwardToInnerContinueMsg>
     where
         OpenIca: Connectable + IcaConnectee<State = Self> + TimeAlarm + Display,
-        SwapTask: AnomalyMonitoredTask,
+        SwapTask: SwapTaskT,
         SwapClient: ExactAmountIn,
         ForwardToInnerMsg: ForwardToInner,
         ForwardToInnerContinueMsg: ForwardToInner,
@@ -440,7 +440,7 @@ mod impl_migration {
             >,
             MigrateOpenIcaFn: FnOnce(OpenIca) -> OpenIcaNew,
             MigrateSpecFn: FnOnce(SwapTask) -> SwapTaskNew,
-            SwapTaskNew: SwapTaskT<OutG = SwapTask::OutG>,
+            SwapTaskNew: SwapTaskT,
         {
             match self {
                 State::OpenIca(inner) => inner.migrate_spec(migrate_open_ica).into(),

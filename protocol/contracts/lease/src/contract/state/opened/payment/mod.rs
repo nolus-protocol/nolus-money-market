@@ -14,7 +14,7 @@ pub(in super::super) use self::{
 mod close;
 mod repay;
 
-pub(super) trait Repayable {
+pub(crate) trait Repayable {
     fn try_repay(
         &self,
         lease: Lease,

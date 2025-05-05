@@ -24,6 +24,7 @@ pub trait WithLeaseTypes {
         Lpn::Group: MemberOf<LpnCurrencies>;
 }
 
+// TODO get rid of this function since the type params are known
 pub fn execute<Cmd>(lease_dto: LeaseDTO, cmd: Cmd) -> Result<Cmd::Output, Cmd::Error>
 where
     Cmd: WithLeaseTypes,

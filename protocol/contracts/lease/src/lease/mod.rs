@@ -56,7 +56,7 @@ impl<Asset, LppLoan, Oracle> Lease<Asset, LppLoan, Oracle> {
 
 impl<Asset, LppLoan, Oracle> Lease<Asset, LppLoan, Oracle>
 where
-    Asset: Currency + MemberOf<LeaseAssetCurrencies> + MemberOf<LeasePaymentCurrencies>,
+    Asset: Currency + MemberOf<LeaseAssetCurrencies>,
     LppLoan: LppLoanTrait<LpnCurrency, LpnCurrencies>,
     Oracle: OracleTrait<LeasePaymentCurrencies, QuoteC = LpnCurrency, QuoteG = LpnCurrencies>,
 {

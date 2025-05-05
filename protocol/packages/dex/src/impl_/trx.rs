@@ -83,11 +83,10 @@ where
         swap_path: &'swap_path SwapPathImpl,
         querier: QuerierWrapper<'querier>,
     ) -> Self {
-        let trx = Transaction::default();
         Self {
             conn: &ica.dex().connection_id,
             ica_account: ica.host(),
-            trx,
+            trx: Transaction::default(),
             swap_path,
             querier,
             _group: PhantomData::<SwapGroup>,

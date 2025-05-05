@@ -1,11 +1,14 @@
 use std::iter;
 
+use currency::{CurrencyDTO, CurrencyDef, Group};
 use oracle::stub::SwapPath;
 use serde::{Deserialize, Serialize};
 
-use currency::{CurrencyDTO, CurrencyDef, Group};
-use dex::{Account, ContractInSwap, Stage, SwapTask};
-use finance::{coin::CoinDTO, duration::Duration};
+use dex::{Account, ContractInSwap, Stage, SwapOutputTask, SwapTask, WithOutputTask};
+use finance::{
+    coin::{Coin, CoinDTO},
+    duration::Duration,
+};
 use sdk::cosmwasm_std::{Env, QuerierWrapper, Timestamp};
 use timealarms::stub::TimeAlarmsRef;
 
@@ -37,10 +40,6 @@ pub(crate) struct SellAsset<RepayableT> {
 impl<RepayableT> SellAsset<RepayableT> {
     pub(in super::super) fn new(lease: Lease, repayable: RepayableT) -> Self {
         Self { lease, repayable }
-    }
-
-    pub(super) fn drop(self) -> (Lease, RepayableT) {
-        (self.lease, self.repayable)
     }
 }
 
@@ -94,14 +93,37 @@ where
         iter::once(*self.repayable.amount(&self.lease))
     }
 
+    fn into_output_task<Cmd>(self, cmd: Cmd) -> Cmd::Output
+    where
+        Cmd: WithOutputTask<Self>,
+    {
+        cmd.on(self)
+    }
+}
+
+impl<RepayableT> SwapOutputTask<Self> for SellAsset<RepayableT>
+where
+    RepayableT: Closable + Repayable,
+{
+    type OutC = LpnCurrency;
+
+    fn as_spec(&self) -> &Self {
+        self
+    }
+
+    fn into_spec(self) -> Self {
+        self
+    }
+
     fn finish(
         self,
-        amount_out: CoinDTO<Self::OutG>,
+        amount_out: Coin<Self::OutC>,
         env: &Env,
         querier: QuerierWrapper<'_>,
-    ) -> Self::Result {
+    ) -> <Self as SwapTask>::Result {
+        // TODO repay with Coin, not CoinDTO
         self.repayable
-            .try_repay(self.lease, amount_out, env, querier)
+            .try_repay(self.lease, amount_out.into(), env, querier)
     }
 }
 

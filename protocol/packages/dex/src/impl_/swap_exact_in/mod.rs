@@ -3,21 +3,19 @@ use std::{
     marker::PhantomData,
 };
 
+use decode_resp::{DecodeThenFinish, DecodeThenTransferIn};
 use serde::{Deserialize, Serialize};
 
-use currency::{CurrencyDTO, Group, MemberOf};
+use currency::{CurrencyDTO, CurrencyDef, Group, MemberOf};
 use finance::{
-    coin::{self, Amount, CoinDTO},
+    coin::{self, Coin, CoinDTO},
     duration::Duration,
     zero::Zero,
 };
 use platform::{batch::Batch, trx};
 use sdk::cosmwasm_std::{Binary, Env, QuerierWrapper, Timestamp};
 
-use crate::{
-    AnomalyMonitoredTask, AnomalyPolicy, ConnectionParams, Contract, Stage, error::Result,
-    swap::ExactAmountIn,
-};
+use crate::{ConnectionParams, Contract, Stage, error::Result, swap::ExactAmountIn};
 
 use crate::{
     Connectable, ContractInSwap, Enterable, SwapTask as SwapTaskT, TimeAlarm,
@@ -25,13 +23,14 @@ use crate::{
         ForwardToInner,
         response::{self, ContinueResult, Handler, Result as HandlerResult},
         timeout,
-        transfer_in_init::TransferInInit,
-        trx::SwapTrx,
     },
 };
 
 #[cfg(feature = "migration")]
 use super::migration::{InspectSpec, MigrateSpec};
+use super::trx::SwapTrx;
+
+mod decode_resp;
 
 #[derive(Serialize, Deserialize)]
 #[serde(bound(
@@ -61,7 +60,7 @@ where
 
 impl<SwapTask, SEnum, SwapClient> SwapExactIn<SwapTask, SEnum, SwapClient>
 where
-    SwapTask: AnomalyMonitoredTask,
+    SwapTask: SwapTaskT,
     SwapClient: ExactAmountIn,
 {
     pub(super) fn enter_state(
@@ -76,64 +75,31 @@ where
             self.spec.oracle(),
             querier,
         );
-        let out_currency = self.spec.out_currency().into_super_group();
+        let out_currency = self.spec.out_currency();
+        let out_currency_top = out_currency.into_super_group();
         try_filter_fold_coins(
             &self.spec,
-            not_out_coins_filter::<_, <SwapTask::InG as Group>::TopG>(&out_currency),
+            not_out_coins_filter::<_, <SwapTask::InG as Group>::TopG>(&out_currency_top),
             swap_trx,
             |mut trx, coin_in| {
                 filtered = true;
-                trx.swap_exact_in::<_, _, SwapClient>(
+                trx.swap_exact_in::<_, SwapTask::OutG, SwapClient>(
                     &coin_in,
-                    &self.spec.policy().min_output(&coin_in),
+                    &coin::from_amount_ticker(1, out_currency),
                 )
                 .map(|()| trx)
             },
         )
         .inspect(|_| {
-            expect_at_lease_one_filtered(filtered, &out_currency);
+            expect_at_lease_one_filtered(filtered, &out_currency_top);
         })
         .map(Into::into)
-    }
-
-    fn decode_response(&self, resp: &[u8]) -> Result<CoinDTO<SwapTask::OutG>> {
-        let out_currency: CurrencyDTO<<SwapTask::InG as Group>::TopG> =
-            self.spec.out_currency().into_super_group();
-        try_filter_fold_coins(
-            &self.spec,
-            out_coins_filter(&out_currency),
-            Amount::ZERO,
-            |total_out, r#in| Ok(total_out + r#in.amount()),
-        )
-        .and_then(|non_swapped: Amount| {
-            trx::decode_msg_responses(resp)
-                .map_err(Into::into)
-                .and_then(|mut responses| {
-                    let mut filtered = false;
-
-                    try_filter_fold_coins(
-                        &self.spec,
-                        not_out_coins_filter(&out_currency),
-                        non_swapped,
-                        |total_out, _in| {
-                            filtered = true;
-                            SwapClient::parse_response(&mut responses)
-                                .map(|out| total_out + out)
-                                .map_err(Into::into)
-                        },
-                    )
-                    .inspect(|_| {
-                        expect_at_lease_one_filtered(filtered, &out_currency);
-                    })
-                })
-        })
-        .map(|amount| coin::from_amount_ticker(amount, self.spec.out_currency()))
     }
 }
 
 impl<SwapTask, SEnum, SwapClient> SwapExactIn<SwapTask, SEnum, SwapClient>
 where
-    SwapTask: AnomalyMonitoredTask,
+    SwapTask: SwapTaskT,
     SwapClient: ExactAmountIn,
     Self: Handler<Response = SEnum> + Into<SEnum>,
 {
@@ -145,7 +111,7 @@ where
 
 impl<SwapTask, SEnum, SwapClient> Enterable for SwapExactIn<SwapTask, SEnum, SwapClient>
 where
-    SwapTask: AnomalyMonitoredTask,
+    SwapTask: SwapTaskT,
     SwapClient: ExactAmountIn,
 {
     fn enter(&self, now: Timestamp, querier: QuerierWrapper<'_>) -> Result<Batch> {
@@ -169,7 +135,7 @@ impl<SwapTask, SwapClient, ForwardToInnerMsg> Handler
         SwapClient,
     >
 where
-    SwapTask: AnomalyMonitoredTask,
+    SwapTask: SwapTaskT,
     SwapClient: ExactAmountIn,
     ForwardToInnerMsg: ForwardToInner,
 {
@@ -182,9 +148,10 @@ where
         querier: QuerierWrapper<'_>,
         env: Env,
     ) -> HandlerResult<Self> {
-        // TODO transfer (downpayment - transferred_and_swapped), i.e. the nls_swap_fee to the profit
-        self.decode_response(resp.as_slice())
-            .map(|amount_out| TransferInInit::new(self.spec, amount_out))
+        self.spec
+            .into_output_task(DecodeThenTransferIn::<'_, _, _, SwapClient>::from(
+                resp.as_slice(),
+            ))
             .and_then(|next_state| {
                 next_state
                     .enter(env.block.time, querier)
@@ -216,7 +183,7 @@ impl<OpenIca, SwapTask, SwapClient, ForwardToInnerMsg, ForwardToInnerContinueMsg
         SwapClient,
     >
 where
-    SwapTask: AnomalyMonitoredTask,
+    SwapTask: SwapTaskT,
     SwapClient: ExactAmountIn,
 {
     type Response = super::out_remote::State<
@@ -234,16 +201,12 @@ where
         querier: QuerierWrapper<'_>,
         env: Env,
     ) -> HandlerResult<Self> {
-        // TODO transfer (downpayment - transferred_and_swapped), i.e. the nls_swap_fee to the profit
-        self.decode_response(resp.as_slice()).map_or_else(
-            |err| HandlerResult::Continue(Err(err)),
-            |amount_out| response::res_finished(self.spec.finish(amount_out, &env, querier)),
-        )
-    }
-
-    fn on_error(self, _querier: QuerierWrapper<'_>, _env: Env) -> HandlerResult<Self> {
-        // self.spec.policy()
-        todo!()
+        self.spec
+            .into_output_task(DecodeThenFinish::<'_, '_, '_, _, _, SwapClient>::from(
+                resp.as_slice(),
+                querier,
+                &env,
+            ))
     }
 
     fn on_timeout(self, querier: QuerierWrapper<'_>, env: Env) -> ContinueResult<Self> {
@@ -319,6 +282,49 @@ impl<SwapTask, R, SEnum, SwapClient> InspectSpec<SwapTask, R>
     }
 }
 
+fn decode_response<OutC, SwapTask, SwapClient>(spec: &SwapTask, resp: &[u8]) -> Result<Coin<OutC>>
+where
+    OutC: CurrencyDef,
+    OutC::Group: MemberOf<<SwapTask::OutG as Group>::TopG>,
+    SwapTask: SwapTaskT,
+    SwapClient: ExactAmountIn,
+{
+    let out_currency = OutC::dto().into_super_group();
+    try_filter_fold_coins(
+        spec,
+        out_coins_filter(&out_currency),
+        Coin::<OutC>::ZERO,
+        |total_out, inn| {
+            Ok(total_out
+                + inn
+                    .into_super_group::<<SwapTask::OutG as Group>::TopG>()
+                    .as_specific(OutC::dto()))
+        },
+    )
+    .and_then(|non_swapped| {
+        trx::decode_msg_responses(resp)
+            .map_err(Into::into)
+            .and_then(|mut responses| {
+                let mut filtered = false;
+
+                try_filter_fold_coins(
+                    spec,
+                    not_out_coins_filter(&out_currency),
+                    non_swapped,
+                    |total_out, _in| {
+                        filtered = true;
+                        SwapClient::parse_response(&mut responses)
+                            .map(|out| total_out + out.into())
+                            .map_err(Into::into)
+                    },
+                )
+                .inspect(|_| {
+                    expect_at_lease_one_filtered(filtered, &out_currency);
+                })
+            })
+    })
+}
+
 fn try_filter_fold_coins<SwapTask, FilterFn, Acc, FoldFn>(
     spec: &SwapTask,
     filter: FilterFn,
@@ -351,7 +357,7 @@ where
     InG: Group + MemberOf<InOutG>,
     InOutG: Group,
 {
-    move |coin_in| !out_coins_filter::<InG, InOutG>(out_c)(coin_in)
+    |coin_in| !out_coins_filter::<InG, InOutG>(out_c)(coin_in)
 }
 
 fn expect_at_lease_one_filtered<G>(filtered: bool, out_c: &CurrencyDTO<G>)

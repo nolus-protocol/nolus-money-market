@@ -13,8 +13,8 @@ use platform::{
 use sdk::cosmwasm_std::{Binary, Env, QuerierWrapper, Timestamp};
 
 use crate::{
-    AnomalyMonitoredTask, CoinsNb, Contract, ContractInSwap, Enterable, Stage,
-    SwapTask as SwapTaskT, TimeAlarm, error::Result, swap::ExactAmountIn,
+    CoinsNb, Contract, ContractInSwap, Enterable, Stage, SwapTask as SwapTaskT, TimeAlarm,
+    error::Result, swap::ExactAmountIn,
 };
 
 #[cfg(feature = "migration")]
@@ -108,7 +108,7 @@ where
 
 impl<SwapTask, SEnum, SwapClient> TransferOut<SwapTask, SEnum, SwapClient>
 where
-    SwapTask: AnomalyMonitoredTask,
+    SwapTask: SwapTaskT,
     SwapClient: ExactAmountIn,
     Self: Into<SEnum>,
     SwapExactIn<SwapTask, SEnum, SwapClient>: Into<SEnum>,
@@ -135,7 +135,7 @@ where
 
 impl<SwapTask, SEnum, SwapClient> Enterable for TransferOut<SwapTask, SEnum, SwapClient>
 where
-    SwapTask: AnomalyMonitoredTask,
+    SwapTask: SwapTaskT,
     SwapClient: ExactAmountIn,
     Self: Into<SEnum>,
     SwapExactIn<SwapTask, SEnum, SwapClient>: Into<SEnum>,
@@ -147,7 +147,7 @@ where
 
 impl<SwapTask, SEnum, SwapClient> Handler for TransferOut<SwapTask, SEnum, SwapClient>
 where
-    SwapTask: AnomalyMonitoredTask,
+    SwapTask: SwapTaskT,
     SwapClient: ExactAmountIn,
     Self: Into<SEnum>,
     SwapExactIn<SwapTask, SEnum, SwapClient>: Into<SEnum>,

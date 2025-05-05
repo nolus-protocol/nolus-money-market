@@ -27,6 +27,31 @@ pub trait WithLeaseDeps {
             + Into<OracleRef>;
 }
 
+pub fn execute_resolved_position<Cmd, Asset>(
+    cmd: Cmd,
+    lease_addr: Addr,
+    position: Position<Asset>,
+    lpp: LppRef,
+    oracle: OracleRef,
+    querier: QuerierWrapper<'_>,
+) -> Result<Cmd::Output, Cmd::Error>
+where
+    Cmd: WithLeaseDeps,
+    Cmd::Error: From<lpp::error::Error> + From<finance::error::Error> + From<PositionError>,
+    oracle_platform::error::Error: Into<Cmd::Error>,
+    Asset: CurrencyDef,
+    Asset::Group: MemberOf<LeaseAssetCurrencies> + MemberOf<LeasePaymentCurrencies>,
+{
+    FactoryStage1 {
+        cmd,
+        lease_addr,
+        lpp,
+        oracle,
+        querier,
+    }
+    .on(position)
+}
+
 pub fn execute<Cmd>(
     cmd: Cmd,
     lease_addr: Addr,

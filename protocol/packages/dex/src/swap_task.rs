@@ -1,5 +1,5 @@
-use currency::{CurrencyDTO, Group};
-use finance::coin::CoinDTO;
+use currency::{CurrencyDTO, CurrencyDef, Group, MemberOf};
+use finance::coin::{Coin, CoinDTO};
 use oracle::stub::SwapPath;
 use sdk::cosmwasm_std::{Env, QuerierWrapper};
 use timealarms::stub::TimeAlarmsRef;
@@ -11,7 +11,10 @@ pub type CoinsNb = u8;
 /// Specification of a swap process
 ///
 /// Supports up to `CoinsNb::MAX` coins.
-pub trait SwapTask {
+pub trait SwapTask
+where
+    Self: Sized,
+{
     type InG: Group;
     type OutG: Group<TopG = <Self::InG as Group>::TopG>;
     type Label: Into<String>;
@@ -32,6 +35,34 @@ pub trait SwapTask {
     // having temporary instances in some of the tasks.
     fn coins(&self) -> impl IntoIterator<Item = CoinDTO<Self::InG>>;
 
+    fn into_output_task<Cmd>(self, cmd: Cmd) -> Cmd::Output
+    where
+        Cmd: WithOutputTask<Self>;
+}
+
+pub trait WithOutputTask<SwapTaskT>
+where
+    SwapTaskT: SwapTask,
+{
+    type Output;
+
+    fn on<OutC, OutputTaskT>(self, task: OutputTaskT) -> Self::Output
+    where
+        OutC: CurrencyDef,
+        OutC::Group: MemberOf<<SwapTaskT::OutG as Group>::TopG> + MemberOf<SwapTaskT::OutG>,
+        OutputTaskT: SwapOutputTask<SwapTaskT, OutC = OutC>;
+}
+
+pub trait SwapOutputTask<SwapTaskT>
+where
+    SwapTaskT: SwapTask,
+{
+    type OutC: CurrencyDef;
+
+    fn as_spec(&self) -> &SwapTaskT;
+
+    fn into_spec(self) -> SwapTaskT;
+
     /// The final transition of this DEX composite state machine
     ///
     /// The states involve TransferOut, SwapExactIn, TransferIn, etc. This transition originates from one of them,
@@ -40,8 +71,8 @@ pub trait SwapTask {
     ///
     fn finish(
         self,
-        amount_out: CoinDTO<Self::OutG>,
+        amount_out: Coin<Self::OutC>,
         env: &Env,
         querier: QuerierWrapper<'_>,
-    ) -> Self::Result;
+    ) -> SwapTaskT::Result;
 }

@@ -1,4 +1,4 @@
-use dex::{AnomalyMonitoredTask, Enterable};
+use dex::Enterable;
 use platform::message::Response as MessageResponse;
 use sdk::cosmwasm_std::{Env, QuerierWrapper};
 
@@ -16,7 +16,6 @@ use crate::{
 };
 
 use self::sell_asset::SellAsset;
-pub(in crate::contract::state) use anomaly::SlippageAnomaly;
 
 use super::payment::Repayable;
 
@@ -47,7 +46,6 @@ trait ClosePositionTask
 where
     Self: IntoRepayable + Sized,
     DexState<Self::Repayable>: Into<State>,
-    Task<Self::Repayable>: AnomalyMonitoredTask,
 {
     fn start(
         self,
@@ -69,6 +67,5 @@ impl<T> ClosePositionTask for T
 where
     T: IntoRepayable,
     DexState<T::Repayable>: Into<State>,
-    Task<Self::Repayable>: AnomalyMonitoredTask,
 {
 }

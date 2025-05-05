@@ -1,10 +1,10 @@
+use currency::{CurrencyDTO, CurrencyDef, Group};
 use serde::{Deserialize, Serialize};
 
 use currencies::{Native, Nls, PaymentGroup};
-use currency::{CurrencyDTO, Group};
 use dex::{
-    AcceptAnyNonZeroSwap, Account, AnomalyMonitoredTask, AnomalyPolicy, ContractInSwap, Enterable,
-    Response as DexResponse, Stage, StateLocalOut, SwapTask,
+    Account, ContractInSwap, Enterable, Response as DexResponse, Stage, StateLocalOut,
+    SwapOutputTask, SwapTask, WithOutputTask,
 };
 use finance::{
     coin::{Coin, CoinDTO},
@@ -47,8 +47,9 @@ impl BuyBack {
         debug_assert!(
             coins
                 .iter()
-                .all(|not_native: &CoinDTO<PaymentGroup>| not_native.currency()
-                    != currency::dto::<Nls, PaymentGroup>()),
+                .all(|not_native: &CoinDTO<PaymentGroup>| not_native
+                    .of_currency_dto(Nls::dto())
+                    .is_err()),
             "{:?}",
             coins
         );
@@ -93,12 +94,31 @@ impl SwapTask for BuyBack {
         self.coins.clone().into_iter()
     }
 
+    fn into_output_task<Cmd>(self, cmd: Cmd) -> Cmd::Output
+    where
+        Cmd: WithOutputTask<Self>,
+    {
+        cmd.on(self)
+    }
+}
+
+impl SwapOutputTask<Self> for BuyBack {
+    type OutC = Nls;
+
+    fn as_spec(&self) -> &Self {
+        self
+    }
+
+    fn into_spec(self) -> Self {
+        self
+    }
+
     fn finish(
         self,
-        _: CoinDTO<Self::OutG>,
+        _amount_out: Coin<Self::OutC>,
         env: &Env,
         querier: QuerierWrapper<'_>,
-    ) -> Self::Result {
+    ) -> <Self as SwapTask>::Result {
         let account = bank::account(&self.profit_contract, querier);
 
         let balance_nls: Coin<Nls> = account.balance()?;
@@ -115,12 +135,6 @@ impl SwapTask for BuyBack {
                 .map(|state_response: PlatformResponse| state_response.merge_with(bank_response))?,
             next_state: State(StateEnum::Idle(next_state)),
         })
-    }
-}
-
-impl AnomalyMonitoredTask for BuyBack {
-    fn policy(&self) -> impl AnomalyPolicy<Self> {
-        AcceptAnyNonZeroSwap::on_task(self)
     }
 }
 

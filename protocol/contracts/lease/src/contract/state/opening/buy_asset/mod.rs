@@ -1,18 +1,17 @@
+use currency::{
+    CurrencyDTO, CurrencyDef, Group, MemberOf,
+    never::{self},
+};
+use finish::BuyAssetFinish;
 use oracle::stub::SwapPath;
-use profit::stub::ProfitRef;
 use serde::{Deserialize, Serialize};
 
-use currency::{CurrencyDTO, Group};
 use dex::{
-    AcceptAnyNonZeroSwap, Account, AnomalyMonitoredTask, AnomalyPolicy, ContractInSwap, Stage,
-    StartLocalRemoteState, SwapTask,
+    Account, ContractInSwap, Stage, StartLocalRemoteState, SwapOutputTask, SwapTask, WithOutputTask,
 };
 use finance::{coin::CoinDTO, duration::Duration};
-use platform::{
-    ica::HostAccount, message::Response as MessageResponse,
-    state_machine::Response as StateMachineResponse,
-};
-use sdk::cosmwasm_std::{Env, QuerierWrapper, Timestamp};
+use platform::ica::HostAccount;
+use sdk::cosmwasm_std::{QuerierWrapper, Timestamp};
 use timealarms::stub::TimeAlarmsRef;
 
 use crate::{
@@ -22,23 +21,22 @@ use crate::{
         query::{StateResponse as QueryStateResponse, opening::OngoingTrx},
     },
     contract::{
-        Lease,
-        cmd::{CloseStatusDTO, LeaseFactory, OpenLeaseResult, OpenLoanRespResult},
+        cmd::OpenLoanRespResult,
         finalize::FinalizerRef,
         state::{
             SwapClient, SwapResult,
-            opened::{active::Active, close::liquidation},
+            out_task::{OutTaskFactory, WithOutCurrency},
             resp_delivery::{ForwardToDexEntry, ForwardToDexEntryContinue},
         },
     },
     error::ContractResult,
     event::Type,
-    finance::{LppRef, OracleRef, ReserveRef},
-    lease::with_lease_deps,
-    position::PositionDTO,
+    finance::{LppRef, OracleRef},
 };
 
 use super::open_ica::OpenIcaAccount;
+
+mod finish;
 
 type AssetGroup = LeaseAssetCurrencies;
 pub(super) type StartState = StartLocalRemoteState<OpenIcaAccount, BuyAsset>;
@@ -69,7 +67,7 @@ pub(super) fn start(
 type BuyAssetStateResponse = <BuyAsset as SwapTask>::StateResponse;
 
 #[derive(Serialize, Deserialize)]
-pub(crate) struct BuyAsset {
+pub struct BuyAsset {
     form: NewLeaseForm,
     dex_account: Account,
     downpayment: DownpaymentCoin,
@@ -134,65 +132,35 @@ impl SwapTask for BuyAsset {
         &self.deps.2
     }
 
-    fn out_currency(&self) -> CurrencyDTO<Self::OutG> {
-        self.form.currency
-    }
-
     fn coins(&self) -> impl IntoIterator<Item = CoinDTO<Self::InG>> {
         [self.downpayment, self.loan.principal.into_super_group()].into_iter()
     }
 
-    fn finish(
-        self,
-        amount_out: CoinDTO<Self::OutG>,
-        env: &Env,
-        querier: QuerierWrapper<'_>,
-    ) -> Self::Result {
-        debug_assert_eq!(amount_out.currency(), self.form.currency);
-        debug_assert!(amount_out.amount() > 0);
-
-        let position = PositionDTO::new(amount_out, self.form.position_spec.into());
-        let profit = ProfitRef::new(self.form.loan.profit.clone(), &querier)?;
-        let reserve = ReserveRef::try_new(self.form.reserve.clone(), &querier)?;
-        let lease_addr = self.dex_account.owner().clone();
-        let cmd = LeaseFactory::new(
-            self.form,
-            lease_addr.clone(),
-            profit,
-            reserve,
-            (self.deps.2, self.deps.1.clone()),
-            self.start_opening_at,
-            &env.block.time,
-        );
-        let OpenLeaseResult { lease, status } =
-            with_lease_deps::execute(cmd, lease_addr, position, self.deps.0, self.deps.1, querier)?;
-
-        let lease = Lease::new(lease, self.dex_account, self.deps.3);
-        let active = Active::new(lease);
-        let emitter = active.emit_opened(env, self.downpayment, self.loan);
-
-        match status {
-            CloseStatusDTO::Paid => {
-                unimplemented!("a freshly open lease should have some due amount")
-            }
-            CloseStatusDTO::None {
-                current_liability: _, // TODO shouldn't we add warning zone events?
-                alarms,
-            } => Ok(StateMachineResponse::from(
-                MessageResponse::messages_with_events(alarms, emitter),
-                active,
-            )),
-            CloseStatusDTO::NeedLiquidation(liquidation) => {
-                liquidation::start(active.into(), liquidation, emitter.into(), env, querier)
-            }
-            CloseStatusDTO::CloseAsked(_) => unimplemented!("no triggers have been set"),
-        }
+    fn out_currency(&self) -> CurrencyDTO<Self::OutG> {
+        self.form.currency
     }
-}
 
-impl AnomalyMonitoredTask for BuyAsset {
-    fn policy(&self) -> impl AnomalyPolicy<Self> {
-        AcceptAnyNonZeroSwap::on_task(self)
+    fn into_output_task<Cmd>(self, cmd: Cmd) -> Cmd::Output
+    where
+        Cmd: WithOutputTask<Self>,
+    {
+        struct OutputTaskFactory {}
+        impl OutTaskFactory<BuyAsset> for OutputTaskFactory {
+            fn new_task<OutC>(swap_task: BuyAsset) -> impl SwapOutputTask<BuyAsset, OutC = OutC>
+            where
+                OutC: CurrencyDef,
+                OutC::Group: MemberOf<<BuyAsset as SwapTask>::OutG>
+                    + MemberOf<<<BuyAsset as SwapTask>::InG as Group>::TopG>,
+            {
+                BuyAssetFinish::<_, OutC>::from(swap_task)
+            }
+        }
+        never::safe_unwrap(
+            self.form
+                .currency
+                .into_super_group()
+                .into_currency_type(WithOutCurrency::<_, OutputTaskFactory, _>::from(self, cmd)),
+        )
     }
 }
 

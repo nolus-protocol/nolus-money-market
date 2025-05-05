@@ -1,6 +1,7 @@
 use std::fmt::{Display, Formatter, Result as FmtResult};
 use std::marker::PhantomData;
 
+use currency::{CurrencyDef, MemberOf};
 use finance::duration::Duration;
 use serde::{Deserialize, Serialize};
 
@@ -11,12 +12,15 @@ use platform::{
 };
 use sdk::cosmwasm_std::{Env, QuerierWrapper, Timestamp};
 
-use crate::{Contract, ContractInSwap, Enterable, Stage, SwapTask as SwapTaskT};
+use crate::{
+    Contract, ContractInSwap, Enterable, Stage, SwapOutputTask, SwapTask as SwapTaskT,
+    WithOutputTask,
+};
 
 #[cfg(feature = "migration")]
 use super::migration::{InspectSpec, MigrateSpec};
 use super::{
-    response::{self, Handler, Result as HandlerResult},
+    response::{self, Handler as HandlerT, Result as HandlerResult},
     transfer_in,
     transfer_in_init::TransferInInit,
 };
@@ -98,48 +102,125 @@ where
     TransferInInit<SwapTask, SEnum>: Into<SEnum>,
 {
     pub(super) fn try_complete(self, querier: QuerierWrapper<'_>, env: Env) -> HandlerResult<Self> {
-        transfer_in::check_received(&self.amount_in, &env.contract.address, querier).map_or_else(
-            Into::into,
-            |received| {
-                if received {
-                    self.complete(&env, querier)
-                } else {
-                    self.try_again(env, querier)
-                }
-            },
-        )
-    }
-
-    fn complete(self, env: &Env, querier: QuerierWrapper<'_>) -> HandlerResult<Self> {
-        response::res_finished(self.spec.finish(self.amount_in, env, querier))
-    }
-
-    fn try_again(self, env: Env, querier: QuerierWrapper<'_>) -> HandlerResult<Self> {
-        let now = env.block.time;
-        let emitter = self.emit_ok();
-        if now >= self.timeout {
-            let next_state = TransferInInit::new(self.spec, self.amount_in);
-            next_state
-                .enter(now, querier)
-                .map(|batch| MessageResponse::messages_with_events(batch, emitter))
-                .and_then(|resp| response::res_continue::<_, _, Self>(resp, next_state))
-                .into()
-        } else {
-            transfer_in::setup_alarm(self.spec.time_alarm(), now)
-                .map(|batch| MessageResponse::messages_with_events(batch, emitter))
-                .and_then(|resp| response::res_continue::<_, _, Self>(resp, self))
-                .into()
+        struct FinishOrTryAgainCmd<'querier, SwapTask, Handler>
+        where
+            SwapTask: SwapTaskT,
+        {
+            amount_in: CoinDTO<SwapTask::OutG>,
+            timeout: Timestamp,
+            querier: QuerierWrapper<'querier>,
+            env: Env,
+            _task: PhantomData<SwapTask>,
+            _handler: PhantomData<Handler>,
         }
-    }
 
-    fn emit_ok(&self) -> Emitter {
-        Emitter::of_type(self.spec.label())
-            .emit("stage", "transfer-in")
-            .emit_coin_dto("amount", &self.amount_in)
+        impl<'querier, SwapTask, Handler> FinishOrTryAgainCmd<'querier, SwapTask, Handler>
+        where
+            SwapTask: SwapTaskT,
+        {
+            fn from(
+                amount_in: CoinDTO<SwapTask::OutG>,
+                timeout: Timestamp,
+                querier: QuerierWrapper<'querier>,
+                env: Env,
+            ) -> Self {
+                Self {
+                    amount_in,
+                    timeout,
+                    querier,
+                    env,
+                    _task: PhantomData,
+                    _handler: PhantomData,
+                }
+            }
+        }
+
+        impl<SwapTask, Handler> FinishOrTryAgainCmd<'_, SwapTask, Handler>
+        where
+            SwapTask: SwapTaskT,
+            Handler: HandlerT<SwapResult = SwapTask::Result>,
+            TransferInInit<SwapTask, Handler::Response>: Into<Handler::Response>,
+            TransferInFinish<SwapTask, Handler::Response>: Into<Handler::Response>,
+        {
+            fn try_again(self, spec: SwapTask) -> HandlerResult<Handler> {
+                let now = self.env.block.time;
+                let emitter = self.emit_ok(&spec);
+                if now >= self.timeout {
+                    let next_state = TransferInInit::new(spec, self.amount_in);
+                    next_state
+                        .enter(now, self.querier)
+                        .map(|batch| MessageResponse::messages_with_events(batch, emitter))
+                        .and_then(|resp| response::res_continue::<_, _, Handler>(resp, next_state))
+                        .into()
+                } else {
+                    transfer_in::setup_alarm(spec.time_alarm(), now)
+                        .map(|batch| MessageResponse::messages_with_events(batch, emitter))
+                        .and_then(|resp| {
+                            response::res_continue::<_, _, Handler>(resp, self.back_to_spec(spec))
+                        })
+                        .into()
+                }
+            }
+
+            fn emit_ok(&self, spec: &SwapTask) -> Emitter {
+                Emitter::of_type(spec.label())
+                    .emit("stage", "transfer-in")
+                    .emit_coin_dto("amount", &self.amount_in)
+            }
+
+            fn back_to_spec(self, spec: SwapTask) -> TransferInFinish<SwapTask, Handler::Response> {
+                TransferInFinish::new(spec, self.amount_in, self.timeout)
+            }
+        }
+
+        impl<SwapTask, Handler> WithOutputTask<SwapTask> for FinishOrTryAgainCmd<'_, SwapTask, Handler>
+        where
+            SwapTask: SwapTaskT,
+            Handler: HandlerT<SwapResult = SwapTask::Result>,
+            TransferInInit<SwapTask, Handler::Response>: Into<Handler::Response>,
+            TransferInFinish<SwapTask, Handler::Response>: Into<Handler::Response>,
+        {
+            type Output = HandlerResult<Handler>;
+
+            fn on<OutC, OutputTaskT>(self, task: OutputTaskT) -> Self::Output
+            where
+                OutC: CurrencyDef,
+                OutC::Group: MemberOf<SwapTask::OutG>,
+                OutputTaskT: SwapOutputTask<SwapTask, OutC = OutC>,
+            {
+                let expected_amount = self
+                    .amount_in
+                    .as_specific(&currency::dto::<OutC, SwapTask::OutG>());
+
+                transfer_in::check_received(
+                    &expected_amount,
+                    &self.env.contract.address,
+                    self.querier,
+                )
+                .map_or_else(Into::into, |received| {
+                    if received {
+                        response::res_finished(task.finish(
+                            expected_amount,
+                            &self.env,
+                            self.querier,
+                        ))
+                    } else {
+                        self.try_again(task.into_spec())
+                    }
+                })
+            }
+        }
+
+        self.spec.into_output_task(FinishOrTryAgainCmd::from(
+            self.amount_in,
+            self.timeout,
+            querier,
+            env,
+        ))
     }
 }
 
-impl<SwapTask, SEnum> Handler for TransferInFinish<SwapTask, SEnum>
+impl<SwapTask, SEnum> HandlerT for TransferInFinish<SwapTask, SEnum>
 where
     SwapTask: SwapTaskT,
     Self: Into<SEnum>,

@@ -35,10 +35,6 @@ pub trait WithPosition {
 }
 
 impl PositionDTO {
-    pub(crate) fn new(amount: CoinDTO<LeaseAssetCurrencies>, spec: SpecDTO) -> Self {
-        Self { amount, spec }
-    }
-
     pub fn amount(&self) -> &CoinDTO<LeaseAssetCurrencies> {
         &self.amount
     }
