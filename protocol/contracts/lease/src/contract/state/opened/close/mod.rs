@@ -16,6 +16,7 @@ use crate::{
 };
 
 use self::sell_asset::SellAsset;
+pub(crate) use anomaly::SlippageAnomaly;
 
 use super::payment::Repayable;
 

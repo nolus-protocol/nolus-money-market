@@ -22,7 +22,7 @@ use crate::{
 };
 
 pub(crate) use self::handler::{Handler, Response};
-use self::{dex::State as DexState, lease::State as LeaseState, opened::close::SlippageAnomaly};
+use self::{dex::State as DexState, lease::State as LeaseState};
 
 mod closed;
 mod dex;
@@ -33,6 +33,7 @@ mod lease;
 mod liquidated;
 mod opened;
 mod opening;
+mod out_task;
 mod paid;
 mod resp_delivery;
 
@@ -71,7 +72,7 @@ type SwapClient = Impl;
 
 #[enum_dispatch(Contract)]
 #[derive(Serialize, Deserialize)]
-pub(crate) enum State {
+pub enum State {
     RequestLoan,
     BuyAsset,
     OpenedActive,

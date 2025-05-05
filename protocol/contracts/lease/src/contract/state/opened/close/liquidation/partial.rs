@@ -11,7 +11,7 @@ use crate::{
         state::{
             event::LiquidationEmitter,
             opened::{
-                close::{self, Closable, IntoRepayable},
+                close::{self, Closable, IntoRepayable, SlippageAnomaly},
                 payment::{Repay, RepayAlgo},
             },
         },
@@ -22,6 +22,7 @@ use crate::{
 type Spec = PartialLiquidationDTO;
 pub(in super::super) type RepayableImpl = Repay<Spec>;
 pub(crate) type DexState = close::DexState<RepayableImpl>;
+pub(crate) type AnomalyState = SlippageAnomaly<RepayableImpl>;
 
 impl IntoRepayable for Spec {
     type Repayable = RepayableImpl;
