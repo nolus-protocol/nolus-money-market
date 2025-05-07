@@ -1,4 +1,4 @@
-use currency::{AnyVisitor, AnyVisitorResult, CurrencyDTO, CurrencyDef, MemberOf};
+use currency::{CurrencyDef, MemberOf};
 
 use crate::{
     api::{LeaseAssetCurrencies, LeasePaymentCurrencies},
@@ -28,9 +28,6 @@ pub trait WithLeaseTypes {
 pub fn execute<Cmd>(lease_dto: LeaseDTO, cmd: Cmd) -> Result<Cmd::Output, Cmd::Error>
 where
     Cmd: WithLeaseTypes,
-    finance::error::Error: Into<Cmd::Error>,
-    currency::error::Error: Into<Cmd::Error>,
-    oracle_platform::error::Error: Into<Cmd::Error>,
     PositionError: Into<Cmd::Error>,
 {
     lease_dto
@@ -47,9 +44,6 @@ struct FactoryStage1<Cmd> {
 impl<Cmd> WithPosition for FactoryStage1<Cmd>
 where
     Cmd: WithLeaseTypes,
-    // Cmd::Error: From<lpp::error::ContractError>,
-    currency::error::Error: Into<Cmd::Error>,
-    oracle_platform::error::Error: Into<Cmd::Error>,
 {
     type Output = Cmd::Output;
     type Error = Cmd::Error;
@@ -59,34 +53,7 @@ where
         Asset: CurrencyDef,
         Asset::Group: MemberOf<LeaseAssetCurrencies> + MemberOf<LeasePaymentCurrencies>,
     {
-        FactoryStage2 {
-            lease_dto: self.lease_dto,
-            cmd: self.cmd,
-            position,
-        }
-        .on::<LpnCurrency>(LpnCurrency::dto())
-    }
-}
-struct FactoryStage2<Cmd, Asset> {
-    lease_dto: LeaseDTO,
-    cmd: Cmd,
-    position: Position<Asset>,
-}
-
-impl<Cmd, Asset> AnyVisitor<LpnCurrencies> for FactoryStage2<Cmd, Asset>
-where
-    Cmd: WithLeaseTypes,
-    Asset: CurrencyDef,
-    Asset::Group: MemberOf<LeaseAssetCurrencies>,
-{
-    type Output = Cmd::Output;
-    type Error = Cmd::Error;
-
-    fn on<Lpn>(self, _def: &CurrencyDTO<Lpn::Group>) -> AnyVisitorResult<LpnCurrencies, Self>
-    where
-        Lpn: CurrencyDef,
-        Lpn::Group: MemberOf<LpnCurrencies>,
-    {
-        self.cmd.exec::<Asset, Lpn>(self.lease_dto, self.position)
+        self.cmd
+            .exec::<Asset, LpnCurrency>(self.lease_dto, position)
     }
 }

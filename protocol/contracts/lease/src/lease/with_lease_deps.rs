@@ -62,7 +62,7 @@ pub fn execute<Cmd>(
 ) -> Result<Cmd::Output, Cmd::Error>
 where
     Cmd: WithLeaseDeps,
-    Cmd::Error: From<lpp::error::Error> + From<finance::error::Error> + From<PositionError>,
+    Cmd::Error: From<lpp::error::Error> + From<PositionError>,
     oracle_platform::error::Error: Into<Cmd::Error>,
 {
     position.with_position(FactoryStage1 {

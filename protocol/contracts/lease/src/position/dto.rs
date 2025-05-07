@@ -1,10 +1,7 @@
 use std::result::Result as StdResult;
 
 use currency::{CurrencyDef, MemberOf};
-use finance::{
-    coin::{Coin, CoinDTO, WithCoin, WithCoinResult},
-    error::Error as FinanceError,
-};
+use finance::coin::{Coin, CoinDTO, WithCoin, WithCoinResult};
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -42,7 +39,6 @@ impl PositionDTO {
     pub fn with_position<V>(self, cmd: V) -> StdResult<V::Output, V::Error>
     where
         V: WithPosition,
-        FinanceError: Into<V::Error>,
         PositionError: Into<V::Error>,
     {
         struct WithAmount<V> {

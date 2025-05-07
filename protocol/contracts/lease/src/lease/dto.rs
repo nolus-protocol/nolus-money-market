@@ -60,7 +60,7 @@ impl LeaseDTO {
     ) -> Result<Cmd::Output, Cmd::Error>
     where
         Cmd: WithLease,
-        Cmd::Error: From<lpp::error::Error> + From<finance::error::Error> + From<PositionError>,
+        Cmd::Error: From<lpp::error::Error> + From<PositionError>,
         currency::error::Error: Into<Cmd::Error>,
         timealarms::stub::Error: Into<Cmd::Error>,
         oracle_platform::error::Error: Into<Cmd::Error>,
