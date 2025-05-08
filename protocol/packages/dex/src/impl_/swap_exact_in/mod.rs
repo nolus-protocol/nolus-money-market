@@ -98,18 +98,6 @@ where
     }
 }
 
-impl<SwapTask, SEnum, SwapClient> SwapExactIn<SwapTask, SEnum, SwapClient>
-where
-    SwapTask: SwapTaskT,
-    SwapClient: ExactAmountIn,
-    Self: Handler<Response = SEnum> + Into<SEnum>,
-{
-    fn retry(self, querier: QuerierWrapper<'_>, env: Env) -> HandlerResult<Self> {
-        let state_label = self.spec.label();
-        timeout::on_timeout_retry(self, state_label, querier, env).into()
-    }
-}
-
 impl<SwapTask, SEnum, SwapClient> Enterable for SwapExactIn<SwapTask, SEnum, SwapClient>
 where
     SwapTask: SwapTaskT,
@@ -169,10 +157,6 @@ where
         let state_label = self.spec.label();
         timeout::on_timeout_retry(self, state_label, querier, env)
     }
-
-    fn heal(self, querier: QuerierWrapper<'_>, env: Env) -> HandlerResult<Self> {
-        self.retry(querier, env)
-    }
 }
 
 impl<OpenIca, SwapTask, SwapClient, ForwardToInnerMsg, ForwardToInnerContinueMsg> Handler
@@ -221,10 +205,6 @@ where
     fn on_timeout(self, querier: QuerierWrapper<'_>, env: Env) -> ContinueResult<Self> {
         let state_label = self.spec.label();
         timeout::on_timeout_retry(self, state_label, querier, env)
-    }
-
-    fn heal(self, querier: QuerierWrapper<'_>, env: Env) -> HandlerResult<Self> {
-        self.retry(querier, env)
     }
 }
 
