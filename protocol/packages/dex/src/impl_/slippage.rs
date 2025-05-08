@@ -1,35 +1,42 @@
 use std::marker::PhantomData;
 
+use serde::{Deserialize, Serialize};
+
 use currency::{CurrencyDef, Group, MemberOf};
 use finance::coin::{Amount, Coin, CoinDTO};
 
-use crate::{SlippageCalculator, SwapTask as SwapTaskT};
+use crate::SlippageCalculator;
 
-pub struct AcceptAnyNonZeroSwap<SwapTask, OutC> {
-    _spec: PhantomData<SwapTask>,
+#[derive(Serialize, Deserialize, Clone, PartialEq, Eq)]
+#[serde(bound(serialize = "", deserialize = "",))]
+#[serde(deny_unknown_fields, rename_all = "snake_case")]
+pub struct AcceptAnyNonZeroSwap<InG, OutC> {
+    #[serde(skip)]
+    _in_g: PhantomData<InG>,
+    #[serde(skip)]
     _out_c: PhantomData<OutC>,
 }
 
 // cannot use the derived impl since it puts the extra bounds `:Default` on the type args
-impl<SwapTask, OutC> Default for AcceptAnyNonZeroSwap<SwapTask, OutC> {
+impl<InG, OutC> Default for AcceptAnyNonZeroSwap<InG, OutC> {
     fn default() -> Self {
         Self {
-            _spec: Default::default(),
+            _in_g: Default::default(),
             _out_c: Default::default(),
         }
     }
 }
 
-impl<SwapTask, OutC> SlippageCalculator<SwapTask> for AcceptAnyNonZeroSwap<SwapTask, OutC>
+impl<InG, OutC> SlippageCalculator<InG> for AcceptAnyNonZeroSwap<InG, OutC>
 where
+    InG: Group,
     OutC: CurrencyDef,
-    SwapTask: SwapTaskT,
 {
     type OutC = OutC;
 
-    fn min_output<InG>(&self, _input: &CoinDTO<InG>) -> Coin<Self::OutC>
+    fn min_output<G>(&self, _input: &CoinDTO<G>) -> Coin<Self::OutC>
     where
-        InG: Group + MemberOf<SwapTask::InG>,
+        G: Group + MemberOf<InG>,
     {
         // before, it was None on Astroport and "1" on Osmosis.
         const MIN_AMOUNT_OUT: Amount = 1;

@@ -31,10 +31,10 @@ where
 {
     type Output = Result<Batch>;
 
-    fn on<CalculatorT>(self, calc: CalculatorT) -> Self::Output
+    fn on<CalculatorT>(self, calc: &CalculatorT) -> Self::Output
     where
-        CalculatorT: SlippageCalculator<SwapTask>,
-        <<CalculatorT as SlippageCalculator<SwapTask>>::OutC as CurrencyDef>::Group:
+        CalculatorT: SlippageCalculator<SwapTask::InG>,
+        <<CalculatorT as SlippageCalculator<SwapTask::InG>>::OutC as CurrencyDef>::Group:
             MemberOf<<SwapTask::InG as Group>::TopG>,
     {
         let mut filtered = false;

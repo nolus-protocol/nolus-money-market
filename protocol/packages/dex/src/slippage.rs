@@ -16,27 +16,17 @@ where
 {
     type Output;
 
-    fn on<CalculatorT>(self, calculator: CalculatorT) -> Self::Output
+    fn on<CalculatorT>(self, calculator: &CalculatorT) -> Self::Output
     where
-        CalculatorT: Calculator<SwapTask>,
-        <<CalculatorT as Calculator<SwapTask>>::OutC as CurrencyDef>::Group:
+        CalculatorT: Calculator<SwapTask::InG>,
+        <<CalculatorT as Calculator<SwapTask::InG>>::OutC as CurrencyDef>::Group:
             MemberOf<SwapTask::OutG> + MemberOf<<SwapTask::InG as Group>::TopG>;
 }
 
-/// Factory of [`Calculator`]-s
-pub trait CalculatorFactory<SwapTask>
-where
-    SwapTask: SwapTaskT,
-{
-    type OutC: CurrencyDef;
-
-    fn new_calc(&self) -> impl Calculator<SwapTask, OutC = Self::OutC>;
-}
-
 /// A calculator of the minimum acceptable swap output
-pub trait Calculator<SwapTask>
+pub trait Calculator<G>
 where
-    SwapTask: SwapTaskT,
+    G: Group,
 {
     /// The output swap currency
     type OutC: CurrencyDef;
@@ -47,5 +37,5 @@ where
     /// workflow will continue as per the result of [`Policy::on_anomaly`].
     fn min_output<InG>(&self, input: &CoinDTO<InG>) -> Coin<Self::OutC>
     where
-        InG: Group + MemberOf<SwapTask::InG>;
+        InG: Group + MemberOf<G>;
 }

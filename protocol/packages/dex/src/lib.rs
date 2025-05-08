@@ -15,10 +15,7 @@ pub use self::{
     },
     resp_delivery::ForwardToInner,
     response::{ContinueResult, Handler, Response, Result},
-    slippage::{
-        Calculator as SlippageCalculator, CalculatorFactory as SlippageCalculatorFactory,
-        WithCalculator,
-    },
+    slippage::{Calculator as SlippageCalculator, WithCalculator},
     state::{Contract, ContractInSwap, Stage},
     swap_task::{CoinsNb, SwapOutputTask, SwapTask, WithOutputTask},
     time_alarm::TimeAlarm,

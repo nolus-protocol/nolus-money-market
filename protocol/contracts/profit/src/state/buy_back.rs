@@ -95,7 +95,7 @@ impl SwapTask for BuyBack {
     where
         WithCalc: WithCalculator<Self>,
     {
-        with_calc.on(AcceptAnyNonZeroSwap::<
+        with_calc.on(&AcceptAnyNonZeroSwap::<
             _,
             <Self as SwapOutputTask<Self>>::OutC,
         >::default())

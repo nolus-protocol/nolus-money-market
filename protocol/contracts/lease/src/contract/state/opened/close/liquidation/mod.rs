@@ -1,3 +1,4 @@
+use finance::percent::Percent;
 use platform::message::Response as MessageResponse;
 use sdk::cosmwasm_std::{Env, QuerierWrapper};
 
@@ -8,10 +9,12 @@ use crate::{
     position::Cause,
 };
 
-use super::ClosePositionTask;
+use super::{ClosePositionTask, anomaly::MaxSlippage};
 
 pub mod full;
 pub mod partial;
+
+type Calculator = MaxSlippage;
 
 pub(in crate::contract::state) fn start(
     lease: Lease,
@@ -20,9 +23,16 @@ pub(in crate::contract::state) fn start(
     env: &Env,
     querier: QuerierWrapper<'_>,
 ) -> ContractResult<Response> {
+    // TODO load the slippage %
+    let slippage_calc = Calculator::with(Percent::from_percent(20));
+
     match liquidation {
-        LiquidationDTO::Partial(spec) => spec.start(lease, curr_request_response, env, querier),
-        LiquidationDTO::Full(spec) => spec.start(lease, curr_request_response, env, querier),
+        LiquidationDTO::Partial(spec) => {
+            spec.start(lease, curr_request_response, slippage_calc, env, querier)
+        }
+        LiquidationDTO::Full(spec) => {
+            spec.start(lease, curr_request_response, slippage_calc, env, querier)
+        }
     }
 }
 

@@ -28,6 +28,6 @@ where
         C::Group: MemberOf<<BuyAsset as SwapTask>::OutG>
             + MemberOf<<<BuyAsset as SwapTask>::OutG as currency::Group>::TopG>,
     {
-        Ok(self.with_calc.on(AcceptAnyNonZeroSwap::<_, C>::default()))
+        Ok(self.with_calc.on(&AcceptAnyNonZeroSwap::<_, C>::default()))
     }
 }

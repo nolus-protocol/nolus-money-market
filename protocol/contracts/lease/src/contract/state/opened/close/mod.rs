@@ -1,11 +1,10 @@
-use currency::{CurrencyDef, Group, MemberOf};
-use dex::{AnomalyHandler, Enterable, SlippageCalculatorFactory};
+use dex::{AnomalyHandler, Enterable, SlippageCalculator};
 use platform::message::Response as MessageResponse;
 use sdk::cosmwasm_std::{Env, QuerierWrapper};
 
 use crate::{
     api::{
-        LeaseCoin,
+        LeaseAssetCurrencies, LeaseCoin,
         query::opened::{OngoingTrx, PositionCloseTrx},
     },
     contract::{
@@ -14,7 +13,7 @@ use crate::{
     },
     error::ContractResult,
     event::Type,
-    finance::LpnCurrencies,
+    finance::LpnCurrency,
 };
 
 use self::sell_asset::SellAsset;
@@ -33,8 +32,16 @@ pub(crate) trait Closable {
     fn event_type(&self) -> Type;
 }
 
-type Task<RepayableT> = SellAsset<RepayableT>;
-type DexState<Repayable> = dex::StateLocalOut<Task<Repayable>, SwapClient, ForwardToDexEntry>;
+type Task<RepayableT, CalculatorT> = SellAsset<RepayableT, CalculatorT>;
+type DexState<Repayable, CalculatorT> =
+    dex::StateLocalOut<Task<Repayable, CalculatorT>, SwapClient, ForwardToDexEntry>;
+
+/// Aim to simplify trait boundaries within this module and underneat
+pub(crate) trait Calculator
+where
+    Self: SlippageCalculator<LeaseAssetCurrencies, OutC = LpnCurrency>,
+{
+}
 
 trait IntoRepayable
 where
@@ -45,39 +52,40 @@ where
     fn into(self) -> Self::Repayable;
 }
 
-trait ClosePositionTask
+trait ClosePositionTask<CalculatorT>
 where
+    CalculatorT: Calculator,
     Self: IntoRepayable + Sized,
-    DexState<Self::Repayable>: Into<State>,
-    SellAsset<Self::Repayable>:
-        SlippageCalculatorFactory<SellAsset<Self::Repayable>> + AnomalyHandler<SellAsset<Self::Repayable>>,
-    <<SellAsset<Self::Repayable> as SlippageCalculatorFactory<SellAsset<Self::Repayable>>>::OutC as CurrencyDef>::Group:
-        MemberOf<LpnCurrencies> + MemberOf<<LpnCurrencies as Group>::TopG>,
-
+    Task<Self::Repayable, CalculatorT>: AnomalyHandler<Task<Self::Repayable, CalculatorT>>,
+    DexState<Self::Repayable, CalculatorT>: Into<State>,
 {
     fn start(
         self,
         lease: Lease,
         curr_request_response: MessageResponse,
+        slippage_calc: CalculatorT,
         env: &Env,
         querier: QuerierWrapper<'_>,
     ) -> ContractResult<Response>
 where {
-        let start_state = dex::start_remote_local(Task::new(lease, self.into()));
+        let start_state = dex::start_remote_local(Task::new(lease, self.into(), slippage_calc));
         start_state
             .enter(env.block.time, querier)
             .map(|swap_msg| curr_request_response.merge_with(swap_msg))
-            .map(|start| Response::from(start, DexState::<Self::Repayable>::from(start_state)))
+            .map(|start| {
+                Response::from(
+                    start,
+                    DexState::<Self::Repayable, CalculatorT>::from(start_state),
+                )
+            })
             .map_err(Into::into)
     }
 }
-impl<T> ClosePositionTask for T
+impl<CalculatorT, T> ClosePositionTask<CalculatorT> for T
 where
     T: IntoRepayable,
-    DexState<T::Repayable>: Into<State>,
-    SellAsset<Self::Repayable>:
-    SlippageCalculatorFactory<SellAsset<Self::Repayable>> + AnomalyHandler<SellAsset<Self::Repayable>>,
-    <<SellAsset<Self::Repayable> as SlippageCalculatorFactory<SellAsset<Self::Repayable>>>::OutC as CurrencyDef>::Group:
-       MemberOf<LpnCurrencies> + MemberOf<<LpnCurrencies as Group>::TopG>,
+    CalculatorT: Calculator,
+    Task<Self::Repayable, CalculatorT>: AnomalyHandler<Task<Self::Repayable, CalculatorT>>,
+    DexState<T::Repayable, CalculatorT>: Into<State>,
 {
 }
