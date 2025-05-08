@@ -84,7 +84,7 @@ where
     ) -> ContractResult<Response> {
         let customer = lease.lease.customer.clone();
 
-        lease.finalizer.notify(customer).and_then(|finalizer_msgs| {
+        lease.finalizer.finalize_lease(customer).and_then(|finalizer_msgs| {
             let profit = self.0.profit_sender(&lease);
             let reserve = lease.lease.reserve.clone();
             let change = self.0.change_sender(&lease);
