@@ -71,6 +71,9 @@ pub enum ContractError {
 
     #[error("[Lease] Inconsistency not detected")]
     InconsistencyNotDetected(),
+
+    #[error("[Lease] Failed to query Position Limits")]
+    PositionLimitsQuery(StdError),
 }
 
 impl ContractError {

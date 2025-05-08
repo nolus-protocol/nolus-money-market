@@ -3,7 +3,13 @@ use serde::{Deserialize, Serialize};
 use platform::batch::Batch;
 use sdk::cosmwasm_std::{Addr, QuerierWrapper};
 
-use crate::{api::FinalizerExecuteMsg, error::ContractResult};
+use crate::{
+    api::{
+        FinalizerExecuteMsg,
+        limits::{MaxSlippage, PositionLimits},
+    },
+    error::{ContractError, ContractResult},
+};
 
 #[derive(Serialize, Deserialize)]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
@@ -28,5 +34,12 @@ impl FinalizerRef {
         )
         .map(|()| msgs)
         .map_err(Into::into)
+    }
+
+    pub(super) fn max_slippage(&self, querier: QuerierWrapper<'_>) -> ContractResult<MaxSlippage> {
+        let query = PositionLimits::MaxSlippage {};
+        querier
+            .query_wasm_smart(self.addr.clone(), &query)
+            .map_err(ContractError::PositionLimitsQuery)
     }
 }

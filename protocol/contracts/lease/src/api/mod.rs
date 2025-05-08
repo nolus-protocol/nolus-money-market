@@ -7,6 +7,8 @@ use sdk::cosmwasm_std::Addr;
 
 use self::position::PositionClose;
 
+pub mod authz;
+pub mod limits;
 pub mod open;
 pub mod position;
 pub mod query;
