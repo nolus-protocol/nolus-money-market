@@ -102,10 +102,9 @@ impl SwapTask for BuyLpn {
         WithCalc: WithCalculator<Self>,
     {
         with_calc.on(AcceptAnyNonZeroSwap::<
-            '_,
             _,
             <Self as SwapOutputTask<Self>>::OutC,
-        >::from(self))
+        >::default())
     }
 
     fn into_output_task<Cmd>(self, cmd: Cmd) -> Cmd::Output

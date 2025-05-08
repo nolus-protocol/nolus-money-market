@@ -41,9 +41,6 @@ where
     /// The output swap currency
     type OutC: CurrencyDef;
 
-    /// The specification of a swap this calculator protects
-    fn as_spec(&self) -> &SwapTask;
-
     /// Determine the minimum output amount of a swap
     ///
     /// An anomaly is triggered if the output amount cannot be satisfied. The

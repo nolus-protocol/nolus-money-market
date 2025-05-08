@@ -74,7 +74,9 @@ where
         querier: QuerierWrapper<'_>,
     ) -> Result<Batch> {
         self.spec
-            .with_slippage_calc(EncodeRequest::<'_, _, SwapClient>::from(querier))
+            .with_slippage_calc(EncodeRequest::<'_, '_, _, SwapClient>::from(
+                &self.spec, querier,
+            ))
     }
 }
 

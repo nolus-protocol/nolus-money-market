@@ -147,7 +147,7 @@ impl SwapTask for BuyAsset {
             self.form
                 .currency
                 .into_super_group()
-                .into_currency_type(CalculatorFactory::from(self, with_calc)),
+                .into_currency_type(CalculatorFactory::from(with_calc)),
         )
     }
 

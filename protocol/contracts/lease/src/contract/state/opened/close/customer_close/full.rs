@@ -94,10 +94,9 @@ impl SlippageCalculatorFactory<SellAsset<RepayableImpl>> for SellAsset<Repayable
 
     fn new_calc(&self) -> impl SlippageCalculator<SellAsset<RepayableImpl>, OutC = Self::OutC> {
         AcceptAnyNonZeroSwap::<
-            '_,
             _,
             <SellAsset<RepayableImpl> as SwapOutputTask<SellAsset<RepayableImpl>>>::OutC,
-        >::from(self)
+        >::default()
     }
 }
 

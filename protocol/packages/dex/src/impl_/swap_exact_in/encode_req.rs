@@ -9,22 +9,22 @@ use crate::{
     swap::ExactAmountIn,
 };
 
-pub struct EncodeRequest<'querier, SwapTask, SwapClient> {
+pub struct EncodeRequest<'spec, 'querier, SwapTask, SwapClient> {
+    spec: &'spec SwapTask,
     querier: QuerierWrapper<'querier>,
-    _spec: PhantomData<SwapTask>,
     _client: PhantomData<SwapClient>,
 }
 
-impl<'querier, SwapTask, SwapClient> EncodeRequest<'querier, SwapTask, SwapClient> {
-    pub fn from(querier: QuerierWrapper<'querier>) -> Self {
+impl<'spec, 'querier, SwapTask, SwapClient> EncodeRequest<'spec, 'querier, SwapTask, SwapClient> {
+    pub fn from(spec: &'spec SwapTask, querier: QuerierWrapper<'querier>) -> Self {
         Self {
+            spec,
             querier,
-            _spec: PhantomData,
             _client: PhantomData,
         }
     }
 }
-impl<SwapTask, SwapClient> WithCalculator<SwapTask> for EncodeRequest<'_, SwapTask, SwapClient>
+impl<SwapTask, SwapClient> WithCalculator<SwapTask> for EncodeRequest<'_, '_, SwapTask, SwapClient>
 where
     SwapTask: SwapTaskT,
     SwapClient: ExactAmountIn,
@@ -40,14 +40,14 @@ where
         let mut filtered = false;
 
         let swap_trx = SwapTrx::<'_, '_, '_, <SwapTask::InG as Group>::TopG, _>::new(
-            calc.as_spec().dex_account(),
-            calc.as_spec().oracle(),
+            self.spec.dex_account(),
+            self.spec.oracle(),
             self.querier,
         );
 
         let out_currency = CalculatorT::OutC::dto().into_super_group();
         super::try_filter_fold_coins(
-            calc.as_spec(),
+            self.spec,
             super::not_out_coins_filter(&out_currency),
             swap_trx,
             |mut trx, coin_in| {

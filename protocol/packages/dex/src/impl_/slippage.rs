@@ -5,30 +5,27 @@ use finance::coin::{Amount, Coin, CoinDTO};
 
 use crate::{SlippageCalculator, SwapTask as SwapTaskT};
 
-pub struct AcceptAnyNonZeroSwap<'spec, SwapTask, OutC> {
-    spec: &'spec SwapTask,
+pub struct AcceptAnyNonZeroSwap<SwapTask, OutC> {
+    _spec: PhantomData<SwapTask>,
     _out_c: PhantomData<OutC>,
 }
 
-impl<'spec, SwapTask, OutC> AcceptAnyNonZeroSwap<'spec, SwapTask, OutC> {
-    pub fn from(spec: &'spec SwapTask) -> Self {
+// cannot use the derived impl since it puts the extra bounds `:Default` on the type args
+impl<SwapTask, OutC> Default for AcceptAnyNonZeroSwap<SwapTask, OutC> {
+    fn default() -> Self {
         Self {
-            spec,
-            _out_c: PhantomData,
+            _spec: Default::default(),
+            _out_c: Default::default(),
         }
     }
 }
 
-impl<SwapTask, OutC> SlippageCalculator<SwapTask> for AcceptAnyNonZeroSwap<'_, SwapTask, OutC>
+impl<SwapTask, OutC> SlippageCalculator<SwapTask> for AcceptAnyNonZeroSwap<SwapTask, OutC>
 where
     OutC: CurrencyDef,
     SwapTask: SwapTaskT,
 {
     type OutC = OutC;
-
-    fn as_spec(&self) -> &SwapTask {
-        self.spec
-    }
 
     fn min_output<InG>(&self, _input: &CoinDTO<InG>) -> Coin<Self::OutC>
     where
