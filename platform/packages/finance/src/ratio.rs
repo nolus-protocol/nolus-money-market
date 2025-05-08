@@ -17,9 +17,9 @@ pub(crate) trait Gcd {
     fn gcd(self, other: Self) -> Self;
 }
 
-/// A wrapper over `Rational` where the ratio is no more than 1.
+/// A wrapper over `SimpleFraction` where the ratio is no more than 1.
 #[cfg_attr(any(test, feature = "testing"), derive(Debug))]
-pub struct Ratio<U>(Rational<U>);
+pub struct Ratio<U>(SimpleFraction<U>);
 
 impl<U> Ratio<U>
 where
@@ -28,11 +28,7 @@ where
     pub fn new(parts: U, total: U) -> Self {
         debug_assert!(parts <= total);
 
-        Self(Rational::new(parts, total))
-    }
-
-    pub fn as_rational(&self) -> &Rational<U> {
-        &self.0
+        Self(SimpleFraction::new(parts, total))
     }
 }
 
@@ -60,12 +56,12 @@ where
 
 #[derive(Clone, Copy, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "snake_case")]
-pub struct Rational<U> {
+pub struct SimpleFraction<U> {
     nominator: U,
     denominator: U,
 }
 
-impl<U> Rational<U>
+impl<U> SimpleFraction<U>
 where
     U: Copy + Debug + Ord + PartialEq<U> + Zero,
 {
@@ -87,12 +83,12 @@ where
         self.denominator
     }
 
-    pub fn map<F, T>(&self, f: F) -> Rational<T>
+    pub fn map<F, T>(&self, f: F) -> SimpleFraction<T>
     where
         F: Fn(U) -> T,
         T: Copy + Debug + Ord + Zero,
     {
-        Rational::new(f(self.nominator), f(self.denominator))
+        SimpleFraction::new(f(self.nominator), f(self.denominator))
     }
 
     pub fn to_ratio(&self) -> Option<Ratio<U>> {
@@ -123,9 +119,9 @@ where
     (a / gcd, b / gcd)
 }
 
-impl<U> Eq for Rational<U> where U: ComparableBounds {}
+impl<U> Eq for SimpleFraction<U> where U: ComparableBounds {}
 
-impl<U> PartialEq for Rational<U>
+impl<U> PartialEq for SimpleFraction<U>
 where
     U: ComparableBounds,
 {
@@ -137,7 +133,7 @@ where
     }
 }
 
-impl<U> PartialOrd for Rational<U>
+impl<U> PartialOrd for SimpleFraction<U>
 where
     U: ComparableBounds + Mul<Output = U> + Ord,
 {
@@ -146,7 +142,7 @@ where
     }
 }
 
-impl<U> Ord for Rational<U>
+impl<U> Ord for SimpleFraction<U>
 where
     U: ComparableBounds + Mul<Output = U> + Ord,
 {
@@ -178,7 +174,7 @@ pub trait CheckedDiv<Rhs = Self> {
     fn checked_div(self, rhs: Rhs) -> Option<Self::Output>;
 }
 
-impl<U> Rational<U>
+impl<U> SimpleFraction<U>
 where
     U: Copy + Debug + Div + Ord + PartialEq<U> + PartialOrd + Rem<Output = U> + Zero,
 {
@@ -187,7 +183,7 @@ where
         <U as Div>::Output: CheckedMul<F, Output = F>,
         F: CheckedAdd<Output = F> + Copy + Fractionable<U>,
     {
-        // Rational(a,b).checked_mul(c) = (a / b).checked_mul(c) + c.safe_mul(Rational(a % b, b))
+        // SimpleFraction(a,b).checked_mul(c) = (a / b).checked_mul(c) + c.safe_mul(SimpleFraction(a % b, b))
 
         self.nominator
             .div(self.denominator)
@@ -202,7 +198,7 @@ where
     }
 }
 
-impl<U> CheckedAdd for Rational<U>
+impl<U> CheckedAdd for SimpleFraction<U>
 where
     U: CheckedMul<Output = U>
         + CheckedAdd<Output = U>

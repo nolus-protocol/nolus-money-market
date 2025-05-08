@@ -1,4 +1,6 @@
-use crate::{fraction::Fraction, percent::Units as PercentUnits, price::Price, ratio::Rational};
+use crate::{
+    fraction::Fraction, percent::Units as PercentUnits, price::Price, ratio::SimpleFraction,
+};
 
 use super::Fractionable;
 
@@ -14,7 +16,7 @@ where
         let parts = fraction.parts().into();
         let total = fraction.total().into();
 
-        self.lossy_mul(&Rational::new(parts, total))
+        self.lossy_mul(&SimpleFraction::new(parts, total))
     }
 }
 

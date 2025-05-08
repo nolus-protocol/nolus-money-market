@@ -63,7 +63,7 @@ pub(super) mod test {
         coin::Coin,
         fraction::Fraction,
         percent::{Percent, Percent100},
-        ratio::Rational,
+        ratio::SimpleFraction,
     };
 
     use super::Units;
@@ -203,7 +203,7 @@ pub(super) mod test {
     #[test]
     fn rational_of_percents() {
         let v = 14u32;
-        let r = Rational::new(Percent100::HUNDRED.units(), Percent100::HUNDRED.units());
+        let r = SimpleFraction::new(Percent100::HUNDRED.units(), Percent100::HUNDRED.units());
         assert_eq!(v, r.checked_mul(v).unwrap());
     }
 
@@ -211,7 +211,7 @@ pub(super) mod test {
     fn rational_to_percents() {
         let n: Units = 189;
         let d: Units = 1890;
-        let r = Rational::new(n, d);
+        let r = SimpleFraction::new(n, d);
         let res: Percent100 = r.checked_mul(Percent100::HUNDRED).unwrap();
         assert_eq!(Percent100::from_permille(n * 1000 / d), res);
     }

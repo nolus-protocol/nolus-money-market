@@ -18,7 +18,7 @@ use crate::{
     duration::Duration,
     percent::{Units as PercentUnits, bound::BoundPercent},
     ratio::{
-        self, CheckedAdd, CheckedDiv, CheckedMul, ComparableBounds, Gcd as GcdTrait, Rational,
+        self, CheckedAdd, CheckedDiv, CheckedMul, ComparableBounds, Gcd as GcdTrait, SimpleFraction,
     },
     zero::Zero,
 };
@@ -133,8 +133,8 @@ impl<C> Coin<C> {
         self.checked_operation(self.amount.checked_div(rhs))
     }
 
-    pub fn to_rational<OtherC>(self, denominator: Coin<OtherC>) -> Rational<Amount> {
-        Rational::new(self.amount, denominator.amount)
+    pub fn to_rational<OtherC>(self, denominator: Coin<OtherC>) -> SimpleFraction<Amount> {
+        SimpleFraction::new(self.amount, denominator.amount)
     }
 
     #[track_caller]

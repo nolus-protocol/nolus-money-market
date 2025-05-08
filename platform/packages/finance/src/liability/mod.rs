@@ -8,7 +8,7 @@ use crate::{
     fraction::Fraction,
     fractionable::{Fractionable, Percentable},
     percent::{Percent, Percent100, Units as PercentUnits},
-    ratio::{CheckedAdd, CheckedMul, Rational},
+    ratio::{CheckedAdd, CheckedMul, SimpleFraction},
     zero::Zero,
 };
 
@@ -129,7 +129,7 @@ impl Liability {
         debug_assert!(self.initial > Percent100::ZERO);
         debug_assert!(self.initial < Percent100::HUNDRED);
 
-        let default_ltd = Rational::new(self.initial, Self::remaining_percent(self.initial));
+        let default_ltd = SimpleFraction::new(self.initial, Self::remaining_percent(self.initial));
         default_ltd
             .checked_mul(downpayment)
             .and_then(|default_borrow| {
@@ -163,7 +163,8 @@ impl Liability {
 
         // from 'due - liquidation = healthy% of (lease - liquidation)' follows
         // liquidation = 100% / (100% - healthy%) of (due - healthy% of lease)
-        let multiplier = Rational::new(Percent100::HUNDRED, Self::remaining_percent(self.healthy));
+        let multiplier =
+            SimpleFraction::new(Percent100::HUNDRED, Self::remaining_percent(self.healthy));
         let extra_liability_lpn = total_due - total_due.min(self.healthy.of(lease_amount));
         multiplier.checked_mul(extra_liability_lpn)
     }

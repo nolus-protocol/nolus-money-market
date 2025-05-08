@@ -9,7 +9,7 @@ use crate::{
     coin::{Amount, Coin},
     error::{Error, Result},
     fractionable::HigherRank,
-    ratio::{CheckedAdd, ComparableBounds, Gcd, Rational},
+    ratio::{CheckedAdd, ComparableBounds, Gcd, SimpleFraction},
 };
 
 pub mod base;
@@ -118,7 +118,7 @@ where
     /// Price(amount, amount_quote) * Ratio(nominator / denominator) = Price(amount * denominator, amount_quote * nominator)
     /// where the pairs (amount, nominator) and (amount_quote, denominator) are transformed into co-prime numbers.
     /// Please note that Price(amount, amount_quote) is like Ratio(amount_quote / amount).
-    pub(crate) fn lossy_mul(self, rhs: &Rational<Amount>) -> Self {
+    pub(crate) fn lossy_mul(self, rhs: &SimpleFraction<Amount>) -> Self {
         let (amount_normalized, rhs_nominator_normalized) = self
             .amount
             .into_coprime_with(Coin::<C>::from(rhs.nominator()));
@@ -166,7 +166,7 @@ where
         Error::broken_invariant_if::<Self>(!invariant, msg)
     }
 
-    fn to_rational(self) -> Rational<Amount> {
+    fn to_rational(self) -> SimpleFraction<Amount> {
         self.amount_quote.to_rational(self.amount)
     }
 
@@ -266,10 +266,10 @@ where
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         // Please note that Price(amount, amount_quote) is like Ratio(amount_quote / amount).
 
-        let left: Rational<DoubleAmount> =
-            Rational::new(self.amount_quote.into(), self.amount.into());
-        let right: Rational<DoubleAmount> =
-            Rational::new(other.amount_quote.into(), other.amount.into());
+        let left: SimpleFraction<DoubleAmount> =
+            SimpleFraction::new(self.amount_quote.into(), self.amount.into());
+        let right: SimpleFraction<DoubleAmount> =
+            SimpleFraction::new(other.amount_quote.into(), other.amount.into());
         left.cmp(&right)
     }
 }
@@ -309,9 +309,9 @@ where
     }
 }
 
-impl<C, QuoteC> From<Price<C, QuoteC>> for Rational<Amount> {
+impl<C, QuoteC> From<Price<C, QuoteC>> for SimpleFraction<Amount> {
     fn from(price: Price<C, QuoteC>) -> Self {
-        Rational::new(price.amount_quote.into(), price.amount.into())
+        SimpleFraction::new(price.amount_quote.into(), price.amount.into())
     }
 }
 
@@ -342,8 +342,10 @@ where
         // Price(a, b) * Price(c, d) = Price(a, d) * Rational(b / c)
         // Please note that Price(amount, amount_quote) is like Ratio(amount_quote / amount).
 
-        Self::Output::new(self.amount, rhs.amount_quote)
-            .lossy_mul(&Rational::new(self.amount_quote.into(), rhs.amount.into()))
+        Self::Output::new(self.amount, rhs.amount_quote).lossy_mul(&SimpleFraction::new(
+            self.amount_quote.into(),
+            rhs.amount.into(),
+        ))
     }
 }
 
@@ -357,7 +359,7 @@ impl<C, QuoteC> Display for Price<C, QuoteC> {
 ///
 /// For example, total(10 EUR, 1.01 EURUSD) = 10.1 USD
 pub fn total<C, QuoteC>(of: Coin<C>, price: Price<C, QuoteC>) -> Option<Coin<QuoteC>> {
-    let ratio_impl = Rational::new(of, price.amount);
+    let ratio_impl = SimpleFraction::new(of, price.amount);
     ratio_impl.checked_mul(price.amount_quote)
 }
 
@@ -371,7 +373,7 @@ mod test {
     use crate::{
         coin::{Amount, Coin as CoinT},
         price::{self, Price},
-        ratio::Rational,
+        ratio::SimpleFraction,
     };
 
     type QuoteQuoteCoin = CoinT<SubGroupTestC10>;
@@ -671,7 +673,7 @@ mod test {
         assert_eq!(exp, price1.mul(price2));
 
         let price3 = price::total_of(amount1).is(quote2);
-        let ratio = Rational::new(quote1.into(), amount2.into());
+        let ratio = SimpleFraction::new(quote1.into(), amount2.into());
         assert_eq!(exp, price3.lossy_mul(&ratio));
     }
 

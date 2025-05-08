@@ -11,7 +11,7 @@ use crate::{
     error::{Error, Result as FinanceResult},
     fraction::Fraction,
     fractionable::Fractionable,
-    ratio::{CheckedAdd, CheckedMul, Ratio, Rational},
+    ratio::{CheckedAdd, CheckedMul, Ratio, SimpleFraction},
     zero::Zero,
 };
 
@@ -55,7 +55,7 @@ impl<const UPPER_BOUND: Units> BoundPercent<UPPER_BOUND> {
         <FractionUnit as Div>::Output: CheckedMul<Self, Output = Self>,
         Self: Fractionable<FractionUnit>,
     {
-        Rational::new(nominator, denominator).checked_mul(Self::HUNDRED)
+        SimpleFraction::new(nominator, denominator).checked_mul(Self::HUNDRED)
     }
 
     pub const fn units(&self) -> Units {
@@ -116,7 +116,7 @@ impl BoundPercent<MAX_BOUND> {
         Units: CheckedMul<A, Output = A>,
         A: CheckedAdd<Output = A> + Copy + Fractionable<Units>,
     {
-        let ratio: Rational<Units> = self.into();
+        let ratio: SimpleFraction<Units> = self.into();
         ratio.checked_mul(whole)
     }
 }
@@ -127,7 +127,7 @@ impl From<&BoundPercent<HUNDRED_BOUND>> for Ratio<Units> {
     }
 }
 
-impl From<&BoundPercent<MAX_BOUND>> for Rational<Units> {
+impl From<&BoundPercent<MAX_BOUND>> for SimpleFraction<Units> {
     fn from(percent: &BoundPercent<MAX_BOUND>) -> Self {
         Self::new(percent.0, Percent100::HUNDRED.0)
     }

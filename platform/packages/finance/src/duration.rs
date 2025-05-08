@@ -10,7 +10,7 @@ use sdk::cosmwasm_std::{Timestamp, Uint128, Uint256};
 use crate::{
     coin::Coin,
     fractionable::Fractionable,
-    ratio::{CheckedAdd, CheckedMul, Rational},
+    ratio::{CheckedAdd, CheckedMul, SimpleFraction},
     zero::Zero,
 };
 
@@ -109,7 +109,7 @@ impl Duration {
         <Self as Div>::Output: CheckedMul<T, Output = T>,
         T: CheckedAdd<Output = T> + Copy + Fractionable<Self>,
     {
-        Rational::new(*self, Self::YEAR).checked_mul(annual_amount)
+        SimpleFraction::new(*self, Self::YEAR).checked_mul(annual_amount)
     }
 
     pub fn into_slice_per_ratio<U>(self, amount: U, annual_amount: U) -> Option<Self>
@@ -118,7 +118,7 @@ impl Duration {
         <U as Div>::Output: CheckedMul<Self, Output = Self>,
         Self: Fractionable<U> + CheckedAdd<Output = Self>,
     {
-        Rational::new(amount, annual_amount).checked_mul(self)
+        SimpleFraction::new(amount, annual_amount).checked_mul(self)
     }
 }
 
