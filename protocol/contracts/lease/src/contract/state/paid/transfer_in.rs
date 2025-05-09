@@ -227,7 +227,7 @@ where
         with_lease_paid::execute(spec.lease.lease, Close::new(lease_account))
             .and_then(|close_msgs| {
                 spec.lease
-                    .finalizer
+                    .leases
                     .finalize_lease(customer)
                     .map(|finalizer_msgs| close_msgs.merge(finalizer_msgs)) //make sure the finalizer messages go out last
             })

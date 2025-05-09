@@ -9,7 +9,7 @@ use crate::{
 };
 
 pub use self::endpoins::{execute, instantiate, migrate, query, reply, sudo};
-use self::finalize::FinalizerRef;
+use self::finalize::LeasesRef;
 
 mod api;
 mod cmd;
@@ -23,7 +23,8 @@ mod state;
 pub(crate) struct Lease {
     lease: LeaseDTO,
     dex: Account,
-    finalizer: FinalizerRef,
+    #[serde(alias = "finalizer")] // TODO remove after the release past v0.8.7 gets deployed
+    leases: LeasesRef,
 }
 
 pub(crate) trait SplitDTOOut {
@@ -33,12 +34,8 @@ pub(crate) trait SplitDTOOut {
 }
 
 impl Lease {
-    fn new(lease: LeaseDTO, dex: Account, finalizer: FinalizerRef) -> Self {
-        Self {
-            lease,
-            dex,
-            finalizer,
-        }
+    fn new(lease: LeaseDTO, dex: Account, leases: LeasesRef) -> Self {
+        Self { lease, dex, leases }
     }
 
     fn update<Cmd>(
@@ -56,7 +53,7 @@ impl Lease {
     {
         self.lease.execute(cmd, querier).map(|result| {
             let (lease, other) = result.split_into();
-            (Self::new(lease, self.dex, self.finalizer), other)
+            (Self::new(lease, self.dex, self.leases), other)
         })
     }
 }

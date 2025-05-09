@@ -24,7 +24,7 @@ use crate::{
     },
     contract::{
         cmd::OpenLoanRespResult,
-        finalize::FinalizerRef,
+        finalize::LeasesRef,
         state::{
             SwapClient, SwapResult,
             out_task::{OutTaskFactory, WithOutCurrency},
@@ -55,7 +55,7 @@ pub(super) fn start(
     new_lease: NewLeaseContract,
     downpayment: DownpaymentCoin,
     loan: OpenLoanRespResult,
-    deps: (LppRef, OracleRef, TimeAlarmsRef, FinalizerRef),
+    deps: (LppRef, OracleRef, TimeAlarmsRef, LeasesRef),
     start_opening_at: Timestamp,
 ) -> StartState {
     dex::start_local_remote::<_, BuyAsset>(OpenIcaAccount::new(
@@ -75,7 +75,7 @@ pub struct BuyAsset {
     dex_account: Account,
     downpayment: DownpaymentCoin,
     loan: OpenLoanRespResult,
-    deps: (LppRef, OracleRef, TimeAlarmsRef, FinalizerRef),
+    deps: (LppRef, OracleRef, TimeAlarmsRef, LeasesRef),
     start_opening_at: Timestamp,
 }
 
@@ -85,7 +85,7 @@ impl BuyAsset {
         dex_account: Account,
         downpayment: DownpaymentCoin,
         loan: OpenLoanRespResult,
-        deps: (LppRef, OracleRef, TimeAlarmsRef, FinalizerRef),
+        deps: (LppRef, OracleRef, TimeAlarmsRef, LeasesRef),
         start_opening_at: Timestamp,
     ) -> Self {
         Self {

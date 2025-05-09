@@ -23,7 +23,7 @@ pub(in crate::contract::state) fn start(
     querier: QuerierWrapper<'_>,
 ) -> ContractResult<Response> {
     lease
-        .finalizer
+        .leases
         .max_slippage(querier)
         .map(|max_slippage| Calculator::with(max_slippage.liquidation))
         .and_then(|slippage_calc| match liquidation {

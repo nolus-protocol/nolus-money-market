@@ -84,20 +84,30 @@ where
     ) -> ContractResult<Response> {
         let customer = lease.lease.customer.clone();
 
-        lease.finalizer.finalize_lease(customer).and_then(|finalizer_msgs| {
-            let profit = self.0.profit_sender(&lease);
-            let reserve = lease.lease.reserve.clone();
-            let change = self.0.change_sender(&lease);
-            let emitter_fn = self.0.emitter_fn(&lease, env);
-            lease
-                .lease
-                .execute(
-                    FullCloseCmd::new(amount, env.block.time, profit, reserve, change, emitter_fn),
-                    querier,
-                )
-                .map(|liquidation_response| liquidation_response.merge_with(finalizer_msgs))
-                //make sure the finalizer messages go out last
-                .map(|response| Response::from(response, CloseAlgoT::OutState::default()))
-        })
+        lease
+            .leases
+            .finalize_lease(customer)
+            .and_then(|finalizer_msgs| {
+                let profit = self.0.profit_sender(&lease);
+                let reserve = lease.lease.reserve.clone();
+                let change = self.0.change_sender(&lease);
+                let emitter_fn = self.0.emitter_fn(&lease, env);
+                lease
+                    .lease
+                    .execute(
+                        FullCloseCmd::new(
+                            amount,
+                            env.block.time,
+                            profit,
+                            reserve,
+                            change,
+                            emitter_fn,
+                        ),
+                        querier,
+                    )
+                    .map(|liquidation_response| liquidation_response.merge_with(finalizer_msgs))
+                    //make sure the finalizer messages go out last
+                    .map(|response| Response::from(response, CloseAlgoT::OutState::default()))
+            })
     }
 }
