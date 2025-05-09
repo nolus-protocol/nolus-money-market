@@ -42,10 +42,8 @@ impl<'a> Leaser<'a> {
         Leases::load_by_customer(self.deps.storage, customer)
     }
 
-    pub fn max_limits(&self) -> ContractResult<MaxSlippage> {
-        Ok(MaxSlippage {
-            liquidation: Percent::from_percent(20), // TODO
-        })
+    pub fn max_slippage(&self) -> ContractResult<MaxSlippage> {
+        Config::load(self.deps.storage).map(|config| config.lease_max_slippage)
     }
 
     pub fn quote(
@@ -218,7 +216,7 @@ mod test {
     use dex::{ConnectionParams, Ics20Channel};
     use finance::{coin::Coin, duration::Duration, liability::Liability, percent::Percent};
     use json_value::JsonValue;
-    use lease::api::{MigrateMsg, open::PositionSpecDTO};
+    use lease::api::{MigrateMsg, limits::MaxSlippage, open::PositionSpecDTO};
     use platform::{contract::Code, response};
     use sdk::cosmwasm_std::{Addr, Storage, testing::MockStorage};
     use versioning::{
@@ -323,6 +321,9 @@ mod test {
             },
             lease_interest_rate_margin: Percent::from_percent(3),
             lease_due_period: Duration::from_days(14),
+            lease_max_slippage: MaxSlippage {
+                liquidation: Percent::from_percent(20),
+            },
             dex: ConnectionParams {
                 connection_id: "conn-12".into(),
                 transfer_channel: Ics20Channel {

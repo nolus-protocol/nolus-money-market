@@ -3,8 +3,8 @@ use serde::{Deserialize, Serialize};
 use finance::percent::Percent;
 
 /// The query API any contract who implements [PositionLimits] should respond to
-#[derive(Serialize)]
-#[cfg_attr(feature = "skel_testing", derive(Debug, Deserialize, PartialEq, Eq))]
+#[derive(Serialize, PartialEq, Eq)]
+#[cfg_attr(feature = "skel_testing", derive(Debug, Deserialize))]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub enum PositionLimits {
     /// Reply with [MaxSlippage]
@@ -13,8 +13,8 @@ pub enum PositionLimits {
 }
 
 /// Response of [PositionLimits::MaxSlippage] query
-#[derive(Serialize, Deserialize)]
-#[cfg_attr(feature = "skel_testing", derive(Debug, PartialEq, Eq))]
+#[derive(Serialize, Deserialize, PartialEq, Eq)]
+#[cfg_attr(feature = "skel_testing", derive(Clone, Debug))]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub struct MaxSlippage {
     // TODO make sure this value is limited to 100%

@@ -187,7 +187,7 @@ pub fn query(deps: Deps<'_>, _env: Env, msg: QueryMsg) -> ContractResult<Binary>
     match msg {
         QueryMsg::Config {} => to_json_binary(&Leaser::new(deps).config()?),
         QueryMsg::Leases { owner } => to_json_binary(&Leaser::new(deps).customer_leases(owner)?),
-        QueryMsg::MaxSlippage {} => to_json_binary(&Leaser::new(deps).max_limits()?),
+        QueryMsg::MaxSlippage {} => to_json_binary(&Leaser::new(deps).max_slippage()?),
         QueryMsg::ProtocolPackageRelease {} => to_json_binary(&CURRENT_RELEASE),
         QueryMsg::Quote {
             downpayment,

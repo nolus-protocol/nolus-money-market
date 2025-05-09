@@ -12,7 +12,7 @@ use finance::{
     liability::Liability,
     percent::Percent,
 };
-use lease::api::{LpnCoinDTO, open::PositionSpecDTO};
+use lease::api::{LpnCoinDTO, limits::MaxSlippage, open::PositionSpecDTO};
 use platform::contract::{Code, CodeId};
 
 use sdk::{
@@ -70,6 +70,9 @@ fn leaser_instantiate_msg(lease_code: Code, lpp: Addr) -> crate::msg::Instantiat
         ),
         lease_interest_rate_margin: MARGIN_INTEREST_RATE,
         lease_due_period: Duration::from_days(90),
+        lease_max_slippage: MaxSlippage {
+            liquidation: Percent::from_percent(20),
+        },
         dex: dex_params(),
     }
 }

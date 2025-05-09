@@ -4,14 +4,16 @@ use admin_contract::msg::{MigrationSpec, ProtocolContracts};
 use currency::CurrencyDTO;
 use dex::ConnectionParams;
 use finance::{duration::Duration, percent::Percent};
-use lease::api::{DownpaymentCoin, LeaseCoin, LpnCoinDTO, open::PositionSpecDTO};
+use lease::api::{
+    DownpaymentCoin, LeaseCoin, LpnCoinDTO, limits::MaxSlippage, open::PositionSpecDTO,
+};
 use sdk::cosmwasm_std::{Addr, Uint64};
 use versioning::ProtocolPackageReleaseId;
 
 use crate::finance::LeaseCurrencies;
 pub use crate::state::config::Config;
 
-#[derive(Serialize, Deserialize, Clone, PartialEq, Eq)]
+#[derive(Serialize, Deserialize, PartialEq, Eq)]
 #[cfg_attr(feature = "testing", derive(Debug))]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub struct InstantiateMsg {
@@ -25,12 +27,15 @@ pub struct InstantiateMsg {
     pub lease_position_spec: PositionSpecDTO,
     pub lease_interest_rate_margin: Percent,
     pub lease_due_period: Duration,
+    pub lease_max_slippage: MaxSlippage,
     pub dex: ConnectionParams,
 }
 
 #[derive(Serialize, Deserialize)]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
-pub struct MigrateMsg {}
+pub struct MigrateMsg {
+    // pub lease_max_slippage: MaxSlippage,
+}
 
 pub type MaxLeases = u32;
 
@@ -135,8 +140,8 @@ pub enum QueryMsg {
     },
 }
 
-#[derive(Serialize, Deserialize, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "testing", derive(Debug))]
+#[derive(Serialize, Deserialize, PartialEq, Eq)]
+#[cfg_attr(feature = "testing", derive(Clone, Debug))]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub struct ConfigResponse {
     pub config: Config,

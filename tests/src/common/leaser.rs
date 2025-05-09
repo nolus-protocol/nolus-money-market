@@ -4,7 +4,7 @@ use currencies::{LeaseGroup, PaymentGroup};
 use currency::{CurrencyDef, MemberOf};
 use dex::{ConnectionParams, Ics20Channel};
 use finance::{coin::Coin, duration::Duration, liability::Liability, percent::Percent, test};
-use lease::api::{LpnCoinDTO, open::PositionSpecDTO};
+use lease::api::{LpnCoinDTO, limits::MaxSlippage, open::PositionSpecDTO};
 use leaser::{
     execute, instantiate,
     msg::{InstantiateMsg, QueryMsg, QuoteResponse},
@@ -90,6 +90,9 @@ impl Instantiator {
             lease_interest_rate_margin: Self::INTEREST_RATE_MARGIN,
             lease_position_spec: Self::position_spec(),
             lease_due_period: Self::REPAYMENT_PERIOD,
+            lease_max_slippage: MaxSlippage {
+                liquidation: Percent::from_percent(15),
+            },
             time_alarms: alarms.time_alarm,
             market_price_oracle: alarms.market_price_oracle,
             dex: ConnectionParams {
