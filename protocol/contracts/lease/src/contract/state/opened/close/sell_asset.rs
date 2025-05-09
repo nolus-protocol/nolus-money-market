@@ -20,7 +20,10 @@ use timealarms::stub::TimeAlarmsRef;
 use crate::{
     api::{
         LeaseAssetCurrencies,
-        query::{StateResponse as QueryStateResponse, opened::PositionCloseTrx},
+        query::{
+            StateResponse as QueryStateResponse,
+            opened::{PositionCloseTrx, Status},
+        },
     },
     contract::{
         Lease,
@@ -96,7 +99,13 @@ where
         querier: QuerierWrapper<'_>,
     ) -> ContractResult<QueryStateResponse> {
         let trx = self.repayable.transaction(&self.lease, in_progress);
-        opened::lease_state(self.lease, Some(trx), now, due_projection, querier)
+        opened::lease_state(
+            self.lease,
+            Status::InProgress(trx),
+            now,
+            due_projection,
+            querier,
+        )
     }
 }
 

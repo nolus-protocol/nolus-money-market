@@ -3,16 +3,13 @@ use currency::{CurrencyDef, MemberOf};
 use crate::{
     api::{
         LeaseAssetCurrencies,
-        query::{StateResponse, opened, paid},
+        query::{StateResponse, opened::Status, paid},
     },
     lease::{LeaseDTO, State},
 };
 
 impl StateResponse {
-    pub fn opened_from<Asset>(
-        open_lease: State<Asset>,
-        in_progress: Option<opened::OngoingTrx>,
-    ) -> Self
+    pub fn opened_from<Asset>(open_lease: State<Asset>, status: Status) -> Self
     where
         Asset: CurrencyDef,
         Asset::Group: MemberOf<LeaseAssetCurrencies>,
@@ -30,7 +27,7 @@ impl StateResponse {
             due_projection: open_lease.due_projection,
             close_policy: open_lease.close_policy,
             validity: open_lease.validity,
-            in_progress,
+            status,
         }
     }
 

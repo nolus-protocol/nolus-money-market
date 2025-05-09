@@ -14,7 +14,7 @@ use finance::{
 };
 use lease::api::{
     ExecuteMsg,
-    query::{ClosePolicy, StateResponse},
+    query::{ClosePolicy, StateResponse, opened::Status},
 };
 use platform::coin_legacy::to_cosmwasm_on_dex;
 use sdk::{
@@ -185,7 +185,7 @@ fn full_repay_with_max_ltd() {
         due_projection: Duration::default(),
         close_policy: ClosePolicy::default(),
         validity: Timestamp::from_nanos(1537237459879305533),
-        in_progress: None,
+        status: Status::Idle,
     };
     let query_result = super::state_query(&test_case, lease_address.clone());
 

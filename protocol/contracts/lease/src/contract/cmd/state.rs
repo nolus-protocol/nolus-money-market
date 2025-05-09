@@ -7,7 +7,7 @@ use sdk::cosmwasm_std::Timestamp;
 use crate::{
     api::{
         LeaseAssetCurrencies, LeasePaymentCurrencies,
-        query::{StateResponse, opened::OngoingTrx},
+        query::{StateResponse, opened::Status},
     },
     error::ContractError,
     finance::{LpnCurrencies, LpnCurrency},
@@ -17,15 +17,15 @@ use crate::{
 pub struct LeaseState {
     now: Timestamp,
     due_projection: Duration,
-    in_progress: Option<OngoingTrx>,
+    status: Status,
 }
 
 impl LeaseState {
-    pub fn new(now: Timestamp, due_projection: Duration, in_progress: Option<OngoingTrx>) -> Self {
+    pub fn new(now: Timestamp, due_projection: Duration, status: Status) -> Self {
         Self {
             now,
             due_projection,
-            in_progress,
+            status,
         }
     }
 }
@@ -47,7 +47,7 @@ impl WithLease for LeaseState {
     {
         Ok(StateResponse::opened_from(
             lease.state(self.now, self.due_projection),
-            self.in_progress,
+            self.status,
         ))
     }
 }

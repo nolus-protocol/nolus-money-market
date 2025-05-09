@@ -20,7 +20,7 @@ use crate::{
         LeasePaymentCurrencies, PaymentCoin,
         query::{
             StateResponse as QueryStateResponse,
-            opened::{OngoingTrx, RepayTrx},
+            opened::{OngoingTrx, RepayTrx, Status},
         },
     },
     contract::{
@@ -66,7 +66,13 @@ impl BuyLpn {
             in_progress,
         };
 
-        opened::lease_state(self.lease, Some(in_progress), now, due_projection, querier)
+        opened::lease_state(
+            self.lease,
+            Status::InProgress(in_progress),
+            now,
+            due_projection,
+            querier,
+        )
     }
 }
 

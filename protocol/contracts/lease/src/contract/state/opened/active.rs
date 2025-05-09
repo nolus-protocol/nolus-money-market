@@ -10,7 +10,7 @@ use crate::{
     api::{
         DownpaymentCoin,
         position::{ClosePolicyChange, PositionClose},
-        query::StateResponse,
+        query::{StateResponse, opened::Status},
     },
     contract::{
         Lease,
@@ -167,7 +167,7 @@ impl Handler for Active {
         due_projection: Duration,
         querier: QuerierWrapper<'_>,
     ) -> ContractResult<StateResponse> {
-        super::lease_state(self.lease, None, now, due_projection, querier)
+        super::lease_state(self.lease, Status::Idle, now, due_projection, querier)
     }
 
     fn repay(

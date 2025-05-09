@@ -1,4 +1,4 @@
-use ::lease::api::query::{ClosePolicy, StateResponse};
+use ::lease::api::query::{ClosePolicy, StateResponse, opened::Status};
 use finance::{
     coin::{Amount, Coin},
     duration::Duration,
@@ -43,7 +43,7 @@ fn manual_calculation() {
         due_projection: Duration::default(),
         close_policy: ClosePolicy::default(),
         validity: crate::block_time(&test_case),
-        in_progress: None,
+        status: Status::Idle,
     };
 
     assert_eq!(query_result, expected_result);

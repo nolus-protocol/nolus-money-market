@@ -4,10 +4,16 @@ use finance::duration::Duration;
 use sdk::cosmwasm_std::{Env, MessageInfo, QuerierWrapper, Timestamp};
 
 use crate::{
-    api::query::StateResponse,
+    api::query::{
+        StateResponse,
+        opened::{PositionCloseTrx, Status},
+    },
     contract::{
         Lease,
-        state::{Handler, Response},
+        state::{
+            Handler, Response,
+            opened::{self, close::Closable},
+        },
     },
     error::ContractResult,
 };
@@ -29,15 +35,27 @@ impl<RepayableT> SlippageAnomaly<RepayableT> {
     }
 }
 
-// RepayableT: Closable + Repayable
-impl<RepayableT> Handler for SlippageAnomaly<RepayableT> {
+impl<RepayableT> Handler for SlippageAnomaly<RepayableT>
+where
+    RepayableT: Closable,
+{
     fn state(
         self,
-        _now: Timestamp,
-        _due_projection: Duration,
-        _querier: QuerierWrapper<'_>,
+        now: Timestamp,
+        due_projection: Duration,
+        querier: QuerierWrapper<'_>,
     ) -> ContractResult<StateResponse> {
-        todo!()
+        let in_progress = self
+            .repayable
+            .transaction(&self.lease, PositionCloseTrx::Swap);
+
+        opened::lease_state(
+            self.lease,
+            Status::SlippageProtectionActivated(in_progress),
+            now,
+            due_projection,
+            querier,
+        )
     }
 
     fn heal(

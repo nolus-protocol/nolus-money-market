@@ -61,7 +61,7 @@ pub enum StateResponse {
         due_projection: Duration,
         close_policy: ClosePolicy,
         validity: Timestamp,
-        in_progress: Option<opened::OngoingTrx>,
+        status: opened::Status,
     },
     Paid {
         amount: LeaseCoin,
@@ -71,7 +71,7 @@ pub enum StateResponse {
     Liquidated(),
 }
 
-pub(crate) mod opening {
+pub mod opening {
     #[cfg(feature = "skel_testing")]
     use serde::Deserialize;
     use serde::Serialize;
@@ -89,7 +89,7 @@ pub(crate) mod opening {
     }
 }
 
-pub(crate) mod opened {
+pub mod opened {
     use finance::percent::Percent;
     #[cfg(feature = "skel_testing")]
     use serde::Deserialize;
@@ -172,6 +172,18 @@ pub(crate) mod opened {
         TransferInFinish,
     }
 
+    #[derive(Serialize)]
+    #[cfg_attr(
+        feature = "skel_testing",
+        derive(Clone, PartialEq, Eq, Debug, Deserialize)
+    )]
+    #[serde(deny_unknown_fields, rename_all = "snake_case")]
+    pub enum Status {
+        InProgress(OngoingTrx),
+        SlippageProtectionActivated(OngoingTrx),
+        Idle,
+    }
+
     #[cfg(feature = "contract")]
     impl ClosePolicy {
         pub(crate) fn new(tp: Option<Percent>, sl: Option<Percent>) -> Self {
@@ -188,7 +200,7 @@ pub(crate) mod opened {
     }
 }
 
-pub(crate) mod paid {
+pub mod paid {
     #[cfg(feature = "skel_testing")]
     use serde::Deserialize;
     use serde::Serialize;
