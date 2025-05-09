@@ -4,7 +4,7 @@ use admin_contract::msg::{ExecuteMsg, MigrationSpec, ProtocolContracts};
 use currencies::LeaseGroup;
 use currency::CurrencyDTO;
 use finance::{duration::Duration, percent::Percent};
-use lease::api::{DownpaymentCoin, MigrateMsg, open::PositionSpecDTO};
+use lease::api::{DownpaymentCoin, MigrateMsg, limits::MaxSlippage, open::PositionSpecDTO};
 use lpp::{msg::ExecuteMsg as LppExecuteMsg, stub::LppRef};
 use platform::{
     batch::{Batch, Emit, Emitter},
@@ -40,6 +40,12 @@ impl<'a> Leaser<'a> {
 
     pub fn customer_leases(&self, customer: Addr) -> ContractResult<HashSet<Addr>> {
         Leases::load_by_customer(self.deps.storage, customer)
+    }
+
+    pub fn max_limits(&self) -> ContractResult<MaxSlippage> {
+        Ok(MaxSlippage {
+            liquidation: Percent::from_percent(20), // TODO
+        })
     }
 
     pub fn quote(

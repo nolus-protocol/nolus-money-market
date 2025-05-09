@@ -186,13 +186,14 @@ pub fn sudo(deps: DepsMut<'_>, _env: Env, msg: SudoMsg) -> ContractResult<Respon
 pub fn query(deps: Deps<'_>, _env: Env, msg: QueryMsg) -> ContractResult<Binary> {
     match msg {
         QueryMsg::Config {} => to_json_binary(&Leaser::new(deps).config()?),
+        QueryMsg::Leases { owner } => to_json_binary(&Leaser::new(deps).customer_leases(owner)?),
+        QueryMsg::MaxSlippage {} => to_json_binary(&Leaser::new(deps).max_limits()?),
         QueryMsg::ProtocolPackageRelease {} => to_json_binary(&CURRENT_RELEASE),
         QueryMsg::Quote {
             downpayment,
             lease_asset,
             max_ltd,
         } => to_json_binary(&Leaser::new(deps).quote(downpayment, lease_asset, max_ltd)?),
-        QueryMsg::Leases { owner } => to_json_binary(&Leaser::new(deps).customer_leases(owner)?),
     }
     .map_err(Into::into)
     .inspect_err(platform_error::log(deps.api))

@@ -119,6 +119,11 @@ pub enum ForceClose {
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub enum QueryMsg {
     Config {},
+    Leases {
+        owner: Addr,
+    },
+    /// Implementation of [lease::api::limits::PositionLimits::MaxSlippage]
+    MaxSlippage {},
     /// Implementation of [versioning::query::ProtocolPackage::Release]
     ProtocolPackageRelease {},
     Quote {
@@ -127,9 +132,6 @@ pub enum QueryMsg {
         // TODO get rid of the default-ness
         #[serde(default)]
         max_ltd: Option<Percent>,
-    },
-    Leases {
-        owner: Addr,
     },
 }
 
@@ -152,7 +154,7 @@ pub struct QuoteResponse {
 
 #[cfg(all(feature = "internal.test.testing", test))]
 mod test {
-    use lease::api::FinalizerExecuteMsg;
+    use lease::api::{FinalizerExecuteMsg, limits::PositionLimits};
     use platform::tests as platform_tests;
     use sdk::cosmwasm_std::Addr;
 
@@ -169,6 +171,14 @@ mod test {
                 customer: customer.clone()
             }),
             platform_tests::ser_de(&ExecuteMsg::FinalizeLease { customer }),
+        );
+    }
+
+    #[test]
+    fn max_slippage_api_match() {
+        assert_eq!(
+            Ok(PositionLimits::MaxSlippage {}),
+            platform_tests::ser_de(&QueryMsg::MaxSlippage {}),
         );
     }
 
