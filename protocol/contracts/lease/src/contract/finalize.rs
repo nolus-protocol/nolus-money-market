@@ -6,6 +6,7 @@ use sdk::cosmwasm_std::{Addr, QuerierWrapper};
 use crate::{
     api::{
         FinalizerExecuteMsg,
+        authz::AccessCheck,
         limits::{MaxSlippage, PositionLimits},
     },
     error::{ContractError, ContractResult},
@@ -41,5 +42,16 @@ impl LeasesRef {
         querier
             .query_wasm_smart(self.addr.clone(), &query)
             .map_err(ContractError::PositionLimitsQuery)
+    }
+
+    pub(super) fn check_assess(
+        &self,
+        caller: Addr,
+        querier: QuerierWrapper<'_>,
+    ) -> ContractResult<()> {
+        let query = AccessCheck::Heal { by: caller };
+        querier
+            .query_wasm_smart(self.addr.clone(), &query)
+            .map_err(ContractError::CheckAccessQuery)
     }
 }

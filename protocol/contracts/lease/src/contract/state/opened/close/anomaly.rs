@@ -12,7 +12,7 @@ use crate::{
         Lease,
         state::{
             Handler, Response,
-            opened::{self, close::Closable},
+            opened::{self, active::Active, close::Closable},
         },
     },
     error::ContractResult,
@@ -60,10 +60,13 @@ where
 
     fn heal(
         self,
-        _querier: QuerierWrapper<'_>,
-        _env: Env,
-        _info: MessageInfo,
+        querier: QuerierWrapper<'_>,
+        env: Env,
+        info: MessageInfo,
     ) -> ContractResult<Response> {
-        todo!("TODO check for access permission, and then Lease::check_close_policy()")
+        self.lease
+            .leases
+            .check_assess(info.sender, querier)
+            .and_then(|()| Active::new(self.lease).assess_close_status(querier, &env))
     }
 }

@@ -10,6 +10,7 @@ use sdk::cosmwasm_std::Addr;
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub enum AccessCheck {
     /// a `heal` on a lease at certain states is tried by the given user
+    #[serde(rename = "check_heal_access")] // provide more meaningfull name on the wire
     Heal { by: Addr },
 }
 

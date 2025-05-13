@@ -69,36 +69,12 @@ impl Active {
         }
     }
 
-    fn try_on_price_alarm(
+    // Access permission check should already have been done!
+    pub(super) fn assess_close_status(
         self,
         querier: QuerierWrapper<'_>,
         env: &Env,
-        info: MessageInfo,
     ) -> ContractResult<Response> {
-        // TODO ref. the TODO in try_on_time_alarm
-        if !self.lease.lease.oracle.owned_by(&info.sender) {
-            return Err(ContractError::Unauthorized(
-                access_control::error::Error::Unauthorized {},
-            ));
-        }
-
-        self.try_on_alarm(querier, env)
-    }
-
-    fn try_on_time_alarm(
-        self,
-        querier: QuerierWrapper<'_>,
-        env: &Env,
-        info: MessageInfo,
-    ) -> ContractResult<Response> {
-        // TODO define a trait 'RestrictedResource' with 'fn owner(&Addr) -> bool'
-        // and move this check to the 'access_control' package
-        if !self.lease.lease.time_alarms.owned_by(&info.sender) {
-            return Err(ContractError::Unauthorized(
-                access_control::error::Error::Unauthorized {},
-            ));
-        }
-
         self.try_on_alarm(querier, env)
     }
 
@@ -227,7 +203,15 @@ impl Handler for Active {
         env: Env,
         info: MessageInfo,
     ) -> ContractResult<Response> {
-        self.try_on_time_alarm(querier, &env, info)
+        // TODO define a trait 'RestrictedResource' with 'fn owner(&Addr) -> bool'
+        // and move this check to the 'access_control' package
+        if !self.lease.lease.time_alarms.owned_by(&info.sender) {
+            return Err(ContractError::Unauthorized(
+                access_control::error::Error::Unauthorized {},
+            ));
+        }
+
+        self.try_on_alarm(querier, &env)
     }
 
     fn on_price_alarm(
@@ -236,7 +220,14 @@ impl Handler for Active {
         env: Env,
         info: MessageInfo,
     ) -> ContractResult<Response> {
-        self.try_on_price_alarm(querier, &env, info)
+        // TODO ref. the TODO in try_on_time_alarm
+        if !self.lease.lease.oracle.owned_by(&info.sender) {
+            return Err(ContractError::Unauthorized(
+                access_control::error::Error::Unauthorized {},
+            ));
+        }
+
+        self.try_on_alarm(querier, &env)
     }
 
     fn heal(

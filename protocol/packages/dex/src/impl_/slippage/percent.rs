@@ -70,7 +70,7 @@ where
             _in_g: PhantomData<InG>,
         }
 
-        impl<'querier, InG, OutC, OutG> WithCoin<InG> for InCoinResolve<'querier, InG, OutC, OutG>
+        impl<InG, OutC, OutG> WithCoin<InG> for InCoinResolve<'_, InG, OutC, OutG>
         where
             InG: Group,
             OutC: CurrencyDef,

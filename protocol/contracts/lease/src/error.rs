@@ -80,6 +80,9 @@ pub enum ContractError {
 
     #[error("[Lease] Failed to query Position Limits")]
     PositionLimitsQuery(StdError),
+
+    #[error("[Lease] Failed to query Access Check")]
+    CheckAccessQuery(StdError),
 }
 
 impl ContractError {

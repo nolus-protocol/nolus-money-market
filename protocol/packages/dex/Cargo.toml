@@ -13,7 +13,7 @@ combinations = [
 ]
 
 [features]
-impl = ["dep:oracle-platform", "dep:timealarms"]
+impl = ["dep:oracle-platform", "oracle/stub_price", "dep:timealarms"]
 migration = []
 testing = []
 
