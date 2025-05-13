@@ -9,9 +9,9 @@ pub use self::{
     error::Result as DexResult,
     ica_connectee::IcaConnectee,
     impl_::{
-        AcceptAnyNonZeroSwap, IcaConnector, StartLocalLocalState, StartLocalRemoteState,
-        StartTransferInState, StateLocalOut, StateRemoteOut, TransferOut, start_local_local,
-        start_local_remote, start_remote_local,
+        AcceptAnyNonZeroSwap, IcaConnector, MaxSlippage, StartLocalLocalState,
+        StartLocalRemoteState, StartTransferInState, StateLocalOut, StateRemoteOut, TransferOut,
+        start_local_local, start_local_remote, start_remote_local,
     },
     resp_delivery::ForwardToInner,
     response::{ContinueResult, Handler, Response, Result},

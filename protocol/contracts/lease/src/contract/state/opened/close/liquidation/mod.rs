@@ -1,19 +1,22 @@
+use dex::MaxSlippage;
 use platform::message::Response as MessageResponse;
 use sdk::cosmwasm_std::{Env, QuerierWrapper};
 
 use crate::{
-    api::query::opened::Cause as ApiCause,
+    api::{LeaseAssetCurrencies, query::opened::Cause as ApiCause},
     contract::{Lease, cmd::LiquidationDTO, state::Response},
     error::ContractResult,
+    finance::{LpnCurrencies, LpnCurrency},
     position::Cause,
 };
 
-use super::{ClosePositionTask, anomaly::MaxSlippage};
+use super::ClosePositionTask;
 
 pub mod full;
 pub mod partial;
 
-type Calculator = MaxSlippage;
+type Calculator = MaxSlippage<LeaseAssetCurrencies, LpnCurrency, LpnCurrencies>;
+impl super::Calculator for Calculator {}
 
 pub(in crate::contract::state) fn start(
     lease: Lease,
@@ -25,7 +28,7 @@ pub(in crate::contract::state) fn start(
     lease
         .leases
         .max_slippage(querier)
-        .map(|max_slippage| Calculator::with(max_slippage.liquidation))
+        .map(|max_slippage| Calculator::with(max_slippage.liquidation, lease.lease.oracle.clone()))
         .and_then(|slippage_calc| match liquidation {
             LiquidationDTO::Partial(spec) => {
                 spec.start(lease, curr_request_response, slippage_calc, env, querier)

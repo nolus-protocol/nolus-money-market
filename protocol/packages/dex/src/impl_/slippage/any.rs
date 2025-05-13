@@ -4,8 +4,9 @@ use serde::{Deserialize, Serialize};
 
 use currency::{CurrencyDef, Group};
 use finance::coin::{Amount, Coin, CoinDTO};
+use sdk::cosmwasm_std::QuerierWrapper;
 
-use crate::SlippageCalculator;
+use crate::{SlippageCalculator, error::Result};
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Eq)]
 #[serde(bound(serialize = "", deserialize = "",))]
@@ -34,9 +35,13 @@ where
 {
     type OutC = OutC;
 
-    fn min_output(&self, _input: &CoinDTO<InG>) -> Coin<Self::OutC> {
+    fn min_output(
+        &self,
+        _input: &CoinDTO<InG>,
+        _querier: QuerierWrapper<'_>,
+    ) -> Result<Coin<Self::OutC>> {
         // before, it was None on Astroport and "1" on Osmosis.
         const MIN_AMOUNT_OUT: Amount = 1;
-        const { Coin::new(MIN_AMOUNT_OUT) }
+        const { Ok(Coin::new(MIN_AMOUNT_OUT)) }
     }
 }

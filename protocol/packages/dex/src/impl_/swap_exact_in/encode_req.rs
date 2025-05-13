@@ -52,7 +52,10 @@ where
             swap_trx,
             |mut trx, coin_in| {
                 filtered = true;
-                trx.swap_exact_in::<_, _, SwapClient>(&coin_in, &calc.min_output(&coin_in).into())
+                calc.min_output(&coin_in, self.querier)
+                    .and_then(|min_output| {
+                        trx.swap_exact_in::<_, _, SwapClient>(&coin_in, &min_output.into())
+                    })
                     .map(|()| trx)
             },
         )

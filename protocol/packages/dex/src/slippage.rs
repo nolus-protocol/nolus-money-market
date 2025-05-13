@@ -1,7 +1,8 @@
 use currency::{CurrencyDef, Group, MemberOf};
 use finance::coin::{Coin, CoinDTO};
+use sdk::cosmwasm_std::QuerierWrapper;
 
-use crate::SwapTask as SwapTaskT;
+use crate::{SwapTask as SwapTaskT, error::Result};
 
 /// Execute logic with a [`Calculator`]
 ///
@@ -35,5 +36,9 @@ where
     ///
     /// An anomaly is triggered if the output amount cannot be satisfied. The
     /// workflow will continue as per the result of [`Policy::on_anomaly`].
-    fn min_output(&self, input: &CoinDTO<G>) -> Coin<Self::OutC>;
+    fn min_output(
+        &self,
+        input: &CoinDTO<G>,
+        querier: QuerierWrapper<'_>,
+    ) -> Result<Coin<Self::OutC>>;
 }

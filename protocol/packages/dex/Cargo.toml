@@ -13,7 +13,7 @@ combinations = [
 ]
 
 [features]
-impl = ["dep:timealarms"]
+impl = ["dep:oracle-platform", "dep:timealarms"]
 migration = []
 testing = []
 
@@ -21,6 +21,7 @@ testing = []
 currency = { workspace = true }
 finance = { workspace = true }
 oracle = { workspace = true, features = ["stub_swap"] }
+oracle-platform = { workspace = true, optional = true }
 timealarms = { workspace = true, optional = true, features = ["stub"] }
 platform = { workspace = true }
 sdk = { workspace = true }
