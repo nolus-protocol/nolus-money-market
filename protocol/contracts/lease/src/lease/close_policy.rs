@@ -6,7 +6,7 @@ use sdk::cosmwasm_std::Timestamp;
 
 use crate::{
     api::{LeaseAssetCurrencies, LeasePaymentCurrencies, position::ClosePolicyChange},
-    error::ContractResult,
+    error::{ContractError, ContractResult},
     finance::{LpnCurrencies, LpnCurrency, Price},
     position::{CloseStrategy, Debt, Liquidation, Steadiness},
 };
@@ -56,7 +56,9 @@ where
     }
 
     pub(super) fn price_of_lease_currency(&self) -> ContractResult<Price<Asset>> {
-        self.oracle.price_of::<Asset>().map_err(Into::into)
+        self.oracle
+            .price_of::<Asset>()
+            .map_err(ContractError::FetchOraclePrice)
     }
 }
 

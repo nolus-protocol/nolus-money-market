@@ -6,7 +6,7 @@ use finance::{
     percent::Percent,
 };
 use lpp::stub::lender::{LppLender as LppLenderTrait, WithLppLender};
-use oracle::stub::convert;
+use oracle::stub;
 use platform::{bank, batch::Batch};
 use sdk::cosmwasm_std::{Coin as CwCoin, QuerierWrapper, Reply};
 
@@ -89,7 +89,7 @@ impl WithCoin<LeasePaymentCurrencies> for DownpaymentHandler<'_> {
         C: CurrencyDef,
         C::Group: MemberOf<LeasePaymentCurrencies>,
     {
-        let downpayment_lpn = convert::to_quote::<
+        let downpayment_lpn = stub::to_quote::<
             C,
             LeasePaymentCurrencies,
             LpnCurrency,

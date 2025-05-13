@@ -7,7 +7,7 @@ use sdk::cosmwasm_std::Timestamp;
 
 use crate::{
     api::{LeaseAssetCurrencies, LeasePaymentCurrencies},
-    error::ContractResult,
+    error::{ContractError, ContractResult},
     finance::{LpnCoin, LpnCurrencies, LpnCurrency},
     lease::Lease,
     loan::RepayReceipt,
@@ -26,7 +26,7 @@ where
     {
         self.oracle
             .price_of::<PaymentC>()
-            .map_err(Into::into)
+            .map_err(ContractError::FetchOraclePrice)
             .and_then(|price| {
                 self.position
                     .validate_payment(payment, price)

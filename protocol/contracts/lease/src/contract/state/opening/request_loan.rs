@@ -16,7 +16,7 @@ use crate::{
         finalize::LeasesRef,
         state::{Handler, Response},
     },
-    error::ContractResult,
+    error::{ContractError, ContractResult},
     event::Type,
     finance::{LppRef, OracleRef},
 };
@@ -38,7 +38,8 @@ impl RequestLoan {
     ) -> ContractResult<(Batch, Self)> {
         let lpp = LppRef::try_new(spec.form.loan.lpp.clone(), querier)?;
 
-        let oracle = OracleRef::try_from_base(spec.form.market_price_oracle.clone(), querier)?;
+        let oracle = OracleRef::try_from_base(spec.form.market_price_oracle.clone(), querier)
+            .map_err(ContractError::CrateOracleRef)?;
 
         let timealarms = TimeAlarmsRef::new(spec.form.time_alarms.clone(), querier)?;
 

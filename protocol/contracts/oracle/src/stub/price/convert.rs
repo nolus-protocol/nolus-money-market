@@ -1,13 +1,11 @@
-use std::marker::PhantomData;
+use std::{marker::PhantomData, result::Result as StdResult};
 
 use currency::{Currency, CurrencyDef, Group, MemberOf};
 use finance::coin::Coin;
+use oracle_platform::{Oracle, OracleRef, WithOracle, error::Error as PlatformError};
 use sdk::cosmwasm_std::QuerierWrapper;
 
-use oracle_platform::{
-    Oracle, OracleRef, WithOracle,
-    error::{Error, Result},
-};
+use super::{Error, Result};
 
 pub fn from_quote<QuoteC, QuoteG, OutC, OutG>(
     oracle_ref: OracleRef<QuoteC, QuoteG>,
@@ -48,9 +46,9 @@ where
         type G = OutG;
 
         type Output = Coin<OutC>;
-        type Error = Error;
+        type Error = PlatformError;
 
-        fn exec<OracleImpl>(self, oracle: OracleImpl) -> Result<Self::Output>
+        fn exec<OracleImpl>(self, oracle: OracleImpl) -> StdResult<Self::Output, Self::Error>
         where
             OracleImpl: Oracle<OutG, QuoteC = QuoteC, QuoteG = QuoteG>,
         {
@@ -62,15 +60,17 @@ where
         }
     }
 
-    oracle_ref.execute_as_oracle(
-        PriceConvert {
-            in_amount,
-            in_group: PhantomData::<QuoteG>,
-            _out: PhantomData::<OutC>,
-            _out_group: PhantomData::<OutG>,
-        },
-        querier,
-    )
+    oracle_ref
+        .execute_as_oracle(
+            PriceConvert {
+                in_amount,
+                in_group: PhantomData::<QuoteG>,
+                _out: PhantomData::<OutC>,
+                _out_group: PhantomData::<OutG>,
+            },
+            querier,
+        )
+        .map_err(Error::FromQuoteConvert)
 }
 
 pub fn to_quote<InC, InG, QuoteC, QuoteG>(
@@ -111,9 +111,9 @@ where
         type G = InG;
 
         type Output = Coin<QuoteC>;
-        type Error = Error;
+        type Error = PlatformError;
 
-        fn exec<OracleImpl>(self, oracle: OracleImpl) -> Result<Self::Output>
+        fn exec<OracleImpl>(self, oracle: OracleImpl) -> StdResult<Self::Output, Self::Error>
         where
             OracleImpl: Oracle<Self::G, QuoteC = QuoteC, QuoteG = QuoteG>,
         {
@@ -121,13 +121,15 @@ where
         }
     }
 
-    oracle_ref.execute_as_oracle(
-        PriceConvert {
-            in_amount,
-            _in_group: PhantomData::<InG>,
-            _out: PhantomData::<QuoteC>,
-            _out_group: PhantomData::<QuoteG>,
-        },
-        querier,
-    )
+    oracle_ref
+        .execute_as_oracle(
+            PriceConvert {
+                in_amount,
+                _in_group: PhantomData::<InG>,
+                _out: PhantomData::<QuoteC>,
+                _out_group: PhantomData::<QuoteG>,
+            },
+            querier,
+        )
+        .map_err(Error::ToQuoteConvert)
 }

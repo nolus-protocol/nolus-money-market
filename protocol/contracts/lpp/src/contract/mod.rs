@@ -2,7 +2,7 @@ use std::ops::DerefMut as _;
 
 use currency::CurrencyDef;
 use finance::coin::{Coin, CoinDTO};
-use oracle::stub::convert;
+use oracle::stub;
 use oracle_platform::OracleRef;
 use serde::Serialize;
 
@@ -216,7 +216,7 @@ fn to_stable(
     total: Coin<LpnCurrency>,
     querier: QuerierWrapper<'_>,
 ) -> Result<Coin<StableCurrency>> {
-    convert::from_quote::<_, LpnCurrencies, StableCurrency, PaymentGroup>(oracle, total, querier)
+    stub::from_quote::<_, LpnCurrencies, StableCurrency, PaymentGroup>(oracle, total, querier)
         .map_err(ContractError::ConvertFromQuote)
 }
 
