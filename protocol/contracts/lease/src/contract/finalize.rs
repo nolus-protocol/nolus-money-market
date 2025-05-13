@@ -49,7 +49,7 @@ impl LeasesRef {
         caller: Addr,
         querier: QuerierWrapper<'_>,
     ) -> ContractResult<()> {
-        let query = AccessCheck::Heal { by: caller };
+        let query = AccessCheck::AnomalyResolution { by: caller };
         querier
             .query_wasm_smart(self.addr.clone(), &query)
             .map_err(ContractError::CheckAccessQuery)
