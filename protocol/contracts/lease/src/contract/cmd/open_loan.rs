@@ -17,21 +17,21 @@ use crate::{
     position::Spec as PositionSpec,
 };
 
-pub struct OpenLoanReq<'a> {
+pub struct OpenLoanReq<'querier> {
     position_spec: PositionSpecDTO,
     funds_in: Vec<CwCoin>,
     max_ltd: Option<Percent>,
     oracle: OracleRef,
-    querier: QuerierWrapper<'a>,
+    querier: QuerierWrapper<'querier>,
 }
 
-impl<'a> OpenLoanReq<'a> {
+impl<'querier> OpenLoanReq<'querier> {
     pub fn new(
         position_spec: PositionSpecDTO,
         funds_in: Vec<CwCoin>,
         max_ltd: Option<Percent>,
         oracle: OracleRef,
-        querier: QuerierWrapper<'a>,
+        querier: QuerierWrapper<'querier>,
     ) -> Self {
         Self {
             position_spec,
@@ -75,9 +75,9 @@ impl WithLppLender<LpnCurrency, LpnCurrencies> for OpenLoanReq<'_> {
     }
 }
 
-struct DownpaymentHandler<'a> {
+struct DownpaymentHandler<'querier> {
     oracle: OracleRef,
-    querier: QuerierWrapper<'a>,
+    querier: QuerierWrapper<'querier>,
 }
 impl WithCoin<LeasePaymentCurrencies> for DownpaymentHandler<'_> {
     type Output = (DownpaymentCoin, LpnCoin);
