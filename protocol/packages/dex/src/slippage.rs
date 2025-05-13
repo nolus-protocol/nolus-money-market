@@ -35,7 +35,5 @@ where
     ///
     /// An anomaly is triggered if the output amount cannot be satisfied. The
     /// workflow will continue as per the result of [`Policy::on_anomaly`].
-    fn min_output<InG>(&self, input: &CoinDTO<InG>) -> Coin<Self::OutC>
-    where
-        InG: Group + MemberOf<G>;
+    fn min_output(&self, input: &CoinDTO<G>) -> Coin<Self::OutC>;
 }

@@ -2,7 +2,7 @@ use std::marker::PhantomData;
 
 use serde::{Deserialize, Serialize};
 
-use currency::{CurrencyDef, Group, MemberOf};
+use currency::{CurrencyDef, Group};
 use finance::coin::{Amount, Coin, CoinDTO};
 
 use crate::SlippageCalculator;
@@ -34,10 +34,7 @@ where
 {
     type OutC = OutC;
 
-    fn min_output<G>(&self, _input: &CoinDTO<G>) -> Coin<Self::OutC>
-    where
-        G: Group + MemberOf<InG>,
-    {
+    fn min_output(&self, _input: &CoinDTO<InG>) -> Coin<Self::OutC> {
         // before, it was None on Astroport and "1" on Osmosis.
         const MIN_AMOUNT_OUT: Amount = 1;
         const { Coin::new(MIN_AMOUNT_OUT) }

@@ -1,4 +1,3 @@
-use currency::{Group, MemberOf};
 use dex::SlippageCalculator;
 use finance::{
     coin::{Coin, CoinDTO},
@@ -26,10 +25,7 @@ impl MaxSlippage {
 impl SlippageCalculator<LeaseAssetCurrencies> for MaxSlippage {
     type OutC = LpnCurrency;
 
-    fn min_output<G>(&self, _input: &CoinDTO<G>) -> Coin<Self::OutC>
-    where
-        G: Group + MemberOf<LeaseAssetCurrencies>,
-    {
+    fn min_output(&self, _input: &CoinDTO<LeaseAssetCurrencies>) -> Coin<Self::OutC> {
         todo!("TODO use oracle_platform::convert::{{from|to}}_quote(..)")
     }
 }
