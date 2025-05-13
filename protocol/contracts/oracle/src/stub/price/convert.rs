@@ -81,7 +81,7 @@ pub fn to_quote<InC, InG, QuoteC, QuoteG>(
 where
     QuoteC: CurrencyDef,
     QuoteC::Group: MemberOf<QuoteG> + MemberOf<InG::TopG>,
-    QuoteG: Group + MemberOf<InG>,
+    QuoteG: Group,
     InC: CurrencyDef,
     InC::Group: MemberOf<InG>,
     InG: Group,
