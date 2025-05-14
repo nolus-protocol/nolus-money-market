@@ -76,13 +76,13 @@ where
     RepayableT: Closable + Repayable,
     CalculatorT: Calculator,
     Self: AnomalyHandler<Self>,
-    State: From<SlippageAnomaly<RepayableT>>,
+    State: From<SlippageAnomaly>,
 {
     pub(super) fn exit_on_anomaly(self) -> AnomalyTreatment<Self> {
         //TODO move this code into the impl of Calculator that would have access to the `max_slipage`
         //or pass it in as a fn argument
         let emitter = event::emit_slippage_anomaly(&self.lease.lease, Percent::from_percent(20)); //self.max_slippage
-        let next_state = SlippageAnomaly::new(self.lease, self.repayable);
+        let next_state = SlippageAnomaly::new(self.lease);
         AnomalyTreatment::Exit(Ok(Response::from(emitter, next_state)))
     }
 }

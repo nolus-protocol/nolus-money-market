@@ -4,15 +4,12 @@ use finance::duration::Duration;
 use sdk::cosmwasm_std::{Env, MessageInfo, QuerierWrapper, Timestamp};
 
 use crate::{
-    api::query::{
-        StateResponse,
-        opened::{PositionCloseTrx, Status},
-    },
+    api::query::{StateResponse, opened::Status},
     contract::{
         Lease,
         state::{
             Handler, Response,
-            opened::{self, active::Active, close::Closable},
+            opened::{self, active::Active},
         },
     },
     error::ContractResult,
@@ -24,34 +21,26 @@ use crate::{
 ///
 /// Only an anomaly manager may resolve that Lease.
 #[derive(Serialize, Deserialize)]
-pub(crate) struct SlippageAnomaly<RepayableT> {
+pub(crate) struct SlippageAnomaly {
     lease: Lease,
-    repayable: RepayableT,
 }
 
-impl<RepayableT> SlippageAnomaly<RepayableT> {
-    pub(in crate::contract::state) fn new(lease: Lease, repayable: RepayableT) -> Self {
-        Self { lease, repayable }
+impl SlippageAnomaly {
+    pub(in crate::contract::state) fn new(lease: Lease) -> Self {
+        Self { lease }
     }
 }
 
-impl<RepayableT> Handler for SlippageAnomaly<RepayableT>
-where
-    RepayableT: Closable,
-{
+impl Handler for SlippageAnomaly {
     fn state(
         self,
         now: Timestamp,
         due_projection: Duration,
         querier: QuerierWrapper<'_>,
     ) -> ContractResult<StateResponse> {
-        let in_progress = self
-            .repayable
-            .transaction(&self.lease, PositionCloseTrx::Swap);
-
         opened::lease_state(
             self.lease,
-            Status::SlippageProtectionActivated(in_progress),
+            Status::SlippageProtectionActivated(),
             now,
             due_projection,
             querier,
