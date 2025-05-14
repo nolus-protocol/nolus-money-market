@@ -1,4 +1,4 @@
-use dex::AcceptAnyNonZeroSwap;
+use dex::{AcceptAnyNonZeroSwap, AnomalyHandler, AnomalyTreatment};
 use platform::message::Response as MessageResponse;
 use sdk::cosmwasm_std::{Env, QuerierWrapper};
 
@@ -10,14 +10,17 @@ use crate::{
     contract::{
         Lease,
         cmd::ValidateClosePosition,
-        state::{Response, event},
+        state::{
+            Response, event,
+            opened::{close::Closable, payment::Repayable},
+        },
     },
     error::ContractResult,
     finance::LpnCurrency,
     position::CloseStrategy,
 };
 
-use super::{Calculator as CloseCalculator, task::ClosePositionTask};
+use super::{Calculator as CloseCalculator, SellAsset, task::ClosePositionTask};
 
 pub mod full;
 pub mod partial;
@@ -63,4 +66,14 @@ pub fn auto_start(
 ) -> ContractResult<Response> {
     let events = event::emit_auto_close(strategy, env, &lease.lease.addr);
     FullClose {}.start(lease, events.into(), Calculator::default(), env, querier)
+}
+
+impl<RepayableImpl> AnomalyHandler<SellAsset<RepayableImpl, Calculator>>
+    for SellAsset<RepayableImpl, Calculator>
+where
+    RepayableImpl: Closable + Repayable,
+{
+    fn on_anomaly(self) -> AnomalyTreatment<SellAsset<RepayableImpl, Calculator>> {
+        self.retry_on_anomaly()
+    }
 }

@@ -1,16 +1,23 @@
-use dex::MaxSlippage;
+use dex::{AnomalyHandler, AnomalyTreatment, MaxSlippage};
 use platform::message::Response as MessageResponse;
 use sdk::cosmwasm_std::{Env, QuerierWrapper};
 
 use crate::{
     api::{LeaseAssetCurrencies, query::opened::Cause as ApiCause},
-    contract::{Lease, cmd::LiquidationDTO, state::Response},
+    contract::{
+        Lease,
+        cmd::LiquidationDTO,
+        state::{
+            Response,
+            opened::{close::Closable, payment::Repayable},
+        },
+    },
     error::ContractResult,
     finance::{LpnCurrencies, LpnCurrency},
     position::Cause,
 };
 
-use super::task::ClosePositionTask;
+use super::{SellAsset, task::ClosePositionTask};
 
 pub mod full;
 pub mod partial;
@@ -48,5 +55,15 @@ impl From<Cause> for ApiCause {
             } => ApiCause::Liability,
             Cause::Overdue() => ApiCause::Overdue,
         }
+    }
+}
+
+impl<RepayableImpl> AnomalyHandler<SellAsset<RepayableImpl, Calculator>>
+    for SellAsset<RepayableImpl, Calculator>
+where
+    RepayableImpl: Closable + Repayable,
+{
+    fn on_anomaly(self) -> AnomalyTreatment<SellAsset<RepayableImpl, Calculator>> {
+        self.exit_on_anomaly()
     }
 }

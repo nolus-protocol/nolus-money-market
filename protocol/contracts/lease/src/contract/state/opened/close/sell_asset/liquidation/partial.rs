@@ -1,4 +1,3 @@
-use dex::AnomalyTreatment;
 use sdk::cosmwasm_std::Env;
 
 use crate::{
@@ -12,7 +11,7 @@ use crate::{
         state::{
             event::LiquidationEmitter,
             opened::{
-                close::{self, AnomalyHandler, Closable, IntoRepayable, sell_asset::SellAsset},
+                close::{self, Closable, IntoRepayable},
                 payment::{Repay, RepayAlgo},
             },
         },
@@ -63,11 +62,5 @@ impl RepayAlgo for Spec {
 
     fn emitter_fn<'liq, 'env>(&'liq self, env: &'env Env) -> Self::PaymentEmitter<'liq, 'env> {
         Self::PaymentEmitter::new(&self.cause, self.amount, env)
-    }
-}
-
-impl AnomalyHandler<SellAsset<RepayableImpl, Calculator>> for SellAsset<RepayableImpl, Calculator> {
-    fn on_anomaly(self) -> AnomalyTreatment<SellAsset<RepayableImpl, Calculator>> {
-        self.exit_on_anomaly()
     }
 }
