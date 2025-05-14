@@ -155,11 +155,13 @@ pub fn sudo(deps: DepsMut<'_>, _env: Env, msg: SudoMsg) -> ContractResult<Respon
             lease_interest_rate_margin,
             lease_position_spec,
             lease_due_period,
+            lease_max_slippage,
         } => leaser::try_configure(
             deps.storage,
             lease_interest_rate_margin,
             lease_position_spec,
             lease_due_period,
+            lease_max_slippage,
         ),
         SudoMsg::CloseProtocol {
             new_lease_code_id,

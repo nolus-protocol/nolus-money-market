@@ -96,6 +96,7 @@ pub enum SudoMsg {
         lease_interest_rate_margin: Percent,
         lease_position_spec: PositionSpecDTO,
         lease_due_period: Duration,
+        lease_max_slippage: MaxSlippage,
     },
     CloseProtocol {
         // Since this is an external system API we should not use [Code].

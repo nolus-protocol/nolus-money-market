@@ -65,6 +65,7 @@ impl Config {
         lease_interest_rate_margin: Percent,
         lease_position_spec: PositionSpecDTO,
         lease_due_period: Duration,
+        lease_max_slippage: MaxSlippage,
     ) -> ContractResult<()> {
         Self::STORAGE
             .update(storage, |c| {
@@ -72,6 +73,7 @@ impl Config {
                     lease_interest_rate_margin,
                     lease_position_spec,
                     lease_due_period,
+                    lease_max_slippage,
                     ..c
                 })
             })

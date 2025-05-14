@@ -4,7 +4,7 @@ use admin_contract::msg::{ExecuteMsg, MigrationSpec, ProtocolContracts};
 use currencies::LeaseGroup;
 use currency::CurrencyDTO;
 use finance::{duration::Duration, percent::Percent};
-use lease::api::{DownpaymentCoin, MigrateMsg, open::PositionSpecDTO};
+use lease::api::{DownpaymentCoin, MigrateMsg, limits::MaxSlippage, open::PositionSpecDTO};
 use lpp::{msg::ExecuteMsg as LppExecuteMsg, stub::LppRef};
 use platform::{
     batch::{Batch, Emit, Emitter},
@@ -74,12 +74,14 @@ pub(super) fn try_configure(
     lease_interest_rate_margin: Percent,
     lease_position_spec: PositionSpecDTO,
     lease_due_period: Duration,
+    lease_max_slippage: MaxSlippage,
 ) -> ContractResult<MessageResponse> {
     Config::update(
         storage,
         lease_interest_rate_margin,
         lease_position_spec,
         lease_due_period,
+        lease_max_slippage,
     )
     .map(|()| MessageResponse::default())
 }

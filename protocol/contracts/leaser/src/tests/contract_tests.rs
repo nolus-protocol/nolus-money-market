@@ -149,26 +149,36 @@ fn test_update_config() {
         Percent::from_percent(65),
         Duration::from_hours(12),
     );
+    let expected_interest_rate_margin = Percent::from_percent(5);
     let expected_position_spec = PositionSpecDTO::new(
         expected_liability,
         lpn_coin(4_211_442_000),
         lpn_coin(100_000),
     );
     let expected_due_period = Duration::from_secs(100);
+    let expected_max_slippage = MaxSlippage {
+        liquidation: Percent::from_percent(13),
+    };
 
     setup_test_case(deps.as_mut());
 
     let msg = SudoMsg::Config {
-        lease_interest_rate_margin: Percent::from_percent(5),
+        lease_interest_rate_margin: expected_interest_rate_margin,
         lease_position_spec: expected_position_spec,
         lease_due_period: expected_due_period,
+        lease_max_slippage: expected_max_slippage,
     };
 
     sudo(deps.as_mut(), testing::mock_env(), msg).unwrap();
 
     let config = query_config(deps.as_ref());
+    assert_eq!(
+        expected_interest_rate_margin,
+        config.lease_interest_rate_margin
+    );
     assert_eq!(expected_position_spec, config.lease_position_spec);
     assert_eq!(expected_due_period, config.lease_due_period);
+    assert_eq!(expected_max_slippage, config.lease_max_slippage);
 }
 
 fn open_lease_with(max_ltd: Option<Percent>) {

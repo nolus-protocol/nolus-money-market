@@ -13,8 +13,8 @@ pub enum PositionLimits {
 }
 
 /// Response of [PositionLimits::MaxSlippage] query
-#[derive(Serialize, Deserialize, PartialEq, Eq)]
-#[cfg_attr(feature = "skel_testing", derive(Clone, Debug))]
+#[derive(Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[cfg_attr(feature = "skel_testing", derive(Debug))]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub struct MaxSlippage {
     //   make sure this value is limited to 100%
