@@ -14,7 +14,10 @@ use crate::{
             Response,
             opened::{
                 active, alarm,
-                close::{Closable, customer_close, liquidation},
+                close::{
+                    Closable,
+                    sell_asset::{customer_close, liquidation},
+                },
             },
             paid,
         },

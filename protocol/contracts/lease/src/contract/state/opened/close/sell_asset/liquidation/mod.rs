@@ -10,7 +10,7 @@ use crate::{
     position::Cause,
 };
 
-use super::ClosePositionTask;
+use super::task::ClosePositionTask;
 
 pub mod full;
 pub mod partial;
@@ -18,7 +18,7 @@ pub mod partial;
 type Calculator = MaxSlippage<LeaseAssetCurrencies, LpnCurrency, LpnCurrencies>;
 impl super::Calculator for Calculator {}
 
-pub(in crate::contract::state) fn start(
+pub fn start(
     lease: Lease,
     liquidation: LiquidationDTO,
     curr_request_response: MessageResponse,

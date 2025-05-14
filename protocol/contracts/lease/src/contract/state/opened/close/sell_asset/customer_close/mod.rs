@@ -17,7 +17,7 @@ use crate::{
     position::CloseStrategy,
 };
 
-use super::{Calculator as CloseCalculator, ClosePositionTask};
+use super::{Calculator as CloseCalculator, task::ClosePositionTask};
 
 pub mod full;
 pub mod partial;
@@ -25,7 +25,7 @@ pub mod partial;
 type Calculator = AcceptAnyNonZeroSwap<LeaseAssetCurrencies, LpnCurrency>;
 impl CloseCalculator for Calculator {}
 
-pub(in super::super) fn start(
+pub fn start(
     close: PositionClose,
     lease: Lease,
     env: &Env,
@@ -55,7 +55,7 @@ pub(in super::super) fn start(
     }
 }
 
-pub(in super::super) fn auto_start(
+pub fn auto_start(
     strategy: CloseStrategy,
     lease: Lease,
     env: &Env,

@@ -14,7 +14,7 @@ use crate::{
     contract::{
         Lease,
         cmd::{CloseStatusDTO, LeaseFactory, OpenLeaseResult},
-        state::opened::{active::Active, close::liquidation},
+        state::opened::{active::Active, close::sell_asset::liquidation},
     },
     finance::ReserveRef,
     lease::with_lease_deps,

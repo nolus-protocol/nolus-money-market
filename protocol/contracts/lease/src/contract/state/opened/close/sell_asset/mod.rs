@@ -28,8 +28,9 @@ use crate::{
     contract::{
         Lease,
         state::{
-            State, SwapResult,
+            State, SwapClient, SwapResult,
             opened::{self, event, payment::Repayable},
+            resp_delivery::ForwardToDexEntry,
         },
     },
     error::ContractResult,
@@ -38,6 +39,14 @@ use crate::{
 };
 
 use super::{AnomalyHandler, Calculator, Closable, SlippageAnomaly};
+
+pub(in crate::contract::state) mod customer_close;
+pub(in crate::contract::state) mod liquidation;
+mod task;
+
+type Task<RepayableT, CalculatorT> = SellAsset<RepayableT, CalculatorT>;
+type DexState<Repayable, CalculatorT> =
+    dex::StateLocalOut<Task<Repayable, CalculatorT>, SwapClient, ForwardToDexEntry>;
 
 #[derive(Serialize, Deserialize)]
 pub(crate) struct SellAsset<RepayableT, CalculatorT> {

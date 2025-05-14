@@ -26,7 +26,7 @@ use super::Calculator;
 
 type Spec = FullLiquidationDTO;
 pub(in super::super) type RepayableImpl = Close<Spec>;
-pub(crate) type DexState = close::DexState<RepayableImpl, Calculator>;
+pub(crate) type DexState = close::sell_asset::DexState<RepayableImpl, Calculator>;
 
 impl IntoRepayable for Spec {
     type Repayable = RepayableImpl;

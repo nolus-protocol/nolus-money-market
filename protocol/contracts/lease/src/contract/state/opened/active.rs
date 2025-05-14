@@ -25,7 +25,7 @@ use crate::{
 
 use super::{
     alarm, balance,
-    close::{customer_close, liquidation},
+    close::sell_asset::{customer_close, liquidation},
     event,
     repay::{
         self,

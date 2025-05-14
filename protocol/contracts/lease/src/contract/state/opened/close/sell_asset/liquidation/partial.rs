@@ -4,14 +4,13 @@ use sdk::cosmwasm_std::Env;
 use crate::{
     api::{
         LeaseCoin,
-        position::PartialClose,
         query::opened::{OngoingTrx, PositionCloseTrx},
     },
     contract::{
         Lease,
-        cmd::PartialCloseFn,
+        cmd::{PartialCloseFn, PartialLiquidationDTO},
         state::{
-            event::PositionCloseEmitter,
+            event::LiquidationEmitter,
             opened::{
                 close::{self, AnomalyHandler, Closable, IntoRepayable, sell_asset::SellAsset},
                 payment::{Repay, RepayAlgo},
@@ -23,9 +22,9 @@ use crate::{
 
 use super::Calculator;
 
-type Spec = PartialClose;
+type Spec = PartialLiquidationDTO;
 pub(in super::super) type RepayableImpl = Repay<Spec>;
-pub(crate) type DexState = close::DexState<RepayableImpl, Calculator>;
+pub(crate) type DexState = close::sell_asset::DexState<RepayableImpl, Calculator>;
 
 impl IntoRepayable for Spec {
     type Repayable = RepayableImpl;
@@ -41,33 +40,34 @@ impl Closable for Spec {
     }
 
     fn transaction(&self, lease: &Lease, in_progress: PositionCloseTrx) -> OngoingTrx {
-        OngoingTrx::Close {
-            close: *self.amount(lease),
+        OngoingTrx::Liquidation {
+            liquidation: *self.amount(lease),
+            cause: self.cause.into(),
             in_progress,
         }
     }
 
     fn event_type(&self) -> Type {
-        Type::ClosePosition
+        Type::LiquidationSwap
     }
 }
 
 impl RepayAlgo for Spec {
     type RepayFn = PartialCloseFn;
 
-    type PaymentEmitter<'this, 'env> = PositionCloseEmitter<'env>;
+    type PaymentEmitter<'liq, 'env> = LiquidationEmitter<'liq, 'env>;
 
     fn repay_fn(&self) -> Self::RepayFn {
         Self::RepayFn::new(self.amount)
     }
 
-    fn emitter_fn<'this, 'env>(&'this self, env: &'env Env) -> Self::PaymentEmitter<'this, 'env> {
-        Self::PaymentEmitter::new(self.amount, env)
+    fn emitter_fn<'liq, 'env>(&'liq self, env: &'env Env) -> Self::PaymentEmitter<'liq, 'env> {
+        Self::PaymentEmitter::new(&self.cause, self.amount, env)
     }
 }
 
 impl AnomalyHandler<SellAsset<RepayableImpl, Calculator>> for SellAsset<RepayableImpl, Calculator> {
     fn on_anomaly(self) -> AnomalyTreatment<SellAsset<RepayableImpl, Calculator>> {
-        self.retry_on_anomaly()
+        self.exit_on_anomaly()
     }
 }

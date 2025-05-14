@@ -45,15 +45,15 @@ type OpenedActive = LeaseState<opened::active::Active>;
 
 type BuyLpn = DexState<opened::repay::buy_lpn::DexState>;
 
-type PartialLiquidation = DexState<opened::close::liquidation::partial::DexState>;
+type PartialLiquidation = DexState<opened::close::sell_asset::liquidation::partial::DexState>;
 
-type FullLiquidation = DexState<opened::close::liquidation::full::DexState>;
+type FullLiquidation = DexState<opened::close::sell_asset::liquidation::full::DexState>;
 
 type SlippageAnomaly = LeaseState<opened::close::SlippageAnomaly>;
 
-type PartialClose = DexState<opened::close::customer_close::partial::DexState>;
+type PartialClose = DexState<opened::close::sell_asset::customer_close::partial::DexState>;
 
-type FullClose = DexState<opened::close::customer_close::full::DexState>;
+type FullClose = DexState<opened::close::sell_asset::customer_close::full::DexState>;
 
 type PaidActive = LeaseState<paid::Active>;
 
@@ -142,8 +142,8 @@ mod impl_from {
         }
     }
 
-    impl From<super::opened::close::liquidation::partial::DexState> for State {
-        fn from(value: super::opened::close::liquidation::partial::DexState) -> Self {
+    impl From<super::opened::close::sell_asset::liquidation::partial::DexState> for State {
+        fn from(value: super::opened::close::sell_asset::liquidation::partial::DexState) -> Self {
             PartialLiquidation::new(value).into()
         }
     }
@@ -154,20 +154,22 @@ mod impl_from {
         }
     }
 
-    impl From<super::opened::close::liquidation::full::DexState> for State {
-        fn from(value: super::opened::close::liquidation::full::DexState) -> Self {
+    impl From<super::opened::close::sell_asset::liquidation::full::DexState> for State {
+        fn from(value: super::opened::close::sell_asset::liquidation::full::DexState) -> Self {
             FullLiquidation::new(value).into()
         }
     }
 
-    impl From<super::opened::close::customer_close::partial::DexState> for State {
-        fn from(value: super::opened::close::customer_close::partial::DexState) -> Self {
+    impl From<super::opened::close::sell_asset::customer_close::partial::DexState> for State {
+        fn from(
+            value: super::opened::close::sell_asset::customer_close::partial::DexState,
+        ) -> Self {
             PartialClose::new(value).into()
         }
     }
 
-    impl From<super::opened::close::customer_close::full::DexState> for State {
-        fn from(value: super::opened::close::customer_close::full::DexState) -> Self {
+    impl From<super::opened::close::sell_asset::customer_close::full::DexState> for State {
+        fn from(value: super::opened::close::sell_asset::customer_close::full::DexState) -> Self {
             FullClose::new(value).into()
         }
     }
