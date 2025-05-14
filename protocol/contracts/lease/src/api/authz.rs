@@ -2,6 +2,8 @@ use serde::{Deserialize, Serialize};
 
 use sdk::cosmwasm_std::Addr;
 
+/// Request for a permission check
+///
 /// The query API any contract who implements [AccessCheck] should respond to
 ///
 /// The response to any variant is [AccessGranted]
@@ -9,7 +11,7 @@ use sdk::cosmwasm_std::Addr;
 #[cfg_attr(feature = "skel_testing", derive(Debug, Deserialize, PartialEq, Eq))]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub enum AccessCheck {
-    /// a `heal` on a lease at certain states is tried by the given user
+    /// Check for a permission to user to execute a `heal` on a lease with anomaly
     // a meaningfull name on the wire
     #[serde(rename = "check_anomaly_resolution_permission")]
     AnomalyResolution { by: Addr },
