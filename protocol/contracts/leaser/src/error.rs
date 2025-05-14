@@ -9,6 +9,9 @@ pub enum ContractError {
     #[error("[Leaser] [Std] {0}")]
     Std(#[from] StdError),
 
+    #[error("[Leaser] Failed to serialize to JSON, cause: {0}")]
+    SerializeToJson(StdError),
+
     #[error("[Leaser] integer conversion {0}")]
     Conversion(#[from] TryFromIntError),
 

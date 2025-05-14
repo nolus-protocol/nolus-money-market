@@ -17,7 +17,7 @@ pub enum PositionLimits {
 #[cfg_attr(feature = "skel_testing", derive(Clone, Debug))]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub struct MaxSlippage {
-    // TODO make sure this value is limited to 100%
+    //   make sure this value is limited to 100%
     // We do not pollute the code with extra validation on deserialization
     // since the new type Percent100 is comming.
     pub liquidation: Percent,

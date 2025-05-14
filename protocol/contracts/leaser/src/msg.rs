@@ -28,6 +28,7 @@ pub struct InstantiateMsg {
     pub lease_interest_rate_margin: Percent,
     pub lease_due_period: Duration,
     pub lease_max_slippage: MaxSlippage,
+    pub lease_admin: Addr,
     pub dex: ConnectionParams,
 }
 
@@ -123,6 +124,10 @@ pub enum ForceClose {
 #[cfg_attr(feature = "testing", derive(Debug))]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub enum QueryMsg {
+    /// Implementation of [lease::api::authz::AccessCheck::AnomalyResolution]
+    CheckAnomalyResolutionPermission {
+        by: Addr,
+    },
     Config {},
     Leases {
         owner: Addr,
@@ -159,13 +164,22 @@ pub struct QuoteResponse {
 
 #[cfg(all(feature = "internal.test.testing", test))]
 mod test {
-    use lease::api::{FinalizerExecuteMsg, limits::PositionLimits};
+    use lease::api::{FinalizerExecuteMsg, authz::AccessCheck, limits::PositionLimits};
     use platform::tests as platform_tests;
     use sdk::cosmwasm_std::Addr;
 
     use crate::msg::ExecuteMsg;
 
     use super::QueryMsg;
+
+    #[test]
+    fn anomaly_resolution_api_match() {
+        let admin = Addr::unchecked("my test admin");
+        assert_eq!(
+            Ok(AccessCheck::AnomalyResolution { by: admin.clone() }),
+            platform_tests::ser_de(&QueryMsg::CheckAnomalyResolutionPermission { by: admin }),
+        );
+    }
 
     #[test]
     fn finalize_api_match() {

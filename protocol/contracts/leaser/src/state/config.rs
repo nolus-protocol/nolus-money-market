@@ -27,6 +27,7 @@ pub struct Config {
     pub lease_interest_rate_margin: Percent,
     pub lease_due_period: Duration,
     pub lease_max_slippage: MaxSlippage,
+    pub lease_admin: Addr,
     pub dex: ConnectionParams,
 }
 
@@ -46,6 +47,7 @@ impl Config {
             lease_interest_rate_margin: msg.lease_interest_rate_margin,
             lease_due_period: msg.lease_due_period,
             lease_max_slippage: msg.lease_max_slippage,
+            lease_admin: msg.lease_admin,
             dex: msg.dex,
         }
     }

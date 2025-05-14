@@ -4,7 +4,7 @@ use admin_contract::msg::{ExecuteMsg, MigrationSpec, ProtocolContracts};
 use currencies::LeaseGroup;
 use currency::CurrencyDTO;
 use finance::{duration::Duration, percent::Percent};
-use lease::api::{DownpaymentCoin, MigrateMsg, limits::MaxSlippage, open::PositionSpecDTO};
+use lease::api::{DownpaymentCoin, MigrateMsg, open::PositionSpecDTO};
 use lpp::{msg::ExecuteMsg as LppExecuteMsg, stub::LppRef};
 use platform::{
     batch::{Batch, Emit, Emitter},
@@ -21,7 +21,7 @@ use crate::{
     finance::{LpnCurrencies, LpnCurrency, OracleRef},
     lease::Release as LeaseReleaseTrait,
     migrate::{self, MigrationResult},
-    msg::{ConfigResponse, ForceClose, MaxLeases, QuoteResponse},
+    msg::{ForceClose, MaxLeases, QuoteResponse},
     result::ContractResult,
     state::{config::Config, leases::Leases},
 };
@@ -34,16 +34,12 @@ impl<'a> Leaser<'a> {
     pub fn new(deps: Deps<'a>) -> Self {
         Self { deps }
     }
-    pub fn config(&self) -> ContractResult<ConfigResponse> {
-        Config::load(self.deps.storage).map(|config| ConfigResponse { config })
+    pub fn config(&self) -> ContractResult<Config> {
+        Config::load(self.deps.storage)
     }
 
     pub fn customer_leases(&self, customer: Addr) -> ContractResult<HashSet<Addr>> {
         Leases::load_by_customer(self.deps.storage, customer)
-    }
-
-    pub fn max_slippage(&self) -> ContractResult<MaxSlippage> {
-        Config::load(self.deps.storage).map(|config| config.lease_max_slippage)
     }
 
     pub fn quote(
@@ -324,6 +320,7 @@ mod test {
             lease_max_slippage: MaxSlippage {
                 liquidation: Percent::from_percent(20),
             },
+            lease_admin: Addr::unchecked("lease_admin_XYZ"),
             dex: ConnectionParams {
                 connection_id: "conn-12".into(),
                 transfer_channel: Ics20Channel {

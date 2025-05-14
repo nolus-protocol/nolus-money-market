@@ -1,7 +1,9 @@
 use std::ops::{Deref, DerefMut};
 
+use serde::Serialize;
+
 use access_control::ContractOwnerAccess;
-use lease::api::MigrateMsg as LeaseMigrateMsg;
+use lease::api::{MigrateMsg as LeaseMigrateMsg, authz::AccessGranted};
 use platform::{
     contract::{self, Code, CodeId},
     error as platform_error,
@@ -12,7 +14,7 @@ use sdk::{
     cosmwasm_ext::Response,
     cosmwasm_std::{
         Addr, Api, Binary, Deps, DepsMut, Env, MessageInfo, QuerierWrapper, Reply, Storage,
-        entry_point, to_json_binary,
+        entry_point,
     },
 };
 use versioning::{
@@ -21,11 +23,12 @@ use versioning::{
 };
 
 use crate::{
+    authz::AnomalyResolutionPermission,
     cmd::Borrow,
     error::ContractError,
     lease::CacheFirstRelease,
     leaser::{self, Leaser},
-    msg::{ExecuteMsg, InstantiateMsg, MaxLeases, MigrateMsg, QueryMsg, SudoMsg},
+    msg::{ConfigResponse, ExecuteMsg, InstantiateMsg, MaxLeases, MigrateMsg, QueryMsg, SudoMsg},
     result::ContractResult,
     state::{config::Config, leases::Leases},
 };
@@ -185,17 +188,37 @@ pub fn sudo(deps: DepsMut<'_>, _env: Env, msg: SudoMsg) -> ContractResult<Respon
 #[entry_point]
 pub fn query(deps: Deps<'_>, _env: Env, msg: QueryMsg) -> ContractResult<Binary> {
     match msg {
-        QueryMsg::Config {} => to_json_binary(&Leaser::new(deps).config()?),
-        QueryMsg::Leases { owner } => to_json_binary(&Leaser::new(deps).customer_leases(owner)?),
-        QueryMsg::MaxSlippage {} => to_json_binary(&Leaser::new(deps).max_slippage()?),
-        QueryMsg::ProtocolPackageRelease {} => to_json_binary(&CURRENT_RELEASE),
+        QueryMsg::CheckAnomalyResolutionPermission { by: caller } => Leaser::new(deps)
+            .config()
+            .map(|ref config| AnomalyResolutionPermission::from(config).granted_to(&caller))
+            .map(|granted| {
+                if granted {
+                    AccessGranted::Yes
+                } else {
+                    AccessGranted::No
+                }
+            })
+            .and_then(serialize_to_json),
+        QueryMsg::Config {} => Leaser::new(deps)
+            .config()
+            .map(|config| ConfigResponse { config })
+            .and_then(serialize_to_json),
+        QueryMsg::Leases { owner } => Leaser::new(deps)
+            .customer_leases(owner)
+            .and_then(serialize_to_json),
+        QueryMsg::MaxSlippage {} => Leaser::new(deps)
+            .config()
+            .map(|cfg| cfg.lease_max_slippage)
+            .and_then(serialize_to_json),
+        QueryMsg::ProtocolPackageRelease {} => serialize_to_json(CURRENT_RELEASE),
         QueryMsg::Quote {
             downpayment,
             lease_asset,
             max_ltd,
-        } => to_json_binary(&Leaser::new(deps).quote(downpayment, lease_asset, max_ltd)?),
+        } => Leaser::new(deps)
+            .quote(downpayment, lease_asset, max_ltd)
+            .and_then(serialize_to_json),
     }
-    .map_err(Into::into)
     .inspect_err(platform_error::log(deps.api))
 }
 
@@ -237,7 +260,7 @@ fn validate_customer(
 fn validate_lease(lease: Addr, deps: Deps<'_>) -> ContractResult<Addr> {
     Leaser::new(deps)
         .config()
-        .map(|config| config.config.lease_code)
+        .map(|config| config.lease_code)
         .and_then(|lease_code| {
             contract::validate_code_id(deps.querier, &lease, lease_code).map_err(Into::into)
         })
@@ -267,4 +290,11 @@ fn migrate_msg(
 
 fn finalizer(env: Env) -> Addr {
     env.contract.address
+}
+
+fn serialize_to_json<Resp>(resp: Resp) -> ContractResult<Binary>
+where
+    Resp: Serialize,
+{
+    cosmwasm_std::to_json_binary(&resp).map_err(ContractError::SerializeToJson)
 }

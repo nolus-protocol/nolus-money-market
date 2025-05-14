@@ -93,6 +93,7 @@ impl Instantiator {
             lease_max_slippage: MaxSlippage {
                 liquidation: Percent::from_percent(15),
             },
+            lease_admin: testing::user("my_lease_admin"),
             time_alarms: alarms.time_alarm,
             market_price_oracle: alarms.market_price_oracle,
             dex: ConnectionParams {

@@ -37,6 +37,7 @@ const ORACLE_ADDR: &str = "oracle";
 const PROFIT_ADDR: &str = "profit";
 const RESERVE_ADDR: &str = "reserve";
 const PROTOCOLS_REGISTRY_ADDR: &str = "protocols";
+const LEASE_ADMIN: &str = "lease_admin";
 
 type TheCurrency = Lpn;
 
@@ -73,6 +74,7 @@ fn leaser_instantiate_msg(lease_code: Code, lpp: Addr) -> crate::msg::Instantiat
         lease_max_slippage: MaxSlippage {
             liquidation: Percent::from_percent(20),
         },
+        lease_admin: sdk_testing::user(LEASE_ADMIN),
         dex: dex_params(),
     }
 }
