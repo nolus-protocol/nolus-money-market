@@ -74,6 +74,6 @@ where
     RepayableImpl: Closable + Repayable,
 {
     fn on_anomaly(self) -> AnomalyTreatment<SellAsset<RepayableImpl, Calculator>> {
-        self.retry_on_anomaly()
+        AnomalyTreatment::Retry(self)
     }
 }

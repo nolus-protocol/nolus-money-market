@@ -42,6 +42,10 @@ where
             _in_g: PhantomData,
         }
     }
+
+    pub fn threshold(&self) -> Percent {
+        self.max_slippage
+    }
 }
 
 impl<InG, OutC, OutG> SlippageCalculator<InG> for MaxSlippage<InG, OutC, OutG>

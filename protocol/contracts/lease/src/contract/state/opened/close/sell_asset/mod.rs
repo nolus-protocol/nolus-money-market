@@ -2,7 +2,6 @@ use std::iter;
 
 use currency::Group;
 use oracle::stub::SwapPath;
-use platform::state_machine::Response;
 use serde::{Deserialize, Serialize};
 
 use dex::{
@@ -12,7 +11,6 @@ use dex::{
 use finance::{
     coin::{Coin, CoinDTO},
     duration::Duration,
-    percent::Percent,
 };
 use sdk::cosmwasm_std::{Env, QuerierWrapper, Timestamp};
 use timealarms::stub::TimeAlarmsRef;
@@ -28,8 +26,8 @@ use crate::{
     contract::{
         Lease,
         state::{
-            State, SwapClient, SwapResult,
-            opened::{self, event, payment::Repayable},
+            SwapClient, SwapResult,
+            opened::{self, payment::Repayable},
             resp_delivery::ForwardToDexEntry,
         },
     },
@@ -38,7 +36,7 @@ use crate::{
     finance::LpnCurrencies,
 };
 
-use super::{AnomalyHandler, Calculator, Closable, SlippageAnomaly};
+use super::{AnomalyHandler, Calculator, Closable};
 
 pub(in crate::contract::state) mod customer_close;
 pub(in crate::contract::state) mod liquidation;
@@ -66,33 +64,6 @@ impl<RepayableT, CalculatorT> SellAsset<RepayableT, CalculatorT> {
             repayable,
             slippage_calc,
         }
-    }
-}
-
-impl<RepayableT, CalculatorT> SellAsset<RepayableT, CalculatorT>
-where
-    RepayableT: Closable + Repayable,
-    CalculatorT: Calculator,
-    Self: AnomalyHandler<Self>,
-{
-    pub(super) fn retry_on_anomaly(self) -> AnomalyTreatment<Self> {
-        AnomalyTreatment::Retry(self)
-    }
-}
-
-impl<RepayableT, CalculatorT> SellAsset<RepayableT, CalculatorT>
-where
-    RepayableT: Closable + Repayable,
-    CalculatorT: Calculator,
-    Self: AnomalyHandler<Self>,
-    State: From<SlippageAnomaly>,
-{
-    pub(super) fn exit_on_anomaly(self) -> AnomalyTreatment<Self> {
-        //TODO move this code into the impl of Calculator that would have access to the `max_slipage`
-        //or pass it in as a fn argument
-        let emitter = event::emit_slippage_anomaly(&self.lease.lease, Percent::from_percent(20)); //self.max_slippage
-        let next_state = SlippageAnomaly::new(self.lease);
-        AnomalyTreatment::Exit(Ok(Response::from(emitter, next_state)))
     }
 }
 

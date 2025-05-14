@@ -9,7 +9,11 @@ use crate::{
         cmd::LiquidationDTO,
         state::{
             Response,
-            opened::{close::Closable, payment::Repayable},
+            opened::{
+                close::{Closable, SlippageAnomaly},
+                event,
+                payment::Repayable,
+            },
         },
     },
     error::ContractResult,
@@ -64,6 +68,9 @@ where
     RepayableImpl: Closable + Repayable,
 {
     fn on_anomaly(self) -> AnomalyTreatment<SellAsset<RepayableImpl, Calculator>> {
-        self.exit_on_anomaly()
+        let emitter =
+            event::emit_slippage_anomaly(&self.lease.lease, self.slippage_calc.threshold());
+        let next_state = SlippageAnomaly::new(self.lease);
+        AnomalyTreatment::Exit(Ok(Response::from(emitter, next_state)))
     }
 }
