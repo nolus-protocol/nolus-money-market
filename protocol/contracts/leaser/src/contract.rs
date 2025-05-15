@@ -23,7 +23,9 @@ use versioning::{
 };
 
 use crate::{
-    authz::{AnomalyResolutionPermission, LeasesConfigurationPermission},
+    authz::{
+        AnomalyResolutionPermission, ChangeLeaseAdminPermission, LeasesConfigurationPermission,
+    },
     cmd::Borrow,
     error::ContractError,
     lease::CacheFirstRelease,
@@ -149,6 +151,12 @@ pub fn execute(
                     migrate_msg(to_release),
                 )
             }),
+        ExecuteMsg::ChangeLeaseAdmin { new } => Leaser::new(deps.as_ref())
+            .config()
+            .and_then(|ref config| {
+                ChangeLeaseAdminPermission::from(config).check_access(&info.sender)
+            })
+            .and_then(|()| leaser::try_change_lease_admin(deps.storage, new)),
     }
     .map(response::response_only_messages)
     .inspect_err(platform_error::log(deps.api))

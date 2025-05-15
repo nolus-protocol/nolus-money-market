@@ -52,3 +52,4 @@ serde = { workspace = true, features = ["derive"] }
 
 [dev-dependencies]
 json-value = { workspace = true }
+lease = { workspace = true, features = ["skel_testing"] }

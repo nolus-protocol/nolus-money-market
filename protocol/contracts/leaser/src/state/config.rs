@@ -17,7 +17,7 @@ use crate::{
 };
 
 #[derive(Serialize, Deserialize, PartialEq, Eq)]
-#[cfg_attr(feature = "testing", derive(Clone, Debug))]
+#[cfg_attr(any(test, feature = "testing"), derive(Clone, Debug))]
 pub struct Config {
     pub lease_code: Code,
     pub lpp: Addr,
@@ -84,5 +84,48 @@ impl Config {
                 ..c
             })
         })
+    }
+
+    pub fn update_lease_admin(storage: &mut dyn Storage, new_admin: Addr) -> ContractResult<Self> {
+        Self::STORAGE.update(storage, |c| -> ContractResult<Config> {
+            Ok(Self {
+                lease_admin: new_admin,
+                ..c
+            })
+        })
+    }
+}
+
+#[cfg(all(feature = "internal.test.testing", test))]
+mod tests {
+    mod update_lease_admin {
+        use cosmwasm_std::Addr;
+        use sdk::cosmwasm_std::testing::MockStorage;
+
+        use crate::{ContractError, msg::Config, tests};
+
+        #[test]
+        fn no_config() {
+            let mut storage = MockStorage::new();
+            let new_admin = Addr::unchecked("my successor");
+            assert!(matches!(
+                Config::update_lease_admin(&mut storage, new_admin).unwrap_err(),
+                ContractError::Std(_)
+            ));
+        }
+
+        #[test]
+        fn has_config() {
+            let mut storage = MockStorage::new();
+            let mut config = tests::config();
+            config.store(&mut storage).unwrap();
+
+            let new_admin = Addr::unchecked("my successor");
+            let config_updated =
+                Config::update_lease_admin(&mut storage, new_admin.clone()).unwrap();
+            config.lease_admin = new_admin;
+            assert_eq!(config, config_updated);
+            assert_eq!(config, Config::load(&storage).unwrap());
+        }
     }
 }

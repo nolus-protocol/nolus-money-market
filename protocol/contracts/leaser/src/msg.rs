@@ -94,6 +94,11 @@ pub enum ExecuteMsg {
         to_release: ProtocolPackageReleaseId,
         max_leases: MaxLeases,
     },
+
+    /// Change the lease admin
+    ///
+    /// Only the current Lease Admin is permitted to do this
+    ChangeLeaseAdmin { new: Addr },
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Eq)]

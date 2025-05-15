@@ -160,6 +160,13 @@ where
     })
 }
 
+pub(super) fn try_change_lease_admin(
+    storage: &mut dyn Storage,
+    new: Addr,
+) -> ContractResult<MessageResponse> {
+    Config::update_lease_admin(storage, new).map(|_| MessageResponse::default())
+}
+
 fn build_response(result: MigrationResult) -> MessageResponse {
     MessageResponse::messages_with_events(result.msgs, emit_status(result.next_customer))
 }
@@ -200,11 +207,8 @@ fn emit_status(next_customer: Option<Addr>) -> Emitter {
 #[cfg(all(feature = "internal.test.testing", test))]
 mod test {
     use admin_contract::msg::{MigrationSpec, ProtocolContracts};
-    use currencies::Lpn;
-    use dex::{ConnectionParams, Ics20Channel};
-    use finance::{coin::Coin, duration::Duration, liability::Liability, percent::Percent};
     use json_value::JsonValue;
-    use lease::api::{MigrateMsg, limits::MaxSlippage, open::PositionSpecDTO};
+    use lease::api::MigrateMsg;
     use platform::{contract::Code, response};
     use sdk::cosmwasm_std::{Addr, Storage, testing::MockStorage};
     use versioning::{
@@ -214,9 +218,10 @@ mod test {
     use crate::{
         ContractError,
         lease::{Release, test::FixedRelease},
-        msg::{Config, ForceClose, InstantiateMsg, MaxLeases},
+        msg::{ForceClose, MaxLeases},
         result::ContractResult,
         state::leases::Leases,
+        tests,
     };
 
     const MAX_LEASES: MaxLeases = 100_000;
@@ -225,9 +230,7 @@ mod test {
     #[test]
     fn close_empty_protocol() {
         let mut store = MockStorage::default();
-        Config::new(Code::unchecked(10), dummy_instantiate_msg())
-            .store(&mut store)
-            .unwrap();
+        tests::config().store(&mut store).unwrap();
         let resp = super::try_close_leases(
             &mut store,
             dummy_release(),
@@ -249,9 +252,7 @@ mod test {
     #[test]
     fn close_non_empty_protocol() {
         let mut store = MockStorage::default();
-        Config::new(Code::unchecked(10), dummy_instantiate_msg())
-            .store(&mut store)
-            .unwrap();
+        tests::config().store(&mut store).unwrap();
         let customer = Addr::unchecked("CustomerA");
         let lease = Addr::unchecked("Lease1");
         Leases::cache_open_req(&mut store, &customer).expect("cache the customer should succeed");
@@ -283,44 +284,6 @@ mod test {
             update_lpp_update_reserve_migrate_legacy_leases,
             cw_resp.messages.len()
         );
-    }
-
-    fn dummy_instantiate_msg() -> InstantiateMsg {
-        InstantiateMsg {
-            lease_code: 10u16.into(),
-            lpp: Addr::unchecked("LPP"),
-            profit: Addr::unchecked("Profit"),
-            reserve: Addr::unchecked("reserve"),
-            time_alarms: Addr::unchecked("time alarms"),
-            market_price_oracle: Addr::unchecked("oracle"),
-            protocols_registry: Addr::unchecked("protocols"),
-            lease_position_spec: PositionSpecDTO {
-                liability: Liability::new(
-                    Percent::from_percent(10),
-                    Percent::from_percent(65),
-                    Percent::from_percent(72),
-                    Percent::from_percent(74),
-                    Percent::from_percent(76),
-                    Percent::from_percent(80),
-                    Duration::from_hours(12),
-                ),
-                min_asset: Coin::<Lpn>::from(120_000).into(),
-                min_transaction: Coin::<Lpn>::from(12_000).into(),
-            },
-            lease_interest_rate_margin: Percent::from_percent(3),
-            lease_due_period: Duration::from_days(14),
-            lease_max_slippage: MaxSlippage {
-                liquidation: Percent::from_percent(20),
-            },
-            lease_admin: Addr::unchecked("lease_admin_XYZ"),
-            dex: ConnectionParams {
-                connection_id: "conn-12".into(),
-                transfer_channel: Ics20Channel {
-                    local_endpoint: "chan-1".into(),
-                    remote_endpoint: "chan-13".into(),
-                },
-            },
-        }
     }
 
     fn dummy_spec() -> ProtocolContracts<MigrationSpec> {

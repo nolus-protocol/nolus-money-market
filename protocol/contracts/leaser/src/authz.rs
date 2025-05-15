@@ -3,6 +3,7 @@ use sdk::cosmwasm_std::Addr;
 use crate::{ContractError, msg::Config, result::ContractResult};
 
 pub type AnomalyResolutionPermission<'config> = LeaseAdminOnly<'config>;
+pub type ChangeLeaseAdminPermission<'config> = LeaseAdminOnly<'config>;
 pub type LeasesConfigurationPermission<'config> = LeaseAdminOnly<'config>;
 
 pub struct LeaseAdminOnly<'config>(&'config Config);
@@ -24,5 +25,32 @@ impl<'config> LeaseAdminOnly<'config> {
                 access_control::error::Error::Unauthorized {},
             ))
         }
+    }
+}
+
+#[cfg(all(feature = "internal.test.testing", test))]
+mod tests {
+    use sdk::cosmwasm_std::Addr;
+
+    use crate::{ContractError, authz::LeaseAdminOnly, tests};
+
+    #[test]
+    fn check_fail() {
+        let config = tests::config();
+        let access = LeaseAdminOnly::from(&config);
+        let not_authorized = Addr::unchecked("hacker");
+
+        assert!(matches!(
+            access.check_access(&not_authorized).unwrap_err(),
+            ContractError::Unauthorized(_)
+        ));
+    }
+
+    #[test]
+    fn check_pass() {
+        let config = tests::config();
+        let access = LeaseAdminOnly::from(&config);
+
+        assert_eq!(Ok(()), access.check_access(&config.lease_admin));
     }
 }
