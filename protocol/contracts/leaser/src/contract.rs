@@ -166,6 +166,7 @@ pub fn execute(
 pub fn sudo(deps: DepsMut<'_>, _env: Env, msg: SudoMsg) -> ContractResult<Response> {
     match msg {
         SudoMsg::Config(new_config) => leaser::try_configure(deps.storage, new_config),
+        SudoMsg::ChangeLeaseAdmin { new } => leaser::try_change_lease_admin(deps.storage, new),
         SudoMsg::CloseProtocol {
             new_lease_code_id,
             migration_spec,

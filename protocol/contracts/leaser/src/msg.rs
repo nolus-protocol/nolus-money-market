@@ -106,6 +106,12 @@ pub enum ExecuteMsg {
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub enum SudoMsg {
     Config(NewConfig),
+
+    /// Change the lease admin
+    ChangeLeaseAdmin {
+        new: Addr,
+    },
+
     CloseProtocol {
         // Since this is an external system API we should not use [Code].
         new_lease_code_id: Uint64,
