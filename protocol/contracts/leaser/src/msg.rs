@@ -49,10 +49,17 @@ pub enum ExecuteMsg {
         #[serde(default)]
         max_ltd: Option<Percent>,
     },
+
+    /// Configure all lease related parameters
+    ///
+    /// Only the Lease Admin is permitted to do this
+    ConfigLeases(NewConfig),
+
     /// A callback from a lease that it has just entered a final state
     ///
     /// It matches the `lease::api::FinalizerExecuteMsg::FinalizeLease`.
     FinalizeLease { customer: Addr },
+
     /// Start a Lease migration
     ///
     /// The consumed gas is a limitaton factor for the maximum lease instances that
@@ -72,6 +79,7 @@ pub enum ExecuteMsg {
         to_release: ProtocolPackageReleaseId,
         max_leases: MaxLeases,
     },
+
     /// Continue a Lease migration
     ///
     /// It migrates the next batch of up to `max_leases` number of Lease instances
@@ -92,12 +100,7 @@ pub enum ExecuteMsg {
 #[cfg_attr(feature = "testing", derive(Debug))]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub enum SudoMsg {
-    Config {
-        lease_interest_rate_margin: Percent,
-        lease_position_spec: PositionSpecDTO,
-        lease_due_period: Duration,
-        lease_max_slippage: MaxSlippage,
-    },
+    Config(NewConfig),
     CloseProtocol {
         // Since this is an external system API we should not use [Code].
         new_lease_code_id: Uint64,
@@ -110,6 +113,16 @@ pub enum SudoMsg {
         #[serde(default)]
         force: ForceClose,
     },
+}
+
+#[derive(Serialize, Deserialize, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "testing", derive(Debug))]
+#[serde(deny_unknown_fields, rename_all = "snake_case")]
+pub struct NewConfig {
+    pub lease_interest_rate_margin: Percent,
+    pub lease_position_spec: PositionSpecDTO,
+    pub lease_due_period: Duration,
+    pub lease_max_slippage: MaxSlippage,
 }
 
 #[derive(Serialize, Deserialize, Default, Clone, PartialEq, Eq)]
@@ -165,11 +178,21 @@ pub struct QuoteResponse {
 
 #[cfg(all(feature = "internal.test.testing", test))]
 mod test {
-    use lease::api::{FinalizerExecuteMsg, authz::AccessCheck, limits::PositionLimits};
+    use finance::{duration::Duration, percent::Percent};
+    use lease::api::{
+        FinalizerExecuteMsg,
+        authz::AccessCheck,
+        limits::{MaxSlippage, PositionLimits},
+        open::PositionSpecDTO,
+    };
     use platform::tests as platform_tests;
     use sdk::cosmwasm_std::Addr;
+    use serde::Deserialize;
 
-    use crate::msg::ExecuteMsg;
+    use crate::{
+        msg::{ExecuteMsg, SudoMsg},
+        tests,
+    };
 
     use super::QueryMsg;
 
@@ -211,5 +234,31 @@ mod test {
 
         platform_tests::ser_de::<_, QueryMsg>(&versioning::query::PlatformPackage::Release {})
             .unwrap_err();
+    }
+
+    #[test]
+    fn new_config_is_transparrent() {
+        #[derive(Deserialize, PartialEq, Eq, Debug)]
+        #[serde(deny_unknown_fields, rename_all = "snake_case")]
+        pub enum ConfigInlineInSudoMsg {
+            Config {
+                lease_interest_rate_margin: Percent,
+                lease_position_spec: PositionSpecDTO,
+                lease_due_period: Duration,
+                lease_max_slippage: MaxSlippage,
+            },
+        }
+
+        let new_config = tests::new_config();
+
+        assert_eq!(
+            Ok(ConfigInlineInSudoMsg::Config {
+                lease_interest_rate_margin: new_config.lease_interest_rate_margin,
+                lease_position_spec: new_config.lease_position_spec,
+                lease_due_period: new_config.lease_due_period,
+                lease_max_slippage: new_config.lease_max_slippage
+            }),
+            platform_tests::ser_de(&SudoMsg::Config(new_config)),
+        );
     }
 }

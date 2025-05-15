@@ -6,13 +6,8 @@ use cosmwasm_std::{
 use currencies::{LeaseGroup, Lpn, testing::LeaseC1};
 use currency::{CurrencyDTO, CurrencyDef as _};
 use dex::{ConnectionParams, Ics20Channel};
-use finance::{
-    coin::{Amount, Coin},
-    duration::Duration,
-    liability::Liability,
-    percent::Percent,
-};
-use lease::api::{LpnCoinDTO, limits::MaxSlippage, open::PositionSpecDTO};
+use finance::{duration::Duration, liability::Liability, percent::Percent};
+use lease::api::{limits::MaxSlippage, open::PositionSpecDTO};
 use platform::contract::{Code, CodeId};
 
 use sdk::{
@@ -26,8 +21,9 @@ use sdk::{
 use crate::{
     cmd::Borrow,
     contract::{execute, instantiate, query, sudo},
-    msg::{ConfigResponse, ExecuteMsg, QueryMsg, SudoMsg},
+    msg::{ConfigResponse, ExecuteMsg, NewConfig, QueryMsg, SudoMsg},
     state::config::Config,
+    tests,
 };
 
 const CREATOR: &str = "creator";
@@ -38,8 +34,6 @@ const PROFIT_ADDR: &str = "profit";
 const RESERVE_ADDR: &str = "reserve";
 const PROTOCOLS_REGISTRY_ADDR: &str = "protocols";
 const LEASE_ADMIN: &str = "lease_admin";
-
-type TheCurrency = Lpn;
 
 fn lease_currency() -> CurrencyDTO<LeaseGroup> {
     currency::dto::<LeaseC1, _>()
@@ -66,8 +60,8 @@ fn leaser_instantiate_msg(lease_code: Code, lpp: Addr) -> crate::msg::Instantiat
                 Percent::from_percent(80),
                 Duration::from_hours(1),
             ),
-            lpn_coin(1000),
-            lpn_coin(10),
+            tests::lpn_coin(1000),
+            tests::lpn_coin(10),
         ),
         lease_interest_rate_margin: MARGIN_INTEREST_RATE,
         lease_due_period: Duration::from_days(90),
@@ -89,7 +83,7 @@ fn owner() -> MessageInfo {
 fn customer() -> MessageInfo {
     MessageInfo {
         sender: sdk_testing::user("addr0000"),
-        funds: coins(2, TheCurrency::dex()),
+        funds: coins(2, Lpn::dex()),
     }
 }
 
@@ -140,45 +134,23 @@ fn proper_initialization() {
 fn test_update_config() {
     let mut deps = deps();
 
-    let expected_liability = Liability::new(
-        Percent::from_percent(55),
-        Percent::from_percent(60),
-        Percent::from_percent(61),
-        Percent::from_percent(62),
-        Percent::from_percent(64),
-        Percent::from_percent(65),
-        Duration::from_hours(12),
-    );
-    let expected_interest_rate_margin = Percent::from_percent(5);
-    let expected_position_spec = PositionSpecDTO::new(
-        expected_liability,
-        lpn_coin(4_211_442_000),
-        lpn_coin(100_000),
-    );
-    let expected_due_period = Duration::from_secs(100);
-    let expected_max_slippage = MaxSlippage {
-        liquidation: Percent::from_percent(13),
-    };
-
     setup_test_case(deps.as_mut());
 
-    let msg = SudoMsg::Config {
-        lease_interest_rate_margin: expected_interest_rate_margin,
-        lease_position_spec: expected_position_spec,
-        lease_due_period: expected_due_period,
-        lease_max_slippage: expected_max_slippage,
-    };
+    let new_config = tests::new_config();
+    let msg = SudoMsg::Config(new_config.clone());
 
     sudo(deps.as_mut(), testing::mock_env(), msg).unwrap();
 
     let config = query_config(deps.as_ref());
     assert_eq!(
-        expected_interest_rate_margin,
-        config.lease_interest_rate_margin
+        new_config,
+        NewConfig {
+            lease_due_period: config.lease_due_period,
+            lease_interest_rate_margin: config.lease_interest_rate_margin,
+            lease_max_slippage: config.lease_max_slippage,
+            lease_position_spec: config.lease_position_spec,
+        }
     );
-    assert_eq!(expected_position_spec, config.lease_position_spec);
-    assert_eq!(expected_due_period, config.lease_due_period);
-    assert_eq!(expected_max_slippage, config.lease_max_slippage);
 }
 
 fn open_lease_with(max_ltd: Option<Percent>) {
@@ -232,8 +204,4 @@ fn deps() -> OwnedDeps<MockStorage, MockApi, MockQuerier> {
         sdk_testing::user(PROFIT_ADDR),
         sdk_testing::user(ORACLE_ADDR),
     ])
-}
-
-fn lpn_coin(amount: Amount) -> LpnCoinDTO {
-    Coin::<TheCurrency>::from(amount).into()
 }

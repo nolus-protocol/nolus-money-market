@@ -11,7 +11,10 @@ use sdk::{
     cw_storage_plus::Item,
 };
 
-use crate::{msg::InstantiateMsg, result::ContractResult};
+use crate::{
+    msg::{InstantiateMsg, NewConfig},
+    result::ContractResult,
+};
 
 #[derive(Serialize, Deserialize, PartialEq, Eq)]
 #[cfg_attr(feature = "testing", derive(Clone, Debug))]
@@ -60,20 +63,14 @@ impl Config {
         Self::STORAGE.load(storage).map_err(Into::into)
     }
 
-    pub fn update(
-        storage: &mut dyn Storage,
-        lease_interest_rate_margin: Percent,
-        lease_position_spec: PositionSpecDTO,
-        lease_due_period: Duration,
-        lease_max_slippage: MaxSlippage,
-    ) -> ContractResult<()> {
+    pub fn update(storage: &mut dyn Storage, new_config: NewConfig) -> ContractResult<()> {
         Self::STORAGE
             .update(storage, |c| {
                 Ok(Self {
-                    lease_interest_rate_margin,
-                    lease_position_spec,
-                    lease_due_period,
-                    lease_max_slippage,
+                    lease_interest_rate_margin: new_config.lease_interest_rate_margin,
+                    lease_position_spec: new_config.lease_position_spec,
+                    lease_due_period: new_config.lease_due_period,
+                    lease_max_slippage: new_config.lease_max_slippage,
                     ..c
                 })
             })

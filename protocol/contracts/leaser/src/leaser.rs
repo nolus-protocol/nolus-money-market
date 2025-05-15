@@ -3,8 +3,8 @@ use std::collections::HashSet;
 use admin_contract::msg::{ExecuteMsg, MigrationSpec, ProtocolContracts};
 use currencies::LeaseGroup;
 use currency::CurrencyDTO;
-use finance::{duration::Duration, percent::Percent};
-use lease::api::{DownpaymentCoin, MigrateMsg, limits::MaxSlippage, open::PositionSpecDTO};
+use finance::percent::Percent;
+use lease::api::{DownpaymentCoin, MigrateMsg};
 use lpp::{msg::ExecuteMsg as LppExecuteMsg, stub::LppRef};
 use platform::{
     batch::{Batch, Emit, Emitter},
@@ -21,7 +21,7 @@ use crate::{
     finance::{LpnCurrencies, LpnCurrency, OracleRef},
     lease::Release as LeaseReleaseTrait,
     migrate::{self, MigrationResult},
-    msg::{ForceClose, MaxLeases, QuoteResponse},
+    msg::{ForceClose, MaxLeases, NewConfig, QuoteResponse},
     result::ContractResult,
     state::{config::Config, leases::Leases},
 };
@@ -71,19 +71,9 @@ impl<'a> Leaser<'a> {
 
 pub(super) fn try_configure(
     storage: &mut dyn Storage,
-    lease_interest_rate_margin: Percent,
-    lease_position_spec: PositionSpecDTO,
-    lease_due_period: Duration,
-    lease_max_slippage: MaxSlippage,
+    new_config: NewConfig,
 ) -> ContractResult<MessageResponse> {
-    Config::update(
-        storage,
-        lease_interest_rate_margin,
-        lease_position_spec,
-        lease_due_period,
-        lease_max_slippage,
-    )
-    .map(|()| MessageResponse::default())
+    Config::update(storage, new_config).map(|()| MessageResponse::default())
 }
 
 pub(super) fn try_migrate_leases<LeaseRelease, MsgFactory>(

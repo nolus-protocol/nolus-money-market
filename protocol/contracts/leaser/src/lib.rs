@@ -16,5 +16,7 @@ pub mod msg;
 pub mod result;
 mod state;
 
+// for some reason 'allow-unwrap-in-tests' clippy configuration does not recognize 'test' config when combined with other
 #[cfg(test)]
+#[cfg(feature = "internal.test.testing")]
 mod tests;

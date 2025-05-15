@@ -23,7 +23,7 @@ use versioning::{
 };
 
 use crate::{
-    authz::AnomalyResolutionPermission,
+    authz::{AnomalyResolutionPermission, LeasesConfigurationPermission},
     cmd::Borrow,
     error::ContractError,
     lease::CacheFirstRelease,
@@ -98,6 +98,12 @@ pub fn execute(
             currency,
             max_ltd,
         ),
+        ExecuteMsg::ConfigLeases(new_config) => Leaser::new(deps.as_ref())
+            .config()
+            .and_then(|ref config| {
+                LeasesConfigurationPermission::from(config).check_access(&info.sender)
+            })
+            .and_then(|()| leaser::try_configure(deps.storage, new_config)),
         ExecuteMsg::FinalizeLease { customer } => {
             validate_customer(customer, deps.api, deps.querier)
                 .and_then(|customer| {
@@ -151,18 +157,7 @@ pub fn execute(
 #[entry_point]
 pub fn sudo(deps: DepsMut<'_>, _env: Env, msg: SudoMsg) -> ContractResult<Response> {
     match msg {
-        SudoMsg::Config {
-            lease_interest_rate_margin,
-            lease_position_spec,
-            lease_due_period,
-            lease_max_slippage,
-        } => leaser::try_configure(
-            deps.storage,
-            lease_interest_rate_margin,
-            lease_position_spec,
-            lease_due_period,
-            lease_max_slippage,
-        ),
+        SudoMsg::Config(new_config) => leaser::try_configure(deps.storage, new_config),
         SudoMsg::CloseProtocol {
             new_lease_code_id,
             migration_spec,
