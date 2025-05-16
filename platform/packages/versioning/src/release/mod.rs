@@ -1,5 +1,7 @@
 use serde::{Deserialize, Serialize};
 
+use sdk::cosmwasm_std::Storage;
+
 use crate::{Error, ProtocolRelease, SoftwarePackageRelease};
 
 pub use self::id::Id;
@@ -23,11 +25,22 @@ where
 
     fn update_software(&self, to: &Self, to_release: &Self::ReleaseId) -> Result<(), Error>;
 
-    fn update_software_and_storage(
+    fn update_software_and_storage<
+        MigrateStorageFunctor,
+        ContractError,
+        MapErrorFunctor,
+    >(
         &self,
         to: &Self,
         to_release: &Self::ReleaseId,
-    ) -> Result<(), Error>;
+        storage: &mut dyn Storage,
+        migrate_storage: MigrateStorageFunctor,
+        map_error: MapErrorFunctor,
+    ) -> Result<(), ContractError>
+    where
+        MigrateStorageFunctor:
+            FnOnce(&mut dyn Storage) -> Result<(), ContractError>,
+        MapErrorFunctor: Fn(Error) -> ContractError;
 }
 
 pub type PlatformPackageRelease = SoftwarePackageRelease;
@@ -73,16 +86,34 @@ impl UpdatablePackage for ProtocolPackageRelease {
             })
     }
 
-    fn update_software_and_storage(
+    fn update_software_and_storage<
+        MigrateStorageFunctor,
+        ContractError,
+        MapErrorFunctor,
+    >(
         &self,
         to: &Self,
         to_release: &Self::ReleaseId,
-    ) -> Result<(), Error> {
+        storage: &mut dyn Storage,
+        migrate_storage: MigrateStorageFunctor,
+        map_error: MapErrorFunctor,
+    ) -> Result<(), ContractError>
+    where
+        MigrateStorageFunctor:
+            FnOnce(&mut dyn Storage) -> Result<(), ContractError>,
+        MapErrorFunctor: Fn(Error) -> ContractError,
+    {
         self.protocol
             .check_update_allowed(&to.protocol, &to_release.protocol)
-            .and_then(|_| {
-                self.software
-                    .update_software_and_storage(&to.software, &to_release.software)
+            .map_err(|err| map_error(err))
+            .and_then(|()| {
+                self.software.update_software_and_storage(
+                    &to.software,
+                    &to_release.software,
+                    storage,
+                    migrate_storage,
+                    map_error,
+                )
             })
     }
 }

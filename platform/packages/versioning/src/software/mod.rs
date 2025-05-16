@@ -1,5 +1,7 @@
 use serde::{Deserialize, Serialize};
 
+use sdk::cosmwasm_std::Storage;
+
 use crate::{
     Error,
     release::{Id, UpdatablePackage, query::PlatformPackage},
@@ -108,18 +110,31 @@ impl UpdatablePackage for PackageRelease {
             .and_then(|()| self.check_software_update_allowed(to, Self::check_storage_match))
     }
 
-    fn update_software_and_storage(
+    fn update_software_and_storage<MigrateStorageFunctor, ContractError, MapErrorFunctor>(
         &self,
         to: &Self,
         to_release: &Self::ReleaseId,
-    ) -> Result<(), Error> {
+        storage: &mut dyn Storage,
+        migrate_storage: MigrateStorageFunctor,
+        map_error: MapErrorFunctor,
+    ) -> Result<(), ContractError>
+    where
+        MigrateStorageFunctor: FnOnce(&mut dyn Storage) -> Result<(), ContractError>,
+        MapErrorFunctor: FnOnce(Error) -> ContractError,
+    {
         to.check_release_match(to_release)
             .and_then(|()| self.check_software_update_allowed(to, Self::check_storage_adjacent))
+            .map_err(map_error)
+            .and_then(|()| migrate_storage(storage))
     }
 }
 
 #[cfg(test)]
 mod test {
+    use std::convert;
+
+    use sdk::cosmwasm_std::{Storage, testing::MockStorage};
+
     use crate::{
         Error,
         release::{Id, UpdatablePackage},
@@ -218,10 +233,15 @@ mod test {
         let current_release = PackageRelease::instance(prod1_id(), current_code);
         let next_release = PackageRelease::instance(prod2_id(), next_code);
 
+        let mut storage = MockStorage::new();
         assert!(matches!(
-            current_release
-                .clone()
-                .update_software_and_storage(&current_release, &prod1_id()),
+            current_release.clone().update_software_and_storage(
+                &current_release,
+                &prod1_id(),
+                &mut storage,
+                update_storage_ok,
+                convert::identity
+            ),
             Err(Error::PackageStorageVersionNotAdjacent(_, _))
         ));
 
@@ -232,14 +252,21 @@ mod test {
                     Package::new(CURRENT_NAME, NEWER_VERSION, CURRENT_STORAGE),
                 ),
                 &prod1_id(),
+                &mut storage,
+                update_storage_ok,
+                convert::identity
             ),
             Err(Error::PackageStorageVersionNotAdjacent(_, _))
         ));
 
         assert!(matches!(
-            current_release
-                .clone()
-                .update_software_and_storage(&next_release, &prod1_id()),
+            current_release.clone().update_software_and_storage(
+                &next_release,
+                &prod1_id(),
+                &mut storage,
+                update_storage_ok,
+                convert::identity
+            ),
             Err(Error::SoftwareReleaseMismatch(_, _))
         ));
 
@@ -250,6 +277,9 @@ mod test {
                     Package::new(OTHER_NAME, NEWER_VERSION, CURRENT_STORAGE + 1),
                 ),
                 &prod1_id(),
+                &mut storage,
+                update_storage_ok,
+                convert::identity
             ),
             Err(Error::PackageNamesMismatch(_, _))
         ));
@@ -261,15 +291,47 @@ mod test {
                     Package::new(CURRENT_NAME, SemVer::parse("0.3.3"), CURRENT_STORAGE + 1),
                 ),
                 &prod1_id(),
+                &mut storage,
+                update_storage_ok,
+                convert::identity
             ),
             Err(Error::OlderPackageCode(_, _))
         ));
 
         assert_eq!(
-            Ok(()),
-            current_release
-                .clone()
-                .update_software_and_storage(&next_release, &prod2_id())
+            Err(TestError::StorageUpdate),
+            current_release.clone().update_software_and_storage(
+                &next_release,
+                &prod2_id(),
+                &mut storage,
+                update_storage_nok,
+                TestError::Versioning,
+            )
         );
+
+        assert_eq!(
+            Ok(()),
+            current_release.clone().update_software_and_storage(
+                &next_release,
+                &prod2_id(),
+                &mut storage,
+                update_storage_ok,
+                convert::identity
+            )
+        );
+    }
+
+    fn update_storage_ok(_storage: &mut dyn Storage) -> Result<(), Error> {
+        Ok(())
+    }
+
+    #[derive(Debug, PartialEq)]
+    enum TestError {
+        StorageUpdate,
+        Versioning(Error),
+    }
+
+    fn update_storage_nok(_storage: &mut dyn Storage) -> Result<(), TestError> {
+        Err(TestError::StorageUpdate)
     }
 }
