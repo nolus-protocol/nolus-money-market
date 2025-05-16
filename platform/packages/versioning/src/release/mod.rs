@@ -25,11 +25,7 @@ where
 
     fn update_software(&self, to: &Self, to_release: &Self::ReleaseId) -> Result<(), Error>;
 
-    fn update_software_and_storage<
-        MigrateStorageFunctor,
-        ContractError,
-        MapErrorFunctor,
-    >(
+    fn update_software_and_storage<MigrateStorageFunctor, ContractError, MapErrorFunctor>(
         &self,
         to: &Self,
         to_release: &Self::ReleaseId,
@@ -38,8 +34,7 @@ where
         map_error: MapErrorFunctor,
     ) -> Result<(), ContractError>
     where
-        MigrateStorageFunctor:
-            FnOnce(&mut dyn Storage) -> Result<(), ContractError>,
+        MigrateStorageFunctor: FnOnce(&mut dyn Storage) -> Result<(), ContractError>,
         MapErrorFunctor: Fn(Error) -> ContractError;
 }
 
@@ -86,11 +81,7 @@ impl UpdatablePackage for ProtocolPackageRelease {
             })
     }
 
-    fn update_software_and_storage<
-        MigrateStorageFunctor,
-        ContractError,
-        MapErrorFunctor,
-    >(
+    fn update_software_and_storage<MigrateStorageFunctor, ContractError, MapErrorFunctor>(
         &self,
         to: &Self,
         to_release: &Self::ReleaseId,
@@ -99,8 +90,7 @@ impl UpdatablePackage for ProtocolPackageRelease {
         map_error: MapErrorFunctor,
     ) -> Result<(), ContractError>
     where
-        MigrateStorageFunctor:
-            FnOnce(&mut dyn Storage) -> Result<(), ContractError>,
+        MigrateStorageFunctor: FnOnce(&mut dyn Storage) -> Result<(), ContractError>,
         MapErrorFunctor: Fn(Error) -> ContractError,
     {
         self.protocol
