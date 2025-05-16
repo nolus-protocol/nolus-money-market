@@ -13,7 +13,7 @@ use lpp::{
     stub::lender::{LppLender as LppLenderTrait, WithLppLender},
 };
 use oracle_platform::{Oracle as OracleTrait, WithOracle};
-use sdk::cosmwasm_std::{QuerierWrapper};
+use sdk::cosmwasm_std::QuerierWrapper;
 
 use crate::{
     ContractError,

@@ -7,11 +7,12 @@ use finance::{duration::Duration, percent::Percent};
 use lease::api::{limits::MaxSlippage, open::PositionSpecDTO};
 use platform::contract::Code;
 use sdk::{
-    cosmwasm_std::{Addr, Storage},
+    cosmwasm_std::{Addr, StdError as SdkError, Storage},
     cw_storage_plus::Item,
 };
 
 use crate::{
+    ContractError,
     msg::{InstantiateMsg, NewConfig},
     result::ContractResult,
 };
@@ -56,16 +57,20 @@ impl Config {
     }
 
     pub fn store(&self, storage: &mut dyn Storage) -> ContractResult<()> {
-        Self::STORAGE.save(storage, self).map_err(Into::into)
+        Self::STORAGE
+            .save(storage, self)
+            .map_err(ContractError::SaveConfigFailure)
     }
 
     pub fn load(storage: &dyn Storage) -> ContractResult<Self> {
-        Self::STORAGE.load(storage).map_err(Into::into)
+        Self::STORAGE
+            .load(storage)
+            .map_err(ContractError::LoadConfigFailure)
     }
 
     pub fn update(storage: &mut dyn Storage, new_config: NewConfig) -> ContractResult<()> {
         Self::STORAGE
-            .update(storage, |c| {
+            .update::<_, UpdateDataError>(storage, |c| {
                 Ok(Self {
                     lease_interest_rate_margin: new_config.lease_interest_rate_margin,
                     lease_position_spec: new_config.lease_position_spec,
@@ -74,25 +79,42 @@ impl Config {
                     ..c
                 })
             })
+            .map_err(Into::into)
             .map(mem::drop)
     }
 
     pub fn update_lease_code(storage: &mut dyn Storage, new_code: Code) -> ContractResult<Self> {
-        Self::STORAGE.update(storage, |c| -> ContractResult<Config> {
-            Ok(Self {
-                lease_code: new_code,
-                ..c
+        Self::STORAGE
+            .update::<_, UpdateDataError>(storage, |c| {
+                Ok(Self {
+                    lease_code: new_code,
+                    ..c
+                })
             })
-        })
+            .map_err(Into::into)
     }
 
     pub fn update_lease_admin(storage: &mut dyn Storage, new_admin: Addr) -> ContractResult<Self> {
-        Self::STORAGE.update(storage, |c| -> ContractResult<Config> {
-            Ok(Self {
-                lease_admin: new_admin,
-                ..c
+        Self::STORAGE
+            .update::<_, UpdateDataError>(storage, |c| {
+                Ok(Self {
+                    lease_admin: new_admin,
+                    ..c
+                })
             })
-        })
+            .map_err(Into::into)
+    }
+}
+
+struct UpdateDataError(SdkError);
+impl From<SdkError> for UpdateDataError {
+    fn from(value: SdkError) -> Self {
+        Self(value)
+    }
+}
+impl From<UpdateDataError> for ContractError {
+    fn from(value: UpdateDataError) -> Self {
+        Self::UpdateConfigFailure(value.0)
     }
 }
 
@@ -110,7 +132,7 @@ mod tests {
             let new_admin = Addr::unchecked("my successor");
             assert!(matches!(
                 Config::update_lease_admin(&mut storage, new_admin).unwrap_err(),
-                ContractError::Std(_)
+                ContractError::UpdateConfigFailure(_)
             ));
         }
 

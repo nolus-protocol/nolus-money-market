@@ -6,8 +6,29 @@ use sdk::cosmwasm_std::StdError;
 
 #[derive(Error, Debug, PartialEq)]
 pub enum ContractError {
-    #[error("[Leaser] [Std] {0}")]
-    Std(#[from] StdError),
+    #[error("[Leaser] Save Config failed, cause: {0}")]
+    SaveConfigFailure(StdError),
+
+    #[error("[Leaser] Update Config failed, cause: {0}")]
+    UpdateConfigFailure(StdError),
+
+    #[error("[Leaser] Load Config failed, cause: {0}")]
+    LoadConfigFailure(StdError),
+
+    #[error("[Leaser] Iterate Cutomer Leases failed, cause: {0}")]
+    IterateLeasesFailure(StdError),
+
+    #[error("[Leaser] Registration of a Lease failed, cause: {0}")]
+    SaveLeaseFailure(StdError),
+
+    #[error("[Leaser] Deregistration of a Lease failed, cause: {0}")]
+    RemoveLeaseFailure(StdError),
+
+    #[error("[Leaser] Load Customer Leases failed, cause: {0}")]
+    LoadLeasesFailure(StdError),
+
+    #[error("[Leaser] Save pending Customer failed, cause: {0}")]
+    SavePendingCustomerFailure(StdError),
 
     #[error("[Leaser] Address validation failed, cause: {0}")]
     InvalidAddress(StdError),

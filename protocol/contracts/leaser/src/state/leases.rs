@@ -6,6 +6,7 @@ use sdk::{
 };
 
 use crate::{
+    ContractError,
     customer::{Customer, CustomerLeases},
     result::ContractResult,
 };
@@ -20,7 +21,7 @@ impl Leases {
     pub fn cache_open_req(storage: &mut dyn Storage, customer: &Addr) -> ContractResult<()> {
         Self::PENDING_CUSTOMER
             .save(storage, customer)
-            .map_err(Into::into)
+            .map_err(ContractError::SavePendingCustomerFailure)
     }
 
     /// Return true if the lease has been stored or false if there has already been the same lease
@@ -40,7 +41,7 @@ impl Leases {
             .inspect(|_| Self::PENDING_CUSTOMER.remove(storage))
             .and_then(|customer| Self::CUSTOMER_LEASES.update(storage, customer, update_fn))
             .map(|_| stored)
-            .map_err(Into::into)
+            .map_err(ContractError::SaveLeaseFailure)
     }
 
     pub fn load_by_customer(
@@ -50,7 +51,7 @@ impl Leases {
         Self::CUSTOMER_LEASES
             .may_load(storage, customer)
             .map(Option::unwrap_or_default)
-            .map_err(Into::into)
+            .map_err(ContractError::LoadLeasesFailure)
     }
 
     /// Return whether the lease was present before the removal
@@ -68,7 +69,7 @@ impl Leases {
         Self::CUSTOMER_LEASES
             .update(storage, customer, update_fn)
             .map(|_| removed)
-            .map_err(Into::into)
+            .map_err(ContractError::RemoveLeaseFailure)
     }
 
     pub fn iter(storage: &dyn Storage, next_customer: Option<Addr>) -> impl CustomerLeases {
@@ -80,7 +81,7 @@ impl Leases {
             .map(|record| {
                 record
                     .map(|(customer, leases)| Customer::from(customer, leases.into_iter()))
-                    .map_err(Into::into)
+                    .map_err(ContractError::IterateLeasesFailure)
             })
     }
 }
@@ -96,7 +97,7 @@ mod test {
         let mut storage = MockStorage::default();
         assert!(matches!(
             Leases::save(&mut storage, test_lease(),),
-            Err(ContractError::Std { .. })
+            Err(ContractError::SaveLeaseFailure { .. })
         ));
         assert_lease_not_exist(&storage);
     }
