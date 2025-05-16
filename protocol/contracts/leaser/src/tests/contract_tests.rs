@@ -6,7 +6,11 @@ use cosmwasm_std::{
 use currencies::{LeaseGroup, Lpn, testing::LeaseC1};
 use currency::{CurrencyDTO, CurrencyDef as _};
 use dex::{ConnectionParams, Ics20Channel};
-use finance::{duration::Duration, liability::Liability, percent::Percent};
+use finance::{
+    duration::Duration,
+    liability::Liability,
+    percent::{Percent, bound::BoundToHundredPercent},
+};
 use lease::api::{limits::MaxSlippage, open::PositionSpecDTO};
 use platform::contract::{Code, CodeId};
 
@@ -66,7 +70,7 @@ fn leaser_instantiate_msg(lease_code: Code, lpp: Addr) -> crate::msg::Instantiat
         lease_interest_rate_margin: MARGIN_INTEREST_RATE,
         lease_due_period: Duration::from_days(90),
         lease_max_slippage: MaxSlippage {
-            liquidation: Percent::from_percent(20),
+            liquidation: BoundToHundredPercent::strict_from_percent(Percent::from_percent(20)),
         },
         lease_admin: sdk_testing::user(LEASE_ADMIN),
         dex: dex_params(),

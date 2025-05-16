@@ -25,6 +25,12 @@ impl<const UPPER_BOUND: Units> BoundPercent<UPPER_BOUND> {
         }
     }
 
+    #[cfg(feature = "testing")]
+    pub fn strict_from_percent(percent: Percent) -> Self {
+        Self::try_from_percent(percent)
+            .expect("BoundPercent created with a value within the limits")
+    }
+
     pub const fn percent(&self) -> Percent {
         self.0
     }

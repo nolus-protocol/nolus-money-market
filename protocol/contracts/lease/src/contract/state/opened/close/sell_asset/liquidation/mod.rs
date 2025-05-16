@@ -68,8 +68,10 @@ where
     RepayableImpl: Closable + Repayable,
 {
     fn on_anomaly(self) -> AnomalyTreatment<SellAsset<RepayableImpl, Calculator>> {
-        let emitter =
-            event::emit_slippage_anomaly(&self.lease.lease, self.slippage_calc.threshold());
+        let emitter = event::emit_slippage_anomaly(
+            &self.lease.lease,
+            self.slippage_calc.threshold().percent(),
+        );
         let next_state = SlippageAnomaly::new(self.lease);
         AnomalyTreatment::Exit(Ok(Response::from(emitter, next_state)))
     }

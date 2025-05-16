@@ -3,7 +3,7 @@ use std::marker::PhantomData;
 use currency::{Currency, CurrencyDef, Group, MemberOf};
 use finance::{
     coin::{Coin, CoinDTO, WithCoin, WithCoinResult},
-    percent::Percent,
+    percent::bound::BoundToHundredPercent,
 };
 use oracle::stub;
 use oracle_platform::OracleRef;
@@ -24,7 +24,7 @@ where
     OutC: Currency + MemberOf<OutG>,
     OutG: Group,
 {
-    max_slippage: Percent,
+    max_slippage: BoundToHundredPercent,
     oracle: OracleRef<OutC, OutG>,
     _in_g: PhantomData<InG>,
 }
@@ -35,7 +35,7 @@ where
     OutC: Currency + MemberOf<OutG>,
     OutG: Group,
 {
-    pub fn with(max_slippage: Percent, oracle: OracleRef<OutC, OutG>) -> Self {
+    pub fn with(max_slippage: BoundToHundredPercent, oracle: OracleRef<OutC, OutG>) -> Self {
         Self {
             max_slippage,
             oracle,
@@ -43,7 +43,7 @@ where
         }
     }
 
-    pub fn threshold(&self) -> Percent {
+    pub fn threshold(&self) -> BoundToHundredPercent {
         self.max_slippage
     }
 }
@@ -91,6 +91,7 @@ where
                 C::Group: MemberOf<InG> + MemberOf<<InG as Group>::TopG>,
             {
                 stub::to_quote::<_, InG, _, _>(self.oracle, input, self.querier)
+                    //TODO!!!!!
                     .map_err(Self::Error::MinOutput)
             }
         }

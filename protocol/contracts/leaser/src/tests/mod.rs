@@ -4,7 +4,7 @@ use finance::{
     coin::{Amount, Coin},
     duration::Duration,
     liability::Liability,
-    percent::Percent,
+    percent::{Percent, bound::BoundToHundredPercent},
 };
 use lease::api::{LpnCoinDTO, limits::MaxSlippage, open::PositionSpecDTO};
 use platform::contract::Code;
@@ -40,7 +40,7 @@ pub fn new_config() -> NewConfig {
         ),
         lease_due_period: Duration::from_secs(100),
         lease_max_slippage: MaxSlippage {
-            liquidation: Percent::from_percent(13),
+            liquidation: BoundToHundredPercent::strict_from_percent(Percent::from_percent(13)),
         },
     }
 }
@@ -70,7 +70,7 @@ fn dummy_instantiate_msg() -> InstantiateMsg {
         lease_interest_rate_margin: Percent::from_percent(3),
         lease_due_period: Duration::from_days(14),
         lease_max_slippage: MaxSlippage {
-            liquidation: Percent::from_percent(20),
+            liquidation: BoundToHundredPercent::strict_from_percent(Percent::from_percent(20)),
         },
         lease_admin: Addr::unchecked("lease_admin_XYZ"),
         dex: ConnectionParams {
