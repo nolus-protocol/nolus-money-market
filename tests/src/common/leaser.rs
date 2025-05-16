@@ -3,7 +3,13 @@ use std::collections::HashSet;
 use currencies::{LeaseGroup, PaymentGroup};
 use currency::{CurrencyDef, MemberOf};
 use dex::{ConnectionParams, Ics20Channel};
-use finance::{coin::Coin, duration::Duration, liability::Liability, percent::Percent, test};
+use finance::{
+    coin::Coin,
+    duration::Duration,
+    liability::Liability,
+    percent::{Percent, bound::BoundToHundredPercent},
+    test,
+};
 use lease::api::{LpnCoinDTO, limits::MaxSlippage, open::PositionSpecDTO};
 use leaser::{
     execute, instantiate,
@@ -91,7 +97,7 @@ impl Instantiator {
             lease_position_spec: Self::position_spec(),
             lease_due_period: Self::REPAYMENT_PERIOD,
             lease_max_slippage: MaxSlippage {
-                liquidation: Percent::from_percent(15),
+                liquidation: BoundToHundredPercent::strict_from_percent(Percent::from_percent(15)),
             },
             lease_admin: testing::user("my_lease_admin"),
             time_alarms: alarms.time_alarm,
