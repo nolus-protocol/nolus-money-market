@@ -200,8 +200,10 @@ fn test_open_lease_with_max_ltd() {
 fn deps() -> OwnedDeps<MockStorage, MockApi, MockQuerier> {
     sdk_testing::mock_deps_with_contracts([
         sdk_testing::user(LPP_ADDR),
-        sdk_testing::user(TIMEALARMS_ADDR),
-        sdk_testing::user(PROFIT_ADDR),
         sdk_testing::user(ORACLE_ADDR),
+        sdk_testing::user(PROFIT_ADDR),
+        sdk_testing::user(PROTOCOLS_REGISTRY_ADDR),
+        sdk_testing::user(RESERVE_ADDR),
+        sdk_testing::user(TIMEALARMS_ADDR),
     ])
 }
