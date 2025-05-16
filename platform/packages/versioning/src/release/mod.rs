@@ -105,7 +105,7 @@ impl UpdatablePackage for ProtocolPackageRelease {
     {
         self.protocol
             .check_update_allowed(&to.protocol, &to_release.protocol)
-            .map_err(|err| map_error(err))
+            .map_err(&map_error)
             .and_then(|()| {
                 self.software.update_software_and_storage(
                     &to.software,
