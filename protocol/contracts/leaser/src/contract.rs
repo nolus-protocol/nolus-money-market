@@ -50,12 +50,13 @@ pub fn instantiate(
     msg: InstantiateMsg,
 ) -> ContractResult<Response> {
     contract::validate_addr(deps.querier, &msg.lpp)?;
+    contract::validate_addr(deps.querier, &msg.profit)?;
+    contract::validate_addr(deps.querier, &msg.reserve)?;
     contract::validate_addr(deps.querier, &msg.time_alarms)?;
     contract::validate_addr(deps.querier, &msg.market_price_oracle)?;
-    contract::validate_addr(deps.querier, &msg.profit)?;
-    // cannot validate the address since the Admin plays the role of the registry
-    // and it is not yet instantiated
-    deps.api.addr_validate(msg.protocols_registry.as_str())?;
+    contract::validate_addr(deps.querier, &msg.protocols_registry)?;
+
+    validate(&msg.lease_admin, deps.api)?;
 
     ContractOwnerAccess::new(deps.storage.deref_mut()).grant_to(&info.sender)?;
 
@@ -156,7 +157,10 @@ pub fn execute(
             .and_then(|ref config| {
                 ChangeLeaseAdminPermission::from(config).check_access(&info.sender)
             })
-            .and_then(|()| leaser::try_change_lease_admin(deps.storage, new)),
+            .and_then(|()| validate(&new, deps.api))
+            .and_then(|valid_new_admin| {
+                leaser::try_change_lease_admin(deps.storage, valid_new_admin)
+            }),
     }
     .map(response::response_only_messages)
     .inspect_err(platform_error::log(deps.api))
@@ -166,7 +170,9 @@ pub fn execute(
 pub fn sudo(deps: DepsMut<'_>, _env: Env, msg: SudoMsg) -> ContractResult<Response> {
     match msg {
         SudoMsg::Config(new_config) => leaser::try_configure(deps.storage, new_config),
-        SudoMsg::ChangeLeaseAdmin { new } => leaser::try_change_lease_admin(deps.storage, new),
+        SudoMsg::ChangeLeaseAdmin { new } => validate(&new, deps.api).and_then(|validated_admin| {
+            leaser::try_change_lease_admin(deps.storage, validated_admin)
+        }),
         SudoMsg::CloseProtocol {
             new_lease_code_id,
             migration_spec,
@@ -296,6 +302,12 @@ fn migrate_msg(
 
 fn finalizer(env: Env) -> Addr {
     env.contract.address
+}
+
+fn validate(addr: &Addr, sdk_api: &dyn Api) -> ContractResult<Addr> {
+    sdk_api
+        .addr_validate(addr.as_str())
+        .map_err(ContractError::InvalidAddress)
 }
 
 fn serialize_to_json<Resp>(resp: Resp) -> ContractResult<Binary>

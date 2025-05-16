@@ -13,7 +13,7 @@ use lpp::{
     stub::lender::{LppLender as LppLenderTrait, WithLppLender},
 };
 use oracle_platform::{Oracle as OracleTrait, WithOracle};
-use sdk::cosmwasm_std::{QuerierWrapper, StdResult};
+use sdk::cosmwasm_std::{QuerierWrapper};
 
 use crate::{
     ContractError,
@@ -65,7 +65,7 @@ impl WithLppLender<LpnCurrency, LpnCurrencies> for Quote<'_> {
             QuoteStage2 {
                 downpayment: self.downpayment,
                 lease_asset: self.lease_asset,
-                lpp_quote: LppQuote::new(lpp)?,
+                lpp_quote: LppQuote::new(lpp),
                 liability: self.liability,
                 lease_interest_rate_margin: self.lease_interest_rate_margin,
                 max_ltd: self.max_ltd,
@@ -84,11 +84,11 @@ impl<Lpn, Lpp> LppQuote<Lpn, Lpp>
 where
     Lpp: LppLenderTrait<Lpn, LpnCurrencies>,
 {
-    pub fn new(lpp: Lpp) -> StdResult<LppQuote<Lpn, Lpp>> {
-        Ok(Self {
+    pub fn new(lpp: Lpp) -> Self {
+        Self {
             lpn: PhantomData,
             lpp,
-        })
+        }
     }
 
     pub fn with(&self, borrow: Coin<Lpn>) -> Result<Percent, ContractError> {
