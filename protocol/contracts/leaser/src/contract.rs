@@ -35,7 +35,7 @@ use crate::{
     state::{config::Config, leases::Leases},
 };
 
-const CONTRACT_STORAGE_VERSION: VersionSegment = 4;
+const CONTRACT_STORAGE_VERSION: VersionSegment = 5;
 const CURRENT_RELEASE: ProtocolPackageRelease = ProtocolPackageRelease::current(
     package_name!(),
     package_version!(),
@@ -74,13 +74,23 @@ pub fn migrate(
     ProtocolMigrationMessage {
         migrate_from,
         to_release,
-        message: MigrateMsg {},
+        message: MigrateMsg {
+            lease_max_slippage,
+            lease_admin,
+        },
     }: ProtocolMigrationMessage<MigrateMsg>,
 ) -> ContractResult<Response> {
+    validate(&lease_admin, deps.api)?;
+
     migrate_from
-        .update_software(&CURRENT_RELEASE, &to_release)
+        .update_software_and_storage(
+            &CURRENT_RELEASE,
+            &to_release,
+            deps.storage,
+            |storage| Config::migrate_from_0_8_8(storage, lease_max_slippage, lease_admin),
+            ContractError::UpdateSoftware,
+        )
         .map(|()| response::empty_response())
-        .map_err(ContractError::UpdateSoftware)
         .inspect_err(platform_error::log(deps.api))
 }
 

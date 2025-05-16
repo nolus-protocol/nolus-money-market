@@ -15,6 +15,9 @@ pub enum ContractError {
     #[error("[Leaser] Load Config failed, cause: {0}")]
     LoadConfigFailure(StdError),
 
+    #[error("[Leaser] Loading the old Config failed, cause: {0}")]
+    LoadOldConfig(StdError),
+
     #[error("[Leaser] Iterate Cutomer Leases failed, cause: {0}")]
     IterateLeasesFailure(StdError),
 
