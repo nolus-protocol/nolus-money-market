@@ -40,7 +40,7 @@ impl Handler for SlippageAnomaly {
     ) -> ContractResult<StateResponse> {
         opened::lease_state(
             self.lease,
-            Status::SlippageProtectionActivated(),
+            Status::SlippageProtectionActivated,
             now,
             due_projection,
             querier,
