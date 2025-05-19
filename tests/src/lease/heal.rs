@@ -27,7 +27,9 @@ fn active_state() {
     let unutilized_amount: LpnCoin = 100.into();
 
     test_case.send_funds_from_admin(lease.clone(), &[cwcoin(unutilized_amount)]);
-    heal_ok(&mut test_case.app, lease.clone()).expect_empty();
+    heal_ok(&mut test_case.app, lease.clone(), testing::user(USER))
+        .ignore_response()
+        .expect_empty();
     assert!(
         platform::bank::balance::<LpnCurrency>(&lease, test_case.app.query())
             .unwrap()
@@ -39,7 +41,7 @@ fn active_state() {
         super::expected_newly_opened_state(&test_case, downpayment, unutilized_amount);
     assert_eq!(query_result, expected_result);
 
-    heal_no_inconsistency(&mut test_case.app, lease);
+    heal_no_inconsistency(&mut test_case.app, lease, testing::user(USER));
 }
 
 #[test]
@@ -72,11 +74,11 @@ fn swap_on_repay() {
     let expected_result = super::expected_newly_opened_state(&test_case, downpayment, payment);
     assert_eq!(query_result, expected_result);
 
-    heal_no_inconsistency(&mut test_case.app, lease);
+    heal_no_inconsistency(&mut test_case.app, lease, testing::user(USER));
 }
 
-pub(super) fn heal_no_inconsistency(app: &mut App, lease: Addr) {
-    let err = try_heal(app, lease).unwrap_err();
+pub(super) fn heal_no_inconsistency(app: &mut App, lease: Addr, caller: Addr) {
+    let err = try_heal(app, lease, caller).unwrap_err();
     let heal_err = err.downcast_ref::<ContractError>();
     assert_eq!(Some(&ContractError::InconsistencyNotDetected()), heal_err);
 }
@@ -90,13 +92,18 @@ pub(super) fn heal_no_inconsistency(app: &mut App, lease: Addr) {
 //     );
 // }
 
+pub(super) fn heal_ok(
+    app: &mut App,
+    lease: Addr,
+    caller: Addr,
+) -> ResponseWithInterChainMsgs<'_, AppResponse> {
+    try_heal(app, lease, caller).unwrap()
+}
+
 fn try_heal(
     app: &mut App,
     lease: Addr,
+    caller: Addr,
 ) -> anyhow::Result<ResponseWithInterChainMsgs<'_, AppResponse>> {
-    app.execute(testing::user(USER), lease, &ExecuteMsg::Heal(), &[])
-}
-
-fn heal_ok(app: &mut App, lease: Addr) -> ResponseWithInterChainMsgs<'_, ()> {
-    try_heal(app, lease).unwrap().ignore_response()
+    app.execute(caller, lease, &ExecuteMsg::Heal(), &[])
 }

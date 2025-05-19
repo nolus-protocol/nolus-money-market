@@ -6,7 +6,7 @@ use sdk::cosmwasm_std::{Addr, QuerierWrapper};
 use crate::{
     api::{
         FinalizerExecuteMsg,
-        authz::AccessCheck,
+        authz::{AccessCheck, AccessGranted},
         limits::{MaxSlippage, PositionLimits},
     },
     error::{ContractError, ContractResult},
@@ -53,5 +53,11 @@ impl LeasesRef {
         querier
             .query_wasm_smart(self.addr.clone(), &query)
             .map_err(ContractError::CheckAccessQuery)
+            .and_then(|access: AccessGranted| match access {
+                AccessGranted::No => Err(ContractError::Unauthorized(
+                    access_control::error::Error::Unauthorized {},
+                )),
+                AccessGranted::Yes => Ok(()),
+            })
     }
 }

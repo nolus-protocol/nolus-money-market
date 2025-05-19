@@ -66,6 +66,7 @@ pub mod treasury;
 
 pub const USER: &str = "user";
 pub const ADMIN: &str = "admin";
+pub const LEASE_ADMIN: &str = "lease_admin";
 
 pub fn native_cwcoin<A>(amount: A) -> CwCoin
 where

@@ -38,6 +38,7 @@ mod heal;
 mod liquidation;
 mod open;
 mod repay;
+mod slippage;
 
 type LpnCurrency = Lpn;
 type LpnCoin = Coin<LpnCurrency>;

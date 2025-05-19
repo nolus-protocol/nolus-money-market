@@ -20,7 +20,7 @@ use platform::contract::{Code, CodeId};
 use sdk::{cosmwasm_std::Addr, testing};
 
 use super::{
-    ADMIN, CwContractWrapper,
+    ADMIN, CwContractWrapper, LEASE_ADMIN,
     test_case::{TestCase, app::App},
 };
 
@@ -99,7 +99,7 @@ impl Instantiator {
             lease_max_slippage: MaxSlippage {
                 liquidation: BoundToHundredPercent::strict_from_percent(Percent::from_percent(15)),
             },
-            lease_admin: testing::user("my_lease_admin"),
+            lease_admin: testing::user(LEASE_ADMIN),
             time_alarms: alarms.time_alarm,
             market_price_oracle: alarms.market_price_oracle,
             dex: ConnectionParams {
