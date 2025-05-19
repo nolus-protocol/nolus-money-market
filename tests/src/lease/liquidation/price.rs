@@ -87,20 +87,18 @@ fn full_liquidation() {
     );
 
     // the base is chosen to be close to the asset amount to trigger a full liquidation
-    let mut response: ResponseWithInterChainMsgs<'_, ()> = lease_mod::deliver_new_price(
+    let response = lease_mod::deliver_new_price(
         &mut test_case,
         (lease_amount - 2).into(),
         borrowed_amount.into(),
-    )
-    .ignore_response();
-
-    let requests: Vec<SwapRequest<PaymentGroup, PaymentGroup>> = common::swap::expect_swap(
-        &mut response,
-        TestCase::DEX_CONNECTION_ID,
-        TestCase::LEASE_ICA_ID,
     );
 
-    () = response.unwrap_response();
+    let requests: Vec<SwapRequest<PaymentGroup, PaymentGroup>> = common::swap::expect_swap(
+        response,
+        TestCase::DEX_CONNECTION_ID,
+        TestCase::LEASE_ICA_ID,
+        |_| {},
+    );
 
     let mut response: ResponseWithInterChainMsgs<'_, ()> = common::swap::do_swap(
         &mut test_case.app,

@@ -251,22 +251,20 @@ where
                 .add_attribute("_contract_address", test_case.address_book.profit())]
         );
 
-        let mut response: ResponseWithInterChainMsgs<'_, ()> = ibc::do_transfer(
+        let response = ibc::do_transfer(
             &mut test_case.app,
             test_case.address_book.profit().clone(),
             test_case.address_book.profit_ica().clone(),
             false,
             &transfer_amount,
-        )
-        .ignore_response();
-
-        let requests = common::swap::expect_swap(
-            &mut response,
-            TestCase::DEX_CONNECTION_ID,
-            TestCase::PROFIT_ICA_ID,
         );
 
-        () = response.unwrap_response();
+        let requests = common::swap::expect_swap(
+            response,
+            TestCase::DEX_CONNECTION_ID,
+            TestCase::PROFIT_ICA_ID,
+            |_| {},
+        );
 
         let mut response: ResponseWithInterChainMsgs<'_, ()> = common::swap::do_swap(
             &mut test_case.app,

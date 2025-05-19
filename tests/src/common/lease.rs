@@ -215,7 +215,7 @@ pub(crate) fn complete_initialization<DownpaymentC, Lpn>(
     let ica_port: String = format!("icacontroller-{ica_addr}");
     let ica_channel: String = format!("channel-{ica_addr}");
 
-    let mut response: ResponseWithInterChainMsgs<'_, ()> = confirm_ica_and_transfer_funds(
+    let response = confirm_ica_and_transfer_funds(
         app,
         lease_addr.clone(),
         connection_id,
@@ -224,12 +224,11 @@ pub(crate) fn complete_initialization<DownpaymentC, Lpn>(
     );
 
     let requests: Vec<SwapRequest<PaymentGroup, PaymentGroup>> = super::swap::expect_swap(
-        &mut response,
+        response,
         TestCase::DEX_CONNECTION_ID,
         TestCase::LEASE_ICA_ID,
+        |_| {},
     );
-
-    () = response.unwrap_response();
 
     check_state_opening(app, lease_addr.clone());
 
@@ -260,7 +259,7 @@ fn confirm_ica_and_transfer_funds<'r, DownpaymentC, Lpn>(
     connection_id: &str,
     (ica_channel, ica_port, ica_addr): (&str, &str, Addr),
     (exp_downpayment, exp_borrow): (Coin<DownpaymentC>, Coin<Lpn>),
-) -> ResponseWithInterChainMsgs<'r, ()>
+) -> ResponseWithInterChainMsgs<'r, AppResponse>
 where
     DownpaymentC: CurrencyDef,
     Lpn: CurrencyDef,
@@ -313,7 +312,7 @@ where
 
     check_state_opening(app, lease_addr.clone());
 
-    ibc::do_transfer(app, lease_addr, ica_addr, false, &borrow).ignore_response()
+    ibc::do_transfer(app, lease_addr, ica_addr, false, &borrow)
 }
 
 fn send_open_ica_response<'r>(

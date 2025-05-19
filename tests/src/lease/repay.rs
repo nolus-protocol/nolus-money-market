@@ -286,16 +286,14 @@ pub(crate) fn repay_with_hook_on_swap<
 where
     SwapHook: FnOnce(&mut App),
 {
-    let mut response: ResponseWithInterChainMsgs<'_, ()> =
-        send_payment_and_transfer(test_case, lease_addr.clone(), payment);
+    let response = send_payment_and_transfer(test_case, lease_addr.clone(), payment);
 
     let requests: Vec<SwapRequest<PaymentGroup, PaymentGroup>> = swap::expect_swap(
-        &mut response,
+        response,
         TestCase::DEX_CONNECTION_ID,
         TestCase::LEASE_ICA_ID,
+        |_| {},
     );
-
-    () = response.unwrap_response();
 
     swap_hook(&mut test_case.app);
 
@@ -377,7 +375,7 @@ fn send_payment_and_transfer<
     >,
     lease_addr: Addr,
     payment: Coin<PaymentC>,
-) -> ResponseWithInterChainMsgs<'_, ()>
+) -> ResponseWithInterChainMsgs<'_, AppResponse>
 where
     PaymentC: CurrencyDef,
 {
@@ -413,5 +411,4 @@ where
         false,
         &transfer_amount,
     )
-    .ignore_response()
 }

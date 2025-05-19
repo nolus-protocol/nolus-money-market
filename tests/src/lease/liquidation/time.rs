@@ -39,7 +39,7 @@ fn liquidation_time_alarm(
 
     feed_price(&mut test_case);
 
-    let mut response: ResponseWithInterChainMsgs<'_, ()> = test_case
+    let response = test_case
         .app
         .execute(
             test_case.address_book.time_alarms().clone(),
@@ -47,22 +47,18 @@ fn liquidation_time_alarm(
             &ExecuteMsg::TimeAlarm {},
             &[],
         )
-        .unwrap()
-        .ignore_response();
+        .unwrap();
 
     let Some(liquidation_amount): Option<LeaseCoin> = liquidation_amount else {
-        () = response.unwrap_response();
-
         return;
     };
 
     let requests: Vec<SwapRequest<PaymentGroup, PaymentGroup>> = crate::common::swap::expect_swap(
-        &mut response,
+        response,
         TestCase::DEX_CONNECTION_ID,
         TestCase::LEASE_ICA_ID,
+        |_| {},
     );
-
-    () = response.unwrap_response();
 
     let ica_addr: Addr = TestCase::ica_addr(&lease_addr, TestCase::LEASE_ICA_ID);
 

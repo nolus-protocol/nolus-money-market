@@ -282,16 +282,17 @@ fn do_close(
     ));
 
     let close_amount_in_lpn: LpnCoin = price::total(close_amount, super::price_lpn_of());
-    let mut response_close: ResponseWithInterChainMsgs<'_, ()> = send_close(
+    let response_close = send_close(
         test_case,
         lease_addr.clone(),
         &ExecuteMsg::ClosePosition(close_msg),
     );
 
     let requests: Vec<SwapRequest<PaymentGroup, PaymentGroup>> = common::swap::expect_swap(
-        &mut response_close,
+        response_close,
         TestCase::DEX_CONNECTION_ID,
         TestCase::LEASE_ICA_ID,
+        |_| {},
     );
 
     let mut response_swap: ResponseWithInterChainMsgs<'_, ()> = common::swap::do_swap(
@@ -366,12 +367,11 @@ fn send_close<'r>(
     test_case: &'r mut LeaseTestCase,
     contract_addr: Addr,
     msg: &ExecuteMsg,
-) -> ResponseWithInterChainMsgs<'r, ()> {
+) -> ResponseWithInterChainMsgs<'r, AppResponse> {
     test_case
         .app
         .execute(testing::user(USER), contract_addr, msg, &[])
         .unwrap()
-        .ignore_response()
 }
 
 fn assert_unauthorized(test_case: &mut LeaseTestCase, lease: Addr, close_msg: ExecuteMsg) {

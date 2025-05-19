@@ -1,7 +1,7 @@
 use std::ops::Deref;
 
 use currencies::PaymentGroup;
-use currency::{DexSymbols, Group, MemberOf, SymbolStatic};
+use currency::{DexSymbols, Group, SymbolStatic};
 use finance::coin::Amount;
 use sdk::{
     cosmos_sdk_proto::Any as CosmosAny,
@@ -44,28 +44,20 @@ where
     }
 }
 
-pub(crate) fn expect_swap<T>(
-    response: &mut ResponseWithInterChainMsgs<'_, T>,
+pub(crate) fn expect_swap<InspectFn>(
+    mut response: ResponseWithInterChainMsgs<'_, AppResponse>,
     connection_id: &str,
     ica_id: &str,
-) -> Vec<SwapRequest<PaymentGroup, PaymentGroup>> {
-    expect_swap_with::<T, PaymentGroup, PaymentGroup>(response, connection_id, ica_id)
-}
-
-pub(crate) fn expect_swap_with<T, GIn, GSwap>(
-    response: &mut ResponseWithInterChainMsgs<'_, T>,
-    connection_id: &str,
-    ica_id: &str,
-) -> Vec<SwapRequest<GIn, GSwap>>
+    inspect_fn: InspectFn,
+) -> Vec<SwapRequest<PaymentGroup, PaymentGroup>>
 where
-    GIn: Group + MemberOf<GSwap>,
-    GSwap: Group,
+    InspectFn: FnOnce(&AppResponse),
 {
-    let requests: Vec<SwapRequest<GIn, GSwap>> = response
+    let requests: Vec<SwapRequest<PaymentGroup, PaymentGroup>> = response
         .expect_submit_tx(connection_id, ica_id)
         .into_iter()
         .map(|NeutronAny { type_url, value }| {
-            <Impl as ExactAmountInSkel>::parse_request::<GIn, GSwap>(CosmosAny {
+            <Impl as ExactAmountInSkel>::parse_request(CosmosAny {
                 type_url,
                 value: value.into(),
             })
@@ -73,7 +65,7 @@ where
         .collect();
 
     assert!(!requests.is_empty());
-
+    inspect_fn(&response.unwrap_response());
     requests
 }
 
