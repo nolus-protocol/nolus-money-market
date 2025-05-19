@@ -58,7 +58,7 @@ fn swap_on_repay() {
 
     repay::repay_with_hook_on_swap(&mut test_case, lease.clone(), payment, |ref mut app| {
         let swap_response_retry = common::swap::do_swap_with_error(app, lease.clone())
-            .expect("should have retried again the swap");
+            .expect("on error should have retried again the swap");
 
         test_swap::expect_swap(
             swap_response_retry,

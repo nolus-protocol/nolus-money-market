@@ -17,7 +17,8 @@ use super::{
 fn state_closed() {
     let mut test_case: LeaseTestCase = super::create_test_case::<PaymentCurrency>();
     let downpayment: PaymentCoin = DOWNPAYMENT;
-    let lease_addr: Addr = super::open_lease(&mut test_case, downpayment, None);
+    let lease: Addr = super::open_lease(&mut test_case, downpayment, None);
+
     let borrowed_lpn: LpnCoin = super::quote_borrow(&test_case, downpayment);
     let borrowed: PaymentCoin =
         price::total(borrowed_lpn, super::price_lpn_of::<PaymentCurrency>().inv());
@@ -25,15 +26,15 @@ fn state_closed() {
         price::total(downpayment, super::price_lpn_of()) + borrowed_lpn,
         super::price_lpn_of::<LeaseCurrency>().inv(),
     );
-    repay::repay(&mut test_case, lease_addr.clone(), borrowed);
+    repay::repay(&mut test_case, lease.clone(), borrowed);
 
     let customer_addr: Addr = testing::user(USER);
     let user_balance: LeaseCoin =
         platform::bank::balance(&customer_addr, test_case.app.query()).unwrap();
 
-    close(&mut test_case, lease_addr.clone(), lease_amount);
+    close(&mut test_case, lease.clone(), lease_amount);
 
-    let query_result: StateResponse = super::state_query(&test_case, lease_addr.clone());
+    let query_result: StateResponse = super::state_query(&test_case, lease.clone());
     let expected_result: StateResponse = StateResponse::Closed();
 
     assert_eq!(query_result, expected_result);
@@ -48,7 +49,7 @@ fn state_closed() {
         test_case.address_book.leaser().clone(),
         customer_addr,
     );
-    heal::heal_no_inconsistency(&mut test_case.app, lease_addr);
+    heal::heal_no_inconsistency(&mut test_case.app, lease);
 }
 
 fn close<ProtocolsRegistry, Treasury, Profit, Reserve, Leaser, Lpp, Oracle, TimeAlarms>(

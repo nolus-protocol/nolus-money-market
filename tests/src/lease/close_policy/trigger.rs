@@ -74,7 +74,7 @@ fn trigger_close(
         TestCase::DEX_CONNECTION_ID,
         TestCase::LEASE_ICA_ID,
         |app_response| {
-            assert_events(&app_response, &lease, exp_strategy_key, exp_ltv);
+            assert_events(app_response, &lease, exp_strategy_key, exp_ltv);
         },
     );
     assert_eq!(1, requests.len());
