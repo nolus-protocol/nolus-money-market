@@ -1,5 +1,6 @@
 use access_control::GrantedAddress;
 use currency::{CurrencyDef, never};
+use oracle_platform::GrantedOracle;
 use serde::{Deserialize, Serialize};
 
 use dex::Enterable;
@@ -239,12 +240,10 @@ impl Handler for Active {
         env: Env,
         info: MessageInfo,
     ) -> ContractResult<Response> {
-        // TODO ref. the TODO in try_on_time_alarm
-        if !self.lease.lease.oracle.owned_by(&info.sender) {
-            return Err(ContractError::Unauthorized(
-                access_control::error::Error::Unauthorized {},
-            ));
-        }
+        access_control::check(
+            &GrantedOracle::new(&self.lease.lease.oracle),
+            &info.sender,
+        )?;
 
         self.try_on_alarm(querier, &env)
     }
