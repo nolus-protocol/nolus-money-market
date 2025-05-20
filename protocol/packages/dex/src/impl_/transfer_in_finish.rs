@@ -1,8 +1,8 @@
 use std::fmt::{Display, Formatter, Result as FmtResult};
 use std::marker::PhantomData;
 
-use currency::{CurrencyDef, MemberOf};
 use crate::Error as DexError;
+use currency::{CurrencyDef, MemberOf};
 use finance::duration::Duration;
 use serde::{Deserialize, Serialize};
 
@@ -16,7 +16,7 @@ use timealarms::stub::GrantedTimeAlarm;
 
 use crate::{
     Contract, ContractInSwap, Enterable, Stage, SwapOutputTask, SwapTask as SwapTaskT,
-    WithOutputTask, TimeAlarm
+    WithOutputTask,
 };
 
 #[cfg(feature = "migration")]
