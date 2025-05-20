@@ -31,3 +31,4 @@ thiserror = { workspace = true }
 
 [dev-dependencies]
 currency = { workspace = true, features = ["testing"] }
+finance = { workspace = true, features = ["testing"] }

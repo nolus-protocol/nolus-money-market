@@ -3,7 +3,8 @@ use std::marker::PhantomData;
 use currency::{Currency, CurrencyDef, Group, MemberOf};
 use finance::{
     coin::{Coin, CoinDTO, WithCoin, WithCoinResult},
-    percent::bound::BoundToHundredPercent,
+    fraction::Fraction,
+    percent::{Percent, bound::BoundToHundredPercent},
 };
 use oracle::stub;
 use oracle_platform::OracleRef;
@@ -69,6 +70,7 @@ where
             OutC::Group: MemberOf<OutG> + MemberOf<InG::TopG>,
             OutG: Group,
         {
+            max_slippage: BoundToHundredPercent,
             oracle: OracleRef<OutC, OutG>,
             querier: QuerierWrapper<'querier>,
             _in_g: PhantomData<InG>,
@@ -91,15 +93,67 @@ where
                 C::Group: MemberOf<InG> + MemberOf<<InG as Group>::TopG>,
             {
                 stub::to_quote::<_, InG, _, _>(self.oracle, input, self.querier)
-                    //TODO!!!!!
                     .map_err(Self::Error::MinOutput)
+                    .map(|input_in_out_c| calc_min_out(input_in_out_c, self.max_slippage))
             }
         }
 
         input.with_coin(InCoinResolve {
+            max_slippage: self.max_slippage,
             oracle: self.oracle.clone(),
             querier,
             _in_g: PhantomData,
         })
+    }
+}
+
+fn calc_min_out<C>(amount: Coin<C>, slippage: BoundToHundredPercent) -> Coin<C> {
+    (Percent::HUNDRED - slippage.percent()).of(amount)
+}
+
+#[cfg(test)]
+mod test {
+    use currency::test::SuperGroupTestC1;
+    use finance::{
+        coin::Coin,
+        fraction::Fraction,
+        percent::{Percent, bound::BoundToHundredPercent},
+    };
+
+    use crate::impl_::slippage::percent::calc_min_out;
+
+    #[test]
+    fn zero() {
+        assert!(
+            calc_min_out(
+                Coin::<SuperGroupTestC1>::from(100),
+                BoundToHundredPercent::strict_from_percent(Percent::from_percent(100))
+            )
+            .is_zero()
+        );
+    }
+
+    #[test]
+    fn hundred() {
+        let coin_in = Coin::<SuperGroupTestC1>::from(100);
+        assert_eq!(
+            coin_in,
+            calc_min_out(
+                coin_in,
+                BoundToHundredPercent::strict_from_percent(Percent::ZERO)
+            )
+        );
+    }
+
+    #[test]
+    fn eighty_five() {
+        let coin_in = Coin::<SuperGroupTestC1>::from(100);
+        assert_eq!(
+            Percent::from_percent(85).of(coin_in),
+            calc_min_out(
+                coin_in,
+                BoundToHundredPercent::strict_from_percent(Percent::from_percent(15))
+            )
+        );
     }
 }

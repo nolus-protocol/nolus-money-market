@@ -83,6 +83,17 @@ pub(super) fn heal_no_inconsistency(app: &mut App, lease: Addr, caller: Addr) {
     assert_eq!(Some(&ContractError::InconsistencyNotDetected()), heal_err);
 }
 
+pub(super) fn heal_no_rights(app: &mut App, lease: Addr, caller: Addr) {
+    let err = try_heal(app, lease, caller).unwrap_err();
+    let heal_err = err.downcast_ref::<ContractError>();
+    assert_eq!(
+        Some(&ContractError::from(
+            access_control::error::Error::Unauthorized {}
+        )),
+        heal_err
+    );
+}
+
 // pub(super) fn heal_unsupported(app: &mut App, lease: Addr) {
 //     let err = try_heal(app, lease).unwrap_err();
 //     let heal_err = err.downcast_ref::<ContractError>();

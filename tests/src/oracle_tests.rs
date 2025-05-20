@@ -10,7 +10,7 @@ use finance::{
     coin::{Amount, Coin},
     duration::Duration,
     percent::Percent,
-    price::{self, Price, base::BasePrice, dto::PriceDTO},
+    price::{self, Price, base::BasePrice},
 };
 use marketprice::config::Config as PriceConfig;
 use oracle::{
@@ -359,16 +359,11 @@ fn test_config_update() {
         Coin::<Lpn>::new(quote),
     );
 
-    let price: PriceDTO<PaymentGroup> = test_case
-        .app
-        .query()
-        .query_wasm_smart(
-            test_case.address_book.oracle().clone(),
-            &OracleQ::<PriceCurrencies>::BasePrice {
-                currency: currency::dto::<BaseC, _>(),
-            },
-        )
-        .unwrap();
+    let price: BasePrice<LeaseGroup, Lpn, Lpns> = oracle_mod::fetch_price::<BaseC, _, _, _>(
+        test_case.app.query(),
+        test_case.address_book.oracle().clone(),
+    )
+    .unwrap();
 
     assert_eq!(
         price,
@@ -397,11 +392,9 @@ fn test_config_update() {
     );
 
     let price: Result<BasePrice<LeaseGroup, Lpn, Lpns>, _> =
-        test_case.app.query().query_wasm_smart(
+        oracle_mod::fetch_price::<BaseC, _, _, _>(
+            test_case.app.query(),
             test_case.address_book.oracle().clone(),
-            &OracleQ::<PriceCurrencies>::BasePrice {
-                currency: currency::dto::<BaseC, _>(),
-            },
         );
 
     assert!(price.is_err());

@@ -2,12 +2,12 @@ use currencies::{
     LeaseGroup as AlarmCurrencies, Lpn as BaseCurrency, Lpns as BaseCurrencies, Nls,
     PaymentGroup as PriceCurrencies,
 };
-use currency::{CurrencyDef, MemberOf};
+use currency::{CurrencyDef, Group, MemberOf};
 use finance::{
     coin::Coin,
     duration::Duration,
     percent::Percent,
-    price::{self, Price},
+    price::{self, Price, base::BasePrice},
 };
 use marketprice::config::Config as PriceConfig;
 use oracle::{
@@ -18,10 +18,14 @@ use oracle::{
     test_tree,
 };
 use sdk::{
-    cosmwasm_std::{Addr, Binary, Deps, Env, Event, to_json_binary, wasm_execute},
+    cosmwasm_std::{
+        Addr, Binary, Deps, Empty, Env, Event, QuerierWrapper, StdResult, to_json_binary,
+        wasm_execute,
+    },
     cw_multi_test::AppResponse,
     testing::{self, CwContract, CwContractWrapper},
 };
+use serde::Serialize;
 
 use super::{
     ADMIN,
@@ -235,4 +239,24 @@ pub(crate) fn dispatch<ProtocolsRegistry, Treasury, Profit, Reserve, Leaser, Lpp
         .unwrap(),
     )
     .expect("Oracle not properly connected!")
+}
+
+pub(crate) fn fetch_price<BaseC, BaseG, QuoteC, QuoteG>(
+    querier: QuerierWrapper<'_, Empty>,
+    oracle: Addr,
+) -> StdResult<BasePrice<BaseG, QuoteC, QuoteG>>
+where
+    BaseC: CurrencyDef,
+    BaseC::Group: MemberOf<BaseG>,
+    BaseG: Group + Serialize,
+    QuoteC: CurrencyDef,
+    QuoteC::Group: MemberOf<QuoteG> + MemberOf<BaseG::TopG>,
+    QuoteG: Group,
+{
+    querier.query_wasm_smart(
+        oracle,
+        &QueryMsg::<BaseG>::BasePrice {
+            currency: currency::dto::<BaseC, _>(),
+        },
+    )
 }

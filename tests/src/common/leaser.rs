@@ -38,6 +38,8 @@ impl Instantiator {
     pub const MAX_LTV: Percent = Percent::from_permille(800);
     pub const RECALC_TIME: Duration = Duration::from_hours(1);
 
+    pub const MAX_SLIPPAGE: Percent = Percent::from_permille(150);
+
     pub fn liability() -> Liability {
         Liability::new(
             Self::INITIAL_LTV,
@@ -97,7 +99,7 @@ impl Instantiator {
             lease_position_spec: Self::position_spec(),
             lease_due_period: Self::REPAYMENT_PERIOD,
             lease_max_slippage: MaxSlippage {
-                liquidation: BoundToHundredPercent::strict_from_percent(Percent::from_percent(15)),
+                liquidation: BoundToHundredPercent::strict_from_percent(Self::MAX_SLIPPAGE),
             },
             lease_admin: testing::user(LEASE_ADMIN),
             time_alarms: alarms.time_alarm,

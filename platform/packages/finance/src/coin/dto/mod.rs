@@ -46,14 +46,14 @@ where
     G: Group,
 {
     // pre-condition: the dto represents the C
-    pub fn from_coin<C>(coin: Coin<C>, currency: CurrencyDTO<G>) -> Self
+    pub const fn from_coin<C>(coin: Coin<C>, currency: CurrencyDTO<G>) -> Self
     where
         C: Currency + MemberOf<G>,
     {
         Self::new(coin.amount, currency)
     }
 
-    fn new(amount: Amount, currency: CurrencyDTO<G>) -> Self {
+    const fn new(amount: Amount, currency: CurrencyDTO<G>) -> Self {
         Self { amount, currency }
     }
 
