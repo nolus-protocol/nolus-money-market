@@ -1,3 +1,4 @@
+use access_control::GrantedAddress;
 use serde::{Deserialize, Serialize};
 
 use platform::{batch::Batch, contract::Validator};
@@ -6,8 +7,7 @@ use sdk::cosmwasm_std::{Addr, QuerierWrapper};
 use crate::{
     api::{
         FinalizerExecuteMsg,
-        authz::{AccessCheck, AccessGranted},
-        limits::{MaxSlippages, PositionLimits},
+        limits::{MaxSlippage, PositionLimits},
     },
     error::{ContractError, ContractResult},
 };
@@ -49,17 +49,8 @@ impl LeasesRef {
     pub(super) fn check_assess(
         &self,
         caller: Addr,
-        querier: QuerierWrapper<'_>,
     ) -> ContractResult<()> {
-        let query = AccessCheck::AnomalyResolution { by: caller };
-        querier
-            .query_wasm_smart(self.addr.clone(), &query)
-            .map_err(ContractError::CheckAccessQuery)
-            .and_then(|access: AccessGranted| match access {
-                AccessGranted::No => Err(ContractError::Unauthorized(
-                    access_control::error::Error::Unauthorized {},
-                )),
-                AccessGranted::Yes => Ok(()),
-            })
+        access_control::check(&GrantedAddress::new(&self.addr), &caller)
+        .map_err(ContractError::Unauthorized)
     }
 }
