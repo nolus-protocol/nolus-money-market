@@ -1,6 +1,6 @@
 use currencies::{LeaseGroup, Lpn, Lpns, PaymentGroup};
 use finance::{
-    coin::{Coin, CoinDTO},
+    coin::CoinDTO,
     fraction::Fraction,
     percent::Percent,
     price::{self, Price},
@@ -135,11 +135,8 @@ fn trigger_full_liquidation(
     borrowed_amount: LpnCoin,
 ) {
     // the base is chosen to be close to the position amount to trigger a full liquidation
-    let response = lease_mod::deliver_new_price(
-        test_case,
-        (lease_amount + 10.into()).into(),
-        borrowed_amount.into(),
-    );
+    let response =
+        lease_mod::deliver_new_price(test_case, lease_amount + 10.into(), borrowed_amount);
     let requests: Vec<SwapRequest<PaymentGroup, PaymentGroup>> = common::swap::expect_swap(
         response,
         TestCase::DEX_CONNECTION_ID,
@@ -148,10 +145,10 @@ fn trigger_full_liquidation(
     );
     //the `expect_swap` postconditions guarantee there is at least one item
     assert_eq!(
-        Into::<CoinDTO<PaymentGroup>>::into(Coin::<LeaseCurrency>::from(lease_amount)),
+        Into::<CoinDTO<PaymentGroup>>::into(lease_amount),
         requests[0].token_in
     );
-    assert_min_out(&test_case, &requests, lease_amount);
+    assert_min_out(test_case, &requests, lease_amount);
 }
 
 fn simulate_min_out_not_satisfied(test_case: &mut LeaseTestCase, lease: Addr) {
@@ -168,7 +165,7 @@ fn simulate_min_out_not_satisfied(test_case: &mut LeaseTestCase, lease: Addr) {
             ),
     );
     assert!(matches!(
-        super::state_query(&test_case, lease),
+        super::state_query(test_case, lease),
         StateResponse::Opened {
             status: Status::SlippageProtectionActivated,
             ..
@@ -184,8 +181,8 @@ fn deliver_high_price(
     // far-better price
     let mut response = lease_mod::deliver_new_price(
         test_case,
-        lease_amount.checked_div(2).unwrap().into(),
-        borrowed_amount.into(),
+        lease_amount.checked_div(2).unwrap(),
+        borrowed_amount,
     );
     response.expect_empty();
     let app_resp = response.unwrap_response();
