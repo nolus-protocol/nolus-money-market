@@ -6,6 +6,7 @@ use dex::Enterable;
 use finance::{coin::IntoDTO, duration::Duration};
 use platform::{bank, batch::Emitter, message::Response as MessageResponse};
 use sdk::cosmwasm_std::{Coin as CwCoin, Env, MessageInfo, QuerierWrapper, Timestamp};
+use timealarms::stub::GrantedTimeAlarm;
 
 use crate::{
     api::{
@@ -224,13 +225,10 @@ impl Handler for Active {
         env: Env,
         info: MessageInfo,
     ) -> ContractResult<Response> {
-        // TODO define a trait 'RestrictedResource' with 'fn owner(&Addr) -> bool'
-        // and move this check to the 'access_control' package
-        if !self.lease.lease.time_alarms.owned_by(&info.sender) {
-            return Err(ContractError::Unauthorized(
-                access_control::error::Error::Unauthorized {},
-            ));
-        }
+        access_control::check(
+            &GrantedTimeAlarm::new(&self.lease.lease.time_alarms),
+            &info.sender,
+        )?;
 
         self.try_on_alarm(querier, &env)
     }
