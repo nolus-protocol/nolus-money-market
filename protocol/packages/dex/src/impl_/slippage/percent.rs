@@ -27,6 +27,7 @@ where
 {
     max_slippage: BoundToHundredPercent,
     oracle: OracleRef<OutC, OutG>,
+    #[serde(skip)]
     _in_g: PhantomData<InG>,
 }
 

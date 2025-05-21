@@ -105,28 +105,6 @@ fn full_liquidation_heal_full_liquidation() {
             }
         ));
     }
-
-    // assert_min_out(&requests, lease_amount, price);
-
-    //     test_swap::expect_swap(
-    //         swap_response_retry,
-    //         TestCase::DEX_CONNECTION_ID,
-    //         TestCase::LEASE_ICA_ID,
-    //         |_| {},
-    //     );
-
-    // let mut response: ResponseWithInterChainMsgs<'_, ()> = common::swap::do_swap(
-    //     &mut test_case.app,
-    //     lease_addr.clone(),
-    //     ica_addr.clone(),
-    //     requests.into_iter(),
-    //     |amount, _, _| {
-    //         assert_eq!(amount, lease_amount);
-
-    //         liq_outcome
-    //     },
-    // )
-    // .ignore_response();
 }
 
 fn trigger_full_liquidation(
