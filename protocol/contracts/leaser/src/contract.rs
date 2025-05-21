@@ -98,12 +98,12 @@ pub fn execute(
             currency,
             max_ltd,
         ),
-        ExecuteMsg::ConfigLeases(new_config) => Leaser::new(deps.as_ref())
-            .config()
-            .and_then(|config| {
-            access_control::check(&GrantedAddress::new(&config.lease_admin), &info.sender)?;
-            leaser::try_configure(deps.storage, new_config)
-            }),
+        ExecuteMsg::ConfigLeases(new_config) => {
+            Leaser::new(deps.as_ref()).config().and_then(|config| {
+                access_control::check(&GrantedAddress::new(&config.lease_admin), &info.sender)?;
+                leaser::try_configure(deps.storage, new_config)
+            })
+        }
         ExecuteMsg::FinalizeLease { customer } => {
             let addr_validator = contract::validator(deps.querier);
             validate_customer(customer, deps.api, &addr_validator)
