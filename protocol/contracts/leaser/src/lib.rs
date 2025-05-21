@@ -3,7 +3,6 @@ pub use self::{
     error::ContractError,
 };
 
-mod authz;
 mod cmd;
 mod contract;
 mod customer;
