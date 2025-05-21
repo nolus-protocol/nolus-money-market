@@ -240,10 +240,7 @@ impl Handler for Active {
         env: Env,
         info: MessageInfo,
     ) -> ContractResult<Response> {
-        access_control::check(
-            &GrantedOracle::new(&self.lease.lease.oracle),
-            &info.sender,
-        )?;
+        access_control::check(&GrantedOracle::new(&self.lease.lease.oracle),&info.sender)?;
 
         self.try_on_alarm(querier, &env)
     }
