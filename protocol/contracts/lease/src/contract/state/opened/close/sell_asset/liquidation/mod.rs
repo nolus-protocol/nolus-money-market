@@ -3,7 +3,7 @@ use platform::message::Response as MessageResponse;
 use sdk::cosmwasm_std::{Env, QuerierWrapper};
 
 use crate::{
-    api::{LeaseAssetCurrencies, query::opened::Cause as ApiCause},
+    api::query::opened::Cause as ApiCause,
     contract::{
         Lease,
         cmd::LiquidationDTO,
@@ -17,16 +17,17 @@ use crate::{
         },
     },
     error::ContractResult,
-    finance::{LpnCurrencies, LpnCurrency},
     position::Cause,
 };
 
-use super::{SellAsset, task::ClosePositionTask};
+use super::{SellAsset, migrate_v0_8_7::CompoundCalculator, task::ClosePositionTask};
 
 pub mod full;
 pub mod partial;
 
-type Calculator = MaxSlippage<LeaseAssetCurrencies, LpnCurrency, LpnCurrencies>;
+// TODO switch to the following implementation on the next release
+// type Calculator = MaxSlippage<LeaseAssetCurrencies, LpnCurrency, LpnCurrencies>;
+type Calculator = CompoundCalculator;
 impl super::Calculator for Calculator {}
 
 pub fn start(
@@ -39,7 +40,9 @@ pub fn start(
     lease
         .leases
         .max_slippage(querier)
-        .map(|max_slippage| Calculator::with(max_slippage.liquidation, lease.lease.oracle.clone()))
+        .map(|max_slippage| {
+            MaxSlippage::with(max_slippage.liquidation, lease.lease.oracle.clone()).into()
+        })
         .and_then(|slippage_calc| match liquidation {
             LiquidationDTO::Partial(spec) => {
                 spec.start(lease, curr_request_response, slippage_calc, env, querier)

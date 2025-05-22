@@ -40,6 +40,7 @@ use super::{AnomalyHandler, Calculator, Closable};
 
 pub(in crate::contract::state) mod customer_close;
 pub(in crate::contract::state) mod liquidation;
+mod migrate_v0_8_7;
 mod task;
 
 type Task<RepayableT, CalculatorT> = SellAsset<RepayableT, CalculatorT>;
@@ -47,13 +48,22 @@ type DexState<Repayable, CalculatorT> =
     dex::StateLocalOut<Task<Repayable, CalculatorT>, SwapClient, ForwardToDexEntry>;
 
 #[derive(Serialize, Deserialize)]
-pub(crate) struct SellAsset<RepayableT, CalculatorT> {
+pub(crate) struct SellAsset<RepayableT, CalculatorT>
+where
+    //TODO remove past the migration from v0.8.7
+    CalculatorT: Default,
+{
     lease: Lease,
     repayable: RepayableT,
+    #[serde(default = "CalculatorT::default")] //TODO remove past the migration from v0.8.7
     slippage_calc: CalculatorT,
 }
 
-impl<RepayableT, CalculatorT> SellAsset<RepayableT, CalculatorT> {
+impl<RepayableT, CalculatorT> SellAsset<RepayableT, CalculatorT>
+where
+    //TODO remove past the migration from v0.8.7
+    CalculatorT: Default,
+{
     pub(in super::super) fn new(
         lease: Lease,
         repayable: RepayableT,
@@ -70,6 +80,8 @@ impl<RepayableT, CalculatorT> SellAsset<RepayableT, CalculatorT> {
 impl<RepayableT, CalculatorT> SellAsset<RepayableT, CalculatorT>
 where
     RepayableT: Closable,
+    //TODO remove past the migration from v0.8.7
+    CalculatorT: Default,
 {
     fn query(
         self,
@@ -92,6 +104,8 @@ where
 impl<RepayableT, CalculatorT> SwapTask for SellAsset<RepayableT, CalculatorT>
 where
     RepayableT: Closable + Repayable,
+    //TODO remove past the migration from v0.8.7
+    CalculatorT: Default,
     CalculatorT: Calculator,
     Self: AnomalyHandler<Self>,
 {
@@ -139,6 +153,8 @@ where
 impl<RepayableT, CalculatorT> SwapOutputTask<Self> for SellAsset<RepayableT, CalculatorT>
 where
     RepayableT: Closable + Repayable,
+    //TODO remove past the migration from v0.8.7
+    CalculatorT: Default,
     CalculatorT: Calculator,
     Self: AnomalyHandler<Self>,
 {
@@ -174,6 +190,8 @@ where
 impl<RepayableT, CalculatorT> ContractInSwap for SellAsset<RepayableT, CalculatorT>
 where
     RepayableT: Closable + Repayable,
+    //TODO remove past the migration from v0.8.7
+    CalculatorT: Default,
     CalculatorT: Calculator,
     Self: AnomalyHandler<Self>,
 {
