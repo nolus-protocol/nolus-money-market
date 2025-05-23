@@ -144,31 +144,3 @@ where
         }
     }
 }
-
-pub struct GrantedOracle<'a, QuoteC, QuoteG>
-where
-    QuoteC: Currency + MemberOf<QuoteG>,
-    QuoteG: Group,
-{
-    oracle_ref: &'a OracleRef<QuoteC, QuoteG>,
-}
-
-impl<'a, QuoteC, QuoteG> GrantedOracle<'a, QuoteC, QuoteG>
-where
-    QuoteC: Currency + MemberOf<QuoteG>,
-    QuoteG: Group,
-{
-    pub fn new(oracle_ref: &'a OracleRef<QuoteC, QuoteG>) -> Self {
-        Self { oracle_ref }
-    }
-}
-
-impl<QuoteC, QuoteG> AccessPermission for GrantedOracle<'_, QuoteC, QuoteG>
-where
-    QuoteC: Currency + MemberOf<QuoteG>,
-    QuoteG: Group,
-{
-    fn is_granted_to(&self, caller: &Addr) -> bool {
-        self.oracle_ref.owned_by(caller)
-    }
-}
