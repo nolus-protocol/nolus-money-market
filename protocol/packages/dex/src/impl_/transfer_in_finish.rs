@@ -12,7 +12,7 @@ use platform::{
     message::Response as MessageResponse,
 };
 use sdk::cosmwasm_std::{Env, QuerierWrapper, Timestamp};
-use timealarms::stub::GrantedTimeAlarm;
+use lease::api::authz::TimeAlarmDelivery;
 
 use crate::{
     Contract, ContractInSwap, Enterable, Stage, SwapOutputTask, SwapTask as SwapTaskT,
@@ -237,7 +237,7 @@ where
 
     fn on_time_alarm(self, querier: QuerierWrapper<'_>, env: Env) -> HandlerResult<Self> {
         access_control::check(
-            &GrantedTimeAlarm::new(self.spec.time_alarm()),
+            &TimeAlarmDelivery::new(self.spec.time_alarm()),
             &env.contract.address,
         )
         .map_or_else(

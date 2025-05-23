@@ -1,6 +1,8 @@
 use serde::{Deserialize, Serialize};
 
+use access_control::AccessPermission;
 use sdk::cosmwasm_std::Addr;
+use timealarms::stub::TimeAlarmsRef;
 
 /// Request for a permission check
 ///
@@ -24,4 +26,20 @@ pub enum AccessCheck {
 pub enum AccessGranted {
     Yes,
     No,
+}
+
+pub struct TimeAlarmDelivery<'a> {
+    time_alarms_ref: &'a TimeAlarmsRef,
+}
+
+impl<'a> TimeAlarmDelivery<'a> {
+    pub fn new(time_alarms_ref: &'a TimeAlarmsRef) -> Self {
+        Self { time_alarms_ref }
+    }
+}
+
+impl AccessPermission for TimeAlarmDelivery<'_> {
+    fn is_granted_to(&self, caller: &Addr) -> bool {
+        self.time_alarms_ref.owned_by(caller)
+    }
 }
