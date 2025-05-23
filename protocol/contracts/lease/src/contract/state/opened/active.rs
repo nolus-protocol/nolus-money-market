@@ -1,6 +1,5 @@
 use access_control::GrantedAddress;
 use currency::{CurrencyDef, never};
-use oracle_platform::GrantedOracle;
 use serde::{Deserialize, Serialize};
 
 use dex::Enterable;
@@ -13,7 +12,7 @@ use crate::{
         DownpaymentCoin,
         position::{ClosePolicyChange, PositionClose},
         query::{StateResponse, opened::Status},
-        authz::TimeAlarmDelivery,
+        authz::{TimeAlarmDelivery, PriceAlarmDelivery},
     },
     contract::{
         Lease,
@@ -240,7 +239,7 @@ impl Handler for Active {
         env: Env,
         info: MessageInfo,
     ) -> ContractResult<Response> {
-        access_control::check(&GrantedOracle::new(&self.lease.lease.oracle), &info.sender)?;
+        access_control::check(&PriceAlarmDelivery::new(&self.lease.lease.oracle), &info.sender)?;
 
         self.try_on_alarm(querier, &env)
     }
