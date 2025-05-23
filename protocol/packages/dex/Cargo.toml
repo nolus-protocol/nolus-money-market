@@ -21,6 +21,7 @@ testing = ["finance/testing"]
 access-control = { workspace = true, optional = true }
 currency = { workspace = true }
 finance = { workspace = true }
+lease = { workspace = true }
 oracle = { workspace = true, features = ["stub_swap"] }
 oracle-platform = { workspace = true, optional = true }
 timealarms = { workspace = true, optional = true, features = ["stub"] }

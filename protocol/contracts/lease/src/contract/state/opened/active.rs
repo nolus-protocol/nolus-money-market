@@ -7,13 +7,13 @@ use dex::Enterable;
 use finance::{coin::IntoDTO, duration::Duration};
 use platform::{bank, batch::Emitter, message::Response as MessageResponse};
 use sdk::cosmwasm_std::{Coin as CwCoin, Env, MessageInfo, QuerierWrapper, Timestamp};
-use timealarms::stub::GrantedTimeAlarm;
 
 use crate::{
     api::{
         DownpaymentCoin,
         position::{ClosePolicyChange, PositionClose},
         query::{StateResponse, opened::Status},
+        authz::TimeAlarmDelivery,
     },
     contract::{
         Lease,
@@ -227,7 +227,7 @@ impl Handler for Active {
         info: MessageInfo,
     ) -> ContractResult<Response> {
         access_control::check(
-            &GrantedTimeAlarm::new(&self.lease.lease.time_alarms),
+            &TimeAlarmDelivery::new(&self.lease.lease.time_alarms),
             &info.sender,
         )?;
 
