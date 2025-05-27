@@ -250,7 +250,7 @@ mod test {
                 lease_interest_rate_margin: Percent,
                 lease_position_spec: PositionSpecDTO,
                 lease_due_period: Duration,
-                lease_max_slippage: MaxSlippages,
+                lease_max_slippages: MaxSlippages,
             },
         }
 
@@ -261,7 +261,7 @@ mod test {
                 lease_interest_rate_margin: new_config.lease_interest_rate_margin,
                 lease_position_spec: new_config.lease_position_spec,
                 lease_due_period: new_config.lease_due_period,
-                lease_max_slippage: new_config.lease_max_slippages
+                lease_max_slippages: new_config.lease_max_slippages
             }),
             platform_tests::ser_de(&SudoMsg::Config(new_config)),
         );
