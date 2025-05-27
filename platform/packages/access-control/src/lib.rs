@@ -27,17 +27,17 @@ where
     }
 }
 
-pub struct GrantedAddress<'a> {
+pub struct SingleUserPermission<'a> {
     addr: &'a Addr,
 }
 
-impl<'a> GrantedAddress<'a> {
+impl<'a> SingleUserPermission<'a> {
     pub fn new(addr: &'a Addr) -> Self {
         Self { addr }
     }
 }
 
-impl AccessPermission for GrantedAddress<'_> {
+impl AccessPermission for SingleUserPermission<'_> {
     fn is_granted_to(&self, caller: &Addr) -> bool {
         self.addr == caller
     }
@@ -66,7 +66,7 @@ where
         self.storage_item
             .load(self.storage.deref())
             .map_err(Into::into)
-            .and_then(|granted_to| check(&GrantedAddress::new(&granted_to), user))
+            .and_then(|granted_to| check(&SingleUserPermission::new(&granted_to), user))
     }
 }
 
@@ -90,7 +90,7 @@ mod tests {
     use sdk::cosmwasm_std::{Addr, Storage, testing::MockStorage};
 
     use crate::{
-        GrantedAddress, SingleUserAccess,
+        SingleUserPermission, SingleUserAccess,
         error::{Error, Result},
     };
 
@@ -138,7 +138,7 @@ mod tests {
 
     fn check_permission(granted_to: &str, asked_for: &str) -> Result {
         super::check(
-            &GrantedAddress::new(&Addr::unchecked(granted_to)),
+            &SingleUserPermission::new(&Addr::unchecked(granted_to)),
             &Addr::unchecked(asked_for),
         )
     }
