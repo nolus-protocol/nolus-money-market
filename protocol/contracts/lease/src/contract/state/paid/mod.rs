@@ -1,4 +1,4 @@
-use access_control::GrantedAddress;
+use access_control::SingleUserPermission;
 use finance::duration::Duration;
 use serde::{Deserialize, Serialize};
 
@@ -12,6 +12,8 @@ use super::{Handler, Response};
 use self::transfer_in::DexState;
 
 pub mod transfer_in;
+
+pub type CloseLeasePermission<'a> = SingleUserPermission<'a>;
 
 #[derive(Serialize, Deserialize)]
 pub struct Active {
@@ -41,7 +43,7 @@ impl Handler for Active {
         info: MessageInfo,
     ) -> ContractResult<Response> {
         access_control::check(
-            &GrantedAddress::new(&self.lease.lease.customer),
+            &CloseLeasePermission::new(&self.lease.lease.customer),
             &info.sender,
         )?;
 
