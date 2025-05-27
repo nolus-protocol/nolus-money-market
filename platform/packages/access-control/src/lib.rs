@@ -90,7 +90,7 @@ mod tests {
     use sdk::cosmwasm_std::{Addr, Storage, testing::MockStorage};
 
     use crate::{
-        SingleUserPermission, SingleUserAccess,
+        SingleUserAccess, SingleUserPermission,
         error::{Error, Result},
     };
 
