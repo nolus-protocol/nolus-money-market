@@ -41,6 +41,10 @@ const CURRENT_RELEASE: ProtocolPackageRelease = ProtocolPackageRelease::current(
     CONTRACT_STORAGE_VERSION,
 );
 
+pub type LeasesConfigurationPermission<'a> = SingleUserPermission<'a>;
+pub type ChangeLeaseAdminPermission<'a> = SingleUserPermission<'a>;
+pub type AnomalyResolutionPermission<'a> = SingleUserPermission<'a>;
+
 #[entry_point]
 pub fn instantiate(
     mut deps: DepsMut<'_>,
