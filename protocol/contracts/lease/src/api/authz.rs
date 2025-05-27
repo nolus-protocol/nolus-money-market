@@ -3,8 +3,7 @@ use serde::{Deserialize, Serialize};
 use access_control::AccessPermission;
 use currency::{Currency, Group, MemberOf};
 use sdk::cosmwasm_std::Addr;
-use timealarms::stub::TimeAlarmsRef;
-use crate::finance::OracleRef;
+use oracle_platform::OracleRef;
 
 /// Request for a permission check
 ///
@@ -28,23 +27,6 @@ pub enum AccessCheck {
 pub enum AccessGranted {
     Yes,
     No,
-}
-
-// TimeAlarmDelivery is a permission check used on on_time_alarm
-pub struct TimeAlarmDelivery<'a> {
-    time_alarms_ref: &'a TimeAlarmsRef,
-}
-
-impl<'a> TimeAlarmDelivery<'a> {
-    pub fn new(time_alarms_ref: &'a TimeAlarmsRef) -> Self {
-        Self { time_alarms_ref }
-    }
-}
-
-impl AccessPermission for TimeAlarmDelivery<'_> {
-    fn is_granted_to(&self, caller: &Addr) -> bool {
-        self.time_alarms_ref.owned_by(caller)
-    }
 }
 
 // PriceAlarmDelivery is a permission check used on on_price_alarm
@@ -75,4 +57,3 @@ where
         self.oracle_ref.owned_by(caller)
     }
 }
-
