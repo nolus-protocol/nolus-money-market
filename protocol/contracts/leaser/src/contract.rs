@@ -2,7 +2,7 @@ use std::ops::{Deref, DerefMut};
 
 use serde::Serialize;
 
-use access_control::{ContractOwnerAccess, GrantedAddress};
+use access_control::{ContractOwnerAccess, SingleUserPermission};
 use lease::api::{MigrateMsg as LeaseMigrateMsg, authz::AccessGranted};
 use platform::{
     contract::{self, Code, CodeId},
@@ -38,6 +38,10 @@ const CURRENT_RELEASE: ProtocolPackageRelease = ProtocolPackageRelease::current(
     package_version!(),
     CONTRACT_STORAGE_VERSION,
 );
+
+pub type LeasesConfigurationPermission<'a> = SingleUserPermission<'a>;
+pub type ChangeLeaseAdminPermission<'a> = SingleUserPermission<'a>;
+pub type AnomalyResolutionPermission<'a> = SingleUserPermission<'a>;
 
 #[entry_point]
 pub fn instantiate(
@@ -110,7 +114,10 @@ pub fn execute(
         ),
         ExecuteMsg::ConfigLeases(new_config) => {
             Leaser::new(deps.as_ref()).config().and_then(|config| {
-                access_control::check(&GrantedAddress::new(&config.lease_admin), &info.sender)?;
+                access_control::check(
+                    &LeasesConfigurationPermission::new(&config.lease_admin),
+                    &info.sender,
+                )?;
                 leaser::try_configure(deps.storage, new_config)
             })
         }
@@ -162,7 +169,10 @@ pub fn execute(
         ExecuteMsg::ChangeLeaseAdmin { new } => Leaser::new(deps.as_ref())
             .config()
             .and_then(|config| {
-                access_control::check(&GrantedAddress::new(&config.lease_admin), &info.sender)?;
+                access_control::check(
+                    &ChangeLeaseAdminPermission::new(&config.lease_admin),
+                    &info.sender,
+                )?;
                 validate(&new, deps.api)
             })
             .and_then(|valid_new_admin| {
@@ -197,9 +207,12 @@ pub fn query(deps: Deps<'_>, _env: Env, msg: QueryMsg) -> ContractResult<Binary>
         QueryMsg::CheckAnomalyResolutionPermission { by: caller } => Leaser::new(deps)
             .config()
             .and_then(|config| {
-                access_control::check(&GrantedAddress::new(&config.lease_admin), &caller)
-                    .map(|_| AccessGranted::Yes)
-                    .or_else(|_| Ok(AccessGranted::No))
+                access_control::check(
+                    &AnomalyResolutionPermission::new(&config.lease_admin),
+                    &caller,
+                )
+                .map(|_| AccessGranted::Yes)
+                .or_else(|_| Ok(AccessGranted::No))
             })
             .and_then(serialize_to_json),
         QueryMsg::Config {} => Leaser::new(deps)
