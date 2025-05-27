@@ -12,7 +12,7 @@ use platform::{
     message::Response as MessageResponse,
 };
 use sdk::cosmwasm_std::{Env, QuerierWrapper, Timestamp};
-use lease::api::authz::TimeAlarmDelivery;
+use timealarms::stub::TimeAlarmDelivery;
 
 use crate::{
     Contract, ContractInSwap, Enterable, Stage, SwapOutputTask, SwapTask as SwapTaskT,

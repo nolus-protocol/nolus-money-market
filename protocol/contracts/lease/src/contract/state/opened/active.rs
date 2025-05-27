@@ -6,13 +6,14 @@ use dex::Enterable;
 use finance::{coin::IntoDTO, duration::Duration};
 use platform::{bank, batch::Emitter, message::Response as MessageResponse};
 use sdk::cosmwasm_std::{Coin as CwCoin, Env, MessageInfo, QuerierWrapper, Timestamp};
+use timealarms::stub::TimeAlarmDelivery;
 
 use crate::{
     api::{
         DownpaymentCoin,
+        authz::PriceAlarmDelivery,
         position::{ClosePolicyChange, PositionClose},
         query::{StateResponse, opened::Status},
-        authz::{TimeAlarmDelivery, PriceAlarmDelivery},
     },
     contract::{
         Lease,
@@ -239,7 +240,10 @@ impl Handler for Active {
         env: Env,
         info: MessageInfo,
     ) -> ContractResult<Response> {
-        access_control::check(&PriceAlarmDelivery::new(&self.lease.lease.oracle), &info.sender)?;
+        access_control::check(
+            &PriceAlarmDelivery::new(&self.lease.lease.oracle),
+            &info.sender,
+        )?;
 
         self.try_on_alarm(querier, &env)
     }
