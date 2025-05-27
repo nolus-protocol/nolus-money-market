@@ -1,6 +1,6 @@
 use std::ops::{Deref, DerefMut};
 
-use access_control::{ContractOwnerAccess, GrantedAddress, SingleUserAccess};
+use access_control::{ContractOwnerAccess, SingleUserPermission, SingleUserAccess};
 use dex::{ContinueResult as DexResult, Handler as _, Response as DexResponse};
 use oracle_platform::OracleRef;
 use platform::{
@@ -38,6 +38,8 @@ const CURRENT_RELEASE: ProtocolPackageRelease = ProtocolPackageRelease::current(
     package_version!(),
     CONTRACT_STORAGE_VERSION,
 );
+
+pub type DexResponseSafeDeliveryProfitPermission<'a> = SingleUserPermission<'a>;
 
 #[entry_point]
 pub fn instantiate(
@@ -122,13 +124,19 @@ pub fn execute(
             Ok(response::response_only_messages(response))
         }
         ExecuteMsg::DexCallback() => {
-            access_control::check(&GrantedAddress::new(&env.contract.address), &info.sender)?;
+            access_control::check(
+                &DexResponseSafeDeliveryProfitPermission::new(&env.contract.address),
+                &info.sender,
+            )?;
 
             try_handle_execute_message(deps, env, State::on_inner)
                 .map(response::response_only_messages)
         }
         ExecuteMsg::DexCallbackContinue() => {
-            access_control::check(&GrantedAddress::new(&env.contract.address), &info.sender)?;
+            access_control::check(
+                &DexResponseSafeDeliveryProfitPermission::new(&env.contract.address),
+                &info.sender,
+            )?;
 
             try_handle_execute_message(deps, env, State::on_inner_continue)
                 .map(response::response_only_messages)
