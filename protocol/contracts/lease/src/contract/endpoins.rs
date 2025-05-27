@@ -1,4 +1,7 @@
+<<<<<<< HEAD
 use access_control::permissions::DexResponseSafeDeliveryPermission;
+=======
+>>>>>>> 7d9d91cdd (chore: refactor GrantedAddress to separate permissions)
 use finance::duration::Duration;
 use platform::{error as platform_error, message::Response as MessageResponse, response};
 use sdk::{
@@ -16,7 +19,7 @@ use versioning::{
 
 use crate::{
     api::{ExecuteMsg, MigrateMsg, open::NewLeaseContract, query::QueryMsg},
-    contract::api::Contract,
+    contract::{DexResponseSafeDeliveryPermission, api::Contract},
     error::{ContractError, ContractResult},
 };
 
