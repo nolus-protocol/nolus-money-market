@@ -43,7 +43,7 @@ impl MaxSlippage {
         emitter.emit_percent_amount(key, self.0.percent())
     }
 
-    fn min_out<C>(&self, amount_in: Coin<C>) -> Coin<C> {
+    pub fn min_out<C>(&self, amount_in: Coin<C>) -> Coin<C> {
         (Percent::HUNDRED - self.0.percent()).of(amount_in)
     }
 }
