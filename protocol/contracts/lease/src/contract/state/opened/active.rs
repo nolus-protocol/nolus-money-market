@@ -1,4 +1,3 @@
-use access_control::GrantedAddress;
 use currency::{CurrencyDef, never};
 use serde::{Deserialize, Serialize};
 
@@ -20,7 +19,10 @@ use crate::{
         cmd::{
             ChangeClosePolicy, CloseStatusCmd, CloseStatusDTO, ObtainPayment, OpenLoanRespResult,
         },
-        state::{Handler, Response},
+        state::{
+            Handler, Response,
+            opened::{ChangeClosePolicyPermission, ClosePositionPermission},
+        },
     },
     error::{ContractError, ContractResult},
     finance::{LpnCurrencies, LpnCurrency},
@@ -166,7 +168,7 @@ impl Handler for Active {
         info: MessageInfo,
     ) -> ContractResult<Response> {
         access_control::check(
-            &GrantedAddress::new(&self.lease.lease.customer),
+            &ChangeClosePolicyPermission::new(&self.lease.lease.customer),
             &info.sender,
         )
         .map_err(Into::into)
@@ -213,7 +215,7 @@ impl Handler for Active {
         info: MessageInfo,
     ) -> ContractResult<Response> {
         access_control::check(
-            &GrantedAddress::new(&self.lease.lease.customer),
+            &ClosePositionPermission::new(&self.lease.lease.customer),
             &info.sender,
         )
         .map_err(Into::into)
