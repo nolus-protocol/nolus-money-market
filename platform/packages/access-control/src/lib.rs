@@ -54,17 +54,17 @@ where
     }
 }
 
-pub struct GrantedAddress<'a> {
+pub struct SingleUserPermission<'a> {
     addr: &'a Addr,
 }
 
-impl<'a> GrantedAddress<'a> {
+impl<'a> SingleUserPermission<'a> {
     pub fn new(addr: &'a Addr) -> Self {
         Self { addr } 
     }
 }
 
-impl AccessPermission for GrantedAddress<'_> {
+impl AccessPermission for SingleUserPermission<'_> {
     fn is_granted_to(&self, caller: &Addr) -> bool {
         self.addr == caller
     }

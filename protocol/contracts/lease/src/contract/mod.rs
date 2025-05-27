@@ -1,3 +1,4 @@
+use access_control::SingleUserPermission;
 use serde::{Deserialize, Serialize};
 
 use currency::{Currency, Group, MemberOf};
@@ -19,6 +20,8 @@ mod endpoins;
 mod finalize;
 pub mod msg;
 mod state;
+
+pub type DexResponseSafeDeliveryPermission<'a> = SingleUserPermission<'a>;
 
 #[derive(Serialize, Deserialize)]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
