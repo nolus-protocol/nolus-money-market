@@ -15,7 +15,7 @@ combinations = [
 [features]
 impl = ["dep:oracle-platform", "oracle/stub_price", "dep:timealarms"]
 migration = []
-testing = []
+testing = ["finance/testing"]
 
 [dependencies]
 currency = { workspace = true }

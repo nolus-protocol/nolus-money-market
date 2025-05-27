@@ -25,7 +25,7 @@ impl NewConfig {
         let min_transaction: Coin<LpnCurrency> = self
             .lease_position_spec
             .min_transaction
-            .as_specific(&LpnCurrency::dto());
+            .as_specific(LpnCurrency::dto());
         BrokenInvariant::r#if(
             self.lease_max_slippages
                 .liquidation
