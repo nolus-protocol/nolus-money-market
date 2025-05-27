@@ -1250,6 +1250,7 @@ version = "0.4.1"
 dependencies = [
  "currency",
  "finance",
+ "platform",
  "sdk",
  "serde",
  "thiserror 2.0.12",

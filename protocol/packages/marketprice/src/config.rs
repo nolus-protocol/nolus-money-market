@@ -163,7 +163,8 @@ mod unchecked {
 #[cfg(test)]
 mod test {
     use finance::{duration::Duration, percent::Percent};
-    use sdk::cosmwasm_std::{StdError, Timestamp, from_json, to_json_vec};
+    use platform::tests as platform_tests;
+    use sdk::cosmwasm_std::{StdError, Timestamp, from_json};
 
     use crate::config::Config;
 
@@ -262,7 +263,7 @@ mod test {
             samples_number,
             Percent::from_permille(discount_factor),
         );
-        assert_eq!(from_json(to_json_vec(&c).unwrap()), Ok(c));
+        assert_eq!(Ok(c.clone()), platform_tests::ser_de(&c));
     }
 
     fn deserialize_pass(

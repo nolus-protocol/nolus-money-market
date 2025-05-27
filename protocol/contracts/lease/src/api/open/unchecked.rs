@@ -31,7 +31,8 @@ impl TryFrom<PositionSpecDTO> for ValidatedPositionSpec {
 #[cfg(all(feature = "internal.test.skel", test))]
 mod test {
     use finance::{duration::Duration, percent::Percent};
-    use sdk::cosmwasm_std::{Addr, from_json, to_json_vec};
+    use platform::tests as platform_tests;
+    use sdk::cosmwasm_std::Addr;
 
     use crate::api::open::LoanForm;
 
@@ -42,11 +43,7 @@ mod test {
 
     #[test]
     fn read_5_0() {
-        assert_eq!(
-            loan_v5_0(),
-            from_json(to_json_vec(&loan_v5_0()).expect("serialization passed"))
-                .expect("deserialization passed")
-        );
+        assert_eq!(Ok(loan_v5_0()), platform_tests::ser_de(&loan_v5_0()));
     }
 
     fn loan_v5_0() -> LoanForm {

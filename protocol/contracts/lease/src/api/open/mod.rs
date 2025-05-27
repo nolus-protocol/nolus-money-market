@@ -78,7 +78,7 @@ pub struct LoanForm {
 #[cfg_attr(
     feature = "skel",
     derive(Deserialize),
-    serde(deny_unknown_fields, try_from = "unchecked::PositionSpecDTO")
+    serde(try_from = "unchecked::PositionSpecDTO")
 )]
 #[cfg_attr(feature = "skel_testing", derive(Debug))]
 #[serde(rename_all = "snake_case")]
