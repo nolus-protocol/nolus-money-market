@@ -5,7 +5,7 @@ use currency::CurrencyDTO;
 use dex::ConnectionParams;
 use finance::{duration::Duration, percent::Percent};
 use lease::api::{
-    DownpaymentCoin, LeaseCoin, LpnCoinDTO, limits::MaxSlippage, open::PositionSpecDTO,
+    DownpaymentCoin, LeaseCoin, LpnCoinDTO, limits::MaxSlippages, open::PositionSpecDTO,
 };
 use sdk::cosmwasm_std::{Addr, Uint64};
 use versioning::ProtocolPackageReleaseId;
@@ -30,7 +30,7 @@ pub struct InstantiateMsg {
     pub lease_position_spec: PositionSpecDTO,
     pub lease_interest_rate_margin: Percent,
     pub lease_due_period: Duration,
-    pub lease_max_slippage: MaxSlippage,
+    pub lease_max_slippages: MaxSlippages,
     pub lease_admin: Addr,
     pub dex: ConnectionParams,
 }
@@ -38,7 +38,7 @@ pub struct InstantiateMsg {
 #[derive(Serialize, Deserialize)]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub struct MigrateMsg {
-    pub lease_max_slippage: MaxSlippage,
+    pub lease_max_slippage: MaxSlippages,
     pub lease_admin: Addr,
 }
 
@@ -151,8 +151,8 @@ pub enum QueryMsg {
     Leases {
         owner: Addr,
     },
-    /// Implementation of [lease::api::limits::PositionLimits::MaxSlippage]
-    MaxSlippage {},
+    /// Implementation of [lease::api::limits::PositionLimits::MaxSlippages]
+    MaxSlippages {},
     /// Implementation of [versioning::query::ProtocolPackage::Release]
     ProtocolPackageRelease {},
     Quote {
@@ -187,7 +187,7 @@ mod test {
     use lease::api::{
         FinalizerExecuteMsg,
         authz::AccessCheck,
-        limits::{MaxSlippage, PositionLimits},
+        limits::{MaxSlippages, PositionLimits},
         open::PositionSpecDTO,
     };
     use platform::tests as platform_tests;
@@ -225,8 +225,8 @@ mod test {
     #[test]
     fn max_slippage_api_match() {
         assert_eq!(
-            Ok(PositionLimits::MaxSlippage {}),
-            platform_tests::ser_de(&QueryMsg::MaxSlippage {}),
+            Ok(PositionLimits::MaxSlippages {}),
+            platform_tests::ser_de(&QueryMsg::MaxSlippages {}),
         );
     }
 
@@ -250,7 +250,7 @@ mod test {
                 lease_interest_rate_margin: Percent,
                 lease_position_spec: PositionSpecDTO,
                 lease_due_period: Duration,
-                lease_max_slippage: MaxSlippage,
+                lease_max_slippage: MaxSlippages,
             },
         }
 
@@ -261,7 +261,7 @@ mod test {
                 lease_interest_rate_margin: new_config.lease_interest_rate_margin,
                 lease_position_spec: new_config.lease_position_spec,
                 lease_due_period: new_config.lease_due_period,
-                lease_max_slippage: new_config.lease_max_slippage
+                lease_max_slippage: new_config.lease_max_slippages
             }),
             platform_tests::ser_de(&SudoMsg::Config(new_config)),
         );

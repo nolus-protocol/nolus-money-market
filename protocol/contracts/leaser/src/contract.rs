@@ -228,7 +228,7 @@ pub fn query(deps: Deps<'_>, _env: Env, msg: QueryMsg) -> ContractResult<Binary>
         QueryMsg::Leases { owner } => Leaser::new(deps)
             .customer_leases(owner)
             .and_then(serialize_to_json),
-        QueryMsg::MaxSlippage {} => Leaser::new(deps)
+        QueryMsg::MaxSlippages {} => Leaser::new(deps)
             .config()
             .map(|cfg| cfg.lease_max_slippage)
             .and_then(serialize_to_json),

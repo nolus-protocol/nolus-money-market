@@ -5,13 +5,9 @@ use cosmwasm_std::{
 
 use currencies::{LeaseGroup, Lpn, testing::LeaseC1};
 use currency::{CurrencyDTO, CurrencyDef as _};
-use dex::{ConnectionParams, Ics20Channel};
-use finance::{
-    duration::Duration,
-    liability::Liability,
-    percent::{Percent, bound::BoundToHundredPercent},
-};
-use lease::api::{limits::MaxSlippage, open::PositionSpecDTO};
+use dex::{ConnectionParams, Ics20Channel, MaxSlippage};
+use finance::{duration::Duration, liability::Liability, percent::Percent};
+use lease::api::{limits::MaxSlippages, open::PositionSpecDTO};
 use platform::contract::{Code, CodeId};
 
 use sdk::{
@@ -69,8 +65,8 @@ fn leaser_instantiate_msg(lease_code: Code, lpp: Addr) -> crate::msg::Instantiat
         ),
         lease_interest_rate_margin: MARGIN_INTEREST_RATE,
         lease_due_period: Duration::from_days(90),
-        lease_max_slippage: MaxSlippage {
-            liquidation: BoundToHundredPercent::strict_from_percent(Percent::from_percent(20)),
+        lease_max_slippages: MaxSlippages {
+            liquidation: MaxSlippage::unchecked(Percent::from_percent(20)),
         },
         lease_admin: sdk_testing::user(LEASE_ADMIN),
         dex: dex_params(),
@@ -151,7 +147,7 @@ fn test_update_config() {
         NewConfig {
             lease_due_period: config.lease_due_period,
             lease_interest_rate_margin: config.lease_interest_rate_margin,
-            lease_max_slippage: config.lease_max_slippage,
+            lease_max_slippages: config.lease_max_slippage,
             lease_position_spec: config.lease_position_spec,
         }
     );

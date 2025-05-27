@@ -8,6 +8,7 @@ use finance::{
 };
 use oracle::stub;
 use oracle_platform::OracleRef;
+use platform::batch::{Emit, Emitter};
 use sdk::cosmwasm_std::QuerierWrapper;
 use serde::{Deserialize, Serialize};
 
@@ -16,28 +17,59 @@ use crate::{
     error::{Error, Result},
 };
 
+#[derive(Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[cfg_attr(feature = "testing", derive(Debug))]
+#[serde(deny_unknown_fields, rename_all = "snake_case")]
+pub struct MaxSlippage(BoundToHundredPercent);
+
+impl MaxSlippage {
+    //TODO remove past the migration
+    pub fn v_0_8_7_any() -> Self {
+        Self(
+            BoundToHundredPercent::try_from_percent(Percent::HUNDRED)
+                .expect("100% to be a valid slippage"),
+        )
+    }
+
+    #[cfg(feature = "testing")]
+    pub fn unchecked(max: Percent) -> Self {
+        Self(BoundToHundredPercent::strict_from_percent(max))
+    }
+
+    pub fn emit<Key>(&self, emitter: Emitter, key: Key) -> Emitter
+    where
+        Key: Into<String>,
+    {
+        emitter.emit_percent_amount(key, self.0.percent())
+    }
+
+    fn min_out<C>(&self, amount_in: Coin<C>) -> Coin<C> {
+        (Percent::HUNDRED - self.0.percent()).of(amount_in)
+    }
+}
+
 #[derive(Serialize, Deserialize)]
 #[cfg_attr(feature = "testing", derive(Debug))]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
-pub struct MaxSlippage<InG, OutC, OutG>
+pub struct Calculator<InG, OutC, OutG>
 where
     InG: Group,
     OutC: Currency + MemberOf<OutG>,
     OutG: Group,
 {
-    max_slippage: BoundToHundredPercent,
+    max_slippage: MaxSlippage,
     oracle: OracleRef<OutC, OutG>,
     #[serde(skip)]
     _in_g: PhantomData<InG>,
 }
 
-impl<InG, OutC, OutG> MaxSlippage<InG, OutC, OutG>
+impl<InG, OutC, OutG> Calculator<InG, OutC, OutG>
 where
     InG: Group,
     OutC: Currency + MemberOf<OutG>,
     OutG: Group,
 {
-    pub fn with(max_slippage: BoundToHundredPercent, oracle: OracleRef<OutC, OutG>) -> Self {
+    pub fn with(max_slippage: MaxSlippage, oracle: OracleRef<OutC, OutG>) -> Self {
         Self {
             max_slippage,
             oracle,
@@ -45,12 +77,12 @@ where
         }
     }
 
-    pub fn threshold(&self) -> BoundToHundredPercent {
+    pub fn threshold(&self) -> MaxSlippage {
         self.max_slippage
     }
 }
 
-impl<InG, OutC, OutG> SlippageCalculator<InG> for MaxSlippage<InG, OutC, OutG>
+impl<InG, OutC, OutG> SlippageCalculator<InG> for Calculator<InG, OutC, OutG>
 where
     InG: Group,
     OutC: CurrencyDef,
@@ -71,7 +103,7 @@ where
             OutC::Group: MemberOf<OutG> + MemberOf<InG::TopG>,
             OutG: Group,
         {
-            max_slippage: BoundToHundredPercent,
+            max_slippage: MaxSlippage,
             oracle: OracleRef<OutC, OutG>,
             querier: QuerierWrapper<'querier>,
             _in_g: PhantomData<InG>,
@@ -95,7 +127,7 @@ where
             {
                 stub::to_quote::<_, InG, _, _>(self.oracle, input, self.querier)
                     .map_err(Self::Error::MinOutput)
-                    .map(|input_in_out_c| calc_min_out(input_in_out_c, self.max_slippage))
+                    .map(|input_in_out_c| self.max_slippage.min_out(input_in_out_c))
             }
         }
 
@@ -108,10 +140,6 @@ where
     }
 }
 
-fn calc_min_out<C>(amount: Coin<C>, slippage: BoundToHundredPercent) -> Coin<C> {
-    (Percent::HUNDRED - slippage.percent()).of(amount)
-}
-
 #[cfg(test)]
 mod test {
     use currency::test::SuperGroupTestC1;
@@ -121,40 +149,34 @@ mod test {
         percent::{Percent, bound::BoundToHundredPercent},
     };
 
-    use crate::impl_::slippage::percent::calc_min_out;
+    use super::MaxSlippage;
 
     #[test]
     fn zero() {
-        assert!(
-            calc_min_out(
-                Coin::<SuperGroupTestC1>::from(100),
-                BoundToHundredPercent::strict_from_percent(Percent::from_percent(100))
-            )
-            .is_zero()
-        );
+        assert!(calc_min_out(456, Percent::from_percent(100)).is_zero());
     }
 
     #[test]
     fn hundred() {
         let coin_in = Coin::<SuperGroupTestC1>::from(100);
-        assert_eq!(
-            coin_in,
-            calc_min_out(
-                coin_in,
-                BoundToHundredPercent::strict_from_percent(Percent::ZERO)
-            )
-        );
+        assert_eq!(coin_in, calc_min_out(coin_in, Percent::ZERO));
     }
 
     #[test]
     fn eighty_five() {
-        let coin_in = Coin::<SuperGroupTestC1>::from(100);
+        let coin_in = Coin::<SuperGroupTestC1>::from(267);
+        let slippage = Percent::from_percent(15);
         assert_eq!(
-            Percent::from_percent(85).of(coin_in),
-            calc_min_out(
-                coin_in,
-                BoundToHundredPercent::strict_from_percent(Percent::from_percent(15))
-            )
+            (Percent::HUNDRED - slippage).of(coin_in),
+            calc_min_out(coin_in, slippage)
         );
+    }
+
+    fn calc_min_out<AmountIn>(amount_in: AmountIn, slippage: Percent) -> Coin<SuperGroupTestC1>
+    where
+        AmountIn: Into<Coin<SuperGroupTestC1>>,
+    {
+        MaxSlippage(BoundToHundredPercent::try_from_percent(slippage).unwrap())
+            .min_out(amount_in.into())
     }
 }

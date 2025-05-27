@@ -1,12 +1,12 @@
 use currencies::Lpn;
-use dex::{ConnectionParams, Ics20Channel};
+use dex::{ConnectionParams, Ics20Channel, MaxSlippage};
 use finance::{
     coin::{Amount, Coin},
     duration::Duration,
     liability::Liability,
-    percent::{Percent, bound::BoundToHundredPercent},
+    percent::Percent,
 };
-use lease::api::{LpnCoinDTO, limits::MaxSlippage, open::PositionSpecDTO};
+use lease::api::{LpnCoinDTO, limits::MaxSlippages, open::PositionSpecDTO};
 use platform::contract::Code;
 use sdk::cosmwasm_std::Addr;
 
@@ -39,8 +39,8 @@ pub fn new_config() -> NewConfig {
             lpn_coin(100_000),
         ),
         lease_due_period: Duration::from_secs(100),
-        lease_max_slippage: MaxSlippage {
-            liquidation: BoundToHundredPercent::strict_from_percent(Percent::from_percent(13)),
+        lease_max_slippages: MaxSlippages {
+            liquidation: MaxSlippage::unchecked(Percent::from_percent(13)),
         },
     }
 }
@@ -69,8 +69,8 @@ fn dummy_instantiate_msg() -> InstantiateMsg {
         },
         lease_interest_rate_margin: Percent::from_percent(3),
         lease_due_period: Duration::from_days(14),
-        lease_max_slippage: MaxSlippage {
-            liquidation: BoundToHundredPercent::strict_from_percent(Percent::from_percent(20)),
+        lease_max_slippages: MaxSlippages {
+            liquidation: MaxSlippage::unchecked(Percent::from_percent(20)),
         },
         lease_admin: Addr::unchecked("lease_admin_XYZ"),
         dex: ConnectionParams {

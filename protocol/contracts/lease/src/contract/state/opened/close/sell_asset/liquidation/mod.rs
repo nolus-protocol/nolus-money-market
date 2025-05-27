@@ -1,4 +1,4 @@
-use dex::{AnomalyHandler, AnomalyTreatment, MaxSlippage};
+use dex::{AcceptUpToMaxSlippage, AnomalyHandler, AnomalyTreatment};
 use platform::message::Response as MessageResponse;
 use sdk::cosmwasm_std::{Env, QuerierWrapper};
 
@@ -41,7 +41,7 @@ pub fn start(
         .leases
         .max_slippage(querier)
         .map(|max_slippage| {
-            MaxSlippage::with(max_slippage.liquidation, lease.lease.oracle.clone()).into()
+            AcceptUpToMaxSlippage::with(max_slippage.liquidation, lease.lease.oracle.clone()).into()
         })
         .and_then(|slippage_calc| match liquidation {
             LiquidationDTO::Partial(spec) => {
@@ -71,10 +71,8 @@ where
     RepayableImpl: Closable + Repayable,
 {
     fn on_anomaly(self) -> AnomalyTreatment<SellAsset<RepayableImpl, Calculator>> {
-        let emitter = event::emit_slippage_anomaly(
-            &self.lease.lease,
-            self.slippage_calc.threshold().percent(),
-        );
+        let emitter =
+            event::emit_slippage_anomaly(&self.lease.lease, self.slippage_calc.threshold());
         let next_state = SlippageAnomaly::new(self.lease);
         AnomalyTreatment::Exit(Ok(Response::from(emitter, next_state)))
     }

@@ -1,10 +1,9 @@
 use serde::{Deserialize, Serialize};
 
-use dex::{AcceptAnyNonZeroSwap, DexResult, MaxSlippage, SlippageCalculator};
-use finance::{
-    coin::{Coin, CoinDTO},
-    percent::{Percent, bound::BoundToHundredPercent},
+use dex::{
+    AcceptAnyNonZeroSwap, AcceptUpToMaxSlippage, DexResult, MaxSlippage, SlippageCalculator,
 };
+use finance::coin::{Coin, CoinDTO};
 use sdk::cosmwasm_std::QuerierWrapper;
 
 use crate::{
@@ -19,15 +18,14 @@ use crate::{
 #[derive(Serialize, Deserialize)]
 #[serde(deny_unknown_fields, rename_all = "snake_case", untagged)]
 pub enum CompoundCalculator {
-    MaxSlippage(MaxSlippage<LeaseAssetCurrencies, LpnCurrency, LpnCurrencies>),
+    MaxSlippage(AcceptUpToMaxSlippage<LeaseAssetCurrencies, LpnCurrency, LpnCurrencies>),
     AnySlippage(AcceptAnyNonZeroSwap<LeaseAssetCurrencies, LpnCurrency>),
 }
 
 impl CompoundCalculator {
-    pub fn threshold(&self) -> BoundToHundredPercent {
+    pub fn threshold(&self) -> MaxSlippage {
         match self {
-            Self::AnySlippage(_calc) => BoundToHundredPercent::try_from_percent(Percent::HUNDRED)
-                .expect("100% to be a valid slippage"),
+            Self::AnySlippage(_calc) => MaxSlippage::v_0_8_7_any(),
             Self::MaxSlippage(calc) => calc.threshold(),
         }
     }
@@ -54,8 +52,12 @@ impl SlippageCalculator<LeaseAssetCurrencies> for CompoundCalculator {
     }
 }
 
-impl From<MaxSlippage<LeaseAssetCurrencies, LpnCurrency, LpnCurrencies>> for CompoundCalculator {
-    fn from(value: MaxSlippage<LeaseAssetCurrencies, LpnCurrency, LpnCurrencies>) -> Self {
+impl From<AcceptUpToMaxSlippage<LeaseAssetCurrencies, LpnCurrency, LpnCurrencies>>
+    for CompoundCalculator
+{
+    fn from(
+        value: AcceptUpToMaxSlippage<LeaseAssetCurrencies, LpnCurrency, LpnCurrencies>,
+    ) -> Self {
         Self::MaxSlippage(value)
     }
 }

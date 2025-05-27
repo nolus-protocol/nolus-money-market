@@ -58,6 +58,7 @@ skel = [
 ]
 skel_testing = [
     "skel",
+    "dex/testing",
     "finance/testing",
 ]
 "internal.test.skel" = [

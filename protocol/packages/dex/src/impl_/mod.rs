@@ -10,7 +10,7 @@ pub use self::{
     },
     out_remote::{StartLocalRemoteState, State as StateRemoteOut, start as start_local_remote},
     resp_delivery::{ICAOpenResponseDelivery, ResponseDelivery},
-    slippage::{AcceptAnyNonZeroSwap, MaxSlippage},
+    slippage::{AcceptAnyNonZeroSwap, Calculator as AcceptUpToMaxSlippage, MaxSlippage},
     swap_exact_in::SwapExactIn,
     transfer_in_finish::TransferInFinish,
     transfer_in_init::TransferInInit,

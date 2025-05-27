@@ -7,7 +7,7 @@ use crate::{
     api::{
         FinalizerExecuteMsg,
         authz::{AccessCheck, AccessGranted},
-        limits::{MaxSlippage, PositionLimits},
+        limits::{MaxSlippages, PositionLimits},
     },
     error::{ContractError, ContractResult},
 };
@@ -37,8 +37,8 @@ impl LeasesRef {
         .map_err(Into::into)
     }
 
-    pub(super) fn max_slippage(&self, querier: QuerierWrapper<'_>) -> ContractResult<MaxSlippage> {
-        let query = PositionLimits::MaxSlippage {};
+    pub(super) fn max_slippage(&self, querier: QuerierWrapper<'_>) -> ContractResult<MaxSlippages> {
+        let query = PositionLimits::MaxSlippages {};
         querier
             .query_wasm_smart(self.addr.clone(), &query)
             .map_err(ContractError::PositionLimitsQuery)
