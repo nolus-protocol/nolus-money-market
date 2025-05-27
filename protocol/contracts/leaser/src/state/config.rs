@@ -11,11 +11,7 @@ use sdk::{
     cw_storage_plus::Item,
 };
 
-use crate::{
-    ContractError,
-    msg::{InstantiateMsg, NewConfig},
-    result::ContractResult,
-};
+use crate::{msg::{InstantiateMsg, NewConfig}, result::ContractResult, ContractError};
 
 #[derive(Serialize, Deserialize, PartialEq, Eq)]
 #[cfg_attr(any(test, feature = "testing"), derive(Clone, Debug))]
