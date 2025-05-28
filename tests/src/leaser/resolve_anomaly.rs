@@ -39,6 +39,7 @@ fn not_privileged() {
         check_permission(&test_case.app, leaser, user)
     );
 }
+
 #[test]
 fn privileged() {
     let test_case = leaser_common::test_case();
