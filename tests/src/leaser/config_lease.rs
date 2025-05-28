@@ -36,8 +36,9 @@ fn privileged() {
     let leaser = test_case.address_book.leaser().clone();
 
     let mut new_config = Instantiator::new_config();
-    new_config.lease_max_slippages.liquidation = MaxSlippage::unchecked(Percent::from_permille(128));
-    
+    new_config.lease_max_slippages.liquidation =
+        MaxSlippage::unchecked(Percent::from_permille(128));
+
     let expected_slippages = new_config.lease_max_slippages.clone();
 
     assert!(config_leases(&mut test_case.app, leaser.clone(), admin, new_config).is_ok());
