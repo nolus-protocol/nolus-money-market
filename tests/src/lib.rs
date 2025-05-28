@@ -6,7 +6,7 @@ use sdk::cosmwasm_std::Timestamp;
 
 mod common;
 mod lease;
-mod leaser_tests;
+mod leaser;
 mod lpp_tests;
 mod oracle_tests;
 mod profit_tests;
