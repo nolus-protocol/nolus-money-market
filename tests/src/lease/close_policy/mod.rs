@@ -16,7 +16,7 @@ use crate::{
 mod change;
 mod trigger;
 
-fn change_ok(
+pub(in crate::lease) fn change_ok(
     test_case: &mut LeaseTestCase,
     lease: Addr,
     take_profit: Option<ChangeCmd>,

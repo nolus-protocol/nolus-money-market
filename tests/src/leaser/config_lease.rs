@@ -39,7 +39,7 @@ fn privileged() {
     new_config.lease_max_slippages.liquidation =
         MaxSlippage::unchecked(Percent::from_permille(128));
 
-    let expected_slippages = new_config.lease_max_slippages.clone();
+    let expected_slippages = new_config.lease_max_slippages;
 
     assert!(config_leases(&mut test_case.app, leaser.clone(), admin, new_config).is_ok());
     assert_eq!(expected_slippages, max_slippages(&test_case.app, leaser));
