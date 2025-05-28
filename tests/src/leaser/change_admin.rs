@@ -1,9 +1,10 @@
 use leaser::ContractError;
-use sdk::testing;
+use sdk::{cosmwasm_std::Addr, cw_multi_test::AppResponse, testing};
 
 use crate::common::{
     ADMIN, LEASE_ADMIN, USER,
     leaser::{self as leaser_common},
+    test_case::{app::App, response::ResponseWithInterChainMsgs},
 };
 
 #[test]
@@ -15,14 +16,7 @@ fn not_privileged() {
     let leaser = test_case.address_book.leaser().clone();
 
     assert!(matches!(
-        test_case
-            .app
-            .execute(
-                user,
-                leaser,
-                &leaser::msg::ExecuteMsg::ChangeLeaseAdmin { new: admin },
-                &[],
-            )
+        change_admin(&mut test_case.app, leaser, user, admin)
             .expect_err("change lease admin by non authorized user should fail")
             .downcast_ref::<ContractError>(),
         Some(&ContractError::Unauthorized(_))
@@ -36,15 +30,19 @@ fn privileged() {
     let lease_admin = testing::user(LEASE_ADMIN);
     let leaser = test_case.address_book.leaser().clone();
 
-    assert!(
-        test_case
-            .app
-            .execute(
-                lease_admin,
-                leaser,
-                &leaser::msg::ExecuteMsg::ChangeLeaseAdmin { new: admin },
-                &[],
-            )
-            .is_ok()
-    );
+    assert!(change_admin(&mut test_case.app, leaser, lease_admin, admin).is_ok());
+}
+
+pub(super) fn change_admin(
+    app: &mut App,
+    leaser: Addr,
+    caller: Addr,
+    new_admin: Addr,
+) -> anyhow::Result<ResponseWithInterChainMsgs<'_, AppResponse>> {
+    app.execute(
+        caller,
+        leaser,
+        &leaser::msg::ExecuteMsg::ChangeLeaseAdmin { new: new_admin },
+        &[],
+    )
 }
