@@ -1,21 +1,23 @@
 use std::collections::HashSet;
 
-use currencies::{LeaseGroup, PaymentGroup};
+use currencies::{LeaseGroup, Lpn, PaymentGroup};
 use currency::{CurrencyDef, MemberOf};
 use dex::{ConnectionParams, Ics20Channel, MaxSlippage};
 use finance::{coin::Coin, duration::Duration, liability::Liability, percent::Percent, test};
 use lease::api::{LpnCoinDTO, limits::MaxSlippages, open::PositionSpecDTO};
 use leaser::{
     execute, instantiate,
-    msg::{InstantiateMsg, QueryMsg, QuoteResponse},
+    msg::{InstantiateMsg, NewConfig, QueryMsg, QuoteResponse},
     query, reply, sudo,
 };
 use platform::contract::{Code, CodeId};
 use sdk::{cosmwasm_std::Addr, testing};
 
 use super::{
-    ADMIN, CwContractWrapper, LEASE_ADMIN,
-    test_case::{TestCase, app::App},
+    ADDON_OPTIMAL_INTEREST_RATE, ADMIN, BASE_INTEREST_RATE, CwContractWrapper, LEASE_ADMIN,
+    UTILIZATION_OPTIMAL,
+    protocols::Registry,
+    test_case::{TestCase, app::App, builder::BlankBuilder as TestCaseBuilder},
 };
 
 pub(crate) struct Instantiator;
@@ -60,6 +62,17 @@ impl Instantiator {
             Self::min_asset(),
             Self::min_transaction(),
         )
+    }
+
+    pub fn new_config() -> NewConfig {
+        NewConfig {
+            lease_position_spec: Instantiator::position_spec(),
+            lease_interest_rate_margin: Instantiator::INTEREST_RATE_MARGIN,
+            lease_due_period: Instantiator::REPAYMENT_PERIOD,
+            lease_max_slippages: MaxSlippages {
+                liquidation: MaxSlippage::unchecked(Instantiator::MAX_SLIPPAGE),
+            },
+        }
     }
 
     pub fn expected_addr() -> Addr {
@@ -113,9 +126,30 @@ impl Instantiator {
     }
 }
 
+pub(super) type LeaserTestCase = TestCase<Addr, Addr, Addr, Addr, Addr, Addr, Addr, Addr>;
+
 pub(crate) struct Alarms {
     pub time_alarm: Addr,
     pub market_price_oracle: Addr,
+}
+
+pub fn test_case() -> LeaserTestCase {
+    TestCaseBuilder::<Lpn>::new()
+        .init_lpp(
+            None,
+            BASE_INTEREST_RATE,
+            UTILIZATION_OPTIMAL,
+            ADDON_OPTIMAL_INTEREST_RATE,
+            TestCase::DEFAULT_LPP_MIN_UTILIZATION,
+        )
+        .init_time_alarms()
+        .init_protocols_registry(Registry::NoProtocol)
+        .init_oracle(None)
+        .init_treasury()
+        .init_profit(24)
+        .init_reserve()
+        .init_leaser()
+        .into_generic()
 }
 
 pub(crate) fn query_quote<DownpaymentC, LeaseC>(
