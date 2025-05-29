@@ -36,6 +36,11 @@ pub enum Error {
     ZeroClosePolicy(&'static str),
 
     #[error(
+        "[Position] Invalid close policy! Take profit value '{tp}' should be less than the stop loss value '{sl}'!"
+    )]
+    InvalidClosePolicy { tp: Percent, sl: Percent },
+
+    #[error(
         "[Position] Invalid close policy! The new strategy '{strategy}' is not less than the max lease liability LTV '{top_bound}'!"
     )]
     LiquidationConflict {
@@ -58,6 +63,10 @@ impl Error {
 
     pub fn zero_stop_loss() -> Self {
         Self::ZeroClosePolicy("stop loss")
+    }
+
+    pub fn invalid_policy(tp: Percent, sl: Percent) -> Self {
+        Self::InvalidClosePolicy { tp, sl }
     }
 
     pub fn liquidation_conflict(liquidation_ltv: Percent, strategy: CloseStrategy) -> Self {

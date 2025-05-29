@@ -18,6 +18,11 @@ use super::error::{Error as PositionError, Result as PositionResult};
 /// Close position policy
 ///
 /// Not designed to be used as an input API component! Invariant checks are not done on deserialization!
+/// Invariant:
+/// - 'take_profit' is None or != Percent::ZERO
+/// - 'stop_loss' is None or != Percent::ZERO
+/// - if both are present, ['take_profit'; 'stop_loss`) should be a valid non-empty range
+///
 /// A position is subject to close if its LTV pertains to the right-open intervals (-inf., `take_profit`),
 /// or [`stop_loss`, +inf)
 #[derive(Copy, Clone, Default, Eq, PartialEq, Serialize, Deserialize)]
@@ -65,9 +70,6 @@ impl Policy {
     }
 
     /// Determine the 'no-close' intersection with the provided range
-    ///
-    /// Pre: `self.may_trigger() == None` for an ltv contained in `during`.
-    /// This implies that `during` is not a sub-range of any of the policy ranges.
     pub fn no_close(
         &self,
         during: RightOpenRange<Percent, Ascending>,
@@ -115,6 +117,16 @@ impl Policy {
         }
         .and_then(|this| match this.stop_loss {
             Some(sl) if sl == Percent::ZERO => Err(PositionError::zero_stop_loss()),
+            _ => Ok(this),
+        })
+        .and_then(|this| match (this.take_profit, this.stop_loss) {
+            (Some(tp), Some(sl)) => {
+                if !RightOpenRange::up_to(sl).cut_to(tp).contains(&tp) {
+                    Err(PositionError::invalid_policy(tp, sl))
+                } else {
+                    Ok(this)
+                }
+            }
             _ => Ok(this),
         })
     }
@@ -351,6 +363,36 @@ mod test {
         }
 
         #[test]
+        fn stop_loss_less_than_take_profit() {
+            let lower = Percent::from_percent(45);
+            let higher = Percent::from_percent(55);
+
+            assert_eq!(
+                PositionError::invalid_policy(higher, lower),
+                Policy::default()
+                    .change_policy(ClosePolicyChange {
+                        take_profit: Some(ChangeCmd::Set(higher)),
+                        stop_loss: Some(ChangeCmd::Set(lower)),
+                    })
+                    .unwrap_err()
+            );
+
+            {
+                Policy::default()
+                    .change_policy(ClosePolicyChange {
+                        take_profit: Some(ChangeCmd::Set(higher)),
+                        stop_loss: None,
+                    })
+                    .unwrap()
+                    .change_policy(ClosePolicyChange {
+                        take_profit: None,
+                        stop_loss: Some(ChangeCmd::Set(lower)),
+                    })
+                    .unwrap_err();
+            }
+        }
+
+        #[test]
         fn invariant_no_current_ltv() {
             let lower = Percent::from_percent(45);
             let higher = Percent::from_percent(55);
@@ -388,13 +430,25 @@ mod test {
                 may_p_1.may_trigger(Percent::HUNDRED, lower)
             );
 
-            let may_p_2 = may_p_1.change_policy(ClosePolicyChange {
-                take_profit: Some(ChangeCmd::Set(higher)),
-                stop_loss: None,
-            });
+            let may_p_2 = may_p_1
+                .change_policy(ClosePolicyChange {
+                    take_profit: Some(ChangeCmd::Set(higher)),
+                    stop_loss: Some(ChangeCmd::Reset),
+                })
+                .unwrap();
             assert_eq!(
-                Some(CloseStrategy::StopLoss(lower)),
-                may_p_2.unwrap().may_trigger(Percent::HUNDRED, higher)
+                Some(CloseStrategy::TakeProfit(higher)),
+                may_p_2.may_trigger(Percent::HUNDRED, lower)
+            );
+
+            assert_eq!(
+                PositionError::invalid_policy(higher, lower),
+                may_p_2
+                    .change_policy(ClosePolicyChange {
+                        take_profit: None,
+                        stop_loss: Some(ChangeCmd::Set(lower)),
+                    })
+                    .unwrap_err()
             );
         }
 
