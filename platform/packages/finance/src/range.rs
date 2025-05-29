@@ -218,6 +218,38 @@ mod test {
         }
     }
 
+    #[test]
+    fn cut_to_bound() {
+        let above = 2;
+        let below = 20;
+        let cut_to = 10;
+        let range = RightOpenRange::up_to(below).cut_to(above); // [above, below)
+        {
+            let range_cut = range.cut_to(cut_to); // [cut_to, below)
+            assert_eq!(RightOpenRange::up_to(below).cut_to(cut_to), range_cut);
+            assert_eq!(Some(cut_to).as_ref(), range_cut.may_above_or_equal());
+            assert_eq!(&below, range_cut.below());
+        }
+
+        {
+            let range_cut = range.cut_to(below);
+            assert_eq!(Some(below).as_ref(), range_cut.may_above_or_equal());
+            assert_eq!(&below, range_cut.below());
+        }
+
+        {
+            let range_cut = range.cut_to(below + above);
+            assert_eq!(Some(below).as_ref(), range_cut.may_above_or_equal());
+            assert_eq!(&below, range_cut.below());
+        }
+
+        {
+            let range_cut = range.cut_to(above); // [above, below)
+            assert_eq!(Some(above).as_ref(), range_cut.may_above_or_equal());
+            assert_eq!(&below, range_cut.below());
+        }
+    }
+
     fn amount_to_price(amount: Amount) -> Price<SuperGroupTestC1, SubGroupTestC6> {
         price::total_of(Coin::from(amount)).is(Coin::from(3))
     }

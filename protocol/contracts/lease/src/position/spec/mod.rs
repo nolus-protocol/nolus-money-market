@@ -1,12 +1,12 @@
 use std::{fmt::Debug, ops::Add};
 
-use currency::{Currency, CurrencyDef, MemberOf};
+use currency::{CurrencyDef, MemberOf};
 use finance::{
     coin::Coin,
     duration::Duration,
     fraction::Fraction,
     fractionable::Fractionable,
-    liability::Liability,
+    liability::{Liability, Zone},
     percent::Percent,
     price::{self},
     zero::Zero,
@@ -87,7 +87,7 @@ impl Spec {
         asset_in_lpns: Price<Asset>,
     ) -> PositionResult<Self>
     where
-        Asset: Currency,
+        Asset: 'static,
         Due: DueTrait,
     {
         let total_due = Self::to_assets(due.total_due(), asset_in_lpns);
@@ -155,8 +155,6 @@ impl Spec {
     }
 
     /// Determine the debt status of a position
-    ///
-    /// Pre: `self.check_close(...) == None`
     pub fn debt<Asset, Due>(
         &self,
         asset: Coin<Asset>,
@@ -164,28 +162,46 @@ impl Spec {
         asset_in_lpns: Price<Asset>,
     ) -> Debt<Asset>
     where
-        Asset: Currency,
+        Asset: 'static,
+        Liquidation<Asset>: Ord,
+        Due: DueTrait,
+    {
+        let due_asset = Self::due_asset(due, asset_in_lpns);
+
+        self.may_ask_liquidation_liability(asset, due_asset, asset_in_lpns)
+            .max(self.may_ask_liquidation_overdue(asset, due, asset_in_lpns))
+            .map(Debt::Bad)
+            .unwrap_or_else(|| self.no_liquidation(asset, due, due_asset))
+    }
+
+    /// Determine the `steadiness`'s range
+    ///
+    /// It is always a sub-range of the debt zone's range
+    ///
+    /// Pre: `self.check_close(...) == None`
+    pub fn steadiness<Asset, Due>(
+        &self,
+        asset: Coin<Asset>,
+        due: &Due,
+        asset_in_lpns: Price<Asset>,
+    ) -> Steadiness<Asset>
+    where
         Due: DueTrait,
     {
         debug_assert_eq!(None, self.check_close(asset, due, asset_in_lpns));
-        let due_assets = Self::to_assets(due.total_due(), asset_in_lpns);
 
-        self.may_ask_liquidation_liability(asset, due_assets, asset_in_lpns)
-            .max(self.may_ask_liquidation_overdue(asset, due, asset_in_lpns))
-            .map(Debt::Bad)
-            .unwrap_or_else(|| {
-                let position_ltv = Self::ltv(due_assets, asset);
-                // The ltv can be above the max percent and due to other circumstances the liquidation may not happen,
-                // for example, the liquidated amount is less than the `min_transaction_amount`
-                let position_ltv_capped = self.liability.cap_to_zone(position_ltv);
-                let due_assets_capped = if position_ltv_capped < position_ltv {
-                    self.liability.max().of(asset) - Coin::new(1)
-                } else {
-                    due_assets
-                };
+        let debt_zone = self.zone(asset, Self::due_asset(due, asset_in_lpns));
 
-                self.no_liquidation(asset, due, due_assets_capped, position_ltv_capped)
-            })
+        let steady_within = self.close.no_close(debt_zone.range());
+
+        Steadiness::new(
+            self.overdue_collection_in(due)
+                .min(self.liability.recalculation_time()),
+            steady_within.invert(|ltv| {
+                debug_assert!(!ltv.is_zero());
+                price::total_of(ltv.of(asset)).is(due.total_due())
+            }),
+        )
     }
 
     /// Check if the position is subject of a full close due to trigerred close policy
@@ -196,7 +212,7 @@ impl Spec {
         asset_in_lpns: Price<Asset>,
     ) -> Option<CloseStrategy>
     where
-        Asset: Currency,
+        Asset: 'static,
         Due: DueTrait,
     {
         self.close
@@ -237,7 +253,7 @@ impl Spec {
         asset_in_lpns: Price<Asset>,
     ) -> PositionResult<()>
     where
-        Asset: Currency,
+        Asset: 'static,
     {
         self.validate_transaction(
             close_amount,
@@ -260,7 +276,7 @@ impl Spec {
         err_fn: ErrFn,
     ) -> Result<(), PositionError>
     where
-        TransactionC: Currency,
+        TransactionC: 'static,
         ErrFn: FnOnce(LpnCoinDTO) -> PositionError,
     {
         let amount_in_lpn = price::total(amount, transaction_currency_in_lpn);
@@ -279,7 +295,7 @@ impl Spec {
         err_fn: ErrFn,
     ) -> Result<(), PositionError>
     where
-        TransactionC: Currency,
+        TransactionC: 'static,
         ErrFn: FnOnce(LpnCoinDTO) -> PositionError,
     {
         let asset_amount_in_lpn = price::total(asset_amount, transaction_currency_in_lpn);
@@ -298,7 +314,7 @@ impl Spec {
         asset_in_lpns: Price<Asset>,
     ) -> Option<Liquidation<Asset>>
     where
-        Asset: Currency,
+        Asset: 'static,
     {
         let liquidation_amount = self.liability.amount_to_liquidate(asset, total_due);
         self.may_ask_liquidation(
@@ -319,7 +335,7 @@ impl Spec {
         asset_in_lpns: Price<Asset>,
     ) -> Option<Liquidation<Asset>>
     where
-        Asset: Currency,
+        Asset: 'static,
         Due: DueTrait,
     {
         let collectable = self.overdue_collection(due).amount();
@@ -336,7 +352,7 @@ impl Spec {
         asset_in_lpns: Price<Asset>,
     ) -> Option<Liquidation<Asset>>
     where
-        Asset: Currency,
+        Asset: 'static,
     {
         match self.validate_close_amount(asset, liquidation, asset_in_lpns) {
             Err(PositionError::PositionCloseAmountTooSmall(_)) => None,
@@ -356,37 +372,18 @@ impl Spec {
         &self,
         asset: Coin<Asset>,
         due: &Due,
-        _due_assets_capped: Coin<Asset>,
-        position_ltv_capped: Percent,
+        due_asset: Coin<Asset>,
     ) -> Debt<Asset>
     where
-        Asset: Currency,
+        Asset: 'static,
         Due: DueTrait,
     {
-        debug_assert!(position_ltv_capped < self.liability.max());
+        debug_assert!(due_asset <= asset);
         if due.total_due().is_zero() {
             Debt::No
         } else {
-            let zone = self.liability.zone_of(position_ltv_capped);
-            debug_assert!(zone.range().contains(&position_ltv_capped));
-            let steady_within = self.close.no_close(zone.range());
-            #[cfg(debug_assertions)]
-            debug_assert!(
-                steady_within
-                    .map(|ltv| ltv.of(asset))
-                    .contains(&_due_assets_capped)
-            );
-
             Debt::Ok {
-                zone,
-                steadiness: Steadiness::new(
-                    self.overdue_collection_in(due)
-                        .min(self.liability.recalculation_time()),
-                    steady_within.invert(|ltv| {
-                        debug_assert!(!ltv.is_zero());
-                        price::total_of(ltv.of(asset)).is(due.total_due())
-                    }),
-                ),
+                zone: self.zone(asset, due_asset),
             }
         }
     }
@@ -406,9 +403,31 @@ impl Spec {
         Percent::from_ratio(total_due, lease_asset)
     }
 
+    fn zone<Asset>(&self, asset: Coin<Asset>, due_asset: Coin<Asset>) -> Zone
+    where
+        Asset: 'static,
+    {
+        // The ltv can be above the max percent and due to other circumstances the liquidation may not happen,
+        // for example, the liquidated amount is less than the `min_transaction_amount`
+        let position_ltv_capped = self.liability.cap_to_zone(Self::ltv(due_asset, asset));
+        debug_assert!(position_ltv_capped < self.liability.max());
+
+        let zone = self.liability.zone_of(position_ltv_capped);
+        debug_assert!(zone.range().contains(&position_ltv_capped));
+        zone
+    }
+
+    fn due_asset<Asset, Due>(due: &Due, asset_in_lpns: Price<Asset>) -> Coin<Asset>
+    where
+        Asset: 'static,
+        Due: DueTrait,
+    {
+        Self::to_assets(due.total_due(), asset_in_lpns)
+    }
+
     fn to_assets<Asset>(lpn_coin: LpnCoin, asset_in_lpns: Price<Asset>) -> Coin<Asset>
     where
-        Asset: Currency,
+        Asset: 'static,
     {
         price::total(lpn_coin, asset_in_lpns.inv())
     }

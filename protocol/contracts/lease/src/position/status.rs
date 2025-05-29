@@ -2,8 +2,6 @@ use serde::{Deserialize, Serialize};
 
 use finance::{coin::Coin, liability::Zone, percent::Percent};
 
-use super::steady::Steadiness;
-
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Serialize, Deserialize)]
 #[cfg_attr(feature = "contract_testing", derive(Debug))]
 pub enum Cause {
@@ -29,8 +27,6 @@ where
     Ok {
         /// The position's debt results to an LTV% within the `liability` zone
         zone: Zone,
-        /// The `steadiness`'s range is always a sub-range of the zone's range.
-        steadiness: Steadiness<Asset>,
     },
     Bad(Liquidation<Asset>),
 }

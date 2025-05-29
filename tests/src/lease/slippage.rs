@@ -83,7 +83,6 @@ fn full_liquidation_heal_no_close() {
 }
 
 #[test]
-#[ignore = "impossible to go into liquidation and slippage anomaly since the SL has precedence. TODO discuss with the stakeholders"]
 fn full_liquidation_heal_sl_close() {
     let mut test_case = lease_mod::create_test_case::<PaymentCurrency>();
 

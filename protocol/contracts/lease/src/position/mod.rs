@@ -62,13 +62,21 @@ where
     }
 
     /// Determine the debt status of a position
-    ///
-    /// Pre: `self.check_close(...) == None`
     pub fn debt<Due>(&self, due: &Due, asset_in_lpns: Price<Asset>) -> Debt<Asset>
     where
         Due: DueTrait,
     {
         self.spec.debt(self.amount, due, asset_in_lpns)
+    }
+
+    /// Determine the `steadiness`'s range
+    ///
+    /// It is always a sub-range of the debt zone's range
+    pub fn steadiness<Due>(&self, due: &Due, asset_in_lpns: Price<Asset>) -> Steadiness<Asset>
+    where
+        Due: DueTrait,
+    {
+        self.spec.steadiness(self.amount, due, asset_in_lpns)
     }
 
     /// Export the close policy state for querying purposes

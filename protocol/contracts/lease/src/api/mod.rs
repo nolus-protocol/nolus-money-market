@@ -48,8 +48,7 @@ pub enum ExecuteMsg {
     /// - SL is set and current LTV% >= SL% , or
     /// - TP is set and TP% > current LTV% .
     ///
-    /// If the Liquidation% and SL% are surpassed simultaneously, and since the higher amount of liquidation and the stop-loss should be closed,
-    /// the protocol should take the SL event with precedence and act accordingly.
+    /// The protocol proceeds with a liquidation if the Liquidation% and SL% are surpassed simultaneously.
     ///
     /// The full position close implies that a trigger is consumed and no longer valid once fired.
     ///

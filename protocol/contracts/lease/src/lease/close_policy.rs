@@ -27,17 +27,18 @@ where
         let due = self.loan.state(now);
 
         self.price_of_lease_currency().map(|asset_in_lpns| {
-            self.position
-                .check_close(&due, asset_in_lpns)
-                .map(|close| CloseStatus::CloseAsked(close))
-                .unwrap_or_else(|| match self.position.debt(&due, asset_in_lpns) {
-                    Debt::No => CloseStatus::Paid,
-                    Debt::Ok { zone, steadiness } => CloseStatus::None {
+            match self.position.debt(&due, asset_in_lpns) {
+                Debt::No => CloseStatus::Paid,
+                Debt::Ok { zone } => self
+                    .position
+                    .check_close(&due, asset_in_lpns)
+                    .map(|close| CloseStatus::CloseAsked(close))
+                    .unwrap_or_else(|| CloseStatus::None {
                         current_liability: zone,
-                        steadiness,
-                    },
-                    Debt::Bad(liquidation) => CloseStatus::NeedLiquidation(liquidation),
-                })
+                        steadiness: self.position.steadiness(&due, asset_in_lpns),
+                    }),
+                Debt::Bad(liquidation) => CloseStatus::NeedLiquidation(liquidation),
+            }
         })
     }
 
