@@ -16,6 +16,7 @@ pub struct Config {
     lease_code: Code,
     borrow_rate: InterestRate,
     min_utilization: BoundToHundredPercent,
+    lease_code_admin: Addr,
 }
 
 impl Config {
@@ -31,6 +32,7 @@ impl Config {
             lease_code,
             borrow_rate: msg.borrow_rate,
             min_utilization: msg.min_utilization,
+            lease_code_admin: msg.lease_code_admin,
         }
     }
 
@@ -39,16 +41,22 @@ impl Config {
         lease_code: Code,
         borrow_rate: InterestRate,
         min_utilization: BoundToHundredPercent,
+        lease_code_admin: Addr,
     ) -> Self {
         Self {
             lease_code,
             borrow_rate,
             min_utilization,
+            lease_code_admin,
         }
     }
 
     pub const fn lease_code(&self) -> Code {
         self.lease_code
+    }
+
+    pub const fn lease_code_admin(&self) -> Addr {
+        self.lease_code_admin
     }
 
     pub const fn borrow_rate(&self) -> &InterestRate {

@@ -1,1 +1,4 @@
-pub(crate) static LEASE_CODE_ADMIN_KEY: &str = "lease_code_admin";
+use access_control::SingleUserPermission;
+
+pub type LppAdminPermission<'a> = SingleUserPermission<'a>;
+
