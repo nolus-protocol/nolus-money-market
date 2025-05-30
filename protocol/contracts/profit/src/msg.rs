@@ -38,6 +38,9 @@ pub enum ExecuteMsg {
     ///
     /// Invoked always by the same contract instance.
     DexCallbackContinue(),
+
+    /// Heal the profit past a middleware failure
+    Heal(),
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Eq)]

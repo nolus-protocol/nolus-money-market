@@ -1473,7 +1473,7 @@ dependencies = [
 
 [[package]]
 name = "profit"
-version = "0.7.1"
+version = "0.7.2"
 dependencies = [
  "access-control",
  "cosmwasm-std 2.1.7",
