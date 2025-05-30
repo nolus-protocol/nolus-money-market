@@ -114,11 +114,12 @@ pub fn execute(
         ExecuteMsg::NewLeaseCode {
             lease_code: new_lease_code,
         } => {
-            SingleUserAccess::new(
-                deps.storage.deref_mut(),
-                crate::access_control::PROTOCOL_ADMIN_KEY,
-            )
-            .check(&Sender::new(&info))?;
+            let loaded_config = Config::load(deps.storage)?;
+            
+            access_control::check(
+                &crate::access_control::LppAdminPermission::new(&loaded_config.lease_code_admin()),
+                &info,
+            )?;
 
             Config::update_lease_code(deps.storage, new_lease_code)
                 .map(|()| PlatformResponse::default())
