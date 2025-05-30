@@ -818,7 +818,7 @@ dependencies = [
 
 [[package]]
 name = "dex"
-version = "0.2.1"
+version = "0.2.2"
 dependencies = [
  "currency",
  "finance",
@@ -1192,7 +1192,7 @@ dependencies = [
 
 [[package]]
 name = "lease"
-version = "0.11.2"
+version = "0.12.0"
 dependencies = [
  "access-control",
  "cosmwasm-std 2.1.7",
@@ -1217,7 +1217,7 @@ dependencies = [
 
 [[package]]
 name = "leaser"
-version = "0.10.1"
+version = "0.11.0"
 dependencies = [
  "access-control",
  "admin_contract",
