@@ -1,6 +1,10 @@
 use std::ops::{Deref, DerefMut};
 
+<<<<<<< HEAD
 use access_control::{Sender, SingleUserAccess};
+=======
+use access_control::SingleUserPermission;
+>>>>>>> e7b7184e2 (refactor(lpp,proft,treasury,reserve): unify permissions model, factor out SingleUserAccess and storage keys for a single addr)
 use admin_contract::msg::{
     ProtocolQueryResponse, ProtocolsQueryResponse, QueryMsg as ProtocolsRegistry,
 };
@@ -76,12 +80,13 @@ pub fn execute(
     msg: ExecuteMsg,
 ) -> ContractResult<CwResponse> {
     match msg {
+        
         ExecuteMsg::TimeAlarm {} => {
-            SingleUserAccess::new(
-                deps.storage.deref(),
-                crate::access_control::TIMEALARMS_NAMESPACE,
-            )
-            .check(&Sender::new(&info))?;
+            let config = try_load_config(storage)?;
+            access_control::check(
+                &TreasuryAlarmsDispatchPermission::new(&config.timealarms_permission),
+                &info,
+            )?;
 
             try_dispatch(deps.storage, deps.querier, &env, info.sender)
                 .map(response::response_only_messages)
@@ -235,13 +240,7 @@ fn setup_dispatching(
     platform::contract::validate_addr(querier, &msg.timealarms)
         .map_err(ContractError::ValidateTimeAlarmsAddr)?;
 
-    SingleUserAccess::new(
-        storage.deref_mut(),
-        crate::access_control::TIMEALARMS_NAMESPACE,
-    )
-    .grant_to(&msg.timealarms)?;
-
-    Config::new(msg.cadence_hours, msg.protocols_registry, msg.tvl_to_apr)
+    Config::new(msg.cadence_hours, msg.protocols_registry, msg.tvl_to_apr, msg.timealarms)
         .store(storage)
         .map_err(ContractError::SaveConfig)?;
     DispatchLog::update(storage, env.block.time)?;
