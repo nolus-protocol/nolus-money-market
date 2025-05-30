@@ -1,6 +1,7 @@
 use enum_dispatch::enum_dispatch;
 
 use finance::duration::Duration;
+use platform::ica::ErrorResponse as ICAErrorResponse;
 use sdk::cosmwasm_std::{Binary, Env, MessageInfo, QuerierWrapper, Reply, Timestamp};
 
 use crate::{
@@ -36,8 +37,13 @@ where
         err("dex response")
     }
 
-    fn on_dex_error(self, _querier: QuerierWrapper<'_>, _env: Env) -> ContractResult<Response> {
-        err("dex error")
+    fn on_dex_error(
+        self,
+        resp: ICAErrorResponse,
+        _querier: QuerierWrapper<'_>,
+        _env: Env,
+    ) -> ContractResult<Response> {
+        err(format!("dex error({})", resp))
     }
 
     fn on_dex_timeout(self, _querier: QuerierWrapper<'_>, _env: Env) -> ContractResult<Response> {
@@ -156,6 +162,9 @@ where
     }
 }
 
-fn err<R>(op: &str) -> ContractResult<R> {
+fn err<R, Op>(op: Op) -> ContractResult<R>
+where
+    Op: ToString,
+{
     Err(ContractError::unsupported_operation(op))
 }

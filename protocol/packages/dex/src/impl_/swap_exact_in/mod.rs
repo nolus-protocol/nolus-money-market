@@ -3,18 +3,18 @@ use std::{
     marker::PhantomData,
 };
 
-use decode_resp::{DecodeThenFinish, DecodeThenTransferIn};
-use encode_req::EncodeRequest;
-use report_anomaly::ReportAnomalyCmd;
 use serde::{Deserialize, Serialize};
 
 use currency::{CurrencyDTO, CurrencyDef, Group, MemberOf};
+use decode_resp::{DecodeThenFinish, DecodeThenTransferIn};
+use encode_req::EncodeRequest;
 use finance::{
     coin::{Coin, CoinDTO},
     duration::Duration,
     zero::Zero,
 };
-use platform::{batch::Batch, trx};
+use platform::{batch::Batch, ica::ErrorResponse as ICAErrorResponse, trx};
+use report_anomaly::ReportAnomalyCmd;
 use sdk::cosmwasm_std::{Binary, Env, QuerierWrapper, Timestamp};
 
 use crate::{
@@ -151,7 +151,12 @@ where
             .into()
     }
 
-    fn on_error(self, querier: QuerierWrapper<'_>, env: Env) -> HandlerResult<Self> {
+    fn on_error(
+        self,
+        _response: ICAErrorResponse,
+        querier: QuerierWrapper<'_>,
+        env: Env,
+    ) -> HandlerResult<Self> {
         self.handle_error(querier, env)
     }
 
@@ -200,7 +205,12 @@ where
             ))
     }
 
-    fn on_error(self, querier: QuerierWrapper<'_>, env: Env) -> HandlerResult<Self> {
+    fn on_error(
+        self,
+        _response: ICAErrorResponse,
+        querier: QuerierWrapper<'_>,
+        env: Env,
+    ) -> HandlerResult<Self> {
         self.handle_error(querier, env)
     }
 

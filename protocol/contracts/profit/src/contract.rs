@@ -10,7 +10,8 @@ use platform::{
 use sdk::{
     cosmwasm_ext::Response as CwResponse,
     cosmwasm_std::{
-        Binary, Deps, DepsMut, Env, MessageInfo, QuerierWrapper, Reply, entry_point, to_json_binary,
+        Api, Binary, Deps, DepsMut, Env, MessageInfo, QuerierWrapper, Reply, entry_point,
+        to_json_binary,
     },
     neutron_sdk::sudo::msg::SudoMsg as NeutronSudoMsg,
 };
@@ -133,16 +134,16 @@ pub fn execute(
 
 #[entry_point]
 pub fn sudo(deps: DepsMut<'_>, env: Env, msg: NeutronSudoMsg) -> ContractResult<CwResponse> {
-    let state: State = State::load(deps.storage)?;
-
-    let DexResponse::<State> {
-        response,
-        next_state,
-    } = try_handle_neutron_msg(deps.as_ref(), env, msg, state)?;
-
-    next_state.store(deps.storage)?;
-
-    Ok(response::response_only_messages(response))
+    State::load(deps.storage)
+        .and_then(|state| try_handle_neutron_msg(deps.api, deps.as_ref(), env, msg, state))
+        .and_then(
+            |DexResponse::<State> {
+                 response,
+                 next_state,
+             }| { next_state.store(deps.storage).map(|()| response) },
+        )
+        .map(response::response_only_messages)
+        .inspect_err(platform_error::log(deps.api))
 }
 
 #[entry_point]
@@ -151,6 +152,7 @@ pub fn reply(deps: DepsMut<'_>, env: Env, msg: Reply) -> ContractResult<CwRespon
 }
 
 fn try_handle_neutron_msg(
+    api: &dyn Api,
     deps: Deps<'_>,
     env: Env,
     msg: NeutronSudoMsg,
@@ -158,7 +160,11 @@ fn try_handle_neutron_msg(
 ) -> ContractResult<DexResponse<State>> {
     match msg {
         NeutronSudoMsg::Response { data, .. } => state.on_response(data, deps.querier, env).into(),
-        NeutronSudoMsg::Error { .. } => state.on_error(deps.querier, env).into(),
+        NeutronSudoMsg::Error { details, .. } => {
+            let resp = details.into();
+            api.debug(&format!("SudoMsg::Error({})", resp));
+            state.on_error(resp, deps.querier, env).into()
+        }
         NeutronSudoMsg::Timeout { .. } => state.on_timeout(deps.querier, env).map_err(Into::into),
         NeutronSudoMsg::OpenAck {
             counterparty_version,

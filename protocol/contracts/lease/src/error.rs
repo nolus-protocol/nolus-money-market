@@ -88,9 +88,9 @@ pub enum ContractError {
 impl ContractError {
     pub fn unsupported_operation<Op>(op: Op) -> Self
     where
-        Op: Into<String>,
+        Op: ToString,
     {
-        Self::UnsupportedOperation(op.into())
+        Self::UnsupportedOperation(op.to_string())
     }
 
     pub fn broken_invariant_if<T>(check: bool, msg: &str) -> ContractResult<()> {

@@ -24,6 +24,13 @@ const ICA_ACCOUNT_ID: &str = "0";
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub struct HostAccount(String);
 
+/// Error response to an ICA request
+///
+/// Contains an unstructured text, that is helpful for manual troubleshooting.
+pub struct ErrorResponse {
+    details: String,
+}
+
 impl TryFrom<String> for HostAccount {
     type Error = Error;
     fn try_from(addr: String) -> Result<Self> {
@@ -44,6 +51,18 @@ impl From<HostAccount> for String {
 impl Display for HostAccount {
     fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
         f.write_str(self.0.as_str())
+    }
+}
+
+impl Display for ErrorResponse {
+    fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
+        f.write_fmt(format_args!("ICA error with details '{}'", self.details))
+    }
+}
+
+impl From<String> for ErrorResponse {
+    fn from(details: String) -> Self {
+        Self { details }
     }
 }
 

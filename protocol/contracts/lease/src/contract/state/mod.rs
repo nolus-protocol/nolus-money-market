@@ -4,7 +4,9 @@ use enum_dispatch::enum_dispatch;
 use finance::duration::Duration;
 use serde::{Deserialize, Serialize};
 
-use platform::{batch::Batch, message::Response as MessageResponse};
+use platform::{
+    batch::Batch, ica::ErrorResponse as ICAErrorResponse, message::Response as MessageResponse,
+};
 use sdk::{
     cosmwasm_std::{Binary, Env, MessageInfo, QuerierWrapper, Reply, Storage, Timestamp},
     cw_storage_plus::Item,

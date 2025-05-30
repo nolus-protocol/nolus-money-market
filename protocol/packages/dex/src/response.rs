@@ -1,6 +1,7 @@
 use std::{fmt::Display, result::Result as StdResult};
 
 use platform::{
+    ica::ErrorResponse as ICAErrorResponse,
     message::Response as MessageResponse,
     state_machine::{self, Response as StateMachineResponse},
 };
@@ -56,8 +57,13 @@ where
     }
 
     /// The entry point of an error delivery
-    fn on_error(self, _querier: QuerierWrapper<'_>, _env: Env) -> Result<Self> {
-        Err(err(self, "handle transaction error")).into()
+    fn on_error(
+        self,
+        response: ICAErrorResponse,
+        _querier: QuerierWrapper<'_>,
+        _env: Env,
+    ) -> Result<Self> {
+        Err(err(self, &format!("handle {}", response))).into()
     }
 
     /// The entry point of a timeout delivery

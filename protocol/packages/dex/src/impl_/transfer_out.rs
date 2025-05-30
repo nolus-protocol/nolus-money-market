@@ -8,6 +8,7 @@ use serde::{Deserialize, Serialize};
 use finance::{coin::CoinDTO, duration::Duration};
 use platform::{
     batch::{Batch, Emitter},
+    ica::ErrorResponse as ICAErrorResponse,
     message::Response as MessageResponse,
 };
 use sdk::cosmwasm_std::{Binary, Env, QuerierWrapper, Timestamp};
@@ -178,7 +179,12 @@ where
 
     // occasionslly, we get errors from handling the transfer receive message at the remote network
     // we cannot do anything else except keep trying to transfer again
-    fn on_error(self, querier: QuerierWrapper<'_>, env: Env) -> HandlerResult<Self> {
+    fn on_error(
+        self,
+        _response: ICAErrorResponse,
+        querier: QuerierWrapper<'_>,
+        env: Env,
+    ) -> HandlerResult<Self> {
         self.on_timeout(querier, env).into()
     }
 }

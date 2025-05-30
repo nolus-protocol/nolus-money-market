@@ -3,7 +3,7 @@ use platform::{error as platform_error, message::Response as MessageResponse, re
 use sdk::{
     cosmwasm_ext::Response as CwResponse,
     cosmwasm_std::{
-        Binary, Deps, DepsMut, Env, MessageInfo, QuerierWrapper, Reply, Storage, entry_point,
+        Api, Binary, Deps, DepsMut, Env, MessageInfo, QuerierWrapper, Reply, Storage, entry_point,
         to_json_binary,
     },
     neutron_sdk::sudo::msg::SudoMsg,
@@ -91,7 +91,7 @@ pub fn execute(
 #[entry_point]
 pub fn sudo(deps: DepsMut<'_>, env: Env, msg: SudoMsg) -> ContractResult<CwResponse> {
     process_lease(deps.storage, |lease| {
-        process_sudo(msg, lease, deps.querier, env)
+        process_sudo(msg, lease, deps.api, deps.querier, env)
     })
     .map(response::response_only_messages)
     .inspect_err(platform_error::log(deps.api))
@@ -160,6 +160,7 @@ fn process_execute(
 fn process_sudo(
     msg: SudoMsg,
     state: State,
+    api: &dyn Api,
     querier: QuerierWrapper<'_>,
     env: Env,
 ) -> ContractResult<Response> {
@@ -174,8 +175,12 @@ fn process_sudo(
         SudoMsg::Timeout { request: _ } => state.on_dex_timeout(querier, env),
         SudoMsg::Error {
             request: _,
-            details: _,
-        } => state.on_dex_error(querier, env),
+            details,
+        } => {
+            let resp = details.into();
+            api.debug(&format!("SudoMsg::Error({})", resp));
+            state.on_dex_error(resp, querier, env)
+        }
         _ => unreachable!(),
     }
 }

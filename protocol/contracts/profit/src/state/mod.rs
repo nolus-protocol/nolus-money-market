@@ -9,6 +9,7 @@ use dex::{
 };
 use platform::{
     batch::Batch,
+    ica::ErrorResponse as ICAErrorResponse,
     state_machine::{self, Response as StateMachineResponse},
 };
 use sdk::{
@@ -161,11 +162,16 @@ impl Handler for State {
         }
     }
 
-    fn on_error(self, querier: QuerierWrapper<'_>, env: Env) -> DexResult<Self> {
+    fn on_error(
+        self,
+        response: ICAErrorResponse,
+        querier: QuerierWrapper<'_>,
+        env: Env,
+    ) -> DexResult<Self> {
         match self.0 {
-            StateEnum::OpenIca(ica) => ica.on_error(querier, env).map_into(),
-            StateEnum::Idle(idle) => idle.on_error(querier, env).map_into(),
-            StateEnum::BuyBack(buy_back) => buy_back.on_error(querier, env).map_into(),
+            StateEnum::OpenIca(ica) => ica.on_error(response, querier, env).map_into(),
+            StateEnum::Idle(idle) => idle.on_error(response, querier, env).map_into(),
+            StateEnum::BuyBack(buy_back) => buy_back.on_error(response, querier, env).map_into(),
         }
     }
 

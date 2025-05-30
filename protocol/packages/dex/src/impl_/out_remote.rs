@@ -126,6 +126,7 @@ mod impl_into {
 mod impl_handler {
     use std::fmt::Display;
 
+    use platform::ica::ErrorResponse as ICAErrorResponse;
     use sdk::cosmwasm_std::{Binary, Env, QuerierWrapper, Reply};
 
     use crate::{
@@ -210,19 +211,30 @@ mod impl_handler {
             }
         }
 
-        fn on_error(self, querier: QuerierWrapper<'_>, env: Env) -> Result<Self> {
+        fn on_error(
+            self,
+            response: ICAErrorResponse,
+            querier: QuerierWrapper<'_>,
+            env: Env,
+        ) -> Result<Self> {
             match self {
-                State::OpenIca(inner) => Handler::on_error(inner, querier, env).map_into(),
+                State::OpenIca(inner) => {
+                    Handler::on_error(inner, response, querier, env).map_into()
+                }
                 State::OpenIcaRespDelivery(inner) => {
-                    Handler::on_error(inner, querier, env).map_into()
+                    Handler::on_error(inner, response, querier, env).map_into()
                 }
-                State::TransferOut(inner) => Handler::on_error(inner, querier, env).map_into(),
+                State::TransferOut(inner) => {
+                    Handler::on_error(inner, response, querier, env).map_into()
+                }
                 State::TransferOutRespDelivery(inner) => {
-                    Handler::on_error(inner, querier, env).map_into()
+                    Handler::on_error(inner, response, querier, env).map_into()
                 }
-                State::SwapExactIn(inner) => Handler::on_error(inner, querier, env).map_into(),
+                State::SwapExactIn(inner) => {
+                    Handler::on_error(inner, response, querier, env).map_into()
+                }
                 State::SwapExactInRespDelivery(inner) => {
-                    Handler::on_error(inner, querier, env).map_into()
+                    Handler::on_error(inner, response, querier, env).map_into()
                 }
             }
         }

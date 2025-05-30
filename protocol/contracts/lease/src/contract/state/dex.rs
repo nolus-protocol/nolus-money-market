@@ -1,8 +1,8 @@
-use finance::duration::Duration;
 use serde::{Deserialize, Serialize};
 
 use dex::{Contract as DexContract, Handler as DexHandler};
-use platform::state_machine;
+use finance::duration::Duration;
+use platform::{ica::ErrorResponse as ICAErrorResponse, state_machine};
 use sdk::cosmwasm_std::{Binary, Env, MessageInfo, QuerierWrapper, Reply, Timestamp};
 
 use crate::{
@@ -53,8 +53,13 @@ where
         self.handler.on_response(data, querier, env).into()
     }
 
-    fn on_dex_error(self, querier: QuerierWrapper<'_>, env: Env) -> ContractResult<Response> {
-        self.handler.on_error(querier, env).into()
+    fn on_dex_error(
+        self,
+        details: ICAErrorResponse,
+        querier: QuerierWrapper<'_>,
+        env: Env,
+    ) -> ContractResult<Response> {
+        self.handler.on_error(details, querier, env).into()
     }
 
     fn on_dex_timeout(self, querier: QuerierWrapper<'_>, env: Env) -> ContractResult<Response> {
