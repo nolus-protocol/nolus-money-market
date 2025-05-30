@@ -24,11 +24,7 @@ use versioning::{
 };
 
 use crate::{
-    error::ContractError,
-    msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg},
-    profit::Profit,
-    result::ContractResult,
-    state::{Config, ConfigManagement as _, State},
+    access_control::ProfitTimeAlarmPermission, error::ContractError, msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg}, profit::Profit, result::ContractResult, state::{Config, ConfigManagement as _, State}
 };
 
 const CONTRACT_STORAGE_VERSION: VersionSegment = 1;
@@ -53,12 +49,6 @@ pub fn instantiate(
     // msg.timealarms is validated on TimeAlarmsRef instantiation
 
     ContractOwnerAccess::new(deps.storage.deref_mut()).grant_to(&info.sender)?;
-
-    SingleUserAccess::new(
-        deps.storage.deref_mut(),
-        crate::access_control::TIMEALARMS_NAMESPACE,
-    )
-    .grant_to(&msg.timealarms)?;
 
     let (state, response) = State::start(
         Config::new(
@@ -101,11 +91,13 @@ pub fn execute(
 ) -> ContractResult<CwResponse> {
     match msg {
         ExecuteMsg::TimeAlarm {} => {
-            SingleUserAccess::new(
-                deps.storage.deref(),
-                crate::access_control::TIMEALARMS_NAMESPACE,
-            )
-            .check(&Sender::new(&info))?;
+            // TODO: this won't work - how to load config? should we query for the config directly?
+            let  time_alarms_ref = Config::time_alarms(&self);
+            
+            access_control::check(
+                &ProfitTimeAlarmPermission::new(&time_alarms_ref),
+                &info.sender,
+            )?;
 
             try_handle_execute_message(deps, env, |state, querier, env| {
                 State::on_time_alarm(state, querier, env, info)

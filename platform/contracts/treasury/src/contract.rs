@@ -79,12 +79,13 @@ pub fn execute(
     msg: ExecuteMsg,
 ) -> ContractResult<CwResponse> {
     match msg {
+        
         ExecuteMsg::TimeAlarm {} => {
-            SingleUserAccess::new(
-                deps.storage.deref(),
-                crate::access_control::TIMEALARMS_NAMESPACE,
-            )
-            .check(&Sender::new(&info))?;
+            let config = try_load_config(storage)?;
+            access_control::check(
+                &TreasuryAlarmsDispatchPermission::new(&config.timealarms_permission),
+                &info,
+            )?;
 
             try_dispatch(deps.storage, deps.querier, &env, info.sender)
                 .map(response::response_only_messages)
@@ -241,13 +242,7 @@ fn setup_dispatching(
     api.addr_validate(msg.protocols_registry.as_str())
         .map_err(ContractError::ValidateRegistryAddr)?;
 
-    SingleUserAccess::new(
-        storage.deref_mut(),
-        crate::access_control::TIMEALARMS_NAMESPACE,
-    )
-    .grant_to(&msg.timealarms)?;
-
-    Config::new(msg.cadence_hours, msg.protocols_registry, msg.tvl_to_apr)
+    Config::new(msg.cadence_hours, msg.protocols_registry, msg.tvl_to_apr, msg.timealarms)
         .store(storage)
         .map_err(ContractError::SaveConfig)?;
     DispatchLog::update(storage, env.block.time)?;

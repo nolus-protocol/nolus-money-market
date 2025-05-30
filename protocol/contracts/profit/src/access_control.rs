@@ -1,1 +1,3 @@
-pub(crate) const TIMEALARMS_NAMESPACE: &str = "contract_timealarms";
+use access_control::SingleUserPermission;
+
+pub type ProfitTimeAlarmPermission<'a> = SingleUserPermission<'a>;

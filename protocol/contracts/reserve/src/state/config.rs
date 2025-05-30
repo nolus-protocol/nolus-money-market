@@ -10,17 +10,22 @@ use crate::error::Result;
 #[derive(Serialize, Deserialize, Clone, Eq, PartialEq)]
 pub struct Config {
     lease_code: Code,
+    lease_code_admin: Addr,
 }
 
 impl Config {
     const STORAGE: Item<Self> = Item::new("config");
 
-    pub const fn new(lease_code: Code) -> Self {
-        Self { lease_code }
+    pub const fn new(lease_code: Code, lease_code_admin: Addr) -> Self {
+        Self { lease_code, lease_code_admin }
     }
 
     pub const fn lease_code(&self) -> Code {
         self.lease_code
+    }
+
+    pub const fn lease_code_admin(&self) -> Addr {
+        self.lease_code_admin
     }
 
     pub fn store(&self, storage: &mut dyn Storage) -> Result<()> {
@@ -31,9 +36,9 @@ impl Config {
         Self::STORAGE.load(storage).map_err(Into::into)
     }
 
-    pub fn update_lease_code(storage: &mut dyn Storage, lease_code: Code) -> Result<()> {
+    pub fn update_lease_code(storage: &mut dyn Storage, lease_code: Code, lease_code_admin: Addr) -> Result<()> {
         Self::STORAGE
-            .update(storage, |_config: Self| Ok(Self::new(lease_code)))
+            .update(storage, |_config: Self| Ok(Self::new(lease_code, lease_code_admin)))
             .map(mem::drop)
     }
 }
@@ -48,8 +53,9 @@ mod test {
     #[test]
     fn store_load() {
         let lease_code = Code::unchecked(12);
+        let admin = Addr::unchecked("admin");
         let mut store = MockStorage::new();
-        assert_eq!(Ok(()), Config::new(lease_code).store(&mut store));
+        assert_eq!(Ok(()), Config::new(lease_code, admin).store(&mut store));
         assert_lease_code_id(lease_code, &store);
     }
 
@@ -57,11 +63,12 @@ mod test {
     fn update_load() {
         let lease_code_id = Code::unchecked(28);
         let new_lease_code_id = Code::unchecked(CodeId::from(lease_code_id) + 10);
+        let admin = Addr::unchecked("admin");
         let mut store = MockStorage::new();
-        assert_eq!(Ok(()), Config::new(lease_code_id).store(&mut store));
+        assert_eq!(Ok(()), Config::new(lease_code_id, admin).store(&mut store));
         assert_eq!(
             Ok(()),
-            Config::update_lease_code(&mut store, new_lease_code_id)
+            Config::update_lease_code(&mut store, new_lease_code_id, admin)
         );
         assert_lease_code_id(new_lease_code_id, &store);
     }
