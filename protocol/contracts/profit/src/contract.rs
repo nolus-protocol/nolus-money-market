@@ -52,6 +52,11 @@ pub fn instantiate(
     addr_validator.check_contract(&msg.oracle)?;
     // msg.timealarms is validated on TimeAlarmsRef instantiation
 
+<<<<<<< HEAD
+=======
+    ContractOwnerAccess::new(deps.storage.deref_mut()).grant_to(&info.sender)?;
+
+>>>>>>> c1b63a3aa (refactor(lpp,proft,treasury,reserve): unify permissions model, factor out SingleUserAccess and storage keys for a single addr)
     let (state, response) = State::start(
         Config::new(
             msg.cadence_hours,

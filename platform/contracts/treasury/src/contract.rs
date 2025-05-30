@@ -78,12 +78,13 @@ pub fn execute(
     msg: ExecuteMsg,
 ) -> ContractResult<CwResponse> {
     match msg {
+        
         ExecuteMsg::TimeAlarm {} => {
-            SingleUserAccess::new(
-                deps.storage.deref(),
-                crate::access_control::TIMEALARMS_NAMESPACE,
-            )
-            .check(&Sender::new(&info))?;
+            let config = try_load_config(storage)?;
+            access_control::check(
+                &TreasuryAlarmsDispatchPermission::new(&config.timealarms_permission),
+                &info,
+            )?;
 
             try_dispatch(deps.storage, deps.querier, &env, info.sender)
                 .map(response::response_only_messages)
