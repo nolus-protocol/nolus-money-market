@@ -11,11 +11,35 @@ use self::error::{Error, Result};
 mod contract_owner;
 pub mod error;
 
-pub fn check(permitted_to: &Addr, accessed_by: &Addr) -> Result {
-    if permitted_to == accessed_by {
+pub trait AccessPermission {
+    fn is_granted_to(&self, caller: &Addr) -> bool;
+}
+
+/// Checks if access is granted to the given caller.
+pub fn check<P>(permission: &P, caller: &Addr) -> Result
+where
+    P: AccessPermission,
+{
+    if permission.is_granted_to(caller) {
         Ok(())
     } else {
         Err(Error::Unauthorized {})
+    }
+}
+
+pub struct SingleUserPermission<'a> {
+    addr: &'a Addr,
+}
+
+impl<'a> SingleUserPermission<'a> {
+    pub fn new(addr: &'a Addr) -> Self {
+        Self { addr }
+    }
+}
+
+impl AccessPermission for SingleUserPermission<'_> {
+    fn is_granted_to(&self, caller: &Addr) -> bool {
+        self.addr == caller
     }
 }
 
@@ -42,7 +66,7 @@ where
         self.storage_item
             .load(self.storage.deref())
             .map_err(Into::into)
-            .and_then(|granted_to| check(&granted_to, user))
+            .and_then(|granted_to| check(&SingleUserPermission::new(&granted_to), user))
     }
 }
 
@@ -66,7 +90,7 @@ mod tests {
     use sdk::cosmwasm_std::{Addr, Storage, testing::MockStorage};
 
     use crate::{
-        SingleUserAccess,
+        SingleUserAccess, SingleUserPermission,
         error::{Error, Result},
     };
 
@@ -113,6 +137,9 @@ mod tests {
     }
 
     fn check_permission(granted_to: &str, asked_for: &str) -> Result {
-        super::check(&Addr::unchecked(granted_to), &Addr::unchecked(asked_for))
+        super::check(
+            &SingleUserPermission::new(&Addr::unchecked(granted_to)),
+            &Addr::unchecked(asked_for),
+        )
     }
 }

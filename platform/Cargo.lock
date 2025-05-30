@@ -1487,6 +1487,7 @@ dependencies = [
 name = "timealarms"
 version = "0.5.1"
 dependencies = [
+ "access-control",
  "cosmwasm-std",
  "platform",
  "sdk",

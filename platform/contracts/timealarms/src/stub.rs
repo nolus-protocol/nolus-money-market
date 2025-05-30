@@ -2,6 +2,7 @@ use std::result::Result as StdResult;
 
 use serde::{Deserialize, Serialize};
 
+use access_control::AccessPermission;
 use platform::{batch::Batch, contract};
 use sdk::cosmwasm_std::{Addr, QuerierWrapper, StdError as SdkError, Timestamp, wasm_execute};
 
@@ -104,5 +105,22 @@ impl TimeAlarms for TimeAlarmsStub<'_> {
 impl<'a> From<TimeAlarmsStub<'a>> for Batch {
     fn from(stub: TimeAlarmsStub<'a>) -> Self {
         stub.batch
+    }
+}
+
+// TimeAlarmDelivery is a permission check used on on_time_alarm
+pub struct TimeAlarmDelivery<'a> {
+    time_alarms_ref: &'a TimeAlarmsRef,
+}
+
+impl<'a> TimeAlarmDelivery<'a> {
+    pub fn new(time_alarms_ref: &'a TimeAlarmsRef) -> Self {
+        Self { time_alarms_ref }
+    }
+}
+
+impl AccessPermission for TimeAlarmDelivery<'_> {
+    fn is_granted_to(&self, caller: &Addr) -> bool {
+        self.time_alarms_ref.owned_by(caller)
     }
 }
