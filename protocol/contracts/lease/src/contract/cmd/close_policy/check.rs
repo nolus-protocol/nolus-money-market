@@ -26,7 +26,8 @@ where
     Oracle: OracleTrait<LeasePaymentCurrencies, QuoteC = LpnCurrency, QuoteG = LpnCurrencies>,
 {
     lease
-        .check_close_policy(when)
+        .price_of_lease_currency()
+        .map(|asset_in_lpns| lease.check_close_policy(asset_in_lpns, when))
         .and_then(|status| CloseStatusDTO::try_from_do(status, when, time_alarms, price_alarms))
 }
 

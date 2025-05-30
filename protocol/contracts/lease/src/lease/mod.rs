@@ -345,13 +345,17 @@ pub(crate) mod tests {
         let state_at = LEASE_START.add(state_since_open);
         let take_profit = Percent::from_percent(20);
         lease
-            .change_close_policy(
-                ClosePolicyChange {
-                    stop_loss: None,
-                    take_profit: Some(ChangeCmd::Set(take_profit)),
-                },
-                &state_at,
-            )
+            .price_of_lease_currency()
+            .and_then(|asset_in_lpns| {
+                lease.change_close_policy(
+                    ClosePolicyChange {
+                        stop_loss: None,
+                        take_profit: Some(ChangeCmd::Set(take_profit)),
+                    },
+                    asset_in_lpns,
+                    &state_at,
+                )
+            })
             .unwrap();
 
         {

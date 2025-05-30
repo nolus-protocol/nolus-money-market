@@ -64,9 +64,11 @@ impl WithLease for ChangeCmd<'_, '_> {
         Oracle: OracleTrait<LeasePaymentCurrencies, QuoteC = LpnCurrency, QuoteG = LpnCurrencies>
             + Into<OracleRef>,
     {
+        lease.price_of_lease_currency()
+        .and_then(|asset_in_lpns|
         lease
-            .change_close_policy(self.change, self.now)
-            .and_then(|()| lease.check_close_policy(self.now))
+            .change_close_policy(self.change, asset_in_lpns, self.now)
+            .map(|()| lease.check_close_policy(asset_in_lpns, self.now)))
             .and_then(|status|CloseStatusDTO::try_from_do(status, self.now, &self.time_alarms, self.price_alarms) )
             .and_then(|status_dto| {
                 let alarms = match status_dto {

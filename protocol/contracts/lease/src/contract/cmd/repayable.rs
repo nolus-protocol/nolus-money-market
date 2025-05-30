@@ -104,13 +104,17 @@ where
                 CloseStatusDTO::CloseAsked(CloseStrategy::TakeProfit(_))
             ) {
                 lease
-                    .change_close_policy(
-                        ClosePolicyChange {
-                            take_profit: Some(ChangeCmd::Reset),
-                            stop_loss: None,
-                        },
-                        now,
-                    )
+                    .price_of_lease_currency()
+                    .and_then(|asset_in_lpns| {
+                        lease.change_close_policy(
+                            ClosePolicyChange {
+                                take_profit: Some(ChangeCmd::Reset),
+                                stop_loss: None,
+                            },
+                            asset_in_lpns,
+                            now,
+                        )
+                    })
                     .and_then(|()| check::check(lease, now, time_alarm, price_alarm))
             } else {
                 Ok(close_status)
@@ -250,13 +254,17 @@ mod test {
         };
         let mut lease = tests::open_lease(lease_amount, loan.clone());
         lease
-            .change_close_policy(
-                ClosePolicyChange {
-                    stop_loss: Some(ChangeCmd::Set(stop_loss)),
-                    take_profit: Some(ChangeCmd::Set(take_profit)),
-                },
-                &now,
-            )
+            .price_of_lease_currency()
+            .and_then(|asset_in_lpns| {
+                lease.change_close_policy(
+                    ClosePolicyChange {
+                        stop_loss: Some(ChangeCmd::Set(stop_loss)),
+                        take_profit: Some(ChangeCmd::Set(take_profit)),
+                    },
+                    asset_in_lpns,
+                    &now,
+                )
+            })
             .expect("change close policy succeed");
 
         let payment: Coin<TestLpn> = due_amount - take_profit.of(lease_lpn);

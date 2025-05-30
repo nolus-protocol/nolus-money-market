@@ -23,40 +23,41 @@ where
     /// Check if the position requires
     /// - partial or full close due to a bad dept, or
     /// - full close due to a Stop-Loss or Take-Profit trigger.
-    pub(crate) fn check_close_policy(&self, now: &Timestamp) -> ContractResult<CloseStatus<Asset>> {
+    pub(crate) fn check_close_policy(
+        &self,
+        asset_in_lpns: Price<Asset>,
+        now: &Timestamp,
+    ) -> CloseStatus<Asset> {
         let due = self.loan.state(now);
 
-        self.price_of_lease_currency().map(|asset_in_lpns| {
-            match self.position.debt(&due, asset_in_lpns) {
-                Debt::No => CloseStatus::Paid,
-                Debt::Ok { zone } => self
-                    .position
-                    .check_close(&due, asset_in_lpns)
-                    .map(|close| CloseStatus::CloseAsked(close))
-                    .unwrap_or_else(|| CloseStatus::None {
-                        current_liability: zone,
-                        steadiness: self.position.steadiness(&due, asset_in_lpns),
-                    }),
-                Debt::Bad(liquidation) => CloseStatus::NeedLiquidation(liquidation),
-            }
-        })
+        match self.position.debt(&due, asset_in_lpns) {
+            Debt::No => CloseStatus::Paid,
+            Debt::Ok { zone } => self
+                .position
+                .check_close(&due, asset_in_lpns)
+                .map(|close| CloseStatus::CloseAsked(close))
+                .unwrap_or_else(|| CloseStatus::None {
+                    current_liability: zone,
+                    steadiness: self.position.steadiness(&due, asset_in_lpns),
+                }),
+            Debt::Bad(liquidation) => CloseStatus::NeedLiquidation(liquidation),
+        }
     }
 
     pub(crate) fn change_close_policy(
         &mut self,
         cmd: ClosePolicyChange,
+        asset_in_lpns: Price<Asset>,
         now: &Timestamp,
     ) -> ContractResult<()> {
         let due = self.loan.state(now);
 
-        self.price_of_lease_currency().and_then(|asset_in_lpns| {
-            self.position
-                .change_close_policy(cmd, &due, asset_in_lpns)
-                .map_err(Into::into)
-        })
+        self.position
+            .change_close_policy(cmd, &due, asset_in_lpns)
+            .map_err(Into::into)
     }
 
-    pub(super) fn price_of_lease_currency(&self) -> ContractResult<Price<Asset>> {
+    pub(crate) fn price_of_lease_currency(&self) -> ContractResult<Price<Asset>> {
         self.oracle
             .price_of::<Asset>()
             .map_err(ContractError::FetchOraclePrice)
