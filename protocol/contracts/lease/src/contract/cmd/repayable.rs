@@ -14,10 +14,10 @@ use crate::{
         LeaseAssetCurrencies, LeasePaymentCurrencies,
         position::{ChangeCmd, ClosePolicyChange},
     },
-    contract::SplitDTOOut,
+    contract::LeaseDTOResult,
     error::{ContractError, ContractResult},
     finance::{LpnCoin, LpnCoinDTO, LpnCurrencies, LpnCurrency, OracleRef, ReserveRef},
-    lease::{IntoDTOResult, Lease as LeaseDO, LeaseDTO, with_lease::WithLease},
+    lease::{IntoDTOResult, Lease as LeaseDO, with_lease::WithLease},
     loan::RepayReceipt,
     position::CloseStrategy,
 };
@@ -123,18 +123,7 @@ where
     }
 }
 
-pub(crate) struct RepayLeaseResult {
-    lease: LeaseDTO,
-    result: RepayResult,
-}
-
-impl SplitDTOOut for RepayLeaseResult {
-    type Other = RepayResult;
-
-    fn split_into(self) -> (LeaseDTO, Self::Other) {
-        (self.lease, self.result)
-    }
-}
+pub(crate) type RepayLeaseResult = LeaseDTOResult<RepayResult>;
 
 pub(crate) struct RepayResult {
     pub response: MessageResponse,
@@ -184,7 +173,7 @@ where
                 .map(
                     |IntoDTOResult {
                          lease,
-                         batch: messages,
+                         result: messages,
                      }| {
                         RepayLeaseResult {
                             lease,
@@ -226,10 +215,7 @@ mod test {
         },
     };
 
-    use super::{
-        CloseStatusDTO, Emitter, OracleRef, Repay, RepayReceipt, RepayResult, ReserveRef,
-        SplitDTOOut,
-    };
+    use super::{CloseStatusDTO, Emitter, OracleRef, Repay, RepayReceipt, ReserveRef};
 
     struct DummyEmitter {}
     impl Emitter for DummyEmitter {
@@ -290,13 +276,9 @@ mod test {
             (TimeAlarmsRef::unchecked("time_alarms_addr"), &oracle),
             ReserveRef::unchecked(Addr::unchecked("reserve_addr")),
         );
-        let (
-            _dto,
-            RepayResult {
-                response: _,
-                close_status,
-            },
-        ) = cmd.exec(lease).expect("payment succeed").split_into();
-        close_status
+        cmd.exec(lease)
+            .expect("payment succeed")
+            .result
+            .close_status
     }
 }

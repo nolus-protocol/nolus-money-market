@@ -7,10 +7,10 @@ use timealarms::stub::TimeAlarmsRef;
 
 use crate::{
     api::{LeaseAssetCurrencies, LeasePaymentCurrencies, open::NewLeaseForm},
-    contract::SplitDTOOut,
+    contract::LeaseDTOResult,
     error::ContractError,
     finance::{LpnCurrencies, LpnCurrency, OracleRef, ReserveRef},
-    lease::{Lease, LeaseDTO, with_lease_deps::WithLeaseDeps},
+    lease::{Lease, with_lease_deps::WithLeaseDeps},
     loan::Loan,
     position::Position,
 };
@@ -28,18 +28,7 @@ pub struct LeaseFactory<'a> {
     now: &'a Timestamp,
 }
 
-pub struct OpenLeaseResult {
-    pub lease: LeaseDTO,
-    pub status: CloseStatusDTO,
-}
-
-impl SplitDTOOut for OpenLeaseResult {
-    type Other = CloseStatusDTO;
-
-    fn split_into(self) -> (LeaseDTO, Self::Other) {
-        (self.lease, self.status)
-    }
-}
+pub type OpenLeaseResult = LeaseDTOResult<CloseStatusDTO>;
 
 impl<'a> LeaseFactory<'a> {
     pub(crate) fn new(
@@ -95,11 +84,11 @@ impl WithLeaseDeps for LeaseFactory<'_> {
             lease
                 .try_into_dto(self.profit, self.time_alarms, self.reserve)
                 .inspect(|res| {
-                    debug_assert!(res.batch.is_empty());
+                    debug_assert!(res.result.is_empty());
                 })
                 .map(|res| OpenLeaseResult {
                     lease: res.lease,
-                    status,
+                    result: status,
                 })
         })
     }

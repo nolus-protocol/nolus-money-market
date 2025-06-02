@@ -96,7 +96,10 @@ where
                 &env.block.time,
             )
         };
-        let OpenLeaseResult { lease, status } = with_lease_deps::execute_resolved_position(
+        let OpenLeaseResult {
+            lease,
+            result: status,
+        } = with_lease_deps::execute_resolved_position(
             cmd,
             lease_addr,
             position,

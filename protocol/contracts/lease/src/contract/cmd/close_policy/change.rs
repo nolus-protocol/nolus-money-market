@@ -1,17 +1,16 @@
 use currency::{CurrencyDef, MemberOf};
 use lpp::stub::loan::LppLoan as LppLoanTrait;
 use oracle_platform::Oracle as OracleTrait;
-use platform::batch::Batch;
 use profit::stub::ProfitRef;
 use sdk::cosmwasm_std::Timestamp;
 use timealarms::stub::TimeAlarmsRef;
 
 use crate::{
     api::{LeaseAssetCurrencies, LeasePaymentCurrencies, position::ClosePolicyChange},
-    contract::SplitDTOOut,
+    contract::LeaseDTOResult,
     error::ContractError,
     finance::{LpnCurrencies, LpnCurrency, OracleRef, ReserveRef},
-    lease::{IntoDTOResult, Lease as LeaseDO, LeaseDTO, with_lease::WithLease},
+    lease::{Lease as LeaseDO, with_lease::WithLease},
 };
 
 use super::CloseStatusDTO;
@@ -27,18 +26,7 @@ pub(crate) struct ChangeCmd<'now, 'price_alarms> {
     price_alarms: &'price_alarms OracleRef,
 }
 
-pub(crate) struct ChangePolicyResult {
-    lease: LeaseDTO,
-    close_status: CloseStatusDTO,
-}
-
-impl SplitDTOOut for ChangePolicyResult {
-    type Other = CloseStatusDTO;
-
-    fn split_into(self) -> (LeaseDTO, Self::Other) {
-        (self.lease, self.close_status)
-    }
-}
+pub(crate) type ChangePolicyResult = LeaseDTOResult<CloseStatusDTO>;
 
 impl<'now, 'price_alarms> ChangeCmd<'now, 'price_alarms> {
     pub fn new(
@@ -91,20 +79,12 @@ impl WithLease for ChangeCmd<'_, '_> {
                 lease
                     .try_into_dto(self.profit, self.time_alarms, self.reserve)
                     .inspect(|res| {
-                        debug_assert!(res.batch.is_empty());
+                        debug_assert!(res.result.is_empty());
                     })
                     .map(|res| Self::Output {
                         lease: res.lease,
-                        close_status: status_dto,
+                        result: status_dto,
                     })
             })
-    }
-}
-
-impl SplitDTOOut for IntoDTOResult {
-    type Other = Batch;
-
-    fn split_into(self) -> (LeaseDTO, Self::Other) {
-        (self.lease, self.batch)
     }
 }

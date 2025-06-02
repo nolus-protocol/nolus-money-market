@@ -27,10 +27,9 @@ pub(crate) struct Lease {
     leases: LeasesRef,
 }
 
-pub(crate) trait SplitDTOOut {
-    type Other;
-
-    fn split_into(self) -> (LeaseDTO, Self::Other);
+pub(crate) struct LeaseDTOResult<Result> {
+    pub lease: LeaseDTO,
+    pub result: Result,
 }
 
 impl Lease {
@@ -38,21 +37,22 @@ impl Lease {
         Self { lease, dex, leases }
     }
 
-    fn update<Cmd>(
+    fn update<Cmd, CmdResult>(
         self,
         cmd: Cmd,
         querier: QuerierWrapper<'_>,
-    ) -> Result<(Self, <Cmd::Output as SplitDTOOut>::Other), Cmd::Error>
+    ) -> Result<(Self, CmdResult), Cmd::Error>
     where
-        Cmd: WithLease,
-        Cmd::Output: SplitDTOOut,
+        Cmd: WithLease<Output = LeaseDTOResult<CmdResult>>,
         Cmd::Error: From<lpp::error::Error> + From<PositionError>,
         currency::error::Error: Into<Cmd::Error>,
         timealarms::stub::Error: Into<Cmd::Error>,
     {
         self.lease.execute(cmd, querier).map(|result| {
-            let (lease, other) = result.split_into();
-            (Self::new(lease, self.dex, self.leases), other)
+            (
+                Self::new(result.lease, self.dex, self.leases),
+                result.result,
+            )
         })
     }
 }

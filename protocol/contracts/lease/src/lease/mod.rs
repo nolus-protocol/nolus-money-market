@@ -9,6 +9,7 @@ use timealarms::stub::TimeAlarmsRef;
 
 use crate::{
     api::{LeaseAssetCurrencies, LeasePaymentCurrencies},
+    contract::LeaseDTOResult,
     error::{ContractError, ContractResult},
     finance::{LpnCurrencies, LpnCurrency, OracleRef, ReserveRef},
     loan::Loan,
@@ -42,11 +43,7 @@ pub struct Lease<Asset, Lpp, Oracle> {
     oracle: Oracle,
 }
 
-#[cfg_attr(feature = "contract_testing", derive(Debug))]
-pub struct IntoDTOResult {
-    pub lease: LeaseDTO,
-    pub batch: Batch,
-}
+pub type IntoDTOResult = LeaseDTOResult<Batch>;
 
 impl<Asset, LppLoan, Oracle> Lease<Asset, LppLoan, Oracle> {
     pub(crate) fn addr(&self) -> &Addr {
@@ -145,7 +142,7 @@ where
                 self.oracle.into(),
                 reserve,
             ),
-            batch: loan_batch,
+            result: loan_batch,
         })
     }
 

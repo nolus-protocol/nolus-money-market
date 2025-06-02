@@ -9,7 +9,7 @@ use crate::{
     position::{Position, PositionDTO, PositionError, WithPosition, WithPositionResult},
 };
 
-pub trait WithLeaseDeps {
+pub(crate) trait WithLeaseDeps {
     type Output;
     type Error;
 
