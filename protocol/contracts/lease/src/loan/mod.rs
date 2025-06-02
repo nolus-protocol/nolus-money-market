@@ -62,6 +62,16 @@ where
     LppLoan: LppLoanTrait<LpnCurrency, LpnCurrencies>,
     LppLoan::Error: Into<ContractError>,
 {
+    pub(super) fn into_dto(self, profit: ProfitRef) -> LoanDTO {
+        LoanDTO {
+            lpp: self.lpp_loan.into(),
+            profit,
+            due_period: self.due_period,
+            margin_interest: self.margin_interest,
+            margin_paid_by: self.margin_paid_by,
+        }
+    }
+
     pub(super) fn try_into_dto(self, profit: ProfitRef) -> ContractResult<(LoanDTO, Batch)> {
         Self::try_loan_into(self.lpp_loan).map(|lpp_batch: LppBatch<LppRef>| {
             (
@@ -1201,6 +1211,12 @@ mod tests {
 
         fn annual_interest_rate(&self) -> Percent {
             self.loan.annual_interest_rate
+        }
+    }
+
+    impl From<LppLoanLocal> for LppRef {
+        fn from(_: LppLoanLocal) -> Self {
+            unreachable!()
         }
     }
 

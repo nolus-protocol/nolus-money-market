@@ -169,7 +169,7 @@ where
         )
         .and_then(|close_status| {
             lease
-                .try_into_dto(self.profit, self.alarms.0, self.reserve)
+                .try_into_dto_past_payments(self.profit, self.alarms.0, self.reserve)
                 .map(
                     |IntoDTOResult {
                          lease,

@@ -80,16 +80,11 @@ impl WithLeaseDeps for LeaseFactory<'_> {
             Lease::new(self.lease_addr, self.form.customer, position, loan, oracle)
         };
 
-        check::check(&lease, self.now, &self.time_alarms, &self.price_alarms).and_then(|status| {
-            lease
-                .try_into_dto(self.profit, self.time_alarms, self.reserve)
-                .inspect(|res| {
-                    debug_assert!(res.result.is_empty());
-                })
-                .map(|res| OpenLeaseResult {
-                    lease: res.lease,
-                    result: status,
-                })
+        check::check(&lease, self.now, &self.time_alarms, &self.price_alarms).map(|status| {
+            OpenLeaseResult {
+                lease: lease.into_dto(self.profit, self.time_alarms, self.reserve),
+                result: status,
+            }
         })
     }
 }

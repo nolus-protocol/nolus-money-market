@@ -122,28 +122,43 @@ where
     Oracle: OracleTrait<LeasePaymentCurrencies, QuoteC = LpnCurrency, QuoteG = LpnCurrencies>
         + Into<OracleRef>,
 {
-    // TODO add fn into_dto() without profit and use it when no payment has been done
-    // TODO rename this fn to try_into_dto_past_payments
-    pub(super) fn try_into_dto(
+    pub(super) fn into_dto(
+        self,
+        profit: ProfitRef,
+        time_alarms: TimeAlarmsRef,
+        reserve: ReserveRef,
+    ) -> LeaseDTO {
+        LeaseDTO::new(
+            self.addr,
+            self.customer,
+            self.position.into(),
+            self.loan.into_dto(profit),
+            time_alarms,
+            self.oracle.into(),
+            reserve,
+        )
+    }
+
+    pub(super) fn try_into_dto_past_payments(
         self,
         profit: ProfitRef,
         time_alarms: TimeAlarmsRef,
         reserve: ReserveRef,
     ) -> ContractResult<IntoDTOResult> {
-        let (loan_dto, loan_batch) = self.loan.try_into_dto(profit)?;
-
-        Ok(IntoDTOResult {
-            lease: LeaseDTO::new(
-                self.addr,
-                self.customer,
-                self.position.into(),
-                loan_dto,
-                time_alarms,
-                self.oracle.into(),
-                reserve,
-            ),
-            result: loan_batch,
-        })
+        self.loan
+            .try_into_dto(profit)
+            .map(|(loan_dto, loan_batch)| IntoDTOResult {
+                lease: LeaseDTO::new(
+                    self.addr,
+                    self.customer,
+                    self.position.into(),
+                    loan_dto,
+                    time_alarms,
+                    self.oracle.into(),
+                    reserve,
+                ),
+                result: loan_batch,
+            })
     }
 
     pub(super) fn try_into_messages(self) -> ContractResult<Batch> {
@@ -231,12 +246,18 @@ pub(crate) mod tests {
         }
     }
 
+    impl<Lpn> From<LppLoanLocal<Lpn>> for LppRef<Lpn, LpnCurrencies> {
+        fn from(_value: LppLoanLocal<Lpn>) -> Self {
+            LppRef::unchecked(Addr::unchecked("test_lpp"))
+        }
+    }
+
     impl<Lpn> TryFrom<LppLoanLocal<Lpn>> for LppBatch<LppRef<Lpn, LpnCurrencies>> {
         type Error = LppError;
 
-        fn try_from(_: LppLoanLocal<Lpn>) -> LppResult<Self> {
+        fn try_from(value: LppLoanLocal<Lpn>) -> LppResult<Self> {
             Ok(Self {
-                lpp_ref: LppRef::<Lpn, _>::unchecked(Addr::unchecked("test_lpp")),
+                lpp_ref: value.into(),
                 batch: Batch::default(),
             })
         }

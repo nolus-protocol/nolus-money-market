@@ -75,16 +75,9 @@ impl WithLease for ChangeCmd<'_, '_> {
             .and_then(|status| {
                 CloseStatusDTO::try_from_do(status, self.now, &self.time_alarms, self.price_alarms)
             })
-            .and_then(|status_dto| {
-                lease
-                    .try_into_dto(self.profit, self.time_alarms, self.reserve)
-                    .inspect(|res| {
-                        debug_assert!(res.result.is_empty());
-                    })
-                    .map(|res| Self::Output {
-                        lease: res.lease,
-                        result: status_dto,
-                    })
+            .map(|status_dto| Self::Output {
+                lease: lease.into_dto(self.profit, self.time_alarms, self.reserve),
+                result: status_dto,
             })
     }
 }

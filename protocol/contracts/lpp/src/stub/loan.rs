@@ -16,7 +16,7 @@ use super::{LppBatch, LppRef};
 pub trait LppLoan<Lpn, Lpns>
 where
     Lpns: Group,
-    Self: TryInto<LppBatch<LppRef<Lpn, Lpns>>, Error = Error>,
+    Self: Into<LppRef<Lpn, Lpns>> + TryInto<LppBatch<LppRef<Lpn, Lpns>>, Error = Error>,
 {
     fn principal_due(&self) -> Coin<Lpn>;
     fn interest_due(&self, by: &Timestamp) -> Coin<Lpn>;
@@ -82,6 +82,17 @@ where
 
     fn annual_interest_rate(&self) -> Percent {
         self.loan.annual_interest_rate
+    }
+}
+
+impl<Lpn, Lpns> From<LppLoanImpl<Lpn, Lpns>> for LppRef<Lpn, Lpns>
+where
+    Lpn: CurrencyDef,
+    Lpn::Group: MemberOf<Lpns>,
+    Lpns: Group,
+{
+    fn from(stub: LppLoanImpl<Lpn, Lpns>) -> Self {
+        stub.lpp_ref
     }
 }
 
