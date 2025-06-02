@@ -61,7 +61,8 @@ pub fn execute<Cmd>(
 ) -> Result<Cmd::Output, Cmd::Error>
 where
     Cmd: WithLeaseDeps,
-    Cmd::Error: From<lpp::error::Error> + From<PositionError>,
+    PositionError: Into<Cmd::Error>,
+    lpp::error::Error: Into<Cmd::Error>,
 {
     position.with_position(FactoryStage1 {
         cmd,
@@ -83,7 +84,7 @@ struct FactoryStage1<'r, Cmd> {
 impl<Cmd> WithPosition for FactoryStage1<'_, Cmd>
 where
     Cmd: WithLeaseDeps,
-    Cmd::Error: From<lpp::error::Error>,
+    lpp::error::Error: Into<Cmd::Error>,
 {
     type Output = Cmd::Output;
     type Error = Cmd::Error;

@@ -44,7 +44,8 @@ impl Lease {
     ) -> Result<(Self, CmdResult), Cmd::Error>
     where
         Cmd: WithLease<Output = LeaseDTOResult<CmdResult>>,
-        Cmd::Error: From<lpp::error::Error> + From<PositionError>,
+        PositionError: Into<Cmd::Error>,
+        lpp::error::Error: Into<Cmd::Error>,
         currency::error::Error: Into<Cmd::Error>,
         timealarms::stub::Error: Into<Cmd::Error>,
     {
