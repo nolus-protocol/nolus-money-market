@@ -147,7 +147,7 @@ fn test_update_config() {
         NewConfig {
             lease_due_period: config.lease_due_period,
             lease_interest_rate_margin: config.lease_interest_rate_margin,
-            lease_max_slippages: config.lease_max_slippage,
+            lease_max_slippages: config.lease_max_slippages,
             lease_position_spec: config.lease_position_spec,
         }
     );

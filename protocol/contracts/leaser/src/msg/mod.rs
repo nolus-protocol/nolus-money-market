@@ -38,7 +38,7 @@ pub struct InstantiateMsg {
 #[derive(Serialize, Deserialize)]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub struct MigrateMsg {
-    pub lease_max_slippage: MaxSlippages,
+    pub lease_max_slippages: MaxSlippages,
     pub lease_admin: Addr,
 }
 
@@ -147,6 +147,7 @@ pub enum QueryMsg {
     CheckAnomalyResolutionPermission {
         by: Addr,
     },
+    /// Return [ConfigResponse]
     Config {},
     Leases {
         owner: Addr,

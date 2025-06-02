@@ -75,7 +75,7 @@ pub fn migrate(
         migrate_from,
         to_release,
         message: MigrateMsg {
-            lease_max_slippage,
+            lease_max_slippages,
             lease_admin,
         },
     }: ProtocolMigrationMessage<MigrateMsg>,
@@ -87,7 +87,7 @@ pub fn migrate(
             &CURRENT_RELEASE,
             &to_release,
             deps.storage,
-            |storage| Config::migrate_from_0_8_8(storage, lease_max_slippage, lease_admin),
+            |storage| Config::migrate_from_0_8_8(storage, lease_max_slippages, lease_admin),
             ContractError::UpdateSoftware,
         )
         .map(|()| response::empty_response())
@@ -230,7 +230,7 @@ pub fn query(deps: Deps<'_>, _env: Env, msg: QueryMsg) -> ContractResult<Binary>
             .and_then(serialize_to_json),
         QueryMsg::MaxSlippages {} => Leaser::new(deps)
             .config()
-            .map(|cfg| cfg.lease_max_slippage)
+            .map(|cfg| cfg.lease_max_slippages)
             .and_then(serialize_to_json),
         QueryMsg::ProtocolPackageRelease {} => serialize_to_json(CURRENT_RELEASE),
         QueryMsg::Quote {

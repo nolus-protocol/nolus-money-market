@@ -30,7 +30,7 @@ pub struct Config {
     pub lease_position_spec: PositionSpecDTO,
     pub lease_interest_rate_margin: Percent,
     pub lease_due_period: Duration,
-    pub lease_max_slippage: MaxSlippages,
+    pub lease_max_slippages: MaxSlippages,
     pub lease_admin: Addr,
     pub dex: ConnectionParams,
 }
@@ -50,7 +50,7 @@ impl Config {
             lease_position_spec: msg.lease_position_spec,
             lease_interest_rate_margin: msg.lease_interest_rate_margin,
             lease_due_period: msg.lease_due_period,
-            lease_max_slippage: msg.lease_max_slippages,
+            lease_max_slippages: msg.lease_max_slippages,
             lease_admin: msg.lease_admin,
             dex: msg.dex,
         }
@@ -70,7 +70,7 @@ impl Config {
 
     pub fn migrate_from_0_8_8(
         storage: &mut dyn Storage,
-        lease_max_slippage: MaxSlippages,
+        lease_max_slippages: MaxSlippages,
         lease_admin: Addr,
     ) -> ContractResult<()> {
         #[derive(Deserialize, Serialize)]
@@ -102,7 +102,7 @@ impl Config {
                     lease_position_spec: old_config.lease_position_spec,
                     lease_interest_rate_margin: old_config.lease_interest_rate_margin,
                     lease_due_period: old_config.lease_due_period,
-                    lease_max_slippage,
+                    lease_max_slippages,
                     lease_admin,
                     dex: old_config.dex,
                 }
@@ -117,7 +117,7 @@ impl Config {
                     lease_interest_rate_margin: new_config.lease_interest_rate_margin,
                     lease_position_spec: new_config.lease_position_spec,
                     lease_due_period: new_config.lease_due_period,
-                    lease_max_slippage: new_config.lease_max_slippages,
+                    lease_max_slippages: new_config.lease_max_slippages,
                     ..c
                 })
             })
