@@ -177,34 +177,40 @@ impl Handler for Active {
             let time_alarms = self.lease.lease.time_alarms.clone();
             let oracle_ref = self.lease.lease.oracle.clone();
             let reserve = self.lease.lease.reserve.clone();
-            self.lease
-                .update(
-                    ChangeClosePolicy::new(
-                        change,
-                        &env.block.time,
-                        profit,
-                        time_alarms,
-                        &oracle_ref,
-                        reserve,
-                    ),
-                    querier,
-                )})
-            .and_then(|(lease, close_status)|
-            match close_status {
-                CloseStatusDTO::Paid => unimplemented!("only changing an Active Opened Lease is permitted"),
-                CloseStatusDTO::None { current_liability, alarms  } =>  Ok(Response::from(
-                    alarm::build_resp(&lease, current_liability, alarms),
-                    Self::new(lease),
-                )),
-                CloseStatusDTO::CloseAsked(_) => unimplemented!("triggering a close with a policy change should have already resulted in an error"),
-                CloseStatusDTO::NeedLiquidation(liquidation) => liquidation::start(
-                    lease,
-                    liquidation,
-                    MessageResponse::default(),
-                    &env,
-                    querier,
+            self.lease.update(
+                ChangeClosePolicy::new(
+                    change,
+                    &env.block.time,
+                    profit,
+                    time_alarms,
+                    &oracle_ref,
+                    reserve,
                 ),
-            })
+                querier,
+            )
+        })
+        .and_then(|(lease, close_status)| match close_status {
+            CloseStatusDTO::Paid => {
+                unimplemented!("only changing an Active Opened Lease is permitted")
+            }
+            CloseStatusDTO::None {
+                current_liability,
+                alarms,
+            } => Ok(Response::from(
+                alarm::build_resp(&lease, current_liability, alarms),
+                Self::new(lease),
+            )),
+            CloseStatusDTO::CloseAsked(_) => unimplemented!(
+                "triggering a close with a policy change should have already resulted in an error"
+            ),
+            CloseStatusDTO::NeedLiquidation(liquidation) => liquidation::start(
+                lease,
+                liquidation,
+                MessageResponse::default(),
+                &env,
+                querier,
+            ),
+        })
     }
 
     fn close_position(
