@@ -122,7 +122,7 @@ pub fn execute(
    
     match msg {
         ExecuteMsg::NewLeaseCode(code) => access_control::check(
-            &crate::access_control::ReserveAdminPermission::new(&lease_code_admin),
+            &crate::access_control::ReserveLeaseCodeAdminPermission::new(&lease_code_admin),
             &info.sender,
         )
         .check(&Sender::new(&info))
