@@ -117,8 +117,8 @@ pub fn execute(
             let loaded_config = Config::load(deps.storage)?;
             
             access_control::check(
-                &crate::access_control::LppAdminPermission::new(&loaded_config.lease_code_admin()),
-                &info,
+                &crate::access_control::LppLeaseCodeAdminPermission::new(&loaded_config.lease_code_admin()),
+                &info.sender,
             )?;
 
             Config::update_lease_code(deps.storage, new_lease_code)

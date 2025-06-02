@@ -95,11 +95,14 @@ pub fn execute(
     let lease_code_admin = Config::load(deps.storage)?.lease_code_admin()?;
    
     match msg {
-        ExecuteMsg::NewLeaseCode(code) => {
-            authorize_protocol_admin_only(deps.storage.deref(), &info)
-                .and_then(|()| Config::update_lease_code(deps.storage, code))
-                .map(|()| PlatformResponse::default())
-        }
+        ExecuteMsg::NewLeaseCode(code) => access_control::check(
+            &crate::access_control::ReserveLeaseCodeAdminPermission::new(&lease_code_admin),
+            &info.sender,
+        )
+        .check(&Sender::new(&info))
+        .map_err(Into::into)
+        .and_then(|()| Config::update_lease_code(deps.storage, code, lease_code_admin))
+        .map(|()| PlatformResponse::default()),
         ExecuteMsg::CoverLiquidationLosses(amount) => Config::load(deps.storage)
             .and_then(|config| {
                 contract::validator(deps.querier)

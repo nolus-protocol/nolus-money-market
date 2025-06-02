@@ -24,7 +24,12 @@ use versioning::{
 };
 
 use crate::{
-    access_control::ProfitTimeAlarmPermission, error::ContractError, msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg}, profit::Profit, result::ContractResult, state::{Config, ConfigManagement as _, State}
+    access_control::ProfitTimeAlarmPermission,
+    error::ContractError,
+    msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg},
+    profit::Profit,
+    result::ContractResult,
+    state::{Config, ConfigManagement as _, State}
 };
 
 const CONTRACT_STORAGE_VERSION: VersionSegment = 1;
