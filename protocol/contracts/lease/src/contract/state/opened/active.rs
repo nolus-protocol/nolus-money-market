@@ -180,9 +180,23 @@ impl Handler for Active {
                             reserve,
                         ),
                         querier,
-                    )
-                    .map(|(lease, batch)| Response::from(batch, Self::new(lease)))
-            })
+                    )})
+                .and_then(|(lease, close_status)|
+                match close_status {
+                    CloseStatusDTO::Paid => unimplemented!("only changing an Active Opened Lease is permitted"),
+                    CloseStatusDTO::None { current_liability, alarms  } =>  Ok(Response::from(
+                        alarm::build_resp(&lease, current_liability, alarms),
+                        Self::new(lease),
+                    )),
+                    CloseStatusDTO::CloseAsked(_) => unimplemented!("triggering a close with a policy change should have already resulted in an error"),
+                    CloseStatusDTO::NeedLiquidation(liquidation) => liquidation::start(
+                        lease,
+                        liquidation,
+                        MessageResponse::default(),
+                        &env,
+                        querier,
+                    ),
+                })
     }
 
     fn close_position(
