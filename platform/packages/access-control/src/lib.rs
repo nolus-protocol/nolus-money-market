@@ -5,7 +5,6 @@ use sdk::{
     cw_storage_plus::Item,
 };
 
-pub use self::contract_owner::ContractOwnerAccess;
 use self::error::{Error, Result};
 use self::permissions::SingleUserPermission;
 
@@ -58,6 +57,8 @@ impl AccessPermission for SingleUserPermission<'_> {
         self.addr == caller
     }
 }
+
+pub type ContractOwnerPermission<'a> = SingleUserPermission<'a>;
 
 pub struct SingleUserAccess<'storage, S>
 where

@@ -33,12 +33,13 @@ pub struct Config {
     pub lease_max_slippages: MaxSlippages,
     pub lease_admin: Addr,
     pub dex: ConnectionParams,
+    pub contract_owner: Addr,
 }
 
 impl Config {
     const STORAGE: Item<Self> = Item::new("config");
 
-    pub fn new(lease_code: Code, msg: InstantiateMsg) -> Self {
+    pub fn new(lease_code: Code, msg: InstantiateMsg, contract_owner: Addr) -> Self {
         Self {
             lease_code,
             lpp: msg.lpp,
@@ -53,6 +54,7 @@ impl Config {
             lease_max_slippages: msg.lease_max_slippages,
             lease_admin: msg.lease_admin,
             dex: msg.dex,
+            contract_owner: contract_owner,
         }
     }
 
