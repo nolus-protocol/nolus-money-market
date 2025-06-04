@@ -4,7 +4,7 @@ set -euxo pipefail
 # Example, deploy new contracts DEX=Osmosis:
 #
 # ./scripts/deploy-contracts-live.sh deploy_contracts "http://localhost:26612/" "nolus-local-v0.4.1-21-1700055474" \
-# "$HOME/.nolus" "wasmAdmin" "storeCodePrivilegedUser" "nolus17p9rzwnnfxcjp32un9ug7yhhzgtkhvl9jfksztgw5uh69wac2pgsmc5xhq" \
+# "$HOME/.nolus" "wasmAdmin" "storeCodePrivilegedUser" "<lease-admin-address>" "nolus17p9rzwnnfxcjp32un9ug7yhhzgtkhvl9jfksztgw5uh69wac2pgsmc5xhq" \
 # "$HOME/Documents/nolus/nolus-money-market/artifacts/osmosis" "Osmosis" "Osmosis" \
 # '"Osmosis"' "connection-0" "channel-0" "channel-2048" \
 # "USDC" "nolus1nc5tatafv6eyq7llkr2gv50ff9e22mnf70qgjlv737ktmt4eswrqrr2r7y" \
@@ -135,18 +135,19 @@ deploy_contracts() {
   local -r nolus_home_dir="$3"
   local -r dex_admin_wallet_key="$4"
   local -r store_code_privileged_wallet_key="$5"
-  local -r admin_contract_address="$6"
-  local -r wasm_path="$7"
-  local -r network="$8"
-  local -r dex_name="$9"
-  local -r dex_type_and_params="${10}"
-  local -r dex_connection="${11}"
-  local -r dex_channel_local="${12}"
-  local -r dex_channel_remote="${13}"
-  local -r protocol_currency="${14}"
-  local -r treasury_contract_address="${15}"
-  local -r timealarms_contract_address="${16}"
-  local swap_tree="${17}"
+  local -r lease_admin_address="$6"
+  local -r admin_contract_address="$7"
+  local -r wasm_path="$8"
+  local -r network="$9"
+  local -r dex_name="${10}"
+  local -r dex_type_and_params="${11}"
+  local -r dex_connection="${12}"
+  local -r dex_channel_local="${13}"
+  local -r dex_channel_remote="${14}"
+  local -r protocol_currency="${15}"
+  local -r treasury_contract_address="${16}"
+  local -r timealarms_contract_address="${17}"
+  local swap_tree="${18}"
   swap_tree="$(echo "$swap_tree" | sed 's/^"\(.*\)"$/\1/')"
 
   to_screaming_snake_case() {
@@ -192,7 +193,7 @@ deploy_contracts() {
     local -r reserve_contract_address=$(_deploy_contract "$nolus_net" "$nolus_home_dir" "$dex_admin_wallet_key" "$store_code_privileged_wallet_key" "$admin_contract_address" "$wasm_path/reserve.wasm" "$reserve_init_msg" "$protocol-reserve" "$protocol")
 
     # instantiate Leaser
-    local -r leaser_init_msg='{"lease_code":"'"$lease_code_id"'","lpp":"'"$lpp_contract_address"'","profit":"'"$profit_contract_address"'","reserve":"'"$reserve_contract_address"'","time_alarms":"'"$timealarms_contract_address"'","market_price_oracle":"'"$oracle_contract_address"'","protocols_registry":"'"$admin_contract_address"'","lease_position_spec":{"liability":{"initial":600,"healthy":830,"first_liq_warn":850,"second_liq_warn":865,"third_liq_warn":880,"max":900,"recalc_time":432000000000000},"min_asset":{"amount":"150","ticker":"'"$protocol_currency"'"},"min_transaction":{"amount":"10","ticker":"'"$protocol_currency"'"}},"lease_interest_rate_margin":20,"lease_due_period":2592000000000000,"dex":{"connection_id":"'"$dex_connection"'","transfer_channel":{"local_endpoint":"'"$dex_channel_local"'","remote_endpoint":"'"$dex_channel_remote"'"}}}'
+    local -r leaser_init_msg='{"lease_code":"'"$lease_code_id"'","lpp":"'"$lpp_contract_address"'","profit":"'"$profit_contract_address"'","reserve":"'"$reserve_contract_address"'","time_alarms":"'"$timealarms_contract_address"'","market_price_oracle":"'"$oracle_contract_address"'","protocols_registry":"'"$admin_contract_address"'","lease_position_spec":{"liability":{"initial":600,"healthy":830,"first_liq_warn":850,"second_liq_warn":865,"third_liq_warn":880,"max":900,"recalc_time":432000000000000},"min_asset":{"amount":"150","ticker":"'"$protocol_currency"'"},"min_transaction":{"amount":"10","ticker":"'"$protocol_currency"'"}},"lease_interest_rate_margin":20,"lease_due_period":2592000000000000,"dex":{"connection_id":"'"$dex_connection"'","transfer_channel":{"local_endpoint":"'"$dex_channel_local"'","remote_endpoint":"'"$dex_channel_remote"'"}},"lease_max_slippages":{"liquidation":300},"lease_admin":"'"$lease_admin_address"'"}'
     local -r leaser_contract_address=$(_instantiate "$nolus_net" "$nolus_home_dir" "$dex_admin_wallet_key" "$leaser_code_id" "$leaser_init_msg" "$protocol-leaser" "$protocol" "$leaser_expected_address" "$admin_contract_address")
 
     # register the protocol
@@ -205,7 +206,7 @@ if [ "$#" -ne 0 ]; then
   case "$1" in
     deploy_contracts)
       shift
-      deploy_contracts "$1" "$2" "$3" "$4" "$5" "$6" "$7" "$8" "$9" "${10}" "${11}" "${12}" "${13}" "${14}" "${15}" "${16}" "${17}"
+      deploy_contracts "$1" "$2" "$3" "$4" "$5" "$6" "$7" "$8" "$9" "${10}" "${11}" "${12}" "${13}" "${14}" "${15}" "${16}" "${17}" "${18}"
       ;;
     *)
       echo "Unknown function: $1"
