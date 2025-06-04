@@ -2,11 +2,10 @@ use std::fmt::{Display, Formatter, Result as FmtResult};
 
 use serde::{Deserialize, Serialize};
 
-use currency::CurrencyDef;
-use finance::{coin::Coin, duration::Duration};
+use finance::duration::Duration;
 use sdk::neutron_sdk::bindings::msg::{IbcFee, NeutronMsg};
 
-use crate::{batch::Batch, coin_legacy, error::Error, result::Result, trx::Transaction};
+use crate::{batch::Batch, error::Error, result::Result, trx::Transaction};
 
 #[cfg(not(feature = "testing"))]
 use self::impl_::OpenAckVersion;
@@ -85,18 +84,15 @@ pub fn parse_register_response(response: &str) -> Result<HostAccount> {
         .and_then(|open_ack| open_ack.address.try_into())
 }
 
-pub fn submit_transaction<Conn, M, C>(
+pub fn submit_transaction<Conn, M>(
     connection: Conn,
     trx: Transaction,
     memo: M,
     timeout: Duration,
-    ack_tip: Coin<C>,
-    timeout_tip: Coin<C>,
 ) -> Batch
 where
     Conn: Into<String>,
     M: Into<String>,
-    C: CurrencyDef,
 {
     let mut batch = Batch::default();
 
@@ -108,8 +104,8 @@ where
         timeout.secs(),
         IbcFee {
             recv_fee: vec![],
-            ack_fee: vec![coin_legacy::to_cosmwasm_on_nolus(ack_tip)],
-            timeout_fee: vec![coin_legacy::to_cosmwasm_on_nolus(timeout_tip)],
+            ack_fee: vec![],
+            timeout_fee: vec![],
         },
     ));
     batch

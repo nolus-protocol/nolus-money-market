@@ -1,10 +1,7 @@
 use std::marker::PhantomData;
 
-use currency::{Group, MemberOf, platform::Nls};
-use finance::{
-    coin::{Coin, CoinDTO},
-    duration::Duration,
-};
+use currency::{Group, MemberOf};
+use finance::{coin::CoinDTO, duration::Duration};
 use oracle::stub::SwapPath;
 use platform::{
     bank_ibc::{local::Sender as LocalSender, remote::Sender as RemoteSender},
@@ -18,14 +15,6 @@ use crate::{Account, Connectable, error::Result, swap::ExactAmountIn};
 
 pub(super) const IBC_TIMEOUT: Duration = Duration::from_days(1); //enough for the relayers to process
 
-//TODO take them as input from the client
-const ICA_TRANSFER_ACK_TIP: Coin<Nls> = Coin::new(1);
-const ICA_TRANSFER_TIMEOUT_TIP: Coin<Nls> = ICA_TRANSFER_ACK_TIP;
-
-//TODO take them as input from the client
-const ICA_SWAP_ACK_TIP: Coin<Nls> = Coin::new(1);
-const ICA_SWAP_TIMEOUT_TIP: Coin<Nls> = ICA_SWAP_ACK_TIP;
-
 pub(super) struct TransferOutTrx<'ica> {
     sender: LocalSender<'ica>,
 }
@@ -38,8 +27,6 @@ impl<'ica> TransferOutTrx<'ica> {
                 ica.owner(),
                 ica.host(),
                 now + IBC_TIMEOUT,
-                ICA_TRANSFER_ACK_TIP,
-                ICA_TRANSFER_TIMEOUT_TIP,
                 format!(
                     "Transfer out: {sender} -> {receiver}",
                     sender = ica.owner(),
@@ -125,14 +112,7 @@ where
 
 impl<SwapGroup, SwapPathImpl> From<SwapTrx<'_, '_, '_, SwapGroup, SwapPathImpl>> for LocalBatch {
     fn from(value: SwapTrx<'_, '_, '_, SwapGroup, SwapPathImpl>) -> Self {
-        ica::submit_transaction(
-            value.conn,
-            value.trx,
-            "memo",
-            IBC_TIMEOUT,
-            ICA_SWAP_ACK_TIP,
-            ICA_SWAP_TIMEOUT_TIP,
-        )
+        ica::submit_transaction(value.conn, value.trx, "memo", IBC_TIMEOUT)
     }
 }
 
@@ -165,13 +145,6 @@ impl<'ica> TransferInTrx<'ica> {
 
 impl<'r> From<TransferInTrx<'r>> for LocalBatch {
     fn from(value: TransferInTrx<'r>) -> Self {
-        ica::submit_transaction(
-            value.conn,
-            value.sender.into(),
-            "memo",
-            IBC_TIMEOUT,
-            ICA_SWAP_ACK_TIP,
-            ICA_SWAP_TIMEOUT_TIP,
-        )
+        ica::submit_transaction(value.conn, value.sender.into(), "memo", IBC_TIMEOUT)
     }
 }

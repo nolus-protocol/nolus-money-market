@@ -1,5 +1,5 @@
-use currency::{BankSymbols, Group, platform::Nls};
-use finance::coin::{Coin, CoinDTO};
+use currency::{BankSymbols, Group};
+use finance::coin::CoinDTO;
 use sdk::{
     cosmwasm_std::{Addr, Coin as CwCoin, Timestamp},
     neutron_sdk::{
@@ -15,8 +15,6 @@ pub struct Sender<'conn> {
     sender: &'conn Addr,
     receiver: &'conn HostAccount,
     timeout: Timestamp,
-    ack_tip: CwCoin,
-    timeout_tip: CwCoin,
     amounts: Vec<CwCoin>,
     memo: String,
 }
@@ -27,8 +25,6 @@ impl<'conn> Sender<'conn> {
         sender: &'conn Addr,
         receiver: &'conn HostAccount,
         timeout: Timestamp,
-        ack_tip: Coin<Nls>,
-        timeout_tip: Coin<Nls>,
         memo: String,
     ) -> Self {
         Self {
@@ -36,8 +32,6 @@ impl<'conn> Sender<'conn> {
             sender,
             receiver,
             timeout,
-            ack_tip: coin_legacy::to_cosmwasm_on_nolus(ack_tip),
-            timeout_tip: coin_legacy::to_cosmwasm_on_nolus(timeout_tip),
             amounts: vec![],
             memo,
         }
@@ -58,8 +52,6 @@ impl<'conn> Sender<'conn> {
             sender,
             receiver,
             timeout,
-            ack_tip,
-            timeout_tip,
             amounts,
             memo,
         } = self;
@@ -71,7 +63,6 @@ impl<'conn> Sender<'conn> {
                 receiver.clone(),
                 amount,
                 timeout,
-                (ack_tip.clone(), timeout_tip.clone()),
                 memo.clone(),
             )
         })
@@ -86,7 +77,6 @@ fn new_msg(
     receiver: HostAccount,
     amount: CwCoin,
     timeout: Timestamp,
-    (ack_tip, timeout_tip): (CwCoin, CwCoin),
     memo: String,
 ) -> NeutronMsg {
     let timeout_height = RequestPacketTimeoutHeight {
@@ -103,8 +93,8 @@ fn new_msg(
         timeout_timestamp: timeout.nanos(),
         fee: IbcFee {
             recv_fee: vec![],
-            ack_fee: vec![ack_tip],
-            timeout_fee: vec![timeout_tip],
+            ack_fee: vec![],
+            timeout_fee: vec![],
         },
         memo,
     }
@@ -123,10 +113,7 @@ impl<'c> From<Sender<'c>> for Batch {
 
 #[cfg(test)]
 mod test {
-    use currency::{
-        platform::Nls,
-        test::{SubGroupTestC10, SuperGroup, SuperGroupTestC1},
-    };
+    use currency::test::{SubGroupTestC10, SuperGroup, SuperGroupTestC1};
     use finance::coin::Coin;
     use sdk::cosmwasm_std::{Addr, Timestamp};
 
@@ -143,17 +130,7 @@ mod test {
         let sender = Addr::unchecked("sender");
         let receiver = HostAccount::try_from(String::from("receiver")).unwrap();
         let timeout = Timestamp::from_seconds(100);
-        let ack_fee = Coin::<Nls>::new(100);
-        let timeout_fee = Coin::<Nls>::new(50);
-        let mut funds_sender = Sender::new(
-            channel,
-            &sender,
-            &receiver,
-            timeout,
-            ack_fee,
-            timeout_fee,
-            "MEMO".into(),
-        );
+        let mut funds_sender = Sender::new(channel, &sender, &receiver, timeout, "MEMO".into());
 
         let coin1: Coin<SubGroupTestC10> = 234214.into();
         let coin2: Coin<SuperGroupTestC1> = 234214.into();
@@ -168,10 +145,6 @@ mod test {
                 receiver.clone(),
                 coin_legacy::to_cosmwasm_on_nolus(coin1),
                 timeout,
-                (
-                    coin_legacy::to_cosmwasm_on_nolus(ack_fee),
-                    coin_legacy::to_cosmwasm_on_nolus(timeout_fee),
-                ),
                 "MEMO".into(),
             ));
             batch.schedule_execute_no_reply(new_msg(
@@ -180,10 +153,6 @@ mod test {
                 receiver,
                 coin_legacy::to_cosmwasm_on_nolus(coin2),
                 timeout,
-                (
-                    coin_legacy::to_cosmwasm_on_nolus(ack_fee),
-                    coin_legacy::to_cosmwasm_on_nolus(timeout_fee),
-                ),
                 "MEMO".into(),
             ));
             batch
