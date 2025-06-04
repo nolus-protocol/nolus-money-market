@@ -2,7 +2,7 @@ use std::ops::{Deref, DerefMut};
 
 use serde::Serialize;
 
-use access_control::{ContractOwnerAccess, Sender};
+use access_control::{ContractOwnerAccess, ContractOwnerPermission, Sender};
 use lease::api::{MigrateMsg as LeaseMigrateMsg, authz::AccessGranted};
 use platform::{
     contract::{self, Code, CodeId, Validator},
@@ -61,7 +61,7 @@ pub fn instantiate(
     ContractOwnerAccess::new(deps.storage.deref_mut()).grant_to(&info)?;
 
     new_code(msg.lease_code, &addr_validator)
-        .map(|lease_code| Config::new(lease_code, msg))
+        .map(|lease_code| Config::new(lease_code, msg, info.sender))
         .and_then(|config| config.store(deps.storage))
         .map(|()| response::empty_response())
         .inspect_err(platform_error::log(deps.api))
@@ -125,8 +125,12 @@ pub fn execute(
             new_code_id,
             max_leases,
             to_release,
-        } => ContractOwnerAccess::new(deps.storage.deref())
-            .check(&info)
+        } => {
+            let config = Config::load(&deps.storage)?;
+            access_control::check(
+                &ContractOwnerPermission::new(&config.contract_owner),
+                &info,
+            )
             .map_err(Into::into)
             .and_then(|()| new_code(new_code_id, &contract::validator(deps.querier)))
             .and_then(|new_lease_code| {
@@ -137,13 +141,18 @@ pub fn execute(
                     max_leases,
                     migrate_msg(to_release),
                 )
-            }),
+            })
+        },
         ExecuteMsg::MigrateLeasesCont {
             key: next_customer,
             max_leases,
             to_release,
-        } => ContractOwnerAccess::new(deps.storage.deref())
-            .check(&info)
+        } => {
+            let config = Config::load(&deps.storage)?;
+            access_control::check(
+                &ContractOwnerPermission::new(&config.contract_owner),
+                &info,
+            )
             .map_err(Into::into)
             .and_then(|()| {
                 validate_customer(next_customer, deps.api, &contract::validator(deps.querier))
@@ -156,7 +165,8 @@ pub fn execute(
                     max_leases,
                     migrate_msg(to_release),
                 )
-            }),
+            })
+        },
         ExecuteMsg::ChangeLeaseAdmin { new } => Leaser::new(deps.as_ref())
             .config()
             .and_then(|ref config| {
