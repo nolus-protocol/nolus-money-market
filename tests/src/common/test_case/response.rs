@@ -81,7 +81,7 @@ impl<T> RemoteChain for ResponseWithInterChainMsgs<'_, T> {
         let message = self
             .receiver
             .try_recv()
-            .expect("Expected message for ICA registration!");
+            .expect("Expected message for IBC transfer!");
 
         if let InterChainMsg::IbcTransfer {
             source_channel,

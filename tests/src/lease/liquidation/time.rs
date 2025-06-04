@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, slice};
 
 use currencies::PaymentGroup;
 use finance::{coin::Amount, duration::Duration, price};
@@ -89,7 +89,7 @@ fn liquidation_time_alarm(
         ica_addr,
         lease_addr.clone(),
         true,
-        &transfer_amount,
+        slice::from_ref(&transfer_amount),
     );
 
     let liquidation_end_response: AppResponse = response.unwrap_response();

@@ -62,11 +62,19 @@ pub(crate) fn do_transfer<'r>(
     sender: Addr,
     recipient: Addr,
     on_remote_chain: bool,
-    cw_coin: &CwCoin,
+    cw_coins: &[CwCoin],
 ) -> ResponseWithInterChainMsgs<'r, AppResponse> {
     let contract_addr: Addr = if on_remote_chain { &recipient } else { &sender }.clone();
 
-    do_transfer_no_response(app, sender, recipient, on_remote_chain, cw_coin);
+    cw_coins.iter().for_each(|cw_coin| {
+        do_transfer_no_response(
+            app,
+            sender.clone(),
+            recipient.clone(),
+            on_remote_chain,
+            cw_coin,
+        )
+    });
 
     send_blank_response(app, contract_addr)
 }
@@ -84,16 +92,12 @@ fn do_transfer_no_response(
         bank_to_dex(&cw_coin.denom)
     };
 
-    app.send_tokens(
-        sender.clone(),
-        testing::user(ADMIN),
-        slice::from_ref(cw_coin),
-    )
-    .unwrap();
+    app.send_tokens(sender, testing::user(ADMIN), slice::from_ref(cw_coin))
+        .unwrap();
 
     app.send_tokens(
         testing::user(ADMIN),
-        recipient.clone(),
+        recipient,
         &[CwCoin::new(cw_coin.amount.u128(), new_symbol)],
     )
     .unwrap();

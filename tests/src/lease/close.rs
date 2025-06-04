@@ -1,3 +1,5 @@
+use std::slice;
+
 use finance::price;
 use lease::api::{ExecuteMsg, query::StateResponse};
 use platform::coin_legacy::to_cosmwasm_on_dex;
@@ -86,7 +88,7 @@ fn close<ProtocolsRegistry, Treasury, Profit, Reserve, Leaser, Lpp, Oracle, Time
         ica_addr,
         lease_addr,
         true,
-        &transfer_amount,
+        slice::from_ref(&transfer_amount),
     )
     .unwrap_response()
 }

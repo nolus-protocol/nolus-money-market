@@ -256,7 +256,7 @@ where
             test_case.address_book.profit().clone(),
             test_case.address_book.profit_ica().clone(),
             false,
-            &transfer_amount,
+            slice::from_ref(&transfer_amount),
         );
 
         let requests = common::swap::expect_swap(
@@ -294,7 +294,7 @@ where
             test_case.address_book.profit_ica().clone(),
             test_case.address_book.profit().clone(),
             true,
-            &transfer_amount,
+            slice::from_ref(&transfer_amount),
         )
         .unwrap_response();
 

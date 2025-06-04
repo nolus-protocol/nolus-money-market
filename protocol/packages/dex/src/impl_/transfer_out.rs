@@ -5,7 +5,7 @@ use std::{
 
 use serde::{Deserialize, Serialize};
 
-use finance::{coin::CoinDTO, duration::Duration};
+use finance::duration::Duration;
 use platform::{
     batch::{Batch, Emitter},
     ica::ErrorResponse as ICAErrorResponse,
@@ -14,8 +14,8 @@ use platform::{
 use sdk::cosmwasm_std::{Binary, Env, QuerierWrapper, Timestamp};
 
 use crate::{
-    CoinsNb, Contract, ContractInSwap, Enterable, Stage, SwapTask as SwapTaskT, TimeAlarm,
-    error::Result, swap::ExactAmountIn,
+    Contract, ContractInSwap, Enterable, Stage, SwapTask as SwapTaskT, TimeAlarm, error::Result,
+    swap::ExactAmountIn,
 };
 
 #[cfg(feature = "migration")]
@@ -29,7 +29,7 @@ use super::{
 
 /// Transfer out a list of coins to DEX
 ///
-/// Supports up to `CoinsNb::MAX` number of coins.
+/// In does it in a single transaction with multiple messages
 #[derive(Serialize, Deserialize)]
 #[serde(bound(
     serialize = "SwapTask: Serialize",
@@ -37,8 +37,6 @@ use super::{
 ))]
 pub struct TransferOut<SwapTask, SEnum, SwapClient> {
     spec: SwapTask,
-    coin_index: CoinsNb,
-    last_coin_index: CoinsNb,
     #[serde(skip)]
     _state_enum: PhantomData<SEnum>,
     #[serde(skip)]
@@ -50,60 +48,21 @@ where
     SwapTask: SwapTaskT,
 {
     pub fn new(spec: SwapTask) -> Self {
-        let first_index = Default::default();
-        let last_coin_index = Self::last_coin_index(&spec);
-        Self::new_with_index(spec, first_index, last_coin_index)
-    }
-
-    fn new_with_index(spec: SwapTask, coin_index: CoinsNb, last_coin_index: CoinsNb) -> Self {
-        dbg!(coin_index, last_coin_index);
-        debug_assert!(dbg!(coin_index <= last_coin_index));
         Self {
             spec,
-            coin_index,
-            last_coin_index,
             _state_enum: PhantomData,
             _swap_client: PhantomData,
         }
     }
 
-    fn last_coin_index(spec: &SwapTask) -> CoinsNb {
-        spec.coins()
-            .into_iter()
-            .count()
-            .checked_sub(1)
-            .expect("The swap task did not provide any coins!")
-            .try_into()
-            .expect("Functionality doesn't support this many coins!")
-    }
-
-    fn next(self) -> Self {
-        debug_assert!(!self.last_coin());
-
-        let next_index = self.coin_index.checked_add(1).expect(
-            "the method contract precondition `!self.last_coin()` should have been respected",
-        );
-
-        Self::new_with_index(self.spec, next_index, self.last_coin_index)
-    }
-
-    fn last_coin(&self) -> bool {
-        debug_assert!(self.coin_index <= self.last_coin_index);
-        self.coin_index == self.last_coin_index
-    }
-
     fn enter_state(&self, now: Timestamp) -> Result<Batch> {
         let mut trx = TransferOutTrx::new(self.spec.dex_account(), now);
 
-        trx.send(&self.current_coin()).map(|()| trx.into())
-    }
-
-    fn current_coin(&self) -> CoinDTO<SwapTask::InG> {
         self.spec
             .coins()
             .into_iter()
-            .nth(self.coin_index.into())
-            .expect("the coin index is invalid")
+            .try_for_each(|coin| trx.send(&coin))
+            .map(|()| trx.into())
     }
 }
 
@@ -164,12 +123,7 @@ where
     ) -> HandlerResult<Self> {
         let label = self.spec.label();
         let now = env.block.time;
-        if self.last_coin() {
-            Self::on_response(SwapExactIn::new(self.spec), label, now, querier)
-        } else {
-            Self::on_response(self.next(), label, now, querier)
-        }
-        .into()
+        Self::on_response(SwapExactIn::new(self.spec), label, now, querier).into()
     }
 
     fn on_timeout(self, querier: QuerierWrapper<'_>, env: Env) -> ContinueResult<Self> {
@@ -241,7 +195,7 @@ where
     where
         MigrateFn: FnOnce(SwapTask) -> SwapTaskNew,
     {
-        Self::Out::new_with_index(migrate_fn(self.spec), self.coin_index, self.last_coin_index)
+        Self::Out::new(migrate_fn(self.spec))
     }
 }
 

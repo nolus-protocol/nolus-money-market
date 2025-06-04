@@ -1,3 +1,5 @@
+use std::slice;
+
 use currencies::PaymentGroup;
 use currency::CurrencyDef as _;
 use finance::{coin::Amount, percent::Percent};
@@ -131,7 +133,7 @@ fn full_liquidation() {
         ica_addr,
         lease_addr.clone(),
         true,
-        &transfer_amount,
+        slice::from_ref(&transfer_amount),
     )
     .unwrap_response();
 

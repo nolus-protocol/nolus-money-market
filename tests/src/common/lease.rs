@@ -281,23 +281,10 @@ where
         ica_addr.as_str(),
     );
 
-    () = response.unwrap_response();
-
     assert_eq!(
         downpayment,
         coin_legacy::to_cosmwasm_on_nolus(exp_downpayment)
     );
-
-    check_state_opening(app, lease_addr.clone());
-
-    let mut response: ResponseWithInterChainMsgs<'_, ()> = ibc::do_transfer(
-        app,
-        lease_addr.clone(),
-        ica_addr.clone(),
-        false,
-        &downpayment,
-    )
-    .ignore_response();
 
     let borrow: CwCoin = ibc::expect_transfer(
         &mut response,
@@ -306,13 +293,19 @@ where
         ica_addr.as_str(),
     );
 
-    () = response.unwrap_response();
-
     assert_eq!(borrow, coin_legacy::to_cosmwasm_on_nolus(exp_borrow));
+
+    () = response.unwrap_response();
 
     check_state_opening(app, lease_addr.clone());
 
-    ibc::do_transfer(app, lease_addr, ica_addr, false, &borrow)
+    ibc::do_transfer(
+        app,
+        lease_addr.clone(),
+        ica_addr.clone(),
+        false,
+        &[downpayment, borrow],
+    )
 }
 
 fn send_open_ica_response<'r>(
