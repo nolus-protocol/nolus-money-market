@@ -40,7 +40,7 @@ const CURRENT_RELEASE: ProtocolPackageRelease = ProtocolPackageRelease::current(
     CONTRACT_STORAGE_VERSION,
 );
 
-pub type DexResponseSafeDeliveryProfitPermission<'a> = SingleUserPermission<'a>;
+type DexResponseSafeDeliveryPermission<'a> = SameContractOnly<'a>;
 
 #[entry_point]
 pub fn instantiate(

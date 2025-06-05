@@ -81,11 +81,7 @@ impl<'a> GrantedTimeAlarm<'a> {
     }
 }
 
-<<<<<<< HEAD
 impl<'a> AccessPermission for TimeAlarmDelivery<'a>{
-=======
-impl<'a> AccessPermission for GrantedTimeAlarm<'a> {
->>>>>>> 97bbb1580 (refactor: better naming)
     fn is_granted_to(&self, caller: &Addr) -> bool {
         self.time_alarms_ref.owned_by(caller)
     }
