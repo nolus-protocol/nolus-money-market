@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use access_control::AccessPermission;
 use platform::{batch::Batch, contract};
-use sdk::cosmwasm_std::{Addr, QuerierWrapper, StdError as SdkError, Timestamp, wasm_execute};
+use sdk::cosmwasm_std::{wasm_execute, Addr, MessageInfo, QuerierWrapper, StdError as SdkError, Timestamp};
 
 use crate::msg::ExecuteMsg;
 
@@ -108,7 +108,7 @@ impl<'a> From<TimeAlarmsStub<'a>> for Batch {
     }
 }
 
-// TimeAlarmDelivery is a permission check used on on_time_alarm
+/// This is a permission given for delivering time alarms
 pub struct TimeAlarmDelivery<'a> {
     time_alarms_ref: &'a TimeAlarmsRef,
 }
@@ -120,7 +120,7 @@ impl<'a> TimeAlarmDelivery<'a> {
 }
 
 impl AccessPermission for TimeAlarmDelivery<'_> {
-    fn is_granted_to(&self, caller: &Addr) -> bool {
-        self.time_alarms_ref.owned_by(caller)
+    fn is_granted_to(&self, msg_info: &MessageInfo) -> bool {
+        self.time_alarms_ref.owned_by(&msg_info.sender)
     }
 }

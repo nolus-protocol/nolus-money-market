@@ -240,9 +240,9 @@ where
             &TimeAlarmDelivery::new(self.spec.time_alarm()),
             &env.contract.address,
         )
+        .map_err(DexError::Unauthorized)
         .map_or_else(
-            |err| DexError::Unauthorized(err).into(),
-            |_| self.try_complete(querier, env),
+            Into::into, |()| self.try_complete(querier, env),
         )
     }
 }

@@ -1,6 +1,9 @@
 use std::ops::{Deref, DerefMut};
 
-use access_control::{ContractOwnerAccess, SingleUserAccess, SingleUserPermission};
+use access_control::{
+    ContractOwnerAccess,
+    permissions::{SameContractOnly, SingleUserAccess},    
+};
 use dex::{ContinueResult as DexResult, Handler as _, Response as DexResponse};
 use oracle_platform::OracleRef;
 use platform::{
@@ -36,7 +39,7 @@ const CURRENT_RELEASE: ProtocolPackageRelease = ProtocolPackageRelease::current(
     CONTRACT_STORAGE_VERSION,
 );
 
-pub type DexResponseSafeDeliveryProfitPermission<'a> = SingleUserPermission<'a>;
+type DexResponseSafeDeliveryPermission<'a> = SameContractOnly<'a>;
 
 #[entry_point]
 pub fn instantiate(
@@ -121,7 +124,7 @@ pub fn execute(
         }
         ExecuteMsg::DexCallback() => {
             access_control::check(
-                &DexResponseSafeDeliveryProfitPermission::new(&env.contract.address),
+                &DexResponseSafeDeliveryPermission::new(&env.contract),
                 &info.sender,
             )?;
 
@@ -130,7 +133,7 @@ pub fn execute(
         }
         ExecuteMsg::DexCallbackContinue() => {
             access_control::check(
-                &DexResponseSafeDeliveryProfitPermission::new(&env.contract.address),
+                &DexResponseSafeDeliveryPermission::new(&env.contract),
                 &info.sender,
             )?;
 
