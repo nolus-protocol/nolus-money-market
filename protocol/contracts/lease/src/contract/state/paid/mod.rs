@@ -1,4 +1,4 @@
-use access_control::SingleUserPermission;
+use access_control::permissions::SingleUserPermission;
 use finance::duration::Duration;
 use serde::{Deserialize, Serialize};
 
