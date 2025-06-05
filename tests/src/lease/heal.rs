@@ -58,7 +58,7 @@ fn swap_on_repay() {
     let payment = super::create_payment_coin(1_000);
     test_case.send_funds_from_admin(testing::user(USER), &[cwcoin(payment)]);
 
-    repay::repay_with_hook_on_swap(&mut test_case, lease.clone(), payment, |ref mut app| {
+    () = repay::repay_with_hook_on_swap(&mut test_case, lease.clone(), payment, |ref mut app| {
         let swap_response_retry = common::swap::do_swap_with_error(app, lease.clone())
             .expect("on error should have retried again the swap");
 
@@ -68,7 +68,9 @@ fn swap_on_repay() {
             TestCase::LEASE_ICA_ID,
             |_| {},
         );
-    });
+    })
+    .ignore_response()
+    .unwrap_response();
 
     let query_result = super::state_query(&test_case, lease.clone());
     let expected_result = super::expected_newly_opened_state(&test_case, downpayment, payment);

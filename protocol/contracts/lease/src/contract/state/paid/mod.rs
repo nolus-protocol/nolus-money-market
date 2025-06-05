@@ -1,7 +1,8 @@
-use finance::duration::Duration;
 use serde::{Deserialize, Serialize};
 
 use dex::Enterable;
+use finance::duration::Duration;
+use platform::message::Response as MessageResponse;
 use sdk::cosmwasm_std::{Env, MessageInfo, QuerierWrapper, Timestamp};
 
 use crate::{api::query::StateResponse, contract::Lease, error::ContractResult};
@@ -12,15 +13,24 @@ use self::transfer_in::DexState;
 
 pub mod transfer_in;
 
+pub fn start_close(
+    lease: Lease,
+    curr_request_response: MessageResponse,
+    env: &Env,
+    querier: QuerierWrapper<'_>,
+) -> ContractResult<Response> {
+    let start_transfer_in = transfer_in::start(lease);
+    start_transfer_in
+        .enter(env.block.time, querier)
+        .map(|close_msgs| curr_request_response.merge_with(close_msgs))
+        .map(|batch| Response::from(batch, DexState::from(start_transfer_in)))
+        .map_err(Into::into)
+}
+
+//TODO remove it once all leases have been gone away from this state - by their owners or by the `heal` caller
 #[derive(Serialize, Deserialize)]
 pub struct Active {
     lease: Lease,
-}
-
-impl Active {
-    pub(in super::super) fn new(lease: Lease) -> Self {
-        Self { lease }
-    }
 }
 
 impl Handler for Active {
@@ -33,20 +43,6 @@ impl Handler for Active {
         Ok(StateResponse::paid_from(self.lease.lease, None))
     }
 
-    fn close(
-        self,
-        querier: QuerierWrapper<'_>,
-        env: Env,
-        info: MessageInfo,
-    ) -> ContractResult<Response> {
-        access_control::check(&self.lease.lease.customer, &info.sender)?;
-
-        let start_transfer_in = transfer_in::start(self.lease);
-        start_transfer_in
-            .enter(env.block.time, querier)
-            .map(|batch| Response::from(batch, DexState::from(start_transfer_in)))
-            .map_err(Into::into)
-    }
     fn on_time_alarm(
         self,
         _querier: QuerierWrapper<'_>,
@@ -55,6 +51,7 @@ impl Handler for Active {
     ) -> ContractResult<Response> {
         super::ignore_msg(self)
     }
+
     fn on_price_alarm(
         self,
         _querier: QuerierWrapper<'_>,
@@ -62,5 +59,14 @@ impl Handler for Active {
         _info: MessageInfo,
     ) -> ContractResult<Response> {
         super::ignore_msg(self)
+    }
+
+    fn heal(
+        self,
+        querier: QuerierWrapper<'_>,
+        env: Env,
+        _info: MessageInfo,
+    ) -> ContractResult<Response> {
+        start_close(self.lease, MessageResponse::default(), &env, querier)
     }
 }

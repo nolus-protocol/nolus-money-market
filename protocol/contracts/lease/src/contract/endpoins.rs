@@ -142,7 +142,6 @@ fn process_execute(
             state.change_close_policy(change, querier, env, info)
         }
         ExecuteMsg::ClosePosition(spec) => state.close_position(spec, querier, env, info),
-        ExecuteMsg::Close() => state.close(querier, env, info),
         ExecuteMsg::TimeAlarm {} => state.on_time_alarm(querier, env, info),
         ExecuteMsg::PriceAlarm() => state.on_price_alarm(querier, env, info),
         ExecuteMsg::DexCallback() => {

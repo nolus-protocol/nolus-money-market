@@ -71,15 +71,6 @@ where
         self.handler.close_position(spec, querier, env, info)
     }
 
-    fn close(
-        self,
-        querier: QuerierWrapper<'_>,
-        env: Env,
-        info: MessageInfo,
-    ) -> ContractResult<Response> {
-        self.handler.close(querier, env, info)
-    }
-
     fn on_time_alarm(
         self,
         querier: QuerierWrapper<'_>,

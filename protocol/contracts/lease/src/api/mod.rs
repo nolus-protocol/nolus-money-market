@@ -70,9 +70,6 @@ pub enum ExecuteMsg {
     /// a `PositionClose::FullClose` is requested. It is executed irrespective of the amount.
     ClosePosition(PositionClose),
 
-    /// Close of a fully paid lease
-    Close(),
-
     PriceAlarm(),
     TimeAlarm {},
 

@@ -1,4 +1,5 @@
 use currencies::{Lpn, Lpns, Nls, testing::LeaseC1};
+use currency::CurrencyDef;
 use finance::{
     coin::{Amount, Coin},
     duration::Duration,
@@ -24,17 +25,25 @@ use sdk::{
     testing,
 };
 
-use crate::common::{
-    ADDON_OPTIMAL_INTEREST_RATE, ADMIN, BASE_INTEREST_RATE, CwCoin, UTILIZATION_OPTIMAL, cwcoin,
-    lease::{
-        InitConfig as LeaseInitConfig, Instantiator as LeaseInstantiator,
-        InstantiatorAddresses as LeaseInstantiatorAddresses,
-        InstantiatorConfig as LeaseInstantiatorConfig,
+use crate::{
+    common::{
+        ADDON_OPTIMAL_INTEREST_RATE, ADMIN, BASE_INTEREST_RATE, CwCoin, UTILIZATION_OPTIMAL,
+        cwcoin,
+        lease::{
+            InitConfig as LeaseInitConfig, Instantiator as LeaseInstantiator,
+            InstantiatorAddresses as LeaseInstantiatorAddresses,
+            InstantiatorConfig as LeaseInstantiatorConfig,
+        },
+        lpp::{LppExecuteMsg, LppQueryMsg},
+        protocols::Registry,
+        test_case::{
+            TestCase, builder::BlankBuilder as TestCaseBuilder,
+            response::ResponseWithInterChainMsgs,
+        },
     },
-    lpp::{LppExecuteMsg, LppQueryMsg},
-    protocols::Registry,
-    test_case::{TestCase, builder::BlankBuilder as TestCaseBuilder},
+    lease::LeaseTestCase,
 };
+
 type LeaseCurrency = LeaseC1;
 
 fn general_interest_rate(
@@ -717,26 +726,10 @@ fn loan_open_and_repay() {
     );
 
     // repay from other addr
-    _ = test_case
-        .app
-        .execute(
-            hacker,
-            test_case.address_book.lpp().clone(),
-            &LppExecuteMsg::RepayLoan(),
-            &[lpn_cwcoin(loan1)],
-        )
-        .unwrap_err();
+    _ = repay_loan::<Lpn, _>(loan1, &mut test_case, hacker).unwrap_err();
 
     // repay zero
-    _ = test_case
-        .app
-        .execute(
-            loan_addr1.clone(),
-            test_case.address_book.lpp().clone(),
-            &LppExecuteMsg::RepayLoan(),
-            &[lpn_cwcoin(0)],
-        )
-        .unwrap_err();
+    _ = repay_loan::<Lpn, _>(0, &mut test_case, loan_addr1.clone()).unwrap_err();
 
     // repay wrong currency
     () = test_case
@@ -750,27 +743,10 @@ fn loan_open_and_repay() {
         )
         .unwrap();
 
-    _ = test_case
-        .app
-        .execute(
-            loan_addr2,
-            test_case.address_book.lpp().clone(),
-            &LppExecuteMsg::RepayLoan(),
-            &[coin_legacy::to_cosmwasm_on_nolus::<Nls>(
-                repay_interest_part.into(),
-            )],
-        )
-        .unwrap_err();
+    _ = repay_loan::<Nls, _>(repay_interest_part, &mut test_case, loan_addr2).unwrap_err();
 
     // repay interest part
-    () = test_case
-        .app
-        .execute(
-            loan_addr1.clone(),
-            test_case.address_book.lpp().clone(),
-            &LppExecuteMsg::RepayLoan(),
-            &[lpn_cwcoin(repay_interest_part)],
-        )
+    () = repay_loan::<Lpn, _>(repay_interest_part, &mut test_case, loan_addr1.clone())
         .unwrap()
         .ignore_response()
         .unwrap_response();
@@ -793,19 +769,14 @@ fn loan_open_and_repay() {
     );
 
     // repay interest + due part
-    () = test_case
-        .app
-        .execute(
-            loan_addr1.clone(),
-            test_case.address_book.lpp().clone(),
-            &LppExecuteMsg::RepayLoan(),
-            &[lpn_cwcoin(
-                interest1.of(loan1) - repay_interest_part + repay_due_part,
-            )],
-        )
-        .unwrap()
-        .ignore_response()
-        .unwrap_response();
+    () = repay_loan::<Lpn, _>(
+        interest1.of(loan1) - repay_interest_part + repay_due_part,
+        &mut test_case,
+        loan_addr1.clone(),
+    )
+    .unwrap()
+    .ignore_response()
+    .unwrap_response();
 
     let maybe_loan1: QueryLoanResponse<Lpn> = test_case
         .app
@@ -825,17 +796,14 @@ fn loan_open_and_repay() {
     );
 
     // repay interest + due part, close the loan
-    () = test_case
-        .app
-        .execute(
-            loan_addr1.clone(),
-            test_case.address_book.lpp().clone(),
-            &LppExecuteMsg::RepayLoan(),
-            &[lpn_cwcoin(loan1 - repay_due_part + repay_excess)],
-        )
-        .unwrap()
-        .ignore_response()
-        .unwrap_response();
+    () = repay_loan::<Lpn, _>(
+        loan1 - repay_due_part + repay_excess,
+        &mut test_case,
+        loan_addr1.clone(),
+    )
+    .unwrap()
+    .ignore_response()
+    .unwrap_response();
 
     let maybe_loan1: QueryLoanResponse<Lpn> = test_case
         .app
@@ -1092,26 +1060,10 @@ fn compare_lpp_states() {
     );
 
     // repay from other addr
-    _ = test_case
-        .app
-        .execute(
-            hacker,
-            test_case.address_book.lpp().clone(),
-            &LppExecuteMsg::RepayLoan(),
-            &[lpn_cwcoin(loan1)],
-        )
-        .unwrap_err();
+    _ = repay_loan::<Lpn, _>(loan1, &mut test_case, hacker).unwrap_err();
 
     // repay zero
-    _ = test_case
-        .app
-        .execute(
-            loan_addr1.clone(),
-            test_case.address_book.lpp().clone(),
-            &LppExecuteMsg::RepayLoan(),
-            &[lpn_cwcoin(0)],
-        )
-        .unwrap_err();
+    _ = repay_loan::<Lpn, _>(0, &mut test_case, loan_addr1.clone()).unwrap_err();
 
     // repay wrong currency
     () = test_case
@@ -1125,27 +1077,10 @@ fn compare_lpp_states() {
         )
         .unwrap();
 
-    _ = test_case
-        .app
-        .execute(
-            loan_addr2,
-            test_case.address_book.lpp().clone(),
-            &LppExecuteMsg::RepayLoan(),
-            &[coin_legacy::to_cosmwasm_on_nolus::<Nls>(
-                repay_interest_part.into(),
-            )],
-        )
-        .unwrap_err();
+    _ = repay_loan::<Nls, _>(repay_interest_part, &mut test_case, loan_addr2).unwrap_err();
 
     // repay interest part
-    () = test_case
-        .app
-        .execute(
-            loan_addr1.clone(),
-            test_case.address_book.lpp().clone(),
-            &LppExecuteMsg::RepayLoan(),
-            &[lpn_cwcoin(repay_interest_part)],
-        )
+    () = repay_loan::<Lpn, _>(repay_interest_part, &mut test_case, loan_addr1.clone())
         .unwrap()
         .ignore_response()
         .unwrap_response();
@@ -1168,19 +1103,14 @@ fn compare_lpp_states() {
     );
 
     // repay interest + due part
-    () = test_case
-        .app
-        .execute(
-            loan_addr1.clone(),
-            test_case.address_book.lpp().clone(),
-            &LppExecuteMsg::RepayLoan(),
-            &[lpn_cwcoin(
-                interest1.of(loan1) - repay_interest_part + repay_due_part,
-            )],
-        )
-        .unwrap()
-        .ignore_response()
-        .unwrap_response();
+    () = repay_loan::<Lpn, _>(
+        interest1.of(loan1) - repay_interest_part + repay_due_part,
+        &mut test_case,
+        loan_addr1.clone(),
+    )
+    .unwrap()
+    .ignore_response()
+    .unwrap_response();
 
     let maybe_loan1: QueryLoanResponse<Lpn> = test_case
         .app
@@ -1200,17 +1130,14 @@ fn compare_lpp_states() {
     );
 
     // repay interest + due part, close the loan
-    () = test_case
-        .app
-        .execute(
-            loan_addr1.clone(),
-            test_case.address_book.lpp().clone(),
-            &LppExecuteMsg::RepayLoan(),
-            &[lpn_cwcoin(loan1 - repay_due_part + repay_excess)],
-        )
-        .unwrap()
-        .ignore_response()
-        .unwrap_response();
+    () = repay_loan::<Lpn, _>(
+        loan1 - repay_due_part + repay_excess,
+        &mut test_case,
+        loan_addr1.clone(),
+    )
+    .unwrap()
+    .ignore_response()
+    .unwrap_response();
 
     let maybe_loan1: QueryLoanResponse<Lpn> = test_case
         .app
@@ -1533,6 +1460,25 @@ fn test_rewards() {
     assert_eq!(resp.rewards, Coin::new(0));
     let balance = bank::balance(&recipient, test_case.app.query()).unwrap();
     assert_eq!(balance, Coin::<Nls>::from(lender_reward2));
+}
+
+fn repay_loan<Currency, Amount>(
+    repay_amount: Amount,
+    test_case: &mut LeaseTestCase,
+    loan_addr2: Addr,
+) -> anyhow::Result<ResponseWithInterChainMsgs<'_, AppResponse>>
+where
+    Currency: CurrencyDef,
+    Amount: Into<Coin<Currency>>,
+{
+    test_case.app.execute(
+        loan_addr2,
+        test_case.address_book.lpp().clone(),
+        &LppExecuteMsg::RepayLoan(),
+        &[coin_legacy::to_cosmwasm_on_nolus::<Currency>(
+            repay_amount.into(),
+        )],
+    )
 }
 
 fn lpn_cwcoin<A>(amount: A) -> CwCoin

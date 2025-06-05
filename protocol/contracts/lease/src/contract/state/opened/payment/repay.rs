@@ -101,7 +101,7 @@ where
         )?;
 
         match close_status {
-            CloseStatusDTO::Paid => Ok(Response::from(response, paid::Active::new(lease))),
+            CloseStatusDTO::Paid => paid::start_close(lease, response, env, querier),
             CloseStatusDTO::None {
                 current_liability,
                 alarms,

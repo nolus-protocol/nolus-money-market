@@ -11,7 +11,7 @@ use lease::{
     api::{
         ExecuteMsg,
         position::{FullClose, PartialClose, PositionClose},
-        query::StateResponse,
+        query::{StateResponse, paid::ClosingTrx},
     },
     error::{ContractError, PositionError},
 };
@@ -168,7 +168,7 @@ fn partial_close_loan_closed() {
     assert_eq!(
         StateResponse::Paid {
             amount: (lease_amount - close_amount).into(),
-            in_progress: None
+            in_progress: Some(ClosingTrx::TransferInInit)
         },
         state
     );
@@ -277,6 +277,7 @@ fn do_close(
 ) -> Addr {
     let user_balance_before: PaymentCoin = user_balance(customer_addr, test_case);
     let lease_addr: Addr = super::open_lease(test_case, DOWNPAYMENT, None);
+    let lease_ica = TestCase::ica_addr(&lease_addr, TestCase::LEASE_ICA_ID);
 
     assert!(matches!(
         super::expected_newly_opened_state(test_case, DOWNPAYMENT, Coin::<LpnCurrency>::ZERO),
@@ -300,7 +301,7 @@ fn do_close(
     let mut response_swap: ResponseWithInterChainMsgs<'_, ()> = common::swap::do_swap(
         &mut test_case.app,
         lease_addr.clone(),
-        TestCase::ica_addr(&lease_addr, TestCase::LEASE_ICA_ID),
+        lease_ica.clone(),
         requests.into_iter(),
         |amount: Amount, _, _| {
             assert_eq!(amount, close_amount.into());
@@ -318,16 +319,28 @@ fn do_close(
 
     assert_eq!(transfer_amount, to_cosmwasm_on_dex(close_amount_in_lpn));
 
-    let response_transfer_in: AppResponse = ibc::do_transfer(
+    let mut response_transfer_in = ibc::do_transfer(
         &mut test_case.app,
-        TestCase::ica_addr(&lease_addr, TestCase::LEASE_ICA_ID),
+        lease_ica.clone(),
         lease_addr.clone(),
         true,
         slice::from_ref(&transfer_amount),
-    )
-    .unwrap_response();
+    );
 
-    response_transfer_in.assert_event(
+    if exp_loan_close && !exp_lease_amount_after.is_zero() {
+        let lease_amount_after = ibc::expect_remote_transfer(
+            &mut response_transfer_in,
+            TestCase::DEX_CONNECTION_ID,
+            TestCase::LEASE_ICA_ID,
+        );
+
+        assert_eq!(
+            to_cosmwasm_on_dex(exp_lease_amount_after),
+            lease_amount_after
+        );
+    }
+
+    response_transfer_in.unwrap_response().assert_event(
         &Event::new("wasm-ls-close-position")
             .add_attribute("to", lease_addr.clone())
             .add_attribute(
@@ -355,7 +368,7 @@ fn do_close(
             test_case
                 .app
                 .query()
-                .query_all_balances(TestCase::ica_addr(&lease_addr, TestCase::LEASE_ICA_ID))
+                .query_all_balances(lease_ica)
                 .unwrap()
                 .as_slice(),
             &[to_cosmwasm_on_dex(exp_lease_amount_after)],

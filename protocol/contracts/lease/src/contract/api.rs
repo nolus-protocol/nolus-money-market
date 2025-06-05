@@ -134,15 +134,6 @@ where
         err("close position")
     }
 
-    fn close(
-        self,
-        _querier: QuerierWrapper<'_>,
-        _env: Env,
-        _info: MessageInfo,
-    ) -> ContractResult<Response> {
-        err("close")
-    }
-
     fn on_time_alarm(
         self,
         _querier: QuerierWrapper<'_>,
