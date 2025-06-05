@@ -2,7 +2,11 @@ use std::ops::{Deref, DerefMut};
 
 use serde::Serialize;
 
-use access_control::{ContractOwnerAccess, SingleUserPermission};
+use access_control::{
+    AccessPermission,
+    ContractOwnerAccess,
+    permissions::SingleUserPermission,
+};
 use lease::api::{MigrateMsg as LeaseMigrateMsg, authz::AccessGranted};
 use platform::{
     contract::{self, Code, CodeId, Validator},
@@ -38,9 +42,25 @@ const CURRENT_RELEASE: ProtocolPackageRelease = ProtocolPackageRelease::current(
     CONTRACT_STORAGE_VERSION,
 );
 
-pub type LeasesConfigurationPermission<'a> = SingleUserPermission<'a>;
-pub type ChangeLeaseAdminPermission<'a> = SingleUserPermission<'a>;
-pub type AnomalyResolutionPermission<'a> = SingleUserPermission<'a>;
+struct LeaseAdminOnly<'a> {
+    lease_config: &'a Config,
+}
+
+impl<'a> LeaseAdminOnly<'a> {
+    fn new(lease_config: &'a Config) -> Self {
+        Self { lease_config }
+    }
+}
+
+impl AccessPermission for LeaseAdminOnly<'_> {
+    fn is_granted_to(&self, caller: &Addr) -> bool {
+        self.lease_config.lease_admin == caller
+    }
+}
+
+type LeasesConfigurationPermission<'a> = LeaseAdminOnly<'a>;
+type ChangeLeaseAdminPermission<'a> = LeaseAdminOnly<'a>;
+type AnomalyResolutionPermission<'a> = LeaseAdminOnly<'a>;
 
 #[entry_point]
 pub fn instantiate(
@@ -105,7 +125,7 @@ pub fn execute(
         ExecuteMsg::ConfigLeases(new_config) => {
             Leaser::new(deps.as_ref()).config().and_then(|config| {
                 access_control::check(
-                    &LeasesConfigurationPermission::new(&config.lease_admin),
+                    &LeasesConfigurationPermission::new(&config),
                     &info.sender,
                 )?;
                 leaser::try_configure(deps.storage, new_config)
@@ -164,7 +184,7 @@ pub fn execute(
             .config()
             .and_then(|config| {
                 access_control::check(
-                    &ChangeLeaseAdminPermission::new(&config.lease_admin),
+                    &ChangeLeaseAdminPermission::new(&config),
                     &info.sender,
                 )?;
                 validate(&new, deps.api)
@@ -202,7 +222,7 @@ pub fn query(deps: Deps<'_>, _env: Env, msg: QueryMsg) -> ContractResult<Binary>
             .config()
             .and_then(|config| {
                 access_control::check(
-                    &AnomalyResolutionPermission::new(&config.lease_admin),
+                    &AnomalyResolutionPermission::new(&config),
                     &caller,
                 )
                 .map(|_| AccessGranted::Yes)

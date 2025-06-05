@@ -10,12 +10,12 @@ use timealarms::stub::TimeAlarmDelivery;
 use crate::{
     api::{
         DownpaymentCoin,
-        authz::PriceAlarmDelivery,
         position::{ClosePolicyChange, PositionClose},
         query::{StateResponse, opened::Status},
     },
     contract::{
         Lease,
+        PriceAlarmDelivery,
         cmd::{
             ChangeClosePolicy, CloseStatusCmd, CloseStatusDTO, ObtainPayment, OpenLoanRespResult,
         },

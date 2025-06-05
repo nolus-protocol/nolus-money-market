@@ -26,7 +26,7 @@ pub enum Error {
     TimeAlarmError(#[from] timealarms::stub::Error),
 
     #[error("[Dex] {0}")]
-    Unauthorized(#[from] access_control::error::Error),
+    Unauthorized(access_control::error::Error),
 }
 
 pub type Result<T> = core::result::Result<T, Error>;

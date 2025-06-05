@@ -152,15 +152,15 @@ fn process_execute(
         ExecuteMsg::PriceAlarm() => state.on_price_alarm(querier, env, info),
         ExecuteMsg::DexCallback() => {
             access_control::check(
-                &DexResponseSafeDeliveryPermission::new(&info.sender),
-                &env.contract.address,
+                &DexResponseSafeDeliveryPermission::new(&env.contract),
+                &info.sender,
             )?;
             state.on_dex_inner(querier, env)
         }
         ExecuteMsg::DexCallbackContinue() => {
             access_control::check(
-                &DexResponseSafeDeliveryPermission::new(&info.sender),
-                &env.contract.address,
+                &DexResponseSafeDeliveryPermission::new(&env.contract),
+                &info.sender,
             )?;
             state.on_dex_inner_continue(querier, env)
         }
