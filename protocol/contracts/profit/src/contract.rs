@@ -2,7 +2,7 @@ use std::ops::{Deref, DerefMut};
 
 use access_control::{
     ContractOwnerAccess,
-    permissions::{SameContractOnly, SingleUserAccess},    
+    permissions::{SameContractOnly, SingleUserAccess},
 };
 use dex::{ContinueResult as DexResult, Handler as _, Response as DexResponse};
 use oracle_platform::OracleRef;
