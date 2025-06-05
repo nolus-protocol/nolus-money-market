@@ -1,6 +1,5 @@
 use serde::{Deserialize, Serialize};
 
-use access_control::AccessPermission;
 use currency::{Currency, Group, MemberOf};
 use oracle_platform::OracleRef;
 use sdk::cosmwasm_std::Addr;
@@ -27,33 +26,4 @@ pub enum AccessCheck {
 pub enum AccessGranted {
     Yes,
     No,
-}
-
-// PriceAlarmDelivery is a permission check used on on_price_alarm
-pub struct PriceAlarmDelivery<'a, QuoteC, QuoteG>
-where
-    QuoteC: Currency + MemberOf<QuoteG>,
-    QuoteG: Group,
-{
-    oracle_ref: &'a OracleRef<QuoteC, QuoteG>,
-}
-
-impl<'a, QuoteC, QuoteG> PriceAlarmDelivery<'a, QuoteC, QuoteG>
-where
-    QuoteC: Currency + MemberOf<QuoteG>,
-    QuoteG: Group,
-{
-    pub fn new(oracle_ref: &'a OracleRef<QuoteC, QuoteG>) -> Self {
-        Self { oracle_ref }
-    }
-}
-
-impl<QuoteC, QuoteG> AccessPermission for PriceAlarmDelivery<'_, QuoteC, QuoteG>
-where
-    QuoteC: Currency + MemberOf<QuoteG>,
-    QuoteG: Group,
-{
-    fn is_granted_to(&self, caller: &Addr) -> bool {
-        self.oracle_ref.owned_by(caller)
-    }
 }

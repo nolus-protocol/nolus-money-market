@@ -1,6 +1,6 @@
 use std::ops::DerefMut;
 
-use access_control::SingleUserAccess;
+use access_control::permissions::SingleUserAccess;
 use currencies::Lpn as LpnCurrency;
 use currency::CurrencyDef;
 use finance::coin::Coin;
