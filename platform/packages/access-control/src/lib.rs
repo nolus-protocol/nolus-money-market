@@ -10,9 +10,18 @@ use self::error::{Error, Result};
 
 mod contract_owner;
 pub mod error;
+pub mod permissions;
 
-pub fn check(permitted_to: &Addr, accessed_by: &Addr) -> Result {
-    if permitted_to == accessed_by {
+pub trait AccessPermission {
+    fn is_granted_to(&self, caller: &Addr) -> bool;
+}
+
+/// Checks if access is granted to the given caller.
+pub fn check<P>(permission: &P, caller: &Addr) -> Result
+where
+    P: AccessPermission,
+{
+    if permission.is_granted_to(caller) {
         Ok(())
     } else {
         Err(Error::Unauthorized {})
@@ -42,7 +51,7 @@ where
         self.storage_item
             .load(self.storage.deref())
             .map_err(Into::into)
-            .and_then(|granted_to| check(&granted_to, user))
+            .and_then(|granted_to| check(&permissions::SingleUserPermission::new(&granted_to), user))
     }
 }
 
@@ -63,10 +72,16 @@ where
 
 #[cfg(test)]
 mod tests {
-    use sdk::cosmwasm_std::{Addr, Storage, testing::MockStorage};
+    use sdk::cosmwasm_std::{
+        Addr,
+        Storage,
+        testing::MockStorage,
+        ContractInfo
+    };
 
     use crate::{
         SingleUserAccess,
+        permissions::{SameContractOnly, SingleUserPermission},
         error::{Error, Result},
     };
 
@@ -98,21 +113,55 @@ mod tests {
     }
 
     #[test]
-    fn check() {
+    fn check_addr() {
         const ADDRESS: &str = "admin";
 
-        check_permission(ADDRESS, ADDRESS).unwrap();
+        check_addr_permission(ADDRESS, ADDRESS).unwrap();
+    }
+
+    #[test]
+    fn check_same_contract_only() {
+        let address = Addr::unchecked("contract admin");
+        let contract_info = ContractInfo {
+            address: address.clone(),
+        };
+
+        let _ = super::check(
+            &SameContractOnly::new(&contract_info),
+            &address,
+        );
+    }
+
+    #[test]
+    fn check_same_contract_only_fail() {
+        let address = Addr::unchecked("contract admin");
+        let contract_info = ContractInfo {
+            address: address.clone(),
+        };
+
+        let check_result = super::check(
+            &SameContractOnly::new(&contract_info),
+            &Addr::unchecked("hacker"),
+        );
+
+        assert!(matches!(
+            check_result.unwrap_err(),
+            Error::Unauthorized{}
+        ));
     }
 
     #[test]
     fn check_fail() {
         assert_eq!(
             Error::Unauthorized {},
-            check_permission("user12", "user21").unwrap_err(),
+            check_addr_permission("user12", "user21").unwrap_err(),
         );
     }
 
-    fn check_permission(granted_to: &str, asked_for: &str) -> Result {
-        super::check(&Addr::unchecked(granted_to), &Addr::unchecked(asked_for))
+    fn check_addr_permission(granted_to: &str, asked_for: &str) -> Result {
+        super::check(
+            &SingleUserPermission::new(&Addr::unchecked(granted_to)),
+            &Addr::unchecked(asked_for),
+        )
     }
 }

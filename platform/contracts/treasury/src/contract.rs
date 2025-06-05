@@ -1,6 +1,6 @@
 use std::ops::{Deref, DerefMut};
 
-use access_control::SingleUserAccess;
+use access_control::permissions::SingleUserAccess;
 use admin_contract::msg::{
     ProtocolQueryResponse, ProtocolsQueryResponse, QueryMsg as ProtocolsRegistry,
 };

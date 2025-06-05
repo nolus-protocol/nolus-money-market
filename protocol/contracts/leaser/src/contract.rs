@@ -2,7 +2,11 @@ use std::ops::{Deref, DerefMut};
 
 use serde::Serialize;
 
-use access_control::ContractOwnerAccess;
+use access_control::{
+    AccessPermission,
+    ContractOwnerAccess,
+    permissions::SingleUserPermission,
+};
 use lease::api::{MigrateMsg as LeaseMigrateMsg, authz::AccessGranted};
 use platform::{
     contract::{self, Code, CodeId},
@@ -23,9 +27,6 @@ use versioning::{
 };
 
 use crate::{
-    authz::{
-        AnomalyResolutionPermission, ChangeLeaseAdminPermission, LeasesConfigurationPermission,
-    },
     cmd::Borrow,
     error::ContractError,
     lease::CacheFirstRelease,
@@ -41,6 +42,26 @@ const CURRENT_RELEASE: ProtocolPackageRelease = ProtocolPackageRelease::current(
     package_version!(),
     CONTRACT_STORAGE_VERSION,
 );
+
+struct LeaseAdminOnly<'a> {
+    lease_config: &'a Config,
+}
+
+impl<'a> LeaseAdminOnly<'a> {
+    fn new(lease_config: &'a Config) -> Self {
+        Self { lease_config }
+    }
+}
+
+impl AccessPermission for LeaseAdminOnly<'_> {
+    fn is_granted_to(&self, caller: &Addr) -> bool {
+        self.lease_config.lease_admin == caller
+    }
+}
+
+type LeasesConfigurationPermission<'a> = LeaseAdminOnly<'a>;
+type ChangeLeaseAdminPermission<'a> = LeaseAdminOnly<'a>;
+type AnomalyResolutionPermission<'a> = LeaseAdminOnly<'a>;
 
 #[entry_point]
 pub fn instantiate(
@@ -111,12 +132,12 @@ pub fn execute(
             currency,
             max_ltd,
         ),
-        ExecuteMsg::ConfigLeases(new_config) => Leaser::new(deps.as_ref())
-            .config()
-            .and_then(|ref config| {
-                LeasesConfigurationPermission::from(config).check_access(&info.sender)
+        ExecuteMsg::ConfigLeases(new_config) => {
+            Leaser::new(deps.as_ref()).config().and_then(|config| {
+                access_control::check(&LeasesConfigurationPermission::new(&config), &info.sender)?;
+                leaser::try_configure(deps.storage, new_config)
             })
-            .and_then(|()| leaser::try_configure(deps.storage, new_config)),
+        }
         ExecuteMsg::FinalizeLease { customer } => {
             validate_customer(customer, deps.api, deps.querier)
                 .and_then(|customer| {
@@ -164,10 +185,10 @@ pub fn execute(
             }),
         ExecuteMsg::ChangeLeaseAdmin { new } => Leaser::new(deps.as_ref())
             .config()
-            .and_then(|ref config| {
-                ChangeLeaseAdminPermission::from(config).check_access(&info.sender)
+            .and_then(|config| {
+                access_control::check(&ChangeLeaseAdminPermission::new(&config), &info.sender)?;
+                validate(&new, deps.api)
             })
-            .and_then(|()| validate(&new, deps.api))
             .and_then(|valid_new_admin| {
                 leaser::try_change_lease_admin(deps.storage, valid_new_admin)
             }),
@@ -212,13 +233,10 @@ pub fn query(deps: Deps<'_>, _env: Env, msg: QueryMsg) -> ContractResult<Binary>
     match msg {
         QueryMsg::CheckAnomalyResolutionPermission { by: caller } => Leaser::new(deps)
             .config()
-            .map(|ref config| AnomalyResolutionPermission::from(config).granted_to(&caller))
-            .map(|granted| {
-                if granted {
-                    AccessGranted::Yes
-                } else {
-                    AccessGranted::No
-                }
+            .and_then(|config| {
+                access_control::check(&AnomalyResolutionPermission::new(&config), &caller)
+                    .map(|_| AccessGranted::Yes)
+                    .or_else(|_| Ok(AccessGranted::No))
             })
             .and_then(serialize_to_json),
         QueryMsg::Config {} => Leaser::new(deps)

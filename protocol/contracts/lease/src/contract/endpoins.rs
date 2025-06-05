@@ -15,7 +15,7 @@ use versioning::{
 
 use crate::{
     api::{ExecuteMsg, MigrateMsg, open::NewLeaseContract, query::QueryMsg},
-    contract::api::Contract,
+    contract::{DexResponseSafeDeliveryPermission, api::Contract},
     error::{ContractError, ContractResult},
 };
 
@@ -146,11 +146,17 @@ fn process_execute(
         ExecuteMsg::TimeAlarm {} => state.on_time_alarm(querier, env, info),
         ExecuteMsg::PriceAlarm() => state.on_price_alarm(querier, env, info),
         ExecuteMsg::DexCallback() => {
-            access_control::check(&info.sender, &env.contract.address)?;
+            access_control::check(
+                &DexResponseSafeDeliveryPermission::new(&env.contract),
+                &info.sender,
+            )?;
             state.on_dex_inner(querier, env)
         }
         ExecuteMsg::DexCallbackContinue() => {
-            access_control::check(&info.sender, &env.contract.address)?;
+            access_control::check(
+                &DexResponseSafeDeliveryPermission::new(&env.contract),
+                &info.sender,
+            )?;
             state.on_dex_inner_continue(querier, env)
         }
         ExecuteMsg::Heal() => state.heal(querier, env, info),

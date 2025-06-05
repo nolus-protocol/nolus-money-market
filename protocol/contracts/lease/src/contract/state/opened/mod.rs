@@ -1,3 +1,4 @@
+use access_control::permissions::SingleUserPermission;
 use finance::duration::Duration;
 use sdk::cosmwasm_std::{QuerierWrapper, Timestamp};
 
@@ -14,6 +15,9 @@ pub mod close;
 mod event;
 mod payment;
 pub mod repay;
+
+type ChangeClosePolicyPermission<'a> = SingleUserPermission<'a>;
+type ClosePositionPermission<'a> = SingleUserPermission<'a>;
 
 fn lease_state(
     lease: Lease,
