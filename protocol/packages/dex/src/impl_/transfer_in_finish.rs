@@ -241,9 +241,7 @@ where
             &env.contract.address,
         )
         .map_err(DexError::Unauthorized)
-        .map_or_else(
-            Into::into, |()| self.try_complete(querier, env),
-        )
+        .map_or_else(Into::into, |()| self.try_complete(querier, env))
     }
 }
 
