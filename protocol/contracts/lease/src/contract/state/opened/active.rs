@@ -14,8 +14,7 @@ use crate::{
         query::{StateResponse, opened::Status},
     },
     contract::{
-        Lease,
-        PriceAlarmDelivery,
+        Lease, PriceAlarmDelivery,
         cmd::{
             ChangeClosePolicy, CloseStatusCmd, CloseStatusDTO, ObtainPayment, OpenLoanRespResult,
         },
