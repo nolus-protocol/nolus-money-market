@@ -168,7 +168,7 @@ impl Handler for Active {
     ) -> ContractResult<Response> {
         access_control::check(
             &ChangeClosePolicyPermission::new(&self.lease.lease.customer),
-            &info.sender,
+            &info,
         )
         .map_err(Into::into)
         .and_then(|()| {
@@ -221,7 +221,7 @@ impl Handler for Active {
     ) -> ContractResult<Response> {
         access_control::check(
             &ClosePositionPermission::new(&self.lease.lease.customer),
-            &info.sender,
+            &info,
         )
         .map_err(Into::into)
         .and_then(|()| customer_close::start(spec, self.lease, &env, querier))
@@ -235,7 +235,7 @@ impl Handler for Active {
     ) -> ContractResult<Response> {
         access_control::check(
             &TimeAlarmDelivery::new(&self.lease.lease.time_alarms),
-            &info.sender,
+            &info,
         )?;
 
         self.try_on_alarm(querier, &env)
@@ -249,7 +249,7 @@ impl Handler for Active {
     ) -> ContractResult<Response> {
         access_control::check(
             &PriceAlarmDelivery::new(&self.lease.lease.oracle),
-            &info.sender,
+            &info,
         )?;
 
         self.try_on_alarm(querier, &env)
