@@ -11,7 +11,7 @@ use platform::{
     batch::{Emit, Emitter},
     message::Response as MessageResponse,
 };
-use sdk::cosmwasm_std::{Env, QuerierWrapper, Timestamp};
+use sdk::cosmwasm_std::{Env, MessageInfo, QuerierWrapper, Timestamp};
 use timealarms::stub::TimeAlarmDelivery;
 
 use crate::{
@@ -235,10 +235,10 @@ where
         self.try_complete(querier, env)
     }
 
-    fn on_time_alarm(self, querier: QuerierWrapper<'_>, env: Env) -> HandlerResult<Self> {
+    fn on_time_alarm(self, querier: QuerierWrapper<'_>, env: Env, info: MessageInfo) -> HandlerResult<Self> {
         access_control::check(
             &TimeAlarmDelivery::new(self.spec.time_alarm()),
-            &env.contract.address,
+            &info,
         )
         .map_err(DexError::Unauthorized)
         .map_or_else(Into::into, |()| self.try_complete(querier, env))
