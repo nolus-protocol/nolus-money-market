@@ -30,7 +30,7 @@ use crate::{
     error::ContractError,
     lease::CacheFirstRelease,
     leaser::{self, Leaser},
-    msg::{ConfigResponse, ExecuteMsg, InstantiateMsg, MaxLeases, MigrateMsg, QueryMsg, SudoMsg},
+    msg::{ConfigResponse, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg, SudoMsg},
     result::ContractResult,
     state::{config::Config, leases::Leases},
 };
@@ -183,25 +183,8 @@ pub fn sudo(deps: DepsMut<'_>, _env: Env, msg: SudoMsg) -> ContractResult<Respon
         SudoMsg::ChangeLeaseAdmin { new } => validate(&new, deps.api).and_then(|validated_admin| {
             leaser::try_change_lease_admin(deps.storage, validated_admin)
         }),
-        SudoMsg::CloseProtocol {
-            new_lease_code_id,
-            migration_spec,
-            force,
-        } => new_code(new_lease_code_id, deps.querier)
-            .and_then(|new_lease_code| {
-                leaser::try_close_leases(
-                    deps.storage,
-                    CacheFirstRelease::new(deps.querier),
-                    new_lease_code,
-                    MaxLeases::MAX,
-                    migrate_msg(ProtocolPackageReleaseId::VOID),
-                    force,
-                )
-            })
-            .and_then(|response| {
-                leaser::try_close_deposits(deps.storage, deps.querier)
-                    .map(|close_resp| response.merge_with(close_resp))
-            })
+        SudoMsg::CloseProtocol { migration_spec } => check_no_leases(deps.storage)
+            .and_then(|()| leaser::try_close_deposits(deps.storage, deps.querier))
             .and_then(|response| {
                 leaser::try_close_protocol(deps.storage, protocols_registry_load, migration_spec)
                     .map(|protocol_resp| response.merge_with(protocol_resp))
@@ -291,6 +274,14 @@ fn validate_lease(lease: Addr, deps: Deps<'_>) -> ContractResult<Addr> {
             contract::validate_code_id(deps.querier, &lease, lease_code).map_err(Into::into)
         })
         .map(|()| lease)
+}
+
+fn check_no_leases(storage: &dyn Storage) -> ContractResult<()> {
+    if Leases::iter(storage, None).next().is_some() {
+        Err(ContractError::ProtocolStillInUse())
+    } else {
+        Ok(())
+    }
 }
 
 fn protocols_registry_load(storage: &dyn Storage) -> ContractResult<Addr> {

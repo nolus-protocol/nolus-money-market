@@ -117,26 +117,8 @@ pub enum SudoMsg {
     },
 
     CloseProtocol {
-        // Since this is an external system API we should not use [Code].
-        new_lease_code_id: Uint64,
         migration_spec: ProtocolContracts<MigrationSpec>,
-        /// `ForceClose::KillProtocol` closes the protocol even if it has not closed leases
-        /// by migrating them to void.
-        ///
-        /// Limitation!
-        /// The leases number is limited up to the max gas.
-        #[serde(default)]
-        force: ForceClose,
     },
-}
-
-#[derive(Serialize, Deserialize, Default, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "testing", derive(Debug))]
-#[serde(deny_unknown_fields, rename_all = "snake_case")]
-pub enum ForceClose {
-    #[default]
-    No,
-    KillProtocol,
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Eq)]

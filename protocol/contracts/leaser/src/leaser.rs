@@ -27,7 +27,7 @@ use crate::{
     finance::{LpnCurrencies, LpnCurrency, OracleRef},
     lease::Release as LeaseReleaseTrait,
     migrate::{self, MigrationResult},
-    msg::{ForceClose, MaxLeases, NewConfig, QuoteResponse},
+    msg::{MaxLeases, NewConfig, QuoteResponse},
     result::ContractResult,
     state::{config::Config, leases::Leases},
 };
@@ -121,31 +121,6 @@ where
         .map(build_response)
 }
 
-pub(super) fn try_close_leases<LeaseRelease, MsgFactory>(
-    storage: &mut dyn Storage,
-    release_from: LeaseRelease,
-    new_lease_code: Code,
-    max_leases: MaxLeases,
-    migrate_msg: MsgFactory,
-    force: ForceClose,
-) -> ContractResult<MessageResponse>
-where
-    LeaseRelease: LeaseReleaseTrait,
-    MsgFactory: Fn(ProtocolPackageRelease) -> ProtocolMigrationMessage<MigrateMsg>,
-{
-    match force {
-        ForceClose::KillProtocol => try_migrate_leases(
-            storage,
-            release_from,
-            new_lease_code,
-            max_leases,
-            migrate_msg,
-        ),
-        ForceClose::No if has_lease(storage) => Err(ContractError::ProtocolStillInUse()),
-        ForceClose::No => Ok(MessageResponse::default()),
-    }
-}
-
 pub(crate) fn try_close_deposits(
     storage: &mut dyn Storage,
     querier: QuerierWrapper<'_>,
@@ -204,10 +179,6 @@ fn build_response(result: MigrationResult) -> MessageResponse {
     MessageResponse::messages_with_events(result.msgs, emit_status(result.next_customer))
 }
 
-fn has_lease(storage: &dyn Storage) -> bool {
-    Leases::iter(storage, None).next().is_some()
-}
-
 fn update_remote_refs(config: Config, batch: &mut Batch) -> ContractResult<()> {
     let new_lease = config.lease_code;
     {
@@ -241,82 +212,19 @@ fn emit_status(next_customer: Option<Addr>) -> Emitter {
 mod test {
     use admin_contract::msg::{MigrationSpec, ProtocolContracts};
     use json_value::JsonValue;
-    use lease::api::MigrateMsg;
-    use platform::{contract::Code, response};
+    use platform::response;
     use sdk::cosmwasm_std::{Addr, Storage, testing::MockStorage};
-    use versioning::{
-        ProtocolMigrationMessage, ProtocolPackageRelease, ProtocolPackageReleaseId, ReleaseId,
-    };
 
-    use crate::{
-        ContractError,
-        lease::{Release, test::FixedRelease},
-        msg::{ForceClose, MaxLeases},
-        result::ContractResult,
-        state::leases::Leases,
-        tests,
-    };
-
-    const MAX_LEASES: MaxLeases = 100_000;
-    const LEASE_VOID_CODE: Code = Code::unchecked(12);
+    use crate::{result::ContractResult, tests};
 
     #[test]
     fn close_empty_protocol() {
         let mut store = MockStorage::default();
         tests::config().store(&mut store).unwrap();
-        let resp = super::try_close_leases(
-            &mut store,
-            dummy_release(),
-            LEASE_VOID_CODE,
-            MAX_LEASES,
-            migrate_msg,
-            ForceClose::No,
-        )
-        .and_then(|leases_resp| {
-            super::try_close_protocol(&mut store, protocols_registry, dummy_spec())
-                .map(|protocol_resp| leases_resp.merge_with(protocol_resp))
-        })
-        .unwrap();
+        let resp = super::try_close_protocol(&mut store, protocols_registry, dummy_spec()).unwrap();
         let cw_resp = response::response_only_messages(resp);
         let delete_protocol = 1;
         assert_eq!(delete_protocol, cw_resp.messages.len());
-    }
-
-    #[test]
-    fn close_non_empty_protocol() {
-        let mut store = MockStorage::default();
-        tests::config().store(&mut store).unwrap();
-        let customer = Addr::unchecked("CustomerA");
-        let lease = Addr::unchecked("Lease1");
-        Leases::cache_open_req(&mut store, &customer).expect("cache the customer should succeed");
-        Leases::save(&mut store, lease).expect("save a new lease should succeed");
-        assert_eq!(
-            Err(ContractError::ProtocolStillInUse()),
-            super::try_close_leases(
-                &mut store,
-                dummy_release(),
-                LEASE_VOID_CODE,
-                MAX_LEASES,
-                migrate_msg,
-                ForceClose::No
-            )
-        );
-
-        let resp = super::try_close_leases(
-            &mut store,
-            dummy_release(),
-            LEASE_VOID_CODE,
-            MAX_LEASES,
-            migrate_msg,
-            ForceClose::KillProtocol,
-        )
-        .unwrap();
-        let cw_resp = response::response_only_messages(resp);
-        let update_lpp_update_reserve_migrate_legacy_leases = 1 + 1 + 1;
-        assert_eq!(
-            update_lpp_update_reserve_migrate_legacy_leases,
-            cw_resp.messages.len()
-        );
     }
 
     fn dummy_spec() -> ProtocolContracts<MigrationSpec> {
@@ -331,21 +239,6 @@ mod test {
             oracle: migration_spec.clone(),
             profit: migration_spec.clone(),
             reserve: migration_spec,
-        }
-    }
-
-    fn dummy_release() -> impl Release {
-        FixedRelease::with(ProtocolPackageRelease::current("moduleX", "0.1.2", 1))
-    }
-
-    fn migrate_msg(migrate_from: ProtocolPackageRelease) -> ProtocolMigrationMessage<MigrateMsg> {
-        ProtocolMigrationMessage {
-            migrate_from,
-            to_release: ProtocolPackageReleaseId::new(
-                ReleaseId::new_test("v0.5.4"),
-                ReleaseId::new_test("v0.2.1"),
-            ),
-            message: MigrateMsg {},
         }
     }
 
