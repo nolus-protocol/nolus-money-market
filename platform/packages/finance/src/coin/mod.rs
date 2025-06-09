@@ -29,18 +29,15 @@ pub type NonZeroAmount = NonZeroU128;
 pub struct Coin<C> {
     #[serde(with = "amount_serde")]
     amount: Amount,
-    // TODO rename to currency
     #[serde(skip)]
-    ticker: PhantomData<C>,
-    // TODO
-    // def: &'static Definition
+    currency: PhantomData<C>,
 }
 
 impl<C> Coin<C> {
     pub const fn new(amount: Amount) -> Self {
         Self {
             amount,
-            ticker: PhantomData,
+            currency: PhantomData,
         }
     }
 
@@ -53,7 +50,7 @@ impl<C> Coin<C> {
         let may_amount = self.amount.checked_add(rhs.amount);
         may_amount.map(|amount| Self {
             amount,
-            ticker: self.ticker,
+            currency: self.currency,
         })
     }
 
@@ -67,7 +64,7 @@ impl<C> Coin<C> {
         let may_amount = self.amount.checked_sub(rhs.amount);
         may_amount.map(|amount| Self {
             amount,
-            ticker: self.ticker,
+            currency: self.currency,
         })
     }
 
@@ -76,7 +73,7 @@ impl<C> Coin<C> {
         let may_amount = self.amount.checked_mul(rhs);
         may_amount.map(|amount| Self {
             amount,
-            ticker: self.ticker,
+            currency: self.currency,
         })
     }
 
@@ -85,7 +82,7 @@ impl<C> Coin<C> {
         let may_amount = self.amount.checked_div(rhs);
         may_amount.map(|amount| Self {
             amount,
-            ticker: self.ticker,
+            currency: self.currency,
         })
     }
 
@@ -129,7 +126,7 @@ impl<C> Debug for Coin<C> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Coin")
             .field("amount", &self.amount)
-            .field("ticker", &self.ticker)
+            .field("ticker", &self.currency)
             .finish()
     }
 }
@@ -138,7 +135,7 @@ impl<C> Default for Coin<C> {
     fn default() -> Self {
         Self {
             amount: Default::default(),
-            ticker: Default::default(),
+            currency: Default::default(),
         }
     }
 }
