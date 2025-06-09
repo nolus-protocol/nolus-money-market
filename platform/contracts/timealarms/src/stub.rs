@@ -123,7 +123,7 @@ impl<'a> TimeAlarmDelivery<'a> {
 }
 
 impl AccessPermission for TimeAlarmDelivery<'_> {
-    fn is_granted_to(&self, msg_info: &Addr) -> bool {
+    fn is_granted_to(&self, msg_info: &MessageInfo) -> bool {
         self.time_alarms_ref.owned_by(&msg_info.sender)
     }
 }

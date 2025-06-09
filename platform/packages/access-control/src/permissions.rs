@@ -1,5 +1,5 @@
 use crate::AccessPermission;
-use sdk::{cosmwasm_std::Addr, cosmwasm_std::ContractInfo};
+use sdk::cosmwasm_std::{Addr, ContractInfo, MessageInfo};
 
 pub struct SingleUserPermission<'a> {
     addr: &'a Addr,
@@ -12,8 +12,8 @@ impl<'a> SingleUserPermission<'a> {
 }
 
 impl AccessPermission for SingleUserPermission<'_> {
-    fn is_granted_to(&self, caller: &Addr) -> bool {
-        self.addr == caller
+    fn is_granted_to(&self, info: &MessageInfo) -> bool {
+        self.addr == info.sender
     }
 }
 
@@ -28,7 +28,7 @@ impl<'a> SameContractOnly<'a> {
 }
 
 impl AccessPermission for SameContractOnly<'_> {
-    fn is_granted_to(&self, caller: &Addr) -> bool {
-        self.contract_info.address == caller
+    fn is_granted_to(&self, info: &MessageInfo) -> bool {
+        self.contract_info.address == info.sender
     }
 }
