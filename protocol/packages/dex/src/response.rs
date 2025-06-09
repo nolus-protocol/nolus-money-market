@@ -5,7 +5,7 @@ use platform::{
     message::Response as MessageResponse,
     state_machine::{self, Response as StateMachineResponse},
 };
-use sdk::cosmwasm_std::{Binary, Env, QuerierWrapper, Reply};
+use sdk::cosmwasm_std::{Binary, Env, MessageInfo, QuerierWrapper, Reply};
 
 use crate::error::{Error, Result as DexResult};
 
@@ -95,7 +95,12 @@ where
         Err(err(self, "handle reply"))
     }
 
-    fn on_time_alarm(self, _querier: QuerierWrapper<'_>, _env: Env) -> Result<Self> {
+    fn on_time_alarm(
+        self,
+        _querier: QuerierWrapper<'_>,
+        _env: Env,
+        _info: MessageInfo,
+    ) -> Result<Self> {
         Err(err(self, "handle time alarm")).into()
     }
 }

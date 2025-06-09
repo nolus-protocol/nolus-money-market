@@ -125,7 +125,7 @@ pub fn execute(
         ExecuteMsg::DexCallback() => {
             access_control::check(
                 &DexResponseSafeDeliveryPermission::new(&env.contract),
-                &info.sender,
+                &info,
             )?;
 
             try_handle_execute_message(deps, env, State::on_inner)
@@ -134,7 +134,7 @@ pub fn execute(
         ExecuteMsg::DexCallbackContinue() => {
             access_control::check(
                 &DexResponseSafeDeliveryPermission::new(&env.contract),
-                &info.sender,
+                &info,
             )?;
 
             try_handle_execute_message(deps, env, State::on_inner_continue)

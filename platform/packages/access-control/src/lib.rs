@@ -1,7 +1,7 @@
 use std::ops::{Deref, DerefMut};
 
 use sdk::{
-    cosmwasm_std::{Addr, Storage},
+    cosmwasm_std::{Addr, MessageInfo, Storage},
     cw_storage_plus::Item,
 };
 
@@ -13,15 +13,15 @@ pub mod error;
 pub mod permissions;
 
 pub trait AccessPermission {
-    fn is_granted_to(&self, caller: &Addr) -> bool;
+    fn is_granted_to(&self, info: &MessageInfo) -> bool;
 }
 
 /// Checks if access is granted to the given caller.
-pub fn check<P>(permission: &P, caller: &Addr) -> Result
+pub fn check<P>(permission: &P, info: &MessageInfo) -> Result
 where
     P: AccessPermission,
 {
-    if permission.is_granted_to(caller) {
+    if permission.is_granted_to(info) {
         Ok(())
     } else {
         Err(Error::Unauthorized {})
