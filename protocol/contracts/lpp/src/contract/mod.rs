@@ -137,6 +137,7 @@ pub fn execute(
             .map(response::response_only_messages),
         ExecuteMsg::Burn { amount } => lender::try_withdraw::<LpnCurrency>(deps, env, info, amount)
             .map(response::response_only_messages),
+        ExecuteMsg::CloseAllDeposits() => todo!(),
     }
     .inspect_err(platform_error::log(api))
 }

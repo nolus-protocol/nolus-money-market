@@ -8,7 +8,7 @@ use platform::{
     batch::Batch,
     message::Response as MessageResponse,
 };
-use sdk::cosmwasm_std::{Addr, Deps, DepsMut, Env, MessageInfo, Storage, Uint128};
+use sdk::cosmwasm_std::{Addr, Deps, DepsMut, Env, MessageInfo, Storage};
 
 use crate::{
     event,
@@ -63,24 +63,23 @@ pub(super) fn try_withdraw<Lpn>(
     deps: DepsMut<'_>,
     env: Env,
     info: MessageInfo,
-    amount_nlpn: Uint128,
+    amount: Coin<NLpn>,
 ) -> Result<MessageResponse>
 where
     Lpn: 'static + CurrencyDef,
 {
-    if amount_nlpn.is_zero() {
+    if amount.is_zero() {
         return Err(ContractError::ZeroWithdrawFunds);
     }
 
     let lender_addr = info.sender;
-    let amount_nlpn: Coin<NLpn> = amount_nlpn.u128().into();
 
     let lpp = LiquidityPool::<Lpn>::load(deps.storage)?;
-    let payment_lpn = lpp.withdraw_lpn(&deps.as_ref(), &env, amount_nlpn)?;
+    let payment_lpn = lpp.withdraw_lpn(&deps.as_ref(), &env, amount)?;
 
     let maybe_reward = Deposit::may_load(deps.storage, lender_addr.clone())?
         .ok_or(ContractError::NoDeposit {})?
-        .withdraw(deps.storage, amount_nlpn)?;
+        .withdraw(deps.storage, amount)?;
 
     let mut bank = bank::account(&env.contract.address, deps.querier);
     bank.send(payment_lpn, lender_addr.clone());
@@ -98,7 +97,7 @@ where
             env,
             lender_addr,
             payment_lpn,
-            amount_nlpn,
+            amount,
             maybe_reward.is_some(),
         ),
     ))
@@ -230,8 +229,10 @@ mod test {
         }
 
         mod withdraw {
-            use finance::coin::Amount;
-            use sdk::cosmwasm_std::Uint128;
+            use finance::{
+                coin::{Amount, Coin},
+                zero::Zero,
+            };
 
             use crate::contract::{lender, test};
 
@@ -251,7 +252,7 @@ mod test {
                         deps.as_mut(),
                         env,
                         test::lender_msg_no_funds(),
-                        Uint128::default(),
+                        Coin::ZERO,
                     )
                     .unwrap_err();
                 })

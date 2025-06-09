@@ -5,14 +5,20 @@ use currencies::LeaseGroup;
 use currency::CurrencyDTO;
 use finance::percent::Percent;
 use lease::api::{DownpaymentCoin, MigrateMsg};
-use lpp::{msg::ExecuteMsg as LppExecuteMsg, stub::LppRef};
+use lpp::{
+    msg::ExecuteMsg as LppExecuteMsg,
+    stub::{
+        LppRef,
+        deposit::{Depositer, WithDepositer},
+    },
+};
 use platform::{
     batch::{Batch, Emit, Emitter},
     contract::Code,
     message::Response as MessageResponse,
 };
 use reserve::api::ExecuteMsg as ReserveExecuteMsg;
-use sdk::cosmwasm_std::{Addr, Deps, Storage};
+use sdk::cosmwasm_std::{Addr, Deps, QuerierWrapper, Storage};
 use versioning::{ProtocolMigrationMessage, ProtocolPackageRelease};
 
 use crate::{
@@ -138,6 +144,33 @@ where
         ForceClose::No if has_lease(storage) => Err(ContractError::ProtocolStillInUse()),
         ForceClose::No => Ok(MessageResponse::default()),
     }
+}
+
+pub(crate) fn try_close_deposits(
+    storage: &mut dyn Storage,
+    querier: QuerierWrapper<'_>,
+) -> ContractResult<MessageResponse> {
+    struct Cmd {}
+    impl WithDepositer<LpnCurrency, LpnCurrencies> for Cmd {
+        type Output = Batch;
+
+        type Error = ContractError;
+
+        fn exec<Lpp>(self, mut lpp: Lpp) -> Result<Self::Output, Self::Error>
+        where
+            Lpp: Depositer<LpnCurrency>,
+        {
+            lpp.close_all()
+                .map_err(ContractError::CloseAllDeposits)
+                .map(|()| lpp.into())
+        }
+    }
+    Config::load(storage)
+        .and_then(|config| {
+            LppRef::<LpnCurrency, LpnCurrencies>::try_new(config.lpp, querier)
+                .map_err(ContractError::CloseAllDepositsToMergeIntoNext)
+        })
+        .and_then(|lpp_ref| lpp_ref.execute_depositer(Cmd {}).map(Into::into))
 }
 
 pub(super) fn try_close_protocol<ProtocolsRegistryLoader>(

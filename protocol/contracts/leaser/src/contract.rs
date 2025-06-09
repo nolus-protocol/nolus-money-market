@@ -198,9 +198,13 @@ pub fn sudo(deps: DepsMut<'_>, _env: Env, msg: SudoMsg) -> ContractResult<Respon
                     force,
                 )
             })
-            .and_then(|leases_resp| {
+            .and_then(|response| {
+                leaser::try_close_deposits(deps.storage, deps.querier)
+                    .map(|close_resp| response.merge_with(close_resp))
+            })
+            .and_then(|response| {
                 leaser::try_close_protocol(deps.storage, protocols_registry_load, migration_spec)
-                    .map(|protocol_resp| leases_resp.merge_with(protocol_resp))
+                    .map(|protocol_resp| response.merge_with(protocol_resp))
             }),
     }
     .map(response::response_only_messages)

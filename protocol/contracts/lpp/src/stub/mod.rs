@@ -1,5 +1,6 @@
-use std::{marker::PhantomData, result::Result as StdResult};
+use std::marker::PhantomData;
 
+use deposit::WithDepositer;
 use serde::{Deserialize, Serialize};
 
 use currency::{self, CurrencyDTO, CurrencyDef, Group, MemberOf};
@@ -12,10 +13,12 @@ use crate::{
 };
 
 use self::{
+    deposit::Impl as DepositerImpl,
     lender::{LppLenderStub, WithLppLender},
     loan::{LppLoanImpl, WithLppLoan},
 };
 
+pub mod deposit;
 pub mod lender;
 pub mod loan;
 
@@ -59,7 +62,7 @@ where
         cmd: Cmd,
         lease: impl Into<Addr>,
         querier: QuerierWrapper<'_>,
-    ) -> StdResult<Cmd::Output, Cmd::Error>
+    ) -> Result<Cmd::Output, Cmd::Error>
     where
         Cmd: WithLppLoan<Lpn, Lpns>,
         Error: Into<Cmd::Error>,
@@ -73,12 +76,20 @@ where
         self,
         cmd: Cmd,
         querier: QuerierWrapper<'_>,
-    ) -> StdResult<Cmd::Output, Cmd::Error>
+    ) -> Result<Cmd::Output, Cmd::Error>
     where
         Cmd: WithLppLender<Lpn, Lpns>,
         Error: Into<Cmd::Error>,
     {
         cmd.exec(self.into_lender(querier))
+    }
+
+    pub fn execute_depositer<Cmd>(self, cmd: Cmd) -> Result<Cmd::Output, Cmd::Error>
+    where
+        Cmd: WithDepositer<Lpn, Lpns>,
+        Error: Into<Cmd::Error>,
+    {
+        cmd.exec(DepositerImpl::new(self))
     }
 
     fn into_loan<A>(

@@ -49,6 +49,12 @@ pub enum ContractError {
     Lpp(#[from] lpp::error::Error),
 
     #[error("[Leaser] {0}")]
+    CloseAllDepositsToMergeIntoNext(lpp::error::Error),
+
+    #[error("[Leaser] {0}")]
+    CloseAllDeposits(lpp::stub::deposit::Error),
+
+    #[error("[Leaser] {0}")]
     PriceOracle(#[from] oracle_platform::error::Error),
 
     #[error("[Leaser] {0}")]

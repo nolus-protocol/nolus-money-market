@@ -54,8 +54,13 @@ where
     Deposit(),
     // CW20 interface, withdraw from lender deposit
     Burn {
-        amount: Uint128,
+        amount: Coin<NLpn>,
     },
+    /// Close all customer deposits as if their owners have burnt the full deposit amounts
+    ///
+    /// Pre: The caller is the Lease Code Admin.
+    /// Pre: There are no outstanding loans.
+    CloseAllDeposits(),
 
     /// Implementation of lpp_platform::msg::ExecuteMsg::DistributeRewards
     DistributeRewards(),

@@ -1,4 +1,4 @@
-use std::{marker::PhantomData, result::Result as StdResult};
+use std::marker::PhantomData;
 
 use currency::{CurrencyDef, Group, MemberOf};
 use finance::coin::Coin;
@@ -33,7 +33,7 @@ where
     type Output;
     type Error;
 
-    fn exec<Lpp>(self, lpp: Lpp) -> StdResult<Self::Output, Self::Error>
+    fn exec<Lpp>(self, lpp: Lpp) -> Result<Self::Output, Self::Error>
     where
         Lpp: LppLender<Lpn, Lpns>;
 }
