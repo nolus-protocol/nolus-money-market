@@ -51,7 +51,9 @@ where
         self.storage_item
             .load(self.storage.deref())
             .map_err(Into::into)
-            .and_then(|granted_to| check(&permissions::SingleUserPermission::new(&granted_to), user))
+            .and_then(|granted_to| {
+                check(&permissions::SingleUserPermission::new(&granted_to), user)
+            })
     }
 }
 
@@ -72,17 +74,12 @@ where
 
 #[cfg(test)]
 mod tests {
-    use sdk::cosmwasm_std::{
-        Addr,
-        Storage,
-        testing::MockStorage,
-        ContractInfo
-    };
+    use sdk::cosmwasm_std::{Addr, ContractInfo, MessageInfo, Storage, testing::MockStorage};
 
     use crate::{
         SingleUserAccess,
-        permissions::{SameContractOnly, SingleUserPermission},
         error::{Error, Result},
+        permissions::{SameContractOnly, SingleUserPermission},
     };
 
     const NAMESPACE: &str = "my-nice-permission";
@@ -125,11 +122,12 @@ mod tests {
         let contract_info = ContractInfo {
             address: address.clone(),
         };
+        let msg_info = MessageInfo {
+            sender: address.clone(),
+            funds: vec![],
+        };
 
-        let _ = super::check(
-            &SameContractOnly::new(&contract_info),
-            &address,
-        );
+        let _ = super::check(&SameContractOnly::new(&contract_info), &msg_info);
     }
 
     #[test]
@@ -138,16 +136,14 @@ mod tests {
         let contract_info = ContractInfo {
             address: address.clone(),
         };
+        let msg_info = MessageInfo {
+            sender: Addr::unchecked("hacker"),
+            funds: vec![],
+        };
 
-        let check_result = super::check(
-            &SameContractOnly::new(&contract_info),
-            &Addr::unchecked("hacker"),
-        );
+        let check_result = super::check(&SameContractOnly::new(&contract_info), &msg_info);
 
-        assert!(matches!(
-            check_result.unwrap_err(),
-            Error::Unauthorized{}
-        ));
+        assert!(matches!(check_result.unwrap_err(), Error::Unauthorized {}));
     }
 
     #[test]
@@ -159,9 +155,14 @@ mod tests {
     }
 
     fn check_addr_permission(granted_to: &str, asked_for: &str) -> Result {
+        let msg_info = MessageInfo {
+            sender: Addr::unchecked(asked_for),
+            funds: vec![],
+        };
+
         super::check(
             &SingleUserPermission::new(&Addr::unchecked(granted_to)),
-            &Addr::unchecked(asked_for),
+            &msg_info,
         )
     }
 }
