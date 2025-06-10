@@ -1,6 +1,6 @@
 use access_control::{
     AccessPermission,
-    permissions::{SameContractOnly, SingleUserPermission}
+    permissions::{SameContractOnly, SingleUserPermission},
 };
 use serde::{Deserialize, Serialize};
 
