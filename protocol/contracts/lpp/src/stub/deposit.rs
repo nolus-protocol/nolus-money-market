@@ -54,11 +54,11 @@ where
     Lpn: CurrencyDef,
 {
     fn deposit(&mut self, _amount: Coin<Lpn>) -> Result<(), Error> {
-        todo!()
+        unimplemented!("not accessible programmatically from other contracts")
     }
 
     fn burn(&self, _amount: Coin<NLpn>) -> Result<(), Error> {
-        todo!()
+        unimplemented!("not accessible programmatically from other contracts")
     }
 
     fn close_all(&mut self) -> Result<(), Error> {

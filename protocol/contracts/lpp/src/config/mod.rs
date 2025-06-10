@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use finance::{percent::bound::BoundToHundredPercent, };
+use finance::percent::bound::BoundToHundredPercent;
 use platform::contract::Code;
 
 use crate::borrow::InterestRate;
