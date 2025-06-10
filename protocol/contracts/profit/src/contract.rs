@@ -109,13 +109,13 @@ pub fn execute(
             .check(&info)?;
 
             let state: State = State::load(deps.storage)?;
-
-            let DexResponse::<State> {
-                response,
-                next_state,
-            } = State::on_time_alarm(state, deps.querier, env, info).into()?;
+            let next_state = state
+                .on_time_alarm(deps.querier, env, info)
+                .map_err(Into::into)?;
         
-            next_state.store(deps.storage).map(|()| response)
+            next_state
+                .store(deps.storage)
+                .map(|()| response)
                 .map(response::response_only_messages)
         }
         ExecuteMsg::Config { cadence_hours } => {
