@@ -13,7 +13,7 @@ use sdk::cosmwasm_std::Timestamp;
 
 use crate::{
     error::{ContractError, ContractResult},
-    finance::{LpnCoin, LpnCurrencies, LpnCurrency},
+    finance::{LpnCoin, LpnCurrency},
 };
 
 pub(crate) use self::repay::Receipt as RepayReceipt;
@@ -22,7 +22,7 @@ pub use self::state::{Overdue, State};
 mod repay;
 mod state;
 
-type LppRef = LppGenericRef<LpnCurrency, LpnCurrencies>;
+type LppRef = LppGenericRef<LpnCurrency>;
 
 #[derive(Serialize, Deserialize, Clone)]
 #[cfg_attr(feature = "contract_testing", derive(Debug, PartialEq))]
@@ -59,7 +59,7 @@ pub(crate) struct Loan<LppLoan> {
 
 impl<LppLoan> Loan<LppLoan>
 where
-    LppLoan: LppLoanTrait<LpnCurrency, LpnCurrencies>,
+    LppLoan: LppLoanTrait<LpnCurrency>,
     LppLoan::Error: Into<ContractError>,
 {
     pub(super) fn into_dto(self, profit: ProfitRef) -> LoanDTO {
@@ -98,7 +98,7 @@ where
 
 impl<LppLoan> Loan<LppLoan>
 where
-    LppLoan: LppLoanTrait<LpnCurrency, LpnCurrencies>,
+    LppLoan: LppLoanTrait<LpnCurrency>,
 {
     pub(super) fn new(
         lpp_loan: LppLoan,
@@ -259,7 +259,7 @@ mod tests {
     use profit::stub::ProfitRef;
     use sdk::cosmwasm_std::Timestamp;
 
-    use crate::finance::{LpnCoin, LpnCurrencies};
+    use crate::finance::LpnCoin;
 
     use super::{Loan, LppRef};
 
@@ -1196,7 +1196,7 @@ mod tests {
         }
     }
 
-    impl LppLoanTrait<Lpn, LpnCurrencies> for LppLoanLocal {
+    impl LppLoanTrait<Lpn> for LppLoanLocal {
         fn principal_due(&self) -> LpnCoin {
             self.loan.principal_due
         }

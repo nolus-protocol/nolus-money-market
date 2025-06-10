@@ -43,14 +43,14 @@ impl<'querier> OpenLoanReq<'querier> {
     }
 }
 
-impl WithLppLender<LpnCurrency, LpnCurrencies> for OpenLoanReq<'_> {
+impl WithLppLender<LpnCurrency> for OpenLoanReq<'_> {
     type Output = OpenLoanReqResult;
 
     type Error = ContractError;
 
     fn exec<LppLender>(self, mut lpp: LppLender) -> Result<Self::Output, Self::Error>
     where
-        LppLender: LppLenderTrait<LpnCurrency, LpnCurrencies>,
+        LppLender: LppLenderTrait<LpnCurrency>,
     {
         let (downpayment, downpayment_lpn) = bank::may_received(
             &self.funds_in,
@@ -117,14 +117,14 @@ impl OpenLoanResp {
     }
 }
 
-impl WithLppLender<LpnCurrency, LpnCurrencies> for OpenLoanResp {
+impl WithLppLender<LpnCurrency> for OpenLoanResp {
     type Output = OpenLoanRespResult;
 
     type Error = ContractError;
 
     fn exec<LppLender>(self, lpp: LppLender) -> Result<Self::Output, Self::Error>
     where
-        LppLender: LppLenderTrait<LpnCurrency, LpnCurrencies>,
+        LppLender: LppLenderTrait<LpnCurrency>,
     {
         let loan_resp = lpp.open_loan_resp(self.reply)?;
 

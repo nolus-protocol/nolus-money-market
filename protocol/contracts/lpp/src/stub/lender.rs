@@ -1,6 +1,6 @@
 use std::marker::PhantomData;
 
-use currency::{CurrencyDef, Group, MemberOf};
+use currency::CurrencyDef;
 use finance::coin::Coin;
 use platform::{
     batch::{Batch, ReplyId},
@@ -15,10 +15,9 @@ use crate::{
 
 use super::{LppBatch, LppRef};
 
-pub trait LppLender<Lpn, Lpns>
+pub trait LppLender<Lpn>
 where
-    Lpns: Group,
-    Self: Into<LppBatch<LppRef<Lpn, Lpns>>>,
+    Self: Into<LppBatch<LppRef<Lpn>>>,
 {
     fn open_loan_req(&mut self, amount: Coin<Lpn>) -> Result<(), Error>;
     fn open_loan_resp(&self, resp: Reply) -> Result<LoanResponse<Lpn>, Error>;
@@ -26,32 +25,26 @@ where
     fn quote(&self, amount: Coin<Lpn>) -> Result<QueryQuoteResponse, Error>;
 }
 
-pub trait WithLppLender<Lpn, Lpns>
-where
-    Lpns: Group,
-{
+pub trait WithLppLender<Lpn> {
     type Output;
     type Error;
 
     fn exec<Lpp>(self, lpp: Lpp) -> Result<Self::Output, Self::Error>
     where
-        Lpp: LppLender<Lpn, Lpns>;
+        Lpp: LppLender<Lpn>;
 }
 
-pub(super) struct LppLenderStub<'a, Lpn, Lpns> {
-    lpp_ref: LppRef<Lpn, Lpns>,
+pub(super) struct LppLenderStub<'a, Lpn> {
+    lpp_ref: LppRef<Lpn>,
     lpn: PhantomData<Lpn>,
     querier: QuerierWrapper<'a>,
     batch: Batch,
 }
 
-impl<'a, Lpn, Lpns> LppLenderStub<'a, Lpn, Lpns>
-where
-    Lpns: Group,
-{
+impl<'a, Lpn> LppLenderStub<'a, Lpn> {
     const OPEN_LOAN_REQ_ID: ReplyId = 0;
 
-    pub(super) fn new(lpp_ref: LppRef<Lpn, Lpns>, querier: QuerierWrapper<'a>) -> Self {
+    pub(super) fn new(lpp_ref: LppRef<Lpn>, querier: QuerierWrapper<'a>) -> Self {
         Self {
             lpp_ref,
             lpn: PhantomData,
@@ -65,17 +58,15 @@ where
     }
 }
 
-impl<Lpn, Lpns> LppLender<Lpn, Lpns> for LppLenderStub<'_, Lpn, Lpns>
+impl<Lpn> LppLender<Lpn> for LppLenderStub<'_, Lpn>
 where
     Lpn: CurrencyDef,
-    Lpn::Group: MemberOf<Lpns>,
-    Lpns: Group,
 {
     fn open_loan_req(&mut self, amount: Coin<Lpn>) -> Result<(), Error> {
         self.batch
             .schedule_execute_wasm_reply_on_success_no_funds(
                 self.id().clone(),
-                &ExecuteMsg::<Lpns>::OpenLoan {
+                &ExecuteMsg::<Lpn::Group>::OpenLoan {
                     amount: amount.into(),
                 },
                 Self::OPEN_LOAN_REQ_ID,
@@ -92,7 +83,7 @@ where
     }
 
     fn quote(&self, amount: Coin<Lpn>) -> Result<QueryQuoteResponse, Error> {
-        let msg = QueryMsg::<Lpns>::Quote {
+        let msg = QueryMsg::<Lpn::Group>::Quote {
             amount: amount.into(),
         };
         self.querier
@@ -101,8 +92,8 @@ where
     }
 }
 
-impl<Lpn, Lpns> From<LppLenderStub<'_, Lpn, Lpns>> for LppBatch<LppRef<Lpn, Lpns>> {
-    fn from(stub: LppLenderStub<'_, Lpn, Lpns>) -> Self {
+impl<Lpn> From<LppLenderStub<'_, Lpn>> for LppBatch<LppRef<Lpn>> {
+    fn from(stub: LppLenderStub<'_, Lpn>) -> Self {
         Self {
             lpp_ref: stub.lpp_ref,
             batch: stub.batch,
@@ -132,7 +123,6 @@ mod test {
         let lpp = LppRef {
             addr: addr.clone(),
             _lpn: PhantomData::<Lpn>,
-            _lpns: PhantomData::<Lpns>,
         };
         let borrow_amount = Coin::<Lpn>::new(10);
         let querier = MockQuerier::default();

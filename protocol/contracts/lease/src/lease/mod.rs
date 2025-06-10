@@ -54,7 +54,7 @@ impl<Asset, LppLoan, Oracle> Lease<Asset, LppLoan, Oracle> {
 impl<Asset, LppLoan, Oracle> Lease<Asset, LppLoan, Oracle>
 where
     Asset: Currency + MemberOf<LeaseAssetCurrencies>,
-    LppLoan: LppLoanTrait<LpnCurrency, LpnCurrencies>,
+    LppLoan: LppLoanTrait<LpnCurrency>,
     Oracle: OracleTrait<LeasePaymentCurrencies, QuoteC = LpnCurrency, QuoteG = LpnCurrencies>,
 {
     pub(super) fn new(
@@ -117,7 +117,7 @@ impl<Asset, LppLoan, Oracle> Lease<Asset, LppLoan, Oracle>
 where
     Asset: CurrencyDef,
     Asset::Group: MemberOf<LeaseAssetCurrencies>,
-    LppLoan: LppLoanTrait<LpnCurrency, LpnCurrencies>,
+    LppLoan: LppLoanTrait<LpnCurrency>,
     LppLoan::Error: Into<ContractError>,
     Oracle: OracleTrait<LeasePaymentCurrencies, QuoteC = LpnCurrency, QuoteG = LpnCurrencies>
         + Into<OracleRef>,
@@ -228,7 +228,7 @@ pub(crate) mod tests {
         }
     }
 
-    impl<Lpn> LppLoan<Lpn, LpnCurrencies> for LppLoanLocal<Lpn> {
+    impl<Lpn> LppLoan<Lpn> for LppLoanLocal<Lpn> {
         fn principal_due(&self) -> Coin<Lpn> {
             self.loan.principal_due
         }
@@ -246,13 +246,13 @@ pub(crate) mod tests {
         }
     }
 
-    impl<Lpn> From<LppLoanLocal<Lpn>> for LppRef<Lpn, LpnCurrencies> {
+    impl<Lpn> From<LppLoanLocal<Lpn>> for LppRef<Lpn> {
         fn from(_value: LppLoanLocal<Lpn>) -> Self {
             LppRef::unchecked(Addr::unchecked("test_lpp"))
         }
     }
 
-    impl<Lpn> TryFrom<LppLoanLocal<Lpn>> for LppBatch<LppRef<Lpn, LpnCurrencies>> {
+    impl<Lpn> TryFrom<LppLoanLocal<Lpn>> for LppBatch<LppRef<Lpn>> {
         type Error = LppError;
 
         fn try_from(value: LppLoanLocal<Lpn>) -> LppResult<Self> {

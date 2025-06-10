@@ -22,7 +22,7 @@ pub(crate) fn check<Asset, Lpp, Oracle>(
 where
     Asset: CurrencyDef,
     Asset::Group: MemberOf<LeaseAssetCurrencies> + MemberOf<LeasePaymentCurrencies>,
-    Lpp: LppLoanTrait<LpnCurrency, LpnCurrencies>,
+    Lpp: LppLoanTrait<LpnCurrency>,
     Oracle: OracleTrait<LeasePaymentCurrencies, QuoteC = LpnCurrency, QuoteG = LpnCurrencies>,
 {
     lease
@@ -63,7 +63,7 @@ impl WithLease for CheckCmd<'_> {
     where
         Asset: CurrencyDef,
         Asset::Group: MemberOf<LeaseAssetCurrencies> + MemberOf<LeasePaymentCurrencies>,
-        Loan: LppLoanTrait<LpnCurrency, LpnCurrencies>,
+        Loan: LppLoanTrait<LpnCurrency>,
         Oracle: OracleTrait<LeasePaymentCurrencies, QuoteC = LpnCurrency, QuoteG = LpnCurrencies>,
     {
         check(&lease, self.now, self.time_alarms, self.price_alarms)

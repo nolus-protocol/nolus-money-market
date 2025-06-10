@@ -35,7 +35,7 @@ pub(crate) trait RepayFn {
     where
         Asset: CurrencyDef,
         Asset::Group: MemberOf<LeaseAssetCurrencies> + MemberOf<LeasePaymentCurrencies>,
-        Lpp: LppLoanTrait<LpnCurrency, LpnCurrencies>,
+        Lpp: LppLoanTrait<LpnCurrency>,
         Oracle: OracleTrait<LeasePaymentCurrencies, QuoteC = LpnCurrency, QuoteG = LpnCurrencies>
             + Into<OracleRef>,
         Profit: FixedAddressSender;
@@ -94,7 +94,7 @@ where
     where
         Asset: CurrencyDef,
         Asset::Group: MemberOf<LeaseAssetCurrencies> + MemberOf<LeasePaymentCurrencies>,
-        Lpp: LppLoanTrait<LpnCurrency, LpnCurrencies>,
+        Lpp: LppLoanTrait<LpnCurrency>,
         Oracle: OracleTrait<LeasePaymentCurrencies, QuoteC = LpnCurrency, QuoteG = LpnCurrencies>,
     {
         check::check(lease, now, time_alarm, price_alarm).and_then(|close_status| {
@@ -146,7 +146,7 @@ where
     where
         Asset: CurrencyDef,
         Asset::Group: MemberOf<LeaseAssetCurrencies> + MemberOf<LeasePaymentCurrencies>,
-        Lpp: LppLoanTrait<LpnCurrency, LpnCurrencies>,
+        Lpp: LppLoanTrait<LpnCurrency>,
         Oracle: OracleTrait<LeasePaymentCurrencies, QuoteC = LpnCurrency, QuoteG = LpnCurrencies>
             + Into<OracleRef>,
     {

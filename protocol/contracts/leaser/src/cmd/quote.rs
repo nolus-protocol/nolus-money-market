@@ -53,13 +53,13 @@ impl<'r> Quote<'r> {
     }
 }
 
-impl WithLppLender<LpnCurrency, LpnCurrencies> for Quote<'_> {
+impl WithLppLender<LpnCurrency> for Quote<'_> {
     type Output = QuoteResponse;
     type Error = ContractError;
 
     fn exec<Lpp>(self, lpp: Lpp) -> Result<Self::Output, Self::Error>
     where
-        Lpp: LppLenderTrait<LpnCurrency, LpnCurrencies>,
+        Lpp: LppLenderTrait<LpnCurrency>,
     {
         self.oracle.execute_as_oracle(
             QuoteStage2 {
@@ -82,7 +82,7 @@ pub struct LppQuote<Lpn, Lpp> {
 
 impl<Lpn, Lpp> LppQuote<Lpn, Lpp>
 where
-    Lpp: LppLenderTrait<Lpn, LpnCurrencies>,
+    Lpp: LppLenderTrait<Lpn>,
 {
     pub fn new(lpp: Lpp) -> Self {
         Self {
@@ -108,7 +108,7 @@ where
 
 struct QuoteStage2<Lpn, Lpp>
 where
-    Lpp: LppLenderTrait<Lpn, LpnCurrencies>,
+    Lpp: LppLenderTrait<Lpn>,
 {
     downpayment: DownpaymentCoin,
     lease_asset: CurrencyDTO<LeaseCurrencies>,
@@ -122,7 +122,7 @@ impl<Lpn, Lpp> WithOracle<Lpn, LpnCurrencies> for QuoteStage2<Lpn, Lpp>
 where
     Lpn: CurrencyDef,
     Lpn::Group: MemberOf<LpnCurrencies>,
-    Lpp: LppLenderTrait<Lpn, LpnCurrencies>,
+    Lpp: LppLenderTrait<Lpn>,
 {
     type G = PaymentCurrencies;
     type Output = QuoteResponse;
@@ -145,7 +145,7 @@ where
 
 struct QuoteStage3<Lpn, Lpp, Oracle>
 where
-    Lpp: LppLenderTrait<Lpn, LpnCurrencies>,
+    Lpp: LppLenderTrait<Lpn>,
     Oracle: OracleTrait<PaymentCurrencies, QuoteC = Lpn, QuoteG = LpnCurrencies>,
 {
     lease_asset: CurrencyDTO<LeaseCurrencies>,
@@ -160,7 +160,7 @@ impl<Lpn, Lpp, Oracle> WithCoin<PaymentCurrencies> for QuoteStage3<Lpn, Lpp, Ora
 where
     Lpn: CurrencyDef,
     Lpn::Group: MemberOf<LpnCurrencies>,
-    Lpp: LppLenderTrait<Lpn, LpnCurrencies>,
+    Lpp: LppLenderTrait<Lpn>,
     Oracle: OracleTrait<PaymentCurrencies, QuoteC = Lpn, QuoteG = LpnCurrencies>,
 {
     type Output = QuoteResponse;
@@ -185,7 +185,7 @@ where
 struct QuoteStage4<Lpn, Dpc, Lpp, Oracle>
 where
     Dpc: Currency + MemberOf<PaymentCurrencies>,
-    Lpp: LppLenderTrait<Lpn, LpnCurrencies>,
+    Lpp: LppLenderTrait<Lpn>,
     Oracle: OracleTrait<PaymentCurrencies, QuoteC = Lpn, QuoteG = LpnCurrencies>,
 {
     downpayment: Coin<Dpc>,
@@ -202,7 +202,7 @@ where
     Lpn::Group: MemberOf<LpnCurrencies>,
     Dpc: CurrencyDef,
     Dpc::Group: MemberOf<PaymentCurrencies>,
-    Lpp: LppLenderTrait<Lpn, LpnCurrencies>,
+    Lpp: LppLenderTrait<Lpn>,
     Oracle: OracleTrait<PaymentCurrencies, QuoteC = Lpn, QuoteG = LpnCurrencies>,
 {
     type Output = QuoteResponse;

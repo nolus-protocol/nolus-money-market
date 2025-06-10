@@ -3,7 +3,7 @@ use std::marker::PhantomData;
 use deposit::WithDepositer;
 use serde::{Deserialize, Serialize};
 
-use currency::{self, CurrencyDTO, CurrencyDef, Group, MemberOf};
+use currency::{self, CurrencyDTO, CurrencyDef};
 use platform::batch::Batch;
 use sdk::cosmwasm_std::{Addr, QuerierWrapper};
 
@@ -24,32 +24,26 @@ pub mod loan;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[cfg_attr(any(test, feature = "testing"), derive(Eq, PartialEq))]
-pub struct LppRef<Lpn, Lpns> {
+pub struct LppRef<Lpn> {
     addr: Addr,
     #[serde(skip)]
     _lpn: PhantomData<Lpn>,
-    #[serde(skip)]
-    _lpns: PhantomData<Lpns>,
 }
 
-impl<Lpn, Lpns> LppRef<Lpn, Lpns>
+impl<Lpn> LppRef<Lpn>
 where
     Lpn: CurrencyDef,
-    Lpn::Group: MemberOf<Lpns>,
-    Lpns: Group,
 {
     pub fn try_new(addr: Addr, querier: QuerierWrapper<'_>) -> Result<Self, Error> {
         querier
-            .query_wasm_smart(addr.clone(), &QueryMsg::<Lpns>::Lpn())
+            .query_wasm_smart(addr.clone(), &QueryMsg::<Lpn::Group>::Lpn())
             .map_err(Error::from)
-            .and_then(|lpn: CurrencyDTO<Lpns>| {
-                lpn.of_currency(&currency::dto::<Lpn, _>())
-                    .map_err(Error::UnknownCurrency)
+            .and_then(|lpn: CurrencyDTO<Lpn::Group>| {
+                lpn.of_currency(Lpn::dto()).map_err(Error::UnknownCurrency)
             })
             .map(|()| Self {
                 addr,
                 _lpn: PhantomData,
-                _lpns: PhantomData,
             })
     }
 
@@ -64,7 +58,7 @@ where
         querier: QuerierWrapper<'_>,
     ) -> Result<Cmd::Output, Cmd::Error>
     where
-        Cmd: WithLppLoan<Lpn, Lpns>,
+        Cmd: WithLppLoan<Lpn>,
         Error: Into<Cmd::Error>,
     {
         self.into_loan(lease, querier)
@@ -78,7 +72,7 @@ where
         querier: QuerierWrapper<'_>,
     ) -> Result<Cmd::Output, Cmd::Error>
     where
-        Cmd: WithLppLender<Lpn, Lpns>,
+        Cmd: WithLppLender<Lpn>,
         Error: Into<Cmd::Error>,
     {
         cmd.exec(self.into_lender(querier))
@@ -92,18 +86,14 @@ where
         cmd.exec(DepositerImpl::new(self))
     }
 
-    fn into_loan<A>(
-        self,
-        lease: A,
-        querier: QuerierWrapper<'_>,
-    ) -> Result<LppLoanImpl<Lpn, Lpns>, Error>
+    fn into_loan<A>(self, lease: A, querier: QuerierWrapper<'_>) -> Result<LppLoanImpl<Lpn>, Error>
     where
         A: Into<Addr>,
     {
         querier
             .query_wasm_smart(
                 self.addr().clone(),
-                &QueryMsg::<Lpns>::Loan {
+                &QueryMsg::<Lpn::Group>::Loan {
                     lease_addr: lease.into(),
                 },
             )
@@ -112,16 +102,13 @@ where
             .map(|loan: LoanResponse<Lpn>| LppLoanImpl::new(self, loan))
     }
 
-    fn into_lender(self, querier: QuerierWrapper<'_>) -> LppLenderStub<'_, Lpn, Lpns> {
+    fn into_lender(self, querier: QuerierWrapper<'_>) -> LppLenderStub<'_, Lpn> {
         LppLenderStub::new(self, querier)
     }
 }
 
 #[cfg(any(test, feature = "testing"))]
-impl<Lpn, Lpns> LppRef<Lpn, Lpns>
-where
-    Lpns: Group,
-{
+impl<Lpn> LppRef<Lpn> {
     pub fn unchecked<A>(addr: A) -> Self
     where
         A: Into<String>,
@@ -129,7 +116,6 @@ where
         Self {
             addr: Addr::unchecked(addr),
             _lpn: PhantomData,
-            _lpns: PhantomData,
         }
     }
 }

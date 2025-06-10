@@ -32,7 +32,7 @@ impl WithLease for Cmd<'_> {
     where
         Asset: CurrencyDef,
         Asset::Group: MemberOf<LeaseAssetCurrencies> + MemberOf<LeasePaymentCurrencies>,
-        LppLoan: LppLoanTrait<LpnCurrency, LpnCurrencies>,
+        LppLoan: LppLoanTrait<LpnCurrency>,
         Oracle: OracleTrait<LeasePaymentCurrencies, QuoteC = LpnCurrency, QuoteG = LpnCurrencies>
             + Into<OracleRef>,
     {

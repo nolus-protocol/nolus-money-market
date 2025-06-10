@@ -33,7 +33,7 @@ impl WithLease for ObtainPayment {
     ) -> Result<Self::Output, Self::Error>
     where
         Asset: Currency + MemberOf<LeaseAssetCurrencies>,
-        LppLoan: LppLoanTrait<LpnCurrency, LpnCurrencies>,
+        LppLoan: LppLoanTrait<LpnCurrency>,
         Oracle: OracleTrait<LeasePaymentCurrencies, QuoteC = LpnCurrency, QuoteG = LpnCurrencies>,
     {
         bank::may_received(&self.cw_amount, RepaymentHandler::<_, _, _> { lease })
@@ -49,7 +49,7 @@ impl<Asset, LppLoan, Oracle> WithCoin<LeasePaymentCurrencies>
     for RepaymentHandler<Asset, LppLoan, Oracle>
 where
     Asset: Currency + MemberOf<LeaseAssetCurrencies>,
-    LppLoan: LppLoanTrait<LpnCurrency, LpnCurrencies>,
+    LppLoan: LppLoanTrait<LpnCurrency>,
     Oracle: OracleTrait<LeasePaymentCurrencies, QuoteC = LpnCurrency, QuoteG = LpnCurrencies>,
 {
     type Output = PaymentCoin;

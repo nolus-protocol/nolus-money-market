@@ -15,7 +15,7 @@ use crate::{
 
 impl<Asset, Lpp, Oracle> Lease<Asset, Lpp, Oracle>
 where
-    Lpp: LppLoanTrait<LpnCurrency, LpnCurrencies>,
+    Lpp: LppLoanTrait<LpnCurrency>,
     Oracle: OracleTrait<LeasePaymentCurrencies, QuoteC = LpnCurrency, QuoteG = LpnCurrencies>,
     Asset: Currency + MemberOf<LeaseAssetCurrencies>,
 {

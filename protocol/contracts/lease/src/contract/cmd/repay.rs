@@ -24,7 +24,7 @@ impl RepayFn for RepayLeaseFn {
         profit: &mut Profit,
     ) -> ContractResult<RepayReceipt>
     where
-        Lpp: LppLoanTrait<LpnCurrency, LpnCurrencies>,
+        Lpp: LppLoanTrait<LpnCurrency>,
         Oracle: OracleTrait<LeasePaymentCurrencies, QuoteC = LpnCurrency, QuoteG = LpnCurrencies>,
         Asset: Currency + MemberOf<LeaseAssetCurrencies>,
         Profit: FixedAddressSender,

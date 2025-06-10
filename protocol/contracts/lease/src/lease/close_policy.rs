@@ -17,7 +17,7 @@ impl<Asset, Lpp, Oracle> Lease<Asset, Lpp, Oracle>
 where
     Asset: CurrencyDef,
     Asset::Group: MemberOf<LeaseAssetCurrencies> + MemberOf<LeasePaymentCurrencies>,
-    Lpp: LppLoanTrait<LpnCurrency, LpnCurrencies>,
+    Lpp: LppLoanTrait<LpnCurrency>,
     Oracle: OracleTrait<LeasePaymentCurrencies, QuoteC = LpnCurrency, QuoteG = LpnCurrencies>,
 {
     /// Check if the position requires

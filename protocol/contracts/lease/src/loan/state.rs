@@ -3,7 +3,7 @@ use finance::{
 };
 use lpp::stub::loan::LppLoan as LppLoanTrait;
 
-use crate::finance::{LpnCoin, LpnCurrencies, LpnCurrency};
+use crate::finance::{LpnCoin, LpnCurrency};
 
 #[cfg_attr(feature = "contract_testing", derive(PartialEq, Eq, Debug))]
 pub struct State {
@@ -38,7 +38,7 @@ impl Overdue {
         lpp_loan: &LppLoan,
     ) -> Self
     where
-        LppLoan: LppLoanTrait<LpnCurrency, LpnCurrencies>,
+        LppLoan: LppLoanTrait<LpnCurrency>,
     {
         if due_period_margin.length() < max_due {
             Self::StartIn(max_due - due_period_margin.length())

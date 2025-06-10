@@ -22,7 +22,7 @@ pub(crate) trait WithLeaseDeps {
     where
         Asset: CurrencyDef,
         Asset::Group: MemberOf<LeaseAssetCurrencies> + MemberOf<LeasePaymentCurrencies>,
-        LppLoan: LppLoanTrait<LpnCurrency, LpnCurrencies>,
+        LppLoan: LppLoanTrait<LpnCurrency>,
         Oracle: OracleTrait<LeasePaymentCurrencies, QuoteC = LpnCurrency, QuoteG = LpnCurrencies>
             + Into<OracleRef>;
 }
@@ -113,7 +113,7 @@ struct FactoryStage2<'r, Cmd, Asset> {
     querier: QuerierWrapper<'r>,
 }
 
-impl<Cmd, Asset> WithLppLoan<LpnCurrency, LpnCurrencies> for FactoryStage2<'_, Cmd, Asset>
+impl<Cmd, Asset> WithLppLoan<LpnCurrency> for FactoryStage2<'_, Cmd, Asset>
 where
     Cmd: WithLeaseDeps,
     Asset: CurrencyDef,
@@ -125,7 +125,7 @@ where
 
     fn exec<LppLoan>(self, lpp_loan: LppLoan) -> Result<Self::Output, Self::Error>
     where
-        LppLoan: LppLoanTrait<LpnCurrency, LpnCurrencies>,
+        LppLoan: LppLoanTrait<LpnCurrency>,
     {
         self.oracle.execute_as_oracle(
             FactoryStage4 {
@@ -150,7 +150,7 @@ where
     Cmd: WithLeaseDeps,
     Asset: CurrencyDef,
     Asset::Group: MemberOf<LeaseAssetCurrencies> + MemberOf<LeasePaymentCurrencies>,
-    LppLoan: LppLoanTrait<LpnCurrency, LpnCurrencies>,
+    LppLoan: LppLoanTrait<LpnCurrency>,
 {
     type G = LeasePaymentCurrencies;
 

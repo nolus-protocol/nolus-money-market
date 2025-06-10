@@ -8,6 +8,6 @@ use super::LpnCurrencies;
 pub type LpnCoin = Coin<LpnCurrency>;
 pub type Price<C> = GenericPrice<C, LpnCurrency>;
 
-pub type LppRef = LppGenericRef<LpnCurrency, LpnCurrencies>;
+pub type LppRef = LppGenericRef<LpnCurrency>;
 pub type OracleRef = OracleGenericRef<LpnCurrency, LpnCurrencies>;
 pub type ReserveRef = reserve::stub::Ref<LpnCurrency>;

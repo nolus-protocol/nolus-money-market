@@ -1,6 +1,6 @@
 use thiserror::Error;
 
-use currency::Group;
+use currency::CurrencyDef;
 use finance::coin::Coin;
 use lpp_platform::NLpn;
 use platform::batch::Batch;
@@ -35,13 +35,13 @@ pub trait WithDepositer<Lpn> {
         Lpp: Depositer<Lpn>;
 }
 
-pub struct Impl<Lpn, Lpns> {
-    lpp_ref: LppRef<Lpn, Lpns>,
+pub struct Impl<Lpn> {
+    lpp_ref: LppRef<Lpn>,
     batch: Batch,
 }
 
-impl<Lpn, Lpns> Impl<Lpn, Lpns> {
-    pub(super) fn new(lpp_ref: LppRef<Lpn, Lpns>) -> Self {
+impl<Lpn> Impl<Lpn> {
+    pub(super) fn new(lpp_ref: LppRef<Lpn>) -> Self {
         Self {
             lpp_ref,
             batch: Batch::default(),
@@ -49,9 +49,9 @@ impl<Lpn, Lpns> Impl<Lpn, Lpns> {
     }
 }
 
-impl<Lpn, Lpns> Depositer<Lpn> for Impl<Lpn, Lpns>
+impl<Lpn> Depositer<Lpn> for Impl<Lpn>
 where
-    Lpns: Group,
+    Lpn: CurrencyDef,
 {
     fn deposit(&mut self, _amount: Coin<Lpn>) -> Result<(), Error> {
         todo!()
@@ -65,14 +65,14 @@ where
         self.batch
             .schedule_execute_wasm_no_reply_no_funds(
                 self.lpp_ref.addr.clone(),
-                &ExecuteMsg::<Lpns>::CloseAllDeposits(),
+                &ExecuteMsg::<Lpn::Group>::CloseAllDeposits(),
             )
             .map_err(Error::ScheduleMessage)
     }
 }
 
-impl<Lpn, Lpns> From<Impl<Lpn, Lpns>> for Batch {
-    fn from(value: Impl<Lpn, Lpns>) -> Self {
+impl<Lpn> From<Impl<Lpn>> for Batch {
+    fn from(value: Impl<Lpn>) -> Self {
         value.batch
     }
 }

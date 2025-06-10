@@ -1,6 +1,6 @@
 use std::{marker::PhantomData, result::Result as StdResult};
 
-use currency::{CurrencyDef, Group, MemberOf};
+use currency::CurrencyDef;
 use finance::{coin::Coin, percent::Percent};
 use platform::batch::Batch;
 use sdk::cosmwasm_std::Timestamp;
@@ -13,10 +13,9 @@ use crate::{
 
 use super::{LppBatch, LppRef};
 
-pub trait LppLoan<Lpn, Lpns>
+pub trait LppLoan<Lpn>
 where
-    Lpns: Group,
-    Self: Into<LppRef<Lpn, Lpns>> + TryInto<LppBatch<LppRef<Lpn, Lpns>>, Error = Error>,
+    Self: Into<LppRef<Lpn>> + TryInto<LppBatch<LppRef<Lpn>>, Error = Error>,
 {
     fn principal_due(&self) -> Coin<Lpn>;
     fn interest_due(&self, by: &Timestamp) -> Coin<Lpn>;
@@ -29,30 +28,24 @@ where
     fn annual_interest_rate(&self) -> Percent;
 }
 
-pub trait WithLppLoan<Lpn, Lpns>
-where
-    Lpns: Group,
-{
+pub trait WithLppLoan<Lpn> {
     type Output;
     type Error;
 
     fn exec<Loan>(self, loan: Loan) -> StdResult<Self::Output, Self::Error>
     where
-        Loan: LppLoan<Lpn, Lpns>;
+        Loan: LppLoan<Lpn>;
 }
 
-pub(super) struct LppLoanImpl<Lpn, Lpns> {
-    lpp_ref: LppRef<Lpn, Lpns>,
+pub(super) struct LppLoanImpl<Lpn> {
+    lpp_ref: LppRef<Lpn>,
     lpn: PhantomData<Lpn>,
     loan: Loan<Lpn>,
     repayment: Coin<Lpn>,
 }
 
-impl<Lpn, Lpns> LppLoanImpl<Lpn, Lpns>
-where
-    Lpns: Group,
-{
-    pub(super) fn new(lpp_ref: LppRef<Lpn, Lpns>, loan: Loan<Lpn>) -> Self {
+impl<Lpn> LppLoanImpl<Lpn> {
+    pub(super) fn new(lpp_ref: LppRef<Lpn>, loan: Loan<Lpn>) -> Self {
         Self {
             lpp_ref,
             lpn: PhantomData,
@@ -61,11 +54,9 @@ where
         }
     }
 }
-impl<Lpn, Lpns> LppLoan<Lpn, Lpns> for LppLoanImpl<Lpn, Lpns>
+impl<Lpn> LppLoan<Lpn> for LppLoanImpl<Lpn>
 where
     Lpn: CurrencyDef,
-    Lpn::Group: MemberOf<Lpns>,
-    Lpns: Group,
 {
     fn principal_due(&self) -> Coin<Lpn> {
         self.loan.principal_due
@@ -85,31 +76,27 @@ where
     }
 }
 
-impl<Lpn, Lpns> From<LppLoanImpl<Lpn, Lpns>> for LppRef<Lpn, Lpns>
+impl<Lpn> From<LppLoanImpl<Lpn>> for LppRef<Lpn>
 where
     Lpn: CurrencyDef,
-    Lpn::Group: MemberOf<Lpns>,
-    Lpns: Group,
 {
-    fn from(stub: LppLoanImpl<Lpn, Lpns>) -> Self {
+    fn from(stub: LppLoanImpl<Lpn>) -> Self {
         stub.lpp_ref
     }
 }
 
-impl<Lpn, Lpns> TryFrom<LppLoanImpl<Lpn, Lpns>> for LppBatch<LppRef<Lpn, Lpns>>
+impl<Lpn> TryFrom<LppLoanImpl<Lpn>> for LppBatch<LppRef<Lpn>>
 where
     Lpn: CurrencyDef,
-    Lpn::Group: MemberOf<Lpns>,
-    Lpns: Group,
 {
     type Error = Error;
 
-    fn try_from(stub: LppLoanImpl<Lpn, Lpns>) -> StdResult<Self, Self::Error> {
+    fn try_from(stub: LppLoanImpl<Lpn>) -> StdResult<Self, Self::Error> {
         let mut batch = Batch::default();
         if !stub.repayment.is_zero() {
             batch.schedule_execute_wasm_no_reply(
                 stub.lpp_ref.addr().clone(),
-                &ExecuteMsg::<Lpns>::RepayLoan(),
+                &ExecuteMsg::<Lpn::Group>::RepayLoan(),
                 Some(stub.repayment),
             )?;
         }
@@ -137,7 +124,7 @@ mod test {
 
     #[test]
     fn try_from_no_payments() {
-        let lpp_ref = LppRef::<Lpn, _>::unchecked("lpp_address");
+        let lpp_ref = LppRef::<Lpn>::unchecked("lpp_address");
         let start = Timestamp::from_seconds(10);
         let mut loan = LppLoanImpl::new(
             lpp_ref.clone(),
@@ -148,7 +135,7 @@ mod test {
             },
         );
         loan.repay(&(start + Duration::YEAR), Coin::ZERO);
-        let batch: LppBatch<LppRef<Lpn, Lpns>> = loan.try_into().unwrap();
+        let batch: LppBatch<LppRef<Lpn>> = loan.try_into().unwrap();
 
         assert_eq!(lpp_ref, batch.lpp_ref);
         assert_eq!(Batch::default(), batch.batch);
@@ -156,7 +143,7 @@ mod test {
 
     #[test]
     fn try_from_a_few_payments() {
-        let lpp_ref = LppRef::<Lpn, _>::unchecked("lpp_address");
+        let lpp_ref = LppRef::<Lpn>::unchecked("lpp_address");
         let start = Timestamp::from_seconds(0);
         let mut loan = LppLoanImpl::new(
             lpp_ref.clone(),
@@ -170,7 +157,7 @@ mod test {
         let payment2 = 4.into();
         loan.repay(&(start + Duration::YEAR), payment1);
         loan.repay(&(start + Duration::YEAR), payment2);
-        let batch: LppBatch<LppRef<Lpn, Lpns>> = loan.try_into().unwrap();
+        let batch: LppBatch<LppRef<Lpn>> = loan.try_into().unwrap();
 
         assert_eq!(lpp_ref, batch.lpp_ref);
         {
