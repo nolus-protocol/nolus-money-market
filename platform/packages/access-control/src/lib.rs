@@ -47,12 +47,12 @@ where
         }
     }
 
-    pub fn check(&self, user: &Addr) -> Result {
+    pub fn check(&self, info: &MessageInfo) -> Result {
         self.storage_item
             .load(self.storage.deref())
             .map_err(Into::into)
             .and_then(|granted_to| {
-                check(&permissions::SingleUserPermission::new(&granted_to), user)
+                check(&permissions::SingleUserPermission::new(&granted_to), info)
             })
     }
 }
@@ -89,11 +89,14 @@ mod tests {
         let mut storage = MockStorage::new();
         let storage_ref: &mut dyn Storage = &mut storage;
         let mut access = SingleUserAccess::new(storage_ref, NAMESPACE);
-        let user = Addr::unchecked("cosmic address");
+        let user_info = MessageInfo {
+            sender: Addr::unchecked("cosmic address"),
+            funds: vec![],
+        };
 
         assert!(access.check(&user).is_err());
         access.grant_to(&user).unwrap();
-        access.check(&user).unwrap();
+        access.check(&user_info).unwrap();
     }
 
     #[test]
@@ -101,7 +104,10 @@ mod tests {
         let mut storage = MockStorage::new();
         let storage_ref: &dyn Storage = &mut storage;
         let access = SingleUserAccess::new(storage_ref, NAMESPACE);
-        let not_authorized = Addr::unchecked("hacker");
+        let not_authorized = MessageInfo {
+            sender: Addr::unchecked("hacker"),
+            funds: vec![],
+        };
 
         assert!(matches!(
             access.check(&not_authorized).unwrap_err(),
