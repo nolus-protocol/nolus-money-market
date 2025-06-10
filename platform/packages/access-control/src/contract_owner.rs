@@ -48,14 +48,15 @@ mod tests {
         let mut storage = MockStorage::new();
         let storage_ref: &mut dyn Storage = &mut storage;
         let mut access = ContractOwnerAccess::new(storage_ref);
+        let user = Addr::unchecked("happy user");
         let msg_info = MessageInfo {
-            sender: Addr::unchecked("happy user"),
+            sender: user.clone(),
             funds: vec![],
         };
 
         assert!(access.check(&msg_info).is_err());
         access.grant_to(&user).unwrap();
-        access.check(&user).unwrap();
+        access.check(&msg_info).unwrap();
     }
 
     #[test]
