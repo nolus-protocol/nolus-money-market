@@ -170,7 +170,7 @@ impl Handler for Idle {
         self,
         querier: QuerierWrapper<'_>,
         env: Env,
-        _info: MessageInfo
+        _info: MessageInfo,
     ) -> DexResult<Self> {
         DexResult::Finished(self.on_time_alarm(querier, env))
     }
