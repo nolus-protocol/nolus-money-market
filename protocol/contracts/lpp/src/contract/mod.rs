@@ -6,7 +6,7 @@ use oracle::stub;
 use oracle_platform::OracleRef;
 use serde::Serialize;
 
-use access_control::permissions::SingleUserAccess;
+use access_control::SingleUserAccess;
 use currencies::{
     Lpn as LpnCurrency, Lpns as LpnCurrencies, PaymentGroup, Stable as StableCurrency,
 };
