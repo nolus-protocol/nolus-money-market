@@ -2,7 +2,7 @@ use std::ops::{Deref, DerefMut};
 
 use serde::Serialize;
 
-use access_control::{AccessPermission, ContractOwnerAccess, permissions::SingleUserPermission};
+use access_control::{AccessPermission, ContractOwnerAccess};
 use lease::api::{MigrateMsg as LeaseMigrateMsg, authz::AccessGranted};
 use platform::{
     contract::{self, Code, CodeId},
@@ -50,8 +50,8 @@ impl<'a> LeaseAdminOnly<'a> {
 }
 
 impl AccessPermission for LeaseAdminOnly<'_> {
-    fn is_granted_to(&self, caller: &Addr) -> bool {
-        self.lease_config.lease_admin == caller
+    fn is_granted_to(&self, info: &MessageInfo) -> bool {
+        self.lease_config.lease_admin == info.sender
     }
 }
 
