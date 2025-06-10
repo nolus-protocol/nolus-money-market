@@ -1,7 +1,5 @@
 use serde::{Deserialize, Serialize};
 
-use currency::{Currency, Group, MemberOf};
-use oracle_platform::OracleRef;
 use sdk::cosmwasm_std::Addr;
 
 /// Request for a permission check
