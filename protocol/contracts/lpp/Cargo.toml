@@ -30,7 +30,7 @@ stub = []
 testing = ["currency/testing"]
 
 [dependencies]
-access-control = { workspace = true, optional = true}
+access-control = { workspace = true, optional = true }
 currencies = { workspace = true }
 currency = { workspace = true }
 finance = { workspace = true }
@@ -48,7 +48,6 @@ thiserror = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 
 [dev-dependencies]
-access-control = { workspace = true }
 currencies = { workspace = true, features = ["testing"] }
 finance = { workspace = true, features = ["testing"] }
 platform = { workspace = true, features = ["testing"] }
