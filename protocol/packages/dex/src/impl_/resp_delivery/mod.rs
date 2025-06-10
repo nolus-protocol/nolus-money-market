@@ -181,7 +181,7 @@ where
         self.setup_next_delivery(env.block.time)
     }
 
-    fn on_time_alarm(self, querier: QuerierWrapper<'_>, env: Env) -> Result<Self> {
+    fn on_time_alarm(self, querier: QuerierWrapper<'_>, env: Env, info: MessageInfo) -> Result<Self> {
         // we leave the error to escape since the time alarms delivery is reliable
         self.do_redeliver(querier, env)
     }
