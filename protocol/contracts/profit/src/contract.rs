@@ -2,7 +2,8 @@ use std::ops::{Deref, DerefMut};
 
 use access_control::{
     ContractOwnerAccess,
-    permissions::{SameContractOnly, SingleUserAccess},
+    permissions::SameContractOnly,
+    SingleUserAccess,
 };
 use dex::{ContinueResult as DexResult, Handler as _, Response as DexResponse};
 use oracle_platform::OracleRef;
@@ -52,7 +53,7 @@ pub fn instantiate(
     platform::contract::validate_addr(deps.querier, &msg.oracle)?;
     platform::contract::validate_addr(deps.querier, &msg.timealarms)?;
 
-    ContractOwnerAccess::new(deps.storage.deref_mut()).grant_to(&info)?;
+    ContractOwnerAccess::new(deps.storage.deref_mut()).grant_to(&info.sender)?;
 
     SingleUserAccess::new(
         deps.storage.deref_mut(),
@@ -107,7 +108,14 @@ pub fn execute(
             )
             .check(&info)?;
 
-            try_handle_execute_message(deps, env, State::on_time_alarm)
+            let state: State = State::load(deps.storage)?;
+
+            let DexResponse::<State> {
+                response,
+                next_state,
+            } = State::on_time_alarm(state, deps.querier, env, info).into()?;
+        
+            next_state.store(deps.storage).map(|()| response)
                 .map(response::response_only_messages)
         }
         ExecuteMsg::Config { cadence_hours } => {
