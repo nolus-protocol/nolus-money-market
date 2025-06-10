@@ -1,7 +1,13 @@
 use std::ops::{Deref, DerefMut};
 
 use access_control::{
+<<<<<<< HEAD
     ContractOwnerAccess, SingleUserAccess, permissions::DexResponseSafeDeliveryPermission,
+=======
+    ContractOwnerAccess,
+    permissions::SameContractOnly,
+    SingleUserAccess,
+>>>>>>> e76511615 (refactor: on_time_alarm usages)
 };
 use dex::{ContinueResult as DexResult, Handler as _, Response as DexResponse};
 use oracle_platform::OracleRef;
@@ -54,7 +60,7 @@ pub fn instantiate(
     addr_validator.check_contract(&msg.oracle)?;
     // msg.timealarms is validated on TimeAlarmsRef instantiation
 
-    ContractOwnerAccess::new(deps.storage.deref_mut()).grant_to(&info)?;
+    ContractOwnerAccess::new(deps.storage.deref_mut()).grant_to(&info.sender)?;
 
     SingleUserAccess::new(
         deps.storage.deref_mut(),
