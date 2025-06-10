@@ -89,8 +89,9 @@ mod tests {
         let mut storage = MockStorage::new();
         let storage_ref: &mut dyn Storage = &mut storage;
         let mut access = SingleUserAccess::new(storage_ref, NAMESPACE);
+        let user = Addr::unchecked("cosmic address");
         let user_info = MessageInfo {
-            sender: Addr::unchecked("cosmic address"),
+            sender: user.clone(),
             funds: vec![],
         };
 
