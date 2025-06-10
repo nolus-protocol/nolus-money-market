@@ -1,11 +1,10 @@
 #[cfg(feature = "contract")]
-pub mod access_control;
+mod access_control;
 pub mod borrow;
 #[cfg(feature = "contract")]
 pub mod contract;
-pub mod error;
 #[cfg(feature = "contract")]
-pub mod event;
+mod event;
 pub mod loan;
 #[cfg(feature = "contract")]
 mod loans;
@@ -13,6 +12,6 @@ mod loans;
 mod lpp;
 pub mod msg;
 #[cfg(feature = "contract")]
-pub mod state;
+mod state;
 #[cfg(feature = "stub")]
 pub mod stub;

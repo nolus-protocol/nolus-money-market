@@ -4,9 +4,9 @@ use currency::CurrencyDef;
 use finance::{coin::Coin, percent::Percent};
 use platform::batch::Batch;
 use sdk::cosmwasm_std::Timestamp;
+use thiserror::Error;
 
 use crate::{
-    error::Error,
     loan::{Loan, RepayShares},
     msg::ExecuteMsg,
 };
@@ -26,6 +26,12 @@ where
     /// Amount 0 is acceptable although does not change the loan.
     fn repay(&mut self, by: &Timestamp, repayment: Coin<Lpn>) -> RepayShares<Lpn>;
     fn annual_interest_rate(&self) -> Percent;
+}
+
+#[derive(Error, Debug, PartialEq)]
+pub enum Error {
+    #[error("[Lpp][Loan] {0}")]
+    Platform(platform::error::Error),
 }
 
 pub trait WithLppLoan<Lpn> {
@@ -94,11 +100,13 @@ where
     fn try_from(stub: LppLoanImpl<Lpn>) -> StdResult<Self, Self::Error> {
         let mut batch = Batch::default();
         if !stub.repayment.is_zero() {
-            batch.schedule_execute_wasm_no_reply(
-                stub.lpp_ref.addr().clone(),
-                &ExecuteMsg::<Lpn::Group>::RepayLoan(),
-                Some(stub.repayment),
-            )?;
+            batch
+                .schedule_execute_wasm_no_reply(
+                    stub.lpp_ref.addr().clone(),
+                    &ExecuteMsg::<Lpn::Group>::RepayLoan(),
+                    Some(stub.repayment),
+                )
+                .map_err(Self::Error::Platform)?;
         }
         Ok(Self {
             lpp_ref: stub.lpp_ref,

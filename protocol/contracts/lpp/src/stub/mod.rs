@@ -1,20 +1,18 @@
 use std::marker::PhantomData;
 
-use deposit::WithDepositer;
 use serde::{Deserialize, Serialize};
 
 use currency::{self, CurrencyDTO, CurrencyDef};
+use deposit::WithDepositer;
 use platform::batch::Batch;
-use sdk::cosmwasm_std::{Addr, QuerierWrapper};
+use sdk::cosmwasm_std::{Addr, QuerierWrapper, StdError};
+use thiserror::Error;
 
-use crate::{
-    error::Error,
-    msg::{LoanResponse, QueryLoanResponse, QueryMsg},
-};
+use crate::msg::{LoanResponse, QueryLoanResponse, QueryMsg};
 
 use self::{
     deposit::Impl as DepositerImpl,
-    lender::{LppLenderStub, WithLppLender},
+    lender::{Error as LenderError, LppLenderStub, WithLppLender},
     loan::{LppLoanImpl, WithLppLoan},
 };
 
@@ -30,6 +28,15 @@ pub struct LppRef<Lpn> {
     _lpn: PhantomData<Lpn>,
 }
 
+#[derive(Error, Debug, PartialEq)]
+pub enum Error {
+    #[error("[Lpp][Stub] [Std] {0}")]
+    Std(StdError),
+
+    #[error("[Lpp][Stub] Unknown currency, details '{0}'")]
+    UnknownCurrency(currency::error::Error),
+}
+
 impl<Lpn> LppRef<Lpn>
 where
     Lpn: CurrencyDef,
@@ -37,7 +44,7 @@ where
     pub fn try_new(addr: Addr, querier: QuerierWrapper<'_>) -> Result<Self, Error> {
         querier
             .query_wasm_smart(addr.clone(), &QueryMsg::<Lpn::Group>::Lpn())
-            .map_err(Error::from)
+            .map_err(Error::Std)
             .and_then(|lpn: CurrencyDTO<Lpn::Group>| {
                 lpn.of_currency(Lpn::dto()).map_err(Error::UnknownCurrency)
             })
@@ -59,7 +66,7 @@ where
     ) -> Result<Cmd::Output, Cmd::Error>
     where
         Cmd: WithLppLoan<Lpn>,
-        Error: Into<Cmd::Error>,
+        LenderError: Into<Cmd::Error>,
     {
         self.into_loan(lease, querier)
             .map_err(Into::into)
@@ -73,7 +80,6 @@ where
     ) -> Result<Cmd::Output, Cmd::Error>
     where
         Cmd: WithLppLender<Lpn>,
-        Error: Into<Cmd::Error>,
     {
         cmd.exec(self.into_lender(querier))
     }
@@ -81,12 +87,15 @@ where
     pub fn execute_depositer<Cmd>(self, cmd: Cmd) -> Result<Cmd::Output, Cmd::Error>
     where
         Cmd: WithDepositer<Lpn>,
-        Error: Into<Cmd::Error>,
     {
         cmd.exec(DepositerImpl::new(self))
     }
 
-    fn into_loan<A>(self, lease: A, querier: QuerierWrapper<'_>) -> Result<LppLoanImpl<Lpn>, Error>
+    fn into_loan<A>(
+        self,
+        lease: A,
+        querier: QuerierWrapper<'_>,
+    ) -> Result<LppLoanImpl<Lpn>, LenderError>
     where
         A: Into<Addr>,
     {
@@ -97,8 +106,8 @@ where
                     lease_addr: lease.into(),
                 },
             )
-            .map_err(Into::into)
-            .and_then(|may_loan: QueryLoanResponse<Lpn>| may_loan.ok_or(Error::NoLoan {}))
+            .map_err(LenderError::Std)
+            .and_then(|may_loan: QueryLoanResponse<Lpn>| may_loan.ok_or(LenderError::NoLoan {}))
             .map(|loan: LoanResponse<Lpn>| LppLoanImpl::new(self, loan))
     }
 

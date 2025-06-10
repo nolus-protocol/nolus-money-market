@@ -250,10 +250,12 @@ mod tests {
     pub use currencies::Lpn;
     use finance::{duration::Duration, percent::Percent};
     use lpp::{
-        error::{Error as LppError, Result as LppResult},
         loan::RepayShares,
         msg::LoanResponse,
-        stub::{LppBatch, loan::LppLoan as LppLoanTrait},
+        stub::{
+            LppBatch,
+            loan::{Error as LppLoanError, LppLoan as LppLoanTrait},
+        },
     };
     use platform::bank::FixedAddressSender;
     use profit::stub::ProfitRef;
@@ -1221,8 +1223,8 @@ mod tests {
     }
 
     impl TryFrom<LppLoanLocal> for LppBatch<LppRef> {
-        type Error = LppError;
-        fn try_from(_: LppLoanLocal) -> LppResult<Self> {
+        type Error = LppLoanError;
+        fn try_from(_: LppLoanLocal) -> Result<Self, Self::Error> {
             unreachable!()
         }
     }

@@ -98,7 +98,7 @@ where
 
         self.lpp
             .quote(borrow)
-            .map_err(Into::into)
+            .map_err(ContractError::QuoteQuery)
             .and_then(|quote_resp| match quote_resp {
                 QueryQuoteResponse::QuoteInterestRate(rate) => Ok(rate),
                 QueryQuoteResponse::NoLiquidity => Err(ContractError::NoLiquidity {}),

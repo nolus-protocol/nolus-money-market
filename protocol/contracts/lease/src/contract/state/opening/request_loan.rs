@@ -36,7 +36,8 @@ impl RequestLoan {
         info: MessageInfo,
         spec: NewLeaseContract,
     ) -> ContractResult<(Batch, Self)> {
-        let lpp = LppRef::try_new(spec.form.loan.lpp.clone(), querier)?;
+        let lpp = LppRef::try_new(spec.form.loan.lpp.clone(), querier)
+            .map_err(ContractError::LppStubError)?;
 
         let oracle = OracleRef::try_from_base(spec.form.market_price_oracle.clone(), querier)
             .map_err(ContractError::CrateOracleRef)?;

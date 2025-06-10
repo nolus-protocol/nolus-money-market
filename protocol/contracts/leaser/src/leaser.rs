@@ -56,7 +56,8 @@ impl<'a> Leaser<'a> {
     ) -> ContractResult<QuoteResponse> {
         let config = Config::load(self.deps.storage)?;
 
-        let lpp = LppRef::<LpnCurrency>::try_new(config.lpp, self.deps.querier)?;
+        let lpp = LppRef::<LpnCurrency>::try_new(config.lpp, self.deps.querier)
+            .map_err(ContractError::LppStubCreation)?;
 
         let oracle = OracleRef::try_from_base(config.market_price_oracle, self.deps.querier)?;
 
@@ -143,7 +144,7 @@ pub(crate) fn try_close_deposits(
     Config::load(storage)
         .and_then(|config| {
             LppRef::<LpnCurrency>::try_new(config.lpp, querier)
-                .map_err(ContractError::CloseAllDepositsToMergeIntoNext)
+                .map_err(ContractError::LppStubCreation)
         })
         .and_then(|lpp_ref| lpp_ref.execute_depositer(Cmd {}).map(Into::into))
 }

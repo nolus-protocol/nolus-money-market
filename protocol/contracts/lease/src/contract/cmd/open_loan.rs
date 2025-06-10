@@ -67,7 +67,10 @@ impl WithLppLender<LpnCurrency> for OpenLoanReq<'_> {
                 spec.calc_borrow_amount(downpayment_lpn, self.max_ltd)
                     .map_err(ContractError::from)
             })
-            .and_then(|borrow_lpn| lpp.open_loan_req(borrow_lpn).map_err(ContractError::from))
+            .and_then(|borrow_lpn| {
+                lpp.open_loan_req(borrow_lpn)
+                    .map_err(ContractError::OpenLoanReq)
+            })
             .map(|()| Self::Output {
                 batch: lpp.into().batch,
                 downpayment,
@@ -126,7 +129,9 @@ impl WithLppLender<LpnCurrency> for OpenLoanResp {
     where
         LppLender: LppLenderTrait<LpnCurrency>,
     {
-        let loan_resp = lpp.open_loan_resp(self.reply)?;
+        let loan_resp = lpp
+            .open_loan_resp(self.reply)
+            .map_err(ContractError::OpenLoanResp)?;
 
         #[cfg(debug_assertions)]
         {

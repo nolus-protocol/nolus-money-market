@@ -37,7 +37,7 @@ pub fn execute_resolved_position<Cmd, Asset>(
 ) -> Result<Cmd::Output, Cmd::Error>
 where
     Cmd: WithLeaseDeps,
-    Cmd::Error: From<lpp::error::Error> + From<finance::error::Error> + From<PositionError>,
+    Cmd::Error: From<lpp::stub::lender::Error> + From<finance::error::Error> + From<PositionError>,
     Asset: CurrencyDef,
     Asset::Group: MemberOf<LeaseAssetCurrencies> + MemberOf<LeasePaymentCurrencies>,
 {
@@ -62,7 +62,7 @@ pub fn execute<Cmd>(
 where
     Cmd: WithLeaseDeps,
     PositionError: Into<Cmd::Error>,
-    lpp::error::Error: Into<Cmd::Error>,
+    lpp::stub::lender::Error: Into<Cmd::Error>,
 {
     position.with_position(FactoryStage1 {
         cmd,
@@ -84,7 +84,7 @@ struct FactoryStage1<'r, Cmd> {
 impl<Cmd> WithPosition for FactoryStage1<'_, Cmd>
 where
     Cmd: WithLeaseDeps,
-    lpp::error::Error: Into<Cmd::Error>,
+    lpp::stub::lender::Error: Into<Cmd::Error>,
 {
     type Output = Cmd::Output;
     type Error = Cmd::Error;
@@ -118,7 +118,7 @@ where
     Cmd: WithLeaseDeps,
     Asset: CurrencyDef,
     Asset::Group: MemberOf<LeaseAssetCurrencies> + MemberOf<LeasePaymentCurrencies>,
-    lpp::error::Error: Into<Cmd::Error>,
+    lpp::stub::lender::Error: Into<Cmd::Error>,
 {
     type Output = Cmd::Output;
     type Error = Cmd::Error;

@@ -234,7 +234,7 @@ pub fn query(deps: Deps<'_>, _env: Env, msg: QueryMsg) -> ContractResult<Binary>
 #[entry_point]
 pub fn reply(deps: DepsMut<'_>, _env: Env, msg: Reply) -> ContractResult<Response> {
     reply::from_instantiate_addr_only(deps.api, msg)
-        .map_err(|err| ContractError::ParseError {
+        .map_err(|err| ContractError::Parsing {
             err: err.to_string(),
         })
         .and_then(|lease| {

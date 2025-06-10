@@ -5,7 +5,9 @@ use thiserror::Error;
 use currency::error::Error as CurrencyError;
 use dex::Error as DexError;
 use finance::error::Error as FinanceError;
-use lpp::error::Error as LppError;
+use lpp::stub::{
+    Error as LppStubError, lender::Error as LppLenderError, loan::Error as LppLoanError,
+};
 use oracle::{api::alarms::Error as OracleAlarmError, stub::Error as OracleError};
 use oracle_platform::error::Error as OraclePlatformError;
 use platform::error::Error as PlatformError;
@@ -37,7 +39,19 @@ pub enum ContractError {
     UpdateSoftware(versioning::Error),
 
     #[error("[Lease] {0}")]
-    LppError(#[from] LppError),
+    LppStubError(LppStubError),
+
+    #[error("[Lease] {0}")]
+    LppLoanError(#[from] LppLoanError),
+
+    #[error("[Lease] {0}")]
+    OpenLoanReq(LppLenderError),
+
+    #[error("[Lease] {0}")]
+    OpenLoanResp(LppLenderError),
+
+    #[error("[Lease] {0}")]
+    LppLenderError(#[from] LppLenderError),
 
     #[error("[Lease] {0}")]
     TimeAlarmsError(#[from] TimeAlarmsError),

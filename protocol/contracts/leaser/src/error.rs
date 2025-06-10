@@ -45,11 +45,11 @@ pub enum ContractError {
     #[error("[Leaser] {0}")]
     Finance(#[from] finance::error::Error),
 
-    #[error("[Leaser] {0}")]
-    Lpp(#[from] lpp::error::Error),
+    #[error("[Lease] {0}")]
+    LppStubCreation(lpp::stub::Error),
 
-    #[error("[Leaser] {0}")]
-    CloseAllDepositsToMergeIntoNext(lpp::error::Error),
+    #[error("[Lease] {0}")]
+    QuoteQuery(lpp::stub::lender::Error),
 
     #[error("[Leaser] {0}")]
     CloseAllDeposits(lpp::stub::deposit::Error),
@@ -67,7 +67,7 @@ pub enum ContractError {
     Unauthorized(#[from] access_control::error::Error),
 
     #[error("[Leaser] ParseError {err:?}")]
-    ParseError { err: String },
+    Parsing { err: String },
 
     #[error("[Leaser] {0}")]
     Reserve(#[from] reserve::stub::Error),

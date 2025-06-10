@@ -6,12 +6,10 @@ use platform::{
     batch::{Batch, ReplyId},
     reply,
 };
-use sdk::cosmwasm_std::{Addr, QuerierWrapper, Reply};
+use sdk::cosmwasm_std::{Addr, QuerierWrapper, Reply, StdError};
+use thiserror::Error;
 
-use crate::{
-    error::Error,
-    msg::{ExecuteMsg, LoanResponse, QueryMsg, QueryQuoteResponse},
-};
+use crate::msg::{ExecuteMsg, LoanResponse, QueryMsg, QueryQuoteResponse};
 
 use super::{LppBatch, LppRef};
 
@@ -23,6 +21,21 @@ where
     fn open_loan_resp(&self, resp: Reply) -> Result<LoanResponse<Lpn>, Error>;
 
     fn quote(&self, amount: Coin<Lpn>) -> Result<QueryQuoteResponse, Error>;
+}
+
+#[derive(Error, Debug, PartialEq)]
+pub enum Error {
+    #[error("[Lpp][Lender] [Std] {0}")]
+    Std(StdError),
+
+    #[error("[Lpp][Lender] {0}")]
+    Platform(platform::error::Error),
+
+    #[error("[Lpp][Lender] No response sent back from LPP contract")]
+    NoResponseStubError,
+
+    #[error("[Lpp][Lender] The loan does not exist")]
+    NoLoan {},
 }
 
 pub trait WithLppLender<Lpn> {
@@ -71,14 +84,14 @@ where
                 },
                 Self::OPEN_LOAN_REQ_ID,
             )
-            .map_err(Error::from)
+            .map_err(Error::Platform)
     }
 
     fn open_loan_resp(&self, resp: Reply) -> Result<LoanResponse<Lpn>, Error> {
         debug_assert_eq!(resp.id, Self::OPEN_LOAN_REQ_ID);
 
         reply::from_execute(resp)
-            .map_err(Into::into)
+            .map_err(Error::Platform)
             .and_then(|maybe_data| maybe_data.ok_or(Error::NoResponseStubError))
     }
 
@@ -88,7 +101,7 @@ where
         };
         self.querier
             .query_wasm_smart(self.id(), &msg)
-            .map_err(Error::from)
+            .map_err(Error::Std)
     }
 }
 

@@ -180,10 +180,12 @@ pub(crate) mod tests {
         price::Price,
     };
     use lpp::{
-        error::{Error as LppError, Result as LppResult},
         loan::RepayShares,
         msg::LoanResponse,
-        stub::{LppBatch, LppRef, loan::LppLoan},
+        stub::{
+            LppBatch, LppRef,
+            loan::{Error as LppLoanError, LppLoan},
+        },
     };
     use oracle_platform::{Oracle, error::Result as PriceOracleResult};
     use platform::batch::Batch;
@@ -253,9 +255,9 @@ pub(crate) mod tests {
     }
 
     impl<Lpn> TryFrom<LppLoanLocal<Lpn>> for LppBatch<LppRef<Lpn>> {
-        type Error = LppError;
+        type Error = LppLoanError;
 
-        fn try_from(value: LppLoanLocal<Lpn>) -> LppResult<Self> {
+        fn try_from(value: LppLoanLocal<Lpn>) -> Result<Self, Self::Error> {
             Ok(Self {
                 lpp_ref: value.into(),
                 batch: Batch::default(),

@@ -335,12 +335,9 @@ mod test {
         );
         let err = "testing error";
 
-        let customers = [
-            Ok(cust1),
-            Err(ContractError::ParseError { err: err.into() }),
-        ];
+        let customers = [Ok(cust1), Err(ContractError::Parsing { err: err.into() })];
         assert_eq!(
-            Err(ContractError::ParseError { err: err.into() }),
+            Err(ContractError::Parsing { err: err.into() }),
             super::migrate_leases(
                 customers.into_iter(),
                 new_code,
