@@ -26,10 +26,7 @@ pub enum Error {
     ScheduleMessage(platform::error::Error),
 }
 
-pub trait WithDepositer<Lpn, Lpns>
-where
-    Lpns: Group,
-{
+pub trait WithDepositer<Lpn> {
     type Output;
     type Error;
 

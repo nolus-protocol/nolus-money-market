@@ -86,7 +86,7 @@ where
 
     pub fn execute_depositer<Cmd>(self, cmd: Cmd) -> Result<Cmd::Output, Cmd::Error>
     where
-        Cmd: WithDepositer<Lpn, Lpns>,
+        Cmd: WithDepositer<Lpn>,
         Error: Into<Cmd::Error>,
     {
         cmd.exec(DepositerImpl::new(self))

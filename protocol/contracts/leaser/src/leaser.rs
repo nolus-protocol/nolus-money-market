@@ -126,7 +126,7 @@ pub(crate) fn try_close_deposits(
     querier: QuerierWrapper<'_>,
 ) -> ContractResult<MessageResponse> {
     struct Cmd {}
-    impl WithDepositer<LpnCurrency, LpnCurrencies> for Cmd {
+    impl WithDepositer<LpnCurrency> for Cmd {
         type Output = Batch;
 
         type Error = ContractError;
