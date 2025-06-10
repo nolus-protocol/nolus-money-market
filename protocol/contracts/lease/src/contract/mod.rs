@@ -1,13 +1,10 @@
-use access_control::{
-    AccessPermission,
-    permissions::{SameContractOnly, SingleUserPermission},
-};
+use access_control::{AccessPermission, permissions::SameContractOnly};
 use serde::{Deserialize, Serialize};
 
 use currency::{Currency, Group, MemberOf};
 use dex::{Account, Connectable, ConnectionParams};
 use oracle_platform::OracleRef;
-use sdk::cosmwasm_std::QuerierWrapper;
+use sdk::cosmwasm_std::{MessageInfo, QuerierWrapper};
 
 use crate::{
     lease::{LeaseDTO, with_lease::WithLease},
@@ -96,7 +93,7 @@ where
     QuoteC: Currency + MemberOf<QuoteG>,
     QuoteG: Group,
 {
-    fn is_granted_to(&self, caller: &Addr) -> bool {
-        self.oracle_ref.owned_by(caller)
+    fn is_granted_to(&self, info: &MessageInfo) -> bool {
+        self.oracle_ref.owned_by(&info.sender)
     }
 }
