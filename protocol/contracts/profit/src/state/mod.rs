@@ -13,7 +13,9 @@ use platform::{
     state_machine::{self, Response as StateMachineResponse},
 };
 use sdk::{
-    cosmwasm_std::{Binary, Env, QuerierWrapper, Reply as CwReply, Storage, Timestamp},
+    cosmwasm_std::{
+        Binary, Env, MessageInfo, QuerierWrapper, Reply as CwReply, Storage, Timestamp
+    },
     cw_storage_plus::Item,
 };
 use swap::Impl;
@@ -227,7 +229,7 @@ impl Handler for State {
         self,
         querier: QuerierWrapper<'_>,
         env: Env,
-        info: MessageInfo
+        info: MessageInfo,
     ) -> DexResult<Self> {
         match self.0 {
             StateEnum::OpenIca(ica) => ica.on_time_alarm(querier, env, info).map_into(),
