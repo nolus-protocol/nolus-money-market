@@ -223,7 +223,12 @@ impl Handler for State {
         }
     }
 
-    fn on_time_alarm(self, querier: QuerierWrapper<'_>, env: Env, info: MessageInfo) -> DexResult<Self> {
+    fn on_time_alarm(
+        self,
+        querier: QuerierWrapper<'_>,
+        env: Env,
+        info: MessageInfo
+    ) -> DexResult<Self> {
         match self.0 {
             StateEnum::OpenIca(ica) => ica.on_time_alarm(querier, env, info).map_into(),
             StateEnum::Idle(idle) => idle.on_time_alarm(querier, env, info).map_into(),
