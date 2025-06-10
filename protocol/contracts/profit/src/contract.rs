@@ -52,7 +52,7 @@ pub fn instantiate(
     platform::contract::validate_addr(deps.querier, &msg.oracle)?;
     platform::contract::validate_addr(deps.querier, &msg.timealarms)?;
 
-    ContractOwnerAccess::new(deps.storage.deref_mut()).grant_to(&info.sender)?;
+    ContractOwnerAccess::new(deps.storage.deref_mut()).grant_to(&info)?;
 
     SingleUserAccess::new(
         deps.storage.deref_mut(),
@@ -111,7 +111,7 @@ pub fn execute(
                 .map(response::response_only_messages)
         }
         ExecuteMsg::Config { cadence_hours } => {
-            ContractOwnerAccess::new(deps.storage.deref()).check(&info.sender)?;
+            ContractOwnerAccess::new(deps.storage.deref()).check(&info)?;
 
             let StateMachineResponse {
                 response,

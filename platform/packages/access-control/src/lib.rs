@@ -94,7 +94,7 @@ mod tests {
             funds: vec![],
         };
 
-        assert!(access.check(&user).is_err());
+        assert!(access.check(&user_info).is_err());
         access.grant_to(&user).unwrap();
         access.check(&user_info).unwrap();
     }
