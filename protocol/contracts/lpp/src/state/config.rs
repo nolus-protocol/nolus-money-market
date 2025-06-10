@@ -1,15 +1,13 @@
 use std::mem;
 
-use currencies::Lpns;
 use serde::{Deserialize, Serialize};
 
-use currency::{CurrencyDef, MemberOf};
 use finance::{percent::bound::BoundToHundredPercent, price::Price};
 use lpp_platform::NLpn;
 use platform::contract::Code;
 use sdk::{cosmwasm_std::Storage, cw_storage_plus::Item};
 
-use crate::{borrow::InterestRate, contract::Result, msg::InstantiateMsg};
+use crate::{borrow::InterestRate, contract::Result};
 
 #[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq)]
 pub struct Config {
@@ -21,21 +19,7 @@ pub struct Config {
 impl Config {
     const STORAGE: Item<Self> = Item::new("config");
 
-    pub fn new<Lpn>(msg: InstantiateMsg, lease_code: Code) -> Self
-    where
-        Lpn: CurrencyDef,
-        Lpn::Group: MemberOf<Lpns>,
-    {
-        debug_assert_eq!(Ok(()), msg.lpn.of_currency(Lpn::dto()));
-        Self {
-            lease_code,
-            borrow_rate: msg.borrow_rate,
-            min_utilization: msg.min_utilization,
-        }
-    }
-
-    #[cfg(test)]
-    pub fn new_unchecked(
+    pub fn new(
         lease_code: Code,
         borrow_rate: InterestRate,
         min_utilization: BoundToHundredPercent,

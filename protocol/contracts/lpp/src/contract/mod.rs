@@ -63,7 +63,7 @@ pub fn instantiate(
         .and_then(|lease_code| {
             LiquidityPool::<LpnCurrency>::store(
                 deps.storage,
-                Config::new::<LpnCurrency>(msg, lease_code),
+                Config::new(lease_code, msg.borrow_rate, msg.min_utilization),
             )
         })
         .map(|()| response::empty_response())
