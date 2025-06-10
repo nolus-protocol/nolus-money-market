@@ -1,4 +1,7 @@
-use access_control::{AccessPermission, permissions::{SameContractOnly, SingleUserPermission}};
+use access_control::{
+    AccessPermission,
+    permissions::{SameContractOnly, SingleUserPermission}
+};
 use serde::{Deserialize, Serialize};
 
 use currency::{Currency, Group, MemberOf};
@@ -69,7 +72,7 @@ impl Connectable for Lease {
     }
 }
 
-/// This is a permission given to deliver price alarms 
+/// This is a permission given to deliver price alarms
 pub struct PriceAlarmDelivery<'a, QuoteC, QuoteG>
 where
     QuoteC: Currency + MemberOf<QuoteG>,

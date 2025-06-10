@@ -1,6 +1,6 @@
 use std::ops::{Deref, DerefMut};
 
-use sdk::cosmwasm_std::{Addr, Storage};
+use sdk::cosmwasm_std::{Addr, MessageInfo, Storage};
 
 use crate::{SingleUserAccess, error::Result};
 
@@ -23,8 +23,8 @@ where
         }
     }
 
-    pub fn check(&self, user: &Addr) -> Result {
-        self.access.check(user)
+    pub fn check(&self, info: &MessageInfo) -> Result {
+        self.access.check(info)
     }
 }
 
@@ -39,7 +39,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use sdk::cosmwasm_std::{Addr, Storage, testing::MockStorage};
+    use sdk::cosmwasm_std::{Addr, MessageInfo, Storage, testing::MockStorage};
 
     use crate::{ContractOwnerAccess, error::Error};
 
@@ -48,9 +48,12 @@ mod tests {
         let mut storage = MockStorage::new();
         let storage_ref: &mut dyn Storage = &mut storage;
         let mut access = ContractOwnerAccess::new(storage_ref);
-        let user = Addr::unchecked("happy user");
+        let msg_info = MessageInfo {
+            sender: Addr::unchecked("happy user"),
+            funds: vec![],
+        };
 
-        assert!(access.check(&user).is_err());
+        assert!(access.check(&msg_info).is_err());
         access.grant_to(&user).unwrap();
         access.check(&user).unwrap();
     }
@@ -60,7 +63,10 @@ mod tests {
         let mut storage = MockStorage::new();
         let storage_ref: &dyn Storage = &mut storage;
         let access = ContractOwnerAccess::new(storage_ref);
-        let not_authorized = Addr::unchecked("hacker");
+        let not_authorized = MessageInfo {
+            sender: Addr::unchecked("hacker"),
+            funds: vec![],
+        };
 
         assert!(matches!(
             access.check(&not_authorized).unwrap_err(),
