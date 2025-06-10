@@ -24,6 +24,7 @@ use versioning::{
 };
 
 use crate::{
+    config::Config as ApiConfig,
     lpp::{LiquidityPool, LppBalances},
     msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg, SudoMsg},
     state::Config,
@@ -63,7 +64,7 @@ pub fn instantiate(
         .and_then(|lease_code| {
             LiquidityPool::<LpnCurrency>::store(
                 deps.storage,
-                Config::new(lease_code, msg.borrow_rate, msg.min_utilization),
+                &ApiConfig::new(lease_code, msg.borrow_rate, msg.min_utilization),
             )
         })
         .map(|()| response::empty_response())

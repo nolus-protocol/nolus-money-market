@@ -13,10 +13,9 @@ use lpp::{
     borrow::InterestRate,
     contract::ContractError,
     msg::{
-        BalanceResponse, LppBalanceResponse, PriceResponse, QueryLoanResponse, QueryQuoteResponse,
-        RewardsResponse, SudoMsg,
+        BalanceResponse, ConfigResponse, LppBalanceResponse, PriceResponse, QueryLoanResponse,
+        QueryQuoteResponse, RewardsResponse, SudoMsg,
     },
-    state::Config,
 };
 use platform::{bank, coin_legacy};
 use sdk::{
@@ -129,7 +128,7 @@ fn config_update_parameters() {
         &[Event::new("sudo").add_attribute("_contract_address", test_case.address_book.lpp()),]
     );
 
-    let quote: Config = test_case
+    let quote: ConfigResponse = test_case
         .app
         .query()
         .query_wasm_smart(test_case.address_book.lpp().clone(), &LppQueryMsg::Config())

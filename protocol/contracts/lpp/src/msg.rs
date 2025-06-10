@@ -10,7 +10,7 @@ use finance::{
 use lpp_platform::NLpn;
 use sdk::cosmwasm_std::{Addr, Uint64, Uint128};
 
-use crate::{borrow::InterestRate, loan::Loan};
+use crate::{borrow::InterestRate, config::Config, loan::Loan};
 
 #[derive(Serialize, Deserialize, Clone, Eq, PartialEq)]
 #[cfg_attr(any(test, feature = "testing"), derive(Debug))]
@@ -89,6 +89,7 @@ pub enum QueryMsg<Lpns>
 where
     Lpns: Group,
 {
+    /// Return the configuration in [ConfigResponse]
     Config(),
     /// Implementation of [versioning::query::ProtocolPackage::Release]
     ProtocolPackageRelease {},
@@ -121,6 +122,8 @@ where
         address: Addr,
     },
 }
+
+pub type ConfigResponse = Config;
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Eq)]
 #[cfg_attr(any(test, feature = "testing"), derive(Debug))]

@@ -68,7 +68,6 @@ impl Instantiator {
         let lpp_id = app.store_code(endpoints);
         let lease_code_admin = LeaserInstantiator::expected_addr();
         let msg = InstantiateMsg {
-            lpn: currency::dto::<Lpn, Lpns>(),
             lease_code_admin: lease_code_admin.clone(),
             lease_code: CodeId::from(lease_code).into(),
             borrow_rate,

@@ -13,6 +13,7 @@ use platform::{bank, contract};
 use sdk::cosmwasm_std::{Addr, Deps, DepsMut, Env, QuerierWrapper, Storage, Timestamp};
 
 use crate::{
+    config::Config as ApiConfig,
     contract::{ContractError, Result},
     loan::Loan,
     loans::Repo,
@@ -80,7 +81,7 @@ impl<Lpn> From<NTokenPrice<Lpn>> for PriceResponse<Lpn> {
 }
 
 pub(crate) struct LiquidityPool<Lpn> {
-    config: Config,
+    config: ApiConfig,
     total: Total<Lpn>,
 }
 
@@ -88,9 +89,8 @@ impl<Lpn> LiquidityPool<Lpn>
 where
     Lpn: 'static,
 {
-    pub fn store(storage: &mut dyn Storage, config: Config) -> Result<()> {
-        config
-            .store(storage)
+    pub fn store(storage: &mut dyn Storage, config: &ApiConfig) -> Result<()> {
+        Config::store(config, storage)
             .and_then(|()| Total::<Lpn>::new().store(storage).map_err(Into::into))
     }
 
@@ -159,7 +159,7 @@ where
         let balance_nlpn = Deposit::balance_nlpn(deps.storage)?;
 
         let price: Price<NLpn, Lpn> = if balance_nlpn.is_zero() {
-            Config::initial_derivative_price()
+            ApiConfig::initial_derivative_price()
         } else {
             price::total_of(balance_nlpn).is(self.total_lpn(
                 deps.querier,
@@ -169,9 +169,8 @@ where
             )?)
         };
 
-        let init: Price<NLpn, Lpn> = Config::initial_derivative_price::<Lpn>();
         debug_assert!(
-            price >= init,
+            price >= ApiConfig::initial_derivative_price::<Lpn>(),
             "[Lpp] programming error: nlpn price less than initial"
         );
 
@@ -350,6 +349,7 @@ mod test {
 
     use crate::{
         borrow::InterestRate,
+        config::Config as ApiConfig,
         contract::ContractError,
         loans::Repo,
         state::{Config, Deposit, Total},
@@ -374,17 +374,19 @@ mod test {
 
         grant_admin_access(deps.as_mut(), &admin);
 
-        Config::new(
-            lease_code_id,
-            InterestRate::new(
-                BASE_INTEREST_RATE,
-                UTILIZATION_OPTIMAL,
-                ADDON_OPTIMAL_INTEREST_RATE,
-            )
-            .expect("Couldn't construct interest rate value!"),
-            DEFAULT_MIN_UTILIZATION,
+        Config::store(
+            &ApiConfig::new(
+                lease_code_id,
+                InterestRate::new(
+                    BASE_INTEREST_RATE,
+                    UTILIZATION_OPTIMAL,
+                    ADDON_OPTIMAL_INTEREST_RATE,
+                )
+                .expect("Couldn't construct interest rate value!"),
+                DEFAULT_MIN_UTILIZATION,
+            ),
+            deps.as_mut().storage,
         )
-        .store(deps.as_mut().storage)
         .expect("Failed to store Config!");
         Total::<TheCurrency>::new()
             .store(deps.as_mut().storage)
@@ -413,17 +415,19 @@ mod test {
 
         grant_admin_access(deps.as_mut(), &admin);
 
-        Config::new(
-            lease_code_id,
-            InterestRate::new(
-                BASE_INTEREST_RATE,
-                UTILIZATION_OPTIMAL,
-                ADDON_OPTIMAL_INTEREST_RATE,
-            )
-            .expect("Couldn't construct interest rate value!"),
-            DEFAULT_MIN_UTILIZATION,
+        Config::store(
+            &ApiConfig::new(
+                lease_code_id,
+                InterestRate::new(
+                    BASE_INTEREST_RATE,
+                    UTILIZATION_OPTIMAL,
+                    ADDON_OPTIMAL_INTEREST_RATE,
+                )
+                .expect("Couldn't construct interest rate value!"),
+                DEFAULT_MIN_UTILIZATION,
+            ),
+            deps.as_mut().storage,
         )
-        .store(deps.as_mut().storage)
         .expect("Failed to store Config!");
         Total::<TheCurrency>::new()
             .store(deps.as_mut().storage)
@@ -496,17 +500,19 @@ mod test {
 
         grant_admin_access(deps.as_mut(), &admin);
 
-        Config::new(
-            lease_code_id,
-            InterestRate::new(
-                BASE_INTEREST_RATE,
-                UTILIZATION_OPTIMAL,
-                ADDON_OPTIMAL_INTEREST_RATE,
-            )
-            .expect("Couldn't construct interest rate value!"),
-            DEFAULT_MIN_UTILIZATION,
+        Config::store(
+            &ApiConfig::new(
+                lease_code_id,
+                InterestRate::new(
+                    BASE_INTEREST_RATE,
+                    UTILIZATION_OPTIMAL,
+                    ADDON_OPTIMAL_INTEREST_RATE,
+                )
+                .expect("Couldn't construct interest rate value!"),
+                DEFAULT_MIN_UTILIZATION,
+            ),
+            deps.as_mut().storage,
         )
-        .store(deps.as_mut().storage)
         .expect("Failed to store Config!");
         Total::<TheCurrency>::new()
             .store(deps.as_mut().storage)
@@ -594,17 +600,19 @@ mod test {
         let lease_code_id = Code::unchecked(123);
 
         grant_admin_access(deps.as_mut(), &admin);
-        Config::new(
-            lease_code_id,
-            InterestRate::new(
-                BASE_INTEREST_RATE,
-                UTILIZATION_OPTIMAL,
-                ADDON_OPTIMAL_INTEREST_RATE,
-            )
-            .expect("Couldn't construct interest rate value!"),
-            DEFAULT_MIN_UTILIZATION,
+        Config::store(
+            &ApiConfig::new(
+                lease_code_id,
+                InterestRate::new(
+                    BASE_INTEREST_RATE,
+                    UTILIZATION_OPTIMAL,
+                    ADDON_OPTIMAL_INTEREST_RATE,
+                )
+                .expect("Couldn't construct interest rate value!"),
+                DEFAULT_MIN_UTILIZATION,
+            ),
+            deps.as_mut().storage,
         )
-        .store(deps.as_mut().storage)
         .expect("Failed to store Config!");
         Total::<TheCurrency>::new()
             .store(deps.as_mut().storage)
@@ -627,17 +635,19 @@ mod test {
         let lease_code_id = Code::unchecked(123);
 
         grant_admin_access(deps.as_mut(), &admin);
-        Config::new(
-            lease_code_id,
-            InterestRate::new(
-                BASE_INTEREST_RATE,
-                UTILIZATION_OPTIMAL,
-                ADDON_OPTIMAL_INTEREST_RATE,
-            )
-            .expect("Couldn't construct interest rate value!"),
-            DEFAULT_MIN_UTILIZATION,
+        Config::store(
+            &ApiConfig::new(
+                lease_code_id,
+                InterestRate::new(
+                    BASE_INTEREST_RATE,
+                    UTILIZATION_OPTIMAL,
+                    ADDON_OPTIMAL_INTEREST_RATE,
+                )
+                .expect("Couldn't construct interest rate value!"),
+                DEFAULT_MIN_UTILIZATION,
+            ),
+            deps.as_mut().storage,
         )
-        .store(deps.as_mut().storage)
         .expect("Failed to store Config!");
         Total::<TheCurrency>::new()
             .store(deps.as_mut().storage)
@@ -660,17 +670,19 @@ mod test {
         let lease_code_id = Code::unchecked(123);
 
         grant_admin_access(deps.as_mut(), &admin);
-        Config::new(
-            lease_code_id,
-            InterestRate::new(
-                BASE_INTEREST_RATE,
-                UTILIZATION_OPTIMAL,
-                ADDON_OPTIMAL_INTEREST_RATE,
-            )
-            .expect("Couldn't construct interest rate value!"),
-            DEFAULT_MIN_UTILIZATION,
+        Config::store(
+            &ApiConfig::new(
+                lease_code_id,
+                InterestRate::new(
+                    BASE_INTEREST_RATE,
+                    UTILIZATION_OPTIMAL,
+                    ADDON_OPTIMAL_INTEREST_RATE,
+                )
+                .expect("Couldn't construct interest rate value!"),
+                DEFAULT_MIN_UTILIZATION,
+            ),
+            deps.as_mut().storage,
         )
-        .store(deps.as_mut().storage)
         .expect("Failed to store Config!");
         Total::<TheCurrency>::new()
             .store(deps.as_mut().storage)
@@ -716,17 +728,19 @@ mod test {
         let lease_code_id = Code::unchecked(123);
 
         grant_admin_access(deps.as_mut(), &admin);
-        Config::new(
-            lease_code_id,
-            InterestRate::new(
-                BASE_INTEREST_RATE,
-                UTILIZATION_OPTIMAL,
-                ADDON_OPTIMAL_INTEREST_RATE,
-            )
-            .expect("Couldn't construct interest rate value!"),
-            DEFAULT_MIN_UTILIZATION,
+        Config::store(
+            &ApiConfig::new(
+                lease_code_id,
+                InterestRate::new(
+                    BASE_INTEREST_RATE,
+                    UTILIZATION_OPTIMAL,
+                    ADDON_OPTIMAL_INTEREST_RATE,
+                )
+                .expect("Couldn't construct interest rate value!"),
+                DEFAULT_MIN_UTILIZATION,
+            ),
+            deps.as_mut().storage,
         )
-        .store(deps.as_mut().storage)
         .expect("Failed to store Config!");
         Total::<TheCurrency>::new()
             .store(deps.as_mut().storage)
@@ -769,17 +783,19 @@ mod test {
         let lease_code_id = Code::unchecked(123);
 
         grant_admin_access(deps.as_mut(), &admin);
-        Config::new(
-            lease_code_id,
-            InterestRate::new(
-                BASE_INTEREST_RATE,
-                UTILIZATION_OPTIMAL,
-                ADDON_OPTIMAL_INTEREST_RATE,
-            )
-            .expect("Couldn't construct interest rate value!"),
-            DEFAULT_MIN_UTILIZATION,
+        Config::store(
+            &ApiConfig::new(
+                lease_code_id,
+                InterestRate::new(
+                    BASE_INTEREST_RATE,
+                    UTILIZATION_OPTIMAL,
+                    ADDON_OPTIMAL_INTEREST_RATE,
+                )
+                .expect("Couldn't construct interest rate value!"),
+                DEFAULT_MIN_UTILIZATION,
+            ),
+            deps.as_mut().storage,
         )
-        .store(deps.as_mut().storage)
         .expect("Failed to store Config!");
 
         // simplify calculation
@@ -931,10 +947,7 @@ mod test {
             testing::{MockQuerier, mock_env},
         };
 
-        use crate::{
-            borrow::InterestRate,
-            state::{Config, Total},
-        };
+        use crate::{borrow::InterestRate, config::Config as ApiConfig, state::Total};
 
         use super::{super::LiquidityPool, TheCurrency, coin_cw};
 
@@ -954,7 +967,7 @@ mod test {
                 .unwrap();
 
             let lpp: LiquidityPool<TheCurrency> = LiquidityPool {
-                config: Config::new(
+                config: ApiConfig::new(
                     Code::unchecked(0xDEADC0DE_u64),
                     InterestRate::new(Percent::ZERO, Percent::from_permille(500), Percent::HUNDRED)
                         .unwrap(),

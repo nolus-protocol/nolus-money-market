@@ -131,7 +131,7 @@ mod test {
     use platform::contract::Code;
     use sdk::cosmwasm_std::{Addr, Storage};
 
-    use crate::{borrow::InterestRate, contract::test::TheCurrency, state::Config};
+    use crate::{borrow::InterestRate, config::Config as ApiConfig, contract::test::TheCurrency};
 
     use super::LiquidityPool;
 
@@ -147,7 +147,7 @@ mod test {
 
         LiquidityPool::<TheCurrency>::store(
             storage,
-            Config::new(
+            &ApiConfig::new(
                 Code::unchecked(0xDEADC0DE_u64),
                 InterestRate::new(
                     BASE_INTEREST_RATE,

@@ -1,6 +1,7 @@
 #[cfg(feature = "contract")]
 mod access_control;
 pub mod borrow;
+pub mod config;
 #[cfg(feature = "contract")]
 pub mod contract;
 #[cfg(feature = "contract")]

@@ -86,13 +86,13 @@ mod test {
 
     use crate::{
         borrow::InterestRate,
+        config::Config,
         contract::{
             error::ContractError,
             lender, rewards,
             test::{self, TheCurrency},
         },
         lpp::LiquidityPool,
-        state::Config,
     };
 
     const BASE_INTEREST_RATE: Percent = Percent::from_permille(70);
@@ -114,7 +114,7 @@ mod test {
 
         LiquidityPool::<TheCurrency>::store(
             deps.as_mut().storage,
-            Config::new(
+            &Config::new(
                 Code::unchecked(1000u64),
                 InterestRate::new(
                     BASE_INTEREST_RATE,

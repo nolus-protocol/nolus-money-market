@@ -1,35 +1,13 @@
-use serde::{Deserialize, Serialize};
-
-use currencies::Lpns;
-use currency::{CurrencyDef, MemberOf};
 use finance::{percent::bound::BoundToHundredPercent, price::Price};
 use lpp_platform::NLpn;
 use platform::contract::Code;
 
-use crate::{borrow::InterestRate, msg::InstantiateMsg};
+use crate::borrow::InterestRate;
 
-#[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq)]
-pub struct Config {
-    lease_code: Code,
-    borrow_rate: InterestRate,
-    min_utilization: BoundToHundredPercent,
-}
+use super::Config;
 
 impl Config {
-    pub(crate) fn new<Lpn>(msg: InstantiateMsg, lease_code: Code) -> Self
-    where
-        Lpn: CurrencyDef,
-        Lpn::Group: MemberOf<Lpns>,
-    {
-        debug_assert_eq!(Ok(()), msg.lpn.of_currency(Lpn::dto()));
-        Self {
-            lease_code,
-            borrow_rate: msg.borrow_rate,
-            min_utilization: msg.min_utilization,
-        }
-    }
-
-    pub(crate) fn new_unchecked(
+    pub(crate) fn new(
         lease_code: Code,
         borrow_rate: InterestRate,
         min_utilization: BoundToHundredPercent,
