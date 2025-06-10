@@ -161,7 +161,12 @@ impl Handler for Idle {
     type Response = State;
     type SwapResult = ContractResult<DexResponse<State>>;
 
-    fn on_time_alarm(self, querier: QuerierWrapper<'_>, env: Env, info: MessageInfo) -> DexResult<Self> {
+    fn on_time_alarm(
+        self,
+        querier: QuerierWrapper<'_>,
+        env: Env,
+        _info: MessageInfo
+    ) -> DexResult<Self> {
         DexResult::Finished(self.on_time_alarm(querier, env))
     }
 }

@@ -14,7 +14,7 @@ use platform::{
 };
 use sdk::{
     cosmwasm_std::{
-        Binary, Env, MessageInfo, QuerierWrapper, Reply as CwReply, Storage, Timestamp
+        Binary, Env, MessageInfo, QuerierWrapper, Reply as CwReply, Storage, Timestamp,
     },
     cw_storage_plus::Item,
 };
