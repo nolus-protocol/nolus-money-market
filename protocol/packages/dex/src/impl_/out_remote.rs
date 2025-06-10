@@ -310,17 +310,28 @@ mod impl_handler {
             }
         }
 
-        fn on_time_alarm(self, querier: QuerierWrapper<'_>, env: Env, info: MessageInfo) -> Result<Self> {
+        fn on_time_alarm(
+            self,
+            querier: QuerierWrapper<'_>,
+            env: Env,
+            info: MessageInfo,
+        ) -> Result<Self> {
             match self {
-                State::OpenIca(inner) => Handler::on_time_alarm(inner, querier, env, info).map_into(),
+                State::OpenIca(inner) => {
+                    Handler::on_time_alarm(inner, querier, env, info).map_into()
+                }
                 State::OpenIcaRespDelivery(inner) => {
                     Handler::on_time_alarm(inner, querier, env, info).map_into()
                 }
-                State::TransferOut(inner) => Handler::on_time_alarm(inner, querier, env, info).map_into(),
+                State::TransferOut(inner) => {
+                    Handler::on_time_alarm(inner, querier, env, info).map_into()
+                }
                 State::TransferOutRespDelivery(inner) => {
                     Handler::on_time_alarm(inner, querier, env, info).map_into()
                 }
-                State::SwapExactIn(inner) => Handler::on_time_alarm(inner, querier, env, info).map_into(),
+                State::SwapExactIn(inner) => {
+                    Handler::on_time_alarm(inner, querier, env, info).map_into()
+                }
                 State::SwapExactInRespDelivery(inner) => {
                     Handler::on_time_alarm(inner, querier, env, info).map_into()
                 }

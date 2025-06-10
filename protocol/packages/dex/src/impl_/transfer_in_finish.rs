@@ -235,13 +235,15 @@ where
         self.try_complete(querier, env)
     }
 
-    fn on_time_alarm(self, querier: QuerierWrapper<'_>, env: Env, info: MessageInfo) -> HandlerResult<Self> {
-        access_control::check(
-            &TimeAlarmDelivery::new(self.spec.time_alarm()),
-            &info,
-        )
-        .map_err(DexError::Unauthorized)
-        .map_or_else(Into::into, |()| self.try_complete(querier, env))
+    fn on_time_alarm(
+        self,
+        querier: QuerierWrapper<'_>,
+        env: Env,
+        info: MessageInfo,
+    ) -> HandlerResult<Self> {
+        access_control::check(&TimeAlarmDelivery::new(self.spec.time_alarm()), &info)
+            .map_err(DexError::Unauthorized)
+            .map_or_else(Into::into, |()| self.try_complete(querier, env))
     }
 }
 

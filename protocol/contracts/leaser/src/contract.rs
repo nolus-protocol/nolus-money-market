@@ -2,11 +2,7 @@ use std::ops::{Deref, DerefMut};
 
 use serde::Serialize;
 
-use access_control::{
-    AccessPermission,
-    ContractOwnerAccess,
-    permissions::SingleUserPermission,
-};
+use access_control::{AccessPermission, ContractOwnerAccess, permissions::SingleUserPermission};
 use lease::api::{MigrateMsg as LeaseMigrateMsg, authz::AccessGranted};
 use platform::{
     contract::{self, Code, CodeId, Validator},
@@ -146,7 +142,7 @@ pub fn execute(
             max_leases,
             to_release,
         } => ContractOwnerAccess::new(deps.storage.deref())
-            .check(&info.sender)
+            .check(&info)
             .map_err(Into::into)
             .and_then(|()| new_code(new_code_id, &contract::validator(deps.querier)))
             .and_then(|new_lease_code| {
@@ -163,7 +159,7 @@ pub fn execute(
             max_leases,
             to_release,
         } => ContractOwnerAccess::new(deps.storage.deref())
-            .check(&info.sender)
+            .check(&info)
             .map_err(Into::into)
             .and_then(|()| {
                 validate_customer(next_customer, deps.api, &contract::validator(deps.querier))
@@ -219,13 +215,13 @@ pub fn query(deps: Deps<'_>, _env: Env, msg: QueryMsg) -> ContractResult<Binary>
             };
 
             Leaser::new(deps)
-            .config()
-            .and_then(|config| {
-                access_control::check(&AnomalyResolutionPermission::new(&config), &msg_info)
-                    .map(|_| AccessGranted::Yes)
-                    .or_else(|_| Ok(AccessGranted::No))
-            })
-            .and_then(serialize_to_json)
+                .config()
+                .and_then(|config| {
+                    access_control::check(&AnomalyResolutionPermission::new(&config), &msg_info)
+                        .map(|_| AccessGranted::Yes)
+                        .or_else(|_| Ok(AccessGranted::No))
+                })
+                .and_then(serialize_to_json)
         }
         QueryMsg::Config {} => Leaser::new(deps)
             .config()
