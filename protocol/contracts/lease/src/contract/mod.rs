@@ -71,7 +71,7 @@ impl Connectable for Lease {
     }
 }
 
-// This is a permission given to deliver price alarms 
+/// This is a permission given to deliver price alarms 
 pub struct PriceAlarmDelivery<'a, QuoteC, QuoteG>
 where
     QuoteC: Currency + MemberOf<QuoteG>,
