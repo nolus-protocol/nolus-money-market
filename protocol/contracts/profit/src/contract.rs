@@ -1,10 +1,6 @@
 use std::ops::{Deref, DerefMut};
 
-use access_control::{
-    ContractOwnerAccess,
-    permissions::SameContractOnly,
-    SingleUserAccess,
-};
+use access_control::{ContractOwnerAccess, SingleUserAccess, permissions::SameContractOnly};
 use dex::{ContinueResult as DexResult, Handler as _, Response as DexResponse};
 use oracle_platform::OracleRef;
 use platform::{
@@ -108,14 +104,7 @@ pub fn execute(
             )
             .check(&info)?;
 
-            let state: State = State::load(deps.storage)?;
-            let next_state = state
-                .on_time_alarm(deps.querier, env, info)
-                .map_err(Into::into)?;
-        
-            next_state
-                .store(deps.storage)
-                .map(|()| response)
+            try_handle_execute_message_with_info(deps, env, info, State::on_time_alarm)
                 .map(response::response_only_messages)
         }
         ExecuteMsg::Config { cadence_hours } => {
@@ -216,6 +205,28 @@ where
         response,
         next_state,
     } = handler(state, deps.querier, env).into()?;
+
+    next_state.store(deps.storage).map(|()| response)
+}
+
+/// basically the same as try_handle_execute_message but accepts a handler with an extra parameter - MessageInfo
+fn try_handle_execute_message_with_info<F, R, E>(
+    deps: DepsMut<'_>,
+    env: Env,
+    info: MessageInfo,
+    handler: F,
+) -> ContractResult<MessageResponse>
+where
+    F: FnOnce(State, QuerierWrapper<'_>, Env, MessageInfo) -> R,
+    R: Into<Result<DexResponse<State>, E>>,
+    ContractError: From<E>,
+{
+    let state: State = State::load(deps.storage)?;
+
+    let DexResponse::<State> {
+        response,
+        next_state,
+    } = handler(state, deps.querier, env, info).into()?;
 
     next_state.store(deps.storage).map(|()| response)
 }
