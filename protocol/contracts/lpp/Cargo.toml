@@ -21,20 +21,22 @@ crate-type = ["cdylib", "rlib"]
 contract = [
     "stub",
     "sdk/contract",
+    "dep:access-control",
     "dep:cosmwasm-std",
     "dep:oracle",
+    "dep:oracle-platform",
 ]
 stub = []
 testing = ["currency/testing"]
 
 [dependencies]
-access-control = { workspace = true }
+access-control = { workspace = true, optional = true}
 currencies = { workspace = true }
 currency = { workspace = true }
 finance = { workspace = true }
 lpp-platform = { workspace = true }
 oracle = { workspace = true, optional = true, features = ["stub_price"] }
-oracle-platform = { workspace = true }
+oracle-platform = { workspace = true, optional = true}
 platform = { workspace = true }
 sdk = { workspace = true }
 versioning = { workspace = true, features = ["protocol_contract"] }
