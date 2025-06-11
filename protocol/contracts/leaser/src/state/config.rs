@@ -68,48 +68,6 @@ impl Config {
             .map_err(ContractError::LoadConfigFailure)
     }
 
-    pub fn migrate_from_0_8_8(
-        storage: &mut dyn Storage,
-        lease_max_slippages: MaxSlippages,
-        lease_admin: Addr,
-    ) -> ContractResult<()> {
-        #[derive(Deserialize, Serialize)]
-        pub struct OldConfig {
-            pub lease_code: Code,
-            pub lpp: Addr,
-            pub profit: Addr,
-            pub reserve: Addr,
-            pub time_alarms: Addr,
-            pub market_price_oracle: Addr,
-            pub protocols_registry: Addr,
-            pub lease_position_spec: PositionSpecDTO,
-            pub lease_interest_rate_margin: Percent,
-            pub lease_due_period: Duration,
-            pub dex: ConnectionParams,
-        }
-        Item::new("config")
-            .load(storage)
-            .map_err(ContractError::LoadOldConfig)
-            .and_then(|old_config: OldConfig| {
-                Config {
-                    lease_code: old_config.lease_code,
-                    lpp: old_config.lpp,
-                    profit: old_config.profit,
-                    reserve: old_config.reserve,
-                    time_alarms: old_config.time_alarms,
-                    market_price_oracle: old_config.market_price_oracle,
-                    protocols_registry: old_config.protocols_registry,
-                    lease_position_spec: old_config.lease_position_spec,
-                    lease_interest_rate_margin: old_config.lease_interest_rate_margin,
-                    lease_due_period: old_config.lease_due_period,
-                    lease_max_slippages,
-                    lease_admin,
-                    dex: old_config.dex,
-                }
-                .store(storage)
-            })
-    }
-
     pub fn update(storage: &mut dyn Storage, new_config: NewConfig) -> ContractResult<()> {
         Self::STORAGE
             .update::<_, UpdateDataError>(storage, |c| {
