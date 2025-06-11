@@ -4,7 +4,7 @@ use finance::{
     coin::Coin,
     fraction::Fraction,
     percent::{Percent, Units},
-    price::{self, Price},
+    price,
     ratio::Rational,
     zero::Zero,
 };
@@ -17,7 +17,8 @@ use crate::{
     contract::{ContractError, Result},
     loan::Loan,
     loans::Repo,
-    msg::{LppBalanceResponse, PriceResponse},
+    msg::LppBalanceResponse,
+    nprice::NTokenPrice,
     state::{Config, Deposit, Total},
 };
 
@@ -51,34 +52,6 @@ where
 // TODO reverse the direction of the dependencies between LiquidityPool and Deposit,
 // and LiquidityPool and Loan. The contract API implementation should depend on
 // Deposit and Loan which in turn may use LiquidityPool.
-pub struct NTokenPrice<Lpn>
-where
-    Lpn: 'static,
-{
-    price: Price<NLpn, Lpn>,
-}
-
-impl<Lpn> NTokenPrice<Lpn>
-where
-    Lpn: 'static + Copy,
-{
-    pub fn get(&self) -> Price<NLpn, Lpn> {
-        self.price
-    }
-
-    #[cfg(test)]
-    pub fn mock(nlpn: Coin<NLpn>, lpn: Coin<Lpn>) -> Self {
-        Self {
-            price: price::total_of(nlpn).is(lpn),
-        }
-    }
-}
-
-impl<Lpn> From<NTokenPrice<Lpn>> for PriceResponse<Lpn> {
-    fn from(nprice: NTokenPrice<Lpn>) -> Self {
-        PriceResponse(nprice.price)
-    }
-}
 
 pub(crate) struct LiquidityPool<Lpn> {
     config: ApiConfig,
@@ -158,7 +131,7 @@ where
     ) -> Result<NTokenPrice<Lpn>> {
         let balance_nlpn = Deposit::balance_nlpn(deps.storage)?;
 
-        let price: Price<NLpn, Lpn> = if balance_nlpn.is_zero() {
+        let price = if balance_nlpn.is_zero() {
             ApiConfig::initial_derivative_price()
         } else {
             price::total_of(balance_nlpn).is(self.total_lpn(
@@ -174,7 +147,7 @@ where
             "[Lpp] programming error: nlpn price less than initial"
         );
 
-        Ok(NTokenPrice { price })
+        Ok(price)
     }
 
     pub fn validate_lease_addr(&self, deps: &Deps<'_>, lease_addr: &Addr) -> Result<()> {
@@ -188,14 +161,14 @@ where
         env: &Env,
         amount_nlpn: Coin<NLpn>,
     ) -> Result<Coin<Lpn>> {
-        let price = self.calculate_price(deps, env, Coin::ZERO)?.get();
+        let price = self.calculate_price(deps, env, Coin::ZERO)?;
         let amount_lpn = price::total(amount_nlpn, price);
 
         if self.balance(&env.contract.address, deps.querier)? < amount_lpn {
-            return Err(ContractError::NoLiquidity {});
+            Err(ContractError::NoLiquidity {})
+        } else {
+            Ok(amount_lpn)
         }
-
-        Ok(amount_lpn)
     }
 
     pub fn query_quote(
@@ -822,7 +795,7 @@ mod test {
         let price = lpp
             .calculate_price(&deps.as_ref(), &env, Coin::new(0))
             .expect("should get price");
-        assert_eq!(price.get(), Price::identity());
+        assert_eq!(price, Price::identity());
 
         deps.querier
             .bank
@@ -879,7 +852,7 @@ mod test {
             .calculate_price(&deps.as_ref(), &env, Coin::new(0))
             .expect("should get price");
         assert_eq!(
-            price::total(Coin::<NLpn>::new(1000), price.get()),
+            price::total(Coin::<NLpn>::new(1000), price),
             price::total(
                 Coin::<NLpn>::new(1000),
                 price::total_of(Coin::new(100)).is(Coin::new(111))
@@ -909,7 +882,7 @@ mod test {
             .calculate_price(&deps.as_ref(), &env, Coin::new(0))
             .expect("should get price");
         assert_eq!(
-            price::total(Coin::<NLpn>::new(1000), price.get()),
+            price::total(Coin::<NLpn>::new(1000), price),
             price::total(
                 Coin::<NLpn>::new(1000),
                 price::total_of(Coin::new(100)).is(Coin::new(111))

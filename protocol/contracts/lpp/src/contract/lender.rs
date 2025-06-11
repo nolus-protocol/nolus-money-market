@@ -66,7 +66,7 @@ pub(super) fn try_withdraw<Lpn>(
     amount: Coin<NLpn>,
 ) -> Result<MessageResponse>
 where
-    Lpn: 'static + CurrencyDef,
+    Lpn: CurrencyDef,
 {
     if amount.is_zero() {
         return Err(ContractError::ZeroWithdrawFunds);
@@ -109,7 +109,7 @@ where
 {
     LiquidityPool::load(deps.storage).and_then(|lpp| {
         lpp.calculate_price(&deps, &env, Coin::default())
-            .map(Into::into)
+            .map(PriceResponse)
     })
 }
 
