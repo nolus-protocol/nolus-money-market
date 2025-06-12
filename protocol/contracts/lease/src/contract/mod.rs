@@ -1,9 +1,7 @@
 use serde::{Deserialize, Serialize};
 
-use currency::{Currency, Group, MemberOf};
 use dex::{Account, Connectable, ConnectionParams};
-use oracle_platform::OracleRef;
-use sdk::cosmwasm_std::{MessageInfo, QuerierWrapper};
+use sdk::cosmwasm_std::QuerierWrapper;
 
 use crate::{
     lease::{LeaseDTO, with_lease::WithLease},

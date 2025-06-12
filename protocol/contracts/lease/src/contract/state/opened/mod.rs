@@ -14,8 +14,8 @@ mod balance;
 pub mod close;
 mod event;
 mod payment;
-pub mod repay;
 pub mod permission;
+pub mod repay;
 
 type ChangeClosePolicyPermission<'a> = SingleUserPermission<'a>;
 type ClosePositionPermission<'a> = SingleUserPermission<'a>;
