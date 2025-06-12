@@ -13,7 +13,7 @@ pub mod error;
 pub mod permissions;
 
 pub trait AccessPermission {
-    fn is_granted_to(&self, info: &MessageInfo) -> bool;
+    fn granted_to(&self, info: &MessageInfo) -> bool;
 }
 
 /// Checks if access is granted to the given caller.
@@ -21,7 +21,7 @@ pub fn check<P>(permission: &P, info: &MessageInfo) -> Result
 where
     P: AccessPermission,
 {
-    if permission.is_granted_to(info) {
+    if permission.granted_to(info) {
         Ok(())
     } else {
         Err(Error::Unauthorized {})

@@ -1,6 +1,6 @@
 use std::ops::{Deref, DerefMut};
 
-use access_control::{ContractOwnerAccess, SingleUserAccess, permissions::SameContractOnly};
+use access_control::{ContractOwnerAccess, SingleUserAccess, permissions::{DexResponseSafeDeliveryPermission}};
 use dex::{ContinueResult as DexResult, Handler as _, Response as DexResponse};
 use oracle_platform::OracleRef;
 use platform::{
@@ -35,8 +35,6 @@ const CURRENT_RELEASE: ProtocolPackageRelease = ProtocolPackageRelease::current(
     package_version!(),
     CONTRACT_STORAGE_VERSION,
 );
-
-type DexResponseSafeDeliveryPermission<'a> = SameContractOnly<'a>;
 
 #[entry_point]
 pub fn instantiate(
