@@ -1,3 +1,4 @@
+use access_control::permissions::DexResponseSafeDeliveryPermission;
 use finance::duration::Duration;
 use platform::{
     contract::{self, Validator},
@@ -20,7 +21,7 @@ use versioning::{
 
 use crate::{
     api::{ExecuteMsg, MigrateMsg, open::NewLeaseContract, query::QueryMsg},
-    contract::{DexResponseSafeDeliveryPermission, api::Contract},
+    contract::api::Contract,
     error::{ContractError, ContractResult},
 };
 

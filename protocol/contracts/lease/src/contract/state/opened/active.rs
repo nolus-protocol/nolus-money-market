@@ -14,13 +14,13 @@ use crate::{
         query::{StateResponse, opened::Status},
     },
     contract::{
-        Lease, PriceAlarmDelivery,
+        Lease,
         cmd::{
             ChangeClosePolicy, CloseStatusCmd, CloseStatusDTO, ObtainPayment, OpenLoanRespResult,
         },
         state::{
             Handler, Response,
-            opened::{ChangeClosePolicyPermission, ClosePositionPermission},
+            opened::{ChangeClosePolicyPermission, ClosePositionPermission, permission::PriceAlarmDelivery},
         },
     },
     error::{ContractError, ContractResult},
@@ -247,7 +247,10 @@ impl Handler for Active {
         env: Env,
         info: MessageInfo,
     ) -> ContractResult<Response> {
-        access_control::check(&PriceAlarmDelivery::new(&self.lease.lease.oracle), &info)?;
+        access_control::check(
+            &PriceAlarmDelivery::new(&self.lease.lease.oracle),
+            &info,
+        )?;
 
         self.try_on_alarm(querier, &env)
     }
