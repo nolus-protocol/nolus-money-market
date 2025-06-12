@@ -16,7 +16,6 @@ use crate::{
     },
     contract::{
         Lease,
-        PriceAlarmDelivery,
         cmd::{
             ChangeClosePolicy, CloseStatusCmd, CloseStatusDTO, ObtainPayment, OpenLoanRespResult,
         },
@@ -262,7 +261,10 @@ impl Handler for Active {
         env: Env,
         info: MessageInfo,
     ) -> ContractResult<Response> {
-        access_control::check(&PriceAlarmDelivery::new(&self.lease.lease.oracle), &info)?;
+        access_control::check(
+            &PriceAlarmDelivery::new(&self.lease.lease.oracle),
+            &info,
+        )?;
 
         self.try_on_alarm(querier, &env)
     }
