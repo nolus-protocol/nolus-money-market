@@ -20,7 +20,7 @@ use versioning::{
 
 use crate::{
     api::{ExecuteMsg, MigrateMsg, open::NewLeaseContract, query::QueryMsg},
-    contract::{DexResponseSafeDeliveryPermission, api::Contract},
+    contract::api::Contract,
     error::{ContractError, ContractResult},
 };
 
