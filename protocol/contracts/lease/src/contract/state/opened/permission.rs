@@ -1,4 +1,4 @@
-use access_control::{AccessPermission, permissions::SameContractOnly};
+use access_control::AccessPermission;
 use currency::{Currency, Group, MemberOf};
 use oracle_platform::OracleRef;
 use sdk::cosmwasm_std::MessageInfo;
