@@ -49,7 +49,7 @@ impl<'a> LeaseAdminOnly<'a> {
 }
 
 impl AccessPermission for LeaseAdminOnly<'_> {
-    fn is_granted_to(&self, info: &MessageInfo) -> bool {
+    fn granted_to(&self, info: &MessageInfo) -> bool {
         self.lease_config.lease_admin == info.sender
     }
 }
