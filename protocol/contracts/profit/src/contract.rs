@@ -104,7 +104,7 @@ pub fn execute(
             )
             .check(&info)?;
 
-            try_handle_execute_message_with_info(deps, env, info, State::on_time_alarm)
+            try_handle_execute_message(deps, env, info, State::on_time_alarm)
                 .map(response::response_only_messages)
         }
         ExecuteMsg::Config { cadence_hours } => {
@@ -125,8 +125,10 @@ pub fn execute(
                 &info,
             )?;
 
-            try_handle_execute_message(deps, env, State::on_inner)
-                .map(response::response_only_messages)
+            try_handle_execute_message(deps, env, info, |state, querier, env, _info| {
+                State::on_inner(state, querier, env)
+            })
+            .map(response::response_only_messages)
         }
         ExecuteMsg::DexCallbackContinue() => {
             access_control::check(
@@ -134,11 +136,16 @@ pub fn execute(
                 &info,
             )?;
 
-            try_handle_execute_message(deps, env, State::on_inner_continue)
-                .map(response::response_only_messages)
+            try_handle_execute_message(deps, env, info, |state, querier, env, _info| {
+                State::on_inner_continue(state, querier, env)
+            })
+            .map(response::response_only_messages)
         }
         ExecuteMsg::Heal() => {
-            try_handle_execute_message(deps, env, State::heal).map(response::response_only_messages)
+            try_handle_execute_message(deps, env, info, |state, querier, env, _info| {
+                State::heal(state, querier, env)
+            })
+            .map(response::response_only_messages)
         }
     }
 }
@@ -190,27 +197,6 @@ fn try_handle_neutron_msg(
 }
 
 fn try_handle_execute_message<F, R, E>(
-    deps: DepsMut<'_>,
-    env: Env,
-    handler: F,
-) -> ContractResult<MessageResponse>
-where
-    F: FnOnce(State, QuerierWrapper<'_>, Env) -> R,
-    R: Into<Result<DexResponse<State>, E>>,
-    ContractError: From<E>,
-{
-    let state: State = State::load(deps.storage)?;
-
-    let DexResponse::<State> {
-        response,
-        next_state,
-    } = handler(state, deps.querier, env).into()?;
-
-    next_state.store(deps.storage).map(|()| response)
-}
-
-/// basically the same as try_handle_execute_message but accepts a handler with an extra parameter - MessageInfo
-fn try_handle_execute_message_with_info<F, R, E>(
     deps: DepsMut<'_>,
     env: Env,
     info: MessageInfo,
