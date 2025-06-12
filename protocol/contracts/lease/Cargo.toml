@@ -26,12 +26,10 @@ dex-test_impl = ["swap/dex-test_impl"]
 
 contract = [
     "skel",
-    "dep:access-control",
     "dep:cosmwasm-std",
     "dep:enum_dispatch",
     "dep:lpp",
     "dep:oracle",
-    "dep:oracle-platform",
     "dep:platform",
     "dep:profit",
     "dep:reserve",
@@ -73,14 +71,14 @@ profit = { workspace = true, optional = true, features = ["stub"] }
 reserve = { workspace = true, optional = true, features = ["stub"] }
 timealarms = { workspace = true, optional = true, features = ["stub"] }
 
-access-control = { workspace = true, optional = true }
+access-control = { workspace = true }
 currencies = { workspace = true }
 currency = { workspace = true }
 dex = { workspace = true, features = ["impl"] }
 finance = { workspace = true }
 lpp = { workspace = true, optional = true, features = ["stub"] }
 oracle = { workspace = true, optional = true, features = ["stub_alarms", "stub_price"] }
-oracle-platform = { workspace = true, optional = true }
+oracle-platform = { workspace = true }
 platform = { workspace = true, optional = true }
 sdk = { workspace = true }
 swap = { workspace = true, optional = true }
