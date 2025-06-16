@@ -77,24 +77,11 @@ impl Active {
     }
 
     // Access permission check should already have been done!
-    pub(super) fn assess_close_status(
+    pub(super) fn access_close_status(
         self,
         querier: QuerierWrapper<'_>,
         env: &Env,
     ) -> ContractResult<Response> {
-        access_control::check(&self.lease.lease.oracle, &info.sender)?;
-
-        self.try_on_alarm(querier, env)
-    }
-
-    fn try_on_time_alarm(
-        self,
-        querier: QuerierWrapper<'_>,
-        env: &Env,
-        info: MessageInfo,
-    ) -> ContractResult<Response> {
-        access_control::check(&self.lease.lease.time_alarms, &info.sender)?;
-
         self.try_on_alarm(querier, env)
     }
 

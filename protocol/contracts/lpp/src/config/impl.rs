@@ -1,6 +1,7 @@
 use finance::{percent::bound::BoundToHundredPercent, price::Price};
 use lpp_platform::NLpn;
 use platform::contract::Code;
+use sdk::cosmwasm_std::Addr;
 
 use crate::borrow::InterestRate;
 
@@ -11,16 +12,22 @@ impl Config {
         lease_code: Code,
         borrow_rate: InterestRate,
         min_utilization: BoundToHundredPercent,
+        lease_code_admin: Addr,
     ) -> Self {
         Self {
             lease_code,
             borrow_rate,
             min_utilization,
+            lease_code_admin,
         }
     }
 
     pub const fn lease_code(&self) -> Code {
         self.lease_code
+    }
+
+    pub const fn lease_code_admin(&self) -> Addr {
+        self.lease_code_admin
     }
 
     pub const fn borrow_rate(&self) -> &InterestRate {

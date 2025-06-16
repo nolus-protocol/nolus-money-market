@@ -6,7 +6,7 @@ use oracle::stub;
 use oracle_platform::OracleRef;
 use serde::Serialize;
 
-use access_control::SingleUserAccess;
+use access_control::permissions::SingleUserPermission;
 use currencies::{
     Lpn as LpnCurrency, Lpns as LpnCurrencies, PaymentGroup, Stable as StableCurrency,
 };
@@ -37,6 +37,8 @@ mod error;
 mod lender;
 mod rewards;
 
+type NewLeaseCodePermission<'a> = SingleUserPermission<'a>;
+
 const CONTRACT_STORAGE_VERSION: VersionSegment = 2;
 const CURRENT_RELEASE: ProtocolPackageRelease = ProtocolPackageRelease::current(
     package_name!(),
@@ -53,18 +55,12 @@ pub fn instantiate(
 ) -> Result<CwResponse> {
     deps.api.addr_validate(msg.lease_code_admin.as_str())?;
 
-    SingleUserAccess::new(
-        deps.storage.deref_mut(),
-        crate::access_control::LEASE_CODE_ADMIN_KEY,
-    )
-    .grant_to(&msg.lease_code_admin)?;
-
     Code::try_new(msg.lease_code.into(), &deps.querier)
         .map_err(Into::into)
         .and_then(|lease_code| {
             LiquidityPool::<LpnCurrency>::store(
                 deps.storage,
-                &ApiConfig::new(lease_code, msg.borrow_rate, msg.min_utilization),
+                &ApiConfig::new(lease_code, msg.borrow_rate, msg.min_utilization, msg.lease_code_admin),
             )
         })
         .map(|()| response::empty_response())
@@ -100,11 +96,8 @@ pub fn execute(
         ExecuteMsg::NewLeaseCode {
             lease_code: new_lease_code,
         } => {
-            SingleUserAccess::new(
-                deps.storage.deref_mut(),
-                crate::access_control::LEASE_CODE_ADMIN_KEY,
-            )
-            .check(&info)?;
+            let cfg = Config::load(deps.storage)?;
+            NewLeaseCodePermission::new(&cfg.lease_code_admin, &info)?;
 
             Config::update_lease_code(deps.storage, new_lease_code)
                 .map(|()| PlatformResponse::default())
