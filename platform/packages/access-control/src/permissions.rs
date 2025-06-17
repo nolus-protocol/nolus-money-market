@@ -3,6 +3,7 @@ use sdk::cosmwasm_std::{Addr, ContractInfo};
 use crate::{AccessPermission, Sender};
 
 pub type DexResponseSafeDeliveryPermission<'a> = SameContractOnly<'a>;
+pub type LeaseCodeAdminPermission<'a> = SingleUserPermission<'a>;
 
 pub struct SingleUserPermission<'a> {
     addr: &'a Addr,

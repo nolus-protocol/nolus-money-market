@@ -19,8 +19,6 @@ mod finalize;
 pub mod msg;
 mod state;
 
-pub type DexResponseSafeDeliveryPermission<'a> = SingleUserPermission<'a>;
-
 #[derive(Serialize, Deserialize)]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub(crate) struct Lease {
