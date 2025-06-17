@@ -88,7 +88,7 @@ impl Config {
             pub lease_interest_rate_margin: Percent,
             pub lease_due_period: Duration,
             pub dex: ConnectionParams,
-            // TODO: we don't need this field in the current migration 
+            // TODO: must handle when we merge changes from unify-permissions-model and decide to migrate
             pub contract_owner: Addr,
         }
         Item::new("config")
@@ -109,7 +109,7 @@ impl Config {
                     lease_max_slippages,
                     lease_admin,
                     dex: old_config.dex,
-                    // TODO: we don't need this field in the current migration 
+                    // TODO: must handle when we merge changes from unify-permissions-model and decide to migrate
                     contract_owner: old_config.contract_owner,
                 }
                 .store(storage)

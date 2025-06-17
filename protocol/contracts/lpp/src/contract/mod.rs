@@ -1,5 +1,6 @@
 use std::ops::DerefMut as _;
 
+use access_control::permissions::LeaseCodeAdminPermission;
 use currency::CurrencyDef;
 use finance::coin::{Coin, CoinDTO};
 use oracle::stub;
@@ -50,14 +51,14 @@ pub fn instantiate(
     _info: MessageInfo,
     msg: InstantiateMsg,
 ) -> Result<CwResponse> {
-    deps.api.addr_validate(msg.lease_code_admin.as_str())?;
+    let lease_code_admin = deps.api.addr_validate(msg.lease_code_admin.as_str())?;
 
     Code::try_new(msg.lease_code.into(), &deps.querier)
         .map_err(Into::into)
         .and_then(|lease_code| {
             LiquidityPool::<LpnCurrency>::store(
                 deps.storage,
-                &ApiConfig::new(lease_code, msg.borrow_rate, msg.min_utilization),
+                &ApiConfig::new(lease_code, msg.borrow_rate, msg.min_utilization, lease_code_admin),
             )
         })
         .map(|()| response::empty_response())
@@ -96,7 +97,7 @@ pub fn execute(
             let loaded_config = Config::load(deps.storage)?;
             
             access_control::check(
-                &crate::access_control::LppLeaseCodeAdminPermission::new(&loaded_config.lease_code_admin()),
+                &LeaseCodeAdminPermission::new(&loaded_config.lease_code_admin()),
                 &info.sender,
             )?;
 

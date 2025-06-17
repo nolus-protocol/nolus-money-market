@@ -1,5 +1,6 @@
 use std::ops::DerefMut;
 
+use access_control::permissions::LeaseCodeAdminPermission;
 use currencies::Lpn as LpnCurrency;
 use currency::CurrencyDef;
 use finance::coin::Coin;
@@ -84,11 +85,11 @@ pub fn execute(
    
     match msg {
         ExecuteMsg::NewLeaseCode(code) => access_control::check(
-            &crate::access_control::ReserveLeaseCodeAdminPermission::new(&lease_code_admin),
+            &LeaseCodeAdminPermission::new(&lease_code_admin),
             &info.sender,
         )
         .map_err(Into::into)
-        .and_then(|()| Config::update_lease_code(deps.storage, code, lease_code_admin))
+        .and_then(|()| Config::update_lease_code(deps.storage, code))
         .map(|()| PlatformResponse::default()),
         ExecuteMsg::CoverLiquidationLosses(amount) => {
             let lease = info.sender;

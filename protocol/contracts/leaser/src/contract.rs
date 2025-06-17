@@ -2,8 +2,7 @@ use std::ops::{Deref, DerefMut};
 
 use serde::Serialize;
 
-use access_control::{AccessPermission, ContractOwnerAccess};
-use access_control::{ContractOwnerPermission, SingleUserPermission};
+use access_control::{AccessPermission, ContractOwnerPermission};
 use lease::api::{MigrateMsg as LeaseMigrateMsg, authz::AccessGranted};
 use platform::{
     contract::{self, Code, CodeId},
