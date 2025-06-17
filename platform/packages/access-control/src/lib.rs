@@ -53,22 +53,6 @@ where
     }
 }
 
-pub struct SingleUserPermission<'a> {
-    addr: &'a Addr,
-}
-
-impl<'a> SingleUserPermission<'a> {
-    pub fn new(addr: &'a Addr) -> Self {
-        Self { addr } 
-    }
-}
-
-impl AccessPermission for SingleUserPermission<'_> {
-    fn is_granted_to(&self, caller: &Addr) -> bool {
-        self.addr == caller
-    }
-}
-
 pub type ContractOwnerPermission<'a> = SingleUserPermission<'a>;
 
 pub struct SingleUserAccess<'storage, S>
