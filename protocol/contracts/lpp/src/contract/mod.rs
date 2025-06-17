@@ -1,5 +1,6 @@
 use std::ops::DerefMut as _;
 
+use access_control::permissions::LeaseCodeAdminPermission;
 use currency::CurrencyDef;
 use finance::coin::{Coin, CoinDTO};
 use oracle::stub;
@@ -52,18 +53,7 @@ pub fn instantiate(
     _info: MessageInfo,
     msg: InstantiateMsg,
 ) -> Result<CwResponse> {
-    deps.api
-        .addr_validate(msg.protocol_admin.as_str())
-        .map_err(Into::<ContractError>::into)
-        // cannot validate the protocol admin contract for existence, since it is not yet instantiated
-        .and_then(|protocol_admin| {
-            SingleUserAccess::new(
-                deps.storage.deref_mut(),
-                crate::access_control::PROTOCOL_ADMIN_KEY,
-            )
-            .grant_to(&protocol_admin)
-            .map_err(Into::into)
-        })?;
+    let lease_code_admin = deps.api.addr_validate(msg.protocol_admin.as_str())?;
 
     Code::try_new(
         msg.lease_code.into(),
@@ -71,7 +61,7 @@ pub fn instantiate(
     )
     .map_err(Into::into)
     .and_then(|lease_code| {
-        let config = ApiConfig::new(lease_code, msg.borrow_rate, msg.min_utilization);
+        let config = ApiConfig::new(lease_code, msg.borrow_rate, msg.min_utilization, lease_code_admin);
         Config::store(&config, deps.storage).map(|()| config)
     })
     .and_then(|ref config| {
@@ -117,7 +107,7 @@ pub fn execute(
             let loaded_config = Config::load(deps.storage)?;
             
             access_control::check(
-                &crate::access_control::LppLeaseCodeAdminPermission::new(&loaded_config.lease_code_admin()),
+                &LeaseCodeAdminPermission::new(&loaded_config.lease_code_admin()),
                 &info.sender,
             )?;
 

@@ -36,9 +36,9 @@ impl Config {
         Self::STORAGE.load(storage).map_err(Into::into)
     }
 
-    pub fn update_lease_code(storage: &mut dyn Storage, lease_code: Code, lease_code_admin: Addr) -> Result<()> {
+    pub fn update_lease_code(storage: &mut dyn Storage, lease_code: Code) -> Result<()> {
         Self::STORAGE
-            .update(storage, |_config: Self| Ok(Self::new(lease_code, lease_code_admin)))
+            .update(storage, |config: Self| Ok(Self::new(lease_code, config.lease_code_admin)))
             .map(mem::drop)
     }
 }
@@ -68,7 +68,7 @@ mod test {
         assert_eq!(Ok(()), Config::new(lease_code_id, admin).store(&mut store));
         assert_eq!(
             Ok(()),
-            Config::update_lease_code(&mut store, new_lease_code_id, admin)
+            Config::update_lease_code(&mut store, new_lease_code_id)
         );
         assert_lease_code_id(new_lease_code_id, &store);
     }
