@@ -93,11 +93,10 @@ pub fn execute(
 ) -> ContractResult<CwResponse> {
     match msg {
         ExecuteMsg::TimeAlarm {} => {
-            // TODO: this won't work - how to load config? should we query for the config directly?
-            let  time_alarms_ref = Config::time_alarms(&self);
+            let config = State::load(deps.storage)?.load_config()?;
             
             access_control::check(
-                &TimeAlarmDelivery::new(&time_alarms_ref),
+                &TimeAlarmDelivery::new(&config.time_alarms()?),
                 &info.sender,
             )?;
 
