@@ -17,14 +17,13 @@ use sdk::{
     },
     neutron_sdk::sudo::msg::SudoMsg as NeutronSudoMsg,
 };
-use timealarms::stub::TimeAlarmsRef;
+use timealarms::stub::{TimeAlarmDelivery, TimeAlarmsRef};
 use versioning::{
     ProtocolMigrationMessage, ProtocolPackageRelease, UpdatablePackage as _, VersionSegment,
     package_name, package_version,
 };
 
 use crate::{
-    access_control::ProfitTimeAlarmPermission,
     error::ContractError,
     msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg},
     profit::Profit,
@@ -38,8 +37,6 @@ const CURRENT_RELEASE: ProtocolPackageRelease = ProtocolPackageRelease::current(
     package_version!(),
     CONTRACT_STORAGE_VERSION,
 );
-
-pub type DexResponseSafeDeliveryProfitPermission<'a> = SingleUserPermission<'a>;
 
 #[entry_point]
 pub fn instantiate(
@@ -100,7 +97,7 @@ pub fn execute(
             let  time_alarms_ref = Config::time_alarms(&self);
             
             access_control::check(
-                &ProfitTimeAlarmPermission::new(&time_alarms_ref),
+                &TimeAlarmDelivery::new(&time_alarms_ref),
                 &info.sender,
             )?;
 

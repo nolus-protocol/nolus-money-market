@@ -323,17 +323,26 @@ mod test {
     fn new_store_load() {
         let bank = MockBankView::<TheCurrency, TheCurrency>::only_balance(Coin::ZERO);
         let lease_code_id = Code::unchecked(123);
-        let config = ApiConfig::new(
-            lease_code_id,
-            InterestRate::new(
-                BASE_INTEREST_RATE,
-                UTILIZATION_OPTIMAL,
-                ADDON_OPTIMAL_INTEREST_RATE,
-            )
-            .expect("Couldn't construct interest rate value!"),
-            DEFAULT_MIN_UTILIZATION,
-        );
-        let lpp = LiquidityPool::<'_, '_, TheCurrency, _>::new(&config, &bank);
+        let lease_code_admin = Addr::unchecked("admin");
+
+        Config::store(
+            &ApiConfig::new(
+                lease_code_id,
+                InterestRate::new(
+                    BASE_INTEREST_RATE,
+                    UTILIZATION_OPTIMAL,
+                    ADDON_OPTIMAL_INTEREST_RATE,
+                )
+                .expect("Couldn't construct interest rate value!"),
+                DEFAULT_MIN_UTILIZATION,
+                lease_code_admin,
+            ),
+            deps.as_mut().storage,
+        )
+        .expect("Failed to store Config!");
+        Total::<TheCurrency>::new()
+            .store(deps.as_mut().storage)
+            .expect("can't initialize Total");
 
         let mut store = MockStorage::new();
         let now = Timestamp::default();
@@ -773,7 +782,7 @@ mod test {
         ) {
             let now = Timestamp::from_seconds(120);
             let mut total: Total<TheCurrency> = Total::new();
-            let admin = Addr::unchecked("admin");
+            let lease_code_admin = Addr::unchecked("admin");
 
             total
                 .borrow(now, Coin::new(borrowed), Percent100::ZERO)

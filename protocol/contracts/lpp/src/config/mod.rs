@@ -2,6 +2,7 @@ use serde::{Deserialize, Serialize};
 
 use finance::percent::Percent100;
 use platform::contract::Code;
+use sdk::cosmwasm_std::Addr;
 
 use crate::borrow::InterestRate;
 
@@ -13,4 +14,5 @@ pub struct Config {
     lease_code: Code,
     borrow_rate: InterestRate,
     min_utilization: Percent100,
+    lease_code_admin: Addr,
 }
