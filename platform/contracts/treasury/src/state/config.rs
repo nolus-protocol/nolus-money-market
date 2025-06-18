@@ -20,7 +20,7 @@ pub(crate) struct Config {
     // A list of (minTVL_MNLS: u32, APR%o) which defines the APR as per the TVL.
     pub tvl_to_apr: RewardScale,
     // An address with permission to dispatch alarms
-    pub timealarms_permission: Addr,
+    pub timealarms: Addr,
 }
 
 impl Config {
@@ -30,13 +30,13 @@ impl Config {
         cadence_hours: CadenceHours,
         protocols_registry: Addr,
         tvl_to_apr: RewardScale,
-        timealarms_permission: Addr,
+        timealarms: Addr,
     ) -> Self {
         Config {
             cadence_hours,
             protocols_registry,
             tvl_to_apr,
-            timealarms_permission,
+            timealarms,
         }
     }
 

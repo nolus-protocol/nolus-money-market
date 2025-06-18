@@ -50,14 +50,13 @@ pub fn instantiate(
     addr_validator.check_contract(&msg.oracle)?;
     // msg.timealarms is validated on TimeAlarmsRef instantiation
 
-    ContractOwnerAccess::new(deps.storage.deref_mut()).grant_to(&info.sender)?;
-
     let (state, response) = State::start(
         Config::new(
             msg.cadence_hours,
             msg.treasury,
             OracleRef::try_from_base(msg.oracle, deps.querier)?,
             TimeAlarmsRef::new(msg.timealarms, &addr_validator)?,
+            info.sender,
         ),
         msg.dex,
     );
@@ -106,7 +105,12 @@ pub fn execute(
             .map(response::response_only_messages)
         }
         ExecuteMsg::Config { cadence_hours } => {
-            ContractOwnerAccess::new(deps.storage.deref()).check(&info)?;
+            let config = State::load(deps.storage)?.load_config()?;
+            
+            access_control::check(
+                &ContractOwnerPermission::new(&config.contract_owner()?),
+                &info.sender,
+            )?;
 
             let StateMachineResponse {
                 response,
