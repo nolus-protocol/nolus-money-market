@@ -1,4 +1,4 @@
-use access_control::ContractOwnerAccess;
+use access_control::permissions::ContractOwnerPermission;
 use platform::{batch::Batch, response};
 use sdk::{
     cosmwasm_ext::Response as CwResponse,
@@ -20,7 +20,7 @@ use crate::{
         ProtocolQueryResponse, ProtocolsQueryResponse, QueryMsg, SudoMsg,
     },
     result::Result as ContractResult,
-    state::{contract::ExpectedInstantiation, contracts as state_contracts},
+    state::{config::Config, contract::ExpectedInstantiation, contracts as state_contracts},
     validate::Validate as _,
 };
 
@@ -43,7 +43,7 @@ pub fn instantiate(
         contracts,
     }: InstantiateMsg,
 ) -> ContractResult<CwResponse> {
-    ContractOwnerAccess::new(deps.branch().storage).grant_to(dex_admin)?;
+    Config::new(dex_admin).store(deps.storage)?;
 
     contracts.validate(deps.querier)?;
 
@@ -120,8 +120,7 @@ pub fn sudo(deps: DepsMut<'_>, env: Env, msg: SudoMsg) -> ContractResult<CwRespo
             .addr_validate(new_dex_admin.as_str())
             .map_err(Into::into)
             .and_then(|new_dex_admin| {
-                ContractOwnerAccess::new(deps.storage)
-                    .grant_to(&new_dex_admin)
+                Config::new(new_dex_admin).store(deps.storage)
                     .map(|()| response::empty_response())
                     .map_err(Into::into)
             }),
@@ -220,9 +219,12 @@ fn instantiate_reply(
 }
 
 fn ensure_sender_is_owner(storage: &mut dyn Storage, info: &MessageInfo) -> ContractResult<()> {
-    ContractOwnerAccess::new(storage)
-        .check(info)
-        .map_err(Into::into)
+    let contract_owner = Config::load(storage)?.contract_owner();
+    access_control::check(
+        &ContractOwnerPermission::new(&contract_owner),
+        &info,
+    )
+    .map_err(Into::into)
 }
 
 fn register_protocol(
