@@ -42,7 +42,6 @@ where
     }
 }
 
-pub type ContractOwnerPermission<'a> = SingleUserPermission<'a>;
 
 pub struct SingleUserAccess<'storage, S>
 where

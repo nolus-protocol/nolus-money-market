@@ -20,7 +20,7 @@ use sdk::{
         entry_point, to_json_binary,
     },
 };
-use timealarms::stub::TimeAlarmsRef;
+use timealarms::stub::{TimeAlarmDelivery, TimeAlarmsRef};
 use versioning::{
     PlatformMigrationMessage, PlatformPackageRelease, UpdatablePackage as _, VersionSegment,
     package_name, package_version,
@@ -80,11 +80,10 @@ pub fn execute(
     msg: ExecuteMsg,
 ) -> ContractResult<CwResponse> {
     match msg {
-        
         ExecuteMsg::TimeAlarm {} => {
             let config = try_load_config(storage)?;
             access_control::check(
-                &TreasuryAlarmsDispatchPermission::new(&config.timealarms_permission),
+                &TimeAlarmDelivery::new(&config.timealarms),
                 &info,
             )?;
 
@@ -240,9 +239,14 @@ fn setup_dispatching(
     platform::contract::validate_addr(querier, &msg.timealarms)
         .map_err(ContractError::ValidateTimeAlarmsAddr)?;
 
-    Config::new(msg.cadence_hours, msg.protocols_registry, msg.tvl_to_apr, msg.timealarms)
-        .store(storage)
-        .map_err(ContractError::SaveConfig)?;
+    Config::new(
+        msg.cadence_hours,
+        msg.protocols_registry,
+        msg.tvl_to_apr,
+        msg.timealarms,
+    )
+    .store(storage)
+    .map_err(ContractError::SaveConfig)?;
     DispatchLog::update(storage, env.block.time)?;
 
     setup_alarm(
