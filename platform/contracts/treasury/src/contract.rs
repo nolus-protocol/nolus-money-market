@@ -78,11 +78,10 @@ pub fn execute(
     msg: ExecuteMsg,
 ) -> ContractResult<CwResponse> {
     match msg {
-        
         ExecuteMsg::TimeAlarm {} => {
             let config = try_load_config(storage)?;
             access_control::check(
-                &TreasuryAlarmsDispatchPermission::new(&config.timealarms_permission),
+                &TimeAlarmDelivery::new(&config.timealarms),
                 &info,
             )?;
 
