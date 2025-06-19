@@ -76,7 +76,6 @@ pub(super) fn query_rewards(storage: &dyn Storage, addr: Addr) -> Result<Rewards
 
 #[cfg(test)]
 mod test {
-    use access_control::ContractOwnerAccess;
     use finance::percent::{Percent, bound::BoundToHundredPercent};
     use platform::contract::Code;
     use sdk::cosmwasm_std::{
@@ -107,10 +106,7 @@ mod test {
 
         let mut lpp_balance = 0;
         let deposit = 20_000;
-
-        ContractOwnerAccess::new(deps.as_mut().storage)
-            .grant_to(&Addr::unchecked("admin"))
-            .unwrap();
+        let lease_code_admin = Addr::unchecked("admin");
 
         LiquidityPool::<TheCurrency>::store(
             deps.as_mut().storage,
@@ -123,6 +119,7 @@ mod test {
                 )
                 .expect("Couldn't construct interest rate value!"),
                 DEFAULT_MIN_UTILIZATION,
+                lease_code_admin,
             ),
         )
         .unwrap();
