@@ -759,6 +759,16 @@ mod test {
         assert_eq!(withdraw, Coin::new(1110));
     }
 
+<<<<<<< HEAD
+=======
+    fn coin_cw<IntoCoin>(into_coin: IntoCoin) -> CwCoin
+    where
+        IntoCoin: Into<Coin<TheCurrency>>,
+    {
+        coin_legacy::to_cosmwasm_on_nolus::<TheCurrency>(into_coin.into())
+    }
+
+>>>>>>> 7eed28148 (chore: remove last remains of singleUserAccess and contractOwnerAccess)
     mod min_utilization {
         use finance::{
             coin::{Amount, Coin},
