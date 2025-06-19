@@ -331,7 +331,6 @@ where
 
 #[cfg(test)]
 mod test {
-    use access_control::ContractOwnerAccess;
     use currencies::Lpn;
     use finance::{
         coin::{Amount, Coin},
@@ -924,12 +923,6 @@ mod test {
         IntoCoin: Into<Coin<TheCurrency>>,
     {
         coin_legacy::to_cosmwasm_on_nolus::<TheCurrency>(into_coin.into())
-    }
-
-    fn grant_admin_access(deps: DepsMut<'_>, admin: &Addr) {
-        ContractOwnerAccess::new(deps.storage)
-            .grant_to(admin)
-            .unwrap();
     }
 
     mod min_utilization {

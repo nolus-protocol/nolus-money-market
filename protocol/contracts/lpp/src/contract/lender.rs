@@ -126,7 +126,6 @@ pub fn query_balance(storage: &dyn Storage, addr: Addr) -> Result<BalanceRespons
 mod test {
     use std::ops::DerefMut as _;
 
-    use access_control::ContractOwnerAccess;
     use finance::percent::{Percent, bound::BoundToHundredPercent};
     use platform::contract::Code;
     use sdk::cosmwasm_std::{Addr, Storage};
@@ -141,9 +140,7 @@ mod test {
     const DEFAULT_MIN_UTILIZATION: BoundToHundredPercent = BoundToHundredPercent::ZERO;
 
     fn setup_storage(mut storage: &mut dyn Storage, min_utilization: BoundToHundredPercent) {
-        ContractOwnerAccess::new(storage.deref_mut())
-            .grant_to(&Addr::unchecked("admin"))
-            .unwrap();
+        let lease_code_admin = Addr::unchecked("admin");
 
         LiquidityPool::<TheCurrency>::store(
             storage,
@@ -156,6 +153,7 @@ mod test {
                 )
                 .expect("Couldn't construct interest rate value!"),
                 min_utilization,
+                lease_code_admin,
             ),
         )
         .unwrap();
