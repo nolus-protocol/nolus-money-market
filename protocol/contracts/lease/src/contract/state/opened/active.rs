@@ -237,11 +237,6 @@ impl Handler for Active {
         env: Env,
         info: MessageInfo,
     ) -> ContractResult<Response> {
-        access_control::check(
-            &TimeAlarmDelivery::new(&self.lease.lease.time_alarms),
-            &info,
-        )?;
-
         self.try_on_alarm(querier, &env)
     }
 
