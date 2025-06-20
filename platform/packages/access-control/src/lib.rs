@@ -1,9 +1,4 @@
-use std::ops::{Deref, DerefMut};
-
-use sdk::{
-    cosmwasm_std::{Addr, MessageInfo, Storage},
-    cw_storage_plus::Item,
-};
+use sdk::cosmwasm_std::MessageInfo;
 
 use self::error::{Error, Result};
 use self::permissions::SingleUserPermission;
