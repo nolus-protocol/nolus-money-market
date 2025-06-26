@@ -225,7 +225,7 @@ where
         block_time: Timestamp,
         sender: Addr,
         prices: Vec<PriceDTO<PriceG>>,
-    ) -> Result<(), PriceG> {
+    ) -> Result<MessageResponse, PriceG> {
         self.tree().and_then(|tree| {
             self.feeds_read_write()
                 .feed_prices(&tree, block_time, sender, &prices)
