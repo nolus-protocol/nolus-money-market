@@ -24,8 +24,8 @@ impl Config {
         self.lease_code
     }
 
-    pub const fn lease_code_admin(&self) -> Addr {
-        self.lease_code_admin
+    pub const fn lease_code_admin(&self) -> &Addr {
+        &self.lease_code_admin
     }
 
     pub fn store(&self, storage: &mut dyn Storage) -> Result<()> {

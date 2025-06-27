@@ -34,8 +34,8 @@ impl Config {
         self.min_utilization
     }
 
-    pub const fn lease_code_admin(&self) -> Addr {
-        self.lease_code_admin
+    pub const fn lease_code_admin(&self) -> &Addr {
+        &self.lease_code_admin
     }
 
     pub fn initial_derivative_price<Lpn>() -> Price<NLpn, Lpn>
