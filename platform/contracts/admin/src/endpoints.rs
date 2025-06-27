@@ -219,11 +219,13 @@ fn instantiate_reply(
 }
 
 fn ensure_sender_is_owner(storage: &mut dyn Storage, info: &MessageInfo) -> ContractResult<()> {
-    let contract_owner = Config::load(storage)?.contract_owner();
-    access_control::check(
-        &ContractOwnerPermission::new(&contract_owner),
-        &info,
-    )
+    Config::load(storage)
+    .and_then(|config| {
+        access_control::check(
+            &ContractOwnerPermission::new(&config.contract_owner()),
+            &info,
+        )
+    })
     .map_err(Into::into)
 }
 

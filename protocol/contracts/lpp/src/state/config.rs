@@ -23,10 +23,10 @@ impl Config {
         Self::STORAGE.load(storage).map_err(Into::into)
     }
 
-    pub fn update_lease_code(storage: &mut dyn Storage, lease_code: Code) -> Result<()> {
-        Self::update_field(storage, |config| {
-            ApiConfig::new(lease_code, *config.borrow_rate(), config.min_utilization(), config.lease_code_admin())
-        })
+    pub fn update_lease_code(self, lease_code_new: Code) -> Result<Self> {
+        self.lease_code = lease_code_new;
+        self.store(storage)
+        .map(|_| self)
     }
 
     pub fn update_borrow_rate(storage: &mut dyn Storage, borrow_rate: InterestRate) -> Result<()> {
