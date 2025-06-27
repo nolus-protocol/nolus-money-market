@@ -151,8 +151,10 @@ fn process_execute(
         }
         ExecuteMsg::ClosePosition(spec) => state.close_position(spec, querier, env, info),
         ExecuteMsg::TimeAlarm {} => {
-            state.check_time_alarm_permission(info)?;
-            state.on_time_alarm(querier, env, info)
+            state.check_time_alarm_permission(&info)
+            .and_then(|()| {
+                state.on_time_alarm(querier, env, info)
+            })
         }
         ExecuteMsg::PriceAlarm() => state.on_price_alarm(querier, env, info),
         ExecuteMsg::DexCallback() => {

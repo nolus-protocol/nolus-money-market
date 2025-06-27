@@ -107,7 +107,7 @@ pub fn execute(
             let loaded_config = Config::load(deps.storage)?;
             
             access_control::check(
-                &LeaseCodeAdminPermission::new(&loaded_config.lease_code_admin()),
+                &LeaseCodeAdminPermission::new(loaded_config.lease_code_admin()),
                 &info.sender,
             )?;
 

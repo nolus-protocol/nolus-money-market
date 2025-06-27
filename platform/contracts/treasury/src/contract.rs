@@ -80,14 +80,17 @@ pub fn execute(
 ) -> ContractResult<CwResponse> {
     match msg {
         ExecuteMsg::TimeAlarm {} => {
-            let config = try_load_config(storage)?;
-            access_control::check(
-                &TimeAlarmDelivery::new(&config.timealarms),
-                &info,
-            )?;
-
-            try_dispatch(deps.storage, deps.querier, &env, info.sender)
-                .map(response::response_only_messages)
+            try_load_config(deps.storage)
+            .and_then(|config| {
+                access_control::check(
+                    &TimeAlarmDelivery::new(&config.timealarms_permission),
+                    &info,
+                )
+            })
+            .and_then(|()| {
+                try_dispatch(deps.storage, deps.querier, &env, info.sender)
+            })
+            .map(response::response_only_messages)
         }
     }
     .inspect_err(platform_error::log(deps.api))

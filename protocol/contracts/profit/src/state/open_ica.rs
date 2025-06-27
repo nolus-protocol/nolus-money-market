@@ -62,7 +62,7 @@ impl Display for OpenIca {
 }
 
 impl ConfigManagement for IcaConnector {
-    fn load_config(&self) -> ContractResult<Config> {
-        Ok(self.config)
+    fn load_config(&self) -> ContractResult<&Config> {
+        Ok(&self.config)
     }
 }

@@ -16,8 +16,8 @@ impl Config {
         Self { contract_owner }
     }
 
-    pub const fn contract_owner(&self) -> Addr {
-        self.contract_owner
+    pub const fn contract_owner(&self) -> &Addr {
+        &self.contract_owner
     }
 
     pub fn store(&self, storage: &mut dyn Storage) -> Result<()> {

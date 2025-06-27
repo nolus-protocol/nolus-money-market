@@ -1,4 +1,3 @@
-use access_control::SingleUserPermission;
 use serde::{Deserialize, Serialize};
 
 use currency::{Currency, Group, MemberOf};
