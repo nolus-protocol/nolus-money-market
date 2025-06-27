@@ -1,6 +1,6 @@
-use access_control::SingleUserPermission;
 use serde::{Deserialize, Serialize};
 
+use access_control::SingleUserPermission;
 use dex::{Account, Connectable, ConnectionParams};
 use sdk::cosmwasm_std::QuerierWrapper;
 

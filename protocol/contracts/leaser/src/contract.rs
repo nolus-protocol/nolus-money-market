@@ -127,7 +127,7 @@ pub fn execute(
         } => {
             let config = Config::load(&deps.storage)?;
             access_control::check(
-                &ContractOwnerPermission::new(&config.contract_owner),
+                &ContractOwnerPermission::new(&config.contract_owner()),
                 &info,
             )
             .map_err(Into::into)
@@ -147,13 +147,17 @@ pub fn execute(
             max_leases,
             to_release,
         } => {
-            let config = Config::load(&deps.storage)?;
-            access_control::check(
-                &ContractOwnerPermission::new(&config.contract_owner),
-                &info,
-            )
+            Config::load(&deps.storage)
+            .and_then(|config| {
+                access_control::check(
+                    &ContractOwnerPermission::new(&config.contract_owner()),
+                    &info,
+                )
+            })
             .map_err(Into::into)
-            .and_then(|()| validate_customer(next_customer, deps.api, deps.querier))
+            .and_then(|()| {
+                validate_customer(next_customer, deps.api, deps.querier)
+            })
             .and_then(|next_customer_validated| {
                 leaser::try_migrate_leases_cont(
                     deps.storage,
