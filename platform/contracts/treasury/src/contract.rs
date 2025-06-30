@@ -80,7 +80,7 @@ pub fn execute(
             try_load_config(deps.storage)
             .and_then(|config| {
                 access_control::check(
-                    &TimeAlarmDelivery::new(&config.timealarms_permission),
+                    &TimeAlarmDelivery::new(config.timealarms()),
                     &info,
                 )
             })
