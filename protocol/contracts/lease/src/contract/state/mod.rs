@@ -95,11 +95,11 @@ impl TimeAlarmPermission for State {
         &self,
         info: &MessageInfo,
     ) -> ContractResult<Response> {
-        if self == &State::OpenedActive {
+        if matches!(self, State::OpenedActive) {
             access_control::check(
                 &TimeAlarmDelivery::new(&self.lease.time_alarms),
                 &info,
-            )?;
+            );
         } else {
             ignore_msg(self)
         }
