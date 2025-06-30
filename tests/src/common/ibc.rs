@@ -62,20 +62,17 @@ pub(crate) fn do_transfer<'r>(
     sender: Addr,
     recipient: Addr,
     on_remote_chain: bool,
-    cw_coins: &[CwCoin],
+    cw_coin: &CwCoin,
 ) -> ResponseWithInterChainMsgs<'r, AppResponse> {
     let contract_addr: Addr = if on_remote_chain { &recipient } else { &sender }.clone();
 
-    cw_coins.iter().for_each(|cw_coin| {
-        do_transfer_no_response(
-            app,
-            sender.clone(),
-            recipient.clone(),
-            on_remote_chain,
-            cw_coin,
-        )
-    });
-
+    do_transfer_no_response(
+        app,
+        sender.clone(),
+        recipient.clone(),
+        on_remote_chain,
+        cw_coin,
+    );
     send_blank_response(app, contract_addr)
 }
 

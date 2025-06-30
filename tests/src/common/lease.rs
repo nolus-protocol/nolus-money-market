@@ -299,13 +299,17 @@ where
 
     check_state_opening(app, lease_addr.clone());
 
-    ibc::do_transfer(
+    () = ibc::do_transfer(
         app,
         lease_addr.clone(),
         ica_addr.clone(),
         false,
-        &[downpayment, borrow],
+        &downpayment,
     )
+    .ignore_response()
+    .unwrap_response();
+
+    ibc::do_transfer(app, lease_addr.clone(), ica_addr.clone(), false, &borrow)
 }
 
 fn send_open_ica_response<'r>(

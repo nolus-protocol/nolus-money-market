@@ -1,5 +1,3 @@
-use std::slice;
-
 use currencies::{LeaseGroup, PaymentGroup, testing::PaymentC5};
 use currency::CurrencyDef;
 use finance::{
@@ -324,7 +322,7 @@ fn do_close(
         lease_ica.clone(),
         lease_addr.clone(),
         true,
-        slice::from_ref(&transfer_amount),
+        &transfer_amount,
     );
 
     if exp_loan_close && !exp_lease_amount_after.is_zero() {

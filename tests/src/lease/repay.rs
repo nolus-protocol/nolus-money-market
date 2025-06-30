@@ -345,13 +345,7 @@ where
 
     _ = response.unwrap_response();
 
-    ibc::do_transfer(
-        &mut test_case.app,
-        lease_ica,
-        lease,
-        true,
-        slice::from_ref(&transfer_amount),
-    )
+    ibc::do_transfer(&mut test_case.app, lease_ica, lease, true, &transfer_amount)
 }
 
 fn send_payment_and_transfer<
@@ -410,7 +404,7 @@ where
         lease_addr,
         ica_addr,
         false,
-        slice::from_ref(&transfer_amount),
+        &transfer_amount,
     )
 }
 
@@ -511,7 +505,7 @@ fn finish_closing<ProtocolsRegistry, Treasury, Profit, Reserve, Lpp, Oracle, Tim
         ica_addr,
         lease.clone(),
         true,
-        slice::from_ref(&to_cosmwasm_on_dex(expected_funds)),
+        &to_cosmwasm_on_dex(expected_funds),
     )
     .unwrap_response();
 

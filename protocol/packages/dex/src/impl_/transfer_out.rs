@@ -14,8 +14,8 @@ use platform::{
 use sdk::cosmwasm_std::{Binary, Env, QuerierWrapper, Timestamp};
 
 use crate::{
-    Contract, ContractInSwap, Enterable, Stage, SwapTask as SwapTaskT, TimeAlarm, error::Result,
-    swap::ExactAmountIn,
+    CoinsNb, Contract, ContractInSwap, Enterable, Stage, SwapTask as SwapTaskT, TimeAlarm,
+    error::Result, swap::ExactAmountIn,
 };
 
 #[cfg(feature = "migration")]
@@ -29,7 +29,9 @@ use super::{
 
 /// Transfer out a list of coins to DEX
 ///
-/// In does it in a single transaction with multiple messages
+/// Supports up to `CoinsNb::MAX` number of coins.
+/// In does it in a single transaction with multiple messages expecting
+/// an acknowledgment per message.
 #[derive(Serialize, Deserialize)]
 #[serde(bound(
     serialize = "SwapTask: Serialize",
@@ -37,7 +39,13 @@ use super::{
 ))]
 pub struct TransferOut<SwapTask, SEnum, SwapClient> {
     spec: SwapTask,
-    #[serde(skip)]
+    acks_left: CoinsNb,
+    // TODO migrate the following two fields, acks_left = last_coin_index - coin_index + 1, sending
+    // `last_coin_index - coin_index` transfer messages.
+    // Use an enum with `#[serde(untagged)]` to favor old data.
+    // coin_index: CoinsNb,
+    // last_coin_index: CoinsNb,
+    // #[serde(skip)]
     _state_enum: PhantomData<SEnum>,
     #[serde(skip)]
     _swap_client: PhantomData<SwapClient>,
@@ -48,14 +56,37 @@ where
     SwapTask: SwapTaskT,
 {
     pub fn new(spec: SwapTask) -> Self {
-        Self {
+        let acks_left = Self::coins_len(&spec);
+        Self::new_with_index(spec, acks_left)
+    }
+
+    fn new_with_index(spec: SwapTask, acks_left: CoinsNb) -> Self {
+        let ret = Self {
             spec,
+            acks_left,
             _state_enum: PhantomData,
             _swap_client: PhantomData,
-        }
+        };
+        debug_assert!(ret.invariant());
+        ret
+    }
+
+    fn invariant(&self) -> bool {
+        self.acks_left > 0
+    }
+
+    fn coins_len(spec: &SwapTask) -> CoinsNb {
+        let ret = spec.coins().into_iter().count();
+        assert!(ret > 0, "The swap task did not provide any coins!");
+        ret.try_into()
+            .expect("Functionality doesn't support this many coins!")
     }
 
     fn enter_state(&self, now: Timestamp) -> Result<Batch> {
+        debug_assert!(
+            Self::coins_len(&self.spec) == self.acks_left,
+            "calling 'enter_state' past initialization"
+        );
         let mut trx = TransferOutTrx::new(self.spec.dex_account(), now);
 
         self.spec
@@ -63,6 +94,21 @@ where
             .into_iter()
             .try_for_each(|coin| trx.send(&coin))
             .map(|()| trx.into())
+    }
+
+    fn next(self) -> Self {
+        debug_assert!(!self.last_ack());
+
+        let acks_left = self.acks_left.checked_sub(1).expect(
+            "the method contract precondition `!self.last_ack()` should have been respected",
+        );
+
+        Self::new_with_index(self.spec, acks_left)
+    }
+
+    fn last_ack(&self) -> bool {
+        debug_assert!(self.acks_left > 0);
+        self.acks_left == 1
     }
 }
 
@@ -76,20 +122,17 @@ where
     fn on_response<NextState, Label>(
         next: NextState,
         label: Label,
-        now: Timestamp,
-        querier: QuerierWrapper<'_>,
+        msgs: Batch,
     ) -> ContinueResult<Self>
     where
         NextState: Enterable + Into<SEnum>,
         Label: Into<String>,
     {
-        next.enter(now, querier).and_then(|batch| {
-            let emitter = Emitter::of_type(label);
-            response::res_continue::<_, _, Self>(
-                MessageResponse::messages_with_events(batch, emitter),
-                next,
-            )
-        })
+        let emitter = Emitter::of_type(label);
+        response::res_continue::<_, _, Self>(
+            MessageResponse::messages_with_events(msgs, emitter),
+            next,
+        )
     }
 }
 
@@ -123,7 +166,14 @@ where
     ) -> HandlerResult<Self> {
         let label = self.spec.label();
         let now = env.block.time;
-        Self::on_response(SwapExactIn::new(self.spec), label, now, querier).into()
+        if self.last_ack() {
+            let next = SwapExactIn::new(self.spec);
+            next.enter(now, querier)
+                .and_then(|msgs| Self::on_response(next, label, msgs))
+        } else {
+            Self::on_response(self.next(), label, Batch::default())
+        }
+        .into()
     }
 
     fn on_timeout(self, querier: QuerierWrapper<'_>, env: Env) -> ContinueResult<Self> {
