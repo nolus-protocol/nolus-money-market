@@ -123,7 +123,7 @@ impl Config {
             .map_err(Into::into)
     }
 
-    pub fn contract_owner(&self) -> &Addr {
+    pub const fn contract_owner(&self) -> &Addr {
         &self.contract_owner
     }
 }

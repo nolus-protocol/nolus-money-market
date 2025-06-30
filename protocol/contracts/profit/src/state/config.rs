@@ -62,7 +62,7 @@ impl Config {
         &self.time_alarms
     }
 
-    pub fn contract_owner(&self) -> &Addr {
+    pub const fn contract_owner(&self) -> &Addr {
         &self.contract_owner
     }
 }
