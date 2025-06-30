@@ -331,7 +331,6 @@ where
 
 #[cfg(test)]
 mod test {
-    use access_control::ContractOwnerAccess;
     use currencies::Lpn;
     use finance::{
         coin::{Amount, Coin},
@@ -370,9 +369,7 @@ mod test {
         let mut deps = testing::mock_dependencies_with_balance(&[balance_mock.clone()]);
         let env = testing::mock_env();
         let lease_code_id = Code::unchecked(123);
-        let admin = Addr::unchecked("admin");
-
-        grant_admin_access(deps.as_mut(), &admin);
+        let lease_code_admin = Addr::unchecked("admin");
 
         Config::store(
             &ApiConfig::new(
@@ -384,6 +381,7 @@ mod test {
                 )
                 .expect("Couldn't construct interest rate value!"),
                 DEFAULT_MIN_UTILIZATION,
+                lease_code_admin,
             ),
             deps.as_mut().storage,
         )
@@ -407,13 +405,11 @@ mod test {
         let balance_mock = coin_cw(10_000_000);
         let mut deps = testing::mock_dependencies_with_balance(&[balance_mock.clone()]);
         let mut env = testing::mock_env();
-        let admin = Addr::unchecked("admin");
+        let lease_code_admin = Addr::unchecked("admin");
         let loan = Addr::unchecked("loan");
         env.block.time = Timestamp::from_nanos(0);
 
         let lease_code_id = Code::unchecked(123);
-
-        grant_admin_access(deps.as_mut(), &admin);
 
         Config::store(
             &ApiConfig::new(
@@ -425,6 +421,7 @@ mod test {
                 )
                 .expect("Couldn't construct interest rate value!"),
                 DEFAULT_MIN_UTILIZATION,
+                lease_code_admin,
             ),
             deps.as_mut().storage,
         )
@@ -493,12 +490,10 @@ mod test {
 
         let mut deps = testing::mock_dependencies_with_balance(&[coin_cw(lpp_balance)]);
         let mut env = testing::mock_env();
-        let admin = Addr::unchecked("admin");
+        let lease_code_admin = Addr::unchecked("admin");
         let lease_addr = Addr::unchecked("loan");
         env.block.time = Timestamp::from_nanos(0);
         let lease_code_id = Code::unchecked(123);
-
-        grant_admin_access(deps.as_mut(), &admin);
 
         Config::store(
             &ApiConfig::new(
@@ -510,6 +505,7 @@ mod test {
                 )
                 .expect("Couldn't construct interest rate value!"),
                 DEFAULT_MIN_UTILIZATION,
+                lease_code_admin,
             ),
             deps.as_mut().storage,
         )
@@ -595,11 +591,10 @@ mod test {
     fn try_open_loan_with_no_liquidity() {
         let mut deps = testing::mock_dependencies();
         let env = testing::mock_env();
-        let admin = Addr::unchecked("admin");
+        let lease_code_admin = Addr::unchecked("admin");
         let loan = Addr::unchecked("loan");
         let lease_code_id = Code::unchecked(123);
 
-        grant_admin_access(deps.as_mut(), &admin);
         Config::store(
             &ApiConfig::new(
                 lease_code_id,
@@ -610,6 +605,7 @@ mod test {
                 )
                 .expect("Couldn't construct interest rate value!"),
                 DEFAULT_MIN_UTILIZATION,
+                lease_code_admin,
             ),
             deps.as_mut().storage,
         )
@@ -630,11 +626,10 @@ mod test {
         let balance_mock = [coin_cw(10_000_000)];
         let mut deps = testing::mock_dependencies_with_balance(&balance_mock);
         let env = testing::mock_env();
-        let admin = Addr::unchecked("admin");
+        let lease_code_admin = Addr::unchecked("admin");
         let loan = Addr::unchecked("loan");
         let lease_code_id = Code::unchecked(123);
 
-        grant_admin_access(deps.as_mut(), &admin);
         Config::store(
             &ApiConfig::new(
                 lease_code_id,
@@ -645,6 +640,7 @@ mod test {
                 )
                 .expect("Couldn't construct interest rate value!"),
                 DEFAULT_MIN_UTILIZATION,
+                lease_code_admin,
             ),
             deps.as_mut().storage,
         )
@@ -665,11 +661,10 @@ mod test {
         let balance_mock = [coin_cw(10_000_000)];
         let mut deps = testing::mock_dependencies_with_balance(&balance_mock);
         let env = testing::mock_env();
-        let admin = Addr::unchecked("admin");
+        let lease_code_admin = Addr::unchecked("admin");
         let loan = Addr::unchecked("loan");
         let lease_code_id = Code::unchecked(123);
 
-        grant_admin_access(deps.as_mut(), &admin);
         Config::store(
             &ApiConfig::new(
                 lease_code_id,
@@ -680,6 +675,7 @@ mod test {
                 )
                 .expect("Couldn't construct interest rate value!"),
                 DEFAULT_MIN_UTILIZATION,
+                lease_code_admin,
             ),
             deps.as_mut().storage,
         )
@@ -723,11 +719,10 @@ mod test {
         let balance_mock = [coin_cw(10_000_000)];
         let mut deps = testing::mock_dependencies_with_balance(&balance_mock);
         let env = testing::mock_env();
-        let admin = Addr::unchecked("admin");
+        let lease_code_admin = Addr::unchecked("admin");
         let loan = Addr::unchecked("loan");
         let lease_code_id = Code::unchecked(123);
 
-        grant_admin_access(deps.as_mut(), &admin);
         Config::store(
             &ApiConfig::new(
                 lease_code_id,
@@ -738,6 +733,7 @@ mod test {
                 )
                 .expect("Couldn't construct interest rate value!"),
                 DEFAULT_MIN_UTILIZATION,
+                lease_code_admin,
             ),
             deps.as_mut().storage,
         )
@@ -777,12 +773,11 @@ mod test {
     fn test_tvl_and_price() {
         let mut deps = testing::mock_dependencies_with_balance(&[]);
         let mut env = testing::mock_env();
-        let admin = Addr::unchecked("admin");
+        let lease_code_admin = Addr::unchecked("admin");
         let loan = Addr::unchecked("loan");
         env.block.time = Timestamp::from_nanos(0);
         let lease_code_id = Code::unchecked(123);
 
-        grant_admin_access(deps.as_mut(), &admin);
         Config::store(
             &ApiConfig::new(
                 lease_code_id,
@@ -793,6 +788,7 @@ mod test {
                 )
                 .expect("Couldn't construct interest rate value!"),
                 DEFAULT_MIN_UTILIZATION,
+                lease_code_admin,
             ),
             deps.as_mut().storage,
         )
@@ -929,12 +925,6 @@ mod test {
         coin_legacy::to_cosmwasm_on_nolus::<TheCurrency>(into_coin.into())
     }
 
-    fn grant_admin_access(deps: DepsMut<'_>, admin: &Addr) {
-        ContractOwnerAccess::new(deps.storage)
-            .grant_to(admin)
-            .unwrap();
-    }
-
     mod min_utilization {
         use finance::{
             coin::{Amount, Coin},
@@ -961,6 +951,7 @@ mod test {
             expected_limit: Option<Amount>,
         ) {
             let mut total: Total<TheCurrency> = Total::new();
+            let lease_code_admin = Addr::unchecked("admin");
 
             total
                 .borrow(Timestamp::default(), borrowed.into(), Percent::ZERO)
@@ -972,6 +963,7 @@ mod test {
                     InterestRate::new(Percent::ZERO, Percent::from_permille(500), Percent::HUNDRED)
                         .unwrap(),
                     min_utilization,
+                    admin,
                 ),
                 total,
             };

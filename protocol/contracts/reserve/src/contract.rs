@@ -1,6 +1,6 @@
 use std::ops::DerefMut;
 
-use access_control::SingleUserAccess;
+use access_control::permissions::LeaseCodeAdminPermission;
 use currencies::Lpn as LpnCurrency;
 use currency::CurrencyDef;
 use finance::coin::Coin;
@@ -47,17 +47,12 @@ pub fn instantiate(
         .addr_validate(new_reserve.lease_code_admin.as_str())
         .map_err(Error::from)
         .and_then(|lease_code_admin| {
-            SingleUserAccess::new(
-                deps.storage.deref_mut(),
-                crate::access_control::LEASE_CODE_ADMIN_KEY,
-            )
-            .grant_to(&lease_code_admin)
-            .map_err(Into::into)
-        })
-        .and_then(|()| {
             Code::try_new(new_reserve.lease_code.into(), &deps.querier).map_err(Into::into)
+            .map(|lease_code| (lease_code, lease_code_admin))
         })
-        .and_then(|lease_code| Config::new(lease_code).store(deps.storage))
+        .and_then(|(lease_code, lease_code_admin)| {
+            Config::new(lease_code, lease_code_admin).store(deps.storage)
+        })
         .map(|()| response::empty_response())
         .inspect_err(platform_error::log(deps.api))
 }
@@ -86,12 +81,13 @@ pub fn execute(
     info: MessageInfo,
     msg: ExecuteMsg,
 ) -> Result<CwResponse> {
+    let lease_code_admin = Config::load(deps.storage)?.lease_code_admin()?;
+   
     match msg {
-        ExecuteMsg::NewLeaseCode(code) => SingleUserAccess::new(
-            deps.storage.deref_mut(),
-            crate::access_control::LEASE_CODE_ADMIN_KEY,
+        ExecuteMsg::NewLeaseCode(code) => access_control::check(
+            &LeaseCodeAdminPermission::new(&lease_code_admin),
+            &info.sender,
         )
-        .check(&info)
         .map_err(Into::into)
         .and_then(|()| Config::update_lease_code(deps.storage, code))
         .map(|()| PlatformResponse::default()),

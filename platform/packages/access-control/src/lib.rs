@@ -1,15 +1,8 @@
-use std::ops::{Deref, DerefMut};
+use sdk::cosmwasm_std::MessageInfo;
 
-use sdk::{
-    cosmwasm_std::{Addr, MessageInfo, Storage},
-    cw_storage_plus::Item,
-};
-
-pub use self::contract_owner::ContractOwnerAccess;
 use self::error::{Error, Result};
 use self::permissions::SingleUserPermission;
 
-mod contract_owner;
 pub mod error;
 pub mod permissions;
 
@@ -29,92 +22,14 @@ where
     }
 }
 
-pub struct SingleUserAccess<'storage, S>
-where
-    S: Deref<Target = dyn Storage + 'storage>,
-{
-    storage: S,
-    storage_item: Item<Addr>,
-}
-
-impl<'storage, S> SingleUserAccess<'storage, S>
-where
-    S: Deref<Target = dyn Storage + 'storage>,
-{
-    pub const fn new(storage: S, storage_namespace: &'static str) -> Self {
-        Self {
-            storage,
-            storage_item: Item::new(storage_namespace),
-        }
-    }
-
-    pub fn check(&self, info: &MessageInfo) -> Result {
-        self.storage_item
-            .load(self.storage.deref())
-            .map_err(Into::into)
-            .and_then(|granted_to| {
-                check(&SingleUserPermission::new(&granted_to), info)
-            })
-    }
-}
-
-impl<'storage, S> SingleUserAccess<'storage, S>
-where
-    S: Deref<Target = dyn Storage + 'storage> + DerefMut,
-{
-    pub fn grant_to(&mut self, user: &Addr) -> Result {
-        self.storage_item
-            .save(self.storage.deref_mut(), user)
-            .map_err(Into::into)
-    }
-
-    pub fn revoke(&mut self) {
-        self.storage_item.remove(self.storage.deref_mut())
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use sdk::cosmwasm_std::{Addr, ContractInfo, MessageInfo, Storage, testing::MockStorage};
 
     use crate::{
-        SingleUserAccess,
         error::{Error, Result},
         permissions::{SameContractOnly, SingleUserPermission},
     };
-
-    const NAMESPACE: &str = "my-nice-permission";
-
-    #[test]
-    fn grant_check() {
-        let mut storage = MockStorage::new();
-        let storage_ref: &mut dyn Storage = &mut storage;
-        let mut access = SingleUserAccess::new(storage_ref, NAMESPACE);
-        let user_info = MessageInfo {
-            sender: Addr::unchecked("cosmic address"),
-            funds: vec![],
-        };
-
-        access.check(&user_info).unwrap_err();
-        access.grant_to(&user).unwrap();
-        access.check(&user_info).unwrap();
-    }
-
-    #[test]
-    fn check_no_grant() {
-        let mut storage = MockStorage::new();
-        let storage_ref: &dyn Storage = &mut storage;
-        let access = SingleUserAccess::new(storage_ref, NAMESPACE);
-        let not_authorized = MessageInfo {
-            sender: Addr::unchecked("hacker"),
-            funds: vec![],
-        };
-
-        assert!(matches!(
-            access.check(&not_authorized).unwrap_err(),
-            Error::Std(_)
-        ));
-    }
 
     #[test]
     fn check_addr() {

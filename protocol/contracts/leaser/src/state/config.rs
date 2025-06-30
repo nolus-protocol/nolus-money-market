@@ -33,12 +33,29 @@ pub struct Config {
     pub lease_max_slippages: MaxSlippages,
     pub lease_admin: Addr,
     pub dex: ConnectionParams,
+    pub contract_owner: Addr,
 }
 
 impl Config {
     const STORAGE: Item<Self> = Item::new("config");
 
-    pub fn new(lease_code: Code, msg: InstantiateMsg) -> Self {
+    pub fn new(lease_code: Code, InstantiateMsg {
+        lease_code,
+        lpp,
+        profit,
+        reserve,
+        time_alarms,
+        market_price_oracle,
+        protocols_registry,
+        lease_position_spec,
+        lease_interest_rate_margin,
+        lease_due_period,
+        lease_max_slippages,
+        lease_admin,
+        dex,
+    }: InstantiateMsg,
+    contract_owner: Addr,
+) -> Self {
         Self {
             lease_code,
             lpp: msg.lpp,
@@ -53,6 +70,7 @@ impl Config {
             lease_max_slippages: msg.lease_max_slippages,
             lease_admin: msg.lease_admin,
             dex: msg.dex,
+            contract_owner,
         }
     }
 
@@ -86,6 +104,8 @@ impl Config {
             pub lease_interest_rate_margin: Percent,
             pub lease_due_period: Duration,
             pub dex: ConnectionParams,
+            // TODO: must handle when we merge changes from unify-permissions-model and decide to migrate
+            pub contract_owner: Addr,
         }
         Item::new("config")
             .load(storage)
@@ -105,6 +125,8 @@ impl Config {
                     lease_max_slippages,
                     lease_admin,
                     dex: old_config.dex,
+                    // TODO: must handle when we merge changes from unify-permissions-model and decide to migrate
+                    contract_owner: old_config.contract_owner,
                 }
                 .store(storage)
             })
@@ -145,6 +167,10 @@ impl Config {
                 })
             })
             .map_err(Into::into)
+    }
+
+    pub const fn contract_owner(&self) -> &Addr {
+        &self.contract_owner
     }
 }
 
