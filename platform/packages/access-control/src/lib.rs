@@ -7,6 +7,7 @@ use sdk::{
 
 pub use self::contract_owner::ContractOwnerAccess;
 use self::error::{Error, Result};
+use self::permissions::SingleUserPermission;
 
 mod contract_owner;
 pub mod error;
@@ -19,7 +20,7 @@ pub trait AccessPermission {
 /// Checks if access is granted to the given caller.
 pub fn check<P>(permission: &P, info: &MessageInfo) -> Result
 where
-    P: AccessPermission,
+    P: AccessPermission + ?Sized,
 {
     if permission.granted_to(info) {
         Ok(())
@@ -52,7 +53,7 @@ where
             .load(self.storage.deref())
             .map_err(Into::into)
             .and_then(|granted_to| {
-                check(&permissions::SingleUserPermission::new(&granted_to), info)
+                check(&SingleUserPermission::new(&granted_to), info)
             })
     }
 }
@@ -89,13 +90,12 @@ mod tests {
         let mut storage = MockStorage::new();
         let storage_ref: &mut dyn Storage = &mut storage;
         let mut access = SingleUserAccess::new(storage_ref, NAMESPACE);
-        let user = Addr::unchecked("cosmic address");
         let user_info = MessageInfo {
-            sender: user.clone(),
+            sender: Addr::unchecked("cosmic address"),
             funds: vec![],
         };
 
-        assert!(access.check(&user_info).is_err());
+        access.check(&user_info).unwrap_err();
         access.grant_to(&user).unwrap();
         access.check(&user_info).unwrap();
     }
@@ -130,18 +130,18 @@ mod tests {
             address: address.clone(),
         };
         let msg_info = MessageInfo {
-            sender: address.clone(),
+            sender: address,
             funds: vec![],
         };
 
-        let _ = super::check(&SameContractOnly::new(&contract_info), &msg_info);
+        let check_result = super::check(&SameContractOnly::new(&contract_info), &msg_info);
+        assert!(check_result.is_ok());
     }
 
     #[test]
     fn check_same_contract_only_fail() {
-        let address = Addr::unchecked("contract admin");
         let contract_info = ContractInfo {
-            address: address.clone(),
+            address: Addr::unchecked("contract admin"),
         };
         let msg_info = MessageInfo {
             sender: Addr::unchecked("hacker"),
@@ -149,7 +149,6 @@ mod tests {
         };
 
         let check_result = super::check(&SameContractOnly::new(&contract_info), &msg_info);
-
         assert!(matches!(check_result.unwrap_err(), Error::Unauthorized {}));
     }
 

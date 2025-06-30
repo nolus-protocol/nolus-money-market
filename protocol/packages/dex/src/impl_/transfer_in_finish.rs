@@ -1,7 +1,7 @@
-use std::fmt::{Display, Formatter, Result as FmtResult};
-use std::marker::PhantomData;
-
-use crate::Error as DexError;
+use std::{
+    fmt::{Display, Formatter, Result as FmtResult},
+    marker::PhantomData,
+};
 use currency::{CurrencyDef, MemberOf};
 use finance::duration::Duration;
 use serde::{Deserialize, Serialize};
@@ -15,8 +15,8 @@ use sdk::cosmwasm_std::{Env, MessageInfo, QuerierWrapper, Timestamp};
 use timealarms::stub::TimeAlarmDelivery;
 
 use crate::{
-    Contract, ContractInSwap, Enterable, Stage, SwapOutputTask, SwapTask as SwapTaskT,
-    WithOutputTask,
+    Contract, ContractInSwap, Enterable, Error as DexError, Stage, SwapOutputTask,
+    SwapTask as SwapTaskT, WithOutputTask,
 };
 
 #[cfg(feature = "migration")]

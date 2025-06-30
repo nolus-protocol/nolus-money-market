@@ -1,5 +1,6 @@
-use crate::AccessPermission;
 use sdk::cosmwasm_std::{Addr, ContractInfo, MessageInfo};
+
+use crate::AccessPermission;
 
 pub type DexResponseSafeDeliveryPermission<'a> = SameContractOnly<'a>;
 
