@@ -176,9 +176,9 @@ pub fn execute(
         ExecuteMsg::ChangeLeaseAdmin { new } => Leaser::new(deps.as_ref())
             .config()
             .and_then(|config| {
-                access_control::check(&ChangeLeaseAdminPermission::new(&config), &info)?;
-                validate(&new, deps.api)
+                access_control::check(&ChangeLeaseAdminPermission::new(&config), &info)
             })
+            .and_then(|()| validate(&new, deps.api))
             .and_then(|valid_new_admin| {
                 leaser::try_change_lease_admin(deps.storage, valid_new_admin)
             }),
@@ -210,16 +210,18 @@ pub fn query(deps: Deps<'_>, _env: Env, msg: QueryMsg) -> ContractResult<Binary>
     match msg {
         QueryMsg::CheckAnomalyResolutionPermission { by: caller } => {
             let msg_info = MessageInfo {
-                sender: caller.clone(),
+                sender: caller,
                 funds: vec![],
             };
 
             Leaser::new(deps)
                 .config()
-                .and_then(|config| {
-                    access_control::check(&AnomalyResolutionPermission::new(&config), &msg_info)
-                        .map(|_| AccessGranted::Yes)
-                        .or_else(|_| Ok(AccessGranted::No))
+                .map(|config| {
+                    if access_control::check(&AnomalyResolutionPermission::new(&config), &msg_info).is_ok() {
+                        AccessGranted::Yes
+                    } else {
+                        AccessGranted::No
+                    }
                 })
                 .and_then(serialize_to_json)
         }
