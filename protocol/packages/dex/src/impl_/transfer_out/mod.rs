@@ -83,8 +83,9 @@ where
     }
 
     fn enter_state(&self, now: Timestamp) -> Result<Batch> {
-        debug_assert!(
-            Self::coins_len(&self.spec) == self.acks_left,
+        debug_assert_eq!(
+            Self::coins_len(&self.spec),
+            self.acks_left,
             "calling 'enter_state' past initialization"
         );
         let mut trx = TransferOutTrx::new(self.spec.dex_account(), now);
