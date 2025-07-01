@@ -2,11 +2,11 @@ use std::{
     fmt::{Display, Formatter, Result as FmtResult},
     marker::PhantomData,
 };
-use currency::{CurrencyDef, MemberOf};
-use finance::duration::Duration;
+
 use serde::{Deserialize, Serialize};
 
-use finance::coin::CoinDTO;
+use currency::{CurrencyDef, MemberOf};
+use finance::{coin::CoinDTO, duration::Duration};
 use platform::{
     batch::{Emit, Emitter},
     message::Response as MessageResponse,
