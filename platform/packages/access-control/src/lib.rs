@@ -96,7 +96,7 @@ mod tests {
         };
 
         access.check(&user_info).unwrap_err();
-        access.grant_to(&user).unwrap();
+        access.grant_to(&user_info.sender).unwrap();
         access.check(&user_info).unwrap();
     }
 
@@ -134,8 +134,7 @@ mod tests {
             funds: vec![],
         };
 
-        let check_result = super::check(&SameContractOnly::new(&contract_info), &msg_info);
-        assert!(check_result.is_ok());
+        super::check(&SameContractOnly::new(&contract_info), &msg_info).unwrap();
     }
 
     #[test]

@@ -177,7 +177,7 @@ impl Handler for Active {
         .and_then(|()| {
             let profit = self.lease.lease.loan.profit().clone();
             let time_alarms = self.lease.lease.time_alarms.clone();
-            let oracle_ref = self.lease.lease.oracle.clone();
+            let oracle_ref = self.lease.lease.oracle;
             let reserve = self.lease.lease.reserve.clone();
             self.lease.update(
                 ChangeClosePolicy::new(
