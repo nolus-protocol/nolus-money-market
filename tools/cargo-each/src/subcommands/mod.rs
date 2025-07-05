@@ -44,7 +44,7 @@ fn find_package_by_name<'r>(metadata: &'r Metadata, package_name: &str) -> Resul
     metadata
         .workspace_packages()
         .into_iter()
-        .find(|package| package.name == package_name)
+        .find(|package| *package.name == *package_name)
         .ok_or_else(move || {
             anyhow!(r#"No package named "{package_name}" exists within the workspace members!"#)
         })
