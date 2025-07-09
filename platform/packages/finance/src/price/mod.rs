@@ -1,4 +1,5 @@
 use std::{
+    convert::Infallible,
     fmt::{Debug, Display, Formatter, Result as FmtResult},
     ops::{Add, AddAssign, Mul},
 };
@@ -7,9 +8,10 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     coin::{Amount, Coin},
-    error::{Error, Result},
-    fractionable::HigherRank,
-    ratio::{CheckedAdd, ComparableBounds, Gcd, SimpleFraction},
+    error::{Error, Result as FinanceResult},
+    ratio::SimpleFraction,
+    rational::Rational,
+    traits::{CheckedAdd, CheckedMul},
 };
 
 pub mod base;
@@ -32,27 +34,6 @@ where
         QuoteC: 'static,
     {
         Price::new(self.0, to)
-    }
-}
-
-type DoubleAmount = <Amount as HigherRank<Amount>>::Type;
-type IntermediateAmount = <Amount as HigherRank<Amount>>::Intermediate;
-
-impl ComparableBounds for DoubleAmount {}
-
-impl Gcd for DoubleAmount {
-    fn gcd(self, other: Self) -> Self {
-        let (mut a, mut b) = if self > other {
-            (self, other)
-        } else {
-            (other, self)
-        };
-
-        while b != DoubleAmount::zero() {
-            std::mem::swap(&mut a, &mut b);
-            b %= a;
-        }
-        a
     }
 }
 
@@ -91,7 +72,7 @@ where
     /// Contructor intended to be used with non-validated input,
     /// for example when deserializing from an user request
     #[track_caller]
-    fn try_new(amount: Coin<C>, amount_quote: Coin<QuoteC>) -> Result<Self> {
+    fn try_new(amount: Coin<C>, amount_quote: Coin<QuoteC>) -> FinanceResult<Self> {
         Self::precondition_check(amount, amount_quote)
             .map(|()| Self::new_inner(amount, amount_quote))
             .and_then(|may_price| may_price.invariant_held().map(|()| may_price))
@@ -118,26 +99,13 @@ where
     /// Price(amount, amount_quote) * Ratio(nominator / denominator) = Price(amount * denominator, amount_quote * nominator)
     /// where the pairs (amount, nominator) and (amount_quote, denominator) are transformed into co-prime numbers.
     /// Please note that Price(amount, amount_quote) is like Ratio(amount_quote / amount).
-    pub(crate) fn lossy_mul(self, rhs: &SimpleFraction<Amount>) -> Self {
-        let (amount_normalized, rhs_nominator_normalized) = self
-            .amount
-            .into_coprime_with(Coin::<C>::from(rhs.nominator()));
-        let (amount_quote_normalized, rhs_denominator_normalized) = self
-            .amount_quote
-            .into_coprime_with(Coin::<QuoteC>::from(rhs.denominator()));
-
-        let double_amount =
-            DoubleAmount::from(amount_normalized) * DoubleAmount::from(rhs_denominator_normalized);
-        let double_amount_quote = DoubleAmount::from(amount_quote_normalized)
-            * DoubleAmount::from(rhs_nominator_normalized);
-
-        let extra_bits =
-            Self::bits_above_max(double_amount).max(Self::bits_above_max(double_amount_quote));
-
-        Price::new(
-            Self::trim_down(double_amount, extra_bits).into(),
-            Self::trim_down(double_amount_quote, extra_bits).into(),
-        )
+    pub(crate) fn lossy_mul(self, rhs: SimpleFraction<Amount>) -> Self {
+        let product = SimpleFraction::from(self)
+            .checked_mul(rhs)
+            .expect("price overflow during multiplication");
+        product
+            .try_into()
+            .expect("lossy_mul failed: can't convert back to Price")
     }
 
     pub fn inv(self) -> Price<QuoteC, C> {
@@ -147,14 +115,14 @@ where
         }
     }
 
-    fn precondition_check(amount: Coin<C>, amount_quote: Coin<QuoteC>) -> Result<()> {
+    fn precondition_check(amount: Coin<C>, amount_quote: Coin<QuoteC>) -> FinanceResult<()> {
         Self::check(!amount.is_zero(), "The amount should not be zero").and(Self::check(
             !amount_quote.is_zero(),
             "The quote amount should not be zero",
         ))
     }
 
-    fn invariant_held(&self) -> Result<()> {
+    fn invariant_held(&self) -> FinanceResult<()> {
         Self::precondition_check(self.amount, self.amount_quote).and(Self::check(
             Amount::from(self.amount) == Amount::from(self.amount_quote)
                 || !currency::equal::<C, QuoteC>(),
@@ -162,18 +130,14 @@ where
         ))
     }
 
-    fn check(invariant: bool, msg: &str) -> Result<()> {
+    fn check(invariant: bool, msg: &str) -> FinanceResult<()> {
         Error::broken_invariant_if::<Self>(!invariant, msg)
-    }
-
-    fn to_rational(self) -> SimpleFraction<Amount> {
-        self.amount_quote.to_rational(self.amount)
     }
 
     fn checked_add(self, rhs: Self) -> Option<Self> {
         // taking into account that Price is like amount_quote/amount
-        let lhs_rational = self.to_rational();
-        let rhs_rational = rhs.to_rational();
+        let lhs_rational = SimpleFraction::from(self);
+        let rhs_rational = SimpleFraction::from(rhs);
 
         lhs_rational
             .checked_add(rhs_rational)
@@ -200,87 +164,6 @@ where
                 total(factor, rhs).and_then(|total_rhs| total_self.checked_add(total_rhs))
             })
             .map(|factored_total| total_of(factor).is(factored_total))
-    }
-
-    #[track_caller]
-    fn bits_above_max(double_amount: DoubleAmount) -> u32 {
-        const BITS_MAX_AMOUNT: u32 = Amount::BITS;
-        let higher_half: Amount = IntermediateAmount::try_from(double_amount >> BITS_MAX_AMOUNT)
-            .expect("Bigger Amount Higher Rank Type than required!")
-            .into();
-        BITS_MAX_AMOUNT - higher_half.leading_zeros()
-    }
-
-    #[track_caller]
-    fn trim_down(double_amount: DoubleAmount, bits: u32) -> Amount {
-        debug_assert!(bits <= Amount::BITS);
-        let amount: IntermediateAmount = (double_amount >> bits)
-            .try_into()
-            .expect("insufficient bits to trim");
-        let res = amount.into();
-        assert!(res > 0, "price overflow during multiplication");
-        res
-    }
-}
-
-impl<C, QuoteC> Clone for Price<C, QuoteC>
-where
-    C: 'static,
-    QuoteC: 'static,
-{
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-
-impl<C, QuoteC> Copy for Price<C, QuoteC>
-where
-    C: 'static,
-    QuoteC: 'static,
-{
-}
-
-impl<C, QuoteC> Eq for Price<C, QuoteC>
-where
-    C: 'static,
-    QuoteC: 'static,
-{
-}
-
-impl<C, QuoteC> PartialEq for Price<C, QuoteC>
-where
-    C: 'static,
-    QuoteC: 'static,
-{
-    fn eq(&self, other: &Self) -> bool {
-        self.amount == other.amount && self.amount_quote == other.amount_quote
-    }
-}
-
-impl<C, QuoteC> Ord for Price<C, QuoteC>
-where
-    C: 'static,
-    QuoteC: 'static,
-    DoubleAmount: ComparableBounds + Mul<Output = DoubleAmount> + Ord,
-{
-    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        // Please note that Price(amount, amount_quote) is like Ratio(amount_quote / amount).
-
-        let left: SimpleFraction<DoubleAmount> =
-            SimpleFraction::new(self.amount_quote.into(), self.amount.into());
-        let right: SimpleFraction<DoubleAmount> =
-            SimpleFraction::new(other.amount_quote.into(), other.amount.into());
-        left.cmp(&right)
-    }
-}
-
-impl<C, QuoteC> PartialOrd for Price<C, QuoteC>
-where
-    C: 'static,
-    QuoteC: 'static,
-{
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        Some(self.cmp(other))
     }
 }
 
@@ -309,12 +192,6 @@ where
     }
 }
 
-impl<C, QuoteC> From<Price<C, QuoteC>> for SimpleFraction<Amount> {
-    fn from(price: Price<C, QuoteC>) -> Self {
-        SimpleFraction::new(price.amount_quote.into(), price.amount.into())
-    }
-}
-
 impl<C, QuoteC> CheckedAdd for Price<C, QuoteC>
 where
     C: 'static,
@@ -329,6 +206,47 @@ where
 
 // TODO for completeness implement the Sub and SubAssign counterparts
 
+impl<C, QuoteC> Clone for Price<C, QuoteC>
+where
+    C: 'static,
+    QuoteC: 'static,
+{
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+
+impl<C, QuoteC> Copy for Price<C, QuoteC>
+where
+    C: 'static,
+    QuoteC: 'static,
+{
+}
+
+impl<C, QuoteC> Display for Price<C, QuoteC> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
+        write!(f, "{}/{}", self.amount, self.amount_quote)
+    }
+}
+
+impl<C, QuoteC> Eq for Price<C, QuoteC>
+where
+    C: 'static,
+    QuoteC: 'static,
+{
+}
+
+impl<C, QuoteC> From<Price<C, QuoteC>> for SimpleFraction<Amount>
+where
+    C: 'static,
+    QuoteC: 'static,
+{
+    fn from(price: Price<C, QuoteC>) -> Self {
+        // Please note that Price(amount, amount_quote) is like SimpleFraction(amount_quote / amount).
+        price.amount_quote.to_rational(price.amount)
+    }
+}
+
 impl<C, QuoteC, QuoteQuoteC> Mul<Price<QuoteC, QuoteQuoteC>> for Price<C, QuoteC>
 where
     C: 'static,
@@ -342,16 +260,54 @@ where
         // Price(a, b) * Price(c, d) = Price(a, d) * Rational(b / c)
         // Please note that Price(amount, amount_quote) is like Ratio(amount_quote / amount).
 
-        Self::Output::new(self.amount, rhs.amount_quote).lossy_mul(&SimpleFraction::new(
+        Self::Output::new(self.amount, rhs.amount_quote).lossy_mul(SimpleFraction::new(
             self.amount_quote.into(),
             rhs.amount.into(),
         ))
     }
 }
 
-impl<C, QuoteC> Display for Price<C, QuoteC> {
-    fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
-        write!(f, "{}/{}", self.amount, self.amount_quote)
+impl<C, QuoteC> Ord for Price<C, QuoteC>
+where
+    C: 'static,
+    QuoteC: 'static,
+{
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        SimpleFraction::from(*self).cmp(&SimpleFraction::from(*other))
+    }
+}
+impl<C, QuoteC> PartialEq for Price<C, QuoteC>
+where
+    C: 'static,
+    QuoteC: 'static,
+{
+    fn eq(&self, other: &Self) -> bool {
+        self.amount == other.amount && self.amount_quote == other.amount_quote
+    }
+}
+
+impl<C, QuoteC> PartialOrd for Price<C, QuoteC>
+where
+    C: 'static,
+    QuoteC: 'static,
+{
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl<C, QuoteC> TryFrom<SimpleFraction<Amount>> for Price<C, QuoteC>
+where
+    C: 'static,
+    QuoteC: 'static,
+{
+    type Error = Infallible;
+
+    fn try_from(fraction: SimpleFraction<Amount>) -> Result<Self, Self::Error> {
+        Ok(Price::new(
+            fraction.denominator().into(),
+            fraction.nominator().into(),
+        ))
     }
 }
 
@@ -359,8 +315,8 @@ impl<C, QuoteC> Display for Price<C, QuoteC> {
 ///
 /// For example, total(10 EUR, 1.01 EURUSD) = 10.1 USD
 pub fn total<C, QuoteC>(of: Coin<C>, price: Price<C, QuoteC>) -> Option<Coin<QuoteC>> {
-    let ratio_impl = SimpleFraction::new(of, price.amount);
-    ratio_impl.checked_mul(price.amount_quote)
+    let ratio_impl: SimpleFraction<Amount> = SimpleFraction::new(of.into(), price.amount.into());
+    ratio_impl.of(price.amount_quote)
 }
 
 #[cfg(test)]
@@ -368,12 +324,12 @@ mod test {
     use std::ops::{Add, AddAssign, Mul};
 
     use currency::test::{SubGroupTestC10, SuperGroupTestC1, SuperGroupTestC2};
-    use sdk::cosmwasm_std::{Uint128, Uint256};
 
     use crate::{
         coin::{Amount, Coin as CoinT},
         price::{self, Price},
         ratio::SimpleFraction,
+        traits::{Scalar, Trim},
     };
 
     type QuoteQuoteCoin = CoinT<SubGroupTestC10>;
@@ -543,11 +499,31 @@ mod test {
     }
 
     #[test]
-    fn lossy_mul_few_shifts() {
-        lossy_mul_shifts_impl(5, 5);
-        lossy_mul_shifts_impl(5, 7);
-        lossy_mul_shifts_impl(5, 16);
-        lossy_mul_shifts_impl(5, 63);
+    fn lossy_mul_with_trim() {
+        let amount1 = c(u64::MAX as u128);
+        let quote1 = q(u128::MAX - 1);
+        let amount2 = q(1u128);
+        let quote2 = qq(2u128);
+
+        // Price1{u64::MAX as u128, u128::MAX -1} * Price2{1,2}  is calculated as
+        // SimpleFraction{u128::MAX -1, u64::MAX as u128} * SimpleFraction{2, 1}.
+        // The multiplication (u128::MAX - 1) * 2 will overflow and the algorythm will trim 2 bits from the u128::MAX -1.
+        // The trimmed nominator is calculated as follows:
+        // u128::MAX - 1  = 1111...1110
+        // (u128::MAX - 1) >> 2  = 0011...1111
+        // 0011...1111 * 2 = 0011...1111 << 1  = 0111...1110 = 2^127 - 2
+        // The trimmed denominator is calculated as follows:
+        // u64::MAX = 1111...1111
+        // u64::MAX >> 2 = 0011...1111 = 2^62 - 1
+
+        lossy_mul_impl(
+            amount1,
+            quote1,
+            amount2,
+            quote2,
+            c(2u128.pow(62) - 1),
+            qq(2u128.pow(127) - 2),
+        );
     }
 
     #[test]
@@ -649,14 +625,32 @@ mod test {
         assert!(exp <= price1.add(price2));
     }
 
-    fn shift_product<A1, A2>(a1: A1, a2: A2, shifts: u8) -> Amount
-    where
-        A1: Into<Uint256>,
-        A2: Into<Uint256>,
-    {
-        Uint128::try_from((a1.into() * a2.into()) >> u32::from(shifts))
-            .expect("Incorrect test setup")
-            .into()
+    fn shift_product(lhs: Amount, rhs: Amount, shifts: u8) -> Amount {
+        let (lhs_share, rhs_share) = calc_shares(lhs, rhs, shifts);
+        let lhs_trimmed = lhs.trim(lhs_share);
+        let rhs_trimmed = rhs.trim(rhs_share);
+
+        lhs_trimmed
+            .scale_up(rhs_trimmed.into_times())
+            .expect("even trimmed values overflowed")
+            .trim(shifts.into())
+    }
+
+    fn calc_shares(lhs: Amount, rhs: Amount, shifts: u8) -> (u32, u32) {
+        let lhs_bits = Amount::BITS - lhs.leading_zeros();
+        let rhs_bits = Amount::BITS - rhs.leading_zeros();
+        let total_bits = lhs_bits + rhs_bits;
+        let shifts = shifts as u32;
+
+        let prod = shifts * lhs_bits;
+
+        let lhs_share = if 2 * (prod % total_bits) < total_bits {
+            prod / total_bits
+        } else {
+            prod / total_bits + 1
+        };
+
+        (lhs_share, shifts - lhs_share)
     }
 
     fn lossy_mul_impl(
@@ -670,27 +664,12 @@ mod test {
         let price1 = price::total_of(amount1).is(quote1);
         let price2 = price::total_of(amount2).is(quote2);
         let exp = price::total_of(amount_exp).is(quote_exp);
+
         assert_eq!(exp, price1.mul(price2));
 
         let price3 = price::total_of(amount1).is(quote2);
         let ratio = SimpleFraction::new(quote1.into(), amount2.into());
-        assert_eq!(exp, price3.lossy_mul(&ratio));
-    }
-
-    fn lossy_mul_shifts_impl(q1: Amount, shifts: u8) {
-        let a1 = u128::MAX - 1;
-        let a2: Amount = 1 << shifts;
-        let q2 = a2 / q1 + 3; // the aim is q1 * q2 > a2
-
-        assert!(a1 % q1 != 0);
-        assert!(a1 % q2 != 0);
-        assert!(a2 % q1 != 0);
-        assert!(a2 % q2 != 0);
-        assert_eq!(1, a2 >> shifts);
-
-        let a_exp = shift_product(a1, a2, shifts);
-        let q_exp = shift_product(q1, q2, shifts);
-        lossy_mul_impl(c(a1), q(q1), q(a2), qq(q2), c(a_exp), qq(q_exp));
+        assert_eq!(exp, price3.lossy_mul(ratio));
     }
 }
 

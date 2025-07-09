@@ -3,27 +3,20 @@ use std::{
     ops::{Add, AddAssign, Div, Rem, Sub, SubAssign},
 };
 
+use gcd::Gcd;
 use serde::{Deserialize, Serialize};
 
-use sdk::cosmwasm_std::{Timestamp, Uint128, Uint256};
+use sdk::cosmwasm_std::Timestamp;
 
 use crate::{
-    coin::Coin,
+    coin::Amount,
     fractionable::Fractionable,
-    ratio::{CheckedAdd, CheckedMul, SimpleFraction},
+    ratio::SimpleFraction,
+    traits::{Bits, FractionUnit, One, Scalar, Trim},
     zero::Zero,
 };
 
 pub type Units = u64;
-
-impl<C> CheckedMul<Coin<C>> for Units {
-    type Output = Coin<C>;
-
-    fn checked_mul(self, rhs: Coin<C>) -> Option<Self::Output> {
-        rhs.checked_mul(self.into())
-    }
-}
-
 pub type Seconds = u32;
 
 /// A more storage and compute optimal version of its counterpart in the std::time.
@@ -105,20 +98,62 @@ impl Duration {
     #[track_caller]
     pub fn annualized_slice_of<T>(&self, annual_amount: T) -> Option<T>
     where
-        Self: Copy + Div + Rem<Output = Self> + Zero,
-        <Self as Div>::Output: CheckedMul<T, Output = T>,
-        T: CheckedAdd<Output = T> + Copy + Fractionable<Self>,
+        Self: FractionUnit,
+        T: Fractionable<Self>,
     {
-        SimpleFraction::new(*self, Self::YEAR).checked_mul(annual_amount)
+        SimpleFraction::new(*self, Self::YEAR).lossy_mul(annual_amount)
     }
 
     pub fn into_slice_per_ratio<U>(self, amount: U, annual_amount: U) -> Option<Self>
     where
-        U: Copy + Debug + Div + Ord + PartialOrd + Rem<Output = U> + Zero,
-        <U as Div>::Output: CheckedMul<Self, Output = Self>,
-        Self: Fractionable<U> + CheckedAdd<Output = Self>,
+        Self: Fractionable<U>,
+        U: FractionUnit,
     {
-        SimpleFraction::new(amount, annual_amount).checked_mul(self)
+        SimpleFraction::new(amount, annual_amount).lossy_mul(self)
+    }
+}
+
+impl Bits for Duration {
+    const BITS: u32 = Units::BITS;
+
+    fn leading_zeros(self) -> u32 {
+        self.0.leading_zeros()
+    }
+}
+
+impl FractionUnit for Duration {}
+
+impl One for Duration {
+    const ONE: Self = Self::from_nanos(1);
+}
+
+impl Trim for Duration {
+    fn trim(self, bits: u32) -> Self {
+        Self::from_nanos(self.0 >> bits)
+    }
+}
+
+impl Scalar for Duration {
+    type Times = Units;
+
+    fn gcd(self, other: Self) -> Self::Times {
+        Gcd::gcd(self.0, other.0)
+    }
+
+    fn scale_up(self, scale: Self::Times) -> Option<Self> {
+        self.0.checked_mul(scale).map(Self::from_nanos)
+    }
+
+    fn scale_down(self, scale: Self::Times) -> Self {
+        Self::from_nanos(self.0.div(scale))
+    }
+
+    fn modulo(self, scale: Self::Times) -> Self::Times {
+        self.0 % scale
+    }
+
+    fn into_times(self) -> Self::Times {
+        self.0
     }
 }
 
@@ -126,28 +161,16 @@ impl Zero for Duration {
     const ZERO: Self = Self::ZERO;
 }
 
-impl From<Duration> for u128 {
+impl From<Duration> for Amount {
     fn from(d: Duration) -> Self {
         d.nanos().into()
     }
 }
 
-impl From<Duration> for Uint128 {
-    fn from(d: Duration) -> Self {
-        u128::from(d).into()
-    }
-}
+impl TryFrom<Amount> for Duration {
+    type Error = <Units as TryFrom<Amount>>::Error;
 
-impl From<Duration> for Uint256 {
-    fn from(d: Duration) -> Self {
-        Uint256::from(d.nanos())
-    }
-}
-
-impl TryFrom<u128> for Duration {
-    type Error = <Units as TryFrom<u128>>::Error;
-
-    fn try_from(value: u128) -> Result<Self, Self::Error> {
+    fn try_from(value: Amount) -> Result<Self, Self::Error> {
         Ok(Self::from_nanos(value.try_into()?))
     }
 }
@@ -237,22 +260,6 @@ impl Rem for Duration {
         debug_assert!(!rhs.is_zero());
 
         Duration(self.nanos() % rhs.nanos())
-    }
-}
-
-impl CheckedMul for Duration {
-    type Output = Self;
-
-    fn checked_mul(self, rhs: Self) -> Option<Self::Output> {
-        self.0.checked_mul(rhs.0).map(Duration)
-    }
-}
-
-impl CheckedAdd for Duration {
-    type Output = Self;
-
-    fn checked_add(self, rhs: Self) -> Option<Self::Output> {
-        self.0.checked_add(rhs.0).map(Duration)
     }
 }
 

@@ -1,42 +1,18 @@
 use crate::{
-    coin::Coin,
-    fraction::Fraction,
+    coin::{Amount, Coin},
     percent::{Units, bound::BoundPercent},
 };
 
-use super::{Fractionable, HigherRank};
+use super::Fractionable;
 
-impl<T> HigherRank<T> for u32
-where
-    T: Into<Self>,
+impl<const UPPER_BOUND: Units> Fractionable<BoundPercent<UPPER_BOUND>>
+    for BoundPercent<UPPER_BOUND>
 {
-    type Type = u64;
-    type Intermediate = Self;
-}
-
-impl<const UPPER_BOUND: Units> Fractionable<Units> for BoundPercent<UPPER_BOUND> {
-    #[track_caller]
-    fn safe_mul<F>(self, ratio: &F) -> Self
-    where
-        F: Fraction<Units>,
-    {
-        Self::from_permille(self.units().safe_mul(ratio))
-    }
+    type MaxRank = Units;
 }
 
 impl<C, const UPPER_BOUND: Units> Fractionable<Coin<C>> for BoundPercent<UPPER_BOUND> {
-    #[track_caller]
-    fn safe_mul<F>(self, fraction: &F) -> Self
-    where
-        F: Fraction<Coin<C>>,
-    {
-        let p128: u128 = self.units().into();
-        let res: Units = p128
-            .safe_mul(fraction)
-            .try_into()
-            .expect("overflow computing a fraction of permille");
-        Self::from_permille(res)
-    }
+    type MaxRank = Amount;
 }
 
 #[cfg(test)]
@@ -44,7 +20,6 @@ mod test {
     mod percent {
         use crate::{
             fraction::Fraction,
-            fractionable::HigherRank,
             percent::{Percent100, Units},
         };
 
@@ -56,8 +31,8 @@ mod test {
             );
 
             let p_units: Units = 410;
-            let p64: <u32 as HigherRank<u8>>::Type = p_units.into();
-            let p64_res: <u32 as HigherRank<u8>>::Type = p64 * u64::from(100 as Units) / 1000;
+            let p64: u64 = p_units.into();
+            let p64_res = p64 * u64::from(100 as Units) / 1000;
             let p_units_res: Units = p64_res.try_into().expect("u64 -> Units overflow");
 
             assert_eq!(
@@ -84,7 +59,7 @@ mod test {
     mod rational {
         use currency::test::SuperGroupTestC1;
 
-        use crate::{coin::Coin, fractionable::Fractionable, percent::Percent100, ratio::Ratio};
+        use crate::{coin::Coin, fraction::Fraction, percent::Percent100, ratio::Ratio};
 
         #[test]
         fn safe_mul() {
@@ -94,7 +69,7 @@ mod test {
             );
             assert_eq!(
                 Percent100::from_permille(899),
-                Fractionable::<Coin<_>>::safe_mul(Percent100::from_permille(899), &ratio_one)
+                ratio_one.of(Percent100::from_permille(899))
             );
         }
     }

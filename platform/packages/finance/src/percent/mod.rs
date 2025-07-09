@@ -1,8 +1,12 @@
 use bound::BoundPercent;
+use gcd::Gcd;
 
 use crate::{
-    coin::{Amount, Coin},
-    ratio::{CheckedAdd, CheckedMul},
+    fraction::Fraction,
+    fractionable::Fractionable,
+    ratio::{Ratio, SimpleFraction},
+    rational::Rational,
+    traits::{Bits, CheckedMul, FractionUnit, One, Scalar, Trim},
 };
 
 pub mod bound;
@@ -15,6 +19,13 @@ pub const MAX_BOUND: Units = Units::MAX;
 pub type Percent100 = BoundPercent<HUNDRED_BOUND>;
 pub type Percent = BoundPercent<MAX_BOUND>;
 
+impl Bits for Units {
+    const BITS: u32 = Units::BITS;
+    fn leading_zeros(self) -> u32 {
+        Units::leading_zeros(self)
+    }
+}
+
 impl CheckedMul for Units {
     type Output = Self;
 
@@ -23,35 +34,75 @@ impl CheckedMul for Units {
     }
 }
 
-impl<C> CheckedMul<Coin<C>> for Units {
-    type Output = Coin<C>;
+impl FractionUnit for Units {}
 
-    fn checked_mul(self, rhs: Coin<C>) -> Option<Self::Output> {
-        rhs.checked_mul(self.into())
+impl One for Units {
+    const ONE: Self = 1;
+}
+
+impl Trim for Units {
+    fn trim(self, bits: u32) -> Self {
+        self >> bits
     }
 }
 
-impl<C> CheckedMul<Coin<C>> for Percent100 {
-    type Output = Coin<C>;
+impl Scalar for Units {
+    type Times = Self;
 
-    fn checked_mul(self, rhs: Coin<C>) -> Option<Self::Output> {
-        rhs.checked_mul(self.into())
+    fn gcd(self, other: Self) -> Self::Times {
+        Gcd::gcd(self, other)
+    }
+
+    fn scale_up(self, scale: Self::Times) -> Option<Self> {
+        self.checked_mul(scale)
+    }
+
+    fn scale_down(self, scale: Self::Times) -> Self {
+        debug_assert_ne!(scale, 0);
+
+        self / scale
+    }
+
+    fn modulo(self, scale: Self::Times) -> Self::Times {
+        debug_assert_ne!(scale, 0);
+
+        self % scale
+    }
+
+    fn into_times(self) -> Self::Times {
+        self
     }
 }
 
-impl CheckedMul<Amount> for Units {
-    type Output = Amount;
-
-    fn checked_mul(self, rhs: Amount) -> Option<Self::Output> {
-        rhs.checked_mul(self.into())
+impl Fraction<Percent100> for Percent100 {
+    fn of<A>(self, whole: A) -> A
+    where
+        A: Fractionable<Percent100>,
+    {
+        let ratio: Ratio<Percent100> = self.into();
+        ratio.of(whole)
     }
 }
 
-impl CheckedAdd for Units {
-    type Output = Self;
+impl Rational<Percent> for Percent {
+    fn of<A>(self, whole: A) -> Option<A>
+    where
+        A: Fractionable<Percent>,
+    {
+        let fraction: SimpleFraction<Percent> = self.into();
+        fraction.of(whole)
+    }
+}
 
-    fn checked_add(self, rhs: Self) -> Option<Self::Output> {
-        self.checked_add(rhs)
+impl From<Percent100> for Ratio<Percent100> {
+    fn from(percent: Percent100) -> Self {
+        Self::new(percent, Percent100::HUNDRED)
+    }
+}
+
+impl From<Percent> for SimpleFraction<Percent> {
+    fn from(percent: Percent) -> Self {
+        Self::new(percent, Percent::HUNDRED)
     }
 }
 
@@ -64,6 +115,7 @@ pub(super) mod test {
         fraction::Fraction,
         percent::{Percent, Percent100},
         ratio::SimpleFraction,
+        rational::Rational,
     };
 
     use super::Units;
@@ -197,23 +249,20 @@ pub(super) mod test {
 
     #[test]
     fn of_overflow() {
-        assert!(Percent::from_permille(Units::MAX).of(Units::MAX).is_none())
-    }
-
-    #[test]
-    fn rational_of_percents() {
-        let v = 14u32;
-        let r = SimpleFraction::new(Percent100::HUNDRED.units(), Percent100::HUNDRED.units());
-        assert_eq!(v, r.checked_mul(v).unwrap());
+        assert!(
+            Percent::from_permille(Units::MAX)
+                .of(Percent::from_permille(Units::MAX))
+                .is_none()
+        )
     }
 
     #[test]
     fn rational_to_percents() {
         let n: Units = 189;
         let d: Units = 1890;
-        let r = SimpleFraction::new(n, d);
-        let res: Percent100 = r.checked_mul(Percent100::HUNDRED).unwrap();
-        assert_eq!(Percent100::from_permille(n * 1000 / d), res);
+        let r = SimpleFraction::new(Percent::from_permille(n), Percent::from_permille(d));
+        let res: Percent = r.lossy_mul(Percent::HUNDRED).unwrap();
+        assert_eq!(Percent::from_permille(n * 1000 / d), res);
     }
 
     fn test_of(permille: Units, quantity: Percent100, exp: Percent100) {

@@ -1,52 +1,40 @@
-use std::{
-    cmp,
-    fmt::Debug,
-    ops::{Div, Rem, Sub},
-};
+use std::{cmp, ops::Sub};
 
 use crate::{
     duration::Duration,
+    fraction::Fraction,
     fractionable::Fractionable,
-    ratio::{CheckedAdd, CheckedMul},
+    traits::{FractionUnit, Scalar},
     zero::Zero,
 };
 
 /// Computes how much interest is accrued
-pub fn interest<R, P>(rate: R, principal: P, period: Duration) -> Option<P>
+pub fn interest<U, R, P>(rate: R, principal: P, period: Duration) -> Option<P>
 where
-    R: CheckedMul<P, Output = P>,
-    P: CheckedAdd<Output = P> + Copy + Fractionable<Duration>,
-    <Duration as Div>::Output: CheckedMul<P, Output = P>,
+    U: FractionUnit,
+    R: Fraction<U>,
+    P: Fractionable<U> + Fractionable<Duration>,
 {
-    rate.checked_mul(principal)
-        .and_then(|interest_per_year| period.annualized_slice_of(interest_per_year))
+    let interest_per_year = rate.of(principal);
+
+    period.annualized_slice_of(interest_per_year)
 }
 
 /// Computes how much time this payment covers, return.0, and the change, return.1
 ///
 /// The actual payment is equal to the payment minus the returned change.
-pub fn pay<R, P>(rate: R, principal: P, payment: P, period: Duration) -> Option<(Duration, P)>
+pub fn pay<U, R, P>(rate: R, principal: P, payment: P, period: Duration) -> Option<(Duration, P)>
 where
-    R: CheckedMul<P, Output = P>,
-    P: CheckedAdd<Output = P>
-        + Copy
-        + Debug
-        + Div
-        + Fractionable<Duration>
-        + Ord
-        + PartialEq
-        + Rem<Output = P>
-        + Sub<Output = P>
-        + Zero,
-    <P as Div>::Output: CheckedMul<Duration, Output = Duration>,
-    Duration: CheckedAdd<Output = Duration> + Fractionable<P>,
-    <Duration as Div>::Output: CheckedMul<P, Output = P>,
+    U: FractionUnit,
+    R: Fraction<U>,
+    P: Fractionable<U> + Fractionable<Duration> + FractionUnit + Scalar + Sub<Output = P> + Zero,
+    Duration: Fractionable<P>,
 {
     interest(rate, principal, period).and_then(|interest_due_per_period| {
         if interest_due_per_period == P::ZERO {
             Some((Duration::from_nanos(0), payment))
         } else {
-            let repayment: P = cmp::min(interest_due_per_period, payment);
+            let repayment = cmp::min(interest_due_per_period, payment);
 
             period
                 .into_slice_per_ratio(repayment, interest_due_per_period)

@@ -1,21 +1,14 @@
-use std::{
-    cmp::Ordering,
-    fmt::Debug,
-    ops::{Div, Mul, Rem},
-};
+use std::{cmp::Ordering, fmt::Debug, ops::Div};
 
 use serde::{Deserialize, Serialize};
 
-use crate::{fraction::Fraction, fractionable::Fractionable, zero::Zero};
-
-pub(crate) trait ComparableBounds:
-    Copy + Debug + Div<Output = Self> + Gcd + PartialEq + Rem<Output = Self> + Zero
-{
-}
-
-pub(crate) trait Gcd {
-    fn gcd(self, other: Self) -> Self;
-}
+use crate::{
+    fraction::Fraction,
+    fractionable::Fractionable,
+    rational::Rational,
+    traits::{self, Bits, CheckedAdd, CheckedMul, FractionUnit, One, Scalar, Trim},
+    zero::Zero,
+};
 
 /// A wrapper over `SimpleFraction` where the ratio is no more than 1.
 #[cfg_attr(any(test, feature = "testing"), derive(Debug))]
@@ -23,7 +16,7 @@ pub struct Ratio<U>(SimpleFraction<U>);
 
 impl<U> Ratio<U>
 where
-    U: Copy + Debug + Ord + PartialEq<U> + Zero,
+    U: FractionUnit + Scalar,
 {
     pub fn new(parts: U, total: U) -> Self {
         debug_assert!(parts <= total);
@@ -34,23 +27,17 @@ where
 
 impl<U> Fraction<U> for Ratio<U>
 where
-    U: Copy + PartialOrd,
+    U: FractionUnit,
 {
-    fn parts(&self) -> U {
-        self.0.nominator
-    }
-
-    fn total(&self) -> U {
-        self.0.denominator
-    }
-
-    fn of<A>(&self, whole: A) -> A
+    fn of<A>(self, whole: A) -> A
     where
         A: Fractionable<U>,
     {
-        debug_assert!(self.parts() <= self.total());
+        debug_assert!(self.0.nominator <= self.0.denominator);
 
-        whole.safe_mul(self)
+        self.0
+            .of(whole)
+            .expect("Ratio multiplication should not overflow.")
     }
 }
 
@@ -63,15 +50,17 @@ pub struct SimpleFraction<U> {
 
 impl<U> SimpleFraction<U>
 where
-    U: Copy + Debug + Ord + PartialEq<U> + Zero,
+    U: FractionUnit,
 {
     #[track_caller]
     pub fn new(nominator: U, denominator: U) -> Self {
         debug_assert_ne!(denominator, Zero::ZERO);
 
+        let (norm_nom, norm_denom) = traits::into_coprime(nominator, denominator);
+
         Self {
-            nominator,
-            denominator,
+            nominator: norm_nom,
+            denominator: norm_denom,
         }
     }
 
@@ -83,153 +72,300 @@ where
         self.denominator
     }
 
-    pub fn map<F, T>(&self, f: F) -> SimpleFraction<T>
-    where
-        F: Fn(U) -> T,
-        T: Copy + Debug + Ord + Zero,
-    {
-        SimpleFraction::new(f(self.nominator), f(self.denominator))
+    fn to_common_denom_with(self, other: &Self) -> Option<(U, U, U)> {
+        // having b / a and d / c
+        // let a1 = a / gcd(a, c), and c1 = c / gcd(a, c), then
+        // (b * c1, d * a1)
+        let (a1, c1) = traits::into_coprime(self.denominator, other.denominator);
+
+        let gcd = self.denominator.scale_down(a1.into_times());
+        a1.scale_up(c1.into_times())
+            .and_then(|a1c1| a1c1.scale_up(gcd.into_times()))
+            .and_then(|common_denom| {
+                self.nominator
+                    .scale_up(c1.into_times())
+                    .and_then(|scaled_lhs_nom| {
+                        other
+                            .nominator
+                            .scale_up(a1.into_times())
+                            .map(|scaled_rhs_nom| (scaled_lhs_nom, scaled_rhs_nom, common_denom))
+                    })
+            })
     }
-
-    pub fn to_ratio(&self) -> Option<Ratio<U>> {
-        (self.nominator <= self.denominator).then(|| Ratio::new(self.nominator, self.denominator))
-    }
-}
-
-pub(crate) fn into_coprime<U>(a: U, b: U) -> (U, U)
-where
-    U: ComparableBounds,
-    <U as Rem>::Output: Debug,
-{
-    debug_assert_ne!(a, Zero::ZERO, "LHS-value is zero!");
-    debug_assert_ne!(b, Zero::ZERO, "RHS-value is zero!");
-
-    let gcd = a.gcd(b);
-
-    debug_assert_ne!(gcd, Zero::ZERO);
-    debug_assert!(
-        a % gcd == Zero::ZERO,
-        "LHS-value is not divisible by the GCD!"
-    );
-    debug_assert!(
-        b % gcd == Zero::ZERO,
-        "RHS-value is not divisible by the GCD!"
-    );
-
-    (a / gcd, b / gcd)
-}
-
-impl<U> Eq for SimpleFraction<U> where U: ComparableBounds {}
-
-impl<U> PartialEq for SimpleFraction<U>
-where
-    U: ComparableBounds,
-{
-    fn eq(&self, other: &Self) -> bool {
-        let (self_numerator, self_denominator) = into_coprime(self.nominator, self.denominator);
-        let (other_numerator, other_denominator) = into_coprime(other.nominator, other.denominator);
-
-        self_numerator == other_numerator && self_denominator == other_denominator
-    }
-}
-
-impl<U> PartialOrd for SimpleFraction<U>
-where
-    U: ComparableBounds + Mul<Output = U> + Ord,
-{
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(self.cmp(other))
-    }
-}
-
-impl<U> Ord for SimpleFraction<U>
-where
-    U: ComparableBounds + Mul<Output = U> + Ord,
-{
-    fn cmp(&self, other: &Self) -> Ordering {
-        // a/b < c/d if and only if a * d < b * c
-
-        let a = self.nominator;
-        let d = other.denominator;
-        let b = self.denominator;
-        let c = other.nominator;
-        (a * d).cmp(&(b * c))
-    }
-}
-pub trait CheckedMul<Rhs = Self> {
-    type Output;
-
-    fn checked_mul(self, rhs: Rhs) -> Option<Self::Output>;
-}
-
-pub trait CheckedAdd<Rhs = Self> {
-    type Output;
-
-    fn checked_add(self, rhs: Rhs) -> Option<Self::Output>;
-}
-
-pub trait CheckedDiv<Rhs = Self> {
-    type Output;
-
-    fn checked_div(self, rhs: Rhs) -> Option<Self::Output>;
 }
 
 impl<U> SimpleFraction<U>
 where
-    U: Copy + Debug + Div + Ord + PartialEq<U> + PartialOrd + Rem<Output = U> + Zero,
+    U: FractionUnit,
 {
-    pub fn checked_mul<F>(self, rhs: F) -> Option<F>
+    /// Performs a multiplication with possibility of precision lost.
+    pub fn lossy_mul<F>(self, rhs: F) -> Option<F>
     where
-        <U as Div>::Output: CheckedMul<F, Output = F>,
-        F: CheckedAdd<Output = F> + Copy + Fractionable<U>,
+        F: Fractionable<U>,
     {
-        // SimpleFraction(a,b).checked_mul(c) = (a / b).checked_mul(c) + c.safe_mul(SimpleFraction(a % b, b))
+        if self.nominator == self.denominator {
+            Some(rhs)
+        } else {
+            let precise_res =
+                Self::multiply(self.nominator.into(), self.denominator.into(), rhs.into());
 
-        self.nominator
-            .div(self.denominator)
-            .checked_mul(rhs)
-            .and_then(|whole_part: F| {
-                let fraction_part = rhs.safe_mul(&Ratio::new(
-                    self.nominator % self.denominator,
-                    self.denominator,
-                ));
-                whole_part.checked_add(fraction_part)
+            precise_res.or_else(|| self.try_precise_mul(rhs))
+        }
+    }
+
+    fn try_precise_mul<F>(self, rhs: F) -> Option<F>
+    where
+        F: Fractionable<U>,
+    {
+        dbg!(self.nominator);
+        dbg!(self.denominator);
+        let nom = F::MaxRank::from(self.nominator);
+        let denom = F::MaxRank::from(self.denominator);
+        let fractionable = F::MaxRank::from(rhs);
+
+        Self::precise_mul(nom, denom, fractionable, F::MaxRank::ONE)
+            .map(|(max_rank_nom, max_rank_denom)| max_rank_nom / max_rank_denom)
+            .and_then(|res| res.try_into().ok())
+    }
+
+    fn precise_mul<T>(lhs_nom: T, lhs_denom: T, rhs_nom: T, rhs_denom: T) -> Option<(T, T)>
+    where
+        T: Bits + CheckedMul<T, Output = T> + Copy + Trim,
+    {
+        lhs_nom
+            .checked_mul(rhs_nom)
+            .and_then(|nom| lhs_denom.checked_mul(rhs_denom).map(|denom| (nom, denom)))
+            .map(|(nom, denom)| (nom, denom))
+            .or_else(|| {
+                let (lhs_nom_bits, rhs_nom_bits, extra_nom_bits) = Self::bits(lhs_nom, rhs_nom);
+                let (lhs_denom_bits, rhs_denom_bits, extra_denom_bits) =
+                    Self::bits(lhs_denom, rhs_denom);
+
+                let extra_bits = extra_nom_bits.max(extra_denom_bits);
+
+                Self::try_trim_and_mul(lhs_nom, lhs_nom_bits, rhs_nom, rhs_nom_bits, extra_bits)
+                    .and_then(|trimmed_nom| {
+                        Self::try_trim_and_mul(
+                            lhs_denom,
+                            lhs_denom_bits,
+                            rhs_denom,
+                            rhs_denom_bits,
+                            extra_bits,
+                        )
+                        .map(|trimmed_denom| (trimmed_nom, trimmed_denom))
+                    })
             })
+    }
+
+    fn try_trim_and_mul<T>(
+        lhs: T,
+        lhs_bits: u32,
+        rhs: T,
+        rhs_bits: u32,
+        extra_bits: u32,
+    ) -> Option<T>
+    where
+        T: CheckedMul<T, Output = T> + Trim,
+    {
+        let lhs_share = Self::calc_share(lhs_bits, lhs_bits + rhs_bits, extra_bits);
+        let rhs_share = extra_bits - lhs_share;
+
+        if lhs_bits <= lhs_share || rhs_bits <= rhs_share {
+            None
+        } else {
+            let (trimmed_lhs, trimmed_rhs) = (lhs.trim(lhs_share), rhs.trim(rhs_share));
+            trimmed_lhs.checked_mul(trimmed_rhs)
+        }
+    }
+
+    fn calc_share(value_bits: u32, total_bits: u32, extra_bits: u32) -> u32 {
+        let prod = extra_bits * value_bits;
+
+        if 2 * (prod % total_bits) < total_bits {
+            prod / total_bits
+        } else {
+            prod / total_bits + 1
+        }
+    }
+
+    fn bits<M>(lhs: M, rhs: M) -> (u32, u32, u32)
+    where
+        M: Bits,
+    {
+        let lhs_bits = Self::significant_bits(lhs);
+        let rhs_bits = Self::significant_bits(rhs);
+        let total_bits = lhs_bits + rhs_bits;
+        (lhs_bits, rhs_bits, total_bits.saturating_sub(M::BITS))
+    }
+
+    fn multiply<F>(parts: F::MaxRank, total: F::MaxRank, rhs: F::MaxRank) -> Option<F>
+    where
+        F: Fractionable<U>,
+    {
+        parts
+            .checked_mul(rhs)
+            .map(|nominator| nominator / total)
+            .and_then(|res| res.try_into().ok())
+    }
+
+    #[track_caller]
+    fn significant_bits<B>(value: B) -> u32
+    where
+        B: Bits,
+    {
+        let bits_max: u32 = B::BITS;
+        bits_max - value.leading_zeros()
+    }
+}
+
+impl<U> Bits for SimpleFraction<U>
+where
+    U: Bits,
+{
+    const BITS: u32 = U::BITS;
+
+    fn leading_zeros(self) -> u32 {
+        self.nominator
+            .leading_zeros()
+            .min(self.denominator.leading_zeros())
     }
 }
 
 impl<U> CheckedAdd for SimpleFraction<U>
 where
-    U: CheckedMul<Output = U>
-        + CheckedAdd<Output = U>
-        + CheckedDiv<Output = U>
-        + ComparableBounds
-        + Mul<Output = U>
-        + Ord,
+    U: CheckedAdd<Output = U> + FractionUnit,
 {
     type Output = Self;
 
     fn checked_add(self, rhs: Self) -> Option<Self::Output> {
         // let a1 = a / gcd(a, c), and c1 = c / gcd(a, c), then
         // b / a + d / c = (b * c1 + d * a1) / (a1 * c1 * gcd(a, c))
-        let (a1, c1) = self::into_coprime(self.denominator, rhs.denominator);
-        debug_assert_eq!(self.denominator % a1, Zero::ZERO);
-        debug_assert_eq!(rhs.denominator % c1, Zero::ZERO);
-        let gcd = match self.denominator.checked_div(a1) {
-            None => unreachable!("invariant on amount != 0 should have passed!"),
-            Some(gcd) => gcd,
-        };
-        debug_assert_eq!(Some(gcd), rhs.denominator.checked_div(c1));
+        self.to_common_denom_with(&rhs)
+            .and_then(|(lhs_nom, rhs_nom, denom)| {
+                lhs_nom
+                    .checked_add(rhs_nom)
+                    .map(|sum_nom| Self::new(sum_nom, denom))
+            })
+    }
+}
 
-        let may_b_c1 = self.nominator.checked_mul(c1);
-        let may_d_a1 = rhs.nominator.checked_mul(a1);
+impl<U> CheckedMul for SimpleFraction<U>
+where
+    U: CheckedMul<U, Output = U> + FractionUnit,
+{
+    type Output = Self;
 
-        let may_nominator = may_b_c1
-            .zip(may_d_a1)
-            .and_then(|(b_c1, d_a1)| b_c1.checked_add(d_a1));
-        let may_denominator = a1.checked_mul(c1).and_then(|a1_c1| a1_c1.checked_mul(gcd));
-        may_nominator
-            .zip(may_denominator)
-            .map(|(nominator, denominator)| Self::new(nominator, denominator))
+    fn checked_mul(self, rhs: Self) -> Option<Self::Output> {
+        let (lhs_nom, rhs_denom) = traits::into_coprime(self.nominator, rhs.denominator);
+        let (lhs_denom, rhs_nom) = traits::into_coprime(self.denominator, rhs.nominator);
+
+        Self::precise_mul(lhs_nom, lhs_denom, rhs_nom, rhs_denom)
+            .map(|(nom, denom)| Self::new(nom, denom))
+    }
+}
+
+impl<U> Div for SimpleFraction<U>
+where
+    U: CheckedMul<U, Output = U> + FractionUnit,
+{
+    type Output = Self;
+
+    // (a / b) ÷ (c / d) = (a * d) / (b * c)
+    fn div(self, rhs: Self) -> Self::Output {
+        debug_assert_ne!(rhs.nominator, Zero::ZERO, "Cannot divide by zero fraction");
+
+        let (lhs_nom, rhs_denom) = traits::into_coprime(self.nominator, rhs.denominator);
+        let (lhs_denom, rhs_nom) = traits::into_coprime(self.denominator, rhs.nominator);
+
+        Self::precise_mul(lhs_nom, lhs_denom, rhs_denom, rhs_nom)
+            .map(|(nom, denom)| Self::new(nom, denom))
+            .expect("Divition overflows even after trimming")
+    }
+}
+
+impl<U> Eq for SimpleFraction<U> where U: FractionUnit {}
+
+impl<U> One for SimpleFraction<U>
+where
+    U: FractionUnit + One,
+{
+    const ONE: Self = Self {
+        nominator: U::ONE,
+        denominator: U::ONE,
+    };
+}
+
+impl<U> Ord for SimpleFraction<U>
+where
+    U: FractionUnit,
+{
+    fn cmp(&self, other: &Self) -> Ordering {
+        if self.denominator == other.denominator {
+            self.nominator.cmp(&other.nominator)
+        } else {
+            self.to_common_denom_with(other)
+                .map(|(lhs_nom, rhs_nom, _)| lhs_nom.cmp(&rhs_nom))
+                .expect("Failed to compute common denominator for fraction comparison")
+        }
+    }
+}
+
+impl<U> PartialEq for SimpleFraction<U>
+where
+    U: FractionUnit,
+{
+    fn eq(&self, other: &Self) -> bool {
+        self.nominator == other.nominator && self.denominator == other.denominator
+    }
+}
+
+impl<U> PartialOrd for SimpleFraction<U>
+where
+    U: FractionUnit,
+{
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl<U> Rational<U> for SimpleFraction<U>
+where
+    U: FractionUnit,
+{
+    fn of<A>(self, whole: A) -> Option<A>
+    where
+        A: Fractionable<U>,
+    {
+        self.lossy_mul(whole)
+    }
+}
+
+impl<U> Trim for SimpleFraction<U>
+where
+    U: FractionUnit,
+{
+    fn trim(self, bits: u32) -> Self {
+        Self::new(self.nominator.trim(bits), self.denominator.trim(bits))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::ratio::SimpleFraction;
+
+    #[test]
+    fn check_trim_commutativity() {
+        let lhs = u32::MAX;
+        let lhs_bits = u32::BITS - lhs.leading_zeros();
+        let rhs = 2u32;
+        let rhs_bits = u32::BITS - rhs.leading_zeros();
+        let extra_bits = lhs_bits + rhs_bits - u32::BITS;
+
+        let trimmed_1 =
+            SimpleFraction::<u32>::try_trim_and_mul(lhs, lhs_bits, rhs, rhs_bits, extra_bits);
+        let trimmed_2 =
+            SimpleFraction::<u32>::try_trim_and_mul(rhs, rhs_bits, lhs, lhs_bits, extra_bits);
+
+        assert_eq!(trimmed_1.unwrap(), trimmed_2.unwrap());
     }
 }

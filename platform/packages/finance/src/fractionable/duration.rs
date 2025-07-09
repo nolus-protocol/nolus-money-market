@@ -1,53 +1,37 @@
-use sdk::cosmwasm_std::{Uint128, Uint256};
+use crate::{coin::Coin, duration::Duration};
 
-use crate::{coin::Coin, duration::Duration, fraction::Fraction};
-
-use super::{Fractionable, HigherRank};
-
-impl<T> HigherRank<T> for u128
-where
-    T: Into<Self>,
-{
-    type Type = Uint256;
-    type Intermediate = Uint128;
-}
+use super::Fractionable;
 
 impl<C> Fractionable<Coin<C>> for Duration {
-    #[track_caller]
-    fn safe_mul<F>(self, fraction: &F) -> Self
-    where
-        F: Fraction<Coin<C>>,
-    {
-        let d128: u128 = self.into();
-        d128.safe_mul(fraction)
-            .try_into()
-            .expect("overflow computing a fraction of duration")
-    }
+    type MaxRank = u128;
 }
 
 #[cfg(test)]
 mod tests {
     use currency::test::SuperGroupTestC1;
 
-    use crate::{coin::Coin, duration::Duration, fractionable::Fractionable, ratio::Ratio};
+    use crate::{coin::Coin, duration::Duration, ratio::SimpleFraction};
 
     #[test]
-    fn safe_mul() {
+    fn lossy_mul() {
         let d = Duration::from_secs(10);
-        let res = d.safe_mul(&Ratio::new(
+        let res = SimpleFraction::new(
             Coin::<SuperGroupTestC1>::new(10),
             Coin::<SuperGroupTestC1>::new(20),
-        ));
+        )
+        .lossy_mul(d)
+        .unwrap();
         assert_eq!(Duration::from_secs(5), res);
     }
 
     #[test]
-    fn safe_mul_max() {
+    fn lossy_mul_max() {
         let d = Duration::from_secs(10);
-        let res = d.safe_mul(&Ratio::new(
-            Coin::<SuperGroupTestC1>::new(u128::MAX / 2),
+        let res_x = SimpleFraction::new(
             Coin::<SuperGroupTestC1>::new(u128::MAX),
-        ));
-        assert_eq!(Duration::from_secs(5) - Duration::from_nanos(1), res);
+            Coin::<SuperGroupTestC1>::new(u128::MAX / 2),
+        );
+        let res = res_x.lossy_mul(d).unwrap();
+        assert_eq!(Duration::from_secs(20), res);
     }
 }

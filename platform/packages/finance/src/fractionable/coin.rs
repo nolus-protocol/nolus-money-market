@@ -1,31 +1,23 @@
-use sdk::cosmwasm_std::{Uint128, Uint256};
+use crate::{
+    coin::{Amount, Coin},
+    duration::Duration,
+    percent::{Units as PercentUnits, bound::BoundPercent},
+};
 
-use crate::coin::{Amount, Coin};
+use super::Fractionable;
 
-use super::HigherRank;
-
-impl<U, C> HigherRank<U> for Coin<C>
-where
-    U: Into<Amount>,
-{
-    type Type = Uint256;
-
-    type Intermediate = Uint128;
+impl<const UPPER_BOUND: PercentUnits, C> Fractionable<BoundPercent<UPPER_BOUND>> for Coin<C> {
+    type MaxRank = Amount;
 }
 
-impl<C> From<Coin<C>> for Uint256 {
-    fn from(coin: Coin<C>) -> Self {
-        let c: Amount = coin.into();
-        c.into()
-    }
+impl<C> Fractionable<Duration> for Coin<C> {
+    type MaxRank = Amount;
 }
 
-impl<C> From<Uint128> for Coin<C> {
-    fn from(amount: Uint128) -> Self {
-        let c: Amount = amount.into();
-        c.into()
-    }
+impl<C> Fractionable<Amount> for Coin<C> {
+    type MaxRank = Amount;
 }
+
 #[cfg(test)]
 mod test {
     use currency::test::SuperGroupTestC1;
@@ -33,13 +25,12 @@ mod test {
     use crate::{
         coin::{Amount, Coin},
         fraction::Fraction,
-        fractionable::Fractionable,
-        percent::Percent100,
+        percent::{Percent, Percent100},
         ratio::Ratio,
     };
 
     #[test]
-    fn safe_mul() {
+    fn checked_mul() {
         assert_eq!(
             Coin::<SuperGroupTestC1>::new(30),
             Percent100::from_percent(100).of(Coin::<SuperGroupTestC1>::new(30))
@@ -47,18 +38,20 @@ mod test {
 
         assert_eq!(
             Coin::<SuperGroupTestC1>::new(4),
-            Fractionable::<u32>::safe_mul(
-                Coin::<SuperGroupTestC1>::new(6),
-                &Ratio::new(2u32, 3u32)
+            Ratio::new(
+                Percent100::from_permille(2u32),
+                Percent100::from_permille(3u32)
             )
+            .of(Coin::<SuperGroupTestC1>::new(6))
         );
 
         assert_eq!(
             Coin::<SuperGroupTestC1>::new(Amount::from(u32::MAX - 1)),
-            Fractionable::<u32>::safe_mul(
-                Coin::<SuperGroupTestC1>::new(Amount::from(u32::MAX)),
-                &Ratio::new(u32::MAX - 1, u32::MAX)
+            Ratio::new(
+                Percent::from_permille(u32::MAX - 1),
+                Percent::from_permille(u32::MAX)
             )
+            .of(Coin::<SuperGroupTestC1>::new(Amount::from(u32::MAX))),
         );
     }
 }

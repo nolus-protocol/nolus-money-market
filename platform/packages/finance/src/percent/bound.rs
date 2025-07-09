@@ -1,21 +1,22 @@
 use std::{
     fmt::{Debug, Display, Formatter, Result as FmtResult, Write},
-    ops::{Div, Rem},
+    num::TryFromIntError,
+    ops::Div,
 };
 
+use gcd::Gcd;
 use serde::{Deserialize, Serialize};
 
-use sdk::cosmwasm_std::Uint256;
-
 use crate::{
+    coin::Amount,
     error::{Error, Result as FinanceResult},
-    fraction::Fraction,
     fractionable::Fractionable,
-    ratio::{CheckedAdd, CheckedMul, Ratio, SimpleFraction},
+    ratio::SimpleFraction,
+    traits::{Bits, FractionUnit, One, Scalar, Trim},
     zero::Zero,
 };
 
-use super::{HUNDRED_BOUND, MAX_BOUND, Percent100, Units};
+use super::{HUNDRED_BOUND, Units};
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, Ord, PartialEq, PartialOrd, Serialize)]
 #[serde(try_from = "Units", into = "Units")]
@@ -46,16 +47,12 @@ impl<const UPPER_BOUND: Units> BoundPercent<UPPER_BOUND> {
         Self::new_internal(permille)
     }
 
-    pub fn from_ratio<FractionUnit>(
-        nominator: FractionUnit,
-        denominator: FractionUnit,
-    ) -> Option<Self>
+    pub fn from_ratio<U>(nominator: U, denominator: U) -> Option<Self>
     where
-        FractionUnit: Copy + Debug + Div + Ord + PartialEq + Rem<Output = FractionUnit> + Zero,
-        <FractionUnit as Div>::Output: CheckedMul<Self, Output = Self>,
-        Self: Fractionable<FractionUnit>,
+        Self: Fractionable<U>,
+        U: FractionUnit,
     {
-        SimpleFraction::new(nominator, denominator).checked_mul(Self::HUNDRED)
+        SimpleFraction::new(nominator, denominator).lossy_mul(Self::HUNDRED)
     }
 
     pub const fn units(&self) -> Units {
@@ -90,68 +87,6 @@ impl<const UPPER_BOUND: Units> BoundPercent<UPPER_BOUND> {
     }
 }
 
-impl Fraction<Units> for BoundPercent<HUNDRED_BOUND> {
-    fn parts(&self) -> Units {
-        self.units()
-    }
-
-    fn total(&self) -> Units {
-        Self::HUNDRED.0
-    }
-
-    fn of<A>(&self, whole: A) -> A
-    where
-        A: Fractionable<Units>,
-    {
-        debug_assert!(self.parts() <= self.total());
-
-        let ratio: Ratio<Units> = self.into();
-        whole.safe_mul(&ratio)
-    }
-}
-
-impl BoundPercent<MAX_BOUND> {
-    pub fn of<A>(&self, whole: A) -> Option<A>
-    where
-        Units: CheckedMul<A, Output = A>,
-        A: CheckedAdd<Output = A> + Copy + Fractionable<Units>,
-    {
-        let ratio: SimpleFraction<Units> = self.into();
-        ratio.checked_mul(whole)
-    }
-}
-
-impl From<&BoundPercent<HUNDRED_BOUND>> for Ratio<Units> {
-    fn from(percent: &BoundPercent<HUNDRED_BOUND>) -> Self {
-        Self::new(percent.0, Percent100::HUNDRED.0)
-    }
-}
-
-impl From<&BoundPercent<MAX_BOUND>> for SimpleFraction<Units> {
-    fn from(percent: &BoundPercent<MAX_BOUND>) -> Self {
-        Self::new(percent.0, Percent100::HUNDRED.0)
-    }
-}
-
-impl From<BoundPercent<HUNDRED_BOUND>> for BoundPercent<MAX_BOUND> {
-    fn from(percent: BoundPercent<HUNDRED_BOUND>) -> Self {
-        Self::from_permille(percent.0)
-    }
-}
-
-impl TryFrom<BoundPercent<MAX_BOUND>> for BoundPercent<HUNDRED_BOUND> {
-    type Error = Error;
-
-    fn try_from(percent: BoundPercent<MAX_BOUND>) -> Result<Self, Self::Error> {
-        (percent.0 <= HUNDRED_BOUND)
-            .then(|| Self::from_permille(percent.0))
-            .ok_or_else(|| Error::UpperBoundCrossed {
-                bound: HUNDRED_BOUND,
-                value: percent.0,
-            })
-    }
-}
-
 // Method used for deserialization
 impl<const UPPER_BOUND: Units> TryFrom<Units> for BoundPercent<UPPER_BOUND> {
     type Error = Error;
@@ -173,55 +108,11 @@ impl<const UPPER_BOUND: Units> From<BoundPercent<UPPER_BOUND>> for Units {
     }
 }
 
-impl<const UPPER_BOUND: Units> From<BoundPercent<UPPER_BOUND>> for u128 {
-    fn from(percent: BoundPercent<UPPER_BOUND>) -> Self {
-        u128::from(percent.units())
-    }
-}
+impl<const UPPER_BOUND: Units> Bits for BoundPercent<UPPER_BOUND> {
+    const BITS: u32 = Units::BITS;
 
-impl<const UPPER_BOUND: Units> From<BoundPercent<UPPER_BOUND>> for Uint256 {
-    fn from(p: BoundPercent<UPPER_BOUND>) -> Self {
-        Uint256::from(p.units())
-    }
-}
-
-impl<const UPPER_BOUND: Units> CheckedAdd for BoundPercent<UPPER_BOUND> {
-    type Output = Self;
-
-    fn checked_add(self, rhs: Self) -> Option<Self::Output> {
-        self.checked_add(rhs).ok()
-    }
-}
-
-impl<const UPPER_BOUND: Units> CheckedMul<BoundPercent<UPPER_BOUND>> for Units {
-    type Output = BoundPercent<UPPER_BOUND>;
-
-    fn checked_mul(self, rhs: BoundPercent<UPPER_BOUND>) -> Option<Self::Output> {
-        self.checked_mul(rhs.units())
-            .map(BoundPercent::from_permille)
-    }
-}
-
-impl<const UPPER_BOUND: Units> Zero for BoundPercent<UPPER_BOUND> {
-    const ZERO: Self = Self::ZERO;
-}
-
-impl<const UPPER_BOUND: Units> Div for BoundPercent<UPPER_BOUND> {
-    type Output = Units;
-
-    fn div(self, rhs: Self) -> Self::Output {
-        debug_assert!(!rhs.is_zero());
-
-        self.0 / rhs.0
-    }
-}
-
-impl<const UPPER_BOUND: Units> Rem for BoundPercent<UPPER_BOUND> {
-    type Output = Self;
-
-    fn rem(self, rhs: Self) -> Self::Output {
-        debug_assert!(!rhs.is_zero());
-        Self::new_internal(self.0 % rhs.0)
+    fn leading_zeros(self) -> u32 {
+        Units::leading_zeros(self.0)
     }
 }
 
@@ -241,4 +132,92 @@ impl<const UPPER_BOUND: Units> Display for BoundPercent<UPPER_BOUND> {
         f.write_char('%')?;
         Ok(())
     }
+}
+
+impl<const UPPER_BOUND: Units> Div for BoundPercent<UPPER_BOUND> {
+    type Output = Units;
+
+    fn div(self, rhs: Self) -> Self::Output {
+        debug_assert!(!rhs.is_zero());
+
+        self.0 / rhs.0
+    }
+}
+
+impl<const UPPER: Units> FractionUnit for BoundPercent<UPPER> where
+    BoundPercent<UPPER>: Copy + Debug + Ord + Scalar + Zero
+{
+}
+
+impl<const UPPER_BOUND: Units> From<BoundPercent<UPPER_BOUND>> for Amount {
+    fn from(percent: BoundPercent<UPPER_BOUND>) -> Self {
+        Amount::from(percent.units())
+    }
+}
+
+impl<const UPPER_BOUND: Units> From<BoundPercent<UPPER_BOUND>> for SimpleFraction<Amount> {
+    fn from(percent: BoundPercent<UPPER_BOUND>) -> Self {
+        Self::new(
+            percent.0.into(),
+            BoundPercent::<UPPER_BOUND>::HUNDRED.0.into(),
+        )
+    }
+}
+
+impl<const UPPER_BOUND: Units> One for BoundPercent<UPPER_BOUND> {
+    const ONE: Self = Self::from_permille(1);
+}
+
+impl<const UPPER_BOUND: Units> Trim for BoundPercent<UPPER_BOUND> {
+    fn trim(self, bits: u32) -> Self {
+        Self::from_permille(self.0 >> bits)
+    }
+}
+
+impl<const UPPER_BOUND: Units> Scalar for BoundPercent<UPPER_BOUND> {
+    type Times = Units;
+
+    fn gcd(self, other: Self) -> Self::Times {
+        Gcd::gcd(self.0, other.0)
+    }
+
+    fn scale_up(self, scale: Self::Times) -> Option<Self> {
+        self.0.checked_mul(scale).map(Self::from_permille)
+    }
+
+    fn scale_down(self, scale: Self::Times) -> Self {
+        debug_assert_ne!(scale, 0);
+
+        Self::from_permille(self.0.div(scale))
+    }
+
+    fn modulo(self, scale: Self::Times) -> Self::Times {
+        debug_assert_ne!(scale, 0);
+
+        self.0 % scale
+    }
+
+    fn into_times(self) -> Self::Times {
+        self.0
+    }
+}
+
+impl<const UPPER_BOUND: Units> TryFrom<Amount> for BoundPercent<UPPER_BOUND> {
+    type Error = <Units as TryFrom<Amount>>::Error;
+
+    fn try_from(value: Amount) -> Result<Self, Self::Error> {
+        Ok(Self::from_permille(value.try_into()?))
+    }
+}
+
+impl<const UPPER_BOUND: Units> TryFrom<BoundPercent<UPPER_BOUND>> for u16 {
+    type Error = TryFromIntError;
+
+    fn try_from(percent: BoundPercent<UPPER_BOUND>) -> Result<Self, Self::Error> {
+        percent.0.try_into()
+    }
+}
+
+impl<const UPPER_BOUND: Units> Zero for BoundPercent<UPPER_BOUND> {
+    const ZERO: Self = Self::ZERO;
 }
