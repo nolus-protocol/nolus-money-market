@@ -440,17 +440,15 @@ mod test {
     {
         as_json(&CoinDTO::<LeaseGroup>::from(amount)).and_then(|amount_str| {
             as_json(&CoinDTO::<Lpns>::from(amount_quote)).map(|amount_quote_str| {
-                let price = format!(
-                    r#"{{"amount": {},"amount_quote": {}}}"#,
-                    amount_str, amount_quote_str
-                );
+                let price =
+                    format!(r#"{{"amount": {amount_str},"amount_quote": {amount_quote_str}}}"#,);
                 alarm_half_to_json_str(price_type, &price)
             })
         })
     }
 
     fn alarm_half_to_json_str(price_type: AlarmPrice, price: &str) -> String {
-        format!(r#""{}": {}"#, price_type, price)
+        format!(r#""{price_type}": {price}"#,)
     }
 
     fn as_json<S>(to_serialize: &S) -> Result<String, StdError>

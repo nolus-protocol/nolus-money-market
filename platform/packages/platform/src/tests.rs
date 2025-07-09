@@ -26,7 +26,7 @@ pub fn assert_event(actual: &[Event], expected: &Event) {
                 .iter()
                 .all(|at| ev.attributes.contains(at))
     });
-    assert!(found, "Expected to find {:?} among {:?}", expected, actual);
+    assert!(found, "Expected to find {expected:?} among {actual:?}");
 }
 
 pub fn parse_resp<Resp>(resp: &Option<Binary>) -> Option<Resp>

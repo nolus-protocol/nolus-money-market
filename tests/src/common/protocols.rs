@@ -121,5 +121,5 @@ fn execute<Req>(
 
 fn protocol_name(index: u8) -> String {
     const PROTOCOL_NAME: &str = "my_nice_protocol";
-    format!("{name}_{index}", name = PROTOCOL_NAME)
+    format!("{PROTOCOL_NAME}_{index}")
 }

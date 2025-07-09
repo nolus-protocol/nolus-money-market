@@ -43,7 +43,7 @@ where
         _querier: QuerierWrapper<'_>,
         _env: Env,
     ) -> ContractResult<Response> {
-        err(format!("dex error({})", resp))
+        err(format!("dex error({resp})",))
     }
 
     fn on_dex_timeout(self, _querier: QuerierWrapper<'_>, _env: Env) -> ContractResult<Response> {

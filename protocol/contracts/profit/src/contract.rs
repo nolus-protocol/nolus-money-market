@@ -165,7 +165,7 @@ fn try_handle_neutron_msg(
         NeutronSudoMsg::Response { data, .. } => state.on_response(data, deps.querier, env).into(),
         NeutronSudoMsg::Error { details, .. } => {
             let resp = details.into();
-            api.debug(&format!("SudoMsg::Error({})", resp));
+            api.debug(&format!("SudoMsg::Error({resp})",));
             state.on_error(resp, deps.querier, env).into()
         }
         NeutronSudoMsg::Timeout { .. } => state.on_timeout(deps.querier, env).map_err(Into::into),

@@ -186,7 +186,7 @@ fn check_events(
     protocols_nb: usize,
     exp_reward: Coin<NlsPlatform>,
 ) {
-    assert_eq!(events.len(), 2 + protocols_nb * 2, "{:?}", events);
+    assert_eq!(events.len(), 2 + protocols_nb * 2, "{events:?}");
 
     let mut event_index = 0;
     {

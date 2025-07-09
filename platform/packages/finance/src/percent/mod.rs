@@ -112,9 +112,9 @@ impl Display for Percent {
         let (fractional, overflow) = (self.0).overflowing_sub(no_fraction);
         debug_assert!(!overflow);
 
-        f.write_fmt(format_args!("{}", whole))?;
+        f.write_fmt(format_args!("{whole}"))?;
         if fractional != Units::default() {
-            f.write_fmt(format_args!(".{}", fractional))?;
+            f.write_fmt(format_args!(".{fractional}"))?;
         }
         f.write_char('%')?;
         Ok(())
@@ -325,9 +325,7 @@ pub(super) mod test {
         assert_eq!(
             exp,
             perm.of(quantity.clone()),
-            "Calculating {} of {}",
-            perm,
-            quantity
+            "Calculating {perm} of {quantity}",
         );
     }
 

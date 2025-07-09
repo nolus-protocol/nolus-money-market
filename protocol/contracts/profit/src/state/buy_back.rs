@@ -51,8 +51,7 @@ impl BuyBack {
                 .all(|not_native: &CoinDTO<PaymentGroup>| not_native
                     .of_currency_dto(Nls::dto())
                     .is_err()),
-            "{:?}",
-            coins
+            "{coins:?}",
         );
 
         Self {

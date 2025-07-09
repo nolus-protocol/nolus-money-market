@@ -100,7 +100,7 @@ pub fn user(addr: &str) -> Addr {
 }
 
 pub fn contract(code_id: u64, instance_id: u64) -> Addr {
-    user(&format!("contract_{}_{}", code_id, instance_id))
+    user(&format!("contract_{code_id}_{instance_id}"))
 }
 
 struct TestAddressGenerator;

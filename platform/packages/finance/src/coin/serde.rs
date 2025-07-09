@@ -73,6 +73,6 @@ mod test {
     }
 
     fn json(amount: Amount) -> String {
-        format!(r#"{{"amount":"{}"}}"#, amount)
+        format!(r#"{{"amount":"{amount}"}}"#)
     }
 }

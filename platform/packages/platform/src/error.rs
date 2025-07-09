@@ -98,5 +98,5 @@ pub fn log<Err>(api: &dyn Api) -> impl FnOnce(&Err)
 where
     Err: Debug,
 {
-    |err| api.debug(&format!("{:?}", err))
+    |err| api.debug(&format!("{err:?}"))
 }

@@ -63,7 +63,7 @@ where
         _querier: QuerierWrapper<'_>,
         _env: Env,
     ) -> Result<Self> {
-        Err(err(self, &format!("handle {}", response))).into()
+        Err(err(self, &format!("handle {response}"))).into()
     }
 
     /// The entry point of a timeout delivery

@@ -365,5 +365,5 @@ fn expect_at_lease_one_filtered<G>(filtered: bool, out_c: &CurrencyDTO<G>)
 where
     G: Group,
 {
-    assert!(filtered, "No coins with currency != {}", out_c)
+    assert!(filtered, "No coins with currency != {out_c}")
 }

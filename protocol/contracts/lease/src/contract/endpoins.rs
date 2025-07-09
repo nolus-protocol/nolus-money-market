@@ -177,7 +177,7 @@ fn process_sudo(
             details,
         } => {
             let resp = details.into();
-            api.debug(&format!("SudoMsg::Error({})", resp));
+            api.debug(&format!("SudoMsg::Error({resp})"));
             state.on_dex_error(resp, querier, env)
         }
         _ => unreachable!(),
