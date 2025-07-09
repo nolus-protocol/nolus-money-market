@@ -217,7 +217,7 @@ fn execute_command(
 
             print!(">>> {:?}", command.get_program());
 
-            command.get_args().for_each(|arg| print!(" {:?}", arg));
+            command.get_args().for_each(|arg| print!(" {arg:?}"));
 
             println!();
 
