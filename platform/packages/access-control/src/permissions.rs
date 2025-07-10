@@ -4,8 +4,6 @@ use crate::{AccessPermission, user::User};
 
 pub type DexResponseSafeDeliveryPermission<'a> = SameContractOnly<'a>;
 
-pub type DexResponseSafeDeliveryPermission<'a> = SameContractOnly<'a>;
-
 pub struct SingleUserPermission<'a> {
     addr: &'a Addr,
 }
