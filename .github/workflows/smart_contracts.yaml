@@ -49,7 +49,7 @@ env:
 
 jobs:
   load-configuration:
-    runs-on: [self-hosted, linux]  # Changed from 'ubuntu-latest'
+    runs-on: "ubuntu-latest"
     name: "Load configuration"
     outputs:
       dex-types-json: |-
@@ -127,7 +127,7 @@ jobs:
           EOF" \
             >>"${GITHUB_OUTPUT}"
   prepare_tool_caches:
-    runs-on: [self-hosted, linux]  # Changed from 'ubuntu-latest'
+    runs-on: "ubuntu-latest"
     strategy:
       fail-fast: true
       matrix:
@@ -157,7 +157,7 @@ jobs:
   check-lock-files:
     needs:
       - "load-configuration"
-    runs-on: [self-hosted, linux]  # Changed from 'ubuntu-latest'
+    runs-on: "ubuntu-latest"
     strategy:
       fail-fast: true
       matrix:
@@ -180,7 +180,7 @@ jobs:
       - "load-configuration"
       - "prepare_tool_caches"
       - "check-lock-files"
-    runs-on: [self-hosted, linux]  # Changed from 'ubuntu-latest'
+    runs-on: "ubuntu-latest"
     strategy:
       fail-fast: true
       matrix:
@@ -224,7 +224,7 @@ jobs:
       - "load-configuration"
       - "prepare_tool_caches"
       - "check-lock-files"
-    runs-on: [self-hosted, linux]  # Changed from 'ubuntu-latest'
+    runs-on: "ubuntu-latest"
     strategy:
       fail-fast: true
       matrix:
@@ -275,7 +275,7 @@ jobs:
       - "load-configuration"
       - "prepare_tool_caches"
       - "check-lock-files"
-    runs-on: [self-hosted, linux]  # Changed from 'ubuntu-latest'
+    runs-on: "ubuntu-latest"
     strategy:
       fail-fast: true
       matrix:
@@ -334,7 +334,7 @@ jobs:
       - "load-configuration"
       - "prepare_tool_caches"
       - "check-lock-files"
-    runs-on: [self-hosted, linux]  # Changed from 'ubuntu-latest'
+    runs-on: "ubuntu-latest"
     strategy:
       fail-fast: true
       matrix:
@@ -393,7 +393,7 @@ jobs:
       - "instance_lint"
       - "instance_check_deps"
       - "instance_tests"
-    runs-on: [self-hosted, linux]  # Changed from 'ubuntu-latest'
+    runs-on: "ubuntu-latest"
     name: "Build platform binaries and protocol container image"
     steps:
       - name: "Checkout repository"
@@ -546,7 +546,7 @@ jobs:
     name: "Create draft release"
     permissions:
       contents: "write"
-    runs-on: [self-hosted, linux]  # Changed from 'ubuntu-latest'
+    runs-on: "ubuntu-latest"
     steps:
       - name: "Checkout repository"
         uses: "actions/checkout@v4"
