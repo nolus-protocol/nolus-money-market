@@ -90,12 +90,12 @@ mod test {
             coin::Coin,
             fractionable::Fractionable,
             percent::{Percent, Units},
-            ratio::Rational,
+            ratio::SimpleFraction,
         };
 
         #[test]
         fn safe_mul() {
-            let ratio_one = Rational::new(
+            let ratio_one = SimpleFraction::new(
                 Coin::<SuperGroupTestC1>::new(u128::MAX),
                 Coin::<SuperGroupTestC1>::new(u128::MAX),
             );

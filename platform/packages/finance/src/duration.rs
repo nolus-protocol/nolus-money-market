@@ -10,7 +10,7 @@ use sdk::cosmwasm_std::Timestamp;
 use crate::{
     fraction::Fraction,
     fractionable::{Fractionable, TimeSliceable},
-    ratio::Rational,
+    ratio::SimpleFraction,
     zero::Zero,
 };
 
@@ -93,7 +93,7 @@ impl Duration {
     where
         T: TimeSliceable,
     {
-        annual_amount.safe_mul(&Rational::new(self.nanos(), Self::YEAR.nanos()))
+        annual_amount.safe_mul(&SimpleFraction::new(self.nanos(), Self::YEAR.nanos()))
     }
 
     pub fn into_slice_per_ratio<U>(self, amount: U, annual_amount: U) -> Self
@@ -101,7 +101,7 @@ impl Duration {
         Self: Fractionable<U>,
         U: Zero + Debug + PartialEq + Copy,
     {
-        Rational::new(amount, annual_amount).of(self)
+        SimpleFraction::new(amount, annual_amount).of(self)
     }
 }
 
