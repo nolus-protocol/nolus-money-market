@@ -13,16 +13,36 @@ mod contract_owner;
 pub mod error;
 pub mod permissions;
 
+pub struct Sender<'a> {
+    addr: &'a Addr,
+}
+
+impl<'a> Sender<'a> {
+    pub fn new(info: &'a MessageInfo) -> Self {
+        Self { addr: &info.sender }
+    }
+    
+    pub fn from_addr(addr: &'a Addr) -> Self {
+        Self { addr }
+    }
+}
+
+impl<'info> AsRef<Addr> for Sender<'info> {
+    fn as_ref(&self) -> &Addr {
+        self.addr
+    }
+}
+
 pub trait AccessPermission {
-    fn granted_to(&self, info: &MessageInfo) -> bool;
+    fn granted_to(&self, sender: &Sender) -> bool;
 }
 
 /// Checks if access is granted to the given caller.
-pub fn check<P>(permission: &P, info: &MessageInfo) -> Result
+pub fn check<P>(permission: &P, sender: &Sender) -> Result
 where
     P: AccessPermission + ?Sized,
 {
-    if permission.granted_to(info) {
+    if permission.granted_to(sender) {
         Ok(())
     } else {
         Err(Error::Unauthorized {})
@@ -48,12 +68,12 @@ where
         }
     }
 
-    pub fn check(&self, info: &MessageInfo) -> Result {
+    pub fn check(&self, sender: &Sender) -> Result {
         self.storage_item
             .load(self.storage.deref())
             .map_err(Into::into)
-            .and_then(|granted_to| {
-                check(&SingleUserPermission::new(&granted_to), info)
+            .and_then(|ref granted_to| {
+                check(&SingleUserPermission::new(&granted_to), sender)
             })
     }
 }
@@ -75,9 +95,10 @@ where
 
 #[cfg(test)]
 mod tests {
-    use sdk::cosmwasm_std::{Addr, ContractInfo, MessageInfo, Storage, testing::MockStorage};
+    use sdk::cosmwasm_std::{Addr, ContractInfo, Storage, testing::MockStorage};
 
     use crate::{
+        Sender,
         SingleUserAccess,
         error::{Error, Result},
         permissions::{SameContractOnly, SingleUserPermission},
@@ -90,7 +111,7 @@ mod tests {
         let mut storage = MockStorage::new();
         let storage_ref: &mut dyn Storage = &mut storage;
         let mut access = SingleUserAccess::new(storage_ref, NAMESPACE);
-        let user_info = MessageInfo {
+        let sender = Sender {
             sender: Addr::unchecked("cosmic address"),
             funds: vec![],
         };

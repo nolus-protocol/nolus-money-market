@@ -12,6 +12,7 @@ mod lease;
 mod leaser;
 mod migrate;
 pub mod msg;
+pub mod permissions;
 pub mod result;
 mod state;
 
