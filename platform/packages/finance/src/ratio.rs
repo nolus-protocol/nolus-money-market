@@ -106,10 +106,12 @@ where
         if self.nominator == self.denominator {
             Some(rhs)
         } else {
-            let precise_res =
-                Self::multiply(self.nominator.into(), self.denominator.into(), rhs.into());
+            F::MaxRank::try_from(rhs).ok().and_then(|rhs_max| {
+                let precise_res =
+                    Self::multiply(self.nominator.into(), self.denominator.into(), rhs_max);
 
-            precise_res.or_else(|| self.try_precise_mul(rhs))
+                precise_res.or_else(|| self.try_precise_mul(rhs))
+            })
         }
     }
 
@@ -117,15 +119,13 @@ where
     where
         F: Fractionable<U>,
     {
-        dbg!(self.nominator);
-        dbg!(self.denominator);
         let nom = F::MaxRank::from(self.nominator);
         let denom = F::MaxRank::from(self.denominator);
-        let fractionable = F::MaxRank::from(rhs);
-
-        Self::precise_mul(nom, denom, fractionable, F::MaxRank::ONE)
-            .map(|(max_rank_nom, max_rank_denom)| max_rank_nom / max_rank_denom)
-            .and_then(|res| res.try_into().ok())
+        F::MaxRank::try_from(rhs).ok().and_then(|fractionable| {
+            Self::precise_mul(nom, denom, fractionable, F::MaxRank::ONE)
+                .map(|(max_rank_nom, max_rank_denom)| max_rank_nom / max_rank_denom)
+                .and_then(|res| res.try_into().ok())
+        })
     }
 
     fn precise_mul<T>(lhs_nom: T, lhs_denom: T, rhs_nom: T, rhs_denom: T) -> Option<(T, T)>
@@ -135,7 +135,6 @@ where
         lhs_nom
             .checked_mul(rhs_nom)
             .and_then(|nom| lhs_denom.checked_mul(rhs_denom).map(|denom| (nom, denom)))
-            .map(|(nom, denom)| (nom, denom))
             .or_else(|| {
                 let (lhs_nom_bits, rhs_nom_bits, extra_nom_bits) = Self::bits(lhs_nom, rhs_nom);
                 let (lhs_denom_bits, rhs_denom_bits, extra_denom_bits) =

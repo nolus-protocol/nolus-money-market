@@ -267,13 +267,7 @@ pub(super) mod test {
 
     fn test_of(permille: Units, quantity: Percent100, exp: Percent100) {
         let perm = Percent100::from_permille(permille);
-        assert_eq!(
-            exp,
-            perm.of(quantity),
-            "Calculating {} of {}",
-            perm,
-            quantity
-        );
+        assert_eq!(exp, perm.of(quantity), "Calculating {perm} of {quantity}",);
     }
 
     fn from(permille: Units) -> Percent100 {

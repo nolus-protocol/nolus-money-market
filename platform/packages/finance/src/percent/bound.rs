@@ -125,9 +125,9 @@ impl<const UPPER_BOUND: Units> Display for BoundPercent<UPPER_BOUND> {
         let (fractional, overflow) = (self.0).overflowing_sub(no_fraction);
         debug_assert!(!overflow);
 
-        f.write_fmt(format_args!("{}", whole))?;
+        f.write_fmt(format_args!("{whole}"))?;
         if fractional != Units::default() {
-            f.write_fmt(format_args!(".{}", fractional))?;
+            f.write_fmt(format_args!(".{fractional}"))?;
         }
         f.write_char('%')?;
         Ok(())

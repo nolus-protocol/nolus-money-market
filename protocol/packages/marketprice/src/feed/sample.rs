@@ -1,6 +1,12 @@
 use std::collections::HashMap;
 
-use finance::{duration::Duration, fractionable::Fractionable, price::Price, ratio::Ratio};
+use finance::{
+    duration::Duration,
+    percent::Percent100,
+    price::Price,
+    ratio::SimpleFraction,
+    rational::Rational,
+};
 use sdk::cosmwasm_std::{Addr, Timestamp};
 
 use super::observation::Observation;
@@ -108,9 +114,12 @@ where
             let first = values.next()?;
             let sum = values.fold(*first, |acc, current| acc + *current);
             let denominator = u32::try_from(prices_number).ok()?;
-            let part: Ratio<u32> = Ratio::new(1, denominator);
-            let avg = sum.safe_mul(&part);
-            self.last_sample = Sample { price: Some(avg) };
+            let part = SimpleFraction::new(
+                Percent100::from_permille(1),
+                Percent100::from_permille(denominator),
+            );
+            let avg = part.of(sum);
+            self.last_sample = Sample { price: avg };
         }
         self.sample_prices.clear();
         self.sample_start = self.sample_end();

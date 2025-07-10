@@ -158,7 +158,7 @@ impl<C> Coin<C> {
     fn checked_operation(self, res: Option<Amount>) -> Option<Self> {
         res.map(|amount| Self {
             amount,
-            ticker: self.ticker,
+            currency: self.currency,
         })
     }
 }
@@ -519,13 +519,7 @@ mod test {
         P: Clone + Debug + Display + Fractionable<Percent100> + PartialEq,
     {
         let perm = Percent100::from_permille(permille);
-        assert_eq!(
-            exp,
-            perm.of(quantity),
-            "Calculating {} of {}",
-            perm,
-            quantity
-        );
+        assert_eq!(exp, perm.of(quantity), "Calculating {perm} of {quantity}");
     }
 
     fn coprime_impl(gcd: Amount, a1: Amount, a2: Amount) {

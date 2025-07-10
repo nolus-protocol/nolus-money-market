@@ -8,8 +8,8 @@ use lease::api::{DownpaymentCoin, MigrateMsg};
 use lpp::{
     msg::ExecuteMsg as LppExecuteMsg,
     stub::{
-        deposit::{Depositer, WithDepositer},
         LppRef,
+        deposit::{Depositer, WithDepositer},
     },
 };
 use platform::{
@@ -22,6 +22,7 @@ use sdk::cosmwasm_std::{Addr, Deps, QuerierWrapper, Storage};
 use versioning::{ProtocolMigrationMessage, ProtocolPackageRelease};
 
 use crate::{
+    ContractError,
     cmd::Quote,
     finance::{LpnCurrencies, LpnCurrency, OracleRef},
     lease::Release as LeaseReleaseTrait,
@@ -29,7 +30,6 @@ use crate::{
     msg::{MaxLeases, NewConfig, QuoteResponse},
     result::ContractResult,
     state::{config::Config, leases::Leases},
-    ContractError,
 };
 
 pub struct Leaser<'a> {
@@ -214,7 +214,7 @@ mod test {
     use admin_contract::msg::{MigrationSpec, ProtocolContracts};
     use json_value::JsonValue;
     use platform::response;
-    use sdk::cosmwasm_std::{testing::MockStorage, Addr, Storage};
+    use sdk::cosmwasm_std::{Addr, Storage, testing::MockStorage};
 
     use crate::{result::ContractResult, tests};
 

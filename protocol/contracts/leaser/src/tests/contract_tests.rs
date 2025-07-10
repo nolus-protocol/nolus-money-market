@@ -66,7 +66,7 @@ fn leaser_instantiate_msg(lease_code: Code, lpp: Addr) -> crate::msg::Instantiat
         lease_interest_rate_margin: MARGIN_INTEREST_RATE,
         lease_due_period: Duration::from_days(90),
         lease_max_slippages: MaxSlippages {
-            liquidation: MaxSlippage::unchecked(Percent::from_percent(20)),
+            liquidation: MaxSlippage::new(Percen100::from_percent(20)),
         },
         lease_admin: sdk_testing::user(LEASE_ADMIN),
         dex: dex_params(),

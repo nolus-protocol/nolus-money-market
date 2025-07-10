@@ -1,4 +1,4 @@
-use currencies::{testing::PaymentC3, Lpn};
+use currencies::{Lpn, testing::PaymentC3};
 use finance::{
     coin::Coin,
     duration::Duration,
@@ -10,7 +10,7 @@ use finance::{
 
 use crate::{
     finance::LpnCoin,
-    position::{close::Policy as ClosePolicy, DueTrait, OverdueCollection},
+    position::{DueTrait, OverdueCollection, close::Policy as ClosePolicy},
 };
 
 use super::Spec;

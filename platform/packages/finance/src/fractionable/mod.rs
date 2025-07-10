@@ -15,9 +15,9 @@ where
     /// The larger numeric type between U and Self, used to safely perform intermediate calculations.
     type MaxRank: CheckedMul<Output = Self::MaxRank>
         + Div<Output = Self::MaxRank>
-        + From<Self>
         + From<U>
         + One
         + Trim
+        + TryFrom<Self>
         + TryInto<Self>;
 }
