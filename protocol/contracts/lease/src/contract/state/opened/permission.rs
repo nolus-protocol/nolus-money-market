@@ -5,6 +5,9 @@ use oracle_platform::OracleRef;
 pub type ChangeClosePolicyPermission<'a> = SingleUserPermission<'a>;
 pub type ClosePositionPermission<'a> = SingleUserPermission<'a>;
 
+pub type ChangeClosePolicyPermission<'a> = SingleUserPermission<'a>;
+pub type ClosePositionPermission<'a> = SingleUserPermission<'a>;
+
 /// This is a permission given to deliver price alarms
 pub struct PriceAlarmDelivery<'a, QuoteC, QuoteG>
 where

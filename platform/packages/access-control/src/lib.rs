@@ -15,6 +15,26 @@ pub mod error;
 pub mod permissions;
 pub mod user;
 
+pub struct Sender<'a> {
+    addr: &'a Addr,
+}
+
+impl<'a> Sender<'a> {
+    pub fn new(info: &'a MessageInfo) -> Self {
+        Self { addr: &info.sender }
+    }
+    
+    pub fn from_addr(addr: &'a Addr) -> Self {
+        Self { addr }
+    }
+}
+
+impl<'info> AsRef<Addr> for Sender<'info> {
+    fn as_ref(&self) -> &Addr {
+        self.addr
+    }
+}
+
 pub trait AccessPermission {
     fn granted_to<U>(&self, user: &U) -> bool
     where
@@ -87,6 +107,7 @@ mod tests {
     use sdk::cosmwasm_std::{Addr, ContractInfo, Storage, testing::MockStorage};
 
     use crate::{
+        Sender,
         SingleUserAccess,
         error::{Error, Result},
         permissions::{SameContractOnly, SingleUserPermission},
