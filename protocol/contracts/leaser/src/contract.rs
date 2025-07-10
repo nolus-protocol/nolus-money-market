@@ -41,26 +41,6 @@ const CURRENT_RELEASE: ProtocolPackageRelease = ProtocolPackageRelease::current(
     CONTRACT_STORAGE_VERSION,
 );
 
-struct LeaseAdminOnly<'a> {
-    lease_config: &'a Config,
-}
-
-impl<'a> LeaseAdminOnly<'a> {
-    fn new(lease_config: &'a Config) -> Self {
-        Self { lease_config }
-    }
-}
-
-impl AccessPermission for LeaseAdminOnly<'_> {
-    fn granted_to(&self, info: &MessageInfo) -> bool {
-        self.lease_config.lease_admin == info.sender
-    }
-}
-
-type LeasesConfigurationPermission<'a> = LeaseAdminOnly<'a>;
-type ChangeLeaseAdminPermission<'a> = LeaseAdminOnly<'a>;
-type AnomalyResolutionPermission<'a> = LeaseAdminOnly<'a>;
-
 #[entry_point]
 pub fn instantiate(
     mut deps: DepsMut<'_>,
