@@ -43,7 +43,7 @@ where
 {
     pub fn try_into_alarms(
         self,
-        when: Timestamp,
+        when: &Timestamp,
         time_alarms: &TimeAlarmsRef,
         price_alarms: &OracleRef,
     ) -> ContractResult<Batch> {

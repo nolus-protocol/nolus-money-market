@@ -28,6 +28,7 @@ use crate::{
     lease::CacheFirstRelease,
     leaser::{self, Leaser},
     msg::{ConfigResponse, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg, SudoMsg},
+    permissions::{AnomalyResolutionPermission, ChangeLeaseAdminPermission, LeasesConfigurationPermission},
     result::ContractResult,
     state::{config::Config, leases::Leases},
 };
@@ -38,26 +39,6 @@ const CURRENT_RELEASE: ProtocolPackageRelease = ProtocolPackageRelease::current(
     package_version!(),
     CONTRACT_STORAGE_VERSION,
 );
-
-struct LeaseAdminOnly<'a> {
-    lease_config: &'a Config,
-}
-
-impl<'a> LeaseAdminOnly<'a> {
-    fn new(lease_config: &'a Config) -> Self {
-        Self { lease_config }
-    }
-}
-
-impl AccessPermission for LeaseAdminOnly<'_> {
-    fn granted_to(&self, info: &MessageInfo) -> bool {
-        self.lease_config.lease_admin == info.sender
-    }
-}
-
-type LeasesConfigurationPermission<'a> = LeaseAdminOnly<'a>;
-type ChangeLeaseAdminPermission<'a> = LeaseAdminOnly<'a>;
-type AnomalyResolutionPermission<'a> = LeaseAdminOnly<'a>;
 
 #[entry_point]
 pub fn instantiate(
@@ -128,15 +109,13 @@ pub fn execute(
             currency,
             max_ltd,
         ),
-        ExecuteMsg::ConfigLeases(new_config) => {
-            Leaser::new(deps.as_ref()).config().and_then(|config| {
-                access_control::check(&LeasesConfigurationPermission::new(&config), &info)?;
-                leaser::try_configure(deps.storage, new_config)
-            })
-        }
+        ExecuteMsg::ConfigLeases(new_config) => Leaser::new(deps.as_ref())
+            .config()
+            .and_then(|config| access_control::check(&LeasesConfigurationPermission::new(&config), &info))
+            .and_then(|()| leaser::try_configure(deps.storage, new_config)),
         ExecuteMsg::FinalizeLease { customer } => {
             validate_customer(customer, deps.api, deps.querier)
-                .and_then(|customer| {
+                .and_then(|customer| {  
                     validate_lease(info.sender, deps.as_ref()).map(|lease| (customer, lease))
                 })
                 .and_then(|(customer, lease)| Leases::remove(deps.storage, customer, &lease))
@@ -181,7 +160,7 @@ pub fn execute(
             }),
         ExecuteMsg::ChangeLeaseAdmin { new } => Leaser::new(deps.as_ref())
             .config()
-            .and_then(|config| {
+            .and_then(|ref config| {
                 access_control::check(&ChangeLeaseAdminPermission::new(&config), &info)
             })
             .and_then(|()| validate(&new, deps.api))
@@ -222,7 +201,7 @@ pub fn query(deps: Deps<'_>, _env: Env, msg: QueryMsg) -> ContractResult<Binary>
 
             Leaser::new(deps)
                 .config()
-                .map(|config| {
+                .map(|ref config| {
                     if access_control::check(&AnomalyResolutionPermission::new(&config), &msg_info).is_ok() {
                         AccessGranted::Yes
                     } else {
