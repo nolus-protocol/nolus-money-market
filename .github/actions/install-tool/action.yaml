@@ -77,8 +77,13 @@ runs:
             tool_info="$(
               "curl" \
                 --silent \
+                --user-agent "nolus-protocol/ci (https://github.com/nolus-protocol/nolus-money-market)" \
+                --max-time 30 \
                 "https://crates.io/api/v1/crates/${tool:?}"
             )"
+
+            # Small delay to respect crates.io rate limits (1 req/sec)
+            sleep 1
 
             key="$(
               "jq" \
