@@ -97,7 +97,7 @@ mod test {
             fraction::Fraction,
             fractionable::price::test::{c, q},
             price,
-            ratio::Rational,
+            ratio::SimpleFraction,
         };
 
         #[test]
@@ -143,7 +143,7 @@ mod test {
             quote_exp: Coin<SuperGroupTestC1>,
         ) {
             let price = price::total_of(amount1).is(quote1);
-            let ratio = Rational::new(nominator, denominator);
+            let ratio = SimpleFraction::new(nominator, denominator);
             assert_eq!(
                 Fraction::<usize>::of(&ratio, price),
                 price::total_of(amount_exp).is(quote_exp)
