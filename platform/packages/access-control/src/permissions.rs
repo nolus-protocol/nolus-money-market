@@ -1,6 +1,6 @@
-use sdk::cosmwasm_std::{Addr, ContractInfo, MessageInfo};
+use sdk::cosmwasm_std::{Addr, ContractInfo};
 
-use crate::AccessPermission;
+use crate::{AccessPermission, Sender};
 
 pub type DexResponseSafeDeliveryPermission<'a> = SameContractOnly<'a>;
 
@@ -15,8 +15,8 @@ impl<'a> SingleUserPermission<'a> {
 }
 
 impl AccessPermission for SingleUserPermission<'_> {
-    fn granted_to(&self, info: &MessageInfo) -> bool {
-        self.addr == info.sender
+    fn granted_to(&self, sender: &Sender) -> bool {
+        self.addr == sender.as_ref()
     }
 }
 
@@ -31,7 +31,7 @@ impl<'a> SameContractOnly<'a> {
 }
 
 impl AccessPermission for SameContractOnly<'_> {
-    fn granted_to(&self, info: &MessageInfo) -> bool {
-        self.contract_info.address == info.sender
+    fn granted_to(&self, sender: &Sender) -> bool {
+        self.contract_info.address == sender.as_ref()
     }
 }
