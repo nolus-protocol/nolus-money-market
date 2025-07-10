@@ -7,7 +7,7 @@ use finance::{
     coin::{Amount, Coin},
     duration::Duration,
     interest,
-    percent::Percent,
+    percent::{Percent, Percent100},
     price::{self, Price},
 };
 use lease::api::query::{ClosePolicy, StateResponse, opened::Status};
@@ -142,9 +142,9 @@ where
 
 pub(super) fn calculate_interest(
     principal: Coin<LpnCurrency>,
-    interest_rate: Percent,
+    interest_rate: Percent100,
     duration: Duration,
-) -> Coin<LpnCurrency> {
+) -> Option<Coin<LpnCurrency>> {
     interest::interest(interest_rate, principal, duration)
 }
 
@@ -396,10 +396,10 @@ where
     let last_paid = now;
     let quote_result = quote_query(test_case, downpayment);
     let total: Coin<AssetC> = Coin::<AssetC>::try_from(quote_result.total).unwrap();
-    let total_lpn: LpnCoin = price::total(total, price_lpn_of::<AssetC>());
+    let total_lpn: LpnCoin = price::total(total, price_lpn_of::<AssetC>()).unwrap();
     let expected_principal: LpnCoin = total_lpn
-        - price::total(downpayment, price_lpn_of::<DownpaymentC>())
-        - price::total(payments, price_lpn_of::<PaymentC>());
+        - price::total(downpayment, price_lpn_of::<DownpaymentC>()).unwrap()
+        - price::total(payments, price_lpn_of::<PaymentC>()).unwrap();
     let due_period_start = (now - max_due).max(last_paid);
     let (overdue, due) = (
         Duration::between(&last_paid, &due_period_start),
@@ -415,12 +415,14 @@ where
             quote_result.annual_interest_rate_margin,
             overdue,
         )
+        .unwrap()
         .into(),
         overdue_interest: calculate_interest(
             expected_principal,
             quote_result.annual_interest_rate,
             overdue,
         )
+        .unwrap()
         .into(),
         overdue_collect_in: if overdue == Duration::default() {
             Duration::between(&(now - max_due), &last_paid)
@@ -432,12 +434,14 @@ where
             quote_result.annual_interest_rate_margin,
             due,
         )
+        .unwrap()
         .into(),
         due_interest: calculate_interest(
             expected_principal,
             quote_result.annual_interest_rate,
             due,
         )
+        .unwrap()
         .into(),
         due_projection: Duration::default(),
         close_policy: ClosePolicy::default(),

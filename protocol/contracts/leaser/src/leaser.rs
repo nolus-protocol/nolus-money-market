@@ -3,7 +3,7 @@ use std::collections::HashSet;
 use admin_contract::msg::{ExecuteMsg, MigrationSpec, ProtocolContracts};
 use currencies::LeaseGroup;
 use currency::CurrencyDTO;
-use finance::percent::Percent;
+use finance::percent::{Percent, Percent100};
 use lease::api::{DownpaymentCoin, MigrateMsg};
 use lpp::{
     msg::ExecuteMsg as LppExecuteMsg,

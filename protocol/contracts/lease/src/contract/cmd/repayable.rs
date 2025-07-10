@@ -197,7 +197,7 @@ mod test {
         coin::Coin,
         fraction::Fraction,
         liability::Zone,
-        percent::Percent,
+        percent::Percent100,
         price::{self, Price},
     };
     use lpp::msg::LoanResponse;
@@ -227,15 +227,15 @@ mod test {
     fn reset_take_profit() {
         let now = Timestamp::from_seconds(24412515);
         let lease_amount = 1000.into();
-        let lease_lpn = price::total(lease_amount, Price::identity());
-        let current_ltv = Percent::from_percent(30);
-        let stop_loss = Percent::from_percent(59);
-        let take_profit = Percent::from_percent(29);
+        let lease_lpn = price::total(lease_amount, Price::identity()).unwrap();
+        let current_ltv = Percent100::from_percent(30);
+        let stop_loss = Percent100::from_percent(59);
+        let take_profit = Percent100::from_percent(29);
 
         let due_amount = current_ltv.of(lease_lpn);
         let loan = LoanResponse {
             principal_due: due_amount,
-            annual_interest_rate: Percent::from_permille(50),
+            annual_interest_rate: Percent100::from_permille(50),
             interest_paid: now,
         };
         let mut lease = tests::open_lease(lease_amount, loan.clone());

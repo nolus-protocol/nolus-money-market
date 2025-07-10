@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use currency::{Group, platform::Nls};
 use finance::{
     coin::{Coin, CoinDTO},
-    percent::{Percent, bound::BoundToHundredPercent},
+    percent::Percent100,
     price::Price,
 };
 use lpp_platform::NLpn;
@@ -20,7 +20,7 @@ pub struct InstantiateMsg {
     // Since this is an external system API we should not use [Code].
     pub lease_code: Uint64,
     pub borrow_rate: InterestRate,
-    pub min_utilization: BoundToHundredPercent,
+    pub min_utilization: Percent100,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -70,12 +70,8 @@ where
 #[cfg_attr(feature = "testing", derive(Debug))]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub enum SudoMsg {
-    NewBorrowRate {
-        borrow_rate: InterestRate,
-    },
-    MinUtilization {
-        min_utilization: BoundToHundredPercent,
-    },
+    NewBorrowRate { borrow_rate: InterestRate },
+    MinUtilization { min_utilization: Percent100 },
 }
 
 #[derive(Serialize, Deserialize, Clone, Eq, PartialEq)]
@@ -129,7 +125,7 @@ pub type ConfigResponse = Config;
 #[cfg_attr(any(test, feature = "testing"), derive(Debug))]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub enum QueryQuoteResponse {
-    QuoteInterestRate(Percent),
+    QuoteInterestRate(Percent100),
     NoLiquidity,
 }
 

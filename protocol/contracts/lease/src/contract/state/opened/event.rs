@@ -3,6 +3,9 @@ use finance::liability::Level;
 use platform::batch::{Emit, Emitter};
 use sdk::cosmwasm_std::{Addr, Env};
 
+use finance::{liability::Level, percent::Percent100};
+use platform::batch::{Emit, Emitter};
+
 use crate::{
     api::DownpaymentCoin,
     contract::{
@@ -26,7 +29,9 @@ pub(super) fn emit_lease_opened(
         .emit("customer", lease.customer.clone())
         .emit_percent_amount(
             "air",
-            loan.annual_interest_rate + lease.loan.annual_margin_interest(),
+            loan.annual_interest_rate
+                .checked_add(lease.loan.annual_margin_interest())
+                .expect("TODO propagate up the stack potential overflow"),
         )
         .emit_currency_dto("currency", &lease.position.amount().currency())
         .emit("loan-pool-id", lease.loan.lpp().addr())
@@ -52,9 +57,9 @@ pub(super) fn emit_liquidation_warning(lease: &LeaseDTO, level: &Level) -> Emitt
         .emit_to_string_value("level", level.ordinal())
 }
 
-pub(super) fn emit_slippage_anomaly(lease: &LeaseDTO, max_slippage: MaxSlippage) -> Emitter {
-    let emitter = emit_lease(Emitter::of_type(Type::SlippageAnomaly), lease);
-    max_slippage.emit(emitter, "max_slippage")
+pub(super) fn emit_slippage_anomaly(lease: &LeaseDTO, max_slippage: Percent100) -> Emitter {
+    emit_lease(Emitter::of_type(Type::SlippageAnomaly), lease)
+        .emit_percent_amount("max_slippage", max_slippage)
 }
 
 fn emit_lease(emitter: Emitter, lease: &LeaseDTO) -> Emitter {

@@ -6,14 +6,19 @@ use std::{
     fmt::{Debug, Display, Formatter},
     iter::Sum,
     marker::PhantomData,
-    ops::{Add, AddAssign, Sub, SubAssign},
+    ops::{Add, AddAssign, Div, Sub, SubAssign},
 };
 
 use ::serde::{Deserialize, Serialize};
+use gcd::Gcd;
 
 use currency::{Currency, CurrencyDef, Group, MemberOf};
 
-use crate::zero::Zero;
+use crate::{
+    ratio::SimpleFraction,
+    traits::{self, Bits, CheckedAdd, CheckedMul, FractionUnit, One, Scalar, Trim},
+    zero::Zero,
+};
 
 pub use self::dto::{CoinDTO, IntoDTO};
 
@@ -22,6 +27,71 @@ mod dto;
 mod serde;
 
 pub type Amount = u128;
+
+impl Bits for Amount {
+    const BITS: u32 = Amount::BITS;
+
+    fn leading_zeros(self) -> u32 {
+        Amount::leading_zeros(self)
+    }
+}
+
+impl CheckedAdd for Amount {
+    type Output = Self;
+
+    fn checked_add(self, rhs: Self) -> Option<Self::Output> {
+        self.checked_add(rhs)
+    }
+}
+
+impl CheckedMul for Amount {
+    type Output = Self;
+
+    fn checked_mul(self, rhs: Self) -> Option<Self::Output> {
+        self.checked_mul(rhs)
+    }
+}
+
+impl FractionUnit for Amount {}
+
+impl One for Amount {
+    const ONE: Self = 1;
+}
+
+impl Trim for Amount {
+    fn trim(self, bits: u32) -> Self {
+        self >> bits
+    }
+}
+
+impl Scalar for Amount {
+    type Times = Self;
+
+    fn gcd(self, other: Self) -> Self::Times {
+        Gcd::gcd(self, other)
+    }
+
+    fn scale_up(self, scale: Self::Times) -> Option<Self> {
+        self.checked_mul(scale)
+    }
+
+    fn scale_down(self, scale: Self::Times) -> Self {
+        debug_assert_ne!(scale, 0);
+
+        self / scale
+    }
+
+    fn modulo(self, scale: Self::Times) -> Self::Times {
+        debug_assert_ne!(scale, 0);
+
+        self % scale
+    }
+
+    fn into_times(self) -> Self::Times {
+        self
+    }
+}
+
 #[cfg(feature = "testing")]
 pub type NonZeroAmount = NonZeroU128;
 
@@ -47,11 +117,7 @@ impl<C> Coin<C> {
 
     #[track_caller]
     pub fn checked_add(self, rhs: Self) -> Option<Self> {
-        let may_amount = self.amount.checked_add(rhs.amount);
-        may_amount.map(|amount| Self {
-            amount,
-            currency: self.currency,
-        })
+        self.checked_operation(self.amount.checked_add(rhs.amount))
     }
 
     #[track_caller]
@@ -61,56 +127,64 @@ impl<C> Coin<C> {
 
     #[track_caller]
     pub fn checked_sub(self, rhs: Self) -> Option<Self> {
-        let may_amount = self.amount.checked_sub(rhs.amount);
-        may_amount.map(|amount| Self {
-            amount,
-            currency: self.currency,
-        })
+        self.checked_operation(self.amount.checked_sub(rhs.amount))
     }
 
     #[track_caller]
     pub fn checked_mul(self, rhs: Amount) -> Option<Self> {
-        let may_amount = self.amount.checked_mul(rhs);
-        may_amount.map(|amount| Self {
-            amount,
-            currency: self.currency,
-        })
+        self.checked_operation(self.amount.checked_mul(rhs))
     }
 
     #[track_caller]
     pub fn checked_div(self, rhs: Amount) -> Option<Self> {
-        let may_amount = self.amount.checked_div(rhs);
-        may_amount.map(|amount| Self {
+        self.checked_operation(self.amount.checked_div(rhs))
+    }
+
+    pub fn to_rational<OtherC>(self, denominator: Coin<OtherC>) -> SimpleFraction<Amount> {
+        SimpleFraction::new(self.amount, denominator.amount)
+    }
+
+    #[track_caller]
+    pub(super) fn into_coprime_with<OtherC>(self, other: Coin<OtherC>) -> (Self, Coin<OtherC>) {
+        let (new_self_amount, new_other_amount) = traits::into_coprime(self.amount, other.amount);
+
+        (
+            Self::new(new_self_amount),
+            Coin::<OtherC>::new(new_other_amount),
+        )
+    }
+
+    #[track_caller]
+    fn checked_operation(self, res: Option<Amount>) -> Option<Self> {
+        res.map(|amount| Self {
             amount,
             currency: self.currency,
         })
     }
+}
+
+impl<C> Add for Coin<C> {
+    type Output = Self;
 
     #[track_caller]
-    pub(super) const fn into_coprime_with<OtherC>(
-        self,
-        other: Coin<OtherC>,
-    ) -> (Self, Coin<OtherC>) {
-        debug_assert!(!self.is_zero(), "LHS-value's amount is zero!");
-        debug_assert!(!other.is_zero(), "RHS-value's amount is zero!");
+    fn add(self, rhs: Coin<C>) -> Self::Output {
+        self.checked_add(rhs)
+            .expect("addition should not overflow with real data")
+    }
+}
 
-        let gcd: Amount = gcd::binary_u128(self.amount, other.amount);
+impl<C> AddAssign for Coin<C> {
+    #[track_caller]
+    fn add_assign(&mut self, rhs: Coin<C>) {
+        self.amount += rhs.amount;
+    }
+}
 
-        debug_assert!(gcd > 0);
+impl<C> Bits for Coin<C> {
+    const BITS: u32 = Amount::BITS;
 
-        debug_assert!(
-            self.amount % gcd == 0,
-            "LHS-value's amount is not divisible by the GCD!"
-        );
-        debug_assert!(
-            other.amount % gcd == 0,
-            "RHS-value's amount is not divisible by the GCD!"
-        );
-
-        (
-            Self::new(self.amount / gcd),
-            Coin::<OtherC>::new(other.amount / gcd),
-        )
+    fn leading_zeros(self) -> u32 {
+        self.amount.leading_zeros()
     }
 }
 
@@ -140,7 +214,40 @@ impl<C> Default for Coin<C> {
     }
 }
 
+impl<C> Display for Coin<C> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.write_fmt(format_args!("{} {}", self.amount, any::type_name::<C>()))
+    }
+}
+
 impl<C> Eq for Coin<C> {}
+
+impl<C> FractionUnit for Coin<C> {}
+
+impl<C> From<Amount> for Coin<C> {
+    fn from(amount: Amount) -> Self {
+        Self::new(amount)
+    }
+}
+
+impl<C> From<Coin<C>> for Amount {
+    fn from(coin: Coin<C>) -> Self {
+        coin.amount
+    }
+}
+
+impl<C> One for Coin<C> {
+    const ONE: Self = Self::new(1);
+}
+
+impl<C> Ord for Coin<C>
+where
+    Self: PartialOrd,
+{
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.amount.cmp(&other.amount)
+    }
+}
 
 impl<C> PartialEq for Coin<C> {
     fn eq(&self, other: &Self) -> bool {
@@ -153,27 +260,35 @@ impl<C> PartialOrd for Coin<C> {
         Some(self.cmp(other))
     }
 }
-
-impl<C> Ord for Coin<C>
-where
-    Self: PartialOrd,
-{
-    fn cmp(&self, other: &Self) -> Ordering {
-        self.amount.cmp(&other.amount)
+impl<C> Trim for Coin<C> {
+    fn trim(self, bits: u32) -> Self {
+        (self.amount >> bits).into()
     }
 }
 
-impl<C> Zero for Coin<C> {
-    const ZERO: Self = Self::new(Zero::ZERO);
-}
+impl<C> Scalar for Coin<C> {
+    type Times = Amount;
 
-impl<C> Add for Coin<C> {
-    type Output = Self;
+    fn gcd(self, other: Self) -> Self::Times {
+        Gcd::gcd(self.amount, other.amount)
+    }
 
-    #[track_caller]
-    fn add(self, rhs: Coin<C>) -> Self::Output {
-        self.checked_add(rhs)
-            .expect("addition should not overflow with real data")
+    fn scale_up(self, scale: Self::Times) -> Option<Self> {
+        self.amount.checked_mul(scale).map(Self::new)
+    }
+
+    fn scale_down(self, scale: Self::Times) -> Self {
+        debug_assert_ne!(scale, 0);
+
+        Self::new(self.amount.div(scale))
+    }
+
+    fn modulo(self, scale: Self::Times) -> Self::Times {
+        self.amount % scale
+    }
+
+    fn into_times(self) -> Self::Times {
+        self.amount
     }
 }
 
@@ -187,13 +302,6 @@ impl<C> Sub for Coin<C> {
     }
 }
 
-impl<C> AddAssign for Coin<C> {
-    #[track_caller]
-    fn add_assign(&mut self, rhs: Coin<C>) {
-        self.amount += rhs.amount;
-    }
-}
-
 impl<C> SubAssign for Coin<C> {
     #[track_caller]
     fn sub_assign(&mut self, rhs: Coin<C>) {
@@ -201,22 +309,8 @@ impl<C> SubAssign for Coin<C> {
     }
 }
 
-impl<C> Display for Coin<C> {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        f.write_fmt(format_args!("{} {}", self.amount, any::type_name::<C>()))
-    }
-}
-
-impl<C> From<Amount> for Coin<C> {
-    fn from(amount: Amount) -> Self {
-        Self::new(amount)
-    }
-}
-
-impl<C> From<Coin<C>> for Amount {
-    fn from(coin: Coin<C>) -> Self {
-        coin.amount
-    }
+impl<C> Zero for Coin<C> {
+    const ZERO: Self = Self::new(Zero::ZERO);
 }
 
 pub type WithCoinResult<G, V> = Result<<V as WithCoin<G>>::Output, <V as WithCoin<G>>::Error>;
@@ -252,11 +346,18 @@ impl<C> AsRef<Self> for Coin<C> {
 
 #[cfg(test)]
 mod test {
-    use std::any;
+    use std::{
+        any,
+        fmt::{Debug, Display},
+    };
 
     use currency::test::{SuperGroupTestC1, SuperGroupTestC2};
 
-    use crate::percent::test::test_of;
+    use crate::{
+        fraction::Fraction,
+        fractionable::Fractionable,
+        percent::{Percent100, Units},
+    };
 
     use super::{Amount, Coin};
 
@@ -411,6 +512,14 @@ mod test {
         let exp_sum = coin1(15);
         assert_eq!(coins.iter().sum::<Coin<SuperGroupTestC1>>(), exp_sum);
         assert_eq!(coins.into_iter().sum::<Coin<SuperGroupTestC1>>(), exp_sum);
+    }
+
+    fn test_of<P>(permille: Units, quantity: P, exp: P)
+    where
+        P: Clone + Debug + Display + Fractionable<Percent100> + PartialEq,
+    {
+        let perm = Percent100::from_permille(permille);
+        assert_eq!(exp, perm.of(quantity), "Calculating {perm} of {quantity}");
     }
 
     fn coprime_impl(gcd: Amount, a1: Amount, a2: Amount) {

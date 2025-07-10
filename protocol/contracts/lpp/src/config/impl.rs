@@ -1,4 +1,4 @@
-use finance::{percent::bound::BoundToHundredPercent, price::Price};
+use finance::{percent::Percent100, price::Price};
 use lpp_platform::NLpn;
 use platform::contract::Code;
 
@@ -10,7 +10,7 @@ impl Config {
     pub(crate) fn new(
         lease_code: Code,
         borrow_rate: InterestRate,
-        min_utilization: BoundToHundredPercent,
+        min_utilization: Percent100,
     ) -> Self {
         Self {
             lease_code,
@@ -27,7 +27,7 @@ impl Config {
         &self.borrow_rate
     }
 
-    pub const fn min_utilization(&self) -> BoundToHundredPercent {
+    pub const fn min_utilization(&self) -> Percent100 {
         self.min_utilization
     }
 

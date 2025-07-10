@@ -6,9 +6,10 @@ use crate::{
     duration::Duration,
     error::{Error, Result},
     fraction::Fraction,
-    fractionable::Percentable,
-    percent::{Percent, Units},
-    ratio::Rational,
+    fractionable::Fractionable,
+    percent::{Percent, Percent100},
+    ratio::SimpleFraction,
+    rational::Rational,
     zero::Zero,
 };
 
@@ -28,19 +29,19 @@ mod zone;
 pub struct Liability {
     /// The initial percentage of the amount due versus the locked collateral
     /// initial > 0
-    initial: Percent,
+    initial: Percent100,
     /// The healty percentage of the amount due versus the locked collateral
     /// healthy >= initial
-    healthy: Percent,
+    healthy: Percent100,
     /// The percentage above which the first liquidity warning is issued.
-    first_liq_warn: Percent,
+    first_liq_warn: Percent100,
     /// The percentage above which the second liquidity warning is issued.
-    second_liq_warn: Percent,
+    second_liq_warn: Percent100,
     /// The percentage above which the third liquidity warning is issued.
-    third_liq_warn: Percent,
+    third_liq_warn: Percent100,
     /// The maximum percentage of the amount due versus the locked collateral
     /// max > healthy
-    max: Percent,
+    max: Percent100,
     /// At what time cadence to recalculate the liability
     ///
     /// Limitation: recalc_time >= 1 hour
@@ -48,18 +49,18 @@ pub struct Liability {
 }
 
 impl Liability {
-    const MAX_TOP_BOUND: Percent = Percent::HUNDRED;
-    const MIN_STEP_LTV: Percent = Percent::from_permille(1);
+    const MAX_TOP_BOUND: Percent100 = Percent100::HUNDRED;
+    const MIN_STEP_LTV: Percent100 = Percent100::from_permille(1);
 
     #[track_caller]
     #[cfg(any(test, feature = "testing"))]
     pub fn new(
-        initial: Percent,
-        healthy: Percent,
-        first_liq_warn: Percent,
-        second_liq_warn: Percent,
-        third_liq_warn: Percent,
-        max: Percent,
+        initial: Percent100,
+        healthy: Percent100,
+        first_liq_warn: Percent100,
+        second_liq_warn: Percent100,
+        third_liq_warn: Percent100,
+        max: Percent100,
         recalc_time: Duration,
     ) -> Self {
         let obj = Self {
@@ -75,23 +76,27 @@ impl Liability {
         obj
     }
 
-    pub const fn healthy_percent(&self) -> Percent {
+    pub const fn healthy_percent(&self) -> Percent100 {
         self.healthy
     }
 
-    pub const fn third_liq_warn(&self) -> Percent {
+    pub const fn third_liq_warn(&self) -> Percent100 {
         self.third_liq_warn
     }
 
-    pub const fn max(&self) -> Percent {
+    pub const fn max(&self) -> Percent100 {
         self.max
     }
 
-    pub fn cap_to_zone(&self, ltv: Percent) -> Percent {
-        ltv.min(self.max - Self::MIN_STEP_LTV)
+    pub fn cap_to_zone(&self, ltv: Percent100) -> Percent100 {
+        ltv.min(
+            self.max
+                .checked_sub(Self::MIN_STEP_LTV)
+                .expect("Invariant to be held"),
+        )
     }
 
-    pub fn zone_of(&self, ltv: Percent) -> Zone {
+    pub fn zone_of(&self, ltv: Percent100) -> Zone {
         debug_assert!(ltv < self.max, "Ltv >= max is outside any liability zone!");
 
         if ltv < self.first_liq_warn {
@@ -109,43 +114,51 @@ impl Liability {
         self.recalc_time
     }
 
-    pub fn init_borrow_amount<P>(&self, downpayment: P, may_max_ltd: Option<Percent>) -> P
+    // ltd could be bigger than 100 %.
+    pub fn init_borrow_amount<P>(&self, downpayment: P, may_max_ltd: Option<Percent>) -> Option<P>
     where
-        P: Percentable + Ord + Copy,
+        P: Fractionable<Percent100> + Fractionable<Percent> + Ord,
     {
-        debug_assert!(self.initial > Percent::ZERO);
-        debug_assert!(self.initial < Percent::HUNDRED);
+        debug_assert!(self.initial > Percent100::ZERO);
+        debug_assert!(self.initial < Percent100::HUNDRED);
 
-        let default_ltd = Rational::new(self.initial, Percent::HUNDRED - self.initial);
-        let default_borrow = default_ltd.of(downpayment);
-        may_max_ltd
-            .map(|max_ltd| max_ltd.of(downpayment))
-            .map(|requested_borrow| requested_borrow.min(default_borrow))
-            .unwrap_or(default_borrow)
+        let default_ltd = SimpleFraction::new(self.initial, Self::remaining_percent(self.initial));
+        default_ltd
+            .lossy_mul(downpayment)
+            .and_then(|default_borrow| {
+                may_max_ltd
+                    .and_then(|max_ltd| max_ltd.of(downpayment))
+                    .map(|requested_borrow| requested_borrow.min(default_borrow))
+                    .or(Some(default_borrow))
+            })
     }
 
     /// Post-assert: (total_due - amount_to_liquidate) / (lease_amount - amount_to_liquidate) ~= self.healthy_percent(), if total_due < lease_amount.
     /// Otherwise, amount_to_liquidate == total_due
-    pub fn amount_to_liquidate<P>(&self, lease_amount: P, total_due: P) -> P
+    pub fn amount_to_liquidate<P>(&self, lease_amount: P, total_due: P) -> Option<P>
     where
-        P: Percentable + Copy + Ord + Sub<Output = P> + Zero,
+        P: Fractionable<Percent100> + Ord + Sub<Output = P> + Zero,
     {
         if total_due < self.max.of(lease_amount) {
-            return P::ZERO;
+            return Some(P::ZERO);
         }
         if lease_amount <= total_due {
-            return lease_amount;
+            return Some(lease_amount);
         }
 
         // from 'due - liquidation = healthy% of (lease - liquidation)' follows
         // liquidation = 100% / (100% - healthy%) of (due - healthy% of lease)
-        let multiplier = Rational::new(Percent::HUNDRED, Percent::HUNDRED - self.healthy);
+        let multiplier =
+            SimpleFraction::new(Percent100::HUNDRED, Self::remaining_percent(self.healthy));
         let extra_liability_lpn = total_due - total_due.min(self.healthy.of(lease_amount));
-        Fraction::<Units>::of(&multiplier, extra_liability_lpn)
+        multiplier.lossy_mul(extra_liability_lpn)
     }
 
     fn invariant_held(&self) -> Result<()> {
-        check(self.initial > Percent::ZERO, "Initial % should not be zero")?;
+        check(
+            self.initial > Percent100::ZERO,
+            "Initial % should not be zero",
+        )?;
 
         check(
             self.initial <= self.healthy,
@@ -169,12 +182,22 @@ impl Liability {
             "Third liquidation % should be < max %",
         )?;
         check(self.max <= Self::MAX_TOP_BOUND, "Max % should be <= 100%")?;
+        check(self.max > Self::MIN_STEP_LTV, "Max % should be > 1")?;
         check(
             self.recalc_time >= Duration::HOUR,
             "Recalculation cadence should be >= 1h",
         )?;
 
         Ok(())
+    }
+
+    fn remaining_percent(percent: Percent100) -> Percent100 {
+        debug_assert!(percent > Percent100::ZERO);
+        debug_assert!(percent < Percent100::HUNDRED);
+
+        Percent100::HUNDRED
+            .checked_sub(percent)
+            .expect("Invariant to be held")
     }
 }
 
@@ -184,28 +207,30 @@ fn check(invariant: bool, msg: &str) -> Result<()> {
 
 #[cfg(test)]
 mod test {
-    use currency::test::SubGroupTestC10;
+    use currency::test::{SubGroupTestC10, SuperGroupTestC2};
     use sdk::cosmwasm_std::{StdError, from_json};
 
     use crate::{
         coin::{Amount, Coin},
         duration::Duration,
         fraction::Fraction,
-        percent::{Percent, Units},
+        percent::{Percent, Percent100, Units},
         zero::Zero,
     };
 
     use super::{Liability, Zone};
 
+    type TestCoin = Coin<SuperGroupTestC2>;
+
     #[test]
     fn new_valid() {
         let exp = Liability {
-            initial: Percent::from_percent(10),
-            healthy: Percent::from_percent(10),
-            first_liq_warn: Percent::from_percent(12),
-            second_liq_warn: Percent::from_percent(13),
-            third_liq_warn: Percent::from_percent(14),
-            max: Percent::from_percent(15),
+            initial: Percent100::from_percent(10),
+            healthy: Percent100::from_percent(10),
+            first_liq_warn: Percent100::from_percent(12),
+            second_liq_warn: Percent100::from_percent(13),
+            third_liq_warn: Percent100::from_percent(14),
+            max: Percent100::from_percent(15),
             recalc_time: Duration::from_hours(10),
         };
         assert_load_ok(exp, br#"{"initial":100,"healthy":100,"first_liq_warn":120,"second_liq_warn":130,"third_liq_warn":140,"max":150,"recalc_time": 36000000000000}"#);
@@ -214,12 +239,12 @@ mod test {
     #[test]
     fn new_edge_case() {
         let exp = Liability {
-            initial: Percent::from_percent(1),
-            healthy: Percent::from_percent(1),
-            first_liq_warn: Percent::from_permille(11),
-            second_liq_warn: Percent::from_permille(12),
-            third_liq_warn: Percent::from_permille(13),
-            max: Percent::from_permille(14),
+            initial: Percent100::from_percent(1),
+            healthy: Percent100::from_percent(1),
+            first_liq_warn: Percent100::from_permille(11),
+            second_liq_warn: Percent100::from_permille(12),
+            third_liq_warn: Percent100::from_permille(13),
+            max: Percent100::from_permille(14),
             recalc_time: Duration::HOUR,
         };
 
@@ -282,13 +307,13 @@ mod test {
 
     #[test]
     fn test_zone_of() {
-        let first_liquidation_warn = Percent::from_permille(792);
-        let second_liquidation_warn = Percent::from_permille(815);
-        let third_liquidation_warn = Percent::from_permille(826);
-        let max = Percent::from_percent(85);
+        let first_liquidation_warn = Percent100::from_permille(792);
+        let second_liquidation_warn = Percent100::from_permille(815);
+        let third_liquidation_warn = Percent100::from_permille(826);
+        let max = Percent100::from_percent(85);
         let l = Liability {
-            initial: Percent::from_percent(60),
-            healthy: Percent::from_percent(65),
+            initial: Percent100::from_percent(60),
+            healthy: Percent100::from_percent(65),
             first_liq_warn: first_liquidation_warn,
             second_liq_warn: second_liquidation_warn,
             third_liq_warn: third_liquidation_warn,
@@ -335,12 +360,12 @@ mod test {
         test_init_borrow_amount(50000, 60, 25000, Some(Percent::from_percent(50)));
         test_init_borrow_amount(1000, 10, 100, Some(Percent::from_percent(10)));
         test_init_borrow_amount(1, 10, 0, Some(Percent::from_percent(5)));
-        test_init_borrow_amount(1000, 60, 1500, Some(Percent::from_percent(190)));
-        test_init_borrow_amount(4000, 55, 4800, Some(Percent::from_percent(120)));
-        test_init_borrow_amount(200, 49, 192, Some(Percent::from_percent(100)));
+        test_init_borrow_amount(1000, 60, 600, Some(Percent::from_percent(60)));
+        test_init_borrow_amount(4000, 55, 2200, Some(Percent::from_percent(55)));
+        test_init_borrow_amount(200, 49, 98, Some(Percent::from_percent(49)));
         test_init_borrow_amount(1, 65, 0, Some(Percent::from_percent(65)));
-        test_init_borrow_amount(2000, 60, 3000, Some(Percent::from_percent(250)));
-        test_init_borrow_amount(300000, 65, 450000, Some(Percent::from_percent(150)));
+        test_init_borrow_amount(2000, 60, 1200, Some(Percent::from_percent(60)));
+        test_init_borrow_amount(300000, 65, 165000, Some(Percent::from_percent(55)));
         test_init_borrow_amount(50, 45, 40, Some(Percent::from_permille(999)));
 
         test_init_borrow_amount(1000, 65, 0, Some(Percent::ZERO));
@@ -351,17 +376,17 @@ mod test {
         let healthy = 85;
         let max = 90;
         let liability = Liability {
-            initial: Percent::from_percent(60),
-            healthy: Percent::from_percent(healthy),
-            max: Percent::from_percent(max),
-            first_liq_warn: Percent::from_permille(860),
-            second_liq_warn: Percent::from_permille(865),
-            third_liq_warn: Percent::from_permille(870),
+            initial: Percent100::from_percent(60),
+            healthy: Percent100::from_percent(healthy),
+            max: Percent100::from_percent(max),
+            first_liq_warn: Percent100::from_permille(860),
+            second_liq_warn: Percent100::from_permille(865),
+            third_liq_warn: Percent100::from_permille(870),
             recalc_time: Duration::from_secs(20000),
         };
         let lease_amount: Amount = 100;
-        let healthy_amount = Percent::from_percent(healthy).of(lease_amount);
-        let max_amount = Percent::from_percent(max).of(lease_amount);
+        let healthy_amount = percent_of(Percent100::from_percent(healthy), lease_amount);
+        let max_amount = percent_of(Percent100::from_percent(max), lease_amount);
         amount_to_liquidate_int(liability, lease_amount, Amount::ZERO, Amount::ZERO);
         amount_to_liquidate_int(liability, lease_amount, healthy_amount - 10, Amount::ZERO);
         amount_to_liquidate_int(liability, lease_amount, healthy_amount - 1, Amount::ZERO);
@@ -379,41 +404,45 @@ mod test {
 
     #[test]
     fn cap_to_zone() {
-        const MAX: Percent = Percent::from_permille(14);
+        const MAX: Percent100 = Percent100::from_permille(14);
         let obj = Liability {
-            initial: Percent::from_percent(1),
-            healthy: Percent::from_percent(1),
-            first_liq_warn: Percent::from_permille(11),
-            second_liq_warn: Percent::from_permille(12),
-            third_liq_warn: Percent::from_permille(13),
+            initial: Percent100::from_percent(1),
+            healthy: Percent100::from_percent(1),
+            first_liq_warn: Percent100::from_permille(11),
+            second_liq_warn: Percent100::from_permille(12),
+            third_liq_warn: Percent100::from_permille(13),
             max: MAX,
             recalc_time: Duration::HOUR,
         };
+        let upper_bound = MAX.checked_sub(Liability::MIN_STEP_LTV).unwrap();
         assert_eq!(
-            MAX - Liability::MIN_STEP_LTV - Liability::MIN_STEP_LTV,
-            obj.cap_to_zone(MAX - Liability::MIN_STEP_LTV - Liability::MIN_STEP_LTV)
+            upper_bound.checked_sub(Liability::MIN_STEP_LTV).unwrap(),
+            obj.cap_to_zone(upper_bound.checked_sub(Liability::MIN_STEP_LTV).unwrap())
         );
+        assert_eq!(upper_bound, obj.cap_to_zone(upper_bound));
+        assert_eq!(upper_bound, obj.cap_to_zone(MAX));
         assert_eq!(
-            MAX - Liability::MIN_STEP_LTV,
-            obj.cap_to_zone(MAX - Liability::MIN_STEP_LTV)
-        );
-        assert_eq!(MAX - Liability::MIN_STEP_LTV, obj.cap_to_zone(MAX));
-        assert_eq!(
-            MAX - Liability::MIN_STEP_LTV,
-            obj.cap_to_zone(MAX + Liability::MIN_STEP_LTV)
+            upper_bound,
+            obj.cap_to_zone(MAX.checked_add(Liability::MIN_STEP_LTV).unwrap())
         );
     }
 
     #[track_caller]
     fn amount_to_liquidate_int(liability: Liability, lease: Amount, due: Amount, exp: Amount) {
-        let liq = liability.amount_to_liquidate(lease, due);
-        assert_eq!(exp, liq);
-        if due.clamp(liability.max.of(lease), lease) == due {
+        let liq = liability
+            .amount_to_liquidate(TestCoin::from(lease), TestCoin::from(due))
+            .unwrap();
+        assert_eq!(TestCoin::from(exp), liq);
+        if due.clamp(percent_of(liability.max, lease), lease) == due {
             assert!(
-                liability.healthy.of(lease - exp).abs_diff(due - exp) <= 1,
+                percent_of(liability.healthy, lease - exp).abs_diff(due - exp) <= 1,
                 "Lease = {lease}, due = {due}, exp = {exp}"
             );
         }
+    }
+
+    fn percent_of(percent: Percent100, amount: Amount) -> Amount {
+        percent.of(TestCoin::from(amount)).into()
     }
 
     fn assert_load_ok(exp: Liability, json: &[u8]) {
@@ -433,24 +462,25 @@ mod test {
     }
 
     fn zone_of(l: &Liability, permilles: Units) -> Zone {
-        l.zone_of(Percent::from_permille(permilles))
+        l.zone_of(Percent100::from_permille(permilles))
     }
 
     fn test_init_borrow_amount(d: u128, p: u16, exp: u128, max_p: Option<Percent>) {
         type Currency = SubGroupTestC10;
 
         let downpayment = Coin::<Currency>::new(d);
-        let percent = Percent::from_percent(p);
+        let percent = Percent100::from_percent(p);
         let calculated = Liability {
             initial: percent,
-            healthy: Percent::from_percent(99),
-            max: Percent::from_percent(100),
-            first_liq_warn: Percent::from_permille(992),
-            second_liq_warn: Percent::from_permille(995),
-            third_liq_warn: Percent::from_permille(998),
+            healthy: Percent100::from_percent(99),
+            max: Percent100::from_percent(100),
+            first_liq_warn: Percent100::from_permille(992),
+            second_liq_warn: Percent100::from_permille(995),
+            third_liq_warn: Percent100::from_permille(998),
             recalc_time: Duration::from_secs(20000),
         }
-        .init_borrow_amount(downpayment, max_p);
+        .init_borrow_amount(downpayment, max_p)
+        .unwrap();
 
         assert_eq!(calculated, Coin::<Currency>::new(exp));
     }

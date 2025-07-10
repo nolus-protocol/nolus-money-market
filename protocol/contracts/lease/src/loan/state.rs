@@ -1,5 +1,5 @@
 use finance::{
-    coin::Coin, duration::Duration, interest, percent::Percent, period::Period, zero::Zero,
+    coin::Coin, duration::Duration, interest, percent::Percent100, period::Period, zero::Zero,
 };
 use lpp::stub::loan::LppLoan as LppLoanTrait;
 
@@ -7,8 +7,8 @@ use crate::finance::{LpnCoin, LpnCurrency};
 
 #[cfg_attr(feature = "contract_testing", derive(PartialEq, Eq, Debug))]
 pub struct State {
-    pub annual_interest: Percent,
-    pub annual_interest_margin: Percent,
+    pub annual_interest: Percent100,
+    pub annual_interest_margin: Percent100,
     pub principal_due: LpnCoin,
     pub due_interest: LpnCoin,
     pub due_margin_interest: LpnCoin,
@@ -34,7 +34,7 @@ impl Overdue {
     pub fn new<LppLoan>(
         due_period_margin: &Period,
         max_due: Duration,
-        margin_interest: Percent,
+        margin_interest: Percent100,
         lpp_loan: &LppLoan,
     ) -> Self
     where
@@ -56,7 +56,8 @@ impl Overdue {
                 margin_interest,
                 lpp_loan.principal_due(),
                 overdue_period.length(),
-            );
+            )
+            .expect("TODO: propagate up the stack potential overflow");
             let interest = lpp_loan.interest_due(&overdue_period.till());
 
             Self::Accrued { interest, margin }
@@ -96,7 +97,7 @@ impl Overdue {
 
 #[cfg(all(feature = "internal.test.contract", test))]
 mod test {
-    use finance::{coin::Coin, duration::Duration, interest, percent::Percent, period::Period};
+    use finance::{coin::Coin, duration::Duration, interest, percent::Percent100, period::Period};
     use lpp::{loan::Loan, stub::loan::LppLoan};
     use sdk::cosmwasm_std::Timestamp;
 
@@ -104,10 +105,10 @@ mod test {
 
     use super::Overdue;
 
-    const MARGIN_INTEREST_RATE: Percent = Percent::from_permille(50);
+    const MARGIN_INTEREST_RATE: Percent100 = Percent100::from_permille(50);
     const LOAN: Loan<Lpn> = Loan {
         principal_due: Coin::new(1000),
-        annual_interest_rate: Percent::from_permille(165),
+        annual_interest_rate: Percent100::from_permille(165),
         interest_paid: Timestamp::from_seconds(2425252),
     };
 
@@ -165,7 +166,7 @@ mod test {
         let exp_interest =
             lpp_loan.interest_due(&(LOAN.interest_paid + due_period_length - max_due));
         let exp_margin =
-            interest::interest(MARGIN_INTEREST_RATE, LOAN.principal_due, overdue_period);
+            interest::interest(MARGIN_INTEREST_RATE, LOAN.principal_due, overdue_period).unwrap();
         assert_eq!(
             Overdue::Accrued {
                 interest: exp_interest,

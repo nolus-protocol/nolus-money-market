@@ -5,7 +5,7 @@ use finance::{
     duration::Duration,
     fraction::Fraction,
     interest,
-    percent::Percent,
+    percent::Percent100,
     ratio::Rational,
     zero::Zero,
 };
@@ -56,18 +56,25 @@ impl<Lpn> Total<Lpn> {
     }
 
     pub fn total_interest_due_by_now(&self, ctime: &Timestamp) -> Coin<Lpn> {
-        interest::interest::<Coin<Lpn>, _, _>(
-            self.annual_interest_rate,
-            self.total_principal_due,
-            Duration::between(&self.last_update_time, ctime),
-        ) + self.total_interest_due
+        self.annual_interest_rate
+            .to_ratio()
+            .map(|annual_interest_rate| {
+                interest::interest::<Coin<Lpn>, _, _>(
+                    annual_interest_rate,
+                    self.total_principal_due,
+                    Duration::between(&self.last_update_time, ctime),
+                )
+                .expect("TODO: propagate up the stack potential overflow")
+                    + self.total_interest_due
+            })
+            .expect("TODO: propagate up the stack potential overflow")
     }
 
     pub fn borrow(
         &mut self,
         ctime: Timestamp,
         amount: Coin<Lpn>,
-        loan_interest_rate: Percent,
+        loan_interest_rate: Percent100,
     ) -> Result<&Self, ContractError> {
         self.total_interest_due = self.total_interest_due_by_now(&ctime);
 
@@ -76,13 +83,19 @@ impl<Lpn> Total<Lpn> {
             .checked_add(amount)
             .ok_or(ContractError::OverflowError("Total principal due overflow"))?;
 
-        // TODO: get rid of fully qualified syntax
-        let new_annual_interest =
-            Fraction::<Coin<Lpn>>::of(&self.annual_interest_rate, self.total_principal_due)
-                .checked_add(loan_interest_rate.of(amount))
-                .ok_or(ContractError::OverflowError(
-                    "Annual interest calculation overflow",
-                ))?;
+        let new_annual_interest = self
+            .annual_interest_rate
+            .checked_mul(self.total_principal_due)
+            .ok_or(ContractError::OverflowError(
+                "Total interest due calculation overflow",
+            ))
+            .and_then(|total_interest_due| {
+                total_interest_due
+                    .checked_add(loan_interest_rate.of(amount))
+                    .ok_or(ContractError::OverflowError(
+                        "Annual interest calculation overflow",
+                    ))
+            })?;
 
         self.annual_interest_rate = Rational::new(new_annual_interest, new_total_principal_due);
 
@@ -98,7 +111,7 @@ impl<Lpn> Total<Lpn> {
         ctime: Timestamp,
         loan_interest_payment: Coin<Lpn>,
         loan_principal_payment: Coin<Lpn>,
-        loan_interest_rate: Percent,
+        loan_interest_rate: Percent100,
     ) -> &Self {
         // The interest payment calculation of loans is the source of truth.
         // Therefore, it is possible for the rounded-down total interest due from `total_interest_due_by_now`
@@ -119,11 +132,13 @@ impl<Lpn> Total<Lpn> {
             // Please refer to the comment above for more detailed information on why using `saturating_sub` is a safe solution
             // for updating the annual interest
 
-            Rational::new(
-                Fraction::<Coin<Lpn>>::of(&self.annual_interest_rate, self.total_principal_due)
-                    .saturating_sub(loan_interest_rate.of(loan_principal_payment)),
-                new_total_principal_due,
-            )
+            self.annual_interest_rate
+                .checked_mul(self.total_principal_due)
+                .map(|total_interest_due| {
+                    total_interest_due.saturating_sub(loan_interest_rate.of(loan_principal_payment))
+                })
+                .map(|res| Rational::new(res, new_total_principal_due))
+                .expect("TODO: propagate up the stack potential overflow")
         };
 
         self.total_principal_due = new_total_principal_due;
@@ -162,7 +177,7 @@ mod test {
         assert_eq!(total.total_principal_due(), Coin::<Lpn>::new(0));
 
         total
-            .borrow(block_time, Coin::new(10000), Percent::from_percent(20))
+            .borrow(block_time, Coin::new(10000), Percent100::from_percent(20))
             .expect("should borrow");
         assert_eq!(total.total_principal_due(), Coin::new(10000));
 
@@ -174,7 +189,7 @@ mod test {
             block_time,
             Coin::new(1000),
             Coin::new(5000),
-            Percent::from_percent(20),
+            Percent100::from_percent(20),
         );
         assert_eq!(total.total_principal_due(), Coin::new(5000));
 
@@ -191,7 +206,7 @@ mod test {
         assert_eq!(total.total_principal_due(), Coin::<Lpn>::new(0));
 
         let borrow_loan1 = Coin::<Lpn>::new(5_458_329);
-        let loan1_annual_interest_rate = Percent::from_permille(137);
+        let loan1_annual_interest_rate = Percent100::from_permille(137);
         let loan1 = Loan {
             principal_due: borrow_loan1,
             annual_interest_rate: loan1_annual_interest_rate,
@@ -208,7 +223,7 @@ mod test {
 
         // Open loan2 after 59 days
         let borrow_loan2 = Coin::<Lpn>::new(3_543_118);
-        let loan2_annual_interest_rate = Percent::from_permille(133);
+        let loan2_annual_interest_rate = Percent100::from_permille(133);
         let loan2 = Loan {
             principal_due: borrow_loan2,
             annual_interest_rate: loan2_annual_interest_rate,
