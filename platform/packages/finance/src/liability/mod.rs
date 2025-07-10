@@ -8,7 +8,7 @@ use crate::{
     fraction::Fraction,
     fractionable::Percentable,
     percent::{Percent, Units},
-    ratio::Rational,
+    ratio::SimpleFraction,
     zero::Zero,
 };
 
@@ -116,7 +116,7 @@ impl Liability {
         debug_assert!(self.initial > Percent::ZERO);
         debug_assert!(self.initial < Percent::HUNDRED);
 
-        let default_ltd = Rational::new(self.initial, Percent::HUNDRED - self.initial);
+        let default_ltd = SimpleFraction::new(self.initial, Percent::HUNDRED - self.initial);
         let default_borrow = default_ltd.of(downpayment);
         may_max_ltd
             .map(|max_ltd| max_ltd.of(downpayment))
@@ -139,7 +139,7 @@ impl Liability {
 
         // from 'due - liquidation = healthy% of (lease - liquidation)' follows
         // liquidation = 100% / (100% - healthy%) of (due - healthy% of lease)
-        let multiplier = Rational::new(Percent::HUNDRED, Percent::HUNDRED - self.healthy);
+        let multiplier = SimpleFraction::new(Percent::HUNDRED, Percent::HUNDRED - self.healthy);
         let extra_liability_lpn = total_due - total_due.min(self.healthy.of(lease_amount));
         Fraction::<Units>::of(&multiplier, extra_liability_lpn)
     }
