@@ -11,7 +11,7 @@ use crate::{
     error::Result as FinanceResult,
     fraction::Fraction,
     fractionable::Fractionable,
-    ratio::{Ratio, Rational},
+    ratio::{Ratio, SimpleFraction},
     zero::Zero,
 };
 
@@ -43,7 +43,7 @@ impl Percent {
         FractionUnit: Copy + Debug + PartialEq + Zero,
         Self: Fractionable<FractionUnit>,
     {
-        Rational::new(nominator, denominator).of(Percent::HUNDRED)
+        SimpleFraction::new(nominator, denominator).of(Percent::HUNDRED)
     }
 
     pub const fn units(&self) -> Units {
@@ -93,7 +93,7 @@ impl Ratio<Units> for Percent {
     }
 }
 
-impl Ratio<Units> for Rational<Percent> {
+impl Ratio<Units> for SimpleFraction<Percent> {
     fn parts(&self) -> Units {
         Ratio::<Percent>::parts(self).units()
     }
@@ -176,7 +176,7 @@ pub(super) mod test {
 
     use crate::{
         coin::Coin, fraction::Fraction, fractionable::Percentable, percent::Percent,
-        ratio::Rational,
+        ratio::SimpleFraction,
     };
 
     use super::Units;
@@ -304,7 +304,7 @@ pub(super) mod test {
     #[test]
     fn rational_of_percents() {
         let v = 14u32;
-        let r = Rational::new(Percent::HUNDRED, Percent::HUNDRED);
+        let r = SimpleFraction::new(Percent::HUNDRED, Percent::HUNDRED);
         assert_eq!(v, Fraction::<u32>::of(&r, v));
     }
 
@@ -312,7 +312,7 @@ pub(super) mod test {
     fn rational_to_percents() {
         let n: Units = 189;
         let d: Units = 1890;
-        let r = Rational::new(n, d);
+        let r = SimpleFraction::new(n, d);
         let res: Percent = Fraction::<Units>::of(&r, Percent::HUNDRED);
         assert_eq!(Percent::from_permille(n * 1000 / d), res);
     }
