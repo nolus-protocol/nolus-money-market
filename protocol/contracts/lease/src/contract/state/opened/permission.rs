@@ -1,7 +1,10 @@
-use access_control::AccessPermission;
+use access_control::{AccessPermission, permissions::SingleUserPermission};
 use currency::{Currency, Group, MemberOf};
 use oracle_platform::OracleRef;
 use sdk::cosmwasm_std::MessageInfo;
+
+pub type ChangeClosePolicyPermission<'a> = SingleUserPermission<'a>;
+pub type ClosePositionPermission<'a> = SingleUserPermission<'a>;
 
 /// This is a permission given to deliver price alarms
 pub struct PriceAlarmDelivery<'a, QuoteC, QuoteG>

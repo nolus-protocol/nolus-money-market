@@ -20,9 +20,8 @@ use crate::{
         },
         state::{
             Handler, Response,
-            opened::{
-                ChangeClosePolicyPermission, ClosePositionPermission,
-                permission::PriceAlarmDelivery,
+            opened::permission::{
+                ChangeClosePolicyPermission, ClosePositionPermission, PriceAlarmDelivery,
             },
         },
     },
