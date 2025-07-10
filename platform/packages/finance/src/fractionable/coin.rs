@@ -27,7 +27,7 @@ mod test {
     use crate::{
         coin::{Amount, Coin},
         percent::Percent,
-        ratio::Rational,
+        ratio::SimpleFraction,
     };
 
     #[test]
@@ -42,7 +42,7 @@ mod test {
             Coin::<SuperGroupTestC1>::new(1000),
             Fractionable::<u32>::safe_mul(
                 Coin::<SuperGroupTestC1>::new(2),
-                &Rational::new(1000u32, 2u32)
+                &SimpleFraction::new(1000u32, 2u32)
             )
         );
 
@@ -50,7 +50,7 @@ mod test {
             Coin::<SuperGroupTestC1>::new(2 * Amount::from(u32::MAX)),
             Fractionable::<u32>::safe_mul(
                 Coin::<SuperGroupTestC1>::new(2),
-                &Rational::new(u32::MAX, 1u32)
+                &SimpleFraction::new(u32::MAX, 1u32)
             )
         );
     }

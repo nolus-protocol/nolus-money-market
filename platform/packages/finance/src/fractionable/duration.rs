@@ -30,12 +30,14 @@ impl<C> Fractionable<Coin<C>> for Duration {
 mod tests {
     use currency::test::SuperGroupTestC1;
 
-    use crate::{coin::Coin, duration::Duration, fractionable::Fractionable, ratio::Rational};
+    use crate::{
+        coin::Coin, duration::Duration, fractionable::Fractionable, ratio::SimpleFraction,
+    };
 
     #[test]
     fn safe_mul() {
         let d = Duration::from_secs(10);
-        let res = d.safe_mul(&Rational::new(
+        let res = d.safe_mul(&SimpleFraction::new(
             Coin::<SuperGroupTestC1>::new(10),
             Coin::<SuperGroupTestC1>::new(20),
         ));
@@ -45,7 +47,7 @@ mod tests {
     #[test]
     fn safe_mul_max() {
         let d = Duration::from_secs(10);
-        let res = d.safe_mul(&Rational::new(
+        let res = d.safe_mul(&SimpleFraction::new(
             Coin::<SuperGroupTestC1>::new(u128::MAX),
             Coin::<SuperGroupTestC1>::new(u128::MAX / 2),
         ));

@@ -44,8 +44,8 @@ mod tests {
     use currency::test::SubGroupTestC10;
 
     use crate::{
-        coin::Coin, duration::Duration, fraction::Fraction, percent::Percent, ratio::Rational,
-        zero::Zero,
+        coin::Coin, duration::Duration, fraction::Fraction, percent::Percent,
+        ratio::SimpleFraction, zero::Zero,
     };
 
     type MyCoin = Coin<SubGroupTestC10>;
@@ -142,7 +142,7 @@ mod tests {
     fn interest() {
         let whole = MyCoin::new(1001);
         let part = MyCoin::new(125);
-        let r = Rational::new(part, whole);
+        let r = SimpleFraction::new(part, whole);
 
         let res = super::interest::<MyCoin, _, _>(r, whole, PERIOD_LENGTH);
         assert_eq!(part, res);
@@ -151,7 +151,7 @@ mod tests {
     #[test]
     fn interest_zero() {
         let principal = MyCoin::new(1001);
-        let r = Rational::new(MyCoin::ZERO, principal);
+        let r = SimpleFraction::new(MyCoin::ZERO, principal);
 
         let res = super::interest::<MyCoin, _, _>(r, principal, PERIOD_LENGTH);
         assert_eq!(MyCoin::ZERO, res);

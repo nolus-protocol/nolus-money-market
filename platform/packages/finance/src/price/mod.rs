@@ -10,7 +10,7 @@ use crate::{
     error::{Error, Result},
     fraction::Fraction,
     fractionable::HigherRank,
-    ratio::{Ratio, Rational},
+    ratio::{Ratio, SimpleFraction},
 };
 
 pub mod base;
@@ -314,7 +314,7 @@ where
         // Please note that Price(amount, amount_quote) is like Ratio(amount_quote / amount).
 
         Self::Output::new(self.amount, rhs.amount_quote)
-            .lossy_mul(&Rational::new(self.amount_quote, rhs.amount))
+            .lossy_mul(&SimpleFraction::new(self.amount_quote, rhs.amount))
     }
 }
 
@@ -322,7 +322,7 @@ where
 ///
 /// For example, total(10 EUR, 1.01 EURUSD) = 10.1 USD
 pub fn total<C, QuoteC>(of: Coin<C>, price: Price<C, QuoteC>) -> Coin<QuoteC> {
-    let ratio_impl = Rational::new(of, price.amount);
+    let ratio_impl = SimpleFraction::new(of, price.amount);
     Fraction::<Coin<C>>::of(&ratio_impl, price.amount_quote)
 }
 
@@ -336,7 +336,7 @@ mod test {
     use crate::{
         coin::{Amount, Coin as CoinT},
         price::{self, Price},
-        ratio::Rational,
+        ratio::SimpleFraction,
     };
 
     type QuoteQuoteCoin = CoinT<SubGroupTestC10>;
@@ -639,7 +639,7 @@ mod test {
         assert_eq!(exp, price1.mul(price2));
 
         let price3 = price::total_of(amount1).is(quote2);
-        let ratio = Rational::new(quote1, amount2);
+        let ratio = SimpleFraction::new(quote1, amount2);
         assert_eq!(exp, price3.lossy_mul(&ratio));
     }
 

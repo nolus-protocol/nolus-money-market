@@ -13,12 +13,12 @@ pub trait Ratio<U> {
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 #[cfg_attr(any(test, feature = "testing"), derive(PartialEq,))]
 #[serde(rename_all = "snake_case")]
-pub struct Rational<U> {
+pub struct SimpleFraction<U> {
     nominator: U,
     denominator: U,
 }
 
-impl<U> Rational<U>
+impl<U> SimpleFraction<U>
 where
     U: Zero + Debug + PartialEq<U>,
 {
@@ -33,7 +33,7 @@ where
     }
 }
 
-impl<U, T> Fraction<U> for Rational<T>
+impl<U, T> Fraction<U> for SimpleFraction<T>
 where
     Self: Ratio<U>,
 {
@@ -46,7 +46,7 @@ where
     }
 }
 
-impl<U, T> Ratio<U> for Rational<T>
+impl<U, T> Ratio<U> for SimpleFraction<T>
 where
     T: Zero + Copy + PartialEq + Into<U>,
 {
