@@ -1,8 +1,9 @@
 use std::{
     fmt::{Debug, Display, Formatter, Result as FmtResult, Write},
-    ops::{Add, Sub},
+    ops::{Add, Div, Rem, Sub},
 };
 
+use gcd::Gcd;
 use serde::{Deserialize, Serialize};
 
 use sdk::cosmwasm_std::{OverflowError, OverflowOperation};
@@ -12,6 +13,7 @@ use crate::{
     fraction::Fraction,
     fractionable::Fractionable,
     ratio::{Ratio, Rational},
+    scalar::Scalar,
     zero::Zero,
 };
 
@@ -162,6 +164,34 @@ impl<'a> Sub<&'a Percent> for Percent {
     #[track_caller]
     fn sub(self, rhs: &'a Percent) -> Self {
         self - *rhs
+    }
+}
+
+impl Scalar for Percent {
+    type Base = Units;
+
+    fn gcd(self, other: Self) -> Self::Base {
+        Gcd::gcd(self.0, other.0)
+    }
+
+    fn scale_up(self, scale: Self::Base) -> Option<Self> {
+        self.0.checked_mul(scale).map(Self::from_permille)
+    }
+
+    fn scale_down(self, scale: Self::Base) -> Self {
+        assert_ne!(scale, 0);
+
+        Self::from_permille(self.0.div(scale))
+    }
+
+    fn modulo(self, scale: Self::Base) -> Self::Base {
+        assert_ne!(scale, 0);
+
+        self.0.rem(scale)
+    }
+
+    fn into_base(self) -> Self::Base {
+        self.0
     }
 }
 

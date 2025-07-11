@@ -10,6 +10,7 @@ pub mod period;
 pub mod price;
 pub mod range;
 pub mod ratio;
+pub mod scalar;
 pub mod zero;
 
 #[cfg(any(test, feature = "testing"))]
