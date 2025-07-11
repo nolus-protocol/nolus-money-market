@@ -2,7 +2,7 @@ use std::ops::{Deref, DerefMut};
 
 use serde::Serialize;
 
-use access_control::{AccessPermission, ContractOwnerAccess};
+use access_control::{AccessPermission, ContractOwnerAccess, Sender};
 use lease::api::{MigrateMsg as LeaseMigrateMsg, authz::AccessGranted};
 use platform::{
     contract::{self, Code, CodeId, Validator},
@@ -101,7 +101,7 @@ pub fn execute(
         ),
         ExecuteMsg::ConfigLeases(new_config) => Leaser::new(deps.as_ref())
             .config()
-            .and_then(|config| access_control::check(&LeasesConfigurationPermission::new(&config), &info))
+            .and_then(|config| access_control::check(&LeasesConfigurationPermission::new(&config), &Sender::new(&info)))
             .and_then(|()| leaser::try_configure(deps.storage, new_config)),
         ExecuteMsg::FinalizeLease { customer } => {
             let addr_validator = contract::validator(deps.querier);
@@ -155,7 +155,7 @@ pub fn execute(
         ExecuteMsg::ChangeLeaseAdmin { new } => Leaser::new(deps.as_ref())
             .config()
             .and_then(|ref config| {
-                access_control::check(&ChangeLeaseAdminPermission::new(&config), &info)
+                access_control::check(&ChangeLeaseAdminPermission::new(&config), &Sender::new(&info))
             })
             .and_then(|()| validate(&new, deps.api))
             .and_then(|valid_new_admin| {
@@ -187,23 +187,16 @@ pub fn sudo(deps: DepsMut<'_>, _env: Env, msg: SudoMsg) -> ContractResult<Respon
 #[entry_point]
 pub fn query(deps: Deps<'_>, _env: Env, msg: QueryMsg) -> ContractResult<Binary> {
     match msg {
-        QueryMsg::CheckAnomalyResolutionPermission { by: caller } => {
-            let msg_info = MessageInfo {
-                sender: caller,
-                funds: vec![],
-            };
-
-            Leaser::new(deps)
-                .config()
-                .map(|ref config| {
-                    if access_control::check(&AnomalyResolutionPermission::new(&config), &msg_info).is_ok() {
-                        AccessGranted::Yes
-                    } else {
-                        AccessGranted::No
-                    }
-                })
-                .and_then(serialize_to_json)
-        }
+        QueryMsg::CheckAnomalyResolutionPermission { by: caller } => Leaser::new(deps)
+            .config()
+            .map(|ref config| {
+                if access_control::check(&AnomalyResolutionPermission::new(&config), &Sender::from_addr(&caller)).is_ok() {
+                    AccessGranted::Yes
+                } else {
+                    AccessGranted::No
+                }
+            })
+            .and_then(serialize_to_json),
         QueryMsg::Config {} => Leaser::new(deps)
             .config()
             .map(|config| ConfigResponse { config })
