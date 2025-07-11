@@ -13,7 +13,7 @@ use ::serde::{Deserialize, Serialize};
 
 use currency::{Currency, CurrencyDef, Group, MemberOf};
 
-use crate::zero::Zero;
+use crate::{traits::FractionUnit, zero::Zero};
 
 pub use self::dto::{CoinDTO, IntoDTO};
 
@@ -24,6 +24,8 @@ mod serde;
 pub type Amount = u128;
 #[cfg(feature = "testing")]
 pub type NonZeroAmount = NonZeroU128;
+
+impl FractionUnit for Amount {}
 
 #[derive(Serialize, Deserialize)]
 pub struct Coin<C> {
@@ -143,6 +145,8 @@ impl<C> Default for Coin<C> {
         }
     }
 }
+
+impl<C> FractionUnit for Coin<C> {}
 
 impl<C> Eq for Coin<C> {}
 

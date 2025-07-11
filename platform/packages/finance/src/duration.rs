@@ -8,9 +8,10 @@ use serde::{Deserialize, Serialize};
 use sdk::cosmwasm_std::Timestamp;
 
 use crate::{
-    fraction::Fraction,
     fractionable::{Fractionable, TimeSliceable},
     ratio::SimpleFraction,
+    rational::Rational,
+    traits::FractionUnit,
     zero::Zero,
 };
 
@@ -93,15 +94,19 @@ impl Duration {
     where
         T: TimeSliceable,
     {
-        annual_amount.safe_mul(&SimpleFraction::new(self.nanos(), Self::YEAR.nanos()))
+        SimpleFraction::new(*self, Self::YEAR)
+            .of(annual_amount)
+            .expect("TODO the method has to return Option")
     }
 
     pub fn into_slice_per_ratio<U>(self, amount: U, annual_amount: U) -> Self
     where
         Self: Fractionable<U>,
-        U: Zero + Debug + PartialEq + Copy,
+        U: FractionUnit,
     {
-        SimpleFraction::new(amount, annual_amount).of(self)
+        SimpleFraction::new(amount, annual_amount)
+            .of(self)
+            .expect("TODO the method has to return Option")
     }
 }
 
@@ -109,6 +114,12 @@ impl From<Duration> for u128 {
     fn from(d: Duration) -> Self {
         d.nanos().into()
     }
+}
+
+impl FractionUnit for Duration {}
+
+impl Zero for Duration {
+    const ZERO: Self = Self::from_nanos(0);
 }
 
 impl TryFrom<u128> for Duration {

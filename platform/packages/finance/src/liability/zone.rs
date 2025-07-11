@@ -1,5 +1,5 @@
 use crate::{
-    percent::Percent,
+    percent::Percent100,
     range::{Ascending, RightOpenRange},
 };
 
@@ -18,14 +18,14 @@ pub struct Zone {
 }
 
 impl Zone {
-    pub fn no_warnings(up_to: Percent) -> Self {
+    pub fn no_warnings(up_to: Percent100) -> Self {
         Self {
             low: None,
             high: Level::First(up_to),
         }
     }
 
-    pub fn first(low: Percent, high: Percent) -> Self {
+    pub fn first(low: Percent100, high: Percent100) -> Self {
         debug_assert!(low < high);
         Self {
             low: Some(Level::First(low)),
@@ -33,7 +33,7 @@ impl Zone {
         }
     }
 
-    pub fn second(low: Percent, high: Percent) -> Self {
+    pub fn second(low: Percent100, high: Percent100) -> Self {
         debug_assert!(low < high);
         Self {
             low: Some(Level::Second(low)),
@@ -41,7 +41,7 @@ impl Zone {
         }
     }
 
-    pub fn third(low: Percent, high: Percent) -> Self {
+    pub fn third(low: Percent100, high: Percent100) -> Self {
         debug_assert!(low < high);
         Self {
             low: Some(Level::Third(low)),
@@ -49,7 +49,7 @@ impl Zone {
         }
     }
 
-    pub fn range(&self) -> RightOpenRange<Percent, Ascending> {
+    pub fn range(&self) -> RightOpenRange<Percent100, Ascending> {
         let range_to = RightOpenRange::up_to(self.high.ltv());
         self.low.map_or(range_to, |low| range_to.cut_to(low.ltv()))
     }
@@ -65,32 +65,32 @@ impl Zone {
 
 #[cfg(test)]
 mod test {
-    use crate::{liability::Zone, percent::Percent, range::RightOpenRange};
+    use crate::{liability::Zone, percent::Percent100, range::RightOpenRange};
 
     #[test]
     fn ord() {
         assert!(
-            Zone::no_warnings(Percent::HUNDRED)
-                < Zone::first(Percent::from_percent(0), Percent::from_percent(10))
+            Zone::no_warnings(Percent100::HUNDRED)
+                < Zone::first(Percent100::from_percent(0), Percent100::from_percent(10))
         );
         assert!(
-            Zone::first(Percent::from_percent(0), Percent::from_percent(10))
-                < Zone::first(Percent::from_percent(0), Percent::from_percent(11))
+            Zone::first(Percent100::from_percent(0), Percent100::from_percent(10))
+                < Zone::first(Percent100::from_percent(0), Percent100::from_percent(11))
         );
         assert!(
-            Zone::first(Percent::from_percent(0), Percent::from_percent(10))
-                < Zone::first(Percent::from_percent(5), Percent::from_percent(6))
+            Zone::first(Percent100::from_percent(0), Percent100::from_percent(10))
+                < Zone::first(Percent100::from_percent(5), Percent100::from_percent(6))
         );
         assert!(
-            Zone::first(Percent::from_percent(23), Percent::from_percent(24))
-                < Zone::second(Percent::from_percent(0), Percent::from_percent(10))
+            Zone::first(Percent100::from_percent(23), Percent100::from_percent(24))
+                < Zone::second(Percent100::from_percent(0), Percent100::from_percent(10))
         );
     }
 
     #[test]
     fn range() {
-        let above = Percent::from_percent(23);
-        let below = Percent::from_percent(34);
+        let above = Percent100::from_percent(23);
+        let below = Percent100::from_percent(34);
         assert_eq!(
             RightOpenRange::up_to(below),
             Zone::no_warnings(below).range()
