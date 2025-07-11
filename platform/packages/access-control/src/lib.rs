@@ -95,7 +95,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use sdk::cosmwasm_std::{Addr, ContractInfo, Storage, testing::MockStorage};
+    use sdk::cosmwasm_std::{Addr, ContractInfo, MessageInfo, Storage, testing::MockStorage};
 
     use crate::{
         Sender,
@@ -111,14 +111,11 @@ mod tests {
         let mut storage = MockStorage::new();
         let storage_ref: &mut dyn Storage = &mut storage;
         let mut access = SingleUserAccess::new(storage_ref, NAMESPACE);
-        let sender = Sender {
-            sender: Addr::unchecked("cosmic address"),
-            funds: vec![],
-        };
+        let sender = Sender::from_addr(&Addr::unchecked("cosmic address"));
 
-        access.check(&user_info).unwrap_err();
-        access.grant_to(&user_info.sender).unwrap();
-        access.check(&user_info).unwrap();
+        access.check(&sender).unwrap_err();
+        access.grant_to(sender.addr).unwrap();
+        access.check(&sender).unwrap();
     }
 
     #[test]
@@ -126,13 +123,10 @@ mod tests {
         let mut storage = MockStorage::new();
         let storage_ref: &dyn Storage = &mut storage;
         let access = SingleUserAccess::new(storage_ref, NAMESPACE);
-        let not_authorized = MessageInfo {
-            sender: Addr::unchecked("hacker"),
-            funds: vec![],
-        };
+        let sender = Sender::from_addr(&Addr::unchecked("hacker")); 
 
         assert!(matches!(
-            access.check(&not_authorized).unwrap_err(),
+            access.check(&sender).unwrap_err(),
             Error::Std(_)
         ));
     }
@@ -150,12 +144,9 @@ mod tests {
         let contract_info = ContractInfo {
             address: address.clone(),
         };
-        let msg_info = MessageInfo {
-            sender: address,
-            funds: vec![],
-        };
+        let sender = Sender::from_addr(&address);
 
-        super::check(&SameContractOnly::new(&contract_info), &msg_info).unwrap();
+        super::check(&SameContractOnly::new(&contract_info), &sender).unwrap();
     }
 
     #[test]
@@ -163,12 +154,9 @@ mod tests {
         let contract_info = ContractInfo {
             address: Addr::unchecked("contract admin"),
         };
-        let msg_info = MessageInfo {
-            sender: Addr::unchecked("hacker"),
-            funds: vec![],
-        };
+        let sender = Sender::from_addr(&Addr::unchecked("hacker")); 
 
-        let check_result = super::check(&SameContractOnly::new(&contract_info), &msg_info);
+        let check_result = super::check(&SameContractOnly::new(&contract_info), &sender);
         assert!(matches!(check_result.unwrap_err(), Error::Unauthorized {}));
     }
 
@@ -181,14 +169,11 @@ mod tests {
     }
 
     fn check_addr_permission(granted_to: &str, asked_for: &str) -> Result {
-        let msg_info = MessageInfo {
-            sender: Addr::unchecked(asked_for),
-            funds: vec![],
-        };
+        let sender = Sender::from_addr(&Addr::unchecked(asked_for)); 
 
         super::check(
             &SingleUserPermission::new(&Addr::unchecked(granted_to)),
-            &msg_info,
+            &sender,
         )
     }
 }

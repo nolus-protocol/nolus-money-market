@@ -1,6 +1,7 @@
 use currency::{CurrencyDef, never};
 use serde::{Deserialize, Serialize};
 
+use access_control::Sender;
 use dex::Enterable;
 use finance::{coin::IntoDTO, duration::Duration};
 use platform::{bank, batch::Emitter, message::Response as MessageResponse};
@@ -170,7 +171,7 @@ impl Handler for Active {
     ) -> ContractResult<Response> {
         access_control::check(
             &ChangeClosePolicyPermission::new(&self.lease.lease.customer),
-            &info,
+            &Sender::new(&info),
         )
         .map_err(Into::into)
         .and_then(|()| {
@@ -223,7 +224,7 @@ impl Handler for Active {
     ) -> ContractResult<Response> {
         access_control::check(
             &ClosePositionPermission::new(&self.lease.lease.customer),
-            &info,
+            &Sender::new(&info),
         )
         .map_err(Into::into)
         .and_then(|()| customer_close::start(spec, self.lease, &env, querier))
@@ -237,7 +238,7 @@ impl Handler for Active {
     ) -> ContractResult<Response> {
         access_control::check(
             &TimeAlarmDelivery::new(&self.lease.lease.time_alarms),
-            &info,
+            &Sender::new(&info),
         )?;
 
         self.try_on_alarm(querier, &env)
@@ -249,7 +250,7 @@ impl Handler for Active {
         env: Env,
         info: MessageInfo,
     ) -> ContractResult<Response> {
-        access_control::check(&PriceAlarmDelivery::new(&self.lease.lease.oracle), &info)?;
+        access_control::check(&PriceAlarmDelivery::new(&self.lease.lease.oracle), &Sender::new(&info))?;
 
         self.try_on_alarm(querier, &env)
     }
