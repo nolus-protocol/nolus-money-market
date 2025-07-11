@@ -1,18 +1,6 @@
 use std::ops::{Deref, DerefMut};
 
-<<<<<<< HEAD
-use access_control::{
-<<<<<<< HEAD
-    ContractOwnerAccess, SingleUserAccess, permissions::DexResponseSafeDeliveryPermission,
-=======
-    ContractOwnerAccess,
-    permissions::SameContractOnly,
-    SingleUserAccess,
->>>>>>> e76511615 (refactor: on_time_alarm usages)
-};
-=======
 use access_control::{ContractOwnerAccess, SingleUserAccess, permissions::{DexResponseSafeDeliveryPermission}};
->>>>>>> 7ef093e83 (chore: address comments regarding naming and modules)
 use dex::{ContinueResult as DexResult, Handler as _, Response as DexResponse};
 use oracle_platform::OracleRef;
 use platform::{
@@ -136,7 +124,7 @@ pub fn execute(
         ExecuteMsg::DexCallback() => {
             access_control::check(
                 &DexResponseSafeDeliveryPermission::new(&env.contract),
-                &info,
+                &Sender::new(&info),
             )?;
 
             try_handle_execute_message(deps, env, info, |state, querier, env, _info| {
@@ -147,7 +135,7 @@ pub fn execute(
         ExecuteMsg::DexCallbackContinue() => {
             access_control::check(
                 &DexResponseSafeDeliveryPermission::new(&env.contract),
-                &info,
+                &Sender::new(&info),
             )?;
 
             try_handle_execute_message(deps, env, info, |state, querier, env, _info| {
