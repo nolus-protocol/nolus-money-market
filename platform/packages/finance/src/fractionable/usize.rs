@@ -1,11 +1,15 @@
-use crate::{percent::Units as PercentUnits, ratio::RatioLegacy};
+use crate::{
+    percent::{Units as PercentUnits, bound::BoundPercent},
+    ratio::RatioLegacy,
+    traits::FractionUnit,
+};
 
 use super::Fractionable;
 
-impl Fractionable<PercentUnits> for usize {
+impl<const UPPER_BOUND: PercentUnits> Fractionable<BoundPercent<UPPER_BOUND>> for usize {
     fn safe_mul<F>(self, fraction: &F) -> Self
     where
-        F: RatioLegacy<PercentUnits>,
+        F: RatioLegacy<BoundPercent<UPPER_BOUND>>,
     {
         u128::try_from(self)
             .expect("usize to u128 overflow")
@@ -15,20 +19,26 @@ impl Fractionable<PercentUnits> for usize {
     }
 }
 
+impl FractionUnit for usize {}
+
 #[cfg(test)]
 mod test {
-    use crate::{fraction::Fraction, percent::Percent};
+    use crate::{
+        fraction::Fraction,
+        percent::{Percent, Percent100},
+        rational::Rational,
+    };
 
     #[test]
     fn ok() {
         let n = 123usize;
-        assert_eq!(n, Percent::HUNDRED.of(n));
-        assert_eq!(n / 2, Percent::from_percent(50).of(n));
-        assert_eq!(n * 3 / 2, Percent::from_percent(150).of(n));
+        assert_eq!(n, Percent100::HUNDRED.of(n));
+        assert_eq!(n / 2, Percent100::from_percent(50).of(n));
+        assert_eq!(n * 3 / 2, Percent100::from_percent(150).of(n));
 
-        assert_eq!(usize::MAX, Percent::HUNDRED.of(usize::MAX));
-        assert_eq!(usize::MIN, Percent::from_permille(1).of(999));
-        assert_eq!(usize::MAX / 2, Percent::from_percent(50).of(usize::MAX));
+        assert_eq!(usize::MAX, Percent100::HUNDRED.of(usize::MAX));
+        assert_eq!(usize::MIN, Percent100::from_permille(1).of(999));
+        assert_eq!(usize::MAX / 2, Percent100::from_percent(50).of(usize::MAX));
     }
 
     #[test]

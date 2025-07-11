@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     error::{Error, Result as FinanceResult},
-    fraction::Fraction,
+    rational::Rational,
     fractionable::Fractionable,
     zero::Zero,
 };
@@ -76,7 +76,7 @@ pub struct SimpleFraction<U> {
 
 impl<U> SimpleFraction<U>
 where
-    U: Debug + PartialEq<U> + Zero,
+    U: FractionUnit,
 {
     #[track_caller]
     pub fn new(nominator: U, denominator: U) -> Self {
@@ -89,16 +89,15 @@ where
     }
 }
 
-impl<U, T> Fraction<U> for SimpleFraction<T>
+impl<U> Rational<U> for SimpleFraction<U>
 where
     Self: RatioLegacy<U>,
 {
-    #[track_caller]
-    fn of<A>(&self, whole: A) -> A
+    fn of<A>(self, whole: A) -> Option<A>
     where
         A: Fractionable<U>,
     {
-        whole.safe_mul(self)
+        Some(whole.safe_mul(&self))
     }
 }
 

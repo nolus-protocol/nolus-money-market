@@ -8,9 +8,9 @@ use serde::{Deserialize, Serialize};
 use crate::{
     coin::{Amount, Coin},
     error::{Error, Result},
-    fraction::Fraction,
     fractionable::HigherRank,
     ratio::{RatioLegacy, SimpleFraction},
+    rational::Rational,
 };
 
 pub mod base;
@@ -322,7 +322,9 @@ where
 /// For example, total(10 EUR, 1.01 EURUSD) = 10.1 USD
 pub fn total<C, QuoteC>(of: Coin<C>, price: Price<C, QuoteC>) -> Coin<QuoteC> {
     let ratio_impl = SimpleFraction::new(of, price.amount);
-    Fraction::<Coin<C>>::of(&ratio_impl, price.amount_quote)
+    ratio_impl
+        .of(price.amount_quote)
+        .expect("TODO the method has to retur Option")
 }
 
 #[cfg(test)]
