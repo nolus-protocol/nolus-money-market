@@ -2,7 +2,12 @@ use std::fmt::Debug;
 
 use serde::{Deserialize, Serialize};
 
-use crate::{fraction::Fraction, fractionable::Fractionable, zero::Zero};
+use crate::{
+    arithmetic::{Bits, Trim},
+    fraction::Fraction,
+    fractionable::Fractionable,
+    zero::Zero,
+};
 
 // TODO review whether it may gets simpler if extend Fraction
 pub trait Ratio<U> {
@@ -32,6 +37,19 @@ where
     }
 }
 
+impl<U> Bits for Rational<U>
+where
+    U: Bits,
+{
+    const BITS: u32 = U::BITS;
+
+    fn leading_zeros(self) -> u32 {
+        self.nominator
+            .leading_zeros()
+            .min(self.denominator.leading_zeros())
+    }
+}
+
 impl<U, T> Fraction<U> for Rational<T>
 where
     Self: Ratio<U>,
@@ -55,5 +73,14 @@ where
 
     fn total(&self) -> U {
         self.denominator.into()
+    }
+}
+
+impl<U> Trim for Rational<U>
+where
+    U: Copy + Debug + PartialEq<U> + Trim + Zero,
+{
+    fn trim(self, bits: u32) -> Self {
+        Self::new(self.nominator.trim(bits), self.denominator.trim(bits))
     }
 }

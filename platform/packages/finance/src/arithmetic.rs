@@ -2,6 +2,12 @@ use std::fmt::Debug;
 
 use crate::zero::Zero;
 
+pub trait Bits {
+    const BITS: u32;
+
+    fn leading_zeros(self) -> u32;
+}
+
 pub trait Scalar
 where
     Self: Copy + Sized,
@@ -20,4 +26,12 @@ where
     fn modulo(self, scale: Self::Base) -> Self::Base;
 
     fn into_base(self) -> Self::Base;
+}
+
+pub trait Trim
+where
+    Self:Copy,
+{
+    /// Trims off the highest bits by shifting right
+    fn trim(self, bits: u32) -> Self;
 }

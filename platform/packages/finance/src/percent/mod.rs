@@ -9,11 +9,11 @@ use serde::{Deserialize, Serialize};
 use sdk::cosmwasm_std::{OverflowError, OverflowOperation};
 
 use crate::{
+    arithmetic::{Bits, Scalar, Trim},
     error::Result as FinanceResult,
     fraction::Fraction,
     fractionable::Fractionable,
     ratio::{Ratio, Rational},
-    arithmetic::Scalar,
     zero::Zero,
 };
 
@@ -68,6 +68,14 @@ impl Percent {
             .checked_sub(other.0)
             .map(Self::from_permille)
             .ok_or_else(|| OverflowError::new(OverflowOperation::Sub).into())
+    }
+}
+
+impl Bits for Percent {
+    const BITS: u32 = Units::BITS;
+
+    fn leading_zeros(self) -> u32 {
+        Units::leading_zeros(self.units())
     }
 }
 
@@ -195,6 +203,11 @@ impl Scalar for Percent {
     }
 }
 
+impl Trim for Percent {
+    fn trim(self, bits: u32) -> Self {
+        Self::from_permille(self.0 >> bits)
+    }
+}
 #[cfg(test)]
 pub(super) mod test {
     use std::{

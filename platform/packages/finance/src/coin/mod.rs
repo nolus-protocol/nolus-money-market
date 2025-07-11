@@ -14,7 +14,10 @@ use gcd::Gcd;
 
 use currency::{Currency, CurrencyDef, Group, MemberOf};
 
-use crate::{arithmetic::Scalar, zero::Zero};
+use crate::{
+    arithmetic::{Bits, Scalar, Trim},
+    zero::Zero,
+};
 
 pub use self::dto::{CoinDTO, IntoDTO};
 
@@ -23,6 +26,14 @@ mod dto;
 mod serde;
 
 pub type Amount = u128;
+
+impl Bits for Amount {
+    const BITS: u32 = Amount::BITS;
+
+    fn leading_zeros(self) -> u32 {
+        Amount::leading_zeros(self)
+    }
+}
 
 impl Scalar for Amount {
     type Base = Self;
@@ -52,6 +63,12 @@ impl Scalar for Amount {
     }
 }
 
+impl Trim for Amount {
+    fn trim(self, bits: u32) -> Self {
+        self >> bits
+    }
+}
+
 #[cfg(feature = "testing")]
 pub type NonZeroAmount = NonZeroU128;
 
@@ -61,6 +78,13 @@ pub struct Coin<C> {
     amount: Amount,
     #[serde(skip)]
     currency: PhantomData<C>,
+}
+impl<C> Bits for Coin<C> {
+    const BITS: u32 = Amount::BITS;
+
+    fn leading_zeros(self) -> u32 {
+        self.amount.leading_zeros()
+    }
 }
 
 impl<C> Coin<C> {
@@ -190,6 +214,12 @@ where
 {
     fn cmp(&self, other: &Self) -> Ordering {
         self.amount.cmp(&other.amount)
+    }
+}
+
+impl<C> Trim for Coin<C> {
+    fn trim(self, bits: u32) -> Self {
+        Self::from(self.amount.trim(bits))
     }
 }
 
