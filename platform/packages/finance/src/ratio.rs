@@ -2,7 +2,7 @@ use std::fmt::Debug;
 
 use serde::{Deserialize, Serialize};
 
-use crate::{fraction::Fraction, fractionable::Fractionable, zero::Zero};
+use crate::{fractionable::Fractionable, rational::Rational, traits::FractionUnit, zero::Zero};
 
 // TODO review whether it may gets simpler if extend Fraction
 pub trait Ratio<U> {
@@ -20,7 +20,7 @@ pub struct SimpleFraction<U> {
 
 impl<U> SimpleFraction<U>
 where
-    U: Zero + Debug + PartialEq<U>,
+    U: FractionUnit,
 {
     #[track_caller]
     pub fn new(nominator: U, denominator: U) -> Self {
@@ -33,16 +33,15 @@ where
     }
 }
 
-impl<U, T> Fraction<U> for SimpleFraction<T>
+impl<U> Rational<U> for SimpleFraction<U>
 where
-    Self: Ratio<U>,
+    U: FractionUnit,
 {
-    #[track_caller]
-    fn of<A>(&self, whole: A) -> A
+    fn of<A>(self, whole: A) -> Option<A>
     where
         A: Fractionable<U>,
     {
-        whole.safe_mul(self)
+        Some(whole.safe_mul(&self))
     }
 }
 
