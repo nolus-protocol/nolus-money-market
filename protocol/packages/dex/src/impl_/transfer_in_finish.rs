@@ -5,6 +5,7 @@ use std::{
 
 use serde::{Deserialize, Serialize};
 
+use access_control::Sender;
 use currency::{CurrencyDef, MemberOf};
 use finance::{coin::CoinDTO, duration::Duration};
 use platform::{
@@ -241,7 +242,7 @@ where
         env: Env,
         info: MessageInfo,
     ) -> HandlerResult<Self> {
-        access_control::check(&TimeAlarmDelivery::new(self.spec.time_alarm()), &info)
+        access_control::check(&TimeAlarmDelivery::new(self.spec.time_alarm()), &Sender::new(&info))
             .map_err(DexError::Unauthorized)
             .map_or_else(Into::into, |()| self.try_complete(querier, env))
     }

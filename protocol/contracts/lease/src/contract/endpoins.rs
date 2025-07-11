@@ -1,4 +1,7 @@
-use access_control::permissions::DexResponseSafeDeliveryPermission;
+use access_control::{
+    permissions::DexResponseSafeDeliveryPermission,
+    Sender,
+};
 use finance::duration::Duration;
 use platform::{error as platform_error, message::Response as MessageResponse, response};
 use sdk::{
@@ -148,14 +151,14 @@ fn process_execute(
         ExecuteMsg::DexCallback() => {
             access_control::check(
                 &DexResponseSafeDeliveryPermission::new(&env.contract),
-                &info,
+                &Sender::new(&info),
             )?;
             state.on_dex_inner(querier, env)
         }
         ExecuteMsg::DexCallbackContinue() => {
             access_control::check(
                 &DexResponseSafeDeliveryPermission::new(&env.contract),
-                &info,
+                &Sender::new(&info),
             )?;
             state.on_dex_inner_continue(querier, env)
         }
