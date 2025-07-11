@@ -27,12 +27,6 @@ impl<'a> Sender<'a> {
     }
 }
 
-impl<'info> AsRef<Addr> for Sender<'info> {
-    fn as_ref(&self) -> &Addr {
-        self.addr
-    }
-}
-
 pub trait AccessPermission {
     fn granted_to(&self, sender: &Sender) -> bool;
 }
