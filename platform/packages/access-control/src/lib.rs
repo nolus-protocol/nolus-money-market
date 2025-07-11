@@ -104,7 +104,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use sdk::cosmwasm_std::{Addr, ContractInfo, Storage, testing::MockStorage};
+    use sdk::cosmwasm_std::{Addr, ContractInfo, MessageInfo, Storage, testing::MockStorage};
 
     use crate::{
         Sender,

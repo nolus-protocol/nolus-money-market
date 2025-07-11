@@ -2,6 +2,7 @@ use currency::{CurrencyDef, never};
 use oracle_platform::GrantedOracle;
 use serde::{Deserialize, Serialize};
 
+use access_control::Sender;
 use dex::Enterable;
 use finance::{coin::IntoDTO, duration::Duration};
 use platform::{bank, batch::Emitter, message::Response as MessageResponse};
@@ -182,7 +183,7 @@ impl Handler for Active {
     ) -> ContractResult<Response> {
         access_control::check(
             &ChangeClosePolicyPermission::new(&self.lease.lease.customer),
-            &info,
+            &Sender::new(&info),
         )
         .map_err(Into::into)
         .and_then(|()| {
@@ -235,7 +236,7 @@ impl Handler for Active {
     ) -> ContractResult<Response> {
         access_control::check(
             &ClosePositionPermission::new(&self.lease.lease.customer),
-            &info,
+            &Sender::new(&info),
         )
         .map_err(Into::into)
         .and_then(|()| customer_close::start(spec, self.lease, &env, querier))
@@ -249,7 +250,7 @@ impl Handler for Active {
     ) -> ContractResult<Response> {
         access_control::check(
             &TimeAlarmDelivery::new(&self.lease.lease.time_alarms),
-            &info,
+            &Sender::new(&info),
         )?;
 
         self.try_on_alarm(querier, &env)
