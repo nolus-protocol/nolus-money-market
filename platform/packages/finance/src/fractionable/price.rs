@@ -1,17 +1,23 @@
 use std::marker::PhantomData;
 
-use crate::{coin::Amount, percent::Units as PercentUnits, price::Price, ratio::Ratio};
+use crate::{
+    coin::Amount,
+    percent::{Units as PercentUnits, bound::BoundPercent},
+    price::Price,
+    ratio::Ratio,
+};
 
 use super::Fractionable;
 
-impl<C, QuoteC> Fractionable<PercentUnits> for Price<C, QuoteC>
+impl<const UPPER_BOUND: PercentUnits, C, QuoteC> Fractionable<BoundPercent<UPPER_BOUND>>
+    for Price<C, QuoteC>
 where
     C: 'static,
     QuoteC: 'static,
 {
     fn safe_mul<F>(self, fraction: &F) -> Self
     where
-        F: Ratio<PercentUnits>,
+        F: Ratio<BoundPercent<UPPER_BOUND>>,
     {
         self.lossy_mul(&RatioUpcast(PhantomData, fraction))
     }
@@ -73,19 +79,19 @@ mod test {
     mod percent {
         use crate::fraction::Fraction;
         use crate::fractionable::price::test::{c, q};
-        use crate::{percent::Percent, price};
+        use crate::{percent::Percent100, price};
 
         #[test]
         fn greater_than_one() {
             let price = price::total_of(c(1)).is(q(1000));
-            let permille = Percent::from_permille(1);
+            let permille = Percent100::from_permille(1);
             assert_eq!(permille.of(price), price::total_of(c(1)).is(q(1)));
         }
 
         #[test]
         fn less_than_one() {
             let price = price::total_of(c(10)).is(q(1));
-            let twenty_percents = Percent::from_percent(20);
+            let twenty_percents = Percent100::from_percent(20);
             assert_eq!(twenty_percents.of(price), price::total_of(c(50)).is(q(1)));
         }
     }
@@ -94,10 +100,10 @@ mod test {
 
         use crate::{
             coin::{Amount, Coin},
-            fraction::Fraction,
             fractionable::price::test::{c, q},
             price,
             ratio::SimpleFraction,
+            rational::Rational,
         };
 
         #[test]
@@ -145,7 +151,7 @@ mod test {
             let price = price::total_of(amount1).is(quote1);
             let ratio = SimpleFraction::new(nominator, denominator);
             assert_eq!(
-                Fraction::<usize>::of(&ratio, price),
+                ratio.of(price).unwrap(),
                 price::total_of(amount_exp).is(quote_exp)
             );
         }
