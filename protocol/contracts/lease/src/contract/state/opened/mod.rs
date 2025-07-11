@@ -13,6 +13,7 @@ mod balance;
 pub mod close;
 mod event;
 mod payment;
+pub mod permission;
 pub mod repay;
 
 fn lease_state(

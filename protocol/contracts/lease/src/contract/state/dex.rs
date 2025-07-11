@@ -113,9 +113,9 @@ where
         self,
         querier: QuerierWrapper<'_>,
         env: Env,
-        _info: MessageInfo,
+        info: MessageInfo,
     ) -> ContractResult<Response> {
-        self.handler.on_time_alarm(querier, env).into()
+        self.handler.on_time_alarm(querier, env, info).into()
     }
 
     fn on_price_alarm(

@@ -55,7 +55,7 @@ impl Handler for SlippageAnomaly {
     ) -> ContractResult<Response> {
         self.lease
             .leases
-            .check_assess(info.sender, querier)
+            .check_access(info.sender, querier)
             .and_then(|()| Active::new(self.lease).assess_close_status(querier, &env))
     }
 }
