@@ -13,7 +13,7 @@ use crate::{
     fraction::Fraction,
     fractionable::Fractionable,
     ratio::{Ratio, Rational},
-    scalar::Scalar,
+    arithmetic::Scalar,
     zero::Zero,
 };
 

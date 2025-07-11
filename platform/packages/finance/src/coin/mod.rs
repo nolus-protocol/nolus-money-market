@@ -14,7 +14,7 @@ use gcd::Gcd;
 
 use currency::{Currency, CurrencyDef, Group, MemberOf};
 
-use crate::{scalar::Scalar, zero::Zero};
+use crate::{arithmetic::Scalar, zero::Zero};
 
 pub use self::dto::{CoinDTO, IntoDTO};
 
