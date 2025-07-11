@@ -1,8 +1,9 @@
 use std::{
     fmt::{Debug, Display, Formatter, Result as FmtResult},
-    ops::{Add, AddAssign, Sub, SubAssign},
+    ops::{Add, AddAssign, Div, Rem, Sub, SubAssign},
 };
 
+use gcd::Gcd;
 use serde::{Deserialize, Serialize};
 
 use sdk::cosmwasm_std::{Timestamp, Uint128};
@@ -11,6 +12,7 @@ use crate::{
     fraction::Fraction,
     fractionable::{Fractionable, TimeSliceable},
     ratio::Rational,
+    scalar::Scalar,
     zero::Zero,
 };
 
@@ -122,6 +124,34 @@ impl TryFrom<u128> for Duration {
 
     fn try_from(value: u128) -> Result<Self, Self::Error> {
         Ok(Self::from_nanos(value.try_into()?))
+    }
+}
+
+impl Scalar for Duration {
+    type Base = Units;
+
+    fn gcd(self, other: Self) -> Self::Base {
+        Gcd::gcd(self.0, other.0)
+    }
+
+    fn scale_up(self, scale: Self::Base) -> Option<Self> {
+        self.0.checked_mul(scale).map(Self::from_nanos)
+    }
+
+    fn scale_down(self, scale: Self::Base) -> Self {
+        assert_ne!(scale, 0);
+
+        Self::from_nanos(self.0.div(scale))
+    }
+
+    fn modulo(self, scale: Self::Base) -> Self::Base {
+        assert_ne!(scale, 0);
+
+        self.0.rem(scale)
+    }
+
+    fn into_base(self) -> Self::Base {
+        self.0
     }
 }
 

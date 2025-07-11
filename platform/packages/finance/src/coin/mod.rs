@@ -6,14 +6,15 @@ use std::{
     fmt::{Debug, Display, Formatter},
     iter::Sum,
     marker::PhantomData,
-    ops::{Add, AddAssign, Sub, SubAssign},
+    ops::{Add, AddAssign, Div, Rem, Sub, SubAssign},
 };
 
 use ::serde::{Deserialize, Serialize};
+use gcd::Gcd;
 
 use currency::{Currency, CurrencyDef, Group, MemberOf};
 
-use crate::zero::Zero;
+use crate::{scalar::Scalar, zero::Zero};
 
 pub use self::dto::{CoinDTO, IntoDTO};
 
@@ -22,6 +23,35 @@ mod dto;
 mod serde;
 
 pub type Amount = u128;
+
+impl Scalar for Amount {
+    type Base = Self;
+
+    fn gcd(self, other: Self) -> Self::Base {
+        Gcd::gcd(self, other)
+    }
+
+    fn scale_up(self, scale: Self::Base) -> Option<Self> {
+        self.checked_mul(scale)
+    }
+
+    fn scale_down(self, scale: Self::Base) -> Self {
+        assert_ne!(scale, 0);
+
+        self.div(scale)
+    }
+
+    fn modulo(self, scale: Self::Base) -> Self::Base {
+        assert_ne!(scale, 0);
+
+        self.rem(scale)
+    }
+
+    fn into_base(self) -> Self::Base {
+        self
+    }
+}
+
 #[cfg(feature = "testing")]
 pub type NonZeroAmount = NonZeroU128;
 
@@ -216,6 +246,34 @@ impl<C> From<Amount> for Coin<C> {
 impl<C> From<Coin<C>> for Amount {
     fn from(coin: Coin<C>) -> Self {
         coin.amount
+    }
+}
+
+impl<C> Scalar for Coin<C> {
+    type Base = Amount;
+
+    fn gcd(self, other: Self) -> Self::Base {
+        Gcd::gcd(self.amount, other.amount)
+    }
+
+    fn scale_up(self, scale: Self::Base) -> Option<Self> {
+        self.amount.checked_mul(scale).map(Self::new)
+    }
+
+    fn scale_down(self, scale: Self::Base) -> Self {
+        assert_ne!(scale, 0);
+
+        self.amount.div(scale).into()
+    }
+
+    fn modulo(self, scale: Self::Base) -> Self::Base {
+        assert_ne!(scale, 0);
+
+        self.amount.rem(scale)
+    }
+
+    fn into_base(self) -> Self::Base {
+        self.amount
     }
 }
 
