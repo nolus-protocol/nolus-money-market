@@ -3,9 +3,7 @@ use std::{
     ops::{Div, Mul},
 };
 
-use crate::{
-    duration::Units as TimeUnits, percent::Units as PercentUnits, ratio::Ratio, zero::Zero,
-};
+use crate::{ratio::Ratio, zero::Zero};
 
 mod coin;
 mod duration;
@@ -19,10 +17,6 @@ pub trait Fractionable<U> {
     where
         F: Ratio<U>;
 }
-
-// TODO revisit its usability
-pub trait Percentable: Fractionable<PercentUnits> {}
-pub trait TimeSliceable: Fractionable<TimeUnits> {}
 
 pub trait HigherRank<T> {
     type Type;
@@ -58,6 +52,3 @@ where
         }
     }
 }
-
-impl<T> Percentable for T where T: Fractionable<PercentUnits> {}
-impl<T> TimeSliceable for T where T: Fractionable<TimeUnits> {}

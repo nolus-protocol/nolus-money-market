@@ -1,15 +1,12 @@
-use crate::{
-    percent::{Units as PercentUnits, bound::BoundPercent},
-    ratio::Ratio,
-    traits::FractionUnit,
-};
+use crate::{percent::Units as PercentUnits, ratio::Ratio, traits::FractionUnit};
 
 use super::Fractionable;
 
-impl<const UPPER_BOUND: PercentUnits> Fractionable<BoundPercent<UPPER_BOUND>> for usize {
+// TODO impl Fractionble<BoundPercent<UPPER_BOUND>> for usize when multiplication with trim is ready
+impl Fractionable<PercentUnits> for usize {
     fn safe_mul<F>(self, fraction: &F) -> Self
     where
-        F: Ratio<BoundPercent<UPPER_BOUND>>,
+        F: Ratio<PercentUnits>,
     {
         u128::try_from(self)
             .expect("usize to u128 overflow")
@@ -26,7 +23,6 @@ mod test {
     use crate::{
         fraction::Fraction,
         percent::{Percent, Percent100},
-        rational::Rational,
     };
 
     #[test]
@@ -34,7 +30,7 @@ mod test {
         let n = 123usize;
         assert_eq!(n, Percent100::HUNDRED.of(n));
         assert_eq!(n / 2, Percent100::from_percent(50).of(n));
-        assert_eq!(n * 3 / 2, Percent100::from_percent(150).of(n));
+        assert_eq!(n * 3 / 4, Percent100::from_percent(75).of(n));
 
         assert_eq!(usize::MAX, Percent100::HUNDRED.of(usize::MAX));
         assert_eq!(usize::MIN, Percent100::from_permille(1).of(999));
@@ -44,6 +40,8 @@ mod test {
     #[test]
     #[should_panic = "usize overflow"]
     fn overflow() {
+        use crate::rational::Rational;
+
         _ = Percent::from_permille(1001).of(usize::MAX);
     }
 }
