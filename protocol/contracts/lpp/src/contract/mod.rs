@@ -51,13 +51,13 @@ pub fn instantiate(
     _info: MessageInfo,
     msg: InstantiateMsg,
 ) -> Result<CwResponse> {
-    deps.api.addr_validate(msg.lease_code_admin.as_str())?;
+    deps.api.addr_validate(msg.protocol_admin.as_str())?;
 
     SingleUserAccess::new(
         deps.storage.deref_mut(),
-        crate::access_control::LEASE_CODE_ADMIN_KEY,
+        crate::access_control::PROTOCOL_ADMIN_KEY,
     )
-    .grant_to(&msg.lease_code_admin)?;
+    .grant_to(&msg.protocol_admin)?;
 
     Code::try_new(msg.lease_code.into(), &deps.querier)
         .map_err(Into::into)
@@ -102,7 +102,7 @@ pub fn execute(
         } => {
             SingleUserAccess::new(
                 deps.storage.deref_mut(),
-                crate::access_control::LEASE_CODE_ADMIN_KEY,
+                crate::access_control::PROTOCOL_ADMIN_KEY,
             )
             .check(&info.sender)?;
 
@@ -138,7 +138,18 @@ pub fn execute(
             .map(response::response_only_messages),
         ExecuteMsg::Burn { amount } => lender::try_withdraw::<LpnCurrency>(deps, env, info, amount)
             .map(response::response_only_messages),
-        ExecuteMsg::CloseAllDeposits() => todo!(),
+        ExecuteMsg::CloseAllDeposits() => {
+            SingleUserAccess::new(
+                deps.storage.deref_mut(),
+                crate::access_control::PROTOCOL_ADMIN_KEY,
+            )
+            .check(&info.sender)?;
+
+            todo!(
+                "assert that no loans exist, then iterate over all deposits, and finally close them"
+            )
+            // lender::try_withdraw::<LpnCurrency>(deps, env, info, amount)
+        }
     }
     .inspect_err(platform_error::log(api))
 }

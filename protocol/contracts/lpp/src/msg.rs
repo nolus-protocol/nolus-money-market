@@ -16,7 +16,11 @@ use crate::{borrow::InterestRate, config::Config, loan::Loan};
 #[cfg_attr(any(test, feature = "testing"), derive(Debug))]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub struct InstantiateMsg {
-    pub lease_code_admin: Addr,
+    /// The actor who has rights to change the Lease code on code migrations,
+    /// and close all deposits.
+    /// In the current protocol architecture, it is the leaser contract
+    #[serde(alias = "lease_code_admin")]
+    pub protocol_admin: Addr,
     // Since this is an external system API we should not use [Code].
     pub lease_code: Uint64,
     pub borrow_rate: InterestRate,

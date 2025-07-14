@@ -66,9 +66,9 @@ impl Instantiator {
         Lpn::Group: MemberOf<Lpns>,
     {
         let lpp_id = app.store_code(endpoints);
-        let lease_code_admin = LeaserInstantiator::expected_addr();
+        let protocol_admin = LeaserInstantiator::expected_addr();
         let msg = InstantiateMsg {
-            lease_code_admin: lease_code_admin.clone(),
+            protocol_admin: protocol_admin.clone(),
             lease_code: CodeId::from(lease_code).into(),
             borrow_rate,
             min_utilization,
