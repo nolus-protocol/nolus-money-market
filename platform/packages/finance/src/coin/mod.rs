@@ -15,7 +15,7 @@ use gcd::Gcd;
 use currency::{Currency, CurrencyDef, Group, MemberOf};
 
 use crate::{
-    arithmetic::{Bits, CheckedAdd, CheckedMul, Scalar, Trim},
+    arithmetic::{Bits, CheckedAdd, CheckedMul, FractionUnit, Scalar, Trim},
     zero::Zero,
 };
 
@@ -50,6 +50,8 @@ impl CheckedMul for Amount {
         self.checked_mul(rhs)
     }
 }
+
+impl FractionUnit for Amount {}
 
 impl Scalar for Amount {
     type Base = Self;
@@ -223,6 +225,8 @@ impl<C> PartialOrd for Coin<C> {
         Some(self.cmp(other))
     }
 }
+
+impl<C> FractionUnit for Coin<C> {}
 
 impl<C> Ord for Coin<C>
 where

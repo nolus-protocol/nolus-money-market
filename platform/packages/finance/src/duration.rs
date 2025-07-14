@@ -9,11 +9,10 @@ use serde::{Deserialize, Serialize};
 use sdk::cosmwasm_std::{Timestamp, Uint128};
 
 use crate::{
-    arithmetic::{Bits, Scalar, Trim},
+    arithmetic::{Bits, FractionUnit, Scalar, Trim},
     fraction::Fraction,
     fractionable::{Fractionable, TimeSliceable},
     ratio::Rational,
-    scalar::Scalar,
     zero::Zero,
 };
 
@@ -105,7 +104,8 @@ impl Duration {
     where
         T: TimeSliceable,
     {
-        annual_amount.safe_mul(&Rational::new(self.nanos(), Self::YEAR.nanos()))
+        // annual_amount.safe_mul(&Rational::new(self.nanos(), Self::YEAR.nanos()))
+        todo!()
     }
 
     pub fn into_slice_per_ratio<U>(self, amount: U, annual_amount: U) -> Self
@@ -113,9 +113,12 @@ impl Duration {
         Self: Fractionable<U>,
         U: Zero + Debug + PartialEq + Copy,
     {
-        Rational::new(amount, annual_amount).of(self)
+        // Rational::new(amount, annual_amount).of(self)
+        todo!()
     }
 }
+
+impl FractionUnit for Duration {}
 
 impl From<Duration> for u128 {
     fn from(d: Duration) -> Self {
@@ -245,6 +248,9 @@ impl Display for Duration {
     }
 }
 
+impl Zero for Duration {
+    const ZERO: Self = Duration::from_nanos(0);
+}
 #[cfg(test)]
 mod tests {
     use sdk::cosmwasm_std::Timestamp as T;

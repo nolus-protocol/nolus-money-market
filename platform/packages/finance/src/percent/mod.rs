@@ -9,12 +9,11 @@ use serde::{Deserialize, Serialize};
 use sdk::cosmwasm_std::{OverflowError, OverflowOperation};
 
 use crate::{
-    arithmetic::{Bits, CheckedMul, Scalar, Trim},
+    arithmetic::{Bits, CheckedMul, FractionUnit, Scalar, Trim},
     error::Result as FinanceResult,
     fraction::Fraction,
     fractionable::Fractionable,
     ratio::{Ratio, Rational},
-    scalar::Scalar,
     zero::Zero,
 };
 
@@ -37,6 +36,8 @@ impl CheckedMul for Units {
         self.checked_mul(rhs)
     }
 }
+
+impl FractionUnit for Units {}
 
 impl Trim for Units {
     fn trim(self, bits: u32) -> Self {
@@ -96,7 +97,8 @@ impl Percent {
         FractionUnit: Copy + Debug + PartialEq + Zero,
         Self: Fractionable<FractionUnit>,
     {
-        Rational::new(nominator, denominator).of(Percent::HUNDRED)
+        // Rational::new(nominator, denominator).of(Percent::HUNDRED)
+        todo!()
     }
 
     pub const fn units(&self) -> Units {
@@ -133,6 +135,8 @@ impl Bits for Percent {
 impl Zero for Percent {
     const ZERO: Self = Self::ZERO;
 }
+
+impl FractionUnit for Percent {}
 
 impl Fraction<Units> for Percent {
     #[track_caller]

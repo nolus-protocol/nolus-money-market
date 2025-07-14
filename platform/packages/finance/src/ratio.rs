@@ -3,7 +3,7 @@ use std::fmt::Debug;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    arithmetic::{Bits, Trim},
+    arithmetic::{self, Bits, FractionUnit, Trim},
     fraction::Fraction,
     fractionable::Fractionable,
     zero::Zero,
@@ -24,7 +24,7 @@ pub struct Rational<U> {
 
 impl<U> Rational<U>
 where
-    U: Zero + Debug + PartialEq<U>,
+    U: FractionUnit,
 {
     #[track_caller]
     pub fn new(nominator: U, denominator: U) -> Self {
@@ -78,7 +78,7 @@ where
 
 impl<U> Trim for Rational<U>
 where
-    U: Copy + Debug + PartialEq<U> + Trim + Zero,
+    U: FractionUnit,
 {
     fn trim(self, bits: u32) -> Self {
         Self::new(self.nominator.trim(bits), self.denominator.trim(bits))
