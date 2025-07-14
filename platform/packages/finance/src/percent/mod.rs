@@ -20,22 +20,24 @@ pub type Percent = BoundPercent<MAX_BOUND>;
 
 impl FractionUnit for Units {}
 
-impl Fraction<Percent100> for Percent100 {
+// TODO implement Fraction<Percent100> when multiplication with trim is ready
+impl Fraction<Units> for Percent100 {
     fn of<A>(self, whole: A) -> A
     where
-        A: Fractionable<Percent100>,
+        A: Fractionable<Units>,
     {
-        let fraction: SimpleFraction<Percent100> = self.into();
+        let fraction: SimpleFraction<Units> = self.into();
         fraction
             .of(whole)
             .expect("TODO it won't be needed when I call ratio.of()")
     }
 }
 
-impl Rational<Percent> for Percent {
+// TODO implement Rational<Percent> when multiplication with trim is ready
+impl Rational<Units> for Percent {
     fn of<A>(self, whole: A) -> Option<A>
     where
-        A: Fractionable<Percent>,
+        A: Fractionable<Units>,
     {
         whole.safe_mul(self)
     }
@@ -92,9 +94,10 @@ impl Add<Percent> for Percent {
     }
 }
 
-impl From<Percent> for SimpleFraction<Percent> {
+// TODO implement From<Percent> for SimpleFraction<Percent> when multiplication with trim is ready
+impl From<Percent> for SimpleFraction<Units> {
     fn from(percent: Percent) -> Self {
-        Self::new(percent, Percent::HUNDRED)
+        Self::new(percent.units(), Percent::HUNDRED.units())
     }
 }
 
@@ -243,31 +246,17 @@ pub(super) mod test {
     }
 
     #[test]
-    fn of_overflow() {
-        assert!(
-            Percent::from_permille(Units::MAX)
-                .of(Percent::from_permille(Units::MAX))
-                .is_none()
-        )
-    }
-
-    #[test]
     fn rational_to_percents() {
         let n: Units = 189;
         let d: Units = 1890;
-        let r = SimpleFraction::new(Percent::from_permille(n), Percent::from_permille(d));
-        let res: Percent = r.of(Percent::HUNDRED).unwrap();
+        let r = SimpleFraction::new(n, d);
+        let res: Percent = Rational::<Units>::of(r, Percent::HUNDRED).unwrap();
         assert_eq!(Percent::from_permille(n * 1000 / d), res);
     }
 
-    // pub fn test_of(permille: Units, quantity: Percent100, exp: Percent100) {
-    //     let perm = Percent100::from_permille(permille);
-    //     assert_eq!(exp, perm.of(quantity), "Calculating {perm} of {quantity}",);
-    // }
-
     pub(crate) fn test_of<P>(permille: Units, quantity: P, exp: P)
     where
-        P: Clone + Debug + Display + Fractionable<Percent100> + PartialEq,
+        P: Clone + Debug + Display + Fractionable<Units> + PartialEq,
     {
         let perm = Percent100::from_permille(permille);
         assert_eq!(

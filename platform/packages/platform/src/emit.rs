@@ -1,7 +1,7 @@
 use currency::{CurrencyDTO, CurrencyDef, Group};
 use finance::{
     coin::{Amount, Coin, CoinDTO},
-    percent::Percent,
+    percent::Percent100,
 };
 use sdk::cosmwasm_std::{Env, Event, Timestamp};
 
@@ -59,7 +59,7 @@ where
     }
 
     /// Specialization of [`emit`](Self::emit) for [`Percent`]'s amount in [`Units`](finance::percent::Units).
-    fn emit_percent_amount<K>(self, event_key: K, percent: Percent) -> Self
+    fn emit_percent_amount<K>(self, event_key: K, percent: Percent100) -> Self
     where
         K: Into<String>,
     {

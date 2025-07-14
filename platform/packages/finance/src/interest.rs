@@ -1,9 +1,9 @@
 use std::{cmp, ops::Sub};
 
 use crate::{
-    duration::Duration,
+    duration::{Duration, Units as DurationUnits},
     fraction::Fraction,
-    fractionable::{Fractionable, TimeSliceable},
+    fractionable::Fractionable,
     traits::FractionUnit,
 };
 
@@ -12,7 +12,7 @@ pub fn interest<U, R, P>(rate: R, principal: P, period: Duration) -> P
 where
     U: FractionUnit,
     R: Fraction<U>,
-    P: Fractionable<U> + Fractionable<Duration> + TimeSliceable,
+    P: Fractionable<U> + Fractionable<DurationUnits>,
 {
     let interest_per_year = rate.of(principal);
     period.annualized_slice_of(interest_per_year)
@@ -25,7 +25,7 @@ pub fn pay<U, R, P>(rate: R, principal: P, payment: P, period: Duration) -> (Dur
 where
     U: FractionUnit,
     R: Fraction<U>,
-    P: Fractionable<U> + Fractionable<Duration> + FractionUnit + Sub<Output = P> + TimeSliceable,
+    P: Fractionable<U> + Fractionable<DurationUnits> + FractionUnit + Sub<Output = P>,
     Duration: Fractionable<P>,
 {
     let interest_due_per_period: P = interest(rate, principal, period);
@@ -46,8 +46,7 @@ mod tests {
     use currency::test::SubGroupTestC10;
 
     use crate::{
-        coin::Coin, duration::Duration, fraction::Fraction, percent::Percent100,
-        ratio::SimpleFraction, zero::Zero,
+        coin::Coin, duration::Duration, fraction::Fraction, percent::Percent100, zero::Zero,
     };
 
     type MyCoin = Coin<SubGroupTestC10>;
@@ -139,16 +138,6 @@ mod tests {
             exp_change,
         );
     }
-
-    // #[test]
-    //  fn interest() {
-    //     let whole = MyCoin::new(1000);
-    //     let part = MyCoin::new(125);
-    //     let r = Percent100::from_ratio(part, whole).unwrap();
-
-    //     let res = super::interest(r, whole, PERIOD_LENGTH);
-    //     assert_eq!(part, res);
-    // }
 
     #[test]
     fn interest_zero() {

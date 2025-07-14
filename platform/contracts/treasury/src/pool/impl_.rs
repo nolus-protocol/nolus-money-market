@@ -1,5 +1,5 @@
 use currency::platform::{PlatformGroup, Stable};
-use finance::{duration::Duration, interest, percent::Percent};
+use finance::{duration::Duration, interest, percent::Percent100};
 use lpp_platform::{CoinStable, Lpp as LppTrait};
 use oracle_platform::{Oracle, OracleRef, convert};
 use platform::message::Response as MessageResponse;
@@ -42,7 +42,7 @@ where
 
     fn distribute_rewards(
         self,
-        apr: Percent,
+        apr: Percent100,
         period: Duration,
     ) -> Result<MessageResponse, ContractError> {
         let reward_in_stable = interest::interest(apr, self.balance, period);
@@ -60,7 +60,7 @@ where
 #[cfg(test)]
 mod test {
     use currency::platform::Nls;
-    use finance::{coin::Coin, duration::Duration, fraction::Fraction, percent::Percent, price};
+    use finance::{coin::Coin, duration::Duration, fraction::Fraction, percent::Percent100, price};
     use lpp_platform::{CoinStable, test::DummyLpp};
     use oracle_platform::{Oracle, test::DummyOracle};
     use platform::response;
@@ -82,7 +82,7 @@ mod test {
 
     #[test]
     fn failing_nls_price() {
-        let bar0_apr = Percent::from_percent(20);
+        let bar0_apr = Percent100::from_percent(20);
         let lpp0_tvl: CoinStable = 15_000.into();
 
         let lpp = DummyLpp::with_balance(lpp0_tvl, Coin::<Nls>::default());
@@ -99,7 +99,7 @@ mod test {
 
     #[test]
     fn failing_reward_distribution() {
-        let bar0_apr = Percent::from_percent(20);
+        let bar0_apr = Percent100::from_percent(20);
         let lpp0_tvl: CoinStable = 15_000.into();
 
         let oracle = DummyOracle::with_price(4);
@@ -117,7 +117,7 @@ mod test {
 
     #[test]
     fn ok() {
-        let bar0_apr = Percent::from_percent(20);
+        let bar0_apr = Percent100::from_percent(20);
         let lpp0_tvl: CoinStable = 23_000.into();
         let oracle = DummyOracle::with_price(2);
         let exp_reward = price::total(bar0_apr.of(lpp0_tvl), oracle.price_of().unwrap().inv());
