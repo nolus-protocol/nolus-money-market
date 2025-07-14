@@ -5,7 +5,7 @@ use std::{
 
 use serde::{Deserialize, Serialize};
 
-use finance::duration::Duration;
+use finance::{duration::Duration, zero::Zero};
 use platform::{
     batch::{Batch, Emitter},
     ica::ErrorResponse as ICAErrorResponse,
@@ -27,25 +27,32 @@ use super::{
     trx::TransferOutTrx,
 };
 
+mod migrate_v0_8_12;
+
 /// Transfer out a list of coins to DEX
 ///
 /// Supports up to `CoinsNb::MAX` number of coins.
 /// In does it in a single transaction with multiple messages expecting
 /// an acknowledgment per message.
 #[derive(Serialize, Deserialize)]
-#[serde(bound(
-    serialize = "SwapTask: Serialize",
-    deserialize = "SwapTask: Deserialize<'de>",
-))]
+#[cfg_attr(test, derive(Clone, Debug, PartialEq, Eq))]
+#[serde(
+    bound(
+        serialize = "SwapTask: Serialize",
+        deserialize = "SwapTask: Deserialize<'de> + SwapTaskT"
+    ),
+    try_from = "migrate_v0_8_12::TransferOut<SwapTask, SEnum, SwapClient>"
+)]
 pub struct TransferOut<SwapTask, SEnum, SwapClient> {
     spec: SwapTask,
     acks_left: CoinsNb,
-    // TODO migrate the following two fields, acks_left = last_coin_index - coin_index + 1, sending
-    // `last_coin_index - coin_index` transfer messages.
-    // Use an enum with `#[serde(untagged)]` to favor old data.
-    // coin_index: CoinsNb,
-    // last_coin_index: CoinsNb,
-    // #[serde(skip)]
+    // a transient field facilitating the v0.8.12 migration
+    // since the lazy migration concerns only data transfer we need a way
+    // to track transfer requests till getting to a v0.8.14 state (all requests sent waiting for acks)
+    //TODO remove once migrated all v0.8.12 leases
+    #[serde(skip)]
+    requests_sent: CoinsNb,
+    #[serde(skip)]
     _state_enum: PhantomData<SEnum>,
     #[serde(skip)]
     _swap_client: PhantomData<SwapClient>,
@@ -57,13 +64,32 @@ where
 {
     pub fn new(spec: SwapTask) -> Self {
         let acks_left = Self::coins_len(&spec);
-        Self::new_with_index(spec, acks_left)
+        Self::internal_new(spec, acks_left, Zero::ZERO)
     }
 
-    fn new_with_index(spec: SwapTask, acks_left: CoinsNb) -> Self {
+    pub fn migrate_from(spec: SwapTask, coin_index: CoinsNb, last_coin_index: CoinsNb) -> Self {
+        let coins_len = Self::coins_len(&spec);
+        debug_assert!(coin_index < coins_len);
+        debug_assert_eq!(coins_len - 1, last_coin_index);
+        debug_assert!(coin_index <= last_coin_index);
+
+        let acks_left = coins_len
+            .checked_sub(coin_index)
+            .expect("'coin_index' is greater than 'coins_len'");
+        let requests_sent = coin_index + 1;
+        Self::internal_new(spec, acks_left, requests_sent)
+    }
+
+    fn nth(spec: SwapTask, acks_left: CoinsNb) -> Self {
+        let coins_nb = Self::coins_len(&spec);
+        Self::internal_new(spec, acks_left, coins_nb)
+    }
+
+    fn internal_new(spec: SwapTask, acks_left: CoinsNb, requests_sent: CoinsNb) -> Self {
         let ret = Self {
             spec,
             acks_left,
+            requests_sent,
             _state_enum: PhantomData,
             _swap_client: PhantomData,
         };
@@ -72,7 +98,8 @@ where
     }
 
     fn invariant(&self) -> bool {
-        self.acks_left > 0
+        let coins_nb = Self::coins_len(&self.spec);
+        self.requests_sent <= coins_nb && 0 < self.acks_left && self.acks_left <= coins_nb
     }
 
     fn coins_len(spec: &SwapTask) -> CoinsNb {
@@ -82,17 +109,19 @@ where
             .expect("Functionality doesn't support this many coins!")
     }
 
-    fn enter_state(&self, now: Timestamp) -> Result<Batch> {
-        debug_assert_eq!(
-            Self::coins_len(&self.spec),
-            self.acks_left,
-            "calling 'enter_state' past initialization"
-        );
+    fn generate_requests(&self, now: Timestamp) -> Result<Batch> {
+        // TODO uncomment once the v0.8.12 migration completes
+        // debug_assert_eq!(
+        //     Self::coins_len(&self.spec),
+        //     self.acks_left,
+        //     "calling 'enter_state' past initialization"
+        // );
         let mut trx = TransferOutTrx::new(self.spec.dex_account(), now);
 
         self.spec
             .coins()
             .into_iter()
+            .skip(self.requests_sent.into())
             .try_for_each(|coin| trx.send(&coin))
             .map(|()| trx.into())
     }
@@ -104,7 +133,7 @@ where
             "the method contract precondition `!self.last_ack()` should have been respected",
         );
 
-        Self::new_with_index(self.spec, acks_left)
+        Self::nth(self.spec, acks_left)
     }
 
     fn last_ack(&self) -> bool {
@@ -145,7 +174,7 @@ where
     SwapExactIn<SwapTask, SEnum, SwapClient>: Into<SEnum>,
 {
     fn enter(&self, now: Timestamp, _querier: QuerierWrapper<'_>) -> Result<Batch> {
-        self.enter_state(now)
+        self.generate_requests(now)
     }
 }
 
@@ -172,7 +201,10 @@ where
             next.enter(now, querier)
                 .and_then(|msgs| Self::on_response(next, label, msgs))
         } else {
-            Self::on_response(self.next(), label, Batch::default())
+            // TODO!!!! remove generation of outstanding requests once the migration from v0.8.12 completes
+            self.generate_requests(now).and_then(|remaining_requests| {
+                Self::on_response(self.next(), label, remaining_requests)
+            })
         }
         .into()
     }
