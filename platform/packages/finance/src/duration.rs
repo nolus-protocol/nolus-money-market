@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 use sdk::cosmwasm_std::{Timestamp, Uint128};
 
 use crate::{
-    arithmetic::{Bits, FractionUnit, Scalar, Trim},
+    arithmetic::{Bits, FractionUnit, One, Scalar, Trim},
     fraction::Fraction,
     fractionable::{Fractionable, TimeSliceable},
     ratio::Rational,
@@ -200,6 +200,10 @@ impl Add<Duration> for Duration {
     fn add(self, rhs: Duration) -> Self::Output {
         Self::from_nanos(self.nanos().add(rhs.nanos()))
     }
+}
+
+impl One for Duration {
+    const ONE: Self = Self::from_nanos(1);
 }
 
 impl Sub<Duration> for Timestamp {

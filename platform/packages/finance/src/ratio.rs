@@ -3,7 +3,7 @@ use std::fmt::Debug;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    arithmetic::{self, Bits, FractionUnit, Trim},
+    arithmetic::{self, Bits, FractionUnit, One, Trim},
     fraction::Fraction,
     fractionable::Fractionable,
     zero::Zero,
@@ -61,6 +61,16 @@ where
     {
         whole.safe_mul(self)
     }
+}
+
+impl<U> One for Rational<U>
+where
+    U: FractionUnit + One,
+{
+    const ONE: Self = Self {
+        nominator: U::ONE,
+        denominator: U::ONE,
+    };
 }
 
 impl<U, T> Ratio<U> for Rational<T>

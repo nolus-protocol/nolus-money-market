@@ -26,6 +26,10 @@ where
 {
 }
 
+pub trait One {
+    const ONE: Self;
+}
+
 pub trait Scalar
 where
     Self: Copy + Sized,

@@ -15,7 +15,7 @@ use gcd::Gcd;
 use currency::{Currency, CurrencyDef, Group, MemberOf};
 
 use crate::{
-    arithmetic::{Bits, CheckedAdd, CheckedMul, FractionUnit, Scalar, Trim},
+    arithmetic::{Bits, CheckedAdd, CheckedMul, FractionUnit, One, Scalar, Trim},
     zero::Zero,
 };
 
@@ -52,6 +52,10 @@ impl CheckedMul for Amount {
 }
 
 impl FractionUnit for Amount {}
+
+impl One for Amount {
+    const ONE: Self = 1;
+}
 
 impl Scalar for Amount {
     type Base = Self;
@@ -213,6 +217,10 @@ impl<C> Default for Coin<C> {
 }
 
 impl<C> Eq for Coin<C> {}
+
+impl<C> One for Coin<C> {
+    const ONE: Self = Self::new(1);
+}
 
 impl<C> PartialEq for Coin<C> {
     fn eq(&self, other: &Self) -> bool {
