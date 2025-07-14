@@ -390,9 +390,6 @@ jobs:
   build:
     needs:
       - "workspace_check"
-      - "instance_lint"
-      - "instance_check_deps"
-      - "instance_tests"
     runs-on: "ubuntu-latest"
     name: "Build platform binaries and protocol container image"
     steps:
