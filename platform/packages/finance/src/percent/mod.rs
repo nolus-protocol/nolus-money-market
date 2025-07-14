@@ -14,6 +14,7 @@ use crate::{
     fraction::Fraction,
     fractionable::Fractionable,
     ratio::{Ratio, Rational},
+    scalar::Scalar,
     zero::Zero,
 };
 
