@@ -1,4 +1,4 @@
-use finance::{duration::Duration, percent::Percent};
+use finance::{duration::Duration, percent::Percent100};
 use lpp_platform::CoinStable;
 use platform::message::Response as MessageResponse;
 
@@ -15,7 +15,7 @@ pub trait Pool {
 
     fn distribute_rewards(
         self,
-        apr: Percent,
+        apr: Percent100,
         period: Duration,
     ) -> Result<MessageResponse, ContractError>;
 }

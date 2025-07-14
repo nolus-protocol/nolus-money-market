@@ -1,23 +1,18 @@
 use std::marker::PhantomData;
 
-use crate::{
-    coin::Amount,
-    percent::{Units as PercentUnits, bound::BoundPercent},
-    price::Price,
-    ratio::Ratio,
-};
+use crate::{coin::Amount, percent::Units as PercentUnits, price::Price, ratio::Ratio};
 
 use super::Fractionable;
 
-impl<const UPPER_BOUND: PercentUnits, C, QuoteC> Fractionable<BoundPercent<UPPER_BOUND>>
-    for Price<C, QuoteC>
+// TODO impl Fractionble<BoundPercent<UPPER_BOUND>> for Price when multiplication with trim is ready
+impl<C, QuoteC> Fractionable<PercentUnits> for Price<C, QuoteC>
 where
     C: 'static,
     QuoteC: 'static,
 {
     fn safe_mul<F>(self, fraction: &F) -> Self
     where
-        F: Ratio<BoundPercent<UPPER_BOUND>>,
+        F: Ratio<PercentUnits>,
     {
         self.lossy_mul(&RatioUpcast(PhantomData, fraction))
     }

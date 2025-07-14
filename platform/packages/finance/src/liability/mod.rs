@@ -6,8 +6,8 @@ use crate::{
     duration::Duration,
     error::{Error, Result},
     fraction::Fraction,
-    fractionable::{Fractionable, Percentable},
-    percent::{Percent, Percent100, Units},
+    fractionable::Fractionable,
+    percent::{Percent, Percent100, Units as PercentUnits},
     ratio::SimpleFraction,
     rational::Rational,
     zero::Zero,
@@ -89,7 +89,11 @@ impl Liability {
     }
 
     pub fn cap_to_zone(&self, ltv: Percent100) -> Percent100 {
-        ltv.min(self.max - Self::MIN_STEP_LTV)
+        ltv.min(
+            self.max
+                .checked_sub(Self::MIN_STEP_LTV)
+                .expect("Invariant to be held"),
+        )
     }
 
     pub fn zone_of(&self, ltv: Percent100) -> Zone {
@@ -110,14 +114,18 @@ impl Liability {
         self.recalc_time
     }
 
+    // TODO replace Fractionable<PercentUnits> with Fractionable<Percent100> + Fractionable<Percent>
     pub fn init_borrow_amount<P>(&self, downpayment: P, may_max_ltd: Option<Percent>) -> P
     where
-        P: Fractionable<Percent100> + Fractionable<Percent> + Ord,
+        P: Copy + Fractionable<PercentUnits> + Ord,
     {
         debug_assert!(self.initial > Percent100::ZERO);
         debug_assert!(self.initial < Percent100::HUNDRED);
 
-        let default_ltd = SimpleFraction::new(self.initial, Percent100::HUNDRED - self.initial);
+        let default_ltd = SimpleFraction::new(
+            self.initial.units(),
+            Self::remaining_percent(self.initial).units(),
+        );
         default_ltd
             .of(downpayment)
             .map(|default_borrow| {
@@ -133,7 +141,7 @@ impl Liability {
     /// Otherwise, amount_to_liquidate == total_due
     pub fn amount_to_liquidate<P>(&self, lease_amount: P, total_due: P) -> P
     where
-        P: Fractionable<Percent100> + Ord + Sub<Output = P> + Zero,
+        P: Copy + Fractionable<PercentUnits> + Ord + Sub<Output = P> + Zero,
     {
         if total_due < self.max.of(lease_amount) {
             return P::ZERO;
@@ -144,10 +152,14 @@ impl Liability {
 
         // from 'due - liquidation = healthy% of (lease - liquidation)' follows
         // liquidation = 100% / (100% - healthy%) of (due - healthy% of lease)
-        let multiplier =
-            SimpleFraction::new(Percent100::HUNDRED, Percent100::HUNDRED - self.healthy);
+        let multiplier = SimpleFraction::new(
+            Percent100::HUNDRED.units(),
+            Self::remaining_percent(self.healthy).units(),
+        );
         let extra_liability_lpn = total_due - total_due.min(self.healthy.of(lease_amount));
-        multiplier.of(extra_liability_lpn).expect("TODO the method has to return Option")
+        multiplier
+            .of(extra_liability_lpn)
+            .expect("TODO the method has to return Option")
     }
 
     fn invariant_held(&self) -> Result<()> {
@@ -184,6 +196,15 @@ impl Liability {
         )?;
 
         Ok(())
+    }
+
+    fn remaining_percent(percent: Percent100) -> Percent100 {
+        debug_assert!(percent > Percent100::ZERO);
+        debug_assert!(percent < Percent100::HUNDRED);
+
+        Percent100::HUNDRED
+            .checked_sub(percent)
+            .expect("Invariant to be held")
     }
 }
 
@@ -399,17 +420,20 @@ mod test {
             recalc_time: Duration::HOUR,
         };
         assert_eq!(
-            MAX - Liability::MIN_STEP_LTV - Liability::MIN_STEP_LTV,
-            obj.cap_to_zone(MAX - Liability::MIN_STEP_LTV - Liability::MIN_STEP_LTV)
+            sub(sub(MAX, Liability::MIN_STEP_LTV), Liability::MIN_STEP_LTV),
+            obj.cap_to_zone(sub(
+                sub(MAX, Liability::MIN_STEP_LTV),
+                Liability::MIN_STEP_LTV
+            ))
         );
         assert_eq!(
-            MAX - Liability::MIN_STEP_LTV,
-            obj.cap_to_zone(MAX - Liability::MIN_STEP_LTV)
+            sub(MAX, Liability::MIN_STEP_LTV),
+            obj.cap_to_zone(sub(MAX, Liability::MIN_STEP_LTV))
         );
-        assert_eq!(MAX - Liability::MIN_STEP_LTV, obj.cap_to_zone(MAX));
+        assert_eq!(sub(MAX, Liability::MIN_STEP_LTV), obj.cap_to_zone(MAX));
         assert_eq!(
-            MAX - Liability::MIN_STEP_LTV,
-            obj.cap_to_zone(MAX + Liability::MIN_STEP_LTV)
+            sub(MAX, Liability::MIN_STEP_LTV),
+            obj.cap_to_zone(MAX.checked_add(Liability::MIN_STEP_LTV).unwrap())
         );
     }
 
@@ -423,6 +447,10 @@ mod test {
                 "Lease = {lease}, due = {due}, exp = {exp}"
             );
         }
+    }
+
+    fn sub(lhs: Percent100, rhs: Percent100) -> Percent100 {
+        lhs.checked_sub(rhs).unwrap()
     }
 
     fn assert_load_ok(exp: Liability, json: &[u8]) {
