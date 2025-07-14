@@ -8,6 +8,24 @@ pub trait Bits {
     fn leading_zeros(self) -> u32;
 }
 
+pub trait CheckedAdd<Rhs = Self> {
+    type Output;
+
+    fn checked_add(self, rhs: Rhs) -> Option<Self::Output>;
+}
+
+pub trait CheckedMul<Rhs = Self> {
+    type Output;
+
+    fn checked_mul(self, rhs: Rhs) -> Option<Self::Output>;
+}
+
+pub trait FractionUnit
+where
+    Self: Copy + Debug + Ord + Scalar + Trim + Zero,
+{
+}
+
 pub trait Scalar
 where
     Self: Copy + Sized,
@@ -30,7 +48,7 @@ where
 
 pub trait Trim
 where
-    Self:Copy,
+    Self: Copy,
 {
     /// Trims off the highest bits by shifting right
     fn trim(self, bits: u32) -> Self;

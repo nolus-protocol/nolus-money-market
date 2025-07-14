@@ -15,7 +15,7 @@ use gcd::Gcd;
 use currency::{Currency, CurrencyDef, Group, MemberOf};
 
 use crate::{
-    arithmetic::{Bits, Scalar, Trim},
+    arithmetic::{Bits, CheckedAdd, CheckedMul, Scalar, Trim},
     zero::Zero,
 };
 
@@ -32,6 +32,22 @@ impl Bits for Amount {
 
     fn leading_zeros(self) -> u32 {
         Amount::leading_zeros(self)
+    }
+}
+
+impl CheckedAdd for Amount {
+    type Output = Self;
+
+    fn checked_add(self, rhs: Self) -> Option<Self::Output> {
+        self.checked_add(rhs)
+    }
+}
+
+impl CheckedMul for Amount {
+    type Output = Self;
+
+    fn checked_mul(self, rhs: Self) -> Option<Self::Output> {
+        self.checked_mul(rhs)
     }
 }
 

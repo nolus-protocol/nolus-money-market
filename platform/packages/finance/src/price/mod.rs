@@ -6,6 +6,7 @@ use std::{
 use serde::{Deserialize, Serialize};
 
 use crate::{
+    arithmetic::CheckedAdd,
     coin::{Amount, Coin},
     error::{Error, Result},
     fraction::Fraction,
@@ -210,6 +211,18 @@ where
         let res = amount.into();
         assert!(res > 0, "price overflow during multiplication");
         res
+    }
+}
+
+impl<C, QuoteC> CheckedAdd for Price<C, QuoteC>
+where
+    C: 'static,
+    QuoteC: 'static,
+{
+    type Output = Self;
+
+    fn checked_add(self, rhs: Self) -> Option<Self::Output> {
+        self.checked_add(rhs)
     }
 }
 

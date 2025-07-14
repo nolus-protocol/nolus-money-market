@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 use sdk::cosmwasm_std::{OverflowError, OverflowOperation};
 
 use crate::{
-    arithmetic::{Bits, Scalar, Trim},
+    arithmetic::{Bits, CheckedMul, Scalar, Trim},
     error::Result as FinanceResult,
     fraction::Fraction,
     fractionable::Fractionable,
@@ -20,6 +20,56 @@ use crate::{
 pub mod bound;
 
 pub type Units = u32;
+
+impl Bits for Units {
+    const BITS: u32 = Self::BITS;
+
+    fn leading_zeros(self) -> u32 {
+        Self::leading_zeros(self)
+    }
+}
+
+impl CheckedMul for Units {
+    type Output = Self;
+
+    fn checked_mul(self, rhs: Self) -> Option<Self::Output> {
+        self.checked_mul(rhs)
+    }
+}
+
+impl Trim for Units {
+    fn trim(self, bits: u32) -> Self {
+        self >> bits
+    }
+}
+
+impl Scalar for Units {
+    type Base = Self;
+
+    fn gcd(self, other: Self) -> Self::Base {
+        Gcd::gcd(self, other)
+    }
+
+    fn scale_up(self, scale: Self::Base) -> Option<Self> {
+        self.checked_mul(scale)
+    }
+
+    fn scale_down(self, scale: Self::Base) -> Self {
+        assert_ne!(scale, 0);
+
+        self.div(scale)
+    }
+
+    fn modulo(self, scale: Self::Base) -> Self::Base {
+        assert_ne!(scale, 0);
+
+        self.rem(scale)
+    }
+
+    fn into_base(self) -> Self::Base {
+        self
+    }
+}
 
 #[derive(Copy, Clone, Default, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
