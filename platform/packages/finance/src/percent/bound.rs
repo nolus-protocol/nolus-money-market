@@ -4,6 +4,7 @@ use std::{
     ops::Div,
 };
 
+use sdk::cosmwasm_std::Uint256;
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -44,14 +45,6 @@ impl<const UPPER_BOUND: Units> BoundPercent<UPPER_BOUND> {
     pub const fn from_permille(permille: Units) -> Self {
         Self::new_internal(permille)
     }
-
-    // pub fn from_ratio<U>(nominator: U, denominator: U) -> Option<Self>
-    // where
-    //     Self: Fractionable<U>,
-    //     U: FractionUnit,
-    // {
-    //     SimpleFraction::new(nominator, denominator).lossy_mul(Self::HUNDRED)
-    // }
 
     pub const fn units(&self) -> Units {
         self.0
@@ -161,6 +154,13 @@ impl<const UPPER_BOUND: Units> From<BoundPercent<UPPER_BOUND>> for SimpleFractio
             percent.0.into(),
             BoundPercent::<UPPER_BOUND>::HUNDRED.0.into(),
         )
+    }
+}
+
+// TODO remove it once the multiplication + trim logic is refactored
+impl<const UPPER_BOUND: Units> From<BoundPercent<UPPER_BOUND>> for Uint256 {
+    fn from(percent: BoundPercent<UPPER_BOUND>) -> Self {
+        Amount::from(percent).into()
     }
 }
 
