@@ -47,205 +47,158 @@ env:
   upload-artifacts: |-
     ${{ toJSON(github.ref_type == 'tag' || (github.event_name == 'workflow_dispatch' && inputs.upload-artifacts)) }}
 
+permissions:
+  actions: "write"
+
 jobs:
-  load-configuration:
+  make_nix_cache:
     runs-on: "ubuntu-latest"
-    name: "Load configuration"
-    outputs:
-      dex-types-json: |-
-        ${{ steps.configuration.outputs.dex-types-json }}
-      profiles-json: |-
-        ${{ steps.configuration.outputs.profiles-json }}
-      workspaces-json: |-
-        ${{ steps.configuration.outputs.workspaces-json }}
     steps:
       - uses: "actions/checkout@v4"
-      - id: "configuration"
-        name: "Load configuration"
+      - uses: "nixbuild/nix-quick-install-action@v32"
+      - name: "Restore and save Nix store"
+        uses: "nix-community/cache-nix-action@v6"
+        with:
+          primary-key: |-
+            nix-${{ runner.os }}-${{ hashFiles('**/*.nix', '**/flake.lock') }}
+          gc-max-store-size-linux: "0G"
+          purge: true
+          purge-prefixes: |-
+            nix-${{ runner.os }}-
+          purge-created: 0
+          purge-last-accessed: 0
+          purge-primary-key: "never"
+      - run: |-
+          "nix" \
+            "build" \
+            --no-use-registries \
+            --no-update-lock-file
+  profiles:
+    runs-on: "ubuntu-latest"
+    needs:
+      - "make_nix_cache"
+    outputs:
+      profiles-json: |-
+        ${{ steps.list-profiles.outputs.profiles-json }}
+    steps:
+      - uses: "actions/checkout@v4"
+      - uses: "nixbuild/nix-quick-install-action@v32"
+      - name: "Restore Nix store"
+        uses: "nix-community/cache-nix-action/restore@v6"
+        with:
+          primary-key: |-
+            nix-${{ runner.os }}-${{ hashFiles('**/*.nix', '**/flake.lock') }}
+      - id: "list-profiles"
         run: |-
           set -eu
 
-          . "./scripts/check/configuration.sh"
-
-          workspaces_quoted="$(
-            "jq" \
-              --raw-input \
-              <<EOF
-          ${workspaces:?}
-          EOF
-          )"
-
-          workspaces_json="$(
-            "jq" \
-              --slurp \
-              <<EOF
-          ${workspaces_quoted:?}
-          EOF
-          )"
-
-          dex_types_quoted="$(
-            "jq" \
-              --raw-input \
-              <<EOF
-          ${dex_types:?}
-          EOF
-          )"
-
-          dex_types_json="$(
-            "jq" \
-              --slurp \
-              <<EOF
-          ${dex_types_quoted:?}
-          EOF
-          )"
-
-          profiles_quoted="$(
-            "jq" \
-              --raw-input \
-              <<EOF
-          ${profiles:?}
-          EOF
-          )"
-
-          profiles_json="$(
-            "jq" \
-              --slurp \
-              <<EOF
-          ${profiles_quoted:?}
-          EOF
-          )"
+          output="profiles-json<<EOF
+          $(
+            "nix" \
+              "run" \
+              --ignore-environment \
+              --no-update-lock-file \
+              --no-use-registries \
+              ".#ci-profiles-json"
+          )
+          EOF"
 
           "echo" \
-            "workspaces-json<<EOF
-          ${workspaces_json:?}
-          EOF
-          dex-types-json<<EOF
-          ${dex_types_json:?}
-          EOF
-          profiles-json<<EOF
-          ${profiles_json:?}
-          EOF" \
-            >>"${GITHUB_OUTPUT}"
-  prepare_tool_caches:
+            "${output:?}" \
+            >"${GITHUB_OUTPUT:?}"
+  lockfiles:
     runs-on: "ubuntu-latest"
-    strategy:
-      fail-fast: true
-      matrix:
-        local:
-          - "false"
-        tool:
-          - "cargo-audit"
-          - "cargo-nextest"
-          - "cargo-udeps"
-          - "git-cliff"
-        include:
-          - local: "true"
-            tool: "cargo-each"
-    name: |-
-      Prepare tool caches [${{ matrix.tool }}]
-    steps:
-      - name: "Checkout repository"
-        uses: "actions/checkout@v4"
-      - name: |-
-          Install `${{ matrix.tool }}` and create cache
-        uses: "./.github/actions/install-tool"
-        with:
-          fail-on-cache-miss: "false"
-          local: "${{ matrix.local }}"
-          no-fetching: "true"
-          tool: "${{ matrix.tool }}"
-  check-lock-files:
     needs:
-      - "load-configuration"
-    runs-on: "ubuntu-latest"
-    strategy:
-      fail-fast: true
-      matrix:
-        workspace: "${{ fromJSON(needs.load-configuration.outputs.workspaces-json) }}"
-    name: |-
-      Check lock files [${{ matrix.workspace }}]
+      - "make_nix_cache"
     steps:
-      - uses: "actions/checkout@v4"
       - if: |-
           fromJSON(env.check-dependencies-versions)
-        name: "Load configuration"
-        run: |-
-          "cargo" \
-            "update" \
-            --locked
-        working-directory: |-
-          ${{ matrix.workspace }}
-  workspace_check:
-    needs:
-      - "load-configuration"
-      - "prepare_tool_caches"
-      - "check-lock-files"
-    runs-on: "ubuntu-latest"
-    strategy:
-      fail-fast: true
-      matrix:
-        workspace: "${{ fromJSON(needs.load-configuration.outputs.workspaces-json) }}"
-    env:
-      workspace: |-
-        ${{ matrix.workspace }}
-    name: |-
-      Workspace-level checks [${{ matrix.workspace }}]
-    steps:
-      - name: "Update Rust"
-        run: |-
-          "rustup" "update"
-      - name: "Checkout repository"
         uses: "actions/checkout@v4"
-      - name: "Install `cargo-audit` from cache"
-        uses: "./.github/actions/install-tool"
+      - if: |-
+          fromJSON(env.check-dependencies-versions)
+        uses: "nixbuild/nix-quick-install-action@v32"
+      - if: |-
+          fromJSON(env.check-dependencies-versions)
+        name: "Restore Nix store"
+        uses: "nix-community/cache-nix-action/restore@v6"
         with:
-          fail-on-cache-miss: "true"
-          local: "false"
-          no-fetching: "false"
-          tool: "cargo-audit"
-      - name: "Copy `.cargo` configuration"
+          primary-key: |-
+            nix-${{ runner.os }}-${{ hashFiles('**/*.nix', '**/flake.lock') }}
+      - if: |-
+          fromJSON(env.check-dependencies-versions)
+        name: "Check lockfiles"
         run: |-
-          set -eu
-
+          "nix" \
+            "run" \
+            --ignore-environment \
+            --no-update-lock-file \
+            --no-use-registries \
+            ".#ci-check-lockfiles"
+  formatting:
+    needs:
+      - "make_nix_cache"
+    runs-on: "ubuntu-latest"
+    steps:
+      - uses: "actions/checkout@v4"
+      - uses: "nixbuild/nix-quick-install-action@v32"
+      - name: "Restore Nix store"
+        uses: "nix-community/cache-nix-action/restore@v6"
+        with:
+          primary-key: |-
+            nix-${{ runner.os }}-${{ hashFiles('**/*.nix', '**/flake.lock') }}
+      - name: "Check for unused dependencies"
+        run: |-
+          "nix" \
+            "run" \
+            --ignore-environment \
+            --no-update-lock-file \
+            --no-use-registries \
+            ".#ci-check-formatting"
+  check_unused_deps:
+    needs:
+      - "make_nix_cache"
+      - "lockfiles"
+    runs-on: "ubuntu-latest"
+    steps:
+      - uses: "actions/checkout@v4"
+      - uses: "nixbuild/nix-quick-install-action@v32"
+      - name: "Restore Nix store"
+        uses: "nix-community/cache-nix-action/restore@v6"
+        with:
+          primary-key: |-
+            nix-${{ runner.os }}-${{ hashFiles('**/*.nix', '**/flake.lock') }}
+      - name: "Copy CI build configuration"
+        run: |-
           "cp" \
             -R \
-            "./.cargo" \
-            "./${workspace:?}/.cargo"
-      - name: "Run workspace-level checks"
+            "./.github/test-data/build-configuration" \
+            "./"
+      - name: "Check for unused dependencies"
         run: |-
-          set -eu
-
-          "sh" \
-            -eu \
-            "./scripts/check/workspace_checks.sh" \
-            "./${workspace:?}"
-  instance_lint:
+          "nix" \
+            "run" \
+            --ignore-environment \
+            --no-update-lock-file \
+            --no-use-registries \
+            ".#ci-check-unused-deps"
+  lint:
     needs:
-      - "load-configuration"
-      - "prepare_tool_caches"
-      - "check-lock-files"
-    runs-on: "ubuntu-latest"
+      - "make_nix_cache"
+      - "profiles"
+      - "lockfiles"
     strategy:
       fail-fast: true
       matrix:
-        dex-type: "${{ fromJSON(needs.load-configuration.outputs.dex-types-json) }}"
-        profile: "${{ fromJSON(needs.load-configuration.outputs.profiles-json) }}"
-        workspace: "${{ fromJSON(needs.load-configuration.outputs.workspaces-json) }}"
-    name: |-
-      Instance-level lints [${{ matrix.workspace }}; ${{ matrix.dex-type }}; ${{ matrix.profile }}]
+        profile: "${{ fromJSON(needs.profiles.outputs.profiles-json) }}"
+    runs-on: "ubuntu-latest"
     steps:
-      - name: "Update Rust"
-        run: |-
-          "rustup" "update"
-      - name: "Checkout repository"
-        uses: "actions/checkout@v4"
-      - name: "Install `cargo-each` from cache"
-        uses: "./.github/actions/install-tool"
+      - uses: "actions/checkout@v4"
+      - uses: "nixbuild/nix-quick-install-action@v32"
+      - name: "Restore Nix store"
+        uses: "nix-community/cache-nix-action/restore@v6"
         with:
-          fail-on-cache-miss: "true"
-          local: "true"
-          no-fetching: "false"
-          tool: "cargo-each"
+          primary-key: |-
+            nix-${{ runner.os }}-${{ hashFiles('**/*.nix', '**/flake.lock') }}
       - name: "Copy CI build configuration"
         run: |-
           "cp" \
@@ -253,62 +206,37 @@ jobs:
             "./.github/test-data/build-configuration" \
             "./"
       - env:
-          dex_type: |-
-            ${{ matrix.dex-type }}
           profile: |-
             ${{ matrix.profile }}
-          RUN_CLIPPY_QUIET: "1"
-          workspace: |-
-            ${{ matrix.workspace }}
-        name: "Run instance-level lints"
+        name: "Lint codebase"
         run: |-
-          set -eu
-
-          "sh" \
-            -eu \
-            "./scripts/check/instance_lint.sh" \
-            "./${workspace:?}" \
-            "${dex_type:?}" \
+          "nix" \
+            "run" \
+            --ignore-environment \
+            --no-update-lock-file \
+            --no-use-registries \
+            ".#ci-lint" \
             "${profile:?}"
-  instance_check_deps:
+  run_tests:
+    permissions:
+      actions: "write"
     needs:
-      - "load-configuration"
-      - "prepare_tool_caches"
-      - "check-lock-files"
-    runs-on: "ubuntu-latest"
+      - "make_nix_cache"
+      - "profiles"
+      - "lockfiles"
     strategy:
       fail-fast: true
       matrix:
-        dex-type: "${{ fromJSON(needs.load-configuration.outputs.dex-types-json) }}"
-        workspace: "${{ fromJSON(needs.load-configuration.outputs.workspaces-json) }}"
-    name: |-
-      Check instance dependencies [${{ matrix.workspace }}; ${{ matrix.dex-type }}]
+        profile: "${{ fromJSON(needs.profiles.outputs.profiles-json) }}"
+    runs-on: "ubuntu-latest"
     steps:
-      - name: "Update Rust"
-        run: |-
-          "rustup" "update"
-      - name: "Checkout repository"
-        uses: "actions/checkout@v4"
-      - name: "Install `cargo-udeps` from cache"
-        uses: "./.github/actions/install-tool"
+      - uses: "actions/checkout@v4"
+      - uses: "nixbuild/nix-quick-install-action@v32"
+      - name: "Restore Nix store"
+        uses: "nix-community/cache-nix-action/restore@v6"
         with:
-          fail-on-cache-miss: "true"
-          local: "false"
-          no-fetching: "false"
-          tool: "cargo-udeps"
-      - name: "Install `cargo-each` from cache"
-        uses: "./.github/actions/install-tool"
-        with:
-          fail-on-cache-miss: "true"
-          local: "true"
-          no-fetching: "false"
-          tool: "cargo-each"
-      - name: "Install nightly Rust toolchain"
-        run: |-
-          "rustup" \
-            "toolchain" \
-            "add" \
-            "nightly"
+          primary-key: |-
+            nix-${{ runner.os }}-${{ hashFiles('**/*.nix', '**/flake.lock') }}
       - name: "Copy CI build configuration"
         run: |-
           "cp" \
@@ -316,83 +244,20 @@ jobs:
             "./.github/test-data/build-configuration" \
             "./"
       - env:
-          dex_type: |-
-            ${{ matrix.dex-type }}
-          workspace: |-
-            ${{ matrix.workspace }}
-        name: "Check dependencies"
-        run: |-
-          set -eu
-
-          "sh" \
-            -eu \
-            "./scripts/check/protocol_check_deps.sh" \
-            "./${workspace:?}" \
-            "${dex_type:?}"
-  instance_tests:
-    needs:
-      - "load-configuration"
-      - "prepare_tool_caches"
-      - "check-lock-files"
-    runs-on: "ubuntu-latest"
-    strategy:
-      fail-fast: true
-      matrix:
-        dex-type: "${{ fromJSON(needs.load-configuration.outputs.dex-types-json) }}"
-        profile: "${{ fromJSON(needs.load-configuration.outputs.profiles-json) }}"
-        workspace: "${{ fromJSON(needs.load-configuration.outputs.workspaces-json) }}"
-    name: |-
-      Run instance tests [${{ matrix.workspace }}; ${{ matrix.dex-type }}; ${{ matrix.profile }}]
-    steps:
-      - name: "Update Rust"
-        run: |-
-          "rustup" "update"
-      - name: "Checkout repository"
-        uses: "actions/checkout@v4"
-      - name: "Install `cargo-each` from cache"
-        uses: "./.github/actions/install-tool"
-        with:
-          fail-on-cache-miss: "true"
-          local: "true"
-          no-fetching: "false"
-          tool: "cargo-each"
-      - name: "Install `cargo-nextest` from cache"
-        uses: "./.github/actions/install-tool"
-        with:
-          fail-on-cache-miss: "true"
-          local: "false"
-          no-fetching: "false"
-          tool: "cargo-nextest"
-      - name: "Copy CI build configuration"
-        run: |-
-          "cp" \
-            -R \
-            "./.github/test-data/build-configuration" \
-            "./"
-      - env:
-          dex_type: |-
-            ${{ matrix.dex-type }}
           profile: |-
             ${{ matrix.profile }}
-          USE_NEXTEST: "1"
-          workspace: |-
-            ${{ matrix.workspace }}
-        name: "Run instance tests"
+        name: "Run tests"
         run: |-
-          set -eu
-
-          "sh" \
-            -eu \
-            "./scripts/check/instance_tests.sh" \
-            "./${workspace:?}" \
-            "${dex_type:?}" \
+          "nix" \
+            "run" \
+            --ignore-environment \
+            --no-update-lock-file \
+            --no-use-registries \
+            ".#ci-run-tests" \
             "${profile:?}"
   build:
     needs:
-      - "workspace_check"
-      - "instance_lint"
-      - "instance_check_deps"
-      - "instance_tests"
+      - "lockfiles"
     runs-on: "ubuntu-latest"
     name: "Build platform binaries and protocol container image"
     steps:
@@ -410,7 +275,7 @@ jobs:
             "cache-key<<EOF
           builder-base-container-[check-deps=${check_deps_updated:?}]
           EOF" \
-            >>"${GITHUB_OUTPUT}"
+            >>"${GITHUB_OUTPUT:?}"
       - id: "restore-builder-base-container-cache"
         name: "Restore builder base image from cache"
         uses: "actions/cache/restore@v4"
@@ -482,7 +347,7 @@ jobs:
           done
       - name: "Produce platform binaries"
         run: |-
-          set -eu
+          set -eux
 
           build_and_pack() {
             network="${1:?}"
@@ -540,6 +405,11 @@ jobs:
             ./protocol-builder.tar
   create_draft_release:
     needs:
+      - "lockfiles"
+      - "formatting"
+      - "check_unused_deps"
+      - "lint"
+      - "run_tests"
       - "build"
     if: |-
       github.ref_type == 'tag'
@@ -554,96 +424,92 @@ jobs:
           fetch-depth: "0"
           fetch-tags: "true"
           sparse-checkout: |-
-            .github/actions/install-tool
-      - name: "Install `git-cliff` from cache"
-        uses: "./.github/actions/install-tool"
+            flake.lock
+            flake.nix
+      - uses: "nixbuild/nix-quick-install-action@v32"
+      - name: "Restore and save Nix store"
+        uses: "nix-community/cache-nix-action@v6"
         with:
-          fail-on-cache-miss: "true"
-          local: "false"
-          no-fetching: "false"
-          tool: "git-cliff"
+          primary-key: |-
+            nix-${{ runner.os }}-${{ hashFiles('**/*.nix', '**/flake.lock') }}
+          gc-max-store-size-linux: "0G"
+          purge: true
+          purge-prefixes: |-
+            nix-${{ runner.os }}-
+          purge-created: 0
+          purge-last-accessed: 0
+          purge-primary-key: "never"
       - name: "Download produced artifacts"
         uses: "actions/download-artifact@v4"
         with:
           merge-multiple: "false"
-          path: "./artifacts/"
       - name: "Create test-net platform binaries archive"
         run: |-
-          set -eu
-
-          files="$(
-            "find" \
-              "." \
-              "!" \
-              -path "./**/**"
-          )"
-
-          "xargs" \
-            -E "" \
-            -n "1" \
-            "tar" \
-            -r \
-            -f "../platform-test-net.tar" \
-            <<EOF
-          ${files:?}
-          EOF
-        working-directory: "./artifacts/platform-test-net/"
+          "nix" \
+            "run" \
+            --ignore-environment \
+            --no-update-lock-file \
+            --no-use-registries \
+            ".#create-tar-archive" \
+            "./artifacts/platform-test-net/" \
+            "./platform-test-net.tar"
       - name: "Compress test-net platform binaries archive"
         run: |-
-          "gzip" "./platform-test-net.tar"
-        working-directory: "./artifacts/"
+          "nix" \
+            "run" \
+            --ignore-environment \
+            --no-update-lock-file \
+            --no-use-registries \
+            ".#gzip" \
+            "./platform-test-net.tar"
       - name: "Create production-net platform binaries archive"
         run: |-
-          set -eu
-
-          files="$(
-            "find" \
-              "." \
-              "!" \
-              "(" \
-              -path "." \
-              -o \
-              -path "./**/**" \
-              ")"
-          )"
-          files="$(
-            "sed" \
-              -e "s/^\\.\\/\\(.\\+\\)$/\\1/g" \
-              <<EOF
-          ${files:?}
-          EOF
-          )"
-          readonly files
-
-          "xargs" \
-            -E "" \
-            -n "1" \
-            "tar" \
-            -r \
-            -f "../platform-production-net.tar" \
-            <<EOF
-          ${files:?}
-          EOF
-        working-directory: "./artifacts/platform-production-net/"
+          "nix" \
+            "run" \
+            --ignore-environment \
+            --no-update-lock-file \
+            --no-use-registries \
+            ".#create-tar-archive" \
+            "./artifacts/platform-production-net/" \
+            "./platform-production-net.tar"
       - name: "Compress production-net platform binaries archive"
         run: |-
-          "gzip" "./platform-production-net.tar"
-        working-directory: "./artifacts/"
+          "nix" \
+            "run" \
+            --ignore-environment \
+            --no-update-lock-file \
+            --no-use-registries \
+            ".#gzip" \
+            "./platform-production-net.tar"
+      - name: "Move protocol builder image to \"artifacts\" directory"
+        run: |-
+          "nix" \
+            "run" \
+            --ignore-environment \
+            --no-update-lock-file \
+            --no-use-registries \
+            ".#coreutils" \
+            -- \
+            --coreutils-prog="mv" \
+            "./artifacts/protocol-builder/protocol-builder.tar" \
+            "./"
       - name: "Compress protocol builder image"
         run: |-
-          set -eu
-
-          "gzip" "./protocol-builder.tar"
-
-          "mv" \
-            "./protocol-builder.tar.gz" \
-            "../"
-        working-directory: "./artifacts/protocol-builder/"
+          "nix" \
+            "run" \
+            --ignore-environment \
+            --no-update-lock-file \
+            --no-use-registries \
+            ".#gzip" \
+            "./protocol-builder.tar"
       - name: "Generate changelog"
         run: |-
-          "git" \
-            "cliff" \
-            --current \
+          "nix" \
+            "run" \
+            --ignore-environment \
+            --no-update-lock-file \
+            --no-use-registries \
+            ".#generate-release-notes" \
             >"./changelog"
       - name: "Create draft release"
         uses: "softprops/action-gh-release@v2"
@@ -653,5 +519,5 @@ jobs:
           draft: true
           body_path: "./changelog"
           generate_release_notes: false
-          files: |
-            ./artifacts/*.tar.gz
+          files: |-
+            ./*.tar.gz
