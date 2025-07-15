@@ -26,7 +26,6 @@ where
 {
     let lease_addr = info.sender;
     let mut lpp = LiquidityPool::<Lpn>::load(deps.storage)?;
-    lpp.validate_lease_addr(&deps.as_ref(), &lease_addr)?;
 
     let loan = lpp.try_open_loan(&mut deps, &env, lease_addr.clone(), amount)?;
 
@@ -50,7 +49,6 @@ where
     let repay_amount = bank::received_one(&info.funds)?;
 
     let mut lpp = LiquidityPool::<Lpn>::load(deps.storage)?;
-    lpp.validate_lease_addr(&deps.as_ref(), &lease_addr)?;
     let excess_received = lpp.try_repay_loan(&mut deps, &env, lease_addr.clone(), repay_amount)?;
 
     let batch = if excess_received.is_zero() {
