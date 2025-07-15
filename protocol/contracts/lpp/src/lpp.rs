@@ -143,11 +143,16 @@ where
         };
 
         debug_assert!(
-            price >= ApiConfig::initial_derivative_price(),
+            price >= ApiConfig::initial_derivative_price::<Lpn>(),
             "[Lpp] programming error: nlpn price less than initial"
         );
 
         Ok(price)
+    }
+
+    pub fn validate_lease_addr(&self, deps: &Deps<'_>, lease_addr: &Addr) -> Result<()> {
+        contract::validate_code_id(deps.querier, lease_addr, self.config.lease_code())
+            .map_err(ContractError::from)
     }
 
     pub fn withdraw_lpn(
@@ -197,7 +202,6 @@ where
         lease_addr: Addr,
         amount: Coin<Lpn>,
     ) -> Result<Loan<Lpn>> {
-        self.validate_lease_addr(&deps.as_ref(), &lease_addr)?;
         if amount.is_zero() {
             return Err(ContractError::ZeroLoanAmount);
         }
@@ -233,7 +237,6 @@ where
         lease_addr: Addr,
         repay_amount: Coin<Lpn>,
     ) -> Result<Coin<Lpn>> {
-        self.validate_lease_addr(&deps.as_ref(), &lease_addr)?;
         let mut loan = Repo::load(deps.storage, lease_addr.clone())?;
         let loan_annual_interest_rate = loan.annual_interest_rate;
         let payment = loan.repay(&env.block.time, repay_amount);
@@ -296,11 +299,6 @@ where
         } else {
             Percent::from_ratio(total_due, total_due + balance)
         }
-    }
-
-    fn validate_lease_addr(&self, deps: &Deps<'_>, lease_addr: &Addr) -> Result<()> {
-        contract::validate_code_id(deps.querier, lease_addr, self.config.lease_code())
-            .map_err(ContractError::from)
     }
 }
 
@@ -803,7 +801,7 @@ mod test {
             .bank
             .update_balance(MOCK_CONTRACT_ADDR, vec![coin_cw(10_000_000)]);
         lender
-            .deposit(deps.as_mut().storage, 10_000_000u128.into())
+            .deposit(deps.as_mut().storage, 10_000_000u128.into(), price)
             .expect("should deposit");
 
         let annual_interest_rate = lpp
