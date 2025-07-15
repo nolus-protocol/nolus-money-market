@@ -1,16 +1,6 @@
-use sdk::cosmwasm_std::{Uint128, Uint256};
-
 use crate::{coin::Coin, duration::Duration, ratio::Ratio};
 
-use super::{Fractionable, HigherRank};
-
-impl<T> HigherRank<T> for u128
-where
-    T: Into<Self>,
-{
-    type Type = Uint256;
-    type Intermediate = Uint128;
-}
+use super::Fractionable;
 
 impl<C> Fractionable<Coin<C>> for Duration {
     #[track_caller]

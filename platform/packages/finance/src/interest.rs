@@ -1,18 +1,14 @@
 use std::{cmp, fmt::Debug, ops::Sub};
 
-use crate::{
-    duration::Duration,
-    fraction::Fraction,
-    fractionable::{Fractionable, TimeSliceable},
-    zero::Zero,
-};
+use crate::{duration::Duration, fraction::Fraction, fractionable::Fractionable, zero::Zero};
 
 /// Computes how much interest is accrued
 pub fn interest<U, F, P>(rate: F, principal: P, period: Duration) -> P
 where
     F: Fraction<U>,
-    P: Fractionable<U> + TimeSliceable,
+    P: Fractionable<U>,
 {
+    todo!("Reimplement");
     let interest_per_year = rate.of(principal);
     period.annualized_slice_of(interest_per_year)
 }
@@ -23,9 +19,11 @@ where
 pub fn pay<U, F, P>(rate: F, principal: P, payment: P, period: Duration) -> (Duration, P)
 where
     F: Fraction<U>,
-    P: Copy + Debug + Fractionable<U> + Ord + Sub<Output = P> + TimeSliceable + Zero,
+    P: Copy + Debug + Fractionable<U> + Ord + Sub<Output = P> + Zero,
     Duration: Fractionable<P>,
 {
+    todo!("Reimplement");
+
     let interest_due_per_period: P = interest(rate, principal, period);
 
     if interest_due_per_period == P::ZERO {

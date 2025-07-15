@@ -4,15 +4,7 @@ use crate::{
     ratio::Ratio,
 };
 
-use super::{Fractionable, HigherRank};
-
-impl<T> HigherRank<T> for u32
-where
-    T: Into<Self>,
-{
-    type Type = u64;
-    type Intermediate = Self;
-}
+use super::Fractionable;
 
 impl Fractionable<Units> for Percent {
     #[track_caller]

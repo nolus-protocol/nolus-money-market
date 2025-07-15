@@ -6,7 +6,6 @@ use crate::{
     duration::Duration,
     error::{Error, Result},
     fraction::Fraction,
-    fractionable::Percentable,
     percent::{Percent, Units},
     ratio::Rational,
     zero::Zero,
@@ -111,9 +110,11 @@ impl Liability {
 
     pub fn init_borrow_amount<P>(&self, downpayment: P, may_max_ltd: Option<Percent>) -> P
     where
-        P: Percentable + Ord + Copy,
+        P: Ord + Copy,
     {
-        debug_assert!(self.initial > Percent::ZERO);
+        todo!("Reimplement");
+
+        /*         debug_assert!(self.initial > Percent::ZERO);
         debug_assert!(self.initial < Percent::HUNDRED);
 
         let default_ltd = Rational::new(self.initial, Percent::HUNDRED - self.initial);
@@ -121,27 +122,29 @@ impl Liability {
         may_max_ltd
             .map(|max_ltd| max_ltd.of(downpayment))
             .map(|requested_borrow| requested_borrow.min(default_borrow))
-            .unwrap_or(default_borrow)
+            .unwrap_or(default_borrow) */
     }
 
     /// Post-assert: (total_due - amount_to_liquidate) / (lease_amount - amount_to_liquidate) ~= self.healthy_percent(), if total_due < lease_amount.
     /// Otherwise, amount_to_liquidate == total_due
     pub fn amount_to_liquidate<P>(&self, lease_amount: P, total_due: P) -> P
     where
-        P: Percentable + Copy + Ord + Sub<Output = P> + Zero,
+        P: Copy + Ord + Sub<Output = P> + Zero,
     {
-        if total_due < self.max.of(lease_amount) {
+        todo!("Reimplement");
+
+        /*         if total_due < self.max.of(lease_amount) {
             return P::ZERO;
         }
         if lease_amount <= total_due {
             return lease_amount;
-        }
+        } */
 
         // from 'due - liquidation = healthy% of (lease - liquidation)' follows
         // liquidation = 100% / (100% - healthy%) of (due - healthy% of lease)
-        let multiplier = Rational::new(Percent::HUNDRED, Percent::HUNDRED - self.healthy);
+        /* let multiplier = Rational::new(Percent::HUNDRED, Percent::HUNDRED - self.healthy);
         let extra_liability_lpn = total_due - total_due.min(self.healthy.of(lease_amount));
-        Fraction::<Units>::of(&multiplier, extra_liability_lpn)
+        Fraction::<Units>::of(&multiplier, extra_liability_lpn) */
     }
 
     fn invariant_held(&self) -> Result<()> {

@@ -9,7 +9,6 @@ use crate::{
     arithmetic::CheckedAdd,
     coin::{Amount, Coin},
     error::{Error, Result},
-    fractionable::HigherRank,
     ratio::{Ratio, Rational},
 };
 
@@ -35,9 +34,6 @@ where
         Price::new(self.0, to)
     }
 }
-
-type DoubleAmount = <Amount as HigherRank<Amount>>::Type;
-type IntermediateAmount = <Amount as HigherRank<Amount>>::Intermediate;
 
 /// Represents the price of a currency in a quote currency, ref: <https://en.wikipedia.org/wiki/Currency_pair>
 ///
@@ -105,7 +101,7 @@ where
     where
         R: Ratio<Amount>,
     {
-        let (amount_normalized, rhs_nominator_normalized) =
+        /* let (amount_normalized, rhs_nominator_normalized) =
             self.amount.into_coprime_with(Coin::<C>::from(rhs.parts()));
         let (amount_quote_normalized, rhs_denominator_normalized) = self
             .amount_quote
@@ -122,7 +118,8 @@ where
         Price::new(
             Self::trim_down(double_amount, extra_bits).into(),
             Self::trim_down(double_amount_quote, extra_bits).into(),
-        )
+        ) */
+        todo!("To remove")
     }
 
     pub fn inv(self) -> Price<QuoteC, C> {
@@ -191,26 +188,6 @@ where
             total(factored_amount, self).checked_add(total(factored_amount, rhs));
         may_factored_total.map(|factored_total| total_of(factored_amount).is(factored_total))
     }
-
-    #[track_caller]
-    fn bits_above_max(double_amount: DoubleAmount) -> u32 {
-        const BITS_MAX_AMOUNT: u32 = Amount::BITS;
-        let higher_half: Amount = IntermediateAmount::try_from(double_amount >> BITS_MAX_AMOUNT)
-            .expect("Bigger Amount Higher Rank Type than required!")
-            .into();
-        BITS_MAX_AMOUNT - higher_half.leading_zeros()
-    }
-
-    #[track_caller]
-    fn trim_down(double_amount: DoubleAmount, bits: u32) -> Amount {
-        debug_assert!(bits <= Amount::BITS);
-        let amount: IntermediateAmount = (double_amount >> bits)
-            .try_into()
-            .expect("insufficient bits to trim");
-        let res = amount.into();
-        assert!(res > 0, "price overflow during multiplication");
-        res
-    }
 }
 
 impl<C, QuoteC> CheckedAdd for Price<C, QuoteC>
@@ -268,12 +245,7 @@ where
         // a/b < c/d if and only if a * d < b * c
         // Please note that Price(amount, amount_quote) is like Ratio(amount_quote / amount).
 
-        let a: DoubleAmount = self.amount_quote.into();
-        let d: DoubleAmount = other.amount.into();
-
-        let b: DoubleAmount = self.amount.into();
-        let c: DoubleAmount = other.amount_quote.into();
-        (a * d).cmp(&(b * c))
+        todo!("Reimplement")
     }
 }
 

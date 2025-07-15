@@ -2,17 +2,6 @@ use sdk::cosmwasm_std::{Uint128, Uint256};
 
 use crate::coin::{Amount, Coin};
 
-use super::HigherRank;
-
-impl<U, C> HigherRank<U> for Coin<C>
-where
-    U: Into<Amount>,
-{
-    type Type = Uint256;
-
-    type Intermediate = Uint128;
-}
-
 impl<C> From<Coin<C>> for Uint256 {
     fn from(coin: Coin<C>) -> Self {
         let c: Amount = coin.into();
