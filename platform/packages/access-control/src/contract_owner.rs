@@ -40,7 +40,7 @@ where
     }
 
     pub fn check(&self, info: &MessageInfo) -> Result {
-        self.access.check(info)
+        self.access.check(Sender::new(info))
     }
 }
 
