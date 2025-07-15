@@ -250,7 +250,10 @@ impl Handler for Active {
         env: Env,
         info: MessageInfo,
     ) -> ContractResult<Response> {
-        access_control::check(&PriceAlarmDelivery::new(&self.lease.lease.oracle), &Sender::new(&info))?;
+        access_control::check(
+            &PriceAlarmDelivery::new(&self.lease.lease.oracle),
+            &Sender::new(&info)
+        )?;
 
         self.try_on_alarm(querier, &env)
     }

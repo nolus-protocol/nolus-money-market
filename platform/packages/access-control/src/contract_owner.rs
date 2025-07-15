@@ -2,7 +2,7 @@ use std::ops::{Deref, DerefMut};
 
 use sdk::cosmwasm_std::{Addr, MessageInfo, Storage};
 
-use crate::{SingleUserAccess, error::Result};
+use crate::{error::Result, Sender, SingleUserAccess};
 
 const CONTRACT_OWNER_NAMESPACE: &str = "contract_owner";
 
@@ -24,7 +24,7 @@ where
     }
 
     pub fn check(&self, info: &MessageInfo) -> Result {
-        self.access.check(info)
+        self.access.check(Sender::new(info))
     }
 }
 

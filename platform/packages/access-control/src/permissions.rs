@@ -15,8 +15,8 @@ impl<'a> SingleUserPermission<'a> {
 }
 
 impl AccessPermission for SingleUserPermission<'_> {
-    fn granted_to(&self, sender: &Sender) -> bool {
-        self.addr == sender.as_ref()
+    fn granted_to(&self, sender: &Sender<'_>) -> bool {
+        self.addr == sender.addr
     }
 }
 
@@ -31,7 +31,7 @@ impl<'a> SameContractOnly<'a> {
 }
 
 impl AccessPermission for SameContractOnly<'_> {
-    fn granted_to(&self, sender: &Sender) -> bool {
-        self.contract_info.address == sender.as_ref()
+    fn granted_to(&self, sender: &Sender<'_>) -> bool {
+        self.contract_info.address == sender.addr
     }
 }

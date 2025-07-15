@@ -242,9 +242,12 @@ where
         env: Env,
         info: MessageInfo,
     ) -> HandlerResult<Self> {
-        access_control::check(&TimeAlarmDelivery::new(self.spec.time_alarm()), &Sender::new(&info))
-            .map_err(DexError::Unauthorized)
-            .map_or_else(Into::into, |()| self.try_complete(querier, env))
+        access_control::check(
+            &TimeAlarmDelivery::new(self.spec.time_alarm()),
+            &Sender::new(&info),
+        )
+        .map_err(DexError::Unauthorized)
+        .map_or_else(Into::into, |()| self.try_complete(querier, env))
     }
 }
 
