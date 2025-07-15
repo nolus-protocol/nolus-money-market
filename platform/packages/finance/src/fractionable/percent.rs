@@ -20,7 +20,8 @@ impl Fractionable<Units> for Percent {
     where
         R: Ratio<Units>,
     {
-        Percent::from_permille(self.units().safe_mul(ratio))
+        // Percent::from_permille(self.units().safe_mul(ratio))
+        todo!("To reimplement")
     }
 }
 
@@ -30,13 +31,14 @@ impl<C> Fractionable<Coin<C>> for Percent {
     where
         F: Ratio<Coin<C>>,
     {
-        let p128: u128 = self.units().into();
+        /* let p128: u128 = self.units().into();
         // TODO re-assess the design of Ratio ... and whether it could be > 1
         let res: Units = p128
             .safe_mul(fraction)
             .try_into()
             .expect("overflow computing a fraction of permille");
-        Self::from_permille(res)
+        Self::from_permille(res) */
+        todo!("To reimplement")
     }
 }
 

@@ -6,13 +6,11 @@ use std::{
 use gcd::Gcd;
 use serde::{Deserialize, Serialize};
 
-use sdk::cosmwasm_std::{Timestamp, Uint128};
+use sdk::cosmwasm_std::Timestamp;
 
 use crate::{
     arithmetic::{Bits, FractionUnit, One, Scalar, Trim},
-    fraction::Fraction,
     fractionable::{Fractionable, TimeSliceable},
-    ratio::Rational,
     zero::Zero,
 };
 
@@ -119,26 +117,6 @@ impl Duration {
 }
 
 impl FractionUnit for Duration {}
-
-impl From<Duration> for u128 {
-    fn from(d: Duration) -> Self {
-        d.nanos().into()
-    }
-}
-
-impl From<Duration> for Uint128 {
-    fn from(d: Duration) -> Self {
-        u128::from(d).into()
-    }
-}
-
-impl TryFrom<u128> for Duration {
-    type Error = <Units as TryFrom<u128>>::Error;
-
-    fn try_from(value: u128) -> Result<Self, Self::Error> {
-        Ok(Self::from_nanos(value.try_into()?))
-    }
-}
 
 impl Scalar for Duration {
     type Base = Units;

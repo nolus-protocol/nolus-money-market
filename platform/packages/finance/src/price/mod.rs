@@ -9,7 +9,6 @@ use crate::{
     arithmetic::CheckedAdd,
     coin::{Amount, Coin},
     error::{Error, Result},
-    fraction::Fraction,
     fractionable::HigherRank,
     ratio::{Ratio, Rational},
 };
@@ -338,7 +337,8 @@ where
 /// For example, total(10 EUR, 1.01 EURUSD) = 10.1 USD
 pub fn total<C, QuoteC>(of: Coin<C>, price: Price<C, QuoteC>) -> Coin<QuoteC> {
     let ratio_impl = Rational::new(of, price.amount);
-    Fraction::<Coin<C>>::of(&ratio_impl, price.amount_quote)
+    // ratio_impl.of(price.amount_quote)
+    todo!("Reimplement")
 }
 
 #[cfg(test)]

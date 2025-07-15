@@ -7,11 +7,12 @@ impl Fractionable<PercentUnits> for usize {
     where
         F: Ratio<PercentUnits>,
     {
-        u128::try_from(self)
-            .expect("usize to u128 overflow")
-            .safe_mul(fraction)
-            .try_into()
-            .expect("usize overflow on percent calculation")
+        /* u128::try_from(self)
+        .expect("usize to u128 overflow")
+        .safe_mul(fraction)
+        .try_into()
+        .expect("usize overflow on percent calculation") */
+        todo!("To reimplement")
     }
 }
 

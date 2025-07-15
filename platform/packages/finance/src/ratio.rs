@@ -3,7 +3,7 @@ use std::fmt::Debug;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    arithmetic::{self, Bits, FractionUnit, One, Trim},
+    arithmetic::{Bits, FractionUnit, One, Trim},
     fraction::Fraction,
     fractionable::Fractionable,
     zero::Zero,
