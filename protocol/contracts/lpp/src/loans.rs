@@ -48,6 +48,10 @@ impl<Lpn> Repo<Lpn> {
             .may_load(storage, lease_addr)
             .map_err(Into::into)
     }
+
+    pub fn empty(storage: &dyn Storage) -> bool {
+        Self::STORAGE.is_empty(storage)
+    }
 }
 
 #[cfg(test)]

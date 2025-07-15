@@ -85,3 +85,7 @@ where
 {
     Repo::query(storage, lease_addr)
 }
+
+pub fn query_empty<Lpn>(storage: &dyn Storage) -> bool {
+    Repo::<Lpn>::empty(storage)
+}

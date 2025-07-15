@@ -145,10 +145,11 @@ pub fn execute(
             )
             .check(&info.sender)?;
 
-            todo!(
-                "assert that no loans exist, then iterate over all deposits, and finally close them"
-            )
-            // lender::try_withdraw::<LpnCurrency>(deps, env, info, amount)
+            assert!(
+                borrow::query_empty::<LpnCurrency>(deps.storage),
+                "There is/are active loan(s)! The protocol admin should have checked it first!"
+            );
+            todo!("iterate over all deposits, and finally close them")
         }
     }
     .inspect_err(platform_error::log(api))
