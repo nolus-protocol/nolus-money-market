@@ -28,7 +28,9 @@ use crate::{
     lease::CacheFirstRelease,
     leaser::{self, Leaser},
     msg::{ConfigResponse, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg, SudoMsg},
-    permissions::{AnomalyResolutionPermission, ChangeLeaseAdminPermission, LeasesConfigurationPermission},
+    permissions::{
+        AnomalyResolutionPermission, ChangeLeaseAdminPermission, LeasesConfigurationPermission
+    },
     result::ContractResult,
     state::{config::Config, leases::Leases},
 };
@@ -101,11 +103,16 @@ pub fn execute(
         ),
         ExecuteMsg::ConfigLeases(new_config) => Leaser::new(deps.as_ref())
             .config()
-            .and_then(|config| access_control::check(&LeasesConfigurationPermission::new(&config), &Sender::new(&info)))
+            .and_then(|config| {
+                access_control::check(
+                    &LeasesConfigurationPermission::new(&config),
+                    &Sender::new(&info),
+                )
+            })
             .and_then(|()| leaser::try_configure(deps.storage, new_config)),
         ExecuteMsg::FinalizeLease { customer } => {
             validate_customer(customer, deps.api, deps.querier)
-                .and_then(|customer| {  
+                .and_then(|customer| {
                     validate_lease(info.sender, deps.as_ref()).map(|lease| (customer, lease))
                 })
                 .and_then(|(customer, lease)| Leases::remove(deps.storage, customer, &lease))
@@ -151,7 +158,10 @@ pub fn execute(
         ExecuteMsg::ChangeLeaseAdmin { new } => Leaser::new(deps.as_ref())
             .config()
             .and_then(|ref config| {
-                access_control::check(&ChangeLeaseAdminPermission::new(&config), &Sender::new(&info))
+                access_control::check(
+                    &ChangeLeaseAdminPermission::new(&config),
+                    &Sender::new(&info),
+                )
             })
             .and_then(|()| validate(&new, deps.api))
             .and_then(|valid_new_admin| {
@@ -186,7 +196,11 @@ pub fn query(deps: Deps<'_>, _env: Env, msg: QueryMsg) -> ContractResult<Binary>
         QueryMsg::CheckAnomalyResolutionPermission { by: caller } => Leaser::new(deps)
             .config()
             .map(|ref config| {
-                if access_control::check(&AnomalyResolutionPermission::new(&config), &Sender::from_addr(&caller)).is_ok() {
+                if access_control::check(
+                    &AnomalyResolutionPermission::new(&config),
+                    &Sender::from_addr(&caller),
+                )
+                .is_ok() {
                     AccessGranted::Yes
                 } else {
                     AccessGranted::No

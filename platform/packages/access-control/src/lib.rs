@@ -28,11 +28,11 @@ impl<'a> Sender<'a> {
 }
 
 pub trait AccessPermission {
-    fn granted_to(&self, sender: &Sender) -> bool;
+    fn granted_to(&self, sender: &Sender<'_>) -> bool;
 }
 
 /// Checks if access is granted to the given caller.
-pub fn check<P>(permission: &P, sender: &Sender) -> Result
+pub fn check<P>(permission: &P, sender: &Sender<'_>) -> Result
 where
     P: AccessPermission + ?Sized,
 {
@@ -89,7 +89,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use sdk::cosmwasm_std::{Addr, ContractInfo, MessageInfo, Storage, testing::MockStorage};
+    use sdk::cosmwasm_std::{Addr, ContractInfo, Storage, testing::MockStorage};
 
     use crate::{
         Sender,
@@ -105,7 +105,8 @@ mod tests {
         let mut storage = MockStorage::new();
         let storage_ref: &mut dyn Storage = &mut storage;
         let mut access = SingleUserAccess::new(storage_ref, NAMESPACE);
-        let sender = Sender::from_addr(&Addr::unchecked("cosmic address"));
+        let address = Addr::unchecked("cosmic address");
+        let sender = Sender::from_addr(&address);
 
         access.check(&sender).unwrap_err();
         access.grant_to(sender.addr).unwrap();
@@ -117,7 +118,8 @@ mod tests {
         let mut storage = MockStorage::new();
         let storage_ref: &dyn Storage = &mut storage;
         let access = SingleUserAccess::new(storage_ref, NAMESPACE);
-        let sender = Sender::from_addr(&Addr::unchecked("hacker")); 
+        let address = Addr::unchecked("hacker");
+        let sender = Sender::from_addr(&address);
 
         assert!(matches!(
             access.check(&sender).unwrap_err(),
@@ -148,7 +150,8 @@ mod tests {
         let contract_info = ContractInfo {
             address: Addr::unchecked("contract admin"),
         };
-        let sender = Sender::from_addr(&Addr::unchecked("hacker")); 
+        let address = Addr::unchecked("hacker");
+        let sender = Sender::from_addr(&address);
 
         let check_result = super::check(&SameContractOnly::new(&contract_info), &sender);
         assert!(matches!(check_result.unwrap_err(), Error::Unauthorized {}));
@@ -163,7 +166,8 @@ mod tests {
     }
 
     fn check_addr_permission(granted_to: &str, asked_for: &str) -> Result {
-        let sender = Sender::from_addr(&Addr::unchecked(asked_for)); 
+        let address = Addr::unchecked(asked_for);
+        let sender = Sender::from_addr(&address); 
 
         super::check(
             &SingleUserPermission::new(&Addr::unchecked(granted_to)),
