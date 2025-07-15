@@ -1,7 +1,7 @@
 use serde::Serialize;
 
 use currency::CurrencyDef;
-use finance::{coin::Coin, zero::Zero};
+use finance::{coin::Coin, price, zero::Zero};
 use lpp_platform::NLpn;
 use platform::{
     bank::{self, BankAccount},
@@ -42,11 +42,10 @@ where
 
     let price = lpp.calculate_price(&deps.as_ref(), &env, pending_deposit)?;
 
-    let receipts = Deposit::load_or_default(deps.storage, lender_addr.clone())?.deposit(
-        deps.storage,
-        pending_deposit,
-        price,
-    )?;
+    let deposit_nlpn = price::total(pending_deposit, price.inv());
+
+    let receipts = Deposit::load_or_default(deps.storage, lender_addr.clone())?
+        .deposit(deps.storage, deposit_nlpn)?;
 
     Ok(event::emit_deposit(env, lender_addr, pending_deposit, receipts).into())
 }
@@ -108,7 +107,7 @@ where
     Lpn: CurrencyDef,
 {
     LiquidityPool::load(deps.storage).and_then(|lpp| {
-        lpp.calculate_price(&deps, &env, Coin::default())
+        lpp.calculate_price(&deps, &env, Coin::ZERO)
             .map(PriceResponse)
     })
 }

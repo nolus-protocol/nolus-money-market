@@ -12,10 +12,7 @@ use sdk::{
     cw_storage_plus::{Item, Map},
 };
 
-use crate::{
-    contract::{ContractError, Result},
-    nprice::NTokenPrice,
-};
+use crate::contract::{ContractError, Result};
 
 #[derive(Debug)]
 pub struct Deposit {
@@ -59,23 +56,18 @@ impl Deposit {
         Ok(result)
     }
 
-    pub fn deposit<Lpn>(
+    pub fn deposit(
         &mut self,
         storage: &mut dyn Storage,
-        amount_lpn: Coin<Lpn>,
-        price: NTokenPrice<Lpn>,
-    ) -> Result<Coin<NLpn>>
-    where
-        Lpn: 'static + Copy,
-    {
-        if amount_lpn.is_zero() {
+        deposited_nlpn: Coin<NLpn>,
+    ) -> Result<Coin<NLpn>> {
+        if deposited_nlpn.is_zero() {
             return Err(ContractError::ZeroDepositFunds);
         }
 
         let mut globals = Self::GLOBALS.may_load(storage)?.unwrap_or_default();
         self.update_rewards(&globals);
 
-        let deposited_nlpn = price::total(amount_lpn, price.inv());
         self.data.deposited_nlpn += deposited_nlpn;
 
         Self::DEPOSITS.save(storage, self.addr.clone(), &self.data)?;
@@ -90,7 +82,7 @@ impl Deposit {
         Ok(deposited_nlpn)
     }
 
-    /// return optional reward payment msg in case of deleting account
+    /// return optional NLS reward in case of deleting account
     pub fn withdraw(
         &mut self,
         storage: &mut dyn Storage,
@@ -200,36 +192,31 @@ impl Deposit {
 
 #[cfg(test)]
 mod test {
-    use currencies::Lpn;
     use currency::platform::Nls;
-    use finance::{coin::Coin, price};
+    use finance::coin::Coin;
     use sdk::cosmwasm_std::{Addr, testing};
 
     use crate::state::Deposit;
-
-    type TheCurrency = Lpn;
 
     #[test]
     fn test_deposit_and_withdraw() {
         let mut deps = testing::mock_dependencies();
         let addr1 = Addr::unchecked("depositor1");
         let addr2 = Addr::unchecked("depositor2");
-        let price = price::total_of(Coin::new(1)).is(Coin::<TheCurrency>::new(1));
 
         let mut deposit1 =
             Deposit::load_or_default(deps.as_ref().storage, addr1.clone()).expect("should load");
         deposit1
-            .deposit(deps.as_mut().storage, 1000u128.into(), price)
+            .deposit(deps.as_mut().storage, 1000u128.into())
             .expect("should deposit");
 
         Deposit::distribute_rewards(deps.as_mut(), Coin::new(1000))
             .expect("should distribute rewards");
 
-        let price = price::total_of(Coin::new(1)).is(Coin::<TheCurrency>::new(2));
         let mut deposit2 =
             Deposit::load_or_default(deps.as_ref().storage, addr2.clone()).expect("should load");
         deposit2
-            .deposit(deps.as_mut().storage, 1000u128.into(), price)
+            .deposit(deps.as_mut().storage, 1000u128.into())
             .expect("should deposit");
 
         let balance_nlpn =
@@ -312,7 +299,6 @@ mod test {
     #[test]
     fn test_query_rewards_zero_balance() {
         let mut deps = testing::mock_dependencies();
-        let price = price::total_of(Coin::new(1)).is(Coin::new(1));
         let addr = Addr::unchecked("depositor");
 
         let mut deposit =
@@ -326,7 +312,7 @@ mod test {
 
         // balance_nls = 0, balance_nlpn != 0
         deposit
-            .deposit(deps.as_mut().storage, Coin::<Lpn>::new(1000), price)
+            .deposit(deps.as_mut().storage, Coin::new(1000))
             .expect("should deposit");
 
         let rewards = deposit
@@ -338,14 +324,13 @@ mod test {
     #[test]
     fn test_zero_funds_rewards() {
         let mut deps = testing::mock_dependencies();
-        let price = price::total_of(Coin::new(1)).is(Coin::new(1));
         let addr = Addr::unchecked("depositor");
 
         let mut deposit =
             Deposit::load_or_default(deps.as_ref().storage, addr).expect("should load");
 
         deposit
-            .deposit(deps.as_mut().storage, Coin::<Lpn>::new(1000), price)
+            .deposit(deps.as_mut().storage, Coin::new(1000))
             .expect("should deposit");
 
         // shouldn't change anything
