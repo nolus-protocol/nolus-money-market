@@ -1,4 +1,4 @@
-use access_control::{AccessPermission, permissions::SingleUserPermission};
+use access_control::{AccessPermission, Sender, permissions::SingleUserPermission};
 use currency::{Currency, Group, MemberOf};
 use oracle_platform::OracleRef;
 use sdk::cosmwasm_std::MessageInfo;
@@ -30,7 +30,7 @@ where
     QuoteC: Currency + MemberOf<QuoteG>,
     QuoteG: Group,
 {
-    fn granted_to(&self, info: &MessageInfo) -> bool {
-        self.oracle_ref.owned_by(&info.sender)
+    fn granted_to(&self, sender: &Sender<'_>) -> bool {
+        self.oracle_ref.owned_by(sender.addr)
     }
 }
