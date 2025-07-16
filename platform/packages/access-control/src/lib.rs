@@ -16,14 +16,14 @@ pub mod permissions;
 pub mod user;
 
 pub struct Sender<'a> {
-    addr: &'a Addr,
+    pub addr: &'a Addr,
 }
 
 impl<'a> Sender<'a> {
     pub fn new(info: &'a MessageInfo) -> Self {
         Self { addr: &info.sender }
     }
-    
+
     pub fn from_addr(addr: &'a Addr) -> Self {
         Self { addr }
     }
@@ -107,8 +107,7 @@ mod tests {
     use sdk::cosmwasm_std::{Addr, ContractInfo, Storage, testing::MockStorage};
 
     use crate::{
-        Sender,
-        SingleUserAccess,
+        Sender, SingleUserAccess,
         error::{Error, Result},
         permissions::{SameContractOnly, SingleUserPermission},
     };
