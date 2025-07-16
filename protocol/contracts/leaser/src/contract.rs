@@ -2,7 +2,7 @@ use std::ops::{Deref, DerefMut};
 
 use serde::Serialize;
 
-use access_control::{AccessPermission, ContractOwnerAccess, Sender};
+use access_control::{ContractOwnerAccess, Sender};
 use lease::api::{MigrateMsg as LeaseMigrateMsg, authz::AccessGranted};
 use platform::{
     contract::{self, Code, CodeId, Validator},
@@ -103,11 +103,12 @@ pub fn execute(
         ),
         ExecuteMsg::ConfigLeases(new_config) => Leaser::new(deps.as_ref())
             .config()
-            .and_then(|config| {
+            .and_then(|ref config| {
                 access_control::check(
-                    &LeasesConfigurationPermission::new(&config),
+                    &LeasesConfigurationPermission::new(config),
                     &Sender::new(&info),
                 )
+                .map_err(ContractError::from)
             })
             .and_then(|()| leaser::try_configure(deps.storage, new_config)),
         ExecuteMsg::FinalizeLease { customer } => {
@@ -169,9 +170,10 @@ pub fn execute(
             .config()
             .and_then(|ref config| {
                 access_control::check(
-                    &ChangeLeaseAdminPermission::new(&config),
+                    &ChangeLeaseAdminPermission::new(config),
                     &Sender::new(&info),
                 )
+                .map_err(ContractError::from)
             })
             .and_then(|()| validate(&new, deps.api))
             .and_then(|valid_new_admin| {
@@ -207,7 +209,7 @@ pub fn query(deps: Deps<'_>, _env: Env, msg: QueryMsg) -> ContractResult<Binary>
             .config()
             .map(|ref config| {
                 if access_control::check(
-                    &AnomalyResolutionPermission::new(&config),
+                    &AnomalyResolutionPermission::new(config),
                     &Sender::from_addr(&caller),
                 )
                 .is_ok()
