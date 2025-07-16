@@ -35,6 +35,15 @@ where
             denominator,
         }
     }
+
+    pub fn nominator(&self) -> U {
+        self.nominator
+    }
+
+    pub fn denominator(&self) -> U {
+        self.denominator
+    }
+
 }
 
 impl<U> Bits for Rational<U>
@@ -50,6 +59,29 @@ where
     }
 }
 
+impl<U> CheckedMul for Rational<U>
+where
+    U: CheckedMul<U, Output = U> + FractionUnit,
+{
+    type Output = Self;
+
+    fn checked_mul(self, rhs: Self) -> Option<Self::Output> {
+        todo!("Implement")
+    }
+}
+
+impl<U> Div for Rational<U>
+where
+    U: CheckedMul<U, Output = U> + FractionUnit,
+{
+    type Output = Self;
+
+    // (a / b) ÷ (c / d) = (a * d) / (b * c)
+    fn div(self, rhs: Self) -> Self::Output {
+        todo!("Implement")
+    }
+}
+
 impl<U, T> Fraction<U> for Rational<T>
 where
     Self: Ratio<U>,
@@ -59,7 +91,7 @@ where
     where
         A: Fractionable<U>,
     {
-        whole.safe_mul(self)
+        todo!("To remove")
     }
 }
 

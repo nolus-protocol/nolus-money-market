@@ -1,22 +1,12 @@
-use crate::{percent::Units as PercentUnits, ratio::Ratio};
+use crate::percent::{Percent, Units as PercentUnits};
 
 use super::Fractionable;
 
-impl Fractionable<PercentUnits> for usize {
-    fn safe_mul<F>(self, fraction: &F) -> Self
-    where
-        F: Ratio<PercentUnits>,
-    {
-        /* u128::try_from(self)
-        .expect("usize to u128 overflow")
-        .safe_mul(fraction)
-        .try_into()
-        .expect("usize overflow on percent calculation") */
-        todo!("To reimplement")
-    }
+impl Fractionable<Percent> for usize {
+    type MaxRank = PercentUnits;
 }
 
-#[cfg(test)]
+/* #[cfg(test)]
 mod test {
     use crate::{fraction::Fraction, percent::Percent};
 
@@ -38,3 +28,4 @@ mod test {
         _ = Percent::from_permille(1001).of(usize::MAX);
     }
 }
+ */

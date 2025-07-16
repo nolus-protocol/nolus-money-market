@@ -1,4 +1,6 @@
-use crate::{duration::Units as TimeUnits, percent::Units as PercentUnits, ratio::Ratio};
+use std::ops::Div;
+
+use crate::arithmetic::{CheckedMul, One, Trim};
 
 mod coin;
 mod duration;
@@ -6,9 +8,15 @@ mod percent;
 mod price;
 mod usize;
 
-pub trait Fractionable<U> {
-    #[track_caller]
-    fn safe_mul<F>(self, fraction: &F) -> Self
-    where
-        F: Ratio<U>;
+pub trait Fractionable<U>
+where
+    Self: Copy,
+{
+    type MaxRank: CheckedMul<Output = Self::MaxRank>
+        + Div<Output = Self::MaxRank>
+        + From<U>
+        + One
+        + Trim
+        + TryFrom<Self>
+        + TryInto<Self>;
 }

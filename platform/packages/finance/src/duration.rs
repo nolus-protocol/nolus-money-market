@@ -10,7 +10,8 @@ use sdk::cosmwasm_std::Timestamp;
 
 use crate::{
     arithmetic::{Bits, FractionUnit, One, Scalar, Trim},
-    fractionable::{Fractionable, TimeSliceable},
+    coin::Amount,
+    fractionable::Fractionable,
     zero::Zero,
 };
 
@@ -98,10 +99,7 @@ impl Duration {
     }
 
     #[track_caller]
-    pub fn annualized_slice_of<T>(&self, annual_amount: T) -> T
-    where
-        T: TimeSliceable,
-    {
+    pub fn annualized_slice_of<T>(&self, annual_amount: T) -> T {
         // annual_amount.safe_mul(&Rational::new(self.nanos(), Self::YEAR.nanos()))
         todo!()
     }
@@ -117,6 +115,34 @@ impl Duration {
 }
 
 impl FractionUnit for Duration {}
+
+impl TryFrom<Amount> for Duration {
+    type Error = <Units as TryFrom<Amount>>::Error;
+
+    fn try_from(value: Amount) -> Result<Self, Self::Error> {
+        Ok(Self::from_nanos(value.try_into()?))
+    }
+}
+
+impl Div for Duration {
+    type Output = Units;
+
+    fn div(self, rhs: Self) -> Self::Output {
+        debug_assert!(!rhs.is_zero());
+
+        self.nanos().div(rhs.nanos())
+    }
+}
+
+impl Rem for Duration {
+    type Output = Self;
+
+    fn rem(self, rhs: Self) -> Self::Output {
+        debug_assert!(!rhs.is_zero());
+
+        Duration(self.nanos() % rhs.nanos())
+    }
+}
 
 impl Scalar for Duration {
     type Base = Units;
@@ -233,6 +259,13 @@ impl Display for Duration {
 impl Zero for Duration {
     const ZERO: Self = Duration::from_nanos(0);
 }
+
+impl From<Duration> for Amount {
+    fn from(d: Duration) -> Self {
+        d.nanos().into()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use sdk::cosmwasm_std::Timestamp as T;

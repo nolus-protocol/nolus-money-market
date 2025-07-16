@@ -1,20 +1,9 @@
-use crate::{coin::Coin, duration::Duration, ratio::Ratio};
+use crate::{coin::Coin, duration::Duration};
 
 use super::Fractionable;
 
 impl<C> Fractionable<Coin<C>> for Duration {
-    #[track_caller]
-    fn safe_mul<F>(self, fraction: &F) -> Self
-    where
-        F: Ratio<Coin<C>>,
-    {
-        /* let d128: u128 = self.into();
-        // TODO re-assess the design of Ratio ... and whether it could be > 1
-        d128.safe_mul(fraction)
-            .try_into()
-            .expect("overflow computing a fraction of duration") */
-        todo!("To reimplement")
-    }
+    type MaxRank = u128;
 }
 
 #[cfg(test)]

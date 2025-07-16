@@ -1,37 +1,16 @@
 use crate::{
-    coin::Coin,
+    coin::{Amount, Coin},
     percent::{Percent, Units},
-    ratio::Ratio,
 };
 
 use super::Fractionable;
 
-impl Fractionable<Units> for Percent {
-    #[track_caller]
-    fn safe_mul<R>(self, ratio: &R) -> Self
-    where
-        R: Ratio<Units>,
-    {
-        // Percent::from_permille(self.units().safe_mul(ratio))
-        todo!("To reimplement")
-    }
+impl Fractionable<Percent> for Percent {
+    type MaxRank = Units;
 }
 
 impl<C> Fractionable<Coin<C>> for Percent {
-    #[track_caller]
-    fn safe_mul<F>(self, fraction: &F) -> Self
-    where
-        F: Ratio<Coin<C>>,
-    {
-        /* let p128: u128 = self.units().into();
-        // TODO re-assess the design of Ratio ... and whether it could be > 1
-        let res: Units = p128
-            .safe_mul(fraction)
-            .try_into()
-            .expect("overflow computing a fraction of permille");
-        Self::from_permille(res) */
-        todo!("To reimplement")
-    }
+    type MaxRank = Amount;
 }
 
 #[cfg(test)]

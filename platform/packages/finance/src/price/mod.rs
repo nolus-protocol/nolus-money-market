@@ -1,4 +1,5 @@
 use std::{
+    convert::Infallible,
     fmt::Debug,
     ops::{Add, AddAssign, Mul},
 };
@@ -226,6 +227,16 @@ where
 {
 }
 
+impl<C, QuoteC> From<Price<C, QuoteC>> for Rational<Amount>
+where
+    C: 'static,
+    QuoteC: 'static,
+{
+    fn from(price: Price<C, QuoteC>) -> Self {
+        todo!("Implement")
+    }
+}
+
 impl<C, QuoteC> PartialEq for Price<C, QuoteC>
 where
     C: 'static,
@@ -281,6 +292,21 @@ where
     #[track_caller]
     fn add_assign(&mut self, rhs: Price<C, QuoteC>) {
         *self = self.add(rhs);
+    }
+}
+
+impl<C, QuoteC> TryFrom<Rational<Amount>> for Price<C, QuoteC>
+where
+    C: 'static,
+    QuoteC: 'static,
+{
+    type Error = Infallible;
+
+    fn try_from(value: Rational<Amount>) -> std::result::Result<Self, Self::Error> {
+        Ok(Price::new(
+            value.denominator().into(),
+            value.nominator().into(),
+        ))
     }
 }
 

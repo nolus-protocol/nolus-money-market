@@ -10,7 +10,8 @@ use sdk::cosmwasm_std::{OverflowError, OverflowOperation};
 
 use crate::{
     arithmetic::{Bits, CheckedMul, FractionUnit, One, Scalar, Trim},
-    error::Result as FinanceResult,
+    coin::Amount,
+    error::{Error, Result as FinanceResult},
     fraction::Fraction,
     fractionable::Fractionable,
     ratio::{Ratio, Rational},
@@ -38,6 +39,12 @@ impl CheckedMul for Units {
 }
 
 impl FractionUnit for Units {}
+
+impl From<Percent> for Units {
+    fn from(percent: Percent) -> Self {
+        percent.0
+    }
+}
 
 impl One for Units {
     const ONE: Self = 1;
@@ -152,7 +159,14 @@ impl Fraction<Units> for Percent {
     where
         A: Fractionable<Units>,
     {
-        whole.safe_mul(self)
+        // whole.safe_mul(self)
+        todo!("Reimplement")
+    }
+}
+
+impl From<Percent> for Amount {
+    fn from(value: Percent) -> Self {
+        Amount::from(value.units())
     }
 }
 
@@ -271,7 +285,22 @@ impl Trim for Percent {
         Self::from_permille(self.0 >> bits)
     }
 }
-#[cfg(test)]
+
+impl TryFrom<Amount> for Percent {
+    type Error = <Units as TryFrom<Amount>>::Error;
+
+    fn try_from(value: Amount) -> Result<Self, Self::Error> {
+        todo!()
+    }
+}
+
+impl TryFrom<Units> for Percent {
+    type Error = Error;
+
+    fn try_from(permille: Units) -> Result<Self, Self::Error> {
+        Ok(Self::from_permille(permille))
+    }
+}
 pub(super) mod test {
     use std::{
         fmt::{Debug, Display},

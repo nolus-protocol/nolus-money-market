@@ -1,4 +1,4 @@
-use crate::{percent::Units as PercentUnits, price::Price, ratio::Ratio};
+use crate::{coin::Amount, percent::Units as PercentUnits, price::Price, ratio::Rational};
 
 use super::Fractionable;
 
@@ -7,12 +7,14 @@ where
     C: 'static,
     QuoteC: 'static,
 {
-    fn safe_mul<F>(self, fraction: &F) -> Self
-    where
-        F: Ratio<PercentUnits>,
-    {
-        // self.lossy_mul(&RatioUpcast(PhantomData, fraction))
-        todo!("To remove")
+    type MaxRank = Rational<Amount>;
+}
+
+impl From<PercentUnits> for Rational<Amount> {
+    fn from(value: PercentUnits) -> Self {
+        let nominator = Amount::from(value);
+        let denominator = Amount::from(1u128);
+        Self::new(nominator, denominator)
     }
 }
 
