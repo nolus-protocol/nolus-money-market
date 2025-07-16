@@ -1,6 +1,8 @@
 use std::ops::{Deref, DerefMut};
 
-use access_control::{ContractOwnerAccess, SingleUserAccess};
+use access_control::{
+    ContractOwnerAccess, Sender, SingleUserAccess, permissions::DexResponseSafeDeliveryPermission,
+};
 use dex::{ContinueResult as DexResult, Handler as _, Response as DexResponse};
 use oracle_platform::OracleRef;
 use platform::{
@@ -100,13 +102,13 @@ pub fn execute(
                 deps.storage.deref(),
                 crate::access_control::TIMEALARMS_NAMESPACE,
             )
-            .check(&info.sender)?;
+            .check(&Sender::new(&info))?;
 
-            try_handle_execute_message(deps, env, State::on_time_alarm)
+            try_handle_execute_message(deps, env, info, State::on_time_alarm)
                 .map(response::response_only_messages)
         }
         ExecuteMsg::Config { cadence_hours } => {
-            ContractOwnerAccess::new(deps.storage.deref()).check(&info.sender)?;
+            ContractOwnerAccess::new(deps.storage.deref()).check(&info)?;
 
             let StateMachineResponse {
                 response,
@@ -118,19 +120,32 @@ pub fn execute(
             Ok(response::response_only_messages(response))
         }
         ExecuteMsg::DexCallback() => {
-            access_control::check(&env.contract.address, &info.sender)?;
+            access_control::check(
+                &DexResponseSafeDeliveryPermission::new(&env.contract),
+                &Sender::new(&info),
+            )?;
 
-            try_handle_execute_message(deps, env, State::on_inner)
-                .map(response::response_only_messages)
+            try_handle_execute_message(deps, env, info, |state, querier, env, _info| {
+                State::on_inner(state, querier, env)
+            })
+            .map(response::response_only_messages)
         }
         ExecuteMsg::DexCallbackContinue() => {
-            access_control::check(&env.contract.address, &info.sender)?;
+            access_control::check(
+                &DexResponseSafeDeliveryPermission::new(&env.contract),
+                &Sender::new(&info),
+            )?;
 
-            try_handle_execute_message(deps, env, State::on_inner_continue)
-                .map(response::response_only_messages)
+            try_handle_execute_message(deps, env, info, |state, querier, env, _info| {
+                State::on_inner_continue(state, querier, env)
+            })
+            .map(response::response_only_messages)
         }
         ExecuteMsg::Heal() => {
-            try_handle_execute_message(deps, env, State::heal).map(response::response_only_messages)
+            try_handle_execute_message(deps, env, info, |state, querier, env, _info| {
+                State::heal(state, querier, env)
+            })
+            .map(response::response_only_messages)
         }
     }
 }
@@ -184,10 +199,11 @@ fn try_handle_neutron_msg(
 fn try_handle_execute_message<F, R, E>(
     deps: DepsMut<'_>,
     env: Env,
+    info: MessageInfo,
     handler: F,
 ) -> ContractResult<MessageResponse>
 where
-    F: FnOnce(State, QuerierWrapper<'_>, Env) -> R,
+    F: FnOnce(State, QuerierWrapper<'_>, Env, MessageInfo) -> R,
     R: Into<Result<DexResponse<State>, E>>,
     ContractError: From<E>,
 {
@@ -196,7 +212,7 @@ where
     let DexResponse::<State> {
         response,
         next_state,
-    } = handler(state, deps.querier, env).into()?;
+    } = handler(state, deps.querier, env, info).into()?;
 
     next_state.store(deps.storage).map(|()| response)
 }
