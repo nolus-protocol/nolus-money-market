@@ -96,7 +96,7 @@ pub fn execute(
             deps.storage.deref_mut(),
             crate::access_control::LEASE_CODE_ADMIN_KEY,
         )
-        .check(&info)
+        .check(&Sender::new(&info))
         .map_err(Into::into)
         .and_then(|()| Config::update_lease_code(deps.storage, code))
         .map(|()| PlatformResponse::default()),
