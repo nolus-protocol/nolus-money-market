@@ -801,7 +801,7 @@ mod test {
             .bank
             .update_balance(MOCK_CONTRACT_ADDR, vec![coin_cw(10_000_000)]);
         lender
-            .deposit(deps.as_mut().storage, 10_000_000u128.into(), price)
+            .deposit(deps.as_mut().storage, 10_000_000u128.into())
             .expect("should deposit");
 
         let annual_interest_rate = lpp

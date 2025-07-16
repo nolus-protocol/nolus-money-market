@@ -216,7 +216,7 @@ mod test {
         let mut deposit2 =
             Deposit::load_or_default(deps.as_ref().storage, addr2.clone()).expect("should load");
         deposit2
-            .deposit(deps.as_mut().storage, 1000u128.into())
+            .deposit(deps.as_mut().storage, 500u128.into())
             .expect("should deposit");
 
         let balance_nlpn =
