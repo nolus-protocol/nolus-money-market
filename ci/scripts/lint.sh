@@ -1,4 +1,4 @@
-#!/bin/sh -eu
+#!/usr/bin/env sh
 
 ################################################################################
 ## This script shall conform to the POSIX.1 standard, a.k.a. IEEE Std 1003.1. ##
@@ -17,58 +17,39 @@
 ## order to keep the script as portable as possible between different         ##
 ## environments.                                                              ##
 ################################################################################
+## Used utilities outside the POSIX standard:                                 ##
+## [in-tree] cargo-each                                                       ##
+## cargo [with:]                                                              ##
+##   * rustc                                                                  ##
+##   * clippy [inherited from 'lint.internal.sh']                             ##
+################################################################################
 
 set -eu
 
-append_lint_flags() {
-  # Deny/Forbid Lint Groups
-  # \
-  # Deny/Forbid Individual lints
-  # \
-  # Deny/Forbid Clippy Lints
-  # \
-  # Deny Forbid "warnings" Lint Group
-  # \
-  # Allowed Lints
-  "${@:?}" \
-    -- \
-    --forbid "deprecated-safe" \
-    --deny "future-incompatible" \
-    --deny "keyword-idents" \
-    --deny "nonstandard-style" \
-    --deny "refining-impl-trait" \
-    --deny "rust-2018-idioms" \
-    --deny "unused" \
-    \
-    --forbid "unfulfilled_lint_expectations" \
-    \
-    --deny "clippy::all" \
-    --deny "clippy::unwrap_used" \
-    --deny "clippy::unwrap_in_result" \
-    \
-    --deny "warnings" \
-    \
-    --allow "clippy::large_enum_variant"
-}
+case "${#}" in
+  ("1") ;;
+  (*)
+    echo "This script takes only one argument, the workspace name." >&2
 
-append_quiet_and_lints() {
-  case "${RUN_CLIPPY_QUIET-"0"}" in
-    ("0")
-      "append_lint_flags" "${@:?}"
-      ;;  
-    ("1")
-      "append_lint_flags" \
-        "${@:?}" \
-        --quiet
-      ;;
-    (*)
-      "echo" \
-        "Environment variable \"RUN_CLIPPY_QUIET\" is set to value other than \
-zero or one!" \
-        >&2
-      ;;
-  esac
-}
+    exit "1"
+esac
 
-"append_quiet_and_lints" \
-  "${@}"
+cd "./${1:?}"
+shift
+
+# Deny/Forbid Lint Groups
+# \
+# Deny/Forbid Individual lints
+# \
+# Deny/Forbid Clippy Lints
+# \
+# Deny Forbid "warnings" Lint Group
+# \
+# Allowed Lints
+"cargo" \
+  -- \
+  "each" \
+  "run" \
+  --external-command \
+  -- \
+  "/bin/lint.internal.sh"

@@ -1,0 +1,34 @@
+name: "Build container image"
+description: "Action for building a container image, or restoring it from
+  cache if such exists."
+author: "The Dev Nolus Team <dev@nolus.io>"
+
+outputs:
+  image-id:
+    description: ""
+    value: |-
+      ${{ steps.check-formatting.outputs.image-id }}
+
+runs:
+  using: "composite"
+  steps:
+    - id: "rust-stable"
+      uses: "./.github/actions/rust-stable-container"
+    - shell: sh
+      env:
+        x: ${{ toJSON(steps) }}
+      run: echo ${x:?}
+    - id: "check-formatting"
+      uses: "./.github/actions/build-container"
+      with:
+        additional-digest-data: |-
+          ${{ steps.rust-stable.outputs.image-id }}
+        build-step: |-
+          "build" \
+            "check-formatting" \
+            "check-formatting" \
+            -- \
+            --build-arg "rust_id=${{ steps.rust-stable.outputs.image-id }}" \
+            --tag "localhost/local/check-formatting"
+        image-friendly-name: "check-formatting"
+        image-name: "localhost/local/check-formatting"

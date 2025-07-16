@@ -1,7 +1,7 @@
 **/.*/
 !.cargo/
 !.git/
-**/target/
+target/
 **/*.md
 **/*Containerfile
 **/.*ignore
@@ -11,6 +11,7 @@
 /artifacts/
 /build.sh
 /build-configuration/
+/ci/
 /docs/
 /lint.sh
 /scripts/common/

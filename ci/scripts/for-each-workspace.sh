@@ -1,4 +1,4 @@
-#!/bin/sh -eu
+#!/usr/bin/env sh
 
 ################################################################################
 ## This script shall conform to the POSIX.1 standard, a.k.a. IEEE Std 1003.1. ##
@@ -20,55 +20,33 @@
 
 set -eu
 
-append_lint_flags() {
-  # Deny/Forbid Lint Groups
-  # \
-  # Deny/Forbid Individual lints
-  # \
-  # Deny/Forbid Clippy Lints
-  # \
-  # Deny Forbid "warnings" Lint Group
-  # \
-  # Allowed Lints
-  "${@:?}" \
-    -- \
-    --forbid "deprecated-safe" \
-    --deny "future-incompatible" \
-    --deny "keyword-idents" \
-    --deny "nonstandard-style" \
-    --deny "refining-impl-trait" \
-    --deny "rust-2018-idioms" \
-    --deny "unused" \
-    \
-    --forbid "unfulfilled_lint_expectations" \
-    \
-    --deny "clippy::all" \
-    --deny "clippy::unwrap_used" \
-    --deny "clippy::unwrap_in_result" \
-    \
-    --deny "warnings" \
-    \
-    --allow "clippy::large_enum_variant"
-}
+files="$("find" "." -name "Cargo.lock")"
 
-append_quiet_and_lints() {
-  case "${RUN_CLIPPY_QUIET-"0"}" in
-    ("0")
-      "append_lint_flags" "${@:?}"
-      ;;  
-    ("1")
-      "append_lint_flags" \
-        "${@:?}" \
-        --quiet
-      ;;
-    (*)
-      "echo" \
-        "Environment variable \"RUN_CLIPPY_QUIET\" is set to value other than \
-zero or one!" \
-        >&2
-      ;;
-  esac
-}
+directories="$(
+  while read -r "file"
+  do
+    "dirname" "${file:?}"
+  done <<EOF
+${files:?}
+EOF
+)"
 
-"append_quiet_and_lints" \
-  "${@}"
+unset "files"
+
+directories="$(
+  while read -r "directory"
+  do
+    "realpath" "${directory:?}"
+  done <<EOF
+${directories:?}
+EOF
+)"
+
+while read -r "directory"
+do
+  cd "${directory:?}"
+  
+  "${@:?}"
+done <<EOF
+${directories:?}
+EOF

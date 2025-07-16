@@ -1,0 +1,25 @@
+name: "Build container image"
+description: "Action for building a container image, or restoring it from
+  cache if such exists."
+author: "The Dev Nolus Team <dev@nolus.io>"
+
+outputs:
+  image-id:
+    description: ""
+    value: |-
+      ${{ steps.rust-stable.outputs.image-id }}
+
+runs:
+  using: "composite"
+  steps:
+    - id: "rust-stable"
+      uses: "./.github/actions/build-container"
+      with:
+        build-step: |-
+          "build" \
+            "rust-stable" \
+            "rust-stable" \
+            -- \
+            --tag "localhost/local/rust"
+        image-friendly-name: "rust-stable"
+        image-name: "localhost/local/rust"

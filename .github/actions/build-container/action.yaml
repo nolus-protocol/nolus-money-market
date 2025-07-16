@@ -1,0 +1,146 @@
+name: "Build container image"
+description: "Action for building a container image, or restoring it from
+  cache if such exists."
+author: "The Dev Nolus Team <dev@nolus.io>"
+
+inputs:
+  additional-digest-data:
+    description: ""
+    required: false
+  build-step:
+    description: ""
+    required: true
+  image-friendly-name:
+    description: ""
+    required: true
+  image-name:
+    description: ""
+    required: true
+
+outputs:
+  image-id:
+    description: ""
+    value: |-
+      ${{ inputs.image-name }}@${{ steps.build.outputs.image-id }}
+
+runs:
+  using: "composite"
+  steps:
+    - id: "values"
+      shell: "sh"
+      env:
+        additional_digest_data: |-
+          ${{ inputs.additional-digest-data || '' }}
+        build_step: |-
+          ${{ inputs.build-step }}
+        ci_hash: |-
+          ${{ hashFiles('./ci/') }}
+        gh_hash: |-
+          ${{ hashFiles('./.github/') }}
+        image_name: |-
+          ${{ inputs.image-name }}
+        runner_temp: |-
+          ${{ runner.temp }}
+      run: |-
+        set -eu
+
+        hash="$(
+          "sha256sum" \
+            <<EOF
+        ${additional_digest_data?}
+        ${build_step:?}
+        ${ci_hash:?}
+        ${gh_hash:?}
+        EOF
+        )"
+
+        hash="${hash%%[[:space:]]*}"
+
+        "echo" \
+          "hash<<EOF
+        ${hash:?}
+        EOF
+        key<<EOF
+        container-${hash:?}
+        EOF
+        path<<EOF
+        ${runner_temp:?}/container-${hash:?}.tar
+        EOF" \
+          >>"${GITHUB_OUTPUT:?}"
+    - id: "cache-restore"
+      uses: "actions/cache/restore@v4"
+      with:
+        fail-on-cache-miss: false
+        key: |-
+          ${{ steps.values.outputs.key }}
+        lookup-only: false
+        path: |-
+          ${{ steps.values.outputs.path }}
+          ./${{ inputs.image-name }}-image-id
+    - if: |-
+        steps.cache-restore.conclusion == 'success'
+          && steps.cache-restore.outputs.cache-hit == 'true'
+      shell: "sh"
+      env:
+        container_path: |-
+          ${{ steps.values.outputs.path }}
+        image_friendly_name: |-
+          ${{ inputs.image-friendly-name }}
+      run: |-
+        set -eu
+
+        "docker" \
+          "image" \
+          "load" \
+          --input "${container_path:?}"
+
+        image_id="$("cat" "./.${image_friendly_name:?}-image-id")"
+
+        "echo" \
+          "image-id<<EOF
+        ${image_id:?}
+        EOF" \
+          >>"${GITHUB_OUTPUT:?}"
+
+    - id: "build"
+      if: |-
+        steps.cache-restore.conclusion == 'success'
+          && steps.cache-restore.outputs.cache-hit != 'true'
+      shell: "sh"
+      env:
+        container_path: |-
+          ${{ steps.values.outputs.path }}
+        image_friendly_name: |-
+          ${{ inputs.image-friendly-name }}
+        image_name: |-
+          ${{ inputs.image-name }}
+      run: |-
+        set -eu
+
+        . "./.github/build-container.sh"
+
+        ${{ inputs.build-step }}
+
+        image_id="$("cat" "./.${image_friendly_name:?}-image-id")"
+
+        "echo" \
+          "image-id<<EOF
+        ${image_id:?}
+        EOF" \
+          >>"${GITHUB_OUTPUT:?}"
+
+        "docker" \
+          "image" \
+          "save" \
+          --output "${container_path:?}" \
+          "${image_name}@${image_id:?}"
+    - if: |-
+        steps.cache-restore.conclusion == 'success'
+          && steps.cache-restore.outputs.cache-hit != 'true'
+      uses: "actions/cache/save@v4"
+      with:
+        key: |-
+          ${{ steps.values.outputs.key }}
+        path: |-
+          ${{ steps.values.outputs.path }}
+          ./${{ inputs.image-friendly-name }}-image-id

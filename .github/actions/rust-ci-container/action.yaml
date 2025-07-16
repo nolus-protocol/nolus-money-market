@@ -1,0 +1,42 @@
+name: "Build container image"
+description: "Action for building a container image, or restoring it from
+  cache if such exists."
+author: "The Dev Nolus Team <dev@nolus.io>"
+
+inputs:
+  cargo-each-image-id:
+    description: ""
+    required: true
+  rust-image-id:
+    description: ""
+    required: true
+  rust-version:
+    description: ""
+    required: true
+
+outputs:
+  image-id:
+    description: ""
+    value: |-
+      ${{ steps.rust-ci.outputs.image-id }}
+
+runs:
+  using: "composite"
+  steps:
+    - id: "rust-ci"
+      uses: "./.github/actions/build-container"
+      with:
+        additional-digest-data: |-
+          ${{ inputs.cargo-each-image-id }}
+          ${{ inputs.rust-image-id }}
+        build-step: |-
+          "build" \
+            "rust-ci" \
+            "rust-${{ inputs.rust-version }}-ci" \
+            -- \
+            --build-arg "cargo_each_id=${{ inputs.cargo-each-image-id }}" \
+            --build-arg "rust_id=${{ inputs.rust-image-id }}" \
+            --tag "localhost/local/rust-ci"
+        image-friendly-name: |-
+          rust-${{ inputs.rust-version }}-ci
+        image-name: "localhost/local/rust-ci"
