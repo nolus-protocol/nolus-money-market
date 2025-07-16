@@ -1,9 +1,8 @@
-use access_control::{AccessPermission, Sender, permissions::SingleUserPermission};
-use currency::{Currency, Group, MemberOf};
-use oracle_platform::OracleRef;
-use sdk::cosmwasm_std::MessageInfo;
+use access_control::{AccessPermission, Sender};
 
-struct LeaseAdminOnly<'a> {
+use crate::state::config::Config;
+
+pub struct LeaseAdminOnly<'a> {
     lease_config: &'a Config,
 }
 

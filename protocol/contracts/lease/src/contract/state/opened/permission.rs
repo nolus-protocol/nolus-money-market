@@ -1,7 +1,6 @@
 use access_control::{AccessPermission, Sender, permissions::SingleUserPermission};
 use currency::{Currency, Group, MemberOf};
 use oracle_platform::OracleRef;
-use sdk::cosmwasm_std::MessageInfo;
 
 pub type ChangeClosePolicyPermission<'a> = SingleUserPermission<'a>;
 pub type ClosePositionPermission<'a> = SingleUserPermission<'a>;
