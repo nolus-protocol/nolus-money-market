@@ -144,7 +144,7 @@ mod test {
             .grant_to(&Addr::unchecked("admin"))
             .unwrap();
 
-        LiquidityPool::<TheCurrency>::store(
+        LiquidityPool::<TheCurrency>::initialize(
             storage,
             &ApiConfig::new(
                 Code::unchecked(0xDEADC0DE_u64),

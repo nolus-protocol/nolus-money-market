@@ -62,7 +62,7 @@ pub fn instantiate(
     Code::try_new(msg.lease_code.into(), &deps.querier)
         .map_err(Into::into)
         .and_then(|lease_code| {
-            LiquidityPool::<LpnCurrency>::store(
+            LiquidityPool::<LpnCurrency>::initialize(
                 deps.storage,
                 &ApiConfig::new(lease_code, msg.borrow_rate, msg.min_utilization),
             )

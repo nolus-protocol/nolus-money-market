@@ -112,7 +112,7 @@ mod test {
             .grant_to(&Addr::unchecked("admin"))
             .unwrap();
 
-        LiquidityPool::<TheCurrency>::store(
+        LiquidityPool::<TheCurrency>::initialize(
             deps.as_mut().storage,
             &Config::new(
                 Code::unchecked(1000u64),
