@@ -112,19 +112,17 @@ mod test {
             .grant_to(&Addr::unchecked("admin"))
             .unwrap();
 
-        LiquidityPool::<TheCurrency>::initialize(
-            deps.as_mut().storage,
-            &Config::new(
-                Code::unchecked(1000u64),
-                InterestRate::new(
-                    BASE_INTEREST_RATE,
-                    UTILIZATION_OPTIMAL,
-                    ADDON_OPTIMAL_INTEREST_RATE,
-                )
-                .expect("Couldn't construct interest rate value!"),
-                DEFAULT_MIN_UTILIZATION,
-            ),
-        )
+        LiquidityPool::<TheCurrency>::new(Config::new(
+            Code::unchecked(1000u64),
+            InterestRate::new(
+                BASE_INTEREST_RATE,
+                UTILIZATION_OPTIMAL,
+                ADDON_OPTIMAL_INTEREST_RATE,
+            )
+            .expect("Couldn't construct interest rate value!"),
+            DEFAULT_MIN_UTILIZATION,
+        ))
+        .save(deps.as_mut().storage)
         .unwrap();
 
         // no deposit

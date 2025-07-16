@@ -62,9 +62,16 @@ impl<Lpn> LiquidityPool<Lpn>
 where
     Lpn: 'static,
 {
-    pub fn initialize(storage: &mut dyn Storage, config: &ApiConfig) -> Result<()> {
-        Config::store(config, storage)
-            .and_then(|()| Total::<Lpn>::new().store(storage).map_err(Into::into))
+    pub fn new(config: ApiConfig) -> Self {
+        Self {
+            config,
+            total: Total::new(),
+        }
+    }
+
+    pub fn save(self, storage: &mut dyn Storage) -> Result<()> {
+        Config::store(&self.config, storage)
+            .and_then(|()| self.total.store(storage).map_err(Into::into))
     }
 
     pub fn load(storage: &dyn Storage) -> Result<Self> {

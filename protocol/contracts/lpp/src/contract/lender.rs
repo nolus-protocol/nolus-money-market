@@ -144,19 +144,17 @@ mod test {
             .grant_to(&Addr::unchecked("admin"))
             .unwrap();
 
-        LiquidityPool::<TheCurrency>::initialize(
-            storage,
-            &ApiConfig::new(
-                Code::unchecked(0xDEADC0DE_u64),
-                InterestRate::new(
-                    BASE_INTEREST_RATE,
-                    UTILIZATION_OPTIMAL,
-                    ADDON_OPTIMAL_INTEREST_RATE,
-                )
-                .expect("Couldn't construct interest rate value!"),
-                min_utilization,
-            ),
-        )
+        LiquidityPool::<TheCurrency>::new(ApiConfig::new(
+            Code::unchecked(0xDEADC0DE_u64),
+            InterestRate::new(
+                BASE_INTEREST_RATE,
+                UTILIZATION_OPTIMAL,
+                ADDON_OPTIMAL_INTEREST_RATE,
+            )
+            .expect("Couldn't construct interest rate value!"),
+            min_utilization,
+        ))
+        .save(storage)
         .unwrap();
     }
 
