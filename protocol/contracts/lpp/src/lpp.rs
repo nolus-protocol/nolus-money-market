@@ -117,7 +117,7 @@ where
     }
 
     pub fn query_lpp_balance(&self, deps: &Deps<'_>, env: &Env) -> Result<LppBalances<Lpn>> {
-        let balance = self.balance(&env.contract.address, deps.querier)?;
+        let balance = self.uncommited_balance(&env.contract.address, deps.querier)?;
 
         let total_principal_due = self.total.total_principal_due();
 
@@ -171,7 +171,7 @@ where
         let price = self.calculate_price(deps, env, Coin::ZERO)?;
         let amount_lpn = price::total(amount_nlpn, price);
 
-        if self.balance(&env.contract.address, deps.querier)? < amount_lpn {
+        if self.uncommited_balance(&env.contract.address, deps.querier)? < amount_lpn {
             Err(ContractError::NoLiquidity {})
         } else {
             Ok(amount_lpn)
@@ -185,7 +185,7 @@ where
         querier: QuerierWrapper<'_>,
         now: &Timestamp,
     ) -> Result<Option<Percent>> {
-        let balance = self.balance(account, querier)?;
+        let balance = self.uncommited_balance(account, querier)?;
 
         if quote > balance {
             return Ok(None);
@@ -261,10 +261,12 @@ where
         Ok(payment.excess)
     }
 
-    fn balance(&self, account: &Addr, querier: QuerierWrapper<'_>) -> Result<Coin<Lpn>> {
-        self.uncommited_balance(account, querier)
+    /// The balance of this pool that may include not yet commited received amounts
+    fn uncommited_balance(&self, account: &Addr, querier: QuerierWrapper<'_>) -> Result<Coin<Lpn>> {
+        bank::balance(account, querier).map_err(Into::into)
     }
 
+    /// The balance of this pool as of the beginning of the ongoing transaction
     fn commited_balance(
         &self,
         account: &Addr,
@@ -279,10 +281,6 @@ where
                 );
                 balance - pending_deposit
             })
-    }
-
-    fn uncommited_balance(&self, account: &Addr, querier: QuerierWrapper<'_>) -> Result<Coin<Lpn>> {
-        bank::balance(account, querier).map_err(Into::into)
     }
 
     fn total_due(&self, now: &Timestamp) -> Coin<Lpn> {
@@ -376,7 +374,7 @@ mod test {
             .expect("can't load LiquidityPool");
 
         let balance = lpp
-            .balance(&env.contract.address, deps.as_ref().querier)
+            .uncommited_balance(&env.contract.address, deps.as_ref().querier)
             .expect("can't get balance");
 
         assert_eq!(balance, balance_mock.amount.into());
