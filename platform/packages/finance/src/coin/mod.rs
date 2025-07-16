@@ -16,6 +16,7 @@ use currency::{Currency, CurrencyDef, Group, MemberOf};
 
 use crate::{
     arithmetic::{Bits, CheckedAdd, CheckedMul, FractionUnit, One, Scalar, Trim},
+    ratio::Rational,
     zero::Zero,
 };
 
@@ -160,6 +161,10 @@ impl<C> Coin<C> {
             amount,
             currency: self.currency,
         })
+    }
+
+    pub fn to_rational<OtherC>(self, denominator: Coin<OtherC>) -> Rational<Amount> {
+        Rational::new(self.amount, denominator.amount)
     }
 
     #[track_caller]
