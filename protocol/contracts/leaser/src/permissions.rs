@@ -1,4 +1,4 @@
-use access_control::{AccessPermission, permissions::SingleUserPermission};
+use access_control::{AccessPermission, Sender, permissions::SingleUserPermission};
 use currency::{Currency, Group, MemberOf};
 use oracle_platform::OracleRef;
 use sdk::cosmwasm_std::MessageInfo;
@@ -14,8 +14,8 @@ impl<'a> LeaseAdminOnly<'a> {
 }
 
 impl AccessPermission for LeaseAdminOnly<'_> {
-    fn granted_to(&self, info: &MessageInfo) -> bool {
-        self.lease_config.lease_admin == info.sender
+    fn granted_to(&self, sender: &Sender<'_>) -> bool {
+        self.lease_config.lease_admin == sender.addr
     }
 }
 
