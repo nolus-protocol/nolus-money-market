@@ -103,13 +103,12 @@ impl Percent {
         Self(permille)
     }
 
-    pub fn from_ratio<FractionUnit>(nominator: FractionUnit, denominator: FractionUnit) -> Self
+    pub fn from_ratio<U>(nominator: U, denominator: U) -> Option<Self>
     where
-        FractionUnit: Copy + Debug + PartialEq + Zero,
-        Self: Fractionable<FractionUnit>,
+        Self: Fractionable<U>,
+        U: FractionUnit,
     {
-        // Rational::new(nominator, denominator).of(Percent::HUNDRED)
-        todo!()
+        Rational::new(nominator, denominator).lossy_mul(Self::HUNDRED)
     }
 
     pub const fn units(&self) -> Units {
@@ -153,14 +152,16 @@ impl One for Percent {
     const ONE: Self = Self::from_permille(1);
 }
 
-impl Fraction<Units> for Percent {
+impl Fraction<Percent> for Percent {
     #[track_caller]
     fn of<A>(&self, whole: A) -> A
     where
-        A: Fractionable<Units>,
+        A: Fractionable<Percent>,
     {
-        // whole.safe_mul(self)
-        todo!("Reimplement")
+        /*         let ratio: Ratio<Percent> = self.into();
+        ratio.of(whole) */
+
+        todo!("Next PR")
     }
 }
 
@@ -290,7 +291,7 @@ impl TryFrom<Amount> for Percent {
     type Error = <Units as TryFrom<Amount>>::Error;
 
     fn try_from(value: Amount) -> Result<Self, Self::Error> {
-        todo!()
+        Ok(Self::from_permille(value.try_into()?))
     }
 }
 
