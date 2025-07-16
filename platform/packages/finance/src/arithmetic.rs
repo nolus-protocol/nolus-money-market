@@ -52,7 +52,7 @@ where
 
 pub trait Trim
 where
-    Self: Copy,
+    Self: Bits + Copy,
 {
     /// Trims off the highest bits by shifting right
     fn trim(self, bits: u32) -> Self;
