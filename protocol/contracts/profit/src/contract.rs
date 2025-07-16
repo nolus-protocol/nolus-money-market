@@ -102,7 +102,7 @@ pub fn execute(
                 deps.storage.deref(),
                 crate::access_control::TIMEALARMS_NAMESPACE,
             )
-            .check(&info)?;
+            .check(&Sender::new(&info))?;
 
             try_handle_execute_message(deps, env, info, State::on_time_alarm)
                 .map(response::response_only_messages)

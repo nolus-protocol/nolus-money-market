@@ -4,9 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use access_control::{AccessPermission, Sender};
 use platform::{batch::Batch, contract};
-use sdk::cosmwasm_std::{
-    Addr, MessageInfo, QuerierWrapper, StdError as SdkError, Timestamp, wasm_execute,
-};
+use sdk::cosmwasm_std::{Addr, QuerierWrapper, StdError as SdkError, Timestamp, wasm_execute};
 
 use crate::msg::ExecuteMsg;
 
