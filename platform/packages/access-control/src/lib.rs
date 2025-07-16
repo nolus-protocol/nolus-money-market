@@ -14,14 +14,14 @@ pub mod error;
 pub mod permissions;
 
 pub struct Sender<'a> {
-    addr: &'a Addr,
+    pub addr: &'a Addr,
 }
 
 impl<'a> Sender<'a> {
     pub fn new(info: &'a MessageInfo) -> Self {
         Self { addr: &info.sender }
     }
-    
+
     pub fn from_addr(addr: &'a Addr) -> Self {
         Self { addr }
     }
@@ -62,13 +62,11 @@ where
         }
     }
 
-    pub fn check(&self, sender: &Sender) -> Result {
+    pub fn check(&self, sender: &Sender<'_>) -> Result {
         self.storage_item
             .load(self.storage.deref())
             .map_err(Into::into)
-            .and_then(|ref granted_to| {
-                check(&SingleUserPermission::new(&granted_to), sender)
-            })
+            .and_then(|ref granted_to| check(&SingleUserPermission::new(granted_to), sender))
     }
 }
 
@@ -92,8 +90,7 @@ mod tests {
     use sdk::cosmwasm_std::{Addr, ContractInfo, Storage, testing::MockStorage};
 
     use crate::{
-        Sender,
-        SingleUserAccess,
+        Sender, SingleUserAccess,
         error::{Error, Result},
         permissions::{SameContractOnly, SingleUserPermission},
     };
@@ -121,10 +118,7 @@ mod tests {
         let address = Addr::unchecked("hacker");
         let sender = Sender::from_addr(&address);
 
-        assert!(matches!(
-            access.check(&sender).unwrap_err(),
-            Error::Std(_)
-        ));
+        assert!(matches!(access.check(&sender).unwrap_err(), Error::Std(_)));
     }
 
     #[test]
@@ -167,7 +161,7 @@ mod tests {
 
     fn check_addr_permission(granted_to: &str, asked_for: &str) -> Result {
         let address = Addr::unchecked(asked_for);
-        let sender = Sender::from_addr(&address); 
+        let sender = Sender::from_addr(&address);
 
         super::check(
             &SingleUserPermission::new(&Addr::unchecked(granted_to)),
