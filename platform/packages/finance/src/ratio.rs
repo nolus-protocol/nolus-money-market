@@ -1,4 +1,4 @@
-use std::{fmt::Debug, ops::Div};
+use std::{cmp::Ordering, fmt::Debug, ops::Div};
 
 use serde::{Deserialize, Serialize};
 
@@ -42,6 +42,27 @@ where
 
     pub fn denominator(&self) -> U {
         self.denominator
+    }
+
+    fn to_common_denom_with(self, other: &Self) -> Option<(U, U, U)> {
+        // having b / a and d / c
+        // let a1 = a / gcd(a, c), and c1 = c / gcd(a, c), then
+        // (b * c1, d * a1)
+        let (a1, c1) = arithmetic::into_coprime(self.denominator, other.denominator);
+
+        let gcd = self.denominator.scale_down(a1.into_base());
+        a1.scale_up(c1.into_base())
+            .and_then(|a1c1| a1c1.scale_up(gcd.into_base()))
+            .and_then(|common_denom| {
+                self.nominator
+                    .scale_up(c1.into_base())
+                    .and_then(|scaled_lhs_nom| {
+                        other
+                            .nominator
+                            .scale_up(a1.into_base())
+                            .map(|scaled_rhs_nom| (scaled_lhs_nom, scaled_rhs_nom, common_denom))
+                    })
+            })
     }
 
     /// Performs a multiplication with possibility of precision lost.
@@ -183,7 +204,11 @@ where
     type Output = Self;
 
     fn checked_mul(self, rhs: Self) -> Option<Self::Output> {
-        todo!("Implement")
+        let (lhs_nom, rhs_denom) = arithmetic::into_coprime(self.nominator, rhs.denominator);
+        let (lhs_denom, rhs_nom) = arithmetic::into_coprime(self.denominator, rhs.nominator);
+
+        Self::precise_mul(lhs_nom, lhs_denom, rhs_nom, rhs_denom)
+            .map(|(nom, denom)| Self::new(nom, denom))
     }
 }
 
@@ -195,22 +220,18 @@ where
 
     // (a / b) ÷ (c / d) = (a * d) / (b * c)
     fn div(self, rhs: Self) -> Self::Output {
-        todo!("Implement")
+        debug_assert_ne!(rhs.nominator, Zero::ZERO, "Cannot divide by zero fraction");
+
+        let (lhs_nom, rhs_denom) = arithmetic::into_coprime(self.nominator, rhs.denominator);
+        let (lhs_denom, rhs_nom) = arithmetic::into_coprime(self.denominator, rhs.nominator);
+
+        Self::precise_mul(lhs_nom, lhs_denom, rhs_denom, rhs_nom)
+            .map(|(nom, denom)| Self::new(nom, denom))
+            .expect("Divition overflows even after trimming")
     }
 }
 
-impl<U, T> Fraction<U> for Rational<T>
-where
-    Self: Ratio<U>,
-{
-    #[track_caller]
-    fn of<A>(&self, whole: A) -> A
-    where
-        A: Fractionable<U>,
-    {
-        todo!("To remove")
-    }
-}
+impl<U> Eq for Rational<U> where U: FractionUnit {}
 
 impl<U> One for Rational<U>
 where
@@ -222,6 +243,38 @@ where
     };
 }
 
+impl<U> Ord for Rational<U>
+where
+    U: FractionUnit,
+{
+    fn cmp(&self, other: &Self) -> Ordering {
+        if self.denominator == other.denominator {
+            self.nominator.cmp(&other.nominator)
+        } else {
+            self.to_common_denom_with(other)
+                .map(|(lhs_nom, rhs_nom, _)| lhs_nom.cmp(&rhs_nom))
+                .expect("Failed to compute common denominator for fraction comparison")
+        }
+    }
+}
+
+impl<U> PartialEq for Rational<U>
+where
+    U: FractionUnit,
+{
+    fn eq(&self, other: &Self) -> bool {
+        self.nominator == other.nominator && self.denominator == other.denominator
+    }
+}
+
+impl<U> PartialOrd for Rational<U>
+where
+    U: FractionUnit,
+{
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
 impl<U, T> Ratio<U> for Rational<T>
 where
     T: Zero + Copy + PartialEq + Into<U>,

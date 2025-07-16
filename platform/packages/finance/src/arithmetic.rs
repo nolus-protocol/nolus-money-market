@@ -57,3 +57,24 @@ where
     /// Trims off the highest bits by shifting right
     fn trim(self, bits: u32) -> Self;
 }
+
+pub fn into_coprime<T>(a: T, b: T) -> (T, T)
+where
+    T: Copy + Debug + PartialEq + Scalar + Zero,
+{
+    debug_assert_ne!(b, Zero::ZERO, "RHS-value is zero!");
+
+    let gcd = a.gcd(b);
+
+    debug_assert_ne!(gcd, Zero::ZERO);
+    debug_assert!(
+        a.modulo(gcd) == Zero::ZERO,
+        "LHS-value is not divisible by the GCD!"
+    );
+    debug_assert!(
+        b.modulo(gcd) == Zero::ZERO,
+        "RHS-value is not divisible by the GCD!"
+    );
+
+    (a.scale_down(gcd), b.scale_down(gcd))
+}
