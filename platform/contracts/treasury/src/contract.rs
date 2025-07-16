@@ -79,10 +79,11 @@ pub fn execute(
 ) -> ContractResult<CwResponse> {
     match msg {
         ExecuteMsg::TimeAlarm {} => {
-            access_control::check(
-                &TimeAlarmDelivery::new(Config::load(deps.storage)?.timealarms()),
-                &info,
-            )?;
+            SingleUserAccess::new(
+                deps.storage.deref(),
+                crate::access_control::TIMEALARMS_NAMESPACE,
+            )
+            .check(&Sender::new(&info))?;
 
             try_dispatch(deps.storage, deps.querier, &env, info.sender)
                 .map(response::response_only_messages)
