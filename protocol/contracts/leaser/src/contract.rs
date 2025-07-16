@@ -29,7 +29,7 @@ use crate::{
     leaser::{self, Leaser},
     msg::{ConfigResponse, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg, SudoMsg},
     permissions::{
-        AnomalyResolutionPermission, ChangeLeaseAdminPermission, LeasesConfigurationPermission
+        AnomalyResolutionPermission, ChangeLeaseAdminPermission, LeasesConfigurationPermission,
     },
     result::ContractResult,
     state::{config::Config, leases::Leases},
@@ -200,7 +200,8 @@ pub fn query(deps: Deps<'_>, _env: Env, msg: QueryMsg) -> ContractResult<Binary>
                     &AnomalyResolutionPermission::new(&config),
                     &Sender::from_addr(&caller),
                 )
-                .is_ok() {
+                .is_ok()
+                {
                     AccessGranted::Yes
                 } else {
                     AccessGranted::No

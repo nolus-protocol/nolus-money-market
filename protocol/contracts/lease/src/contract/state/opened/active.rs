@@ -252,7 +252,7 @@ impl Handler for Active {
     ) -> ContractResult<Response> {
         access_control::check(
             &PriceAlarmDelivery::new(&self.lease.lease.oracle),
-            &Sender::new(&info)
+            &Sender::new(&info),
         )?;
 
         self.try_on_alarm(querier, &env)
