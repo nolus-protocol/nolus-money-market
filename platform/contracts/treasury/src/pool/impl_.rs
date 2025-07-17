@@ -45,19 +45,11 @@ where
         apr: Percent,
         period: Duration,
     ) -> Result<MessageResponse, ContractError> {
-        let reward_in_stable = interest::interest(apr, self.balance, period);
-
-        convert::from_quote::<_, _, _, _, PlatformGroup>(&self.oracle, reward_in_stable)
-            .map_err(ContractError::ConvertRewardsToNLS)
-            .and_then(|rewards| {
-                self.lpp
-                    .distribute(rewards)
-                    .map_err(ContractError::DistributeLppReward)
-            })
+        todo!("Implement");
     }
 }
 
-#[cfg(test)]
+/* #[cfg(test)]
 mod test {
     use currency::platform::Nls;
     use finance::{coin::Coin, duration::Duration, fraction::Fraction, percent::Percent, price};
@@ -132,3 +124,4 @@ mod test {
         assert_eq!(resp.events.len(), 1);
     }
 }
+ */

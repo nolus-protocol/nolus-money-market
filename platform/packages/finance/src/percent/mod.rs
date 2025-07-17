@@ -14,7 +14,7 @@ use crate::{
     error::{Error, Result as FinanceResult},
     fraction::Fraction,
     fractionable::Fractionable,
-    ratio::{Ratio, Rational},
+    ratio::Rational,
     zero::Zero,
 };
 
@@ -168,26 +168,6 @@ impl Fraction<Percent> for Percent {
 impl From<Percent> for Amount {
     fn from(value: Percent) -> Self {
         Amount::from(value.units())
-    }
-}
-
-impl Ratio<Units> for Percent {
-    fn parts(&self) -> Units {
-        self.units()
-    }
-
-    fn total(&self) -> Units {
-        Percent::HUNDRED.units()
-    }
-}
-
-impl Ratio<Units> for Rational<Percent> {
-    fn parts(&self) -> Units {
-        Ratio::<Percent>::parts(self).units()
-    }
-
-    fn total(&self) -> Units {
-        Ratio::<Percent>::total(self).units()
     }
 }
 

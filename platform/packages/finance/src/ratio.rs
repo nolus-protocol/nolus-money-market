@@ -4,7 +4,6 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     arithmetic::{self, Bits, CheckedMul, FractionUnit, One, Trim},
-    fraction::Fraction,
     fractionable::Fractionable,
     zero::Zero,
 };
@@ -273,18 +272,6 @@ where
 {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
-    }
-}
-impl<U, T> Ratio<U> for Rational<T>
-where
-    T: Zero + Copy + PartialEq + Into<U>,
-{
-    fn parts(&self) -> U {
-        self.nominator.into()
-    }
-
-    fn total(&self) -> U {
-        self.denominator.into()
     }
 }
 
