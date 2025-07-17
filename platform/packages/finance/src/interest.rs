@@ -1,18 +1,17 @@
 use std::{cmp, fmt::Debug, ops::Sub};
 
 use crate::{
-    arithmetic::FractionUnit, duration::Duration, fraction::Fraction, fractionable::Fractionable,
+    arithmetic::{FractionUnit, Scalar}, duration::Duration, fraction::Fraction, fractionable::Fractionable,
     zero::Zero,
 };
 
 /// Computes how much interest is accrued
-pub fn interest<U, R, P>(rate: R, principal: P, period: Duration) -> P
+pub fn interest<U, R, P>(rate: R, principal: P, period: Duration) -> Option<P>
 where
     U: FractionUnit,
     R: Fraction<U>,
-    P: Fractionable<U>,
+    P: Fractionable<U> + Fractionable<Duration>,
 {
-    todo!("Reimplement");
     let interest_per_year = rate.of(principal);
     period.annualized_slice_of(interest_per_year)
 }
@@ -20,26 +19,27 @@ where
 /// Computes how much time this payment covers, return.0, and the change, return.1
 ///
 /// The actual payment is equal to the payment minus the returned change.
-pub fn pay<U, R, P>(rate: R, principal: P, payment: P, period: Duration) -> (Duration, P)
+pub fn pay<U, R, P>(rate: R, principal: P, payment: P, period: Duration) -> Option<(Duration, P)>
 where
     U: FractionUnit,
     R: Fraction<U>,
-    P: Copy + Debug + Fractionable<U> + Ord + Sub<Output = P> + Zero,
+    P: Fractionable<U>+ Fractionable<Duration> +FractionUnit + Scalar + Sub<Output = P> + Zero,
     Duration: Fractionable<P>,
 {
-    todo!("Reimplement");
+    interest(rate, principal, period).and_then(|interest_due_per_period| {
+        if interest_due_per_period == P::ZERO {
+            Some((Duration::from_nanos(0), payment))
+        } else {
+            let repayment = cmp::min(interest_due_per_period, payment);
 
-    let interest_due_per_period: P = interest(rate, principal, period);
-
-    if interest_due_per_period == P::ZERO {
-        (Duration::from_nanos(0), payment)
-    } else {
-        let repayment: P = cmp::min(interest_due_per_period, payment);
-
-        let period_paid_for = period.into_slice_per_ratio(repayment, interest_due_per_period);
-        let change = payment - repayment;
-        (period_paid_for, change)
-    }
+            period
+                .into_slice_per_ratio(repayment, interest_due_per_period)
+                .map(|period_paid_for| {
+                    let change = payment - repayment;
+                    (period_paid_for, change)
+                })
+        }
+    })
 }
 
 #[cfg(test)]

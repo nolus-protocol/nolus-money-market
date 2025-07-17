@@ -12,6 +12,7 @@ use crate::{
     arithmetic::{Bits, FractionUnit, One, Scalar, Trim},
     coin::Amount,
     fractionable::Fractionable,
+    ratio::Rational,
     zero::Zero,
 };
 
@@ -94,23 +95,29 @@ impl Duration {
         self.millis() / 1000
     }
 
+    pub fn is_zero(&self) -> bool {
+        self == &Self::ZERO
+    }
+
     pub fn checked_mul(&self, rhs: u16) -> Option<Self> {
         self.nanos().checked_mul(rhs.into()).map(Self::from_nanos)
     }
 
     #[track_caller]
-    pub fn annualized_slice_of<T>(&self, annual_amount: T) -> T {
-        // annual_amount.safe_mul(&Rational::new(self.nanos(), Self::YEAR.nanos()))
-        todo!()
+    pub fn annualized_slice_of<T>(&self, annual_amount: T) -> Option<T>
+    where
+        Self: FractionUnit,
+        T: Fractionable<Self>,
+    {
+        Rational::new(*self, Self::YEAR).lossy_mul(annual_amount)
     }
 
-    pub fn into_slice_per_ratio<U>(self, amount: U, annual_amount: U) -> Self
+    pub fn into_slice_per_ratio<U>(self, amount: U, annual_amount: U) -> Option<Self>
     where
         Self: Fractionable<U>,
-        U: Zero + Debug + PartialEq + Copy,
+        U: FractionUnit,
     {
-        // Rational::new(amount, annual_amount).of(self)
-        todo!()
+        Rational::new(amount, annual_amount).lossy_mul(self)
     }
 }
 
