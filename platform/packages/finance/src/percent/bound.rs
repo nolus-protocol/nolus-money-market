@@ -4,13 +4,18 @@ use std::{
     ops::Div,
 };
 
+#[cfg(any(test, feature = "testing"))]
+use std::ops::{Add, Sub};
+
 use sdk::cosmwasm_std::Uint256;
 use serde::{Deserialize, Serialize};
 
 use crate::{
     coin::Amount,
     error::{Error, Result as FinanceResult},
+    fractionable::Fractionable,
     ratio::{Ratio, SimpleFraction},
+    rational::Rational,
     traits::FractionUnit,
     zero::Zero,
 };
@@ -44,6 +49,14 @@ impl<const UPPER_BOUND: Units> BoundPercent<UPPER_BOUND> {
 
     pub const fn from_permille(permille: Units) -> Self {
         Self::new_internal(permille)
+    }
+
+    pub fn from_fraction<U>(nominator: U, denominator: U) -> Option<Self>
+    where
+        Self: Fractionable<U>,
+        U: FractionUnit,
+    {
+        SimpleFraction::new(nominator, denominator).of(Self::HUNDRED)
     }
 
     pub const fn units(&self) -> Units {
@@ -182,4 +195,32 @@ impl<const UPPER_BOUND: Units> TryFrom<BoundPercent<UPPER_BOUND>> for u16 {
 
 impl<const UPPER_BOUND: Units> Zero for BoundPercent<UPPER_BOUND> {
     const ZERO: Self = Self::ZERO;
+}
+
+#[cfg(any(test, feature = "testing"))]
+impl<const UPPER_BOUND: Units> Add for BoundPercent<UPPER_BOUND> {
+    type Output = Self;
+
+    #[track_caller]
+    fn add(self, rhs: Self) -> Self {
+        Self(
+            self.0
+                .checked_add(rhs.0)
+                .expect("attempt to add with overflow"),
+        )
+    }
+}
+
+#[cfg(any(test, feature = "testing"))]
+impl<const UPPER_BOUND: Units> Sub for BoundPercent<UPPER_BOUND> {
+    type Output = Self;
+
+    #[track_caller]
+    fn sub(self, rhs: Self) -> Self {
+        Self(
+            self.0
+                .checked_sub(rhs.0)
+                .expect("attempt to subtract with overflow"),
+        )
+    }
 }
