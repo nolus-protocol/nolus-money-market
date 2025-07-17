@@ -1,11 +1,9 @@
+use std::{fmt::Formatter, ops::Add};
+
 use bound::BoundPercent;
 
 use crate::{
-    error::Result as FinanceResult,
-    fraction::Fraction,
-    fractionable::Fractionable,
-    ratio::{RatioLegacy, SimpleFraction},
-    zero::Zero,
+    error::{Error, Result as FinanceResult}, fraction::Fraction, fractionable::Fractionable, ratio::{RatioLegacy, SimpleFraction}, traits::FractionUnit, zero::Zero
 };
 
 pub mod bound;
@@ -29,7 +27,7 @@ impl Fraction<Units> for Percent100 {
         let fraction: SimpleFraction<Units> = self.into();
         fraction
             .of(whole)
-            .expect("TODO it won't be needed when I call ratio.of()")
+            .expect("TODO it won't be needed when ratio.of()")
     }
 }
 
@@ -98,6 +96,26 @@ impl Add<Percent> for Percent {
 impl From<Percent> for SimpleFraction<Units> {
     fn from(percent: Percent) -> Self {
         Self::new(percent.units(), Percent::HUNDRED.units())
+    }
+}
+
+impl From<Percent100> for Percent {
+    fn from(percent: Percent100) -> Self {
+        Self::from_permille(percent.units())
+    }
+}
+
+impl TryFrom<Percent> for Percent100 {
+    type Error = Error;
+
+    fn try_from(percent: Percent) -> Result<Self, Self::Error> {
+        let permilles = percent.units();
+        (permilles <= HUNDRED_BOUND)
+            .then(|| Self::from_permille(permilles))
+            .ok_or(Error::UpperBoundCrossed {
+                bound: HUNDRED_BOUND,
+                value: permilles,
+            })
     }
 }
 
@@ -179,20 +197,12 @@ pub(super) mod test {
     }
 
     #[test]
-    fn checked_sub() {
-        assert_eq!(from(67), from(79).checked_sub(from(12)).unwrap());
-        assert_eq!(from(0), from(34).checked_sub(from(34)).unwrap());
-        assert_eq!(from(39), from(39).checked_sub(from(0)).unwrap());
-        assert_eq!(
-            from(990),
-            Percent100::HUNDRED.checked_sub(from(10)).unwrap()
-        );
-        assert_eq!(
-            from(0),
-            Percent100::HUNDRED
-                .checked_sub(from(Percent100::PERMILLE))
-                .unwrap()
-        );
+    fn sub() {
+        assert_eq!(from(67), from(79) - (from(12)));
+        assert_eq!(from(0), from(34) - (from(34)));
+        assert_eq!(from(39), from(39) - (from(0)));
+        assert_eq!(from(990), Percent100::HUNDRED - (from(10)));
+        assert_eq!(from(0), Percent100::HUNDRED - (from(Percent100::PERMILLE)));
     }
 
     #[test]
