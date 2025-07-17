@@ -88,12 +88,15 @@ impl Liability {
         self.max
     }
 
-    pub fn cap_to_zone(&self, ltv: Percent100) -> Percent100 {
-        ltv.min(
+    pub fn cap_to_zone(&self, ltv: Percent) -> Percent100 {
+        let result = ltv.min(Percent::from(
             self.max
                 .checked_sub(Self::MIN_STEP_LTV)
                 .expect("Invariant to be held"),
-        )
+        ));
+        result
+            .try_into()
+            .expect("The result should be less than 100%")
     }
 
     pub fn zone_of(&self, ltv: Percent100) -> Zone {
@@ -420,20 +423,17 @@ mod test {
             recalc_time: Duration::HOUR,
         };
         assert_eq!(
-            sub(sub(MAX, Liability::MIN_STEP_LTV), Liability::MIN_STEP_LTV),
-            obj.cap_to_zone(sub(
-                sub(MAX, Liability::MIN_STEP_LTV),
-                Liability::MIN_STEP_LTV
-            ))
+            MAX - Liability::MIN_STEP_LTV - Liability::MIN_STEP_LTV,
+            obj.cap_to_zone((MAX - Liability::MIN_STEP_LTV - Liability::MIN_STEP_LTV).into())
         );
         assert_eq!(
-            sub(MAX, Liability::MIN_STEP_LTV),
-            obj.cap_to_zone(sub(MAX, Liability::MIN_STEP_LTV))
+            MAX - Liability::MIN_STEP_LTV,
+            obj.cap_to_zone((MAX - Liability::MIN_STEP_LTV).into())
         );
-        assert_eq!(sub(MAX, Liability::MIN_STEP_LTV), obj.cap_to_zone(MAX));
+        assert_eq!(MAX - Liability::MIN_STEP_LTV, obj.cap_to_zone(MAX.into()));
         assert_eq!(
-            sub(MAX, Liability::MIN_STEP_LTV),
-            obj.cap_to_zone(MAX.checked_add(Liability::MIN_STEP_LTV).unwrap())
+            MAX - Liability::MIN_STEP_LTV,
+            obj.cap_to_zone((MAX + Liability::MIN_STEP_LTV).into())
         );
     }
 
@@ -447,10 +447,6 @@ mod test {
                 "Lease = {lease}, due = {due}, exp = {exp}"
             );
         }
-    }
-
-    fn sub(lhs: Percent100, rhs: Percent100) -> Percent100 {
-        lhs.checked_sub(rhs).unwrap()
     }
 
     fn assert_load_ok(exp: Liability, json: &[u8]) {
