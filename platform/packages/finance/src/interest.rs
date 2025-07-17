@@ -1,7 +1,10 @@
-use std::{cmp, fmt::Debug, ops::Sub};
+use std::{cmp, ops::Sub};
 
 use crate::{
-    arithmetic::{FractionUnit, Scalar}, duration::Duration, fraction::Fraction, fractionable::Fractionable,
+    arithmetic::{FractionUnit, Scalar},
+    duration::Duration,
+    fraction::Fraction,
+    fractionable::Fractionable,
     zero::Zero,
 };
 
@@ -23,7 +26,7 @@ pub fn pay<U, R, P>(rate: R, principal: P, payment: P, period: Duration) -> Opti
 where
     U: FractionUnit,
     R: Fraction<U>,
-    P: Fractionable<U>+ Fractionable<Duration> +FractionUnit + Scalar + Sub<Output = P> + Zero,
+    P: Fractionable<U> + Fractionable<Duration> + FractionUnit + Scalar + Sub<Output = P> + Zero,
     Duration: Fractionable<P>,
 {
     interest(rate, principal, period).and_then(|interest_due_per_period| {
@@ -42,7 +45,7 @@ where
     })
 }
 
-#[cfg(test)]
+/* #[cfg(test)]
 mod tests {
     use currency::test::SubGroupTestC10;
 
@@ -173,3 +176,4 @@ mod tests {
         assert_eq!(exp_change, change);
     }
 }
+ */

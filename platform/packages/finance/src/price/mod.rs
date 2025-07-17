@@ -10,7 +10,6 @@ use crate::{
     arithmetic::{CheckedAdd, CheckedMul},
     coin::{Amount, Coin},
     error::{Error, Result},
-    fraction::Fraction,
     ratio::Rational,
 };
 
