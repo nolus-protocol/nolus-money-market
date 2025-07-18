@@ -47,9 +47,49 @@ env:
   upload-artifacts: |-
     ${{ toJSON(github.ref_type == 'tag' || (github.event_name == 'workflow_dispatch' && inputs.upload-artifacts)) }}
 
+permissions:
+  actions: write
+
 jobs:
+  clear-cache:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Clear cache
+        uses: actions/github-script@v6
+        with:
+          script: |
+            console.log("About to clear")
+
+            while (true) {
+              const caches = await github.rest.actions.getActionsCacheList({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+              })
+
+              let no_caches = true;
+
+              for (const cache of caches.data.actions_caches) {
+                no_caches = false;
+
+                console.log(cache)
+
+                github.rest.actions.deleteActionsCacheById({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  cache_id: cache.id,
+                })
+              }
+
+              if (no_caches) {
+                break;
+              }
+            }
+
+            console.log("Clear completed")
   matrix-arguments:
     runs-on: "ubuntu-latest"
+    needs:
+      - "clear-cache"
     outputs:
       profiles-json: |-
         ${{ steps.out.outputs.profiles-json }}
@@ -98,37 +138,41 @@ jobs:
   check-lockfiles:
     if: |-
       github.ref_type == 'tag' || (github.event_name == 'workflow_dispatch' && inputs.check-dependencies-version)
+    needs:
+      - "clear-cache"
     runs-on: "ubuntu-latest"
     steps:
       - uses: "actions/checkout@v4"
       - uses: "./.github/actions/setup-docker"
       - id: "build-container"
         uses: "./.github/actions/check-lockfiles-container"
-      - env:
-          image_id: |-
-            ${{ steps.build-container.outputs.image-id }}
-        run: |-
-          "docker" \
-            "container" \
-            "run" \
-            --volume "./:/src/:ro" \
-            "${image_id:?}"
+      #- env:
+      #    image_id: |-
+      #      ${{ steps.build-container.outputs.image-id }}
+      #  run: |-
+      #    "docker" \
+      #      "container" \
+      #      "run" \
+      #      --volume "./:/src/:ro" \
+      #      "${image_id:?}"
   check-formatting:
     runs-on: "ubuntu-latest"
+    needs:
+      - "clear-cache"
     steps:
       - uses: "actions/checkout@v4"
       - uses: "./.github/actions/setup-docker"
       - id: "build-container"
         uses: "./.github/actions/check-formatting-container"
-      - env:
-          image_id: |-
-            ${{ steps.build-container.outputs.image-id }}
-        run: |-
-          "docker" \
-            "container" \
-            "run" \
-            --volume "./:/src/:ro" \
-            "${image_id:?}"
+      #- env:
+      #    image_id: |-
+      #      ${{ steps.build-container.outputs.image-id }}
+      #  run: |-
+      #    "docker" \
+      #      "container" \
+      #      "run" \
+      #      --volume "./:/src/:ro" \
+      #      "${image_id:?}"
   lint:
     runs-on: "ubuntu-latest"
     needs:
@@ -148,21 +192,21 @@ jobs:
           "mv" \
             "./.github/test-data/build-configuration" \
             "."
-      - env:
-          image_id: |-
-            ${{ steps.build-container.outputs.image-id }}
-          profile: |-
-            ${{ matrix.profile }}
-          workspace: |-
-            ${{ matrix.workspace }}
-        run: |-
-          "docker" \
-            "container" \
-            "run" \
-            --env "PROFILE=${profile:?}" \
-            --volume "./:/src/:ro" \
-            "${image_id:?}" \
-            "${workspace:?}"
+      #- env:
+      #    image_id: |-
+      #      ${{ steps.build-container.outputs.image-id }}
+      #    profile: |-
+      #      ${{ matrix.profile }}
+      #    workspace: |-
+      #      ${{ matrix.workspace }}
+      #  run: |-
+      #    "docker" \
+      #      "container" \
+      #      "run" \
+      #      --env "PROFILE=${profile:?}" \
+      #      --volume "./:/src/:ro" \
+      #      "${image_id:?}" \
+      #      "${workspace:?}"
   test:
     runs-on: "ubuntu-latest"
     needs:
@@ -182,21 +226,21 @@ jobs:
           "mv" \
             "./.github/test-data/build-configuration" \
             "."
-      - env:
-          image_id: |-
-            ${{ steps.build-container.outputs.image-id }}
-          profile: |-
-            ${{ matrix.profile }}
-          workspace: |-
-            ${{ matrix.workspace }}
-        run: |-
-          "docker" \
-            "container" \
-            "run" \
-            --env "PROFILE=${profile:?}" \
-            --volume "./:/src/:ro" \
-            "${image_id:?}" \
-            "${workspace:?}"
+      #- env:
+      #    image_id: |-
+      #      ${{ steps.build-container.outputs.image-id }}
+      #    profile: |-
+      #      ${{ matrix.profile }}
+      #    workspace: |-
+      #      ${{ matrix.workspace }}
+      #  run: |-
+      #    "docker" \
+      #      "container" \
+      #      "run" \
+      #      --env "PROFILE=${profile:?}" \
+      #      --volume "./:/src/:ro" \
+      #      "${image_id:?}" \
+      #      "${workspace:?}"
 
 #  load-configuration:
 #    runs-on: "ubuntu-latest"

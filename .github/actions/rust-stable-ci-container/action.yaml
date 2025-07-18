@@ -4,6 +4,10 @@ description: "Action for building a container image, or restoring it from
 author: "The Dev Nolus Team <dev@nolus.io>"
 
 outputs:
+  image-hash:
+    description: ""
+    value: |-
+      ${{ steps.rust-stable-ci.outputs.image-hash }}
   image-id:
     description: ""
     value: |-
@@ -17,13 +21,19 @@ runs:
     - id: "cargo-each"
       uses: "./.github/actions/cargo-each-container"
       with:
+        rust-image-hash: |-
+          ${{ steps.rust-stable.outputs.image-hash }}
         rust-image-id: |-
           ${{ steps.rust-stable.outputs.image-id }}
     - id: "rust-stable-ci"
       uses: "./.github/actions/rust-ci-container"
       with:
+        cargo-each-image-hash: |-
+          ${{ steps.cargo-each.outputs.image-hash }}
         cargo-each-image-id: |-
           ${{ steps.cargo-each.outputs.image-id }}
+        rust-image-hash: |-
+          ${{ steps.rust-stable.outputs.image-hash }}
         rust-image-id: |-
           ${{ steps.rust-stable.outputs.image-id }}
         rust-version: "stable"

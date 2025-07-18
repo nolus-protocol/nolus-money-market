@@ -4,6 +4,10 @@ description: "Action for building a container image, or restoring it from
 author: "The Dev Nolus Team <dev@nolus.io>"
 
 outputs:
+  image-hash:
+    description: ""
+    value: |-
+      ${{ steps.check-lockfiles.outputs.image-hash }}
   image-id:
     description: ""
     value: |-
@@ -14,17 +18,22 @@ runs:
   steps:
     - id: "rust-stable"
       uses: "./.github/actions/rust-stable-container"
-    - id: "check-lockfiles"
+    - env:
+        RUST_ID: |-
+          ${{ steps.rust-stable.outputs.image-id }}
+      id: "check-lockfiles"
       uses: "./.github/actions/build-container"
       with:
         additional-digest-data: |-
-          ${{ steps.rust-stable.outputs.image-id }}
+          ${{ steps.rust-stable.outputs.image-hash }}
+        additional-digest-targets: |-
+          ./ci/images/check-lockfiles.Containerfile
         build-step: |-
           "build" \
             "check-lockfiles" \
             "check-lockfiles" \
             -- \
-            --build-arg "rust_id=${{ steps.rust-stable.outputs.image-id }}" \
+            --build-arg "rust_id=${RUST_ID:?}" \
             --tag "local/check-lockfiles"
         image-friendly-name: "check-lockfiles"
         image-name: "localhost/local/check-lockfiles"

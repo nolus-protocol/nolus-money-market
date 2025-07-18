@@ -4,7 +4,13 @@ description: "Action for building a container image, or restoring it from
 author: "The Dev Nolus Team <dev@nolus.io>"
 
 inputs:
+  cargo-each-image-hash:
+    description: ""
+    required: true
   cargo-each-image-id:
+    description: ""
+    required: true
+  rust-image-hash:
     description: ""
     required: true
   rust-image-id:
@@ -15,6 +21,10 @@ inputs:
     required: true
 
 outputs:
+  image-hash:
+    description: ""
+    value: |-
+      ${{ steps.rust-ci.outputs.image-hash }}
   image-id:
     description: ""
     value: |-
@@ -23,19 +33,26 @@ outputs:
 runs:
   using: "composite"
   steps:
-    - id: "rust-ci"
+    - env:
+        CARGO_EACH_ID: |-
+          ${{ inputs.cargo-each-image-id }}
+        RUST_ID: |-
+          ${{ inputs.rust-image-id }}
+      id: "rust-ci"
       uses: "./.github/actions/build-container"
       with:
         additional-digest-data: |-
-          ${{ inputs.cargo-each-image-id }}
-          ${{ inputs.rust-image-id }}
+          ${{ inputs.cargo-each-image-hash }}
+          ${{ inputs.rust-image-hash }}
+        additional-digest-targets: |-
+          ./ci/images/rust-ci.Containerfile
         build-step: |-
           "build" \
             "rust-ci" \
             "rust-${{ inputs.rust-version }}-ci" \
             -- \
-            --build-arg "cargo_each_id=${{ inputs.cargo-each-image-id }}" \
-            --build-arg "rust_id=${{ inputs.rust-image-id }}" \
+            --build-arg "cargo_each_id=${CARGO_EACH_ID:?}" \
+            --build-arg "rust_id=${RUST_ID:?}" \
             --tag "localhost/local/rust-ci"
         image-friendly-name: |-
           rust-${{ inputs.rust-version }}-ci

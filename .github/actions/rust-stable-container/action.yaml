@@ -4,6 +4,10 @@ description: "Action for building a container image, or restoring it from
 author: "The Dev Nolus Team <dev@nolus.io>"
 
 outputs:
+  image-hash:
+    description: ""
+    value: |-
+      ${{ steps.rust-stable.outputs.image-hash }}
   image-id:
     description: ""
     value: |-
@@ -15,6 +19,8 @@ runs:
     - id: "rust-stable"
       uses: "./.github/actions/build-container"
       with:
+        additional-digest-targets: |-
+          ./ci/images/rust-stable.Containerfile
         build-step: |-
           "build" \
             "rust-stable" \

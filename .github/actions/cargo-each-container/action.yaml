@@ -4,11 +4,18 @@ description: "Action for building a container image, or restoring it from
 author: "The Dev Nolus Team <dev@nolus.io>"
 
 inputs:
+  rust-image-hash:
+    description: ""
+    required: true
   rust-image-id:
     description: ""
     required: true
 
 outputs:
+  image-hash:
+    description: ""
+    value: |-
+      ${{ steps.cargo-each.outputs.image-hash }}
   image-id:
     description: ""
     value: |-
@@ -17,18 +24,23 @@ outputs:
 runs:
   using: "composite"
   steps:
-    - id: "cargo-each"
+    - env:
+        RUST_ID: |-
+          ${{ inputs.rust-image-id }}
+      id: "cargo-each"
       uses: "./.github/actions/build-container"
       with:
         additional-digest-data: |-
-          ${{ inputs.rust-image-id }}
-          ${{ hashFiles('./tools/') }}
+          ${{ inputs.rust-image-hash }}
+        additional-digest-targets: |-
+          ./ci/images/cargo-each.Containerfile
+          ./tools/
         build-step: |-
           "build" \
             "cargo-each" \
             "cargo-each" \
             -- \
-            --build-arg "rust_id=${{ inputs.rust-image-id }}" \
+            --build-arg "rust_id=${RUST_ID:?}" \
             --build-context "tools=./tools/" \
             --tag "localhost/local/cargo-each"
         image-friendly-name: "cargo-each"

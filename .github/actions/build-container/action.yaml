@@ -7,6 +7,9 @@ inputs:
   additional-digest-data:
     description: ""
     required: false
+  additional-digest-targets:
+    description: ""
+    required: false
   build-step:
     description: ""
     required: true
@@ -18,6 +21,10 @@ inputs:
     required: true
 
 outputs:
+  hash:
+    description: ""
+    value: |-
+      ${{ steps.values.outputs.hash }}
   image-id:
     description: ""
     value: |-
@@ -31,12 +38,10 @@ runs:
       env:
         additional_digest_data: |-
           ${{ inputs.additional-digest-data || '' }}
+        additional_digest_targets: |-
+          ${{ inputs.additional-digest-targets || '' }}
         build_step: |-
           ${{ inputs.build-step }}
-        ci_hash: |-
-          ${{ hashFiles('./ci/') }}
-        gh_hash: |-
-          ${{ hashFiles('./.github/') }}
         image_name: |-
           ${{ inputs.image-name }}
         runner_temp: |-
@@ -44,17 +49,78 @@ runs:
       run: |-
         set -eu
 
-        hash="$(
-          "sha256sum" \
-            <<EOF
-        ${additional_digest_data?}
-        ${build_step:?}
-        ${ci_hash:?}
-        ${gh_hash:?}
+        hash_target() (
+          case "${#:?}" in
+            ("1") ;;
+            (*)
+              "echo" \
+                "This function takes only one argument!" \
+                >&2
+
+              exit "1"
+          esac
+
+          files="$("find" "${1:?}" -type "f")"
+
+          files="$(
+            "sort" <<EOF
+        ${files:?}
+        EOF
+          )"
+
+          hash=""
+
+          while read -r file
+          do
+            hash="${hash?}
+        $("sha256sum" "${file:?}")"
+          done <<EOF
+        ${files:?}
+        EOF
+
+          hash="$(
+            "sha256sum" <<EOF
+        ${hash?}
+        EOF
+          )"
+
+          "echo" "${hash:?}"
+        )
+
+        additional_targets_hash=""
+
+        case "${additional_digest_targets?}" in
+          ("") ;;
+          (*)
+            while read -r directory
+            do
+              additional_targets_hash="${additional_targets_hash?}
+        $("hash_target" "${directory:?}")"
+            done <<EOF
+        ${additional_digest_targets:?}
+        EOF
+        esac
+
+        additional_targets_hash="$(
+          "sha256sum" <<EOF
+        ${additional_targets_hash?}
         EOF
         )"
 
+        echo "@@@@@@@@@@@ $("hash_target" "./.github/actions/build-container/");$("hash_target" "./.github/build-container.sh");${additional_digest_data?};${additional_targets_hash:?};${build_step:?}"
+
+        hash="$(
+          "sha256sum" \
+            <<EOF
+        $("hash_target" "./.github/actions/build-container/")
+        $("hash_target" "./.github/build-container.sh")
+        ${additional_digest_data?}
+        ${additional_targets_hash:?}
+        ${build_step:?}
+        EOF
+        )"
         hash="${hash%%[[:space:]]*}"
+        readonly "hash"
 
         "echo" \
           "hash<<EOF

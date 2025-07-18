@@ -19,11 +19,13 @@ build() (
       exit "1"
   esac
 
-  "docker" \
-    "buildx" \
-    "build" \
-    "${@:?}" \
-    --file "./ci/images/${image:?}.Containerfile" \
-    --iidfile "./.${friendly_name:?}-image-id" \
-    "./ci/"
+  SOURCE_DATE_EPOCH="0" \
+    "docker" \
+      "buildx" \
+      "build" \
+      "${@:?}" \
+      --build-arg "SOURCE_DATE_EPOCH=0" \
+      --file "./ci/images/${image:?}.Containerfile" \
+      --iidfile "./.${friendly_name:?}-image-id" \
+      "./ci/"
 )
