@@ -1,7 +1,6 @@
-use sdk::cosmwasm_std::MessageInfo;
+use sdk::{cosmwasm_std::{Addr, MessageInfo}};
 
 use self::error::{Error, Result};
-use self::permissions::SingleUserPermission;
 
 pub mod error;
 pub mod permissions;
@@ -38,9 +37,10 @@ where
 
 #[cfg(test)]
 mod tests {
-    use sdk::cosmwasm_std::{Addr, ContractInfo, Storage, testing::MockStorage};
+    use sdk::cosmwasm_std::{Addr, ContractInfo};
 
     use crate::{
+        Sender,
         error::{Error, Result},
         permissions::{SameContractOnly, SingleUserPermission},
     };
