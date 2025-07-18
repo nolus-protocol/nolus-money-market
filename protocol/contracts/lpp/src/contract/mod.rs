@@ -1,16 +1,14 @@
 use std::ops::DerefMut as _;
+use serde::Serialize;
 
 use access_control::permissions::LeaseCodeAdminPermission;
 use currency::CurrencyDef;
-use finance::coin::{Coin, CoinDTO};
-use oracle::stub;
-use oracle_platform::OracleRef;
-use serde::Serialize;
-
 use currencies::{
     Lpn as LpnCurrency, Lpns as LpnCurrencies, PaymentGroup, Stable as StableCurrency,
 };
-
+use finance::coin::{Coin, CoinDTO};
+use oracle::stub;
+use oracle_platform::OracleRef;
 use platform::{
     contract::Code, error as platform_error, message::Response as PlatformResponse, response,
 };
@@ -22,6 +20,7 @@ use versioning::{
     ProtocolMigrationMessage, ProtocolPackageRelease, UpdatablePackage as _, VersionSegment,
     package_name, package_version,
 };
+
 
 use crate::{
     config::Config as ApiConfig,
