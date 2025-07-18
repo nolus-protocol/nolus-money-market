@@ -1,8 +1,6 @@
 use std::ops::{Deref, DerefMut};
 
-use access_control::{
-    ContractOwnerAccess, Sender, SingleUserAccess, permissions::DexResponseSafeDeliveryPermission,
-};
+use access_control::{permissions::{ContractOwnerPermission, DexResponseSafeDeliveryPermission}};
 use dex::{ContinueResult as DexResult, Handler as _, Response as DexResponse};
 use oracle_platform::OracleRef;
 use platform::{
@@ -17,7 +15,7 @@ use sdk::{
     },
     neutron_sdk::sudo::msg::SudoMsg as NeutronSudoMsg,
 };
-use timealarms::stub::TimeAlarmsRef;
+use timealarms::stub::{TimeAlarmDelivery, TimeAlarmsRef};
 use versioning::{
     ProtocolMigrationMessage, ProtocolPackageRelease, UpdatablePackage as _, VersionSegment,
     package_name, package_version,
@@ -28,7 +26,7 @@ use crate::{
     msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg},
     profit::Profit,
     result::ContractResult,
-    state::{Config, ConfigManagement as _, State},
+    state::{Config, ConfigManagement as _, State}
 };
 
 const CONTRACT_STORAGE_VERSION: VersionSegment = 1;
@@ -49,20 +47,13 @@ pub fn instantiate(
     platform::contract::validate_addr(deps.querier, &msg.oracle)?;
     platform::contract::validate_addr(deps.querier, &msg.timealarms)?;
 
-    ContractOwnerAccess::new(deps.storage.deref_mut()).grant_to(&info.sender)?;
-
-    SingleUserAccess::new(
-        deps.storage.deref_mut(),
-        crate::access_control::TIMEALARMS_NAMESPACE,
-    )
-    .grant_to(&msg.timealarms)?;
-
     let (state, response) = State::start(
         Config::new(
             msg.cadence_hours,
             msg.treasury,
             OracleRef::try_from_base(msg.oracle, deps.querier)?,
             TimeAlarmsRef::new(msg.timealarms, deps.querier)?,
+            info.sender,
         ),
         msg.dex,
     );
@@ -98,17 +89,23 @@ pub fn execute(
 ) -> ContractResult<CwResponse> {
     match msg {
         ExecuteMsg::TimeAlarm {} => {
-            SingleUserAccess::new(
-                deps.storage.deref(),
-                crate::access_control::TIMEALARMS_NAMESPACE,
-            )
-            .check(&Sender::new(&info))?;
+            let config = State::load(deps.storage)?.load_config()?;
+            
+            access_control::check(
+                &TimeAlarmDelivery::new(&config.time_alarms()?),
+                &info.sender,
+            )?;
 
             try_handle_execute_message(deps, env, info, State::on_time_alarm)
                 .map(response::response_only_messages)
         }
         ExecuteMsg::Config { cadence_hours } => {
-            ContractOwnerAccess::new(deps.storage.deref()).check(&info)?;
+            let config = State::load(deps.storage)?.load_config()?;
+            
+            access_control::check(
+                &ContractOwnerPermission::new(&config.contract_owner()?),
+                &info.sender,
+            )?;
 
             let StateMachineResponse {
                 response,

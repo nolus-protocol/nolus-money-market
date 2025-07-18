@@ -140,6 +140,10 @@ impl Contract for Idle {
 }
 
 impl ConfigManagement for Idle {
+    fn load_config(&self) -> ContractResult<&Config> {
+        Ok(&self.config)
+    }
+
     fn try_update_config(
         self,
         now: Timestamp,
