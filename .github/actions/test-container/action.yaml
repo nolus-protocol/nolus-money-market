@@ -14,26 +14,23 @@ runs:
   steps:
     - id: "rust-stable-ci"
       uses: "./.github/actions/rust-stable-ci-container"
-    - env:
+    - id: "test"
+      env:
         RUST_CI_ID: |-
           ${{ steps.rust-stable-ci.outputs.image-id }}
-      run: |-
-        set -eu
-
-        . "./.github/build-container.sh"
-
-        "build" \
-          "test" \
-          "test" \
-          -- \
-          --build-arg "rust_ci_id=${RUST_CI_ID:?}" \
-          --tag "localhost/local/test"
-
-        image_id="$("cat" "./.test-image-digest")"
-
-        "echo" \
-          "image-id<<EOF
-        ${image_id:?}
-        EOF" \
-          >>"${GITHUB_OUTPUT:?}"
-      shell: "sh"
+      uses: "./.github/actions/build-container"
+      with:
+        additional-digest-data: |-
+          ${{ steps.rust-stable-ci.outputs.image-hash }}
+        additional-digest-targets: |-
+          ./ci/images/test.Containerfile
+        build-step: |-
+          "build" \
+            "test" \
+            "test" \
+            -- \
+            --build-arg "rust_ci_id=${RUST_CI_ID:?}" \
+            --tag "localhost/local/test"
+        disable-caching: true
+        image-friendly-name: "test"
+        image-name: "localhost/local/test"

@@ -13,6 +13,10 @@ inputs:
   build-step:
     description: ""
     required: true
+  disable-caching:
+    default: false
+    description: ""
+    required: false
   image-friendly-name:
     description: ""
     required: true
@@ -40,8 +44,6 @@ runs:
           ${{ inputs.additional-digest-targets || '' }}
         build_step: |-
           ${{ inputs.build-step }}
-        image_friendly_name: |-
-          ${{ inputs.image-friendly-name }}
         image_name: |-
           ${{ inputs.image-name }}
         runner_temp: |-
@@ -88,15 +90,6 @@ runs:
           "echo" "${hash:?}"
         )
 
-        should_run="$(
-          if test -f "./.${image_friendly_name:?}-image-digest"
-          then
-            "echo" "false"
-          else
-            "echo" "true"
-          fi
-        )"
-
         additional_targets_hash=""
 
         case "${additional_digest_targets?}" in
@@ -129,6 +122,23 @@ runs:
         hash="${hash%%[[:space:]]*}"
         readonly "hash"
 
+        should_run="$(
+          ids="$(
+            "docker" \
+              "image" \
+              "list" \
+              --quiet \
+              "${image_name:?}:${hash:?}"
+          )"
+
+          case "${ids?}" in
+            ("")
+              "echo" "true"
+              ;;
+            (*) "echo" "false"
+          esac
+        )"
+
         "echo" \
           "should-run<<EOF
         ${should_run:?}
@@ -147,6 +157,7 @@ runs:
     - id: "cache-restore"
       if: |-
         fromJSON(steps.values.outputs.should-run)
+          && (! fromJSON(inputs.disable-caching))
       uses: "actions/cache/restore@v4"
       with:
         fail-on-cache-miss: false
@@ -163,7 +174,6 @@ runs:
           ${{ inputs.image-friendly-name }}
       if: |-
         fromJSON(steps.values.outputs.should-run)
-          && steps.cache-restore.conclusion == 'success'
           && steps.cache-restore.outputs.cache-hit == 'true'
       run: |-
         "docker" \
@@ -181,7 +191,6 @@ runs:
       id: "build"
       if: |-
         fromJSON(steps.values.outputs.should-run)
-          && steps.cache-restore.conclusion == 'success'
           && steps.cache-restore.outputs.cache-hit != 'true'
       run: |-
         set -eu
@@ -208,6 +217,8 @@ runs:
     - env:
         container_path: |-
           ${{ steps.values.outputs.path }}
+        hash: |-
+          ${{ steps.values.outputs.hash }}
         image_digest: |-
           ${{ steps.image-digest.outputs.digest }}
         image_name: |-
@@ -215,9 +226,17 @@ runs:
       id: "export"
       if: |-
         fromJSON(steps.values.outputs.should-run)
-          && steps.cache-restore.conclusion == 'success'
+          && (! fromJSON(inputs.disable-caching))
           && steps.cache-restore.outputs.cache-hit != 'true'
       run: |-
+        set -eu
+
+        "docker" \
+          "image" \
+          "tag" \
+          "${image_name:?}@${image_digest:?}" \
+          "${image_name:?}:${hash:?}"
+
         "docker" \
           "image" \
           "save" \
@@ -226,7 +245,7 @@ runs:
       shell: "sh"
     - if: |-
         fromJSON(steps.values.outputs.should-run)
-          && steps.cache-restore.conclusion == 'success'
+          && (! fromJSON(inputs.disable-caching))
           && steps.cache-restore.outputs.cache-hit != 'true'
       uses: "actions/cache/save@v4"
       with:

@@ -34,6 +34,7 @@ runs:
             "check-lockfiles" \
             -- \
             --build-arg "rust_id=${RUST_ID:?}" \
-            --tag "local/check-lockfiles"
+            --tag "localhost/local/check-lockfiles"
+        disable-caching: true
         image-friendly-name: "check-lockfiles"
         image-name: "localhost/local/check-lockfiles"
