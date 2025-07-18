@@ -4,10 +4,6 @@ description: "Action for building a container image, or restoring it from
 author: "The Dev Nolus Team <dev@nolus.io>"
 
 outputs:
-  image-hash:
-    description: ""
-    value: |-
-      ${{ steps.lint.outputs.image-hash }}
   image-id:
     description: ""
     value: |-
@@ -21,19 +17,23 @@ runs:
     - env:
         RUST_CI_ID: |-
           ${{ steps.rust-stable-ci.outputs.image-id }}
-      id: "lint"
-      uses: "./.github/actions/build-container"
-      with:
-        additional-digest-data: |-
-          ${{ steps.rust-stable-ci.outputs.image-hash }}
-        additional-digest-targets: |-
-          ./ci/images/lint.Containerfile
-        build-step: |-
-          "build" \
-            "lint" \
-            "lint" \
-            -- \
-            --build-arg "rust_ci_id=${RUST_CI_ID:?}" \
-            --tag "localhost/local/lint"
-        image-friendly-name: "lint"
-        image-name: "localhost/local/lint"
+      run: |-
+        set -eu
+
+        . "./.github/build-container.sh"
+
+        "build" \
+          "lint" \
+          "lint" \
+          -- \
+          --build-arg "rust_ci_id=${RUST_CI_ID:?}" \
+          --tag "localhost/local/lint"
+
+        image_id="$("cat" "./.lint-image-digest")"
+
+        "echo" \
+          "image-id<<EOF
+        ${image_id:?}
+        EOF" \
+          >>"${GITHUB_OUTPUT:?}"
+      shell: "sh"

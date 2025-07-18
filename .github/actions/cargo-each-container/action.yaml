@@ -4,10 +4,10 @@ description: "Action for building a container image, or restoring it from
 author: "The Dev Nolus Team <dev@nolus.io>"
 
 inputs:
-  rust-image-hash:
+  rust-stable-image-hash:
     description: ""
     required: true
-  rust-image-id:
+  rust-stable-image-id:
     description: ""
     required: true
 
@@ -26,12 +26,12 @@ runs:
   steps:
     - env:
         RUST_ID: |-
-          ${{ inputs.rust-image-id }}
+          ${{ inputs.rust-stable-image-id }}
       id: "cargo-each"
       uses: "./.github/actions/build-container"
       with:
         additional-digest-data: |-
-          ${{ inputs.rust-image-hash }}
+          ${{ inputs.rust-stable-image-hash }}
         additional-digest-targets: |-
           ./ci/images/cargo-each.Containerfile
           ./tools/

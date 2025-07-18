@@ -26,6 +26,18 @@ build() (
       "${@:?}" \
       --build-arg "SOURCE_DATE_EPOCH=0" \
       --file "./ci/images/${image:?}.Containerfile" \
-      --iidfile "./.${friendly_name:?}-image-id" \
+      --iidfile "./.${friendly_name:?}-image-digest" \
       "./ci/"
+)
+
+build_rust() (
+  rust_version="${1:?"No Rust version selected!"}"
+
+  "build" \
+    "rust-${rust_version:?}" \
+    "rust-${rust_version:?}" \
+    -- \
+    --tag "localhost/local/rust-${rust_version:?}"
+
+  "cat" "./.rust-${rust_version:?}-image-digest"
 )

@@ -4,12 +4,6 @@ description: "Action for building a container image, or restoring it from
 author: "The Dev Nolus Team <dev@nolus.io>"
 
 inputs:
-  cargo-each-image-hash:
-    description: ""
-    required: true
-  cargo-each-image-id:
-    description: ""
-    required: true
   rust-image-hash:
     description: ""
     required: true
@@ -33,26 +27,54 @@ outputs:
 runs:
   using: "composite"
   steps:
+    - id: "rust-stable"
+      if: |-
+        inputs.rust-version != 'stable'
+      uses: "./.github/actions/rust-stable-container"
+    - id: "cargo-each"
+      uses: "./.github/actions/cargo-each-container"
+      with:
+        rust-stable-image-hash: |-
+          ${{
+            (
+              inputs.rust-version == 'stable'
+                && inputs.rust-image-hash
+            ) || steps.rust-stable.outputs.image-hash
+          }}
+        rust-stable-image-id: |-
+          ${{
+            (
+              inputs.rust-version == 'stable'
+                && inputs.rust-image-id
+            ) || steps.rust-stable.outputs.image-id
+          }}
     - env:
         CARGO_EACH_ID: |-
-          ${{ inputs.cargo-each-image-id }}
-        RUST_ID: |-
-          ${{ inputs.rust-image-id }}
+          ${{ steps.cargo-each.outputs.image-id }}
+        RUST_STABLE_ID: |-
+          ${{
+            (
+              inputs.rust-version == 'stable'
+                && inputs.rust-image-id
+            ) || steps.rust-stable.outputs.image-id
+          }}
+        RUST_VERSION: |-
+          ${{ inputs.rust-version }}
       id: "rust-ci"
       uses: "./.github/actions/build-container"
       with:
         additional-digest-data: |-
-          ${{ inputs.cargo-each-image-hash }}
-          ${{ inputs.rust-image-hash }}
+          ${{ steps.cargo-each.outputs.image-hash }}
+          ${{ steps.rust-stable.outputs.image-hash }}
         additional-digest-targets: |-
           ./ci/images/rust-ci.Containerfile
         build-step: |-
           "build" \
             "rust-ci" \
-            "rust-${{ inputs.rust-version }}-ci" \
+            "rust-${RUST_VERSION:?}-ci" \
             -- \
             --build-arg "cargo_each_id=${CARGO_EACH_ID:?}" \
-            --build-arg "rust_id=${RUST_ID:?}" \
+            --build-arg "rust_id=${RUST_STABLE_ID:?}" \
             --tag "localhost/local/rust-ci"
         image-friendly-name: |-
           rust-${{ inputs.rust-version }}-ci

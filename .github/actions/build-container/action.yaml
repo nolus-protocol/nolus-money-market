@@ -28,24 +28,25 @@ outputs:
   image-id:
     description: ""
     value: |-
-      ${{ inputs.image-name }}@${{ steps.build.outputs.image-id }}
+      ${{ inputs.image-name }}@${{ steps.image-digest.outputs.digest }}
 
 runs:
   using: "composite"
   steps:
-    - id: "values"
-      shell: "sh"
-      env:
+    - env:
         additional_digest_data: |-
           ${{ inputs.additional-digest-data || '' }}
         additional_digest_targets: |-
           ${{ inputs.additional-digest-targets || '' }}
         build_step: |-
           ${{ inputs.build-step }}
+        image_friendly_name: |-
+          ${{ inputs.image-friendly-name }}
         image_name: |-
           ${{ inputs.image-name }}
         runner_temp: |-
           ${{ runner.temp }}
+      id: "values"
       run: |-
         set -eu
 
@@ -87,6 +88,15 @@ runs:
           "echo" "${hash:?}"
         )
 
+        should_run="$(
+          if test -f "./.${image_friendly_name:?}-image-digest"
+          then
+            "echo" "false"
+          else
+            "echo" "true"
+          fi
+        )"
+
         additional_targets_hash=""
 
         case "${additional_digest_targets?}" in
@@ -107,13 +117,10 @@ runs:
         EOF
         )"
 
-        echo "@@@@@@@@@@@ $("hash_target" "./.github/actions/build-container/");$("hash_target" "./.github/build-container.sh");${additional_digest_data?};${additional_targets_hash:?};${build_step:?}"
-
         hash="$(
           "sha256sum" \
             <<EOF
-        $("hash_target" "./.github/actions/build-container/")
-        $("hash_target" "./.github/build-container.sh")
+        $("hash_target" "./.github/")
         ${additional_digest_data?}
         ${additional_targets_hash:?}
         ${build_step:?}
@@ -123,7 +130,10 @@ runs:
         readonly "hash"
 
         "echo" \
-          "hash<<EOF
+          "should-run<<EOF
+        ${should_run:?}
+        EOF
+        hash<<EOF
         ${hash:?}
         EOF
         key<<EOF
@@ -133,7 +143,10 @@ runs:
         ${runner_temp:?}/container-${hash:?}.tar
         EOF" \
           >>"${GITHUB_OUTPUT:?}"
+      shell: "sh"
     - id: "cache-restore"
+      if: |-
+        fromJSON(steps.values.outputs.should-run)
       uses: "actions/cache/restore@v4"
       with:
         fail-on-cache-miss: false
@@ -142,66 +155,78 @@ runs:
         lookup-only: false
         path: |-
           ${{ steps.values.outputs.path }}
-          ./${{ inputs.image-name }}-image-id
-    - if: |-
-        steps.cache-restore.conclusion == 'success'
-          && steps.cache-restore.outputs.cache-hit == 'true'
-      shell: "sh"
-      env:
+          ./${{ inputs.image-name }}-image-digest
+    - env:
         container_path: |-
           ${{ steps.values.outputs.path }}
         image_friendly_name: |-
           ${{ inputs.image-friendly-name }}
+      if: |-
+        fromJSON(steps.values.outputs.should-run)
+          && steps.cache-restore.conclusion == 'success'
+          && steps.cache-restore.outputs.cache-hit == 'true'
       run: |-
-        set -eu
-
         "docker" \
           "image" \
           "load" \
           --input "${container_path:?}"
-
-        image_id="$("cat" "./.${image_friendly_name:?}-image-id")"
-
-        "echo" \
-          "image-id<<EOF
-        ${image_id:?}
-        EOF" \
-          >>"${GITHUB_OUTPUT:?}"
-
-    - id: "build"
-      if: |-
-        steps.cache-restore.conclusion == 'success'
-          && steps.cache-restore.outputs.cache-hit != 'true'
       shell: "sh"
-      env:
+    - env:
         container_path: |-
           ${{ steps.values.outputs.path }}
         image_friendly_name: |-
           ${{ inputs.image-friendly-name }}
         image_name: |-
           ${{ inputs.image-name }}
+      id: "build"
+      if: |-
+        fromJSON(steps.values.outputs.should-run)
+          && steps.cache-restore.conclusion == 'success'
+          && steps.cache-restore.outputs.cache-hit != 'true'
       run: |-
         set -eu
 
         . "./.github/build-container.sh"
 
         ${{ inputs.build-step }}
+      shell: "sh"
+    - env:
+        image_friendly_name: |-
+          ${{ inputs.image-friendly-name }}
+      id: "image-digest"
+      run: |-
+        set -eu
 
-        image_id="$("cat" "./.${image_friendly_name:?}-image-id")"
+        digest="$("cat" "./.${image_friendly_name:?}-image-digest")"
 
         "echo" \
-          "image-id<<EOF
-        ${image_id:?}
+          "digest<<EOF
+        ${digest:?}
         EOF" \
           >>"${GITHUB_OUTPUT:?}"
-
+      shell: "sh"
+    - env:
+        container_path: |-
+          ${{ steps.values.outputs.path }}
+        image_digest: |-
+          ${{ steps.image-digest.outputs.digest }}
+        image_name: |-
+          ${{ inputs.image-name }}
+      id: "export"
+      if: |-
+        fromJSON(steps.values.outputs.should-run)
+          && steps.cache-restore.conclusion == 'success'
+          && steps.cache-restore.outputs.cache-hit != 'true'
+      run: |-
         "docker" \
           "image" \
           "save" \
           --output "${container_path:?}" \
-          "${image_name}@${image_id:?}"
+          "${image_name:?}@${image_digest:?}"
+      shell: "sh"
     - if: |-
-        steps.cache-restore.conclusion == 'success'
+        fromJSON(steps.values.outputs.should-run)
+          && steps.cache-restore.conclusion == 'success'
           && steps.cache-restore.outputs.cache-hit != 'true'
       uses: "actions/cache/save@v4"
       with:
@@ -209,4 +234,4 @@ runs:
           ${{ steps.values.outputs.key }}
         path: |-
           ${{ steps.values.outputs.path }}
-          ./${{ inputs.image-friendly-name }}-image-id
+          ./${{ inputs.image-friendly-name }}-image-digest

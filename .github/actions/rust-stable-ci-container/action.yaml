@@ -18,20 +18,9 @@ runs:
   steps:
     - id: "rust-stable"
       uses: "./.github/actions/rust-stable-container"
-    - id: "cargo-each"
-      uses: "./.github/actions/cargo-each-container"
-      with:
-        rust-image-hash: |-
-          ${{ steps.rust-stable.outputs.image-hash }}
-        rust-image-id: |-
-          ${{ steps.rust-stable.outputs.image-id }}
     - id: "rust-stable-ci"
       uses: "./.github/actions/rust-ci-container"
       with:
-        cargo-each-image-hash: |-
-          ${{ steps.cargo-each.outputs.image-hash }}
-        cargo-each-image-id: |-
-          ${{ steps.cargo-each.outputs.image-id }}
         rust-image-hash: |-
           ${{ steps.rust-stable.outputs.image-hash }}
         rust-image-id: |-
