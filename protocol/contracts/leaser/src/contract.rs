@@ -142,13 +142,12 @@ pub fn execute(
                     migrate_msg(to_release),
                 )
             })
-        },
+        }
         ExecuteMsg::MigrateLeasesCont {
             key: next_customer,
             max_leases,
             to_release,
-        } => {
-            Config::load(&deps.storage)
+        } => Config::load(&deps.storage)
             .and_then(|config| {
                 access_control::check(
                     &ContractOwnerPermission::new(config.contract_owner()),
@@ -167,8 +166,7 @@ pub fn execute(
                     max_leases,
                     migrate_msg(to_release),
                 )
-            })
-        },
+            }),
         ExecuteMsg::ChangeLeaseAdmin { new } => Leaser::new(deps.as_ref())
             .config()
             .and_then(|ref config| {
