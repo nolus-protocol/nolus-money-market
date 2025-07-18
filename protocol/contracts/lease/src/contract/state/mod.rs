@@ -91,15 +91,9 @@ pub(crate) trait TimeAlarmPermission {
 }
 
 impl TimeAlarmPermission for State {
-    fn check_time_alarm_permission(
-        &self,
-        info: &MessageInfo,
-    ) -> ContractResult<Response> {
+    fn check_time_alarm_permission(&self, info: &MessageInfo) -> ContractResult<Response> {
         if matches!(self, State::OpenedActive) {
-            access_control::check(
-                &TimeAlarmDelivery::new(&self.lease.time_alarms),
-                &info,
-            );
+            access_control::check(&TimeAlarmDelivery::new(&self.lease.time_alarms), &info);
         } else {
             ignore_msg(self)
         }

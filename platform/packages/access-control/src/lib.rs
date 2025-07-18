@@ -54,9 +54,10 @@ where
 
 #[cfg(test)]
 mod tests {
-    use sdk::cosmwasm_std::{Addr, ContractInfo, Storage, testing::MockStorage};
+    use sdk::cosmwasm_std::{Addr, ContractInfo};
 
     use crate::{
+        Sender,
         error::{Error, Result},
         permissions::{SameContractOnly, SingleUserPermission},
     };
