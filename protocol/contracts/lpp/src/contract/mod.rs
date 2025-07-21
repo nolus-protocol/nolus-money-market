@@ -1,11 +1,11 @@
-use std::ops::DerefMut as _;
 use serde::Serialize;
+use std::ops::DerefMut as _;
 
 use access_control::{Sender, permissions::LeaseCodeAdminPermission};
-use currency::CurrencyDef;
 use currencies::{
     Lpn as LpnCurrency, Lpns as LpnCurrencies, PaymentGroup, Stable as StableCurrency,
 };
+use currency::CurrencyDef;
 use finance::coin::{Coin, CoinDTO};
 use oracle::stub;
 use oracle_platform::OracleRef;
@@ -20,7 +20,6 @@ use versioning::{
     ProtocolMigrationMessage, ProtocolPackageRelease, UpdatablePackage as _, VersionSegment,
     package_name, package_version,
 };
-
 
 use crate::{
     config::Config as ApiConfig,
@@ -57,7 +56,12 @@ pub fn instantiate(
         .and_then(|lease_code| {
             LiquidityPool::<LpnCurrency>::store(
                 deps.storage,
-                &ApiConfig::new(lease_code, msg.borrow_rate, msg.min_utilization, lease_code_admin),
+                &ApiConfig::new(
+                    lease_code,
+                    msg.borrow_rate,
+                    msg.min_utilization,
+                    lease_code_admin
+                ),
             )
         })
         .map(|()| response::empty_response())
@@ -94,7 +98,7 @@ pub fn execute(
             lease_code: new_lease_code,
         } => {
             let loaded_config = Config::load(deps.storage)?;
-            
+
             access_control::check(
                 &LeaseCodeAdminPermission::new(loaded_config.lease_code_admin()),
                 &Sender::new(&info),
@@ -139,7 +143,7 @@ pub fn execute(
                 &LeaseCodeAdminPermission::new(loaded_config.lease_code_admin()),
                 &Sender::new(&info),
             )?;
-            
+
             assert!(
                 borrow::query_empty::<LpnCurrency>(deps.storage),
                 "There is/are active loan(s)! The protocol admin should have checked it first!"

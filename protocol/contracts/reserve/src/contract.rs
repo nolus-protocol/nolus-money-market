@@ -45,7 +45,8 @@ pub fn instantiate(
         .addr_validate(new_reserve.lease_code_admin.as_str())
         .map_err(Error::from)
         .and_then(|lease_code_admin| {
-            Code::try_new(new_reserve.lease_code.into(), &deps.querier).map_err(Into::into)
+            Code::try_new(new_reserve.lease_code.into(), &deps.querier)
+            .map_err(Into::into)
             .map(|lease_code| (lease_code, lease_code_admin))
         })
         .and_then(|(lease_code, lease_code_admin)| {
@@ -80,7 +81,7 @@ pub fn execute(
     msg: ExecuteMsg,
 ) -> Result<CwResponse> {
     let lease_code_admin = Config::load(deps.storage)?.lease_code_admin()?;
-   
+
     match msg {
         ExecuteMsg::NewLeaseCode(code) => access_control::check(
             &LeaseCodeAdminPermission::new(&lease_code_admin),
