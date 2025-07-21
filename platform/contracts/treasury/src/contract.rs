@@ -80,13 +80,12 @@ pub fn execute(
 ) -> ContractResult<CwResponse> {
     match msg {
         ExecuteMsg::TimeAlarm {} => {
-            try_load_config(deps.storage)
-            .and_then(|config| {
-                Ok(access_control::check(
-                    &TimeAlarmDelivery::new(config.timealarms()),
-                    &Sender::new(&info),
-                ))
-            })
+            let config = Config::load(storage)?;
+
+            access_control::check(
+                &TimeAlarmDelivery::new(config.timealarms()),
+                &Sender::new(&info),
+            )
             .and_then(|()| {
                 try_dispatch(deps.storage, deps.querier, &env, info.sender)
             })
@@ -248,7 +247,7 @@ fn setup_dispatching(
         msg.cadence_hours,
         msg.protocols_registry,
         msg.tvl_to_apr,
-        TimeAlarmsRef::new(msg.timealarms, querier),
+        TimeAlarmsRef::new(msg.timealarms, querier)?,
     )
     .store(storage)
     .map_err(ContractError::SaveConfig)?;

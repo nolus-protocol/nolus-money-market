@@ -93,7 +93,7 @@ pub fn execute(
     msg: ExecuteMsg,
 ) -> Result<CwResponse> {
     let lease_code_admin = Config::load(deps.storage)?.lease_code_admin()?;
-   
+
     match msg {
         ExecuteMsg::NewLeaseCode(code) => access_control::check(
             &LeaseCodeAdminPermission::new(&lease_code_admin),

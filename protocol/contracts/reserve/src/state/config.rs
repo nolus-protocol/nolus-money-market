@@ -3,7 +3,10 @@ use std::mem;
 use serde::{Deserialize, Serialize};
 
 use platform::contract::Code;
-use sdk::{cosmwasm_std::{Addr, Storage}, cw_storage_plus::Item};
+use sdk::{
+    cosmwasm_std::{Addr, Storage},
+    cw_storage_plus::Item
+};
 
 use crate::error::Result;
 
@@ -17,7 +20,10 @@ impl Config {
     const STORAGE: Item<Self> = Item::new("config");
 
     pub const fn new(lease_code: Code, lease_code_admin: Addr) -> Self {
-        Self { lease_code, lease_code_admin }
+        Self {
+            lease_code,
+            lease_code_admin
+        }
     }
 
     pub const fn lease_code(&self) -> Code {
@@ -38,7 +44,9 @@ impl Config {
 
     pub fn update_lease_code(storage: &mut dyn Storage, lease_code: Code) -> Result<()> {
         Self::STORAGE
-            .update(storage, |config: Self| Ok(Self::new(lease_code, config.lease_code_admin)))
+            .update(storage,|config: Self| {
+                Ok(Self::new(lease_code, config.lease_code_admin))
+            })
             .map(mem::drop)
     }
 }

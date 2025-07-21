@@ -25,13 +25,23 @@ impl Config {
 
     pub fn update_lease_code(storage: &mut dyn Storage, lease_code_new: Code) -> Result<()> {
         Self::update_field(storage, |config| {
-            ApiConfig::new(lease_code_new, *config.borrow_rate(), config.min_utilization(), config.lease_code_admin().clone())
+            ApiConfig::new(
+                lease_code_new,
+                *config.borrow_rate(),
+                config.min_utilization(),
+                config.lease_code_admin().clone(),
+            )
         })
     }
 
     pub fn update_borrow_rate(storage: &mut dyn Storage, borrow_rate: InterestRate) -> Result<()> {
         Self::update_field(storage, |config| {
-            ApiConfig::new(config.lease_code(), borrow_rate, config.min_utilization(), config.lease_code_admin().clone())
+            ApiConfig::new(
+                config.lease_code(),
+                borrow_rate,
+                config.min_utilization(),
+                config.lease_code_admin().clone(),
+            )
         })
     }
 
@@ -40,7 +50,12 @@ impl Config {
         min_utilization: Percent100,
     ) -> Result<()> {
         Self::update_field(storage, |config| {
-            ApiConfig::new(config.lease_code(), *config.borrow_rate(), min_utilization, config.lease_code_admin().clone())
+            ApiConfig::new(
+                config.lease_code(),
+                *config.borrow_rate(),
+                min_utilization,
+                config.lease_code_admin().clone(),
+            )
         })
     }
 
