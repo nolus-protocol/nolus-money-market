@@ -40,7 +40,7 @@ mod test {
     fn store_load() {
         let admin = Addr::unchecked("admin");
         let mut store = MockStorage::new();
-        assert_eq!(Ok(()), Config::new(admin).store(&mut store));
+        assert_eq!(Ok(()), Config::new(admin.clone()).store(&mut store));
         assert_eq!(admin, Config::load(&store).unwrap().contract_owner());
     }
 }
