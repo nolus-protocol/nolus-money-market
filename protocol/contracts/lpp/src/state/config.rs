@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use finance::percent::Percent100;
 use platform::contract::Code;
-use sdk::{cosmwasm_std::{Addr, Storage}, cw_storage_plus::Item};
+use sdk::{cosmwasm_std::Storage, cw_storage_plus::Item};
 
 use crate::{borrow::InterestRate, config::Config as ApiConfig, contract::Result};
 

@@ -184,6 +184,11 @@ pub fn execute(
                 &info,
             )?;
 
+            access_control::check(
+                &LeaseCodeAdminPermission::new(loaded_config.lease_code_admin()),
+                &Sender::new(&info),
+            )?;
+            
             assert!(
                 borrow::query_empty::<LpnCurrency>(deps.storage),
                 "There is/are active loan(s)! The protocol admin should have checked it first!"
