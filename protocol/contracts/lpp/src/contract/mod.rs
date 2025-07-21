@@ -1,7 +1,7 @@
 use std::ops::DerefMut as _;
 use serde::Serialize;
 
-use access_control::permissions::LeaseCodeAdminPermission;
+use access_control::{Sender, permissions::LeaseCodeAdminPermission};
 use currency::CurrencyDef;
 use currencies::{
     Lpn as LpnCurrency, Lpns as LpnCurrencies, PaymentGroup, Stable as StableCurrency,
@@ -50,7 +50,7 @@ pub fn instantiate(
     _info: MessageInfo,
     msg: InstantiateMsg,
 ) -> Result<CwResponse> {
-    let lease_code_admin = deps.api.addr_validate(msg.lease_code_admin.as_str())?;
+    let lease_code_admin = deps.api.addr_validate(msg.protocol_admin.as_str())?;
 
     Code::try_new(msg.lease_code.into(), &deps.querier)
         .map_err(Into::into)
@@ -97,7 +97,7 @@ pub fn execute(
             
             access_control::check(
                 &LeaseCodeAdminPermission::new(loaded_config.lease_code_admin()),
-                &info.sender,
+                &Sender::new(&info),
             )?;
 
             Config::update_lease_code(deps.storage, new_lease_code)
@@ -133,12 +133,13 @@ pub fn execute(
         ExecuteMsg::Burn { amount } => lender::try_withdraw::<LpnCurrency>(deps, env, info, amount)
             .map(response::response_only_messages),
         ExecuteMsg::CloseAllDeposits() => {
-            SingleUserAccess::new(
-                deps.storage.deref_mut(),
-                crate::access_control::PROTOCOL_ADMIN_KEY,
-            )
-            .check(&Sender::new(&info))?;
+            let loaded_config = Config::load(deps.storage)?;
 
+            access_control::check(
+                &LeaseCodeAdminPermission::new(loaded_config.lease_code_admin()),
+                &Sender::new(&info),
+            )?;
+            
             assert!(
                 borrow::query_empty::<LpnCurrency>(deps.storage),
                 "There is/are active loan(s)! The protocol admin should have checked it first!"

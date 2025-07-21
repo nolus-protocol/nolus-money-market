@@ -1,10 +1,4 @@
-use std::ops::{Deref, DerefMut};
-
-<<<<<<< HEAD
-use access_control::{Sender, SingleUserAccess};
-=======
-use access_control::SingleUserPermission;
->>>>>>> e7b7184e2 (refactor(lpp,proft,treasury,reserve): unify permissions model, factor out SingleUserAccess and storage keys for a single addr)
+use access_control::Sender;
 use admin_contract::msg::{
     ProtocolQueryResponse, ProtocolsQueryResponse, QueryMsg as ProtocolsRegistry,
 };
@@ -83,10 +77,10 @@ pub fn execute(
         ExecuteMsg::TimeAlarm {} => {
             try_load_config(deps.storage)
             .and_then(|config| {
-                access_control::check(
+                Ok(access_control::check(
                     &TimeAlarmDelivery::new(config.timealarms()),
                     &Sender::new(&info),
-                )
+                ))
             })
             .and_then(|()| {
                 try_dispatch(deps.storage, deps.querier, &env, info.sender)
@@ -246,7 +240,7 @@ fn setup_dispatching(
         msg.cadence_hours,
         msg.protocols_registry,
         msg.tvl_to_apr,
-        msg.timealarms,
+        TimeAlarmsRef::new(msg.timealarms, querier),
     )
     .store(storage)
     .map_err(ContractError::SaveConfig)?;

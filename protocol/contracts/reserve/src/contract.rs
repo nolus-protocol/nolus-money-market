@@ -1,6 +1,4 @@
-use std::ops::DerefMut;
-
-use access_control::permissions::LeaseCodeAdminPermission;
+use access_control::{Sender, permissions::LeaseCodeAdminPermission};
 use currencies::Lpn as LpnCurrency;
 use currency::CurrencyDef;
 use finance::coin::Coin;
@@ -86,7 +84,7 @@ pub fn execute(
     match msg {
         ExecuteMsg::NewLeaseCode(code) => access_control::check(
             &LeaseCodeAdminPermission::new(&lease_code_admin),
-            &info.sender,
+            &Sender::new(&info),
         )
         .check(&Sender::new(&info))
         .map_err(Into::into)
