@@ -85,7 +85,7 @@ pub fn execute(
             .and_then(|config| {
                 access_control::check(
                     &TimeAlarmDelivery::new(config.timealarms()),
-                    &info,
+                    &Sender::new(&info),
                 )
             })
             .and_then(|()| {
