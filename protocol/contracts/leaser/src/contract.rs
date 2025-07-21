@@ -129,7 +129,7 @@ pub fn execute(
             let config = Config::load(&deps.storage)?;
             access_control::check(
                 &ContractOwnerPermission::new(config.contract_owner()),
-                &info,
+                &Sender::new(&info),
             )
             .map_err(Into::into)
             .and_then(|()| new_code(new_code_id, &contract::validator(deps.querier)))
@@ -151,7 +151,7 @@ pub fn execute(
             .and_then(|config| {
                 access_control::check(
                     &ContractOwnerPermission::new(config.contract_owner()),
-                    &info,
+                    &Sender::new(&info),
                 )
             })
             .map_err(Into::into)

@@ -1,4 +1,4 @@
-use access_control::permissions::ContractOwnerPermission;
+use access_control::{permissions::ContractOwnerPermission, Sender};
 use platform::{batch::Batch, response};
 use sdk::{
     cosmwasm_ext::Response as CwResponse,
@@ -120,7 +120,8 @@ pub fn sudo(deps: DepsMut<'_>, env: Env, msg: SudoMsg) -> ContractResult<CwRespo
             .addr_validate(new_dex_admin.as_str())
             .map_err(Into::into)
             .and_then(|new_dex_admin| {
-                Config::new(new_dex_admin).store(deps.storage)
+                Config::new(new_dex_admin)
+                    .store(deps.storage)
                     .map(|()| response::empty_response())
                     .map_err(Into::into)
             }),
@@ -220,13 +221,13 @@ fn instantiate_reply(
 
 fn ensure_sender_is_owner(storage: &mut dyn Storage, info: &MessageInfo) -> ContractResult<()> {
     Config::load(storage)
-    .and_then(|config| {
-        access_control::check(
-            &ContractOwnerPermission::new(config.contract_owner()),
-            &info,
-        )
-    })
-    .map_err(Into::into)
+        .and_then(|config| {
+            access_control::check(
+                &ContractOwnerPermission::new(config.contract_owner()),
+                &Sender::new(info),
+            )
+        })
+        .map_err(Into::into)
 }
 
 fn register_protocol(
