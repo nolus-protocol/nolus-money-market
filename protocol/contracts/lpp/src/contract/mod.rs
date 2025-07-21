@@ -1,16 +1,14 @@
+use serde::Serialize;
 use std::ops::DerefMut as _;
 
+use access_control::{Sender, permissions::LeaseCodeAdminPermission};
+use currencies::{
+    Lpn as LpnCurrency, Lpns as LpnCurrencies, PaymentGroup, Stable as StableCurrency,
+};
 use currency::CurrencyDef;
 use finance::coin::{Coin, CoinDTO};
 use oracle::stub;
 use oracle_platform::OracleRef;
-use serde::Serialize;
-
-use access_control::{Sender, SingleUserAccess};
-use currencies::{
-    Lpn as LpnCurrency, Lpns as LpnCurrencies, PaymentGroup, Stable as StableCurrency,
-};
-
 use platform::{
     contract::Code, error as platform_error, message::Response as PlatformResponse, response,
 };
@@ -51,20 +49,19 @@ pub fn instantiate(
     _info: MessageInfo,
     msg: InstantiateMsg,
 ) -> Result<CwResponse> {
-    deps.api.addr_validate(msg.protocol_admin.as_str())?;
-
-    SingleUserAccess::new(
-        deps.storage.deref_mut(),
-        crate::access_control::PROTOCOL_ADMIN_KEY,
-    )
-    .grant_to(&msg.protocol_admin)?;
+    let lease_code_admin = deps.api.addr_validate(msg.protocol_admin.as_str())?;
 
     Code::try_new(msg.lease_code.into(), &deps.querier)
         .map_err(Into::into)
         .and_then(|lease_code| {
             LiquidityPool::<LpnCurrency>::store(
                 deps.storage,
-                &ApiConfig::new(lease_code, msg.borrow_rate, msg.min_utilization),
+                &ApiConfig::new(
+                    lease_code,
+                    msg.borrow_rate,
+                    msg.min_utilization,
+                    lease_code_admin
+                ),
             )
         })
         .map(|()| response::empty_response())
@@ -100,11 +97,12 @@ pub fn execute(
         ExecuteMsg::NewLeaseCode {
             lease_code: new_lease_code,
         } => {
-            SingleUserAccess::new(
-                deps.storage.deref_mut(),
-                crate::access_control::PROTOCOL_ADMIN_KEY,
-            )
-            .check(&Sender::new(&info))?;
+            let loaded_config = Config::load(deps.storage)?;
+
+            access_control::check(
+                &LeaseCodeAdminPermission::new(loaded_config.lease_code_admin()),
+                &Sender::new(&info),
+            )?;
 
             Config::update_lease_code(deps.storage, new_lease_code)
                 .map(|()| PlatformResponse::default())
@@ -139,11 +137,12 @@ pub fn execute(
         ExecuteMsg::Burn { amount } => lender::try_withdraw::<LpnCurrency>(deps, env, info, amount)
             .map(response::response_only_messages),
         ExecuteMsg::CloseAllDeposits() => {
-            SingleUserAccess::new(
-                deps.storage.deref_mut(),
-                crate::access_control::PROTOCOL_ADMIN_KEY,
-            )
-            .check(&Sender::new(&info))?;
+            let loaded_config = Config::load(deps.storage)?;
+
+            access_control::check(
+                &LeaseCodeAdminPermission::new(loaded_config.lease_code_admin()),
+                &Sender::new(&info),
+            )?;
 
             assert!(
                 borrow::query_empty::<LpnCurrency>(deps.storage),

@@ -42,6 +42,12 @@ pub(crate) trait ConfigManagement
 where
     Self: Sized,
 {
+    fn load_config(&self) -> ContractResult<Config> {
+        Err(ContractError::unsupported_operation(
+            "Configuration loading is not supported in this state!",
+        ))
+    }
+
     fn try_update_config(
         self,
         _: Timestamp,
@@ -65,6 +71,14 @@ enum StateEnum {
 pub(crate) struct State(StateEnum);
 
 impl ConfigManagement for State {
+    fn load_config(&self) -> ContractResult<Config> {
+        match &self.0 {
+            StateEnum::OpenIca(ica) => ica.load_config(),
+            StateEnum::Idle(idle) => idle.load_config(),
+            StateEnum::BuyBack(buy_back) => buy_back.load_config(),
+        }
+    }
+    
     fn try_update_config(
         self,
         now: Timestamp,

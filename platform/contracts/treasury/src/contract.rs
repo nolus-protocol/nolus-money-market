@@ -1,6 +1,4 @@
-use std::ops::{Deref, DerefMut};
-
-use access_control::{Sender, SingleUserAccess};
+use access_control::Sender;
 use admin_contract::msg::{
     ProtocolQueryResponse, ProtocolsQueryResponse, QueryMsg as ProtocolsRegistry,
 };
@@ -16,7 +14,7 @@ use sdk::{
         entry_point, to_json_binary,
     },
 };
-use timealarms::stub::TimeAlarmsRef;
+use timealarms::stub::{TimeAlarmDelivery, TimeAlarmsRef};
 use versioning::{
     PlatformMigrationMessage, PlatformPackageRelease, UpdatablePackage as _, VersionSegment,
     package_name, package_version,
@@ -77,14 +75,16 @@ pub fn execute(
 ) -> ContractResult<CwResponse> {
     match msg {
         ExecuteMsg::TimeAlarm {} => {
-            SingleUserAccess::new(
-                deps.storage.deref(),
-                crate::access_control::TIMEALARMS_NAMESPACE,
-            )
-            .check(&Sender::new(&info))?;
+            let config = Config::load(storage)?;
 
-            try_dispatch(deps.storage, deps.querier, &env, info.sender)
-                .map(response::response_only_messages)
+            access_control::check(
+                &TimeAlarmDelivery::new(config.timealarms()),
+                &Sender::new(&info),
+            )
+            .and_then(|()| {
+                try_dispatch(deps.storage, deps.querier, &env, info.sender)
+            })
+            .map(response::response_only_messages)
         }
     }
     .inspect_err(platform_error::log(deps.api))
@@ -235,15 +235,14 @@ fn setup_dispatching(
     platform::contract::validate_addr(querier, &msg.timealarms)
         .map_err(ContractError::ValidateTimeAlarmsAddr)?;
 
-    SingleUserAccess::new(
-        storage.deref_mut(),
-        crate::access_control::TIMEALARMS_NAMESPACE,
+    Config::new(
+        msg.cadence_hours,
+        msg.protocols_registry,
+        msg.tvl_to_apr,
+        TimeAlarmsRef::new(msg.timealarms, querier)?,
     )
-    .grant_to(&msg.timealarms)?;
-
-    Config::new(msg.cadence_hours, msg.protocols_registry, msg.tvl_to_apr)
-        .store(storage)
-        .map_err(ContractError::SaveConfig)?;
+    .store(storage)
+    .map_err(ContractError::SaveConfig)?;
     DispatchLog::update(storage, env.block.time)?;
 
     setup_alarm(
