@@ -1,7 +1,8 @@
 use std::ops::DerefMut as _;
 use serde::Serialize;
 
-use access_control::permissions::{LeaseCodeAdminPermission, SingleUserAccess};
+use access_control::{Sender, permissions::LeaseCodeAdminPermission};
+use currency::CurrencyDef;
 use currencies::{
     Lpn as LpnCurrency, Lpns as LpnCurrencies, PaymentGroup, Stable as StableCurrency,
 };
@@ -106,7 +107,7 @@ pub fn execute(
             
             access_control::check(
                 &LeaseCodeAdminPermission::new(loaded_config.lease_code_admin()),
-                &info.sender,
+                &Sender::new(&info),
             )?;
 
             Config::update_lease_code(deps.storage, new_lease_code)
@@ -174,12 +175,13 @@ pub fn execute(
         )
         .map(response::response_only_messages),
         ExecuteMsg::CloseAllDeposits() => {
-            SingleUserAccess::new(
-                deps.storage.deref_mut(),
-                crate::access_control::PROTOCOL_ADMIN_KEY,
-            )
-            .check(&info)?;
+            let loaded_config = Config::load(deps.storage)?;
 
+            access_control::check(
+                &LeaseCodeAdminPermission::new(loaded_config.lease_code_admin()),
+                &Sender::new(&info),
+            )?;
+            
             assert!(
                 borrow::query_empty::<LpnCurrency>(deps.storage),
                 "There is/are active loan(s)! The protocol admin should have checked it first!"

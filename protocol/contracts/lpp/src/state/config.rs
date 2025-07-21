@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use finance::percent::Percent100;
 use platform::contract::Code;
-use sdk::{cosmwasm_std::{Addr, Storage}, cw_storage_plus::Item};
+use sdk::{cosmwasm_std::Storage, cw_storage_plus::Item};
 
 use crate::{borrow::InterestRate, config::Config as ApiConfig, contract::Result};
 
@@ -25,13 +25,13 @@ impl Config {
 
     pub fn update_lease_code(storage: &mut dyn Storage, lease_code_new: Code) -> Result<()> {
         Self::update_field(storage, |config| {
-            ApiConfig::new(lease_code_new, *config.borrow_rate(), config.min_utilization(), config.lease_code_admin())
+            ApiConfig::new(lease_code_new, *config.borrow_rate(), config.min_utilization(), config.lease_code_admin().clone())
         })
     }
 
     pub fn update_borrow_rate(storage: &mut dyn Storage, borrow_rate: InterestRate) -> Result<()> {
         Self::update_field(storage, |config| {
-            ApiConfig::new(config.lease_code(), borrow_rate, config.min_utilization(), config.lease_code_admin())
+            ApiConfig::new(config.lease_code(), borrow_rate, config.min_utilization(), config.lease_code_admin().clone())
         })
     }
 
@@ -40,7 +40,7 @@ impl Config {
         min_utilization: Percent100,
     ) -> Result<()> {
         Self::update_field(storage, |config| {
-            ApiConfig::new(config.lease_code(), *config.borrow_rate(), min_utilization, config.lease_code_admin())
+            ApiConfig::new(config.lease_code(), *config.borrow_rate(), min_utilization, config.lease_code_admin().clone())
         })
     }
 

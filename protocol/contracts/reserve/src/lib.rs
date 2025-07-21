@@ -1,5 +1,3 @@
-#[cfg(feature = "contract")]
-mod access_control;
 pub mod api;
 #[cfg(feature = "contract")]
 pub mod contract;

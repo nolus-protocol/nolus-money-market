@@ -82,10 +82,10 @@ pub fn execute(
         ExecuteMsg::TimeAlarm {} => {
             try_load_config(deps.storage)
             .and_then(|config| {
-                access_control::check(
+                Ok(access_control::check(
                     &TimeAlarmDelivery::new(config.timealarms()),
                     &Sender::new(&info),
-                )
+                ))
             })
             .and_then(|()| {
                 try_dispatch(deps.storage, deps.querier, &env, info.sender)
@@ -248,7 +248,7 @@ fn setup_dispatching(
         msg.cadence_hours,
         msg.protocols_registry,
         msg.tvl_to_apr,
-        msg.timealarms,
+        TimeAlarmsRef::new(msg.timealarms, querier),
     )
     .store(storage)
     .map_err(ContractError::SaveConfig)?;

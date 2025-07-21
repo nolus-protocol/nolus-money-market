@@ -97,7 +97,7 @@ pub fn execute(
     match msg {
         ExecuteMsg::NewLeaseCode(code) => access_control::check(
             &LeaseCodeAdminPermission::new(&lease_code_admin),
-            &info.sender,
+            &Sender::new(&info),
         )
         .check(&Sender::new(&info))
         .map_err(Into::into)
