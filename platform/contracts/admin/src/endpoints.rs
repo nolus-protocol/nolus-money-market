@@ -43,7 +43,7 @@ pub fn instantiate(
         contracts,
     }: InstantiateMsg,
 ) -> ContractResult<CwResponse> {
-    Config::new(dex_admin).store(deps.storage)?;
+    Config::new(dex_admin.clone()).store(deps.storage)?;
 
     contracts.validate(deps.querier)?;
 
@@ -220,14 +220,14 @@ fn instantiate_reply(
 }
 
 fn ensure_sender_is_owner(storage: &mut dyn Storage, info: &MessageInfo) -> ContractResult<()> {
-    Config::load(storage)
-        .and_then(|config| {
-            access_control::check(
-                &ContractOwnerPermission::new(config.contract_owner()),
-                &Sender::new(info),
-            )
-        })
-        .map_err(Into::into)
+    let config = Config::load(storage)?;
+    
+    access_control::check(
+        &ContractOwnerPermission::new(config.contract_owner()),
+        &Sender::new(info),
+    )?;
+    
+    Ok(())
 }
 
 fn register_protocol(

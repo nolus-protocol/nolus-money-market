@@ -1,4 +1,4 @@
-use sdk::{cosmwasm_std::{Addr, MessageInfo}};
+use sdk::cosmwasm_std::{Addr, MessageInfo};
 
 use self::error::{Error, Result};
 

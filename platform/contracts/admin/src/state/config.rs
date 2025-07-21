@@ -32,7 +32,7 @@ impl Config {
 
 #[cfg(test)]
 mod test {
-    use cosmwasm_std::{Storage, testing::MockStorage};
+    use cosmwasm_std::{Addr, testing::MockStorage};
 
     use super::Config;
 
