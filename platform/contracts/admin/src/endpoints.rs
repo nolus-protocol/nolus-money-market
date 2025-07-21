@@ -35,7 +35,7 @@ const CURRENT_RELEASE: PlatformPackageRelease = PlatformPackageRelease::current(
 
 #[entry_point]
 pub fn instantiate(
-    mut deps: DepsMut<'_>,
+    deps: DepsMut<'_>,
     _: Env,
     _: MessageInfo,
     InstantiateMsg {
@@ -221,12 +221,12 @@ fn instantiate_reply(
 
 fn ensure_sender_is_owner(storage: &mut dyn Storage, info: &MessageInfo) -> ContractResult<()> {
     let config = Config::load(storage)?;
-    
+
     access_control::check(
         &ContractOwnerPermission::new(config.contract_owner()),
         &Sender::new(info),
     )?;
-    
+
     Ok(())
 }
 
