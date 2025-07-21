@@ -19,7 +19,7 @@ COPY \
   "/bin/cargo-each" \
   "/bin/"
 
-COPY \
-  --chmod="0555" \
-  "./scripts/for-each-workspace.sh" \
-  "/bin/"
+#COPY \
+#  --chmod="0555" \
+#  "./scripts/for-each-workspace.sh" \
+#  "/bin/"

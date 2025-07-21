@@ -1,0 +1,43 @@
+name: "Build container image"
+description: "Action for building a container image, or restoring it from
+  cache if such exists."
+author: "The Dev Nolus Team <dev@nolus.io>"
+
+outputs:
+  image-id:
+    description: ""
+    value: |-
+      ${{ steps.check-unused-deps.outputs.image-id }}
+
+runs:
+  using: "composite"
+  steps:
+    - id: "rust-nightly-ci"
+      uses: "./.github/actions/rust-nightly-ci-container"
+    - id: "cargo-udeps"
+      uses: "./.github/actions/cargo-udeps-container"
+    - id: "check-unused-deps"
+      env:
+        CARGO_UDEPS_ID: |-
+          ${{ steps.cargo-udeps.outputs.image-id }}
+        RUST_CI_ID: |-
+          ${{ steps.rust-nightly-ci.outputs.image-id }}
+      uses: "./.github/actions/build-container"
+      with:
+        additional-digest-data: |-
+          ${{ steps.cargo-udeps.outputs.image-hash }}
+          ${{ steps.rust-nightly-ci.outputs.image-hash }}
+        additional-digest-targets: |-
+          ./ci/images/check-unused-deps.Containerfile
+          ./ci/scripts/check-unused-deps.sh
+        build-step: |-
+          "build" \
+            "check-unused-deps" \
+            "check-unused-deps" \
+            -- \
+            --build-arg "cargo_udeps_id=${CARGO_UDEPS_ID:?}" \
+            --build-arg "rust_ci_id=${RUST_CI_ID:?}" \
+            --tag "localhost/local/check-unused-deps"
+        disable-caching: true
+        image-friendly-name: "check-unused-deps"
+        image-name: "localhost/local/check-unused-deps"

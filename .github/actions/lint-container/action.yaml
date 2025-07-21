@@ -24,6 +24,8 @@ runs:
           ${{ steps.rust-stable-ci.outputs.image-hash }}
         additional-digest-targets: |-
           ./ci/images/lint.Containerfile
+          ./ci/scripts/lint.internal.sh
+          ./ci/scripts/lint.sh
         build-step: |-
           "build" \
             "lint" \

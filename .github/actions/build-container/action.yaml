@@ -106,6 +106,7 @@ runs:
 
         additional_targets_hash="$(
           "sha256sum" <<EOF
+        ./.github/
         ${additional_targets_hash?}
         EOF
         )"
@@ -113,7 +114,6 @@ runs:
         hash="$(
           "sha256sum" \
             <<EOF
-        $("hash_target" "./.github/")
         ${additional_digest_data?}
         ${additional_targets_hash:?}
         ${build_step:?}

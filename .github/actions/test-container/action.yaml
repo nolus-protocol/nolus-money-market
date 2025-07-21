@@ -24,6 +24,7 @@ runs:
           ${{ steps.rust-stable-ci.outputs.image-hash }}
         additional-digest-targets: |-
           ./ci/images/test.Containerfile
+          ./ci/scripts/test.sh
         build-step: |-
           "build" \
             "test" \

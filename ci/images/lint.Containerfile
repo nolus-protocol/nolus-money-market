@@ -2,8 +2,6 @@ ARG rust_ci_id
 
 FROM ${rust_ci_id:?}
 
-RUN ["rustup", "component", "add", "clippy"]
-
 COPY \
   --chmod="0555" \
   "./scripts/lint.sh" \
