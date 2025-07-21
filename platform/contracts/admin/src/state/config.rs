@@ -1,8 +1,9 @@
 use serde::{Deserialize, Serialize};
 
+use cosmwasm_std::Addr;
 use sdk::{cosmwasm_std::Storage, cw_storage_plus::Item};
 
-use crate::error::Result;
+use crate::result::Result;
 
 #[derive(Serialize, Deserialize, Clone, Eq, PartialEq)]
 pub struct Config {
