@@ -170,8 +170,6 @@ runs:
     - env:
         container_path: |-
           ${{ steps.values.outputs.path }}
-        image_friendly_name: |-
-          ${{ inputs.image-friendly-name }}
       if: |-
         fromJSON(steps.values.outputs.should-run)
           && steps.cache-restore.outputs.cache-hit == 'true'
@@ -184,10 +182,6 @@ runs:
     - env:
         container_path: |-
           ${{ steps.values.outputs.path }}
-        image_friendly_name: |-
-          ${{ inputs.image-friendly-name }}
-        image_name: |-
-          ${{ inputs.image-name }}
       id: "build"
       if: |-
         fromJSON(steps.values.outputs.should-run)
