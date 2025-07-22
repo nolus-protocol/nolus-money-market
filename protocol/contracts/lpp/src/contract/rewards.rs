@@ -1,14 +1,12 @@
+use currency::CurrencyDef;
 use finance::coin::Coin;
 use lpp_platform::NLpn;
-use serde::Serialize;
-
-use currency::CurrencyDef;
 use platform::{
-    bank::{self, BankAccount},
+    bank::{self, BankAccount, BankAccountView},
     batch::Batch,
     message::Response as MessageResponse,
 };
-use sdk::cosmwasm_std::{Addr, Deps, DepsMut, Env, MessageInfo, Storage};
+use sdk::cosmwasm_std::{Addr, DepsMut, Env, MessageInfo, Storage, Timestamp};
 
 use crate::{
     lpp::{LiquidityPool, LppBalances},
@@ -55,11 +53,16 @@ pub(super) fn try_claim_rewards(
     Ok(batch.into())
 }
 
-pub(super) fn query_lpp_balance<Lpn>(deps: Deps<'_>, env: Env) -> Result<LppBalances<Lpn>>
+pub(super) fn query_lpp_balance<Lpn, Bank>(
+    storage: &dyn Storage,
+    bank: &Bank,
+    now: &Timestamp,
+) -> Result<LppBalances<Lpn>>
 where
-    Lpn: 'static + CurrencyDef + Serialize,
+    Lpn: 'static + CurrencyDef,
+    Bank: BankAccountView,
 {
-    LiquidityPool::<Lpn>::load(deps.storage).and_then(|lpp| lpp.query_lpp_balance(&deps, &env))
+    LiquidityPool::<_, Bank>::load(storage, bank).and_then(|lpp| lpp.query_lpp_balance(now))
 }
 
 pub(super) fn query_total_rewards(storage: &dyn Storage) -> Result<Coin<NLpn>> {
@@ -77,11 +80,15 @@ pub(super) fn query_rewards(storage: &dyn Storage, addr: Addr) -> Result<Rewards
 #[cfg(test)]
 mod test {
     use access_control::ContractOwnerAccess;
-    use finance::percent::{Percent, bound::BoundToHundredPercent};
-    use platform::contract::Code;
+    use finance::{
+        coin::Coin,
+        percent::{Percent, bound::BoundToHundredPercent},
+        zero::Zero,
+    };
+    use platform::{bank::testing::MockBankView, contract::Code};
     use sdk::cosmwasm_std::{
         Addr,
-        testing::{MOCK_CONTRACT_ADDR, mock_dependencies, mock_env},
+        testing::{mock_dependencies, mock_env},
     };
 
     use crate::{
@@ -105,23 +112,28 @@ mod test {
         let mut deps = mock_dependencies();
         let env = mock_env();
 
-        let mut lpp_balance = 0;
-        let deposit = 20_000;
+        const INITIAL_LPP_BALANCE: Coin<TheCurrency> = Coin::ZERO;
+        const DEPOSIT: Coin<TheCurrency> = Coin::new(20_000);
 
+        //TODO check if this grant is really needed
         ContractOwnerAccess::new(deps.as_mut().storage)
             .grant_to(&Addr::unchecked("admin"))
             .unwrap();
 
-        LiquidityPool::<TheCurrency>::new(Config::new(
-            Code::unchecked(1000u64),
-            InterestRate::new(
-                BASE_INTEREST_RATE,
-                UTILIZATION_OPTIMAL,
-                ADDON_OPTIMAL_INTEREST_RATE,
-            )
-            .expect("Couldn't construct interest rate value!"),
-            DEFAULT_MIN_UTILIZATION,
-        ))
+        let bank = MockBankView::<TheCurrency, TheCurrency>::only_balance(INITIAL_LPP_BALANCE);
+        LiquidityPool::<TheCurrency, _>::new(
+            Config::new(
+                Code::unchecked(1000u64),
+                InterestRate::new(
+                    BASE_INTEREST_RATE,
+                    UTILIZATION_OPTIMAL,
+                    ADDON_OPTIMAL_INTEREST_RATE,
+                )
+                .expect("Couldn't construct interest rate value!"),
+                DEFAULT_MIN_UTILIZATION,
+            ),
+            &bank,
+        )
         .save(deps.as_mut().storage)
         .unwrap();
 
@@ -130,12 +142,16 @@ mod test {
         let response = super::try_claim_rewards(deps.as_mut(), env.clone(), info, None);
         assert_eq!(response, Err(ContractError::NoDeposit {}));
 
-        lpp_balance += deposit;
-        let info = test::lender_msg_with_funds(deposit);
-        deps.querier
-            .bank
-            .update_balance(MOCK_CONTRACT_ADDR, vec![test::cwcoin(lpp_balance)]);
-        lender::try_deposit::<TheCurrency>(deps.as_mut(), env.clone(), info).unwrap();
+        let bank =
+            MockBankView::<TheCurrency, TheCurrency>::only_balance(INITIAL_LPP_BALANCE + DEPOSIT);
+
+        lender::try_deposit::<TheCurrency, _>(
+            &mut deps.storage,
+            &bank,
+            env.clone(),
+            test::lender_msg_with_funds(DEPOSIT),
+        )
+        .unwrap();
 
         // pending rewards == 0
         let info = test::lender_msg_no_funds();

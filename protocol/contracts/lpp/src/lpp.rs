@@ -1,3 +1,4 @@
+use cosmwasm_std::QuerierWrapper;
 use currencies::Lpns;
 use currency::{CurrencyDef, MemberOf};
 use finance::{
@@ -9,8 +10,8 @@ use finance::{
     zero::Zero,
 };
 use lpp_platform::NLpn;
-use platform::{bank, contract};
-use sdk::cosmwasm_std::{Addr, Deps, DepsMut, Env, QuerierWrapper, Storage, Timestamp};
+use platform::{bank::BankAccountView, contract};
+use sdk::cosmwasm_std::{Addr, Storage, Timestamp};
 
 use crate::{
     config::Config as ApiConfig,
@@ -22,6 +23,7 @@ use crate::{
     state::{Config, Deposit, Total},
 };
 
+#[cfg_attr(test, derive(Debug, PartialEq))]
 pub struct LppBalances<Lpn> {
     pub(crate) balance: Coin<Lpn>,
     pub(crate) total_principal_due: Coin<Lpn>,
@@ -53,19 +55,21 @@ where
 // and LiquidityPool and Loan. The contract API implementation should depend on
 // Deposit and Loan which in turn may use LiquidityPool.
 
-pub(crate) struct LiquidityPool<Lpn> {
+pub(crate) struct LiquidityPool<'bank, Lpn, Bank> {
     config: ApiConfig,
     total: Total<Lpn>,
+    bank: &'bank Bank,
 }
 
-impl<Lpn> LiquidityPool<Lpn>
+impl<'bank, Lpn, Bank> LiquidityPool<'bank, Lpn, Bank>
 where
     Lpn: 'static,
 {
-    pub fn new(config: ApiConfig) -> Self {
+    pub fn new(config: ApiConfig, bank: &'bank Bank) -> Self {
         Self {
             config,
             total: Total::new(),
+            bank,
         }
     }
 
@@ -74,22 +78,26 @@ where
             .and_then(|()| self.total.store(storage).map_err(Into::into))
     }
 
-    pub fn load(storage: &dyn Storage) -> Result<Self> {
+    pub fn load(storage: &dyn Storage, bank: &'bank Bank) -> Result<Self> {
         let config = Config::load(storage)?;
         let total = Total::load(storage)?;
 
-        Ok(LiquidityPool { config, total })
+        Ok(LiquidityPool {
+            config,
+            total,
+            bank,
+        })
     }
 }
 
-impl<Lpn> LiquidityPool<Lpn>
+impl<Lpn, Bank> LiquidityPool<'_, Lpn, Bank>
 where
     Lpn: 'static + CurrencyDef,
+    Bank: BankAccountView,
 {
     pub fn deposit_capacity(
         &self,
-        querier: QuerierWrapper<'_>,
-        env: &Env,
+        now: &Timestamp,
         pending_deposit: Coin<Lpn>,
     ) -> Result<Option<Coin<Lpn>>> {
         let min_utilization: Percent = self.config.min_utilization().percent();
@@ -97,9 +105,9 @@ where
         if min_utilization.is_zero() {
             Ok(None)
         } else {
-            let total_due: Coin<Lpn> = self.total_due(&env.block.time);
+            let total_due: Coin<Lpn> = self.total_due(now);
 
-            self.commited_balance(&env.contract.address, querier, pending_deposit)
+            self.commited_balance(pending_deposit)
                 .map(|balance: Coin<Lpn>| {
                     if self.utilization(balance, total_due) > min_utilization {
                         // a followup from the above true value is (total_due * 100 / min_utilization) > (balance + total_due)
@@ -116,12 +124,12 @@ where
         }
     }
 
-    pub fn query_lpp_balance(&self, deps: &Deps<'_>, env: &Env) -> Result<LppBalances<Lpn>> {
-        let balance = self.uncommited_balance(&env.contract.address, deps.querier)?;
+    pub fn query_lpp_balance(&self, now: &Timestamp) -> Result<LppBalances<Lpn>> {
+        let balance = self.uncommited_balance()?;
 
         let total_principal_due = self.total.total_principal_due();
 
-        let total_interest_due = self.total.total_interest_due_by_now(&env.block.time);
+        let total_interest_due = self.total.total_interest_due_by_now(now);
 
         Ok(LppBalances {
             balance,
@@ -132,21 +140,16 @@ where
 
     pub fn calculate_price(
         &self,
-        deps: &Deps<'_>,
-        env: &Env,
+        storage: &dyn Storage,
+        now: &Timestamp,
         pending_deposit: Coin<Lpn>,
     ) -> Result<NTokenPrice<Lpn>> {
-        let balance_nlpn = Deposit::balance_nlpn(deps.storage)?;
+        let balance_nlpn = Deposit::balance_nlpn(storage)?;
 
         let price = if balance_nlpn.is_zero() {
             ApiConfig::initial_derivative_price()
         } else {
-            price::total_of(balance_nlpn).is(self.total_lpn(
-                deps.querier,
-                &env.contract.address,
-                &env.block.time,
-                pending_deposit,
-            )?)
+            price::total_of(balance_nlpn).is(self.total_lpn(now, pending_deposit)?)
         };
 
         debug_assert!(
@@ -157,35 +160,33 @@ where
         Ok(price)
     }
 
-    pub fn validate_lease_addr(&self, deps: &Deps<'_>, lease_addr: &Addr) -> Result<()> {
-        contract::validate_code_id(deps.querier, lease_addr, self.config.lease_code())
+    pub fn validate_lease_addr(
+        &self,
+        querier: QuerierWrapper<'_>,
+        lease_addr: &Addr,
+    ) -> Result<()> {
+        contract::validate_code_id(querier, lease_addr, self.config.lease_code())
             .map_err(ContractError::from)
     }
 
     pub fn withdraw_lpn(
         &self,
-        deps: &Deps<'_>,
-        env: &Env,
+        storage: &dyn Storage,
+        now: &Timestamp,
         amount_nlpn: Coin<NLpn>,
     ) -> Result<Coin<Lpn>> {
-        let price = self.calculate_price(deps, env, Coin::ZERO)?;
+        let price = self.calculate_price(storage, now, Coin::ZERO)?;
         let amount_lpn = price::total(amount_nlpn, price);
 
-        if self.uncommited_balance(&env.contract.address, deps.querier)? < amount_lpn {
+        if self.uncommited_balance()? < amount_lpn {
             Err(ContractError::NoLiquidity {})
         } else {
             Ok(amount_lpn)
         }
     }
 
-    pub fn query_quote(
-        &self,
-        quote: Coin<Lpn>,
-        account: &Addr,
-        querier: QuerierWrapper<'_>,
-        now: &Timestamp,
-    ) -> Result<Option<Percent>> {
-        let balance = self.uncommited_balance(account, querier)?;
+    pub fn query_quote(&self, quote: Coin<Lpn>, now: &Timestamp) -> Result<Option<Percent>> {
+        let balance = self.uncommited_balance()?;
 
         if quote > balance {
             return Ok(None);
@@ -204,8 +205,8 @@ where
 
     pub(super) fn try_open_loan(
         &mut self,
-        deps: &mut DepsMut<'_>,
-        env: &Env,
+        storage: &mut dyn Storage,
+        now: Timestamp,
         lease_addr: Addr,
         amount: Coin<Lpn>,
     ) -> Result<Loan<Lpn>> {
@@ -213,13 +214,10 @@ where
             return Err(ContractError::ZeroLoanAmount);
         }
 
-        let now = env.block.time;
-
-        let annual_interest_rate =
-            match self.query_quote(amount, &env.contract.address, deps.querier, &now)? {
-                Some(rate) => Ok(rate),
-                None => Err(ContractError::NoLiquidity {}),
-            }?;
+        let annual_interest_rate = match self.query_quote(amount, &now)? {
+            Some(rate) => Ok(rate),
+            None => Err(ContractError::NoLiquidity {}),
+        }?;
 
         let loan = Loan {
             principal_due: amount,
@@ -227,11 +225,11 @@ where
             interest_paid: now,
         };
 
-        Repo::open(deps.storage, lease_addr, &loan)?;
+        Repo::open(storage, lease_addr, &loan)?;
 
         self.total
             .borrow(now, amount, annual_interest_rate)?
-            .store(deps.storage)?;
+            .store(storage)?;
 
         Ok(loan)
     }
@@ -239,62 +237,48 @@ where
     /// return amount of lpp currency to pay back to lease_addr
     pub(super) fn try_repay_loan(
         &mut self,
-        deps: &mut DepsMut<'_>,
-        env: &Env,
+        storage: &mut dyn Storage,
+        now: Timestamp,
         lease_addr: Addr,
         repay_amount: Coin<Lpn>,
     ) -> Result<Coin<Lpn>> {
-        let mut loan = Repo::load(deps.storage, lease_addr.clone())?;
+        let mut loan = Repo::load(storage, lease_addr.clone())?;
         let loan_annual_interest_rate = loan.annual_interest_rate;
-        let payment = loan.repay(&env.block.time, repay_amount);
-        Repo::save(deps.storage, lease_addr, loan)?;
+        let payment = loan.repay(&now, repay_amount);
+        Repo::save(storage, lease_addr, loan)?;
 
         self.total
             .repay(
-                env.block.time,
+                now,
                 payment.interest,
                 payment.principal,
                 loan_annual_interest_rate,
             )
-            .store(deps.storage)?;
+            .store(storage)?;
 
         Ok(payment.excess)
     }
 
-    /// The balance of this pool that may include not yet commited received amounts
-    fn uncommited_balance(&self, account: &Addr, querier: QuerierWrapper<'_>) -> Result<Coin<Lpn>> {
-        bank::balance(account, querier).map_err(Into::into)
+    fn uncommited_balance(&self) -> Result<Coin<Lpn>> {
+        self.bank.balance().map_err(Into::into)
     }
 
-    /// The balance of this pool as of the beginning of the ongoing transaction
-    fn commited_balance(
-        &self,
-        account: &Addr,
-        querier: QuerierWrapper<'_>,
-        pending_deposit: Coin<Lpn>,
-    ) -> Result<Coin<Lpn>> {
-        self.uncommited_balance(account, querier)
-            .map(|balance: Coin<Lpn>| {
-                debug_assert!(
-                    pending_deposit <= balance,
-                    "Pending deposit {{{pending_deposit:?}}} > Current Balance: {{{balance}}}!"
-                );
-                balance - pending_deposit
-            })
+    fn commited_balance(&self, pending_deposit: Coin<Lpn>) -> Result<Coin<Lpn>> {
+        self.uncommited_balance().map(|balance: Coin<Lpn>| {
+            debug_assert!(
+                pending_deposit <= balance,
+                "Pending deposit {{{pending_deposit:?}}} > Current Balance: {{{balance}}}!"
+            );
+            balance - pending_deposit
+        })
     }
 
     fn total_due(&self, now: &Timestamp) -> Coin<Lpn> {
         self.total.total_principal_due() + self.total.total_interest_due_by_now(now)
     }
 
-    fn total_lpn(
-        &self,
-        querier: QuerierWrapper<'_>,
-        account: &Addr,
-        now: &Timestamp,
-        pending_deposit: Coin<Lpn>,
-    ) -> Result<Coin<Lpn>> {
-        self.commited_balance(account, querier, pending_deposit)
+    fn total_lpn(&self, now: &Timestamp, pending_deposit: Coin<Lpn>) -> Result<Coin<Lpn>> {
+        self.commited_balance(pending_deposit)
             .map(|balance: Coin<Lpn>| balance + self.total_due(now))
     }
 
@@ -312,24 +296,27 @@ mod test {
     use access_control::ContractOwnerAccess;
     use currencies::Lpn;
     use finance::{
-        coin::{Amount, Coin},
+        coin::Coin,
         duration::Duration,
+        fraction::Fraction,
         percent::{Percent, bound::BoundToHundredPercent},
         price::{self, Price},
         zero::Zero,
     };
     use lpp_platform::NLpn;
-    use platform::{coin_legacy, contract::Code};
+    use platform::{bank::testing::MockBankView, contract::Code};
     use sdk::cosmwasm_std::{
-        Addr, Coin as CwCoin, DepsMut, Timestamp,
-        testing::{self, MOCK_CONTRACT_ADDR},
+        Addr, Storage, Timestamp,
+        testing::{self, MockStorage},
     };
 
     use crate::{
         borrow::InterestRate,
         config::Config as ApiConfig,
         contract::ContractError,
+        loan::Loan,
         loans::Repo,
+        lpp::LppBalances,
         state::{Config, Deposit, Total},
     };
 
@@ -343,107 +330,106 @@ mod test {
     const DEFAULT_MIN_UTILIZATION: BoundToHundredPercent = BoundToHundredPercent::ZERO;
 
     #[test]
-    fn test_balance() {
-        let balance_mock = coin_cw(10_000_000);
-        let mut deps = testing::mock_dependencies_with_balance(&[balance_mock.clone()]);
-        let env = testing::mock_env();
+    fn new_store_load() {
+        let bank = MockBankView::<TheCurrency, TheCurrency>::only_balance(Coin::ZERO);
         let lease_code_id = Code::unchecked(123);
-        let admin = Addr::unchecked("admin");
+        let config = ApiConfig::new(
+            lease_code_id,
+            InterestRate::new(
+                BASE_INTEREST_RATE,
+                UTILIZATION_OPTIMAL,
+                ADDON_OPTIMAL_INTEREST_RATE,
+            )
+            .expect("Couldn't construct interest rate value!"),
+            DEFAULT_MIN_UTILIZATION,
+        );
+        let lpp = LiquidityPool::<'_, TheCurrency, _>::new(config, &bank);
 
-        grant_admin_access(deps.as_mut(), &admin);
+        let mut store = MockStorage::new();
+        let now = Timestamp::default();
+        lpp.save(&mut store).unwrap();
+        let lpp = LiquidityPool::<'_, TheCurrency, _>::load(&store, &bank).unwrap();
+        assert_eq!(
+            Price::identity(),
+            lpp.calculate_price(&store, &now, Coin::ZERO).unwrap()
+        );
 
-        Config::store(
-            &ApiConfig::new(
-                lease_code_id,
-                InterestRate::new(
-                    BASE_INTEREST_RATE,
-                    UTILIZATION_OPTIMAL,
-                    ADDON_OPTIMAL_INTEREST_RATE,
-                )
-                .expect("Couldn't construct interest rate value!"),
-                DEFAULT_MIN_UTILIZATION,
-            ),
-            deps.as_mut().storage,
-        )
-        .expect("Failed to store Config!");
-        Total::<TheCurrency>::new()
-            .store(deps.as_mut().storage)
-            .expect("can't initialize Total");
+        assert_eq!(None, lpp.deposit_capacity(&now, Coin::ZERO,).unwrap());
+        assert_eq!(
+            LppBalances {
+                balance: Coin::ZERO,
+                total_principal_due: Coin::ZERO,
+                total_interest_due: Coin::ZERO
+            },
+            lpp.query_lpp_balance(&now).unwrap()
+        );
+    }
 
-        let lpp = LiquidityPool::<TheCurrency>::load(deps.as_mut().storage)
-            .expect("can't load LiquidityPool");
+    #[test]
+    fn test_balance() {
+        let lease_code_id = Code::unchecked(123);
+        let balance = Coin::new(10_000_000);
 
-        let balance = lpp
-            .uncommited_balance(&env.contract.address, deps.as_ref().querier)
-            .expect("can't get balance");
+        let config = ApiConfig::new(
+            lease_code_id,
+            InterestRate::new(
+                BASE_INTEREST_RATE,
+                UTILIZATION_OPTIMAL,
+                ADDON_OPTIMAL_INTEREST_RATE,
+            )
+            .expect("Couldn't construct interest rate value!"),
+            DEFAULT_MIN_UTILIZATION,
+        );
+        let bank = MockBankView::<TheCurrency, TheCurrency>::only_balance(balance);
+        let lpp = LiquidityPool::<TheCurrency, _>::new(config, &bank);
 
-        assert_eq!(balance, balance_mock.amount.into());
+        let balance_lpp = lpp.uncommited_balance().expect("can't get balance");
+
+        assert_eq!(balance_lpp, balance);
     }
 
     #[test]
     fn test_query_quote() {
-        let balance_mock = coin_cw(10_000_000);
-        let mut deps = testing::mock_dependencies_with_balance(&[balance_mock.clone()]);
-        let mut env = testing::mock_env();
-        let admin = Addr::unchecked("admin");
+        const BALANCE: Coin<TheCurrency> = Coin::new(10_000_000);
+        const DEPOSIT_AMOUNT: Coin<TheCurrency> = Coin::new(7_000_000);
+        let mut store = testing::MockStorage::default();
+
         let loan = Addr::unchecked("loan");
-        env.block.time = Timestamp::from_nanos(0);
+        let now = Timestamp::from_nanos(0);
 
         let lease_code_id = Code::unchecked(123);
 
-        grant_admin_access(deps.as_mut(), &admin);
-
-        Config::store(
-            &ApiConfig::new(
-                lease_code_id,
-                InterestRate::new(
-                    BASE_INTEREST_RATE,
-                    UTILIZATION_OPTIMAL,
-                    ADDON_OPTIMAL_INTEREST_RATE,
-                )
-                .expect("Couldn't construct interest rate value!"),
-                DEFAULT_MIN_UTILIZATION,
-            ),
-            deps.as_mut().storage,
-        )
-        .expect("Failed to store Config!");
-        Total::<TheCurrency>::new()
-            .store(deps.as_mut().storage)
-            .expect("can't initialize Total");
-
-        let mut lpp = LiquidityPool::<TheCurrency>::load(deps.as_mut().storage)
-            .expect("can't load LiquidityPool");
-
-        env.block.time = Timestamp::from_nanos(10);
-
-        let result = lpp
-            .query_quote(
-                Coin::new(7_700_000),
-                &env.contract.address,
-                deps.as_ref().querier,
-                &env.block.time,
+        let bank = MockBankView::<_, TheCurrency>::only_balance(BALANCE);
+        let config = ApiConfig::new(
+            lease_code_id,
+            InterestRate::new(
+                BASE_INTEREST_RATE,
+                UTILIZATION_OPTIMAL,
+                ADDON_OPTIMAL_INTEREST_RATE,
             )
-            .expect("can't query quote")
-            .expect("should return some interest_rate");
+            .expect("Couldn't construct interest rate value!"),
+            DEFAULT_MIN_UTILIZATION,
+        );
+        let mut lpp = LiquidityPool::<TheCurrency, _>::new(config, &bank);
 
-        assert_eq!(result, Percent::from_permille(136));
-
-        lpp.try_open_loan(&mut deps.as_mut(), &env, loan, Coin::new(7_000_000))
+        let now = now + Duration::from_nanos(10); //deliberately hide the variable name
+        assert_eq!(
+            Percent::from_permille(136),
+            lpp.query_quote(Coin::new(7_700_000), &now)
+                .expect("can't query quote")
+                .expect("should return some interest_rate")
+        );
+        lpp.try_open_loan(&mut store, now, loan, DEPOSIT_AMOUNT)
             .expect("can't open loan");
-        deps.querier
-            .bank
-            .update_balance(MOCK_CONTRACT_ADDR, vec![coin_cw(3_000_000)]);
+        lpp.save(&mut store).unwrap();
 
         // wait for a year
-        env.block.time = Timestamp::from_nanos(10 + Duration::YEAR.nanos());
+        let now = now + Duration::YEAR;
+        let bank_past_loan = MockBankView::<_, TheCurrency>::only_balance(BALANCE - DEPOSIT_AMOUNT);
+        let lpp = LiquidityPool::<TheCurrency, _>::load(&store, &bank_past_loan).unwrap();
 
         let result = lpp
-            .query_quote(
-                Coin::new(1_000_000),
-                &env.contract.address,
-                deps.as_ref().querier,
-                &env.block.time,
-            )
+            .query_quote(Coin::new(1_000_000), &now)
             .expect("can't query quote")
             .expect("should return some interest_rate");
 
@@ -452,132 +438,113 @@ mod test {
 
     #[test]
     fn test_open_and_repay_loan() {
-        let lpp_balance: Amount = 10_000_000;
-        let amount = 5_000_000;
+        const LPP_BALANCE: Coin<TheCurrency> = Coin::new(10_000_000);
+        const LOAN_AMOUNT: Coin<TheCurrency> = Coin::new(5_000_000);
 
-        let base_rate = 70;
-        let addon_rate = 20;
-        let optimal_rate = 700;
+        let base_rate = BASE_INTEREST_RATE;
+        let addon_rate = ADDON_OPTIMAL_INTEREST_RATE;
+        let utilization_optimal = UTILIZATION_OPTIMAL;
 
-        let utilization_const = (optimal_rate * 1000) / (1000 - optimal_rate);
-        let utilization_relative = ((lpp_balance - amount) * 1000) / amount;
-        let utilization = utilization_relative.min(utilization_const);
+        let interest_rate = InterestRate::new(base_rate, utilization_optimal, addon_rate).unwrap();
+        let annual_interest_rate = interest_rate.calculate(LOAN_AMOUNT, LPP_BALANCE - LOAN_AMOUNT);
 
-        let annual_interest_rate = Percent::from_permille(
-            (base_rate + ((utilization * addon_rate) / optimal_rate))
-                .try_into()
-                .unwrap(),
-        );
-
-        let mut deps = testing::mock_dependencies_with_balance(&[coin_cw(lpp_balance)]);
-        let mut env = testing::mock_env();
+        let mut store = MockStorage::new();
+        let bank = MockBankView::<TheCurrency, TheCurrency>::only_balance(LPP_BALANCE);
         let admin = Addr::unchecked("admin");
         let lease_addr = Addr::unchecked("loan");
-        env.block.time = Timestamp::from_nanos(0);
+        let now = Timestamp::from_nanos(0);
         let lease_code_id = Code::unchecked(123);
 
-        grant_admin_access(deps.as_mut(), &admin);
+        grant_admin_access(&mut store, &admin);
 
-        Config::store(
-            &ApiConfig::new(
-                lease_code_id,
-                InterestRate::new(
-                    BASE_INTEREST_RATE,
-                    UTILIZATION_OPTIMAL,
-                    ADDON_OPTIMAL_INTEREST_RATE,
-                )
-                .expect("Couldn't construct interest rate value!"),
-                DEFAULT_MIN_UTILIZATION,
-            ),
-            deps.as_mut().storage,
-        )
-        .expect("Failed to store Config!");
-        Total::<TheCurrency>::new()
-            .store(deps.as_mut().storage)
-            .expect("can't initialize Total");
+        let config = ApiConfig::new(lease_code_id, interest_rate, DEFAULT_MIN_UTILIZATION);
 
-        let mut lpp = LiquidityPool::<TheCurrency>::load(deps.as_mut().storage)
-            .expect("can't load LiquidityPool");
+        let mut lpp = LiquidityPool::<TheCurrency, _>::new(config, &bank);
 
         // doesn't exist
-        let loan_response = Repo::<TheCurrency>::query(deps.as_ref().storage, lease_addr.clone())
-            .expect("can't query loan");
+        let loan_response =
+            Repo::<TheCurrency>::query(&store, lease_addr.clone()).expect("can't query loan");
         assert_eq!(loan_response, None);
 
-        env.block.time = Timestamp::from_nanos(10);
+        let now = now + Duration::from_nanos(10);
 
-        lpp.try_open_loan(
-            &mut deps.as_mut(),
-            &env,
-            lease_addr.clone(),
-            Coin::new(5_000_000),
-        )
-        .expect("can't open loan");
-        deps.querier
-            .bank
-            .update_balance(MOCK_CONTRACT_ADDR, vec![coin_cw(5_000_000)]);
+        lpp.try_open_loan(&mut store, now, lease_addr.clone(), LOAN_AMOUNT)
+            .expect("can't open loan");
 
-        let loan = Repo::query(deps.as_ref().storage, lease_addr.clone())
+        let loan = Repo::query(&store, lease_addr.clone())
             .expect("can't query loan")
             .expect("should be some response");
 
-        assert_eq!(loan.principal_due, Coin::new(amount));
-        assert_eq!(loan.annual_interest_rate, annual_interest_rate);
-        assert_eq!(loan.interest_paid, env.block.time);
-        assert_eq!(loan.interest_due(&env.block.time), 0u128.into());
+        assert_eq!(
+            Loan {
+                principal_due: LOAN_AMOUNT,
+                annual_interest_rate,
+                interest_paid: now
+            },
+            loan
+        );
+        assert_eq!(loan.interest_due(&now), 0u128.into());
 
-        // wait for year/10
-        env.block.time = Timestamp::from_nanos(10 + Duration::YEAR.nanos() / 10);
+        // wait for 36 days
+        let now = now + Duration::from_days(36);
 
-        // pay interest for year/10
-        let payment = loan.interest_due(&env.block.time);
+        // pay interest for 36 days
+        let payment = loan.interest_due(&now);
 
         let repay = lpp
-            .try_repay_loan(&mut deps.as_mut(), &env, lease_addr.clone(), payment)
+            .try_repay_loan(&mut store, now, lease_addr.clone(), payment)
             .expect("can't repay loan");
 
         assert_eq!(repay, 0u128.into());
 
-        let loan = Repo::<TheCurrency>::query(deps.as_ref().storage, lease_addr.clone())
+        let loan = Repo::<TheCurrency>::query(&store, lease_addr.clone())
             .expect("can't query loan")
             .expect("should be some response");
 
-        assert_eq!(loan.principal_due, Coin::new(amount));
-        assert_eq!(loan.annual_interest_rate, annual_interest_rate);
-        assert_eq!(loan.interest_paid, env.block.time);
-        assert_eq!(loan.interest_due(&env.block.time), 0u128.into());
+        assert_eq!(
+            Loan {
+                principal_due: LOAN_AMOUNT,
+                annual_interest_rate,
+                interest_paid: now
+            },
+            loan
+        );
+        assert_eq!(loan.interest_due(&now), 0u128.into());
 
         // an immediate repay after repay should pass (loan_interest_due==0 bug)
-        lpp.try_repay_loan(&mut deps.as_mut(), &env, lease_addr.clone(), Coin::new(0))
+        lpp.try_repay_loan(&mut store, now, lease_addr.clone(), Coin::new(0))
             .expect("can't repay loan");
 
-        // wait for another year/10
-        env.block.time = Timestamp::from_nanos(10 + 2 * Duration::YEAR.nanos() / 10);
+        // wait for another 36 days
+        let now = now + Duration::from_days(36);
 
+        const PAYED_EXTRA: Coin<TheCurrency> = Coin::new(100);
         // pay everything + excess
-        let payment = Repo::query(deps.as_ref().storage, lease_addr.clone())
+        let payment = Repo::query(&store, lease_addr.clone())
             .expect("can't query the loan")
             .expect("should exist")
-            .interest_due(&env.block.time)
-            + Coin::new(amount)
-            + Coin::new(100);
+            .interest_due(&now)
+            + LOAN_AMOUNT
+            + PAYED_EXTRA;
 
         let repay = lpp
-            .try_repay_loan(&mut deps.as_mut(), &env, lease_addr, payment)
+            .try_repay_loan(&mut store, now, lease_addr, payment)
             .expect("can't repay loan");
 
-        assert_eq!(repay, 100u128.into());
+        assert_eq!(repay, PAYED_EXTRA);
     }
 
     #[test]
     fn try_open_loan_with_no_liquidity() {
         let mut deps = testing::mock_dependencies();
-        let env = testing::mock_env();
+        let mut store = MockStorage::new();
+        let now = Timestamp::from_nanos(0);
+        let bank = MockBankView::<TheCurrency, TheCurrency>::only_balance(Coin::ZERO);
         let admin = Addr::unchecked("admin");
         let loan = Addr::unchecked("loan");
         let lease_code_id = Code::unchecked(123);
 
-        grant_admin_access(deps.as_mut(), &admin);
+        grant_admin_access(&mut store, &admin);
         Config::store(
             &ApiConfig::new(
                 lease_code_id,
@@ -596,23 +563,24 @@ mod test {
             .store(deps.as_mut().storage)
             .expect("can't initialize Total");
 
-        let mut lpp = LiquidityPool::<TheCurrency>::load(deps.as_mut().storage)
+        let mut lpp = LiquidityPool::<TheCurrency, _>::load(deps.as_mut().storage, &bank)
             .expect("can't load LiquidityPool");
 
-        let result = lpp.try_open_loan(&mut deps.as_mut(), &env, loan, Coin::new(1_000));
+        let result = lpp.try_open_loan(&mut store, now, loan, Coin::new(1_000));
         assert_eq!(result, Err(ContractError::NoLiquidity {}));
     }
 
     #[test]
     fn try_open_loan_for_zero_amount() {
-        let balance_mock = [coin_cw(10_000_000)];
-        let mut deps = testing::mock_dependencies_with_balance(&balance_mock);
-        let env = testing::mock_env();
+        const BALANCE: Coin<TheCurrency> = Coin::new(10_000_000);
+        let mut store = MockStorage::new();
+        let now = Timestamp::from_nanos(0);
+        let bank = MockBankView::<TheCurrency, TheCurrency>::only_balance(BALANCE);
         let admin = Addr::unchecked("admin");
         let loan = Addr::unchecked("loan");
         let lease_code_id = Code::unchecked(123);
 
-        grant_admin_access(deps.as_mut(), &admin);
+        grant_admin_access(&mut store, &admin);
         Config::store(
             &ApiConfig::new(
                 lease_code_id,
@@ -624,30 +592,31 @@ mod test {
                 .expect("Couldn't construct interest rate value!"),
                 DEFAULT_MIN_UTILIZATION,
             ),
-            deps.as_mut().storage,
+            &mut store,
         )
         .expect("Failed to store Config!");
         Total::<TheCurrency>::new()
-            .store(deps.as_mut().storage)
+            .store(&mut store)
             .expect("can't initialize Total");
 
-        let mut lpp = LiquidityPool::<TheCurrency>::load(deps.as_mut().storage)
-            .expect("can't load LiquidityPool");
+        let mut lpp =
+            LiquidityPool::<TheCurrency, _>::load(&store, &bank).expect("can't load LiquidityPool");
 
-        let result = lpp.try_open_loan(&mut deps.as_mut(), &env, loan, Coin::new(0));
+        let result = lpp.try_open_loan(&mut store, now, loan, Coin::new(0));
         assert_eq!(result, Err(ContractError::ZeroLoanAmount));
     }
 
     #[test]
     fn open_loan_repay_zero() {
-        let balance_mock = [coin_cw(10_000_000)];
-        let mut deps = testing::mock_dependencies_with_balance(&balance_mock);
-        let env = testing::mock_env();
+        const BALANCE: Coin<TheCurrency> = Coin::new(10_000_000);
+        let mut store = MockStorage::new();
+        let now = Timestamp::from_nanos(0);
+        let bank = MockBankView::<TheCurrency, TheCurrency>::only_balance(BALANCE);
         let admin = Addr::unchecked("admin");
         let loan = Addr::unchecked("loan");
         let lease_code_id = Code::unchecked(123);
 
-        grant_admin_access(deps.as_mut(), &admin);
+        grant_admin_access(&mut store, &admin);
         Config::store(
             &ApiConfig::new(
                 lease_code_id,
@@ -659,31 +628,28 @@ mod test {
                 .expect("Couldn't construct interest rate value!"),
                 DEFAULT_MIN_UTILIZATION,
             ),
-            deps.as_mut().storage,
+            &mut store,
         )
         .expect("Failed to store Config!");
         Total::<TheCurrency>::new()
-            .store(deps.as_mut().storage)
+            .store(&mut store)
             .expect("can't initialize Total");
 
-        let mut lpp = LiquidityPool::<TheCurrency>::load(deps.as_mut().storage)
-            .expect("can't load LiquidityPool");
+        let mut lpp =
+            LiquidityPool::<TheCurrency, _>::load(&store, &bank).expect("can't load LiquidityPool");
 
-        lpp.try_open_loan(&mut deps.as_mut(), &env, loan.clone(), Coin::new(5_000))
+        lpp.try_open_loan(&mut store, now, loan.clone(), Coin::new(5_000))
             .expect("can't open loan");
-        deps.querier
-            .bank
-            .update_balance(MOCK_CONTRACT_ADDR, vec![coin_cw(5_000)]);
 
-        let loan_before = Repo::<TheCurrency>::query(deps.as_ref().storage, loan.clone())
+        let loan_before = Repo::<TheCurrency>::query(&store, loan.clone())
             .expect("can't query loan")
             .expect("should be some response");
 
         //zero repay
-        lpp.try_repay_loan(&mut deps.as_mut(), &env, loan.clone(), Coin::new(0))
+        lpp.try_repay_loan(&mut store, now, loan.clone(), Coin::new(0))
             .expect("can't repay loan");
 
-        let loan_after = Repo::query(deps.as_ref().storage, loan)
+        let loan_after = Repo::query(&store, loan)
             .expect("can't query loan")
             .expect("should be some response");
 
@@ -698,14 +664,15 @@ mod test {
 
     #[test]
     fn try_open_and_close_loan_without_paying_interest() {
-        let balance_mock = [coin_cw(10_000_000)];
-        let mut deps = testing::mock_dependencies_with_balance(&balance_mock);
-        let env = testing::mock_env();
+        const BALANCE: Coin<TheCurrency> = Coin::new(10_000_000);
+        let mut store = MockStorage::new();
+        let now = Timestamp::from_nanos(0);
+        let bank = MockBankView::<TheCurrency, TheCurrency>::only_balance(BALANCE);
         let admin = Addr::unchecked("admin");
         let loan = Addr::unchecked("loan");
         let lease_code_id = Code::unchecked(123);
 
-        grant_admin_access(deps.as_mut(), &admin);
+        grant_admin_access(&mut store, &admin);
         Config::store(
             &ApiConfig::new(
                 lease_code_id,
@@ -717,200 +684,148 @@ mod test {
                 .expect("Couldn't construct interest rate value!"),
                 DEFAULT_MIN_UTILIZATION,
             ),
-            deps.as_mut().storage,
+            &mut store,
         )
         .expect("Failed to store Config!");
         Total::<TheCurrency>::new()
-            .store(deps.as_mut().storage)
+            .store(&mut store)
             .expect("can't initialize Total");
 
-        let mut lpp = LiquidityPool::<TheCurrency>::load(deps.as_mut().storage)
-            .expect("can't load LiquidityPool");
+        let mut lpp =
+            LiquidityPool::<TheCurrency, _>::load(&store, &bank).expect("can't load LiquidityPool");
 
-        lpp.try_open_loan(&mut deps.as_mut(), &env, loan.clone(), Coin::new(5_000))
+        lpp.try_open_loan(&mut store, now, loan.clone(), Coin::new(5_000))
             .expect("can't open loan");
-        deps.querier
-            .bank
-            .update_balance(MOCK_CONTRACT_ADDR, vec![coin_cw(5_000)]);
 
-        let payment = Repo::<TheCurrency>::query(deps.as_ref().storage, loan.clone())
+        let payment = Repo::<TheCurrency>::query(&store, loan.clone())
             .expect("can't query outstanding interest")
             .expect("should be some coins")
-            .interest_due(&env.block.time);
+            .interest_due(&now);
         assert_eq!(payment, Coin::new(0));
 
         let repay = lpp
-            .try_repay_loan(&mut deps.as_mut(), &env, loan.clone(), Coin::new(5_000))
+            .try_repay_loan(&mut store, now, loan.clone(), Coin::new(5_000))
             .expect("can't repay loan");
 
         assert_eq!(repay, 0u128.into());
 
         // Should be closed
-        let loan_response =
-            Repo::<TheCurrency>::query(deps.as_ref().storage, loan).expect("can't query loan");
+        let loan_response = Repo::<TheCurrency>::query(&store, loan).expect("can't query loan");
         assert_eq!(loan_response, None);
     }
 
     #[test]
     fn test_tvl_and_price() {
-        let mut deps = testing::mock_dependencies_with_balance(&[]);
-        let mut env = testing::mock_env();
+        const BALANCE: Coin<TheCurrency> = Coin::new(10_000_000);
+        const DEPOSIT_NLPN: Coin<NLpn> = Coin::new(10_000_000);
+        const LOAN_AMOUNT: Coin<TheCurrency> = Coin::new(5_000_000);
+        const EXPECTED_INTEREST_RATE: Percent = Percent::from_permille(220);
+        const LOAN_REPAYMENT: Coin<TheCurrency> = Coin::new(6_000_000);
+
+        let mut store = MockStorage::new();
+        let now = Timestamp::from_nanos(0);
         let admin = Addr::unchecked("admin");
         let loan = Addr::unchecked("loan");
-        env.block.time = Timestamp::from_nanos(0);
         let lease_code_id = Code::unchecked(123);
 
-        grant_admin_access(deps.as_mut(), &admin);
-        Config::store(
-            &ApiConfig::new(
+        grant_admin_access(&mut store, &admin);
+
+        let bank = MockBankView::<TheCurrency, TheCurrency>::only_balance(BALANCE);
+        {
+            let mut lender =
+                Deposit::load_or_default(&store, Addr::unchecked("lender")).expect("should load");
+            lender.deposit(&mut store, DEPOSIT_NLPN).unwrap();
+        }
+
+        {
+            let config = ApiConfig::new(
                 lease_code_id,
                 InterestRate::new(
-                    BASE_INTEREST_RATE,
-                    UTILIZATION_OPTIMAL,
-                    ADDON_OPTIMAL_INTEREST_RATE,
+                    Percent::from_percent(18),
+                    Percent::from_percent(50),
+                    Percent::from_percent(2),
                 )
                 .expect("Couldn't construct interest rate value!"),
                 DEFAULT_MIN_UTILIZATION,
-            ),
-            deps.as_mut().storage,
-        )
-        .expect("Failed to store Config!");
+            );
+            LiquidityPool::<TheCurrency, _>::new(config, &bank)
+                .save(&mut store)
+                .unwrap();
+        }
 
-        // simplify calculation
-        Config::update_borrow_rate(
-            deps.as_mut().storage,
-            InterestRate::new(
-                Percent::from_percent(18),
-                Percent::from_percent(50),
-                Percent::from_percent(2),
-            )
-            .expect("Couldn't construct interest rate value!"),
-        )
-        .expect("should update config");
+        {
+            let mut lpp = LiquidityPool::<TheCurrency, _>::load(&store, &bank).unwrap();
+            assert_eq!(
+                Price::identity(),
+                lpp.calculate_price(&store, &now, Coin::new(0)).unwrap()
+            );
 
-        Total::<TheCurrency>::new()
-            .store(deps.as_mut().storage)
-            .expect("can't initialize Total");
+            let annual_interest_rate = lpp
+                .query_quote(LOAN_AMOUNT, &now)
+                .expect("can't query quote")
+                .expect("should return some interest_rate");
 
-        let mut lpp = LiquidityPool::<TheCurrency>::load(deps.as_mut().storage)
-            .expect("can't load LiquidityPool");
+            assert_eq!(EXPECTED_INTEREST_RATE, annual_interest_rate);
 
-        let mut lender = Deposit::load_or_default(deps.as_ref().storage, Addr::unchecked("lender"))
-            .expect("should load");
-        let price = lpp
-            .calculate_price(&deps.as_ref(), &env, Coin::new(0))
-            .expect("should get price");
-        assert_eq!(price, Price::identity());
+            lpp.try_open_loan(&mut store, now, loan.clone(), LOAN_AMOUNT)
+                .unwrap();
+        }
 
-        deps.querier
-            .bank
-            .update_balance(MOCK_CONTRACT_ADDR, vec![coin_cw(10_000_000)]);
-        lender
-            .deposit(deps.as_mut().storage, 10_000_000u128.into())
-            .expect("should deposit");
-
-        let annual_interest_rate = lpp
-            .query_quote(
-                Coin::new(5_000_000),
-                &env.contract.address,
-                deps.as_ref().querier,
-                &env.block.time,
-            )
-            .expect("can't query quote")
-            .expect("should return some interest_rate");
-
-        assert_eq!(annual_interest_rate, Percent::from_permille(220));
-
-        lpp.try_open_loan(&mut deps.as_mut(), &env, loan.clone(), Coin::new(5_000_000))
-            .expect("can't open loan");
-        deps.querier
-            .bank
-            .update_balance(MOCK_CONTRACT_ADDR, vec![coin_cw(5_000_000)]);
-
+        const BALANCE_PAST_LOAN: Coin<TheCurrency> = BALANCE.checked_sub(LOAN_AMOUNT).unwrap();
+        let loan_interest = EXPECTED_INTEREST_RATE.of(LOAN_AMOUNT);
         // wait a year
-        env.block.time = Timestamp::from_nanos(Duration::YEAR.nanos());
+        let now = now + Duration::YEAR;
+        {
+            let bank = MockBankView::<TheCurrency, TheCurrency>::only_balance(BALANCE_PAST_LOAN);
+            let mut lpp = LiquidityPool::<TheCurrency, _>::load(&store, &bank).unwrap();
+            let total_lpn = lpp.total_lpn(&now, Coin::ZERO).unwrap();
 
-        let total_lpn = lpp
-            .total_lpn(
-                deps.as_ref().querier,
-                &env.contract.address,
-                &env.block.time,
-                Coin::ZERO,
-            )
-            .expect("should query total_lpn");
-        assert_eq!(total_lpn, 11_100_000u128.into());
+            assert_eq!(BALANCE_PAST_LOAN + LOAN_AMOUNT + loan_interest, total_lpn);
 
-        let lpp_balance = lpp
-            .query_lpp_balance(&deps.as_ref(), &env)
-            .expect("should query_lpp_balance");
-        assert_eq!(lpp_balance.balance, Coin::<TheCurrency>::new(5_000_000));
+            let lpp_balance = lpp
+                .query_lpp_balance(&now)
+                .expect("should query_lpp_balance");
+            assert_eq!(
+                LppBalances {
+                    balance: BALANCE_PAST_LOAN,
+                    total_principal_due: LOAN_AMOUNT,
+                    total_interest_due: loan_interest
+                },
+                lpp_balance
+            );
+
+            let price = lpp.calculate_price(&store, &now, Coin::ZERO).unwrap();
+            assert_eq!(
+                price::total_of(DEPOSIT_NLPN).is(lpp_balance.into_total()),
+                price,
+            );
+
+            // should not change tvl/price
+            let excess = lpp
+                .try_repay_loan(&mut store, now, loan, LOAN_REPAYMENT)
+                .unwrap();
+            assert_eq!(Coin::ZERO, excess,);
+        }
+
+        const BALANCE_PAST_REPAYMENT: Coin<TheCurrency> =
+            BALANCE_PAST_LOAN.checked_add(LOAN_REPAYMENT).unwrap();
+        let bank = MockBankView::<TheCurrency, TheCurrency>::only_balance(BALANCE_PAST_REPAYMENT);
+        let lpp = LiquidityPool::<TheCurrency, _>::load(&store, &bank).unwrap();
+
+        let lpp_total = BALANCE_PAST_REPAYMENT + LOAN_AMOUNT + loan_interest - LOAN_REPAYMENT;
+        assert_eq!(lpp_total, lpp.total_lpn(&now, Coin::ZERO).unwrap(),);
+
         assert_eq!(
-            lpp_balance.total_principal_due,
-            Coin::<TheCurrency>::new(5_000_000)
-        );
-        assert_eq!(
-            lpp_balance.total_interest_due,
-            Coin::<TheCurrency>::new(1_100_000)
-        );
-
-        let price = lpp
-            .calculate_price(&deps.as_ref(), &env, Coin::new(0))
-            .expect("should get price");
-        assert_eq!(
-            price::total(Coin::<NLpn>::new(1000), price),
-            price::total(
-                Coin::<NLpn>::new(1000),
-                price::total_of(Coin::new(100)).is(Coin::new(111))
-            )
-        );
-
-        // should not change tvl/price
-        let excess = lpp
-            .try_repay_loan(&mut deps.as_mut(), &env, loan, Coin::new(6_000_000))
-            .unwrap();
-        assert_eq!(excess, Coin::new(0));
-
-        deps.querier
-            .bank
-            .update_balance(MOCK_CONTRACT_ADDR, vec![coin_cw(11_000_000)]);
-        let total_lpn = lpp
-            .total_lpn(
-                deps.as_ref().querier,
-                &env.contract.address,
-                &env.block.time,
-                Coin::ZERO,
-            )
-            .expect("should query total_lpn");
-        assert_eq!(total_lpn, 11_100_000u128.into());
-
-        let price = lpp
-            .calculate_price(&deps.as_ref(), &env, Coin::new(0))
-            .expect("should get price");
-        assert_eq!(
-            price::total(Coin::<NLpn>::new(1000), price),
-            price::total(
-                Coin::<NLpn>::new(1000),
-                price::total_of(Coin::new(100)).is(Coin::new(111))
-            )
+            price::total_of(DEPOSIT_NLPN).is(lpp_total),
+            lpp.calculate_price(&store, &now, Coin::ZERO).unwrap()
         );
 
-        let withdraw = lpp
-            .withdraw_lpn(&deps.as_ref(), &env, 1000u128.into())
-            .expect("should withdraw");
+        let withdraw = lpp.withdraw_lpn(&store, &now, 1000u128.into()).unwrap();
         assert_eq!(withdraw, Coin::new(1110));
     }
 
-    fn coin_cw<IntoCoin>(into_coin: IntoCoin) -> CwCoin
-    where
-        IntoCoin: Into<Coin<TheCurrency>>,
-    {
-        coin_legacy::to_cosmwasm_on_nolus::<TheCurrency>(into_coin.into())
-    }
-
-    fn grant_admin_access(deps: DepsMut<'_>, admin: &Addr) {
-        ContractOwnerAccess::new(deps.storage)
-            .grant_to(admin)
-            .unwrap();
+    fn grant_admin_access(store: &mut dyn Storage, admin: &Addr) {
+        ContractOwnerAccess::new(store).grant_to(admin).unwrap();
     }
 
     mod min_utilization {
@@ -919,15 +834,12 @@ mod test {
             percent::{Percent, bound::BoundToHundredPercent},
             zero::Zero,
         };
-        use platform::contract::Code;
-        use sdk::cosmwasm_std::{
-            Env, QuerierWrapper, Timestamp,
-            testing::{MockQuerier, mock_env},
-        };
+        use platform::{bank::testing::MockBankView, contract::Code};
+        use sdk::cosmwasm_std::Timestamp;
 
         use crate::{borrow::InterestRate, config::Config as ApiConfig, state::Total};
 
-        use super::{super::LiquidityPool, TheCurrency, coin_cw};
+        use super::{super::LiquidityPool, TheCurrency};
 
         const FIFTY_PERCENT_MIN_UTILIZATION: fn() -> BoundToHundredPercent =
             || Percent::from_permille(500).try_into().unwrap();
@@ -938,13 +850,14 @@ mod test {
             min_utilization: BoundToHundredPercent,
             expected_limit: Option<Amount>,
         ) {
+            let now = Timestamp::from_seconds(120);
             let mut total: Total<TheCurrency> = Total::new();
 
-            total
-                .borrow(Timestamp::default(), borrowed.into(), Percent::ZERO)
-                .unwrap();
+            total.borrow(now, borrowed.into(), Percent::ZERO).unwrap();
 
-            let lpp: LiquidityPool<TheCurrency> = LiquidityPool {
+            let bank =
+                MockBankView::<TheCurrency, TheCurrency>::only_balance(Coin::new(lpp_balance));
+            let lpp = LiquidityPool::<TheCurrency, _> {
                 config: ApiConfig::new(
                     Code::unchecked(0xDEADC0DE_u64),
                     InterestRate::new(Percent::ZERO, Percent::from_permille(500), Percent::HUNDRED)
@@ -952,16 +865,11 @@ mod test {
                     min_utilization,
                 ),
                 total,
+                bank: &bank,
             };
 
-            let mock_env: Env = mock_env();
-            let mock_querier: MockQuerier =
-                MockQuerier::new(&[(mock_env.contract.address.as_str(), &[coin_cw(lpp_balance)])]);
-            let mock_querier: QuerierWrapper<'_> = QuerierWrapper::new(&mock_querier);
-
             assert_eq!(
-                lpp.deposit_capacity(mock_querier, &mock_env, Coin::ZERO)
-                    .unwrap(),
+                lpp.deposit_capacity(&now, Coin::ZERO).unwrap(),
                 expected_limit.map(Into::into)
             );
         }
