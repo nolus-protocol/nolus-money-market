@@ -56,21 +56,11 @@ mod tests {
     use std::marker::PhantomData;
 
     use currencies::{Lpn, testing::PaymentC3};
-    use currency::{Currency, CurrencyDef, Group};
-    use finance::{
-        coin::{Coin, WithCoin},
-        duration::Duration,
-        liability::Liability,
-        percent::Percent,
-        zero::Zero,
-    };
+    use currency::Currency;
+    use finance::{coin::Coin, duration::Duration, liability::Liability, percent::Percent};
     use platform::{
-        bank::{
-            self, Aggregate, BalancesResult, BankAccountView, BankStub, FixedAddressSender,
-            LazySenderStub,
-        },
+        bank::{self, BankStub, FixedAddressSender, LazySenderStub, testing::MockBankView},
         batch::Batch,
-        result::Result as PlatformResult,
     };
     use sdk::cosmwasm_std::Addr;
 
@@ -81,54 +71,6 @@ mod tests {
     const CUSTOMER: &str = "customer";
     type TestLpn = Lpn;
     type TestAsset = PaymentC3;
-
-    pub struct MockBankView {
-        balance: Coin<TestAsset>,
-        balance_surplus: Coin<TestLpn>,
-    }
-
-    impl MockBankView {
-        fn new(amount: Coin<TestAsset>, amount_surplus: Coin<TestLpn>) -> Self {
-            Self {
-                balance: amount,
-                balance_surplus: amount_surplus,
-            }
-        }
-        fn only_balance(amount: Coin<TestAsset>) -> Self {
-            Self {
-                balance: amount,
-                balance_surplus: Coin::ZERO,
-            }
-        }
-    }
-
-    impl BankAccountView for MockBankView {
-        fn balance<C>(&self) -> PlatformResult<Coin<C>>
-        where
-            C: CurrencyDef,
-        {
-            if currency::equal::<C, TestAsset>() {
-                Ok(Coin::<C>::new(self.balance.into()))
-            } else if currency::equal::<C, TestLpn>() {
-                Ok(Coin::<C>::new(self.balance_surplus.into()))
-            } else {
-                unreachable!(
-                    "Expected {}, found {}",
-                    currency::to_string(TestAsset::dto()),
-                    currency::to_string(C::dto())
-                );
-            }
-        }
-
-        fn balances<G, Cmd>(&self, _: Cmd) -> BalancesResult<G, Cmd>
-        where
-            G: Group,
-            Cmd: WithCoin<G>,
-            Cmd::Output: Aggregate,
-        {
-            unimplemented!()
-        }
-    }
 
     fn create_lease<Asset, Lpn>(amount: Coin<Asset>) -> Lease<Asset, Lpn>
     where
@@ -158,9 +100,10 @@ mod tests {
 
     #[test]
     fn close_no_surplus() {
-        let lease_amount = 10.into();
+        let lease_amount = Coin::<TestAsset>::new(10);
         let lease: Lease<TestAsset, TestLpn> = create_lease(lease_amount);
-        let lease_account = BankStub::with_view(MockBankView::only_balance(lease_amount));
+        let lease_account =
+            BankStub::with_view(MockBankView::<_, TestLpn>::only_balance(lease_amount));
         let res = lease.close(lease_account).unwrap();
         assert_eq!(
             res,
@@ -171,8 +114,8 @@ mod tests {
     #[test]
     fn close_with_surplus() {
         let customer = Addr::unchecked(CUSTOMER);
-        let lease_amount = 10.into();
-        let surplus_amount = 2.into();
+        let lease_amount = Coin::<TestAsset>::new(10);
+        let surplus_amount = Coin::<TestLpn>::new(2);
         let lease: Lease<TestAsset, TestLpn> = create_lease(lease_amount);
         let lease_account = BankStub::with_view(MockBankView::new(lease_amount, surplus_amount));
         let res = lease.close(lease_account).unwrap();
