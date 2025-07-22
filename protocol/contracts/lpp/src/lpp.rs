@@ -293,7 +293,6 @@ where
 
 #[cfg(test)]
 mod test {
-    use access_control::ContractOwnerAccess;
     use currencies::Lpn;
     use finance::{
         coin::Coin,
@@ -306,7 +305,7 @@ mod test {
     use lpp_platform::NLpn;
     use platform::{bank::testing::MockBankView, contract::Code};
     use sdk::cosmwasm_std::{
-        Addr, Storage, Timestamp,
+        Addr, Timestamp,
         testing::{self, MockStorage},
     };
 
@@ -450,12 +449,9 @@ mod test {
 
         let mut store = MockStorage::new();
         let bank = MockBankView::<TheCurrency, TheCurrency>::only_balance(LPP_BALANCE);
-        let admin = Addr::unchecked("admin");
         let lease_addr = Addr::unchecked("loan");
         let now = Timestamp::from_nanos(0);
         let lease_code_id = Code::unchecked(123);
-
-        grant_admin_access(&mut store, &admin);
 
         let config = ApiConfig::new(lease_code_id, interest_rate, DEFAULT_MIN_UTILIZATION);
 
@@ -540,11 +536,9 @@ mod test {
         let mut store = MockStorage::new();
         let now = Timestamp::from_nanos(0);
         let bank = MockBankView::<TheCurrency, TheCurrency>::only_balance(Coin::ZERO);
-        let admin = Addr::unchecked("admin");
         let loan = Addr::unchecked("loan");
         let lease_code_id = Code::unchecked(123);
 
-        grant_admin_access(&mut store, &admin);
         Config::store(
             &ApiConfig::new(
                 lease_code_id,
@@ -576,11 +570,9 @@ mod test {
         let mut store = MockStorage::new();
         let now = Timestamp::from_nanos(0);
         let bank = MockBankView::<TheCurrency, TheCurrency>::only_balance(BALANCE);
-        let admin = Addr::unchecked("admin");
         let loan = Addr::unchecked("loan");
         let lease_code_id = Code::unchecked(123);
 
-        grant_admin_access(&mut store, &admin);
         Config::store(
             &ApiConfig::new(
                 lease_code_id,
@@ -612,11 +604,9 @@ mod test {
         let mut store = MockStorage::new();
         let now = Timestamp::from_nanos(0);
         let bank = MockBankView::<TheCurrency, TheCurrency>::only_balance(BALANCE);
-        let admin = Addr::unchecked("admin");
         let loan = Addr::unchecked("loan");
         let lease_code_id = Code::unchecked(123);
 
-        grant_admin_access(&mut store, &admin);
         Config::store(
             &ApiConfig::new(
                 lease_code_id,
@@ -668,11 +658,9 @@ mod test {
         let mut store = MockStorage::new();
         let now = Timestamp::from_nanos(0);
         let bank = MockBankView::<TheCurrency, TheCurrency>::only_balance(BALANCE);
-        let admin = Addr::unchecked("admin");
         let loan = Addr::unchecked("loan");
         let lease_code_id = Code::unchecked(123);
 
-        grant_admin_access(&mut store, &admin);
         Config::store(
             &ApiConfig::new(
                 lease_code_id,
@@ -724,11 +712,8 @@ mod test {
 
         let mut store = MockStorage::new();
         let now = Timestamp::from_nanos(0);
-        let admin = Addr::unchecked("admin");
         let loan = Addr::unchecked("loan");
         let lease_code_id = Code::unchecked(123);
-
-        grant_admin_access(&mut store, &admin);
 
         let bank = MockBankView::<TheCurrency, TheCurrency>::only_balance(BALANCE);
         {
@@ -822,10 +807,6 @@ mod test {
 
         let withdraw = lpp.withdraw_lpn(&store, &now, 1000u128.into()).unwrap();
         assert_eq!(withdraw, Coin::new(1110));
-    }
-
-    fn grant_admin_access(store: &mut dyn Storage, admin: &Addr) {
-        ContractOwnerAccess::new(store).grant_to(admin).unwrap();
     }
 
     mod min_utilization {

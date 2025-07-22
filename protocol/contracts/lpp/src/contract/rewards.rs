@@ -79,17 +79,13 @@ pub(super) fn query_rewards(storage: &dyn Storage, addr: Addr) -> Result<Rewards
 
 #[cfg(test)]
 mod test {
-    use access_control::ContractOwnerAccess;
     use finance::{
         coin::Coin,
         percent::{Percent, bound::BoundToHundredPercent},
         zero::Zero,
     };
     use platform::{bank::testing::MockBankView, contract::Code};
-    use sdk::cosmwasm_std::{
-        Addr,
-        testing::{mock_dependencies, mock_env},
-    };
+    use sdk::cosmwasm_std::testing::{mock_dependencies, mock_env};
 
     use crate::{
         borrow::InterestRate,
@@ -114,11 +110,6 @@ mod test {
 
         const INITIAL_LPP_BALANCE: Coin<TheCurrency> = Coin::ZERO;
         const DEPOSIT: Coin<TheCurrency> = Coin::new(20_000);
-
-        //TODO check if this grant is really needed
-        ContractOwnerAccess::new(deps.as_mut().storage)
-            .grant_to(&Addr::unchecked("admin"))
-            .unwrap();
 
         let bank = MockBankView::<TheCurrency, TheCurrency>::only_balance(INITIAL_LPP_BALANCE);
         LiquidityPool::<TheCurrency, _>::new(

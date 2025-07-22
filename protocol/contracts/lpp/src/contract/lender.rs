@@ -135,10 +135,6 @@ pub fn query_balance(storage: &dyn Storage, addr: Addr) -> Result<BalanceRespons
 
 #[cfg(test)]
 mod test {
-    use std::ops::DerefMut as _;
-
-    use access_control::ContractOwnerAccess;
-
     use finance::{
         coin::Coin,
         percent::{Percent, bound::BoundToHundredPercent},
@@ -148,7 +144,7 @@ mod test {
         contract::Code,
     };
     use sdk::cosmwasm_std::{
-        Addr, Env, Storage,
+        Env, Storage,
         testing::{self, MockStorage},
     };
 
@@ -198,16 +194,12 @@ mod test {
     }
 
     fn setup_storage<Bank>(
-        mut storage: &mut dyn Storage,
+        storage: &mut dyn Storage,
         bank: &Bank,
         min_utilization: BoundToHundredPercent,
     ) where
         Bank: BankAccountView,
     {
-        ContractOwnerAccess::new(storage.deref_mut())
-            .grant_to(&Addr::unchecked("admin"))
-            .unwrap();
-
         LiquidityPool::<TheCurrency, _>::new(
             ApiConfig::new(
                 Code::unchecked(0xDEADC0DE_u64),
