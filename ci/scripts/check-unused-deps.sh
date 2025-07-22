@@ -36,11 +36,14 @@ esac
 cd "./${1:?}"
 shift
 
-"rustup" "default"
-
 "cargo" \
   -- \
   "each" \
   "run" \
+  --external-command \
   -- \
-  "udeps"
+  "cargo" \
+  "+${RUST_NIGHTLY_VERSION:?}" \
+  -- \
+  "udeps" \
+  --all-targets

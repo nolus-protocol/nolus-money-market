@@ -12,27 +12,25 @@ outputs:
 runs:
   using: "composite"
   steps:
-    - id: "rust-stable-ci"
-      uses: "./.github/actions/rust-stable-ci-container"
+    - id: "rust-ci"
+      uses: "./.github/actions/rust-ci-container"
     - id: "lint"
       env:
         RUST_CI_ID: |-
-          ${{ steps.rust-stable-ci.outputs.image-id }}
+          ${{ steps.rust-ci.outputs.image-id }}
       uses: "./.github/actions/build-container"
       with:
         additional-digest-data: |-
-          ${{ steps.rust-stable-ci.outputs.image-hash }}
+          ${{ steps.rust-ci.outputs.image-hash }}
         additional-digest-targets: |-
+          ./.github/actions/lint-container/
           ./ci/images/lint.Containerfile
           ./ci/scripts/lint.internal.sh
           ./ci/scripts/lint.sh
         build-step: |-
           "build" \
             "lint" \
-            "lint" \
             -- \
-            --build-arg "rust_ci_id=${RUST_CI_ID:?}" \
-            --tag "localhost/local/lint"
+            --build-arg "rust_ci_id=${RUST_CI_ID:?}"
         disable-caching: true
-        image-friendly-name: "lint"
-        image-name: "localhost/local/lint"
+        image-name: "lint"

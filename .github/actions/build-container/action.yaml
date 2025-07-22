@@ -17,9 +17,6 @@ inputs:
     default: false
     description: ""
     required: false
-  image-friendly-name:
-    description: ""
-    required: true
   image-name:
     description: ""
     required: true
@@ -32,7 +29,7 @@ outputs:
   image-id:
     description: ""
     value: |-
-      ${{ inputs.image-name }}@${{ steps.image-digest.outputs.digest }}
+      localhost/local/${{ inputs.image-name }}@${{ steps.image-digest.outputs.digest }}
 
 runs:
   using: "composite"
@@ -45,7 +42,7 @@ runs:
         build_step: |-
           ${{ inputs.build-step }}
         image_name: |-
-          ${{ inputs.image-name }}
+          localhost/local/${{ inputs.image-name }}
         runner_temp: |-
           ${{ runner.temp }}
       id: "values"
@@ -106,7 +103,8 @@ runs:
 
         additional_targets_hash="$(
           "sha256sum" <<EOF
-        ./.github/
+        ./.github/actions/build-container/
+        ./.github/build-container.sh
         ${additional_targets_hash?}
         EOF
         )"
@@ -194,13 +192,13 @@ runs:
         ${{ inputs.build-step }}
       shell: "sh"
     - env:
-        image_friendly_name: |-
-          ${{ inputs.image-friendly-name }}
+        image_name: |-
+          ${{ inputs.image-name }}
       id: "image-digest"
       run: |-
         set -eu
 
-        digest="$("cat" "./.${image_friendly_name:?}-image-digest")"
+        digest="$("cat" "./.${image_name:?}-image-digest")"
 
         "echo" \
           "digest<<EOF
@@ -216,7 +214,7 @@ runs:
         image_digest: |-
           ${{ steps.image-digest.outputs.digest }}
         image_name: |-
-          ${{ inputs.image-name }}
+          localhost/local/${{ inputs.image-name }}
       id: "export"
       if: |-
         fromJSON(steps.values.outputs.should-run)
@@ -247,4 +245,4 @@ runs:
           ${{ steps.values.outputs.key }}
         path: |-
           ${{ steps.values.outputs.path }}
-          ./${{ inputs.image-friendly-name }}-image-digest
+          ./.${{ inputs.image-name }}-image-digest

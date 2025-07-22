@@ -16,25 +16,23 @@ outputs:
 runs:
   using: "composite"
   steps:
-    - id: "rust-stable"
-      uses: "./.github/actions/rust-stable-container"
+    - id: "rust"
+      uses: "./.github/actions/rust-container"
     - env:
         RUST_ID: |-
-          ${{ steps.rust-stable.outputs.image-id }}
+          ${{ steps.rust.outputs.image-id }}
       id: "check-lockfiles"
       uses: "./.github/actions/build-container"
       with:
         additional-digest-data: |-
-          ${{ steps.rust-stable.outputs.image-hash }}
+          ${{ steps.rust.outputs.image-hash }}
         additional-digest-targets: |-
+          ./.github/actions/check-lockfiles-container/
           ./ci/images/check-lockfiles.Containerfile
         build-step: |-
           "build" \
             "check-lockfiles" \
-            "check-lockfiles" \
             -- \
-            --build-arg "rust_id=${RUST_ID:?}" \
-            --tag "localhost/local/check-lockfiles"
+            --build-arg "rust_id=${RUST_ID:?}"
         disable-caching: true
-        image-friendly-name: "check-lockfiles"
-        image-name: "localhost/local/check-lockfiles"
+        image-name: "check-lockfiles"

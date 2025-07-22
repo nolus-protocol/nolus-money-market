@@ -12,8 +12,8 @@ outputs:
 runs:
   using: "composite"
   steps:
-    - id: "rust-nightly-ci"
-      uses: "./.github/actions/rust-nightly-ci-container"
+    - id: "rust-ci"
+      uses: "./.github/actions/rust-ci-container"
     - id: "cargo-udeps"
       uses: "./.github/actions/cargo-udeps-container"
     - id: "check-unused-deps"
@@ -21,23 +21,21 @@ runs:
         CARGO_UDEPS_ID: |-
           ${{ steps.cargo-udeps.outputs.image-id }}
         RUST_CI_ID: |-
-          ${{ steps.rust-nightly-ci.outputs.image-id }}
+          ${{ steps.rust-ci.outputs.image-id }}
       uses: "./.github/actions/build-container"
       with:
         additional-digest-data: |-
           ${{ steps.cargo-udeps.outputs.image-hash }}
-          ${{ steps.rust-nightly-ci.outputs.image-hash }}
+          ${{ steps.rust-ci.outputs.image-hash }}
         additional-digest-targets: |-
+          ./.github/actions/check-unused-deps-container/
           ./ci/images/check-unused-deps.Containerfile
           ./ci/scripts/check-unused-deps.sh
         build-step: |-
           "build" \
             "check-unused-deps" \
-            "check-unused-deps" \
             -- \
             --build-arg "cargo_udeps_id=${CARGO_UDEPS_ID:?}" \
-            --build-arg "rust_ci_id=${RUST_CI_ID:?}" \
-            --tag "localhost/local/check-unused-deps"
+            --build-arg "rust_ci_id=${RUST_CI_ID:?}"
         disable-caching: true
-        image-friendly-name: "check-unused-deps"
-        image-name: "localhost/local/check-unused-deps"
+        image-name: "check-unused-deps"

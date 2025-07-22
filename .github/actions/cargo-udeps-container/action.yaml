@@ -16,24 +16,22 @@ outputs:
 runs:
   using: "composite"
   steps:
-    - id: "rust-stable"
-      uses: "./.github/actions/rust-stable-container"
+    - id: "rust"
+      uses: "./.github/actions/rust-container"
     - env:
         RUST_ID: |-
-          ${{ steps.rust-stable.outputs.image-id }}
+          ${{ steps.rust.outputs.image-id }}
       id: "cargo-each"
       uses: "./.github/actions/build-container"
       with:
         additional-digest-data: |-
-          ${{ inputs.rust-stable-image-hash }}
+          ${{ steps.rust.outputs.image-hash }}
         additional-digest-targets: |-
+          ./.github/actions/cargo-udeps-container/
           ./ci/images/cargo-udeps.Containerfile
         build-step: |-
           "build" \
             "cargo-udeps" \
-            "cargo-udeps" \
             -- \
-            --build-arg "rust_id=${RUST_ID:?}" \
-            --tag "localhost/local/cargo-udeps"
-        image-friendly-name: "cargo-udeps"
-        image-name: "localhost/local/cargo-udeps"
+            --build-arg "rust_id=${RUST_ID:?}"
+        image-name: "cargo-udeps"

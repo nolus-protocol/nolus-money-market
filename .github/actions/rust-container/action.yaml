@@ -7,25 +7,21 @@ outputs:
   image-hash:
     description: ""
     value: |-
-      ${{ steps.rust-stable.outputs.image-hash }}
+      ${{ steps.rust.outputs.image-hash }}
   image-id:
     description: ""
     value: |-
-      ${{ steps.rust-stable.outputs.image-id }}
+      ${{ steps.rust.outputs.image-id }}
 
 runs:
   using: "composite"
   steps:
-    - id: "rust-stable"
+    - id: "rust"
       uses: "./.github/actions/build-container"
       with:
         additional-digest-targets: |-
-          ./ci/images/rust-stable.Containerfile
+          ./.github/actions/rust-container/
+          ./ci/images/rust.Containerfile
         build-step: |-
-          "build" \
-            "rust-stable" \
-            "rust-stable" \
-            -- \
-            --tag "localhost/local/rust"
-        image-friendly-name: "rust-stable"
-        image-name: "localhost/local/rust"
+          "build" "rust"
+        image-name: "rust"
