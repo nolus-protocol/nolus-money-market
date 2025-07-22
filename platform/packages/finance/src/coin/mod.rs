@@ -41,17 +41,20 @@ impl<C> Coin<C> {
         }
     }
 
+    const fn may_new(may_amount: Option<Amount>) -> Option<Self> {
+        match may_amount {
+            None => None,
+            Some(amount) => Some(Self::new(amount)),
+        }
+    }
+
     pub const fn is_zero(&self) -> bool {
         self.amount == Zero::ZERO
     }
 
     #[track_caller]
-    pub fn checked_add(self, rhs: Self) -> Option<Self> {
-        let may_amount = self.amount.checked_add(rhs.amount);
-        may_amount.map(|amount| Self {
-            amount,
-            currency: self.currency,
-        })
+    pub const fn checked_add(self, rhs: Self) -> Option<Self> {
+        Self::may_new(self.amount.checked_add(rhs.amount))
     }
 
     #[track_caller]
@@ -60,30 +63,18 @@ impl<C> Coin<C> {
     }
 
     #[track_caller]
-    pub fn checked_sub(self, rhs: Self) -> Option<Self> {
-        let may_amount = self.amount.checked_sub(rhs.amount);
-        may_amount.map(|amount| Self {
-            amount,
-            currency: self.currency,
-        })
+    pub const fn checked_sub(self, rhs: Self) -> Option<Self> {
+        Self::may_new(self.amount.checked_sub(rhs.amount))
     }
 
     #[track_caller]
-    pub fn checked_mul(self, rhs: Amount) -> Option<Self> {
-        let may_amount = self.amount.checked_mul(rhs);
-        may_amount.map(|amount| Self {
-            amount,
-            currency: self.currency,
-        })
+    pub const fn checked_mul(self, rhs: Amount) -> Option<Self> {
+        Self::may_new(self.amount.checked_mul(rhs))
     }
 
     #[track_caller]
-    pub fn checked_div(self, rhs: Amount) -> Option<Self> {
-        let may_amount = self.amount.checked_div(rhs);
-        may_amount.map(|amount| Self {
-            amount,
-            currency: self.currency,
-        })
+    pub const fn checked_div(self, rhs: Amount) -> Option<Self> {
+        Self::may_new(self.amount.checked_div(rhs))
     }
 
     #[track_caller]
