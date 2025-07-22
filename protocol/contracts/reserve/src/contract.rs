@@ -92,14 +92,13 @@ pub fn execute(
     info: MessageInfo,
     msg: ExecuteMsg,
 ) -> Result<CwResponse> {
-    let lease_code_admin = Config::load(deps.storage)?.lease_code_admin()?;
+    let lease_code_admin = Config::load(deps.storage)?.lease_code_admin();
 
     match msg {
         ExecuteMsg::NewLeaseCode(code) => access_control::check(
             &LeaseCodeAdminPermission::new(&lease_code_admin),
             &Sender::new(&info),
         )
-        .check(&Sender::new(&info))
         .map_err(Into::into)
         .and_then(|()| Config::update_lease_code(deps.storage, code))
         .map(|()| PlatformResponse::default()),

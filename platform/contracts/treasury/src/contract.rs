@@ -80,7 +80,7 @@ pub fn execute(
 ) -> ContractResult<CwResponse> {
     match msg {
         ExecuteMsg::TimeAlarm {} => {
-            let config = Config::load(storage)?;
+            let config = Config::load(&deps.storage)?;
 
             access_control::check(
                 &TimeAlarmDelivery::new(config.timealarms()),

@@ -1,5 +1,4 @@
 use serde::Serialize;
-use std::ops::DerefMut as _;
 
 use access_control::{Sender, permissions::LeaseCodeAdminPermission};
 use currencies::{
