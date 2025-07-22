@@ -8,6 +8,10 @@ WORKDIR "/src"
 
 ENV CARGO_TARGET_DIR="/build/"
 
+ENV CARGO_TERM_COLOR="always"
+
+ENV POSIXLY_CORRECT="1"
+
 RUN ["apk", "update"]
 
 RUN ["apk", "add", "ca-certificates", "libc-dev", "openssl-dev", "openssl-libs-static"]

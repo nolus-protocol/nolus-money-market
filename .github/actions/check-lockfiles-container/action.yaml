@@ -29,6 +29,7 @@ runs:
         additional-digest-targets: |-
           ./.github/actions/check-lockfiles-container/
           ./ci/images/check-lockfiles.Containerfile
+          ./ci/scripts/check-lockfiles.sh
         build-step: |-
           "build" \
             "check-lockfiles" \

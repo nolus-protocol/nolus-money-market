@@ -18,29 +18,22 @@
 ## environments.                                                              ##
 ################################################################################
 ## Used utilities outside the POSIX standard:                                 ##
-## [in-tree] cargo-each                                                       ##
-## cargo [with:]                                                              ##
-##   * rustc                                                                  ##
-##   * clippy [inherited from 'lint.internal.sh']                             ##
+## cargo                                                                      ##
 ################################################################################
 
 set -eu
 
 case "${#}" in
-  ("1") ;;
+  ("0") ;;
   (*)
-    echo "This script takes only one argument, the workspace name." >&2
+    "echo" "This script takes no arguments!" >&2
 
     exit "1"
 esac
 
-cd "./${1:?}"
-shift
-
-"cargo" \
-  -- \
-  "each" \
-  "run" \
-  --external-command \
-  -- \
-  "/bin/lint.internal.sh"
+if "test" -e ".ignore-lockfile"
+then
+  "echo" "Ignoring lockfile check."
+else
+  "cargo" "update" --locked
+fi

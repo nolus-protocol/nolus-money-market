@@ -37,11 +37,7 @@ defaults:
     shell: "sh"
 
 env:
-  CARGO_TERM_COLOR: "always"
-  SOFTWARE_RELEASE_ID: "ci"
-  PROTOCOL_NETWORK: "ci"
-  PROTOCOL_NAME: "ci"
-  PROTOCOL_RELEASE_ID: "ci"
+  POSIXLY_CORRECT: "1"
   check-dependencies-versions: |-
     ${{ toJSON(github.ref_type == 'tag' || (github.event_name == 'workflow_dispatch' && inputs.check-dependencies-version)) }}
   upload-artifacts: |-
@@ -152,6 +148,7 @@ jobs:
           "docker" \
             "container" \
             "run" \
+            --tty \
             --volume "./:/src/:ro" \
             "${image_id:?}"
   check-formatting:
@@ -170,6 +167,7 @@ jobs:
           "docker" \
             "container" \
             "run" \
+            --tty \
             --volume "./:/src/:ro" \
             "${image_id:?}"
   lint:
@@ -204,6 +202,7 @@ jobs:
             "container" \
             "run" \
             --env "PROFILE=${profile:?}" \
+            --tty \
             --volume "./:/src/:ro" \
             "${image_id:?}" \
             "${workspace:?}"
@@ -239,6 +238,7 @@ jobs:
             "container" \
             "run" \
             --env "PROFILE=${profile:?}" \
+            --tty \
             --volume "./:/src/:ro" \
             "${image_id:?}" \
             "${workspace:?}"
@@ -269,6 +269,7 @@ jobs:
           "docker" \
             "container" \
             "run" \
+            --tty \
             --volume "./:/src/:ro" \
             "${image_id:?}" \
             "${workspace:?}"

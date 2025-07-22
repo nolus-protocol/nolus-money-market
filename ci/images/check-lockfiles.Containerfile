@@ -7,4 +7,9 @@ COPY \
   "./scripts/for-each-workspace.sh" \
   "/bin/"
 
-ENTRYPOINT ["/bin/for-each-workspace.sh", "cargo", "update", "--locked"]
+COPY \
+  --chmod="0555" \
+  "./scripts/check-lockfiles.sh" \
+  "/bin/"
+
+ENTRYPOINT ["/bin/for-each-workspace.sh", "/bin/check-lockfiles.sh"]
