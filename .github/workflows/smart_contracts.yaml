@@ -44,7 +44,7 @@ env:
     ${{ toJSON(github.ref_type == 'tag' || (github.event_name == 'workflow_dispatch' && inputs.upload-artifacts)) }}
 
 permissions:
-  actions: write
+  actions: "write"
 
 jobs:
   matrix-arguments:
@@ -135,7 +135,7 @@ jobs:
       github.ref_type == 'tag' || (github.event_name == 'workflow_dispatch' && inputs.check-dependencies-version)
     # needs:
     #   - "clear-cache"
-    runs-on: "ubuntu-latest"
+    runs-on: "self-hosted"
     steps:
       - uses: "actions/checkout@v4"
       - uses: "./.github/actions/setup-docker"
@@ -145,6 +145,8 @@ jobs:
           image_id: |-
             ${{ steps.build-container.outputs.image-id }}
         run: |-
+          "sleep" "600"
+
           "docker" \
             "container" \
             "run" \
@@ -152,12 +154,12 @@ jobs:
             --volume "./:/src/:ro" \
             "${image_id:?}"
   check-formatting:
-    runs-on: "ubuntu-latest"
+    runs-on: "self-hosted"
     # needs:
     #   - "clear-cache"
     steps:
       - uses: "actions/checkout@v4"
-      - uses: "./.github/actions/setup-docker"
+      # - uses: "./.github/actions/setup-docker"
       - id: "build-container"
         uses: "./.github/actions/check-formatting-container"
       - env:
@@ -171,7 +173,7 @@ jobs:
             --volume "./:/src/:ro" \
             "${image_id:?}"
   lint:
-    runs-on: "ubuntu-latest"
+    runs-on: "self-hosted"
     needs:
       - "matrix-arguments"
       # - "clear-cache"
@@ -183,7 +185,7 @@ jobs:
           ${{ fromJSON(needs.matrix-arguments.outputs.workspaces-json) }}
     steps:
       - uses: "actions/checkout@v4"
-      - uses: "./.github/actions/setup-docker"
+      # - uses: "./.github/actions/setup-docker"
       - id: "build-container"
         uses: "./.github/actions/lint-container"
       - run: |-
@@ -207,7 +209,7 @@ jobs:
             "${image_id:?}" \
             "${workspace:?}"
   test:
-    runs-on: "ubuntu-latest"
+    runs-on: "self-hosted"
     needs:
       - "matrix-arguments"
       # - "clear-cache"
@@ -219,7 +221,7 @@ jobs:
           ${{ fromJSON(needs.matrix-arguments.outputs.workspaces-json) }}
     steps:
       - uses: "actions/checkout@v4"
-      - uses: "./.github/actions/setup-docker"
+      # - uses: "./.github/actions/setup-docker"
       - id: "build-container"
         uses: "./.github/actions/test-container"
       - run: |-
@@ -243,7 +245,7 @@ jobs:
             "${image_id:?}" \
             "${workspace:?}"
   check-unused-deps:
-    runs-on: "ubuntu-latest"
+    runs-on: "self-hosted"
     needs:
       - "matrix-arguments"
       # - "clear-cache"
@@ -253,7 +255,7 @@ jobs:
           ${{ fromJSON(needs.matrix-arguments.outputs.workspaces-json) }}
     steps:
       - uses: "actions/checkout@v4"
-      - uses: "./.github/actions/setup-docker"
+      # - uses: "./.github/actions/setup-docker"
       - id: "build-container"
         uses: "./.github/actions/check-unused-deps-container"
       - run: |-

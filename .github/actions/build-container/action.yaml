@@ -42,7 +42,7 @@ runs:
         build_step: |-
           ${{ inputs.build-step }}
         image_name: |-
-          localhost/local/${{ inputs.image-name }}
+          ${{ inputs.image-name }}
         runner_temp: |-
           ${{ runner.temp }}
       id: "values"
@@ -121,19 +121,26 @@ runs:
         readonly "hash"
 
         should_run="$(
-          ids="$(
+          id="$(
             "docker" \
               "image" \
               "list" \
+              --digests \
+              --no-trunc \
               --quiet \
-              "${image_name:?}:${hash:?}"
+              "localhost/local/${image_name:?}:${hash:?}"
           )"
 
-          case "${ids?}" in
+          case "${id?}" in
             ("")
               "echo" "true"
               ;;
-            (*) "echo" "false"
+            (*)
+              "echo" \
+                "${id:?}" \
+                >"./.${image_name:?}-image-digest"
+
+              "echo" "false"
           esac
         )"
 
@@ -214,7 +221,7 @@ runs:
         image_digest: |-
           ${{ steps.image-digest.outputs.digest }}
         image_name: |-
-          localhost/local/${{ inputs.image-name }}
+          ${{ inputs.image-name }}
       id: "export"
       if: |-
         fromJSON(steps.values.outputs.should-run)
@@ -226,14 +233,14 @@ runs:
         "docker" \
           "image" \
           "tag" \
-          "${image_name:?}@${image_digest:?}" \
-          "${image_name:?}:${hash:?}"
+          "${image_digest:?}" \
+          "localhost/local/${image_name:?}:${hash:?}"
 
         "docker" \
           "image" \
           "save" \
           --output "${container_path:?}" \
-          "${image_name:?}@${image_digest:?}"
+          "${image_digest:?}"
       shell: "sh"
     - if: |-
         fromJSON(steps.values.outputs.should-run)

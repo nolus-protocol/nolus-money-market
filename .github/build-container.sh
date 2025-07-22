@@ -1,6 +1,8 @@
 # This shell script is meant to be sourced with the POSIX shell "dot" command.
 
 build() (
+  set -eu
+
   image="${1:?"No image selected!"}"
   readonly "image"
   shift
@@ -19,8 +21,6 @@ build() (
       esac
   esac
 
-  set -x
-
   SOURCE_DATE_EPOCH="0" \
     "docker" \
       "buildx" \
@@ -28,7 +28,18 @@ build() (
       --build-arg "SOURCE_DATE_EPOCH=0" \
       --file "./ci/images/${image:?}.Containerfile" \
       --iidfile "./.${image:?}-image-digest" \
-      --tag "localhost/local/${image:?}" \
+      --load \
+      --provenance "false" \
       "${@}" \
       "./ci/"
+
+  id="$("cat" "./.${image:?}-image-digest")"
+
+  echo "${id:?}"
+
+  "docker" \
+    "image" \
+    "tag" \
+    "${id:?}" \
+    "localhost/local/${image:?}"
 )
