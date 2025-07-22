@@ -6,6 +6,9 @@ use sdk::cosmwasm_std::{Addr, BankMsg, Coin as CwCoin, QuerierWrapper};
 
 use crate::{batch::Batch, coin_legacy, error::Error, result::Result};
 
+#[cfg(feature = "testing")]
+pub mod testing;
+
 pub type BalancesResult<G, Cmd> = StdResult<Option<WithCoinResult<G, Cmd>>, Error>;
 
 pub trait BankAccountView {
@@ -151,7 +154,11 @@ where
     }
 }
 
-pub fn account<'a>(account: &'a Addr, querier: QuerierWrapper<'a>) -> BankStub<BankView<'a>> {
+pub fn account_view<'a>(account: &'a Addr, querier: QuerierWrapper<'a>) -> impl BankAccountView {
+    BankView::account(account, querier)
+}
+
+pub fn account<'a>(account: &'a Addr, querier: QuerierWrapper<'a>) -> impl BankAccount {
     BankStub::new(BankView::account(account, querier))
 }
 
