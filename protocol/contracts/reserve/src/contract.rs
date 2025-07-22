@@ -1,6 +1,6 @@
 use std::ops::DerefMut;
 
-use access_control::{Sender, SingleUserAccess};
+use access_control::{SingleUserAccess, sender::Sender};
 use currencies::Lpn as LpnCurrency;
 use currency::CurrencyDef;
 use finance::coin::Coin;
@@ -96,7 +96,7 @@ pub fn execute(
             deps.storage.deref_mut(),
             crate::access_control::LEASE_CODE_ADMIN_KEY,
         )
-        .check(&Sender::new(&info))
+        .check(&Sender::of_execute_msg(&info))
         .map_err(Into::into)
         .and_then(|()| Config::update_lease_code(deps.storage, code))
         .map(|()| PlatformResponse::default()),
