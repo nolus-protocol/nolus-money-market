@@ -1,40 +1,31 @@
 use std::ops::{Deref, DerefMut};
 
 use sdk::{
-    cosmwasm_std::{Addr, MessageInfo, Storage},
+    cosmwasm_std::{Addr, Storage},
     cw_storage_plus::Item,
 };
 
 pub use self::contract_owner::ContractOwnerAccess;
 use self::error::{Error, Result};
 use self::permissions::SingleUserPermission;
+use self::sender::{Sender, SenderAssurance};
 
 mod contract_owner;
 pub mod error;
 pub mod permissions;
-
-pub struct Sender<'a> {
-    pub addr: &'a Addr,
-}
-
-impl<'a> Sender<'a> {
-    pub fn new(info: &'a MessageInfo) -> Self {
-        Self { addr: &info.sender }
-    }
-
-    pub fn from_addr(addr: &'a Addr) -> Self {
-        Self { addr }
-    }
-}
+pub mod sender;
 
 pub trait AccessPermission {
-    fn granted_to(&self, sender: &Sender<'_>) -> bool;
+    fn granted_to<S>(&self, sender: &S) -> bool
+    where
+        S: SenderAssurance;
 }
 
 /// Checks if access is granted to the given caller.
-pub fn check<P>(permission: &P, sender: &Sender<'_>) -> Result
+pub fn check<P, S>(permission: &P, sender: &S) -> Result
 where
     P: AccessPermission + ?Sized,
+    S: SenderAssurance,
 {
     if permission.granted_to(sender) {
         Ok(())
@@ -90,9 +81,10 @@ mod tests {
     use sdk::cosmwasm_std::{Addr, ContractInfo, Storage, testing::MockStorage};
 
     use crate::{
-        Sender, SingleUserAccess,
+        SingleUserAccess,
         error::{Error, Result},
         permissions::{SameContractOnly, SingleUserPermission},
+        sender::Sender,
     };
 
     const NAMESPACE: &str = "my-nice-permission";
@@ -106,7 +98,7 @@ mod tests {
         let sender = Sender::from_addr(&address);
 
         access.check(&sender).unwrap_err();
-        access.grant_to(sender.addr).unwrap();
+        access.grant_to(sender.as_ref()).unwrap();
         access.check(&sender).unwrap();
     }
 

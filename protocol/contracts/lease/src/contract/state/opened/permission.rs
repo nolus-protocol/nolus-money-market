@@ -1,4 +1,6 @@
-use access_control::{AccessPermission, Sender, permissions::SingleUserPermission};
+use access_control::{
+    AccessPermission, permissions::SingleUserPermission, sender::SenderAssurance,
+};
 use currency::{Currency, Group, MemberOf};
 use oracle_platform::OracleRef;
 
@@ -29,7 +31,10 @@ where
     QuoteC: Currency + MemberOf<QuoteG>,
     QuoteG: Group,
 {
-    fn granted_to(&self, sender: &Sender<'_>) -> bool {
-        self.oracle_ref.owned_by(sender.addr)
+    fn granted_to<S>(&self, sender: &S) -> bool
+    where
+        S: SenderAssurance,
+    {
+        self.oracle_ref.owned_by(sender.as_ref())
     }
 }
