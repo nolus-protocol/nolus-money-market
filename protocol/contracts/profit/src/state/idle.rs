@@ -16,7 +16,7 @@ use finance::{
     duration::Duration,
 };
 use platform::{
-    bank::{self, Aggregate, BankAccount, BankAccountView, BankStub, BankView},
+    bank::{self, Aggregate, BankAccount, BankAccountView},
     batch::Batch,
     message::Response as PlatformResponse,
     state_machine::Response as StateMachineResponse,
@@ -69,7 +69,7 @@ impl Idle {
         querier: QuerierWrapper<'_>,
         env: Env,
     ) -> ContractResult<DexResponse<Self>> {
-        let account: BankStub<BankView<'_>> = bank::account(&env.contract.address, querier);
+        let account = bank::account(&env.contract.address, querier);
 
         let balances: SplitCoins<Nls, PaymentGroup> = account
             .balances::<PaymentGroup, _>(CoinToDTO(PhantomData, PhantomData))?
@@ -83,7 +83,12 @@ impl Idle {
                     next_state: State(StateEnum::Idle(self)),
                 })
         } else {
-            self.try_enter_buy_back(querier, env.contract.address, env.block.time, balances.rest)
+            self.try_enter_buy_back(
+                querier,
+                env.contract.address.clone(),
+                env.block.time,
+                balances.rest,
+            )
         }
     }
 

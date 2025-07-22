@@ -154,11 +154,14 @@ where
     }
 }
 
-pub fn account_view<'a>(account: &'a Addr, querier: QuerierWrapper<'a>) -> impl BankAccountView {
+pub fn account_view<'a>(
+    account: &'a Addr,
+    querier: QuerierWrapper<'a>,
+) -> impl BankAccountView + use<'a> {
     BankView::account(account, querier)
 }
 
-pub fn account<'a>(account: &'a Addr, querier: QuerierWrapper<'a>) -> impl BankAccount {
+pub fn account<'a>(account: &'a Addr, querier: QuerierWrapper<'a>) -> impl BankAccount + use<'a> {
     BankStub::new(BankView::account(account, querier))
 }
 
