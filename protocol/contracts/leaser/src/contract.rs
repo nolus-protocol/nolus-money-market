@@ -5,7 +5,7 @@ use serde::Serialize;
 use access_control::ContractOwnerAccess;
 use lease::api::{MigrateMsg as LeaseMigrateMsg, authz::AccessGranted};
 use platform::{
-    contract::{self, Code, CodeId},
+    contract::{self, Code, CodeId, Validator},
     error as platform_error,
     message::Response as MessageResponse,
     reply, response,
@@ -13,8 +13,7 @@ use platform::{
 use sdk::{
     cosmwasm_ext::Response,
     cosmwasm_std::{
-        Addr, Api, Binary, Deps, DepsMut, Env, MessageInfo, QuerierWrapper, Reply, Storage,
-        entry_point,
+        Addr, Api, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Storage, entry_point,
     },
 };
 use versioning::{
@@ -49,18 +48,19 @@ pub fn instantiate(
     info: MessageInfo,
     msg: InstantiateMsg,
 ) -> ContractResult<Response> {
-    contract::validate_addr(deps.querier, &msg.lpp)?;
-    contract::validate_addr(deps.querier, &msg.profit)?;
-    contract::validate_addr(deps.querier, &msg.reserve)?;
-    contract::validate_addr(deps.querier, &msg.time_alarms)?;
-    contract::validate_addr(deps.querier, &msg.market_price_oracle)?;
-    contract::validate_addr(deps.querier, &msg.protocols_registry)?;
+    let addr_validator = contract::validator(deps.querier);
+    addr_validator.check_contract(&msg.lpp)?;
+    addr_validator.check_contract(&msg.profit)?;
+    addr_validator.check_contract(&msg.reserve)?;
+    addr_validator.check_contract(&msg.time_alarms)?;
+    addr_validator.check_contract(&msg.market_price_oracle)?;
+    addr_validator.check_contract(&msg.protocols_registry)?;
 
     validate(&msg.lease_admin, deps.api)?;
 
     ContractOwnerAccess::new(deps.storage.deref_mut()).grant_to(&info.sender)?;
 
-    new_code(msg.lease_code, deps.querier)
+    new_code(msg.lease_code, &addr_validator)
         .map(|lease_code| Config::new(lease_code, msg))
         .and_then(|config| config.store(deps.storage))
         .map(|()| response::empty_response())
@@ -108,9 +108,11 @@ pub fn execute(
             })
             .and_then(|()| leaser::try_configure(deps.storage, new_config)),
         ExecuteMsg::FinalizeLease { customer } => {
-            validate_customer(customer, deps.api, deps.querier)
+            let addr_validator = contract::validator(deps.querier);
+            validate_customer(customer, deps.api, &addr_validator)
                 .and_then(|customer| {
-                    validate_lease(info.sender, deps.as_ref()).map(|lease| (customer, lease))
+                    validate_lease(info.sender, deps.as_ref(), &addr_validator)
+                        .map(|lease| (customer, lease))
                 })
                 .and_then(|(customer, lease)| Leases::remove(deps.storage, customer, &lease))
                 .map(|removed| {
@@ -125,7 +127,7 @@ pub fn execute(
         } => ContractOwnerAccess::new(deps.storage.deref())
             .check(&info.sender)
             .map_err(Into::into)
-            .and_then(|()| new_code(new_code_id, deps.querier))
+            .and_then(|()| new_code(new_code_id, &contract::validator(deps.querier)))
             .and_then(|new_lease_code| {
                 leaser::try_migrate_leases(
                     deps.storage,
@@ -142,7 +144,9 @@ pub fn execute(
         } => ContractOwnerAccess::new(deps.storage.deref())
             .check(&info.sender)
             .map_err(Into::into)
-            .and_then(|()| validate_customer(next_customer, deps.api, deps.querier))
+            .and_then(|()| {
+                validate_customer(next_customer, deps.api, &contract::validator(deps.querier))
+            })
             .and_then(|next_customer_validated| {
                 leaser::try_migrate_leases_cont(
                     deps.storage,
@@ -237,17 +241,17 @@ pub fn reply(deps: DepsMut<'_>, _env: Env, msg: Reply) -> ContractResult<Respons
         .inspect_err(platform_error::log(deps.api))
 }
 
-fn validate_customer(
-    customer: Addr,
-    api: &dyn Api,
-    querier: QuerierWrapper<'_>,
-) -> ContractResult<Addr> {
+fn validate_customer<V>(customer: Addr, api: &dyn Api, addr_validator: &V) -> ContractResult<Addr>
+where
+    V: Validator,
+{
     api.addr_validate(customer.as_str())
         .map_err(|_| ContractError::InvalidContinuationKey {
             err: "invalid address".into(),
         })
         .and_then(|next_customer| {
-            contract::validate_addr(querier, &next_customer)
+            addr_validator
+                .check_contract(&next_customer)
                 .is_err()
                 .then_some(next_customer)
                 .ok_or_else(|| ContractError::InvalidContinuationKey {
@@ -256,14 +260,18 @@ fn validate_customer(
         })
 }
 
-fn validate_lease(lease: Addr, deps: Deps<'_>) -> ContractResult<Addr> {
+fn validate_lease<V>(lease: Addr, deps: Deps<'_>, addr_validator: &V) -> ContractResult<Addr>
+where
+    V: Validator,
+{
     Leaser::new(deps)
         .config()
         .map(|config| config.lease_code)
         .and_then(|lease_code| {
-            contract::validate_code_id(deps.querier, &lease, lease_code).map_err(Into::into)
+            addr_validator
+                .check_contract_code(lease, &lease_code)
+                .map_err(Into::into)
         })
-        .map(|()| lease)
 }
 
 fn check_no_leases(storage: &dyn Storage) -> ContractResult<()> {
@@ -278,11 +286,12 @@ fn protocols_registry_load(storage: &dyn Storage) -> ContractResult<Addr> {
     Config::load(storage).map(|cfg| cfg.protocols_registry)
 }
 
-fn new_code<C>(new_code_id: C, querier: QuerierWrapper<'_>) -> ContractResult<Code>
+fn new_code<C, V>(new_code_id: C, addr_validator: &V) -> ContractResult<Code>
 where
     C: Into<CodeId>,
+    V: Validator,
 {
-    Code::try_new(new_code_id.into(), &querier).map_err(Into::into)
+    Code::try_new(new_code_id.into(), addr_validator).map_err(Into::into)
 }
 
 fn migrate_msg(

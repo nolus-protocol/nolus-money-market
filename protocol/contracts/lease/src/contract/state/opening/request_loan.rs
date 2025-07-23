@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 
 use platform::{
     batch::{Batch, Emit, Emitter},
+    contract,
     message::Response as MessageResponse,
     state_machine::Response as StateMachineResponse,
 };
@@ -36,15 +37,16 @@ impl RequestLoan {
         info: MessageInfo,
         spec: NewLeaseContract,
     ) -> ContractResult<(Batch, Self)> {
+        let addr_validator = contract::validator(querier);
         let lpp = LppRef::try_new(spec.form.loan.lpp.clone(), querier)
             .map_err(ContractError::LppStubError)?;
 
         let oracle = OracleRef::try_from_base(spec.form.market_price_oracle.clone(), querier)
             .map_err(ContractError::CrateOracleRef)?;
 
-        let timealarms = TimeAlarmsRef::new(spec.form.time_alarms.clone(), querier)?;
+        let timealarms = TimeAlarmsRef::new(spec.form.time_alarms.clone(), &addr_validator)?;
 
-        let finalizer = LeasesRef::try_new(spec.finalizer.clone(), querier)?;
+        let finalizer = LeasesRef::try_new(spec.finalizer.clone(), &addr_validator)?;
 
         let OpenLoanReqResult { batch, downpayment } = lpp.clone().execute_lender(
             OpenLoanReq::new(

@@ -1,11 +1,10 @@
 use std::ops::{Deref, DerefMut};
 
 use platform::{
-    contract,
     dispatcher::{AlarmsDispatcher, Id},
     message::Response as MessageResponse,
 };
-use sdk::cosmwasm_std::{Addr, Env, QuerierWrapper, Storage, Timestamp};
+use sdk::cosmwasm_std::{Addr, Env, Storage, Timestamp};
 use time_oracle::Alarms;
 
 use crate::{
@@ -58,9 +57,10 @@ impl<'storage, S> TimeAlarms<'storage, S>
 where
     S: Deref<Target = dyn Storage + 'storage> + DerefMut,
 {
+    /// pre:
+    /// `subscriber` is a valid contract address
     pub fn try_add(
         &mut self,
-        querier: QuerierWrapper<'_>,
         env: &Env,
         subscriber: Addr,
         time: Timestamp,
@@ -68,10 +68,9 @@ where
         if time < env.block.time {
             return Err(ContractError::InvalidAlarm(time));
         }
-
-        contract::validate_addr(querier, &subscriber)
-            .map_err(ContractError::from)
-            .and_then(|()| self.time_alarms.add(subscriber, time).map_err(Into::into))
+        self.time_alarms
+            .add(subscriber, time)
+            .map_err(Into::into)
             .map(|()| Default::default())
     }
 
@@ -116,82 +115,39 @@ where
 
 #[cfg(test)]
 mod tests {
-    use std::ops::DerefMut;
-
-    use platform::contract;
     use sdk::cosmwasm_std::{
-        Addr, QuerierWrapper, Timestamp,
-        testing::{self, MockQuerier, mock_dependencies},
+        Addr, Timestamp,
+        testing::{self, mock_dependencies},
     };
-
-    use crate::error::ContractError;
 
     use super::TimeAlarms;
 
     #[test]
-    fn try_add_invalid_contract_address() {
-        let mut deps = mock_dependencies();
-        let mut deps = deps.as_mut();
-        let mut env = testing::mock_env();
-        env.block.time = Timestamp::from_seconds(0);
-
-        let msg_sender = Addr::unchecked("some address");
-        assert!(
-            TimeAlarms::new(deps.storage.deref_mut())
-                .try_add(
-                    deps.querier,
-                    &env,
-                    msg_sender.clone(),
-                    Timestamp::from_nanos(8),
-                )
-                .is_err()
-        );
-
-        let expected_error: ContractError = contract::validate_addr(deps.querier, &msg_sender)
-            .unwrap_err()
-            .into();
-
-        let result = TimeAlarms::new(deps.storage)
-            .try_add(deps.querier, &env, msg_sender, Timestamp::from_nanos(8))
-            .unwrap_err();
-
-        assert_eq!(expected_error, result);
-    }
-
-    #[test]
     fn try_add_valid_contract_address() {
-        let mut mock_querier = MockQuerier::default();
-        mock_querier.update_wasm(contract::testing::valid_contract_handler);
-        let querier = QuerierWrapper::new(&mock_querier);
         let mut deps_temp = mock_dependencies();
-        let mut deps = deps_temp.as_mut();
-        deps.querier = querier;
+        let deps = deps_temp.as_mut();
         let mut env = testing::mock_env();
         env.block.time = Timestamp::from_seconds(0);
 
         let msg_sender = Addr::unchecked("some address");
         assert!(
             TimeAlarms::new(deps.storage)
-                .try_add(deps.querier, &env, msg_sender, Timestamp::from_nanos(4),)
+                .try_add(&env, msg_sender, Timestamp::from_nanos(4),)
                 .is_ok()
         );
     }
 
     #[test]
     fn try_add_alarm_in_the_past() {
-        let mut mock_querier = MockQuerier::default();
-        mock_querier.update_wasm(contract::testing::valid_contract_handler);
-        let querier = QuerierWrapper::new(&mock_querier);
         let mut deps_temp = mock_dependencies();
-        let mut deps = deps_temp.as_mut();
-        deps.querier = querier;
+        let deps = deps_temp.as_mut();
 
         let mut env = testing::mock_env();
         env.block.time = Timestamp::from_seconds(100);
 
         let msg_sender = Addr::unchecked("some address");
         TimeAlarms::new(deps.storage)
-            .try_add(deps.querier, &env, msg_sender, Timestamp::from_nanos(4))
+            .try_add(&env, msg_sender, Timestamp::from_nanos(4))
             .unwrap_err();
     }
 }

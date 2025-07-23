@@ -1,5 +1,8 @@
 use currency::{CurrencyDef, Group, MemberOf};
-use platform::{contract, response};
+use platform::{
+    contract::{self, Validator},
+    response,
+};
 use sdk::{
     cosmwasm_ext::Response as CwResponse,
     cosmwasm_std::{Addr, DepsMut, Env},
@@ -50,7 +53,7 @@ where
                 })
         }
         ExecuteMsg::AddPriceAlarm { alarm } => {
-            contract::validate_addr(deps.querier, &sender)?;
+            contract::validator(deps.querier).check_contract(&sender)?;
 
             MarketAlarms::new(deps.storage)
                 .try_add_price_alarm(sender, alarm)

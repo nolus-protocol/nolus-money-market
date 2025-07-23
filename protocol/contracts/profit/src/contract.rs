@@ -4,7 +4,10 @@ use access_control::{ContractOwnerAccess, SingleUserAccess};
 use dex::{ContinueResult as DexResult, Handler as _, Response as DexResponse};
 use oracle_platform::OracleRef;
 use platform::{
-    error as platform_error, message::Response as MessageResponse, response,
+    contract::{self, Validator},
+    error as platform_error,
+    message::Response as MessageResponse,
+    response,
     state_machine::Response as StateMachineResponse,
 };
 use sdk::{
@@ -43,9 +46,10 @@ pub fn instantiate(
     info: MessageInfo,
     msg: InstantiateMsg,
 ) -> ContractResult<CwResponse> {
-    platform::contract::validate_addr(deps.querier, &msg.treasury)?;
-    platform::contract::validate_addr(deps.querier, &msg.oracle)?;
-    platform::contract::validate_addr(deps.querier, &msg.timealarms)?;
+    let addr_validator = contract::validator(deps.querier);
+    addr_validator.check_contract(&msg.treasury)?;
+    addr_validator.check_contract(&msg.oracle)?;
+    // msg.timealarms is validated on TimeAlarmsRef instantiation
 
     ContractOwnerAccess::new(deps.storage.deref_mut()).grant_to(&info.sender)?;
 
@@ -60,7 +64,7 @@ pub fn instantiate(
             msg.cadence_hours,
             msg.treasury,
             OracleRef::try_from_base(msg.oracle, deps.querier)?,
-            TimeAlarmsRef::new(msg.timealarms, deps.querier)?,
+            TimeAlarmsRef::new(msg.timealarms, &addr_validator)?,
         ),
         msg.dex,
     );

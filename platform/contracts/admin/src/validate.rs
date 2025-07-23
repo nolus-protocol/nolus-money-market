@@ -1,5 +1,6 @@
 use std::collections::BTreeMap;
 
+use platform::contract::Validator;
 use sdk::cosmwasm_std::{Addr, QuerierWrapper};
 
 use crate::error::Error;
@@ -79,6 +80,8 @@ impl Validate for Addr {
     type Error = Error;
 
     fn validate(&self, ctx: Self::Context<'_>) -> Result<(), Self::Error> {
-        platform::contract::validate_addr(ctx, self).map_err(Error::Platform)
+        platform::contract::validator(ctx)
+            .check_contract(self)
+            .map_err(Error::Platform)
     }
 }

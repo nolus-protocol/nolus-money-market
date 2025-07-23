@@ -1,5 +1,6 @@
 use platform::{
     batch::{Emit, Emitter},
+    contract::{self, Validator},
     error as platform_error, response,
 };
 use sdk::{
@@ -16,6 +17,7 @@ use versioning::{
 
 use crate::{
     alarms::TimeAlarms,
+    error::ContractError,
     msg::{DispatchAlarmsResponse, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg, SudoMsg},
     result::ContractResult,
 };
@@ -64,9 +66,14 @@ pub fn execute(
     let mut time_alarms: TimeAlarms<'_, &mut dyn Storage> = TimeAlarms::new(deps.storage);
 
     match msg {
-        ExecuteMsg::AddAlarm { time } => time_alarms
-            .try_add(deps.querier, &env, info.sender, time)
-            .map(response::response_only_messages),
+        ExecuteMsg::AddAlarm { time } => {
+            let sender = info.sender;
+            contract::validator(deps.querier)
+                .check_contract(&sender)
+                .map_err(ContractError::from)
+                .and_then(|()| time_alarms.try_add(&env, sender, time))
+                .map(response::response_only_messages)
+        }
         ExecuteMsg::DispatchAlarms { max_count } => time_alarms
             .try_notify(env.block.time, max_count)
             .and_then(|(total, resp)| {

@@ -2,8 +2,8 @@ use std::result::Result as StdResult;
 
 use serde::{Deserialize, Serialize};
 
-use platform::{batch::Batch, contract};
-use sdk::cosmwasm_std::{Addr, QuerierWrapper, StdError as SdkError, Timestamp, wasm_execute};
+use platform::{batch::Batch, contract::Validator};
+use sdk::cosmwasm_std::{Addr, StdError as SdkError, Timestamp, wasm_execute};
 
 use crate::msg::ExecuteMsg;
 
@@ -41,8 +41,12 @@ pub struct TimeAlarmsRef {
 }
 
 impl TimeAlarmsRef {
-    pub fn new(addr: Addr, querier: QuerierWrapper<'_>) -> Result<Self> {
-        contract::validate_addr(querier, &addr)
+    pub fn new<V>(addr: Addr, validator: &V) -> Result<Self>
+    where
+        V: Validator,
+    {
+        validator
+            .check_contract(&addr)
             .map_err(Error::InvalidAddress)
             .map(|()| Self { addr })
     }

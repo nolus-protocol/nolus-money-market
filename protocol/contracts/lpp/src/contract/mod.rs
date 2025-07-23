@@ -12,7 +12,11 @@ use currencies::{
 };
 
 use platform::{
-    bank, contract::Code, error as platform_error, message::Response as PlatformResponse, response,
+    bank,
+    contract::{Code, Validator},
+    error as platform_error,
+    message::Response as PlatformResponse,
+    response,
 };
 use sdk::{
     cosmwasm_ext::Response as CwResponse,
@@ -51,16 +55,28 @@ pub fn instantiate(
     _info: MessageInfo,
     msg: InstantiateMsg,
 ) -> Result<CwResponse> {
-    deps.api.addr_validate(msg.protocol_admin.as_str())?;
+    let addr_validator = platform::contract::validator(deps.querier);
 
-    SingleUserAccess::new(
-        deps.storage.deref_mut(),
-        crate::access_control::PROTOCOL_ADMIN_KEY,
-    )
-    .grant_to(&msg.protocol_admin)?;
+    deps.api
+        .addr_validate(msg.protocol_admin.as_str())
+        .map_err(Into::<ContractError>::into)
+        .and_then(|protocol_admin| {
+            addr_validator
+                .check_contract(&protocol_admin)
+                .map(|()| protocol_admin)
+                .map_err(Into::into)
+        })
+        .and_then(|protocol_admin| {
+            SingleUserAccess::new(
+                deps.storage.deref_mut(),
+                crate::access_control::PROTOCOL_ADMIN_KEY,
+            )
+            .grant_to(&protocol_admin)
+            .map_err(Into::into)
+        })?;
 
     let bank = bank::account_view(&env.contract.address, deps.querier);
-    Code::try_new(msg.lease_code.into(), &deps.querier)
+    Code::try_new(msg.lease_code.into(), &addr_validator)
         .map_err(Into::into)
         .and_then(|lease_code| {
             LiquidityPool::<LpnCurrency, _>::new(

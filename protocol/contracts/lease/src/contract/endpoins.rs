@@ -1,5 +1,10 @@
 use finance::duration::Duration;
-use platform::{error as platform_error, message::Response as MessageResponse, response};
+use platform::{
+    contract::{self, Validator},
+    error as platform_error,
+    message::Response as MessageResponse,
+    response,
+};
 use sdk::{
     cosmwasm_ext::Response as CwResponse,
     cosmwasm_std::{
@@ -39,10 +44,11 @@ pub fn instantiate(
     deps.api.addr_validate(new_lease.finalizer.as_str())?;
     deps.api.addr_validate(new_lease.form.customer.as_str())?;
 
-    platform::contract::validate_addr(deps.querier, &new_lease.form.time_alarms)?;
-    platform::contract::validate_addr(deps.querier, &new_lease.form.market_price_oracle)?;
-    platform::contract::validate_addr(deps.querier, &new_lease.form.loan.lpp)?;
-    platform::contract::validate_addr(deps.querier, &new_lease.form.loan.profit)?;
+    let addr_validator = contract::validator(deps.querier);
+    addr_validator.check_contract(&new_lease.form.time_alarms)?;
+    addr_validator.check_contract(&new_lease.form.market_price_oracle)?;
+    addr_validator.check_contract(&new_lease.form.loan.lpp)?;
+    addr_validator.check_contract(&new_lease.form.loan.profit)?;
 
     state::new_lease(deps.querier, info, new_lease)
         .and_then(|(batch, next_state)| state::save(deps.storage, &next_state).map(|()| batch))

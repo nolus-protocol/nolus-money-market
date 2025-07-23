@@ -1,4 +1,3 @@
-use cosmwasm_std::QuerierWrapper;
 use currencies::Lpns;
 use currency::{CurrencyDef, MemberOf};
 use finance::{
@@ -10,7 +9,7 @@ use finance::{
     zero::Zero,
 };
 use lpp_platform::NLpn;
-use platform::{bank::BankAccountView, contract};
+use platform::{bank::BankAccountView, contract::Validator};
 use sdk::cosmwasm_std::{Addr, Storage, Timestamp};
 
 use crate::{
@@ -160,12 +159,12 @@ where
         Ok(price)
     }
 
-    pub fn validate_lease_addr(
-        &self,
-        querier: QuerierWrapper<'_>,
-        lease_addr: &Addr,
-    ) -> Result<()> {
-        contract::validate_code_id(querier, lease_addr, self.config.lease_code())
+    pub fn validate_lease_addr<V>(&self, validator: &V, lease_addr: Addr) -> Result<Addr>
+    where
+        V: Validator,
+    {
+        validator
+            .check_contract_code(lease_addr, &self.config.lease_code())
             .map_err(ContractError::from)
     }
 

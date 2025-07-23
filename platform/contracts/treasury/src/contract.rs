@@ -7,7 +7,11 @@ use admin_contract::msg::{
 use currency::platform::PlatformGroup;
 use finance::{duration::Duration, percent::Percent};
 use platform::{
-    batch::Batch, error as platform_error, message::Response as MessageResponse, response,
+    batch::Batch,
+    contract::{self, Validator},
+    error as platform_error,
+    message::Response as MessageResponse,
+    response,
 };
 use sdk::{
     cosmwasm_ext::Response as CwResponse,
@@ -173,7 +177,7 @@ fn try_dispatch(
         timealarm,
         &now,
         Duration::from_hours(config.cadence_hours),
-        querier,
+        &contract::validator(querier),
     )?;
 
     let last_dispatch = DispatchLog::last_dispatch(storage);
@@ -207,13 +211,16 @@ fn protocols(
         })
 }
 
-fn setup_alarm(
+fn setup_alarm<V>(
     timealarm: Addr,
     now: &Timestamp,
     alarm_in: Duration,
-    querier: QuerierWrapper<'_>,
-) -> ContractResult<Batch> {
-    TimeAlarmsRef::new(timealarm, querier)
+    validator: &V,
+) -> ContractResult<Batch>
+where
+    V: Validator,
+{
+    TimeAlarmsRef::new(timealarm, validator)
         .map_err(ContractError::SetupTimeAlarmStub)
         .and_then(|stub| {
             stub.setup_alarm(now + alarm_in)
@@ -232,8 +239,6 @@ fn setup_dispatching(
     // and it is not yet instantiated
     api.addr_validate(msg.protocols_registry.as_str())
         .map_err(ContractError::ValidateRegistryAddr)?;
-    platform::contract::validate_addr(querier, &msg.timealarms)
-        .map_err(ContractError::ValidateTimeAlarmsAddr)?;
 
     SingleUserAccess::new(
         storage.deref_mut(),
@@ -250,7 +255,7 @@ fn setup_dispatching(
         msg.timealarms,
         &env.block.time,
         Duration::from_hours(msg.cadence_hours),
-        querier,
+        &contract::validator(querier),
     )
 }
 

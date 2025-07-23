@@ -19,9 +19,6 @@ pub enum ContractError {
     #[error("[Treasury] Failed to validate the Registry address! Cause: {0}")]
     ValidateRegistryAddr(StdError),
 
-    #[error("[Treasury] Failed to validate the Timealarms address! Cause: {0}")]
-    ValidateTimeAlarmsAddr(platform::error::Error),
-
     #[error("[Treasury] Failed to update the storage! Cause: {0}")]
     UpdateStorage(StdError),
 

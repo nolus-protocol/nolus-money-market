@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use platform::batch::Batch;
+use platform::{batch::Batch, contract::Validator};
 use sdk::cosmwasm_std::{Addr, QuerierWrapper};
 
 use crate::{
@@ -19,10 +19,12 @@ pub struct LeasesRef {
 }
 
 impl LeasesRef {
-    pub(super) fn try_new(addr: Addr, querier: QuerierWrapper<'_>) -> ContractResult<Self> {
-        use platform::contract;
-
-        contract::validate_addr(querier, &addr)
+    pub(super) fn try_new<V>(addr: Addr, addr_validator: &V) -> ContractResult<Self>
+    where
+        V: Validator,
+    {
+        addr_validator
+            .check_contract(&addr)
             .map(|()| Self { addr })
             .map_err(Into::into)
     }

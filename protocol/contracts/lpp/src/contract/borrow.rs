@@ -3,6 +3,7 @@ use finance::coin::Coin;
 use platform::{
     bank::{self, BankAccount},
     batch::Batch,
+    contract,
     message::Response as MessageResponse,
 };
 use sdk::cosmwasm_std::{Addr, Deps, DepsMut, Env, MessageInfo, Storage};
@@ -24,11 +25,9 @@ pub(super) fn try_open_loan<Lpn>(
 where
     Lpn: 'static + CurrencyDef,
 {
-    let lease_addr = info.sender;
-
     let mut bank = bank::account(&env.contract.address, deps.querier);
     let mut lpp = LiquidityPool::<Lpn, _>::load(deps.storage, &bank)?;
-    lpp.validate_lease_addr(deps.querier, &lease_addr)?;
+    let lease_addr = lpp.validate_lease_addr(&contract::validator(deps.querier), info.sender)?;
 
     let loan = lpp.try_open_loan(deps.storage, env.block.time, lease_addr.clone(), amount)?;
     bank.send(amount, lease_addr);
@@ -46,13 +45,12 @@ pub(super) fn try_repay_loan<Lpn>(
 where
     Lpn: CurrencyDef,
 {
-    let lease_addr = info.sender;
     let repay_amount = bank::received_one(&info.funds)?;
 
     let mut bank = bank::account(&env.contract.address, deps.querier);
     let mut lpp = LiquidityPool::<'_, Lpn, _>::load(deps.storage, &bank)?;
-    // TODO introduce platform::contract_validator to check if an address is a contract instance address
-    lpp.validate_lease_addr(deps.querier, &lease_addr)?;
+    let lease_addr = lpp.validate_lease_addr(&contract::validator(deps.querier), info.sender)?;
+
     let excess_received = lpp.try_repay_loan(
         deps.storage,
         env.block.time,
