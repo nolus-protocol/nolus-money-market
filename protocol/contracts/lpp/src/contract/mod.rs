@@ -152,13 +152,18 @@ pub fn execute(
                 )
             },
         ),
-        ExecuteMsg::Deposit() => lender::try_deposit::<LpnCurrency, _>(
-            deps.storage,
-            &bank::account_view(&env.contract.address.clone(), deps.querier),
-            env,
-            info,
-        )
-        .map(response::response_only_messages),
+        ExecuteMsg::Deposit() => bank::received_one(&info.funds)
+            .map_err(Into::into)
+            .and_then(|pending_deposit| {
+                lender::try_deposit::<LpnCurrency, _>(
+                    deps.storage,
+                    &bank::account_view(&env.contract.address.clone(), deps.querier),
+                    info.sender,
+                    pending_deposit,
+                    env,
+                )
+            })
+            .map(response::response_only_messages),
         ExecuteMsg::Burn { amount } => lender::try_withdraw::<LpnCurrency, _>(
             deps.storage,
             bank::account(&env.contract.address.clone(), deps.querier),
@@ -278,9 +283,7 @@ fn to_stable(
 #[cfg(test)]
 mod test {
     use currencies::Lpn;
-    use finance::coin::Coin;
-    use platform::coin_legacy;
-    use sdk::cosmwasm_std::{Addr, Coin as CwCoin, MessageInfo};
+    use sdk::cosmwasm_std::{Addr, MessageInfo};
 
     pub(super) type TheCurrency = Lpn;
 
@@ -295,22 +298,5 @@ mod test {
             sender: lender(),
             funds: vec![],
         }
-    }
-
-    pub(super) fn lender_msg_with_funds<F>(funds: F) -> MessageInfo
-    where
-        F: Into<Coin<TheCurrency>>,
-    {
-        MessageInfo {
-            sender: lender(),
-            funds: vec![cwcoin(funds)],
-        }
-    }
-
-    pub(super) fn cwcoin<A>(amount: A) -> CwCoin
-    where
-        A: Into<Coin<TheCurrency>>,
-    {
-        coin_legacy::to_cosmwasm_on_nolus::<TheCurrency>(amount.into())
     }
 }

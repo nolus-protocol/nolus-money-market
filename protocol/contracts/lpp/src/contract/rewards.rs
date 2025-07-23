@@ -139,8 +139,9 @@ mod test {
         lender::try_deposit::<TheCurrency, _>(
             &mut deps.storage,
             &bank,
+            test::lender(),
+            DEPOSIT,
             env.clone(),
-            test::lender_msg_with_funds(DEPOSIT),
         )
         .unwrap();
 

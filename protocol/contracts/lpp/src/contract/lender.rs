@@ -2,7 +2,7 @@ use currency::CurrencyDef;
 use finance::{coin::Coin, price, zero::Zero};
 use lpp_platform::NLpn;
 use platform::{
-    bank::{self, BankAccount, BankAccountView},
+    bank::{BankAccount, BankAccountView},
     batch::Batch,
     message::Response as MessageResponse,
 };
@@ -20,16 +20,14 @@ use super::error::{ContractError, Result};
 pub(super) fn try_deposit<Lpn, Bank>(
     storage: &mut dyn Storage,
     bank: &Bank,
+    lender: Addr,
+    pending_deposit: Coin<Lpn>,
     env: Env,
-    info: MessageInfo,
 ) -> Result<MessageResponse>
 where
     Lpn: 'static + CurrencyDef,
     Bank: BankAccountView,
 {
-    let lender_addr = info.sender;
-    let pending_deposit = bank::received_one(&info.funds)?;
-
     let receipts = {
         let now = &env.block.time;
         let lpp = LiquidityPool::<Lpn, _>::load(storage, bank)?;
@@ -45,10 +43,10 @@ where
 
         let deposit_nlpn = price::total(pending_deposit, price.inv());
 
-        Deposit::load_or_default(storage, lender_addr.clone())?.deposit(storage, deposit_nlpn)?
+        Deposit::load_or_default(storage, lender.clone())?.deposit(storage, deposit_nlpn)?
     };
 
-    Ok(event::emit_deposit(env, lender_addr, pending_deposit, receipts).into())
+    Ok(event::emit_deposit(env, lender, pending_deposit, receipts).into())
 }
 
 pub(super) fn deposit_capacity<Lpn, Bank>(
@@ -183,8 +181,9 @@ mod test {
             lender::try_deposit::<TheCurrency, _>(
                 &mut store,
                 &bank,
+                test_tools::lender(),
+                initial_lpp_balance.into(),
                 env.clone(),
-                test_tools::lender_msg_with_funds(initial_lpp_balance),
             )
             .unwrap();
         }
@@ -230,7 +229,7 @@ mod test {
         const DEPOSIT_NLPN: Coin<NLpn> = Coin::new(TEST_AMOUNT);
 
         mod deposit {
-            use finance::coin::Coin;
+            use finance::{coin::Coin, zero::Zero};
 
             use crate::contract::{
                 lender::{
@@ -248,8 +247,9 @@ mod test {
                     lender::try_deposit::<TheCurrency, _>(
                         &mut store,
                         &bank,
+                        test_tools::lender(),
+                        Coin::ZERO,
                         env,
-                        test_tools::lender_msg_no_funds(),
                     )
                     .unwrap_err();
                 })
@@ -480,8 +480,9 @@ mod test {
                     let result = lender::try_deposit::<TheCurrency, _>(
                         &mut store,
                         &bank,
+                        test_tools::lender(),
+                        deposit.into(),
                         env,
-                        test_tools::lender_msg_with_funds(deposit),
                     );
 
                     if expect_error {
