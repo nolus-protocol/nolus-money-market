@@ -75,8 +75,14 @@ impl Instantiator {
         }
     }
 
+    /// The expected address of the leaser contract
+    ///
+    /// It may not be necessarily the leaser's one, nor contract at all.
+    /// Used as `lease_code_admin` or `protocol_admin`.
+    /// Due to the protocol contracts instantiation order, the production code cannot and does not
+    /// check for existence.
     pub fn expected_addr() -> Addr {
-        testing::user("contract5")
+        testing::contract(9, 0)
     }
 
     #[track_caller]

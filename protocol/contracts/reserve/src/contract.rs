@@ -43,17 +43,10 @@ pub fn instantiate(
     _info: MessageInfo,
     new_reserve: InstantiateMsg,
 ) -> Result<CwResponse> {
-    let addr_validator = platform::contract::validator(deps.querier);
-
     deps.api
         .addr_validate(new_reserve.lease_code_admin.as_str())
         .map_err(Error::from)
-        .and_then(|lease_code_admin| {
-            addr_validator
-                .check_contract(&lease_code_admin)
-                .map(|()| lease_code_admin)
-                .map_err(Into::into)
-        })
+        // cannot validate the lease code admin contract for existence, since it is not yet instantiated
         .and_then(|lease_code_admin| {
             SingleUserAccess::new(
                 deps.storage.deref_mut(),
@@ -63,7 +56,11 @@ pub fn instantiate(
             .map_err(Into::into)
         })
         .and_then(|()| {
-            Code::try_new(new_reserve.lease_code.into(), &addr_validator).map_err(Into::into)
+            Code::try_new(
+                new_reserve.lease_code.into(),
+                &platform::contract::validator(deps.querier),
+            )
+            .map_err(Into::into)
         })
         .and_then(|lease_code| Config::new(lease_code).store(deps.storage))
         .map(|()| response::empty_response())
