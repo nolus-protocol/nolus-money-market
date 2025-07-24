@@ -112,17 +112,11 @@ pub fn execute(
             })
             .and_then(|()| leaser::try_configure(deps.storage, new_config)),
         ExecuteMsg::FinalizeLease { customer } => {
-<<<<<<< HEAD
             let addr_validator = contract::validator(deps.querier);
             validate_customer(customer, deps.api, &addr_validator)
                 .and_then(|customer| {
                     validate_lease(info.sender, deps.as_ref(), &addr_validator)
                         .map(|lease| (customer, lease))
-=======
-            validate_customer(customer, deps.api, deps.querier)
-                .and_then(|customer| {
-                    validate_lease(info.sender, deps.as_ref()).map(|lease| (customer, lease))
->>>>>>> eb41a3a57 (fix: ci reported errors)
                 })
                 .and_then(|(customer, lease)| Leases::remove(deps.storage, customer, &lease))
                 .map(|removed| {
