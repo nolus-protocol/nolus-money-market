@@ -2,7 +2,6 @@ use std::ops::{Deref, DerefMut};
 
 use access_control::{
     ContractOwnerAccess, SingleUserAccess, permissions::DexResponseSafeDeliveryPermission,
-    sender::Sender,
 };
 use dex::{ContinueResult as DexResult, Handler as _, Response as DexResponse};
 use oracle_platform::OracleRef;
@@ -107,7 +106,7 @@ pub fn execute(
                 deps.storage.deref(),
                 crate::access_control::TIMEALARMS_NAMESPACE,
             )
-            .check(&Sender::of_execute_msg(&info))?;
+            .check(&info)?;
 
             try_handle_execute_message(deps, env, info, State::on_time_alarm)
                 .map(response::response_only_messages)
@@ -127,7 +126,7 @@ pub fn execute(
         ExecuteMsg::DexCallback() => {
             access_control::check(
                 &DexResponseSafeDeliveryPermission::new(&env.contract),
-                &Sender::of_execute_msg(&info),
+                &info,
             )?;
 
             try_handle_execute_message(deps, env, info, |state, querier, env, _info| {
@@ -138,7 +137,7 @@ pub fn execute(
         ExecuteMsg::DexCallbackContinue() => {
             access_control::check(
                 &DexResponseSafeDeliveryPermission::new(&env.contract),
-                &Sender::of_execute_msg(&info),
+                &info,
             )?;
 
             try_handle_execute_message(deps, env, info, |state, querier, env, _info| {

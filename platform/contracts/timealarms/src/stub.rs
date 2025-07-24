@@ -124,9 +124,7 @@ impl<'a> TimeAlarmDelivery<'a> {
 }
 
 impl AccessPermission for TimeAlarmDelivery<'_> {
-    fn granted_to<S>(&self, sender: &S) -> bool
-    where
-        S: SenderAssurance,
+    fn granted_to<S>(&self, user: &User) -> bool
     {
         self.time_alarms_ref.owned_by(sender.as_ref())
     }

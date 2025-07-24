@@ -1,4 +1,4 @@
-use access_control::{permissions::DexResponseSafeDeliveryPermission, sender::Sender};
+use access_control::{permissions::DexResponseSafeDeliveryPermission};
 use finance::duration::Duration;
 use platform::{
     contract::{self, Validator},
@@ -154,14 +154,14 @@ fn process_execute(
         ExecuteMsg::DexCallback() => {
             access_control::check(
                 &DexResponseSafeDeliveryPermission::new(&env.contract),
-                &Sender::of_execute_msg(&info),
+                &info,
             )?;
             state.on_dex_inner(querier, env)
         }
         ExecuteMsg::DexCallbackContinue() => {
             access_control::check(
                 &DexResponseSafeDeliveryPermission::new(&env.contract),
-                &Sender::of_execute_msg(&info),
+                &info,
             )?;
             state.on_dex_inner_continue(querier, env)
         }
