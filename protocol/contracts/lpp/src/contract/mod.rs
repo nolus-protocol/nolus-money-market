@@ -6,7 +6,7 @@ use oracle::stub;
 use oracle_platform::OracleRef;
 use serde::Serialize;
 
-use access_control::{SingleUserAccess, sender::Sender};
+use access_control::SingleUserAccess;
 use currencies::{
     Lpn as LpnCurrency, Lpns as LpnCurrencies, PaymentGroup, Stable as StableCurrency,
 };
@@ -118,7 +118,7 @@ pub fn execute(
                 deps.storage.deref_mut(),
                 crate::access_control::PROTOCOL_ADMIN_KEY,
             )
-            .check(&Sender::of_execute_msg(&info))?;
+            .check(&info)?;
 
             Config::update_lease_code(deps.storage, new_lease_code)
                 .map(|()| PlatformResponse::default())
@@ -194,7 +194,7 @@ pub fn execute(
                 deps.storage.deref_mut(),
                 crate::access_control::PROTOCOL_ADMIN_KEY,
             )
-            .check(&Sender::of_execute_msg(&info))?;
+            .check(&info)?;
 
             assert!(
                 borrow::query_empty::<LpnCurrency>(deps.storage),

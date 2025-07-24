@@ -8,26 +8,25 @@ use sdk::{
 pub use self::contract_owner::ContractOwnerAccess;
 use self::error::{Error, Result};
 use self::permissions::SingleUserPermission;
-use self::sender::{Sender, SenderAssurance};
+use self::user::{User};
 
 mod contract_owner;
 pub mod error;
 pub mod permissions;
-pub mod sender;
+pub mod user;
 
 pub trait AccessPermission {
-    fn granted_to<S>(&self, sender: &S) -> bool
+    fn granted_to<U>(&self, user: &U) -> bool
     where
-        S: SenderAssurance;
+        U: User;
 }
 
-/// Checks if access is granted to the given caller.
-pub fn check<P, S>(permission: &P, sender: &S) -> Result
+/// Checks if access is granted to the given user.
+pub fn check<P, S>(permission: &P, user: &User) -> Result
 where
     P: AccessPermission + ?Sized,
-    S: SenderAssurance,
 {
-    if permission.granted_to(sender) {
+    if permission.granted_to(user) {
         Ok(())
     } else {
         Err(Error::Unauthorized {})
@@ -53,11 +52,11 @@ where
         }
     }
 
-    pub fn check(&self, sender: &Sender<'_>) -> Result {
+    pub fn check(&self, user: &User<'_>) -> Result {
         self.storage_item
             .load(self.storage.deref())
             .map_err(Into::into)
-            .and_then(|ref granted_to| check(&SingleUserPermission::new(granted_to), sender))
+            .and_then(|ref granted_to| check(&SingleUserPermission::new(granted_to), user))
     }
 }
 
@@ -84,7 +83,7 @@ mod tests {
         SingleUserAccess,
         error::{Error, Result},
         permissions::{SameContractOnly, SingleUserPermission},
-        sender::Sender,
+        user::User,
     };
 
     const NAMESPACE: &str = "my-nice-permission";
@@ -95,10 +94,9 @@ mod tests {
         let storage_ref: &mut dyn Storage = &mut storage;
         let mut access = SingleUserAccess::new(storage_ref, NAMESPACE);
         let address = Addr::unchecked("cosmic address");
-        let sender = Sender::from_addr(&address);
 
         access.check(&sender).unwrap_err();
-        access.grant_to(sender.as_ref()).unwrap();
+        access.grant_to(&addres).unwrap();
         access.check(&sender).unwrap();
     }
 
@@ -108,9 +106,8 @@ mod tests {
         let storage_ref: &dyn Storage = &mut storage;
         let access = SingleUserAccess::new(storage_ref, NAMESPACE);
         let address = Addr::unchecked("hacker");
-        let sender = Sender::from_addr(&address);
 
-        assert!(matches!(access.check(&sender).unwrap_err(), Error::Std(_)));
+        assert!(matches!(access.check(&address).unwrap_err(), Error::Std(_)));
     }
 
     #[test]
@@ -126,9 +123,8 @@ mod tests {
         let contract_info = ContractInfo {
             address: address.clone(),
         };
-        let sender = Sender::from_addr(&address);
 
-        super::check(&SameContractOnly::new(&contract_info), &sender).unwrap();
+        super::check(&SameContractOnly::new(&contract_info), &address).unwrap();
     }
 
     #[test]
@@ -137,9 +133,8 @@ mod tests {
             address: Addr::unchecked("contract admin"),
         };
         let address = Addr::unchecked("hacker");
-        let sender = Sender::from_addr(&address);
 
-        let check_result = super::check(&SameContractOnly::new(&contract_info), &sender);
+        let check_result = super::check(&SameContractOnly::new(&contract_info), &address);
         assert!(matches!(check_result.unwrap_err(), Error::Unauthorized {}));
     }
 
@@ -153,11 +148,10 @@ mod tests {
 
     fn check_addr_permission(granted_to: &str, asked_for: &str) -> Result {
         let address = Addr::unchecked(asked_for);
-        let sender = Sender::from_addr(&address);
 
         super::check(
             &SingleUserPermission::new(&Addr::unchecked(granted_to)),
-            &sender,
+            &address,
         )
     }
 }

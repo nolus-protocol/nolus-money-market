@@ -1,4 +1,4 @@
-use access_control::{AccessPermission, sender::SenderAssurance};
+use access_control::{AccessPermission, user::User};
 
 use crate::state::config::Config;
 
@@ -13,11 +13,11 @@ impl<'a> LeaseAdminOnly<'a> {
 }
 
 impl AccessPermission for LeaseAdminOnly<'_> {
-    fn granted_to<S>(&self, sender: &S) -> bool
+    fn granted_to<S>(&self, user: &U) -> bool
     where
-        S: SenderAssurance,
+        U: User,
     {
-        self.lease_config.lease_admin == sender.as_ref()
+        self.lease_config.lease_admin == user.addr()
     }
 }
 

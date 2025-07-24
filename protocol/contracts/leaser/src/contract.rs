@@ -2,7 +2,7 @@ use std::ops::{Deref, DerefMut};
 
 use serde::Serialize;
 
-use access_control::{AccessPermission, ContractOwnerAccess, sender::Sender};
+use access_control::{AccessPermission, ContractOwnerAccess};
 use lease::api::{MigrateMsg as LeaseMigrateMsg, authz::AccessGranted};
 use platform::{
     contract::{self, Code, CodeId, Validator},
@@ -106,7 +106,7 @@ pub fn execute(
             .and_then(|ref config| {
                 access_control::check(
                     &LeasesConfigurationPermission::new(config),
-                    &Sender::of_execute_msg(&info),
+                    &info,
                 )
                 .map_err(ContractError::from)
             })
@@ -171,7 +171,7 @@ pub fn execute(
             .and_then(|ref config| {
                 access_control::check(
                     &ChangeLeaseAdminPermission::new(config),
-                    &Sender::of_execute_msg(&info),
+                    &info,
                 )
                 .map_err(ContractError::from)
             })
@@ -209,7 +209,7 @@ pub fn query(deps: Deps<'_>, _env: Env, msg: QueryMsg) -> ContractResult<Binary>
             .config()
             .map(|ref config| {
                 let permission = AnomalyResolutionPermission::new(config);
-                permission.granted_to(&Sender::from_addr(&caller))
+                permission.granted_to(&caller)
             })
             .map(|granted| {
                 if granted {

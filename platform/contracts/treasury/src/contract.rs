@@ -1,6 +1,6 @@
 use std::ops::{Deref, DerefMut};
 
-use access_control::{SingleUserAccess, sender::Sender};
+use access_control::{SingleUserAccess};
 use admin_contract::msg::{
     ProtocolQueryResponse, ProtocolsQueryResponse, QueryMsg as ProtocolsRegistry,
 };
@@ -85,7 +85,7 @@ pub fn execute(
                 deps.storage.deref(),
                 crate::access_control::TIMEALARMS_NAMESPACE,
             )
-            .check(&Sender::of_execute_msg(&info))?;
+            .check(&&info)?;
 
             try_dispatch(deps.storage, deps.querier, &env, info.sender)
                 .map(response::response_only_messages)
