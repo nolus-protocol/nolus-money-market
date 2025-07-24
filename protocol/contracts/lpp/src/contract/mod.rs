@@ -25,6 +25,7 @@ use versioning::{
 
 use crate::{
     config::Config as ApiConfig,
+    event,
     lpp::{LiquidityPool, LppBalances},
     msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg, SudoMsg},
     state::Config,
@@ -150,10 +151,18 @@ pub fn execute(
                 lender::try_deposit::<LpnCurrency, _>(
                     deps.storage,
                     &bank::account_view(&env.contract.address.clone(), deps.querier),
-                    info.sender,
+                    info.sender.clone(),
                     pending_deposit,
-                    env,
+                    &env.block.time,
                 )
+                .map(|receipts| {
+                    PlatformResponse::from(event::emit_deposit(
+                        env,
+                        info.sender,
+                        pending_deposit,
+                        receipts,
+                    ))
+                })
             })
             .map(response::response_only_messages),
         ExecuteMsg::Burn { amount } => lender::try_withdraw::<LpnCurrency, _>(

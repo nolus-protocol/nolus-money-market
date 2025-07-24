@@ -1,5 +1,5 @@
 use currency::CurrencyDef;
-use finance::{coin::Coin, price, zero::Zero};
+use finance::{coin::Coin, zero::Zero};
 use lpp_platform::NLpn;
 use platform::{
     bank::{BankAccount, BankAccountView},
@@ -22,31 +22,17 @@ pub(super) fn try_deposit<Lpn, Bank>(
     bank: &Bank,
     lender: Addr,
     pending_deposit: Coin<Lpn>,
-    env: Env,
-) -> Result<MessageResponse>
+    now: &Timestamp,
+) -> Result<Coin<NLpn>>
 where
     Lpn: 'static + CurrencyDef,
     Bank: BankAccountView,
 {
-    let receipts = {
-        let now = &env.block.time;
-        let lpp = LiquidityPool::<Lpn, _>::load(storage, bank)?;
-
-        if lpp
-            .deposit_capacity(now, pending_deposit)?
-            .map(|capacity| pending_deposit > capacity)
-            .unwrap_or_default()
-        {
-            return Err(ContractError::UtilizationBelowMinimalRates);
-        }
-        let price = lpp.calculate_price(storage, now, pending_deposit)?;
-
-        let deposit_nlpn = price::total(pending_deposit, price.inv());
-
-        Deposit::load_or_default(storage, lender.clone())?.deposit(storage, deposit_nlpn)?
-    };
-
-    Ok(event::emit_deposit(env, lender, pending_deposit, receipts).into())
+    LiquidityPool::<Lpn, _>::load(storage, bank)
+        .and_then(|mut lpp| lpp.deposit(storage, pending_deposit, now))
+        .and_then(|receipts| {
+            Deposit::load_or_default(storage, lender.clone())?.deposit(storage, receipts)
+        })
 }
 
 pub(super) fn deposit_capacity<Lpn, Bank>(
@@ -173,6 +159,7 @@ mod test {
     {
         let mut store = testing::MockStorage::default();
         let env = testing::mock_env();
+        let now = env.block.time;
 
         let bank = BankStub::with_view(MockBankView::only_balance(initial_lpp_balance.into()));
         setup_storage(&mut store, &bank, BoundToHundredPercent::ZERO); //
@@ -183,7 +170,7 @@ mod test {
                 &bank,
                 test_tools::lender(),
                 initial_lpp_balance.into(),
-                env.clone(),
+                &now,
             )
             .unwrap();
         }
@@ -249,7 +236,7 @@ mod test {
                         &bank,
                         test_tools::lender(),
                         Coin::ZERO,
-                        env,
+                        &env.block.time,
                     )
                     .unwrap_err();
                 })
@@ -295,6 +282,7 @@ mod test {
                     DEPOSIT_LPP,
                     DEFAULT_MIN_UTILIZATION,
                     |mut store, bank, env| {
+                        // TODO switch from using `env` to `&Timestamp`
                         lender::try_withdraw::<TheCurrency, _>(
                             &mut store,
                             bank,
@@ -482,7 +470,7 @@ mod test {
                         &bank,
                         test_tools::lender(),
                         deposit.into(),
-                        env,
+                        &env.block.time,
                     );
 
                     if expect_error {

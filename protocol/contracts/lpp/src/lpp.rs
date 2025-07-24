@@ -168,6 +168,24 @@ where
             .map_err(ContractError::from)
     }
 
+    pub fn deposit(
+        &mut self,
+        storage: &mut dyn Storage,
+        amount: Coin<Lpn>,
+        now: &Timestamp,
+    ) -> Result<Coin<NLpn>> {
+        if self
+            .deposit_capacity(now, amount)?
+            .map(|capacity| amount > capacity)
+            .unwrap_or_default()
+        {
+            return Err(ContractError::UtilizationBelowMinimalRates);
+        }
+
+        self.calculate_price(storage, now, amount)
+            .map(|price| price::total(amount, price.inv()))
+    }
+
     pub fn withdraw_lpn(
         &self,
         storage: &dyn Storage,

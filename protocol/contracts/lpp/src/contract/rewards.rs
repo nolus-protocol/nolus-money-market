@@ -107,6 +107,7 @@ mod test {
     fn test_claim_zero_rewards() {
         let mut deps = mock_dependencies();
         let env = mock_env();
+        let now = env.block.time;
 
         const INITIAL_LPP_BALANCE: Coin<TheCurrency> = Coin::ZERO;
         const DEPOSIT: Coin<TheCurrency> = Coin::new(20_000);
@@ -141,7 +142,7 @@ mod test {
             &bank,
             test::lender(),
             DEPOSIT,
-            env.clone(),
+            &now,
         )
         .unwrap();
 
