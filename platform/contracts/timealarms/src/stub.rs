@@ -2,7 +2,7 @@ use std::result::Result as StdResult;
 
 use serde::{Deserialize, Serialize};
 
-use access_control::{AccessPermission, Sender};
+use access_control::AccessPermission;
 use platform::{batch::Batch, contract::Validator};
 use sdk::cosmwasm_std::{Addr, StdError as SdkError, Timestamp, wasm_execute};
 
@@ -126,6 +126,6 @@ impl<'a> TimeAlarmDelivery<'a> {
 impl AccessPermission for TimeAlarmDelivery<'_> {
     fn granted_to<S>(&self, user: &User) -> bool
     {
-        self.time_alarms_ref.owned_by(sender.as_ref())
+        self.time_alarms_ref.owned_by(user.addr())
     }
 }

@@ -32,8 +32,8 @@ impl<'storage, S> ContractOwnerAccess<'storage, S>
 where
     S: Deref<Target = dyn Storage + 'storage> + DerefMut,
 {
-    pub fn grant_to(&mut self, user: &Addr) -> Result {
-        self.access.grant_to(user)
+    pub fn grant_to(&mut self, user: &User) -> Result {
+        self.access.grant_to(user.addr())
     }
 }
 
