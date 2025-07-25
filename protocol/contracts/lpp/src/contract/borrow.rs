@@ -12,6 +12,7 @@ use crate::{
     loans::Repo,
     lpp::LiquidityPool,
     msg::{LoanResponse, QueryLoanResponse, QueryQuoteResponse},
+    state::Config,
 };
 
 use super::Result;
@@ -25,8 +26,9 @@ pub(super) fn try_open_loan<Lpn>(
 where
     Lpn: 'static + CurrencyDef,
 {
+    let config = Config::load(deps.storage)?;
     let mut bank = bank::account(&env.contract.address, deps.querier);
-    let mut lpp = LiquidityPool::<Lpn, _>::load(deps.storage, &bank)?;
+    let mut lpp = LiquidityPool::load(deps.storage, &config, &bank)?;
     let lease_addr = lpp.validate_lease_addr(&contract::validator(deps.querier), info.sender)?;
 
     let loan = lpp.try_open_loan(deps.storage, env.block.time, lease_addr.clone(), amount)?;
@@ -47,8 +49,9 @@ where
 {
     let repay_amount = bank::received_one(&info.funds)?;
 
+    let config = Config::load(deps.storage)?;
     let mut bank = bank::account(&env.contract.address, deps.querier);
-    let mut lpp = LiquidityPool::<'_, Lpn, _>::load(deps.storage, &bank)?;
+    let mut lpp = LiquidityPool::load(deps.storage, &config, &bank)?;
     let lease_addr = lpp.validate_lease_addr(&contract::validator(deps.querier), info.sender)?;
 
     let excess_received = lpp.try_repay_loan(
@@ -75,8 +78,9 @@ pub(super) fn query_quote<Lpn>(
 where
     Lpn: CurrencyDef,
 {
+    let config = Config::load(deps.storage)?;
     let bank = bank::account_view(&env.contract.address, deps.querier);
-    let lpp = LiquidityPool::<'_, Lpn, _>::load(deps.storage, &bank)?;
+    let lpp = LiquidityPool::load(deps.storage, &config, &bank)?;
 
     match lpp.query_quote(quote, &env.block.time)? {
         Some(quote) => Ok(QueryQuoteResponse::QuoteInterestRate(quote)),

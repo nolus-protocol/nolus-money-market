@@ -71,8 +71,12 @@ pub fn instantiate(
     )
     .map_err(Into::into)
     .and_then(|lease_code| {
+        let config = ApiConfig::new(lease_code, msg.borrow_rate, msg.min_utilization);
+        Config::store(&config, deps.storage).map(|()| config)
+    })
+    .and_then(|ref config| {
         LiquidityPool::<LpnCurrency, _>::new(
-            ApiConfig::new(lease_code, msg.borrow_rate, msg.min_utilization),
+            config,
             &bank::account_view(&env.contract.address, deps.querier),
         )
         .save(deps.storage)
@@ -120,12 +124,16 @@ pub fn execute(
                 .map(|()| PlatformResponse::default())
                 .map(response::response_only_messages)
         }
-        ExecuteMsg::DistributeRewards() => rewards::try_distribute_rewards::<LpnCurrency, _>(
-            deps.storage,
-            info,
-            &bank::account_view(&env.contract.address.clone(), deps.querier),
-        )
-        .map(response::response_only_messages),
+        ExecuteMsg::DistributeRewards() => Config::load(deps.storage)
+            .and_then(|ref config| {
+                rewards::try_distribute_rewards::<LpnCurrency, _>(
+                    deps.storage,
+                    info,
+                    config,
+                    &bank::account_view(&env.contract.address.clone(), deps.querier),
+                )
+            })
+            .map(response::response_only_messages),
         ExecuteMsg::ClaimRewards { other_recipient } => {
             rewards::try_claim_rewards(deps, env, info, other_recipient)
                 .map(response::response_only_messages)
@@ -237,26 +245,38 @@ pub fn query(deps: Deps<'_>, env: Env, msg: QueryMsg<LpnCurrencies>) -> Result<B
         }
         QueryMsg::LppBalance() => {
             let bank = bank::account_view(&env.contract.address, deps.querier);
-            rewards::query_lpp_balance::<LpnCurrency, _>(deps.storage, &bank, &env.block.time)
-                .and_then(|lpp_balances| {
-                    rewards::query_total_receipts::<LpnCurrency, _>(deps.storage, &bank)
-                        .map(|total_receipts| lpp_balances.into_response(total_receipts))
+            Config::load(deps.storage)
+                .and_then(|ref config| {
+                    rewards::query_lpp_balance::<LpnCurrency, _>(
+                        deps.storage,
+                        config,
+                        &bank,
+                        &env.block.time,
+                    )
+                    .and_then(|lpp_balances| {
+                        rewards::query_total_receipts::<LpnCurrency, _>(deps.storage, config, &bank)
+                            .map(|total_receipts| lpp_balances.into_response(total_receipts))
+                    })
                 })
                 .and_then(|ref resp| to_json_binary(resp))
         }
-        QueryMsg::StableBalance { oracle_addr } => rewards::query_lpp_balance::<LpnCurrency, _>(
-            deps.storage,
-            &bank::account_view(&env.contract.address, deps.querier),
-            &env.block.time,
-        )
-        .map(LppBalances::into_total)
-        .and_then(|total| {
-            OracleRef::try_from_base(oracle_addr, deps.querier)
-                .map_err(ContractError::InvalidOracleBaseCurrency)
-                .and_then(|oracle_ref| to_stable(oracle_ref, total, deps.querier))
-        })
-        .map(CoinDTO::<PaymentGroup>::from)
-        .and_then(|ref resp| to_json_binary(resp)),
+        QueryMsg::StableBalance { oracle_addr } => Config::load(deps.storage)
+            .and_then(|ref config| {
+                rewards::query_lpp_balance::<LpnCurrency, _>(
+                    deps.storage,
+                    config,
+                    &bank::account_view(&env.contract.address, deps.querier),
+                    &env.block.time,
+                )
+            })
+            .map(LppBalances::into_total)
+            .and_then(|total| {
+                OracleRef::try_from_base(oracle_addr, deps.querier)
+                    .map_err(ContractError::InvalidOracleBaseCurrency)
+                    .and_then(|oracle_ref| to_stable(oracle_ref, total, deps.querier))
+            })
+            .map(CoinDTO::<PaymentGroup>::from)
+            .and_then(|ref resp| to_json_binary(resp)),
         QueryMsg::Price() => lender::query_ntoken_price::<LpnCurrency, _>(
             deps.storage,
             &bank::account_view(&env.contract.address, deps.querier),

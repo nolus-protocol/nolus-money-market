@@ -130,6 +130,25 @@ impl Deposit {
         Ok(Self::GLOBALS.save(store, &globals)?)
     }
 
+    /// query accounted rewards
+    pub fn query_rewards(&self, storage: &dyn Storage) -> StdResult<Coin<Nls>> {
+        let globals = Self::GLOBALS.may_load(storage)?.unwrap_or_default();
+        Ok(self.calculate_reward(&globals))
+    }
+
+    /// pay accounted rewards to the deposit owner or optional recipient
+    pub fn claim_rewards(&mut self, storage: &mut dyn Storage) -> StdResult<Coin<Nls>> {
+        let globals = Self::GLOBALS.may_load(storage)?.unwrap_or_default();
+        self.update_rewards(&globals);
+
+        let reward = self.data.pending_rewards_nls;
+        self.data.pending_rewards_nls = Coin::ZERO;
+
+        Self::DEPOSITS.save(storage, self.addr.clone(), &self.data)?;
+
+        Ok(reward)
+    }
+
     fn update_rewards(&mut self, globals: &DepositsGlobals) {
         self.data.pending_rewards_nls = self.calculate_reward(globals);
         self.data.reward_per_token = globals.reward_per_token;
@@ -149,25 +168,6 @@ impl Deposit {
             .unwrap_or_default();
 
         deposit.pending_rewards_nls + global_reward - deposit_reward
-    }
-
-    /// query accounted rewards
-    pub fn query_rewards(&self, storage: &dyn Storage) -> StdResult<Coin<Nls>> {
-        let globals = Self::GLOBALS.may_load(storage)?.unwrap_or_default();
-        Ok(self.calculate_reward(&globals))
-    }
-
-    /// pay accounted rewards to the deposit owner or optional recipient
-    pub fn claim_rewards(&mut self, storage: &mut dyn Storage) -> StdResult<Coin<Nls>> {
-        let globals = Self::GLOBALS.may_load(storage)?.unwrap_or_default();
-        self.update_rewards(&globals);
-
-        let reward = self.data.pending_rewards_nls;
-        self.data.pending_rewards_nls = Coin::ZERO;
-
-        Self::DEPOSITS.save(storage, self.addr.clone(), &self.data)?;
-
-        Ok(reward)
     }
 }
 

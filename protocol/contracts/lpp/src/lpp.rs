@@ -19,7 +19,7 @@ use crate::{
     loans::Repo,
     msg::LppBalanceResponse,
     nprice::NTokenPrice,
-    state::{Config, Total},
+    state::Total,
 };
 
 #[cfg_attr(test, derive(Debug, PartialEq))]
@@ -52,42 +52,41 @@ where
 
 // TODO reverse the direction of the dependencies between LiquidityPool and Loan.
 // The contract API implementation should depend on Loan which in turn may use LiquidityPool.
-pub(crate) struct LiquidityPool<'bank, Lpn, Bank> {
-    config: ApiConfig,
+
+// TODO saving only with `Self::save`, not on every `&mut self` function
+pub(crate) struct LiquidityPool<'cfg, 'bank, Lpn, Bank> {
+    config: &'cfg ApiConfig,
+    bank: &'bank Bank,
     //TODO inline the Total
     total: Total<Lpn>,
-    bank: &'bank Bank,
 }
 
-impl<'bank, Lpn, Bank> LiquidityPool<'bank, Lpn, Bank>
+impl<'cfg, 'bank, Lpn, Bank> LiquidityPool<'cfg, 'bank, Lpn, Bank>
 where
     Lpn: 'static,
 {
-    pub fn new(config: ApiConfig, bank: &'bank Bank) -> Self {
+    pub fn new(config: &'cfg ApiConfig, bank: &'bank Bank) -> Self {
         Self {
             config,
-            total: Total::new(),
             bank,
+            total: Total::new(),
         }
     }
 
     pub fn save(self, storage: &mut dyn Storage) -> Result<()> {
-        Config::store(&self.config, storage).and_then(|()| self.total.store(storage))
+        self.total.store(storage)
     }
 
-    pub fn load(storage: &dyn Storage, bank: &'bank Bank) -> Result<Self> {
-        let config = Config::load(storage)?;
-        let total = Total::load(storage)?;
-
-        Ok(LiquidityPool {
+    pub fn load(storage: &dyn Storage, config: &'cfg ApiConfig, bank: &'bank Bank) -> Result<Self> {
+        Total::load(storage).map(|total| LiquidityPool {
             config,
-            total,
             bank,
+            total,
         })
     }
 }
 
-impl<Lpn, Bank> LiquidityPool<'_, Lpn, Bank>
+impl<Lpn, Bank> LiquidityPool<'_, '_, Lpn, Bank>
 where
     Lpn: 'static + CurrencyDef,
     Bank: BankAccountView,
@@ -345,13 +344,8 @@ mod test {
     };
 
     use crate::{
-        borrow::InterestRate,
-        config::Config as ApiConfig,
-        contract::ContractError,
-        loan::Loan,
-        loans::Repo,
-        lpp::LppBalances,
-        state::{Config, Deposit, Total},
+        borrow::InterestRate, config::Config as ApiConfig, contract::ContractError, loan::Loan,
+        loans::Repo, lpp::LppBalances, state::Deposit,
     };
 
     use super::LiquidityPool;
@@ -377,12 +371,12 @@ mod test {
             .expect("Couldn't construct interest rate value!"),
             DEFAULT_MIN_UTILIZATION,
         );
-        let lpp = LiquidityPool::<'_, TheCurrency, _>::new(config, &bank);
+        let lpp = LiquidityPool::<'_, '_, TheCurrency, _>::new(&config, &bank);
 
         let mut store = MockStorage::new();
         let now = Timestamp::default();
         lpp.save(&mut store).unwrap();
-        let lpp = LiquidityPool::<'_, TheCurrency, _>::load(&store, &bank).unwrap();
+        let lpp = LiquidityPool::<'_, '_, TheCurrency, _>::load(&store, &config, &bank).unwrap();
         assert_eq!(
             Price::identity(),
             lpp.calculate_price(&now, Coin::ZERO).unwrap()
@@ -415,7 +409,7 @@ mod test {
             DEFAULT_MIN_UTILIZATION,
         );
         let bank = MockBankView::<TheCurrency, TheCurrency>::only_balance(balance);
-        let lpp = LiquidityPool::<TheCurrency, _>::new(config, &bank);
+        let lpp = LiquidityPool::<TheCurrency, _>::new(&config, &bank);
 
         let balance_lpp = lpp.uncommited_balance().expect("can't get balance");
 
@@ -444,7 +438,7 @@ mod test {
             .expect("Couldn't construct interest rate value!"),
             DEFAULT_MIN_UTILIZATION,
         );
-        let mut lpp = LiquidityPool::<TheCurrency, _>::new(config, &bank);
+        let mut lpp = LiquidityPool::<TheCurrency, _>::new(&config, &bank);
 
         let now = now + Duration::from_nanos(10); //deliberately hide the variable name
         assert_eq!(
@@ -460,7 +454,7 @@ mod test {
         // wait for a year
         let now = now + Duration::YEAR;
         let bank_past_loan = MockBankView::<_, TheCurrency>::only_balance(BALANCE - DEPOSIT_AMOUNT);
-        let lpp = LiquidityPool::<TheCurrency, _>::load(&store, &bank_past_loan).unwrap();
+        let lpp = LiquidityPool::<TheCurrency, _>::load(&store, &config, &bank_past_loan).unwrap();
 
         let result = lpp
             .query_quote(Coin::new(1_000_000), &now)
@@ -490,7 +484,7 @@ mod test {
 
         let config = ApiConfig::new(lease_code_id, interest_rate, DEFAULT_MIN_UTILIZATION);
 
-        let mut lpp = LiquidityPool::<TheCurrency, _>::new(config, &bank);
+        let mut lpp = LiquidityPool::<TheCurrency, _>::new(&config, &bank);
 
         // doesn't exist
         let loan_response =
@@ -567,35 +561,25 @@ mod test {
 
     #[test]
     fn try_open_loan_with_no_liquidity() {
-        let mut deps = testing::mock_dependencies();
         let mut store = MockStorage::new();
         let now = Timestamp::from_nanos(0);
         let bank = MockBankView::<TheCurrency, TheCurrency>::only_balance(Coin::ZERO);
         let loan = Addr::unchecked("loan");
         let lease_code_id = Code::unchecked(123);
 
-        Config::store(
-            &ApiConfig::new(
-                lease_code_id,
-                InterestRate::new(
-                    BASE_INTEREST_RATE,
-                    UTILIZATION_OPTIMAL,
-                    ADDON_OPTIMAL_INTEREST_RATE,
-                )
-                .expect("Couldn't construct interest rate value!"),
-                DEFAULT_MIN_UTILIZATION,
-            ),
-            deps.as_mut().storage,
-        )
-        .expect("Failed to store Config!");
-        Total::<TheCurrency>::new()
-            .store(deps.as_mut().storage)
-            .expect("can't initialize Total");
+        let config = ApiConfig::new(
+            lease_code_id,
+            InterestRate::new(
+                BASE_INTEREST_RATE,
+                UTILIZATION_OPTIMAL,
+                ADDON_OPTIMAL_INTEREST_RATE,
+            )
+            .expect("Couldn't construct interest rate value!"),
+            DEFAULT_MIN_UTILIZATION,
+        );
+        let mut lpp = LiquidityPool::new(&config, &bank);
 
-        let mut lpp = LiquidityPool::<TheCurrency, _>::load(deps.as_mut().storage, &bank)
-            .expect("can't load LiquidityPool");
-
-        let result = lpp.try_open_loan(&mut store, now, loan, Coin::new(1_000));
+        let result = lpp.try_open_loan(&mut store, now, loan, Coin::<TheCurrency>::new(1_000));
         assert_eq!(result, Err(ContractError::NoLiquidity {}));
     }
 
@@ -608,28 +592,19 @@ mod test {
         let loan = Addr::unchecked("loan");
         let lease_code_id = Code::unchecked(123);
 
-        Config::store(
-            &ApiConfig::new(
-                lease_code_id,
-                InterestRate::new(
-                    BASE_INTEREST_RATE,
-                    UTILIZATION_OPTIMAL,
-                    ADDON_OPTIMAL_INTEREST_RATE,
-                )
-                .expect("Couldn't construct interest rate value!"),
-                DEFAULT_MIN_UTILIZATION,
-            ),
-            &mut store,
-        )
-        .expect("Failed to store Config!");
-        Total::<TheCurrency>::new()
-            .store(&mut store)
-            .expect("can't initialize Total");
+        let config = ApiConfig::new(
+            lease_code_id,
+            InterestRate::new(
+                BASE_INTEREST_RATE,
+                UTILIZATION_OPTIMAL,
+                ADDON_OPTIMAL_INTEREST_RATE,
+            )
+            .expect("Couldn't construct interest rate value!"),
+            DEFAULT_MIN_UTILIZATION,
+        );
+        let mut lpp = LiquidityPool::new(&config, &bank);
 
-        let mut lpp =
-            LiquidityPool::<TheCurrency, _>::load(&store, &bank).expect("can't load LiquidityPool");
-
-        let result = lpp.try_open_loan(&mut store, now, loan, Coin::new(0));
+        let result = lpp.try_open_loan(&mut store, now, loan, Coin::<TheCurrency>::new(0));
         assert_eq!(result, Err(ContractError::ZeroLoanAmount));
     }
 
@@ -642,41 +617,35 @@ mod test {
         let loan = Addr::unchecked("loan");
         let lease_code_id = Code::unchecked(123);
 
-        Config::store(
-            &ApiConfig::new(
-                lease_code_id,
-                InterestRate::new(
-                    BASE_INTEREST_RATE,
-                    UTILIZATION_OPTIMAL,
-                    ADDON_OPTIMAL_INTEREST_RATE,
-                )
-                .expect("Couldn't construct interest rate value!"),
-                DEFAULT_MIN_UTILIZATION,
-            ),
+        let config = ApiConfig::new(
+            lease_code_id,
+            InterestRate::new(
+                BASE_INTEREST_RATE,
+                UTILIZATION_OPTIMAL,
+                ADDON_OPTIMAL_INTEREST_RATE,
+            )
+            .expect("Couldn't construct interest rate value!"),
+            DEFAULT_MIN_UTILIZATION,
+        );
+        let mut lpp = LiquidityPool::new(&config, &bank);
+
+        lpp.try_open_loan(
             &mut store,
+            now,
+            loan.clone(),
+            Coin::<TheCurrency>::new(5_000),
         )
-        .expect("Failed to store Config!");
-        Total::<TheCurrency>::new()
-            .store(&mut store)
-            .expect("can't initialize Total");
-
-        let mut lpp =
-            LiquidityPool::<TheCurrency, _>::load(&store, &bank).expect("can't load LiquidityPool");
-
-        lpp.try_open_loan(&mut store, now, loan.clone(), Coin::new(5_000))
-            .expect("can't open loan");
+        .unwrap();
 
         let loan_before = Repo::<TheCurrency>::query(&store, loan.clone())
-            .expect("can't query loan")
-            .expect("should be some response");
+            .unwrap()
+            .unwrap();
 
         //zero repay
         lpp.try_repay_loan(&mut store, now, loan.clone(), Coin::new(0))
-            .expect("can't repay loan");
+            .unwrap();
 
-        let loan_after = Repo::query(&store, loan)
-            .expect("can't query loan")
-            .expect("should be some response");
+        let loan_after = Repo::query(&store, loan).unwrap().unwrap();
 
         //should not change after zero repay
         assert_eq!(loan_before.principal_due, loan_after.principal_due);
@@ -696,39 +665,35 @@ mod test {
         let loan = Addr::unchecked("loan");
         let lease_code_id = Code::unchecked(123);
 
-        Config::store(
-            &ApiConfig::new(
-                lease_code_id,
-                InterestRate::new(
-                    BASE_INTEREST_RATE,
-                    UTILIZATION_OPTIMAL,
-                    ADDON_OPTIMAL_INTEREST_RATE,
-                )
-                .expect("Couldn't construct interest rate value!"),
-                DEFAULT_MIN_UTILIZATION,
-            ),
+        let config = ApiConfig::new(
+            lease_code_id,
+            InterestRate::new(
+                BASE_INTEREST_RATE,
+                UTILIZATION_OPTIMAL,
+                ADDON_OPTIMAL_INTEREST_RATE,
+            )
+            .expect("Couldn't construct interest rate value!"),
+            DEFAULT_MIN_UTILIZATION,
+        );
+        let mut lpp = LiquidityPool::new(&config, &bank);
+
+        lpp.try_open_loan(
             &mut store,
+            now,
+            loan.clone(),
+            Coin::<TheCurrency>::new(5_000),
         )
-        .expect("Failed to store Config!");
-        Total::<TheCurrency>::new()
-            .store(&mut store)
-            .expect("can't initialize Total");
-
-        let mut lpp =
-            LiquidityPool::<TheCurrency, _>::load(&store, &bank).expect("can't load LiquidityPool");
-
-        lpp.try_open_loan(&mut store, now, loan.clone(), Coin::new(5_000))
-            .expect("can't open loan");
+        .unwrap();
 
         let payment = Repo::<TheCurrency>::query(&store, loan.clone())
-            .expect("can't query outstanding interest")
-            .expect("should be some coins")
+            .unwrap()
+            .unwrap()
             .interest_due(&now);
-        assert_eq!(payment, Coin::new(0));
+        assert_eq!(payment, Coin::ZERO);
 
         let repay = lpp
             .try_repay_loan(&mut store, now, loan.clone(), Coin::new(5_000))
-            .expect("can't repay loan");
+            .unwrap();
 
         assert_eq!(repay, 0u128.into());
 
@@ -752,26 +717,20 @@ mod test {
         let lease_code_id = Code::unchecked(123);
 
         let bank = MockBankView::<TheCurrency, TheCurrency>::only_balance(BALANCE);
+
+        let config = ApiConfig::new(
+            lease_code_id,
+            InterestRate::new(
+                Percent::from_percent(18),
+                Percent::from_percent(50),
+                Percent::from_percent(2),
+            )
+            .expect("Couldn't construct interest rate value!"),
+            DEFAULT_MIN_UTILIZATION,
+        );
+        let mut lpp = LiquidityPool::new(&config, &bank);
         {
-            let config = ApiConfig::new(
-                lease_code_id,
-                InterestRate::new(
-                    Percent::from_percent(18),
-                    Percent::from_percent(50),
-                    Percent::from_percent(2),
-                )
-                .expect("Couldn't construct interest rate value!"),
-                DEFAULT_MIN_UTILIZATION,
-            );
-            LiquidityPool::<TheCurrency, _>::new(config, &bank)
-                .save(&mut store)
-                .unwrap();
-            assert_eq!(
-                Ok(DEPOSIT_RECEIPTS),
-                LiquidityPool::<TheCurrency, _>::load(&store, &bank)
-                    .unwrap()
-                    .deposit(&mut store, DEPOSIT, &now)
-            );
+            assert_eq!(Ok(DEPOSIT_RECEIPTS), lpp.deposit(&mut store, DEPOSIT, &now));
             Deposit::load_or_default(&store, Addr::unchecked("lender"))
                 .unwrap()
                 .deposit(&mut store, DEPOSIT_RECEIPTS)
@@ -779,7 +738,6 @@ mod test {
         }
 
         {
-            let mut lpp = LiquidityPool::<TheCurrency, _>::load(&store, &bank).unwrap();
             assert_eq!(
                 Price::identity(),
                 lpp.calculate_price(&now, Coin::ZERO).unwrap()
@@ -800,7 +758,8 @@ mod test {
         let now = now + Duration::YEAR;
         {
             let bank = MockBankView::<TheCurrency, TheCurrency>::only_balance(BALANCE_PAST_LOAN);
-            let mut lpp = LiquidityPool::<TheCurrency, _>::load(&store, &bank).unwrap();
+            let mut lpp = LiquidityPool::load(&store, &config, &bank).unwrap();
+
             let total_lpn = lpp.total_lpn(&now, Coin::ZERO).unwrap();
 
             assert_eq!(BALANCE_PAST_LOAN + LOAN_AMOUNT + loan_interest, total_lpn);
@@ -830,7 +789,7 @@ mod test {
         const BALANCE_PAST_REPAYMENT: Coin<TheCurrency> =
             BALANCE_PAST_LOAN.checked_add(LOAN_REPAYMENT).unwrap();
         let bank = MockBankView::<TheCurrency, TheCurrency>::only_balance(BALANCE_PAST_REPAYMENT);
-        let mut lpp = LiquidityPool::<TheCurrency, _>::load(&store, &bank).unwrap();
+        let mut lpp = LiquidityPool::load(&store, &config, &bank).unwrap();
 
         let lpp_total = BALANCE_PAST_REPAYMENT + LOAN_AMOUNT + loan_interest - LOAN_REPAYMENT;
         assert_eq!(lpp_total, lpp.total_lpn(&now, Coin::ZERO).unwrap(),);
@@ -874,7 +833,7 @@ mod test {
             let bank =
                 MockBankView::<TheCurrency, TheCurrency>::only_balance(Coin::new(lpp_balance));
             let lpp = LiquidityPool::<TheCurrency, _> {
-                config: ApiConfig::new(
+                config: &ApiConfig::new(
                     Code::unchecked(0xDEADC0DE_u64),
                     InterestRate::new(Percent::ZERO, Percent::from_permille(500), Percent::HUNDRED)
                         .unwrap(),
@@ -970,20 +929,15 @@ mod test {
 
             let mut store = MockStorage::default();
 
-            LiquidityPool::<TheCurrency, _>::new(
-                Config::new(
-                    Code::unchecked(0xDEADC0DE_u64),
-                    InterestRate::new(Percent::ZERO, Percent::from_permille(500), Percent::HUNDRED)
-                        .unwrap(),
-                    BoundToHundredPercent::strict_from_percent(Percent::ZERO),
-                ),
-                &MockBankView::<TheCurrency, TheCurrency>::only_balance(Coin::ZERO),
-            )
-            .save(&mut store)
-            .unwrap();
-
+            let config = Config::new(
+                Code::unchecked(0xDEADC0DE_u64),
+                InterestRate::new(Percent::ZERO, Percent::from_permille(500), Percent::HUNDRED)
+                    .unwrap(),
+                BoundToHundredPercent::strict_from_percent(Percent::ZERO),
+            );
             let bank = MockBankView::<TheCurrency, TheCurrency>::only_balance(DEPOSIT1);
-            let mut lpp = LiquidityPool::<TheCurrency, _>::load(&store, &bank).unwrap();
+            let mut lpp = LiquidityPool::<TheCurrency, _>::new(&config, &bank);
+
             assert_eq!(RECEIPT1, lpp.deposit(&mut store, DEPOSIT1, &now).unwrap());
             assert_eq!(RECEIPT1, lpp.balance_nlpn());
 
@@ -1000,12 +954,13 @@ mod test {
                     .unwrap()
                     .principal_due
             );
+            lpp.save(&mut store).unwrap();
 
             // let's see how the due interest affects the deposited coins
             let now = now + Duration::from_days(120);
             let bank =
                 MockBankView::<TheCurrency, TheCurrency>::only_balance(DEPOSIT1 - LOAN + DEPOSIT2);
-            let mut lpp = LiquidityPool::<TheCurrency, _>::load(&store, &bank).unwrap();
+            let mut lpp = LiquidityPool::<TheCurrency, _>::load(&store, &config, &bank).unwrap();
 
             let nlpn_to_lpn_before = lpp.calculate_price(&now, DEPOSIT2).unwrap();
             assert!(nlpn_to_lpn_before > Price::identity());
@@ -1027,20 +982,15 @@ mod test {
 
             let mut store = MockStorage::default();
 
-            LiquidityPool::<TheCurrency, _>::new(
-                Config::new(
-                    Code::unchecked(0xDEADC0DE_u64),
-                    InterestRate::new(Percent::ZERO, Percent::from_permille(500), Percent::HUNDRED)
-                        .unwrap(),
-                    BoundToHundredPercent::strict_from_percent(Percent::ZERO),
-                ),
-                &MockBankView::<TheCurrency, TheCurrency>::only_balance(Coin::ZERO),
-            )
-            .save(&mut store)
-            .unwrap();
-
+            let config = Config::new(
+                Code::unchecked(0xDEADC0DE_u64),
+                InterestRate::new(Percent::ZERO, Percent::from_permille(500), Percent::HUNDRED)
+                    .unwrap(),
+                BoundToHundredPercent::strict_from_percent(Percent::ZERO),
+            );
             let bank = MockBankView::<TheCurrency, TheCurrency>::only_balance(DEPOSIT1);
-            let mut lpp = LiquidityPool::<TheCurrency, _>::load(&store, &bank).unwrap();
+            let mut lpp = LiquidityPool::<TheCurrency, _>::new(&config, &bank);
+
             assert!(matches!(
                 lpp.withdraw_lpn(&mut store, RECEIPT1, &now).unwrap_err(),
                 ContractError::OverflowError(_)
@@ -1056,11 +1006,12 @@ mod test {
                     .unwrap()
                     .principal_due
             );
+            lpp.save(&mut store).unwrap();
 
             // let's see how the due interest affects the withdrawn coins
             let now = now + Duration::from_days(120);
             let bank = MockBankView::<TheCurrency, TheCurrency>::only_balance(DEPOSIT1 - LOAN);
-            let mut lpp = LiquidityPool::<TheCurrency, _>::load(&store, &bank).unwrap();
+            let mut lpp = LiquidityPool::<TheCurrency, _>::load(&store, &config, &bank).unwrap();
 
             let nlpn_to_lpn_before = lpp.calculate_price(&now, Coin::ZERO).unwrap();
             assert!(nlpn_to_lpn_before > Price::identity());

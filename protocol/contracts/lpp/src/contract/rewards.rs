@@ -9,6 +9,7 @@ use platform::{
 use sdk::cosmwasm_std::{Addr, DepsMut, Env, MessageInfo, Storage, Timestamp};
 
 use crate::{
+    config::Config as ApiConfig,
     lpp::{LiquidityPool, LppBalances},
     msg::RewardsResponse,
     state::Deposit,
@@ -19,6 +20,7 @@ use super::error::{ContractError, Result};
 pub(super) fn try_distribute_rewards<Lpn, Bank>(
     store: &mut dyn Storage,
     info: MessageInfo,
+    config: &ApiConfig,
     bank: &Bank,
 ) -> Result<MessageResponse>
 where
@@ -28,7 +30,7 @@ where
     bank::received_one(&info.funds)
         .map_err(Into::into)
         .and_then(|amount| {
-            query_total_receipts::<Lpn, _>(store, bank)
+            query_total_receipts::<Lpn, _>(store, config, bank)
                 .and_then(|receipts| Deposit::distribute_rewards(store, amount, receipts))
         })
         .map(|()| Default::default())
@@ -63,6 +65,7 @@ pub(super) fn try_claim_rewards(
 
 pub(super) fn query_lpp_balance<Lpn, Bank>(
     storage: &dyn Storage,
+    config: &ApiConfig,
     bank: &Bank,
     now: &Timestamp,
 ) -> Result<LppBalances<Lpn>>
@@ -70,18 +73,19 @@ where
     Lpn: CurrencyDef,
     Bank: BankAccountView,
 {
-    LiquidityPool::<_, Bank>::load(storage, bank).and_then(|lpp| lpp.query_lpp_balance(now))
+    LiquidityPool::load(storage, config, bank).and_then(|lpp| lpp.query_lpp_balance(now))
 }
 
 pub(super) fn query_total_receipts<Lpn, Bank>(
     storage: &dyn Storage,
+    config: &ApiConfig,
     bank: &Bank,
 ) -> Result<Coin<NLpn>>
 where
     Lpn: CurrencyDef,
     Bank: BankAccountView,
 {
-    LiquidityPool::<Lpn, Bank>::load(storage, bank).map(|lpp| lpp.balance_nlpn())
+    LiquidityPool::<Lpn, _>::load(storage, config, bank).map(|lpp| lpp.balance_nlpn())
 }
 
 pub(super) fn query_rewards(storage: &dyn Storage, addr: Addr) -> Result<RewardsResponse> {
@@ -104,13 +108,14 @@ mod test {
 
     use crate::{
         borrow::InterestRate,
-        config::Config,
+        config::Config as ApiConfig,
         contract::{
             error::ContractError,
             lender, rewards,
             test::{self, TheCurrency},
         },
         lpp::LiquidityPool,
+        state::Config,
     };
 
     const BASE_INTEREST_RATE: Percent = Percent::from_permille(70);
@@ -128,21 +133,20 @@ mod test {
         const DEPOSIT: Coin<TheCurrency> = Coin::new(20_000);
 
         let bank = MockBankView::<TheCurrency, TheCurrency>::only_balance(INITIAL_LPP_BALANCE);
-        LiquidityPool::<TheCurrency, _>::new(
-            Config::new(
-                Code::unchecked(1000u64),
-                InterestRate::new(
-                    BASE_INTEREST_RATE,
-                    UTILIZATION_OPTIMAL,
-                    ADDON_OPTIMAL_INTEREST_RATE,
-                )
-                .expect("Couldn't construct interest rate value!"),
-                DEFAULT_MIN_UTILIZATION,
-            ),
-            &bank,
-        )
-        .save(deps.as_mut().storage)
-        .unwrap();
+        let config = ApiConfig::new(
+            Code::unchecked(1000u64),
+            InterestRate::new(
+                BASE_INTEREST_RATE,
+                UTILIZATION_OPTIMAL,
+                ADDON_OPTIMAL_INTEREST_RATE,
+            )
+            .expect("Couldn't construct interest rate value!"),
+            DEFAULT_MIN_UTILIZATION,
+        );
+        Config::store(&config, deps.as_mut().storage).unwrap();
+        LiquidityPool::<TheCurrency, _>::new(&config, &bank)
+            .save(deps.as_mut().storage)
+            .unwrap();
 
         // no deposit
         let info = test::lender_msg_no_funds();

@@ -13,7 +13,7 @@ use sdk::cosmwasm_std::{Addr, Storage, Timestamp};
 use crate::{
     lpp::LiquidityPool,
     msg::{BalanceResponse, PriceResponse},
-    state::Deposit,
+    state::{Config, Deposit},
 };
 
 use super::error::{ContractError, Result};
@@ -30,8 +30,11 @@ where
     Lpn: 'static + CurrencyDef,
     Bank: BankAccountView,
 {
-    LiquidityPool::<Lpn, _>::load(storage, bank)
-        .and_then(|mut lpp| lpp.deposit(storage, pending_deposit, now))
+    Config::load(storage)
+        .and_then(|config| {
+            LiquidityPool::<Lpn, _>::load(storage, &config, bank)
+                .and_then(|mut lpp| lpp.deposit(storage, pending_deposit, now))
+        })
         .and_then(|receipts| {
             Deposit::load_or_default(storage, lender.clone())?.deposit(storage, receipts)
         })
@@ -46,8 +49,10 @@ where
     Lpn: 'static + CurrencyDef,
     Bank: BankAccountView,
 {
-    LiquidityPool::<'_, Lpn, Bank>::load(storage, bank)
-        .and_then(|lpp| lpp.deposit_capacity(now, Coin::ZERO))
+    Config::load(storage).and_then(|config| {
+        LiquidityPool::load(storage, &config, bank)
+            .and_then(|lpp| lpp.deposit_capacity(now, Coin::ZERO))
+    })
 }
 
 /// Withdraw receipts and return the returned amount, potentially some unclaimed `Nls` rewards, and their transfer messages
@@ -66,8 +71,10 @@ where
         return Err(ContractError::ZeroWithdrawFunds);
     }
 
-    let mut lpp = LiquidityPool::<'_, Lpn, _>::load(storage, &bank)?;
-    let payment_lpn = lpp.withdraw_lpn(storage, amount, now)?;
+    let payment_lpn = Config::load(storage).and_then(|config| {
+        LiquidityPool::load(storage, &config, &bank)
+            .and_then(|mut lpp| lpp.withdraw_lpn(storage, amount, now))
+    })?;
 
     let maybe_reward = Deposit::may_load(storage, lender.clone())?
         .ok_or(ContractError::NoDeposit {})?
@@ -93,8 +100,12 @@ where
     Lpn: CurrencyDef,
     Bank: BankAccountView,
 {
-    LiquidityPool::load(storage, bank)
-        .and_then(|lpp| lpp.calculate_price(now, Coin::ZERO).map(PriceResponse))
+    Config::load(storage)
+        .and_then(|config| {
+            LiquidityPool::load(storage, &config, bank)
+                .and_then(|lpp| lpp.calculate_price(now, Coin::ZERO))
+        })
+        .map(PriceResponse)
 }
 
 pub fn query_balance(storage: &dyn Storage, addr: Addr) -> Result<BalanceResponse> {
@@ -143,13 +154,28 @@ mod test {
         f: F,
     ) where
         Balance: Copy + Into<Coin<TheCurrency>>,
-        F: FnOnce(MockStorage, BankStub<MockBankView<TheCurrency, TheCurrency>>, Timestamp),
+        F: FnOnce(
+            MockStorage,
+            ApiConfig,
+            BankStub<MockBankView<TheCurrency, TheCurrency>>,
+            Timestamp,
+        ),
     {
         let mut store = testing::MockStorage::default();
         let now = Timestamp::from_nanos(1_571_897_419_879_405_538);
 
+        let config = ApiConfig::new(
+            Code::unchecked(0xDEADC0DE_u64),
+            InterestRate::new(
+                BASE_INTEREST_RATE,
+                UTILIZATION_OPTIMAL,
+                ADDON_OPTIMAL_INTEREST_RATE,
+            )
+            .expect("Couldn't construct interest rate value!"),
+            BoundToHundredPercent::ZERO,
+        );
         let bank = BankStub::with_view(MockBankView::only_balance(initial_lpp_balance.into()));
-        setup_storage(&mut store, &bank, BoundToHundredPercent::ZERO); //
+        setup_storage(&mut store, &config, &bank);
 
         if !initial_lpp_balance.into().is_zero() {
             lender::try_deposit::<TheCurrency, _>(
@@ -162,32 +188,20 @@ mod test {
             .unwrap();
         }
 
-        Config::update_min_utilization(&mut store, min_utilization).unwrap();
-        f(store, bank, now)
+        let config_custom =
+            ApiConfig::new(config.lease_code(), *config.borrow_rate(), min_utilization);
+        Config::store(&config_custom, &mut store).unwrap();
+        f(store, config_custom, bank, now)
     }
 
-    fn setup_storage<Bank>(
-        storage: &mut dyn Storage,
-        bank: &Bank,
-        min_utilization: BoundToHundredPercent,
-    ) where
+    fn setup_storage<Bank>(storage: &mut dyn Storage, config: &ApiConfig, bank: &Bank)
+    where
         Bank: BankAccountView,
     {
-        LiquidityPool::<TheCurrency, _>::new(
-            ApiConfig::new(
-                Code::unchecked(0xDEADC0DE_u64),
-                InterestRate::new(
-                    BASE_INTEREST_RATE,
-                    UTILIZATION_OPTIMAL,
-                    ADDON_OPTIMAL_INTEREST_RATE,
-                )
-                .expect("Couldn't construct interest rate value!"),
-                min_utilization,
-            ),
-            bank,
-        )
-        .save(storage)
-        .unwrap();
+        Config::store(config, storage).unwrap();
+        LiquidityPool::<TheCurrency, _>::new(config, bank)
+            .save(storage)
+            .unwrap();
     }
 
     mod deposit_withdraw_price {
@@ -217,16 +231,20 @@ mod test {
 
             #[test]
             fn test_deposit_zero() {
-                test::test_case(0, DEFAULT_MIN_UTILIZATION, |mut store, bank, now| {
-                    lender::try_deposit::<TheCurrency, _>(
-                        &mut store,
-                        &bank,
-                        test_tools::lender(),
-                        Coin::ZERO,
-                        &now,
-                    )
-                    .unwrap_err();
-                })
+                test::test_case(
+                    0,
+                    DEFAULT_MIN_UTILIZATION,
+                    |mut store, _config, bank, now| {
+                        lender::try_deposit::<TheCurrency, _>(
+                            &mut store,
+                            &bank,
+                            test_tools::lender(),
+                            Coin::ZERO,
+                            &now,
+                        )
+                        .unwrap_err();
+                    },
+                )
             }
 
             #[test]
@@ -234,7 +252,7 @@ mod test {
                 test::test_case(
                     DEPOSIT_LPP,
                     DEFAULT_MIN_UTILIZATION,
-                    |store, _bank, _now| {
+                    |store, _config, _bank, _now| {
                         assert_eq!(
                             Coin::from(
                                 lender::query_balance(&store, test_tools::lender())
@@ -268,7 +286,7 @@ mod test {
                 test::test_case(
                     DEPOSIT_LPP,
                     DEFAULT_MIN_UTILIZATION,
-                    |mut store, bank, now| {
+                    |mut store, _config, bank, now| {
                         lender::try_withdraw::<TheCurrency, _>(
                             &mut store,
                             bank,
@@ -289,7 +307,7 @@ mod test {
                 test::test_case(
                     DEPOSIT_LPP,
                     DEFAULT_MIN_UTILIZATION,
-                    |mut store, bank, now| {
+                    |mut store, _config, bank, now| {
                         lender::try_withdraw::<TheCurrency, _>(
                             &mut store,
                             bank,
@@ -317,7 +335,7 @@ mod test {
                 test::test_case(
                     DEPOSIT_LPP,
                     DEFAULT_MIN_UTILIZATION,
-                    |mut store, bank, now| {
+                    |mut store, _config, bank, now| {
                         lender::try_withdraw::<TheCurrency, _>(
                             &mut store,
                             bank,
@@ -345,7 +363,7 @@ mod test {
                 test::test_case(
                     DEPOSIT_LPP,
                     DEFAULT_MIN_UTILIZATION,
-                    |mut store, bank, now| {
+                    |mut store, _config, bank, now| {
                         lender::try_withdraw::<TheCurrency, _>(
                             &mut store,
                             bank,
@@ -376,36 +394,41 @@ mod test {
             fn test_nlpn_price() {
                 const INTEREST: Coin<TheCurrency> = DEPOSIT_LPP.checked_div(2).unwrap();
 
-                test::test_case(DEPOSIT_LPP, DEFAULT_MIN_UTILIZATION, |store, bank, now| {
-                    assert_eq!(
-                        lender::query_ntoken_price::<TheCurrency, _>(&store, &bank, &now)
+                test::test_case(
+                    DEPOSIT_LPP,
+                    DEFAULT_MIN_UTILIZATION,
+                    |store, _config, bank, now| {
+                        assert_eq!(
+                            lender::query_ntoken_price::<TheCurrency, _>(&store, &bank, &now)
+                                .unwrap()
+                                .0,
+                            Price::identity(),
+                        );
+
+                        let bank_got_interest =
+                            MockBankView::<TheCurrency, TheCurrency>::only_balance(
+                                DEPOSIT_LPP + INTEREST,
+                            );
+
+                        assert_eq!(
+                            price::total_of(DEPOSIT_NLPN).is(DEPOSIT_LPP + INTEREST),
+                            lender::query_ntoken_price::<TheCurrency, _>(
+                                &store,
+                                &bank_got_interest,
+                                &now
+                            )
                             .unwrap()
                             .0,
-                        Price::identity(),
-                    );
-
-                    let bank_got_interest = MockBankView::<TheCurrency, TheCurrency>::only_balance(
-                        DEPOSIT_LPP + INTEREST,
-                    );
-
-                    assert_eq!(
-                        price::total_of(DEPOSIT_NLPN).is(DEPOSIT_LPP + INTEREST),
-                        lender::query_ntoken_price::<TheCurrency, _>(
-                            &store,
-                            &bank_got_interest,
-                            &now
-                        )
-                        .unwrap()
-                        .0,
-                    );
-                })
+                        );
+                    },
+                )
             }
         }
     }
 
     mod min_utilization {
         use finance::{
-            coin::Amount,
+            coin::{Amount, Coin},
             percent::{Percent, bound::BoundToHundredPercent},
         };
         use platform::bank::testing::MockBankView;
@@ -432,15 +455,15 @@ mod test {
             test::test_case(
                 lpp_balance_at_deposit + borrowed,
                 BoundToHundredPercent::try_from_percent(min_utilization).unwrap(),
-                |mut store, bank, now| {
+                |mut store, config, bank, now| {
                     if borrowed != 0 {
-                        LiquidityPool::<'_, TheCurrency, _>::load(&store, &bank)
+                        LiquidityPool::load(&store, &config, &bank)
                             .unwrap()
                             .try_open_loan(
                                 &mut store,
                                 now,
                                 Addr::unchecked("lease"),
-                                borrowed.into(),
+                                Coin::<TheCurrency>::from(borrowed),
                             )
                             .unwrap();
                     }
