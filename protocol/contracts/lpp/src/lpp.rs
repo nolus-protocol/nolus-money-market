@@ -15,8 +15,7 @@ use sdk::cosmwasm_std::{Addr, Storage, Timestamp};
 use crate::{
     config::Config as ApiConfig,
     contract::{ContractError, Result},
-    loan::Loan,
-    loans::Repo,
+    loan::{Loan, RepayShares},
     msg::LppBalanceResponse,
     nprice::NTokenPrice,
     state::Total,
@@ -49,9 +48,6 @@ where
         }
     }
 }
-
-// TODO reverse the direction of the dependencies between LiquidityPool and Loan.
-// The contract API implementation should depend on Loan which in turn may use LiquidityPool.
 
 pub(crate) struct LiquidityPool<'cfg, 'bank, Lpn, Bank> {
     config: &'cfg ApiConfig,
@@ -222,43 +218,31 @@ where
             return Err(ContractError::ZeroLoanAmount);
         }
 
-        let annual_interest_rate = match self.query_quote(amount, &now)? {
-            Some(rate) => Ok(rate),
-            None => Err(ContractError::NoLiquidity {}),
-        }?;
-
-        let loan = Loan {
-            principal_due: amount,
-            annual_interest_rate,
-            interest_paid: now,
-        };
-
-        self.total.borrow(now, amount, annual_interest_rate)?;
-
-        Ok(loan)
+        self.query_quote(amount, &now)
+            .and_then(|quote| quote.ok_or(ContractError::NoLiquidity {}))
+            .and_then(|annual_interest_rate| {
+                self.total
+                    .borrow(now, amount, annual_interest_rate)
+                    .map(|_total| Loan {
+                        principal_due: amount,
+                        annual_interest_rate,
+                        interest_paid: now,
+                    })
+            })
     }
 
-    /// return amount of lpp currency to pay back to lease_addr
-    pub(super) fn try_repay_loan(
+    pub(super) fn register_repay_loan(
         &mut self,
-        storage: &mut dyn Storage,
         now: Timestamp,
-        lease_addr: Addr,
-        repay_amount: Coin<Lpn>,
-    ) -> Result<Coin<Lpn>> {
-        let mut loan = Repo::load(storage, lease_addr.clone())?;
-        let loan_annual_interest_rate = loan.annual_interest_rate;
-        let payment = loan.repay(&now, repay_amount);
-        Repo::save(storage, lease_addr, &loan)?;
-
+        loan: &Loan<Lpn>,
+        payment: &RepayShares<Lpn>,
+    ) {
         self.total.repay(
             now,
             payment.interest,
             payment.principal,
-            loan_annual_interest_rate,
+            loan.annual_interest_rate,
         );
-
-        Ok(payment.excess)
     }
 
     fn uncommited_balance(&self) -> Result<Coin<Lpn>> {
@@ -466,7 +450,7 @@ mod test {
             .and_then(|loan| Repo::open(&mut store, lease_addr.clone(), &loan))
             .unwrap();
 
-        let loan = Repo::query(&store, lease_addr.clone()).unwrap().unwrap();
+        let mut loan = Repo::query(&store, lease_addr.clone()).unwrap().unwrap();
 
         assert_eq!(
             Loan {
@@ -484,15 +468,11 @@ mod test {
         // pay interest for 36 days
         let payment = loan.interest_due(&now);
 
-        let repay = lpp
-            .try_repay_loan(&mut store, now, lease_addr.clone(), payment)
-            .expect("can't repay loan");
+        let repay = loan.repay(&now, payment);
+        lpp.register_repay_loan(now, &loan, &repay);
+        Repo::save(&mut store, lease_addr.clone(), &loan).unwrap();
 
-        assert_eq!(repay, 0u128.into());
-
-        let loan = Repo::<TheCurrency>::query(&store, lease_addr.clone())
-            .expect("can't query loan")
-            .expect("should be some response");
+        assert_eq!(Coin::ZERO, repay.excess);
 
         assert_eq!(
             Loan {
@@ -502,29 +482,25 @@ mod test {
             },
             loan
         );
+        assert_eq!(
+            loan,
+            Repo::query(&store, lease_addr.clone()).unwrap().unwrap()
+        );
         assert_eq!(loan.interest_due(&now), 0u128.into());
 
         // an immediate repay after repay should pass (loan_interest_due==0 bug)
-        lpp.try_repay_loan(&mut store, now, lease_addr.clone(), Coin::new(0))
-            .expect("can't repay loan");
+        let repay = loan.repay(&now, Coin::ZERO);
+        lpp.register_repay_loan(now, &loan, &repay);
 
         // wait for another 36 days
         let now = now + Duration::from_days(36);
 
         const PAYED_EXTRA: Coin<TheCurrency> = Coin::new(100);
         // pay everything + excess
-        let payment = Repo::query(&store, lease_addr.clone())
-            .expect("can't query the loan")
-            .expect("should exist")
-            .interest_due(&now)
-            + LOAN_AMOUNT
-            + PAYED_EXTRA;
+        let repay = loan.repay(&now, loan.interest_due(&now) + LOAN_AMOUNT + PAYED_EXTRA);
+        lpp.register_repay_loan(now, &loan, &repay);
 
-        let repay = lpp
-            .try_repay_loan(&mut store, now, lease_addr, payment)
-            .expect("can't repay loan");
-
-        assert_eq!(repay, PAYED_EXTRA);
+        assert_eq!(PAYED_EXTRA, repay.excess);
     }
 
     #[test]
@@ -597,13 +573,14 @@ mod test {
             .and_then(|loan| Repo::open(&mut store, loan_addr.clone(), &loan))
             .unwrap();
 
-        let loan_before = Repo::<TheCurrency>::query(&store, loan_addr.clone())
+        let mut loan_before = Repo::<TheCurrency>::query(&store, loan_addr.clone())
             .unwrap()
             .unwrap();
 
         //zero repay
-        lpp.try_repay_loan(&mut store, now, loan_addr.clone(), Coin::new(0))
-            .unwrap();
+        let payment = loan_before.repay(&now, Coin::ZERO);
+        lpp.register_repay_loan(now, &loan_before, &payment);
+        Repo::save(&mut store, loan_addr.clone(), &loan_before).unwrap();
 
         let loan_after = Repo::query(&store, loan_addr).unwrap().unwrap();
 
@@ -641,22 +618,19 @@ mod test {
             .and_then(|loan| Repo::open(&mut store, loan_addr.clone(), &loan))
             .unwrap();
 
-        let payment = Repo::<TheCurrency>::query(&store, loan_addr.clone())
+        let mut loan = Repo::<TheCurrency>::query(&store, loan_addr.clone())
             .unwrap()
-            .unwrap()
-            .interest_due(&now);
-        assert_eq!(payment, Coin::ZERO);
-
-        let repay = lpp
-            .try_repay_loan(&mut store, now, loan_addr.clone(), Coin::new(5_000))
             .unwrap();
+        assert_eq!(Coin::ZERO, loan.interest_due(&now));
 
-        assert_eq!(repay, 0u128.into());
+        let repay = loan.repay(&now, Coin::new(5_000));
+        lpp.register_repay_loan(now, &loan, &repay);
+        Repo::save(&mut store, loan_addr.clone(), &loan).unwrap();
+
+        assert_eq!(Coin::ZERO, repay.excess);
 
         // Should be closed
-        let loan_response =
-            Repo::<TheCurrency>::query(&store, loan_addr).expect("can't query loan");
-        assert_eq!(loan_response, None);
+        assert_eq!(None, Repo::<TheCurrency>::query(&store, loan_addr).unwrap());
     }
 
     #[test]
@@ -694,7 +668,7 @@ mod test {
                 .unwrap();
         }
 
-        {
+        let mut loan = {
             assert_eq!(
                 Price::identity(),
                 lpp.calculate_price(&now, Coin::ZERO).unwrap()
@@ -706,9 +680,9 @@ mod test {
             );
 
             lpp.try_open_loan(now, LOAN_AMOUNT)
-                .and_then(|loan| Repo::open(&mut store, loan_addr.clone(), &loan))
-                .unwrap();
-        }
+                .and_then(|loan| Repo::open(&mut store, loan_addr.clone(), &loan).map(|()| loan))
+                .unwrap()
+        };
         lpp.save(&mut store).unwrap();
 
         const BALANCE_PAST_LOAN: Coin<TheCurrency> = BALANCE.checked_sub(LOAN_AMOUNT).unwrap();
@@ -739,10 +713,10 @@ mod test {
                 price,
             );
 
-            let excess = lpp
-                .try_repay_loan(&mut store, now, loan_addr, LOAN_REPAYMENT)
-                .unwrap();
-            assert_eq!(Coin::ZERO, excess,);
+            let payment = loan.repay(&now, LOAN_REPAYMENT);
+            Repo::save(&mut store, loan_addr.clone(), &loan).unwrap();
+            lpp.register_repay_loan(now, &loan, &payment);
+            assert_eq!(payment.excess, Coin::ZERO,);
             lpp.save(&mut store).unwrap();
         }
 

@@ -58,14 +58,16 @@ where
     let mut lpp = LiquidityPool::load(deps.storage, &config, &bank)?;
     let lease_addr = lpp.validate_lease_addr(&contract::validator(deps.querier), info.sender)?;
 
-    let excess_received = lpp.try_repay_loan(
-        deps.storage,
-        env.block.time,
-        lease_addr.clone(),
-        repay_amount,
-    )?;
-    lpp.save(deps.storage)?;
+    let payment = Repo::load(deps.storage, lease_addr.clone()).and_then(|mut loan| {
+        let now = env.block.time;
+        let payment = loan.repay(&now, repay_amount);
+        Repo::save(deps.storage, lease_addr.clone(), &loan)
+            .inspect(|()| lpp.register_repay_loan(now, &loan, &payment))
+            .and_then(|()| lpp.save(deps.storage))
+            .map(|()| payment)
+    })?;
 
+    let excess_received = payment.excess;
     let batch = if excess_received.is_zero() {
         Batch::default()
     } else {
