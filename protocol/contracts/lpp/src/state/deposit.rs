@@ -41,11 +41,12 @@ impl Deposit {
     const GLOBALS: Item<DepositsGlobals> = Item::new("deposits_globals");
 
     pub fn load_or_default(storage: &dyn Storage, addr: Addr) -> StdResult<Self> {
-        let data = Self::DEPOSITS
-            .may_load(storage, addr.clone())?
-            .unwrap_or_default();
-
-        Ok(Self { addr, data })
+        Self::may_load(storage, addr.clone()).map(|may_deposit| {
+            may_deposit.unwrap_or_else(|| Deposit {
+                addr,
+                data: DepositData::default(),
+            })
+        })
     }
 
     pub fn may_load(storage: &dyn Storage, addr: Addr) -> StdResult<Option<Self>> {
