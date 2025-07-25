@@ -8,6 +8,7 @@ use finance::{
     price,
     ratio::Rational,
     test,
+    zero::Zero,
 };
 use lpp::{
     borrow::InterestRate,
@@ -1249,6 +1250,22 @@ fn test_rewards() {
         .unwrap()
         .ignore_response()
         .unwrap_response();
+    // the initial price is 1 Nlpn = 1 LPN
+    assert_eq!(
+        deposit1,
+        test_case
+            .app
+            .query()
+            .query_wasm_smart::<BalanceResponse>(
+                test_case.address_book.lpp().clone(),
+                &LppQueryMsg::Balance {
+                    address: lender1.clone(),
+                },
+            )
+            .unwrap()
+            .balance
+            .into()
+    );
 
     // push the price from 1, should be allowed as an interest from previous leases for example.
     test_case.send_funds_from_admin(
@@ -1307,7 +1324,7 @@ fn test_rewards() {
         )
         .unwrap();
 
-    assert_eq!(resp.rewards, Coin::new(0));
+    assert_eq!(Coin::ZERO, resp.rewards);
 
     // claim zero rewards
     _ = test_case
@@ -1361,7 +1378,7 @@ fn test_rewards() {
         )
         .unwrap();
 
-    assert_eq!(resp.rewards, Coin::new(0));
+    assert_eq!(Coin::ZERO, resp.rewards,);
 
     let balance = bank::balance(&lender1, test_case.app.query()).unwrap();
     assert_eq!(balance, Coin::<Nls>::from(tot_rewards1));

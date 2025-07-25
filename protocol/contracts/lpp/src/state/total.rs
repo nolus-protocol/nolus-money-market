@@ -9,20 +9,25 @@ use finance::{
     ratio::Rational,
     zero::Zero,
 };
+use lpp_platform::NLpn;
 use sdk::{
-    cosmwasm_std::{StdResult, Storage, Timestamp},
+    cosmwasm_std::{Storage, Timestamp},
     cw_storage_plus::Item,
 };
 
-use crate::contract::ContractError;
+use crate::contract::{ContractError, Result as ContractResult};
 
 #[derive(Serialize, Deserialize, Debug)]
+#[cfg_attr(any(test, feature = "testing"), derive(PartialEq,))]
 #[serde(bound(serialize = "", deserialize = ""))]
 pub struct Total<Lpn> {
     total_principal_due: Coin<Lpn>,
     total_interest_due: Coin<Lpn>,
     annual_interest_rate: Rational<Coin<Lpn>>,
+    /// concerns only the borrowing aspect, i.e. `borrow` and `repay`
     last_update_time: Timestamp,
+    /// former `DepositsGlobals::balance_nlpn`
+    receipts: Coin<NLpn>,
 }
 
 impl<Lpn> Default for Total<Lpn> {
@@ -40,19 +45,20 @@ impl<Lpn> Total<Lpn> {
             total_interest_due: Coin::ZERO,
             annual_interest_rate: zero_interest_rate(),
             last_update_time: Timestamp::default(),
+            receipts: Coin::ZERO,
         }
+    }
+
+    pub fn store(&self, storage: &mut dyn Storage) -> ContractResult<()> {
+        Self::STORAGE.save(storage, self).map_err(Into::into)
+    }
+
+    pub fn load(storage: &dyn Storage) -> ContractResult<Self> {
+        Self::STORAGE.load(storage).map_err(Into::into)
     }
 
     pub fn total_principal_due(&self) -> Coin<Lpn> {
         self.total_principal_due
-    }
-
-    pub fn store(&self, storage: &mut dyn Storage) -> StdResult<()> {
-        Self::STORAGE.save(storage, self)
-    }
-
-    pub fn load(storage: &dyn Storage) -> StdResult<Self> {
-        Self::STORAGE.load(storage)
     }
 
     pub fn total_interest_due_by_now(&self, ctime: &Timestamp) -> Coin<Lpn> {
@@ -61,6 +67,10 @@ impl<Lpn> Total<Lpn> {
             self.total_principal_due,
             Duration::between(&self.last_update_time, ctime),
         ) + self.total_interest_due
+    }
+
+    pub fn receipts(&self) -> Coin<NLpn> {
+        self.receipts
     }
 
     pub fn borrow(
@@ -132,6 +142,26 @@ impl<Lpn> Total<Lpn> {
 
         self
     }
+
+    pub fn deposit(&mut self, receipts: Coin<NLpn>) -> Result<&mut Self, ContractError> {
+        self.receipts
+            .checked_add(receipts)
+            .ok_or(ContractError::OverflowError("Deposit receipts overflow"))
+            .map(|total| {
+                self.receipts = total;
+                self
+            })
+    }
+
+    pub fn withdraw(&mut self, receipts: Coin<NLpn>) -> Result<&mut Self, ContractError> {
+        self.receipts
+            .checked_sub(receipts)
+            .ok_or(ContractError::OverflowError("Withdraw receipts overflow"))
+            .map(|total| {
+                self.receipts = total;
+                self
+            })
+    }
 }
 
 fn zero_interest_rate<Lpn>() -> Rational<Coin<Lpn>> {
@@ -143,7 +173,7 @@ fn zero_interest_rate<Lpn>() -> Rational<Coin<Lpn>> {
 mod test {
     use currencies::Lpn;
     use finance::duration::Duration;
-    use sdk::cosmwasm_std::testing;
+    use sdk::cosmwasm_std::testing::MockStorage;
 
     use crate::loan::Loan;
 
@@ -151,19 +181,20 @@ mod test {
 
     #[test]
     fn borrow_and_repay() {
-        let mut deps = testing::mock_dependencies();
+        let mut store = MockStorage::default();
         let mut block_time = Timestamp::from_nanos(1_571_797_419_879_305_533);
 
         let total: Total<Lpn> = Total::default();
-        total.store(deps.as_mut().storage).expect("should store");
+        total.store(&mut store).expect("should store");
 
-        let mut total: Total<Lpn> = Total::load(deps.as_ref().storage).expect("should load");
+        let mut total: Total<Lpn> = Total::load(&store).expect("should load");
 
-        assert_eq!(total.total_principal_due(), Coin::<Lpn>::new(0));
+        assert_eq!(Total::default(), total);
+        assert_eq!(Coin::ZERO, total.total_principal_due());
 
         total
             .borrow(block_time, Coin::new(10000), Percent::from_percent(20))
-            .expect("should borrow");
+            .unwrap();
         assert_eq!(total.total_principal_due(), Coin::new(10000));
 
         block_time = block_time.plus_nanos(Duration::YEAR.nanos() / 2);
@@ -250,5 +281,100 @@ mod test {
 
         assert!(total.total_interest_due.is_zero());
         assert!(total.total_principal_due.is_zero());
+    }
+
+    #[test]
+    fn deposit() {
+        assert_eq!(Coin::ZERO, Total::<Lpn>::default().receipts());
+
+        const RECEIPTS1: Coin<NLpn> = Coin::new(10);
+        const RECEIPTS2: Coin<NLpn> = Coin::new(20);
+        assert_eq!(
+            RECEIPTS1,
+            Total::<Lpn>::default()
+                .deposit(RECEIPTS1)
+                .unwrap()
+                .receipts()
+        );
+        assert!(matches!(
+            Total::<Lpn>::default()
+                .deposit(RECEIPTS1)
+                .unwrap()
+                .deposit(Coin::new(Amount::MAX))
+                .unwrap_err(),
+            ContractError::OverflowError(_)
+        ));
+        assert_eq!(
+            Total::<Lpn>::default()
+                .deposit(RECEIPTS1 + RECEIPTS2)
+                .unwrap(),
+            Total::default()
+                .deposit(RECEIPTS1)
+                .unwrap()
+                .deposit(RECEIPTS2)
+                .unwrap()
+        );
+        assert_eq!(
+            RECEIPTS1 + RECEIPTS2,
+            Total::<Lpn>::default()
+                .deposit(RECEIPTS1)
+                .unwrap()
+                .deposit(RECEIPTS2)
+                .unwrap()
+                .receipts()
+        );
+    }
+
+    #[test]
+    fn deposit_persisted() {
+        let mut store = MockStorage::default();
+
+        const RECEIPTS1: Coin<NLpn> = Coin::new(10);
+        Total::<Lpn>::default()
+            .deposit(RECEIPTS1)
+            .unwrap()
+            .store(&mut store)
+            .unwrap();
+
+        let loaded = Total::<Lpn>::load(&store).unwrap();
+        assert_eq!(RECEIPTS1, loaded.receipts());
+        assert_eq!(*Total::default().deposit(RECEIPTS1).unwrap(), loaded);
+    }
+
+    #[test]
+    fn withdraw() {
+        const RECEIPTS1: Coin<NLpn> = Coin::new(10);
+        const RECEIPTS2: Coin<NLpn> = Coin::new(20);
+        let mut total: Total<Lpn> = Total::default();
+        assert_eq!(
+            RECEIPTS1 + RECEIPTS2,
+            total.deposit(RECEIPTS1 + RECEIPTS2).unwrap().receipts()
+        );
+
+        assert_eq!(RECEIPTS2, total.withdraw(RECEIPTS1).unwrap().receipts(),);
+        assert_eq!(Coin::ZERO, total.withdraw(RECEIPTS2).unwrap().receipts(),);
+        assert!(matches!(
+            total.withdraw(RECEIPTS1).unwrap_err(),
+            ContractError::OverflowError(_)
+        ));
+    }
+
+    #[test]
+    fn withdraw_persisted() {
+        let mut store = MockStorage::default();
+
+        const RECEIPTS1: Coin<NLpn> = Coin::new(10);
+        const RECEIPTS2: Coin<NLpn> = Coin::new(20);
+        Total::<Lpn>::default()
+            .deposit(RECEIPTS1 + RECEIPTS2)
+            .unwrap()
+            .withdraw(RECEIPTS1)
+            .unwrap()
+            .store(&mut store)
+            .unwrap();
+
+        let loaded = Total::<Lpn>::load(&store).unwrap();
+        assert_eq!(RECEIPTS2, loaded.receipts());
+        assert_eq!(*Total::default().deposit(RECEIPTS2).unwrap(), loaded);
     }
 }

@@ -65,8 +65,8 @@ where
 
     let lender_addr = info.sender;
 
-    let lpp = LiquidityPool::<'_, Lpn, _>::load(storage, &bank)?;
-    let payment_lpn = lpp.withdraw_lpn(storage, &env.block.time, amount)?;
+    let mut lpp = LiquidityPool::<'_, Lpn, _>::load(storage, &bank)?;
+    let payment_lpn = lpp.withdraw_lpn(storage, amount, &env.block.time)?;
 
     let maybe_reward = Deposit::may_load(storage, lender_addr.clone())?
         .ok_or(ContractError::NoDeposit {})?
@@ -102,10 +102,8 @@ where
     Lpn: CurrencyDef,
     Bank: BankAccountView,
 {
-    LiquidityPool::load(storage, bank).and_then(|lpp| {
-        lpp.calculate_price(storage, now, Coin::ZERO)
-            .map(PriceResponse)
-    })
+    LiquidityPool::load(storage, bank)
+        .and_then(|lpp| lpp.calculate_price(now, Coin::ZERO).map(PriceResponse))
 }
 
 pub fn query_balance(storage: &dyn Storage, addr: Addr) -> Result<BalanceResponse> {

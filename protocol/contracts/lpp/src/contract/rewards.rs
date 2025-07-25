@@ -16,13 +16,21 @@ use crate::{
 
 use super::error::{ContractError, Result};
 
-pub(super) fn try_distribute_rewards(
-    deps: DepsMut<'_>,
+pub(super) fn try_distribute_rewards<Lpn, Bank>(
+    store: &mut dyn Storage,
     info: MessageInfo,
-) -> Result<MessageResponse> {
+    bank: &Bank,
+) -> Result<MessageResponse>
+where
+    Lpn: CurrencyDef,
+    Bank: BankAccountView,
+{
     bank::received_one(&info.funds)
         .map_err(Into::into)
-        .and_then(|amount| Deposit::distribute_rewards(deps, amount))
+        .and_then(|amount| {
+            query_total_receipts::<Lpn, _>(store, bank)
+                .and_then(|receipts| Deposit::distribute_rewards(store, amount, receipts))
+        })
         .map(|()| Default::default())
 }
 
@@ -59,14 +67,21 @@ pub(super) fn query_lpp_balance<Lpn, Bank>(
     now: &Timestamp,
 ) -> Result<LppBalances<Lpn>>
 where
-    Lpn: 'static + CurrencyDef,
+    Lpn: CurrencyDef,
     Bank: BankAccountView,
 {
     LiquidityPool::<_, Bank>::load(storage, bank).and_then(|lpp| lpp.query_lpp_balance(now))
 }
 
-pub(super) fn query_total_rewards(storage: &dyn Storage) -> Result<Coin<NLpn>> {
-    Deposit::balance_nlpn(storage).map_err(Into::into)
+pub(super) fn query_total_receipts<Lpn, Bank>(
+    storage: &dyn Storage,
+    bank: &Bank,
+) -> Result<Coin<NLpn>>
+where
+    Lpn: CurrencyDef,
+    Bank: BankAccountView,
+{
+    LiquidityPool::<Lpn, Bank>::load(storage, bank).map(|lpp| lpp.balance_nlpn())
 }
 
 pub(super) fn query_rewards(storage: &dyn Storage, addr: Addr) -> Result<RewardsResponse> {

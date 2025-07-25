@@ -11,6 +11,7 @@ pub trait Ratio<U> {
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[cfg_attr(any(test, feature = "testing"), derive(PartialEq,))]
 #[serde(rename_all = "snake_case")]
 pub struct Rational<U> {
     nominator: U,
