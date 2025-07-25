@@ -1,4 +1,5 @@
 use std::{
+    convert::Infallible,
     fmt::Debug,
     ops::{Add, AddAssign, Mul},
 };
@@ -6,11 +7,10 @@ use std::{
 use serde::{Deserialize, Serialize};
 
 use crate::{
+    arithmetic::{CheckedAdd, CheckedMul},
     coin::{Amount, Coin},
     error::{Error, Result},
-    fraction::Fraction,
-    fractionable::HigherRank,
-    ratio::{Ratio, Rational},
+    ratio::Rational,
 };
 
 pub mod base;
@@ -35,9 +35,6 @@ where
         Price::new(self.0, to)
     }
 }
-
-type DoubleAmount = <Amount as HigherRank<Amount>>::Type;
-type IntermediateAmount = <Amount as HigherRank<Amount>>::Intermediate;
 
 /// Represents the price of a currency in a quote currency, ref: <https://en.wikipedia.org/wiki/Currency_pair>
 ///
@@ -101,28 +98,13 @@ where
     /// Price(amount, amount_quote) * Ratio(nominator / denominator) = Price(amount * denominator, amount_quote * nominator)
     /// where the pairs (amount, nominator) and (amount_quote, denominator) are transformed into co-prime numbers.
     /// Please note that Price(amount, amount_quote) is like Ratio(amount_quote / amount).
-    pub(crate) fn lossy_mul<R>(self, rhs: &R) -> Self
-    where
-        R: Ratio<Amount>,
-    {
-        let (amount_normalized, rhs_nominator_normalized) =
-            self.amount.into_coprime_with(Coin::<C>::from(rhs.parts()));
-        let (amount_quote_normalized, rhs_denominator_normalized) = self
-            .amount_quote
-            .into_coprime_with(Coin::<QuoteC>::from(rhs.total()));
-
-        let double_amount =
-            DoubleAmount::from(amount_normalized) * DoubleAmount::from(rhs_denominator_normalized);
-        let double_amount_quote = DoubleAmount::from(amount_quote_normalized)
-            * DoubleAmount::from(rhs_nominator_normalized);
-
-        let extra_bits =
-            Self::bits_above_max(double_amount).max(Self::bits_above_max(double_amount_quote));
-
-        Price::new(
-            Self::trim_down(double_amount, extra_bits).into(),
-            Self::trim_down(double_amount_quote, extra_bits).into(),
-        )
+    pub(crate) fn lossy_mul(self, rhs: Rational<Amount>) -> Self {
+        let product = Rational::from(self)
+            .checked_mul(rhs)
+            .expect("price overflow during multiplication");
+        product
+            .try_into()
+            .expect("lossy_mul failed: can't convert back to Price")
     }
 
     pub fn inv(self) -> Price<QuoteC, C> {
@@ -191,25 +173,17 @@ where
             total(factored_amount, self).checked_add(total(factored_amount, rhs));
         may_factored_total.map(|factored_total| total_of(factored_amount).is(factored_total))
     }
+}
 
-    #[track_caller]
-    fn bits_above_max(double_amount: DoubleAmount) -> u32 {
-        const BITS_MAX_AMOUNT: u32 = Amount::BITS;
-        let higher_half: Amount = IntermediateAmount::try_from(double_amount >> BITS_MAX_AMOUNT)
-            .expect("Bigger Amount Higher Rank Type than required!")
-            .into();
-        BITS_MAX_AMOUNT - higher_half.leading_zeros()
-    }
+impl<C, QuoteC> CheckedAdd for Price<C, QuoteC>
+where
+    C: 'static,
+    QuoteC: 'static,
+{
+    type Output = Self;
 
-    #[track_caller]
-    fn trim_down(double_amount: DoubleAmount, bits: u32) -> Amount {
-        debug_assert!(bits <= Amount::BITS);
-        let amount: IntermediateAmount = (double_amount >> bits)
-            .try_into()
-            .expect("insufficient bits to trim");
-        let res = amount.into();
-        assert!(res > 0, "price overflow during multiplication");
-        res
+    fn checked_add(self, rhs: Self) -> Option<Self::Output> {
+        self.checked_add(rhs)
     }
 }
 
@@ -237,6 +211,17 @@ where
 {
 }
 
+impl<C, QuoteC> From<Price<C, QuoteC>> for Rational<Amount>
+where
+    C: 'static,
+    QuoteC: 'static,
+{
+    fn from(price: Price<C, QuoteC>) -> Self {
+        // Please note that Price(amount, amount_quote) is like SimpleFraction(amount_quote / amount).
+        price.amount_quote.to_rational(price.amount)
+    }
+}
+
 impl<C, QuoteC> PartialEq for Price<C, QuoteC>
 where
     C: 'static,
@@ -252,16 +237,11 @@ where
     C: 'static,
     QuoteC: 'static,
 {
+    // a/b < c/d if and only if a * d < b * c
+    // Please note that Price(amount, amount_quote) is like Ratio(amount_quote / amount).
+
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        // a/b < c/d if and only if a * d < b * c
-        // Please note that Price(amount, amount_quote) is like Ratio(amount_quote / amount).
-
-        let a: DoubleAmount = self.amount_quote.into();
-        let d: DoubleAmount = other.amount.into();
-
-        let b: DoubleAmount = self.amount.into();
-        let c: DoubleAmount = other.amount_quote.into();
-        (a * d).cmp(&(b * c))
+        Rational::from(*self).cmp(&Rational::from(*other))
     }
 }
 
@@ -300,6 +280,21 @@ where
     }
 }
 
+impl<C, QuoteC> TryFrom<Rational<Amount>> for Price<C, QuoteC>
+where
+    C: 'static,
+    QuoteC: 'static,
+{
+    type Error = Infallible;
+
+    fn try_from(value: Rational<Amount>) -> std::result::Result<Self, Self::Error> {
+        Ok(Price::new(
+            value.denominator().into(),
+            value.nominator().into(),
+        ))
+    }
+}
+
 // TODO for completeness implement the Sub and SubAssign counterparts
 
 impl<C, QuoteC, QuoteQuoteC> Mul<Price<QuoteC, QuoteQuoteC>> for Price<C, QuoteC>
@@ -316,7 +311,7 @@ where
         // Please note that Price(amount, amount_quote) is like Ratio(amount_quote / amount).
 
         Self::Output::new(self.amount, rhs.amount_quote)
-            .lossy_mul(&Rational::new(self.amount_quote, rhs.amount))
+            .lossy_mul(Rational::new(self.amount_quote.into(), rhs.amount.into()))
     }
 }
 
@@ -325,7 +320,8 @@ where
 /// For example, total(10 EUR, 1.01 EURUSD) = 10.1 USD
 pub fn total<C, QuoteC>(of: Coin<C>, price: Price<C, QuoteC>) -> Coin<QuoteC> {
     let ratio_impl = Rational::new(of, price.amount);
-    Fraction::<Coin<C>>::of(&ratio_impl, price.amount_quote)
+    // ratio_impl.of(price.amount_quote)
+    todo!("Next PR")
 }
 
 #[cfg(test)]

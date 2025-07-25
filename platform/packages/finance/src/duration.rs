@@ -1,15 +1,17 @@
 use std::{
     fmt::{Debug, Display, Formatter, Result as FmtResult},
-    ops::{Add, AddAssign, Sub, SubAssign},
+    ops::{Add, AddAssign, Div, Rem, Sub, SubAssign},
 };
 
+use gcd::Gcd;
 use serde::{Deserialize, Serialize};
 
-use sdk::cosmwasm_std::{Timestamp, Uint128};
+use sdk::cosmwasm_std::Timestamp;
 
 use crate::{
-    fraction::Fraction,
-    fractionable::{Fractionable, TimeSliceable},
+    arithmetic::{Bits, FractionUnit, One, Scalar, Trim},
+    coin::Amount,
+    fractionable::Fractionable,
     ratio::Rational,
     zero::Zero,
 };
@@ -25,6 +27,15 @@ pub type Seconds = u32;
 /// in order to get const result.
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default, Serialize, Deserialize)]
 pub struct Duration(Units);
+
+impl Bits for Duration {
+    const BITS: u32 = Units::BITS;
+
+    fn leading_zeros(self) -> u32 {
+        self.0.leading_zeros()
+    }
+}
+
 impl Duration {
     const UNITS_IN_SECOND: Units = 1000 * 1000 * 1000;
     const UNITS_IN_DAY: Units = Self::UNITS_IN_SECOND * Self::SECONDS_IN_DAY as Units;
@@ -84,44 +95,87 @@ impl Duration {
         self.millis() / 1000
     }
 
+    pub fn is_zero(&self) -> bool {
+        self == &Self::ZERO
+    }
+
     pub fn checked_mul(&self, rhs: u16) -> Option<Self> {
         self.nanos().checked_mul(rhs.into()).map(Self::from_nanos)
     }
 
     #[track_caller]
-    pub fn annualized_slice_of<T>(&self, annual_amount: T) -> T
+    pub fn annualized_slice_of<T>(&self, annual_amount: T) -> Option<T>
     where
-        T: TimeSliceable,
+        Self: FractionUnit,
+        T: Fractionable<Self>,
     {
-        annual_amount.safe_mul(&Rational::new(self.nanos(), Self::YEAR.nanos()))
+        Rational::new(*self, Self::YEAR).lossy_mul(annual_amount)
     }
 
-    pub fn into_slice_per_ratio<U>(self, amount: U, annual_amount: U) -> Self
+    pub fn into_slice_per_ratio<U>(self, amount: U, annual_amount: U) -> Option<Self>
     where
         Self: Fractionable<U>,
-        U: Zero + Debug + PartialEq + Copy,
+        U: FractionUnit,
     {
-        Rational::new(amount, annual_amount).of(self)
+        Rational::new(amount, annual_amount).lossy_mul(self)
     }
 }
 
-impl From<Duration> for u128 {
-    fn from(d: Duration) -> Self {
-        d.nanos().into()
-    }
-}
+impl FractionUnit for Duration {}
 
-impl From<Duration> for Uint128 {
-    fn from(d: Duration) -> Self {
-        u128::from(d).into()
-    }
-}
+impl TryFrom<Amount> for Duration {
+    type Error = <Units as TryFrom<Amount>>::Error;
 
-impl TryFrom<u128> for Duration {
-    type Error = <Units as TryFrom<u128>>::Error;
-
-    fn try_from(value: u128) -> Result<Self, Self::Error> {
+    fn try_from(value: Amount) -> Result<Self, Self::Error> {
         Ok(Self::from_nanos(value.try_into()?))
+    }
+}
+
+impl Div for Duration {
+    type Output = Units;
+
+    fn div(self, rhs: Self) -> Self::Output {
+        debug_assert!(!rhs.is_zero());
+
+        self.nanos().div(rhs.nanos())
+    }
+}
+
+impl Rem for Duration {
+    type Output = Self;
+
+    fn rem(self, rhs: Self) -> Self::Output {
+        debug_assert!(!rhs.is_zero());
+
+        Duration(self.nanos() % rhs.nanos())
+    }
+}
+
+impl Scalar for Duration {
+    type Base = Units;
+
+    fn gcd(self, other: Self) -> Self::Base {
+        Gcd::gcd(self.0, other.0)
+    }
+
+    fn scale_up(self, scale: Self::Base) -> Option<Self> {
+        self.0.checked_mul(scale).map(Self::from_nanos)
+    }
+
+    fn scale_down(self, scale: Self::Base) -> Self {
+        assert_ne!(scale, 0);
+
+        Self::from_nanos(self.0.div(scale))
+    }
+
+    fn modulo(self, scale: Self::Base) -> Self::Base {
+        assert_ne!(scale, 0);
+
+        self.0.rem(scale)
+    }
+
+    fn into_base(self) -> Self::Base {
+        self.0
     }
 }
 
@@ -159,6 +213,10 @@ impl Add<Duration> for Duration {
     }
 }
 
+impl One for Duration {
+    const ONE: Self = Self::from_nanos(1);
+}
+
 impl Sub<Duration> for Timestamp {
     type Output = Self;
 
@@ -193,9 +251,25 @@ impl Sub<Duration> for Duration {
     }
 }
 
+impl Trim for Duration {
+    fn trim(self, bits: u32) -> Self {
+        Self::from_nanos(self.0 >> bits)
+    }
+}
+
 impl Display for Duration {
     fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
         f.write_fmt(format_args!("{} {}", self.nanos(), "nanos"))
+    }
+}
+
+impl Zero for Duration {
+    const ZERO: Self = Duration::from_nanos(0);
+}
+
+impl From<Duration> for Amount {
+    fn from(d: Duration) -> Self {
+        d.nanos().into()
     }
 }
 
