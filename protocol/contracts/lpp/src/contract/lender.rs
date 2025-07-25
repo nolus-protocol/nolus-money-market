@@ -438,10 +438,13 @@ mod test {
         use platform::bank::testing::MockBankView;
         use sdk::cosmwasm_std::Addr;
 
-        use crate::contract::{
-            ContractError,
-            lender::{self, test},
-            test as test_tools,
+        use crate::{
+            contract::{
+                ContractError,
+                lender::{self, test},
+                test as test_tools,
+            },
+            loans::Repo,
         };
 
         use super::{LiquidityPool, TheCurrency};
@@ -462,13 +465,11 @@ mod test {
                 |mut store, config, bank, now| {
                     if borrowed != 0 {
                         let mut lpp = LiquidityPool::load(&store, &config, &bank).unwrap();
-                        lpp.try_open_loan(
-                            &mut store,
-                            now,
-                            Addr::unchecked("lease"),
-                            Coin::<TheCurrency>::from(borrowed),
-                        )
-                        .unwrap();
+                        lpp.try_open_loan(now, Coin::<TheCurrency>::from(borrowed))
+                            .and_then(|loan| {
+                                Repo::open(&mut store, Addr::unchecked("lease"), &loan)
+                            })
+                            .unwrap();
                         lpp.save(&mut store).unwrap();
                     }
 

@@ -31,7 +31,9 @@ where
     let mut lpp = LiquidityPool::load(deps.storage, &config, &bank)?;
     let lease_addr = lpp.validate_lease_addr(&contract::validator(deps.querier), info.sender)?;
 
-    let loan = lpp.try_open_loan(deps.storage, env.block.time, lease_addr.clone(), amount)?;
+    let loan = lpp.try_open_loan(env.block.time, amount)?;
+    Repo::open(deps.storage, lease_addr.clone(), &loan)?;
+
     lpp.save(deps.storage)?;
 
     bank.send(amount, lease_addr);

@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 
 use finance::{coin::Coin, duration::Duration, interest, percent::Percent};
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone, Copy, Debug)]
 #[cfg_attr(any(test, feature = "testing"), derive(Eq, PartialEq))]
 #[serde(rename_all = "snake_case", bound(serialize = "", deserialize = ""))]
 pub struct Loan<Lpn> {

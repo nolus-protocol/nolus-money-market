@@ -26,7 +26,7 @@ impl<Lpn> Repo<Lpn> {
         Self::STORAGE.load(storage, addr).map_err(Into::into)
     }
 
-    pub fn save(storage: &mut dyn Storage, addr: Addr, loan: Loan<Lpn>) -> Result<()> {
+    pub fn save(storage: &mut dyn Storage, addr: Addr, loan: &Loan<Lpn>) -> Result<()> {
         if loan.principal_due.is_zero() {
             Self::STORAGE.remove(storage, addr);
             Ok(())
@@ -92,7 +92,7 @@ mod test {
         assert_eq!(payment.excess, 0u128.into());
 
         assert_eq!(loan.principal_due, 500u128.into());
-        Repo::save(deps.as_mut().storage, addr.clone(), loan).unwrap();
+        Repo::save(deps.as_mut().storage, addr.clone(), &loan).unwrap();
 
         let mut loan: Loan<Lpn> =
             Repo::load(deps.as_ref().storage, addr.clone()).expect("should load loan");
@@ -103,7 +103,7 @@ mod test {
         assert_eq!(payment.principal, 500u128.into());
         assert_eq!(payment.excess, 100u128.into());
         assert_eq!(loan.principal_due, Coin::ZERO);
-        Repo::save(deps.as_mut().storage, addr.clone(), loan).unwrap();
+        Repo::save(deps.as_mut().storage, addr.clone(), &loan).unwrap();
 
         // is it cleaned up?
         let is_none = Repo::<Lpn>::query(deps.as_ref().storage, addr)
