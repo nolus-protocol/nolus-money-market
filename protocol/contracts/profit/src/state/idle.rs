@@ -21,7 +21,7 @@ use platform::{
     message::Response as PlatformResponse,
     state_machine::Response as StateMachineResponse,
 };
-use sdk::cosmwasm_std::{Addr, Env, QuerierWrapper, Timestamp};
+use sdk::cosmwasm_std::{Addr, Env, MessageInfo, QuerierWrapper, Timestamp};
 use timealarms::stub::Result as TimeAlarmsResult;
 
 use crate::{
@@ -166,7 +166,12 @@ impl Handler for Idle {
     type Response = State;
     type SwapResult = ContractResult<DexResponse<State>>;
 
-    fn on_time_alarm(self, querier: QuerierWrapper<'_>, env: Env) -> DexResult<Self> {
+    fn on_time_alarm(
+        self,
+        querier: QuerierWrapper<'_>,
+        env: Env,
+        _info: MessageInfo,
+    ) -> DexResult<Self> {
         DexResult::Finished(self.on_time_alarm(querier, env))
     }
 }

@@ -46,7 +46,7 @@ impl LeasesRef {
             .map_err(ContractError::PositionLimitsQuery)
     }
 
-    pub(super) fn check_assess(
+    pub(super) fn check_access(
         &self,
         caller: Addr,
         querier: QuerierWrapper<'_>,

@@ -7,12 +7,26 @@ use sdk::{
 
 pub use self::contract_owner::ContractOwnerAccess;
 use self::error::{Error, Result};
+use self::permissions::SingleUserPermission;
+use self::user::User;
 
 mod contract_owner;
 pub mod error;
+pub mod permissions;
+pub mod user;
 
-pub fn check(permitted_to: &Addr, accessed_by: &Addr) -> Result {
-    if permitted_to == accessed_by {
+pub trait AccessPermission {
+    fn granted_to<U>(&self, user: &U) -> bool
+    where
+        U: User + ?Sized;
+}
+
+/// Checks if access is granted to the given user.
+pub fn check<P>(permission: &P, user: &dyn User) -> Result
+where
+    P: AccessPermission + ?Sized,
+{
+    if permission.granted_to(user) {
         Ok(())
     } else {
         Err(Error::Unauthorized {})
@@ -38,11 +52,11 @@ where
         }
     }
 
-    pub fn check(&self, user: &Addr) -> Result {
+    pub fn check(&self, user: &dyn User) -> Result {
         self.storage_item
             .load(self.storage.deref())
             .map_err(Into::into)
-            .and_then(|granted_to| check(&granted_to, user))
+            .and_then(|ref granted_to| check(&SingleUserPermission::new(granted_to), user))
     }
 }
 
@@ -63,11 +77,12 @@ where
 
 #[cfg(test)]
 mod tests {
-    use sdk::cosmwasm_std::{Addr, Storage, testing::MockStorage};
+    use sdk::cosmwasm_std::{Addr, ContractInfo, Storage, testing::MockStorage};
 
     use crate::{
         SingleUserAccess,
         error::{Error, Result},
+        permissions::{SameContractOnly, SingleUserPermission},
     };
 
     const NAMESPACE: &str = "my-nice-permission";
@@ -77,11 +92,11 @@ mod tests {
         let mut storage = MockStorage::new();
         let storage_ref: &mut dyn Storage = &mut storage;
         let mut access = SingleUserAccess::new(storage_ref, NAMESPACE);
-        let user = Addr::unchecked("cosmic address");
+        let address = Addr::unchecked("cosmic address");
 
-        assert!(access.check(&user).is_err());
-        access.grant_to(&user).unwrap();
-        access.check(&user).unwrap();
+        access.check(&address).unwrap_err();
+        access.grant_to(&address).unwrap();
+        access.check(&address).unwrap();
     }
 
     #[test]
@@ -89,30 +104,53 @@ mod tests {
         let mut storage = MockStorage::new();
         let storage_ref: &dyn Storage = &mut storage;
         let access = SingleUserAccess::new(storage_ref, NAMESPACE);
-        let not_authorized = Addr::unchecked("hacker");
+        let address = Addr::unchecked("hacker");
 
-        assert!(matches!(
-            access.check(&not_authorized).unwrap_err(),
-            Error::Std(_)
-        ));
+        assert!(matches!(access.check(&address).unwrap_err(), Error::Std(_)));
     }
 
     #[test]
-    fn check() {
+    fn check_addr() {
         const ADDRESS: &str = "admin";
 
-        check_permission(ADDRESS, ADDRESS).unwrap();
+        check_addr_permission(ADDRESS, ADDRESS).unwrap();
+    }
+
+    #[test]
+    fn check_same_contract_only() {
+        let address = Addr::unchecked("contract admin");
+        let contract_info = ContractInfo {
+            address: address.clone(),
+        };
+
+        super::check(&SameContractOnly::new(&contract_info), &address).unwrap();
+    }
+
+    #[test]
+    fn check_same_contract_only_fail() {
+        let contract_info = ContractInfo {
+            address: Addr::unchecked("contract admin"),
+        };
+        let address = Addr::unchecked("hacker");
+
+        let check_result = super::check(&SameContractOnly::new(&contract_info), &address);
+        assert!(matches!(check_result.unwrap_err(), Error::Unauthorized {}));
     }
 
     #[test]
     fn check_fail() {
         assert_eq!(
             Error::Unauthorized {},
-            check_permission("user12", "user21").unwrap_err(),
+            check_addr_permission("user12", "user21").unwrap_err(),
         );
     }
 
-    fn check_permission(granted_to: &str, asked_for: &str) -> Result {
-        super::check(&Addr::unchecked(granted_to), &Addr::unchecked(asked_for))
+    fn check_addr_permission(granted_to: &str, asked_for: &str) -> Result {
+        let address = Addr::unchecked(asked_for);
+
+        super::check(
+            &SingleUserPermission::new(&Addr::unchecked(granted_to)),
+            &address,
+        )
     }
 }
