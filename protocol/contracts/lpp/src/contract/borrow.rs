@@ -32,6 +32,8 @@ where
     let lease_addr = lpp.validate_lease_addr(&contract::validator(deps.querier), info.sender)?;
 
     let loan = lpp.try_open_loan(deps.storage, env.block.time, lease_addr.clone(), amount)?;
+    lpp.save(deps.storage)?;
+
     bank.send(amount, lease_addr);
 
     let messages: Batch = bank.into();
@@ -60,6 +62,7 @@ where
         lease_addr.clone(),
         repay_amount,
     )?;
+    lpp.save(deps.storage)?;
 
     let batch = if excess_received.is_zero() {
         Batch::default()

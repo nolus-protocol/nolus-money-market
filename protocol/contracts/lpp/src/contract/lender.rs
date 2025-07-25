@@ -32,8 +32,10 @@ where
 {
     Config::load(storage)
         .and_then(|config| {
-            LiquidityPool::<Lpn, _>::load(storage, &config, bank)
-                .and_then(|mut lpp| lpp.deposit(storage, pending_deposit, now))
+            LiquidityPool::load(storage, &config, bank).and_then(|mut lpp| {
+                lpp.deposit(pending_deposit, now)
+                    .and_then(|receipts| lpp.save(storage).map(|()| receipts))
+            })
         })
         .and_then(|receipts| {
             Deposit::load_or_default(storage, lender.clone())?.deposit(storage, receipts)
@@ -72,8 +74,10 @@ where
     }
 
     let payment_lpn = Config::load(storage).and_then(|config| {
-        LiquidityPool::load(storage, &config, &bank)
-            .and_then(|mut lpp| lpp.withdraw_lpn(storage, amount, now))
+        LiquidityPool::load(storage, &config, &bank).and_then(|mut lpp| {
+            lpp.withdraw_lpn(amount, now)
+                .and_then(|payment_lpn| lpp.save(storage).map(|()| payment_lpn))
+        })
     })?;
 
     let maybe_reward = Deposit::may_load(storage, lender.clone())?
@@ -457,15 +461,15 @@ mod test {
                 BoundToHundredPercent::try_from_percent(min_utilization).unwrap(),
                 |mut store, config, bank, now| {
                     if borrowed != 0 {
-                        LiquidityPool::load(&store, &config, &bank)
-                            .unwrap()
-                            .try_open_loan(
-                                &mut store,
-                                now,
-                                Addr::unchecked("lease"),
-                                Coin::<TheCurrency>::from(borrowed),
-                            )
-                            .unwrap();
+                        let mut lpp = LiquidityPool::load(&store, &config, &bank).unwrap();
+                        lpp.try_open_loan(
+                            &mut store,
+                            now,
+                            Addr::unchecked("lease"),
+                            Coin::<TheCurrency>::from(borrowed),
+                        )
+                        .unwrap();
+                        lpp.save(&mut store).unwrap();
                     }
 
                     //do deposit
