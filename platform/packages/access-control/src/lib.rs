@@ -8,7 +8,7 @@ use sdk::{
 pub use self::contract_owner::ContractOwnerAccess;
 use self::error::{Error, Result};
 use self::permissions::SingleUserPermission;
-use self::user::{User};
+use self::user::User;
 
 mod contract_owner;
 pub mod error;
@@ -18,11 +18,11 @@ pub mod user;
 pub trait AccessPermission {
     fn granted_to<U>(&self, user: &U) -> bool
     where
-        U: User;
+        U: User + ?Sized;
 }
 
 /// Checks if access is granted to the given user.
-pub fn check<P, S>(permission: &P, user: &User) -> Result
+pub fn check<P>(permission: &P, user: &dyn User) -> Result
 where
     P: AccessPermission + ?Sized,
 {
@@ -52,7 +52,7 @@ where
         }
     }
 
-    pub fn check(&self, user: &User<'_>) -> Result {
+    pub fn check(&self, user: &dyn User) -> Result {
         self.storage_item
             .load(self.storage.deref())
             .map_err(Into::into)
@@ -83,7 +83,6 @@ mod tests {
         SingleUserAccess,
         error::{Error, Result},
         permissions::{SameContractOnly, SingleUserPermission},
-        user::User,
     };
 
     const NAMESPACE: &str = "my-nice-permission";
@@ -95,9 +94,9 @@ mod tests {
         let mut access = SingleUserAccess::new(storage_ref, NAMESPACE);
         let address = Addr::unchecked("cosmic address");
 
-        access.check(&sender).unwrap_err();
-        access.grant_to(&addres).unwrap();
-        access.check(&sender).unwrap();
+        access.check(&address).unwrap_err();
+        access.grant_to(&address).unwrap();
+        access.check(&address).unwrap();
     }
 
     #[test]

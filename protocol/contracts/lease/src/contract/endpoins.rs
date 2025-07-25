@@ -1,4 +1,4 @@
-use access_control::{permissions::DexResponseSafeDeliveryPermission};
+use access_control::permissions::DexResponseSafeDeliveryPermission;
 use finance::duration::Duration;
 use platform::{
     contract::{self, Validator},

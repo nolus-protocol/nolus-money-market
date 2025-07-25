@@ -104,11 +104,8 @@ pub fn execute(
         ExecuteMsg::ConfigLeases(new_config) => Leaser::new(deps.as_ref())
             .config()
             .and_then(|ref config| {
-                access_control::check(
-                    &LeasesConfigurationPermission::new(config),
-                    &info,
-                )
-                .map_err(ContractError::from)
+                access_control::check(&LeasesConfigurationPermission::new(config), &info)
+                    .map_err(ContractError::from)
             })
             .and_then(|()| leaser::try_configure(deps.storage, new_config)),
         ExecuteMsg::FinalizeLease { customer } => {
@@ -163,11 +160,8 @@ pub fn execute(
         ExecuteMsg::ChangeLeaseAdmin { new } => Leaser::new(deps.as_ref())
             .config()
             .and_then(|ref config| {
-                access_control::check(
-                    &ChangeLeaseAdminPermission::new(config),
-                    &info,
-                )
-                .map_err(ContractError::from)
+                access_control::check(&ChangeLeaseAdminPermission::new(config), &info)
+                    .map_err(ContractError::from)
             })
             .and_then(|()| validate(&new, deps.api))
             .and_then(|valid_new_admin| {
