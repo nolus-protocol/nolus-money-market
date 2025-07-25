@@ -100,12 +100,8 @@ impl Deposit {
         Ok(maybe_reward)
     }
 
-    //TODO remove it, instead use Self::load::receipts
-    pub fn query_balance_nlpn(storage: &dyn Storage, addr: Addr) -> StdResult<Option<Coin<NLpn>>> {
-        let maybe_balance = Self::DEPOSITS
-            .may_load(storage, addr)?
-            .map(|data| data.deposited_nlpn);
-        Ok(maybe_balance)
+    pub fn receipts(&self) -> Coin<NLpn> {
+        self.data.deposited_nlpn
     }
 
     pub fn distribute_rewards(
@@ -199,10 +195,7 @@ mod test {
         let mut deposit2 = Deposit::load_or_default(&store, addr2.clone()).unwrap();
         deposit2.deposit(&mut store, deposit2_1).unwrap();
 
-        assert_eq!(
-            Some(deposit2_1),
-            Deposit::query_balance_nlpn(&store, addr2).unwrap()
-        );
+        assert_eq!(deposit2_1, deposit2.receipts());
 
         assert_eq!(
             Coin::new(deposit1_1.into()),

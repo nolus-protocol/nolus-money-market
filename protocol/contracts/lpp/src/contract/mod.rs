@@ -170,10 +170,16 @@ pub fn execute(
         ExecuteMsg::Burn { amount } => lender::try_withdraw::<LpnCurrency, _>(
             deps.storage,
             bank::account(&env.contract.address.clone(), deps.querier),
-            env,
-            info,
+            info.sender.clone(),
             amount,
+            &env.block.time,
         )
+        .map(|(amount_lpn, maybe_reward, bank_transfers)| {
+            PlatformResponse::messages_with_events(
+                bank_transfers,
+                event::emit_withdraw(env, info.sender, amount_lpn, amount, maybe_reward.is_some()),
+            )
+        })
         .map(response::response_only_messages),
         ExecuteMsg::CloseAllDeposits() => {
             SingleUserAccess::new(

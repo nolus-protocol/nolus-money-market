@@ -1,15 +1,16 @@
-use currency::CurrencyDef;
-use finance::{coin::Coin, zero::Zero};
+use currency::{CurrencyDef, platform::Nls};
+use finance::{
+    coin::{Amount, Coin},
+    zero::Zero,
+};
 use lpp_platform::NLpn;
 use platform::{
     bank::{BankAccount, BankAccountView},
     batch::Batch,
-    message::Response as MessageResponse,
 };
-use sdk::cosmwasm_std::{Addr, Env, MessageInfo, Storage, Timestamp};
+use sdk::cosmwasm_std::{Addr, Storage, Timestamp};
 
 use crate::{
-    event,
     lpp::LiquidityPool,
     msg::{BalanceResponse, PriceResponse},
     state::Deposit,
@@ -17,6 +18,7 @@ use crate::{
 
 use super::error::{ContractError, Result};
 
+/// Deposit `Lpn`-s and return the amount of receipts
 pub(super) fn try_deposit<Lpn, Bank>(
     storage: &mut dyn Storage,
     bank: &Bank,
@@ -48,13 +50,14 @@ where
         .and_then(|lpp| lpp.deposit_capacity(now, Coin::ZERO))
 }
 
+/// Withdraw receipts and return the returned amount, potentially some unclaimed `Nls` rewards, and their transfer messages
 pub(super) fn try_withdraw<Lpn, Bank>(
     storage: &mut dyn Storage,
     mut bank: Bank,
-    env: Env,
-    info: MessageInfo,
+    lender: Addr,
     amount: Coin<NLpn>,
-) -> Result<MessageResponse>
+    now: &Timestamp,
+) -> Result<(Coin<Lpn>, Option<Coin<Nls>>, Batch)>
 where
     Lpn: CurrencyDef,
     Bank: BankAccount,
@@ -63,34 +66,22 @@ where
         return Err(ContractError::ZeroWithdrawFunds);
     }
 
-    let lender_addr = info.sender;
-
     let mut lpp = LiquidityPool::<'_, Lpn, _>::load(storage, &bank)?;
-    let payment_lpn = lpp.withdraw_lpn(storage, amount, &env.block.time)?;
+    let payment_lpn = lpp.withdraw_lpn(storage, amount, now)?;
 
-    let maybe_reward = Deposit::may_load(storage, lender_addr.clone())?
+    let maybe_reward = Deposit::may_load(storage, lender.clone())?
         .ok_or(ContractError::NoDeposit {})?
         .withdraw(storage, amount)?;
 
-    bank.send(payment_lpn, lender_addr.clone());
+    bank.send(payment_lpn, lender.clone());
 
     if let Some(reward) = maybe_reward {
         if !reward.is_zero() {
-            bank.send(reward, lender_addr.clone());
+            bank.send(reward, lender.clone());
         }
     }
 
-    let batch: Batch = bank.into();
-    Ok(MessageResponse::messages_with_events(
-        batch,
-        event::emit_withdraw(
-            env,
-            lender_addr,
-            payment_lpn,
-            amount,
-            maybe_reward.is_some(),
-        ),
-    ))
+    Ok((payment_lpn, maybe_reward, bank.into()))
 }
 
 pub fn query_ntoken_price<Lpn, Bank>(
@@ -107,12 +98,12 @@ where
 }
 
 pub fn query_balance(storage: &dyn Storage, addr: Addr) -> Result<BalanceResponse> {
-    let balance: u128 = Deposit::query_balance_nlpn(storage, addr)?
-        .unwrap_or_default()
-        .into();
-    Ok(BalanceResponse {
-        balance: balance.into(),
-    })
+    Deposit::load_or_default(storage, addr)
+        .map_err(Into::into)
+        .map(|ref deposit| deposit.receipts())
+        .map(|receipts| BalanceResponse {
+            balance: Amount::from(receipts).into(),
+        })
 }
 
 #[cfg(test)]
@@ -126,7 +117,7 @@ mod test {
         contract::Code,
     };
     use sdk::cosmwasm_std::{
-        Env, Storage,
+        Storage, Timestamp,
         testing::{self, MockStorage},
     };
 
@@ -153,11 +144,10 @@ mod test {
         f: F,
     ) where
         Balance: Copy + Into<Coin<TheCurrency>>,
-        F: FnOnce(MockStorage, BankStub<MockBankView<TheCurrency, TheCurrency>>, Env),
+        F: FnOnce(MockStorage, BankStub<MockBankView<TheCurrency, TheCurrency>>, Timestamp),
     {
         let mut store = testing::MockStorage::default();
-        let env = testing::mock_env();
-        let now = env.block.time;
+        let now = Timestamp::from_nanos(1_571_897_419_879_405_538);
 
         let bank = BankStub::with_view(MockBankView::only_balance(initial_lpp_balance.into()));
         setup_storage(&mut store, &bank, BoundToHundredPercent::ZERO); //
@@ -174,7 +164,7 @@ mod test {
         }
 
         Config::update_min_utilization(&mut store, min_utilization).unwrap();
-        f(store, bank, env)
+        f(store, bank, now)
     }
 
     fn setup_storage<Bank>(
@@ -228,13 +218,13 @@ mod test {
 
             #[test]
             fn test_deposit_zero() {
-                test::test_case(0, DEFAULT_MIN_UTILIZATION, |mut store, bank, env| {
+                test::test_case(0, DEFAULT_MIN_UTILIZATION, |mut store, bank, now| {
                     lender::try_deposit::<TheCurrency, _>(
                         &mut store,
                         &bank,
                         test_tools::lender(),
                         Coin::ZERO,
-                        &env.block.time,
+                        &now,
                     )
                     .unwrap_err();
                 })
@@ -245,7 +235,7 @@ mod test {
                 test::test_case(
                     DEPOSIT_LPP,
                     DEFAULT_MIN_UTILIZATION,
-                    |store, _bank, _env| {
+                    |store, _bank, _now| {
                         assert_eq!(
                             Coin::from(
                                 lender::query_balance(&store, test_tools::lender())
@@ -279,14 +269,13 @@ mod test {
                 test::test_case(
                     DEPOSIT_LPP,
                     DEFAULT_MIN_UTILIZATION,
-                    |mut store, bank, env| {
-                        // TODO switch from using `env` to `&Timestamp`
+                    |mut store, bank, now| {
                         lender::try_withdraw::<TheCurrency, _>(
                             &mut store,
                             bank,
-                            env,
-                            test_tools::lender_msg_no_funds(),
+                            test_tools::lender(),
                             Coin::ZERO,
+                            &now,
                         )
                         .unwrap_err();
                     },
@@ -301,13 +290,13 @@ mod test {
                 test::test_case(
                     DEPOSIT_LPP,
                     DEFAULT_MIN_UTILIZATION,
-                    |mut store, bank, env| {
+                    |mut store, bank, now| {
                         lender::try_withdraw::<TheCurrency, _>(
                             &mut store,
                             bank,
-                            env,
-                            test_tools::lender_msg_no_funds(),
+                            test_tools::lender(),
                             WITHDRAWN,
+                            &now,
                         )
                         .unwrap();
 
@@ -329,13 +318,13 @@ mod test {
                 test::test_case(
                     DEPOSIT_LPP,
                     DEFAULT_MIN_UTILIZATION,
-                    |mut store, bank, env| {
+                    |mut store, bank, now| {
                         lender::try_withdraw::<TheCurrency, _>(
                             &mut store,
                             bank,
-                            env,
-                            test_tools::lender_msg_no_funds(),
+                            test_tools::lender(),
                             DEPOSIT_NLPN,
+                            &now,
                         )
                         .unwrap();
 
@@ -357,13 +346,13 @@ mod test {
                 test::test_case(
                     DEPOSIT_LPP,
                     DEFAULT_MIN_UTILIZATION,
-                    |mut store, bank, env| {
+                    |mut store, bank, now| {
                         lender::try_withdraw::<TheCurrency, _>(
                             &mut store,
                             bank,
-                            env,
-                            test_tools::lender_msg_no_funds(),
+                            test_tools::lender(),
                             DEPOSIT_NLPN + Coin::new(1),
+                            &now,
                         )
                         .unwrap_err();
                     },
@@ -388,10 +377,9 @@ mod test {
             fn test_nlpn_price() {
                 const INTEREST: Coin<TheCurrency> = DEPOSIT_LPP.checked_div(2).unwrap();
 
-                test::test_case(DEPOSIT_LPP, DEFAULT_MIN_UTILIZATION, |store, bank, env| {
-                    let now = &env.block.time;
+                test::test_case(DEPOSIT_LPP, DEFAULT_MIN_UTILIZATION, |store, bank, now| {
                     assert_eq!(
-                        lender::query_ntoken_price::<TheCurrency, _>(&store, &bank, now)
+                        lender::query_ntoken_price::<TheCurrency, _>(&store, &bank, &now)
                             .unwrap()
                             .0,
                         Price::identity(),
@@ -406,7 +394,7 @@ mod test {
                         lender::query_ntoken_price::<TheCurrency, _>(
                             &store,
                             &bank_got_interest,
-                            now
+                            &now
                         )
                         .unwrap()
                         .0,
@@ -445,13 +433,13 @@ mod test {
             test::test_case(
                 lpp_balance_at_deposit + borrowed,
                 BoundToHundredPercent::try_from_percent(min_utilization).unwrap(),
-                |mut store, bank, env| {
+                |mut store, bank, now| {
                     if borrowed != 0 {
                         LiquidityPool::<'_, TheCurrency, _>::load(&store, &bank)
                             .unwrap()
                             .try_open_loan(
                                 &mut store,
-                                env.block.time,
+                                now,
                                 Addr::unchecked("lease"),
                                 borrowed.into(),
                             )
@@ -468,7 +456,7 @@ mod test {
                         &bank,
                         test_tools::lender(),
                         deposit.into(),
-                        &env.block.time,
+                        &now,
                     );
 
                     if expect_error {
