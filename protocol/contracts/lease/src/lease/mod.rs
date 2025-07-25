@@ -359,7 +359,7 @@ pub(crate) mod tests {
             annual_interest_rate: interest_rate,
             interest_paid: LEASE_START,
         };
-        let mut lease = open_lease(lease_amount, loan.clone());
+        let mut lease = open_lease(lease_amount, loan);
 
         let state_since_open = Duration::from_nanos(150);
         let state_at = LEASE_START.add(state_since_open);

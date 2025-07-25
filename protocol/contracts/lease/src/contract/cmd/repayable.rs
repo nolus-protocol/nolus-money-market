@@ -238,7 +238,7 @@ mod test {
             annual_interest_rate: Percent::from_permille(50),
             interest_paid: now,
         };
-        let mut lease = tests::open_lease(lease_amount, loan.clone());
+        let mut lease = tests::open_lease(lease_amount, loan);
         lease
             .price_of_lease_currency()
             .and_then(|asset_in_lpns| {

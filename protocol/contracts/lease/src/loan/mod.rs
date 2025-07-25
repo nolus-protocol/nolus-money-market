@@ -1111,7 +1111,7 @@ mod tests {
 
             let loan = create_loan_custom(
                 MARGIN_INTEREST_RATE,
-                loan_resp.clone(),
+                loan_resp,
                 margin_paid_by,
                 due_period_len,
             );
