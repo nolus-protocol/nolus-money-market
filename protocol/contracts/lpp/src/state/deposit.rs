@@ -40,7 +40,7 @@ impl Deposit {
     // take Globals::reward_per_token out in a dedicated abstraction and keep working Deposit -> <Rewards>
     const GLOBALS: Item<DepositsGlobals> = Item::new("deposits_globals");
 
-    pub fn load_or_default(storage: &dyn Storage, addr: Addr) -> StdResult<Self> {
+    pub fn load_or_default(storage: &dyn Storage, addr: Addr) -> Result<Self> {
         Self::may_load(storage, addr.clone()).map(|may_deposit| {
             may_deposit.unwrap_or_else(|| Deposit {
                 addr,
@@ -49,11 +49,11 @@ impl Deposit {
         })
     }
 
-    pub fn may_load(storage: &dyn Storage, addr: Addr) -> StdResult<Option<Self>> {
-        let result = Self::DEPOSITS
-            .may_load(storage, addr.clone())?
-            .map(|data| Self { addr, data });
-        Ok(result)
+    pub fn may_load(storage: &dyn Storage, addr: Addr) -> Result<Option<Self>> {
+        Self::DEPOSITS
+            .may_load(storage, addr.clone())
+            .map_err(Into::into)
+            .map(|may_data| may_data.map(|data| Self { addr, data }))
     }
 
     pub fn deposit(

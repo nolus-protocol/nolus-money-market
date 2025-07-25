@@ -99,7 +99,6 @@ where
 
 pub fn query_balance(storage: &dyn Storage, addr: Addr) -> Result<BalanceResponse> {
     Deposit::load_or_default(storage, addr)
-        .map_err(Into::into)
         .map(|ref deposit| deposit.receipts())
         .map(|receipts| BalanceResponse {
             balance: Amount::from(receipts).into(),
