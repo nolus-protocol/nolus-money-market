@@ -1,4 +1,4 @@
-pub use self::{config::Config, deposit::Deposit, rewards::DepositsGlobals, total::Total};
+pub use self::{config::Config, deposit::Deposit, rewards::TotalRewards, total::Total};
 
 mod config;
 mod deposit;

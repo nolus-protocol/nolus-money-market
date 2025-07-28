@@ -13,7 +13,7 @@ use sdk::cosmwasm_std::{Addr, Storage, Timestamp};
 use crate::{
     lpp::LiquidityPool,
     msg::{BalanceResponse, PriceResponse},
-    state::{Config, Deposit, DepositsGlobals},
+    state::{Config, Deposit, TotalRewards},
 };
 
 use super::error::{ContractError, Result};
@@ -42,7 +42,7 @@ where
             })
         })
         .and_then(|receipts| {
-            DepositsGlobals::load_or_default(storage)
+            TotalRewards::load_or_default(storage)
                 .and_then(|total_rewards| {
                     Deposit::load_or_default(storage, lender.clone(), total_rewards).and_then(
                         |mut deposit| {
@@ -86,7 +86,7 @@ where
         return Err(ContractError::ZeroWithdrawFunds);
     }
 
-    let maybe_reward = DepositsGlobals::load_or_default(storage).and_then(|total_rewards| {
+    let maybe_reward = TotalRewards::load_or_default(storage).and_then(|total_rewards| {
         Deposit::load(storage, lender.clone(), total_rewards).and_then(|mut deposit| {
             deposit
                 .withdraw(receipts)
@@ -130,7 +130,7 @@ where
 }
 
 pub fn query_balance(storage: &dyn Storage, addr: Addr) -> Result<BalanceResponse> {
-    DepositsGlobals::load_or_default(storage)
+    TotalRewards::load_or_default(storage)
         .and_then(|total_rewards| Deposit::load_or_default(storage, addr, total_rewards))
         .map(|ref deposit| deposit.receipts())
         .map(|receipts| BalanceResponse {

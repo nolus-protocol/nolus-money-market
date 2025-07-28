@@ -14,13 +14,13 @@ use sdk::{cosmwasm_std::Storage, cw_storage_plus::Item};
 use crate::contract::Result;
 
 #[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq, Default)]
-pub struct DepositsGlobals();
+pub struct TotalRewards();
 
 // TODO avoid potential pragramming mistakes, e.g. use stale index values if load twice, save one,
 // and use the other, especially to mutate and override the previous change!
 // A potential solution: use Rust ownership model, for example,
 // add a read reference to this struct instance as a memver variable of `Index`
-impl DepositsGlobals {
+impl TotalRewards {
     const REWARDS: Item<Index> = Item::new("deposits_globals");
 
     pub fn load_or_default(store: &dyn Storage) -> Result<Index> {

@@ -984,7 +984,9 @@ mod test {
             assert_eq!(RECEIPT1, lpp.balance_nlpn());
             lpp.save(&mut store).unwrap();
 
-            let bank = MockBankView::<TheCurrency, TheCurrency>::only_balance(DEPOSIT1 + INTEREST + DEPOSIT2);
+            let bank = MockBankView::<TheCurrency, TheCurrency>::only_balance(
+                DEPOSIT1 + INTEREST + DEPOSIT2,
+            );
             let mut lpp = LiquidityPool::<TheCurrency, _>::load(&store, &config, &bank).unwrap();
             assert_eq!(
                 ContractError::DepositLessThanAReceipt,

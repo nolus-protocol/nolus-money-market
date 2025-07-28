@@ -144,14 +144,14 @@ mod test {
 
     use crate::{
         contract::ContractError,
-        state::{Deposit, DepositsGlobals},
+        state::{Deposit, TotalRewards},
     };
 
     #[test]
     fn test_load_not_existent() {
         let store = MockStorage::default();
         let addr1 = Addr::unchecked("depositor1");
-        let rewards = DepositsGlobals::load_or_default(&store).unwrap();
+        let rewards = TotalRewards::load_or_default(&store).unwrap();
         assert_eq!(
             ContractError::NoDeposit {},
             Deposit::load(&store, addr1, rewards).unwrap_err(),
@@ -164,7 +164,7 @@ mod test {
         let addr1 = Addr::unchecked("depositor1");
         let addr2 = Addr::unchecked("depositor2");
 
-        let rewards = DepositsGlobals::load_or_default(&store).unwrap();
+        let rewards = TotalRewards::load_or_default(&store).unwrap();
         let mut deposit1 = Deposit::load_or_default(&store, addr1.clone(), rewards).unwrap();
         let deposit1_1 = 1000.into();
         let withdraw1_1 = 500.into();
@@ -231,7 +231,7 @@ mod test {
     fn test_query_rewards_zero_balance() {
         let store = MockStorage::default();
         let addr = Addr::unchecked("depositor");
-        let rewards = DepositsGlobals::load_or_default(&store).unwrap();
+        let rewards = TotalRewards::load_or_default(&store).unwrap();
 
         let mut deposit = Deposit::load_or_default(&store, addr, rewards).unwrap();
 
@@ -253,7 +253,7 @@ mod test {
         const REWARD_DEPOSIT: Coin<Nls> = Coin::new(124 / 2);
         const RECEIPTS: Coin<NLpn> = Coin::new(1000);
 
-        let mut rewards = DepositsGlobals::load_or_default(&store).unwrap();
+        let mut rewards = TotalRewards::load_or_default(&store).unwrap();
 
         let mut deposit1 = Deposit::load_or_default(&store, addr1.clone(), rewards).unwrap();
         deposit1.deposit(RECEIPTS);

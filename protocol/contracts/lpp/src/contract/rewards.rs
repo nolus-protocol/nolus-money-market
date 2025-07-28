@@ -12,7 +12,7 @@ use crate::{
     config::Config as ApiConfig,
     lpp::{LiquidityPool, LppBalances},
     msg::RewardsResponse,
-    state::{Deposit, DepositsGlobals},
+    state::{Deposit, TotalRewards},
 };
 
 use super::error::{ContractError, Result};
@@ -39,8 +39,8 @@ where
                     if total_receipts.is_zero() {
                         Err(ContractError::ZeroBalanceRewards {})
                     } else {
-                        DepositsGlobals::load_or_default(store).and_then(|total_rewards| {
-                            DepositsGlobals::save(
+                        TotalRewards::load_or_default(store).and_then(|total_rewards| {
+                            TotalRewards::save(
                                 &total_rewards.add(new_rewards, total_receipts),
                                 store,
                             )
@@ -62,7 +62,7 @@ pub(super) fn try_claim_rewards(
         .transpose()?
         .unwrap_or_else(|| info.sender.clone());
 
-    let reward = DepositsGlobals::load_or_default(deps.storage)
+    let reward = TotalRewards::load_or_default(deps.storage)
         .and_then(|total_rewards| Deposit::load(deps.storage, info.sender, total_rewards))
         .and_then(|mut deposit| {
             let rewards = deposit.claim_rewards();
@@ -109,7 +109,7 @@ where
 }
 
 pub(super) fn query_rewards(storage: &dyn Storage, addr: Addr) -> Result<RewardsResponse> {
-    DepositsGlobals::load_or_default(storage)
+    TotalRewards::load_or_default(storage)
         .and_then(|total_rewards| Deposit::load(storage, addr, total_rewards))
         .map(|ref deposit| deposit.query_rewards())
         .map(|rewards| RewardsResponse { rewards })
@@ -136,7 +136,7 @@ mod test {
             test::{self, TheCurrency},
         },
         lpp::LiquidityPool,
-        state::{Config, Deposit, DepositsGlobals},
+        state::{Config, Deposit, TotalRewards},
     };
 
     const BASE_INTEREST_RATE: Percent = Percent::from_permille(70);
@@ -197,7 +197,7 @@ mod test {
         let mut store = MockStorage::default();
         let lender = test::lender();
 
-        let rewards = DepositsGlobals::load_or_default(&store).unwrap();
+        let rewards = TotalRewards::load_or_default(&store).unwrap();
         let mut deposit = Deposit::load_or_default(&store, lender, rewards).unwrap();
 
         const DEPOSIT: Coin<TheCurrency> = Coin::new(1000);
