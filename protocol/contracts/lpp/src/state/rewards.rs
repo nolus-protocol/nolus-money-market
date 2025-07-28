@@ -21,7 +21,7 @@ pub struct TotalRewards();
 // A potential solution: use Rust ownership model, for example,
 // add a read reference to this struct instance as a memver variable of `Index`
 impl TotalRewards {
-    const REWARDS: Item<Index> = Item::new("deposits_globals");
+    const REWARDS: Item<Index> = Item::new("total_rewards");
 
     pub fn load_or_default(store: &dyn Storage) -> Result<Index> {
         Self::REWARDS
