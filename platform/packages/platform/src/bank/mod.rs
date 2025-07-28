@@ -280,9 +280,7 @@ where
 {
     match cw_amount.len() {
         0 => Err(no_funds_err()),
-        1 => {
-            Ok(cw_amount.iter().next().expect("there is at least a coin"))
-        }
+        1 => Ok(cw_amount.iter().next().expect("there is at least a coin")),
         _ => Err(unexp_funds_err()),
     }
 }
