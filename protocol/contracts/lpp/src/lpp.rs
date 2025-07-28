@@ -160,6 +160,8 @@ where
     }
 
     pub fn deposit(&mut self, amount: Coin<Lpn>, now: &Timestamp) -> Result<Coin<NLpn>> {
+        debug_assert_ne!(Coin::ZERO, amount);
+
         if self
             .deposit_capacity(now, amount)?
             .map(|capacity| amount > capacity)
@@ -170,16 +172,29 @@ where
 
         self.calculate_price(now, amount)
             .map(|price| price::total(amount, price.inv()))
-            .and_then(|receipts| self.total.deposit(receipts).map(|_| receipts))
+            .and_then(|receipts| {
+                if receipts.is_zero() {
+                    Err(ContractError::DepositLessThanAReceipt)
+                } else {
+                    self.total.deposit(receipts).map(|_| receipts)
+                }
+            })
     }
 
     pub fn withdraw_lpn(&mut self, receipts: Coin<NLpn>, now: &Timestamp) -> Result<Coin<Lpn>> {
-        debug_assert!(!receipts.is_zero());
+        debug_assert_ne!(Coin::ZERO, receipts);
 
         // the price calculation should go before the withdrawal from the total
         self.calculate_price(now, Coin::ZERO)
             .map(|price| price::total(receipts, price))
-            .and_then(|amount_lpn: Coin<Lpn>| self.total.withdraw(receipts).map(|_| amount_lpn))
+            .and_then(|amount_lpn: Coin<Lpn>| {
+                debug_assert_ne!(
+                    Coin::ZERO,
+                    amount_lpn,
+                    "The receipts price should always be greater to 1!"
+                );
+                self.total.withdraw(receipts).map(|_| amount_lpn)
+            })
             .and_then(|amount_lpn: Coin<Lpn>| {
                 self.uncommited_balance().and_then(|balance| {
                     if balance < amount_lpn {
@@ -297,7 +312,7 @@ mod test {
 
     use crate::{
         borrow::InterestRate, config::Config as ApiConfig, contract::ContractError, loan::Loan,
-        loans::Repo, lpp::LppBalances, state::Deposit,
+        loans::Repo, lpp::LppBalances,
     };
 
     use super::LiquidityPool;
@@ -660,13 +675,7 @@ mod test {
             DEFAULT_MIN_UTILIZATION,
         );
         let mut lpp = LiquidityPool::new(&config, &bank);
-        {
-            assert_eq!(Ok(DEPOSIT_RECEIPTS), lpp.deposit(DEPOSIT, &now));
-            Deposit::load_or_default(&store, Addr::unchecked("lender"))
-                .unwrap()
-                .deposit(&mut store, DEPOSIT_RECEIPTS)
-                .unwrap();
-        }
+        assert_eq!(Ok(DEPOSIT_RECEIPTS), lpp.deposit(DEPOSIT, &now));
 
         let mut loan = {
             assert_eq!(
@@ -950,6 +959,37 @@ mod test {
             );
 
             assert_eq!(RECEIPT1 - WITHDRAW1, lpp.balance_nlpn());
+        }
+
+        #[test]
+        fn test_deposit_less_than_a_receipt() {
+            let now = Timestamp::from_seconds(120);
+            const DEPOSIT1: Coin<TheCurrency> = Coin::new(1233);
+            const RECEIPT1: Coin<NLpn> = Coin::new(1233);
+            const INTEREST: Coin<TheCurrency> = Coin::new(1);
+            const DEPOSIT2: Coin<TheCurrency> = Coin::new(1); // the receipts would be 1233/1234 that should trigger an error
+
+            let mut store = MockStorage::default();
+
+            let config = Config::new(
+                Code::unchecked(0xDEADC0DE_u64),
+                InterestRate::new(Percent::ZERO, Percent::from_permille(500), Percent::HUNDRED)
+                    .unwrap(),
+                BoundToHundredPercent::strict_from_percent(Percent::ZERO),
+            );
+            let bank = MockBankView::<TheCurrency, TheCurrency>::only_balance(DEPOSIT1);
+            let mut lpp = LiquidityPool::<TheCurrency, _>::new(&config, &bank);
+
+            assert_eq!(RECEIPT1, lpp.deposit(DEPOSIT1, &now).unwrap());
+            assert_eq!(RECEIPT1, lpp.balance_nlpn());
+            lpp.save(&mut store).unwrap();
+
+            let bank = MockBankView::<TheCurrency, TheCurrency>::only_balance(DEPOSIT1 + INTEREST + DEPOSIT2);
+            let mut lpp = LiquidityPool::<TheCurrency, _>::load(&store, &config, &bank).unwrap();
+            assert_eq!(
+                ContractError::DepositLessThanAReceipt,
+                lpp.deposit(DEPOSIT2, &now).unwrap_err()
+            );
         }
     }
 }

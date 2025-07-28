@@ -13,7 +13,7 @@ use sdk::cosmwasm_std::{Addr, Storage, Timestamp};
 use crate::{
     lpp::LiquidityPool,
     msg::{BalanceResponse, PriceResponse},
-    state::{Config, Deposit},
+    state::{Config, Deposit, DepositsGlobals},
 };
 
 use super::error::{ContractError, Result};
@@ -27,9 +27,13 @@ pub(super) fn try_deposit<Lpn, Bank>(
     now: &Timestamp,
 ) -> Result<Coin<NLpn>>
 where
-    Lpn: 'static + CurrencyDef,
+    Lpn: CurrencyDef,
     Bank: BankAccountView,
 {
+    if pending_deposit.is_zero() {
+        return Err(ContractError::ZeroDepositFunds);
+    }
+
     Config::load(storage)
         .and_then(|config| {
             LiquidityPool::load(storage, &config, bank).and_then(|mut lpp| {
@@ -38,7 +42,16 @@ where
             })
         })
         .and_then(|receipts| {
-            Deposit::load_or_default(storage, lender.clone())?.deposit(storage, receipts)
+            DepositsGlobals::load_or_default(storage)
+                .and_then(|total_rewards| {
+                    Deposit::load_or_default(storage, lender.clone(), total_rewards).and_then(
+                        |mut deposit| {
+                            deposit.deposit(receipts);
+                            deposit.save(storage)
+                        },
+                    )
+                })
+                .map(|()| receipts)
         })
 }
 
@@ -48,7 +61,7 @@ pub(super) fn deposit_capacity<Lpn, Bank>(
     now: &Timestamp,
 ) -> Result<Option<Coin<Lpn>>>
 where
-    Lpn: 'static + CurrencyDef,
+    Lpn: CurrencyDef,
     Bank: BankAccountView,
 {
     Config::load(storage).and_then(|config| {
@@ -62,35 +75,39 @@ pub(super) fn try_withdraw<Lpn, Bank>(
     storage: &mut dyn Storage,
     mut bank: Bank,
     lender: Addr,
-    amount: Coin<NLpn>,
+    receipts: Coin<NLpn>,
     now: &Timestamp,
 ) -> Result<(Coin<Lpn>, Option<Coin<Nls>>, Batch)>
 where
     Lpn: CurrencyDef,
     Bank: BankAccount,
 {
-    if amount.is_zero() {
+    if receipts.is_zero() {
         return Err(ContractError::ZeroWithdrawFunds);
     }
 
-    let payment_lpn = Config::load(storage).and_then(|config| {
-        LiquidityPool::load(storage, &config, &bank).and_then(|mut lpp| {
-            lpp.withdraw_lpn(amount, now)
-                .and_then(|payment_lpn| lpp.save(storage).map(|()| payment_lpn))
+    let maybe_reward = DepositsGlobals::load_or_default(storage).and_then(|total_rewards| {
+        Deposit::load(storage, lender.clone(), total_rewards).and_then(|mut deposit| {
+            deposit
+                .withdraw(receipts)
+                .and_then(|may_reward| deposit.save(storage).map(|()| may_reward))
         })
     })?;
-
-    let maybe_reward = Deposit::may_load(storage, lender.clone())?
-        .ok_or(ContractError::NoDeposit {})?
-        .withdraw(storage, amount)?;
-
-    bank.send(payment_lpn, lender.clone());
 
     if let Some(reward) = maybe_reward {
         if !reward.is_zero() {
             bank.send(reward, lender.clone());
         }
     }
+
+    let payment_lpn = Config::load(storage).and_then(|config| {
+        LiquidityPool::load(storage, &config, &bank).and_then(|mut lpp| {
+            lpp.withdraw_lpn(receipts, now)
+                .and_then(|payment_lpn| lpp.save(storage).map(|()| payment_lpn))
+        })
+    })?;
+
+    bank.send(payment_lpn, lender.clone());
 
     Ok((payment_lpn, maybe_reward, bank.into()))
 }
@@ -113,7 +130,8 @@ where
 }
 
 pub fn query_balance(storage: &dyn Storage, addr: Addr) -> Result<BalanceResponse> {
-    Deposit::load_or_default(storage, addr)
+    DepositsGlobals::load_or_default(storage)
+        .and_then(|total_rewards| Deposit::load_or_default(storage, addr, total_rewards))
         .map(|ref deposit| deposit.receipts())
         .map(|receipts| BalanceResponse {
             balance: Amount::from(receipts).into(),

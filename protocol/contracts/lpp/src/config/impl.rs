@@ -35,6 +35,7 @@ impl Config {
     where
         Lpn: 'static,
     {
+        // must be >= 1 to guarantee proper (non zero result) Nlpn -> Lpn conversion
         Price::identity()
     }
 }

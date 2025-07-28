@@ -144,6 +144,8 @@ impl<Lpn> Total<Lpn> {
     }
 
     pub fn deposit(&mut self, receipts: Coin<NLpn>) -> Result<&mut Self, ContractError> {
+        debug_assert_ne!(Coin::ZERO, receipts);
+
         self.receipts
             .checked_add(receipts)
             .ok_or(ContractError::OverflowError("Deposit receipts overflow"))
@@ -154,6 +156,8 @@ impl<Lpn> Total<Lpn> {
     }
 
     pub fn withdraw(&mut self, receipts: Coin<NLpn>) -> Result<&mut Self, ContractError> {
+        debug_assert_ne!(Coin::ZERO, receipts);
+
         self.receipts
             .checked_sub(receipts)
             .ok_or(ContractError::OverflowError("Withdraw receipts overflow"))

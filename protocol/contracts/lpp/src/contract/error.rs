@@ -49,8 +49,13 @@ pub enum ContractError {
     #[error("[Lpp] Zero loan amount")]
     ZeroLoanAmount,
 
-    #[error("[Lpp] Zero deposit")]
+    #[error("[Lpp] Zero deposit amount")]
     ZeroDepositFunds,
+
+    #[error(
+        "[Lpp] Insufficient deposit amount! It must at least be total to the smallest receipt unit!"
+    )]
+    DepositLessThanAReceipt,
 
     #[error("[Lpp] Zero withdraw amount")]
     ZeroWithdrawFunds,

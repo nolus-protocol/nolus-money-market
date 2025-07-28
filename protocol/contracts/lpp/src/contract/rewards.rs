@@ -12,7 +12,7 @@ use crate::{
     config::Config as ApiConfig,
     lpp::{LiquidityPool, LppBalances},
     msg::RewardsResponse,
-    state::Deposit,
+    state::{Deposit, DepositsGlobals},
 };
 
 use super::error::{ContractError, Result};
@@ -29,11 +29,26 @@ where
 {
     bank::received_one(&info.funds)
         .map_err(Into::into)
-        .and_then(|amount| {
+        .and_then(|new_rewards| {
+            if new_rewards.is_zero() {
+                return Err(ContractError::ZeroRewardsFunds {});
+            }
+
             query_total_receipts::<Lpn, _>(store, config, bank)
-                .and_then(|receipts| Deposit::distribute_rewards(store, amount, receipts))
+                .and_then(|total_receipts| {
+                    if total_receipts.is_zero() {
+                        Err(ContractError::ZeroBalanceRewards {})
+                    } else {
+                        DepositsGlobals::load_or_default(store).and_then(|total_rewards| {
+                            DepositsGlobals::save(
+                                &total_rewards.add(new_rewards, total_receipts),
+                                store,
+                            )
+                        })
+                    }
+                })
+                .map(|()| Default::default())
         })
-        .map(|()| Default::default())
 }
 
 pub(super) fn try_claim_rewards(
@@ -47,14 +62,19 @@ pub(super) fn try_claim_rewards(
         .transpose()?
         .unwrap_or_else(|| info.sender.clone());
 
-    let mut deposit =
-        Deposit::may_load(deps.storage, info.sender)?.ok_or(ContractError::NoDeposit {})?;
-
-    let reward = deposit.claim_rewards(deps.storage)?;
-
-    if reward.is_zero() {
-        return Err(ContractError::NoRewards {});
-    }
+    let reward = DepositsGlobals::load_or_default(deps.storage)
+        .and_then(|total_rewards| Deposit::load(deps.storage, info.sender, total_rewards))
+        .and_then(|mut deposit| {
+            let rewards = deposit.claim_rewards();
+            deposit.save(deps.storage).map(|()| rewards)
+        })
+        .and_then(|reward| {
+            if reward.is_zero() {
+                Err(ContractError::NoRewards {})
+            } else {
+                Ok(reward)
+            }
+        })?;
 
     let mut bank = bank::account(&env.contract.address, deps.querier);
     bank.send(reward, recipient);
@@ -89,20 +109,21 @@ where
 }
 
 pub(super) fn query_rewards(storage: &dyn Storage, addr: Addr) -> Result<RewardsResponse> {
-    let rewards = Deposit::may_load(storage, addr)?
-        .ok_or(ContractError::NoDeposit {})?
-        .query_rewards(storage)?;
-
-    Ok(RewardsResponse { rewards })
+    DepositsGlobals::load_or_default(storage)
+        .and_then(|total_rewards| Deposit::load(storage, addr, total_rewards))
+        .map(|ref deposit| deposit.query_rewards())
+        .map(|rewards| RewardsResponse { rewards })
 }
 
 #[cfg(test)]
 mod test {
+    use cosmwasm_std::{Timestamp, testing::MockStorage};
     use finance::{
         coin::Coin,
         percent::{Percent, bound::BoundToHundredPercent},
         zero::Zero,
     };
+    use lpp_platform::NLpn;
     use platform::{bank::testing::MockBankView, contract::Code};
     use sdk::cosmwasm_std::testing::{mock_dependencies, mock_env};
 
@@ -115,7 +136,7 @@ mod test {
             test::{self, TheCurrency},
         },
         lpp::LiquidityPool,
-        state::Config,
+        state::{Config, Deposit, DepositsGlobals},
     };
 
     const BASE_INTEREST_RATE: Percent = Percent::from_permille(70);
@@ -169,5 +190,43 @@ mod test {
         let info = test::lender_msg_no_funds();
         let response = rewards::try_claim_rewards(deps.as_mut(), env, info, None);
         assert_eq!(response, Err(ContractError::NoRewards {}));
+    }
+
+    #[test]
+    fn test_distribute_zero_rewards() {
+        let mut store = MockStorage::default();
+        let lender = test::lender();
+
+        let rewards = DepositsGlobals::load_or_default(&store).unwrap();
+        let mut deposit = Deposit::load_or_default(&store, lender, rewards).unwrap();
+
+        const DEPOSIT: Coin<TheCurrency> = Coin::new(1000);
+        const RECEIPTS: Coin<NLpn> = Coin::new(1000);
+        deposit.deposit(RECEIPTS);
+        deposit.save(&mut store).unwrap();
+
+        let config = ApiConfig::new(
+            Code::unchecked(1000u64),
+            InterestRate::new(
+                BASE_INTEREST_RATE,
+                UTILIZATION_OPTIMAL,
+                ADDON_OPTIMAL_INTEREST_RATE,
+            )
+            .expect("Couldn't construct interest rate value!"),
+            DEFAULT_MIN_UTILIZATION,
+        );
+        let bank = MockBankView::<_, TheCurrency>::only_balance(DEPOSIT);
+
+        let mut lpp = LiquidityPool::<TheCurrency, _>::new(&config, &bank);
+        lpp.deposit(DEPOSIT, &Timestamp::from_seconds(100)).unwrap();
+        lpp.save(&mut store).unwrap();
+
+        let info = test::lender_msg_no_funds();
+        assert!(matches!(
+            // ContractError::ZeroRewardsFunds {},
+            super::try_distribute_rewards::<TheCurrency, _>(&mut store, info, &config, &bank)
+                .unwrap_err(),
+            ContractError::Platform(platform::error::Error::NoFunds(_)),
+        ));
     }
 }
