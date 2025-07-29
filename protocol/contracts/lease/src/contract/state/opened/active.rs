@@ -1,4 +1,3 @@
-use access_control::Sender;
 use currency::{CurrencyDef, never};
 use dex::Enterable;
 use finance::{coin::IntoDTO, duration::Duration};
@@ -82,18 +81,6 @@ impl Active {
         querier: QuerierWrapper<'_>,
         env: &Env,
     ) -> ContractResult<Response> {
-        access_control::check(self.lease.lease.oracle, &info.sender)?;
-        self.try_on_alarm(querier, env)
-    }
-
-    fn try_on_time_alarm(
-        self,
-        querier: QuerierWrapper<'_>,
-        env: &Env,
-        info: MessageInfo,
-    ) -> ContractResult<Response> {
-        access_control::check(self.lease.lease.time_alarms, &info.sender)?;
-
         self.try_on_alarm(querier, env)
     }
 
@@ -193,7 +180,7 @@ impl Handler for Active {
     ) -> ContractResult<Response> {
         access_control::check(
             &ChangeClosePolicyPermission::new(&self.lease.lease.customer),
-            &Sender::new(&info),
+            &info,
         )
         .map_err(Into::into)
         .and_then(|()| {
@@ -246,7 +233,7 @@ impl Handler for Active {
     ) -> ContractResult<Response> {
         access_control::check(
             &ClosePositionPermission::new(&self.lease.lease.customer),
-            &Sender::new(&info),
+            &info,
         )
         .map_err(Into::into)
         .and_then(|()| customer_close::start(spec, self.lease, &env, querier))
@@ -260,7 +247,7 @@ impl Handler for Active {
     ) -> ContractResult<Response> {
         access_control::check(
             &TimeAlarmDelivery::new(&self.lease.lease.time_alarms),
-            &Sender::new(&info),
+            &info,
         )?;
 
         self.try_on_alarm(querier, &env)

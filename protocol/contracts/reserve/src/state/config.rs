@@ -13,16 +13,16 @@ use crate::error::Result;
 #[derive(Serialize, Deserialize, Clone, Eq, PartialEq)]
 pub struct Config {
     lease_code: Code,
-    protocol_admin: Addr,
+    lease_code_admin: Addr,
 }
 
 impl Config {
     const STORAGE: Item<Self> = Item::new("config");
 
-    pub const fn new(lease_code: Code, protocol_admin: Addr) -> Self {
+    pub const fn new(lease_code: Code, lease_code_admin: Addr) -> Self {
         Self {
             lease_code,
-            protocol_admin,
+            lease_code_admin,
         }
     }
 
@@ -30,8 +30,8 @@ impl Config {
         self.lease_code
     }
 
-    pub const fn protocol_admin(&self) -> &Addr {
-        &self.protocol_admin
+    pub const fn lease_code_admin(&self) -> &Addr {
+        &self.lease_code_admin
     }
 
     pub fn store(&self, storage: &mut dyn Storage) -> Result<()> {
@@ -45,7 +45,7 @@ impl Config {
     pub fn update_lease_code(storage: &mut dyn Storage, lease_code: Code) -> Result<()> {
         Self::STORAGE
             .update(storage, |config: Self| {
-                Ok(Self::new(lease_code, config.protocol_admin))
+                Ok(Self::new(lease_code, config.lease_code_admin))
             })
             .map(mem::drop)
     }
