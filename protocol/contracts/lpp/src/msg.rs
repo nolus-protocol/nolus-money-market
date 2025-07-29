@@ -19,7 +19,6 @@ pub struct InstantiateMsg {
     /// The actor who has rights to change the Lease code on code migrations,
     /// and close all deposits.
     /// In the current protocol architecture, it is the leaser contract
-    #[serde(alias = "lease_code_admin")]
     pub protocol_admin: Addr,
     // Since this is an external system API we should not use [Code].
     pub lease_code: Uint64,
