@@ -30,7 +30,7 @@ impl TryFrom<PositionSpecDTO> for ValidatedPositionSpec {
 
 #[cfg(all(feature = "internal.test.skel", test))]
 mod test {
-    use finance::{duration::Duration, percent::Percent};
+    use finance::{duration::Duration, percent::Percent100};
     use platform::tests as platform_tests;
     use sdk::cosmwasm_std::Addr;
 
@@ -39,7 +39,7 @@ mod test {
     const LPP_ADDR: &str = "nolus1qg5ega6dykkxc307y25pecuufrjkxkaggkkxh7nad0vhyhtuhw3sqaa3c5";
     const PROFIT_ADDR: &str = "nolus1mf6ptkssddfmxvhdx0ech0k03ktp6kf9yk59renau2gvht3nq2gqkxgywu";
     const DUE_PERIOD: Duration = Duration::from_nanos(604800000000000);
-    const MARGIN_INTEREST: Percent = Percent::from_permille(40);
+    const MARGIN_INTEREST: Percent100 = Percent100::from_permille(40);
 
     #[test]
     fn read_5_0() {

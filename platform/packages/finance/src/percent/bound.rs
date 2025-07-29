@@ -1,7 +1,7 @@
 use std::{
     fmt::{Debug, Display, Formatter, Result as FmtResult, Write},
     num::TryFromIntError,
-    ops::Div,
+    ops::{Div, Mul},
 };
 
 #[cfg(any(test, feature = "testing"))]
@@ -140,7 +140,15 @@ impl<const UPPER_BOUND: Units> Div for BoundPercent<UPPER_BOUND> {
     }
 }
 
-impl<const UPPER: Units> Ratio<Units> for BoundPercent<UPPER> {
+impl<const UPPER_BOUND: Units> Mul<BoundPercent<UPPER_BOUND>> for BoundPercent<UPPER_BOUND> {
+    type Output = Self;
+
+    fn mul(self, rhs: Self) -> Self::Output {
+        Self::from_permille(self.0.mul(rhs.0))
+    }
+}
+
+impl<const UPPER_BOUND: Units> Ratio<Units> for BoundPercent<UPPER_BOUND> {
     fn parts(&self) -> Units {
         self.units()
     }
