@@ -26,7 +26,9 @@ pub(super) fn emit_lease_opened(
         .emit("customer", lease.customer.clone())
         .emit_percent_amount(
             "air",
-            loan.annual_interest_rate + lease.loan.annual_margin_interest(),
+            loan.annual_interest_rate
+                .checked_add(lease.loan.annual_margin_interest())
+                .expect("TODO propagate up the stack potential overflow"),
         )
         .emit_currency_dto("currency", &lease.position.amount().currency())
         .emit("loan-pool-id", lease.loan.lpp().addr())
