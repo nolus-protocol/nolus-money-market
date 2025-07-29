@@ -1,7 +1,11 @@
 use currencies::{LeaseGroup, Lpn, testing::LeaseC1};
 use currency::{CurrencyDTO, CurrencyDef as _};
 use dex::{ConnectionParams, Ics20Channel, MaxSlippage};
-use finance::{duration::Duration, liability::Liability, percent::Percent};
+use finance::{
+    duration::Duration,
+    liability::Liability,
+    percent::{Percent, Percent100},
+};
 use lease::api::{limits::MaxSlippages, open::PositionSpecDTO};
 use platform::contract::{Code, CodeId};
 
@@ -35,7 +39,7 @@ fn lease_currency() -> CurrencyDTO<LeaseGroup> {
     currency::dto::<LeaseC1, _>()
 }
 
-const MARGIN_INTEREST_RATE: Percent = Percent::from_permille(30);
+const MARGIN_INTEREST_RATE: Percent100 = Percent100::from_permille(30);
 
 fn leaser_instantiate_msg(lease_code: Code, lpp: Addr) -> crate::msg::InstantiateMsg {
     crate::msg::InstantiateMsg {
@@ -48,12 +52,12 @@ fn leaser_instantiate_msg(lease_code: Code, lpp: Addr) -> crate::msg::Instantiat
         protocols_registry: sdk_testing::user(PROTOCOLS_REGISTRY_ADDR),
         lease_position_spec: PositionSpecDTO::new(
             Liability::new(
-                Percent::from_percent(65),
-                Percent::from_percent(70),
-                Percent::from_percent(73),
-                Percent::from_percent(75),
-                Percent::from_percent(78),
-                Percent::from_percent(80),
+                Percent100::from_percent(65),
+                Percent100::from_percent(70),
+                Percent100::from_percent(73),
+                Percent100::from_percent(75),
+                Percent100::from_percent(78),
+                Percent100::from_percent(80),
                 Duration::from_hours(1),
             ),
             tests::lpn_coin(1000),
@@ -62,7 +66,7 @@ fn leaser_instantiate_msg(lease_code: Code, lpp: Addr) -> crate::msg::Instantiat
         lease_interest_rate_margin: MARGIN_INTEREST_RATE,
         lease_due_period: Duration::from_days(90),
         lease_max_slippages: MaxSlippages {
-            liquidation: MaxSlippage::unchecked(Percent::from_percent(20)),
+            liquidation: MaxSlippage::unchecked(Percent100::from_percent(20)),
         },
         lease_admin: sdk_testing::user(LEASE_ADMIN),
         dex: dex_params(),

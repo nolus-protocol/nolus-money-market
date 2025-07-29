@@ -57,7 +57,7 @@ impl<Lpn> Repo<Lpn> {
 #[cfg(test)]
 mod test {
     use currencies::Lpn;
-    use finance::{coin::Coin, duration::Duration, percent::Percent, zero::Zero};
+    use finance::{coin::Coin, duration::Duration, percent::Percent100, zero::Zero};
     use sdk::cosmwasm_std::{Addr, Timestamp, testing};
 
     use crate::{contract::ContractError, loan::Loan, loans::Repo};
@@ -71,7 +71,7 @@ mod test {
         let addr = Addr::unchecked("leaser");
         let loan = Loan {
             principal_due: Coin::<Lpn>::new(1000),
-            annual_interest_rate: Percent::from_percent(20),
+            annual_interest_rate: Percent100::from_percent(20),
             interest_paid: time,
         };
         Repo::open(deps.as_mut().storage, addr.clone(), &loan).expect("should open loan");

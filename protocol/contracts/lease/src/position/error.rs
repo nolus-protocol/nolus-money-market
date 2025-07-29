@@ -1,6 +1,9 @@
 use std::result::Result as StdResult;
 
-use finance::{error::Error as FinanceError, percent::Percent};
+use finance::{
+    error::Error as FinanceError,
+    percent::{Percent, Percent100},
+};
 use thiserror::Error;
 
 use crate::finance::LpnCoinDTO;
@@ -38,14 +41,14 @@ pub enum Error {
     #[error(
         "[Position] Invalid close policy! Take profit value '{tp}' should be less than the stop loss value '{sl}'!"
     )]
-    InvalidClosePolicy { tp: Percent, sl: Percent },
+    InvalidClosePolicy { tp: Percent100, sl: Percent100 },
 
     #[error(
         "[Position] Invalid close policy! The new strategy '{strategy}' is not less than the max lease liability LTV '{top_bound}'!"
     )]
     LiquidationConflict {
         strategy: CloseStrategy,
-        top_bound: Percent,
+        top_bound: Percent100,
     },
 }
 
@@ -65,11 +68,11 @@ impl Error {
         Self::ZeroClosePolicy("stop loss")
     }
 
-    pub fn invalid_policy(tp: Percent, sl: Percent) -> Self {
+    pub fn invalid_policy(tp: Percent100, sl: Percent100) -> Self {
         Self::InvalidClosePolicy { tp, sl }
     }
 
-    pub fn liquidation_conflict(liquidation_ltv: Percent, strategy: CloseStrategy) -> Self {
+    pub fn liquidation_conflict(liquidation_ltv: Percent100, strategy: CloseStrategy) -> Self {
         Self::LiquidationConflict {
             top_bound: liquidation_ltv,
             strategy,

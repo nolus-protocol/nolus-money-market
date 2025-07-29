@@ -3,7 +3,7 @@ use std::mem;
 use serde::{Deserialize, Serialize};
 
 use dex::ConnectionParams;
-use finance::{duration::Duration, percent::Percent};
+use finance::{duration::Duration, percent::Percent100};
 use lease::api::{limits::MaxSlippages, open::PositionSpecDTO};
 use platform::contract::Code;
 use sdk::{
@@ -28,7 +28,7 @@ pub struct Config {
     pub market_price_oracle: Addr,
     pub protocols_registry: Addr,
     pub lease_position_spec: PositionSpecDTO,
-    pub lease_interest_rate_margin: Percent,
+    pub lease_interest_rate_margin: Percent100,
     pub lease_due_period: Duration,
     pub lease_max_slippages: MaxSlippages,
     pub lease_admin: Addr,

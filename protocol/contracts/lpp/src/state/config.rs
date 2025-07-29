@@ -2,7 +2,7 @@ use std::mem;
 
 use serde::{Deserialize, Serialize};
 
-use finance::percent::bound::BoundToHundredPercent;
+use finance::percent::Percent100;
 use platform::contract::Code;
 use sdk::{cosmwasm_std::Storage, cw_storage_plus::Item};
 
@@ -37,7 +37,7 @@ impl Config {
 
     pub fn update_min_utilization(
         storage: &mut dyn Storage,
-        min_utilization: BoundToHundredPercent,
+        min_utilization: Percent100,
     ) -> Result<()> {
         Self::update_field(storage, |config| {
             ApiConfig::new(config.lease_code(), *config.borrow_rate(), min_utilization)

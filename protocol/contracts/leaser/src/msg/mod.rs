@@ -3,7 +3,10 @@ use serde::{Deserialize, Serialize};
 use admin_contract::msg::{MigrationSpec, ProtocolContracts};
 use currency::CurrencyDTO;
 use dex::ConnectionParams;
-use finance::{duration::Duration, percent::Percent};
+use finance::{
+    duration::Duration,
+    percent::{Percent, Percent100},
+};
 use lease::api::{
     DownpaymentCoin, LeaseCoin, LpnCoinDTO, limits::MaxSlippages, open::PositionSpecDTO,
 };
@@ -28,7 +31,7 @@ pub struct InstantiateMsg {
     pub market_price_oracle: Addr,
     pub protocols_registry: Addr,
     pub lease_position_spec: PositionSpecDTO,
-    pub lease_interest_rate_margin: Percent,
+    pub lease_interest_rate_margin: Percent100,
     pub lease_due_period: Duration,
     pub lease_max_slippages: MaxSlippages,
     pub lease_admin: Addr,
@@ -157,13 +160,13 @@ pub struct ConfigResponse {
 pub struct QuoteResponse {
     pub total: LeaseCoin,
     pub borrow: LpnCoinDTO,
-    pub annual_interest_rate: Percent,
-    pub annual_interest_rate_margin: Percent,
+    pub annual_interest_rate: Percent100,
+    pub annual_interest_rate_margin: Percent100,
 }
 
 #[cfg(all(feature = "internal.test.testing", test))]
 mod test {
-    use finance::{duration::Duration, percent::Percent};
+    use finance::{duration::Duration, percent::Percent100};
     use lease::api::{
         FinalizerExecuteMsg,
         authz::AccessCheck,
@@ -227,7 +230,7 @@ mod test {
         #[serde(deny_unknown_fields, rename_all = "snake_case")]
         pub enum ConfigInlineInSudoMsg {
             Config {
-                lease_interest_rate_margin: Percent,
+                lease_interest_rate_margin: Percent100,
                 lease_position_spec: PositionSpecDTO,
                 lease_due_period: Duration,
                 lease_max_slippages: MaxSlippages,
