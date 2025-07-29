@@ -89,7 +89,7 @@ impl RequestLoan {
             env.block.time,
         );
         Ok(StateMachineResponse::from(
-            MessageResponse::messages_with_events(open_ica.enter(), emitter),
+            MessageResponse::messages_with_event(open_ica.enter(), emitter),
             Into::<DexState>::into(open_ica),
         ))
     }

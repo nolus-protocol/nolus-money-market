@@ -50,7 +50,7 @@ where
 
 impl<M> From<AlarmsDispatcher<M>> for MessageResponse {
     fn from(value: AlarmsDispatcher<M>) -> Self {
-        MessageResponse::messages_with_events(value.batch, value.emitter)
+        MessageResponse::messages_with_event(value.batch, value.emitter)
     }
 }
 

@@ -178,7 +178,7 @@ where
                         RepayLeaseResult {
                             lease,
                             result: RepayResult {
-                                response: MessageResponse::messages_with_events(
+                                response: MessageResponse::messages_with_event(
                                     messages.merge(profit_sender.into()),
                                     events,
                                 ),

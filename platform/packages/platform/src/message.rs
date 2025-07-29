@@ -15,10 +15,10 @@ impl Response {
         }
     }
 
-    pub fn messages_with_events(messages: Batch, events: Emitter) -> Self {
+    pub fn messages_with_event(messages: Batch, event: Emitter) -> Self {
         Self {
             messages,
-            events: vec![events],
+            events: vec![event],
         }
     }
 
@@ -40,7 +40,7 @@ impl From<Batch> for Response {
 }
 
 impl From<Emitter> for Response {
-    fn from(events: Emitter) -> Self {
-        Self::messages_with_events(Default::default(), events)
+    fn from(event: Emitter) -> Self {
+        Self::messages_with_event(Default::default(), event)
     }
 }

@@ -31,7 +31,7 @@ impl Profit {
         } else {
             from_my_account.send(amount, to_treasury);
 
-            PlatformResponse::messages_with_events(
+            PlatformResponse::messages_with_event(
                 from_my_account.into(),
                 Emitter::of_type("tr-profit")
                     .emit_tx_info(env)

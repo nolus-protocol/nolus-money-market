@@ -149,12 +149,12 @@ where
                     let next_state = TransferInInit::new(spec, self.amount_in);
                     next_state
                         .enter(now, self.querier)
-                        .map(|batch| MessageResponse::messages_with_events(batch, emitter))
+                        .map(|batch| MessageResponse::messages_with_event(batch, emitter))
                         .and_then(|resp| response::res_continue::<_, _, Handler>(resp, next_state))
                         .into()
                 } else {
                     transfer_in::setup_alarm(spec.time_alarm(), now)
-                        .map(|batch| MessageResponse::messages_with_events(batch, emitter))
+                        .map(|batch| MessageResponse::messages_with_event(batch, emitter))
                         .and_then(|resp| {
                             response::res_continue::<_, _, Handler>(resp, self.back_to_spec(spec))
                         })

@@ -231,7 +231,7 @@ where
                     .finalize_lease(customer)
                     .map(|finalizer_msgs| close_msgs.merge(finalizer_msgs)) //make sure the finalizer messages go out last
             })
-            .map(|all_messages| MessageResponse::messages_with_events(all_messages, emitter))
+            .map(|all_messages| MessageResponse::messages_with_event(all_messages, emitter))
             .map(|response| StateMachineResponse::from(response, Closed::default()))
     }
 }

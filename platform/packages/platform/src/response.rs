@@ -141,7 +141,7 @@ mod test {
         let emitter = Emitter::of_type(TY1).emit(KEY1, VALUE1).emit(KEY2, VALUE2);
         let resp: Response = super::response_with_messages::<_, _, Error>(
             ret,
-            MessageResponse::messages_with_events(b, emitter),
+            MessageResponse::messages_with_event(b, emitter),
         )
         .unwrap();
         assert_eq!(1, resp.messages.len());

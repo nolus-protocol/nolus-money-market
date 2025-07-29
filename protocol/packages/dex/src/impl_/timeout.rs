@@ -21,7 +21,7 @@ where
         let emitter = emit_timeout(state_label, env.contract.address);
 
         StateMachineResponse::from(
-            MessageResponse::messages_with_events(batch, emitter),
+            MessageResponse::messages_with_event(batch, emitter),
             current_state,
         )
     })

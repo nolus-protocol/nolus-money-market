@@ -120,7 +120,7 @@ where
                 current_liability: _, // TODO shouldn't we add warning zone events?
                 alarms,
             } => Ok(StateMachineResponse::from(
-                MessageResponse::messages_with_events(alarms, emitter),
+                MessageResponse::messages_with_event(alarms, emitter),
                 active,
             )),
             CloseStatusDTO::NeedLiquidation(liquidation) => {

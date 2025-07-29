@@ -119,11 +119,11 @@ where
         env: Env,
     ) -> ContinueResult<Self> {
         let ica = self.build_account(counterparty_version, &env)?;
-        let events = Self::emit_ok(env.contract.address, ica.host().clone());
+        let event = Self::emit_ok(env.contract.address, ica.host().clone());
         let next_state = self.connectee.connected(ica);
         next_state
             .enter(env.block.time, querier)
-            .map(|batch| message::Response::messages_with_events(batch, events))
+            .map(|batch| message::Response::messages_with_event(batch, event))
             .map(|cw_resp| Response::<Self>::from(cw_resp, next_state))
     }
 }

@@ -183,7 +183,7 @@ pub fn execute(
             &env.block.time,
         )
         .map(|(amount_lpn, maybe_reward, bank_transfers)| {
-            PlatformResponse::messages_with_events(
+            PlatformResponse::messages_with_event(
                 bank_transfers,
                 event::emit_withdraw(env, info.sender, amount_lpn, amount, maybe_reward.is_some()),
             )

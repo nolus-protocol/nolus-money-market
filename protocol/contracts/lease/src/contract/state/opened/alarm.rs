@@ -10,7 +10,7 @@ pub(super) fn build_resp(lease: &Lease, current_liability: Zone, alarms: Batch) 
         .low()
         .map(|low_level| event::emit_liquidation_warning(&lease.lease, &low_level))
     {
-        MessageResponse::messages_with_events(alarms, events)
+        MessageResponse::messages_with_event(alarms, events)
     } else {
         MessageResponse::messages_only(alarms)
     }

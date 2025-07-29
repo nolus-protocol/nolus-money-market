@@ -160,7 +160,7 @@ where
     {
         let emitter = Emitter::of_type(label);
         response::res_continue::<_, _, Self>(
-            MessageResponse::messages_with_events(msgs, emitter),
+            MessageResponse::messages_with_event(msgs, emitter),
             next,
         )
     }

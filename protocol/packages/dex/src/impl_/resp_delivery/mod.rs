@@ -142,9 +142,7 @@ where
     fn setup_next_delivery(self, now: Timestamp) -> ContinueResult<Self> {
         self.handler
             .setup_alarm(now + Self::RIGHT_AFTER_NOW)
-            .map(|msgs| {
-                MessageResponse::messages_with_events(msgs, self.emit_setup_next_delivery())
-            })
+            .map(|msgs| MessageResponse::messages_with_event(msgs, self.emit_setup_next_delivery()))
             .map(|msg_response| Response::<Self>::from(msg_response, self))
     }
 

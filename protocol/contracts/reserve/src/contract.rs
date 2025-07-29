@@ -151,7 +151,7 @@ fn do_cover_losses(
                     .emit("to", lease)
                     .emit_coin("payment", amount);
 
-                Ok(PlatformResponse::messages_with_events(bank.into(), emitter))
+                Ok(PlatformResponse::messages_with_event(bank.into(), emitter))
             }
         })
 }

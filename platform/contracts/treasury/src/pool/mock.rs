@@ -66,9 +66,9 @@ impl Pool for MockPool {
                 let mut msgs = Batch::default();
                 msgs.schedule_execute_wasm_no_reply_no_funds(Addr::unchecked("DEADCODE"), "msg1")
                     .map_err(ContractError::SerializeResponse)?;
-                let events =
+                let event =
                     Emitter::of_type("test-distribution").emit_percent_amount("attr_apr", apr);
-                Ok(Response::messages_with_events(msgs, events))
+                Ok(Response::messages_with_event(msgs, event))
             }
             DistributeRewards::Fail => Err(ContractError::DistributeLppReward(
                 lpp_platform::error::Error::Std(StdError::generic_err("Error from the MockPool")),

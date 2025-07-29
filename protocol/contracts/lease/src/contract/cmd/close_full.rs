@@ -79,7 +79,7 @@ where
             })
             .map(|result| {
                 let (receipt, messages) = result.decompose();
-                MessageResponse::messages_with_events(
+                MessageResponse::messages_with_event(
                     messages,
                     self.emitter_fn.emit(&lease_addr, &receipt),
                 )

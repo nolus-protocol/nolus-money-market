@@ -61,8 +61,8 @@ impl Lpp for DummyLpp {
 
         msgs.schedule_execute_wasm_no_reply(Addr::unchecked("Dummy_Lpp"), "message", Some(reward))?;
 
-        let events = Emitter::of_type("eventX").emit_coin("reward", reward);
+        let event = Emitter::of_type("eventX").emit_coin("reward", reward);
 
-        Ok(MessageResponse::messages_with_events(msgs, events))
+        Ok(MessageResponse::messages_with_event(msgs, event))
     }
 }

@@ -177,7 +177,7 @@ pub(super) fn try_change_lease_admin(
 }
 
 fn build_response(result: MigrationResult) -> MessageResponse {
-    MessageResponse::messages_with_events(result.msgs, emit_status(result.next_customer))
+    MessageResponse::messages_with_event(result.msgs, emit_status(result.next_customer))
 }
 
 fn update_remote_refs(config: Config, batch: &mut Batch) -> ContractResult<()> {

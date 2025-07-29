@@ -57,7 +57,7 @@ impl Lpp for Stub<'_, '_> {
                 .emit_to_string_value("to", self.lpp)
                 .emit_coin("rewards", reward)
         })
-        .map(|events| MessageResponse::messages_with_events(msgs, events))
+        .map(|event| MessageResponse::messages_with_event(msgs, event))
         .map_err(Into::into)
     }
 }
