@@ -12,13 +12,13 @@ impl Config {
         lease_code: Code,
         borrow_rate: InterestRate,
         min_utilization: Percent100,
-        lease_code_admin: Addr,
+        protocol_admin: Addr,
     ) -> Self {
         Self {
             lease_code,
             borrow_rate,
             min_utilization,
-            lease_code_admin,
+            protocol_admin,
         }
     }
 
@@ -34,8 +34,8 @@ impl Config {
         self.min_utilization
     }
 
-    pub const fn lease_code_admin(&self) -> &Addr {
-        &self.lease_code_admin
+    pub const fn protocol_admin(&self) -> &Addr {
+        &self.protocol_admin
     }
 
     pub fn initial_derivative_price<Lpn>() -> Price<NLpn, Lpn>

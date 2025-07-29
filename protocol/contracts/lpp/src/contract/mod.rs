@@ -1,6 +1,6 @@
 use serde::Serialize;
 
-use access_control::{Sender, permissions::LeaseCodeAdminPermission};
+use access_control::{Sender, permissions::ProtocolAdminPermission};
 use currencies::{
     Lpn as LpnCurrency, Lpns as LpnCurrencies, PaymentGroup, Stable as StableCurrency,
 };
@@ -49,7 +49,7 @@ pub fn instantiate(
     _info: MessageInfo,
     msg: InstantiateMsg,
 ) -> Result<CwResponse> {
-    let lease_code_admin = deps.api.addr_validate(msg.protocol_admin.as_str())?;
+    let protocol_admin = deps.api.addr_validate(msg.protocol_admin.as_str())?;
 
     Code::try_new(
         msg.lease_code.into(),
@@ -57,7 +57,7 @@ pub fn instantiate(
     )
     .map_err(Into::into)
     .and_then(|lease_code| {
-        let config = ApiConfig::new(lease_code, msg.borrow_rate, msg.min_utilization, lease_code_admin);
+        let config = ApiConfig::new(lease_code, msg.borrow_rate, msg.min_utilization, protocol_admin);
         Config::store(&config, deps.storage).map(|()| config)
     })
     .and_then(|ref config| {
@@ -103,7 +103,7 @@ pub fn execute(
             let loaded_config = Config::load(deps.storage)?;
 
             access_control::check(
-                &LeaseCodeAdminPermission::new(loaded_config.lease_code_admin()),
+                &ProtocolAdminPermission::new(loaded_config.protocol_admin()),
                 &Sender::new(&info),
             )?;
 
@@ -175,7 +175,7 @@ pub fn execute(
             let loaded_config = Config::load(deps.storage)?;
 
             access_control::check(
-                &LeaseCodeAdminPermission::new(loaded_config.lease_code_admin()),
+                &ProtocolAdminPermission::new(loaded_config.protocol_admin()),
                 &Sender::new(&info),
             )?;
 

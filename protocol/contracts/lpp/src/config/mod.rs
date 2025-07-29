@@ -14,5 +14,5 @@ pub struct Config {
     lease_code: Code,
     borrow_rate: InterestRate,
     min_utilization: Percent100,
-    lease_code_admin: Addr,
+    protocol_admin: Addr,
 }
