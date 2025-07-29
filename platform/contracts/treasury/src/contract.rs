@@ -86,9 +86,7 @@ pub fn execute(
                 &TimeAlarmDelivery::new(config.timealarms()),
                 &Sender::new(&info),
             )
-            .and_then(|()| {
-                try_dispatch(deps.storage, deps.querier, &env, info.sender)
-            })
+            .and_then(|()| try_dispatch(deps.storage, deps.querier, &env, info.sender))
             .map(response::response_only_messages)
         }
     }
