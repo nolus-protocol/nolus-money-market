@@ -22,6 +22,16 @@ impl Response {
         }
     }
 
+    pub fn messages_with_events<Emitters>(messages: Batch, events: Emitters) -> Self
+    where
+        Emitters: IntoIterator<Item = Emitter>,
+    {
+        Self {
+            messages,
+            events: Vec::from_iter(events),
+        }
+    }
+
     pub fn merge_with<R>(mut self, other: R) -> Self
     where
         R: Into<Self>,
