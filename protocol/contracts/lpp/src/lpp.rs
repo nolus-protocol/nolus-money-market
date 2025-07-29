@@ -329,7 +329,7 @@ mod test {
     fn new_store_load() {
         let bank = MockBankView::<TheCurrency, TheCurrency>::only_balance(Coin::ZERO);
         let lease_code_id = Code::unchecked(123);
-        let lease_code_admin = Addr::unchecked("admin");
+        let protocol_admin = Addr::unchecked("admin");
 
         Config::store(
             &ApiConfig::new(
@@ -341,7 +341,7 @@ mod test {
                 )
                 .expect("Couldn't construct interest rate value!"),
                 DEFAULT_MIN_UTILIZATION,
-                lease_code_admin,
+                protocol_admin,
             ),
             deps.as_mut().storage,
         )
@@ -373,7 +373,7 @@ mod test {
     #[test]
     fn test_balance() {
         let lease_code_id = Code::unchecked(123);
-        let lease_code_admin = Addr::unchecked("admin");
+        let protocol_admin = Addr::unchecked("admin");
         let balance = Coin::new(10_000_000);
 
         let config = ApiConfig::new(
@@ -385,7 +385,7 @@ mod test {
             )
             .expect("Couldn't construct interest rate value!"),
             DEFAULT_MIN_UTILIZATION,
-            lease_code_admin,
+            protocol_admin,
         );
         let bank = MockBankView::<TheCurrency, TheCurrency>::only_balance(balance);
         let lpp = LiquidityPool::<TheCurrency, _>::new(&config, &bank);
@@ -404,7 +404,7 @@ mod test {
         let now = Timestamp::from_nanos(0);
 
         let lease_code_id = Code::unchecked(123);
-        let lease_code_admin = Addr::unchecked("admin");
+        let protocol_admin = Addr::unchecked("admin");
 
         let bank = MockBankView::<_, TheCurrency>::only_balance(BALANCE);
         let config = ApiConfig::new(
@@ -416,7 +416,7 @@ mod test {
             )
             .expect("Couldn't construct interest rate value!"),
             DEFAULT_MIN_UTILIZATION,
-            lease_code_admin,
+            protocol_admin,
         );
         let mut lpp = LiquidityPool::<TheCurrency, _>::new(&config, &bank);
 
@@ -460,9 +460,9 @@ mod test {
         let lease_addr = Addr::unchecked("loan");
         let now = Timestamp::from_nanos(0);
         let lease_code_id = Code::unchecked(123);
-        let lease_code_admin = Addr::unchecked("admin");
+        let protocol_admin = Addr::unchecked("admin");
 
-        let config = ApiConfig::new(lease_code_id, interest_rate, DEFAULT_MIN_UTILIZATION, lease_code_admin);
+        let config = ApiConfig::new(lease_code_id, interest_rate, DEFAULT_MIN_UTILIZATION, protocol_admin);
 
         let mut lpp = LiquidityPool::<TheCurrency, _>::new(&config, &bank);
 
@@ -530,7 +530,7 @@ mod test {
         let now = Timestamp::from_nanos(0);
         let bank = MockBankView::<TheCurrency, TheCurrency>::only_balance(Coin::ZERO);
         let lease_code_id = Code::unchecked(123);
-        let lease_code_admin = Addr::unchecked("admin");
+        let protocol_admin = Addr::unchecked("admin");
 
         let config = ApiConfig::new(
             lease_code_id,
@@ -541,7 +541,7 @@ mod test {
             )
             .expect("Couldn't construct interest rate value!"),
             DEFAULT_MIN_UTILIZATION,
-            lease_code_admin,
+            protocol_admin,
         );
         let mut lpp = LiquidityPool::new(&config, &bank);
 
@@ -555,7 +555,7 @@ mod test {
         let now = Timestamp::from_nanos(0);
         let bank = MockBankView::<TheCurrency, TheCurrency>::only_balance(BALANCE);
         let lease_code_id = Code::unchecked(123);
-        let lease_code_admin = Addr::unchecked("admin");
+        let protocol_admin = Addr::unchecked("admin");
 
         let config = ApiConfig::new(
             lease_code_id,
@@ -566,7 +566,7 @@ mod test {
             )
             .expect("Couldn't construct interest rate value!"),
             DEFAULT_MIN_UTILIZATION,
-            lease_code_admin,
+            protocol_admin,
         );
         let mut lpp = LiquidityPool::new(&config, &bank);
 
@@ -582,7 +582,7 @@ mod test {
         let bank = MockBankView::<TheCurrency, TheCurrency>::only_balance(BALANCE);
         let loan_addr = Addr::unchecked("loan");
         let lease_code_id = Code::unchecked(123);
-        let lease_code_admin = Addr::unchecked("admin");
+        let protocol_admin = Addr::unchecked("admin");
 
         let config = ApiConfig::new(
             lease_code_id,
@@ -593,7 +593,7 @@ mod test {
             )
             .expect("Couldn't construct interest rate value!"),
             DEFAULT_MIN_UTILIZATION,
-            lease_code_admin,
+            protocol_admin,
         );
         let mut lpp = LiquidityPool::new(&config, &bank);
 
@@ -629,7 +629,7 @@ mod test {
         let bank = MockBankView::<TheCurrency, TheCurrency>::only_balance(BALANCE);
         let loan_addr = Addr::unchecked("loan");
         let lease_code_id = Code::unchecked(123);
-        let lease_code_admin = Addr::unchecked("admin");
+        let protocol_admin = Addr::unchecked("admin");
 
         let config = ApiConfig::new(
             lease_code_id,
@@ -640,7 +640,7 @@ mod test {
             )
             .expect("Couldn't construct interest rate value!"),
             DEFAULT_MIN_UTILIZATION,
-            lease_code_admin,
+            protocol_admin,
         );
         let mut lpp = LiquidityPool::new(&config, &bank);
 
@@ -676,7 +676,7 @@ mod test {
         let now = Timestamp::from_nanos(0);
         let loan_addr = Addr::unchecked("loan");
         let lease_code_id = Code::unchecked(123);
-        let lease_code_admin = Addr::unchecked("admin");
+        let protocol_admin = Addr::unchecked("admin");
 
         let bank = MockBankView::<TheCurrency, TheCurrency>::only_balance(BALANCE);
 
@@ -689,7 +689,7 @@ mod test {
             )
             .expect("Couldn't construct interest rate value!"),
             DEFAULT_MIN_UTILIZATION,
-            lease_code_admin,
+            protocol_admin,
         );
         let mut lpp = LiquidityPool::new(&config, &bank);
         assert_eq!(Ok(DEPOSIT_RECEIPTS), lpp.deposit(DEPOSIT, &now));
@@ -793,7 +793,7 @@ mod test {
         ) {
             let now = Timestamp::from_seconds(120);
             let mut total: Total<TheCurrency> = Total::new();
-            let lease_code_admin = Addr::unchecked("admin");
+            let protocol_admin = Addr::unchecked("admin");
 
             total.borrow(now, borrowed.into(), Percent::ZERO).unwrap();
 

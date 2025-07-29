@@ -1,4 +1,4 @@
-use access_control::{Sender, permissions::LeaseCodeAdminPermission};
+use access_control::{Sender, permissions::ProtocolAdminPermission};
 use currencies::Lpn as LpnCurrency;
 use currency::CurrencyDef;
 use finance::coin::Coin;
@@ -42,19 +42,19 @@ pub fn instantiate(
     new_reserve: InstantiateMsg,
 ) -> Result<CwResponse> {
     deps.api
-        .addr_validate(new_reserve.lease_code_admin.as_str())
+        .addr_validate(new_reserve.protocol_admin.as_str())
         .map_err(Error::from)
         // cannot validate the lease code admin contract for existence, since it is not yet instantiated
-        .and_then(|lease_code_admin| {
+        .and_then(|protocol_admin| {
             Code::try_new(new_reserve.lease_code.into(), &deps.querier)
                 .map_err(Into::into)
-                .map(|lease_code| (lease_code, lease_code_admin))
+                .map(|lease_code| (lease_code, protocol_admin))
         })
-        .and_then(|(lease_code, lease_code_admin)| {
+        .and_then(|(lease_code, protocol_admin)| {
             Code::try_new(
                 new_reserve.lease_code.into(),
                 &platform::contract::validator(deps.querier),
-                lease_code_admin,
+                protocol_admin,
             )
             .map_err(Into::into)
         })
@@ -86,11 +86,11 @@ pub fn execute(
     info: MessageInfo,
     msg: ExecuteMsg,
 ) -> Result<CwResponse> {
-    let lease_code_admin = Config::load(deps.storage)?.lease_code_admin();
+    let protocol_admin = Config::load(deps.storage)?.protocol_admin();
 
     match msg {
         ExecuteMsg::NewLeaseCode(code) => access_control::check(
-            &LeaseCodeAdminPermission::new(&lease_code_admin),
+            &ProtocolAdminPermission::new(&protocol_admin),
             &Sender::new(&info),
         )
         .map_err(Into::into)
