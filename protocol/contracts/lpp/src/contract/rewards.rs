@@ -118,11 +118,7 @@ pub(super) fn query_rewards(storage: &dyn Storage, addr: Addr) -> Result<Rewards
 #[cfg(test)]
 mod test {
     use cosmwasm_std::{Timestamp, testing::MockStorage};
-    use finance::{
-        coin::Coin,
-        percent::{Percent, bound::BoundToHundredPercent},
-        zero::Zero,
-    };
+    use finance::{coin::Coin, percent::Percent100, zero::Zero};
     use lpp_platform::NLpn;
     use platform::{bank::testing::MockBankView, contract::Code};
     use sdk::cosmwasm_std::testing::{mock_dependencies, mock_env};
@@ -139,10 +135,10 @@ mod test {
         state::{Config, Deposit, TotalRewards},
     };
 
-    const BASE_INTEREST_RATE: Percent = Percent::from_permille(70);
-    const UTILIZATION_OPTIMAL: Percent = Percent::from_permille(700);
-    const ADDON_OPTIMAL_INTEREST_RATE: Percent = Percent::from_permille(20);
-    const DEFAULT_MIN_UTILIZATION: BoundToHundredPercent = BoundToHundredPercent::ZERO;
+    const BASE_INTEREST_RATE: Percent100 = Percent100::from_permille(70);
+    const UTILIZATION_OPTIMAL: Percent100 = Percent100::from_permille(700);
+    const ADDON_OPTIMAL_INTEREST_RATE: Percent100 = Percent100::from_permille(20);
+    const DEFAULT_MIN_UTILIZATION: Percent100 = Percent100::ZERO;
 
     #[test]
     fn test_claim_zero_rewards() {

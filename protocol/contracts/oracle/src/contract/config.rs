@@ -13,7 +13,7 @@ where
 #[cfg(all(feature = "internal.test.contract", test))]
 mod tests {
     use currencies::{Lpn, PaymentGroup as PriceCurrencies, testing::PaymentC9};
-    use finance::{duration::Duration, percent::Percent};
+    use finance::{duration::Duration, percent::Percent100};
     use sdk::{
         cosmwasm_ext::Response,
         cosmwasm_std::{from_json, testing::mock_env},
@@ -31,16 +31,16 @@ mod tests {
         use marketprice::config::Config as PriceConfig;
         let msg = tests::dummy_instantiate_msg(
             60,
-            Percent::from_percent(50),
+            Percent100::from_percent(50),
             test_tree::dummy_swap_tree(),
         );
         let (mut deps, _info) = tests::setup_test(msg).unwrap();
 
         let msg = SudoMsg::UpdateConfig(PriceConfig::new(
-            Percent::from_percent(44),
+            Percent100::from_percent(44),
             Duration::from_secs(5),
             7,
-            Percent::from_percent(88),
+            Percent100::from_percent(88),
         ));
 
         let Response {
@@ -62,10 +62,10 @@ mod tests {
             value,
             Config {
                 price_config: PriceConfig::new(
-                    Percent::from_percent(44),
+                    Percent100::from_percent(44),
                     Duration::from_secs(5),
                     7,
-                    Percent::from_percent(88),
+                    Percent100::from_percent(88),
                 )
             }
         );

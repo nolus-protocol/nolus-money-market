@@ -1,4 +1,4 @@
-use std::fmt::Debug;
+use std::{fmt::Debug, ops::Mul};
 
 use serde::{Deserialize, Serialize};
 
@@ -31,17 +31,20 @@ where
             denominator,
         }
     }
-}
 
-impl<U> Rational<U> for SimpleFraction<U>
-where
-    U: FractionUnit,
-{
-    fn of<A>(self, whole: A) -> Option<A>
+    // TODO remove it when implement Ord for SimpleFraction
+    pub fn min(self, other: SimpleFraction<U>) -> SimpleFraction<U>
     where
-        A: Fractionable<U>,
+        U: Mul<Output = U>,
     {
-        Some(whole.safe_mul(&self))
+        // a / b, c /d compare them by cross-multiplication
+        // if ad = bc => a / b = c / d
+        // if ad < bc => a / b < c / d
+        // if ad > bc => a / b > c / d
+
+        let ad = self.nominator.mul(other.denominator);
+        let bc = self.denominator.mul(other.denominator);
+        if ad <= bc { self } else { other }
     }
 }
 
@@ -55,5 +58,17 @@ where
 
     fn total(&self) -> U {
         self.denominator.into()
+    }
+}
+
+impl<U> Rational<U> for SimpleFraction<U>
+where
+    U: FractionUnit,
+{
+    fn of<A>(self, whole: A) -> Option<A>
+    where
+        A: Fractionable<U>,
+    {
+        Some(whole.safe_mul(&self))
     }
 }
