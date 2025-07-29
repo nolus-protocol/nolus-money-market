@@ -1,10 +1,7 @@
-use std::{
-    iter,
-    ops::{Deref, DerefMut},
-};
+use std::ops::{Deref, DerefMut};
 
 use sdk::{
-    cosmwasm_std::{Addr, Order, StdResult as CwResult, Storage, Timestamp},
+    cosmwasm_std::{Addr, Order, Storage, Timestamp},
     cw_storage_plus::{Bound, Deque, Index, IndexList, IndexedMap as CwIndexedMap, MultiIndex},
 };
 
@@ -38,11 +35,6 @@ fn indexed_map(namespace_alarms: &'static str, namespace_index: &'static str) ->
 
 type IndexedMap = CwIndexedMap<Addr, TimeSeconds, AlarmIndexes>;
 
-type AlarmsSelectionIterator<'storage> = iter::Map<
-    Box<dyn Iterator<Item = CwResult<(Addr, TimeSeconds)>> + 'storage>,
-    fn(CwResult<(Addr, TimeSeconds)>) -> Result<Addr, AlarmError>,
->;
-
 pub struct Alarms<'storage, S>
 where
     S: Deref<Target = dyn Storage + 'storage>,
@@ -69,7 +61,10 @@ where
         }
     }
 
-    pub fn alarms_selection(&self, ctime: Timestamp) -> AlarmsSelectionIterator<'_> {
+    pub fn alarms_selection<'this>(
+        &'this self,
+        ctime: Timestamp,
+    ) -> impl Iterator<Item = Result<Addr, AlarmError>> + use<'this, S> {
         self.alarms
             .idx
             .alarms
