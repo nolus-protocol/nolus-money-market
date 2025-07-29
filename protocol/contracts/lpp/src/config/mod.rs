@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use finance::percent::bound::BoundToHundredPercent;
+use finance::percent::Percent100;
 use platform::contract::Code;
 
 use crate::borrow::InterestRate;
@@ -12,5 +12,5 @@ mod r#impl;
 pub struct Config {
     lease_code: Code,
     borrow_rate: InterestRate,
-    min_utilization: BoundToHundredPercent,
+    min_utilization: Percent100,
 }
