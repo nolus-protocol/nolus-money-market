@@ -1,7 +1,3 @@
-use sdk::{
-    cosmwasm_std::{Addr, MessageInfo},
-};
-
 use self::error::{Error, Result};
 use self::user::User;
 
