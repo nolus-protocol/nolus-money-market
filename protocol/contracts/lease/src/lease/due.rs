@@ -1,4 +1,4 @@
-use finance::{duration::Duration, interest};
+use finance::{duration::Duration, interest, percent::Percent};
 
 use crate::{
     finance::LpnCoin,
@@ -19,7 +19,11 @@ impl DueTrait for State {
             let overdue_left = min_amount - total_due_interest;
 
             let total_interest_a_year = interest::interest(
-                self.annual_interest + self.annual_interest_margin,
+                Percent::from(
+                    self.annual_interest
+                        .checked_add(self.annual_interest_margin)
+                        .expect("TODO: propagate up the stack potential overflow"),
+                ),
                 self.principal_due,
                 Duration::YEAR,
             );
@@ -49,7 +53,13 @@ impl State {
 
 #[cfg(all(feature = "internal.test.contract", test))]
 mod test {
-    use finance::{coin::Coin, duration::Duration, interest, percent::Percent, zero::Zero};
+    use finance::{
+        coin::Coin,
+        duration::Duration,
+        interest,
+        percent::{Percent, Percent100},
+        zero::Zero,
+    };
 
     use crate::{
         loan::{Overdue, State},
@@ -63,8 +73,8 @@ mod test {
         let due_margin_interest = 5.into();
         let till_due_end = Duration::from_days(3);
         let s = State {
-            annual_interest: Percent::from_percent(20),
-            annual_interest_margin: Percent::from_percent(5),
+            annual_interest: Percent100::from_percent(20),
+            annual_interest_margin: Percent100::from_percent(5),
             principal_due,
             due_interest,
             due_margin_interest,
@@ -82,14 +92,14 @@ mod test {
 
     #[test]
     fn get_to_limit_before_due_end() {
-        let annual_interest = Percent::from_percent(20);
-        let annual_interest_margin = Percent::from_percent(5);
+        let annual_interest = Percent100::from_percent(20);
+        let annual_interest_margin = Percent100::from_percent(5);
         let principal_due = 100_000.into();
         let due_interest = 10.into();
         let due_margin_interest = 5.into();
         let till_due_end = Duration::from_days(3);
         let delta_to_due_end = interest::interest(
-            annual_interest + annual_interest_margin,
+            Percent::from(annual_interest + annual_interest_margin),
             principal_due,
             till_due_end,
         );
@@ -113,8 +123,8 @@ mod test {
 
     #[test]
     fn below_the_limit_past_due_end() {
-        let annual_interest = Percent::from_percent(20);
-        let annual_interest_margin = Percent::from_percent(5);
+        let annual_interest = Percent100::from_percent(20);
+        let annual_interest_margin = Percent100::from_percent(5);
         let principal_due = 100_000.into();
         let due_interest = 15.into();
         let due_margin_interest = 5.into();
@@ -127,7 +137,7 @@ mod test {
         let till_overdue = Duration::YEAR.into_slice_per_ratio(
             delta_to_overdue,
             interest::interest(
-                annual_interest + annual_interest_margin,
+                Percent::from(annual_interest + annual_interest_margin),
                 principal_due,
                 Duration::YEAR,
             ),
@@ -152,8 +162,8 @@ mod test {
 
     #[test]
     fn above_the_limit_past_due_end() {
-        let annual_interest = Percent::from_percent(20);
-        let annual_interest_margin = Percent::from_percent(5);
+        let annual_interest = Percent100::from_percent(20);
+        let annual_interest_margin = Percent100::from_percent(5);
         let principal_due = 100_000.into();
         let due_interest = 15.into();
         let due_margin_interest = 5.into();
@@ -191,8 +201,8 @@ mod test {
 
         let overdue_start_in = Duration::from_days(6);
         let s = State {
-            annual_interest: Percent::from_percent(20),
-            annual_interest_margin: Percent::from_percent(5),
+            annual_interest: Percent100::from_percent(20),
+            annual_interest_margin: Percent100::from_percent(5),
             principal_due,
             due_interest,
             due_margin_interest,
@@ -215,8 +225,8 @@ mod test {
             due_interest + due_margin_interest + overdue_interest + overdue_margin_interest;
 
         let s = State {
-            annual_interest: Percent::from_percent(20),
-            annual_interest_margin: Percent::from_percent(5),
+            annual_interest: Percent100::from_percent(20),
+            annual_interest_margin: Percent100::from_percent(5),
             principal_due,
             due_interest,
             due_margin_interest,
