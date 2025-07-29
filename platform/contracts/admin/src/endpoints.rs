@@ -1,4 +1,4 @@
-use access_control::{permissions::ContractOwnerPermission, Sender};
+use access_control::permissions::ContractOwnerPermission;
 use platform::{batch::Batch, response};
 use sdk::{
     cosmwasm_ext::Response as CwResponse,

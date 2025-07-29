@@ -1,9 +1,6 @@
 use std::ops::{Deref, DerefMut};
 
-use access_control::{
-    Sender,
-    permissions::{ContractOwnerPermission, DexResponseSafeDeliveryPermission}
-};
+use access_control::permissions::{ContractOwnerPermission, DexResponseSafeDeliveryPermission};
 use dex::{ContinueResult as DexResult, Handler as _, Response as DexResponse};
 use oracle_platform::OracleRef;
 use platform::{
