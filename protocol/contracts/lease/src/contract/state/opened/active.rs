@@ -1,5 +1,3 @@
-use access_control::Sender;
-use currency::{CurrencyDef, never};
 use dex::Enterable;
 use finance::{coin::IntoDTO, duration::Duration};
 use oracle_platform::GrantedOracle;
@@ -81,7 +79,6 @@ impl Active {
         querier: QuerierWrapper<'_>,
         env: &Env,
     ) -> ContractResult<Response> {
-        access_control::check(self.lease.lease.oracle, &info.sender)?;
         self.try_on_alarm(querier, env)
     }
 
@@ -91,7 +88,7 @@ impl Active {
         env: &Env,
         info: MessageInfo,
     ) -> ContractResult<Response> {
-        access_control::check(self.lease.lease.time_alarms, &info.sender)?;
+        access_control::check(self.lease.lease.time_alarms, &info)?;
         self.try_on_alarm(querier, env)
     }
 
@@ -181,7 +178,7 @@ impl Handler for Active {
     ) -> ContractResult<Response> {
         access_control::check(
             &ChangeClosePolicyPermission::new(&self.lease.lease.customer),
-            &Sender::new(&info),
+            &info,
         )
         .map_err(Into::into)
         .and_then(|()| {
@@ -234,7 +231,7 @@ impl Handler for Active {
     ) -> ContractResult<Response> {
         access_control::check(
             &ClosePositionPermission::new(&self.lease.lease.customer),
-            &Sender::new(&info),
+            &info,
         )
         .map_err(Into::into)
         .and_then(|()| customer_close::start(spec, self.lease, &env, querier))
@@ -248,7 +245,7 @@ impl Handler for Active {
     ) -> ContractResult<Response> {
         access_control::check(
             &TimeAlarmDelivery::new(&self.lease.lease.time_alarms),
-            &Sender::new(&info),
+            &info,
         )?;
 
         self.try_on_alarm(querier, &env)
@@ -260,10 +257,7 @@ impl Handler for Active {
         env: Env,
         info: MessageInfo,
     ) -> ContractResult<Response> {
-        access_control::check(
-            &PriceAlarmDelivery::new(&self.lease.lease.oracle),
-            &info,
-        )?;
+        access_control::check(&PriceAlarmDelivery::new(&self.lease.lease.oracle), &info)?;
 
         self.try_on_alarm(querier, &env)
     }

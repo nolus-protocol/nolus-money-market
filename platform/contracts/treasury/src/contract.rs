@@ -84,7 +84,7 @@ pub fn execute(
 
             access_control::check(
                 &TimeAlarmDelivery::new(config.timealarms()),
-                &Sender::new(&info),
+                &info,
             )
             .and_then(|()| try_dispatch(deps.storage, deps.querier, &env, info.sender))
             .map(response::response_only_messages)

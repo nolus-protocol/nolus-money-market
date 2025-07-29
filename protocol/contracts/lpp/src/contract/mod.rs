@@ -1,6 +1,6 @@
 use serde::Serialize;
 
-use access_control::{Sender, permissions::ProtocolAdminPermission};
+use access_control::permissions::ProtocolAdminPermission;
 use currencies::{
     Lpn as LpnCurrency, Lpns as LpnCurrencies, PaymentGroup, Stable as StableCurrency,
 };
@@ -57,7 +57,12 @@ pub fn instantiate(
     )
     .map_err(Into::into)
     .and_then(|lease_code| {
-        let config = ApiConfig::new(lease_code, msg.borrow_rate, msg.min_utilization, protocol_admin);
+        let config = ApiConfig::new(
+            lease_code,
+            msg.borrow_rate,
+            msg.min_utilization,
+            protocol_admin
+        );
         Config::store(&config, deps.storage).map(|()| config)
     })
     .and_then(|ref config| {
@@ -104,7 +109,7 @@ pub fn execute(
 
             access_control::check(
                 &ProtocolAdminPermission::new(loaded_config.protocol_admin()),
-                &Sender::new(&info),
+                &info,
             )?;
 
             Config::update_lease_code(deps.storage, new_lease_code)
@@ -176,7 +181,7 @@ pub fn execute(
 
             access_control::check(
                 &ProtocolAdminPermission::new(loaded_config.protocol_admin()),
-                &Sender::new(&info),
+                &info,
             )?;
 
             assert!(

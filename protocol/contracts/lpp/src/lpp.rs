@@ -456,7 +456,12 @@ mod test {
         let lease_code_id = Code::unchecked(123);
         let protocol_admin = Addr::unchecked("admin");
 
-        let config = ApiConfig::new(lease_code_id, interest_rate, DEFAULT_MIN_UTILIZATION, protocol_admin);
+        let config = ApiConfig::new(
+            lease_code_id,
+            interest_rate,
+            DEFAULT_MIN_UTILIZATION,
+            protocol_admin
+        );
 
         let mut lpp = LiquidityPool::<TheCurrency, _>::new(&config, &bank);
 

@@ -224,7 +224,7 @@ fn ensure_sender_is_owner(storage: &mut dyn Storage, info: &MessageInfo) -> Cont
 
     access_control::check(
         &ContractOwnerPermission::new(config.contract_owner()),
-        &Sender::new(info),
+        info,
     )?;
 
     Ok(())
