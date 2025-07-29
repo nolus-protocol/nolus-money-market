@@ -770,7 +770,7 @@ mod test {
     {
         coin_legacy::to_cosmwasm_on_nolus::<TheCurrency>(into_coin.into())
     }
-    
+
     mod min_utilization {
         use finance::{
             coin::{Amount, Coin},

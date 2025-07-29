@@ -1,11 +1,7 @@
 use serde::Serialize;
 use std::ops::DerefMut as _;
 
-<<<<<<< HEAD
 use access_control::permissions::ProtocolAdminPermission;
-=======
-use access_control::{Sender, permissions::LeaseCodeAdminPermission};
->>>>>>> fc467baba (fix: ci linting)
 use currencies::{
     Lpn as LpnCurrency, Lpns as LpnCurrencies, PaymentGroup, Stable as StableCurrency,
 };
@@ -187,11 +183,6 @@ pub fn execute(
             access_control::check(
                 &ProtocolAdminPermission::new(loaded_config.protocol_admin()),
                 &info,
-            )?;
-
-            access_control::check(
-                &LeaseCodeAdminPermission::new(loaded_config.lease_code_admin()),
-                &Sender::new(&info),
             )?;
 
             assert!(
