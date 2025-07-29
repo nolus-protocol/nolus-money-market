@@ -29,7 +29,7 @@ impl Config {
                 lease_code_new,
                 *config.borrow_rate(),
                 config.min_utilization(),
-                config.lease_code_admin().clone(),
+                config.protocol_admin().clone(),
             )
         })
     }
@@ -40,7 +40,7 @@ impl Config {
                 config.lease_code(),
                 borrow_rate,
                 config.min_utilization(),
-                config.lease_code_admin().clone(),
+                config.protocol_admin().clone(),
             )
         })
     }
@@ -54,7 +54,7 @@ impl Config {
                 config.lease_code(),
                 *config.borrow_rate(),
                 min_utilization,
-                config.lease_code_admin().clone(),
+                config.protocol_admin().clone(),
             )
         })
     }

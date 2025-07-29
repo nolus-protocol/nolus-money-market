@@ -13,7 +13,7 @@ pub type LpnCoin = CoinDTO<LpnCurrencies>;
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub struct InstantiateMsg {
     /// Unchecked address of the user that can change the lease code Id
-    pub lease_code_admin: String,
+    pub protocol_admin: String,
     // Since this is an external system API we should not use [Code].
     pub lease_code: Uint64,
 }
