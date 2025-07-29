@@ -4,7 +4,7 @@ use finance::{
     coin::{Amount, Coin},
     duration::Duration,
     liability::Liability,
-    percent::Percent,
+    percent::Percent100,
 };
 use lease::api::{LpnCoinDTO, limits::MaxSlippages, open::PositionSpecDTO};
 use platform::contract::Code;
@@ -24,15 +24,15 @@ pub fn config() -> Config {
 
 pub fn new_config() -> NewConfig {
     NewConfig {
-        lease_interest_rate_margin: Percent::from_percent(5),
+        lease_interest_rate_margin: Percent100::from_percent(5),
         lease_position_spec: PositionSpecDTO::new(
             Liability::new(
-                Percent::from_percent(55),
-                Percent::from_percent(60),
-                Percent::from_percent(61),
-                Percent::from_percent(62),
-                Percent::from_percent(64),
-                Percent::from_percent(65),
+                Percent100::from_percent(55),
+                Percent100::from_percent(60),
+                Percent100::from_percent(61),
+                Percent100::from_percent(62),
+                Percent100::from_percent(64),
+                Percent100::from_percent(65),
                 Duration::from_hours(12),
             ),
             lpn_coin(4_211_442_000),
@@ -40,7 +40,7 @@ pub fn new_config() -> NewConfig {
         ),
         lease_due_period: Duration::from_secs(100),
         lease_max_slippages: MaxSlippages {
-            liquidation: MaxSlippage::unchecked(Percent::from_percent(13)),
+            liquidation: MaxSlippage::unchecked(Percent100::from_percent(13)),
         },
     }
 }
@@ -56,21 +56,21 @@ fn dummy_instantiate_msg() -> InstantiateMsg {
         protocols_registry: Addr::unchecked("protocols"),
         lease_position_spec: PositionSpecDTO {
             liability: Liability::new(
-                Percent::from_percent(10),
-                Percent::from_percent(65),
-                Percent::from_percent(72),
-                Percent::from_percent(74),
-                Percent::from_percent(76),
-                Percent::from_percent(80),
+                Percent100::from_percent(10),
+                Percent100::from_percent(65),
+                Percent100::from_percent(72),
+                Percent100::from_percent(74),
+                Percent100::from_percent(76),
+                Percent100::from_percent(80),
                 Duration::from_hours(12),
             ),
             min_asset: Coin::<Lpn>::from(120_000).into(),
             min_transaction: Coin::<Lpn>::from(12_000).into(),
         },
-        lease_interest_rate_margin: Percent::from_percent(3),
+        lease_interest_rate_margin: Percent100::from_percent(3),
         lease_due_period: Duration::from_days(14),
         lease_max_slippages: MaxSlippages {
-            liquidation: MaxSlippage::unchecked(Percent::from_percent(20)),
+            liquidation: MaxSlippage::unchecked(Percent100::from_percent(20)),
         },
         lease_admin: Addr::unchecked("lease_admin_XYZ"),
         dex: ConnectionParams {

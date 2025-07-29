@@ -1,4 +1,4 @@
-use finance::{duration::Duration, percent::Percent};
+use finance::{duration::Duration, percent::Percent100};
 use lease::api::{limits::MaxSlippages, open::PositionSpecDTO};
 use serde::Deserialize;
 #[cfg(feature = "internal.test.testing")]
@@ -11,7 +11,7 @@ use super::{NewConfig as ValidatedNewConfig, error::BrokenInvariant};
 #[cfg_attr(feature = "internal.test.testing", derive(Serialize))]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub(super) struct NewConfig {
-    lease_interest_rate_margin: Percent,
+    lease_interest_rate_margin: Percent100,
     lease_position_spec: PositionSpecDTO,
     lease_due_period: Duration,
     lease_max_slippages: MaxSlippages,
@@ -38,7 +38,7 @@ mod test {
         coin::{Amount, Coin, CoinDTO},
         duration::Duration,
         liability::Liability,
-        percent::Percent,
+        percent::Percent100,
     };
     use lease::api::{limits::MaxSlippages, open::PositionSpecDTO};
     use platform::tests as platform_tests;
@@ -51,18 +51,18 @@ mod test {
     use super::NewConfig as NonvalidatedConfig;
 
     const DUE_PERIOD: Duration = Duration::from_nanos(604800000000000);
-    const INTEREST_RATE_MARGIN: Percent = Percent::from_permille(40);
+    const INTEREST_RATE_MARGIN: Percent100 = Percent100::from_permille(40);
 
     #[test]
     fn read_valid() {
         let spec = PositionSpecDTO::new(
             Liability::new(
-                Percent::from_percent(65),
-                Percent::from_percent(70),
-                Percent::from_percent(73),
-                Percent::from_percent(75),
-                Percent::from_percent(78),
-                Percent::from_percent(80),
+                Percent100::from_percent(65),
+                Percent100::from_percent(70),
+                Percent100::from_percent(73),
+                Percent100::from_percent(75),
+                Percent100::from_percent(78),
+                Percent100::from_percent(80),
                 Duration::from_hours(1),
             ),
             lpn_coin_dto(1000),
@@ -70,7 +70,7 @@ mod test {
         );
 
         let max_slippages = MaxSlippages {
-            liquidation: MaxSlippage::unchecked(Percent::from_permille(200)), // (100%-20%) of 10 LPN = 8 LPN != 0 LPN
+            liquidation: MaxSlippage::unchecked(Percent100::from_permille(200)), // (100%-20%) of 10 LPN = 8 LPN != 0 LPN
         };
 
         assert_eq!(
@@ -88,12 +88,12 @@ mod test {
     fn read_invalid() {
         let spec = PositionSpecDTO::new(
             Liability::new(
-                Percent::from_percent(65),
-                Percent::from_percent(70),
-                Percent::from_percent(73),
-                Percent::from_percent(75),
-                Percent::from_percent(78),
-                Percent::from_percent(80),
+                Percent100::from_percent(65),
+                Percent100::from_percent(70),
+                Percent100::from_percent(73),
+                Percent100::from_percent(75),
+                Percent100::from_percent(78),
+                Percent100::from_percent(80),
                 Duration::from_hours(1),
             ),
             lpn_coin_dto(1000),
@@ -101,7 +101,7 @@ mod test {
         );
 
         let max_slippages = MaxSlippages {
-            liquidation: MaxSlippage::unchecked(Percent::from_percent(91)), //(100%-91%) of 10 LPN = 0.9 LPN == 0 LPN
+            liquidation: MaxSlippage::unchecked(Percent100::from_percent(91)), //(100%-91%) of 10 LPN = 0.9 LPN == 0 LPN
         };
 
         assert!(

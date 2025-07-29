@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 
 use finance::{
     duration::{Duration, Seconds},
-    percent::Percent,
+    percent::Percent100,
 };
 use sdk::cosmwasm_std::Timestamp;
 
@@ -41,13 +41,13 @@ pub enum StateResponse {
         currency: CurrencyDTO<LeaseAssetCurrencies>,
         downpayment: DownpaymentCoin,
         loan: LpnCoinDTO,
-        loan_interest_rate: Percent,
+        loan_interest_rate: Percent100,
         in_progress: opening::OngoingTrx,
     },
     Opened {
         amount: LeaseCoin,
-        loan_interest_rate: Percent,
-        margin_interest_rate: Percent,
+        loan_interest_rate: Percent100,
+        margin_interest_rate: Percent100,
         principal_due: LpnCoinDTO,
         overdue_margin: LpnCoinDTO,
         overdue_interest: LpnCoinDTO,
@@ -90,7 +90,7 @@ pub mod opening {
 }
 
 pub mod opened {
-    use finance::percent::Percent;
+    use finance::percent::Percent100;
     #[cfg(feature = "skel_testing")]
     use serde::Deserialize;
     use serde::Serialize;
@@ -107,8 +107,8 @@ pub mod opened {
     )]
     #[serde(deny_unknown_fields, rename_all = "snake_case")]
     pub struct ClosePolicy {
-        take_profit: Option<Percent>,
-        stop_loss: Option<Percent>,
+        take_profit: Option<Percent100>,
+        stop_loss: Option<Percent100>,
     }
 
     /// The data transport type of the liquidation cause
@@ -186,7 +186,7 @@ pub mod opened {
 
     #[cfg(feature = "contract")]
     impl ClosePolicy {
-        pub(crate) fn new(tp: Option<Percent>, sl: Option<Percent>) -> Self {
+        pub(crate) fn new(tp: Option<Percent100>, sl: Option<Percent100>) -> Self {
             Self {
                 take_profit: tp,
                 stop_loss: sl,
@@ -194,7 +194,7 @@ pub mod opened {
         }
 
         #[cfg(feature = "contract_testing")]
-        pub fn new_testing(tp: Option<Percent>, sl: Option<Percent>) -> Self {
+        pub fn new_testing(tp: Option<Percent100>, sl: Option<Percent100>) -> Self {
             Self::new(tp, sl)
         }
     }

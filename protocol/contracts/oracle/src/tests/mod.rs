@@ -7,7 +7,7 @@ use currency::{CurrencyDef, Group, MemberOf};
 use finance::{
     coin::{Amount, Coin},
     duration::Duration,
-    percent::Percent,
+    percent::Percent100,
     price::{self, base::BasePrice, dto::PriceDTO},
 };
 use marketprice::config::Config as PriceConfig;
@@ -59,7 +59,7 @@ where
 
 pub(crate) fn dummy_instantiate_msg(
     price_feed_period_secs: u32,
-    expected_feeders: Percent,
+    expected_feeders: Percent100,
     swap_tree: HumanReadableTree<SwapTarget<PriceCurrencies>>,
 ) -> InstantiateMsg<PriceCurrencies> {
     InstantiateMsg {
@@ -68,7 +68,7 @@ pub(crate) fn dummy_instantiate_msg(
                 expected_feeders,
                 Duration::from_secs(price_feed_period_secs),
                 1,
-                Percent::from_percent(88),
+                Percent100::from_percent(88),
             ),
         },
         swap_tree,
@@ -76,7 +76,11 @@ pub(crate) fn dummy_instantiate_msg(
 }
 
 pub(crate) fn dummy_default_instantiate_msg() -> InstantiateMsg<PriceCurrencies> {
-    dummy_instantiate_msg(60, Percent::from_percent(50), test_tree::dummy_swap_tree())
+    dummy_instantiate_msg(
+        60,
+        Percent100::from_percent(50),
+        test_tree::dummy_swap_tree(),
+    )
 }
 
 pub(crate) fn dummy_feed_prices_msg()

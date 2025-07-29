@@ -57,7 +57,7 @@ mod tests {
 
     use currencies::{Lpn, testing::PaymentC3};
     use currency::Currency;
-    use finance::{coin::Coin, duration::Duration, liability::Liability, percent::Percent};
+    use finance::{coin::Coin, duration::Duration, liability::Liability, percent::Percent100};
     use platform::{
         bank::{
             self, FixedAddressSender, LazySenderStub, testing as bank_testing,
@@ -80,12 +80,12 @@ mod tests {
         Asset: Currency,
     {
         let liability = Liability::new(
-            Percent::from_percent(65),
-            Percent::from_percent(70),
-            Percent::from_percent(72),
-            Percent::from_percent(74),
-            Percent::from_percent(77),
-            Percent::from_percent(80),
+            Percent100::from_percent(65),
+            Percent100::from_percent(70),
+            Percent100::from_percent(72),
+            Percent100::from_percent(74),
+            Percent100::from_percent(77),
+            Percent100::from_percent(80),
             Duration::from_days(3),
         );
         let spec = Spec::no_close(

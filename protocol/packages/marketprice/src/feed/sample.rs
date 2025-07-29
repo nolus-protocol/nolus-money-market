@@ -1,6 +1,9 @@
 use std::collections::HashMap;
 
-use finance::{duration::Duration, fraction::Fraction, price::Price, ratio::Rational};
+use finance::{
+    duration::Duration, percent::Percent100, price::Price, ratio::SimpleFraction,
+    rational::Rational,
+};
 use sdk::cosmwasm_std::{Addr, Timestamp};
 
 use super::observation::Observation;
@@ -101,21 +104,24 @@ where
         self.sample_start + self.sample_span
     }
 
-    fn end_of_period(&mut self) {
+    fn end_of_period(&mut self) -> Option<()> {
         let prices_number = self.sample_prices.len();
         if prices_number > 0 {
             let mut values = self.sample_prices.values();
-            let first = values
-                .next()
-                .expect("should have been checked that there is at least one member");
+            let first = values.next()?;
 
             let sum = values.fold(*first, |acc, current| acc + *current);
-            let part = Rational::new(1, prices_number);
-            let avg = Fraction::<usize>::of(&part, sum);
-            self.last_sample = Sample { price: Some(avg) }
+            let denominator = u32::try_from(prices_number).ok()?;
+            let part = SimpleFraction::new(
+                Percent100::from_permille(1).units(),
+                Percent100::from_permille(denominator).units(),
+            );
+            let avg = part.of(sum);
+            self.last_sample = Sample { price: avg }
         }
         self.sample_prices.clear();
         self.sample_start = self.sample_end();
+        Some(())
     }
 }
 
