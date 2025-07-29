@@ -1,4 +1,4 @@
-use access_control::{Sender, permissions::ProtocolAdminPermission};
+use access_control::permissions::ProtocolAdminPermission;
 use currencies::Lpn as LpnCurrency;
 use currency::CurrencyDef;
 use finance::coin::Coin;
@@ -41,25 +41,15 @@ pub fn instantiate(
     _info: MessageInfo,
     new_reserve: InstantiateMsg,
 ) -> Result<CwResponse> {
-    deps.api
-        .addr_validate(new_reserve.protocol_admin.as_str())
-        .map_err(Error::from)
-        // cannot validate the lease code admin contract for existence, since it is not yet instantiated
-        .and_then(|protocol_admin| {
-            Code::try_new(new_reserve.lease_code.into(), &deps.querier)
-                .map_err(Into::into)
-                .map(|lease_code| (lease_code, protocol_admin))
-        })
-        .and_then(|(lease_code, protocol_admin)| {
-            Code::try_new(
-                new_reserve.lease_code.into(),
-                &platform::contract::validator(deps.querier),
-                protocol_admin,
-            )
-            .map_err(Into::into)
-        })
-        .map(|()| response::empty_response())
-        .inspect_err(platform_error::log(deps.api))
+    let lease_code_admin = deps.api.addr_validate(new_reserve.lease_code_admin.as_str())?;
+    Code::try_new(
+        new_reserve.lease_code.into(),
+        &platform::contract::validator(deps.querier),
+    )
+    .map_err(Into::into)
+    .and_then(|lease_code| Config::new(lease_code, lease_code_admin).store(deps.storage))
+    .map(|()| response::empty_response())
+    .inspect_err(platform_error::log(deps.api))
 }
 
 #[entry_point]
@@ -86,12 +76,12 @@ pub fn execute(
     info: MessageInfo,
     msg: ExecuteMsg,
 ) -> Result<CwResponse> {
-    let protocol_admin = Config::load(deps.storage)?.protocol_admin();
+    let lease_code_admin = Config::load(deps.storage)?.lease_code_admin();
 
     match msg {
         ExecuteMsg::NewLeaseCode(code) => access_control::check(
-            &ProtocolAdminPermission::new(&protocol_admin),
-            &Sender::new(&info),
+            &ProtocolAdminPermission::new(&lease_code_admin),
+            &info,
         )
         .map_err(Into::into)
         .and_then(|()| Config::update_lease_code(deps.storage, code))
