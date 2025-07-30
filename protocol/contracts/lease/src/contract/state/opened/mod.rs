@@ -17,9 +17,6 @@ mod payment;
 mod permission;
 pub mod repay;
 
-type ChangeClosePolicyPermission<'a> = SingleUserPermission<'a>;
-type ClosePositionPermission<'a> = SingleUserPermission<'a>;
-
 fn lease_state(
     lease: Lease,
     status: Status,
