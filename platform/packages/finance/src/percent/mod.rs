@@ -1,23 +1,88 @@
 use std::{
     fmt::{Debug, Display, Formatter, Result as FmtResult, Write},
-    ops::{Add, Sub},
+    ops::{Add, Div, Rem, Sub},
 };
 
+use gcd::Gcd;
 use serde::{Deserialize, Serialize};
 
 use sdk::cosmwasm_std::{OverflowError, OverflowOperation};
 
 use crate::{
-    error::Result as FinanceResult,
+    arithmetic::{Bits, CheckedMul, FractionUnit, One, Scalar, Trim},
+    coin::Amount,
+    error::{Error, Result as FinanceResult},
     fraction::Fraction,
     fractionable::Fractionable,
-    ratio::{Ratio, Rational},
+    ratio::Rational,
     zero::Zero,
 };
 
 pub mod bound;
 
 pub type Units = u32;
+
+impl Bits for Units {
+    const BITS: u32 = Self::BITS;
+
+    fn leading_zeros(self) -> u32 {
+        Self::leading_zeros(self)
+    }
+}
+
+impl CheckedMul for Units {
+    type Output = Self;
+
+    fn checked_mul(self, rhs: Self) -> Option<Self::Output> {
+        self.checked_mul(rhs)
+    }
+}
+
+impl FractionUnit for Units {}
+
+impl From<Percent> for Units {
+    fn from(percent: Percent) -> Self {
+        percent.0
+    }
+}
+
+impl One for Units {
+    const ONE: Self = 1;
+}
+
+impl Trim for Units {
+    fn trim(self, bits: u32) -> Self {
+        self >> bits
+    }
+}
+
+impl Scalar for Units {
+    type Base = Self;
+
+    fn gcd(self, other: Self) -> Self::Base {
+        Gcd::gcd(self, other)
+    }
+
+    fn scale_up(self, scale: Self::Base) -> Option<Self> {
+        self.checked_mul(scale)
+    }
+
+    fn scale_down(self, scale: Self::Base) -> Self {
+        assert_ne!(scale, 0);
+
+        self.div(scale)
+    }
+
+    fn modulo(self, scale: Self::Base) -> Self::Base {
+        assert_ne!(scale, 0);
+
+        self.rem(scale)
+    }
+
+    fn into_base(self) -> Self::Base {
+        self
+    }
+}
 
 #[derive(Copy, Clone, Default, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -38,12 +103,12 @@ impl Percent {
         Self(permille)
     }
 
-    pub fn from_ratio<FractionUnit>(nominator: FractionUnit, denominator: FractionUnit) -> Self
+    pub fn from_ratio<U>(nominator: U, denominator: U) -> Option<Self>
     where
-        FractionUnit: Copy + Debug + PartialEq + Zero,
-        Self: Fractionable<FractionUnit>,
+        Self: Fractionable<U>,
+        U: FractionUnit,
     {
-        Rational::new(nominator, denominator).of(Percent::HUNDRED)
+        Rational::new(nominator, denominator).lossy_mul(Self::HUNDRED)
     }
 
     pub const fn units(&self) -> Units {
@@ -69,37 +134,40 @@ impl Percent {
     }
 }
 
+impl Bits for Percent {
+    const BITS: u32 = Units::BITS;
+
+    fn leading_zeros(self) -> u32 {
+        Units::leading_zeros(self.units())
+    }
+}
+
 impl Zero for Percent {
     const ZERO: Self = Self::ZERO;
 }
 
-impl Fraction<Units> for Percent {
+impl FractionUnit for Percent {}
+
+impl One for Percent {
+    const ONE: Self = Self::from_permille(1);
+}
+
+impl Fraction<Percent> for Percent {
     #[track_caller]
     fn of<A>(&self, whole: A) -> A
     where
-        A: Fractionable<Units>,
+        A: Fractionable<Percent>,
     {
-        whole.safe_mul(self)
+        /*         let ratio: Ratio<Percent> = self.into();
+        ratio.of(whole) */
+
+        todo!("Next PR")
     }
 }
 
-impl Ratio<Units> for Percent {
-    fn parts(&self) -> Units {
-        self.units()
-    }
-
-    fn total(&self) -> Units {
-        Percent::HUNDRED.units()
-    }
-}
-
-impl Ratio<Units> for Rational<Percent> {
-    fn parts(&self) -> Units {
-        Ratio::<Percent>::parts(self).units()
-    }
-
-    fn total(&self) -> Units {
-        Ratio::<Percent>::total(self).units()
+impl From<Percent> for Amount {
+    fn from(value: Percent) -> Self {
+        Amount::from(value.units())
     }
 }
 
@@ -165,7 +233,55 @@ impl<'a> Sub<&'a Percent> for Percent {
     }
 }
 
-#[cfg(test)]
+impl Scalar for Percent {
+    type Base = Units;
+
+    fn gcd(self, other: Self) -> Self::Base {
+        Gcd::gcd(self.0, other.0)
+    }
+
+    fn scale_up(self, scale: Self::Base) -> Option<Self> {
+        self.0.checked_mul(scale).map(Self::from_permille)
+    }
+
+    fn scale_down(self, scale: Self::Base) -> Self {
+        assert_ne!(scale, 0);
+
+        Self::from_permille(self.0.div(scale))
+    }
+
+    fn modulo(self, scale: Self::Base) -> Self::Base {
+        assert_ne!(scale, 0);
+
+        self.0.rem(scale)
+    }
+
+    fn into_base(self) -> Self::Base {
+        self.0
+    }
+}
+
+impl Trim for Percent {
+    fn trim(self, bits: u32) -> Self {
+        Self::from_permille(self.0 >> bits)
+    }
+}
+
+impl TryFrom<Amount> for Percent {
+    type Error = <Units as TryFrom<Amount>>::Error;
+
+    fn try_from(value: Amount) -> Result<Self, Self::Error> {
+        Ok(Self::from_permille(value.try_into()?))
+    }
+}
+
+impl TryFrom<Units> for Percent {
+    type Error = Error;
+
+    fn try_from(permille: Units) -> Result<Self, Self::Error> {
+        Ok(Self::from_permille(permille))
+    }
+}
 pub(super) mod test {
     use std::{
         fmt::{Debug, Display},

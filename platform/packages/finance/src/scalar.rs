@@ -1,0 +1,23 @@
+use std::fmt::Debug;
+
+use crate::zero::Zero;
+
+pub trait Scalar
+where
+    Self: Copy + Sized,
+{
+    type Base: Copy + Debug + PartialEq + Zero;
+
+    fn gcd(self, other: Self) -> Self::Base;
+
+    /// Multiplies `self` by the given `scale`
+    fn scale_up(self, scale: Self::Base) -> Option<Self>;
+
+    /// Divides `self` by the given `scale`
+    fn scale_down(self, scale: Self::Base) -> Self;
+
+    /// Returns the remainder of `self` divided by `scale`
+    fn modulo(self, scale: Self::Base) -> Self::Base;
+
+    fn into_base(self) -> Self::Base;
+}

@@ -6,14 +6,19 @@ use std::{
     fmt::{Debug, Display, Formatter},
     iter::Sum,
     marker::PhantomData,
-    ops::{Add, AddAssign, Sub, SubAssign},
+    ops::{Add, AddAssign, Div, Rem, Sub, SubAssign},
 };
 
 use ::serde::{Deserialize, Serialize};
+use gcd::Gcd;
 
 use currency::{Currency, CurrencyDef, Group, MemberOf};
 
-use crate::zero::Zero;
+use crate::{
+    arithmetic::{Bits, CheckedAdd, CheckedMul, FractionUnit, One, Scalar, Trim},
+    ratio::Rational,
+    zero::Zero,
+};
 
 pub use self::dto::{CoinDTO, IntoDTO};
 
@@ -22,6 +27,71 @@ mod dto;
 mod serde;
 
 pub type Amount = u128;
+
+impl Bits for Amount {
+    const BITS: u32 = Amount::BITS;
+
+    fn leading_zeros(self) -> u32 {
+        Amount::leading_zeros(self)
+    }
+}
+
+impl CheckedAdd for Amount {
+    type Output = Self;
+
+    fn checked_add(self, rhs: Self) -> Option<Self::Output> {
+        self.checked_add(rhs)
+    }
+}
+
+impl CheckedMul for Amount {
+    type Output = Self;
+
+    fn checked_mul(self, rhs: Self) -> Option<Self::Output> {
+        self.checked_mul(rhs)
+    }
+}
+
+impl FractionUnit for Amount {}
+
+impl One for Amount {
+    const ONE: Self = 1;
+}
+
+impl Scalar for Amount {
+    type Base = Self;
+
+    fn gcd(self, other: Self) -> Self::Base {
+        Gcd::gcd(self, other)
+    }
+
+    fn scale_up(self, scale: Self::Base) -> Option<Self> {
+        self.checked_mul(scale)
+    }
+
+    fn scale_down(self, scale: Self::Base) -> Self {
+        assert_ne!(scale, 0);
+
+        self.div(scale)
+    }
+
+    fn modulo(self, scale: Self::Base) -> Self::Base {
+        assert_ne!(scale, 0);
+
+        self.rem(scale)
+    }
+
+    fn into_base(self) -> Self::Base {
+        self
+    }
+}
+
+impl Trim for Amount {
+    fn trim(self, bits: u32) -> Self {
+        self >> bits
+    }
+}
+
 #[cfg(feature = "testing")]
 pub type NonZeroAmount = NonZeroU128;
 
@@ -31,6 +101,13 @@ pub struct Coin<C> {
     amount: Amount,
     #[serde(skip)]
     currency: PhantomData<C>,
+}
+impl<C> Bits for Coin<C> {
+    const BITS: u32 = Amount::BITS;
+
+    fn leading_zeros(self) -> u32 {
+        self.amount.leading_zeros()
+    }
 }
 
 impl<C> Coin<C> {
@@ -75,6 +152,10 @@ impl<C> Coin<C> {
     #[track_caller]
     pub const fn checked_div(self, rhs: Amount) -> Option<Self> {
         Self::may_new(self.amount.checked_div(rhs))
+    }
+
+    pub fn to_rational<OtherC>(self, denominator: Coin<OtherC>) -> Rational<Amount> {
+        Rational::new(self.amount, denominator.amount)
     }
 
     #[track_caller]
@@ -133,6 +214,10 @@ impl<C> Default for Coin<C> {
 
 impl<C> Eq for Coin<C> {}
 
+impl<C> One for Coin<C> {
+    const ONE: Self = Self::new(1);
+}
+
 impl<C> PartialEq for Coin<C> {
     fn eq(&self, other: &Self) -> bool {
         self.amount.eq(&other.amount)
@@ -145,12 +230,20 @@ impl<C> PartialOrd for Coin<C> {
     }
 }
 
+impl<C> FractionUnit for Coin<C> {}
+
 impl<C> Ord for Coin<C>
 where
     Self: PartialOrd,
 {
     fn cmp(&self, other: &Self) -> Ordering {
         self.amount.cmp(&other.amount)
+    }
+}
+
+impl<C> Trim for Coin<C> {
+    fn trim(self, bits: u32) -> Self {
+        Self::from(self.amount.trim(bits))
     }
 }
 
@@ -207,6 +300,34 @@ impl<C> From<Amount> for Coin<C> {
 impl<C> From<Coin<C>> for Amount {
     fn from(coin: Coin<C>) -> Self {
         coin.amount
+    }
+}
+
+impl<C> Scalar for Coin<C> {
+    type Base = Amount;
+
+    fn gcd(self, other: Self) -> Self::Base {
+        Gcd::gcd(self.amount, other.amount)
+    }
+
+    fn scale_up(self, scale: Self::Base) -> Option<Self> {
+        self.amount.checked_mul(scale).map(Self::new)
+    }
+
+    fn scale_down(self, scale: Self::Base) -> Self {
+        assert_ne!(scale, 0);
+
+        self.amount.div(scale).into()
+    }
+
+    fn modulo(self, scale: Self::Base) -> Self::Base {
+        assert_ne!(scale, 0);
+
+        self.amount.rem(scale)
+    }
+
+    fn into_base(self) -> Self::Base {
+        self.amount
     }
 }
 

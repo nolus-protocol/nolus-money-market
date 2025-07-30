@@ -1,29 +1,9 @@
-use sdk::cosmwasm_std::{Uint128, Uint256};
+use crate::{coin::Coin, duration::Duration};
 
-use crate::{coin::Coin, duration::Duration, ratio::Ratio};
-
-use super::{Fractionable, HigherRank};
-
-impl<T> HigherRank<T> for u128
-where
-    T: Into<Self>,
-{
-    type Type = Uint256;
-    type Intermediate = Uint128;
-}
+use super::Fractionable;
 
 impl<C> Fractionable<Coin<C>> for Duration {
-    #[track_caller]
-    fn safe_mul<F>(self, fraction: &F) -> Self
-    where
-        F: Ratio<Coin<C>>,
-    {
-        let d128: u128 = self.into();
-        // TODO re-assess the design of Ratio ... and whether it could be > 1
-        d128.safe_mul(fraction)
-            .try_into()
-            .expect("overflow computing a fraction of duration")
-    }
+    type MaxRank = u128;
 }
 
 #[cfg(test)]
