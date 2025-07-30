@@ -35,8 +35,6 @@ build() (
 
   id="$("cat" "./.${image:?}-image-digest")"
 
-  echo "${id:?}"
-
   "docker" \
     "image" \
     "tag" \

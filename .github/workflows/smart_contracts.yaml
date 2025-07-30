@@ -57,8 +57,13 @@ jobs:
     steps:
       - uses: "actions/checkout@v4"
       - id: "out"
+        env:
+          x: |-
+            ${{ toJSON(runner) }}
         run: |-
           set -eu
+
+          "echo" "${x:?}" >>"${GITHUB_SUMMARY:?}"
 
           profiles='["ci_dev","ci_dev_no_debug_assertions"]'
 
