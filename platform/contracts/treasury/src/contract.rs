@@ -1,6 +1,5 @@
 use std::ops::{Deref, DerefMut};
 
-use access_control::permissions::SingleUserAccess;
 use admin_contract::msg::{
     ProtocolQueryResponse, ProtocolsQueryResponse, QueryMsg as ProtocolsRegistry,
 };
@@ -80,14 +79,13 @@ pub fn execute(
 ) -> ContractResult<CwResponse> {
     match msg {
         ExecuteMsg::TimeAlarm {} => {
-            let config = Config::load(&deps.storage)?;
-
             access_control::check(
-                &TimeAlarmDelivery::new(config.timealarms()),
+                &TimeAlarmDelivery::new(Config::load(deps.storage)?.timealarms()),
                 &info,
-            )
-            .and_then(|()| try_dispatch(deps.storage, deps.querier, &env, info.sender))
-            .map(response::response_only_messages)
+            )?;
+            
+            try_dispatch(deps.storage, deps.querier, &env, info.sender)
+                .map(response::response_only_messages)
         }
     }
     .inspect_err(platform_error::log(deps.api))
@@ -236,6 +234,7 @@ fn setup_dispatching(
     env: Env,
     msg: InstantiateMsg,
 ) -> ContractResult<impl Into<MessageResponse> + use<>> {
+    let addr_validator = contract::validator(querier);
     // cannot validate the address since the Admin plays the role of the registry
     // and it is not yet instantiated
     api.addr_validate(msg.protocols_registry.as_str())
@@ -245,7 +244,7 @@ fn setup_dispatching(
         msg.cadence_hours,
         msg.protocols_registry,
         msg.tvl_to_apr,
-        TimeAlarmsRef::new(msg.timealarms, querier)?,
+        TimeAlarmsRef::new(msg.timealarms.clone(), &addr_validator)?,
     )
     .store(storage)
     .map_err(ContractError::SaveConfig)?;
@@ -255,7 +254,7 @@ fn setup_dispatching(
         msg.timealarms,
         &env.block.time,
         Duration::from_hours(msg.cadence_hours),
-        &contract::validator(querier),
+        &addr_validator,
     )
 }
 

@@ -48,7 +48,10 @@ pub fn instantiate(
     _info: MessageInfo,
     new_reserve: InstantiateMsg,
 ) -> Result<CwResponse> {
-    let lease_code_admin = deps.api.addr_validate(new_reserve.lease_code_admin.as_str())?;
+    let lease_code_admin = deps
+        .api
+        .addr_validate(new_reserve.lease_code_admin.as_str())?;
+
     Code::try_new(
         new_reserve.lease_code.into(),
         &platform::contract::validator(deps.querier),
@@ -83,22 +86,19 @@ pub fn execute(
     info: MessageInfo,
     msg: ExecuteMsg,
 ) -> Result<CwResponse> {
-    let lease_code_admin = Config::load(deps.storage)?.lease_code_admin();
+    let cfg = Config::load(deps.storage)?;
+    let lease_code_admin = cfg.lease_code_admin();
 
     match msg {
-        ExecuteMsg::NewLeaseCode(code) => access_control::check(
-            &ProtocolAdminPermission::new(&lease_code_admin),
-            &info,
-        )
-        .map_err(Into::into)
-        .and_then(|()| Config::update_lease_code(deps.storage, code))
-        .map(|()| PlatformResponse::default()),
-        ExecuteMsg::CoverLiquidationLosses(amount) => Config::load(deps.storage)
-            .and_then(|config| {
-                contract::validator(deps.querier)
-                    .check_contract_code(info.sender, &config.lease_code())
-                    .map_err(Error::from)
-            })
+        ExecuteMsg::NewLeaseCode(code) => {
+            access_control::check(&ProtocolAdminPermission::new(&lease_code_admin), &info)
+                .map_err(Into::into)
+                .and_then(|()| Config::update_lease_code(deps.storage, code)) // TODO - reuse cfg
+                .map(|()| PlatformResponse::default())
+        }
+        ExecuteMsg::CoverLiquidationLosses(amount) => contract::validator(deps.querier)
+            .check_contract_code(info.sender, &cfg.lease_code())
+            .map_err(Error::from)
             .and_then(|lease| {
                 amount.try_into().map_err(Into::into).and_then(|losses| {
                     do_cover_losses(lease, losses, &env.contract.address, deps.querier)
