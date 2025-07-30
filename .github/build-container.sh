@@ -33,7 +33,36 @@ build() (
       "${@}" \
       "./ci/"
 
-  id="$("cat" "./.${image:?}-image-digest")"
+  digest="$("cat" "./.${image:?}-image-digest")"
+
+  case "${digest:?}" in
+    ("sha256:"*) ;;
+    (*)
+      "echo" \
+        "Digest doesn't have expected format! Got: \"${digest:?}\"!" \
+        >&2
+
+      exit "1"
+  esac
+
+  images="$(
+    "docker" \
+      "image" \
+      "ls" \
+      --digests \
+      --no-trunc
+  )"
+
+  id="$(
+    "awk" \
+      -v "digest=${digest:?}" \
+      "\$3 == digest { print \$4; exit; }" \
+      <<EOF
+${images:?}
+EOF
+  )"
+
+  unset "images"
 
   "docker" \
     "image" \
