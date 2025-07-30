@@ -52,7 +52,6 @@ where
 pub(crate) struct LiquidityPool<'cfg, 'bank, Lpn, Bank> {
     config: &'cfg ApiConfig,
     bank: &'bank Bank,
-    //TODO inline the Total
     total: Total<Lpn>,
 }
 

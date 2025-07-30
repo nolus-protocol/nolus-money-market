@@ -3,9 +3,7 @@ use finance::coin::{Amount, Coin, WithCoin};
 use sdk::cosmwasm_std::Addr;
 
 use crate::{
-    bank::{Aggregate, BalancesResult, BankAccount, BankAccountView},
-    batch::Batch,
-    result::Result,
+    bank::{account::BankAccount, aggregate::Aggregate, view::{BalancesResult, BankAccountView}}, batch::Batch, result::Result
 };
 
 //TODO refactor to like to the MockBank implementation

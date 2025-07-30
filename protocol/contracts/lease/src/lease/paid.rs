@@ -59,7 +59,10 @@ mod tests {
     use currency::Currency;
     use finance::{coin::Coin, duration::Duration, liability::Liability, percent::Percent};
     use platform::{
-        bank::{self, BankStub, FixedAddressSender, LazySenderStub, testing::MockBankView},
+        bank::{
+            self, FixedAddressSender, LazySenderStub, testing as bank_testing,
+            testing::MockBankView,
+        },
         batch::Batch,
     };
     use sdk::cosmwasm_std::Addr;
@@ -102,8 +105,11 @@ mod tests {
     fn close_no_surplus() {
         let lease_amount = Coin::<TestAsset>::new(10);
         let lease: Lease<TestAsset, TestLpn> = create_lease(lease_amount);
-        let lease_account =
-            BankStub::with_view(MockBankView::<_, TestLpn>::only_balance(lease_amount));
+        let lease_account = bank_testing::one_transfer(
+            lease_amount,
+            Addr::unchecked(CUSTOMER),
+            MockBankView::<_, TestLpn>::only_balance(lease_amount),
+        );
         let res = lease.close(lease_account).unwrap();
         assert_eq!(
             res,
@@ -117,7 +123,13 @@ mod tests {
         let lease_amount = Coin::<TestAsset>::new(10);
         let surplus_amount = Coin::<TestLpn>::new(2);
         let lease: Lease<TestAsset, TestLpn> = create_lease(lease_amount);
-        let lease_account = BankStub::with_view(MockBankView::new(lease_amount, surplus_amount));
+        let lease_account = bank_testing::two_transfers(
+            surplus_amount,
+            customer.clone(),
+            lease_amount,
+            customer.clone(),
+            MockBankView::new(lease_amount, surplus_amount),
+        );
         let res = lease.close(lease_account).unwrap();
         assert_eq!(res, {
             {
