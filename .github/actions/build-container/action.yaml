@@ -29,7 +29,7 @@ outputs:
   image-id:
     description: ""
     value: |-
-      localhost/local/${{ inputs.image-name }}@${{ steps.image-digest.outputs.digest }}
+      localhost/local/${{ inputs.image-name }}@${{ steps.image-id.outputs.id }}
 
 runs:
   using: "composite"
@@ -125,7 +125,6 @@ runs:
             "docker" \
               "image" \
               "list" \
-              --digests \
               --no-trunc \
               --quiet \
               "localhost/local/${image_name:?}:${hash:?}"
@@ -138,7 +137,7 @@ runs:
             (*)
               "echo" \
                 "${id:?}" \
-                >"./.${image_name:?}-image-digest"
+                >"./.${image_name:?}-image-id"
 
               "echo" "false"
           esac
@@ -171,7 +170,7 @@ runs:
         lookup-only: false
         path: |-
           ${{ steps.values.outputs.path }}
-          ./${{ inputs.image-name }}-image-digest
+          ./${{ inputs.image-name }}-image-id
     - env:
         container_path: |-
           ${{ steps.values.outputs.path }}
@@ -187,6 +186,10 @@ runs:
     - env:
         container_path: |-
           ${{ steps.values.outputs.path }}
+        hash: |-
+          ${{ steps.values.outputs.hash }}
+        runner_name: |-
+          ${{ runner.name }}
       id: "build"
       if: |-
         fromJSON(steps.values.outputs.should-run)
@@ -201,15 +204,15 @@ runs:
     - env:
         image_name: |-
           ${{ inputs.image-name }}
-      id: "image-digest"
+      id: "image-id"
       run: |-
         set -eu
 
-        digest="$("cat" "./.${image_name:?}-image-digest")"
+        id="$("cat" "./.${image_name:?}-image-id")"
 
         "echo" \
-          "digest<<EOF
-        ${digest:?}
+          "id<<EOF
+        ${id:?}
         EOF" \
           >>"${GITHUB_OUTPUT:?}"
       shell: "sh"
@@ -218,10 +221,10 @@ runs:
           ${{ steps.values.outputs.path }}
         hash: |-
           ${{ steps.values.outputs.hash }}
-        image_digest: |-
-          ${{ steps.image-digest.outputs.digest }}
         image_name: |-
           ${{ inputs.image-name }}
+        runner_name: |-
+          ${{ runner.name }}
       id: "export"
       if: |-
         fromJSON(steps.values.outputs.should-run)
@@ -232,15 +235,9 @@ runs:
 
         "docker" \
           "image" \
-          "tag" \
-          "${image_digest:?}" \
-          "localhost/local/${image_name:?}:${hash:?}"
-
-        "docker" \
-          "image" \
           "save" \
           --output "${container_path:?}" \
-          "${image_digest:?}"
+          "localhost/local/${image_name:?}:${hash:?}"
       shell: "sh"
     - if: |-
         fromJSON(steps.values.outputs.should-run)
@@ -252,4 +249,4 @@ runs:
           ${{ steps.values.outputs.key }}
         path: |-
           ${{ steps.values.outputs.path }}
-          ./.${{ inputs.image-name }}-image-digest
+          ./.${{ inputs.image-name }}-image-id

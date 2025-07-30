@@ -26,18 +26,19 @@ build() (
       "buildx" \
       "build" \
       --build-arg "SOURCE_DATE_EPOCH=0" \
+      --cache-to "type=inline" \
       --file "./ci/images/${image:?}.Containerfile" \
-      --iidfile "./.${image:?}-image-digest" \
       --load \
       --provenance "false" \
+      --quiet \
+      --tag "localhost/local/${image:?}:${runner_name:?}-${hash:?}" \
       "${@}" \
-      "./ci/"
-
-  id="$("cat" "./.${image:?}-image-digest")"
+      "./ci/" \
+      >"./.${image:?}-image-id"
 
   "docker" \
     "image" \
     "tag" \
-    "${id:?}" \
-    "localhost/local/${image:?}"
+    "localhost/local/${image:?}:${runner_name:?}-${hash:?}" \
+    "localhost/local/${image:?}:${hash:?}"
 )

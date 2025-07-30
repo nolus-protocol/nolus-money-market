@@ -57,13 +57,8 @@ jobs:
     steps:
       - uses: "actions/checkout@v4"
       - id: "out"
-        env:
-          x: |-
-            ${{ toJSON(runner) }}
         run: |-
           set -eu
-
-          "echo" "${x:?}" >>"${GITHUB_SUMMARY:?}"
 
           profiles='["ci_dev","ci_dev_no_debug_assertions"]'
 
@@ -164,7 +159,7 @@ jobs:
     #   - "clear-cache"
     steps:
       - uses: "actions/checkout@v4"
-      # - uses: "./.github/actions/setup-docker"
+      - uses: "./.github/actions/setup-docker"
       - id: "build-container"
         uses: "./.github/actions/check-formatting-container"
       - env:
@@ -190,7 +185,7 @@ jobs:
           ${{ fromJSON(needs.matrix-arguments.outputs.workspaces-json) }}
     steps:
       - uses: "actions/checkout@v4"
-      # - uses: "./.github/actions/setup-docker"
+      - uses: "./.github/actions/setup-docker"
       - id: "build-container"
         uses: "./.github/actions/lint-container"
       - run: |-
@@ -226,7 +221,7 @@ jobs:
           ${{ fromJSON(needs.matrix-arguments.outputs.workspaces-json) }}
     steps:
       - uses: "actions/checkout@v4"
-      # - uses: "./.github/actions/setup-docker"
+      - uses: "./.github/actions/setup-docker"
       - id: "build-container"
         uses: "./.github/actions/test-container"
       - run: |-
@@ -260,7 +255,7 @@ jobs:
           ${{ fromJSON(needs.matrix-arguments.outputs.workspaces-json) }}
     steps:
       - uses: "actions/checkout@v4"
-      # - uses: "./.github/actions/setup-docker"
+      - uses: "./.github/actions/setup-docker"
       - id: "build-container"
         uses: "./.github/actions/check-unused-deps-container"
       - run: |-
