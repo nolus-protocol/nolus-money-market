@@ -99,11 +99,10 @@ where
                     |mut lpp| {
                         Deposit::load(storage, lender.clone(), total_rewards)
                             .and_then(|mut deposit| {
-                                withdraw(&mut deposit, &mut lpp, receipts, now).and_then(
-                                    |(payment_out, may_reward)| {
+                                withdraw(&mut deposit, &mut lpp, receipts, now, Coin::ZERO)
+                                    .and_then(|(payment_out, may_reward)| {
                                         deposit.save(storage).map(|()| (payment_out, may_reward))
-                                    },
-                                )
+                                    })
                             })
                             .and_then(|(payment_out, may_reward)| {
                                 lpp.save(storage).map(|()| (payment_out, may_reward))
@@ -136,13 +135,12 @@ where
     Config::load(storage).and_then(|config| {
         TotalRewards::load_or_default(storage).and_then(|total_rewards| {
             LiquidityPool::<Lpn, _>::load(storage, &config, &pool_view).and_then(|mut lpp| {
-                //TODO use collect instead
-                let deposits = Deposit::iter(storage, total_rewards).try_fold(
-                    Vec::<Deposit>::default(),
-                    |mut deposits, may_deposit| {
+                let (deposits, _) = Deposit::iter(storage, total_rewards).try_fold(
+                    (Vec::<Deposit>::default(), Coin::ZERO),
+                    |(mut deposits, pending_withdraw), may_deposit| {
                         may_deposit.and_then(|mut deposit| {
                             let receipts = deposit.receipts();
-                            withdraw(&mut deposit, &mut lpp, receipts, now).map(
+                            withdraw(&mut deposit, &mut lpp, receipts, now, pending_withdraw).map(
                                 |(payment_out, may_reward)| {
                                     transfer_to(
                                         deposit.owner().clone(),
@@ -157,7 +155,7 @@ where
                                         may_reward,
                                     );
                                     deposits.push(deposit);
-                                    deposits
+                                    (deposits, pending_withdraw + payment_out)
                                 },
                             )
                         })
@@ -179,13 +177,14 @@ fn withdraw<Lpn, Bank>(
     lpp: &mut LiquidityPool<'_, '_, Lpn, Bank>,
     receipts: Coin<NLpn>,
     now: &Timestamp,
+    pending_withdraw: Coin<Lpn>,
 ) -> Result<(Coin<Lpn>, Option<Coin<Nls>>)>
 where
     Lpn: CurrencyDef,
     Bank: BankAccountView,
 {
     deposit.withdraw(receipts).and_then(|may_rewards| {
-        lpp.withdraw_lpn(receipts, now)
+        lpp.withdraw_lpn(receipts, pending_withdraw, now)
             .map(|payment_lpn| (payment_lpn, may_rewards))
     })
     // we have a problem! withdrawing next deposits would read the same LPP balance
@@ -404,6 +403,7 @@ mod test {
 
             use crate::{
                 contract::{
+                    ContractError,
                     lender::{
                         self,
                         test::{
@@ -414,6 +414,7 @@ mod test {
                     test as test_tools,
                 },
                 event::WithdrawEmitter,
+                lpp::LiquidityPool,
                 state::TotalRewards,
             };
 
@@ -622,6 +623,126 @@ mod test {
             }
 
             #[test]
+            fn test_overwithdraw() {
+                test::test_case(
+                    DEPOSIT_LPP,
+                    DEFAULT_MIN_UTILIZATION,
+                    |mut store, _config, bank, now| {
+                        assert_eq!(
+                            ContractError::InsufficientBalance {},
+                            lender::try_withdraw::<TheCurrency, _>(
+                                &mut store,
+                                testing::no_transfers(bank),
+                                test_tools::lender(),
+                                DEPOSIT_NLPN + Coin::new(1),
+                                &now,
+                                WithdrawEmitter::new(&sdk_testing::mock_env()),
+                            )
+                            .unwrap_err()
+                        );
+                    },
+                )
+            }
+
+            #[test]
+            fn test_no_liquidity() {
+                const LOAN_AMOUNT: Coin<TheCurrency> = Coin::new(1);
+
+                test::test_case(
+                    DEPOSIT_LPP,
+                    DEFAULT_MIN_UTILIZATION,
+                    |mut store, config, bank, now| {
+                        let mut lpp = LiquidityPool::load(&store, &config, &bank).unwrap();
+                        lpp.try_open_loan(now, LOAN_AMOUNT).unwrap();
+                        lpp.save(&mut store).unwrap();
+
+                        assert_eq!(
+                            ContractError::NoLiquidity {},
+                            lender::try_withdraw::<TheCurrency, _>(
+                                &mut store,
+                                testing::no_transfers(bank),
+                                test_tools::lender(),
+                                DEPOSIT_NLPN,
+                                &now,
+                                WithdrawEmitter::new(&sdk_testing::mock_env()),
+                            )
+                            .unwrap_err()
+                        );
+                    },
+                )
+            }
+        }
+
+        mod nlpn_price {
+            use crate::contract::lender::{
+                self,
+                test::{self, DEFAULT_MIN_UTILIZATION, deposit_withdraw_price::DEPOSIT_NLPN},
+            };
+            use finance::{
+                coin::Coin,
+                price::{self, Price},
+            };
+            use platform::bank::testing::MockBankView;
+
+            use super::{DEPOSIT_LPP, TheCurrency};
+
+            #[test]
+            fn test_nlpn_price() {
+                const INTEREST: Coin<TheCurrency> = DEPOSIT_LPP.checked_div(2).unwrap();
+
+                test::test_case(
+                    DEPOSIT_LPP,
+                    DEFAULT_MIN_UTILIZATION,
+                    |store, _config, bank, now| {
+                        assert_eq!(
+                            lender::query_ntoken_price::<TheCurrency, _>(&store, &bank, &now)
+                                .unwrap()
+                                .0,
+                            Price::identity(),
+                        );
+
+                        let bank_got_interest =
+                            MockBankView::<TheCurrency, TheCurrency>::only_balance(
+                                DEPOSIT_LPP + INTEREST,
+                            );
+
+                        assert_eq!(
+                            price::total_of(DEPOSIT_NLPN).is(DEPOSIT_LPP + INTEREST),
+                            lender::query_ntoken_price::<TheCurrency, _>(
+                                &store,
+                                &bank_got_interest,
+                                &now
+                            )
+                            .unwrap()
+                            .0,
+                        );
+                    },
+                )
+            }
+        }
+
+        mod close_all {
+            use finance::coin::Coin;
+            use platform::bank::{
+                BankAccountView,
+                testing::{self, MockBankView},
+            };
+            use sdk::cosmwasm_std::{Addr, testing as sdk_testing};
+
+            use crate::{
+                contract::{
+                    lender::{
+                        self,
+                        test::{
+                            self, DEFAULT_MIN_UTILIZATION, deposit_withdraw_price::DEPOSIT_LPP,
+                        },
+                    },
+                    test::{self as test_tools, TheCurrency},
+                },
+                event::WithdrawEmitter,
+            };
+
+            #[test]
             fn test_close_all() {
                 const INTEREST_TOTAL: Coin<TheCurrency> = Coin::new(48);
                 const INTEREST_A_DEPOSIT: Coin<TheCurrency> =
@@ -685,82 +806,6 @@ mod test {
                     },
                 )
             }
-
-            #[test]
-            fn test_overwithdraw() {
-                test::test_case(
-                    DEPOSIT_LPP,
-                    DEFAULT_MIN_UTILIZATION,
-                    |mut store, _config, bank, now| {
-                        lender::try_withdraw::<TheCurrency, _>(
-                            &mut store,
-                            testing::no_transfers(bank),
-                            test_tools::lender(),
-                            DEPOSIT_NLPN + Coin::new(1),
-                            &now,
-                            WithdrawEmitter::new(&sdk_testing::mock_env()),
-                        )
-                        .unwrap_err();
-                    },
-                )
-            }
-        }
-
-        mod nlpn_price {
-            use crate::contract::lender::{
-                self,
-                test::{self, DEFAULT_MIN_UTILIZATION, deposit_withdraw_price::DEPOSIT_NLPN},
-            };
-            use finance::{
-                coin::Coin,
-                price::{self, Price},
-            };
-            use platform::bank::testing::MockBankView;
-
-            use super::{DEPOSIT_LPP, TheCurrency};
-
-            #[test]
-            fn test_nlpn_price() {
-                const INTEREST: Coin<TheCurrency> = DEPOSIT_LPP.checked_div(2).unwrap();
-
-                test::test_case(
-                    DEPOSIT_LPP,
-                    DEFAULT_MIN_UTILIZATION,
-                    |store, _config, bank, now| {
-                        assert_eq!(
-                            lender::query_ntoken_price::<TheCurrency, _>(&store, &bank, &now)
-                                .unwrap()
-                                .0,
-                            Price::identity(),
-                        );
-
-                        let bank_got_interest =
-                            MockBankView::<TheCurrency, TheCurrency>::only_balance(
-                                DEPOSIT_LPP + INTEREST,
-                            );
-
-                        assert_eq!(
-                            price::total_of(DEPOSIT_NLPN).is(DEPOSIT_LPP + INTEREST),
-                            lender::query_ntoken_price::<TheCurrency, _>(
-                                &store,
-                                &bank_got_interest,
-                                &now
-                            )
-                            .unwrap()
-                            .0,
-                        );
-                    },
-                )
-            }
-        }
-
-        mod close_all {
-            // use crate::contract::lender;
-
-            #[test]
-            fn close_none() {
-                // lender::try_close_all()
-            }
         }
     }
 
@@ -770,15 +815,11 @@ mod test {
             percent::{Percent, bound::BoundToHundredPercent},
         };
         use platform::bank::testing::MockBankView;
-        use sdk::cosmwasm_std::Addr;
 
-        use crate::{
-            contract::{
-                ContractError,
-                lender::{self, test},
-                test as test_tools,
-            },
-            loans::Repo,
+        use crate::contract::{
+            ContractError,
+            lender::{self, test},
+            test as test_tools,
         };
 
         use super::{LiquidityPool, TheCurrency};
@@ -800,9 +841,6 @@ mod test {
                     if borrowed != 0 {
                         let mut lpp = LiquidityPool::load(&store, &config, &bank).unwrap();
                         lpp.try_open_loan(now, Coin::<TheCurrency>::from(borrowed))
-                            .and_then(|loan| {
-                                Repo::open(&mut store, Addr::unchecked("lease"), &loan)
-                            })
                             .unwrap();
                         lpp.save(&mut store).unwrap();
                     }

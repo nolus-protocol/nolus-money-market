@@ -129,14 +129,14 @@ where
     pub fn calculate_price(
         &self,
         now: &Timestamp,
-        pending_deposit: Coin<Lpn>,
+        uncommited_amount: Coin<Lpn>,
     ) -> Result<NTokenPrice<Lpn>> {
         let balance_nlpn = self.balance_nlpn();
 
         let price = if balance_nlpn.is_zero() {
             ApiConfig::initial_derivative_price()
         } else {
-            price::total_of(balance_nlpn).is(self.total_lpn(now, pending_deposit)?)
+            price::total_of(balance_nlpn).is(self.total_lpn(now, uncommited_amount)?)
         };
 
         debug_assert!(
@@ -178,11 +178,16 @@ where
             })
     }
 
-    pub fn withdraw_lpn(&mut self, receipts: Coin<NLpn>, now: &Timestamp) -> Result<Coin<Lpn>> {
+    pub fn withdraw_lpn(
+        &mut self,
+        receipts: Coin<NLpn>,
+        pending_withdraw: Coin<Lpn>,
+        now: &Timestamp,
+    ) -> Result<Coin<Lpn>> {
         debug_assert_ne!(Coin::ZERO, receipts);
 
         // the price calculation should go before the withdrawal from the total
-        self.calculate_price(now, Coin::ZERO)
+        self.calculate_price(now, pending_withdraw)
             .map(|price| price::total(receipts, price))
             .and_then(|amount_lpn: Coin<Lpn>| {
                 debug_assert_ne!(
@@ -193,7 +198,7 @@ where
                 self.total.withdraw(receipts).map(|_| amount_lpn)
             })
             .and_then(|amount_lpn: Coin<Lpn>| {
-                self.uncommited_balance().and_then(|balance| {
+                self.commited_balance(pending_withdraw).and_then(|balance| {
                     if balance < amount_lpn {
                         Err(ContractError::NoLiquidity {})
                     } else {
@@ -261,13 +266,13 @@ where
         self.bank.balance().map_err(Into::into)
     }
 
-    fn commited_balance(&self, pending_deposit: Coin<Lpn>) -> Result<Coin<Lpn>> {
+    fn commited_balance(&self, uncommited_amount: Coin<Lpn>) -> Result<Coin<Lpn>> {
         self.uncommited_balance().map(|balance: Coin<Lpn>| {
             debug_assert!(
-                pending_deposit <= balance,
-                "Pending deposit {{{pending_deposit:?}}} > Current Balance: {{{balance}}}!"
+                uncommited_amount <= balance,
+                "Pending deposit or withdraw {{{uncommited_amount:?}}} > Current Balance: {{{balance}}}!"
             );
-            balance - pending_deposit
+            balance - uncommited_amount
         })
     }
 
@@ -275,8 +280,8 @@ where
         self.total.total_principal_due() + self.total.total_interest_due_by_now(now)
     }
 
-    fn total_lpn(&self, now: &Timestamp, pending_deposit: Coin<Lpn>) -> Result<Coin<Lpn>> {
-        self.commited_balance(pending_deposit)
+    fn total_lpn(&self, now: &Timestamp, uncommited_amount: Coin<Lpn>) -> Result<Coin<Lpn>> {
+        self.commited_balance(uncommited_amount)
             .map(|balance: Coin<Lpn>| balance + self.total_due(now))
     }
 
@@ -386,7 +391,6 @@ mod test {
         const DEPOSIT_AMOUNT: Coin<TheCurrency> = Coin::new(7_000_000);
         let mut store = testing::MockStorage::default();
 
-        let loan_addr = Addr::unchecked("loan");
         let now = Timestamp::from_nanos(0);
 
         let lease_code_id = Code::unchecked(123);
@@ -411,9 +415,7 @@ mod test {
                 .expect("can't query quote")
                 .expect("should return some interest_rate")
         );
-        lpp.try_open_loan(now, DEPOSIT_AMOUNT)
-            .and_then(|loan| Repo::open(&mut store, loan_addr, &loan))
-            .unwrap();
+        lpp.try_open_loan(now, DEPOSIT_AMOUNT).unwrap();
         lpp.save(&mut store).unwrap();
 
         // wait for a year
@@ -450,11 +452,6 @@ mod test {
         let config = ApiConfig::new(lease_code_id, interest_rate, DEFAULT_MIN_UTILIZATION);
 
         let mut lpp = LiquidityPool::<TheCurrency, _>::new(&config, &bank);
-
-        // doesn't exist
-        let loan_response =
-            Repo::<TheCurrency>::query(&store, lease_addr.clone()).expect("can't query loan");
-        assert_eq!(loan_response, None);
 
         let now = now + Duration::from_nanos(10);
 
@@ -739,7 +736,7 @@ mod test {
             lpp.calculate_price(&now, Coin::ZERO).unwrap()
         );
 
-        let withdraw = lpp.withdraw_lpn(1000u128.into(), &now).unwrap();
+        let withdraw = lpp.withdraw_lpn(1000u128.into(), Coin::ZERO, &now).unwrap();
         assert_eq!(withdraw, Coin::new(1110));
     }
 
@@ -850,13 +847,12 @@ mod test {
         };
         use lpp_platform::NLpn;
         use platform::{bank::testing::MockBankView, contract::Code};
-        use sdk::cosmwasm_std::{Addr, Timestamp, testing::MockStorage};
+        use sdk::cosmwasm_std::{Timestamp, testing::MockStorage};
 
         use crate::{
             borrow::InterestRate,
             config::Config,
             contract::ContractError,
-            loans::Repo,
             lpp::{LiquidityPool, test::TheCurrency},
         };
 
@@ -882,7 +878,6 @@ mod test {
             assert_eq!(RECEIPT1, lpp.deposit(DEPOSIT1, &now).unwrap());
             assert_eq!(RECEIPT1, lpp.balance_nlpn());
 
-            let lease = Addr::unchecked("lease1");
             assert_eq!(
                 ContractError::NoLiquidity {},
                 lpp.try_open_loan(now, DEPOSIT1 + Coin::new(1)).unwrap_err()
@@ -890,7 +885,6 @@ mod test {
 
             lpp.try_open_loan(now, LOAN)
                 .inspect(|loan| assert_eq!(LOAN, loan.principal_due))
-                .and_then(|loan| Repo::open(&mut store, lease, &loan))
                 .unwrap();
             lpp.save(&mut store).unwrap();
 
@@ -927,18 +921,15 @@ mod test {
             let mut lpp = LiquidityPool::<TheCurrency, _>::new(&config, &bank);
 
             assert!(matches!(
-                lpp.withdraw_lpn(RECEIPT1, &now).unwrap_err(),
+                lpp.withdraw_lpn(RECEIPT1, Coin::ZERO, &now).unwrap_err(),
                 ContractError::OverflowError(_)
             ));
 
             assert_eq!(RECEIPT1, lpp.deposit(DEPOSIT1, &now).unwrap());
             assert_eq!(RECEIPT1, lpp.balance_nlpn());
 
-            let lease = Addr::unchecked("lease1");
-
             lpp.try_open_loan(now, LOAN)
                 .inspect(|loan| assert_eq!(LOAN, loan.principal_due))
-                .and_then(|loan| Repo::open(&mut store, lease, &loan))
                 .unwrap();
             lpp.save(&mut store).unwrap();
 
@@ -952,7 +943,7 @@ mod test {
             let expected_withdraw1 = price::total(WITHDRAW1, nlpn_to_lpn_before);
             assert_eq!(
                 expected_withdraw1,
-                lpp.withdraw_lpn(WITHDRAW1, &now).unwrap()
+                lpp.withdraw_lpn(WITHDRAW1, Coin::ZERO, &now).unwrap()
             );
 
             assert_eq!(RECEIPT1 - WITHDRAW1, lpp.balance_nlpn());
