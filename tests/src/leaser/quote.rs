@@ -7,7 +7,7 @@ use currencies::{
 use currency::CurrencyDef;
 use finance::{
     coin::{Amount, Coin},
-    percent::Percent,
+    percent::Percent100,
     price::{Price, total, total_of},
 };
 use sdk::{
@@ -80,9 +80,12 @@ fn test_quote() {
     /*   TODO: test with different time periods and amounts in LPP
      */
 
-    assert_eq!(resp.annual_interest_rate, Percent::from_permille(72),);
+    assert_eq!(resp.annual_interest_rate, Percent100::from_permille(72),);
 
-    assert_eq!(resp.annual_interest_rate_margin, Percent::from_permille(30),);
+    assert_eq!(
+        resp.annual_interest_rate_margin,
+        Percent100::from_permille(30),
+    );
 
     let leaser = test_case.address_book.leaser().clone();
     let resp = leaser_mod::query_quote::<Downpayment, LeaseCurrency>(
@@ -268,9 +271,12 @@ fn test_quote_fixed_rate() {
         3% margin_interest_rate of the leaser
     */
 
-    assert_eq!(resp.annual_interest_rate, Percent::HUNDRED);
+    assert_eq!(resp.annual_interest_rate, Percent100::HUNDRED);
 
-    assert_eq!(resp.annual_interest_rate_margin, Percent::from_percent(3));
+    assert_eq!(
+        resp.annual_interest_rate_margin,
+        Percent100::from_percent(3)
+    );
 }
 
 fn setup_feeder<ProtocolsRegistry, Treasury, Profit, Reserve, Leaser, Lpp, TimeAlarms>(

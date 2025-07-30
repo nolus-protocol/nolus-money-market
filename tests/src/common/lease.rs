@@ -5,7 +5,7 @@ use finance::{
     coin::Coin,
     duration::{Duration, Seconds},
     liability::Liability,
-    percent::Percent,
+    percent::{Percent, Percent100},
 };
 use lease::{
     api::{
@@ -149,15 +149,15 @@ pub(crate) struct InstantiatorConfig {
     //NewLeaseForm
     pub customer: Addr,
     // Liability
-    pub liability_init_percent: Percent,
-    pub liability_healthy_percent: Percent,
-    pub liability_first_liq_warn: Percent,
-    pub liability_second_liq_warn: Percent,
-    pub liability_third_liq_warn: Percent,
-    pub liability_max_percent: Percent,
+    pub liability_init_percent: Percent100,
+    pub liability_healthy_percent: Percent100,
+    pub liability_first_liq_warn: Percent100,
+    pub liability_second_liq_warn: Percent100,
+    pub liability_third_liq_warn: Percent100,
+    pub liability_max_percent: Percent100,
     pub liability_recalc_time: Duration,
     // LoanForm
-    pub annual_margin_interest: Percent,
+    pub annual_margin_interest: Percent100,
     pub lease_due_period: Duration,
     // Dex
     pub dex: ConnectionParams,
@@ -167,15 +167,15 @@ impl Default for InstantiatorConfig {
     fn default() -> Self {
         Self {
             customer: testing::user(USER),
-            liability_init_percent: Percent::from_percent(65),
-            liability_healthy_percent: Percent::from_percent(70),
-            liability_first_liq_warn: Percent::from_percent(73),
-            liability_second_liq_warn: Percent::from_percent(75),
-            liability_third_liq_warn: Percent::from_percent(78),
-            liability_max_percent: Percent::from_percent(80),
+            liability_init_percent: Percent100::from_percent(65),
+            liability_healthy_percent: Percent100::from_percent(70),
+            liability_first_liq_warn: Percent100::from_percent(73),
+            liability_second_liq_warn: Percent100::from_percent(75),
+            liability_third_liq_warn: Percent100::from_percent(78),
+            liability_max_percent: Percent100::from_percent(80),
             liability_recalc_time: Duration::from_days(20),
 
-            annual_margin_interest: Percent::from_permille(31),
+            annual_margin_interest: Percent100::from_permille(31),
             lease_due_period: Duration::from_secs(100),
 
             dex: ConnectionParams {

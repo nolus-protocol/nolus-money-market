@@ -1,6 +1,6 @@
 use currencies::PaymentGroup;
 use currency::CurrencyDef as _;
-use finance::{coin::Amount, percent::Percent};
+use finance::{coin::Amount, percent::Percent100};
 use lease::api::query::StateResponse;
 use platform::coin_legacy::to_cosmwasm_on_dex;
 use sdk::{
@@ -167,7 +167,7 @@ fn full_liquidation() {
     )
 }
 
-fn liquidation_warning(base: LeaseCoin, quote: LpnCoin, liability: Percent, level: &str) {
+fn liquidation_warning(base: LeaseCoin, quote: LpnCoin, liability: Percent100, level: &str) {
     let mut test_case = lease_mod::create_test_case::<PaymentCurrency>();
     let _lease = lease_mod::open_lease(&mut test_case, DOWNPAYMENT, None);
 
