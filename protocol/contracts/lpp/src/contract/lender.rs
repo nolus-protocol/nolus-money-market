@@ -187,16 +187,6 @@ where
         lpp.withdraw_lpn(receipts, pending_withdraw, now)
             .map(|payment_lpn| (payment_lpn, may_rewards))
     })
-    // we have a problem! withdrawing next deposits would read the same LPP balance
-    // whereas the total Nlpn balance would go down
-    // for the deposit usecase we have a notion of pending deposit ... so we may introduce
-    // a simmilar pending withdraw thing.
-    // Ooooooor define a decorator of `trait BankAccount` to track the requested amounts for sent
-    // for a *specific* currency only. Composing one for Lpn and another for Nls
-    // (and we should debug assert that no other amounts are transferred) we would avoid
-    // the special cases with *pending_Xxxx*
-    // ooooooooor reuse `pending_deposit` since it's definition matches fully to the definition
-    // of `pending_withdrawals` - the part of the balance amount that is not commited!
 }
 
 fn transfer_to<Lpn, Bank>(
@@ -209,11 +199,10 @@ fn transfer_to<Lpn, Bank>(
     Bank: BankAccount,
 {
     pool_account.send(payment_out, lender.clone());
-    //TODO match
-    if let Some(reward) = may_reward {
-        if !reward.is_zero() {
-            pool_account.send(reward, lender);
-        }
+
+    match may_reward {
+        Some(reward) if !reward.is_zero() => pool_account.send(reward, lender),
+        _ => {}
     }
 }
 
