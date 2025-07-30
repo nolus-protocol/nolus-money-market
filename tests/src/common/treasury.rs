@@ -1,4 +1,4 @@
-use finance::percent::Percent;
+use finance::percent::Percent100;
 use sdk::{cosmwasm_std::Addr, testing};
 use treasury::{
     msg::InstantiateMsg,
@@ -30,11 +30,11 @@ impl Instantiator {
             tvl_to_apr: RewardScale::try_from(vec![
                 Bar {
                     tvl: Default::default(),
-                    apr: Percent::from_permille(10),
+                    apr: Percent100::from_permille(10),
                 },
                 Bar {
                     tvl: TotalValueLocked::new(1000),
-                    apr: Percent::from_permille(10),
+                    apr: Percent100::from_permille(10),
                 },
             ])
             .unwrap(),

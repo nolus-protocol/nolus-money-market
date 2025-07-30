@@ -6,7 +6,7 @@ use currency::CurrencyDef;
 use finance::{
     coin::{Amount, Coin},
     duration::Duration,
-    percent::Percent,
+    percent::Percent100,
 };
 use platform::coin_legacy;
 pub use sdk::cosmwasm_std::Coin as CwCoin;
@@ -19,9 +19,9 @@ use sdk::{
     testing::{self, CwApp, InterChainMsgSender, new_app},
 };
 
-pub(crate) const BASE_INTEREST_RATE: Percent = Percent::from_permille(70);
-pub(crate) const UTILIZATION_OPTIMAL: Percent = Percent::from_permille(700);
-pub(crate) const ADDON_OPTIMAL_INTEREST_RATE: Percent = Percent::from_permille(20);
+pub(crate) const BASE_INTEREST_RATE: Percent100 = Percent100::from_permille(70);
+pub(crate) const UTILIZATION_OPTIMAL: Percent100 = Percent100::from_permille(700);
+pub(crate) const ADDON_OPTIMAL_INTEREST_RATE: Percent100 = Percent100::from_permille(20);
 
 type CwContractWrapper<
     ExecMsg,
