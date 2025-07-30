@@ -6,7 +6,10 @@ use serde::{Deserialize, Serialize};
 use dex::{Account, Connectable, ConnectionParams, Contract, IcaConnectee};
 use sdk::cosmwasm_std::{QuerierWrapper, Timestamp};
 
-use crate::msg::ConfigResponse;
+use crate::{
+    msg::ConfigResponse,
+    result::ContractResult,
+};
 
 use super::{Config, ConfigManagement, IcaConnector, State, idle::Idle};
 
@@ -61,8 +64,8 @@ impl Display for OpenIca {
     }
 }
 
-impl ConfigManagement for IcaConnector {
-    fn load_config(&self) -> ContractResult<&Config> {
+impl ConfigManagement for OpenIca {
+    fn load_config(&self) -> ContractResult<Config> {
         Ok(&self.config)
     }
 }
