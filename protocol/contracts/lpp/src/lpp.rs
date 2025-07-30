@@ -56,10 +56,7 @@ pub(crate) struct LiquidityPool<'cfg, 'bank, Lpn, Bank> {
     total: Total<Lpn>,
 }
 
-impl<'cfg, 'bank, Lpn, Bank> LiquidityPool<'cfg, 'bank, Lpn, Bank>
-where
-    Lpn: 'static,
-{
+impl<'cfg, 'bank, Lpn, Bank> LiquidityPool<'cfg, 'bank, Lpn, Bank> {
     pub fn new(config: &'cfg ApiConfig, bank: &'bank Bank) -> Self {
         Self {
             config,
@@ -83,7 +80,7 @@ where
 
 impl<Lpn, Bank> LiquidityPool<'_, '_, Lpn, Bank>
 where
-    Lpn: 'static + CurrencyDef,
+    Lpn: CurrencyDef,
     Bank: BankAccountView,
 {
     pub fn deposit_capacity(

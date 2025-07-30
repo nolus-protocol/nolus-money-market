@@ -6,11 +6,12 @@ use finance::{
 use lpp_platform::NLpn;
 use platform::{
     bank::{BankAccount, BankAccountView},
-    batch::Batch,
+    message::Response as MessageResponse,
 };
 use sdk::cosmwasm_std::{Addr, Storage, Timestamp};
 
 use crate::{
+    event::WithdrawEmitter,
     lpp::LiquidityPool,
     msg::{BalanceResponse, PriceResponse},
     state::{Config, Deposit, TotalRewards},
@@ -71,13 +72,18 @@ where
 }
 
 /// Withdraw receipts and return the returned amount, potentially some unclaimed `Nls` rewards, and their transfer messages
+///
+/// Note: Due to the asynchronous execution of bank transfers this operation should be run at most once at a transaction.
+/// Should one need more times then balance adjustment/forecasting is needed, e.g. subtracting the transfer from the balance,
+/// or exposing the notion of 'commited' and 'uncommited' amounts at this level.
 pub(super) fn try_withdraw<Lpn, Bank>(
     storage: &mut dyn Storage,
-    mut bank: Bank,
+    mut pool_account: Bank,
     lender: Addr,
     receipts: Coin<NLpn>,
     now: &Timestamp,
-) -> Result<(Coin<Lpn>, Option<Coin<Nls>>, Batch)>
+    mut emitter: WithdrawEmitter<'_, Lpn>,
+) -> Result<MessageResponse>
 where
     Lpn: CurrencyDef,
     Bank: BankAccount,
@@ -86,30 +92,130 @@ where
         return Err(ContractError::ZeroWithdrawFunds);
     }
 
-    let maybe_reward = TotalRewards::load_or_default(storage).and_then(|total_rewards| {
-        Deposit::load(storage, lender.clone(), total_rewards).and_then(|mut deposit| {
-            deposit
-                .withdraw(receipts)
-                .and_then(|may_reward| deposit.save(storage).map(|()| may_reward))
+    Config::load(storage)
+        .and_then(|config| {
+            TotalRewards::load_or_default(storage).and_then(|total_rewards| {
+                LiquidityPool::<Lpn, _>::load(storage, &config, &pool_account).and_then(
+                    |mut lpp| {
+                        Deposit::load(storage, lender.clone(), total_rewards)
+                            .and_then(|mut deposit| {
+                                withdraw(&mut deposit, &mut lpp, receipts, now).and_then(
+                                    |(payment_out, may_reward)| {
+                                        deposit.save(storage).map(|()| (payment_out, may_reward))
+                                    },
+                                )
+                            })
+                            .and_then(|(payment_out, may_reward)| {
+                                lpp.save(storage).map(|()| (payment_out, may_reward))
+                            })
+                    },
+                )
+            })
         })
-    })?;
+        .map(|(payment_out, may_reward)| {
+            transfer_to(lender.clone(), payment_out, may_reward, &mut pool_account);
 
-    if let Some(reward) = maybe_reward {
+            emitter.on_withdraw(lender, receipts, payment_out, may_reward)
+        })
+        .map(|()| MessageResponse::messages_with_events(pool_account.into(), emitter))
+}
+
+//TODO cache the BankView on Lpn
+pub(super) fn try_close_all<Lpn, BankView, Bank>(
+    storage: &mut dyn Storage,
+    pool_view: BankView, // acceptable trick since the bank transfers get visible after the ransaction finishes
+    mut pool_account: Bank, // enable transfer scheduling while in process of reading balances
+    now: &Timestamp,
+    mut emitter: WithdrawEmitter<'_, Lpn>,
+) -> Result<MessageResponse>
+where
+    Lpn: CurrencyDef,
+    BankView: BankAccountView,
+    Bank: BankAccount,
+{
+    Config::load(storage).and_then(|config| {
+        TotalRewards::load_or_default(storage).and_then(|total_rewards| {
+            LiquidityPool::<Lpn, _>::load(storage, &config, &pool_view).and_then(|mut lpp| {
+                //TODO use collect instead
+                let deposits = Deposit::iter(storage, total_rewards).try_fold(
+                    Vec::<Deposit>::default(),
+                    |mut deposits, may_deposit| {
+                        may_deposit.and_then(|mut deposit| {
+                            let receipts = deposit.receipts();
+                            withdraw(&mut deposit, &mut lpp, receipts, now).map(
+                                |(payment_out, may_reward)| {
+                                    transfer_to(
+                                        deposit.owner().clone(),
+                                        payment_out,
+                                        may_reward,
+                                        &mut pool_account,
+                                    );
+                                    emitter.on_withdraw(
+                                        deposit.owner().clone(),
+                                        receipts,
+                                        payment_out,
+                                        may_reward,
+                                    );
+                                    deposits.push(deposit);
+                                    deposits
+                                },
+                            )
+                        })
+                    },
+                )?;
+
+                deposits
+                    .into_iter()
+                    .try_for_each(|deposit| deposit.save(storage))
+                    .map(|()| MessageResponse::messages_with_events(pool_account.into(), emitter))
+                    .and_then(|resp| lpp.save(storage).map(|()| resp))
+            })
+        })
+    })
+}
+
+fn withdraw<Lpn, Bank>(
+    deposit: &mut Deposit,
+    lpp: &mut LiquidityPool<'_, '_, Lpn, Bank>,
+    receipts: Coin<NLpn>,
+    now: &Timestamp,
+) -> Result<(Coin<Lpn>, Option<Coin<Nls>>)>
+where
+    Lpn: CurrencyDef,
+    Bank: BankAccountView,
+{
+    deposit.withdraw(receipts).and_then(|may_rewards| {
+        lpp.withdraw_lpn(receipts, now)
+            .map(|payment_lpn| (payment_lpn, may_rewards))
+    })
+    // we have a problem! withdrawing next deposits would read the same LPP balance
+    // whereas the total Nlpn balance would go down
+    // for the deposit usecase we have a notion of pending deposit ... so we may introduce
+    // a simmilar pending withdraw thing.
+    // Ooooooor define a decorator of `trait BankAccount` to track the requested amounts for sent
+    // for a *specific* currency only. Composing one for Lpn and another for Nls
+    // (and we should debug assert that no other amounts are transferred) we would avoid
+    // the special cases with *pending_Xxxx*
+    // ooooooooor reuse `pending_deposit` since it's definition matches fully to the definition
+    // of `pending_withdrawals` - the part of the balance amount that is not commited!
+}
+
+fn transfer_to<Lpn, Bank>(
+    lender: Addr,
+    payment_out: Coin<Lpn>,
+    may_reward: Option<Coin<Nls>>,
+    pool_account: &mut Bank,
+) where
+    Lpn: CurrencyDef,
+    Bank: BankAccount,
+{
+    pool_account.send(payment_out, lender.clone());
+    //TODO match
+    if let Some(reward) = may_reward {
         if !reward.is_zero() {
-            bank.send(reward, lender.clone());
+            pool_account.send(reward, lender);
         }
     }
-
-    let payment_lpn = Config::load(storage).and_then(|config| {
-        LiquidityPool::load(storage, &config, &bank).and_then(|mut lpp| {
-            lpp.withdraw_lpn(receipts, now)
-                .and_then(|payment_lpn| lpp.save(storage).map(|()| payment_lpn))
-        })
-    })?;
-
-    bank.send(payment_lpn, lender.clone());
-
-    Ok((payment_lpn, maybe_reward, bank.into()))
 }
 
 pub fn query_ntoken_price<Lpn, Bank>(
@@ -145,7 +251,7 @@ mod test {
         percent::{Percent, bound::BoundToHundredPercent},
     };
     use platform::{
-        bank::{BankAccountView, BankStub, testing::MockBankView},
+        bank::{BankAccountView, testing::MockBankView},
         contract::Code,
     };
     use sdk::cosmwasm_std::{
@@ -160,7 +266,7 @@ mod test {
             lender,
             test::{self as test_tools, TheCurrency},
         },
-        state::Config,
+        state::{Config, TotalRewards},
     };
 
     use super::LiquidityPool;
@@ -176,12 +282,7 @@ mod test {
         f: F,
     ) where
         Balance: Copy + Into<Coin<TheCurrency>>,
-        F: FnOnce(
-            MockStorage,
-            ApiConfig,
-            BankStub<MockBankView<TheCurrency, TheCurrency>>,
-            Timestamp,
-        ),
+        F: FnOnce(MockStorage, ApiConfig, MockBankView<TheCurrency, TheCurrency>, Timestamp),
     {
         let mut store = testing::MockStorage::default();
         let now = Timestamp::from_nanos(1_571_897_419_879_405_538);
@@ -196,7 +297,7 @@ mod test {
             .expect("Couldn't construct interest rate value!"),
             BoundToHundredPercent::ZERO,
         );
-        let bank = BankStub::with_view(MockBankView::only_balance(initial_lpp_balance.into()));
+        let bank = MockBankView::only_balance(initial_lpp_balance.into());
         setup_storage(&mut store, &config, &bank);
 
         if !initial_lpp_balance.into().is_zero() {
@@ -224,6 +325,7 @@ mod test {
         LiquidityPool::<TheCurrency, _>::new(config, bank)
             .save(storage)
             .unwrap();
+        TotalRewards::save(&TotalRewards::load_or_default(storage).unwrap(), storage).unwrap();
     }
 
     mod deposit_withdraw_price {
@@ -290,15 +392,29 @@ mod test {
         }
 
         mod withdraw {
+            use cosmwasm_std::Addr;
+            use currency::platform::Nls;
             use finance::{coin::Coin, zero::Zero};
             use lpp_platform::NLpn;
+            use platform::bank::{
+                BankAccountView,
+                testing::{self, MockBankView},
+            };
+            use sdk::cosmwasm_std::testing as sdk_testing;
 
-            use crate::contract::{
-                lender::{
-                    self,
-                    test::{self, DEFAULT_MIN_UTILIZATION, deposit_withdraw_price::DEPOSIT_NLPN},
+            use crate::{
+                contract::{
+                    lender::{
+                        self,
+                        test::{
+                            self, DEFAULT_MIN_UTILIZATION,
+                            deposit_withdraw_price::{DEPOSIT_NLPN, TEST_AMOUNT},
+                        },
+                    },
+                    test as test_tools,
                 },
-                test as test_tools,
+                event::WithdrawEmitter,
+                state::TotalRewards,
             };
 
             use super::{DEPOSIT_LPP, TheCurrency};
@@ -311,10 +427,11 @@ mod test {
                     |mut store, _config, bank, now| {
                         lender::try_withdraw::<TheCurrency, _>(
                             &mut store,
-                            bank,
+                            testing::no_transfers(bank),
                             test_tools::lender(),
                             Coin::ZERO,
                             &now,
+                            WithdrawEmitter::new(&sdk_testing::mock_env()),
                         )
                         .unwrap_err();
                     },
@@ -323,25 +440,29 @@ mod test {
 
             #[test]
             fn test_partial_withdraw() {
-                const WITHDRAWN: Coin<NLpn> = DEPOSIT_NLPN.checked_div(2).unwrap();
+                const WITHDRAWN: Coin<NLpn> = Coin::new(TEST_AMOUNT.checked_div(2).unwrap());
+                const WITHDRAWN_LPP: Coin<TheCurrency> =
+                    Coin::new(TEST_AMOUNT.checked_div(2).unwrap());
                 const LEFTOVER: Coin<NLpn> = DEPOSIT_NLPN.checked_sub(WITHDRAWN).unwrap();
 
                 test::test_case(
                     DEPOSIT_LPP,
                     DEFAULT_MIN_UTILIZATION,
                     |mut store, _config, bank, now| {
+                        let lender = test_tools::lender();
                         lender::try_withdraw::<TheCurrency, _>(
                             &mut store,
-                            bank,
-                            test_tools::lender(),
+                            testing::one_transfer(WITHDRAWN_LPP, lender.clone(), bank),
+                            lender.clone(),
                             WITHDRAWN,
                             &now,
+                            WithdrawEmitter::new(&sdk_testing::mock_env()),
                         )
                         .unwrap();
 
                         assert_eq!(
                             Coin::new(
-                                lender::query_balance(&store, test_tools::lender())
+                                lender::query_balance(&store, lender)
                                     .unwrap()
                                     .balance
                                     .u128()
@@ -358,18 +479,203 @@ mod test {
                     DEPOSIT_LPP,
                     DEFAULT_MIN_UTILIZATION,
                     |mut store, _config, bank, now| {
+                        let lender = test_tools::lender();
                         lender::try_withdraw::<TheCurrency, _>(
                             &mut store,
-                            bank,
-                            test_tools::lender(),
+                            testing::one_transfer(DEPOSIT_LPP, lender.clone(), bank),
+                            lender,
                             DEPOSIT_NLPN,
                             &now,
+                            WithdrawEmitter::new(&sdk_testing::mock_env()),
                         )
                         .unwrap();
 
                         assert!(
                             Coin::<TheCurrency>::new(
                                 lender::query_balance(&store, test_tools::lender())
+                                    .unwrap()
+                                    .balance
+                                    .u128()
+                            )
+                            .is_zero()
+                        );
+                    },
+                )
+            }
+
+            #[test]
+            fn test_full_withdraw_reward() {
+                const REWARDS: Coin<Nls> = Coin::new(422);
+
+                test::test_case(
+                    DEPOSIT_LPP,
+                    DEFAULT_MIN_UTILIZATION,
+                    |mut store, _config, bank, now| {
+                        let rewards = TotalRewards::load_or_default(&store)
+                            .unwrap()
+                            .add(REWARDS, DEPOSIT_NLPN);
+                        TotalRewards::save(&rewards, &mut store).unwrap();
+
+                        let lender = test_tools::lender();
+                        lender::try_withdraw::<TheCurrency, _>(
+                            &mut store,
+                            testing::two_transfers(
+                                DEPOSIT_LPP,
+                                lender.clone(),
+                                REWARDS,
+                                lender.clone(),
+                                bank,
+                            ),
+                            lender,
+                            DEPOSIT_NLPN,
+                            &now,
+                            WithdrawEmitter::new(&sdk_testing::mock_env()),
+                        )
+                        .unwrap();
+
+                        assert!(
+                            Coin::<TheCurrency>::new(
+                                lender::query_balance(&store, test_tools::lender())
+                                    .unwrap()
+                                    .balance
+                                    .u128()
+                            )
+                            .is_zero()
+                        );
+                    },
+                )
+            }
+
+            #[test]
+            fn test_full_withdraw_interest() {
+                const INTEREST_TOTAL: Coin<TheCurrency> = Coin::new(48);
+                const INTEREST_A_DEPOSIT: Coin<TheCurrency> =
+                    INTEREST_TOTAL.checked_div(2).unwrap();
+                let other_lender = Addr::unchecked("other_lender");
+                test::test_case(
+                    DEPOSIT_LPP,
+                    DEFAULT_MIN_UTILIZATION,
+                    |mut store, _config, bank, now| {
+                        let lender = test_tools::lender();
+                        let plus_deposit = MockBankView::<_, TheCurrency>::only_balance(
+                            bank.balance::<TheCurrency>().unwrap() + DEPOSIT_LPP,
+                        );
+
+                        lender::try_deposit(
+                            &mut store,
+                            &plus_deposit,
+                            other_lender.clone(),
+                            DEPOSIT_LPP,
+                            &now,
+                        )
+                        .unwrap();
+
+                        let plus_deposit_and_interest =
+                            MockBankView::<_, TheCurrency>::only_balance(
+                                plus_deposit.balance().unwrap() + INTEREST_TOTAL,
+                            );
+                        lender::try_withdraw::<TheCurrency, _>(
+                            &mut store,
+                            testing::one_transfer(
+                                DEPOSIT_LPP + INTEREST_A_DEPOSIT,
+                                lender.clone(),
+                                plus_deposit_and_interest.clone(),
+                            ),
+                            lender,
+                            DEPOSIT_NLPN,
+                            &now,
+                            WithdrawEmitter::new(&sdk_testing::mock_env()),
+                        )
+                        .unwrap();
+
+                        assert!(
+                            Coin::<TheCurrency>::new(
+                                lender::query_balance(&store, test_tools::lender())
+                                    .unwrap()
+                                    .balance
+                                    .u128()
+                            )
+                            .is_zero()
+                        );
+
+                        //simulate finality of the previous withdraw
+                        let past_withdrawal = MockBankView::<_, TheCurrency>::only_balance(
+                            plus_deposit_and_interest.balance().unwrap()
+                                - DEPOSIT_LPP
+                                - INTEREST_A_DEPOSIT,
+                        );
+                        lender::try_withdraw::<TheCurrency, _>(
+                            &mut store,
+                            testing::one_transfer(
+                                DEPOSIT_LPP + INTEREST_A_DEPOSIT,
+                                other_lender.clone(),
+                                past_withdrawal,
+                            ),
+                            other_lender,
+                            DEPOSIT_NLPN,
+                            &now,
+                            WithdrawEmitter::new(&sdk_testing::mock_env()),
+                        )
+                        .unwrap();
+                    },
+                )
+            }
+
+            #[test]
+            fn test_close_all() {
+                const INTEREST_TOTAL: Coin<TheCurrency> = Coin::new(48);
+                const INTEREST_A_DEPOSIT: Coin<TheCurrency> =
+                    INTEREST_TOTAL.checked_div(2).unwrap();
+                let other_lender = Addr::unchecked("other_lender");
+                test::test_case(
+                    DEPOSIT_LPP,
+                    DEFAULT_MIN_UTILIZATION,
+                    |mut store, _config, bank, now| {
+                        let lender = test_tools::lender();
+                        let plus_deposit = MockBankView::<_, TheCurrency>::only_balance(
+                            bank.balance::<TheCurrency>().unwrap() + DEPOSIT_LPP,
+                        );
+
+                        lender::try_deposit(
+                            &mut store,
+                            &plus_deposit,
+                            other_lender.clone(),
+                            DEPOSIT_LPP,
+                            &now,
+                        )
+                        .unwrap();
+
+                        let plus_deposit_and_interest =
+                            MockBankView::<_, TheCurrency>::only_balance(
+                                plus_deposit.balance().unwrap() + INTEREST_TOTAL,
+                            );
+                        lender::try_close_all::<TheCurrency, _, _>(
+                            &mut store,
+                            plus_deposit_and_interest.clone(),
+                            testing::two_transfers(
+                                DEPOSIT_LPP + INTEREST_A_DEPOSIT,
+                                lender.clone(),
+                                DEPOSIT_LPP + INTEREST_A_DEPOSIT,
+                                other_lender.clone(),
+                                plus_deposit_and_interest,
+                            ),
+                            &now,
+                            WithdrawEmitter::new(&sdk_testing::mock_env()),
+                        )
+                        .unwrap();
+
+                        assert!(
+                            Coin::<TheCurrency>::new(
+                                lender::query_balance(&store, test_tools::lender())
+                                    .unwrap()
+                                    .balance
+                                    .u128()
+                            )
+                            .is_zero()
+                        );
+                        assert!(
+                            Coin::<TheCurrency>::new(
+                                lender::query_balance(&store, other_lender)
                                     .unwrap()
                                     .balance
                                     .u128()
@@ -388,10 +694,11 @@ mod test {
                     |mut store, _config, bank, now| {
                         lender::try_withdraw::<TheCurrency, _>(
                             &mut store,
-                            bank,
+                            testing::no_transfers(bank),
                             test_tools::lender(),
                             DEPOSIT_NLPN + Coin::new(1),
                             &now,
+                            WithdrawEmitter::new(&sdk_testing::mock_env()),
                         )
                         .unwrap_err();
                     },
@@ -444,6 +751,15 @@ mod test {
                         );
                     },
                 )
+            }
+        }
+
+        mod close_all {
+            // use crate::contract::lender;
+
+            #[test]
+            fn close_none() {
+                // lender::try_close_all()
             }
         }
     }

@@ -1,3 +1,4 @@
+use cosmwasm_std::Order;
 use serde::{Deserialize, Serialize};
 
 use currency::platform::Nls;
@@ -14,6 +15,7 @@ use crate::{
 };
 
 #[derive(Debug)]
+#[cfg_attr(test, derive(Clone, PartialEq, Eq))]
 pub struct Deposit {
     addr: Addr,
     data: DepositData,
@@ -51,12 +53,15 @@ impl Deposit {
             .and_then(|may_deposit| may_deposit.ok_or_else(|| ContractError::NoDeposit {}))
     }
 
-    fn may_load(storage: &dyn Storage, addr: Addr, total_rewards: Index) -> Result<Option<Self>> {
+    pub fn iter<'storage>(
+        storage: &'storage dyn Storage,
+        total_rewards: Index,
+    ) -> impl Iterator<Item = Result<Self>> + use<'storage> {
         Self::DEPOSITS
-            .may_load(storage, addr.clone())
-            .map_err(Into::into)
-            .map(|may_data| {
-                may_data.map(|data| Self {
+            .prefix(())
+            .range(storage, None, None, Order::Ascending)
+            .map(move |record| {
+                record.map_err(Into::into).map(|(addr, data)| Self {
                     addr,
                     data,
                     total_rewards,
@@ -73,6 +78,14 @@ impl Deposit {
                 .save(storage, self.addr.clone(), &self.data)
                 .map_err(Into::into)
         }
+    }
+
+    pub fn owner(&self) -> &Addr {
+        &self.addr
+    }
+
+    pub fn receipts(&self) -> Coin<NLpn> {
+        self.data.deposited_nlpn
     }
 
     pub fn deposit(&mut self, deposited_nlpn: Coin<NLpn>) {
@@ -102,10 +115,6 @@ impl Deposit {
         Ok(maybe_reward)
     }
 
-    pub fn receipts(&self) -> Coin<NLpn> {
-        self.data.deposited_nlpn
-    }
-
     /// query accounted rewards
     pub fn query_rewards(&self) -> Coin<Nls> {
         let deposit = &self.data;
@@ -127,6 +136,19 @@ impl Deposit {
         self.data.pending_rewards_nls = Coin::ZERO;
 
         reward
+    }
+
+    fn may_load(storage: &dyn Storage, addr: Addr, total_rewards: Index) -> Result<Option<Self>> {
+        Self::DEPOSITS
+            .may_load(storage, addr.clone())
+            .map_err(Into::into)
+            .map(|may_data| {
+                may_data.map(|data| Self {
+                    addr,
+                    data,
+                    total_rewards,
+                })
+            })
     }
 
     fn update_rewards(&mut self) {
@@ -283,5 +305,82 @@ mod test {
         assert_eq!(REWARD_DEPOSIT, deposit1.query_rewards());
         assert_eq!(REWARD_DEPOSIT, deposit1.claim_rewards());
         assert_eq!(Coin::ZERO, deposit1.query_rewards());
+    }
+
+    #[test]
+    fn test_empty_iter() {
+        let mut store = MockStorage::default();
+        let rewards = TotalRewards::load_or_default(&store).unwrap();
+        assert_eq!(None, Deposit::iter(&store, rewards).next());
+
+        let addr1 = Addr::unchecked("depositor1");
+
+        let mut deposit1 = Deposit::load_or_default(&store, addr1.clone(), rewards).unwrap();
+        assert_eq!(None, Deposit::iter(&store, rewards).next()); //non-saved
+
+        const DEPOSIT_RECEIPTS: Coin<NLpn> = Coin::new(1000);
+        const WITHDRAW1_RECEIPTS: Coin<NLpn> = Coin::new(245);
+        const WITHDRAW2_RECEIPTS: Option<Coin<NLpn>> =
+            DEPOSIT_RECEIPTS.checked_sub(WITHDRAW1_RECEIPTS);
+        deposit1.deposit(DEPOSIT_RECEIPTS);
+        deposit1.save(&mut store).unwrap();
+
+        let mut deposit1 = Deposit::load(&store, addr1.clone(), rewards).unwrap();
+        {
+            let mut deposits = Deposit::iter(&store, rewards);
+            assert_eq!(Some(Ok(deposit1.clone())), deposits.next());
+            assert_eq!(None, deposits.next());
+        }
+
+        assert_eq!(Ok(None), deposit1.withdraw(WITHDRAW1_RECEIPTS));
+        deposit1.save(&mut store).unwrap();
+
+        let mut deposit1 = Deposit::load(&store, addr1.clone(), rewards).unwrap();
+        assert_eq!(
+            Some(Ok(deposit1.clone())),
+            Deposit::iter(&store, rewards).next()
+        );
+
+        assert_eq!(
+            // closing the deposit
+            Ok(Some(Coin::ZERO)),
+            deposit1.withdraw(WITHDRAW2_RECEIPTS.unwrap())
+        );
+        assert_eq!(Coin::ZERO, deposit1.receipts());
+        deposit1.save(&mut store).unwrap();
+        assert_eq!(None, Deposit::iter(&store, rewards).next());
+    }
+
+    #[test]
+    fn test_iter_deposits() {
+        let addr1 = Addr::unchecked("depositor1");
+        let addr2 = Addr::unchecked("depositor2");
+        const DEPOSIT1_RECEIPTS: Coin<NLpn> = Coin::new(1000);
+        const DEPOSIT2_RECEIPTS: Coin<NLpn> = Coin::new(352);
+
+        let mut store = MockStorage::default();
+        let rewards = TotalRewards::load_or_default(&store).unwrap();
+        assert_eq!(None, Deposit::iter(&store, rewards).next());
+
+        {
+            let mut deposit1 = Deposit::load_or_default(&store, addr1.clone(), rewards).unwrap();
+            deposit1.deposit(DEPOSIT1_RECEIPTS);
+            deposit1.save(&mut store).unwrap();
+        }
+        {
+            let mut deposit2 = Deposit::load_or_default(&store, addr2.clone(), rewards).unwrap();
+            deposit2.deposit(DEPOSIT2_RECEIPTS);
+            deposit2.save(&mut store).unwrap();
+        }
+
+        {
+            let deposit1 = Deposit::load(&store, addr1.clone(), rewards).unwrap();
+            let deposit2 = Deposit::load(&store, addr2.clone(), rewards).unwrap();
+
+            let mut deposits = Deposit::iter(&store, rewards);
+            assert_eq!(Some(Ok(deposit1)), deposits.next());
+            assert_eq!(Some(Ok(deposit2)), deposits.next());
+            assert_eq!(None, deposits.next());
+        }
     }
 }

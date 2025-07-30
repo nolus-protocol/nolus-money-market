@@ -25,7 +25,7 @@ use versioning::{
 
 use crate::{
     config::Config as ApiConfig,
-    event,
+    event::{self, WithdrawEmitter},
     lpp::{LiquidityPool, LppBalances},
     msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg, SudoMsg},
     state::Config,
@@ -181,13 +181,8 @@ pub fn execute(
             info.sender.clone(),
             amount,
             &env.block.time,
+            WithdrawEmitter::new(&env),
         )
-        .map(|(amount_lpn, maybe_reward, bank_transfers)| {
-            PlatformResponse::messages_with_event(
-                bank_transfers,
-                event::emit_withdraw(env, info.sender, amount_lpn, amount, maybe_reward.is_some()),
-            )
-        })
         .map(response::response_only_messages),
         ExecuteMsg::CloseAllDeposits() => {
             SingleUserAccess::new(
@@ -200,7 +195,14 @@ pub fn execute(
                 borrow::query_empty::<LpnCurrency>(deps.storage),
                 "There is/are active loan(s)! The protocol admin should have checked it first!"
             );
-            todo!("iterate over all deposits, and finally close them")
+            lender::try_close_all::<LpnCurrency, _, _>(
+                deps.storage,
+                bank::account_view(&env.contract.address.clone(), deps.querier),
+                bank::account(&env.contract.address.clone(), deps.querier),
+                &env.block.time,
+                WithdrawEmitter::new(&env),
+            )
+            .map(response::response_only_messages)
         }
     }
     .inspect_err(platform_error::log(api))
