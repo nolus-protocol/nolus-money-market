@@ -95,7 +95,7 @@ pub fn execute(
             let config = State::load(deps.storage)?.load_config()?;
             
             access_control::check(
-                &TimeAlarmDelivery::new(&config.time_alarms()?),
+                &TimeAlarmDelivery::new(&config.time_alarms()),
                 &info.sender,
             )?;
 
@@ -108,7 +108,7 @@ pub fn execute(
             let config = State::load(deps.storage)?.load_config()?;
             
             access_control::check(
-                &ContractOwnerPermission::new(&config.contract_owner()?),
+                &ContractOwnerPermission::new(&config.contract_owner()),
                 &info.sender,
             )?;
 

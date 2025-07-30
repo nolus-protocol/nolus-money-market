@@ -141,7 +141,7 @@ impl Contract for Idle {
 }
 
 impl ConfigManagement for Idle {
-    fn load_config(&self) -> ContractResult<&Config> {
+    fn load_config(&self) -> ContractResult<Config> {
         Ok(&self.config)
     }
 
