@@ -1,4 +1,4 @@
-use std::{fmt::Debug, ops::Mul};
+use std::fmt::Debug;
 
 use serde::{Deserialize, Serialize};
 
@@ -30,21 +30,6 @@ where
             nominator,
             denominator,
         }
-    }
-
-    // TODO remove it when implement Ord for SimpleFraction
-    pub fn min(self, other: SimpleFraction<U>) -> SimpleFraction<U>
-    where
-        U: Mul<Output = U>,
-    {
-        // a / b, c /d compare them by cross-multiplication
-        // if ad = bc => a / b = c / d
-        // if ad < bc => a / b < c / d
-        // if ad > bc => a / b > c / d
-
-        let ad = self.nominator.mul(other.denominator);
-        let bc = self.denominator.mul(other.denominator);
-        if ad <= bc { self } else { other }
     }
 }
 
