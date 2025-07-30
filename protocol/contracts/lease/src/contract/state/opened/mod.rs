@@ -15,7 +15,6 @@ mod event;
 mod payment;
 pub mod permission;
 pub mod repay;
-pub mod permission;
 
 fn lease_state(
     lease: Lease,

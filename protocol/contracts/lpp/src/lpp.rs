@@ -453,7 +453,7 @@ mod test {
             lease_code_id,
             interest_rate,
             DEFAULT_MIN_UTILIZATION,
-            protocol_admin
+            protocol_admin,
         );
 
         let mut lpp = LiquidityPool::<TheCurrency, _>::new(&config, &bank);
