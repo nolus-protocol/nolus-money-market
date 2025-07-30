@@ -61,7 +61,7 @@ pub fn instantiate(
             lease_code,
             msg.borrow_rate,
             msg.min_utilization,
-            protocol_admin
+            protocol_admin,
         );
         Config::store(&config, deps.storage).map(|()| config)
     })

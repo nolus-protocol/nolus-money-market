@@ -306,7 +306,7 @@ mod test {
             config.lease_code(),
             *config.borrow_rate(),
             min_utilization,
-            protocol_admin
+            protocol_admin,
         );
         Config::store(&config_custom, &mut store).unwrap();
         f(store, config_custom, bank, now)
