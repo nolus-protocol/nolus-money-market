@@ -80,11 +80,10 @@ impl InterestRate {
             config
                 .of(utilization_factor)
                 .and_then(|utilization_config| {
-                    Percent100::try_from(utilization_config)
+                    utilization_config
+                        .checked_add(self.base_interest_rate.into())
                         .ok()
-                        .and_then(|utilization_config| {
-                            utilization_config.checked_add(self.base_interest_rate).ok()
-                        })
+                        .and_then(|res| res.try_into().ok())
                 })
         })
         .expect("The borrow rate must not exceed 100%")
