@@ -2,7 +2,7 @@ use std::fmt::Debug;
 
 use serde::{Deserialize, Serialize};
 
-use crate::{fraction::Fraction, fractionable::Fractionable, zero::Zero};
+use crate::{fractionable::Fractionable, rational::Rational, traits::FractionUnit, zero::Zero};
 
 // TODO review whether it may gets simpler if extend Fraction
 pub trait Ratio<U> {
@@ -13,14 +13,14 @@ pub trait Ratio<U> {
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 #[cfg_attr(any(test, feature = "testing"), derive(PartialEq,))]
 #[serde(rename_all = "snake_case")]
-pub struct Rational<U> {
+pub struct SimpleFraction<U> {
     nominator: U,
     denominator: U,
 }
 
-impl<U> Rational<U>
+impl<U> SimpleFraction<U>
 where
-    U: Zero + Debug + PartialEq<U>,
+    U: FractionUnit,
 {
     #[track_caller]
     pub fn new(nominator: U, denominator: U) -> Self {
@@ -33,20 +33,7 @@ where
     }
 }
 
-impl<U, T> Fraction<U> for Rational<T>
-where
-    Self: Ratio<U>,
-{
-    #[track_caller]
-    fn of<A>(&self, whole: A) -> A
-    where
-        A: Fractionable<U>,
-    {
-        whole.safe_mul(self)
-    }
-}
-
-impl<U, T> Ratio<U> for Rational<T>
+impl<U, T> Ratio<U> for SimpleFraction<T>
 where
     T: Zero + Copy + PartialEq + Into<U>,
 {
@@ -56,5 +43,17 @@ where
 
     fn total(&self) -> U {
         self.denominator.into()
+    }
+}
+
+impl<U> Rational<U> for SimpleFraction<U>
+where
+    U: FractionUnit,
+{
+    fn of<A>(self, whole: A) -> Option<A>
+    where
+        A: Fractionable<U>,
+    {
+        Some(whole.safe_mul(&self))
     }
 }
