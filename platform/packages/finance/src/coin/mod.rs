@@ -105,6 +105,19 @@ impl<C> Coin<C> {
     }
 }
 
+impl<C> Coin<C>
+where
+    C: 'static,
+{
+    pub fn coerce_into<SameC>(self) -> Coin<SameC>
+    where
+        SameC: 'static,
+    {
+        debug_assert!(currency::equal::<C, SameC>());
+        Coin::new(self.amount)
+    }
+}
+
 impl<C> Clone for Coin<C> {
     fn clone(&self) -> Self {
         *self
@@ -402,6 +415,11 @@ mod test {
         let exp_sum = coin1(15);
         assert_eq!(coins.iter().sum::<Coin<SuperGroupTestC1>>(), exp_sum);
         assert_eq!(coins.into_iter().sum::<Coin<SuperGroupTestC1>>(), exp_sum);
+    }
+
+    #[test]
+    fn coerce() {
+        assert_eq!(coin1(100), coin1(100).coerce_into());
     }
 
     fn coprime_impl(gcd: Amount, a1: Amount, a2: Amount) {

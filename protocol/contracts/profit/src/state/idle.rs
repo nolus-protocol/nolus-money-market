@@ -45,7 +45,7 @@ impl Idle {
         Self { config, account }
     }
 
-    fn send_nls<B>(
+    pub(super) fn send_nls<B>(
         &self,
         env: &Env,
         querier: QuerierWrapper<'_>,
@@ -198,7 +198,7 @@ where
     {
         Ok(if currency::equal::<C, FilterC>() {
             SplitCoins {
-                filtered: Coin::new(coin.into()),
+                filtered: coin.coerce_into(),
                 rest: Vec::new(),
             }
         } else {

@@ -151,7 +151,7 @@ where
 {
     debug_assert_eq!(CDef::dto().definition().bank_symbol, coin.denom);
     assert!(currency::equal::<COut, CDef>());
-    Amount::from(coin.amount).into()
+    Coin::new(coin.amount.into())
 }
 
 #[cfg(test)]
