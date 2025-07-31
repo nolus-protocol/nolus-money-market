@@ -2,7 +2,7 @@ use sdk::cosmwasm_std::{Uint128, Uint256};
 
 use crate::{coin::Coin, duration::Duration, ratio::Ratio};
 
-use super::{Fractionable, HigherRank};
+use super::{Fragmentable, HigherRank};
 
 impl<T> HigherRank<T> for u128
 where
@@ -12,7 +12,7 @@ where
     type Intermediate = Uint128;
 }
 
-impl<C> Fractionable<Coin<C>> for Duration {
+impl<C> Fragmentable<Coin<C>> for Duration {
     #[track_caller]
     fn safe_mul<F>(self, fraction: &F) -> Self
     where
@@ -31,7 +31,7 @@ mod tests {
     use currency::test::SuperGroupTestC1;
 
     use crate::{
-        coin::Coin, duration::Duration, fractionable::Fractionable, ratio::SimpleFraction,
+        coin::Coin, duration::Duration, fractionable::Fragmentable, ratio::SimpleFraction,
     };
 
     #[test]

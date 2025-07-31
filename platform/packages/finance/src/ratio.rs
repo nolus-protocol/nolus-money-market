@@ -2,7 +2,7 @@ use std::fmt::Debug;
 
 use serde::{Deserialize, Serialize};
 
-use crate::{fractionable::Fractionable, rational::Rational, traits::FractionUnit, zero::Zero};
+use crate::{fractionable::Fragmentable, rational::Rational, traits::FractionUnit, zero::Zero};
 
 // TODO review whether it may gets simpler if extend Fraction
 pub trait Ratio<U> {
@@ -52,7 +52,7 @@ where
 {
     fn of<A>(self, whole: A) -> Option<A>
     where
-        A: Fractionable<U>,
+        A: Fragmentable<U>,
     {
         Some(whole.safe_mul(&self))
     }

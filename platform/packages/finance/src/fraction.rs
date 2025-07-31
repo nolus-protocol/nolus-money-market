@@ -1,4 +1,4 @@
-use crate::{fractionable::Fractionable, traits::FractionUnit};
+use crate::{fractionable::Fragmentable, traits::FractionUnit};
 
 pub trait Fraction<U>
 where
@@ -6,5 +6,5 @@ where
 {
     fn of<A>(self, whole: A) -> A
     where
-        A: Fractionable<U>;
+        A: Fragmentable<U>;
 }

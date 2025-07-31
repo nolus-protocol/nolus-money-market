@@ -6,7 +6,7 @@ use crate::{
     duration::Duration,
     error::{Error, Result},
     fraction::Fraction,
-    fractionable::Fractionable,
+    fractionable::Fragmentable,
     percent::{Percent, Percent100, Units as PercentUnits},
     ratio::SimpleFraction,
     rational::Rational,
@@ -120,7 +120,7 @@ impl Liability {
     // TODO replace Fractionable<PercentUnits> with Fractionable<Percent100> + Fractionable<Percent>
     pub fn init_borrow_amount<P>(&self, downpayment: P, may_max_ltd: Option<Percent>) -> P
     where
-        P: Copy + Fractionable<PercentUnits> + Ord,
+        P: Copy + Fragmentable<PercentUnits> + Ord,
     {
         debug_assert!(self.initial > Percent100::ZERO);
         debug_assert!(self.initial < Percent100::HUNDRED);
@@ -144,7 +144,7 @@ impl Liability {
     /// Otherwise, amount_to_liquidate == total_due
     pub fn amount_to_liquidate<P>(&self, lease_amount: P, total_due: P) -> P
     where
-        P: Copy + Fractionable<PercentUnits> + Ord + Sub<Output = P> + Zero,
+        P: Copy + Fragmentable<PercentUnits> + Ord + Sub<Output = P> + Zero,
     {
         if total_due < self.max.of(lease_amount) {
             return P::ZERO;
