@@ -203,7 +203,7 @@ where
         self.total.receipts()
     }
 
-    pub fn query_quote(&self, quote: Coin<Lpn>, now: &Timestamp) -> Result<Option<Percent>> {
+    pub fn query_quote(&self, quote: Coin<Lpn>, now: &Timestamp) -> Result<Option<Percent100>> {
         let balance = self.uncommited_balance()?;
 
         if quote > balance {
@@ -292,6 +292,7 @@ mod test {
     use finance::{
         coin::Coin,
         duration::Duration,
+        fraction::Fraction,
         percent::Percent100,
         price::{self, Price},
         zero::Zero,
@@ -401,7 +402,7 @@ mod test {
 
         let now = now + Duration::from_nanos(10); //deliberately hide the variable name
         assert_eq!(
-            Percent::from_permille(136),
+            Percent100::from_permille(136),
             lpp.query_quote(Coin::new(7_700_000), &now)
                 .expect("can't query quote")
                 .expect("should return some interest_rate")
@@ -639,7 +640,7 @@ mod test {
         const DEPOSIT: Coin<TheCurrency> = Coin::new(10_000_000);
         const DEPOSIT_RECEIPTS: Coin<NLpn> = Coin::new(10_000_000);
         const LOAN_AMOUNT: Coin<TheCurrency> = Coin::new(5_000_000);
-        const EXPECTED_INTEREST_RATE: Percent = Percent::from_permille(220);
+        const EXPECTED_INTEREST_RATE: Percent100 = Percent100::from_permille(220);
         const LOAN_REPAYMENT: Coin<TheCurrency> = Coin::new(6_000_000);
 
         let mut store = MockStorage::new();
@@ -755,7 +756,9 @@ mod test {
             let now = Timestamp::from_seconds(120);
             let mut total: Total<TheCurrency> = Total::new();
 
-            total.borrow(now, borrowed.into(), Percent100::ZERO).unwrap();
+            total
+                .borrow(now, borrowed.into(), Percent100::ZERO)
+                .unwrap();
 
             let bank =
                 MockBankView::<TheCurrency, TheCurrency>::only_balance(Coin::new(lpp_balance));
@@ -835,7 +838,7 @@ mod test {
         use finance::{
             coin::Coin,
             duration::Duration,
-            percent::{Percent, bound::BoundToHundredPercent},
+            percent::Percent100,
             price::{self, Price},
             zero::Zero,
         };
@@ -862,9 +865,13 @@ mod test {
 
             let config = Config::new(
                 Code::unchecked(0xDEADC0DE_u64),
-                InterestRate::new(Percent::ZERO, Percent::from_permille(500), Percent::HUNDRED)
-                    .unwrap(),
-                BoundToHundredPercent::strict_from_percent(Percent::ZERO),
+                InterestRate::new(
+                    Percent100::ZERO,
+                    Percent100::from_permille(500),
+                    Percent100::from_permille(500),
+                )
+                .unwrap(),
+                Percent100::ZERO,
             );
             let bank = MockBankView::<TheCurrency, TheCurrency>::only_balance(DEPOSIT1);
             let mut lpp = LiquidityPool::<TheCurrency, _>::new(&config, &bank);
@@ -907,9 +914,13 @@ mod test {
 
             let config = Config::new(
                 Code::unchecked(0xDEADC0DE_u64),
-                InterestRate::new(Percent::ZERO, Percent::from_permille(500), Percent::HUNDRED)
-                    .unwrap(),
-                BoundToHundredPercent::strict_from_percent(Percent::ZERO),
+                InterestRate::new(
+                    Percent100::ZERO,
+                    Percent100::from_permille(500),
+                    Percent100::from_permille(500),
+                )
+                .unwrap(),
+                Percent100::ZERO,
             );
             let bank = MockBankView::<TheCurrency, TheCurrency>::only_balance(DEPOSIT1);
             let mut lpp = LiquidityPool::<TheCurrency, _>::new(&config, &bank);
@@ -955,9 +966,13 @@ mod test {
 
             let config = Config::new(
                 Code::unchecked(0xDEADC0DE_u64),
-                InterestRate::new(Percent::ZERO, Percent::from_permille(500), Percent::HUNDRED)
-                    .unwrap(),
-                BoundToHundredPercent::strict_from_percent(Percent::ZERO),
+                InterestRate::new(
+                    Percent100::ZERO,
+                    Percent100::from_permille(500),
+                    Percent100::HUNDRED,
+                )
+                .unwrap(),
+                Percent100::ZERO,
             );
             let bank = MockBankView::<TheCurrency, TheCurrency>::only_balance(DEPOSIT1);
             let mut lpp = LiquidityPool::<TheCurrency, _>::new(&config, &bank);
