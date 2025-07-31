@@ -257,11 +257,8 @@ mod test {
     const ADDON_OPTIMAL_INTEREST_RATE: Percent100 = Percent100::from_permille(20);
     const DEFAULT_MIN_UTILIZATION: Percent100 = Percent100::ZERO;
 
-    fn test_case<Balance, F>(
-        initial_lpp_balance: Balance,
-        min_utilization: BoundToHundredPercent,
-        f: F,
-    ) where
+    fn test_case<Balance, F>(initial_lpp_balance: Balance, min_utilization: Percent100, f: F)
+    where
         Balance: Copy + Into<Coin<TheCurrency>>,
         F: FnOnce(MockStorage, ApiConfig, MockBankView<TheCurrency, TheCurrency>, Timestamp),
     {
@@ -276,7 +273,7 @@ mod test {
                 ADDON_OPTIMAL_INTEREST_RATE,
             )
             .expect("Couldn't construct interest rate value!"),
-            BoundToHundredPercent::ZERO,
+            Percent100::ZERO,
         );
         let bank = MockBankView::only_balance(initial_lpp_balance.into());
         setup_storage(&mut store, &config, &bank);
@@ -773,7 +770,7 @@ mod test {
             debug_assert!(deposit != 0);
             test::test_case(
                 lpp_balance_at_deposit + borrowed,
-                BoundToHundredPercent::try_from_percent(min_utilization).unwrap(),
+                min_utilization,
                 |mut store, config, bank, now| {
                     if borrowed != 0 {
                         let mut lpp = LiquidityPool::load(&store, &config, &bank).unwrap();
