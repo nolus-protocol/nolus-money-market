@@ -31,9 +31,12 @@ runs:
           ./ci/images/check-lockfiles.Containerfile
           ./ci/scripts/check-lockfiles.sh
         build-step: |-
+          "build_into_dir" "rust"
+
           "build" \
             "check-lockfiles" \
             -- \
-            --build-arg "rust_id=${RUST_ID:?}"
+            --build-arg "rust_id=local-rust" \
+            --build-context "local-rust=./.rust-image"
         disable-caching: true
         image-name: "check-lockfiles"
