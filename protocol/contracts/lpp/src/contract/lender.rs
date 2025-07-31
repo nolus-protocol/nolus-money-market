@@ -5,7 +5,7 @@ use finance::{
 };
 use lpp_platform::NLpn;
 use platform::{
-    bank::{BankAccount, BankAccountView},
+    bank::{self, BankAccount, BankAccountView},
     message::Response as MessageResponse,
 };
 use sdk::cosmwasm_std::{Addr, Storage, Timestamp};
@@ -119,7 +119,6 @@ where
         .map(|()| MessageResponse::messages_with_events(pool_account.into(), emitter))
 }
 
-//TODO cache the BankView on Lpn
 pub(super) fn try_close_all<Lpn, BankView, Bank>(
     storage: &mut dyn Storage,
     pool_view: BankView, // acceptable trick since the bank transfers get visible after the ransaction finishes
@@ -134,40 +133,42 @@ where
 {
     Config::load(storage).and_then(|config| {
         TotalRewards::load_or_default(storage).and_then(|total_rewards| {
-            LiquidityPool::<Lpn, _>::load(storage, &config, &pool_view).and_then(|mut lpp| {
-                let (deposits, _) = Deposit::iter(storage, total_rewards).try_fold(
-                    (Vec::<Deposit>::default(), Coin::ZERO),
-                    |(mut deposits, pending_withdraw), may_deposit| {
-                        may_deposit.and_then(|mut deposit| {
-                            let receipts = deposit.receipts();
-                            withdraw(&mut deposit, &mut lpp, receipts, now, pending_withdraw).map(
-                                |(payment_out, may_reward)| {
-                                    transfer_to(
-                                        deposit.owner().clone(),
-                                        payment_out,
-                                        may_reward,
-                                        &mut pool_account,
-                                    );
-                                    emitter.on_withdraw(
-                                        deposit.owner().clone(),
-                                        receipts,
-                                        payment_out,
-                                        may_reward,
-                                    );
-                                    deposits.push(deposit);
-                                    (deposits, pending_withdraw + payment_out)
-                                },
-                            )
-                        })
-                    },
-                )?;
+            LiquidityPool::<Lpn, _>::load(storage, &config, &bank::cache::<Lpn, _>(pool_view))
+                .and_then(|mut lpp| {
+                    let (deposits, _) = Deposit::iter(storage, total_rewards).try_fold(
+                        (Vec::<Deposit>::default(), Coin::ZERO),
+                        |(mut deposits, pending_withdraw), may_deposit| {
+                            may_deposit.and_then(|mut deposit| {
+                                let receipts = deposit.receipts();
+                                withdraw(&mut deposit, &mut lpp, receipts, now, pending_withdraw)
+                                    .map(|(payment_out, may_reward)| {
+                                        transfer_to(
+                                            deposit.owner().clone(),
+                                            payment_out,
+                                            may_reward,
+                                            &mut pool_account,
+                                        );
+                                        emitter.on_withdraw(
+                                            deposit.owner().clone(),
+                                            receipts,
+                                            payment_out,
+                                            may_reward,
+                                        );
+                                        deposits.push(deposit);
+                                        (deposits, pending_withdraw + payment_out)
+                                    })
+                            })
+                        },
+                    )?;
 
-                deposits
-                    .into_iter()
-                    .try_for_each(|deposit| deposit.save(storage))
-                    .map(|()| MessageResponse::messages_with_events(pool_account.into(), emitter))
-                    .and_then(|resp| lpp.save(storage).map(|()| resp))
-            })
+                    deposits
+                        .into_iter()
+                        .try_for_each(|deposit| deposit.save(storage))
+                        .map(|()| {
+                            MessageResponse::messages_with_events(pool_account.into(), emitter)
+                        })
+                        .and_then(|resp| lpp.save(storage).map(|()| resp))
+                })
         })
     })
 }

@@ -4,7 +4,13 @@ use currency::{CurrencyDef, Group, MemberOf};
 use finance::coin::{Coin, WithCoin, WithCoinResult};
 use sdk::cosmwasm_std::{Addr, BankMsg, Coin as CwCoin, QuerierWrapper};
 
-use crate::{bank::{account, view::BankAccountView}, batch::Batch, coin_legacy, error::Error, result::Result};
+use crate::{
+    bank::{account, view::BankAccountView},
+    batch::Batch,
+    coin_legacy,
+    error::Error,
+    result::Result,
+};
 
 /// Send a single coin to a recepient
 #[cfg(feature = "testing")]

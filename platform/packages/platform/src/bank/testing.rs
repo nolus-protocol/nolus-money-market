@@ -1,10 +1,104 @@
+use std::cell::OnceCell;
+
 use currency::{CurrencyDef, Group};
-use finance::coin::{Amount, Coin, WithCoin};
+use finance::coin::{Coin, WithCoin};
 use sdk::cosmwasm_std::Addr;
 
 use crate::{
-    bank::{account::BankAccount, aggregate::Aggregate, view::{BalancesResult, BankAccountView}}, batch::Batch, result::Result
+    bank::{
+        account::BankAccount,
+        aggregate::Aggregate,
+        view::{BalancesResult, BankAccountView},
+    },
+    batch::Batch,
+    result::Result,
 };
+
+pub fn not_taking_balance() -> impl BankAccountView {
+    struct PanickingView();
+    impl BankAccountView for PanickingView {
+        fn balance<C>(&self) -> Result<Coin<C>>
+        where
+            C: CurrencyDef,
+        {
+            unimplemented!(
+                "Unexpected call of BankAccountView::balance with C = {}",
+                C::ticker()
+            )
+        }
+
+        fn balances<G, Cmd>(&self, _cmd: Cmd) -> BalancesResult<G, Cmd>
+        where
+            G: Group,
+            Cmd: WithCoin<G> + Clone,
+            Cmd::Output: Aggregate,
+        {
+            unimplemented!()
+        }
+    }
+    PanickingView()
+}
+
+pub fn take_balance_once<C, OthersView>(
+    balance: Coin<C>,
+    others_view: OthersView,
+) -> impl BankAccountView
+where
+    C: 'static,
+    OthersView: BankAccountView,
+{
+    TakeBalanceOnce::new(balance, others_view)
+}
+
+/// Provide given balance only once
+struct TakeBalanceOnce<C, View> {
+    balance: Coin<C>,
+    query_done: OnceCell<bool>,
+    others_view: View,
+}
+
+impl<C, View> TakeBalanceOnce<C, View> {
+    fn new(balance: Coin<C>, others_view: View) -> Self {
+        Self {
+            balance,
+            query_done: OnceCell::new(),
+            others_view,
+        }
+    }
+}
+
+impl<C, View> BankAccountView for TakeBalanceOnce<C, View>
+where
+    C: 'static,
+    View: BankAccountView,
+{
+    fn balance<CC>(&self) -> Result<Coin<CC>>
+    where
+        CC: CurrencyDef,
+    {
+        if currency::equal::<C, CC>() {
+            match self.query_done.get() {
+                Some(_done) => panic!("Unexpected query of balance {}", CC::ticker()),
+                None => {
+                    let set_res = self.query_done.set(true);
+                    debug_assert_eq!(Ok(()), set_res);
+                    Ok(self.balance.coerce_into())
+                }
+            }
+        } else {
+            self.others_view.balance()
+        }
+    }
+
+    fn balances<G, Cmd>(&self, _cmd: Cmd) -> BalancesResult<G, Cmd>
+    where
+        G: Group,
+        Cmd: WithCoin<G> + Clone,
+        Cmd::Output: Aggregate,
+    {
+        unimplemented!()
+    }
+}
 
 //TODO refactor to like to the MockBank implementation
 #[derive(Clone)]
@@ -38,9 +132,9 @@ where
         C: CurrencyDef,
     {
         if currency::equal::<C, OneC>() {
-            Ok(Coin::<C>::new(self.balance.into()))
+            Ok(self.balance.coerce_into())
         } else if currency::equal::<C, OtherC>() {
-            Ok(Coin::<C>::new(self.balance_other.into()))
+            Ok(self.balance_other.coerce_into())
         } else {
             unreachable!(
                 "Expected {} or {}, found {}",
@@ -160,7 +254,7 @@ where
             self.next.send(transfer, to);
         } else {
             assert!(currency::equal::<TransferC, C>());
-            assert_eq!(self.expected_transfer, Coin::from(Amount::from(transfer)));
+            assert_eq!(self.expected_transfer, transfer.coerce_into());
             assert_eq!(self.expected_recepient, to);
             self.transfer_met = true;
         }

@@ -1,16 +1,16 @@
 pub use account::{BankAccount, account};
 pub use aggregate::Aggregate;
 pub use receive::{may_received, received_one};
-pub use send::{FixedAddressSender, bank_send_all, LazySenderStub};
 #[cfg(feature = "testing")]
 pub use send::bank_send;
-pub use view::{BankAccountView, account_view, balance, BalancesResult};
+pub use send::{FixedAddressSender, LazySenderStub, bank_send_all};
+pub use view::{BalancesResult, BankAccountView, account_view, balance, cache};
 
 mod account;
 mod aggregate;
 mod receive;
 mod send;
-#[cfg(feature = "testing")]
+#[cfg(any(test, feature = "testing"))]
 pub mod testing;
 mod view;
 
