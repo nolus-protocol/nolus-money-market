@@ -64,8 +64,6 @@ impl InterestRate {
                 .units(),
         )
         .and_then(|utilization_max| {
-            
-
             let utilization_factor = if balance.is_zero() {
                 utilization_max
             } else {
