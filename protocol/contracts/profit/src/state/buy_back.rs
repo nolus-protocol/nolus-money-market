@@ -3,23 +3,19 @@ use serde::{Deserialize, Serialize};
 
 use currencies::{Native, Nls, PaymentGroup};
 use dex::{
-    AcceptAnyNonZeroSwap, Account, AnomalyTreatment, ContractInSwap, Enterable,
-    Response as DexResponse, Stage, StateLocalOut, SwapOutputTask, SwapTask, WithCalculator,
-    WithOutputTask,
+    AcceptAnyNonZeroSwap, Account, AnomalyTreatment, ContractInSwap, Response as DexResponse,
+    Stage, StateLocalOut, SwapOutputTask, SwapTask, WithCalculator, WithOutputTask,
 };
 use finance::{
     coin::{Coin, CoinDTO},
     duration::Duration,
 };
 use oracle::stub::SwapPath;
-use platform::{
-    bank::{self, BankAccountView},
-    message::Response as PlatformResponse,
-};
+use platform::bank::{self, BankAccountView};
 use sdk::cosmwasm_std::{Addr, Env, QuerierWrapper, Timestamp};
 use timealarms::stub::TimeAlarmsRef;
 
-use crate::{msg::ConfigResponse, profit::Profit, result::ContractResult};
+use crate::{msg::ConfigResponse, result::ContractResult};
 
 use super::{
     Config, ConfigManagement, State, StateEnum, SwapClient, idle::Idle,
@@ -131,20 +127,18 @@ impl SwapOutputTask<Self> for BuyBack {
     ) -> <Self as SwapTask>::Result {
         let account = bank::account(&self.profit_contract, querier);
 
-        let balance_nls: Coin<Nls> = account.balance()?;
+        account
+            .balance()
+            .map_err(Into::into)
+            .and_then(|balance_nls| {
+                let next_state = Idle::new(self.config, self.account);
 
-        let bank_response: PlatformResponse =
-            Profit::transfer_nls(account, self.config.treasury().clone(), balance_nls, env);
-
-        let next_state: Idle = Idle::new(self.config, self.account);
-
-        Ok(DexResponse::<State> {
-            response: next_state
-                .enter(env.block.time, querier)
-                .map(PlatformResponse::messages_only)
-                .map(|state_response: PlatformResponse| state_response.merge_with(bank_response))?,
-            next_state: State(StateEnum::Idle(next_state)),
-        })
+                next_state
+                    .send_nls(env, querier, account, balance_nls)
+                    .map(|response| {
+                        DexResponse::<State>::from(response, State(StateEnum::Idle(next_state)))
+                    })
+            })
     }
 }
 
