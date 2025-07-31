@@ -11,6 +11,7 @@ pub mod price;
 pub mod range;
 pub mod ratio;
 pub mod rational;
+pub mod scalar;
 pub mod traits;
 pub mod zero;
 
