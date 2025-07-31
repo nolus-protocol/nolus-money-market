@@ -1,8 +1,14 @@
-use std::fmt::Debug;
+use std::{fmt::Debug, ops::Div};
 
 use serde::{Deserialize, Serialize};
 
-use crate::{fractionable::Fragmentable, rational::Rational, traits::FractionUnit, zero::Zero};
+use crate::{
+    arithmetics::CheckedMul,
+    fractionable::{Fractionable, Fragmentable},
+    rational::Rational,
+    traits::FractionUnit,
+    zero::Zero,
+};
 
 // TODO review whether it may gets simpler if extend Fraction
 pub trait Ratio<U> {
@@ -29,6 +35,27 @@ where
         Self {
             nominator,
             denominator,
+        }
+    }
+}
+
+impl<U> SimpleFraction<U>
+where
+    U: FractionUnit,
+{
+    pub fn lossy_mul<F>(self, rhs: F) -> Option<F>
+    where
+        F: Fractionable<U>,
+    {
+        if self.nominator == self.denominator {
+            Some(rhs)
+        } else {
+            F::HigherPrimitive::from(self.nominator)
+                .checked_mul(F::HigherPrimitive::from(rhs))
+                .and_then(|nominator| {
+                    let result = nominator.div(self.denominator.into());
+                    result.try_into().ok()
+                })
         }
     }
 }
