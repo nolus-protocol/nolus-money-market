@@ -64,10 +64,7 @@ impl InterestRate {
                 .units(),
         )
         .and_then(|utilization_max| {
-            let config = SimpleFraction::new(
-                self.addon_optimal_interest_rate.units(),
-                self.utilization_optimal.units(),
-            );
+            
 
             let utilization_factor = if balance.is_zero() {
                 utilization_max
@@ -76,6 +73,11 @@ impl InterestRate {
                     .expect("The utilization must be a valid Percent")
                     .min(utilization_max)
             };
+
+            let config = SimpleFraction::new(
+                self.addon_optimal_interest_rate.units(),
+                self.utilization_optimal.units(),
+            );
 
             config
                 .of(utilization_factor)
