@@ -371,11 +371,7 @@ fn expect_transfer_events<ProtocolsRegistry, Reserve, Leaser, Lpp, Oracle>(
         ]
     );
 
-    let [transfer, time_alarms_exec] = if has_swap {
-        [&response.events[3], &response.events[2]]
-    } else {
-        [&response.events[2], &response.events[3]]
-    };
+    let transfer = &response.events[2];
 
     assert_eq!(transfer.ty.as_str(), "transfer", "{transfer:?}");
     assert_eq!(
@@ -390,6 +386,7 @@ fn expect_transfer_events<ProtocolsRegistry, Reserve, Leaser, Lpp, Oracle>(
         ]
     );
 
+    let time_alarms_exec = &response.events[3];
     assert_eq!(
         time_alarms_exec.ty.as_str(),
         "execute",
