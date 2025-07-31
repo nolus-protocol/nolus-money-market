@@ -13,7 +13,7 @@ use crate::{
 };
 
 /// Send a single coin to a recepient
-#[cfg(feature = "testing")]
+#[cfg(any(test, feature = "testing"))]
 pub fn bank_send<C>(to: Addr, amount: Coin<C>) -> Batch
 where
     C: CurrencyDef,

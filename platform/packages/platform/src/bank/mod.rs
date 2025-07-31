@@ -1,7 +1,7 @@
 pub use account::{BankAccount, account};
 pub use aggregate::Aggregate;
 pub use receive::{may_received, received_one};
-#[cfg(feature = "testing")]
+#[cfg(any(test, feature = "testing"))]
 pub use send::bank_send;
 pub use send::{FixedAddressSender, LazySenderStub, bank_send_all};
 pub use view::{BalancesResult, BankAccountView, account_view, balance, cache};

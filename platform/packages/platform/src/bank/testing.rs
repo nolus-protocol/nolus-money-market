@@ -6,6 +6,7 @@ use sdk::cosmwasm_std::Addr;
 
 use crate::{
     bank::{
+        self,
         account::BankAccount,
         aggregate::Aggregate,
         view::{BalancesResult, BankAccountView},
@@ -168,7 +169,7 @@ pub fn one_transfer<TransferC, BankView>(
     view: BankView,
 ) -> impl BankAccount
 where
-    TransferC: 'static,
+    TransferC: CurrencyDef,
     BankView: BankAccountView,
 {
     MockBank::single_transfer(amount, to, view)
@@ -182,8 +183,8 @@ pub fn two_transfers<TransferC1, TransferC2, BankView>(
     view: BankView,
 ) -> impl BankAccount
 where
-    TransferC1: 'static,
-    TransferC2: 'static,
+    TransferC1: CurrencyDef,
+    TransferC2: CurrencyDef,
     BankView: BankAccountView,
 {
     MockBank::prev_transfer(amount1, to1, MockBank::single_transfer(amount2, to2, view))
@@ -243,12 +244,12 @@ where
 
 impl<TransferC, Bank> BankAccount for MockBank<TransferC, Bank>
 where
-    TransferC: 'static,
+    TransferC: CurrencyDef,
     Bank: BankAccount,
 {
     fn send<C>(&mut self, transfer: Coin<C>, to: Addr)
     where
-        C: 'static + CurrencyDef,
+        C: CurrencyDef,
     {
         if self.transfer_met {
             self.next.send(transfer, to);
@@ -261,9 +262,22 @@ where
     }
 }
 
-impl<TransferC, Bank> From<MockBank<TransferC, Bank>> for Batch {
-    fn from(_value: MockBank<TransferC, Bank>) -> Self {
-        Batch::default() //no messages since the mock has fulfuilled its job at this stage
+impl<TransferC, Bank> From<MockBank<TransferC, Bank>> for Batch
+where
+    TransferC: CurrencyDef,
+    Bank: BankAccount,
+{
+    fn from(value: MockBank<TransferC, Bank>) -> Self {
+        let msgs = Batch::default();
+        if value.transfer_met {
+            msgs.merge(bank::bank_send(
+                value.expected_recepient,
+                value.expected_transfer,
+            ))
+        } else {
+            msgs
+        }
+        .merge(value.next.into())
     }
 }
 
