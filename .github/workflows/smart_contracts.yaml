@@ -141,7 +141,7 @@ jobs:
           "./ci/scripts/for-each-workspace.sh" \
             "cp" \
             -R \
-            "../.cargo"
+            "../.cargo" \
             "./"
       - uses: "./.github/actions/build-and-run"
         with:
