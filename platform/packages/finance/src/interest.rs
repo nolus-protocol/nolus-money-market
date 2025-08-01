@@ -3,7 +3,7 @@ use std::{cmp, ops::Sub};
 use crate::{
     duration::{Duration, Units as DurationUnits},
     fraction::Unit as FractionUnit,
-    fractionable::Fractionable,
+    fractionable::Fragmentable,
     rational::Rational,
 };
 
@@ -12,7 +12,7 @@ pub fn interest<U, R, P>(rate: R, principal: P, period: Duration) -> P
 where
     // TODO R:Fraction<U> when Ratio becomes a struct
     R: Rational<U>,
-    P: Fractionable<U> + Fractionable<DurationUnits>,
+    P: Fragmentable<U> + Fragmentable<DurationUnits>,
 {
     let interest_per_year = rate.of(principal).expect("TODO remove when R:Fraction<U>");
     period.annualized_slice_of(interest_per_year)
@@ -25,8 +25,8 @@ pub fn pay<U, R, P>(rate: R, principal: P, payment: P, period: Duration) -> (Dur
 where
     // TODO R:Fraction<U> when Ratio becomes a struct
     R: Rational<U>,
-    P: Fractionable<U> + Fractionable<DurationUnits> + FractionUnit + Sub<Output = P>,
-    Duration: Fractionable<P>,
+    P: Fragmentable<U> + Fragmentable<DurationUnits> + FractionUnit + Sub<Output = P>,
+    Duration: Fragmentable<P>,
 {
     let interest_due_per_period: P = interest(rate, principal, period);
 

@@ -2,10 +2,10 @@ use std::marker::PhantomData;
 
 use crate::{coin::Amount, percent::Units as PercentUnits, price::Price, ratio::Ratio};
 
-use super::Fractionable;
+use super::Fragmentable;
 
 // TODO impl Fractionble<BoundPercent<UPPER_BOUND>> for Price when multiplication with trim is ready
-impl<C, QuoteC> Fractionable<PercentUnits> for Price<C, QuoteC>
+impl<C, QuoteC> Fragmentable<PercentUnits> for Price<C, QuoteC>
 where
     C: 'static,
     QuoteC: 'static,
@@ -18,7 +18,7 @@ where
     }
 }
 
-impl<C, QuoteC> Fractionable<usize> for Price<C, QuoteC>
+impl<C, QuoteC> Fragmentable<usize> for Price<C, QuoteC>
 where
     C: 'static,
     QuoteC: 'static,

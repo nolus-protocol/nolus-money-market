@@ -3,7 +3,7 @@ use std::fmt::Debug;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    fraction::Unit as FractionUnit, fractionable::Fractionable, rational::Rational, zero::Zero,
+    fraction::Unit as FractionUnit, fractionable::Fragmentable, rational::Rational, zero::Zero,
 };
 
 // TODO review whether it may gets simpler if extend Fraction
@@ -54,7 +54,7 @@ where
 {
     fn of<A>(&self, whole: A) -> Option<A>
     where
-        A: Fractionable<U>,
+        A: Fragmentable<U>,
     {
         Some(whole.safe_mul(self))
     }

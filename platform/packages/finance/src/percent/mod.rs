@@ -3,7 +3,7 @@ use bound::BoundPercent;
 use crate::{
     error::Error,
     fraction::{Fraction, Unit as FractionUnit},
-    fractionable::Fractionable,
+    fractionable::Fragmentable,
     ratio::SimpleFraction,
     rational::Rational,
 };
@@ -24,7 +24,7 @@ impl FractionUnit for Units {}
 impl Fraction<Units> for Percent100 {
     fn of<A>(&self, whole: A) -> A
     where
-        A: Fractionable<Units>,
+        A: Fragmentable<Units>,
     {
         let fraction: SimpleFraction<Units> = self.into();
         fraction
@@ -37,7 +37,7 @@ impl Fraction<Units> for Percent100 {
 impl Rational<Units> for Percent {
     fn of<A>(&self, whole: A) -> Option<A>
     where
-        A: Fractionable<Units>,
+        A: Fragmentable<Units>,
     {
         let fraction: SimpleFraction<Units> = self.into();
         fraction.of(whole)
@@ -87,7 +87,7 @@ pub(super) mod test {
     use crate::{
         coin::Coin,
         fraction::Fraction,
-        fractionable::Fractionable,
+        fractionable::Fragmentable,
         percent::{Percent, Percent100},
         ratio::SimpleFraction,
         rational::Rational,
@@ -225,7 +225,7 @@ pub(super) mod test {
 
     pub(crate) fn test_of<P>(permille: Units, quantity: P, exp: P)
     where
-        P: Clone + Debug + Display + Fractionable<Units> + PartialEq,
+        P: Clone + Debug + Display + Fragmentable<Units> + PartialEq,
     {
         let perm = Percent100::from_permille(permille);
         assert_eq!(
