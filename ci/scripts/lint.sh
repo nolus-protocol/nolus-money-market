@@ -43,4 +43,4 @@ shift
   "run" \
   --external-command \
   -- \
-  "/bin/lint.internal.sh"
+  "/usr/local/bin/lint.internal.sh"
