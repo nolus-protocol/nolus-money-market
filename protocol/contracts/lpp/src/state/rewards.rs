@@ -41,6 +41,54 @@ pub struct Index {
     reward_per_token: Option<Price<NLpn, Nls>>,
 }
 
+pub mod migrate_from_0_8_12 {
+    use currency::platform::Nls;
+    use serde::{Deserialize, Serialize, Serializer};
+
+    use finance::{coin::Coin, price::Price};
+    use lpp_platform::NLpn;
+    use sdk::{cosmwasm_std::Storage, cw_storage_plus::Item};
+
+    use crate::{
+        contract::Result as ContractResult,
+        state::{TotalRewards, rewards::Index},
+    };
+
+    /// Migrate `DepositsGlobals` into `Index` and return the `balance_nlpn` to be migrated to Total::receipts
+    pub fn migrate(store: &mut dyn Storage) -> ContractResult<Coin<NLpn>> {
+        #[derive(Deserialize)]
+        struct DepositsGlobals {
+            balance_nlpn: Coin<NLpn>,
+
+            // Rewards
+            reward_per_token: Option<Price<NLpn, Nls>>,
+        }
+        impl Serialize for DepositsGlobals {
+            fn serialize<S>(&self, _serializer: S) -> Result<S::Ok, S::Error>
+            where
+                S: Serializer,
+            {
+                unimplemented!("satisfies Item::load trait bound")
+            }
+        }
+
+        let old_key = Item::new("deposits_globals");
+        old_key
+            .load(store)
+            .inspect(|_| old_key.remove(store))
+            .map_err(Into::into)
+            .and_then(|old_deposits: DepositsGlobals| {
+                TotalRewards::save(
+                    &Index {
+                        reward_per_token: old_deposits.reward_per_token,
+                    },
+                    store,
+                )
+                .map(|()| old_deposits.balance_nlpn)
+            })
+    }
+}
+
 impl Index {
     fn new(reward_per_token: Price<NLpn, Nls>) -> Self {
         Self {

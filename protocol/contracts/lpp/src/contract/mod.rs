@@ -28,7 +28,7 @@ use crate::{
     event::{self, WithdrawEmitter},
     lpp::{LiquidityPool, LppBalances},
     msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg, SudoMsg},
-    state::Config,
+    state::{self, Config},
 };
 
 pub use self::error::{ContractError, Result};
@@ -96,9 +96,14 @@ pub fn migrate(
     }: ProtocolMigrationMessage<MigrateMsg>,
 ) -> Result<CwResponse> {
     migrate_from
-        .update_software(&CURRENT_RELEASE, &to_release)
+        .update_software_and_storage(
+            &CURRENT_RELEASE,
+            &to_release,
+            deps.storage,
+            state::migrate_v0_8_12,
+            ContractError::UpdateSoftware,
+        )
         .map(|()| response::empty_response())
-        .map_err(ContractError::UpdateSoftware)
         .inspect_err(platform_error::log(deps.api))
 }
 

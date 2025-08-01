@@ -125,6 +125,11 @@ impl Deposit {
             .pending_rewards_index
             .rewards(deposit.deposited_nlpn);
 
+        debug_assert!(
+            deposit_reward <= global_reward,
+            "the global rewards index should only go up"
+        );
+
         deposit.pending_rewards_nls + global_reward - deposit_reward
     }
 
