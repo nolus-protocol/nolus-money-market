@@ -47,7 +47,7 @@ runs:
         workspace: |-
           ${{ inputs.workspace }}
       run: |-
-        set -eux
+        set -eu
 
         run() {
           "docker" \
