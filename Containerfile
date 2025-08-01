@@ -99,7 +99,7 @@ ARG SOURCE_DATE_EPOCH
 COPY \
   --from=cargo-audit \
   "/usr/local/cargo/bin/cargo-audit" \
-  "/usr/local/bin/"
+  "/usr/local/cargo/bin/"
 
 ENTRYPOINT ["/usr/local/bin/for-each-workspace.sh", "cargo", "audit"]
 
@@ -129,12 +129,12 @@ ARG SOURCE_DATE_EPOCH
 COPY \
   --from=cargo-each \
   "/usr/local/cargo/bin/cargo-each" \
-  "/usr/local/bin/"
+  "/usr/local/cargo/bin/"
 
 COPY \
   --from=cargo-udeps \
   "/usr/local/cargo/bin/cargo-udeps" \
-  "/usr/local/bin/"
+  "/usr/local/cargo/bin/"
 
 COPY \
   --chmod="0555" \
@@ -150,7 +150,7 @@ ARG SOURCE_DATE_EPOCH
 COPY \
   --from=cargo-each \
   "/usr/local/cargo/bin/cargo-each" \
-  "/usr/local/bin/"
+  "/usr/local/cargo/bin/"
 
 COPY \
   --chmod="0555" \
@@ -173,7 +173,7 @@ RUN ["rustup", "component", "add", "clippy"]
 COPY \
   --from=cargo-each \
   "/usr/local/cargo/bin/cargo-each" \
-  "/usr/local/bin/"
+  "/usr/local/cargo/bin/"
 
 COPY \
   --chmod="0555" \
