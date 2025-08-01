@@ -147,6 +147,8 @@ FROM rust-ci AS lint
 
 ARG SOURCE_DATE_EPOCH
 
+RUN ["rustup", "component", "add", "clippy"]
+
 COPY \
   --from=cargo-each \
   "/usr/local/cargo/bin/cargo-each" \
@@ -167,8 +169,6 @@ ENTRYPOINT ["/usr/local/bin/lint.sh"]
 FROM rust-ci AS test
 
 ARG SOURCE_DATE_EPOCH
-
-RUN ["rustup", "component", "add", "clippy"]
 
 COPY \
   --from=cargo-each \
