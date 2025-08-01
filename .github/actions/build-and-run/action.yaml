@@ -4,12 +4,19 @@ description: "Action for building a container image, or restoring it from
 author: "The Dev Nolus Team <dev@nolus.io>"
 
 inputs:
-  build-contexts:
+  profile:
     description: ""
     required: false
   target:
     description: ""
     required: true
+  tools-context:
+    default: "false"
+    description: ""
+    required: false
+  workspace:
+    description: ""
+    required: false
 
 runs:
   using: "composite"
@@ -21,7 +28,7 @@ runs:
       uses: "docker/build-push-action@v6"
       with:
         build-contexts: |-
-          ${{ inputs.build-contexts || '' }}
+          ${{ (fromJSON(inputs.tools-context) && 'tools=./tools/') || '' }}
         cache-from: |-
           type=gha,scope=${{ inputs.target }}
         cache-to: |-
@@ -37,11 +44,22 @@ runs:
     - env:
         target: |-
           ${{ inputs.target }}
+        workspace: |-
+          ${{ inputs.workspace }}
       run: |-
-        "docker" \
-          "container" \
-          "run" \
-          --tty \
-          --volume "./:/src/:ro" \
-          "localhost/local/${target}"
+        run() {
+          "docker" \
+            "container" \
+            "run" \
+            ${{ (inputs.profile && format('--env "PROFILE={0}"', inputs.profile)) || '' }} \
+            --tty \
+            --volume "./:/src/:ro" \
+            "localhost/local/${target}" \
+            "${@}"
+        }
+
+        case "${workspace?}" in
+          ("") "run" ;;
+          (*) "run" "${workspace:?}"
+        esac
       shell: "sh"

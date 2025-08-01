@@ -150,18 +150,9 @@ jobs:
     steps:
       - uses: "actions/checkout@v4"
       - uses: "./.github/actions/setup-docker"
-      - id: "build-container"
-        uses: "./.github/actions/check-formatting-container"
-      - env:
-          image_id: |-
-            ${{ steps.build-container.outputs.image-id }}
-        run: |-
-          "docker" \
-            "container" \
-            "run" \
-            --tty \
-            --volume "./:/src/:ro" \
-            "${image_id:?}"
+      - uses: "./.github/actions/build-and-run"
+        with:
+          target: "check-formatting"
   lint:
     runs-on: "ubuntu-latest" # "self-hosted"
     needs:
@@ -176,28 +167,38 @@ jobs:
     steps:
       - uses: "actions/checkout@v4"
       - uses: "./.github/actions/setup-docker"
-      - id: "build-container"
-        uses: "./.github/actions/lint-container"
-      - run: |-
-          "mv" \
-            "./.github/test-data/build-configuration" \
-            "."
-      - env:
-          image_id: |-
-            ${{ steps.build-container.outputs.image-id }}
+      - uses: "./.github/actions/build-and-run"
+        with:
           profile: |-
             ${{ matrix.profile }}
+          target: "lint"
+          tools-context: "true"
           workspace: |-
             ${{ matrix.workspace }}
-        run: |-
-          "docker" \
-            "container" \
-            "run" \
-            --env "PROFILE=${profile:?}" \
-            --tty \
-            --volume "./:/src/:ro" \
-            "${image_id:?}" \
-            "${workspace:?}"
+      # - uses: "actions/checkout@v4"
+      # - uses: "./.github/actions/setup-docker"
+      # - id: "build-container"
+      #   uses: "./.github/actions/lint-container"
+      # - run: |-
+      #     "mv" \
+      #       "./.github/test-data/build-configuration" \
+      #       "."
+      # - env:
+      #     image_id: |-
+      #       ${{ steps.build-container.outputs.image-id }}
+      #     profile: |-
+      #       ${{ matrix.profile }}
+      #     workspace: |-
+      #       ${{ matrix.workspace }}
+      #   run: |-
+      #     "docker" \
+      #       "container" \
+      #       "run" \
+      #       --env "PROFILE=${profile:?}" \
+      #       --tty \
+      #       --volume "./:/src/:ro" \
+      #       "${image_id:?}" \
+      #       "${workspace:?}"
   test:
     runs-on: "ubuntu-latest" # "self-hosted"
     needs:
@@ -212,28 +213,46 @@ jobs:
     steps:
       - uses: "actions/checkout@v4"
       - uses: "./.github/actions/setup-docker"
-      - id: "build-container"
-        uses: "./.github/actions/test-container"
-      - run: |-
-          "mv" \
-            "./.github/test-data/build-configuration" \
-            "."
-      - env:
-          image_id: |-
-            ${{ steps.build-container.outputs.image-id }}
+      - uses: "./.github/actions/build-and-run"
+        with:
           profile: |-
             ${{ matrix.profile }}
+          target: "test"
+          tools-context: "true"
           workspace: |-
             ${{ matrix.workspace }}
-        run: |-
-          "docker" \
-            "container" \
-            "run" \
-            --env "PROFILE=${profile:?}" \
-            --tty \
-            --volume "./:/src/:ro" \
-            "${image_id:?}" \
-            "${workspace:?}"
+      # - uses: "actions/checkout@v4"
+      # - uses: "./.github/actions/setup-docker"
+      # - uses: "./.github/actions/build-and-run"
+      #   with:
+      #     target: "check-formatting"
+      #     workspace: |-
+      #       ${{ matrix.workspace }}
+
+      # - uses: "actions/checkout@v4"
+      # - uses: "./.github/actions/setup-docker"
+      # - id: "build-container"
+      #   uses: "./.github/actions/test-container"
+      # - run: |-
+      #     "mv" \
+      #       "./.github/test-data/build-configuration" \
+      #       "."
+      # - env:
+      #     image_id: |-
+      #       ${{ steps.build-container.outputs.image-id }}
+      #     profile: |-
+      #       ${{ matrix.profile }}
+      #     workspace: |-
+      #       ${{ matrix.workspace }}
+      #   run: |-
+      #     "docker" \
+      #       "container" \
+      #       "run" \
+      #       --env "PROFILE=${profile:?}" \
+      #       --tty \
+      #       --volume "./:/src/:ro" \
+      #       "${image_id:?}" \
+      #       "${workspace:?}"
   check-unused-deps:
     runs-on: "ubuntu-latest" # "self-hosted"
     needs:
@@ -246,25 +265,33 @@ jobs:
     steps:
       - uses: "actions/checkout@v4"
       - uses: "./.github/actions/setup-docker"
-      - id: "build-container"
-        uses: "./.github/actions/check-unused-deps-container"
-      - run: |-
-          "mv" \
-            "./.github/test-data/build-configuration" \
-            "."
-      - env:
-          image_id: |-
-            ${{ steps.build-container.outputs.image-id }}
+      - uses: "./.github/actions/build-and-run"
+        with:
+          target: "check-unused-deps"
+          tools-context: "true"
           workspace: |-
             ${{ matrix.workspace }}
-        run: |-
-          "docker" \
-            "container" \
-            "run" \
-            --tty \
-            --volume "./:/src/:ro" \
-            "${image_id:?}" \
-            "${workspace:?}"
+      # - uses: "actions/checkout@v4"
+      # - uses: "./.github/actions/setup-docker"
+      # - id: "build-container"
+      #   uses: "./.github/actions/check-unused-deps-container"
+      # - run: |-
+      #     "mv" \
+      #       "./.github/test-data/build-configuration" \
+      #       "."
+      # - env:
+      #     image_id: |-
+      #       ${{ steps.build-container.outputs.image-id }}
+      #     workspace: |-
+      #       ${{ matrix.workspace }}
+      #   run: |-
+      #     "docker" \
+      #       "container" \
+      #       "run" \
+      #       --tty \
+      #       --volume "./:/src/:ro" \
+      #       "${image_id:?}" \
+      #       "${workspace:?}"
 
 #  load-configuration:
 #    runs-on: "ubuntu-latest"
