@@ -137,6 +137,12 @@ jobs:
     steps:
       - uses: "actions/checkout@v4"
       - uses: "./.github/actions/setup-docker"
+      - run: |-
+          "./ci/scripts/for-each-workspace.sh" \
+            "cp" \
+            -R \
+            "../.cargo"
+            "./"
       - uses: "./.github/actions/build-and-run"
         with:
           target: "audit-dependencies"
