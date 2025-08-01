@@ -253,7 +253,7 @@ jobs:
       #       --volume "./:/src/:ro" \
       #       "${image_id:?}" \
       #       "${workspace:?}"
-  check-unused-deps:
+  check-unused-dependencies:
     runs-on: "ubuntu-latest" # "self-hosted"
     needs:
       - "matrix-arguments"
@@ -267,7 +267,7 @@ jobs:
       - uses: "./.github/actions/setup-docker"
       - uses: "./.github/actions/build-and-run"
         with:
-          target: "check-unused-deps"
+          target: "check-unused-dependencies"
           tools-context: "true"
           workspace: |-
             ${{ matrix.workspace }}
