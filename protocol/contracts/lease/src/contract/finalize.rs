@@ -7,7 +7,7 @@ use crate::{
     api::{
         FinalizerExecuteMsg,
         authz::{AccessCheck, AccessGranted},
-        limits::{MaxSlippages, PositionLimits},
+        limits::{MaxSlippage, PositionLimits},
     },
     error::{ContractError, ContractResult},
 };
