@@ -1,0 +1,47 @@
+name: "Build container image"
+description: "Action for building a container image, or restoring it from
+  cache if such exists."
+author: "The Dev Nolus Team <dev@nolus.io>"
+
+inputs:
+  build-contexts:
+    description: ""
+    required: false
+  target:
+    description: ""
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - env:
+        DOCKER_BUILD_RECORD_UPLOAD: "false"
+        SOURCE_DATE_EPOCH: "0"
+      id: "build-container"
+      uses: "docker/build-push-action@v6"
+      with:
+        build-contexts: |-
+          ${{ inputs.build-contexts || '' }}
+        cache-from: |-
+          type=gha,scope=${{ inputs.target }}
+        cache-to: |-
+          type=gha,mode=max,scope=${{ inputs.target }}
+        context: "./ci/"
+        file: "./Containerfile"
+        outputs: "type=docker,rewrite-timestamp=true"
+        provenance: false
+        tags: |-
+          localhost/local/${{ inputs.target }}
+        target: |-
+          ${{ inputs.target }}
+    - env:
+        target: |-
+          ${{ inputs.target }}
+      run: |-
+        "docker" \
+          "container" \
+          "run" \
+          --tty \
+          --volume "./:/src/:ro" \
+          "localhost/local/${target}"
+      shell: "sh"

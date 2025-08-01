@@ -139,21 +139,10 @@ jobs:
     runs-on: "self-hosted"
     steps:
       - uses: "actions/checkout@v4"
-      # - uses: "./.github/actions/setup-docker"
-      - id: "build-container"
-        uses: "./.github/actions/check-lockfiles-container"
-      - env:
-          image_id: |-
-            ${{ steps.build-container.outputs.image-id }}
-        run: |-
-          "sleep" "600"
-
-          "docker" \
-            "container" \
-            "run" \
-            --tty \
-            --volume "./:/src/:ro" \
-            "${image_id:?}"
+      - uses: "./.github/actions/setup-docker"
+      - uses: "./.github/actions/build-and-run"
+        with:
+          target: "check-lockfiles"
   check-formatting:
     runs-on: "ubuntu-latest" # "self-hosted"
     # needs:
