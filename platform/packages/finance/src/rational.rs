@@ -1,4 +1,4 @@
-use crate::{fractionable::Fractionable, traits::FractionUnit};
+use crate::{fractionable::Fragmentable, traits::FractionUnit};
 
 pub trait Rational<U>
 where
@@ -7,5 +7,5 @@ where
     /// Computes the fraction of a given whole.
     fn of<A>(self, whole: A) -> Option<A>
     where
-        A: Fractionable<U>;
+        A: Fragmentable<U>;
 }

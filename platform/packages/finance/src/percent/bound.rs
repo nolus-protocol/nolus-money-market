@@ -13,7 +13,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     coin::Amount,
     error::{Error, Result as FinanceResult},
-    fractionable::Fractionable,
+    fractionable::Fragmentable,
     ratio::{Ratio, SimpleFraction},
     rational::Rational,
     traits::FractionUnit,
@@ -53,7 +53,7 @@ impl<const UPPER_BOUND: Units> BoundPercent<UPPER_BOUND> {
 
     pub fn from_fraction<U>(nominator: U, denominator: U) -> Option<Self>
     where
-        Self: Fractionable<U>,
+        Self: Fragmentable<U>,
         U: FractionUnit,
     {
         SimpleFraction::new(nominator, denominator).of(Self::HUNDRED)
