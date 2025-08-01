@@ -130,6 +130,16 @@ jobs:
 #            }
 #
 #            console.log("Clear completed")
+  audit-dependencies:
+    runs-on: "ubuntu-latest" # "self-hosted"
+    # needs:
+    #   - "clear-cache"
+    steps:
+      - uses: "actions/checkout@v4"
+      - uses: "./.github/actions/setup-docker"
+      - uses: "./.github/actions/build-and-run"
+        with:
+          target: "audit-dependencies"
   check-lockfiles:
     if: |-
       github.ref_type == 'tag' || (github.event_name == 'workflow_dispatch' && inputs.check-dependencies-version)
@@ -167,6 +177,8 @@ jobs:
     steps:
       - uses: "actions/checkout@v4"
       - uses: "./.github/actions/setup-docker"
+      - run: |-
+          "mv" "./.github/test-data" "./"
       - uses: "./.github/actions/build-and-run"
         with:
           profile: |-
@@ -213,6 +225,8 @@ jobs:
     steps:
       - uses: "actions/checkout@v4"
       - uses: "./.github/actions/setup-docker"
+      - run: |-
+          "mv" "./.github/test-data" "./"
       - uses: "./.github/actions/build-and-run"
         with:
           profile: |-
@@ -265,6 +279,8 @@ jobs:
     steps:
       - uses: "actions/checkout@v4"
       - uses: "./.github/actions/setup-docker"
+      - run: |-
+          "mv" "./.github/test-data" "./"
       - uses: "./.github/actions/build-and-run"
         with:
           target: "check-unused-dependencies"
