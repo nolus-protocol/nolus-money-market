@@ -34,10 +34,11 @@ use crate::{
             InstantiatorAddresses as LeaseInstantiatorAddresses,
             InstantiatorConfig as LeaseInstantiatorConfig,
         },
+        leaser::Instantiator as LeaserInstantiator,
         lpp::{LppExecuteMsg, LppQueryMsg},
         protocols::Registry,
         test_case::{
-            TestCase, builder::BlankBuilder as TestCaseBuilder,
+            TestCase, app::App, builder::BlankBuilder as TestCaseBuilder,
             response::ResponseWithInterChainMsgs,
         },
     },
@@ -270,16 +271,7 @@ fn deposit_and_withdraw() {
         );
 
     // initial deposit
-    let _: AppResponse = test_case
-        .app
-        .execute(
-            lender1.clone(),
-            test_case.address_book.lpp().clone(),
-            &LppExecuteMsg::Deposit(),
-            &[lpn_cwcoin(init_deposit)],
-        )
-        .unwrap()
-        .unwrap_response();
+    deposit(&mut test_case, lender1.clone(), init_deposit);
 
     // push the price from 1, should be allowed as an interest from previous leases for example.
     () = test_case
@@ -302,16 +294,7 @@ fn deposit_and_withdraw() {
     );
 
     // deposit to check,
-    let _: AppResponse = test_case
-        .app
-        .execute(
-            lender2.clone(),
-            test_case.address_book.lpp().clone(),
-            &LppExecuteMsg::Deposit(),
-            &[lpn_cwcoin(test_deposit)],
-        )
-        .unwrap()
-        .unwrap_response();
+    deposit(&mut test_case, lender2.clone(), test_deposit);
 
     // got rounding error
     let balance_nlpn: BalanceResponse = test_case
@@ -335,16 +318,7 @@ fn deposit_and_withdraw() {
     );
 
     // other deposits should not change asserts for lender2
-    let _: AppResponse = test_case
-        .app
-        .execute(
-            lender3.clone(),
-            test_case.address_book.lpp().clone(),
-            &LppExecuteMsg::Deposit(),
-            &[lpn_cwcoin(post_deposit)],
-        )
-        .unwrap()
-        .unwrap_response();
+    deposit(&mut test_case, lender3.clone(), post_deposit);
 
     let balance_nlpn: BalanceResponse = test_case
         .app
@@ -455,7 +429,7 @@ fn deposit_and_withdraw() {
             lender2.clone(),
             test_case.address_book.lpp().clone(),
             &LppExecuteMsg::Burn {
-                amount: (rest_nlpn).into(),
+                amount: rest_nlpn.into(),
             },
             &[],
         )
@@ -584,17 +558,7 @@ fn loan_open_and_repay() {
     };
 
     // initial deposit
-    () = test_case
-        .app
-        .execute(
-            lender,
-            test_case.address_book.lpp().clone(),
-            &LppExecuteMsg::Deposit(),
-            &[lpn_cwcoin(init_deposit)],
-        )
-        .unwrap()
-        .ignore_response()
-        .unwrap_response();
+    deposit(&mut test_case, lender, init_deposit);
 
     () = test_case
         .app
@@ -905,17 +869,7 @@ fn compare_lpp_states() {
         .send_funds_from_admin(hacker.clone(), &[lpn_cwcoin(hacker_balance)]);
 
     // initial deposit
-    () = test_case
-        .app
-        .execute(
-            lender,
-            test_case.address_book.lpp().clone(),
-            &LppExecuteMsg::Deposit(),
-            &[lpn_cwcoin(init_deposit)],
-        )
-        .unwrap()
-        .ignore_response()
-        .unwrap_response();
+    deposit(&mut test_case, lender, init_deposit);
 
     () = test_case
         .app
@@ -1239,17 +1193,7 @@ fn test_rewards() {
         .unwrap_err();
 
     // initial deposit
-    () = test_case
-        .app
-        .execute(
-            lender1.clone(),
-            test_case.address_book.lpp().clone(),
-            &LppExecuteMsg::Deposit(),
-            &[lpn_cwcoin(deposit1)],
-        )
-        .unwrap()
-        .ignore_response()
-        .unwrap_response();
+    deposit(&mut test_case, lender1.clone(), deposit1);
     // the initial price is 1 Nlpn = 1 LPN
     assert_eq!(
         deposit1,
@@ -1288,17 +1232,7 @@ fn test_rewards() {
         .unwrap_response();
 
     // deposit after disributing rewards should not get anything
-    () = test_case
-        .app
-        .execute(
-            lender2.clone(),
-            test_case.address_book.lpp().clone(),
-            &LppExecuteMsg::Deposit(),
-            &[lpn_cwcoin(deposit2)],
-        )
-        .unwrap()
-        .ignore_response()
-        .unwrap_response();
+    deposit(&mut test_case, lender2.clone(), deposit2);
 
     let resp: RewardsResponse = test_case
         .app
@@ -1476,6 +1410,98 @@ fn test_rewards() {
     assert_eq!(resp.rewards, Coin::new(0));
     let balance = bank::balance(&recipient, test_case.app.query()).unwrap();
     assert_eq!(balance, Coin::<Nls>::from(lender_reward2));
+}
+
+#[test]
+fn close_all_deposits() {
+    let app_balance = 10_000_000_000;
+    let deposit1 = 20_000;
+    let deposit2 = 10_004;
+    let deposit3 = 1_000_000;
+
+    let lender1 = testing::user("lender1");
+    let lender2 = testing::user("lender2");
+    let lender3 = testing::user("lender3");
+
+    let mut test_case = TestCaseBuilder::<Lpn>::with_reserve(&[lpn_cwcoin(app_balance)])
+        .init_lpp_with_funds(
+            None,
+            &[],
+            BASE_INTEREST_RATE,
+            UTILIZATION_OPTIMAL,
+            ADDON_OPTIMAL_INTEREST_RATE,
+            TestCase::DEFAULT_LPP_MIN_UTILIZATION,
+        )
+        .into_generic();
+
+    test_case
+        .send_funds_from_admin(lender1.clone(), &[lpn_cwcoin(deposit1)])
+        .send_funds_from_admin(lender2.clone(), &[lpn_cwcoin(deposit2)])
+        .send_funds_from_admin(lender3.clone(), &[lpn_cwcoin(deposit3)]);
+
+    deposit(&mut test_case, lender1.clone(), deposit1);
+    deposit(&mut test_case, lender2.clone(), deposit2);
+    deposit(&mut test_case, lender3.clone(), deposit3);
+
+    expect_balance(&test_case.app, Coin::ZERO, lender1.clone());
+    expect_balance(&test_case.app, Coin::ZERO, lender2.clone());
+    expect_balance(&test_case.app, Coin::ZERO, lender3.clone());
+
+    let protocol_admin = LeaserInstantiator::expected_addr();
+    _ = test_case
+        .app
+        .execute(
+            protocol_admin,
+            test_case.address_book.lpp().clone(),
+            &LppExecuteMsg::CloseAllDeposits(),
+            &[],
+        )
+        .unwrap()
+        .ignore_response()
+        .unwrap_response();
+
+    expect_balance(&test_case.app, deposit1, lender1);
+    expect_balance(&test_case.app, deposit2, lender2);
+    expect_balance(&test_case.app, deposit3, lender3);
+}
+
+fn expect_balance<A>(app: &App, amount: A, lender: Addr)
+where
+    A: Into<Coin<Lpn>>,
+{
+    assert_eq!(
+        amount.into(),
+        bank::balance::<Lpn>(&lender, app.query()).unwrap()
+    )
+}
+
+fn deposit<ProtocolsRegistry, Treasury, Profit, Reserve, Leaser, Oracle, TimeAlarms, Amount>(
+    test_case: &mut TestCase<
+        ProtocolsRegistry,
+        Treasury,
+        Profit,
+        Reserve,
+        Leaser,
+        Addr,
+        Oracle,
+        TimeAlarms,
+    >,
+    lender: Addr,
+    amount: Amount,
+) where
+    Amount: Into<Coin<Lpn>>,
+{
+    test_case
+        .app
+        .execute(
+            lender,
+            test_case.address_book.lpp().clone(),
+            &LppExecuteMsg::Deposit(),
+            &[lpn_cwcoin(amount)],
+        )
+        .unwrap()
+        .ignore_response()
+        .unwrap_response()
 }
 
 fn repay_loan<Currency, Amount>(
