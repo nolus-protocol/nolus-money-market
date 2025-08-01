@@ -1448,7 +1448,7 @@ fn close_all_deposits() {
     expect_balance(&test_case.app, Coin::ZERO, lender3.clone());
 
     let protocol_admin = LeaserInstantiator::expected_addr();
-    _ = test_case
+    () = test_case
         .app
         .execute(
             protocol_admin,
