@@ -11,9 +11,3 @@ impl User for MessageInfo {
         &self.sender
     }
 }
-
-impl User for Addr {
-    fn addr(&self) -> &Addr {
-        self
-    }
-}
