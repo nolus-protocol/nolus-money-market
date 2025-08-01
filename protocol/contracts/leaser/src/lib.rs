@@ -3,7 +3,6 @@ pub use self::{
     error::ContractError,
 };
 
-mod authz;
 mod cmd;
 mod contract;
 mod customer;
@@ -13,6 +12,7 @@ mod lease;
 mod leaser;
 mod migrate;
 pub mod msg;
+mod permissions;
 pub mod result;
 mod state;
 

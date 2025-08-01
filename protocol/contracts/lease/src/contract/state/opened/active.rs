@@ -5,6 +5,7 @@ use dex::Enterable;
 use finance::{coin::IntoDTO, duration::Duration};
 use platform::{bank, batch::Emitter, message::Response as MessageResponse};
 use sdk::cosmwasm_std::{Coin as CwCoin, Env, MessageInfo, QuerierWrapper, Timestamp};
+use timealarms::stub::TimeAlarmDelivery;
 
 use crate::{
     api::{
@@ -17,7 +18,12 @@ use crate::{
         cmd::{
             ChangeClosePolicy, CloseStatusCmd, CloseStatusDTO, ObtainPayment, OpenLoanRespResult,
         },
-        state::{Handler, Response},
+        state::{
+            Handler, Response,
+            opened::permission::{
+                ChangeClosePolicyPermission, ClosePositionPermission, PriceAlarmDelivery,
+            },
+        },
     },
     error::{ContractError, ContractResult},
     finance::{LpnCurrencies, LpnCurrency},
@@ -162,41 +168,50 @@ impl Handler for Active {
         env: Env,
         info: MessageInfo,
     ) -> ContractResult<Response> {
-        access_control::check(&self.lease.lease.customer, &info.sender)
-            .map_err(Into::into)
-            .and_then(|()| {
-                let profit = self.lease.lease.loan.profit().clone();
-                let time_alarms = self.lease.lease.time_alarms.clone();
-                let oracle_ref = self.lease.lease.oracle.clone();
-                let reserve = self.lease.lease.reserve.clone();
-                self.lease
-                    .update(
-                        ChangeClosePolicy::new(
-                            change,
-                            &env.block.time,
-                            profit,
-                            time_alarms,
-                            &oracle_ref,
-                            reserve,
-                        ),
-                        querier,
-                    )})
-                .and_then(|(lease, close_status)|
-                match close_status {
-                    CloseStatusDTO::Paid => unimplemented!("only changing an Active Opened Lease is permitted"),
-                    CloseStatusDTO::None { current_liability, alarms  } =>  Ok(Response::from(
-                        alarm::build_resp(&lease, current_liability, alarms),
-                        Self::new(lease),
-                    )),
-                    CloseStatusDTO::CloseAsked(_) => unimplemented!("triggering a close with a policy change should have already resulted in an error"),
-                    CloseStatusDTO::NeedLiquidation(liquidation) => liquidation::start(
-                        lease,
-                        liquidation,
-                        MessageResponse::default(),
-                        &env,
-                        querier,
-                    ),
-                })
+        access_control::check(
+            &ChangeClosePolicyPermission::new(&self.lease.lease.customer),
+            &info,
+        )
+        .map_err(Into::into)
+        .and_then(|()| {
+            let profit = self.lease.lease.loan.profit().clone();
+            let time_alarms = self.lease.lease.time_alarms.clone();
+            let oracle_ref = self.lease.lease.oracle.clone();
+            let reserve = self.lease.lease.reserve.clone();
+            self.lease.update(
+                ChangeClosePolicy::new(
+                    change,
+                    &env.block.time,
+                    profit,
+                    time_alarms,
+                    &oracle_ref,
+                    reserve,
+                ),
+                querier,
+            )
+        })
+        .and_then(|(lease, close_status)| match close_status {
+            CloseStatusDTO::Paid => {
+                unimplemented!("only changing an Active Opened Lease is permitted")
+            }
+            CloseStatusDTO::None {
+                current_liability,
+                alarms,
+            } => Ok(Response::from(
+                alarm::build_resp(&lease, current_liability, alarms),
+                Self::new(lease),
+            )),
+            CloseStatusDTO::CloseAsked(_) => unimplemented!(
+                "triggering a close with a policy change should have already resulted in an error"
+            ),
+            CloseStatusDTO::NeedLiquidation(liquidation) => liquidation::start(
+                lease,
+                liquidation,
+                MessageResponse::default(),
+                &env,
+                querier,
+            ),
+        })
     }
 
     fn close_position(
@@ -206,9 +221,12 @@ impl Handler for Active {
         env: Env,
         info: MessageInfo,
     ) -> ContractResult<Response> {
-        access_control::check(&self.lease.lease.customer, &info.sender)
-            .map_err(Into::into)
-            .and_then(|()| customer_close::start(spec, self.lease, &env, querier))
+        access_control::check(
+            &ClosePositionPermission::new(&self.lease.lease.customer),
+            &info,
+        )
+        .map_err(Into::into)
+        .and_then(|()| customer_close::start(spec, self.lease, &env, querier))
     }
 
     fn on_time_alarm(
@@ -217,13 +235,10 @@ impl Handler for Active {
         env: Env,
         info: MessageInfo,
     ) -> ContractResult<Response> {
-        // TODO define a trait 'RestrictedResource' with 'fn owner(&Addr) -> bool'
-        // and move this check to the 'access_control' package
-        if !self.lease.lease.time_alarms.owned_by(&info.sender) {
-            return Err(ContractError::Unauthorized(
-                access_control::error::Error::Unauthorized {},
-            ));
-        }
+        access_control::check(
+            &TimeAlarmDelivery::new(&self.lease.lease.time_alarms),
+            &info,
+        )?;
 
         self.try_on_alarm(querier, &env)
     }
@@ -234,12 +249,7 @@ impl Handler for Active {
         env: Env,
         info: MessageInfo,
     ) -> ContractResult<Response> {
-        // TODO ref. the TODO in try_on_time_alarm
-        if !self.lease.lease.oracle.owned_by(&info.sender) {
-            return Err(ContractError::Unauthorized(
-                access_control::error::Error::Unauthorized {},
-            ));
-        }
+        access_control::check(&PriceAlarmDelivery::new(&self.lease.lease.oracle), &info)?;
 
         self.try_on_alarm(querier, &env)
     }

@@ -11,11 +11,12 @@ license.workspace = true
 combinations = [{ tags = ["ci", "@agnostic"], include-rest = true }]
 
 [features]
-impl = ["dep:oracle-platform", "oracle/stub_price", "dep:timealarms"]
+impl = ["dep:access-control", "dep:oracle-platform", "oracle/stub_price", "dep:timealarms"]
 migration = []
 testing = ["finance/testing"]
 
 [dependencies]
+access-control = { workspace = true, optional = true }
 currency = { workspace = true }
 finance = { workspace = true }
 oracle = { workspace = true, features = ["stub_swap"] }

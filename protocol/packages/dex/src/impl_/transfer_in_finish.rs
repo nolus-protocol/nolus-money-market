@@ -1,20 +1,22 @@
-use std::fmt::{Display, Formatter, Result as FmtResult};
-use std::marker::PhantomData;
+use std::{
+    fmt::{Display, Formatter, Result as FmtResult},
+    marker::PhantomData,
+};
 
-use currency::{CurrencyDef, MemberOf};
-use finance::duration::Duration;
 use serde::{Deserialize, Serialize};
 
-use finance::coin::CoinDTO;
+use currency::{CurrencyDef, MemberOf};
+use finance::{coin::CoinDTO, duration::Duration};
 use platform::{
     batch::{Emit, Emitter},
     message::Response as MessageResponse,
 };
-use sdk::cosmwasm_std::{Env, QuerierWrapper, Timestamp};
+use sdk::cosmwasm_std::{Env, MessageInfo, QuerierWrapper, Timestamp};
+use timealarms::stub::TimeAlarmDelivery;
 
 use crate::{
-    Contract, ContractInSwap, Enterable, Stage, SwapOutputTask, SwapTask as SwapTaskT,
-    WithOutputTask,
+    Contract, ContractInSwap, Enterable, Error as DexError, Stage, SwapOutputTask,
+    SwapTask as SwapTaskT, WithOutputTask,
 };
 
 #[cfg(feature = "migration")]
@@ -230,11 +232,18 @@ where
     type SwapResult = SwapTask::Result;
 
     fn heal(self, querier: QuerierWrapper<'_>, env: Env) -> HandlerResult<Self> {
-        self.on_time_alarm(querier, env)
+        self.try_complete(querier, env)
     }
 
-    fn on_time_alarm(self, querier: QuerierWrapper<'_>, env: Env) -> HandlerResult<Self> {
-        self.try_complete(querier, env)
+    fn on_time_alarm(
+        self,
+        querier: QuerierWrapper<'_>,
+        env: Env,
+        info: MessageInfo,
+    ) -> HandlerResult<Self> {
+        access_control::check(&TimeAlarmDelivery::new(self.spec.time_alarm()), &info)
+            .map_err(DexError::Unauthorized)
+            .map_or_else(Into::into, |()| self.try_complete(querier, env))
     }
 }
 

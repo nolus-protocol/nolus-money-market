@@ -820,6 +820,7 @@ dependencies = [
 name = "dex"
 version = "0.2.2"
 dependencies = [
+ "access-control",
  "currency",
  "finance",
  "oracle",
@@ -2154,6 +2155,7 @@ dependencies = [
 name = "timealarms"
 version = "0.5.1"
 dependencies = [
+ "access-control",
  "cosmwasm-std 2.1.7",
  "platform",
  "sdk",

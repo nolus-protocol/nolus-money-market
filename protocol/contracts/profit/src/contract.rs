@@ -1,6 +1,8 @@
 use std::ops::{Deref, DerefMut};
 
-use access_control::{ContractOwnerAccess, SingleUserAccess};
+use access_control::{
+    ContractOwnerAccess, SingleUserAccess, permissions::DexResponseSafeDeliveryPermission,
+};
 use dex::{ContinueResult as DexResult, Handler as _, Response as DexResponse};
 use oracle_platform::OracleRef;
 use platform::{
@@ -51,7 +53,7 @@ pub fn instantiate(
     addr_validator.check_contract(&msg.oracle)?;
     // msg.timealarms is validated on TimeAlarmsRef instantiation
 
-    ContractOwnerAccess::new(deps.storage.deref_mut()).grant_to(&info.sender)?;
+    ContractOwnerAccess::new(deps.storage.deref_mut()).grant_to(&info)?;
 
     SingleUserAccess::new(
         deps.storage.deref_mut(),
@@ -104,13 +106,15 @@ pub fn execute(
                 deps.storage.deref(),
                 crate::access_control::TIMEALARMS_NAMESPACE,
             )
-            .check(&info.sender)?;
+            .check(&info)?;
 
-            try_handle_execute_message(deps, env, State::on_time_alarm)
-                .map(response::response_only_messages)
+            try_handle_execute_message(deps, env, |state, querier, env| {
+                State::on_time_alarm(state, querier, env, info)
+            })
+            .map(response::response_only_messages)
         }
         ExecuteMsg::Config { cadence_hours } => {
-            ContractOwnerAccess::new(deps.storage.deref()).check(&info.sender)?;
+            ContractOwnerAccess::new(deps.storage.deref()).check(&info)?;
 
             let StateMachineResponse {
                 response,
@@ -122,13 +126,19 @@ pub fn execute(
             Ok(response::response_only_messages(response))
         }
         ExecuteMsg::DexCallback() => {
-            access_control::check(&env.contract.address, &info.sender)?;
+            access_control::check(
+                &DexResponseSafeDeliveryPermission::new(&env.contract),
+                &info,
+            )?;
 
             try_handle_execute_message(deps, env, State::on_inner)
                 .map(response::response_only_messages)
         }
         ExecuteMsg::DexCallbackContinue() => {
-            access_control::check(&env.contract.address, &info.sender)?;
+            access_control::check(
+                &DexResponseSafeDeliveryPermission::new(&env.contract),
+                &info,
+            )?;
 
             try_handle_execute_message(deps, env, State::on_inner_continue)
                 .map(response::response_only_messages)

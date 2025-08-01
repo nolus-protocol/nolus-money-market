@@ -81,7 +81,7 @@ pub fn execute(
             label,
             message,
         } => {
-            ensure_sender_is_owner(deps.storage, &info.sender)?;
+            ensure_sender_is_owner(deps.storage, &info)?;
 
             ExpectedInstantiation::new(code_id.u64(), expected_address).store(deps.storage)?;
 
@@ -102,7 +102,7 @@ pub fn execute(
             Ok(response::response_only_messages(batch))
         }
         ExecuteMsg::RegisterProtocol { name, ref protocol } => {
-            ensure_sender_is_owner(deps.storage, &info.sender)?;
+            ensure_sender_is_owner(deps.storage, &info)?;
 
             register_protocol(deps.storage, deps.querier, name, protocol)
         }
@@ -219,9 +219,9 @@ fn instantiate_reply(
     }
 }
 
-fn ensure_sender_is_owner(storage: &mut dyn Storage, sender: &Addr) -> ContractResult<()> {
+fn ensure_sender_is_owner(storage: &mut dyn Storage, info: &MessageInfo) -> ContractResult<()> {
     ContractOwnerAccess::new(storage)
-        .check(sender)
+        .check(info)
         .map_err(Into::into)
 }
 

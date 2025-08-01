@@ -123,7 +123,7 @@ pub fn execute(
                 deps.storage.deref_mut(),
                 crate::access_control::PROTOCOL_ADMIN_KEY,
             )
-            .check(&info.sender)?;
+            .check(&info)?;
 
             Config::update_lease_code(deps.storage, new_lease_code)
                 .map(|()| PlatformResponse::default())
@@ -194,7 +194,7 @@ pub fn execute(
                 deps.storage.deref_mut(),
                 crate::access_control::PROTOCOL_ADMIN_KEY,
             )
-            .check(&info.sender)?;
+            .check(&info)?;
 
             assert!(
                 borrow::query_empty::<LpnCurrency>(deps.storage),

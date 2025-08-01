@@ -8,7 +8,7 @@ use platform::{
     batch::{Batch, Emit, Emitter},
     message::Response as MessageResponse,
 };
-use sdk::cosmwasm_std::{Addr, Binary, Env, QuerierWrapper, Reply, Timestamp};
+use sdk::cosmwasm_std::{Addr, Binary, Env, MessageInfo, QuerierWrapper, Reply, Timestamp};
 
 use serde::{Deserialize, Serialize};
 
@@ -179,7 +179,12 @@ where
         self.setup_next_delivery(env.block.time)
     }
 
-    fn on_time_alarm(self, querier: QuerierWrapper<'_>, env: Env) -> Result<Self> {
+    fn on_time_alarm(
+        self,
+        querier: QuerierWrapper<'_>,
+        env: Env,
+        _info: MessageInfo,
+    ) -> Result<Self> {
         // we leave the error to escape since the time alarms delivery is reliable
         self.do_redeliver(querier, env)
     }

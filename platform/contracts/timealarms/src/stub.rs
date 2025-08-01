@@ -2,6 +2,7 @@ use std::result::Result as StdResult;
 
 use serde::{Deserialize, Serialize};
 
+use access_control::{AccessPermission, user::User};
 use platform::{batch::Batch, contract::Validator};
 use sdk::cosmwasm_std::{Addr, StdError as SdkError, Timestamp, wasm_execute};
 
@@ -108,5 +109,25 @@ impl TimeAlarms for TimeAlarmsStub<'_> {
 impl<'a> From<TimeAlarmsStub<'a>> for Batch {
     fn from(stub: TimeAlarmsStub<'a>) -> Self {
         stub.batch
+    }
+}
+
+/// This is a permission given for delivering time alarms
+pub struct TimeAlarmDelivery<'a> {
+    time_alarms_ref: &'a TimeAlarmsRef,
+}
+
+impl<'a> TimeAlarmDelivery<'a> {
+    pub fn new(time_alarms_ref: &'a TimeAlarmsRef) -> Self {
+        Self { time_alarms_ref }
+    }
+}
+
+impl AccessPermission for TimeAlarmDelivery<'_> {
+    fn granted_to<U>(&self, user: &U) -> bool
+    where
+        U: User,
+    {
+        self.time_alarms_ref.owned_by(user.addr())
     }
 }

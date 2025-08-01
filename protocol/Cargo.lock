@@ -819,6 +819,7 @@ dependencies = [
 name = "dex"
 version = "0.2.2"
 dependencies = [
+ "access-control",
  "currency",
  "finance",
  "oracle",
@@ -2125,6 +2126,7 @@ dependencies = [
 name = "timealarms"
 version = "0.5.1"
 dependencies = [
+ "access-control",
  "platform",
  "sdk",
  "serde",
