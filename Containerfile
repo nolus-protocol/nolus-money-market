@@ -34,8 +34,6 @@ FROM rust AS cargo-audit
 
 ARG SOURCE_DATE_EPOCH
 
-RUN ["apk", "add", "ca-certificates", "openssl-dev", "openssl-libs-static"]
-
 ARG cargo_audit_ver
 
 RUN \
@@ -54,6 +52,8 @@ RUN \
 FROM rust AS cargo-udeps
 
 ARG SOURCE_DATE_EPOCH
+
+RUN ["apk", "add", "ca-certificates", "openssl-dev", "openssl-libs-static"]
 
 ARG cargo_udeps_ver
 
