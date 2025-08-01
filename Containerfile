@@ -61,16 +61,6 @@ RUN \
   --mount=type="tmpfs",target="/tmp/cargo-target/" \
   "cargo" "install" "cargo-udeps@${cargo_udeps_ver:?}" "--target-dir" "/tmp/cargo-target/"
 
-FROM rust AS rust-nightly
-
-ARG SOURCE_DATE_EPOCH
-
-ARG rust_nightly_ver
-
-ENV RUST_NIGHTLY_VERSION="nightly-${rust_nightly_ver:?}"
-
-RUN "rustup" "toolchain" "install" "${RUST_NIGHTLY_VERSION:?}"
-
 FROM rust AS rust-ci
 
 ARG SOURCE_DATE_EPOCH
@@ -125,6 +115,12 @@ ENTRYPOINT ["/usr/local/bin/for-each-workspace.sh", "check-lockfiles.sh"]
 FROM rust-ci AS check-unused-dependencies
 
 ARG SOURCE_DATE_EPOCH
+
+ARG rust_nightly_ver
+
+ENV RUST_NIGHTLY_VERSION="nightly-${rust_nightly_ver:?}"
+
+RUN "rustup" "toolchain" "install" "${RUST_NIGHTLY_VERSION:?}"
 
 COPY \
   --from=cargo-each \
