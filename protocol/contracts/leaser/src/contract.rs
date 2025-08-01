@@ -58,7 +58,7 @@ pub fn instantiate(
 
     validate(&msg.lease_admin, deps.api)?;
 
-    ContractOwnerAccess::new(deps.storage.deref_mut()).grant_to(&info.sender)?;
+    ContractOwnerAccess::new(deps.storage.deref_mut()).grant_to(&info)?;
 
     new_code(msg.lease_code, &addr_validator)
         .map(|lease_code| Config::new(lease_code, msg))

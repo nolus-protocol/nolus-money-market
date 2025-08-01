@@ -53,7 +53,7 @@ pub fn instantiate(
     addr_validator.check_contract(&msg.oracle)?;
     // msg.timealarms is validated on TimeAlarmsRef instantiation
 
-    ContractOwnerAccess::new(deps.storage.deref_mut()).grant_to(&info.sender)?;
+    ContractOwnerAccess::new(deps.storage.deref_mut()).grant_to(&info)?;
 
     SingleUserAccess::new(
         deps.storage.deref_mut(),
