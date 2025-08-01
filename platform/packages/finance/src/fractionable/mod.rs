@@ -11,7 +11,7 @@ mod percent;
 mod price;
 mod usize;
 
-pub trait Fractionable<U> {
+pub trait Fragmentable<U> {
     #[track_caller]
     fn safe_mul<F>(self, fraction: &F) -> Self
     where
@@ -25,7 +25,7 @@ pub trait HigherRank<T> {
     type Intermediate;
 }
 
-impl<T, D, DIntermediate, U> Fractionable<U> for T
+impl<T, D, DIntermediate, U> Fragmentable<U> for T
 where
     T: HigherRank<U, Type = D, Intermediate = DIntermediate> + Into<D>,
     D: TryInto<DIntermediate>,
