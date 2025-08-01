@@ -2,7 +2,7 @@ use bnum::types::U256;
 
 use crate::{coin::Coin, duration::Duration, ratio::Ratio};
 
-use super::{Fractionable, HigherRank};
+use super::{Fragmentable, HigherRank};
 
 impl<T> HigherRank<T> for u128
 where
@@ -12,7 +12,7 @@ where
     type Intermediate = u128;
 }
 
-impl<C> Fractionable<Coin<C>> for Duration {
+impl<C> Fragmentable<Coin<C>> for Duration {
     #[track_caller]
     fn safe_mul<F>(self, fraction: &F) -> Self
     where
@@ -30,7 +30,10 @@ impl<C> Fractionable<Coin<C>> for Duration {
 mod tests {
     use currency::test::SuperGroupTestC1;
 
-    use crate::{coin::Coin, duration::Duration, ratio::SimpleFraction, rational::Rational};
+    use crate::{
+        coin::Coin, duration::Duration, ratio::SimpleFraction,
+        rational::Rational,
+    };
 
     #[test]
     fn safe_mul() {

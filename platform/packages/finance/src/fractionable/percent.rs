@@ -4,7 +4,7 @@ use crate::{
     ratio::Ratio,
 };
 
-use super::{Fractionable, HigherRank};
+use super::{Fragmentable, HigherRank};
 
 impl<T> HigherRank<T> for u32
 where
@@ -14,7 +14,7 @@ where
     type Intermediate = Self;
 }
 
-impl<const UPPER_BOUND: Units> Fractionable<Units> for BoundPercent<UPPER_BOUND> {
+impl<const UPPER_BOUND: Units> Fragmentable<Units> for BoundPercent<UPPER_BOUND> {
     #[track_caller]
     fn safe_mul<R>(self, ratio: &R) -> Self
     where
@@ -25,7 +25,7 @@ impl<const UPPER_BOUND: Units> Fractionable<Units> for BoundPercent<UPPER_BOUND>
     }
 }
 
-impl<C, const UPPER_BOUND: Units> Fractionable<Coin<C>> for BoundPercent<UPPER_BOUND> {
+impl<C, const UPPER_BOUND: Units> Fragmentable<Coin<C>> for BoundPercent<UPPER_BOUND> {
     #[track_caller]
     fn safe_mul<F>(self, fraction: &F) -> Self
     where
