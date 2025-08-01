@@ -218,6 +218,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3e31ea183f6ee62ac8b8a8cf7feddd766317adfb13ff469de57ce033efd6a790"
 
 [[package]]
+name = "bnum"
+version = "0.13.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "119771309b95163ec7aaf79810da82f7cd0599c19722d48b9c03894dca833966"
+
+[[package]]
 name = "bytes"
 version = "1.10.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -332,7 +338,7 @@ checksum = "42fa3f65c1c2bbd2af42f77dae303e5519dc25f557e004bec27873263a100cbf"
 dependencies = [
  "base64",
  "bech32 0.11.0",
- "bnum",
+ "bnum 0.11.0",
  "cosmwasm-core",
  "cosmwasm-crypto",
  "cosmwasm-derive",
@@ -633,6 +639,7 @@ checksum = "28dea519a9695b9977216879a3ebfddf92f1c08c05d984f8996aecd6ecdc811d"
 name = "finance"
 version = "0.2.3"
 dependencies = [
+ "bnum 0.13.0",
  "currency",
  "gcd",
  "sdk",

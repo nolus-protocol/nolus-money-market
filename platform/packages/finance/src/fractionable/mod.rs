@@ -7,6 +7,7 @@ use crate::{arithmetics::CheckedMul, ratio::Ratio, zero::Zero};
 
 mod coin;
 mod duration;
+mod higher_primitive;
 mod percent;
 mod price;
 mod usize;

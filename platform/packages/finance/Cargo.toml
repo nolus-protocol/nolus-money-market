@@ -22,6 +22,7 @@ sdk = { workspace = true }
 gcd = { workspace = true }
 thiserror = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
+bnum = "0.13.0"
 
 [dev-dependencies]
 currency = { workspace = true, features = ["testing"] }

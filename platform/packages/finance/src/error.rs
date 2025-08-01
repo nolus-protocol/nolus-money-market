@@ -31,8 +31,9 @@ pub enum Error {
         bound: PercentUnits,
         value: PercentUnits,
     },
-    // #[error("[Finance] [Std] {0}")]
-    // CosmWasmError(#[from] StdError),
+
+    #[error("[Finance] The convertion from the HigherPrimitive to Self overflows. {0}")]
+    HigherPrimitiveConvertion(String),
 }
 
 impl Error {

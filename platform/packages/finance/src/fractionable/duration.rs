@@ -1,8 +1,14 @@
 use sdk::cosmwasm_std::{Uint128, Uint256};
 
-use crate::{coin::Coin, duration::Duration, ratio::Ratio};
+use crate::{
+    coin::Coin,
+    duration::Duration,
+    fractionable::{Fractionable, Fragmentable},
+    ratio::Ratio,
+};
+use bnum::types;
 
-use super::{Fragmentable, HigherRank};
+use super::HigherRank;
 
 impl<T> HigherRank<T> for u128
 where
@@ -12,6 +18,11 @@ where
     type Intermediate = Uint128;
 }
 
+impl<C> Fractionable<Coin<C>> for Duration {
+    type HigherPrimitive = types::U256;
+}
+
+// TODO remove when Fractionable replaces the Fragmentable as trait boundary
 impl<C> Fragmentable<Coin<C>> for Duration {
     #[track_caller]
     fn safe_mul<F>(self, fraction: &F) -> Self
@@ -30,27 +41,28 @@ impl<C> Fragmentable<Coin<C>> for Duration {
 mod tests {
     use currency::test::SuperGroupTestC1;
 
-    use crate::{
-        coin::Coin, duration::Duration, fractionable::Fragmentable, ratio::SimpleFraction,
-    };
+    use crate::{coin::Coin, duration::Duration, ratio::SimpleFraction};
 
     #[test]
-    fn safe_mul() {
+    fn lossy_mul() {
         let d = Duration::from_secs(10);
-        let res = d.safe_mul(&SimpleFraction::new(
+        let res = SimpleFraction::new(
             Coin::<SuperGroupTestC1>::new(10),
             Coin::<SuperGroupTestC1>::new(20),
-        ));
+        )
+        .lossy_mul(d)
+        .unwrap();
         assert_eq!(Duration::from_secs(5), res);
     }
 
     #[test]
-    fn safe_mul_max() {
+    fn lossy_mul_max() {
         let d = Duration::from_secs(10);
-        let res = d.safe_mul(&SimpleFraction::new(
+        let res_x = SimpleFraction::new(
             Coin::<SuperGroupTestC1>::new(u128::MAX),
             Coin::<SuperGroupTestC1>::new(u128::MAX / 2),
-        ));
+        );
+        let res = res_x.lossy_mul(d).unwrap();
         assert_eq!(Duration::from_secs(20), res);
     }
 }

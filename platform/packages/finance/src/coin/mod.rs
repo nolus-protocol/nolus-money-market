@@ -10,6 +10,7 @@ use std::{
 };
 
 use ::serde::{Deserialize, Serialize};
+use bnum::types::U256;
 
 use currency::{Currency, CurrencyDef, Group, MemberOf};
 
@@ -147,6 +148,12 @@ impl<C> Default for Coin<C> {
 }
 
 impl<C> FractionUnit for Coin<C> {}
+
+impl<C> From<Coin<C>> for U256 {
+    fn from(coin: Coin<C>) -> Self {
+        coin.amount.into()
+    }
+}
 
 impl<C> Eq for Coin<C> {}
 

@@ -3,13 +3,14 @@ use std::{
     ops::{Add, AddAssign, Sub, SubAssign},
 };
 
+use bnum::types::U256;
 use serde::{Deserialize, Serialize};
 
-use sdk::cosmwasm_std::{Timestamp, Uint128};
+use sdk::cosmwasm_std::Timestamp;
 
 use crate::{
-    fractionable::Fragmentable, ratio::SimpleFraction, rational::Rational, traits::FractionUnit,
-    zero::Zero,
+    error::Error, fractionable::Fragmentable, ratio::SimpleFraction, rational::Rational,
+    traits::FractionUnit, zero::Zero,
 };
 
 pub type Units = u64;
@@ -107,22 +108,18 @@ impl Duration {
     }
 }
 
+impl FractionUnit for Duration {}
+
 impl From<Duration> for u128 {
     fn from(d: Duration) -> Self {
         d.nanos().into()
     }
 }
 
-impl From<Duration> for Uint128 {
-    fn from(d: Duration) -> Self {
-        u128::from(d).into()
+impl From<Duration> for U256 {
+    fn from(duration: Duration) -> Self {
+        u128::from(duration).into()
     }
-}
-
-impl FractionUnit for Duration {}
-
-impl Zero for Duration {
-    const ZERO: Self = Self::from_nanos(0);
 }
 
 impl TryFrom<u128> for Duration {
@@ -131,6 +128,22 @@ impl TryFrom<u128> for Duration {
     fn try_from(value: u128) -> Result<Self, Self::Error> {
         Ok(Self::from_nanos(value.try_into()?))
     }
+}
+
+impl TryFrom<U256> for Duration {
+    type Error = Error;
+
+    fn try_from(value: U256) -> Result<Self, Self::Error> {
+        u128::try_from(value)
+            .map_err(|err| Error::HigherPrimitiveConvertion(err.to_string()))
+            .and_then(|u: u128| {
+                Self::try_from(u).map_err(|err| Error::HigherPrimitiveConvertion(err.to_string()))
+            })
+    }
+}
+
+impl Zero for Duration {
+    const ZERO: Self = Self::from_nanos(0);
 }
 
 impl Add<Duration> for Timestamp {
