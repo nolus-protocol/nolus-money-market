@@ -15,7 +15,7 @@ impl<'a> LeaseAdminOnly<'a> {
 impl AccessPermission for LeaseAdminOnly<'_> {
     fn granted_to<U>(&self, user: &U) -> bool
     where
-        U: User + ?Sized,
+        U: User,
     {
         self.lease_config.lease_admin == user.addr()
     }

@@ -1,6 +1,6 @@
 use std::ops::{Deref, DerefMut};
 
-use sdk::cosmwasm_std::{MessageInfo, Storage};
+use sdk::cosmwasm_std::Storage;
 
 use crate::{SingleUserAccess, error::Result, user::User};
 
@@ -23,8 +23,11 @@ where
         }
     }
 
-    pub fn check(&self, info: &MessageInfo) -> Result {
-        self.access.check(info)
+    pub fn check<U>(&self, user: &U) -> Result
+    where
+        U: User,
+    {
+        self.access.check(user)
     }
 }
 
@@ -32,7 +35,10 @@ impl<'storage, S> ContractOwnerAccess<'storage, S>
 where
     S: Deref<Target = dyn Storage + 'storage> + DerefMut,
 {
-    pub fn grant_to(&mut self, user: &dyn User) -> Result {
+    pub fn grant_to<U>(&mut self, user: &U) -> Result
+    where
+        U: User,
+    {
         self.access.grant_to(user.addr())
     }
 }

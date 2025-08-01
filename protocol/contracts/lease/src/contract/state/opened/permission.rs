@@ -31,7 +31,7 @@ where
 {
     fn granted_to<U>(&self, user: &U) -> bool
     where
-        U: User + ?Sized,
+        U: User,
     {
         self.oracle_ref.owned_by(user.addr())
     }

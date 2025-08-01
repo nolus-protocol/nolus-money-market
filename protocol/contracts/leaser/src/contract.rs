@@ -105,7 +105,7 @@ pub fn execute(
             .config()
             .and_then(|ref config| {
                 access_control::check(&LeasesConfigurationPermission::new(config), &info)
-                    .map_err(ContractError::from)
+                    .map_err(Into::into)
             })
             .and_then(|()| leaser::try_configure(deps.storage, new_config)),
         ExecuteMsg::FinalizeLease { customer } => {
@@ -161,7 +161,7 @@ pub fn execute(
             .config()
             .and_then(|ref config| {
                 access_control::check(&ChangeLeaseAdminPermission::new(config), &info)
-                    .map_err(ContractError::from)
+                    .map_err(Into::into)
             })
             .and_then(|()| validate(&new, deps.api))
             .and_then(|valid_new_admin| {
@@ -195,10 +195,7 @@ pub fn query(deps: Deps<'_>, _env: Env, msg: QueryMsg) -> ContractResult<Binary>
     match msg {
         QueryMsg::CheckAnomalyResolutionPermission { by: caller } => Leaser::new(deps)
             .config()
-            .map(|ref config| {
-                let permission = AnomalyResolutionPermission::new(config);
-                permission.granted_to(&caller)
-            })
+            .map(|ref config| AnomalyResolutionPermission::new(config).granted_to(&caller))
             .map(|granted| {
                 if granted {
                     AccessGranted::Yes

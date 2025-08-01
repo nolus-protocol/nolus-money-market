@@ -108,8 +108,10 @@ pub fn execute(
             )
             .check(&info)?;
 
-            try_handle_execute_message(deps, env, info, State::on_time_alarm)
-                .map(response::response_only_messages)
+            try_handle_execute_message(deps, env, |state, querier, env| {
+                State::on_time_alarm(state, querier, env, info)
+            })
+            .map(response::response_only_messages)
         }
         ExecuteMsg::Config { cadence_hours } => {
             ContractOwnerAccess::new(deps.storage.deref()).check(&info)?;
@@ -129,10 +131,8 @@ pub fn execute(
                 &info,
             )?;
 
-            try_handle_execute_message(deps, env, info, |state, querier, env, _info| {
-                State::on_inner(state, querier, env)
-            })
-            .map(response::response_only_messages)
+            try_handle_execute_message(deps, env, State::on_inner)
+                .map(response::response_only_messages)
         }
         ExecuteMsg::DexCallbackContinue() => {
             access_control::check(
@@ -140,16 +140,11 @@ pub fn execute(
                 &info,
             )?;
 
-            try_handle_execute_message(deps, env, info, |state, querier, env, _info| {
-                State::on_inner_continue(state, querier, env)
-            })
-            .map(response::response_only_messages)
+            try_handle_execute_message(deps, env, State::on_inner_continue)
+                .map(response::response_only_messages)
         }
         ExecuteMsg::Heal() => {
-            try_handle_execute_message(deps, env, info, |state, querier, env, _info| {
-                State::heal(state, querier, env)
-            })
-            .map(response::response_only_messages)
+            try_handle_execute_message(deps, env, State::heal).map(response::response_only_messages)
         }
     }
 }
@@ -203,11 +198,10 @@ fn try_handle_neutron_msg(
 fn try_handle_execute_message<F, R, E>(
     deps: DepsMut<'_>,
     env: Env,
-    info: MessageInfo,
     handler: F,
 ) -> ContractResult<MessageResponse>
 where
-    F: FnOnce(State, QuerierWrapper<'_>, Env, MessageInfo) -> R,
+    F: FnOnce(State, QuerierWrapper<'_>, Env) -> R,
     R: Into<Result<DexResponse<State>, E>>,
     ContractError: From<E>,
 {
@@ -216,7 +210,7 @@ where
     let DexResponse::<State> {
         response,
         next_state,
-    } = handler(state, deps.querier, env, info).into()?;
+    } = handler(state, deps.querier, env).into()?;
 
     next_state.store(deps.storage).map(|()| response)
 }

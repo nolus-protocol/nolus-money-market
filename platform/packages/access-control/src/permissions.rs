@@ -17,7 +17,7 @@ impl<'a> SingleUserPermission<'a> {
 impl AccessPermission for SingleUserPermission<'_> {
     fn granted_to<U>(&self, user: &U) -> bool
     where
-        U: User + ?Sized,
+        U: User,
     {
         self.addr == user.addr()
     }
@@ -36,7 +36,7 @@ impl<'a> SameContractOnly<'a> {
 impl AccessPermission for SameContractOnly<'_> {
     fn granted_to<U>(&self, user: &U) -> bool
     where
-        U: User + ?Sized,
+        U: User,
     {
         self.contract_info.address == user.addr()
     }

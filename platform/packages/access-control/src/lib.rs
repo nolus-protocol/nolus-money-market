@@ -18,13 +18,14 @@ pub mod user;
 pub trait AccessPermission {
     fn granted_to<U>(&self, user: &U) -> bool
     where
-        U: User + ?Sized;
+        U: User;
 }
 
 /// Checks if access is granted to the given user.
-pub fn check<P>(permission: &P, user: &dyn User) -> Result
+pub fn check<P, U>(permission: &P, user: &U) -> Result
 where
     P: AccessPermission + ?Sized,
+    U: User,
 {
     if permission.granted_to(user) {
         Ok(())
@@ -52,7 +53,10 @@ where
         }
     }
 
-    pub fn check(&self, user: &dyn User) -> Result {
+    pub fn check<U>(&self, user: &U) -> Result
+    where
+        U: User,
+    {
         self.storage_item
             .load(self.storage.deref())
             .map_err(Into::into)
@@ -64,9 +68,12 @@ impl<'storage, S> SingleUserAccess<'storage, S>
 where
     S: Deref<Target = dyn Storage + 'storage> + DerefMut,
 {
-    pub fn grant_to(&mut self, user: &Addr) -> Result {
+    pub fn grant_to<U>(&mut self, user: &U) -> Result
+    where
+        U: User,
+    {
         self.storage_item
-            .save(self.storage.deref_mut(), user)
+            .save(self.storage.deref_mut(), user.addr())
             .map_err(Into::into)
     }
 
