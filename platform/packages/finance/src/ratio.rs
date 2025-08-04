@@ -1,9 +1,10 @@
-use std::fmt::Debug;
+use std::{fmt::Debug, ops::Div};
 
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    fraction::Unit as FractionUnit, fractionable::Fragmentable, rational::Rational, zero::Zero,
+    arithmetics::CheckedMul, fraction::Unit as FractionUnit, fractionable::Fragmentable,
+    rational::Rational, zero::Zero,
 };
 
 // TODO review whether it may gets simpler if extend Fraction
@@ -32,6 +33,50 @@ where
             nominator,
             denominator,
         }
+    }
+
+    pub(crate) fn nominator(&self) -> U {
+        self.nominator
+    }
+
+    pub(crate) fn denominator(&self) -> U {
+        self.denominator
+    }
+
+    fn inv(self) -> Self {
+        Self::new(self.denominator, self.nominator)
+    }
+}
+
+impl<U> CheckedMul for SimpleFraction<U>
+where
+    U: CheckedMul<U, Output = U> + FractionUnit,
+{
+    type Output = Self;
+
+    fn checked_mul(self, rhs: Self) -> Option<Self::Output> {
+        self.nominator
+            .checked_mul(rhs.nominator)
+            .and_then(|nominator| {
+                self.denominator
+                    .checked_mul(rhs.denominator)
+                    .map(|denominator| Self::new(nominator, denominator))
+            })
+    }
+}
+
+impl<U> Div for SimpleFraction<U>
+where
+    U: CheckedMul<U, Output = U> + FractionUnit,
+{
+    type Output = Self;
+
+    // (a / b) ÷ (c / d) = (a * d) / (b * c)
+    fn div(self, rhs: Self) -> Self::Output {
+        debug_assert_ne!(rhs.nominator, Zero::ZERO, "Cannot divide by zero fraction");
+
+        self.checked_mul(rhs.inv())
+            .expect("Division should not overflow")
     }
 }
 

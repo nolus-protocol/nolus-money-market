@@ -1,6 +1,5 @@
 use std::{
     fmt::{Debug, Display, Formatter, Result as FmtResult, Write},
-    num::TryFromIntError,
     ops::{Div, Mul},
 };
 
@@ -89,6 +88,17 @@ impl<const UPPER_BOUND: Units> BoundPercent<UPPER_BOUND> {
             .map(Self::from_permille)
             .ok_or(Error::overflow_err("while subtracting", self, other))
     }
+
+    pub(crate) fn to_fraction<U>(self) -> SimpleFraction<U>
+    where
+        Amount: Into<U>,
+        U: FractionUnit,
+    {
+        SimpleFraction::new(
+            Amount::from(self.0).into(),
+            Amount::from(Self::HUNDRED.0).into(),
+        )
+    }
 }
 
 // Method used for deserialization
@@ -163,41 +173,10 @@ impl<const UPPER: Units> FractionUnit for BoundPercent<UPPER> where
 {
 }
 
-impl<const UPPER_BOUND: Units> From<BoundPercent<UPPER_BOUND>> for Amount {
-    fn from(percent: BoundPercent<UPPER_BOUND>) -> Self {
-        Amount::from(percent.units())
-    }
-}
-
-impl<const UPPER_BOUND: Units> From<BoundPercent<UPPER_BOUND>> for SimpleFraction<Amount> {
-    fn from(percent: BoundPercent<UPPER_BOUND>) -> Self {
-        Self::new(
-            percent.0.into(),
-            BoundPercent::<UPPER_BOUND>::HUNDRED.0.into(),
-        )
-    }
-}
-
 // TODO remove it once the multiplication + trim logic is refactored
 impl<const UPPER_BOUND: Units> From<BoundPercent<UPPER_BOUND>> for Uint256 {
     fn from(percent: BoundPercent<UPPER_BOUND>) -> Self {
-        Amount::from(percent).into()
-    }
-}
-
-impl<const UPPER_BOUND: Units> TryFrom<Amount> for BoundPercent<UPPER_BOUND> {
-    type Error = <Units as TryFrom<Amount>>::Error;
-
-    fn try_from(value: Amount) -> Result<Self, Self::Error> {
-        Ok(Self::from_permille(value.try_into()?))
-    }
-}
-
-impl<const UPPER_BOUND: Units> TryFrom<BoundPercent<UPPER_BOUND>> for u16 {
-    type Error = TryFromIntError;
-
-    fn try_from(percent: BoundPercent<UPPER_BOUND>) -> Result<Self, Self::Error> {
-        percent.0.try_into()
+        Amount::from(percent.0).into()
     }
 }
 
