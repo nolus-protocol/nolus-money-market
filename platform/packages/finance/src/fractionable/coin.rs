@@ -34,9 +34,16 @@ impl<C> From<Coin<C>> for Uint256 {
 // TODO: Remove with Fragmentable
 impl<C> From<Uint128> for Coin<C> {
     fn from(amount: Uint128) -> Self {
-        let c: Amount = amount.into();
-        c.into()
+        Coin::new(amount.into())
     }
+}
+
+impl<C, QuoteC> Fractionable<Coin<C>> for Coin<QuoteC> {
+    type HigherPrimitive = U256;
+}
+
+impl<C> Fractionable<PercentUnits> for Coin<C> {
+    type HigherPrimitive = U256;
 }
 
 impl<C, QuoteC> Fractionable<Coin<C>> for Coin<QuoteC> {
