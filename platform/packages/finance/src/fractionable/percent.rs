@@ -55,8 +55,6 @@ impl TryFromPrimitive<u64> for u32 {
     }
 }
 
-// Bound Percent
-
 impl<C, const UPPER_BOUND: Units> Fractionable<Coin<C>> for BoundPercent<UPPER_BOUND> {
     type HigherPrimitive = U256;
 }
