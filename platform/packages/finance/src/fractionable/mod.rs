@@ -30,6 +30,7 @@ pub trait TryFromPrimitive<P>
 where
     Self: Sized,
 {
+    #[allow(dead_code)]
     fn try_from_primitive(primitive: P) -> Option<Self>;
 }
 
