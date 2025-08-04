@@ -67,7 +67,7 @@ impl<C> Coin<C> {
 
     #[track_caller]
     pub fn saturating_sub(self, rhs: Self) -> Self {
-        self.amount.saturating_sub(rhs.amount).into()
+        Coin::new(self.amount.saturating_sub(rhs.amount))
     }
 
     #[track_caller]
@@ -218,12 +218,6 @@ impl<C> SubAssign for Coin<C> {
 impl<C> Display for Coin<C> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.write_fmt(format_args!("{} {}", self.amount, any::type_name::<C>()))
-    }
-}
-
-impl<C> From<Amount> for Coin<C> {
-    fn from(amount: Amount) -> Self {
-        Self::new(amount)
     }
 }
 

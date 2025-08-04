@@ -133,10 +133,10 @@ mod test {
         let timeout = Timestamp::from_seconds(100);
         let mut funds_sender = Sender::new(channel, &sender, &receiver, timeout, "MEMO".into());
 
-        let coin1: Coin<SubGroupTestC10> = 234214.into();
-        let coin2: Coin<SuperGroupTestC1> = 234214.into();
-        funds_sender.send::<SuperGroup>(&coin1.into());
-        funds_sender.send::<SuperGroup>(&coin2.into());
+        let coin1: Coin<SubGroupTestC10> = Coin::new(234214);
+        let coin2: Coin<SuperGroupTestC1> = Coin::new(234214);
+        funds_sender.send::<SuperGroup>(&coin1.into()).unwrap();
+        funds_sender.send::<SuperGroup>(&coin2.into()).unwrap();
 
         assert_eq!(Batch::from(funds_sender), {
             let mut batch = Batch::default();

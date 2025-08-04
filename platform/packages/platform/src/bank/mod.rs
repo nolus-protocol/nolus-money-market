@@ -131,7 +131,7 @@ mod test {
     fn may_received_no_input() {
         assert_eq!(
             None,
-            receive::may_received(&vec![], Expect(Coin::<TheCurrency>::from(AMOUNT)))
+            receive::may_received(&vec![], Expect(Coin::<TheCurrency>::new(AMOUNT)))
         );
     }
 

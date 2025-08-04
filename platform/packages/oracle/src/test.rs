@@ -1,6 +1,6 @@
 use currency::{CurrencyDef, Group, MemberOf, platform::Stable};
 use finance::{
-    coin::Amount,
+    coin::{Amount, Coin},
     price::{self, Price},
 };
 use sdk::cosmwasm_std::{Addr, StdError};
@@ -49,7 +49,7 @@ where
         C::Group: MemberOf<G>,
     {
         self.price
-            .map(|price| price::total_of(1.into()).is(price.into()))
+            .map(|price| price::total_of(Coin::new(1)).is(Coin::new(price)))
             .ok_or_else(|| {
                 error::failed_to_fetch_price(
                     C::dto(),
