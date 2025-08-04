@@ -26,6 +26,10 @@ impl ToPrimitive<U256> for Units {
     }
 }
 
+impl<C, const UPPER_BOUND: Units> Fractionable<Coin<C>> for BoundPercent<UPPER_BOUND> {
+    type HigherPrimitive = U256;
+}
+
 impl CheckedMul<u64> for u64 {
     type Output = Self;
 
@@ -75,6 +79,16 @@ impl<const UPPER_BOUND: Units> TryFromPrimitive<u64> for BoundPercent<UPPER_BOUN
         Units::try_from(primitive)
             .ok()
             .map(|units| Self::from_permille(units))
+    }
+}
+
+impl<const UPPER_BOUND: Units> TryFromPrimitive<U256> for BoundPercent<UPPER_BOUND> {
+    fn try_from_primitive(primitive: U256) -> Option<Self> {
+        u128::try_from(primitive).ok().and_then(|u_128| {
+            Units::try_from(u_128)
+                .ok()
+                .map(|units| Self::from_permille(units))
+        })
     }
 }
 
