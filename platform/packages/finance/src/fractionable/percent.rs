@@ -15,6 +15,11 @@ impl Fractionable<Units> for u32 {
     type HigherPrimitive = u64;
 }
 
+
+impl<C, const UPPER_BOUND: Units> Fractionable<Coin<C>> for BoundPercent<UPPER_BOUND> {
+    type HigherPrimitive = U256;
+}
+
 impl ToPrimitive<u64> for Units {
     fn into_primitive(self) -> u64 {
         self.into()
