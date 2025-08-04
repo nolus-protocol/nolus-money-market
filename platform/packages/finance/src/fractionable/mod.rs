@@ -13,27 +13,22 @@ mod usize;
 
 pub(crate) trait Fractionable<U>
 where
-    Self: Sized + ToHigherPrimitive + TryFromHigherPrimitive,
-    U: ToHigherPrimitive,
+    Self: Sized + ToPrimitive<Self::HigherPrimitive> + TryFromPrimitive<Self::HigherPrimitive>,
+    U: ToPrimitive<Self::HigherPrimitive>,
 {
     type HigherPrimitive: CheckedMul<Output = Self::HigherPrimitive>
         + Div<Output = Self::HigherPrimitive>;
-
-    fn u_into_primitive(u: U) -> Self::HigherPrimitive;
-    fn into_primitive() -> Self::HigherPrimitive;
-    fn try_into_self(hp: Self::HigherPrimitive) -> Option<Self>;
 }
 
-pub(crate) trait ToHigherPrimitive {
-    type Primitive;
-
-    fn into(self) -> Self::Primitive;
+pub(crate) trait ToPrimitive<P> {
+    fn into_primitive(self) -> P;
 }
 
-pub(crate) trait TryFromHigherPrimitive {
-    type Output;
-
-    fn try_into(self) -> Option<Self::Output>;
+pub(crate) trait TryFromPrimitive<P>
+where
+    Self: Sized,
+{
+    fn try_from_primitive(primitive: P) -> Option<Self>;
 }
 
 pub trait Fragmentable<U> {
