@@ -49,7 +49,7 @@ impl<C> Fractionable<PercentUnits> for Coin<C> {
 
 impl<C> ToPrimitive<U256> for Coin<C> {
     fn into_primitive(self) -> U256 {
-        Amount::from(self).into()
+        self.amount().into()
     }
 }
 
