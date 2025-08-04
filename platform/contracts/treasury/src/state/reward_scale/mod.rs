@@ -26,8 +26,8 @@ impl TotalValueLocked {
     {
         Amount::from(self.0)
             .checked_mul(Self::SCALE_FACTOR)
+            .map(|amount| Coin::new(amount))
             .expect("Amount goes beyond calculation limits!")
-            .into()
     }
 }
 
@@ -188,7 +188,7 @@ mod tests {
         .unwrap();
 
         assert_eq!(
-            res.get_apr::<SuperGroupTestC1>(0.into()),
+            res.get_apr::<SuperGroupTestC1>(Coin::new(0)),
             Percent100::from_permille(6)
         );
         assert_eq!(
@@ -243,6 +243,6 @@ mod tests {
     }
 
     fn coin(amount: Amount) -> Coin<SuperGroupTestC1> {
-        amount.into()
+        Coin::new(amount)
     }
 }

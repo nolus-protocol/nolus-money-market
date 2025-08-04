@@ -64,6 +64,7 @@ impl Lpp for Stub<'_, '_> {
 
 #[cfg(test)]
 mod test {
+    use finance::coin::Coin;
     use platform::message::Response as MessageResponse;
     use sdk::cosmwasm_std::{
         Addr, QuerierWrapper,
@@ -81,6 +82,9 @@ mod test {
         let querier = QuerierWrapper::new(&mock_querier);
         let lpp_addr = Addr::unchecked("LPP");
         let stub = Stub::new(lpp_addr, querier, &env);
-        assert_eq!(Ok(MessageResponse::default()), stub.distribute(0.into()));
+        assert_eq!(
+            Ok(MessageResponse::default()),
+            stub.distribute(Coin::new(0))
+        );
     }
 }
