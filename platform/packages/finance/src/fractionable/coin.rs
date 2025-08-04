@@ -4,7 +4,7 @@ use crate::{coin::{Amount, Coin}, fractionable::{ToPrimitive, TryFromPrimitive}}
 
 use super::HigherRank;
 
-// TODO: Remove
+// TODO: Remove with Fragmentable
 impl<U, C> HigherRank<U> for Coin<C>
 where
     U: Into<Amount>,
