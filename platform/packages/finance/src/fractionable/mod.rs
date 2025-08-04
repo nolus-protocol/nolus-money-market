@@ -11,16 +11,29 @@ mod percent;
 mod price;
 mod usize;
 
-pub trait Fractionable<U>
+pub(crate) trait Fractionable<U>
 where
-    Self: Sized,
+    Self: Sized + ToHigherPrimitive + TryFromHigherPrimitive,
+    U: ToHigherPrimitive,
 {
     type HigherPrimitive: CheckedMul<Output = Self::HigherPrimitive>
         + Div<Output = Self::HigherPrimitive>;
 
-    fn from_u(u: U) -> Self::HigherPrimitive;
-    fn from_self(&self) -> Self::HigherPrimitive;
-    fn into_self(hp: Self::HigherPrimitive) -> Option<Self>;
+    fn u_into_primitive(u: U) -> Self::HigherPrimitive;
+    fn into_primitive() -> Self::HigherPrimitive;
+    fn try_into_self(hp: Self::HigherPrimitive) -> Option<Self>;
+}
+
+pub(crate) trait ToHigherPrimitive {
+    type Primitive;
+
+    fn into(self) -> Self::Primitive;
+}
+
+pub(crate) trait TryFromHigherPrimitive {
+    type Output;
+
+    fn try_into(self) -> Option<Self::Output>;
 }
 
 pub trait Fragmentable<U> {
