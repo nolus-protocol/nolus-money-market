@@ -1,6 +1,6 @@
 use bnum::types::U256;
 
-use crate::coin::{Amount, Coin};
+use crate::{coin::{Amount, Coin}, fractionable::{ToPrimitive, TryFromPrimitive}};
 
 use super::HigherRank;
 
@@ -13,13 +13,19 @@ where
     type Intermediate = u128;
 }
 
-impl<C> From<Coin<C>> for U256 {
-    fn from(coin: Coin<C>) -> Self {
-        let c: Amount = coin.into();
-        c.into()
+impl<C> ToPrimitive<U256> for Coin<C> {
+    fn into_primitive(self) -> U256 {
+        Amount::from(self).into()
     }
 }
 
+impl<C> TryFromPrimitive<U256> for Coin<C> {
+    fn try_from_primitive(primitive: U256) -> Option<Self> {
+        Amount::try_from(primitive)
+            .ok()
+            .map(|amount| Coin::<C>::new(amount))
+    }
+}
 #[cfg(test)]
 mod test {
     use currency::test::SuperGroupTestC1;
