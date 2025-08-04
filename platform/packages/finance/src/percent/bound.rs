@@ -1,4 +1,7 @@
-use std::fmt::{Debug, Display, Formatter, Result as FmtResult, Write};
+use std::{
+    fmt::{Debug, Display, Formatter, Result as FmtResult, Write},
+    ops::{Div, Mul},
+};
 
 #[cfg(any(test, feature = "testing"))]
 use std::ops::{Add, Sub};
