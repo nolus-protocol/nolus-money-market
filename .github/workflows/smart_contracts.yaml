@@ -94,46 +94,8 @@ jobs:
           ${workspaces:?}
           EOF" \
             >>"${GITHUB_OUTPUT:?}"
-  clear-cache:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Clear cache
-        uses: actions/github-script@v6
-        with:
-          script: |-
-            console.log("TODO")
-#            console.log("About to clear")
-#
-#            while (true) {
-#              const caches = await github.rest.actions.getActionsCacheList({
-#                owner: context.repo.owner,
-#                repo: context.repo.repo,
-#              })
-#
-#              let no_caches = true;
-#
-#              for (const cache of caches.data.actions_caches) {
-#                no_caches = false;
-#
-#                console.log(cache)
-#
-#                github.rest.actions.deleteActionsCacheById({
-#                  owner: context.repo.owner,
-#                  repo: context.repo.repo,
-#                  cache_id: cache.id,
-#                })
-#              }
-#
-#              if (no_caches) {
-#                break;
-#              }
-#            }
-#
-#            console.log("Clear completed")
   audit-dependencies:
     runs-on: "ubuntu-latest" # "self-hosted"
-    # needs:
-    #   - "clear-cache"
     steps:
       - uses: "actions/checkout@v4"
       - uses: "./.github/actions/setup-docker"
@@ -143,37 +105,32 @@ jobs:
             -R \
             "../.cargo" \
             "./"
-      - uses: "./.github/actions/build-and-run"
+      - uses: "./.github/actions/build-and-run-image"
         with:
           target: "audit-dependencies"
   check-lockfiles:
     if: |-
       github.ref_type == 'tag' || (github.event_name == 'workflow_dispatch' && inputs.check-dependencies-version)
-    # needs:
-    #   - "clear-cache"
     # runs-on: "ubuntu-latest"
     runs-on: "self-hosted"
     steps:
       - uses: "actions/checkout@v4"
       - uses: "./.github/actions/setup-docker"
-      - uses: "./.github/actions/build-and-run"
+      - uses: "./.github/actions/build-and-run-image"
         with:
           target: "check-lockfiles"
   check-formatting:
     runs-on: "ubuntu-latest" # "self-hosted"
-    # needs:
-    #   - "clear-cache"
     steps:
       - uses: "actions/checkout@v4"
       - uses: "./.github/actions/setup-docker"
-      - uses: "./.github/actions/build-and-run"
+      - uses: "./.github/actions/build-and-run-image"
         with:
           target: "check-formatting"
   lint:
     runs-on: "ubuntu-latest" # "self-hosted"
     needs:
       - "matrix-arguments"
-      # - "clear-cache"
     strategy:
       matrix:
         profile: |-
@@ -185,7 +142,7 @@ jobs:
       - uses: "./.github/actions/setup-docker"
       - run: |-
           "mv" "./.github/test-data/build-configuration" "./"
-      - uses: "./.github/actions/build-and-run"
+      - uses: "./.github/actions/build-and-run-image"
         with:
           profile: |-
             ${{ matrix.profile }}
@@ -193,35 +150,10 @@ jobs:
           tools-context: "true"
           workspace: |-
             ${{ matrix.workspace }}
-      # - uses: "actions/checkout@v4"
-      # - uses: "./.github/actions/setup-docker"
-      # - id: "build-container"
-      #   uses: "./.github/actions/lint-container"
-      # - run: |-
-      #     "mv" \
-      #       "./.github/test-data/build-configuration" \
-      #       "."
-      # - env:
-      #     image_id: |-
-      #       ${{ steps.build-container.outputs.image-id }}
-      #     profile: |-
-      #       ${{ matrix.profile }}
-      #     workspace: |-
-      #       ${{ matrix.workspace }}
-      #   run: |-
-      #     "docker" \
-      #       "container" \
-      #       "run" \
-      #       --env "PROFILE=${profile:?}" \
-      #       --tty \
-      #       --volume "./:/src/:ro" \
-      #       "${image_id:?}" \
-      #       "${workspace:?}"
   test:
     runs-on: "ubuntu-latest" # "self-hosted"
     needs:
       - "matrix-arguments"
-      # - "clear-cache"
     strategy:
       matrix:
         profile: |-
@@ -233,7 +165,7 @@ jobs:
       - uses: "./.github/actions/setup-docker"
       - run: |-
           "mv" "./.github/test-data/build-configuration" "./"
-      - uses: "./.github/actions/build-and-run"
+      - uses: "./.github/actions/build-and-run-image"
         with:
           profile: |-
             ${{ matrix.profile }}
@@ -241,43 +173,10 @@ jobs:
           tools-context: "true"
           workspace: |-
             ${{ matrix.workspace }}
-      # - uses: "actions/checkout@v4"
-      # - uses: "./.github/actions/setup-docker"
-      # - uses: "./.github/actions/build-and-run"
-      #   with:
-      #     target: "check-formatting"
-      #     workspace: |-
-      #       ${{ matrix.workspace }}
-
-      # - uses: "actions/checkout@v4"
-      # - uses: "./.github/actions/setup-docker"
-      # - id: "build-container"
-      #   uses: "./.github/actions/test-container"
-      # - run: |-
-      #     "mv" \
-      #       "./.github/test-data/build-configuration" \
-      #       "."
-      # - env:
-      #     image_id: |-
-      #       ${{ steps.build-container.outputs.image-id }}
-      #     profile: |-
-      #       ${{ matrix.profile }}
-      #     workspace: |-
-      #       ${{ matrix.workspace }}
-      #   run: |-
-      #     "docker" \
-      #       "container" \
-      #       "run" \
-      #       --env "PROFILE=${profile:?}" \
-      #       --tty \
-      #       --volume "./:/src/:ro" \
-      #       "${image_id:?}" \
-      #       "${workspace:?}"
   check-unused-dependencies:
     runs-on: "ubuntu-latest" # "self-hosted"
     needs:
       - "matrix-arguments"
-      # - "clear-cache"
     strategy:
       matrix:
         workspace: |-
@@ -287,373 +186,32 @@ jobs:
       - uses: "./.github/actions/setup-docker"
       - run: |-
           "mv" "./.github/test-data/build-configuration" "./"
-      - uses: "./.github/actions/build-and-run"
+      - uses: "./.github/actions/build-and-run-image"
         with:
           target: "check-unused-dependencies"
           tools-context: "true"
           workspace: |-
             ${{ matrix.workspace }}
-      # - uses: "actions/checkout@v4"
-      # - uses: "./.github/actions/setup-docker"
-      # - id: "build-container"
-      #   uses: "./.github/actions/check-unused-deps-container"
-      # - run: |-
-      #     "mv" \
-      #       "./.github/test-data/build-configuration" \
-      #       "."
-      # - env:
-      #     image_id: |-
-      #       ${{ steps.build-container.outputs.image-id }}
-      #     workspace: |-
-      #       ${{ matrix.workspace }}
-      #   run: |-
-      #     "docker" \
-      #       "container" \
-      #       "run" \
-      #       --tty \
-      #       --volume "./:/src/:ro" \
-      #       "${image_id:?}" \
-      #       "${workspace:?}"
+  build:
+    runs-on: "ubuntu-latest" # "self-hosted"
+    needs:
+      - "matrix-arguments"
+    strategy:
+      matrix:
+        workspace: |-
+          ${{ fromJSON(needs.matrix-arguments.outputs.workspaces-json) }}
+    steps:
+      - uses: "actions/checkout@v4"
+      - uses: "./.github/actions/setup-docker"
+      - run: |-
+          "mv" "./.github/test-data/build-configuration" "./"
+      - uses: "./.github/actions/build-and-run-image"
+        with:
+          target: "build"
+          tools-context: "true"
+          workspace: |-
+            ${{ matrix.workspace }}
 
-#  load-configuration:
-#    runs-on: "ubuntu-latest"
-#    name: "Load configuration"
-#    outputs:
-#      dex-types-json: |-
-#        ${{ steps.configuration.outputs.dex-types-json }}
-#      profiles-json: |-
-#        ${{ steps.configuration.outputs.profiles-json }}
-#      workspaces-json: |-
-#        ${{ steps.configuration.outputs.workspaces-json }}
-#    steps:
-#      - uses: "actions/checkout@v4"
-#      - id: "configuration"
-#        name: "Load configuration"
-#        run: |-
-#          set -eu
-#
-#          . "./scripts/check/configuration.sh"
-#
-#          workspaces_quoted="$(
-#            "jq" \
-#              --raw-input \
-#              <<EOF
-#          ${workspaces:?}
-#          EOF
-#          )"
-#
-#          workspaces_json="$(
-#            "jq" \
-#              --slurp \
-#              <<EOF
-#          ${workspaces_quoted:?}
-#          EOF
-#          )"
-#
-#          dex_types_quoted="$(
-#            "jq" \
-#              --raw-input \
-#              <<EOF
-#          ${dex_types:?}
-#          EOF
-#          )"
-#
-#          dex_types_json="$(
-#            "jq" \
-#              --slurp \
-#              <<EOF
-#          ${dex_types_quoted:?}
-#          EOF
-#          )"
-#
-#          profiles_quoted="$(
-#            "jq" \
-#              --raw-input \
-#              <<EOF
-#          ${profiles:?}
-#          EOF
-#          )"
-#
-#          profiles_json="$(
-#            "jq" \
-#              --slurp \
-#              <<EOF
-#          ${profiles_quoted:?}
-#          EOF
-#          )"
-#
-#          "echo" \
-#            "workspaces-json<<EOF
-#          ${workspaces_json:?}
-#          EOF
-#          dex-types-json<<EOF
-#          ${dex_types_json:?}
-#          EOF
-#          profiles-json<<EOF
-#          ${profiles_json:?}
-#          EOF" \
-#            >>"${GITHUB_OUTPUT}"
-#  prepare_tool_caches:
-#    runs-on: "ubuntu-latest"
-#    strategy:
-#      fail-fast: true
-#      matrix:
-#        local:
-#          - "false"
-#        tool:
-#          - "cargo-audit"
-#          - "cargo-nextest"
-#          - "cargo-udeps"
-#          - "git-cliff"
-#        include:
-#          - local: "true"
-#            tool: "cargo-each"
-#    name: |-
-#      Prepare tool caches [${{ matrix.tool }}]
-#    steps:
-#      - name: "Checkout repository"
-#        uses: "actions/checkout@v4"
-#      - name: |-
-#          Install `${{ matrix.tool }}` and create cache
-#        uses: "./.github/actions/install-tool"
-#        with:
-#          fail-on-cache-miss: "false"
-#          local: "${{ matrix.local }}"
-#          no-fetching: "true"
-#          tool: "${{ matrix.tool }}"
-#  check-lock-files:
-#    needs:
-#      - "load-configuration"
-#    runs-on: "ubuntu-latest"
-#    strategy:
-#      fail-fast: true
-#      matrix:
-#        workspace: "${{ fromJSON(needs.load-configuration.outputs.workspaces-json) }}"
-#    name: |-
-#      Check lock files [${{ matrix.workspace }}]
-#    steps:
-#      - uses: "actions/checkout@v4"
-#      - if: |-
-#          fromJSON(env.check-dependencies-versions)
-#        name: "Load configuration"
-#        run: |-
-#          "cargo" \
-#            "update" \
-#            --locked
-#        working-directory: |-
-#          ${{ matrix.workspace }}
-#  workspace_check:
-#    needs:
-#      - "load-configuration"
-#      - "prepare_tool_caches"
-#      - "check-lock-files"
-#    runs-on: "ubuntu-latest"
-#    strategy:
-#      fail-fast: true
-#      matrix:
-#        workspace: "${{ fromJSON(needs.load-configuration.outputs.workspaces-json) }}"
-#    env:
-#      workspace: |-
-#        ${{ matrix.workspace }}
-#    name: |-
-#      Workspace-level checks [${{ matrix.workspace }}]
-#    steps:
-#      - name: "Update Rust"
-#        run: |-
-#          "rustup" "update"
-#      - name: "Checkout repository"
-#        uses: "actions/checkout@v4"
-#      - name: "Install `cargo-audit` from cache"
-#        uses: "./.github/actions/install-tool"
-#        with:
-#          fail-on-cache-miss: "true"
-#          local: "false"
-#          no-fetching: "false"
-#          tool: "cargo-audit"
-#      - name: "Copy `.cargo` configuration"
-#        run: |-
-#          set -eu
-#
-#          "cp" \
-#            -R \
-#            "./.cargo" \
-#            "./${workspace:?}/.cargo"
-#      - name: "Run workspace-level checks"
-#        run: |-
-#          set -eu
-#
-#          "sh" \
-#            -eu \
-#            "./scripts/check/workspace_checks.sh" \
-#            "./${workspace:?}"
-#  instance_lint:
-#    needs:
-#      - "load-configuration"
-#      - "prepare_tool_caches"
-#      - "check-lock-files"
-#    runs-on: "ubuntu-latest"
-#    strategy:
-#      fail-fast: true
-#      matrix:
-#        dex-type: "${{ fromJSON(needs.load-configuration.outputs.dex-types-json) }}"
-#        profile: "${{ fromJSON(needs.load-configuration.outputs.profiles-json) }}"
-#        workspace: "${{ fromJSON(needs.load-configuration.outputs.workspaces-json) }}"
-#    name: |-
-#      Instance-level lints [${{ matrix.workspace }}; ${{ matrix.dex-type }}; ${{ matrix.profile }}]
-#    steps:
-#      - name: "Update Rust"
-#        run: |-
-#          "rustup" "update"
-#      - name: "Checkout repository"
-#        uses: "actions/checkout@v4"
-#      - name: "Install `cargo-each` from cache"
-#        uses: "./.github/actions/install-tool"
-#        with:
-#          fail-on-cache-miss: "true"
-#          local: "true"
-#          no-fetching: "false"
-#          tool: "cargo-each"
-#      - name: "Copy CI build configuration"
-#        run: |-
-#          "cp" \
-#            -R \
-#            "./.github/test-data/build-configuration" \
-#            "./"
-#      - env:
-#          dex_type: |-
-#            ${{ matrix.dex-type }}
-#          profile: |-
-#            ${{ matrix.profile }}
-#          RUN_CLIPPY_QUIET: "1"
-#          workspace: |-
-#            ${{ matrix.workspace }}
-#        name: "Run instance-level lints"
-#        run: |-
-#          set -eu
-#
-#          "sh" \
-#            -eu \
-#            "./scripts/check/instance_lint.sh" \
-#            "./${workspace:?}" \
-#            "${dex_type:?}" \
-#            "${profile:?}"
-#  instance_check_deps:
-#    needs:
-#      - "load-configuration"
-#      - "prepare_tool_caches"
-#      - "check-lock-files"
-#    runs-on: "ubuntu-latest"
-#    strategy:
-#      fail-fast: true
-#      matrix:
-#        dex-type: "${{ fromJSON(needs.load-configuration.outputs.dex-types-json) }}"
-#        workspace: "${{ fromJSON(needs.load-configuration.outputs.workspaces-json) }}"
-#    name: |-
-#      Check instance dependencies [${{ matrix.workspace }}; ${{ matrix.dex-type }}]
-#    steps:
-#      - name: "Update Rust"
-#        run: |-
-#          "rustup" "update"
-#      - name: "Checkout repository"
-#        uses: "actions/checkout@v4"
-#      - name: "Install `cargo-udeps` from cache"
-#        uses: "./.github/actions/install-tool"
-#        with:
-#          fail-on-cache-miss: "true"
-#          local: "false"
-#          no-fetching: "false"
-#          tool: "cargo-udeps"
-#      - name: "Install `cargo-each` from cache"
-#        uses: "./.github/actions/install-tool"
-#        with:
-#          fail-on-cache-miss: "true"
-#          local: "true"
-#          no-fetching: "false"
-#          tool: "cargo-each"
-#      - name: "Install nightly Rust toolchain"
-#        run: |-
-#          "rustup" \
-#            "toolchain" \
-#            "add" \
-#            "nightly"
-#      - name: "Copy CI build configuration"
-#        run: |-
-#          "cp" \
-#            -R \
-#            "./.github/test-data/build-configuration" \
-#            "./"
-#      - env:
-#          dex_type: |-
-#            ${{ matrix.dex-type }}
-#          workspace: |-
-#            ${{ matrix.workspace }}
-#        name: "Check dependencies"
-#        run: |-
-#          set -eu
-#
-#          "sh" \
-#            -eu \
-#            "./scripts/check/protocol_check_deps.sh" \
-#            "./${workspace:?}" \
-#            "${dex_type:?}"
-#  instance_tests:
-#    needs:
-#      - "load-configuration"
-#      - "prepare_tool_caches"
-#      - "check-lock-files"
-#    runs-on: "ubuntu-latest"
-#    strategy:
-#      fail-fast: true
-#      matrix:
-#        dex-type: "${{ fromJSON(needs.load-configuration.outputs.dex-types-json) }}"
-#        profile: "${{ fromJSON(needs.load-configuration.outputs.profiles-json) }}"
-#        workspace: "${{ fromJSON(needs.load-configuration.outputs.workspaces-json) }}"
-#    name: |-
-#      Run instance tests [${{ matrix.workspace }}; ${{ matrix.dex-type }}; ${{ matrix.profile }}]
-#    steps:
-#      - name: "Update Rust"
-#        run: |-
-#          "rustup" "update"
-#      - name: "Checkout repository"
-#        uses: "actions/checkout@v4"
-#      - name: "Install `cargo-each` from cache"
-#        uses: "./.github/actions/install-tool"
-#        with:
-#          fail-on-cache-miss: "true"
-#          local: "true"
-#          no-fetching: "false"
-#          tool: "cargo-each"
-#      - name: "Install `cargo-nextest` from cache"
-#        uses: "./.github/actions/install-tool"
-#        with:
-#          fail-on-cache-miss: "true"
-#          local: "false"
-#          no-fetching: "false"
-#          tool: "cargo-nextest"
-#      - name: "Copy CI build configuration"
-#        run: |-
-#          "cp" \
-#            -R \
-#            "./.github/test-data/build-configuration" \
-#            "./"
-#      - env:
-#          dex_type: |-
-#            ${{ matrix.dex-type }}
-#          profile: |-
-#            ${{ matrix.profile }}
-#          USE_NEXTEST: "1"
-#          workspace: |-
-#            ${{ matrix.workspace }}
-#        name: "Run instance tests"
-#        run: |-
-#          set -eu
-#
-#          "sh" \
-#            -eu \
-#            "./scripts/check/instance_tests.sh" \
-#            "./${workspace:?}" \
-#            "${dex_type:?}" \
-#            "${profile:?}"
 #  build:
 #    needs:
 #      - "workspace_check"

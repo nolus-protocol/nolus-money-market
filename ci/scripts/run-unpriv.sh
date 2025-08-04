@@ -18,36 +18,14 @@
 ## environments.                                                              ##
 ################################################################################
 ## Used utilities outside the POSIX standard:                                 ##
-## [in-tree] cargo-each                                                       ##
-## [in-tree] run-unpriv.sh                                                    ##
-## cargo [with:]                                                              ##
-##   * rustc                                                                  ##
+## setpriv [from "util-linux"]                                                ##
 ################################################################################
 
 set -eu
 
-case "${#}" in
-  ("1") ;;
-  (*)
-    echo "This script takes only one argument, the workspace name." >&2
-
-    exit "1"
-esac
-
-cd "./${1:?}"
-shift
-
-"cargo" "fetch"
-
-"run-unpriv.sh" \
-  "cargo" \
-  -- \
-  "each" \
-  "run" \
-  --external-command \
-  -- \
-  "cargo" \
-  "+${RUST_NIGHTLY_VERSION:?}" \
-  -- \
-  "udeps" \
-  --all-targets
+"setpriv" \
+  --clear-groups \
+  --no-new-privs \
+  --regid "1000" \
+  --reuid "1000" \
+  "${@:?}"

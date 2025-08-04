@@ -1,26 +1,46 @@
 # syntax=docker/dockerfile:1
 
+################################################################################
+##                         START : EDIT  HERE : START                         ##
+################################################################################
+
 ARG cargo_audit_ver="0.21.2"
 
 ARG cargo_udeps_ver="0.1.57"
 
-### 1.88-alpine
-ARG rust_digest="sha256:9dfaae478ecd298b6b5a039e1f2cc4fc040fc818a2de9aa78fa714dea036574d"
+ARG cosmwasm_capabilities="cosmwasm_1_1,cosmwasm_1_2,iterator,neutron,staking,\
+stargate"
+
+ARG platform_contracts_count="3"
+
+ARG production_network_build_profile="production_nets_release"
+
+ARG production_network_max_binary_size="5M"
+
+ARG protocol_contracts_count="7"
+
+ARG rust_image_ver="1.88"
 
 ### 1.90
 ARG rust_nightly_ver="2025-08-01"
 
-ARG SOURCE_DATE_EPOCH="0"
+ARG test_network_build_profile="test_nets_release"
 
-FROM docker.io/library/rust@${rust_digest:?} AS rust
+ARG test_network_max_binary_size="5M"
 
-ARG SOURCE_DATE_EPOCH
+################################################################################
+##                           END : EDIT  HERE : END                           ##
+################################################################################
+
+FROM docker.io/library/rust:${rust_image_ver:?}-alpine AS rust
+
+ENV SOURCE_DATE_EPOCH="0"
 
 VOLUME ["/src"]
 
 WORKDIR "/src/"
 
-ENV CARGO_TARGET_DIR="/build/"
+ENV CARGO_TARGET_DIR="/tmp/cargo-target/"
 
 ENV CARGO_TERM_COLOR="always"
 
@@ -32,26 +52,20 @@ RUN ["apk", "add", "libc-dev"]
 
 FROM rust AS cargo-audit
 
-ARG SOURCE_DATE_EPOCH
-
 ARG cargo_audit_ver
 
 RUN \
   --mount=type="tmpfs",target="/tmp/cargo-target/" \
-  "cargo" "install" "cargo-audit@${cargo_audit_ver:?}" "--target-dir" "/tmp/cargo-target/"
+  "cargo" "install" "cargo-audit@${cargo_audit_ver:?}"
 
 FROM rust AS cargo-each
-
-ARG SOURCE_DATE_EPOCH
 
 RUN \
   --mount=type="bind",from="tools",target="/src/",readonly \
   --mount=type="tmpfs",target="/tmp/cargo-target/" \
-  ["cargo", "install", "--path", "/src/cargo-each/", "--target-dir", "/tmp/cargo-target/"]
+  ["cargo", "install", "--path", "/src/cargo-each/"]
 
 FROM rust AS cargo-udeps
-
-ARG SOURCE_DATE_EPOCH
 
 RUN ["apk", "add", "ca-certificates", "openssl-dev", "openssl-libs-static"]
 
@@ -59,11 +73,9 @@ ARG cargo_udeps_ver
 
 RUN \
   --mount=type="tmpfs",target="/tmp/cargo-target/" \
-  "cargo" "install" "cargo-udeps@${cargo_udeps_ver:?}" "--target-dir" "/tmp/cargo-target/"
+  "cargo" "install" "cargo-udeps@${cargo_udeps_ver:?}"
 
 FROM rust AS rust-ci
-
-ARG SOURCE_DATE_EPOCH
 
 ENV SOFTWARE_RELEASE_ID="ci-software-release"
 
@@ -75,16 +87,12 @@ ENV PROTOCOL_RELEASE_ID="ci-protocol-release"
 
 FROM rust-ci AS rust-ci-multi-workspace
 
-ARG SOURCE_DATE_EPOCH
-
 COPY \
   --chmod="0555" \
   "./scripts/for-each-workspace.sh" \
   "/usr/local/bin/"
 
 FROM rust-ci-multi-workspace AS audit-dependencies
-
-ARG SOURCE_DATE_EPOCH
 
 COPY \
   --from=cargo-audit \
@@ -95,15 +103,11 @@ ENTRYPOINT ["/usr/local/bin/for-each-workspace.sh", "cargo", "audit"]
 
 FROM rust-ci-multi-workspace AS check-formatting
 
-ARG SOURCE_DATE_EPOCH
-
 RUN ["rustup", "component", "add", "rustfmt"]
 
 ENTRYPOINT ["/usr/local/bin/for-each-workspace.sh", "cargo", "fmt", "--check"]
 
 FROM rust-ci-multi-workspace AS check-lockfiles
-
-ARG SOURCE_DATE_EPOCH
 
 COPY \
   --chmod="0555" \
@@ -114,7 +118,7 @@ ENTRYPOINT ["/usr/local/bin/for-each-workspace.sh", "check-lockfiles.sh"]
 
 FROM rust-ci AS check-unused-dependencies
 
-ARG SOURCE_DATE_EPOCH
+RUN ["apk", "add", "util-linux"]
 
 ARG rust_nightly_ver
 
@@ -141,7 +145,7 @@ ENTRYPOINT ["/usr/local/bin/check-unused-deps.sh"]
 
 FROM rust-ci AS lint
 
-ARG SOURCE_DATE_EPOCH
+RUN ["apk", "add", "util-linux"]
 
 RUN ["rustup", "component", "add", "clippy"]
 
@@ -164,7 +168,7 @@ ENTRYPOINT ["/usr/local/bin/lint.sh"]
 
 FROM rust-ci AS test
 
-ARG SOURCE_DATE_EPOCH
+RUN ["apk", "add", "util-linux"]
 
 COPY \
   --from=cargo-each \
@@ -177,3 +181,14 @@ COPY \
   "/usr/local/bin/"
 
 ENTRYPOINT ["/usr/local/bin/test.sh"]
+
+FROM rust AS build
+
+VOLUME ["/artifacts"]
+
+RUN ["apk", "add", "util-linux"]
+
+COPY \
+  --from=cargo-each \
+  "/usr/local/cargo/bin/cargo-each" \
+  "/usr/local/bin/"
