@@ -3,13 +3,25 @@ use std::{
     ops::{Div, Mul},
 };
 
-use crate::{ratio::Ratio, zero::Zero};
+use crate::{arithmetics::CheckedMul, ratio::Ratio, zero::Zero};
 
 mod coin;
 mod duration;
 mod percent;
 mod price;
 mod usize;
+
+pub trait Fractionable<U>
+where
+    Self: Sized,
+{
+    type HigherPrimitive: CheckedMul<Output = Self::HigherPrimitive>
+        + Div<Output = Self::HigherPrimitive>;
+
+    fn from_u(u: U) -> Self::HigherPrimitive;
+    fn from_self(&self) -> Self::HigherPrimitive;
+    fn into_self(hp: Self::HigherPrimitive) -> Option<Self>;
+}
 
 pub trait Fragmentable<U> {
     #[track_caller]
