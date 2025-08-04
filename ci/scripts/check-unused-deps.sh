@@ -19,7 +19,6 @@
 ################################################################################
 ## Used utilities outside the POSIX standard:                                 ##
 ## [in-tree] cargo-each                                                       ##
-## [in-tree] run-unpriv.sh                                                    ##
 ## cargo [with:]                                                              ##
 ##   * rustc                                                                  ##
 ################################################################################
@@ -37,10 +36,7 @@ esac
 cd "./${1:?}"
 shift
 
-"cargo" "fetch"
-
-"run-unpriv.sh" \
-  "cargo" \
+"cargo" \
   -- \
   "each" \
   "run" \

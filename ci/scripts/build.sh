@@ -18,14 +18,11 @@
 ## environments.                                                              ##
 ################################################################################
 ## Used utilities outside the POSIX standard:                                 ##
-## setpriv [from "util-linux"]                                                ##
+## [in-tree] cargo-each                                                       ##
+## cargo [with:]                                                              ##
+##   * rustc                                                                  ##
 ################################################################################
 
 set -eu
 
-"setpriv" \
-  --clear-groups \
-  --no-new-privs \
-  --regid "1000" \
-  --reuid "1000" \
-  "${@:?}"
+

@@ -19,9 +19,10 @@
 ################################################################################
 ## Used utilities outside the POSIX standard:                                 ##
 ## [in-tree] cargo-each                                                       ##
+## [in-tree] lint.workspace.sh                                                ##
 ## cargo [with:]                                                              ##
 ##   * rustc                                                                  ##
-##   * clippy [inherited from 'lint.internal.sh']                             ##
+##   * clippy [inherited from 'lint.workspace.sh']                            ##
 ################################################################################
 
 set -eu
@@ -43,4 +44,4 @@ shift
   "run" \
   --external-command \
   -- \
-  "/usr/local/bin/lint.internal.sh"
+  "lint.workspace.sh"

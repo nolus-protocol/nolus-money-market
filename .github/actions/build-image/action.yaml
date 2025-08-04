@@ -4,9 +4,6 @@ description: "Action for building a container image, or restoring it from
 author: "The Dev Nolus Team <dev@nolus.io>"
 
 inputs:
-  profile:
-    description: ""
-    required: false
   target:
     description: ""
     required: true
@@ -14,19 +11,10 @@ inputs:
     default: "false"
     description: ""
     required: false
-  workspace:
-    description: ""
-    required: false
 
 runs:
   using: "composite"
   steps:
-    - uses: "./.github/actions/build-image"
-      with:
-        target: |-
-          ${{ inputs.target }}
-        tools-context: |-
-          ${{ inputs.tools-context }}
     - env:
         DOCKER_BUILD_RECORD_UPLOAD: "false"
         SOURCE_DATE_EPOCH: "0"
@@ -47,18 +35,3 @@ runs:
           localhost/local/${{ inputs.target }}
         target: |-
           ${{ inputs.target }}
-    - env:
-        target: |-
-          ${{ inputs.target }}
-      run: |-
-        set -eu
-
-        "docker" \
-          "container" \
-          "run" \
-          ${{ (inputs.profile && format('--env "PROFILE={0}"', inputs.profile)) || '' }} \
-          --tty \
-          --volume ".:/src:ro" \
-          "localhost/local/${target:?}" \
-          ${{ (inputs.workspace && format('"{0}"', inputs.workspace)) || '' }}
-      shell: "sh"

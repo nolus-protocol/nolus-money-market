@@ -192,291 +192,267 @@ jobs:
           tools-context: "true"
           workspace: |-
             ${{ matrix.workspace }}
-  build:
-    runs-on: "ubuntu-latest" # "self-hosted"
-    needs:
-      - "matrix-arguments"
-    strategy:
-      matrix:
-        workspace: |-
-          ${{ fromJSON(needs.matrix-arguments.outputs.workspaces-json) }}
-    steps:
-      - uses: "actions/checkout@v4"
-      - uses: "./.github/actions/setup-docker"
-      - run: |-
-          "mv" "./.github/test-data/build-configuration" "./"
-      - uses: "./.github/actions/build-and-run-image"
-        with:
-          target: "build"
-          tools-context: "true"
-          workspace: |-
-            ${{ matrix.workspace }}
 
-#  build:
-#    needs:
-#      - "workspace_check"
-#      - "instance_lint"
-#      - "instance_check_deps"
-#      - "instance_tests"
-#    runs-on: "ubuntu-latest"
-#    name: "Build platform binaries and protocol container image"
-#    steps:
-#      - name: "Checkout repository"
-#        uses: "actions/checkout@v4"
-#        with:
-#          fetch-depth: "0"
-#          fetch-tags: "true"
-#      - id: "builder-base-container-cache-key"
-#        env:
-#          check_deps_updated: |-
-#            ${{ toJSON(env.check-dependencies-versions) }}
-#        run: |-
-#          echo \
-#            "cache-key<<EOF
-#          builder-base-container-[check-deps=${check_deps_updated:?}]
-#          EOF" \
-#            >>"${GITHUB_OUTPUT}"
-#      - id: "restore-builder-base-container-cache"
-#        name: "Restore builder base image from cache"
-#        uses: "actions/cache/restore@v4"
-#        with:
-#          key: |-
-#            ${{ steps.builder-base-container-cache-key.outputs.cache-key }}
-#          path: |-
-#            builder-base-container.tar
-#      - if: |-
-#          !steps.restore-builder-base-container-cache.outputs.cache-hit
-#        name: "Build builder base image"
-#        run: |-
-#          "docker" \
-#            "buildx" \
-#            "build" \
-#            --file "build.Containerfile" \
-#            --tag "builder-base" \
-#            --target "builder-base" \
-#            "."
-#      - if: |-
-#          !steps.restore-builder-base-container-cache.outputs.cache-hit
-#        name: "Export builder base image"
-#        run: |-
-#          "docker" \
-#            "save" \
-#            --output "builder-base-container.tar" \
-#            "builder-base"
-#      - if: |-
-#          !steps.restore-builder-base-container-cache.outputs.cache-hit
-#        name: "Store builder base image to cache"
-#        uses: "actions/cache/save@v4"
-#        with:
-#          key: |-
-#            ${{ steps.builder-base-container-cache-key.outputs.cache-key }}
-#          path: |-
-#            builder-base-container.tar
-#      - if: |-
-#          steps.restore-builder-base-container-cache.outputs.cache-hit
-#        name: "Load builder base image"
-#        run: |-
-#          "docker" \
-#            "load" \
-#            --input "builder-base-container.tar"
-#      - name: "Produce builder images"
-#        env:
-#          CHECK_DEPS_UPDATED: |-
-#            ${{ env.check-dependencies-versions }}
-#        run: |-
-#          set -eu
-#
-#          builder_image() {
-#            target="${1:?}"
-#
-#            "docker" \
-#              "buildx" \
-#              "build" \
-#              --build-arg "check_dependencies_updated=${CHECK_DEPS_UPDATED:?}" \
-#              --file "build.Containerfile" \
-#              --tag "${target:?}-builder" \
-#              --target "${target:?}-builder" \
-#              "."
-#          }
-#
-#          for workspace in \
-#            "platform" \
-#            "protocol"
-#          do
-#            "builder_image" "${workspace:?}"
-#          done
-#      - name: "Produce platform binaries"
-#        run: |-
-#          set -eu
-#
-#          build_and_pack() {
-#            network="${1:?}"
-#
-#            "mkdir" "./artifacts-${network:?}/"
-#
-#            "docker" \
-#              "run" \
-#              --volume "./artifacts-${network:?}/:/artifacts/" \
-#              "platform-builder" \
-#              "${network:?}"
-#          }
-#
-#          for network in \
-#            "test-net" \
-#            "production-net"
-#          do
-#            "build_and_pack" "${network:?}"
-#          done
-#      - if: |-
-#          fromJSON(env.upload-artifacts)
-#        name: "Export protocol builder image"
-#        run: |-
-#          "docker" \
-#            "image" \
-#            "save" \
-#            --output "protocol-builder.tar" \
-#            "protocol-builder"
-#      - if: |-
-#          fromJSON(env.upload-artifacts)
-#        name: "Upload test-net platform binaries"
-#        uses: "actions/upload-artifact@v4"
-#        with:
-#          if-no-files-found: "error"
-#          name: "platform-test-net"
-#          path: |-
-#            ./artifacts-test-net/*
-#      - if: |-
-#          fromJSON(env.upload-artifacts)
-#        name: "Upload production-net platform binaries"
-#        uses: "actions/upload-artifact@v4"
-#        with:
-#          if-no-files-found: "error"
-#          name: "platform-production-net"
-#          path: |-
-#            ./artifacts-production-net/*
-#      - if: |-
-#          fromJSON(env.upload-artifacts)
-#        name: "Upload protocol builder image"
-#        uses: "actions/upload-artifact@v4"
-#        with:
-#          if-no-files-found: "error"
-#          name: "protocol-builder"
-#          path: |-
-#            ./protocol-builder.tar
-#  create_draft_release:
-#    needs:
-#      - "build"
-#    if: |-
-#      github.ref_type == 'tag'
-#    name: "Create draft release"
-#    permissions:
-#      contents: "write"
-#    runs-on: "ubuntu-latest"
-#    steps:
-#      - name: "Checkout repository"
-#        uses: "actions/checkout@v4"
-#        with:
-#          fetch-depth: "0"
-#          fetch-tags: "true"
-#          sparse-checkout: |-
-#            .github/actions/install-tool
-#      - name: "Install `git-cliff` from cache"
-#        uses: "./.github/actions/install-tool"
-#        with:
-#          fail-on-cache-miss: "true"
-#          local: "false"
-#          no-fetching: "false"
-#          tool: "git-cliff"
-#      - name: "Download produced artifacts"
-#        uses: "actions/download-artifact@v4"
-#        with:
-#          merge-multiple: "false"
-#          path: "./artifacts/"
-#      - name: "Create test-net platform binaries archive"
-#        run: |-
-#          set -eu
-#
-#          files="$(
-#            "find" \
-#              "." \
-#              "!" \
-#              -path "./**/**"
-#          )"
-#
-#          "xargs" \
-#            -E "" \
-#            -n "1" \
-#            "tar" \
-#            -r \
-#            -f "../platform-test-net.tar" \
-#            <<EOF
-#          ${files:?}
-#          EOF
-#        working-directory: "./artifacts/platform-test-net/"
-#      - name: "Compress test-net platform binaries archive"
-#        run: |-
-#          "gzip" "./platform-test-net.tar"
-#        working-directory: "./artifacts/"
-#      - name: "Create production-net platform binaries archive"
-#        run: |-
-#          set -eu
-#
-#          files="$(
-#            "find" \
-#              "." \
-#              "!" \
-#              "(" \
-#              -path "." \
-#              -o \
-#              -path "./**/**" \
-#              ")"
-#          )"
-#          files="$(
-#            "sed" \
-#              -e "s/^\\.\\/\\(.\\+\\)$/\\1/g" \
-#              <<EOF
-#          ${files:?}
-#          EOF
-#          )"
-#          readonly files
-#
-#          "xargs" \
-#            -E "" \
-#            -n "1" \
-#            "tar" \
-#            -r \
-#            -f "../platform-production-net.tar" \
-#            <<EOF
-#          ${files:?}
-#          EOF
-#        working-directory: "./artifacts/platform-production-net/"
-#      - name: "Compress production-net platform binaries archive"
-#        run: |-
-#          "gzip" "./platform-production-net.tar"
-#        working-directory: "./artifacts/"
-#      - name: "Compress protocol builder image"
-#        run: |-
-#          set -eu
-#
-#          "gzip" "./protocol-builder.tar"
-#
-#          "mv" \
-#            "./protocol-builder.tar.gz" \
-#            "../"
-#        working-directory: "./artifacts/protocol-builder/"
-#      - name: "Generate changelog"
-#        run: |-
-#          "git" \
-#            "cliff" \
-#            --current \
-#            >"./changelog"
-#      - name: "Create draft release"
-#        uses: "softprops/action-gh-release@v2"
-#        with:
-#          name: |-
-#            ${{ github.ref_name }}
-#          draft: true
-#          body_path: "./changelog"
-#          generate_release_notes: false
-#          files: |
-#            ./artifacts/*.tar.gz
+  build:
+    runs-on: "ubuntu-latest"
+    name: "Build platform binaries and protocol container image"
+    steps:
+      - name: "Checkout repository"
+        uses: "actions/checkout@v4"
+        with:
+          fetch-depth: "0"
+          fetch-tags: "true"
+      - id: "builder-base-container-cache-key"
+        env:
+          check_deps_updated: |-
+            ${{ toJSON(env.check-dependencies-versions) }}
+        run: |-
+          echo \
+            "cache-key<<EOF
+          builder-base-container-[check-deps=${check_deps_updated:?}]
+          EOF" \
+            >>"${GITHUB_OUTPUT}"
+      - id: "restore-builder-base-container-cache"
+        name: "Restore builder base image from cache"
+        uses: "actions/cache/restore@v4"
+        with:
+          key: |-
+            ${{ steps.builder-base-container-cache-key.outputs.cache-key }}
+          path: |-
+            builder-base-container.tar
+      - if: |-
+          !steps.restore-builder-base-container-cache.outputs.cache-hit
+        name: "Build builder base image"
+        run: |-
+          "docker" \
+            "buildx" \
+            "build" \
+            --file "build.Containerfile" \
+            --tag "builder-base" \
+            --target "builder-base" \
+            "."
+      - if: |-
+          !steps.restore-builder-base-container-cache.outputs.cache-hit
+        name: "Export builder base image"
+        run: |-
+          "docker" \
+            "save" \
+            --output "builder-base-container.tar" \
+            "builder-base"
+      - if: |-
+          !steps.restore-builder-base-container-cache.outputs.cache-hit
+        name: "Store builder base image to cache"
+        uses: "actions/cache/save@v4"
+        with:
+          key: |-
+            ${{ steps.builder-base-container-cache-key.outputs.cache-key }}
+          path: |-
+            builder-base-container.tar
+      - if: |-
+          steps.restore-builder-base-container-cache.outputs.cache-hit
+        name: "Load builder base image"
+        run: |-
+          "docker" \
+            "load" \
+            --input "builder-base-container.tar"
+      - name: "Produce builder images"
+        env:
+          CHECK_DEPS_UPDATED: |-
+            ${{ env.check-dependencies-versions }}
+        run: |-
+          set -eu
+
+          builder_image() {
+            target="${1:?}"
+
+            "docker" \
+              "buildx" \
+              "build" \
+              --build-arg "check_dependencies_updated=${CHECK_DEPS_UPDATED:?}" \
+              --file "build.Containerfile" \
+              --tag "${target:?}-builder" \
+              --target "${target:?}-builder" \
+              "."
+          }
+
+          for workspace in \
+            "platform" \
+            "protocol"
+          do
+            "builder_image" "${workspace:?}"
+          done
+      - name: "Produce platform binaries"
+        run: |-
+          set -eu
+
+          build_and_pack() {
+            network="${1:?}"
+
+            "mkdir" "./artifacts-${network:?}/"
+
+            "docker" \
+              "run" \
+              --volume "./artifacts-${network:?}/:/artifacts/" \
+              "platform-builder" \
+              "${network:?}"
+          }
+
+          for network in \
+            "test-net" \
+            "production-net"
+          do
+            "build_and_pack" "${network:?}"
+          done
+      - if: |-
+          fromJSON(env.upload-artifacts)
+        name: "Export protocol builder image"
+        run: |-
+          "docker" \
+            "image" \
+            "save" \
+            --output "protocol-builder.tar" \
+            "protocol-builder"
+      - if: |-
+          fromJSON(env.upload-artifacts)
+        name: "Upload test-net platform binaries"
+        uses: "actions/upload-artifact@v4"
+        with:
+          if-no-files-found: "error"
+          name: "platform-test-net"
+          path: |-
+            ./artifacts-test-net/*
+      - if: |-
+          fromJSON(env.upload-artifacts)
+        name: "Upload production-net platform binaries"
+        uses: "actions/upload-artifact@v4"
+        with:
+          if-no-files-found: "error"
+          name: "platform-production-net"
+          path: |-
+            ./artifacts-production-net/*
+      - if: |-
+          fromJSON(env.upload-artifacts)
+        name: "Upload protocol builder image"
+        uses: "actions/upload-artifact@v4"
+        with:
+          if-no-files-found: "error"
+          name: "protocol-builder"
+          path: |-
+            ./protocol-builder.tar
+  create_draft_release:
+    needs:
+      - "build"
+    if: |-
+      github.ref_type == 'tag'
+    name: "Create draft release"
+    permissions:
+      contents: "write"
+    runs-on: "ubuntu-latest"
+    steps:
+      - name: "Checkout repository"
+        uses: "actions/checkout@v4"
+        with:
+          fetch-depth: "0"
+          fetch-tags: "true"
+          sparse-checkout: |-
+            .github/actions/install-tool
+      - name: "Install `git-cliff` from cache"
+        uses: "./.github/actions/install-tool"
+        with:
+          fail-on-cache-miss: "true"
+          local: "false"
+          no-fetching: "false"
+          tool: "git-cliff"
+      - name: "Download produced artifacts"
+        uses: "actions/download-artifact@v4"
+        with:
+          merge-multiple: "false"
+          path: "./artifacts/"
+      - name: "Create test-net platform binaries archive"
+        run: |-
+          set -eu
+
+          files="$(
+            "find" \
+              "." \
+              "!" \
+              -path "./**/**"
+          )"
+
+          "xargs" \
+            -E "" \
+            -n "1" \
+            "tar" \
+            -r \
+            -f "../platform-test-net.tar" \
+            <<EOF
+          ${files:?}
+          EOF
+        working-directory: "./artifacts/platform-test-net/"
+      - name: "Compress test-net platform binaries archive"
+        run: |-
+          "gzip" "./platform-test-net.tar"
+        working-directory: "./artifacts/"
+      - name: "Create production-net platform binaries archive"
+        run: |-
+          set -eu
+
+          files="$(
+            "find" \
+              "." \
+              "!" \
+              "(" \
+              -path "." \
+              -o \
+              -path "./**/**" \
+              ")"
+          )"
+          files="$(
+            "sed" \
+              -e "s/^\\.\\/\\(.\\+\\)$/\\1/g" \
+              <<EOF
+          ${files:?}
+          EOF
+          )"
+          readonly files
+
+          "xargs" \
+            -E "" \
+            -n "1" \
+            "tar" \
+            -r \
+            -f "../platform-production-net.tar" \
+            <<EOF
+          ${files:?}
+          EOF
+        working-directory: "./artifacts/platform-production-net/"
+      - name: "Compress production-net platform binaries archive"
+        run: |-
+          "gzip" "./platform-production-net.tar"
+        working-directory: "./artifacts/"
+      - name: "Compress protocol builder image"
+        run: |-
+          set -eu
+
+          "gzip" "./protocol-builder.tar"
+
+          "mv" \
+            "./protocol-builder.tar.gz" \
+            "../"
+        working-directory: "./artifacts/protocol-builder/"
+      - name: "Generate changelog"
+        run: |-
+          "git" \
+            "cliff" \
+            --current \
+            >"./changelog"
+      - name: "Create draft release"
+        uses: "softprops/action-gh-release@v2"
+        with:
+          name: |-
+            ${{ github.ref_name }}
+          draft: true
+          body_path: "./changelog"
+          generate_release_notes: false
+          files: |
+            ./artifacts/*.tar.gz
