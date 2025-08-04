@@ -1,5 +1,7 @@
 use crate::{
+    arithmetics::CheckedMul,
     coin::Coin,
+    fractionable::{Fractionable, ToPrimitive, TryFromPrimitive},
     percent::{Units, bound::BoundPercent},
     ratio::Ratio,
 };
@@ -12,6 +14,38 @@ where
 {
     type Type = u64;
     type Intermediate = Self;
+}
+
+impl<const UPPER_BOUND: Units> Fractionable<Units> for BoundPercent<UPPER_BOUND> {
+    type HigherPrimitive = u64;
+}
+
+impl CheckedMul<u64> for u64 {
+    type Output = Self;
+
+    fn checked_mul(self, rhs: Self) -> Option<Self::Output> {
+        self.checked_mul(rhs)
+    }
+}
+
+impl ToPrimitive<u64> for Units {
+    fn into_primitive(self) -> u64 {
+        self.into()
+    }
+}
+
+impl<const UPPER_BOUND: Units> ToPrimitive<u64> for BoundPercent<UPPER_BOUND> {
+    fn into_primitive(self) -> u64 {
+        self.units().into()
+    }
+}
+
+impl<const UPPER_BOUND: Units> TryFromPrimitive<u64> for BoundPercent<UPPER_BOUND> {
+    fn try_from_primitive(primitive: u64) -> Option<Self> {
+        Units::try_from(primitive)
+            .ok()
+            .map(|units| Self::from_permille(units))
+    }
 }
 
 // TODO implement Fractionble<BoundPercent<UPPER_BOUND>> for BoundPercent<UPPER_BOUND>
