@@ -8,9 +8,7 @@ authors.workspace = true
 license.workspace = true
 
 [package.metadata.cargo-each]
-combinations = [
-    { tags = ["ci", "@agnostic"], include-rest = true },
-]
+combinations = [{ tags = ["ci", "@agnostic"], include-rest = true }]
 
 [features]
 testing = []
@@ -19,6 +17,7 @@ testing = []
 currency = { workspace = true }
 sdk = { workspace = true }
 
+bnum = "0.13"
 gcd = { workspace = true }
 thiserror = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
