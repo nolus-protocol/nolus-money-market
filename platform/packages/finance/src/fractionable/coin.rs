@@ -22,8 +22,7 @@ impl<C> From<Coin<C>> for Uint256 {
 
 impl<C> From<Uint128> for Coin<C> {
     fn from(amount: Uint128) -> Self {
-        let c: Amount = amount.into();
-        c.into()
+        Coin::new(amount.into())
     }
 }
 #[cfg(test)]
