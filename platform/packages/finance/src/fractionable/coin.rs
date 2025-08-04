@@ -8,6 +8,7 @@ use crate::{
 
 use super::HigherRank;
 
+// TODO: Remove
 impl<U, C> HigherRank<U> for Coin<C>
 where
     U: Into<Amount>,
@@ -17,12 +18,14 @@ where
     type Intermediate = Uint128;
 }
 
+// TODO: Remove
 impl<C> From<Coin<C>> for Uint256 {
     fn from(coin: Coin<C>) -> Self {
         Amount::from(coin).into()
     }
 }
 
+// TODO: Remove
 impl<C> From<Uint128> for Coin<C> {
     fn from(amount: Uint128) -> Self {
         let c: Amount = amount.into();
@@ -32,7 +35,7 @@ impl<C> From<Uint128> for Coin<C> {
 
 impl<C> ToPrimitive<U256> for Coin<C> {
     fn into_primitive(self) -> U256 {
-        Amount::from(self).into()
+        self.amount().into()
     }
 }
 
