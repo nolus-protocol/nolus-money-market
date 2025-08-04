@@ -1,6 +1,11 @@
 use bnum::types::U256;
 
-use crate::{coin::Coin, duration::Duration, ratio::Ratio};
+use crate::{
+    coin::Coin,
+    duration::{Duration, Units},
+    fractionable::{Fractionable, ToPrimitive, TryFromPrimitive},
+    ratio::Ratio,
+};
 
 use super::{Fragmentable, HigherRank};
 
@@ -10,6 +15,26 @@ where
 {
     type Type = U256;
     type Intermediate = u128;
+}
+
+impl<C> Fractionable<Coin<C>> for Duration {
+    type HigherPrimitive = U256;
+}
+
+impl ToPrimitive<U256> for Duration {
+    fn into_primitive(self) -> U256 {
+        u128::from(self.nanos()).into()
+    }
+}
+
+impl TryFromPrimitive<U256> for Duration {
+    fn try_from_primitive(primitive: U256) -> Option<Self> {
+        u128::try_from(primitive).ok().and_then(|u_128| {
+            Units::try_from(u_128)
+                .ok()
+                .map(|units| Self::from_nanos(units))
+        })
+    }
 }
 
 impl<C> Fragmentable<Coin<C>> for Duration {
