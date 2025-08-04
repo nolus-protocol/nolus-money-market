@@ -18,7 +18,9 @@ where
     type Intermediate = Self;
 }
 
-impl<const UPPER_BOUND: Units> Fractionable<Units> for BoundPercent<UPPER_BOUND> {
+impl<const UPPER_BOUND: Units> Fractionable<BoundPercent<UPPER_BOUND>>
+    for BoundPercent<UPPER_BOUND>
+{
     type HigherPrimitive = u64;
 }
 
@@ -39,12 +41,6 @@ impl CheckedMul<U256> for U256 {
 
     fn checked_mul(self, rhs: U256) -> Option<Self::Output> {
         self.checked_mul(rhs)
-    }
-}
-
-impl ToPrimitive<u64> for Units {
-    fn into_primitive(self) -> u64 {
-        self.into()
     }
 }
 
