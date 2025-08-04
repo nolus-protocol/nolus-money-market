@@ -4,6 +4,7 @@ use crate::{coin::{Amount, Coin}, fractionable::{ToPrimitive, TryFromPrimitive}}
 
 use super::HigherRank;
 
+// TODO: Remove
 impl<U, C> HigherRank<U> for Coin<C>
 where
     U: Into<Amount>,
@@ -15,7 +16,7 @@ where
 
 impl<C> ToPrimitive<U256> for Coin<C> {
     fn into_primitive(self) -> U256 {
-        Amount::from(self).into()
+        self.amount().into()
     }
 }
 

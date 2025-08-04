@@ -41,6 +41,10 @@ impl<C> Coin<C> {
         }
     }
 
+    pub(crate) fn amount(&self) -> Amount {
+        self.amount
+    }
+
     const fn may_new(may_amount: Option<Amount>) -> Option<Self> {
         if let Some(amount) = may_amount {
             Some(Self::new(amount))
