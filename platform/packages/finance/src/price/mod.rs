@@ -12,6 +12,7 @@ use crate::{
     fractionable::HigherRank,
     ratio::{Ratio, SimpleFraction},
     rational::Rational,
+    traits::FractionUnit,
 };
 
 pub mod base;

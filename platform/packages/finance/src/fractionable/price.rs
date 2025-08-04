@@ -9,7 +9,7 @@ use crate::{
     zero::Zero,
 };
 
-impl<C, QuoteC> Fragmentable<PercentUnits> for Price<C, QuoteC>
+impl<C, QuoteC> Fractionable<PercentUnits> for Price<C, QuoteC>
 where
     C: 'static,
     QuoteC: 'static,
