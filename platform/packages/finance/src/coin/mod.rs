@@ -221,6 +221,7 @@ impl<C> From<Amount> for Coin<C> {
     }
 }
 
+// TODO: Remove with Fragmentable
 impl<C> From<Coin<C>> for Amount {
     fn from(coin: Coin<C>) -> Self {
         coin.amount

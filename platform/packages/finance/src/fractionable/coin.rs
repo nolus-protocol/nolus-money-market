@@ -8,6 +8,7 @@ use crate::{
 
 use super::HigherRank;
 
+// TODO: Remove with Fragmentable
 impl<U, C> HigherRank<U> for Coin<C>
 where
     U: Into<Amount>,
@@ -17,12 +18,14 @@ where
     type Intermediate = Uint128;
 }
 
+// TODO: Remove with Frgamentable
 impl<C> From<Coin<C>> for Uint256 {
     fn from(coin: Coin<C>) -> Self {
         Amount::from(coin).into()
     }
 }
 
+// TODO: Remove with Fragmentable
 impl<C> From<Uint128> for Coin<C> {
     fn from(amount: Uint128) -> Self {
         let c: Amount = amount.into();
