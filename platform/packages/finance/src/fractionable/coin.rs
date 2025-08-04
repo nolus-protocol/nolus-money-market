@@ -3,7 +3,7 @@ use sdk::cosmwasm_std::{Uint128, Uint256};
 
 use crate::{
     coin::{Amount, Coin},
-    fractionable::{Fractionable, ToPrimitive, TryFromPrimitive},
+    fractionable::{ToPrimitive, TryFromPrimitive},
 };
 
 use super::HigherRank;
