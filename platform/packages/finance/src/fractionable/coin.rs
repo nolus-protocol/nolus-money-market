@@ -3,7 +3,7 @@ use sdk::cosmwasm_std::{Uint128, Uint256};
 
 use crate::{
     coin::{Amount, Coin},
-    fractionable::{ToPrimitive, TryFromPrimitive},
+    fractionable::{Fractionable, ToPrimitive, TryFromPrimitive},
 };
 
 use super::HigherRank;
@@ -28,8 +28,7 @@ impl<C> From<Coin<C>> for Uint256 {
 // TODO: Remove with Fragmentable
 impl<C> From<Uint128> for Coin<C> {
     fn from(amount: Uint128) -> Self {
-        let c: Amount = amount.into();
-        c.into()
+        Coin::new(amount.into())
     }
 }
 
