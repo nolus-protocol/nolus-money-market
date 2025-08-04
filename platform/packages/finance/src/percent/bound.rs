@@ -1,6 +1,5 @@
 use std::{
     fmt::{Debug, Display, Formatter, Result as FmtResult, Write},
-    num::TryFromIntError,
     ops::{Div, Mul},
 };
 
@@ -88,6 +87,17 @@ impl<const UPPER_BOUND: Units> BoundPercent<UPPER_BOUND> {
             .checked_sub(other.0)
             .map(Self::from_permille)
             .ok_or(Error::overflow_err("while subtracting", self, other))
+    }
+
+    pub(crate) fn to_fraction<U>(self) -> SimpleFraction<U>
+    where
+        Amount: Into<U>,
+        U: FractionUnit,
+    {
+        SimpleFraction::new(
+            Amount::from(self.0).into(),
+            Amount::from(Self::HUNDRED.0).into(),
+        )
     }
 }
 
@@ -181,23 +191,7 @@ impl<const UPPER_BOUND: Units> From<BoundPercent<UPPER_BOUND>> for SimpleFractio
 // TODO remove it once the multiplication is refactored
 impl<const UPPER_BOUND: Units> From<BoundPercent<UPPER_BOUND>> for Uint256 {
     fn from(percent: BoundPercent<UPPER_BOUND>) -> Self {
-        Amount::from(percent).into()
-    }
-}
-
-impl<const UPPER_BOUND: Units> TryFrom<Amount> for BoundPercent<UPPER_BOUND> {
-    type Error = <Units as TryFrom<Amount>>::Error;
-
-    fn try_from(value: Amount) -> Result<Self, Self::Error> {
-        Ok(Self::from_permille(value.try_into()?))
-    }
-}
-
-impl<const UPPER_BOUND: Units> TryFrom<BoundPercent<UPPER_BOUND>> for u16 {
-    type Error = TryFromIntError;
-
-    fn try_from(percent: BoundPercent<UPPER_BOUND>) -> Result<Self, Self::Error> {
-        percent.0.try_into()
+        Amount::from(percent.0).into()
     }
 }
 

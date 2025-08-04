@@ -1,9 +1,55 @@
 use std::marker::PhantomData;
 
-use crate::{coin::Amount, percent::Units as PercentUnits, price::Price, ratio::Ratio};
+use bnum::types::U256;
+
+use crate::{
+    coin::Amount,
+    fractionable::{Fractionable, ToPrimitive, TryFromPrimitive},
+    percent::{Units as PercentUnits, bound::BoundPercent},
+    price::Price,
+    ratio::{Ratio, SimpleFraction},
+    traits::FractionUnit,
+    zero::Zero,
+};
 
 use super::Fragmentable;
 
+impl<const UPPER_BOUND: PercentUnits, C, QuoteC> Fractionable<BoundPercent<UPPER_BOUND>>
+    for Price<C, QuoteC>
+where
+    C: 'static,
+    QuoteC: 'static,
+{
+    type HigherPrimitive = SimpleFraction<U256>;
+}
+
+impl FractionUnit for U256 {}
+
+impl<C, QuoteC> ToPrimitive<SimpleFraction<U256>> for Price<C, QuoteC>
+where
+    C: 'static,
+    QuoteC: 'static,
+{
+    fn into_primitive(self) -> SimpleFraction<U256> {
+        self.to_fraction()
+    }
+}
+
+impl<C, QuoteC> TryFromPrimitive<SimpleFraction<U256>> for Price<C, QuoteC>
+where
+    C: 'static,
+    QuoteC: 'static,
+{
+    fn try_from_primitive(primitive: SimpleFraction<U256>) -> Option<Self> {
+        Self::try_from_fraction(primitive)
+    }
+}
+
+impl Zero for U256 {
+    const ZERO: Self = Self::ZERO;
+}
+
+// TODO impl Fractionble<BoundPercent<UPPER_BOUND>> for Price when multiplication with trim is ready
 impl<C, QuoteC> Fragmentable<PercentUnits> for Price<C, QuoteC>
 where
     C: 'static,

@@ -5,7 +5,7 @@ use crate::{
     coin::Coin,
     fractionable::{Fractionable, ToPrimitive, TryFromPrimitive},
     percent::{Units, bound::BoundPercent},
-    ratio::Ratio,
+    ratio::{Ratio, SimpleFraction},
 };
 
 use super::{Fragmentable, HigherRank};
@@ -52,7 +52,13 @@ impl<const UPPER_BOUND: Units> ToPrimitive<u64> for BoundPercent<UPPER_BOUND> {
 
 impl<const UPPER_BOUND: Units> ToPrimitive<U256> for BoundPercent<UPPER_BOUND> {
     fn into_primitive(self) -> U256 {
-        u128::from(self).into()
+        u128::from(self.units()).into()
+    }
+}
+
+impl<const UPPER_BOUND: Units> ToPrimitive<SimpleFraction<U256>> for BoundPercent<UPPER_BOUND> {
+    fn into_primitive(self) -> SimpleFraction<U256> {
+        self.to_fraction::<U256>()
     }
 }
 
