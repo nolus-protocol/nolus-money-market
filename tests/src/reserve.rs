@@ -13,7 +13,7 @@ use sdk::{cosmwasm_std::Addr, cw_multi_test::AppResponse, testing};
 
 use crate::{
     common::{
-        cwcoin,
+        cwcoin_from_amount,
         leaser::Instantiator as LeaserInstantiator,
         test_case::{
             TestCase, app::App, builder::BlankBuilder as TestCaseBuilder,
@@ -120,7 +120,7 @@ fn cover_losses_enough_balance() {
 
     let reserve = test_case.address_book.reserve().clone();
     let losses = 1425;
-    test_case.send_funds_from_admin(reserve.clone(), &[cwcoin::<Lpn, _>(losses)]);
+    test_case.send_funds_from_admin(reserve.clone(), &[cwcoin_from_amount::<Lpn>(losses)]);
 
     let _resp = cover_losses_ok(&mut test_case, reserve.clone(), lease_addr, losses);
     assert_balance_eq(&test_case, &reserve, Coin::ZERO);

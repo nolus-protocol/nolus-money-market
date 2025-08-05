@@ -13,7 +13,7 @@ use sdk::{
 use treasury::msg::ConfigResponse;
 
 use crate::common::{
-    ADDON_OPTIMAL_INTEREST_RATE, BASE_INTEREST_RATE, USER, UTILIZATION_OPTIMAL, cwcoin,
+    ADDON_OPTIMAL_INTEREST_RATE, BASE_INTEREST_RATE, USER, UTILIZATION_OPTIMAL, cwcoin_from_amount,
     lpp::{LppExecuteMsg, LppQueryMsg},
     oracle as oracle_mod,
     protocols::Registry,
@@ -26,11 +26,11 @@ type DispatcherTestCase = TestCase<Addr, Addr, (), (), (), Addr, Addr, Addr>;
 fn on_alarm_zero_reward() {
     let mut test_case = new_test_case(Registry::NoProtocol);
 
-    test_case.send_funds_from_admin(testing::user(USER), &[cwcoin::<Lpn, _>(500)]);
+    test_case.send_funds_from_admin(testing::user(USER), &[cwcoin_from_amount::<Lpn>(500)]);
 
     test_case.send_funds_from_admin(
         test_case.address_book.time_alarms().clone(),
-        &[cwcoin::<Lpn, _>(500)],
+        &[cwcoin_from_amount::<Lpn>(500)],
     );
 
     let treasury_balance_before: Coin<NlsPlatform> = treasury_balance(&test_case);
@@ -118,7 +118,7 @@ fn new_test_case(registry: Registry) -> DispatcherTestCase {
 fn on_alarm_n_protocols(registry: Registry, protocols_nb: usize) {
     const REWARD: Coin<NlsPlatform> = Coin::new(7);
     let lender = testing::user(USER);
-    let lender_deposit = [cwcoin::<Lpn, _>(500)];
+    let lender_deposit = [cwcoin_from_amount::<Lpn>(500)];
 
     let mut test_case = new_test_case(registry);
     let feeder1 = testing::user("feeder1");
@@ -129,7 +129,7 @@ fn on_alarm_n_protocols(registry: Registry, protocols_nb: usize) {
     let treasury = test_case.address_book.treasury().clone();
     test_case
         .send_funds_from_admin(lender.clone(), &lender_deposit)
-        .send_funds_from_admin(treasury, &[cwcoin::<NlsPlatform, _>(123)]);
+        .send_funds_from_admin(treasury, &[cwcoin_from_amount::<NlsPlatform>(123)]);
 
     assert!(lpp_balance(&test_case).is_zero());
 

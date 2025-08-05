@@ -1,17 +1,14 @@
 use ::lease::api::position::ChangeCmd;
 use ::swap::testing::SwapRequest;
 use currencies::PaymentGroup;
-use finance::{
-    coin::{Amount, Coin},
-    percent::Percent100,
-};
+use finance::{coin::Amount, percent::Percent100};
 use sdk::{
     cosmwasm_std::{Addr, Event},
     cw_multi_test::AppResponse,
 };
 
 use crate::{
-    common::swap,
+    common::{self, swap},
     lease::{
         self, DOWNPAYMENT, LeaseCurrency, LeaserInstantiator, LpnCurrency, PaymentCurrency,
         TestCase,
@@ -69,8 +66,8 @@ fn trigger_close(
 ) {
     let response = lease::deliver_new_price(
         &mut test_case,
-        Coin::<LeaseCurrency>::from(base),
-        Coin::<LpnCurrency>::from(quote),
+        common::coin::<LeaseCurrency>(base),
+        common::coin::<LpnCurrency>(quote),
     );
 
     let requests: Vec<SwapRequest<PaymentGroup, PaymentGroup>> = swap::expect_swap(

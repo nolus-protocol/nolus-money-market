@@ -170,7 +170,7 @@ fn trigger_full_liquidation(
 ) {
     // the base is chosen to be close to the position amount to trigger a full liquidation
     let response =
-        lease_mod::deliver_new_price(test_case, lease_amount + 10.into(), borrowed_amount);
+        lease_mod::deliver_new_price(test_case, lease_amount + common::coin(10), borrowed_amount);
     let requests: Vec<SwapRequest<PaymentGroup, PaymentGroup>> = common::swap::expect_swap(
         response,
         TestCase::DEX_CONNECTION_ID,
@@ -242,10 +242,10 @@ fn assert_min_out(
     let position_in_lpn = price::total(lease_amount, price);
     assert_eq!(
         MaxSlippage::unchecked(LeaserInstantiator::MAX_SLIPPAGE).min_out(position_in_lpn),
-        requests[0].min_token_out.into()
+        common::coin(requests[0].min_token_out)
     );
 }
 
 fn assert_any_min_out(requests: &[SwapRequest<PaymentGroup, PaymentGroup>]) {
-    assert_eq!(LeaseCoin::new(1), requests[0].min_token_out.into());
+    assert_eq!(LeaseCoin::new(1), common::coin(requests[0].min_token_out));
 }
