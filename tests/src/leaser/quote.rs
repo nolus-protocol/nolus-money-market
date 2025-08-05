@@ -17,8 +17,8 @@ use sdk::{
 };
 
 use crate::common::{
-    ADDON_OPTIMAL_INTEREST_RATE, BASE_INTEREST_RATE, USER, UTILIZATION_OPTIMAL, cwcoin,
-    leaser as leaser_mod,
+    self, ADDON_OPTIMAL_INTEREST_RATE, BASE_INTEREST_RATE, USER, UTILIZATION_OPTIMAL,
+    cwcoin_from_amount, leaser as leaser_mod,
     lpp::{self as lpp_mod},
     oracle as oracle_mod,
     protocols::Registry,
@@ -50,9 +50,9 @@ fn test_quote() {
         .init_leaser()
         .into_generic();
 
-    test_case.send_funds_from_admin(testing::user(USER), &[cwcoin::<Lpn, _>(500)]);
+    test_case.send_funds_from_admin(testing::user(USER), &[cwcoin_from_amount::<Lpn>(500)]);
 
-    let price_lease_lpn: Price<LeaseCurrency, Lpn> = total_of(2.into()).is(1.into());
+    let price_lease_lpn: Price<LeaseCurrency, Lpn> = total_of(common::coin(2)).is(common::coin(1));
     let feeder = setup_feeder(&mut test_case);
     oracle_mod::feed_price(
         &mut test_case,
@@ -116,17 +116,17 @@ fn common_quote_with_conversion(
     const USER_ATOMS: Amount = 5_000_000_000;
 
     let lpp_reserve = vec![
-        cwcoin::<Lpn, _>(LPNS),
-        cwcoin::<LeaseC3, _>(OSMOS),
-        cwcoin::<LeaseCurrency, _>(CROS),
+        cwcoin_from_amount::<Lpn>(LPNS),
+        cwcoin_from_amount::<LeaseC3>(OSMOS),
+        cwcoin_from_amount::<LeaseCurrency>(CROS),
     ];
 
-    let user_reserve = cwcoin::<LeaseC1, _>(USER_ATOMS);
+    let user_reserve = cwcoin_from_amount::<LeaseC1>(USER_ATOMS);
 
     let user_addr = testing::user(USER);
 
     let mut test_case = TestCaseBuilder::<Lpn>::with_reserve(&{
-        let mut reserve = vec![cwcoin::<Lpn, _>(1_000_000_000)];
+        let mut reserve = vec![cwcoin_from_amount::<Lpn>(1_000_000_000)];
 
         reserve.extend_from_slice(&lpp_reserve);
 
