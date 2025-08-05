@@ -93,7 +93,7 @@ where
                 .map(|balance: Coin<Lpn>| {
                     if self.utilization(balance, total_due) > min_utilization {
                         // a followup from the above true value is (total_due * 100 / min_utilization) > (balance + total_due)
-                        SimpleFraction::new(Percent100::HUNDRED, min_utilization)
+                        SimpleFraction::new(Percent100::HUNDRED.units(), min_utilization.units())
                             .of(total_due)
                             .map(|res| res - balance - total_due)
                     } else {
