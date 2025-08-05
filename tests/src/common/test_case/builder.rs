@@ -16,7 +16,7 @@ use sdk::{
 };
 
 use crate::common::{
-    cwcoin, cwcoin_dex,
+    cwcoin_dex, cwcoin_from_amount,
     leaser::{Alarms, Instantiator as LeaserInstantiator},
     lpp::Instantiator as LppInstantiator,
     oracle::Instantiator as OracleInstantiator,
@@ -52,7 +52,7 @@ where
     Lpn::Group: MemberOf<Lpns>,
 {
     pub fn new() -> Self {
-        Self::with_reserve(&[cwcoin::<Lpn, _>(10_000), cwcoin_dex::<Lpn, _>(10_000)])
+        Self::with_reserve(&[cwcoin_from_amount::<Lpn>(10_000), cwcoin_dex::<Lpn>(10_000)])
     }
 
     pub fn with_reserve(reserve: &[CwCoin]) -> Self {
