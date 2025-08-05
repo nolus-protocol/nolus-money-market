@@ -45,7 +45,7 @@ fn close_by_another_user() {
         &mut test_case,
         lease,
         ExecuteMsg::ClosePosition(PositionClose::PartialClose(PartialClose {
-            amount: LeaseCoin::from(1234414).into(),
+            amount: LeaseCoin::new(1234414).into(),
         })),
     );
 }
@@ -92,8 +92,10 @@ fn partial_close_loan_not_closed() {
     let lease_amount: LeaseCoin = lease_amount();
     let principal: LpnCoin = price::total(lease_amount, super::price_lpn_of())
         - price::total(DOWNPAYMENT, super::price_lpn_of());
-    let close_amount: LeaseCoin =
-        price::total(principal - 1234567.into(), super::price_lpn_of().inv());
+    let close_amount: LeaseCoin = price::total(
+        principal - common::coin(1234567),
+        super::price_lpn_of().inv(),
+    );
     let repay_principal = price::total(close_amount, super::price_lpn_of());
     let customer = testing::user(USER);
     let mut test_case = super::create_test_case::<PaymentCurrency>();
@@ -142,7 +144,7 @@ fn partial_close_loan_closed() {
     let lease_amount: LeaseCoin = lease_amount();
     let principal: LpnCoin = price::total(lease_amount, super::price_lpn_of())
         - price::total(DOWNPAYMENT, super::price_lpn_of());
-    let exp_change: LpnCoin = 345.into();
+    let exp_change: LpnCoin = common::coin(345);
 
     let repay_principal = principal + exp_change;
     let close_amount: LeaseCoin = price::total(repay_principal, super::price_lpn_of().inv());
@@ -198,7 +200,7 @@ fn partial_close_invalid_currency() {
             testing::user(USER),
             lease,
             &(&ExecuteMsg::ClosePosition(PositionClose::PartialClose(PartialClose {
-                amount: Coin::<PaymentC5>::from(12345678).into(),
+                amount: common::coin::<PaymentC5>(12345678).into(),
             }))),
             &[],
         )
@@ -225,7 +227,7 @@ fn partial_close_min_asset() {
 
     let lease = super::open_lease(&mut test_case, DOWNPAYMENT, None);
     let msg = &ExecuteMsg::ClosePosition(PositionClose::PartialClose(PartialClose {
-        amount: (lease_amount - min_asset + 1.into()).into(),
+        amount: (lease_amount - min_asset + common::coin(1)).into(),
     }));
 
     let err = test_case
@@ -249,7 +251,7 @@ fn partial_close_min_transaction() {
 
     let lease = super::open_lease(&mut test_case, DOWNPAYMENT, None);
     let msg = &ExecuteMsg::ClosePosition(PositionClose::PartialClose(PartialClose {
-        amount: (min_transaction - 1.into()).into(),
+        amount: (min_transaction - common::coin(1)).into(),
     }));
 
     let err = test_case
@@ -415,5 +417,5 @@ fn lease_balance(test_case: &LeaseTestCase, lease: Addr) -> Vec<CwCoin> {
 }
 
 fn lease_amount() -> LeaseCoin {
-    2857142857142.into()
+    common::coin(2857142857142)
 }

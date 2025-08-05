@@ -68,42 +68,48 @@ pub const USER: &str = "user";
 pub const ADMIN: &str = "admin";
 pub const LEASE_ADMIN: &str = "lease_admin";
 
-pub fn native_cwcoin<A>(amount: A) -> CwCoin
-where
-    A: Into<Coin<Nls>>,
-{
-    cwcoin::<Nls, A>(amount)
+pub fn native_cwcoin(amount: Amount) -> CwCoin {
+    cwcoin_from_amount::<Nls>(amount)
 }
 
 pub fn lpn_coin(amount: Amount) -> LpnCoinDTO {
     Coin::<Lpn>::new(amount).into()
 }
 
-pub fn cwcoin<C, A>(amount: A) -> CwCoin
-where
-    C: CurrencyDef,
-    A: Into<Coin<C>>,
-{
-    coin_legacy::to_cosmwasm_on_nolus(amount.into())
+pub fn coin<C>(amount: Amount) -> Coin<C> {
+    Coin::<C>::new(amount)
 }
-pub fn cwcoin_as_balance<C, A>(amount: A) -> Vec<CwCoin>
+
+pub fn cwcoin<C>(coin: Coin<C>) -> CwCoin
 where
     C: CurrencyDef,
-    A: Into<Coin<C>> + Copy,
 {
-    if amount.into().is_zero() {
+    coin_legacy::to_cosmwasm_on_nolus(coin)
+}
+
+pub fn cwcoin_from_amount<C>(amount: Amount) -> CwCoin
+where
+    C: CurrencyDef,
+{
+    cwcoin(coin::<C>(amount))
+}
+
+pub fn cwcoin_as_balance<C>(coin: Coin<C>) -> Vec<CwCoin>
+where
+    C: CurrencyDef,
+{
+    if coin.is_zero() {
         vec![]
     } else {
-        vec![cwcoin(amount)]
+        vec![cwcoin::<C>(coin)]
     }
 }
 
-pub fn cwcoin_dex<C, A>(amount: A) -> CwCoin
+pub fn cwcoin_dex<C>(amount: Amount) -> CwCoin
 where
     C: CurrencyDef,
-    A: Into<Coin<C>>,
 {
-    coin_legacy::to_cosmwasm_on_dex(amount.into())
+    coin_legacy::to_cosmwasm_on_dex(coin::<C>(amount))
 }
 
 #[derive(Serialize, Clone, Debug, PartialEq)]

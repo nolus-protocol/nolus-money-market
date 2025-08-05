@@ -13,7 +13,7 @@ use sdk::{
 
 use crate::common::{
     ADDON_OPTIMAL_INTEREST_RATE, BASE_INTEREST_RATE, USER, UTILIZATION_OPTIMAL, cwcoin, cwcoin_dex,
-    lease as lease_mod, leaser as leaser_mod,
+    cwcoin_from_amount, lease as lease_mod, leaser as leaser_mod,
     lpp::LppExecuteMsg,
     oracle as oracle_mod,
     protocols::Registry,
@@ -65,8 +65,8 @@ fn open_multiple_loans() {
         .into_generic();
 
     test_case
-        .send_funds_from_admin(user_addr.clone(), &[cwcoin::<Lpn, _>(450)])
-        .send_funds_from_admin(other_user_addr.clone(), &[cwcoin::<Lpn, _>(225)]);
+        .send_funds_from_admin(user_addr.clone(), &[cwcoin_from_amount::<Lpn>(450)])
+        .send_funds_from_admin(other_user_addr.clone(), &[cwcoin_from_amount::<Lpn>(225)]);
 
     leaser_mod::assert_no_leases(
         &test_case.app,
@@ -84,7 +84,7 @@ fn open_multiple_loans() {
                     currency: currency::dto::<LeaseCurrency, _>(),
                     max_ltd: None,
                 },
-                &[cwcoin::<Lpn, _>(75)],
+                &[cwcoin_from_amount::<Lpn>(75)],
             )
             .unwrap();
 
@@ -111,7 +111,7 @@ fn open_multiple_loans() {
                 currency: currency::dto::<LeaseCurrency, _>(),
                 max_ltd: None,
             },
-            &[cwcoin::<Lpn, _>(78)],
+            &[cwcoin_from_amount::<Lpn>(78)],
         )
         .unwrap();
 
@@ -135,7 +135,7 @@ fn open_loans_lpp_fails() {
     type LeaseCurrency = LeaseC1;
 
     let user_addr = testing::user(USER);
-    let downpayment = cwcoin::<Lpn, _>(86);
+    let downpayment = cwcoin_from_amount::<Lpn>(86);
 
     fn mock_lpp_execute(
         deps: DepsMut<'_>,
@@ -216,12 +216,12 @@ where
     let user_addr = testing::user(USER);
 
     let mut test_case = TestCaseBuilder::<Lpn>::with_reserve(&[
-        cwcoin::<Lpn, _>(1_000_000_000),
-        cwcoin_dex::<Lpn, _>(1_000_000_000),
-        cwcoin::<LeaseC, _>(1_000_000_000),
-        cwcoin_dex::<LeaseC, _>(1_000_000_000),
-        cwcoin::<DownpaymentC, _>(1_000_000_000),
-        cwcoin_dex::<DownpaymentC, _>(1_000_000_000),
+        cwcoin_from_amount::<Lpn>(1_000_000_000),
+        cwcoin_dex::<Lpn>(1_000_000_000),
+        cwcoin_from_amount::<LeaseC>(1_000_000_000),
+        cwcoin_dex::<LeaseC>(1_000_000_000),
+        cwcoin_from_amount::<DownpaymentC>(1_000_000_000),
+        cwcoin_dex::<DownpaymentC>(1_000_000_000),
     ])
     .init_lpp(
         None,
@@ -239,7 +239,10 @@ where
     .init_leaser()
     .into_generic();
 
-    test_case.send_funds_from_admin(user_addr.clone(), &[cwcoin::<DownpaymentC, _>(500)]);
+    test_case.send_funds_from_admin(
+        user_addr.clone(),
+        &[cwcoin_from_amount::<DownpaymentC>(500)],
+    );
 
     let leaser_addr: Addr = test_case.address_book.leaser().clone();
 
@@ -317,8 +320,8 @@ fn open_loans_insufficient_amount(downpayment: Amount) {
     type LeaseCurrency = LeaseC1;
 
     let user_addr = testing::user(USER);
-    let incoming_funds = cwcoin::<Lpn, _>(200);
-    let downpayment_amount = cwcoin::<Lpn, _>(downpayment);
+    let incoming_funds = cwcoin_from_amount::<Lpn>(200);
+    let downpayment_amount = cwcoin_from_amount::<Lpn>(downpayment);
 
     let mut test_case = TestCaseBuilder::<Lpn>::new()
         .init_lpp(
