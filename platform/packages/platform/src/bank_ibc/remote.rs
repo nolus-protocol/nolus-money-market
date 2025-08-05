@@ -124,8 +124,8 @@ mod test {
         let timeout = Timestamp::from_seconds(100);
         let mut funds_sender = Sender::new(channel, &sender, &receiver, timeout);
 
-        let coin1: Coin<SuperGroupTestC2> = Coin::new(63);
-        let coin2: Coin<SuperGroupTestC1> = Coin::new(2);
+        let coin1: Coin<SuperGroupTestC2> = 63.into();
+        let coin2: Coin<SuperGroupTestC1> = 2.into();
         funds_sender.send::<SuperGroup>(&coin1.into()).unwrap();
         funds_sender.send::<SuperGroup>(&coin2.into()).unwrap();
 

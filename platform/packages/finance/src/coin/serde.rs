@@ -48,7 +48,7 @@ mod test {
         let amount = 134;
         let nls_bin = to_json_vec(&Coin::<SuperGroupTestC1>::new(amount)).unwrap();
         let res = from_json::<Coin<SuperGroupTestC2>>(&nls_bin);
-        assert_eq!(Ok(Coin::new(amount)), res);
+        assert_eq!(Ok(amount.into()), res);
     }
 
     fn serialize_deserialize_coin<C>(amount: Amount, exp_txt: &str)
