@@ -196,8 +196,9 @@ impl<Lpn> Total<Lpn> {
     }
 }
 
-fn zero_interest_rate<Lpn>() -> Ratio<Coin<Lpn>> {
-    Ratio::new(Coin::ZERO, Coin::new(1000))
+fn zero_interest_rate<Lpn>() -> Rational<Coin<Lpn>> {
+    const THOUSAND: Amount = 1000;
+    Rational::new(Coin::ZERO, Coin::new(THOUSAND))
 }
 
 #[cfg(test)]
@@ -242,7 +243,7 @@ mod test {
 
         block_time = block_time.plus_nanos(Duration::YEAR.nanos() / 2);
         let interest_due = total.total_interest_due_by_now(&block_time);
-        assert_eq!(interest_due, 500u128.into());
+        assert_eq!(interest_due, Coin::new(500));
     }
 
     #[test]
