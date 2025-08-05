@@ -64,7 +64,7 @@ impl<C> Coin<C> {
 
     #[track_caller]
     pub fn saturating_sub(self, rhs: Self) -> Self {
-        Coin::new(self.amount.saturating_sub(rhs.amount))
+        self.amount.saturating_sub(rhs.amount).into()
     }
 
     #[track_caller]

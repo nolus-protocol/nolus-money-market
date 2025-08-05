@@ -114,10 +114,10 @@ where
         R: Ratio<Amount>,
     {
         let (amount_normalized, rhs_nominator_normalized) =
-            self.amount.into_coprime_with(Coin::<C>::new(rhs.parts()));
+            self.amount.into_coprime_with(Coin::<C>::from(rhs.parts()));
         let (amount_quote_normalized, rhs_denominator_normalized) = self
             .amount_quote
-            .into_coprime_with(Coin::<QuoteC>::new(rhs.total()));
+            .into_coprime_with(Coin::<QuoteC>::from(rhs.total()));
 
         let double_amount =
             DoubleAmount::from(amount_normalized) * DoubleAmount::from(rhs_denominator_normalized);
@@ -128,8 +128,8 @@ where
             Self::bits_above_max(double_amount).max(Self::bits_above_max(double_amount_quote));
 
         Price::new(
-            Coin::new(Self::trim_down(double_amount, extra_bits)),
-            Coin::new(Self::trim_down(double_amount_quote, extra_bits)),
+            Self::trim_down(double_amount, extra_bits).into(),
+            Self::trim_down(double_amount_quote, extra_bits).into(),
         )
     }
 
@@ -192,7 +192,7 @@ where
             None => unreachable!("invariant on amount != 0 should have passed!"),
             Some(gcd) => gcd.into(),
         };
-        debug_assert_eq!(Some(Coin::new(gcd)), rhs.amount.checked_div(c1.into()));
+        debug_assert_eq!(Some(gcd.into()), rhs.amount.checked_div(c1.into()));
 
         let may_b_c1 = self.amount_quote.checked_mul(c1.into());
         let may_d_a1 = rhs.amount_quote.checked_mul(a1.into());
@@ -216,7 +216,7 @@ where
     /// until a * d + b * c and b * d do not overflow.
     fn lossy_add(self, rhs: Self) -> Option<Self> {
         const FACTOR: Amount = 1_000_000_000_000_000_000; // 1*10^18
-        let factored_amount = Coin::new(FACTOR);
+        let factored_amount = FACTOR.into();
         let may_factored_total =
             total(factored_amount, self).checked_add(total(factored_amount, rhs));
         may_factored_total.map(|factored_total| total_of(factored_amount).is(factored_total))
@@ -381,8 +381,11 @@ mod test {
         let amount_quote = 15;
         let factor = 32;
         assert_eq!(
-            Price::new(Coin::new(amount), q(amount_quote)),
-            Price::new(Coin::new(amount * factor), q(amount_quote * factor))
+            Price::new(Coin::new(amount), QuoteCoin::new(amount_quote)),
+            Price::new(
+                Coin::new(amount * factor),
+                QuoteCoin::new(amount_quote * factor)
+            )
         );
     }
 
@@ -391,22 +394,22 @@ mod test {
         let amount = 13;
         let amount_quote = 15;
         assert_ne!(
-            Price::new(Coin::new(amount), q(amount_quote)),
-            Price::new(Coin::new(amount), q(amount_quote + 1))
+            Price::new(Coin::new(amount), QuoteCoin::new(amount_quote)),
+            Price::new(Coin::new(amount), QuoteCoin::new(amount_quote + 1))
         );
         assert_ne!(
-            Price::new(Coin::new(amount - 1), q(amount_quote)),
-            Price::new(Coin::new(amount), q(amount_quote))
+            Price::new(Coin::new(amount - 1), QuoteCoin::new(amount_quote)),
+            Price::new(Coin::new(amount), QuoteCoin::new(amount_quote))
         );
 
         assert_eq!(
-            Price::new(Coin::new(amount), q(amount_quote)),
-            Price::new(Coin::new(amount), q(amount_quote))
+            Price::new(Coin::new(amount), QuoteCoin::new(amount_quote)),
+            Price::new(Coin::new(amount), QuoteCoin::new(amount_quote))
         );
 
         assert_eq!(
-            Price::new(q(amount_quote), Coin::new(amount)),
-            Price::new(Coin::new(amount), q(amount_quote)).inv()
+            Price::new(QuoteCoin::new(amount_quote), Coin::new(amount)),
+            Price::new(Coin::new(amount), QuoteCoin::new(amount_quote)).inv()
         );
     }
 
@@ -425,9 +428,9 @@ mod test {
     fn total() {
         let amount_quote = 647;
         let amount = 48;
-        let price = price::total_of(c(amount)).is(q(amount_quote));
+        let price = price::total_of(amount.into()).is(amount_quote.into());
         let factor = 17;
-        let coin_quote = q(amount_quote * factor);
+        let coin_quote = QuoteCoin::new(amount_quote * factor);
         let coin = Coin::new(amount * factor);
 
         assert_eq!(coin_quote, super::total(coin, price));
@@ -438,8 +441,8 @@ mod test {
     fn total_rounding() {
         let amount_quote = 647;
         let amount = 48;
-        let price = super::total_of(c(amount)).is(q(amount_quote));
-        let coin_quote = q(633);
+        let price = super::total_of(amount.into()).is(amount_quote.into());
+        let coin_quote = QuoteCoin::new(633);
 
         // 47 * 647 / 48 -> 633.5208333333334
         let coin_in = Coin::new(47);
@@ -460,9 +463,9 @@ mod test {
     #[test]
     #[should_panic]
     fn total_overflow() {
-        let price = price::total_of::<SuperGroupTestC2>(Coin::new(1))
-            .is::<SuperGroupTestC1>(q(Amount::MAX / 2 + 1));
-        super::total(Coin::new(2), price);
+        let price = price::total_of::<SuperGroupTestC2>(1.into())
+            .is::<SuperGroupTestC1>((Amount::MAX / 2 + 1).into());
+        super::total(2.into(), price);
     }
 
     #[test]
@@ -578,13 +581,13 @@ mod test {
     }
 
     fn ord_impl(amount: Amount, amount_quote: Amount) {
-        let price1 = Price::new(c(amount), q(amount_quote));
-        let price2 = Price::new(c(amount), q(amount_quote + 1));
+        let price1 = Price::new(amount.into(), QuoteCoin::new(amount_quote));
+        let price2 = Price::new(amount.into(), QuoteCoin::new(amount_quote + 1));
         assert!(price1 < price2);
 
         let total1 = super::total(Coin::new(amount), price1);
         assert!(total1 < super::total(Coin::new(amount), price2));
-        assert_eq!(q(amount_quote), total1);
+        assert_eq!(QuoteCoin::new(amount_quote), total1);
     }
 
     fn total_max_impl(
@@ -593,8 +596,8 @@ mod test {
         price_amount_quote: Amount,
         expected: Amount,
     ) {
-        let price = price::total_of(c(price_amount)).is(q(price_amount_quote));
-        let expected = q(expected);
+        let price = price::total_of(price_amount.into()).is(price_amount_quote.into());
+        let expected = QuoteCoin::new(expected);
         let input = Coin::new(amount);
 
         assert_eq!(expected, super::total(input, price));
