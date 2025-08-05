@@ -28,7 +28,8 @@ impl<C> From<Coin<C>> for Uint256 {
 // TODO: Remove with Fragmentable
 impl<C> From<Uint128> for Coin<C> {
     fn from(amount: Uint128) -> Self {
-        Coin::new(amount.into())
+        let c: Amount = amount.into();
+        c.into()
     }
 }
 
