@@ -224,7 +224,7 @@ mod test {
             Ok(Ok(true)),
             super::from_cosmwasm_seek_any(
                 &CosmWasmCoin::new(amount, SuperGroupTestC1::bank()),
-                coin::Expect(Coin::<TheCurrency>::new(amount))
+                coin::Expect(Coin::<TheCurrency>::from(amount))
             )
         );
     }
@@ -238,17 +238,17 @@ mod test {
             Ok(Ok(false)),
             super::from_cosmwasm_seek_any(
                 &CosmWasmCoin::new(amount + 1, SuperGroupTestC1::bank()),
-                coin::Expect(Coin::<TheCurrency>::new(amount))
+                coin::Expect(Coin::<TheCurrency>::from(amount))
             )
         );
         assert_eq!(
             Ok(Ok(false)),
             super::from_cosmwasm_seek_any(
                 &CosmWasmCoin::new(amount, SuperGroupTestC1::bank()),
-                coin::Expect(Coin::<AnotherCurrency>::new(amount))
+                coin::Expect(Coin::<AnotherCurrency>::from(amount))
             )
         );
-        let with_coin = coin::Expect(Coin::<TheCurrency>::new(amount));
+        let with_coin = coin::Expect(Coin::<TheCurrency>::from(amount));
         assert_eq!(
             Err(with_coin.clone()),
             super::from_cosmwasm_seek_any(
