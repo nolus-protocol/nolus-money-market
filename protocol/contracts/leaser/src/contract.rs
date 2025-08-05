@@ -78,9 +78,14 @@ pub fn migrate(
     }: ProtocolMigrationMessage<MigrateMsg>,
 ) -> ContractResult<Response> {
     migrate_from
-        .update_software(&CURRENT_RELEASE, &to_release)
+        .update_software_and_storage(
+            &CURRENT_RELEASE,
+            &to_release,
+            deps.storage,
+            Leases::migrate_v0_8_12,
+            ContractError::UpdateSoftware,
+        )
         .map(|()| response::empty_response())
-        .map_err(ContractError::UpdateSoftware)
         .inspect_err(platform_error::log(deps.api))
 }
 
@@ -277,10 +282,10 @@ where
 }
 
 fn check_no_leases(storage: &dyn Storage) -> ContractResult<()> {
-    if Leases::iter(storage, None).next().is_some() {
-        Err(ContractError::ProtocolStillInUse())
-    } else {
+    if Leases::empty(storage) {
         Ok(())
+    } else {
+        Err(ContractError::ProtocolStillInUse())
     }
 }
 
