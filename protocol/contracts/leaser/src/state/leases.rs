@@ -227,6 +227,65 @@ mod test {
     }
 
     #[test]
+    fn test_remove_multiple_leases() {
+        let mut storage = MockStorage::default();
+        assert!(Leases::empty(&storage));
+
+        Leases::cache_open_req(&mut storage, &test_customer()).unwrap();
+        Leases::save(&mut storage, test_lease()).unwrap();
+        assert_lease_exist(&storage);
+        assert!(!Leases::empty(&storage));
+
+        Leases::cache_open_req(&mut storage, &test_customer()).unwrap();
+        Leases::save(&mut storage, test_another_lease()).unwrap();
+        assert!(lease_exist(
+            &storage,
+            test_customer(),
+            &test_another_lease()
+        ));
+        assert!(!Leases::empty(&storage));
+
+        Leases::cache_open_req(&mut storage, &test_another_customer()).unwrap();
+        Leases::save(&mut storage, test_another_lease()).unwrap();
+        assert_another_lease_exist(&storage);
+        assert!(!Leases::empty(&storage));
+
+        assert_eq!(
+            Ok(true),
+            Leases::remove(&mut storage, test_customer(), &test_lease(),)
+        );
+        assert_lease_not_exist(&storage);
+        assert!(!Leases::empty(&storage));
+
+        assert_eq!(
+            Ok(true),
+            Leases::remove(&mut storage, test_another_customer(), &test_another_lease(),)
+        );
+        assert!(!lease_exist(
+            &storage,
+            test_another_customer(),
+            &test_another_lease()
+        ));
+        assert!(!Leases::empty(&storage));
+
+        assert_eq!(
+            Ok(false),
+            Leases::remove(&mut storage, test_customer(), &test_lease(),)
+        );
+        assert_eq!(
+            Ok(true),
+            Leases::remove(&mut storage, test_customer(), &test_another_lease(),)
+        );
+        assert!(!lease_exist(
+            &storage,
+            test_customer(),
+            &test_another_lease()
+        ));
+
+        assert!(Leases::empty(&storage));
+    }
+
+    #[test]
     fn test_migration_simple() {
         let mut storage = MockStorage::default();
 
