@@ -265,12 +265,11 @@ mod test {
     const ADDON_OPTIMAL_INTEREST_RATE: Percent = Percent::from_permille(20);
     const DEFAULT_MIN_UTILIZATION: BoundToHundredPercent = BoundToHundredPercent::ZERO;
 
-    fn test_case<Balance, F>(
-        initial_lpp_balance: Balance,
+    fn test_case<F>(
+        initial_lpp_balance: Coin<TheCurrency>,
         min_utilization: BoundToHundredPercent,
         f: F,
     ) where
-        Balance: Copy + Into<Coin<TheCurrency>>,
         F: FnOnce(MockStorage, ApiConfig, MockBankView<TheCurrency, TheCurrency>, Timestamp),
     {
         let mut store = testing::MockStorage::default();
@@ -286,15 +285,15 @@ mod test {
             .expect("Couldn't construct interest rate value!"),
             BoundToHundredPercent::ZERO,
         );
-        let bank = MockBankView::only_balance(initial_lpp_balance.into());
+        let bank = MockBankView::only_balance(initial_lpp_balance);
         setup_storage(&mut store, &config, &bank);
 
-        if !initial_lpp_balance.into().is_zero() {
+        if !initial_lpp_balance.is_zero() {
             lender::try_deposit::<TheCurrency, _>(
                 &mut store,
                 &bank,
                 test_tools::lender(),
-                initial_lpp_balance.into(),
+                initial_lpp_balance,
                 &now,
             )
             .unwrap();
@@ -345,7 +344,7 @@ mod test {
             #[test]
             fn test_deposit_zero() {
                 test::test_case(
-                    0,
+                    Coin::ZERO,
                     DEFAULT_MIN_UTILIZATION,
                     |mut store, _config, bank, now| {
                         lender::try_deposit::<TheCurrency, _>(
@@ -367,7 +366,7 @@ mod test {
                     DEFAULT_MIN_UTILIZATION,
                     |store, _config, _bank, _now| {
                         assert_eq!(
-                            Coin::from(
+                            Coin::new(
                                 lender::query_balance(&store, test_tools::lender())
                                     .unwrap()
                                     .balance
@@ -825,26 +824,26 @@ mod test {
         ) {
             debug_assert!(deposit != 0);
             test::test_case(
-                lpp_balance_at_deposit + borrowed,
+                Coin::new(lpp_balance_at_deposit + borrowed),
                 BoundToHundredPercent::try_from_percent(min_utilization).unwrap(),
                 |mut store, config, bank, now| {
                     if borrowed != 0 {
                         let mut lpp = LiquidityPool::load(&store, &config, &bank).unwrap();
-                        lpp.try_open_loan(now, Coin::<TheCurrency>::from(borrowed))
+                        lpp.try_open_loan(now, Coin::<TheCurrency>::new(borrowed))
                             .unwrap();
                         lpp.save(&mut store).unwrap();
                     }
 
                     //do deposit
-                    let bank = MockBankView::<TheCurrency, TheCurrency>::only_balance(
-                        (lpp_balance_at_deposit + deposit).into(),
-                    );
+                    let bank = MockBankView::<TheCurrency, TheCurrency>::only_balance(Coin::new(
+                        lpp_balance_at_deposit + deposit,
+                    ));
 
                     let result = lender::try_deposit::<TheCurrency, _>(
                         &mut store,
                         &bank,
                         test_tools::lender(),
-                        deposit.into(),
+                        Coin::new(deposit),
                         &now,
                     );
 

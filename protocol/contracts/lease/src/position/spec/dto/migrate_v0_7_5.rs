@@ -63,8 +63,8 @@ mod test_two_versions {
                 Percent::from_permille(900),
                 Duration::from_nanos(432000000000000),
             ),
-            CoinDTO::from(Coin::<Lpn>::from(15000000)),
-            CoinDTO::from(Coin::<Lpn>::from(10000)),
+            CoinDTO::from(Coin::<Lpn>::new(15000000)),
+            CoinDTO::from(Coin::<Lpn>::new(10000)),
         );
         let spec_v7_6 = SpecDTO::V0_7_5 {
             spec: position_spec,

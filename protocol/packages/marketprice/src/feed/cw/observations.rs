@@ -196,6 +196,6 @@ mod test {
     }
 
     fn price(c: Amount, q: Amount) -> Price<C1, C2> {
-        price::total_of(Coin::from(c)).is(Coin::from(q))
+        price::total_of(Coin::new(c)).is(Coin::new(q))
     }
 }
