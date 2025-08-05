@@ -89,7 +89,7 @@ mod test {
     #[test]
     fn failing_nls_price() {
         let bar0_apr = Percent100::from_percent(20);
-        let lpp0_tvl: CoinStable = Coin::new(15_000);
+        let lpp0_tvl: CoinStable = 15_000.into();
 
         let lpp = DummyLpp::with_balance(lpp0_tvl, Coin::<Nls>::default());
         let oracle = DummyOracle::failing();
@@ -106,7 +106,7 @@ mod test {
     #[test]
     fn failing_reward_distribution() {
         let bar0_apr = Percent100::from_percent(20);
-        let lpp0_tvl: CoinStable = Coin::new(15_000);
+        let lpp0_tvl: CoinStable = 15_000.into();
 
         let oracle = DummyOracle::with_price(4);
         let exp_reward = price::total(bar0_apr.of(lpp0_tvl), oracle.price_of().unwrap().inv());
@@ -124,7 +124,7 @@ mod test {
     #[test]
     fn ok() {
         let bar0_apr = Percent100::from_percent(20);
-        let lpp0_tvl: CoinStable = Coin::new(23_000);
+        let lpp0_tvl: CoinStable = 23_000.into();
         let oracle = DummyOracle::with_price(2);
         let exp_reward = price::total(bar0_apr.of(lpp0_tvl), oracle.price_of().unwrap().inv());
 
