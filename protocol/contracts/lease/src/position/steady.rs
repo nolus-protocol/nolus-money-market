@@ -93,7 +93,7 @@ mod tests {
         let now = Timestamp::from_seconds(1732016180);
         let recheck_in = Duration::from_secs(765758);
         let ltv_to_price = |ltv: Percent100| {
-            price::total_of::<TestCurrency>(ltv.of(Coin::from(100))).is(Coin::from(45))
+            price::total_of::<TestCurrency>(ltv.of(Coin::new(100))).is(Coin::new(45))
         };
 
         let steady_below_ltv = Percent100::from_percent(60);

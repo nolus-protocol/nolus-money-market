@@ -134,24 +134,24 @@ where
 #[cfg(test)]
 mod test {
     use currency::test::SuperGroupTestC1;
-    use finance::{coin::Coin, fraction::Fraction, percent::Percent100};
+    use finance::{coin::{Amount, Coin}, fraction::Fraction, percent::Percent100};
 
     use super::MaxSlippage;
 
     #[test]
     fn zero() {
-        assert!(calc_min_out(456, Percent100::from_percent(100)).is_zero());
+        assert!(calc_min_out(coin(456), Percent100::from_percent(100)).is_zero());
     }
 
     #[test]
     fn hundred() {
-        let coin_in = Coin::<SuperGroupTestC1>::from(100);
+        let coin_in = coin(100);
         assert_eq!(coin_in, calc_min_out(coin_in, Percent100::ZERO));
     }
 
     #[test]
     fn eighty_five() {
-        let coin_in = Coin::<SuperGroupTestC1>::from(267);
+        let coin_in = coin(267);
         let slippage = Percent100::from_percent(15);
         assert_eq!(
             slippage.complement().of(coin_in),
@@ -159,10 +159,14 @@ mod test {
         );
     }
 
-    fn calc_min_out<AmountIn>(amount_in: AmountIn, slippage: Percent100) -> Coin<SuperGroupTestC1>
-    where
-        AmountIn: Into<Coin<SuperGroupTestC1>>,
-    {
-        MaxSlippage(slippage).min_out(amount_in.into())
+    fn coin(amount: Amount) -> Coin<SuperGroupTestC1> {
+        Coin::new(amount)
+    }
+
+    fn calc_min_out(
+        amount_in: Coin<SuperGroupTestC1>,
+        slippage: Percent,
+    ) -> Coin<SuperGroupTestC1> {
+        MaxSlippage(BoundToHundredPercent::try_from_percent(slippage).unwrap()).min_out(amount_in)
     }
 }

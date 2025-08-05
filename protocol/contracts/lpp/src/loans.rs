@@ -57,7 +57,12 @@ impl<Lpn> Repo<Lpn> {
 #[cfg(test)]
 mod test {
     use currencies::Lpn;
-    use finance::{coin::Coin, duration::Duration, percent::Percent100, zero::Zero};
+    use finance::{
+        coin::{Amount, Coin},
+        duration::Duration,
+        percent::Percent100,
+        zero::Zero,
+    };
     use sdk::cosmwasm_std::{Addr, Timestamp, testing};
 
     use crate::{contract::ContractError, loan::Loan, loans::Repo};
@@ -70,7 +75,7 @@ mod test {
 
         let addr = Addr::unchecked("leaser");
         let loan = Loan {
-            principal_due: Coin::<Lpn>::new(1000),
+            principal_due: coin(1000),
             annual_interest_rate: Percent100::from_percent(20),
             interest_paid: time,
         };
@@ -84,24 +89,24 @@ mod test {
 
         time = Timestamp::from_nanos(Duration::YEAR.nanos() / 2);
         let interest: Coin<Lpn> = loan.interest_due(&time);
-        assert_eq!(interest, 100u128.into());
+        assert_eq!(interest, coin(100));
         // partial repay
-        let payment = loan.repay(&time, 600u128.into());
-        assert_eq!(payment.interest, 100u128.into());
-        assert_eq!(payment.principal, 500u128.into());
-        assert_eq!(payment.excess, 0u128.into());
+        let payment = loan.repay(&time, coin(600));
+        assert_eq!(payment.interest, coin(100));
+        assert_eq!(payment.principal, coin(500));
+        assert_eq!(payment.excess, Coin::ZERO);
 
-        assert_eq!(loan.principal_due, 500u128.into());
+        assert_eq!(loan.principal_due, coin(500));
         Repo::save(deps.as_mut().storage, addr.clone(), &loan).unwrap();
 
         let mut loan: Loan<Lpn> =
             Repo::load(deps.as_ref().storage, addr.clone()).expect("should load loan");
 
         // repay with excess, should close the loan
-        let payment = loan.repay(&time, 600u128.into());
-        assert_eq!(payment.interest, 0u128.into());
-        assert_eq!(payment.principal, 500u128.into());
-        assert_eq!(payment.excess, 100u128.into());
+        let payment = loan.repay(&time, coin(600));
+        assert_eq!(payment.interest, Coin::ZERO);
+        assert_eq!(payment.principal, coin(500));
+        assert_eq!(payment.excess, coin(100));
         assert_eq!(loan.principal_due, Coin::ZERO);
         Repo::save(deps.as_mut().storage, addr.clone(), &loan).unwrap();
 
@@ -110,5 +115,9 @@ mod test {
             .expect("should query loan")
             .is_none();
         assert!(is_none);
+    }
+
+    fn coin(amount: Amount) -> Coin<Lpn> {
+        Coin::new(amount)
     }
 }

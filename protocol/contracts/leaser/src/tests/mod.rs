@@ -15,7 +15,7 @@ use crate::msg::{Config, InstantiateMsg, NewConfig};
 mod contract_tests;
 
 pub fn lpn_coin(amount: Amount) -> LpnCoinDTO {
-    Coin::<Lpn>::from(amount).into()
+    Coin::<Lpn>::new(amount).into()
 }
 
 pub fn config() -> Config {
@@ -64,8 +64,8 @@ fn dummy_instantiate_msg() -> InstantiateMsg {
                 Percent100::from_percent(80),
                 Duration::from_hours(12),
             ),
-            min_asset: Coin::<Lpn>::from(120_000).into(),
-            min_transaction: Coin::<Lpn>::from(12_000).into(),
+            min_asset: Coin::<Lpn>::new(120_000).into(),
+            min_transaction: Coin::<Lpn>::new(12_000).into(),
         },
         lease_interest_rate_margin: Percent100::from_percent(3),
         lease_due_period: Duration::from_days(14),
