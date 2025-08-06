@@ -21,35 +21,16 @@ inputs:
 runs:
   using: "composite"
   steps:
-    - uses: "./.github/actions/build-image"
-      with:
-        target: |-
-          ${{ inputs.target }}
-        tools-context: |-
-          ${{ inputs.tools-context }}
-    - env:
-        DOCKER_BUILD_RECORD_UPLOAD: "false"
-        SOURCE_DATE_EPOCH: "0"
-      id: "build-container"
-      uses: "docker/build-push-action@v6"
+    - id: "build-container"
+      uses: "./.github/actions/build-image"
       with:
         build-contexts: |-
-          ${{ (fromJSON(inputs.tools-context) && 'tools=./tools/') || '' }}
-        cache-from: |-
-          type=gha,scope=${{ inputs.target }}
-        cache-to: |-
-          type=gha,mode=max,scope=${{ inputs.target }}
-        context: "./ci/"
-        file: "./Containerfile"
-        outputs: "type=docker,rewrite-timestamp=true"
-        provenance: false
-        tags: |-
-          localhost/local/${{ inputs.target }}
+          ${{ (fromJSON(inputs.tools-context) && 'tools="./tools"') || '' }}
         target: |-
           ${{ inputs.target }}
     - env:
-        target: |-
-          ${{ inputs.target }}
+        image_tag: |-
+          ${{ steps.build-container.outputs.tag }}
       run: |-
         set -eu
 
@@ -57,8 +38,9 @@ runs:
           "container" \
           "run" \
           ${{ (inputs.profile && format('--env "PROFILE={0}"', inputs.profile)) || '' }} \
+          --rm \
           --tty \
           --volume ".:/src:ro" \
-          "localhost/local/${target:?}" \
+          "${image_tag:?}" \
           ${{ (inputs.workspace && format('"{0}"', inputs.workspace)) || '' }}
       shell: "sh"

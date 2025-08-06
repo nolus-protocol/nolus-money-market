@@ -38,10 +38,6 @@ defaults:
 
 env:
   POSIXLY_CORRECT: "1"
-  check-dependencies-versions: |-
-    ${{ toJSON(github.ref_type == 'tag' || (github.event_name == 'workflow_dispatch' && inputs.check-dependencies-version)) }}
-  upload-artifacts: |-
-    ${{ toJSON(github.ref_type == 'tag' || (github.event_name == 'workflow_dispatch' && inputs.upload-artifacts)) }}
 
 permissions:
   actions: "write"
@@ -105,28 +101,106 @@ jobs:
             -R \
             "../.cargo" \
             "./"
-      - uses: "./.github/actions/build-and-run-image"
+      - id: "build-container"
+        uses: "./.github/actions/build-image"
         with:
           target: "audit-dependencies"
-  check-lockfiles:
-    if: |-
-      github.ref_type == 'tag' || (github.event_name == 'workflow_dispatch' && inputs.check-dependencies-version)
-    # runs-on: "ubuntu-latest"
-    runs-on: "self-hosted"
-    steps:
-      - uses: "actions/checkout@v4"
-      - uses: "./.github/actions/setup-docker"
-      - uses: "./.github/actions/build-and-run-image"
-        with:
-          target: "check-lockfiles"
+      - env:
+          image_tag: |-
+            ${{ steps.build-container.outputs.tag }}
+        run: |-
+          "docker" \
+            "container" \
+            "run" \
+            --rm \
+            --tty \
+            --volume ".:/src:ro" \
+            "${image_tag:?}"
   check-formatting:
     runs-on: "ubuntu-latest" # "self-hosted"
     steps:
       - uses: "actions/checkout@v4"
       - uses: "./.github/actions/setup-docker"
-      - uses: "./.github/actions/build-and-run-image"
+      - id: "build-container"
+        uses: "./.github/actions/build-image"
         with:
           target: "check-formatting"
+      - env:
+          image_tag: |-
+            ${{ steps.build-container.outputs.tag }}
+        run: |-
+          "docker" \
+            "container" \
+            "run" \
+            --rm \
+            --tty \
+            --volume ".:/src:ro" \
+            "${image_tag:?}"
+  check-lockfiles:
+    runs-on: "ubuntu-latest"
+    # runs-on: "self-hosted"
+    env:
+      check-dependencies-versions: |-
+        ${{ toJSON(github.ref_type == 'tag' || (github.event_name == 'workflow_dispatch' && inputs.check-dependencies-version)) }}
+    steps:
+      - if: |-
+          fromJSON(env.check-dependencies-versions)
+        uses: "actions/checkout@v4"
+      - if: |-
+          fromJSON(env.check-dependencies-versions)
+        uses: "./.github/actions/setup-docker"
+      - id: "build-container"
+        if: |-
+          fromJSON(env.check-dependencies-versions)
+        uses: "./.github/actions/build-image"
+        with:
+          target: "check-lockfiles"
+      - env:
+          image_tag: |-
+            ${{ steps.build-container.outputs.tag }}
+        if: |-
+          fromJSON(env.check-dependencies-versions)
+        run: |-
+          "docker" \
+            "container" \
+            "run" \
+            --rm \
+            --tty \
+            --volume ".:/src:ro" \
+            "${image_tag:?}"
+  check-unused-dependencies:
+    runs-on: "ubuntu-latest" # "self-hosted"
+    needs:
+      - "matrix-arguments"
+    strategy:
+      matrix:
+        workspace: |-
+          ${{ fromJSON(needs.matrix-arguments.outputs.workspaces-json) }}
+    steps:
+      - uses: "actions/checkout@v4"
+      - uses: "./.github/actions/setup-docker"
+      - run: |-
+          "mv" "./.github/test-data/build-configuration" "./"
+      - id: "build-container"
+        uses: "./.github/actions/build-image"
+        with:
+          build-contexts: |-
+            tools=./tools
+          target: "check-unused-dependencies"
+      - env:
+          image_tag: |-
+            ${{ steps.build-container.outputs.tag }}
+          workspace: |-
+            ${{ matrix.workspace }}
+        run: |-
+          "docker" \
+            "container" \
+            "run" \
+            --rm \
+            --tty \
+            --volume ".:/src:ro" \
+            "${image_tag:?}" \
+            "${workspace:?}"
   lint:
     runs-on: "ubuntu-latest" # "self-hosted"
     needs:
@@ -142,14 +216,29 @@ jobs:
       - uses: "./.github/actions/setup-docker"
       - run: |-
           "mv" "./.github/test-data/build-configuration" "./"
-      - uses: "./.github/actions/build-and-run-image"
+      - id: "build-container"
+        uses: "./.github/actions/build-image"
         with:
+          build-contexts: |-
+            tools=./tools
+          target: "lint"
+      - env:
+          image_tag: |-
+            ${{ steps.build-container.outputs.tag }}
           profile: |-
             ${{ matrix.profile }}
-          target: "lint"
-          tools-context: "true"
           workspace: |-
             ${{ matrix.workspace }}
+        run: |-
+          "docker" \
+            "container" \
+            "run" \
+            --env "PROFILE=${profile:?}" \
+            --rm \
+            --tty \
+            --volume ".:/src:ro" \
+            "${image_tag:?}" \
+            "${workspace:?}"
   test:
     runs-on: "ubuntu-latest" # "self-hosted"
     needs:
@@ -165,153 +254,88 @@ jobs:
       - uses: "./.github/actions/setup-docker"
       - run: |-
           "mv" "./.github/test-data/build-configuration" "./"
-      - uses: "./.github/actions/build-and-run-image"
+      - id: "build-container"
+        uses: "./.github/actions/build-image"
         with:
+          build-contexts: |-
+            tools=./tools
+          target: "test"
+      - env:
+          image_tag: |-
+            ${{ steps.build-container.outputs.tag }}
           profile: |-
             ${{ matrix.profile }}
-          target: "test"
-          tools-context: "true"
           workspace: |-
             ${{ matrix.workspace }}
-  check-unused-dependencies:
+        run: |-
+          "docker" \
+            "container" \
+            "run" \
+            --env "PROFILE=${profile:?}" \
+            --rm \
+            --tty \
+            --volume ".:/src:ro" \
+            "${image_tag:?}" \
+            "${workspace:?}"
+  build:
     runs-on: "ubuntu-latest" # "self-hosted"
-    needs:
-      - "matrix-arguments"
-    strategy:
-      matrix:
-        workspace: |-
-          ${{ fromJSON(needs.matrix-arguments.outputs.workspaces-json) }}
+    env:
+      software-release-id: |-
+        ${{ (github.ref_type == 'tag' && format('{0} / ', github.ref)) || '' }}${{ github.sha }}
+      upload-artifacts: |-
+        ${{ toJSON(github.ref_type == 'tag' || (github.event_name == 'workflow_dispatch' && inputs.upload-artifacts)) }}
     steps:
       - uses: "actions/checkout@v4"
       - uses: "./.github/actions/setup-docker"
-      - run: |-
-          "mv" "./.github/test-data/build-configuration" "./"
-      - uses: "./.github/actions/build-and-run-image"
+      - id: "platform-builder"
+        uses: "./.github/actions/build-image"
         with:
-          target: "check-unused-dependencies"
-          tools-context: "true"
-          workspace: |-
-            ${{ matrix.workspace }}
-
-  build:
-    runs-on: "ubuntu-latest"
-    name: "Build platform binaries and protocol container image"
-    steps:
-      - name: "Checkout repository"
-        uses: "actions/checkout@v4"
+          build-arguments: |-
+            software_release_id=${{ env.software-release-id }}
+          build-contexts: |-
+            platform=./platform
+            tools=./tools
+          target: "platform-builder"
+      - id: "protocol-builder"
+        uses: "./.github/actions/build-image"
         with:
-          fetch-depth: "0"
-          fetch-tags: "true"
-      - id: "builder-base-container-cache-key"
-        env:
-          check_deps_updated: |-
-            ${{ toJSON(env.check-dependencies-versions) }}
-        run: |-
-          echo \
-            "cache-key<<EOF
-          builder-base-container-[check-deps=${check_deps_updated:?}]
-          EOF" \
-            >>"${GITHUB_OUTPUT}"
-      - id: "restore-builder-base-container-cache"
-        name: "Restore builder base image from cache"
-        uses: "actions/cache/restore@v4"
-        with:
-          key: |-
-            ${{ steps.builder-base-container-cache-key.outputs.cache-key }}
-          path: |-
-            builder-base-container.tar
-      - if: |-
-          !steps.restore-builder-base-container-cache.outputs.cache-hit
-        name: "Build builder base image"
-        run: |-
-          "docker" \
-            "buildx" \
-            "build" \
-            --file "build.Containerfile" \
-            --tag "builder-base" \
-            --target "builder-base" \
-            "."
-      - if: |-
-          !steps.restore-builder-base-container-cache.outputs.cache-hit
-        name: "Export builder base image"
-        run: |-
-          "docker" \
-            "save" \
-            --output "builder-base-container.tar" \
-            "builder-base"
-      - if: |-
-          !steps.restore-builder-base-container-cache.outputs.cache-hit
-        name: "Store builder base image to cache"
-        uses: "actions/cache/save@v4"
-        with:
-          key: |-
-            ${{ steps.builder-base-container-cache-key.outputs.cache-key }}
-          path: |-
-            builder-base-container.tar
-      - if: |-
-          steps.restore-builder-base-container-cache.outputs.cache-hit
-        name: "Load builder base image"
-        run: |-
-          "docker" \
-            "load" \
-            --input "builder-base-container.tar"
-      - name: "Produce builder images"
-        env:
-          CHECK_DEPS_UPDATED: |-
-            ${{ env.check-dependencies-versions }}
+          build-arguments: |-
+            software_release_id=${{ env.software-release-id }}
+          build-contexts: |-
+            platform=./platform
+            protocol=./protocol
+            tools=./tools
+          target: "protocol-builder"
+      - env:
+          image_tag: |-
+            ${{ steps.platform-builder.outputs.tag }}
         run: |-
           set -eu
 
-          builder_image() {
-            target="${1:?}"
-
-            "docker" \
-              "buildx" \
-              "build" \
-              --build-arg "check_dependencies_updated=${CHECK_DEPS_UPDATED:?}" \
-              --file "build.Containerfile" \
-              --tag "${target:?}-builder" \
-              --target "${target:?}-builder" \
-              "."
-          }
-
-          for workspace in \
-            "platform" \
-            "protocol"
+          for network_group in "test-net" "production-net"
           do
-            "builder_image" "${workspace:?}"
-          done
-      - name: "Produce platform binaries"
-        run: |-
-          set -eu
-
-          build_and_pack() {
-            network="${1:?}"
-
-            "mkdir" "./artifacts-${network:?}/"
+            "mkdir" "./${network_group:?}-artifacts/"
 
             "docker" \
+              "container" \
               "run" \
-              --volume "./artifacts-${network:?}/:/artifacts/" \
-              "platform-builder" \
-              "${network:?}"
-          }
-
-          for network in \
-            "test-net" \
-            "production-net"
-          do
-            "build_and_pack" "${network:?}"
+              --rm \
+              --tty \
+              --volume "./${network_group:?}-artifacts:/artifacts" \
+              "${image_tag:?}" \
+              "${network_group:?}"
           done
-      - if: |-
-          fromJSON(env.upload-artifacts)
-        name: "Export protocol builder image"
+      - env:
+          image_tag: |-
+            ${{ steps.protocol-builder.outputs.tag }}
         run: |-
+          set -eu
+
           "docker" \
             "image" \
             "save" \
             --output "protocol-builder.tar" \
-            "protocol-builder"
+            "${image_tag:?}"
       - if: |-
           fromJSON(env.upload-artifacts)
         name: "Upload test-net platform binaries"
@@ -320,7 +344,7 @@ jobs:
           if-no-files-found: "error"
           name: "platform-test-net"
           path: |-
-            ./artifacts-test-net/*
+            ./test-net-artifacts/*
       - if: |-
           fromJSON(env.upload-artifacts)
         name: "Upload production-net platform binaries"
@@ -329,7 +353,7 @@ jobs:
           if-no-files-found: "error"
           name: "platform-production-net"
           path: |-
-            ./artifacts-production-net/*
+            ./production-net-artifacts/*
       - if: |-
           fromJSON(env.upload-artifacts)
         name: "Upload protocol builder image"
@@ -339,8 +363,15 @@ jobs:
           name: "protocol-builder"
           path: |-
             ./protocol-builder.tar
+
   create_draft_release:
     needs:
+      - "audit-dependencies"
+      - "check-lockfiles"
+      - "check-formatting"
+      - "lint"
+      - "test"
+      - "check-unused-dependencies"
       - "build"
     if: |-
       github.ref_type == 'tag'

@@ -143,7 +143,9 @@ RUN ["cargo", "install", "--jobs", "1", "--force", "cosmwasm-check"]
 
 FROM builder-base AS builder
 
-RUN --mount=type=bind,source="./",target="/code/",readonly \
+RUN \
+  --mount=type=bind,target="/code",readwrite \
+  --mount=type=bind,from="git",target="/code/.git",readonly \
   cd "/code/" && \
     described="$("git" "describe" --tags)" && \
     readonly described && \
@@ -228,7 +230,11 @@ RUN --mount=type=tmpfs,target="${cargo_target_dir:?}" \
     "--path", "/tools/cargo-each/" \
   ]
 
-COPY --chmod="0555" "./scripts/build-and-optimize.sh" "/build/build.sh"
+COPY \
+  --chmod="0555" \
+  --from=scripts \
+  "./build-and-optimize.sh" \
+  "/build/build.sh"
 
 COPY --chmod="0555" "./.cargo/" "/.cargo/"
 

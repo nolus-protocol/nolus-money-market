@@ -20,18 +20,24 @@ ARG platform_contracts_count="3"
 
 ARG production_network_build_profile="production_nets_release"
 
+ARG production_network_build_profile_directory="production_nets_release"
+
 ARG production_network_max_binary_size="5M"
 
 ARG protocol_contracts_count="7"
 
-ARG rust_image_ver="1.88"
+ARG rust_image_ver="1.86"
 
 ### 1.90
 ARG rust_nightly_ver="2025-08-01"
 
 ARG test_network_build_profile="test_nets_release"
 
+ARG test_network_build_profile_directory="test_nets_release"
+
 ARG test_network_max_binary_size="5M"
+
+ARG tooling_rust_image_ver="1.88"
 
 ################################################################################
 ##                           END : EDIT  HERE : END                           ##
@@ -39,22 +45,31 @@ ARG test_network_max_binary_size="5M"
 
 FROM docker.io/library/rust:${rust_image_ver:?}-alpine AS rust
 
-ENV SOURCE_DATE_EPOCH="0"
+ENV SOURCE_DATE_EPOCH="0" \
+  CARGO_TARGET_DIR="/tmp/cargo-target/" \
+  CARGO_TERM_COLOR="always" \
+  POSIXLY_CORRECT="1"
 
 WORKDIR "/src"
-
-ENV CARGO_TARGET_DIR="/tmp/cargo-target/"
-
-ENV CARGO_TERM_COLOR="always"
-
-ENV POSIXLY_CORRECT="1"
 
 RUN <<EOF
 "apk" "update"
 "apk" "add" "libc-dev"
 EOF
 
-FROM rust AS cargo-audit
+FROM docker.io/library/rust:${tooling_rust_image_ver:?}-alpine AS tooling-rust
+
+ENV SOURCE_DATE_EPOCH="0" \
+  CARGO_TARGET_DIR="/tmp/cargo-target/" \
+  CARGO_TERM_COLOR="always" \
+  POSIXLY_CORRECT="1"
+
+RUN <<EOF
+"apk" "update"
+"apk" "add" "libc-dev"
+EOF
+
+FROM tooling-rust AS cargo-audit
 
 ARG cargo_audit_ver
 
@@ -62,6 +77,7 @@ RUN \
   --mount=type="tmpfs",target="/tmp/cargo-target/" \
   "cargo" "install" "cargo-audit@${cargo_audit_ver:?}"
 
+### In-tree tool.
 FROM rust AS cargo-each
 
 RUN \
@@ -69,7 +85,7 @@ RUN \
   --mount=type="tmpfs",target="/tmp/cargo-target/" \
   "cargo" "install" "--path" "/src/cargo-each/"
 
-FROM rust AS cargo-udeps
+FROM tooling-rust AS cargo-udeps
 
 RUN "apk" "add" "ca-certificates" "openssl-dev" "openssl-libs-static"
 
@@ -79,7 +95,7 @@ RUN \
   --mount=type="tmpfs",target="/tmp/cargo-target/" \
   "cargo" "install" "cargo-udeps@${cargo_udeps_ver:?}"
 
-FROM docker.io/library/rust:${rust_image_ver:?}-bookworm AS cosmwasm-check
+FROM docker.io/library/rust:${tooling_rust_image_ver:?}-slim-bookworm AS cosmwasm-check
 
 ARG cosmwasm_check_ver
 
@@ -91,13 +107,10 @@ FROM rust AS rust-ci
 
 VOLUME ["/src"]
 
-ENV SOFTWARE_RELEASE_ID="ci-software-release"
-
-ENV PROTOCOL_NETWORK="ci-network"
-
-ENV PROTOCOL_NAME="ci-protocol"
-
-ENV PROTOCOL_RELEASE_ID="ci-protocol-release"
+ENV SOFTWARE_RELEASE_ID="ci-software-release" \
+  PROTOCOL_NETWORK="ci-network" \
+  PROTOCOL_NAME="ci-protocol" \
+  PROTOCOL_RELEASE_ID="ci-protocol-release"
 
 FROM rust-ci AS rust-ci-multi-workspace
 
@@ -118,9 +131,9 @@ COPY \
 
 FROM rust-ci-multi-workspace AS check-formatting
 
-RUN "rustup" "component" "add" "rustfmt"
-
 ENTRYPOINT ["/usr/local/bin/for-each-workspace.sh", "cargo", "fmt", "--check"]
+
+RUN "rustup" "component" "add" "rustfmt"
 
 FROM rust-ci-multi-workspace AS check-lockfiles
 
@@ -231,52 +244,41 @@ cd "/"
   "/binaryen-version_${binaryen_version:?}"
 EOF
 
-FROM rust AS build
+FROM rust AS builder
 
 VOLUME ["/artifacts"]
 
+ENTRYPOINT ["/usr/local/bin/build.sh"]
+
 RUN <<EOF
-"apk" "add" "gcompat" "util-linux"
+"apk" "add" "gcompat"
 "rustup" "target" "add" "wasm32-unknown-unknown"
 EOF
 
+ARG binaryen_version
+
 ARG cosmwasm_capabilities
-
-ENV COSMWASM_CAPABILITIES="${cosmwasm_capabilities:?}"
-
-ARG platform_contracts_count
-
-ENV PLATFORM_CONTRACTS_COUNT="${platform_contracts_count:?}"
 
 ARG production_network_build_profile
 
-ENV PRODUCTION_NETWORK_BUILD_PROFILE="${production_network_build_profile:?}"
+ARG production_network_build_profile_directory
 
 ARG production_network_max_binary_size
 
-ENV PRODUCTION_NETWORK_MAX_BINARY_SIZE="${production_network_max_binary_size:?}"
-
-ARG protocol_contracts_count
-
-ENV PROTOCOL_CONTRACTS_COUNT="${protocol_contracts_count:?}"
-
 ARG test_network_build_profile
 
-ENV TEST_NETWORK_BUILD_PROFILE="${test_network_build_profile:?}"
+ARG test_network_build_profile_directory
 
 ARG test_network_max_binary_size
 
-ENV TEST_NETWORK_MAX_BINARY_SIZE="${test_network_max_binary_size:?}"
-
-COPY \
-  --chmod="0555" \
-  "./scripts/build.sh" \
-  "/usr/local/bin/"
-  # --link=true \
-
-ARG binaryen_version
-
-ENV BINARYEN_VERSION="${binaryen_version:?}"
+ENV BINARYEN_VERSION="${binaryen_version:?}" \
+  COSMWASM_CAPABILITIES="${cosmwasm_capabilities:?}" \
+  PRODUCTION_NETWORK_BUILD_PROFILE="${production_network_build_profile:?}" \
+  PRODUCTION_NETWORK_BUILD_PROFILE_DIRECTORY="${production_network_build_profile_directory:?}" \
+  PRODUCTION_NETWORK_MAX_BINARY_SIZE="${production_network_max_binary_size:?}" \
+  TEST_NETWORK_BUILD_PROFILE="${test_network_build_profile:?}" \
+  TEST_NETWORK_BUILD_PROFILE_DIRECTORY="${test_network_build_profile_directory:?}" \
+  TEST_NETWORK_MAX_BINARY_SIZE="${test_network_max_binary_size:?}"
 
 COPY \
   --from=binaryen \
@@ -291,24 +293,52 @@ COPY \
   # --link=true \
 
 COPY \
+  --chmod="0555" \
+  "./scripts/build.sh" \
+  "/usr/local/bin/"
+  # --link=true \
+
+COPY \
   --from=cargo-each \
   "/usr/local/cargo/bin/cargo-each" \
   "/usr/local/bin/"
   # --link=true \
 
-COPY \
-  --from="src" \
-  "." \
-  "/src"
+ARG software_release_id
 
-FROM build AS platform
+ENV SOFTWARE_RELEASE_ID="${software_release_id:?}"
+
+COPY \
+  --from="tools" \
+  "." \
+  "/src/tools"
+
+COPY \
+  --from="platform" \
+  "." \
+  "/src/platform"
+
+FROM builder AS platform-builder
 
 WORKDIR "/src/platform"
 
-ENTRYPOINT ["/usr/local/bin/build.sh", "platform"]
+ARG platform_contracts_count
 
-FROM build AS protocol
+ENV CONTRACTS_COUNT="${platform_contracts_count:?}"
+
+FROM builder AS protocol-builder
+
+VOLUME ["/src/build-configuration"]
 
 WORKDIR "/src/protocol"
 
-ENTRYPOINT ["/usr/local/bin/build.sh", "protocol"]
+RUN "apk" "add" "jq"
+
+ARG protocol_contracts_count
+
+ENV CONTRACTS_COUNT="${protocol_contracts_count:?}"
+
+COPY \
+  --from="protocol" \
+  "." \
+  "/src/protocol"

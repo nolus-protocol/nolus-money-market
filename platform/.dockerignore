@@ -1,0 +1,8 @@
+*
+.*
+**/target
+!contracts/
+!packages/
+!tests/
+!Cargo.lock
+!Cargo.toml
