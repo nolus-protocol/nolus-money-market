@@ -36,7 +36,7 @@ pub mod migrate_from_0_8_12 {
     use serde::{Deserialize, Serialize, Serializer};
 
     use cosmwasm_std::{Storage, Timestamp};
-    use finance::{coin::Coin, ratio::Rational};
+    use finance::{coin::Coin, ratio::SimpleFraction};
     use lpp_platform::NLpn;
     use sdk::cw_storage_plus::Item;
 
@@ -48,7 +48,7 @@ pub mod migrate_from_0_8_12 {
         pub struct Total0_8_12<Lpn> {
             total_principal_due: Coin<Lpn>,
             total_interest_due: Coin<Lpn>,
-            annual_interest_rate: Rational<Coin<Lpn>>,
+            annual_interest_rate: SimpleFraction<Coin<Lpn>>,
             last_update_time: Timestamp,
         }
         impl<Lpn> Serialize for Total0_8_12<Lpn> {
