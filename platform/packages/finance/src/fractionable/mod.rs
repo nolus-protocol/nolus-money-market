@@ -11,8 +11,7 @@ mod percent;
 mod price;
 mod usize;
 
-#[allow(dead_code)]
-pub(crate) trait Fractionable<U>
+pub trait Fractionable<U>
 where
     Self: Sized + ToPrimitive<Self::HigherPrimitive> + TryFromPrimitive<Self::HigherPrimitive>,
     U: ToPrimitive<Self::HigherPrimitive>,
@@ -21,16 +20,14 @@ where
         + Div<Output = Self::HigherPrimitive>;
 }
 
-pub(crate) trait ToPrimitive<P> {
-    #[allow(dead_code)]
+pub trait ToPrimitive<P> {
     fn into_primitive(self) -> P;
 }
 
-pub(crate) trait TryFromPrimitive<P>
+pub trait TryFromPrimitive<P>
 where
     Self: Sized,
 {
-    #[allow(dead_code)]
     fn try_from_primitive(primitive: P) -> Option<Self>;
 }
 
