@@ -4,12 +4,11 @@ use currency::{CurrencyDef, MemberOf};
 use finance::{
     coin::Coin,
     duration::Duration,
-    fraction::Fraction,
+    fraction::{Fraction, Unit as FractionUnit},
     fractionable::Fractionable,
     liability::{Liability, Zone},
     percent::Percent,
     price::{self},
-    traits::FractionUnit,
     zero::Zero,
 };
 
