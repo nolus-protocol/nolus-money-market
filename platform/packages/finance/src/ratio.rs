@@ -106,11 +106,11 @@ impl<U> Rational<U> for SimpleFraction<U>
 where
     U: FractionUnit,
 {
-    fn of<A>(self, whole: A) -> Option<A>
+    fn of<A>(&self, whole: A) -> Option<A>
     where
         A: Fractionable<U>,
     {
-        Some(whole.safe_mul(&self))
+        Some(whole.safe_mul(self))
     }
 }
 
