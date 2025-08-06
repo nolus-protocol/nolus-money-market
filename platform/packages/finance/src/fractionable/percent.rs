@@ -64,19 +64,15 @@ impl<const UPPER_BOUND: Units> ToPrimitive<SimpleFraction<U256>> for BoundPercen
 
 impl<const UPPER_BOUND: Units> TryFromPrimitive<u64> for BoundPercent<UPPER_BOUND> {
     fn try_from_primitive(primitive: u64) -> Option<Self> {
-        Units::try_from(primitive)
-            .ok()
-            .map(|units| Self::from_permille(units))
+        Units::try_from(primitive).ok().map(Self::from_permille)
     }
 }
 
 impl<const UPPER_BOUND: Units> TryFromPrimitive<U256> for BoundPercent<UPPER_BOUND> {
     fn try_from_primitive(primitive: U256) -> Option<Self> {
-        u128::try_from(primitive).ok().and_then(|u_128| {
-            Units::try_from(u_128)
-                .ok()
-                .map(|units| Self::from_permille(units))
-        })
+        u128::try_from(primitive)
+            .ok()
+            .and_then(|u_128| Units::try_from(u_128).ok().map(Self::from_permille))
     }
 }
 

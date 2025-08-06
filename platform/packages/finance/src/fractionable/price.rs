@@ -4,11 +4,11 @@ use bnum::types::U256;
 
 use crate::{
     coin::Amount,
+    fraction::Unit as FractionUnit,
     fractionable::{Fractionable, ToPrimitive, TryFromPrimitive},
     percent::{Units as PercentUnits, bound::BoundPercent},
     price::Price,
     ratio::{Ratio, SimpleFraction},
-    traits::FractionUnit,
     zero::Zero,
 };
 

@@ -30,11 +30,9 @@ impl ToPrimitive<U256> for Duration {
 
 impl TryFromPrimitive<U256> for Duration {
     fn try_from_primitive(primitive: U256) -> Option<Self> {
-        u128::try_from(primitive).ok().and_then(|u_128| {
-            Units::try_from(u_128)
-                .ok()
-                .map(|units| Self::from_nanos(units))
-        })
+        u128::try_from(primitive)
+            .ok()
+            .and_then(|u_128| Units::try_from(u_128).ok().map(Self::from_nanos))
     }
 }
 

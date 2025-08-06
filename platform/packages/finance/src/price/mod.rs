@@ -8,10 +8,10 @@ use serde::{Deserialize, Serialize};
 use crate::{
     coin::{Amount, Coin},
     error::{Error, Result},
+    fraction::Unit as FractionUnit,
     fractionable::HigherRank,
     ratio::{Ratio, SimpleFraction},
     rational::Rational,
-    traits::FractionUnit,
 };
 
 pub mod base;

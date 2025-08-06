@@ -1,6 +1,8 @@
 use currencies::Lpns;
 use currency::{CurrencyDef, MemberOf};
-use finance::{coin::Coin, percent::Percent100, price, ratio::SimpleFraction, rational::Rational, zero::Zero};
+use finance::{
+    coin::Coin, percent::Percent100, price, ratio::SimpleFraction, rational::Rational, zero::Zero,
+};
 use lpp_platform::NLpn;
 use platform::{bank::BankAccountView, contract::Validator};
 use sdk::cosmwasm_std::{Addr, Storage, Timestamp};
