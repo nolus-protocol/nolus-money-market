@@ -13,10 +13,10 @@ use serde::{Deserialize, Serialize};
 use crate::{
     coin::Amount,
     error::{Error, Result as FinanceResult},
+    fraction::Unit as FractionUnit,
     fractionable::Fractionable,
     ratio::{Ratio, SimpleFraction},
     rational::Rational,
-    traits::FractionUnit,
     zero::Zero,
 };
 
