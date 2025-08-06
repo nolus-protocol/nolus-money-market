@@ -21,7 +21,7 @@
 ## [in-tree] cargo-each                                                       ##
 ## cargo-udeps                                                                ##
 ## cargo [with:]                                                              ##
-##   * rustc                                                                  ##
+##   * Rust compiler                                                          ##
 ################################################################################
 
 set -eu

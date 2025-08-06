@@ -21,7 +21,7 @@
 ## [in-tree] cargo-each                                                       ##
 ## [in-tree] lint.workspace.sh                                                ##
 ## cargo [with:]                                                              ##
-##   * rustc                                                                  ##
+##   * Rust compiler                                                          ##
 ##   * clippy [inherited from 'lint.workspace.sh']                            ##
 ################################################################################
 

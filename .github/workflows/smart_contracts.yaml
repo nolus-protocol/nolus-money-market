@@ -336,6 +336,24 @@ jobs:
             "save" \
             --output "protocol-builder.tar" \
             "${image_tag:?}"
+      - id: "gzip"
+        uses: "./.github/actions/build-image"
+        with:
+          target: "gzip"
+      - env:
+          image_tag: |-
+            ${{ steps.gzip.outputs.tag }}
+        run: |-
+          set -eu
+
+          "docker" \
+            "container" \
+            "run" \
+            --rm \
+            --tty \
+            --volume ".:/bind" \
+            "${image_tag:?}" \
+            "/bind/protocol-builder.tar"
       - if: |-
           fromJSON(env.upload-artifacts)
         name: "Upload test-net platform binaries"
@@ -362,7 +380,7 @@ jobs:
           if-no-files-found: "error"
           name: "protocol-builder"
           path: |-
-            ./protocol-builder.tar
+            ./protocol-builder.tar.gz
 
   create_draft_release:
     needs:

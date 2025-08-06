@@ -20,7 +20,7 @@
 ## Used utilities outside the POSIX standard:                                 ##
 ## [in-tree] cargo-each                                                       ##
 ## cargo [with:]                                                              ##
-##   * rustc                                                                  ##
+##   * Rust compiler                                                          ##
 ################################################################################
 
 set -eu

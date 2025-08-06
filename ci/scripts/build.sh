@@ -20,7 +20,9 @@
 ## Used utilities outside the POSIX standard:                                 ##
 ## [in-tree] cargo-each                                                       ##
 ## cargo [with:]                                                              ##
-##   * rustc                                                                  ##
+##   * Rust compiler                                                          ##
+##   * Rust compiler [target=wasm32-unknown-unknown]                          ##
+## jq                                                                         ##
 ################################################################################
 
 set -eu
@@ -78,6 +80,7 @@ case "${#}" in
 esac
 
 network_group="${1:?}"
+shift
 
 case "${network_group:?}" in
   ("test-net")
@@ -99,7 +102,6 @@ case "${network_group:?}" in
       "Unknown network group!" \
       >&2
 esac
-shift
 
 readonly "profile"
 : "${profile:?}"
@@ -128,15 +130,12 @@ readonly optimized_binaries_directory
   esac
 )
 
-build() (
-  dex_type="${1:?}"
-  shift
-
+___build_unoptimized() {
   case "${#}" in
     ("0") ;;
     (*)
       "echo" \
-        "The \"build\" function takes exactly one argument, the DEX type tag!" \
+        "\"___build_unoptimized\" takes no arguments!" \
         >&2
 
       exit "1"
@@ -154,19 +153,192 @@ build() (
     --lib \
     --locked \
     --target "wasm32-unknown-unknown"
+}
 
-  unoptimized_binaries="$(
-    cd "${unoptimized_binaries_directory:?}"
+___list_unoptimized_binaries() (
+  case "${#}" in
+    ("0") ;;
+    (*)
+      "echo" \
+        "\"___list_unoptimized_binaries\" takes no arguments!" \
+        >&2
 
+      exit "1"
+  esac
+
+  cd "${unoptimized_binaries_directory:?}"
+
+  "find" \
+    "." \
+    "(" \
+    "!" \
+    -path "./?*/?*" \
+    ")" \
+    -type "f" \
+    -name "*.wasm"
+)
+
+___check_binaries_count() (
+  case "${#}" in
+    ("1")
+      binaries_list="${1?}"
+
+      shift
+      ;;
+    (*)
+      "echo" \
+        "\"___check_binaries_count\" takes exactly one argument, the binaries list!" \
+        >&2
+
+      exit "1"
+  esac
+
+  cd "${unoptimized_binaries_directory:?}"
+
+  files_count="$(
+    "wc" \
+      -l \
+      <<EOF
+${binaries_list?}
+EOF
+)"
+
+  case "${files_count:?}" in
+    ("${CONTRACTS_COUNT:?}") ;;
+    (*)
+      "echo" \
+        "Expected ${CONTRACTS_COUNT:?} file(s), got ${files_count:?}!
+Files:
+${binaries_list?}" \
+        >&2
+
+      exit "1"
+  esac
+)
+
+___optimize_binary() (
+  case "${#}" in
+    ("1")
+      binary_name="${1:?}"
+
+      shift "1"
+      ;;
+    (*)
+      "echo" \
+        "\"___optimize_binary\" takes exactly one argument, the binary's file name!" \
+        >&2
+
+      exit "1"
+  esac
+
+  "echo" \
+    "Optimizing \"${binary_name:?}\"." \
+    >&2
+
+  "wasm-opt" \
+    --inlining-optimizing \
+    -Os \
+    -o "${optimized_binaries_directory}/${binary_name:?}" \
+    --signext-lowering \
+    "${unoptimized_binaries_directory:?}/${binary_name:?}"
+)
+
+___check_optimized_binary() (
+  case "${#}" in
+    ("1")
+      binary_name="${1:?}"
+
+      shift
+      ;;
+    (*)
+      "echo" \
+        "\"___check_optimized_binary\" takes exactly one argument, the optimized binary's name!" \
+        >&2
+
+      exit "1"
+  esac
+
+  "echo" \
+    "Checking \"${binary_name:?}\"." \
+    >&2
+
+  "cosmwasm-check" \
+    --available-capabilities "${COSMWASM_CAPABILITIES:?}" \
+    "${optimized_binaries_directory}/${binary_name:?}"
+)
+
+___check_optimized_binaries_sizes() (
+  case "${#}" in
+    ("0") ;;
+    (*)
+      "echo" \
+        "\"___check_optimized_binaries_sizes\" takes no arguments!" \
+        >&2
+
+      exit "1"
+  esac
+
+  cd "${optimized_binaries_directory:?}"
+
+  large_files="$(
     "find" \
       "." \
-      "(" \
-      "!" \
-      -path "./?*/?*" \
-      ")" \
       -type "f" \
-      -name "*.wasm"
+      -name "*.wasm" \
+      -size "+${max_binary_size:?}c" \
+      -print
   )"
+
+  case "${large_files?}" in
+    ("") return ;;
+  esac
+
+  large_files="$(
+    while read -r "file"
+    do
+      stats="$(
+        "ls" \
+          -ks \
+          -1 \
+          "${file:?}"
+      )"
+
+      awk \
+        "{ print \$2 - \$1 KiB }" \
+        <<EOF
+${stats:?}
+EOF
+    done \
+      <<EOF
+${large_files:?}
+EOF
+  )"
+
+  "echo" \
+    "Some files are over the allowed limit of ${max_binary_size:?} byte(s):
+${large_files:?}" \
+    >&2
+
+  exit "1"
+)
+
+build() (
+  dex_type="${1:?}"
+  shift
+
+  case "${#}" in
+    ("0") ;;
+    (*)
+      "echo" \
+        "The \"build\" function takes exactly one argument, the DEX type tag!" \
+        >&2
+
+      exit "1"
+  esac
+
+  "___build_unoptimized"
+
+  unoptimized_binaries="$("___list_unoptimized_binaries")"
   readonly "unoptimized_binaries"
 
   if ! test -e "${optimized_binaries_directory:?}"
@@ -174,29 +346,7 @@ build() (
     "mkdir" "${optimized_binaries_directory:?}"
   fi
 
-  cd "${unoptimized_binaries_directory:?}"
-
-  (
-    files_count="$(
-      "wc" \
-        -l \
-        <<EOF
-${unoptimized_binaries?}
-EOF
-  )"
-
-    case "${files_count:?}" in
-      ("${CONTRACTS_COUNT:?}") ;;
-      (*)
-        "echo" \
-          "Expected ${CONTRACTS_COUNT:?} file(s), got ${files_count:?}!
-Files:
-${unoptimized_binaries?}" \
-          >&2
-
-        exit "1"
-    esac
-  )
+  "___check_binaries_count" "${unoptimized_binaries?}"
 
   while read -r "file"
   do
@@ -206,29 +356,15 @@ ${unoptimized_binaries?}" \
 
     name="$("basename" "${file:?}")"
 
-    "echo" \
-      "Optimizing \"${name:?}\"." \
-      >&2
+    "___optimize_binary" "${name:?}"
 
-    "wasm-opt" \
-      --inlining-optimizing \
-      -Os \
-      -o "${optimized_binaries_directory}/${name:?}" \
-      --signext-lowering \
-      "${file:?}"
-
-    "echo" \
-      "Checking \"${name:?}\"." \
-      >&2
-
-    "/usr/local/bin/cosmwasm-check" \
-      --available-capabilities "${COSMWASM_CAPABILITIES:?}" \
-      "${optimized_binaries_directory}/${name:?}"
-  done <<EOF
+    "___check_optimized_binary" "${name:?}"
+  done \
+    <<EOF
 ${unoptimized_binaries:?}
 EOF
 
-  cd "${optimized_binaries_directory}"
+  "___check_optimized_binaries_sizes"
 )
 
 "build" "@agnostic"

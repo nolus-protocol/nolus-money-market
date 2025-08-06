@@ -25,7 +25,7 @@ runs:
   steps:
     - env:
         image_tag: |-
-          localhost/local/${{ inputs.target }}
+          ${{ inputs.target }}
       id: "tag"
       run: |-
         set -eu

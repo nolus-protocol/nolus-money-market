@@ -4,6 +4,8 @@
 ##                         START : EDIT  HERE : START                         ##
 ################################################################################
 
+ARG alpine_ver="3.21"
+
 ARG binaryen_checksum="e959f2170af4c20c552e9de3a0253704d6a9d2766e8fdb88e4d6ac4bae9388fe"
 
 ARG binaryen_version="123"
@@ -22,7 +24,8 @@ ARG production_network_build_profile="production_nets_release"
 
 ARG production_network_build_profile_directory="production_nets_release"
 
-ARG production_network_max_binary_size="5M"
+### 5 MiB
+ARG production_network_max_binary_size="5242880"
 
 ARG protocol_contracts_count="7"
 
@@ -35,7 +38,8 @@ ARG test_network_build_profile="test_nets_release"
 
 ARG test_network_build_profile_directory="test_nets_release"
 
-ARG test_network_max_binary_size="5M"
+### 5 MiB
+ARG test_network_max_binary_size="5242880"
 
 ARG tooling_rust_image_ver="1.88"
 
@@ -43,7 +47,13 @@ ARG tooling_rust_image_ver="1.88"
 ##                           END : EDIT  HERE : END                           ##
 ################################################################################
 
-FROM docker.io/library/rust:${rust_image_ver:?}-alpine AS rust
+FROM docker.io/library/alpine:${alpine_ver:?} AS gzip
+
+ENTRYPOINT ["/usr/bin/gzip"]
+
+RUN "apk" "update" && "apk" "add" "gzip"
+
+FROM docker.io/library/rust:${rust_image_ver:?}-alpine${alpine_ver:?} AS rust
 
 ENV SOURCE_DATE_EPOCH="0" \
   CARGO_TARGET_DIR="/tmp/cargo-target/" \
@@ -57,7 +67,7 @@ RUN <<EOF
 "apk" "add" "libc-dev"
 EOF
 
-FROM docker.io/library/rust:${tooling_rust_image_ver:?}-alpine AS tooling-rust
+FROM docker.io/library/rust:${tooling_rust_image_ver:?}-alpine${alpine_ver:?} AS tooling-rust
 
 ENV SOURCE_DATE_EPOCH="0" \
   CARGO_TARGET_DIR="/tmp/cargo-target/" \
