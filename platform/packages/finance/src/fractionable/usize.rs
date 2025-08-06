@@ -1,4 +1,4 @@
-use crate::{percent::Units as PercentUnits, ratio::Ratio, traits::FractionUnit};
+use crate::{fraction::Unit as FractionUnit, percent::Units as PercentUnits, ratio::Ratio};
 
 use super::Fractionable;
 

@@ -1,8 +1,11 @@
 use bound::BoundPercent;
 
 use crate::{
-    error::Error, fraction::Fraction, fractionable::Fractionable, ratio::SimpleFraction,
-    rational::Rational, traits::FractionUnit,
+    error::Error,
+    fraction::{Fraction, Unit as FractionUnit},
+    fractionable::Fractionable,
+    ratio::SimpleFraction,
+    rational::Rational,
 };
 
 pub mod bound;

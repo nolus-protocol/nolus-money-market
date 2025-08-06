@@ -2,7 +2,9 @@ use std::fmt::Debug;
 
 use serde::{Deserialize, Serialize};
 
-use crate::{fractionable::Fractionable, rational::Rational, traits::FractionUnit, zero::Zero};
+use crate::{
+    fraction::Unit as FractionUnit, fractionable::Fractionable, rational::Rational, zero::Zero,
+};
 
 // TODO review whether it may gets simpler if extend Fraction
 pub trait Ratio<U> {

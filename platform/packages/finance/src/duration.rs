@@ -8,8 +8,8 @@ use serde::{Deserialize, Serialize};
 use sdk::cosmwasm_std::{Timestamp, Uint128};
 
 use crate::{
-    fractionable::Fractionable, ratio::SimpleFraction, rational::Rational, traits::FractionUnit,
-    zero::Zero,
+    fraction::Unit as FractionUnit, fractionable::Fractionable, ratio::SimpleFraction,
+    rational::Rational, zero::Zero,
 };
 
 pub type Units = u64;
