@@ -22,7 +22,7 @@ impl FractionUnit for Units {}
 
 // TODO implement Fraction<Percent100> when multiplication with trim is ready
 impl Fraction<Units> for Percent100 {
-    fn of<A>(self, whole: A) -> A
+    fn of<A>(&self, whole: A) -> A
     where
         A: Fractionable<Units>,
     {
@@ -35,7 +35,7 @@ impl Fraction<Units> for Percent100 {
 
 // TODO implement Rational<Percent> when multiplication with trim is ready
 impl Rational<Units> for Percent {
-    fn of<A>(self, whole: A) -> Option<A>
+    fn of<A>(&self, whole: A) -> Option<A>
     where
         A: Fractionable<Units>,
     {
@@ -45,15 +45,15 @@ impl Rational<Units> for Percent {
 }
 
 // TODO remove this convertion after Ratio become a struct
-impl From<Percent100> for SimpleFraction<Units> {
-    fn from(percent: Percent100) -> Self {
+impl From<&Percent100> for SimpleFraction<Units> {
+    fn from(percent: &Percent100) -> Self {
         Self::new(percent.units(), Percent100::HUNDRED.units())
     }
 }
 
-// TODO implement From<Percent> for SimpleFraction<Percent> when multiplication with trim is ready
-impl From<Percent> for SimpleFraction<Units> {
-    fn from(percent: Percent) -> Self {
+// TODO implement From<&Percent> for SimpleFraction<Percent> when multiplication with trim is ready
+impl From<&Percent> for SimpleFraction<Units> {
+    fn from(percent: &Percent) -> Self {
         Self::new(percent.units(), Percent::HUNDRED.units())
     }
 }
@@ -219,7 +219,7 @@ pub(super) mod test {
         let n: Units = 189;
         let d: Units = 1890;
         let r = SimpleFraction::new(n, d);
-        let res: Percent = Rational::<Units>::of(r, Percent::HUNDRED).unwrap();
+        let res: Percent = r.of(Percent::HUNDRED).unwrap();
         assert_eq!(Percent::from_permille(n * 1000 / d), res);
     }
 
