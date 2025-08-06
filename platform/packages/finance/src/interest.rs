@@ -10,7 +10,6 @@ use crate::{
 /// Computes how much interest is accrued
 pub fn interest<U, R, P>(rate: R, principal: P, period: Duration) -> P
 where
-    U: FractionUnit,
     // TODO R:Fraction<U> when Ratio becomes a struct
     R: Rational<U>,
     P: Fractionable<U> + Fractionable<DurationUnits>,
@@ -24,7 +23,6 @@ where
 /// The actual payment is equal to the payment minus the returned change.
 pub fn pay<U, R, P>(rate: R, principal: P, payment: P, period: Duration) -> (Duration, P)
 where
-    U: FractionUnit,
     // TODO R:Fraction<U> when Ratio becomes a struct
     R: Rational<U>,
     P: Fractionable<U> + Fractionable<DurationUnits> + FractionUnit + Sub<Output = P>,
