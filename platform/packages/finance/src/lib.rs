@@ -11,7 +11,6 @@ pub mod price;
 pub mod range;
 pub mod ratio;
 pub mod rational;
-pub mod traits;
 pub mod zero;
 
 #[cfg(any(test, feature = "testing"))]

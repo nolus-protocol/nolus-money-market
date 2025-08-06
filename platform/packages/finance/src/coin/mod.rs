@@ -13,7 +13,7 @@ use ::serde::{Deserialize, Serialize};
 
 use currency::{Currency, CurrencyDef, Group, MemberOf};
 
-use crate::{traits::FractionUnit, zero::Zero};
+use crate::{fraction::Unit as FractionUnit, zero::Zero};
 
 pub use self::dto::{CoinDTO, IntoDTO};
 

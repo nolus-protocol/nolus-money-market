@@ -2,9 +2,9 @@ use std::{cmp, ops::Sub};
 
 use crate::{
     duration::{Duration, Units as DurationUnits},
+    fraction::Unit as FractionUnit,
     fractionable::Fractionable,
     rational::Rational,
-    traits::FractionUnit,
 };
 
 /// Computes how much interest is accrued
