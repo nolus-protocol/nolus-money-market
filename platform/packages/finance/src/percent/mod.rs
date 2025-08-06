@@ -20,7 +20,7 @@ impl FractionUnit for Units {}
 
 // TODO implement Fraction<Percent100> when multiplication with trim is ready
 impl Fraction<Units> for Percent100 {
-    fn of<A>(self, whole: A) -> A
+    fn of<A>(&self, whole: A) -> A
     where
         A: Fractionable<Units>,
     {
@@ -33,7 +33,7 @@ impl Fraction<Units> for Percent100 {
 
 // TODO implement Rational<Percent> when multiplication with trim is ready
 impl Rational<Units> for Percent {
-    fn of<A>(self, whole: A) -> Option<A>
+    fn of<A>(&self, whole: A) -> Option<A>
     where
         A: Fractionable<Units>,
     {
@@ -61,40 +61,16 @@ impl RatioLegacy<Units> for SimpleFraction<Percent> {
     }
 }
 
-impl Display for Percent {
-    #[track_caller]
-    fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
-        let whole = (self.0) / Self::UNITS_TO_PERCENT_RATIO;
-        let (no_fraction, overflow) = whole.overflowing_mul(Self::UNITS_TO_PERCENT_RATIO);
-        debug_assert!(!overflow);
-        let (fractional, overflow) = (self.0).overflowing_sub(no_fraction);
-        debug_assert!(!overflow);
-
-        f.write_fmt(format_args!("{whole}"))?;
-        if fractional != Units::default() {
-            f.write_fmt(format_args!(".{fractional}"))?;
-        }
-        f.write_char('%')?;
-        Ok(())
+// TODO remove this convertion after Ratio become a struct
+impl From<&Percent100> for SimpleFraction<Units> {
+    fn from(percent: &Percent100) -> Self {
+        Self::new(percent.units(), Percent100::HUNDRED.units())
     }
 }
 
-impl Add<Percent> for Percent {
-    type Output = Self;
-
-    #[track_caller]
-    fn add(self, rhs: Self) -> Self {
-        Self(
-            self.0
-                .checked_add(rhs.0)
-                .expect("attempt to add with overflow"),
-        )
-    }
-}
-
-// TODO implement From<Percent> for SimpleFraction<Percent> when multiplication with trim is ready
-impl From<Percent> for SimpleFraction<Units> {
-    fn from(percent: Percent) -> Self {
+// TODO implement From<&Percent> for SimpleFraction<Percent> when multiplication with trim is ready
+impl From<&Percent> for SimpleFraction<Units> {
+    fn from(percent: &Percent) -> Self {
         Self::new(percent.units(), Percent::HUNDRED.units())
     }
 }
@@ -260,7 +236,7 @@ pub(super) mod test {
         let n: Units = 189;
         let d: Units = 1890;
         let r = SimpleFraction::new(n, d);
-        let res: Percent = Rational::<Units>::of(r, Percent::HUNDRED).unwrap();
+        let res: Percent = r.of(Percent::HUNDRED).unwrap();
         assert_eq!(Percent::from_permille(n * 1000 / d), res);
     }
 
