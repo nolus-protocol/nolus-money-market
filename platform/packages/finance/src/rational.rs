@@ -1,9 +1,6 @@
-use crate::{fractionable::Fractionable, traits::FractionUnit};
+use crate::fractionable::Fractionable;
 
-pub trait Rational<U>
-where
-    U: FractionUnit,
-{
+pub trait Rational<U> {
     /// Computes the fraction of a given whole.
     fn of<A>(self, whole: A) -> Option<A>
     where
