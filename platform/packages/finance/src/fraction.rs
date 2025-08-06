@@ -1,9 +1,6 @@
-use crate::{fractionable::Fractionable, traits::FractionUnit};
+use crate::fractionable::Fractionable;
 
-pub trait Fraction<U>
-where
-    U: FractionUnit,
-{
+pub trait Fraction<U> {
     fn of<A>(self, whole: A) -> A
     where
         A: Fractionable<U>;
