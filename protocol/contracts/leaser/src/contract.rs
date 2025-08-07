@@ -34,7 +34,7 @@ use crate::{
     state::{config::Config, leases::Leases},
 };
 
-const CONTRACT_STORAGE_VERSION: VersionSegment = 5;
+const CONTRACT_STORAGE_VERSION: VersionSegment = 6;
 const CURRENT_RELEASE: ProtocolPackageRelease = ProtocolPackageRelease::current(
     package_name!(),
     package_version!(),
