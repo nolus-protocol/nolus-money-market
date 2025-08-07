@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     arithmetics::CheckedMul,
     fraction::Unit as FractionUnit,
-    fractionable::{Fractionable, Fragmentable, ToPrimitive},
+    fractionable::{Fractionable, ToPrimitive},
     rational::Rational,
     zero::Zero,
 };
@@ -52,7 +52,7 @@ where
                 .into_primitive()
                 .checked_mul(rhs.into_primitive())
                 .and_then(|product| {
-                    let res_primitive = product.div(self.nominator.into_primitive());
+                    let res_primitive = product.div(self.denominator.into_primitive());
 
                     F::try_from_primitive(res_primitive)
                 })
@@ -123,9 +123,10 @@ where
 {
     fn of<A>(&self, whole: A) -> Option<A>
     where
-        A: Fragmentable<U>,
+        A: Fractionable<U>,
+        U: ToPrimitive<A::HigherPrimitive>,
     {
-        Some(whole.safe_mul(self))
+        self.checked_mul(whole)
     }
 }
 

@@ -3,7 +3,7 @@ use bound::BoundPercent;
 use crate::{
     error::Error,
     fraction::{Fraction, Unit as FractionUnit},
-    fractionable::Fragmentable,
+    fractionable::{Fractionable, ToPrimitive},
     ratio::SimpleFraction,
     rational::Rational,
 };
@@ -24,7 +24,8 @@ impl FractionUnit for Units {}
 impl Fraction<Units> for Percent100 {
     fn of<A>(&self, whole: A) -> A
     where
-        A: Fragmentable<Units>,
+        A: Fractionable<Units>,
+        Units: ToPrimitive<A::HigherPrimitive>,
     {
         let fraction: SimpleFraction<Units> = self.into();
         fraction
@@ -37,7 +38,8 @@ impl Fraction<Units> for Percent100 {
 impl Rational<Units> for Percent {
     fn of<A>(&self, whole: A) -> Option<A>
     where
-        A: Fragmentable<Units>,
+        A: Fractionable<Units>,
+        Units: ToPrimitive<A::HigherPrimitive>,
     {
         let fraction: SimpleFraction<Units> = self.into();
         fraction.of(whole)

@@ -11,6 +11,9 @@ mod percent;
 mod price;
 mod usize;
 
+/// Domain entity for which a fraction could be calculated.
+///
+/// The fraction is not necessarily less than one.
 pub trait Fractionable<U>
 where
     Self: Sized + ToPrimitive<Self::HigherPrimitive> + TryFromPrimitive<Self::HigherPrimitive>,

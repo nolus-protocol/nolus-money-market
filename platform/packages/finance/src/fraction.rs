@@ -1,11 +1,15 @@
 use std::fmt::Debug;
 
-use crate::{fractionable::Fragmentable, zero::Zero};
+use crate::{
+    fractionable::{Fractionable, ToPrimitive},
+    zero::Zero,
+};
 
 pub trait Fraction<U> {
     fn of<A>(&self, whole: A) -> A
     where
-        A: Fragmentable<U>;
+        A: Fractionable<U>,
+        U: ToPrimitive<A::HigherPrimitive>;
 }
 
 pub trait Unit
