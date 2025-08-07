@@ -18,6 +18,8 @@
 ## environments.                                                              ##
 ################################################################################
 ## Used utilities outside the POSIX standard:                                 ##
+## busybox [with:]                                                            ##
+##   * sha256sum                                                              ##
 ## [in-tree] cargo-each                                                       ##
 ## cargo [with:]                                                              ##
 ##   * Rust compiler                                                          ##

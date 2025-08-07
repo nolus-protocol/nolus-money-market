@@ -18,6 +18,8 @@ ARG cosmwasm_check_version="3.0.1"
 
 ARG cosmwasm_capabilities="cosmwasm_1_1,cosmwasm_1_2,iterator,neutron,staking,stargate"
 
+ARG git_cliff_version="2.10.0"
+
 ARG platform_contracts_count="3"
 
 ARG production_network_build_profile="production_nets_release"
@@ -47,7 +49,9 @@ ARG tooling_rust_image_version="1.88"
 ##                           END : EDIT  HERE : END                           ##
 ################################################################################
 
-FROM docker.io/library/alpine:${alpine_version:?} AS gzip
+FROM docker.io/library/alpine:${alpine_version:?} AS alpine
+
+FROM alpine AS gzip
 
 ENTRYPOINT ["/usr/bin/gzip"]
 
@@ -112,6 +116,14 @@ ARG cosmwasm_check_version
 RUN \
   --mount=type="tmpfs",target="/tmp/cargo-target/" \
   "cargo" "install" "cosmwasm-check@${cosmwasm_check_version:?}" "--target-dir" "/tmp/cargo-target"
+
+FROM tooling-rust AS git-cliff
+
+ARG git_cliff_version
+
+RUN \
+  --mount=type="tmpfs",target="/tmp/cargo-target/" \
+  "cargo" "install" "git-cliff@${git_cliff_version:?}"
 
 FROM rust AS rust-ci
 
@@ -352,3 +364,21 @@ COPY \
   --from="protocol" \
   "." \
   "/src/protocol"
+
+FROM gzip AS pack-release-artifacts
+
+VOLUME ["/bind"]
+
+ENTRYPOINT ["/usr/local/bin/pack-release-artifacts.sh"]
+
+COPY \
+  --from=git-cliff \
+  "/usr/local/cargo/bin/git-cliff" \
+  "/usr/local/bin/"
+  # --link=true \
+
+COPY \
+  --chmod="0555" \
+  "./scripts/pack-release-artifacts.sh" \
+  "/usr/local/bin/"
+  # --link=true \

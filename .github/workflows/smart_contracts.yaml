@@ -360,8 +360,7 @@ jobs:
         with:
           if-no-files-found: "error"
           name: "platform-test-net"
-          path: |-
-            ./test-net-artifacts/*
+          path: "./test-net-artifacts/*"
       - if: |-
           fromJSON(env.upload-artifacts)
         name: "Upload production-net platform binaries"
@@ -369,8 +368,7 @@ jobs:
         with:
           if-no-files-found: "error"
           name: "platform-production-net"
-          path: |-
-            ./production-net-artifacts/*
+          path: "./production-net-artifacts/*"
       - if: |-
           fromJSON(env.upload-artifacts)
         name: "Upload protocol builder image"
@@ -378,8 +376,7 @@ jobs:
         with:
           if-no-files-found: "error"
           name: "protocol-builder"
-          path: |-
-            ./protocol-builder.tar.gz
+          path: "./protocol-builder.tar.gz"
 
   create_draft_release:
     needs:
@@ -402,98 +399,31 @@ jobs:
         with:
           fetch-depth: "0"
           fetch-tags: "true"
-          sparse-checkout: |-
-            .github/actions/install-tool
-      - name: "Install `git-cliff` from cache"
-        uses: "./.github/actions/install-tool"
-        with:
-          fail-on-cache-miss: "true"
-          local: "false"
-          no-fetching: "false"
-          tool: "git-cliff"
+          sparse-checkout: ".github/actions"
+      - uses: "./.github/actions/setup-docker"
       - name: "Download produced artifacts"
         uses: "actions/download-artifact@v4"
         with:
-          merge-multiple: "false"
-          path: "./artifacts/"
-      - name: "Create test-net platform binaries archive"
+          path: "./artifacts"
+      - id: "pack-release-artifacts"
+        uses: "./.github/actions/build-image"
+        with:
+          target: "pack-release-artifacts"
+      - env:
+          image_tag: |-
+            ${{ steps.pack-release-artifacts.outputs.tag }}
         run: |-
           set -eu
 
-          files="$(
-            "find" \
-              "." \
-              "!" \
-              -path "./**/**"
-          )"
-
-          "xargs" \
-            -E "" \
-            -n "1" \
-            "tar" \
-            -r \
-            -f "../platform-test-net.tar" \
-            <<EOF
-          ${files:?}
-          EOF
-        working-directory: "./artifacts/platform-test-net/"
-      - name: "Compress test-net platform binaries archive"
-        run: |-
-          "gzip" "./platform-test-net.tar"
-        working-directory: "./artifacts/"
-      - name: "Create production-net platform binaries archive"
-        run: |-
-          set -eu
-
-          files="$(
-            "find" \
-              "." \
-              "!" \
-              "(" \
-              -path "." \
-              -o \
-              -path "./**/**" \
-              ")"
-          )"
-          files="$(
-            "sed" \
-              -e "s/^\\.\\/\\(.\\+\\)$/\\1/g" \
-              <<EOF
-          ${files:?}
-          EOF
-          )"
-          readonly files
-
-          "xargs" \
-            -E "" \
-            -n "1" \
-            "tar" \
-            -r \
-            -f "../platform-production-net.tar" \
-            <<EOF
-          ${files:?}
-          EOF
-        working-directory: "./artifacts/platform-production-net/"
-      - name: "Compress production-net platform binaries archive"
-        run: |-
-          "gzip" "./platform-production-net.tar"
-        working-directory: "./artifacts/"
-      - name: "Compress protocol builder image"
-        run: |-
-          set -eu
-
-          "gzip" "./protocol-builder.tar"
-
-          "mv" \
-            "./protocol-builder.tar.gz" \
-            "../"
-        working-directory: "./artifacts/protocol-builder/"
-      - name: "Generate changelog"
-        run: |-
-          "git" \
-            "cliff" \
-            --current \
-            >"./changelog"
+          "docker" \
+            "container" \
+            "run" \
+            --rm \
+            --tty \
+            --volume ".:/bind" \
+            "${image_tag:?}" \
+            "platform-test-net" \
+            "platform-production-net"
       - name: "Create draft release"
         uses: "softprops/action-gh-release@v2"
         with:
@@ -503,4 +433,4 @@ jobs:
           body_path: "./changelog"
           generate_release_notes: false
           files: |
-            ./artifacts/*.tar.gz
+            ./artifacts/?*.tar.gz
