@@ -8,8 +8,11 @@ use serde::{Deserialize, Serialize};
 use sdk::cosmwasm_std::{Timestamp, Uint128};
 
 use crate::{
-    fraction::Unit as FractionUnit, fractionable::Fragmentable, ratio::SimpleFraction,
-    rational::Rational, zero::Zero,
+    fraction::Unit as FractionUnit,
+    fractionable::{Fractionable, Fragmentable, ToPrimitive},
+    ratio::SimpleFraction,
+    rational::Rational,
+    zero::Zero,
 };
 
 pub type Units = u64;
@@ -96,14 +99,12 @@ impl Duration {
         annual_amount.safe_mul(&SimpleFraction::new(self.nanos(), Self::YEAR.nanos()))
     }
 
-    pub fn into_slice_per_ratio<U>(self, amount: U, annual_amount: U) -> Self
+    pub fn into_slice_per_ratio<U>(self, amount: U, annual_amount: U) -> Option<Self>
     where
-        Self: Fragmentable<U>,
-        U: FractionUnit,
+        Self: Fractionable<U>,
+        U: FractionUnit + ToPrimitive<<Self as Fractionable<U>>::HigherPrimitive>,
     {
-        SimpleFraction::new(amount, annual_amount)
-            .of(self)
-            .expect("TODO the method has to return Option")
+        SimpleFraction::new(amount, annual_amount).of(self)
     }
 }
 
