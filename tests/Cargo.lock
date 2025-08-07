@@ -1218,7 +1218,7 @@ dependencies = [
 
 [[package]]
 name = "leaser"
-version = "0.11.0"
+version = "0.12.0"
 dependencies = [
  "access-control",
  "admin_contract",
@@ -1246,7 +1246,7 @@ checksum = "1171693293099992e19cddea4e8b849964e9846f4acee11b3948bcc337be8776"
 
 [[package]]
 name = "lpp"
-version = "0.6.1"
+version = "0.7.0"
 dependencies = [
  "access-control",
  "cosmwasm-std 2.1.7",
