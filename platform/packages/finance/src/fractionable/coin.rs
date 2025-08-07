@@ -38,6 +38,10 @@ impl<C> From<Uint128> for Coin<C> {
     }
 }
 
+impl<C, QuoteC> Fractionable<Coin<C>> for Coin<QuoteC> {
+    type HigherPrimitive = U256;
+}
+
 impl<C> ToPrimitive<U256> for Coin<C> {
     fn into_primitive(self) -> U256 {
         self.amount().into()
