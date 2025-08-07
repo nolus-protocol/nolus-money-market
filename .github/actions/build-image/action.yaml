@@ -36,6 +36,7 @@ runs:
       shell: "sh"
     - env:
         DOCKER_BUILD_RECORD_UPLOAD: "false"
+        DOCKER_BUILD_SUMMARY: "false"
         SOURCE_DATE_EPOCH: "0"
       id: "build-container"
       uses: "docker/build-push-action@v6"

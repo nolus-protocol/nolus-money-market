@@ -4,17 +4,17 @@
 ##                         START : EDIT  HERE : START                         ##
 ################################################################################
 
-ARG alpine_ver="3.21"
+ARG alpine_version="3.21"
 
 ARG binaryen_checksum="e959f2170af4c20c552e9de3a0253704d6a9d2766e8fdb88e4d6ac4bae9388fe"
 
 ARG binaryen_version="123"
 
-ARG cargo_audit_ver="0.21.2"
+ARG cargo_audit_version="0.21.2"
 
-ARG cargo_udeps_ver="0.1.57"
+ARG cargo_udeps_version="0.1.57"
 
-ARG cosmwasm_check_ver="3.0.1"
+ARG cosmwasm_check_version="3.0.1"
 
 ARG cosmwasm_capabilities="cosmwasm_1_1,cosmwasm_1_2,iterator,neutron,staking,stargate"
 
@@ -29,10 +29,10 @@ ARG production_network_max_binary_size="5242880"
 
 ARG protocol_contracts_count="7"
 
-ARG rust_image_ver="1.86"
+ARG rust_image_version="1.86"
 
 ### 1.90
-ARG rust_nightly_ver="2025-08-01"
+ARG rust_nightly_version="2025-08-01"
 
 ARG test_network_build_profile="test_nets_release"
 
@@ -41,19 +41,19 @@ ARG test_network_build_profile_directory="test_nets_release"
 ### 5 MiB
 ARG test_network_max_binary_size="5242880"
 
-ARG tooling_rust_image_ver="1.88"
+ARG tooling_rust_image_version="1.88"
 
 ################################################################################
 ##                           END : EDIT  HERE : END                           ##
 ################################################################################
 
-FROM docker.io/library/alpine:${alpine_ver:?} AS gzip
+FROM docker.io/library/alpine:${alpine_version:?} AS gzip
 
 ENTRYPOINT ["/usr/bin/gzip"]
 
 RUN "apk" "update" && "apk" "add" "gzip"
 
-FROM docker.io/library/rust:${rust_image_ver:?}-alpine${alpine_ver:?} AS rust
+FROM docker.io/library/rust:${rust_image_version:?}-alpine${alpine_version:?} AS rust
 
 ENV SOURCE_DATE_EPOCH="0" \
   CARGO_TARGET_DIR="/tmp/cargo-target/" \
@@ -67,7 +67,7 @@ RUN <<EOF
 "apk" "add" "libc-dev"
 EOF
 
-FROM docker.io/library/rust:${tooling_rust_image_ver:?}-alpine${alpine_ver:?} AS tooling-rust
+FROM docker.io/library/rust:${tooling_rust_image_version:?}-alpine${alpine_version:?} AS tooling-rust
 
 ENV SOURCE_DATE_EPOCH="0" \
   CARGO_TARGET_DIR="/tmp/cargo-target/" \
@@ -81,11 +81,11 @@ EOF
 
 FROM tooling-rust AS cargo-audit
 
-ARG cargo_audit_ver
+ARG cargo_audit_version
 
 RUN \
   --mount=type="tmpfs",target="/tmp/cargo-target/" \
-  "cargo" "install" "cargo-audit@${cargo_audit_ver:?}"
+  "cargo" "install" "cargo-audit@${cargo_audit_version:?}"
 
 ### In-tree tool.
 FROM rust AS cargo-each
@@ -99,19 +99,19 @@ FROM tooling-rust AS cargo-udeps
 
 RUN "apk" "add" "ca-certificates" "openssl-dev" "openssl-libs-static"
 
-ARG cargo_udeps_ver
+ARG cargo_udeps_version
 
 RUN \
   --mount=type="tmpfs",target="/tmp/cargo-target/" \
-  "cargo" "install" "cargo-udeps@${cargo_udeps_ver:?}"
+  "cargo" "install" "cargo-udeps@${cargo_udeps_version:?}"
 
-FROM docker.io/library/rust:${tooling_rust_image_ver:?}-slim-bookworm AS cosmwasm-check
+FROM docker.io/library/rust:${tooling_rust_image_version:?}-slim-bookworm AS cosmwasm-check
 
-ARG cosmwasm_check_ver
+ARG cosmwasm_check_version
 
 RUN \
   --mount=type="tmpfs",target="/tmp/cargo-target/" \
-  "cargo" "install" "cosmwasm-check@${cosmwasm_check_ver:?}" "--target-dir" "/tmp/cargo-target"
+  "cargo" "install" "cosmwasm-check@${cosmwasm_check_version:?}" "--target-dir" "/tmp/cargo-target"
 
 FROM rust AS rust-ci
 
@@ -159,9 +159,9 @@ FROM rust-ci AS check-unused-dependencies
 
 RUN "apk" "add" "util-linux"
 
-ARG rust_nightly_ver
+ARG rust_nightly_version
 
-ENV RUST_NIGHTLY_VERSION="nightly-${rust_nightly_ver:?}"
+ENV RUST_NIGHTLY_VERSION="nightly-${rust_nightly_version:?}"
 
 RUN "rustup" "toolchain" "install" "${RUST_NIGHTLY_VERSION:?}"
 

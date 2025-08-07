@@ -27,41 +27,38 @@
 
 set -eu
 
-RUSTFLAGS="${RUSTFLAGS:+"${RUSTFLAGS} "}-C link-arg=-s"
-readonly "RUSTFLAGS"
-export "RUSTFLAGS"
+readonly "BINARYEN_VERSION"
+: "${BINARYEN_VERSION:?}"
 
 readonly "CONTRACTS_COUNT"
 : "${CONTRACTS_COUNT:?}"
-export "CONTRACTS_COUNT"
 
 readonly "COSMWASM_CAPABILITIES"
 : "${COSMWASM_CAPABILITIES?}"
-export "COSMWASM_CAPABILITIES"
 
 readonly "PRODUCTION_NETWORK_BUILD_PROFILE"
 : "${PRODUCTION_NETWORK_BUILD_PROFILE:?}"
-export "PRODUCTION_NETWORK_BUILD_PROFILE"
 
 readonly "PRODUCTION_NETWORK_BUILD_PROFILE_DIRECTORY"
 : "${PRODUCTION_NETWORK_BUILD_PROFILE_DIRECTORY:?}"
-export "PRODUCTION_NETWORK_BUILD_PROFILE_DIRECTORY"
 
 readonly "PRODUCTION_NETWORK_MAX_BINARY_SIZE"
 : "${PRODUCTION_NETWORK_MAX_BINARY_SIZE:?}"
-export "PRODUCTION_NETWORK_MAX_BINARY_SIZE"
+
+readonly "RUST_VERSION"
+: "${RUST_VERSION:?}"
+
+readonly "SOFTWARE_RELEASE_ID"
+: "${SOFTWARE_RELEASE_ID:?}"
 
 readonly "TEST_NETWORK_BUILD_PROFILE"
 : "${TEST_NETWORK_BUILD_PROFILE:?}"
-export "TEST_NETWORK_BUILD_PROFILE"
 
 readonly "TEST_NETWORK_BUILD_PROFILE_DIRECTORY"
 : "${TEST_NETWORK_BUILD_PROFILE_DIRECTORY:?}"
-export "TEST_NETWORK_BUILD_PROFILE_DIRECTORY"
 
 readonly "TEST_NETWORK_MAX_BINARY_SIZE"
 : "${TEST_NETWORK_MAX_BINARY_SIZE:?}"
-export "TEST_NETWORK_MAX_BINARY_SIZE"
 
 readonly "PROTOCOL_NETWORK"
 
@@ -70,7 +67,11 @@ readonly "PROTOCOL_NAME"
 readonly "PROTOCOL_RELEASE_ID"
 
 case "${#}" in
-  ("1") ;;
+  ("1")
+    network_group="${1:?}"
+
+    shift
+    ;;
   (*)
     "echo" \
       "This script takes exactly one argument, the network group name!" \
@@ -79,8 +80,9 @@ case "${#}" in
     exit "1"
 esac
 
-network_group="${1:?}"
-shift
+RUSTFLAGS="${RUSTFLAGS:+"${RUSTFLAGS} "}-C link-arg=-s"
+readonly "RUSTFLAGS"
+export "RUSTFLAGS"
 
 case "${network_group:?}" in
   ("test-net")
@@ -267,12 +269,81 @@ ___check_optimized_binary() (
     "${optimized_binaries_directory}/${binary_name:?}"
 )
 
-___check_optimized_binaries_sizes() (
+___calculate_optimized_binary_checksum() (
+  case "${#}" in
+    ("1")
+      binary_name="${1:?}"
+
+      shift
+      ;;
+    (*)
+      "echo" \
+        "\"___calculate_optimized_binary_checksum\" takes exactly one argument, the optimized binary's name!" \
+        >&2
+
+      exit "1"
+  esac
+
+  "echo" \
+    "Calculating checksum for \"${binary_name:?}\"." \
+    >&2
+
+  "sha256sum" \
+    "${optimized_binaries_directory}/${binary_name:?}" \
+    >"${optimized_binaries_directory}/${binary_name:?}.sha256"
+)
+
+build() (
+  dex_type="${1:?}"
+  shift
+
   case "${#}" in
     ("0") ;;
     (*)
       "echo" \
-        "\"___check_optimized_binaries_sizes\" takes no arguments!" \
+        "The \"build\" function takes exactly one argument, the DEX type tag!" \
+        >&2
+
+      exit "1"
+  esac
+
+  "___build_unoptimized"
+
+  unoptimized_binaries="$("___list_unoptimized_binaries")"
+  readonly "unoptimized_binaries"
+
+  if ! test -e "${optimized_binaries_directory:?}"
+  then
+    "mkdir" "${optimized_binaries_directory:?}"
+  fi
+
+  "___check_binaries_count" "${unoptimized_binaries?}"
+
+  while read -r "file"
+  do
+    case "${file?}" in
+      ("") continue ;;
+    esac
+
+    name="$("basename" "${file:?}")"
+
+    "___optimize_binary" "${name:?}"
+
+    "___check_optimized_binary" "${name:?}"
+
+    "___calculate_optimized_binary_checksum" "${name:?}"
+  done \
+    <<EOF
+${unoptimized_binaries:?}
+EOF
+)
+
+check_optimized_binaries_sizes() (
+  case "${#}" in
+    ("0") ;;
+    (*)
+      "echo" \
+        "\"check_optimized_binaries_sizes\" takes no arguments!" \
         >&2
 
       exit "1"
@@ -322,50 +393,19 @@ ${large_files:?}" \
   exit "1"
 )
 
-build() (
-  dex_type="${1:?}"
-  shift
+generate_informational_files() {
+  "echo" \
+    "${BINARYEN_VERSION:?}" \
+    >"${optimized_binaries_directory:?}/binaryen-version.txt"
 
-  case "${#}" in
-    ("0") ;;
-    (*)
-      "echo" \
-        "The \"build\" function takes exactly one argument, the DEX type tag!" \
-        >&2
+  "echo" \
+    "${RUST_VERSION:?}" \
+    >"${optimized_binaries_directory:?}/rust-version.txt"
 
-      exit "1"
-  esac
-
-  "___build_unoptimized"
-
-  unoptimized_binaries="$("___list_unoptimized_binaries")"
-  readonly "unoptimized_binaries"
-
-  if ! test -e "${optimized_binaries_directory:?}"
-  then
-    "mkdir" "${optimized_binaries_directory:?}"
-  fi
-
-  "___check_binaries_count" "${unoptimized_binaries?}"
-
-  while read -r "file"
-  do
-    case "${file?}" in
-      ("") continue ;;
-    esac
-
-    name="$("basename" "${file:?}")"
-
-    "___optimize_binary" "${name:?}"
-
-    "___check_optimized_binary" "${name:?}"
-  done \
-    <<EOF
-${unoptimized_binaries:?}
-EOF
-
-  "___check_optimized_binaries_sizes"
-)
+  "echo" \
+    "${SOFTWARE_RELEASE_ID:?}" \
+    >"${optimized_binaries_directory:?}/software-release-id.txt"
+}
 
 "build" "@agnostic"
 
@@ -407,3 +447,7 @@ case "${workspace:?}" in
 
     exit "1"
 esac
+
+"check_optimized_binaries_sizes"
+
+"generate_informational_files"

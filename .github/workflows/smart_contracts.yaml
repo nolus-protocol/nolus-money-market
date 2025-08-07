@@ -137,8 +137,7 @@ jobs:
             --volume ".:/src:ro" \
             "${image_tag:?}"
   check-lockfiles:
-    runs-on: "ubuntu-latest"
-    # runs-on: "self-hosted"
+    runs-on: "ubuntu-latest" # "self-hosted"
     env:
       check-dependencies-versions: |-
         ${{ toJSON(github.ref_type == 'tag' || (github.event_name == 'workflow_dispatch' && inputs.check-dependencies-version)) }}
