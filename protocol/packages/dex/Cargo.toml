@@ -8,10 +8,17 @@ authors.workspace = true
 license.workspace = true
 
 [package.metadata.cargo-each]
-combinations = [{ tags = ["ci", "@agnostic"], include-rest = true }]
+combinations = [{ tags = ["ci", "@agnostic"], feature-groups = ["impl-or-testing"], include-rest = false }]
+feature-groups = { impl-or-testing = { members = ["impl","testing",], at-least-one = false, mutually-exclusive = true }}
+
 
 [features]
-impl = ["dep:access-control", "dep:oracle-platform", "oracle/stub_price", "dep:timealarms"]
+impl = [
+    "dep:access-control",
+    "dep:oracle-platform",
+    "oracle/stub_price",
+    "dep:timealarms",
+]
 migration = []
 testing = ["finance/testing"]
 
