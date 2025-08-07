@@ -26,10 +26,6 @@ impl ToPrimitive<U256> for Units {
     }
 }
 
-impl<C, const UPPER_BOUND: Units> Fractionable<Coin<C>> for BoundPercent<UPPER_BOUND> {
-    type HigherPrimitive = U256;
-}
-
 impl CheckedMul<u64> for u64 {
     type Output = Self;
 
@@ -65,12 +61,6 @@ impl<C, const UPPER_BOUND: Units> Fractionable<Coin<C>> for BoundPercent<UPPER_B
 impl<const UPPER_BOUND: Units> ToPrimitive<U256> for BoundPercent<UPPER_BOUND> {
     fn into_primitive(self) -> U256 {
         u128::from(self.units()).into()
-    }
-}
-
-impl<const UPPER_BOUND: Units> ToPrimitive<SimpleFraction<U256>> for BoundPercent<UPPER_BOUND> {
-    fn into_primitive(self) -> SimpleFraction<U256> {
-        self._to_fraction::<U256>()
     }
 }
 
