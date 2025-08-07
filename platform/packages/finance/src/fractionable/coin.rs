@@ -3,7 +3,8 @@ use sdk::cosmwasm_std::{Uint128, Uint256};
 
 use crate::{
     coin::{Amount, Coin},
-    fractionable::{ToPrimitive, TryFromPrimitive},
+    duration::Duration,
+    fractionable::{Fractionable, ToPrimitive, TryFromPrimitive},
 };
 
 use super::HigherRank;
@@ -16,6 +17,10 @@ where
     type Type = Uint256;
 
     type Intermediate = Uint128;
+}
+
+impl<C> Fractionable<Duration> for Coin<C> {
+    type HigherPrimitive = U256;
 }
 
 // TODO: Remove with Frgamentable

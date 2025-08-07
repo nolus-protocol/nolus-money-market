@@ -49,14 +49,16 @@ where
         apr: Percent100,
         period: Duration,
     ) -> Result<MessageResponse, ContractError> {
-        let reward_in_stable = interest::interest(Percent::from(apr), self.balance, period);
-
-        convert::from_quote::<_, _, _, _, PlatformGroup>(&self.oracle, reward_in_stable)
-            .map_err(ContractError::ConvertRewardsToNLS)
-            .and_then(|rewards| {
-                self.lpp
-                    .distribute(rewards)
-                    .map_err(ContractError::DistributeLppReward)
+        interest::interest(Percent::from(apr), self.balance, period)
+            .ok_or(ContractError::InterestOverflow)
+            .and_then(|reward_in_stable| {
+                convert::from_quote::<_, _, _, _, PlatformGroup>(&self.oracle, reward_in_stable)
+                    .map_err(ContractError::ConvertRewardsToNLS)
+                    .and_then(|rewards| {
+                        self.lpp
+                            .distribute(rewards)
+                            .map_err(ContractError::DistributeLppReward)
+                    })
             })
     }
 }

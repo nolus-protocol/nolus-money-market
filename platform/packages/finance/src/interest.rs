@@ -1,18 +1,20 @@
 use std::{cmp, ops::Sub};
 
 use crate::{
-    duration::{Duration, Units as DurationUnits},
+    duration::Duration,
     fraction::Unit as FractionUnit,
-    fractionable::{Fractionable, Fragmentable, ToPrimitive},
+    fractionable::{Fractionable, ToPrimitive},
     rational::Rational,
 };
 
 /// Computes how much interest is accrued
-pub fn interest<U, R, P>(rate: R, principal: P, period: Duration) -> P
+pub fn interest<U, R, P>(rate: R, principal: P, period: Duration) -> Option<P>
 where
     // TODO R:Fraction<U> when Ratio becomes a struct
     R: Rational<U>,
-    P: Fragmentable<U> + Fragmentable<DurationUnits>,
+    P: Fractionable<U> + Fractionable<Duration>,
+    U: ToPrimitive<<P as Fractionable<U>>::HigherPrimitive>,
+    Duration: ToPrimitive<<P as Fractionable<Duration>>::HigherPrimitive>,
 {
     let interest_per_year = rate.of(principal).expect("TODO remove when R:Fraction<U>");
     period.annualized_slice_of(interest_per_year)
@@ -25,27 +27,28 @@ pub fn pay<U, R, P>(rate: R, principal: P, payment: P, period: Duration) -> Opti
 where
     // TODO R:Fraction<U> when Ratio becomes a struct
     R: Rational<U>,
-    P: Fragmentable<U>
-        + Fragmentable<DurationUnits>
+    P: Fractionable<U>
+        + Fractionable<Duration>
         + FractionUnit
         + Sub<Output = P>
         + ToPrimitive<<Duration as Fractionable<P>>::HigherPrimitive>,
-    Duration: Fractionable<P>,
+    U: ToPrimitive<<P as Fractionable<U>>::HigherPrimitive>,
+    Duration: Fractionable<P> + ToPrimitive<<P as Fractionable<Duration>>::HigherPrimitive>,
 {
-    let interest_due_per_period: P = interest(rate, principal, period);
+    interest(rate, principal, period).and_then(|interest_due_per_period| {
+        if interest_due_per_period == P::ZERO {
+            Some((Duration::from_nanos(0), payment))
+        } else {
+            let repayment: P = cmp::min(interest_due_per_period, payment);
 
-    if interest_due_per_period == P::ZERO {
-        Some((Duration::from_nanos(0), payment))
-    } else {
-        let repayment: P = cmp::min(interest_due_per_period, payment);
-
-        period
-            .into_slice_per_ratio(repayment, interest_due_per_period)
-            .map(|period_paid_for| {
-                let change = payment - repayment;
-                (period_paid_for, change)
-            })
-    }
+            period
+                .into_slice_per_ratio(repayment, interest_due_per_period)
+                .map(|period_paid_for| {
+                    let change = payment - repayment;
+                    (period_paid_for, change)
+                })
+        }
+    })
 }
 
 #[cfg(test)]
@@ -155,7 +158,7 @@ mod tests {
         let principal = MyCoin::new(1001);
 
         let res = super::interest(Percent::ZERO, principal, PERIOD_LENGTH);
-        assert_eq!(MyCoin::ZERO, res);
+        assert_eq!(MyCoin::ZERO, res.unwrap());
     }
 
     fn pay_impl(

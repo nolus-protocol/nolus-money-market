@@ -9,7 +9,7 @@ use sdk::cosmwasm_std::{Timestamp, Uint128};
 
 use crate::{
     fraction::Unit as FractionUnit,
-    fractionable::{Fractionable, Fragmentable, ToPrimitive},
+    fractionable::{Fractionable, ToPrimitive},
     ratio::SimpleFraction,
     rational::Rational,
     zero::Zero,
@@ -92,11 +92,12 @@ impl Duration {
     }
 
     #[track_caller]
-    pub fn annualized_slice_of<T>(&self, annual_amount: T) -> T
+    pub fn annualized_slice_of<T>(&self, annual_amount: T) -> Option<T>
     where
-        T: Fragmentable<Units>,
+        T: Fractionable<Duration>,
+        Duration: ToPrimitive<T::HigherPrimitive>,
     {
-        annual_amount.safe_mul(&SimpleFraction::new(self.nanos(), Self::YEAR.nanos()))
+        SimpleFraction::new(*self, Self::YEAR).of(annual_amount)
     }
 
     pub fn into_slice_per_ratio<U>(self, amount: U, annual_amount: U) -> Option<Self>
