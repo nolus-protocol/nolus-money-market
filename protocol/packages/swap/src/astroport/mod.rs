@@ -18,9 +18,15 @@ use sdk::{
     cosmwasm_std::{self, Coin as CwCoin, Decimal},
 };
 
-use self::api::{AssetInfo, ExecuteMsg, SwapOperation, SwapResponseData};
+use self::{
+    api::{AssetInfo, ExecuteMsg, SwapOperation, SwapResponseData},
+    router::Router,
+};
+
+pub type Impl = GenericImpl<self::router::Impl>;
 
 mod api;
+mod router;
 #[cfg(test)]
 mod test;
 #[cfg(any(test, feature = "testing"))]
@@ -32,7 +38,7 @@ type ResponseMsg = MsgExecuteContractResponse;
 // 50% is the value of `astroport::pair::MAX_ALLOWED_SLIPPAGE`
 const MAX_IMPACT: Decimal = Decimal::percent(50);
 
-pub struct Impl<R>
+pub struct GenericImpl<R>
 where
     Self: ExactAmountIn,
     R: Router,
@@ -41,7 +47,7 @@ where
     _never: Never,
 }
 
-impl<R> ExactAmountIn for Impl<R>
+impl<R> ExactAmountIn for GenericImpl<R>
 where
     R: Router,
 {
@@ -95,26 +101,6 @@ where
             })
             .map(|swap_resp| swap_resp.return_amount.into())
     }
-}
-
-pub trait Router {
-    const ADDRESS: &'static str;
-}
-
-pub struct NeutronMain {}
-
-impl Router for NeutronMain {
-    /// Source: https://github.com/astroport-fi/astroport-changelog/blob/main/neutron/neutron-1/core_mainnet.json
-    const ADDRESS: &'static str =
-        "neutron1rwj6mfxzzrwskur73v326xwuff52vygqk73lr7azkehnfzz5f5wskwekf4";
-}
-
-pub struct NeutronTest {}
-
-impl Router for NeutronTest {
-    /// Source: https://github.com/astroport-fi/astroport-changelog/blob/main/neutron/pion-1/core_testnet.json
-    const ADDRESS: &'static str =
-        "neutron12jm24l9lr9cupufqjuxpdjnnweana4h66tsx5cl800mke26td26sq7m05p";
 }
 
 enum Never {}
