@@ -5,6 +5,7 @@ use crate::{
     coin::{Amount, Coin},
     duration::Duration,
     fractionable::{Fractionable, ToPrimitive, TryFromPrimitive},
+    percent::Units as PercentUnits,
 };
 
 use super::HigherRank;
@@ -39,6 +40,10 @@ impl<C> From<Uint128> for Coin<C> {
 }
 
 impl<C, QuoteC> Fractionable<Coin<C>> for Coin<QuoteC> {
+    type HigherPrimitive = U256;
+}
+
+impl<C> Fractionable<PercentUnits> for Coin<C> {
     type HigherPrimitive = U256;
 }
 

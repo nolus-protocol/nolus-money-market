@@ -89,7 +89,7 @@ pub(super) mod test {
     use crate::{
         coin::Coin,
         fraction::Fraction,
-        fractionable::Fragmentable,
+        fractionable::{Fractionable, ToPrimitive},
         percent::{Percent, Percent100},
         ratio::SimpleFraction,
         rational::Rational,
@@ -227,7 +227,12 @@ pub(super) mod test {
 
     pub(crate) fn test_of<P>(permille: Units, quantity: P, exp: P)
     where
-        P: Clone + Debug + Display + Fragmentable<Units> + PartialEq,
+        P: Clone
+            + Debug
+            + Display
+            + Fractionable<Units>
+            + PartialEq,
+        Units: ToPrimitive<<P as Fractionable<Units>>::HigherPrimitive>,
     {
         let perm = Percent100::from_permille(permille);
         assert_eq!(

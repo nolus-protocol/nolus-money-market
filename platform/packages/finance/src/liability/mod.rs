@@ -6,7 +6,7 @@ use crate::{
     duration::Duration,
     error::{Error, Result},
     fraction::Fraction,
-    fractionable::Fragmentable,
+    fractionable::{Fractionable, Fragmentable, ToPrimitive},
     percent::{Percent, Percent100, Units as PercentUnits},
     ratio::SimpleFraction,
     rational::Rational,
@@ -144,7 +144,8 @@ impl Liability {
     /// Otherwise, amount_to_liquidate == total_due
     pub fn amount_to_liquidate<P>(&self, lease_amount: P, total_due: P) -> P
     where
-        P: Copy + Fragmentable<PercentUnits> + Ord + Sub<Output = P> + Zero,
+        P: Copy + Fractionable<PercentUnits> + Ord + Sub<Output = P> + Zero,
+        PercentUnits: ToPrimitive<<P as Fractionable<u32>>::HigherPrimitive>,
     {
         if total_due < self.max.of(lease_amount) {
             return P::ZERO;

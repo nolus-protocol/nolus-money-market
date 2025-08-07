@@ -6,7 +6,7 @@ use crate::{
     coin::Amount,
     fraction::Unit as FractionUnit,
     fractionable::{Fractionable, ToPrimitive, TryFromPrimitive},
-    percent::{Units as PercentUnits, bound::BoundPercent},
+    percent::Units as PercentUnits,
     price::Price,
     ratio::{Ratio, SimpleFraction},
     zero::Zero,
@@ -14,8 +14,7 @@ use crate::{
 
 use super::Fragmentable;
 
-impl<const UPPER_BOUND: PercentUnits, C, QuoteC> Fractionable<BoundPercent<UPPER_BOUND>>
-    for Price<C, QuoteC>
+impl<C, QuoteC> Fractionable<PercentUnits> for Price<C, QuoteC>
 where
     C: 'static,
     QuoteC: 'static,

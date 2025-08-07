@@ -5,10 +5,10 @@ use crate::{
     coin::Coin,
     fractionable::{Fractionable, ToPrimitive, TryFromPrimitive},
     percent::{Units, bound::BoundPercent},
-    ratio::{Ratio, SimpleFraction},
+    ratio::SimpleFraction,
 };
 
-use super::{Fragmentable, HigherRank};
+use super::HigherRank;
 
 // Remove with Fragmentable
 impl<T> HigherRank<T> for u32
@@ -27,8 +27,14 @@ impl<const UPPER_BOUND: Units> Fractionable<Units> for BoundPercent<UPPER_BOUND>
     type HigherPrimitive = u64;
 }
 
-impl ToPrimitive<u64> for u32 {
+impl ToPrimitive<u64> for Units {
     fn into_primitive(self) -> u64 {
+        self.into()
+    }
+}
+
+impl ToPrimitive<U256> for Units {
+    fn into_primitive(self) -> U256 {
         self.into()
     }
 }
@@ -78,33 +84,6 @@ impl<const UPPER_BOUND: Units> TryFromPrimitive<U256> for BoundPercent<UPPER_BOU
         u128::try_from(primitive)
             .ok()
             .and_then(|u_128| Units::try_from(u_128).ok().map(Self::from_permille))
-    }
-}
-
-// TODO implement Fractionble<BoundPercent<UPPER_BOUND>> for BoundPercent<UPPER_BOUND>
-impl<const UPPER_BOUND: Units> Fragmentable<Units> for BoundPercent<UPPER_BOUND> {
-    #[track_caller]
-    fn safe_mul<R>(self, ratio: &R) -> Self
-    where
-        R: Ratio<Units>,
-    {
-        Self::from_permille(self.units().safe_mul(ratio))
-    }
-}
-
-impl<C, const UPPER_BOUND: Units> Fragmentable<Coin<C>> for BoundPercent<UPPER_BOUND> {
-    #[track_caller]
-    fn safe_mul<F>(self, fraction: &F) -> Self
-    where
-        F: Ratio<Coin<C>>,
-    {
-        let p128: u128 = self.units().into();
-        // TODO re-assess the design of Ratio ... and whether it could be > 1
-        let res: Units = p128
-            .safe_mul(fraction)
-            .try_into()
-            .expect("overflow computing a fraction of permille");
-        Self::from_permille(res)
     }
 }
 
