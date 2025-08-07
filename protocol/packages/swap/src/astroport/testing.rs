@@ -16,11 +16,12 @@ use sdk::{
 use crate::testing::{self, ExactAmountInSkel, SwapRequest};
 
 use super::{
-    Impl, RequestMsg, ResponseMsg, Router,
+    GenericImpl, RequestMsg, ResponseMsg,
     api::{AssetInfo, ExecuteMsg, SwapOperation, SwapResponseData},
+    router::Router,
 };
 
-impl<R> ExactAmountInSkel for Impl<R>
+impl<R> ExactAmountInSkel for GenericImpl<R>
 where
     Self: ExactAmountIn,
     R: Router,
