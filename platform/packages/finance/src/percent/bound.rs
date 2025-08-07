@@ -13,7 +13,7 @@ use crate::{
     coin::Amount,
     error::{Error, Result as FinanceResult},
     fraction::Unit as FractionUnit,
-    fractionable::Fragmentable,
+    fractionable::{Fractionable, ToPrimitive},
     ratio::{Ratio, SimpleFraction},
     rational::Rational,
     zero::Zero,
@@ -52,8 +52,8 @@ impl<const UPPER_BOUND: Units> BoundPercent<UPPER_BOUND> {
 
     pub fn from_fraction<U>(nominator: U, denominator: U) -> Option<Self>
     where
-        Self: Fragmentable<U>,
-        U: FractionUnit,
+        Self: Fractionable<U>,
+        U: FractionUnit + ToPrimitive<<Self as Fractionable<U>>::HigherPrimitive>,
     {
         SimpleFraction::new(nominator, denominator).of(Self::HUNDRED)
     }
