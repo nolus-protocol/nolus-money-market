@@ -1,3 +1,5 @@
+use std::slice;
+
 use currencies::{
     Lpn,
     testing::{LeaseC1, LeaseC2, LeaseC3, LeaseC7, PaymentC1},
@@ -125,7 +127,7 @@ fn common_quote_with_conversion(
 
         reserve.extend_from_slice(&lpp_reserve);
 
-        reserve.extend_from_slice(&[user_reserve.clone()]);
+        reserve.extend_from_slice(slice::from_ref(&user_reserve));
 
         reserve
     })
