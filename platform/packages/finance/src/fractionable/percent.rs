@@ -10,6 +10,7 @@ use crate::{
 
 use super::{Fragmentable, HigherRank};
 
+// Remove with Fragmentable
 impl<T> HigherRank<T> for u32
 where
     T: Into<Self>,
@@ -18,14 +19,18 @@ where
     type Intermediate = Self;
 }
 
-impl<const UPPER_BOUND: Units> Fractionable<BoundPercent<UPPER_BOUND>>
-    for BoundPercent<UPPER_BOUND>
-{
+impl<C, const UPPER_BOUND: Units> Fractionable<Coin<C>> for BoundPercent<UPPER_BOUND> {
+    type HigherPrimitive = U256;
+}
+
+impl<const UPPER_BOUND: Units> Fractionable<Units> for BoundPercent<UPPER_BOUND> {
     type HigherPrimitive = u64;
 }
 
-impl<C, const UPPER_BOUND: Units> Fractionable<Coin<C>> for BoundPercent<UPPER_BOUND> {
-    type HigherPrimitive = U256;
+impl ToPrimitive<u64> for u32 {
+    fn into_primitive(self) -> u64 {
+        self.into()
+    }
 }
 
 impl CheckedMul<u64> for u64 {
@@ -56,9 +61,9 @@ impl<const UPPER_BOUND: Units> ToPrimitive<U256> for BoundPercent<UPPER_BOUND> {
     }
 }
 
-impl<const UPPER_BOUND: Units> ToPrimitive<SimpleFraction<U256>> for BoundPercent<UPPER_BOUND> {
+impl ToPrimitive<SimpleFraction<U256>> for Units {
     fn into_primitive(self) -> SimpleFraction<U256> {
-        self.to_fraction::<U256>()
+        SimpleFraction::new(self.into(), 1u32.into())
     }
 }
 
