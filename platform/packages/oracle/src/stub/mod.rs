@@ -94,7 +94,6 @@ where
     where
         V: WithOracle<QuoteC, QuoteG, G = G>,
         G: Group,
-        // QuoteC::Group: MemberOf<G> + MemberOf<G::TopG>,
         QuoteC::Group: MemberOf<G::TopG>,
     {
         cmd.exec(OracleStub::<'_, G, QuoteC, QuoteG, BasePriceRequest>::new(
