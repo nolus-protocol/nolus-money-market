@@ -38,7 +38,7 @@ mod error;
 mod lender;
 mod rewards;
 
-const CONTRACT_STORAGE_VERSION: VersionSegment = 2;
+const CONTRACT_STORAGE_VERSION: VersionSegment = 3;
 const CURRENT_RELEASE: ProtocolPackageRelease = ProtocolPackageRelease::current(
     package_name!(),
     package_version!(),

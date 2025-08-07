@@ -2,7 +2,7 @@ lints = { workspace = true }
 
 [package]
 name = "lpp"
-version = "0.6.1"
+version = "0.7.0"
 edition.workspace = true
 authors.workspace = true
 license.workspace = true
