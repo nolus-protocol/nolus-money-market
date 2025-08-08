@@ -141,7 +141,7 @@ mod test {
 
         #[test]
         fn of() {
-            // TODO replace it with Ratio whe it becode a struct
+            // TODO replace it with Ratio whe it becomes a struct
             let ratio_one = SimpleFraction::new(
                 Coin::<SuperGroupTestC1>::new(u128::MAX),
                 Coin::<SuperGroupTestC1>::new(u128::MAX),

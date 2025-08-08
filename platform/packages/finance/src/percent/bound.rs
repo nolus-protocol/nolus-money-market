@@ -162,7 +162,22 @@ impl<const UPPER: Units> FractionUnit for BoundPercent<UPPER> where
 {
 }
 
-// TODO remove it once the multiplication + trim logic is refactored
+impl<const UPPER_BOUND: Units> From<BoundPercent<UPPER_BOUND>> for Amount {
+    fn from(percent: BoundPercent<UPPER_BOUND>) -> Self {
+        Amount::from(percent.units())
+    }
+}
+
+impl<const UPPER_BOUND: Units> From<BoundPercent<UPPER_BOUND>> for SimpleFraction<Amount> {
+    fn from(percent: BoundPercent<UPPER_BOUND>) -> Self {
+        Self::new(
+            percent.0.into(),
+            BoundPercent::<UPPER_BOUND>::HUNDRED.0.into(),
+        )
+    }
+}
+
+// TODO remove it once the multiplication is refactored
 impl<const UPPER_BOUND: Units> From<BoundPercent<UPPER_BOUND>> for Uint256 {
     fn from(percent: BoundPercent<UPPER_BOUND>) -> Self {
         Amount::from(percent.0).into()
