@@ -117,7 +117,6 @@ impl Liability {
         self.recalc_time
     }
 
-    // TODO replace Fractionable<PercentUnits> with Fractionable<Percent100> + Fractionable<Percent>
     pub fn init_borrow_amount<P>(&self, downpayment: P, may_max_ltd: Option<Percent>) -> P
     where
         P: Copy + Fractionable<PercentUnits> + Ord,

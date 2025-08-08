@@ -178,7 +178,7 @@ impl<const UPPER_BOUND: Units> From<BoundPercent<UPPER_BOUND>> for SimpleFractio
     }
 }
 
-// TODO remove it once the multiplication + trim logic is refactored
+// TODO remove it once the multiplication is refactored
 impl<const UPPER_BOUND: Units> From<BoundPercent<UPPER_BOUND>> for Uint256 {
     fn from(percent: BoundPercent<UPPER_BOUND>) -> Self {
         Amount::from(percent).into()

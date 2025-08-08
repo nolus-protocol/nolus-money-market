@@ -14,7 +14,6 @@ where
     type Type = u64;
 }
 
-// TODO implement Fractionble<BoundPercent<UPPER_BOUND>> for BoundPercent<UPPER_BOUND>
 impl<const UPPER_BOUND: Units> Fractionable<Units> for BoundPercent<UPPER_BOUND> {
     #[track_caller]
     fn safe_mul<R>(self, ratio: &R) -> Self
@@ -91,7 +90,7 @@ mod test {
 
         #[test]
         fn of() {
-            // TODO replace it with Ratio whe it becode a struct
+            // TODO replace it with Ratio whe it becomes a struct
             let ratio_one = SimpleFraction::new(
                 Coin::<SuperGroupTestC1>::new(u128::MAX),
                 Coin::<SuperGroupTestC1>::new(u128::MAX),
