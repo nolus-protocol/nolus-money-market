@@ -48,6 +48,22 @@ impl ToPrimitive<SimpleFraction<U256>> for Units {
     }
 }
 
+impl TryFromPrimitive<u64> for u32 {
+    fn try_from_primitive(primitive: u64) -> Option<Self> {
+        primitive.try_into().ok()
+    }
+}
+
+// Bound Percent
+
+impl<C, const UPPER_BOUND: Units> Fractionable<Coin<C>> for BoundPercent<UPPER_BOUND> {
+    type HigherPrimitive = U256;
+}
+
+impl<const UPPER_BOUND: Units> Fractionable<Units> for BoundPercent<UPPER_BOUND> {
+    type HigherPrimitive = u64;
+}
+
 impl<const UPPER_BOUND: Units> ToPrimitive<u64> for BoundPercent<UPPER_BOUND> {
     fn into_primitive(self) -> u64 {
         self.units().into()
