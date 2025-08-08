@@ -1,4 +1,4 @@
-use finance::{duration::Duration, percent::Percent};
+use finance::{duration::Duration, percent::Percent100};
 use lpp_platform::CoinStable;
 use platform::{
     batch::{Batch, Emit, Emitter},
@@ -18,7 +18,7 @@ enum DistributeRewards {
 
 pub struct MockPool {
     balance: CoinStable,
-    apr: Percent,
+    apr: Percent100,
     period: Duration,
     rewards_result: DistributeRewards,
 }
@@ -27,13 +27,13 @@ impl MockPool {
     pub fn reward_none(balance: CoinStable) -> Self {
         Self {
             balance,
-            apr: Default::default(),
+            apr: Percent100::ZERO,
             period: Default::default(),
             rewards_result: DistributeRewards::None,
         }
     }
 
-    pub fn reward_ok(balance: CoinStable, apr: Percent, period: Duration) -> Self {
+    pub fn reward_ok(balance: CoinStable, apr: Percent100, period: Duration) -> Self {
         Self {
             balance,
             apr,
@@ -42,7 +42,7 @@ impl MockPool {
         }
     }
 
-    pub fn reward_fail(balance: CoinStable, apr: Percent, period: Duration) -> Self {
+    pub fn reward_fail(balance: CoinStable, apr: Percent100, period: Duration) -> Self {
         Self {
             balance,
             apr,
@@ -57,7 +57,11 @@ impl Pool for MockPool {
         self.balance
     }
 
-    fn distribute_rewards(self, apr: Percent, period: Duration) -> Result<Response, ContractError> {
+    fn distribute_rewards(
+        self,
+        apr: Percent100,
+        period: Duration,
+    ) -> Result<Response, ContractError> {
         let res = match self.rewards_result {
             DistributeRewards::None => {
                 unreachable!("calling Pool::distribute_rewards is not expected")

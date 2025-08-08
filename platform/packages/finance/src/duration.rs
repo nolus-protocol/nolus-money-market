@@ -8,15 +8,15 @@ use serde::{Deserialize, Serialize};
 use sdk::cosmwasm_std::{Timestamp, Uint128};
 
 use crate::{
-    fraction::Fraction,
-    fractionable::{Fractionable, TimeSliceable},
-    ratio::Rational,
-    zero::Zero,
+    fraction::Unit as FractionUnit, fractionable::Fractionable, ratio::SimpleFraction,
+    rational::Rational, zero::Zero,
 };
 
 pub type Units = u64;
 
 pub type Seconds = u32;
+
+impl FractionUnit for Units {}
 
 /// A more storage and compute optimal version of its counterpart in the std::time.
 /// Designed to represent a timespan between cosmwasm_std::Timestamp-s.
@@ -91,17 +91,19 @@ impl Duration {
     #[track_caller]
     pub fn annualized_slice_of<T>(&self, annual_amount: T) -> T
     where
-        T: TimeSliceable,
+        T: Fractionable<Units>,
     {
-        annual_amount.safe_mul(&Rational::new(self.nanos(), Self::YEAR.nanos()))
+        annual_amount.safe_mul(&SimpleFraction::new(self.nanos(), Self::YEAR.nanos()))
     }
 
     pub fn into_slice_per_ratio<U>(self, amount: U, annual_amount: U) -> Self
     where
         Self: Fractionable<U>,
-        U: Zero + Debug + PartialEq + Copy,
+        U: FractionUnit,
     {
-        Rational::new(amount, annual_amount).of(self)
+        SimpleFraction::new(amount, annual_amount)
+            .of(self)
+            .expect("TODO the method has to return Option")
     }
 }
 
@@ -115,6 +117,12 @@ impl From<Duration> for Uint128 {
     fn from(d: Duration) -> Self {
         u128::from(d).into()
     }
+}
+
+impl FractionUnit for Duration {}
+
+impl Zero for Duration {
+    const ZERO: Self = Self::from_nanos(0);
 }
 
 impl TryFrom<u128> for Duration {

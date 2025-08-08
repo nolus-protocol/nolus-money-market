@@ -6,10 +6,10 @@ use currency::CurrencyDef;
 use finance::{
     coin::{Amount, Coin, CoinDTO},
     duration::Duration,
-    fraction::Fraction,
-    percent::Percent,
+    percent::{Percent, Percent100},
     price::{self, Price},
-    ratio::Rational,
+    ratio::SimpleFraction,
+    rational::Rational,
     zero::Zero,
 };
 use lease::api::{
@@ -44,10 +44,11 @@ fn partial_repay() {
     let downpayment = DOWNPAYMENT;
 
     let amount = super::quote_borrow(&test_case, downpayment);
-    let partial_payment: PaymentCoin = Fraction::<PaymentCoin>::of(
-        &Rational::new(1, 2),
-        super::create_payment_coin(amount.into()),
-    );
+    let partial_payment =
+        SimpleFraction::<PaymentCoin>::new(PaymentCoin::new(1), PaymentCoin::new(2))
+            .of(super::create_payment_coin(amount.into()))
+            .unwrap();
+
     let expected_result =
         super::expected_newly_opened_state(&test_case, downpayment, partial_payment);
 
@@ -167,18 +168,20 @@ fn full_repay_with_max_ltd() {
     let mut test_case = super::create_test_case::<PaymentCurrency>();
     let downpayment = DOWNPAYMENT;
     let max_ltd = Percent::from_percent(10);
-    let borrowed = max_ltd.of(DOWNPAYMENT);
+    let borrowed = max_ltd.of(DOWNPAYMENT).unwrap();
     let lease = super::open_lease(&mut test_case, downpayment, Some(max_ltd));
 
-    let lease_amount = (Percent::HUNDRED + max_ltd).of(price::total(
-        downpayment,
-        Price::<PaymentCurrency, LeaseCurrency>::identity(),
-    ));
+    let lease_amount = (Percent::HUNDRED + max_ltd)
+        .of(price::total(
+            downpayment,
+            Price::<PaymentCurrency, LeaseCurrency>::identity(),
+        ))
+        .unwrap();
     let expected_result = StateResponse::Opened {
         amount: lease_amount.into(),
-        loan_interest_rate: Percent::from_permille(70),
-        margin_interest_rate: Percent::from_permille(30),
-        principal_due: price::total(max_ltd.of(downpayment), super::price_lpn_of()).into(),
+        loan_interest_rate: Percent100::from_permille(70),
+        margin_interest_rate: Percent100::from_permille(30),
+        principal_due: price::total(max_ltd.of(downpayment).unwrap(), super::price_lpn_of()).into(),
         overdue_margin: LpnCoin::ZERO.into(),
         overdue_interest: LpnCoin::ZERO.into(),
         overdue_collect_in: LeaserInstantiator::REPAYMENT_PERIOD,

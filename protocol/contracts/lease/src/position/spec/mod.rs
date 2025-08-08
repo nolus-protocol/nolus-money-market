@@ -4,7 +4,7 @@ use currency::{CurrencyDef, MemberOf};
 use finance::{
     coin::Coin,
     duration::Duration,
-    fraction::Fraction,
+    fraction::{Fraction, Unit as FractionUnit},
     fractionable::Fractionable,
     liability::{Liability, Zone},
     percent::Percent,
@@ -397,10 +397,10 @@ impl Spec {
 
     fn ltv<P>(total_due: P, lease_asset: P) -> Percent
     where
-        P: Copy + Debug + PartialEq + Zero,
+        P: Copy + Debug + FractionUnit + PartialEq + Zero,
         Percent: Fractionable<P>,
     {
-        Percent::from_ratio(total_due, lease_asset)
+        Percent::from_fraction(total_due, lease_asset).expect("Expect having a ltv")
     }
 
     fn zone<Asset>(&self, asset: Coin<Asset>, due_asset: Coin<Asset>) -> Zone
