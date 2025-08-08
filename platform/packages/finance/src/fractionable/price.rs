@@ -25,7 +25,7 @@ where
     QuoteC: 'static,
 {
     fn into_primitive(self) -> SimpleFraction<U256> {
-        self.to_fraction()
+        self._to_fraction()
     }
 }
 
@@ -35,7 +35,7 @@ where
     QuoteC: 'static,
 {
     fn try_from_primitive(primitive: SimpleFraction<U256>) -> Option<Self> {
-        Self::try_from_fraction(primitive)
+        Self::_try_from_fraction(primitive)
     }
 }
 

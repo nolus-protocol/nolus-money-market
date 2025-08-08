@@ -59,6 +59,25 @@ where
         }
     }
 
+    pub fn checked_mul<F>(self, rhs: F) -> Option<F>
+    where
+        F: Fractionable<U>,
+        U: ToPrimitive<F::HigherPrimitive>,
+    {
+        if self.nominator == self.denominator {
+            Some(rhs)
+        } else {
+            self.nominator
+                .into_primitive()
+                .checked_mul(rhs.into_primitive())
+                .and_then(|product| {
+                    let res_primitive = product.div(self.denominator.into_primitive());
+
+                    F::try_from_primitive(res_primitive)
+                })
+        }
+    }
+
     pub(crate) fn nominator(&self) -> U {
         self.nominator
     }

@@ -80,6 +80,12 @@ impl<const UPPER_BOUND: Units> ToPrimitive<U256> for BoundPercent<UPPER_BOUND> {
     }
 }
 
+impl<const UPPER_BOUND: Units> ToPrimitive<SimpleFraction<U256>> for BoundPercent<UPPER_BOUND> {
+    fn into_primitive(self) -> SimpleFraction<U256> {
+        self.to_fraction::<U256>()
+    }
+}
+
 impl<const UPPER_BOUND: Units> TryFromPrimitive<u64> for BoundPercent<UPPER_BOUND> {
     fn try_from_primitive(primitive: u64) -> Option<Self> {
         Units::try_from(primitive).ok().map(Self::from_permille)
