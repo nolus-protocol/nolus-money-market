@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 
 use currency::{CurrencyDef, Group, MemberOf, SymbolOwned};
 use finance::{
-    coin::{Amount, CoinDTO},
+    coin::{Amount, Coin, CoinDTO},
     price::{self, Price},
 };
 use sdk::{
@@ -64,7 +64,7 @@ where
         BaseC: CurrencyDef,
     {
         const NORM_SCALE: Amount = 10u128.pow(18);
-        NormalizedPrice::<G>(price::total(NORM_SCALE.into(), price.inv()).into())
+        NormalizedPrice::<G>(price::total(Coin::new(NORM_SCALE), price.inv()).into())
     }
 }
 
@@ -640,11 +640,7 @@ pub mod tests {
             )
             .unwrap();
         alarms
-            .add_alarm(
-                subscriber1.clone(),
-                price::total_of::<SuperGroupTestC4>(1.into()).is::<BaseCurrency>(2.into()),
-                None,
-            )
+            .add_alarm(subscriber1.clone(), price(1, 2), None)
             .unwrap();
 
         alarms.ensure_no_in_delivery().unwrap();
@@ -657,11 +653,7 @@ pub mod tests {
             )
             .unwrap();
         alarms
-            .add_alarm(
-                subscriber2.clone(),
-                price::total_of::<SuperGroupTestC4>(1.into()).is::<BaseCurrency>(2.into()),
-                None,
-            )
+            .add_alarm(subscriber2.clone(), price(1, 2), None)
             .unwrap();
 
         alarms.ensure_no_in_delivery().unwrap();
@@ -703,7 +695,7 @@ pub mod tests {
             .add_alarm(
                 subscriber1.clone(),
                 Price::<SuperGroupTestC4, BaseCurrency>::identity(),
-                Some(price::total_of::<SuperGroupTestC4>(1.into()).is::<BaseCurrency>(2.into())),
+                Some(price(1, 2)),
             )
             .unwrap();
 
@@ -765,5 +757,9 @@ pub mod tests {
             "index_above",
             "in_delivery",
         )
+    }
+
+    fn price(c: Amount, q: Amount) -> Price<SuperGroupTestC4, BaseCurrency> {
+        price::total_of::<SuperGroupTestC4>(Coin::new(c)).is::<BaseCurrency>(Coin::new(q))
     }
 }

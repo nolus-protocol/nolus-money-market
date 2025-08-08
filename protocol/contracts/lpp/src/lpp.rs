@@ -468,7 +468,7 @@ mod test {
             },
             loan
         );
-        assert_eq!(loan.interest_due(&now), 0u128.into());
+        assert_eq!(loan.interest_due(&now), Coin::ZERO);
 
         // wait for 36 days
         let now = now + Duration::from_days(36);
@@ -494,7 +494,7 @@ mod test {
             loan,
             Repo::query(&store, lease_addr.clone()).unwrap().unwrap()
         );
-        assert_eq!(loan.interest_due(&now), 0u128.into());
+        assert_eq!(loan.interest_due(&now), Coin::ZERO);
 
         // an immediate repay after repay should pass (loan_interest_due==0 bug)
         let repay = loan.repay(&now, Coin::ZERO);
@@ -735,7 +735,9 @@ mod test {
             lpp.calculate_price(&now, Coin::ZERO).unwrap()
         );
 
-        let withdraw = lpp.withdraw_lpn(1000u128.into(), Coin::ZERO, &now).unwrap();
+        let withdraw = lpp
+            .withdraw_lpn(Coin::new(1000u128), Coin::ZERO, &now)
+            .unwrap();
         assert_eq!(withdraw, Coin::new(1110));
     }
 
@@ -764,7 +766,9 @@ mod test {
             let now = Timestamp::from_seconds(120);
             let mut total: Total<TheCurrency> = Total::new();
 
-            total.borrow(now, borrowed.into(), Percent::ZERO).unwrap();
+            total
+                .borrow(now, Coin::new(borrowed), Percent::ZERO)
+                .unwrap();
 
             let bank =
                 MockBankView::<TheCurrency, TheCurrency>::only_balance(Coin::new(lpp_balance));
@@ -781,7 +785,7 @@ mod test {
 
             assert_eq!(
                 lpp.deposit_capacity(&now, Coin::ZERO).unwrap(),
-                expected_limit.map(Into::into)
+                expected_limit.map(Coin::new)
             );
         }
 
