@@ -6,10 +6,7 @@ use serde::{Deserialize, Serialize};
 use dex::{Account, Connectable, ConnectionParams, Contract, IcaConnectee};
 use sdk::cosmwasm_std::{QuerierWrapper, Timestamp};
 
-use crate::{
-    msg::ConfigResponse,
-    result::ContractResult,
-};
+use crate::{msg::ConfigResponse, result::ContractResult};
 
 use super::{Config, ConfigManagement, IcaConnector, State, idle::Idle};
 

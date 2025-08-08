@@ -29,7 +29,7 @@ use crate::{
     msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg},
     profit::Profit,
     result::ContractResult,
-    state::{Config, ConfigManagement as _, State}
+    state::{Config, ConfigManagement as _, State},
 };
 
 const CONTRACT_STORAGE_VERSION: VersionSegment = 1;
@@ -94,11 +94,8 @@ pub fn execute(
     match msg {
         ExecuteMsg::TimeAlarm {} => {
             let config = State::load(deps.storage)?.load_config()?;
-            
-            access_control::check(
-                &TimeAlarmDelivery::new(&config.time_alarms()),
-                &info.sender,
-            )?;
+
+            access_control::check(&TimeAlarmDelivery::new(&config.time_alarms()), &info.sender)?;;
 
             try_handle_execute_message(deps, env, |state, querier, env| {
                 State::on_time_alarm(state, querier, env, info)
@@ -107,7 +104,7 @@ pub fn execute(
         }
         ExecuteMsg::Config { cadence_hours } => {
             let config = State::load(deps.storage)?.load_config()?;
-            
+
             access_control::check(
                 &ContractOwnerPermission::new(&config.contract_owner()),
                 &info.sender,
