@@ -78,7 +78,7 @@ impl ConfigManagement for State {
             StateEnum::BuyBack(buy_back) => buy_back.load_config(),
         }
     }
-    
+
     fn try_update_config(
         self,
         now: Timestamp,

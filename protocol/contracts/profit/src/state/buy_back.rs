@@ -157,9 +157,3 @@ impl ContractInSwap for BuyBack {
         }
     }
 }
-
-impl ConfigManagement for StateLocalOut<BuyBack, SwapClient, ForwardToDexEntry> {
-    fn load_config(&self) -> ContractResult<Config> {
-        Ok(self)
-    }
-}
