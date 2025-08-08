@@ -18,20 +18,18 @@ pub type Percent = BoundPercent<MAX_BOUND>;
 
 impl FractionUnit for Units {}
 
-// TODO implement Fraction<Percent100> when multiplication with trim is ready
 impl Fraction<Units> for Percent100 {
     fn of<A>(&self, whole: A) -> A
     where
         A: Fractionable<Units>,
     {
-        let fraction: SimpleFraction<Units> = self.into();
+        let fraction = SimpleFraction::<Units>::from(*self);
         fraction
             .of(whole)
             .expect("TODO it won't be needed when ratio.of()")
     }
 }
 
-// TODO implement Rational<Percent> when multiplication with trim is ready
 impl Rational<Units> for Percent {
     fn of<A>(&self, whole: A) -> Option<A>
     where
@@ -61,16 +59,15 @@ impl RatioLegacy<Units> for SimpleFraction<Percent> {
     }
 }
 
-// TODO remove this convertion after Ratio become a struct
-impl From<&Percent100> for SimpleFraction<Units> {
-    fn from(percent: &Percent100) -> Self {
+// TODO replace this convertion with From<Percent100> for Ratio after Ratio becomes a struct
+impl From<Percent100> for SimpleFraction<Units> {
+    fn from(percent: Percent100) -> Self {
         Self::new(percent.units(), Percent100::HUNDRED.units())
     }
 }
 
-// TODO implement From<&Percent> for SimpleFraction<Percent> when multiplication with trim is ready
-impl From<&Percent> for SimpleFraction<Units> {
-    fn from(percent: &Percent) -> Self {
+impl From<Percent> for SimpleFraction<Units> {
+    fn from(percent: Percent) -> Self {
         Self::new(percent.units(), Percent::HUNDRED.units())
     }
 }

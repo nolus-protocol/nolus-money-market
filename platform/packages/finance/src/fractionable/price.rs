@@ -9,7 +9,6 @@ use crate::{
 
 use super::Fractionable;
 
-// TODO impl Fractionble<BoundPercent<UPPER_BOUND>> for Price when multiplication with trim is ready
 impl<C, QuoteC> Fractionable<PercentUnits> for Price<C, QuoteC>
 where
     C: 'static,
