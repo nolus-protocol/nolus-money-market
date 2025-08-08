@@ -1,18 +1,13 @@
-use std::marker::PhantomData;
-
 use bnum::types::U256;
 
 use crate::{
-    coin::Amount,
     fraction::Unit as FractionUnit,
     fractionable::{Fractionable, ToPrimitive, TryFromPrimitive},
     percent::Units as PercentUnits,
     price::Price,
-    ratio::{Ratio, SimpleFraction},
+    ratio::SimpleFraction,
     zero::Zero,
 };
-
-use super::Fragmentable;
 
 impl<C, QuoteC> Fractionable<PercentUnits> for Price<C, QuoteC>
 where
@@ -46,67 +41,6 @@ where
 
 impl Zero for U256 {
     const ZERO: Self = Self::ZERO;
-}
-
-// TODO impl Fractionble<BoundPercent<UPPER_BOUND>> for Price when multiplication with trim is ready
-impl<C, QuoteC> Fragmentable<PercentUnits> for Price<C, QuoteC>
-where
-    C: 'static,
-    QuoteC: 'static,
-{
-    fn safe_mul<F>(self, fraction: &F) -> Self
-    where
-        F: Ratio<PercentUnits>,
-    {
-        self.lossy_mul(&RatioUpcast(PhantomData, fraction))
-    }
-}
-
-impl<C, QuoteC> Fragmentable<usize> for Price<C, QuoteC>
-where
-    C: 'static,
-    QuoteC: 'static,
-{
-    fn safe_mul<F>(self, fraction: &F) -> Self
-    where
-        F: Ratio<usize>,
-    {
-        self.lossy_mul(&RatioTryUpcast(fraction))
-    }
-}
-
-struct RatioUpcast<'a, U, R>(PhantomData<U>, &'a R)
-where
-    R: Ratio<U>;
-impl<U, R> Ratio<Amount> for RatioUpcast<'_, U, R>
-where
-    U: Into<Amount>,
-    R: Ratio<U>,
-{
-    fn parts(&self) -> Amount {
-        self.1.parts().into()
-    }
-    fn total(&self) -> Amount {
-        self.1.total().into()
-    }
-}
-
-struct RatioTryUpcast<'a, R>(&'a R)
-where
-    R: Ratio<usize>;
-
-const EXPECT_MSG: &str = "usize should convert into u128";
-
-impl<R> Ratio<Amount> for RatioTryUpcast<'_, R>
-where
-    R: Ratio<usize>,
-{
-    fn parts(&self) -> Amount {
-        self.0.parts().try_into().expect(EXPECT_MSG)
-    }
-    fn total(&self) -> Amount {
-        self.0.total().try_into().expect(EXPECT_MSG)
-    }
 }
 
 #[cfg(test)]
@@ -182,8 +116,8 @@ mod test {
         fn test_impl(
             amount1: Coin<SubGroupTestC10>,
             quote1: Coin<SuperGroupTestC1>,
-            nominator: usize,
-            denominator: usize,
+            nominator: u32,
+            denominator: u32,
             amount_exp: Coin<SubGroupTestC10>,
             quote_exp: Coin<SuperGroupTestC1>,
         ) {
