@@ -8,11 +8,10 @@ use crate::{
     ratio::SimpleFraction,
 };
 
-impl<C, const UPPER_BOUND: Units> Fractionable<Coin<C>> for BoundPercent<UPPER_BOUND> {
-    type HigherPrimitive = U256;
-}
+// Base types
 
-impl<const UPPER_BOUND: Units> Fractionable<Units> for BoundPercent<UPPER_BOUND> {
+// u32 used instead of usize
+impl Fractionable<Units> for u32 {
     type HigherPrimitive = u64;
 }
 
@@ -44,6 +43,28 @@ impl CheckedMul<U256> for U256 {
     }
 }
 
+impl ToPrimitive<SimpleFraction<U256>> for Units {
+    fn into_primitive(self) -> SimpleFraction<U256> {
+        SimpleFraction::new(self.into(), 1u32.into())
+    }
+}
+
+impl TryFromPrimitive<u64> for u32 {
+    fn try_from_primitive(primitive: u64) -> Option<Self> {
+        primitive.try_into().ok()
+    }
+}
+
+// Bound Percent
+
+impl<C, const UPPER_BOUND: Units> Fractionable<Coin<C>> for BoundPercent<UPPER_BOUND> {
+    type HigherPrimitive = U256;
+}
+
+impl<const UPPER_BOUND: Units> Fractionable<Units> for BoundPercent<UPPER_BOUND> {
+    type HigherPrimitive = u64;
+}
+
 impl<const UPPER_BOUND: Units> ToPrimitive<u64> for BoundPercent<UPPER_BOUND> {
     fn into_primitive(self) -> u64 {
         self.units().into()
@@ -53,12 +74,6 @@ impl<const UPPER_BOUND: Units> ToPrimitive<u64> for BoundPercent<UPPER_BOUND> {
 impl<const UPPER_BOUND: Units> ToPrimitive<U256> for BoundPercent<UPPER_BOUND> {
     fn into_primitive(self) -> U256 {
         u128::from(self.units()).into()
-    }
-}
-
-impl ToPrimitive<SimpleFraction<U256>> for Units {
-    fn into_primitive(self) -> SimpleFraction<U256> {
-        SimpleFraction::new(self.into(), 1u32.into())
     }
 }
 
@@ -135,6 +150,32 @@ mod test {
                 Percent100::from_permille(899),
                 ratio_one.of(Percent100::from_permille(899)).unwrap()
             );
+        }
+    }
+
+    mod u32 {
+        use crate::{
+            fraction::Fraction,
+            percent::{Percent, Percent100},
+        };
+
+        #[test]
+        fn ok() {
+            let n = 123u32;
+            assert_eq!(n, Percent100::HUNDRED.of(n));
+            assert_eq!(n / 2, Percent100::from_percent(50).of(n));
+            assert_eq!(n * 3 / 4, Percent100::from_percent(75).of(n));
+
+            assert_eq!(u32::MAX, Percent100::HUNDRED.of(u32::MAX));
+            assert_eq!(u32::MIN, Percent100::from_permille(1).of(999));
+            assert_eq!(u32::MAX / 2, Percent100::from_percent(50).of(u32::MAX));
+        }
+
+        #[test]
+        fn overflow() {
+            use crate::rational::Rational;
+
+            assert!(Percent::from_permille(1001).of(u32::MAX).is_none());
         }
     }
 }

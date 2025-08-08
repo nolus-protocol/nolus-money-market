@@ -3,7 +3,7 @@ use crate::{fraction::Unit as FractionUnit, percent::Units as PercentUnits, rati
 use super::Fragmentable;
 
 // TODO impl Fractionble<BoundPercent<UPPER_BOUND>> for usize when multiplication with trim is ready
-impl Fragmentable<PercentUnits> for usize {
+/* impl Fragmentable<PercentUnits> for usize {
     fn safe_mul<F>(self, fraction: &F) -> Self
     where
         F: Ratio<PercentUnits>,
@@ -14,11 +14,11 @@ impl Fragmentable<PercentUnits> for usize {
             .try_into()
             .expect("usize overflow on percent calculation")
     }
-}
+} */
 
 impl FractionUnit for usize {}
 
-#[cfg(test)]
+/* #[cfg(test)]
 mod test {
     use crate::{
         fraction::Fraction,
@@ -44,4 +44,4 @@ mod test {
 
         _ = Percent::from_permille(1001).of(usize::MAX);
     }
-}
+} */

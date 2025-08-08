@@ -9,7 +9,6 @@ mod coin;
 mod duration;
 mod percent;
 mod price;
-mod usize;
 
 /// Domain entity for which a fraction could be calculated.
 ///
