@@ -143,28 +143,25 @@ impl Liability {
 
     /// Post-assert: (total_due - amount_to_liquidate) / (lease_amount - amount_to_liquidate) ~= self.healthy_percent(), if total_due < lease_amount.
     /// Otherwise, amount_to_liquidate == total_due
-    pub fn amount_to_liquidate<P>(&self, lease_amount: P, total_due: P) -> P
+    pub fn amount_to_liquidate<P>(&self, lease_amount: P, total_due: P) -> Option<P>
     where
         P: Copy + Fractionable<PercentUnits> + Ord + Sub<Output = P> + Zero,
         PercentUnits: ToPrimitive<<P as Fractionable<PercentUnits>>::HigherPrimitive>,
     {
         if total_due < self.max.of(lease_amount) {
-            return P::ZERO;
+            Some(P::ZERO)
+        } else if lease_amount <= total_due {
+            Some(lease_amount)
+        } else {
+            // from 'due - liquidation = healthy% of (lease - liquidation)' follows
+            // liquidation = 100% / (100% - healthy%) of (due - healthy% of lease)
+            let multiplier = SimpleFraction::new(
+                Percent100::HUNDRED.units(),
+                Self::remaining_percent(self.healthy).units(),
+            );
+            let extra_liability_lpn = total_due - total_due.min(self.healthy.of(lease_amount));
+            multiplier.of(extra_liability_lpn)
         }
-        if lease_amount <= total_due {
-            return lease_amount;
-        }
-
-        // from 'due - liquidation = healthy% of (lease - liquidation)' follows
-        // liquidation = 100% / (100% - healthy%) of (due - healthy% of lease)
-        let multiplier = SimpleFraction::new(
-            Percent100::HUNDRED.units(),
-            Self::remaining_percent(self.healthy).units(),
-        );
-        let extra_liability_lpn = total_due - total_due.min(self.healthy.of(lease_amount));
-        multiplier
-            .of(extra_liability_lpn)
-            .expect("TODO the method has to return Option")
     }
 
     fn invariant_held(&self) -> Result<()> {
@@ -449,7 +446,7 @@ mod test {
         let due = Coin::<SubGroupTestC10>::new(due);
         let exp = Coin::<SubGroupTestC10>::new(exp);
 
-        let liq = liability.amount_to_liquidate(lease, due);
+        let liq = liability.amount_to_liquidate(lease, due).unwrap();
         assert_eq!(exp, liq);
         if due.clamp(liability.max.of(lease), lease) == due {
             assert!(

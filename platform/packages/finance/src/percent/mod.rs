@@ -227,11 +227,7 @@ pub(super) mod test {
 
     pub(crate) fn test_of<P>(permille: Units, quantity: P, exp: P)
     where
-        P: Clone
-            + Debug
-            + Display
-            + Fractionable<Units>
-            + PartialEq,
+        P: Clone + Debug + Display + Fractionable<Units> + PartialEq,
         Units: ToPrimitive<<P as Fractionable<Units>>::HigherPrimitive>,
     {
         let perm = Percent100::from_permille(permille);
