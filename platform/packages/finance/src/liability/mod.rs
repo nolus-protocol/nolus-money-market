@@ -6,7 +6,7 @@ use crate::{
     duration::Duration,
     error::{Error, Result},
     fraction::Fraction,
-    fractionable::{Fractionable, Fragmentable, ToPrimitive},
+    fractionable::{Fractionable, ToPrimitive},
     percent::{Percent, Percent100, Units as PercentUnits},
     ratio::SimpleFraction,
     rational::Rational,
@@ -146,7 +146,7 @@ impl Liability {
     pub fn amount_to_liquidate<P>(&self, lease_amount: P, total_due: P) -> P
     where
         P: Copy + Fractionable<PercentUnits> + Ord + Sub<Output = P> + Zero,
-        PercentUnits: ToPrimitive<<P as Fractionable<u32>>::HigherPrimitive>,
+        PercentUnits: ToPrimitive<<P as Fractionable<PercentUnits>>::HigherPrimitive>,
     {
         if total_due < self.max.of(lease_amount) {
             return P::ZERO;
@@ -395,8 +395,12 @@ mod test {
             recalc_time: Duration::from_secs(20000),
         };
         let lease_amount: Amount = 100;
-        let healthy_amount = Percent100::from_percent(healthy).of(lease_amount);
-        let max_amount = Percent100::from_percent(max).of(lease_amount);
+        let healthy_amount = Percent100::from_percent(healthy)
+            .of(Coin::<SubGroupTestC10>::new(lease_amount))
+            .amount();
+        let max_amount = Percent100::from_percent(max)
+            .of(Coin::<SubGroupTestC10>::new(lease_amount))
+            .amount();
         amount_to_liquidate_int(liability, lease_amount, Amount::ZERO, Amount::ZERO);
         amount_to_liquidate_int(liability, lease_amount, healthy_amount - 10, Amount::ZERO);
         amount_to_liquidate_int(liability, lease_amount, healthy_amount - 1, Amount::ZERO);
@@ -441,11 +445,20 @@ mod test {
 
     #[track_caller]
     fn amount_to_liquidate_int(liability: Liability, lease: Amount, due: Amount, exp: Amount) {
+        let lease = Coin::<SubGroupTestC10>::new(lease);
+        let due = Coin::<SubGroupTestC10>::new(due);
+        let exp = Coin::<SubGroupTestC10>::new(exp);
+
         let liq = liability.amount_to_liquidate(lease, due);
         assert_eq!(exp, liq);
         if due.clamp(liability.max.of(lease), lease) == due {
             assert!(
-                liability.healthy.of(lease - exp).abs_diff(due - exp) <= 1,
+                liability
+                    .healthy
+                    .of(lease - exp)
+                    .amount()
+                    .abs_diff(due.amount() - exp.amount())
+                    <= 1,
                 "Lease = {lease}, due = {due}, exp = {exp}"
             );
         }
