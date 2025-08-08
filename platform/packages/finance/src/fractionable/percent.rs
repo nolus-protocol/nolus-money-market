@@ -8,17 +8,6 @@ use crate::{
     ratio::SimpleFraction,
 };
 
-use super::HigherRank;
-
-// Remove with Fragmentable
-impl<T> HigherRank<T> for u32
-where
-    T: Into<Self>,
-{
-    type Type = u64;
-    type Intermediate = Self;
-}
-
 impl<C, const UPPER_BOUND: Units> Fractionable<Coin<C>> for BoundPercent<UPPER_BOUND> {
     type HigherPrimitive = U256;
 }
