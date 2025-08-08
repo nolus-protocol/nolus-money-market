@@ -43,6 +43,10 @@ impl<C> Coin<C> {
         }
     }
 
+    pub(crate) fn _amount(&self) -> Amount {
+        self.amount
+    }
+
     const fn may_new(may_amount: Option<Amount>) -> Option<Self> {
         match may_amount {
             None => None,
@@ -221,6 +225,7 @@ impl<C> From<Amount> for Coin<C> {
     }
 }
 
+// TODO: Remove with Fragmentable
 impl<C> From<Coin<C>> for Amount {
     fn from(coin: Coin<C>) -> Self {
         coin.amount
