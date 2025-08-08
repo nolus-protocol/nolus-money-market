@@ -120,7 +120,8 @@ impl Liability {
     // TODO replace Fractionable<PercentUnits> with Fractionable<Percent100> + Fractionable<Percent>
     pub fn init_borrow_amount<P>(&self, downpayment: P, may_max_ltd: Option<Percent>) -> P
     where
-        P: Copy + Fragmentable<PercentUnits> + Ord,
+        P: Copy + Fractionable<PercentUnits> + Ord,
+        PercentUnits: ToPrimitive<<P as Fractionable<PercentUnits>>::HigherPrimitive>,
     {
         debug_assert!(self.initial > Percent100::ZERO);
         debug_assert!(self.initial < Percent100::HUNDRED);
