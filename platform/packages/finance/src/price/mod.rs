@@ -8,10 +8,10 @@ use serde::{Deserialize, Serialize};
 use crate::{
     coin::{Amount, Coin},
     error::{Error, Result},
+    fraction::Unit as FractionUnit,
     fractionable::HigherRank,
     ratio::{Ratio, SimpleFraction},
     rational::Rational,
-    traits::FractionUnit,
 };
 
 pub mod base;
@@ -134,28 +134,28 @@ where
     }
 
     // Please note that Price(amount, amount_quote) is like SimpleFraction(amount_quote / amount).
-    pub(crate) fn to_fraction<U>(self) -> SimpleFraction<U>
+    pub(crate) fn _to_fraction<U>(self) -> SimpleFraction<U>
     where
         Amount: Into<U>,
         U: FractionUnit,
     {
         SimpleFraction::new(
-            self.amount_quote.amount().into(),
-            self.amount.amount().into(),
+            self.amount_quote._amount().into(),
+            self.amount._amount().into(),
         )
     }
 
-    pub(crate) fn try_from_fraction<U>(fraction: SimpleFraction<U>) -> Option<Self>
+    pub(crate) fn _try_from_fraction<U>(fraction: SimpleFraction<U>) -> Option<Self>
     where
         U: FractionUnit + TryInto<Amount>,
     {
         fraction
-            .nominator()
+            ._nominator()
             .try_into()
             .ok()
             .and_then(|amount_quote| {
                 fraction
-                    .denominator()
+                    ._denominator()
                     .try_into()
                     .ok()
                     .map(|amount| Self::new(Coin::new(amount), Coin::new(amount_quote)))
