@@ -16,6 +16,9 @@ pub enum ContractError {
     #[error("[Treasury] Failed to init the contract version! Cause: {0}")]
     InitVersion(StdError),
 
+    #[error("[Treasury] Failed to create timealarms ref! Cause: {0}")]
+    InvalidAddress(#[from] timealarms::stub::Error),
+
     #[error("[Treasury] Failed to validate the Registry address! Cause: {0}")]
     ValidateRegistryAddr(StdError),
 

@@ -157,5 +157,3 @@ impl ContractInSwap for BuyBack {
         }
     }
 }
-
-impl ConfigManagement for StateLocalOut<BuyBack, SwapClient, ForwardToDexEntry> {}
