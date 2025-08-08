@@ -3,11 +3,8 @@ use std::{fmt::Debug, ops::Div};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    arithmetics::CheckedMul,
-    fraction::Unit as FractionUnit, 
-    fractionable::Fragmentable, rational::Rational,
-    zero::Zero,
-,
+    arithmetics::CheckedMul, fraction::Unit as FractionUnit, fractionable::Fragmentable,
+    rational::Rational, zero::Zero,
 };
 
 // TODO review whether it may gets simpler if extend Fraction
@@ -38,11 +35,11 @@ where
         }
     }
 
-    pub(crate) fn nominator(&self) -> U {
+    pub(crate) fn _nominator(&self) -> U {
         self.nominator
     }
 
-    pub(crate) fn denominator(&self) -> U {
+    pub(crate) fn _denominator(&self) -> U {
         self.denominator
     }
 

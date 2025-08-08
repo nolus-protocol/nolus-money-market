@@ -16,7 +16,7 @@ where
 
 impl<C> ToPrimitive<U256> for Coin<C> {
     fn into_primitive(self) -> U256 {
-        self.amount().into()
+        self._amount().into()
     }
 }
 
