@@ -1,25 +1,73 @@
-use crate::{fraction::Unit as FractionUnit, percent::Units as PercentUnits, ratio::Ratio};
+#[cfg(test)]
+use crate::arithmetics::CheckedMul;
+use crate::{
+    fraction::Unit as FractionUnit,
+    fractionable::{Fractionable, ToPrimitive, TryFromPrimitive},
+    percent::Units as PercentUnits,
+};
 
-use super::Fragmentable;
+// TODO: Remove when protocol/marketplace gets refactored to use a type based on u32
+#[cfg(not(test))]
+impl Fractionable<PercentUnits> for usize {
+    type HigherPrimitive = u64;
+}
 
-// TODO impl Fractionble<BoundPercent<UPPER_BOUND>> for usize when multiplication with trim is ready
-/* impl Fragmentable<PercentUnits> for usize {
-    fn safe_mul<F>(self, fraction: &F) -> Self
-    where
-        F: Ratio<PercentUnits>,
-    {
-        u128::try_from(self)
-            .expect("usize to u128 overflow")
-            .safe_mul(fraction)
-            .try_into()
-            .expect("usize overflow on percent calculation")
+#[cfg(not(test))]
+impl ToPrimitive<u64> for usize {
+    fn into_primitive(self) -> u64 {
+        self.try_into().expect("usize is greater than u64")
     }
-} */
+}
+
+#[cfg(not(test))]
+impl TryFromPrimitive<u64> for usize {
+    fn try_from_primitive(primitive: u64) -> Option<Self> {
+        primitive.try_into().ok()
+    }
+}
+
+// Test purposes
+// remove with  `usize` removal
+#[cfg(test)]
+impl Fractionable<PercentUnits> for usize {
+    type HigherPrimitive = u128;
+}
+#[cfg(test)]
+impl ToPrimitive<u128> for u32 {
+    fn into_primitive(self) -> u128 {
+        self.into()
+    }
+}
+
+#[cfg(test)]
+impl ToPrimitive<u128> for usize {
+    fn into_primitive(self) -> u128 {
+        self.try_into().expect("usize is greater than u64")
+    }
+}
+
+#[cfg(test)]
+impl TryFromPrimitive<u128> for usize {
+    fn try_from_primitive(primitive: u128) -> Option<Self> {
+        primitive.try_into().ok()
+    }
+}
+
+#[cfg(test)]
+impl CheckedMul for u128 {
+    type Output = u128;
+
+    fn checked_mul(self, rhs: Self) -> Option<Self::Output> {
+        self.checked_mul(rhs)
+    }
+}
 
 impl FractionUnit for usize {}
 
-/* #[cfg(test)]
+#[cfg(test)]
 mod test {
+    use std::usize;
+
     use crate::{
         fraction::Fraction,
         percent::{Percent, Percent100},
@@ -38,10 +86,9 @@ mod test {
     }
 
     #[test]
-    #[should_panic = "usize overflow"]
     fn overflow() {
         use crate::rational::Rational;
 
-        _ = Percent::from_permille(1001).of(usize::MAX);
+        assert!(Rational::of(&Percent::from_permille(1001), usize::MAX).is_none());
     }
-} */
+}
