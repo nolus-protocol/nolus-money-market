@@ -141,10 +141,6 @@ impl Contract for Idle {
 }
 
 impl ConfigManagement for Idle {
-    fn load_config(&self) -> ContractResult<Config> {
-        Ok(self.config)
-    }
-
     fn try_update_config(
         self,
         now: Timestamp,
@@ -173,6 +169,11 @@ impl Handler for Idle {
         _info: MessageInfo,
     ) -> DexResult<Self> {
         DexResult::Finished(self.on_time_alarm(querier, env))
+    }
+
+    fn check_timealarms_permission<U>(self, user: &U, check_type: &String) -> DexResult<Self> {
+        // TODO match check type if needed
+        access_control::check(&TimeAlarmDelivery::new(&self.config.time_alarms()), user)?;
     }
 }
 

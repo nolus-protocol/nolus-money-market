@@ -5,7 +5,7 @@ use platform::{
     message::Response as MessageResponse,
     state_machine::{self, Response as StateMachineResponse},
 };
-use sdk::cosmwasm_std::{Binary, Env, MessageInfo, QuerierWrapper, Reply};
+use sdk::cosmwasm_std::{Addr, Binary, Env, MessageInfo, QuerierWrapper, Reply};
 
 use crate::error::{Error, Result as DexResult};
 
@@ -102,6 +102,13 @@ where
         _info: MessageInfo,
     ) -> Result<Self> {
         Err(err(self, "handle time alarm")).into()
+    }
+
+    fn check_timealarms_permission<U>(&self, user: &U, check_type: String) -> DexResult<bool>
+    where
+        U: User,
+    {
+        Err(err(self, "check timealarms permission")).into()
     }
 }
 

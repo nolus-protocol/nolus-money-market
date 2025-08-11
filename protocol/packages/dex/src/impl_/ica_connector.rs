@@ -49,6 +49,10 @@ where
         Account::register_request(self.connectee.dex())
     }
 
+    pub fn inner(self) -> Connectee {
+        self.connectee
+    }
+
     fn build_account(&self, counterparty_version: String, env: &Env) -> Result<Account> {
         let contract = env.contract.address.clone();
         Account::from_register_response(

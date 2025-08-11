@@ -101,8 +101,7 @@ pub fn execute(
 ) -> ContractResult<CwResponse> {
     match msg {
         ExecuteMsg::TimeAlarm {} => {
-            let config = State::load(deps.storage)?.load_config()?;
-
+            State::check_timealarms_permission(&self, user, &"timealarms")?; // TODO enum?
             access_control::check(&TimeAlarmDelivery::new(&config.time_alarms()), &info.sender)?;
 
             try_handle_execute_message(deps, env, |state, querier, env| {
