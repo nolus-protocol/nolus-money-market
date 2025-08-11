@@ -69,10 +69,6 @@ impl<const UPPER_BOUND: Units> ToPrimitive<u64> for BoundPercent<UPPER_BOUND> {
         self.units().into()
     }
 }
-impl<C, const UPPER_BOUND: Units> Fractionable<Coin<C>> for BoundPercent<UPPER_BOUND> {
-    type HigherPrimitive = U256;
-}
-
 
 impl<const UPPER_BOUND: Units> ToPrimitive<U256> for BoundPercent<UPPER_BOUND> {
     fn into_primitive(self) -> U256 {
@@ -129,11 +125,14 @@ mod test {
         }
 
         #[test]
-        #[should_panic]
         fn of_overflow() {
             use crate::rational::Rational;
 
-            Percent::from_permille(1001).of(Percent::from_permille(Units::MAX));
+            assert!(
+                Percent::from_permille(1001)
+                    .of(Percent::from_permille(Units::MAX))
+                    .is_none()
+            )
         }
     }
 

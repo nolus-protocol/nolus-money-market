@@ -88,17 +88,6 @@ impl<const UPPER_BOUND: Units> BoundPercent<UPPER_BOUND> {
             .map(Self::from_permille)
             .ok_or(Error::overflow_err("while subtracting", self, other))
     }
-
-    pub(crate) fn to_fraction<U>(self) -> SimpleFraction<U>
-    where
-        Amount: Into<U>,
-        U: FractionUnit,
-    {
-        SimpleFraction::new(
-            Amount::from(self.0).into(),
-            Amount::from(Self::HUNDRED.0).into(),
-        )
-    }
 }
 
 // Method used for deserialization
