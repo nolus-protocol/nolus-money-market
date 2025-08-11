@@ -30,10 +30,10 @@ pub trait TryFromPrimitive<P>
 where
     Self: Sized,
 {
-    #[allow(dead_code)]
     fn try_from_primitive(primitive: P) -> Option<Self>;
 }
 
+// TODO: Remove when refactor the Ord for Price
 pub trait Fragmentable<U> {
     #[track_caller]
     fn safe_mul<F>(self, fraction: &F) -> Self
@@ -41,6 +41,7 @@ pub trait Fragmentable<U> {
         F: Ratio<U>;
 }
 
+// TODO: Remove when refactor the Ord for Price
 pub trait HigherRank<T> {
     type Type;
     // An intermediate type to handle cases when there is no TryInto<Self> for HigherRank::Type but

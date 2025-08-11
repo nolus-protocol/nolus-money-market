@@ -9,6 +9,7 @@ use crate::{
 
 use super::HigherRank;
 
+// TODO: Remove when refactor the Ord for Price
 impl<T> HigherRank<T> for u128
 where
     T: Into<Self>,
@@ -42,7 +43,7 @@ mod tests {
     use crate::{coin::Coin, duration::Duration, ratio::SimpleFraction, rational::Rational};
 
     #[test]
-    fn safe_mul() {
+    fn of() {
         let d = Duration::from_secs(10);
         let res = SimpleFraction::new(
             Coin::<SuperGroupTestC1>::new(10),
@@ -53,7 +54,7 @@ mod tests {
     }
 
     #[test]
-    fn safe_mul_max() {
+    fn of_max() {
         let d = Duration::from_secs(10);
         let res = SimpleFraction::new(
             Coin::<SuperGroupTestC1>::new(u128::MAX),
