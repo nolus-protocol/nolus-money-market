@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 
 use currencies::{Native, Nls, PaymentGroup};
 use dex::{
-    AcceptAnyNonZeroSwap, Account, AnomalyTreatment, ContractInSwap, Response as DexResponse,
+    AcceptAnyNonZeroSwap, Account, AnomalyTreatment, ContractInSwap, Handler, Response as DexResponse,
     Stage, StateLocalOut, SwapOutputTask, SwapTask, WithCalculator, WithOutputTask,
 };
 use finance::{
@@ -155,5 +155,15 @@ impl ContractInSwap for BuyBack {
         ConfigResponse {
             cadence_hours: self.config.cadence_hours(),
         }
+    }
+}
+
+impl Handler for BuyBack {
+    type Response = State;
+    type SwapResult = ContractResult<DexResponse<State>>;
+
+    fn check_timealarms_permission<U>(self, user: &U, check_type: &String) -> DexResult<Self> {
+        // TODO match check_type if needed
+        access_control::check(&TimeAlarmDelivery::new(&self.config.time_alarms()), user)?;
     }
 }

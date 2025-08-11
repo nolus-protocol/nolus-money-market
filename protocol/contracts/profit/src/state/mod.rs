@@ -1,7 +1,7 @@
 use std::fmt::{Display, Formatter};
 
 use finance::duration::Duration;
-use serde::{Deserialize, Serialize};
+use serde::{de, Deserialize, Serialize};
 
 use dex::{
     ConnectionParams, ContinueResult, Contract, Handler, Response as DexResponse,
@@ -14,7 +14,7 @@ use platform::{
 };
 use sdk::{
     cosmwasm_std::{
-        Binary, Env, MessageInfo, QuerierWrapper, Reply as CwReply, Storage, Timestamp,
+        Addr, Binary, Env, MessageInfo, QuerierWrapper, Reply as CwReply, Storage, Timestamp,
     },
     cw_storage_plus::Item,
 };
@@ -42,12 +42,6 @@ pub(crate) trait ConfigManagement
 where
     Self: Sized,
 {
-    fn load_config(&self) -> ContractResult<Config> {
-        Err(ContractError::unsupported_operation(
-            "Configuration loading is not supported in this state!",
-        ))
-    }
-
     fn try_update_config(
         self,
         _: Timestamp,
@@ -71,14 +65,6 @@ enum StateEnum {
 pub(crate) struct State(StateEnum);
 
 impl ConfigManagement for State {
-    fn load_config(&self) -> ContractResult<Config> {
-        match &self.0 {
-            StateEnum::OpenIca(ica) => ica.load_config(),
-            StateEnum::Idle(idle) => idle.load_config(),
-            StateEnum::BuyBack(buy_back) => buy_back.load_config(),
-        }
-    }
-
     fn try_update_config(
         self,
         now: Timestamp,
@@ -249,6 +235,17 @@ impl Handler for State {
             StateEnum::OpenIca(ica) => ica.on_time_alarm(querier, env, info).map_into(),
             StateEnum::Idle(idle) => idle.on_time_alarm(querier, env, info).map_into(),
             StateEnum::BuyBack(buy_back) => buy_back.on_time_alarm(querier, env, info).map_into(),
+        }
+    }
+
+    fn check_timealarms_permission<U>(&self, user: &U, check_type: &String) -> DexResult<bool>
+        where
+            U: User
+    {
+        match self.0 {
+            StateEnum::OpenIca(ica) => ica.check_timealarms_permission(user, check_type).map_into(),
+            StateEnum::Idle(idle) => idle.check_timealarms_permission(user, check_type).map_into(),
+            StateEnum::BuyBack(buy_back) => buy_back.check_timealarms_permission(user, check_type).map_into(),
         }
     }
 }

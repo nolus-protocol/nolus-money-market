@@ -3,7 +3,7 @@ use std::fmt::{Display, Formatter, Result as FmtResult};
 use finance::duration::Duration;
 use serde::{Deserialize, Serialize};
 
-use dex::{Account, Connectable, ConnectionParams, Contract, IcaConnectee};
+use dex::{Account, Connectable, ConnectionParams, Contract, Handler, IcaConnectee};
 use sdk::cosmwasm_std::{QuerierWrapper, Timestamp};
 
 use crate::{msg::ConfigResponse, result::ContractResult};
@@ -61,8 +61,13 @@ impl Display for OpenIca {
     }
 }
 
-impl ConfigManagement for IcaConnector {
-    fn load_config(&self) -> ContractResult<Config> {
-        Ok(self.config)
+impl Handler for IcaConnector {
+    type Response = State;
+    type SwapResult = ContractResult<DexResponse<State>>;
+
+    fn check_timealarms_permission<U>(self, user: &U, check_type: &String) -> DexResult<Self> {
+        // TODO Match check_type if needed
+        let inner = self.inner();
+        access_control::check(&TimeAlarmDelivery::new(&inner.config.time_alarms()), user)?;
     }
 }
