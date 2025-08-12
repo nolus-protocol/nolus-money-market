@@ -1,7 +1,7 @@
 use std::fmt::{Display, Formatter};
 
 use finance::duration::Duration;
-use serde::{de, Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 
 use dex::{
     ConnectionParams, ContinueResult, Contract, Handler, Response as DexResponse,
@@ -14,7 +14,7 @@ use platform::{
 };
 use sdk::{
     cosmwasm_std::{
-        Addr, Binary, Env, MessageInfo, QuerierWrapper, Reply as CwReply, Storage, Timestamp,
+        Binary, Env, MessageInfo, QuerierWrapper, Reply as CwReply, Storage, Timestamp,
     },
     cw_storage_plus::Item,
 };

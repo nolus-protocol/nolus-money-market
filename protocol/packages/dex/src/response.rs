@@ -5,7 +5,7 @@ use platform::{
     message::Response as MessageResponse,
     state_machine::{self, Response as StateMachineResponse},
 };
-use sdk::cosmwasm_std::{Addr, Binary, Env, MessageInfo, QuerierWrapper, Reply};
+use sdk::cosmwasm_std::{Binary, Env, MessageInfo, QuerierWrapper, Reply};
 
 use crate::error::{Error, Result as DexResult};
 
