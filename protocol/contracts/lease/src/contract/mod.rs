@@ -1,19 +1,21 @@
 use serde::{Deserialize, Serialize};
 
+use currency::{Currency, Group, MemberOf};
 use dex::{Account, Connectable, ConnectionParams};
-use sdk::cosmwasm_std::QuerierWrapper;
+use oracle_platform::OracleRef;
+use sdk::cosmwasm_std::{MessageInfo, QuerierWrapper};
 
 use crate::{
     lease::{LeaseDTO, with_lease::WithLease},
     position::PositionError,
 };
 
-pub use self::endpoins::{execute, instantiate, migrate, query, reply, sudo};
+pub use self::endpoints::{execute, instantiate, migrate, query, reply, sudo};
 use self::finalize::LeasesRef;
 
 mod api;
 mod cmd;
-mod endpoins;
+mod endpoints;
 mod finalize;
 pub mod msg;
 mod state;
