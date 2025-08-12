@@ -20,35 +20,43 @@ use crate::{
     zero::Zero,
 };
 
-use super::{HUNDRED_BOUND, Units};
+use super::Units;
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, Ord, PartialEq, PartialOrd, Serialize)]
 #[serde(try_from = "Units", into = "Units")]
 pub struct BoundPercent<const UPPER_BOUND: Units>(Units);
 
 impl<const UPPER_BOUND: Units> BoundPercent<UPPER_BOUND> {
-    pub const ZERO: Self = Self::from_permille(0);
-    pub const HUNDRED: Self = Self::from_permille(Self::PERMILLE);
-    pub(crate) const PERMILLE: Units = HUNDRED_BOUND;
+    pub const ZERO: Self = Self::try_from_primitive(0).expect("0% is a valid instance");
+    pub const HUNDRED: Self = Self::try_from_primitive(100).expect("100% is a valid instance");
+    pub(crate) const PERMILLE_UNIT: Self =
+        Self::try_from_permille(1).expect("0.1% is a valid instance");
 
     const UNITS_TO_PERCENT_RATIO: Units = 10;
 
     #[cfg(any(test, feature = "testing"))]
-    pub fn new(units: Units) -> Self {
-        Self::new_internal(units)
+    pub const fn from_percent(percent: u16) -> Self {
+        Self::try_from_primitive(percent as u32)
+            .expect("Percent value safely fits in internal representation")
     }
 
-    const fn new_internal(units: Units) -> Self {
-        debug_assert!(units <= UPPER_BOUND, "Value exceeds upper bound!");
-        Self(units)
-    }
-
-    pub fn from_percent(percent: u16) -> Self {
-        Self::from_permille(Units::from(percent) * Self::UNITS_TO_PERCENT_RATIO)
-    }
-
+    #[cfg(any(test, feature = "testing"))]
     pub const fn from_permille(permille: Units) -> Self {
-        Self::new_internal(permille)
+        Self::try_from_permille(permille).expect("Permille value exceeds allowed upper bound")
+    }
+
+    const fn try_from_permille(permille: Units) -> Option<Self> {
+        match permille <= UPPER_BOUND {
+            true => Some(Self(permille)),
+            false => None,
+        }
+    }
+
+    const fn try_from_primitive(percent: u32) -> Option<Self> {
+        match percent.checked_mul(Self::UNITS_TO_PERCENT_RATIO) {
+            Some(permille) => Self::try_from_permille(permille),
+            None => None,
+        }
     }
 
     pub fn from_fraction<U>(nominator: U, denominator: U) -> Option<Self>
@@ -71,22 +79,13 @@ impl<const UPPER_BOUND: Units> BoundPercent<UPPER_BOUND> {
         self.0
             .checked_add(other.0)
             .ok_or(Error::overflow_err("while adding", self, other))
-            .and_then(|sum| {
-                if sum <= UPPER_BOUND {
-                    Ok(Self::from_permille(sum))
-                } else {
-                    Err(Error::UpperBoundCrossed {
-                        bound: HUNDRED_BOUND,
-                        value: sum,
-                    })
-                }
-            })
+            .and_then(|sum| sum.try_into())
     }
 
     pub fn checked_sub(self, other: Self) -> FinanceResult<Self> {
         self.0
             .checked_sub(other.0)
-            .map(Self::from_permille)
+            .and_then(Self::try_from_permille)
             .ok_or(Error::overflow_err("while subtracting", self, other))
     }
 }
@@ -96,12 +95,10 @@ impl<const UPPER_BOUND: Units> TryFrom<Units> for BoundPercent<UPPER_BOUND> {
     type Error = Error;
 
     fn try_from(permille: Units) -> Result<Self, Self::Error> {
-        (permille <= UPPER_BOUND)
-            .then(|| Self::new_internal(permille))
-            .ok_or(Error::UpperBoundCrossed {
-                bound: UPPER_BOUND,
-                value: permille,
-            })
+        Self::try_from_permille(permille).ok_or(Error::UpperBoundCrossed {
+            bound: UPPER_BOUND,
+            value: permille,
+        })
     }
 }
 
@@ -144,7 +141,8 @@ impl<const UPPER_BOUND: Units> Mul<BoundPercent<UPPER_BOUND>> for BoundPercent<U
     type Output = Self;
 
     fn mul(self, rhs: Self) -> Self::Output {
-        Self::from_permille(self.0.mul(rhs.0))
+        Self::try_from(self.0.mul(rhs.0))
+            .expect("Resulting permille exceeds BoundPercent upper bound")
     }
 }
 
@@ -185,13 +183,13 @@ impl<const UPPER_BOUND: Units> From<BoundPercent<UPPER_BOUND>> for Uint256 {
     }
 }
 
-impl<const UPPER_BOUND: Units> TryFrom<Amount> for BoundPercent<UPPER_BOUND> {
-    type Error = <Units as TryFrom<Amount>>::Error;
+// impl<const UPPER_BOUND: Units> TryFrom<Amount> for BoundPercent<UPPER_BOUND> {
+//     type Error = Error;
 
-    fn try_from(value: Amount) -> Result<Self, Self::Error> {
-        Ok(Self::from_permille(value.try_into()?))
-    }
-}
+//     fn try_from(value: Amount) -> Result<Self, Self::Error> {
+//         Units::try_from(value).and_then(Self::try_from)
+//     }
+// }
 
 impl<const UPPER_BOUND: Units> TryFrom<BoundPercent<UPPER_BOUND>> for u16 {
     type Error = TryFromIntError;
@@ -230,5 +228,54 @@ impl<const UPPER_BOUND: Units> Sub for BoundPercent<UPPER_BOUND> {
                 .checked_sub(rhs.0)
                 .expect("attempt to subtract with overflow"),
         )
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use crate::percent::{Percent, Percent100};
+
+    #[test]
+    fn from_primitive() {
+        assert_eq!(Percent100::try_from_primitive(0).unwrap(), Percent100::ZERO);
+        assert_eq!(
+            Percent100::try_from_primitive(10).unwrap(),
+            Percent100::from_percent(10)
+        );
+        assert_eq!(
+            Percent100::try_from_primitive(99).unwrap(),
+            Percent100::from_percent(99)
+        );
+        assert_eq!(
+            Percent100::try_from_primitive(100).unwrap(),
+            Percent100::from_percent(100)
+        );
+        assert!(Percent100::try_from_primitive(101).is_none());
+
+        assert_eq!(Percent::try_from_primitive(0).unwrap(), Percent::ZERO);
+        assert_eq!(
+            Percent::try_from_primitive(101).unwrap(),
+            Percent::from_percent(101)
+        );
+    }
+
+    #[test]
+    fn from_permille() {
+        assert_eq!(Percent100::try_from_permille(0).unwrap(), Percent100::ZERO);
+        assert_eq!(
+            Percent100::try_from_permille(10).unwrap(),
+            Percent100::from_permille(10)
+        );
+        assert_eq!(
+            Percent100::try_from_permille(1000).unwrap(),
+            Percent100::from_permille(1000)
+        );
+
+        assert_eq!(Percent::try_from_permille(0).unwrap(), Percent::ZERO);
+        assert_eq!(
+            Percent::try_from_permille(1001).unwrap(),
+            Percent::from_permille(1001)
+        );
+        assert!(Percent::try_from_primitive(u32::MAX / 10 + 1).is_none());
     }
 }

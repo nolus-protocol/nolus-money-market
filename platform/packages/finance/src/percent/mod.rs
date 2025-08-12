@@ -57,7 +57,8 @@ impl From<Percent> for SimpleFraction<Units> {
 
 impl From<Percent100> for Percent {
     fn from(percent: Percent100) -> Self {
-        Self::from_permille(percent.units())
+        Self::try_from(percent.units())
+            .expect("Percent value safely fits in internal representation")
     }
 }
 
@@ -66,12 +67,7 @@ impl TryFrom<Percent> for Percent100 {
 
     fn try_from(percent: Percent) -> Result<Self, Self::Error> {
         let permilles = percent.units();
-        (permilles <= HUNDRED_BOUND)
-            .then(|| Self::from_permille(permilles))
-            .ok_or(Error::UpperBoundCrossed {
-                bound: HUNDRED_BOUND,
-                value: permilles,
-            })
+        permilles.try_into()
     }
 }
 
@@ -91,28 +87,6 @@ pub(super) mod test {
     };
 
     use super::Units;
-
-    #[test]
-    fn from_percent() {
-        assert_eq!(Percent100::from_percent(0), Percent100::new(0));
-        assert_eq!(Percent100::from_percent(10), Percent100::new(100));
-        assert_eq!(Percent100::from_percent(99), Percent100::new(990));
-        assert_eq!(Percent100::from_percent(100), Percent100::new(1000));
-
-        assert_eq!(Percent::from_percent(0), Percent::new(0));
-        assert_eq!(Percent::from_percent(101), Percent::new(1010));
-    }
-
-    #[test]
-    fn from_permille() {
-        assert_eq!(Percent100::from_permille(0), Percent100::new(0));
-        assert_eq!(Percent100::from_permille(10), Percent100::new(10));
-        assert_eq!(Percent100::from_permille(1000), Percent100::new(1000));
-
-        assert_eq!(Percent::from_permille(0), Percent::new(0));
-        assert_eq!(Percent::from_permille(1001), Percent::new(1001));
-        assert_eq!(Percent::from_permille(Units::MAX), Percent::new(Units::MAX));
-    }
 
     #[test]
     fn test_zero() {
@@ -158,7 +132,10 @@ pub(super) mod test {
         assert_eq!(from(0), from(34) - (from(34)));
         assert_eq!(from(39), from(39) - (from(0)));
         assert_eq!(from(990), Percent100::HUNDRED - (from(10)));
-        assert_eq!(from(0), Percent100::HUNDRED - (from(Percent100::PERMILLE)));
+        assert_eq!(
+            from(0),
+            Percent100::HUNDRED - Percent100::from_permille(1000)
+        );
     }
 
     #[test]
@@ -201,14 +178,22 @@ pub(super) mod test {
             Percent100::from_permille(8),
         );
         test_of(1, Percent100::from_permille(123), Percent100::ZERO);
-        test_of(0, Percent100::HUNDRED, Percent100::from_percent(0));
-        test_of(
-            1000,
-            Percent100::from_permille(Percent100::PERMILLE),
-            Percent100::from_permille(1000),
-        );
+        test_of(0, Percent100::HUNDRED, Percent100::ZERO);
         test_of(1000, Percent100::HUNDRED, Percent100::HUNDRED);
         test_of(100, Percent100::ZERO, Percent100::ZERO);
+    }
+
+    #[test]
+    fn percent_to_percent100() {
+        assert_eq!(
+            Percent100::from_permille(500),
+            Percent::from_permille(500).try_into().unwrap()
+        );
+        assert_eq!(
+            Percent100::from_permille(1000),
+            Percent::from_permille(1000).try_into().unwrap()
+        );
+        assert!(Percent100::try_from(Percent::from_permille(1001)).is_err());
     }
 
     #[test]
