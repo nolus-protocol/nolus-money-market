@@ -10,12 +10,12 @@ use crate::{
     position::PositionError,
 };
 
-pub use self::endpoins::{execute, instantiate, migrate, query, reply, sudo};
+pub use self::endpoints::{execute, instantiate, migrate, query, reply, sudo};
 use self::finalize::LeasesRef;
 
 mod api;
 mod cmd;
-mod endpoins;
+mod endpoints;
 mod finalize;
 pub mod msg;
 mod state;

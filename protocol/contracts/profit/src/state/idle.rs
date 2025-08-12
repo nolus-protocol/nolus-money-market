@@ -27,8 +27,8 @@ use timealarms::stub::Result as TimeAlarmsResult;
 use crate::{msg::ConfigResponse, profit::Profit, result::ContractResult, typedefs::CadenceHours};
 
 use super::{
-    Config, ConfigManagement, State, StateEnum, SwapClient, buy_back::BuyBack,
-    resp_delivery::ForwardToDexEntry,
+    Config, ConfigManagement, State, StateEnum, SwapClient,
+    buy_back::BuyBack, resp_delivery::ForwardToDexEntry,
 };
 
 #[derive(Serialize, Deserialize)]
