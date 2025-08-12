@@ -1,9 +1,6 @@
 use std::collections::HashMap;
 
-use finance::{
-    duration::Duration, percent::Percent100, price::Price, ratio::SimpleFraction,
-    rational::Rational,
-};
+use finance::{duration::Duration, price::Price, ratio::SimpleFraction, rational::Rational};
 use sdk::cosmwasm_std::{Addr, Timestamp};
 
 use super::observation::Observation;
@@ -112,10 +109,7 @@ where
 
             let sum = values.fold(*first, |acc, current| acc + *current);
             let denominator = u32::try_from(prices_number).ok()?;
-            let part = SimpleFraction::new(
-                Percent100::from_permille(1).units(),
-                Percent100::from_permille(denominator).units(),
-            );
+            let part = SimpleFraction::new(1, denominator);
             let avg = part.of(sum);
             self.last_sample = Sample { price: avg }
         }
