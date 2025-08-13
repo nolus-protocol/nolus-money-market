@@ -13,8 +13,8 @@ use platform::{
 use sdk::{
     cosmwasm_ext::Response as CwResponse,
     cosmwasm_std::{
-        Addr, Api, Binary, Deps, DepsMut, Env, MessageInfo, QuerierWrapper, Reply, entry_point,
-        to_json_binary,
+        Addr, Api, Binary, ContractInfo, Deps, DepsMut, Env, MessageInfo, QuerierWrapper, Reply,
+        entry_point, to_json_binary,
     },
     neutron_sdk::sudo::msg::SudoMsg as NeutronSudoMsg,
 };
@@ -96,7 +96,7 @@ pub fn execute(
             deps,
             env,
             |state, querier, env| State::on_time_alarm(state, querier, env, info),
-            (&info, CheckType::Timealarm, None),
+            (info, CheckType::Timealarm, None),
         )
         .map(response::response_only_messages),
         ExecuteMsg::Config { cadence_hours } => {
@@ -117,11 +117,7 @@ pub fn execute(
             deps,
             env,
             State::on_inner,
-            (
-                info,
-                CheckType::DexResponseSafeDelivery,
-                env.contract.address,
-            ),
+            (info, CheckType::DexResponseSafeDelivery, Some(env.contract)),
         )
         .map(response::response_only_messages),
         ExecuteMsg::DexCallbackContinue() => try_handle_execute_message(
@@ -131,7 +127,7 @@ pub fn execute(
             (
                 &info,
                 CheckType::DexResponseSafeDelivery,
-                env.contract.address,
+                Some(env.contract),
             ),
         )
         .map(response::response_only_messages),
@@ -192,7 +188,7 @@ fn try_handle_execute_message<F, R, E, U>(
     deps: DepsMut<'_>,
     env: Env,
     handler: F,
-    permission_check: (U, CheckType, Addr),
+    permission_check: (U, CheckType, Option<ContractInfo>),
 ) -> ContractResult<MessageResponse>
 where
     F: FnOnce(State, QuerierWrapper<'_>, Env) -> R,

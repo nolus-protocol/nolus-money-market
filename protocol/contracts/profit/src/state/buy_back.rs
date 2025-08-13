@@ -18,7 +18,7 @@ use finance::{
 };
 use oracle::stub::SwapPath;
 use platform::bank::{self, BankAccountView};
-use sdk::cosmwasm_std::{Addr, Env, QuerierWrapper, Timestamp};
+use sdk::cosmwasm_std::{Addr, ContractInfo, Env, QuerierWrapper, Timestamp};
 use timealarms::stub::{TimeAlarmDelivery, TimeAlarmsRef};
 
 use crate::{msg::ConfigResponse, result::ContractResult};
@@ -169,8 +169,8 @@ impl Handler for BuyBack {
         &self,
         user: &U,
         check_type: CheckType,
-        contract_addr: Option<Addr>,
-    ) -> DexResult<bool>
+        contract_info: Option<ContractInfo>,
+    ) -> DexResult<Self>
     where
         U: User,
     {
@@ -181,13 +181,13 @@ impl Handler for BuyBack {
             CheckType::ContractOwner => {
                 access_control::check(
                     &ContractOwnerPermission::new(&self.config.contract_owner()),
-                    &user,
+                    user,
                 )?;
             }
             CheckType::DexResponseSafeDelivery => {
                 access_control::check(
-                    &DexResponseSafeDeliveryPermission::new(&contract_addr),
-                    &user,
+                    &DexResponseSafeDeliveryPermission::new(&contract_info),
+                    user,
                 )?;
             }
             CheckType::None => {}
