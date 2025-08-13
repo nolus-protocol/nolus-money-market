@@ -126,11 +126,4 @@ where
     ) -> ContractResult<Response> {
         super::ignore_msg(self)
     }
-
-    fn check_timealarms_permission<U>(&self, user: &U, check_type: &String) -> ContractResult<bool>
-    where
-        U: User,
-    {
-        self.handler.check_timealarms_permission(user, check_type).into()
-    }
 }

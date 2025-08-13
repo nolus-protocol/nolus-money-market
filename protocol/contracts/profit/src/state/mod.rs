@@ -4,8 +4,7 @@ use finance::duration::Duration;
 use serde::{Deserialize, Serialize};
 
 use dex::{
-    ConnectionParams, ContinueResult, Contract, Handler, Response as DexResponse,
-    Result as DexResult, StateLocalOut,
+    CheckType, ConnectionParams, ContinueResult, Contract, Handler, Response as DexResponse, Result as DexResult, StateLocalOut
 };
 use platform::{
     batch::Batch,
@@ -238,14 +237,14 @@ impl Handler for State {
         }
     }
 
-    fn check_timealarms_permission<U>(&self, user: &U, check_type: &String) -> DexResult<bool>
+    fn check_permission<U>(&self, user: &U, check_type: &CheckType, contract_addr: Option<Addr>) -> DexResult<bool>
         where
             U: User
     {
         match self.0 {
-            StateEnum::OpenIca(ica) => ica.check_timealarms_permission(user, check_type).map_into(),
-            StateEnum::Idle(idle) => idle.check_timealarms_permission(user, check_type).map_into(),
-            StateEnum::BuyBack(buy_back) => buy_back.check_timealarms_permission(user, check_type).map_into(),
+            StateEnum::OpenIca(ica) => ica.check_permission(user, check_type, contract_addr).map_into(),
+            StateEnum::Idle(idle) => idle.check_permission(user, check_type, contract_addr).map_into(),
+            StateEnum::BuyBack(buy_back) => buy_back.check_permission(user, check_type, contract_addr).map_into(),
         }
     }
 }

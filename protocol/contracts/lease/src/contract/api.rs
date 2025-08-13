@@ -151,17 +151,6 @@ where
     ) -> ContractResult<Response> {
         err("on price alarm")
     }
-
-    fn check_timealarms_permission<U>(
-        &self,
-        _user: &U,
-        check_type: String,
-    ) -> ContractResult<bool>
-    where
-        U: User,
-    {
-        err("check timealarms permission")
-    }
 }
 
 fn err<R, Op>(op: Op) -> ContractResult<R>

@@ -1,10 +1,14 @@
 use std::fmt::{Display, Formatter, Result as FmtResult};
-
-use finance::duration::Duration;
 use serde::{Deserialize, Serialize};
 
+use access_control::{
+    permissions::{ContractOwnerPermission, DexResponseSafeDeliveryPermission},
+    user::User,
+};
 use dex::{Account, Connectable, ConnectionParams, Contract, Handler, IcaConnectee};
+use finance::duration::Duration;
 use sdk::cosmwasm_std::{QuerierWrapper, Timestamp};
+use timealarms::stub::TimeAlarmDelivery;
 
 use crate::{msg::ConfigResponse, result::ContractResult};
 
@@ -61,13 +65,28 @@ impl Display for OpenIca {
     }
 }
 
-impl Handler for IcaConnector {
+impl Handler for OpenIca {
     type Response = State;
     type SwapResult = ContractResult<DexResponse<State>>;
 
-    fn check_timealarms_permission<U>(self, user: &U, check_type: &String) -> DexResult<Self> {
-        // TODO Match check_type if needed
-        let inner = self.inner();
-        access_control::check(&TimeAlarmDelivery::new(&inner.config.time_alarms()), user)?;
+    fn check_permission<U>(self, user: &U, check_type: &CheckType, contract_addr: Option<Addr>) -> DexResult<bool> {
+        match check_type {
+            CheckType::Timealarm => {
+                access_control::check(&TimeAlarmDelivery::new(&self.config.time_alarms()), user)?;
+            }
+            CheckType::ContractOwner => {
+                access_control::check(
+                    &ContractOwnerPermission::new(&self.config.contract_owner()),
+                    &user,
+                )?;
+            }
+            CheckType::DexResponseSafeDelivery => {
+                access_control::check(
+                    &DexResponseSafeDeliveryPermission::new(&contract_addr),
+                    &user,
+                )?;
+            }
+            CheckType::None => {}
+        }
     }
 }
