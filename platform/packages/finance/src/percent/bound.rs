@@ -1,7 +1,4 @@
-use std::{
-    fmt::{Debug, Display, Formatter, Result as FmtResult, Write},
-    num::TryFromIntError,
-};
+use std::fmt::{Debug, Display, Formatter, Result as FmtResult, Write};
 
 #[cfg(any(test, feature = "testing"))]
 use std::ops::{Add, Sub};
@@ -22,13 +19,13 @@ use crate::{
 use super::Units;
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, Ord, PartialEq, PartialOrd, Serialize)]
-#[serde(try_from = "Units", into = "Units")]
+#[serde(into = "Units", try_from = "Units")]
 pub struct BoundPercent<const UPPER_BOUND: Units>(Units);
 
 impl<const UPPER_BOUND: Units> BoundPercent<UPPER_BOUND> {
     pub const ZERO: Self = Self::try_from_primitive(0).expect("0% is a valid instance");
     pub const HUNDRED: Self = Self::try_from_primitive(100).expect("100% is a valid instance");
-    pub(crate) const PERMILLE_UNIT: Self =
+    pub(crate) const PRECISION: Self =
         Self::try_from_permille(1).expect("0.1% is a valid instance");
 
     const UNITS_TO_PERCENT_RATIO: Units = 10;
@@ -89,7 +86,12 @@ impl<const UPPER_BOUND: Units> BoundPercent<UPPER_BOUND> {
     }
 }
 
-// Method used for deserialization
+impl<const UPPER_BOUND: Units> From<BoundPercent<UPPER_BOUND>> for Units {
+    fn from(percent: BoundPercent<UPPER_BOUND>) -> Self {
+        percent.0
+    }
+}
+
 impl<const UPPER_BOUND: Units> TryFrom<Units> for BoundPercent<UPPER_BOUND> {
     type Error = Error;
 
@@ -98,13 +100,6 @@ impl<const UPPER_BOUND: Units> TryFrom<Units> for BoundPercent<UPPER_BOUND> {
             bound: UPPER_BOUND,
             value: permille,
         })
-    }
-}
-
-// Method used for serialization
-impl<const UPPER_BOUND: Units> From<BoundPercent<UPPER_BOUND>> for Units {
-    fn from(percent: BoundPercent<UPPER_BOUND>) -> Self {
-        percent.0
     }
 }
 
@@ -160,14 +155,6 @@ impl<const UPPER_BOUND: Units> From<BoundPercent<UPPER_BOUND>> for SimpleFractio
 impl<const UPPER_BOUND: Units> From<BoundPercent<UPPER_BOUND>> for Uint256 {
     fn from(percent: BoundPercent<UPPER_BOUND>) -> Self {
         Amount::from(percent).into()
-    }
-}
-
-impl<const UPPER_BOUND: Units> TryFrom<BoundPercent<UPPER_BOUND>> for u16 {
-    type Error = TryFromIntError;
-
-    fn try_from(percent: BoundPercent<UPPER_BOUND>) -> Result<Self, Self::Error> {
-        percent.0.try_into()
     }
 }
 
