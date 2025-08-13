@@ -6,7 +6,7 @@ use platform::{
     message::Response as MessageResponse,
     state_machine::{self, Response as StateMachineResponse},
 };
-use sdk::cosmwasm_std::{Addr, Binary, Env, MessageInfo, QuerierWrapper, Reply};
+use sdk::cosmwasm_std::{Addr, Binary, ContractInfo, Env, MessageInfo, QuerierWrapper, Reply};
 
 use crate::error::{Error, Result as DexResult};
 
@@ -116,8 +116,8 @@ where
         &self,
         user: &U,
         check_type: CheckType,
-        contract_addr: Option<Addr>,
-    ) -> DexResult<bool>
+        contract_info: Option<ContractInfo>,
+    ) -> Result<Self>
     where
         U: User,
     {

@@ -1,3 +1,4 @@
+use cosmwasm_std::ContractInfo;
 use serde::{Deserialize, Serialize};
 use std::{
     fmt::{Display, Formatter, Result as FmtResult},
@@ -24,7 +25,7 @@ use platform::{
     message::Response as PlatformResponse,
     state_machine::Response as StateMachineResponse,
 };
-use sdk::cosmwasm_std::{Addr, Env, MessageInfo, QuerierWrapper, Timestamp};
+use sdk::cosmwasm_std::{Addr, ContractInfo, Env, MessageInfo, QuerierWrapper, Timestamp};
 use timealarms::stub::{Result as TimeAlarmsResult, TimeAlarmDelivery};
 
 use crate::{msg::ConfigResponse, profit::Profit, result::ContractResult, typedefs::CadenceHours};
@@ -178,8 +179,8 @@ impl Handler for Idle {
         &self,
         user: &U,
         check_type: CheckType,
-        contract_addr: Option<Addr>,
-    ) -> DexResult<bool>
+        contract_info: Option<ContractInfo>,
+    ) -> DexResult<Self>
     where
         U: User,
     {
@@ -190,13 +191,13 @@ impl Handler for Idle {
             CheckType::ContractOwner => {
                 access_control::check(
                     &ContractOwnerPermission::new(&self.config.contract_owner()),
-                    &user,
+                    user,
                 )?;
             }
             CheckType::DexResponseSafeDelivery => {
                 access_control::check(
-                    &DexResponseSafeDeliveryPermission::new(&contract_addr),
-                    &user,
+                    &DexResponseSafeDeliveryPermission::new(&contract_info),
+                    user,
                 )?;
             }
             CheckType::None => {}

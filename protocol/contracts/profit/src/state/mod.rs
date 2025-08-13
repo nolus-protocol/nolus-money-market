@@ -14,7 +14,8 @@ use platform::{
 };
 use sdk::{
     cosmwasm_std::{
-        Addr, Binary, Env, MessageInfo, QuerierWrapper, Reply as CwReply, Storage, Timestamp,
+        Addr, Binary, ContractInfo, Env, MessageInfo, QuerierWrapper, Reply as CwReply, Storage,
+        Timestamp,
     },
     cw_storage_plus::Item,
 };
@@ -242,20 +243,20 @@ impl Handler for State {
         &self,
         user: &U,
         check_type: CheckType,
-        contract_addr: Option<Addr>,
-    ) -> DexResult<bool>
+        contract_info: Option<ContractInfo>,
+    ) -> DexResult<Self>
     where
         U: User,
     {
         match self.0 {
             StateEnum::OpenIca(ica) => ica
-                .check_permission(user, check_type, contract_addr)
+                .check_permission(user, check_type, contract_info)
                 .map_into(),
             StateEnum::Idle(idle) => idle
-                .check_permission(user, check_type, contract_addr)
+                .check_permission(user, check_type, contract_info)
                 .map_into(),
             StateEnum::BuyBack(buy_back) => buy_back
-                .check_permission(user, check_type, contract_addr)
+                .check_permission(user, check_type, contract_info)
                 .map_into(),
         }
     }
