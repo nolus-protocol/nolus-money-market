@@ -69,8 +69,9 @@ impl<const UPPER_BOUND: Units> BoundPercent<UPPER_BOUND> {
         self.0
     }
 
-    pub const fn is_zero(&self) -> bool {
-        self.0 == Self::ZERO.0
+    // Cannot be const because const impl of PartialEq is not available.
+    pub fn is_zero(&self) -> bool {
+        self == &Self::ZERO
     }
 
     pub fn checked_add(self, other: Self) -> Option<Self> {
