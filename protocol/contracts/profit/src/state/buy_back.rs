@@ -23,7 +23,7 @@ use timealarms::stub::{TimeAlarmDelivery, TimeAlarmsRef};
 
 use crate::{msg::ConfigResponse, result::ContractResult};
 
-use super::{Config, State, StateEnum, SwapClient, idle::Idle, resp_delivery::ForwardToDexEntry};
+use super::{Config, ConfigManagement, State, StateEnum, SwapClient, idle::Idle, resp_delivery::ForwardToDexEntry};
 
 #[derive(Serialize, Deserialize)]
 pub(super) struct BuyBack {
@@ -160,6 +160,8 @@ impl ContractInSwap for BuyBack {
         }
     }
 }
+
+impl ConfigManagement for StateLocalOut<BuyBack, SwapClient, ForwardToDexEntry> {}
 
 impl Handler for BuyBack {
     type Response = State;

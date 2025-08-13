@@ -125,14 +125,14 @@ pub fn execute(
             env,
             State::on_inner_continue,
             (
-                &info,
+                info,
                 CheckType::DexResponseSafeDelivery,
                 Some(env.contract),
             ),
         )
         .map(response::response_only_messages),
         ExecuteMsg::Heal() => {
-            try_handle_execute_message(deps, env, State::heal, (&info, CheckType::None, None))
+            try_handle_execute_message(deps, env, State::heal, (info, CheckType::None, None))
                 .map(response::response_only_messages)
         }
     }
@@ -199,7 +199,7 @@ where
     let state: State = State::load(deps.storage)?;
 
     if permission_check.1 != None {
-        state.check_permission(&permission_check.0, &permission_check.1, permission_check.2)?;
+        state.check_permission(&permission_check.0, permission_check.1, permission_check.2)?;
     }
 
     let DexResponse::<State> {

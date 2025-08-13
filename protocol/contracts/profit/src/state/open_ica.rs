@@ -15,7 +15,7 @@ use timealarms::stub::TimeAlarmDelivery;
 
 use crate::{msg::ConfigResponse, result::ContractResult};
 
-use super::{Config, State, idle::Idle};
+use super::{Config, ConfigManagement, State, idle::Idle};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub(super) struct OpenIca {
@@ -61,6 +61,8 @@ impl Contract for OpenIca {
         }
     }
 }
+
+impl ConfigManagement for IcaConnector {}
 
 impl Display for OpenIca {
     fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {

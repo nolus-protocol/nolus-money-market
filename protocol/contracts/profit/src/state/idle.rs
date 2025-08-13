@@ -1,4 +1,3 @@
-use cosmwasm_std::ContractInfo;
 use serde::{Deserialize, Serialize};
 use std::{
     fmt::{Display, Formatter, Result as FmtResult},
