@@ -50,7 +50,7 @@ pub struct Liability {
 
 impl Liability {
     const MAX_TOP_BOUND: Percent100 = Percent100::HUNDRED;
-    const MIN_STEP_LTV: Percent100 = Percent100::PERMILLE_UNIT;
+    const MIN_STEP_LTV: Percent100 = Percent100::PRECISION;
 
     #[track_caller]
     #[cfg(any(test, feature = "testing"))]
