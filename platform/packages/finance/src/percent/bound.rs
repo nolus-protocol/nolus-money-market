@@ -1,7 +1,6 @@
 use std::{
     fmt::{Debug, Display, Formatter, Result as FmtResult, Write},
     num::TryFromIntError,
-    ops::{Div, Mul},
 };
 
 #[cfg(any(test, feature = "testing"))]
@@ -125,25 +124,6 @@ impl<const UPPER_BOUND: Units> Display for BoundPercent<UPPER_BOUND> {
     }
 }
 
-impl<const UPPER_BOUND: Units> Div for BoundPercent<UPPER_BOUND> {
-    type Output = Units;
-
-    fn div(self, rhs: Self) -> Self::Output {
-        debug_assert!(!rhs.is_zero());
-
-        self.0.div(rhs.0)
-    }
-}
-
-impl<const UPPER_BOUND: Units> Mul<BoundPercent<UPPER_BOUND>> for BoundPercent<UPPER_BOUND> {
-    type Output = Self;
-
-    fn mul(self, rhs: Self) -> Self::Output {
-        Self::try_from(self.0.mul(rhs.0))
-            .expect("Resulting permille exceeds BoundPercent upper bound")
-    }
-}
-
 impl<const UPPER_BOUND: Units> Ratio<Units> for BoundPercent<UPPER_BOUND> {
     fn parts(&self) -> Units {
         self.units()
@@ -180,14 +160,6 @@ impl<const UPPER_BOUND: Units> From<BoundPercent<UPPER_BOUND>> for Uint256 {
         Amount::from(percent).into()
     }
 }
-
-// impl<const UPPER_BOUND: Units> TryFrom<Amount> for BoundPercent<UPPER_BOUND> {
-//     type Error = Error;
-
-//     fn try_from(value: Amount) -> Result<Self, Self::Error> {
-//         Units::try_from(value).and_then(Self::try_from)
-//     }
-// }
 
 impl<const UPPER_BOUND: Units> TryFrom<BoundPercent<UPPER_BOUND>> for u16 {
     type Error = TryFromIntError;
