@@ -14,7 +14,7 @@ pub use self::{
         StateRemoteOut, TransferOut, start_local_local, start_local_remote, start_remote_local,
     },
     resp_delivery::ForwardToInner,
-    response::{ContinueResult, Handler, Response, Result},
+    response::{CheckType, ContinueResult, Handler, Response, Result},
     slippage::{Calculator as SlippageCalculator, WithCalculator},
     state::{Contract, ContractInSwap, Stage},
     swap_task::{CoinsNb, SwapOutputTask, SwapTask, WithOutputTask},

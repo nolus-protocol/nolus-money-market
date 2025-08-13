@@ -1,6 +1,10 @@
 use currency::{CurrencyDef, Group};
 use serde::{Deserialize, Serialize};
 
+use access_control::{
+    permissions::{ContractOwnerPermission, DexResponseSafeDeliveryPermission},
+    user::User,
+};
 use currencies::{Native, Nls, PaymentGroup};
 use dex::{
     AcceptAnyNonZeroSwap, Account, AnomalyTreatment, ContractInSwap, Handler, Response as DexResponse,
@@ -13,7 +17,7 @@ use finance::{
 use oracle::stub::SwapPath;
 use platform::bank::{self, BankAccountView};
 use sdk::cosmwasm_std::{Addr, Env, QuerierWrapper, Timestamp};
-use timealarms::stub::TimeAlarmsRef;
+use timealarms::stub::{TimeAlarmDelivery, TimeAlarmsRef};
 
 use crate::{msg::ConfigResponse, result::ContractResult};
 
@@ -162,8 +166,24 @@ impl Handler for BuyBack {
     type Response = State;
     type SwapResult = ContractResult<DexResponse<State>>;
 
-    fn check_timealarms_permission<U>(self, user: &U, check_type: &String) -> DexResult<Self> {
-        // TODO match check_type if needed
-        access_control::check(&TimeAlarmDelivery::new(&self.config.time_alarms()), user)?;
+    fn check_permission<U>(self, user: &U, check_type: &CheckType, contract_addr: Option<Addr>) -> DexResult<bool> {
+        match check_type {
+            CheckType::Timealarm => {
+                access_control::check(&TimeAlarmDelivery::new(&self.config.time_alarms()), user)?;
+            }
+            CheckType::ContractOwner => {
+                access_control::check(
+                    &ContractOwnerPermission::new(&self.config.contract_owner()),
+                    &user,
+                )?;
+            }
+            CheckType::DexResponseSafeDelivery => {
+                access_control::check(
+                    &DexResponseSafeDeliveryPermission::new(&contract_addr),
+                    &user,
+                )?;
+            }
+            CheckType::None => {}
+        }
     }
 }

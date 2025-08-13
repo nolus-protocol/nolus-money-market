@@ -2,14 +2,16 @@ use std::{
     fmt::{Display, Formatter, Result as FmtResult},
     marker::PhantomData,
 };
-
 use serde::{Deserialize, Serialize};
 
+use access_control::{
+    permissions::{ContractOwnerPermission, DexResponseSafeDeliveryPermission},
+    user::User,
+};
 use currencies::{Nls, PaymentGroup};
 use currency::{Currency, CurrencyDef, Group, MemberOf};
 use dex::{
-    Account, Contract, Enterable, Error as DexError, Handler, Response as DexResponse,
-    Result as DexResult, StartLocalLocalState,
+    Account, CheckType, Contract, Enterable, Error as DexError, Handler, Response as DexResponse, Result as DexResult, StartLocalLocalState
 };
 use finance::{
     coin::{Coin, CoinDTO, WithCoin},
@@ -22,7 +24,7 @@ use platform::{
     state_machine::Response as StateMachineResponse,
 };
 use sdk::cosmwasm_std::{Addr, Env, MessageInfo, QuerierWrapper, Timestamp};
-use timealarms::stub::Result as TimeAlarmsResult;
+use timealarms::stub::{TimeAlarmDelivery, Result as TimeAlarmsResult};
 
 use crate::{msg::ConfigResponse, profit::Profit, result::ContractResult, typedefs::CadenceHours};
 
@@ -171,9 +173,25 @@ impl Handler for Idle {
         DexResult::Finished(self.on_time_alarm(querier, env))
     }
 
-    fn check_timealarms_permission<U>(self, user: &U, check_type: &String) -> DexResult<Self> {
-        // TODO match check type if needed
-        access_control::check(&TimeAlarmDelivery::new(&self.config.time_alarms()), user)?;
+    fn check_permission<U>(self, user: &U, check_type: &CheckType, contract_addr: Option<Addr>) -> DexResult<bool> {
+        match check_type {
+            CheckType::Timealarm => {
+                access_control::check(&TimeAlarmDelivery::new(&self.config.time_alarms()), user)?;
+            }
+            CheckType::ContractOwner => {
+                access_control::check(
+                    &ContractOwnerPermission::new(&self.config.contract_owner()),
+                    &user,
+                )?;
+            }
+            CheckType::DexResponseSafeDelivery => {
+                access_control::check(
+                    &DexResponseSafeDeliveryPermission::new(&contract_addr),
+                    &user,
+                )?;
+            }
+            CheckType::None => {}
+        }
     }
 }
 

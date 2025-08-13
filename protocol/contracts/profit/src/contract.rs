@@ -1,14 +1,7 @@
 use std::ops::{Deref, DerefMut};
 
-<<<<<<< HEAD
-use access_control::permissions::{ContractOwnerPermission, DexResponseSafeDeliveryPermission};
-=======
-use access_control::{
-    Sender,
-    permissions::{ContractOwnerPermission, DexResponseSafeDeliveryPermission}
-};
->>>>>>> a0106d26e (fix: CI checks)
-use dex::{ContinueResult as DexResult, Handler as _, Response as DexResponse};
+use access_control::{user::User};
+use dex::{CheckType, ContinueResult as DexResult, Handler as _, Response as DexResponse};
 use oracle_platform::OracleRef;
 use platform::{
     contract::{self, Validator},
@@ -20,11 +13,12 @@ use platform::{
 use sdk::{
     cosmwasm_ext::Response as CwResponse,
     cosmwasm_std::{
-        Api, Binary, Deps, DepsMut, Env, MessageInfo, QuerierWrapper, Reply, entry_point,
+        Addr, Api, Binary, Deps, DepsMut, Env, MessageInfo, QuerierWrapper, Reply, entry_point,
+        to_json_binary,
     },
     neutron_sdk::sudo::msg::SudoMsg as NeutronSudoMsg,
 };
-use timealarms::stub::{TimeAlarmDelivery, TimeAlarmsRef};
+use timealarms::stub::TimeAlarmsRef;
 use versioning::{
     ProtocolMigrationMessage, ProtocolPackageRelease, UpdatablePackage as _, VersionSegment,
     package_name, package_version,
@@ -44,8 +38,6 @@ const CURRENT_RELEASE: ProtocolPackageRelease = ProtocolPackageRelease::current(
     package_version!(),
     CONTRACT_STORAGE_VERSION,
 );
-
-type DexResponseSafeDeliveryPermission<'a> = SameContractOnly<'a>;
 
 #[entry_point]
 pub fn instantiate(
@@ -101,21 +93,20 @@ pub fn execute(
 ) -> ContractResult<CwResponse> {
     match msg {
         ExecuteMsg::TimeAlarm {} => {
-            State::check_timealarms_permission(&self, user, &"timealarms")?; // TODO enum?
-            access_control::check(&TimeAlarmDelivery::new(&config.time_alarms()), &info.sender)?;
-
-            try_handle_execute_message(deps, env, |state, querier, env| {
-                State::on_time_alarm(state, querier, env, info)
-            })
+            try_handle_execute_message(
+                deps,
+                env,
+                |state, querier, env| {
+                    State::on_time_alarm(state, querier, env, info)
+                },
+                (&info, CheckType::Timealarm, None)
+            )
             .map(response::response_only_messages)
         }
         ExecuteMsg::Config { cadence_hours } => {
-            let config = State::load(deps.storage)?.load_config()?;
+            let state = State::load(deps.storage)?;
 
-            access_control::check(
-                &ContractOwnerPermission::new(&config.contract_owner()),
-                &info.sender,
-            )?;
+            state.check_permission(&info, CheckType::ContractOwner, None)?;
 
             let StateMachineResponse {
                 response,
@@ -127,25 +118,31 @@ pub fn execute(
             Ok(response::response_only_messages(response))
         }
         ExecuteMsg::DexCallback() => {
-            access_control::check(
-                &DexResponseSafeDeliveryPermission::new(&env.contract),
-                &info,
-            )?;
-
-            try_handle_execute_message(deps, env, State::on_inner)
-                .map(response::response_only_messages)
+            try_handle_execute_message(
+                deps,
+                env,
+                State::on_inner,
+                (info, CheckType::DexResponseSafeDelivery, env.contract.address)
+            )
+            .map(response::response_only_messages)
         }
         ExecuteMsg::DexCallbackContinue() => {
-            access_control::check(
-                &DexResponseSafeDeliveryPermission::new(&env.contract),
-                &info,
-            )?;
-
-            try_handle_execute_message(deps, env, State::on_inner_continue)
-                .map(response::response_only_messages)
+            try_handle_execute_message(
+                deps,
+                env,
+                State::on_inner_continue,
+                (&info, CheckType::DexResponseSafeDelivery, env.contract.address)
+            )
+            .map(response::response_only_messages)
         }
         ExecuteMsg::Heal() => {
-            try_handle_execute_message(deps, env, State::heal).map(response::response_only_messages)
+            try_handle_execute_message(
+                deps,
+                env,
+                State::heal,
+                (&info, CheckType::None)
+            )
+            .map(response::response_only_messages)
         }
     }
 }
@@ -196,17 +193,23 @@ fn try_handle_neutron_msg(
     }
 }
 
-fn try_handle_execute_message<F, R, E>(
+fn try_handle_execute_message<F, R, E, U>(
     deps: DepsMut<'_>,
     env: Env,
     handler: F,
+    permission_check: (U, CheckType, Addr),
 ) -> ContractResult<MessageResponse>
 where
     F: FnOnce(State, QuerierWrapper<'_>, Env) -> R,
     R: Into<Result<DexResponse<State>, E>>,
     ContractError: From<E>,
+    U: User,
 {
     let state: State = State::load(deps.storage)?;
+
+    if permission_check.1 != None {
+        state.check_permission(&permission_check.0, &permission_check.1, permission_check.2)?;
+    }
 
     let DexResponse::<State> {
         response,

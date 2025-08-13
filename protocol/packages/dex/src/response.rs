@@ -5,7 +5,7 @@ use platform::{
     message::Response as MessageResponse,
     state_machine::{self, Response as StateMachineResponse},
 };
-use sdk::cosmwasm_std::{Binary, Env, MessageInfo, QuerierWrapper, Reply};
+use sdk::cosmwasm_std::{Addr, Binary, Env, MessageInfo, QuerierWrapper, Reply};
 
 use crate::error::{Error, Result as DexResult};
 
@@ -17,6 +17,13 @@ where
 {
     Continue(ContinueResult<H>),
     Finished(H::SwapResult),
+}
+
+pub enum CheckType {
+    Timealarm,
+    ContractOwner,
+    DexResponseSafeDelivery,
+    None,
 }
 
 pub fn res_continue<R, S, H>(resp: R, next_state: S) -> ContinueResult<H>
@@ -104,11 +111,16 @@ where
         Err(err(self, "handle time alarm")).into()
     }
 
-    fn check_timealarms_permission<U>(&self, user: &U, check_type: String) -> DexResult<bool>
+    fn check_permission<U>(
+        &self,
+        user: &U,
+        check_type: CheckType,
+        contract_addr: Option<Addr>,
+    ) -> DexResult<bool>
     where
         U: User,
     {
-        Err(err(self, "check timealarms permission")).into()
+        Err(err(self, "check permission")).into()
     }
 }
 
