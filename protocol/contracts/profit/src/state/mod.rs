@@ -248,7 +248,7 @@ impl Handler for State {
     where
         U: User,
     {
-        match self.0 {
+        match &self.0 {
             StateEnum::OpenIca(ica) => ica
                 .check_permission(user, check_type, contract_info)
                 .map_into(),

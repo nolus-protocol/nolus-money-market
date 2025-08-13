@@ -20,6 +20,7 @@ where
     Finished(H::SwapResult),
 }
 
+#[derive(PartialEq)]
 pub enum CheckType {
     Timealarm,
     ContractOwner,
