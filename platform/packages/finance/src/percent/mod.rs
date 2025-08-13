@@ -116,11 +116,11 @@ pub(super) mod test {
 
     #[test]
     fn add_overflow() {
-        assert!(Percent100::HUNDRED.checked_add(from(1)).is_err());
+        assert!(Percent100::HUNDRED.checked_add(from(1)).is_none());
         assert!(
             Percent::from_permille(Units::MAX)
                 .checked_add(Percent::from_permille(1))
-                .is_err()
+                .is_none()
         );
     }
 
@@ -138,7 +138,7 @@ pub(super) mod test {
 
     #[test]
     fn sub_overflow() {
-        assert!(from(34).checked_sub(from(35)).is_err())
+        assert!(from(34).checked_sub(from(35)).is_none())
     }
 
     #[test]

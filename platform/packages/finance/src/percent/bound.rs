@@ -12,7 +12,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     coin::Amount,
-    error::{Error, Result as FinanceResult},
+    error::Error,
     fraction::Unit as FractionUnit,
     fractionable::Fractionable,
     ratio::{Ratio, SimpleFraction},
@@ -75,18 +75,16 @@ impl<const UPPER_BOUND: Units> BoundPercent<UPPER_BOUND> {
         self == &Self::ZERO
     }
 
-    pub fn checked_add(self, other: Self) -> FinanceResult<Self> {
+    pub fn checked_add(self, other: Self) -> Option<Self> {
         self.0
             .checked_add(other.0)
-            .ok_or(Error::overflow_err("while adding", self, other))
-            .and_then(|sum| sum.try_into())
+            .and_then(Self::try_from_permille)
     }
 
-    pub fn checked_sub(self, other: Self) -> FinanceResult<Self> {
+    pub fn checked_sub(self, other: Self) -> Option<Self> {
         self.0
             .checked_sub(other.0)
             .and_then(Self::try_from_permille)
-            .ok_or(Error::overflow_err("while subtracting", self, other))
     }
 }
 
