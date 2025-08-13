@@ -1,11 +1,12 @@
+use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter};
 
-use finance::duration::Duration;
-use serde::{Deserialize, Serialize};
-
+use access_control::user::User;
 use dex::{
-    CheckType, ConnectionParams, ContinueResult, Contract, Handler, Response as DexResponse, Result as DexResult, StateLocalOut
+    CheckType, ConnectionParams, ContinueResult, Contract, Handler, Response as DexResponse,
+    Result as DexResult, StateLocalOut,
 };
+use finance::duration::Duration;
 use platform::{
     batch::Batch,
     ica::ErrorResponse as ICAErrorResponse,
@@ -13,7 +14,7 @@ use platform::{
 };
 use sdk::{
     cosmwasm_std::{
-        Binary, Env, MessageInfo, QuerierWrapper, Reply as CwReply, Storage, Timestamp,
+        Addr, Binary, Env, MessageInfo, QuerierWrapper, Reply as CwReply, Storage, Timestamp,
     },
     cw_storage_plus::Item,
 };
@@ -237,14 +238,25 @@ impl Handler for State {
         }
     }
 
-    fn check_permission<U>(&self, user: &U, check_type: &CheckType, contract_addr: Option<Addr>) -> DexResult<bool>
-        where
-            U: User
+    fn check_permission<U>(
+        &self,
+        user: &U,
+        check_type: CheckType,
+        contract_addr: Option<Addr>,
+    ) -> DexResult<bool>
+    where
+        U: User,
     {
         match self.0 {
-            StateEnum::OpenIca(ica) => ica.check_permission(user, check_type, contract_addr).map_into(),
-            StateEnum::Idle(idle) => idle.check_permission(user, check_type, contract_addr).map_into(),
-            StateEnum::BuyBack(buy_back) => buy_back.check_permission(user, check_type, contract_addr).map_into(),
+            StateEnum::OpenIca(ica) => ica
+                .check_permission(user, check_type, contract_addr)
+                .map_into(),
+            StateEnum::Idle(idle) => idle
+                .check_permission(user, check_type, contract_addr)
+                .map_into(),
+            StateEnum::BuyBack(buy_back) => buy_back
+                .check_permission(user, check_type, contract_addr)
+                .map_into(),
         }
     }
 }

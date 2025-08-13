@@ -1,5 +1,6 @@
 use std::{fmt::Display, result::Result as StdResult};
 
+use access_control::user::User;
 use platform::{
     ica::ErrorResponse as ICAErrorResponse,
     message::Response as MessageResponse,
