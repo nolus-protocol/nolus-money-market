@@ -44,17 +44,19 @@ impl<const UPPER_BOUND: Units> BoundPercent<UPPER_BOUND> {
         Self::try_from_permille(permille).expect("Permille value exceeds allowed upper bound")
     }
 
-    const fn try_from_permille(permille: Units) -> Option<Self> {
-        match permille <= UPPER_BOUND {
-            true => Some(Self(permille)),
-            false => None,
+    const fn try_from_primitive(percent: u32) -> Option<Self> {
+        if let Some(permille) = percent.checked_mul(Self::UNITS_TO_PERCENT_RATIO) {
+            Self::try_from_permille(permille)
+        } else {
+            None
         }
     }
 
-    const fn try_from_primitive(percent: u32) -> Option<Self> {
-        match percent.checked_mul(Self::UNITS_TO_PERCENT_RATIO) {
-            Some(permille) => Self::try_from_permille(permille),
-            None => None,
+    const fn try_from_permille(permille: Units) -> Option<Self> {
+        if permille <= UPPER_BOUND {
+            Some(Self(permille))
+        } else {
+            None
         }
     }
 
