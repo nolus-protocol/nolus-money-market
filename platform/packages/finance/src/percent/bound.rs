@@ -87,12 +87,15 @@ impl<const UPPER_BOUND: Units> BoundPercent<UPPER_BOUND> {
     }
 }
 
+// Used for serialization
 impl<const UPPER_BOUND: Units> From<BoundPercent<UPPER_BOUND>> for Units {
     fn from(percent: BoundPercent<UPPER_BOUND>) -> Self {
         percent.0
     }
 }
 
+// Used during the deserialization and general construction from a permille unit,
+// ensuring it does not exceed the UPPER_BOUND.
 impl<const UPPER_BOUND: Units> TryFrom<Units> for BoundPercent<UPPER_BOUND> {
     type Error = Error;
 
