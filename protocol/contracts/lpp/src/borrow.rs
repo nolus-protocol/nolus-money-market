@@ -60,7 +60,7 @@ impl InterestRate {
             self.utilization_optimal.units(),
             Percent100::HUNDRED
                 .checked_sub(self.utilization_optimal)
-                .expect("Invariant to be held")
+                .expect("The optimal utilization configuration parameter should be at most 100%")
                 .units(),
         )
         .and_then(|utilization_max| {
