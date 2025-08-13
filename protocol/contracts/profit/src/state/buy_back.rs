@@ -1,5 +1,6 @@
 use currency::{CurrencyDef, Group};
 use serde::{Deserialize, Serialize};
+use std::fmt::{Display, Formatter, Result as FmtResult};
 
 use access_control::{
     permissions::{ContractOwnerPermission, DexResponseSafeDeliveryPermission},
@@ -7,8 +8,9 @@ use access_control::{
 };
 use currencies::{Native, Nls, PaymentGroup};
 use dex::{
-    AcceptAnyNonZeroSwap, Account, AnomalyTreatment, ContractInSwap, Handler, Response as DexResponse,
-    Stage, StateLocalOut, SwapOutputTask, SwapTask, WithCalculator, WithOutputTask,
+    AcceptAnyNonZeroSwap, Account, AnomalyTreatment, CheckType, ContractInSwap, Handler,
+    Response as DexResponse, Result as DexResult, Stage, StateLocalOut, SwapOutputTask, SwapTask,
+    WithCalculator, WithOutputTask,
 };
 use finance::{
     coin::{Coin, CoinDTO},
@@ -21,10 +23,7 @@ use timealarms::stub::{TimeAlarmDelivery, TimeAlarmsRef};
 
 use crate::{msg::ConfigResponse, result::ContractResult};
 
-use super::{
-    Config, State, StateEnum, SwapClient, idle::Idle,
-    resp_delivery::ForwardToDexEntry,
-};
+use super::{Config, State, StateEnum, SwapClient, idle::Idle, resp_delivery::ForwardToDexEntry};
 
 #[derive(Serialize, Deserialize)]
 pub(super) struct BuyBack {
@@ -166,7 +165,15 @@ impl Handler for BuyBack {
     type Response = State;
     type SwapResult = ContractResult<DexResponse<State>>;
 
-    fn check_permission<U>(self, user: &U, check_type: &CheckType, contract_addr: Option<Addr>) -> DexResult<bool> {
+    fn check_permission<U>(
+        &self,
+        user: &U,
+        check_type: CheckType,
+        contract_addr: Option<Addr>,
+    ) -> DexResult<bool>
+    where
+        U: User,
+    {
         match check_type {
             CheckType::Timealarm => {
                 access_control::check(&TimeAlarmDelivery::new(&self.config.time_alarms()), user)?;
@@ -185,5 +192,11 @@ impl Handler for BuyBack {
             }
             CheckType::None => {}
         }
+    }
+}
+
+impl Display for BuyBack {
+    fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
+        f.write_fmt(format_args!("BuyBack"))
     }
 }

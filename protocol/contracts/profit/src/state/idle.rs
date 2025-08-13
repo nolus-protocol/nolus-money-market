@@ -1,8 +1,8 @@
+use serde::{Deserialize, Serialize};
 use std::{
     fmt::{Display, Formatter, Result as FmtResult},
     marker::PhantomData,
 };
-use serde::{Deserialize, Serialize};
 
 use access_control::{
     permissions::{ContractOwnerPermission, DexResponseSafeDeliveryPermission},
@@ -11,7 +11,8 @@ use access_control::{
 use currencies::{Nls, PaymentGroup};
 use currency::{Currency, CurrencyDef, Group, MemberOf};
 use dex::{
-    Account, CheckType, Contract, Enterable, Error as DexError, Handler, Response as DexResponse, Result as DexResult, StartLocalLocalState
+    Account, CheckType, Contract, Enterable, Error as DexError, Handler, Response as DexResponse,
+    Result as DexResult, StartLocalLocalState,
 };
 use finance::{
     coin::{Coin, CoinDTO, WithCoin},
@@ -24,13 +25,13 @@ use platform::{
     state_machine::Response as StateMachineResponse,
 };
 use sdk::cosmwasm_std::{Addr, Env, MessageInfo, QuerierWrapper, Timestamp};
-use timealarms::stub::{TimeAlarmDelivery, Result as TimeAlarmsResult};
+use timealarms::stub::{Result as TimeAlarmsResult, TimeAlarmDelivery};
 
 use crate::{msg::ConfigResponse, profit::Profit, result::ContractResult, typedefs::CadenceHours};
 
 use super::{
-    Config, ConfigManagement, State, StateEnum, SwapClient,
-    buy_back::BuyBack, resp_delivery::ForwardToDexEntry,
+    Config, ConfigManagement, State, StateEnum, SwapClient, buy_back::BuyBack,
+    resp_delivery::ForwardToDexEntry,
 };
 
 #[derive(Serialize, Deserialize)]
@@ -173,7 +174,15 @@ impl Handler for Idle {
         DexResult::Finished(self.on_time_alarm(querier, env))
     }
 
-    fn check_permission<U>(self, user: &U, check_type: &CheckType, contract_addr: Option<Addr>) -> DexResult<bool> {
+    fn check_permission<U>(
+        &self,
+        user: &U,
+        check_type: CheckType,
+        contract_addr: Option<Addr>,
+    ) -> DexResult<bool>
+    where
+        U: User,
+    {
         match check_type {
             CheckType::Timealarm => {
                 access_control::check(&TimeAlarmDelivery::new(&self.config.time_alarms()), user)?;

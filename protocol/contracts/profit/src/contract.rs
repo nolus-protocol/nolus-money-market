@@ -1,6 +1,6 @@
 use std::ops::{Deref, DerefMut};
 
-use access_control::{user::User};
+use access_control::user::User;
 use dex::{CheckType, ContinueResult as DexResult, Handler as _, Response as DexResponse};
 use oracle_platform::OracleRef;
 use platform::{
@@ -29,7 +29,7 @@ use crate::{
     msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg},
     profit::Profit,
     result::ContractResult,
-    state::{Config as _, State},
+    state::{Config, State},
 };
 
 const CONTRACT_STORAGE_VERSION: VersionSegment = 1;
@@ -92,17 +92,13 @@ pub fn execute(
     msg: ExecuteMsg,
 ) -> ContractResult<CwResponse> {
     match msg {
-        ExecuteMsg::TimeAlarm {} => {
-            try_handle_execute_message(
-                deps,
-                env,
-                |state, querier, env| {
-                    State::on_time_alarm(state, querier, env, info)
-                },
-                (&info, CheckType::Timealarm, None)
-            )
-            .map(response::response_only_messages)
-        }
+        ExecuteMsg::TimeAlarm {} => try_handle_execute_message(
+            deps,
+            env,
+            |state, querier, env| State::on_time_alarm(state, querier, env, info),
+            (&info, CheckType::Timealarm, None),
+        )
+        .map(response::response_only_messages),
         ExecuteMsg::Config { cadence_hours } => {
             let state = State::load(deps.storage)?;
 
@@ -117,32 +113,31 @@ pub fn execute(
 
             Ok(response::response_only_messages(response))
         }
-        ExecuteMsg::DexCallback() => {
-            try_handle_execute_message(
-                deps,
-                env,
-                State::on_inner,
-                (info, CheckType::DexResponseSafeDelivery, env.contract.address)
-            )
-            .map(response::response_only_messages)
-        }
-        ExecuteMsg::DexCallbackContinue() => {
-            try_handle_execute_message(
-                deps,
-                env,
-                State::on_inner_continue,
-                (&info, CheckType::DexResponseSafeDelivery, env.contract.address)
-            )
-            .map(response::response_only_messages)
-        }
+        ExecuteMsg::DexCallback() => try_handle_execute_message(
+            deps,
+            env,
+            State::on_inner,
+            (
+                info,
+                CheckType::DexResponseSafeDelivery,
+                env.contract.address,
+            ),
+        )
+        .map(response::response_only_messages),
+        ExecuteMsg::DexCallbackContinue() => try_handle_execute_message(
+            deps,
+            env,
+            State::on_inner_continue,
+            (
+                &info,
+                CheckType::DexResponseSafeDelivery,
+                env.contract.address,
+            ),
+        )
+        .map(response::response_only_messages),
         ExecuteMsg::Heal() => {
-            try_handle_execute_message(
-                deps,
-                env,
-                State::heal,
-                (&info, CheckType::None)
-            )
-            .map(response::response_only_messages)
+            try_handle_execute_message(deps, env, State::heal, (&info, CheckType::None, None))
+                .map(response::response_only_messages)
         }
     }
 }
