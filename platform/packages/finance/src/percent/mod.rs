@@ -8,12 +8,10 @@ use crate::{
 
 pub mod bound;
 
-pub type Units = u32;
-
-pub const HUNDRED_BOUND: Units = 1000;
 pub const MAX_BOUND: Units = Units::MAX;
 
-pub type Percent100 = BoundPercent<HUNDRED_BOUND>;
+pub type Units = u32;
+pub type Percent100 = BoundPercent<1000>;
 pub type Percent = BoundPercent<MAX_BOUND>;
 
 impl FractionUnit for Units {}
