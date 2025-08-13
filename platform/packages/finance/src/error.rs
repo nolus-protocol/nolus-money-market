@@ -11,13 +11,6 @@ pub enum Error {
     #[error("[Finance] Programming error or invalid serialized object of '{0}' type, cause '{1}'")]
     BrokenInvariant(String, String),
 
-    #[error("[Finance] Overflow {operation}: {operand1} and {operand2}")]
-    OverflowError {
-        operation: String,
-        operand1: String,
-        operand2: String,
-    },
-
     #[error("[Finance] {0}")]
     Overflow(&'static str),
 
@@ -31,8 +24,6 @@ pub enum Error {
         bound: PercentUnits,
         value: PercentUnits,
     },
-    // #[error("[Finance] [Std] {0}")]
-    // CosmWasmError(#[from] StdError),
 }
 
 impl Error {
@@ -41,18 +32,6 @@ impl Error {
             Err(Self::BrokenInvariant(type_name::<T>().into(), msg.into()))
         } else {
             Ok(())
-        }
-    }
-
-    pub fn overflow_err(
-        operation: impl ToString,
-        operand1: impl ToString,
-        operand2: impl ToString,
-    ) -> Self {
-        Self::OverflowError {
-            operation: operation.to_string(),
-            operand1: operand1.to_string(),
-            operand2: operand2.to_string(),
         }
     }
 }
