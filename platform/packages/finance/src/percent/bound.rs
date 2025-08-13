@@ -69,8 +69,8 @@ impl<const UPPER_BOUND: Units> BoundPercent<UPPER_BOUND> {
         self.0
     }
 
-    pub fn is_zero(&self) -> bool {
-        self == &Self::ZERO
+    pub const fn is_zero(&self) -> bool {
+        self.0 == Self::ZERO.0
     }
 
     pub fn checked_add(self, other: Self) -> Option<Self> {
