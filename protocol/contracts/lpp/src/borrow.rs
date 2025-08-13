@@ -82,7 +82,6 @@ impl InterestRate {
                 .and_then(|utilization_config| {
                     utilization_config
                         .checked_add(self.base_interest_rate.into())
-                        .ok()
                         .and_then(|res| res.try_into().ok())
                 })
         })
