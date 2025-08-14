@@ -32,9 +32,8 @@ impl<const UPPER_BOUND: Units> BoundPercent<UPPER_BOUND> {
     const UNITS_TO_PERCENT_RATIO: Units = 10;
 
     #[cfg(any(test, feature = "testing"))]
-    pub const fn from_percent(percent: u16) -> Self {
-        Self::try_from_primitive(percent as u32)
-            .expect("Percent value safely fits in internal representation")
+    pub const fn from_percent(percent: u32) -> Self {
+        Self::try_from_primitive(percent).expect("Percent value exceeds allowed upper bound")
     }
 
     #[cfg(any(test, feature = "testing"))]
