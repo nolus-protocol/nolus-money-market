@@ -1,7 +1,7 @@
-use currency::CurrencyDef;
-use error::BrokenInvariant;
 use serde::{Deserialize, Serialize};
 
+use currency::CurrencyDef;
+use error::BrokenInvariant;
 use finance::{coin::Coin, duration::Duration, percent::Percent100};
 use lease::api::{limits::MaxSlippages, open::PositionSpecDTO};
 

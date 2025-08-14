@@ -1,3 +1,5 @@
+use serde::Serialize;
+
 use currencies::{
     LeaseGroup as AlarmCurrencies, Lpn as BaseCurrency, Lpns as BaseCurrencies, Nls,
     PaymentGroup as PriceCurrencies,
@@ -25,7 +27,6 @@ use sdk::{
     cw_multi_test::AppResponse,
     testing::{self, CwContract, CwContractWrapper},
 };
-use serde::Serialize;
 
 use super::{
     ADMIN,

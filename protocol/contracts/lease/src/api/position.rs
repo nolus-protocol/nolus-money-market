@@ -1,5 +1,6 @@
-use finance::percent::Percent100;
 use serde::{Deserialize, Serialize};
+
+use finance::percent::Percent100;
 
 use super::LeaseCoin;
 
