@@ -28,34 +28,35 @@ impl<C> TryInto<Coin<C>> for U256 {
 
 #[cfg(test)]
 mod test {
-    use currency::test::SuperGroupTestC1;
 
     use crate::{
         coin::{Amount, Coin},
         fractionable::FractionableLegacy,
         percent::Percent,
         ratio::SimpleFraction,
+        test::coin,
     };
 
     #[test]
     fn safe_mul() {
+        use crate::fractionable::Fractionable;
         assert_eq!(
-            Coin::<SuperGroupTestC1>::new(30),
-            Coin::<SuperGroupTestC1>::new(3).safe_mul(&Percent::from_percent(1000))
+            coin::coin1(30),
+            coin::coin1(3).safe_mul(&Percent::from_percent(1000))
         );
 
         assert_eq!(
-            Coin::<SuperGroupTestC1>::new(1000),
+            coin::coin1(1000),
             FractionableLegacy::<u32>::safe_mul(
-                Coin::<SuperGroupTestC1>::new(2),
+                coin::coin1(2),
                 &SimpleFraction::new(1000u32, 2u32)
             )
         );
 
         assert_eq!(
-            Coin::<SuperGroupTestC1>::new(2 * Amount::from(u32::MAX)),
+            coin::coin1(2 * Amount::from(u32::MAX)),
             FractionableLegacy::<u32>::safe_mul(
-                Coin::<SuperGroupTestC1>::new(2),
+                coin::coin1(2),
                 &SimpleFraction::new(u32::MAX, 1u32)
             )
         );

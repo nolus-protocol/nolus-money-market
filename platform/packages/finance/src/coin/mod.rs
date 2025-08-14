@@ -261,7 +261,7 @@ mod test {
 
     use currency::test::{SuperGroupTestC1, SuperGroupTestC2};
 
-    use crate::percent::test::test_of;
+    use crate::{percent::test::test_of, test::coin};
 
     use super::{Amount, Coin};
 
@@ -269,37 +269,37 @@ mod test {
     fn display() {
         assert_eq!(
             format!("25 {}", any::type_name::<SuperGroupTestC2>()),
-            coin2(25).to_string()
+            coin::coin2(25).to_string()
         );
         assert_eq!(
             format!("0 {}", any::type_name::<SuperGroupTestC1>()),
-            coin1(0).to_string()
+            coin::coin1(0).to_string()
         );
     }
 
     #[test]
     fn of_are() {
-        test_of(10, coin1(100), coin1(1));
-        test_of(11, coin1(100), coin1(1));
-        test_of(11, coin1(90), coin1(0));
-        test_of(11, coin1(91), coin1(1));
-        test_of(110, coin1(100), coin1(11));
-        test_of(12, coin1(100), coin1(1));
-        test_of(12, coin1(84), coin1(1));
-        test_of(12, coin1(83), coin1(0));
-        test_of(18, coin1(100), coin1(1));
-        test_of(18, coin1(56), coin1(1));
-        test_of(18, coin1(55), coin1(0));
-        test_of(18, coin1(120), coin1(2));
-        test_of(18, coin1(112), coin1(2));
-        test_of(18, coin1(111), coin1(1));
-        test_of(1000, coin1(Amount::MAX), coin1(Amount::MAX));
+        test_of(10, coin::coin1(100), coin::coin1(1));
+        test_of(11, coin::coin1(100), coin::coin1(1));
+        test_of(11, coin::coin1(90), coin::coin1(0));
+        test_of(11, coin::coin1(91), coin::coin1(1));
+        test_of(110, coin::coin1(100), coin::coin1(11));
+        test_of(12, coin::coin1(100), coin::coin1(1));
+        test_of(12, coin::coin1(84), coin::coin1(1));
+        test_of(12, coin::coin1(83), coin::coin1(0));
+        test_of(18, coin::coin1(100), coin::coin1(1));
+        test_of(18, coin::coin1(56), coin::coin1(1));
+        test_of(18, coin::coin1(55), coin::coin1(0));
+        test_of(18, coin::coin1(120), coin::coin1(2));
+        test_of(18, coin::coin1(112), coin::coin1(2));
+        test_of(18, coin::coin1(111), coin::coin1(1));
+        test_of(1000, coin::coin1(Amount::MAX), coin::coin1(Amount::MAX));
     }
 
     #[test]
     fn is_zero() {
-        assert!(coin1(0).is_zero());
-        assert!(!coin1(1).is_zero());
+        assert!(coin::coin1(0).is_zero());
+        assert!(!coin::coin1(1).is_zero());
     }
 
     #[test]
@@ -308,56 +308,80 @@ mod test {
         let amount2 = 20;
 
         assert_eq!(
-            Some(coin1(amount1 + amount2)),
-            coin1(amount1).checked_add(coin1(amount2))
+            Some(coin::coin1(amount1 + amount2)),
+            coin::coin1(amount1).checked_add(coin::coin1(amount2))
         );
 
         assert_eq!(
-            Some(coin1(Amount::MAX)),
-            coin1(Amount::MAX).checked_add(coin1(Amount::default()))
+            Some(coin::coin1(Amount::MAX)),
+            coin::coin1(Amount::MAX).checked_add(coin::coin1(Amount::default()))
         );
 
         assert_eq!(
-            Some(coin1(Amount::MAX)),
-            coin1(Amount::MAX - amount2).checked_add(coin1(amount2))
+            Some(coin::coin1(Amount::MAX)),
+            coin::coin1(Amount::MAX - amount2).checked_add(coin::coin1(amount2))
         );
 
         assert_eq!(
             None,
-            coin1(Amount::MAX - amount2).checked_add(coin1(amount2 + 1))
+            coin::coin1(Amount::MAX - amount2).checked_add(coin::coin1(amount2 + 1))
         );
     }
 
     #[test]
     fn saturating_sub() {
-        assert_eq!(coin1(17), coin1(21).saturating_sub(coin1(4)));
+        assert_eq!(
+            coin::coin1(17),
+            coin::coin1(21).saturating_sub(coin::coin1(4))
+        );
 
-        assert_eq!(coin1(1), coin1(21).saturating_sub(coin1(20)));
+        assert_eq!(
+            coin::coin1(1),
+            coin::coin1(21).saturating_sub(coin::coin1(20))
+        );
 
-        assert_eq!(coin1(0), coin1(21).saturating_sub(coin1(21)));
+        assert_eq!(
+            coin::coin1(0),
+            coin::coin1(21).saturating_sub(coin::coin1(21))
+        );
 
-        assert_eq!(coin1(0), coin1(21).saturating_sub(coin1(22)));
+        assert_eq!(
+            coin::coin1(0),
+            coin::coin1(21).saturating_sub(coin::coin1(22))
+        );
 
-        assert_eq!(coin1(0), coin1(21).saturating_sub(coin1(122)));
+        assert_eq!(
+            coin::coin1(0),
+            coin::coin1(21).saturating_sub(coin::coin1(122))
+        );
     }
 
     #[test]
     fn checked_sub() {
-        assert_eq!(Some(coin1(17)), coin1(21).checked_sub(coin1(4)));
+        assert_eq!(
+            Some(coin::coin1(17)),
+            coin::coin1(21).checked_sub(coin::coin1(4))
+        );
 
-        assert_eq!(Some(coin1(1)), coin1(21).checked_sub(coin1(20)));
+        assert_eq!(
+            Some(coin::coin1(1)),
+            coin::coin1(21).checked_sub(coin::coin1(20))
+        );
 
-        assert_eq!(Some(coin1(0)), coin1(21).checked_sub(coin1(21)));
+        assert_eq!(
+            Some(coin::coin1(0)),
+            coin::coin1(21).checked_sub(coin::coin1(21))
+        );
 
-        assert_eq!(None, coin1(21).checked_sub(coin1(22)));
+        assert_eq!(None, coin::coin1(21).checked_sub(coin::coin1(22)));
 
-        assert_eq!(None, coin1(21).checked_sub(coin1(122)));
+        assert_eq!(None, coin::coin1(21).checked_sub(coin::coin1(122)));
     }
 
     #[test]
     #[should_panic = "overflow with real data"]
     fn add_panic() {
-        let _ = coin1(Amount::MAX) + coin1(1);
+        let _ = coin::coin1(Amount::MAX) + coin::coin1(1);
     }
 
     #[test]
@@ -366,37 +390,40 @@ mod test {
         let amount2 = 20;
 
         assert_eq!(
-            Some(coin1(amount1 * amount2)),
-            coin1(amount1).checked_mul(amount2)
+            Some(coin::coin1(amount1 * amount2)),
+            coin::coin1(amount1).checked_mul(amount2)
         );
-
-        assert_eq!(Some(coin1(Amount::MAX)), coin1(Amount::MAX).checked_mul(1));
 
         assert_eq!(
-            Some(coin1(Amount::MAX)),
-            coin1(Amount::MAX / 5).checked_mul(5)
+            Some(coin::coin1(Amount::MAX)),
+            coin::coin1(Amount::MAX).checked_mul(1)
         );
 
-        assert_eq!(None, coin1(Amount::MAX / 5).checked_mul(5 + 1));
+        assert_eq!(
+            Some(coin::coin1(Amount::MAX)),
+            coin::coin1(Amount::MAX / 5).checked_mul(5)
+        );
+
+        assert_eq!(None, coin::coin1(Amount::MAX / 5).checked_mul(5 + 1));
     }
 
     #[test]
     #[should_panic]
     fn of_overflow() {
-        let max_amount = coin1(Amount::MAX);
+        let max_amount = coin::coin1(Amount::MAX);
         test_of(1001, max_amount, max_amount);
     }
 
     #[test]
     fn checked_div() {
-        assert_eq!(Some(coin1(18 / 3)), coin1(18).checked_div(3));
-        assert_eq!(Some(coin1(0)), coin1(0).checked_div(5));
-        assert_eq!(Some(coin1(17 / 3)), coin1(17).checked_div(3));
+        assert_eq!(Some(coin::coin1(18 / 3)), coin::coin1(18).checked_div(3));
+        assert_eq!(Some(coin::coin1(0)), coin::coin1(0).checked_div(5));
+        assert_eq!(Some(coin::coin1(17 / 3)), coin::coin1(17).checked_div(3));
     }
 
     #[test]
     fn div_ceil() {
-        assert_eq!(Some(coin1(17 / 3)), coin1(17).checked_div(3));
+        assert_eq!(Some(coin::coin1(17 / 3)), coin::coin1(17).checked_div(3));
     }
 
     #[test]
@@ -412,33 +439,31 @@ mod test {
 
     #[test]
     fn sum() {
-        let coins = vec![coin1(1), coin1(2), coin1(3), coin1(4), coin1(5)];
-        let exp_sum = coin1(15);
+        let coins = vec![
+            coin::coin1(1),
+            coin::coin1(2),
+            coin::coin1(3),
+            coin::coin1(4),
+            coin::coin1(5),
+        ];
+        let exp_sum = coin::coin1(15);
         assert_eq!(coins.iter().sum::<Coin<SuperGroupTestC1>>(), exp_sum);
         assert_eq!(coins.into_iter().sum::<Coin<SuperGroupTestC1>>(), exp_sum);
     }
 
     #[test]
     fn coerce() {
-        assert_eq!(coin1(100), coin1(100).coerce_into());
+        assert_eq!(coin::coin1(100), coin::coin1(100).coerce_into());
     }
 
     fn coprime_impl(gcd: Amount, a1: Amount, a2: Amount) {
         assert_eq!(
-            (coin1(a1 / gcd), coin2(a2 / gcd)),
-            coin1(a1).into_coprime_with(coin2(a2))
+            (coin::coin1(a1 / gcd), coin::coin2(a2 / gcd)),
+            coin::coin1(a1).into_coprime_with(coin::coin2(a2))
         );
         assert_eq!(
-            (coin2(a1 / gcd), coin2(a2 / gcd)),
-            coin2(a1).into_coprime_with(coin2(a2))
+            (coin::coin2(a1 / gcd), coin::coin2(a2 / gcd)),
+            coin::coin2(a1).into_coprime_with(coin::coin2(a2))
         );
-    }
-
-    fn coin1(amount: Amount) -> Coin<SuperGroupTestC1> {
-        Coin::new(amount)
-    }
-
-    fn coin2(amount: Amount) -> Coin<SuperGroupTestC2> {
-        Coin::new(amount)
     }
 }

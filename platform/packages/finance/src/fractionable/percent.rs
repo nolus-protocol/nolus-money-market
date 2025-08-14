@@ -94,13 +94,13 @@ mod test {
     }
 
     mod rational {
-        use currency::test::SuperGroupTestC1;
 
         use crate::{
             coin::Coin,
             fractionable::FractionableLegacy,
             percent::{Percent, Units},
             ratio::SimpleFraction,
+            test::coin,
         };
 
         #[test]
@@ -109,30 +109,21 @@ mod test {
                 Percent::from_permille(Units::MAX),
                 FractionableLegacy::<Coin<_>>::safe_mul(
                     Percent::from_permille(Units::MAX),
-                    &SimpleFraction::new(
-                        Coin::<SuperGroupTestC1>::new(u128::MAX),
-                        Coin::<SuperGroupTestC1>::new(u128::MAX),
-                    )
+                    &SimpleFraction::new(coin::coin1(u128::MAX), coin::coin1(u128::MAX))
                 )
             );
             assert_eq!(
                 Percent::from_percent(20),
                 FractionableLegacy::<Coin<_>>::safe_mul(
                     Percent::HUNDRED,
-                    &SimpleFraction::new(
-                        Coin::<SuperGroupTestC1>::new(1),
-                        Coin::<SuperGroupTestC1>::new(5),
-                    )
+                    &SimpleFraction::new(coin::coin1(1), coin::coin1(5))
                 )
             );
             assert_eq!(
                 Percent::from_permille(225),
                 FractionableLegacy::<Coin<_>>::safe_mul(
                     Percent::from_permille(150),
-                    &SimpleFraction::new(
-                        Coin::<SuperGroupTestC1>::new(3),
-                        Coin::<SuperGroupTestC1>::new(2),
-                    )
+                    &SimpleFraction::new(coin::coin1(3), coin::coin1(2))
                 )
             );
         }
@@ -142,10 +133,7 @@ mod test {
         fn safe_mul_overflow() {
             FractionableLegacy::<Coin<_>>::safe_mul(
                 Percent::from_percent(1),
-                &SimpleFraction::new(
-                    Coin::<SuperGroupTestC1>::new(u128::MAX),
-                    Coin::<SuperGroupTestC1>::new(1),
-                ),
+                &SimpleFraction::new(coin::coin1(u128::MAX), coin::coin1(1)),
             );
         }
     }

@@ -26,7 +26,7 @@ impl TotalValueLocked {
     {
         Amount::from(self.0)
             .checked_mul(Self::SCALE_FACTOR)
-            .map(|amount| Coin::new(amount))
+            .map(Coin::new)
             .expect("Amount goes beyond calculation limits!")
     }
 }
@@ -115,11 +115,8 @@ impl TryFrom<Vec<Bar>> for RewardScale {
 
 #[cfg(test)]
 mod tests {
-    use currency::test::SuperGroupTestC1;
-    use finance::{
-        coin::{Amount, Coin},
-        percent::Percent100, zero::Zero,
-    };
+
+    use finance::{coin::Amount, percent::{Percent, Percent100}, test::coin};
 
     use super::{Bar, RewardScale, TotalValueLocked};
 
@@ -187,20 +184,17 @@ mod tests {
         ])
         .unwrap();
 
+        assert_eq!(res.get_apr(coin::coin1(0)), Percent::from_permille(6));
         assert_eq!(
-            res.get_apr::<SuperGroupTestC1>(Coin::ZERO),
+            res.get_apr(coin::coin1(TotalValueLocked::SCALE_FACTOR)),
             Percent100::from_permille(6)
         );
         assert_eq!(
-            res.get_apr(coin(TotalValueLocked::SCALE_FACTOR)),
+            res.get_apr(coin::coin1(30 * TotalValueLocked::SCALE_FACTOR - 1)),
             Percent100::from_permille(6)
         );
         assert_eq!(
-            res.get_apr(coin(30 * TotalValueLocked::SCALE_FACTOR - 1)),
-            Percent100::from_permille(6)
-        );
-        assert_eq!(
-            res.get_apr(coin(30 * TotalValueLocked::SCALE_FACTOR)),
+            res.get_apr(coin::coin1(30 * TotalValueLocked::SCALE_FACTOR)),
             Percent100::from_permille(10)
         );
         assert_eq!(
@@ -208,41 +202,40 @@ mod tests {
             Percent100::from_permille(10)
         );
         assert_eq!(
-            res.get_apr(coin(100 * TotalValueLocked::SCALE_FACTOR + 1)),
+            res.get_apr(coin::coin1(100 * TotalValueLocked::SCALE_FACTOR + 1)),
             Percent100::from_permille(12)
         );
         assert_eq!(
-            res.get_apr(coin(150 * TotalValueLocked::SCALE_FACTOR - 1)),
+            res.get_apr(coin::coin1(150 * TotalValueLocked::SCALE_FACTOR - 1)),
             Percent100::from_permille(12)
         );
         assert_eq!(
-            res.get_apr(coin(150 * TotalValueLocked::SCALE_FACTOR)),
+            res.get_apr(coin::coin1(150 * TotalValueLocked::SCALE_FACTOR)),
             Percent100::from_permille(15)
         );
         assert_eq!(
-            res.get_apr(coin(200 * TotalValueLocked::SCALE_FACTOR)),
+            res.get_apr(coin::coin1(200 * TotalValueLocked::SCALE_FACTOR)),
             Percent100::from_permille(15)
         );
         assert_eq!(
-            res.get_apr(coin(300 * TotalValueLocked::SCALE_FACTOR)),
+            res.get_apr(coin::coin1(300 * TotalValueLocked::SCALE_FACTOR)),
+            Percent::from_permille(20)
+        );
+        assert_eq!(
+            res.get_apr(coin::coin1(300 * TotalValueLocked::SCALE_FACTOR + 1)),
             Percent100::from_permille(20)
         );
         assert_eq!(
-            res.get_apr(coin(300 * TotalValueLocked::SCALE_FACTOR + 1)),
+            res.get_apr(coin::coin1(1300 * TotalValueLocked::SCALE_FACTOR + 1)),
             Percent100::from_permille(20)
         );
         assert_eq!(
-            res.get_apr(coin(1300 * TotalValueLocked::SCALE_FACTOR + 1)),
+            res.get_apr(coin::coin1(Amount::MAX)),
             Percent100::from_permille(20)
         );
         assert_eq!(
-            res.get_apr(coin(Amount::MAX)),
-            Percent100::from_permille(20)
+            res.get_apr(coin::coin1(Amount::MIN)),
+            Percent100::from_permille(6)
         );
-        assert_eq!(res.get_apr(coin(Amount::MIN)), Percent100::from_permille(6));
-    }
-
-    fn coin(amount: Amount) -> Coin<SuperGroupTestC1> {
-        Coin::new(amount)
     }
 }

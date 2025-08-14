@@ -171,9 +171,9 @@ mod test {
 
     #[test]
     fn test_add() {
-        let c1 = Coin::<SuperGroupTestC2>::new(10);
-        let c2 = Coin::<SuperGroupTestC2>::new(20);
-        let c12 = Coin::<SuperGroupTestC2>::new(30);
+        let c1 = coin::coin2(10);
+        let c2 = coin::coin2(20);
+        let c12 = coin::coin2(30);
         assert_eq!(c12, c1 + c2);
     }
 
@@ -183,7 +183,7 @@ mod test {
             12u8,
             SuperGroupTestC2::bank(),
         ));
-        assert_eq!(Ok(Coin::<SuperGroupTestC2>::new(12)), c1);
+        assert_eq!(Ok(coin::coin2(12)), c1);
     }
     #[test]
     fn from_cosmwasm_unexpected() {
@@ -265,23 +265,23 @@ mod test {
         let amount = 326;
         assert_eq!(
             CosmWasmCoin::new(amount, SuperGroupTestC2::bank()),
-            super::to_cosmwasm_on_nolus(Coin::<SuperGroupTestC2>::new(amount))
+            super::to_cosmwasm_on_nolus(coin::coin2(amount))
         );
         assert_eq!(
             CosmWasmCoin::new(amount, SuperGroupTestC1::bank()),
-            super::to_cosmwasm_on_nolus(Coin::<SuperGroupTestC1>::new(amount))
+            super::to_cosmwasm_on_nolus(coin::coin1(amount))
         );
     }
 
     #[test]
     fn from_to_cosmwasm() {
-        let c_nls = Coin::<SuperGroupTestC2>::new(24563);
+        let c_nls = coin::coin2(24563);
         assert_eq!(
             Ok(c_nls),
             super::from_cosmwasm(&to_cosmwasm_on_nolus(c_nls))
         );
 
-        let c_usdc = Coin::<SuperGroupTestC1>::new(u128::MAX);
+        let c_usdc = coin::coin1(u128::MAX);
         assert_eq!(
             Ok(c_usdc),
             super::from_cosmwasm(&to_cosmwasm_on_nolus(c_usdc))
