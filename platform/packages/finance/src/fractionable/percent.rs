@@ -85,21 +85,18 @@ mod test {
     }
 
     mod rational {
-        use currency::test::SuperGroupTestC1;
 
         use crate::{
             coin::Coin,
             fractionable::Fractionable,
             percent::{Percent, Units},
             ratio::Rational,
+            test::coin,
         };
 
         #[test]
         fn safe_mul() {
-            let ratio_one = Rational::new(
-                Coin::<SuperGroupTestC1>::new(u128::MAX),
-                Coin::<SuperGroupTestC1>::new(u128::MAX),
-            );
+            let ratio_one = Rational::new(coin::coin1(u128::MAX), coin::coin1(u128::MAX));
             assert_eq!(
                 Percent::from_permille(Units::MAX),
                 Fractionable::<Coin<_>>::safe_mul(Percent::from_permille(Units::MAX), &ratio_one)
