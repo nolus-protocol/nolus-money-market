@@ -1,9 +1,10 @@
 use std::str;
 
-use enum_dispatch::enum_dispatch;
-use finance::duration::Duration;
 use serde::{Deserialize, Serialize};
 
+use enum_dispatch::enum_dispatch;
+
+use finance::duration::Duration;
 use platform::{
     batch::Batch, ica::ErrorResponse as ICAErrorResponse, message::Response as MessageResponse,
 };

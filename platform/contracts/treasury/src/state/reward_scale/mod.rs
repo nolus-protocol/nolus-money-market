@@ -1,6 +1,6 @@
-use currency::Currency;
 use serde::{Deserialize, Serialize};
 
+use currency::Currency;
 use finance::{
     coin::{Amount, Coin},
     percent::Percent100,
