@@ -198,7 +198,7 @@ mod test {
         );
     }
 
-    fn min_feders_impl(min_feeders: u16, total: usize, exp: usize) {
+    fn min_feders_impl(min_feeders: u32, total: usize, exp: usize) {
         let c = Config::new(
             Percent100::from_percent(min_feeders),
             Duration::HOUR,
