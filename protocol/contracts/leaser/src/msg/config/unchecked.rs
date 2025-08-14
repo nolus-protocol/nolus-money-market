@@ -1,8 +1,9 @@
-use finance::{duration::Duration, percent::Percent100};
-use lease::api::{limits::MaxSlippages, open::PositionSpecDTO};
 use serde::Deserialize;
 #[cfg(feature = "internal.test.testing")]
 use serde::Serialize;
+
+use finance::{duration::Duration, percent::Percent100};
+use lease::api::{limits::MaxSlippages, open::PositionSpecDTO};
 
 use super::{NewConfig as ValidatedNewConfig, error::BrokenInvariant};
 

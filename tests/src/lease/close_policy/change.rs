@@ -1,3 +1,5 @@
+use anyhow::Error;
+
 use ::lease::{
     CloseStrategy,
     api::{
@@ -6,7 +8,6 @@ use ::lease::{
     },
     error::{ContractError, PositionError},
 };
-use anyhow::Error;
 use finance::{coin::Coin, percent::Percent100};
 use sdk::{cosmwasm_std::Addr, testing};
 

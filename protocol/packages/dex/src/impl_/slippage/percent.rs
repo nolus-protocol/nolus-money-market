@@ -1,5 +1,7 @@
 use std::marker::PhantomData;
 
+use serde::{Deserialize, Serialize};
+
 use currency::{Currency, CurrencyDef, Group, MemberOf};
 use finance::{
     coin::{Coin, CoinDTO, WithCoin, WithCoinResult},
@@ -10,7 +12,6 @@ use oracle::stub;
 use oracle_platform::OracleRef;
 use platform::batch::{Emit, Emitter};
 use sdk::cosmwasm_std::QuerierWrapper;
-use serde::{Deserialize, Serialize};
 
 use crate::{
     SlippageCalculator,

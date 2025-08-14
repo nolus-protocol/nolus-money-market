@@ -1,10 +1,11 @@
 use std::{marker::PhantomData, result::Result as StdResult};
 
+use thiserror::Error;
+
 use currency::CurrencyDef;
 use finance::{coin::Coin, percent::Percent100};
 use platform::batch::Batch;
 use sdk::cosmwasm_std::Timestamp;
-use thiserror::Error;
 
 use crate::{
     loan::{Loan, RepayShares},
