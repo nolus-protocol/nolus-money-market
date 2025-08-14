@@ -183,11 +183,14 @@ mod test {
     };
     use sdk::cosmwasm_std;
 
-    use crate::coin::{Amount, Coin, CoinDTO};
+    use crate::{
+        coin::{Amount, Coin, CoinDTO},
+        test::coin,
+    };
 
     #[test]
     fn longer_representation() {
-        let coin = Coin::<SuperGroupTestC1>::new(4215);
+        let coin = coin::coin1(4215);
         let coin_len = cosmwasm_std::to_json_vec(&coin).unwrap().len();
         let coindto_len = cosmwasm_std::to_json_vec(&CoinDTO::<SuperGroup>::from(coin))
             .unwrap()
@@ -197,7 +200,7 @@ mod test {
 
     #[test]
     fn compatible_deserialization() {
-        let coin = Coin::<SuperGroupTestC1>::new(85);
+        let coin = coin::coin1(85);
         assert_eq!(
             coin,
             cosmwasm_std::to_json_vec(&CoinDTO::<SuperGroup>::from(coin))
@@ -229,7 +232,7 @@ mod test {
     #[test]
     fn deser_same_group() {
         let coin = test_coin::<SuperGroupTestC1, SuperGroup>(4215);
-        let coin_deser: CoinDTO<SuperGroup> = cosmwasm_std::to_json_vec(&coin)
+        let coin_deser = cosmwasm_std::to_json_vec(&coin)
             .and_then(cosmwasm_std::from_json)
             .expect("correct raw bytes");
         assert_eq!(coin, coin_deser);
@@ -247,7 +250,7 @@ mod test {
         let coin_deser: CoinDTO<ParentGroup> = cosmwasm_std::to_json_vec(&coin)
             .and_then(cosmwasm_std::from_json)
             .expect("correct raw bytes");
-        let coin_exp: CoinDTO<ParentGroup> = Coin::<CoinCurrency>::new(amount).into();
+        let coin_exp = test_coin::<CoinCurrency, ParentGroup>(amount);
         assert_eq!(coin_exp, coin_deser);
     }
 

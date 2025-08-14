@@ -659,48 +659,33 @@ mod test {
 
 #[cfg(test)]
 mod test_invariant {
-    use currency::{
-        Currency,
-        test::{SuperGroupTestC1, SuperGroupTestC2},
-    };
+    use currency::Currency;
 
-    use crate::{coin::Coin, price::Price};
+    use crate::{coin::Coin, price::Price, test::coin};
 
     #[test]
     #[should_panic = "zero"]
     fn base_zero() {
-        new_invalid(
-            Coin::<SuperGroupTestC1>::new(0),
-            Coin::<SuperGroupTestC2>::new(5),
-        );
+        new_invalid(coin::coin1(0), coin::coin2(5));
     }
 
     #[test]
     #[should_panic = "zero"]
     fn quote_zero() {
-        new_invalid(
-            Coin::<SuperGroupTestC1>::new(10),
-            Coin::<SuperGroupTestC2>::new(0),
-        );
+        new_invalid(coin::coin1(10), coin::coin2(0));
     }
 
     #[test]
     #[should_panic = "should be equal to the identity if the currencies match"]
     fn currencies_match() {
-        new_invalid(
-            Coin::<SuperGroupTestC2>::new(4),
-            Coin::<SuperGroupTestC2>::new(5),
-        );
+        new_invalid(coin::coin2(4), coin::coin2(5));
     }
 
     #[test]
     fn currencies_match_ok() {
         assert_eq!(
             Price::identity(),
-            Price::new(
-                Coin::<SuperGroupTestC2>::new(4),
-                Coin::<SuperGroupTestC2>::new(4)
-            )
+            Price::new(coin::coin2(4), coin::coin2(4))
         );
     }
 
