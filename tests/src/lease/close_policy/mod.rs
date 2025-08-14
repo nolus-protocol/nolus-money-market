@@ -1,3 +1,5 @@
+use anyhow::Error;
+
 use ::lease::{
     api::{
         ExecuteMsg,
@@ -5,7 +7,6 @@ use ::lease::{
     },
     error::ContractError,
 };
-use anyhow::Error;
 use sdk::{cosmwasm_std::Addr, cw_multi_test::AppResponse, testing};
 
 use crate::{

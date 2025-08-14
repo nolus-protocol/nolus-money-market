@@ -1,6 +1,6 @@
-use currency::CurrencyDTO;
 use serde::{Deserialize, Serialize};
 
+use currency::CurrencyDTO;
 use finance::{
     duration::{Duration, Seconds},
     percent::Percent100,

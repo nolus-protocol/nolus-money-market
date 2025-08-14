@@ -1,4 +1,3 @@
-use sdk::cosmwasm_std::Timestamp;
 use serde::{Deserialize, Serialize};
 
 use finance::{
@@ -7,6 +6,7 @@ use finance::{
     interest,
     percent::{Percent, Percent100},
 };
+use sdk::cosmwasm_std::Timestamp;
 
 #[derive(Serialize, Deserialize, Clone, Copy, Debug)]
 #[cfg_attr(any(test, feature = "testing"), derive(Eq, PartialEq))]

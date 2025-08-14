@@ -3,8 +3,9 @@ use std::fmt::{Debug, Display, Formatter, Result as FmtResult, Write};
 #[cfg(any(test, feature = "testing"))]
 use std::ops::{Add, Sub};
 
-use sdk::cosmwasm_std::Uint256;
 use serde::{Deserialize, Serialize};
+
+use sdk::cosmwasm_std::Uint256;
 
 use crate::{
     coin::Amount,

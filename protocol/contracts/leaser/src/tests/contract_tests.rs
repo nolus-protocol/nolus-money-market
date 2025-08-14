@@ -8,7 +8,6 @@ use finance::{
 };
 use lease::api::{limits::MaxSlippages, open::PositionSpecDTO};
 use platform::contract::{Code, CodeId};
-
 use sdk::{
     cosmwasm_std::{
         Addr, CosmosMsg, Deps, DepsMut, MessageInfo, OwnedDeps, SubMsg, WasmMsg, coins, from_json,
