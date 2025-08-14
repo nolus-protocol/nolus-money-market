@@ -3,8 +3,8 @@ use std::fmt::{Display, Formatter};
 
 use access_control::user::User;
 use dex::{
-    CheckType, ConnectionParams, ContinueResult, Contract, Handler, Response as DexResponse,
-    Result as DexResult, StateLocalOut,
+    CheckType, ConnectionParams, ContinueResult, Contract, error::Result as DexErrResult, Handler,
+    Response as DexResponse, Result as DexResult, StateLocalOut,
 };
 use finance::duration::Duration;
 use platform::{
@@ -14,7 +14,7 @@ use platform::{
 };
 use sdk::{
     cosmwasm_std::{
-        Addr, Binary, ContractInfo, Env, MessageInfo, QuerierWrapper, Reply as CwReply, Storage,
+        Binary, ContractInfo, Env, MessageInfo, QuerierWrapper, Reply as CwReply, Storage,
         Timestamp,
     },
     cw_storage_plus::Item,
@@ -243,21 +243,18 @@ impl Handler for State {
         &self,
         user: &U,
         check_type: CheckType,
-        contract_info: Option<ContractInfo>,
-    ) -> DexResult<Self>
+        contract_info: ContractInfo,
+    ) -> DexErrResult<()>
     where
         U: User,
     {
         match &self.0 {
             StateEnum::OpenIca(ica) => ica
-                .check_permission(user, check_type, contract_info)
-                .map_into(),
+                .check_permission(user, check_type, contract_info),
             StateEnum::Idle(idle) => idle
-                .check_permission(user, check_type, contract_info)
-                .map_into(),
+                .check_permission(user, check_type, contract_info),
             StateEnum::BuyBack(buy_back) => buy_back
-                .check_permission(user, check_type, contract_info)
-                .map_into(),
+                .check_permission(user, check_type, contract_info),
         }
     }
 }
