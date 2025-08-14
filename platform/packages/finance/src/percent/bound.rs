@@ -173,11 +173,7 @@ impl<const UPPER_BOUND: Units> Add for BoundPercent<UPPER_BOUND> {
 
     #[track_caller]
     fn add(self, rhs: Self) -> Self {
-        Self(
-            self.0
-                .checked_add(rhs.0)
-                .expect("attempt to add with overflow"),
-        )
+        Self::checked_add(self, rhs).expect("attempt to add with overflow")
     }
 }
 
@@ -187,11 +183,7 @@ impl<const UPPER_BOUND: Units> Sub for BoundPercent<UPPER_BOUND> {
 
     #[track_caller]
     fn sub(self, rhs: Self) -> Self {
-        Self(
-            self.0
-                .checked_sub(rhs.0)
-                .expect("attempt to subtract with overflow"),
-        )
+        Self::checked_sub(self, rhs).expect("attempt to subtract with overflow")
     }
 }
 
