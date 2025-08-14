@@ -83,10 +83,12 @@ impl<const UPPER_BOUND: Units> BoundPercent<UPPER_BOUND> {
         }
     }
 
-    pub fn checked_sub(self, other: Self) -> Option<Self> {
-        self.0
-            .checked_sub(other.0)
-            .and_then(Self::try_from_permille)
+    pub const fn checked_sub(self, other: Self) -> Option<Self> {
+        if let Some(res) = self.0.checked_sub(other.0) {
+            Self::try_from_permille(res)
+        } else {
+            None
+        }
     }
 }
 
