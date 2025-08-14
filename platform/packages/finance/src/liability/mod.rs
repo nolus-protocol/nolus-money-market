@@ -468,7 +468,7 @@ mod test {
         l.zone_of(Percent100::from_permille(permilles))
     }
 
-    fn test_init_borrow_amount(d: u128, p: u16, exp: u128, max_p: Option<Percent>) {
+    fn test_init_borrow_amount(d: u128, p: u32, exp: u128, max_p: Option<Percent>) {
         type Currency = SubGroupTestC10;
 
         let downpayment = Coin::<Currency>::new(d);
