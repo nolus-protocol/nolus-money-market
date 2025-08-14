@@ -8,8 +8,8 @@ use access_control::{
 };
 use currencies::{Native, Nls, PaymentGroup};
 use dex::{
-    AcceptAnyNonZeroSwap, Account, AnomalyTreatment, CheckType, ContractInSwap, Handler,
-    Response as DexResponse, Result as DexResult, Stage, StateLocalOut, SwapOutputTask, SwapTask,
+    AcceptAnyNonZeroSwap, Account, AnomalyTreatment, CheckType, ContractInSwap, error::Result as DexResult,
+    Handler, Response as DexResponse, Stage, StateLocalOut, SwapOutputTask, SwapTask,
     WithCalculator, WithOutputTask,
 };
 use finance::{
@@ -17,13 +17,16 @@ use finance::{
     duration::Duration,
 };
 use oracle::stub::SwapPath;
-use platform::bank::{self, BankAccountView};
+use platform::bank::{self, BankAccountView, message::Response as MessageResponse};
 use sdk::cosmwasm_std::{Addr, ContractInfo, Env, QuerierWrapper, Timestamp};
 use timealarms::stub::{TimeAlarmDelivery, TimeAlarmsRef};
 
-use crate::{msg::ConfigResponse, result::ContractResult};
+use crate::{error::ContractError, msg::ConfigResponse, result::ContractResult};
 
-use super::{Config, ConfigManagement, State, StateEnum, SwapClient, idle::Idle, resp_delivery::ForwardToDexEntry};
+use super::{
+    Config, ConfigManagement, State, StateEnum, SwapClient, idle::Idle,
+    resp_delivery::ForwardToDexEntry,
+};
 
 #[derive(Serialize, Deserialize)]
 pub(super) struct BuyBack {
@@ -171,26 +174,29 @@ impl Handler for BuyBack {
         &self,
         user: &U,
         check_type: CheckType,
-        contract_info: Option<ContractInfo>,
-    ) -> DexResult<Self>
+        contract_info: ContractInfo,
+    ) -> DexResult<()>
     where
         U: User,
     {
         match check_type {
             CheckType::Timealarm => {
-                access_control::check(&TimeAlarmDelivery::new(&self.config.time_alarms()), user)?;
+                access_control::check(&TimeAlarmDelivery::new(&self.config.time_alarms()), user)
+                    .map_err(|e| map_err(DexError::Unauthorized(e)))?;
             }
             CheckType::ContractOwner => {
                 access_control::check(
                     &ContractOwnerPermission::new(&self.config.contract_owner()),
                     user,
-                )?;
+                )
+                .map_err(|e| map_err(DexError::Unauthorized(e)))?;
             }
             CheckType::DexResponseSafeDelivery => {
                 access_control::check(
                     &DexResponseSafeDeliveryPermission::new(&contract_info),
                     user,
-                )?;
+                )
+                .map_err(|e| map_err(DexError::Unauthorized(e)))?;
             }
             CheckType::None => {}
         }

@@ -6,7 +6,7 @@ use platform::{
     message::Response as MessageResponse,
     state_machine::{self, Response as StateMachineResponse},
 };
-use sdk::cosmwasm_std::{Addr, Binary, ContractInfo, Env, MessageInfo, QuerierWrapper, Reply};
+use sdk::cosmwasm_std::{Binary, ContractInfo, Env, MessageInfo, QuerierWrapper, Reply};
 
 use crate::error::{Error, Result as DexResult};
 
@@ -115,10 +115,10 @@ where
 
     fn check_permission<U>(
         &self,
-        user: &U,
-        check_type: CheckType,
-        contract_info: Option<ContractInfo>,
-    ) -> Result<Self>
+        _user: &U,
+        _check_type: CheckType,
+        _contract_info: ContractInfo,
+    ) -> DexResult<()>
     where
         U: User,
     {

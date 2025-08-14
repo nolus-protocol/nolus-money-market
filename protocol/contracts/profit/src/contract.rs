@@ -13,7 +13,7 @@ use platform::{
 use sdk::{
     cosmwasm_ext::Response as CwResponse,
     cosmwasm_std::{
-        Addr, Api, Binary, ContractInfo, Deps, DepsMut, Env, MessageInfo, QuerierWrapper, Reply,
+        Api, Binary, ContractInfo, Deps, DepsMut, Env, MessageInfo, QuerierWrapper, Reply,
         entry_point, to_json_binary,
     },
     neutron_sdk::sudo::msg::SudoMsg as NeutronSudoMsg,
@@ -96,13 +96,13 @@ pub fn execute(
             deps,
             env,
             |state, querier, env| State::on_time_alarm(state, querier, env, info),
-            (info, CheckType::Timealarm, None),
+            (info, CheckType::Timealarm, env.contract),
         )
         .map(response::response_only_messages),
         ExecuteMsg::Config { cadence_hours } => {
             let state = State::load(deps.storage)?;
 
-            state.check_permission(&info, CheckType::ContractOwner, None)?;
+            state.check_permission(&info, CheckType::ContractOwner, env.contract)?;
 
             let StateMachineResponse {
                 response,
@@ -117,24 +117,23 @@ pub fn execute(
             deps,
             env,
             State::on_inner,
-            (info, CheckType::DexResponseSafeDelivery, Some(env.contract)),
+            (info, CheckType::DexResponseSafeDelivery, env.contract),
         )
         .map(response::response_only_messages),
         ExecuteMsg::DexCallbackContinue() => try_handle_execute_message(
             deps,
             env,
             State::on_inner_continue,
-            (
-                info,
-                CheckType::DexResponseSafeDelivery,
-                Some(env.contract),
-            ),
+            (info, CheckType::DexResponseSafeDelivery, env.contract),
         )
         .map(response::response_only_messages),
-        ExecuteMsg::Heal() => {
-            try_handle_execute_message(deps, env, State::heal, (info, CheckType::None, None))
-                .map(response::response_only_messages)
-        }
+        ExecuteMsg::Heal() => try_handle_execute_message(
+            deps,
+            env,
+            State::heal,
+            (info, CheckType::None, env.contract),
+        )
+        .map(response::response_only_messages),
     }
 }
 
@@ -188,7 +187,7 @@ fn try_handle_execute_message<F, R, E, U>(
     deps: DepsMut<'_>,
     env: Env,
     handler: F,
-    permission_check: (U, CheckType, Option<ContractInfo>),
+    permission_check: (U, CheckType, ContractInfo),
 ) -> ContractResult<MessageResponse>
 where
     F: FnOnce(State, QuerierWrapper<'_>, Env) -> R,
@@ -198,7 +197,7 @@ where
 {
     let state: State = State::load(deps.storage)?;
 
-    if permission_check.1 != None {
+    if permission_check.1 != CheckType::None {
         state.check_permission(&permission_check.0, permission_check.1, permission_check.2)?;
     }
 
