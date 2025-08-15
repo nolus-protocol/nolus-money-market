@@ -142,19 +142,12 @@ impl<const UPPER: Units> FractionUnit for BoundPercent<UPPER> where
 {
 }
 
-// TODO: Revisit after refactoring Fractionable.
-// Required by Rational::of() that has a Fractionable trait bound
-// that in turn requires this implementation
-impl<const UPPER_BOUND: Units> From<BoundPercent<UPPER_BOUND>> for Amount {
-    fn from(percent: BoundPercent<UPPER_BOUND>) -> Self {
-        Amount::from(percent.units())
-    }
-}
-
-// TODO remove it once the multiplication is refactored
+// TODO: Remove once SimpleFraction multiplication is fully refactored.
+// This conversion is required because `SimpleFraction<BoundPercnt>::of(Coin<C>)` relies on `BoundPercent` being
+// convertible into the "double" type (`Uint256`) used in `safe_mul` arithmetic.
 impl<const UPPER_BOUND: Units> From<BoundPercent<UPPER_BOUND>> for Uint256 {
     fn from(percent: BoundPercent<UPPER_BOUND>) -> Self {
-        Amount::from(percent).into()
+        Amount::from(percent.units()).into()
     }
 }
 
@@ -168,7 +161,7 @@ impl<const UPPER_BOUND: Units> Add for BoundPercent<UPPER_BOUND> {
 
     #[track_caller]
     fn add(self, rhs: Self) -> Self {
-        Self::checked_add(self, rhs).expect("attempt to add with overflow")
+        self.checked_add(rhs).expect("attempt to add with overflow")
     }
 }
 
@@ -178,7 +171,8 @@ impl<const UPPER_BOUND: Units> Sub for BoundPercent<UPPER_BOUND> {
 
     #[track_caller]
     fn sub(self, rhs: Self) -> Self {
-        Self::checked_sub(self, rhs).expect("attempt to subtract with overflow")
+        self.checked_sub(rhs)
+            .expect("attempt to subtract with overflow")
     }
 }
 
