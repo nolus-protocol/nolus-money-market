@@ -324,7 +324,7 @@ pub fn total<C, QuoteC>(of: Coin<C>, price: Price<C, QuoteC>) -> Coin<QuoteC> {
     let ratio_impl = SimpleFraction::new(of, price.amount);
     ratio_impl
         .of(price.amount_quote)
-        .expect("TODO the method has to retur Option")
+        .expect("TODO the method has to return Option")
 }
 
 #[cfg(test)]
