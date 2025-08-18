@@ -60,14 +60,12 @@ impl CheckedMul for u128 {
     fn checked_mul(self, rhs: Self) -> Option<Self::Output> {
         self.checked_mul(rhs)
     }
-} */
+}
 
 impl FractionUnit for usize {}
 
-/* #[cfg(test)]
+#[cfg(test)]
 mod test {
-    use std::usize;
-
     use crate::{
         fraction::Fraction,
         percent::{Percent, Percent100},
@@ -91,4 +89,4 @@ mod test {
 
         assert!(Rational::of(&Percent::from_permille(1001), usize::MAX).is_none());
     }
-} */
+}
