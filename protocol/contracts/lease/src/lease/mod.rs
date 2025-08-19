@@ -168,8 +168,6 @@ where
 
 #[cfg(all(feature = "internal.test.contract", test))]
 pub(crate) mod tests {
-    use std::ops::Add;
-
     use serde::{Deserialize, Serialize};
 
     pub(super) use currencies::PaymentGroup as PriceG;
@@ -362,7 +360,7 @@ pub(crate) mod tests {
         let mut lease = open_lease(lease_amount, loan);
 
         let state_since_open = Duration::from_nanos(150);
-        let state_at = LEASE_START.add(state_since_open);
+        let state_at = LEASE_START + state_since_open;
         let take_profit = Percent100::from_percent(20);
         lease
             .price_of_lease_currency()
