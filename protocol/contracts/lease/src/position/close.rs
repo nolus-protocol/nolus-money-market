@@ -500,7 +500,7 @@ mod test {
 
         #[test]
         fn check() {
-            const DELTA: Percent100 = Percent100::from_permille(1);
+            const DELTA: Percent100 = Percent100::PRECISION;
 
             let lower = Percent100::from_percent(45);
             let higher = Percent100::from_percent(55);
