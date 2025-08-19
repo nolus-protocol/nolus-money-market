@@ -25,8 +25,6 @@ pub type Amount = u128;
 #[cfg(feature = "testing")]
 pub type NonZeroAmount = NonZeroU128;
 
-impl FractionUnit for Amount {}
-
 #[derive(Serialize, Deserialize)]
 pub struct Coin<C> {
     #[serde(with = "amount_serde")]
@@ -44,9 +42,10 @@ impl<C> Coin<C> {
     }
 
     const fn may_new(may_amount: Option<Amount>) -> Option<Self> {
-        match may_amount {
-            None => None,
-            Some(amount) => Some(Self::new(amount)),
+        if let Some(amount) = may_amount {
+            Some(Self::new(amount))
+        } else {
+            None
         }
     }
 
