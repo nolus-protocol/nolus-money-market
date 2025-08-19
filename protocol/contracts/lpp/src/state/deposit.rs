@@ -53,10 +53,10 @@ impl Deposit {
             .and_then(|may_deposit| may_deposit.ok_or_else(|| ContractError::NoDeposit {}))
     }
 
-    pub fn iter<'storage>(
-        storage: &'storage dyn Storage,
+    pub fn iter(
+        storage: &dyn Storage,
         total_rewards: Index,
-    ) -> impl Iterator<Item = Result<Self>> + use<'storage> {
+    ) -> impl Iterator<Item = Result<Self>> + use<'_> {
         Self::DEPOSITS
             .prefix(())
             .range(storage, None, None, Order::Ascending)

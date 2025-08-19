@@ -20,7 +20,7 @@ pub trait Validator {
     fn check_contract_code(&self, contract: Addr, code: &Code) -> Result<Addr>;
 }
 
-pub fn validator<'q>(querier: QuerierWrapper<'q>) -> impl Validator + use<'q> {
+pub fn validator(querier: QuerierWrapper<'_>) -> impl Validator + use<'_> {
     CosmwasmValidator::new(querier)
 }
 
