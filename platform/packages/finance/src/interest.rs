@@ -45,7 +45,10 @@ where
 mod tests {
     use currency::test::SubGroupTestC10;
 
-    use crate::{coin::Coin, duration::Duration, percent::Percent, rational::Rational, zero::Zero};
+    use crate::{
+        coin::Coin, duration::Duration, percent::Percent, ratio::SimpleFraction,
+        rational::Rational, zero::Zero,
+    };
 
     type MyCoin = Coin<SubGroupTestC10>;
     const PERIOD_LENGTH: Duration = Duration::YEAR;
@@ -141,6 +144,16 @@ mod tests {
             Duration::default(),
             exp_change,
         );
+    }
+
+    #[test]
+    fn interest() {
+        let whole = MyCoin::new(1001);
+        let part = MyCoin::new(125);
+        let r = SimpleFraction::new(part, whole);
+
+        let res = super::interest(r, whole, PERIOD_LENGTH);
+        assert_eq!(part, res);
     }
 
     #[test]
