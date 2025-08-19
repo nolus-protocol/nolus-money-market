@@ -511,8 +511,10 @@ mod tests {
             let one_year_margin = MARGIN_INTEREST_RATE.of(principal);
             let one_year_interest = LOAN_INTEREST_RATE.of(principal);
             let overdue_period = Duration::from_days(100);
-            let overdue_interest = overdue_period.annualized_slice_of(one_year_interest);
-            let overdue_margin = overdue_period.annualized_slice_of(one_year_margin);
+            let overdue_interest = overdue_period
+                .annualized_slice_of(one_year_interest)
+                .unwrap();
+            let overdue_margin = overdue_period.annualized_slice_of(one_year_margin).unwrap();
 
             let partial_overdue_interest = overdue_interest - 10;
             let repay_at = LEASE_START + Duration::YEAR + overdue_period;
@@ -565,11 +567,13 @@ mod tests {
                 + Duration::YEAR
                 + Duration::YEAR;
 
-            let overdue_margin_modulo_year =
-                overdue_period_molulo_year.annualized_slice_of(one_year_margin);
-            let overdue_interest_modulo_year =
-                overdue_period_molulo_year.annualized_slice_of(one_year_interest);
-            let interest_payment = overdue_interest_modulo_year - 10;
+            let overdue_margin_modulo_year = overdue_period_molulo_year
+                .annualized_slice_of(one_year_margin)
+                .unwrap();
+            let overdue_interest_modulo_year = overdue_period_molulo_year
+                .annualized_slice_of(one_year_interest)
+                .unwrap();
+            let interest_payment = overdue_interest_modulo_year - Coin::new(10);
 
             let loan = LoanResponse {
                 principal_due: principal.into(),
@@ -711,8 +715,8 @@ mod tests {
             let overdue_period =
                 Duration::YEAR - Duration::HOUR - Duration::HOUR - Duration::HOUR - Duration::HOUR;
             let repay_at = LEASE_START + Duration::YEAR + overdue_period;
-            let overdue_margin = overdue_period.annualized_slice_of(due_margin);
-            let overdue_interest = overdue_period.annualized_slice_of(due_interest);
+            let overdue_margin = overdue_period.annualized_slice_of(due_margin).unwrap();
+            let overdue_interest = overdue_period.annualized_slice_of(due_interest).unwrap();
             let payment = overdue_interest + overdue_margin + due_interest + due_margin_payment;
             let due_period_paid =
                 Duration::between(&LEASE_START, &repay_at).into_slice_per_ratio::<LpnCoin>(
@@ -754,8 +758,8 @@ mod tests {
             let one_year_margin = MARGIN_INTEREST_RATE.of(principal);
             let one_year_interest = LOAN_INTEREST_RATE.of(principal);
             let due_period = Duration::HOUR + Duration::HOUR + Duration::HOUR;
-            let due_margin = due_period.annualized_slice_of(one_year_margin);
-            let due_interest = due_period.annualized_slice_of(one_year_interest);
+            let due_margin = due_period.annualized_slice_of(one_year_margin).unwrap();
+            let due_interest = due_period.annualized_slice_of(one_year_interest).unwrap();
             let payment = due_margin + due_interest + principal_paid;
 
             let repay_at = LEASE_START + due_period;
@@ -797,10 +801,10 @@ mod tests {
             let due_margin = margin_interest_rate.of(principal);
             let due_interest = loan_interest_rate.of(principal);
             let overdue_period = Duration::HOUR + Duration::HOUR;
-            let overdue_interest = overdue_period.annualized_slice_of(due_interest);
-            assert_eq!(Amount::ZERO, overdue_interest);
-            let overdue_margin = overdue_period.annualized_slice_of(due_margin);
-            assert!(Amount::ZERO != overdue_margin);
+            let overdue_interest = overdue_period.annualized_slice_of(due_interest).unwrap();
+            assert_eq!(Coin::ZERO, overdue_interest);
+            let overdue_margin = overdue_period.annualized_slice_of(due_margin).unwrap();
+            assert!(Coin::ZERO != overdue_margin);
 
             let loan = LoanResponse {
                 principal_due: principal.into(),
@@ -872,8 +876,8 @@ mod tests {
             let one_year_margin = MARGIN_INTEREST_RATE.of(principal);
             let one_year_interest = LOAN_INTEREST_RATE.of(principal);
             let due_period = Duration::HOUR + Duration::HOUR + Duration::HOUR;
-            let due_margin = due_period.annualized_slice_of(one_year_margin);
-            let due_interest = due_period.annualized_slice_of(one_year_interest);
+            let due_margin = due_period.annualized_slice_of(one_year_margin).unwrap();
+            let due_interest = due_period.annualized_slice_of(one_year_interest).unwrap();
             let mut loan = create_loan(LoanResponse {
                 principal_due: principal.into(),
                 annual_interest_rate: LOAN_INTEREST_RATE,
@@ -910,9 +914,11 @@ mod tests {
                 let change = Coin::new(97);
                 let duration_since_prev_payment = Duration::YEAR - due_period;
                 let due_margin = duration_since_prev_payment
-                    .annualized_slice_of(MARGIN_INTEREST_RATE.of(principal_due));
+                    .annualized_slice_of(MARGIN_INTEREST_RATE.of(principal_due))
+                    .unwrap();
                 let due_interest = duration_since_prev_payment
-                    .annualized_slice_of(LOAN_INTEREST_RATE.of(principal_due));
+                    .annualized_slice_of(LOAN_INTEREST_RATE.of(principal_due))
+                    .unwrap();
                 let payment = due_margin + due_interest + principal_due + change;
                 let repay_at = LEASE_START + Duration::YEAR;
                 repay(
@@ -961,13 +967,16 @@ mod tests {
             let principal_left = {
                 let due_period_paid = Duration::default();
 
-                let overdue_margin = (since_start - due_period).annualized_slice_of(total_margin);
+                let overdue_margin = (since_start - due_period)
+                    .annualized_slice_of(total_margin)
+                    .unwrap();
                 let due_margin = total_margin - overdue_margin;
                 assert_eq!(Amount::ZERO, due_margin);
                 assert_eq!(Amount::ZERO, total_margin);
 
-                let overdue_interest =
-                    (since_start - due_period).annualized_slice_of(total_interest);
+                let overdue_interest = (since_start - due_period)
+                    .annualized_slice_of(total_interest)
+                    .unwrap();
                 let due_interest = total_interest - overdue_interest;
                 assert_eq!(1, due_interest);
 
