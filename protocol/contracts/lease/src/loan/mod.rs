@@ -283,7 +283,8 @@ mod tests {
             coin::{Amount, Coin, WithCoin},
             duration::Duration,
             fraction::Fraction,
-            percent::Percent100,
+            percent::{Percent, Percent100},
+            rational::Rational,
             zero::Zero,
         };
         use lpp::msg::LoanResponse;
@@ -469,7 +470,7 @@ mod tests {
         fn partial_max_due_margin_repay() {
             let principal = Coin::new(1000);
             let due_margin = MARGIN_INTEREST_RATE.of(principal);
-            let payment = due_margin / 2;
+            let payment = Percent100::from_percent(50).of(due_margin);
             let now = LEASE_START + Duration::YEAR;
 
             let mut loan = create_loan(LoanResponse {
@@ -587,8 +588,10 @@ mod tests {
                         one_year_margin,
                         one_year_interest,
                         Overdue::Accrued {
-                            interest: (one_year_interest * 2 + overdue_interest_modulo_year).into(),
-                            margin: (one_year_margin * 2 + overdue_margin_modulo_year).into(),
+                            interest: (Percent::from_percent(200).of(one_year_interest).unwrap()
+                                + overdue_interest_modulo_year),
+                            margin: (Percent::from_percent(200).of(one_year_margin).unwrap()
+                                + overdue_margin_modulo_year),
                         },
                     ),
                     receipt(
@@ -615,8 +618,9 @@ mod tests {
                         one_year_margin,
                         one_year_interest,
                         Overdue::Accrued {
-                            interest: (overdue_interest_modulo_year - interest_payment).into(),
-                            margin: (one_year_margin * 2 + overdue_margin_modulo_year).into(),
+                            interest: (overdue_interest_modulo_year - interest_payment),
+                            margin: (Percent::from_percent(200).of(one_year_margin).unwrap()
+                                + overdue_margin_modulo_year),
                         },
                     ),
                     receipt(
@@ -633,7 +637,8 @@ mod tests {
                 );
             }
             {
-                let payment = one_year_margin * 2 + interest_payment;
+                let double_margin = Percent::from_percent(200).of(one_year_margin).unwrap();
+                let payment = double_margin + interest_payment;
                 repay(
                     &mut loan,
                     payment,
@@ -643,7 +648,7 @@ mod tests {
                         one_year_interest,
                         Overdue::Accrued {
                             interest: 0.into(),
-                            margin: (one_year_margin * 2).into(),
+                            margin: double_margin,
                         },
                     ),
                     receipt(
@@ -1171,6 +1176,7 @@ mod tests {
     #[cfg(test)]
     mod test_state {
         use finance::{
+            coin::Coin,
             duration::Duration,
             interest,
             percent::{Percent, Percent100},
