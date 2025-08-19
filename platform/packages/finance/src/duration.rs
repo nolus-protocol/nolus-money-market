@@ -93,7 +93,9 @@ impl Duration {
     where
         T: Fractionable<Units>,
     {
-        annual_amount.safe_mul(&SimpleFraction::new(self.nanos(), Self::YEAR.nanos()))
+        SimpleFraction::new(self.nanos(), Self::YEAR.nanos())
+            .of(annual_amount)
+            .expect("TODO the method has to return Option")
     }
 
     pub fn into_slice_per_ratio<U>(self, amount: U, annual_amount: U) -> Self
