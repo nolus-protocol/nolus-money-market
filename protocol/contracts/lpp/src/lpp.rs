@@ -199,7 +199,7 @@ where
             })
     }
 
-    pub fn balance_nlpn(&self) -> Coin<NLpn> {
+    pub const fn balance_nlpn(&self) -> Coin<NLpn> {
         self.total.receipts()
     }
 
