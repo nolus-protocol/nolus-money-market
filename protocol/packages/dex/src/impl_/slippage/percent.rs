@@ -25,12 +25,12 @@ pub struct MaxSlippage(Percent100);
 
 impl MaxSlippage {
     //TODO remove past the migration
-    pub fn v_0_8_7_any() -> Self {
+    pub const fn v_0_8_7_any() -> Self {
         Self(Percent100::HUNDRED)
     }
 
     #[cfg(feature = "testing")]
-    pub fn unchecked(max: Percent100) -> Self {
+    pub const fn unchecked(max: Percent100) -> Self {
         Self(max)
     }
 
@@ -70,7 +70,7 @@ where
     OutC: Currency + MemberOf<OutG>,
     OutG: Group,
 {
-    pub fn with(max_slippage: MaxSlippage, oracle: OracleRef<OutC, OutG>) -> Self {
+    pub const fn with(max_slippage: MaxSlippage, oracle: OracleRef<OutC, OutG>) -> Self {
         Self {
             max_slippage,
             oracle,
@@ -78,7 +78,7 @@ where
         }
     }
 
-    pub fn threshold(&self) -> MaxSlippage {
+    pub const fn threshold(&self) -> MaxSlippage {
         self.max_slippage
     }
 }

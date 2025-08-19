@@ -1,14 +1,8 @@
 use serde::{Deserialize, Serialize};
 
 use finance::{
-    coin::{Amount, Coin},
-    duration::Duration,
-    fraction::Fraction,
-    interest,
-    percent::Percent100,
-    ratio::SimpleFraction,
-    rational::Rational,
-    zero::Zero,
+    coin::Coin, duration::Duration, fraction::Fraction, interest, percent::Percent100,
+    ratio::SimpleFraction, rational::Rational, zero::Zero,
 };
 use lpp_platform::NLpn;
 use sdk::{
@@ -106,7 +100,7 @@ impl<Lpn> Total<Lpn> {
         Self::STORAGE.load(storage).map_err(Into::into)
     }
 
-    pub fn total_principal_due(&self) -> Coin<Lpn> {
+    pub const fn total_principal_due(&self) -> Coin<Lpn> {
         self.total_principal_due
     }
 
@@ -118,7 +112,7 @@ impl<Lpn> Total<Lpn> {
         ) + self.total_interest_due
     }
 
-    pub fn receipts(&self) -> Coin<NLpn> {
+    pub const fn receipts(&self) -> Coin<NLpn> {
         self.receipts
     }
 
@@ -227,14 +221,13 @@ impl<Lpn> Total<Lpn> {
 }
 
 fn zero_interest_rate<Lpn>() -> SimpleFraction<Coin<Lpn>> {
-    const THOUSAND: Amount = 1000;
-    SimpleFraction::new(Coin::ZERO, THOUSAND.into())
+    SimpleFraction::new(Coin::ZERO, Coin::new(1000))
 }
 
 #[cfg(test)]
 mod test {
     use currencies::Lpn;
-    use finance::duration::Duration;
+    use finance::{coin::Amount, duration::Duration};
     use sdk::cosmwasm_std::testing::MockStorage;
 
     use crate::loan::Loan;
