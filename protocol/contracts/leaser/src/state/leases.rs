@@ -116,10 +116,13 @@ impl Leases {
                 .collect::<ContractResult<Vec<Addr>>>();
 
             next_customer = match may_customers_no_leases {
-                Ok(customers_no_leases) => customers_no_leases
-                    .into_iter()
-                    .inspect(|customer| Self::CUSTOMER_LEASES.remove(storage, customer.clone()))
-                    .last(),
+                Ok(customers_no_leases) => {
+                    customers_no_leases.into_iter().fold(None, |_, customer| {
+                        Self::CUSTOMER_LEASES.remove(storage, customer.clone());
+
+                        Some(customer)
+                    })
+                }
                 Err(e) => break Err(e),
             };
 
