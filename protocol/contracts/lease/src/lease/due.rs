@@ -102,7 +102,8 @@ mod test {
             Percent::from(annual_interest + annual_interest_margin),
             principal_due,
             till_due_end,
-        );
+        )
+        .expect("Calculating interest overflowed");
         let s = State {
             annual_interest,
             annual_interest_margin,
@@ -136,12 +137,13 @@ mod test {
         let delta_to_overdue = 40.into();
         let till_overdue = Duration::YEAR.into_slice_per_ratio(
             delta_to_overdue,
-            interest::interest(
-                Percent::from(annual_interest + annual_interest_margin),
-                principal_due,
-                Duration::YEAR,
-            ),
         );
+                interest::interest(
+                    Percent::from(annual_interest + annual_interest_margin),
+                    principal_due,
+                    Duration::YEAR,
+                )
+                .expect("Calculating interest overflowed"),
 
         let s = State {
             annual_interest,

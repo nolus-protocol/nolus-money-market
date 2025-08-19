@@ -61,7 +61,8 @@ impl Overdue {
                 Percent::from(margin_interest),
                 lpp_loan.principal_due(),
                 overdue_period.length(),
-            );
+            )
+            .expect("Calculating interest overflowed");
             let interest = lpp_loan.interest_due(&overdue_period.till());
 
             Self::Accrued { interest, margin }
@@ -179,7 +180,8 @@ mod test {
             Percent::from(MARGIN_INTEREST_RATE),
             LOAN.principal_due,
             overdue_period,
-        );
+        )
+        .unwrap();
         assert_eq!(
             Overdue::Accrued {
                 interest: exp_interest,

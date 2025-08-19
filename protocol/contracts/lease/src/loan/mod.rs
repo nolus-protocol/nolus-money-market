@@ -201,7 +201,9 @@ where
             Percent::from(self.margin_interest),
             principal_due,
             due_period_margin.length(),
-        ) - overdue.margin();
+        )
+        .expect("Calculating interest overflowed")
+            - overdue.margin();
         let due_interest =
             self.lpp_loan.interest_due(&due_period_margin.till()) - overdue.interest();
 
@@ -1233,7 +1235,8 @@ mod tests {
                 Percent::from(annual_interest_margin),
                 principal_due,
                 due_period,
-            );
+            )
+            .unwrap();
             let expected_interest_due =
                 lpp_loan.interest_due(&due_period_margin.till()) - overdue.interest();
 

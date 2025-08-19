@@ -1,3 +1,5 @@
+use std::ops::Add;
+
 use serde::{Deserialize, Serialize};
 
 use finance::{
@@ -112,7 +114,9 @@ impl<Lpn> Total<Lpn> {
             self.annual_interest_rate,
             self.total_principal_due,
             Duration::between(&self.last_update_time, ctime),
-        ) + self.total_interest_due
+        )
+        .map(|interest| interest.add(self.total_interest_due))
+        .expect("TODO Method should return Option")
     }
 
     pub fn receipts(&self) -> Coin<NLpn> {
