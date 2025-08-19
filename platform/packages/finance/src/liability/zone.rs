@@ -18,7 +18,7 @@ pub struct Zone {
 }
 
 impl Zone {
-    pub fn no_warnings(up_to: Percent100) -> Self {
+    pub const fn no_warnings(up_to: Percent100) -> Self {
         Self {
             low: None,
             high: Level::First(up_to),
@@ -54,12 +54,8 @@ impl Zone {
         self.low.map_or(range_to, |low| range_to.cut_to(low.ltv()))
     }
 
-    pub fn low(&self) -> Option<Level> {
+    pub const fn low(&self) -> Option<Level> {
         self.low
-    }
-
-    pub fn high(&self) -> Level {
-        self.high
     }
 }
 

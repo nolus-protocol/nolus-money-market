@@ -80,10 +80,6 @@ impl Liability {
         self.healthy
     }
 
-    pub const fn third_liq_warn(&self) -> Percent100 {
-        self.third_liq_warn
-    }
-
     pub const fn max(&self) -> Percent100 {
         self.max
     }
@@ -92,7 +88,7 @@ impl Liability {
         let result = ltv.min(Percent::from(
             self.max
                 .checked_sub(Self::MIN_STEP_LTV)
-                .expect("Invariant to be held"),
+                .expect("Invariant violated: max must be greater than MIN_STEP_LTV"),
         ));
         result
             .try_into()
@@ -201,12 +197,9 @@ impl Liability {
     }
 
     fn remaining_percent(percent: Percent100) -> Percent100 {
-        debug_assert!(percent > Percent100::ZERO);
-        debug_assert!(percent < Percent100::HUNDRED);
-
         Percent100::HUNDRED
             .checked_sub(percent)
-            .expect("Invariant to be held")
+            .expect("Invariant violated: percent is bigger than 100%")
     }
 }
 

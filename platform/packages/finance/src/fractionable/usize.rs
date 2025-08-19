@@ -41,6 +41,8 @@ mod test {
     fn overflow() {
         use crate::rational::Rational;
 
+        // TODO remove the `#[should_panic]` and assert that is None when
+        // SimpleFraction::of() calls its checked_mul method instead of safe_mul
         _ = Percent::from_permille(1001).of(usize::MAX);
     }
 }
