@@ -26,8 +26,7 @@ pub struct BoundPercent<const UPPER_BOUND: Units>(Units);
 impl<const UPPER_BOUND: Units> BoundPercent<UPPER_BOUND> {
     pub const ZERO: Self = Self::try_from_primitive(0).expect("0% is a valid instance");
     pub const HUNDRED: Self = Self::try_from_primitive(100).expect("100% is a valid instance");
-    pub const PRECISION: Self =
-        Self::try_from_permille(1).expect("0.1% is a valid instance");
+    pub const PRECISION: Self = Self::try_from_permille(1).expect("0.1% is a valid instance");
 
     const UNITS_TO_PERCENT_RATIO: Units = 10;
 
