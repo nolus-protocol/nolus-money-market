@@ -44,10 +44,9 @@ fn partial_repay() {
     let downpayment = DOWNPAYMENT;
 
     let amount = super::quote_borrow(&test_case, downpayment);
-    let partial_payment =
-        SimpleFraction::<PaymentCoin>::new(PaymentCoin::new(1), PaymentCoin::new(2))
-            .of(super::create_payment_coin(amount.into()))
-            .unwrap();
+    let partial_payment = SimpleFraction::new(PaymentCoin::new(1), PaymentCoin::new(2))
+        .of(super::create_payment_coin(amount.into()))
+        .unwrap();
 
     let expected_result =
         super::expected_newly_opened_state(&test_case, downpayment, partial_payment);
