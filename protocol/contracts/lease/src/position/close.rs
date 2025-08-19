@@ -2,7 +2,7 @@ use std::fmt::{Debug, Display, Formatter, Result as FmtResult};
 
 use finance::{
     fraction::Fraction,
-    fractionable::Fragmentable,
+    fractionable::{Fractionable, ToPrimitive},
     percent::{Percent100, Units as PercentUnits},
     range::{Ascending, RightOpenRange},
 };
@@ -87,7 +87,8 @@ impl Policy {
     // Note that in edge cases the ltv may go above 100%
     pub fn may_trigger<P>(&self, lease_asset: P, total_due: P) -> Option<Strategy>
     where
-        P: Fragmentable<PercentUnits> + PartialOrd + Copy,
+        P: Fractionable<PercentUnits> + PartialOrd + Copy,
+        PercentUnits: ToPrimitive<P::HigherPrimitive>,
     {
         self.may_stop_loss(lease_asset, total_due)
             .or_else(|| self.may_take_profit(lease_asset, total_due))
@@ -133,7 +134,8 @@ impl Policy {
 
     fn may_stop_loss<P>(&self, lease_asset: P, total_due: P) -> Option<Strategy>
     where
-        P: Fragmentable<PercentUnits> + PartialOrd,
+        P: Fractionable<PercentUnits> + PartialOrd,
+        PercentUnits: ToPrimitive<P::HigherPrimitive>,
     {
         self.stop_loss.and_then(|stop_loss| {
             (stop_loss.of(lease_asset) <= total_due).then_some(Strategy::StopLoss(stop_loss))
@@ -142,7 +144,8 @@ impl Policy {
 
     fn may_take_profit<P>(&self, lease_asset: P, total_due: P) -> Option<Strategy>
     where
-        P: Fragmentable<PercentUnits> + PartialOrd,
+        P: Fractionable<PercentUnits> + PartialOrd,
+        PercentUnits: ToPrimitive<P::HigherPrimitive>,
     {
         self.take_profit.and_then(|take_profit| {
             (take_profit.of(lease_asset) > total_due).then_some(Strategy::TakeProfit(take_profit))

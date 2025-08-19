@@ -5,7 +5,7 @@ use finance::{
     coin::Coin,
     duration::Duration,
     fraction::{Fraction, Unit as FractionUnit},
-    fractionable::Fragmentable,
+    fractionable::{Fractionable, ToPrimitive},
     liability::{Liability, Zone},
     percent::Percent,
     price::{self},
@@ -397,8 +397,13 @@ impl Spec {
 
     fn ltv<P>(total_due: P, lease_asset: P) -> Percent
     where
-        P: Copy + Debug + FractionUnit + PartialEq + Zero,
-        Percent: Fragmentable<P>,
+        Percent: Fractionable<P>,
+        P: Copy
+            + Debug
+            + FractionUnit
+            + PartialEq
+            + ToPrimitive<<Percent as Fractionable<P>>::HigherPrimitive>
+            + Zero,
     {
         Percent::from_fraction(total_due, lease_asset).expect("Expect having a ltv")
     }
