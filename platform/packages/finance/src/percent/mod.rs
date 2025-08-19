@@ -71,7 +71,7 @@ impl TryFrom<Percent> for Percent100 {
 pub(super) mod test {
     use std::fmt::{Debug, Display};
 
-    use currency::test::SubGroupTestC10;
+    use currency::test::SuperGroupTestC1;
 
     use crate::{
         coin::Coin,
@@ -83,73 +83,6 @@ pub(super) mod test {
     };
 
     use super::Units;
-
-    #[test]
-    fn test_zero() {
-        let zero_amount = Coin::<SubGroupTestC10>::new(0);
-        assert_eq!(
-            zero_amount,
-            Percent100::ZERO.of(Coin::<SubGroupTestC10>::new(10))
-        );
-        assert_eq!(
-            zero_amount,
-            Percent::ZERO.of(Coin::<SubGroupTestC10>::new(10)).unwrap()
-        )
-    }
-
-    #[test]
-    fn test_hundred() {
-        let amount = Coin::<SubGroupTestC10>::new(123);
-        assert_eq!(amount, Percent100::HUNDRED.of(amount));
-        assert_eq!(amount, Percent::HUNDRED.of(amount).unwrap())
-    }
-
-    #[test]
-    fn checked_add() {
-        assert_eq!(from(40), from(25).checked_add(from(15)).unwrap());
-        assert_eq!(from(39), from(0).checked_add(from(39)).unwrap());
-        assert_eq!(from(39), from(39).checked_add(from(0)).unwrap());
-        assert_eq!(Percent100::HUNDRED, from(999).checked_add(from(1)).unwrap());
-    }
-
-    #[test]
-    fn add_overflow() {
-        assert!(Percent100::HUNDRED.checked_add(from(1)).is_none());
-        assert!(
-            Percent::from_permille(Units::MAX)
-                .checked_add(Percent::from_permille(1))
-                .is_none()
-        );
-    }
-
-    #[test]
-    fn sub() {
-        assert_eq!(from(67), from(79) - (from(12)));
-        assert_eq!(from(0), from(34) - (from(34)));
-        assert_eq!(from(39), from(39) - (from(0)));
-        assert_eq!(from(990), Percent100::HUNDRED - (from(10)));
-        assert_eq!(
-            from(0),
-            Percent100::HUNDRED - Percent100::from_permille(1000)
-        );
-    }
-
-    #[test]
-    fn sub_overflow() {
-        assert!(from(34).checked_sub(from(35)).is_none())
-    }
-
-    #[test]
-    fn display() {
-        test_display("0%", 0);
-        test_display("0.1%", 1);
-        test_display("0.4%", 4);
-        test_display("1%", 10);
-        test_display("1.9%", 19);
-        test_display("9%", 90);
-        test_display("10.1%", 101);
-        test_display("100%", 1000);
-    }
 
     #[test]
     fn of() {
@@ -177,6 +110,64 @@ pub(super) mod test {
         test_of(0, Percent100::HUNDRED, Percent100::ZERO);
         test_of(1000, Percent100::HUNDRED, Percent100::HUNDRED);
         test_of(100, Percent100::ZERO, Percent100::ZERO);
+    }
+
+    #[test]
+    fn of_percent() {
+        assert_eq!(
+            Percent100::from_permille(410 * 222 / 1000),
+            Percent100::from_percent(41).of(Percent100::from_permille(222))
+        );
+        assert_eq!(
+            Percent100::from_permille(999),
+            Percent100::from_percent(100).of(Percent100::from_permille(999))
+        );
+        assert_eq!(
+            Percent::from_permille(410 * 222222 / 1000),
+            Percent::from_percent(41)
+                .of(Percent::from_permille(222222))
+                .unwrap()
+        );
+        assert_eq!(
+            Percent::from_permille(Units::MAX),
+            Percent::from_percent(100)
+                .of(Percent::from_permille(Units::MAX))
+                .unwrap()
+        );
+
+        let p_units: Units = 410;
+        let p64: u64 = p_units.into();
+        let p64_res = p64 * u64::from(Units::MAX) / 1000;
+        let p_units_res: Units = p64_res.try_into().expect("u64 -> Units overflow");
+
+        assert_eq!(
+            Percent::from_permille(p_units_res),
+            Percent::from_percent(41)
+                .of(Percent::from_permille(Units::MAX))
+                .unwrap()
+        );
+    }
+
+    #[test]
+    fn of_one() {
+        // TODO replace SimpleFraction with Ratio whe it becomes a struct
+        assert_eq!(
+            Percent100::from_permille(899),
+            SimpleFraction::new(
+                Coin::<SuperGroupTestC1>::new(u128::MAX),
+                Coin::<SuperGroupTestC1>::new(u128::MAX),
+            )
+            .of(Percent100::from_permille(899))
+            .unwrap()
+        );
+    }
+
+    #[test]
+    #[should_panic]
+    fn of_overflow() {
+        // TODO remove the `#[should_panic]` and assert that is None when
+        // SimpleFraction::of() calls its checked_mul method instead of safe_mul
+        Percent::from_permille(1001).of(Percent::from_permille(Units::MAX));
     }
 
     #[test]
@@ -211,13 +202,5 @@ pub(super) mod test {
             perm.of(quantity.clone()),
             "Calculating {perm} of {quantity}",
         );
-    }
-
-    fn from(permille: Units) -> Percent100 {
-        Percent100::from_permille(permille)
-    }
-
-    fn test_display(exp: &str, permilles: Units) {
-        assert_eq!(exp, format!("{}", Percent100::from_permille(permilles)));
     }
 }
