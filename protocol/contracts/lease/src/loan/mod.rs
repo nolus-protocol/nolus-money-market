@@ -223,7 +223,8 @@ where
             principal_due,
             margin_paid,
             Duration::between(&self.margin_paid_by, by),
-        );
+        )
+        .expect("TODO Method should return Option");
         debug_assert!(margin_payment_change.is_zero());
         self.margin_paid_by += margin_paid_for;
     }
