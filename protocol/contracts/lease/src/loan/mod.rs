@@ -493,7 +493,6 @@ mod tests {
                         margin: 0.into(),
                     },
                 ),
-                Duration::YEAR.into_slice_per_ratio::<LpnCoin>(payment.into(), due_margin.into()),
                 receipt(
                     principal,
                     Coin::ZERO,
@@ -503,6 +502,9 @@ mod tests {
                     Coin::ZERO,
                     Coin::ZERO,
                 ),
+                Duration::YEAR
+                    .into_slice_per_ratio::<LpnCoin>(payment, due_margin)
+                    .unwrap(),
                 &now,
             );
         }
@@ -720,11 +722,13 @@ mod tests {
             let overdue_margin = overdue_period.annualized_slice_of(due_margin).unwrap();
             let overdue_interest = overdue_period.annualized_slice_of(due_interest).unwrap();
             let payment = overdue_interest + overdue_margin + due_interest + due_margin_payment;
-            let due_period_paid =
-                Duration::between(&LEASE_START, &repay_at).into_slice_per_ratio::<LpnCoin>(
-                    (overdue_margin + due_margin_payment).into(),
-                    (overdue_margin + due_margin).into(),
-                ) - overdue_period;
+            let due_period_paid = Duration::between(&LEASE_START, &repay_at)
+                .into_slice_per_ratio::<LpnCoin>(
+                    overdue_margin + due_margin_payment,
+                    overdue_margin + due_margin,
+                )
+                .unwrap()
+                - overdue_period;
 
             let mut loan = create_loan(loan);
             repay(

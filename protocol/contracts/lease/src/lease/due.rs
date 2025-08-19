@@ -27,11 +27,18 @@ impl DueTrait for State {
                 self.principal_due,
                 Duration::YEAR,
             );
-            if total_interest_a_year.is_zero() {
-                Duration::MAX
-            } else {
-                Duration::YEAR.into_slice_per_ratio(overdue_left, total_interest_a_year)
-            }
+
+            total_interest_a_year
+                .map(|total| {
+                    if total.is_zero() {
+                        Duration::MAX
+                    } else {
+                        Duration::YEAR
+                            .into_slice_per_ratio(overdue_left, total)
+                            .expect("Rational::of returned None")
+                    }
+                })
+                .expect("Calculating interest overflowed")
         };
         let time_to_collect = self.overdue.start_in().max(time_to_accrue_min_amount);
         if time_to_collect == Duration::default() {
@@ -135,15 +142,17 @@ mod test {
             due_interest + due_margin_interest + overdue_interest + overdue_margin_interest;
 
         let delta_to_overdue = 40.into();
-        let till_overdue = Duration::YEAR.into_slice_per_ratio(
-            delta_to_overdue,
-        );
+        let till_overdue = Duration::YEAR
+            .into_slice_per_ratio(
+                delta_to_overdue,
                 interest::interest(
                     Percent::from(annual_interest + annual_interest_margin),
                     principal_due,
                     Duration::YEAR,
                 )
                 .expect("Calculating interest overflowed"),
+            )
+            .expect("into_slice_per_ratio failed");
 
         let s = State {
             annual_interest,
