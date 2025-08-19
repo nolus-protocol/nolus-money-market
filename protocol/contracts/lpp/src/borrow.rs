@@ -43,15 +43,15 @@ impl InterestRate {
         value.validate().then_some(value)
     }
 
-    pub fn base_interest_rate(&self) -> Percent100 {
+    pub const fn base_interest_rate(&self) -> Percent100 {
         self.base_interest_rate
     }
 
-    pub fn utilization_optimal(&self) -> Percent100 {
+    pub const fn utilization_optimal(&self) -> Percent100 {
         self.utilization_optimal
     }
 
-    pub fn addon_optimal_interest_rate(&self) -> Percent100 {
+    pub const fn addon_optimal_interest_rate(&self) -> Percent100 {
         self.addon_optimal_interest_rate
     }
 

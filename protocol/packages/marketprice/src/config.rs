@@ -59,11 +59,11 @@ impl Config {
         self.min_feeders.of(total)
     }
 
-    pub fn sample_period(&self) -> Duration {
+    pub const fn sample_period(&self) -> Duration {
         self.sample_period
     }
 
-    pub fn samples_number(&self) -> u16 {
+    pub const fn samples_number(&self) -> u16 {
         self.samples_number
     }
 
@@ -79,7 +79,7 @@ impl Config {
         ret
     }
 
-    pub fn discount_factor(&self) -> Percent100 {
+    pub const fn discount_factor(&self) -> Percent100 {
         self.discount_factor
     }
 
