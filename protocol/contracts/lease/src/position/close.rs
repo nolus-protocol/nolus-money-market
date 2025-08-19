@@ -173,7 +173,11 @@ impl Display for Strategy {
 mod test {
 
     mod may_trigger {
-        use finance::{coin::Amount, percent::Percent100};
+        use currency::test::SuperGroupTestC1;
+        use finance::{
+            coin::{Amount, Coin},
+            percent::Percent100,
+        };
 
         use crate::position::{CloseStrategy, close::Policy};
 
@@ -274,7 +278,7 @@ mod test {
                 stop_loss: sl,
                 take_profit: tp,
             }
-            .may_trigger(asset, due)
+            .may_trigger(Coin::<SuperGroupTestC1>::new(asset), Coin::new(due))
         }
     }
 
