@@ -67,7 +67,10 @@ mod tests {
     };
     use sdk::cosmwasm_std::Addr;
 
-    use crate::position::{Position, Spec};
+    use crate::{
+        lease::tests,
+        position::{Position, Spec},
+    };
 
     use super::Lease;
 
@@ -90,8 +93,8 @@ mod tests {
         );
         let spec = Spec::no_close(
             liability,
-            Coin::<TestLpn>::new(15_000_000),
-            Coin::<TestLpn>::new(10_000),
+            tests::lpn_coin(15_000_000),
+            tests::lpn_coin(10_000),
         );
 
         Lease {
@@ -103,7 +106,7 @@ mod tests {
 
     #[test]
     fn close_no_surplus() {
-        let lease_amount = Coin::<TestAsset>::new(10);
+        let lease_amount = Coin::new(10);
         let lease: Lease<TestAsset, TestLpn> = create_lease(lease_amount);
         let lease_account = bank_testing::one_transfer(
             lease_amount,
@@ -120,8 +123,8 @@ mod tests {
     #[test]
     fn close_with_surplus() {
         let customer = Addr::unchecked(CUSTOMER);
-        let lease_amount = Coin::<TestAsset>::new(10);
-        let surplus_amount = Coin::<TestLpn>::new(2);
+        let lease_amount = Coin::new(10);
+        let surplus_amount = tests::lpn_coin(2);
         let lease: Lease<TestAsset, TestLpn> = create_lease(lease_amount);
         let lease_account = bank_testing::two_transfers(
             surplus_amount,

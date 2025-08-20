@@ -9,7 +9,7 @@ use finance::{
 };
 
 use crate::{
-    finance::{LpnCoin, LpnCurrency},
+    finance::LpnCoin,
     position::{DueTrait, OverdueCollection, close::Policy as ClosePolicy},
 };
 
@@ -42,14 +42,14 @@ impl DueTrait for TestDue {
     }
 }
 
-fn coin<C>(amount: Amount) -> Coin<C> {
-    Coin::<C>::new(amount)
+const fn coin<C>(amount: Amount) -> Coin<C> {
+    Coin::new(amount)
 }
 
 fn due(total_due: Amount, overdue_collectable: Amount) -> TestDue {
     TestDue {
-        total_due: coin::<TestLpn>(total_due),
-        overdue: coin::<TestLpn>(overdue_collectable),
+        total_due: coin(total_due),
+        overdue: coin(overdue_collectable),
     }
 }
 
@@ -66,8 +66,8 @@ fn spec(min_asset: Amount, min_transaction: Amount) -> Spec {
     Spec::new(
         liability,
         ClosePolicy::default(),
-        coin::<LpnCurrency>(min_asset),
-        coin::<LpnCurrency>(min_transaction),
+        coin(min_asset),
+        coin(min_transaction),
     )
 }
 
@@ -79,8 +79,8 @@ fn ltv_to_price(
 }
 
 fn price(
-    price_asset: super::Coin<TestCurrency>,
-    price_lpn: super::Coin<TestLpn>,
+    price_asset: Coin<TestCurrency>,
+    price_lpn: Coin<TestLpn>,
 ) -> Price<TestCurrency, TestLpn> {
     price::total_of(price_asset).is(price_lpn)
 }
@@ -123,8 +123,8 @@ fn spec_with_max(max: Percent100, min_asset: Amount, min_transaction: Amount) ->
     Spec::new(
         liability,
         ClosePolicy::default(),
-        coin::<TestLpn>(min_asset),
-        coin::<TestLpn>(min_transaction),
+        coin(min_asset),
+        coin(min_transaction),
     )
 }
 
@@ -133,20 +133,18 @@ mod test_calc_borrow {
 
     use crate::position::PositionError;
 
-    use super::TestLpn;
-
     #[test]
     fn downpayment_less_than_min() {
         let spec = super::spec(560, 300);
 
-        let downpayment_less = spec.calc_borrow_amount(super::coin::<TestLpn>(299), None);
+        let downpayment_less = spec.calc_borrow_amount(super::coin(299), None);
         assert!(matches!(
             downpayment_less,
             Err(PositionError::InsufficientTransactionAmount(_))
         ));
 
-        let borrow = spec.calc_borrow_amount(super::coin::<TestLpn>(300), None);
-        assert_eq!(super::coin::<TestLpn>(557), borrow.unwrap());
+        let borrow = spec.calc_borrow_amount(super::coin(300), None);
+        assert_eq!(super::coin(557), borrow.unwrap());
     }
 
     #[test]
@@ -154,62 +152,51 @@ mod test_calc_borrow {
         let spec = super::spec(600, 300);
 
         let borrow_less =
-            spec.calc_borrow_amount(super::coin::<TestLpn>(300), Some(Percent::from_percent(99)));
+            spec.calc_borrow_amount(super::coin(300), Some(Percent::from_percent(99)));
         assert!(matches!(
             borrow_less,
             Err(PositionError::InsufficientTransactionAmount(_))
         ));
 
-        let borrow = spec.calc_borrow_amount(
-            super::coin::<TestLpn>(300),
-            Some(Percent::from_percent(100)),
-        );
-        assert_eq!(super::coin::<TestLpn>(300), borrow.unwrap());
+        let borrow = spec.calc_borrow_amount(super::coin(300), Some(Percent::from_percent(100)));
+        assert_eq!(super::coin(300), borrow.unwrap());
     }
 
     #[test]
     fn lease_less_than_min() {
         let spec = super::spec(1_000, 300);
 
-        let borrow_1 = spec.calc_borrow_amount(super::coin::<TestLpn>(349), None);
+        let borrow_1 = spec.calc_borrow_amount(super::coin(349), None);
         assert!(matches!(
             borrow_1,
             Err(PositionError::InsufficientAssetAmount(_))
         ));
 
-        let borrow_2 = spec.calc_borrow_amount(super::coin::<TestLpn>(350), None);
-        assert_eq!(super::coin::<TestLpn>(650), borrow_2.unwrap());
+        let borrow_2 = spec.calc_borrow_amount(super::coin(350), None);
+        assert_eq!(super::coin(650), borrow_2.unwrap());
 
-        let borrow_3 =
-            spec.calc_borrow_amount(super::coin::<TestLpn>(550), Some(Percent::from_percent(81)));
+        let borrow_3 = spec.calc_borrow_amount(super::coin(550), Some(Percent::from_percent(81)));
         assert!(matches!(
             borrow_3,
             Err(PositionError::InsufficientAssetAmount(_))
         ));
 
-        let borrow_3 =
-            spec.calc_borrow_amount(super::coin::<TestLpn>(550), Some(Percent::from_percent(82)));
-        assert_eq!(super::coin::<TestLpn>(451), borrow_3.unwrap());
+        let borrow_3 = spec.calc_borrow_amount(super::coin(550), Some(Percent::from_percent(82)));
+        assert_eq!(super::coin(451), borrow_3.unwrap());
     }
 
     #[test]
     fn valid_borrow_amount() {
         let spec = super::spec(1_000, 300);
 
-        let borrow_1 = spec.calc_borrow_amount(super::coin::<TestLpn>(540), None);
-        assert_eq!(super::coin::<TestLpn>(1002), borrow_1.unwrap());
+        let borrow_1 = spec.calc_borrow_amount(super::coin(540), None);
+        assert_eq!(super::coin(1002), borrow_1.unwrap());
 
-        let borrow_2 = spec.calc_borrow_amount(
-            super::coin::<TestLpn>(870),
-            Some(Percent::from_percent(100)),
-        );
-        assert_eq!(super::coin::<TestLpn>(870), borrow_2.unwrap());
+        let borrow_2 = spec.calc_borrow_amount(super::coin(870), Some(Percent::from_percent(100)));
+        assert_eq!(super::coin(870), borrow_2.unwrap());
 
-        let borrow_3 = spec.calc_borrow_amount(
-            super::coin::<TestLpn>(650),
-            Some(Percent::from_percent(150)),
-        );
-        assert_eq!(super::coin::<TestLpn>(975), borrow_3.unwrap());
+        let borrow_3 = spec.calc_borrow_amount(super::coin(650), Some(Percent::from_percent(150)));
+        assert_eq!(super::coin(975), borrow_3.unwrap());
     }
 }
 
@@ -223,7 +210,7 @@ mod test_debt {
     fn no_debt() {
         let warn_ltv = Percent100::from_permille(11);
         let spec = super::spec_with_first(warn_ltv, 1, 1);
-        let asset = super::Coin::new(100);
+        let asset = super::coin(100);
 
         assert_eq!(
             spec.debt(asset, &super::due(0, 0), super::price_from_amount(1, 1)),
