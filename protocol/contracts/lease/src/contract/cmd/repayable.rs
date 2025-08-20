@@ -254,7 +254,7 @@ mod test {
             })
             .expect("change close policy succeed");
 
-        let payment: Coin<TestLpn> = due_amount - take_profit.of(lease_lpn);
+        let payment = due_amount - take_profit.of(lease_lpn);
         let close_status = repay(lease, payment, &now);
         match close_status {
             CloseStatusDTO::None {
