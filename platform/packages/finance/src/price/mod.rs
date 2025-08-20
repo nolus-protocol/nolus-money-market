@@ -3,9 +3,11 @@ use std::{
     ops::{Add, AddAssign, Mul},
 };
 
+use bnum::types::U256;
 use serde::{Deserialize, Serialize};
 
 use crate::{
+    arithmetics::CheckedMul,
     coin::{Amount, Coin},
     error::{Error, Result},
     fraction::Unit as FractionUnit,
@@ -131,6 +133,19 @@ where
             Self::trim_down(double_amount, extra_bits).into(),
             Self::trim_down(double_amount_quote, extra_bits).into(),
         )
+    }
+
+    /// Executes lossless multiplication with possible overflow \
+    /// A method derived from Price::lossy_mul
+    pub(crate) fn _checked_mul<R>(self, rhs: &R) -> Option<Self>
+    where
+        R: Ratio<Amount>,
+    {
+        let fraction = SimpleFraction::<U256>::new(rhs.parts().into(), rhs.total().into());
+        let price = self.to_fraction::<U256>();
+
+        CheckedMul::checked_mul(price, fraction)
+            .and_then(|product| Price::try_from_fraction(product))
     }
 
     // Please note that Price(amount, amount_quote) is like SimpleFraction(amount_quote / amount).
@@ -568,6 +583,43 @@ mod test {
         let price1 = price::total_of(c(a1)).is(q(q1));
         let price2 = price::total_of(q(a2)).is(qq(q2));
         _ = price1.mul(price2);
+    }
+
+    #[test]
+    fn checked_mul() {
+        checked_mul_pass(3, 1, 1, 2, 6, 1);
+        checked_mul_fail(Amount::MAX, 1, 1, 2);
+        checked_mul_fail(Amount::MAX / 2 + 1, 1, 1, 2);
+    }
+
+    fn checked_mul_pass(
+        currency: Amount,
+        quote: Amount,
+        nom: u128,
+        denom: u128,
+        c_exp: Amount,
+        q_exp: Amount,
+    ) {
+        let actual = execute_checked_mul(currency, quote, nom, denom);
+        let expected = price::total_of(c(c_exp)).is(q(q_exp));
+        assert!(actual.is_some());
+        assert_eq!(actual.unwrap(), expected);
+    }
+
+    fn checked_mul_fail(currency: Amount, quote: Amount, nom: u128, denom: u128) {
+        assert!(execute_checked_mul(currency, quote, nom, denom).is_none())
+    }
+
+    fn execute_checked_mul(
+        currency: Amount,
+        quote: Amount,
+        nom: u128,
+        denom: u128,
+    ) -> Option<Price<SuperGroupTestC2, SuperGroupTestC1>> {
+        let price = price::total_of(c(currency)).is(q(quote));
+        let fraction = SimpleFraction::new(nom, denom);
+
+        price.checked_mul(&fraction)
     }
 
     fn c(a: Amount) -> Coin {
