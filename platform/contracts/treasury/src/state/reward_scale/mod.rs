@@ -116,7 +116,7 @@ impl TryFrom<Vec<Bar>> for RewardScale {
 #[cfg(test)]
 mod tests {
 
-    use finance::{coin::Amount, percent::{Percent, Percent100}, test::coin};
+    use finance::{coin::Amount, percent::Percent100, test::coin};
 
     use super::{Bar, RewardScale, TotalValueLocked};
 
@@ -184,7 +184,7 @@ mod tests {
         ])
         .unwrap();
 
-        assert_eq!(res.get_apr(coin::coin1(0)), Percent::from_permille(6));
+        assert_eq!(res.get_apr(coin::coin1(0)), Percent100::from_permille(6));
         assert_eq!(
             res.get_apr(coin::coin1(TotalValueLocked::SCALE_FACTOR)),
             Percent100::from_permille(6)
@@ -198,7 +198,7 @@ mod tests {
             Percent100::from_permille(10)
         );
         assert_eq!(
-            res.get_apr(coin(30 * TotalValueLocked::SCALE_FACTOR + 1)),
+            res.get_apr(coin::coin1(30 * TotalValueLocked::SCALE_FACTOR + 1)),
             Percent100::from_permille(10)
         );
         assert_eq!(
@@ -219,7 +219,7 @@ mod tests {
         );
         assert_eq!(
             res.get_apr(coin::coin1(300 * TotalValueLocked::SCALE_FACTOR)),
-            Percent::from_permille(20)
+            Percent100::from_permille(20)
         );
         assert_eq!(
             res.get_apr(coin::coin1(300 * TotalValueLocked::SCALE_FACTOR + 1)),
