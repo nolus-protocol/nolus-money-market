@@ -16,6 +16,14 @@ pub type Percent = BoundPercent<{ Units::MAX }>;
 
 impl FractionUnit for Units {}
 
+impl Percent100 {
+    pub const fn complement(self) -> Self {
+        Percent100::HUNDRED
+            .checked_sub(self)
+            .expect("Invariant violated: percent is bigger than 100%")
+    }
+}
+
 impl Fraction<Units> for Percent100 {
     fn of<A>(&self, whole: A) -> A
     where
