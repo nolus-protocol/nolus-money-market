@@ -330,7 +330,10 @@ mod test {
         const DEPOSIT_NLPN: Coin<NLpn> = Coin::new(TEST_AMOUNT);
 
         mod deposit {
-            use finance::{coin::Coin, zero::Zero};
+            use finance::{
+                coin::{Amount, Coin},
+                zero::Zero,
+            };
 
             use crate::contract::{
                 lender::{
@@ -367,11 +370,11 @@ mod test {
                     DEFAULT_MIN_UTILIZATION,
                     |store, _config, _bank, _now| {
                         assert_eq!(
-                            Coin::from(
+                            Coin::new(Amount::from(
                                 lender::query_balance(&store, test_tools::lender())
                                     .unwrap()
                                     .balance
-                            ),
+                            )),
                             DEPOSIT_NLPN
                         );
                     },
@@ -382,7 +385,10 @@ mod test {
         mod withdraw {
             use cosmwasm_std::Addr;
             use currency::platform::Nls;
-            use finance::{coin::Coin, zero::Zero};
+            use finance::{
+                coin::{Amount, Coin},
+                zero::Zero,
+            };
             use lpp_platform::NLpn;
             use platform::bank::{
                 BankAccountView,
@@ -451,7 +457,9 @@ mod test {
                         .unwrap();
 
                         assert_eq!(
-                            Coin::new(lender::query_balance(&store, lender).unwrap().balance),
+                            Coin::new(Amount::from(
+                                lender::query_balance(&store, lender).unwrap().balance
+                            )),
                             LEFTOVER
                         );
                     },
@@ -476,11 +484,11 @@ mod test {
                         .unwrap();
 
                         assert!(
-                            Coin::<TheCurrency>::new(
+                            Coin::<TheCurrency>::new(Amount::from(
                                 lender::query_balance(&store, test_tools::lender())
                                     .unwrap()
                                     .balance
-                            )
+                            ))
                             .is_zero()
                         );
                     },
@@ -518,11 +526,11 @@ mod test {
                         .unwrap();
 
                         assert!(
-                            Coin::<TheCurrency>::new(
+                            Coin::<TheCurrency>::new(Amount::from(
                                 lender::query_balance(&store, test_tools::lender())
                                     .unwrap()
                                     .balance
-                            )
+                            ))
                             .is_zero()
                         );
                     },
@@ -573,9 +581,9 @@ mod test {
 
                         assert!(
                             Coin::<TheCurrency>::new(
-                                lender::query_balance(&store, test_tools::lender())
+                                Amount::from(lender::query_balance(&store, test_tools::lender())
                                     .unwrap()
-                                    .balance
+                                    .balance)
                             )
                             .is_zero()
                         );
@@ -703,7 +711,7 @@ mod test {
         }
 
         mod close_all {
-            use finance::coin::Coin;
+            use finance::coin::{Amount, Coin};
             use platform::bank::{
                 BankAccountView,
                 testing::{self, MockBankView},
@@ -768,15 +776,15 @@ mod test {
 
                         assert!(
                             Coin::<TheCurrency>::new(
-                                lender::query_balance(&store, test_tools::lender())
+                               Amount::from( lender::query_balance(&store, test_tools::lender())
                                     .unwrap()
-                                    .balance
+                                    .balance)
                             )
                             .is_zero()
                         );
                         assert!(
                             Coin::<TheCurrency>::new(
-                                lender::query_balance(&store, other_lender).unwrap().balance
+                                Amount::from(lender::query_balance(&store, other_lender).unwrap().balance)
                             )
                             .is_zero()
                         );

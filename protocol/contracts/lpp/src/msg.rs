@@ -1,5 +1,5 @@
-use cosmwasm_std::Uint128;
 use platform::contract::Code;
+use sdk::cosmwasm_std::Uint128;
 use serde::{Deserialize, Serialize};
 
 use currency::{Group, platform::Nls};
