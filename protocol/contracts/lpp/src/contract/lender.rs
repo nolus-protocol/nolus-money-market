@@ -371,7 +371,6 @@ mod test {
                                 lender::query_balance(&store, test_tools::lender())
                                     .unwrap()
                                     .balance
-                                    .u128()
                             ),
                             DEPOSIT_NLPN
                         );
@@ -452,12 +451,7 @@ mod test {
                         .unwrap();
 
                         assert_eq!(
-                            Coin::new(
-                                lender::query_balance(&store, lender)
-                                    .unwrap()
-                                    .balance
-                                    .u128()
-                            ),
+                            Coin::new(lender::query_balance(&store, lender).unwrap().balance),
                             LEFTOVER
                         );
                     },
@@ -486,7 +480,6 @@ mod test {
                                 lender::query_balance(&store, test_tools::lender())
                                     .unwrap()
                                     .balance
-                                    .u128()
                             )
                             .is_zero()
                         );
@@ -529,7 +522,6 @@ mod test {
                                 lender::query_balance(&store, test_tools::lender())
                                     .unwrap()
                                     .balance
-                                    .u128()
                             )
                             .is_zero()
                         );
@@ -584,7 +576,6 @@ mod test {
                                 lender::query_balance(&store, test_tools::lender())
                                     .unwrap()
                                     .balance
-                                    .u128()
                             )
                             .is_zero()
                         );
@@ -780,16 +771,12 @@ mod test {
                                 lender::query_balance(&store, test_tools::lender())
                                     .unwrap()
                                     .balance
-                                    .u128()
                             )
                             .is_zero()
                         );
                         assert!(
                             Coin::<TheCurrency>::new(
-                                lender::query_balance(&store, other_lender)
-                                    .unwrap()
-                                    .balance
-                                    .u128()
+                                lender::query_balance(&store, other_lender).unwrap().balance
                             )
                             .is_zero()
                         );

@@ -1,3 +1,4 @@
+use cosmwasm_std::Uint128;
 use platform::contract::Code;
 use serde::{Deserialize, Serialize};
 
@@ -8,7 +9,7 @@ use finance::{
     price::Price,
 };
 use lpp_platform::NLpn;
-use sdk::cosmwasm_std::{Addr, Uint64, Uint128};
+use sdk::cosmwasm_std::{Addr, Uint64};
 
 use crate::{borrow::InterestRate, config::Config, loan::Loan};
 
@@ -147,6 +148,7 @@ pub type QueryLoanResponse<Lpn> = Option<LoanResponse<Lpn>>;
 #[cfg_attr(any(test, feature = "testing"), derive(Debug))]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub struct BalanceResponse {
+    // TODO: Migrate to `balance: Coin<NLpn>
     pub balance: Uint128,
 }
 
