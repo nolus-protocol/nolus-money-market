@@ -1,12 +1,6 @@
-use std::{
-    env,
-    fs::File,
-    io::{self, Write},
-    path::{Path, PathBuf},
-};
+use std::{env, ffi::OsStr, fs::File, io::Write, path::Path};
 
 use anyhow::{Context as _, Result, anyhow, bail};
-use either::Either;
 
 use topology::{CurrencyDefinitions, Topology};
 
@@ -23,23 +17,39 @@ const PROTOCOL_JSON: &str = "../../../build-configuration/protocol.json";
 
 const TOPOLOGY_JSON: &str = "../../../build-configuration/topology.json";
 
-const BUILD_REPORT: &str = "CURRENCIES_BUILD_REPORT";
+const BUILD_OUT_DIR_PATHS: &str = "BUILD_OUT_DIR_PATHS";
 
 fn main() -> Result<()> {
     for path in ["build/", PROTOCOL_JSON, TOPOLOGY_JSON] {
         println!("cargo::rerun-if-changed={path}");
     }
 
-    println!("cargo::rerun-if-env-changed={BUILD_REPORT}");
+    println!("cargo::rerun-if-env-changed={BUILD_OUT_DIR_PATHS}");
 
     if env::var_os("CARGO_FEATURE_TESTING").is_some() {
         Ok(())
     } else if check_for_definitions()? {
-        let build_report = build_report_writer()?;
+        let output_directory =
+            env::var_os("OUT_DIR").context("Cargo did not set `OUT_DIR` environment variable!")?;
 
-        let output_directory: &Path = &PathBuf::from(
-            env::var_os("OUT_DIR").context("Cargo did not set `OUT_DIR` environment variable!")?,
-        );
+        let build_report = build_report_writer(output_directory.as_ref())?;
+
+        let output_directory = {
+            if let Some(build_dir_paths) = env::var_os(BUILD_OUT_DIR_PATHS) {
+                let mut build_dir_paths = File::options()
+                    .append(true)
+                    .create(true)
+                    .open(build_dir_paths)?;
+
+                build_dir_paths.write_all(output_directory.as_encoded_bytes())?;
+
+                build_dir_paths.write_all(AsRef::<OsStr>::as_ref("\n").as_encoded_bytes())?;
+
+                build_dir_paths.flush()?;
+            }
+
+            AsRef::as_ref(&output_directory)
+        };
 
         let topology = File::open(TOPOLOGY_JSON)
             .context(r#"Failed to open "topology.json"!"#)
@@ -73,14 +83,9 @@ fn check_for_definitions() -> Result<bool> {
         })
 }
 
-fn build_report_writer() -> Result<impl Write> {
-    if let Some(report_file) = env::var_os(BUILD_REPORT) {
-        File::create(report_file)
-            .context("Failed to open build report for writing!")
-            .map(Either::Left)
-    } else {
-        Ok(Either::Right(io::stderr()))
-    }
+fn build_report_writer(output_directory: &Path) -> Result<impl Write + use<>> {
+    File::create(output_directory.join("currencies-build.log"))
+        .context("Failed to open build report for writing!")
 }
 
 fn generate_currencies<BuildReport>(
