@@ -580,11 +580,11 @@ mod test {
                         .unwrap();
 
                         assert!(
-                            Coin::<TheCurrency>::new(
-                                Amount::from(lender::query_balance(&store, test_tools::lender())
+                            Coin::<TheCurrency>::new(Amount::from(
+                                lender::query_balance(&store, test_tools::lender())
                                     .unwrap()
-                                    .balance)
-                            )
+                                    .balance
+                            ))
                             .is_zero()
                         );
 
@@ -775,17 +775,17 @@ mod test {
                         .unwrap();
 
                         assert!(
-                            Coin::<TheCurrency>::new(
-                               Amount::from( lender::query_balance(&store, test_tools::lender())
+                            Coin::<TheCurrency>::new(Amount::from(
+                                lender::query_balance(&store, test_tools::lender())
                                     .unwrap()
-                                    .balance)
-                            )
+                                    .balance
+                            ))
                             .is_zero()
                         );
                         assert!(
-                            Coin::<TheCurrency>::new(
-                                Amount::from(lender::query_balance(&store, other_lender).unwrap().balance)
-                            )
+                            Coin::<TheCurrency>::new(Amount::from(
+                                lender::query_balance(&store, other_lender).unwrap().balance
+                            ))
                             .is_zero()
                         );
                     },
