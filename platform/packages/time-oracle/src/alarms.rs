@@ -61,10 +61,10 @@ where
         }
     }
 
-    pub fn alarms_selection<'this>(
-        &'this self,
+    pub fn alarms_selection(
+        &self,
         ctime: Timestamp,
-    ) -> impl Iterator<Item = Result<Addr, AlarmError>> + use<'this, S> {
+    ) -> impl Iterator<Item = Result<Addr, AlarmError>> + use<'_, S> {
         self.alarms
             .idx
             .alarms

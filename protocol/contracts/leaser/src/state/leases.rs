@@ -76,10 +76,10 @@ impl Leases {
         }
     }
 
-    pub fn iter<'store>(
-        storage: &'store dyn Storage,
+    pub fn iter(
+        storage: &dyn Storage,
         next_customer: Option<Addr>,
-    ) -> impl CustomerLeases + use<'store> {
+    ) -> impl CustomerLeases + use<'_> {
         let start_bound = next_customer.map(Bound::<Addr>::inclusive);
 
         Self::CUSTOMER_LEASES
