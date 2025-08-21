@@ -1,0 +1,572 @@
+name: "<Callable> Run checks & build"
+run-name: "Running workflow for smart contracts"
+
+concurrency:
+  cancel-in-progress: true
+  group: |-
+    ci-${{ github.ref_name }}-${{ github.ref_type }}-${{ github.event_name }}${{ (inputs.check-dependencies-version == null && format('-{0}-{1}', inputs.check-dependencies-version, inputs.upload-artifacts)) || '' }}
+
+defaults:
+  run:
+    shell: "sh"
+
+env:
+  POSIXLY_CORRECT: "1"
+
+on:
+  pull_request:
+    branches:
+      - "main"
+    paths-ignore:
+      - "**/*.md"
+  push:
+    branches:
+      - "main"
+    tags:
+      - "*"
+    paths-ignore:
+      - "**/*.md"
+  workflow_dispatch:
+    inputs:
+      check-dependencies-version:
+        description: "Check dependencies' versions."
+        required: true
+        default: true
+        type: "boolean"
+      upload-artifacts:
+        description: "Upload optimized builds as artifacts."
+        required: true
+        default: false
+        type: "boolean"
+
+jobs:
+  matrix-arguments:
+    name: "Generate matrices arguments"
+    outputs:
+      profiles-json: |-
+        ${{ steps.out.outputs.profiles-json }}
+      workspaces-json: |-
+        ${{ steps.out.outputs.workspaces-json }}
+    runs-on: "ubuntu-latest"
+    steps:
+      - name: "Checkout repository"
+        uses: "actions/checkout@v5"
+      - id: "out"
+        name: "Produce matrices arguments"
+        run: |-
+          set -eu
+
+          profiles='["ci_dev","ci_dev_no_debug_assertions"]'
+
+          workspaces="$(
+            workspaces="$(
+              "find" \
+                "." \
+                -type "f" \
+                -name "Cargo.lock"
+            )"
+
+            joined=""
+
+            while read -r "workspace"
+            do
+              case "${workspace?}" in
+                ("") continue ;;
+              esac
+
+              workspace="$("dirname" "${workspace}")"
+
+              workspace="$("basename" "${workspace}")"
+
+              joined="${joined?},\"${workspace:?}\""
+            done \
+              <<EOF
+          ${workspaces?}
+          EOF
+
+            "echo" "[${joined#,}]"
+          )"
+
+          echo \
+            "profiles-json<<EOF
+          ${profiles:?}
+          EOF
+          workspaces-json<<EOF
+          ${workspaces:?}
+          EOF" \
+            >>"${GITHUB_OUTPUT:?}"
+  audit-dependencies:
+    name: "Audit dependencies"
+    runs-on: "ubuntu-latest"
+    steps:
+      - name: "Checkout repository"
+        uses: "actions/checkout@v5"
+      - name: "Setup Docker"
+        uses: "nolus-protocol/actions/setup-docker@v1"
+      - name: "Setup workspaces"
+        uses: "./.github/actions/setup-workspaces"
+      - id: "build-container"
+        name: "Build container image"
+        uses: "nolus-protocol/actions/build-image@v1"
+        with:
+          context: "./ci"
+          file: "./ci/Containerfile"
+          target: "audit-dependencies"
+      - env:
+          image_tag: |-
+            ${{ steps.build-container.outputs.tag }}
+        name: "Run container"
+        run: |-
+          "docker" \
+            "container" \
+            "run" \
+            --rm \
+            --tty \
+            --volume ".:/src:ro" \
+            "${image_tag:?}"
+  check-formatting:
+    name: "Check formatting"
+    runs-on: "ubuntu-latest"
+    steps:
+      - name: "Checkout repository"
+        uses: "actions/checkout@v5"
+      - name: "Setup Docker"
+        uses: "nolus-protocol/actions/setup-docker@v1"
+      - name: "Setup workspaces"
+        uses: "./.github/actions/setup-workspaces"
+      - id: "build-container"
+        name: "Build container image"
+        uses: "nolus-protocol/actions/build-image@v1"
+        with:
+          context: "./ci"
+          file: "./ci/Containerfile"
+          target: "check-formatting"
+      - env:
+          image_tag: |-
+            ${{ steps.build-container.outputs.tag }}
+        name: "Run container"
+        run: |-
+          "docker" \
+            "container" \
+            "run" \
+            --rm \
+            --tty \
+            --volume ".:/src:ro" \
+            "${image_tag:?}"
+  check-lockfiles:
+    env:
+      check-dependencies-versions: |-
+        ${{ toJSON(github.ref_type == 'tag' || (github.event_name == 'workflow_dispatch' && inputs.check-dependencies-version)) }}
+    name: "Check lockfiles"
+    runs-on: "ubuntu-latest"
+    steps:
+      - if: |-
+          fromJSON(env.check-dependencies-versions)
+        name: "Checkout repository"
+        uses: "actions/checkout@v5"
+      - if: |-
+          fromJSON(env.check-dependencies-versions)
+        name: "Setup Docker"
+        uses: "nolus-protocol/actions/setup-docker@v1"
+      - if: |-
+          fromJSON(env.check-dependencies-versions)
+        name: "Setup workspaces"
+        uses: "./.github/actions/setup-workspaces"
+      - id: "build-container"
+        if: |-
+          fromJSON(env.check-dependencies-versions)
+        name: "Build container image"
+        uses: "nolus-protocol/actions/build-image@v1"
+        with:
+          context: "./ci"
+          file: "./ci/Containerfile"
+          target: "check-lockfiles"
+      - env:
+          image_tag: |-
+            ${{ steps.build-container.outputs.tag }}
+        if: |-
+          fromJSON(env.check-dependencies-versions)
+        name: "Run container"
+        run: |-
+          "docker" \
+            "container" \
+            "run" \
+            --rm \
+            --tty \
+            --volume ".:/src:ro" \
+            "${image_tag:?}"
+  check-unused-dependencies:
+    name: "Check for unused dependencies"
+    needs:
+      - "matrix-arguments"
+    runs-on: "ubuntu-latest"
+    strategy:
+      matrix:
+        workspace: |-
+          ${{ fromJSON(needs.matrix-arguments.outputs.workspaces-json) }}
+    steps:
+      - name: "Checkout repository"
+        uses: "actions/checkout@v5"
+      - name: "Setup Docker"
+        uses: "nolus-protocol/actions/setup-docker@v1"
+      - name: "Setup workspaces"
+        uses: "./.github/actions/setup-workspaces"
+      - id: "build-container"
+        name: "Build container image"
+        uses: "nolus-protocol/actions/build-image@v1"
+        with:
+          build-contexts: "tools=./tools"
+          context: "./ci"
+          file: "./ci/Containerfile"
+          target: "check-unused-dependencies"
+      - name: "Use testing build configuration"
+        run: |-
+          "mv" \
+            "./.github/test-data/build-configuration" \
+            "./"
+      - env:
+          image_tag: |-
+            ${{ steps.build-container.outputs.tag }}
+          workspace: |-
+            ${{ matrix.workspace }}
+        name: "Run container"
+        run: |-
+          "docker" \
+            "container" \
+            "run" \
+            --rm \
+            --tty \
+            --volume ".:/src:ro" \
+            "${image_tag:?}" \
+            "${workspace:?}"
+  lint:
+    name: "Lint codebase"
+    needs:
+      - "matrix-arguments"
+    runs-on: "ubuntu-latest"
+    strategy:
+      matrix:
+        profile: |-
+          ${{ fromJSON(needs.matrix-arguments.outputs.profiles-json) }}
+        workspace: |-
+          ${{ fromJSON(needs.matrix-arguments.outputs.workspaces-json) }}
+    steps:
+      - name: "Checkout repository"
+        uses: "actions/checkout@v5"
+      - name: "Setup Docker"
+        uses: "nolus-protocol/actions/setup-docker@v1"
+      - name: "Setup workspaces"
+        uses: "./.github/actions/setup-workspaces"
+      - id: "build-container"
+        name: "Build container image"
+        uses: "nolus-protocol/actions/build-image@v1"
+        with:
+          build-contexts: "tools=./tools"
+          context: "./ci"
+          file: "./ci/Containerfile"
+          target: "lint"
+      - name: "Use testing build configuration"
+        run: |-
+          "mv" \
+            "./.github/test-data/build-configuration" \
+            "./"
+      - env:
+          image_tag: |-
+            ${{ steps.build-container.outputs.tag }}
+          profile: |-
+            ${{ matrix.profile }}
+          workspace: |-
+            ${{ matrix.workspace }}
+        name: "Run container"
+        run: |-
+          "docker" \
+            "container" \
+            "run" \
+            --env "PROFILE=${profile:?}" \
+            --rm \
+            --tty \
+            --volume ".:/src:ro" \
+            "${image_tag:?}" \
+            "${workspace:?}"
+  test:
+    name: "Run tests"
+    needs:
+      - "matrix-arguments"
+    runs-on: "ubuntu-latest"
+    strategy:
+      matrix:
+        profile: |-
+          ${{ fromJSON(needs.matrix-arguments.outputs.profiles-json) }}
+        workspace: |-
+          ${{ fromJSON(needs.matrix-arguments.outputs.workspaces-json) }}
+    steps:
+      - name: "Checkout repository"
+        uses: "actions/checkout@v5"
+      - name: "Setup Docker"
+        uses: "nolus-protocol/actions/setup-docker@v1"
+      - name: "Setup workspaces"
+        uses: "./.github/actions/setup-workspaces"
+      - id: "build-container"
+        name: "Build container image"
+        uses: "nolus-protocol/actions/build-image@v1"
+        with:
+          build-contexts: "tools=./tools"
+          context: "./ci"
+          file: "./ci/Containerfile"
+          target: "test"
+      - name: "Use testing build configuration"
+        run: |-
+          "mv" \
+            "./.github/test-data/build-configuration" \
+            "./"
+      - env:
+          image_tag: |-
+            ${{ steps.build-container.outputs.tag }}
+          profile: |-
+            ${{ matrix.profile }}
+          workspace: |-
+            ${{ matrix.workspace }}
+        name: "Run container"
+        run: |-
+          "docker" \
+            "container" \
+            "run" \
+            --env "PROFILE=${profile:?}" \
+            --rm \
+            --tty \
+            --volume ".:/src:ro" \
+            "${image_tag:?}" \
+            "${workspace:?}"
+  build:
+    env:
+      software-release-id: |-
+        ${{ (github.ref_type == 'tag' && format('{0} / ', github.ref)) || '' }}${{ github.sha }}
+      upload-artifacts: |-
+        ${{ toJSON(github.ref_type == 'tag' || (github.event_name == 'workflow_dispatch' && inputs.upload-artifacts)) }}
+    name: "Build contracts"
+    runs-on: "ubuntu-latest"
+    steps:
+      - name: "Checkout repository"
+        uses: "actions/checkout@v5"
+      - name: "Setup Docker"
+        uses: "nolus-protocol/actions/setup-docker@v1"
+      - id: "build-platform"
+        name: "Build platform building container image"
+        uses: "nolus-protocol/actions/build-image@v1"
+        with:
+          build-arguments: |-
+            software_release_id=${{ env.software-release-id }}
+          build-contexts: |-
+            dot-cargo=./.cargo
+            platform=./platform
+            scripts=./scripts
+            tools=./tools
+          context: "./ci"
+          file: "./ci/Containerfile"
+          target: "build-platform"
+      - id: "build-protocol"
+        name: "Build protocol building container image"
+        uses: "nolus-protocol/actions/build-image@v1"
+        with:
+          build-arguments: |-
+            software_release_id=${{ env.software-release-id }}
+          build-contexts: |-
+            dot-cargo=./.cargo
+            platform=./platform
+            protocol=./protocol
+            scripts=./scripts
+            tools=./tools
+          context: "./ci"
+          file: "./ci/Containerfile"
+          target: "build-protocol"
+      - id: "alpine"
+        if: |-
+          fromJSON(env.upload-artifacts)
+        name: "Build plain Alpine container image"
+        uses: "nolus-protocol/actions/build-image@v1"
+        with:
+          context: "./ci"
+          file: "./ci/Containerfile"
+          target: "alpine"
+      - id: "compress"
+        if: |-
+          fromJSON(env.upload-artifacts)
+        name: "Build compression container image"
+        uses: "nolus-protocol/actions/build-image@v1"
+        with:
+          context: "./ci"
+          file: "./ci/Containerfile"
+          target: "compress"
+      - env:
+          image_tag: |-
+            ${{ steps.build-platform.outputs.tag }}
+        name: "Run platform building container for each network group"
+        run: |-
+          set -eu
+
+          for network_group in "test-net" "production-net"
+          do
+            "echo" \
+              "Running for network group: ${network_group:?}" \
+              >&2
+
+            "mkdir" "./${network_group:?}-artifacts"
+
+            "docker" \
+              "container" \
+              "run" \
+              --rm \
+              --tty \
+              --volume "./${network_group:?}-artifacts:/artifacts" \
+              "${image_tag:?}" \
+              "${network_group:?}"
+          done
+      - env:
+          image_tag: |-
+            ${{ steps.build-protocol.outputs.tag }}
+        if: |-
+          fromJSON(env.upload-artifacts)
+        name: "Export protocol building container image"
+        run: |-
+          set -eu
+
+          "docker" \
+            "image" \
+            "save" \
+            --output "./build-protocol.tar" \
+            "${image_tag:?}"
+      - env:
+          image_tag: |-
+            ${{ steps.compress.outputs.tag }}
+        if: |-
+          fromJSON(env.upload-artifacts)
+        name: "Compress protocol building container image export"
+        run: |-
+          set -eu
+
+          "docker" \
+            "container" \
+            "run" \
+            --rm \
+            --volume ".:/bind:rw" \
+            "${image_tag:?}" \
+            "/bind/build-protocol.tar"
+      - if: |-
+          fromJSON(env.upload-artifacts)
+        name: "Upload test-net platform binaries"
+        uses: "actions/upload-artifact@v4"
+        with:
+          if-no-files-found: "error"
+          name: "platform-test-net"
+          path: "./test-net-artifacts/*"
+      - if: |-
+          fromJSON(env.upload-artifacts)
+        name: "Upload production-net platform binaries"
+        uses: "actions/upload-artifact@v4"
+        with:
+          if-no-files-found: "error"
+          name: "platform-production-net"
+          path: "./production-net-artifacts/*"
+      - if: |-
+          fromJSON(env.upload-artifacts)
+        name: "Upload protocol builder image"
+        uses: "actions/upload-artifact@v4"
+        with:
+          if-no-files-found: "error"
+          name: "build-protocol"
+          path: "./build-protocol.tar.gz"
+      - env:
+          image_tag: |-
+            ${{ steps.alpine.outputs.tag }}
+        if: |-
+          fromJSON(env.upload-artifacts) &&
+            runner.environment == 'self-hosted'
+        name: "Clean up build artifacts"
+        run: |-
+          set -eu
+
+          "docker" \
+            "container" \
+            "run" \
+            --rm \
+            --volume ".:/bind:rw" \
+            "${image_tag:?}" \
+            "/bin/rm" \
+            "-f" \
+            "-R" \
+            "/bind/test-net-artifacts" \
+            "/bind/production-net-artifacts" \
+            "/bind/build-protocol.tar.gz"
+  create-draft-release:
+    needs:
+      - "audit-dependencies"
+      - "check-lockfiles"
+      - "check-formatting"
+      - "lint"
+      - "test"
+      - "check-unused-dependencies"
+      - "build"
+    if: |-
+      github.ref_type == 'tag'
+    name: "Create draft release"
+    permissions:
+      contents: "write"
+    runs-on: "ubuntu-latest"
+    steps:
+      - name: "Checkout repository"
+        uses: "actions/checkout@v5"
+        with:
+          fetch-depth: "0"
+          fetch-tags: "true"
+          sparse-checkout: |-
+            ./
+            .github/actions/
+            ci/
+      - name: "Setup Docker"
+        uses: "nolus-protocol/actions/setup-docker@v1"
+      - id: "pack-release-artifacts"
+        name: "Build release artifacts packing container image"
+        uses: "nolus-protocol/actions/build-image@v1"
+        with:
+          context: "./ci"
+          file: "./ci/Containerfile"
+          target: "pack-release-artifacts"
+      - name: "Download produced artifacts"
+        uses: "actions/download-artifact@v5"
+        with:
+          name: "platform-test-net"
+          path: "./artifacts/platform-test-net"
+      - name: "Download produced artifacts"
+        uses: "actions/download-artifact@v5"
+        with:
+          name: "platform-production-net"
+          path: "./artifacts/platform-production-net"
+      - name: "Download produced artifacts"
+        uses: "actions/download-artifact@v5"
+        with:
+          name: "build-protocol"
+          path: "./artifacts"
+      - env:
+          image_tag: |-
+            ${{ steps.pack-release-artifacts.outputs.tag }}
+        name: "Pack release artifacts"
+        run: |-
+          set -eu
+
+          "docker" \
+            "container" \
+            "run" \
+            --rm \
+            --tty \
+            --volume ".:/repo:ro" \
+            --volume "./artifacts:/bind" \
+            "${image_tag:?}"
+      - name: "Create draft release"
+        uses: "softprops/action-gh-release@v2"
+        with:
+          name: |-
+            ${{ github.ref_name }}
+          draft: true
+          body_path: "./artifacts/changelog"
+          generate_release_notes: false
+          files: "./artifacts/*?.tar.gz"
