@@ -273,11 +273,8 @@ mod test {
         assert_eq!(from(67), from(79) - (from(12)));
         assert_eq!(from(0), from(34) - (from(34)));
         assert_eq!(from(39), from(39) - (from(0)));
-        assert_eq!(from(990), Percent100::HUNDRED - (from(10)));
-        assert_eq!(
-            from(0),
-            Percent100::HUNDRED - Percent100::from_permille(1000)
-        );
+        assert_eq!(from(990), from(10).complement());
+        assert_eq!(from(0), from(1000).complement());
     }
 
     #[test]
