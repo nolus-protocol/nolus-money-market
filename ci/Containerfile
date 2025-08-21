@@ -1,0 +1,403 @@
+# syntax=docker/dockerfile:1
+
+################################################################################
+##                         START : EDIT  HERE : START                         ##
+################################################################################
+
+### 3.22.1
+ARG alpine_digest="sha256:4bcff63911fcb4448bd4fdacec207030997caf25e9bea4045fa6c8c44de311d1"
+
+ARG binaryen_checksum="e959f2170af4c20c552e9de3a0253704d6a9d2766e8fdb88e4d6ac4bae9388fe"
+
+ARG binaryen_version="123"
+
+ARG cargo_audit_version="0.21.2"
+
+ARG cargo_udeps_version="0.1.57"
+
+ARG cosmwasm_check_version="3.0.1"
+
+ARG cosmwasm_capabilities="cosmwasm_1_1,cosmwasm_1_2,iterator,neutron,staking,stargate"
+
+ARG git_cliff_version="2.10.0"
+
+ARG platform_contracts_count="3"
+
+ARG production_network_build_profile="production_nets_release"
+
+ARG production_network_build_profile_directory="production_nets_release"
+
+### 5 MiB
+ARG production_network_max_binary_size="5242880"
+
+ARG protocol_contracts_count="7"
+
+### 1.86.0-alpine3.21
+ARG rust_image_digest="sha256:661d708cc863ce32007cf46807a72062a80d2944a6fae9e0d83742d2e04d5375"
+
+### 1.91.0
+ARG rust_nightly_version="2025-08-10"
+
+ARG test_network_build_profile="test_nets_release"
+
+ARG test_network_build_profile_directory="test_nets_release"
+
+### 5 MiB
+ARG test_network_max_binary_size="5242880"
+
+### 1.88.0-alpine3.22
+ARG tooling_rust_image_digest="sha256:9dfaae478ecd298b6b5a039e1f2cc4fc040fc818a2de9aa78fa714dea036574d"
+
+################################################################################
+##                           END : EDIT  HERE : END                           ##
+################################################################################
+
+FROM docker.io/library/alpine@${alpine_digest:?} AS alpine
+
+ENV SOURCE_DATE_EPOCH="0"
+
+FROM docker.io/library/rust@${rust_image_digest:?} AS rust
+
+ENV CARGO_INCREMENTAL="0" \
+  CARGO_TARGET_DIR="/tmp/cargo-target/" \
+  CARGO_TERM_COLOR="always" \
+  POSIXLY_CORRECT="1" \
+  SOURCE_DATE_EPOCH="0"
+
+WORKDIR "/src"
+
+RUN "apk" "update" && "apk" "add" "libc-dev"
+
+FROM docker.io/library/rust@${tooling_rust_image_digest:?} AS tooling-rust
+
+ENV CARGO_INCREMENTAL="0" \
+  CARGO_TARGET_DIR="/tmp/cargo-target/" \
+  CARGO_TERM_COLOR="always" \
+  POSIXLY_CORRECT="1" \
+  SOURCE_DATE_EPOCH="0"
+
+RUN "apk" "update" && "apk" "add" "libc-dev"
+
+FROM alpine AS binaryen
+
+ARG binaryen_checksum
+
+ARG binaryen_version
+
+ADD \
+  --checksum=sha256:${binaryen_checksum:?} \
+  --link=true \
+  "https://github.com/WebAssembly/binaryen/releases/download/version_${binaryen_version:?}/binaryen-version_${binaryen_version:?}-x86_64-linux.tar.gz" \
+  "/binaryen.tar.gz"
+
+RUN <<EOF
+cd "/"
+
+"tar" \
+  "x" \
+  -f "/binaryen.tar.gz" \
+  "binaryen-version_${binaryen_version:?}/bin/wasm-opt"
+
+"mv" \
+  "/binaryen-version_${binaryen_version:?}/bin/wasm-opt" \
+  "/"
+
+"rm" \
+  -fr \
+  "/binaryen-version_${binaryen_version:?}"
+EOF
+
+FROM tooling-rust AS cargo-audit
+
+ARG cargo_audit_version
+
+RUN \
+  --mount=type="tmpfs",target="/tmp/cargo-target" \
+  "cargo" "install" "--locked" "cargo-audit@${cargo_audit_version:?}"
+
+### In-tree tool.
+FROM rust AS cargo-each
+
+RUN \
+  --mount=type="bind",from="tools",target="/src",readonly \
+  --mount=type="tmpfs",target="/tmp/cargo-target" \
+  "cargo" "install" "--locked" "--path" "/src/cargo-each"
+
+FROM tooling-rust AS cargo-udeps
+
+RUN "apk" "add" "ca-certificates" "openssl-dev" "openssl-libs-static"
+
+ARG cargo_udeps_version
+
+RUN \
+  --mount=type="tmpfs",target="/tmp/cargo-target" \
+  "cargo" "install" "--locked" "cargo-udeps@${cargo_udeps_version:?}"
+
+FROM tooling-rust AS cosmwasm-check
+
+RUN "apk" "add" "llvm-dev" "clang-static"
+
+ARG cosmwasm_check_version
+
+RUN \
+  --mount=type="tmpfs",target="/tmp/cargo-target" \
+  "cargo" "install" "--locked" "cosmwasm-check@${cosmwasm_check_version:?}"
+
+FROM tooling-rust AS git-cliff
+
+ARG git_cliff_version
+
+RUN \
+  --mount=type="tmpfs",target="/tmp/cargo-target" \
+  "cargo" "install" "--locked" "git-cliff@${git_cliff_version:?}"
+
+FROM rust AS rust-ci
+
+VOLUME ["/src"]
+
+ENV SOFTWARE_RELEASE_ID="ci-software-release" \
+  PROTOCOL_NETWORK="ci-network" \
+  PROTOCOL_NAME="ci-protocol" \
+  PROTOCOL_RELEASE_ID="ci-protocol-release"
+
+FROM rust-ci AS rust-ci-multi-workspace
+
+COPY \
+  --chmod="0555" \
+  --link=true \
+  "./for-each-workspace.sh" \
+  "/usr/local/bin/"
+
+FROM rust-ci-multi-workspace AS audit-dependencies
+
+ENTRYPOINT ["/usr/local/bin/for-each-workspace.sh", "cargo", "audit"]
+
+COPY \
+  --from=cargo-audit \
+  --link=true \
+  "/usr/local/cargo/bin/cargo-audit" \
+  "/usr/local/bin/"
+
+FROM rust-ci-multi-workspace AS check-formatting
+
+ENTRYPOINT ["/usr/local/bin/for-each-workspace.sh", "cargo", "fmt", "--check"]
+
+RUN "rustup" "component" "add" "rustfmt"
+
+FROM rust-ci-multi-workspace AS check-lockfiles
+
+ENTRYPOINT ["/usr/local/bin/for-each-workspace.sh", "check-lockfiles.sh"]
+
+COPY \
+  --chmod="0555" \
+  --link=true \
+  "./check-lockfiles.sh" \
+  "/usr/local/bin/"
+
+FROM rust-ci AS check-unused-dependencies
+
+ARG rust_nightly_version
+
+ENV RUST_NIGHTLY_VERSION="nightly-${rust_nightly_version:?}"
+
+RUN "rustup" "toolchain" "install" "${RUST_NIGHTLY_VERSION:?}"
+
+ENTRYPOINT ["/usr/local/bin/check-unused-deps.sh"]
+
+COPY \
+  --from=cargo-udeps \
+  --link=true \
+  "/usr/local/cargo/bin/cargo-udeps" \
+  "/usr/local/bin/"
+
+COPY \
+  --chmod="0555" \
+  --link=true \
+  "./check-unused-deps.sh" \
+  "/usr/local/bin/"
+
+COPY \
+  --from=cargo-each \
+  --link=true \
+  "/usr/local/cargo/bin/cargo-each" \
+  "/usr/local/bin/"
+
+FROM rust-ci AS lint
+
+RUN "rustup" "component" "add" "clippy"
+
+ENTRYPOINT ["/usr/local/bin/lint.sh"]
+
+COPY \
+  --chmod="0555" \
+  --link=true \
+  "./lint.sh" \
+  "./lint.workspace.sh" \
+  "/usr/local/bin/"
+
+COPY \
+  --from=cargo-each \
+  --link=true \
+  "/usr/local/cargo/bin/cargo-each" \
+  "/usr/local/bin/"
+  
+FROM rust-ci AS test
+
+ENTRYPOINT ["/usr/local/bin/test.sh"]
+
+COPY \
+  --chmod="0555" \
+  --link=true \
+  "./test.sh" \
+  "/usr/local/bin/"
+
+COPY \
+  --from=cargo-each \
+  --link=true \
+  "/usr/local/cargo/bin/cargo-each" \
+  "/usr/local/bin/"
+
+FROM rust AS build
+
+VOLUME ["/artifacts"]
+
+ENTRYPOINT ["/usr/local/bin/build.sh"]
+
+ONBUILD COPY \
+  --from="tools" \
+  --link=true \
+  "." \
+  "/src/tools"
+
+ONBUILD COPY \
+  --from="platform" \
+  --link=true \
+  "." \
+  "/src/platform"
+
+RUN "rustup" "target" "add" "wasm32-unknown-unknown"
+
+ARG binaryen_version
+
+ARG cosmwasm_capabilities
+
+ARG production_network_build_profile
+
+ARG production_network_build_profile_directory
+
+ARG production_network_max_binary_size
+
+ARG test_network_build_profile
+
+ARG test_network_build_profile_directory
+
+ARG test_network_max_binary_size
+
+ENV BINARYEN_VERSION="${binaryen_version:?}" \
+  COSMWASM_CAPABILITIES="${cosmwasm_capabilities:?}" \
+  PRODUCTION_NETWORK_BUILD_PROFILE="${production_network_build_profile:?}" \
+  PRODUCTION_NETWORK_BUILD_PROFILE_DIRECTORY="${production_network_build_profile_directory:?}" \
+  PRODUCTION_NETWORK_MAX_BINARY_SIZE="${production_network_max_binary_size:?}" \
+  TEST_NETWORK_BUILD_PROFILE="${test_network_build_profile:?}" \
+  TEST_NETWORK_BUILD_PROFILE_DIRECTORY="${test_network_build_profile_directory:?}" \
+  TEST_NETWORK_MAX_BINARY_SIZE="${test_network_max_binary_size:?}"
+
+COPY \
+  --from=binaryen \
+  --link=true \
+  "/wasm-opt" \
+  "/usr/local/bin/"
+
+COPY \
+  --from=cosmwasm-check \
+  --link=true \
+  "/usr/local/cargo/bin/cosmwasm-check" \
+  "/usr/local/bin/"
+
+COPY \
+  --chmod="0555" \
+  --link=true \
+  "./build.sh" \
+  "/usr/local/bin/"
+
+COPY \
+  --from=cargo-each \
+  --link=true \
+  "/usr/local/cargo/bin/cargo-each" \
+  "/usr/local/bin/"
+
+COPY \
+  --from="scripts" \
+  --link=true \
+  "." \
+  "/src/scripts"
+
+COPY \
+  --from="dot-cargo" \
+  --link=true \
+  "." \
+  "/src/.cargo"
+
+FROM build AS build-platform
+
+WORKDIR "/src/platform"
+
+ARG platform_contracts_count
+
+ENV CONTRACTS_COUNT="${platform_contracts_count:?}"
+
+ARG software_release_id
+
+ENV SOFTWARE_RELEASE_ID="${software_release_id:?}"
+
+FROM build AS build-protocol
+
+VOLUME ["/src/build-configuration"]
+
+WORKDIR "/src/protocol"
+
+RUN "apk" "add" "jq"
+
+ARG protocol_contracts_count
+
+ENV CONTRACTS_COUNT="${protocol_contracts_count:?}"
+
+COPY \
+  --from="protocol" \
+  --link=true \
+  "." \
+  "/src/protocol"
+
+ARG software_release_id
+
+ENV SOFTWARE_RELEASE_ID="${software_release_id:?}"
+
+FROM alpine AS compress
+
+ENTRYPOINT ["/usr/local/bin/compress.sh"]
+
+COPY \
+  --chmod="0555" \
+  --link=true \
+  "./compress.sh" \
+  "/usr/local/bin/"
+
+FROM alpine AS pack-release-artifacts
+
+VOLUME ["/bind", "/repo"]
+
+ENTRYPOINT ["/usr/local/bin/pack-release-artifacts.sh"]
+
+RUN "apk" "add" "git"
+
+COPY \
+  --from=git-cliff \
+  --link=true \
+  "/usr/local/cargo/bin/git-cliff" \
+  "/usr/local/bin/"
+
+COPY \
+  --chmod="0555" \
+  --link=true \
+  "./pack-release-artifacts.sh" \
+  "/usr/local/bin/"
