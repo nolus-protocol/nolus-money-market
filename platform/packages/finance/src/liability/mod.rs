@@ -120,10 +120,8 @@ impl Liability {
         debug_assert!(self.initial > Percent100::ZERO);
         debug_assert!(self.initial < Percent100::HUNDRED);
 
-        let default_ltd = SimpleFraction::new(
-            self.initial.units(),
-            Self::remaining_percent(self.initial).units(),
-        );
+        let default_ltd =
+            SimpleFraction::new(self.initial.units(), self.initial.complement().units());
         default_ltd
             .of(downpayment)
             .map(|default_borrow| {
@@ -152,7 +150,7 @@ impl Liability {
         // liquidation = 100% / (100% - healthy%) of (due - healthy% of lease)
         let multiplier = SimpleFraction::new(
             Percent100::HUNDRED.units(),
-            Self::remaining_percent(self.healthy).units(),
+            self.healthy.complement().units(),
         );
         let extra_liability_lpn = total_due - total_due.min(self.healthy.of(lease_amount));
         multiplier
@@ -194,12 +192,6 @@ impl Liability {
         )?;
 
         Ok(())
-    }
-
-    fn remaining_percent(percent: Percent100) -> Percent100 {
-        Percent100::HUNDRED
-            .checked_sub(percent)
-            .expect("Invariant violated: percent is bigger than 100%")
     }
 }
 

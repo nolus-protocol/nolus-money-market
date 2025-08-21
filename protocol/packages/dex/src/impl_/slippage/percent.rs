@@ -164,7 +164,7 @@ mod test {
         let coin_in = Coin::<SuperGroupTestC1>::from(267);
         let slippage = Percent100::from_percent(15);
         assert_eq!(
-            (Percent100::HUNDRED - slippage).of(coin_in),
+            slippage.complement().of(coin_in),
             calc_min_out(coin_in, slippage)
         );
     }
