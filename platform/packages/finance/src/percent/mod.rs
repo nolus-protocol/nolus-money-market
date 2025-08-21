@@ -11,7 +11,7 @@ use crate::{
 pub mod bound;
 
 pub type Units = u32;
-pub type Percent100 = BoundPercent<1000>;
+pub type Percent100 = BoundPercent<{ Percent::HUNDRED.units() }>;
 pub type Percent = BoundPercent<{ Units::MAX }>;
 
 impl FractionUnit for Units {}
@@ -21,8 +21,7 @@ impl Fraction<Units> for Percent100 {
     where
         A: Fractionable<Units>,
     {
-        let fraction = SimpleFraction::<Units>::from(*self);
-        fraction
+        SimpleFraction::from(*self)
             .of(whole)
             .expect("TODO it won't be needed when ratio.of()")
     }
@@ -33,8 +32,7 @@ impl Rational<Units> for Percent {
     where
         A: Fractionable<Units>,
     {
-        let fraction: SimpleFraction<Units> = SimpleFraction::<Units>::from(*self);
-        fraction.of(whole)
+        SimpleFraction::from(*self).of(whole)
     }
 }
 
