@@ -72,9 +72,9 @@ mod tests {
             }])
             .unwrap();
 
-        let lpp0_tvl: CoinStable = TotalValueLocked::new(23).as_coin(); //23k USD
+        let lpp0_tvl = TotalValueLocked::new(23).as_coin(); //23k USD
         {
-            let lpp1_tvl = tvl_total.as_coin() - lpp0_tvl - 1.into();
+            let lpp1_tvl = tvl_total.as_coin() - lpp0_tvl - CoinStable::new(1);
             let lpps = vec![
                 MockPool::reward_none(lpp0_tvl),
                 MockPool::reward_none(lpp1_tvl),
@@ -97,8 +97,8 @@ mod tests {
         let scale = RewardScale::new(bar0_apr);
         let period = Duration::YEAR;
 
-        let lpp0_tvl: CoinStable = 23_000.into();
-        let lpp1_tvl = 3_000.into();
+        let lpp0_tvl = CoinStable::new(23_000);
+        let lpp1_tvl = CoinStable::new(3_000);
         let lpps = vec![
             MockPool::reward_ok(lpp0_tvl, bar0_apr, period),
             MockPool::reward_ok(lpp1_tvl, bar0_apr, period),
@@ -117,8 +117,8 @@ mod tests {
         let scale = RewardScale::new(bar0_apr);
         let period = Duration::from_days(134);
 
-        let lpp0_tvl: CoinStable = 23_000.into();
-        let lpp1_tvl = 3_000.into();
+        let lpp0_tvl = CoinStable::new(23_000);
+        let lpp1_tvl = CoinStable::new(3_000);
         let lpps = vec![
             MockPool::reward_fail(lpp0_tvl, bar0_apr, period),
             MockPool::reward_none(lpp1_tvl),

@@ -34,19 +34,11 @@ impl TryFrom<NewConfig> for ValidatedNewConfig {
 #[cfg(all(feature = "internal.test.testing", test))]
 mod test {
     use dex::MaxSlippage;
-    use finance::{
-        coin::{Amount, Coin, CoinDTO},
-        duration::Duration,
-        liability::Liability,
-        percent::Percent,
-    };
+    use finance::{duration::Duration, liability::Liability, percent::Percent};
     use lease::api::{limits::MaxSlippages, open::PositionSpecDTO};
     use platform::tests as platform_tests;
 
-    use crate::{
-        finance::{LpnCurrencies, LpnCurrency},
-        msg::NewConfig as ValidatedConfig,
-    };
+    use crate::{msg::NewConfig as ValidatedConfig, tests};
 
     use super::NewConfig as NonvalidatedConfig;
 
@@ -65,8 +57,8 @@ mod test {
                 Percent::from_percent(80),
                 Duration::from_hours(1),
             ),
-            lpn_coin_dto(1000),
-            lpn_coin_dto(10),
+            tests::lpn_coin_dto(1000),
+            tests::lpn_coin_dto(10),
         );
 
         let max_slippages = MaxSlippages {
@@ -96,8 +88,8 @@ mod test {
                 Percent::from_percent(80),
                 Duration::from_hours(1),
             ),
-            lpn_coin_dto(1000),
-            lpn_coin_dto(10),
+            tests::lpn_coin_dto(1000),
+            tests::lpn_coin_dto(10),
         );
 
         let max_slippages = MaxSlippages {
@@ -122,9 +114,5 @@ mod test {
             lease_due_period: DUE_PERIOD,
             lease_max_slippages: max_slippages,
         }
-    }
-
-    fn lpn_coin_dto(amount: Amount) -> CoinDTO<LpnCurrencies> {
-        Coin::<LpnCurrency>::new(amount).into()
     }
 }

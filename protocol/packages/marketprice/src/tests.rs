@@ -5,6 +5,7 @@ use currency::test::{
     SuperGroupTestC3, SuperGroupTestC4, SuperGroupTestC5,
 };
 use currency::{CurrencyDef, Group, MemberOf};
+use finance::coin::Amount;
 use finance::price::base::BasePrice;
 use finance::{
     coin::Coin,
@@ -112,9 +113,9 @@ fn marketprice_add_feed() {
     let mut market = PriceFeeds::new(Repo::new(ROOT_NS, storage_dyn_ref), &config);
     let f_address = testing::user("address1");
 
-    let price1 = price::<SuperGroupTestC5, SuperGroupTestC3, _, _>(10, 5);
-    let price2 = price::<SuperGroupTestC5, SubGroupTestC10, _, _>(10000000000, 1000000009);
-    let price3 = price::<SuperGroupTestC5, SuperGroupTestC4, _, _>(10000000000000, 100000000000002);
+    let price1 = price::<SuperGroupTestC5, SuperGroupTestC3>(10, 5);
+    let price2 = price::<SuperGroupTestC5, SubGroupTestC10>(10000000000, 1000000009);
+    let price3 = price::<SuperGroupTestC5, SuperGroupTestC4>(10000000000000, 100000000000002);
 
     let prices = vec![price1.into(), price2.into(), price3.into()];
 
@@ -163,61 +164,58 @@ fn marketprice_follow_the_path() {
 
     feed_price(
         &mut market,
-        price::<SuperGroupTestC3, SubGroupTestC10, _, _>(1, 1),
+        price::<SuperGroupTestC3, SubGroupTestC10>(1, 1),
     )
     .unwrap();
     feed_price(
         &mut market,
-        price::<SuperGroupTestC1, SuperGroupTestC2, _, _>(1, 3),
+        price::<SuperGroupTestC1, SuperGroupTestC2>(1, 3),
     )
     .unwrap();
 
     feed_price(
         &mut market,
-        price::<SuperGroupTestC1, SubGroupTestC10, _, _>(1, 3),
+        price::<SuperGroupTestC1, SubGroupTestC10>(1, 3),
     )
     .unwrap();
 
     feed_price(
         &mut market,
-        price::<SuperGroupTestC3, SuperGroupTestC5, _, _>(1, 1),
+        price::<SuperGroupTestC3, SuperGroupTestC5>(1, 1),
     )
     .unwrap();
 
     feed_price(
         &mut market,
-        price::<SuperGroupTestC1, SuperGroupTestC2, _, _>(1, 3),
+        price::<SuperGroupTestC1, SuperGroupTestC2>(1, 3),
     )
     .unwrap();
     feed_price(
         &mut market,
-        price::<SuperGroupTestC5, SuperGroupTestC1, _, _>(1, 2),
+        price::<SuperGroupTestC5, SuperGroupTestC1>(1, 2),
     )
     .unwrap();
 
     feed_price(
         &mut market,
-        price::<SuperGroupTestC1, SuperGroupTestC5, _, _>(1, 3),
+        price::<SuperGroupTestC1, SuperGroupTestC5>(1, 3),
     )
     .unwrap();
 
     feed_price(
         &mut market,
-        price::<SuperGroupTestC4, SubGroupTestC10, _, _>(1, 3),
+        price::<SuperGroupTestC4, SubGroupTestC10>(1, 3),
     )
     .unwrap();
 
     feed_price(
         &mut market,
-        price::<SuperGroupTestC2, SuperGroupTestC3, _, _>(1, 3),
+        price::<SuperGroupTestC2, SuperGroupTestC3>(1, 3),
     )
     .unwrap();
 
-    let last_feed_time = feed_price(
-        &mut market,
-        price::<SubGroupTestC6, SuperGroupTestC2, _, _>(1, 3),
-    )
-    .unwrap();
+    let last_feed_time =
+        feed_price(&mut market, price::<SubGroupTestC6, SuperGroupTestC2>(1, 3)).unwrap();
 
     let price_resp = market
         .price::<SuperGroupTestC2, SuperGroup, _>(
@@ -232,7 +230,7 @@ fn marketprice_follow_the_path() {
             .into_iter(),
         )
         .unwrap();
-    let expected = price::<SuperGroupTestC3, SuperGroupTestC2, _, _>(1, 6);
+    let expected = price::<SuperGroupTestC3, SuperGroupTestC2>(1, 6);
     let expected_dto = BasePrice::from(expected);
 
     assert_eq!(expected_dto, price_resp);
@@ -334,12 +332,10 @@ fn config() -> Config {
     )
 }
 
-fn price<C1, C2, CoinC1, CoinC2>(coin1: CoinC1, coin2: CoinC2) -> Price<C1, C2>
+fn price<C1, C2>(coin1: Amount, coin2: Amount) -> Price<C1, C2>
 where
     C1: 'static,
-    CoinC1: Into<Coin<C1>>,
     C2: 'static,
-    CoinC2: Into<Coin<C2>>,
 {
-    price::total_of(coin1.into()).is(coin2.into())
+    price::total_of(Coin::<C1>::new(coin1)).is(Coin::<C2>::new(coin2))
 }

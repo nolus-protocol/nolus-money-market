@@ -4,7 +4,7 @@ use ::swap::testing::SwapRequest;
 use currencies::PaymentGroup;
 use currency::CurrencyDef;
 use finance::{
-    coin::{Amount, Coin, CoinDTO},
+    coin::{Coin, CoinDTO},
     duration::Duration,
     fraction::Fraction,
     percent::Percent,
@@ -45,7 +45,7 @@ fn partial_repay() {
 
     let amount = super::quote_borrow(&test_case, downpayment);
     let partial_payment: PaymentCoin = Fraction::<PaymentCoin>::of(
-        &Rational::new(1, 2),
+        &Rational::new(common::coin(1), common::coin(2)),
         super::create_payment_coin(amount.into()),
     );
     let expected_result =
@@ -466,7 +466,7 @@ fn expect_lease_amounts<ProtocolsRegistry, Treasury, Profit, Reserve, Lpp, Oracl
                 .query()
                 .query_all_balances(lease.clone())
                 .unwrap(),
-            &[cwcoin::<LpnCurrency, Amount>(excess_balance.into())],
+            &[cwcoin::<LpnCurrency>(excess_balance)],
         )
     }
 

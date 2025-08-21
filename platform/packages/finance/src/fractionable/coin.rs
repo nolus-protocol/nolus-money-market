@@ -22,42 +22,30 @@ impl<C> From<Coin<C>> for Uint256 {
 
 impl<C> From<Uint128> for Coin<C> {
     fn from(amount: Uint128) -> Self {
-        let c: Amount = amount.into();
-        c.into()
+        Coin::new(amount.into())
     }
 }
 #[cfg(test)]
 mod test {
-    use currency::test::SuperGroupTestC1;
 
-    use crate::{
-        coin::{Amount, Coin},
-        percent::Percent,
-        ratio::Rational,
-    };
+    use crate::{coin::Amount, percent::Percent, ratio::Rational, test::coin};
 
     #[test]
     fn safe_mul() {
         use crate::fractionable::Fractionable;
         assert_eq!(
-            Coin::<SuperGroupTestC1>::new(30),
-            Coin::<SuperGroupTestC1>::new(3).safe_mul(&Percent::from_percent(1000))
+            coin::coin1(30),
+            coin::coin1(3).safe_mul(&Percent::from_percent(1000))
         );
 
         assert_eq!(
-            Coin::<SuperGroupTestC1>::new(1000),
-            Fractionable::<u32>::safe_mul(
-                Coin::<SuperGroupTestC1>::new(2),
-                &Rational::new(1000u32, 2u32)
-            )
+            coin::coin1(1000),
+            Fractionable::<u32>::safe_mul(coin::coin1(2), &Rational::new(1000u32, 2u32))
         );
 
         assert_eq!(
-            Coin::<SuperGroupTestC1>::new(2 * Amount::from(u32::MAX)),
-            Fractionable::<u32>::safe_mul(
-                Coin::<SuperGroupTestC1>::new(2),
-                &Rational::new(u32::MAX, 1u32)
-            )
+            coin::coin1(2 * Amount::from(u32::MAX)),
+            Fractionable::<u32>::safe_mul(coin::coin1(2), &Rational::new(u32::MAX, 1u32))
         );
     }
 }

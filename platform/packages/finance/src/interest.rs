@@ -44,7 +44,11 @@ mod tests {
     use currency::test::SubGroupTestC10;
 
     use crate::{
-        coin::Coin, duration::Duration, fraction::Fraction, percent::Percent, ratio::Rational,
+        coin::{Amount, Coin},
+        duration::Duration,
+        fraction::Fraction,
+        percent::Percent,
+        ratio::Rational,
         zero::Zero,
     };
 
@@ -55,7 +59,7 @@ mod tests {
     fn pay_zero_principal() {
         let p = Percent::from_percent(10);
         let principal = MyCoin::ZERO;
-        let payment = MyCoin::new(300);
+        let payment = my_coin(300);
         pay_impl(
             p,
             principal,
@@ -69,7 +73,7 @@ mod tests {
     #[test]
     fn pay_zero_payment() {
         let p = Percent::from_percent(10);
-        let principal = MyCoin::new(1000);
+        let principal = my_coin(1000);
         let payment = MyCoin::ZERO;
         pay_impl(
             p,
@@ -84,8 +88,8 @@ mod tests {
     #[test]
     fn pay_outside_period() {
         let p = Percent::from_percent(10);
-        let principal = MyCoin::new(1000);
-        let payment = MyCoin::new(345);
+        let principal = my_coin(1000);
+        let payment = my_coin(345);
         let exp_change = payment - p.of(principal);
         pay_impl(
             p,
@@ -109,8 +113,8 @@ mod tests {
     #[test]
     fn pay_all_due() {
         let p = Percent::from_percent(10);
-        let principal = MyCoin::new(1000);
-        let payment = MyCoin::new(300);
+        let principal = my_coin(1000);
+        let payment = my_coin(300);
         let exp_change = payment - p.of(principal);
         pay_impl(
             p,
@@ -125,8 +129,8 @@ mod tests {
     #[test]
     fn pay_zero_due_does_not_touch_the_period() {
         let p = Percent::from_percent(10);
-        let principal = MyCoin::new(9); // 10% of 9 = 0
-        let payment = MyCoin::new(100);
+        let principal = my_coin(9); // 10% of 9 = 0
+        let payment = my_coin(100);
         let exp_change = payment - p.of(principal);
         pay_impl(
             p,
@@ -140,8 +144,8 @@ mod tests {
 
     #[test]
     fn interest() {
-        let whole = MyCoin::new(1001);
-        let part = MyCoin::new(125);
+        let whole = my_coin(1001);
+        let part = my_coin(125);
         let r = Rational::new(part, whole);
 
         let res = super::interest::<MyCoin, _, _>(r, whole, PERIOD_LENGTH);
@@ -150,11 +154,15 @@ mod tests {
 
     #[test]
     fn interest_zero() {
-        let principal = MyCoin::new(1001);
+        let principal = my_coin(1001);
         let r = Rational::new(MyCoin::ZERO, principal);
 
         let res = super::interest::<MyCoin, _, _>(r, principal, PERIOD_LENGTH);
         assert_eq!(MyCoin::ZERO, res);
+    }
+
+    fn my_coin(amount: Amount) -> MyCoin {
+        MyCoin::new(amount)
     }
 
     fn pay_impl(
