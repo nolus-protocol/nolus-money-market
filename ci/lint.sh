@@ -1,4 +1,4 @@
-#!/bin/sh -eu
+#!/usr/bin/env sh
 
 ################################################################################
 ## This script shall conform to the POSIX.1 standard, a.k.a. IEEE Std 1003.1. ##
@@ -17,38 +17,33 @@
 ## order to keep the script as portable as possible between different         ##
 ## environments.                                                              ##
 ################################################################################
+## Used utilities outside the POSIX standard:                                 ##
+## [in-tree] cargo-each                                                       ##
+## [in-tree] lint.workspace.sh                                                ##
+## cargo [with:]                                                              ##
+##   * Rust compiler                                                          ##
+##   * clippy [inherited from 'lint.workspace.sh']                            ##
+################################################################################
 
 set -eu
 
-script="$("basename" "${0:?}")"
-script_dir="${0%"${script:?}"}"
-case "${script_dir?}" in
-  ("/"*) ;;
-  (*) script_dir="./${script_dir?}"
+case "${#}" in
+  ("1") ;;
+  (*)
+    "echo" \
+      "This script takes only one argument, the workspace name!" \
+      >&2
+
+    exit "1"
 esac
-readonly script_dir
-unset script
 
-mode="workspace"
-readonly mode
-: "${mode:?}"
+cd "./${1:?}"
+shift
 
-. "${script_dir:?}/setup.sh"
-
-if "cargo" \
-  "fmt" \
-  --check
-then
-  "log" "Formatting check passed."
-else
-  "error" "Workspace \"${workspace:?}\" failed formatting checks!"
-fi
-
-if "cargo" \
-  "audit" \
-  --quiet
-then
-  "log" "Dependencies audit passed."
-else
-  "error" "Workspace \"${workspace:?}\" failed the dependencies audit!"
-fi
+"cargo" \
+  -- \
+  "each" \
+  "run" \
+  --external-command \
+  -- \
+  "lint.workspace.sh"

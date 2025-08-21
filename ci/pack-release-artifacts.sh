@@ -1,4 +1,4 @@
-#!/bin/sh -eu
+#!/usr/bin/env sh
 
 ################################################################################
 ## This script shall conform to the POSIX.1 standard, a.k.a. IEEE Std 1003.1. ##
@@ -17,62 +17,84 @@
 ## order to keep the script as portable as possible between different         ##
 ## environments.                                                              ##
 ################################################################################
+## Used utilities outside the POSIX standard:                                 ##
+## busybox [with:]                                                            ##
+##   * gzip                                                                   ##
+##   * tar                                                                    ##
+## git                                                                        ##
+## git-cliff                                                                  ##
+################################################################################
 
 set -eu
 
-append_lint_flags() {
-  # Deny/Forbid Lint Groups
-  # \
-  # Deny/Forbid Individual lints
-  # \
-  # Deny/Forbid Clippy Lints
-  # \
-  # Deny Forbid "warnings" Lint Group
-  # \
-  # Allowed Lints
-  "${@:?}" \
-    -- \
-    --forbid "deprecated-safe" \
-    --deny "future-incompatible" \
-    --deny "keyword-idents" \
-    --deny "nonstandard-style" \
-    --deny "refining-impl-trait" \
-    --deny "rust-2018-idioms" \
-    --deny "unused" \
-    \
-    --forbid "unfulfilled_lint_expectations" \
-    \
-    --deny "clippy::all" \
-    --deny "clippy::unwrap_used" \
-    --deny "clippy::unwrap_in_result" \
-    \
-    --deny "warnings" \
-    \
-    --allow "clippy::large_enum_variant"
-}
+case "${#}" in
+  ("0") ;;
+  (*)
+    echo \
+      "This script takes no arguments!" \
+      >&2
 
-append_quiet_and_lints() {
-  case "${RUN_CLIPPY_QUIET-"0"}" in
-    ("0")
-      "append_lint_flags" "${@:?}"
-      ;;  
-    ("1")
-      "append_lint_flags" \
-        "${@:?}" \
-        --quiet
-      ;;
+    exit "1"
+esac
+
+pack() (
+  case "${#}" in
+    ("1") ;;
     (*)
       "echo" \
-        "Environment variable \"RUN_CLIPPY_QUIET\" is set to value other than \
-zero or one!" \
+        "\"pack\" takes exactly one argument, the directory path!" \
         >&2
-      ;;
-  esac
-}
 
-"append_quiet_and_lints" \
-  "cargo" \
-  -- \
-  "clippy" \
-  --all-targets \
-  "${@}"
+      exit "1"
+  esac
+
+  directory="${1:?}"
+
+  cd "${directory:?}"
+
+  "tar" \
+    "c" \
+    -f "${directory:?}.tar" \
+    ./*
+
+  "gzip" \
+    -f \
+    "${directory:?}.tar"
+)
+
+directories="$(
+  "find" \
+    "/bind/" \
+    -type "d" \
+    -path "/bind/?*" \
+    "(" \
+    "!" \
+    -path "/bind/?*/?*" \
+    ")"
+)"
+
+while read -r "directory"
+do
+  case "${directory?}" in
+    ("") continue ;;
+  esac
+
+  "pack" "${directory:?}"
+done \
+  <<EOF
+${directories?}
+EOF
+
+"git" \
+  "config" \
+  --global \
+  --add \
+  "safe.directory" \
+  "/repo"
+
+cd "/repo"
+
+"git" \
+  "cliff" \
+  --current \
+  >"/bind/changelog"

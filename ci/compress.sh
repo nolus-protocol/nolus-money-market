@@ -1,4 +1,4 @@
-#!/bin/sh -eu
+#!/usr/bin/env sh
 
 ################################################################################
 ## This script shall conform to the POSIX.1 standard, a.k.a. IEEE Std 1003.1. ##
@@ -17,42 +17,38 @@
 ## order to keep the script as portable as possible between different         ##
 ## environments.                                                              ##
 ################################################################################
+## Used utilities outside the POSIX standard:                                 ##
+## busybox [with:]                                                            ##
+##   * gzip                                                                   ##
+##   * stat                                                                   ##
+################################################################################
 
 set -eu
 
-script="$("basename" "${0:?}")"
-script_dir="${0%"${script:?}"}"
-unset script
-case "${script_dir?}" in
-  ("/"*) ;;
+case "${#}" in
+  ("1") ;;
   (*)
-    working_dir="$(pwd)"
-    readonly working_dir
-    script_dir="${working_dir:?}/${script_dir?}"
+    "echo" \
+      "This script takes only one argument, the file path!" \
+      >&2
+
+    exit "1"
 esac
-readonly script_dir
 
-mode="protocol"
-readonly mode
-: "${mode:?}"
+permissions="$(
+  "stat" \
+    -c "%a" \
+    "${1:?}"
+)"
 
-. "${script_dir:?}/setup.sh"
+ownership="$(
+  "stat" \
+    -c "%u:%g" \
+    "${1:?}"
+)"
 
-if "cargo" \
-  "+nightly" \
-  -- \
-  "each" \
-  "run" \
-  --tag "ci" \
-  --tag "${dex_type:?}" \
-  -- \
-  --quiet \
-  "udeps" \
-  --all-targets \
-  --quiet
-then
-  "log" "Unused dependencies checks passed."
-else
-  "error" "Workspace \"${workspace:?}\"'s unused dependencies checks failed \
-with dex type \"${dex_type:?}\"!"
-fi
+"gzip" "${1:?}"
+
+"chmod" "${permissions:?}" "${1:?}.gz"
+
+"chown" "${ownership:?}" "${1:?}.gz"

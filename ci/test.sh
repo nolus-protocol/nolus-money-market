@@ -1,4 +1,4 @@
-#!/bin/sh -eu
+#!/usr/bin/env sh
 
 ################################################################################
 ## This script shall conform to the POSIX.1 standard, a.k.a. IEEE Std 1003.1. ##
@@ -17,42 +17,32 @@
 ## order to keep the script as portable as possible between different         ##
 ## environments.                                                              ##
 ################################################################################
+## Used utilities outside the POSIX standard:                                 ##
+## [in-tree] cargo-each                                                       ##
+## cargo [with:]                                                              ##
+##   * Rust compiler                                                          ##
+################################################################################
 
 set -eu
 
-script="$("basename" "${0:?}")"
-script_dir="${0%"${script:?}"}"
-unset script
-case "${script_dir?}" in
-  ("/"*) ;;
+case "${#}" in
+  ("1") ;;
   (*)
-    working_dir="$(pwd)"
-    readonly working_dir
-    script_dir="${working_dir:?}/${script_dir?}"
+    "echo" \
+      "This script takes only one argument, the workspace name!" \
+      >&2
+
+    exit "1"
 esac
-readonly script_dir
 
-mode="instance"
-readonly mode
-: "${mode:?}"
+cd "./${1:?}"
+shift
 
-. "${script_dir:?}/setup.sh"
-
-if "cargo" \
+"cargo" \
   -- \
   "each" \
   "run" \
-  --external-command \
-  --tag "ci" \
-  --tag "${dex_type:?}" \
   -- \
-  "sh" \
-  -eu \
-  "${script_dir:?}/lint.sh" \
-  --profile "${profile:?}"
-then
-  "log" "Linter checks passed."
-else
-  "error" "Workspace \"${workspace:?}\"'s linter checks failed with dex type \
-\"${dex_type:?}\" and profile \"${profile:?}\"!"
-fi
+  "test" \
+  --profile "${PROFILE:?}" \
+  --locked

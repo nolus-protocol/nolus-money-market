@@ -1,0 +1,35 @@
+name: "Setup workspaces"
+description: "Action for performing any necessary workspace preparation steps."
+author: "The Dev Nolus Team <dev@nolus.io>"
+
+runs:
+  using: "composite"
+  steps:
+    - name: ""
+      run: |-
+        set -eu
+
+        files="$(
+          "find" \
+            "." \
+            -type "f" \
+            -name "Cargo.lock"
+        )"
+
+        while read -r "file"
+        do
+          case "${file?}" in
+            ("") continue ;;
+          esac
+
+          directory="$("dirname" "${file:?}")"
+
+          "cp" \
+            -R \
+            "./.cargo" \
+            "${directory:?}"
+        done \
+          <<EOF
+        ${files?}
+        EOF
+      shell: "sh"

@@ -1,4 +1,4 @@
-#!/bin/sh -eu
+#!/usr/bin/env sh
 
 ################################################################################
 ## This script shall conform to the POSIX.1 standard, a.k.a. IEEE Std 1003.1. ##
@@ -17,24 +17,44 @@
 ## order to keep the script as portable as possible between different         ##
 ## environments.                                                              ##
 ################################################################################
+## Used utilities outside the POSIX standard:                                 ##
+## cargo [with:]                                                              ##
+##   * Rust compiler                                                          ##
+##   * clippy                                                                 ##
+################################################################################
 
 set -eu
 
-workspaces="platform
-protocol
-tests
-tools"
-readonly workspaces
-: "${workspaces:?}"
-
-dex_types="@agnostic
-dex-astroport_main
-dex-astroport_test
-dex-osmosis"
-readonly dex_types
-: "${dex_types:?}"
-
-profiles="ci_dev
-ci_dev_no_debug_assertions"
-readonly profiles
-: "${profiles:?}"
+# Deny/Forbid Lint Groups
+# \
+# Deny/Forbid Individual lints
+# \
+# Deny/Forbid Clippy Lints
+# \
+# Deny Forbid "warnings" Lint Group
+# \
+# Allowed Lints
+"cargo" \
+  "clippy" \
+  --all-targets \
+  --locked \
+  --profile "${PROFILE:?}" \
+  "${@:?}" \
+  -- \
+  --forbid "deprecated-safe" \
+  --deny "future-incompatible" \
+  --deny "keyword-idents" \
+  --deny "nonstandard-style" \
+  --deny "refining-impl-trait" \
+  --deny "rust-2018-idioms" \
+  --deny "unused" \
+  \
+  --forbid "unfulfilled_lint_expectations" \
+  \
+  --deny "clippy::all" \
+  --deny "clippy::unwrap_used" \
+  --deny "clippy::unwrap_in_result" \
+  \
+  --deny "warnings" \
+  \
+  --allow "clippy::large_enum_variant"

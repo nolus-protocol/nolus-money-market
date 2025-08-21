@@ -1,4 +1,4 @@
-#!/bin/sh -eu
+#!/usr/bin/env sh
 
 ################################################################################
 ## This script shall conform to the POSIX.1 standard, a.k.a. IEEE Std 1003.1. ##
@@ -17,83 +17,33 @@
 ## order to keep the script as portable as possible between different         ##
 ## environments.                                                              ##
 ################################################################################
+## Used utilities outside the POSIX standard:                                 ##
+## cargo                                                                      ##
+################################################################################
 
 set -eu
 
-. "${script_dir-""}/configuration.sh"
+(
+  path="$("pwd")"
 
-mode="runner"
-readonly mode
-: "${mode:?}"
+  workspace="$("basename" "${path:?}")"
 
-. "${script_dir-""}/setup.sh"
+  "echo" \
+    "Workspace: ${workspace:?}" \
+    >&2
+)
 
-check_with_workspace() {
-  "log" "Running checks for workspace: ${1:?}"
+case "${#}" in
+  ("0") ;;
+  (*)
+    "echo" "This script takes no arguments!" >&2
 
-  "run" \
-    "sh" \
-    -eu \
-    "${script_dir-""}/workspace_checks.sh" \
-    "${workspaces_dir-"/code"}/${1:?}/"
+    exit "1"
+esac
 
-  "run" \
-    "check_with_dex_type" \
-    "${workspaces_dir-"/code"}/${1:?}/"
-}
-
-check_with_dex_type() {
-  while read -r dex_type
-  do
-    "log" "Running checks for DEX type: ${dex_type:?}"
-
-    "run" \
-      "sh" \
-      -eu \
-      "${script_dir-""}/protocol_check_deps.sh" \
-      "${1:?}" \
-      "${dex_type:?}"
-
-    "run" \
-      "check_with_profile" \
-      "${1:?}" \
-      "${dex_type:?}"
-  done \
-    <<EOF
-${dex_types:?}
-EOF
-}
-
-check_with_profile() {
-  while read -r profile
-  do
-    "log" "Running checks for profile: ${profile:?}"
-
-    "run" \
-      "sh" \
-      -eu \
-      "${script_dir-""}/instance_lint.sh" \
-      "${1:?}" \
-      "${2:?}" \
-      "${profile:?}"
-
-    "run" \
-      "sh" \
-      -eu \
-      "${script_dir-""}/instance_tests.sh" \
-      "${1:?}" \
-      "${2:?}" \
-      "${profile:?}"
-  done \
-    <<EOF
-${profiles:?}
-EOF
-}
-
-while read -r workspace
-do
-  "check_with_workspace" "${workspace:?}"
-done \
-  <<EOF
-${workspaces:?}
-EOF
+if "test" -e ".ignore-lockfile"
+then
+  "echo" "Ignoring lockfile check."
+else
+  "cargo" "update" --locked
+fi
