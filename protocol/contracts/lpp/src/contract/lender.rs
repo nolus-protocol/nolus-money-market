@@ -318,9 +318,12 @@ mod test {
     }
 
     mod deposit_withdraw_price {
+        use cosmwasm_std::{Addr, Storage};
         use finance::coin::{Amount, Coin};
 
         use lpp_platform::NLpn;
+
+        use crate::contract::lender;
 
         use super::TheCurrency;
 
@@ -338,7 +341,10 @@ mod test {
             use crate::contract::{
                 lender::{
                     self,
-                    test::{self, DEFAULT_MIN_UTILIZATION, deposit_withdraw_price::DEPOSIT_NLPN},
+                    test::{
+                        self, DEFAULT_MIN_UTILIZATION,
+                        deposit_withdraw_price::{DEPOSIT_NLPN, query_balance},
+                    },
                 },
                 test as test_tools,
             };
@@ -377,6 +383,8 @@ mod test {
                             )),
                             DEPOSIT_NLPN
                         );
+
+                        assert_eq!(query_balance(&store, test_tools::lender()), DEPOSIT_NLPN)
                     },
                 )
             }
@@ -403,7 +411,9 @@ mod test {
                         self,
                         test::{
                             self, DEFAULT_MIN_UTILIZATION,
-                            deposit_withdraw_price::{DEPOSIT_NLPN, TEST_AMOUNT},
+                            deposit_withdraw_price::{
+                                DEPOSIT_NLPN, TEST_AMOUNT, query_balance_the_currency,
+                            },
                         },
                     },
                     test as test_tools,
@@ -483,14 +493,7 @@ mod test {
                         )
                         .unwrap();
 
-                        assert!(
-                            Coin::<TheCurrency>::new(Amount::from(
-                                lender::query_balance(&store, test_tools::lender())
-                                    .unwrap()
-                                    .balance
-                            ))
-                            .is_zero()
-                        );
+                        assert!(query_balance_the_currency(&store, test_tools::lender()).is_zero());
                     },
                 )
             }
@@ -525,14 +528,7 @@ mod test {
                         )
                         .unwrap();
 
-                        assert!(
-                            Coin::<TheCurrency>::new(Amount::from(
-                                lender::query_balance(&store, test_tools::lender())
-                                    .unwrap()
-                                    .balance
-                            ))
-                            .is_zero()
-                        );
+                        assert!(query_balance_the_currency(&store, test_tools::lender()).is_zero());
                     },
                 )
             }
@@ -579,14 +575,7 @@ mod test {
                         )
                         .unwrap();
 
-                        assert!(
-                            Coin::<TheCurrency>::new(Amount::from(
-                                lender::query_balance(&store, test_tools::lender())
-                                    .unwrap()
-                                    .balance
-                            ))
-                            .is_zero()
-                        );
+                        assert!(query_balance_the_currency(&store, test_tools::lender()).is_zero());
 
                         //simulate finality of the previous withdraw
                         let past_withdrawal = MockBankView::<_, TheCurrency>::only_balance(
@@ -711,7 +700,7 @@ mod test {
         }
 
         mod close_all {
-            use finance::coin::{Amount, Coin};
+            use finance::coin::Coin;
             use platform::bank::{
                 BankAccountView,
                 testing::{self, MockBankView},
@@ -723,7 +712,8 @@ mod test {
                     lender::{
                         self,
                         test::{
-                            self, DEFAULT_MIN_UTILIZATION, deposit_withdraw_price::DEPOSIT_LPP,
+                            self, DEFAULT_MIN_UTILIZATION,
+                            deposit_withdraw_price::{DEPOSIT_LPP, query_balance_the_currency},
                         },
                     },
                     test::{self as test_tools, TheCurrency},
@@ -774,23 +764,24 @@ mod test {
                         )
                         .unwrap();
 
-                        assert!(
-                            Coin::<TheCurrency>::new(Amount::from(
-                                lender::query_balance(&store, test_tools::lender())
-                                    .unwrap()
-                                    .balance
-                            ))
-                            .is_zero()
-                        );
-                        assert!(
-                            Coin::<TheCurrency>::new(Amount::from(
-                                lender::query_balance(&store, other_lender).unwrap().balance
-                            ))
-                            .is_zero()
-                        );
+                        assert!(query_balance_the_currency(&store, test_tools::lender()).is_zero());
+                        assert!(query_balance_the_currency(&store, other_lender).is_zero());
                     },
                 )
             }
+        }
+
+        pub(super) fn query_balance<C>(storage: &dyn Storage, addr: Addr) -> Coin<C> {
+            Coin::<C>::new(Amount::from(
+                lender::query_balance(storage, addr).unwrap().balance,
+            ))
+        }
+
+        pub(super) fn query_balance_the_currency(
+            storage: &dyn Storage,
+            addr: Addr,
+        ) -> Coin<TheCurrency> {
+            query_balance(storage, addr)
         }
     }
 
