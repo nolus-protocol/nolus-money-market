@@ -56,36 +56,34 @@ impl InterestRate {
     }
 
     pub fn calculate<Lpn>(&self, total_liability: Coin<Lpn>, balance: Coin<Lpn>) -> Percent100 {
-        Percent::from_fraction(
+        let utilization_max = Percent::from_fraction(
             self.utilization_optimal.units(),
             Percent100::HUNDRED
                 .checked_sub(self.utilization_optimal)
                 .expect("The optimal utilization configuration parameter should be at most 100%")
                 .units(),
         )
-        .and_then(|utilization_max| {
-            let utilization_factor = if balance.is_zero() {
-                utilization_max
-            } else {
-                Percent::from_fraction(total_liability, balance)
-                    .expect("The utilization must be a valid Percent")
-                    .min(utilization_max)
-            };
+        .expect("The utilization_max must be a valid Percent - the nominator and denominator are at most Percent100::HUNDRED.units()");
 
-            let config = SimpleFraction::new(
-                self.addon_optimal_interest_rate.units(),
-                self.utilization_optimal.units(),
-            );
+        let utilization = if balance.is_zero() {
+            utilization_max
+        } else {
+            Percent::from_fraction(total_liability, balance)
+                .expect("The utilization must be a valid Percent")
+                .min(utilization_max)
+        };
 
-            config
-                .of(utilization_factor)
-                .and_then(|utilization_config| {
-                    utilization_config
-                        .checked_add(self.base_interest_rate.into())
-                        .and_then(|res| res.try_into().ok())
-                })
+        SimpleFraction::new(
+            self.addon_optimal_interest_rate.units(),
+            self.utilization_optimal.units(),
+        )
+        .of(utilization)
+        .and_then(|utilization_config| {
+            utilization_config
+                .checked_add(self.base_interest_rate.into())
+                .map(|res| Percent100::try_from(res).expect("The borrow rate must not exceed 100%"))
         })
-        .expect("The borrow rate must not exceed 100%")
+        .expect("The utilization_config must be a valid Percent")
     }
 
     fn validate(&self) -> bool {
