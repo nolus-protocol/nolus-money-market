@@ -84,15 +84,12 @@ impl Liability {
         self.max
     }
 
-    pub fn cap_to_zone(&self, ltv: Percent) -> Percent100 {
-        let result = ltv.min(Percent::from(
+    pub fn cap_to_zone(&self, ltv: Percent100) -> Percent100 {
+        ltv.min(
             self.max
                 .checked_sub(Self::MIN_STEP_LTV)
                 .expect("Invariant violated: max must be greater than MIN_STEP_LTV"),
-        ));
-        result
-            .try_into()
-            .expect("The result should be less than 100%")
+        )
     }
 
     pub fn zone_of(&self, ltv: Percent100) -> Zone {
@@ -408,16 +405,16 @@ mod test {
         };
         assert_eq!(
             MAX - Liability::MIN_STEP_LTV - Liability::MIN_STEP_LTV,
-            obj.cap_to_zone((MAX - Liability::MIN_STEP_LTV - Liability::MIN_STEP_LTV).into())
+            obj.cap_to_zone(MAX - Liability::MIN_STEP_LTV - Liability::MIN_STEP_LTV)
         );
         assert_eq!(
             MAX - Liability::MIN_STEP_LTV,
-            obj.cap_to_zone((MAX - Liability::MIN_STEP_LTV).into())
+            obj.cap_to_zone(MAX - Liability::MIN_STEP_LTV)
         );
-        assert_eq!(MAX - Liability::MIN_STEP_LTV, obj.cap_to_zone(MAX.into()));
+        assert_eq!(MAX - Liability::MIN_STEP_LTV, obj.cap_to_zone(MAX));
         assert_eq!(
             MAX - Liability::MIN_STEP_LTV,
-            obj.cap_to_zone((MAX + Liability::MIN_STEP_LTV).into())
+            obj.cap_to_zone(MAX + Liability::MIN_STEP_LTV)
         );
     }
 
