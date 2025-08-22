@@ -333,18 +333,12 @@ mod test {
         const DEPOSIT_NLPN: Coin<NLpn> = Coin::new(TEST_AMOUNT);
 
         mod deposit {
-            use finance::{
-                coin::Coin,
-                zero::Zero,
-            };
+            use finance::{coin::Coin, zero::Zero};
 
             use crate::contract::{
                 lender::{
                     self,
-                    test::{
-                        self, DEFAULT_MIN_UTILIZATION,
-                        deposit_withdraw_price::{DEPOSIT_NLPN, query_balance},
-                    },
+                    test::{self, DEFAULT_MIN_UTILIZATION, deposit_withdraw_price::DEPOSIT_NLPN},
                 },
                 test as test_tools,
             };
@@ -375,7 +369,10 @@ mod test {
                     DEPOSIT_LPN,
                     DEFAULT_MIN_UTILIZATION,
                     |store, _config, _bank, _now| {
-                        assert_eq!(query_balance(&store, test_tools::lender()), DEPOSIT_NLPN)
+                        assert_eq!(
+                            super::query_balance(&store, test_tools::lender()),
+                            DEPOSIT_NLPN
+                        )
                     },
                 )
             }
@@ -383,10 +380,7 @@ mod test {
 
         mod withdraw {
             use currency::platform::Nls;
-            use finance::{
-                coin::Coin,
-                zero::Zero,
-            };
+            use finance::{coin::Coin, zero::Zero};
             use lpp_platform::NLpn;
             use platform::bank::{
                 BankAccountView,
@@ -401,10 +395,7 @@ mod test {
                         self,
                         test::{
                             self, DEFAULT_MIN_UTILIZATION,
-                            deposit_withdraw_price::{
-                                DEPOSIT_NLPN, TEST_AMOUNT, query_balance,
-                                query_balance_the_currency,
-                            },
+                            deposit_withdraw_price::{DEPOSIT_NLPN, TEST_AMOUNT},
                         },
                     },
                     test as test_tools,
@@ -457,7 +448,7 @@ mod test {
                         )
                         .unwrap();
 
-                        assert_eq!(query_balance(&store, lender), LEFTOVER);
+                        assert_eq!(super::query_balance(&store, lender), LEFTOVER);
                     },
                 )
             }
@@ -479,7 +470,7 @@ mod test {
                         )
                         .unwrap();
 
-                        assert!(query_balance_the_currency(&store, test_tools::lender()).is_zero());
+                        assert!(super::query_balance(&store, test_tools::lender()).is_zero());
                     },
                 )
             }
@@ -514,7 +505,7 @@ mod test {
                         )
                         .unwrap();
 
-                        assert!(query_balance_the_currency(&store, test_tools::lender()).is_zero());
+                        assert!(super::query_balance(&store, test_tools::lender()).is_zero());
                     },
                 )
             }
@@ -561,7 +552,7 @@ mod test {
                         )
                         .unwrap();
 
-                        assert!(query_balance_the_currency(&store, test_tools::lender()).is_zero());
+                        assert!(super::query_balance(&store, test_tools::lender()).is_zero());
 
                         //simulate finality of the previous withdraw
                         let past_withdrawal = MockBankView::<_, TheCurrency>::only_balance(
@@ -698,8 +689,7 @@ mod test {
                     lender::{
                         self,
                         test::{
-                            self, DEFAULT_MIN_UTILIZATION,
-                            deposit_withdraw_price::{DEPOSIT_LPN, query_balance_the_currency},
+                            self, DEFAULT_MIN_UTILIZATION, deposit_withdraw_price::DEPOSIT_LPN,
                         },
                     },
                     test::{self as test_tools, TheCurrency},
@@ -750,24 +740,17 @@ mod test {
                         )
                         .unwrap();
 
-                        assert!(query_balance_the_currency(&store, test_tools::lender()).is_zero());
-                        assert!(query_balance_the_currency(&store, other_lender).is_zero());
+                        assert!(super::query_balance(&store, test_tools::lender()).is_zero());
+                        assert!(super::query_balance(&store, other_lender).is_zero());
                     },
                 )
             }
         }
 
-        pub(super) fn query_balance<C>(storage: &dyn Storage, addr: Addr) -> Coin<C> {
-            Coin::<C>::new(Amount::from(
+        pub(super) fn query_balance(storage: &dyn Storage, addr: Addr) -> Coin<NLpn> {
+            Coin::new(Amount::from(
                 lender::query_balance(storage, addr).unwrap().balance,
             ))
-        }
-
-        pub(super) fn query_balance_the_currency(
-            storage: &dyn Storage,
-            addr: Addr,
-        ) -> Coin<TheCurrency> {
-            query_balance(storage, addr)
         }
     }
 
