@@ -18,11 +18,11 @@
 ## environments.                                                              ##
 ################################################################################
 ## Used utilities outside the POSIX standard:                                 ##
-## [in-tree] cargo-each                                                       ##
-## [in-tree] lint.workspace.sh                                                ##
+## [in-tree] cargo-each [inherited from 'lint' alias]                         ##
+## [Cargo command alias] lint                                                 ##
 ## cargo [with:]                                                              ##
 ##   * Rust compiler                                                          ##
-##   * clippy [inherited from 'lint.workspace.sh']                            ##
+##   * clippy [inherited from 'lint' alias]                                   ##
 ################################################################################
 
 set -eu
@@ -42,8 +42,5 @@ shift
 
 "cargo" \
   -- \
-  "each" \
-  "run" \
-  --external-command \
-  -- \
-  "lint.workspace.sh"
+  "lint" \
+  --profile "${PROFILE:?}"
