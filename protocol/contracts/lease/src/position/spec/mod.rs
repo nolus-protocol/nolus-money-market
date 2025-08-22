@@ -7,7 +7,7 @@ use finance::{
     fraction::{Fraction, Unit as FractionUnit},
     fractionable::Fractionable,
     liability::{Liability, Zone},
-    percent::Percent,
+    percent::{Percent, Percent100},
     price::{self},
     zero::Zero,
 };
@@ -395,12 +395,16 @@ impl Spec {
         due.overdue_collection(self.min_transaction)
     }
 
-    fn ltv<P>(total_due: P, lease_asset: P) -> Percent
+    fn ltv<P>(total_due: P, lease_asset: P) -> Percent100
     where
         P: Copy + Debug + FractionUnit + PartialEq + Zero,
-        Percent: Fractionable<P>,
+        Percent100: Fractionable<P>,
     {
-        Percent::from_fraction(total_due, lease_asset).expect("Expect having a ltv")
+        debug_assert!(total_due <= lease_asset);
+
+        Percent100::from_fraction(total_due, lease_asset).expect(
+            "TODO: The ltv has to be at most 100%. Remove the expect once Ratio become a struct",
+        )
     }
 
     fn zone<Asset>(&self, asset: Coin<Asset>, due_asset: Coin<Asset>) -> Zone
