@@ -18,7 +18,8 @@
 ## environments.                                                              ##
 ################################################################################
 ## Used utilities outside the POSIX standard:                                 ##
-## [in-tree] cargo-each                                                       ##
+## [in-tree] cargo-each [inherited from 'run-test' alias]                     ##
+## [Cargo command alias] 'run-test'                                           ##
 ## cargo [with:]                                                              ##
 ##   * Rust compiler                                                          ##
 ################################################################################
@@ -40,9 +41,5 @@ shift
 
 "cargo" \
   -- \
-  "each" \
-  "run" \
-  -- \
-  "test" \
-  --profile "${PROFILE:?}" \
-  --locked
+  "run-test" \
+  --profile "${PROFILE:?}"
