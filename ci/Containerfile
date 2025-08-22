@@ -237,7 +237,6 @@ COPY \
   --chmod="0555" \
   --link=true \
   "./lint.sh" \
-  "./lint.workspace.sh" \
   "/usr/local/bin/"
 
 COPY \
