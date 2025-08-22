@@ -11,9 +11,25 @@ combinations = [
     { tags = ["ci", "$dex"], always-on = ["$dex"], include-rest = false, generics = { "$dex" = ["dex-astroport_test", "dex-astroport_main", "dex-osmosis"] } },
 ]
 
+### [SYNC WITH OTHER WORKSPACES : START]
+[workspace.lints.clippy]
+all = "deny"
+large_enum_variant = { level = "allow", priority = 1 }
+unwrap_in_result = "deny"
+unwrap_used = "deny"
+
 [workspace.lints.rust]
-deprecated_safe = { level = "forbid" }
-unexpected_cfgs = { level = "forbid", check-cfg = ["cfg(test)"] }
+deprecated_safe = "forbid"
+future-incompatible = { level = "deny", priority = 1 }
+keyword-idents = { level = "deny", priority = 1 }
+nonstandard-style = { level = "deny", priority = 1 }
+refining-impl-trait = { level = "deny", priority = 1 }
+rust-2018-idioms = { level = "deny", priority = 1 }
+unexpected_cfgs = { level = "forbid", priority = 1, check-cfg = ["cfg(test)"] }
+unfulfilled_lint_expectations = { level = "forbid", priority = 1 }
+unused = "deny"
+warnings = "deny"
+### [SYNC WITH OTHER WORKSPACES : END]
 
 [features]
 dex-astroport_test = ["lease/dex-astroport_test", "profit/dex-astroport_test"]
