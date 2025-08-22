@@ -271,22 +271,15 @@ mod tests {
     const PROFIT_ADDR: &str = "profit_addr";
 
     mod test_repay {
-        use serde::{Deserialize, Serialize};
-
-        use currency::{Currency, Group};
         use finance::{
-            coin::{Amount, Coin, WithCoin},
+            coin::{Amount, Coin},
             duration::Duration,
             fraction::Fraction,
             percent::Percent,
             zero::Zero,
         };
         use lpp::msg::LoanResponse;
-        use platform::{
-            bank::{self, Aggregate, BalancesResult, BankAccountView},
-            batch::Batch,
-            result::Result as PlatformResult,
-        };
+        use platform::{bank, batch::Batch};
         use sdk::cosmwasm_std::{Addr, Timestamp};
 
         use crate::{
@@ -301,29 +294,6 @@ mod tests {
         use super::{
             LEASE_START, LOAN_INTEREST_RATE, LppLoanLocal, MARGIN_INTEREST_RATE, create_loan,
         };
-
-        #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-        pub struct BankStub {
-            balance: Amount,
-        }
-
-        impl BankAccountView for BankStub {
-            fn balance<C>(&self) -> PlatformResult<Coin<C>>
-            where
-                C: Currency,
-            {
-                Ok(Coin::new(self.balance))
-            }
-
-            fn balances<G, Cmd>(&self, _: Cmd) -> BalancesResult<G, Cmd>
-            where
-                G: Group,
-                Cmd: WithCoin<G>,
-                Cmd::Output: Aggregate,
-            {
-                unimplemented!()
-            }
-        }
 
         #[test]
         fn full_max_overdue_full_max_due_repay() {
