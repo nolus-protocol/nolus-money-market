@@ -1,2 +1,6 @@
+[alias]
+lint = "each --tag ci run -- clippy --all-targets --locked"
+run-test = "each --tag ci run -- test --all-targets --locked"
+
 [target.wasm32-unknown-unknown]
 rustflags = ["-C", "link-arg=-s"]
