@@ -40,8 +40,8 @@ impl Config {
 
 #[cfg(test)]
 mod test {
-    use cosmwasm_std::{Storage, testing::MockStorage};
     use platform::contract::{Code, CodeId};
+    use sdk::cosmwasm_std::{Storage, testing::MockStorage};
 
     use super::Config;
 

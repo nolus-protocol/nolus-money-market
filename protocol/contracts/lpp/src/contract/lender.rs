@@ -318,8 +318,8 @@ mod test {
     }
 
     mod deposit_withdraw_price {
-        use cosmwasm_std::{Addr, Storage};
         use finance::coin::{Amount, Coin};
+        use sdk::cosmwasm_std::{Addr, Storage};
 
         use lpp_platform::NLpn;
 
@@ -382,7 +382,6 @@ mod test {
         }
 
         mod withdraw {
-            use cosmwasm_std::Addr;
             use currency::platform::Nls;
             use finance::{
                 coin::Coin,
@@ -393,7 +392,7 @@ mod test {
                 BankAccountView,
                 testing::{self, MockBankView},
             };
-            use sdk::cosmwasm_std::testing as sdk_testing;
+            use sdk::cosmwasm_std::{Addr, testing as sdk_testing};
 
             use crate::{
                 contract::{

@@ -1,5 +1,3 @@
-use platform::contract::Code;
-use sdk::cosmwasm_std::Uint128;
 use serde::{Deserialize, Serialize};
 
 use currency::{Group, platform::Nls};
@@ -9,7 +7,8 @@ use finance::{
     price::Price,
 };
 use lpp_platform::NLpn;
-use sdk::cosmwasm_std::{Addr, Uint64};
+use platform::contract::Code;
+use sdk::cosmwasm_std::{Addr, Uint64, Uint128};
 
 use crate::{borrow::InterestRate, config::Config, loan::Loan};
 
