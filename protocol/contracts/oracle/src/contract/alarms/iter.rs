@@ -13,7 +13,7 @@ type AlarmIter<'alarms, AlarmG, ErrorG> =
 
 pub struct Iter<'storage, 'alarms, S, I, AlarmsG, BaseC, BaseG, ErrorG>
 where
-    S: Deref<Target = (dyn Storage + 'storage)>,
+    S: Deref<Target = dyn Storage + 'storage>,
     I: Iterator<Item = PriceResult<AlarmsG, BaseC, BaseG, ErrorG>>,
     AlarmsG: Group,
     BaseC: CurrencyDef,
@@ -29,7 +29,7 @@ where
 impl<'storage, 'alarms, S, I, AlarmsG, BaseC, BaseG, ErrorG>
     Iter<'storage, 'alarms, S, I, AlarmsG, BaseC, BaseG, ErrorG>
 where
-    S: Deref<Target = (dyn Storage + 'storage)>,
+    S: Deref<Target = dyn Storage + 'storage>,
     I: Iterator<Item = PriceResult<AlarmsG, BaseC, BaseG, ErrorG>>,
     AlarmsG: Group,
     BaseC: CurrencyDef,
@@ -86,7 +86,7 @@ where
 impl<'storage, S, I, AlarmsG, BaseC, BaseG, ErrorG> Iterator
     for Iter<'storage, '_, S, I, AlarmsG, BaseC, BaseG, ErrorG>
 where
-    S: Deref<Target = (dyn Storage + 'storage)>,
+    S: Deref<Target = dyn Storage + 'storage>,
     I: Iterator<Item = PriceResult<AlarmsG, BaseC, BaseG, ErrorG>>,
     AlarmsG: Group,
     BaseC: CurrencyDef,
@@ -117,7 +117,7 @@ where
 
 struct Cmd<'storage, 'alarms, S, AlarmsG, BaseC, ErrorG>
 where
-    S: Deref<Target = (dyn Storage + 'storage)>,
+    S: Deref<Target = dyn Storage + 'storage>,
     AlarmsG: Group + Clone,
     BaseC: Currency,
 {
@@ -129,7 +129,7 @@ where
 impl<'storage, 'alarms, S, AlarmsG, BaseC, ErrorG> WithPrice<BaseC>
     for Cmd<'storage, 'alarms, S, AlarmsG, BaseC, ErrorG>
 where
-    S: Deref<Target = (dyn Storage + 'storage)>,
+    S: Deref<Target = dyn Storage + 'storage>,
     AlarmsG: Group,
     BaseC: CurrencyDef,
     ErrorG: Group,
