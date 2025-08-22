@@ -89,10 +89,8 @@ impl InterestRate {
     }
 
     fn validate(&self) -> bool {
-        self.base_interest_rate <= Percent100::HUNDRED
-            && self.utilization_optimal > Percent100::ZERO
+        self.utilization_optimal > Percent100::ZERO
             && self.utilization_optimal < Percent100::HUNDRED
-            && self.addon_optimal_interest_rate <= Percent100::HUNDRED
     }
 }
 
