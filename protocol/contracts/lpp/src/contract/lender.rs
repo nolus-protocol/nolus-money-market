@@ -334,7 +334,7 @@ mod test {
 
         mod deposit {
             use finance::{
-                coin::{Amount, Coin},
+                coin::Coin,
                 zero::Zero,
             };
 
@@ -375,15 +375,6 @@ mod test {
                     DEPOSIT_LPP,
                     DEFAULT_MIN_UTILIZATION,
                     |store, _config, _bank, _now| {
-                        assert_eq!(
-                            Coin::new(Amount::from(
-                                lender::query_balance(&store, test_tools::lender())
-                                    .unwrap()
-                                    .balance
-                            )),
-                            DEPOSIT_NLPN
-                        );
-
                         assert_eq!(query_balance(&store, test_tools::lender()), DEPOSIT_NLPN)
                     },
                 )
@@ -394,7 +385,7 @@ mod test {
             use cosmwasm_std::Addr;
             use currency::platform::Nls;
             use finance::{
-                coin::{Amount, Coin},
+                coin::Coin,
                 zero::Zero,
             };
             use lpp_platform::NLpn;
@@ -412,7 +403,8 @@ mod test {
                         test::{
                             self, DEFAULT_MIN_UTILIZATION,
                             deposit_withdraw_price::{
-                                DEPOSIT_NLPN, TEST_AMOUNT, query_balance_the_currency,
+                                DEPOSIT_NLPN, TEST_AMOUNT, query_balance,
+                                query_balance_the_currency,
                             },
                         },
                     },
@@ -466,12 +458,7 @@ mod test {
                         )
                         .unwrap();
 
-                        assert_eq!(
-                            Coin::new(Amount::from(
-                                lender::query_balance(&store, lender).unwrap().balance
-                            )),
-                            LEFTOVER
-                        );
+                        assert_eq!(query_balance(&store, lender), LEFTOVER);
                     },
                 )
             }
