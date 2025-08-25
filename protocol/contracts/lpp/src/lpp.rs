@@ -89,17 +89,16 @@ where
         } else {
             let total_due = self.total_due(now);
 
-            self.commited_balance(pending_deposit)
-                .map(|balance| {
-                    if self.utilization(balance, total_due) > min_utilization {
-                        // a followup from the above true value is (total_due * 100 / min_utilization) > (balance + total_due)
-                        SimpleFraction::new(Percent100::HUNDRED, min_utilization)
-                            .of(total_due)
-                            .map(|res| res - balance - total_due)
-                    } else {
-                        Some(Coin::ZERO)
-                    }
-                })
+            self.commited_balance(pending_deposit).map(|balance| {
+                if self.utilization(balance, total_due) > min_utilization {
+                    // a followup from the above true value is (total_due * 100 / min_utilization) > (balance + total_due)
+                    SimpleFraction::new(Percent100::HUNDRED, min_utilization)
+                        .of(total_due)
+                        .map(|res| res - balance - total_due)
+                } else {
+                    Some(Coin::ZERO)
+                }
+            })
         }
     }
 
