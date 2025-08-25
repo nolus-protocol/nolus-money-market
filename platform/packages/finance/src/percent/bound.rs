@@ -3,9 +3,8 @@ use std::fmt::{Debug, Display, Formatter, Result as FmtResult, Write};
 #[cfg(any(test, feature = "testing"))]
 use std::ops::{Add, Sub};
 
+use bnum::types::U256;
 use serde::{Deserialize, Serialize};
-
-use sdk::cosmwasm_std::Uint256;
 
 use crate::{
     coin::Amount,
@@ -141,12 +140,17 @@ impl<const UPPER: Units> FractionUnit for BoundPercent<UPPER> where
 {
 }
 
-// TODO: Remove once SimpleFraction multiplication is fully refactored.
-// This conversion is required because `SimpleFraction<BoundPercnt>::of(Coin<C>)` relies on `BoundPercent` being
-// convertible into the "double" type (`Uint256`) used in `safe_mul` arithmetic.
-impl<const UPPER_BOUND: Units> From<BoundPercent<UPPER_BOUND>> for Uint256 {
+// TODO: Revisit it's usage after refactoring Fractionable
+impl<const UPPER_BOUND: Units> From<BoundPercent<UPPER_BOUND>> for u128 {
     fn from(percent: BoundPercent<UPPER_BOUND>) -> Self {
-        Amount::from(percent.units()).into()
+        Amount::from(percent.units())
+    }
+}
+
+// TODO: Remove when Fractionable trait boundaries include the traits ToPrimitive and TryFromPrimitive
+impl<const UPPER_BOUND: Units> From<BoundPercent<UPPER_BOUND>> for U256 {
+    fn from(percent: BoundPercent<UPPER_BOUND>) -> Self {
+        Amount::from(percent).into()
     }
 }
 
