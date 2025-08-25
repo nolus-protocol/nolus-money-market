@@ -8,7 +8,7 @@ use finance::{
 };
 use lpp_platform::NLpn;
 use platform::contract::Code;
-use sdk::cosmwasm_std::{Addr, Uint64, Uint128};
+use sdk::cosmwasm_std::{Addr, Uint64};
 
 use crate::{borrow::InterestRate, config::Config, loan::Loan};
 
@@ -147,8 +147,8 @@ pub type QueryLoanResponse<Lpn> = Option<LoanResponse<Lpn>>;
 #[cfg_attr(any(test, feature = "testing"), derive(Debug))]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub struct BalanceResponse {
-    // TODO: Migrate to `balance: Coin<NLpn>
-    pub balance: Uint128,
+    #[serde(flatten)]
+    pub balance: Coin<NLpn>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -184,9 +184,12 @@ pub struct RewardsResponse {
 
 #[cfg(test)]
 mod test {
-    use super::QueryMsg;
     use currencies::Lpns;
-    use platform::tests as platform_tests;
+    use finance::coin::Coin;
+    use platform::tests::{self as platform_tests};
+
+    use super::QueryMsg;
+    use crate::msg::BalanceResponse;
 
     #[test]
     fn release() {
@@ -199,5 +202,14 @@ mod test {
             &versioning::query::PlatformPackage::Release {},
         )
         .unwrap_err();
+    }
+
+    #[test]
+    fn balance_response_string() {
+        let response = BalanceResponse {
+            balance: Coin::new(1_000),
+        };
+
+        platform_tests::assert_ser_string(&response, "{\"amount\":\"1000\"}");
     }
 }
