@@ -52,27 +52,31 @@ impl<const UPPER_BOUND: Units> ToPrimitive<u64> for BoundPercent<UPPER_BOUND> {
 
 impl<const UPPER_BOUND: Units> ToPrimitive<U256> for BoundPercent<UPPER_BOUND> {
     fn into_primitive(self) -> U256 {
-        u128::from(self.units()).into()
+        percent_to_u256(self)
     }
 }
 
 impl<const UPPER_BOUND: Units> ToPrimitive<SimpleFraction<U256>> for BoundPercent<UPPER_BOUND> {
     fn into_primitive(self) -> SimpleFraction<U256> {
-        self._to_fraction::<U256>()
+        SimpleFraction::new(percent_to_u256(self), percent_to_u256(Self::HUNDRED))
     }
 }
 
 impl<const UPPER_BOUND: Units> TryFromPrimitive<u64> for BoundPercent<UPPER_BOUND> {
     fn try_from_primitive(primitive: u64) -> Option<Self> {
-        Units::try_from(primitive).ok().map(Self::from_permille)
+        Units::try_from(primitive)
+            .ok()
+            .and_then(Self::try_from_primitive)
     }
 }
 
 impl<const UPPER_BOUND: Units> TryFromPrimitive<U256> for BoundPercent<UPPER_BOUND> {
     fn try_from_primitive(primitive: U256) -> Option<Self> {
-        u128::try_from(primitive)
-            .ok()
-            .and_then(|u_128| Units::try_from(u_128).ok().map(Self::from_permille))
+        u128::try_from(primitive).ok().and_then(|u_128| {
+            Units::try_from(u_128)
+                .ok()
+                .and_then(Self::try_from_primitive)
+        })
     }
 }
 
@@ -102,4 +106,9 @@ impl<C, const UPPER_BOUND: Units> Fragmentable<Coin<C>> for BoundPercent<UPPER_B
             .expect("overflow computing a fraction of permille");
         Self::try_from(res).expect("Resulting permille exceeds BoundPercent upper bound")
     }
+}
+
+#[allow(dead_code)]
+fn percent_to_u256<const UPPER_BOUND: Units>(percent: BoundPercent<UPPER_BOUND>) -> U256 {
+    u128::from(percent.units()).into()
 }

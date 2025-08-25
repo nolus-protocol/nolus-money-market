@@ -134,7 +134,8 @@ where
     }
 
     // Please note that Price(amount, amount_quote) is like SimpleFraction(amount_quote / amount).
-    pub(crate) fn _to_fraction<U>(self) -> SimpleFraction<U>
+    #[allow(dead_code)]
+    pub(crate) fn to_fraction<U>(self) -> SimpleFraction<U>
     where
         Amount: Into<U>,
         U: FractionUnit,
@@ -145,7 +146,8 @@ where
         )
     }
 
-    pub(crate) fn _try_from_fraction<U>(fraction: SimpleFraction<U>) -> Option<Self>
+    #[allow(dead_code)]
+    pub(crate) fn try_from_fraction<U>(fraction: SimpleFraction<U>) -> Option<Self>
     where
         U: FractionUnit + TryInto<Amount>,
     {

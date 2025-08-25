@@ -53,10 +53,7 @@ impl<C> Fragmentable<Coin<C>> for Duration {
 mod tests {
     use currency::test::SuperGroupTestC1;
 
-    use crate::{
-        coin::Coin, duration::Duration, ratio::SimpleFraction,
-        rational::Rational,
-    };
+    use crate::{coin::Coin, duration::Duration, ratio::SimpleFraction, rational::Rational};
 
     #[test]
     fn safe_mul() {

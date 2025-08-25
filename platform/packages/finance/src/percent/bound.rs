@@ -1,7 +1,4 @@
-use std::{
-    fmt::{Debug, Display, Formatter, Result as FmtResult, Write},
-    ops::{Div, Mul},
-};
+use std::fmt::{Debug, Display, Formatter, Result as FmtResult, Write};
 
 #[cfg(any(test, feature = "testing"))]
 use std::ops::{Add, Sub};
@@ -42,7 +39,7 @@ impl<const UPPER_BOUND: Units> BoundPercent<UPPER_BOUND> {
         Self::try_from_permille(permille).expect("Permille value exceeds allowed upper bound")
     }
 
-    const fn try_from_primitive(percent: u32) -> Option<Self> {
+    pub(crate) const fn try_from_primitive(percent: u32) -> Option<Self> {
         if let Some(permille) = percent.checked_mul(Self::UNITS_TO_PERCENT_RATIO) {
             Self::try_from_permille(permille)
         } else {
