@@ -35,8 +35,10 @@ pub mod migrate_from_0_8_12 {
 
     use finance::{coin::Coin, ratio::Rational};
     use lpp_platform::NLpn;
-    use sdk::cosmwasm_std::{Storage, Timestamp};
-    use sdk::cw_storage_plus::Item;
+    use sdk::{
+        cosmwasm_std::{Storage, Timestamp},
+        cw_storage_plus::Item,
+    };
 
     use crate::{contract::Result as ContractResult, state::Total};
 

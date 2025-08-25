@@ -126,8 +126,7 @@ mod test {
     use platform::{bank::testing::MockBankView, contract::Code};
     use sdk::cosmwasm_std::{
         Timestamp,
-        testing::MockStorage,
-        testing::{mock_dependencies, mock_env},
+        testing::{self, MockStorage},
     };
 
     use crate::{
@@ -149,8 +148,8 @@ mod test {
 
     #[test]
     fn test_claim_zero_rewards() {
-        let mut deps = mock_dependencies();
-        let env = mock_env();
+        let mut deps = testing::mock_dependencies();
+        let env = testing::mock_env();
         let now = env.block.time;
 
         const INITIAL_LPP_BALANCE: Coin<TheCurrency> = Coin::ZERO;
