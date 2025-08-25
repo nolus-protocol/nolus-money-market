@@ -44,3 +44,10 @@ where
 {
     cosmwasm_std::from_json(cosmwasm_std::to_json_vec(obj).expect("serialization succeed"))
 }
+
+pub fn assert_ser_string<T>(obj: &T, expected: &str)
+where
+    T: Serialize,
+{
+    assert!(cosmwasm_std::to_json_string(obj).is_ok_and(|inner| inner == expected));
+}
