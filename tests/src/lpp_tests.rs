@@ -288,8 +288,10 @@ fn deposit_and_withdraw() {
         .query()
         .query_wasm_smart(test_case.address_book.lpp().clone(), &LppQueryMsg::Price())
         .unwrap();
+
+    let amount: Amount = 1_000;
     assert_eq!(
-        price::total(coin(1_000u128), price.0),
+        price::total(coin(amount), price.0),
         Coin::<Lpn>::new(1_000 * pushed_price)
     );
 
