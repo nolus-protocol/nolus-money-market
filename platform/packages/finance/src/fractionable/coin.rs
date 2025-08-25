@@ -1,8 +1,9 @@
 use bnum::types::U256;
 
-use crate::{coin::{Amount, Coin}, fractionable::{ToPrimitive, TryFromPrimitive}};
-
-use super::HigherRank;
+use crate::{
+    coin::{Amount, Coin},
+    fractionable::{HigherRank, ToPrimitive, TryFromPrimitive},
+};
 
 // TODO: Remove with Fragmentable
 impl<U, C> HigherRank<U> for Coin<C>
@@ -27,6 +28,14 @@ impl<C> TryFromPrimitive<U256> for Coin<C> {
             .map(|amount| Coin::<C>::new(amount))
     }
 }
+
+// TODO remove when remove safe_mul() implementation
+impl<C> From<Coin<C>> for U256 {
+    fn from(coin: Coin<C>) -> Self {
+        coin.into_primitive()
+    }
+}
+
 #[cfg(test)]
 mod test {
     use currency::test::SuperGroupTestC1;
