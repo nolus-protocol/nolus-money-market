@@ -87,10 +87,10 @@ where
         if min_utilization.is_zero() {
             Ok(None)
         } else {
-            let total_due: Coin<Lpn> = self.total_due(now);
+            let total_due = self.total_due(now);
 
             self.commited_balance(pending_deposit)
-                .map(|balance: Coin<Lpn>| {
+                .map(|balance| {
                     if self.utilization(balance, total_due) > min_utilization {
                         // a followup from the above true value is (total_due * 100 / min_utilization) > (balance + total_due)
                         SimpleFraction::new(Percent100::HUNDRED, min_utilization)
