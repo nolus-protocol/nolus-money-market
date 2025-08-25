@@ -865,9 +865,9 @@ mod test_steadiness {
     use super::{HALF_STEP, RECALC_IN, TestCurrency, ltv_to_price};
 
     const TP: Percent100 = Percent100::from_permille(490);
-    const LTV: Percent100 = TP.checked_add(STEP).unwrap();
-    const WARN_LTV: Percent100 = LTV.checked_add(STEP).unwrap();
-    const SL: Percent100 = WARN_LTV.checked_add(STEP).unwrap();
+    const LTV: Percent100 = TP.checked_add(STEP).expect("should not exceed 100%");
+    const WARN_LTV: Percent100 = LTV.checked_add(STEP).expect("should not exceed 100%");
+    const SL: Percent100 = WARN_LTV.checked_add(STEP).expect("should not exceed 100%");
 
     const ASSET: Coin<TestCurrency> = Coin::new(1000);
 
