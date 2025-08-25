@@ -1,11 +1,10 @@
-use cosmwasm_std::Order;
 use serde::{Deserialize, Serialize};
 
 use currency::platform::Nls;
 use finance::{coin::Coin, zero::Zero};
 use lpp_platform::NLpn;
 use sdk::{
-    cosmwasm_std::{Addr, Storage},
+    cosmwasm_std::{Addr, Order, Storage},
     cw_storage_plus::Map,
 };
 

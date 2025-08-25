@@ -121,8 +121,7 @@ impl From<UpdateDataError> for ContractError {
 #[cfg(all(feature = "internal.test.testing", test))]
 mod tests {
     mod update_lease_admin {
-        use cosmwasm_std::Addr;
-        use sdk::cosmwasm_std::testing::MockStorage;
+        use sdk::cosmwasm_std::{Addr, testing::MockStorage};
 
         use crate::{ContractError, msg::Config, tests};
 

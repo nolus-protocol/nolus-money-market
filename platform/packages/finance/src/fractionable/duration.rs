@@ -1,4 +1,4 @@
-use sdk::cosmwasm_std::{Uint128, Uint256};
+use bnum::types::U256;
 
 use crate::{coin::Coin, duration::Duration, ratio::Ratio};
 
@@ -8,8 +8,8 @@ impl<T> HigherRank<T> for u128
 where
     T: Into<Self>,
 {
-    type Type = Uint256;
-    type Intermediate = Uint128;
+    type Type = U256;
+    type Intermediate = u128;
 }
 
 impl<C> Fractionable<Coin<C>> for Duration {

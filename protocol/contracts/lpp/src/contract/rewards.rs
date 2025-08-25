@@ -117,7 +117,6 @@ pub(super) fn query_rewards(storage: &dyn Storage, addr: Addr) -> Result<Rewards
 
 #[cfg(test)]
 mod test {
-    use cosmwasm_std::{Timestamp, testing::MockStorage};
     use finance::{
         coin::Coin,
         percent::{Percent, bound::BoundToHundredPercent},
@@ -125,7 +124,10 @@ mod test {
     };
     use lpp_platform::NLpn;
     use platform::{bank::testing::MockBankView, contract::Code};
-    use sdk::cosmwasm_std::testing::{mock_dependencies, mock_env};
+    use sdk::cosmwasm_std::{
+        Timestamp,
+        testing::{self, MockStorage},
+    };
 
     use crate::{
         borrow::InterestRate,
@@ -146,8 +148,8 @@ mod test {
 
     #[test]
     fn test_claim_zero_rewards() {
-        let mut deps = mock_dependencies();
-        let env = mock_env();
+        let mut deps = testing::mock_dependencies();
+        let env = testing::mock_env();
         let now = env.block.time;
 
         const INITIAL_LPP_BALANCE: Coin<TheCurrency> = Coin::ZERO;

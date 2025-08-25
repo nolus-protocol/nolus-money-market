@@ -1,4 +1,4 @@
-use sdk::cosmwasm_std::{Uint128, Uint256};
+use bnum::types::U256;
 
 use crate::coin::{Amount, Coin};
 
@@ -8,24 +8,18 @@ impl<U, C> HigherRank<U> for Coin<C>
 where
     U: Into<Amount>,
 {
-    type Type = Uint256;
+    type Type = U256;
 
-    type Intermediate = Uint128;
+    type Intermediate = u128;
 }
 
-impl<C> From<Coin<C>> for Uint256 {
+impl<C> From<Coin<C>> for U256 {
     fn from(coin: Coin<C>) -> Self {
         let c: Amount = coin.into();
         c.into()
     }
 }
 
-impl<C> From<Uint128> for Coin<C> {
-    fn from(amount: Uint128) -> Self {
-        let c: Amount = amount.into();
-        c.into()
-    }
-}
 #[cfg(test)]
 mod test {
     use currency::test::SuperGroupTestC1;

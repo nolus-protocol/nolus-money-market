@@ -19,9 +19,10 @@ testing = []
 currency = { workspace = true }
 sdk = { workspace = true }
 
+bnum = { workspace = true }
 gcd = { workspace = true }
-thiserror = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
+thiserror = { workspace = true }
 
 [dev-dependencies]
 currency = { workspace = true, features = ["testing"] }

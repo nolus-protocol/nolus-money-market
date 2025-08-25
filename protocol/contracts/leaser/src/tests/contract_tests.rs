@@ -1,8 +1,3 @@
-use cosmwasm_std::{
-    OwnedDeps,
-    testing::{MockApi, MockQuerier, MockStorage},
-};
-
 use currencies::{LeaseGroup, Lpn, testing::LeaseC1};
 use currency::{CurrencyDTO, CurrencyDef as _};
 use dex::{ConnectionParams, Ics20Channel, MaxSlippage};
@@ -12,7 +7,8 @@ use platform::contract::{Code, CodeId};
 
 use sdk::{
     cosmwasm_std::{
-        Addr, CosmosMsg, Deps, DepsMut, MessageInfo, SubMsg, WasmMsg, coins, from_json, testing,
+        Addr, CosmosMsg, Deps, DepsMut, MessageInfo, OwnedDeps, SubMsg, WasmMsg, coins, from_json,
+        testing::{self, MockApi, MockQuerier, MockStorage},
         to_json_binary,
     },
     testing as sdk_testing,
