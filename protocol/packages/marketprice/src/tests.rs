@@ -12,10 +12,11 @@ use finance::{
     percent::Percent,
     price::{self, Price, dto::PriceDTO},
 };
-use sdk::cosmwasm_std::Storage;
-use sdk::cosmwasm_std::testing::MockStorage;
 use sdk::{
-    cosmwasm_std::{Timestamp, testing::mock_dependencies},
+    cosmwasm_std::{
+        Storage, Timestamp,
+        testing::{MockStorage, mock_dependencies},
+    },
     testing,
 };
 
