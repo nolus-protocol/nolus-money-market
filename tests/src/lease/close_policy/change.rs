@@ -1,3 +1,5 @@
+use anyhow::Error;
+
 use ::lease::{
     CloseStrategy,
     api::{
@@ -6,8 +8,7 @@ use ::lease::{
     },
     error::{ContractError, PositionError},
 };
-use anyhow::Error;
-use finance::{coin::Coin, percent::Percent};
+use finance::{coin::Coin, percent::Percent100};
 use sdk::{cosmwasm_std::Addr, testing};
 
 use crate::{
@@ -33,7 +34,7 @@ fn tp_zero() {
     let err = super::change_err(
         &mut test_case,
         lease,
-        Some(ChangeCmd::Set(Percent::ZERO)),
+        Some(ChangeCmd::Set(Percent100::ZERO)),
         Some(ChangeCmd::Reset),
     );
 
@@ -54,7 +55,7 @@ fn sl_zero() {
         &mut test_case,
         lease,
         Some(ChangeCmd::Reset),
-        Some(ChangeCmd::Set(Percent::ZERO)),
+        Some(ChangeCmd::Set(Percent100::ZERO)),
     );
 
     assert_eq!(
@@ -71,7 +72,7 @@ fn tp_trigger() {
     let lease = lease::open_lease(&mut test_case, DOWNPAYMENT, None);
 
     let init_ltv = LeaserInstantiator::INITIAL_LTV;
-    let tp_new = init_ltv + Percent::from_permille(1);
+    let tp_new = init_ltv + Percent100::from_permille(1);
     let err = super::change_err(
         &mut test_case,
         lease,
@@ -116,7 +117,7 @@ fn liquidation_conflict() {
     let err = super::change_err(
         &mut test_case,
         lease.clone(),
-        Some(ChangeCmd::Set(sl_new - Percent::from_permille(1))),
+        Some(ChangeCmd::Set(sl_new - Percent100::from_permille(1))),
         Some(ChangeCmd::Set(sl_new)),
     );
 
@@ -157,7 +158,7 @@ fn tp_set() {
         query_policy(&test_case, lease.clone())
     );
 
-    let tp = Percent::from_percent(28);
+    let tp = Percent100::from_percent(28);
     super::change_ok(
         &mut test_case,
         lease.clone(),
@@ -192,7 +193,7 @@ fn query_policy(test_case: &LeaseTestCase, lease: Addr) -> ClosePolicy {
     close_policy
 }
 
-fn assert_trigger_tp_error(err: Error, exp_tp: Percent) {
+fn assert_trigger_tp_error(err: Error, exp_tp: Percent100) {
     let Some(ContractError::PositionError(PositionError::TriggerClose {
         lease_ltv: _,
         strategy: CloseStrategy::TakeProfit(tp_trigger),

@@ -13,7 +13,7 @@ use ::serde::{Deserialize, Serialize};
 
 use currency::{Currency, CurrencyDef, Group, MemberOf};
 
-use crate::zero::Zero;
+use crate::{fraction::Unit as FractionUnit, zero::Zero};
 
 pub use self::dto::{CoinDTO, IntoDTO};
 
@@ -42,9 +42,10 @@ impl<C> Coin<C> {
     }
 
     const fn may_new(may_amount: Option<Amount>) -> Option<Self> {
-        match may_amount {
-            None => None,
-            Some(amount) => Some(Self::new(amount)),
+        if let Some(amount) = may_amount {
+            Some(Self::new(amount))
+        } else {
+            None
         }
     }
 
@@ -143,6 +144,8 @@ impl<C> Default for Coin<C> {
         }
     }
 }
+
+impl<C> FractionUnit for Coin<C> {}
 
 impl<C> Eq for Coin<C> {}
 

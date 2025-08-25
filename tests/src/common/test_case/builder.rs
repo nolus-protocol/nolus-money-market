@@ -2,7 +2,7 @@ use std::marker::PhantomData;
 
 use currencies::Lpns;
 use currency::{Currency, CurrencyDef, MemberOf};
-use finance::percent::{Percent, bound::BoundToHundredPercent};
+use finance::percent::Percent100;
 use lpp::borrow::InterestRate;
 use platform::ica::OpenAckVersion;
 use profit::{
@@ -300,10 +300,10 @@ where
     pub fn init_lpp(
         self,
         custom_wrapper: OptionalLppEndpoints,
-        base_interest_rate: Percent,
-        utilization_optimal: Percent,
-        addon_optimal_interest_rate: Percent,
-        min_utilization: BoundToHundredPercent,
+        base_interest_rate: Percent100,
+        utilization_optimal: Percent100,
+        addon_optimal_interest_rate: Percent100,
+        min_utilization: Percent100,
     ) -> Builder<Lpn, ProtocolsRegistry, Treasury, Profit, Reserve, Leaser, Addr, Oracle, TimeAlarms>
     {
         self.init_lpp_with_funds(
@@ -320,10 +320,10 @@ where
         self,
         endpoints: OptionalLppEndpoints,
         init_balance: &[CwCoin],
-        base_interest_rate: Percent,
-        utilization_optimal: Percent,
-        addon_optimal_interest_rate: Percent,
-        min_utilization: BoundToHundredPercent,
+        base_interest_rate: Percent100,
+        utilization_optimal: Percent100,
+        addon_optimal_interest_rate: Percent100,
+        min_utilization: Percent100,
     ) -> Builder<Lpn, ProtocolsRegistry, Treasury, Profit, Reserve, Leaser, Addr, Oracle, TimeAlarms>
     {
         let Self {

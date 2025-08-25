@@ -1,8 +1,8 @@
-use currency::CurrencyDef;
-use error::BrokenInvariant;
 use serde::{Deserialize, Serialize};
 
-use finance::{coin::Coin, duration::Duration, percent::Percent};
+use currency::CurrencyDef;
+use error::BrokenInvariant;
+use finance::{coin::Coin, duration::Duration, percent::Percent100};
 use lease::api::{limits::MaxSlippages, open::PositionSpecDTO};
 
 use crate::finance::LpnCurrency;
@@ -14,7 +14,7 @@ mod unchecked;
 #[cfg_attr(feature = "testing", derive(Debug))]
 #[serde(rename_all = "snake_case", try_from = "unchecked::NewConfig")]
 pub struct NewConfig {
-    pub lease_interest_rate_margin: Percent,
+    pub lease_interest_rate_margin: Percent100,
     pub lease_position_spec: PositionSpecDTO,
     pub lease_due_period: Duration,
     pub lease_max_slippages: MaxSlippages,

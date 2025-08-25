@@ -1,4 +1,4 @@
-use finance::{duration::Duration, percent::Percent};
+use finance::{duration::Duration, percent::Percent100};
 use lpp_platform::CoinStable;
 use platform::message::Response as MessageResponse;
 
@@ -8,7 +8,7 @@ use crate::{ContractError, pool::Pool as PoolTrait, state::reward_scale::RewardS
 #[cfg_attr(test, derive(Debug))]
 pub struct RewardCalculator<Pool> {
     pools: Vec<Pool>,
-    apr: Percent,
+    apr: Percent100,
 }
 
 impl<Pool> RewardCalculator<Pool>
@@ -30,7 +30,7 @@ where
         }
     }
 
-    pub fn apr(&self) -> Percent {
+    pub fn apr(&self) -> Percent100 {
         self.apr
     }
 
@@ -47,7 +47,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use finance::{duration::Duration, percent::Percent};
+    use finance::{duration::Duration, percent::Percent100};
     use lpp_platform::CoinStable;
     use platform::response;
 
@@ -62,8 +62,8 @@ mod tests {
     #[test]
     fn calc_apr() {
         let tvl_total = TotalValueLocked::new(54); //54k USD
-        let bar0_apr = Percent::from_percent(20);
-        let bar1_apr = Percent::from_percent(10);
+        let bar0_apr = Percent100::from_percent(20);
+        let bar1_apr = Percent100::from_percent(10);
         let scale = RewardScale::new(bar0_apr);
         let scale = scale
             .add_non_overlapping(vec![Bar {
@@ -93,7 +93,7 @@ mod tests {
 
     #[test]
     fn calc_ok() {
-        let bar0_apr = Percent::from_percent(20);
+        let bar0_apr = Percent100::from_percent(20);
         let scale = RewardScale::new(bar0_apr);
         let period = Duration::YEAR;
 
@@ -113,7 +113,7 @@ mod tests {
 
     #[test]
     fn distribute_err() {
-        let bar0_apr = Percent::from_percent(5);
+        let bar0_apr = Percent100::from_percent(5);
         let scale = RewardScale::new(bar0_apr);
         let period = Duration::from_days(134);
 
