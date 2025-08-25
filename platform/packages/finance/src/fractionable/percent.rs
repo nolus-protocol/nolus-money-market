@@ -1,10 +1,14 @@
+use bnum::types::U256;
+
 use crate::{
+    arithmetics::CheckedMul,
     coin::Coin,
+    fractionable::{Fractionable, ToPrimitive, TryFromPrimitive},
     percent::{Units, bound::BoundPercent},
-    ratio::Ratio,
+    ratio::{Ratio, SimpleFraction},
 };
 
-use super::{Fractionable, HigherRank};
+use super::{Fragmentable, HigherRank};
 
 impl<T> HigherRank<T> for u32
 where
@@ -14,7 +18,70 @@ where
     type Intermediate = Self;
 }
 
-impl<const UPPER_BOUND: Units> Fractionable<Units> for BoundPercent<UPPER_BOUND> {
+impl<const UPPER_BOUND: Units> Fractionable<BoundPercent<UPPER_BOUND>>
+    for BoundPercent<UPPER_BOUND>
+{
+    type HigherPrimitive = u64;
+}
+
+impl<C, const UPPER_BOUND: Units> Fractionable<Coin<C>> for BoundPercent<UPPER_BOUND> {
+    type HigherPrimitive = U256;
+}
+
+impl CheckedMul<u64> for u64 {
+    type Output = Self;
+
+    fn checked_mul(self, rhs: Self) -> Option<Self::Output> {
+        self.checked_mul(rhs)
+    }
+}
+
+impl CheckedMul<U256> for U256 {
+    type Output = U256;
+
+    fn checked_mul(self, rhs: U256) -> Option<Self::Output> {
+        self.checked_mul(rhs)
+    }
+}
+
+impl<const UPPER_BOUND: Units> ToPrimitive<u64> for BoundPercent<UPPER_BOUND> {
+    fn into_primitive(self) -> u64 {
+        self.units().into()
+    }
+}
+
+impl<const UPPER_BOUND: Units> ToPrimitive<U256> for BoundPercent<UPPER_BOUND> {
+    fn into_primitive(self) -> U256 {
+        percent_to_u256(self)
+    }
+}
+
+impl<const UPPER_BOUND: Units> ToPrimitive<SimpleFraction<U256>> for BoundPercent<UPPER_BOUND> {
+    fn into_primitive(self) -> SimpleFraction<U256> {
+        SimpleFraction::new(percent_to_u256(self), percent_to_u256(Self::HUNDRED))
+    }
+}
+
+impl<const UPPER_BOUND: Units> TryFromPrimitive<u64> for BoundPercent<UPPER_BOUND> {
+    fn try_from_primitive(primitive: u64) -> Option<Self> {
+        Units::try_from(primitive)
+            .ok()
+            .and_then(Self::try_from_primitive)
+    }
+}
+
+impl<const UPPER_BOUND: Units> TryFromPrimitive<U256> for BoundPercent<UPPER_BOUND> {
+    fn try_from_primitive(primitive: U256) -> Option<Self> {
+        u128::try_from(primitive).ok().and_then(|u_128| {
+            Units::try_from(u_128)
+                .ok()
+                .and_then(Self::try_from_primitive)
+        })
+    }
+}
+
+// TODO implement Fractionble<BoundPercent<UPPER_BOUND>> for BoundPercent<UPPER_BOUND>
+impl<const UPPER_BOUND: Units> Fragmentable<Units> for BoundPercent<UPPER_BOUND> {
     #[track_caller]
     fn safe_mul<R>(self, ratio: &R) -> Self
     where
@@ -25,7 +92,7 @@ impl<const UPPER_BOUND: Units> Fractionable<Units> for BoundPercent<UPPER_BOUND>
     }
 }
 
-impl<C, const UPPER_BOUND: Units> Fractionable<Coin<C>> for BoundPercent<UPPER_BOUND> {
+impl<C, const UPPER_BOUND: Units> Fragmentable<Coin<C>> for BoundPercent<UPPER_BOUND> {
     #[track_caller]
     fn safe_mul<F>(self, fraction: &F) -> Self
     where
@@ -39,4 +106,9 @@ impl<C, const UPPER_BOUND: Units> Fractionable<Coin<C>> for BoundPercent<UPPER_B
             .expect("overflow computing a fraction of permille");
         Self::try_from(res).expect("Resulting permille exceeds BoundPercent upper bound")
     }
+}
+
+#[allow(dead_code)]
+fn percent_to_u256<const UPPER_BOUND: Units>(percent: BoundPercent<UPPER_BOUND>) -> U256 {
+    u128::from(percent.units()).into()
 }

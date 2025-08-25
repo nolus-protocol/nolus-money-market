@@ -3,7 +3,7 @@ use std::{
     ops::{Div, Mul},
 };
 
-use crate::{ratio::Ratio, zero::Zero};
+use crate::{arithmetics::CheckedMul, ratio::Ratio, zero::Zero};
 
 mod coin;
 mod duration;
@@ -11,7 +11,30 @@ mod percent;
 mod price;
 mod usize;
 
-pub trait Fractionable<U> {
+#[allow(dead_code)]
+pub(crate) trait Fractionable<U>
+where
+    Self: Sized + ToPrimitive<Self::HigherPrimitive> + TryFromPrimitive<Self::HigherPrimitive>,
+    U: ToPrimitive<Self::HigherPrimitive>,
+{
+    type HigherPrimitive: CheckedMul<Output = Self::HigherPrimitive>
+        + Div<Output = Self::HigherPrimitive>;
+}
+
+pub(crate) trait ToPrimitive<P> {
+    #[allow(dead_code)]
+    fn into_primitive(self) -> P;
+}
+
+pub(crate) trait TryFromPrimitive<P>
+where
+    Self: Sized,
+{
+    #[allow(dead_code)]
+    fn try_from_primitive(primitive: P) -> Option<Self>;
+}
+
+pub trait Fragmentable<U> {
     #[track_caller]
     fn safe_mul<F>(self, fraction: &F) -> Self
     where
@@ -25,7 +48,7 @@ pub trait HigherRank<T> {
     type Intermediate;
 }
 
-impl<T, D, DIntermediate, U> Fractionable<U> for T
+impl<T, D, DIntermediate, U> Fragmentable<U> for T
 where
     T: HigherRank<U, Type = D, Intermediate = DIntermediate> + Into<D>,
     D: TryInto<DIntermediate>,

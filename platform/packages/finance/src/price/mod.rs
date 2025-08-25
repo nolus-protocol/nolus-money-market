@@ -8,6 +8,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     coin::{Amount, Coin},
     error::{Error, Result},
+    fraction::Unit as FractionUnit,
     fractionable::HigherRank,
     ratio::{Ratio, SimpleFraction},
     rational::Rational,
@@ -98,6 +99,13 @@ where
         }
     }
 
+    pub fn inv(self) -> Price<QuoteC, C> {
+        Price {
+            amount: self.amount_quote,
+            amount_quote: self.amount,
+        }
+    }
+
     /// Price(amount, amount_quote) * Ratio(nominator / denominator) = Price(amount * denominator, amount_quote * nominator)
     /// where the pairs (amount, nominator) and (amount_quote, denominator) are transformed into co-prime numbers.
     /// Please note that Price(amount, amount_quote) is like Ratio(amount_quote / amount).
@@ -125,11 +133,35 @@ where
         )
     }
 
-    pub fn inv(self) -> Price<QuoteC, C> {
-        Price {
-            amount: self.amount_quote,
-            amount_quote: self.amount,
-        }
+    // Please note that Price(amount, amount_quote) is like SimpleFraction(amount_quote / amount).
+    #[allow(dead_code)]
+    pub(crate) fn to_fraction<U>(self) -> SimpleFraction<U>
+    where
+        Amount: Into<U>,
+        U: FractionUnit,
+    {
+        SimpleFraction::new(
+            self.amount_quote._amount().into(),
+            self.amount._amount().into(),
+        )
+    }
+
+    #[allow(dead_code)]
+    pub(crate) fn try_from_fraction<U>(fraction: SimpleFraction<U>) -> Option<Self>
+    where
+        U: FractionUnit + TryInto<Amount>,
+    {
+        fraction
+            ._nominator()
+            .try_into()
+            .ok()
+            .and_then(|amount_quote| {
+                fraction
+                    ._denominator()
+                    .try_into()
+                    .ok()
+                    .map(|amount| Self::new(Coin::new(amount), Coin::new(amount_quote)))
+            })
     }
 
     fn precondition_check(amount: Coin<C>, amount_quote: Coin<QuoteC>) -> Result<()> {
