@@ -63,7 +63,7 @@ impl InterestRate {
                 .expect("The optimal utilization configuration parameter should be at most 100%")
                 .units(),
         )
-        .expect("The utilization_max must be a valid Percent - the nominator and denominator are at most Percent100::HUNDRED.units()");
+        .expect("The utilization_max must be a valid Percent: utilization_opt < 100% ensures the ratio is valid Percent100, which always fits within Percent's wider range");
 
         let utilization = if balance.is_zero() {
             utilization_max
