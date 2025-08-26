@@ -199,7 +199,7 @@ jobs:
     name: "Check for unused dependencies"
     needs:
       - "matrix-arguments"
-    runs-on: "ubuntu-latest"
+    runs-on: "self-hosted"
     strategy:
       matrix:
         workspace: |-
