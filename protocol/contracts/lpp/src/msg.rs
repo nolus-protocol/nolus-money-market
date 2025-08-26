@@ -190,8 +190,9 @@ mod test {
     use finance::coin::Coin;
     use platform::tests::{self as platform_tests};
 
-    use super::QueryMsg;
     use crate::msg::BalanceResponse;
+
+    use super::QueryMsg;
 
     #[test]
     fn release() {
