@@ -106,7 +106,7 @@ where
     },
     // Deposit
     /// CW20 interface
-    /// 
+    ///
     /// Return the lender's deposit balance in NLpn [BalanceResponse]
     Balance {
         address: Addr,
