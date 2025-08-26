@@ -29,7 +29,8 @@ impl Fraction<Units> for Percent100 {
     where
         A: Fractionable<Units>,
     {
-        SimpleFraction::from(*self)
+        // TODO replace this convertion with From<Percent100> for Ratio after Ratio becomes a struct
+        Percent::from(*self)
             .of(whole)
             .expect("TODO it won't be needed when ratio.of()")
     }
@@ -41,19 +42,6 @@ impl Rational<Units> for Percent {
         A: Fractionable<Units>,
     {
         SimpleFraction::from(*self).of(whole)
-    }
-}
-
-// TODO replace this convertion with From<Percent100> for Ratio after Ratio becomes a struct
-impl From<Percent100> for SimpleFraction<Units> {
-    fn from(percent: Percent100) -> Self {
-        Self::new(percent.units(), Percent100::HUNDRED.units())
-    }
-}
-
-impl From<Percent> for SimpleFraction<Units> {
-    fn from(percent: Percent) -> Self {
-        Self::new(percent.units(), Percent::HUNDRED.units())
     }
 }
 
