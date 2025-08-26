@@ -49,7 +49,6 @@ impl Zero for U256 {
     const ZERO: Self = Self::ZERO;
 }
 
-// TODO impl Fractionble<BoundPercent<UPPER_BOUND>> for Price when multiplication with trim is ready
 impl<C, QuoteC> Fragmentable<PercentUnits> for Price<C, QuoteC>
 where
     C: 'static,
@@ -197,10 +196,10 @@ mod test {
         }
     }
     fn c(a: Amount) -> Coin<SubGroupTestC10> {
-        Coin::<SubGroupTestC10>::from(a)
+        Coin::new(a)
     }
 
     fn q(a: Amount) -> Coin<SuperGroupTestC1> {
-        Coin::<SuperGroupTestC1>::from(a)
+        Coin::new(a)
     }
 }

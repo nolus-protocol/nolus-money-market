@@ -17,15 +17,13 @@ where
 
 impl<C> ToPrimitive<U256> for Coin<C> {
     fn into_primitive(self) -> U256 {
-        self._amount().into()
+        self.amount().into()
     }
 }
 
 impl<C> TryFromPrimitive<U256> for Coin<C> {
     fn try_from_primitive(primitive: U256) -> Option<Self> {
-        Amount::try_from(primitive)
-            .ok()
-            .map(|amount| Coin::<C>::new(amount))
+        Amount::try_from(primitive).ok().map(Coin::new)
     }
 }
 
@@ -45,11 +43,11 @@ mod test {
         fraction::Fraction,
         percent::Percent100,
         ratio::SimpleFraction,
+        rational::Rational,
     };
 
     #[test]
-    fn safe_mul() {
-        use crate::fractionable::Fragmentable;
+    fn of() {
         assert_eq!(
             Coin::<SuperGroupTestC1>::new(30),
             Percent100::from_percent(100).of(Coin::<SuperGroupTestC1>::new(30))
@@ -57,18 +55,16 @@ mod test {
 
         assert_eq!(
             Coin::<SuperGroupTestC1>::new(4),
-            Fragmentable::<u32>::safe_mul(
-                Coin::<SuperGroupTestC1>::new(6),
-                &SimpleFraction::new(2u32, 3u32)
-            )
+            SimpleFraction::new(2u32, 3u32)
+                .of(Coin::<SuperGroupTestC1>::new(6))
+                .unwrap()
         );
 
         assert_eq!(
             Coin::<SuperGroupTestC1>::new(Amount::from(u32::MAX - 1)),
-            Fragmentable::<u32>::safe_mul(
-                Coin::<SuperGroupTestC1>::new(Amount::from(u32::MAX)),
-                &SimpleFraction::new(u32::MAX - 1, u32::MAX)
-            )
+            SimpleFraction::new(u32::MAX - 1, u32::MAX)
+                .of(Coin::<SuperGroupTestC1>::new(Amount::from(u32::MAX)))
+                .unwrap()
         );
     }
 }

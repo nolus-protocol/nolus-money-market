@@ -80,7 +80,6 @@ impl<const UPPER_BOUND: Units> TryFromPrimitive<U256> for BoundPercent<UPPER_BOU
     }
 }
 
-// TODO implement Fractionble<BoundPercent<UPPER_BOUND>> for BoundPercent<UPPER_BOUND>
 impl<const UPPER_BOUND: Units> Fragmentable<Units> for BoundPercent<UPPER_BOUND> {
     #[track_caller]
     fn safe_mul<R>(self, ratio: &R) -> Self
@@ -108,7 +107,6 @@ impl<C, const UPPER_BOUND: Units> Fragmentable<Coin<C>> for BoundPercent<UPPER_B
     }
 }
 
-#[allow(dead_code)]
 fn percent_to_u256<const UPPER_BOUND: Units>(percent: BoundPercent<UPPER_BOUND>) -> U256 {
     u128::from(percent.units()).into()
 }

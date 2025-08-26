@@ -22,7 +22,6 @@ where
 }
 
 pub(crate) trait ToPrimitive<P> {
-    #[allow(dead_code)]
     fn into_primitive(self) -> P;
 }
 
@@ -41,6 +40,7 @@ pub trait Fragmentable<U> {
         F: Ratio<U>;
 }
 
+// TODO: Remove when removing Fragmentable
 pub trait HigherRank<T> {
     type Type;
     // An intermediate type to handle cases when there is no TryInto<Self> for HigherRank::Type but
