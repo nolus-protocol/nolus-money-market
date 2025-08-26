@@ -35,11 +35,11 @@ where
         }
     }
 
-    pub(crate) fn _nominator(&self) -> U {
+    pub(crate) const fn nominator(&self) -> U {
         self.nominator
     }
 
-    pub(crate) fn _denominator(&self) -> U {
+    pub(crate) const fn denominator(&self) -> U {
         self.denominator
     }
 

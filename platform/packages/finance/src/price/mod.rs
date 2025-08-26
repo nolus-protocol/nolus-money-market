@@ -81,7 +81,7 @@ where
             .and_then(|may_price| may_price.invariant_held().map(|()| may_price))
     }
 
-    fn new_inner(amount: Coin<C>, amount_quote: Coin<QuoteC>) -> Self {
+    const fn new_inner(amount: Coin<C>, amount_quote: Coin<QuoteC>) -> Self {
         let (amount_normalized, amount_quote_normalized): (Coin<C>, Coin<QuoteC>) =
             amount.into_coprime_with(amount_quote);
 
@@ -99,7 +99,7 @@ where
         }
     }
 
-    pub fn inv(self) -> Price<QuoteC, C> {
+    pub const fn inv(self) -> Price<QuoteC, C> {
         Price {
             amount: self.amount_quote,
             amount_quote: self.amount,
@@ -134,15 +134,14 @@ where
     }
 
     // Please note that Price(amount, amount_quote) is like SimpleFraction(amount_quote / amount).
-    #[allow(dead_code)]
     pub(crate) fn to_fraction<U>(self) -> SimpleFraction<U>
     where
         Amount: Into<U>,
         U: FractionUnit,
     {
         SimpleFraction::new(
-            self.amount_quote._amount().into(),
-            self.amount._amount().into(),
+            self.amount_quote.amount().into(),
+            self.amount.amount().into(),
         )
     }
 
@@ -152,12 +151,12 @@ where
         U: FractionUnit + TryInto<Amount>,
     {
         fraction
-            ._nominator()
+            .nominator()
             .try_into()
             .ok()
             .and_then(|amount_quote| {
                 fraction
-                    ._denominator()
+                    .denominator()
                     .try_into()
                     .ok()
                     .map(|amount| Self::new(Coin::new(amount), Coin::new(amount_quote)))

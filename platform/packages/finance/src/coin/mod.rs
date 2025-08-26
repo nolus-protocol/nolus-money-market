@@ -41,7 +41,7 @@ impl<C> Coin<C> {
         }
     }
 
-    pub(crate) fn _amount(&self) -> Amount {
+    pub(crate) const fn amount(&self) -> Amount {
         self.amount
     }
 
