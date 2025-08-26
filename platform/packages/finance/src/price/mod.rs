@@ -8,6 +8,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     coin::{Amount, Coin},
     error::{Error, Result},
+    fraction::Unit as FractionUnit,
     fractionable::HigherRank,
     ratio::{Ratio, SimpleFraction},
     rational::Rational,
@@ -80,7 +81,7 @@ where
             .and_then(|may_price| may_price.invariant_held().map(|()| may_price))
     }
 
-    fn new_inner(amount: Coin<C>, amount_quote: Coin<QuoteC>) -> Self {
+    const fn new_inner(amount: Coin<C>, amount_quote: Coin<QuoteC>) -> Self {
         let (amount_normalized, amount_quote_normalized): (Coin<C>, Coin<QuoteC>) =
             amount.into_coprime_with(amount_quote);
 
@@ -95,6 +96,13 @@ where
         Self {
             amount: Coin::new(1),
             amount_quote: Coin::new(1),
+        }
+    }
+
+    pub const fn inv(self) -> Price<QuoteC, C> {
+        Price {
+            amount: self.amount_quote,
+            amount_quote: self.amount,
         }
     }
 
@@ -125,11 +133,34 @@ where
         )
     }
 
-    pub fn inv(self) -> Price<QuoteC, C> {
-        Price {
-            amount: self.amount_quote,
-            amount_quote: self.amount,
-        }
+    // Please note that Price(amount, amount_quote) is like SimpleFraction(amount_quote / amount).
+    pub(crate) fn to_fraction<U>(self) -> SimpleFraction<U>
+    where
+        Amount: Into<U>,
+        U: FractionUnit,
+    {
+        SimpleFraction::new(
+            self.amount_quote.amount().into(),
+            self.amount.amount().into(),
+        )
+    }
+
+    #[allow(dead_code)]
+    pub(crate) fn try_from_fraction<U>(fraction: SimpleFraction<U>) -> Option<Self>
+    where
+        U: FractionUnit + TryInto<Amount>,
+    {
+        fraction
+            .nominator()
+            .try_into()
+            .ok()
+            .and_then(|amount_quote| {
+                fraction
+                    .denominator()
+                    .try_into()
+                    .ok()
+                    .map(|amount| Self::new(Coin::new(amount), Coin::new(amount_quote)))
+            })
     }
 
     fn precondition_check(amount: Coin<C>, amount_quote: Coin<QuoteC>) -> Result<()> {

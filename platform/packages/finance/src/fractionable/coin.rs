@@ -1,9 +1,11 @@
 use bnum::types::U256;
 
-use crate::coin::{Amount, Coin};
+use crate::{
+    coin::{Amount, Coin},
+    fractionable::{HigherRank, ToPrimitive, TryFromPrimitive},
+};
 
-use super::HigherRank;
-
+// TODO: Remove with Fragmentable
 impl<U, C> HigherRank<U> for Coin<C>
 where
     U: Into<Amount>,
@@ -13,10 +15,22 @@ where
     type Intermediate = u128;
 }
 
+impl<C> ToPrimitive<U256> for Coin<C> {
+    fn into_primitive(self) -> U256 {
+        self.amount().into()
+    }
+}
+
+impl<C> TryFromPrimitive<U256> for Coin<C> {
+    fn try_from_primitive(primitive: U256) -> Option<Self> {
+        Amount::try_from(primitive).ok().map(Coin::new)
+    }
+}
+
+// TODO remove when remove safe_mul() implementation
 impl<C> From<Coin<C>> for U256 {
     fn from(coin: Coin<C>) -> Self {
-        let c: Amount = coin.into();
-        c.into()
+        coin.into_primitive()
     }
 }
 
@@ -33,7 +47,7 @@ mod test {
     };
 
     #[test]
-    fn safe_mul() {
+    fn of() {
         assert_eq!(
             Coin::<SuperGroupTestC1>::new(30),
             Percent100::from_percent(100).of(Coin::<SuperGroupTestC1>::new(30))

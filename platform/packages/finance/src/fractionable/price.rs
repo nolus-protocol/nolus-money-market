@@ -1,10 +1,55 @@
 use std::marker::PhantomData;
 
-use crate::{coin::Amount, percent::Units as PercentUnits, price::Price, ratio::Ratio};
+use bnum::types::U256;
 
-use super::Fractionable;
+use crate::{
+    coin::Amount,
+    fraction::Unit as FractionUnit,
+    fractionable::{Fractionable, ToPrimitive, TryFromPrimitive},
+    percent::{Units as PercentUnits, bound::BoundPercent},
+    price::Price,
+    ratio::{Ratio, SimpleFraction},
+    zero::Zero,
+};
 
-impl<C, QuoteC> Fractionable<PercentUnits> for Price<C, QuoteC>
+use super::Fragmentable;
+
+impl<const UPPER_BOUND: PercentUnits, C, QuoteC> Fractionable<BoundPercent<UPPER_BOUND>>
+    for Price<C, QuoteC>
+where
+    C: 'static,
+    QuoteC: 'static,
+{
+    type HigherPrimitive = SimpleFraction<U256>;
+}
+
+impl FractionUnit for U256 {}
+
+impl<C, QuoteC> ToPrimitive<SimpleFraction<U256>> for Price<C, QuoteC>
+where
+    C: 'static,
+    QuoteC: 'static,
+{
+    fn into_primitive(self) -> SimpleFraction<U256> {
+        self.to_fraction()
+    }
+}
+
+impl<C, QuoteC> TryFromPrimitive<SimpleFraction<U256>> for Price<C, QuoteC>
+where
+    C: 'static,
+    QuoteC: 'static,
+{
+    fn try_from_primitive(primitive: SimpleFraction<U256>) -> Option<Self> {
+        Self::try_from_fraction(primitive)
+    }
+}
+
+impl Zero for U256 {
+    const ZERO: Self = Self::ZERO;
+}
+
+impl<C, QuoteC> Fragmentable<PercentUnits> for Price<C, QuoteC>
 where
     C: 'static,
     QuoteC: 'static,
@@ -17,7 +62,7 @@ where
     }
 }
 
-impl<C, QuoteC> Fractionable<usize> for Price<C, QuoteC>
+impl<C, QuoteC> Fragmentable<usize> for Price<C, QuoteC>
 where
     C: 'static,
     QuoteC: 'static,
@@ -151,10 +196,10 @@ mod test {
         }
     }
     fn c(a: Amount) -> Coin<SubGroupTestC10> {
-        Coin::<SubGroupTestC10>::from(a)
+        Coin::new(a)
     }
 
     fn q(a: Amount) -> Coin<SuperGroupTestC1> {
-        Coin::<SuperGroupTestC1>::from(a)
+        Coin::new(a)
     }
 }

@@ -10,7 +10,7 @@ use crate::{
     coin::Amount,
     error::Error,
     fraction::Unit as FractionUnit,
-    fractionable::Fractionable,
+    fractionable::Fragmentable,
     ratio::{Ratio, SimpleFraction},
     rational::Rational,
     zero::Zero,
@@ -39,7 +39,7 @@ impl<const UPPER_BOUND: Units> BoundPercent<UPPER_BOUND> {
         Self::try_from_permille(permille).expect("Permille value exceeds allowed upper bound")
     }
 
-    const fn try_from_primitive(percent: u32) -> Option<Self> {
+    pub(crate) const fn try_from_primitive(percent: u32) -> Option<Self> {
         if let Some(permille) = percent.checked_mul(Self::UNITS_TO_PERCENT_RATIO) {
             Self::try_from_permille(permille)
         } else {
@@ -57,7 +57,7 @@ impl<const UPPER_BOUND: Units> BoundPercent<UPPER_BOUND> {
 
     pub fn from_fraction<U>(nominator: U, denominator: U) -> Option<Self>
     where
-        Self: Fractionable<U>,
+        Self: Fragmentable<U>,
         U: FractionUnit,
     {
         SimpleFraction::new(nominator, denominator).of(Self::HUNDRED)

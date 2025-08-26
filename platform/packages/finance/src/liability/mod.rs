@@ -6,7 +6,7 @@ use crate::{
     duration::Duration,
     error::{Error, Result},
     fraction::Fraction,
-    fractionable::Fractionable,
+    fractionable::Fragmentable,
     percent::{Percent, Percent100, Units as PercentUnits},
     ratio::SimpleFraction,
     rational::Rational,
@@ -112,7 +112,7 @@ impl Liability {
 
     pub fn init_borrow_amount<P>(&self, downpayment: P, may_max_ltd: Option<Percent>) -> P
     where
-        P: Copy + Fractionable<PercentUnits> + Ord,
+        P: Copy + Fragmentable<PercentUnits> + Ord,
     {
         debug_assert!(self.initial > Percent100::ZERO);
         debug_assert!(self.initial < Percent100::HUNDRED);
@@ -134,25 +134,24 @@ impl Liability {
     /// Otherwise, amount_to_liquidate == total_due
     pub fn amount_to_liquidate<P>(&self, lease_amount: P, total_due: P) -> P
     where
-        P: Copy + Fractionable<PercentUnits> + Ord + Sub<Output = P> + Zero,
+        P: Copy + Fragmentable<PercentUnits> + Ord + Sub<Output = P> + Zero,
     {
         if total_due < self.max.of(lease_amount) {
-            return P::ZERO;
+            P::ZERO
+        } else if lease_amount <= total_due {
+            lease_amount
+        } else {
+            // from 'due - liquidation = healthy% of (lease - liquidation)' follows
+            // liquidation = 100% / (100% - healthy%) of (due - healthy% of lease)
+            let multiplier = SimpleFraction::new(
+                Percent100::HUNDRED.units(),
+                self.healthy.complement().units(),
+            );
+            let extra_liability_lpn = total_due - total_due.min(self.healthy.of(lease_amount));
+            multiplier
+                .of(extra_liability_lpn)
+                .expect("TODO the method has to return Option")
         }
-        if lease_amount <= total_due {
-            return lease_amount;
-        }
-
-        // from 'due - liquidation = healthy% of (lease - liquidation)' follows
-        // liquidation = 100% / (100% - healthy%) of (due - healthy% of lease)
-        let multiplier = SimpleFraction::new(
-            Percent100::HUNDRED.units(),
-            self.healthy.complement().units(),
-        );
-        let extra_liability_lpn = total_due - total_due.min(self.healthy.of(lease_amount));
-        multiplier
-            .of(extra_liability_lpn)
-            .expect("TODO the method has to return Option")
     }
 
     fn invariant_held(&self) -> Result<()> {

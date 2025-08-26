@@ -5,10 +5,10 @@ use std::{
 
 use serde::{Deserialize, Serialize};
 
-use sdk::cosmwasm_std::{Timestamp, Uint128};
+use sdk::cosmwasm_std::Timestamp;
 
 use crate::{
-    fraction::Unit as FractionUnit, fractionable::Fractionable, ratio::SimpleFraction,
+    fraction::Unit as FractionUnit, fractionable::Fragmentable, ratio::SimpleFraction,
     rational::Rational, zero::Zero,
 };
 
@@ -91,7 +91,7 @@ impl Duration {
     #[track_caller]
     pub fn annualized_slice_of<T>(&self, annual_amount: T) -> T
     where
-        T: Fractionable<Units>,
+        T: Fragmentable<Units>,
     {
         SimpleFraction::new(self.nanos(), Self::YEAR.nanos())
             .of(annual_amount)
@@ -100,7 +100,7 @@ impl Duration {
 
     pub fn into_slice_per_ratio<U>(self, amount: U, annual_amount: U) -> Self
     where
-        Self: Fractionable<U>,
+        Self: Fragmentable<U>,
         U: FractionUnit,
     {
         SimpleFraction::new(amount, annual_amount)
@@ -112,12 +112,6 @@ impl Duration {
 impl From<Duration> for u128 {
     fn from(d: Duration) -> Self {
         d.nanos().into()
-    }
-}
-
-impl From<Duration> for Uint128 {
-    fn from(d: Duration) -> Self {
-        u128::from(d).into()
     }
 }
 
