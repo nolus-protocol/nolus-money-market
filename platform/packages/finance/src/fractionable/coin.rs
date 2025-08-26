@@ -9,14 +9,20 @@ where
     U: Into<Amount>,
 {
     type Type = U256;
-
-    type Intermediate = u128;
 }
 
 impl<C> From<Coin<C>> for U256 {
     fn from(coin: Coin<C>) -> Self {
         let c: Amount = coin.into();
         c.into()
+    }
+}
+
+impl<C> TryInto<Coin<C>> for U256 {
+    type Error = <u128 as TryFrom<U256>>::Error;
+
+    fn try_into(self) -> Result<Coin<C>, Self::Error> {
+        self.try_into().map(Coin::new)
     }
 }
 

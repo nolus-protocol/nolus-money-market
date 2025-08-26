@@ -11,7 +11,6 @@ where
     T: Into<Self>,
 {
     type Type = u64;
-    type Intermediate = Self;
 }
 
 impl Fractionable<Units> for Percent {
