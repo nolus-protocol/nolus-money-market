@@ -5,11 +5,12 @@ use std::{
 
 use serde::{Deserialize, Serialize};
 
+use bnum::types::U256;
+
 use crate::{
     coin::{Amount, Coin},
     error::{Error, Result},
     fraction::Fraction,
-    fractionable::HigherRank,
     ratio::{Ratio, Rational},
 };
 
@@ -36,8 +37,7 @@ where
     }
 }
 
-type DoubleAmount = <Amount as HigherRank<Amount>>::Type;
-type IntermediateAmount = <Amount as HigherRank<Amount>>::Intermediate;
+type DoubleAmount = U256;
 
 /// Represents the price of a currency in a quote currency, ref: <https://en.wikipedia.org/wiki/Currency_pair>
 ///
@@ -106,10 +106,10 @@ where
         R: Ratio<Amount>,
     {
         let (amount_normalized, rhs_nominator_normalized) =
-            self.amount.into_coprime_with(Coin::<C>::from(rhs.parts()));
+            self.amount.into_coprime_with(Coin::<C>::new(rhs.parts()));
         let (amount_quote_normalized, rhs_denominator_normalized) = self
             .amount_quote
-            .into_coprime_with(Coin::<QuoteC>::from(rhs.total()));
+            .into_coprime_with(Coin::<QuoteC>::new(rhs.total()));
 
         let double_amount =
             DoubleAmount::from(amount_normalized) * DoubleAmount::from(rhs_denominator_normalized);
@@ -195,7 +195,7 @@ where
     #[track_caller]
     fn bits_above_max(double_amount: DoubleAmount) -> u32 {
         const BITS_MAX_AMOUNT: u32 = Amount::BITS;
-        let higher_half = IntermediateAmount::try_from(double_amount >> BITS_MAX_AMOUNT)
+        let higher_half = Amount::try_from(double_amount >> BITS_MAX_AMOUNT)
             .expect("Bigger Amount Higher Rank Type than required!");
         BITS_MAX_AMOUNT - higher_half.leading_zeros()
     }
@@ -203,7 +203,7 @@ where
     #[track_caller]
     fn trim_down(double_amount: DoubleAmount, bits: u32) -> Amount {
         debug_assert!(bits <= Amount::BITS);
-        let amount: IntermediateAmount = (double_amount >> bits)
+        let amount: Amount = (double_amount >> bits)
             .try_into()
             .expect("insufficient bits to trim");
         assert!(amount > 0, "price overflow during multiplication");
