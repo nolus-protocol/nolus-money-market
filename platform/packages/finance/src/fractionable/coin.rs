@@ -32,31 +32,32 @@ mod test {
 
     use crate::{
         coin::{Amount, Coin},
-        fraction::Fraction,
-        percent::Percent100,
+        fractionable::Fractionable,
+        percent::Percent,
         ratio::SimpleFraction,
-        rational::Rational,
     };
 
     #[test]
     fn safe_mul() {
         assert_eq!(
             Coin::<SuperGroupTestC1>::new(30),
-            Percent100::from_percent(100).of(Coin::<SuperGroupTestC1>::new(30))
+            Coin::<SuperGroupTestC1>::new(3).safe_mul(&Percent::from_percent(1000))
         );
 
         assert_eq!(
-            Coin::<SuperGroupTestC1>::new(4),
-            SimpleFraction::new(2u32, 3u32)
-                .of(Coin::<SuperGroupTestC1>::new(6))
-                .unwrap()
+            Coin::<SuperGroupTestC1>::new(1000),
+            Fractionable::<u32>::safe_mul(
+                Coin::<SuperGroupTestC1>::new(2),
+                &SimpleFraction::new(1000u32, 2u32)
+            )
         );
 
         assert_eq!(
-            Coin::<SuperGroupTestC1>::new(Amount::from(u32::MAX - 1)),
-            SimpleFraction::new(u32::MAX - 1, u32::MAX)
-                .of(Coin::<SuperGroupTestC1>::new(Amount::from(u32::MAX)))
-                .unwrap()
+            Coin::<SuperGroupTestC1>::new(2 * Amount::from(u32::MAX)),
+            Fractionable::<u32>::safe_mul(
+                Coin::<SuperGroupTestC1>::new(2),
+                &SimpleFraction::new(u32::MAX, 1u32)
+            )
         );
     }
 }
