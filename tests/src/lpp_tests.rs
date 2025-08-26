@@ -291,7 +291,7 @@ fn deposit_and_withdraw() {
 
     let amount: Amount = 1_000;
     assert_eq!(
-        price::total(coin(amount), price.0),
+        price::total(Coin::new(amount), price.0),
         Coin::<Lpn>::new(1_000 * pushed_price)
     );
 
@@ -315,7 +315,7 @@ fn deposit_and_withdraw() {
         .query_wasm_smart(test_case.address_book.lpp().clone(), &LppQueryMsg::Price())
         .unwrap();
     assert_eq!(
-        price::total(coin(balance_nlpn.balance), price.0),
+        price::total(balance_nlpn.balance, price.0),
         Coin::<Lpn>::new(test_deposit - rounding_error)
     );
 
@@ -338,7 +338,7 @@ fn deposit_and_withdraw() {
         .query_wasm_smart(test_case.address_book.lpp().clone(), &LppQueryMsg::Price())
         .unwrap();
     assert_eq!(
-        price::total(coin(balance_nlpn.balance), price.0),
+        price::total(balance_nlpn.balance, price.0),
         Coin::<Lpn>::new(test_deposit - rounding_error)
     );
 
@@ -379,12 +379,12 @@ fn deposit_and_withdraw() {
         .query_wasm_smart(test_case.address_book.lpp().clone(), &LppQueryMsg::Price())
         .unwrap();
     assert_eq!(
-        price::total(coin(balance_nlpn2.balance), price.0),
+        price::total(balance_nlpn2.balance, price.0),
         Coin::<Lpn>::new(test_deposit - rounding_error)
     );
 
     // try to withdraw with overdraft
-    let to_burn: u128 = balance_nlpn.balance.u128() - rounding_error + overdraft;
+    let to_burn = Amount::from(balance_nlpn.balance) - rounding_error + overdraft;
     _ = test_case
         .app
         .execute(
@@ -422,7 +422,7 @@ fn deposit_and_withdraw() {
             },
         )
         .unwrap();
-    assert_eq!(balance_nlpn.balance.u128(), rest_nlpn);
+    assert_eq!(balance_nlpn.balance, Coin::new(rest_nlpn));
 
     // full withdraw, should close lender's account
     () = test_case
@@ -447,7 +447,7 @@ fn deposit_and_withdraw() {
             &LppQueryMsg::Balance { address: lender2 },
         )
         .unwrap();
-    assert_eq!(balance_nlpn.balance.u128(), 0);
+    assert_eq!(balance_nlpn.balance, Coin::ZERO);
 }
 
 #[test]
@@ -758,7 +758,7 @@ fn loan_open_and_repay() {
     assert_eq!(loan1_resp.principal_due, (loan1 - repay_due_part).into());
     assert_eq!(
         loan1_resp.interest_due(&crate::block_time(&test_case)),
-        coin(Amount::ZERO)
+        Coin::ZERO
     );
 
     // repay interest + due part, close the loan
@@ -1082,7 +1082,7 @@ fn compare_lpp_states() {
     assert_eq!(loan1_resp.principal_due, (loan1 - repay_due_part).into());
     assert_eq!(
         loan1_resp.interest_due(&crate::block_time(&test_case)),
-        coin(Amount::ZERO)
+        Coin::ZERO
     );
 
     // repay interest + due part, close the loan
@@ -1409,7 +1409,7 @@ fn test_rewards() {
         )
         .unwrap();
 
-    assert_eq!(resp.rewards, coin(Amount::ZERO));
+    assert_eq!(resp.rewards, Coin::ZERO);
     let balance = bank::balance(&recipient, test_case.app.query()).unwrap();
     assert_eq!(balance, Coin::<Nls>::from(lender_reward2));
 }
@@ -1530,11 +1530,4 @@ where
     A: Into<Coin<Lpn>>,
 {
     cwcoin(amount)
-}
-
-fn coin<A, C>(amount: A) -> Coin<C>
-where
-    A: Into<Amount>,
-{
-    Coin::<C>::new(amount.into())
 }

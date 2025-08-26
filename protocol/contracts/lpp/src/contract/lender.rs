@@ -1,8 +1,5 @@
 use currency::{CurrencyDef, platform::Nls};
-use finance::{
-    coin::{Amount, Coin},
-    zero::Zero,
-};
+use finance::{coin::Coin, zero::Zero};
 use lpp_platform::NLpn;
 use platform::{
     bank::{self, BankAccount, BankAccountView},
@@ -228,9 +225,7 @@ pub fn query_balance(storage: &dyn Storage, addr: Addr) -> Result<BalanceRespons
     TotalRewards::load_or_default(storage)
         .and_then(|total_rewards| Deposit::load_or_default(storage, addr, total_rewards))
         .map(|ref deposit| deposit.receipts())
-        .map(|receipts| BalanceResponse {
-            balance: Amount::from(receipts).into(),
-        })
+        .map(|balance| BalanceResponse { balance })
 }
 
 #[cfg(test)]
