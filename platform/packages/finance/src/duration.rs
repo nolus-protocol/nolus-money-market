@@ -5,7 +5,7 @@ use std::{
 
 use serde::{Deserialize, Serialize};
 
-use sdk::cosmwasm_std::{Timestamp, Uint128};
+use sdk::cosmwasm_std::Timestamp;
 
 use crate::{
     fraction::Unit as FractionUnit, fractionable::Fragmentable, ratio::SimpleFraction,
@@ -112,12 +112,6 @@ impl Duration {
 impl From<Duration> for u128 {
     fn from(d: Duration) -> Self {
         d.nanos().into()
-    }
-}
-
-impl From<Duration> for Uint128 {
-    fn from(d: Duration) -> Self {
-        u128::from(d).into()
     }
 }
 
