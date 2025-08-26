@@ -5,12 +5,11 @@ use std::{
 
 use serde::{Deserialize, Serialize};
 
-use bnum::types::U256;
-
 use crate::{
     coin::{Amount, Coin},
     error::{Error, Result},
     fraction::Fraction,
+    fractionable::HigherRank,
     ratio::{Ratio, Rational},
 };
 
@@ -37,7 +36,7 @@ where
     }
 }
 
-type DoubleAmount = U256;
+type DoubleAmount = <Amount as HigherRank<Amount>>::Type;
 
 /// Represents the price of a currency in a quote currency, ref: <https://en.wikipedia.org/wiki/Currency_pair>
 ///
