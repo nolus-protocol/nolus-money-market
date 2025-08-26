@@ -225,7 +225,7 @@ pub fn query_balance(storage: &dyn Storage, addr: Addr) -> Result<BalanceRespons
     TotalRewards::load_or_default(storage)
         .and_then(|total_rewards| Deposit::load_or_default(storage, addr, total_rewards))
         .map(|ref deposit| deposit.receipts())
-        .map(|receipts| BalanceResponse { balance: receipts })
+        .map(|balance| BalanceResponse { balance })
 }
 
 #[cfg(test)]
