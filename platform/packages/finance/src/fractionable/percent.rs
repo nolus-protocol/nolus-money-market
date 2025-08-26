@@ -40,3 +40,81 @@ impl<C, const UPPER_BOUND: Units> Fractionable<Coin<C>> for BoundPercent<UPPER_B
         Self::try_from(res).expect("Resulting permille exceeds BoundPercent upper bound")
     }
 }
+
+#[cfg(test)]
+mod test {
+    mod percent {
+        use crate::{
+            fractionable::Fractionable,
+            percent::{Percent, Percent100, Units},
+        };
+
+        #[test]
+        fn safe_mul() {
+            assert_eq!(
+                Percent100::from_permille(410 * 222 / 1000),
+                Percent100::from_percent(41).safe_mul(&Percent100::from_permille(222))
+            );
+            assert_eq!(
+                Percent100::from_permille(999),
+                Percent100::from_percent(100).safe_mul(&Percent100::from_permille(999))
+            );
+            assert_eq!(
+                Percent::from_permille(410 * 222222 / 1000),
+                Percent::from_percent(41).safe_mul(&Percent::from_permille(222222))
+            );
+            assert_eq!(
+                Percent::from_permille(Units::MAX),
+                Percent::from_percent(100).safe_mul(&Percent::from_permille(Units::MAX))
+            );
+
+            let p_units: Units = 410;
+            let p64: u64 = p_units.into();
+            let p64_res = p64 * u64::from(Units::MAX) / 1000;
+            let p_units_res: Units = p64_res.try_into().expect("u64 -> Units overflow");
+
+            assert_eq!(
+                Percent::from_permille(p_units_res),
+                Percent::from_percent(41).safe_mul(&Percent::from_permille(Units::MAX))
+            );
+        }
+
+        #[test]
+        fn safe_mul_hundred_percent() {
+            assert_eq!(
+                Percent::from_permille(Units::MAX),
+                Percent::from_percent(100).safe_mul(&Percent::from_permille(Units::MAX))
+            );
+        }
+
+        #[test]
+        #[should_panic]
+        fn safe_mul_overflow() {
+            Percent::from_permille(1001).safe_mul(&Percent::from_permille(Units::MAX));
+        }
+    }
+
+    mod rational {
+        use currency::test::SuperGroupTestC1;
+
+        use crate::{
+            coin::Coin,
+            fractionable::Fractionable,
+            percent::{Percent, Units},
+            ratio::SimpleFraction,
+        };
+
+        #[test]
+        fn safe_mul() {
+            // TODO replace SimpleFraction with Ratio whe it becomes a struct
+            let ratio_one = SimpleFraction::new(
+                Coin::<SuperGroupTestC1>::new(u128::MAX),
+                Coin::<SuperGroupTestC1>::new(u128::MAX),
+            );
+            assert_eq!(
+                Percent::from_permille(Units::MAX),
+                Fractionable::<Coin<_>>::safe_mul(Percent::from_permille(Units::MAX), &ratio_one)
+            );
+        }
+    }
+}
