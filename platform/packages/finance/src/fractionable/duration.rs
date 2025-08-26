@@ -9,7 +9,6 @@ where
     T: Into<Self>,
 {
     type Type = U256;
-    type Intermediate = u128;
 }
 
 impl<C> Fractionable<Coin<C>> for Duration {
