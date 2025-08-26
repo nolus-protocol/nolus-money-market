@@ -125,16 +125,6 @@ impl<const UPPER_BOUND: Units> Display for BoundPercent<UPPER_BOUND> {
     }
 }
 
-impl<const UPPER_BOUND: Units> Ratio<Units> for BoundPercent<UPPER_BOUND> {
-    fn parts(&self) -> Units {
-        self.units()
-    }
-
-    fn total(&self) -> Units {
-        Self::HUNDRED.units()
-    }
-}
-
 impl<const UPPER: Units> FractionUnit for BoundPercent<UPPER> where
     BoundPercent<UPPER>: Copy + Debug + Ord + Zero
 {
@@ -151,6 +141,25 @@ impl<const UPPER_BOUND: Units> From<BoundPercent<UPPER_BOUND>> for u128 {
 impl<const UPPER_BOUND: Units> From<BoundPercent<UPPER_BOUND>> for U256 {
     fn from(percent: BoundPercent<UPPER_BOUND>) -> Self {
         Amount::from(percent).into()
+    }
+}
+
+impl<const UPPER_BOUND: Units> From<BoundPercent<UPPER_BOUND>> for SimpleFraction<Units> {
+    fn from(percent: BoundPercent<UPPER_BOUND>) -> Self {
+        Self::new(
+            percent.units(),
+            BoundPercent::<UPPER_BOUND>::HUNDRED.units(),
+        )
+    }
+}
+
+impl<const UPPER_BOUND: Units> Ratio<Units> for BoundPercent<UPPER_BOUND> {
+    fn parts(&self) -> Units {
+        self.units()
+    }
+
+    fn total(&self) -> Units {
+        Self::HUNDRED.units()
     }
 }
 
