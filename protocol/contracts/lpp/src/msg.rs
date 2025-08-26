@@ -143,6 +143,8 @@ pub type QueryLoanResponse<Lpn> = Option<LoanResponse<Lpn>>;
 // Deposit query responses
 
 // CW20 interface
+/// A response to `QueryMsg::Balance`\
+/// Returns the lender's total balance in NLpn
 #[derive(Serialize, Deserialize, Clone, PartialEq, Eq)]
 #[cfg_attr(any(test, feature = "testing"), derive(Debug))]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
