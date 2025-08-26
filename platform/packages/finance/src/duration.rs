@@ -332,12 +332,16 @@ mod tests {
 
     #[test]
     fn annualized_slice_of() {
-        let annual_amount = test_coin(1000);
+        let annual_amount = test_coin(100000);
         assert_eq!(annual_amount, D::YEAR.annualized_slice_of(annual_amount));
+        let expect_day_amount = annual_amount.checked_div(365).unwrap();
         assert_eq!(
-            annual_amount
-                .checked_mul((D::HOUR.0 / D::YEAR.0).into())
-                .unwrap(),
+            expect_day_amount,
+            D::from_days(1).annualized_slice_of(annual_amount)
+        );
+        let expect_hour_amount = expect_day_amount.checked_div(24).unwrap();
+        assert_eq!(
+            expect_hour_amount,
             D::HOUR.annualized_slice_of(annual_amount)
         )
     }
