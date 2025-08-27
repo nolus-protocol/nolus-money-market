@@ -123,7 +123,7 @@ where
 }
 
 pub(crate) fn try_close_deposits(
-    storage: &mut dyn Storage,
+    lpp: Addr,
     querier: QuerierWrapper<'_>,
 ) -> ContractResult<MessageResponse> {
     struct Cmd {}
@@ -141,46 +141,30 @@ pub(crate) fn try_close_deposits(
                 .map(|()| lpp.into())
         }
     }
-    Config::load(storage)
-        .and_then(|config| {
-            LppRef::<LpnCurrency>::try_new(config.lpp, querier)
-                .map_err(ContractError::LppStubCreation)
-        })
+    LppRef::<LpnCurrency>::try_new(lpp, querier)
+        .map_err(ContractError::LppStubCreation)
         .and_then(|lpp_ref| lpp_ref.execute_depositer(Cmd {}).map(Into::into))
 }
 
-pub(crate) fn try_dump_reserve(
-    storage: &dyn Storage,
-) -> ContractResult<MessageResponse> {
-    Config::load(storage).and_then(|config| {
-        let mut msgs = Batch::default();
-        msgs.schedule_execute_wasm_no_reply_no_funds(
-            config.reserve,
-            &ReserveExecuteMsg::DumpBalanceTo(config.lease_admin),
-        )
+pub(crate) fn try_dump_reserve(reserve: Addr, to: Addr) -> ContractResult<MessageResponse> {
+    let mut msgs = Batch::default();
+    msgs.schedule_execute_wasm_no_reply_no_funds(reserve, &ReserveExecuteMsg::DumpBalanceTo(to))
         .map_err(ContractError::ScheduleReserveDump)
         .map(|()| msgs.into())
-    })
 }
 
-pub(super) fn try_close_protocol<ProtocolsRegistryLoader>(
-    storage: &mut dyn Storage,
-    protocols_registry: ProtocolsRegistryLoader,
+pub(super) fn try_close_protocol(
+    protocols_registry: Addr,
     migration_spec: ProtocolContracts<MigrationSpec>,
-) -> ContractResult<MessageResponse>
-where
-    ProtocolsRegistryLoader: FnOnce(&dyn Storage) -> ContractResult<Addr>,
-{
-    protocols_registry(storage).and_then(|protocols_registry| {
-        let mut batch = Batch::default();
-        batch
-            .schedule_execute_wasm_no_reply_no_funds(
-                protocols_registry,
-                &ExecuteMsg::DeregisterProtocol(migration_spec),
-            )
-            .map_err(ContractError::ProtocolDeregistration)
-            .map(|()| batch.into())
-    })
+) -> ContractResult<MessageResponse> {
+    let mut batch = Batch::default();
+    batch
+        .schedule_execute_wasm_no_reply_no_funds(
+            protocols_registry,
+            &ExecuteMsg::DeregisterProtocol(migration_spec),
+        )
+        .map_err(ContractError::ProtocolDeregistration)
+        .map(|()| batch.into())
 }
 
 pub(super) fn try_change_lease_admin(
@@ -228,15 +212,16 @@ mod test {
     use admin_contract::msg::{MigrationSpec, ProtocolContracts};
     use json_value::JsonValue;
     use platform::response;
-    use sdk::cosmwasm_std::{Addr, Storage, testing::MockStorage};
+    use sdk::cosmwasm_std::{Addr, testing::MockStorage};
 
-    use crate::{result::ContractResult, tests};
+    use crate::tests;
 
     #[test]
     fn close_empty_protocol() {
         let mut store = MockStorage::default();
         tests::config().store(&mut store).unwrap();
-        let resp = super::try_close_protocol(&mut store, protocols_registry, dummy_spec()).unwrap();
+        let protocols_registry = Addr::unchecked("Registry");
+        let resp = super::try_close_protocol(protocols_registry, dummy_spec()).unwrap();
         let cw_resp = response::response_only_messages(resp);
         let delete_protocol = 1;
         assert_eq!(delete_protocol, cw_resp.messages.len());
@@ -255,9 +240,5 @@ mod test {
             profit: migration_spec.clone(),
             reserve: migration_spec,
         }
-    }
-
-    fn protocols_registry(_storage: &dyn Storage) -> ContractResult<Addr> {
-        Ok(Addr::unchecked("Registry"))
     }
 }

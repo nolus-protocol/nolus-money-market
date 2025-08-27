@@ -185,14 +185,18 @@ pub fn sudo(deps: DepsMut<'_>, _env: Env, msg: SudoMsg) -> ContractResult<Respon
             leaser::try_change_lease_admin(deps.storage, validated_admin)
         }),
         SudoMsg::CloseProtocol { migration_spec } => check_no_leases(deps.storage)
-            .and_then(|()| leaser::try_close_deposits(deps.storage, deps.querier))
-            .and_then(|close_deposits_resp| {
-                leaser::try_dump_reserve(deps.storage)
-                    .map(|dump_reserve_resp| close_deposits_resp.merge_with(dump_reserve_resp))
-            })
-            .and_then(|response| {
-                leaser::try_close_protocol(deps.storage, protocols_registry_load, migration_spec)
-                    .map(|close_protocol_resp| response.merge_with(close_protocol_resp))
+            .and_then(|()| Config::load(deps.storage))
+            .and_then(|config| {
+                leaser::try_close_deposits(config.lpp, deps.querier)
+                    .and_then(|close_deposits_resp| {
+                        leaser::try_dump_reserve(config.reserve, config.lease_admin).map(
+                            |dump_reserve_resp| close_deposits_resp.merge_with(dump_reserve_resp),
+                        )
+                    })
+                    .and_then(|response| {
+                        leaser::try_close_protocol(config.protocols_registry, migration_spec)
+                            .map(|close_protocol_resp| response.merge_with(close_protocol_resp))
+                    })
             }),
     }
     .map(response::response_only_messages)
@@ -291,10 +295,6 @@ fn check_no_leases(storage: &dyn Storage) -> ContractResult<()> {
     } else {
         Err(ContractError::ProtocolStillInUse())
     }
-}
-
-fn protocols_registry_load(storage: &dyn Storage) -> ContractResult<Addr> {
-    Config::load(storage).map(|cfg| cfg.protocols_registry)
 }
 
 fn new_code<C, V>(new_code_id: C, addr_validator: &V) -> ContractResult<Code>
