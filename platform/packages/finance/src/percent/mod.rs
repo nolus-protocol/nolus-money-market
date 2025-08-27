@@ -74,8 +74,7 @@ impl TryFrom<Percent> for Percent100 {
     type Error = Error;
 
     fn try_from(percent: Percent) -> Result<Self, Self::Error> {
-        let permilles = percent.units();
-        permilles.try_into()
+        percent.units().try_into()
     }
 }
 
@@ -139,7 +138,7 @@ pub(super) mod test {
         let n: Units = 189;
         let d: Units = 1890;
         let r = SimpleFraction::new(n, d);
-        let res: Percent = r.of(Percent::HUNDRED).unwrap();
+        let res: Percent = Rational::<Units>::of(&r, Percent::HUNDRED).unwrap();
         assert_eq!(Percent::from_permille(n * 1000 / d), res);
     }
 

@@ -152,7 +152,7 @@ mod tests {
         let part = MyCoin::new(125);
         let r = SimpleFraction::new(part, whole);
 
-        let res = super::interest(r, whole, PERIOD_LENGTH);
+        let res = super::interest::<MyCoin, _, _>(r, whole, PERIOD_LENGTH);
         assert_eq!(part, res);
     }
 
