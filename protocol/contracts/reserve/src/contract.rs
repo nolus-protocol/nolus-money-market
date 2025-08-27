@@ -50,7 +50,7 @@ pub fn instantiate(
         .and_then(|lease_code_admin| {
             SingleUserAccess::new(
                 deps.storage.deref_mut(),
-                crate::access_control::LEASE_CODE_ADMIN_KEY,
+                crate::access_control::PROTOCOL_ADMIN_KEY,
             )
             .grant_to(&lease_code_admin)
             .map_err(Into::into)
@@ -94,7 +94,7 @@ pub fn execute(
     match msg {
         ExecuteMsg::NewLeaseCode(code) => SingleUserAccess::new(
             deps.storage.deref_mut(),
-            crate::access_control::LEASE_CODE_ADMIN_KEY,
+            crate::access_control::PROTOCOL_ADMIN_KEY,
         )
         .check(&info)
         .map_err(Into::into)
