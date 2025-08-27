@@ -110,7 +110,7 @@ where
             let sum = values.fold(*first, |acc, current| acc + *current);
             let denominator = u32::try_from(prices_number).ok()?;
             let part = SimpleFraction::new(1, denominator);
-            let avg = part.of(sum);
+            let avg = Rational::<u32>::of(&part, sum);
             self.last_sample = Sample { price: avg }
         }
         self.sample_prices.clear();
