@@ -22,11 +22,11 @@ use crate::contract::{ContractError, Result as ContractResult};
 #[serde(bound(serialize = "", deserialize = ""))]
 pub struct Total<Lpn> {
     /// The total due principle amount
-    /// 
+    ///
     /// It is a sum of all loan due principle amounts and is maintained
     /// on loan open and payments.
     total_principal_due: Coin<Lpn>,
-    
+
     /// Estimation of the total due interest accrued up to `last_update_time`.
     ///
     /// The most precision calculation would be to sum all loan due interest amounts up to that time.
@@ -39,7 +39,7 @@ pub struct Total<Lpn> {
     annual_interest_rate: Rational<Coin<Lpn>>,
 
     /// The last time a borrow-related operation is performed
-    /// 
+    ///
     /// This concerns only loan open and payments.
     last_update_time: Timestamp,
 
@@ -193,7 +193,7 @@ impl<Lpn> Total<Lpn> {
             .expect("Unexpected overflow when subtracting loan principal payment from total principal due");
 
         if new_total_principal_due.is_zero() {
-            // Due to rounding errors, the calculated total interest due might deviate from 
+            // Due to rounding errors, the calculated total interest due might deviate from
             // the sum of loans' interest due. This is an important checkpoint at which
             // the deviation could be cleared.
             self.total_interest_due = Coin::ZERO;
