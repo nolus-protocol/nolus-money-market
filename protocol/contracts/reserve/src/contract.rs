@@ -44,15 +44,15 @@ pub fn instantiate(
     new_reserve: InstantiateMsg,
 ) -> Result<CwResponse> {
     deps.api
-        .addr_validate(new_reserve.lease_code_admin.as_str())
+        .addr_validate(new_reserve.protocol_admin.as_str())
         .map_err(Error::from)
-        // cannot validate the lease code admin contract for existence, since it is not yet instantiated
-        .and_then(|lease_code_admin| {
+        // cannot validate the protocol admin contract for existence, since it is not yet instantiated
+        .and_then(|protocol_admin| {
             SingleUserAccess::new(
                 deps.storage.deref_mut(),
                 crate::access_control::PROTOCOL_ADMIN_KEY,
             )
-            .grant_to(&lease_code_admin)
+            .grant_to(&protocol_admin)
             .map_err(Into::into)
         })
         .and_then(|()| {
