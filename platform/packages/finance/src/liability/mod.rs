@@ -117,8 +117,7 @@ impl Liability {
         debug_assert!(self.initial > Percent100::ZERO);
         debug_assert!(self.initial < Percent100::HUNDRED);
 
-        let default_ltd =
-            SimpleFraction::new(self.initial.units(), self.initial.complement().units());
+        let default_ltd = SimpleFraction::new(self.initial, self.initial.complement());
         default_ltd
             .of(downpayment)
             .map(|default_borrow| {
@@ -145,10 +144,7 @@ impl Liability {
 
         // from 'due - liquidation = healthy% of (lease - liquidation)' follows
         // liquidation = 100% / (100% - healthy%) of (due - healthy% of lease)
-        let multiplier = SimpleFraction::new(
-            Percent100::HUNDRED.units(),
-            self.healthy.complement().units(),
-        );
+        let multiplier = SimpleFraction::new(Percent100::HUNDRED, self.healthy.complement());
         let extra_liability_lpn = total_due - total_due.min(self.healthy.of(lease_amount));
         multiplier
             .of(extra_liability_lpn)

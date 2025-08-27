@@ -133,7 +133,7 @@ impl<const UPPER: Units> FractionUnit for BoundPercent<UPPER> where
 // TODO: Revisit it's usage after refactoring Fractionable
 impl<const UPPER_BOUND: Units> From<BoundPercent<UPPER_BOUND>> for u128 {
     fn from(percent: BoundPercent<UPPER_BOUND>) -> Self {
-        Amount::from(percent.units())
+        Amount::from(percent.0)
     }
 }
 
@@ -146,20 +146,17 @@ impl<const UPPER_BOUND: Units> From<BoundPercent<UPPER_BOUND>> for U256 {
 
 impl<const UPPER_BOUND: Units> From<BoundPercent<UPPER_BOUND>> for SimpleFraction<Units> {
     fn from(percent: BoundPercent<UPPER_BOUND>) -> Self {
-        Self::new(
-            percent.units(),
-            BoundPercent::<UPPER_BOUND>::HUNDRED.units(),
-        )
+        Self::new(percent.0, BoundPercent::<UPPER_BOUND>::HUNDRED.0)
     }
 }
 
 impl<const UPPER_BOUND: Units> Ratio<Units> for BoundPercent<UPPER_BOUND> {
     fn parts(&self) -> Units {
-        self.units()
+        self.0
     }
 
     fn total(&self) -> Units {
-        Self::HUNDRED.units()
+        Self::HUNDRED.0
     }
 }
 
