@@ -21,12 +21,29 @@ use crate::contract::{ContractError, Result as ContractResult};
 #[cfg_attr(any(test, feature = "testing"), derive(PartialEq,))]
 #[serde(bound(serialize = "", deserialize = ""))]
 pub struct Total<Lpn> {
+    /// The total due principle amount
+    /// 
+    /// It is a sum of all loan due principle amounts and is maintained
+    /// on loan open and payments.
     total_principal_due: Coin<Lpn>,
+    
+    /// Estimation of the total due interest accrued up to `last_update_time`.
+    ///
+    /// The most precision calculation would be to sum all loan due interest amounts up to that time.
+    /// Since there might be a lot of open loans, we may not afford it on chain.
+    /// The algorithm keeps a current pool-wide `annual_interest_rate`. It is a weighted average
+    /// of all loan interest rates and is updated with each change of the total prindipal due.
     total_interest_due: Coin<Lpn>,
+
+    /// Current pool-wide weghted annual interest rate of all loans interest rates
     annual_interest_rate: Rational<Coin<Lpn>>,
-    /// concerns only the borrowing aspect, i.e. `borrow` and `repay`
+
+    /// The last time a borrow-related operation is performed
+    /// 
+    /// This concerns only loan open and payments.
     last_update_time: Timestamp,
-    /// former `DepositsGlobals::balance_nlpn`
+
+    /// The total receipts issued to lenders for their deposits
     receipts: Coin<NLpn>,
 }
 
@@ -108,11 +125,18 @@ impl<Lpn> Total<Lpn> {
     }
 
     pub fn total_interest_due_by_now(&self, ctime: &Timestamp) -> Coin<Lpn> {
-        interest::interest::<Coin<Lpn>, _, _>(
-            self.annual_interest_rate,
-            self.total_principal_due,
-            Duration::between(&self.last_update_time, ctime),
-        ) + self.total_interest_due
+        if self.total_principal_due.is_zero() {
+            // TODO remove this case once close protocols with `total_principal_due == 0` and `total_interest_due > 0`
+            // the newly added invariant: if `total_principal_due == 0` then `total_interest_due == 0`
+            Coin::ZERO
+            //debug_assert!(self.total_interest_due.is_zero());
+        } else {
+            interest::interest::<Coin<Lpn>, _, _>(
+                self.annual_interest_rate,
+                self.total_principal_due,
+                Duration::between(&self.last_update_time, ctime),
+            ) + self.total_interest_due
+        }
     }
 
     pub fn receipts(&self) -> Coin<NLpn> {
@@ -133,12 +157,12 @@ impl<Lpn> Total<Lpn> {
             .ok_or(ContractError::OverflowError("Total principal due overflow"))?;
 
         // TODO: get rid of fully qualified syntax
-        let new_annual_interest =
-            Fraction::<Coin<Lpn>>::of(&self.annual_interest_rate, self.total_principal_due)
-                .checked_add(loan_interest_rate.of(amount))
-                .ok_or(ContractError::OverflowError(
-                    "Annual interest calculation overflow",
-                ))?;
+        let new_annual_interest = self
+            .estimated_annual_interest()
+            .checked_add(loan_interest_rate.of(amount))
+            .ok_or(ContractError::OverflowError(
+                "Annual interest calculation overflow",
+            ))?;
 
         self.annual_interest_rate = Rational::new(new_annual_interest, new_total_principal_due);
 
@@ -159,8 +183,7 @@ impl<Lpn> Total<Lpn> {
         // The interest payment calculation of loans is the source of truth.
         // Therefore, it is possible for the rounded-down total interest due from `total_interest_due_by_now`
         // to become less than the sum of loans' interests. Taking 0 when subtracting a loan's interest from the total is a safe solution.
-
-        self.total_interest_due = self
+        let new_total_interest_due = self
             .total_interest_due_by_now(&ctime)
             .saturating_sub(loan_interest_payment);
 
@@ -169,14 +192,20 @@ impl<Lpn> Total<Lpn> {
             .checked_sub(loan_principal_payment)
             .expect("Unexpected overflow when subtracting loan principal payment from total principal due");
 
-        self.annual_interest_rate = if new_total_principal_due.is_zero() {
-            zero_interest_rate()
+        if new_total_principal_due.is_zero() {
+            // Due to rounding errors, the calculated total interest due might deviate from 
+            // the sum of loans' interest due. This is an important checkpoint at which
+            // the deviation could be cleared.
+            self.total_interest_due = Coin::ZERO;
+
+            self.annual_interest_rate = zero_interest_rate();
         } else {
+            self.total_interest_due = new_total_interest_due;
+
             // Please refer to the comment above for more detailed information on why using `saturating_sub` is a safe solution
             // for updating the annual interest
-
-            Rational::new(
-                Fraction::<Coin<Lpn>>::of(&self.annual_interest_rate, self.total_principal_due)
+            self.annual_interest_rate = Rational::new(
+                self.estimated_annual_interest()
                     .saturating_sub(loan_interest_rate.of(loan_principal_payment)),
                 new_total_principal_due,
             )
@@ -211,6 +240,10 @@ impl<Lpn> Total<Lpn> {
                 self.receipts = total;
                 self
             })
+    }
+
+    fn estimated_annual_interest(&self) -> Coin<Lpn> {
+        Fraction::<Coin<Lpn>>::of(&self.annual_interest_rate, self.total_principal_due)
     }
 }
 
