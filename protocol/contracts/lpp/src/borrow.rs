@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 
 use finance::{
     coin::Coin,
-    percent::{Percent, Percent100},
+    percent::{Percent, Percent100, Units as PercentUnits},
     ratio::SimpleFraction,
     rational::Rational,
 };
@@ -73,11 +73,13 @@ impl InterestRate {
                 .min(utilization_max)
         };
 
-        SimpleFraction::new(
-            self.addon_optimal_interest_rate.units(),
-            self.utilization_optimal.units(),
+        Rational::<PercentUnits>::of(
+            &SimpleFraction::new(
+                self.addon_optimal_interest_rate,
+                self.utilization_optimal,
+            ),
+            utilization,
         )
-        .of(utilization)
         .and_then(|utilization_config| {
             utilization_config
                 .checked_add(self.base_interest_rate.into())

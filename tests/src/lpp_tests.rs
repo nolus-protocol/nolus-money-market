@@ -4,7 +4,7 @@ use finance::{
     coin::{Amount, Coin},
     duration::Duration,
     fraction::Fraction,
-    percent::{Percent, Percent100},
+    percent::{Percent, Percent100, Units as PercentUnits},
     price,
     ratio::SimpleFraction,
     rational::Rational,
@@ -66,9 +66,11 @@ fn general_interest_rate(
         .and_then(|utilization_rate| {
             Percent100::try_from(
                 Percent::from(base_rate)
-                    + SimpleFraction::new(addon_rate.units(), optimal_rate.units())
-                        .of(utilization_rate)
-                        .expect("should be a valid Percent"),
+                    + Rational::<PercentUnits>::of(
+                        &SimpleFraction::new(addon_rate, optimal_rate),
+                        utilization_rate,
+                    )
+                    .expect("should be a valid Percent"),
             )
             .ok()
         })
