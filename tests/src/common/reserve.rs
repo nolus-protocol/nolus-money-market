@@ -17,10 +17,10 @@ impl Instantiator {
         let endpoints = CwContractWrapper::new(execute, instantiate, query);
 
         let code_id = app.store_code(Box::new(endpoints));
-        let lease_code_admin = LeaserInstantiator::expected_addr().into(); //the Leaser address
+        let protocol_admin = LeaserInstantiator::expected_addr().into(); //the Leaser address
 
         let msg = InstantiateMsg {
-            lease_code_admin,
+            protocol_admin,
             lease_code: CodeId::from(lease_code).into(),
         };
 
