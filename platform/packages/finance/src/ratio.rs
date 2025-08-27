@@ -48,9 +48,10 @@ where
     }
 }
 
-impl<U> Rational<U> for SimpleFraction<U>
+impl<U, T> Rational<U> for SimpleFraction<T>
 where
-    U: FractionUnit,
+    Self: Ratio<U>,
+    T: FractionUnit,
 {
     fn of<A>(&self, whole: A) -> Option<A>
     where
