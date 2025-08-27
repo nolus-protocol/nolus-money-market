@@ -89,6 +89,11 @@ pub enum ContractError {
     )]
     ProtocolDeregistration(platform::error::Error),
 
+    #[error(
+        "[Leaser] Scheduling reserve dump has failed! Cause: {0}"
+    )]
+    ScheduleReserveDump(platform::error::Error),
+
     #[error("[Leaser] Failed to query for the Lease package, cause: {0}")]
     QueryLeasePackage(StdError),
 }

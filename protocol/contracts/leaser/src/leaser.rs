@@ -149,6 +149,20 @@ pub(crate) fn try_close_deposits(
         .and_then(|lpp_ref| lpp_ref.execute_depositer(Cmd {}).map(Into::into))
 }
 
+pub(crate) fn try_dump_reserve(
+    storage: &dyn Storage,
+) -> ContractResult<MessageResponse> {
+    Config::load(storage).and_then(|config| {
+        let mut msgs = Batch::default();
+        msgs.schedule_execute_wasm_no_reply_no_funds(
+            config.reserve,
+            &ReserveExecuteMsg::DumpBalanceTo(config.lease_admin),
+        )
+        .map_err(ContractError::ScheduleReserveDump)
+        .map(|()| msgs.into())
+    })
+}
+
 pub(super) fn try_close_protocol<ProtocolsRegistryLoader>(
     storage: &mut dyn Storage,
     protocols_registry: ProtocolsRegistryLoader,

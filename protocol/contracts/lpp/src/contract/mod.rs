@@ -182,7 +182,7 @@ pub fn execute(
             .map(response::response_only_messages),
         ExecuteMsg::Burn { amount } => lender::try_withdraw::<LpnCurrency, _>(
             deps.storage,
-            bank::account(&env.contract.address.clone(), deps.querier),
+            bank::account(&env.contract.address, deps.querier),
             info.sender.clone(),
             amount,
             &env.block.time,
