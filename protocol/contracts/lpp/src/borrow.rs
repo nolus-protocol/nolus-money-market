@@ -74,10 +74,7 @@ impl InterestRate {
         };
 
         Rational::<PercentUnits>::of(
-            &SimpleFraction::new(
-                self.addon_optimal_interest_rate,
-                self.utilization_optimal,
-            ),
+            &SimpleFraction::new(self.addon_optimal_interest_rate, self.utilization_optimal),
             utilization,
         )
         .and_then(|utilization_config| {
