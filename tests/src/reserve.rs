@@ -1,6 +1,10 @@
+use access_control::error::Error as AccessControlError;
 use currencies::Lpn;
-use finance::coin::{Amount, Coin};
-use platform::{contract::Code, error::Error as PlatformError};
+use finance::{
+    coin::{Amount, Coin},
+    zero::Zero,
+};
+use platform::{bank, contract::Code, error::Error as PlatformError};
 use reserve::{
     api::{ConfigResponse, LpnCurrencyDTO, QueryMsg},
     error::Error as ReserveError,
@@ -119,10 +123,61 @@ fn cover_losses_enough_balance() {
     test_case.send_funds_from_admin(reserve.clone(), &[cwcoin::<Lpn, _>(losses)]);
 
     let _resp = cover_losses_ok(&mut test_case, reserve.clone(), lease_addr, losses);
-    let balance_past_cover =
-        platform::bank::balance::<Lpn>(&reserve, test_case.app.query()).unwrap();
+    let balance_past_cover = bank::balance::<Lpn>(&reserve, test_case.app.query()).unwrap();
 
     assert!(balance_past_cover.is_zero());
+}
+
+#[test]
+fn dump_balance_unauthorized() {
+    let mut test_case = lease::create_test_case::<Lpn>();
+    let reserve = test_case.address_book.reserve().clone();
+    let receiver = testing::user("USER");
+
+    let msg = reserve::api::ExecuteMsg::DumpBalanceTo(receiver);
+    let err = test_case
+        .app
+        .execute(testing::user("malicious user"), reserve, &msg, &[])
+        .unwrap_err();
+
+    assert!(matches!(
+        err.downcast_ref::<ReserveError>(),
+        Some(&ReserveError::Unauthorized(
+            AccessControlError::Unauthorized {}
+        ))
+    ));
+}
+
+#[test]
+fn dump_balance_ok() {
+    let mut test_case = lease::create_test_case::<Lpn>();
+    let reserve = test_case.address_book.reserve().clone();
+    let receiver = testing::user("USER");
+    let balance = Coin::new(4213141);
+
+    test_case.send_funds_from_admin(reserve.clone(), &[cwcoin::<Lpn, _>(balance)]);
+
+    let msg = reserve::api::ExecuteMsg::DumpBalanceTo(receiver.clone());
+    let _resp = test_case
+        .app
+        .execute(
+            LeaserInstantiator::expected_addr(),
+            reserve.clone(),
+            &msg,
+            &[],
+        )
+        .unwrap()
+        .unwrap_response();
+
+    assert_eq!(
+        Ok(Coin::ZERO),
+        bank::balance::<Lpn>(&reserve, test_case.app.query())
+    );
+
+    assert_eq!(
+        Ok(balance),
+        bank::balance::<Lpn>(&receiver, test_case.app.query())
+    );
 }
 
 fn cover_losses_err(

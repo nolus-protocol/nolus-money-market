@@ -1,6 +1,7 @@
-use std::ops::DerefMut;
+use std::ops::{Deref, DerefMut};
 
 use access_control::SingleUserAccess;
+use cosmwasm_std::Storage;
 use currencies::Lpn as LpnCurrency;
 use currency::CurrencyDef;
 use finance::coin::Coin;
@@ -86,20 +87,17 @@ pub fn migrate(
 
 #[entry_point]
 pub fn execute(
-    mut deps: DepsMut<'_>,
+    deps: DepsMut<'_>,
     env: Env,
     info: MessageInfo,
     msg: ExecuteMsg,
 ) -> Result<CwResponse> {
     match msg {
-        ExecuteMsg::NewLeaseCode(code) => SingleUserAccess::new(
-            deps.storage.deref_mut(),
-            crate::access_control::PROTOCOL_ADMIN_KEY,
-        )
-        .check(&info)
-        .map_err(Into::into)
-        .and_then(|()| Config::update_lease_code(deps.storage, code))
-        .map(|()| PlatformResponse::default()),
+        ExecuteMsg::NewLeaseCode(code) => {
+            authorize_protocol_admin_only(deps.storage.deref(), &info)
+                .and_then(|()| Config::update_lease_code(deps.storage, code))
+                .map(|()| PlatformResponse::default())
+        }
         ExecuteMsg::CoverLiquidationLosses(amount) => Config::load(deps.storage)
             .and_then(|config| {
                 contract::validator(deps.querier)
@@ -111,6 +109,10 @@ pub fn execute(
                     do_cover_losses(lease, losses, &env.contract.address, deps.querier)
                 })
             }),
+        ExecuteMsg::DumpBalanceTo(receiver) => {
+            authorize_protocol_admin_only(deps.storage.deref(), &info)
+                .and_then(|()| dump_balance_to(&env.contract.address, receiver, deps.querier))
+        }
     }
     .map(response::response_only_messages)
     .inspect_err(platform_error::log(deps.api))
@@ -133,6 +135,12 @@ pub fn query(deps: Deps<'_>, _env: Env, msg: QueryMsg) -> Result<Binary> {
     .inspect_err(platform_error::log(deps.api))
 }
 
+fn authorize_protocol_admin_only(store: &dyn Storage, call_message: &MessageInfo) -> Result<()> {
+    SingleUserAccess::new(store, crate::access_control::PROTOCOL_ADMIN_KEY)
+        .check(call_message)
+        .map_err(Into::into)
+}
+
 fn do_cover_losses(
     lease: Addr,
     amount: Coin<LpnCurrency>,
@@ -153,5 +161,20 @@ fn do_cover_losses(
 
                 Ok(PlatformResponse::messages_with_event(bank.into(), emitter))
             }
+        })
+}
+
+fn dump_balance_to(
+    reserve: &Addr,
+    receiver: Addr,
+    querier: QuerierWrapper<'_>,
+) -> Result<PlatformResponse> {
+    let mut reserve_account = bank::account(reserve, querier);
+    reserve_account
+        .balance::<LpnCurrency>()
+        .map_err(Error::ObtainBalance)
+        .map(|balance| {
+            reserve_account.send(balance, receiver);
+            PlatformResponse::messages_only(reserve_account.into())
         })
 }

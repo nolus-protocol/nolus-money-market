@@ -4,7 +4,7 @@ pub(crate) use currencies::Lpns as LpnCurrencies;
 use currency::CurrencyDTO;
 use finance::coin::CoinDTO;
 use platform::contract::{Code, CodeId};
-use sdk::cosmwasm_std::Uint64;
+use sdk::cosmwasm_std::{Addr, Uint64};
 
 pub type LpnCurrencyDTO = CurrencyDTO<LpnCurrencies>;
 pub type LpnCoin = CoinDTO<LpnCurrencies>;
@@ -29,6 +29,9 @@ pub enum ExecuteMsg {
     NewLeaseCode(Code),
 
     CoverLiquidationLosses(LpnCoin),
+
+    /// Transfer the Lpn amount of the reserve to the specified address
+    DumpBalanceTo(Addr),
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
