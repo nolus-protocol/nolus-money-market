@@ -47,52 +47,6 @@ pub struct Total<Lpn> {
     receipts: Coin<NLpn>,
 }
 
-pub mod migrate_from_0_8_12 {
-    use serde::{Deserialize, Serialize, Serializer};
-
-    use finance::{coin::Coin, ratio::Rational};
-    use lpp_platform::NLpn;
-    use sdk::{
-        cosmwasm_std::{Storage, Timestamp},
-        cw_storage_plus::Item,
-    };
-
-    use crate::{contract::Result as ContractResult, state::Total};
-
-    pub fn migrate<Lpn>(store: &mut dyn Storage, balance_nlpn: Coin<NLpn>) -> ContractResult<()> {
-        #[derive(Deserialize)]
-        #[serde(bound(deserialize = ""))]
-        pub struct Total0_8_12<Lpn> {
-            total_principal_due: Coin<Lpn>,
-            total_interest_due: Coin<Lpn>,
-            annual_interest_rate: Rational<Coin<Lpn>>,
-            last_update_time: Timestamp,
-        }
-        impl<Lpn> Serialize for Total0_8_12<Lpn> {
-            fn serialize<S>(&self, _serializer: S) -> Result<S::Ok, S::Error>
-            where
-                S: Serializer,
-            {
-                unimplemented!("satisfies Item::load trait bound")
-            }
-        }
-
-        let old_key = Item::new("total");
-        old_key
-            .load(store)
-            .inspect(|_| old_key.remove(store))
-            .map_err(Into::into)
-            .map(|old_total: Total0_8_12<Lpn>| Total::<Lpn> {
-                total_principal_due: old_total.total_principal_due,
-                total_interest_due: old_total.total_interest_due,
-                annual_interest_rate: old_total.annual_interest_rate,
-                last_update_time: old_total.last_update_time,
-                receipts: balance_nlpn,
-            })
-            .and_then(|new_total| new_total.store(store))
-    }
-}
-
 impl<Lpn> Default for Total<Lpn> {
     fn default() -> Self {
         Self::new()
