@@ -357,8 +357,8 @@ mod tests {
     #[test]
     fn into_slice_per_ratio() {
         assert_eq!(
-            D::from_nanos(D::YEAR.0 / 4),
-            D::YEAR.into_slice_per_ratio(test_coin(25), test_coin(100))
+            D::from_days(365 / 5),
+            D::YEAR.into_slice_per_ratio(test_coin(1), test_coin(5))
         );
         assert_eq!(
             D::from_days(10),
@@ -369,8 +369,8 @@ mod tests {
             D::YEAR.into_slice_per_ratio(Coin::ZERO, test_coin(Amount::MAX))
         );
         assert_eq!(
-            D::from_nanos(D::YEAR.0 / 2),
-            D::YEAR.into_slice_per_ratio(test_coin(Amount::MAX / 2), test_coin(Amount::MAX - 1))
+            D::from_days(365 / 5),
+            D::YEAR.into_slice_per_ratio(test_coin(Amount::MAX / 5), test_coin(Amount::MAX))
         );
     }
 
