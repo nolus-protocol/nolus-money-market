@@ -63,7 +63,7 @@ pub enum StateResponse {
         validity: Timestamp,
         status: opened::Status,
     },
-    Paid {
+    Closing {
         amount: LeaseCoin,
         in_progress: paid::ClosingTrx,
     },

@@ -164,7 +164,7 @@ fn partial_close_loan_closed() {
     );
     let state = super::state_query(&test_case, lease.clone());
     assert_eq!(
-        StateResponse::Paid {
+        StateResponse::Closing {
             amount: (lease_amount - close_amount).into(),
             in_progress: ClosingTrx::TransferInInit
         },

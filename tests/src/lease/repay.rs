@@ -437,7 +437,7 @@ fn expect_paid<ProtocolsRegistry, Treasury, Profit, Reserve, Lpp, Oracle, TimeAl
     lease: Addr,
     expected_funds: LeaseCoin,
 ) {
-    let expected_result = StateResponse::Paid {
+    let expected_result = StateResponse::Closing {
         amount: LeaseCoin::into(expected_funds),
         in_progress: ClosingTrx::TransferInInit,
     };

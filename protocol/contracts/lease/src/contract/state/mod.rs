@@ -113,8 +113,7 @@ where
 mod impl_from {
     use super::{
         BuyAsset, BuyLpn, Closed, ClosingTransferIn, FullClose, FullLiquidation, Liquidated,
-        OpenedActive, PartialClose, PartialLiquidation, RequestLoan, SlippageAnomaly,
-        State,
+        OpenedActive, PartialClose, PartialLiquidation, RequestLoan, SlippageAnomaly, State,
     };
 
     impl From<super::opening::request_loan::RequestLoan> for State {
