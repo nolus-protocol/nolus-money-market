@@ -9,7 +9,7 @@ use finance::price::base::BasePrice;
 use finance::{
     coin::Coin,
     duration::Duration,
-    percent::Percent,
+    percent::Percent100,
     price::{self, Price, dto::PriceDTO},
 };
 use sdk::{
@@ -30,7 +30,7 @@ const ROOT_NS: &str = "root_ns";
 const TOTAL_FEEDERS: usize = 1;
 const SAMPLE_PERIOD_SECS: u32 = 5;
 const SAMPLES_NUMBER: u16 = 12;
-const DISCOUNTING_FACTOR: Percent = Percent::from_permille(750);
+const DISCOUNTING_FACTOR: Percent100 = Percent100::from_permille(750);
 
 #[test]
 fn register_feeder() {
@@ -328,7 +328,7 @@ where
 
 fn config() -> Config {
     Config::new(
-        Percent::HUNDRED,
+        Percent100::HUNDRED,
         Duration::from_secs(SAMPLE_PERIOD_SECS),
         SAMPLES_NUMBER,
         DISCOUNTING_FACTOR,

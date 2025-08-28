@@ -3,7 +3,7 @@ use ::swap::testing::SwapRequest;
 use currencies::PaymentGroup;
 use finance::{
     coin::{Amount, Coin},
-    percent::Percent,
+    percent::Percent100,
 };
 use sdk::{
     cosmwasm_std::{Addr, Event},
@@ -35,14 +35,18 @@ fn trigger_tp() {
 fn trigger_sl() {
     let mut test_case = lease::create_test_case::<PaymentCurrency>();
 
-    let sl = LeaserInstantiator::INITIAL_LTV + Percent::from_permille(1);
+    let sl = LeaserInstantiator::INITIAL_LTV + Percent100::from_permille(1);
     let lease = open_lease(&mut test_case, None, Some(sl));
 
     // LeaseC/LpnC = 1.01
     trigger_close(test_case, lease, 101, 100, "stop-loss-ltv", sl);
 }
 
-fn open_lease(test_case: &mut LeaseTestCase, tp: Option<Percent>, sl: Option<Percent>) -> Addr {
+fn open_lease(
+    test_case: &mut LeaseTestCase,
+    tp: Option<Percent100>,
+    sl: Option<Percent100>,
+) -> Addr {
     // LeaseC/LpnC = 1
     let lease = lease::open_lease(test_case, DOWNPAYMENT, None);
 
@@ -61,7 +65,7 @@ fn trigger_close(
     base: Amount,
     quote: Amount,
     exp_strategy_key: &str,
-    exp_ltv: Percent,
+    exp_ltv: Percent100,
 ) {
     let response = lease::deliver_new_price(
         &mut test_case,
@@ -80,7 +84,7 @@ fn trigger_close(
     assert_eq!(1, requests.len());
 }
 
-fn assert_events(resp: &AppResponse, lease: &Addr, exp_strategy_key: &str, exp_ltv: Percent) {
+fn assert_events(resp: &AppResponse, lease: &Addr, exp_strategy_key: &str, exp_ltv: Percent100) {
     platform::tests::assert_event(
         &resp.events,
         &Event::new("wasm-ls-auto-close-position")

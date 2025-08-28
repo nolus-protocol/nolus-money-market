@@ -1,6 +1,6 @@
 use crate::{
     coin::Coin,
-    percent::{Percent, Units},
+    percent::{Units, bound::BoundPercent},
     ratio::Ratio,
 };
 
@@ -13,17 +13,18 @@ where
     type Type = u64;
 }
 
-impl Fractionable<Units> for Percent {
+impl<const UPPER_BOUND: Units> Fractionable<Units> for BoundPercent<UPPER_BOUND> {
     #[track_caller]
     fn safe_mul<R>(self, ratio: &R) -> Self
     where
         R: Ratio<Units>,
     {
-        Percent::from_permille(self.units().safe_mul(ratio))
+        Self::try_from(self.units().safe_mul(ratio))
+            .expect("Resulting permille exceeds BoundPercent upper bound")
     }
 }
 
-impl<C> Fractionable<Coin<C>> for Percent {
+impl<C, const UPPER_BOUND: Units> Fractionable<Coin<C>> for BoundPercent<UPPER_BOUND> {
     #[track_caller]
     fn safe_mul<F>(self, fraction: &F) -> Self
     where
@@ -35,7 +36,7 @@ impl<C> Fractionable<Coin<C>> for Percent {
             .safe_mul(fraction)
             .try_into()
             .expect("overflow computing a fraction of permille");
-        Self::from_permille(res)
+        Self::try_from(res).expect("Resulting permille exceeds BoundPercent upper bound")
     }
 }
 
@@ -44,20 +45,33 @@ mod test {
     mod percent {
         use crate::{
             fractionable::{Fractionable, HigherRank},
-            percent::{Percent, Units},
+            percent::{Percent, Percent100, Units},
         };
 
         #[test]
         fn safe_mul() {
             assert_eq!(
+                Percent100::from_permille(410 * 222 / 1000),
+                Percent100::from_percent(41).safe_mul(&Percent100::from_permille(222))
+            );
+            assert_eq!(
+                Percent100::from_permille(999),
+                Percent100::from_percent(100).safe_mul(&Percent100::from_permille(999))
+            );
+            assert_eq!(
                 Percent::from_permille(410 * 222222 / 1000),
                 Percent::from_percent(41).safe_mul(&Percent::from_permille(222222))
+            );
+            assert_eq!(
+                Percent::from_permille(Units::MAX),
+                Percent::from_percent(100).safe_mul(&Percent::from_permille(Units::MAX))
             );
 
             let p_units: Units = 410;
             let p64: <u32 as HigherRank<u8>>::Type = p_units.into();
             let p64_res: <u32 as HigherRank<u8>>::Type = p64 * u64::from(Units::MAX) / 1000;
             let p_units_res: Units = p64_res.try_into().expect("u64 -> Units overflow");
+
             assert_eq!(
                 Percent::from_permille(p_units_res),
                 Percent::from_percent(41).safe_mul(&Percent::from_permille(Units::MAX))
@@ -69,10 +83,6 @@ mod test {
             assert_eq!(
                 Percent::from_permille(Units::MAX),
                 Percent::from_percent(100).safe_mul(&Percent::from_permille(Units::MAX))
-            );
-            assert_eq!(
-                Percent::from_percent(u16::MAX),
-                Percent::from_percent(100).safe_mul(&Percent::from_percent(u16::MAX))
             );
         }
 
@@ -90,12 +100,13 @@ mod test {
             coin::Coin,
             fractionable::Fractionable,
             percent::{Percent, Units},
-            ratio::Rational,
+            ratio::SimpleFraction,
         };
 
         #[test]
         fn safe_mul() {
-            let ratio_one = Rational::new(
+            // TODO replace SimpleFraction with Ratio whe it becomes a struct
+            let ratio_one = SimpleFraction::new(
                 Coin::<SuperGroupTestC1>::new(u128::MAX),
                 Coin::<SuperGroupTestC1>::new(u128::MAX),
             );

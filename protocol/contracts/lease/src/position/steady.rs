@@ -71,7 +71,7 @@ where
 mod tests {
     use currencies::{LeaseGroup, Lpn, Lpns, testing::PaymentC3};
     use finance::{
-        coin::Coin, duration::Duration, fraction::Fraction, percent::Percent, price,
+        coin::Coin, duration::Duration, fraction::Fraction, percent::Percent100, price,
         range::RightOpenRange,
     };
     use oracle::api::alarms::{Alarm, ExecuteMsg as PriceAlarmsCmd};
@@ -92,12 +92,12 @@ mod tests {
     fn try_into_alarms() {
         let now = Timestamp::from_seconds(1732016180);
         let recheck_in = Duration::from_secs(765758);
-        let ltv_to_price = |ltv: Percent| {
+        let ltv_to_price = |ltv: Percent100| {
             price::total_of::<TestCurrency>(ltv.of(Coin::from(100))).is(Coin::from(45))
         };
 
-        let steady_below_ltv = Percent::from_percent(60);
-        let steady_above_ltv = Percent::from_percent(43);
+        let steady_below_ltv = Percent100::from_percent(60);
+        let steady_above_ltv = Percent100::from_percent(43);
         let steady_above = Steadiness {
             r#for: recheck_in,
             within: RightOpenRange::up_to(steady_below_ltv).invert(ltv_to_price),

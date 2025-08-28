@@ -1,8 +1,9 @@
 use std::result::Result as StdResult;
 
+use serde::{Deserialize, Serialize};
+
 use currency::{CurrencyDef, MemberOf};
 use finance::coin::{Coin, CoinDTO, WithCoin, WithCoinResult};
-use serde::{Deserialize, Serialize};
 
 use crate::{
     api::{LeaseAssetCurrencies, LeasePaymentCurrencies},
