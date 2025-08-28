@@ -23,7 +23,6 @@ mod state;
 pub(crate) struct Lease {
     lease: LeaseDTO,
     dex: Account,
-    #[serde(alias = "finalizer")] // TODO remove after the release past v0.8.7 gets deployed
     leases: LeasesRef,
 }
 
