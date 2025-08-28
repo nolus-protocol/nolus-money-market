@@ -166,7 +166,7 @@ fn partial_close_loan_closed() {
     assert_eq!(
         StateResponse::Paid {
             amount: (lease_amount - close_amount).into(),
-            in_progress: Some(ClosingTrx::TransferInInit)
+            in_progress: ClosingTrx::TransferInInit
         },
         state
     );

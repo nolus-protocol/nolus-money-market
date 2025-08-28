@@ -31,7 +31,7 @@ impl StateResponse {
         }
     }
 
-    pub fn paid_from(lease: LeaseDTO, in_progress: Option<paid::ClosingTrx>) -> Self {
+    pub fn paid_from(lease: LeaseDTO, in_progress: paid::ClosingTrx) -> Self {
         Self::Paid {
             amount: lease.position.into(),
             in_progress,

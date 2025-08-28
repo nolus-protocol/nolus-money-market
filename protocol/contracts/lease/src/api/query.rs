@@ -65,7 +65,7 @@ pub enum StateResponse {
     },
     Paid {
         amount: LeaseCoin,
-        in_progress: Option<paid::ClosingTrx>,
+        in_progress: paid::ClosingTrx,
     },
     Closed(),
     Liquidated(),

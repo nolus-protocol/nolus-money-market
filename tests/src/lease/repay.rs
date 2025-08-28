@@ -439,7 +439,7 @@ fn expect_paid<ProtocolsRegistry, Treasury, Profit, Reserve, Lpp, Oracle, TimeAl
 ) {
     let expected_result = StateResponse::Paid {
         amount: LeaseCoin::into(expected_funds),
-        in_progress: Some(ClosingTrx::TransferInInit),
+        in_progress: ClosingTrx::TransferInInit,
     };
     assert_eq!(expected_result, super::state_query(test_case, lease));
 }

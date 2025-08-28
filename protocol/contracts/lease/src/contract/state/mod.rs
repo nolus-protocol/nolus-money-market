@@ -57,8 +57,6 @@ type PartialClose = DexState<opened::close::sell_asset::customer_close::partial:
 
 type FullClose = DexState<opened::close::sell_asset::customer_close::full::DexState>;
 
-type PaidActive = LeaseState<paid::Active>;
-
 type ClosingTransferIn = DexState<paid::transfer_in::DexState>;
 
 type Closed = LeaseState<closed::Closed>;
@@ -81,7 +79,6 @@ pub enum State {
     SlippageAnomaly,
     PartialClose,
     FullClose,
-    PaidActive,
     ClosingTransferIn,
     Closed,
     Liquidated,
@@ -116,7 +113,7 @@ where
 mod impl_from {
     use super::{
         BuyAsset, BuyLpn, Closed, ClosingTransferIn, FullClose, FullLiquidation, Liquidated,
-        OpenedActive, PaidActive, PartialClose, PartialLiquidation, RequestLoan, SlippageAnomaly,
+        OpenedActive, PartialClose, PartialLiquidation, RequestLoan, SlippageAnomaly,
         State,
     };
 
@@ -173,12 +170,6 @@ mod impl_from {
     impl From<super::opened::close::sell_asset::customer_close::full::DexState> for State {
         fn from(value: super::opened::close::sell_asset::customer_close::full::DexState) -> Self {
             FullClose::new(value).into()
-        }
-    }
-
-    impl From<super::paid::Active> for State {
-        fn from(value: super::paid::Active) -> Self {
-            PaidActive::new(value).into()
         }
     }
 

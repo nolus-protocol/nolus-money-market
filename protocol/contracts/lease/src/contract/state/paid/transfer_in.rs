@@ -62,10 +62,7 @@ impl TransferIn {
     }
 
     fn state(self, in_progress: ClosingTrx) -> <Self as SwapTask>::StateResponse {
-        Ok(QueryStateResponse::paid_from(
-            self.lease.lease,
-            Some(in_progress),
-        ))
+        Ok(QueryStateResponse::paid_from(self.lease.lease, in_progress))
     }
 
     fn amount(&self) -> &CoinDTO<AssetGroup> {
