@@ -106,14 +106,47 @@ mod test {
 
         #[test]
         fn safe_mul() {
-            // TODO replace SimpleFraction with Ratio whe it becomes a struct
-            let ratio_one = SimpleFraction::new(
-                Coin::<SuperGroupTestC1>::new(u128::MAX),
-                Coin::<SuperGroupTestC1>::new(u128::MAX),
-            );
             assert_eq!(
                 Percent::from_permille(Units::MAX),
-                Fractionable::<Coin<_>>::safe_mul(Percent::from_permille(Units::MAX), &ratio_one)
+                Fractionable::<Coin<_>>::safe_mul(
+                    Percent::from_permille(Units::MAX),
+                    &SimpleFraction::new(
+                        Coin::<SuperGroupTestC1>::new(u128::MAX),
+                        Coin::<SuperGroupTestC1>::new(u128::MAX),
+                    )
+                )
+            );
+            assert_eq!(
+                Percent::from_percent(20),
+                Fractionable::<Coin<_>>::safe_mul(
+                    Percent::HUNDRED,
+                    &SimpleFraction::new(
+                        Coin::<SuperGroupTestC1>::new(1),
+                        Coin::<SuperGroupTestC1>::new(5),
+                    )
+                )
+            );
+            assert_eq!(
+                Percent::from_permille(225),
+                Fractionable::<Coin<_>>::safe_mul(
+                    Percent::from_permille(150),
+                    &SimpleFraction::new(
+                        Coin::<SuperGroupTestC1>::new(3),
+                        Coin::<SuperGroupTestC1>::new(2),
+                    )
+                )
+            );
+        }
+
+        #[test]
+        #[should_panic]
+        fn safe_mul_overflow() {
+            Fractionable::<Coin<_>>::safe_mul(
+                Percent::from_percent(1),
+                &SimpleFraction::new(
+                    Coin::<SuperGroupTestC1>::new(u128::MAX),
+                    Coin::<SuperGroupTestC1>::new(1),
+                ),
             );
         }
     }
