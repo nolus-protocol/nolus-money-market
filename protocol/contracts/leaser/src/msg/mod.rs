@@ -166,7 +166,7 @@ pub struct QuoteResponse {
 mod test {
     use currencies::testing::{LeaseC1, PaymentC1};
     use currency::CurrencyDef;
-    use finance::{coin::Coin, duration::Duration, percent::Percent};
+    use finance::{coin::Coin, duration::Duration, percent::Percent100};
     use lease::api::{
         FinalizerExecuteMsg,
         authz::AccessCheck,
