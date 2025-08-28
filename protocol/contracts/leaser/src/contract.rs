@@ -78,14 +78,9 @@ pub fn migrate(
     }: ProtocolMigrationMessage<MigrateMsg>,
 ) -> ContractResult<Response> {
     migrate_from
-        .update_software_and_storage(
-            &CURRENT_RELEASE,
-            &to_release,
-            deps.storage,
-            Leases::migrate_v0_8_12,
-            ContractError::UpdateSoftware,
-        )
+        .update_software(&CURRENT_RELEASE, &to_release)
         .map(|()| response::empty_response())
+        .map_err(ContractError::UpdateSoftware)
         .inspect_err(platform_error::log(deps.api))
 }
 
