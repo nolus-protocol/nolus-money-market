@@ -17,8 +17,6 @@ use super::{DexState, Task};
 
 pub(super) trait ClosePositionTask<CalculatorT>
 where
-    //TODO remove past the migration from v0.8.7
-    CalculatorT: Default,
     CalculatorT: Calculator,
     Self: IntoRepayable + Sized,
     Task<Self::Repayable, CalculatorT>: AnomalyHandler<Task<Self::Repayable, CalculatorT>>,
@@ -49,8 +47,6 @@ where {
 impl<CalculatorT, T> ClosePositionTask<CalculatorT> for T
 where
     T: IntoRepayable,
-    //TODO remove past the migration from v0.8.7
-    CalculatorT: Default,
     CalculatorT: Calculator,
     Task<Self::Repayable, CalculatorT>: AnomalyHandler<Task<Self::Repayable, CalculatorT>>,
     DexState<T::Repayable, CalculatorT>: Into<State>,
