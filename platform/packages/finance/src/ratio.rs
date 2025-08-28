@@ -4,6 +4,21 @@ use serde::{Deserialize, Serialize};
 
 use crate::{fraction::Fraction, fractionable::Fractionable, zero::Zero};
 
+/// A wrapper over `Rational` where the ratio is no more than 1.
+#[cfg_attr(any(test, feature = "testing"), derive(Debug))]
+pub struct Ratio<U>(Rational<U>);
+
+impl<U> Ratio<U>
+where
+    U: Debug + Ord + Zero,
+{
+    pub fn new(parts: U, total: U) -> Self {
+        debug_assert!(parts <= total);
+
+        Self(Rational::new(parts, total))
+    }
+}
+
 // TODO review whether it may gets simpler if extend Fraction
 pub trait RatioLegacy<U> {
     fn parts(&self) -> U;
