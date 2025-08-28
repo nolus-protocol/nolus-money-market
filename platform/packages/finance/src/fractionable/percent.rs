@@ -45,7 +45,7 @@ impl<C, const UPPER_BOUND: Units> Fractionable<Coin<C>> for BoundPercent<UPPER_B
 mod test {
     mod percent {
         use crate::{
-            fractionable::Fractionable,
+            fractionable::{Fractionable, HigherRank},
             percent::{Percent, Percent100, Units},
         };
 
@@ -69,8 +69,8 @@ mod test {
             );
 
             let p_units: Units = 410;
-            let p64: u64 = p_units.into();
-            let p64_res = p64 * u64::from(Units::MAX) / 1000;
+            let p64: <u32 as HigherRank<u8>>::Type = p_units.into();
+            let p64_res: <u32 as HigherRank<u8>>::Type = p64 * u64::from(Units::MAX) / 1000;
             let p_units_res: Units = p64_res.try_into().expect("u64 -> Units overflow");
 
             assert_eq!(
