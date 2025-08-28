@@ -10,7 +10,7 @@ use crate::{
     error::{Error, Result},
     fraction::Fraction,
     fractionable::HigherRank,
-    ratio::{Ratio, Rational},
+    ratio::{RatioLegacy, Rational},
 };
 
 pub mod base;
@@ -102,7 +102,7 @@ where
     /// Please note that Price(amount, amount_quote) is like Ratio(amount_quote / amount).
     pub(crate) fn lossy_mul<R>(self, rhs: &R) -> Self
     where
-        R: Ratio<Amount>,
+        R: RatioLegacy<Amount>,
     {
         let (amount_normalized, rhs_nominator_normalized) =
             self.amount.into_coprime_with(Coin::<C>::new(rhs.parts()));

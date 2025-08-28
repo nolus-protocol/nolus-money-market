@@ -1,7 +1,7 @@
 use crate::{
     coin::Coin,
     percent::{Percent, Units},
-    ratio::Ratio,
+    ratio::RatioLegacy,
 };
 
 use super::{Fractionable, HigherRank};
@@ -17,7 +17,7 @@ impl Fractionable<Units> for Percent {
     #[track_caller]
     fn safe_mul<R>(self, ratio: &R) -> Self
     where
-        R: Ratio<Units>,
+        R: RatioLegacy<Units>,
     {
         Percent::from_permille(self.units().safe_mul(ratio))
     }
@@ -27,7 +27,7 @@ impl<C> Fractionable<Coin<C>> for Percent {
     #[track_caller]
     fn safe_mul<F>(self, fraction: &F) -> Self
     where
-        F: Ratio<Coin<C>>,
+        F: RatioLegacy<Coin<C>>,
     {
         let p128: u128 = self.units().into();
         // TODO re-assess the design of Ratio ... and whether it could be > 1
