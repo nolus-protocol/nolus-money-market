@@ -5,7 +5,7 @@ use std::{
 
 use serde::{Deserialize, Serialize};
 
-use finance::{duration::Duration, zero::Zero};
+use finance::duration::Duration;
 use platform::{
     batch::{Batch, Emitter},
     ica::ErrorResponse as ICAErrorResponse,
@@ -27,8 +27,6 @@ use super::{
     trx::TransferOutTrx,
 };
 
-mod migrate_v0_8_12;
-
 /// Transfer out a list of coins to DEX
 ///
 /// Supports up to `CoinsNb::MAX` number of coins.
@@ -41,17 +39,12 @@ mod migrate_v0_8_12;
         serialize = "SwapTask: Serialize",
         deserialize = "SwapTask: Deserialize<'de> + SwapTaskT"
     ),
-    try_from = "migrate_v0_8_12::TransferOut<SwapTask, SEnum, SwapClient>"
+    deny_unknown_fields,
+    rename_all = "snake_case"
 )]
 pub struct TransferOut<SwapTask, SEnum, SwapClient> {
     spec: SwapTask,
     acks_left: CoinsNb,
-    // a transient field facilitating the v0.8.12 migration
-    // since the lazy migration concerns only data transfer we need a way
-    // to track transfer requests till getting to a v0.8.14 state (all requests sent waiting for acks)
-    //TODO remove once migrated all v0.8.12 leases
-    #[serde(skip)]
-    requests_sent: CoinsNb,
     #[serde(skip)]
     _state_enum: PhantomData<SEnum>,
     #[serde(skip)]
@@ -64,32 +57,13 @@ where
 {
     pub fn new(spec: SwapTask) -> Self {
         let acks_left = Self::coins_len(&spec);
-        Self::internal_new(spec, acks_left, Zero::ZERO)
+        Self::internal_new(spec, acks_left)
     }
 
-    pub fn migrate_from(spec: SwapTask, coin_index: CoinsNb, last_coin_index: CoinsNb) -> Self {
-        let coins_len = Self::coins_len(&spec);
-        debug_assert!(coin_index < coins_len);
-        debug_assert_eq!(coins_len - 1, last_coin_index);
-        debug_assert!(coin_index <= last_coin_index);
-
-        let acks_left = coins_len
-            .checked_sub(coin_index)
-            .expect("'coin_index' is greater than 'coins_len'");
-        let requests_sent = coin_index + 1;
-        Self::internal_new(spec, acks_left, requests_sent)
-    }
-
-    fn nth(spec: SwapTask, acks_left: CoinsNb) -> Self {
-        let coins_nb = Self::coins_len(&spec);
-        Self::internal_new(spec, acks_left, coins_nb)
-    }
-
-    fn internal_new(spec: SwapTask, acks_left: CoinsNb, requests_sent: CoinsNb) -> Self {
+    fn internal_new(spec: SwapTask, acks_left: CoinsNb) -> Self {
         let ret = Self {
             spec,
             acks_left,
-            requests_sent,
             _state_enum: PhantomData,
             _swap_client: PhantomData,
         };
@@ -99,7 +73,7 @@ where
 
     fn invariant(&self) -> bool {
         let coins_nb = Self::coins_len(&self.spec);
-        self.requests_sent <= coins_nb && 0 < self.acks_left && self.acks_left <= coins_nb
+        0 < self.acks_left && self.acks_left <= coins_nb
     }
 
     fn coins_len(spec: &SwapTask) -> CoinsNb {
@@ -110,18 +84,16 @@ where
     }
 
     fn generate_requests(&self, now: Timestamp) -> Result<Batch> {
-        // TODO uncomment once the v0.8.12 migration completes
-        // debug_assert_eq!(
-        //     Self::coins_len(&self.spec),
-        //     self.acks_left,
-        //     "calling 'enter_state' past initialization"
-        // );
+        debug_assert_eq!(
+            Self::coins_len(&self.spec),
+            self.acks_left,
+            "calling 'enter_state' past initialization"
+        );
         let mut trx = TransferOutTrx::new(self.spec.dex_account(), now);
 
         self.spec
             .coins()
             .into_iter()
-            .skip(self.requests_sent.into())
             .try_for_each(|coin| trx.send(&coin))
             .map(|()| trx.into())
     }
@@ -133,7 +105,7 @@ where
             "the method contract precondition `!self.last_ack()` should have been respected",
         );
 
-        Self::nth(self.spec, acks_left)
+        Self::internal_new(self.spec, acks_left)
     }
 
     fn last_ack(&self) -> bool {
@@ -195,16 +167,12 @@ where
         env: Env,
     ) -> HandlerResult<Self> {
         let label = self.spec.label();
-        let now = env.block.time;
         if self.last_ack() {
             let next = SwapExactIn::new(self.spec);
-            next.enter(now, querier)
+            next.enter(env.block.time, querier)
                 .and_then(|msgs| Self::on_response(next, label, msgs))
         } else {
-            // TODO!!!! remove generation of outstanding requests once the migration from v0.8.12 completes
-            self.generate_requests(now).and_then(|remaining_requests| {
-                Self::on_response(self.next(), label, remaining_requests)
-            })
+            Self::on_response(self.next(), label, Batch::default())
         }
         .into()
     }
