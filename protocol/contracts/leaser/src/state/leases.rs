@@ -99,44 +99,10 @@ impl Leases {
         // ExactSizeIterator::is_empty() is not stable yet
         Self::iter(storage, None).next().is_none()
     }
-
-    pub fn migrate_v0_8_12(storage: &mut dyn Storage) -> ContractResult<()> {
-        const MAX_BATCH: u8 = u8::MAX;
-
-        let mut next_customer = None;
-        loop {
-            let may_customers_no_leases = Self::iter(storage, next_customer)
-                .filter_map(|maybe_customer| {
-                    maybe_customer.map_or_else(
-                        |err| Some(Err(err)),
-                        |customer| (customer.leases.len() == 0).then(|| Ok(customer.customer)),
-                    )
-                })
-                .take(MAX_BATCH.into())
-                .collect::<ContractResult<Vec<Addr>>>();
-
-            next_customer = match may_customers_no_leases {
-                Ok(customers_no_leases) => {
-                    customers_no_leases.into_iter().fold(None, |_, customer| {
-                        Self::CUSTOMER_LEASES.remove(storage, customer.clone());
-
-                        Some(customer)
-                    })
-                }
-                Err(e) => break Err(e),
-            };
-
-            if next_customer.is_none() {
-                break Ok(());
-            }
-        }
-    }
 }
 
 #[cfg(all(feature = "internal.test.testing", test))]
 mod test {
-    use std::collections::HashSet;
-
     use sdk::cosmwasm_std::{Addr, Storage, testing::MockStorage};
 
     use crate::{ContractError, state::leases::Leases};
@@ -288,104 +254,6 @@ mod test {
         assert!(Leases::empty(&storage));
     }
 
-    #[test]
-    fn test_migration_simple() {
-        let mut storage = MockStorage::default();
-
-        Leases::CUSTOMER_LEASES
-            .save(&mut storage, test_customer(), &HashSet::default())
-            .unwrap();
-        assert!(!Leases::empty(&storage));
-        assert_lease_not_exist(&storage);
-        save_customer_lease(&mut storage, test_another_customer(), test_another_lease());
-        assert!(!Leases::empty(&storage));
-        assert_another_lease_exist(&storage);
-
-        Leases::migrate_v0_8_12(&mut storage).unwrap();
-        assert!(!Leases::empty(&storage));
-        assert_another_lease_exist(&storage);
-
-        let mut customers = Leases::iter(&storage, None);
-        let first_customer = customers.next().unwrap().unwrap();
-        assert_eq!(test_another_customer(), first_customer.customer);
-        assert_eq!(
-            vec![test_another_lease()],
-            first_customer.leases.collect::<Vec<_>>()
-        );
-        assert!(customers.next().is_none());
-    }
-
-    #[test]
-    fn test_migration_multipage() {
-        let mut storage = MockStorage::default();
-
-        save_empty_customer_leases(&mut storage, 0, 100);
-
-        let customer_1 = test_index_customer(100);
-        save_customer_lease(&mut storage, customer_1.clone(), test_lease());
-        assert!(!Leases::empty(&storage));
-        assert!(lease_exist(&storage, customer_1.clone(), &test_lease()));
-
-        save_empty_customer_leases(&mut storage, 101, 500);
-        let customer_2 = test_index_customer(500);
-        save_customer_lease(&mut storage, customer_2.clone(), test_another_lease());
-        assert!(!Leases::empty(&storage));
-        assert!(lease_exist(
-            &storage,
-            customer_2.clone(),
-            &test_another_lease()
-        ));
-
-        let last_customer = test_index_customer(700);
-        save_empty_customer_leases(&mut storage, 501, 700);
-        save_customer_lease(&mut storage, last_customer.clone(), test_lease());
-
-        Leases::migrate_v0_8_12(&mut storage).unwrap();
-        assert!(!Leases::empty(&storage));
-        assert!(lease_exist(&storage, customer_1.clone(), &test_lease()));
-        assert!(lease_exist(
-            &storage,
-            customer_2.clone(),
-            &test_another_lease()
-        ));
-        assert!(lease_exist(&storage, last_customer.clone(), &test_lease()));
-
-        let mut customers = Leases::iter(&storage, None);
-        let first_customer = customers.next().unwrap().unwrap();
-        assert_eq!(customer_1, first_customer.customer);
-        assert_eq!(
-            vec![test_lease()],
-            first_customer.leases.collect::<Vec<_>>()
-        );
-        let second_customer = customers.next().unwrap().unwrap();
-        assert_eq!(customer_2, second_customer.customer);
-        assert_eq!(
-            vec![test_another_lease()],
-            second_customer.leases.collect::<Vec<_>>()
-        );
-        let third_customer = customers.next().unwrap().unwrap();
-        assert_eq!(last_customer, third_customer.customer);
-        assert_eq!(
-            vec![test_lease()],
-            third_customer.leases.collect::<Vec<_>>()
-        );
-        assert!(customers.next().is_none());
-    }
-
-    fn save_customer_lease(storage: &mut dyn Storage, customer: Addr, lease: Addr) {
-        Leases::CUSTOMER_LEASES
-            .save(storage, customer, &HashSet::from_iter([lease]))
-            .expect("saving succeeded");
-    }
-
-    fn save_empty_customer_leases(storage: &mut dyn Storage, index_from: u32, index_to: u32) {
-        for i in index_from..index_to {
-            Leases::CUSTOMER_LEASES
-                .save(storage, test_index_customer(i), &HashSet::default())
-                .expect("saving succeeded");
-        }
-    }
-
     fn test_customer() -> Addr {
         const CUSTOMER: &str = "customerX";
         Addr::unchecked(CUSTOMER)
@@ -394,13 +262,6 @@ mod test {
     fn test_another_customer() -> Addr {
         const CUSTOMER: &str = "customerY";
         Addr::unchecked(CUSTOMER)
-    }
-
-    fn test_index_customer(index: u32) -> Addr {
-        const CUSTOMER: &str = "customer";
-        let mut cust = CUSTOMER.to_owned();
-        cust.push_str(&index.to_string());
-        Addr::unchecked(cust)
     }
 
     fn test_lease() -> Addr {
