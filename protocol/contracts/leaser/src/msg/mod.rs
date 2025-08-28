@@ -138,8 +138,6 @@ pub enum QueryMsg {
     Quote {
         downpayment: DownpaymentCoin,
         lease_asset: CurrencyDTO<LeaseCurrencies>,
-        // TODO get rid of the default-ness
-        #[serde(default)]
         max_ltd: Option<Percent>,
     },
 }
@@ -163,7 +161,9 @@ pub struct QuoteResponse {
 
 #[cfg(all(feature = "internal.test.testing", test))]
 mod test {
-    use finance::{duration::Duration, percent::Percent};
+    use currencies::testing::{LeaseC1, PaymentC1};
+    use currency::CurrencyDef;
+    use finance::{coin::Coin, duration::Duration, percent::Percent};
     use lease::api::{
         FinalizerExecuteMsg,
         authz::AccessCheck,
@@ -244,6 +244,20 @@ mod test {
                 lease_max_slippages: new_config.lease_max_slippages
             }),
             platform_tests::ser_de(&SudoMsg::Config(new_config)),
+        );
+    }
+
+    #[test]
+    fn no_max_ltd() {
+        let quote_bin = "{\"quote\":{\"downpayment\":{\"amount\":\"10\",\"ticker\":\"NLS\"},\"lease_asset\":\"LC1\"}}";
+
+        assert_eq!(
+            QueryMsg::Quote {
+                downpayment: Coin::<PaymentC1>::new(10).into(),
+                lease_asset: *LeaseC1::dto(),
+                max_ltd: None,
+            },
+            cosmwasm_std::from_json(quote_bin).expect("deserialization failed"),
         );
     }
 }
