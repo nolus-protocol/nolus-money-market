@@ -1,6 +1,6 @@
 use bnum::types::U256;
 
-use crate::{coin::Coin, duration::Duration, ratio::Ratio};
+use crate::{coin::Coin, duration::Duration, ratio::RatioLegacy};
 
 use super::{Fractionable, HigherRank};
 
@@ -15,7 +15,7 @@ impl<C> Fractionable<Coin<C>> for Duration {
     #[track_caller]
     fn safe_mul<F>(self, fraction: &F) -> Self
     where
-        F: Ratio<Coin<C>>,
+        F: RatioLegacy<Coin<C>>,
     {
         let d128: u128 = self.into();
         // TODO re-assess the design of Ratio ... and whether it could be > 1

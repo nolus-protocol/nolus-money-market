@@ -1,11 +1,11 @@
-use crate::{percent::Units as PercentUnits, ratio::Ratio};
+use crate::{percent::Units as PercentUnits, ratio::RatioLegacy};
 
 use super::Fractionable;
 
 impl Fractionable<PercentUnits> for usize {
     fn safe_mul<F>(self, fraction: &F) -> Self
     where
-        F: Ratio<PercentUnits>,
+        F: RatioLegacy<PercentUnits>,
     {
         u128::try_from(self)
             .expect("usize to u128 overflow")

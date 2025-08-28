@@ -1,6 +1,6 @@
 use std::marker::PhantomData;
 
-use crate::{coin::Amount, percent::Units as PercentUnits, price::Price, ratio::Ratio};
+use crate::{coin::Amount, percent::Units as PercentUnits, price::Price, ratio::RatioLegacy};
 
 use super::Fractionable;
 
@@ -11,7 +11,7 @@ where
 {
     fn safe_mul<F>(self, fraction: &F) -> Self
     where
-        F: Ratio<PercentUnits>,
+        F: RatioLegacy<PercentUnits>,
     {
         self.lossy_mul(&RatioUpcast(PhantomData, fraction))
     }
@@ -24,7 +24,7 @@ where
 {
     fn safe_mul<F>(self, fraction: &F) -> Self
     where
-        F: Ratio<usize>,
+        F: RatioLegacy<usize>,
     {
         self.lossy_mul(&RatioTryUpcast(fraction))
     }
@@ -32,11 +32,11 @@ where
 
 struct RatioUpcast<'a, U, R>(PhantomData<U>, &'a R)
 where
-    R: Ratio<U>;
-impl<U, R> Ratio<Amount> for RatioUpcast<'_, U, R>
+    R: RatioLegacy<U>;
+impl<U, R> RatioLegacy<Amount> for RatioUpcast<'_, U, R>
 where
     U: Into<Amount>,
-    R: Ratio<U>,
+    R: RatioLegacy<U>,
 {
     fn parts(&self) -> Amount {
         self.1.parts().into()
@@ -48,13 +48,13 @@ where
 
 struct RatioTryUpcast<'a, R>(&'a R)
 where
-    R: Ratio<usize>;
+    R: RatioLegacy<usize>;
 
 const EXPECT_MSG: &str = "usize should convert into u128";
 
-impl<R> Ratio<Amount> for RatioTryUpcast<'_, R>
+impl<R> RatioLegacy<Amount> for RatioTryUpcast<'_, R>
 where
-    R: Ratio<usize>,
+    R: RatioLegacy<usize>,
 {
     fn parts(&self) -> Amount {
         self.0.parts().try_into().expect(EXPECT_MSG)

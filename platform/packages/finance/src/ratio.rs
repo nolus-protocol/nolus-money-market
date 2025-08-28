@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use crate::{fraction::Fraction, fractionable::Fractionable, zero::Zero};
 
 // TODO review whether it may gets simpler if extend Fraction
-pub trait Ratio<U> {
+pub trait RatioLegacy<U> {
     fn parts(&self) -> U;
     fn total(&self) -> U;
 }
@@ -35,7 +35,7 @@ where
 
 impl<U, T> Fraction<U> for Rational<T>
 where
-    Self: Ratio<U>,
+    Self: RatioLegacy<U>,
 {
     #[track_caller]
     fn of<A>(&self, whole: A) -> A
@@ -46,7 +46,7 @@ where
     }
 }
 
-impl<U, T> Ratio<U> for Rational<T>
+impl<U, T> RatioLegacy<U> for Rational<T>
 where
     T: Zero + Copy + PartialEq + Into<U>,
 {

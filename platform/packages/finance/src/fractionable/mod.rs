@@ -4,7 +4,7 @@ use std::{
 };
 
 use crate::{
-    duration::Units as TimeUnits, percent::Units as PercentUnits, ratio::Ratio, zero::Zero,
+    duration::Units as TimeUnits, percent::Units as PercentUnits, ratio::RatioLegacy, zero::Zero,
 };
 
 mod coin;
@@ -17,7 +17,7 @@ pub trait Fractionable<U> {
     #[track_caller]
     fn safe_mul<F>(self, fraction: &F) -> Self
     where
-        F: Ratio<U>;
+        F: RatioLegacy<U>;
 }
 
 // TODO revisit its usability
@@ -38,7 +38,7 @@ where
     #[track_caller]
     fn safe_mul<R>(self, ratio: &R) -> Self
     where
-        R: Ratio<U>,
+        R: RatioLegacy<U>,
     {
         // TODO debug_assert_eq!(T::BITS * 2, D::BITS);
 
