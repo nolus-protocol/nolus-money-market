@@ -16,7 +16,7 @@ impl FractionUnit for Units {}
 
 impl Percent100 {
     pub const fn complement(self) -> Self {
-        Percent100::HUNDRED
+        Self::HUNDRED
             .checked_sub(self)
             .expect("Invariant violated: percent is bigger than 100%")
     }
