@@ -23,14 +23,6 @@ use crate::{
 pub struct MaxSlippage(BoundToHundredPercent);
 
 impl MaxSlippage {
-    //TODO remove past the migration
-    pub fn v_0_8_7_any() -> Self {
-        Self(
-            BoundToHundredPercent::try_from_percent(Percent::HUNDRED)
-                .expect("100% to be a valid slippage"),
-        )
-    }
-
     #[cfg(feature = "testing")]
     pub fn unchecked(max: Percent) -> Self {
         Self(BoundToHundredPercent::strict_from_percent(max))
