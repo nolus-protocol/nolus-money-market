@@ -4,13 +4,13 @@ use serde::{Deserialize, Serialize};
 
 use crate::{fraction::Fraction, fractionable::Fractionable, zero::Zero};
 
-/// A wrapper over `Rational` where the ratio is no more than 1.
+/// A `Rational` that is no more than 1
 #[cfg_attr(any(test, feature = "testing"), derive(Debug))]
 pub struct Ratio<U>(Rational<U>);
 
 impl<U> Ratio<U>
 where
-    U: Debug + Ord + Zero,
+    U: Debug + PartialOrd + Zero,
 {
     pub fn new(parts: U, total: U) -> Self {
         debug_assert!(parts <= total);
