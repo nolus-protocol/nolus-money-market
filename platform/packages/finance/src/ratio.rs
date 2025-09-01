@@ -10,6 +10,27 @@ pub trait RatioLegacy<U> {
     fn total(&self) -> U;
 }
 
+/// Defines scalar operations on a value
+pub trait Scalar
+where
+    Self: Sized,
+{
+    type Times: Debug + Zero;
+
+    fn gcd(self, other: Self) -> Self::Times;
+
+    /// Multiplies `self` by the given `scale`
+    fn scale_up(self, scale: Self::Times) -> Option<Self>;
+
+    /// Divides `self` by the given `scale`
+    fn scale_down(self, scale: Self::Times) -> Self;
+
+    /// Returns the remainder of `self` divided by `scale`
+    fn modulo(self, scale: Self::Times) -> Self::Times;
+
+    fn into_times(self) -> Self::Times;
+}
+
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 #[cfg_attr(any(test, feature = "testing"), derive(PartialEq,))]
 #[serde(rename_all = "snake_case")]
@@ -20,7 +41,7 @@ pub struct Rational<U> {
 
 impl<U> Rational<U>
 where
-    U: Zero + Debug + PartialEq<U>,
+    U: Debug + PartialEq<U> + Scalar + Zero,
 {
     #[track_caller]
     pub fn new(nominator: U, denominator: U) -> Self {
