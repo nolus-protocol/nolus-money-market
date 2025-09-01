@@ -67,8 +67,8 @@ pub trait RatioLegacy<U> {
     fn total(&self) -> U;
 }
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
-#[cfg_attr(any(test, feature = "testing"), derive(PartialEq,))]
+#[derive(Clone, Copy, Debug, Deserialize, Serialize)]
+#[cfg_attr(any(test, feature = "testing"), derive(PartialEq))]
 #[serde(rename_all = "snake_case")]
 pub struct Rational<U> {
     nominator: U,
@@ -77,7 +77,7 @@ pub struct Rational<U> {
 
 impl<U> Rational<U>
 where
-    U: Zero + Debug + PartialEq<U>,
+    U: Debug + PartialEq<U> + Zero,
 {
     #[track_caller]
     pub fn new(nominator: U, denominator: U) -> Self {
@@ -105,7 +105,7 @@ where
 
 impl<U, T> RatioLegacy<U> for Rational<T>
 where
-    T: Zero + Copy + PartialEq + Into<U>,
+    T: Copy + Into<U> + PartialEq + Zero,
 {
     fn parts(&self) -> U {
         self.nominator.into()
