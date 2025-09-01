@@ -13,6 +13,6 @@ pub trait Fraction<U> {
 
 pub trait Unit
 where
-    Self: Copy + Debug + Ord + Zero,
+    Self: Copy + Debug + PartialOrd + Zero,
 {
 }

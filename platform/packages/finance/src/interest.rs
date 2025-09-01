@@ -25,7 +25,7 @@ pub fn pay<U, R, P>(rate: R, principal: P, payment: P, period: Duration) -> (Dur
 where
     // TODO R:Fraction<U> when Ratio becomes a struct
     R: Rational<U>,
-    P: Fractionable<U> + Fractionable<DurationUnits> + FractionUnit + Sub<Output = P>,
+    P: Fractionable<U> + Fractionable<DurationUnits> + FractionUnit + Ord + Sub<Output = P>,
     Duration: Fractionable<P>,
 {
     let interest_due_per_period: P = interest(rate, principal, period);
