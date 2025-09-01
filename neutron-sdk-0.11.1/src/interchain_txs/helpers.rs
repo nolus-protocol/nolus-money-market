@@ -5,7 +5,7 @@ use cosmwasm_std::{StdError, StdResult};
 pub fn decode_message_response<T: Message + Default>(item: &Vec<u8>) -> StdResult<T> {
     let res = T::decode(item.as_slice());
     match res {
-        Err(e) => Err(StdError::generic_err(format!("Can't decode item: {}", e))),
+        Err(e) => Err(StdError::msg(format!("Can't decode item: {}", e))),
         Ok(data) => Ok(data),
     }
 }

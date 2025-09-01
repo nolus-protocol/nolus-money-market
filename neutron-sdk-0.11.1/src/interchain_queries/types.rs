@@ -1,6 +1,6 @@
 use crate::{
     bindings::types::{KVKey, StorageValue},
-    errors::error::NeutronResult,
+    errors::error::{NeutronError, NeutronResult},
 };
 use cosmwasm_std::{from_json, StdError, Uint128};
 use schemars::{JsonSchema, _serde_json::Value};
@@ -128,8 +128,9 @@ impl KVReconstruct for Uint128 {
     fn reconstruct(storage_values: &[StorageValue]) -> NeutronResult<Uint128> {
         let value = storage_values
             .first()
-            .ok_or_else(|| StdError::generic_err("empty query result"))?;
-        let balance: Uint128 = from_json(&value.value)?;
+            .ok_or_else(|| NeutronError::Std(StdError::msg("empty query result").to_string()))?;
+        let balance: Uint128 = from_json(&value.value)
+            .map_err(|error: StdError| NeutronError::Std(error.to_string()))?;
         Ok(balance)
     }
 }

@@ -1,5 +1,5 @@
-use crate::{bindings::query::NeutronQuery, NeutronResult};
-use cosmwasm_std::{Coin, Deps};
+use crate::{bindings::query::NeutronQuery, NeutronError, NeutronResult};
+use cosmwasm_std::{Coin, Deps, StdError};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -14,5 +14,8 @@ pub fn query_total_burned_neutrons(
     deps: Deps<NeutronQuery>,
 ) -> NeutronResult<TotalBurnedNeutronsAmountResponse> {
     let query = NeutronQuery::TotalBurnedNeutronsAmount {};
-    Ok(deps.querier.query(&query.into())?)
+    Ok(deps
+        .querier
+        .query(&query.into())
+        .map_err(|error: StdError| NeutronError::Std(error.to_string()))?)
 }

@@ -28,7 +28,9 @@ use cosmos_sdk_proto::cosmos::staking::v1beta1::{
     Commission, CommissionRates, Delegation, Description, Validator,
 };
 use cosmos_sdk_proto::traits::Message;
-use cosmwasm_std::{to_json_binary, Addr, Binary, Coin as StdCoin, Decimal, Timestamp, Uint128};
+use cosmwasm_std::{
+    to_json_binary, Addr, Binary, Coin as StdCoin, Decimal, Timestamp, Uint128, Uint256,
+};
 use hex;
 use std::ops::Mul;
 use std::str::FromStr;
@@ -50,19 +52,19 @@ pub const VALIDATOR_SIGNING_INFO_HEX_RESPONSE: &str = "0a34636f736d6f7376616c636
 fn test_balance_reconstruct() {
     struct TestCase {
         addr: String,
-        coins: Vec<(String, Uint128)>,
+        coins: Vec<(String, Uint256)>,
     }
     let test_cases: Vec<TestCase> = vec![
         TestCase {
             addr: "osmo1yz54ncxj9csp7un3xled03q6thrrhy9cztkfzs".to_string(),
-            coins: vec![("uosmo".to_string(), Uint128::from(100u128))],
+            coins: vec![("uosmo".to_string(), Uint256::from(100u128))],
         },
         TestCase {
             addr: "osmo1yz54ncxj9csp7un3xled03q6thrrhy9cztkfzs".to_string(),
             coins: vec![
-                ("uosmo".to_string(), Uint128::from(100u128)),
-                ("uatom".to_string(), Uint128::from(500u128)),
-                ("uluna".to_string(), Uint128::from(80u128)),
+                ("uosmo".to_string(), Uint256::from(100u128)),
+                ("uatom".to_string(), Uint256::from(500u128)),
+                ("uluna".to_string(), Uint256::from(80u128)),
             ],
         },
         TestCase {
@@ -151,7 +153,7 @@ fn test_bank_total_supply_reconstruct() {
             assert_eq!(coin.denom, ts.values[i].denom);
             assert_eq!(
                 coin.amount,
-                Uint128::from_str(ts.values[i].amount.as_str()).unwrap()
+                Uint256::from_str(ts.values[i].amount.as_str()).unwrap()
             )
         }
     }
@@ -779,17 +781,17 @@ fn test_proposal_votes_reconstruct() {
 #[test]
 fn test_fee_pool_reconstruct() {
     struct TestCase {
-        coins: Vec<(String, Uint128)>,
+        coins: Vec<(String, Uint256)>,
     }
     let test_cases: Vec<TestCase> = vec![
         TestCase {
-            coins: vec![("uosmo".to_string(), Uint128::from(100u128))],
+            coins: vec![("uosmo".to_string(), Uint256::from(100u128))],
         },
         TestCase {
             coins: vec![
-                ("uosmo".to_string(), Uint128::from(100u128)),
-                ("uatom".to_string(), Uint128::from(500u128)),
-                ("uluna".to_string(), Uint128::from(80u128)),
+                ("uosmo".to_string(), Uint256::from(100u128)),
+                ("uatom".to_string(), Uint256::from(500u128)),
+                ("uluna".to_string(), Uint256::from(80u128)),
             ],
         },
         TestCase { coins: vec![] },
@@ -803,7 +805,7 @@ fn test_fee_pool_reconstruct() {
                 denom: coin.0.clone(),
                 amount: coin
                     .1
-                    .mul(Uint128::one().mul(Uint128::from(10u64).pow(DECIMAL_PLACES))) // adjust to Dec gogo proto format
+                    .mul(Uint256::one().mul(Uint256::from(10u64).pow(DECIMAL_PLACES))) // adjust to Dec gogo proto format
                     .to_string(),
             };
 
@@ -1019,7 +1021,7 @@ fn test_balance_reconstruct_from_hex() {
         Balances {
             coins: vec![StdCoin {
                 denom: String::from("uosmo"),
-                amount: Uint128::from(99999000u64),
+                amount: Uint256::from(99999000u64),
             }]
         }
     );
@@ -1062,7 +1064,7 @@ fn test_bank_total_supply_reconstruct_from_hex() {
         TotalSupply {
             coins: vec![StdCoin {
                 denom: String::from("stake"),
-                amount: Uint128::from(300001098u64), // mutating
+                amount: Uint256::from(300001098u64), // mutating
             }]
         }
     );
@@ -1156,7 +1158,7 @@ fn test_government_proposals_reconstruct_from_hex() {
                 proposal_type: Some(String::from("/cosmos.gov.v1beta1.TextProposal")),
                 total_deposit: vec![StdCoin {
                     denom: String::from("stake"),
-                    amount: Uint128::from(1000u64),
+                    amount: Uint256::from(1000u64),
                 }],
                 status: 1i32,
                 submit_time: Some(1683291849u64),      // mutating
@@ -1216,7 +1218,7 @@ fn test_fee_pool_reconstruct_from_hex() {
         FeePool {
             coins: vec![StdCoin {
                 denom: String::from("stake"),
-                amount: Uint128::from(21u64), // mutating
+                amount: Uint256::from(21u64), // mutating
             }]
         }
     );
@@ -1256,7 +1258,7 @@ fn test_delegations_reconstruct_from_hex() {
                 validator: String::from("cosmosvaloper15fqjpj90ruhj57q3l6a5hda0rt77g6mcek2mtq"), // mutating
                 amount: StdCoin {
                     denom: String::from("stake"),
-                    amount: Uint128::from(100000000u64),
+                    amount: Uint256::from(100000000u64),
                 },
             }],
         }

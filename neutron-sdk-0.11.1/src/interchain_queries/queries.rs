@@ -4,7 +4,7 @@ use crate::bindings::query::{
 use crate::errors::error::NeutronResult;
 use crate::interchain_queries::types::{KVReconstruct, QueryType};
 use crate::NeutronError;
-use cosmwasm_std::Deps;
+use cosmwasm_std::{Deps, StdError};
 
 /// Checks **actual** query type is **expected** query type
 pub fn check_query_type(actual: QueryType, expected: QueryType) -> NeutronResult<()> {
@@ -25,7 +25,10 @@ pub fn get_registered_query(
         query_id: interchain_query_id,
     };
 
-    let res: QueryRegisteredQueryResponse = deps.querier.query(&query.into())?;
+    let res: QueryRegisteredQueryResponse = deps
+        .querier
+        .query(&query.into())
+        .map_err(|error: StdError| NeutronError::Std(error.to_string()))?;
     Ok(res)
 }
 
@@ -50,6 +53,9 @@ pub fn get_raw_interchain_query_result(
     let interchain_query = NeutronQuery::InterchainQueryResult {
         query_id: interchain_query_id,
     };
-    let res = deps.querier.query(&interchain_query.into())?;
+    let res = deps
+        .querier
+        .query(&interchain_query.into())
+        .map_err(|error: StdError| NeutronError::Std(error.to_string()))?;
     Ok(res)
 }

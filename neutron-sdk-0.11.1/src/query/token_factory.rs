@@ -1,5 +1,5 @@
-use crate::{bindings::query::NeutronQuery, NeutronResult};
-use cosmwasm_std::Deps;
+use crate::{bindings::query::NeutronQuery, NeutronError, NeutronResult};
+use cosmwasm_std::{Deps, StdError};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -30,7 +30,10 @@ pub fn query_full_denom(
         creator_addr: creator_addr.into(),
         subdenom: subdenom.into(),
     };
-    Ok(deps.querier.query(&query.into())?)
+    Ok(deps
+        .querier
+        .query(&query.into())
+        .map_err(|error: StdError| NeutronError::Std(error.to_string()))?)
 }
 
 pub fn query_denom_admin(
@@ -40,7 +43,10 @@ pub fn query_denom_admin(
     let query = NeutronQuery::DenomAdmin {
         subdenom: subdenom.into(),
     };
-    Ok(deps.querier.query(&query.into())?)
+    Ok(deps
+        .querier
+        .query(&query.into())
+        .map_err(|error: StdError| NeutronError::Std(error.to_string()))?)
 }
 
 pub fn query_before_send_hook(
@@ -50,5 +56,8 @@ pub fn query_before_send_hook(
     let query = NeutronQuery::BeforeSendHook {
         denom: denom.into(),
     };
-    Ok(deps.querier.query(&query.into())?)
+    Ok(deps
+        .querier
+        .query(&query.into())
+        .map_err(|error: StdError| NeutronError::Std(error.to_string()))?)
 }

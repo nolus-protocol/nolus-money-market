@@ -14,7 +14,9 @@ use cosmos_sdk_proto::cosmos::{
     staking::v1beta1::{Delegation, UnbondingDelegation, Validator as CosmosValidator},
 };
 use cosmos_sdk_proto::traits::Message;
-use cosmwasm_std::{from_json, Addr, Coin, Decimal, Decimal256, Timestamp, Uint128, Uint256};
+use cosmwasm_std::{
+    from_json, Addr, Coin, Decimal, Decimal256, StdError, Timestamp, Uint128, Uint256,
+};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::{ops::Div, str::FromStr};
@@ -116,7 +118,9 @@ impl KVReconstruct for Balances {
             let (_, denom) = deconstruct_account_denom_balance_key(kv.key.to_vec())?;
             let amount = if kv.value.len() > 0 {
                 let balance: CosmosCoin = CosmosCoin::decode(kv.value.as_slice())?;
-                Uint128::from_str(balance.amount.as_str())?.u128()
+                Uint128::from_str(balance.amount.as_str())
+                    .map_err(|error: StdError| NeutronError::Std(error.to_string()))?
+                    .u128()
             } else {
                 0u128
             };
@@ -361,7 +365,8 @@ impl KVReconstruct for GovernmentProposal {
             let mut coins: Vec<Coin> = Vec::with_capacity(proposal.total_deposit.len());
 
             for coin in proposal.total_deposit {
-                let amount = Uint128::from_str(coin.amount.as_str())?;
+                let amount = Uint128::from_str(coin.amount.as_str())
+                    .map_err(|error: StdError| NeutronError::Std(error.to_string()))?;
                 coins.push(Coin::new(amount.u128(), coin.denom));
             }
 
@@ -478,7 +483,8 @@ impl KVReconstruct for Delegations {
                 "denom is empty".into(),
             ));
         }
-        let denom: String = from_json(&storage_values[0].value)?;
+        let denom: String = from_json(&storage_values[0].value)
+            .map_err(|error: StdError| NeutronError::Std(error.to_string()))?;
 
         // the rest are delegations and validators alternately
         for chunk in storage_values[1..].chunks(2) {
@@ -507,17 +513,22 @@ impl KVReconstruct for Delegations {
             let validator: CosmosValidator = CosmosValidator::decode(chunk[1].value.as_slice())?;
 
             let delegation_shares = Decimal256::from_atomics(
-                Uint256::from_str(&delegation_sdk.shares)?,
+                Uint256::from_str(&delegation_sdk.shares)
+                    .map_err(|error: StdError| NeutronError::Std(error.to_string()))?,
                 DECIMAL_PLACES,
             )?;
 
             let delegator_shares = Decimal256::from_atomics(
-                Uint256::from_str(&validator.delegator_shares)?,
+                Uint256::from_str(&validator.delegator_shares)
+                    .map_err(|error: StdError| NeutronError::Std(error.to_string()))?,
                 DECIMAL_PLACES,
             )?;
 
-            let validator_tokens =
-                Decimal256::from_atomics(Uint128::from_str(&validator.tokens)?, 0)?;
+            let validator_tokens = Decimal256::from_atomics(
+                Uint128::from_str(&validator.tokens)
+                    .map_err(|error: StdError| NeutronError::Std(error.to_string()))?,
+                0,
+            )?;
 
             // https://github.com/cosmos/cosmos-sdk/blob/35ae2c4c72d4aeb33447d5a7af23ca47f786606e/x/staking/keeper/querier.go#L463
             // delegated_tokens = quotient(delegation.shares * validator.tokens / validator.total_shares);
@@ -525,9 +536,13 @@ impl KVReconstruct for Delegations {
                 .checked_mul(validator_tokens)?
                 .div(delegator_shares)
                 .atomics()
-                .div(Uint256::from_u128(DECIMAL_FRACTIONAL));
+                .div(Uint256::new(DECIMAL_FRACTIONAL));
 
-            delegation_std.amount = Coin::new(uint256_to_u128(delegated_tokens)?, &denom);
+            delegation_std.amount = Coin::new(
+                uint256_to_u128(delegated_tokens)
+                    .map_err(|error: StdError| NeutronError::Std(error.to_string()))?,
+                &denom,
+            );
 
             delegations.push(delegation_std);
         }
@@ -581,12 +596,14 @@ impl KVReconstruct for UnbondingDelegations {
             };
             for entry in unbonding_delegation_sdk.entries {
                 let unbonding_entry = UnbondingEntry {
-                    balance: Uint128::from_str(&entry.balance)?,
+                    balance: Uint128::from_str(&entry.balance)
+                        .map_err(|error: StdError| NeutronError::Std(error.to_string()))?,
                     completion_time: entry.completion_time.map(|t| {
                         Timestamp::from_seconds(t.seconds as u64).plus_nanos(t.nanos as u64)
                     }),
                     creation_height: entry.creation_height as u64,
-                    initial_balance: Uint128::from_str(&entry.initial_balance)?,
+                    initial_balance: Uint128::from_str(&entry.initial_balance)
+                        .map_err(|error: StdError| NeutronError::Std(error.to_string()))?,
                 };
                 unbonding_response.entries.push(unbonding_entry);
             }

@@ -1,4 +1,4 @@
-use cosmwasm_std::{Decimal256RangeExceeded, DecimalRangeExceeded, OverflowError, StdError};
+use cosmwasm_std::{Decimal256RangeExceeded, DecimalRangeExceeded, OverflowError};
 use serde_json_wasm;
 use thiserror::Error;
 
@@ -7,7 +7,7 @@ pub type NeutronResult<T> = Result<T, NeutronError>;
 #[derive(Error, Debug, PartialEq)]
 pub enum NeutronError {
     #[error("{0}")]
-    Std(#[from] StdError),
+    Std(String),
 
     #[error("{0}")]
     Fmt(#[from] std::fmt::Error),

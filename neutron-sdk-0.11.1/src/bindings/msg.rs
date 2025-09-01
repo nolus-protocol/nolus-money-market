@@ -304,8 +304,9 @@ impl NeutronMsg {
                     NeutronMsg::RegisterInterchainQuery {
                         query_type: QueryType::TX.into(),
                         keys: vec![],
-                        transactions_filter: to_string(&transactions_filters)
-                            .map_err(|e| StdError::generic_err(e.to_string()))?,
+                        transactions_filter: to_string(&transactions_filters).map_err(|e| {
+                            NeutronError::Std(StdError::msg(e.to_string()).to_string())
+                        })?,
                         connection_id,
                         update_period,
                     }
@@ -335,10 +336,9 @@ impl NeutronMsg {
                             max: MAX_TX_FILTERS,
                         });
                     } else {
-                        Some(
-                            to_string(&filters)
-                                .map_err(|e| StdError::generic_err(e.to_string()))?,
-                        )
+                        Some(to_string(&filters).map_err(|e| {
+                            NeutronError::Std(StdError::msg(e.to_string()).to_string())
+                        })?)
                     }
                 }
                 None => None,
