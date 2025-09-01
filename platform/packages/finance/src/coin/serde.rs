@@ -8,7 +8,7 @@ mod test {
         Currency,
         test::{SuperGroupTestC1, SuperGroupTestC2},
     };
-    use sdk::cosmwasm_std::{from_json, to_json_vec};
+    use sdk::cosmwasm_std::{StdError as CwError, from_json, to_json_vec};
 
     use crate::coin::{Amount, Coin};
 
@@ -38,8 +38,10 @@ mod test {
     fn distinct_repr() {
         let amount = 432;
         assert_eq!(
-            to_json_vec(&Coin::<SuperGroupTestC1>::new(amount)),
+            to_json_vec(&Coin::<SuperGroupTestC1>::new(amount))
+                .map_err(|error: CwError| error.to_string()),
             to_json_vec(&Coin::<SuperGroupTestC2>::new(amount))
+                .map_err(|error: CwError| error.to_string())
         );
     }
 
@@ -47,7 +49,8 @@ mod test {
     fn currency_tolerant() {
         let amount = 134;
         let nls_bin = to_json_vec(&Coin::<SuperGroupTestC1>::new(amount)).unwrap();
-        let res = from_json::<Coin<SuperGroupTestC2>>(&nls_bin);
+        let res = from_json::<Coin<SuperGroupTestC2>>(&nls_bin)
+            .map_err(|error: CwError| error.to_string());
         assert_eq!(Ok(amount.into()), res);
     }
 

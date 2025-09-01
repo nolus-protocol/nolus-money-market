@@ -1,4 +1,4 @@
-use sdk::cosmwasm_std::{Addr, QuerierWrapper};
+use sdk::cosmwasm_std::{Addr, QuerierWrapper, StdError as CwError};
 use versioning::{ProtocolPackageRelease, UpdatablePackage};
 
 use crate::{ContractError, result::ContractResult};
@@ -38,7 +38,7 @@ fn query_release(
 ) -> ContractResult<ProtocolPackageRelease> {
     querier
         .query_wasm_smart(instance, &ProtocolPackageRelease::VERSION_QUERY)
-        .map_err(ContractError::QueryLeasePackage)
+        .map_err(|error: CwError| ContractError::QueryLeasePackage(error.to_string()))
 }
 
 #[cfg(all(feature = "internal.test.testing", test))]

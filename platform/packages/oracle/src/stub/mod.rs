@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use currency::{Currency, CurrencyDTO, CurrencyDef, Group, MemberOf};
 use finance::price::Price;
-use sdk::cosmwasm_std::{Addr, QuerierWrapper};
+use sdk::cosmwasm_std::{Addr, QuerierWrapper, StdError as CwError};
 
 use crate::error::{Error, Result};
 
@@ -107,7 +107,7 @@ where
     {
         querier
             .query_wasm_smart(addr.clone(), &CurrencyReq::currency::<QuoteG>())
-            .map_err(Error::StubConfigQuery)
+            .map_err(|error: CwError| Error::StubConfigQuery(error.to_string()))
             .and_then(|quote_c: CurrencyDTO<QuoteG>| {
                 quote_c
                     .of_currency(QuoteC::dto())

@@ -189,6 +189,7 @@ mod test {
     use currencies::Lpns;
     use finance::coin::Coin;
     use platform::tests::{self as platform_tests};
+    use sdk::cosmwasm_std::StdError as CwError;
 
     use crate::msg::BalanceResponse;
 
@@ -198,7 +199,8 @@ mod test {
     fn release() {
         assert_eq!(
             Ok(QueryMsg::<Lpns>::ProtocolPackageRelease {}),
-            platform_tests::ser_de(&versioning::query::ProtocolPackage::Release {}),
+            platform_tests::ser_de(&versioning::query::ProtocolPackage::Release {})
+                .map_err(|error: CwError| error.to_string()),
         );
 
         platform_tests::ser_de::<_, QueryMsg<Lpns>>(

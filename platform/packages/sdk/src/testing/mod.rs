@@ -1,6 +1,6 @@
 use cosmwasm_std::{
     Addr, Checksum, CodeInfoResponse, ContractInfoResponse, ContractResult, Empty, GovMsg, IbcMsg,
-    IbcQuery, OwnedDeps, SystemError, SystemResult, WasmQuery,
+    IbcQuery, OwnedDeps, StdResult as CwResult, SystemError, SystemResult, WasmQuery,
     testing::{MockApi, MockQuerier, MockStorage, mock_dependencies},
 };
 use cw_multi_test::{
@@ -64,6 +64,7 @@ pub fn customized_mock_deps_with_contracts<const N: usize>(
                     None,
                     false,
                     None,
+                    None,
                 ))
                 .expect("serialization succeed"),
             ))
@@ -111,14 +112,16 @@ impl AddressGenerator for TestAddressGenerator {
         _storage: &mut dyn cosmwasm_std::Storage,
         code_id: u64,
         instance_id: u64,
-    ) -> anyhow::Result<Addr> {
+    ) -> CwResult<Addr> {
         Ok(contract(code_id, instance_id))
     }
 }
 
 mod custom_msg {
-    use anyhow::{Result as AnyResult, bail};
-    use cosmwasm_std::{Addr, Api, Binary, BlockInfo, CustomQuery, Empty, Querier, Storage};
+    use cosmwasm_std::{
+        Addr, Api, Binary, BlockInfo, CustomQuery, Empty, Querier, StdError as CwError,
+        StdResult as CwResult, Storage,
+    };
     use cw_multi_test::{AppResponse, CosmosRouter, Module as ModuleTrait};
     use serde::de::DeserializeOwned;
 
@@ -151,7 +154,7 @@ mod custom_msg {
             _block: &BlockInfo,
             _sender: Addr,
             msg: Self::ExecT,
-        ) -> AnyResult<AppResponse>
+        ) -> CwResult<AppResponse>
         where
             ExecC: std::fmt::Debug + Clone + PartialEq + DeserializeOwned + 'static,
             QueryC: CustomQuery + DeserializeOwned + 'static,
@@ -169,12 +172,12 @@ mod custom_msg {
             _router: &dyn CosmosRouter<ExecC = ExecC, QueryC = QueryC>,
             _block: &BlockInfo,
             msg: Self::SudoT,
-        ) -> AnyResult<AppResponse>
+        ) -> CwResult<AppResponse>
         where
             ExecC: std::fmt::Debug + Clone + PartialEq + DeserializeOwned + 'static,
             QueryC: CustomQuery + DeserializeOwned + 'static,
         {
-            bail!("Unexpected sudo msg {:?}", msg)
+            Err(CwError::msg(format!("Unexpected sudo msg {msg:?}")))
         }
 
         fn query(
@@ -184,8 +187,8 @@ mod custom_msg {
             _querier: &dyn Querier,
             _block: &BlockInfo,
             request: Self::QueryT,
-        ) -> AnyResult<Binary> {
-            bail!("Unexpected custom query {:?}", request)
+        ) -> CwResult<Binary> {
+            Err(CwError::msg(format!("Unexpected custom query {request:?}")))
         }
     }
 }

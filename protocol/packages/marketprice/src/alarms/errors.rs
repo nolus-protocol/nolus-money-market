@@ -1,56 +1,54 @@
 use thiserror::Error;
 
-use sdk::cosmwasm_std::StdError;
-
 #[derive(Error, Debug, PartialEq)]
 pub enum AlarmError {
     #[error("[Market Price; Alarm] Failed to load next subscriber! Cause: {0}")]
-    IteratorLoadFailed(StdError),
+    IteratorLoadFailed(String),
 
     #[error("[Market Price; Alarm] Failed to load in delivery queue length! Cause: {0}")]
-    InDeliveryIsEmptyFailed(StdError),
+    InDeliveryIsEmptyFailed(String),
 
     #[error("[Market Price; Alarm] Failed to remove \"below price\"! Cause: {0}")]
-    RemoveBelow(StdError),
+    RemoveBelow(String),
 
     #[error("[Market Price; Alarm] Failed to store new \"below price\" alarm! Cause: {0}")]
-    AddAlarmStoreBelow(StdError),
+    AddAlarmStoreBelow(String),
 
     #[error("[Market Price; Alarm] Failed to load \"above or equal price\"! Cause: {0}")]
-    AddAlarmLoadAboveOrEqual(StdError),
+    AddAlarmLoadAboveOrEqual(String),
 
     #[error("[Market Price; Alarm] Failed to store new \"above or equal price\"! Cause: {0}")]
-    AddAlarmStoreAboveOrEqual(StdError),
+    AddAlarmStoreAboveOrEqual(String),
 
     #[error("[Market Price; Alarm] Failed to remove \"above or equal price\"! Cause: {0}")]
-    RemoveAboveOrEqual(StdError),
+    RemoveAboveOrEqual(String),
 
     #[error("[Market Price; Alarm; InDelivery] Failed to load \"below price\"! Cause: {0}")]
-    InDeliveryLoadBelow(StdError),
+    InDeliveryLoadBelow(String),
 
     #[error("[Market Price; Alarm; In Delivery] Failed to remove \"below price\"! Cause: {0}")]
-    InDeliveryRemoveBelow(StdError),
+    InDeliveryRemoveBelow(String),
 
     #[error(
         "[Market Price; Alarm; In Delivery] Failed to load \"above or equal price\"! Cause: {0}"
     )]
-    InDeliveryLoadAboveOrEqual(StdError),
+    InDeliveryLoadAboveOrEqual(String),
 
     #[error(
         "[Market Price; Alarm; In Delivery] Failed to remove \"above or equal price\"! Cause: {0}"
     )]
-    InDeliveryRemoveAboveOrEqual(StdError),
+    InDeliveryRemoveAboveOrEqual(String),
 
     #[error(
         "[Market Price; Alarm; In Delivery] Failed to append alarm in \"in delivery\" queue! Cause: {0}"
     )]
-    InDeliveryAppend(StdError),
+    InDeliveryAppend(String),
 
     #[error("[Market Price; Alarm] Failed to remove last delivered alarm from queue! Cause: {0}")]
-    LastDeliveredRemove(StdError),
+    LastDeliveredRemove(String),
 
     #[error("[Market Price; Alarm] Failed to remove last failed alarm from queue! Cause: {0}")]
-    LastFailedRemove(StdError),
+    LastFailedRemove(String),
 
     #[error("[Market Price; Alarm] Alarms delivery queue is empty! Cause: {0}")]
     EmptyAlarmsInDeliveryQueue(String),

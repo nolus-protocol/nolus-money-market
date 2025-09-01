@@ -61,15 +61,13 @@ serde = { version = "1", default-features = false }
 thiserror = { version = "2", default-features = false }
 
 # CosmWasm
-# TBD version = "<major>" only once address PR#469
-cosmwasm-std = { version = "~2.1", default-features = false, features = [
-    "abort",
+cosmwasm-std = { version = "3", default-features = false, features = [
     "cosmwasm_1_2",
     "iterator",
     "std",
 ] }
-cw-storage-plus = "2"
-cw-multi-test = { version = "2", default-features = false, features = [
+cw-storage-plus = "3"
+cw-multi-test = { version = "3", default-features = false, features = [
     "cosmwasm_1_2",
     "staking",
     "stargate",
@@ -81,7 +79,8 @@ ibc-proto = { version = "0.51", default-features = false }
 
 # Other
 bnum = { version = "0.13", default-features = false }
-neutron-sdk = { version = "0.11", default-features = false }
+# neutron-sdk = { version = "0.11", default-features = false }
+neutron-sdk = { version = "0.11.1", path = "../neutron-sdk-0.11.1", default-features = false }
 
 # Testing
 serde_test = "1"

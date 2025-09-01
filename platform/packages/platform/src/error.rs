@@ -5,7 +5,7 @@ use thiserror::Error;
 use currency::{CurrencyDef, SymbolStatic};
 use sdk::{
     cosmos_sdk_proto::prost::DecodeError,
-    cosmwasm_std::{Addr, Api, StdError},
+    cosmwasm_std::{Addr, Api},
 };
 
 use crate::contract::CodeId;
@@ -35,25 +35,25 @@ pub enum Error {
     Finance(#[from] finance::error::Error),
 
     #[error("[Platform] [Std] An error occured while querying code info: {0}")]
-    CosmWasmQueryCodeInfo(StdError),
+    CosmWasmQueryCodeInfo(String),
 
     #[error("[Platform] [Std] An error occured while querying contract info: {0}")]
-    CosmWasmQueryContractInfo(StdError),
+    CosmWasmQueryContractInfo(String),
 
     #[error("[Platform] [Std] An error occured while querying a currency balance: {0}")]
-    CosmWasmAddressInvalid(String, StdError),
+    CosmWasmAddressInvalid(String, String),
 
     #[error("[Platform] [Std] An error occured while querying a currency balance: {0}")]
-    CosmWasmQueryBalance(StdError),
+    CosmWasmQueryBalance(String),
 
     #[error("[Platform] [Std] An error occured while querying all balances: {0}")]
-    CosmWasmQueryAllBalances(StdError),
+    CosmWasmQueryAllBalances(String),
 
     #[error("[Platform] [Std] An error occured on data serialization: {0}")]
-    Serialization(StdError),
+    Serialization(String),
 
     #[error("[Platform] [Std] An error occured on data deserialization: {0}")]
-    Deserialization(StdError),
+    Deserialization(String),
 
     #[error("[ICA] Invalid ICA host account")]
     InvalidICAHostAccount(),

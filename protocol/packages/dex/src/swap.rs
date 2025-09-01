@@ -4,7 +4,7 @@ use currency::Group;
 use finance::coin::{Amount, CoinDTO};
 use oracle::api::swap::SwapTarget;
 use platform::{ica::HostAccount, trx::Transaction};
-use sdk::{cosmos_sdk_proto::Any as CosmosAny, cosmwasm_std::StdError};
+use sdk::cosmos_sdk_proto::Any as CosmosAny;
 
 pub type SwapPathSlice<'a, G> = &'a [SwapTarget<G>];
 
@@ -42,7 +42,7 @@ pub enum Error {
     Platform(#[from] platform::error::Error),
 
     #[error("[Swap] {0}")]
-    Std(#[from] StdError),
+    Std(String),
 
     #[error("[Swap] The value {0} is an invalid amount")]
     InvalidAmount(String),

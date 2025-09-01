@@ -16,8 +16,8 @@ use platform::{
 use sdk::{
     cosmwasm_ext::Response as CwResponse,
     cosmwasm_std::{
-        Addr, Api, Binary, Deps, DepsMut, Env, MessageInfo, QuerierWrapper, Storage, Timestamp,
-        entry_point, to_json_binary,
+        Addr, Api, Binary, Deps, DepsMut, Env, MessageInfo, QuerierWrapper, StdError as CwError,
+        Storage, Timestamp, entry_point, to_json_binary,
     },
 };
 use timealarms::stub::TimeAlarmsRef;
@@ -111,20 +111,21 @@ pub fn sudo(deps: DepsMut<'_>, _env: Env, msg: SudoMsg) -> ContractResult<CwResp
 #[entry_point]
 pub fn query(deps: Deps<'_>, env: Env, msg: QueryMsg) -> ContractResult<Binary> {
     match msg {
-        QueryMsg::Config {} => {
-            to_json_binary(&query_config(deps.storage)?).map_err(ContractError::Serialize)
-        }
+        QueryMsg::Config {} => to_json_binary(&query_config(deps.storage)?)
+            .map_err(|error: CwError| ContractError::Serialize(error.to_string())),
         QueryMsg::CalculateRewards {} => query_reward_apr(deps.storage, deps.querier, &env)
-            .and_then(|ref apr| to_json_binary(apr).map_err(ContractError::Serialize)),
-        QueryMsg::PlatformPackageRelease {} => {
-            cosmwasm_std::to_json_binary(&CURRENT_RELEASE).map_err(Into::into)
-        }
+            .and_then(|ref apr| {
+                to_json_binary(apr)
+                    .map_err(|error: CwError| ContractError::Serialize(error.to_string()))
+            }),
+        QueryMsg::PlatformPackageRelease {} => cosmwasm_std::to_json_binary(&CURRENT_RELEASE)
+            .map_err(|error: CwError| ContractError::Std(error.to_string())),
     }
     .inspect_err(platform_error::log(deps.api))
 }
 
 fn try_load_config(storage: &dyn Storage) -> ContractResult<Config> {
-    Config::load(storage).map_err(ContractError::LoadConfig)
+    Config::load(storage).map_err(|error: CwError| ContractError::LoadConfig(error.to_string()))
 }
 
 fn query_config(storage: &dyn Storage) -> ContractResult<ConfigResponse> {
@@ -195,7 +196,7 @@ fn protocols(
 ) -> ContractResult<impl IntoIterator<Item = ProtocolQueryResponse> + use<>> {
     querier
         .query_wasm_smart(protocols_registry.clone(), &ProtocolsRegistry::Protocols {})
-        .map_err(ContractError::QueryProtocols)
+        .map_err(|error: CwError| ContractError::QueryProtocols(error.to_string()))
         .and_then(|protocols: ProtocolsQueryResponse| {
             protocols
                 .into_iter()
@@ -205,7 +206,7 @@ fn protocols(
                             protocols_registry.clone(),
                             &ProtocolsRegistry::Protocol(protocol),
                         )
-                        .map_err(ContractError::QueryProtocols)
+                        .map_err(|error: CwError| ContractError::QueryProtocols(error.to_string()))
                 })
                 .collect::<ContractResult<Vec<_>>>()
         })
@@ -238,7 +239,7 @@ fn setup_dispatching(
     // cannot validate the address since the Admin plays the role of the registry
     // and it is not yet instantiated
     api.addr_validate(msg.protocols_registry.as_str())
-        .map_err(ContractError::ValidateRegistryAddr)?;
+        .map_err(|error: CwError| ContractError::ValidateRegistryAddr(error.to_string()))?;
 
     SingleUserAccess::new(
         storage.deref_mut(),
@@ -248,7 +249,7 @@ fn setup_dispatching(
 
     Config::new(msg.cadence_hours, msg.protocols_registry, msg.tvl_to_apr)
         .store(storage)
-        .map_err(ContractError::SaveConfig)?;
+        .map_err(|error: CwError| ContractError::SaveConfig(error.to_string()))?;
     DispatchLog::update(storage, env.block.time)?;
 
     setup_alarm(

@@ -42,6 +42,7 @@ mod test {
     };
     use lease::api::{limits::MaxSlippages, open::PositionSpecDTO};
     use platform::tests as platform_tests;
+    use sdk::cosmwasm_std::StdError as CwError;
 
     use crate::{
         finance::{LpnCurrencies, LpnCurrency},
@@ -81,6 +82,7 @@ mod test {
                 lease_due_period: DUE_PERIOD,
                 lease_max_slippages: max_slippages,
             })
+            .map_err(|error: CwError| error.to_string())
         );
     }
 

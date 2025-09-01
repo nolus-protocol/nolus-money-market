@@ -1,11 +1,11 @@
 use thiserror::Error;
 
-use sdk::cosmwasm_std::{Addr, StdError};
+use sdk::cosmwasm_std::Addr;
 
 #[derive(Debug, PartialEq, Error)]
 pub enum ContractError {
     #[error("[Profit] [Std] {0}")]
-    Std(#[from] StdError),
+    Std(String),
 
     #[error("[Profit] {0}")]
     Dex(#[from] dex::Error),

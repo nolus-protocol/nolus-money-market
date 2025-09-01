@@ -1,7 +1,7 @@
 use serde::Serialize;
 use thiserror::Error;
 
-use sdk::cosmwasm_std::{Addr, QuerierWrapper, StdError};
+use sdk::cosmwasm_std::{Addr, QuerierWrapper, StdError as CwError};
 
 use super::{PlatformPackageRelease, ProtocolPackageRelease};
 
@@ -30,7 +30,7 @@ pub enum ProtocolPackage {
 #[derive(Error, Debug, PartialEq)]
 pub enum Error {
     #[error("[Versioning][Query] {0}")]
-    Transmission(StdError),
+    Transmission(String),
 }
 
 pub fn platform_release(
@@ -39,7 +39,7 @@ pub fn platform_release(
 ) -> Result<PlatformPackageRelease, Error> {
     querier
         .query_wasm_smart(contract, &PlatformPackage::Release {})
-        .map_err(Error::Transmission)
+        .map_err(|error: CwError| Error::Transmission(error.to_string()))
 }
 
 pub fn protocol_release(
@@ -48,5 +48,5 @@ pub fn protocol_release(
 ) -> Result<ProtocolPackageRelease, Error> {
     querier
         .query_wasm_smart(contract, &ProtocolPackage::Release {})
-        .map_err(Error::Transmission)
+        .map_err(|error: CwError| Error::Transmission(error.to_string()))
 }

@@ -4,11 +4,11 @@ use platform::{
     batch::{Batch, Emit, Emitter},
     message::Response as MessageResponse,
 };
-use sdk::cosmwasm_std::{Addr, Env, QuerierWrapper};
+use sdk::cosmwasm_std::{Addr, Env, QuerierWrapper, StdError as CwError};
 
 use crate::{
     CoinStable, Lpp,
-    error::Result,
+    error::{Error, Result},
     msg::{ExecuteMsg, QueryMsg},
 };
 
@@ -33,7 +33,7 @@ impl Lpp for Stub<'_, '_> {
                     oracle_addr: oracle,
                 }),
             )
-            .map_err(Into::into)
+            .map_err(|error: CwError| Error::Std(error.to_string()))
             .map(|dto| {
                 dto.try_into()
                     .unwrap_or_else(|_| unreachable!("Each stable is member of the plaform group!"))

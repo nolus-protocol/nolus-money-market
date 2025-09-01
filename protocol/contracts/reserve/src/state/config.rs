@@ -3,9 +3,12 @@ use std::mem;
 use serde::{Deserialize, Serialize};
 
 use platform::contract::Code;
-use sdk::{cosmwasm_std::Storage, cw_storage_plus::Item};
+use sdk::{
+    cosmwasm_std::{StdError as CwError, Storage},
+    cw_storage_plus::Item,
+};
 
-use crate::error::Result;
+use crate::error::{Error, Result};
 
 #[derive(Serialize, Deserialize, Clone, Eq, PartialEq)]
 pub struct Config {
@@ -24,17 +27,22 @@ impl Config {
     }
 
     pub fn store(&self, storage: &mut dyn Storage) -> Result<()> {
-        Self::STORAGE.save(storage, self).map_err(Into::into)
+        Self::STORAGE
+            .save(storage, self)
+            .map_err(|error: CwError| Error::Std(error.to_string()))
     }
 
     pub fn load(storage: &dyn Storage) -> Result<Self> {
-        Self::STORAGE.load(storage).map_err(Into::into)
+        Self::STORAGE
+            .load(storage)
+            .map_err(|error: CwError| Error::Std(error.to_string()))
     }
 
     pub fn update_lease_code(storage: &mut dyn Storage, lease_code: Code) -> Result<()> {
         Self::STORAGE
             .update(storage, |_config: Self| Ok(Self::new(lease_code)))
             .map(mem::drop)
+            .map_err(|error: CwError| Error::Std(error.to_string()))
     }
 }
 

@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 use sdk::{
-    cosmwasm_std::{Addr, StdResult, Storage},
+    cosmwasm_std::{Addr, StdError as CwError, StdResult, Storage},
     cw_storage_plus::Item,
 };
 
@@ -56,7 +56,7 @@ impl Config {
                 })
             })
             .map(|_| ())
-            .map_err(ContractError::UpdateStorage)
+            .map_err(|error: CwError| ContractError::UpdateStorage(error.to_string()))
     }
 
     pub fn update_tvl_to_apr(
@@ -71,6 +71,6 @@ impl Config {
                 })
             })
             .map(|_| ())
-            .map_err(ContractError::UpdateStorage)
+            .map_err(|error: CwError| ContractError::UpdateStorage(error.to_string()))
     }
 }

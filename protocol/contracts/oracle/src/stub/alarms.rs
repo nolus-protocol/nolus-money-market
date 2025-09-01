@@ -2,7 +2,7 @@ use oracle_platform::OracleRef;
 
 use currency::{Currency, CurrencyDef, Group, MemberOf};
 use platform::batch::Batch;
-use sdk::cosmwasm_std::{Addr, wasm_execute};
+use sdk::cosmwasm_std::{Addr, StdError as CwError, wasm_execute};
 
 use crate::api::alarms::{Alarm, Error, ExecuteMsg, Result};
 
@@ -92,7 +92,7 @@ where
                 &ExecuteMsg::AddPriceAlarm { alarm },
                 vec![],
             )
-            .map_err(Error::StubAddAlarm)?,
+            .map_err(|error: CwError| Error::StubAddAlarm(error.to_string()))?,
         );
 
         Ok(())

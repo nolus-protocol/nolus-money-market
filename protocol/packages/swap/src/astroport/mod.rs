@@ -15,7 +15,7 @@ use sdk::{
         cosmwasm::wasm::v1::{MsgExecuteContract, MsgExecuteContractResponse},
         traits::Name,
     },
-    cosmwasm_std::{self, Coin as CwCoin, Decimal},
+    cosmwasm_std::{self, Coin as CwCoin, Decimal, StdError as CwError},
 };
 
 use self::{
@@ -73,7 +73,7 @@ where
             max_spread: Some(MAX_IMPACT), // checked on each individual swap operation, if None that would be equivalent to `astroport::pair::DEFAULT_SLIPPAGE`, i.e. 0.5%,
                                           // fails if greater-than MAX_IMPACT https://github.com/astroport-fi/astroport-core/blob/b558de92ef4bf8f3dc3a272f2ec45a317eff43bf/contracts/pair/src/contract.rs#L1363C20-L1363C57
         })
-        .map_err(Into::into)
+        .map_err(|error: CwError| Error::Std(error.to_string()))
         .map(|msg| RequestMsg {
             sender: sender.into(),
             contract: R::ADDRESS.into(),
@@ -97,7 +97,8 @@ where
                     .map_err(Into::into)
             })
             .and_then(|cosmwasm_resp| {
-                cosmwasm_std::from_json::<SwapResponseData>(cosmwasm_resp.data).map_err(Into::into)
+                cosmwasm_std::from_json::<SwapResponseData>(cosmwasm_resp.data)
+                    .map_err(|error: CwError| Error::Std(error.to_string()))
             })
             .map(|swap_resp| swap_resp.return_amount.into())
     }

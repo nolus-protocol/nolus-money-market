@@ -1,6 +1,6 @@
 use currency::{Currency, CurrencyDTO, Group, MemberOf};
 use oracle_platform::OracleRef;
-use sdk::cosmwasm_std::QuerierWrapper;
+use sdk::cosmwasm_std::{QuerierWrapper, StdError as CwError};
 
 use crate::api::swap::{Error, QueryMsg, Result, SwapTarget};
 
@@ -43,6 +43,6 @@ where
                     to: to.into_super_group::<SwapGroup>(),
                 },
             )
-            .map_err(Error::StubSwapPathQuery)
+            .map_err(|error: CwError| Error::StubSwapPathQuery(error.to_string()))
     }
 }

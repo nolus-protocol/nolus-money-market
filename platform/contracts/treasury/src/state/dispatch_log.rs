@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 use sdk::{
-    cosmwasm_std::{StdResult, Storage, Timestamp},
+    cosmwasm_std::{StdError as CwError, StdResult, Storage, Timestamp},
     cw_storage_plus::Item,
 };
 
@@ -33,7 +33,7 @@ impl DispatchLog {
     ) -> Result<(), ContractError> {
         Self::STORAGE
             .may_load(storage)
-            .map_err(ContractError::LoadDispatchLog)
+            .map_err(|error: CwError| ContractError::LoadDispatchLog(error.to_string()))
             .and_then(|log| match log {
                 None => Self::STORAGE
                     .save(
@@ -42,7 +42,7 @@ impl DispatchLog {
                             last_dispatch: current_dispatch,
                         },
                     )
-                    .map_err(ContractError::SaveDispatchLog),
+                    .map_err(|error: CwError| ContractError::SaveDispatchLog(error.to_string())),
                 Some(l) => {
                     if current_dispatch < l.last_dispatch {
                         Err(ContractError::InvalidTimeConfiguration {})
@@ -52,7 +52,9 @@ impl DispatchLog {
                                 log.last_dispatch = current_dispatch;
                                 Ok(log)
                             })
-                            .map_err(ContractError::SaveDispatchLog)
+                            .map_err(|error: CwError| {
+                                ContractError::SaveDispatchLog(error.to_string())
+                            })
                             .map(drop)
                     }
                 }

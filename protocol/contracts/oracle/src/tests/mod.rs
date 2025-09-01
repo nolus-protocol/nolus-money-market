@@ -14,8 +14,8 @@ use marketprice::config::Config as PriceConfig;
 use sdk::{
     cosmwasm_ext::Response as CwResponse,
     cosmwasm_std::{
-        MemoryStorage, MessageInfo, OwnedDeps, coins,
-        testing::{self, MockApi, MockQuerier},
+        MessageInfo, OwnedDeps, coins,
+        testing::{self, MockApi, MockQuerier, MockStorage},
     },
     testing as sdk_testing,
 };
@@ -101,7 +101,7 @@ pub(crate) fn dummy_feed_prices_msg()
 
 pub(crate) fn setup_test(
     msg: InstantiateMsg<PriceCurrencies>,
-) -> Result<(OwnedDeps<MemoryStorage, MockApi, MockQuerier>, MessageInfo), PriceCurrencies> {
+) -> Result<(OwnedDeps<MockStorage, MockApi, MockQuerier>, MessageInfo), PriceCurrencies> {
     let mut deps = testing::mock_dependencies();
 
     let info = MessageInfo {

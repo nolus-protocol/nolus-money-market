@@ -16,7 +16,9 @@ use platform::{
 };
 use sdk::{
     cosmwasm_ext::Response as CwResponse,
-    cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, QuerierWrapper, entry_point},
+    cosmwasm_std::{
+        Binary, Deps, DepsMut, Env, MessageInfo, QuerierWrapper, StdError as CwError, entry_point,
+    },
 };
 use versioning::{
     ProtocolMigrationMessage, ProtocolPackageRelease, UpdatablePackage as _, VersionSegment,
@@ -54,7 +56,7 @@ pub fn instantiate(
 ) -> Result<CwResponse> {
     deps.api
         .addr_validate(msg.protocol_admin.as_str())
-        .map_err(Into::<ContractError>::into)
+        .map_err(|error: CwError| ContractError::Std(error.to_string()))
         // cannot validate the protocol admin contract for existence, since it is not yet instantiated
         .and_then(|protocol_admin| {
             SingleUserAccess::new(
@@ -298,7 +300,8 @@ fn to_json_binary<T>(data: &T) -> Result<Binary>
 where
     T: Serialize,
 {
-    cosmwasm_std::to_json_binary(data).map_err(ContractError::ConvertToBinary)
+    cosmwasm_std::to_json_binary(data)
+        .map_err(|error: CwError| ContractError::ConvertToBinary(error.to_string()))
 }
 
 fn to_stable(

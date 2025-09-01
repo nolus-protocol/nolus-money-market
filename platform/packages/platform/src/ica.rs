@@ -3,7 +3,10 @@ use std::fmt::{Display, Formatter, Result as FmtResult};
 use serde::{Deserialize, Serialize};
 
 use finance::duration::Duration;
-use sdk::neutron_sdk::bindings::msg::{IbcFee, NeutronMsg};
+use sdk::{
+    cosmwasm_std::StdError as CwError,
+    neutron_sdk::bindings::msg::{IbcFee, NeutronMsg},
+};
 
 use crate::{batch::Batch, error::Error, result::Result, trx::Transaction};
 
@@ -80,7 +83,7 @@ where
 
 pub fn parse_register_response(response: &str) -> Result<HostAccount> {
     sdk::cosmwasm_std::from_json::<OpenAckVersion>(response)
-        .map_err(Error::Deserialization)
+        .map_err(|error: CwError| Error::Deserialization(error.to_string()))
         .and_then(|open_ack| open_ack.address.try_into())
 }
 

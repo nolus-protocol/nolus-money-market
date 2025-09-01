@@ -11,7 +11,7 @@ use finance::{
 };
 use lpp_platform::NLpn;
 use sdk::{
-    cosmwasm_std::{Storage, Timestamp},
+    cosmwasm_std::{StdError as CwError, Storage, Timestamp},
     cw_storage_plus::Item,
 };
 
@@ -67,11 +67,15 @@ impl<Lpn> Total<Lpn> {
     }
 
     pub fn store(&self, storage: &mut dyn Storage) -> ContractResult<()> {
-        Self::STORAGE.save(storage, self).map_err(Into::into)
+        Self::STORAGE
+            .save(storage, self)
+            .map_err(|error: CwError| ContractError::Std(error.to_string()))
     }
 
     pub fn load(storage: &dyn Storage) -> ContractResult<Self> {
-        Self::STORAGE.load(storage).map_err(Into::into)
+        Self::STORAGE
+            .load(storage)
+            .map_err(|error: CwError| ContractError::Std(error.to_string()))
     }
 
     pub fn total_principal_due(&self) -> Coin<Lpn> {

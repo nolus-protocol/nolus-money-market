@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 use platform::{batch::Batch, contract::Validator};
-use sdk::cosmwasm_std::{Addr, QuerierWrapper};
+use sdk::cosmwasm_std::{Addr, QuerierWrapper, StdError as CwError};
 
 use crate::{
     api::{
@@ -43,7 +43,7 @@ impl LeasesRef {
         let query = PositionLimits::MaxSlippages {};
         querier
             .query_wasm_smart(self.addr.clone(), &query)
-            .map_err(ContractError::PositionLimitsQuery)
+            .map_err(|error: CwError| ContractError::PositionLimitsQuery(error.to_string()))
     }
 
     pub(super) fn check_access(
@@ -54,7 +54,7 @@ impl LeasesRef {
         let query = AccessCheck::AnomalyResolution { by: caller };
         querier
             .query_wasm_smart(self.addr.clone(), &query)
-            .map_err(ContractError::CheckAccessQuery)
+            .map_err(|error: CwError| ContractError::CheckAccessQuery(error.to_string()))
             .and_then(|access: AccessGranted| match access {
                 AccessGranted::No => Err(ContractError::Unauthorized(
                     access_control::error::Error::Unauthorized {},

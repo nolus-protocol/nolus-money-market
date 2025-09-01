@@ -263,19 +263,23 @@ where
 
 #[cfg(all(feature = "internal.test.contract", test))]
 mod test {
-    use crate::api::{Currency, CurrencyGroup};
+    use serde::Deserialize;
 
-    use super::QueryMsg;
     use currencies::{Lpns, testing::LeaseC1};
     use currency::{CurrencyDef, SymbolOwned};
     use platform::tests as platform_tests;
-    use serde::Deserialize;
+    use sdk::cosmwasm_std::StdError as CwError;
+
+    use crate::api::{Currency, CurrencyGroup};
+
+    use super::QueryMsg;
 
     #[test]
     fn release() {
         assert_eq!(
             Ok(QueryMsg::<Lpns>::ProtocolPackageRelease {}),
-            platform_tests::ser_de(&versioning::query::ProtocolPackage::Release {}),
+            platform_tests::ser_de(&versioning::query::ProtocolPackage::Release {})
+                .map_err(|error: CwError| error.to_string()),
         );
 
         platform_tests::ser_de::<_, QueryMsg<Lpns>>(
@@ -308,7 +312,7 @@ mod test {
                 decimal_digits: definition_in.decimal_digits,
                 group: currency_in.group
             }),
-            platform_tests::ser_de(&currency_in),
+            platform_tests::ser_de(&currency_in).map_err(|error: CwError| error.to_string()),
         );
 
         platform_tests::ser_de::<_, QueryMsg<Lpns>>(

@@ -1,3 +1,4 @@
+use anyhow::anyhow;
 use serde::{Deserialize, Serialize};
 
 use currencies::{
@@ -548,14 +549,13 @@ fn execute<const RESCHEDULE: bool, const PRICE_BASE: Amount, const PRICE_QUOTE: 
 ) -> Result<CwResponse, DummyContractError> {
     match msg {
         DummyExecMsg::PriceAlarm() => {
-            if SHOULD_FAIL.load(storage).map_err(anyhow::Error::from)? {
-                Err(DummyContractError(anyhow::anyhow!(
+            if SHOULD_FAIL.load(storage).map_err(|error| anyhow!(error))? {
+                Err(DummyContractError(anyhow!(
                     "Error while delivering price alarm!"
                 )))
             } else if RESCHEDULE {
                 schedule_alarm(storage, PRICE_BASE, PRICE_QUOTE)
-                    .map_err(anyhow::Error::from)
-                    .map_err(DummyContractError)
+                    .map_err(|error| DummyContractError(anyhow!(error)))
             } else {
                 Ok(CwResponse::new())
             }
@@ -563,8 +563,7 @@ fn execute<const RESCHEDULE: bool, const PRICE_BASE: Amount, const PRICE_QUOTE: 
         DummyExecMsg::ShouldFail(value) => SHOULD_FAIL
             .save(storage, &value)
             .map(|()| CwResponse::new())
-            .map_err(anyhow::Error::from)
-            .map_err(DummyContractError),
+            .map_err(|error| DummyContractError(anyhow!(error))),
     }
 }
 
@@ -590,15 +589,14 @@ fn dummy_contract<const PRICE_BASE: Amount, const PRICE_QUOTE: Amount>(
          -> Result<CwResponse, DummyContractError> {
             ORACLE_ADDR
                 .save(storage, &oracle)
-                .map_err(anyhow::Error::from)?;
+                .map_err(|error| anyhow!(error))?;
 
             SHOULD_FAIL
                 .save(storage, &should_fail)
-                .map_err(anyhow::Error::from)?;
+                .map_err(|error| anyhow!(error))?;
 
             schedule_alarm(storage, PRICE_BASE, PRICE_QUOTE)
-                .map_err(anyhow::Error::from)
-                .map_err(DummyContractError)
+                .map_err(|error| DummyContractError(anyhow!(error)))
         },
         move |_: Deps<'_>, _: Env, (): ()| -> Result<Binary, DummyContractError> {
             unimplemented!()

@@ -1,14 +1,12 @@
 use thiserror::Error;
 
-use sdk::cosmwasm_std::StdError;
-
 #[derive(Error, Debug, PartialEq)]
 pub enum ContractError {
     #[error("[Lpp] [Std] {0}")]
-    Std(#[from] StdError),
+    Std(String),
 
     #[error("[Lpp] Failed to convert query response to binary! Cause: {0}")]
-    ConvertToBinary(StdError),
+    ConvertToBinary(String),
 
     #[error("[Lpp] {0}")]
     Currency(#[from] currency::error::Error),

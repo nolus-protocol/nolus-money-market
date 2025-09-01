@@ -59,7 +59,7 @@ where
     {
         self.storage_item
             .load(self.storage.deref())
-            .map_err(Into::into)
+            .map_err(|error| Error::Std(error.to_string()))
             .and_then(|ref granted_to| check(&SingleUserPermission::new(granted_to), user))
     }
 }
@@ -74,7 +74,7 @@ where
     {
         self.storage_item
             .save(self.storage.deref_mut(), user.addr())
-            .map_err(Into::into)
+            .map_err(|error| Error::Std(error.to_string()))
     }
 
     pub fn revoke(&mut self) {

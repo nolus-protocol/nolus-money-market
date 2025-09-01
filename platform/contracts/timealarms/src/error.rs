@@ -2,13 +2,13 @@ use std::num::TryFromIntError;
 
 use thiserror::Error;
 
-use sdk::cosmwasm_std::{Addr, StdError, Timestamp};
+use sdk::cosmwasm_std::{Addr, Timestamp};
 use time_oracle::AlarmError;
 
 #[derive(Error, Debug, PartialEq)]
 pub enum ContractError {
     #[error("[TimeAlarms] [Std] {0}")]
-    Std(#[from] StdError),
+    Std(String),
 
     #[error("[TimeAlarms] {0}")]
     Versioning(#[from] versioning::Error),

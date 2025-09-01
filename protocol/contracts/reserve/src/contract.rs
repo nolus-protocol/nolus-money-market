@@ -16,7 +16,8 @@ use platform::{
 use sdk::{
     cosmwasm_ext::Response as CwResponse,
     cosmwasm_std::{
-        self, Addr, Binary, Deps, DepsMut, Env, MessageInfo, QuerierWrapper, entry_point,
+        self, Addr, Binary, Deps, DepsMut, Env, MessageInfo, QuerierWrapper, StdError as CwError,
+        entry_point,
     },
 };
 use versioning::{
@@ -46,7 +47,7 @@ pub fn instantiate(
 ) -> Result<CwResponse> {
     deps.api
         .addr_validate(new_reserve.protocol_admin.as_str())
-        .map_err(Error::from)
+        .map_err(|error: CwError| Error::Std(error.to_string()))
         // cannot validate the protocol admin contract for existence, since it is not yet instantiated
         .and_then(|protocol_admin| {
             SingleUserAccess::new(
@@ -123,14 +124,16 @@ pub fn query(deps: Deps<'_>, _env: Env, msg: QueryMsg) -> Result<Binary> {
     match msg {
         QueryMsg::ReserveLpn() => {
             cosmwasm_std::to_json_binary(&currency::to_string(LpnCurrency::dto()))
-                .map_err(Into::into)
+                .map_err(|error: CwError| Error::Std(error.to_string()))
         }
         QueryMsg::Config() => Config::load(deps.storage)
             .map(ConfigResponse::from)
-            .and_then(|config| cosmwasm_std::to_json_binary(&config).map_err(Into::into)),
-        QueryMsg::ProtocolPackageRelease {} => {
-            cosmwasm_std::to_json_binary(&CURRENT_RELEASE).map_err(Into::into)
-        }
+            .and_then(|config| {
+                cosmwasm_std::to_json_binary(&config)
+                    .map_err(|error: CwError| Error::Std(error.to_string()))
+            }),
+        QueryMsg::ProtocolPackageRelease {} => cosmwasm_std::to_json_binary(&CURRENT_RELEASE)
+            .map_err(|error: CwError| Error::Std(error.to_string())),
     }
     .inspect_err(platform_error::log(deps.api))
 }

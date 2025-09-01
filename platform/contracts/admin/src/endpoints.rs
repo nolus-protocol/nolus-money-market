@@ -263,8 +263,11 @@ fn deregister_protocol(
 
 #[test]
 fn test_release() {
+    use sdk::cosmwasm_std::StdError as CwError;
+
     assert_eq!(
         Ok(QueryMsg::PlatformPackageRelease {}),
-        platform::tests::ser_de(&versioning::query::PlatformPackage::Release {}),
+        platform::tests::ser_de(&versioning::query::PlatformPackage::Release {})
+            .map_err(|error: CwError| error.to_string()),
     );
 }

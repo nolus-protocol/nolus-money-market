@@ -6,8 +6,8 @@ use platform::{
 use sdk::{
     cosmwasm_ext::Response as CwResponse,
     cosmwasm_std::{
-        Binary, Deps, DepsMut, Env, MessageInfo, Reply, Storage, SubMsgResult, entry_point,
-        to_json_binary,
+        self, Binary, Deps, DepsMut, Env, MessageInfo, Reply, StdError as CwError, Storage,
+        SubMsgResult, entry_point, to_json_binary,
     },
 };
 use versioning::{
@@ -91,14 +91,13 @@ pub fn sudo(_deps: DepsMut<'_>, _env: Env, msg: SudoMsg) -> ContractResult<CwRes
 #[entry_point]
 pub fn query(deps: Deps<'_>, env: Env, msg: QueryMsg) -> ContractResult<Binary> {
     match msg {
-        QueryMsg::ContractVersion {} => Ok(to_json_binary(&CURRENT_RELEASE.version())?),
-        QueryMsg::AlarmsStatus {} => Ok(to_json_binary(
-            &TimeAlarms::new(deps.storage).try_any_alarm(env.block.time)?,
-        )?),
-        QueryMsg::PlatformPackageRelease {} => {
-            cosmwasm_std::to_json_binary(&CURRENT_RELEASE).map_err(Into::into)
+        QueryMsg::ContractVersion {} => to_json_binary(&CURRENT_RELEASE.version()),
+        QueryMsg::AlarmsStatus {} => {
+            to_json_binary(&TimeAlarms::new(deps.storage).try_any_alarm(env.block.time)?)
         }
+        QueryMsg::PlatformPackageRelease {} => cosmwasm_std::to_json_binary(&CURRENT_RELEASE),
     }
+    .map_err(|error: CwError| ContractError::Std(error.to_string()))
     .inspect_err(platform_error::log(deps.api))
 }
 

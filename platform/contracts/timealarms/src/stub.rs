@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use access_control::{AccessPermission, user::User};
 use platform::{batch::Batch, contract::Validator};
-use sdk::cosmwasm_std::{Addr, StdError as SdkError, Timestamp, wasm_execute};
+use sdk::cosmwasm_std::{Addr, StdError as CwError, Timestamp, wasm_execute};
 
 use crate::msg::ExecuteMsg;
 
@@ -29,7 +29,7 @@ pub trait WithTimeAlarms {
 #[derive(thiserror::Error, Debug, PartialEq)]
 pub enum Error {
     #[error("[TimeAlarms Stub] [Sdk] {0}")]
-    Sdk(#[from] SdkError),
+    Sdk(String),
 
     #[error("[TimeAlarms Stub] Invalid address, cause: \"{0}\".")]
     InvalidAddress(platform::error::Error),
@@ -96,11 +96,10 @@ impl TimeAlarmsStub<'_> {
 
 impl TimeAlarms for TimeAlarmsStub<'_> {
     fn add_alarm(&mut self, time: Timestamp) -> Result<()> {
-        self.batch.schedule_execute_no_reply(wasm_execute(
-            self.addr().clone(),
-            &ExecuteMsg::AddAlarm { time },
-            vec![],
-        )?);
+        self.batch.schedule_execute_no_reply(
+            wasm_execute(self.addr().clone(), &ExecuteMsg::AddAlarm { time }, vec![])
+                .map_err(|error: CwError| Error::Sdk(error.to_string()))?,
+        );
 
         Ok(())
     }

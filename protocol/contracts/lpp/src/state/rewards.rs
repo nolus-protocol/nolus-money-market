@@ -9,9 +9,12 @@ use finance::{
     zero::Zero,
 };
 use lpp_platform::NLpn;
-use sdk::{cosmwasm_std::Storage, cw_storage_plus::Item};
+use sdk::{
+    cosmwasm_std::{StdError as CwError, Storage},
+    cw_storage_plus::Item,
+};
 
-use crate::contract::Result;
+use crate::contract::{ContractError, Result};
 
 #[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq, Default)]
 pub struct TotalRewards();
@@ -26,12 +29,14 @@ impl TotalRewards {
     pub fn load_or_default(store: &dyn Storage) -> Result<Index> {
         Self::REWARDS
             .may_load(store)
-            .map_err(Into::into)
+            .map_err(|error: CwError| ContractError::Std(error.to_string()))
             .map(Option::unwrap_or_default)
     }
 
     pub fn save(rewards: &Index, store: &mut dyn Storage) -> Result<()> {
-        Self::REWARDS.save(store, rewards).map_err(Into::into)
+        Self::REWARDS
+            .save(store, rewards)
+            .map_err(|error: CwError| ContractError::Std(error.to_string()))
     }
 }
 

@@ -2,12 +2,10 @@ use std::convert::Infallible;
 
 use thiserror::Error;
 
-use sdk::cosmwasm_std::StdError;
-
 #[derive(Error, Debug, PartialEq)]
 pub enum PriceFeedsError {
     #[error("[Market Price; Feeds] {0}")]
-    Std(#[from] StdError),
+    Std(String),
 
     #[error("[Market Price; Feeds] No price")]
     NoPrice(),
@@ -25,16 +23,16 @@ pub enum PriceFeedsError {
     Finance(#[from] finance::error::Error),
 
     #[error("[Market Price; Feeds] {0}")]
-    FeedsRetrieve(StdError),
+    FeedsRetrieve(String),
 
     #[error("[Market Price; Feeds] {0}")]
-    FeedRead(StdError),
+    FeedRead(String),
 
     #[error("[Market Price; Feeds] {0}")]
-    FeedPush(StdError),
+    FeedPush(String),
 
     #[error("[Market Price; Feeds] {0}")]
-    FeedRemove(StdError),
+    FeedRemove(String),
 }
 
 pub type Result<T> = std::result::Result<T, PriceFeedsError>;

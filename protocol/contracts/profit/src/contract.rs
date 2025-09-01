@@ -15,8 +15,8 @@ use platform::{
 use sdk::{
     cosmwasm_ext::Response as CwResponse,
     cosmwasm_std::{
-        Api, Binary, Deps, DepsMut, Env, MessageInfo, QuerierWrapper, Reply, entry_point,
-        to_json_binary,
+        Api, Binary, Deps, DepsMut, Env, MessageInfo, QuerierWrapper, Reply, StdError as CwError,
+        entry_point, to_json_binary,
     },
     neutron_sdk::sudo::msg::SudoMsg as NeutronSudoMsg,
 };
@@ -244,5 +244,5 @@ pub fn query(deps: Deps<'_>, env: Env, msg: QueryMsg) -> ContractResult<Binary> 
         )?),
         QueryMsg::ProtocolPackageRelease {} => to_json_binary(&CURRENT_RELEASE),
     }
-    .map_err(Into::into)
+    .map_err(|error: CwError| ContractError::Std(error.to_string()))
 }

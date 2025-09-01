@@ -4,7 +4,6 @@ use std::result::Result as StdResult;
 use thiserror::Error;
 
 use currency::{CurrencyDTO, Group};
-use sdk::cosmwasm_std::StdError;
 
 pub type PoolId = u64;
 
@@ -33,7 +32,7 @@ pub type Result<T> = StdResult<T, Error>;
 #[derive(Error, Debug, PartialEq)]
 pub enum Error {
     #[error("[Oracle; Stub] Failed to query swap path! Cause: {0}")]
-    StubSwapPathQuery(StdError),
+    StubSwapPathQuery(String),
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]

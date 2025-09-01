@@ -2,7 +2,9 @@ use std::mem;
 
 use serde::{Deserialize, Serialize};
 
-use sdk::cosmwasm_std::{Addr, CodeInfoResponse, ContractInfoResponse, QuerierWrapper, WasmQuery};
+use sdk::cosmwasm_std::{
+    Addr, CodeInfoResponse, ContractInfoResponse, QuerierWrapper, StdError as CwError, WasmQuery,
+};
 
 use crate::{error::Error, result::Result};
 
@@ -38,7 +40,7 @@ impl<'q> CosmwasmValidator<'q> {
                 }
                 .into(),
             )
-            .map_err(Error::CosmWasmQueryContractInfo)
+            .map_err(|error: CwError| Error::CosmWasmQueryContractInfo(error.to_string()))
     }
 }
 
@@ -46,7 +48,7 @@ impl Validator for CosmwasmValidator<'_> {
     fn check_code(&self, id: CodeId) -> Result<CodeId> {
         self.0
             .query(&WasmQuery::CodeInfo { code_id: id }.into())
-            .map_err(Error::CosmWasmQueryCodeInfo)
+            .map_err(|error: CwError| Error::CosmWasmQueryCodeInfo(error.to_string()))
             .inspect(|response: &CodeInfoResponse| assert_eq!(id, response.code_id))
             .map(|_| id)
     }
@@ -182,6 +184,7 @@ pub mod testing {
                 testing::user("user"),
                 None,
                 false,
+                None,
                 None,
             ))
             .expect("serialization succeedeed"),

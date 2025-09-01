@@ -227,7 +227,7 @@ mod test_invariant {
         SuperGroup, SuperGroupTestC1, SuperGroupTestC2, SuperGroupTestC4, SuperGroupTestC5,
     };
     use currency::{CurrencyDef, Group, MemberOf, error::Error as CurrencyError};
-    use sdk::cosmwasm_std::{StdError as CWError, StdResult as CWResult, from_json};
+    use sdk::cosmwasm_std::{StdErrorKind as CwErrorKind, StdResult as CwResult, from_json};
 
     use crate::{
         coin::{Coin, CoinDTO},
@@ -374,29 +374,30 @@ mod test_invariant {
         PriceDTO::<TC>::try_new(base.into(), quote.into())
     }
 
-    fn load(json: &[u8]) -> CWResult<PriceDTO<TC>> {
+    fn load(json: &[u8]) -> CwResult<PriceDTO<TC>> {
         load_with_groups::<TC>(json)
     }
 
-    fn load_with_groups<G>(json: &[u8]) -> CWResult<PriceDTO<G>>
+    fn load_with_groups<G>(json: &[u8]) -> CwResult<PriceDTO<G>>
     where
         G: Group<TopG = G>,
     {
         from_json::<PriceDTO<G>>(json)
     }
 
-    fn assert_load_err<G>(r: CWResult<PriceDTO<G>>, msg: &str)
+    #[track_caller]
+    fn assert_load_err<G>(r: CwResult<PriceDTO<G>>, msg: &str)
     where
         G: Group,
     {
-        assert!(matches!(
-            r,
-            Err(CWError::ParseErr {
-                target_type,
-                msg: real_msg,
-                backtrace: _,
-            }) if target_type.contains("PriceDTO") && real_msg.contains(msg)
-        ));
+        match r {
+            Err(error)
+                if error.kind() == CwErrorKind::Serialization
+                    && format!("{error}").contains(msg) => {}
+            result => {
+                panic!("Got unexpected result! Result: {result:?}");
+            }
+        }
     }
 
     fn assert_err<G>(r: Result<PriceDTO<G>>, msg: &str)

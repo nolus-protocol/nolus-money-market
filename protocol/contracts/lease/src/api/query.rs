@@ -219,14 +219,18 @@ pub mod paid {
 
 #[cfg(all(feature = "internal.test.skel", test))]
 mod test {
+    use sdk::cosmwasm_std::StdError as CwError;
+
     use platform::tests as platform_tests;
 
     use super::QueryMsg;
+
     #[test]
     fn release() {
         assert_eq!(
             Ok(QueryMsg::ProtocolPackageRelease {}),
-            platform_tests::ser_de(&versioning::query::ProtocolPackage::Release {}),
+            platform_tests::ser_de(&versioning::query::ProtocolPackage::Release {})
+                .map_err(|error: CwError| error.to_string()),
         );
 
         platform_tests::ser_de::<_, QueryMsg>(&versioning::query::PlatformPackage::Release {})

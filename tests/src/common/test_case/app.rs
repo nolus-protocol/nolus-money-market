@@ -1,12 +1,13 @@
 use std::fmt::Debug;
 
+use anyhow::anyhow;
 use serde::Serialize;
 
 use finance::duration::Duration;
 use platform::contract::Code;
 use sdk::{
     cosmwasm_ext::{CosmosMsg, InterChainMsg},
-    cosmwasm_std::{Addr, BlockInfo, Coin as CwCoin, Empty, QuerierWrapper},
+    cosmwasm_std::{Addr, BlockInfo, Coin as CwCoin, Empty, QuerierWrapper, StdError as CwError},
     cw_multi_test::{AppResponse, Contract as CwContract, Executor},
     testing::InterChainMsgReceiver,
 };
@@ -53,7 +54,7 @@ impl App {
         sender: Addr,
         recipient: Addr,
         amount: &[CwCoin],
-    ) -> anyhow::Result<()> {
+    ) -> Result<(), CwError> {
         self.app
             .send_tokens(sender, recipient, amount)
             .map(|_: AppResponse| ())
@@ -67,7 +68,7 @@ impl App {
         send_funds: &[CwCoin],
         label: U,
         admin: Option<String>,
-    ) -> anyhow::Result<ResponseWithInterChainMsgs<'r, Addr>>
+    ) -> Result<ResponseWithInterChainMsgs<'r, Addr>, CwError>
     where
         T: Debug + Serialize,
         U: Into<String>,
@@ -90,6 +91,7 @@ impl App {
         self.with_mock_app(|app: &mut MockApp| {
             app.execute_contract(sender, contract_addr, msg, send_funds)
         })
+        .map_err(|error: CwError| anyhow!(error))
     }
 
     pub fn execute_raw<T>(
@@ -101,6 +103,7 @@ impl App {
         T: Into<CosmosMsg>,
     {
         self.with_mock_app(|app: &mut MockApp| app.execute(sender, msg.into()))
+            .map_err(|error: CwError| anyhow!(error))
     }
 
     pub fn migrate<'r, T>(
@@ -116,6 +119,7 @@ impl App {
         self.with_mock_app(|app: &mut MockApp| {
             app.migrate_contract(sender, contract_addr, msg, new_code_id)
         })
+        .map_err(|error: CwError| anyhow!(error))
     }
 
     pub fn sudo<'r, T, U>(
@@ -128,11 +132,12 @@ impl App {
         U: Serialize,
     {
         self.with_mock_app(|app: &mut MockApp| app.wasm_sudo(contract_addr, msg))
+            .map_err(|error: CwError| anyhow!(error))
     }
 
-    pub fn with_mock_app<F, R>(&mut self, f: F) -> anyhow::Result<ResponseWithInterChainMsgs<'_, R>>
+    pub fn with_mock_app<F, R, E>(&mut self, f: F) -> Result<ResponseWithInterChainMsgs<'_, R>, E>
     where
-        F: FnOnce(&'_ mut MockApp) -> anyhow::Result<R>,
+        F: FnOnce(&'_ mut MockApp) -> Result<R, E>,
     {
         assert_eq!(self.message_receiver.try_recv().ok(), None);
 

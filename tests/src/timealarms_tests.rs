@@ -89,7 +89,7 @@ mod mock_lease {
                         .add_attribute("lease_reply", env.block.time.to_string())
                         .set_data(to_json_binary(&env.contract.address)?))
                 } else {
-                    Err(StdError::generic_err("closed gate"))
+                    Err(StdError::msg("closed gate"))
                 }
             }
             MockExecuteMsg::Gate(gate) => {
@@ -126,7 +126,7 @@ mod mock_lease {
     }
 
     fn query(_: Deps<'_>, _: Env, _msg: MockExecuteMsg) -> StdResult<Binary> {
-        Err(StdError::generic_err("not implemented"))
+        Err(StdError::msg("not implemented"))
     }
 
     fn contract_no_reschedule_endpoints() -> Box<CwContract> {

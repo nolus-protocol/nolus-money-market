@@ -13,7 +13,8 @@ use platform::{
 use sdk::{
     cosmwasm_ext::Response,
     cosmwasm_std::{
-        Addr, Api, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Storage, entry_point,
+        Addr, Api, Binary, Deps, DepsMut, Env, MessageInfo, Reply, StdError as CwError, Storage,
+        entry_point,
     },
 };
 use versioning::{
@@ -317,12 +318,13 @@ fn finalizer(env: Env) -> Addr {
 fn validate(addr: &Addr, sdk_api: &dyn Api) -> ContractResult<Addr> {
     sdk_api
         .addr_validate(addr.as_str())
-        .map_err(ContractError::InvalidAddress)
+        .map_err(|error: CwError| ContractError::InvalidAddress(error.to_string()))
 }
 
 fn serialize_to_json<Resp>(resp: Resp) -> ContractResult<Binary>
 where
     Resp: Serialize,
 {
-    cosmwasm_std::to_json_binary(&resp).map_err(ContractError::SerializeToJson)
+    cosmwasm_std::to_json_binary(&resp)
+        .map_err(|error: CwError| ContractError::SerializeToJson(error.to_string()))
 }

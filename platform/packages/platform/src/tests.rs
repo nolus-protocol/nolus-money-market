@@ -49,5 +49,10 @@ pub fn assert_ser_string<T>(obj: &T, expected: &str)
 where
     T: Serialize,
 {
-    assert_eq!(Ok(expected), cosmwasm_std::to_json_string(obj).as_deref())
+    assert_eq!(
+        Ok(expected),
+        cosmwasm_std::to_json_string(obj)
+            .as_deref()
+            .map_err(ToString::to_string)
+    )
 }

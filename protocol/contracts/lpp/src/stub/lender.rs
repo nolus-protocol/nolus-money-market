@@ -6,7 +6,7 @@ use platform::{
     batch::{Batch, ReplyId},
     reply,
 };
-use sdk::cosmwasm_std::{Addr, QuerierWrapper, Reply, StdError};
+use sdk::cosmwasm_std::{Addr, QuerierWrapper, Reply, StdError as CwError};
 use thiserror::Error;
 
 use crate::msg::{ExecuteMsg, LoanResponse, QueryMsg, QueryQuoteResponse};
@@ -26,7 +26,7 @@ where
 #[derive(Error, Debug, PartialEq)]
 pub enum Error {
     #[error("[Lpp][Lender] [Std] {0}")]
-    Std(StdError),
+    Std(String),
 
     #[error("[Lpp][Lender] {0}")]
     Platform(platform::error::Error),
@@ -101,7 +101,7 @@ where
         };
         self.querier
             .query_wasm_smart(self.id(), &msg)
-            .map_err(Error::Std)
+            .map_err(|error: CwError| Error::Std(error.to_string()))
     }
 }
 

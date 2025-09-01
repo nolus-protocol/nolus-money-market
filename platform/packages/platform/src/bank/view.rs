@@ -2,7 +2,7 @@ use std::{cell::OnceCell, result::Result as StdResult};
 
 use currency::{CurrencyDTO, CurrencyDef, Group};
 use finance::coin::{Coin, WithCoin, WithCoinResult};
-use sdk::cosmwasm_std::{Addr, Coin as CwCoin, QuerierWrapper};
+use sdk::cosmwasm_std::{Addr, Coin as CwCoin, QuerierWrapper, StdError as CwError};
 
 use crate::{
     bank::aggregate::{Aggregate, ReduceResults},
@@ -63,7 +63,7 @@ impl<'a> BankView<'a> {
     {
         self.querier
             .query_balance(self.account, currency.definition().bank_symbol)
-            .map_err(Error::CosmWasmQueryBalance)
+            .map_err(|error| Error::CosmWasmQueryBalance(error.to_string()))
     }
 }
 
@@ -83,9 +83,13 @@ impl BankAccountView for BankView<'_> {
         Cmd: WithCoin<G> + Clone,
         Cmd::Output: Aggregate,
     {
+        /*
+        FIXME
         self.querier
             .query_all_balances(self.account)
-            .map_err(Error::CosmWasmQueryAllBalances)
+        */
+        Err::<Vec<CwCoin>, _>(sdk::cosmwasm_std::StdError::msg("[FIXME] implement"))
+            .map_err(|error: CwError| Error::CosmWasmQueryAllBalances(error.to_string()))
             .map(|cw_coins| {
                 cw_coins
                     .into_iter()

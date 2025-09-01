@@ -7,7 +7,7 @@ use finance::{duration::Duration, percent::Percent};
 use lease::api::{limits::MaxSlippages, open::PositionSpecDTO};
 use platform::contract::Code;
 use sdk::{
-    cosmwasm_std::{Addr, StdError as SdkError, Storage},
+    cosmwasm_std::{Addr, StdError as CwError, Storage},
     cw_storage_plus::Item,
 };
 
@@ -59,13 +59,13 @@ impl Config {
     pub fn store(&self, storage: &mut dyn Storage) -> ContractResult<()> {
         Self::STORAGE
             .save(storage, self)
-            .map_err(ContractError::SaveConfigFailure)
+            .map_err(|error: CwError| ContractError::SaveConfigFailure(error.to_string()))
     }
 
     pub fn load(storage: &dyn Storage) -> ContractResult<Self> {
         Self::STORAGE
             .load(storage)
-            .map_err(ContractError::LoadConfigFailure)
+            .map_err(|error: CwError| ContractError::LoadConfigFailure(error.to_string()))
     }
 
     pub fn update(storage: &mut dyn Storage, new_config: NewConfig) -> ContractResult<()> {
@@ -106,15 +106,15 @@ impl Config {
     }
 }
 
-struct UpdateDataError(SdkError);
-impl From<SdkError> for UpdateDataError {
-    fn from(value: SdkError) -> Self {
+struct UpdateDataError(CwError);
+impl From<CwError> for UpdateDataError {
+    fn from(value: CwError) -> Self {
         Self(value)
     }
 }
 impl From<UpdateDataError> for ContractError {
     fn from(value: UpdateDataError) -> Self {
-        Self::UpdateConfigFailure(value.0)
+        Self::UpdateConfigFailure(value.0.to_string())
     }
 }
 

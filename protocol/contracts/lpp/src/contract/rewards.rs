@@ -6,7 +6,7 @@ use platform::{
     batch::Batch,
     message::Response as MessageResponse,
 };
-use sdk::cosmwasm_std::{Addr, DepsMut, Env, MessageInfo, Storage, Timestamp};
+use sdk::cosmwasm_std::{Addr, DepsMut, Env, MessageInfo, StdError as CwError, Storage, Timestamp};
 
 use crate::{
     config::Config as ApiConfig,
@@ -59,7 +59,8 @@ pub(super) fn try_claim_rewards(
 ) -> Result<MessageResponse> {
     let recipient = other_recipient
         .map(|recipient| deps.api.addr_validate(recipient.as_str()))
-        .transpose()?
+        .transpose()
+        .map_err(|error: CwError| ContractError::Std(error.to_string()))?
         .unwrap_or_else(|| info.sender.clone());
 
     let reward = TotalRewards::load_or_default(deps.storage)

@@ -171,7 +171,7 @@ mod test {
         open::PositionSpecDTO,
     };
     use platform::tests as platform_tests;
-    use sdk::cosmwasm_std::Addr;
+    use sdk::cosmwasm_std::{Addr, StdError as CwError};
     use serde::Deserialize;
 
     use crate::{
@@ -186,7 +186,8 @@ mod test {
         let admin = Addr::unchecked("my test admin");
         assert_eq!(
             Ok(AccessCheck::AnomalyResolution { by: admin.clone() }),
-            platform_tests::ser_de(&QueryMsg::CheckAnomalyResolutionPermission { by: admin }),
+            platform_tests::ser_de(&QueryMsg::CheckAnomalyResolutionPermission { by: admin })
+                .map_err(|error: CwError| error.to_string()),
         );
     }
 
@@ -198,7 +199,8 @@ mod test {
             Ok(FinalizerExecuteMsg::FinalizeLease {
                 customer: customer.clone()
             }),
-            platform_tests::ser_de(&ExecuteMsg::FinalizeLease { customer }),
+            platform_tests::ser_de(&ExecuteMsg::FinalizeLease { customer })
+                .map_err(|error: CwError| error.to_string()),
         );
     }
 
@@ -206,7 +208,8 @@ mod test {
     fn max_slippage_api_match() {
         assert_eq!(
             Ok(PositionLimits::MaxSlippages {}),
-            platform_tests::ser_de(&QueryMsg::MaxSlippages {}),
+            platform_tests::ser_de(&QueryMsg::MaxSlippages {})
+                .map_err(|error: CwError| error.to_string()),
         );
     }
 
@@ -214,7 +217,8 @@ mod test {
     fn release() {
         assert_eq!(
             Ok(QueryMsg::ProtocolPackageRelease {}),
-            platform_tests::ser_de(&versioning::query::ProtocolPackage::Release {}),
+            platform_tests::ser_de(&versioning::query::ProtocolPackage::Release {})
+                .map_err(|error: CwError| error.to_string()),
         );
 
         platform_tests::ser_de::<_, QueryMsg>(&versioning::query::PlatformPackage::Release {})
@@ -243,7 +247,8 @@ mod test {
                 lease_due_period: new_config.lease_due_period,
                 lease_max_slippages: new_config.lease_max_slippages
             }),
-            platform_tests::ser_de(&SudoMsg::Config(new_config)),
+            platform_tests::ser_de(&SudoMsg::Config(new_config))
+                .map_err(|error: CwError| error.to_string()),
         );
     }
 

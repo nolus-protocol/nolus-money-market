@@ -8,7 +8,9 @@ use platform::{
     batch::Batch, ica::ErrorResponse as ICAErrorResponse, message::Response as MessageResponse,
 };
 use sdk::{
-    cosmwasm_std::{Binary, Env, MessageInfo, QuerierWrapper, Reply, Storage, Timestamp},
+    cosmwasm_std::{
+        Binary, Env, MessageInfo, QuerierWrapper, Reply, StdError as CwError, Storage, Timestamp,
+    },
     cw_storage_plus::Item,
 };
 use swap::Impl;
@@ -20,7 +22,7 @@ use crate::{
         query::StateResponse,
     },
     contract::api::Contract,
-    error::ContractResult,
+    error::{ContractError, ContractResult},
 };
 
 pub(crate) use self::handler::{Handler, Response};
@@ -87,11 +89,15 @@ pub enum State {
 const STATE_DB_ITEM: Item<State> = Item::new("state");
 
 pub(super) fn load(storage: &dyn Storage) -> ContractResult<State> {
-    STATE_DB_ITEM.load(storage).map_err(Into::into)
+    STATE_DB_ITEM
+        .load(storage)
+        .map_err(|error: CwError| ContractError::Std(error.to_string()))
 }
 
 pub(super) fn save(storage: &mut dyn Storage, next_state: &State) -> ContractResult<()> {
-    STATE_DB_ITEM.save(storage, next_state).map_err(Into::into)
+    STATE_DB_ITEM
+        .save(storage, next_state)
+        .map_err(|error: CwError| ContractError::Std(error.to_string()))
 }
 
 pub(super) fn new_lease(

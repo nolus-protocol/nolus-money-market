@@ -1,5 +1,8 @@
-use osmosis_std::types::osmosis::poolmanager::v1beta1::{
-    MsgSwapExactAmountIn, MsgSwapExactAmountInResponse, SwapAmountInRoute,
+use osmosis_std::types::{
+    cosmos::base::v1beta1::Coin as OsmosisCoin,
+    osmosis::poolmanager::v1beta1::{
+        MsgSwapExactAmountIn, MsgSwapExactAmountInResponse, SwapAmountInRoute,
+    },
 };
 
 use currency::{DexSymbols, Group};
@@ -49,7 +52,7 @@ impl ExactAmountIn for Impl {
         let msg = RequestMsg {
             sender: sender.into(),
             routes,
-            token_in: token_in.map(Into::into),
+            token_in,
             token_out_min_amount,
         };
 
@@ -87,9 +90,14 @@ where
         .collect()
 }
 
-fn to_dex_cwcoin<G>(token: &CoinDTO<G>) -> Result<CwCoin>
+fn to_dex_cwcoin<G>(token: &CoinDTO<G>) -> Result<OsmosisCoin>
 where
     G: Group,
 {
-    coin_legacy::to_cosmwasm_on_network::<DexSymbols<G>>(token).map_err(Error::from)
+    coin_legacy::to_cosmwasm_on_network::<DexSymbols<G>>(token)
+        .map(|CwCoin { denom, amount }| OsmosisCoin {
+            denom,
+            amount: amount.to_string(),
+        })
+        .map_err(Error::from)
 }

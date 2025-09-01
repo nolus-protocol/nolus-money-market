@@ -1,7 +1,7 @@
 use std::ops::{Deref, DerefMut};
 
 use sdk::{
-    cosmwasm_std::{Addr, Order, Storage, Timestamp},
+    cosmwasm_std::{Addr, Order, StdError as CwError, Storage, Timestamp},
     cw_storage_plus::{Bound, Deque, Index, IndexList, IndexedMap as CwIndexedMap, MultiIndex},
 };
 
@@ -76,7 +76,7 @@ where
             )
             .map(|res| {
                 res.map(|(subscriber, _): (Addr, TimeSeconds)| subscriber)
-                    .map_err(AlarmError::from)
+                    .map_err(|error: CwError| AlarmError::Std(error.to_string()))
             })
     }
 }
@@ -91,7 +91,8 @@ where
 
     pub fn ensure_no_in_delivery(&mut self) -> Result<&mut Self, AlarmError> {
         self.in_delivery
-            .is_empty(self.storage.deref_mut())?
+            .is_empty(self.storage.deref_mut())
+            .map_err(|error: CwError| AlarmError::Std(error.to_string()))?
             .then_some(self)
             .ok_or_else(|| {
                 AlarmError::NonEmptyAlarmsInDeliveryQueue(String::from("Assertion requested"))
@@ -100,17 +101,18 @@ where
 
     pub fn out_for_delivery(&mut self, subscriber: Addr) -> Result<(), AlarmError> {
         self.alarms
-            .remove(self.storage.deref_mut(), subscriber.clone())?;
+            .remove(self.storage.deref_mut(), subscriber.clone())
+            .map_err(|error: CwError| AlarmError::Std(error.to_string()))?;
 
         self.in_delivery
             .push_back(self.storage.deref_mut(), &subscriber)
-            .map_err(Into::into)
+            .map_err(|error: CwError| AlarmError::Std(error.to_string()))
     }
 
     pub fn last_delivered(&mut self) -> Result<(), AlarmError> {
         self.in_delivery
             .pop_front(self.storage.deref_mut())
-            .map_err(Into::into)
+            .map_err(|error: CwError| AlarmError::Std(error.to_string()))
             .and_then(|maybe_alarm: Option<Addr>| {
                 if maybe_alarm.is_some() {
                     Ok(())
@@ -125,7 +127,7 @@ where
     pub fn last_failed(&mut self, now: Timestamp) -> Result<(), AlarmError> {
         self.in_delivery
             .pop_front(self.storage.deref_mut())
-            .map_err(Into::into)
+            .map_err(|error: CwError| AlarmError::Std(error.to_string()))
             .and_then(|maybe_alarm: Option<Addr>| maybe_alarm.ok_or_else(|| AlarmError::EmptyAlarmsInDeliveryQueue(
                 String::from("Received failure reply status"))
             ))
@@ -135,7 +137,7 @@ where
     fn add_internal(&mut self, subscriber: Addr, time: TimeSeconds) -> Result<(), AlarmError> {
         self.alarms
             .save(self.storage.deref_mut(), subscriber, &time)
-            .map_err(Into::into)
+            .map_err(|error: CwError| AlarmError::Std(error.to_string()))
     }
 }
 

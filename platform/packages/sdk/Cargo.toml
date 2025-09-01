@@ -18,7 +18,6 @@ feature-groups = { storage = { members = ["storage"], at-least-one = false, mutu
 contract = ["storage"]
 storage = ["dep:cw-storage-plus"]
 testing = [
-    "dep:anyhow",
     "dep:cw-multi-test",
     "cw-multi-test/cosmwasm_1_2",
     "dep:base64",
@@ -42,5 +41,4 @@ serde = { workspace = true, optional = true }
 thiserror = { workspace = true, optional = true }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-anyhow = { workspace = true, optional = true }
 cw-multi-test = { workspace = true, optional = true }

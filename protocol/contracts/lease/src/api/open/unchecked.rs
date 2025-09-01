@@ -32,7 +32,7 @@ impl TryFrom<PositionSpecDTO> for ValidatedPositionSpec {
 mod test {
     use finance::{duration::Duration, percent::Percent};
     use platform::tests as platform_tests;
-    use sdk::cosmwasm_std::Addr;
+    use sdk::cosmwasm_std::{Addr, StdError as CwError};
 
     use crate::api::open::LoanForm;
 
@@ -43,7 +43,10 @@ mod test {
 
     #[test]
     fn read_5_0() {
-        assert_eq!(Ok(loan_v5_0()), platform_tests::ser_de(&loan_v5_0()));
+        assert_eq!(
+            Ok(loan_v5_0()),
+            platform_tests::ser_de(&loan_v5_0()).map_err(|error: CwError| error.to_string())
+        );
     }
 
     fn loan_v5_0() -> LoanForm {

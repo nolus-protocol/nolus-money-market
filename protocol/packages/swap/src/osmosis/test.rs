@@ -1,9 +1,10 @@
+use osmosis_std::types::cosmos::base::v1beta1::Coin as OsmosisCoin;
+
 use currency::{
     CurrencyDef as _,
     test::{SuperGroup, SuperGroupTestC1},
 };
 use finance::coin::{Amount, Coin};
-use sdk::cosmwasm_std::Coin as CwCoin;
 
 use crate::testing;
 
@@ -12,8 +13,12 @@ use super::{SwapAmountInRoute, SwapTarget};
 #[test]
 fn to_dex_cwcoin() {
     let coin: Coin<SuperGroupTestC1> = 3541415.into();
+
     assert_eq!(
-        CwCoin::new(Amount::from(coin), SuperGroupTestC1::dex()),
+        OsmosisCoin {
+            denom: SuperGroupTestC1::dex().into(),
+            amount: Amount::from(coin).to_string()
+        },
         super::to_dex_cwcoin::<SuperGroup>(&coin.into()).unwrap()
     );
 }

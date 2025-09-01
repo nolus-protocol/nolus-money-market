@@ -64,6 +64,7 @@ pub struct AlarmsStatusResponse {
 #[cfg(test)]
 mod test {
     use platform::tests as platform_tests;
+    use sdk::cosmwasm_std::StdError as CwError;
 
     use super::QueryMsg;
 
@@ -71,7 +72,8 @@ mod test {
     fn release() {
         assert_eq!(
             Ok(QueryMsg::PlatformPackageRelease {}),
-            platform_tests::ser_de(&versioning::query::PlatformPackage::Release {}),
+            platform_tests::ser_de(&versioning::query::PlatformPackage::Release {})
+                .map_err(|error: CwError| error.to_string()),
         );
     }
 }

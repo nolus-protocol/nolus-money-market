@@ -3,7 +3,7 @@ use std::mem;
 use currency::Group;
 use marketprice::config::Config as PriceConfig;
 use sdk::{
-    cosmwasm_std::{StdResult, Storage},
+    cosmwasm_std::{StdError as CwError, StdResult, Storage},
     cw_storage_plus::Item,
 };
 
@@ -22,7 +22,7 @@ impl Config {
     {
         Self::STORAGE
             .save(storage, &self)
-            .map_err(Error::<PriceG>::StoreConfig)
+            .map_err(|error: CwError| Error::StoreConfig(error.to_string()))
     }
 
     pub fn load<PriceG>(storage: &dyn Storage) -> Result<Self, PriceG>
@@ -31,7 +31,7 @@ impl Config {
     {
         Self::STORAGE
             .load(storage)
-            .map_err(Error::<PriceG>::LoadConfig)
+            .map_err(|error: CwError| Error::LoadConfig(error.to_string()))
     }
 
     pub fn update<PriceG>(
@@ -47,6 +47,6 @@ impl Config {
                 Ok(c)
             })
             .map(mem::drop)
-            .map_err(Error::<PriceG>::UpdateConfig)
+            .map_err(|error: CwError| Error::UpdateConfig(error.to_string()))
     }
 }

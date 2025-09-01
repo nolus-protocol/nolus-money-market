@@ -13,8 +13,8 @@ pub use sdk::cosmwasm_std::Coin as CwCoin;
 use sdk::{
     cosmwasm_ext::InterChainMsg,
     cosmwasm_std::{
-        Binary, BlockInfo, Deps, Empty, Env, StdResult, Timestamp, testing::mock_env,
-        to_json_binary,
+        Binary, BlockInfo, Deps, Empty, Env, StdError as CwError, StdResult, Timestamp,
+        testing::mock_env, to_json_binary,
     },
     testing::{self, CwApp, InterChainMsgSender, new_app},
 };
@@ -31,10 +31,10 @@ type CwContractWrapper<
     QueryMsg,
     QueryErr,
     Sudo = Empty,
-    SudoErr = anyhow::Error,
-    ReplyErr = anyhow::Error,
+    SudoErr = CwError,
+    ReplyErr = CwError,
     MigrMsg = Empty,
-    MigrErr = anyhow::Error,
+    MigrErr = CwError,
 > = testing::CwContractWrapper<
     ExecMsg,       // execute msg
     InstMsg,       // instantiate msg

@@ -1,7 +1,7 @@
 use std::{marker::PhantomData, mem};
 
 use sdk::{
-    cosmwasm_std::{Addr, Storage},
+    cosmwasm_std::{Addr, StdError as CwError, Storage},
     cw_storage_plus::Map,
 };
 
@@ -19,34 +19,55 @@ impl<Lpn> Repo<Lpn> {
             return Err(ContractError::LoanExists {});
         }
 
-        Self::STORAGE.save(storage, addr, loan).map_err(Into::into)
+        Self::STORAGE
+            .save(storage, addr, loan)
+            .map_err(|error: CwError| ContractError::Std(error.to_string()))
     }
 
     pub fn load(storage: &dyn Storage, addr: Addr) -> Result<Loan<Lpn>> {
-        Self::STORAGE.load(storage, addr).map_err(Into::into)
+        Self::STORAGE
+            .load(storage, addr)
+            .map_err(|error: CwError| ContractError::Std(error.to_string()))
     }
 
     pub fn save(storage: &mut dyn Storage, addr: Addr, loan: &Loan<Lpn>) -> Result<()> {
+        enum Error {
+            Std(CwError),
+            NoLoan,
+        }
+
+        impl From<CwError> for Error {
+            fn from(value: CwError) -> Self {
+                Self::Std(value)
+            }
+        }
+
         if loan.principal_due.is_zero() {
             Self::STORAGE.remove(storage, addr);
             Ok(())
         } else {
             Self::STORAGE
                 .update(storage, addr, |loaded_loan| {
-                    let mut loaded_loan = loaded_loan.ok_or(ContractError::NoLoan {})?;
+                    let mut loaded_loan = loaded_loan.ok_or(Error::NoLoan)?;
                     loaded_loan.principal_due = loan.principal_due;
                     loaded_loan.interest_paid = loan.interest_paid;
 
-                    Ok::<_, ContractError>(loaded_loan)
+                    Ok(loaded_loan)
                 })
                 .map(mem::drop)
+                .map_err(|error: Error| match error {
+                    Error::Std(cw_error @ CwError { .. }) => {
+                        ContractError::Std(cw_error.to_string())
+                    }
+                    Error::NoLoan => ContractError::NoLoan {},
+                })
         }
     }
 
     pub fn query(storage: &dyn Storage, lease_addr: Addr) -> Result<Option<Loan<Lpn>>> {
         Self::STORAGE
             .may_load(storage, lease_addr)
-            .map_err(Into::into)
+            .map_err(|error: CwError| ContractError::Std(error.to_string()))
     }
 
     pub fn empty(storage: &dyn Storage) -> bool {

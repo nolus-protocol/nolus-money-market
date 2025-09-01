@@ -2,42 +2,40 @@ use std::num::TryFromIntError;
 
 use thiserror::Error;
 
-use sdk::cosmwasm_std::StdError;
-
 #[derive(Error, Debug, PartialEq)]
 pub enum ContractError {
     #[error("[Leaser] Save Config failed, cause: {0}")]
-    SaveConfigFailure(StdError),
+    SaveConfigFailure(String),
 
     #[error("[Leaser] Update Config failed, cause: {0}")]
-    UpdateConfigFailure(StdError),
+    UpdateConfigFailure(String),
 
     #[error("[Leaser] Load Config failed, cause: {0}")]
-    LoadConfigFailure(StdError),
+    LoadConfigFailure(String),
 
     #[error("[Leaser] Loading the old Config failed, cause: {0}")]
-    LoadOldConfig(StdError),
+    LoadOldConfig(String),
 
     #[error("[Leaser] Iterate Cutomer Leases failed, cause: {0}")]
-    IterateLeasesFailure(StdError),
+    IterateLeasesFailure(String),
 
     #[error("[Leaser] Registration of a Lease failed, cause: {0}")]
-    SaveLeaseFailure(StdError),
+    SaveLeaseFailure(String),
 
     #[error("[Leaser] Deregistration of a Lease failed, cause: {0}")]
-    RemoveLeaseFailure(StdError),
+    RemoveLeaseFailure(String),
 
     #[error("[Leaser] Load Customer Leases failed, cause: {0}")]
-    LoadLeasesFailure(StdError),
+    LoadLeasesFailure(String),
 
     #[error("[Leaser] Save pending Customer failed, cause: {0}")]
-    SavePendingCustomerFailure(StdError),
+    SavePendingCustomerFailure(String),
 
     #[error("[Leaser] Address validation failed, cause: {0}")]
-    InvalidAddress(StdError),
+    InvalidAddress(String),
 
     #[error("[Leaser] Failed to serialize to JSON, cause: {0}")]
-    SerializeToJson(StdError),
+    SerializeToJson(String),
 
     #[error("[Leaser] integer conversion {0}")]
     Conversion(#[from] TryFromIntError),
@@ -93,5 +91,5 @@ pub enum ContractError {
     ScheduleReserveDump(platform::error::Error),
 
     #[error("[Leaser] Failed to query for the Lease package, cause: {0}")]
-    QueryLeasePackage(StdError),
+    QueryLeasePackage(String),
 }

@@ -4,7 +4,7 @@ use currency::platform::Nls;
 use finance::{coin::Coin, zero::Zero};
 use lpp_platform::NLpn;
 use sdk::{
-    cosmwasm_std::{Addr, Order, Storage},
+    cosmwasm_std::{Addr, Order, StdError as CwError, Storage},
     cw_storage_plus::Map,
 };
 
@@ -60,11 +60,13 @@ impl Deposit {
             .prefix(())
             .range(storage, None, None, Order::Ascending)
             .map(move |record| {
-                record.map_err(Into::into).map(|(addr, data)| Self {
-                    addr,
-                    data,
-                    total_rewards,
-                })
+                record
+                    .map(|(addr, data)| Self {
+                        addr,
+                        data,
+                        total_rewards,
+                    })
+                    .map_err(|error: CwError| ContractError::Std(error.to_string()))
             })
     }
 
@@ -75,7 +77,7 @@ impl Deposit {
         } else {
             Self::DEPOSITS
                 .save(storage, self.addr.clone(), &self.data)
-                .map_err(Into::into)
+                .map_err(|error: CwError| ContractError::Std(error.to_string()))
         }
     }
 
@@ -145,7 +147,7 @@ impl Deposit {
     fn may_load(storage: &dyn Storage, addr: Addr, total_rewards: Index) -> Result<Option<Self>> {
         Self::DEPOSITS
             .may_load(storage, addr.clone())
-            .map_err(Into::into)
+            .map_err(|error: CwError| ContractError::Std(error.to_string()))
             .map(|may_data| {
                 may_data.map(|data| Self {
                     addr,

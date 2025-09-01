@@ -13,7 +13,6 @@ use oracle_platform::error::Error as OraclePlatformError;
 use platform::error::Error as PlatformError;
 use profit::stub::Error as ProfitError;
 use reserve::stub::Error as ReserveError;
-use sdk::cosmwasm_std::StdError;
 use timealarms::stub::Error as TimeAlarmsError;
 
 pub use crate::position::PositionError;
@@ -21,7 +20,7 @@ pub use crate::position::PositionError;
 #[derive(Error, Debug, PartialEq)]
 pub enum ContractError {
     #[error("[Lease] [Std] {0}")]
-    Std(#[from] StdError),
+    Std(String),
 
     #[error("[Lease] {0}")]
     Unauthorized(#[from] access_control::error::Error),
@@ -93,10 +92,10 @@ pub enum ContractError {
     InconsistencyNotDetected(),
 
     #[error("[Lease] Failed to query Position Limits")]
-    PositionLimitsQuery(StdError),
+    PositionLimitsQuery(String),
 
     #[error("[Lease] Failed to query Access Check")]
-    CheckAccessQuery(StdError),
+    CheckAccessQuery(String),
 }
 
 impl ContractError {

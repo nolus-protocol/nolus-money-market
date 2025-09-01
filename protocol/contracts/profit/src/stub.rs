@@ -18,7 +18,7 @@ pub struct ProfitRef {
 #[derive(Debug, PartialEq, Error)]
 pub enum Error {
     #[error("[Profit] [Std] {0}")]
-    Std(#[from] StdError),
+    Std(String),
 }
 
 impl ProfitRef {
@@ -26,7 +26,7 @@ impl ProfitRef {
         querier
             .query_wasm_smart(addr.clone(), &QueryMsg::Config {})
             .map(|_: ConfigResponse| Self { addr })
-            .map_err(Into::into)
+            .map_err(|error: StdError| Error::Std(error.to_string()))
     }
 
     pub fn into_stub(self) -> ProfitStub {

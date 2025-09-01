@@ -10,7 +10,7 @@ pub type Result<T> = StdResult<T, Error>;
 #[derive(Error, Debug, PartialEq)]
 pub enum Error {
     #[error("[Oracle; Stub] Failed to query configuration! Cause: {0}")]
-    StubConfigQuery(StdError),
+    StubConfigQuery(String),
 
     #[error("[Oracle; Stub] Invalid configuration! Cause: {0}")]
     StubConfigInvalid(CurrencyError),
@@ -25,7 +25,7 @@ pub enum Error {
     FailedToFetchPrice {
         from: SymbolStatic,
         to: SymbolStatic,
-        error: StdError,
+        error: String,
     },
 }
 
@@ -41,6 +41,6 @@ where
     Error::FailedToFetchPrice {
         from: from.into_symbol::<Tickers<G>>(),
         to: to.into_symbol::<Tickers<G>>(),
-        error,
+        error: error.to_string(),
     }
 }

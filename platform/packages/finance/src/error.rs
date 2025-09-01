@@ -3,7 +3,7 @@ use std::any::type_name;
 use thiserror::Error;
 
 use currency::error::Error as CurrencyError;
-use sdk::cosmwasm_std::{OverflowError, StdError};
+use sdk::cosmwasm_std::OverflowError;
 
 use crate::percent::Units as PercentUnits;
 
@@ -27,7 +27,7 @@ pub enum Error {
     },
 
     #[error("[Finance] [Std] {0}")]
-    CosmWasmError(#[from] StdError),
+    CosmWasmError(String),
 }
 
 impl Error {

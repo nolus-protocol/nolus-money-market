@@ -1,11 +1,9 @@
 use thiserror::Error;
 
-use sdk::cosmwasm_std::StdError;
-
 #[derive(Error, Debug, PartialEq)]
 pub enum Error {
     #[error("[Reserve] [Std] {0}")]
-    Std(#[from] StdError),
+    Std(String),
 
     #[error("[Reserve] {0}")]
     Finance(#[from] finance::error::Error),

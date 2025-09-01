@@ -3,7 +3,7 @@ use std::marker::PhantomData;
 use currency::{CurrencyDef, MemberOf};
 use serde::{Deserialize, Serialize};
 
-use sdk::cosmwasm_std::{Addr, QuerierWrapper};
+use sdk::cosmwasm_std::{Addr, QuerierWrapper, StdError as CwError};
 
 use crate::api::{LpnCurrencies, LpnCurrencyDTO, QueryMsg};
 
@@ -29,7 +29,7 @@ where
     pub fn try_new(contract: Addr, querier: &QuerierWrapper<'_>) -> Result<Self, Error> {
         querier
             .query_wasm_smart(contract.clone(), &QueryMsg::ReserveLpn())
-            .map_err(Error::QueryReserveFailure)
+            .map_err(|error: CwError| Error::QueryReserveFailure(error.to_string()))
             .and_then(|lpn: LpnCurrencyDTO| {
                 lpn.of_currency(&currency::dto::<Lpn, _>())
                     .map_err(Error::UnexpectedLpn)

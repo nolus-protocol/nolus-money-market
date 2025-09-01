@@ -48,7 +48,7 @@ where
     fn next(&mut self) -> Option<Self::Item> {
         self.0.next().map(|res| {
             res.map(|pair| pair.0)
-                .map_err(AlarmError::IteratorLoadFailed)
+                .map_err(|error: CwError| AlarmError::IteratorLoadFailed(error.to_string()))
         })
     }
 }
@@ -174,7 +174,9 @@ where
             Ok(false) => Err(AlarmError::NonEmptyAlarmsInDeliveryQueue(String::from(
                 "Assertion requested",
             ))),
-            Err(error) => Err(AlarmError::InDeliveryIsEmptyFailed(error)),
+            Err(error @ CwError { .. }) => {
+                Err(AlarmError::InDeliveryIsEmptyFailed(error.to_string()))
+            }
         }
     }
 
@@ -234,13 +236,13 @@ where
     pub fn remove_above_or_equal(&mut self, subscriber: Addr) -> Result<(), AlarmError> {
         self.alarms_above_or_equal
             .remove(self.storage.deref_mut(), subscriber)
-            .map_err(AlarmError::RemoveAboveOrEqual)
+            .map_err(|error: CwError| AlarmError::RemoveAboveOrEqual(error.to_string()))
     }
 
     pub fn remove_all(&mut self, subscriber: Addr) -> Result<(), AlarmError> {
         self.alarms_below
             .remove(self.storage.deref_mut(), subscriber.clone())
-            .map_err(AlarmError::RemoveBelow)
+            .map_err(|error: CwError| AlarmError::RemoveBelow(error.to_string()))
             .and_then(|()| self.remove_above_or_equal(subscriber))
     }
 
@@ -248,7 +250,7 @@ where
         let below: NormalizedPrice<G> = self
             .alarms_below
             .load(self.storage.deref(), subscriber.clone())
-            .map_err(AlarmError::InDeliveryLoadBelow)?;
+            .map_err(|error: CwError| AlarmError::InDeliveryLoadBelow(error.to_string()))?;
 
         self.alarms_below
             .replace(
@@ -257,12 +259,12 @@ where
                 None,
                 Some(&below),
             )
-            .map_err(AlarmError::InDeliveryRemoveBelow)?;
+            .map_err(|error: CwError| AlarmError::InDeliveryRemoveBelow(error.to_string()))?;
 
         let above: Option<NormalizedPrice<G>> = self
             .alarms_above_or_equal
             .may_load(self.storage.deref(), subscriber.clone())
-            .map_err(AlarmError::InDeliveryLoadAboveOrEqual)?;
+            .map_err(|error: CwError| AlarmError::InDeliveryLoadAboveOrEqual(error.to_string()))?;
 
         if let Some(above) = &above {
             self.alarms_above_or_equal
@@ -272,7 +274,9 @@ where
                     None,
                     Some(above),
                 )
-                .map_err(AlarmError::InDeliveryRemoveAboveOrEqual)?;
+                .map_err(|error: CwError| {
+                    AlarmError::InDeliveryRemoveAboveOrEqual(error.to_string())
+                })?;
         }
 
         self.in_delivery
@@ -284,12 +288,12 @@ where
                     above,
                 },
             )
-            .map_err(AlarmError::InDeliveryAppend)
+            .map_err(|error: CwError| AlarmError::InDeliveryAppend(error.to_string()))
     }
 
     pub fn last_delivered(&mut self) -> Result<(), AlarmError> {
         self.pop_front_in_delivery(
-            AlarmError::LastDeliveredRemove,
+            |error: CwError| AlarmError::LastDeliveredRemove(error.to_string()),
             "Received success reply status",
         )
         .map(|_: AlarmWithSubscriber<G>| ())
@@ -297,7 +301,7 @@ where
 
     pub fn last_failed(&mut self) -> Result<(), AlarmError> {
         self.pop_front_in_delivery(
-            AlarmError::LastFailedRemove,
+            |error: CwError| AlarmError::LastFailedRemove(error.to_string()),
             "Received failure reply status",
         )
         .and_then(|alarm: AlarmWithSubscriber<G>| {
@@ -340,7 +344,7 @@ where
             &self.alarms_below,
             subscriber,
             alarm,
-            AlarmError::AddAlarmStoreBelow,
+            |error: CwError| AlarmError::AddAlarmStoreBelow(error.to_string()),
         )
     }
 
@@ -354,7 +358,7 @@ where
             &self.alarms_above_or_equal,
             subscriber,
             alarm,
-            AlarmError::AddAlarmStoreAboveOrEqual,
+            |error: CwError| AlarmError::AddAlarmStoreAboveOrEqual(error.to_string()),
         )
     }
 

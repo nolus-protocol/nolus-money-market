@@ -11,7 +11,7 @@ use sdk::{
 #[derive(Error, Debug, PartialEq)]
 pub enum PriceFeedersError {
     #[error("{0}")]
-    Std(#[from] StdError),
+    Std(String),
 
     #[error("Given address already registered as a price feeder")]
     FeederAlreadyRegistered {},
@@ -45,7 +45,11 @@ impl PriceFeeders {
     }
 
     pub fn register(&self, deps: DepsMut<'_>, feeder: Addr) -> Result<(), PriceFeedersError> {
-        let mut db = self.0.may_load(deps.storage)?.unwrap_or_default();
+        let mut db = self
+            .0
+            .may_load(deps.storage)
+            .map_err(|error: StdError| PriceFeedersError::Std(error.to_string()))?
+            .unwrap_or_default();
 
         if db.contains(&feeder) {
             return Err(PriceFeedersError::FeederAlreadyRegistered {});
@@ -53,7 +57,9 @@ impl PriceFeeders {
 
         db.insert(feeder);
 
-        self.0.save(deps.storage, &db)?;
+        self.0
+            .save(deps.storage, &db)
+            .map_err(|error: StdError| PriceFeedersError::Std(error.to_string()))?;
 
         Ok(())
     }
@@ -68,13 +74,13 @@ impl PriceFeeders {
                     self.0.save(deps.storage, &feeders)
                 })
             })
-            .map_err(Into::into)
+            .map_err(|error: StdError| PriceFeedersError::Std(error.to_string()))
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use sdk::cosmwasm_std::{Addr, testing};
+    use sdk::cosmwasm_std::{Addr, StdError as CwError, testing};
 
     use crate::feeders::PriceFeeders;
 
@@ -93,10 +99,20 @@ mod tests {
         let feeders = PriceFeeders::new("storage_namespace");
         let new_feeder = Addr::unchecked("feeder34");
         feeders.register(deps.as_mut(), new_feeder.clone()).unwrap();
-        assert_eq!(Ok(true), feeders.is_registered(&deps.storage, &new_feeder));
+        assert_eq!(
+            Ok(true),
+            feeders
+                .is_registered(&deps.storage, &new_feeder)
+                .map_err(|error: CwError| error.to_string())
+        );
 
         feeders.remove(deps.as_mut(), &new_feeder).unwrap();
 
-        assert_eq!(Ok(false), feeders.is_registered(&deps.storage, &new_feeder));
+        assert_eq!(
+            Ok(false),
+            feeders
+                .is_registered(&deps.storage, &new_feeder)
+                .map_err(|error: CwError| error.to_string())
+        );
     }
 }

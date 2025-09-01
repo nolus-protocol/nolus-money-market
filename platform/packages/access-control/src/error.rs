@@ -1,4 +1,3 @@
-use sdk::cosmwasm_std::StdError;
 use thiserror::Error;
 
 #[derive(Error, Debug, PartialEq)]
@@ -7,7 +6,7 @@ pub enum Error {
     Unauthorized {},
 
     #[error("[Access Control] [Std] {0}")]
-    Std(#[from] StdError),
+    Std(String),
 }
 
 pub type Result = std::result::Result<(), Error>;

@@ -164,7 +164,7 @@ mod unchecked {
 mod test {
     use finance::{duration::Duration, percent::Percent};
     use platform::tests as platform_tests;
-    use sdk::cosmwasm_std::{StdError, Timestamp, from_json};
+    use sdk::cosmwasm_std::{StdError, StdErrorKind, Timestamp, from_json};
 
     use crate::config::Config;
 
@@ -263,7 +263,10 @@ mod test {
             samples_number,
             Percent::from_permille(discount_factor),
         );
-        assert_eq!(Ok(c.clone()), platform_tests::ser_de(&c));
+        assert_eq!(
+            Ok(c.clone()),
+            platform_tests::ser_de(&c).map_err(|error: StdError| error.to_string())
+        );
     }
 
     fn deserialize_pass(
@@ -289,10 +292,12 @@ mod test {
         samples_number: u16,
         discount_factor: u32,
     ) {
-        assert!(matches!(
-            deserialize(min_feeders, sample_period, samples_number, discount_factor).unwrap_err(),
-            StdError::ParseErr { .. }
-        ));
+        assert_eq!(
+            deserialize(min_feeders, sample_period, samples_number, discount_factor)
+                .unwrap_err()
+                .kind(),
+            StdErrorKind::Serialization
+        );
     }
 
     fn deserialize(

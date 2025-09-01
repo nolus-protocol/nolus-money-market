@@ -19,8 +19,8 @@ use oracle::{
 };
 use sdk::{
     cosmwasm_std::{
-        Addr, Binary, Deps, Empty, Env, Event, QuerierWrapper, StdResult, to_json_binary,
-        wasm_execute,
+        Addr, Binary, Deps, Empty, Env, Event, QuerierWrapper, StdError as CwError, StdResult,
+        to_json_binary, wasm_execute,
     },
     cw_multi_test::AppResponse,
     testing::{self, CwContract, CwContractWrapper},
@@ -89,7 +89,7 @@ pub(crate) fn mock_query(
                     prices: vec![price.into()],
                 },
             )
-            .map_err(Error::ConvertToBinary)
+            .map_err(|error: CwError| Error::ConvertToBinary(error.to_string()))
         }
         _ => query(deps, env, msg),
     }

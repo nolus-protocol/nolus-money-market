@@ -4,7 +4,10 @@ use ::currencies::{LeaseGroup, Lpns, Native, PaymentOnlyGroup};
 use serde::{Deserialize, Serialize};
 
 use currency::{Currency, CurrencyDTO, CurrencyDef, Group, MemberOf};
-use sdk::{cosmwasm_std::Storage, cw_storage_plus::Item};
+use sdk::{
+    cosmwasm_std::{StdError as CwError, Storage},
+    cw_storage_plus::Item,
+};
 use tree::{FindBy as _, NodeRef};
 
 use crate::{
@@ -50,13 +53,13 @@ where
     pub fn load(storage: &dyn Storage) -> Result<Self, PriceG> {
         Self::DB_ITEM
             .load(storage)
-            .map_err(Error::LoadSupportedPairs)
+            .map_err(|error: CwError| Error::LoadSupportedPairs(error.to_string()))
     }
 
     pub fn save(&self, storage: &mut dyn Storage) -> Result<(), PriceG> {
         Self::DB_ITEM
             .save(storage, self)
-            .map_err(Error::StoreSupportedPairs)
+            .map_err(|error: CwError| Error::StoreSupportedPairs(error.to_string()))
     }
 
     pub fn load_path<'r>(

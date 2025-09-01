@@ -1,7 +1,7 @@
 use std::ops::{Deref, DerefMut};
 
 use sdk::{
-    cosmwasm_std::{Storage, Timestamp},
+    cosmwasm_std::{StdError as CwError, Storage, Timestamp},
     cw_storage_plus::{Deque as CwDeque, Namespace},
 };
 
@@ -61,8 +61,12 @@ where
     > {
         self.storage
             .iter(self.store.deref())
-            .map(|iter| iter.map(|item| item.map_err(PriceFeedsError::FeedRead)))
-            .map_err(PriceFeedsError::FeedRead)
+            .map(|iter| {
+                iter.map(|item| {
+                    item.map_err(|error: CwError| PriceFeedsError::FeedRead(error.to_string()))
+                })
+            })
+            .map_err(|error: CwError| PriceFeedsError::FeedRead(error.to_string()))
     }
 }
 
@@ -77,13 +81,15 @@ where
             match self
                 .storage
                 .pop_front(self.store.deref_mut())
-                .map_err(PriceFeedsError::FeedRemove)
+                .map_err(|error: CwError| PriceFeedsError::FeedRemove(error.to_string()))
                 .and_then(|may_item| {
                     if let Some(item) = may_item {
                         if item.valid_since(valid_since) {
                             self.storage
                                 .push_front(self.store.deref_mut(), &item)
-                                .map_err(PriceFeedsError::FeedPush)
+                                .map_err(|error: CwError| {
+                                    PriceFeedsError::FeedPush(error.to_string())
+                                })
                                 .map(|()| false)
                         } else {
                             Ok(true)
@@ -102,7 +108,7 @@ where
     fn register(&mut self, observation: Observation<C, QuoteC>) -> Result<(), PriceFeedsError> {
         self.storage
             .push_back(self.store.deref_mut(), &observation)
-            .map_err(PriceFeedsError::FeedPush)
+            .map_err(|error: CwError| PriceFeedsError::FeedPush(error.to_string()))
     }
 }
 

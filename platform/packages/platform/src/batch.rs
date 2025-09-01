@@ -6,7 +6,7 @@ use currency::CurrencyDef;
 use finance::coin::Coin;
 use sdk::{
     cosmwasm_ext::{CosmosMsg, SubMsg},
-    cosmwasm_std::{Addr, Coin as CoinCw, WasmMsg, to_json_binary},
+    cosmwasm_std::{Addr, Coin as CoinCw, StdError as CwError, WasmMsg, to_json_binary},
 };
 
 pub use crate::emit::{Emit, Emitter};
@@ -160,7 +160,7 @@ impl Batch {
         M: Serialize + ?Sized,
     {
         to_json_binary(msg)
-            .map_err(Error::Serialization)
+            .map_err(|error: CwError| Error::Serialization(error.to_string()))
             .map(|raw_msg| WasmMsg::Execute {
                 contract_addr: addr.into_string(),
                 funds: vec![],
@@ -174,7 +174,7 @@ impl Batch {
         C: CurrencyDef,
     {
         to_json_binary(msg)
-            .map_err(Error::Serialization)
+            .map_err(|error: CwError| Error::Serialization(error.to_string()))
             .map(|msg| WasmMsg::Execute {
                 contract_addr: addr.into_string(),
                 funds: if let Some(funds) = funds {
@@ -197,7 +197,7 @@ impl Batch {
         M: Serialize + ?Sized,
     {
         to_json_binary(msg)
-            .map_err(Error::Serialization)
+            .map_err(|error: CwError| Error::Serialization(error.to_string()))
             .map(|msg| WasmMsg::Instantiate {
                 admin: admin.map(Addr::into_string),
                 code_id: code.into(),
@@ -212,7 +212,7 @@ impl Batch {
         M: Serialize + ?Sized,
     {
         to_json_binary(msg)
-            .map_err(Error::Serialization)
+            .map_err(|error: CwError| Error::Serialization(error.to_string()))
             .map(|msg| WasmMsg::Migrate {
                 contract_addr: addr.into_string(),
                 new_code_id: new_code.into(),

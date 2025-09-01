@@ -63,6 +63,7 @@ pub struct ConfigResponse {
 #[cfg(all(feature = "internal.test.testing", test))]
 mod test {
     use platform::tests as platform_tests;
+    use sdk::cosmwasm_std::StdError as CwError;
 
     use super::QueryMsg;
 
@@ -70,7 +71,8 @@ mod test {
     fn release() {
         assert_eq!(
             Ok(QueryMsg::ProtocolPackageRelease {}),
-            platform_tests::ser_de(&versioning::query::ProtocolPackage::Release {}),
+            platform_tests::ser_de(&versioning::query::ProtocolPackage::Release {})
+                .map_err(|error: CwError| error.to_string()),
         );
     }
 }

@@ -8,7 +8,7 @@ use currency::{CurrencyDTO, CurrencyDef, Group, MemberOf};
 #[cfg(feature = "contract")]
 use finance::price::dto::PriceDTO;
 use marketprice::{alarms::errors::AlarmError, error::PriceFeedsError, feeders::PriceFeedersError};
-use sdk::cosmwasm_std::{Addr, StdError};
+use sdk::cosmwasm_std::Addr;
 use versioning::Error as VersioningError;
 
 #[derive(Error, Debug, PartialEq)]
@@ -17,10 +17,10 @@ where
     PriceG: Group,
 {
     #[error("[Oracle] Failed to validate address while trying to register feeder! Cause: {0}")]
-    RegisterFeederAddressValidation(StdError),
+    RegisterFeederAddressValidation(String),
 
     #[error("[Oracle] Failed to validate address while trying to unregister feeder! Cause: {0}")]
-    UnregisterFeederAddressValidation(StdError),
+    UnregisterFeederAddressValidation(String),
 
     #[error("[Oracle] Failed to update software! Cause: {0}")]
     UpdateSoftware(VersioningError),
@@ -29,25 +29,25 @@ where
     BrokenSwapTree(String),
 
     #[error("[Oracle] Failed to load feeders! Cause: {0}")]
-    LoadFeeders(StdError),
+    LoadFeeders(String),
 
     #[error("[Oracle] Failed to load configuration! Cause: {0}")]
-    LoadConfig(StdError),
+    LoadConfig(String),
 
     #[error("[Oracle] Failed to update configuration! Cause: {0}")]
-    UpdateConfig(StdError),
+    UpdateConfig(String),
 
     #[error("[Oracle] Failed to store configuration! Cause: {0}")]
-    StoreConfig(StdError),
+    StoreConfig(String),
 
     #[error("[Oracle] Failed to load supported pairs! Cause: {0}")]
-    LoadSupportedPairs(StdError),
+    LoadSupportedPairs(String),
 
     #[error("[Oracle] Failed to store supported pairs! Cause: {0}")]
-    StoreSupportedPairs(StdError),
+    StoreSupportedPairs(String),
 
     #[error("[Oracle] Failed to convert query response to binary! Cause: {0}")]
-    ConvertToBinary(StdError),
+    ConvertToBinary(String),
 
     #[error("[Oracle] {0}")]
     PriceFeedersError(#[from] PriceFeedersError),

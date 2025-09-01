@@ -14,7 +14,8 @@ use platform::{
 };
 use sdk::{
     cosmwasm_std::{
-        Binary, Env, MessageInfo, QuerierWrapper, Reply as CwReply, Storage, Timestamp,
+        Binary, Env, MessageInfo, QuerierWrapper, Reply as CwReply, StdError as CwError, Storage,
+        Timestamp,
     },
     cw_storage_plus::Item,
 };
@@ -94,11 +95,15 @@ impl State {
     }
 
     pub fn load(storage: &dyn Storage) -> ContractResult<Self> {
-        STATE.load(storage).map_err(Into::into)
+        STATE
+            .load(storage)
+            .map_err(|error: CwError| ContractError::Std(error.to_string()))
     }
 
     pub fn store(&self, storage: &mut dyn Storage) -> ContractResult<()> {
-        STATE.save(storage, self).map_err(Into::into)
+        STATE
+            .save(storage, self)
+            .map_err(|error: CwError| ContractError::Std(error.to_string()))
     }
 }
 

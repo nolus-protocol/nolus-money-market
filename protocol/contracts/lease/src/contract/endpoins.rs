@@ -9,8 +9,8 @@ use platform::{
 use sdk::{
     cosmwasm_ext::Response as CwResponse,
     cosmwasm_std::{
-        Api, Binary, Deps, DepsMut, Env, MessageInfo, QuerierWrapper, Reply, Storage, entry_point,
-        to_json_binary,
+        Api, Binary, Deps, DepsMut, Env, MessageInfo, QuerierWrapper, Reply, StdError as CwError,
+        Storage, entry_point, to_json_binary,
     },
     neutron_sdk::sudo::msg::SudoMsg,
 };
@@ -42,8 +42,12 @@ pub fn instantiate(
     new_lease: NewLeaseContract,
 ) -> ContractResult<CwResponse> {
     //TODO move the following validations into the deserialization
-    deps.api.addr_validate(new_lease.finalizer.as_str())?;
-    deps.api.addr_validate(new_lease.form.customer.as_str())?;
+    deps.api
+        .addr_validate(new_lease.finalizer.as_str())
+        .map_err(|error: CwError| ContractError::Std(error.to_string()))?;
+    deps.api
+        .addr_validate(new_lease.form.customer.as_str())
+        .map_err(|error: CwError| ContractError::Std(error.to_string()))?;
 
     let addr_validator = contract::validator(deps.querier);
     addr_validator.check_contract(&new_lease.form.time_alarms)?;
@@ -115,8 +119,12 @@ pub fn query(deps: Deps<'_>, env: Env, msg: QueryMsg) -> ContractResult<Binary> 
                     deps.querier,
                 )
             })
-            .and_then(|resp| to_json_binary(&resp).map_err(Into::into)),
-        QueryMsg::ProtocolPackageRelease {} => to_json_binary(&CURRENT_RELEASE).map_err(Into::into),
+            .and_then(|resp| {
+                to_json_binary(&resp)
+                    .map_err(|error: CwError| ContractError::Std(error.to_string()))
+            }),
+        QueryMsg::ProtocolPackageRelease {} => to_json_binary(&CURRENT_RELEASE)
+            .map_err(|error: CwError| ContractError::Std(error.to_string())),
     }
     .inspect_err(platform_error::log(deps.api))
 }

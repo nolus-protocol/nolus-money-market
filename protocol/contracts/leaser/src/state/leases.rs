@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 
 use sdk::{
-    cosmwasm_std::{Addr, Order, StdResult, Storage},
+    cosmwasm_std::{Addr, Order, StdError as CwError, Storage},
     cw_storage_plus::{Bound, Item, Map},
 };
 
@@ -21,19 +21,19 @@ impl Leases {
     pub fn cache_open_req(storage: &mut dyn Storage, customer: &Addr) -> ContractResult<()> {
         Self::PENDING_CUSTOMER
             .save(storage, customer)
-            .map_err(ContractError::SavePendingCustomerFailure)
+            .map_err(|error: CwError| ContractError::SavePendingCustomerFailure(error.to_string()))
     }
 
     /// Return true if the lease has been stored or false if there has already been the same lease
     pub fn save(storage: &mut dyn Storage, lease: Addr) -> ContractResult<bool> {
         let mut stored = false;
 
-        let update_fn = |may_leases: Option<HashSet<Addr>>| -> StdResult<HashSet<Addr>> {
+        let update_fn = |may_leases: Option<HashSet<Addr>>| {
             let mut leases = may_leases.unwrap_or_default();
 
             stored = leases.insert(lease);
 
-            Ok(leases)
+            Ok::<_, CwError>(leases)
         };
 
         Self::PENDING_CUSTOMER
@@ -41,7 +41,7 @@ impl Leases {
             .inspect(|_| Self::PENDING_CUSTOMER.remove(storage))
             .and_then(|customer| Self::CUSTOMER_LEASES.update(storage, customer, update_fn))
             .map(|_| stored)
-            .map_err(ContractError::SaveLeaseFailure)
+            .map_err(|error: CwError| ContractError::SaveLeaseFailure(error.to_string()))
     }
 
     pub fn load_by_customer(
@@ -51,7 +51,7 @@ impl Leases {
         Self::CUSTOMER_LEASES
             .may_load(storage, customer)
             .map(Option::unwrap_or_default)
-            .map_err(ContractError::LoadLeasesFailure)
+            .map_err(|error: CwError| ContractError::LoadLeasesFailure(error.to_string()))
     }
 
     /// Return whether the lease was present before the removal
@@ -70,7 +70,7 @@ impl Leases {
                     }
                     .map(|()| removed)
                 })
-                .map_err(ContractError::RemoveLeaseFailure)
+                .map_err(|error: CwError| ContractError::RemoveLeaseFailure(error.to_string()))
         } else {
             Ok(false)
         }
@@ -88,7 +88,9 @@ impl Leases {
             .map(|record| {
                 record
                     .map(|(customer, leases)| Customer::from(customer, leases.into_iter()))
-                    .map_err(ContractError::IterateLeasesFailure)
+                    .map_err(|error: CwError| {
+                        ContractError::IterateLeasesFailure(error.to_string())
+                    })
             })
     }
 

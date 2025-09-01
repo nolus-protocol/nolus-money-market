@@ -183,7 +183,7 @@ mod test {
         CurrencyDef, Group, MemberOf,
         test::{SubGroup, SubGroupTestC10, SuperGroup, SuperGroupTestC1, SuperGroupTestC2},
     };
-    use sdk::cosmwasm_std;
+    use sdk::cosmwasm_std::{self, StdError as CwError};
 
     use crate::coin::{Amount, Coin, CoinDTO};
 
@@ -312,8 +312,10 @@ mod test {
     fn distinct_currencies() {
         let amount = 432;
         assert_ne!(
-            cosmwasm_std::to_json_vec(&test_coin::<SuperGroupTestC1, SuperGroup>(amount)),
+            cosmwasm_std::to_json_vec(&test_coin::<SuperGroupTestC1, SuperGroup>(amount))
+                .map_err(|error: CwError| error.to_string()),
             cosmwasm_std::to_json_vec(&test_coin::<SuperGroupTestC2, SuperGroup>(amount))
+                .map_err(|error: CwError| error.to_string())
         );
     }
 

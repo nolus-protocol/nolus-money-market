@@ -4,9 +4,16 @@ use serde::{Deserialize, Serialize};
 
 use finance::percent::bound::BoundToHundredPercent;
 use platform::contract::Code;
-use sdk::{cosmwasm_std::Storage, cw_storage_plus::Item};
+use sdk::{
+    cosmwasm_std::{StdError as CwError, Storage},
+    cw_storage_plus::Item,
+};
 
-use crate::{borrow::InterestRate, config::Config as ApiConfig, contract::Result};
+use crate::{
+    borrow::InterestRate,
+    config::Config as ApiConfig,
+    contract::{ContractError, Result},
+};
 
 #[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq)]
 #[serde(transparent)]
@@ -16,11 +23,15 @@ impl Config {
     const STORAGE: Item<ApiConfig> = Item::new("config");
 
     pub fn store(cfg: &ApiConfig, storage: &mut dyn Storage) -> Result<()> {
-        Self::STORAGE.save(storage, cfg).map_err(Into::into)
+        Self::STORAGE
+            .save(storage, cfg)
+            .map_err(|error: CwError| ContractError::Std(error.to_string()))
     }
 
     pub fn load(storage: &dyn Storage) -> Result<ApiConfig> {
-        Self::STORAGE.load(storage).map_err(Into::into)
+        Self::STORAGE
+            .load(storage)
+            .map_err(|error: CwError| ContractError::Std(error.to_string()))
     }
 
     pub fn update_lease_code(storage: &mut dyn Storage, lease_code: Code) -> Result<()> {
@@ -51,5 +62,6 @@ impl Config {
         Self::STORAGE
             .update(storage, |config: ApiConfig| Ok(f(config)))
             .map(mem::drop)
+            .map_err(|error: CwError| ContractError::Std(error.to_string()))
     }
 }

@@ -1,6 +1,9 @@
 use serde::Serialize;
 
-use sdk::{cosmwasm_ext::Response as CwResponse, cosmwasm_std::to_json_binary};
+use sdk::{
+    cosmwasm_ext::Response as CwResponse,
+    cosmwasm_std::{StdError as CwError, to_json_binary},
+};
 
 use crate::{
     error::{self, Error},
@@ -39,8 +42,7 @@ where
     M: Into<MessageResponse>,
 {
     to_json_binary(&response)
-        .map_err(Error::Serialization)
-        .map_err(Into::into)
+        .map_err(|error: CwError| Error::Serialization(error.to_string()).into())
         .map(|resp_bin| response_only_messages(messages).set_data(resp_bin))
 }
 

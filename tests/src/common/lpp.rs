@@ -8,7 +8,7 @@ use lpp::{
 };
 use platform::contract::{Code, CodeId};
 use sdk::{
-    cosmwasm_std::{Addr, Binary, Coin as CwCoin, Deps, Env, to_json_binary},
+    cosmwasm_std::{Addr, Binary, Coin as CwCoin, Deps, Env, StdError as CwError, to_json_binary},
     testing::{self, CwContract},
 };
 
@@ -95,8 +95,9 @@ pub(crate) fn mock_quote_query(
     let res = match msg {
         QueryMsg::Quote { amount: _amount } => to_json_binary(
             &lpp::msg::QueryQuoteResponse::QuoteInterestRate(Percent::HUNDRED),
-        ),
-        _ => Ok(lpp::contract::query(deps, env, msg)?),
+        )
+        .map_err(|error: CwError| ContractError::Std(error.to_string())),
+        _ => lpp::contract::query(deps, env, msg),
     }?;
 
     Ok(res)
