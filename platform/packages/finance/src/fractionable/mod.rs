@@ -3,9 +3,7 @@ use std::{
     ops::{Div, Mul},
 };
 
-use crate::{
-    duration::Units as TimeUnits, percent::Units as PercentUnits, ratio::RatioLegacy, zero::Zero,
-};
+use crate::{ratio::RatioLegacy, zero::Zero};
 
 mod coin;
 mod duration;

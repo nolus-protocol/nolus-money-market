@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     error::{Error, Result as FinanceResult},
+    fraction::Unit as FractionUnit,
     fractionable::Fractionable,
     rational::Rational,
     zero::Zero,
@@ -20,11 +21,11 @@ use crate::{
         deserialize = "U: Debug + Deserialize<'de> + PartialOrd + Zero"
     )
 )]
-pub struct Ratio<U>(Rational<U>);
+pub struct Ratio<U>(SimpleFraction<U>);
 
 impl<U> Ratio<U>
 where
-    U: Debug + PartialOrd + Zero,
+    U: FractionUnit,
 {
     pub(crate) fn new(parts: U, total: U) -> Self {
         let obj = Self(Rational::new(parts, total));
@@ -40,23 +41,23 @@ where
     }
 }
 
-impl<U> TryFrom<Rational<U>> for Ratio<U>
+impl<U> TryFrom<SimpleFraction<U>> for Ratio<U>
 where
-    U: Debug + PartialOrd + Zero,
+    U: FractionUnit,
 {
     type Error = Error;
 
-    fn try_from(rational: Rational<U>) -> Result<Self, Self::Error> {
+    fn try_from(rational: SimpleFraction<U>) -> Result<Self, Self::Error> {
         let res = Self::new(rational.nominator, rational.denominator);
         res.invariant_held().map(|()| res)
     }
 }
 
-impl<U> From<Ratio<U>> for Rational<U>
+impl<U> From<Ratio<U>> for SimpleFraction<U>
 where
     U: Clone,
 {
-    fn from(ratio: Ratio<U>) -> Rational<U> {
+    fn from(ratio: Ratio<U>) -> SimpleFraction<U> {
         ratio.0
     }
 }
@@ -89,7 +90,7 @@ where
     }
 }
 
-impl<U, T> RatioLegacy<U> for Rational<T>
+impl<U, T> RatioLegacy<U> for SimpleFraction<T>
 where
     T: Copy + Into<U> + PartialEq + Zero,
 {
@@ -104,7 +105,7 @@ where
 
 impl<U, T> Rational<U> for SimpleFraction<T>
 where
-    Self: Ratio<U>,
+    Self: RatioLegacy<U>,
     T: FractionUnit,
 {
     fn of<A>(&self, whole: A) -> Option<A>
@@ -123,7 +124,8 @@ mod test_ratio {
 
     use crate::{
         coin::{Amount, Coin},
-        ratio::{Ratio, Rational},
+        ratio::{Ratio, Rational, SimpleFraction},
+        zero::Zero,
     };
 
     #[test]
@@ -200,7 +202,7 @@ mod test_ratio {
 
     fn invalid_ratio_deserialization()
     -> Result<Ratio<Coin<SuperGroupTestC1>>, cosmwasm_std::StdError> {
-        let serialized = cosmwasm_std::to_json_vec(&Rational::new(coin(5), coin(4))).unwrap();
+        let serialized = cosmwasm_std::to_json_vec(&SimpleFraction::new(coin(5), coin(4))).unwrap();
         cosmwasm_std::from_json::<Ratio<Coin<SuperGroupTestC1>>>(&serialized)
     }
 }

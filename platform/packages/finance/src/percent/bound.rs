@@ -11,7 +11,7 @@ use crate::{
     error::Error,
     fraction::Unit as FractionUnit,
     fractionable::Fractionable,
-    ratio::{Ratio, SimpleFraction},
+    ratio::{RatioLegacy, SimpleFraction},
     rational::Rational,
     zero::Zero,
 };
@@ -150,7 +150,7 @@ impl<const UPPER_BOUND: Units> From<BoundPercent<UPPER_BOUND>> for SimpleFractio
     }
 }
 
-impl<const UPPER_BOUND: Units> Ratio<Units> for BoundPercent<UPPER_BOUND> {
+impl<const UPPER_BOUND: Units> RatioLegacy<Units> for BoundPercent<UPPER_BOUND> {
     fn parts(&self) -> Units {
         self.0
     }
