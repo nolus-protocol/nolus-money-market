@@ -27,11 +27,11 @@ version = "0.20.0"
 default-features = false
 
 [dependencies.cosmwasm-schema]
-version = "2.0.4"
+version = "3"
 default-features = false
 
 [dependencies.cosmwasm-std]
-version = "2.0.4"
+version = "3"
 features = ["stargate"]
 
 [dependencies.prost]
