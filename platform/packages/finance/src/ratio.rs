@@ -48,8 +48,7 @@ where
 
     fn try_from(rational: Rational<U>) -> Result<Self, Self::Error> {
         let res = Self::new(rational.nominator, rational.denominator);
-        res.invariant_held()?;
-        Ok(res)
+        res.invariant_held().map(|()| res)
     }
 }
 
@@ -135,10 +134,18 @@ mod test_ratio {
     }
 
     #[test]
+    #[cfg(debug_assertions)]
     #[should_panic = "Parts must not exceed total"]
     fn invalid_variant() {
         let _ = Ratio::new(4u32, 3u32);
         let _ = Ratio::new(coin(10), coin(9));
+    }
+
+    #[test]
+    #[cfg(not(debug_assertions))]
+    fn invalid_variant_release() {
+        let ratio = Ratio::new(4u32, 3u32);
+        assert!(ratio.invariant_held().is_err());
     }
 
     #[test]
@@ -174,13 +181,26 @@ mod test_ratio {
     }
 
     #[test]
+    #[cfg(debug_assertions)]
     #[should_panic = "Parts must not exceed total"]
-    fn serialize_deserialize_invalid() {
-        let serialized = cosmwasm_std::to_json_vec(&Rational::new(coin(5), coin(4))).unwrap();
-        let _ = cosmwasm_std::from_json::<Ratio<Coin<SuperGroupTestC1>>>(&serialized);
+    fn serialize_deserialize_invalid_debug() {
+        let _ = invalid_ratio_deserialization();
+    }
+
+    #[test]
+    #[cfg(not(debug_assertions))]
+    fn serialize_deserialize_invalid_release() {
+        let result = invalid_ratio_deserialization();
+        assert!(result.is_err());
     }
 
     const fn coin(amount: Amount) -> Coin<SuperGroupTestC1> {
         Coin::new(amount)
+    }
+
+    fn invalid_ratio_deserialization()
+    -> Result<Ratio<Coin<SuperGroupTestC1>>, cosmwasm_std::StdError> {
+        let serialized = cosmwasm_std::to_json_vec(&Rational::new(coin(5), coin(4))).unwrap();
+        cosmwasm_std::from_json::<Ratio<Coin<SuperGroupTestC1>>>(&serialized)
     }
 }
