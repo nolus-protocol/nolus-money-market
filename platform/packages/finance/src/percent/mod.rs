@@ -1,9 +1,10 @@
-use std::{fmt::Formatter, ops::Add};
-
 use bound::BoundPercent;
 
 use crate::{
-    error::{Error, Result as FinanceResult}, fraction::Fraction, fractionable::Fractionable, ratio::{RatioLegacy, SimpleFraction}, traits::FractionUnit, zero::Zero
+    error::Error,
+    fraction::{Fraction, Unit as FractionUnit},
+    fractionable::Fractionable,
+    rational::Rational,
 };
 
 pub mod bound;
@@ -39,27 +40,7 @@ impl Rational<Units> for Percent {
     where
         A: Fractionable<Units>,
     {
-        whole.safe_mul(self)
-    }
-}
-
-impl RatioLegacy<Units> for Percent {
-    fn parts(&self) -> Units {
-        self.units()
-    }
-
-    fn total(&self) -> Units {
-        Percent::HUNDRED.units()
-    }
-}
-
-impl RatioLegacy<Units> for SimpleFraction<Percent> {
-    fn parts(&self) -> Units {
-        RatioLegacy::<Percent>::parts(self).units()
-    }
-
-    fn total(&self) -> Units {
-        RatioLegacy::<Percent>::total(self).units()
+        Some(whole.safe_mul(self))
     }
 }
 

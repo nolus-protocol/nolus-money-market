@@ -1,11 +1,6 @@
 use std::marker::PhantomData;
 
-use crate::{
-    coin::Amount,
-    percent::{Units as PercentUnits, bound::BoundPercent},
-    price::Price,
-    ratio::RatioLegacy,
-};
+use crate::{coin::Amount, percent::Units as PercentUnits, price::Price, ratio::RatioLegacy};
 
 use super::Fractionable;
 
@@ -16,7 +11,7 @@ where
 {
     fn safe_mul<F>(self, fraction: &F) -> Self
     where
-        F: RatioLegacy<BoundPercent<UPPER_BOUND>>,
+        F: RatioLegacy<PercentUnits>,
     {
         self.lossy_mul(&RatioUpcast(PhantomData, fraction))
     }

@@ -2,7 +2,6 @@ use crate::{
     coin::Coin,
     percent::{Units, bound::BoundPercent},
     ratio::RatioLegacy,
-    rational::Rational,
 };
 
 use super::{Fractionable, HigherRank};
@@ -18,7 +17,7 @@ impl<const UPPER_BOUND: Units> Fractionable<Units> for BoundPercent<UPPER_BOUND>
     #[track_caller]
     fn safe_mul<R>(self, ratio: &R) -> Self
     where
-        R: RatioLegacy<BoundPercent<UPPER_BOUND>>,
+        R: RatioLegacy<Units>,
     {
         Self::try_from(self.units().safe_mul(ratio))
             .expect("Resulting permille exceeds BoundPercent upper bound")
