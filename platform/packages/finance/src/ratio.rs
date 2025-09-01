@@ -9,17 +9,22 @@ use crate::{
     zero::Zero,
 };
 
-// /// A part of something that is divisible
-#[derive(Clone, Deserialize, Serialize)]
+/// A part of something that is divisible
+#[derive(Clone, Copy, Deserialize, Serialize)]
 #[cfg_attr(any(test, feature = "testing"), derive(Debug, PartialEq))]
-#[serde(try_from = "Rational<U>", into = "Rational<U>")]
-pub struct Ratio<U>(Rational<U>)
-where
-    U: Clone + Debug + PartialOrd + Zero;
+#[serde(
+    try_from = "Rational<U>",
+    into = "Rational<U>",
+    bound(
+        serialize = "U: Clone + Serialize",
+        deserialize = "U: Debug + Deserialize<'de> + PartialOrd + Zero"
+    )
+)]
+pub struct Ratio<U>(Rational<U>);
 
 impl<U> Ratio<U>
 where
-    U: Clone + Debug + PartialOrd + Zero,
+    U: Debug + PartialOrd + Zero,
 {
     pub(crate) fn new(parts: U, total: U) -> Self {
         let obj = Self(Rational::new(parts, total));
@@ -37,7 +42,7 @@ where
 
 impl<U> TryFrom<Rational<U>> for Ratio<U>
 where
-    U: Clone + Debug + PartialOrd + Zero,
+    U: Debug + PartialOrd + Zero,
 {
     type Error = Error;
 
@@ -50,7 +55,7 @@ where
 
 impl<U> From<Ratio<U>> for Rational<U>
 where
-    U: Clone + Debug + PartialOrd + Zero,
+    U: Clone,
 {
     fn from(ratio: Ratio<U>) -> Rational<U> {
         ratio.0
@@ -113,16 +118,13 @@ where
 
 #[cfg(test)]
 mod test_ratio {
-    use std::fmt::Debug;
 
     use currency::test::SuperGroupTestC1;
     use sdk::cosmwasm_std;
-    use serde::{Serialize, de::DeserializeOwned};
 
     use crate::{
         coin::{Amount, Coin},
         ratio::{Ratio, Rational},
-        zero::Zero,
     };
 
     #[test]
@@ -162,8 +164,13 @@ mod test_ratio {
 
     #[test]
     fn serialize_deserialize_test() {
-        serialize_deserialize(Ratio::new(coin(3), coin(4)));
-        serialize_deserialize(Ratio::new(coin(Amount::MAX), coin(Amount::MAX)));
+        let ratio_1 = Ratio::new(coin(3), coin(4));
+        let serialized = cosmwasm_std::to_json_vec(&ratio_1).unwrap();
+        assert_eq!(ratio_1, cosmwasm_std::from_json(&serialized).unwrap());
+
+        let ratio_2 = Ratio::new(coin(Amount::MAX), coin(Amount::MAX));
+        let serialized = cosmwasm_std::to_json_vec(&ratio_2).unwrap();
+        assert_eq!(ratio_2, cosmwasm_std::from_json(&serialized).unwrap());
     }
 
     #[test]
@@ -175,15 +182,5 @@ mod test_ratio {
 
     const fn coin(amount: Amount) -> Coin<SuperGroupTestC1> {
         Coin::new(amount)
-    }
-
-    fn serialize_deserialize<U>(ratio: Ratio<U>)
-    where
-        U: Clone + Debug + DeserializeOwned + PartialOrd + Serialize + Zero,
-    {
-        let serialized = cosmwasm_std::to_json_vec(&ratio).unwrap();
-        let deserialized = cosmwasm_std::from_json::<Ratio<U>>(&serialized).unwrap();
-
-        assert_eq!(ratio, deserialized)
     }
 }
