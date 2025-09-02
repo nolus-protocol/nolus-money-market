@@ -7,7 +7,7 @@ use finance::{
     coin::{Amount, Coin},
     duration::Duration,
     interest,
-    percent::Percent,
+    percent::{Percent, Percent100},
     price::{self, Price},
 };
 use lease::api::query::{ClosePolicy, StateResponse, opened::Status};
@@ -142,7 +142,7 @@ where
 
 pub(super) fn calculate_interest(
     principal: Coin<LpnCurrency>,
-    interest_rate: Percent,
+    interest_rate: Percent100,
     duration: Duration,
 ) -> Coin<LpnCurrency> {
     interest::interest(interest_rate, principal, duration)

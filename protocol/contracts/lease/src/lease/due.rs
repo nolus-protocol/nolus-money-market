@@ -1,4 +1,4 @@
-use finance::{duration::Duration, interest, percent::Percent};
+use finance::{duration::Duration, interest};
 
 use crate::{
     finance::LpnCoin,
@@ -19,11 +19,9 @@ impl DueTrait for State {
             let overdue_left = min_amount - total_due_interest;
 
             let total_interest_a_year = interest::interest(
-                Percent::from(
-                    self.annual_interest
-                        .checked_add(self.annual_interest_margin)
-                        .expect("TODO: propagate up the stack potential overflow"),
-                ),
+                self.annual_interest
+                    .checked_add(self.annual_interest_margin)
+                    .expect("TODO: propagate up the stack potential overflow"),
                 self.principal_due,
                 Duration::YEAR,
             );
@@ -53,13 +51,7 @@ impl State {
 
 #[cfg(all(feature = "internal.test.contract", test))]
 mod test {
-    use finance::{
-        coin::Coin,
-        duration::Duration,
-        interest,
-        percent::{Percent, Percent100},
-        zero::Zero,
-    };
+    use finance::{coin::Coin, duration::Duration, interest, percent::Percent100, zero::Zero};
 
     use crate::{
         loan::{Overdue, State},
@@ -99,7 +91,7 @@ mod test {
         let due_margin_interest = 5.into();
         let till_due_end = Duration::from_days(3);
         let delta_to_due_end = interest::interest(
-            Percent::from(annual_interest + annual_interest_margin),
+            annual_interest + annual_interest_margin,
             principal_due,
             till_due_end,
         );
@@ -137,7 +129,7 @@ mod test {
         let till_overdue = Duration::YEAR.into_slice_per_ratio(
             delta_to_overdue,
             interest::interest(
-                Percent::from(annual_interest + annual_interest_margin),
+                annual_interest + annual_interest_margin,
                 principal_due,
                 Duration::YEAR,
             ),

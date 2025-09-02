@@ -2,19 +2,17 @@ use std::{cmp, ops::Sub};
 
 use crate::{
     duration::{Duration, Units as DurationUnits},
-    fraction::Unit as FractionUnit,
+    fraction::{Fraction, Unit as FractionUnit},
     fractionable::Fractionable,
-    rational::Rational,
 };
 
 /// Computes how much interest is accrued
 pub fn interest<U, R, P>(rate: R, principal: P, period: Duration) -> P
 where
-    // TODO R:Fraction<U> when Ratio becomes a struct
-    R: Rational<U>,
+    R: Fraction<U>,
     P: Fractionable<U> + Fractionable<DurationUnits>,
 {
-    let interest_per_year = rate.of(principal).expect("TODO remove when R:Fraction<U>");
+    let interest_per_year = rate.of(principal);
     period.annualized_slice_of(interest_per_year)
 }
 
@@ -23,8 +21,7 @@ where
 /// The actual payment is equal to the payment minus the returned change.
 pub fn pay<U, R, P>(rate: R, principal: P, payment: P, period: Duration) -> (Duration, P)
 where
-    // TODO R:Fraction<U> when Ratio becomes a struct
-    R: Rational<U>,
+    R: Fraction<U>,
     P: Fractionable<U> + Fractionable<DurationUnits> + FractionUnit + Ord + Sub<Output = P>,
     Duration: Fractionable<P>,
 {
@@ -46,8 +43,8 @@ mod tests {
     use currency::test::SubGroupTestC10;
 
     use crate::{
-        coin::Coin, duration::Duration, percent::Percent, ratio::SimpleFraction,
-        rational::Rational, zero::Zero,
+        coin::Coin, duration::Duration, fraction::Fraction, percent::Percent100, ratio::Ratio,
+        zero::Zero,
     };
 
     type MyCoin = Coin<SubGroupTestC10>;
@@ -55,7 +52,7 @@ mod tests {
 
     #[test]
     fn pay_zero_principal() {
-        let p = Percent::from_percent(10);
+        let p = Percent100::from_percent(10);
         let principal = MyCoin::ZERO;
         let payment = MyCoin::new(300);
         pay_impl(
@@ -70,7 +67,7 @@ mod tests {
 
     #[test]
     fn pay_zero_payment() {
-        let p = Percent::from_percent(10);
+        let p = Percent100::from_percent(10);
         let principal = MyCoin::new(1000);
         let payment = MyCoin::ZERO;
         pay_impl(
@@ -85,12 +82,10 @@ mod tests {
 
     #[test]
     fn pay_outside_period() {
-        let p = Percent::from_percent(10);
+        let p = Percent100::from_percent(10);
         let principal = MyCoin::new(1000);
         let payment = MyCoin::new(345);
-        let exp_change = payment
-            - p.of(principal)
-                .expect("TODO remove then interest trait boundaries are fixed");
+        let exp_change = payment - p.of(principal);
         pay_impl(
             p,
             principal,
@@ -112,12 +107,10 @@ mod tests {
 
     #[test]
     fn pay_all_due() {
-        let p = Percent::from_percent(10);
+        let p = Percent100::from_percent(10);
         let principal = MyCoin::new(1000);
         let payment = MyCoin::new(300);
-        let exp_change = payment
-            - p.of(principal)
-                .expect("TODO remove then interest trait boundaries are fixed");
+        let exp_change = payment - p.of(principal);
         pay_impl(
             p,
             principal,
@@ -130,12 +123,10 @@ mod tests {
 
     #[test]
     fn pay_zero_due_does_not_touch_the_period() {
-        let p = Percent::from_percent(10);
+        let p = Percent100::from_percent(10);
         let principal = MyCoin::new(9); // 10% of 9 = 0
         let payment = MyCoin::new(100);
-        let exp_change = payment
-            - p.of(principal)
-                .expect("TODO remove then interest trait boundaries are fixed");
+        let exp_change = payment - p.of(principal);
         pay_impl(
             p,
             principal,
@@ -150,9 +141,9 @@ mod tests {
     fn interest() {
         let whole = MyCoin::new(1001);
         let part = MyCoin::new(125);
-        let r = SimpleFraction::new(part, whole);
+        let r = Ratio::new(part, whole);
 
-        let res = super::interest::<MyCoin, _, _>(r, whole, PERIOD_LENGTH);
+        let res = super::interest(r, whole, PERIOD_LENGTH);
         assert_eq!(part, res);
     }
 
@@ -160,12 +151,12 @@ mod tests {
     fn interest_zero() {
         let principal = MyCoin::new(1001);
 
-        let res = super::interest(Percent::ZERO, principal, PERIOD_LENGTH);
+        let res = super::interest(Percent100::ZERO, principal, PERIOD_LENGTH);
         assert_eq!(MyCoin::ZERO, res);
     }
 
     fn pay_impl(
-        rate: Percent,
+        rate: Percent100,
         principal: MyCoin,
         payment: MyCoin,
         pay_for: Duration,
