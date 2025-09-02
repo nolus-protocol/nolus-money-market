@@ -14,11 +14,11 @@ use crate::{
 #[derive(Clone, Copy, Deserialize, Serialize)]
 #[cfg_attr(any(test, feature = "testing"), derive(Debug, PartialEq))]
 #[serde(
-    try_from = "Rational<U>",
-    into = "Rational<U>",
+    try_from = "SimpleFraction<U>",
+    into = "SimpleFraction<U>",
     bound(
         serialize = "U: Clone + Serialize",
-        deserialize = "U: Debug + Deserialize<'de> + PartialOrd + Zero"
+        deserialize = "U: Deserialize<'de> + FractionUnit"
     )
 )]
 pub struct Ratio<U>(SimpleFraction<U>);
@@ -28,7 +28,7 @@ where
     U: FractionUnit,
 {
     pub(crate) fn new(parts: U, total: U) -> Self {
-        let obj = Self(Rational::new(parts, total));
+        let obj = Self(SimpleFraction::new(parts, total));
         debug_assert_eq!(Ok(()), obj.invariant_held());
         obj
     }
@@ -124,8 +124,7 @@ mod test_ratio {
 
     use crate::{
         coin::{Amount, Coin},
-        ratio::{Ratio, Rational, SimpleFraction},
-        zero::Zero,
+        ratio::{Ratio, SimpleFraction},
     };
 
     #[test]
