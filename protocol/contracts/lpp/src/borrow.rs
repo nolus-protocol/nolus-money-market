@@ -73,10 +73,11 @@ impl InterestRate {
             &SimpleFraction::new(self.addon_optimal_interest_rate, self.utilization_optimal),
             utilization_factor,
         )
-        .and_then(|utilization_config| {
+        .map(|utilization_config| {
             utilization_config
                 .checked_add(self.base_interest_rate.into())
                 .map(|res| Percent100::try_from(res).expect("The borrow rate must not exceed 100%"))
+                .expect("Addition must not fail")
         })
         .expect("The utilization_config must be a valid Percent")
     }
