@@ -1,10 +1,5 @@
 use finance::{
-    coin::Coin,
-    duration::Duration,
-    interest,
-    percent::{Percent, Percent100},
-    period::Period,
-    zero::Zero,
+    coin::Coin, duration::Duration, interest, percent::Percent100, period::Period, zero::Zero,
 };
 use lpp::stub::loan::LppLoan as LppLoanTrait;
 
@@ -58,7 +53,7 @@ impl Overdue {
 
             // TODO consider using the `trait InterestDue`
             let margin = interest::interest(
-                Percent::from(margin_interest),
+                margin_interest,
                 lpp_loan.principal_due(),
                 overdue_period.length(),
             );
@@ -101,13 +96,7 @@ impl Overdue {
 
 #[cfg(all(feature = "internal.test.contract", test))]
 mod test {
-    use finance::{
-        coin::Coin,
-        duration::Duration,
-        interest,
-        percent::{Percent, Percent100},
-        period::Period,
-    };
+    use finance::{coin::Coin, duration::Duration, interest, percent::Percent100, period::Period};
     use lpp::{loan::Loan, stub::loan::LppLoan};
     use sdk::cosmwasm_std::Timestamp;
 
@@ -175,11 +164,8 @@ mod test {
         let overdue = Overdue::new(&due_period_margin, max_due, MARGIN_INTEREST_RATE, &lpp_loan);
         let exp_interest =
             lpp_loan.interest_due(&(LOAN.interest_paid + due_period_length - max_due));
-        let exp_margin = interest::interest(
-            Percent::from(MARGIN_INTEREST_RATE),
-            LOAN.principal_due,
-            overdue_period,
-        );
+        let exp_margin =
+            interest::interest(MARGIN_INTEREST_RATE, LOAN.principal_due, overdue_period);
         assert_eq!(
             Overdue::Accrued {
                 interest: exp_interest,

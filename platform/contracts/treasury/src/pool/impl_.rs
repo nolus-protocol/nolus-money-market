@@ -1,9 +1,5 @@
 use currency::platform::{PlatformGroup, Stable};
-use finance::{
-    duration::Duration,
-    interest,
-    percent::{Percent, Percent100},
-};
+use finance::{duration::Duration, interest, percent::Percent100};
 use lpp_platform::{CoinStable, Lpp as LppTrait};
 use oracle_platform::{Oracle, OracleRef, convert};
 use platform::message::Response as MessageResponse;
@@ -49,7 +45,7 @@ where
         apr: Percent100,
         period: Duration,
     ) -> Result<MessageResponse, ContractError> {
-        let reward_in_stable = interest::interest(Percent::from(apr), self.balance, period);
+        let reward_in_stable = interest::interest(apr, self.balance, period);
 
         convert::from_quote::<_, _, _, _, PlatformGroup>(&self.oracle, reward_in_stable)
             .map_err(ContractError::ConvertRewardsToNLS)

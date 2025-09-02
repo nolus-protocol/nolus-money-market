@@ -1,11 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use finance::{
-    coin::Coin,
-    duration::Duration,
-    interest,
-    percent::{Percent, Percent100},
-};
+use finance::{coin::Coin, duration::Duration, interest, percent::Percent100};
 use sdk::cosmwasm_std::Timestamp;
 
 #[derive(Serialize, Deserialize, Clone, Copy, Debug)]
@@ -30,7 +25,7 @@ where
 impl<Lpn> Loan<Lpn> {
     pub fn interest_due(&self, by: &Timestamp) -> Coin<Lpn> {
         interest::interest(
-            Percent::from(self.annual_interest_rate),
+            self.annual_interest_rate,
             self.principal_due,
             self.due_period(by),
         )
@@ -38,7 +33,7 @@ impl<Lpn> Loan<Lpn> {
 
     pub fn repay(&mut self, by: &Timestamp, repayment: Coin<Lpn>) -> RepayShares<Lpn> {
         let (paid_for, interest_change) = interest::pay(
-            Percent::from(self.annual_interest_rate),
+            self.annual_interest_rate,
             self.principal_due,
             repayment,
             self.due_period(by),

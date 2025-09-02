@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 
 use finance::{
     coin::Coin, duration::Duration, fraction::Fraction, interest, percent::Percent100,
-    ratio::SimpleFraction, rational::Rational, zero::Zero,
+    ratio::Ratio, zero::Zero,
 };
 use lpp_platform::NLpn;
 use sdk::{
@@ -31,8 +31,7 @@ pub struct Total<Lpn> {
     total_interest_due: Coin<Lpn>,
 
     /// Current pool-wide weghted annual interest rate of all loans interest rates
-    // TODO to be Ratio<Coin<Lpn>> because it won't be more than 100%
-    annual_interest_rate: SimpleFraction<Coin<Lpn>>,
+    annual_interest_rate: Ratio<Coin<Lpn>>,
 
     /// The last time a borrow-related operation is performed
     ///
@@ -114,8 +113,7 @@ impl<Lpn> Total<Lpn> {
                 "Annual interest calculation overflow",
             ))?;
 
-        self.annual_interest_rate =
-            SimpleFraction::new(new_annual_interest, new_total_principal_due);
+        self.annual_interest_rate = Ratio::new(new_annual_interest, new_total_principal_due);
 
         self.total_principal_due = new_total_principal_due;
 
@@ -155,7 +153,7 @@ impl<Lpn> Total<Lpn> {
 
             // Please refer to the comment above for more detailed information on why using `saturating_sub` is a safe solution
             // for updating the annual interest
-            self.annual_interest_rate = SimpleFraction::new(
+            self.annual_interest_rate = Ratio::new(
                 self.estimated_annual_interest()
                     .saturating_sub(loan_interest_rate.of(loan_principal_payment)),
                 new_total_principal_due,
@@ -194,14 +192,12 @@ impl<Lpn> Total<Lpn> {
     }
 
     fn estimated_annual_interest(&self) -> Coin<Lpn> {
-        // TODO replace Rational with Fraction when self.annual_interest_rate becomes Ratio
-        // and remove the expect
-        Rational::<Coin<Lpn>>::of(&self.annual_interest_rate, self.total_principal_due).expect("annual_interest_rate <= 100% in practice. Type allows higher values. Will be replaced with Ratio")
+        Fraction::<Coin<Lpn>>::of(&self.annual_interest_rate, self.total_principal_due)
     }
 }
 
-fn zero_interest_rate<Lpn>() -> SimpleFraction<Coin<Lpn>> {
-    SimpleFraction::new(Coin::ZERO, Coin::new(1000))
+fn zero_interest_rate<Lpn>() -> Ratio<Coin<Lpn>> {
+    Ratio::new(Coin::ZERO, Coin::new(1000))
 }
 
 #[cfg(test)]

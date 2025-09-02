@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     error::{Error, Result as FinanceResult},
-    fraction::Unit as FractionUnit,
+    fraction::{Fraction, Unit as FractionUnit},
     fractionable::Fractionable,
     rational::Rational,
     zero::Zero,
@@ -27,7 +27,7 @@ impl<U> Ratio<U>
 where
     U: FractionUnit,
 {
-    pub(crate) fn new(parts: U, total: U) -> Self {
+    pub fn new(parts: U, total: U) -> Self {
         let obj = Self(SimpleFraction::new(parts, total));
         debug_assert_eq!(Ok(()), obj.invariant_held());
         obj
@@ -59,6 +59,20 @@ where
 {
     fn from(ratio: Ratio<U>) -> SimpleFraction<U> {
         ratio.0
+    }
+}
+
+impl<U> Fraction<U> for Ratio<U>
+where
+    U: FractionUnit,
+{
+    fn of<A>(&self, whole: A) -> A
+    where
+        A: Fractionable<U>,
+    {
+        self.0
+            .of(whole)
+            .expect("Ratio is a part of a whole, multiplication cannot overflow")
     }
 }
 

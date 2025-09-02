@@ -1,12 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 use finance::{
-    coin::Coin,
-    duration::Duration,
-    interest,
-    percent::{Percent, Percent100},
-    period::Period,
-    zero::Zero,
+    coin::Coin, duration::Duration, interest, percent::Percent100, period::Period, zero::Zero,
 };
 use lpp::{
     loan::RepayShares,
@@ -198,7 +193,7 @@ where
 
         let principal_due = self.lpp_loan.principal_due();
         let due_margin_interest = interest::interest(
-            Percent::from(self.margin_interest),
+            self.margin_interest,
             principal_due,
             due_period_margin.length(),
         ) - overdue.margin();
@@ -217,7 +212,7 @@ where
 
     fn repay_margin(&mut self, principal_due: LpnCoin, margin_paid: LpnCoin, by: &Timestamp) {
         let (margin_paid_for, margin_payment_change) = interest::pay(
-            Percent::from(self.margin_interest),
+            self.margin_interest,
             principal_due,
             margin_paid,
             Duration::between(&self.margin_paid_by, by),
@@ -1060,12 +1055,7 @@ mod tests {
 
     #[cfg(test)]
     mod test_state {
-        use finance::{
-            duration::Duration,
-            interest,
-            percent::{Percent, Percent100},
-            period::Period,
-        };
+        use finance::{duration::Duration, interest, percent::Percent100, period::Period};
         use lpp::{msg::LoanResponse, stub::loan::LppLoan};
         use sdk::cosmwasm_std::Timestamp;
 
@@ -1104,11 +1094,8 @@ mod tests {
                 &lpp_loan,
             );
             let due_period = due_period_len.min(due_period_margin.length());
-            let expected_margin_due = interest::interest(
-                Percent::from(annual_interest_margin),
-                principal_due,
-                due_period,
-            );
+            let expected_margin_due =
+                interest::interest(annual_interest_margin, principal_due, due_period);
             let expected_interest_due =
                 lpp_loan.interest_due(&due_period_margin.till()) - overdue.interest();
 
