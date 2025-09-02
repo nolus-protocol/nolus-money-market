@@ -4,6 +4,7 @@ use crate::{
     duration::Duration,
     fraction::Fraction,
     fractionable::{Fractionable, TimeSliceable},
+    ratio::Scalar,
     zero::Zero,
 };
 
@@ -23,7 +24,7 @@ where
 pub fn pay<U, F, P>(rate: F, principal: P, payment: P, period: Duration) -> (Duration, P)
 where
     F: Fraction<U>,
-    P: Copy + Debug + Fractionable<U> + Ord + Sub<Output = P> + TimeSliceable + Zero,
+    P: Copy + Debug + Fractionable<U> + Ord + Scalar + Sub<Output = P> + TimeSliceable + Zero,
     Duration: Fractionable<P>,
 {
     let interest_due_per_period: P = interest(rate, principal, period);

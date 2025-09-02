@@ -11,7 +11,7 @@ use crate::{
     error::Result as FinanceResult,
     fraction::Fraction,
     fractionable::Fractionable,
-    ratio::{RatioLegacy, Rational},
+    ratio::{RatioLegacy, Rational, Scalar},
     zero::Zero,
 };
 
@@ -40,7 +40,7 @@ impl Percent {
 
     pub fn from_ratio<FractionUnit>(nominator: FractionUnit, denominator: FractionUnit) -> Self
     where
-        FractionUnit: Copy + Debug + PartialEq + Zero,
+        FractionUnit: Copy + Debug + PartialEq + Scalar + Zero,
         Self: Fractionable<FractionUnit>,
     {
         Rational::new(nominator, denominator).of(Percent::HUNDRED)

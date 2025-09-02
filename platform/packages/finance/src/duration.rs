@@ -1,8 +1,9 @@
 use std::{
     fmt::{Debug, Display, Formatter, Result as FmtResult},
-    ops::{Add, AddAssign, Sub, SubAssign},
+    ops::{Add, AddAssign, Div, Rem, Sub, SubAssign},
 };
 
+use gcd::Gcd;
 use serde::{Deserialize, Serialize};
 
 use sdk::cosmwasm_std::Timestamp;
@@ -10,7 +11,7 @@ use sdk::cosmwasm_std::Timestamp;
 use crate::{
     fraction::Fraction,
     fractionable::{Fractionable, TimeSliceable},
-    ratio::Rational,
+    ratio::{Rational, Scalar},
     zero::Zero,
 };
 
@@ -99,7 +100,7 @@ impl Duration {
     pub fn into_slice_per_ratio<U>(self, amount: U, annual_amount: U) -> Self
     where
         Self: Fractionable<U>,
-        U: Zero + Debug + PartialEq + Copy,
+        U: Copy + Debug + PartialEq + Scalar + Zero,
     {
         Rational::new(amount, annual_amount).of(self)
     }
@@ -190,6 +191,34 @@ impl Sub<Duration> for Duration {
 impl Display for Duration {
     fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
         f.write_fmt(format_args!("{} {}", self.nanos(), "nanos"))
+    }
+}
+
+impl Scalar for Units {
+    type Times = Self;
+
+    fn gcd(self, other: Self) -> Self::Times {
+        Gcd::gcd(self, other)
+    }
+
+    fn scale_up(self, scale: Self::Times) -> Option<Self> {
+        self.checked_mul(scale)
+    }
+
+    fn scale_down(self, scale: Self::Times) -> Self {
+        debug_assert_ne!(scale, 0);
+
+        self.div(scale)
+    }
+
+    fn modulo(self, scale: Self::Times) -> Self::Times {
+        debug_assert_ne!(scale, 0);
+
+        self.rem(scale)
+    }
+
+    fn into_times(self) -> Self::Times {
+        self
     }
 }
 
