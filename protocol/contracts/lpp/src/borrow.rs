@@ -56,7 +56,7 @@ impl InterestRate {
     }
 
     pub fn calculate<Lpn>(&self, total_liability: Coin<Lpn>, balance: Coin<Lpn>) -> Percent100 {
-        let utilization_max = Percent::from_fraction(
+        let utilization_factor_max = Percent::from_fraction(
             self.utilization_optimal.units(),
             Percent100::HUNDRED
                 .checked_sub(self.utilization_optimal)
@@ -65,17 +65,17 @@ impl InterestRate {
         )
         .expect("The utilization_max must be a valid Percent: utilization_opt < 100% ensures the ratio is valid Percent100, which always fits within Percent's wider range");
 
-        let utilization = if balance.is_zero() {
-            utilization_max
+        let utilization_factor = if balance.is_zero() {
+            utilization_factor_max
         } else {
             Percent::from_fraction(total_liability, balance)
                 .expect("The utilization must be a valid Percent")
-                .min(utilization_max)
+                .min(utilization_factor_max)
         };
 
         Rational::<PercentUnits>::of(
             &SimpleFraction::new(self.addon_optimal_interest_rate, self.utilization_optimal),
-            utilization,
+            utilization_factor,
         )
         .and_then(|utilization_config| {
             utilization_config
