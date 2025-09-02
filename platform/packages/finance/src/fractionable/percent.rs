@@ -20,7 +20,7 @@ impl<const UPPER_BOUND: Units> Fractionable<Units> for BoundPercent<UPPER_BOUND>
         R: RatioLegacy<Units>,
     {
         Self::try_from(self.units().safe_mul(ratio))
-            .expect("Resulting permille exceeds BoundPercent upper bound")
+            .expect("TODO remove when refactor Fractionable. Resulting permille exceeds BoundPercent upper bound")
     }
 }
 
@@ -36,7 +36,7 @@ impl<C, const UPPER_BOUND: Units> Fractionable<Coin<C>> for BoundPercent<UPPER_B
             .safe_mul(fraction)
             .try_into()
             .expect("overflow computing a fraction of permille");
-        Self::try_from(res).expect("Resulting permille exceeds BoundPercent upper bound")
+        Self::try_from(res).expect("TODO remove when refactor Fractionable. Resulting permille exceeds BoundPercent upper bound")
     }
 }
 
