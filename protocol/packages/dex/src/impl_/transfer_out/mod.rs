@@ -224,6 +224,14 @@ where
     ) -> HandlerResult<Self> {
         self.on_timeout(querier, env).into()
     }
+
+    fn heal(self, querier: QuerierWrapper<'_>, env: Env) -> HandlerResult<Self> {
+        let init_transfer = Self::new(self.spec);
+        init_transfer
+            .enter(env.block.time, querier)
+            .and_then(|msgs| response::res_continue::<_, _, Self>(msgs, init_transfer))
+            .into()
+    }
 }
 
 impl<SwapTask, SEnum, SwapClient> Contract for TransferOut<SwapTask, SEnum, SwapClient>
