@@ -6,14 +6,15 @@ use std::{
     fmt::{Debug, Display, Formatter},
     iter::Sum,
     marker::PhantomData,
-    ops::{Add, AddAssign, Sub, SubAssign},
+    ops::{Add, AddAssign, Div, Rem, Sub, SubAssign},
 };
 
 use ::serde::{Deserialize, Serialize};
+use gcd::Gcd;
 
 use currency::{Currency, CurrencyDef, Group, MemberOf};
 
-use crate::zero::Zero;
+use crate::{ratio::Scalar, zero::Zero};
 
 pub use self::dto::{CoinDTO, IntoDTO};
 
@@ -164,6 +165,32 @@ where
 {
     fn cmp(&self, other: &Self) -> Ordering {
         self.amount.cmp(&other.amount)
+    }
+}
+
+impl<C> Scalar for Coin<C> {
+    type Times = Amount;
+
+    fn gcd(self, other: Self) -> Self::Times {
+        Gcd::gcd(self.amount, other.amount)
+    }
+
+    fn scale_up(self, scale: Self::Times) -> Option<Self> {
+        self.amount.checked_mul(scale).map(Self::new)
+    }
+
+    fn scale_down(self, scale: Self::Times) -> Self {
+        debug_assert_ne!(scale, 0);
+
+        Self::new(self.amount.div(scale))
+    }
+
+    fn modulo(self, scale: Self::Times) -> Self::Times {
+        self.amount.rem(scale)
+    }
+
+    fn into_times(self) -> Self::Times {
+        self.amount
     }
 }
 

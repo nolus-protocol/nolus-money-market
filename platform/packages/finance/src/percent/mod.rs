@@ -1,8 +1,9 @@
 use std::{
     fmt::{Debug, Display, Formatter, Result as FmtResult, Write},
-    ops::{Add, Sub},
+    ops::{Add, Div, Rem, Sub},
 };
 
+use gcd::Gcd;
 use serde::{Deserialize, Serialize};
 
 use sdk::cosmwasm_std::{OverflowError, OverflowOperation};
@@ -140,6 +141,33 @@ impl<'a> Add<&'a Percent> for Percent {
     #[track_caller]
     fn add(self, rhs: &'a Percent) -> Self {
         self + *rhs
+    }
+}
+
+impl Scalar for Percent {
+    type Times = Units;
+    fn gcd(self, other: Self) -> Self::Times {
+        Gcd::gcd(self.0, other.0)
+    }
+
+    fn scale_up(self, scale: Self::Times) -> Option<Self> {
+        self.0.checked_mul(scale).map(Self::from_permille)
+    }
+
+    fn scale_down(self, scale: Self::Times) -> Self {
+        debug_assert_ne!(scale, 0);
+
+        Self::from_permille(self.0.div(scale))
+    }
+
+    fn modulo(self, scale: Self::Times) -> Self::Times {
+        debug_assert_ne!(scale, 0);
+
+        self.0.rem(scale)
+    }
+
+    fn into_times(self) -> Self::Times {
+        self.0
     }
 }
 
@@ -312,7 +340,7 @@ pub(super) mod test {
     fn rational_to_percents() {
         let n: Units = 189;
         let d: Units = 1890;
-        let r = Rational::new(n, d);
+        let r = Rational::new(Percent::from_permille(n), Percent::from_permille(d));
         let res: Percent = Fraction::<Units>::of(&r, Percent::HUNDRED);
         assert_eq!(Percent::from_permille(n * 1000 / d), res);
     }
