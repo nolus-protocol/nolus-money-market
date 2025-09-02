@@ -55,19 +55,15 @@ impl InterestRate {
         self.addon_optimal_interest_rate
     }
 
+    /// For more ref see: https://hub.nolus.io/en/articles/9680324-borrow
     pub fn calculate<Lpn>(&self, total_liability: Coin<Lpn>, balance: Coin<Lpn>) -> Percent100 {
-        let utilization_factor_max = Percent::from_fraction(
-            self.utilization_optimal.units(),
-            Percent100::HUNDRED
-                .checked_sub(self.utilization_optimal)
-                .expect("The optimal utilization configuration parameter should be at most 100%")
-                .units(),
-        )
-        .expect("The utilization_max must be a valid Percent: utilization_opt < 100% ensures the ratio is valid Percent100, which always fits within Percent's wider range");
+        // TODO migrate to using SimpleFraction once it starts implementing Ord
+        let utilization_factor_max = self.utilization_factor_max();
 
         let utilization_factor = if balance.is_zero() {
             utilization_factor_max
         } else {
+            // TODO migrate to using SimpleFraction once it starts implementing Ord
             Percent::from_fraction(total_liability, balance)
                 .expect("The utilization must be a valid Percent")
                 .min(utilization_factor_max)
@@ -88,6 +84,14 @@ impl InterestRate {
     fn validate(&self) -> bool {
         self.utilization_optimal > Percent100::ZERO
             && self.utilization_optimal < Percent100::HUNDRED
+    }
+
+    fn utilization_factor_max(&self) -> Percent {
+        Percent::from_fraction(
+            self.utilization_optimal.units(),
+            self.utilization_optimal.complement().units(),
+        )
+        .expect("The utilization_max must be a valid Percent: utilization_opt < 100% ensures the ratio is valid Percent100, which always fits within Percent's wider range")
     }
 }
 
