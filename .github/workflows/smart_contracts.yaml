@@ -170,9 +170,7 @@ jobs:
           fromJSON(env.check-dependencies-versions)
         name: "Load configuration"
         run: |-
-          "cargo" \
-            "update" \
-            --locked
+          "pwd"
         working-directory: |-
           ${{ matrix.workspace }}
   workspace_check:
