@@ -2,7 +2,7 @@ use std::{cell::OnceCell, result::Result as StdResult};
 
 use currency::{CurrencyDTO, CurrencyDef, Group};
 use finance::coin::{Coin, WithCoin, WithCoinResult};
-use sdk::cosmwasm_std::{Addr, Coin as CwCoin, QuerierWrapper};
+use sdk::cosmwasm_std::{Addr, Coin as CwCoin, QuerierWrapper, Uint128};
 
 use crate::{
     bank::aggregate::{Aggregate, ReduceResults},
@@ -18,6 +18,7 @@ pub trait BankAccountView {
     where
         C: CurrencyDef;
 
+    /// Return only the non-zero balances of all currencies belonging to the group
     fn balances<G, Cmd>(&self, cmd: Cmd) -> BalancesResult<G, Cmd>
     where
         G: Group,
@@ -83,17 +84,19 @@ impl BankAccountView for BankView<'_> {
         Cmd: WithCoin<G> + Clone,
         Cmd::Output: Aggregate,
     {
-        self.querier
-            .query_all_balances(self.account)
-            .map_err(Error::CosmWasmQueryAllBalances)
-            .map(|cw_coins| {
-                cw_coins
-                    .into_iter()
-                    .filter_map(|cw_coin| {
-                        coin_legacy::maybe_from_cosmwasm_any::<G, _>(cw_coin, cmd.clone())
-                    })
-                    .reduce_results(Aggregate::aggregate)
+        G::currencies()
+            .filter_map(|ref currency| {
+                self.cw_balance(currency).map_err(Into::into).map_or_else(
+                    |err| Some(Err(err)),
+                    |ref cw_balance| {
+                        (cw_balance.amount != Uint128::zero()).then(|| {
+                            coin_legacy::from_cosmwasm_any::<G, _>(cw_balance, cmd.clone())
+                        })
+                    },
+                )
             })
+            .reduce_results(Aggregate::aggregate)
+            .transpose()
     }
 }
 
