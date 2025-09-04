@@ -37,10 +37,7 @@ impl MaxSlippage {
     }
 
     pub fn min_out<C>(&self, amount_in: Coin<C>) -> Coin<C> {
-        (Percent100::HUNDRED
-            .checked_sub(self.0)
-            .expect("The subtraction should not panic"))
-        .of(amount_in)
+        self.0.complement().of(amount_in)
     }
 }
 
