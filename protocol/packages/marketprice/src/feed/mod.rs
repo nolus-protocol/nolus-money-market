@@ -1,6 +1,6 @@
 use std::{collections::HashSet, marker::PhantomData};
 
-use finance::{fraction::Fraction, percent::Percent100, price::Price};
+use finance::{fraction::Fraction, price::Price};
 use observations::{Observations, ObservationsRead};
 use sdk::cosmwasm_std::{Addr, Timestamp};
 
@@ -87,7 +87,7 @@ where
             .skip_while(Option::is_none)
             .map(|price| Option::expect(price, "sample prices should keep being present"))
             .reduce(|acc, sample_price| {
-                discount_factor.of(sample_price) + remaining_factor(discount_factor).of(acc)
+                discount_factor.of(sample_price) + discount_factor.complement().of(acc)
             })
             .ok_or(PriceFeedsError::NoPrice {})
     }
@@ -150,15 +150,6 @@ where
             })
             .map(|()| self)
     }
-}
-
-fn remaining_factor(factor: Percent100) -> Percent100 {
-    debug_assert!(factor > Percent100::ZERO);
-    debug_assert!(factor < Percent100::HUNDRED);
-
-    Percent100::HUNDRED
-        .checked_sub(factor)
-        .expect("Invariant to be held")
 }
 
 #[cfg(test)]
