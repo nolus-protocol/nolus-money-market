@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{cmp, collections::HashMap};
 
 use finance::{duration::Duration, fraction::Fraction, price::Price, ratio::Ratio};
 use sdk::cosmwasm_std::{Addr, Timestamp};
@@ -102,7 +102,7 @@ where
     }
 
     fn end_of_period(&mut self) {
-        let prices_number = self.sample_prices.len();
+        let prices_number = Self::prices_number(self.sample_prices.len());
 
         if prices_number > 0 {
             let mut values = self.sample_prices.values();
@@ -110,20 +110,25 @@ where
                 .next()
                 .expect("should have been checked that there is at least one member");
 
-            let max_items = usize::try_from(u128::MAX).unwrap_or(usize::MAX);
             let sum = values
-                .take(max_items - 1)
+                .take(prices_number - 1)
                 .fold(*first, |acc, current| acc + *current);
 
-            let denominator = u128::try_from(prices_number).unwrap_or(u128::MAX);
-
-            let part = Ratio::new(1, denominator);
+            let part = Ratio::new(
+                1,
+                u128::try_from(prices_number)
+                    .expect("prices_number is already restricted to fit in u128::MAX"),
+            );
             let avg = Fraction::of(&part, sum);
             self.last_sample = Sample { price: Some(avg) };
         }
 
         self.sample_prices.clear();
         self.sample_start = self.sample_end();
+    }
+
+    fn prices_number(len: usize) -> usize {
+        cmp::min(len, u128::MAX.try_into().unwrap_or(usize::MAX))
     }
 }
 
