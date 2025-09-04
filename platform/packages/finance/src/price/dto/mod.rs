@@ -9,11 +9,9 @@ use std::{
 use currency::CurrencyDef;
 use currency::{Currency, CurrencyDTO, Group, InPoolWith, MemberOf};
 
-use crate::{
-    coin::CoinDTO,
-    error::{Error, Result},
-    price::Price,
-};
+#[cfg(any(test, feature = "testing"))]
+use crate::error::Error;
+use crate::{coin::CoinDTO, error::Result, price::Price};
 
 mod unchecked;
 pub mod with_price;
@@ -90,11 +88,9 @@ where
         {
             type G = G;
 
-            type Output = ();
+            type Outcome = Result<()>;
 
-            type Error = Error;
-
-            fn exec<C, QuoteC>(self, converted: Price<C, QuoteC>) -> Result<Self::Output>
+            fn exec<C, QuoteC>(self, converted: Price<C, QuoteC>) -> Self::Outcome
             where
                 C: Currency + MemberOf<G>,
                 QuoteC: Currency + MemberOf<G>,
@@ -110,6 +106,7 @@ where
                 g: PhantomData::<G>,
             },
         )
+        .flatten()
         .map(|()| self)
     }
 
@@ -199,10 +196,9 @@ where
 pub trait WithPrice {
     type G: Group;
 
-    type Output;
-    type Error;
+    type Outcome;
 
-    fn exec<C, QuoteC>(self, _: Price<C, QuoteC>) -> StdResult<Self::Output, Self::Error>
+    fn exec<C, QuoteC>(self, _: Price<C, QuoteC>) -> Self::Outcome
     where
         C: Currency + MemberOf<Self::G>,
         QuoteC: Currency + MemberOf<Self::G> + InPoolWith<C>;

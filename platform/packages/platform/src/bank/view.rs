@@ -1,7 +1,7 @@
 use std::{cell::OnceCell, result::Result as StdResult};
 
 use currency::{CurrencyDTO, CurrencyDef, Group};
-use finance::coin::{Coin, WithCoin, WithCoinResult};
+use finance::coin::{Coin, WithCoin};
 use sdk::cosmwasm_std::{Addr, Coin as CwCoin, QuerierWrapper};
 
 use crate::{
@@ -11,7 +11,7 @@ use crate::{
     result::Result,
 };
 
-pub type BalancesResult<G, Cmd> = StdResult<Option<WithCoinResult<G, Cmd>>, Error>;
+pub type BalancesResult<G, Cmd> = StdResult<Option<<Cmd as WithCoin<G>>::Outcome>, Error>;
 
 pub trait BankAccountView {
     fn balance<C>(&self) -> Result<Coin<C>>
@@ -22,7 +22,7 @@ pub trait BankAccountView {
     where
         G: Group,
         Cmd: WithCoin<G> + Clone,
-        Cmd::Output: Aggregate;
+        Cmd::Outcome: Aggregate;
 }
 
 pub fn account_view<'a>(
@@ -81,18 +81,23 @@ impl BankAccountView for BankView<'_> {
     where
         G: Group,
         Cmd: WithCoin<G> + Clone,
-        Cmd::Output: Aggregate,
+        Cmd::Outcome: Aggregate,
     {
+        // StdResult<Option<<Cmd as WithCoin<G>>::Outcome>, Error>
         self.querier
             .query_all_balances(self.account)
             .map_err(Error::CosmWasmQueryAllBalances)
-            .map(|cw_coins| {
+            .and_then(|cw_coins| {
                 cw_coins
                     .into_iter()
                     .filter_map(|cw_coin| {
-                        coin_legacy::maybe_from_cosmwasm_any::<G, _>(cw_coin, cmd.clone())
+                        // intentionally make a Result<Cmd::Outcome> to keep a room for error obtaining a balance per currency
+                        coin_legacy::from_cosmwasm_any::<G, _>(cw_coin, cmd.clone())
+                            .ok()
+                            .map(Ok)
                     })
                     .reduce_results(Aggregate::aggregate)
+                    .transpose()
             })
     }
 }
@@ -146,7 +151,7 @@ where
     where
         G: Group,
         Cmd: WithCoin<G> + Clone,
-        Cmd::Output: Aggregate,
+        Cmd::Outcome: Aggregate,
     {
         self.view.balances(cmd)
     }

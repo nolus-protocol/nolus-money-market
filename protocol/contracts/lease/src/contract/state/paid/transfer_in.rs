@@ -3,7 +3,7 @@ use std::{iter, marker::PhantomData};
 use oracle::stub::SwapPath;
 use serde::{Deserialize, Serialize};
 
-use currency::{CurrencyDef, Group, MemberOf, never};
+use currency::{CurrencyDef, Group, MemberOf};
 use dex::{
     Account, AnomalyTreatment, ContractInSwap, Stage, StartTransferInState, SwapOutputTask,
     SwapTask, WithCalculator, WithOutputTask,
@@ -128,11 +128,9 @@ impl SwapTask for TransferIn {
                 TransferInFinish::<_, OutC>::from(swap_task)
             }
         }
-        never::safe_unwrap(
-            self.amount()
-                .currency()
-                .into_currency_type(WithOutCurrency::<_, OutputTaskFactory, _>::from(self, cmd)),
-        )
+        self.amount()
+            .currency()
+            .into_currency_type(WithOutCurrency::<_, OutputTaskFactory, _>::from(self, cmd))
     }
 }
 

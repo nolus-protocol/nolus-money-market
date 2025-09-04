@@ -43,14 +43,13 @@ where
 {
     type VisitedG = PriceG;
 
-    type Output = Option<BasePrice<PriceG, BaseC, BaseG>>;
-    type Error = Error<PriceG>;
+    type Outcome = Result<Option<BasePrice<PriceG, BaseC, BaseG>>, Error<PriceG>>;
 
     fn on<B, Q>(
         self,
         dto1: &CurrencyDTO<Self::VisitedG>,
         dto2: &CurrencyDTO<Self::VisitedG>,
-    ) -> Result<Self::Output, Self::Error>
+    ) -> Self::Outcome
     where
         B: Currency + MemberOf<Self::VisitedG>,
         Q: Currency + MemberOf<Self::VisitedG>,

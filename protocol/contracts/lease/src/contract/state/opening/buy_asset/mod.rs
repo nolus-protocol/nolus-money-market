@@ -1,8 +1,5 @@
 use calculator::Factory as CalculatorFactory;
-use currency::{
-    CurrencyDef, Group, MemberOf,
-    never::{self},
-};
+use currency::{CurrencyDef, Group, MemberOf};
 use finish::BuyAssetFinish;
 use oracle::stub::SwapPath;
 use serde::{Deserialize, Serialize};
@@ -143,12 +140,10 @@ impl SwapTask for BuyAsset {
     where
         WithCalc: WithCalculator<Self>,
     {
-        never::safe_unwrap(
-            self.form
-                .currency
-                .into_super_group()
-                .into_currency_type(CalculatorFactory::from(with_calc)),
-        )
+        self.form
+            .currency
+            .into_super_group()
+            .into_currency_type(CalculatorFactory::from(with_calc))
     }
 
     fn into_output_task<Cmd>(self, cmd: Cmd) -> Cmd::Output
@@ -166,12 +161,10 @@ impl SwapTask for BuyAsset {
                 BuyAssetFinish::<_, OutC>::from(swap_task)
             }
         }
-        never::safe_unwrap(
-            self.form
-                .currency
-                .into_super_group()
-                .into_currency_type(WithOutCurrency::<_, OutputTaskFactory, _>::from(self, cmd)),
-        )
+        self.form
+            .currency
+            .into_super_group()
+            .into_currency_type(WithOutCurrency::<_, OutputTaskFactory, _>::from(self, cmd))
     }
 }
 

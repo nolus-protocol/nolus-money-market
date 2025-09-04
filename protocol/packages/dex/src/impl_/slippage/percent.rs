@@ -2,7 +2,7 @@ use std::marker::PhantomData;
 
 use currency::{Currency, CurrencyDef, Group, MemberOf};
 use finance::{
-    coin::{Coin, CoinDTO, WithCoin, WithCoinResult},
+    coin::{Coin, CoinDTO, WithCoin},
     fraction::Fraction,
     percent::{Percent, bound::BoundToHundredPercent},
 };
@@ -108,17 +108,15 @@ where
             OutC::Group: MemberOf<OutG> + MemberOf<InG::TopG>,
             OutG: Group,
         {
-            type Output = Coin<OutC>;
+            type Outcome = Result<Coin<OutC>>;
 
-            type Error = Error;
-
-            fn on<C>(self, input: Coin<C>) -> WithCoinResult<InG, Self>
+            fn on<C>(self, input: Coin<C>) -> Self::Outcome
             where
                 C: CurrencyDef,
                 C::Group: MemberOf<InG> + MemberOf<<InG as Group>::TopG>,
             {
                 stub::to_quote::<_, InG, _, _>(self.oracle, input, self.querier)
-                    .map_err(Self::Error::MinOutput)
+                    .map_err(Error::MinOutput)
                     .map(|input_in_out_c| self.max_slippage.min_out(input_in_out_c))
             }
         }

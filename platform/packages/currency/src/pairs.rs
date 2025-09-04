@@ -1,7 +1,6 @@
 use crate::{CurrencyDTO, CurrencyDef, Group, Matcher, MemberOf, from_symbol_any::InPoolWith};
 
-pub type PairsVisitorResult<Visitor> =
-    Result<<Visitor as PairsVisitor>::Output, <Visitor as PairsVisitor>::Error>;
+pub type PairsVisitorResult<Visitor> = <Visitor as PairsVisitor>::Outcome;
 
 pub type MaybePairsVisitorResult<V> = Result<PairsVisitorResult<V>, V>;
 
@@ -20,8 +19,7 @@ where
 {
     type Pivot: PairsGroup;
 
-    type Output;
-    type Error;
+    type Outcome;
 
     fn on<C>(self, def: &CurrencyDTO<C::Group>) -> PairsVisitorResult<Self>
     where

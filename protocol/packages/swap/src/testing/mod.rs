@@ -1,9 +1,6 @@
 use std::marker::PhantomData;
 
-use currency::{
-    AnyVisitor, AnyVisitorResult, CurrencyDTO, CurrencyDef, DexSymbols, Group, GroupVisit as _,
-    MemberOf,
-};
+use currency::{AnyVisitor, CurrencyDTO, CurrencyDef, DexSymbols, Group, GroupVisit, MemberOf};
 use finance::coin::{Amount, Coin, CoinDTO, NonZeroAmount};
 use oracle::api::swap::SwapTarget;
 use sdk::cosmos_sdk_proto::Any as CosmosAny;
@@ -34,7 +31,7 @@ pub(crate) fn parse_dex_token<G>(amount: &str, denom: &str) -> CoinDTO<G>
 where
     G: Group,
 {
-    DexSymbols::visit_any(
+    DexSymbols::maybe_visit_any(
         denom,
         ConstructDto {
             amount: amount
@@ -91,6 +88,7 @@ pub(crate) fn validate_a_response(resp_base64: &str, exp_amount1: Amount, exp_am
     assert_eq!(resp_messages.next(), None);
 }
 
+#[derive(Debug)]
 struct ConstructDto<G>
 where
     G: Group,
@@ -103,14 +101,13 @@ impl<G> AnyVisitor<G> for ConstructDto<G>
 where
     G: Group,
 {
-    type Output = CoinDTO<G>;
-    type Error = currency::error::Error;
+    type Outcome = CoinDTO<G>;
 
-    fn on<C>(self, _def: &CurrencyDTO<C::Group>) -> AnyVisitorResult<G, Self>
+    fn on<C>(self, _def: &CurrencyDTO<C::Group>) -> Self::Outcome
     where
         C: CurrencyDef,
         C::Group: MemberOf<G>,
     {
-        Ok(Coin::<C>::new(self.amount).into())
+        Coin::<C>::new(self.amount).into()
     }
 }

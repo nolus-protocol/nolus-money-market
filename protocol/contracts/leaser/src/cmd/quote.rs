@@ -1,8 +1,8 @@
 use std::marker::PhantomData;
 
-use currency::{AnyVisitor, AnyVisitorResult, Currency, CurrencyDTO, CurrencyDef, MemberOf};
+use currency::{AnyVisitor, Currency, CurrencyDTO, CurrencyDef, MemberOf};
 use finance::{
-    coin::{Coin, WithCoin, WithCoinResult},
+    coin::{Coin, WithCoin},
     liability::Liability,
     percent::Percent,
     price::total,
@@ -19,6 +19,7 @@ use crate::{
     ContractError,
     finance::{LeaseCurrencies, LpnCurrencies, LpnCurrency, OracleRef, PaymentCurrencies},
     msg::QuoteResponse,
+    result::ContractResult,
 };
 
 pub struct Quote<'r> {
@@ -163,10 +164,9 @@ where
     Lpp: LppLenderTrait<Lpn>,
     Oracle: OracleTrait<PaymentCurrencies, QuoteC = Lpn, QuoteG = LpnCurrencies>,
 {
-    type Output = QuoteResponse;
-    type Error = ContractError;
+    type Outcome = ContractResult<QuoteResponse>;
 
-    fn on<Dpc>(self, downpayment: Coin<Dpc>) -> WithCoinResult<PaymentCurrencies, Self>
+    fn on<Dpc>(self, downpayment: Coin<Dpc>) -> Self::Outcome
     where
         Dpc: CurrencyDef,
         Dpc::Group: MemberOf<PaymentCurrencies>,
@@ -205,10 +205,9 @@ where
     Lpp: LppLenderTrait<Lpn>,
     Oracle: OracleTrait<PaymentCurrencies, QuoteC = Lpn, QuoteG = LpnCurrencies>,
 {
-    type Output = QuoteResponse;
-    type Error = ContractError;
+    type Outcome = ContractResult<QuoteResponse>;
 
-    fn on<Asset>(self, _def: &CurrencyDTO<Asset::Group>) -> AnyVisitorResult<LeaseCurrencies, Self>
+    fn on<Asset>(self, _def: &CurrencyDTO<Asset::Group>) -> Self::Outcome
     where
         Asset: CurrencyDef,
         Asset::Group: MemberOf<LeaseCurrencies> + MemberOf<PaymentCurrencies>,

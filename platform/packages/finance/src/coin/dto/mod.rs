@@ -1,12 +1,11 @@
 use std::{
     fmt::{Display, Formatter},
     marker::PhantomData,
-    result::Result as StdResult,
 };
 
 use serde::{Deserialize, Serialize};
 
-use currency::{Currency, CurrencyDTO, CurrencyDef, Group, MemberOf, never::Never};
+use currency::{Currency, CurrencyDTO, CurrencyDef, Group, MemberOf};
 use transformer::CoinTransformerAny;
 
 use crate::{
@@ -70,7 +69,7 @@ where
         self.amount == Amount::default()
     }
 
-    pub fn with_coin<V>(&self, cmd: V) -> StdResult<V::Output, V::Error>
+    pub fn with_coin<V>(&self, cmd: V) -> V::Outcome
     where
         V: WithCoin<G>,
         G: MemberOf<G>,
@@ -161,15 +160,14 @@ impl<G> WithCoin<G> for IntoDTO<G>
 where
     G: Group,
 {
-    type Output = CoinDTO<G>;
-    type Error = Never;
+    type Outcome = CoinDTO<G>;
 
-    fn on<C>(self, coin: Coin<C>) -> super::WithCoinResult<G, Self>
+    fn on<C>(self, coin: Coin<C>) -> Self::Outcome
     where
         C: CurrencyDef,
         C::Group: MemberOf<G>,
     {
-        Ok(coin.into())
+        coin.into()
     }
 }
 

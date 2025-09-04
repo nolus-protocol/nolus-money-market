@@ -44,7 +44,7 @@ impl ExactAmountIn for Impl {
         // Then apply the parameterized maximum slippage to get the minimum amount.
         // For the first version, we accept whatever price impact and slippage.
         let routes = to_route::<GSwap>(swap_path);
-        let token_in = Some(to_dex_cwcoin(amount_in)?);
+        let token_in = Some(to_dex_cwcoin(amount_in));
         let token_out_min_amount = min_amount_out.amount().to_string();
         let msg = RequestMsg {
             sender: sender.into(),
@@ -87,9 +87,9 @@ where
         .collect()
 }
 
-fn to_dex_cwcoin<G>(token: &CoinDTO<G>) -> Result<CwCoin>
+fn to_dex_cwcoin<G>(token: &CoinDTO<G>) -> CwCoin
 where
     G: Group,
 {
-    coin_legacy::to_cosmwasm_on_network::<DexSymbols<G>>(token).map_err(Error::from)
+    coin_legacy::to_cosmwasm_on_network::<DexSymbols<G>>(token)
 }

@@ -8,7 +8,7 @@ use sdk::{
     },
 };
 
-use crate::{coin_legacy, ica::HostAccount, result::Result, trx::Transaction};
+use crate::{coin_legacy, ica::HostAccount, trx::Transaction};
 
 pub struct Sender<'ica> {
     ics20_channel_at_dex: &'ica str,
@@ -34,15 +34,14 @@ impl<'ica> Sender<'ica> {
         }
     }
 
-    pub fn send<G>(&mut self, amount: &CoinDTO<G>) -> Result<()>
+    pub fn send<G>(&mut self, amount: &CoinDTO<G>)
     where
         G: Group,
     {
-        coin_legacy::to_cosmwasm_on_network::<DexSymbols<G>>(amount)
-            .map(into_cosmos_sdk_coin)
-            .map(|cosmos_sdk_coin| {
-                self.amounts.push(cosmos_sdk_coin);
-            })
+        let cosmos_sdk_coin =
+            into_cosmos_sdk_coin(coin_legacy::to_cosmwasm_on_network::<DexSymbols<G>>(amount));
+
+        self.amounts.push(cosmos_sdk_coin);
     }
 
     fn into_ibc_msgs(self) -> impl Iterator<Item = MsgTransfer> {
@@ -126,8 +125,8 @@ mod test {
 
         let coin1: Coin<SuperGroupTestC2> = 63.into();
         let coin2: Coin<SuperGroupTestC1> = 2.into();
-        funds_sender.send::<SuperGroup>(&coin1.into()).unwrap();
-        funds_sender.send::<SuperGroup>(&coin2.into()).unwrap();
+        funds_sender.send::<SuperGroup>(&coin1.into());
+        funds_sender.send::<SuperGroup>(&coin2.into());
 
         assert_eq!(Transaction::from(funds_sender), {
             let mut trx = Transaction::default();

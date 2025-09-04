@@ -5,7 +5,7 @@ pub use crate::{
     dto::{CurrencyDTO, dto, to_string},
     from_symbol::{CurrencyVisit, SingleVisitor},
     from_symbol_any::{
-        AnyVisitor, AnyVisitorPair, AnyVisitorPairResult, AnyVisitorResult, GroupVisit, InPoolWith,
+        AnyVisitor, AnyVisitorPair, AnyVisitorPairResult, GroupVisit, InPoolWith,
         visit_any_on_currencies,
     },
     group::{Group, MaybeAnyVisitResult, MemberOf},

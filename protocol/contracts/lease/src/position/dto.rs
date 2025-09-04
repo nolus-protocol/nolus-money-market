@@ -1,7 +1,7 @@
 use std::result::Result as StdResult;
 
 use currency::{CurrencyDef, MemberOf};
-use finance::coin::{Coin, CoinDTO, WithCoin, WithCoinResult};
+use finance::coin::{Coin, CoinDTO, WithCoin};
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -51,11 +51,9 @@ impl PositionDTO {
             V: WithPosition,
             PositionError: Into<V::Error>,
         {
-            type Output = V::Output;
+            type Outcome = Result<V::Output, V::Error>;
 
-            type Error = V::Error;
-
-            fn on<Asset>(self, amount: Coin<Asset>) -> WithCoinResult<LeaseAssetCurrencies, Self>
+            fn on<Asset>(self, amount: Coin<Asset>) -> Self::Outcome
             where
                 Asset: CurrencyDef,
                 Asset::Group: MemberOf<LeaseAssetCurrencies> + MemberOf<LeasePaymentCurrencies>,

@@ -85,7 +85,7 @@ where
 {
     fn enter_state(&self, now: Timestamp) -> Result<Batch> {
         let mut sender = TransferInTrx::new(self.spec.dex_account(), now);
-        sender.send(&self.amount_in)?;
+        sender.send(&self.amount_in);
         Ok(sender.into())
     }
 }

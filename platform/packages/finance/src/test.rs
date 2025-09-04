@@ -14,10 +14,7 @@ where
 pub mod coin {
     use currency::{Currency, CurrencyDef, equal};
 
-    use crate::{
-        coin::{Amount, Coin, WithCoin, WithCoinResult},
-        error::Error,
-    };
+    use crate::coin::{Amount, Coin, WithCoin};
 
     #[derive(PartialEq, Eq, Debug, Clone)]
     pub struct Expect<CExp>(pub Coin<CExp>)
@@ -28,15 +25,13 @@ pub mod coin {
     where
         CExp: CurrencyDef,
     {
-        type Output = bool;
+        type Outcome = bool;
 
-        type Error = Error;
-
-        fn on<C>(self, coin: Coin<C>) -> WithCoinResult<CExp::Group, Self>
+        fn on<C>(self, coin: Coin<C>) -> Self::Outcome
         where
             C: Currency,
         {
-            Ok(equal::<CExp, C>() && Amount::from(coin) == self.0.into())
+            equal::<CExp, C>() && Amount::from(coin) == self.0.into()
         }
     }
 }

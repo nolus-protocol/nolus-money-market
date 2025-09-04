@@ -25,7 +25,7 @@ mod test {
         },
     };
     use finance::{
-        coin::{Amount, Coin, WithCoin, WithCoinResult},
+        coin::{Amount, Coin, WithCoin},
         test::coin::Expect,
     };
     use sdk::{
@@ -41,7 +41,6 @@ mod test {
             view::{self, BankAccountView},
         },
         coin_legacy,
-        error::Error,
     };
 
     type TheCurrency = SubGroupTestC10;
@@ -158,7 +157,7 @@ mod test {
         let coin = Coin::<TheCurrency>::new(AMOUNT);
         let in_coin_1 = coin_legacy::to_cosmwasm_on_nolus(coin);
         assert_eq!(
-            Some(Ok(true)),
+            Some(true),
             receive::may_received(&vec![in_coin_1], Expect(coin))
         );
     }
@@ -174,14 +173,14 @@ mod test {
         let coin_3 = Coin::<TheCurrency>::new(AMOUNT + AMOUNT);
         let in_coin_3 = coin_legacy::to_cosmwasm_on_nolus(coin_3);
         assert_eq!(
-            Some(Ok(true)),
+            Some(true),
             receive::may_received(
                 &vec![in_coin_1.clone(), in_coin_2.clone(), in_coin_3.clone()],
                 Expect(coin_2)
             )
         );
         assert_eq!(
-            Some(Ok(true)),
+            Some(true),
             receive::may_received(&vec![in_coin_1, in_coin_3, in_coin_2], Expect(coin_3),)
         );
     }
@@ -211,12 +210,12 @@ mod test {
             Self { expected: None }
         }
 
-        fn validate(&self, balances_result: Option<Result<(), Error>>)
+        fn validate(&self, balances_result: Option<()>)
         where
             G: Group,
         {
             if self.expected.is_some() {
-                assert_eq!(Some(Ok(())), balances_result)
+                assert_eq!(Some(()), balances_result)
             } else {
                 assert_eq!(None, balances_result)
             }
@@ -227,16 +226,14 @@ mod test {
     where
         G: Group,
     {
-        type Output = ();
-        type Error = Error;
+        type Outcome = ();
 
-        fn on<C>(self, _: Coin<C>) -> WithCoinResult<G, Self>
+        fn on<C>(self, _: Coin<C>) -> Self::Outcome
         where
             C: CurrencyDef,
             C::Group: MemberOf<G>,
         {
             assert_eq!(Some(&C::dto().into_super_group::<G>()), self.expected);
-            Ok(())
         }
     }
 

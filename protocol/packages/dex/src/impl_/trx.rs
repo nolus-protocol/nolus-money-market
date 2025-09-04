@@ -36,11 +36,11 @@ impl<'ica> TransferOutTrx<'ica> {
         }
     }
 
-    pub fn send<G>(&mut self, amount: &CoinDTO<G>) -> Result<()>
+    pub fn send<G>(&mut self, amount: &CoinDTO<G>)
     where
         G: Group,
     {
-        self.sender.send(amount).map_err(Into::into)
+        self.sender.send(amount)
     }
 }
 
@@ -135,11 +135,11 @@ impl<'ica> TransferInTrx<'ica> {
         }
     }
 
-    pub fn send<G>(&mut self, amount: &CoinDTO<G>) -> Result<()>
+    pub fn send<G>(&mut self, amount: &CoinDTO<G>)
     where
         G: Group,
     {
-        self.sender.send(amount).map_err(Into::into)
+        self.sender.send(amount)
     }
 }
 

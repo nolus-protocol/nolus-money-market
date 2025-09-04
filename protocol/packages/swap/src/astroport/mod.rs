@@ -64,7 +64,7 @@ where
         GSwap: Group,
     {
         debug_assert!(!swap_path.is_empty());
-        let token_in = to_dex_proto_coin(token_in)?;
+        let token_in = to_dex_proto_coin(token_in);
 
         cosmwasm_std::to_json_vec(&ExecuteMsg::ExecuteSwapOperations {
             operations: to_operations::<GSwap>(&token_in.denom, swap_path),
@@ -137,14 +137,13 @@ where
         .collect()
 }
 
-fn to_dex_proto_coin<G>(token: &CoinDTO<G>) -> Result<ProtoCoin>
+fn to_dex_proto_coin<G>(token: &CoinDTO<G>) -> ProtoCoin
 where
     G: Group,
 {
-    coin_legacy::to_cosmwasm_on_network::<DexSymbols<G>>(token)
-        .map_err(Error::from)
-        .map(|CwCoin { denom, amount }| ProtoCoin {
-            denom,
-            amount: amount.into(),
-        })
+    let CwCoin { denom, amount } = coin_legacy::to_cosmwasm_on_network::<DexSymbols<G>>(token);
+    ProtoCoin {
+        denom,
+        amount: amount.into(),
+    }
 }

@@ -11,10 +11,10 @@ use crate::{
     definition::DefinitionRef,
     error::{Error, Result},
     group::MemberOf,
-    pairs::{MaybePairsVisitorResult, PairsGroup, PairsVisitor, PairsVisitorResult},
+    pairs::{MaybePairsVisitorResult, PairsGroup, PairsVisitor},
 };
 
-use super::{AnyVisitor, AnyVisitorResult};
+use super::AnyVisitor;
 
 mod unchecked;
 
@@ -55,7 +55,7 @@ where
         SubG::maybe_visit(&TypeMatcher::new(self.def), visitor)
     }
 
-    pub fn into_currency_type<V>(self, visitor: V) -> AnyVisitorResult<G, V>
+    pub fn into_currency_type<V>(self, visitor: V) -> V::Outcome
     where
         V: AnyVisitor<G>,
     {
@@ -70,7 +70,7 @@ where
         V::Pivot::maybe_visit(&TypeMatcher::new(self.def), visitor)
     }
 
-    pub fn into_pair_member_type<V>(self, visitor: V) -> PairsVisitorResult<V>
+    pub fn into_pair_member_type<V>(self, visitor: V) -> V::Outcome
     where
         V: PairsVisitor,
     {
@@ -131,21 +131,19 @@ where
         where
             G: Group,
         {
-            type Output = CurrencyDTO<G>;
+            type Outcome = CurrencyDTO<G>;
 
-            type Error = Error;
-
-            fn on<C>(self, def: &CurrencyDTO<C::Group>) -> AnyVisitorResult<G, Self>
+            fn on<C>(self, def: &CurrencyDTO<C::Group>) -> Self::Outcome
             where
                 C: CurrencyDef,
                 C::Group: MemberOf<G>,
             {
-                Ok(def.into_super_group())
+                def.into_super_group()
             }
         }
 
-        // V: AnyVisitor<<Self::Group as Group>::TopG>,
-        S::visit_any(symbol, TypeToCurrency(PhantomData::<S::Group>))
+        S::maybe_visit_any(symbol, TypeToCurrency(PhantomData::<S::Group>))
+            .map_err(|_| Error::not_in_currency_group::<_, S, S::Group>(symbol))
     }
 
     fn unexpected<R>(self) -> R
@@ -242,14 +240,12 @@ mod test {
     fn into_currency_type() {
         let c1 = dto::<SuperGroup, SuperGroupTestC1>();
 
-        assert_eq!(
+        assert!(
             c1.into_currency_type(test::Expect::<SuperGroupTestC1, SuperGroup, SuperGroup>::new()),
-            Ok(true),
         );
 
-        assert_eq!(
-            c1.into_currency_type(test::Expect::<SuperGroupTestC2, SuperGroup, SuperGroup>::new()),
-            Ok(false),
+        assert!(
+            !c1.into_currency_type(test::Expect::<SuperGroupTestC2, SuperGroup, SuperGroup>::new()),
         );
     }
 

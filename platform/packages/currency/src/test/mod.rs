@@ -1,8 +1,8 @@
 use std::marker::PhantomData;
 
 use crate::{
-    AnyVisitor, AnyVisitorPair, AnyVisitorPairResult, AnyVisitorResult, Currency, CurrencyDTO,
-    CurrencyDef, Group, MemberOf, SingleVisitor, error::Error,
+    AnyVisitor, AnyVisitorPair, Currency, CurrencyDTO, CurrencyDef, Group, MemberOf, SingleVisitor,
+    error::Error,
 };
 
 pub use self::group::*;
@@ -43,14 +43,13 @@ where
     VisitedG: Group + MemberOf<VisitorG>,
     VisitorG: Group,
 {
-    type Output = bool;
-    type Error = Error;
+    type Outcome = bool;
 
-    fn on<Cin>(self, def: &CurrencyDTO<Cin::Group>) -> Result<bool, Error>
+    fn on<Cin>(self, def: &CurrencyDTO<Cin::Group>) -> Self::Outcome
     where
         Cin: CurrencyDef,
     {
-        Ok(def == CDef::dto())
+        def == CDef::dto()
     }
 }
 
@@ -79,10 +78,9 @@ impl<G> AnyVisitor<G> for ExpectUnknownCurrency<G>
 where
     G: Group,
 {
-    type Output = bool;
-    type Error = Error;
+    type Outcome = bool;
 
-    fn on<C>(self, _def: &CurrencyDTO<C::Group>) -> AnyVisitorResult<G, Self>
+    fn on<C>(self, _def: &CurrencyDTO<C::Group>) -> Self::Outcome
     where
         C: CurrencyDef,
     {
@@ -131,18 +129,17 @@ where
 {
     type VisitedG = VisitedG;
 
-    type Output = bool;
-    type Error = Error;
+    type Outcome = bool;
 
     fn on<C1in, C2in>(
         self,
         dto1: &CurrencyDTO<Self::VisitedG>,
         dto2: &CurrencyDTO<Self::VisitedG>,
-    ) -> AnyVisitorPairResult<Self>
+    ) -> Self::Outcome
     where
         C1in: Currency,
         C2in: Currency,
     {
-        Ok(dto1 == self.1 && dto2 == self.2)
+        dto1 == self.1 && dto2 == self.2
     }
 }

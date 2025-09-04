@@ -7,20 +7,15 @@ use super::Group;
 
 use self::impl_any_tickers::FirstTickerVisitor;
 
-pub type AnyVisitorResult<VisitedG, Visitor> =
-    Result<<Visitor as AnyVisitor<VisitedG>>::Output, <Visitor as AnyVisitor<VisitedG>>::Error>;
-
-pub type AnyVisitorPairResult<V> =
-    Result<<V as AnyVisitorPair>::Output, <V as AnyVisitorPair>::Error>;
+pub type AnyVisitorPairResult<V> = <V as AnyVisitorPair>::Outcome;
 
 pub trait AnyVisitor<VisitedG>
 where
     VisitedG: Group,
 {
-    type Output;
-    type Error;
+    type Outcome;
 
-    fn on<C>(self, def: &CurrencyDTO<C::Group>) -> AnyVisitorResult<VisitedG, Self>
+    fn on<C>(self, def: &CurrencyDTO<C::Group>) -> Self::Outcome
     where
         // for the sake of generating less monomorphized functions, try to:
         // C: Currency + MemberOf<VisitedG> + MemberOf<VisitedG::TopG> + ...
@@ -33,14 +28,13 @@ pub trait InPoolWith<C> {}
 pub trait AnyVisitorPair {
     type VisitedG: Group<TopG = Self::VisitedG>;
 
-    type Output;
-    type Error;
+    type Outcome;
 
     fn on<C1, C2>(
         self,
         dto1: &CurrencyDTO<Self::VisitedG>,
         dto2: &CurrencyDTO<Self::VisitedG>,
-    ) -> AnyVisitorPairResult<Self>
+    ) -> Self::Outcome
     where
         C1: Currency + MemberOf<Self::VisitedG>,
         C2: Currency + MemberOf<Self::VisitedG> + InPoolWith<C1>;
@@ -50,16 +44,6 @@ pub trait GroupVisit
 where
     Self: Symbol,
 {
-    fn visit_any<V>(symbol: &str, visitor: V) -> Result<V::Output, V::Error>
-    where
-        V: AnyVisitor<Self::Group>,
-        Error: Into<V::Error>,
-    {
-        Self::maybe_visit_any(symbol, visitor).unwrap_or_else(|_| {
-            Err(Error::not_in_currency_group::<_, Self, Self::Group>(symbol).into())
-        })
-    }
-
     fn maybe_visit_any<V>(symbol: &str, visitor: V) -> MaybeAnyVisitResult<Self::Group, V>
     where
         V: AnyVisitor<Self::Group>,
@@ -75,14 +59,16 @@ where
 {
 }
 
+/// Resolve a pair of currencies and execute the visitor
+///
+/// Return an [Error::NotInPoolWith] if the provided currencies are an unknown pair, otherwise the visiting result
 pub fn visit_any_on_currencies<V>(
     currency1: CurrencyDTO<V::VisitedG>,
     currency2: CurrencyDTO<V::VisitedG>,
     visitor: V,
-) -> Result<V::Output, V::Error>
+) -> Result<V::Outcome, Error>
 where
     V: AnyVisitorPair,
-    Error: Into<V::Error>,
 {
     currency1.into_currency_type(FirstTickerVisitor::new(currency1, currency2, visitor))
 }
@@ -93,10 +79,10 @@ mod impl_any_tickers {
     use crate::{
         Currency, CurrencyDTO, CurrencyDef, Group, MemberOf,
         error::Error,
-        pairs::{PairsGroup, PairsVisitor, PairsVisitorResult},
+        pairs::{PairsGroup, PairsVisitor},
     };
 
-    use super::{AnyVisitor, AnyVisitorPair, AnyVisitorResult, InPoolWith};
+    use super::{AnyVisitor, AnyVisitorPair, InPoolWith};
 
     pub struct FirstTickerVisitor<V>
     where
@@ -125,12 +111,10 @@ mod impl_any_tickers {
     impl<V> AnyVisitor<V::VisitedG> for FirstTickerVisitor<V>
     where
         V: AnyVisitorPair,
-        Error: Into<V::Error>,
     {
-        type Output = <V as AnyVisitorPair>::Output;
-        type Error = <V as AnyVisitorPair>::Error;
+        type Outcome = Result<<V as AnyVisitorPair>::Outcome, Error>;
 
-        fn on<C1>(self, def: &CurrencyDTO<C1::Group>) -> AnyVisitorResult<V::VisitedG, Self>
+        fn on<C1>(self, def: &CurrencyDTO<C1::Group>) -> Self::Outcome
         where
             C1: CurrencyDef + PairsGroup<CommonGroup = <V::VisitedG as Group>::TopG>,
             C1::Group: MemberOf<V::VisitedG> + MemberOf<<V::VisitedG as Group>::TopG>, // TODO since V::VisitedG === Self::VisitorG, do we need them both?
@@ -143,9 +127,7 @@ mod impl_any_tickers {
                     currency2: self.currency2,
                     visitor: self.visitor,
                 })
-                .unwrap_or_else(|_| {
-                    Err(Error::not_in_pool_with(&self.currency1, &self.currency2).into())
-                })
+                .map_err(|_| Error::not_in_pool_with(&self.currency1, &self.currency2))
         }
     }
 
@@ -162,17 +144,14 @@ mod impl_any_tickers {
     impl<C1, V> PairsVisitor for SecondTickerVisitor<C1, V>
     where
         C1: CurrencyDef + PairsGroup,
-        //+ PairsGroup<CommonGroup = <V::VisitedG as Group>::TopG>,
         C1::Group: MemberOf<V::VisitedG> + MemberOf<<C1 as PairsGroup>::CommonGroup>,
         V: AnyVisitorPair<VisitedG = C1::CommonGroup>,
     {
         type Pivot = C1;
-        // C1::CommonGroup;
 
-        type Output = <V as AnyVisitorPair>::Output;
-        type Error = <V as AnyVisitorPair>::Error;
+        type Outcome = <V as AnyVisitorPair>::Outcome;
 
-        fn on<C2>(self, currency: &CurrencyDTO<C2::Group>) -> PairsVisitorResult<Self>
+        fn on<C2>(self, currency: &CurrencyDTO<C2::Group>) -> Self::Outcome
         where
             C2: CurrencyDef + InPoolWith<Self::Pivot>,
             C2::Group: MemberOf<<Self::Pivot as PairsGroup>::CommonGroup>,
@@ -200,29 +179,19 @@ mod test {
         let v_usdc = Expect::<SuperGroupTestC1, SuperGroup, SuperGroup>::new();
         assert_eq!(
             Ok(true),
-            Tickers::<SuperGroup>::visit_any(SuperGroupTestC1::ticker(), v_usdc.clone())
-        );
-        assert_eq!(
-            Ok(Ok(true)),
             Tickers::<SuperGroup>::maybe_visit_any(SuperGroupTestC1::ticker(), v_usdc)
         );
 
         let v_nls = Expect::<SuperGroupTestC2, SuperGroup, SuperGroup>::new();
         assert_eq!(
             Ok(true),
-            Tickers::<SuperGroup>::visit_any(SuperGroupTestC2::ticker(), v_nls)
+            Tickers::<SuperGroup>::maybe_visit_any(SuperGroupTestC2::ticker(), v_nls)
         );
 
+        let v_err = ExpectUnknownCurrency::<SuperGroup>::new();
         assert_eq!(
-            Err(Error::not_in_currency_group::<
-                _,
-                Tickers::<SubGroup>,
-                SuperGroup,
-            >(SubGroupTestC10::bank())),
-            Tickers::<SuperGroup>::visit_any(
-                SubGroupTestC10::bank(),
-                ExpectUnknownCurrency::<SuperGroup>::new()
-            )
+            Err(v_err.clone()),
+            Tickers::<SuperGroup>::maybe_visit_any(SubGroupTestC10::bank(), v_err)
         );
         let v = ExpectUnknownCurrency::<SuperGroup>::new();
         assert_eq!(
@@ -235,7 +204,7 @@ mod test {
     fn visit_super_group() {
         assert_eq!(
             Ok(true),
-            Tickers::<SuperGroup>::visit_any(
+            Tickers::<SuperGroup>::maybe_visit_any(
                 SubGroupTestC10::ticker(),
                 Expect::<SubGroupTestC10, SuperGroup, SuperGroup>::new()
             )
@@ -247,17 +216,13 @@ mod test {
         let v_usdc = Expect::<SuperGroupTestC1, SuperGroup, SuperGroup>::new();
         assert_eq!(
             Ok(false),
-            Tickers::<SuperGroup>::visit_any(SubGroupTestC10::ticker(), v_usdc)
+            Tickers::<SuperGroup>::maybe_visit_any(SubGroupTestC10::ticker(), v_usdc)
         );
 
         let v_usdc = ExpectUnknownCurrency::<SubGroup>::new();
         assert_eq!(
-            Err(Error::not_in_currency_group::<
-                _,
-                Tickers::<SuperGroup>,
-                SubGroup,
-            >(SuperGroupTestC1::ticker())),
-            Tickers::<SubGroup>::visit_any(SuperGroupTestC1::ticker(), v_usdc)
+            Err(v_usdc.clone()),
+            Tickers::<SubGroup>::maybe_visit_any(SuperGroupTestC1::ticker(), v_usdc)
         );
     }
 
@@ -265,13 +230,10 @@ mod test {
     fn visit_any_unexpected() {
         const DENOM: &str = "my_fancy_coin";
 
+        let v_err = ExpectUnknownCurrency::<SuperGroup>::new();
         assert_eq!(
-            Tickers::<SuperGroup>::visit_any(DENOM, ExpectUnknownCurrency::<SuperGroup>::new()),
-            Err(Error::not_in_currency_group::<
-                _,
-                Tickers::<SubGroup>,
-                SuperGroup,
-            >(DENOM)),
+            Err(v_err.clone()),
+            Tickers::<SuperGroup>::maybe_visit_any(DENOM, v_err),
         );
     }
 

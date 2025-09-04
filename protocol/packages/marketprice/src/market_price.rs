@@ -1,8 +1,8 @@
 use std::{marker::PhantomData, mem};
 
 use currency::{
-    self, AnyVisitor, AnyVisitorResult, Currency, CurrencyDTO, CurrencyDef, Group, InPoolWith,
-    MemberOf, PairsGroup, PairsVisitor, PairsVisitorResult,
+    self, AnyVisitor, Currency, CurrencyDTO, CurrencyDef, Group, InPoolWith, MemberOf, PairsGroup,
+    PairsVisitor, PairsVisitorResult,
 };
 use finance::price::{
     Price,
@@ -92,11 +92,9 @@ where
             CurrenciesToBaseC: Iterator<Item = &'currency_dto CurrencyDTO<G>> + DoubleEndedIterator,
             ObservationsRepoImpl: ObservationsReadRepo<Group = G>,
         {
-            type Output = BasePrice<G, BaseC, BaseG>;
+            type Outcome = Result<BasePrice<G, BaseC, BaseG>, PriceFeedsError>;
 
-            type Error = PriceFeedsError;
-
-            fn on<C>(self, def: &CurrencyDTO<C::Group>) -> AnyVisitorResult<G, Self>
+            fn on<C>(self, def: &CurrencyDTO<C::Group>) -> Self::Outcome
             where
                 C: CurrencyDef + PairsGroup<CommonGroup = <G as Group>::TopG>,
                 C::Group: MemberOf<G> + MemberOf<<G as Group>::TopG>,
@@ -201,10 +199,9 @@ where
             ObservationsRepoImpl: ObservationsRepo<Group = G>,
         {
             type G = G;
-            type Output = ();
-            type Error = PriceFeedsError;
+            type Outcome = Result<(), PriceFeedsError>;
 
-            fn exec<C, QuoteC>(self, price: Price<C, QuoteC>) -> Result<Self::Output, Self::Error>
+            fn exec<C, QuoteC>(self, price: Price<C, QuoteC>) -> Self::Outcome
             where
                 C: Currency,
                 QuoteC: Currency,
@@ -366,9 +363,7 @@ where
 {
     type Pivot = CurrentC;
 
-    type Output = BasePrice<G, BaseC, BaseG>;
-
-    type Error = PriceFeedsError;
+    type Outcome = Result<BasePrice<G, BaseC, BaseG>, PriceFeedsError>;
 
     fn on<QuoteC>(self, def: &CurrencyDTO<QuoteC::Group>) -> PairsVisitorResult<Self>
     where

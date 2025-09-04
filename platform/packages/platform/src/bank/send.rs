@@ -1,14 +1,13 @@
 use std::marker::PhantomData;
 
 use currency::{CurrencyDef, Group, MemberOf};
-use finance::coin::{Coin, WithCoin, WithCoinResult};
+use finance::coin::{Coin, WithCoin};
 use sdk::cosmwasm_std::{Addr, BankMsg, Coin as CwCoin, QuerierWrapper};
 
 use crate::{
     bank::{account, view::BankAccountView},
     batch::Batch,
     coin_legacy,
-    error::Error,
     result::Result,
 };
 
@@ -38,18 +37,16 @@ where
     where
         G: Group,
     {
-        type Output = Batch;
+        type Outcome = Batch;
 
-        type Error = Error;
-
-        fn on<C>(self, coin: Coin<C>) -> WithCoinResult<G, Self>
+        fn on<C>(self, coin: Coin<C>) -> Self::Outcome
         where
             C: CurrencyDef,
             C::Group: MemberOf<G> + MemberOf<G::TopG>,
         {
             let mut sender = LazySenderStub::new(self.to);
             sender.send(coin);
-            Ok(sender.into())
+            sender.into()
         }
     }
 
@@ -59,10 +56,7 @@ where
             to,
             _g: PhantomData,
         })
-        .and_then(|may_batch| {
-            // TODO eliminate the `Result::and_then` once `Result::flatten` gets stabilized
-            may_batch.transpose().map(Option::unwrap_or_default)
-        })
+        .map(Option::unwrap_or_default)
 }
 
 pub trait FixedAddressSender

@@ -8,7 +8,7 @@ use sdk::{
     },
 };
 
-use crate::{batch::Batch, coin_legacy, ica::HostAccount, result::Result};
+use crate::{batch::Batch, coin_legacy, ica::HostAccount};
 
 pub struct Sender<'conn> {
     channel: &'conn str,
@@ -37,13 +37,14 @@ impl<'conn> Sender<'conn> {
         }
     }
 
-    pub fn send<G>(&mut self, amount: &CoinDTO<G>) -> Result<()>
+    pub fn send<G>(&mut self, amount: &CoinDTO<G>)
     where
         G: Group,
     {
-        coin_legacy::to_cosmwasm_on_network::<BankSymbols<G>>(amount).map(|coin| {
-            self.amounts.push(coin);
-        })
+        self.amounts
+            .push(coin_legacy::to_cosmwasm_on_network::<BankSymbols<G>>(
+                amount,
+            ));
     }
 
     fn into_ibc_msgs(self) -> impl Iterator<Item = NeutronMsg> {
@@ -134,8 +135,8 @@ mod test {
 
         let coin1: Coin<SubGroupTestC10> = 234214.into();
         let coin2: Coin<SuperGroupTestC1> = 234214.into();
-        funds_sender.send::<SuperGroup>(&coin1.into()).unwrap();
-        funds_sender.send::<SuperGroup>(&coin2.into()).unwrap();
+        funds_sender.send::<SuperGroup>(&coin1.into());
+        funds_sender.send::<SuperGroup>(&coin2.into());
 
         assert_eq!(Batch::from(funds_sender), {
             let mut batch = Batch::default();

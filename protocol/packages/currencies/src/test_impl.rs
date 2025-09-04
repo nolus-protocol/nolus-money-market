@@ -1,6 +1,5 @@
 use currency::{
-    BankSymbols, CurrencyDef, Group, GroupVisit, MemberOf, Symbol, Tickers, error::Error,
-    test::Expect,
+    BankSymbols, CurrencyDef, Group, GroupVisit, MemberOf, Symbol, Tickers, test::Expect,
 };
 
 #[track_caller]
@@ -51,7 +50,7 @@ where
     Symbols: Symbol<Group = C::Group>,
 {
     assert_eq!(
-        Symbols::visit_any(symbol, Expect::<C, C::Group, C::Group>::default()),
+        Symbols::maybe_visit_any(symbol, Expect::<C, C::Group, C::Group>::default()),
         Ok(true)
     );
 }
@@ -63,8 +62,8 @@ where
     VisitorG: Group,
     Symbols: Symbol<Group = C::Group>,
 {
-    assert!(matches!(
-        Symbols::visit_any(unknown_symbol, Expect::<C, C::Group, C::Group>::default()),
-        Err(Error::NotInCurrencyGroup(_, _, _))
-    ));
+    assert!(
+        Symbols::maybe_visit_any(unknown_symbol, Expect::<C, C::Group, C::Group>::default())
+            .is_err(),
+    );
 }

@@ -12,7 +12,7 @@ use dex::{
     Result as DexResult, StartLocalLocalState,
 };
 use finance::{
-    coin::{Coin, CoinDTO, WithCoin, WithCoinResult},
+    coin::{Coin, CoinDTO, WithCoin},
     duration::Duration,
 };
 use platform::{
@@ -24,10 +24,7 @@ use platform::{
 use sdk::cosmwasm_std::{Addr, Env, MessageInfo, QuerierWrapper, Timestamp};
 use timealarms::stub::Result as TimeAlarmsResult;
 
-use crate::{
-    error::ContractError, msg::ConfigResponse, profit::Profit, result::ContractResult,
-    typedefs::CadenceHours,
-};
+use crate::{msg::ConfigResponse, profit::Profit, result::ContractResult, typedefs::CadenceHours};
 
 use super::{
     Config, ConfigManagement, State, StateEnum, SwapClient, buy_back::BuyBack,
@@ -73,7 +70,6 @@ impl Idle {
 
         let balances: SplitCoins<Nls, PaymentGroup> = account
             .balances::<PaymentGroup, _>(CoinToDTO(PhantomData, PhantomData))?
-            .transpose()?
             .unwrap_or_default();
 
         if balances.rest.is_empty() {
@@ -193,15 +189,14 @@ where
     FilterC: Currency,
     G: Group,
 {
-    type Output = SplitCoins<FilterC, G>;
-    type Error = ContractError;
+    type Outcome = SplitCoins<FilterC, G>;
 
-    fn on<C>(self, coin: Coin<C>) -> WithCoinResult<G, Self>
+    fn on<C>(self, coin: Coin<C>) -> Self::Outcome
     where
         C: CurrencyDef,
         C::Group: MemberOf<G>,
     {
-        Ok(if currency::equal::<C, FilterC>() {
+        if currency::equal::<C, FilterC>() {
             SplitCoins {
                 filtered: coin.coerce_into(),
                 rest: Vec::new(),
@@ -211,7 +206,7 @@ where
                 filtered: Coin::default(),
                 rest: vec![coin.into()],
             }
-        })
+        }
     }
 }
 

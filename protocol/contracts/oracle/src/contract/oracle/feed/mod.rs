@@ -61,7 +61,12 @@ where
 
         swap_pairs_df
             .scan(cmd, |cmd, leg: SwapLeg<PriceG>| {
-                Some(currency::visit_any_on_currencies(leg.from, leg.to.target, cmd).transpose())
+                Some(
+                    currency::visit_any_on_currencies(leg.from, leg.to.target, cmd)
+                        .map_err(Into::into)
+                        .flatten()
+                        .transpose(),
+                )
             })
             .flatten()
     }

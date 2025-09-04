@@ -83,7 +83,7 @@ where
             .expect("Functionality doesn't support this many coins!")
     }
 
-    fn generate_requests(&self, now: Timestamp) -> Result<Batch> {
+    fn generate_requests(&self, now: Timestamp) -> Batch {
         debug_assert_eq!(
             Self::coins_len(&self.spec),
             self.acks_left,
@@ -94,8 +94,8 @@ where
         self.spec
             .coins()
             .into_iter()
-            .try_for_each(|coin| trx.send(&coin))
-            .map(|()| trx.into())
+            .for_each(|coin| trx.send(&coin));
+        trx.into()
     }
 
     fn next(self) -> Self {
@@ -146,7 +146,7 @@ where
     SwapExactIn<SwapTask, SEnum, SwapClient>: Into<SEnum>,
 {
     fn enter(&self, now: Timestamp, _querier: QuerierWrapper<'_>) -> Result<Batch> {
-        self.generate_requests(now)
+        Ok(self.generate_requests(now))
     }
 }
 

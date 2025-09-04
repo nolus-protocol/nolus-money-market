@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 
 use currency::{CurrencyDef, MemberOf};
 use finance::{
-    coin::{Coin, WithCoin, WithCoinResult},
+    coin::{Coin, WithCoin},
     percent::Percent,
 };
 use lpp::stub::lender::{LppLender as LppLenderTrait, WithLppLender};
@@ -12,7 +12,7 @@ use sdk::cosmwasm_std::{Coin as CwCoin, QuerierWrapper, Reply};
 
 use crate::{
     api::{DownpaymentCoin, LeasePaymentCurrencies, open::PositionSpecDTO},
-    error::ContractError,
+    error::{ContractError, ContractResult},
     finance::{LpnCoin, LpnCoinDTO, LpnCurrencies, LpnCurrency, OracleRef},
     position::Spec as PositionSpec,
 };
@@ -83,11 +83,9 @@ struct DownpaymentHandler<'querier> {
     querier: QuerierWrapper<'querier>,
 }
 impl WithCoin<LeasePaymentCurrencies> for DownpaymentHandler<'_> {
-    type Output = (DownpaymentCoin, LpnCoin);
+    type Outcome = ContractResult<(DownpaymentCoin, LpnCoin)>;
 
-    type Error = ContractError;
-
-    fn on<C>(self, in_amount: Coin<C>) -> WithCoinResult<LeasePaymentCurrencies, Self>
+    fn on<C>(self, in_amount: Coin<C>) -> Self::Outcome
     where
         C: CurrencyDef,
         C::Group: MemberOf<LeasePaymentCurrencies>,

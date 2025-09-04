@@ -1,5 +1,5 @@
 use currency::{Currency, CurrencyDef, MemberOf};
-use finance::coin::{Coin, WithCoin, WithCoinResult};
+use finance::coin::{Coin, WithCoin};
 use lpp::stub::loan::LppLoan as LppLoanTrait;
 use oracle_platform::Oracle as OracleTrait;
 use platform::bank;
@@ -7,7 +7,7 @@ use sdk::cosmwasm_std::Coin as CwCoin;
 
 use crate::{
     api::{LeaseAssetCurrencies, LeasePaymentCurrencies, PaymentCoin},
-    error::ContractError,
+    error::{ContractError, ContractResult},
     finance::{LpnCurrencies, LpnCurrency},
     lease::{Lease, with_lease::WithLease},
 };
@@ -52,11 +52,9 @@ where
     LppLoan: LppLoanTrait<LpnCurrency>,
     Oracle: OracleTrait<LeasePaymentCurrencies, QuoteC = LpnCurrency, QuoteG = LpnCurrencies>,
 {
-    type Output = PaymentCoin;
+    type Outcome = ContractResult<PaymentCoin>;
 
-    type Error = ContractError;
-
-    fn on<C>(self, coin: Coin<C>) -> WithCoinResult<LeasePaymentCurrencies, Self>
+    fn on<C>(self, coin: Coin<C>) -> Self::Outcome
     where
         C: CurrencyDef,
         C::Group: MemberOf<LeasePaymentCurrencies>,

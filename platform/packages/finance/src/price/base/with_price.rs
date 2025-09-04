@@ -3,7 +3,7 @@ use std::marker::PhantomData;
 use currency::{Currency, Group};
 use currency::{CurrencyDef, MemberOf};
 
-use crate::coin::{Coin, CoinDTO, WithCoin, WithCoinResult};
+use crate::coin::{Coin, CoinDTO, WithCoin};
 use crate::error::Error;
 use crate::price::Price;
 
@@ -74,10 +74,7 @@ trait PriceFactory {
 
 struct UncheckedConversion<BaseG, QuoteC>(PhantomData<BaseG>, Coin<QuoteC>)
 where
-    // BaseG: Group,
     QuoteC: CurrencyDef;
-// QuoteC::Group: MemberOf<QuoteG> + MemberOf<BaseG::TopG>,
-// QuoteG: Group;
 
 impl<BaseG, QuoteC> PriceFactory for UncheckedConversion<BaseG, QuoteC>
 where
@@ -136,11 +133,9 @@ where
     Cmd: WithPrice<QuoteC, PriceG = G>,
     Cmd::Error: From<Error>,
 {
-    type Output = Cmd::Output;
+    type Outcome = Result<Cmd::Output, Cmd::Error>;
 
-    type Error = Cmd::Error;
-
-    fn on<C>(self, amount: Coin<C>) -> WithCoinResult<G, Self>
+    fn on<C>(self, amount: Coin<C>) -> Self::Outcome
     where
         C: CurrencyDef,
         C::Group: MemberOf<G> + MemberOf<G::TopG>,

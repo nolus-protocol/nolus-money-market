@@ -32,7 +32,7 @@ pub fn not_taking_balance() -> impl BankAccountView {
         where
             G: Group,
             Cmd: WithCoin<G> + Clone,
-            Cmd::Output: Aggregate,
+            Cmd::Outcome: Aggregate,
         {
             unimplemented!()
         }
@@ -95,7 +95,7 @@ where
     where
         G: Group,
         Cmd: WithCoin<G> + Clone,
-        Cmd::Output: Aggregate,
+        Cmd::Outcome: Aggregate,
     {
         unimplemented!()
     }
@@ -150,7 +150,7 @@ where
     where
         G: Group,
         Cmd: WithCoin<G>,
-        Cmd::Output: Aggregate,
+        Cmd::Outcome: Aggregate,
     {
         unimplemented!()
     }
@@ -236,7 +236,7 @@ where
     where
         G: Group,
         Cmd: WithCoin<G> + Clone,
-        Cmd::Output: Aggregate,
+        Cmd::Outcome: Aggregate,
     {
         unimplemented!()
     }
@@ -305,7 +305,7 @@ where
     where
         G: Group,
         Cmd: WithCoin<G> + Clone,
-        Cmd::Output: Aggregate,
+        Cmd::Outcome: Aggregate,
     {
         self.view.balances(cmd)
     }

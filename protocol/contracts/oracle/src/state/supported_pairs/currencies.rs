@@ -3,10 +3,7 @@ use std::marker::PhantomData;
 use currencies::{LeaseGroup, Lpns, Native, PaymentOnlyGroup};
 use tree::NodeRef;
 
-use currency::{
-    AnyVisitor, AnyVisitorResult, CurrencyDTO, CurrencyDef, Group, MaybeAnyVisitResult, MemberOf,
-    never::{self, Never},
-};
+use currency::{AnyVisitor, CurrencyDTO, CurrencyDef, Group, MaybeAnyVisitResult, MemberOf};
 
 use crate::api::{Currency as ApiCurrency, CurrencyGroup, swap::SwapTarget};
 
@@ -20,17 +17,15 @@ where
     Nodes: Iterator<Item = NodeRef<'r, SwapTarget<TopG>>>,
 {
     nodes.map(|node| {
-        never::safe_unwrap(
-            map_from_group::<LeaseGroup, TopG>(node, CurrencyGroup::Lease)
-                .or_else(|_err| map_from_group::<Lpns, TopG>(node, CurrencyGroup::Lpn))
-                .or_else(|_err| map_from_group::<Native, TopG>(node, CurrencyGroup::Native))
-                .or_else(|_err| {
-                    map_from_group::<PaymentOnlyGroup, TopG>(node, CurrencyGroup::PaymentOnly)
-                })
-                .unwrap_or_else(|_err| {
-                    unreachable!("The payment group does not cover all available currencies!")
-                }),
-        )
+        map_from_group::<LeaseGroup, TopG>(node, CurrencyGroup::Lease)
+            .or_else(|_err| map_from_group::<Lpns, TopG>(node, CurrencyGroup::Lpn))
+            .or_else(|_err| map_from_group::<Native, TopG>(node, CurrencyGroup::Native))
+            .or_else(|_err| {
+                map_from_group::<PaymentOnlyGroup, TopG>(node, CurrencyGroup::PaymentOnly)
+            })
+            .unwrap_or_else(|_err| {
+                unreachable!("The payment group does not cover all available currencies!")
+            })
     })
 }
 
@@ -53,14 +48,12 @@ impl<VisitedG> AnyVisitor<VisitedG> for CurrencyVisitor<VisitedG>
 where
     VisitedG: Group,
 {
-    type Output = ApiCurrency;
+    type Outcome = ApiCurrency;
 
-    type Error = Never;
-
-    fn on<C>(self, def: &CurrencyDTO<C::Group>) -> AnyVisitorResult<VisitedG, Self>
+    fn on<C>(self, def: &CurrencyDTO<C::Group>) -> Self::Outcome
     where
         C: CurrencyDef,
     {
-        Ok(ApiCurrency::new(def.definition(), self.1))
+        ApiCurrency::new(def.definition(), self.1)
     }
 }

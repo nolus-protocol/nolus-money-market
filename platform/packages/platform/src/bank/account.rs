@@ -65,7 +65,7 @@ where
     where
         G: Group,
         Cmd: WithCoin<G> + Clone,
-        Cmd::Output: Aggregate,
+        Cmd::Outcome: Aggregate,
     {
         self.view.balances::<G, Cmd>(cmd)
     }

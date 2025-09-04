@@ -1,5 +1,5 @@
 use currency::{CurrencyDef, Group};
-use finance::coin::{Coin, WithCoin, WithCoinResult};
+use finance::coin::{Coin, WithCoin};
 use sdk::cosmwasm_std::Coin as CwCoin;
 
 use crate::{coin_legacy, error::Error, result::Result};
@@ -18,10 +18,7 @@ where
 }
 
 /// Run a command on the first coin of the specified group
-pub fn may_received<VisitedG, V>(
-    cw_amount: &Vec<CwCoin>,
-    mut cmd: V,
-) -> Option<WithCoinResult<VisitedG, V>>
+pub fn may_received<VisitedG, V>(cw_amount: &Vec<CwCoin>, mut cmd: V) -> Option<V::Outcome>
 where
     VisitedG: Group,
     V: WithCoin<VisitedG>,

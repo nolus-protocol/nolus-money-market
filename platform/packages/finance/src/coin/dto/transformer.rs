@@ -1,4 +1,4 @@
-use currency::{AnyVisitor, AnyVisitorResult, CurrencyDTO, CurrencyDef, Group, MemberOf};
+use currency::{AnyVisitor, CurrencyDTO, CurrencyDef, Group, MemberOf};
 
 use crate::coin::WithCoin;
 
@@ -24,10 +24,9 @@ where
     VisitedG: Group,
     V: WithCoin<VisitedG>,
 {
-    type Output = V::Output;
-    type Error = V::Error;
+    type Outcome = V::Outcome;
 
-    fn on<C>(self, def: &CurrencyDTO<C::Group>) -> AnyVisitorResult<VisitedG, Self>
+    fn on<C>(self, def: &CurrencyDTO<C::Group>) -> Self::Outcome
     where
         C: CurrencyDef,
         C::Group: MemberOf<VisitedG> + MemberOf<VisitedG::TopG>,

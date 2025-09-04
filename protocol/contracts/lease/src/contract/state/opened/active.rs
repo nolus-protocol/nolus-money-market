@@ -1,4 +1,4 @@
-use currency::{CurrencyDef, never};
+use currency::CurrencyDef;
 use serde::{Deserialize, Serialize};
 
 use dex::Enterable;
@@ -66,8 +66,7 @@ impl Active {
     ) -> ContractResult<Response> {
         let may_lpn_payment = bank::may_received(&info.funds, IntoDTO::<LpnCurrencies>::new());
         match may_lpn_payment {
-            Some(lpn_payment) => {
-                let payment = never::safe_unwrap(lpn_payment);
+            Some(payment) => {
                 debug_assert!(payment.of_currency_dto(LpnCurrency::dto()).is_ok());
                 repay::repay(self.lease, payment, env, querier)
             }

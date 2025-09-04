@@ -2,7 +2,7 @@ use std::fmt::Debug;
 
 use crate::CurrencyDef;
 
-use super::{AnyVisitor, AnyVisitorResult, matcher::Matcher};
+use super::{AnyVisitor, matcher::Matcher};
 
 pub trait Group
 where
@@ -25,7 +25,7 @@ where
         V: AnyVisitor<Self::TopG>;
 }
 
-pub type MaybeAnyVisitResult<VisitedG, V> = Result<AnyVisitorResult<VisitedG, V>, V>;
+pub type MaybeAnyVisitResult<VisitedG, V> = Result<<V as AnyVisitor<VisitedG>>::Outcome, V>;
 
 pub trait MemberOf<G>
 where

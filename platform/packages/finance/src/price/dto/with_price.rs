@@ -1,24 +1,20 @@
-use std::{marker::PhantomData, result::Result as StdResult};
+use std::marker::PhantomData;
 
-use currency::{
-    AnyVisitorPair, AnyVisitorPairResult, Currency, CurrencyDTO, Group, InPoolWith, MemberOf,
-    error::Error as CurrencyError,
-};
+use currency::{AnyVisitorPair, Currency, CurrencyDTO, Group, InPoolWith, MemberOf};
 
 use crate::{
     coin::{Coin, CoinDTO},
-    error::{Error, Result},
+    error::Result,
     price::Price,
 };
 
 use super::{PriceDTO, WithPrice};
 
 /// Execute the provided price command on a valid price
-pub fn execute<G, Cmd>(price: &PriceDTO<G>, cmd: Cmd) -> StdResult<Cmd::Output, Cmd::Error>
+pub fn execute<G, Cmd>(price: &PriceDTO<G>, cmd: Cmd) -> Cmd::Outcome
 where
     G: Group<TopG = G>,
     Cmd: WithPrice<G = G>,
-    Cmd::Error: From<Error> + From<CurrencyError>,
 {
     // the refactored code that substituted the Price generic parameter with an enum Price got worse in the size of the output .wasm
     // trait objects are not possible here due to the generic function parameters
@@ -34,19 +30,21 @@ where
             cmd,
         },
     )
+    .expect("the currencies should have been checked for validity when PriceDTO has been created")
+    .expect("the ProceDTO invariant should have been verified when it was created ")
 }
 
 /// Execute the provided price command on a non-validated price
+///
 /// Intended mainly for invariant validation purposes.
 pub(super) fn execute_with_coins<G, Cmd>(
     amount: CoinDTO<G>,
     amount_quote: CoinDTO<G>,
     cmd: Cmd,
-) -> StdResult<Cmd::Output, Cmd::Error>
+) -> Result<Cmd::Outcome>
 where
     G: Group<TopG = G>,
     Cmd: WithPrice<G = G>,
-    Cmd::Error: From<Error> + From<CurrencyError>,
 {
     currency::visit_any_on_currencies(
         amount.currency(),
@@ -60,8 +58,13 @@ where
             cmd,
         },
     )
+    .map_err(Into::into)
+    .flatten()
 }
 
+/// Construct a price and executes a command
+///
+/// Result in an [Error::BrokenInvariant] if the price is invalid, otherwise [Cmd::Outcome]
 struct PriceAmountVisitor<'amount, G, Price, Cmd>
 where
     G: Group,
@@ -77,19 +80,16 @@ where
     G: Group<TopG = G>,
     Price: PriceFactory<G = G>,
     Cmd: WithPrice<G = G>,
-    Cmd::Error: From<Error>,
 {
     type VisitedG = G;
 
-    type Output = Cmd::Output;
-
-    type Error = Cmd::Error;
+    type Outcome = Result<Cmd::Outcome>;
 
     fn on<C1, C2>(
         self,
         dto1: &CurrencyDTO<Self::VisitedG>,
         dto2: &CurrencyDTO<Self::VisitedG>,
-    ) -> AnyVisitorPairResult<Self>
+    ) -> Self::Outcome
     where
         C1: Currency + MemberOf<Self::VisitedG>,
         C2: Currency + MemberOf<Self::VisitedG> + InPoolWith<C1>,
@@ -99,8 +99,7 @@ where
                 self.amount.as_specific(dto1),
                 self.amount_quote.as_specific(dto2),
             )
-            .map_err(Into::into)
-            .and_then(|price| self.cmd.exec(price))
+            .map(|price| self.cmd.exec(price))
     }
 }
 

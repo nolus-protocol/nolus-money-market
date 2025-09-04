@@ -14,7 +14,7 @@ fn to_dex_cwcoin() {
     let coin: Coin<SuperGroupTestC1> = 3541415.into();
     assert_eq!(
         CwCoin::new(Amount::from(coin), SuperGroupTestC1::dex()),
-        super::to_dex_cwcoin::<SuperGroup>(&coin.into()).unwrap()
+        super::to_dex_cwcoin::<SuperGroup>(&coin.into())
     );
 }
 

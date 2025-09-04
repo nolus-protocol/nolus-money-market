@@ -1,8 +1,6 @@
 use std::marker::PhantomData;
 
-use currency::{
-    AnyVisitor, AnyVisitorResult, CurrencyDTO, CurrencyDef, Group, MemberOf, never::Never,
-};
+use currency::{AnyVisitor, CurrencyDTO, CurrencyDef, Group, MemberOf};
 use dex::{SwapOutputTask, SwapTask, WithOutputTask};
 
 pub struct WithOutCurrency<SwapTask, OutTaskFry, Cmd> {
@@ -37,15 +35,13 @@ where
     OutTaskFry: OutTaskFactory<SwapTaskT>,
     Cmd: WithOutputTask<SwapTaskT>,
 {
-    type Output = Cmd::Output;
+    type Outcome = Cmd::Output;
 
-    type Error = Never;
-
-    fn on<C>(self, _def: &CurrencyDTO<C::Group>) -> AnyVisitorResult<SwapTaskT::OutG, Self>
+    fn on<C>(self, _def: &CurrencyDTO<C::Group>) -> Self::Outcome
     where
         C: CurrencyDef,
         C::Group: MemberOf<<SwapTaskT::OutG as Group>::TopG> + MemberOf<SwapTaskT::OutG>,
     {
-        Ok(self.cmd.on(OutTaskFry::new_task::<C>(self.swap_task)))
+        self.cmd.on(OutTaskFry::new_task::<C>(self.swap_task))
     }
 }

@@ -32,7 +32,7 @@ fn to_dex_cwcoin() {
             denom: SuperGroupTestC1::dex().into(),
             amount: coin_amount.to_string(),
         },
-        super::to_dex_proto_coin::<SuperGroup>(&coin.into()).unwrap()
+        super::to_dex_proto_coin::<SuperGroup>(&coin.into())
     );
 }
 

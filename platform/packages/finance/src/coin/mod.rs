@@ -223,16 +223,13 @@ impl<C> From<Coin<C>> for Amount {
     }
 }
 
-pub type WithCoinResult<G, V> = Result<<V as WithCoin<G>>::Output, <V as WithCoin<G>>::Error>;
-
 pub trait WithCoin<VisitedG>
 where
     VisitedG: Group,
 {
-    type Output;
-    type Error;
+    type Outcome;
 
-    fn on<C>(self, coin: Coin<C>) -> WithCoinResult<VisitedG, Self>
+    fn on<C>(self, coin: Coin<C>) -> Self::Outcome
     where
         C: CurrencyDef,
         C::Group: MemberOf<VisitedG> + MemberOf<VisitedG::TopG>;
