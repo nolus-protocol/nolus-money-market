@@ -50,10 +50,7 @@ pub trait GroupVisit
 where
     Self: Symbol,
 {
-    fn visit_any<V>(
-        symbol: &str,
-        visitor: V,
-    ) -> Result<AnyVisitorResult<Self::Group, V>, Error>
+    fn visit_any<V>(symbol: &str, visitor: V) -> Result<AnyVisitorResult<Self::Group, V>, Error>
     where
         V: AnyVisitor<Self::Group>,
     {
