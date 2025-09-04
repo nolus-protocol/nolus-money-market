@@ -55,26 +55,23 @@ fn general_interest_rate(
     addon_rate: Percent100,
     optimal_rate: Percent100,
 ) -> Percent100 {
+    // TODO migrate to using SimpleFraction once it starts implementing Ord
     Percent::from_fraction(loan, balance)
-        .and_then(|current_utilization| {
-            Percent::from_fraction(
-                optimal_rate.units(),
-                (Percent100::HUNDRED - optimal_rate).units(),
-            )
-            .map(|max_utilization| current_utilization.min(max_utilization))
-        })
-        .and_then(|utilization_rate| {
-            Percent100::try_from(
-                Percent::from(base_rate)
-                    + Rational::<PercentUnits>::of(
-                        &SimpleFraction::new(addon_rate, optimal_rate),
-                        utilization_rate,
-                    )
-                    .expect("should be a valid Percent"),
-            )
-            .ok()
-        })
-        .expect("The utilization has to be a valid Percent100")
+    .map(|utilization_factor_max| {
+            // TODO migrate to using SimpleFraction once it starts implementing Ord
+            let utilization_factor = Percent::from_fraction(
+                    optimal_rate.units(),
+                    (Percent100::HUNDRED - optimal_rate).units(),
+                ).expect("The utilization must be a valid Percent").min(utilization_factor_max);
+
+            Rational::<PercentUnits>::of(
+            &SimpleFraction::new(addon_rate, optimal_rate),
+            utilization_factor,
+        )
+        .map(|utilization_config| Percent100::try_from(utilization_config + base_rate.into()).expect("The borrow rate must not exceed 100%"))     
+        .expect("The utilization_config must be a valid Percent")     
+    })
+    .expect("The utilization_max must be a valid Percent: utilization_opt < 100% ensures the ratio is valid Percent100, which always fits within Percent's wider range")
 }
 
 #[test]
