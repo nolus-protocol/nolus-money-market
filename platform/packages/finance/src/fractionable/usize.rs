@@ -2,6 +2,7 @@ use crate::{fraction::Unit as FractionUnit, percent::Units as PercentUnits, rati
 
 use super::Fractionable;
 
+// TODO remove the implementation and the whole module when Fractionable is refactored
 impl Fractionable<PercentUnits> for usize {
     fn safe_mul<F>(self, fraction: &F) -> Self
     where
