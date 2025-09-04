@@ -1556,7 +1556,7 @@ mod test_check_close {
         let stop_loss_trigger = Percent100::from_percent(46);
         assert_eq!(
             Err(PositionError::trigger_close(
-                Percent100::from_fraction(920, 1000 * 2).unwrap(),
+                Percent100::from_ratio(920, 1000 * 2),
                 CloseStrategy::StopLoss(stop_loss_trigger)
             )),
             spec.change_close_policy(
@@ -1630,7 +1630,7 @@ mod test_check_close {
         let take_profit_trigger = Percent100::from_percent(46);
         assert_eq!(
             Err(PositionError::trigger_close(
-                Percent100::from_fraction(919, 1000 * 2).unwrap(),
+                Percent100::from_ratio(919, 1000 * 2),
                 CloseStrategy::TakeProfit(take_profit_trigger)
             )),
             spec.change_close_policy(

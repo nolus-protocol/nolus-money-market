@@ -198,9 +198,7 @@ mod tests {
         }
 
         fn ratio(n: Units, d: Units) -> Percent100 {
-            Percent100::from_fraction(n, d).expect(
-                "TODO replace with convertion from Ratio to Percent100 when Ratio become a struct",
-            )
+            Percent100::from_ratio(n, d)
         }
 
         #[derive(Copy, Clone)]

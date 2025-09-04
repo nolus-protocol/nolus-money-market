@@ -7,13 +7,7 @@ use bnum::types::U256;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    coin::Amount,
-    error::Error,
-    fraction::Unit as FractionUnit,
-    fractionable::Fractionable,
-    ratio::{RatioLegacy, SimpleFraction},
-    rational::Rational,
-    zero::Zero,
+    coin::Amount, error::Error, fraction::Unit as FractionUnit, ratio::RatioLegacy, zero::Zero,
 };
 
 use super::Units;
@@ -53,14 +47,6 @@ impl<const UPPER_BOUND: Units> BoundPercent<UPPER_BOUND> {
         } else {
             None
         }
-    }
-
-    pub fn from_fraction<U>(nominator: U, denominator: U) -> Option<Self>
-    where
-        Self: Fractionable<U>,
-        U: FractionUnit,
-    {
-        SimpleFraction::new(nominator, denominator).of(Self::HUNDRED)
     }
 
     // TODO revisit it's usage and remove
@@ -141,12 +127,6 @@ impl<const UPPER_BOUND: Units> From<BoundPercent<UPPER_BOUND>> for u128 {
 impl<const UPPER_BOUND: Units> From<BoundPercent<UPPER_BOUND>> for U256 {
     fn from(percent: BoundPercent<UPPER_BOUND>) -> Self {
         Amount::from(percent).into()
-    }
-}
-
-impl<const UPPER_BOUND: Units> From<BoundPercent<UPPER_BOUND>> for SimpleFraction<Units> {
-    fn from(percent: BoundPercent<UPPER_BOUND>) -> Self {
-        Self::new(percent.0, BoundPercent::<UPPER_BOUND>::HUNDRED.0)
     }
 }
 
