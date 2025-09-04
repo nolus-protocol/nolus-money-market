@@ -17,6 +17,19 @@ where
     }
 }
 
+impl<C, QuoteC> Fractionable<Amount> for Price<C, QuoteC>
+where
+    C: 'static,
+    QuoteC: 'static,
+{
+    fn safe_mul<F>(self, fraction: &F) -> Self
+    where
+        F: RatioLegacy<Amount>,
+    {
+        self.lossy_mul(fraction)
+    }
+}
+
 impl<C, QuoteC> Fractionable<usize> for Price<C, QuoteC>
 where
     C: 'static,
@@ -46,9 +59,7 @@ where
     }
 }
 
-struct RatioTryUpcast<'a, R>(&'a R)
-where
-    R: RatioLegacy<usize>;
+struct RatioTryUpcast<'a, R>(&'a R);
 
 const EXPECT_MSG: &str = "usize should convert into u128";
 

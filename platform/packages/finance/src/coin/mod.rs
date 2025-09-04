@@ -25,6 +25,8 @@ pub type Amount = u128;
 #[cfg(feature = "testing")]
 pub type NonZeroAmount = NonZeroU128;
 
+impl FractionUnit for Amount {}
+
 #[derive(Serialize, Deserialize)]
 pub struct Coin<C> {
     #[serde(with = "amount_serde")]
