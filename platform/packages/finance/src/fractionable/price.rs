@@ -30,6 +30,7 @@ where
     }
 }
 
+// TODO remove when Fractionable is refactored
 impl<C, QuoteC> Fractionable<usize> for Price<C, QuoteC>
 where
     C: 'static,
