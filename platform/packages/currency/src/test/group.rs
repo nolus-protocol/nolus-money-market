@@ -178,12 +178,9 @@ impl Group for SubGroup {
     type TopG = SuperGroup;
 
     fn currencies() -> impl Iterator<Item = CurrencyDTO<Self>> {
-        [
-            SubGroupTestC6::dto(),
-            SubGroupTestC10::dto(),
-        ]
-        .into_iter()
-        .copied()
+        [SubGroupTestC6::dto(), SubGroupTestC10::dto()]
+            .into_iter()
+            .copied()
     }
 
     fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<Self, V>
