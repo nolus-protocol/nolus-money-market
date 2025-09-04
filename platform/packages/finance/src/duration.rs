@@ -375,7 +375,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic = "overflow computing a fraction of duration"]
+    #[should_panic = "TODO remove when refactor Fractionable. Overflow computing a fraction of duration"]
     fn panic_into_slice_per_ratio() {
         // TODO remove the `#[should_panic]` and assert that is None when
         // SimpleFraction::of() calls its checked_mul method instead of safe_mul

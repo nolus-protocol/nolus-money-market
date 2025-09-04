@@ -19,9 +19,9 @@ impl<C> Fractionable<Coin<C>> for Duration {
     {
         let d128: u128 = self.into();
         // TODO re-assess the design of Ratio ... and whether it could be > 1
-        d128.safe_mul(fraction)
-            .try_into()
-            .expect("overflow computing a fraction of duration")
+        d128.safe_mul(fraction).try_into().expect(
+            "TODO remove when refactor Fractionable. Overflow computing a fraction of duration",
+        )
     }
 }
 
