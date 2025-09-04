@@ -281,8 +281,7 @@ where
         if balance.is_zero() {
             Percent100::HUNDRED
         } else {
-            Percent100::from_fraction(total_due, total_due + balance)
-                .expect("TODO: propagate up the stack potential overflow")
+            Percent100::from_ratio(total_due, total_due + balance)
         }
     }
 }

@@ -402,9 +402,7 @@ impl Spec {
     {
         debug_assert!(total_due <= lease_asset);
 
-        Percent100::from_fraction(total_due, lease_asset).expect(
-            "TODO: The ltv has to be at most 100%. Remove the expect once Ratio become a struct",
-        )
+        Percent100::from_ratio(total_due, lease_asset)
     }
 
     fn zone<Asset>(&self, asset: Coin<Asset>, due_asset: Coin<Asset>) -> Zone

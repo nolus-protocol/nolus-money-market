@@ -4,6 +4,7 @@ use crate::{
     error::Error,
     fraction::{Fraction, Unit as FractionUnit},
     fractionable::Fractionable,
+    ratio::{Ratio, SimpleFraction},
     rational::Rational,
 };
 
@@ -21,6 +22,30 @@ impl Percent100 {
             .checked_sub(self)
             .expect("Invariant violated: percent is bigger than 100%")
     }
+
+    pub fn from_ratio<U>(parts: U, total: U) -> Self
+    where
+        Self: Fractionable<U>,
+        U: FractionUnit,
+    {
+        debug_assert!(parts <= total);
+
+        Ratio::new(parts, total).of(Self::HUNDRED)
+    }
+
+    fn to_ratio(self) -> Ratio<Units> {
+        Ratio::new(self.units(), Self::HUNDRED.units())
+    }
+}
+
+impl Percent {
+    pub fn from_fraction<U>(nominator: U, denominator: U) -> Option<Self>
+    where
+        Self: Fractionable<U>,
+        U: FractionUnit,
+    {
+        SimpleFraction::new(nominator, denominator).of(Self::HUNDRED)
+    }
 }
 
 impl Fraction<Units> for Percent100 {
@@ -28,10 +53,7 @@ impl Fraction<Units> for Percent100 {
     where
         A: Fractionable<Units>,
     {
-        // TODO replace this convertion with From<Percent100> for Ratio after Ratio becomes a struct
-        Percent::from(*self)
-            .of(whole)
-            .expect("TODO it won't be needed when ratio.of()")
+        self.to_ratio().of(whole)
     }
 }
 
@@ -63,11 +85,14 @@ impl TryFrom<Percent> for Percent100 {
 pub(super) mod test {
     use std::fmt::{Debug, Display};
 
+    use currency::test::SubGroupTestC10;
+
     use crate::{
+        coin::{Amount, Coin},
         fraction::Fraction,
         fractionable::Fractionable,
         percent::{Percent, Percent100},
-        ratio::SimpleFraction,
+        ratio::{Ratio, SimpleFraction},
         rational::Rational,
     };
 
@@ -99,6 +124,39 @@ pub(super) mod test {
         test_of(0, Percent100::HUNDRED, Percent100::ZERO);
         test_of(1000, Percent100::HUNDRED, Percent100::HUNDRED);
         test_of(100, Percent100::ZERO, Percent100::ZERO);
+    }
+
+    #[test]
+    fn from_ratio() {
+        assert_eq!(
+            Percent100::from_permille(750),
+            Percent100::from_ratio(3u32, 4u32)
+        );
+        assert_eq!(Percent100::HUNDRED, Percent100::from_ratio(3u32, 3u32));
+        assert_eq!(
+            Percent100::HUNDRED,
+            Percent100::from_ratio(
+                Coin::<SubGroupTestC10>::new(Amount::MAX),
+                Coin::<SubGroupTestC10>::new(Amount::MAX)
+            )
+        );
+        assert_eq!(
+            Percent100::from_permille(50),
+            Percent100::from_ratio(
+                Coin::<SubGroupTestC10>::new(1),
+                Coin::<SubGroupTestC10>::new(20)
+            )
+        );
+    }
+
+    #[test]
+    fn to_ratio() {
+        assert_eq!(Ratio::new(0, 1000), Percent100::ZERO.to_ratio());
+        assert_eq!(
+            Ratio::new(100, 1000),
+            Percent100::from_permille(100).to_ratio()
+        );
+        assert_eq!(Ratio::new(1000, 1000), Percent100::HUNDRED.to_ratio());
     }
 
     #[test]
