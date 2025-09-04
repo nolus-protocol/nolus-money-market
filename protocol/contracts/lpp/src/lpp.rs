@@ -745,7 +745,7 @@ mod test {
 
         use super::{super::LiquidityPool, TheCurrency};
 
-        const FIFTY_PERCENT_MIN_UTILIZATION: fn() -> Percent100 = || Percent100::from_permille(500);
+        const FIFTY_PERCENT_MIN_UTILIZATION: Percent100 = Percent100::from_permille(500);
 
         fn test_case(
             borrowed: Amount,
@@ -808,7 +808,7 @@ mod test {
             test_case(
                 50,
                 100,
-                FIFTY_PERCENT_MIN_UTILIZATION(),
+                FIFTY_PERCENT_MIN_UTILIZATION,
                 Some(Default::default()),
             );
         }
@@ -818,19 +818,19 @@ mod test {
             test_case(
                 50,
                 50,
-                FIFTY_PERCENT_MIN_UTILIZATION(),
+                FIFTY_PERCENT_MIN_UTILIZATION,
                 Some(Default::default()),
             );
         }
 
         #[test]
         fn test_deposit_capacity_above_min_util() {
-            test_case(100, 50, FIFTY_PERCENT_MIN_UTILIZATION(), Some(50));
+            test_case(100, 50, FIFTY_PERCENT_MIN_UTILIZATION, Some(50));
         }
 
         #[test]
         fn test_deposit_capacity_at_max_util() {
-            test_case(50, 0, FIFTY_PERCENT_MIN_UTILIZATION(), Some(50));
+            test_case(50, 0, FIFTY_PERCENT_MIN_UTILIZATION, Some(50));
         }
     }
 
