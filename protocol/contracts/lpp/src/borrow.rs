@@ -66,10 +66,7 @@ impl InterestRate {
             Percent::from_ratio(total_liability, balance).min(utilization_max)
         };
 
-        let config = Rational::new(
-            self.addon_optimal_interest_rate.units(),
-            self.utilization_optimal.units(),
-        );
+        let config = Rational::new(self.addon_optimal_interest_rate, self.utilization_optimal);
 
         self.base_interest_rate + Fraction::<Units>::of(&config, utilization)
     }
