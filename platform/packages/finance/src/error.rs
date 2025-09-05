@@ -3,7 +3,6 @@ use std::any::type_name;
 use thiserror::Error;
 
 use currency::error::Error as CurrencyError;
-use sdk::cosmwasm_std::{OverflowError, StdError};
 
 use crate::percent::Units as PercentUnits;
 
@@ -12,8 +11,8 @@ pub enum Error {
     #[error("[Finance] Programming error or invalid serialized object of '{0}' type, cause '{1}'")]
     BrokenInvariant(String, String),
 
-    #[error("[Finance] [OverflowError] {0}")]
-    OverflowError(#[from] OverflowError),
+    #[error("[Finance] {0}")]
+    Overflow(&'static str),
 
     #[error("[Finance] {0}")]
     CurrencyError(#[from] CurrencyError),
@@ -25,9 +24,6 @@ pub enum Error {
         bound: PercentUnits,
         value: PercentUnits,
     },
-
-    #[error("[Finance] [Std] {0}")]
-    CosmWasmError(#[from] StdError),
 }
 
 impl Error {

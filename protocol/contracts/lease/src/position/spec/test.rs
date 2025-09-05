@@ -4,7 +4,7 @@ use finance::{
     duration::Duration,
     fraction::Fraction,
     liability::Liability,
-    percent::Percent,
+    percent::Percent100,
     price::{self, Price},
 };
 
@@ -15,9 +15,9 @@ use crate::{
 
 use super::Spec;
 
-const HALF_STEP: Percent = Percent::from_permille(5);
-const STEP: Percent = Percent::from_permille(5 + 5);
-const MAX_DEBT: Percent = Percent::from_permille(800);
+const HALF_STEP: Percent100 = Percent100::from_permille(5);
+const STEP: Percent100 = Percent100::from_permille(5 + 5);
+const MAX_DEBT: Percent100 = Percent100::from_permille(800);
 const RECALC_IN: Duration = Duration::from_hours(1);
 
 type TestCurrency = PaymentC3;
@@ -57,11 +57,11 @@ where
     Lpn: Into<LpnCoin>,
 {
     let liability = Liability::new(
-        Percent::from_percent(65),
-        Percent::from_percent(70),
-        Percent::from_percent(73),
-        Percent::from_percent(75),
-        Percent::from_percent(78),
+        Percent100::from_percent(65),
+        Percent100::from_percent(70),
+        Percent100::from_percent(73),
+        Percent100::from_percent(75),
+        Percent100::from_percent(78),
         MAX_DEBT,
         Duration::from_hours(1),
     );
@@ -73,7 +73,7 @@ where
     )
 }
 
-fn ltv_to_price<C, D>(asset: C, due: D) -> impl FnMut(Percent) -> Price<TestCurrency, TestLpn>
+fn ltv_to_price<C, D>(asset: C, due: D) -> impl FnMut(Percent100) -> Price<TestCurrency, TestLpn>
 where
     C: Into<Coin<TestCurrency>> + Copy,
     D: Into<Coin<TestLpn>> + Copy,
@@ -89,21 +89,21 @@ where
     price::total_of(price_asset.into()).is(price_lpn.into())
 }
 
-fn spec_with_first<Lpn>(warn: Percent, min_asset: Lpn, min_transaction: Lpn) -> Spec
+fn spec_with_first<Lpn>(warn: Percent100, min_asset: Lpn, min_transaction: Lpn) -> Spec
 where
     Lpn: Into<Coin<TestLpn>>,
 {
     spec_with_max(warn + STEP + STEP + STEP, min_asset, min_transaction)
 }
 
-fn spec_with_second<Lpn>(warn: Percent, min_asset: Lpn, min_transaction: Lpn) -> Spec
+fn spec_with_second<Lpn>(warn: Percent100, min_asset: Lpn, min_transaction: Lpn) -> Spec
 where
     Lpn: Into<Coin<TestLpn>>,
 {
     spec_with_max(warn + STEP + STEP, min_asset, min_transaction)
 }
 
-fn spec_with_third<Lpn>(warn: Percent, min_asset: Lpn, min_transaction: Lpn) -> Spec
+fn spec_with_third<Lpn>(warn: Percent100, min_asset: Lpn, min_transaction: Lpn) -> Spec
 where
     Lpn: Into<Coin<TestLpn>>,
 {
@@ -111,14 +111,14 @@ where
 }
 
 // init = 1%, healthy = 1%, first = max - 3, second = max - 2, third = max - 1
-fn spec_with_max<Lpn>(max: Percent, min_asset: Lpn, min_transaction: Lpn) -> Spec
+fn spec_with_max<Lpn>(max: Percent100, min_asset: Lpn, min_transaction: Lpn) -> Spec
 where
     Lpn: Into<Coin<TestLpn>>,
 {
     let initial = STEP;
     assert!(initial < max - STEP - STEP - STEP);
 
-    let healthy = initial + Percent::ZERO;
+    let healthy = initial + Percent100::ZERO;
     let third_liquidity_warning = max - STEP;
     let second_liquidity_warning = third_liquidity_warning - STEP;
     let first_liquidity_warning = second_liquidity_warning - STEP;
@@ -222,13 +222,13 @@ mod test_calc_borrow {
 
 mod test_debt {
 
-    use finance::{liability::Zone, percent::Percent};
+    use finance::{liability::Zone, percent::Percent100};
 
     use crate::position::{Cause, Debt, spec::test::STEP};
 
     #[test]
     fn no_debt() {
-        let warn_ltv = Percent::from_permille(11);
+        let warn_ltv = Percent100::from_permille(11);
         let spec = super::spec_with_first(warn_ltv, 1, 1);
         let asset = 100.into();
 
@@ -244,7 +244,7 @@ mod test_debt {
 
     #[test]
     fn warnings_none_zero_liq() {
-        let warn_ltv = Percent::from_percent(51);
+        let warn_ltv = Percent100::from_percent(51);
         let spec = super::spec_with_first(warn_ltv, 1, 1);
         let asset = 100.into();
 
@@ -294,7 +294,7 @@ mod test_debt {
 
     #[test]
     fn warnings_none_min_transaction() {
-        let warn_ltv = Percent::from_percent(51);
+        let warn_ltv = Percent100::from_percent(51);
         let spec = super::spec_with_first(warn_ltv, 1, 15);
         let asset = 100.into();
 
@@ -330,7 +330,7 @@ mod test_debt {
 
     #[test]
     fn warnings_first() {
-        let warn_ltv = Percent::from_permille(712);
+        let warn_ltv = Percent100::from_permille(712);
         let spec = super::spec_with_first(warn_ltv, 10, 1);
         let asset = 1000.into();
 
@@ -402,7 +402,7 @@ mod test_debt {
 
     #[test]
     fn warnings_first_min_transaction() {
-        let warn_ltv = Percent::from_permille(712);
+        let warn_ltv = Percent100::from_permille(712);
         let spec = super::spec_with_first(warn_ltv, 10, 3);
         let asset = 1000.into();
 
@@ -439,7 +439,7 @@ mod test_debt {
 
     #[test]
     fn warnings_second() {
-        let warn_ltv = Percent::from_permille(123);
+        let warn_ltv = Percent100::from_permille(123);
         let spec = super::spec_with_second(warn_ltv, 10, 1);
         let asset = 1000.into();
 
@@ -500,7 +500,7 @@ mod test_debt {
 
     #[test]
     fn warnings_second_min_transaction() {
-        let warn_ltv = Percent::from_permille(123);
+        let warn_ltv = Percent100::from_permille(123);
         let spec = super::spec_with_second(warn_ltv, 10, 5);
         let asset = 1000.into();
 
@@ -526,7 +526,7 @@ mod test_debt {
 
     #[test]
     fn warnings_third() {
-        let warn_third_ltv = Percent::from_permille(381);
+        let warn_third_ltv = Percent100::from_permille(381);
         let max_ltv = warn_third_ltv + STEP;
         let spec = super::spec_with_third(warn_third_ltv, 100, 1);
         let asset = 1000.into();
@@ -581,7 +581,7 @@ mod test_debt {
 
     #[test]
     fn warnings_third_min_transaction() {
-        let warn_third_ltv = Percent::from_permille(381);
+        let warn_third_ltv = Percent100::from_permille(381);
         let max_ltv = warn_third_ltv + STEP;
         let spec = super::spec_with_third(warn_third_ltv, 100, 386);
         let asset = 1000.into();
@@ -656,7 +656,7 @@ mod test_debt {
 
     #[test]
     fn liquidate_partial() {
-        let max_ltv = Percent::from_permille(881);
+        let max_ltv = Percent100::from_permille(881);
         let spec = super::spec_with_max(max_ltv, 100, 1);
         let asset = 1000.into();
 
@@ -704,7 +704,7 @@ mod test_debt {
 
     #[test]
     fn liquidate_partial_min_asset() {
-        let max_ltv = Percent::from_permille(881);
+        let max_ltv = Percent100::from_permille(881);
         let spec = super::spec_with_max(max_ltv, 100, 1);
         let asset = 1000.into();
 
@@ -747,7 +747,7 @@ mod test_debt {
 
     #[test]
     fn liquidate_full() {
-        let max_ltv = Percent::from_permille(768);
+        let max_ltv = Percent100::from_permille(768);
         let spec = super::spec_with_max(max_ltv, 230, 1);
         let asset = 1000.into();
 
@@ -790,7 +790,7 @@ mod test_debt {
 
     #[test]
     fn liquidate_full_liability() {
-        let max_ltv = Percent::from_permille(673);
+        let max_ltv = Percent100::from_permille(673);
         let spec = super::spec_with_max(max_ltv, 120, 15);
         let asset = 1000.into();
 
@@ -829,7 +829,7 @@ mod test_debt {
 
     #[test]
     fn liquidate_full_overdue() {
-        let max_ltv = Percent::from_permille(773);
+        let max_ltv = Percent100::from_permille(773);
         let spec = super::spec_with_max(max_ltv, 326, 15);
         let asset = 1000.into();
 
@@ -855,7 +855,7 @@ mod test_debt {
 mod test_steadiness {
 
     use currencies::Lpn;
-    use finance::{coin::Coin, fraction::Fraction, percent::Percent, range::RightOpenRange};
+    use finance::{coin::Coin, fraction::Fraction, percent::Percent100, range::RightOpenRange};
 
     use crate::{
         api::position::{ChangeCmd, ClosePolicyChange},
@@ -864,10 +864,10 @@ mod test_steadiness {
 
     use super::{HALF_STEP, RECALC_IN, TestCurrency, ltv_to_price};
 
-    const TP: Percent = Percent::from_permille(490);
-    const LTV: Percent = Percent::from_permille(TP.units() + STEP.units());
-    const WARN_LTV: Percent = Percent::from_permille(LTV.units() + STEP.units());
-    const SL: Percent = Percent::from_permille(WARN_LTV.units() + STEP.units());
+    const TP: Percent100 = Percent100::from_permille(490);
+    const LTV: Percent100 = TP.checked_add(STEP).expect("should not exceed 100%");
+    const WARN_LTV: Percent100 = LTV.checked_add(STEP).expect("should not exceed 100%");
+    const SL: Percent100 = WARN_LTV.checked_add(STEP).expect("should not exceed 100%");
 
     const ASSET: Coin<TestCurrency> = Coin::new(1000);
 
@@ -1383,7 +1383,7 @@ mod test_steadiness {
         );
     }
 
-    fn steady_to<C, D>(ltv: Percent, asset: C, due: D) -> Steadiness<TestCurrency>
+    fn steady_to<C, D>(ltv: Percent100, asset: C, due: D) -> Steadiness<TestCurrency>
     where
         C: Into<Coin<TestCurrency>> + Copy,
         D: Into<Coin<TestLpn>> + Copy,
@@ -1395,8 +1395,8 @@ mod test_steadiness {
     }
 
     fn steady_in<C, D>(
-        ltv_from: Percent,
-        ltv_to: Percent,
+        ltv_from: Percent100,
+        ltv_to: Percent100,
         asset: C,
         due: D,
     ) -> Steadiness<TestCurrency>
@@ -1514,7 +1514,7 @@ mod test_validate_close {
 }
 
 mod test_check_close {
-    use finance::percent::Percent;
+    use finance::percent::Percent100;
 
     use crate::{
         api::position::{ChangeCmd, ClosePolicyChange},
@@ -1553,10 +1553,10 @@ mod test_check_close {
             spec.check_close(asset, &super::due(90, 0), super::price(1, 2))
         );
 
-        let stop_loss_trigger = Percent::from_percent(46);
+        let stop_loss_trigger = Percent100::from_percent(46);
         assert_eq!(
             Err(PositionError::trigger_close(
-                Percent::from_ratio(920, 1000 * 2),
+                Percent100::from_ratio(920, 1000 * 2),
                 CloseStrategy::StopLoss(stop_loss_trigger)
             )),
             spec.change_close_policy(
@@ -1627,10 +1627,10 @@ mod test_check_close {
             spec.check_close(asset, &super::due(90, 0), super::price(1, 2))
         );
 
-        let take_profit_trigger = Percent::from_percent(46);
+        let take_profit_trigger = Percent100::from_percent(46);
         assert_eq!(
             Err(PositionError::trigger_close(
-                Percent::from_ratio(919, 1000 * 2),
+                Percent100::from_ratio(919, 1000 * 2),
                 CloseStrategy::TakeProfit(take_profit_trigger)
             )),
             spec.change_close_policy(

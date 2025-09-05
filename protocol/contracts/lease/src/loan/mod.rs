@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 use finance::{
-    coin::Coin, duration::Duration, interest, percent::Percent, period::Period, zero::Zero,
+    coin::Coin, duration::Duration, interest, percent::Percent100, period::Period, zero::Zero,
 };
 use lpp::{
     loan::RepayShares,
@@ -31,12 +31,12 @@ pub(crate) struct LoanDTO {
     lpp: LppRef,
     profit: ProfitRef,
     due_period: Duration,
-    margin_interest: Percent,
+    margin_interest: Percent100,
     margin_paid_by: Timestamp, // only this one should vary!
 }
 
 impl LoanDTO {
-    pub(crate) fn annual_margin_interest(&self) -> Percent {
+    pub(crate) fn annual_margin_interest(&self) -> Percent100 {
         self.margin_interest
     }
 
@@ -53,7 +53,7 @@ impl LoanDTO {
 pub(crate) struct Loan<LppLoan> {
     lpp_loan: LppLoan,
     due_period: Duration,
-    margin_interest: Percent,
+    margin_interest: Percent100,
     margin_paid_by: Timestamp, // only this one should vary!
 }
 
@@ -103,7 +103,7 @@ where
     pub(super) fn new(
         lpp_loan: LppLoan,
         start: Timestamp,
-        annual_margin_interest: Percent,
+        annual_margin_interest: Percent100,
         due_period: Duration,
     ) -> Self {
         Self {
@@ -248,7 +248,7 @@ mod tests {
     use serde::{Deserialize, Serialize};
 
     pub use currencies::Lpn;
-    use finance::{duration::Duration, percent::Percent};
+    use finance::{duration::Duration, percent::Percent100};
     use lpp::{
         loan::RepayShares,
         msg::LoanResponse,
@@ -265,8 +265,8 @@ mod tests {
 
     use super::{Loan, LppRef};
 
-    const MARGIN_INTEREST_RATE: Percent = Percent::from_permille(50);
-    const LOAN_INTEREST_RATE: Percent = Percent::from_permille(500);
+    const MARGIN_INTEREST_RATE: Percent100 = Percent100::from_permille(50);
+    const LOAN_INTEREST_RATE: Percent100 = Percent100::from_permille(500);
     const LEASE_START: Timestamp = Timestamp::from_nanos(100);
     const PROFIT_ADDR: &str = "profit_addr";
 
@@ -275,7 +275,7 @@ mod tests {
             coin::{Amount, Coin},
             duration::Duration,
             fraction::Fraction,
-            percent::Percent,
+            percent::Percent100,
             zero::Zero,
         };
         use lpp::msg::LoanResponse;
@@ -1009,8 +1009,8 @@ mod tests {
         }
 
         fn state_custom_percents<P>(
-            annual_interest: Percent,
-            annual_interest_margin: Percent,
+            annual_interest: Percent100,
+            annual_interest_margin: Percent100,
             principal: P,
             due_margin_interest: P,
             due_interest: P,
@@ -1055,7 +1055,7 @@ mod tests {
 
     #[cfg(test)]
     mod test_state {
-        use finance::{duration::Duration, interest, percent::Percent, period::Period};
+        use finance::{duration::Duration, interest, percent::Percent100, period::Period};
         use lpp::{msg::LoanResponse, stub::loan::LppLoan};
         use sdk::cosmwasm_std::Timestamp;
 
@@ -1071,7 +1071,7 @@ mod tests {
             let principal_due = 10000.into();
             let due_period_len = Duration::YEAR;
             let annual_interest_margin = MARGIN_INTEREST_RATE;
-            let annual_interest = Percent::from_permille(145);
+            let annual_interest = Percent100::from_permille(145);
 
             let loan_resp = LoanResponse {
                 principal_due,
@@ -1181,7 +1181,7 @@ mod tests {
             self.loan.repay(by, repayment)
         }
 
-        fn annual_interest_rate(&self) -> Percent {
+        fn annual_interest_rate(&self) -> Percent100 {
             self.loan.annual_interest_rate
         }
     }
@@ -1204,7 +1204,7 @@ mod tests {
     }
 
     fn create_loan_custom(
-        annual_margin_interest: Percent,
+        annual_margin_interest: Percent100,
         loan: LoanResponse<Lpn>,
         due_start: Timestamp,
         due_period: Duration,

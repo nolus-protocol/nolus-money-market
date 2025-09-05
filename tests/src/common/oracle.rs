@@ -1,3 +1,5 @@
+use serde::Serialize;
+
 use currencies::{
     LeaseGroup as AlarmCurrencies, Lpn as BaseCurrency, Lpns as BaseCurrencies, Nls,
     PaymentGroup as PriceCurrencies,
@@ -6,7 +8,7 @@ use currency::{CurrencyDef, Group, MemberOf};
 use finance::{
     coin::Coin,
     duration::Duration,
-    percent::Percent,
+    percent::Percent100,
     price::{self, Price, base::BasePrice},
 };
 use marketprice::config::Config as PriceConfig;
@@ -25,7 +27,6 @@ use sdk::{
     cw_multi_test::AppResponse,
     testing::{self, CwContract, CwContractWrapper},
 };
-use serde::Serialize;
 
 use super::{
     ADMIN,
@@ -51,10 +52,10 @@ impl Instantiator {
         let msg = InstantiateMsg {
             config: Config {
                 price_config: PriceConfig::new(
-                    Percent::from_percent(1),
+                    Percent100::from_percent(1),
                     Duration::from_secs(5),
                     12,
-                    Percent::from_percent(75),
+                    Percent100::from_percent(75),
                 ),
             },
 

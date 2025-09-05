@@ -1,5 +1,5 @@
 use dex::MaxSlippage;
-use finance::percent::Percent;
+use finance::percent::Percent100;
 use lease::api::limits::MaxSlippages;
 use leaser::{
     ContractError,
@@ -37,7 +37,7 @@ fn privileged() {
 
     let mut new_config = Instantiator::new_config();
     new_config.lease_max_slippages.liquidation =
-        MaxSlippage::unchecked(Percent::from_permille(128));
+        MaxSlippage::unchecked(Percent100::from_permille(128));
 
     let expected_slippages = new_config.lease_max_slippages;
 

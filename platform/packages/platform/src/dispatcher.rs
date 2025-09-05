@@ -1,10 +1,12 @@
+use serde::Serialize;
+
+use sdk::cosmwasm_std::Addr;
+
 use crate::{
     batch::{Batch, Emit, Emitter},
     error::Error,
     message::Response as MessageResponse,
 };
-use sdk::cosmwasm_std::Addr;
-use serde::Serialize;
 
 pub type Id = u64;
 pub type AlarmsCount = u32;
@@ -56,14 +58,14 @@ impl<M> From<AlarmsDispatcher<M>> for MessageResponse {
 
 #[cfg(test)]
 mod test {
-    use super::*;
-
-    use crate::{dispatcher::EVENT_KEY, response};
-
     use sdk::{
         cosmwasm_ext::Response as CwResponse,
         cosmwasm_std::{Addr, Event, ReplyOn},
     };
+
+    use crate::{dispatcher::EVENT_KEY, response};
+
+    use super::*;
 
     const EVENT_TYPE: &str = "test_event";
 
