@@ -9,6 +9,7 @@ use finance::{
     liability::{Liability, Zone},
     percent::Percent,
     price::{self},
+    ratio::Scalar,
     zero::Zero,
 };
 
@@ -397,7 +398,7 @@ impl Spec {
 
     fn ltv<P>(total_due: P, lease_asset: P) -> Percent
     where
-        P: Copy + Debug + PartialEq + Zero,
+        P: Copy + Debug + PartialEq + Scalar + Zero,
         Percent: Fractionable<P>,
     {
         Percent::from_ratio(total_due, lease_asset)
