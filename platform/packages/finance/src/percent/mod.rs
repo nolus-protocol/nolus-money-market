@@ -193,6 +193,34 @@ impl<'a> Sub<&'a Percent> for Percent {
     }
 }
 
+impl Scalar for Units {
+    type Times = Self;
+
+    fn gcd(self, other: Self) -> Self::Times {
+        Gcd::gcd(self, other)
+    }
+
+    fn scale_up(self, scale: Self::Times) -> Option<Self> {
+        self.checked_mul(scale)
+    }
+
+    fn scale_down(self, scale: Self::Times) -> Self {
+        debug_assert_ne!(scale, 0);
+
+        self.div(scale)
+    }
+
+    fn modulo(self, scale: Self::Times) -> Self::Times {
+        debug_assert_ne!(scale, 0);
+
+        self.rem(scale)
+    }
+
+    fn into_times(self) -> Self::Times {
+        self
+    }
+}
+
 #[cfg(test)]
 pub(super) mod test {
     use std::{
