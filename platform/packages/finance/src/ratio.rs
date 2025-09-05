@@ -1,11 +1,13 @@
-use std::fmt::Debug;
+use std::{fmt::Debug, ops::Div};
 
 use serde::{Deserialize, Serialize};
 
 use crate::{
     error::{Error, Result as FinanceResult},
     fraction::{Fraction, Unit as FractionUnit},
-    fractionable::Fractionable,
+    fractionable::{
+        Fractionable, MaxPrimitive, ToDoublePrimitive, TryFromMaxPrimitive, checked_mul::CheckedMul,
+    },
     rational::Rational,
     zero::Zero,
 };
@@ -100,6 +102,24 @@ where
         Self {
             nominator,
             denominator,
+        }
+    }
+
+    pub fn checked_mul<M>(self, rhs: M) -> Option<M>
+    where
+        U: MaxPrimitive<M>,
+        M: ToDoublePrimitive + TryFromMaxPrimitive<<U as MaxPrimitive<M>>::Max>,
+    {
+        if self.nominator == self.denominator {
+            Some(rhs)
+        } else {
+            self.nominator
+                .self_to_max()
+                .checked_mul(U::other_to_max(rhs))
+                .and_then(|product| {
+                    let res_primitive = product.div(self.denominator.self_to_max());
+                    M::try_from_max(res_primitive)
+                })
         }
     }
 }
