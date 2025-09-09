@@ -11,6 +11,12 @@ use self::currency_definition::CurrencyDefinition;
 
 mod currency_definition;
 
+type TryFoldElement<'maybe_visit, Currencies, MaybeVisit, CurrencyDefinition> = Result<(
+    Currencies,
+    Either<MaybeVisit, iter::Empty<&'maybe_visit str>>,
+    CurrencyDefinition,
+)>;
+
 impl<'dex_currencies, 'dex_currency_ticker, 'dex_currency_definition, 'currencies_tree>
     Writer<'currencies_tree, '_, '_, '_, '_>
 where
@@ -60,11 +66,13 @@ where
             )
             .map(|non_finalized_sources| {
                 non_finalized_sources
+                    .map_currencies(Either::Left)
                     .map_maybe_visit(Either::Left)
                     .map_currency_definitions(Either::Left)
             })
         } else {
             Ok(generate_blank_sources()
+                .map_currencies(Either::Right)
                 .map_maybe_visit(Either::Right)
                 .map_currency_definitions(Either::Right))
         }
@@ -74,9 +82,7 @@ where
 
 fn with_currencies_sources<
     'r,
-    'host_currency,
     'dex_currencies,
-    'definition,
     'dex_currency_ticker,
     'dex_currency_definition,
     'currencies_tree,
@@ -90,6 +96,8 @@ fn with_currencies_sources<
     tail_tickers: Tickers,
 ) -> Result<
     NonFinalizedSources<
+        impl Iterator<Item = &'dex_currencies str>
+        + use<'dex_currencies, 'generator, Generator, Tickers>,
         impl Iterator<Item = &'dex_currencies str>
         + use<'dex_currencies, 'generator, Generator, Tickers>,
         impl Iterator<Item = Cow<'r, str>>
@@ -106,13 +114,11 @@ fn with_currencies_sources<
     >,
 >
 where
-    'host_currency: 'definition,
-    'dex_currencies: 'definition,
-    'definition: 'r,
+    'dex_currencies: 'r,
     'dex_currency_ticker: 'dex_currencies,
     'dex_currency_definition: 'dex_currencies,
     'ticker: 'r,
-    Generator: generator::Resolver<'dex_currencies, 'definition>
+    Generator: generator::Resolver<'dex_currencies, 'dex_currencies>
         + generator::MaybeVisit
         + generator::PairsGroup<'dex_currencies, 'dex_currency_ticker, 'dex_currency_definition>
         + generator::InPoolWith<'dex_currencies, 'dex_currency_ticker, 'dex_currency_definition>,
@@ -128,6 +134,7 @@ where
 
     per_currency_sources(generator, head_ticker, tail_tickers).map(|non_finalized_sources| {
         non_finalized_sources
+            .map_currencies(currencies_definition)
             .map_maybe_visit(|maybe_visit| {
                 maybe_visit.map_left(|maybe_visit| {
                     maybe_visit_definition_with_currencies(
@@ -145,13 +152,15 @@ where
     })
 }
 
-struct GeneratedSourceEntry<MaybeVisit, CurrencyDefinition> {
+struct GeneratedSourceEntry<Currencies, MaybeVisit, CurrencyDefinition> {
+    currencies: Currencies,
     maybe_visit: MaybeVisit,
     currency_definition: CurrencyDefinition,
 }
 
-type PerCurrencySourcesResult<'dex_currencies, MaybeVisit, CurrencyDefinition> = Result<
+type PerCurrencySourcesResult<'dex_currencies, Currencies, MaybeVisit, CurrencyDefinition> = Result<
     NonFinalizedSources<
+        Vec<Currencies>,
         Either<Vec<MaybeVisit>, iter::Empty<&'dex_currencies str>>,
         Vec<CurrencyDefinition>,
     >,
@@ -159,9 +168,7 @@ type PerCurrencySourcesResult<'dex_currencies, MaybeVisit, CurrencyDefinition> =
 
 fn per_currency_sources<
     'r,
-    'host_currency,
     'dex_currencies,
-    'definition,
     'dex_currency_ticker,
     'dex_currency_definition,
     'currencies_tree,
@@ -176,6 +183,7 @@ fn per_currency_sources<
 ) -> PerCurrencySourcesResult<
     'dex_currencies,
     impl Iterator<Item = &'dex_currencies str> + use<'dex_currencies, 'generator, Generator, Tickers>,
+    impl Iterator<Item = &'dex_currencies str> + use<'dex_currencies, 'generator, Generator, Tickers>,
     impl Iterator<Item = Cow<'r, str>>
     + use<
         'r,
@@ -189,13 +197,11 @@ fn per_currency_sources<
     >,
 >
 where
-    'host_currency: 'definition,
-    'dex_currencies: 'definition,
-    'definition: 'r,
+    'dex_currencies: 'r,
     'dex_currency_ticker: 'dex_currencies,
     'dex_currency_definition: 'dex_currencies,
     'ticker: 'r,
-    Generator: generator::Resolver<'dex_currencies, 'definition>
+    Generator: generator::Resolver<'dex_currencies, 'dex_currencies>
         + generator::MaybeVisit
         + generator::PairsGroup<'dex_currencies, 'dex_currency_ticker, 'dex_currency_definition>
         + generator::InPoolWith<'dex_currencies, 'dex_currency_ticker, 'dex_currency_definition>,
@@ -203,6 +209,7 @@ where
 {
     iter::once(generator.generate_entry(head_ticker).map(|entry| {
         (
+            entry.currencies,
             entry
                 .maybe_visit
                 .map_left(|maybe_visit| Either::Left(maybe_visit.into_iter())),
@@ -212,6 +219,7 @@ where
     .chain(tail_tickers.map(|ticker| {
         generator.generate_entry(ticker).map(|entry| {
             (
+                entry.currencies,
                 entry.maybe_visit.map_left(|maybe_visit| {
                     Either::Right({
                         [
@@ -232,6 +240,7 @@ where
     .try_fold(
         NonFinalizedSources::new(
             0,
+            vec![],
             if <Generator as generator::MaybeVisit>::GENERATE {
                 Either::Left(vec![])
             } else {
@@ -241,6 +250,30 @@ where
         ),
         NonFinalizedSources::try_fold,
     )
+}
+
+#[inline]
+fn currencies_definition<'r, Currencies>(currencies: Currencies) -> impl Iterator<Item = &'r str>
+where
+    Currencies: IntoIterator,
+    Currencies::Item: Iterator<Item = &'r str>,
+{
+    iter::once(
+        "
+pub(super) fn currencies() -> impl Iterator<Item = currency::CurrencyDTO<super::Group>> {
+    [",
+    )
+    .chain(currencies.into_iter().flat_map(|currencies| {
+        iter::once("\n        ")
+            .chain(currencies)
+            .chain(iter::once(",\n    "))
+    }))
+    .chain(iter::once(
+        "]
+    .into_iter()
+}
+",
+    ))
 }
 
 #[inline]
@@ -318,7 +351,8 @@ where
 }
 
 #[inline]
-fn generate_blank_sources<'maybe_visit, 'currency_definitions>() -> NonFinalizedSources<
+fn generate_blank_sources<'currencies, 'maybe_visit, 'currency_definitions>() -> NonFinalizedSources<
+    impl Iterator<Item = &'currencies str> + use<'currencies>,
     impl Iterator<Item = &'maybe_visit str> + use<'maybe_visit>,
     impl Iterator<Item = Cow<'currency_definitions, str>> + use<'currency_definitions>,
 > {
@@ -326,6 +360,7 @@ fn generate_blank_sources<'maybe_visit, 'currency_definitions>() -> NonFinalized
 
     NonFinalizedSources::new(
         0,
+        const { iter::empty() },
         maybe_visit_definition(
             "VisitedG",
             "_",
@@ -336,65 +371,95 @@ fn generate_blank_sources<'maybe_visit, 'currency_definitions>() -> NonFinalized
     )
 }
 
-struct NonFinalizedSources<MaybeVisit, CurrencyDefinitions> {
+struct NonFinalizedSources<Currencies, MaybeVisit, CurrencyDefinitions> {
     currencies_count: usize,
+    currencies: Currencies,
     maybe_visit: MaybeVisit,
     currency_definitions: CurrencyDefinitions,
 }
 
-impl<MaybeVisit, CurrencyDefinitions> NonFinalizedSources<MaybeVisit, CurrencyDefinitions> {
+impl<Currencies, MaybeVisit, CurrencyDefinitions>
+    NonFinalizedSources<Currencies, MaybeVisit, CurrencyDefinitions>
+{
     #[inline]
     const fn new(
         currencies_count: usize,
+        currencies: Currencies,
         maybe_visit: MaybeVisit,
         currency_definitions: CurrencyDefinitions,
     ) -> Self {
         Self {
             currencies_count,
+            currencies,
             maybe_visit,
             currency_definitions,
         }
     }
 
     #[inline]
-    fn map_maybe_visit<F, R>(self, f: F) -> NonFinalizedSources<R, CurrencyDefinitions>
+    fn map_currencies<F, R>(self, f: F) -> NonFinalizedSources<R, MaybeVisit, CurrencyDefinitions>
     where
-        F: FnOnce(MaybeVisit) -> R,
+        F: FnOnce(Currencies) -> R,
     {
         let Self {
             currencies_count,
+            currencies,
             maybe_visit,
             currency_definitions,
         } = self;
 
         NonFinalizedSources {
             currencies_count,
+            currencies: f(currencies),
+            maybe_visit,
+            currency_definitions,
+        }
+    }
+
+    #[inline]
+    fn map_maybe_visit<F, R>(self, f: F) -> NonFinalizedSources<Currencies, R, CurrencyDefinitions>
+    where
+        F: FnOnce(MaybeVisit) -> R,
+    {
+        let Self {
+            currencies_count,
+            currencies,
+            maybe_visit,
+            currency_definitions,
+        } = self;
+
+        NonFinalizedSources {
+            currencies_count,
+            currencies,
             maybe_visit: f(maybe_visit),
             currency_definitions,
         }
     }
 
     #[inline]
-    fn map_currency_definitions<F, R>(self, f: F) -> NonFinalizedSources<MaybeVisit, R>
+    fn map_currency_definitions<F, R>(self, f: F) -> NonFinalizedSources<Currencies, MaybeVisit, R>
     where
         F: FnOnce(CurrencyDefinitions) -> R,
     {
         let Self {
             currencies_count,
+            currencies,
             maybe_visit,
             currency_definitions,
         } = self;
 
         NonFinalizedSources {
             currencies_count,
+            currencies,
             maybe_visit,
             currency_definitions: f(currency_definitions),
         }
     }
 }
 
-impl<'maybe_visit, MaybeVisit, CurrencyDefinition>
+impl<'maybe_visit, Currencies, MaybeVisit, CurrencyDefinition>
     NonFinalizedSources<
+        Vec<Currencies>,
         Either<Vec<MaybeVisit>, iter::Empty<&'maybe_visit str>>,
         Vec<CurrencyDefinition>,
     >
@@ -402,17 +467,20 @@ impl<'maybe_visit, MaybeVisit, CurrencyDefinition>
     fn try_fold(
         Self {
             currencies_count,
+            mut currencies,
             maybe_visit,
             mut currency_definitions,
         }: Self,
-        element: Result<(
-            Either<MaybeVisit, iter::Empty<&'maybe_visit str>>,
-            CurrencyDefinition,
-        )>,
+        element: TryFoldElement<'maybe_visit, Currencies, MaybeVisit, CurrencyDefinition>,
     ) -> Result<Self> {
         element.map(
-            |(maybe_visit_entry, currency_definition)| NonFinalizedSources {
+            |(currencies_entry, maybe_visit_entry, currency_definition)| NonFinalizedSources {
                 currencies_count: currencies_count + 1,
+                currencies: {
+                    currencies.push(currencies_entry);
+
+                    currencies
+                },
                 maybe_visit: match (maybe_visit, maybe_visit_entry) {
                     (Either::Left(mut maybe_visit), Either::Left(entry)) => {
                         maybe_visit.push(entry);
@@ -436,11 +504,20 @@ impl<'maybe_visit, MaybeVisit, CurrencyDefinition>
     }
 }
 
-impl<'r, 'maybe_visit, 'currency_definition, MaybeVisit, CurrencyDefinitions>
-    NonFinalizedSources<MaybeVisit, CurrencyDefinitions>
+impl<
+    'r,
+    'currencies,
+    'maybe_visit,
+    'currency_definition,
+    Currencies,
+    MaybeVisit,
+    CurrencyDefinitions,
+> NonFinalizedSources<Currencies, MaybeVisit, CurrencyDefinitions>
 where
+    'currencies: 'r,
     'maybe_visit: 'r,
     'currency_definition: 'r,
+    Currencies: Iterator<Item = &'currencies str>,
     MaybeVisit: Iterator<Item = &'maybe_visit str>,
     CurrencyDefinitions: Iterator<Item = Cow<'currency_definition, str>>,
 {
@@ -449,11 +526,20 @@ where
         self,
     ) -> FinalizedSources<
         impl Iterator<Item = Cow<'r, str>>
-        + use<'r, 'maybe_visit, 'currency_definition, MaybeVisit, CurrencyDefinitions>,
+        + use<
+            'r,
+            'currencies,
+            'maybe_visit,
+            'currency_definition,
+            Currencies,
+            MaybeVisit,
+            CurrencyDefinitions,
+        >,
     > {
         FinalizedSources {
             currencies_count: self.currencies_count,
             sources: iter::once("// @generated\n")
+                .chain(self.currencies.map(SubtypeLifetime::subtype))
                 .chain(self.maybe_visit.map(SubtypeLifetime::subtype))
                 .chain(iter::once(
                     r#"

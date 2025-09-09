@@ -7,9 +7,14 @@ use crate::currencies_tree::{self, CurrenciesTree};
 
 use super::{super::super::generator, GeneratedSourceEntry};
 
-pub(super) type GenerateEntryResult<'dex_currency, MaybeVisit, CurrencyDefinition> = Result<
-    GeneratedSourceEntry<Either<MaybeVisit, iter::Empty<&'dex_currency str>>, CurrencyDefinition>,
->;
+pub(super) type GenerateEntryResult<'dex_currency, Currencies, MaybeVisit, CurrencyDefinition> =
+    Result<
+        GeneratedSourceEntry<
+            Currencies,
+            Either<MaybeVisit, iter::Empty<&'dex_currency str>>,
+            CurrencyDefinition,
+        >,
+    >;
 
 pub(super) struct CurrencyDefinition<
     'currencies_tree,
@@ -107,6 +112,7 @@ where
         ticker: &'r str,
     ) -> GenerateEntryResult<
         'dex_currencies,
+        impl Iterator<Item = &'dex_currencies str> + use<'dex_currencies, Generator>,
         impl IntoIterator<Item = &'dex_currencies str> + use<'dex_currencies, Generator>,
         impl Iterator<Item = Cow<'r, str>>
         + use<
@@ -143,6 +149,7 @@ where
         parents: &'parents currencies_tree::Parents<'parent>,
     ) -> GenerateEntryResult<
         'dex_currencies,
+        impl Iterator<Item = &'dex_currencies str> + use<'dex_currencies, Generator>,
         impl IntoIterator<Item = &'dex_currencies str> + use<'dex_currencies, Generator>,
         impl Iterator<Item = Cow<'r, str>>
         + use<
@@ -162,39 +169,49 @@ where
     {
         self.generator
             .resolve(ticker)
-            .context("Failed to generate currency definition sources!")
+            .context("Failed to generate `maybe_visit` definition sources entry!")
             .and_then(|resolved| {
                 self.generator
                     .pairs_group(resolved.name(), parents)
-                    .and_then(|pairs_group| {
-                        self.generator
-                            .in_pool_with(resolved.name(), children)
-                            .map(|in_pool_with| GeneratedSourceEntry {
-                                maybe_visit: if <Generator as generator::MaybeVisit>::GENERATE {
-                                    Either::Left([
-                                        self.visit_function,
-                                        "::<_, self::definitions::",
-                                        resolved.name(),
-                                        ", ",
-                                        self.visited_group,
-                                        ", _>(",
-                                        self.matcher_parameter,
-                                        ", ",
-                                        self.visitor_parameter,
-                                        ")",
-                                    ])
-                                } else {
-                                    Either::Right(iter::empty())
-                                },
-                                currency_definition: currency_definition(
-                                    resolved.name(),
-                                    ticker,
-                                    resolved.definition(),
-                                )
-                                .chain(pairs_group.chain(in_pool_with).map(Cow::Borrowed)),
-                            })
-                    })
+                    .map(|pairs_group| (resolved, pairs_group))
             })
+            .and_then(|(resolved, pairs_group)| {
+                self.generator
+                    .in_pool_with(resolved.name(), children)
+                    .map(|in_pool_with| (resolved, pairs_group, in_pool_with))
+            })
+            .map(
+                |(resolved, pairs_group, in_pool_with)| GeneratedSourceEntry {
+                    currencies: [
+                        "*<self::definitions::",
+                        resolved.name(),
+                        " as currency::CurrencyDef>::dto()",
+                    ]
+                    .into_iter(),
+                    maybe_visit: if <Generator as generator::MaybeVisit>::GENERATE {
+                        Either::Left([
+                            self.visit_function,
+                            "::<_, self::definitions::",
+                            resolved.name(),
+                            ", ",
+                            self.visited_group,
+                            ", _>(",
+                            self.matcher_parameter,
+                            ", ",
+                            self.visitor_parameter,
+                            ")",
+                        ])
+                    } else {
+                        Either::Right(iter::empty())
+                    },
+                    currency_definition: currency_definition(
+                        resolved.name(),
+                        ticker,
+                        resolved.definition(),
+                    )
+                    .chain(pairs_group.chain(in_pool_with).map(Cow::Borrowed)),
+                },
+            )
     }
 }
 

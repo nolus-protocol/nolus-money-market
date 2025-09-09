@@ -1,3 +1,11 @@
+use std::iter;
+
+use currency::{CurrencyDTO, CurrencyDef};
+
+pub(super) fn currencies() -> impl Iterator<Item = CurrencyDTO<super::Group>> {
+    iter::once(*self::definitions::Lpn::dto())
+}
+
 pub(super) mod definitions {
     use serde::{Deserialize, Serialize};
 

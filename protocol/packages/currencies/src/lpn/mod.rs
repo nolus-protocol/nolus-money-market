@@ -1,8 +1,8 @@
 use serde::{Deserialize, Serialize};
 
 use currency::{
-    AnyVisitor, Matcher, MaybeAnyVisitResult, MaybePairsVisitorResult, MemberOf, PairsGroup,
-    PairsVisitor,
+    AnyVisitor, CurrencyDTO, Matcher, MaybeAnyVisitResult, MaybePairsVisitorResult, MemberOf,
+    PairsGroup, PairsVisitor,
 };
 
 use crate::payment::Group as PaymentGroup;
@@ -26,6 +26,10 @@ impl currency::Group for Group {
     const DESCR: &'static str = "lpns";
 
     type TopG = PaymentGroup;
+
+    fn currencies() -> impl Iterator<Item = CurrencyDTO<Self>> {
+        impl_mod::currencies()
+    }
 
     fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<Self, V>
     where

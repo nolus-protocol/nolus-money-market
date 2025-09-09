@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use currency::{AnyVisitor, Matcher, MaybeAnyVisitResult, MemberOf};
+use currency::{AnyVisitor, CurrencyDTO, Matcher, MaybeAnyVisitResult, MemberOf};
 
 use crate::{lease::Group as LeaseGroup, lpn::Group as LpnGroup, native::Group as NativeGroup};
 
@@ -23,6 +23,14 @@ impl currency::Group for Group {
     const DESCR: &'static str = "payment";
 
     type TopG = Self;
+
+    fn currencies() -> impl Iterator<Item = CurrencyDTO<Self>> {
+        LeaseGroup::currencies()
+            .map(CurrencyDTO::into_super_group)
+            .chain(LpnGroup::currencies().map(CurrencyDTO::into_super_group))
+            .chain(NativeGroup::currencies().map(CurrencyDTO::into_super_group))
+            .chain(OnlyGroup::currencies().map(CurrencyDTO::into_super_group))
+    }
 
     fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<Self, V>
     where

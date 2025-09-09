@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use currency::{AnyVisitor, Matcher, MaybeAnyVisitResult, MemberOf};
+use currency::{AnyVisitor, CurrencyDTO, Matcher, MaybeAnyVisitResult, MemberOf};
 
 use super::Group as PaymentGroup;
 
@@ -25,6 +25,10 @@ impl currency::Group for Group {
     const DESCR: &'static str = "payment only";
 
     type TopG = PaymentGroup;
+
+    fn currencies() -> impl Iterator<Item = CurrencyDTO<Self>> {
+        impl_mod::currencies()
+    }
 
     fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<Self, V>
     where

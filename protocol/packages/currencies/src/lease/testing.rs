@@ -1,10 +1,25 @@
-use currency::{AnyVisitor, Group, Matcher, MaybeAnyVisitResult, MemberOf};
+use currency::{
+    AnyVisitor, CurrencyDTO, CurrencyDef, Group, Matcher, MaybeAnyVisitResult, MemberOf,
+};
 
 use crate::payment::Group as PaymentGroup;
 
 use super::Group as LeaseGroup;
 
 use self::definitions::{LeaseC1, LeaseC2, LeaseC3, LeaseC4, LeaseC5, LeaseC6, LeaseC7};
+
+pub(super) fn currencies() -> impl Iterator<Item = CurrencyDTO<super::Group>> {
+    [
+        *LeaseC1::dto(),
+        *LeaseC2::dto(),
+        *LeaseC3::dto(),
+        *LeaseC4::dto(),
+        *LeaseC5::dto(),
+        *LeaseC6::dto(),
+        *LeaseC7::dto(),
+    ]
+    .into_iter()
+}
 
 pub(super) fn maybe_visit<M, V, VisitedG>(
     matcher: &M,
