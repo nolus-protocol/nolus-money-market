@@ -15,7 +15,7 @@ pub trait Scalar
 where
     Self: Sized,
 {
-    type Times: Debug + Zero;
+    type Times: Copy + Debug + PartialEq + Zero;
 
     fn gcd(self, other: Self) -> Self::Times;
 
@@ -41,11 +41,13 @@ pub struct Rational<U> {
 
 impl<U> Rational<U>
 where
-    U: Debug + PartialEq<U> + Scalar + Zero,
+    U: Copy + Debug + PartialEq<U> + Scalar + Zero,
 {
     #[track_caller]
     pub fn new(nominator: U, denominator: U) -> Self {
         debug_assert_ne!(denominator, Zero::ZERO);
+
+        let (nominator, denominator) = into_coprime(nominator, denominator);
 
         Self {
             nominator,
@@ -78,4 +80,25 @@ where
     fn total(&self) -> U {
         self.denominator.into()
     }
+}
+
+fn into_coprime<T>(a: T, b: T) -> (T, T)
+where
+    T: Copy + Debug + PartialEq + Scalar + Zero,
+{
+    debug_assert_ne!(b, Zero::ZERO, "RHS-value is zero!");
+
+    let gcd = a.gcd(b);
+
+    debug_assert_ne!(gcd, Zero::ZERO);
+    debug_assert!(
+        a.modulo(gcd) == Zero::ZERO,
+        "LHS-value is not divisible by the GCD!"
+    );
+    debug_assert!(
+        b.modulo(gcd) == Zero::ZERO,
+        "RHS-value is not divisible by the GCD!"
+    );
+
+    (a.scale_down(gcd), b.scale_down(gcd))
 }
