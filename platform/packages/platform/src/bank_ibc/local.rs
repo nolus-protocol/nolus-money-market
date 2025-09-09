@@ -135,8 +135,8 @@ mod test {
 
         let coin1: Coin<SubGroupTestC10> = Coin::new(234214);
         let coin2 = coin::coin1(234214);
-        funds_sender.send::<SuperGroup>(&coin1.into()).unwrap();
-        funds_sender.send::<SuperGroup>(&coin2.into()).unwrap();
+        funds_sender.send::<SuperGroup>(&coin1.into());
+        funds_sender.send::<SuperGroup>(&coin2.into());
 
         assert_eq!(Batch::from(funds_sender), {
             let mut batch = Batch::default();

@@ -125,8 +125,8 @@ mod test {
 
         let coin1: Coin<SuperGroupTestC2> = Coin::new(63);
         let coin2: Coin<SuperGroupTestC1> = Coin::new(2);
-        funds_sender.send::<SuperGroup>(&coin1.into()).unwrap();
-        funds_sender.send::<SuperGroup>(&coin2.into()).unwrap();
+        funds_sender.send::<SuperGroup>(&coin1.into());
+        funds_sender.send::<SuperGroup>(&coin2.into());
 
         assert_eq!(Transaction::from(funds_sender), {
             let mut trx = Transaction::default();
