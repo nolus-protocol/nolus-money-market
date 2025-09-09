@@ -1,6 +1,7 @@
 pub mod coin;
 pub mod duration;
 pub mod error;
+pub mod flatten;
 pub mod fraction;
 pub mod fractionable;
 pub mod interest;

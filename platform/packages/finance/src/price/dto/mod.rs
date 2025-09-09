@@ -11,7 +11,7 @@ use currency::{Currency, CurrencyDTO, Group, InPoolWith, MemberOf};
 
 #[cfg(any(test, feature = "testing"))]
 use crate::error::Error;
-use crate::{coin::CoinDTO, error::Result, price::Price};
+use crate::{coin::CoinDTO, error::Result, flatten::Flatten, price::Price};
 
 mod unchecked;
 pub mod with_price;
@@ -106,7 +106,7 @@ where
                 g: PhantomData::<G>,
             },
         )
-        .flatten()
+        .flatten_pre_1_89()
         .map(|()| self)
     }
 
