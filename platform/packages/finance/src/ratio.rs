@@ -102,3 +102,39 @@ where
 
     (a.scale_down(gcd), b.scale_down(gcd))
 }
+
+#[cfg(test)]
+mod test {
+    use crate::{percent::Units as PercentUnits, ratio::Rational};
+
+    #[test]
+    fn into_coprime() {
+        assert_eq!(Rational::new(1, 3), u_rational(2, 6))
+    }
+
+    #[test]
+    fn into_coprime_primes() {
+        assert_eq!(Rational::new(1009, 1061), u_rational(1009, 1061))
+    }
+    #[test]
+    fn into_prime_big_coprime_values() {
+        let max_even = PercentUnits::MAX - 1;
+        assert_eq!(Rational::new(1, 2), u_rational(max_even / 2, max_even))
+    }
+    #[test]
+    fn into_prime_big_prime_values() {
+        assert_eq!(
+            Rational::new(u32::MAX, u32::MAX - 1),
+            u_rational(u32::MAX, u32::MAX - 1)
+        )
+    }
+
+    #[test]
+    fn into_coprime_one() {
+        assert_eq!(Rational::new(1, 1), u_rational(u32::MAX, u32::MAX));
+    }
+
+    fn u_rational(nominator: PercentUnits, denominator: PercentUnits) -> Rational<PercentUnits> {
+        Rational::new(nominator, denominator)
+    }
+}
