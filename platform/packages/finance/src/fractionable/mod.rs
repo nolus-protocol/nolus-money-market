@@ -25,8 +25,8 @@ where
     type Max: CheckedMul<Output = Self::Max> + Div<Output = Self::Max>;
 
     // Having two identical methods so the trait becomes symmetric
-    fn self_to_max(self) -> Self::Max;
-    fn other_to_max(other: Other) -> Self::Max;
+    fn into_max(self) -> Self::Max;
+    fn into_max_from(other: Other) -> Self::Max;
 }
 
 pub trait TryFromMaxPrimitive<Max>

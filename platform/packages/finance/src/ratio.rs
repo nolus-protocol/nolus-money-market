@@ -114,10 +114,10 @@ where
             Some(rhs)
         } else {
             self.nominator
-                .self_to_max()
-                .checked_mul(U::other_to_max(rhs))
+                .into_max()
+                .checked_mul(U::into_max_from(rhs))
                 .and_then(|product| {
-                    let res_primitive = product.div(self.denominator.self_to_max());
+                    let res_primitive = product.div(self.denominator.into_max());
                     M::try_from_max(res_primitive)
                 })
         }
