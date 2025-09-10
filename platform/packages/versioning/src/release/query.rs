@@ -30,7 +30,13 @@ pub enum ProtocolPackage {
 #[derive(Error, Debug, PartialEq)]
 pub enum Error {
     #[error("[Versioning][Query] {0}")]
-    Transmission(StdError),
+    Transmission(String),
+}
+
+impl Error {
+    pub(crate) fn transmission(error: StdError) -> Self {
+        Self::Transmission(error.to_string())
+    }
 }
 
 pub fn platform_release(
@@ -39,7 +45,7 @@ pub fn platform_release(
 ) -> Result<PlatformPackageRelease, Error> {
     querier
         .query_wasm_smart(contract, &PlatformPackage::Release {})
-        .map_err(Error::Transmission)
+        .map_err(Error::transmission)
 }
 
 pub fn protocol_release(
@@ -48,5 +54,5 @@ pub fn protocol_release(
 ) -> Result<ProtocolPackageRelease, Error> {
     querier
         .query_wasm_smart(contract, &ProtocolPackage::Release {})
-        .map_err(Error::Transmission)
+        .map_err(Error::transmission)
 }

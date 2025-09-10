@@ -2,7 +2,7 @@ use std::{cell::OnceCell, result::Result as StdResult};
 
 use currency::{CurrencyDTO, CurrencyDef, Group};
 use finance::coin::{Coin, WithCoin};
-use sdk::cosmwasm_std::{Addr, Coin as CwCoin, QuerierWrapper, Uint128};
+use sdk::cosmwasm_std::{Addr, Coin as CwCoin, QuerierWrapper};
 
 use crate::{
     bank::aggregate::{Aggregate, ReduceResults},
@@ -64,7 +64,7 @@ impl<'a> BankView<'a> {
     {
         self.querier
             .query_balance(self.account, currency.definition().bank_symbol)
-            .map_err(Error::CosmWasmQueryBalance)
+            .map_err(Error::cosm_wasm_query_balance)
     }
 }
 
@@ -89,7 +89,7 @@ impl BankAccountView for BankView<'_> {
                 self.cw_balance(currency).map_err(Into::into).map_or_else(
                     |err| Some(Err(err)),
                     |ref cw_balance| {
-                        (cw_balance.amount != Uint128::zero()).then(|| {
+                        cw_balance.amount.is_zero().then(|| {
                             coin_legacy::from_cosmwasm_any::<G, _>(cw_balance, cmd.clone())
                         })
                     },

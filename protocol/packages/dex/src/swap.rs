@@ -42,11 +42,17 @@ pub enum Error {
     Platform(#[from] platform::error::Error),
 
     #[error("[Swap] {0}")]
-    Std(#[from] StdError),
+    Std(String),
 
     #[error("[Swap] The value {0} is an invalid amount")]
     InvalidAmount(String),
 
     #[error("[Swap] Expected response to {0} is not found")]
     MissingResponse(String),
+}
+
+impl From<StdError> for Error {
+    fn from(value: StdError) -> Self {
+        Self::Std(value.to_string())
+    }
 }

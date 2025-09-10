@@ -31,10 +31,16 @@ pub struct LppRef<Lpn> {
 #[derive(Error, Debug, PartialEq)]
 pub enum Error {
     #[error("[Lpp][Stub] [Std] {0}")]
-    Std(StdError),
+    Std(String),
 
     #[error("[Lpp][Stub] Unknown currency, details '{0}'")]
     UnknownCurrency(currency::error::Error),
+}
+
+impl Error {
+    pub(crate) fn std(error: StdError) -> Self {
+        Self::Std(error.to_string())
+    }
 }
 
 impl<Lpn> LppRef<Lpn>
@@ -44,7 +50,7 @@ where
     pub fn try_new(addr: Addr, querier: QuerierWrapper<'_>) -> Result<Self, Error> {
         querier
             .query_wasm_smart(addr.clone(), &QueryMsg::<Lpn::Group>::Lpn())
-            .map_err(Error::Std)
+            .map_err(Error::std)
             .and_then(|lpn: CurrencyDTO<Lpn::Group>| {
                 lpn.of_currency(Lpn::dto()).map_err(Error::UnknownCurrency)
             })
@@ -106,7 +112,7 @@ where
                     lease_addr: lease.into(),
                 },
             )
-            .map_err(LenderError::Std)
+            .map_err(LenderError::std)
             .and_then(|may_loan: QueryLoanResponse<Lpn>| may_loan.ok_or(LenderError::NoLoan {}))
             .map(|loan: LoanResponse<Lpn>| LppLoanImpl::new(self, loan))
     }

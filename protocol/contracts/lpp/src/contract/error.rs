@@ -5,10 +5,10 @@ use sdk::cosmwasm_std::StdError;
 #[derive(Error, Debug, PartialEq)]
 pub enum ContractError {
     #[error("[Lpp] [Std] {0}")]
-    Std(#[from] StdError),
+    Std(String),
 
     #[error("[Lpp] Failed to convert query response to binary! Cause: {0}")]
-    ConvertToBinary(StdError),
+    ConvertToBinary(String),
 
     #[error("[Lpp] {0}")]
     Currency(#[from] currency::error::Error),
@@ -83,6 +83,18 @@ pub enum ContractError {
 
     #[error("[Lpp Stub] No response sent back from LPP contract")]
     NoResponseStubError,
+}
+
+impl ContractError {
+    pub(crate) fn convert_to_binary(error: StdError) -> Self {
+        Self::ConvertToBinary(error.to_string())
+    }
+}
+
+impl From<StdError> for ContractError {
+    fn from(value: StdError) -> Self {
+        Self::Std(value.to_string())
+    }
 }
 
 pub type Result<T> = std::result::Result<T, ContractError>;

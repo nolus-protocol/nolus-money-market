@@ -29,7 +29,7 @@ where
     pub fn try_new(contract: Addr, querier: &QuerierWrapper<'_>) -> Result<Self, Error> {
         querier
             .query_wasm_smart(contract.clone(), &QueryMsg::ReserveLpn())
-            .map_err(Error::QueryReserveFailure)
+            .map_err(Error::query_reserve_failure)
             .and_then(|lpn: LpnCurrencyDTO| {
                 lpn.of_currency(&currency::dto::<Lpn, _>())
                     .map_err(Error::UnexpectedLpn)

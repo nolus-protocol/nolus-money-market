@@ -5,7 +5,7 @@ use sdk::cosmwasm_std::{Addr, StdError};
 #[derive(Debug, PartialEq, Error)]
 pub enum ContractError {
     #[error("[Profit] [Std] {0}")]
-    Std(#[from] StdError),
+    Std(String),
 
     #[error("[Profit] {0}")]
     Dex(#[from] dex::Error),
@@ -47,6 +47,12 @@ pub enum ContractError {
 
     #[error("[Profit] EmptyBalance. No profit to dispatch")]
     EmptyBalance {},
+}
+
+impl From<StdError> for ContractError {
+    fn from(value: StdError) -> Self {
+        Self::Std(value.to_string())
+    }
 }
 
 impl ContractError {

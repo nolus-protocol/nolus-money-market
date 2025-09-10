@@ -20,9 +20,7 @@ impl Feeders {
     where
         PriceG: Group,
     {
-        Self::FEEDERS
-            .get(storage)
-            .map_err(Error::<PriceG>::LoadFeeders)
+        Self::FEEDERS.get(storage).map_err(Error::load_feeders)
     }
 
     pub(crate) fn is_feeder<PriceG>(storage: &dyn Storage, address: &Addr) -> Result<bool, PriceG>
@@ -31,7 +29,7 @@ impl Feeders {
     {
         Self::FEEDERS
             .is_registered(storage, address)
-            .map_err(Error::<PriceG>::LoadFeeders)
+            .map_err(Error::load_feeders)
     }
 
     pub(crate) fn try_register<PriceG>(deps: DepsMut<'_>, feeder_txt: String) -> Result<(), PriceG>
@@ -40,7 +38,7 @@ impl Feeders {
     {
         deps.api
             .addr_validate(&feeder_txt)
-            .map_err(Error::<PriceG>::RegisterFeederAddressValidation)
+            .map_err(Error::register_feeder_address_validation)
             .and_then(|feeder| Self::FEEDERS.register(deps, feeder).map_err(Into::into))
     }
 
@@ -50,13 +48,13 @@ impl Feeders {
     {
         deps.api
             .addr_validate(&address)
-            .map_err(Error::<PriceG>::UnregisterFeederAddressValidation)
+            .map_err(Error::unregister_feeder_address_validation)
             .and_then(|f_address| {
                 Self::is_feeder(deps.storage, &f_address).and_then(|is_feeder| {
                     if is_feeder {
                         Self::FEEDERS.remove(deps, &f_address).map_err(Into::into)
                     } else {
-                        Err(Error::<PriceG>::UnknownFeeder {})
+                        Err(Error::UnknownFeeder {})
                     }
                 })
             })

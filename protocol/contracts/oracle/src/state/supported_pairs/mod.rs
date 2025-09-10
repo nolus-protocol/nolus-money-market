@@ -50,13 +50,13 @@ where
     pub fn load(storage: &dyn Storage) -> Result<Self, PriceG> {
         Self::DB_ITEM
             .load(storage)
-            .map_err(Error::LoadSupportedPairs)
+            .map_err(Error::load_supported_pairs)
     }
 
     pub fn save(&self, storage: &mut dyn Storage) -> Result<(), PriceG> {
         Self::DB_ITEM
             .save(storage, self)
-            .map_err(Error::StoreSupportedPairs)
+            .map_err(Error::store_supported_pairs)
     }
 
     pub fn load_path<'r>(

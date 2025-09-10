@@ -1,5 +1,6 @@
 use std::fmt::Debug;
 
+use anyhow::anyhow;
 use serde::Serialize;
 
 use finance::duration::Duration;
@@ -57,6 +58,7 @@ impl App {
         self.app
             .send_tokens(sender, recipient, amount)
             .map(|_: AppResponse| ())
+            .map_err(|error| anyhow!(error))
     }
 
     pub fn instantiate<'r, T, U>(
@@ -75,6 +77,7 @@ impl App {
         self.with_mock_app(|app: &mut MockApp| {
             app.instantiate_contract(code.into(), sender, init_msg, send_funds, label, admin)
         })
+        .map_err(|error| anyhow!(error))
     }
 
     pub fn execute<'r, T>(
@@ -90,6 +93,7 @@ impl App {
         self.with_mock_app(|app: &mut MockApp| {
             app.execute_contract(sender, contract_addr, msg, send_funds)
         })
+        .map_err(|error| anyhow!(error))
     }
 
     pub fn execute_raw<T>(
@@ -101,6 +105,7 @@ impl App {
         T: Into<CosmosMsg>,
     {
         self.with_mock_app(|app: &mut MockApp| app.execute(sender, msg.into()))
+            .map_err(|error| anyhow!(error))
     }
 
     pub fn migrate<'r, T>(
@@ -116,6 +121,7 @@ impl App {
         self.with_mock_app(|app: &mut MockApp| {
             app.migrate_contract(sender, contract_addr, msg, new_code_id)
         })
+        .map_err(|error| anyhow!(error))
     }
 
     pub fn sudo<'r, T, U>(
@@ -128,11 +134,12 @@ impl App {
         U: Serialize,
     {
         self.with_mock_app(|app: &mut MockApp| app.wasm_sudo(contract_addr, msg))
+            .map_err(|error| anyhow!(error))
     }
 
-    pub fn with_mock_app<F, R>(&mut self, f: F) -> anyhow::Result<ResponseWithInterChainMsgs<'_, R>>
+    pub fn with_mock_app<F, R, E>(&mut self, f: F) -> Result<ResponseWithInterChainMsgs<'_, R>, E>
     where
-        F: FnOnce(&'_ mut MockApp) -> anyhow::Result<R>,
+        F: FnOnce(&'_ mut MockApp) -> Result<R, E>,
     {
         assert_eq!(self.message_receiver.try_recv().ok(), None);
 

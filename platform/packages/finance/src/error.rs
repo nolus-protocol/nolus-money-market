@@ -27,7 +27,7 @@ pub enum Error {
     },
 
     #[error("[Finance] [Std] {0}")]
-    CosmWasmError(#[from] StdError),
+    CosmWasmError(String),
 }
 
 impl Error {
@@ -37,6 +37,12 @@ impl Error {
         } else {
             Ok(())
         }
+    }
+}
+
+impl From<StdError> for Error {
+    fn from(value: StdError) -> Self {
+        Self::CosmWasmError(value.to_string())
     }
 }
 

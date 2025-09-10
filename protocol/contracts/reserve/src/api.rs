@@ -67,14 +67,17 @@ impl ConfigResponse {
 #[cfg(test)]
 mod test {
     use platform::tests as platform_tests;
+    use sdk::cosmwasm_std::StdError as CwError;
 
     use super::QueryMsg;
 
     #[test]
     fn release() {
         assert_eq!(
-            Ok(QueryMsg::ProtocolPackageRelease {}),
-            platform_tests::ser_de(&versioning::query::ProtocolPackage::Release {}),
+            Ok(&QueryMsg::ProtocolPackageRelease {}),
+            platform_tests::ser_de(&versioning::query::ProtocolPackage::Release {})
+                .as_ref()
+                .map_err(CwError::to_string),
         );
     }
 }

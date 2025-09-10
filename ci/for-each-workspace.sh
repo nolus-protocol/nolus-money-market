@@ -34,6 +34,12 @@ do
 
   directory="$("dirname" "${file:?}")"
 
+  directory_name="$("basename" "${directory:?}")"
+
+  case "${directory_name?}" in
+    ("neutron-sdk") continue ;;
+  esac
+
   (
     cd "${directory:?}"
 

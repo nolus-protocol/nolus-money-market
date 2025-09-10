@@ -1,6 +1,6 @@
-use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::result::Result as StdResult;
 
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use thiserror::Error;
 
 use currency::{CurrencyDTO, Group};
@@ -33,7 +33,13 @@ pub type Result<T> = StdResult<T, Error>;
 #[derive(Error, Debug, PartialEq)]
 pub enum Error {
     #[error("[Oracle; Stub] Failed to query swap path! Cause: {0}")]
-    StubSwapPathQuery(StdError),
+    StubSwapPathQuery(String),
+}
+
+impl Error {
+    pub(crate) fn stub_swap_path_query(error: StdError) -> Self {
+        Self::StubSwapPathQuery(error.to_string())
+    }
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]

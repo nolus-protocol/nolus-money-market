@@ -13,7 +13,7 @@ use profit::{
     typedefs::CadenceHours,
 };
 use sdk::{
-    cosmwasm_std::{Addr, Event, from_json},
+    cosmwasm_std::{Addr, Event, StdError as CwError, Uint128 as CwUint128, from_json},
     cw_multi_test::AppResponse,
     testing,
 };
@@ -287,7 +287,10 @@ where
             TestCase::PROFIT_ICA_ID,
         );
 
-        assert_eq!(transfer_amount.amount.u128(), lpn_profit_swap_out.into());
+        assert_eq!(
+            CwUint128::try_from(transfer_amount.amount).unwrap().u128(),
+            lpn_profit_swap_out.into()
+        );
 
         let response = ibc::do_transfer(
             &mut test_case.app,
@@ -552,20 +555,25 @@ fn integration_with_time_alarms() {
         .unwrap_response();
 
     assert_eq!(
-        from_json(resp.data.clone().unwrap()),
-        Ok(DispatchAlarmsResponse(1))
+        from_json(resp.data.clone().unwrap())
+            .as_ref()
+            .map_err(CwError::to_string),
+        Ok(&DispatchAlarmsResponse(1))
     );
 
     resp.assert_event(&Event::new("wasm-time-alarm").add_attribute("delivered", "success"));
 
     assert_eq!(
-        test_case
-            .app
-            .query()
-            .query_balance(test_case.address_book.profit().clone(), Nls::bank())
-            .unwrap()
-            .amount
-            .u128(),
+        CwUint128::try_from(
+            test_case
+                .app
+                .query()
+                .query_balance(test_case.address_book.profit().clone(), Nls::bank())
+                .unwrap()
+                .amount
+        )
+        .unwrap()
+        .u128(),
         ::profit::profit::Profit::IBC_FEE_RESERVE.into(),
     );
 }

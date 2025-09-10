@@ -29,10 +29,16 @@ pub trait WithTimeAlarms {
 #[derive(thiserror::Error, Debug, PartialEq)]
 pub enum Error {
     #[error("[TimeAlarms Stub] [Sdk] {0}")]
-    Sdk(#[from] SdkError),
+    Sdk(String),
 
     #[error("[TimeAlarms Stub] Invalid address, cause: \"{0}\".")]
     InvalidAddress(platform::error::Error),
+}
+
+impl From<SdkError> for Error {
+    fn from(value: SdkError) -> Self {
+        Self::Sdk(value.to_string())
+    }
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]

@@ -59,13 +59,13 @@ impl Config {
     pub fn store(&self, storage: &mut dyn Storage) -> ContractResult<()> {
         Self::STORAGE
             .save(storage, self)
-            .map_err(ContractError::SaveConfigFailure)
+            .map_err(ContractError::save_config_failure)
     }
 
     pub fn load(storage: &dyn Storage) -> ContractResult<Self> {
         Self::STORAGE
             .load(storage)
-            .map_err(ContractError::LoadConfigFailure)
+            .map_err(ContractError::load_config_failure)
     }
 
     pub fn update(storage: &mut dyn Storage, new_config: NewConfig) -> ContractResult<()> {
@@ -114,7 +114,7 @@ impl From<SdkError> for UpdateDataError {
 }
 impl From<UpdateDataError> for ContractError {
     fn from(value: UpdateDataError) -> Self {
-        Self::UpdateConfigFailure(value.0)
+        Self::update_config_failure(value.0)
     }
 }
 

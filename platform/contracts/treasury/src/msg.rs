@@ -51,14 +51,17 @@ pub type RewardScaleResponse = RewardScale;
 #[cfg(test)]
 mod test {
     use platform::tests as platform_tests;
+    use sdk::cosmwasm_std::StdError as CwError;
 
     use super::QueryMsg;
 
     #[test]
     fn release() {
         assert_eq!(
-            Ok(QueryMsg::PlatformPackageRelease {}),
-            platform_tests::ser_de(&versioning::query::PlatformPackage::Release {}),
+            Ok(&QueryMsg::PlatformPackageRelease {}),
+            platform_tests::ser_de(&versioning::query::PlatformPackage::Release {})
+                .as_ref()
+                .map_err(CwError::to_string),
         );
     }
 }

@@ -18,7 +18,13 @@ pub struct ProfitRef {
 #[derive(Debug, PartialEq, Error)]
 pub enum Error {
     #[error("[Profit] [Std] {0}")]
-    Std(#[from] StdError),
+    Std(String),
+}
+
+impl From<StdError> for Error {
+    fn from(value: StdError) -> Self {
+        Self::Std(value.to_string())
+    }
 }
 
 impl ProfitRef {

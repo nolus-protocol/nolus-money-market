@@ -78,6 +78,10 @@ jobs:
 
               workspace="$("basename" "${workspace}")"
 
+              case "${workspace?}" in
+                ("neutron-sdk") continue ;;
+              esac
+
               joined="${joined?},\"${workspace:?}\""
             done \
               <<EOF
@@ -358,6 +362,7 @@ jobs:
             software_release_id=${{ env.software-release-id }}
           build-contexts: |-
             dot-cargo=./.cargo
+            neutron-sdk=./neutron-sdk
             platform=./platform
             scripts=./scripts
             tools=./tools
@@ -372,6 +377,7 @@ jobs:
             software_release_id=${{ env.software-release-id }}
           build-contexts: |-
             dot-cargo=./.cargo
+            neutron-sdk=./neutron-sdk
             platform=./platform
             protocol=./protocol
             scripts=./scripts

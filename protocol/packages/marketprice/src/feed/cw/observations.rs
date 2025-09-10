@@ -61,8 +61,8 @@ where
     > {
         self.storage
             .iter(self.store.deref())
-            .map(|iter| iter.map(|item| item.map_err(PriceFeedsError::FeedRead)))
-            .map_err(PriceFeedsError::FeedRead)
+            .map(|iter| iter.map(|item| item.map_err(PriceFeedsError::feed_read)))
+            .map_err(PriceFeedsError::feed_read)
     }
 }
 
@@ -77,13 +77,13 @@ where
             match self
                 .storage
                 .pop_front(self.store.deref_mut())
-                .map_err(PriceFeedsError::FeedRemove)
+                .map_err(PriceFeedsError::feed_remove)
                 .and_then(|may_item| {
                     if let Some(item) = may_item {
                         if item.valid_since(valid_since) {
                             self.storage
                                 .push_front(self.store.deref_mut(), &item)
-                                .map_err(PriceFeedsError::FeedPush)
+                                .map_err(PriceFeedsError::feed_push)
                                 .map(|()| false)
                         } else {
                             Ok(true)
@@ -102,7 +102,7 @@ where
     fn register(&mut self, observation: Observation<C, QuoteC>) -> Result<(), PriceFeedsError> {
         self.storage
             .push_back(self.store.deref_mut(), &observation)
-            .map_err(PriceFeedsError::FeedPush)
+            .map_err(PriceFeedsError::feed_push)
     }
 }
 

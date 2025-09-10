@@ -56,7 +56,7 @@ impl Config {
                 })
             })
             .map(|_| ())
-            .map_err(ContractError::UpdateStorage)
+            .map_err(ContractError::update_storage)
     }
 
     pub fn update_tvl_to_apr(
@@ -71,6 +71,6 @@ impl Config {
                 })
             })
             .map(|_| ())
-            .map_err(ContractError::UpdateStorage)
+            .map_err(ContractError::update_storage)
     }
 }

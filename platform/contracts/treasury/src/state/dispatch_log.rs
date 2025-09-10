@@ -33,7 +33,7 @@ impl DispatchLog {
     ) -> Result<(), ContractError> {
         Self::STORAGE
             .may_load(storage)
-            .map_err(ContractError::LoadDispatchLog)
+            .map_err(ContractError::load_dispatch_log)
             .and_then(|log| match log {
                 None => Self::STORAGE
                     .save(
@@ -42,7 +42,7 @@ impl DispatchLog {
                             last_dispatch: current_dispatch,
                         },
                     )
-                    .map_err(ContractError::SaveDispatchLog),
+                    .map_err(ContractError::save_dispatch_log),
                 Some(l) => {
                     if current_dispatch < l.last_dispatch {
                         Err(ContractError::InvalidTimeConfiguration {})
@@ -52,7 +52,7 @@ impl DispatchLog {
                                 log.last_dispatch = current_dispatch;
                                 Ok(log)
                             })
-                            .map_err(ContractError::SaveDispatchLog)
+                            .map_err(ContractError::save_dispatch_log)
                             .map(drop)
                     }
                 }
