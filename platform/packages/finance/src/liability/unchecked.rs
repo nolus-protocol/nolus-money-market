@@ -1,18 +1,18 @@
 use serde::Deserialize;
 
-use crate::{duration::Duration, error::Error, percent::Percent};
+use crate::{duration::Duration, error::Error, percent::Percent100};
 
 use super::Liability as ValidatedLiability;
 
 /// Brings invariant checking as a step in deserializing a Liability
 #[derive(Deserialize)]
 pub(super) struct Liability {
-    initial: Percent,
-    healthy: Percent,
-    first_liq_warn: Percent,
-    second_liq_warn: Percent,
-    third_liq_warn: Percent,
-    max: Percent,
+    initial: Percent100,
+    healthy: Percent100,
+    first_liq_warn: Percent100,
+    second_liq_warn: Percent100,
+    third_liq_warn: Percent100,
+    max: Percent100,
     recalc_time: Duration,
 }
 

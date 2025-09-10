@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use currency::{CurrencyDef, MemberOf};
 use finance::{
     coin::{Coin, WithCoin},
-    percent::Percent,
+    percent::{Percent, Percent100},
 };
 use lpp::stub::lender::{LppLender as LppLenderTrait, WithLppLender};
 use oracle::stub;
@@ -150,5 +150,5 @@ impl WithLppLender<LpnCurrency> for OpenLoanResp {
 #[derive(Serialize, Deserialize)]
 pub struct OpenLoanRespResult {
     pub(in crate::contract) principal: LpnCoinDTO,
-    pub(in crate::contract) annual_interest_rate: Percent,
+    pub(in crate::contract) annual_interest_rate: Percent100,
 }

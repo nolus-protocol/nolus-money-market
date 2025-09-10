@@ -2,25 +2,25 @@ use serde::{Deserialize, Serialize};
 
 use finance::{
     coin::Coin,
-    fraction::Fraction,
-    percent::{Percent, Units},
-    ratio::Rational,
+    percent::{Percent, Percent100, Units as PercentUnits},
+    ratio::SimpleFraction,
+    rational::Rational,
 };
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Serialize, Deserialize)]
 #[serde(try_from = "UncheckedInterestRate")]
 pub struct InterestRate {
-    base_interest_rate: Percent,
-    utilization_optimal: Percent,
-    addon_optimal_interest_rate: Percent,
+    base_interest_rate: Percent100,
+    utilization_optimal: Percent100,
+    addon_optimal_interest_rate: Percent100,
 }
 
 impl InterestRate {
     #[cfg(any(test, feature = "testing"))]
     pub fn new(
-        base_interest_rate: Percent,
-        utilization_optimal: Percent,
-        addon_optimal_interest_rate: Percent,
+        base_interest_rate: Percent100,
+        utilization_optimal: Percent100,
+        addon_optimal_interest_rate: Percent100,
     ) -> Option<Self> {
         Self::private_new(
             base_interest_rate,
@@ -30,9 +30,9 @@ impl InterestRate {
     }
 
     fn private_new(
-        base_interest_rate: Percent,
-        utilization_optimal: Percent,
-        addon_optimal_interest_rate: Percent,
+        base_interest_rate: Percent100,
+        utilization_optimal: Percent100,
+        addon_optimal_interest_rate: Percent100,
     ) -> Option<Self> {
         let value = Self {
             base_interest_rate,
@@ -43,42 +43,56 @@ impl InterestRate {
         value.validate().then_some(value)
     }
 
-    pub fn base_interest_rate(&self) -> Percent {
+    pub const fn base_interest_rate(&self) -> Percent100 {
         self.base_interest_rate
     }
 
-    pub fn utilization_optimal(&self) -> Percent {
+    pub const fn utilization_optimal(&self) -> Percent100 {
         self.utilization_optimal
     }
 
-    pub fn addon_optimal_interest_rate(&self) -> Percent {
+    pub const fn addon_optimal_interest_rate(&self) -> Percent100 {
         self.addon_optimal_interest_rate
     }
 
-    pub fn calculate<Lpn>(&self, total_liability: Coin<Lpn>, balance: Coin<Lpn>) -> Percent {
-        let utilization_max = Percent::from_ratio(
-            self.utilization_optimal.units(),
-            (Percent::HUNDRED - self.utilization_optimal).units(),
-        );
-        let utilization = if balance.is_zero() {
-            utilization_max
+    /// For more ref see: https://hub.nolus.io/en/articles/9680324-borrow
+    pub fn calculate<Lpn>(&self, total_liability: Coin<Lpn>, balance: Coin<Lpn>) -> Percent100 {
+        // TODO migrate to using SimpleFraction once it starts implementing Ord
+        let utilization_factor_max = self.utilization_factor_max();
+
+        let utilization_factor = if balance.is_zero() {
+            utilization_factor_max
         } else {
-            Percent::from_ratio(total_liability, balance).min(utilization_max)
+            // TODO migrate to using SimpleFraction once it starts implementing Ord
+            Percent::from_fraction(total_liability, balance)
+                .expect("The utilization must be a valid Percent")
+                .min(utilization_factor_max)
         };
 
-        let config = Rational::new(
-            self.addon_optimal_interest_rate.units(),
-            self.utilization_optimal.units(),
-        );
-
-        self.base_interest_rate + Fraction::<Units>::of(&config, utilization)
+        Rational::<PercentUnits>::of(
+            &SimpleFraction::new(self.addon_optimal_interest_rate, self.utilization_optimal),
+            utilization_factor,
+        )
+        .map(|utilization_config| {
+            utilization_config
+                .checked_add(self.base_interest_rate.into())
+                .map(|res| Percent100::try_from(res).expect("The borrow rate must not exceed 100%"))
+                .expect("Addition must not fail")
+        })
+        .expect("The utilization_config must be a valid Percent")
     }
 
     fn validate(&self) -> bool {
-        self.base_interest_rate <= Percent::HUNDRED
-            && self.utilization_optimal > Percent::ZERO
-            && self.utilization_optimal < Percent::HUNDRED
-            && self.addon_optimal_interest_rate <= Percent::HUNDRED
+        self.utilization_optimal > Percent100::ZERO
+            && self.utilization_optimal < Percent100::HUNDRED
+    }
+
+    fn utilization_factor_max(&self) -> Percent {
+        Percent::from_fraction(
+            self.utilization_optimal.units(),
+            self.utilization_optimal.complement().units(),
+        )
+        .expect("The utilization_max must be a valid Percent: utilization_opt < 100% ensures the ratio is valid Percent100, which always fits within Percent's wider range")
     }
 }
 
@@ -97,83 +111,59 @@ impl TryFrom<UncheckedInterestRate> for InterestRate {
 
 #[derive(Serialize, Deserialize)]
 struct UncheckedInterestRate {
-    base_interest_rate: Percent,
-    utilization_optimal: Percent,
-    addon_optimal_interest_rate: Percent,
+    base_interest_rate: Percent100,
+    utilization_optimal: Percent100,
+    addon_optimal_interest_rate: Percent100,
 }
 
 #[cfg(test)]
 mod tests {
-    use finance::percent::Percent;
+    use finance::percent::Percent100;
 
     use crate::borrow::InterestRate;
 
     #[test]
     fn test_constructor() {
         assert!(
-            InterestRate::new(Percent::ZERO, Percent::from_percent(1), Percent::ZERO).is_some(),
+            InterestRate::new(
+                Percent100::ZERO,
+                Percent100::from_percent(1),
+                Percent100::ZERO
+            )
+            .is_some(),
             ""
         );
-        assert!(InterestRate::new(Percent::ZERO, Percent::HUNDRED, Percent::ZERO).is_none());
+        assert!(
+            InterestRate::new(Percent100::ZERO, Percent100::HUNDRED, Percent100::ZERO).is_none()
+        );
         assert!(
             InterestRate::new(
-                Percent::from_percent(25),
-                Percent::from_percent(50),
-                Percent::from_percent(75)
+                Percent100::from_percent(25),
+                Percent100::from_percent(50),
+                Percent100::from_percent(75)
             )
             .is_some()
         );
-        assert!(InterestRate::new(Percent::HUNDRED, Percent::HUNDRED, Percent::HUNDRED).is_none());
+        assert!(
+            InterestRate::new(
+                Percent100::HUNDRED,
+                Percent100::HUNDRED,
+                Percent100::HUNDRED
+            )
+            .is_none()
+        );
 
-        assert!(InterestRate::new(Percent::ZERO, Percent::ZERO, Percent::ZERO).is_none());
+        assert!(InterestRate::new(Percent100::ZERO, Percent100::ZERO, Percent100::ZERO).is_none());
         assert!(
             InterestRate::new(
-                Percent::from_percent(25),
-                Percent::ZERO,
-                Percent::from_percent(75)
-            )
-            .is_none()
-        );
-        assert!(InterestRate::new(Percent::HUNDRED, Percent::ZERO, Percent::HUNDRED).is_none());
-        assert!(
-            InterestRate::new(
-                Percent::from_percent(101),
-                Percent::HUNDRED,
-                Percent::HUNDRED
+                Percent100::from_percent(25),
+                Percent100::ZERO,
+                Percent100::from_percent(75)
             )
             .is_none()
         );
         assert!(
-            InterestRate::new(
-                Percent::HUNDRED,
-                Percent::from_percent(101),
-                Percent::HUNDRED
-            )
-            .is_none()
-        );
-        assert!(
-            InterestRate::new(
-                Percent::HUNDRED,
-                Percent::HUNDRED,
-                Percent::from_percent(101)
-            )
-            .is_none()
-        );
-        assert!(
-            InterestRate::new(
-                Percent::from_percent(101),
-                Percent::ZERO,
-                Percent::from_percent(101)
-            )
-            .is_none()
-        );
-        assert!(
-            InterestRate::new(
-                Percent::from_percent(101),
-                Percent::from_percent(101),
-                Percent::from_percent(101)
-            )
-            .is_none()
+            InterestRate::new(Percent100::HUNDRED, Percent100::ZERO, Percent100::HUNDRED).is_none()
         );
     }
 
@@ -182,7 +172,7 @@ mod tests {
         use crate::borrow::InterestRate;
         use finance::{
             coin::{Amount, Coin},
-            percent::{Percent, Units},
+            percent::{Percent100, Units},
         };
         use lpp_platform::NLpn;
 
@@ -198,22 +188,23 @@ mod tests {
             utilization_optimal: u32,
             addon_optimal_interest_rate: u32,
         ) -> InterestRate {
-            InterestRate::new(
-                Percent::from_permille(base_interest_rate),
-                Percent::from_permille(utilization_optimal),
-                Percent::from_permille(addon_optimal_interest_rate),
-            )
-            .expect("Rates should be less or equal to a thousand!")
+            let res = InterestRate::new(
+                Percent100::from_permille(base_interest_rate),
+                Percent100::from_permille(utilization_optimal),
+                Percent100::from_permille(addon_optimal_interest_rate),
+            );
+
+            res.expect("Rates must not exceed 100%!")
         }
 
-        fn ratio(n: Units, d: Units) -> Percent {
-            Percent::from_ratio(n, d)
+        fn ratio(n: Units, d: Units) -> Percent100 {
+            Percent100::from_ratio(n, d)
         }
 
         #[derive(Copy, Clone)]
         struct InOut((Amount, Amount), (Units, Units));
 
-        fn in_out(InOut((l, b), (n, d)): InOut) -> ((Coin<NLpn>, Coin<NLpn>), Percent) {
+        fn in_out(InOut((l, b), (n, d)): InOut) -> ((Coin<NLpn>, Coin<NLpn>), Percent100) {
             ((Coin::new(l), Coin::new(b)), ratio(n, d))
         }
 
@@ -264,9 +255,9 @@ mod tests {
 
         #[test]
         fn test_corner_set() {
-            let rate = rate(1000, 900, 1000);
+            let rate = rate(300, 857, 100);
 
-            let set = [InOut((0, 0), (11, 1)), InOut((10, 0), (11, 1))];
+            let set = [InOut((0, 0), (999, 1000)), InOut((730, 123), (992, 1000))];
             do_test_calculate(rate, &set);
         }
 

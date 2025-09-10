@@ -1,12 +1,12 @@
 use std::marker::PhantomData;
 
 use serde::{Deserialize, Serialize};
+use thiserror::Error;
 
 use currency::{self, CurrencyDTO, CurrencyDef};
 use deposit::WithDepositer;
 use platform::batch::Batch;
 use sdk::cosmwasm_std::{Addr, QuerierWrapper, StdError};
-use thiserror::Error;
 
 use crate::msg::{LoanResponse, QueryLoanResponse, QueryMsg};
 

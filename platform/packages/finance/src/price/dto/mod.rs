@@ -219,10 +219,13 @@ where
 #[cfg(test)]
 mod test_invariant {
 
-    use currency::test::{
-        SuperGroup, SuperGroupTestC1, SuperGroupTestC2, SuperGroupTestC4, SuperGroupTestC5,
+    use currency::{
+        CurrencyDef, Group, MemberOf,
+        error::Error as CurrencyError,
+        test::{
+            SuperGroup, SuperGroupTestC1, SuperGroupTestC2, SuperGroupTestC4, SuperGroupTestC5,
+        },
     };
-    use currency::{CurrencyDef, Group, MemberOf, error::Error as CurrencyError};
     use sdk::cosmwasm_std::{StdError as CWError, StdResult as CWResult, from_json};
 
     use crate::{

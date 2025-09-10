@@ -17,16 +17,17 @@ where
     }
 }
 
-impl<C, QuoteC> Fractionable<usize> for Price<C, QuoteC>
+// Used only for average price calculation
+impl<C, QuoteC> Fractionable<u128> for Price<C, QuoteC>
 where
     C: 'static,
     QuoteC: 'static,
 {
     fn safe_mul<F>(self, fraction: &F) -> Self
     where
-        F: RatioLegacy<usize>,
+        F: RatioLegacy<u128>,
     {
-        self.lossy_mul(&RatioTryUpcast(fraction))
+        self.lossy_mul(fraction)
     }
 }
 
@@ -46,24 +47,6 @@ where
     }
 }
 
-struct RatioTryUpcast<'a, R>(&'a R)
-where
-    R: RatioLegacy<usize>;
-
-const EXPECT_MSG: &str = "usize should convert into u128";
-
-impl<R> RatioLegacy<Amount> for RatioTryUpcast<'_, R>
-where
-    R: RatioLegacy<usize>,
-{
-    fn parts(&self) -> Amount {
-        self.0.parts().try_into().expect(EXPECT_MSG)
-    }
-    fn total(&self) -> Amount {
-        self.0.total().try_into().expect(EXPECT_MSG)
-    }
-}
-
 #[cfg(test)]
 mod test {
     use currency::test::{SubGroupTestC10, SuperGroupTestC1};
@@ -73,31 +56,31 @@ mod test {
     mod percent {
         use crate::fraction::Fraction;
         use crate::fractionable::price::test::{c, q};
-        use crate::{percent::Percent, price};
+        use crate::{percent::Percent100, price};
 
         #[test]
         fn greater_than_one() {
             let price = price::total_of(c(1)).is(q(1000));
-            let permille = Percent::from_permille(1);
+            let permille = Percent100::from_permille(1);
             assert_eq!(permille.of(price), price::total_of(c(1)).is(q(1)));
         }
 
         #[test]
         fn less_than_one() {
             let price = price::total_of(c(10)).is(q(1));
-            let twenty_percents = Percent::from_percent(20);
+            let twenty_percents = Percent100::from_percent(20);
             assert_eq!(twenty_percents.of(price), price::total_of(c(50)).is(q(1)));
         }
     }
-    mod usize_ratio {
+    mod u128_ratio {
         use currency::test::{SubGroupTestC10, SuperGroupTestC1};
 
         use crate::{
             coin::{Amount, Coin},
-            fraction::Fraction,
             fractionable::price::test::{c, q},
             price,
-            ratio::Rational,
+            ratio::SimpleFraction,
+            rational::Rational,
         };
 
         #[test]
@@ -137,15 +120,15 @@ mod test {
         fn test_impl(
             amount1: Coin<SubGroupTestC10>,
             quote1: Coin<SuperGroupTestC1>,
-            nominator: usize,
-            denominator: usize,
+            nominator: u128,
+            denominator: u128,
             amount_exp: Coin<SubGroupTestC10>,
             quote_exp: Coin<SuperGroupTestC1>,
         ) {
             let price = price::total_of(amount1).is(quote1);
-            let ratio = Rational::new(nominator, denominator);
+            let ratio = SimpleFraction::new(nominator, denominator);
             assert_eq!(
-                Fraction::<usize>::of(&ratio, price),
+                Rational::<u128>::of(&ratio, price).unwrap(),
                 price::total_of(amount_exp).is(quote_exp)
             );
         }

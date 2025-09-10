@@ -1,16 +1,16 @@
-use crate::percent::Percent;
+use crate::percent::Percent100;
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 #[cfg_attr(any(test, feature = "testing"), derive(Debug))]
 pub enum Level {
-    First(Percent),
-    Second(Percent),
-    Third(Percent),
-    Max(Percent),
+    First(Percent100),
+    Second(Percent100),
+    Third(Percent100),
+    Max(Percent100),
 }
 
 impl Level {
-    pub fn ltv(&self) -> Percent {
+    pub fn ltv(&self) -> Percent100 {
         *match self {
             Self::First(ltv) | Self::Second(ltv) | Self::Third(ltv) | Self::Max(ltv) => ltv,
         }
@@ -26,7 +26,7 @@ impl Level {
     }
 }
 
-impl From<Level> for Percent {
+impl From<Level> for Percent100 {
     fn from(value: Level) -> Self {
         value.ltv()
     }

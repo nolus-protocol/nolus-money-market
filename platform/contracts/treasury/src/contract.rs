@@ -5,7 +5,7 @@ use admin_contract::msg::{
     ProtocolQueryResponse, ProtocolsQueryResponse, QueryMsg as ProtocolsRegistry,
 };
 use currency::platform::PlatformGroup;
-use finance::{duration::Duration, percent::Percent};
+use finance::{duration::Duration, percent::Percent100};
 use platform::{
     batch::Batch,
     contract::{self, Validator},
@@ -158,7 +158,7 @@ fn query_reward_apr(
     storage: &dyn Storage,
     querier: QuerierWrapper<'_>,
     env: &Env,
-) -> ContractResult<Percent> {
+) -> ContractResult<Percent100> {
     try_load_config(storage)
         .and_then(|config| try_build_reward(config, querier, env))
         .map(|rewards| rewards.apr())
@@ -262,7 +262,7 @@ fn setup_dispatching(
 #[cfg(test)]
 mod tests {
     use cosmwasm_std::MessageInfo;
-    use finance::percent::Percent;
+    use finance::percent::Percent100;
     use sdk::{
         cosmwasm_ext::Response as CwResponse,
         cosmwasm_std::{
@@ -292,11 +292,11 @@ mod tests {
             tvl_to_apr: RewardScale::try_from(vec![
                 Bar {
                     tvl: TotalValueLocked::new(0),
-                    apr: Percent::from_permille(5),
+                    apr: Percent100::from_permille(5),
                 },
                 Bar {
                     tvl: TotalValueLocked::new(1000),
-                    apr: Percent::from_permille(10),
+                    apr: Percent100::from_permille(10),
                 },
             ])
             .unwrap(),

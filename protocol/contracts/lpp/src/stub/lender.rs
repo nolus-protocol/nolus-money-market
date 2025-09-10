@@ -1,5 +1,7 @@
 use std::marker::PhantomData;
 
+use thiserror::Error;
+
 use currency::CurrencyDef;
 use finance::coin::Coin;
 use platform::{
@@ -7,7 +9,6 @@ use platform::{
     reply,
 };
 use sdk::cosmwasm_std::{Addr, QuerierWrapper, Reply, StdError};
-use thiserror::Error;
 
 use crate::msg::{ExecuteMsg, LoanResponse, QueryMsg, QueryQuoteResponse};
 

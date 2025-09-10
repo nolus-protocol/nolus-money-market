@@ -1,9 +1,9 @@
-use currency::Currency;
 use serde::{Deserialize, Serialize};
 
+use currency::Currency;
 use finance::{
     coin::{Amount, Coin},
-    percent::Percent,
+    percent::Percent100,
 };
 use sdk::cosmwasm_std::{StdError, StdResult};
 
@@ -35,7 +35,7 @@ impl TotalValueLocked {
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub struct Bar {
     pub tvl: TotalValueLocked,
-    pub apr: Percent,
+    pub apr: Percent100,
 }
 
 // A list of (minTVL_thousands: u32, APR%o) which defines the APR as per the TVL.
@@ -48,7 +48,7 @@ pub struct RewardScale {
 }
 
 impl RewardScale {
-    pub fn new(initial_apr: Percent) -> Self {
+    pub fn new(initial_apr: Percent100) -> Self {
         RewardScale {
             bars: vec![Bar {
                 tvl: Default::default(),
@@ -85,7 +85,7 @@ impl RewardScale {
         Ok(self)
     }
 
-    pub fn get_apr<StableC>(&self, tvl_total: Coin<StableC>) -> Percent
+    pub fn get_apr<StableC>(&self, tvl_total: Coin<StableC>) -> Percent100
     where
         StableC: Currency,
     {
@@ -118,17 +118,17 @@ mod tests {
     use currency::test::SuperGroupTestC1;
     use finance::{
         coin::{Amount, Coin},
-        percent::Percent,
+        percent::Percent100,
     };
 
     use super::{Bar, RewardScale, TotalValueLocked};
 
     #[test]
     fn rewards_scale_new() {
-        let cfg = RewardScale::new(Percent::from_permille(6));
+        let cfg = RewardScale::new(Percent100::from_permille(6));
         let initial = cfg.bars.first().unwrap();
         assert_eq!(initial.tvl, Default::default());
-        assert_eq!(initial.apr, Percent::from_permille(6));
+        assert_eq!(initial.apr, Percent100::from_permille(6));
         assert_eq!(cfg.bars.len(), 1);
     }
 
@@ -138,27 +138,27 @@ mod tests {
 
         let _ = RewardScale::try_from(vec![Bar {
             tvl: TotalValueLocked::new(30),
-            apr: Percent::from_permille(6),
+            apr: Percent100::from_permille(6),
         }])
         .unwrap_err();
 
         let res = RewardScale::try_from(vec![
             Bar {
                 tvl: Default::default(),
-                apr: Percent::from_permille(6),
+                apr: Percent100::from_permille(6),
             },
             Bar {
                 tvl: TotalValueLocked::new(30),
-                apr: Percent::from_permille(10),
+                apr: Percent100::from_permille(10),
             },
         ])
         .unwrap();
 
         assert_eq!(res.bars.len(), 2);
         assert_eq!(res.bars[0].tvl, Default::default());
-        assert_eq!(res.bars[0].apr, Percent::from_permille(6));
+        assert_eq!(res.bars[0].apr, Percent100::from_permille(6));
         assert_eq!(res.bars[1].tvl, TotalValueLocked::new(30));
-        assert_eq!(res.bars[1].apr, Percent::from_permille(10));
+        assert_eq!(res.bars[1].apr, Percent100::from_permille(10));
     }
 
     #[test]
@@ -166,77 +166,80 @@ mod tests {
         let res = RewardScale::try_from(vec![
             Bar {
                 tvl: Default::default(),
-                apr: Percent::from_permille(6),
+                apr: Percent100::from_permille(6),
             },
             Bar {
                 tvl: TotalValueLocked::new(30),
-                apr: Percent::from_permille(10),
+                apr: Percent100::from_permille(10),
             },
             Bar {
                 tvl: TotalValueLocked::new(150),
-                apr: Percent::from_permille(15),
+                apr: Percent100::from_permille(15),
             },
             Bar {
                 tvl: TotalValueLocked::new(300),
-                apr: Percent::from_permille(20),
+                apr: Percent100::from_permille(20),
             },
             Bar {
                 tvl: TotalValueLocked::new(100),
-                apr: Percent::from_permille(12),
+                apr: Percent100::from_permille(12),
             },
         ])
         .unwrap();
 
         assert_eq!(
             res.get_apr::<SuperGroupTestC1>(0.into()),
-            Percent::from_permille(6)
+            Percent100::from_permille(6)
         );
         assert_eq!(
             res.get_apr(coin(TotalValueLocked::SCALE_FACTOR)),
-            Percent::from_permille(6)
+            Percent100::from_permille(6)
         );
         assert_eq!(
             res.get_apr(coin(30 * TotalValueLocked::SCALE_FACTOR - 1)),
-            Percent::from_permille(6)
+            Percent100::from_permille(6)
         );
         assert_eq!(
             res.get_apr(coin(30 * TotalValueLocked::SCALE_FACTOR)),
-            Percent::from_permille(10)
+            Percent100::from_permille(10)
         );
         assert_eq!(
             res.get_apr(coin(30 * TotalValueLocked::SCALE_FACTOR + 1)),
-            Percent::from_permille(10)
+            Percent100::from_permille(10)
         );
         assert_eq!(
             res.get_apr(coin(100 * TotalValueLocked::SCALE_FACTOR + 1)),
-            Percent::from_permille(12)
+            Percent100::from_permille(12)
         );
         assert_eq!(
             res.get_apr(coin(150 * TotalValueLocked::SCALE_FACTOR - 1)),
-            Percent::from_permille(12)
+            Percent100::from_permille(12)
         );
         assert_eq!(
             res.get_apr(coin(150 * TotalValueLocked::SCALE_FACTOR)),
-            Percent::from_permille(15)
+            Percent100::from_permille(15)
         );
         assert_eq!(
             res.get_apr(coin(200 * TotalValueLocked::SCALE_FACTOR)),
-            Percent::from_permille(15)
+            Percent100::from_permille(15)
         );
         assert_eq!(
             res.get_apr(coin(300 * TotalValueLocked::SCALE_FACTOR)),
-            Percent::from_permille(20)
+            Percent100::from_permille(20)
         );
         assert_eq!(
             res.get_apr(coin(300 * TotalValueLocked::SCALE_FACTOR + 1)),
-            Percent::from_permille(20)
+            Percent100::from_permille(20)
         );
         assert_eq!(
             res.get_apr(coin(1300 * TotalValueLocked::SCALE_FACTOR + 1)),
-            Percent::from_permille(20)
+            Percent100::from_permille(20)
         );
-        assert_eq!(res.get_apr(coin(Amount::MAX)), Percent::from_permille(20));
-        assert_eq!(res.get_apr(coin(Amount::MIN)), Percent::from_permille(6));
+        assert_eq!(
+            res.get_apr(coin(Amount::MAX)),
+            Percent100::from_permille(20)
+        );
+        assert_eq!(res.get_apr(coin(Amount::MIN)), Percent100::from_permille(6));
     }
 
     fn coin(amount: Amount) -> Coin<SuperGroupTestC1> {

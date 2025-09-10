@@ -1,12 +1,7 @@
 use currencies::Lpns;
 use currency::{CurrencyDef, MemberOf};
 use finance::{
-    coin::Coin,
-    fraction::Fraction,
-    percent::{Percent, Units},
-    price,
-    ratio::Rational,
-    zero::Zero,
+    coin::Coin, percent::Percent100, price, ratio::SimpleFraction, rational::Rational, zero::Zero,
 };
 use lpp_platform::NLpn;
 use platform::{bank::BankAccountView, contract::Validator};
@@ -87,27 +82,25 @@ where
         now: &Timestamp,
         pending_deposit: Coin<Lpn>,
     ) -> Result<Option<Coin<Lpn>>> {
-        let min_utilization: Percent = self.config.min_utilization().percent();
+        let min_utilization = self.config.min_utilization();
 
         if min_utilization.is_zero() {
             Ok(None)
         } else {
-            let total_due: Coin<Lpn> = self.total_due(now);
+            let total_due = self.total_due(now);
 
-            self.commited_balance(pending_deposit)
-                .map(|balance: Coin<Lpn>| {
-                    if self.utilization(balance, total_due) > min_utilization {
-                        // a followup from the above true value is (total_due * 100 / min_utilization) > (balance + total_due)
-                        Fraction::<Units>::of(
-                            &Rational::new(Percent::HUNDRED, min_utilization),
-                            total_due,
-                        ) - balance
-                            - total_due
-                    } else {
-                        Coin::ZERO
-                    }
-                })
-                .map(Some)
+            self.commited_balance(pending_deposit).map(|balance| {
+                if self.utilization(balance, total_due) > min_utilization {
+                    // a followup from the above true value is (total_due * 100 / min_utilization) > (balance + total_due)
+                    Rational::<Percent100>::of(
+                        &SimpleFraction::new(Percent100::HUNDRED, min_utilization),
+                        total_due,
+                    )
+                    .map(|res| res - balance - total_due)
+                } else {
+                    Some(Coin::ZERO)
+                }
+            })
         }
     }
 
@@ -207,11 +200,11 @@ where
             })
     }
 
-    pub fn balance_nlpn(&self) -> Coin<NLpn> {
+    pub const fn balance_nlpn(&self) -> Coin<NLpn> {
         self.total.receipts()
     }
 
-    pub fn query_quote(&self, quote: Coin<Lpn>, now: &Timestamp) -> Result<Option<Percent>> {
+    pub fn query_quote(&self, quote: Coin<Lpn>, now: &Timestamp) -> Result<Option<Percent100>> {
         let balance = self.uncommited_balance()?;
 
         if quote > balance {
@@ -284,11 +277,11 @@ where
             .map(|balance: Coin<Lpn>| balance + self.total_due(now))
     }
 
-    fn utilization(&self, balance: Coin<Lpn>, total_due: Coin<Lpn>) -> Percent {
+    fn utilization(&self, balance: Coin<Lpn>, total_due: Coin<Lpn>) -> Percent100 {
         if balance.is_zero() {
-            Percent::HUNDRED
+            Percent100::HUNDRED
         } else {
-            Percent::from_ratio(total_due, total_due + balance)
+            Percent100::from_ratio(total_due, total_due + balance)
         }
     }
 }
@@ -300,7 +293,7 @@ mod test {
         coin::Coin,
         duration::Duration,
         fraction::Fraction,
-        percent::{Percent, bound::BoundToHundredPercent},
+        percent::Percent100,
         price::{self, Price},
         zero::Zero,
     };
@@ -320,10 +313,10 @@ mod test {
 
     type TheCurrency = Lpn;
 
-    const BASE_INTEREST_RATE: Percent = Percent::from_permille(70);
-    const UTILIZATION_OPTIMAL: Percent = Percent::from_permille(700);
-    const ADDON_OPTIMAL_INTEREST_RATE: Percent = Percent::from_permille(20);
-    const DEFAULT_MIN_UTILIZATION: BoundToHundredPercent = BoundToHundredPercent::ZERO;
+    const BASE_INTEREST_RATE: Percent100 = Percent100::from_permille(70);
+    const UTILIZATION_OPTIMAL: Percent100 = Percent100::from_permille(700);
+    const ADDON_OPTIMAL_INTEREST_RATE: Percent100 = Percent100::from_permille(20);
+    const DEFAULT_MIN_UTILIZATION: Percent100 = Percent100::ZERO;
 
     #[test]
     fn new_store_load() {
@@ -409,7 +402,7 @@ mod test {
 
         let now = now + Duration::from_nanos(10); //deliberately hide the variable name
         assert_eq!(
-            Percent::from_permille(136),
+            Percent100::from_permille(136),
             lpp.query_quote(Coin::new(7_700_000), &now)
                 .expect("can't query quote")
                 .expect("should return some interest_rate")
@@ -427,7 +420,7 @@ mod test {
             .expect("can't query quote")
             .expect("should return some interest_rate");
 
-        assert_eq!(result, Percent::from_permille(136));
+        assert_eq!(result, Percent100::from_permille(136));
     }
 
     #[test]
@@ -647,7 +640,7 @@ mod test {
         const DEPOSIT: Coin<TheCurrency> = Coin::new(10_000_000);
         const DEPOSIT_RECEIPTS: Coin<NLpn> = Coin::new(10_000_000);
         const LOAN_AMOUNT: Coin<TheCurrency> = Coin::new(5_000_000);
-        const EXPECTED_INTEREST_RATE: Percent = Percent::from_permille(220);
+        const EXPECTED_INTEREST_RATE: Percent100 = Percent100::from_permille(220);
         const LOAN_REPAYMENT: Coin<TheCurrency> = Coin::new(6_000_000);
 
         let mut store = MockStorage::new();
@@ -660,9 +653,9 @@ mod test {
         let config = ApiConfig::new(
             lease_code_id,
             InterestRate::new(
-                Percent::from_percent(18),
-                Percent::from_percent(50),
-                Percent::from_percent(2),
+                Percent100::from_percent(18),
+                Percent100::from_percent(50),
+                Percent100::from_percent(2),
             )
             .expect("Couldn't construct interest rate value!"),
             DEFAULT_MIN_UTILIZATION,
@@ -742,7 +735,7 @@ mod test {
     mod min_utilization {
         use finance::{
             coin::{Amount, Coin},
-            percent::{Percent, bound::BoundToHundredPercent},
+            percent::Percent100,
             zero::Zero,
         };
         use platform::{bank::testing::MockBankView, contract::Code};
@@ -752,27 +745,32 @@ mod test {
 
         use super::{super::LiquidityPool, TheCurrency};
 
-        const FIFTY_PERCENT_MIN_UTILIZATION: fn() -> BoundToHundredPercent =
-            || Percent::from_permille(500).try_into().unwrap();
+        const FIFTY_PERCENT_MIN_UTILIZATION: Percent100 = Percent100::from_permille(500);
 
         fn test_case(
             borrowed: Amount,
             lpp_balance: Amount,
-            min_utilization: BoundToHundredPercent,
+            min_utilization: Percent100,
             expected_limit: Option<Amount>,
         ) {
             let now = Timestamp::from_seconds(120);
             let mut total: Total<TheCurrency> = Total::new();
 
-            total.borrow(now, borrowed.into(), Percent::ZERO).unwrap();
+            total
+                .borrow(now, borrowed.into(), Percent100::ZERO)
+                .unwrap();
 
             let bank =
                 MockBankView::<TheCurrency, TheCurrency>::only_balance(Coin::new(lpp_balance));
             let lpp = LiquidityPool::<TheCurrency, _> {
                 config: &ApiConfig::new(
                     Code::unchecked(0xDEADC0DE_u64),
-                    InterestRate::new(Percent::ZERO, Percent::from_permille(500), Percent::HUNDRED)
-                        .unwrap(),
+                    InterestRate::new(
+                        Percent100::ZERO,
+                        Percent100::from_permille(500),
+                        Percent100::HUNDRED,
+                    )
+                    .unwrap(),
                     min_utilization,
                 ),
                 total,
@@ -787,22 +785,22 @@ mod test {
 
         #[test]
         fn test_deposit_capacity_no_min_util_below_50() {
-            test_case(50, 100, BoundToHundredPercent::ZERO, None);
+            test_case(50, 100, Percent100::ZERO, None);
         }
 
         #[test]
         fn test_deposit_capacity_no_min_util_at_50() {
-            test_case(50, 50, BoundToHundredPercent::ZERO, None);
+            test_case(50, 50, Percent100::ZERO, None);
         }
 
         #[test]
         fn test_deposit_capacity_no_min_util_above_50() {
-            test_case(100, 50, BoundToHundredPercent::ZERO, None);
+            test_case(100, 50, Percent100::ZERO, None);
         }
 
         #[test]
         fn test_deposit_capacity_no_min_util_at_100() {
-            test_case(50, 0, BoundToHundredPercent::ZERO, None);
+            test_case(50, 0, Percent100::ZERO, None);
         }
 
         #[test]
@@ -810,7 +808,7 @@ mod test {
             test_case(
                 50,
                 100,
-                FIFTY_PERCENT_MIN_UTILIZATION(),
+                FIFTY_PERCENT_MIN_UTILIZATION,
                 Some(Default::default()),
             );
         }
@@ -820,19 +818,19 @@ mod test {
             test_case(
                 50,
                 50,
-                FIFTY_PERCENT_MIN_UTILIZATION(),
+                FIFTY_PERCENT_MIN_UTILIZATION,
                 Some(Default::default()),
             );
         }
 
         #[test]
         fn test_deposit_capacity_above_min_util() {
-            test_case(100, 50, FIFTY_PERCENT_MIN_UTILIZATION(), Some(50));
+            test_case(100, 50, FIFTY_PERCENT_MIN_UTILIZATION, Some(50));
         }
 
         #[test]
         fn test_deposit_capacity_at_max_util() {
-            test_case(50, 0, FIFTY_PERCENT_MIN_UTILIZATION(), Some(50));
+            test_case(50, 0, FIFTY_PERCENT_MIN_UTILIZATION, Some(50));
         }
     }
 
@@ -840,7 +838,7 @@ mod test {
         use finance::{
             coin::Coin,
             duration::Duration,
-            percent::{Percent, bound::BoundToHundredPercent},
+            percent::Percent100,
             price::{self, Price},
             zero::Zero,
         };
@@ -867,9 +865,13 @@ mod test {
 
             let config = Config::new(
                 Code::unchecked(0xDEADC0DE_u64),
-                InterestRate::new(Percent::ZERO, Percent::from_permille(500), Percent::HUNDRED)
-                    .unwrap(),
-                BoundToHundredPercent::strict_from_percent(Percent::ZERO),
+                InterestRate::new(
+                    Percent100::ZERO,
+                    Percent100::from_permille(500),
+                    Percent100::from_permille(500),
+                )
+                .unwrap(),
+                Percent100::ZERO,
             );
             let bank = MockBankView::<TheCurrency, TheCurrency>::only_balance(DEPOSIT1);
             let mut lpp = LiquidityPool::<TheCurrency, _>::new(&config, &bank);
@@ -912,9 +914,13 @@ mod test {
 
             let config = Config::new(
                 Code::unchecked(0xDEADC0DE_u64),
-                InterestRate::new(Percent::ZERO, Percent::from_permille(500), Percent::HUNDRED)
-                    .unwrap(),
-                BoundToHundredPercent::strict_from_percent(Percent::ZERO),
+                InterestRate::new(
+                    Percent100::ZERO,
+                    Percent100::from_permille(500),
+                    Percent100::from_permille(500),
+                )
+                .unwrap(),
+                Percent100::ZERO,
             );
             let bank = MockBankView::<TheCurrency, TheCurrency>::only_balance(DEPOSIT1);
             let mut lpp = LiquidityPool::<TheCurrency, _>::new(&config, &bank);
@@ -960,9 +966,13 @@ mod test {
 
             let config = Config::new(
                 Code::unchecked(0xDEADC0DE_u64),
-                InterestRate::new(Percent::ZERO, Percent::from_permille(500), Percent::HUNDRED)
-                    .unwrap(),
-                BoundToHundredPercent::strict_from_percent(Percent::ZERO),
+                InterestRate::new(
+                    Percent100::ZERO,
+                    Percent100::from_permille(500),
+                    Percent100::HUNDRED,
+                )
+                .unwrap(),
+                Percent100::ZERO,
             );
             let bank = MockBankView::<TheCurrency, TheCurrency>::only_balance(DEPOSIT1);
             let mut lpp = LiquidityPool::<TheCurrency, _>::new(&config, &bank);

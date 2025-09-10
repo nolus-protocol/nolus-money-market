@@ -1,5 +1,6 @@
-use finance::percent::Percent;
 use serde::{Deserialize, Serialize};
+
+use finance::percent::Percent100;
 
 use super::LeaseCoin;
 
@@ -28,7 +29,7 @@ pub struct PartialClose {
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub enum ChangeCmd {
     Reset,
-    Set(Percent),
+    Set(Percent100),
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Eq)]
@@ -41,7 +42,7 @@ pub struct ClosePolicyChange {
 
 #[cfg(all(feature = "internal.test.skel", test))]
 mod test {
-    use finance::percent::Percent;
+    use finance::percent::Percent100;
     use sdk::cosmwasm_std;
 
     use crate::api::position::{ChangeCmd, ClosePolicyChange};
@@ -63,7 +64,7 @@ mod test {
     #[test]
     fn sl_set() {
         let msg = ClosePolicyChange {
-            stop_loss: Some(ChangeCmd::Set(Percent::from_permille(123))),
+            stop_loss: Some(ChangeCmd::Set(Percent100::from_permille(123))),
             take_profit: None,
         };
         const CLOSE_JSON: &str = "{ \"stop_loss\": { \"set\": 123 } }";
@@ -92,7 +93,7 @@ mod test {
     fn tp_set() {
         let msg = ClosePolicyChange {
             stop_loss: None,
-            take_profit: Some(ChangeCmd::Set(Percent::from_permille(321))),
+            take_profit: Some(ChangeCmd::Set(Percent100::from_permille(321))),
         };
         const CLOSE_JSON: &str = "{ \"take_profit\": { \"set\": 321 } }";
         assert_eq!(
@@ -106,7 +107,7 @@ mod test {
     fn sl_reset_tp_set() {
         let msg = ClosePolicyChange {
             stop_loss: Some(ChangeCmd::Reset),
-            take_profit: Some(ChangeCmd::Set(Percent::from_permille(321))),
+            take_profit: Some(ChangeCmd::Set(Percent100::from_permille(321))),
         };
         const CLOSE_JSON: &str = "{ \"stop_loss\": \"reset\", \"take_profit\": { \"set\": 321 } }";
         assert_eq!(
@@ -119,7 +120,7 @@ mod test {
     #[test]
     fn sl_set_tp_reset() {
         let msg = ClosePolicyChange {
-            stop_loss: Some(ChangeCmd::Set(Percent::from_permille(321))),
+            stop_loss: Some(ChangeCmd::Set(Percent100::from_permille(321))),
             take_profit: Some(ChangeCmd::Reset),
         };
         const CLOSE_JSON: &str = "{ \"stop_loss\": { \"set\": 321 }, \"take_profit\": \"reset\" }";

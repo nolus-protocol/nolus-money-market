@@ -1,3 +1,5 @@
+use serde::Serialize;
+
 use currencies::{
     LeaseGroup as AlarmCurrencies, Lpn as BaseCurrency, Lpns as BaseCurrencies,
     PaymentGroup as PriceCurrencies, Stable as StableCurrency,
@@ -13,7 +15,6 @@ use sdk::{
         entry_point,
     },
 };
-use serde::Serialize;
 use versioning::{
     ProtocolMigrationMessage, ProtocolPackageRelease, UpdatablePackage as _, VersionSegment,
     package_name, package_version,
@@ -221,7 +222,7 @@ mod tests {
         LeaseGroup, Lpn, Lpns, PaymentGroup,
         testing::{LeaseC1, PaymentC1, PaymentC9},
     };
-    use finance::{duration::Duration, percent::Percent, price};
+    use finance::{duration::Duration, percent::Percent100, price};
     use platform::tests as platform_tests;
     use sdk::cosmwasm_std::{self, testing::mock_env};
 
@@ -239,7 +240,7 @@ mod tests {
         use marketprice::config::Config as PriceConfig;
         let msg = dummy_instantiate_msg(
             60,
-            Percent::from_percent(50),
+            Percent100::from_percent(50),
             test_tree::minimal_swap_tree(),
         );
         let (deps, _info) = setup_test(msg).unwrap();
@@ -249,10 +250,10 @@ mod tests {
         assert_eq!(
             Config {
                 price_config: PriceConfig::new(
-                    Percent::from_percent(50),
+                    Percent100::from_percent(50),
                     Duration::from_secs(60),
                     1,
-                    Percent::from_percent(88),
+                    Percent100::from_percent(88),
                 ),
             },
             value

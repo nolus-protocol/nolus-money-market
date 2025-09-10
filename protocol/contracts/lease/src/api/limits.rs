@@ -1,5 +1,6 @@
-use dex::MaxSlippage;
 use serde::{Deserialize, Serialize};
+
+use dex::MaxSlippage;
 
 /// The query API any contract who implements [PositionLimits] should respond to
 #[derive(Serialize, PartialEq, Eq)]

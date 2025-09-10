@@ -4,7 +4,7 @@ use currency::{AnyVisitor, Currency, CurrencyDTO, CurrencyDef, MemberOf};
 use finance::{
     coin::{Coin, WithCoin},
     liability::Liability,
-    percent::Percent,
+    percent::{Percent, Percent100},
     price::total,
 };
 use lease::api::DownpaymentCoin;
@@ -28,7 +28,7 @@ pub struct Quote<'r> {
     downpayment: DownpaymentCoin,
     oracle: OracleRef,
     liability: Liability,
-    lease_interest_rate_margin: Percent,
+    lease_interest_rate_margin: Percent100,
     max_ltd: Option<Percent>,
 }
 
@@ -39,7 +39,7 @@ impl<'r> Quote<'r> {
         lease_asset: CurrencyDTO<LeaseCurrencies>,
         oracle: OracleRef,
         liability: Liability,
-        lease_interest_rate_margin: Percent,
+        lease_interest_rate_margin: Percent100,
         max_ltd: Option<Percent>,
     ) -> Self {
         Self {
@@ -92,7 +92,7 @@ where
         }
     }
 
-    pub fn with(&self, borrow: Coin<Lpn>) -> Result<Percent, ContractError> {
+    pub fn with(&self, borrow: Coin<Lpn>) -> Result<Percent100, ContractError> {
         if borrow.is_zero() {
             return Err(ContractError::ZeroDownpayment {});
         }
@@ -115,7 +115,7 @@ where
     lease_asset: CurrencyDTO<LeaseCurrencies>,
     lpp_quote: LppQuote<Lpn, Lpp>,
     liability: Liability,
-    lease_interest_rate_margin: Percent,
+    lease_interest_rate_margin: Percent100,
     max_ltd: Option<Percent>,
 }
 
@@ -153,7 +153,7 @@ where
     lpp_quote: LppQuote<Lpn, Lpp>,
     oracle: Oracle,
     liability: Liability,
-    lease_interest_rate_margin: Percent,
+    lease_interest_rate_margin: Percent100,
     max_ltd: Option<Percent>,
 }
 
@@ -192,7 +192,7 @@ where
     lpp_quote: LppQuote<Lpn, Lpp>,
     oracle: Oracle,
     liability: Liability,
-    lease_interest_rate_margin: Percent,
+    lease_interest_rate_margin: Percent100,
     max_ltd: Option<Percent>,
 }
 

@@ -230,10 +230,7 @@ pub fn query_balance(storage: &dyn Storage, addr: Addr) -> Result<BalanceRespons
 
 #[cfg(test)]
 mod test {
-    use finance::{
-        coin::Coin,
-        percent::{Percent, bound::BoundToHundredPercent},
-    };
+    use finance::{coin::Coin, percent::Percent100};
     use platform::{
         bank::{BankAccountView, testing::MockBankView},
         contract::Code,
@@ -255,16 +252,13 @@ mod test {
 
     use super::LiquidityPool;
 
-    const BASE_INTEREST_RATE: Percent = Percent::from_permille(70);
-    const UTILIZATION_OPTIMAL: Percent = Percent::from_permille(700);
-    const ADDON_OPTIMAL_INTEREST_RATE: Percent = Percent::from_permille(20);
-    const DEFAULT_MIN_UTILIZATION: BoundToHundredPercent = BoundToHundredPercent::ZERO;
+    const BASE_INTEREST_RATE: Percent100 = Percent100::from_permille(70);
+    const UTILIZATION_OPTIMAL: Percent100 = Percent100::from_permille(700);
+    const ADDON_OPTIMAL_INTEREST_RATE: Percent100 = Percent100::from_permille(20);
+    const DEFAULT_MIN_UTILIZATION: Percent100 = Percent100::ZERO;
 
-    fn test_case<Balance, F>(
-        initial_lpp_balance: Balance,
-        min_utilization: BoundToHundredPercent,
-        f: F,
-    ) where
+    fn test_case<Balance, F>(initial_lpp_balance: Balance, min_utilization: Percent100, f: F)
+    where
         Balance: Copy + Into<Coin<TheCurrency>>,
         F: FnOnce(MockStorage, ApiConfig, MockBankView<TheCurrency, TheCurrency>, Timestamp),
     {
@@ -279,7 +273,7 @@ mod test {
                 ADDON_OPTIMAL_INTEREST_RATE,
             )
             .expect("Couldn't construct interest rate value!"),
-            BoundToHundredPercent::ZERO,
+            Percent100::ZERO,
         );
         let bank = MockBankView::only_balance(initial_lpp_balance.into());
         setup_storage(&mut store, &config, &bank);
@@ -752,7 +746,7 @@ mod test {
     mod min_utilization {
         use finance::{
             coin::{Amount, Coin},
-            percent::{Percent, bound::BoundToHundredPercent},
+            percent::Percent100,
         };
         use platform::bank::testing::MockBankView;
 
@@ -764,19 +758,19 @@ mod test {
 
         use super::{LiquidityPool, TheCurrency};
 
-        const FIFTY: Percent = Percent::from_permille(500);
+        const FIFTY: Percent100 = Percent100::from_permille(500);
 
         fn test_case(
             lpp_balance_at_deposit: Amount,
             borrowed: Amount,
             deposit: Amount,
-            min_utilization: Percent,
+            min_utilization: Percent100,
             expect_error: bool,
         ) {
             debug_assert!(deposit != 0);
             test::test_case(
                 lpp_balance_at_deposit + borrowed,
-                BoundToHundredPercent::try_from_percent(min_utilization).unwrap(),
+                min_utilization,
                 |mut store, config, bank, now| {
                     if borrowed != 0 {
                         let mut lpp = LiquidityPool::load(&store, &config, &bank).unwrap();
@@ -842,7 +836,7 @@ mod test {
 
         #[test]
         fn test_uncapped() {
-            test_case(50, 0, 50, Percent::ZERO, false);
+            test_case(50, 0, 50, Percent100::ZERO, false);
         }
     }
 }

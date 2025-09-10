@@ -1,10 +1,11 @@
 use std::{marker::PhantomData, result::Result as StdResult};
 
+use thiserror::Error;
+
 use currency::CurrencyDef;
-use finance::{coin::Coin, percent::Percent};
+use finance::{coin::Coin, percent::Percent100};
 use platform::batch::Batch;
 use sdk::cosmwasm_std::Timestamp;
-use thiserror::Error;
 
 use crate::{
     loan::{Loan, RepayShares},
@@ -25,7 +26,7 @@ where
     /// and then, if there is any remaining amount, to repay the principal.
     /// Amount 0 is acceptable although does not change the loan.
     fn repay(&mut self, by: &Timestamp, repayment: Coin<Lpn>) -> RepayShares<Lpn>;
-    fn annual_interest_rate(&self) -> Percent;
+    fn annual_interest_rate(&self) -> Percent100;
 }
 
 #[derive(Error, Debug, PartialEq)]
@@ -77,7 +78,7 @@ where
         self.loan.repay(by, repayment)
     }
 
-    fn annual_interest_rate(&self) -> Percent {
+    fn annual_interest_rate(&self) -> Percent100 {
         self.loan.annual_interest_rate
     }
 }
@@ -118,7 +119,7 @@ where
 #[cfg(test)]
 mod test {
     use currencies::{Lpn, Lpns};
-    use finance::{coin::Coin, duration::Duration, percent::Percent, zero::Zero};
+    use finance::{coin::Coin, duration::Duration, percent::Percent100, zero::Zero};
     use platform::batch::Batch;
     use sdk::cosmwasm_std::Timestamp;
 
@@ -138,7 +139,7 @@ mod test {
             lpp_ref.clone(),
             Loan {
                 principal_due: Coin::<Lpn>::new(100),
-                annual_interest_rate: Percent::from_percent(12),
+                annual_interest_rate: Percent100::from_percent(12),
                 interest_paid: start,
             },
         );
@@ -157,7 +158,7 @@ mod test {
             lpp_ref.clone(),
             Loan {
                 principal_due: Coin::<Lpn>::new(100),
-                annual_interest_rate: Percent::from_percent(12),
+                annual_interest_rate: Percent100::from_percent(12),
                 interest_paid: start,
             },
         );
