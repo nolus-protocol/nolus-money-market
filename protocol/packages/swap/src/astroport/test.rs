@@ -26,7 +26,7 @@ fn const_eq_max_allowed_slippage() {
 #[test]
 fn to_dex_cwcoin() {
     let coin_amount = 3541415;
-    let coin: Coin<SuperGroupTestC1> = coin_amount.into();
+    let coin: Coin<SuperGroupTestC1> = Coin::new(coin_amount);
     assert_eq!(
         ProtoCoin {
             denom: SuperGroupTestC1::dex().into(),

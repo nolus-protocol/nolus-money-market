@@ -12,6 +12,8 @@ use sdk::{
 };
 use versioning::ProtocolMigrationMessage;
 
+use crate::common;
+
 use super::{
     ADMIN, CwContractWrapper,
     lease::{
@@ -142,7 +144,7 @@ impl<ProtocolsRegistry, Treasury>
                 reserve: self.address_book.reserve().clone(),
                 finalizer: self.address_book.leaser().clone(),
             },
-            InitConfig::new(lease_currency, 1000.into(), None),
+            InitConfig::new(lease_currency, common::coin(1000), None),
             LeaseInstantiatorConfig::default(),
             TestCase::DEX_CONNECTION_ID,
             TestCase::LEASE_ICA_ID,

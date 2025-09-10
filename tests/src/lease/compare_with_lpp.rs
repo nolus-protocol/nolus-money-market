@@ -31,7 +31,7 @@ fn manual_calculation() {
 
     let query_result = super::state_query(&test_case, lease_address);
     let expected_result = StateResponse::Opened {
-        amount: LeaseCoin::from(Amount::from(DOWNPAYMENT + 1_857_142_857_142.into())).into(),
+        amount: LeaseCoin::new(Amount::from(DOWNPAYMENT) + 1_857_142_857_142).into(),
         loan_interest_rate: quote_result.annual_interest_rate,
         margin_interest_rate: quote_result.annual_interest_rate_margin,
         principal_due: Coin::<LpnCurrency>::new(1_857_142_857_142).into(),

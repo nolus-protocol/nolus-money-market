@@ -174,8 +174,8 @@ fn tp_set() {
     oracle::feed_price(
         &mut test_case,
         testing::user(ADMIN),
-        Coin::<LeaseCurrency>::from(10),
-        Coin::<LpnCurrency>::from(25),
+        Coin::<LeaseCurrency>::new(10),
+        Coin::<LpnCurrency>::new(25),
     );
     let err = super::change_err(
         &mut test_case,

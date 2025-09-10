@@ -228,6 +228,7 @@ mod test_invariant {
     };
     use sdk::cosmwasm_std::{StdError as CWError, StdResult as CWResult, from_json};
 
+    use crate::test::coin;
     use crate::{
         coin::{Coin, CoinDTO},
         error::{Error, Result},
@@ -239,13 +240,7 @@ mod test_invariant {
 
     #[test]
     fn base_zero() {
-        assert_err(
-            new_invalid(
-                Coin::<SuperGroupTestC1>::new(0),
-                Coin::<SuperGroupTestC2>::new(5),
-            ),
-            "zero",
-        );
+        assert_err(new_invalid(coin::coin1(0), coin::coin2(5)), "zero");
     }
 
     #[test]
@@ -260,13 +255,7 @@ mod test_invariant {
 
     #[test]
     fn quote_zero() {
-        assert_err(
-            new_invalid(
-                Coin::<SuperGroupTestC1>::new(10),
-                Coin::<SuperGroupTestC2>::new(0),
-            ),
-            "zero",
-        )
+        assert_err(new_invalid(coin::coin1(10), coin::coin2(0)), "zero")
     }
 
     #[test]
@@ -341,7 +330,7 @@ mod test_invariant {
     #[test]
     fn invalid_pair() {
         let p = PriceDTO::<TC>::try_new(
-            Coin::<SuperGroupTestC2>::new(4).into(),
+            coin::coin2(4).into(),
             Coin::<SuperGroupTestC4>::new(5).into(),
         );
         assert_eq!(

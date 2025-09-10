@@ -12,21 +12,21 @@ use swap::testing::SwapRequest;
 
 use crate::{
     common::{
-        self, CwCoin, USER, cwcoin, ibc,
+        self, CwCoin, USER, cwcoin_from_amount, ibc,
         leaser::{self, Instantiator as LeaserInstantiator},
         test_case::{TestCase, response::ResponseWithInterChainMsgs},
     },
     lease::{self as lease_mod, LpnCurrency},
 };
 
-use super::{DOWNPAYMENT, LeaseCoin, LeaseCurrency, LpnCoin, PaymentCurrency};
+use super::{DOWNPAYMENT, LeaseCurrency, LpnCoin, PaymentCurrency};
 
 #[test]
 #[should_panic = "No liquidation warning emitted!"]
 fn liquidation_warning_price_0() {
     liquidation_warning(
-        2085713.into(),
-        1857159.into(),
+        2085713,
+        1857159,
         LeaserInstantiator::liability().max(), //not used
         "N/A",
     );
@@ -36,9 +36,9 @@ fn liquidation_warning_price_0() {
 fn liquidation_warning_price_1() {
     liquidation_warning(
         // ref: 2085713
-        2085713.into(),
+        2085713,
         // ref: 1857159
-        1827159.into(),
+        1827159,
         LeaserInstantiator::FIRST_LIQ_WARN,
         "1",
     );
@@ -48,9 +48,9 @@ fn liquidation_warning_price_1() {
 fn liquidation_warning_price_2() {
     liquidation_warning(
         // ref: 2085713
-        2085713.into(),
+        2085713,
         // ref: 1857159
-        1757159.into(),
+        1757159,
         LeaserInstantiator::SECOND_LIQ_WARN,
         "2",
     );
@@ -60,9 +60,9 @@ fn liquidation_warning_price_2() {
 fn liquidation_warning_price_3() {
     liquidation_warning(
         // ref: 2085713
-        2085713.into(),
+        2085713,
         // ref: 1857159
-        1707159.into(),
+        1707159,
         LeaserInstantiator::THIRD_LIQ_WARN,
         "3",
     );
@@ -83,14 +83,16 @@ fn full_liquidation() {
     let liq_outcome = borrowed_amount - 11123; // to trigger an interaction with Reserve
     test_case.send_funds_from_admin(
         reserve.clone(),
-        &[cwcoin::<LpnCurrency, _>(borrowed_amount - liq_outcome)],
+        &[cwcoin_from_amount::<LpnCurrency>(
+            borrowed_amount - liq_outcome,
+        )],
     );
 
     // the base is chosen to be close to the asset amount to trigger a full liquidation
     let response = lease_mod::deliver_new_price(
         &mut test_case,
-        (lease_amount - 2).into(),
-        borrowed_amount.into(),
+        common::coin(lease_amount - 2),
+        common::coin(borrowed_amount),
     );
 
     let requests: Vec<SwapRequest<PaymentGroup, PaymentGroup>> = common::swap::expect_swap(
@@ -167,12 +169,16 @@ fn full_liquidation() {
     )
 }
 
-fn liquidation_warning(base: LeaseCoin, quote: LpnCoin, liability: Percent100, level: &str) {
+fn liquidation_warning(base: Amount, quote: Amount, liability: Percent100, level: &str) {
     let mut test_case = lease_mod::create_test_case::<PaymentCurrency>();
     let _lease = lease_mod::open_lease(&mut test_case, DOWNPAYMENT, None);
 
-    let response: AppResponse =
-        lease_mod::deliver_new_price(&mut test_case, base, quote).unwrap_response();
+    let response: AppResponse = lease_mod::deliver_new_price(
+        &mut test_case,
+        common::coin::<LeaseCurrency>(base),
+        common::coin::<LpnCurrency>(quote),
+    )
+    .unwrap_response();
 
     let event = response
         .events

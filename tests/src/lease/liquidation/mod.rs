@@ -1,4 +1,4 @@
-use super::{DOWNPAYMENT, LeaseCoin, LeaseCurrency, LpnCoin, PaymentCoin, PaymentCurrency};
+use super::{DOWNPAYMENT, LeaseCoin, LeaseCurrency, LpnCoin, PaymentCurrency};
 
 mod price;
 mod time;

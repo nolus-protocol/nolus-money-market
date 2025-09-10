@@ -10,7 +10,10 @@ mod test {
     };
     use sdk::cosmwasm_std::{from_json, to_json_vec};
 
-    use crate::coin::{Amount, Coin};
+    use crate::{
+        coin::{Amount, Coin},
+        test::coin,
+    };
 
     #[test]
     fn serialize_deserialize() {
@@ -29,7 +32,7 @@ mod test {
             coin: Coin<C>,
         }
         let coin_container = CoinContainer {
-            coin: Coin::<SuperGroupTestC2>::new(10),
+            coin: coin::coin2(10),
         };
         serialize_deserialize_impl(coin_container, &format!(r#"{{"coin":{}}}"#, json(10)));
     }
@@ -38,17 +41,17 @@ mod test {
     fn distinct_repr() {
         let amount = 432;
         assert_eq!(
-            to_json_vec(&Coin::<SuperGroupTestC1>::new(amount)),
-            to_json_vec(&Coin::<SuperGroupTestC2>::new(amount))
+            to_json_vec(&coin::coin1(amount)),
+            to_json_vec(&coin::coin2(amount))
         );
     }
 
     #[test]
     fn currency_tolerant() {
         let amount = 134;
-        let nls_bin = to_json_vec(&Coin::<SuperGroupTestC1>::new(amount)).unwrap();
+        let nls_bin = to_json_vec(&coin::coin1(amount)).unwrap();
         let res = from_json::<Coin<SuperGroupTestC2>>(&nls_bin);
-        assert_eq!(Ok(amount.into()), res);
+        assert_eq!(Ok(coin::coin2(amount)), res);
     }
 
     fn serialize_deserialize_coin<C>(amount: Amount, exp_txt: &str)

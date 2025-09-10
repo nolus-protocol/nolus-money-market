@@ -162,8 +162,8 @@ mod test {
                 interest_paid: start,
             },
         );
-        let payment1 = 8.into();
-        let payment2 = 4.into();
+        let payment1 = Coin::new(8);
+        let payment2 = Coin::new(4);
         loan.repay(&(start + Duration::YEAR), payment1);
         loan.repay(&(start + Duration::YEAR), payment2);
         let batch: LppBatch<LppRef<Lpn>> = loan.try_into().unwrap();
