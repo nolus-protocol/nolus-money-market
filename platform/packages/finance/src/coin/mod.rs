@@ -25,7 +25,8 @@ pub type Amount = u128;
 #[cfg(feature = "testing")]
 pub type NonZeroAmount = NonZeroU128;
 
-impl FractionUnit for Amount {}
+// Used only for average price calculation
+impl FractionUnit for u128 {}
 
 #[derive(Serialize, Deserialize)]
 pub struct Coin<C> {
