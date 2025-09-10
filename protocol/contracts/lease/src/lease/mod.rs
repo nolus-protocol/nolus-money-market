@@ -180,8 +180,8 @@ pub(crate) mod tests {
         duration::Duration,
         fraction::Fraction,
         liability::Liability,
-       
-        percent::Percent100, price::Price,
+        percent::Percent100,
+        price::Price,
         zero::Zero,
     };
     use lpp::{

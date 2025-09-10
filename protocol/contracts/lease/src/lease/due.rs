@@ -86,8 +86,8 @@ mod test {
 
     #[test]
     fn get_to_limit_before_due_end() {
-        let annual_interest = Percent::from_percent(20);
-        let annual_interest_margin = Percent::from_percent(5);
+        let annual_interest = Percent100::from_percent(20);
+        let annual_interest_margin = Percent100::from_percent(5);
         let principal_due = tests::lpn_coin(100_000);
         let due_interest = tests::lpn_coin(10);
         let due_margin_interest = tests::lpn_coin(5);
@@ -118,8 +118,8 @@ mod test {
 
     #[test]
     fn below_the_limit_past_due_end() {
-        let annual_interest = Percent::from_percent(20);
-        let annual_interest_margin = Percent::from_percent(5);
+        let annual_interest = Percent100::from_percent(20);
+        let annual_interest_margin = Percent100::from_percent(5);
         let principal_due = tests::lpn_coin(100_000);
         let due_interest = tests::lpn_coin(15);
         let due_margin_interest = tests::lpn_coin(5);
@@ -157,8 +157,8 @@ mod test {
 
     #[test]
     fn above_the_limit_past_due_end() {
-        let annual_interest = Percent::from_percent(20);
-        let annual_interest_margin = Percent::from_percent(5);
+        let annual_interest = Percent100::from_percent(20);
+        let annual_interest_margin = Percent100::from_percent(5);
         let principal_due = tests::lpn_coin(100_000);
         let due_interest = tests::lpn_coin(15);
         let due_margin_interest = tests::lpn_coin(5);

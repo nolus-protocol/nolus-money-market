@@ -759,9 +759,7 @@ mod test {
             let mut total: Total<TheCurrency> = Total::new();
 
             total
-                
                 .borrow(now, Coin::new(borrowed), Percent100::ZERO)
-                
                 .unwrap();
 
             let bank =
