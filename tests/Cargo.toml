@@ -5,6 +5,7 @@ edition = "2024"
 authors = ["The Dev Nolus Team <dev@nolus.io>"]
 license = "Apache-2.0"
 resolver = "3"
+rust-version = "1.86"
 
 [package.metadata.cargo-each]
 combinations = [

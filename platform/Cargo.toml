@@ -31,6 +31,7 @@ warnings = "deny"
 edition = "2024"
 authors = ["The Dev Nolus Team <dev@nolus.io>"]
 license = "Apache-2.0"
+rust-version = "1.86"
 
 [workspace.dependencies]
 # Own Contracts
