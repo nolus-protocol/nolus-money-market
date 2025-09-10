@@ -1,6 +1,6 @@
 use std::fmt::Debug;
 
-use crate::{CurrencyDTO, CurrencyDef};
+use crate::{CurrencyDTO, CurrencyDef, PairsGroup};
 
 use super::{AnyVisitor, matcher::Matcher};
 
@@ -11,6 +11,15 @@ where
 {
     const DESCR: &'static str;
     type TopG: Group<TopG = Self::TopG>;
+
+    /// Creates an iterator that both filters and maps currencies.
+    ///
+    /// The elements of the returned iterator are produced by the provided functor
+    /// mapping a currency to `Some(value)`. A currency for which the functor returns
+    /// `None` is skipped.
+    fn filter_map<FilterMap>(f: FilterMap) -> impl Iterator<Item = FilterMap::Outcome>
+    where
+        FilterMap: FilterMapT<Self>;
 
     /// All direct or indirect member currencies of this group
     fn currencies() -> impl Iterator<Item = CurrencyDTO<Self>>;
@@ -31,6 +40,20 @@ where
 }
 
 pub type MaybeAnyVisitResult<VisitedG, V> = Result<<V as AnyVisitor<VisitedG>>::Outcome, V>;
+
+pub trait FilterMapT<VisitedG>
+where
+    Self: Clone, // required by the composite group implementations
+    VisitedG: Group,
+{
+    type Outcome;
+
+    //TODO consider removing the function argument `def`
+    fn on<C>(&self, def: &CurrencyDTO<C::Group>) -> Option<Self::Outcome>
+    where
+        C: CurrencyDef + PairsGroup<CommonGroup = VisitedG::TopG>,
+        C::Group: MemberOf<VisitedG> + MemberOf<VisitedG::TopG>;
+}
 
 pub trait MemberOf<G>
 where
