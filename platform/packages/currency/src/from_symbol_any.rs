@@ -17,8 +17,8 @@ where
 
     fn on<C>(self, def: &CurrencyDTO<C::Group>) -> Self::Outcome
     where
-        // for the sake of generating less monomorphized functions, try to:
-        // C: Currency + MemberOf<VisitedG> + MemberOf<VisitedG::TopG> + ...
+        // cannot simplify to `C: Currency + MemberOf<VisitedG> + MemberOf<VisitedG::TopG> + ...`
+        // due to the lack of relation to the type argument of the `CurrencyDTO` argument
         C: CurrencyDef + PairsGroup<CommonGroup = VisitedG::TopG>,
         C::Group: MemberOf<VisitedG> + MemberOf<VisitedG::TopG>;
 }
