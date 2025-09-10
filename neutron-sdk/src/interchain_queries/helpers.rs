@@ -34,6 +34,6 @@ pub fn length_prefix<AddrBytes: AsRef<[u8]>>(addr: AddrBytes) -> NeutronResult<V
 pub fn uint256_to_u128(value: Uint256) -> Result<u128, StdError> {
     let converted: Uint128 = value
         .try_into()
-        .map_err(|_| StdError::generic_err("Uint256 value exceeds u128 limits"))?;
+        .map_err(|_| StdError::msg("Uint256 value exceeds u128 limits"))?;
     Ok(converted.u128())
 }
