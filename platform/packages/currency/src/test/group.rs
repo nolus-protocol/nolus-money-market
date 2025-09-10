@@ -3,9 +3,11 @@ use serde::Deserialize;
 use crate::{
     AnyVisitor, CurrencyDTO, CurrencyDef, Group, Matcher, MaybeAnyVisitResult,
     from_symbol_any::InPoolWith,
-    group::MemberOf,
+    group::{FilterMapT, MemberOf},
     pairs::{MaybePairsVisitorResult, PairsGroup, PairsVisitor},
 };
+
+use super::{sub::Currencies as SubGroupCurrencies, super_::Currencies as SuperGroupCurrencies};
 
 pub type SuperGroupTestC1 = impl_::TestC1;
 pub type SuperGroupTestC2 = impl_::TestC2;
@@ -24,6 +26,32 @@ impl MemberOf<Self> for SuperGroup {}
 impl Group for SuperGroup {
     const DESCR: &'static str = "super_group";
     type TopG = Self;
+
+    fn filter_map<FilterMap>(f: FilterMap) -> impl Iterator<Item = FilterMap::Outcome>
+    where
+        FilterMap: FilterMapT<Self>,
+    {
+        #[derive(Clone)]
+        struct SubFilterAdapter<FilterMap>(FilterMap);
+
+        impl<FilterMap> FilterMapT<SubGroup> for SubFilterAdapter<FilterMap>
+        where
+            FilterMap: FilterMapT<SuperGroup>,
+        {
+            type Outcome = FilterMap::Outcome;
+
+            fn on<C>(&self, def: &CurrencyDTO<C::Group>) -> Option<Self::Outcome>
+            where
+                C: CurrencyDef + PairsGroup<CommonGroup = <SubGroup as Group>::TopG>,
+                C::Group: MemberOf<SubGroup> + MemberOf<<SubGroup as Group>::TopG>,
+            {
+                self.0.on::<C>(def)
+            }
+        }
+
+        SuperGroupCurrencies::with_filter(f.clone())
+            .chain(SubGroup::filter_map(SubFilterAdapter(f)))
+    }
 
     fn currencies() -> impl Iterator<Item = CurrencyDTO<Self>> {
         [
@@ -176,6 +204,13 @@ impl MemberOf<SuperGroup> for SubGroup {}
 impl Group for SubGroup {
     const DESCR: &'static str = "sub_group";
     type TopG = SuperGroup;
+
+    fn filter_map<FilterMap>(f: FilterMap) -> impl Iterator<Item = FilterMap::Outcome>
+    where
+        FilterMap: FilterMapT<Self>,
+    {
+        SubGroupCurrencies::with_filter(f)
+    }
 
     fn currencies() -> impl Iterator<Item = CurrencyDTO<Self>> {
         [SubGroupTestC6::dto(), SubGroupTestC10::dto()]
