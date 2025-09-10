@@ -17,30 +17,17 @@ where
     }
 }
 
-impl<C, QuoteC> Fractionable<Amount> for Price<C, QuoteC>
+// Used only for average price calculation
+impl<C, QuoteC> Fractionable<u128> for Price<C, QuoteC>
 where
     C: 'static,
     QuoteC: 'static,
 {
     fn safe_mul<F>(self, fraction: &F) -> Self
     where
-        F: RatioLegacy<Amount>,
+        F: RatioLegacy<u128>,
     {
         self.lossy_mul(fraction)
-    }
-}
-
-// TODO remove when Fractionable is refactored
-impl<C, QuoteC> Fractionable<usize> for Price<C, QuoteC>
-where
-    C: 'static,
-    QuoteC: 'static,
-{
-    fn safe_mul<F>(self, fraction: &F) -> Self
-    where
-        F: RatioLegacy<usize>,
-    {
-        self.lossy_mul(&RatioTryUpcast(fraction))
     }
 }
 
@@ -57,22 +44,6 @@ where
     }
     fn total(&self) -> Amount {
         self.1.total().into()
-    }
-}
-
-struct RatioTryUpcast<'a, R>(&'a R);
-
-const EXPECT_MSG: &str = "usize should convert into u128";
-
-impl<R> RatioLegacy<Amount> for RatioTryUpcast<'_, R>
-where
-    R: RatioLegacy<usize>,
-{
-    fn parts(&self) -> Amount {
-        self.0.parts().try_into().expect(EXPECT_MSG)
-    }
-    fn total(&self) -> Amount {
-        self.0.total().try_into().expect(EXPECT_MSG)
     }
 }
 
@@ -101,7 +72,7 @@ mod test {
             assert_eq!(twenty_percents.of(price), price::total_of(c(50)).is(q(1)));
         }
     }
-    mod usize_ratio {
+    mod u128_ratio {
         use currency::test::{SubGroupTestC10, SuperGroupTestC1};
 
         use crate::{
@@ -149,15 +120,15 @@ mod test {
         fn test_impl(
             amount1: Coin<SubGroupTestC10>,
             quote1: Coin<SuperGroupTestC1>,
-            nominator: usize,
-            denominator: usize,
+            nominator: u128,
+            denominator: u128,
             amount_exp: Coin<SubGroupTestC10>,
             quote_exp: Coin<SuperGroupTestC1>,
         ) {
             let price = price::total_of(amount1).is(quote1);
             let ratio = SimpleFraction::new(nominator, denominator);
             assert_eq!(
-                Rational::<usize>::of(&ratio, price).unwrap(),
+                Rational::<u128>::of(&ratio, price).unwrap(),
                 price::total_of(amount_exp).is(quote_exp)
             );
         }
