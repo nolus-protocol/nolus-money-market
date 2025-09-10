@@ -6,9 +6,10 @@ use currency::CurrencyDef;
 use finance::{
     coin::{Coin, CoinDTO},
     duration::Duration,
+    fraction::Fraction,
     percent::{Percent, Percent100},
     price::{self, Price},
-    ratio::SimpleFraction,
+    ratio::Ratio,
     rational::Rational,
     zero::Zero,
 };
@@ -45,10 +46,9 @@ fn partial_repay() {
 
     let amount = super::quote_borrow(&test_case, downpayment);
     let partial_payment: PaymentCoin = Fraction::<PaymentCoin>::of(
-        &Rational::new(common::coin(1), common::coin(2)),
+        &Ratio::new(common::coin(1), common::coin(2)),
         super::create_payment_coin(amount.into()),
-    )
-    .unwrap();
+    );
 
     let expected_result =
         super::expected_newly_opened_state(&test_case, downpayment, partial_payment);

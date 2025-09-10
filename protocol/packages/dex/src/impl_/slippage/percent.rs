@@ -134,7 +134,11 @@ where
 #[cfg(test)]
 mod test {
     use currency::test::SuperGroupTestC1;
-    use finance::{coin::{Amount, Coin}, fraction::Fraction, percent::Percent100};
+    use finance::{
+        coin::{Amount, Coin},
+        fraction::Fraction,
+        percent::Percent100,
+    };
 
     use super::MaxSlippage;
 
@@ -165,8 +169,8 @@ mod test {
 
     fn calc_min_out(
         amount_in: Coin<SuperGroupTestC1>,
-        slippage: Percent,
+        slippage: Percent100,
     ) -> Coin<SuperGroupTestC1> {
-        MaxSlippage(BoundToHundredPercent::try_from_percent(slippage).unwrap()).min_out(amount_in)
+        MaxSlippage(slippage).min_out(amount_in)
     }
 }
