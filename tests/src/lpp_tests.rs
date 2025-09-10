@@ -61,7 +61,7 @@ fn general_interest_rate(
             // TODO migrate to using SimpleFraction once it starts implementing Ord
             let utilization_factor = Percent::from_fraction(
                     optimal_rate.units(),
-                    (Percent100::HUNDRED - optimal_rate).units(),
+                    optimal_rate.complement().units(),
                 ).expect("The utilization must be a valid Percent").min(utilization_factor_max);
 
             Rational::<PercentUnits>::of(
