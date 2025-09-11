@@ -32,3 +32,11 @@ where
     G: Group,
 {
 }
+
+impl<G, C> MemberOf<G> for C
+where
+    C: CurrencyDef,
+    C::Group: MemberOf<G>,
+    G: Group,
+{
+}
