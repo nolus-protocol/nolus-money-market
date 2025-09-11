@@ -21,9 +21,6 @@ where
     where
         FilterMap: FilterMapT<Self>;
 
-    /// All direct or indirect member currencies of this group
-    fn currencies() -> impl Iterator<Item = CurrencyDTO<Self>>;
-
     // TODO it seems this could be taken out from here into a simple algo-function
     // Visit this group directly by a visitor
     fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<Self, V>

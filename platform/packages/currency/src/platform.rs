@@ -83,13 +83,6 @@ impl Group for PlatformGroup {
         PlatformCurrencies::with_filter(f)
     }
 
-    fn currencies() -> impl Iterator<Item = CurrencyDTO<Self>> {
-        [Nls::dto(), Stable::dto()]
-            .into_iter()
-            .copied()
-            .map(CurrencyDTO::into_super_group)
-    }
-
     fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<Self, V>
     where
         M: Matcher,

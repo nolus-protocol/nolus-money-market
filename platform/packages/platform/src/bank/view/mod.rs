@@ -1,8 +1,8 @@
-use std::{cell::OnceCell, result::Result as StdResult};
+use std::cell::OnceCell;
 
 use currency::{CurrencyDTO, CurrencyDef, Group};
 use finance::coin::{Coin, WithCoin};
-use sdk::cosmwasm_std::{Addr, Coin as CwCoin, QuerierWrapper, Uint128};
+use sdk::cosmwasm_std::{Addr, Coin as CwCoin, QuerierWrapper};
 
 use crate::{
     bank::aggregate::{Aggregate, ReduceResults},
@@ -11,9 +11,14 @@ use crate::{
     result::Result,
 };
 
-pub type BalancesResult<G, Cmd> = StdResult<Option<<Cmd as WithCoin<G>>::Outcome>, Error>;
+use balances::NonZeroBalances;
+
+mod balances;
+
+pub type BalancesResult<G, Cmd> = Result<Option<<Cmd as WithCoin<G>>::Outcome>>;
 
 pub trait BankAccountView {
+    /// Obtain the balance of a given currency
     fn balance<C>(&self) -> Result<Coin<C>>
     where
         C: CurrencyDef;
@@ -89,17 +94,7 @@ impl BankAccountView for BankView<'_> {
         Cmd: WithCoin<G> + Clone,
         Cmd::Outcome: Aggregate,
     {
-        G::currencies()
-            .filter_map(|ref currency| {
-                self.cw_balance(currency).map_err(Into::into).map_or_else(
-                    |err| Some(Err(err)),
-                    |ref cw_balance| {
-                        (cw_balance.amount != Uint128::zero()).then(|| {
-                            coin_legacy::from_cosmwasm_any::<G, _>(cw_balance, cmd.clone())
-                        })
-                    },
-                )
-            })
+        G::filter_map(NonZeroBalances::new(self, cmd))
             .reduce_results(Aggregate::aggregate)
             .transpose()
     }
