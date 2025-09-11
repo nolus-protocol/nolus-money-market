@@ -1,9 +1,6 @@
 use gcd::Gcd;
 
-use crate::{
-    percent::Units as PercentUnits,
-    ratio::{RatioLegacy, Scalar},
-};
+use crate::{fractionable::scalar::Scalar, percent::Units as PercentUnits, ratio::RatioLegacy};
 
 use super::Fractionable;
 

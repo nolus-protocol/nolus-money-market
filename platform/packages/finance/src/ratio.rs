@@ -2,7 +2,11 @@ use std::fmt::Debug;
 
 use serde::{Deserialize, Serialize};
 
-use crate::{fraction::Fraction, fractionable::Fractionable, zero::Zero};
+use crate::{
+    fraction::Fraction,
+    fractionable::{Fractionable, scalar::Scalar},
+    zero::Zero,
+};
 
 // TODO review whether it may gets simpler if extend Fraction
 pub trait RatioLegacy<U> {

@@ -3,8 +3,7 @@ use std::{cmp, fmt::Debug, ops::Sub};
 use crate::{
     duration::Duration,
     fraction::Fraction,
-    fractionable::{Fractionable, TimeSliceable},
-    ratio::Scalar,
+    fractionable::{Fractionable, TimeSliceable, scalar::Scalar},
     zero::Zero,
 };
 
