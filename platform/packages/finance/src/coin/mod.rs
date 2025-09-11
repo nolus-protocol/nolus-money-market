@@ -6,15 +6,14 @@ use std::{
     fmt::{Debug, Display, Formatter},
     iter::Sum,
     marker::PhantomData,
-    ops::{Add, AddAssign, Div, Rem, Sub, SubAssign},
+    ops::{Add, AddAssign, Sub, SubAssign},
 };
 
 use ::serde::{Deserialize, Serialize};
-use gcd::Gcd;
 
 use currency::{Currency, CurrencyDef, Group, MemberOf};
 
-use crate::{ratio::Scalar, zero::Zero};
+use crate::zero::Zero;
 
 pub use self::dto::{CoinDTO, IntoDTO};
 
@@ -47,6 +46,10 @@ impl<C> Coin<C> {
             None => None,
             Some(amount) => Some(Self::new(amount)),
         }
+    }
+
+    pub(super) const fn amount(&self) -> Amount {
+        self.amount
     }
 
     pub const fn is_zero(&self) -> bool {
@@ -168,32 +171,6 @@ where
     }
 }
 
-impl<C> Scalar for Coin<C> {
-    type Times = Amount;
-
-    fn gcd(self, other: Self) -> Self::Times {
-        Gcd::gcd(self.amount, other.amount)
-    }
-
-    fn scale_up(self, scale: Self::Times) -> Option<Self> {
-        self.amount.checked_mul(scale).map(Self::new)
-    }
-
-    fn scale_down(self, scale: Self::Times) -> Self {
-        debug_assert_ne!(scale, 0);
-
-        Self::new(self.amount.div(scale))
-    }
-
-    fn modulo(self, scale: Self::Times) -> Self::Times {
-        self.amount.rem(scale)
-    }
-
-    fn into_times(self) -> Self::Times {
-        self.amount
-    }
-}
-
 impl<C> Zero for Coin<C> {
     const ZERO: Self = Self::new(Zero::ZERO);
 }
@@ -281,33 +258,6 @@ impl<C> AsRef<Self> for Coin<C> {
     }
 }
 
-impl Scalar for Amount {
-    type Times = Self;
-
-    fn gcd(self, other: Self) -> Self::Times {
-        Gcd::gcd(self, other)
-    }
-
-    fn scale_up(self, scale: Self::Times) -> Option<Self> {
-        self.checked_mul(scale)
-    }
-
-    fn scale_down(self, scale: Self::Times) -> Self {
-        debug_assert_ne!(scale, 0);
-
-        self.div(scale)
-    }
-
-    fn modulo(self, scale: Self::Times) -> Self::Times {
-        debug_assert_ne!(scale, 0);
-
-        self.rem(scale)
-    }
-
-    fn into_times(self) -> Self::Times {
-        self
-    }
-}
 #[cfg(test)]
 mod test {
     use std::any;
