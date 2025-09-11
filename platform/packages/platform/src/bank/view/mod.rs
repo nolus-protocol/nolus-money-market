@@ -94,7 +94,8 @@ impl BankAccountView for BankView<'_> {
         Cmd: WithCoin<G> + Clone,
         Cmd::Outcome: Aggregate,
     {
-        G::filter_map(NonZeroBalances::new(self, cmd))
+        let balances = NonZeroBalances::<'_, '_, G, _>::new(self, cmd);
+        G::filter_map::<NonZeroBalances<'_, '_, _, _>, _>(&balances)
             .reduce_results(Aggregate::aggregate)
             .transpose()
     }
