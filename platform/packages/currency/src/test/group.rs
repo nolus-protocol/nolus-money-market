@@ -53,19 +53,6 @@ impl Group for SuperGroup {
             .chain(SubGroup::filter_map(SubFilterAdapter(f)))
     }
 
-    fn currencies() -> impl Iterator<Item = CurrencyDTO<Self>> {
-        [
-            SuperGroupTestC1::dto(),
-            SuperGroupTestC2::dto(),
-            SuperGroupTestC3::dto(),
-            SuperGroupTestC4::dto(),
-            SuperGroupTestC5::dto(),
-        ]
-        .into_iter()
-        .copied()
-        .chain(SubGroup::currencies().map(CurrencyDTO::into_super_group))
-    }
-
     fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<Self, V>
     where
         M: Matcher,
@@ -210,12 +197,6 @@ impl Group for SubGroup {
         FilterMap: FilterMapT<Self>,
     {
         SubGroupCurrencies::with_filter(f)
-    }
-
-    fn currencies() -> impl Iterator<Item = CurrencyDTO<Self>> {
-        [SubGroupTestC6::dto(), SubGroupTestC10::dto()]
-            .into_iter()
-            .copied()
     }
 
     fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<Self, V>
