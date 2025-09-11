@@ -1,5 +1,10 @@
+use std::ops::{Div, Rem};
+
+use gcd::Gcd;
+
 use crate::{
     coin::Coin,
+    fractionable::scalar::Scalar,
     percent::{Percent, Units},
     ratio::RatioLegacy,
 };
@@ -36,6 +41,61 @@ impl<C> Fractionable<Coin<C>> for Percent {
             .try_into()
             .expect("overflow computing a fraction of permille");
         Self::from_permille(res)
+    }
+}
+
+impl Scalar for Percent {
+    type Times = Units;
+    fn gcd(self, other: Self) -> Self::Times {
+        Gcd::gcd(self.units(), other.units())
+    }
+
+    fn scale_up(self, scale: Self::Times) -> Option<Self> {
+        self.units().checked_mul(scale).map(Self::from_permille)
+    }
+
+    fn scale_down(self, scale: Self::Times) -> Self {
+        debug_assert_ne!(scale, 0);
+
+        Self::from_permille(self.units().div(scale))
+    }
+
+    fn modulo(self, scale: Self::Times) -> Self::Times {
+        debug_assert_ne!(scale, 0);
+
+        self.units().rem(scale)
+    }
+
+    fn into_times(self) -> Self::Times {
+        self.units()
+    }
+}
+
+impl Scalar for Units {
+    type Times = Self;
+
+    fn gcd(self, other: Self) -> Self::Times {
+        Gcd::gcd(self, other)
+    }
+
+    fn scale_up(self, scale: Self::Times) -> Option<Self> {
+        self.checked_mul(scale)
+    }
+
+    fn scale_down(self, scale: Self::Times) -> Self {
+        debug_assert_ne!(scale, 0);
+
+        self.div(scale)
+    }
+
+    fn modulo(self, scale: Self::Times) -> Self::Times {
+        debug_assert_ne!(scale, 0);
+
+        self.rem(scale)
+    }
+
+    fn into_times(self) -> Self::Times {
+        self
     }
 }
 

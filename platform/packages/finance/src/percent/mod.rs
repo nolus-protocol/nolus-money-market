@@ -1,9 +1,8 @@
 use std::{
     fmt::{Debug, Display, Formatter, Result as FmtResult, Write},
-    ops::{Add, Div, Rem, Sub},
+    ops::{Add, Sub},
 };
 
-use gcd::Gcd;
 use serde::{Deserialize, Serialize};
 
 use sdk::cosmwasm_std::{OverflowError, OverflowOperation};
@@ -11,8 +10,8 @@ use sdk::cosmwasm_std::{OverflowError, OverflowOperation};
 use crate::{
     error::Result as FinanceResult,
     fraction::Fraction,
-    fractionable::Fractionable,
-    ratio::{RatioLegacy, Rational, Scalar},
+    fractionable::{Fractionable, scalar::Scalar},
+    ratio::{RatioLegacy, Rational},
     zero::Zero,
 };
 
@@ -144,33 +143,6 @@ impl<'a> Add<&'a Percent> for Percent {
     }
 }
 
-impl Scalar for Percent {
-    type Times = Units;
-    fn gcd(self, other: Self) -> Self::Times {
-        Gcd::gcd(self.0, other.0)
-    }
-
-    fn scale_up(self, scale: Self::Times) -> Option<Self> {
-        self.0.checked_mul(scale).map(Self::from_permille)
-    }
-
-    fn scale_down(self, scale: Self::Times) -> Self {
-        debug_assert_ne!(scale, 0);
-
-        Self::from_permille(self.0.div(scale))
-    }
-
-    fn modulo(self, scale: Self::Times) -> Self::Times {
-        debug_assert_ne!(scale, 0);
-
-        self.0.rem(scale)
-    }
-
-    fn into_times(self) -> Self::Times {
-        self.0
-    }
-}
-
 impl Sub<Percent> for Percent {
     type Output = Self;
 
@@ -190,34 +162,6 @@ impl<'a> Sub<&'a Percent> for Percent {
     #[track_caller]
     fn sub(self, rhs: &'a Percent) -> Self {
         self - *rhs
-    }
-}
-
-impl Scalar for Units {
-    type Times = Self;
-
-    fn gcd(self, other: Self) -> Self::Times {
-        Gcd::gcd(self, other)
-    }
-
-    fn scale_up(self, scale: Self::Times) -> Option<Self> {
-        self.checked_mul(scale)
-    }
-
-    fn scale_down(self, scale: Self::Times) -> Self {
-        debug_assert_ne!(scale, 0);
-
-        self.div(scale)
-    }
-
-    fn modulo(self, scale: Self::Times) -> Self::Times {
-        debug_assert_ne!(scale, 0);
-
-        self.rem(scale)
-    }
-
-    fn into_times(self) -> Self::Times {
-        self
     }
 }
 
