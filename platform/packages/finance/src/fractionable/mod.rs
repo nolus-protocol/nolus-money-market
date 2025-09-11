@@ -11,7 +11,7 @@ mod coin;
 mod duration;
 mod percent;
 mod price;
-mod scalar;
+pub(super) mod scalar;
 mod usize;
 
 pub trait Fractionable<U> {
