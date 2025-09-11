@@ -5,11 +5,10 @@ use finance::{
     coin::Coin,
     duration::Duration,
     fraction::Fraction,
-    fractionable::Fractionable,
+    fractionable::{Fractionable, scalar::Scalar},
     liability::{Liability, Zone},
     percent::Percent,
     price::{self},
-    ratio::Scalar,
     zero::Zero,
 };
 
