@@ -24,20 +24,6 @@ impl<'addr, 'view, GBalances, CmdBalances> NonZeroBalances<'addr, 'view, GBalanc
     }
 }
 
-impl<'addr, 'view, GBalances, CmdBalances> Clone
-    for NonZeroBalances<'addr, 'view, GBalances, CmdBalances>
-where
-    CmdBalances: Clone,
-{
-    fn clone(&self) -> Self {
-        Self {
-            _g: self._g,
-            view: self.view,
-            cmd: self.cmd.clone(),
-        }
-    }
-}
-
 impl<'addr, 'view, GBalances, CmdBalances> FilterMapT<GBalances>
     for NonZeroBalances<'addr, 'view, GBalances, CmdBalances>
 where
