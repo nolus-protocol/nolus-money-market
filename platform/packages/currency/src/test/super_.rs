@@ -1,4 +1,4 @@
-use std::any::TypeId;
+use std::{any::TypeId, borrow::Borrow, marker::PhantomData};
 
 use crate::{
     CurrencyDef,
@@ -10,18 +10,21 @@ use crate::{
 };
 
 /// Iterator over [`SuperGroup`] currency types mapped to some values
-pub(super) struct Currencies<FilterMap> {
-    f: FilterMap,
+pub(super) struct Currencies<FilterMap, FilterMapRef> {
+    f: FilterMapRef,
+    _f_type: PhantomData<FilterMap>,
     next: Option<TypeId>,
 }
 
-impl<FilterMap> Currencies<FilterMap>
+impl<FilterMap, FilterMapRef> Currencies<FilterMap, FilterMapRef>
 where
     FilterMap: FilterMapT<SuperGroup>,
+    FilterMapRef: Borrow<FilterMap>,
 {
-    pub fn with_filter(f: FilterMap) -> Self {
+    pub fn with_filter(f: FilterMapRef) -> Self {
         Self {
             f,
+            _f_type: PhantomData,
             next: Some(TypeId::of::<SuperGroupTestC1>()),
         }
     }
@@ -39,21 +42,22 @@ where
         let c5_type = TypeId::of::<SuperGroupTestC5>();
 
         self.next.and_then(|next_type| {
+            let filter = self.f.borrow();
             if next_type == c1_type {
                 self.next = Some(c2_type);
-                self.f.on::<SuperGroupTestC1>(SuperGroupTestC1::dto())
+                filter.on::<SuperGroupTestC1>(SuperGroupTestC1::dto())
             } else if next_type == c2_type {
                 self.next = Some(c3_type);
-                self.f.on::<SuperGroupTestC2>(SuperGroupTestC2::dto())
+                filter.on::<SuperGroupTestC2>(SuperGroupTestC2::dto())
             } else if next_type == c3_type {
                 self.next = Some(c4_type);
-                self.f.on::<SuperGroupTestC3>(SuperGroupTestC3::dto())
+                filter.on::<SuperGroupTestC3>(SuperGroupTestC3::dto())
             } else if next_type == c4_type {
                 self.next = Some(c5_type);
-                self.f.on::<SuperGroupTestC4>(SuperGroupTestC4::dto())
+                filter.on::<SuperGroupTestC4>(SuperGroupTestC4::dto())
             } else if next_type == c5_type {
                 self.next = None;
-                self.f.on::<SuperGroupTestC5>(SuperGroupTestC5::dto())
+                filter.on::<SuperGroupTestC5>(SuperGroupTestC5::dto())
             } else {
                 unimplemented!("Unknown type found!")
             }
@@ -61,9 +65,10 @@ where
     }
 }
 
-impl<FilterMap> Iterator for Currencies<FilterMap>
+impl<FilterMap, FilterMapRef> Iterator for Currencies<FilterMap, FilterMapRef>
 where
     FilterMap: FilterMapT<SuperGroup>,
+    FilterMapRef: Borrow<FilterMap>,
 {
     type Item = FilterMap::Outcome;
 
@@ -90,7 +95,8 @@ mod test {
 
     #[test]
     fn enumerate_all() {
-        let mut iter = SuperGroup::filter_map(Dto::default());
+        let filter = Dto::default();
+        let mut iter = SuperGroup::filter_map(filter);
 
         assert_eq!(Some(SuperGroupTestC1::dto()), iter.next().as_ref());
         assert_eq!(Some(SuperGroupTestC2::dto()), iter.next().as_ref());
@@ -104,10 +110,8 @@ mod test {
 
     #[test]
     fn skip_some() {
-        let mut iter = SuperGroup::filter_map(FindByTicker::new(
-            SuperGroupTestC3::ticker(),
-            SubGroupTestC10::ticker(),
-        ));
+        let filter = FindByTicker::new(SuperGroupTestC3::ticker(), SubGroupTestC10::ticker());
+        let mut iter = SuperGroup::filter_map(filter);
         assert_eq!(Some(SuperGroupTestC3::dto()), iter.next().as_ref());
         assert_eq!(Some(SubGroupTestC10::dto().into_super_group()), iter.next());
         assert_eq!(None, iter.next().as_ref());

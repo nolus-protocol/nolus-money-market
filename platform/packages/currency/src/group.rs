@@ -1,4 +1,4 @@
-use std::fmt::Debug;
+use std::{borrow::Borrow, fmt::Debug};
 
 use crate::{CurrencyDTO, CurrencyDef, PairsGroup};
 
@@ -17,9 +17,12 @@ where
     /// The elements of the returned iterator are produced by the provided functor
     /// mapping a currency to `Some(value)`. A currency for which the functor returns
     /// `None` is skipped.
-    fn filter_map<FilterMap>(f: FilterMap) -> impl Iterator<Item = FilterMap::Outcome>
+    fn filter_map<FilterMap, FilterMapRef>(
+        f: FilterMapRef,
+    ) -> impl Iterator<Item = FilterMap::Outcome>
     where
-        FilterMap: FilterMapT<Self>;
+        FilterMap: FilterMapT<Self>,
+        FilterMapRef: Borrow<FilterMap> + Clone;
 
     // TODO it seems this could be taken out from here into a simple algo-function
     // Visit this group directly by a visitor
@@ -40,12 +43,11 @@ pub type MaybeAnyVisitResult<VisitedG, V> = Result<<V as AnyVisitor<VisitedG>>::
 
 pub trait FilterMapT<VisitedG>
 where
-    Self: Clone, // required by the composite group implementations
     VisitedG: Group,
 {
     type Outcome;
 
-    //TODO consider removing the function argument `def`
+    //TODO consider removing the function argument `def` if the wasm binaries do not become too large
     fn on<C>(&self, def: &CurrencyDTO<C::Group>) -> Option<Self::Outcome>
     where
         C: CurrencyDef + PairsGroup<CommonGroup = VisitedG::TopG>,
