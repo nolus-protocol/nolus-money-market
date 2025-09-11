@@ -1,4 +1,4 @@
-use std::any::TypeId;
+use std::{any::TypeId, borrow::Borrow, marker::PhantomData};
 
 use serde::{Deserialize, Serialize};
 
@@ -76,9 +76,12 @@ impl Group for PlatformGroup {
     const DESCR: &'static str = "platform currencies";
     type TopG = Self;
 
-    fn filter_map<FilterMap>(f: FilterMap) -> impl Iterator<Item = FilterMap::Outcome>
+    fn filter_map<FilterMap, FilterMapRef>(
+        f: FilterMapRef,
+    ) -> impl Iterator<Item = FilterMap::Outcome>
     where
         FilterMap: FilterMapT<Self>,
+        FilterMapRef: Borrow<FilterMap>,
     {
         PlatformCurrencies::with_filter(f)
     }
@@ -105,18 +108,21 @@ impl Group for PlatformGroup {
 impl MemberOf<Self> for PlatformGroup {}
 
 /// Iterator over platform currency types mapped to some values
-struct PlatformCurrencies<FilterMap> {
-    f: FilterMap,
+struct PlatformCurrencies<FilterMap, FilterMapRef> {
+    f: FilterMapRef,
+    _f_type: PhantomData<FilterMap>,
     next: Option<TypeId>,
 }
 
-impl<FilterMap> PlatformCurrencies<FilterMap>
+impl<FilterMap, FilterMapRef> PlatformCurrencies<FilterMap, FilterMapRef>
 where
     FilterMap: FilterMapT<PlatformGroup>,
+    FilterMapRef: Borrow<FilterMap>,
 {
-    fn with_filter(f: FilterMap) -> Self {
+    fn with_filter(f: FilterMapRef) -> Self {
         Self {
             f,
+            _f_type: PhantomData,
             next: Some(TypeId::of::<Nls>()),
         }
     }
@@ -131,12 +137,13 @@ where
         let stable_type = TypeId::of::<Stable>();
 
         self.next.and_then(|next_type| {
+            let filter = self.f.borrow();
             if next_type == nls_type {
                 self.next = Some(stable_type);
-                self.f.on::<Nls>(Nls::dto())
+                filter.on::<Nls>(Nls::dto())
             } else if next_type == stable_type {
                 self.next = None;
-                self.f.on::<Stable>(Stable::dto())
+                filter.on::<Stable>(Stable::dto())
             } else {
                 unimplemented!("Unknown type found!")
             }
@@ -144,9 +151,10 @@ where
     }
 }
 
-impl<FilterMap> Iterator for PlatformCurrencies<FilterMap>
+impl<FilterMap, FilterMapRef> Iterator for PlatformCurrencies<FilterMap, FilterMapRef>
 where
     FilterMap: FilterMapT<PlatformGroup>,
+    FilterMapRef: Borrow<FilterMap>,
 {
     type Item = FilterMap::Outcome;
 
@@ -175,7 +183,8 @@ mod test {
 
     #[test]
     fn enumerate_all() {
-        let mut iter = PlatformCurrencies::with_filter(Dto::default());
+        let filter = Dto::default();
+        let mut iter = PlatformCurrencies::with_filter(filter);
         assert_eq!(Some(Nls::dto()), iter.next().as_ref());
         assert_eq!(Some(Stable::dto()), iter.next().as_ref());
         assert_eq!(None, iter.next().as_ref());
@@ -183,10 +192,8 @@ mod test {
 
     #[test]
     fn skip_some() {
-        let mut iter = PlatformCurrencies::with_filter(FindByTicker::new(
-            SubGroupTestC6::ticker(),
-            Stable::ticker(),
-        ));
+        let filter = FindByTicker::new(SubGroupTestC6::ticker(), Stable::ticker());
+        let mut iter = PlatformCurrencies::with_filter(filter);
         assert_eq!(Some(Stable::dto()), iter.next().as_ref());
         assert_eq!(None, iter.next().as_ref());
     }
