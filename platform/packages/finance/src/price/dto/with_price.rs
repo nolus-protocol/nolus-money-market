@@ -1,6 +1,6 @@
 use std::marker::PhantomData;
 
-use currency::{AnyVisitorPair, Currency, CurrencyDTO, Group, InPoolWith, MemberOf};
+use currency::{AnyVisitorPair, Currency, CurrencyDTO, CurrencyDef, Group, InPoolWith, MemberOf};
 
 use crate::{
     coin::{Coin, CoinDTO},
@@ -92,8 +92,10 @@ where
         dto2: &CurrencyDTO<Self::VisitedG>,
     ) -> Self::Outcome
     where
-        C1: Currency + MemberOf<Self::VisitedG>,
-        C2: Currency + MemberOf<Self::VisitedG> + InPoolWith<C1>,
+        C1: CurrencyDef,
+        C1::Group: MemberOf<Self::VisitedG>,
+        C2: CurrencyDef + InPoolWith<C1>,
+        C2::Group: MemberOf<Self::VisitedG>,
     {
         self.price
             .try_obtain_price::<C1, C2>(

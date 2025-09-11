@@ -1,6 +1,6 @@
 use crate::{
-    Currency, CurrencyDTO, CurrencyDef, MaybeAnyVisitResult, Symbol, error::Error, group::MemberOf,
-    matcher, pairs::PairsGroup,
+    CurrencyDTO, CurrencyDef, MaybeAnyVisitResult, Symbol, error::Error, group::MemberOf, matcher,
+    pairs::PairsGroup,
 };
 
 use super::Group;
@@ -36,8 +36,10 @@ pub trait AnyVisitorPair {
         dto2: &CurrencyDTO<Self::VisitedG>,
     ) -> Self::Outcome
     where
-        C1: Currency + MemberOf<Self::VisitedG>,
-        C2: Currency + MemberOf<Self::VisitedG> + InPoolWith<C1>;
+        C1: CurrencyDef,
+        C1::Group: MemberOf<Self::VisitedG>,
+        C2: CurrencyDef + InPoolWith<C1>,
+        C2::Group: MemberOf<Self::VisitedG>;
 }
 
 pub trait GroupVisit

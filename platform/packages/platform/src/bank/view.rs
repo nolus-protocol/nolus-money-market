@@ -18,6 +18,12 @@ pub trait BankAccountView {
     where
         C: CurrencyDef;
 
+    /// Filter-map-aggregate of balances of the currencies belonging to a group
+    ///
+    /// - `G` is the currency group
+    /// - `Cmd` is the map function
+    ///
+    /// The embedded filter skips zero balances, Returns `Ok(None)` if there is no not-zero balance for the currencies.
     fn balances<G, Cmd>(&self, cmd: Cmd) -> BalancesResult<G, Cmd>
     where
         G: Group,
