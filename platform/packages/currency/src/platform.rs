@@ -1,4 +1,4 @@
-use std::{any::TypeId, borrow::Borrow, marker::PhantomData};
+use std::{borrow::Borrow, marker::PhantomData};
 
 use serde::{Deserialize, Serialize};
 
@@ -86,6 +86,13 @@ impl Group for PlatformGroup {
         PlatformCurrencies::with_filter(f)
     }
 
+    // fn find_map<FindMap>(_f: FindMap) -> Result<FindMap::Outcome, FindMap>
+    // where
+    //     FindMap: FindMapT<Self>,
+    // {
+    //     todo!()
+    // }
+
     fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<Self, V>
     where
         M: Matcher,
@@ -111,8 +118,89 @@ impl MemberOf<Self> for PlatformGroup {}
 struct PlatformCurrencies<FilterMap, FilterMapRef> {
     f: FilterMapRef,
     _f_type: PhantomData<FilterMap>,
-    next: Option<TypeId>,
+    next: Option<Item>,
 }
+
+// trait Item {
+//     fn next(self) -> Option<impl Item>;
+// }
+
+// 1. specialization on the Currency type instead to using TypeId. It has to be `Iterator`,
+// so we need a smaller abstraction `NextType` that calls the filter, then if in iteration
+// -- [pros] immutable
+
+struct CurrencyItem<Currency>(PhantomData<Currency>);
+
+impl<C> Default for CurrencyItem<C> {
+    fn default() -> Self {
+        Self(PhantomData)
+    }
+}
+
+impl<C> CurrencyItem<C>
+where
+    C: CurrencyDef,
+{
+    // the &self argument is not necessary for the implementation but is needed for easier message passing
+    fn filter_map<VisitedG, FilterMap>(&self, filter_map: &FilterMap) -> Option<FilterMap::Outcome>
+    where
+        VisitedG: Group,
+        C: PairsGroup<CommonGroup = VisitedG::TopG>,
+        C::Group: MemberOf<VisitedG> + MemberOf<VisitedG::TopG>,
+        FilterMap: FilterMapT<VisitedG>,
+    {
+        filter_map.on::<C>(C::dto())
+    }
+
+    // fn find_map(find_map: FindMap) -> Result<FindMap::Outcome, FindMap> {
+    //     find_map.on::<Currency>(Currency::dto())
+    // }
+}
+
+// ======== START GENERATED CODE =========
+// An alternative to TypeId
+enum Item {
+    Nls(CurrencyItem<Nls>),
+    Stable(CurrencyItem<Stable>),
+}
+
+impl Item {
+    fn first() -> Option<Item> {
+        Some(Self::Nls(CurrencyItem::default()))
+    }
+
+    fn next(&self) -> Option<Item> {
+        match self {
+            Item::Nls(_item) => Some(Self::Stable(CurrencyItem::default())),
+            Item::Stable(_item) => None,
+        }
+    }
+
+    fn filter_map<FilterMap>(&self, filter_map: &FilterMap) -> Option<FilterMap::Outcome>
+    where
+        // C: PairsGroup<CommonGroup = VisitedG::TopG>,
+        // C::Group: MemberOf<VisitedG> + MemberOf<VisitedG::TopG>,
+        FilterMap: FilterMapT<PlatformGroup>,
+    {
+        match *self {
+            Item::Nls(ref item) => item.filter_map(filter_map),
+            Item::Stable(ref item) => item.filter_map(filter_map),
+        }
+    }
+}
+
+// impl CurrencyItem<Nls> {
+//     fn next(self) -> Option<CurrencyItem<Stable>> {
+//         Some(CurrencyItem::<Stable>())
+//     }
+// }
+
+// impl CurrencyItem<Stable> {
+//     fn next(self) -> Option<CurrencyItem<Stable>> {
+//         None
+//     }
+// }
+// ======== END GENERATED CODE =========
 
 impl<FilterMap, FilterMapRef> PlatformCurrencies<FilterMap, FilterMapRef>
 where
@@ -123,31 +211,8 @@ where
         Self {
             f,
             _f_type: PhantomData,
-            next: Some(TypeId::of::<Nls>()),
+            next: Item::first(),
         }
-    }
-
-    fn next_map(&mut self) -> Option<FilterMap::Outcome> {
-        debug_assert!(self.next.is_some());
-
-        // TODO define `const` for each of the currencies
-        // once `const fn TypeId::of` gets stabilized
-        // and switch from `if-else` to `match`
-        let nls_type = TypeId::of::<Nls>();
-        let stable_type = TypeId::of::<Stable>();
-
-        self.next.and_then(|next_type| {
-            let filter = self.f.borrow();
-            if next_type == nls_type {
-                self.next = Some(stable_type);
-                filter.on::<Nls>(Nls::dto())
-            } else if next_type == stable_type {
-                self.next = None;
-                filter.on::<Stable>(Stable::dto())
-            } else {
-                unimplemented!("Unknown type found!")
-            }
-        })
     }
 }
 
@@ -160,8 +225,17 @@ where
 
     fn next(&mut self) -> Option<Self::Item> {
         let mut result = None;
-        while result.is_none() && self.next.is_some() {
-            result = self.next_map();
+        while result.is_none() {
+            match self.next {
+                Some(ref current) => {
+                    result = current.filter_map(self.f.borrow());
+                    self.next = current.next();
+                }
+                None => {
+                    break;
+                }
+            }
+            // result = self.next_map();
         }
         result
     }
