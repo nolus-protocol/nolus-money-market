@@ -1,8 +1,11 @@
+use std::{borrow::Borrow, marker::PhantomData};
+
 use serde::{Deserialize, Serialize};
 
 use crate::{
     AnyVisitor, CurrencyDTO, CurrencyDef, Definition, Group, Matcher, MaybeAnyVisitResult,
     MaybePairsVisitorResult, MemberOf, PairsGroup, PairsVisitor,
+    group::{FilterMapT, FindMapT},
 };
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Serialize, Deserialize)]
@@ -74,6 +77,36 @@ impl Group for PlatformGroup {
     const DESCR: &'static str = "platform currencies";
     type TopG = Self;
 
+    fn filter_map<FilterMap, FilterMapRef>(
+        f: FilterMapRef,
+    ) -> impl Iterator<Item = FilterMap::Outcome>
+    where
+        FilterMap: FilterMapT<Self>,
+        FilterMapRef: Borrow<FilterMap>,
+    {
+        PlatformCurrencies::with_filter(f)
+    }
+
+    fn find_map<FindMap>(f: FindMap) -> Result<FindMap::Outcome, FindMap>
+    where
+        FindMap: FindMapT<Self>,
+    {
+        let mut may_next = Item::first();
+        let mut result = Err(f);
+        while let Some(next) = may_next {
+            match result {
+                Ok(ref _result) => {
+                    break;
+                }
+                Err(f) => {
+                    result = next.find_map(f);
+                }
+            }
+            may_next = next.next();
+        }
+        result
+    }
+
     fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<Self, V>
     where
         M: Matcher,
@@ -94,3 +127,169 @@ impl Group for PlatformGroup {
 }
 
 impl MemberOf<Self> for PlatformGroup {}
+
+/// Iterator over platform currency types mapped to some values
+struct PlatformCurrencies<FilterMap, FilterMapRef> {
+    f: FilterMapRef,
+    _f_type: PhantomData<FilterMap>,
+    next: Option<Item>,
+}
+
+// ======== START GENERATED CODE =========
+enum Item {
+    Nls(),
+    Stable(),
+}
+
+impl Item {
+    fn first() -> Option<Item> {
+        Some(Self::Nls())
+    }
+
+    fn next(&self) -> Option<Item> {
+        match self {
+            Item::Nls() => Some(Self::Stable()),
+            Item::Stable() => None,
+        }
+    }
+
+    fn filter_map<FilterMap>(&self, filter_map: &FilterMap) -> Option<FilterMap::Outcome>
+    where
+        FilterMap: FilterMapT<PlatformGroup>,
+    {
+        match *self {
+            Item::Nls() => filter_map.on::<Nls>(Nls::dto()),
+            Item::Stable() => filter_map.on::<Stable>(Stable::dto()),
+        }
+    }
+
+    fn find_map<FindMap>(&self, find_map: FindMap) -> Result<FindMap::Outcome, FindMap>
+    where
+        FindMap: FindMapT<PlatformGroup>,
+    {
+        match *self {
+            Item::Nls() => find_map.on::<Nls>(Nls::dto()),
+            Item::Stable() => find_map.on::<Stable>(Stable::dto()),
+        }
+    }
+}
+// ======== END GENERATED CODE =========
+
+impl<FilterMap, FilterMapRef> PlatformCurrencies<FilterMap, FilterMapRef>
+where
+    FilterMap: FilterMapT<PlatformGroup>,
+    FilterMapRef: Borrow<FilterMap>,
+{
+    fn with_filter(f: FilterMapRef) -> Self {
+        Self {
+            f,
+            _f_type: PhantomData,
+            next: Item::first(),
+        }
+    }
+}
+
+impl<FilterMap, FilterMapRef> Iterator for PlatformCurrencies<FilterMap, FilterMapRef>
+where
+    FilterMap: FilterMapT<PlatformGroup>,
+    FilterMapRef: Borrow<FilterMap>,
+{
+    type Item = FilterMap::Outcome;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let mut result = None;
+        while let Some(ref current) = self.next {
+            if result.is_some() {
+                break;
+            }
+
+            result = current.filter_map(self.f.borrow());
+            self.next = current.next();
+        }
+        result
+    }
+}
+
+#[cfg(test)]
+mod test {
+
+    use std::fmt::Debug;
+
+    use crate::{
+        CurrencyDTO, CurrencyDef, Group, Matcher, MemberOf, PairsGroup, Tickers,
+        group::FindMapT,
+        matcher::symbol_matcher,
+        platform::{Nls, PlatformGroup, Stable},
+        test::{
+            SubGroupTestC6,
+            filter::{Dto, FindByTicker},
+        },
+    };
+
+    use super::PlatformCurrencies;
+
+    #[test]
+    fn enumerate_all() {
+        let filter = Dto::default();
+        let mut iter = PlatformCurrencies::with_filter(filter);
+        assert_eq!(Some(Nls::dto()), iter.next().as_ref());
+        assert_eq!(Some(Stable::dto()), iter.next().as_ref());
+        assert_eq!(None, iter.next().as_ref());
+    }
+
+    #[test]
+    fn skip_some() {
+        let filter = FindByTicker::new(SubGroupTestC6::ticker(), Stable::ticker());
+        let mut iter = PlatformCurrencies::with_filter(filter);
+        assert_eq!(Some(Stable::dto()), iter.next().as_ref());
+        assert_eq!(None, iter.next().as_ref());
+    }
+
+    #[test]
+    fn find() {
+        struct FindCurrencyBySymbol<Matcher>(Matcher);
+
+        impl<Matcher> Debug for FindCurrencyBySymbol<Matcher> {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                f.debug_tuple("FindCurrencyBySymbol")
+                    .field(&"matcher")
+                    .finish()
+            }
+        }
+
+        impl<MatcherImpl, VisitedG> FindMapT<VisitedG> for FindCurrencyBySymbol<MatcherImpl>
+        where
+            MatcherImpl: Matcher,
+            VisitedG: Group,
+        {
+            type Outcome = CurrencyDTO<VisitedG>;
+
+            fn on<C>(self, def: &CurrencyDTO<C::Group>) -> Result<Self::Outcome, Self>
+            where
+                C: CurrencyDef + PairsGroup<CommonGroup = VisitedG::TopG>,
+                C::Group: MemberOf<VisitedG> + MemberOf<VisitedG::TopG>,
+            {
+                if self.0.r#match(def.definition()) {
+                    Ok(def.into_super_group())
+                } else {
+                    Err(self)
+                }
+            }
+        }
+
+        let matcher = symbol_matcher::<Tickers<PlatformGroup>>(Nls::ticker());
+        assert_eq!(
+            Nls::dto(),
+            &PlatformGroup::find_map(FindCurrencyBySymbol(matcher)).unwrap()
+        );
+
+        let matcher = symbol_matcher::<Tickers<PlatformGroup>>(Stable::ticker());
+        assert_eq!(
+            Stable::dto(),
+            &PlatformGroup::find_map(FindCurrencyBySymbol(matcher)).unwrap()
+        );
+
+        let matcher = symbol_matcher::<Tickers<PlatformGroup>>("unknown ticker");
+        assert!(PlatformGroup::find_map(FindCurrencyBySymbol(matcher)).is_err());
+    }
+}

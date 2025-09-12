@@ -1,11 +1,15 @@
+use std::{borrow::Borrow, marker::PhantomData};
+
 use serde::Deserialize;
 
 use crate::{
-    AnyVisitor, CurrencyDTO, Group, Matcher, MaybeAnyVisitResult,
+    AnyVisitor, CurrencyDTO, CurrencyDef, Group, Matcher, MaybeAnyVisitResult,
     from_symbol_any::InPoolWith,
-    group::MemberOf,
+    group::{FilterMapT, MemberOf},
     pairs::{MaybePairsVisitorResult, PairsGroup, PairsVisitor},
 };
+
+use super::{sub::Currencies as SubGroupCurrencies, super_::Currencies as SuperGroupCurrencies};
 
 pub type SuperGroupTestC1 = impl_::TestC1;
 pub type SuperGroupTestC2 = impl_::TestC2;
@@ -24,6 +28,44 @@ impl MemberOf<Self> for SuperGroup {}
 impl Group for SuperGroup {
     const DESCR: &'static str = "super_group";
     type TopG = Self;
+
+    fn filter_map<FilterMap, FilterMapRef>(
+        f: FilterMapRef,
+    ) -> impl Iterator<Item = FilterMap::Outcome>
+    where
+        FilterMap: FilterMapT<Self>,
+        FilterMapRef: Borrow<FilterMap> + Clone,
+    {
+        struct SubFilterAdapter<FilterMap, FilterMapRef>(FilterMapRef, PhantomData<FilterMap>);
+
+        impl<FilterMap, FilterMapRef> Clone for SubFilterAdapter<FilterMap, FilterMapRef>
+        where
+            FilterMapRef: Clone,
+        {
+            fn clone(&self) -> Self {
+                Self(self.0.clone(), self.1)
+            }
+        }
+
+        impl<FilterMap, FilterMapRef> FilterMapT<SubGroup> for SubFilterAdapter<FilterMap, FilterMapRef>
+        where
+            FilterMap: FilterMapT<SuperGroup>,
+            FilterMapRef: Borrow<FilterMap>,
+        {
+            type Outcome = FilterMap::Outcome;
+
+            fn on<C>(&self, def: &CurrencyDTO<C::Group>) -> Option<Self::Outcome>
+            where
+                C: CurrencyDef + PairsGroup<CommonGroup = <SubGroup as Group>::TopG>,
+                C::Group: MemberOf<<SubGroup as Group>::TopG>,
+            {
+                self.0.borrow().on::<C>(def)
+            }
+        }
+
+        SuperGroupCurrencies::with_filter(f.clone())
+            .chain(SubGroup::filter_map(SubFilterAdapter(f, PhantomData)))
+    }
 
     fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<Self, V>
     where
@@ -44,6 +86,13 @@ impl Group for SuperGroup {
         V: AnyVisitor<Self::TopG>,
     {
         unreachable!()
+    }
+
+    fn find_map<FindMap>(_v: FindMap) -> Result<FindMap::Outcome, FindMap>
+    where
+        FindMap: crate::group::FindMapT<Self>,
+    {
+        todo!()
     }
 }
 
@@ -164,6 +213,16 @@ impl Group for SubGroup {
     const DESCR: &'static str = "sub_group";
     type TopG = SuperGroup;
 
+    fn filter_map<FilterMap, FilterMapRef>(
+        f: FilterMapRef,
+    ) -> impl Iterator<Item = FilterMap::Outcome>
+    where
+        FilterMap: FilterMapT<Self>,
+        FilterMapRef: Borrow<FilterMap>,
+    {
+        SubGroupCurrencies::with_filter(f)
+    }
+
     fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<Self, V>
     where
         M: Matcher,
@@ -178,6 +237,13 @@ impl Group for SubGroup {
         V: AnyVisitor<Self::TopG>,
     {
         maybe_visit::<_, Self::TopG, _>(matcher, visitor)
+    }
+
+    fn find_map<FindMap>(_v: FindMap) -> Result<FindMap::Outcome, FindMap>
+    where
+        FindMap: crate::group::FindMapT<Self>,
+    {
+        todo!()
     }
 }
 
