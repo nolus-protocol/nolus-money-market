@@ -4,6 +4,12 @@ use crate::{CurrencyDTO, CurrencyDef, PairsGroup};
 
 use super::{AnyVisitor, matcher::Matcher};
 
+pub use filter::CurrenciesMapping;
+pub use member::{GroupMember, MemberOf};
+
+mod filter;
+mod member;
+
 pub trait Group
 where
     Self: Copy + Clone + Debug + Ord + PartialEq + MemberOf<Self>,
@@ -71,18 +77,4 @@ where
     where
         C: CurrencyDef + PairsGroup<CommonGroup = VisitedG::TopG>,
         C::Group: MemberOf<VisitedG> + MemberOf<VisitedG::TopG>;
-}
-
-pub trait MemberOf<G>
-where
-    G: Group,
-{
-}
-
-impl<G, C> MemberOf<G> for C
-where
-    C: CurrencyDef,
-    C::Group: MemberOf<G>,
-    G: Group,
-{
 }
