@@ -1,11 +1,11 @@
-use std::{borrow::Borrow, marker::PhantomData};
+use std::borrow::Borrow;
 
 use serde::{Deserialize, Serialize};
 
 use crate::{
     AnyVisitor, CurrencyDTO, CurrencyDef, Definition, Group, Matcher, MaybeAnyVisitResult,
     MaybePairsVisitorResult, MemberOf, PairsGroup, PairsVisitor,
-    group::{FilterMapT, FindMapT},
+    group::{CurrenciesMapping, FilterMapT, FindMapT, GroupMember},
 };
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Serialize, Deserialize)]
@@ -84,7 +84,7 @@ impl Group for PlatformGroup {
         FilterMap: FilterMapT<Self>,
         FilterMapRef: Borrow<FilterMap>,
     {
-        PlatformCurrencies::with_filter(f)
+        CurrenciesMapping::<_, Item, _, _>::with_filter(f)
     }
 
     fn find_map<FindMap>(f: FindMap) -> Result<FindMap::Outcome, FindMap>
@@ -128,25 +128,18 @@ impl Group for PlatformGroup {
 
 impl MemberOf<Self> for PlatformGroup {}
 
-/// Iterator over platform currency types mapped to some values
-struct PlatformCurrencies<FilterMap, FilterMapRef> {
-    f: FilterMapRef,
-    _f_type: PhantomData<FilterMap>,
-    next: Option<Item>,
-}
-
 // ======== START GENERATED CODE =========
 enum Item {
     Nls(),
     Stable(),
 }
 
-impl Item {
-    fn first() -> Option<Item> {
+impl GroupMember<PlatformGroup> for Item {
+    fn first() -> Option<Self> {
         Some(Self::Nls())
     }
 
-    fn next(&self) -> Option<Item> {
+    fn next(&self) -> Option<Self> {
         match self {
             Item::Nls() => Some(Self::Stable()),
             Item::Stable() => None,
@@ -175,41 +168,6 @@ impl Item {
 }
 // ======== END GENERATED CODE =========
 
-impl<FilterMap, FilterMapRef> PlatformCurrencies<FilterMap, FilterMapRef>
-where
-    FilterMap: FilterMapT<PlatformGroup>,
-    FilterMapRef: Borrow<FilterMap>,
-{
-    fn with_filter(f: FilterMapRef) -> Self {
-        Self {
-            f,
-            _f_type: PhantomData,
-            next: Item::first(),
-        }
-    }
-}
-
-impl<FilterMap, FilterMapRef> Iterator for PlatformCurrencies<FilterMap, FilterMapRef>
-where
-    FilterMap: FilterMapT<PlatformGroup>,
-    FilterMapRef: Borrow<FilterMap>,
-{
-    type Item = FilterMap::Outcome;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        let mut result = None;
-        while let Some(ref current) = self.next {
-            if result.is_some() {
-                break;
-            }
-
-            result = current.filter_map(self.f.borrow());
-            self.next = current.next();
-        }
-        result
-    }
-}
-
 #[cfg(test)]
 mod test {
 
@@ -226,12 +184,11 @@ mod test {
         },
     };
 
-    use super::PlatformCurrencies;
-
     #[test]
     fn enumerate_all() {
         let filter = Dto::default();
-        let mut iter = PlatformCurrencies::with_filter(filter);
+        //intentionally use the filter by ref to avoid its potential clone
+        let mut iter = PlatformGroup::filter_map::<Dto<PlatformGroup>, _>(&filter);
         assert_eq!(Some(Nls::dto()), iter.next().as_ref());
         assert_eq!(Some(Stable::dto()), iter.next().as_ref());
         assert_eq!(None, iter.next().as_ref());
@@ -240,7 +197,7 @@ mod test {
     #[test]
     fn skip_some() {
         let filter = FindByTicker::new(SubGroupTestC6::ticker(), Stable::ticker());
-        let mut iter = PlatformCurrencies::with_filter(filter);
+        let mut iter = PlatformGroup::filter_map(filter);
         assert_eq!(Some(Stable::dto()), iter.next().as_ref());
         assert_eq!(None, iter.next().as_ref());
     }
