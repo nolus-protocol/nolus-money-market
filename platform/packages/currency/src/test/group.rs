@@ -5,11 +5,12 @@ use serde::Deserialize;
 use crate::{
     AnyVisitor, CurrencyDTO, CurrencyDef, Group, Matcher, MaybeAnyVisitResult,
     from_symbol_any::InPoolWith,
-    group::{FilterMapT, MemberOf},
+    group::{CurrenciesMapping, FilterMapT, MemberOf},
     pairs::{MaybePairsVisitorResult, PairsGroup, PairsVisitor},
+    test::sub::Item,
 };
 
-use super::{sub::Currencies as SubGroupCurrencies, super_::Currencies as SuperGroupCurrencies};
+use super::super_::Currencies as SuperGroupCurrencies;
 
 pub type SuperGroupTestC1 = impl_::TestC1;
 pub type SuperGroupTestC2 = impl_::TestC2;
@@ -220,7 +221,7 @@ impl Group for SubGroup {
         FilterMap: FilterMapT<Self>,
         FilterMapRef: Borrow<FilterMap>,
     {
-        SubGroupCurrencies::with_filter(f)
+        CurrenciesMapping::<_, Item, _, _>::with_filter(f)
     }
 
     fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<Self, V>

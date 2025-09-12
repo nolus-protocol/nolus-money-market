@@ -1,88 +1,65 @@
-use std::{any::TypeId, borrow::Borrow, marker::PhantomData};
-
 use crate::{
-    CurrencyDef,
-    group::FilterMapT,
+    CurrencyDef, FindMapT,
+    group::{FilterMapT, GroupMember},
     test::{SubGroup, SubGroupTestC6, SubGroupTestC10},
 };
 
-/// Iterator over [`SubGroup`] currency types mapped to some values
-pub(super) struct Currencies<FilterMap, FilterMapRef> {
-    f: FilterMapRef,
-    _f_type: PhantomData<FilterMap>,
-    next: Option<TypeId>,
+// ======== START GENERATED CODE =========
+pub(super) enum Item {
+    SubGroupTestC6(),
+    SubGroupTestC10(),
 }
 
-impl<FilterMap, FilterMapRef> Currencies<FilterMap, FilterMapRef>
-where
-    FilterMap: FilterMapT<SubGroup>,
-    FilterMapRef: Borrow<FilterMap>,
-{
-    pub fn with_filter(f: FilterMapRef) -> Self {
-        Self {
-            f,
-            _f_type: PhantomData,
-            next: Some(TypeId::of::<SubGroupTestC6>()),
+impl GroupMember<SubGroup> for Item {
+    fn first() -> Option<Self> {
+        Some(Self::SubGroupTestC6())
+    }
+
+    fn next(&self) -> Option<Self> {
+        match self {
+            Item::SubGroupTestC6() => Some(Self::SubGroupTestC10()),
+            Item::SubGroupTestC10() => None,
         }
     }
 
-    fn next_map(&mut self) -> Option<FilterMap::Outcome> {
-        debug_assert!(self.next.is_some());
-
-        // TODO define `const` for each of the currencies
-        // once `const fn TypeId::of` gets stabilized
-        // and switch from `if-else` to `match`
-        let c6_type = TypeId::of::<SubGroupTestC6>();
-        let c10_type = TypeId::of::<SubGroupTestC10>();
-
-        self.next.and_then(|next_type| {
-            let filter = self.f.borrow();
-            if next_type == c6_type {
-                self.next = Some(c10_type);
-                filter.on::<SubGroupTestC6>(SubGroupTestC6::dto())
-            } else if next_type == c10_type {
-                self.next = None;
-                filter.on::<SubGroupTestC10>(SubGroupTestC10::dto())
-            } else {
-                unimplemented!("Unknown type found!")
-            }
-        })
-    }
-}
-
-impl<FilterMap, FilterMapRef> Iterator for Currencies<FilterMap, FilterMapRef>
-where
-    FilterMap: FilterMapT<SubGroup>,
-    FilterMapRef: Borrow<FilterMap>,
-{
-    type Item = FilterMap::Outcome;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        let mut result = None;
-        while result.is_none() && self.next.is_some() {
-            result = self.next_map();
+    fn filter_map<FilterMap>(&self, filter_map: &FilterMap) -> Option<FilterMap::Outcome>
+    where
+        FilterMap: FilterMapT<SubGroup>,
+    {
+        match *self {
+            Item::SubGroupTestC6() => filter_map.on::<SubGroupTestC6>(SubGroupTestC6::dto()),
+            Item::SubGroupTestC10() => filter_map.on::<SubGroupTestC10>(SubGroupTestC10::dto()),
         }
-        result
+    }
+
+    fn find_map<FindMap>(&self, find_map: FindMap) -> Result<FindMap::Outcome, FindMap>
+    where
+        FindMap: FindMapT<SubGroup>,
+    {
+        match *self {
+            Item::SubGroupTestC6() => find_map.on::<SubGroupTestC6>(SubGroupTestC6::dto()),
+            Item::SubGroupTestC10() => find_map.on::<SubGroupTestC10>(SubGroupTestC10::dto()),
+        }
     }
 }
+
+// ======== END GENERATED CODE =========
 
 #[cfg(test)]
 mod test {
 
     use crate::{
-        CurrencyDef,
+        CurrencyDef, Group,
         test::{
             SubGroup, SubGroupTestC6, SubGroupTestC10, SuperGroupTestC1,
             filter::{Dto, FindByTicker},
         },
     };
 
-    use super::Currencies;
-
     #[test]
     fn enumerate_all() {
         let filter = Dto::<SubGroup>::default();
-        let mut iter = Currencies::<Dto<SubGroup>, _>::with_filter(&filter);
+        let mut iter = SubGroup::filter_map::<Dto<SubGroup>, _>(&filter);
         assert_eq!(Some(SubGroupTestC6::dto()), iter.next().as_ref());
         assert_eq!(Some(SubGroupTestC10::dto()), iter.next().as_ref());
         assert_eq!(None, iter.next().as_ref());
@@ -91,7 +68,7 @@ mod test {
     #[test]
     fn skip_some() {
         let filter = FindByTicker::new(SubGroupTestC10::ticker(), SuperGroupTestC1::ticker());
-        let mut iter = Currencies::with_filter(filter);
+        let mut iter = SubGroup::filter_map(filter);
         assert_eq!(Some(SubGroupTestC10::dto()), iter.next().as_ref());
         assert_eq!(None, iter.next().as_ref());
     }
