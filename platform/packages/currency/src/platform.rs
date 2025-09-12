@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     AnyVisitor, CurrencyDTO, CurrencyDef, Definition, Group, Matcher, MaybeAnyVisitResult,
     MaybePairsVisitorResult, MemberOf, PairsGroup, PairsVisitor,
-    group::{CurrenciesMapping, FilterMapT, FindMapT, GroupMember},
+    group::{self, CurrenciesMapping, FilterMapT, FindMapT, GroupMember},
 };
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Serialize, Deserialize)]
@@ -91,20 +91,7 @@ impl Group for PlatformGroup {
     where
         FindMap: FindMapT<Self>,
     {
-        let mut may_next = Item::first();
-        let mut result = Err(f);
-        while let Some(next) = may_next {
-            match result {
-                Ok(ref _result) => {
-                    break;
-                }
-                Err(f) => {
-                    result = next.find_map(f);
-                }
-            }
-            may_next = next.next();
-        }
-        result
+        group::find_map::<_, Item, _>(f)
     }
 
     fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<Self, V>
@@ -171,16 +158,12 @@ impl GroupMember<PlatformGroup> for Item {
 #[cfg(test)]
 mod test {
 
-    use std::fmt::Debug;
-
     use crate::{
-        CurrencyDTO, CurrencyDef, Group, Matcher, MemberOf, PairsGroup, Tickers,
-        group::FindMapT,
+        CurrencyDef, Group, Tickers,
         matcher::symbol_matcher,
         platform::{Nls, PlatformGroup, Stable},
         test::{
-            SubGroupTestC6,
-            filter::{Dto, FindByTicker},
+            FindCurrencyBySymbol, SubGroupTestC6, {Dto, FindByTicker},
         },
     };
 
@@ -204,49 +187,19 @@ mod test {
 
     #[test]
     fn find() {
-        struct FindCurrencyBySymbol<Matcher>(Matcher);
-
-        impl<Matcher> Debug for FindCurrencyBySymbol<Matcher> {
-            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-                f.debug_tuple("FindCurrencyBySymbol")
-                    .field(&"matcher")
-                    .finish()
-            }
-        }
-
-        impl<MatcherImpl, VisitedG> FindMapT<VisitedG> for FindCurrencyBySymbol<MatcherImpl>
-        where
-            MatcherImpl: Matcher,
-            VisitedG: Group,
-        {
-            type Outcome = CurrencyDTO<VisitedG>;
-
-            fn on<C>(self, def: &CurrencyDTO<C::Group>) -> Result<Self::Outcome, Self>
-            where
-                C: CurrencyDef + PairsGroup<CommonGroup = VisitedG::TopG>,
-                C::Group: MemberOf<VisitedG> + MemberOf<VisitedG::TopG>,
-            {
-                if self.0.r#match(def.definition()) {
-                    Ok(def.into_super_group())
-                } else {
-                    Err(self)
-                }
-            }
-        }
-
         let matcher = symbol_matcher::<Tickers<PlatformGroup>>(Nls::ticker());
         assert_eq!(
             Nls::dto(),
-            &PlatformGroup::find_map(FindCurrencyBySymbol(matcher)).unwrap()
+            &PlatformGroup::find_map(FindCurrencyBySymbol::with_matcher(matcher)).unwrap()
         );
 
         let matcher = symbol_matcher::<Tickers<PlatformGroup>>(Stable::ticker());
         assert_eq!(
             Stable::dto(),
-            &PlatformGroup::find_map(FindCurrencyBySymbol(matcher)).unwrap()
+            &PlatformGroup::find_map(FindCurrencyBySymbol::with_matcher(matcher)).unwrap()
         );
 
         let matcher = symbol_matcher::<Tickers<PlatformGroup>>("unknown ticker");
-        assert!(PlatformGroup::find_map(FindCurrencyBySymbol(matcher)).is_err());
+        assert!(PlatformGroup::find_map(FindCurrencyBySymbol::with_matcher(matcher)).is_err());
     }
 }
