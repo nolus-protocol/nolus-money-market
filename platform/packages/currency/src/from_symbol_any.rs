@@ -1,6 +1,5 @@
 use crate::{
-    CurrencyDTO, CurrencyDef, MaybeAnyVisitResult, Symbol, error::Error, group::MemberOf, matcher,
-    pairs::PairsGroup,
+    CurrencyDTO, CurrencyDef, Symbol, error::Error, group::MemberOf, matcher, pairs::PairsGroup,
 };
 
 use super::Group;
@@ -46,12 +45,14 @@ pub trait GroupVisit
 where
     Self: Symbol,
 {
-    fn maybe_visit_any<V>(symbol: &str, visitor: V) -> MaybeAnyVisitResult<Self::Group, V>
+    fn maybe_visit_any<V>(symbol: &str, visitor: V) -> Result<V::Outcome, V>
     where
         V: AnyVisitor<Self::Group>,
     {
         let matcher = matcher::symbol_matcher::<Self>(symbol);
         <Self::Group as Group>::maybe_visit(&matcher, visitor)
+        // let match_map = MatchThenMap::new(matcher, visitor);
+        // <Self::Group as Group>::find_map(match_map)
     }
 }
 impl<T> GroupVisit for T
