@@ -87,6 +87,13 @@ impl Group for SuperGroup {
     {
         unreachable!()
     }
+
+    fn find_map<FindMap>(_v: FindMap) -> Result<FindMap::Outcome, FindMap>
+    where
+        FindMap: crate::group::FindMapT<Self>,
+    {
+        todo!()
+    }
 }
 
 //Pool pairs: 1:2, 1:4, 2:3, 4:5, 2:6, 2:10, 5:10, 6:10
@@ -230,6 +237,13 @@ impl Group for SubGroup {
         V: AnyVisitor<Self::TopG>,
     {
         maybe_visit::<_, Self::TopG, _>(matcher, visitor)
+    }
+
+    fn find_map<FindMap>(_v: FindMap) -> Result<FindMap::Outcome, FindMap>
+    where
+        FindMap: crate::group::FindMapT<Self>,
+    {
+        todo!()
     }
 }
 

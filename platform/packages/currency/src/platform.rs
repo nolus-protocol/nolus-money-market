@@ -4,7 +4,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     AnyVisitor, CurrencyDTO, CurrencyDef, Definition, Group, Matcher, MaybeAnyVisitResult,
-    MaybePairsVisitorResult, MemberOf, PairsGroup, PairsVisitor, group::FilterMapT,
+    MaybePairsVisitorResult, MemberOf, PairsGroup, PairsVisitor,
+    group::{FilterMapT, FindMapT},
 };
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Serialize, Deserialize)]
@@ -86,12 +87,25 @@ impl Group for PlatformGroup {
         PlatformCurrencies::with_filter(f)
     }
 
-    // fn find_map<FindMap>(_f: FindMap) -> Result<FindMap::Outcome, FindMap>
-    // where
-    //     FindMap: FindMapT<Self>,
-    // {
-    //     todo!()
-    // }
+    fn find_map<FindMap>(f: FindMap) -> Result<FindMap::Outcome, FindMap>
+    where
+        FindMap: FindMapT<Self>,
+    {
+        let mut may_next = Item::first();
+        let mut result = Err(f);
+        while let Some(next) = may_next {
+            match result {
+                Ok(ref _result) => {
+                    break;
+                }
+                Err(f) => {
+                    result = next.find_map(f);
+                }
+            }
+            may_next = next.next();
+        }
+        result
+    }
 
     fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<Self, V>
     where
@@ -121,85 +135,44 @@ struct PlatformCurrencies<FilterMap, FilterMapRef> {
     next: Option<Item>,
 }
 
-// trait Item {
-//     fn next(self) -> Option<impl Item>;
-// }
-
-// 1. specialization on the Currency type instead to using TypeId. It has to be `Iterator`,
-// so we need a smaller abstraction `NextType` that calls the filter, then if in iteration
-// -- [pros] immutable
-
-struct CurrencyItem<Currency>(PhantomData<Currency>);
-
-impl<C> Default for CurrencyItem<C> {
-    fn default() -> Self {
-        Self(PhantomData)
-    }
-}
-
-impl<C> CurrencyItem<C>
-where
-    C: CurrencyDef,
-{
-    // the &self argument is not necessary for the implementation but is needed for easier message passing
-    fn filter_map<VisitedG, FilterMap>(&self, filter_map: &FilterMap) -> Option<FilterMap::Outcome>
-    where
-        VisitedG: Group,
-        C: PairsGroup<CommonGroup = VisitedG::TopG>,
-        C::Group: MemberOf<VisitedG> + MemberOf<VisitedG::TopG>,
-        FilterMap: FilterMapT<VisitedG>,
-    {
-        filter_map.on::<C>(C::dto())
-    }
-
-    // fn find_map(find_map: FindMap) -> Result<FindMap::Outcome, FindMap> {
-    //     find_map.on::<Currency>(Currency::dto())
-    // }
-}
-
 // ======== START GENERATED CODE =========
-// An alternative to TypeId
 enum Item {
-    Nls(CurrencyItem<Nls>),
-    Stable(CurrencyItem<Stable>),
+    Nls(),
+    Stable(),
 }
 
 impl Item {
     fn first() -> Option<Item> {
-        Some(Self::Nls(CurrencyItem::default()))
+        Some(Self::Nls())
     }
 
     fn next(&self) -> Option<Item> {
         match self {
-            Item::Nls(_item) => Some(Self::Stable(CurrencyItem::default())),
-            Item::Stable(_item) => None,
+            Item::Nls() => Some(Self::Stable()),
+            Item::Stable() => None,
         }
     }
 
     fn filter_map<FilterMap>(&self, filter_map: &FilterMap) -> Option<FilterMap::Outcome>
     where
-        // C: PairsGroup<CommonGroup = VisitedG::TopG>,
-        // C::Group: MemberOf<VisitedG> + MemberOf<VisitedG::TopG>,
         FilterMap: FilterMapT<PlatformGroup>,
     {
         match *self {
-            Item::Nls(ref item) => item.filter_map(filter_map),
-            Item::Stable(ref item) => item.filter_map(filter_map),
+            Item::Nls() => filter_map.on::<Nls>(Nls::dto()),
+            Item::Stable() => filter_map.on::<Stable>(Stable::dto()),
+        }
+    }
+
+    fn find_map<FindMap>(&self, find_map: FindMap) -> Result<FindMap::Outcome, FindMap>
+    where
+        FindMap: FindMapT<PlatformGroup>,
+    {
+        match *self {
+            Item::Nls() => find_map.on::<Nls>(Nls::dto()),
+            Item::Stable() => find_map.on::<Stable>(Stable::dto()),
         }
     }
 }
-
-// impl CurrencyItem<Nls> {
-//     fn next(self) -> Option<CurrencyItem<Stable>> {
-//         Some(CurrencyItem::<Stable>())
-//     }
-// }
-
-// impl CurrencyItem<Stable> {
-//     fn next(self) -> Option<CurrencyItem<Stable>> {
-//         None
-//     }
-// }
 // ======== END GENERATED CODE =========
 
 impl<FilterMap, FilterMapRef> PlatformCurrencies<FilterMap, FilterMapRef>
@@ -225,17 +198,13 @@ where
 
     fn next(&mut self) -> Option<Self::Item> {
         let mut result = None;
-        while result.is_none() {
-            match self.next {
-                Some(ref current) => {
-                    result = current.filter_map(self.f.borrow());
-                    self.next = current.next();
-                }
-                None => {
-                    break;
-                }
+        while let Some(ref current) = self.next {
+            if result.is_some() {
+                break;
             }
-            // result = self.next_map();
+
+            result = current.filter_map(self.f.borrow());
+            self.next = current.next();
         }
         result
     }
@@ -244,9 +213,13 @@ where
 #[cfg(test)]
 mod test {
 
+    use std::fmt::Debug;
+
     use crate::{
-        CurrencyDef,
-        platform::{Nls, Stable},
+        CurrencyDTO, CurrencyDef, Group, Matcher, MemberOf, PairsGroup, Tickers,
+        group::FindMapT,
+        matcher::symbol_matcher,
+        platform::{Nls, PlatformGroup, Stable},
         test::{
             SubGroupTestC6,
             filter::{Dto, FindByTicker},
@@ -270,5 +243,53 @@ mod test {
         let mut iter = PlatformCurrencies::with_filter(filter);
         assert_eq!(Some(Stable::dto()), iter.next().as_ref());
         assert_eq!(None, iter.next().as_ref());
+    }
+
+    #[test]
+    fn find() {
+        struct FindCurrencyBySymbol<Matcher>(Matcher);
+
+        impl<Matcher> Debug for FindCurrencyBySymbol<Matcher> {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                f.debug_tuple("FindCurrencyBySymbol")
+                    .field(&"matcher")
+                    .finish()
+            }
+        }
+
+        impl<MatcherImpl, VisitedG> FindMapT<VisitedG> for FindCurrencyBySymbol<MatcherImpl>
+        where
+            MatcherImpl: Matcher,
+            VisitedG: Group,
+        {
+            type Outcome = CurrencyDTO<VisitedG>;
+
+            fn on<C>(self, def: &CurrencyDTO<C::Group>) -> Result<Self::Outcome, Self>
+            where
+                C: CurrencyDef + PairsGroup<CommonGroup = VisitedG::TopG>,
+                C::Group: MemberOf<VisitedG> + MemberOf<VisitedG::TopG>,
+            {
+                if self.0.r#match(def.definition()) {
+                    Ok(def.into_super_group())
+                } else {
+                    Err(self)
+                }
+            }
+        }
+
+        let matcher = symbol_matcher::<Tickers<PlatformGroup>>(Nls::ticker());
+        assert_eq!(
+            Nls::dto(),
+            &PlatformGroup::find_map(FindCurrencyBySymbol(matcher)).unwrap()
+        );
+
+        let matcher = symbol_matcher::<Tickers<PlatformGroup>>(Stable::ticker());
+        assert_eq!(
+            Stable::dto(),
+            &PlatformGroup::find_map(FindCurrencyBySymbol(matcher)).unwrap()
+        );
+
+        let matcher = symbol_matcher::<Tickers<PlatformGroup>>("unknown ticker");
+        assert!(PlatformGroup::find_map(FindCurrencyBySymbol(matcher)).is_err());
     }
 }
