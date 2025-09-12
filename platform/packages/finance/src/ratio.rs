@@ -1,11 +1,14 @@
-use std::fmt::Debug;
+use std::{fmt::Debug, ops::Div};
 
 use serde::{Deserialize, Serialize};
 
 use crate::{
     error::{Error, Result as FinanceResult},
     fraction::{Fraction, Unit as FractionUnit},
-    fractionable::Fractionable,
+    fractionable::{
+        Fractionable, MaxPrimitive, ToDoublePrimitive, TryFromDoublePrimitive,
+        checked_mul::CheckedMul,
+    },
     rational::Rational,
     zero::Zero,
 };
@@ -102,6 +105,30 @@ where
             denominator,
         }
     }
+
+    pub fn checked_mul<M, T>(self, rhs: M) -> Option<M>
+    where
+        U: ToDoublePrimitive,
+        M: ToDoublePrimitive + TryFromDoublePrimitive<T>,
+        <U as ToDoublePrimitive>::Double: MaxPrimitive<<M as ToDoublePrimitive>::Double, Max = T>,
+        T: CheckedMul<Output = T>
+            + Div<Output = T>
+            + From<<U as ToDoublePrimitive>::Double>
+            + From<<M as ToDoublePrimitive>::Double>,
+    {
+        if self.nominator == self.denominator {
+            Some(rhs)
+        } else {
+            let nominator_max = self.nominator.to_double().into_max_self();
+            let rhs_max = <U as ToDoublePrimitive>::Double::into_max_other(rhs.to_double());
+            let denominator_max = self.denominator.to_double().into_max_self();
+
+            nominator_max
+                .checked_mul(rhs_max)
+                .map(|product| product.div(denominator_max))
+                .and_then(M::try_from_max)
+        }
+    }
 }
 
 impl<U, T> RatioLegacy<U> for SimpleFraction<T>
@@ -120,7 +147,6 @@ where
 impl<U, T> Rational<U> for SimpleFraction<T>
 where
     Self: RatioLegacy<U>,
-    T: FractionUnit,
 {
     fn of<A>(&self, whole: A) -> Option<A>
     where
