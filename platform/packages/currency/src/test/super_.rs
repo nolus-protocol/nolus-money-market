@@ -1,85 +1,64 @@
-use std::{any::TypeId, borrow::Borrow, marker::PhantomData};
-
 use crate::{
-    CurrencyDef,
-    group::FilterMapT,
+    CurrencyDef, FindMapT,
+    group::{FilterMapT, GroupMember},
     test::{
         SuperGroup, SuperGroupTestC1, SuperGroupTestC2, SuperGroupTestC3, SuperGroupTestC4,
         SuperGroupTestC5,
     },
 };
 
-/// Iterator over [`SuperGroup`] currency types mapped to some values
-pub(super) struct Currencies<FilterMap, FilterMapRef> {
-    f: FilterMapRef,
-    _f_type: PhantomData<FilterMap>,
-    next: Option<TypeId>,
+// ======== START GENERATED CODE =========
+pub(super) enum Item {
+    SuperGroupTestC1(),
+    SuperGroupTestC2(),
+    SuperGroupTestC3(),
+    SuperGroupTestC4(),
+    SuperGroupTestC5(),
 }
 
-impl<FilterMap, FilterMapRef> Currencies<FilterMap, FilterMapRef>
-where
-    FilterMap: FilterMapT<SuperGroup>,
-    FilterMapRef: Borrow<FilterMap>,
-{
-    pub fn with_filter(f: FilterMapRef) -> Self {
-        Self {
-            f,
-            _f_type: PhantomData,
-            next: Some(TypeId::of::<SuperGroupTestC1>()),
+impl GroupMember<SuperGroup> for Item {
+    fn first() -> Option<Self> {
+        Some(Self::SuperGroupTestC1())
+    }
+
+    fn next(&self) -> Option<Self> {
+        match self {
+            Item::SuperGroupTestC1() => Some(Self::SuperGroupTestC2()),
+            Item::SuperGroupTestC2() => Some(Self::SuperGroupTestC3()),
+            Item::SuperGroupTestC3() => Some(Self::SuperGroupTestC4()),
+            Item::SuperGroupTestC4() => Some(Self::SuperGroupTestC5()),
+            Item::SuperGroupTestC5() => None,
         }
     }
 
-    fn next_map(&mut self) -> Option<FilterMap::Outcome> {
-        debug_assert!(self.next.is_some());
-
-        // TODO define `const` for each of the currencies
-        // once `const fn TypeId::of` gets stabilized
-        // and switch from `if-else` to `match`
-        let c1_type = TypeId::of::<SuperGroupTestC1>();
-        let c2_type = TypeId::of::<SuperGroupTestC2>();
-        let c3_type = TypeId::of::<SuperGroupTestC3>();
-        let c4_type = TypeId::of::<SuperGroupTestC4>();
-        let c5_type = TypeId::of::<SuperGroupTestC5>();
-
-        self.next.and_then(|next_type| {
-            let filter = self.f.borrow();
-            if next_type == c1_type {
-                self.next = Some(c2_type);
-                filter.on::<SuperGroupTestC1>(SuperGroupTestC1::dto())
-            } else if next_type == c2_type {
-                self.next = Some(c3_type);
-                filter.on::<SuperGroupTestC2>(SuperGroupTestC2::dto())
-            } else if next_type == c3_type {
-                self.next = Some(c4_type);
-                filter.on::<SuperGroupTestC3>(SuperGroupTestC3::dto())
-            } else if next_type == c4_type {
-                self.next = Some(c5_type);
-                filter.on::<SuperGroupTestC4>(SuperGroupTestC4::dto())
-            } else if next_type == c5_type {
-                self.next = None;
-                filter.on::<SuperGroupTestC5>(SuperGroupTestC5::dto())
-            } else {
-                unimplemented!("Unknown type found!")
-            }
-        })
-    }
-}
-
-impl<FilterMap, FilterMapRef> Iterator for Currencies<FilterMap, FilterMapRef>
-where
-    FilterMap: FilterMapT<SuperGroup>,
-    FilterMapRef: Borrow<FilterMap>,
-{
-    type Item = FilterMap::Outcome;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        let mut result = None;
-        while result.is_none() && self.next.is_some() {
-            result = self.next_map();
+    fn filter_map<FilterMap>(&self, filter_map: &FilterMap) -> Option<FilterMap::Outcome>
+    where
+        FilterMap: FilterMapT<SuperGroup>,
+    {
+        match *self {
+            Item::SuperGroupTestC1() => filter_map.on::<SuperGroupTestC1>(SuperGroupTestC1::dto()),
+            Item::SuperGroupTestC2() => filter_map.on::<SuperGroupTestC2>(SuperGroupTestC2::dto()),
+            Item::SuperGroupTestC3() => filter_map.on::<SuperGroupTestC3>(SuperGroupTestC3::dto()),
+            Item::SuperGroupTestC4() => filter_map.on::<SuperGroupTestC4>(SuperGroupTestC4::dto()),
+            Item::SuperGroupTestC5() => filter_map.on::<SuperGroupTestC5>(SuperGroupTestC5::dto()),
         }
-        result
+    }
+
+    fn find_map<FindMap>(&self, find_map: FindMap) -> Result<FindMap::Outcome, FindMap>
+    where
+        FindMap: FindMapT<SuperGroup>,
+    {
+        match *self {
+            Item::SuperGroupTestC1() => find_map.on::<SuperGroupTestC1>(SuperGroupTestC1::dto()),
+            Item::SuperGroupTestC2() => find_map.on::<SuperGroupTestC2>(SuperGroupTestC2::dto()),
+            Item::SuperGroupTestC3() => find_map.on::<SuperGroupTestC3>(SuperGroupTestC3::dto()),
+            Item::SuperGroupTestC4() => find_map.on::<SuperGroupTestC4>(SuperGroupTestC4::dto()),
+            Item::SuperGroupTestC5() => find_map.on::<SuperGroupTestC5>(SuperGroupTestC5::dto()),
+        }
     }
 }
+
+// ======== END GENERATED CODE =========
 
 #[cfg(test)]
 mod test {
