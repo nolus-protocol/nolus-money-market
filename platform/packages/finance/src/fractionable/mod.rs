@@ -14,22 +14,31 @@ mod usize;
 
 pub trait ToDoublePrimitive {
     type Double;
+
+    fn to_double(self) -> Self::Double;
 }
 
-/// Defines a common `Max` type based on `Self::Double` and `Other::Double` types.
-pub trait MaxPrimitive<Other>
-where
-    Self: ToDoublePrimitive,
-    Other: ToDoublePrimitive,
-{
+/// Defines a common `Max` type, chosen as one of the `Double` types from either `Self` or `Other`
+pub trait MaxPrimitive<Other> {
     type Max: CheckedMul<Output = Self::Max> + Div<Output = Self::Max>;
 
     // Having two identical methods so the trait becomes symmetric
-    fn into_max(self) -> Self::Max;
-    fn into_max_from(other: Other) -> Self::Max;
+    fn into_max_self(self) -> Self::Max
+    where
+        Self: Into<Self::Max> + Sized,
+    {
+        self.into()
+    }
+
+    fn into_max_other(other: Other) -> Self::Max
+    where
+        Other: Into<Self::Max>,
+    {
+        other.into()
+    }
 }
 
-pub trait TryFromMaxPrimitive<Max>
+pub trait TryFromDoublePrimitive<Max>
 where
     Self: Sized,
 {
