@@ -82,6 +82,43 @@ where
     maybe_visit_member::<_, C, C::Group, _>(matcher, visitor)
 }
 
+// pub(crate) struct MatchThenMap<M, V, VisitedG> {
+//     matcher: M,
+//     v: V,
+//     _visited_g: PhantomData<VisitedG>,
+// }
+
+// impl<M, V, VisitedG> MatchThenMap<M, V, VisitedG> {
+//     pub fn new(matcher: M, v: V) -> Self {
+//         Self {
+//             matcher,
+//             v,
+//             _visited_g: PhantomData,
+//         }
+//     }
+// }
+
+// impl<M, V, VisitedG> FindMapT<VisitedG> for MatchThenMap<M, V, VisitedG>
+// where
+//     M: Matcher,
+//     V: AnyVisitor<VisitedG>,
+//     VisitedG: Group,
+// {
+//     type Outcome = V::Outcome;
+
+//     fn on<C>(self, def: &CurrencyDTO<C::Group>) -> Result<Self::Outcome, Self>
+//     where
+//         C: CurrencyDef + PairsGroup<CommonGroup = VisitedG::TopG>,
+//         C::Group: MemberOf<VisitedG> + MemberOf<VisitedG::TopG>,
+//     {
+//         if self.matcher.r#match(def.definition()) {
+//             Ok(self.v.on::<C>(def))
+//         } else {
+//             Err(self)
+//         }
+//     }
+// }
+
 pub fn maybe_visit_member<M, C, VisitedG, V>(
     matcher: &M,
     visitor: V,
