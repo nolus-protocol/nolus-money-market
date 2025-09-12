@@ -1,11 +1,11 @@
-use std::{borrow::Borrow, marker::PhantomData};
+use std::borrow::Borrow;
 
 use serde::Deserialize;
 
 use crate::{
-    AnyVisitor, CurrencyDTO, CurrencyDef, Group, Matcher, MaybeAnyVisitResult,
+    AnyVisitor, CurrencyDTO, FindMapT, Group, Matcher, MaybeAnyVisitResult,
     from_symbol_any::InPoolWith,
-    group::{CurrenciesMapping, FilterMapT, MemberOf},
+    group::{self, CurrenciesMapping, FilterMapT, MemberOf, SubFilterAdapter, SubGroupFindAdapter},
     pairs::{MaybePairsVisitorResult, PairsGroup, PairsVisitor},
     test::{sub::Item as SubGroupItem, super_::Item as SuperGroupItem},
 };
@@ -35,35 +35,17 @@ impl Group for SuperGroup {
         FilterMap: FilterMapT<Self>,
         FilterMapRef: Borrow<FilterMap> + Clone,
     {
-        struct SubFilterAdapter<FilterMap, FilterMapRef>(FilterMapRef, PhantomData<FilterMap>);
-
-        impl<FilterMap, FilterMapRef> Clone for SubFilterAdapter<FilterMap, FilterMapRef>
-        where
-            FilterMapRef: Clone,
-        {
-            fn clone(&self) -> Self {
-                Self(self.0.clone(), self.1)
-            }
-        }
-
-        impl<FilterMap, FilterMapRef> FilterMapT<SubGroup> for SubFilterAdapter<FilterMap, FilterMapRef>
-        where
-            FilterMap: FilterMapT<SuperGroup>,
-            FilterMapRef: Borrow<FilterMap>,
-        {
-            type Outcome = FilterMap::Outcome;
-
-            fn on<C>(&self, def: &CurrencyDTO<C::Group>) -> Option<Self::Outcome>
-            where
-                C: CurrencyDef + PairsGroup<CommonGroup = <SubGroup as Group>::TopG>,
-                C::Group: MemberOf<<SubGroup as Group>::TopG>,
-            {
-                self.0.borrow().on::<C>(def)
-            }
-        }
-
         CurrenciesMapping::<_, SuperGroupItem, _, _>::with_filter(f.clone())
-            .chain(SubGroup::filter_map(SubFilterAdapter(f, PhantomData)))
+            .chain(SubGroup::filter_map(SubFilterAdapter::new(f)))
+    }
+
+    fn find_map<FindMap>(v: FindMap) -> Result<FindMap::Outcome, FindMap>
+    where
+        FindMap: FindMapT<Self>,
+    {
+        group::find_map::<_, SuperGroupItem, _>(v)
+            .or_else(|v| group::find_map::<_, SubGroupItem, _>(SubGroupFindAdapter::new(v)))
+            .map_err(|adapter| adapter.release_super_map())
     }
 
     fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<Self, V>
@@ -85,13 +67,6 @@ impl Group for SuperGroup {
         V: AnyVisitor<Self::TopG>,
     {
         unreachable!()
-    }
-
-    fn find_map<FindMap>(_v: FindMap) -> Result<FindMap::Outcome, FindMap>
-    where
-        FindMap: crate::group::FindMapT<Self>,
-    {
-        todo!()
     }
 }
 
@@ -222,6 +197,13 @@ impl Group for SubGroup {
         CurrenciesMapping::<_, SubGroupItem, _, _>::with_filter(f)
     }
 
+    fn find_map<FindMap>(v: FindMap) -> Result<FindMap::Outcome, FindMap>
+    where
+        FindMap: crate::group::FindMapT<Self>,
+    {
+        group::find_map::<_, SubGroupItem, _>(v)
+    }
+
     fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<Self, V>
     where
         M: Matcher,
@@ -236,13 +218,6 @@ impl Group for SubGroup {
         V: AnyVisitor<Self::TopG>,
     {
         maybe_visit::<_, Self::TopG, _>(matcher, visitor)
-    }
-
-    fn find_map<FindMap>(_v: FindMap) -> Result<FindMap::Outcome, FindMap>
-    where
-        FindMap: crate::group::FindMapT<Self>,
-    {
-        todo!()
     }
 }
 

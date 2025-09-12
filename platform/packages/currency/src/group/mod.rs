@@ -5,9 +5,17 @@ use crate::{CurrencyDTO, CurrencyDef, PairsGroup};
 use super::{AnyVisitor, matcher::Matcher};
 
 pub use filter::CurrenciesMapping;
+pub use find::find_map;
 pub use member::{GroupMember, MemberOf};
 
+#[cfg(any(test, feature = "testing"))]
+pub use self::adapter::{SubFilterAdapter, SubGroupFindAdapter};
+
+// to uncomment once a composite group in production shows up
+#[cfg(any(test, feature = "testing"))]
+mod adapter;
 mod filter;
+mod find;
 mod member;
 
 pub trait Group
