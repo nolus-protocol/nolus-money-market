@@ -8,7 +8,7 @@ pub use crate::{
         AnyVisitor, AnyVisitorPair, AnyVisitorPairResult, GroupVisit, InPoolWith,
         visit_any_on_currencies,
     },
-    group::{FilterMapT, Group, MaybeAnyVisitResult, MemberOf},
+    group::{FilterMapT, FindMapT, Group, MaybeAnyVisitResult, MemberOf},
     matcher::{Matcher, TypeMatcher},
     pairs::{MaybePairsVisitorResult, PairsGroup, PairsVisitor, PairsVisitorResult},
     symbol::{BankSymbols, DexSymbols, Symbol, Tickers},
