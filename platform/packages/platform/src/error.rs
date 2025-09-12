@@ -46,8 +46,8 @@ pub enum Error {
     #[error("[Platform] [Std] An error occured while querying a currency balance: {0}")]
     CosmWasmQueryBalance(String),
 
-    #[error("[Platform] [Std] An error occured while querying all balances: {0}")]
-    CosmWasmQueryAllBalances(String),
+    // #[error("[Platform] [Std] An error occured while querying all balances: {0}")]
+    // CosmWasmQueryAllBalances(String),
 
     #[error("[Platform] [Std] An error occured on data serialization: {0}")]
     Serialization(String),
@@ -88,9 +88,9 @@ impl Error {
         Self::CosmWasmQueryBalance(error.to_string())
     }
 
-    pub(crate) fn cosm_wasm_query_all_balances(error: StdError) -> Self {
-        Self::CosmWasmQueryAllBalances(error.to_string())
-    }
+    // pub(crate) fn cosm_wasm_query_all_balances(error: StdError) -> Self {
+    //     Self::CosmWasmQueryAllBalances(error.to_string())
+    // }
 
     pub(crate) fn serialization(error: StdError) -> Self {
         Self::Serialization(error.to_string())
