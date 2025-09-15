@@ -6,7 +6,7 @@ pub use crate::{
     from_symbol::{CurrencyVisit, SingleVisitor},
     from_symbol_any::GroupVisit,
     group::{FilterMapT, FindMapT, Group, MaybeAnyVisitResult, MemberOf},
-    matcher::{Matcher, TypeMatcher},
+    matcher::Matcher,
     pairs::{MaybePairsVisitorResult, PairsGroup, PairsVisitor, PairsVisitorResult},
     symbol::{BankSymbols, DexSymbols, Symbol, Tickers},
     visit_any::{AnyVisitor, AnyVisitorPair, InPoolWith, visit_any_on_currencies},
