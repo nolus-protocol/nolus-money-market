@@ -4,7 +4,7 @@ pub fn find_map<G, GroupMemberImpl, FindMap>(f: FindMap) -> Result<FindMap::Outc
 where
     G: Group,
     GroupMemberImpl: GroupMember<G>,
-    FindMap: FindMapT<G>,
+    FindMap: FindMapT<TargetG = G>,
 {
     let mut may_next = GroupMemberImpl::first();
     let mut result = Err(f);

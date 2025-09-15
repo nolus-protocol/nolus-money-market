@@ -59,12 +59,13 @@ impl<M, V, VisitedG> MatchThenVisit<M, V, VisitedG> {
     }
 }
 
-impl<M, V, VisitedG> FindMapT<VisitedG> for MatchThenVisit<M, V, VisitedG>
+impl<M, V, VisitedG> FindMapT for MatchThenVisit<M, V, VisitedG>
 where
     M: Matcher,
     V: AnyVisitor<VisitedG>,
     VisitedG: Group,
 {
+    type TargetG = VisitedG;
     type Outcome = V::Outcome;
 
     fn on<C>(self, def: &CurrencyDTO<C::Group>) -> Result<Self::Outcome, Self>

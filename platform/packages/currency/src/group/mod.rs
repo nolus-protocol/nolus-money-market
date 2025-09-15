@@ -42,7 +42,7 @@ where
 
     fn find_map<FindMap>(v: FindMap) -> Result<FindMap::Outcome, FindMap>
     where
-        FindMap: FindMapT<Self>;
+        FindMap: FindMapT<TargetG = Self>;
 }
 
 pub type MaybeAnyVisitResult<VisitedG, V> = Result<<V as AnyVisitor<VisitedG>>::Outcome, V>;
@@ -60,15 +60,16 @@ where
         C::Group: MemberOf<VisitedG> + MemberOf<VisitedG::TopG>;
 }
 
-pub trait FindMapT<VisitedG>
+pub trait FindMapT
 where
     Self: Sized,
-    VisitedG: Group,
 {
+    type TargetG: Group;
+
     type Outcome;
 
     fn on<C>(self, def: &CurrencyDTO<C::Group>) -> Result<Self::Outcome, Self>
     where
-        C: CurrencyDef + PairsGroup<CommonGroup = VisitedG::TopG>,
-        C::Group: MemberOf<VisitedG> + MemberOf<VisitedG::TopG>;
+        C: CurrencyDef + PairsGroup<CommonGroup = <Self::TargetG as Group>::TopG>,
+        C::Group: MemberOf<Self::TargetG> + MemberOf<<Self::TargetG as Group>::TopG>;
 }

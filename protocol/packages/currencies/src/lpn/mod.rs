@@ -40,7 +40,7 @@ impl currency::Group for Group {
 
     fn find_map<FindMap>(_v: FindMap) -> Result<FindMap::Outcome, FindMap>
     where
-        FindMap: FindMapT<Self>,
+        FindMap: FindMapT<TargetG = Self>,
     {
         todo!()
     }
