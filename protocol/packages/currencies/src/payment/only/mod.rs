@@ -1,6 +1,8 @@
+use std::{borrow::Borrow, iter};
+
 use serde::{Deserialize, Serialize};
 
-use currency::{AnyVisitor, Matcher, MaybeAnyVisitResult, MemberOf};
+use currency::{AnyVisitor, FilterMapT, Matcher, MaybeAnyVisitResult, MemberOf};
 
 use super::Group as PaymentGroup;
 
@@ -40,6 +42,23 @@ impl currency::Group for Group {
         V: AnyVisitor<Self::TopG>,
     {
         impl_mod::maybe_visit(matcher, visitor)
+    }
+
+    fn filter_map<FilterMap, FilterMapRef>(
+        _f: FilterMapRef,
+    ) -> impl Iterator<Item = FilterMap::Outcome>
+    where
+        FilterMap: FilterMapT<Self>,
+        FilterMapRef: Borrow<FilterMap> + Clone,
+    {
+        iter::empty()
+    }
+
+    fn find_map<FindMap>(_v: FindMap) -> Result<FindMap::Outcome, FindMap>
+    where
+        FindMap: currency::FindMapT<Self>,
+    {
+        todo!()
     }
 }
 
