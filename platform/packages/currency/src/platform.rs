@@ -3,8 +3,8 @@ use std::borrow::Borrow;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    AnyVisitor, CurrencyDTO, CurrencyDef, Definition, Group, Matcher, MaybeAnyVisitResult,
-    MaybePairsVisitorResult, MemberOf, PairsGroup, PairsVisitor,
+    CurrencyDTO, CurrencyDef, Definition, Group, Matcher, MaybePairsVisitorResult, MemberOf,
+    PairsGroup, PairsVisitor,
     group::{self, CurrenciesMapping, FilterMapT, FindMapT, GroupMember},
 };
 
@@ -92,24 +92,6 @@ impl Group for PlatformGroup {
         FindMap: FindMapT<Self>,
     {
         group::find_map::<_, Item, _>(f)
-    }
-
-    fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<Self, V>
-    where
-        M: Matcher,
-        V: AnyVisitor<Self>,
-    {
-        Self::maybe_visit_member(matcher, visitor)
-    }
-
-    fn maybe_visit_member<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<Self::TopG, V>
-    where
-        M: Matcher,
-        V: AnyVisitor<Self::TopG>,
-    {
-        crate::maybe_visit_member::<_, Nls, Self::TopG, _>(matcher, visitor)
-            .or_else(|v| MaybeAnyVisitResult::Ok(v.on::<Stable>(Stable::dto())))
-        // we accept ANY currency to allow any stable@protocol to be a member
     }
 }
 
