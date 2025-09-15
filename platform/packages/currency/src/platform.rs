@@ -89,7 +89,7 @@ impl Group for PlatformGroup {
 
     fn find_map<FindMap>(f: FindMap) -> Result<FindMap::Outcome, FindMap>
     where
-        FindMap: FindMapT<Self>,
+        FindMap: FindMapT<TargetG = Self>,
     {
         group::find_map::<_, Item, _>(f)
     }
@@ -127,7 +127,7 @@ impl GroupMember<PlatformGroup> for Item {
 
     fn find_map<FindMap>(&self, find_map: FindMap) -> Result<FindMap::Outcome, FindMap>
     where
-        FindMap: FindMapT<PlatformGroup>,
+        FindMap: FindMapT<TargetG = PlatformGroup>,
     {
         match *self {
             Item::Nls() => find_map.on::<Nls>(Nls::dto()),

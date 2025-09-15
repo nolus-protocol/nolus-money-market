@@ -67,19 +67,20 @@ impl<G, SuperG, FindMap> SubGroupFindAdapter<G, SuperG, FindMap>
 where
     G: Group<TopG = SuperG>,
     SuperG: Group<TopG = G::TopG>,
-    FindMap: FindMapT<SuperG>,
+    FindMap: FindMapT<TargetG = SuperG>,
 {
     pub fn release_super_map(self) -> FindMap {
         self.2
     }
 }
 
-impl<G, SuperG, FindMap> FindMapT<G> for SubGroupFindAdapter<G, SuperG, FindMap>
+impl<G, SuperG, FindMap> FindMapT for SubGroupFindAdapter<G, SuperG, FindMap>
 where
     G: Group<TopG = SuperG>,
     SuperG: Group<TopG = G::TopG>,
-    FindMap: FindMapT<SuperG>,
+    FindMap: FindMapT<TargetG = SuperG>,
 {
+    type TargetG = G;
     type Outcome = FindMap::Outcome;
 
     fn on<C>(self, def: &CurrencyDTO<C::Group>) -> Result<Self::Outcome, Self>

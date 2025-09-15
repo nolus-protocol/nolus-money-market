@@ -2,7 +2,7 @@ use std::{borrow::Borrow, iter};
 
 use serde::{Deserialize, Serialize};
 
-use currency::{FilterMapT, MemberOf};
+use currency::{FilterMapT, FindMapT, MemberOf};
 
 pub use self::only::Group as OnlyGroup;
 #[cfg(feature = "testing")]
@@ -36,7 +36,7 @@ impl currency::Group for Group {
 
     fn find_map<FindMap>(_v: FindMap) -> Result<FindMap::Outcome, FindMap>
     where
-        FindMap: currency::FindMapT<Self>,
+        FindMap: FindMapT<TargetG = Self>,
     {
         todo!()
     }

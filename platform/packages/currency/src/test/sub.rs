@@ -34,7 +34,7 @@ impl GroupMember<SubGroup> for Item {
 
     fn find_map<FindMap>(&self, find_map: FindMap) -> Result<FindMap::Outcome, FindMap>
     where
-        FindMap: FindMapT<SubGroup>,
+        FindMap: FindMapT<TargetG = SubGroup>,
     {
         match *self {
             Item::SubGroupTestC6() => find_map.on::<SubGroupTestC6>(SubGroupTestC6::dto()),

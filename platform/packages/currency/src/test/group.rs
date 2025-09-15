@@ -41,10 +41,12 @@ impl Group for SuperGroup {
 
     fn find_map<FindMap>(v: FindMap) -> Result<FindMap::Outcome, FindMap>
     where
-        FindMap: FindMapT<Self>,
+        FindMap: FindMapT<TargetG = Self>,
     {
         group::find_map::<_, SuperGroupItem, _>(v)
-            .or_else(|v| group::find_map::<_, SubGroupItem, _>(SubGroupFindAdapter::new(v)))
+            .or_else(|v| {
+                group::find_map::<_, SubGroupItem, _>(SubGroupFindAdapter::<SubGroup, _, _>::new(v))
+            })
             .map_err(|adapter| adapter.release_super_map())
     }
 }
@@ -178,7 +180,7 @@ impl Group for SubGroup {
 
     fn find_map<FindMap>(v: FindMap) -> Result<FindMap::Outcome, FindMap>
     where
-        FindMap: crate::group::FindMapT<Self>,
+        FindMap: FindMapT<TargetG = Self>,
     {
         group::find_map::<_, SubGroupItem, _>(v)
     }

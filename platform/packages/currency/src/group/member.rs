@@ -41,5 +41,5 @@ where
 
     fn find_map<FindMap>(&self, find_map: FindMap) -> Result<FindMap::Outcome, FindMap>
     where
-        FindMap: FindMapT<G>;
+        FindMap: FindMapT<TargetG = G>;
 }

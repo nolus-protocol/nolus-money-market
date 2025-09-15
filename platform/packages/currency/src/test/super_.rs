@@ -46,7 +46,7 @@ impl GroupMember<SuperGroup> for Item {
 
     fn find_map<FindMap>(&self, find_map: FindMap) -> Result<FindMap::Outcome, FindMap>
     where
-        FindMap: FindMapT<SuperGroup>,
+        FindMap: FindMapT<TargetG = SuperGroup>,
     {
         match *self {
             Item::SuperGroupTestC1() => find_map.on::<SuperGroupTestC1>(SuperGroupTestC1::dto()),
