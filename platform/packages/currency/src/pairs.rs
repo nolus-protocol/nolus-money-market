@@ -1,4 +1,4 @@
-use crate::{CurrencyDTO, CurrencyDef, Group, Matcher, MemberOf, from_symbol_any::InPoolWith};
+use crate::{CurrencyDTO, CurrencyDef, Group, Matcher, MemberOf, visit_any::InPoolWith};
 
 pub type PairsVisitorResult<Visitor> = <Visitor as PairsVisitor>::Outcome;
 

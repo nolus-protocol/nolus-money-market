@@ -4,10 +4,10 @@ use serde::Deserialize;
 
 use crate::{
     AnyVisitor, CurrencyDTO, FindMapT, Group, Matcher, MaybeAnyVisitResult,
-    from_symbol_any::InPoolWith,
     group::{self, CurrenciesMapping, FilterMapT, MemberOf, SubFilterAdapter, SubGroupFindAdapter},
     pairs::{MaybePairsVisitorResult, PairsGroup, PairsVisitor},
     test::{sub::Item as SubGroupItem, super_::Item as SuperGroupItem},
+    visit_any::InPoolWith,
 };
 
 pub type SuperGroupTestC1 = impl_::TestC1;

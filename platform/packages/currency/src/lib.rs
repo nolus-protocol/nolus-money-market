@@ -4,14 +4,12 @@ pub use crate::{
     definition::{Definition, DefinitionRef},
     dto::{CurrencyDTO, dto, to_string},
     from_symbol::{CurrencyVisit, SingleVisitor},
-    from_symbol_any::{
-        AnyVisitor, AnyVisitorPair, AnyVisitorPairResult, GroupVisit, InPoolWith,
-        visit_any_on_currencies,
-    },
+    from_symbol_any::GroupVisit,
     group::{FilterMapT, FindMapT, Group, MaybeAnyVisitResult, MemberOf},
     matcher::{Matcher, TypeMatcher},
     pairs::{MaybePairsVisitorResult, PairsGroup, PairsVisitor, PairsVisitorResult},
     symbol::{BankSymbols, DexSymbols, Symbol, Tickers},
+    visit_any::{AnyVisitor, AnyVisitorPair, InPoolWith, visit_any_on_currencies},
 };
 
 mod definition;
@@ -27,6 +25,7 @@ pub mod platform;
 mod symbol;
 #[cfg(any(test, feature = "testing"))]
 pub mod test;
+mod visit_any;
 
 // TODO get rid of these definitions. Move some to much smaller scope, for example move SymbolOwned close to CurrencyDTO
 // and SymbolStatic close to Symbols
@@ -81,43 +80,6 @@ where
 {
     maybe_visit_member::<_, C, C::Group, _>(matcher, visitor)
 }
-
-// pub(crate) struct MatchThenMap<M, V, VisitedG> {
-//     matcher: M,
-//     v: V,
-//     _visited_g: PhantomData<VisitedG>,
-// }
-
-// impl<M, V, VisitedG> MatchThenMap<M, V, VisitedG> {
-//     pub fn new(matcher: M, v: V) -> Self {
-//         Self {
-//             matcher,
-//             v,
-//             _visited_g: PhantomData,
-//         }
-//     }
-// }
-
-// impl<M, V, VisitedG> FindMapT<VisitedG> for MatchThenMap<M, V, VisitedG>
-// where
-//     M: Matcher,
-//     V: AnyVisitor<VisitedG>,
-//     VisitedG: Group,
-// {
-//     type Outcome = V::Outcome;
-
-//     fn on<C>(self, def: &CurrencyDTO<C::Group>) -> Result<Self::Outcome, Self>
-//     where
-//         C: CurrencyDef + PairsGroup<CommonGroup = VisitedG::TopG>,
-//         C::Group: MemberOf<VisitedG> + MemberOf<VisitedG::TopG>,
-//     {
-//         if self.matcher.r#match(def.definition()) {
-//             Ok(self.v.on::<C>(def))
-//         } else {
-//             Err(self)
-//         }
-//     }
-// }
 
 pub fn maybe_visit_member<M, C, VisitedG, V>(
     matcher: &M,
