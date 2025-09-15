@@ -1,4 +1,7 @@
+use std::ops::Div;
+
 use bound::BoundPercent;
+use gcd::Gcd;
 
 use crate::{
     error::Error,
@@ -6,6 +9,7 @@ use crate::{
     fractionable::FractionableLegacy,
     ratio::{Ratio, SimpleFraction},
     rational::Rational,
+    zero::Zero,
 };
 
 pub mod bound;
@@ -14,7 +18,19 @@ pub type Units = u32;
 pub type Percent100 = BoundPercent<{ Percent::HUNDRED.units() }>;
 pub type Percent = BoundPercent<{ Units::MAX }>;
 
-impl FractionUnit for Units {}
+impl FractionUnit for Units {
+    type Times = Self;
+
+    fn gcd(self, other: Self) -> Self::Times {
+        Gcd::gcd(self, other)
+    }
+
+    fn scale_down(self, scale: Self::Times) -> Self {
+        debug_assert_ne!(scale, Self::Times::ZERO);
+
+        self.div(scale)
+    }
+}
 
 impl Percent100 {
     pub const fn complement(self) -> Self {

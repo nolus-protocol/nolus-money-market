@@ -6,10 +6,11 @@ use std::{
     fmt::{Debug, Display, Formatter},
     iter::Sum,
     marker::PhantomData,
-    ops::{Add, AddAssign, Sub, SubAssign},
+    ops::{Add, AddAssign, Div, Sub, SubAssign},
 };
 
 use ::serde::{Deserialize, Serialize};
+use gcd::Gcd;
 
 use currency::{Currency, CurrencyDef, Group, MemberOf};
 
@@ -30,7 +31,19 @@ pub type Amount = u128;
 pub type NonZeroAmount = NonZeroU128;
 
 // Used only for average price calculation
-impl FractionUnit for u128 {}
+impl FractionUnit for u128 {
+    type Times = Self;
+
+    fn gcd(self, other: Self) -> Self::Times {
+        Gcd::gcd(self, other)
+    }
+
+    fn scale_down(self, scale: Self::Times) -> Self {
+        debug_assert_ne!(scale, Self::Times::ZERO);
+
+        self.div(scale)
+    }
+}
 
 #[derive(Serialize, Deserialize)]
 pub struct Coin<C> {
@@ -152,7 +165,19 @@ impl<C> Default for Coin<C> {
     }
 }
 
-impl<C> FractionUnit for Coin<C> {}
+impl<C> FractionUnit for Coin<C> {
+    type Times = Amount;
+
+    fn gcd(self, other: Self) -> Self::Times {
+        Gcd::gcd(self.amount, other.amount)
+    }
+
+    fn scale_down(self, scale: Self::Times) -> Self {
+        debug_assert_ne!(scale, Self::Times::ZERO);
+
+        Coin::new(self.amount.scale_down(scale))
+    }
+}
 
 impl<C> Eq for Coin<C> {}
 
