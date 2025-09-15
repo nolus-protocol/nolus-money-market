@@ -2,7 +2,7 @@ use std::{borrow::Borrow, fmt::Debug};
 
 use crate::{CurrencyDTO, CurrencyDef, PairsGroup};
 
-use super::{AnyVisitor, matcher::Matcher};
+use super::AnyVisitor;
 
 pub use filter::CurrenciesMapping;
 pub use find::find_map;
@@ -43,20 +43,6 @@ where
     fn find_map<FindMap>(v: FindMap) -> Result<FindMap::Outcome, FindMap>
     where
         FindMap: FindMapT<Self>;
-
-    // TODO it seems this could be taken out from here into a simple algo-function
-    // Visit this group directly by a visitor
-    fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<Self, V>
-    where
-        M: Matcher,
-        V: AnyVisitor<Self>;
-
-    // TODO it seems this could be taken out from here into a simple algo-function
-    // Visit this group since it is a member, or a sub-group, of another that is being visited
-    fn maybe_visit_member<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<Self::TopG, V>
-    where
-        M: Matcher,
-        V: AnyVisitor<Self::TopG>;
 }
 
 pub type MaybeAnyVisitResult<VisitedG, V> = Result<<V as AnyVisitor<VisitedG>>::Outcome, V>;

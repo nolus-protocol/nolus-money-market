@@ -3,7 +3,7 @@ use std::borrow::Borrow;
 use serde::Deserialize;
 
 use crate::{
-    AnyVisitor, CurrencyDTO, FindMapT, Group, Matcher, MaybeAnyVisitResult,
+    CurrencyDTO, FindMapT, Group, Matcher,
     group::{self, CurrenciesMapping, FilterMapT, MemberOf, SubFilterAdapter, SubGroupFindAdapter},
     pairs::{MaybePairsVisitorResult, PairsGroup, PairsVisitor},
     test::{sub::Item as SubGroupItem, super_::Item as SuperGroupItem},
@@ -46,27 +46,6 @@ impl Group for SuperGroup {
         group::find_map::<_, SuperGroupItem, _>(v)
             .or_else(|v| group::find_map::<_, SubGroupItem, _>(SubGroupFindAdapter::new(v)))
             .map_err(|adapter| adapter.release_super_map())
-    }
-
-    fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<Self, V>
-    where
-        M: Matcher,
-        V: AnyVisitor<Self>,
-    {
-        crate::maybe_visit_any::<_, SuperGroupTestC1, _>(matcher, visitor)
-            .or_else(|visitor| crate::maybe_visit_any::<_, SuperGroupTestC2, _>(matcher, visitor))
-            .or_else(|visitor| crate::maybe_visit_any::<_, SuperGroupTestC3, _>(matcher, visitor))
-            .or_else(|visitor| crate::maybe_visit_any::<_, SuperGroupTestC4, _>(matcher, visitor))
-            .or_else(|visitor| crate::maybe_visit_any::<_, SuperGroupTestC5, _>(matcher, visitor))
-            .or_else(|visitor| SubGroup::maybe_visit_member(matcher, visitor))
-    }
-
-    fn maybe_visit_member<M, V>(_matcher: &M, _visitor: V) -> MaybeAnyVisitResult<Self::TopG, V>
-    where
-        M: Matcher,
-        V: AnyVisitor<Self::TopG>,
-    {
-        unreachable!()
     }
 }
 
@@ -203,34 +182,6 @@ impl Group for SubGroup {
     {
         group::find_map::<_, SubGroupItem, _>(v)
     }
-
-    fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<Self, V>
-    where
-        M: Matcher,
-        V: AnyVisitor<Self>,
-    {
-        maybe_visit::<_, Self, _>(matcher, visitor)
-    }
-
-    fn maybe_visit_member<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<Self::TopG, V>
-    where
-        M: Matcher,
-        V: AnyVisitor<Self::TopG>,
-    {
-        maybe_visit::<_, Self::TopG, _>(matcher, visitor)
-    }
-}
-
-fn maybe_visit<M, VisitedG, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<VisitedG, V>
-where
-    M: Matcher,
-    V: AnyVisitor<VisitedG>,
-    SubGroup: MemberOf<VisitedG>,
-    VisitedG: Group<TopG = SuperGroup>,
-{
-    crate::maybe_visit_member::<_, SubGroupTestC6, VisitedG, _>(matcher, visitor).or_else(
-        |visitor| crate::maybe_visit_member::<_, SubGroupTestC10, VisitedG, _>(matcher, visitor),
-    )
 }
 
 //Pool pairs: 1:2, 1:4, 2:3, 4:5, 2:6, 2:10, 5:10, 6:10
