@@ -24,13 +24,15 @@ impl<'addr, 'view, GBalances, CmdBalances> NonZeroBalances<'addr, 'view, GBalanc
     }
 }
 
-impl<'addr, 'view, GBalances, CmdBalances> FilterMapT<GBalances>
+impl<'addr, 'view, GBalances, CmdBalances> FilterMapT
     for NonZeroBalances<'addr, 'view, GBalances, CmdBalances>
 where
     GBalances: Group,
     CmdBalances: WithCoin<GBalances> + Clone,
     CmdBalances::Outcome: Aggregate,
 {
+    type VisitedG = GBalances;
+
     type Outcome = Result<<CmdBalances as WithCoin<GBalances>>::Outcome>;
 
     fn on<C>(&self, def: &CurrencyDTO<C::Group>) -> Option<Self::Outcome>

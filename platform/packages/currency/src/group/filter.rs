@@ -15,7 +15,7 @@ impl<GroupImpl, GroupMemberImpl, FilterMap, FilterMapRef>
 where
     GroupImpl: Group,
     GroupMemberImpl: GroupMember<GroupImpl>,
-    FilterMap: FilterMapT<GroupImpl>,
+    FilterMap: FilterMapT<VisitedG = GroupImpl>,
     FilterMapRef: Borrow<FilterMap>,
 {
     pub fn with_filter(f: FilterMapRef) -> Self {
@@ -33,7 +33,7 @@ impl<GroupImpl, GroupMemberImpl, FilterMap, FilterMapRef> Iterator
 where
     GroupImpl: Group,
     GroupMemberImpl: GroupMember<GroupImpl>,
-    FilterMap: FilterMapT<GroupImpl>,
+    FilterMap: FilterMapT<VisitedG = GroupImpl>,
     FilterMapRef: Borrow<FilterMap>,
 {
     type Item = FilterMap::Outcome;

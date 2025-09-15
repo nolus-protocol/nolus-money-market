@@ -24,7 +24,7 @@ impl GroupMember<SubGroup> for Item {
 
     fn filter_map<FilterMap>(&self, filter_map: &FilterMap) -> Option<FilterMap::Outcome>
     where
-        FilterMap: FilterMapT<SubGroup>,
+        FilterMap: FilterMapT<VisitedG = SubGroup>,
     {
         match *self {
             Item::SubGroupTestC6() => filter_map.on::<SubGroupTestC6>(SubGroupTestC6::dto()),

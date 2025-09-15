@@ -33,14 +33,16 @@ where
     }
 }
 
-impl<G, SuperG, FilterMap, FilterMapRef> FilterMapT<G>
+impl<G, SuperG, FilterMap, FilterMapRef> FilterMapT
     for SubFilterAdapter<G, SuperG, FilterMap, FilterMapRef>
 where
     G: Group<TopG = SuperG>,
     SuperG: Group<TopG = G::TopG>,
-    FilterMap: FilterMapT<SuperG>,
+    FilterMap: FilterMapT<VisitedG = SuperG>,
     FilterMapRef: Borrow<FilterMap>,
 {
+    type VisitedG = G;
+
     type Outcome = FilterMap::Outcome;
 
     fn on<C>(&self, def: &CurrencyDTO<C::Group>) -> Option<Self::Outcome>

@@ -37,7 +37,7 @@ where
         f: FilterMapRef,
     ) -> impl Iterator<Item = FilterMap::Outcome>
     where
-        FilterMap: FilterMapT<Self>,
+        FilterMap: FilterMapT<VisitedG = Self>,
         FilterMapRef: Borrow<FilterMap> + Clone;
 
     fn find_map<FindMap>(v: FindMap) -> Result<FindMap::Outcome, FindMap>
@@ -47,17 +47,16 @@ where
 
 pub type MaybeAnyVisitResult<VisitedG, V> = Result<<V as AnyVisitor<VisitedG>>::Outcome, V>;
 
-pub trait FilterMapT<VisitedG>
-where
-    VisitedG: Group,
-{
+pub trait FilterMapT {
+    type VisitedG: Group;
+
     type Outcome;
 
     //TODO consider removing the function argument `def` if the wasm binaries do not become too large
     fn on<C>(&self, def: &CurrencyDTO<C::Group>) -> Option<Self::Outcome>
     where
-        C: CurrencyDef + PairsGroup<CommonGroup = VisitedG::TopG>,
-        C::Group: MemberOf<VisitedG> + MemberOf<VisitedG::TopG>;
+        C: CurrencyDef + PairsGroup<CommonGroup = <Self::VisitedG as Group>::TopG>,
+        C::Group: MemberOf<Self::VisitedG> + MemberOf<<Self::VisitedG as Group>::TopG>;
 }
 
 pub trait FindMapT

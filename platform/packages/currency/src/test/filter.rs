@@ -10,10 +10,12 @@ impl<FilterG> Default for Dto<FilterG> {
         Self(PhantomData)
     }
 }
-impl<FilterG> FilterMapT<FilterG> for Dto<FilterG>
+impl<FilterG> FilterMapT for Dto<FilterG>
 where
     FilterG: Group,
 {
+    type VisitedG = FilterG;
+
     type Outcome = CurrencyDTO<FilterG>;
 
     fn on<C>(&self, def: &CurrencyDTO<C::Group>) -> Option<Self::Outcome>
@@ -42,10 +44,12 @@ impl<FilterG> FindByTicker<FilterG> {
     }
 }
 
-impl<FilterG> FilterMapT<FilterG> for FindByTicker<FilterG>
+impl<FilterG> FilterMapT for FindByTicker<FilterG>
 where
     FilterG: Group,
 {
+    type VisitedG = FilterG;
+
     type Outcome = CurrencyDTO<FilterG>;
 
     fn on<C>(&self, def: &CurrencyDTO<C::Group>) -> Option<Self::Outcome>
