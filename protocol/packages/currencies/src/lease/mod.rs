@@ -2,7 +2,7 @@ use std::{borrow::Borrow, iter};
 
 use serde::{Deserialize, Serialize};
 
-use currency::{AnyVisitor, FilterMapT, Matcher, MaybeAnyVisitResult, MemberOf};
+use currency::{FilterMapT, MemberOf};
 
 use crate::payment::Group as PaymentGroup;
 
@@ -32,22 +32,6 @@ impl currency::Group for Group {
     const DESCR: &'static str = "lease";
 
     type TopG = PaymentGroup;
-
-    fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<Self, V>
-    where
-        M: Matcher,
-        V: AnyVisitor<Self>,
-    {
-        impl_mod::maybe_visit(matcher, visitor)
-    }
-
-    fn maybe_visit_member<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<Self::TopG, V>
-    where
-        M: Matcher,
-        V: AnyVisitor<Self::TopG>,
-    {
-        impl_mod::maybe_visit(matcher, visitor)
-    }
 
     fn filter_map<FilterMap, FilterMapRef>(
         _f: FilterMapRef,
