@@ -19,30 +19,17 @@ pub trait ToDoublePrimitive {
 }
 
 /// Defines a common `Max` type, chosen as one of the `Double` types from either `Self` or `Other`
-pub trait MaxPrimitive<Other> {
+pub trait MaxDoublePrimitive<Other>
+where
+    Self: Sized + ToDoublePrimitive,
+    Other: ToDoublePrimitive,
+{
     type Max: CheckedMul<Output = Self::Max> + Div<Output = Self::Max>;
 
     // Having two identical methods so the trait becomes symmetric
-    fn into_max_self(self) -> Self::Max
-    where
-        Self: Into<Self::Max> + Sized,
-    {
-        self.into()
-    }
-
-    fn into_max_other(other: Other) -> Self::Max
-    where
-        Other: Into<Self::Max>,
-    {
-        other.into()
-    }
-}
-
-pub trait TryFromDoublePrimitive<Max>
-where
-    Self: Sized,
-{
-    fn try_from_max(max: Max) -> Option<Self>;
+    fn into_max_self(self) -> Self::Max;
+    fn into_max_other(other: Other) -> Self::Max;
+    fn try_other_from_max(max: Self::Max) -> Option<Other>;
 }
 
 pub trait Fractionable<U> {
