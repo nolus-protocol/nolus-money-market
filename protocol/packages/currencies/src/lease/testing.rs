@@ -1,32 +1,3 @@
-use currency::{AnyVisitor, Group, Matcher, MaybeAnyVisitResult, MemberOf};
-
-use crate::payment::Group as PaymentGroup;
-
-use super::Group as LeaseGroup;
-
-use self::definitions::{LeaseC1, LeaseC2, LeaseC3, LeaseC4, LeaseC5, LeaseC6, LeaseC7};
-
-pub(super) fn maybe_visit<M, V, VisitedG>(
-    matcher: &M,
-    visitor: V,
-) -> MaybeAnyVisitResult<VisitedG, V>
-where
-    LeaseGroup: MemberOf<VisitedG>,
-    M: Matcher,
-    V: AnyVisitor<VisitedG>,
-    VisitedG: Group<TopG = PaymentGroup>,
-{
-    use currency::maybe_visit_member as visit;
-
-    visit::<_, LeaseC1, VisitedG, _>(matcher, visitor)
-        .or_else(|visitor| visit::<_, LeaseC2, VisitedG, _>(matcher, visitor))
-        .or_else(|visitor| visit::<_, LeaseC3, VisitedG, _>(matcher, visitor))
-        .or_else(|visitor| visit::<_, LeaseC4, VisitedG, _>(matcher, visitor))
-        .or_else(|visitor| visit::<_, LeaseC5, VisitedG, _>(matcher, visitor))
-        .or_else(|visitor| visit::<_, LeaseC6, VisitedG, _>(matcher, visitor))
-        .or_else(|visitor| visit::<_, LeaseC7, VisitedG, _>(matcher, visitor))
-}
-
 pub(super) mod definitions {
     use serde::{Deserialize, Serialize};
 
@@ -272,6 +243,7 @@ mod test {
     use currency::CurrencyDef as _;
 
     use crate::{
+        LeaseGroup,
         lpn::{Group as Lpns, Lpn},
         native::Nls,
         test_impl::{
@@ -280,7 +252,7 @@ mod test {
         },
     };
 
-    use super::{LeaseC1, LeaseC2, LeaseC3, LeaseC4, LeaseC5, LeaseC6, LeaseC7, LeaseGroup};
+    use crate::lease::{LeaseC1, LeaseC2, LeaseC3, LeaseC4, LeaseC5, LeaseC6, LeaseC7};
 
     #[test]
     fn maybe_visit_on_ticker() {
