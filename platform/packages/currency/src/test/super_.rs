@@ -33,7 +33,7 @@ impl GroupMember<SuperGroup> for Item {
 
     fn filter_map<FilterMap>(&self, filter_map: &FilterMap) -> Option<FilterMap::Outcome>
     where
-        FilterMap: FilterMapT<SuperGroup>,
+        FilterMap: FilterMapT<VisitedG = SuperGroup>,
     {
         match *self {
             Item::SuperGroupTestC1() => filter_map.on::<SuperGroupTestC1>(SuperGroupTestC1::dto()),

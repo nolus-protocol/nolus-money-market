@@ -81,7 +81,7 @@ impl Group for PlatformGroup {
         f: FilterMapRef,
     ) -> impl Iterator<Item = FilterMap::Outcome>
     where
-        FilterMap: FilterMapT<Self>,
+        FilterMap: FilterMapT<VisitedG = Self>,
         FilterMapRef: Borrow<FilterMap>,
     {
         CurrenciesMapping::<_, Item, _, _>::with_filter(f)
@@ -117,7 +117,7 @@ impl GroupMember<PlatformGroup> for Item {
 
     fn filter_map<FilterMap>(&self, filter_map: &FilterMap) -> Option<FilterMap::Outcome>
     where
-        FilterMap: FilterMapT<PlatformGroup>,
+        FilterMap: FilterMapT<VisitedG = PlatformGroup>,
     {
         match *self {
             Item::Nls() => filter_map.on::<Nls>(Nls::dto()),

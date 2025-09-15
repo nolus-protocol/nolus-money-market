@@ -32,7 +32,7 @@ impl Group for SuperGroup {
         f: FilterMapRef,
     ) -> impl Iterator<Item = FilterMap::Outcome>
     where
-        FilterMap: FilterMapT<Self>,
+        FilterMap: FilterMapT<VisitedG = Self>,
         FilterMapRef: Borrow<FilterMap> + Clone,
     {
         CurrenciesMapping::<_, SuperGroupItem, _, _>::with_filter(f.clone())
@@ -172,7 +172,7 @@ impl Group for SubGroup {
         f: FilterMapRef,
     ) -> impl Iterator<Item = FilterMap::Outcome>
     where
-        FilterMap: FilterMapT<Self>,
+        FilterMap: FilterMapT<VisitedG = Self>,
         FilterMapRef: Borrow<FilterMap>,
     {
         CurrenciesMapping::<_, SubGroupItem, _, _>::with_filter(f)

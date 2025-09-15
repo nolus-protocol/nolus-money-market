@@ -32,7 +32,7 @@ impl currency::Group for Group {
         _f: FilterMapRef,
     ) -> impl Iterator<Item = FilterMap::Outcome>
     where
-        FilterMap: FilterMapT<Self>,
+        FilterMap: FilterMapT<VisitedG = Self>,
         FilterMapRef: Borrow<FilterMap> + Clone,
     {
         iter::empty()
