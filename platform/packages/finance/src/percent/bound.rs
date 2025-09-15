@@ -111,9 +111,21 @@ impl<const UPPER_BOUND: Units> Display for BoundPercent<UPPER_BOUND> {
     }
 }
 
-impl<const UPPER: Units> FractionUnit for BoundPercent<UPPER> where
-    BoundPercent<UPPER>: Copy + Debug + Ord + Zero
+impl<const UPPER: Units> FractionUnit for BoundPercent<UPPER>
+where
+    BoundPercent<UPPER>: Copy + Debug + Ord + Zero,
 {
+    type Times = Units;
+
+    fn gcd(self, other: Self) -> Self::Times {
+        FractionUnit::gcd(self.units(), other.units())
+    }
+
+    fn scale_down(self, scale: Self::Times) -> Self {
+        debug_assert_ne!(scale, Self::Times::ZERO);
+        Self::try_from_permille(self.units().scale_down(scale))
+            .expect("Scaled down Units are greater than UPPER_BOUND")
+    }
 }
 
 // TODO: Revisit it's usage after refactoring Fractionable
