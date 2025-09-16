@@ -3,7 +3,7 @@ pub(super) mod definitions {
 
     use currency::{
         CurrencyDTO, CurrencyDef, Definition, InPoolWith, Matcher, MaybePairsVisitorResult,
-        PairsGroup, PairsVisitor,
+        PairsFindMapT, PairsGroup, PairsVisitor,
     };
 
     use crate::{lease::LeaseC5, lpn::Lpn, payment::Group as PaymentGroup};
@@ -34,6 +34,13 @@ pub(super) mod definitions {
             use currency::maybe_visit_buddy as visit;
 
             visit::<Lpn, _, _>(matcher, visitor)
+        }
+
+        fn find_map<FindMap>(_f: FindMap) -> Result<FindMap::Outcome, FindMap>
+        where
+            FindMap: PairsFindMapT<Pivot = Self>,
+        {
+            todo!()
         }
     }
 

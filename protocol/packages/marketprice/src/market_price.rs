@@ -2,7 +2,7 @@ use std::{marker::PhantomData, mem};
 
 use currency::{
     self, AnyVisitor, Currency, CurrencyDTO, CurrencyDef, Group, InPoolWith, MemberOf, PairsGroup,
-    PairsVisitor, PairsVisitorResult,
+    PairsVisitor,
 };
 use finance::price::{
     Price,
@@ -365,7 +365,7 @@ where
 
     type Outcome = Result<BasePrice<G, BaseC, BaseG>, PriceFeedsError>;
 
-    fn on<QuoteC>(self, def: &CurrencyDTO<QuoteC::Group>) -> PairsVisitorResult<Self>
+    fn on<QuoteC>(self, def: &CurrencyDTO<QuoteC::Group>) -> Self::Outcome
     where
         QuoteC: CurrencyDef
             + InPoolWith<Self::Pivot>

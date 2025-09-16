@@ -7,7 +7,7 @@ pub use crate::{
     from_symbol_any::GroupVisit,
     group::{FilterMapT, FindMapT, Group, MaybeAnyVisitResult, MemberOf},
     matcher::Matcher,
-    pairs::{MaybePairsVisitorResult, PairsGroup, PairsVisitor, PairsVisitorResult},
+    pairs::{MaybePairsVisitorResult, PairsGroup, PairsVisitor, FindMapT as PairsFindMapT},
     symbol::{BankSymbols, DexSymbols, Symbol, Tickers},
     visit_any::{AnyVisitor, AnyVisitorPair, InPoolWith, visit_any_on_currencies},
 };
@@ -69,35 +69,6 @@ where
     C2: 'static,
 {
     TypeId::of::<C1>() == TypeId::of::<C2>()
-}
-
-pub fn maybe_visit_any<M, C, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<C::Group, V>
-where
-    M: Matcher,
-    C: CurrencyDef + PairsGroup<CommonGroup = <C::Group as Group>::TopG>,
-    C::Group: MemberOf<C::Group> + MemberOf<<C::Group as Group>::TopG>,
-    V: AnyVisitor<C::Group>,
-{
-    maybe_visit_member::<_, C, C::Group, _>(matcher, visitor)
-}
-
-pub fn maybe_visit_member<M, C, VisitedG, V>(
-    matcher: &M,
-    visitor: V,
-) -> MaybeAnyVisitResult<VisitedG, V>
-where
-    M: Matcher,
-    C: CurrencyDef + PairsGroup<CommonGroup = VisitedG::TopG>,
-    C::Group: MemberOf<VisitedG> + MemberOf<VisitedG::TopG>,
-    V: AnyVisitor<VisitedG>,
-    VisitedG: Group,
-{
-    let member = C::dto();
-    if matcher.r#match(member.definition()) {
-        Ok(visitor.on::<C>(member))
-    } else {
-        Err(visitor)
-    }
 }
 
 pub fn maybe_visit_buddy<C, M, V>(matcher: &M, visitor: V) -> MaybePairsVisitorResult<V>

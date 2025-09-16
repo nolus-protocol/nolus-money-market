@@ -3,7 +3,8 @@ use std::{borrow::Borrow, iter};
 use serde::{Deserialize, Serialize};
 
 use currency::{
-    FilterMapT, FindMapT, Matcher, MaybePairsVisitorResult, MemberOf, PairsGroup, PairsVisitor,
+    FilterMapT, FindMapT, Matcher, MaybePairsVisitorResult, MemberOf, PairsFindMapT, PairsGroup,
+    PairsVisitor,
 };
 
 use crate::payment::Group as PaymentGroup;
@@ -60,6 +61,13 @@ impl PairsGroup for Lpn {
         V: PairsVisitor<Pivot = Self>,
     {
         currency::visit_noone(visitor)
+    }
+
+    fn find_map<FindMap>(_f: FindMap) -> Result<FindMap::Outcome, FindMap>
+    where
+        FindMap: PairsFindMapT<Pivot = Self>,
+    {
+        todo!()
     }
 }
 
