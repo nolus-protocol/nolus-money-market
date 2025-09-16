@@ -1,7 +1,8 @@
 use std::marker::PhantomData;
 
 use crate::{
-    CurrencyDTO, CurrencyDef, FindMapT, Group, Matcher, MemberOf, PairsGroup, error::Error,
+    CurrencyDTO, CurrencyDef, FindMapT, Group, Matcher, MemberOf, PairsGroup, PairsVisitor,
+    error::Error, pairs::FindMapT as PairsFindMapT,
 };
 
 use self::impl_any_tickers::FirstTickerVisitor;
@@ -72,6 +73,29 @@ where
     where
         C: CurrencyDef + PairsGroup<CommonGroup = VisitedG::TopG>,
         C::Group: MemberOf<VisitedG> + MemberOf<VisitedG::TopG>,
+    {
+        if self.matcher.r#match(def.definition()) {
+            Ok(self.v.on::<C>(def))
+        } else {
+            Err(self)
+        }
+    }
+}
+
+impl<M, V, VisitedG> PairsFindMapT for MatchThenVisit<M, V, VisitedG>
+where
+    M: Matcher,
+    V: PairsVisitor,
+{
+    type Pivot = V::Pivot;
+    type Outcome = V::Outcome;
+
+    fn on<C>(self, def: &CurrencyDTO<C::Group>) -> Result<Self::Outcome, Self>
+    where
+        C: CurrencyDef
+            + InPoolWith<Self::Pivot>
+            + PairsGroup<CommonGroup = <Self::Pivot as PairsGroup>::CommonGroup>,
+        C::Group: MemberOf<<Self::Pivot as PairsGroup>::CommonGroup>,
     {
         if self.matcher.r#match(def.definition()) {
             Ok(self.v.on::<C>(def))

@@ -3,8 +3,7 @@ use std::borrow::Borrow;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    CurrencyDTO, CurrencyDef, Definition, Group, Matcher, MaybePairsVisitorResult, MemberOf,
-    PairsGroup, PairsVisitor,
+    CurrencyDTO, CurrencyDef, Definition, Group, MemberOf, PairsGroup,
     group::{self, CurrenciesMapping, FilterMapT, FindMapT, GroupMember},
     pairs::FindMapT as PairsFindMapT,
 };
@@ -21,14 +20,6 @@ impl CurrencyDef for Stable {
 }
 impl PairsGroup for Stable {
     type CommonGroup = PlatformGroup;
-
-    fn maybe_visit<M, V>(_matcher: &M, _visitor: V) -> MaybePairsVisitorResult<V>
-    where
-        M: Matcher,
-        V: PairsVisitor<Pivot = Self>,
-    {
-        unreachable!("The 'Stable' platform currency used in pairs resolution!")
-    }
 
     fn find_map<FindMap>(_f: FindMap) -> Result<FindMap::Outcome, FindMap>
     where
@@ -69,14 +60,6 @@ impl CurrencyDef for Nls {
 
 impl PairsGroup for Nls {
     type CommonGroup = PlatformGroup;
-
-    fn maybe_visit<M, V>(_matcher: &M, _visitor: V) -> MaybePairsVisitorResult<V>
-    where
-        M: Matcher,
-        V: PairsVisitor,
-    {
-        unreachable!("The 'Nls' platform currency used in pairs resolution!")
-    }
 
     fn find_map<FindMap>(_f: FindMap) -> Result<FindMap::Outcome, FindMap>
     where
