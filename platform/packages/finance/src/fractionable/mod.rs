@@ -3,13 +3,34 @@ use std::{
     ops::{Div, Mul},
 };
 
-use crate::{ratio::RatioLegacy, zero::Zero};
+use crate::{fractionable::checked_mul::CheckedMul, ratio::RatioLegacy, zero::Zero};
 
+pub(crate) mod checked_mul;
 mod coin;
 mod duration;
 mod percent;
 mod price;
 mod usize;
+
+pub trait ToDoublePrimitive {
+    type Double;
+
+    fn to_double(self) -> Self::Double;
+}
+
+/// Defines a common `Max` type, chosen as one of the `Double` types from either `Self` or `Other`
+pub trait MaxDoublePrimitive<Other>
+where
+    Self: Sized + ToDoublePrimitive,
+    Other: ToDoublePrimitive,
+{
+    type Max: CheckedMul<Output = Self::Max> + Div<Output = Self::Max>;
+
+    // Having two identical methods so the trait becomes symmetric
+    fn into_max_self(self) -> Self::Max;
+    fn into_max_other(other: Other) -> Self::Max;
+    fn try_from_max(max: Self::Max) -> Option<Self>;
+}
 
 pub trait Fractionable<U> {
     #[track_caller]

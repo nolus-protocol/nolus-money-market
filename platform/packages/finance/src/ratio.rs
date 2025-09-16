@@ -1,11 +1,11 @@
-use std::fmt::Debug;
+use std::{fmt::Debug, ops::Div};
 
 use serde::{Deserialize, Serialize};
 
 use crate::{
     error::{Error, Result as FinanceResult},
     fraction::{Fraction, Unit as FractionUnit},
-    fractionable::Fractionable,
+    fractionable::{Fractionable, MaxDoublePrimitive, ToDoublePrimitive, checked_mul::CheckedMul},
     rational::Rational,
     zero::Zero,
 };
@@ -102,6 +102,25 @@ where
             denominator,
         }
     }
+
+    pub fn checked_mul<M>(&self, rhs: M) -> Option<M>
+    where
+        U: ToDoublePrimitive,
+        M: MaxDoublePrimitive<U>,
+    {
+        if self.nominator == self.denominator {
+            Some(rhs)
+        } else {
+            let nominator_max = M::into_max_other(self.nominator);
+            let rhs_max = rhs.into_max_self();
+            let denominator_max = M::into_max_other(self.denominator);
+
+            nominator_max
+                .checked_mul(rhs_max)
+                .map(|product| product.div(denominator_max))
+                .and_then(M::try_from_max)
+        }
+    }
 }
 
 impl<U, T> RatioLegacy<U> for SimpleFraction<T>
@@ -120,7 +139,6 @@ where
 impl<U, T> Rational<U> for SimpleFraction<T>
 where
     Self: RatioLegacy<U>,
-    T: FractionUnit,
 {
     fn of<A>(&self, whole: A) -> Option<A>
     where
