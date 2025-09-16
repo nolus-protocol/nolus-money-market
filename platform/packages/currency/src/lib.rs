@@ -7,7 +7,7 @@ pub use crate::{
     from_symbol_any::GroupVisit,
     group::{FilterMapT, FindMapT, Group, MaybeAnyVisitResult, MemberOf},
     matcher::Matcher,
-    pairs::{MaybePairsVisitorResult, PairsGroup, PairsVisitor, FindMapT as PairsFindMapT},
+    pairs::{FindMapT as PairsFindMapT, MaybePairsVisitorResult, PairsGroup, PairsVisitor},
     symbol::{BankSymbols, DexSymbols, Symbol, Tickers},
     visit_any::{AnyVisitor, AnyVisitorPair, InPoolWith, visit_any_on_currencies},
 };
@@ -69,25 +69,4 @@ where
     C2: 'static,
 {
     TypeId::of::<C1>() == TypeId::of::<C2>()
-}
-
-pub fn maybe_visit_buddy<C, M, V>(matcher: &M, visitor: V) -> MaybePairsVisitorResult<V>
-where
-    M: Matcher,
-    C: CurrencyDef
-        + InPoolWith<V::Pivot>
-        + PairsGroup<CommonGroup = <V::Pivot as PairsGroup>::CommonGroup>,
-    C::Group: MemberOf<<V::Pivot as PairsGroup>::CommonGroup>,
-    V: PairsVisitor,
-{
-    let buddy = C::dto();
-    if matcher.r#match(buddy.definition()) {
-        Ok(visitor.on::<C>(buddy))
-    } else {
-        Err(visitor)
-    }
-}
-
-pub fn visit_noone<R, V>(visitor: V) -> Result<R, V> {
-    Err(visitor)
 }

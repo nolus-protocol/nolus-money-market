@@ -2,10 +2,7 @@ use std::{borrow::Borrow, iter};
 
 use serde::{Deserialize, Serialize};
 
-use currency::{
-    FilterMapT, FindMapT, Matcher, MaybePairsVisitorResult, MemberOf, PairsFindMapT, PairsGroup,
-    PairsVisitor,
-};
+use currency::{FilterMapT, FindMapT, MemberOf, PairsFindMapT, PairsGroup};
 
 use crate::payment::Group as PaymentGroup;
 
@@ -54,20 +51,11 @@ impl MemberOf<PaymentGroup> for Group {}
 impl PairsGroup for Lpn {
     type CommonGroup = PaymentGroup;
 
-    #[inline]
-    fn maybe_visit<M, V>(_matcher: &M, visitor: V) -> MaybePairsVisitorResult<V>
-    where
-        M: Matcher,
-        V: PairsVisitor<Pivot = Self>,
-    {
-        currency::visit_noone(visitor)
-    }
-
     fn find_map<FindMap>(_f: FindMap) -> Result<FindMap::Outcome, FindMap>
     where
         FindMap: PairsFindMapT<Pivot = Self>,
     {
-        todo!()
+        todo!("()")
     }
 }
 

@@ -1,12 +1,9 @@
 pub(super) mod definitions {
     use serde::{Deserialize, Serialize};
 
-    use currency::{
-        CurrencyDTO, CurrencyDef, Definition, InPoolWith, Matcher, MaybePairsVisitorResult,
-        PairsFindMapT, PairsGroup, PairsVisitor,
-    };
+    use currency::{CurrencyDTO, CurrencyDef, Definition, InPoolWith, PairsFindMapT, PairsGroup};
 
-    use crate::{lease::LeaseC5, lpn::Lpn, payment::Group as PaymentGroup};
+    use crate::{lease::LeaseC5, payment::Group as PaymentGroup};
 
     use super::super::Group as NativeGroup;
 
@@ -25,22 +22,11 @@ pub(super) mod definitions {
     impl PairsGroup for Nls {
         type CommonGroup = PaymentGroup;
 
-        #[inline]
-        fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybePairsVisitorResult<V>
-        where
-            M: Matcher,
-            V: PairsVisitor<Pivot = Self>,
-        {
-            use currency::maybe_visit_buddy as visit;
-
-            visit::<Lpn, _, _>(matcher, visitor)
-        }
-
         fn find_map<FindMap>(_f: FindMap) -> Result<FindMap::Outcome, FindMap>
         where
             FindMap: PairsFindMapT<Pivot = Self>,
         {
-            todo!()
+            todo!("(Lpn)")
         }
     }
 

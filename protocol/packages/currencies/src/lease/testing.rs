@@ -1,12 +1,9 @@
 pub(super) mod definitions {
     use serde::{Deserialize, Serialize};
 
-    use currency::{
-        CurrencyDTO, CurrencyDef, Definition, InPoolWith, Matcher, MaybePairsVisitorResult,
-        PairsFindMapT, PairsGroup, PairsVisitor,
-    };
+    use currency::{CurrencyDTO, CurrencyDef, Definition, InPoolWith, PairsFindMapT, PairsGroup};
 
-    use crate::{lpn::Lpn, native::Nls, payment::Group as PaymentGroup};
+    use crate::payment::Group as PaymentGroup;
 
     use super::super::Group as LeaseGroup;
 
@@ -30,23 +27,11 @@ pub(super) mod definitions {
     impl PairsGroup for LeaseC1 {
         type CommonGroup = PaymentGroup;
 
-        #[inline]
-        fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybePairsVisitorResult<V>
-        where
-            M: Matcher,
-            V: PairsVisitor<Pivot = Self>,
-        {
-            use currency::maybe_visit_buddy as visit;
-
-            visit::<LeaseC2, _, _>(matcher, visitor)
-                .or_else(|visitor| visit::<LeaseC3, _, _>(matcher, visitor))
-        }
-
         fn find_map<FindMap>(_f: FindMap) -> Result<FindMap::Outcome, FindMap>
         where
             FindMap: PairsFindMapT<Pivot = Self>,
         {
-            todo!()
+            todo!("(LeaseC2, LeaseC3)")
         }
     }
 
@@ -70,22 +55,11 @@ pub(super) mod definitions {
     impl PairsGroup for LeaseC2 {
         type CommonGroup = PaymentGroup;
 
-        #[inline]
-        fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybePairsVisitorResult<V>
-        where
-            M: Matcher,
-            V: PairsVisitor<Pivot = Self>,
-        {
-            use currency::maybe_visit_buddy as visit;
-
-            visit::<Lpn, _, _>(matcher, visitor)
-        }
-
         fn find_map<FindMap>(_f: FindMap) -> Result<FindMap::Outcome, FindMap>
         where
             FindMap: PairsFindMapT<Pivot = Self>,
         {
-            todo!()
+            todo!("(Lpn)")
         }
     }
 
@@ -114,22 +88,11 @@ pub(super) mod definitions {
     impl PairsGroup for LeaseC3 {
         type CommonGroup = PaymentGroup;
 
-        #[inline]
-        fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybePairsVisitorResult<V>
-        where
-            M: Matcher,
-            V: PairsVisitor<Pivot = Self>,
-        {
-            use currency::maybe_visit_buddy as visit;
-
-            visit::<LeaseC2, _, _>(matcher, visitor)
-        }
-
         fn find_map<FindMap>(_f: FindMap) -> Result<FindMap::Outcome, FindMap>
         where
             FindMap: PairsFindMapT<Pivot = Self>,
         {
-            todo!()
+            todo!("(LeaseC2)")
         }
     }
 
@@ -154,22 +117,11 @@ pub(super) mod definitions {
     impl PairsGroup for LeaseC4 {
         type CommonGroup = PaymentGroup;
 
-        #[inline]
-        fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybePairsVisitorResult<V>
-        where
-            M: Matcher,
-            V: PairsVisitor<Pivot = Self>,
-        {
-            use currency::maybe_visit_buddy as visit;
-
-            visit::<LeaseC2, _, _>(matcher, visitor)
-        }
-
         fn find_map<FindMap>(_f: FindMap) -> Result<FindMap::Outcome, FindMap>
         where
             FindMap: PairsFindMapT<Pivot = Self>,
         {
-            todo!()
+            todo!("(LeaseC2)")
         }
     }
 
@@ -192,22 +144,11 @@ pub(super) mod definitions {
     impl PairsGroup for LeaseC5 {
         type CommonGroup = PaymentGroup;
 
-        #[inline]
-        fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybePairsVisitorResult<V>
-        where
-            M: Matcher,
-            V: PairsVisitor<Pivot = Self>,
-        {
-            use currency::maybe_visit_buddy as visit;
-
-            visit::<Nls, _, _>(matcher, visitor)
-        }
-
         fn find_map<FindMap>(_f: FindMap) -> Result<FindMap::Outcome, FindMap>
         where
             FindMap: PairsFindMapT<Pivot = Self>,
         {
-            todo!()
+            todo!("(Nls)")
         }
     }
 
@@ -230,21 +171,12 @@ pub(super) mod definitions {
     impl PairsGroup for LeaseC6 {
         type CommonGroup = PaymentGroup;
 
-        #[inline]
-        fn maybe_visit<M, V>(_: &M, visitor: V) -> MaybePairsVisitorResult<V>
-        where
-            M: Matcher,
-            V: PairsVisitor<Pivot = Self>,
-        {
-            // let's stay detached from the swap tree for some corner cases.
-            currency::visit_noone(visitor)
-        }
-
         fn find_map<FindMap>(_f: FindMap) -> Result<FindMap::Outcome, FindMap>
         where
             FindMap: PairsFindMapT<Pivot = Self>,
         {
-            todo!()
+            // let's stay detached from the swap tree for some corner cases.
+            todo!("()")
         }
     }
 
@@ -267,22 +199,11 @@ pub(super) mod definitions {
     impl PairsGroup for LeaseC7 {
         type CommonGroup = PaymentGroup;
 
-        #[inline]
-        fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybePairsVisitorResult<V>
-        where
-            M: Matcher,
-            V: PairsVisitor<Pivot = Self>,
-        {
-            use currency::maybe_visit_buddy as visit;
-
-            visit::<Lpn, _, _>(matcher, visitor)
-        }
-
         fn find_map<FindMap>(_f: FindMap) -> Result<FindMap::Outcome, FindMap>
         where
             FindMap: PairsFindMapT<Pivot = Self>,
         {
-            todo!()
+            todo!("(Lpn)")
         }
     }
 }

@@ -72,7 +72,8 @@ where
         V: PairsVisitor,
     {
         let matcher = matcher::type_matcher(self.def);
-        V::Pivot::maybe_visit(&matcher, visitor)
+        let match_then_visit = MatchThenVisit::<_, _, V::Pivot>::new(matcher, visitor);
+        V::Pivot::find_map(match_then_visit).map_err(MatchThenVisit::release_visitor)
     }
 
     pub fn into_pair_member_type<V>(self, visitor: V) -> V::Outcome
