@@ -1,6 +1,6 @@
 use std::{
     fmt::{Debug, Display, Formatter, Result as FmtResult},
-    ops::{Add, AddAssign, Div, Sub, SubAssign},
+    ops::{Add, AddAssign, Div, Rem, Sub, SubAssign},
 };
 
 use gcd::Gcd;
@@ -28,6 +28,10 @@ impl FractionUnit for Units {
         debug_assert_ne!(scale, Self::Times::ZERO);
 
         self.div(scale)
+    }
+
+    fn modulo(self, scale: Self::Times) -> Self::Times {
+        self.rem(scale)
     }
 }
 
@@ -137,6 +141,10 @@ impl FractionUnit for Duration {
         debug_assert_ne!(scale, Self::Times::ZERO);
 
         Self::from_nanos(self.nanos().scale_down(scale))
+    }
+
+    fn modulo(self, scale: Self::Times) -> Self::Times {
+        self.nanos().modulo(scale)
     }
 }
 

@@ -1,4 +1,4 @@
-use std::ops::Div;
+use std::ops::{Div, Rem};
 
 use gcd::Gcd;
 
@@ -33,6 +33,10 @@ impl FractionUnit for usize {
         debug_assert_ne!(scale, Self::Times::ZERO);
 
         self.div(scale)
+    }
+
+    fn modulo(self, scale: Self::Times) -> Self::Times {
+        self.rem(scale)
     }
 }
 

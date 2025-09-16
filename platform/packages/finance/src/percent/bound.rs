@@ -1,4 +1,7 @@
-use std::fmt::{Debug, Display, Formatter, Result as FmtResult, Write};
+use std::{
+    fmt::{Debug, Display, Formatter, Result as FmtResult, Write},
+    ops::Rem,
+};
 
 #[cfg(any(test, feature = "testing"))]
 use std::ops::{Add, Sub};
@@ -125,6 +128,10 @@ where
         debug_assert_ne!(scale, Self::Times::ZERO);
         Self::try_from_permille(self.units().scale_down(scale))
             .expect("Scaled down Units are greater than UPPER_BOUND")
+    }
+
+    fn modulo(self, scale: Self::Times) -> Self::Times {
+        self.units().rem(scale)
     }
 }
 
