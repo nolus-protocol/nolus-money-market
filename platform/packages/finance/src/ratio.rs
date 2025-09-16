@@ -105,20 +105,20 @@ where
 
     pub fn checked_mul<M>(&self, rhs: M) -> Option<M>
     where
-        U: MaxDoublePrimitive<M>,
-        M: ToDoublePrimitive,
+        U: ToDoublePrimitive,
+        M: MaxDoublePrimitive<U>,
     {
         if self.nominator == self.denominator {
             Some(rhs)
         } else {
-            let nominator_max = self.nominator.into_max_self();
-            let rhs_max = U::into_max_other(rhs);
-            let denominator_max = self.denominator.into_max_self();
+            let nominator_max = M::into_max_other(self.nominator);
+            let rhs_max = rhs.into_max_self();
+            let denominator_max = M::into_max_other(self.denominator);
 
             nominator_max
                 .checked_mul(rhs_max)
                 .map(|product| product.div(denominator_max))
-                .and_then(U::try_other_from_max)
+                .and_then(M::try_from_max)
         }
     }
 }

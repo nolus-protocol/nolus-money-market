@@ -29,7 +29,7 @@ where
     // Having two identical methods so the trait becomes symmetric
     fn into_max_self(self) -> Self::Max;
     fn into_max_other(other: Other) -> Self::Max;
-    fn try_other_from_max(max: Self::Max) -> Option<Other>;
+    fn try_from_max(max: Self::Max) -> Option<Self>;
 }
 
 pub trait Fractionable<U> {
