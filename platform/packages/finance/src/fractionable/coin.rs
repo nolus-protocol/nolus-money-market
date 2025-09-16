@@ -1,6 +1,9 @@
 use bnum::types::U256;
 
-use crate::coin::{Amount, Coin};
+use crate::{
+    coin::{Amount, Coin},
+    fractionable::ToDoublePrimitive,
+};
 
 use super::HigherRank;
 
@@ -23,6 +26,14 @@ impl<C> TryInto<Coin<C>> for U256 {
 
     fn try_into(self) -> Result<Coin<C>, Self::Error> {
         self.try_into().map(Coin::new)
+    }
+}
+
+impl<C> ToDoublePrimitive for Coin<C> {
+    type Double = U256;
+
+    fn to_double(self) -> Self::Double {
+        self.amount().into()
     }
 }
 

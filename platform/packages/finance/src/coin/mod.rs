@@ -56,6 +56,10 @@ impl<C> Coin<C> {
         self.amount == Zero::ZERO
     }
 
+    pub(super) const fn amount(&self) -> Amount {
+        self.amount
+    }
+
     #[track_caller]
     pub const fn checked_add(self, rhs: Self) -> Option<Self> {
         Self::may_new(self.amount.checked_add(rhs.amount))
