@@ -18,5 +18,10 @@ where
     type Times: Copy + Debug + PartialEq + Zero;
 
     fn gcd(self, other: Self) -> Self::Times;
+
+    /// Divides `self` by the given `scale`
     fn scale_down(self, scale: Self::Times) -> Self;
+
+    /// Returns the remainder of `self` divided by `scale`
+    fn modulo(self, scale: Self::Times) -> Self::Times;
 }
