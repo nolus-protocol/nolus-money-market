@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     error::{Error, Result as FinanceResult},
-    fraction::{Fraction, Unit as FractionUnit},
+    fraction::{FractionLegacy, Unit as FractionUnit},
     fractionable::{Fractionable, MaxDoublePrimitive, ToDoublePrimitive, checked_mul::CheckedMul},
     rational::RationalLegacy,
     zero::Zero,
@@ -62,7 +62,7 @@ where
     }
 }
 
-impl<U> Fraction<U> for Ratio<U>
+impl<U> FractionLegacy<U> for Ratio<U>
 where
     U: FractionUnit,
 {

@@ -2,14 +2,14 @@ use std::{cmp, ops::Sub};
 
 use crate::{
     duration::{Duration, Units as DurationUnits},
-    fraction::{Fraction, Unit as FractionUnit},
+    fraction::{FractionLegacy, Unit as FractionUnit},
     fractionable::Fractionable,
 };
 
 /// Computes how much interest is accrued
 pub fn interest<U, R, P>(rate: R, principal: P, period: Duration) -> P
 where
-    R: Fraction<U>,
+    R: FractionLegacy<U>,
     P: Fractionable<U> + Fractionable<DurationUnits>,
 {
     let interest_per_year = rate.of(principal);
@@ -21,7 +21,7 @@ where
 /// The actual payment is equal to the payment minus the returned change.
 pub fn pay<U, R, P>(rate: R, principal: P, payment: P, period: Duration) -> (Duration, P)
 where
-    R: Fraction<U>,
+    R: FractionLegacy<U>,
     P: Fractionable<U> + Fractionable<DurationUnits> + FractionUnit + Ord + Sub<Output = P>,
     Duration: Fractionable<P>,
 {
@@ -43,7 +43,7 @@ mod tests {
     use currency::test::SubGroupTestC10;
 
     use crate::{
-        coin::Coin, duration::Duration, fraction::Fraction, percent::Percent100, ratio::Ratio,
+        coin::Coin, duration::Duration, fraction::FractionLegacy, percent::Percent100, ratio::Ratio,
         zero::Zero,
     };
 
