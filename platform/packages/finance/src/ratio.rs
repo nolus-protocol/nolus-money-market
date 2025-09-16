@@ -6,7 +6,7 @@ use crate::{
     error::{Error, Result as FinanceResult},
     fraction::{Fraction, Unit as FractionUnit},
     fractionable::{Fractionable, MaxDoublePrimitive, ToDoublePrimitive, checked_mul::CheckedMul},
-    rational::Rational,
+    rational::RationalLegacy,
     zero::Zero,
 };
 
@@ -136,7 +136,7 @@ where
     }
 }
 
-impl<U, T> Rational<U> for SimpleFraction<T>
+impl<U, T> RationalLegacy<U> for SimpleFraction<T>
 where
     Self: RatioLegacy<U>,
 {

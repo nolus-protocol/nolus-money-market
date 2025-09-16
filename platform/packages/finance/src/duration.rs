@@ -9,7 +9,7 @@ use sdk::cosmwasm_std::Timestamp;
 
 use crate::{
     fraction::Unit as FractionUnit, fractionable::Fractionable, ratio::SimpleFraction,
-    rational::Rational, zero::Zero,
+    rational::RationalLegacy, zero::Zero,
 };
 
 pub type Units = u64;
