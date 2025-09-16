@@ -4,30 +4,15 @@ use crate::{
     coin::Coin,
     duration::{Duration, Units},
     fractionable::{MaxDoublePrimitive, ToDoublePrimitive},
-    ratio::RatioLegacy,
 };
 
-use super::{Fractionable, HigherRank};
+use super::HigherRank;
 
 impl<T> HigherRank<T> for u128
 where
     T: Into<Self>,
 {
     type Type = U256;
-}
-
-impl<C> Fractionable<Coin<C>> for Duration {
-    #[track_caller]
-    fn safe_mul<F>(self, fraction: &F) -> Self
-    where
-        F: RatioLegacy<Coin<C>>,
-    {
-        let d128: u128 = self.into();
-        // TODO re-assess the design of Ratio ... and whether it could be > 1
-        d128.safe_mul(fraction).try_into().expect(
-            "TODO remove when refactor Fractionable. Overflow computing a fraction of duration",
-        )
-    }
 }
 
 impl ToDoublePrimitive for Duration {
@@ -60,27 +45,29 @@ impl<C> MaxDoublePrimitive<Coin<C>> for Duration {
 mod tests {
     use currency::test::SuperGroupTestC1;
 
-    use crate::{
-        coin::Coin, duration::Duration, fractionable::Fractionable, ratio::SimpleFraction,
-    };
+    use crate::{coin::Coin, duration::Duration, ratio::SimpleFraction, rational::Rational};
 
     #[test]
-    fn safe_mul() {
+    fn of() {
         let d = Duration::from_secs(10);
-        let res = d.safe_mul(&SimpleFraction::new(
+        let res = SimpleFraction::new(
             Coin::<SuperGroupTestC1>::new(10),
             Coin::<SuperGroupTestC1>::new(20),
-        ));
+        )
+        .of(d)
+        .unwrap();
         assert_eq!(Duration::from_secs(5), res);
     }
 
     #[test]
-    fn safe_mul_max() {
+    fn of_max() {
         let d = Duration::from_secs(10);
-        let res = d.safe_mul(&SimpleFraction::new(
+        let res = SimpleFraction::new(
             Coin::<SuperGroupTestC1>::new(u128::MAX),
             Coin::<SuperGroupTestC1>::new(u128::MAX / 2),
-        ));
+        )
+        .of(d)
+        .unwrap();
 
         assert_eq!(Duration::from_secs(20), res);
     }
