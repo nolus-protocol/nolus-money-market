@@ -55,11 +55,11 @@ impl<C, const UPPER_BOUND: Units> MaxDoublePrimitive<Coin<C>> for BoundPercent<U
     type Max = U256;
 
     fn into_max_self(self) -> Self::Max {
-        self.units().into()
+        self.to_double().into()
     }
 
     fn into_max_other(other: Coin<C>) -> Self::Max {
-        other.amount().into()
+        other.to_double()
     }
 
     fn try_from_max(max: Self::Max) -> Option<Self> {

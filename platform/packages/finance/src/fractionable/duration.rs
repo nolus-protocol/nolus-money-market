@@ -46,7 +46,7 @@ impl<C> MaxDoublePrimitive<Coin<C>> for Duration {
     }
 
     fn into_max_other(other: Coin<C>) -> Self::Max {
-        other.to_double().into()
+        other.to_double()
     }
 
     fn try_from_max(max: Self::Max) -> Option<Self> {
