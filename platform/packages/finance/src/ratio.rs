@@ -4,9 +4,9 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     error::{Error, Result as FinanceResult},
-    fraction::{FractionLegacy, Unit as FractionUnit},
+    fraction::{Fraction, FractionLegacy, Unit as FractionUnit},
     fractionable::{Fractionable, MaxDoublePrimitive, ToDoublePrimitive, checked_mul::CheckedMul},
-    rational::RationalLegacy,
+    rational::{Rational, RationalLegacy},
     zero::Zero,
 };
 
@@ -62,6 +62,21 @@ where
     }
 }
 
+impl<U> Fraction<U> for Ratio<U>
+where
+    U: FractionUnit,
+{
+    fn of<A>(&self, whole: A) -> A
+    where
+        U: ToDoublePrimitive,
+        A: MaxDoublePrimitive<U>,
+    {
+        // TODO remove the full syntax when removing the FarctionLegacy
+        Rational::of(&self.0, whole)
+            .expect("Ratio is a part of a whole, multiplication cannot overflow")
+    }
+}
+
 impl<U> FractionLegacy<U> for Ratio<U>
 where
     U: FractionUnit,
@@ -70,8 +85,7 @@ where
     where
         A: Fractionable<U>,
     {
-        self.0
-            .of(whole)
+        RationalLegacy::of(&self.0, whole)
             .expect("Ratio is a part of a whole, multiplication cannot overflow")
     }
 }
@@ -120,6 +134,19 @@ where
                 .map(|product| product.div(denominator_max))
                 .and_then(M::try_from_max)
         }
+    }
+}
+
+impl<U> Rational<U> for SimpleFraction<U>
+where
+    U: FractionUnit,
+{
+    fn of<A>(&self, whole: A) -> Option<A>
+    where
+        U: ToDoublePrimitive,
+        A: MaxDoublePrimitive<U>,
+    {
+        self.checked_mul(whole)
     }
 }
 

@@ -43,8 +43,8 @@ mod tests {
     use currency::test::SubGroupTestC10;
 
     use crate::{
-        coin::Coin, duration::Duration, fraction::FractionLegacy, percent::Percent100, ratio::Ratio,
-        zero::Zero,
+        coin::Coin, duration::Duration, fraction::FractionLegacy, percent::Percent100,
+        ratio::Ratio, zero::Zero,
     };
 
     type MyCoin = Coin<SubGroupTestC10>;
