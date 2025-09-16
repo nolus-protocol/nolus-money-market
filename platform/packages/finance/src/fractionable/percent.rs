@@ -27,22 +27,6 @@ impl<const UPPER_BOUND: Units> Fractionable<Units> for BoundPercent<UPPER_BOUND>
     }
 }
 
-impl<C, const UPPER_BOUND: Units> Fractionable<Coin<C>> for BoundPercent<UPPER_BOUND> {
-    #[track_caller]
-    fn safe_mul<F>(self, fraction: &F) -> Self
-    where
-        F: RatioLegacy<Coin<C>>,
-    {
-        let p128: u128 = self.units().into();
-        // TODO re-assess the design of Ratio ... and whether it could be > 1
-        let res: Units = p128
-            .safe_mul(fraction)
-            .try_into()
-            .expect("overflow computing a fraction of permille");
-        Self::try_from(res).expect("TODO remove when refactor Fractionable. Resulting permille exceeds BoundPercent upper bound")
-    }
-}
-
 impl<const UPPER_BOUND: Units> ToDoublePrimitive for BoundPercent<UPPER_BOUND> {
     type Double = u64;
 
@@ -66,7 +50,7 @@ impl<C, const UPPER_BOUND: Units> MaxDoublePrimitive<Coin<C>> for BoundPercent<U
         u128::try_from(max).ok().and_then(|u_128| {
             Units::try_from(u_128)
                 .ok()
-                .and_then(Self::try_from_primitive)
+                .and_then(Self::try_from_permille)
         })
     }
 }
@@ -129,55 +113,52 @@ mod test {
 
         use crate::{
             coin::Coin,
-            fractionable::Fractionable,
-            percent::{Percent, Units},
-            ratio::SimpleFraction,
+            fraction::Fraction,
+            percent::{Percent, Percent100, Units},
+            ratio::{Ratio, SimpleFraction},
+            rational::Rational,
         };
 
         #[test]
-        fn safe_mul() {
+        fn of() {
             assert_eq!(
                 Percent::from_permille(Units::MAX),
-                Fractionable::<Coin<_>>::safe_mul(
-                    Percent::from_permille(Units::MAX),
-                    &SimpleFraction::new(
-                        Coin::<SuperGroupTestC1>::new(u128::MAX),
-                        Coin::<SuperGroupTestC1>::new(u128::MAX),
-                    )
+                SimpleFraction::new(
+                    Coin::<SuperGroupTestC1>::new(u128::MAX),
+                    Coin::<SuperGroupTestC1>::new(u128::MAX)
                 )
+                .of(Percent::from_permille(Units::MAX))
+                .unwrap()
             );
             assert_eq!(
-                Percent::from_percent(20),
-                Fractionable::<Coin<_>>::safe_mul(
-                    Percent::HUNDRED,
-                    &SimpleFraction::new(
-                        Coin::<SuperGroupTestC1>::new(1),
-                        Coin::<SuperGroupTestC1>::new(5),
-                    )
+                Percent100::from_percent(20),
+                Ratio::new(
+                    Coin::<SuperGroupTestC1>::new(1),
+                    Coin::<SuperGroupTestC1>::new(5),
                 )
+                .of(Percent100::HUNDRED)
             );
             assert_eq!(
                 Percent::from_permille(225),
-                Fractionable::<Coin<_>>::safe_mul(
-                    Percent::from_permille(150),
-                    &SimpleFraction::new(
-                        Coin::<SuperGroupTestC1>::new(3),
-                        Coin::<SuperGroupTestC1>::new(2),
-                    )
+                SimpleFraction::new(
+                    Coin::<SuperGroupTestC1>::new(3),
+                    Coin::<SuperGroupTestC1>::new(2),
                 )
+                .of(Percent::from_permille(150))
+                .unwrap()
             );
         }
 
         #[test]
-        #[should_panic]
-        fn safe_mul_overflow() {
-            Fractionable::<Coin<_>>::safe_mul(
-                Percent::from_percent(1),
-                &SimpleFraction::new(
+        fn of_overflow() {
+            assert!(
+                SimpleFraction::new(
                     Coin::<SuperGroupTestC1>::new(u128::MAX),
                     Coin::<SuperGroupTestC1>::new(1),
-                ),
-            );
+                )
+                .of(Percent::from_percent(1))
+                .is_none()
+            )
         }
     }
 }
