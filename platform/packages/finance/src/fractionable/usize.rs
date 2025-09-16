@@ -1,4 +1,10 @@
-use crate::{fraction::Unit as FractionUnit, percent::Units as PercentUnits, ratio::RatioLegacy};
+use std::ops::{Div, Rem};
+
+use gcd::Gcd;
+
+use crate::{
+    fraction::Unit as FractionUnit, percent::Units as PercentUnits, ratio::RatioLegacy, zero::Zero,
+};
 
 use super::Fractionable;
 
@@ -16,7 +22,23 @@ impl Fractionable<PercentUnits> for usize {
     }
 }
 
-impl FractionUnit for usize {}
+impl FractionUnit for usize {
+    type Times = Self;
+
+    fn gcd(self, other: Self) -> Self::Times {
+        Gcd::gcd(self, other)
+    }
+
+    fn scale_down(self, scale: Self::Times) -> Self {
+        debug_assert_ne!(scale, Self::Times::ZERO);
+
+        self.div(scale)
+    }
+
+    fn modulo(self, scale: Self::Times) -> Self::Times {
+        self.rem(scale)
+    }
+}
 
 #[cfg(test)]
 mod test {
