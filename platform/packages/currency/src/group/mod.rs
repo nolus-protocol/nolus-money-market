@@ -11,17 +11,21 @@ pub use member::{GroupMember, MemberOf};
 #[cfg(any(test, feature = "testing"))]
 pub use self::adapter::{SubFilterAdapter, SubGroupFindAdapter};
 
-// to uncomment once a composite group in production shows up
+// TODO remove once a composite group in production shows up
 #[cfg(any(test, feature = "testing"))]
 mod adapter;
 mod filter;
 mod find;
 mod member;
 
+/// A group of strong typed [`Currency`]-ies
+///
+/// It is like a collection of types validated statically by the Rust compiler.
+/// Since there is no notion of a 'meta-types', the members of a group cannot be iterated over.
+/// Instead, we can deal with their mapped values, though.
 pub trait Group
 where
-    Self: Copy + Clone + Debug + Ord + PartialEq + MemberOf<Self>,
-    Self: MemberOf<Self::TopG>,
+    Self: Copy + Clone + Debug + Ord + PartialEq + MemberOf<Self> + MemberOf<Self::TopG>,
 {
     const DESCR: &'static str;
     type TopG: Group<TopG = Self::TopG>;
@@ -40,6 +44,11 @@ where
         FilterMap: FilterMapT<VisitedG = Self>,
         FilterMapRef: Borrow<FilterMap> + Clone;
 
+    /// Find and map a currency to value
+    ///
+    /// The first currency for which the [`FindMap`] argument produces [`Ok(mapped_value)`]
+    /// stops the iteration and that result is returned.
+    /// If there is no such currency, [`Err(v)`] is returned.
     fn find_map<FindMap>(v: FindMap) -> Result<FindMap::Outcome, FindMap>
     where
         FindMap: FindMapT<TargetG = Self>;

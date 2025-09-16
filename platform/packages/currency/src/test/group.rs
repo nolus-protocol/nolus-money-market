@@ -5,8 +5,14 @@ use serde::Deserialize;
 use crate::{
     CurrencyDTO, FindMapT, Group, Matcher,
     group::{self, CurrenciesMapping, FilterMapT, MemberOf, SubFilterAdapter, SubGroupFindAdapter},
-    pairs::{MaybePairsVisitorResult, PairsGroup, PairsVisitor},
-    test::{sub::Item as SubGroupItem, super_::Item as SuperGroupItem},
+    pairs::{self, FindMapT as PairsFindMapT, MaybePairsVisitorResult, PairsGroup, PairsVisitor},
+    test::{
+        sub::{Item as SubGroupItem, SubGroupTestC6Pairs, SubGroupTestC10Pairs},
+        super_::{
+            Item as SuperGroupItem, SuperGroupTestC1Pairs, SuperGroupTestC2Pairs,
+            SuperGroupTestC3Pairs, SuperGroupTestC4Pairs, SuperGroupTestC5Pairs,
+        },
+    },
     visit_any::InPoolWith,
 };
 
@@ -66,6 +72,13 @@ impl PairsGroup for SuperGroupTestC1 {
             .or_else(|v| maybe_visit::<SuperGroupTestC5, _, _>(matcher, v))
             .or_else(|v| maybe_visit::<SubGroupTestC10, _, _>(matcher, v))
     }
+
+    fn find_map<FindMap>(f: FindMap) -> Result<FindMap::Outcome, FindMap>
+    where
+        FindMap: PairsFindMapT<Pivot = Self>,
+    {
+        pairs::find_map::<SuperGroupTestC1Pairs, _>(f)
+    }
 }
 impl InPoolWith<SuperGroup> for SuperGroupTestC1 {}
 impl InPoolWith<SuperGroupTestC2> for SuperGroupTestC1 {}
@@ -86,6 +99,13 @@ impl PairsGroup for SuperGroupTestC2 {
             .or_else(|v| maybe_visit::<SuperGroupTestC3, _, _>(matcher, v))
             .or_else(|v| maybe_visit::<SubGroupTestC6, _, _>(matcher, v))
             .or_else(|v| maybe_visit::<SubGroupTestC10, _, _>(matcher, v))
+    }
+
+    fn find_map<FindMap>(f: FindMap) -> Result<FindMap::Outcome, FindMap>
+    where
+        FindMap: PairsFindMapT<Pivot = Self>,
+    {
+        pairs::find_map::<SuperGroupTestC2Pairs, _>(f)
     }
 }
 impl InPoolWith<SuperGroup> for SuperGroupTestC2 {}
@@ -109,6 +129,13 @@ impl PairsGroup for SuperGroupTestC3 {
             .or_else(|v| maybe_visit::<SuperGroupTestC5, _, _>(matcher, v))
             .or_else(|v| maybe_visit::<SubGroupTestC10, _, _>(matcher, v))
     }
+
+    fn find_map<FindMap>(f: FindMap) -> Result<FindMap::Outcome, FindMap>
+    where
+        FindMap: PairsFindMapT<Pivot = Self>,
+    {
+        pairs::find_map::<SuperGroupTestC3Pairs, _>(f)
+    }
 }
 impl InPoolWith<SuperGroup> for SuperGroupTestC3 {}
 impl InPoolWith<SuperGroupTestC2> for SuperGroupTestC3 {}
@@ -127,6 +154,13 @@ impl PairsGroup for SuperGroupTestC4 {
         maybe_visit::<SuperGroupTestC1, _, _>(matcher, visitor)
             .or_else(|v| maybe_visit::<SuperGroupTestC5, _, _>(matcher, v))
             .or_else(|v| maybe_visit::<SubGroupTestC10, _, _>(matcher, v))
+    }
+
+    fn find_map<FindMap>(f: FindMap) -> Result<FindMap::Outcome, FindMap>
+    where
+        FindMap: PairsFindMapT<Pivot = Self>,
+    {
+        pairs::find_map::<SuperGroupTestC4Pairs, _>(f)
     }
 }
 impl InPoolWith<SuperGroup> for SuperGroupTestC4 {}
@@ -147,15 +181,20 @@ impl PairsGroup for SuperGroupTestC5 {
         maybe_visit::<SuperGroupTestC1, _, _>(matcher, visitor)
             .or_else(|v| maybe_visit::<SuperGroupTestC3, _, _>(matcher, v))
             .or_else(|v| maybe_visit::<SuperGroupTestC4, _, _>(matcher, v))
-            .or_else(|v| maybe_visit::<SuperGroupTestC5, _, _>(matcher, v))
             .or_else(|v| maybe_visit::<SubGroupTestC10, _, _>(matcher, v))
+    }
+
+    fn find_map<FindMap>(f: FindMap) -> Result<FindMap::Outcome, FindMap>
+    where
+        FindMap: PairsFindMapT<Pivot = Self>,
+    {
+        pairs::find_map::<SuperGroupTestC5Pairs, _>(f)
     }
 }
 impl InPoolWith<SuperGroup> for SuperGroupTestC5 {}
 impl InPoolWith<SuperGroupTestC1> for SuperGroupTestC5 {}
 impl InPoolWith<SuperGroupTestC3> for SuperGroupTestC5 {}
 impl InPoolWith<SuperGroupTestC4> for SuperGroupTestC5 {}
-impl InPoolWith<SuperGroupTestC5> for SuperGroupTestC5 {} // Note Self is InPoolWith<Self>, defined so to allow 'same-currency' 'unit tests on PriceDTO
 impl InPoolWith<SubGroupTestC10> for SuperGroupTestC5 {}
 
 #[derive(Debug, Copy, Clone, Ord, PartialEq, PartialOrd, Eq, Deserialize)]
@@ -199,6 +238,13 @@ impl PairsGroup for SubGroupTestC6 {
         maybe_visit::<SuperGroupTestC2, _, _>(matcher, visitor)
             .or_else(|v| maybe_visit::<SubGroupTestC10, _, _>(matcher, v))
     }
+
+    fn find_map<FindMap>(f: FindMap) -> Result<FindMap::Outcome, FindMap>
+    where
+        FindMap: PairsFindMapT<Pivot = Self>,
+    {
+        pairs::find_map::<SubGroupTestC6Pairs, _>(f)
+    }
 }
 impl InPoolWith<SuperGroup> for SubGroupTestC6 {}
 impl InPoolWith<SuperGroupTestC2> for SubGroupTestC6 {}
@@ -217,6 +263,13 @@ impl PairsGroup for SubGroupTestC10 {
         maybe_visit::<SuperGroupTestC2, _, _>(matcher, visitor)
             .or_else(|v| maybe_visit::<SuperGroupTestC5, _, _>(matcher, v))
             .or_else(|v| maybe_visit::<SubGroupTestC6, _, _>(matcher, v))
+    }
+
+    fn find_map<FindMap>(f: FindMap) -> Result<FindMap::Outcome, FindMap>
+    where
+        FindMap: PairsFindMapT<Pivot = Self>,
+    {
+        pairs::find_map::<SubGroupTestC10Pairs, _>(f)
     }
 }
 impl InPoolWith<SuperGroup> for SubGroupTestC10 {}

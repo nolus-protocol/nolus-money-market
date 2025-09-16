@@ -1,7 +1,26 @@
-use crate::{visit_any::InPoolWith, CurrencyDTO, CurrencyDef, Group, Matcher, MemberOf};
+use crate::{CurrencyDTO, CurrencyDef, Group, Matcher, MemberOf, visit_any::InPoolWith};
+
+#[cfg(any(test, feature = "testing"))]
+pub use find::find_map;
+#[cfg(any(test, feature = "testing"))]
+pub use member::PairsGroupMember;
+
+//TODO remove once generated production pairs show up
+#[cfg(any(test, feature = "testing"))]
+mod find;
+//TODO the same
+#[cfg(any(test, feature = "testing"))]
+mod member;
 
 pub type MaybePairsVisitorResult<V> = Result<<V as PairsVisitor>::Outcome, V>;
 
+/// A group of strong typed [`Currency`]-ies that form with [`self`] valid swap pools on the DEX.
+///
+/// For each currency *C*, a swap pool ([`self`], *C*`) or (*C*, [`self`]) exists on the Dex.
+///
+/// The collection of pair types are validated statically by the Rust compiler.
+/// Since there is no notion of a 'meta-types', the members of a group cannot be iterated over.
+/// Instead, we deal with their mapped values.
 pub trait PairsGroup {
     type CommonGroup: Group;
 

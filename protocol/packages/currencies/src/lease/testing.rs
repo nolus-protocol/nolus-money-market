@@ -3,7 +3,7 @@ pub(super) mod definitions {
 
     use currency::{
         CurrencyDTO, CurrencyDef, Definition, InPoolWith, Matcher, MaybePairsVisitorResult,
-        PairsGroup, PairsVisitor,
+        PairsFindMapT, PairsGroup, PairsVisitor,
     };
 
     use crate::{lpn::Lpn, native::Nls, payment::Group as PaymentGroup};
@@ -41,6 +41,13 @@ pub(super) mod definitions {
             visit::<LeaseC2, _, _>(matcher, visitor)
                 .or_else(|visitor| visit::<LeaseC3, _, _>(matcher, visitor))
         }
+
+        fn find_map<FindMap>(_f: FindMap) -> Result<FindMap::Outcome, FindMap>
+        where
+            FindMap: PairsFindMapT<Pivot = Self>,
+        {
+            todo!()
+        }
     }
 
     #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
@@ -72,6 +79,13 @@ pub(super) mod definitions {
             use currency::maybe_visit_buddy as visit;
 
             visit::<Lpn, _, _>(matcher, visitor)
+        }
+
+        fn find_map<FindMap>(_f: FindMap) -> Result<FindMap::Outcome, FindMap>
+        where
+            FindMap: PairsFindMapT<Pivot = Self>,
+        {
+            todo!()
         }
     }
 
@@ -110,6 +124,13 @@ pub(super) mod definitions {
 
             visit::<LeaseC2, _, _>(matcher, visitor)
         }
+
+        fn find_map<FindMap>(_f: FindMap) -> Result<FindMap::Outcome, FindMap>
+        where
+            FindMap: PairsFindMapT<Pivot = Self>,
+        {
+            todo!()
+        }
     }
 
     impl InPoolWith<LeaseC1> for LeaseC3 {}
@@ -143,6 +164,13 @@ pub(super) mod definitions {
 
             visit::<LeaseC2, _, _>(matcher, visitor)
         }
+
+        fn find_map<FindMap>(_f: FindMap) -> Result<FindMap::Outcome, FindMap>
+        where
+            FindMap: PairsFindMapT<Pivot = Self>,
+        {
+            todo!()
+        }
     }
 
     #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
@@ -174,6 +202,13 @@ pub(super) mod definitions {
 
             visit::<Nls, _, _>(matcher, visitor)
         }
+
+        fn find_map<FindMap>(_f: FindMap) -> Result<FindMap::Outcome, FindMap>
+        where
+            FindMap: PairsFindMapT<Pivot = Self>,
+        {
+            todo!()
+        }
     }
 
     #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
@@ -203,6 +238,13 @@ pub(super) mod definitions {
         {
             // let's stay detached from the swap tree for some corner cases.
             currency::visit_noone(visitor)
+        }
+
+        fn find_map<FindMap>(_f: FindMap) -> Result<FindMap::Outcome, FindMap>
+        where
+            FindMap: PairsFindMapT<Pivot = Self>,
+        {
+            todo!()
         }
     }
 
@@ -234,6 +276,13 @@ pub(super) mod definitions {
             use currency::maybe_visit_buddy as visit;
 
             visit::<Lpn, _, _>(matcher, visitor)
+        }
+
+        fn find_map<FindMap>(_f: FindMap) -> Result<FindMap::Outcome, FindMap>
+        where
+            FindMap: PairsFindMapT<Pivot = Self>,
+        {
+            todo!()
         }
     }
 }

@@ -1,7 +1,8 @@
 use crate::{
     CurrencyDef, FindMapT,
     group::{FilterMapT, GroupMember},
-    test::{SubGroup, SubGroupTestC6, SubGroupTestC10},
+    pairs::{FindMapT as PairsFindMapT, PairsGroupMember},
+    test::{SubGroup, SubGroupTestC6, SubGroupTestC10, SuperGroupTestC2, SuperGroupTestC5},
 };
 
 // ======== START GENERATED CODE =========
@@ -43,6 +44,71 @@ impl GroupMember<SubGroup> for Item {
     }
 }
 
+pub(super) enum SubGroupTestC6Pairs {
+    SuperGroupTestC2,
+    SubGroupTestC10,
+}
+
+impl PairsGroupMember for SubGroupTestC6Pairs {
+    type Group = SubGroupTestC6;
+
+    fn first() -> Option<Self> {
+        Some(Self::SuperGroupTestC2)
+    }
+
+    fn next(&self) -> Option<Self> {
+        match self {
+            Self::SuperGroupTestC2 => Some(Self::SubGroupTestC10),
+            Self::SubGroupTestC10 => None,
+        }
+    }
+
+    fn find_map<PairsFindMap>(
+        &self,
+        find_map: PairsFindMap,
+    ) -> Result<PairsFindMap::Outcome, PairsFindMap>
+    where
+        PairsFindMap: PairsFindMapT<Pivot = Self::Group>,
+    {
+        match *self {
+            Self::SuperGroupTestC2 => find_map.on::<SuperGroupTestC2>(SuperGroupTestC2::dto()),
+            Self::SubGroupTestC10 => find_map.on::<SubGroupTestC10>(SubGroupTestC10::dto()),
+        }
+    }
+}
+
+pub(super) enum SubGroupTestC10Pairs {
+    SuperGroupTestC5,
+    SubGroupTestC6,
+}
+
+impl PairsGroupMember for SubGroupTestC10Pairs {
+    type Group = SubGroupTestC10;
+
+    fn first() -> Option<Self> {
+        Some(Self::SuperGroupTestC5)
+    }
+
+    fn next(&self) -> Option<Self> {
+        match self {
+            Self::SuperGroupTestC5 => Some(Self::SubGroupTestC6),
+            Self::SubGroupTestC6 => None,
+        }
+    }
+
+    fn find_map<PairsFindMap>(
+        &self,
+        find_map: PairsFindMap,
+    ) -> Result<PairsFindMap::Outcome, PairsFindMap>
+    where
+        PairsFindMap: PairsFindMapT<Pivot = Self::Group>,
+    {
+        match *self {
+            Self::SuperGroupTestC5 => find_map.on::<SuperGroupTestC5>(SuperGroupTestC5::dto()),
+            Self::SubGroupTestC6 => find_map.on::<SubGroupTestC6>(SubGroupTestC6::dto()),
+        }
+    }
+}
 // ======== END GENERATED CODE =========
 
 #[cfg(test)]

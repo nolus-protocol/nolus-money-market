@@ -6,6 +6,7 @@ use crate::{
     CurrencyDTO, CurrencyDef, Definition, Group, Matcher, MaybePairsVisitorResult, MemberOf,
     PairsGroup, PairsVisitor,
     group::{self, CurrenciesMapping, FilterMapT, FindMapT, GroupMember},
+    pairs::FindMapT as PairsFindMapT,
 };
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Serialize, Deserialize)]
@@ -25,6 +26,13 @@ impl PairsGroup for Stable {
     where
         M: Matcher,
         V: PairsVisitor<Pivot = Self>,
+    {
+        unreachable!("The 'Stable' platform currency used in pairs resolution!")
+    }
+
+    fn find_map<FindMap>(_f: FindMap) -> Result<FindMap::Outcome, FindMap>
+    where
+        FindMap: PairsFindMapT<Pivot = Self>,
     {
         unreachable!("The 'Stable' platform currency used in pairs resolution!")
     }
@@ -66,6 +74,13 @@ impl PairsGroup for Nls {
     where
         M: Matcher,
         V: PairsVisitor,
+    {
+        unreachable!("The 'Nls' platform currency used in pairs resolution!")
+    }
+
+    fn find_map<FindMap>(_f: FindMap) -> Result<FindMap::Outcome, FindMap>
+    where
+        FindMap: PairsFindMapT<Pivot = Self>,
     {
         unreachable!("The 'Nls' platform currency used in pairs resolution!")
     }

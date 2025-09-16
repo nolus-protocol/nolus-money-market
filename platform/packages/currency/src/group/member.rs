@@ -26,6 +26,7 @@ where
 /// Intended to facilitate the iteration of group members.
 ///
 /// Not to be confused [`MemberOf`]!
+// TODO switch G to an associative type
 pub trait GroupMember<G>
 where
     Self: Sized,
