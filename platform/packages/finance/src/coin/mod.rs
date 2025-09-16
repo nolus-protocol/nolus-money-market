@@ -6,7 +6,7 @@ use std::{
     fmt::{Debug, Display, Formatter},
     iter::Sum,
     marker::PhantomData,
-    ops::{Add, AddAssign, Div, Sub, SubAssign},
+    ops::{Add, AddAssign, Div, Rem, Sub, SubAssign},
 };
 
 use ::serde::{Deserialize, Serialize};
@@ -42,6 +42,10 @@ impl FractionUnit for u128 {
         debug_assert_ne!(scale, Self::Times::ZERO);
 
         self.div(scale)
+    }
+
+    fn modulo(self, scale: Self::Times) -> Self::Times {
+        self.rem(scale)
     }
 }
 
@@ -176,6 +180,10 @@ impl<C> FractionUnit for Coin<C> {
         debug_assert_ne!(scale, Self::Times::ZERO);
 
         Coin::new(self.amount.scale_down(scale))
+    }
+
+    fn modulo(self, scale: Self::Times) -> Self::Times {
+        self.amount.modulo(scale)
     }
 }
 
