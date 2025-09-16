@@ -99,6 +99,8 @@ where
     pub fn new(nominator: U, denominator: U) -> Self {
         debug_assert_ne!(denominator, Zero::ZERO);
 
+        let (nominator, denominator) = into_coprime(nominator, denominator);
+
         Self {
             nominator,
             denominator,
@@ -148,6 +150,27 @@ where
     {
         Some(whole.safe_mul(self))
     }
+}
+
+fn into_coprime<U>(a: U, b: U) -> (U, U)
+where
+    U: Copy + Debug + FractionUnit + PartialEq + Zero,
+{
+    debug_assert_ne!(b, Zero::ZERO, "RHS-value is zero!");
+
+    let gcd = a.gcd(b);
+
+    debug_assert_ne!(gcd, Zero::ZERO);
+    debug_assert!(
+        a.modulo(gcd) == Zero::ZERO,
+        "LHS-value is not divisible by the GCD!"
+    );
+    debug_assert!(
+        b.modulo(gcd) == Zero::ZERO,
+        "RHS-value is not divisible by the GCD!"
+    );
+
+    (a.scale_down(gcd), b.scale_down(gcd))
 }
 
 #[cfg(test)]
@@ -237,5 +260,46 @@ mod test_ratio {
     -> Result<Ratio<Coin<SuperGroupTestC1>>, cosmwasm_std::StdError> {
         let serialized = cosmwasm_std::to_json_vec(&SimpleFraction::new(coin(5), coin(4))).unwrap();
         cosmwasm_std::from_json::<Ratio<Coin<SuperGroupTestC1>>>(&serialized)
+    }
+
+    mod into_coprime {
+        use crate::{percent::Units as PercentUnits, ratio::SimpleFraction};
+
+        #[test]
+        fn into_coprime() {
+            assert_eq!(SimpleFraction::new(1, 3), u_rational(2, 6))
+        }
+
+        #[test]
+        fn into_coprime_primes() {
+            assert_eq!(SimpleFraction::new(1009, 1061), u_rational(1009, 1061))
+        }
+        #[test]
+        fn into_prime_big_coprime_values() {
+            let max_even = PercentUnits::MAX - 1;
+            assert_eq!(
+                SimpleFraction::new(1, 2),
+                u_rational(max_even / 2, max_even)
+            )
+        }
+        #[test]
+        fn into_prime_big_prime_values() {
+            assert_eq!(
+                SimpleFraction::new(u32::MAX, u32::MAX - 1),
+                u_rational(u32::MAX, u32::MAX - 1)
+            )
+        }
+
+        #[test]
+        fn into_coprime_one() {
+            assert_eq!(SimpleFraction::new(1, 1), u_rational(u32::MAX, u32::MAX));
+        }
+
+        fn u_rational(
+            nominator: PercentUnits,
+            denominator: PercentUnits,
+        ) -> SimpleFraction<PercentUnits> {
+            SimpleFraction::new(nominator, denominator)
+        }
     }
 }
