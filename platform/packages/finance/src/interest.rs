@@ -7,7 +7,7 @@ use crate::{
 };
 
 /// Computes how much interest is accrued
-pub fn interest<U, R, P>(rate: R, principal: P, period: Duration) -> P
+pub fn interest<U, R, P>(rate: R, principal: P, period: Duration) -> Option<P>
 where
     R: FractionLegacy<U>,
     P: Fractionable<U> + Fractionable<DurationUnits>,
@@ -30,20 +30,20 @@ where
         + ToDoublePrimitive,
     Duration: MaxDoublePrimitive<P>,
 {
-    let interest_due_per_period: P = interest(rate, principal, period);
+    interest(rate, principal, period).and_then(|interest_due_per_period| {
+        if interest_due_per_period == P::ZERO {
+            Some((Duration::from_nanos(0), payment))
+        } else {
+            let repayment: P = cmp::min(interest_due_per_period, payment);
 
-    if interest_due_per_period == P::ZERO {
-        Some((Duration::from_nanos(0), payment))
-    } else {
-        let repayment: P = cmp::min(interest_due_per_period, payment);
-
-        period
-            .into_slice_per_ratio(repayment, interest_due_per_period)
-            .map(|period_paid_for| {
-                let change = payment - repayment;
-                (period_paid_for, change)
-            })
-    }
+            period
+                .into_slice_per_ratio(repayment, interest_due_per_period)
+                .map(|period_paid_for| {
+                    let change = payment - repayment;
+                    (period_paid_for, change)
+                })
+        }
+    })
 }
 
 #[cfg(test)]
