@@ -1,15 +1,8 @@
 use crate::{CurrencyDTO, CurrencyDef, Group, MemberOf, visit_any::InPoolWith};
 
-#[cfg(any(test, feature = "testing"))]
-pub use find::find_map;
-#[cfg(any(test, feature = "testing"))]
-pub use member::PairsGroupMember;
+pub use self::{find::find_map, member::PairsGroupMember};
 
-//TODO remove once generated production pairs show up
-#[cfg(any(test, feature = "testing"))]
 mod find;
-//TODO the same
-#[cfg(any(test, feature = "testing"))]
 mod member;
 
 pub type MaybePairsVisitorResult<V> = Result<<V as PairsVisitor>::Outcome, V>;
