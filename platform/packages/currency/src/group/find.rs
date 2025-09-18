@@ -9,14 +9,11 @@ where
     let mut may_next = GroupMemberImpl::first();
     let mut result = Err(f);
     while let Some(next) = may_next {
-        match result {
-            Ok(ref _result) => {
-                break;
-            }
-            Err(f) => {
-                result = next.find_map(f);
-            }
-        }
+        result = if let Err(f) = result {
+            next.find_map(f)
+        } else {
+            break;
+        };
         may_next = next.next();
     }
     result

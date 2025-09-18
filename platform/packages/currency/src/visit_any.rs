@@ -168,11 +168,19 @@ mod impl_any_tickers {
         {
             debug_assert_eq!(def, &self.currency1);
             self.currency2
-                .may_into_pair_member_type(SecondTickerVisitor {
-                    c: PhantomData::<C1>,
-                    currency1: self.currency1,
-                    currency2: self.currency2,
-                    visitor: self.visitor,
+                .may_into_pair_member_type({
+                    let Self {
+                        currency1,
+                        currency2,
+                        visitor,
+                    } = self;
+
+                    SecondTickerVisitor {
+                        c: PhantomData::<C1>,
+                        currency1,
+                        currency2,
+                        visitor,
+                    }
                 })
                 .map_err(|_| Error::not_in_pool_with(&self.currency1, &self.currency2))
         }
