@@ -1,10 +1,4 @@
-use std::ops::{Div, Rem};
-
-use gcd::Gcd;
-
-use crate::{
-    fraction::Unit as FractionUnit, percent::Units as PercentUnits, ratio::RatioLegacy, zero::Zero,
-};
+use crate::{percent::Units as PercentUnits, ratio::RatioLegacy};
 
 use super::FractionableLegacy;
 
@@ -19,24 +13,6 @@ impl FractionableLegacy<PercentUnits> for usize {
             .safe_mul(fraction)
             .try_into()
             .expect("usize overflow on percent calculation")
-    }
-}
-
-impl FractionUnit for usize {
-    type Times = Self;
-
-    fn gcd(self, other: Self) -> Self::Times {
-        Gcd::gcd(self, other)
-    }
-
-    fn scale_down(self, scale: Self::Times) -> Self {
-        debug_assert_ne!(scale, Self::Times::ZERO);
-
-        self.div(scale)
-    }
-
-    fn modulo(self, scale: Self::Times) -> Self::Times {
-        self.rem(scale)
     }
 }
 
