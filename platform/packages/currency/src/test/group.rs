@@ -57,7 +57,8 @@ impl Group for SuperGroup {
     }
 }
 
-//Pool pairs: 1:2, 1:4, 2:3, 4:5, 2:6, 2:10, 5:10, 6:10
+//Pool pairs: 1:2, 1:4, 1:10, 2:3, 2:6, 2:10, 4:5, 5:10, 6:10
+//Pool pairs: 1:2, 1:4, 1:10, 2:3, 2:6, 2:10, 4:5, 5:10, 6:10
 impl PairsGroup for SuperGroupTestC1 {
     type CommonGroup = SuperGroup;
 
@@ -71,9 +72,9 @@ impl PairsGroup for SuperGroupTestC1 {
 impl InPoolWith<SuperGroup> for SuperGroupTestC1 {}
 impl InPoolWith<SuperGroupTestC2> for SuperGroupTestC1 {}
 impl InPoolWith<SuperGroupTestC4> for SuperGroupTestC1 {}
-impl InPoolWith<SuperGroupTestC5> for SuperGroupTestC1 {}
+impl InPoolWith<SubGroupTestC10> for SuperGroupTestC1 {}
 
-//Pool pairs: 1:2, 1:4, 2:3, 4:5, 2:6, 2:10, 5:10, 6:10
+//Pool pairs: 1:2, 1:4, 1:10, 2:3, 2:6, 2:10, 4:5, 5:10, 6:10
 impl PairsGroup for SuperGroupTestC2 {
     type CommonGroup = SuperGroup;
 
@@ -90,7 +91,7 @@ impl InPoolWith<SuperGroupTestC3> for SuperGroupTestC2 {}
 impl InPoolWith<SubGroupTestC6> for SuperGroupTestC2 {}
 impl InPoolWith<SubGroupTestC10> for SuperGroupTestC2 {}
 
-//Pool pairs: 1:2, 1:4, 2:3, 4:5, 2:6, 2:10, 5:10, 6:10
+//Pool pairs: 1:2, 1:4, 1:10, 2:3, 2:6, 2:10, 4:5, 5:10, 6:10
 impl PairsGroup for SuperGroupTestC3 {
     type CommonGroup = SuperGroup;
 
@@ -103,9 +104,8 @@ impl PairsGroup for SuperGroupTestC3 {
 }
 impl InPoolWith<SuperGroup> for SuperGroupTestC3 {}
 impl InPoolWith<SuperGroupTestC2> for SuperGroupTestC3 {}
-impl InPoolWith<SuperGroupTestC5> for SuperGroupTestC3 {}
 
-//Pool pairs: 1:2, 1:4, 2:3, 4:5, 2:6, 2:10, 5:10, 6:10
+//Pool pairs: 1:2, 1:4, 1:10, 2:3, 2:6, 2:10, 4:5, 5:10, 6:10
 impl PairsGroup for SuperGroupTestC4 {
     type CommonGroup = SuperGroup;
 
@@ -118,10 +118,9 @@ impl PairsGroup for SuperGroupTestC4 {
 }
 impl InPoolWith<SuperGroup> for SuperGroupTestC4 {}
 impl InPoolWith<SuperGroupTestC1> for SuperGroupTestC4 {}
-impl InPoolWith<SuperGroupTestC3> for SuperGroupTestC4 {}
 impl InPoolWith<SuperGroupTestC5> for SuperGroupTestC4 {}
 
-//Pool pairs: 1:2, 1:4, 2:3, 4:5, 2:6, 2:10, 5:10, 6:10
+//Pool pairs: 1:2, 1:4, 1:10, 2:3, 2:6, 2:10, 4:5, 5:10, 6:10
 impl PairsGroup for SuperGroupTestC5 {
     type CommonGroup = SuperGroup;
 
@@ -133,8 +132,6 @@ impl PairsGroup for SuperGroupTestC5 {
     }
 }
 impl InPoolWith<SuperGroup> for SuperGroupTestC5 {}
-impl InPoolWith<SuperGroupTestC1> for SuperGroupTestC5 {}
-impl InPoolWith<SuperGroupTestC3> for SuperGroupTestC5 {}
 impl InPoolWith<SuperGroupTestC4> for SuperGroupTestC5 {}
 impl InPoolWith<SubGroupTestC10> for SuperGroupTestC5 {}
 
@@ -166,7 +163,7 @@ impl Group for SubGroup {
     }
 }
 
-//Pool pairs: 1:2, 1:4, 2:3, 4:5, 2:6, 2:10, 5:10, 6:10
+//Pool pairs: 1:2, 1:4, 1:10, 2:3, 2:6, 2:10, 4:5, 5:10, 6:10
 impl PairsGroup for SubGroupTestC6 {
     type CommonGroup = SuperGroup;
 
@@ -181,7 +178,7 @@ impl InPoolWith<SuperGroup> for SubGroupTestC6 {}
 impl InPoolWith<SuperGroupTestC2> for SubGroupTestC6 {}
 impl InPoolWith<SubGroupTestC10> for SubGroupTestC6 {}
 
-//Pool pairs: 1:2, 1:4, 2:3, 4:5, 2:6, 2:10, 5:10, 6:10
+//Pool pairs: 1:2, 1:4, 1:10, 2:3, 2:6, 2:10, 4:5, 5:10, 6:10
 impl PairsGroup for SubGroupTestC10 {
     type CommonGroup = SuperGroup;
 
@@ -195,8 +192,6 @@ impl PairsGroup for SubGroupTestC10 {
 impl InPoolWith<SuperGroup> for SubGroupTestC10 {}
 impl InPoolWith<SuperGroupTestC1> for SubGroupTestC10 {}
 impl InPoolWith<SuperGroupTestC2> for SubGroupTestC10 {}
-impl InPoolWith<SuperGroupTestC3> for SubGroupTestC10 {}
-impl InPoolWith<SuperGroupTestC4> for SubGroupTestC10 {}
 impl InPoolWith<SuperGroupTestC5> for SubGroupTestC10 {}
 impl InPoolWith<SubGroupTestC6> for SubGroupTestC10 {}
 
