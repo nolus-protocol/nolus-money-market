@@ -1,8 +1,8 @@
+use std::{borrow::Borrow, iter};
+
 use serde::{Deserialize, Serialize};
 
-use currency::{AnyVisitor, Matcher, MaybeAnyVisitResult, MemberOf};
-
-use crate::{lease::Group as LeaseGroup, lpn::Group as LpnGroup, native::Group as NativeGroup};
+use currency::{FilterMapT, FindMapT, MemberOf};
 
 pub use self::only::Group as OnlyGroup;
 #[cfg(feature = "testing")]
@@ -24,23 +24,21 @@ impl currency::Group for Group {
 
     type TopG = Self;
 
-    fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<Self, V>
+    fn filter_map<FilterMap, FilterMapRef>(
+        _f: FilterMapRef,
+    ) -> impl Iterator<Item = FilterMap::Outcome>
     where
-        M: Matcher,
-        V: AnyVisitor<Self>,
+        FilterMap: FilterMapT<VisitedG = Self>,
+        FilterMapRef: Borrow<FilterMap> + Clone,
     {
-        LeaseGroup::maybe_visit_member(matcher, visitor)
-            .or_else(|visitor| LpnGroup::maybe_visit_member(matcher, visitor))
-            .or_else(|visitor| NativeGroup::maybe_visit_member(matcher, visitor))
-            .or_else(|visitor| OnlyGroup::maybe_visit_member(matcher, visitor))
+        iter::empty()
     }
 
-    fn maybe_visit_member<M, V>(_: &M, _: V) -> MaybeAnyVisitResult<Self::TopG, V>
+    fn find_map<FindMap>(_v: FindMap) -> Result<FindMap::Outcome, FindMap>
     where
-        M: Matcher,
-        V: AnyVisitor<Self::TopG>,
+        FindMap: FindMapT<TargetG = Self>,
     {
-        unreachable!()
+        todo!()
     }
 }
 

@@ -1,9 +1,8 @@
+use std::{borrow::Borrow, iter};
+
 use serde::{Deserialize, Serialize};
 
-use currency::{
-    AnyVisitor, Matcher, MaybeAnyVisitResult, MaybePairsVisitorResult, MemberOf, PairsGroup,
-    PairsVisitor,
-};
+use currency::{FilterMapT, FindMapT, MemberOf, PairsFindMapT, PairsGroup};
 
 use crate::payment::Group as PaymentGroup;
 
@@ -27,24 +26,21 @@ impl currency::Group for Group {
 
     type TopG = PaymentGroup;
 
-    fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<Self, V>
+    fn filter_map<FilterMap, FilterMapRef>(
+        _f: FilterMapRef,
+    ) -> impl Iterator<Item = FilterMap::Outcome>
     where
-        M: Matcher,
-        V: AnyVisitor<Self>,
+        FilterMap: FilterMapT<VisitedG = Self>,
+        FilterMapRef: Borrow<FilterMap> + Clone,
     {
-        use currency::maybe_visit_member as visit;
-
-        visit::<_, Lpn, _, _>(matcher, visitor)
+        iter::empty()
     }
 
-    fn maybe_visit_member<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<Self::TopG, V>
+    fn find_map<FindMap>(_v: FindMap) -> Result<FindMap::Outcome, FindMap>
     where
-        M: Matcher,
-        V: AnyVisitor<Self::TopG>,
+        FindMap: FindMapT<TargetG = Self>,
     {
-        use currency::maybe_visit_member as visit;
-
-        visit::<_, Lpn, _, _>(matcher, visitor)
+        todo!()
     }
 }
 
@@ -55,13 +51,11 @@ impl MemberOf<PaymentGroup> for Group {}
 impl PairsGroup for Lpn {
     type CommonGroup = PaymentGroup;
 
-    #[inline]
-    fn maybe_visit<M, V>(_matcher: &M, visitor: V) -> MaybePairsVisitorResult<V>
+    fn find_map<FindMap>(_f: FindMap) -> Result<FindMap::Outcome, FindMap>
     where
-        M: Matcher,
-        V: PairsVisitor<Pivot = Self>,
+        FindMap: PairsFindMapT<Pivot = Self>,
     {
-        currency::visit_noone(visitor)
+        todo!("()")
     }
 }
 

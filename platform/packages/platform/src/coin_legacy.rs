@@ -45,14 +45,18 @@ where
     .map_err(|transformer| transformer.2)
 }
 
-pub(crate) fn from_cosmwasm_any<VisitedG, V>(coin: CosmWasmCoin, v: V) -> Result<V::Outcome>
+/// Transform CW coin to Nolus coin and then return the [WithCoin] result
+///
+/// If seeking for the corresponding Nolus coin is not successfull an [Error::from(CurrencyError::NotInCurrencyGroup)]  is returned.
+/// Otherwise, an `v.on(Nolus_coin)` is returned
+pub(crate) fn from_cosmwasm_any<VisitedG, V>(coin: &CosmWasmCoin, v: V) -> Result<V::Outcome>
 where
     VisitedG: Group,
     V: WithCoin<VisitedG>,
 {
     BankSymbols::<VisitedG>::maybe_visit_any(
         &coin.denom,
-        CoinTransformerAny(&coin, PhantomData::<VisitedG>, v),
+        CoinTransformerAny(coin, PhantomData::<VisitedG>, v),
     )
     .map_err(|_| {
         CurrencyError::not_in_currency_group::<_, BankSymbols<VisitedG>, VisitedG>(&coin.denom)
@@ -138,7 +142,7 @@ where
         C: CurrencyDef,
         C::Group: MemberOf<VisitedG> + MemberOf<VisitedG::TopG>,
     {
-        self.2.on::<C>(from_cosmwasm_internal::<C, C>(self.0))
+        self.2.on(from_cosmwasm_internal::<C, C>(self.0))
     }
 }
 

@@ -13,6 +13,10 @@ where
     SymbolMatcher::<'_, S>(symbol, PhantomData)
 }
 
+pub(crate) fn type_matcher(def: DefinitionRef) -> impl Matcher {
+    TypeMatcher(def)
+}
+
 struct SymbolMatcher<'a, S>(&'a str, PhantomData<S>)
 where
     S: ?Sized;
@@ -26,12 +30,7 @@ where
 }
 
 #[derive(Debug)]
-pub struct TypeMatcher(DefinitionRef);
-impl TypeMatcher {
-    pub fn new(def: DefinitionRef) -> Self {
-        Self(def)
-    }
-}
+struct TypeMatcher(DefinitionRef);
 impl Matcher for TypeMatcher {
     fn r#match(&self, def: DefinitionRef) -> bool {
         def == self.0

@@ -1,6 +1,8 @@
+use std::{borrow::Borrow, iter};
+
 use serde::{Deserialize, Serialize};
 
-use currency::{AnyVisitor, Matcher, MaybeAnyVisitResult, MemberOf};
+use currency::{FilterMapT, FindMapT, MemberOf};
 
 use super::Group as PaymentGroup;
 
@@ -13,10 +15,6 @@ mod impl_mod {
     include!(concat!(env!("OUT_DIR"), "/payment_only.rs"));
 }
 
-#[cfg(feature = "testing")]
-#[path = "testing.rs"]
-mod impl_mod;
-
 #[derive(Clone, Copy, Debug, Ord, PartialEq, PartialOrd, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub enum Group {}
@@ -26,20 +24,21 @@ impl currency::Group for Group {
 
     type TopG = PaymentGroup;
 
-    fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<Self, V>
+    fn filter_map<FilterMap, FilterMapRef>(
+        _f: FilterMapRef,
+    ) -> impl Iterator<Item = FilterMap::Outcome>
     where
-        M: Matcher,
-        V: AnyVisitor<Self>,
+        FilterMap: FilterMapT<VisitedG = Self>,
+        FilterMapRef: Borrow<FilterMap> + Clone,
     {
-        impl_mod::maybe_visit(matcher, visitor)
+        iter::empty()
     }
 
-    fn maybe_visit_member<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<Self::TopG, V>
+    fn find_map<FindMap>(_v: FindMap) -> Result<FindMap::Outcome, FindMap>
     where
-        M: Matcher,
-        V: AnyVisitor<Self::TopG>,
+        FindMap: FindMapT<TargetG = Self>,
     {
-        impl_mod::maybe_visit(matcher, visitor)
+        todo!()
     }
 }
 
