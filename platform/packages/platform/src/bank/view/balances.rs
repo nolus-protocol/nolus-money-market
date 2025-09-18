@@ -2,7 +2,6 @@ use std::marker::PhantomData;
 
 use currency::{CurrencyDTO, CurrencyDef, FilterMapT, Group, MemberOf};
 use finance::coin::WithCoin;
-use sdk::cosmwasm_std::Uint128;
 
 use crate::{bank::Aggregate, coin_legacy, result::Result};
 
@@ -43,7 +42,7 @@ where
         self.view.cw_balance(def).map_or_else(
             |err| Some(Err(err)),
             |ref cw_balance| {
-                (cw_balance.amount != Uint128::zero()).then(|| {
+                (!cw_balance.amount.is_zero()).then(|| {
                     coin_legacy::from_cosmwasm_any::<GBalances, _>(cw_balance, self.cmd.clone())
                 })
             },

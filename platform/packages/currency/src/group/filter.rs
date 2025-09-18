@@ -41,12 +41,12 @@ where
     fn next(&mut self) -> Option<Self::Item> {
         let mut result = None;
         while let Some(ref current) = self.next {
+            result = current.filter_map(self.f.borrow());
+            self.next = current.next();
+
             if result.is_some() {
                 break;
             }
-
-            result = current.filter_map(self.f.borrow());
-            self.next = current.next();
         }
         result
     }

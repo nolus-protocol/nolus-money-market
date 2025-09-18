@@ -29,7 +29,10 @@ where
     FilterMapRef: Clone,
 {
     fn clone(&self) -> Self {
-        Self(self.0, self.1, self.2.clone(), self.3)
+        Self {
+            2: self.2.clone(),
+            ..*self
+        }
     }
 }
 
@@ -90,8 +93,6 @@ where
         C: CurrencyDef + PairsGroup<CommonGroup = <G as Group>::TopG>,
         C::Group: MemberOf<G> + MemberOf<<G as Group>::TopG>,
     {
-        self.2
-            .on::<C>(def)
-            .map_err(|super_find_map| Self::new(super_find_map))
+        self.2.on::<C>(def).map_err(Self::new)
     }
 }

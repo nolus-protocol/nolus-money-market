@@ -53,7 +53,7 @@ impl Group for SuperGroup {
             .or_else(|v| {
                 group::find_map::<_, SubGroupItem, _>(SubGroupFindAdapter::<SubGroup, _, _>::new(v))
             })
-            .map_err(|adapter| adapter.release_super_map())
+            .map_err(SubGroupFindAdapter::release_super_map)
     }
 }
 
