@@ -2,7 +2,10 @@ use crate::{
     CurrencyDef, FindMapT,
     group::{FilterMapT, GroupMember},
     pairs::{FindMapT as PairsFindMapT, PairsGroupMember},
-    test::{SubGroup, SubGroupTestC6, SubGroupTestC10, SuperGroupTestC2, SuperGroupTestC5},
+    test::{
+        SubGroup, SubGroupTestC6, SubGroupTestC10, SuperGroupTestC1, SuperGroupTestC2,
+        SuperGroupTestC5,
+    },
 };
 
 // ======== START GENERATED CODE =========
@@ -78,6 +81,8 @@ impl PairsGroupMember for SubGroupTestC6Pairs {
 }
 
 pub(super) enum SubGroupTestC10Pairs {
+    SuperGroupTestC1,
+    SuperGroupTestC2,
     SuperGroupTestC5,
     SubGroupTestC6,
 }
@@ -86,11 +91,13 @@ impl PairsGroupMember for SubGroupTestC10Pairs {
     type Group = SubGroupTestC10;
 
     fn first() -> Option<Self> {
-        Some(Self::SuperGroupTestC5)
+        Some(Self::SuperGroupTestC1)
     }
 
     fn next(&self) -> Option<Self> {
         match self {
+            Self::SuperGroupTestC1 => Some(Self::SuperGroupTestC2),
+            Self::SuperGroupTestC2 => Some(Self::SuperGroupTestC5),
             Self::SuperGroupTestC5 => Some(Self::SubGroupTestC6),
             Self::SubGroupTestC6 => None,
         }
@@ -104,6 +111,8 @@ impl PairsGroupMember for SubGroupTestC10Pairs {
         PairsFindMap: PairsFindMapT<Pivot = Self::Group>,
     {
         match *self {
+            Self::SuperGroupTestC1 => find_map.on::<SuperGroupTestC1>(SuperGroupTestC1::dto()),
+            Self::SuperGroupTestC2 => find_map.on::<SuperGroupTestC2>(SuperGroupTestC2::dto()),
             Self::SuperGroupTestC5 => find_map.on::<SuperGroupTestC5>(SuperGroupTestC5::dto()),
             Self::SubGroupTestC6 => find_map.on::<SubGroupTestC6>(SubGroupTestC6::dto()),
         }

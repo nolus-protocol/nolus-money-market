@@ -216,17 +216,39 @@ mod test {
         error::Error,
         test::{
             ExpectPair, SubGroupTestC6, SubGroupTestC10, SuperGroup, SuperGroupTestC1,
-            SuperGroupTestC2, SuperGroupTestC3, SuperGroupTestC4,
+            SuperGroupTestC2, SuperGroupTestC3, SuperGroupTestC4, SuperGroupTestC5,
         },
     };
 
     #[test]
     fn visit_any_currencies() {
-        //Pool pairs: 1:2, 1:4, 2:3, 4:5, 2:6, 2:10, 5:10, 6:10
+        //Pool pairs: 1:2, 1:4, 1:10, 2:3, 2:6, 2:10, 4:5, 5:10, 6:10
         visit_any_currencies_ok::<SuperGroup, SuperGroupTestC1, SuperGroupTestC2>();
+        visit_any_currencies_ok::<SuperGroup, SuperGroupTestC2, SuperGroupTestC1>();
+
+        visit_any_currencies_ok::<SuperGroup, SuperGroupTestC1, SuperGroupTestC4>();
+        visit_any_currencies_ok::<SuperGroup, SuperGroupTestC4, SuperGroupTestC1>();
+
+        visit_any_currencies_ok::<SuperGroup, SuperGroupTestC1, SubGroupTestC10>();
+        visit_any_currencies_ok::<SuperGroup, SubGroupTestC10, SuperGroupTestC1>();
+
+        visit_any_currencies_ok::<SuperGroup, SuperGroupTestC2, SuperGroupTestC3>();
+        visit_any_currencies_ok::<SuperGroup, SuperGroupTestC3, SuperGroupTestC2>();
+
         visit_any_currencies_ok::<SuperGroup, SuperGroupTestC2, SubGroupTestC6>();
+        visit_any_currencies_ok::<SuperGroup, SubGroupTestC6, SuperGroupTestC2>();
+
+        visit_any_currencies_ok::<SuperGroup, SuperGroupTestC2, SubGroupTestC10>();
+        visit_any_currencies_ok::<SuperGroup, SubGroupTestC10, SuperGroupTestC2>();
+
+        visit_any_currencies_ok::<SuperGroup, SuperGroupTestC4, SuperGroupTestC5>();
+        visit_any_currencies_ok::<SuperGroup, SuperGroupTestC5, SuperGroupTestC4>();
+
+        visit_any_currencies_ok::<SuperGroup, SuperGroupTestC5, SubGroupTestC10>();
+        visit_any_currencies_ok::<SuperGroup, SubGroupTestC10, SuperGroupTestC5>();
 
         // visit_any_currencies_ok::<SubGroup, SubGroupTestC10, SubGroupTestC6>();
+        visit_any_currencies_ok::<SuperGroup, SubGroupTestC6, SubGroupTestC10>();
         visit_any_currencies_ok::<SuperGroup, SubGroupTestC10, SubGroupTestC6>();
 
         visit_any_currencies_ok::<SuperGroup, SuperGroupTestC2, SubGroupTestC10>();
@@ -241,6 +263,7 @@ mod test {
         visit_any_currencies_nok::<SuperGroup, SuperGroupTestC4, SuperGroupTestC2>();
     }
 
+    #[track_caller]
     fn visit_any_currencies_ok<VisitedG, CDef1, CDef2>()
     where
         VisitedG: Group<TopG = VisitedG>,
@@ -255,6 +278,7 @@ mod test {
         );
     }
 
+    #[track_caller]
     fn visit_any_currencies_nok<VisitedG, CDef1, CDef2>()
     where
         VisitedG: Group<TopG = VisitedG>,

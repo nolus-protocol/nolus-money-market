@@ -62,7 +62,6 @@ impl GroupMember<SuperGroup> for Item {
 pub(super) enum SuperGroupTestC1Pairs {
     SuperGroupTestC2,
     SuperGroupTestC4,
-    SuperGroupTestC5,
     SubGroupTestC10,
 }
 
@@ -76,8 +75,7 @@ impl PairsGroupMember for SuperGroupTestC1Pairs {
     fn next(&self) -> Option<Self> {
         match self {
             Self::SuperGroupTestC2 => Some(Self::SuperGroupTestC4),
-            Self::SuperGroupTestC4 => Some(Self::SuperGroupTestC5),
-            Self::SuperGroupTestC5 => Some(Self::SubGroupTestC10),
+            Self::SuperGroupTestC4 => Some(Self::SubGroupTestC10),
             Self::SubGroupTestC10 => None,
         }
     }
@@ -92,7 +90,6 @@ impl PairsGroupMember for SuperGroupTestC1Pairs {
         match *self {
             Self::SuperGroupTestC2 => find_map.on::<SuperGroupTestC2>(SuperGroupTestC2::dto()),
             Self::SuperGroupTestC4 => find_map.on::<SuperGroupTestC4>(SuperGroupTestC4::dto()),
-            Self::SuperGroupTestC5 => find_map.on::<SuperGroupTestC5>(SuperGroupTestC5::dto()),
             Self::SubGroupTestC10 => find_map.on::<SubGroupTestC10>(SubGroupTestC10::dto()),
         }
     }
@@ -139,9 +136,6 @@ impl PairsGroupMember for SuperGroupTestC2Pairs {
 
 pub(super) enum SuperGroupTestC3Pairs {
     SuperGroupTestC2,
-    SuperGroupTestC4,
-    SuperGroupTestC5,
-    SubGroupTestC10,
 }
 
 impl PairsGroupMember for SuperGroupTestC3Pairs {
@@ -153,10 +147,7 @@ impl PairsGroupMember for SuperGroupTestC3Pairs {
 
     fn next(&self) -> Option<Self> {
         match self {
-            Self::SuperGroupTestC2 => Some(Self::SuperGroupTestC4),
-            Self::SuperGroupTestC4 => Some(Self::SuperGroupTestC5),
-            Self::SuperGroupTestC5 => Some(Self::SubGroupTestC10),
-            Self::SubGroupTestC10 => None,
+            Self::SuperGroupTestC2 => None,
         }
     }
 
@@ -169,9 +160,6 @@ impl PairsGroupMember for SuperGroupTestC3Pairs {
     {
         match *self {
             Self::SuperGroupTestC2 => find_map.on::<SuperGroupTestC2>(SuperGroupTestC2::dto()),
-            Self::SuperGroupTestC4 => find_map.on::<SuperGroupTestC4>(SuperGroupTestC4::dto()),
-            Self::SuperGroupTestC5 => find_map.on::<SuperGroupTestC5>(SuperGroupTestC5::dto()),
-            Self::SubGroupTestC10 => find_map.on::<SubGroupTestC10>(SubGroupTestC10::dto()),
         }
     }
 }
@@ -179,7 +167,6 @@ impl PairsGroupMember for SuperGroupTestC3Pairs {
 pub(super) enum SuperGroupTestC4Pairs {
     SuperGroupTestC1,
     SuperGroupTestC5,
-    SubGroupTestC10,
 }
 
 impl PairsGroupMember for SuperGroupTestC4Pairs {
@@ -192,8 +179,7 @@ impl PairsGroupMember for SuperGroupTestC4Pairs {
     fn next(&self) -> Option<Self> {
         match self {
             Self::SuperGroupTestC1 => Some(Self::SuperGroupTestC5),
-            Self::SuperGroupTestC5 => Some(Self::SubGroupTestC10),
-            Self::SubGroupTestC10 => None,
+            Self::SuperGroupTestC5 => None,
         }
     }
 
@@ -207,13 +193,11 @@ impl PairsGroupMember for SuperGroupTestC4Pairs {
         match *self {
             Self::SuperGroupTestC1 => find_map.on::<SuperGroupTestC1>(SuperGroupTestC1::dto()),
             Self::SuperGroupTestC5 => find_map.on::<SuperGroupTestC5>(SuperGroupTestC5::dto()),
-            Self::SubGroupTestC10 => find_map.on::<SubGroupTestC10>(SubGroupTestC10::dto()),
         }
     }
 }
 
 pub(super) enum SuperGroupTestC5Pairs {
-    SuperGroupTestC3,
     SuperGroupTestC4,
     SubGroupTestC10,
 }
@@ -222,12 +206,11 @@ impl PairsGroupMember for SuperGroupTestC5Pairs {
     type Group = SuperGroupTestC5;
 
     fn first() -> Option<Self> {
-        Some(Self::SuperGroupTestC3)
+        Some(Self::SuperGroupTestC4)
     }
 
     fn next(&self) -> Option<Self> {
         match self {
-            Self::SuperGroupTestC3 => Some(Self::SuperGroupTestC4),
             Self::SuperGroupTestC4 => Some(Self::SubGroupTestC10),
             Self::SubGroupTestC10 => None,
         }
@@ -241,7 +224,6 @@ impl PairsGroupMember for SuperGroupTestC5Pairs {
         PairsFindMap: PairsFindMapT<Pivot = Self::Group>,
     {
         match *self {
-            Self::SuperGroupTestC3 => find_map.on::<SuperGroupTestC3>(SuperGroupTestC3::dto()),
             Self::SuperGroupTestC4 => find_map.on::<SuperGroupTestC4>(SuperGroupTestC4::dto()),
             Self::SubGroupTestC10 => find_map.on::<SubGroupTestC10>(SubGroupTestC10::dto()),
         }
