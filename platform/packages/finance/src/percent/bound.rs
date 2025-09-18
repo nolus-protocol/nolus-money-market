@@ -127,7 +127,7 @@ where
     fn scale_down(self, scale: Self::Times) -> Self {
         debug_assert_ne!(scale, Self::Times::ZERO);
         Self::try_from_permille(self.units().scale_down(scale))
-            .expect("Scaled down Units are greater than UPPER_BOUND")
+            .expect("Units should be less than UPPER_BOUND")
     }
 
     fn modulo(self, scale: Self::Times) -> Self::Times {
