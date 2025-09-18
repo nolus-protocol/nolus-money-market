@@ -8,7 +8,7 @@ use super::Group as PaymentGroup;
 
 #[cfg(not(feature = "testing"))]
 #[allow(unused_imports)]
-pub(crate) use self::impl_mod::definitions::*;
+pub(crate) use self::impl_mod::*;
 
 #[cfg(not(feature = "testing"))]
 mod impl_mod {
