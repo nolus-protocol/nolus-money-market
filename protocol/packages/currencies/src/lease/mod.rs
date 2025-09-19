@@ -9,11 +9,9 @@ use crate::payment::Group as PaymentGroup;
 // TODO use cfg_match! once gets stabilized
 #[cfg(not(feature = "testing"))]
 #[allow(unused_imports)]
-pub(crate) use self::impl_mod::definitions::*;
+pub(crate) use self::impl_mod::*;
 #[cfg(feature = "testing")]
-pub use self::impl_mod::definitions::{
-    LeaseC1, LeaseC2, LeaseC3, LeaseC4, LeaseC5, LeaseC6, LeaseC7,
-};
+pub use self::impl_mod::{LeaseC1, LeaseC2, LeaseC3, LeaseC4, LeaseC5, LeaseC6, LeaseC7};
 
 #[cfg(not(feature = "testing"))]
 mod impl_mod {
@@ -68,7 +66,7 @@ mod test {
         },
     };
 
-    use super::{Group, impl_mod::definitions::LeaseC1};
+    use super::{Group, impl_mod::LeaseC1};
 
     #[test]
     fn maybe_visit_on_ticker() {
