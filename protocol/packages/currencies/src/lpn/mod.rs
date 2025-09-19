@@ -6,7 +6,7 @@ use currency::{FilterMapT, FindMapT, MemberOf, PairsFindMapT, PairsGroup};
 
 use crate::payment::Group as PaymentGroup;
 
-pub use self::impl_mod::definitions::Lpn;
+pub use self::impl_mod::Lpn;
 
 #[cfg(not(feature = "testing"))]
 mod impl_mod {
