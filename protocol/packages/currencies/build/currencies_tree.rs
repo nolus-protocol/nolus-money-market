@@ -18,13 +18,22 @@ pub(crate) struct CurrenciesTree<'parents_of, 'parent, 'children_of, 'child> {
     children: BTreeMap<&'children_of str, Children<'child>>,
 }
 
-impl<'protocol> CurrenciesTree<'protocol, 'protocol, 'protocol, 'protocol> {
+impl<'parents_of, 'parent, 'children_of, 'child>
+    CurrenciesTree<'parents_of, 'parent, 'children_of, 'child>
+{
     const EMPTY: Self = Self {
         parents: BTreeMap::new(),
         children: BTreeMap::new(),
     };
 
-    pub fn new(protocol: &'protocol Protocol, host_currency: &HostCurrency) -> Result<Self> {
+    pub fn new<'protocol>(
+        protocol: &'protocol Protocol,
+        host_currency: &HostCurrency,
+    ) -> Result<Self>
+    where
+        'child: 'parents_of,
+        'protocol: 'parents_of + 'parent + 'children_of + 'child,
+    {
         protocol
             .swap_pairs
             .iter()
@@ -35,13 +44,18 @@ impl<'protocol> CurrenciesTree<'protocol, 'protocol, 'protocol, 'protocol> {
             })
     }
 
-    fn process_targets(
+    fn process_targets<'ticker, 'targets>(
         mut self,
         protocol: &Protocol,
         host_currency: &HostCurrency,
-        ticker: &'protocol str,
-        targets: &'protocol PairTargets,
-    ) -> Result<Self> {
+        ticker: &'ticker str,
+        targets: &'targets PairTargets,
+    ) -> Result<Self>
+    where
+        'child: 'parents_of,
+        'ticker: 'parent + 'children_of,
+        'targets: 'child,
+    {
         const DUPLICATED_TICKER_ERROR: &str = "Currency ticker duplication detected in swap pairs!";
 
         let btree_map::Entry::Vacant(entry) = self.children.entry(ticker) else {
@@ -113,10 +127,10 @@ impl<'ticker, Marker> AsRef<BTreeSet<&'ticker str>> for SetNewtype<'ticker, Mark
     }
 }
 
-pub(crate) enum ParentsMarker {}
+pub(crate) enum ParentMarker {}
 
-pub(crate) type Parents<'parent> = SetNewtype<'parent, ParentsMarker>;
+pub(crate) type Parents<'parent> = SetNewtype<'parent, ParentMarker>;
 
-pub(crate) enum ChildrenMarker {}
+pub(crate) enum ChildMarker {}
 
-pub(crate) type Children<'children> = SetNewtype<'children, ChildrenMarker>;
+pub(crate) type Children<'child> = SetNewtype<'child, ChildMarker>;
