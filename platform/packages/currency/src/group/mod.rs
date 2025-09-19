@@ -4,12 +4,13 @@ use crate::{CurrencyDTO, CurrencyDef, PairsGroup};
 
 use super::AnyVisitor;
 
-pub use filter::CurrenciesMapping;
-pub use find::find_map;
-pub use member::{GroupMember, MemberOf};
-
 #[cfg(any(test, feature = "testing"))]
 pub use self::adapter::{SubFilterAdapter, SubGroupFindAdapter};
+pub use self::{
+    filter::CurrenciesMapping,
+    find::find_map,
+    member::{GroupMember, MemberOf},
+};
 
 // TODO remove once a composite group in production shows up
 #[cfg(any(test, feature = "testing"))]
