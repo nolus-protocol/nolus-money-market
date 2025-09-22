@@ -154,7 +154,7 @@ where
 
 fn into_coprime<U>(a: U, b: U) -> (U, U)
 where
-    U: Copy + Debug + FractionUnit + PartialEq + Zero,
+    U: FractionUnit,
 {
     debug_assert_ne!(b, Zero::ZERO, "RHS-value is zero!");
 
