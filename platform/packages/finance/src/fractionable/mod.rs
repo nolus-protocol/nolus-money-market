@@ -32,7 +32,7 @@ where
 }
 
 /// Allows converting a value from the common `Max` type back into `Self`
-pub trait FractionOutcome<Other>
+pub trait Fractionable<Other>
 where
     Self: MaxDoublePrimitive<Other> + Sized,
     Other: ToDoublePrimitive,

@@ -5,9 +5,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     error::{Error, Result as FinanceResult},
     fraction::{Fraction, Unit as FractionUnit},
-    fractionable::{
-        FractionOutcome, FractionableLegacy, ToDoublePrimitive, checked_mul::CheckedMul,
-    },
+    fractionable::{Fractionable, FractionableLegacy, ToDoublePrimitive, checked_mul::CheckedMul},
     rational::Rational,
     zero::Zero,
 };
@@ -108,7 +106,7 @@ where
     pub fn checked_mul<M>(&self, rhs: M) -> Option<M>
     where
         U: ToDoublePrimitive,
-        M: FractionOutcome<U>,
+        M: Fractionable<U>,
     {
         if self.nominator == self.denominator {
             Some(rhs)
