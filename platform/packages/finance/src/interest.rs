@@ -3,14 +3,14 @@ use std::{cmp, ops::Sub};
 use crate::{
     duration::{Duration, Units as DurationUnits},
     fraction::{Fraction, Unit as FractionUnit},
-    fractionable::Fractionable,
+    fractionable::FractionableLegacy,
 };
 
 /// Computes how much interest is accrued
 pub fn interest<U, R, P>(rate: R, principal: P, period: Duration) -> P
 where
     R: Fraction<U>,
-    P: Fractionable<U> + Fractionable<DurationUnits>,
+    P: FractionableLegacy<U> + FractionableLegacy<DurationUnits>,
 {
     let interest_per_year = rate.of(principal);
     period.annualized_slice_of(interest_per_year)
@@ -22,8 +22,12 @@ where
 pub fn pay<U, R, P>(rate: R, principal: P, payment: P, period: Duration) -> (Duration, P)
 where
     R: Fraction<U>,
-    P: Fractionable<U> + Fractionable<DurationUnits> + FractionUnit + Ord + Sub<Output = P>,
-    Duration: Fractionable<P>,
+    P: FractionableLegacy<U>
+        + FractionableLegacy<DurationUnits>
+        + FractionUnit
+        + Ord
+        + Sub<Output = P>,
+    Duration: FractionableLegacy<P>,
 {
     let interest_due_per_period: P = interest(rate, principal, period);
 

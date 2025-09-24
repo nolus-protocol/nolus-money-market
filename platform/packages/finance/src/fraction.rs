@@ -1,6 +1,6 @@
 use std::fmt::Debug;
 
-use crate::{fractionable::Fractionable, zero::Zero};
+use crate::{fractionable::FractionableLegacy, zero::Zero};
 
 /// A part of a whole
 ///
@@ -8,7 +8,7 @@ use crate::{fractionable::Fractionable, zero::Zero};
 pub trait Fraction<U> {
     fn of<A>(&self, whole: A) -> A
     where
-        A: Fractionable<U>;
+        A: FractionableLegacy<U>;
 }
 
 pub trait Unit

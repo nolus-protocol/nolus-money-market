@@ -5,7 +5,9 @@ use serde::{Deserialize, Serialize};
 use crate::{
     error::{Error, Result as FinanceResult},
     fraction::{Fraction, Unit as FractionUnit},
-    fractionable::{FractionOutcome, Fractionable, ToDoublePrimitive, checked_mul::CheckedMul},
+    fractionable::{
+        FractionOutcome, FractionableLegacy, ToDoublePrimitive, checked_mul::CheckedMul,
+    },
     rational::Rational,
     zero::Zero,
 };
@@ -68,7 +70,7 @@ where
 {
     fn of<A>(&self, whole: A) -> A
     where
-        A: Fractionable<U>,
+        A: FractionableLegacy<U>,
     {
         self.0
             .of(whole)
@@ -142,7 +144,7 @@ where
 {
     fn of<A>(&self, whole: A) -> Option<A>
     where
-        A: Fractionable<U>,
+        A: FractionableLegacy<U>,
     {
         Some(whole.safe_mul(self))
     }

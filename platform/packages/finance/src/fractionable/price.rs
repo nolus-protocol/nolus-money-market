@@ -2,9 +2,9 @@ use std::marker::PhantomData;
 
 use crate::{coin::Amount, percent::Units as PercentUnits, price::Price, ratio::RatioLegacy};
 
-use super::Fractionable;
+use super::FractionableLegacy;
 
-impl<C, QuoteC> Fractionable<PercentUnits> for Price<C, QuoteC>
+impl<C, QuoteC> FractionableLegacy<PercentUnits> for Price<C, QuoteC>
 where
     C: 'static,
     QuoteC: 'static,
@@ -18,7 +18,7 @@ where
 }
 
 // Used only for average price calculation
-impl<C, QuoteC> Fractionable<u128> for Price<C, QuoteC>
+impl<C, QuoteC> FractionableLegacy<u128> for Price<C, QuoteC>
 where
     C: 'static,
     QuoteC: 'static,

@@ -40,7 +40,7 @@ where
     fn try_from_max(max: Self::Max) -> Option<Self>;
 }
 
-pub trait Fractionable<U> {
+pub trait FractionableLegacy<U> {
     #[track_caller]
     fn safe_mul<F>(self, fraction: &F) -> Self
     where
@@ -51,7 +51,7 @@ pub trait HigherRank<T> {
     type Type;
 }
 
-impl<T, D, U> Fractionable<U> for T
+impl<T, D, U> FractionableLegacy<U> for T
 where
     T: HigherRank<U, Type = D> + Into<D>,
     D: Mul<D, Output = D> + Div<D, Output = D> + TryInto<T>,

@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 use sdk::cosmwasm_std::Timestamp;
 
 use crate::{
-    fraction::Unit as FractionUnit, fractionable::Fractionable, ratio::SimpleFraction,
+    fraction::Unit as FractionUnit, fractionable::FractionableLegacy, ratio::SimpleFraction,
     rational::Rational, zero::Zero,
 };
 
@@ -91,14 +91,14 @@ impl Duration {
     #[track_caller]
     pub fn annualized_slice_of<T>(&self, annual_amount: T) -> T
     where
-        T: Fractionable<Units>,
+        T: FractionableLegacy<Units>,
     {
         annual_amount.safe_mul(&SimpleFraction::new(self.nanos(), Self::YEAR.nanos()))
     }
 
     pub fn into_slice_per_ratio<U>(self, amount: U, annual_amount: U) -> Self
     where
-        Self: Fractionable<U>,
+        Self: FractionableLegacy<U>,
         U: FractionUnit,
     {
         SimpleFraction::new(amount, annual_amount)

@@ -5,7 +5,7 @@ use finance::{
     coin::Coin,
     duration::Duration,
     fraction::{Fraction, Unit as FractionUnit},
-    fractionable::Fractionable,
+    fractionable::FractionableLegacy,
     liability::{Liability, Zone},
     percent::{Percent, Percent100},
     price::{self},
@@ -398,7 +398,7 @@ impl Spec {
     fn ltv<P>(total_due: P, lease_asset: P) -> Percent100
     where
         P: Copy + Debug + FractionUnit + PartialEq + Zero,
-        Percent100: Fractionable<P>,
+        Percent100: FractionableLegacy<P>,
     {
         debug_assert!(total_due <= lease_asset);
 
