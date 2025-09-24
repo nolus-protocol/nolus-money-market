@@ -24,17 +24,20 @@ where
     Self: ToDoublePrimitive + Sized,
     Other: ToDoublePrimitive,
 {
-    type Max: CheckedMul<Output = Self::Max> + Div<Output = Self::Max>;
+    type Max: CheckedMul<Output = Self::Max>
+        + Div<Output = Self::Max>
+        + From<Self::Double>
+        + From<Other::Double>;
 
     // Having two identical methods so the trait becomes symmetric
     fn into_max_self(self) -> Self::Max;
     fn into_max_other(other: Other) -> Self::Max;
 }
 
-/// Allows converting a value from the common `Max` type back into `Self`
+/// Domain entity for which a fraction could be calculated.
 pub trait Fractionable<Other>
 where
-    Self: MaxDoublePrimitive<Other> + Sized,
+    Self: MaxDoublePrimitive<Other>,
     Other: ToDoublePrimitive,
 {
     fn try_from_max(max: Self::Max) -> Option<Self>;
