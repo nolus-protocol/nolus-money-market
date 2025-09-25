@@ -14,7 +14,7 @@ combinations = [
 ]
 
 [features]
-testing = []
+testing = ["currency/testing"]
 
 [dependencies]
 currency = { workspace = true }

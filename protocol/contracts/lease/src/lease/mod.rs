@@ -176,8 +176,13 @@ pub(crate) mod tests {
     use currencies::{Lpn, testing::PaymentC7};
     use currency::{Currency, Group, MemberOf};
     use finance::{
-        coin::Coin, duration::Duration, fraction::Fraction, liability::Liability,
-        percent::Percent100, price::Price,
+        coin::{Amount, Coin},
+        duration::Duration,
+        fraction::Fraction,
+        liability::Liability,
+        percent::Percent100,
+        price::Price,
+        zero::Zero,
     };
     use lpp::{
         loan::RepayShares,
@@ -213,7 +218,7 @@ pub(crate) mod tests {
     pub(super) const SECOND_LIQ_WARN: Percent100 = Percent100::from_permille(750);
     pub(super) const THIRD_LIQ_WARN: Percent100 = Percent100::from_permille(780);
     pub(super) const RECHECK_TIME: Duration = Duration::from_hours(24);
-    pub(super) const MIN_TRANSACTION: Coin<TestLpn> = Coin::new(10_000);
+    pub(super) const MIN_TRANSACTION: Coin<TestLpn> = lpn_coin(10_000);
     pub(crate) type TestLpn = Lpn;
     pub(crate) type TestCurrency = PaymentC7;
     pub(crate) type TestLease = Lease<TestCurrency, LppLoanLocal<TestLpn>, OracleLocalStub>;
@@ -329,7 +334,7 @@ pub(crate) mod tests {
             RECHECK_TIME,
         );
         let position_spec =
-            PositionSpec::no_close(liability, Coin::<TestLpn>::new(15_000_000), MIN_TRANSACTION);
+            PositionSpec::no_close(liability, lpn_coin(15_000_000), MIN_TRANSACTION);
         Lease::new(
             lease,
             Addr::unchecked(CUSTOMER),
@@ -339,17 +344,13 @@ pub(crate) mod tests {
         )
     }
 
-    pub fn coin(a: u128) -> Coin<TestCurrency> {
-        Coin::new(a)
-    }
-
-    pub fn lpn_coin(a: u128) -> Coin<TestLpn> {
+    pub(super) const fn lpn_coin(a: Amount) -> Coin<TestLpn> {
         Coin::new(a)
     }
 
     #[test]
     fn state_opened() {
-        let lease_amount = coin(1000);
+        let lease_amount = Coin::new(1000);
         let interest_rate = Percent100::from_permille(50);
         let overdue_collect_in = Duration::from_days(500); //=min_transaction/principal_due/(interest+margin)*1000*365
 
@@ -386,11 +387,11 @@ pub(crate) mod tests {
                     interest_rate,
                     interest_rate_margin: MARGIN_INTEREST_RATE,
                     principal_due: loan.principal_due,
-                    overdue_margin: lpn_coin(0),
-                    overdue_interest: lpn_coin(0),
+                    overdue_margin: Coin::ZERO,
+                    overdue_interest: Coin::ZERO,
                     overdue_collect_in,
-                    due_margin: lpn_coin(0),
-                    due_interest: lpn_coin(0),
+                    due_margin: Coin::ZERO,
+                    due_interest: Coin::ZERO,
                     due_projection,
                     close_policy: ClosePolicy::new(Some(take_profit), None),
                     validity: state_at,
@@ -440,8 +441,8 @@ pub(crate) mod tests {
                 interest_rate,
                 interest_rate_margin: MARGIN_INTEREST_RATE,
                 principal_due,
-                overdue_margin: lpn_coin(0),
-                overdue_interest: lpn_coin(0),
+                overdue_margin: Coin::ZERO,
+                overdue_interest: Coin::ZERO,
                 overdue_collect_in: Duration::YEAR.into_slice_per_ratio(
                     MIN_TRANSACTION - exp_due_interest - exp_due_margin,
                     (interest_rate + MARGIN_INTEREST_RATE).of(principal_due)

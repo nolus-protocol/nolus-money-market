@@ -8,23 +8,27 @@ use sdk::{cosmwasm_std::Addr, cw_multi_test::AppResponse};
 use swap::testing::SwapRequest;
 
 use crate::common::{
-    CwCoin, ibc,
+    self, CwCoin, ibc,
     leaser::Instantiator as LeaserInstantiator,
     test_case::{TestCase, response::ResponseWithInterChainMsgs},
 };
 
 use super::{
     super::{LeaseTestCase, create_test_case, feed_price, open_lease, price_lpn_of, state_query},
-    LeaseCoin, PaymentCoin, PaymentCurrency,
+    LeaseCoin, PaymentCurrency,
 };
 
 fn liquidation_time_alarm(
-    downpayment: PaymentCoin,
+    downpayment: Amount,
     time_pass: Duration,
     liquidation_amount: Option<LeaseCoin>,
 ) {
     let mut test_case: LeaseTestCase = create_test_case::<PaymentCurrency>();
-    let lease_addr: Addr = open_lease(&mut test_case, downpayment, None);
+    let lease_addr: Addr = open_lease(
+        &mut test_case,
+        common::coin::<PaymentCurrency>(downpayment),
+        None,
+    );
 
     let StateResponse::Opened {
         amount: lease_amount,
@@ -115,10 +119,11 @@ fn liquidation_time_alarm(
 
     let query_result: StateResponse = state_query(&test_case, lease_addr);
 
-    let liquidated_amount: LeaseCoin = liquidation_attributes["amount-amount"]
-        .parse::<Amount>()
-        .unwrap()
-        .into();
+    let liquidated_amount: LeaseCoin = common::coin(
+        liquidation_attributes["amount-amount"]
+            .parse::<Amount>()
+            .unwrap(),
+    );
 
     assert_eq!(liquidated_amount, liquidation_amount);
 
@@ -146,7 +151,7 @@ fn liquidation_time_alarm(
 #[test]
 fn liquidation_by_time_due_more_than_min_no_overdue() {
     liquidation_time_alarm(
-        1_000_000.into(),
+        1_000_000,
         LeaserInstantiator::REPAYMENT_PERIOD - Duration::from_nanos(1),
         None,
     );
@@ -155,7 +160,7 @@ fn liquidation_by_time_due_more_than_min_no_overdue() {
 #[test]
 fn liquidation_by_time_overdue_less_than_min() {
     liquidation_time_alarm(
-        100.into(),
+        100,
         LeaserInstantiator::REPAYMENT_PERIOD + Duration::from_days(1),
         None,
     );
@@ -164,7 +169,7 @@ fn liquidation_by_time_overdue_less_than_min() {
 #[test]
 fn liquidation_by_time_overdue_more_than_min() {
     liquidation_time_alarm(
-        1_000_000_000.into(),
+        1_000_000_000,
         LeaserInstantiator::REPAYMENT_PERIOD,
         Some(LeaseCoin::new(45792562)), //the total interest due for the LeaserInstantiator::REPAYMENT_PERIOD = (7% + 3%) * 65/(100-65)*Downpayment * LeaserInstantiator::REPAYMENT_PERIOD/365
     );

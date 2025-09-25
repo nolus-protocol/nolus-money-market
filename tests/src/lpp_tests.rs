@@ -28,8 +28,8 @@ use sdk::{
 
 use crate::{
     common::{
-        ADDON_OPTIMAL_INTEREST_RATE, ADMIN, BASE_INTEREST_RATE, CwCoin, UTILIZATION_OPTIMAL,
-        cwcoin,
+        self, ADDON_OPTIMAL_INTEREST_RATE, ADMIN, BASE_INTEREST_RATE, CwCoin, UTILIZATION_OPTIMAL,
+        cwcoin, cwcoin_from_amount,
         lease::{
             InitConfig as LeaseInitConfig, Instantiator as LeaseInstantiator,
             InstantiatorAddresses as LeaseInstantiatorAddresses,
@@ -90,7 +90,7 @@ fn config_update_parameters() {
 
     let mut test_case = TestCaseBuilder::<Lpn>::with_reserve(&[
         lpn_cwcoin(app_balance),
-        cwcoin::<Nls, _>(app_balance),
+        cwcoin_from_amount::<Nls>(app_balance),
     ])
     .init_lpp(
         None,
@@ -362,7 +362,11 @@ fn deposit_and_withdraw() {
             reserve: test_case.address_book.reserve().clone(),
             finalizer: test_case.address_book.leaser().clone(),
         },
-        LeaseInitConfig::new(currency::dto::<LeaseCurrency, _>(), loan.into(), None),
+        LeaseInitConfig::new(
+            currency::dto::<LeaseCurrency, _>(),
+            common::coin(loan),
+            None,
+        ),
         LeaseInstantiatorConfig {
             liability_init_percent: Percent100::from_percent(50), // simplify case: borrow == downpayment
             ..LeaseInstantiatorConfig::default()
@@ -399,7 +403,7 @@ fn deposit_and_withdraw() {
             lender2.clone(),
             test_case.address_book.lpp().clone(),
             &LppExecuteMsg::Burn {
-                amount: to_burn.into(),
+                amount: common::coin(to_burn),
             },
             &[],
         )
@@ -412,7 +416,7 @@ fn deposit_and_withdraw() {
             lender2.clone(),
             test_case.address_book.lpp().clone(),
             &LppExecuteMsg::Burn {
-                amount: withdraw_amount_nlpn.into(),
+                amount: common::coin(withdraw_amount_nlpn),
             },
             &[],
         )
@@ -439,7 +443,7 @@ fn deposit_and_withdraw() {
             lender2.clone(),
             test_case.address_book.lpp().clone(),
             &LppExecuteMsg::Burn {
-                amount: rest_nlpn.into(),
+                amount: common::coin(rest_nlpn),
             },
             &[],
         )
@@ -535,7 +539,7 @@ fn loan_open_and_repay() {
 
     let mut test_case = TestCaseBuilder::<Lpn>::with_reserve(&[
         lpn_cwcoin(app_balance),
-        cwcoin::<Nls, _>(app_balance),
+        cwcoin_from_amount::<Nls>(app_balance),
     ])
     .init_lpp_with_funds(
         None,
@@ -607,7 +611,11 @@ fn loan_open_and_repay() {
         &mut test_case.app,
         test_case.address_book.lease_code(),
         lease_addresses.clone(),
-        LeaseInitConfig::new(currency::dto::<LeaseCurrency, _>(), loan1.into(), None),
+        LeaseInitConfig::new(
+            currency::dto::<LeaseCurrency, _>(),
+            common::coin(loan1),
+            None,
+        ),
         LeaseInstantiatorConfig {
             liability_init_percent: Percent100::from_percent(50), // simplify case: borrow == downpayment
             ..LeaseInstantiatorConfig::default()
@@ -670,7 +678,11 @@ fn loan_open_and_repay() {
         &mut test_case.app,
         test_case.address_book.lease_code(),
         lease_addresses,
-        LeaseInitConfig::new(currency::dto::<LeaseCurrency, _>(), loan2.into(), None),
+        LeaseInitConfig::new(
+            currency::dto::<LeaseCurrency, _>(),
+            common::coin(loan2),
+            None,
+        ),
         LeaseInstantiatorConfig {
             liability_init_percent: Percent100::from_percent(50), // simplify case: borrow == downpayment
             ..LeaseInstantiatorConfig::default()
@@ -692,18 +704,18 @@ fn loan_open_and_repay() {
         )
         .unwrap();
     let loan1_resp = maybe_loan1.unwrap();
-    assert_eq!(loan1_resp.principal_due, loan1.into());
+    assert_eq!(loan1_resp.principal_due, common::coin(loan1));
     assert_eq!(loan1_resp.annual_interest_rate, interest1);
     assert_eq!(
         loan1_resp.interest_due(&crate::block_time(&test_case)),
-        interest1.of(loan1).into()
+        common::coin(interest1.of(loan1))
     );
 
     // repay from other addr
-    _ = repay_loan::<Lpn, _>(loan1, &mut test_case, hacker).unwrap_err();
+    _ = repay_loan::<Lpn>(loan1, &mut test_case, hacker).unwrap_err();
 
     // repay zero
-    _ = repay_loan::<Lpn, _>(0, &mut test_case, loan_addr1.clone()).unwrap_err();
+    _ = repay_loan::<Lpn>(0, &mut test_case, loan_addr1.clone()).unwrap_err();
 
     // repay wrong currency
     () = test_case
@@ -711,16 +723,16 @@ fn loan_open_and_repay() {
         .send_tokens(
             admin,
             loan_addr2.clone(),
-            &[coin_legacy::to_cosmwasm_on_nolus::<Nls>(
-                repay_interest_part.into(),
-            )],
+            &[coin_legacy::to_cosmwasm_on_nolus::<Nls>(common::coin(
+                repay_interest_part,
+            ))],
         )
         .unwrap();
 
-    _ = repay_loan::<Nls, _>(repay_interest_part, &mut test_case, loan_addr2).unwrap_err();
+    _ = repay_loan::<Nls>(repay_interest_part, &mut test_case, loan_addr2).unwrap_err();
 
     // repay interest part
-    () = repay_loan::<Lpn, _>(repay_interest_part, &mut test_case, loan_addr1.clone())
+    () = repay_loan::<Lpn>(repay_interest_part, &mut test_case, loan_addr1.clone())
         .unwrap()
         .ignore_response()
         .unwrap_response();
@@ -736,14 +748,14 @@ fn loan_open_and_repay() {
         )
         .unwrap();
     let loan1_resp = maybe_loan1.unwrap();
-    assert_eq!(loan1_resp.principal_due, loan1.into());
+    assert_eq!(loan1_resp.principal_due, common::coin(loan1));
     assert_eq!(
         loan1_resp.interest_due(&crate::block_time(&test_case)),
-        (interest1.of(loan1) - repay_interest_part).into()
+        common::coin(interest1.of(loan1) - repay_interest_part)
     );
 
     // repay interest + due part
-    () = repay_loan::<Lpn, _>(
+    () = repay_loan::<Lpn>(
         interest1.of(loan1) - repay_interest_part + repay_due_part,
         &mut test_case,
         loan_addr1.clone(),
@@ -763,14 +775,17 @@ fn loan_open_and_repay() {
         )
         .unwrap();
     let loan1_resp = maybe_loan1.unwrap();
-    assert_eq!(loan1_resp.principal_due, (loan1 - repay_due_part).into());
+    assert_eq!(
+        loan1_resp.principal_due,
+        common::coin(loan1 - repay_due_part)
+    );
     assert_eq!(
         loan1_resp.interest_due(&crate::block_time(&test_case)),
         Coin::ZERO
     );
 
     // repay interest + due part, close the loan
-    () = repay_loan::<Lpn, _>(
+    () = repay_loan::<Lpn>(
         loan1 - repay_due_part + repay_excess,
         &mut test_case,
         loan_addr1.clone(),
@@ -793,7 +808,7 @@ fn loan_open_and_repay() {
 
     // repay excess is returned
     let balance = bank::balance(&loan_addr1, test_case.app.query()).unwrap();
-    assert_eq!(balance, Coin::<Lpn>::from(loan1 - interest1.of(loan1)));
+    assert_eq!(balance, common::coin::<Lpn>(loan1 - interest1.of(loan1)));
 
     let resp: LppBalanceResponse<Lpns> = test_case
         .app
@@ -807,12 +822,12 @@ fn loan_open_and_repay() {
     // total unpaid interest
     assert_eq!(
         resp.total_interest_due,
-        Coin::<Lpn>::from(interest2.of(loan2) / 2u128).into()
+        common::coin::<Lpn>(interest2.of(loan2) / 2u128).into()
     );
-    assert_eq!(resp.total_principal_due, Coin::<Lpn>::from(loan2).into());
+    assert_eq!(resp.total_principal_due, common::coin::<Lpn>(loan2).into());
     assert_eq!(
         resp.balance,
-        Coin::<Lpn>::from(init_deposit + interest1.of(loan1) - loan2).into()
+        common::coin::<Lpn>(init_deposit + interest1.of(loan1) - loan2).into()
     );
 }
 
@@ -855,7 +870,7 @@ fn compare_lpp_states() {
 
     let mut test_case = TestCaseBuilder::<Lpn>::with_reserve(&[
         lpn_cwcoin(app_balance),
-        coin_legacy::to_cosmwasm_on_nolus::<Nls>(app_balance.into()),
+        coin_legacy::to_cosmwasm_on_nolus::<Nls>(common::coin(app_balance)),
     ])
     .init_lpp_with_funds(
         None,
@@ -925,7 +940,11 @@ fn compare_lpp_states() {
             reserve: test_case.address_book.reserve().clone(),
             finalizer: test_case.address_book.leaser().clone(),
         },
-        LeaseInitConfig::new(currency::dto::<LeaseCurrency, _>(), loan1.into(), None),
+        LeaseInitConfig::new(
+            currency::dto::<LeaseCurrency, _>(),
+            common::coin(loan1),
+            None,
+        ),
         LeaseInstantiatorConfig {
             liability_init_percent: Percent100::from_percent(50), // simplify case: borrow == downpayment
             ..LeaseInstantiatorConfig::default()
@@ -994,7 +1013,11 @@ fn compare_lpp_states() {
             reserve: test_case.address_book.reserve().clone(),
             finalizer: test_case.address_book.leaser().clone(),
         },
-        LeaseInitConfig::new(currency::dto::<LeaseCurrency, _>(), loan2.into(), None),
+        LeaseInitConfig::new(
+            currency::dto::<LeaseCurrency, _>(),
+            common::coin(loan2),
+            None,
+        ),
         LeaseInstantiatorConfig {
             liability_init_percent: Percent100::from_percent(50), // simplify case: borrow == downpayment
             ..LeaseInstantiatorConfig::default()
@@ -1016,18 +1039,18 @@ fn compare_lpp_states() {
         )
         .unwrap();
     let loan1_resp = maybe_loan1.unwrap();
-    assert_eq!(loan1_resp.principal_due, loan1.into());
+    assert_eq!(loan1_resp.principal_due, common::coin(loan1));
     assert_eq!(loan1_resp.annual_interest_rate, interest1);
     assert_eq!(
         loan1_resp.interest_due(&crate::block_time(&test_case)),
-        interest1.of(loan1).into()
+        common::coin(interest1.of(loan1))
     );
 
     // repay from other addr
-    _ = repay_loan::<Lpn, _>(loan1, &mut test_case, hacker).unwrap_err();
+    _ = repay_loan::<Lpn>(loan1, &mut test_case, hacker).unwrap_err();
 
     // repay zero
-    _ = repay_loan::<Lpn, _>(0, &mut test_case, loan_addr1.clone()).unwrap_err();
+    _ = repay_loan::<Lpn>(0, &mut test_case, loan_addr1.clone()).unwrap_err();
 
     // repay wrong currency
     () = test_case
@@ -1035,16 +1058,16 @@ fn compare_lpp_states() {
         .send_tokens(
             admin,
             loan_addr2.clone(),
-            &[coin_legacy::to_cosmwasm_on_nolus::<Nls>(
-                repay_interest_part.into(),
-            )],
+            &[coin_legacy::to_cosmwasm_on_nolus::<Nls>(common::coin(
+                repay_interest_part,
+            ))],
         )
         .unwrap();
 
-    _ = repay_loan::<Nls, _>(repay_interest_part, &mut test_case, loan_addr2).unwrap_err();
+    _ = repay_loan::<Nls>(repay_interest_part, &mut test_case, loan_addr2).unwrap_err();
 
     // repay interest part
-    () = repay_loan::<Lpn, _>(repay_interest_part, &mut test_case, loan_addr1.clone())
+    () = repay_loan::<Lpn>(repay_interest_part, &mut test_case, loan_addr1.clone())
         .unwrap()
         .ignore_response()
         .unwrap_response();
@@ -1060,14 +1083,14 @@ fn compare_lpp_states() {
         )
         .unwrap();
     let loan1_resp = maybe_loan1.unwrap();
-    assert_eq!(loan1_resp.principal_due, loan1.into());
+    assert_eq!(loan1_resp.principal_due, common::coin(loan1));
     assert_eq!(
         loan1_resp.interest_due(&crate::block_time(&test_case)),
-        (interest1.of(loan1) - repay_interest_part).into()
+        common::coin(interest1.of(loan1) - repay_interest_part)
     );
 
     // repay interest + due part
-    () = repay_loan::<Lpn, _>(
+    () = repay_loan::<Lpn>(
         interest1.of(loan1) - repay_interest_part + repay_due_part,
         &mut test_case,
         loan_addr1.clone(),
@@ -1087,14 +1110,17 @@ fn compare_lpp_states() {
         )
         .unwrap();
     let loan1_resp = maybe_loan1.unwrap();
-    assert_eq!(loan1_resp.principal_due, (loan1 - repay_due_part).into());
+    assert_eq!(
+        loan1_resp.principal_due,
+        common::coin(loan1 - repay_due_part)
+    );
     assert_eq!(
         loan1_resp.interest_due(&crate::block_time(&test_case)),
         Coin::ZERO
     );
 
     // repay interest + due part, close the loan
-    () = repay_loan::<Lpn, _>(
+    () = repay_loan::<Lpn>(
         loan1 - repay_due_part + repay_excess,
         &mut test_case,
         loan_addr1.clone(),
@@ -1117,7 +1143,7 @@ fn compare_lpp_states() {
 
     // repay excess is returned
     let balance = bank::balance(&loan_addr1, test_case.app.query()).unwrap();
-    assert_eq!(balance, Coin::<Lpn>::from(loan1 - interest1.of(loan1)));
+    assert_eq!(balance, common::coin::<Lpn>(loan1 - interest1.of(loan1)));
 
     let resp: LppBalanceResponse<Lpns> = test_case
         .app
@@ -1131,12 +1157,12 @@ fn compare_lpp_states() {
     // total unpaid interest
     assert_eq!(
         resp.total_interest_due,
-        Coin::<Lpn>::from(interest2.of(loan2) / 2u128).into()
+        common::coin::<Lpn>(interest2.of(loan2) / 2u128).into()
     );
-    assert_eq!(resp.total_principal_due, Coin::<Lpn>::from(loan2).into());
+    assert_eq!(resp.total_principal_due, common::coin::<Lpn>(loan2).into());
     assert_eq!(
         resp.balance,
-        Coin::<Lpn>::from(init_deposit + interest1.of(loan1) - loan2).into()
+        common::coin::<Lpn>(init_deposit + interest1.of(loan1) - loan2).into()
     );
 }
 
@@ -1167,7 +1193,7 @@ fn test_rewards() {
 
     let mut test_case = TestCaseBuilder::<Lpn>::with_reserve(&[
         lpn_cwcoin(app_balance),
-        cwcoin::<Nls, _>(app_balance),
+        cwcoin_from_amount::<Nls>(app_balance),
     ])
     .init_lpp_with_funds(
         None,
@@ -1184,9 +1210,9 @@ fn test_rewards() {
         .send_funds_from_admin(lender2.clone(), &[lpn_cwcoin(deposit2)])
         .send_funds_from_admin(
             treasury.clone(),
-            &[coin_legacy::to_cosmwasm_on_nolus::<Nls>(
-                treasury_balance.into(),
-            )],
+            &[coin_legacy::to_cosmwasm_on_nolus::<Nls>(common::coin(
+                treasury_balance,
+            ))],
         );
 
     // rewards before deposits
@@ -1196,9 +1222,9 @@ fn test_rewards() {
             treasury.clone(),
             test_case.address_book.lpp().clone(),
             &LppExecuteMsg::DistributeRewards(),
-            &[coin_legacy::to_cosmwasm_on_nolus::<Nls>(
-                tot_rewards0.into(),
-            )],
+            &[coin_legacy::to_cosmwasm_on_nolus::<Nls>(common::coin(
+                tot_rewards0,
+            ))],
         )
         .unwrap_err();
 
@@ -1233,9 +1259,9 @@ fn test_rewards() {
             treasury.clone(),
             test_case.address_book.lpp().clone(),
             &LppExecuteMsg::DistributeRewards(),
-            &[coin_legacy::to_cosmwasm_on_nolus::<Nls>(
-                tot_rewards1.into(),
-            )],
+            &[coin_legacy::to_cosmwasm_on_nolus::<Nls>(common::coin(
+                tot_rewards1,
+            ))],
         )
         .unwrap()
         .ignore_response()
@@ -1255,7 +1281,7 @@ fn test_rewards() {
         )
         .unwrap();
 
-    assert_eq!(resp.rewards, tot_rewards1.into());
+    assert_eq!(resp.rewards, common::coin(tot_rewards1));
 
     let resp: RewardsResponse = test_case
         .app
@@ -1325,7 +1351,7 @@ fn test_rewards() {
     assert_eq!(Coin::ZERO, resp.rewards,);
 
     let balance = bank::balance(&lender1, test_case.app.query()).unwrap();
-    assert_eq!(balance, Coin::<Nls>::from(tot_rewards1));
+    assert_eq!(balance, common::coin::<Nls>(tot_rewards1));
 
     () = test_case
         .app
@@ -1333,9 +1359,9 @@ fn test_rewards() {
             treasury,
             test_case.address_book.lpp().clone(),
             &LppExecuteMsg::DistributeRewards(),
-            &[coin_legacy::to_cosmwasm_on_nolus::<Nls>(
-                tot_rewards2.into(),
-            )],
+            &[coin_legacy::to_cosmwasm_on_nolus::<Nls>(common::coin(
+                tot_rewards2,
+            ))],
         )
         .unwrap()
         .ignore_response()
@@ -1352,7 +1378,7 @@ fn test_rewards() {
         )
         .unwrap();
 
-    assert_eq!(resp.rewards, lender_reward1.into());
+    assert_eq!(resp.rewards, common::coin(lender_reward1));
 
     let resp: RewardsResponse = test_case
         .app
@@ -1365,7 +1391,7 @@ fn test_rewards() {
         )
         .unwrap();
 
-    assert_eq!(resp.rewards, lender_reward2.into());
+    assert_eq!(resp.rewards, common::coin(lender_reward2));
 
     // full withdraw, should send rewards to the lender
     () = test_case
@@ -1374,7 +1400,7 @@ fn test_rewards() {
             lender1.clone(),
             test_case.address_book.lpp().clone(),
             &LppExecuteMsg::Burn {
-                amount: deposit1.into(),
+                amount: common::coin(deposit1),
             },
             &[],
         )
@@ -1383,7 +1409,7 @@ fn test_rewards() {
         .unwrap_response();
 
     let balance = bank::balance(&lender1, test_case.app.query()).unwrap();
-    assert_eq!(balance, Coin::<Nls>::from(tot_rewards1 + lender_reward1));
+    assert_eq!(balance, common::coin::<Nls>(tot_rewards1 + lender_reward1));
 
     // lender account is removed
     let resp: Result<RewardsResponse, _> = test_case.app.query().query_wasm_smart(
@@ -1419,7 +1445,7 @@ fn test_rewards() {
 
     assert_eq!(resp.rewards, Coin::ZERO);
     let balance = bank::balance(&recipient, test_case.app.query()).unwrap();
-    assert_eq!(balance, Coin::<Nls>::from(lender_reward2));
+    assert_eq!(balance, common::coin::<Nls>(lender_reward2));
 }
 
 #[test]
@@ -1470,9 +1496,9 @@ fn close_all_deposits() {
         .ignore_response()
         .unwrap_response();
 
-    expect_balance(&test_case.app, deposit1, lender1);
-    expect_balance(&test_case.app, deposit2, lender2);
-    expect_balance(&test_case.app, deposit3, lender3);
+    expect_balance(&test_case.app, common::coin(deposit1), lender1);
+    expect_balance(&test_case.app, common::coin(deposit2), lender2);
+    expect_balance(&test_case.app, common::coin(deposit3), lender3);
 }
 
 fn expect_balance<A>(app: &App, amount: A, lender: Addr)
@@ -1485,7 +1511,7 @@ where
     )
 }
 
-fn deposit<ProtocolsRegistry, Treasury, Profit, Reserve, Leaser, Oracle, TimeAlarms, Amount>(
+fn deposit<ProtocolsRegistry, Treasury, Profit, Reserve, Leaser, Oracle, TimeAlarms>(
     test_case: &mut TestCase<
         ProtocolsRegistry,
         Treasury,
@@ -1498,9 +1524,7 @@ fn deposit<ProtocolsRegistry, Treasury, Profit, Reserve, Leaser, Oracle, TimeAla
     >,
     lender: Addr,
     amount: Amount,
-) where
-    Amount: Into<Coin<Lpn>>,
-{
+) {
     test_case
         .app
         .execute(
@@ -1514,28 +1538,24 @@ fn deposit<ProtocolsRegistry, Treasury, Profit, Reserve, Leaser, Oracle, TimeAla
         .unwrap_response()
 }
 
-fn repay_loan<Currency, Amount>(
+fn repay_loan<Currency>(
     repay_amount: Amount,
     test_case: &mut LeaseTestCase,
     loan_addr2: Addr,
 ) -> anyhow::Result<ResponseWithInterChainMsgs<'_, AppResponse>>
 where
     Currency: CurrencyDef,
-    Amount: Into<Coin<Currency>>,
 {
     test_case.app.execute(
         loan_addr2,
         test_case.address_book.lpp().clone(),
         &LppExecuteMsg::RepayLoan(),
         &[coin_legacy::to_cosmwasm_on_nolus::<Currency>(
-            repay_amount.into(),
+            common::coin::<Currency>(repay_amount),
         )],
     )
 }
 
-fn lpn_cwcoin<A>(amount: A) -> CwCoin
-where
-    A: Into<Coin<Lpn>>,
-{
-    cwcoin(amount)
+fn lpn_cwcoin(amount: Amount) -> CwCoin {
+    cwcoin(common::coin::<Lpn>(amount))
 }

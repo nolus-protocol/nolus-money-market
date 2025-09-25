@@ -51,18 +51,20 @@ impl State {
 
 #[cfg(all(feature = "internal.test.contract", test))]
 mod test {
+
     use finance::{coin::Coin, duration::Duration, interest, percent::Percent100, zero::Zero};
 
     use crate::{
+        lease::tests,
         loan::{Overdue, State},
         position::DueTrait,
     };
 
     #[test]
     fn already_above_the_limit_before_due_end() {
-        let principal_due = 100_000.into();
-        let due_interest = 10.into();
-        let due_margin_interest = 5.into();
+        let principal_due = tests::lpn_coin(100_000);
+        let due_interest = tests::lpn_coin(10);
+        let due_margin_interest = tests::lpn_coin(5);
         let till_due_end = Duration::from_days(3);
         let s = State {
             annual_interest: Percent100::from_percent(20),
@@ -73,7 +75,7 @@ mod test {
             overdue: Overdue::StartIn(till_due_end),
         };
         let overdue_collection =
-            s.overdue_collection(due_interest + due_margin_interest - 1.into());
+            s.overdue_collection(due_interest + due_margin_interest - tests::lpn_coin(1));
         assert_eq!(till_due_end, overdue_collection.start_in());
         assert_eq!(Coin::ZERO, overdue_collection.amount());
         assert_eq!(
@@ -86,9 +88,9 @@ mod test {
     fn get_to_limit_before_due_end() {
         let annual_interest = Percent100::from_percent(20);
         let annual_interest_margin = Percent100::from_percent(5);
-        let principal_due = 100_000.into();
-        let due_interest = 10.into();
-        let due_margin_interest = 5.into();
+        let principal_due = tests::lpn_coin(100_000);
+        let due_interest = tests::lpn_coin(10);
+        let due_margin_interest = tests::lpn_coin(5);
         let till_due_end = Duration::from_days(3);
         let delta_to_due_end = interest::interest(
             annual_interest + annual_interest_margin,
@@ -103,8 +105,9 @@ mod test {
             due_margin_interest,
             overdue: Overdue::StartIn(till_due_end),
         };
-        let overdue_collection =
-            s.overdue_collection(due_interest + due_margin_interest + delta_to_due_end - 1.into());
+        let overdue_collection = s.overdue_collection(
+            due_interest + due_margin_interest + delta_to_due_end - tests::lpn_coin(1),
+        );
         assert_eq!(till_due_end, overdue_collection.start_in());
         assert_eq!(Coin::ZERO, overdue_collection.amount());
         assert_eq!(
@@ -117,15 +120,15 @@ mod test {
     fn below_the_limit_past_due_end() {
         let annual_interest = Percent100::from_percent(20);
         let annual_interest_margin = Percent100::from_percent(5);
-        let principal_due = 100_000.into();
-        let due_interest = 15.into();
-        let due_margin_interest = 5.into();
-        let overdue_interest = 7.into();
-        let overdue_margin_interest = 2.into();
+        let principal_due = tests::lpn_coin(100_000);
+        let due_interest = tests::lpn_coin(15);
+        let due_margin_interest = tests::lpn_coin(5);
+        let overdue_interest = tests::lpn_coin(7);
+        let overdue_margin_interest = tests::lpn_coin(2);
         let total_interest =
             due_interest + due_margin_interest + overdue_interest + overdue_margin_interest;
 
-        let delta_to_overdue = 40.into();
+        let delta_to_overdue = tests::lpn_coin(40);
         let till_overdue = Duration::YEAR.into_slice_per_ratio(
             delta_to_overdue,
             interest::interest(
@@ -156,11 +159,11 @@ mod test {
     fn above_the_limit_past_due_end() {
         let annual_interest = Percent100::from_percent(20);
         let annual_interest_margin = Percent100::from_percent(5);
-        let principal_due = 100_000.into();
-        let due_interest = 15.into();
-        let due_margin_interest = 5.into();
-        let overdue_interest = 7.into();
-        let overdue_margin_interest = 2.into();
+        let principal_due = tests::lpn_coin(100_000);
+        let due_interest = tests::lpn_coin(15);
+        let due_margin_interest = tests::lpn_coin(5);
+        let overdue_interest = tests::lpn_coin(7);
+        let overdue_margin_interest = tests::lpn_coin(2);
         let total_interest =
             due_interest + due_margin_interest + overdue_interest + overdue_margin_interest;
 
@@ -175,7 +178,7 @@ mod test {
                 margin: overdue_margin_interest,
             },
         };
-        let overdue_collection = s.overdue_collection(total_interest - 1.into());
+        let overdue_collection = s.overdue_collection(total_interest - tests::lpn_coin(1));
         assert_eq!(Duration::default(), overdue_collection.start_in());
         assert_eq!(total_interest, overdue_collection.amount());
         assert_eq!(principal_due + total_interest, s.total_due());
@@ -200,7 +203,7 @@ mod test {
             due_margin_interest,
             overdue: Overdue::StartIn(overdue_start_in),
         };
-        let overdue_collection = s.overdue_collection(100.into());
+        let overdue_collection = s.overdue_collection(tests::lpn_coin(100));
         assert_eq!(Duration::MAX, overdue_collection.start_in());
         assert_eq!(Coin::ZERO, overdue_collection.amount());
         assert_eq!(principal_due + total_interest, s.total_due());
@@ -227,7 +230,7 @@ mod test {
                 margin: overdue_margin_interest,
             },
         };
-        let overdue_collection = s.overdue_collection(100.into());
+        let overdue_collection = s.overdue_collection(tests::lpn_coin(100));
         assert_eq!(Duration::MAX, overdue_collection.start_in());
         assert_eq!(Coin::ZERO, overdue_collection.amount());
         assert_eq!(principal_due + total_interest, s.total_due());

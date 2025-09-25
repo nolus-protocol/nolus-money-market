@@ -222,7 +222,12 @@ mod tests {
         LeaseGroup, Lpn, Lpns, PaymentGroup,
         testing::{LeaseC1, PaymentC1, PaymentC9},
     };
-    use finance::{duration::Duration, percent::Percent100, price};
+    use finance::{
+        coin::{Amount, Coin},
+        duration::Duration,
+        percent::Percent100,
+        price::{self, Price},
+    };
     use platform::tests as platform_tests;
     use sdk::cosmwasm_std::{self, testing::mock_env};
 
@@ -297,8 +302,8 @@ mod tests {
         use crate::api::alarms::ExecuteMsg as ExecuteMsgApi;
 
         let alarm = Alarm::<AlarmCurrencies, BaseCurrency, BaseCurrencies>::new(
-            price::total_of::<LeaseC1>(10.into()).is::<BaseCurrency>(1.into()),
-            Some(price::total_of(7.into()).is(1.into())),
+            price(10, 1),
+            Some(price(7, 1)),
         );
         let query_impl = ExecuteMsg::<
             BaseCurrency,
@@ -324,5 +329,9 @@ mod tests {
             Ok(QueryMsg::<PaymentGroup>::ProtocolPackageRelease {}),
             platform_tests::ser_de(&versioning::query::ProtocolPackage::Release {}),
         );
+    }
+
+    fn price(c: Amount, q: Amount) -> Price<LeaseC1, BaseCurrency> {
+        price::total_of(Coin::new(c)).is(Coin::new(q))
     }
 }
