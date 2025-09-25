@@ -18,29 +18,33 @@ pub trait ToDoublePrimitive {
     fn to_double(self) -> Self::Double;
 }
 
-/// Defines a common `Max` type, chosen as one of the `Double` types from either `Self` or `Other`
-pub trait MaxDoublePrimitive<Other>
-where
-    Self: ToDoublePrimitive + Sized,
-    Other: ToDoublePrimitive,
-{
-    type Max: CheckedMul<Output = Self::Max>
-        + Div<Output = Self::Max>
-        + From<Self::Double>
-        + From<Other::Double>;
-
-    // Having two identical methods so the trait becomes symmetric
-    fn into_max_self(self) -> Self::Max;
-    fn into_max_other(other: Other) -> Self::Max;
+/// Defines a common `Max` type, chosen as one of `Double` the types from either `Self` or `Other`
+pub trait CommonDoublePrimitive<Other> {
+    type CommonDouble: CheckedMul<Output = Self::CommonDouble> + Div<Output = Self::CommonDouble>;
 }
 
 /// Domain entity for which a fraction could be calculated.
-pub trait Fractionable<Other>
+pub trait Fractionable<FractionUnit>
 where
-    Self: MaxDoublePrimitive<Other>,
-    Other: ToDoublePrimitive,
+    Self: CommonDoublePrimitive<FractionUnit>
+        + TryFromMax<<Self as CommonDoublePrimitive<FractionUnit>>::CommonDouble>
+        + Sized,
 {
-    fn try_from_max(max: Self::Max) -> Option<Self>;
+}
+
+pub trait IntoMax<Max>
+where
+    Self: ToDoublePrimitive,
+{
+    fn into(self) -> Max;
+}
+
+/// Conversion from `Max` back to the domain type
+pub trait TryFromMax<Max>
+where
+    Self: IntoMax<Max> + Sized,
+{
+    fn try_from(max: Max) -> Option<Self>;
 }
 
 pub trait FractionableLegacy<U> {

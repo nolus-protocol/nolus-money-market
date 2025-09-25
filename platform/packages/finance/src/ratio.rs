@@ -5,7 +5,9 @@ use serde::{Deserialize, Serialize};
 use crate::{
     error::{Error, Result as FinanceResult},
     fraction::{Fraction, Unit as FractionUnit},
-    fractionable::{Fractionable, FractionableLegacy, ToDoublePrimitive, checked_mul::CheckedMul},
+    fractionable::{
+        Fractionable, FractionableLegacy, IntoMax, TryFromMax, checked_mul::CheckedMul,
+    },
     rational::Rational,
     zero::Zero,
 };
@@ -105,20 +107,20 @@ where
 
     pub fn checked_mul<M>(&self, rhs: M) -> Option<M>
     where
-        U: ToDoublePrimitive,
+        U: IntoMax<M::CommonDouble>,
         M: Fractionable<U>,
     {
         if self.nominator == self.denominator {
             Some(rhs)
         } else {
-            let nominator_max = M::into_max_other(self.nominator);
-            let rhs_max = rhs.into_max_self();
-            let denominator_max = M::into_max_other(self.denominator);
+            let nominator_max = self.nominator.into();
+            let rhs_max = rhs.into();
+            let denominator_max = self.denominator.into();
 
             nominator_max
                 .checked_mul(rhs_max)
                 .map(|product| product.div(denominator_max))
-                .and_then(M::try_from_max)
+                .and_then(TryFromMax::try_from)
         }
     }
 }
