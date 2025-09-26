@@ -134,7 +134,7 @@ where
 #[cfg(test)]
 mod test {
     use currency::test::SuperGroupTestC1;
-    use finance::{coin::Coin, fraction::Fraction, percent::Percent100};
+    use finance::{coin::Coin, fraction::FractionLegacy, percent::Percent100};
 
     use super::MaxSlippage;
 
