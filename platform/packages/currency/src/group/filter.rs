@@ -1,6 +1,6 @@
 use std::{borrow::Borrow, marker::PhantomData};
 
-use crate::{FilterMapT, Group, group::GroupMember};
+use crate::{Group, GroupFilterMapT, GroupMember};
 
 /// Iterator over group currency types mapped to some values
 pub struct CurrenciesMapping<Group, GroupMember, FilterMap, FilterMapRef> {
@@ -15,7 +15,7 @@ impl<GroupImpl, GroupMemberImpl, FilterMap, FilterMapRef>
 where
     GroupImpl: Group,
     GroupMemberImpl: GroupMember<GroupImpl>,
-    FilterMap: FilterMapT<VisitedG = GroupImpl>,
+    FilterMap: GroupFilterMapT<VisitedG = GroupImpl>,
     FilterMapRef: Borrow<FilterMap>,
 {
     pub fn with_filter(f: FilterMapRef) -> Self {
@@ -33,7 +33,7 @@ impl<GroupImpl, GroupMemberImpl, FilterMap, FilterMapRef> Iterator
 where
     GroupImpl: Group,
     GroupMemberImpl: GroupMember<GroupImpl>,
-    FilterMap: FilterMapT<VisitedG = GroupImpl>,
+    FilterMap: GroupFilterMapT<VisitedG = GroupImpl>,
     FilterMapRef: Borrow<FilterMap>,
 {
     type Item = FilterMap::Outcome;

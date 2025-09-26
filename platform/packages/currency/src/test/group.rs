@@ -3,9 +3,8 @@ use std::borrow::Borrow;
 use serde::Deserialize;
 
 use crate::{
-    CurrencyDTO, FindMapT, Group,
-    group::{self, CurrenciesMapping, FilterMapT, MemberOf, SubFilterAdapter, SubGroupFindAdapter},
-    pairs::{self, FindMapT as PairsFindMapT, PairsGroup},
+    CurrenciesMapping, CurrencyDTO, Group, GroupFilterMapT, GroupFindMapT, MemberOf, PairsFindMapT,
+    PairsGroup, SubFilterAdapter, SubGroupFindAdapter, group, pairs,
     test::{
         sub::{Item as SubGroupItem, SubGroupTestC6Pairs, SubGroupTestC10Pairs},
         super_::{
@@ -38,7 +37,7 @@ impl Group for SuperGroup {
         f: FilterMapRef,
     ) -> impl Iterator<Item = FilterMap::Outcome>
     where
-        FilterMap: FilterMapT<VisitedG = Self>,
+        FilterMap: GroupFilterMapT<VisitedG = Self>,
         FilterMapRef: Borrow<FilterMap> + Clone,
     {
         CurrenciesMapping::<_, SuperGroupItem, _, _>::with_filter(f.clone())
@@ -47,7 +46,7 @@ impl Group for SuperGroup {
 
     fn find_map<FindMap>(v: FindMap) -> Result<FindMap::Outcome, FindMap>
     where
-        FindMap: FindMapT<TargetG = Self>,
+        FindMap: GroupFindMapT<TargetG = Self>,
     {
         group::find_map::<_, SuperGroupItem, _>(v)
             .or_else(|v| {
@@ -149,7 +148,7 @@ impl Group for SubGroup {
         f: FilterMapRef,
     ) -> impl Iterator<Item = FilterMap::Outcome>
     where
-        FilterMap: FilterMapT<VisitedG = Self>,
+        FilterMap: GroupFilterMapT<VisitedG = Self>,
         FilterMapRef: Borrow<FilterMap>,
     {
         CurrenciesMapping::<_, SubGroupItem, _, _>::with_filter(f)
@@ -157,7 +156,7 @@ impl Group for SubGroup {
 
     fn find_map<FindMap>(v: FindMap) -> Result<FindMap::Outcome, FindMap>
     where
-        FindMap: FindMapT<TargetG = Self>,
+        FindMap: GroupFindMapT<TargetG = Self>,
     {
         group::find_map::<_, SubGroupItem, _>(v)
     }
