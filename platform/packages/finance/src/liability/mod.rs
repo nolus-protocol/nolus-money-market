@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     duration::Duration,
     error::{Error, Result},
-    fraction::Fraction,
+    fraction::FractionLegacy,
     fractionable::FractionableLegacy,
     percent::{Percent, Percent100, Units as PercentUnits},
     ratio::SimpleFraction,
@@ -200,7 +200,7 @@ mod test {
     use crate::{
         coin::{Amount, Coin},
         duration::Duration,
-        fraction::Fraction,
+        fraction::FractionLegacy,
         percent::{Percent, Percent100, Units},
         zero::Zero,
     };
