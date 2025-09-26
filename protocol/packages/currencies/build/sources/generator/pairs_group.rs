@@ -13,241 +13,210 @@ use crate::{
 
 use super::DexCurrencies;
 
-pub(super) fn pairs_group<'r, 'dex_currencies, 'child, Parents>(
+pub(super) fn pairs_group<'r, 'dex_currencies, 'parent, Parents>(
     current_module: CurrentModule,
     protocol: &Protocol,
     host_currency: &HostCurrency,
     dex_currencies: &'dex_currencies DexCurrencies<'_, '_>,
     name: &'r str,
     mut parents: Parents,
-) -> Result<impl Iterator<Item = &'r str> + use<'r, Parents>>
+) -> Result<impl Iterator<Item = &'r str> + use<'r, 'parent, Parents>>
 where
     'dex_currencies: 'r,
-    Parents: Iterator<Item = &'child str>,
+    'parent: 'r,
+    Parents: Iterator<Item = &'parent str> + Clone,
 {
-    let matcher;
+    const ENUM_IDENT: &str = "Pairs";
 
     if let Some(ticker) = parents.next() {
-        matcher = "matcher";
+        fn find_map_source_segment<'r, 'ticker, 'dex_currencies>(
+            ticker: &'ticker str,
+            current_module: CurrentModule,
+            protocol: &Protocol,
+            host_currency: &HostCurrency,
+            dex_currencies: &'dex_currencies DexCurrencies<'_, '_>,
+        ) -> Result<impl IntoIterator<Item = &'r str> + use<'r>>
+        where
+            'ticker: 'r,
+            'dex_currencies: 'r,
+        {
+            ResolvedCurrency::resolve(
+                current_module,
+                protocol,
+                host_currency,
+                dex_currencies,
+                ticker,
+            )
+            .map(|resolved| {
+                [
+                    "
+                    Self::",
+                    ticker,
+                    " => find_map.on::<",
+                    resolved.module(),
+                    "::",
+                    resolved.name(),
+                    ">(<",
+                    resolved.module(),
+                    "::",
+                    resolved.name(),
+                    " as currency::CurrencyDef>::dto()),",
+                ]
+            })
+        }
 
-        PairsGroupTemplate::new(
-            current_module,
-            protocol,
-            host_currency,
-            dex_currencies,
-            matcher,
-            "visitor",
-        )
-        .apply(ticker, parents)
-        .map(Either::Left)
+        let source = [
+            r#"#[allow(non_camel_case_types)]
+        enum "#,
+            ENUM_IDENT,
+            r#" {
+            "#,
+            ticker,
+            ",",
+        ]
+        .into_iter()
+        .chain(parents.clone().flat_map(|ticker| {
+            [
+                "
+            ",
+                ticker,
+                ",",
+            ]
+        }))
+        .chain([
+            r#"
+        }
+
+        impl currency::PairsGroupMember for "#,
+            ENUM_IDENT,
+            r#" {
+            type Group = "#,
+            name,
+            r#";
+
+            fn first() -> Option<Self> {
+                Some(Self::"#,
+            ticker,
+            r#")
+            }
+
+            fn next(&self) -> Option<Self> {
+                match self {
+                    Self::"#,
+            ticker,
+        ])
+        .chain(parents.clone().flat_map(|ticker| {
+            [
+                " => Some(Self::",
+                ticker,
+                "),
+                    Self::",
+                ticker,
+            ]
+        }))
+        .chain(iter::once(
+            " => None,
+                }
+            }
+
+            fn find_map<FindMap>(
+                &self,
+                find_map: FindMap,
+            ) -> Result<<FindMap as currency::PairsFindMapT>::Outcome, FindMap>
+            where
+                FindMap: currency::PairsFindMapT<Pivot = Self::Group>,
+            {
+                match self {",
+        ));
+
+        iter::once(ticker)
+            .chain(parents)
+            .try_fold(vec![], |mut find_map_source, ticker| {
+                find_map_source_segment(
+                    ticker,
+                    current_module,
+                    protocol,
+                    host_currency,
+                    dex_currencies,
+                )
+                .map(|source| {
+                    find_map_source.extend(source);
+
+                    find_map_source
+                })
+            })
+            .map(|find_map_source| {
+                source.chain(find_map_source).chain(iter::once(
+                    "
+                }
+            }
+        }",
+                ))
+            })
+            .map(Either::Left)
     } else {
-        matcher = "_";
+        Ok(Either::Right(
+            [
+                r#"enum "#,
+                ENUM_IDENT,
+                r#" {}
 
-        Ok(Either::Right(iter::once("currency::visit_noone(visitor)")))
+        impl currency::PairsGroupMember for "#,
+                ENUM_IDENT,
+                r#" {
+            type Group = "#,
+                name,
+                r#";
+
+            fn first() -> Option<Self> {
+                None
+            }
+
+            fn next(&self) -> Option<Self> {
+                match self {}
+            }
+
+            fn find_map<FindMap>(
+                &self,
+                _: FindMap,
+            ) -> Result<<FindMap as currency::PairsFindMapT>::Outcome, FindMap>
+            where
+                FindMap: currency::PairsFindMapT<Pivot = Self::Group>,
+            {
+                match self {}
+            }
+        }"#,
+            ]
+            .into_iter(),
+        ))
     }
     .map(|sources| {
         [
             r#"
-    impl currency::PairsGroup for "#,
+impl currency::PairsGroup for "#,
             name,
             r#" {
-        type CommonGroup = crate::payment::Group;
+    type CommonGroup = crate::payment::Group;
 
-        fn maybe_visit<M, V>(
-            "#,
-            matcher,
-            r#": &M,
-            visitor: V,
-        ) -> currency::MaybePairsVisitorResult<V>
-        where
-            M: currency::Matcher,
-            V: currency::PairsVisitor<Pivot = Self>,
-        {
-            "#,
+    fn find_map<FindMap>(
+        find_map: FindMap,
+    ) -> Result<<FindMap as currency::PairsFindMapT>::Outcome, FindMap>
+    where
+        FindMap: currency::PairsFindMapT<Pivot = Self>,
+    {
+        "#,
         ]
         .into_iter()
         .chain(sources.map(SubtypeLifetime::subtype))
-        .chain(iter::once(
+        .chain([
             r#"
-        }
+
+        currency::pairs_find_map::<"#,
+            ENUM_IDENT,
+            r#", _>(find_map)
     }
+}
 "#,
-        ))
+        ])
     })
-}
-
-struct PairsGroupTemplate<
-    'protocol,
-    'host_currency,
-    'dex_currencies,
-    'dex_currency_ticker,
-    'dex_currency_definition,
-> {
-    current_module: CurrentModule,
-    protocol: &'protocol Protocol,
-    host_currency: &'host_currency HostCurrency,
-    dex_currencies: &'dex_currencies DexCurrencies<'dex_currency_ticker, 'dex_currency_definition>,
-    matcher_parameter_name: &'static str,
-    visitor_parameter_name: &'static str,
-}
-
-impl<'protocol, 'host_currency, 'dex_currencies, 'dex_currency_ticker, 'dex_currency_definition>
-    PairsGroupTemplate<
-        'protocol,
-        'host_currency,
-        'dex_currencies,
-        'dex_currency_ticker,
-        'dex_currency_definition,
-    >
-{
-    #[inline]
-    const fn new(
-        current_module: CurrentModule,
-        protocol: &'protocol Protocol,
-        host_currency: &'host_currency HostCurrency,
-        dex_currencies: &'dex_currencies DexCurrencies<
-            'dex_currency_ticker,
-            'dex_currency_definition,
-        >,
-        matcher_parameter_name: &'static str,
-        visitor_parameter_name: &'static str,
-    ) -> Self {
-        Self {
-            current_module,
-            protocol,
-            host_currency,
-            dex_currencies,
-            matcher_parameter_name,
-            visitor_parameter_name,
-        }
-    }
-}
-
-impl<'dex_currencies> PairsGroupTemplate<'_, '_, 'dex_currencies, '_, '_> {
-    fn apply<'child, Children>(
-        &self,
-        ticker: &str,
-        children: Children,
-    ) -> Result<impl Iterator<Item = &'dex_currencies str> + use<'dex_currencies, Children>>
-    where
-        Children: Iterator<Item = &'child str>,
-    {
-        const PAIRS_GROUP_ENTRIES_PREPEND: &str = "use currency::maybe_visit_buddy as visit;
-
-            ";
-
-        let visit_entry_template = VisitEntryTemplate::new(
-            self.current_module,
-            self.protocol,
-            self.host_currency,
-            self.dex_currencies,
-            "visit",
-            self.matcher_parameter_name,
-            self.visitor_parameter_name,
-        );
-
-        visit_entry_template.apply(ticker).and_then(|first_entry| {
-            children
-                .map(|ticker| {
-                    visit_entry_template.apply(ticker).map(|entry| {
-                        [
-                            "
-                .or_else(|",
-                            self.visitor_parameter_name,
-                            "| ",
-                        ]
-                        .into_iter()
-                        .chain(entry)
-                        .chain(iter::once(")"))
-                    })
-                })
-                .collect::<Result<_, _>>()
-                .map(Vec::into_iter)
-                .map(Iterator::flatten)
-                .map(move |rest_of_entries| {
-                    iter::once(PAIRS_GROUP_ENTRIES_PREPEND)
-                        .chain(first_entry)
-                        .chain(rest_of_entries)
-                })
-        })
-    }
-}
-
-struct VisitEntryTemplate<
-    'protocol,
-    'host_currency,
-    'dex_currencies,
-    'dex_currency_ticker,
-    'dex_currency_definition,
-> {
-    current_module: CurrentModule,
-    protocol: &'protocol Protocol,
-    host_currency: &'host_currency HostCurrency,
-    dex_currencies: &'dex_currencies DexCurrencies<'dex_currency_ticker, 'dex_currency_definition>,
-    visit_function: &'static str,
-    matcher_parameter_name: &'static str,
-    visitor_parameter_name: &'static str,
-}
-
-impl<'protocol, 'host_currency, 'dex_currencies, 'dex_currency_ticker, 'dex_currency_definition>
-    VisitEntryTemplate<
-        'protocol,
-        'host_currency,
-        'dex_currencies,
-        'dex_currency_ticker,
-        'dex_currency_definition,
-    >
-{
-    #[inline]
-    const fn new(
-        current_module: CurrentModule,
-        protocol: &'protocol Protocol,
-        host_currency: &'host_currency HostCurrency,
-        dex_currencies: &'dex_currencies DexCurrencies<
-            'dex_currency_ticker,
-            'dex_currency_definition,
-        >,
-        visit_function: &'static str,
-        matcher_parameter_name: &'static str,
-        visitor_parameter_name: &'static str,
-    ) -> Self {
-        Self {
-            current_module,
-            protocol,
-            host_currency,
-            dex_currencies,
-            visit_function,
-            matcher_parameter_name,
-            visitor_parameter_name,
-        }
-    }
-}
-
-impl<'dex_currencies> VisitEntryTemplate<'_, '_, 'dex_currencies, '_, '_> {
-    fn apply(
-        &self,
-        ticker: &str,
-    ) -> Result<impl IntoIterator<Item = &'dex_currencies str> + use<'dex_currencies>> {
-        ResolvedCurrency::resolve(
-            self.current_module,
-            self.protocol,
-            self.host_currency,
-            self.dex_currencies,
-            ticker,
-        )
-        .map(|resolved| {
-            [
-                self.visit_function,
-                "::<",
-                resolved.module(),
-                "::",
-                resolved.name(),
-                ", _, _>(",
-                self.matcher_parameter_name,
-                ", ",
-                self.visitor_parameter_name,
-                ")",
-            ]
-        })
-    }
 }
