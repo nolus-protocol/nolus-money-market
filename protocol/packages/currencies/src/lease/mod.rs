@@ -1,17 +1,20 @@
-use std::{borrow::Borrow, iter};
+use std::borrow::Borrow;
 
 use serde::{Deserialize, Serialize};
 
-use currency::{FilterMapT, FindMapT, MemberOf};
+use currency::{CurrenciesMapping, GroupFilterMapT, GroupFindMapT, MemberOf};
 
 use crate::payment::Group as PaymentGroup;
 
+use self::impl_mod::GroupMember;
 // TODO use cfg_match! once gets stabilized
 #[cfg(not(feature = "testing"))]
 #[allow(unused_imports)]
-pub(crate) use self::impl_mod::*;
+pub(crate) use self::impl_mod::definitions::*;
 #[cfg(feature = "testing")]
-pub use self::impl_mod::{LeaseC1, LeaseC2, LeaseC3, LeaseC4, LeaseC5, LeaseC6, LeaseC7};
+pub use self::impl_mod::definitions::{
+    LeaseC1, LeaseC2, LeaseC3, LeaseC4, LeaseC5, LeaseC6, LeaseC7,
+};
 
 #[cfg(not(feature = "testing"))]
 mod impl_mod {
@@ -32,20 +35,20 @@ impl currency::Group for Group {
     type TopG = PaymentGroup;
 
     fn filter_map<FilterMap, FilterMapRef>(
-        _f: FilterMapRef,
+        filter_map: FilterMapRef,
     ) -> impl Iterator<Item = FilterMap::Outcome>
     where
-        FilterMap: FilterMapT<VisitedG = Self>,
+        FilterMap: GroupFilterMapT<VisitedG = Self>,
         FilterMapRef: Borrow<FilterMap> + Clone,
     {
-        iter::empty()
+        CurrenciesMapping::<_, GroupMember, _, _>::with_filter(filter_map)
     }
 
-    fn find_map<FindMap>(_v: FindMap) -> Result<FindMap::Outcome, FindMap>
+    fn find_map<FindMap>(find_map: FindMap) -> Result<FindMap::Outcome, FindMap>
     where
-        FindMap: FindMapT<TargetG = Self>,
+        FindMap: GroupFindMapT<TargetG = Self>,
     {
-        todo!()
+        currency::group_find_map::<_, GroupMember, _>(find_map)
     }
 }
 
@@ -66,7 +69,7 @@ mod test {
         },
     };
 
-    use super::{Group, impl_mod::LeaseC1};
+    use super::{Group, LeaseC1};
 
     #[test]
     fn maybe_visit_on_ticker() {

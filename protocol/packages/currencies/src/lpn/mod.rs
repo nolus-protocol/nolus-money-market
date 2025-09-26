@@ -1,12 +1,15 @@
-use std::{borrow::Borrow, iter};
+use std::borrow::Borrow;
 
 use serde::{Deserialize, Serialize};
 
-use currency::{FilterMapT, FindMapT, MemberOf, PairsFindMapT, PairsGroup};
+use currency::{
+    CurrenciesMapping, GroupFilterMapT, GroupFindMapT, MemberOf, PairsFindMapT, PairsGroup,
+};
 
 use crate::payment::Group as PaymentGroup;
 
-pub use self::impl_mod::Lpn;
+use self::impl_mod::GroupMember;
+pub use self::impl_mod::definitions::Lpn;
 
 #[cfg(not(feature = "testing"))]
 mod impl_mod {
@@ -27,20 +30,20 @@ impl currency::Group for Group {
     type TopG = PaymentGroup;
 
     fn filter_map<FilterMap, FilterMapRef>(
-        _f: FilterMapRef,
+        filter_map: FilterMapRef,
     ) -> impl Iterator<Item = FilterMap::Outcome>
     where
-        FilterMap: FilterMapT<VisitedG = Self>,
+        FilterMap: GroupFilterMapT<VisitedG = Self>,
         FilterMapRef: Borrow<FilterMap> + Clone,
     {
-        iter::empty()
+        CurrenciesMapping::<_, GroupMember, _, _>::with_filter(filter_map)
     }
 
-    fn find_map<FindMap>(_v: FindMap) -> Result<FindMap::Outcome, FindMap>
+    fn find_map<FindMap>(find_map: FindMap) -> Result<FindMap::Outcome, FindMap>
     where
-        FindMap: FindMapT<TargetG = Self>,
+        FindMap: GroupFindMapT<TargetG = Self>,
     {
-        todo!()
+        currency::group_find_map::<_, GroupMember, _>(find_map)
     }
 }
 
@@ -51,11 +54,11 @@ impl MemberOf<PaymentGroup> for Group {}
 impl PairsGroup for Lpn {
     type CommonGroup = PaymentGroup;
 
-    fn find_map<FindMap>(_f: FindMap) -> Result<FindMap::Outcome, FindMap>
+    fn find_map<FindMap>(find_map: FindMap) -> Result<FindMap::Outcome, FindMap>
     where
         FindMap: PairsFindMapT<Pivot = Self>,
     {
-        todo!("()")
+        Err(find_map)
     }
 }
 
