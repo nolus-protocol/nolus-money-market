@@ -176,7 +176,7 @@ pub(crate) mod tests {
     use currencies::{Lpn, testing::PaymentC7};
     use currency::{Currency, Group, MemberOf};
     use finance::{
-        coin::Coin, duration::Duration, fraction::Fraction, liability::Liability,
+        coin::Coin, duration::Duration, fraction::FractionLegacy, liability::Liability,
         percent::Percent100, price::Price,
     };
     use lpp::{
