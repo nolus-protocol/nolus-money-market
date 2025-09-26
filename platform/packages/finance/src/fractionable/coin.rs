@@ -1,6 +1,9 @@
 use bnum::types::U256;
 
-use crate::coin::{Amount, Coin};
+use crate::{
+    coin::{Amount, Coin},
+    fractionable::{IntoMax, ToDoublePrimitive},
+};
 
 use super::HigherRank;
 
@@ -13,7 +16,7 @@ where
 
 impl<C> From<Coin<C>> for U256 {
     fn from(coin: Coin<C>) -> Self {
-        let c: Amount = coin.into();
+        let c = Amount::from(coin);
         c.into()
     }
 }
@@ -23,6 +26,20 @@ impl<C> TryInto<Coin<C>> for U256 {
 
     fn try_into(self) -> Result<Coin<C>, Self::Error> {
         self.try_into().map(Coin::new)
+    }
+}
+
+impl<C> ToDoublePrimitive for Coin<C> {
+    type Double = U256;
+
+    fn to_double(self) -> Self::Double {
+        U256::from(self)
+    }
+}
+
+impl<C> IntoMax<U256> for Coin<C> {
+    fn into(self) -> U256 {
+        self.to_double()
     }
 }
 
