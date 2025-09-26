@@ -8,7 +8,7 @@ use crate::{
     fraction::{FractionLegacy, Unit as FractionUnit},
     fractionable::FractionableLegacy,
     ratio::{Ratio, SimpleFraction},
-    rational::Rational,
+    rational::RationalLegacy,
     zero::Zero,
 };
 
@@ -86,7 +86,7 @@ impl FractionLegacy<Units> for Percent100 {
     }
 }
 
-impl Rational<Units> for Percent {
+impl RationalLegacy<Units> for Percent {
     fn of<A>(&self, whole: A) -> Option<A>
     where
         A: FractionableLegacy<Units>,
@@ -122,7 +122,7 @@ pub(super) mod test {
         fractionable::FractionableLegacy,
         percent::{Percent, Percent100},
         ratio::{Ratio, SimpleFraction},
-        rational::Rational,
+        rational::RationalLegacy,
     };
 
     use super::Units;
@@ -206,7 +206,7 @@ pub(super) mod test {
         let n: Units = 189;
         let d: Units = 1890;
         let r = SimpleFraction::new(n, d);
-        let res: Percent = Rational::<Units>::of(&r, Percent::HUNDRED).unwrap();
+        let res: Percent = RationalLegacy::<Units>::of(&r, Percent::HUNDRED).unwrap();
         assert_eq!(Percent::from_permille(n * 1000 / d), res);
     }
 

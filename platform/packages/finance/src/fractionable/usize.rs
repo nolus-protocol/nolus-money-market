@@ -38,7 +38,7 @@ mod test {
     #[test]
     #[should_panic = "usize overflow"]
     fn overflow() {
-        use crate::rational::Rational;
+        use crate::rational::RationalLegacy;
 
         // TODO remove the `#[should_panic]` and assert that is None when
         // SimpleFraction::of() calls its checked_mul method instead of safe_mul

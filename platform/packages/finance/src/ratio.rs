@@ -8,7 +8,7 @@ use crate::{
     fractionable::{
         Fractionable, FractionableLegacy, IntoMax, TryFromMax, checked_mul::CheckedMul,
     },
-    rational::Rational,
+    rational::RationalLegacy,
     zero::Zero,
 };
 
@@ -141,7 +141,7 @@ where
     }
 }
 
-impl<U, T> Rational<U> for SimpleFraction<T>
+impl<U, T> RationalLegacy<U> for SimpleFraction<T>
 where
     Self: RatioLegacy<U>,
 {

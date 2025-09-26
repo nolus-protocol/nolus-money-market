@@ -4,7 +4,7 @@ use finance::{
     coin::Coin,
     percent::{Percent, Percent100, Units as PercentUnits},
     ratio::SimpleFraction,
-    rational::Rational,
+    rational::RationalLegacy,
 };
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Serialize, Deserialize)]
@@ -69,7 +69,7 @@ impl InterestRate {
                 .min(utilization_factor_max)
         };
 
-        Rational::<PercentUnits>::of(
+        RationalLegacy::<PercentUnits>::of(
             &SimpleFraction::new(self.addon_optimal_interest_rate, self.utilization_optimal),
             utilization_factor,
         )

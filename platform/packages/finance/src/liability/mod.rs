@@ -9,7 +9,7 @@ use crate::{
     fractionable::FractionableLegacy,
     percent::{Percent, Percent100, Units as PercentUnits},
     ratio::SimpleFraction,
-    rational::Rational,
+    rational::RationalLegacy,
     zero::Zero,
 };
 
