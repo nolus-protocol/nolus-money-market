@@ -199,6 +199,7 @@ impl PairsGroupMember for SuperGroupTestC4Pairs {
 
 pub(super) enum SuperGroupTestC5Pairs {
     SuperGroupTestC4,
+    SuperGroupTestC5,
     SubGroupTestC10,
 }
 
@@ -211,7 +212,8 @@ impl PairsGroupMember for SuperGroupTestC5Pairs {
 
     fn next(&self) -> Option<Self> {
         match self {
-            Self::SuperGroupTestC4 => Some(Self::SubGroupTestC10),
+            Self::SuperGroupTestC4 => Some(Self::SuperGroupTestC5),
+            Self::SuperGroupTestC5 => Some(Self::SubGroupTestC10),
             Self::SubGroupTestC10 => None,
         }
     }
@@ -225,6 +227,7 @@ impl PairsGroupMember for SuperGroupTestC5Pairs {
     {
         match *self {
             Self::SuperGroupTestC4 => find_map.on::<SuperGroupTestC4>(SuperGroupTestC4::dto()),
+            Self::SuperGroupTestC5 => find_map.on::<SuperGroupTestC5>(SuperGroupTestC5::dto()),
             Self::SubGroupTestC10 => find_map.on::<SubGroupTestC10>(SubGroupTestC10::dto()),
         }
     }
