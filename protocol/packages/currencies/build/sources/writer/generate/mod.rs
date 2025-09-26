@@ -1,18 +1,21 @@
 use std::{borrow::Cow, iter};
 
-use anyhow::Result;
+use anyhow::{Context as _, Result};
 use either::Either;
 
 use crate::subtype_lifetime::SubtypeLifetime;
 
-use super::{super::generator, FinalizedSources, Writer};
+use super::{
+    super::generator::{self, GroupMemberEntry},
+    FinalizedSources, Writer,
+};
 
-use self::currency_definition::CurrencyDefinition;
+use self::currency_definition::{CurrencyDefinition, GeneratedEntry, GeneratedEntryResult};
 
 mod currency_definition;
 
-impl<'dex_currencies, 'dex_currency_ticker, 'dex_currency_definition, 'currencies_tree>
-    Writer<'currencies_tree, '_, '_, '_, '_>
+impl<'dex_currencies, 'dex_currency_ticker, 'dex_currency_definition, 'currencies_tree, 'parent>
+    Writer<'currencies_tree, '_, 'parent, '_, '_>
 where
     'dex_currency_ticker: 'dex_currencies,
     'dex_currency_definition: 'dex_currencies,
@@ -30,6 +33,7 @@ where
                 'dex_currency_ticker,
                 'dex_currency_definition,
                 'currencies_tree,
+                'parent,
                 'generator,
                 Generator,
                 Tickers,
@@ -38,39 +42,65 @@ where
     >
     where
         'dex_currencies: 'r,
+        'parent: 'r,
         'ticker: 'r,
         Generator: generator::Resolver<'dex_currencies, 'dex_currencies>
-            + generator::MaybeVisit
+            + generator::GroupMember<'dex_currencies, 'dex_currency_ticker, 'dex_currency_definition>
             + generator::PairsGroup<'dex_currencies, 'dex_currency_ticker, 'dex_currency_definition>
             + generator::InPoolWith<'dex_currencies, 'dex_currency_ticker, 'dex_currency_definition>,
         Tickers: Iterator<Item = &'ticker str>,
     {
         if let Some(head_ticker) = tickers.next() {
             with_currencies_sources(
-                CurrencyDefinition::new(
-                    self.currencies_tree,
-                    generator,
-                    "VisitedG",
-                    "visit",
-                    "matcher",
-                    "visitor",
-                ),
+                CurrencyDefinition::new(self.currencies_tree, generator),
                 head_ticker,
                 tickers,
             )
             .map(|non_finalized_sources| {
                 non_finalized_sources
-                    .map_maybe_visit(Either::Left)
-                    .map_currency_definitions(Either::Left)
+                    .map_variants(|variants| Either::Left(variants.into_iter()))
+                    .map_first(|first| first.map(IntoIterator::into_iter))
+                    .map_next(|next| {
+                        next.map(|(head, middle, tail)| {
+                            head.into_iter()
+                                .chain(middle.into_iter().flatten())
+                                .chain(tail)
+                        })
+                    })
+                    .map_filter_map(|filter_map| Some(filter_map.into_iter()))
+                    .map_find_map(|find_map| Some(find_map.into_iter()))
+                    .map_currency_definitions(|currency_definitions| {
+                        Either::Left(currency_definitions.into_iter())
+                    })
             })
         } else {
-            Ok(generate_blank_sources()
-                .map_maybe_visit(Either::Right)
-                .map_currency_definitions(Either::Right))
+            const {
+                Ok(NonFinalizedSources {
+                    currencies_count: 0,
+                    variants: Either::Right(iter::empty()),
+                    first: None,
+                    next: None,
+                    filter_map: None,
+                    find_map: None,
+                    currency_definitions: Either::Right(iter::empty()),
+                })
+            }
         }
         .map(NonFinalizedSources::finalize)
     }
 }
+
+type WithCurrenciesSourcesResult<Variants, First, Next, FilterMap, FindMap, CurrencyDefinitions> =
+    Result<
+        NonFinalizedSources<
+            Variants,
+            Option<First>,
+            Option<Next>,
+            FilterMap,
+            FindMap,
+            CurrencyDefinitions,
+        >,
+    >;
 
 fn with_currencies_sources<
     'r,
@@ -80,102 +110,83 @@ fn with_currencies_sources<
     'dex_currency_ticker,
     'dex_currency_definition,
     'currencies_tree,
+    'parent,
     'generator,
     'ticker,
     Generator,
     Tickers,
 >(
-    generator: CurrencyDefinition<'currencies_tree, '_, '_, '_, '_, 'generator, Generator>,
+    definition: CurrencyDefinition<'currencies_tree, '_, 'parent, '_, '_, 'generator, Generator>,
     head_ticker: &'ticker str,
     tail_tickers: Tickers,
-) -> Result<
-    NonFinalizedSources<
-        impl Iterator<Item = &'dex_currencies str>
-        + use<'dex_currencies, 'generator, Generator, Tickers>,
-        impl Iterator<Item = Cow<'r, str>>
+) -> WithCurrenciesSourcesResult<
+    impl IntoIterator<Item = &'dex_currencies str>
+    + use<
+        'dex_currencies,
+        'dex_currency_ticker,
+        'dex_currency_definition,
+        'generator,
+        Generator,
+        Tickers,
+    >,
+    impl IntoIterator<Item = &'dex_currencies str>
+    + use<
+        'dex_currencies,
+        'dex_currency_ticker,
+        'dex_currency_definition,
+        'generator,
+        Generator,
+        Tickers,
+    >,
+    (
+        impl IntoIterator<Item = &'dex_currencies str>
         + use<
-            'r,
             'dex_currencies,
             'dex_currency_ticker,
             'dex_currency_definition,
-            'currencies_tree,
             'generator,
             Generator,
             Tickers,
         >,
+        Vec<
+            impl IntoIterator<Item = &'dex_currencies str>
+            + use<
+                'dex_currencies,
+                'dex_currency_ticker,
+                'dex_currency_definition,
+                'generator,
+                Generator,
+                Tickers,
+            >,
+        >,
+        impl IntoIterator<Item = &'dex_currencies str>
+        + use<
+            'dex_currencies,
+            'dex_currency_ticker,
+            'dex_currency_definition,
+            'generator,
+            Generator,
+            Tickers,
+        >,
+    ),
+    impl IntoIterator<Item = &'dex_currencies str>
+    + use<
+        'dex_currencies,
+        'dex_currency_ticker,
+        'dex_currency_definition,
+        'generator,
+        Generator,
+        Tickers,
     >,
->
-where
-    'host_currency: 'definition,
-    'dex_currencies: 'definition,
-    'definition: 'r,
-    'dex_currency_ticker: 'dex_currencies,
-    'dex_currency_definition: 'dex_currencies,
-    'ticker: 'r,
-    Generator: generator::Resolver<'dex_currencies, 'definition>
-        + generator::MaybeVisit
-        + generator::PairsGroup<'dex_currencies, 'dex_currency_ticker, 'dex_currency_definition>
-        + generator::InPoolWith<'dex_currencies, 'dex_currency_ticker, 'dex_currency_definition>,
-    Tickers: Iterator<Item = &'ticker str>,
-{
-    let visited_group = generator.visited_group();
-
-    let visit_function = generator.visit_function();
-
-    let matcher_parameter = generator.matcher_parameter();
-
-    let visitor_parameter = generator.visitor_parameter();
-
-    per_currency_sources(generator, head_ticker, tail_tickers).map(|non_finalized_sources| {
-        non_finalized_sources
-            .map_maybe_visit(|maybe_visit| {
-                maybe_visit.map_left(|maybe_visit| {
-                    maybe_visit_definition_with_currencies(
-                        visited_group,
-                        visit_function,
-                        matcher_parameter,
-                        visitor_parameter,
-                        maybe_visit.into_iter().flatten(),
-                    )
-                })
-            })
-            .map_currency_definitions(|currency_definitions| {
-                currency_definitions.into_iter().flatten()
-            })
-    })
-}
-
-struct GeneratedSourceEntry<MaybeVisit, CurrencyDefinition> {
-    maybe_visit: MaybeVisit,
-    currency_definition: CurrencyDefinition,
-}
-
-type PerCurrencySourcesResult<'dex_currencies, MaybeVisit, CurrencyDefinition> = Result<
-    NonFinalizedSources<
-        Either<Vec<MaybeVisit>, iter::Empty<&'dex_currencies str>>,
-        Vec<CurrencyDefinition>,
+    impl IntoIterator<Item = &'dex_currencies str>
+    + use<
+        'dex_currencies,
+        'dex_currency_ticker,
+        'dex_currency_definition,
+        'generator,
+        Generator,
+        Tickers,
     >,
->;
-
-fn per_currency_sources<
-    'r,
-    'host_currency,
-    'dex_currencies,
-    'definition,
-    'dex_currency_ticker,
-    'dex_currency_definition,
-    'currencies_tree,
-    'generator,
-    'ticker,
-    Generator,
-    Tickers,
->(
-    generator: CurrencyDefinition<'currencies_tree, '_, '_, '_, '_, 'generator, Generator>,
-    head_ticker: &'ticker str,
-    tail_tickers: Tickers,
-) -> PerCurrencySourcesResult<
-    'dex_currencies,
-    impl Iterator<Item = &'dex_currencies str> + use<'dex_currencies, 'generator, Generator, Tickers>,
     impl Iterator<Item = Cow<'r, str>>
     + use<
         'r,
@@ -183,6 +194,7 @@ fn per_currency_sources<
         'dex_currency_ticker,
         'dex_currency_definition,
         'currencies_tree,
+        'parent,
         'generator,
         Generator,
         Tickers,
@@ -194,254 +206,373 @@ where
     'definition: 'r,
     'dex_currency_ticker: 'dex_currencies,
     'dex_currency_definition: 'dex_currencies,
+    'parent: 'r,
     'ticker: 'r,
     Generator: generator::Resolver<'dex_currencies, 'definition>
-        + generator::MaybeVisit
+        + generator::GroupMember<'dex_currencies, 'dex_currency_ticker, 'dex_currency_definition>
         + generator::PairsGroup<'dex_currencies, 'dex_currency_ticker, 'dex_currency_definition>
         + generator::InPoolWith<'dex_currencies, 'dex_currency_ticker, 'dex_currency_definition>,
     Tickers: Iterator<Item = &'ticker str>,
 {
-    iter::once(generator.generate_entry(head_ticker).map(|entry| {
-        (
-            entry
-                .maybe_visit
-                .map_left(|maybe_visit| Either::Left(maybe_visit.into_iter())),
-            entry.currency_definition,
-        )
-    }))
-    .chain(tail_tickers.map(|ticker| {
-        generator.generate_entry(ticker).map(|entry| {
-            (
-                entry.maybe_visit.map_left(|maybe_visit| {
-                    Either::Right({
-                        [
-                            "
-        .or_else(|",
-                            generator.visitor_parameter(),
-                            "| ",
-                        ]
-                        .into_iter()
-                        .chain(maybe_visit)
-                        .chain(iter::once(")"))
-                    })
-                }),
-                entry.currency_definition,
-            )
+    #[inline]
+    fn flatten_iter_vec<I>(v: Vec<I>) -> impl Iterator<Item = I::Item>
+    where
+        I: IntoIterator,
+    {
+        v.into_iter().flatten()
+    }
+
+    fn chain_whitespace<'r, I>(iter: I) -> impl Iterator<Item = &'r str>
+    where
+        I: IntoIterator<Item = &'r str>,
+    {
+        iter.into_iter().chain(iter::once(
+            "
+        ",
+        ))
+    }
+
+    iter::once(head_ticker)
+        .chain(tail_tickers)
+        .map(|ticker| definition.generate_entry(ticker))
+        .try_fold(NonFinalizedSources::empty(), NonFinalizedSources::try_fold)
+        .map(|non_finalized_sources| {
+            non_finalized_sources
+                .map_variants(flatten_iter_vec)
+                .map_filter_map(flatten_iter_vec)
+                .map_filter_map(chain_whitespace)
+                .map_find_map(flatten_iter_vec)
+                .map_find_map(chain_whitespace)
+                .map_currency_definitions(flatten_iter_vec)
         })
-    }))
-    .try_fold(
-        NonFinalizedSources::new(
-            0,
-            if <Generator as generator::MaybeVisit>::GENERATE {
-                Either::Left(vec![])
-            } else {
-                Either::Right(iter::empty())
-            },
-            vec![],
-        ),
-        NonFinalizedSources::try_fold,
-    )
 }
 
-#[inline]
-fn maybe_visit_definition_with_currencies<'r, MaybeVisit>(
-    visited_group: &'static str,
-    visit_function: &'static str,
-    matcher_parameter: &'static str,
-    visitor_parameter: &'static str,
-    maybe_visit: MaybeVisit,
-) -> impl Iterator<Item = &'r str>
-where
-    MaybeVisit: IntoIterator<Item = &'r str>,
-{
-    maybe_visit_definition(
-        visited_group,
-        matcher_parameter,
-        visitor_parameter,
-        [
-            "use currency::maybe_visit_member as ",
-            visit_function,
-            ";
-
-    ",
-        ]
-        .into_iter()
-        .chain(maybe_visit),
-    )
-}
-
-#[inline]
-fn maybe_visit_definition<'r, MaybeVisit>(
-    visited_group: &'static str,
-    matcher_parameter: &'static str,
-    visitor_parameter: &'static str,
-    maybe_visit: MaybeVisit,
-) -> impl Iterator<Item = &'r str>
-where
-    MaybeVisit: IntoIterator<Item = &'r str>,
-{
-    [
-        "
-pub(super) fn maybe_visit<M, V, ",
-        visited_group,
-        ">(
-    ",
-        matcher_parameter,
-        ": &M,
-    ",
-        visitor_parameter,
-        ": V,
-) -> currency::MaybeAnyVisitResult<",
-        visited_group,
-        ", V>
-where
-    super::Group: currency::MemberOf<",
-        visited_group,
-        ">,
-    M: currency::Matcher,
-    V: currency::AnyVisitor<",
-        visited_group,
-        ">,
-    ",
-        visited_group,
-        ": currency::Group<TopG = crate::payment::Group>,
-{
-    ",
-    ]
-    .into_iter()
-    .chain(maybe_visit)
-    .chain(iter::once(
-        "
-}
-",
-    ))
-}
-
-#[inline]
-fn generate_blank_sources<'maybe_visit, 'currency_definitions>() -> NonFinalizedSources<
-    impl Iterator<Item = &'maybe_visit str> + use<'maybe_visit>,
-    impl Iterator<Item = Cow<'currency_definitions, str>> + use<'currency_definitions>,
-> {
-    const VISITOR_PARAMETER: &str = "visitor";
-
-    NonFinalizedSources::new(
-        0,
-        maybe_visit_definition(
-            "VisitedG",
-            "_",
-            VISITOR_PARAMETER,
-            ["currency::visit_noone(", VISITOR_PARAMETER, ")"],
-        ),
-        const { iter::empty() },
-    )
-}
-
-struct NonFinalizedSources<MaybeVisit, CurrencyDefinitions> {
+struct NonFinalizedSources<Variants, First, Next, FilterMap, FindMap, CurrencyDefinitions> {
     currencies_count: usize,
-    maybe_visit: MaybeVisit,
+    variants: Variants,
+    first: First,
+    next: Next,
+    filter_map: FilterMap,
+    find_map: FindMap,
     currency_definitions: CurrencyDefinitions,
 }
 
-impl<MaybeVisit, CurrencyDefinitions> NonFinalizedSources<MaybeVisit, CurrencyDefinitions> {
+impl<Variants, First, Next, FilterMap, FindMap, CurrencyDefinitions>
+    NonFinalizedSources<
+        Vec<Variants>,
+        Option<First>,
+        Option<Next>,
+        Vec<FilterMap>,
+        Vec<FindMap>,
+        Vec<CurrencyDefinitions>,
+    >
+{
     #[inline]
-    const fn new(
-        currencies_count: usize,
-        maybe_visit: MaybeVisit,
-        currency_definitions: CurrencyDefinitions,
-    ) -> Self {
-        Self {
-            currencies_count,
-            maybe_visit,
-            currency_definitions,
+    const fn empty() -> Self {
+        const {
+            Self {
+                currencies_count: 0,
+                variants: vec![],
+                first: None,
+                next: None,
+                filter_map: vec![],
+                find_map: vec![],
+                currency_definitions: vec![],
+            }
         }
     }
+}
 
+impl<Variants, First, Next, FilterMap, FindMap, CurrencyDefinitions>
+    NonFinalizedSources<Variants, First, Next, FilterMap, FindMap, CurrencyDefinitions>
+{
     #[inline]
-    fn map_maybe_visit<F, R>(self, f: F) -> NonFinalizedSources<R, CurrencyDefinitions>
+    fn map_variants<F, R>(
+        self,
+        f: F,
+    ) -> NonFinalizedSources<R, First, Next, FilterMap, FindMap, CurrencyDefinitions>
     where
-        F: FnOnce(MaybeVisit) -> R,
+        F: FnOnce(Variants) -> R,
     {
         let Self {
             currencies_count,
-            maybe_visit,
+            variants,
+            first,
+            next,
+            filter_map,
+            find_map,
             currency_definitions,
         } = self;
 
         NonFinalizedSources {
             currencies_count,
-            maybe_visit: f(maybe_visit),
+            variants: f(variants),
+            first,
+            next,
+            filter_map,
+            find_map,
             currency_definitions,
         }
     }
 
     #[inline]
-    fn map_currency_definitions<F, R>(self, f: F) -> NonFinalizedSources<MaybeVisit, R>
+    fn map_first<F, R>(
+        self,
+        f: F,
+    ) -> NonFinalizedSources<Variants, R, Next, FilterMap, FindMap, CurrencyDefinitions>
+    where
+        F: FnOnce(First) -> R,
+    {
+        let Self {
+            currencies_count,
+            variants,
+            first,
+            next,
+            filter_map,
+            find_map,
+            currency_definitions,
+        } = self;
+
+        NonFinalizedSources {
+            currencies_count,
+            variants,
+            first: f(first),
+            next,
+            filter_map,
+            find_map,
+            currency_definitions,
+        }
+    }
+
+    #[inline]
+    fn map_next<F, R>(
+        self,
+        f: F,
+    ) -> NonFinalizedSources<Variants, First, R, FilterMap, FindMap, CurrencyDefinitions>
+    where
+        F: FnOnce(Next) -> R,
+    {
+        let Self {
+            currencies_count,
+            variants,
+            first,
+            next,
+            filter_map,
+            find_map,
+            currency_definitions,
+        } = self;
+
+        NonFinalizedSources {
+            currencies_count,
+            variants,
+            first,
+            next: f(next),
+            filter_map,
+            find_map,
+            currency_definitions,
+        }
+    }
+
+    #[inline]
+    fn map_filter_map<F, R>(
+        self,
+        f: F,
+    ) -> NonFinalizedSources<Variants, First, Next, R, FindMap, CurrencyDefinitions>
+    where
+        F: FnOnce(FilterMap) -> R,
+    {
+        let Self {
+            currencies_count,
+            variants,
+            first,
+            next,
+            filter_map,
+            find_map,
+            currency_definitions,
+        } = self;
+
+        NonFinalizedSources {
+            currencies_count,
+            variants,
+            first,
+            next,
+            filter_map: f(filter_map),
+            find_map,
+            currency_definitions,
+        }
+    }
+
+    #[inline]
+    fn map_find_map<F, R>(
+        self,
+        f: F,
+    ) -> NonFinalizedSources<Variants, First, Next, FilterMap, R, CurrencyDefinitions>
+    where
+        F: FnOnce(FindMap) -> R,
+    {
+        let Self {
+            currencies_count,
+            variants,
+            first,
+            next,
+            filter_map,
+            find_map,
+            currency_definitions,
+        } = self;
+
+        NonFinalizedSources {
+            currencies_count,
+            variants,
+            first,
+            next,
+            filter_map,
+            find_map: f(find_map),
+            currency_definitions,
+        }
+    }
+
+    #[inline]
+    fn map_currency_definitions<F, R>(
+        self,
+        f: F,
+    ) -> NonFinalizedSources<Variants, First, Next, FilterMap, FindMap, R>
     where
         F: FnOnce(CurrencyDefinitions) -> R,
     {
         let Self {
             currencies_count,
-            maybe_visit,
+            variants,
+            first,
+            next,
+            filter_map,
+            find_map,
             currency_definitions,
         } = self;
 
         NonFinalizedSources {
             currencies_count,
-            maybe_visit,
+            variants,
+            first,
+            next,
+            filter_map,
+            find_map,
             currency_definitions: f(currency_definitions),
         }
     }
 }
 
-impl<'maybe_visit, MaybeVisit, CurrencyDefinition>
+impl<Variants, First, NextHead, NextMiddle, NextTail, FilterMap, FindMap, CurrencyDefinition>
     NonFinalizedSources<
-        Either<Vec<MaybeVisit>, iter::Empty<&'maybe_visit str>>,
+        Vec<Variants>,
+        Option<First>,
+        Option<(NextHead, Vec<NextMiddle>, NextTail)>,
+        Vec<FilterMap>,
+        Vec<FindMap>,
         Vec<CurrencyDefinition>,
     >
 {
     fn try_fold(
-        Self {
-            currencies_count,
-            maybe_visit,
-            mut currency_definitions,
-        }: Self,
-        element: Result<(
-            Either<MaybeVisit, iter::Empty<&'maybe_visit str>>,
+        self,
+        element: GeneratedEntryResult<
+            Variants,
+            First,
+            GroupMemberEntry<NextHead, NextMiddle, NextTail>,
+            FilterMap,
+            FindMap,
             CurrencyDefinition,
-        )>,
+        >,
     ) -> Result<Self> {
-        element.map(
-            |(maybe_visit_entry, currency_definition)| NonFinalizedSources {
-                currencies_count: currencies_count + 1,
-                maybe_visit: match (maybe_visit, maybe_visit_entry) {
-                    (Either::Left(mut maybe_visit), Either::Left(entry)) => {
-                        maybe_visit.push(entry);
+        let Self {
+            currencies_count,
+            mut variants,
+            first,
+            next,
+            mut filter_map,
+            mut find_map,
+            mut currency_definitions,
+        } = self;
 
-                        Either::Left(maybe_visit)
-                    }
-                    (Either::Left { .. }, Either::Right { .. })
-                    | (Either::Right { .. }, Either::Left { .. }) => unreachable!(),
-                    (
-                        iter @ Either::Right(iter::Empty { .. }),
-                        Either::Right(iter::Empty { .. }),
-                    ) => iter,
-                },
-                currency_definitions: {
+        currencies_count
+            .checked_add(1)
+            .context("Unable to increment generated currencies count! Overflowing beyond maximum capacity!")
+            .and_then(|currencies_count| {
+                element.map(|GeneratedEntry {
+                    variant,
+                    first_entry,
+                    next_entry: GroupMemberEntry {
+                        head: next_head_entry,
+                        middle: next_middle_entry,
+                        tail: next_tail_entry,
+                    },
+                    filter_map_entry,
+                    find_map_entry,
+                    currency_definition,
+                 }| {
+                    variants.push(variant);
+
+                    let (next_head, next_middle) = if let Some((next_head, mut next_middle, _)) = next {
+                        next_middle.push(next_middle_entry);
+
+                        (next_head, next_middle)
+                    } else {
+                        (next_head_entry, vec![])
+                    };
+
+                    filter_map.push(filter_map_entry);
+
+                    find_map.push(find_map_entry);
+
                     currency_definitions.push(currency_definition);
 
-                    currency_definitions
-                },
-            },
-        )
+                    Self {
+                        currencies_count,
+                        variants,
+                        first: first.or(Some(first_entry)),
+                        next: Some((next_head, next_middle, next_tail_entry)),
+                        filter_map,
+                        find_map,
+                        currency_definitions,
+                    }
+                })
+            })
     }
 }
 
-impl<'r, 'maybe_visit, 'currency_definition, MaybeVisit, CurrencyDefinitions>
-    NonFinalizedSources<MaybeVisit, CurrencyDefinitions>
+impl<
+    'r,
+    'variants,
+    'first,
+    'next,
+    'filter_map,
+    'find_map,
+    'currency_definition,
+    Variants,
+    First,
+    Next,
+    FilterMap,
+    FindMap,
+    CurrencyDefinitions,
+>
+    NonFinalizedSources<
+        Variants,
+        Option<First>,
+        Option<Next>,
+        Option<FilterMap>,
+        Option<FindMap>,
+        CurrencyDefinitions,
+    >
 where
-    'maybe_visit: 'r,
+    'variants: 'r,
+    'first: 'r,
+    'next: 'r,
+    'filter_map: 'r,
+    'find_map: 'r,
     'currency_definition: 'r,
-    MaybeVisit: Iterator<Item = &'maybe_visit str>,
+    Variants: Iterator<Item = &'variants str>,
+    First: Iterator<Item = &'first str>,
+    Next: Iterator<Item = &'next str>,
+    FilterMap: Iterator<Item = &'filter_map str>,
+    FindMap: Iterator<Item = &'find_map str>,
     CurrencyDefinitions: Iterator<Item = Cow<'currency_definition, str>>,
 {
     #[inline]
@@ -449,26 +580,114 @@ where
         self,
     ) -> FinalizedSources<
         impl Iterator<Item = Cow<'r, str>>
-        + use<'r, 'maybe_visit, 'currency_definition, MaybeVisit, CurrencyDefinitions>,
+        + use<
+            'r,
+            'variants,
+            'first,
+            'next,
+            'filter_map,
+            'find_map,
+            'currency_definition,
+            Variants,
+            First,
+            Next,
+            FilterMap,
+            FindMap,
+            CurrencyDefinitions,
+        >,
     > {
+        let Self {
+            currencies_count,
+            variants,
+            first,
+            next,
+            filter_map,
+            find_map,
+            currency_definitions,
+        } = self;
+
         FinalizedSources {
-            currencies_count: self.currencies_count,
-            sources: iter::once("// @generated\n")
-                .chain(self.maybe_visit.map(SubtypeLifetime::subtype))
-                .chain(iter::once(
-                    r#"
-pub(super) mod definitions {"#,
-                ))
-                .map(Cow::Borrowed)
-                .chain(self.currency_definitions.map(SubtypeLifetime::subtype))
-                .chain(iter::once(
-                    const {
-                        Cow::Borrowed(
-                            r#"}
-"#,
-                        )
-                    },
-                )),
+            currencies_count,
+            sources: iter::once(
+                "// @generated
+
+pub(super) enum GroupMember {",
+            )
+            .chain(variants.map(SubtypeLifetime::subtype))
+            .chain(iter::once(
+                "
+}
+
+impl currency::GroupMember<super::Group> for GroupMember {
+    fn first() -> Option<Self> {
+        ",
+            ))
+            .chain(first.map_or_else(
+                || Either::Right(iter::once("None")),
+                |first| Either::Left(first.map(SubtypeLifetime::subtype)),
+            ))
+            .chain(iter::once(
+                "
+    }
+
+    fn next(&self) -> Option<Self> {
+        match *self {",
+            ))
+            .chain(next.map_or(const { Either::Right(iter::empty()) }, |next| {
+                Either::Left(next.map(SubtypeLifetime::subtype))
+            }))
+            .chain([
+                "}
+    }
+
+    fn filter_map<FilterMap>(&self, ",
+                if filter_map.is_some() {
+                    "filter_map"
+                } else {
+                    "_"
+                },
+                ": &FilterMap) -> Option<FilterMap::Outcome>
+    where
+        FilterMap: currency::GroupFilterMapT<VisitedG = super::Group>,
+    {
+        match *self {",
+            ])
+            .chain(
+                filter_map.map_or(const { Either::Right(iter::empty()) }, |iter| {
+                    Either::Left(iter.map(SubtypeLifetime::subtype))
+                }),
+            )
+            .chain([
+                "}
+    }
+
+    fn find_map<FindMap>(&self, ",
+                if find_map.is_some() { "find_map" } else { "_" },
+                ": FindMap) -> Result<FindMap::Outcome, FindMap>
+    where
+        FindMap: currency::GroupFindMapT<TargetG = super::Group>,
+    {
+        match *self {",
+            ])
+            .chain(
+                find_map.map_or(const { Either::Right(iter::empty()) }, |iter| {
+                    Either::Left(iter.map(SubtypeLifetime::subtype))
+                }),
+            )
+            .chain(iter::once(
+                "}
+    }
+}
+
+pub(super) mod definitions {",
+            ))
+            .map(Cow::Borrowed)
+            .chain(
+                currency_definitions
+                    .into_iter()
+                    .map(SubtypeLifetime::subtype),
+            )
+            .chain(iter::once(Cow::Borrowed("}\n"))),
         }
     }
 }
