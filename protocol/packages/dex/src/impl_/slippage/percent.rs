@@ -136,7 +136,7 @@ mod test {
     use currency::test::SuperGroupTestC1;
     use finance::{
         coin::{Amount, Coin},
-        fraction::Fraction,
+        fraction::FractionLegacy,
         percent::Percent100,
     };
 
