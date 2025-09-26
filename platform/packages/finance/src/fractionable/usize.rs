@@ -19,7 +19,7 @@ impl FractionableLegacy<PercentUnits> for usize {
 #[cfg(test)]
 mod test {
     use crate::{
-        fraction::Fraction,
+        fraction::FractionLegacy,
         percent::{Percent, Percent100},
     };
 

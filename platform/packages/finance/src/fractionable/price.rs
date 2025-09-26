@@ -54,7 +54,7 @@ mod test {
     use crate::coin::{Amount, Coin};
 
     mod percent {
-        use crate::fraction::Fraction;
+        use crate::fraction::FractionLegacy;
         use crate::fractionable::price::test::{c, q};
         use crate::{percent::Percent100, price};
 

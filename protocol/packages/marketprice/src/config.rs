@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use finance::{duration::Duration, fraction::Fraction, percent::Percent100};
+use finance::{duration::Duration, fraction::FractionLegacy, percent::Percent100};
 use sdk::cosmwasm_std::Timestamp;
 
 use crate::error::{self, PriceFeedsError};

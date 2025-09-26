@@ -3,7 +3,7 @@ use currency::CurrencyDef;
 use finance::{
     coin::{Amount, Coin},
     duration::Duration,
-    fraction::Fraction,
+    fraction::FractionLegacy,
     percent::{Percent, Percent100, Units as PercentUnits},
     price,
     ratio::SimpleFraction,

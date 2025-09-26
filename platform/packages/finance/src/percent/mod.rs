@@ -5,7 +5,7 @@ use gcd::Gcd;
 
 use crate::{
     error::Error,
-    fraction::{Fraction, Unit as FractionUnit},
+    fraction::{FractionLegacy, Unit as FractionUnit},
     fractionable::FractionableLegacy,
     ratio::{Ratio, SimpleFraction},
     rational::Rational,
@@ -77,7 +77,7 @@ impl Percent {
     }
 }
 
-impl Fraction<Units> for Percent100 {
+impl FractionLegacy<Units> for Percent100 {
     fn of<A>(&self, whole: A) -> A
     where
         A: FractionableLegacy<Units>,
@@ -118,7 +118,7 @@ pub(super) mod test {
 
     use crate::{
         coin::{Amount, Coin},
-        fraction::Fraction,
+        fraction::FractionLegacy,
         fractionable::FractionableLegacy,
         percent::{Percent, Percent100},
         ratio::{Ratio, SimpleFraction},

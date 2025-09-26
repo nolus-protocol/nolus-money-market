@@ -5,7 +5,7 @@ use crate::{fractionable::FractionableLegacy, zero::Zero};
 /// A part of a whole
 ///
 /// Never greater than the whole
-pub trait Fraction<U> {
+pub trait FractionLegacy<U> {
     fn of<A>(&self, whole: A) -> A
     where
         A: FractionableLegacy<U>;

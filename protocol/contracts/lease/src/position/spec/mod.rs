@@ -4,7 +4,7 @@ use currency::{CurrencyDef, MemberOf};
 use finance::{
     coin::Coin,
     duration::Duration,
-    fraction::{Fraction, Unit as FractionUnit},
+    fraction::{FractionLegacy, Unit as FractionUnit},
     fractionable::FractionableLegacy,
     liability::{Liability, Zone},
     percent::{Percent, Percent100},
