@@ -4,7 +4,7 @@ use anyhow::{Context as _, Result, anyhow};
 
 use crate::currencies_tree::{self, CurrenciesTree};
 
-use super::super::super::generator;
+use super::super::super::generator::{self, GroupMemberEntry};
 
 pub(super) struct CurrencyDefinition<
     'currencies_tree,
@@ -63,13 +63,48 @@ where
     'dex_currency_ticker: 'dex_currencies,
     'dex_currency_definition: 'dex_currencies,
     Generator: generator::Resolver<'dex_currencies, 'definition>
+        + generator::GroupMember<'dex_currencies, 'dex_currency_ticker, 'dex_currency_definition>
         + generator::PairsGroup<'dex_currencies, 'dex_currency_ticker, 'dex_currency_definition>
         + generator::InPoolWith<'dex_currencies, 'dex_currency_ticker, 'dex_currency_definition>,
 {
     pub(super) fn generate_entry<'r>(
         &self,
         ticker: &'r str,
-    ) -> Result<
+    ) -> GeneratedEntryResult<
+        impl IntoIterator<Item = &'dex_currencies str>
+        + use<'dex_currencies, 'dex_currency_ticker, 'dex_currency_definition, 'generator, Generator>,
+        impl IntoIterator<Item = &'dex_currencies str>
+        + use<'dex_currencies, 'dex_currency_ticker, 'dex_currency_definition, 'generator, Generator>,
+        GroupMemberEntry<
+            impl IntoIterator<Item = &'dex_currencies str>
+            + use<
+                'dex_currencies,
+                'dex_currency_ticker,
+                'dex_currency_definition,
+                'generator,
+                Generator,
+            >,
+            impl IntoIterator<Item = &'dex_currencies str>
+            + use<
+                'dex_currencies,
+                'dex_currency_ticker,
+                'dex_currency_definition,
+                'generator,
+                Generator,
+            >,
+            impl IntoIterator<Item = &'dex_currencies str>
+            + use<
+                'dex_currencies,
+                'dex_currency_ticker,
+                'dex_currency_definition,
+                'generator,
+                Generator,
+            >,
+        >,
+        impl IntoIterator<Item = &'dex_currencies str>
+        + use<'dex_currencies, 'dex_currency_ticker, 'dex_currency_definition, 'generator, Generator>,
+        impl IntoIterator<Item = &'dex_currencies str>
+        + use<'dex_currencies, 'dex_currency_ticker, 'dex_currency_definition, 'generator, Generator>,
         impl Iterator<Item = Cow<'r, str>>
         + use<
             'r,
@@ -105,7 +140,41 @@ where
         ticker: &'r str,
         children: &'children currencies_tree::Children<'child>,
         parents: &'parents currencies_tree::Parents<'parent>,
-    ) -> Result<
+    ) -> GeneratedEntryResult<
+        impl IntoIterator<Item = &'dex_currencies str>
+        + use<'dex_currencies, 'dex_currency_ticker, 'dex_currency_definition, 'generator, Generator>,
+        impl IntoIterator<Item = &'dex_currencies str>
+        + use<'dex_currencies, 'dex_currency_ticker, 'dex_currency_definition, 'generator, Generator>,
+        GroupMemberEntry<
+            impl IntoIterator<Item = &'dex_currencies str>
+            + use<
+                'dex_currencies,
+                'dex_currency_ticker,
+                'dex_currency_definition,
+                'generator,
+                Generator,
+            >,
+            impl IntoIterator<Item = &'dex_currencies str>
+            + use<
+                'dex_currencies,
+                'dex_currency_ticker,
+                'dex_currency_definition,
+                'generator,
+                Generator,
+            >,
+            impl IntoIterator<Item = &'dex_currencies str>
+            + use<
+                'dex_currencies,
+                'dex_currency_ticker,
+                'dex_currency_definition,
+                'generator,
+                Generator,
+            >,
+        >,
+        impl IntoIterator<Item = &'dex_currencies str>
+        + use<'dex_currencies, 'dex_currency_ticker, 'dex_currency_definition, 'generator, Generator>,
+        impl IntoIterator<Item = &'dex_currencies str>
+        + use<'dex_currencies, 'dex_currency_ticker, 'dex_currency_definition, 'generator, Generator>,
         impl Iterator<Item = Cow<'r, str>>
         + use<
             'r,
@@ -133,12 +202,55 @@ where
 
         self.generator
             .in_pool_with(resolved.name(), children)
-            .map(|in_pool_with| {
-                currency_definition(resolved.name(), ticker, resolved.definition())
-                    .chain(pairs_group.chain(in_pool_with).map(Cow::Borrowed))
+            .map(|in_pool_with| GeneratedEntry {
+                variant: self.generator.variant(resolved.name()),
+                first_entry: self.generator.first(resolved.name()),
+                next_entry: self.generator.next(resolved.name()),
+                filter_map_entry: self.generator.filter_map(resolved.name()),
+                find_map_entry: self.generator.find_map(resolved.name()),
+                currency_definition: currency_definition(
+                    resolved.name(),
+                    ticker,
+                    resolved.definition(),
+                )
+                .chain(pairs_group.chain(in_pool_with).map(Cow::Borrowed)),
             })
     }
 }
+
+pub(super) struct GeneratedEntry<
+    Variants,
+    FirstEntry,
+    NextEntry,
+    FilterMapEntry,
+    FindMapEntry,
+    CurrencyDefinition,
+> {
+    pub variant: Variants,
+    pub first_entry: FirstEntry,
+    pub next_entry: NextEntry,
+    pub filter_map_entry: FilterMapEntry,
+    pub find_map_entry: FindMapEntry,
+    pub currency_definition: CurrencyDefinition,
+}
+
+pub(super) type GeneratedEntryResult<
+    Variants,
+    FirstEntry,
+    NextEntry,
+    FilterMapEntry,
+    FindMapEntry,
+    CurrencyDefinition,
+> = Result<
+    GeneratedEntry<
+        Variants,
+        FirstEntry,
+        NextEntry,
+        FilterMapEntry,
+        FindMapEntry,
+        CurrencyDefinition,
+    >,
+>;
 
 fn currency_definition<'r>(
     name: &'r str,
@@ -147,41 +259,41 @@ fn currency_definition<'r>(
 ) -> impl Iterator<Item = Cow<'r, str>> {
     [
         r#"
-#[derive(
-    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, serde::Serialize,
-    serde::Deserialize,
-)]
-#[serde(deny_unknown_fields, rename_all = "snake_case")]
-pub struct "#,
+    #[derive(
+        Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, serde::Serialize,
+        serde::Deserialize,
+    )]
+    #[serde(deny_unknown_fields, rename_all = "snake_case")]
+    pub struct "#,
         name,
-        r#"(currency::CurrencyDTO<super::Group>);
+        r#"(currency::CurrencyDTO<super::super::Group>);
 
-impl currency::CurrencyDef for "#,
+    impl currency::CurrencyDef for "#,
         name,
         r#" {
-    type Group = super::Group;
+        type Group = super::super::Group;
 
-    fn dto() -> &'static currency::CurrencyDTO<Self::Group> {
-        const {
-            &currency::CurrencyDTO::new(
-                const {
-                    &currency::Definition::new(
-                        ""#,
+        fn dto() -> &'static currency::CurrencyDTO<Self::Group> {
+            const {
+                &currency::CurrencyDTO::new(
+                    const {
+                        &currency::Definition::new(
+                            ""#,
         ticker,
         r#"",
-                        // "#,
+                            // "#,
         currency.host().path(),
         r#"
-                        ""#,
+                            ""#,
         currency.host().symbol(),
         r#"",
-                        // "#,
+                            // "#,
         currency.dex().path(),
         r#"
-                        ""#,
+                            ""#,
         currency.dex().symbol(),
         r#"",
-                        "#,
+                            "#,
     ]
     .into_iter()
     .map(Cow::Borrowed)
@@ -192,12 +304,12 @@ impl currency::CurrencyDef for "#,
         const {
             Cow::Borrowed(
                 r#",
-                    )
-                },
-            )
+                        )
+                    },
+                )
+            }
         }
     }
-}
 "#,
             )
         },
