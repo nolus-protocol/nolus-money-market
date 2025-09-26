@@ -62,7 +62,7 @@ impl<Lpn> Loan<Lpn> {
 mod test {
     use currencies::Lpn;
     use finance::{
-        coin::Coin, duration::Duration, fraction::Fraction, percent::Percent100, zero::Zero,
+        coin::Coin, duration::Duration, fraction::FractionLegacy, percent::Percent100, zero::Zero,
     };
     use sdk::cosmwasm_std::Timestamp;
 

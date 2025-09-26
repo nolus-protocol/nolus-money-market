@@ -2,7 +2,7 @@ use currencies::{Lpn, testing::PaymentC3};
 use finance::{
     coin::Coin,
     duration::Duration,
-    fraction::Fraction,
+    fraction::FractionLegacy,
     liability::Liability,
     percent::Percent100,
     price::{self, Price},
@@ -855,7 +855,9 @@ mod test_debt {
 mod test_steadiness {
 
     use currencies::Lpn;
-    use finance::{coin::Coin, fraction::Fraction, percent::Percent100, range::RightOpenRange};
+    use finance::{
+        coin::Coin, fraction::FractionLegacy, percent::Percent100, range::RightOpenRange,
+    };
 
     use crate::{
         api::position::{ChangeCmd, ClosePolicyChange},
