@@ -13,6 +13,19 @@ pub trait Fraction<U> {
 
 pub trait Unit
 where
-    Self: Copy + Debug + PartialOrd + Zero,
+    Self: Copy + Debug + PartialOrd + Sized + Zero,
 {
+    type Times: Copy + Debug + PartialEq + Zero;
+
+    fn gcd(self, other: Self) -> Self::Times;
+
+    /// Divides `self` by the given `scale`
+    ///
+    /// [scale] should should be non zero
+    fn scale_down(self, scale: Self::Times) -> Self;
+
+    /// Returns the remainder of `self` divided by `scale`
+    ///
+    /// [scale] should should be non zero
+    fn modulo(self, scale: Self::Times) -> Self::Times;
 }
