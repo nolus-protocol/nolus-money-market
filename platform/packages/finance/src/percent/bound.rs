@@ -171,7 +171,7 @@ mod test {
 
     use crate::{
         coin::Coin,
-        fraction::Fraction,
+        fraction::FractionLegacy,
         percent::{Percent, Percent100, Units},
         rational::Rational,
     };

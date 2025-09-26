@@ -1,6 +1,6 @@
 use std::{cmp, collections::HashMap};
 
-use finance::{duration::Duration, fraction::Fraction, price::Price, ratio::Ratio};
+use finance::{duration::Duration, fraction::FractionLegacy, price::Price, ratio::Ratio};
 use sdk::cosmwasm_std::{Addr, Timestamp};
 
 use super::observation::Observation;
@@ -119,7 +119,7 @@ where
                 u128::try_from(prices_number)
                     .expect("prices_number is already restricted to fit in u128::MAX"),
             );
-            let avg = Fraction::of(&part, sum);
+            let avg = FractionLegacy::of(&part, sum);
             self.last_sample = Sample { price: Some(avg) };
         }
 
