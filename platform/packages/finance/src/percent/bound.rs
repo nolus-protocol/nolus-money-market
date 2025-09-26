@@ -173,7 +173,7 @@ mod test {
         coin::Coin,
         fraction::FractionLegacy,
         percent::{Percent, Percent100, Units},
-        rational::Rational,
+        rational::RationalLegacy,
     };
 
     #[test]
