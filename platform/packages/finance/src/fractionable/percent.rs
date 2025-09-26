@@ -4,7 +4,7 @@ use crate::{
     ratio::RatioLegacy,
 };
 
-use super::{Fractionable, HigherRank};
+use super::{FractionableLegacy, HigherRank};
 
 impl<T> HigherRank<T> for u32
 where
@@ -13,7 +13,7 @@ where
     type Type = u64;
 }
 
-impl<const UPPER_BOUND: Units> Fractionable<Units> for BoundPercent<UPPER_BOUND> {
+impl<const UPPER_BOUND: Units> FractionableLegacy<Units> for BoundPercent<UPPER_BOUND> {
     #[track_caller]
     fn safe_mul<R>(self, ratio: &R) -> Self
     where
@@ -24,7 +24,7 @@ impl<const UPPER_BOUND: Units> Fractionable<Units> for BoundPercent<UPPER_BOUND>
     }
 }
 
-impl<C, const UPPER_BOUND: Units> Fractionable<Coin<C>> for BoundPercent<UPPER_BOUND> {
+impl<C, const UPPER_BOUND: Units> FractionableLegacy<Coin<C>> for BoundPercent<UPPER_BOUND> {
     #[track_caller]
     fn safe_mul<F>(self, fraction: &F) -> Self
     where
@@ -44,7 +44,7 @@ impl<C, const UPPER_BOUND: Units> Fractionable<Coin<C>> for BoundPercent<UPPER_B
 mod test {
     mod percent {
         use crate::{
-            fractionable::{Fractionable, HigherRank},
+            fractionable::{FractionableLegacy, HigherRank},
             percent::{Percent, Percent100, Units},
         };
 
@@ -98,7 +98,7 @@ mod test {
 
         use crate::{
             coin::Coin,
-            fractionable::Fractionable,
+            fractionable::FractionableLegacy,
             percent::{Percent, Units},
             ratio::SimpleFraction,
         };
@@ -107,7 +107,7 @@ mod test {
         fn safe_mul() {
             assert_eq!(
                 Percent::from_permille(Units::MAX),
-                Fractionable::<Coin<_>>::safe_mul(
+                FractionableLegacy::<Coin<_>>::safe_mul(
                     Percent::from_permille(Units::MAX),
                     &SimpleFraction::new(
                         Coin::<SuperGroupTestC1>::new(u128::MAX),
@@ -117,7 +117,7 @@ mod test {
             );
             assert_eq!(
                 Percent::from_percent(20),
-                Fractionable::<Coin<_>>::safe_mul(
+                FractionableLegacy::<Coin<_>>::safe_mul(
                     Percent::HUNDRED,
                     &SimpleFraction::new(
                         Coin::<SuperGroupTestC1>::new(1),
@@ -127,7 +127,7 @@ mod test {
             );
             assert_eq!(
                 Percent::from_permille(225),
-                Fractionable::<Coin<_>>::safe_mul(
+                FractionableLegacy::<Coin<_>>::safe_mul(
                     Percent::from_permille(150),
                     &SimpleFraction::new(
                         Coin::<SuperGroupTestC1>::new(3),
@@ -140,7 +140,7 @@ mod test {
         #[test]
         #[should_panic]
         fn safe_mul_overflow() {
-            Fractionable::<Coin<_>>::safe_mul(
+            FractionableLegacy::<Coin<_>>::safe_mul(
                 Percent::from_percent(1),
                 &SimpleFraction::new(
                     Coin::<SuperGroupTestC1>::new(u128::MAX),

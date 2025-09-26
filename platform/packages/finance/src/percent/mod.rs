@@ -3,7 +3,7 @@ use bound::BoundPercent;
 use crate::{
     error::Error,
     fraction::{Fraction, Unit as FractionUnit},
-    fractionable::Fractionable,
+    fractionable::FractionableLegacy,
     ratio::{Ratio, SimpleFraction},
     rational::Rational,
 };
@@ -25,7 +25,7 @@ impl Percent100 {
 
     pub fn from_ratio<U>(parts: U, total: U) -> Self
     where
-        Self: Fractionable<U>,
+        Self: FractionableLegacy<U>,
         U: FractionUnit,
     {
         debug_assert!(parts <= total);
@@ -41,7 +41,7 @@ impl Percent100 {
 impl Percent {
     pub fn from_fraction<U>(nominator: U, denominator: U) -> Option<Self>
     where
-        Self: Fractionable<U>,
+        Self: FractionableLegacy<U>,
         U: FractionUnit,
     {
         SimpleFraction::new(nominator, denominator).of(Self::HUNDRED)
@@ -51,7 +51,7 @@ impl Percent {
 impl Fraction<Units> for Percent100 {
     fn of<A>(&self, whole: A) -> A
     where
-        A: Fractionable<Units>,
+        A: FractionableLegacy<Units>,
     {
         self.to_ratio().of(whole)
     }
@@ -60,7 +60,7 @@ impl Fraction<Units> for Percent100 {
 impl Rational<Units> for Percent {
     fn of<A>(&self, whole: A) -> Option<A>
     where
-        A: Fractionable<Units>,
+        A: FractionableLegacy<Units>,
     {
         Some(whole.safe_mul(self))
     }
@@ -90,7 +90,7 @@ pub(super) mod test {
     use crate::{
         coin::{Amount, Coin},
         fraction::Fraction,
-        fractionable::Fractionable,
+        fractionable::FractionableLegacy,
         percent::{Percent, Percent100},
         ratio::{Ratio, SimpleFraction},
         rational::Rational,
@@ -183,7 +183,7 @@ pub(super) mod test {
 
     pub(crate) fn test_of<P>(permille: Units, quantity: P, exp: P)
     where
-        P: Clone + Debug + Display + Fractionable<Units> + PartialEq,
+        P: Clone + Debug + Display + FractionableLegacy<Units> + PartialEq,
     {
         let perm = Percent100::from_permille(permille);
         assert_eq!(

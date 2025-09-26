@@ -1,11 +1,13 @@
-use std::fmt::Debug;
+use std::{fmt::Debug, ops::Div};
 
 use serde::{Deserialize, Serialize};
 
 use crate::{
     error::{Error, Result as FinanceResult},
     fraction::{Fraction, Unit as FractionUnit},
-    fractionable::Fractionable,
+    fractionable::{
+        Fractionable, FractionableLegacy, IntoMax, TryFromMax, checked_mul::CheckedMul,
+    },
     rational::Rational,
     zero::Zero,
 };
@@ -68,7 +70,7 @@ where
 {
     fn of<A>(&self, whole: A) -> A
     where
-        A: Fractionable<U>,
+        A: FractionableLegacy<U>,
     {
         self.0
             .of(whole)
@@ -102,6 +104,25 @@ where
             denominator,
         }
     }
+
+    pub fn checked_mul<M>(&self, rhs: M) -> Option<M>
+    where
+        U: IntoMax<M::CommonDouble>,
+        M: Fractionable<U>,
+    {
+        if self.nominator == self.denominator {
+            Some(rhs)
+        } else {
+            let nominator_max = self.nominator.into();
+            let rhs_max = rhs.into();
+            let denominator_max = self.denominator.into();
+
+            nominator_max
+                .checked_mul(rhs_max)
+                .map(|product| product.div(denominator_max))
+                .and_then(TryFromMax::try_from)
+        }
+    }
 }
 
 impl<U, T> RatioLegacy<U> for SimpleFraction<T>
@@ -120,11 +141,10 @@ where
 impl<U, T> Rational<U> for SimpleFraction<T>
 where
     Self: RatioLegacy<U>,
-    T: FractionUnit,
 {
     fn of<A>(&self, whole: A) -> Option<A>
     where
-        A: Fractionable<U>,
+        A: FractionableLegacy<U>,
     {
         Some(whole.safe_mul(self))
     }
