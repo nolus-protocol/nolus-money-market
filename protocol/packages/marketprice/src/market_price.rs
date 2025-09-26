@@ -434,7 +434,7 @@ mod test {
                 NOW,
                 TOTAL_FEEDERS,
                 [
-                    &currency::dto::<SuperGroupTestC5, _>(),
+                    &currency::dto::<SuperGroupTestC4, _>(),
                     &currency::dto::<SuperGroupTestC1, _>(),
                 ]
                 .into_iter()
@@ -459,12 +459,12 @@ mod test {
 
         assert_eq!(
             Err(PriceFeedsError::NoPrice()),
-            feeds.price::<SuperGroupTestC1, SuperGroup, _>(
+            feeds.price::<SuperGroupTestC4, SuperGroup, _>(
                 NOW,
                 TOTAL_FEEDERS,
                 [
                     &currency::dto::<SuperGroupTestC5, _>(),
-                    &currency::dto::<SuperGroupTestC1, _>(),
+                    &currency::dto::<SuperGroupTestC4, _>(),
                 ]
                 .into_iter()
             )
