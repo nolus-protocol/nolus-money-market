@@ -1,8 +1,10 @@
-use std::{borrow::Borrow, iter};
+use std::borrow::Borrow;
 
 use serde::{Deserialize, Serialize};
 
-use currency::{FilterMapT, FindMapT, MemberOf};
+use currency::{GroupFilterMapT, GroupFindMapT, MemberOf, SubFilterAdapter, SubGroupFindAdapter};
+
+use crate::{lease::Group as LeaseGroup, lpn::Group as LpnGroup, native::Group as NativeGroup};
 
 pub use self::only::Group as OnlyGroup;
 #[cfg(feature = "testing")]
@@ -25,20 +27,37 @@ impl currency::Group for Group {
     type TopG = Self;
 
     fn filter_map<FilterMap, FilterMapRef>(
-        _f: FilterMapRef,
+        filter_map: FilterMapRef,
     ) -> impl Iterator<Item = FilterMap::Outcome>
     where
-        FilterMap: FilterMapT<VisitedG = Self>,
+        FilterMap: GroupFilterMapT<VisitedG = Self>,
         FilterMapRef: Borrow<FilterMap> + Clone,
     {
-        iter::empty()
+        LpnGroup::filter_map(SubFilterAdapter::new(filter_map.clone()))
+            .chain(NativeGroup::filter_map(SubFilterAdapter::new(
+                filter_map.clone(),
+            )))
+            .chain(LeaseGroup::filter_map(SubFilterAdapter::new(
+                filter_map.clone(),
+            )))
+            .chain(OnlyGroup::filter_map(SubFilterAdapter::new(filter_map)))
     }
 
-    fn find_map<FindMap>(_v: FindMap) -> Result<FindMap::Outcome, FindMap>
+    fn find_map<FindMap>(find_map: FindMap) -> Result<FindMap::Outcome, FindMap>
     where
-        FindMap: FindMapT<TargetG = Self>,
+        FindMap: GroupFindMapT<TargetG = Self>,
     {
-        todo!()
+        LpnGroup::find_map(SubGroupFindAdapter::new(find_map))
+            .or_else(|find_map| {
+                NativeGroup::find_map(SubGroupFindAdapter::new(find_map.release_super_map()))
+            })
+            .or_else(|find_map| {
+                LeaseGroup::find_map(SubGroupFindAdapter::new(find_map.release_super_map()))
+            })
+            .or_else(|find_map| {
+                OnlyGroup::find_map(SubGroupFindAdapter::new(find_map.release_super_map()))
+            })
+            .map_err(SubGroupFindAdapter::release_super_map)
     }
 }
 

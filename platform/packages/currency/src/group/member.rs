@@ -1,4 +1,4 @@
-use crate::{CurrencyDef, FilterMapT, FindMapT, Group};
+use crate::{CurrencyDef, Group, GroupFilterMapT, GroupFindMapT};
 
 /// Member type of a group
 ///
@@ -38,9 +38,9 @@ where
 
     fn filter_map<FilterMap>(&self, filter_map: &FilterMap) -> Option<FilterMap::Outcome>
     where
-        FilterMap: FilterMapT<VisitedG = G>;
+        FilterMap: GroupFilterMapT<VisitedG = G>;
 
     fn find_map<FindMap>(&self, find_map: FindMap) -> Result<FindMap::Outcome, FindMap>
     where
-        FindMap: FindMapT<TargetG = G>;
+        FindMap: GroupFindMapT<TargetG = G>;
 }

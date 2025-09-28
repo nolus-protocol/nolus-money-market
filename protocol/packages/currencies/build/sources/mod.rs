@@ -188,10 +188,7 @@ where
     File::create(output_directory.join(FILENAME))
         .with_context(|| format!("Failed to open {FILENAME:?} for writing!"))?
         .write_fmt(format_args!(
-            "// @generated
-
-pub type Stable = {module}::{name};
-"
+            "// @generated\n\npub type Stable = {module}::{name};\n"
         ))
         .with_context(move || format!("Failed to write contents to {FILENAME:?}!"))
 }

@@ -1,10 +1,10 @@
-use crate::{FindMapT, Group, group::GroupMember};
+use crate::{Group, GroupFindMapT, GroupMember};
 
 pub fn find_map<G, GroupMemberImpl, FindMap>(f: FindMap) -> Result<FindMap::Outcome, FindMap>
 where
     G: Group,
     GroupMemberImpl: GroupMember<G>,
-    FindMap: FindMapT<TargetG = G>,
+    FindMap: GroupFindMapT<TargetG = G>,
 {
     let mut may_next = GroupMemberImpl::first();
     let mut result = Err(f);

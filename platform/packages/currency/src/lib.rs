@@ -5,9 +5,16 @@ pub use crate::{
     dto::{CurrencyDTO, dto, to_string},
     from_symbol::{CurrencyVisit, SingleVisitor},
     from_symbol_any::GroupVisit,
-    group::{FilterMapT, FindMapT, Group, MaybeAnyVisitResult, MemberOf},
+    group::{
+        CurrenciesMapping, FilterMapT as GroupFilterMapT, FindMapT as GroupFindMapT, Group,
+        GroupMember, MaybeAnyVisitResult, MemberOf, SubFilterAdapter, SubGroupFindAdapter,
+        find_map as group_find_map,
+    },
     matcher::Matcher,
-    pairs::{FindMapT as PairsFindMapT, MaybePairsVisitorResult, PairsGroup, PairsVisitor},
+    pairs::{
+        FindMapT as PairsFindMapT, MaybePairsVisitorResult, PairsGroup, PairsGroupMember,
+        PairsVisitor, find_map as pairs_find_map,
+    },
     symbol::{BankSymbols, DexSymbols, Symbol, Tickers},
     visit_any::{AnyVisitor, AnyVisitorPair, InPoolWith, visit_any_on_currencies},
 };

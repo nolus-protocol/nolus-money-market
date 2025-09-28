@@ -1,15 +1,10 @@
 use std::{borrow::Cow, iter};
 
 use anyhow::{Context as _, Result, anyhow};
-use either::Either;
 
 use crate::currencies_tree::{self, CurrenciesTree};
 
-use super::{super::super::generator, GeneratedSourceEntry};
-
-pub(super) type GenerateEntryResult<'dex_currency, MaybeVisit, CurrencyDefinition> = Result<
-    GeneratedSourceEntry<Either<MaybeVisit, iter::Empty<&'dex_currency str>>, CurrencyDefinition>,
->;
+use super::super::super::generator::{self, GroupMemberEntry};
 
 pub(super) struct CurrencyDefinition<
     'currencies_tree,
@@ -22,10 +17,6 @@ pub(super) struct CurrencyDefinition<
 > {
     currencies_tree: &'currencies_tree CurrenciesTree<'parents_of, 'parent, 'children_of, 'child>,
     generator: &'generator Generator,
-    visited_group: &'static str,
-    visit_function: &'static str,
-    matcher_parameter: &'static str,
-    visitor_parameter: &'static str,
 }
 
 impl<'currencies_tree, 'parents_of, 'parent, 'children_of, 'child, 'generator, Generator>
@@ -48,39 +39,11 @@ impl<'currencies_tree, 'parents_of, 'parent, 'children_of, 'child, 'generator, G
             'child,
         >,
         generator: &'generator Generator,
-        visited_group: &'static str,
-        visit_function: &'static str,
-        matcher_parameter: &'static str,
-        visitor_parameter: &'static str,
     ) -> Self {
         Self {
             currencies_tree,
             generator,
-            visited_group,
-            visit_function,
-            matcher_parameter,
-            visitor_parameter,
         }
-    }
-
-    #[inline]
-    pub const fn visited_group(&self) -> &'static str {
-        self.visited_group
-    }
-
-    #[inline]
-    pub const fn visit_function(&self) -> &'static str {
-        self.visit_function
-    }
-
-    #[inline]
-    pub const fn matcher_parameter(&self) -> &'static str {
-        self.matcher_parameter
-    }
-
-    #[inline]
-    pub const fn visitor_parameter(&self) -> &'static str {
-        self.visitor_parameter
     }
 }
 
@@ -90,24 +53,58 @@ impl<
     'dex_currency_ticker,
     'dex_currency_definition,
     'currencies_tree,
+    'parents,
+    'parent,
     'generator,
     Generator,
-> CurrencyDefinition<'currencies_tree, '_, '_, '_, '_, 'generator, Generator>
+> CurrencyDefinition<'currencies_tree, 'parents, 'parent, '_, '_, 'generator, Generator>
 where
     'dex_currencies: 'definition,
     'dex_currency_ticker: 'dex_currencies,
     'dex_currency_definition: 'dex_currencies,
     Generator: generator::Resolver<'dex_currencies, 'definition>
-        + generator::MaybeVisit
+        + generator::GroupMember<'dex_currencies, 'dex_currency_ticker, 'dex_currency_definition>
         + generator::PairsGroup<'dex_currencies, 'dex_currency_ticker, 'dex_currency_definition>
         + generator::InPoolWith<'dex_currencies, 'dex_currency_ticker, 'dex_currency_definition>,
 {
     pub(super) fn generate_entry<'r>(
         &self,
         ticker: &'r str,
-    ) -> GenerateEntryResult<
-        'dex_currencies,
-        impl IntoIterator<Item = &'dex_currencies str> + use<'dex_currencies, Generator>,
+    ) -> GeneratedEntryResult<
+        impl IntoIterator<Item = &'dex_currencies str>
+        + use<'dex_currencies, 'dex_currency_ticker, 'dex_currency_definition, 'generator, Generator>,
+        impl IntoIterator<Item = &'dex_currencies str>
+        + use<'dex_currencies, 'dex_currency_ticker, 'dex_currency_definition, 'generator, Generator>,
+        GroupMemberEntry<
+            impl IntoIterator<Item = &'dex_currencies str>
+            + use<
+                'dex_currencies,
+                'dex_currency_ticker,
+                'dex_currency_definition,
+                'generator,
+                Generator,
+            >,
+            impl IntoIterator<Item = &'dex_currencies str>
+            + use<
+                'dex_currencies,
+                'dex_currency_ticker,
+                'dex_currency_definition,
+                'generator,
+                Generator,
+            >,
+            impl IntoIterator<Item = &'dex_currencies str>
+            + use<
+                'dex_currencies,
+                'dex_currency_ticker,
+                'dex_currency_definition,
+                'generator,
+                Generator,
+            >,
+        >,
+        impl IntoIterator<Item = &'dex_currencies str>
+        + use<'dex_currencies, 'dex_currency_ticker, 'dex_currency_definition, 'generator, Generator>,
+        impl IntoIterator<Item = &'dex_currencies str>
+        + use<'dex_currencies, 'dex_currency_ticker, 'dex_currency_definition, 'generator, Generator>,
         impl Iterator<Item = Cow<'r, str>>
         + use<
             'r,
@@ -115,12 +112,14 @@ where
             'dex_currency_ticker,
             'dex_currency_definition,
             'currencies_tree,
+            'parent,
             'generator,
             Generator,
         >,
     >
     where
         'definition: 'r,
+        'parent: 'r,
     {
         let parents = self.currencies_tree.parents(ticker);
 
@@ -136,14 +135,46 @@ where
         }
     }
 
-    fn generate_entry_unchecked<'r, 'children, 'child, 'parents, 'parent>(
+    fn generate_entry_unchecked<'r, 'children, 'child>(
         &self,
         ticker: &'r str,
         children: &'children currencies_tree::Children<'child>,
         parents: &'parents currencies_tree::Parents<'parent>,
-    ) -> GenerateEntryResult<
-        'dex_currencies,
-        impl IntoIterator<Item = &'dex_currencies str> + use<'dex_currencies, Generator>,
+    ) -> GeneratedEntryResult<
+        impl IntoIterator<Item = &'dex_currencies str>
+        + use<'dex_currencies, 'dex_currency_ticker, 'dex_currency_definition, 'generator, Generator>,
+        impl IntoIterator<Item = &'dex_currencies str>
+        + use<'dex_currencies, 'dex_currency_ticker, 'dex_currency_definition, 'generator, Generator>,
+        GroupMemberEntry<
+            impl IntoIterator<Item = &'dex_currencies str>
+            + use<
+                'dex_currencies,
+                'dex_currency_ticker,
+                'dex_currency_definition,
+                'generator,
+                Generator,
+            >,
+            impl IntoIterator<Item = &'dex_currencies str>
+            + use<
+                'dex_currencies,
+                'dex_currency_ticker,
+                'dex_currency_definition,
+                'generator,
+                Generator,
+            >,
+            impl IntoIterator<Item = &'dex_currencies str>
+            + use<
+                'dex_currencies,
+                'dex_currency_ticker,
+                'dex_currency_definition,
+                'generator,
+                Generator,
+            >,
+        >,
+        impl IntoIterator<Item = &'dex_currencies str>
+        + use<'dex_currencies, 'dex_currency_ticker, 'dex_currency_definition, 'generator, Generator>,
+        impl IntoIterator<Item = &'dex_currencies str>
+        + use<'dex_currencies, 'dex_currency_ticker, 'dex_currency_definition, 'generator, Generator>,
         impl Iterator<Item = Cow<'r, str>>
         + use<
             'r,
@@ -153,50 +184,73 @@ where
             'currencies_tree,
             'children,
             'parents,
+            'parent,
             'generator,
             Generator,
         >,
     >
     where
         'definition: 'r,
+        'parent: 'r,
     {
-        self.generator
+        let resolved = self
+            .generator
             .resolve(ticker)
-            .context("Failed to generate currency definition sources!")
-            .and_then(|resolved| {
-                self.generator
-                    .pairs_group(resolved.name(), parents)
-                    .and_then(|pairs_group| {
-                        self.generator
-                            .in_pool_with(resolved.name(), children)
-                            .map(|in_pool_with| GeneratedSourceEntry {
-                                maybe_visit: if <Generator as generator::MaybeVisit>::GENERATE {
-                                    Either::Left([
-                                        self.visit_function,
-                                        "::<_, self::definitions::",
-                                        resolved.name(),
-                                        ", ",
-                                        self.visited_group,
-                                        ", _>(",
-                                        self.matcher_parameter,
-                                        ", ",
-                                        self.visitor_parameter,
-                                        ")",
-                                    ])
-                                } else {
-                                    Either::Right(iter::empty())
-                                },
-                                currency_definition: currency_definition(
-                                    resolved.name(),
-                                    ticker,
-                                    resolved.definition(),
-                                )
-                                .chain(pairs_group.chain(in_pool_with).map(Cow::Borrowed)),
-                            })
-                    })
+            .context("Failed to generate currency definition sources!")?;
+
+        let pairs_group = self.generator.pairs_group(resolved.name(), parents)?;
+
+        self.generator
+            .in_pool_with(resolved.name(), children)
+            .map(|in_pool_with| GeneratedEntry {
+                variant: self.generator.variant(resolved.name()),
+                first_entry: self.generator.first(resolved.name()),
+                next_entry: self.generator.next(resolved.name()),
+                filter_map_entry: self.generator.filter_map(resolved.name()),
+                find_map_entry: self.generator.find_map(resolved.name()),
+                currency_definition: currency_definition(
+                    resolved.name(),
+                    ticker,
+                    resolved.definition(),
+                )
+                .chain(pairs_group.chain(in_pool_with).map(Cow::Borrowed)),
             })
     }
 }
+
+pub(super) struct GeneratedEntry<
+    Variants,
+    FirstEntry,
+    NextEntry,
+    FilterMapEntry,
+    FindMapEntry,
+    CurrencyDefinition,
+> {
+    pub variant: Variants,
+    pub first_entry: FirstEntry,
+    pub next_entry: NextEntry,
+    pub filter_map_entry: FilterMapEntry,
+    pub find_map_entry: FindMapEntry,
+    pub currency_definition: CurrencyDefinition,
+}
+
+pub(super) type GeneratedEntryResult<
+    Variants,
+    FirstEntry,
+    NextEntry,
+    FilterMapEntry,
+    FindMapEntry,
+    CurrencyDefinition,
+> = Result<
+    GeneratedEntry<
+        Variants,
+        FirstEntry,
+        NextEntry,
+        FilterMapEntry,
+        FindMapEntry,
+        CurrencyDefinition,
+    >,
+>;
 
 fn currency_definition<'r>(
     name: &'r str,

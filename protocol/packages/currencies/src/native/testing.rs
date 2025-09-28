@@ -1,11 +1,50 @@
+use currency::{CurrencyDef, GroupFilterMapT, GroupFindMapT};
+
+use self::definitions::Nls;
+
+use super::Group as NativeGroup;
+
+pub(super) struct GroupMember;
+
+impl currency::GroupMember<NativeGroup> for GroupMember {
+    fn first() -> Option<Self> {
+        Some(Self)
+    }
+
+    fn next(&self) -> Option<Self> {
+        let Self {} = self;
+
+        None
+    }
+
+    fn filter_map<FilterMap>(&self, filter_map: &FilterMap) -> Option<FilterMap::Outcome>
+    where
+        FilterMap: GroupFilterMapT<VisitedG = NativeGroup>,
+    {
+        let Self {} = self;
+
+        filter_map.on::<Nls>(Nls::dto())
+    }
+
+    fn find_map<FindMap>(&self, find_map: FindMap) -> Result<FindMap::Outcome, FindMap>
+    where
+        FindMap: GroupFindMapT<TargetG = NativeGroup>,
+    {
+        find_map.on::<Nls>(Nls::dto())
+    }
+}
+
 pub(super) mod definitions {
     use serde::{Deserialize, Serialize};
 
-    use currency::{CurrencyDTO, CurrencyDef, Definition, InPoolWith, PairsFindMapT, PairsGroup};
+    use currency::{
+        CurrencyDTO, CurrencyDef, Definition, InPoolWith, PairsFindMapT, PairsGroup,
+        PairsGroupMember,
+    };
 
-    use crate::{lease::LeaseC5, payment::Group as PaymentGroup};
+    use crate::{lease::LeaseC5, lpn::Lpn, payment::Group as PaymentGroup};
 
-    use super::super::Group as NativeGroup;
+    use super::NativeGroup;
 
     #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
     #[serde(deny_unknown_fields, rename_all = "snake_case")]
@@ -22,11 +61,35 @@ pub(super) mod definitions {
     impl PairsGroup for Nls {
         type CommonGroup = PaymentGroup;
 
-        fn find_map<FindMap>(_f: FindMap) -> Result<FindMap::Outcome, FindMap>
+        fn find_map<FindMap>(find_map: FindMap) -> Result<FindMap::Outcome, FindMap>
         where
             FindMap: PairsFindMapT<Pivot = Self>,
         {
-            todo!("(Lpn)")
+            struct Pairs;
+
+            impl PairsGroupMember for Pairs {
+                type Group = Nls;
+
+                fn first() -> Option<Self> {
+                    Some(Self)
+                }
+
+                fn next(&self) -> Option<Self> {
+                    None
+                }
+
+                fn find_map<PairsFindMap>(
+                    &self,
+                    find_map: PairsFindMap,
+                ) -> Result<PairsFindMap::Outcome, PairsFindMap>
+                where
+                    PairsFindMap: PairsFindMapT<Pivot = Self::Group>,
+                {
+                    find_map.on::<Lpn>(<Lpn>::dto())
+                }
+            }
+
+            currency::pairs_find_map::<Pairs, _>(find_map)
         }
     }
 

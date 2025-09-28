@@ -1,6 +1,8 @@
 use std::{borrow::Borrow, marker::PhantomData};
 
-use crate::{CurrencyDTO, CurrencyDef, FilterMapT, FindMapT, Group, MemberOf, PairsGroup};
+use crate::{
+    CurrencyDTO, CurrencyDef, Group, GroupFilterMapT, GroupFindMapT, MemberOf, PairsGroup,
+};
 
 /// Adapter of [`FilterMapT<SuperG>`] to [`FilterMapT<G>`]
 ///
@@ -36,12 +38,12 @@ where
     }
 }
 
-impl<G, SuperG, FilterMap, FilterMapRef> FilterMapT
+impl<G, SuperG, FilterMap, FilterMapRef> GroupFilterMapT
     for SubFilterAdapter<G, SuperG, FilterMap, FilterMapRef>
 where
     G: Group<TopG = SuperG>,
     SuperG: Group<TopG = G::TopG>,
-    FilterMap: FilterMapT<VisitedG = SuperG>,
+    FilterMap: GroupFilterMapT<VisitedG = SuperG>,
     FilterMapRef: Borrow<FilterMap>,
 {
     type VisitedG = G;
@@ -72,18 +74,18 @@ impl<G, SuperG, FindMap> SubGroupFindAdapter<G, SuperG, FindMap>
 where
     G: Group<TopG = SuperG>,
     SuperG: Group<TopG = G::TopG>,
-    FindMap: FindMapT<TargetG = SuperG>,
+    FindMap: GroupFindMapT<TargetG = SuperG>,
 {
     pub fn release_super_map(self) -> FindMap {
         self.2
     }
 }
 
-impl<G, SuperG, FindMap> FindMapT for SubGroupFindAdapter<G, SuperG, FindMap>
+impl<G, SuperG, FindMap> GroupFindMapT for SubGroupFindAdapter<G, SuperG, FindMap>
 where
     G: Group<TopG = SuperG>,
     SuperG: Group<TopG = G::TopG>,
-    FindMap: FindMapT<TargetG = SuperG>,
+    FindMap: GroupFindMapT<TargetG = SuperG>,
 {
     type TargetG = G;
     type Outcome = FindMap::Outcome;
