@@ -69,7 +69,7 @@ trait PriceFactory {
 
     fn try_obtain_price<C>(self, amount: Coin<C>) -> Result<Price<C, Self::QuoteC>, Error>
     where
-        C: Currency + MemberOf<Self::G>;
+        C: Currency;
 }
 
 struct UncheckedConversion<BaseG, QuoteC>(PhantomData<BaseG>, Coin<QuoteC>)
@@ -80,14 +80,13 @@ impl<BaseG, QuoteC> PriceFactory for UncheckedConversion<BaseG, QuoteC>
 where
     BaseG: Group,
     QuoteC: CurrencyDef,
-    QuoteC::Group: MemberOf<BaseG::TopG>,
 {
     type G = BaseG;
     type QuoteC = QuoteC;
 
     fn try_obtain_price<C>(self, amount: Coin<C>) -> Result<Price<C, Self::QuoteC>, Error>
     where
-        C: Currency + MemberOf<Self::G>,
+        C: Currency,
     {
         Ok(Price::new(amount, self.1))
     }
@@ -108,7 +107,7 @@ where
 
     fn try_obtain_price<C>(self, amount: Coin<C>) -> Result<Price<C, Self::QuoteC>, Error>
     where
-        C: Currency + MemberOf<Self::G>,
+        C: Currency,
     {
         Price::try_new(amount, self.1)
     }

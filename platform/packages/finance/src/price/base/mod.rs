@@ -25,7 +25,7 @@ pub struct BasePrice<BaseG, QuoteC, QuoteG>
 where
     BaseG: Group,
     QuoteC: CurrencyDef,
-    QuoteC::Group: MemberOf<QuoteG> + MemberOf<BaseG::TopG>,
+    QuoteC::Group: MemberOf<QuoteG>,
     QuoteG: Group,
 {
     amount: CoinDTO<BaseG>,
@@ -39,7 +39,7 @@ impl<BaseG, QuoteC, QuoteG> BasePrice<BaseG, QuoteC, QuoteG>
 where
     BaseG: Group,
     QuoteC: CurrencyDef,
-    QuoteC::Group: MemberOf<QuoteG> + MemberOf<BaseG::TopG>,
+    QuoteC::Group: MemberOf<QuoteG>,
     QuoteG: Group,
 {
     pub fn from_price<C>(price: &Price<C, QuoteC>, c_dto: CurrencyDTO<BaseG>) -> Self
@@ -136,7 +136,7 @@ where
     C::Group: MemberOf<G>,
     G: Group,
     QuoteC: CurrencyDef,
-    QuoteC::Group: MemberOf<QuoteG> + MemberOf<G::TopG>,
+    QuoteC::Group: MemberOf<QuoteG>,
     QuoteG: Group,
 {
     fn from(price: Price<C, QuoteC>) -> Self {
@@ -150,7 +150,7 @@ where
     C::Group: MemberOf<G>,
     G: Group,
     QuoteC: CurrencyDef,
-    QuoteC::Group: MemberOf<QuoteG> + MemberOf<G::TopG>,
+    QuoteC::Group: MemberOf<QuoteG>,
     QuoteG: Group,
 {
     fn from(price: &Price<C, QuoteC>) -> Self {
@@ -164,7 +164,7 @@ where
     C::Group: MemberOf<G>,
     G: Group,
     QuoteC: CurrencyDef,
-    QuoteC::Group: MemberOf<QuoteG> + MemberOf<G::TopG>,
+    QuoteC::Group: MemberOf<QuoteG>,
     QuoteG: Group,
 {
     type Error = Error;
@@ -180,7 +180,7 @@ where
     C::Group: MemberOf<G>,
     G: Group,
     QuoteC: CurrencyDef,
-    QuoteC::Group: MemberOf<QuoteG> + MemberOf<G::TopG>,
+    QuoteC::Group: MemberOf<QuoteG>,
     QuoteG: Group,
 {
     type Error = Error;
@@ -285,7 +285,7 @@ mod test_invariant {
     where
         G: Group,
         QuoteC: CurrencyDef,
-        QuoteC::Group: MemberOf<QuoteG> + MemberOf<G::TopG>,
+        QuoteC::Group: MemberOf<QuoteG>,
         QuoteG: Group,
     {
         assert!(matches!(
@@ -302,7 +302,7 @@ mod test_invariant {
     where
         G: Group,
         QuoteC: CurrencyDef,
-        QuoteC::Group: MemberOf<QuoteG> + MemberOf<G::TopG>,
+        QuoteC::Group: MemberOf<QuoteG>,
         QuoteG: Group + MemberOf<G>,
     {
         load_with_group::<G, QuoteC, QuoteG>(json)
@@ -312,7 +312,7 @@ mod test_invariant {
     where
         G: Group,
         QuoteC: CurrencyDef,
-        QuoteC::Group: MemberOf<QuoteG> + MemberOf<G::TopG>,
+        QuoteC::Group: MemberOf<QuoteG>,
         QuoteG: Group + MemberOf<G>,
     {
         from_json::<BasePrice<G, QuoteC, QuoteG>>(json)

@@ -28,7 +28,7 @@ impl<BaseG, QuoteC, QuoteG> TryFrom<BasePrice<BaseG, QuoteG>>
 where
     BaseG: Group,
     QuoteC: CurrencyDef,
-    QuoteC::Group: MemberOf<QuoteG> + MemberOf<BaseG::TopG>,
+    QuoteC::Group: MemberOf<QuoteG>,
     QuoteG: Group,
 {
     type Error = Error;
@@ -45,7 +45,7 @@ impl<BaseG, QuoteC, QuoteG> From<ValidatedBasePrice<BaseG, QuoteC, QuoteG>>
 where
     BaseG: Group,
     QuoteC: CurrencyDef,
-    QuoteC::Group: MemberOf<QuoteG> + MemberOf<BaseG::TopG>,
+    QuoteC::Group: MemberOf<QuoteG>,
     QuoteG: Group,
 {
     fn from(checked: ValidatedBasePrice<BaseG, QuoteC, QuoteG>) -> Self {
