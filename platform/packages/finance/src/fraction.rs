@@ -21,11 +21,11 @@ where
 
     /// Divides `self` by the given `scale`
     ///
-    /// [scale] should should be non zero
+    /// [scale] should be non zero
     fn scale_down(self, scale: Self::Times) -> Self;
 
     /// Returns the remainder of `self` divided by `scale`
     ///
-    /// [scale] should should be non zero
+    /// [scale] should be non zero
     fn modulo(self, scale: Self::Times) -> Self::Times;
 }

@@ -83,7 +83,7 @@ pub trait RatioLegacy<U> {
     fn total(&self) -> U;
 }
 
-/// [denominator] should should be non zero
+/// [denominator] should be non zero
 #[derive(Clone, Copy, Debug, Deserialize, Serialize)]
 #[cfg_attr(any(test, feature = "testing"), derive(PartialEq))]
 #[serde(rename_all = "snake_case")]
