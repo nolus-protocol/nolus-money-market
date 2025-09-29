@@ -10,7 +10,6 @@ use dex::{
     Response as DexResponse, error::Result as DexResult,
 };
 use finance::duration::Duration;
-use platform::bank::message::Response as MessageResponse;
 use sdk::cosmwasm_std::{ContractInfo, QuerierWrapper, Timestamp};
 use timealarms::stub::TimeAlarmDelivery;
 

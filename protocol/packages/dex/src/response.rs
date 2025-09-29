@@ -118,11 +118,11 @@ where
         _user: &U,
         _check_type: CheckType,
         _contract_info: ContractInfo,
-    ) -> DexResult<()>
+    ) -> StdResult<(), Error>
     where
         U: User,
     {
-        Err(err(self, "check permission")).into()
+        Err(err(self, "check permission"))
     }
 }
 

@@ -29,7 +29,7 @@ use crate::{
     msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg},
     profit::Profit,
     result::ContractResult,
-    state::{Config, State},
+    state::{Config, ConfigManagement as _, State},
 };
 
 const CONTRACT_STORAGE_VERSION: VersionSegment = 1;

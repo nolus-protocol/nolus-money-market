@@ -1,10 +1,10 @@
 use serde::{Deserialize, Serialize};
-use std::fmt::{Display, Formatter};
+use std::fmt::{Display, Formatter, result::Result as StdResult};
 
 use access_control::user::User;
 use dex::{
-    CheckType, ConnectionParams, ContinueResult, Contract, error::Result as DexErrResult, Handler,
-    Response as DexResponse, Result as DexResult, StateLocalOut,
+    CheckType, ConnectionParams, ContinueResult, Contract, Handler, Response as DexResponse,
+    Result as DexResult, StateLocalOut, error::Result as DexErrResult,
 };
 use finance::duration::Duration;
 use platform::{
@@ -244,7 +244,7 @@ impl Handler for State {
         user: &U,
         check_type: CheckType,
         contract_info: ContractInfo,
-    ) -> DexErrResult<()>
+    ) -> StdResult<(), Error>
     where
         U: User,
     {

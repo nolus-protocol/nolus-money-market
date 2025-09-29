@@ -8,16 +8,16 @@ use access_control::{
 };
 use currencies::{Native, Nls, PaymentGroup};
 use dex::{
-    AcceptAnyNonZeroSwap, Account, AnomalyTreatment, CheckType, ContractInSwap, error::Result as DexResult,
-    Handler, Response as DexResponse, Stage, StateLocalOut, SwapOutputTask, SwapTask,
-    WithCalculator, WithOutputTask,
+    AcceptAnyNonZeroSwap, Account, AnomalyTreatment, CheckType, ContractInSwap, Handler,
+    Response as DexResponse, Stage, StateLocalOut, SwapOutputTask, SwapTask, WithCalculator,
+    WithOutputTask, error::Result as DexResult,
 };
 use finance::{
     coin::{Coin, CoinDTO},
     duration::Duration,
 };
 use oracle::stub::SwapPath;
-use platform::bank::{self, BankAccountView, message::Response as MessageResponse};
+use platform::bank::{self, BankAccountView};
 use sdk::cosmwasm_std::{Addr, ContractInfo, Env, QuerierWrapper, Timestamp};
 use timealarms::stub::{TimeAlarmDelivery, TimeAlarmsRef};
 

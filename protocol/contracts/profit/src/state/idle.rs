@@ -11,8 +11,8 @@ use access_control::{
 use currencies::{Nls, PaymentGroup};
 use currency::{Currency, CurrencyDef, Group, MemberOf};
 use dex::{
-    Account, CheckType, Contract, Enterable, Error as DexError, error::Result as DexErrResult, Handler,
-    Response as DexResponse, Result as DexResult, StartLocalLocalState,
+    Account, CheckType, Contract, Enterable, Error as DexError, Handler, Response as DexResponse,
+    Result as DexResult, StartLocalLocalState, error::Result as DexErrResult,
 };
 use finance::{
     coin::{Coin, CoinDTO, WithCoin},
