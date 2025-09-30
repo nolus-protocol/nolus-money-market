@@ -1,12 +1,13 @@
-use std::{borrow::Borrow, iter};
+use std::borrow::Borrow;
 
 use serde::{Deserialize, Serialize};
 
-use currency::{FilterMapT, FindMapT, MemberOf};
+use currency::{CurrenciesMapping, FilterMapT, FindMapT, MemberOf, group_find_map};
 
 use crate::payment::Group as PaymentGroup;
 
-pub use self::impl_mod::Nls;
+use self::impl_mod::GroupMember;
+pub use self::impl_mod::definitions::Nls;
 
 #[cfg(not(feature = "testing"))]
 mod impl_mod {
@@ -27,20 +28,20 @@ impl currency::Group for Group {
     type TopG = PaymentGroup;
 
     fn filter_map<FilterMap, FilterMapRef>(
-        _f: FilterMapRef,
+        filter_map: FilterMapRef,
     ) -> impl Iterator<Item = FilterMap::Outcome>
     where
         FilterMap: FilterMapT<VisitedG = Self>,
         FilterMapRef: Borrow<FilterMap> + Clone,
     {
-        iter::empty()
+        CurrenciesMapping::<_, GroupMember, _, _>::with_filter(filter_map)
     }
 
-    fn find_map<FindMap>(_v: FindMap) -> Result<FindMap::Outcome, FindMap>
+    fn find_map<FindMap>(find_map: FindMap) -> Result<FindMap::Outcome, FindMap>
     where
         FindMap: FindMapT<TargetG = Self>,
     {
-        todo!()
+        group_find_map::<_, GroupMember, _>(find_map)
     }
 }
 

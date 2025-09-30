@@ -140,7 +140,7 @@ impl<
         'dex_currencies,
         'dex_currency_ticker,
         'dex_currency_definition,
-        false,
+        true,
     > {
         self.build(CurrentModule::Lpn)
     }
@@ -236,6 +236,38 @@ where
             self.static_context.dex_currencies,
             ticker,
         )
+    }
+}
+
+pub(super) trait GroupMembers<'dex_currencies, 'dex_currency_ticker, 'dex_currency_definition>
+where
+    'dex_currency_ticker: 'dex_currencies,
+    'dex_currency_definition: 'dex_currencies,
+{
+    fn group_members<'name>(&self, name: &'name str) -> Result<impl Iterator<Item = &'name str>>;
+}
+
+impl<'dex_currencies, 'dex_currency_ticker, 'dex_currency_definition, const PAIRS_GROUP: bool>
+    GroupMembers<'dex_currencies, 'dex_currency_ticker, 'dex_currency_definition>
+    for Generator<
+        '_,
+        '_,
+        '_,
+        'dex_currencies,
+        'dex_currency_ticker,
+        'dex_currency_definition,
+        PAIRS_GROUP,
+    >
+{
+    #[inline]
+    fn group_members<'name>(&self, name: &'name str) -> Result<impl Iterator<Item = &'name str>> {
+        Ok([
+            "
+        Self::",
+            name,
+            " => ",
+        ]
+        .into_iter())
     }
 }
 
@@ -397,7 +429,8 @@ impl<'dex_currencies, 'dex_currency_ticker, 'dex_currency_definition, const PAIR
                 )
                 .map(|resolved| {
                     [
-                        "\nimpl currency::InPoolWith<",
+                        "
+    impl currency::InPoolWith<",
                         resolved.module(),
                         "::",
                         resolved.name(),

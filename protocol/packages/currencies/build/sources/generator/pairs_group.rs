@@ -50,7 +50,7 @@ where
             .map(|resolved| {
                 [
                     "
-                    Self::",
+                        Self::",
                     ticker,
                     " => find_map.on::<",
                     resolved.module(),
@@ -66,11 +66,11 @@ where
         }
 
         let source = [
-            r#"#[allow(non_camel_case_types)]
-        enum "#,
+            r#"#[allow(non_camel_case_types, clippy::upper_case_acronyms)]
+            enum "#,
             ENUM_IDENT,
             r#" {
-            "#,
+                "#,
             ticker,
             ",",
         ]
@@ -78,31 +78,31 @@ where
         .chain(parents.clone().flat_map(|ticker| {
             [
                 "
-            ",
+                ",
                 ticker,
                 ",",
             ]
         }))
         .chain([
             r#"
-        }
+            }
 
-        impl currency::PairsGroupMember for "#,
+            impl currency::PairsGroupMember for "#,
             ENUM_IDENT,
             r#" {
-            type Group = "#,
+                type Group = "#,
             name,
             r#";
 
-            fn first() -> Option<Self> {
-                Some(Self::"#,
+                fn first() -> Option<Self> {
+                    Some(Self::"#,
             ticker,
             r#")
-            }
+                }
 
-            fn next(&self) -> Option<Self> {
-                match self {
-                    Self::"#,
+                fn next(&self) -> Option<Self> {
+                    match *self {
+                        Self::"#,
             ticker,
         ])
         .chain(parents.clone().flat_map(|ticker| {
@@ -110,23 +110,23 @@ where
                 " => Some(Self::",
                 ticker,
                 "),
-                    Self::",
+                        Self::",
                 ticker,
             ]
         }))
         .chain(iter::once(
             " => None,
+                    }
                 }
-            }
 
-            fn find_map<FindMap>(
-                &self,
-                find_map: FindMap,
-            ) -> Result<<FindMap as currency::PairsFindMapT>::Outcome, FindMap>
-            where
-                FindMap: currency::PairsFindMapT<Pivot = Self::Group>,
-            {
-                match self {",
+                fn find_map<FindMap>(
+                    &self,
+                    find_map: FindMap,
+                ) -> Result<<FindMap as currency::PairsFindMapT>::Outcome, FindMap>
+                where
+                    FindMap: currency::PairsFindMapT<Pivot = Self::Group>,
+                {
+                    match *self {",
         ));
 
         iter::once(ticker)
@@ -148,9 +148,9 @@ where
             .map(|find_map_source| {
                 source.chain(find_map_source).chain(iter::once(
                     "
+                    }
                 }
-            }
-        }",
+            }",
                 ))
             })
             .map(Either::Left)
@@ -161,31 +161,31 @@ where
                 ENUM_IDENT,
                 r#" {}
 
-        impl currency::PairsGroupMember for "#,
+            impl currency::PairsGroupMember for "#,
                 ENUM_IDENT,
                 r#" {
-            type Group = "#,
+                type Group = "#,
                 name,
                 r#";
 
-            fn first() -> Option<Self> {
-                None
-            }
+                fn first() -> Option<Self> {
+                    None
+                }
 
-            fn next(&self) -> Option<Self> {
-                match self {}
-            }
+                fn next(&self) -> Option<Self> {
+                    match *self {}
+                }
 
-            fn find_map<FindMap>(
-                &self,
-                _: FindMap,
-            ) -> Result<<FindMap as currency::PairsFindMapT>::Outcome, FindMap>
-            where
-                FindMap: currency::PairsFindMapT<Pivot = Self::Group>,
-            {
-                match self {}
-            }
-        }"#,
+                fn find_map<FindMap>(
+                    &self,
+                    _: FindMap,
+                ) -> Result<<FindMap as currency::PairsFindMapT>::Outcome, FindMap>
+                where
+                    FindMap: currency::PairsFindMapT<Pivot = Self::Group>,
+                {
+                    match *self {}
+                }
+            }"#,
             ]
             .into_iter(),
         ))
@@ -193,29 +193,29 @@ where
     .map(|sources| {
         [
             r#"
-impl currency::PairsGroup for "#,
+    impl currency::PairsGroup for "#,
             name,
             r#" {
-    type CommonGroup = crate::payment::Group;
+        type CommonGroup = crate::payment::Group;
 
-    fn find_map<FindMap>(
-        find_map: FindMap,
-    ) -> Result<<FindMap as currency::PairsFindMapT>::Outcome, FindMap>
-    where
-        FindMap: currency::PairsFindMapT<Pivot = Self>,
-    {
-        "#,
+        fn find_map<FindMap>(
+            find_map: FindMap,
+        ) -> Result<<FindMap as currency::PairsFindMapT>::Outcome, FindMap>
+        where
+            FindMap: currency::PairsFindMapT<Pivot = Self>,
+        {
+            "#,
         ]
         .into_iter()
         .chain(sources.map(SubtypeLifetime::subtype))
         .chain([
             r#"
 
-        currency::pairs_find_map::<"#,
+            currency::pairs_find_map::<"#,
             ENUM_IDENT,
             r#", _>(find_map)
+        }
     }
-}
 "#,
         ])
     })
