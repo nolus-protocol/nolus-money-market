@@ -412,13 +412,13 @@ where
         principal_due: expected_principal.into(),
         overdue_margin: calculate_interest(
             expected_principal,
-            quote_result.annual_interest_rate_margin.into(),
+            quote_result.annual_interest_rate_margin,
             overdue,
         )
         .into(),
         overdue_interest: calculate_interest(
             expected_principal,
-            quote_result.annual_interest_rate.into(),
+            quote_result.annual_interest_rate,
             overdue,
         )
         .into(),
@@ -429,13 +429,13 @@ where
         },
         due_margin: calculate_interest(
             expected_principal,
-            quote_result.annual_interest_rate_margin.into(),
+            quote_result.annual_interest_rate_margin,
             due,
         )
         .into(),
         due_interest: calculate_interest(
             expected_principal,
-            quote_result.annual_interest_rate.into(),
+            quote_result.annual_interest_rate,
             due,
         )
         .into(),
