@@ -2,7 +2,8 @@ use bnum::types::U256;
 
 use crate::{
     coin::{Amount, Coin},
-    fractionable::{IntoMax, ToDoublePrimitive},
+    duration::Duration,
+    fractionable::{CommonDoublePrimitive, Fractionable, IntoMax, ToDoublePrimitive, TryFromMax},
 };
 
 use super::HigherRank;
@@ -14,6 +15,7 @@ where
     type Type = U256;
 }
 
+// TODO remove when FractionableLegacy usages are replaced
 impl<C> From<Coin<C>> for U256 {
     fn from(coin: Coin<C>) -> Self {
         let c = Amount::from(coin);
@@ -21,6 +23,7 @@ impl<C> From<Coin<C>> for U256 {
     }
 }
 
+// TODO remove when FractionableLegacy usages are replaced
 impl<C> TryInto<Coin<C>> for U256 {
     type Error = <u128 as TryFrom<U256>>::Error;
 
@@ -37,9 +40,21 @@ impl<C> ToDoublePrimitive for Coin<C> {
     }
 }
 
+impl<C> CommonDoublePrimitive<Duration> for Coin<C> {
+    type CommonDouble = U256;
+}
+
+impl<C> Fractionable<Duration> for Coin<C> {}
+
 impl<C> IntoMax<U256> for Coin<C> {
     fn into(self) -> U256 {
         self.to_double()
+    }
+}
+
+impl<C> TryFromMax<U256> for Coin<C> {
+    fn try_from(max: U256) -> Option<Self> {
+        max.try_into().ok().map(Coin::new)
     }
 }
 
