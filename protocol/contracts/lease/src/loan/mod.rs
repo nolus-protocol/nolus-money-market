@@ -216,7 +216,8 @@ where
             principal_due,
             margin_paid,
             Duration::between(&self.margin_paid_by, by),
-        );
+        )
+        .expect("TODO Method should return Option");
         debug_assert!(margin_payment_change.is_zero());
         self.margin_paid_by += margin_paid_for;
     }
@@ -448,7 +449,9 @@ mod tests {
                     },
                 ),
                 receipt(principal, 0, 0, 0, payment, 0, 0),
-                Duration::YEAR.into_slice_per_ratio::<LpnCoin>(payment.into(), due_margin.into()),
+                Duration::YEAR
+                    .into_slice_per_ratio::<LpnCoin>(payment.into(), due_margin.into())
+                    .unwrap(),
                 &now,
             );
         }
@@ -634,11 +637,13 @@ mod tests {
             let overdue_margin = overdue_period.annualized_slice_of(due_margin);
             let overdue_interest = overdue_period.annualized_slice_of(due_interest);
             let payment = overdue_interest + overdue_margin + due_interest + due_margin_payment;
-            let due_period_paid =
-                Duration::between(&LEASE_START, &repay_at).into_slice_per_ratio::<LpnCoin>(
+            let due_period_paid = Duration::between(&LEASE_START, &repay_at)
+                .into_slice_per_ratio::<LpnCoin>(
                     (overdue_margin + due_margin_payment).into(),
                     (overdue_margin + due_margin).into(),
-                ) - overdue_period;
+                )
+                .unwrap()
+                - overdue_period;
 
             let mut loan = create_loan(loan);
             repay(
