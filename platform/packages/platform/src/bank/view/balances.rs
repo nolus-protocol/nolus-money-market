@@ -23,8 +23,7 @@ impl<'addr, 'view, GBalances, CmdBalances> NonZeroBalances<'addr, 'view, GBalanc
     }
 }
 
-impl<'addr, 'view, GBalances, CmdBalances> FilterMapT
-    for NonZeroBalances<'addr, 'view, GBalances, CmdBalances>
+impl<GBalances, CmdBalances> FilterMapT for NonZeroBalances<'_, '_, GBalances, CmdBalances>
 where
     GBalances: Group,
     CmdBalances: WithCoin<GBalances> + Clone,
