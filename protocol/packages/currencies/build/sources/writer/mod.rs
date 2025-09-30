@@ -49,6 +49,7 @@ where
     where
         BuildReport: Write,
         Generator: generator::Resolver<'dex_currencies, 'dex_currencies>
+            + generator::GroupMembers<'dex_currencies, 'dex_currency_ticker, 'dex_currency_definition>
             + generator::PairsGroup<'dex_currencies, 'dex_currency_ticker, 'dex_currency_definition>
             + generator::InPoolWith<'dex_currencies, 'dex_currency_ticker, 'dex_currency_definition>,
         Tickers: IntoIterator<Item = &'ticker str>,

@@ -5,7 +5,10 @@ pub use crate::{
     dto::{CurrencyDTO, dto, to_string},
     from_symbol::{CurrencyVisit, SingleVisitor},
     from_symbol_any::GroupVisit,
-    group::{FilterMapT, FindMapT, Group, MaybeAnyVisitResult, MemberOf},
+    group::{
+        CurrenciesMapping, FilterMapT, FindMapT, Group, GroupMember, MaybeAnyVisitResult, MemberOf,
+        SubFilterAdapter, SubGroupFindAdapter, find_map as group_find_map,
+    },
     matcher::Matcher,
     pairs::{
         FindMapT as PairsFindMapT, MaybePairsVisitorResult, PairsGroup, PairsGroupMember,

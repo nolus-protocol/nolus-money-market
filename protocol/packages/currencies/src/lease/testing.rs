@@ -1,180 +1,449 @@
-use serde::{Deserialize, Serialize};
+use currency::{CurrencyDef as _, FilterMapT, FindMapT};
 
-use currency::{CurrencyDTO, CurrencyDef, Definition, InPoolWith, PairsFindMapT, PairsGroup};
-
-use crate::payment::Group as PaymentGroup;
+use self::definitions::{LeaseC1, LeaseC2, LeaseC3, LeaseC4, LeaseC5, LeaseC6, LeaseC7};
 
 use super::Group as LeaseGroup;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
-#[serde(deny_unknown_fields, rename_all = "snake_case")]
-pub struct LeaseC1(CurrencyDTO<LeaseGroup>);
-
-impl CurrencyDef for LeaseC1 {
-    type Group = LeaseGroup;
-
-    #[inline]
-    fn dto() -> &'static CurrencyDTO<Self::Group> {
-        &const { CurrencyDTO::new(const { &Definition::new("LC1", "ibc/bank_LC1", "ibc/dex_LC1", 6) }) }
-    }
+pub(super) enum GroupMember {
+    LeaseC1,
+    LeaseC2,
+    LeaseC3,
+    LeaseC4,
+    LeaseC5,
+    LeaseC6,
+    LeaseC7,
 }
 
-impl PairsGroup for LeaseC1 {
-    type CommonGroup = PaymentGroup;
+impl currency::GroupMember<super::Group> for GroupMember {
+    fn first() -> Option<Self> {
+        Some(Self::LeaseC1)
+    }
 
-    fn find_map<FindMap>(_f: FindMap) -> Result<FindMap::Outcome, FindMap>
+    fn next(&self) -> Option<Self> {
+        match self {
+            Self::LeaseC1 => Some(Self::LeaseC2),
+            Self::LeaseC2 => Some(Self::LeaseC3),
+            Self::LeaseC3 => Some(Self::LeaseC4),
+            Self::LeaseC4 => Some(Self::LeaseC5),
+            Self::LeaseC5 => Some(Self::LeaseC6),
+            Self::LeaseC6 => Some(Self::LeaseC7),
+            Self::LeaseC7 => None,
+        }
+    }
+
+    fn filter_map<FilterMap>(&self, filter_map: &FilterMap) -> Option<FilterMap::Outcome>
     where
-        FindMap: PairsFindMapT<Pivot = Self>,
+        FilterMap: FilterMapT<VisitedG = super::Group>,
     {
-        todo!("(LeaseC2, LeaseC3)")
+        match self {
+            Self::LeaseC1 => filter_map.on::<LeaseC1>(LeaseC1::dto()),
+            Self::LeaseC2 => filter_map.on::<LeaseC2>(LeaseC2::dto()),
+            Self::LeaseC3 => filter_map.on::<LeaseC3>(LeaseC3::dto()),
+            Self::LeaseC4 => filter_map.on::<LeaseC4>(LeaseC4::dto()),
+            Self::LeaseC5 => filter_map.on::<LeaseC5>(LeaseC5::dto()),
+            Self::LeaseC6 => filter_map.on::<LeaseC6>(LeaseC6::dto()),
+            Self::LeaseC7 => filter_map.on::<LeaseC7>(LeaseC7::dto()),
+        }
     }
-}
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
-#[serde(deny_unknown_fields, rename_all = "snake_case")]
-pub struct LeaseC2(CurrencyDTO<LeaseGroup>);
-
-impl CurrencyDef for LeaseC2 {
-    type Group = LeaseGroup;
-
-    #[inline]
-    fn dto() -> &'static CurrencyDTO<Self::Group> {
-        &const { CurrencyDTO::new(const { &Definition::new("LC2", "ibc/bank_LC2", "ibc/dex_LC2", 6) }) }
-    }
-}
-
-impl PairsGroup for LeaseC2 {
-    type CommonGroup = PaymentGroup;
-
-    fn find_map<FindMap>(_f: FindMap) -> Result<FindMap::Outcome, FindMap>
+    fn find_map<FindMap>(&self, find_map: FindMap) -> Result<FindMap::Outcome, FindMap>
     where
-        FindMap: PairsFindMapT<Pivot = Self>,
+        FindMap: FindMapT<TargetG = super::Group>,
     {
-        todo!("(Lpn)")
+        match self {
+            Self::LeaseC1 => find_map.on::<LeaseC1>(LeaseC1::dto()),
+            Self::LeaseC2 => find_map.on::<LeaseC2>(LeaseC2::dto()),
+            Self::LeaseC3 => find_map.on::<LeaseC3>(LeaseC3::dto()),
+            Self::LeaseC4 => find_map.on::<LeaseC4>(LeaseC4::dto()),
+            Self::LeaseC5 => find_map.on::<LeaseC5>(LeaseC5::dto()),
+            Self::LeaseC6 => find_map.on::<LeaseC6>(LeaseC6::dto()),
+            Self::LeaseC7 => find_map.on::<LeaseC7>(LeaseC7::dto()),
+        }
     }
 }
 
-impl InPoolWith<LeaseC1> for LeaseC2 {}
+pub(super) mod definitions {
+    use serde::{Deserialize, Serialize};
 
-impl InPoolWith<LeaseC3> for LeaseC2 {}
+    use currency::{
+        CurrencyDTO, CurrencyDef, Definition, InPoolWith, PairsFindMapT, PairsGroup,
+        PairsGroupMember, pairs_find_map,
+    };
 
-impl InPoolWith<LeaseC4> for LeaseC2 {}
+    use crate::{lpn::Lpn, native::Nls, payment::Group as PaymentGroup};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
-#[serde(deny_unknown_fields, rename_all = "snake_case")]
-pub struct LeaseC3(CurrencyDTO<LeaseGroup>);
+    use super::LeaseGroup;
 
-impl CurrencyDef for LeaseC3 {
-    type Group = LeaseGroup;
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+    #[serde(deny_unknown_fields, rename_all = "snake_case")]
+    pub struct LeaseC1(CurrencyDTO<LeaseGroup>);
 
-    fn dto() -> &'static CurrencyDTO<Self::Group> {
-        &const { CurrencyDTO::new(const { &Definition::new("LC3", "ibc/bank_LC3", "ibc/dex_LC3", 6) }) }
+    impl CurrencyDef for LeaseC1 {
+        type Group = LeaseGroup;
+
+        #[inline]
+        fn dto() -> &'static CurrencyDTO<Self::Group> {
+            &const {
+                CurrencyDTO::new(
+                    const { &Definition::new("LC1", "ibc/bank_LC1", "ibc/dex_LC1", 6) },
+                )
+            }
+        }
     }
-}
 
-impl PairsGroup for LeaseC3 {
-    type CommonGroup = PaymentGroup;
+    impl PairsGroup for LeaseC1 {
+        type CommonGroup = PaymentGroup;
 
-    fn find_map<FindMap>(_f: FindMap) -> Result<FindMap::Outcome, FindMap>
-    where
-        FindMap: PairsFindMapT<Pivot = Self>,
-    {
-        todo!("(LeaseC2)")
+        fn find_map<FindMap>(find_map: FindMap) -> Result<FindMap::Outcome, FindMap>
+        where
+            FindMap: PairsFindMapT<Pivot = Self>,
+        {
+            enum Pairs {
+                LeaseC2,
+                LeaseC3,
+            }
+
+            impl PairsGroupMember for Pairs {
+                type Group = LeaseC1;
+
+                fn first() -> Option<Self> {
+                    Some(Self::LeaseC2)
+                }
+
+                fn next(&self) -> Option<Self> {
+                    match self {
+                        Self::LeaseC2 => Some(Self::LeaseC3),
+                        Self::LeaseC3 => None,
+                    }
+                }
+
+                fn find_map<PairsFindMap>(
+                    &self,
+                    find_map: PairsFindMap,
+                ) -> Result<PairsFindMap::Outcome, PairsFindMap>
+                where
+                    PairsFindMap: PairsFindMapT<Pivot = Self::Group>,
+                {
+                    match self {
+                        Self::LeaseC2 => find_map.on::<LeaseC2>(LeaseC2::dto()),
+                        Self::LeaseC3 => find_map.on::<LeaseC3>(LeaseC3::dto()),
+                    }
+                }
+            }
+
+            pairs_find_map::<Pairs, _>(find_map)
+        }
     }
-}
 
-impl InPoolWith<LeaseC1> for LeaseC3 {}
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+    #[serde(deny_unknown_fields, rename_all = "snake_case")]
+    pub struct LeaseC2(CurrencyDTO<LeaseGroup>);
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
-#[serde(deny_unknown_fields, rename_all = "snake_case")]
-pub struct LeaseC4(CurrencyDTO<LeaseGroup>);
+    impl CurrencyDef for LeaseC2 {
+        type Group = LeaseGroup;
 
-impl CurrencyDef for LeaseC4 {
-    type Group = LeaseGroup;
-
-    fn dto() -> &'static CurrencyDTO<Self::Group> {
-        &const { CurrencyDTO::new(const { &Definition::new("LC4", "ibc/bank_LC4", "ibc/dex_LC4", 6) }) }
+        #[inline]
+        fn dto() -> &'static CurrencyDTO<Self::Group> {
+            &const {
+                CurrencyDTO::new(
+                    const { &Definition::new("LC2", "ibc/bank_LC2", "ibc/dex_LC2", 6) },
+                )
+            }
+        }
     }
-}
 
-impl PairsGroup for LeaseC4 {
-    type CommonGroup = PaymentGroup;
+    impl PairsGroup for LeaseC2 {
+        type CommonGroup = PaymentGroup;
 
-    fn find_map<FindMap>(_f: FindMap) -> Result<FindMap::Outcome, FindMap>
-    where
-        FindMap: PairsFindMapT<Pivot = Self>,
-    {
-        todo!("(LeaseC2)")
+        fn find_map<FindMap>(find_map: FindMap) -> Result<FindMap::Outcome, FindMap>
+        where
+            FindMap: PairsFindMapT<Pivot = Self>,
+        {
+            struct Pairs;
+
+            impl PairsGroupMember for Pairs {
+                type Group = LeaseC2;
+
+                fn first() -> Option<Self> {
+                    Some(Self)
+                }
+
+                fn next(&self) -> Option<Self> {
+                    let Self {} = self;
+
+                    None
+                }
+
+                fn find_map<PairsFindMap>(
+                    &self,
+                    find_map: PairsFindMap,
+                ) -> Result<PairsFindMap::Outcome, PairsFindMap>
+                where
+                    PairsFindMap: PairsFindMapT<Pivot = Self::Group>,
+                {
+                    let Self {} = self;
+
+                    find_map.on::<Lpn>(Lpn::dto())
+                }
+            }
+
+            pairs_find_map::<Pairs, _>(find_map)
+        }
     }
-}
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
-#[serde(deny_unknown_fields, rename_all = "snake_case")]
-pub struct LeaseC5(CurrencyDTO<LeaseGroup>);
+    impl InPoolWith<LeaseC1> for LeaseC2 {}
 
-impl CurrencyDef for LeaseC5 {
-    type Group = LeaseGroup;
+    impl InPoolWith<LeaseC3> for LeaseC2 {}
 
-    fn dto() -> &'static CurrencyDTO<Self::Group> {
-        &const { CurrencyDTO::new(const { &Definition::new("LC5", "ibc/bank_LC5", "ibc/dex_LC5", 6) }) }
+    impl InPoolWith<LeaseC4> for LeaseC2 {}
+
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+    #[serde(deny_unknown_fields, rename_all = "snake_case")]
+    pub struct LeaseC3(CurrencyDTO<LeaseGroup>);
+
+    impl CurrencyDef for LeaseC3 {
+        type Group = LeaseGroup;
+
+        fn dto() -> &'static CurrencyDTO<Self::Group> {
+            &const {
+                CurrencyDTO::new(
+                    const { &Definition::new("LC3", "ibc/bank_LC3", "ibc/dex_LC3", 6) },
+                )
+            }
+        }
     }
-}
 
-impl PairsGroup for LeaseC5 {
-    type CommonGroup = PaymentGroup;
+    impl PairsGroup for LeaseC3 {
+        type CommonGroup = PaymentGroup;
 
-    fn find_map<FindMap>(_f: FindMap) -> Result<FindMap::Outcome, FindMap>
-    where
-        FindMap: PairsFindMapT<Pivot = Self>,
-    {
-        todo!("(Nls)")
+        fn find_map<FindMap>(find_map: FindMap) -> Result<FindMap::Outcome, FindMap>
+        where
+            FindMap: PairsFindMapT<Pivot = Self>,
+        {
+            struct Pairs;
+
+            impl PairsGroupMember for Pairs {
+                type Group = LeaseC3;
+
+                fn first() -> Option<Self> {
+                    Some(Self)
+                }
+
+                fn next(&self) -> Option<Self> {
+                    let Self {} = self;
+
+                    None
+                }
+
+                fn find_map<PairsFindMap>(
+                    &self,
+                    find_map: PairsFindMap,
+                ) -> Result<PairsFindMap::Outcome, PairsFindMap>
+                where
+                    PairsFindMap: PairsFindMapT<Pivot = Self::Group>,
+                {
+                    let Self {} = self;
+
+                    find_map.on::<LeaseC2>(LeaseC2::dto())
+                }
+            }
+
+            pairs_find_map::<Pairs, _>(find_map)
+        }
     }
-}
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
-#[serde(deny_unknown_fields, rename_all = "snake_case")]
-pub struct LeaseC6(CurrencyDTO<LeaseGroup>);
+    impl InPoolWith<LeaseC1> for LeaseC3 {}
 
-impl CurrencyDef for LeaseC6 {
-    type Group = LeaseGroup;
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+    #[serde(deny_unknown_fields, rename_all = "snake_case")]
+    pub struct LeaseC4(CurrencyDTO<LeaseGroup>);
 
-    fn dto() -> &'static CurrencyDTO<Self::Group> {
-        &const { CurrencyDTO::new(const { &Definition::new("LC6", "ibc/bank_LC6", "ibc/dex_LC6", 6) }) }
+    impl CurrencyDef for LeaseC4 {
+        type Group = LeaseGroup;
+
+        fn dto() -> &'static CurrencyDTO<Self::Group> {
+            &const {
+                CurrencyDTO::new(
+                    const { &Definition::new("LC4", "ibc/bank_LC4", "ibc/dex_LC4", 6) },
+                )
+            }
+        }
     }
-}
 
-impl PairsGroup for LeaseC6 {
-    type CommonGroup = PaymentGroup;
+    impl PairsGroup for LeaseC4 {
+        type CommonGroup = PaymentGroup;
 
-    fn find_map<FindMap>(_f: FindMap) -> Result<FindMap::Outcome, FindMap>
-    where
-        FindMap: PairsFindMapT<Pivot = Self>,
-    {
-        // let's stay detached from the swap tree for some corner cases.
-        todo!("()")
+        fn find_map<FindMap>(find_map: FindMap) -> Result<FindMap::Outcome, FindMap>
+        where
+            FindMap: PairsFindMapT<Pivot = Self>,
+        {
+            struct Pairs;
+
+            impl PairsGroupMember for Pairs {
+                type Group = LeaseC4;
+
+                fn first() -> Option<Self> {
+                    Some(Self)
+                }
+
+                fn next(&self) -> Option<Self> {
+                    let Self {} = self;
+
+                    None
+                }
+
+                fn find_map<PairsFindMap>(
+                    &self,
+                    find_map: PairsFindMap,
+                ) -> Result<PairsFindMap::Outcome, PairsFindMap>
+                where
+                    PairsFindMap: PairsFindMapT<Pivot = Self::Group>,
+                {
+                    let Self {} = self;
+
+                    find_map.on::<LeaseC2>(LeaseC2::dto())
+                }
+            }
+
+            pairs_find_map::<Pairs, _>(find_map)
+        }
     }
-}
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
-#[serde(deny_unknown_fields, rename_all = "snake_case")]
-pub struct LeaseC7(CurrencyDTO<LeaseGroup>);
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+    #[serde(deny_unknown_fields, rename_all = "snake_case")]
+    pub struct LeaseC5(CurrencyDTO<LeaseGroup>);
 
-impl CurrencyDef for LeaseC7 {
-    type Group = LeaseGroup;
+    impl CurrencyDef for LeaseC5 {
+        type Group = LeaseGroup;
 
-    fn dto() -> &'static CurrencyDTO<Self::Group> {
-        &const { CurrencyDTO::new(const { &Definition::new("LC7", "ibc/bank_LC7", "ibc/dex_LC7", 6) }) }
+        fn dto() -> &'static CurrencyDTO<Self::Group> {
+            &const {
+                CurrencyDTO::new(
+                    const { &Definition::new("LC5", "ibc/bank_LC5", "ibc/dex_LC5", 6) },
+                )
+            }
+        }
     }
-}
 
-impl PairsGroup for LeaseC7 {
-    type CommonGroup = PaymentGroup;
+    impl PairsGroup for LeaseC5 {
+        type CommonGroup = PaymentGroup;
 
-    fn find_map<FindMap>(_f: FindMap) -> Result<FindMap::Outcome, FindMap>
-    where
-        FindMap: PairsFindMapT<Pivot = Self>,
-    {
-        todo!("(Lpn)")
+        fn find_map<FindMap>(find_map: FindMap) -> Result<FindMap::Outcome, FindMap>
+        where
+            FindMap: PairsFindMapT<Pivot = Self>,
+        {
+            struct Pairs;
+
+            impl PairsGroupMember for Pairs {
+                type Group = LeaseC5;
+
+                fn first() -> Option<Self> {
+                    Some(Self)
+                }
+
+                fn next(&self) -> Option<Self> {
+                    let Self {} = self;
+
+                    None
+                }
+
+                fn find_map<PairsFindMap>(
+                    &self,
+                    find_map: PairsFindMap,
+                ) -> Result<PairsFindMap::Outcome, PairsFindMap>
+                where
+                    PairsFindMap: PairsFindMapT<Pivot = Self::Group>,
+                {
+                    let Self {} = self;
+
+                    find_map.on::<Nls>(Nls::dto())
+                }
+            }
+
+            pairs_find_map::<Pairs, _>(find_map)
+        }
+    }
+
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+    #[serde(deny_unknown_fields, rename_all = "snake_case")]
+    pub struct LeaseC6(CurrencyDTO<LeaseGroup>);
+
+    impl CurrencyDef for LeaseC6 {
+        type Group = LeaseGroup;
+
+        fn dto() -> &'static CurrencyDTO<Self::Group> {
+            &const {
+                CurrencyDTO::new(
+                    const { &Definition::new("LC6", "ibc/bank_LC6", "ibc/dex_LC6", 6) },
+                )
+            }
+        }
+    }
+
+    impl PairsGroup for LeaseC6 {
+        type CommonGroup = PaymentGroup;
+
+        fn find_map<FindMap>(find_map: FindMap) -> Result<FindMap::Outcome, FindMap>
+        where
+            FindMap: PairsFindMapT<Pivot = Self>,
+        {
+            Err(find_map)
+        }
+    }
+
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+    #[serde(deny_unknown_fields, rename_all = "snake_case")]
+    pub struct LeaseC7(CurrencyDTO<LeaseGroup>);
+
+    impl CurrencyDef for LeaseC7 {
+        type Group = LeaseGroup;
+
+        fn dto() -> &'static CurrencyDTO<Self::Group> {
+            &const {
+                CurrencyDTO::new(
+                    const { &Definition::new("LC7", "ibc/bank_LC7", "ibc/dex_LC7", 6) },
+                )
+            }
+        }
+    }
+
+    impl PairsGroup for LeaseC7 {
+        type CommonGroup = PaymentGroup;
+
+        fn find_map<FindMap>(find_map: FindMap) -> Result<FindMap::Outcome, FindMap>
+        where
+            FindMap: PairsFindMapT<Pivot = Self>,
+        {
+            struct Pairs;
+
+            impl PairsGroupMember for Pairs {
+                type Group = LeaseC7;
+
+                fn first() -> Option<Self> {
+                    Some(Self)
+                }
+
+                fn next(&self) -> Option<Self> {
+                    let Self {} = self;
+
+                    None
+                }
+
+                fn find_map<PairsFindMap>(
+                    &self,
+                    find_map: PairsFindMap,
+                ) -> Result<PairsFindMap::Outcome, PairsFindMap>
+                where
+                    PairsFindMap: PairsFindMapT<Pivot = Self::Group>,
+                {
+                    let Self {} = self;
+
+                    find_map.on::<Lpn>(Lpn::dto())
+                }
+            }
+
+            pairs_find_map::<Pairs, _>(find_map)
+        }
     }
 }
 

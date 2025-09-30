@@ -47,6 +47,26 @@ impl<'currencies_tree, 'parents_of, 'parent, 'children_of, 'child, 'generator, G
     }
 }
 
+pub(super) struct GeneratedEntry<
+    Variants,
+    FirstEntry,
+    HeadNextEntry,
+    MiddleNextEntry,
+    TailNextEntry,
+    FilterMapEntry,
+    FindMapEntry,
+    CurrencyDefinition,
+> {
+    pub variant: Variants,
+    pub first_entry: FirstEntry,
+    pub head_next_entry: HeadNextEntry,
+    pub middle_next_entry: MiddleNextEntry,
+    pub tail_next_entry: TailNextEntry,
+    pub filter_map_entry: FilterMapEntry,
+    pub find_map_entry: FindMapEntry,
+    pub currency_definition: CurrencyDefinition,
+}
+
 impl<
     'dex_currencies,
     'definition,
@@ -63,13 +83,21 @@ where
     'dex_currency_ticker: 'dex_currencies,
     'dex_currency_definition: 'dex_currencies,
     Generator: generator::Resolver<'dex_currencies, 'definition>
+        + generator::GroupMembers<'dex_currencies, 'dex_currency_ticker, 'dex_currency_definition>
         + generator::PairsGroup<'dex_currencies, 'dex_currency_ticker, 'dex_currency_definition>
         + generator::InPoolWith<'dex_currencies, 'dex_currency_ticker, 'dex_currency_definition>,
 {
     pub(super) fn generate_entry<'r>(
         &self,
         ticker: &'r str,
-    ) -> Result<
+    ) -> GeneratedEntryResult<
+        impl Iterator<Item = &'r str> + use<'r, Generator>,
+        impl Iterator<Item = &'r str> + use<'r, Generator>,
+        impl Iterator<Item = &'r str> + use<'r, Generator>,
+        impl Iterator<Item = &'r str> + use<'r, Generator>,
+        impl Iterator<Item = &'r str> + use<'r, Generator>,
+        impl Iterator<Item = &'r str> + use<'r, Generator>,
+        impl Iterator<Item = &'r str> + use<'r, Generator>,
         impl Iterator<Item = Cow<'r, str>>
         + use<
             'r,
@@ -105,7 +133,14 @@ where
         ticker: &'r str,
         children: &'children currencies_tree::Children<'child>,
         parents: &'parents currencies_tree::Parents<'parent>,
-    ) -> Result<
+    ) -> GeneratedEntryResult<
+        impl Iterator<Item = &'r str> + use<'r, Generator>,
+        impl Iterator<Item = &'r str> + use<'r, Generator>,
+        impl Iterator<Item = &'r str> + use<'r, Generator>,
+        impl Iterator<Item = &'r str> + use<'r, Generator>,
+        impl Iterator<Item = &'r str> + use<'r, Generator>,
+        impl Iterator<Item = &'r str> + use<'r, Generator>,
+        impl Iterator<Item = &'r str> + use<'r, Generator>,
         impl Iterator<Item = Cow<'r, str>>
         + use<
             'r,
@@ -129,16 +164,93 @@ where
             .resolve(ticker)
             .context("Failed to generate currency definition sources!")?;
 
+        let _ = self.generator.group_members(resolved.name())?;
+
         let pairs_group = self.generator.pairs_group(resolved.name(), parents)?;
 
         self.generator
             .in_pool_with(resolved.name(), children)
-            .map(|in_pool_with| {
-                currency_definition(resolved.name(), ticker, resolved.definition())
-                    .chain(pairs_group.chain(in_pool_with).map(Cow::Borrowed))
+            .map(|in_pool_with| GeneratedEntry {
+                variant: [
+                    "
+    ",
+                    resolved.name(),
+                    ",",
+                ]
+                .into_iter(),
+                first_entry: ["Some(Self::", resolved.name(), ")"].into_iter(),
+                head_next_entry: [
+                    "
+            Self::",
+                    resolved.name(),
+                    " => ",
+                ]
+                .into_iter(),
+                middle_next_entry: [
+                    "Some(Self::",
+                    resolved.name(),
+                    "),
+            Self::",
+                    resolved.name(),
+                    " => ",
+                ]
+                .into_iter(),
+                tail_next_entry: ["None,
+        "]
+                .into_iter(),
+                filter_map_entry: [
+                    "
+            Self::",
+                    resolved.name(),
+                    " => filter_map.on::<self::definitions::",
+                    resolved.name(),
+                    ">(<self::definitions::",
+                    resolved.name(),
+                    " as currency::CurrencyDef>::dto()),",
+                ]
+                .into_iter(),
+                find_map_entry: [
+                    "
+            Self::",
+                    resolved.name(),
+                    " => find_map.on::<self::definitions::",
+                    resolved.name(),
+                    ">(<self::definitions::",
+                    resolved.name(),
+                    " as currency::CurrencyDef>::dto()),",
+                ]
+                .into_iter(),
+                currency_definition: currency_definition(
+                    resolved.name(),
+                    ticker,
+                    resolved.definition(),
+                )
+                .chain(pairs_group.chain(in_pool_with).map(Cow::Borrowed)),
             })
     }
 }
+
+pub(super) type GeneratedEntryResult<
+    Variants,
+    FirstEntry,
+    HeadNextEntry,
+    MiddleNextEntry,
+    TailNextEntry,
+    FilterMapEntry,
+    FindMapEntry,
+    CurrencyDefinition,
+> = Result<
+    GeneratedEntry<
+        Variants,
+        FirstEntry,
+        HeadNextEntry,
+        MiddleNextEntry,
+        TailNextEntry,
+        FilterMapEntry,
+        FindMapEntry,
+        CurrencyDefinition,
+    >,
+>;
 
 fn currency_definition<'r>(
     name: &'r str,
@@ -147,41 +259,41 @@ fn currency_definition<'r>(
 ) -> impl Iterator<Item = Cow<'r, str>> {
     [
         r#"
-#[derive(
-    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, serde::Serialize,
-    serde::Deserialize,
-)]
-#[serde(deny_unknown_fields, rename_all = "snake_case")]
-pub struct "#,
+    #[derive(
+        Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, serde::Serialize,
+        serde::Deserialize,
+    )]
+    #[serde(deny_unknown_fields, rename_all = "snake_case")]
+    pub struct "#,
         name,
-        r#"(currency::CurrencyDTO<super::Group>);
+        r#"(currency::CurrencyDTO<super::super::Group>);
 
-impl currency::CurrencyDef for "#,
+    impl currency::CurrencyDef for "#,
         name,
         r#" {
-    type Group = super::Group;
+        type Group = super::super::Group;
 
-    fn dto() -> &'static currency::CurrencyDTO<Self::Group> {
-        const {
-            &currency::CurrencyDTO::new(
-                const {
-                    &currency::Definition::new(
-                        ""#,
+        fn dto() -> &'static currency::CurrencyDTO<Self::Group> {
+            const {
+                &currency::CurrencyDTO::new(
+                    const {
+                        &currency::Definition::new(
+                            ""#,
         ticker,
         r#"",
-                        // "#,
+                            // "#,
         currency.host().path(),
         r#"
-                        ""#,
+                            ""#,
         currency.host().symbol(),
         r#"",
-                        // "#,
+                            // "#,
         currency.dex().path(),
         r#"
-                        ""#,
+                            ""#,
         currency.dex().symbol(),
         r#"",
-                        "#,
+                            "#,
     ]
     .into_iter()
     .map(Cow::Borrowed)
@@ -192,12 +304,12 @@ impl currency::CurrencyDef for "#,
         const {
             Cow::Borrowed(
                 r#",
-                    )
-                },
-            )
+                        )
+                    },
+                )
+            }
         }
     }
-}
 "#,
             )
         },
