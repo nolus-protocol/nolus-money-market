@@ -46,6 +46,9 @@ pub enum ContractError {
     #[error("[Treasury] Failed to save the dispatch log! Cause: {0}")]
     SaveDispatchLog(StdError),
 
+    #[error("[Treasury] Failed to query the oracle for its stable ticker! Cause: {0}")]
+    QueryStableTicker(oracle_platform::error::Error),
+
     #[error("[Treasury] Failed to obtain Lpp balance! Cause: {0}")]
     ReadLppBalance(lpp_platform::error::Error),
 

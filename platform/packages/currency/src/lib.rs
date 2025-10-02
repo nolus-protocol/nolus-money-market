@@ -2,16 +2,20 @@ use std::{any::TypeId, fmt::Debug};
 
 pub use crate::{
     definition::{Definition, DefinitionRef},
-    dto::{CurrencyDTO, dto, to_string},
+    dto::{CurrencyDTO, dto, single::expect_received as expect_exact_received, to_string},
     from_symbol::{CurrencyVisit, SingleVisitor},
-    from_symbol_any::{
-        AnyVisitor, AnyVisitorPair, AnyVisitorPairResult, GroupVisit, InPoolWith,
-        visit_any_on_currencies,
+    from_symbol_any::GroupVisit,
+    group::{
+        CurrenciesMapping, FilterMapT, FindMapT, Group, GroupMember, MaybeAnyVisitResult, MemberOf,
+        SubFilterAdapter, SubGroupFindAdapter, find_map as group_find_map,
     },
-    group::{Group, MaybeAnyVisitResult, MemberOf},
-    matcher::{Matcher, TypeMatcher},
-    pairs::{MaybePairsVisitorResult, PairsGroup, PairsVisitor, PairsVisitorResult},
+    matcher::Matcher,
+    pairs::{
+        FindMapT as PairsFindMapT, MaybePairsVisitorResult, PairsGroup, PairsGroupMember,
+        PairsVisitor, find_map as pairs_find_map,
+    },
     symbol::{BankSymbols, DexSymbols, Symbol, Tickers},
+    visit_any::{AnyVisitor, AnyVisitorPair, InPoolWith, visit_any_on_currencies},
 };
 
 mod definition;
@@ -27,10 +31,10 @@ pub mod platform;
 mod symbol;
 #[cfg(any(test, feature = "testing"))]
 pub mod test;
+mod visit_any;
 
-// TODO get rid of these definitions. Move some to much smaller scope, for example move SymbolOwned close to CurrencyDTO
-// and SymbolStatic close to Symbols
-pub type SymbolStatic = &'static str;
+pub type SymbolRef<'symbol> = &'symbol str;
+pub type SymbolStatic = SymbolRef<'static>;
 pub type SymbolOwned = String;
 
 /// Currency market trait
@@ -70,54 +74,4 @@ where
     C2: 'static,
 {
     TypeId::of::<C1>() == TypeId::of::<C2>()
-}
-
-pub fn maybe_visit_any<M, C, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<C::Group, V>
-where
-    M: Matcher,
-    C: CurrencyDef + PairsGroup<CommonGroup = <C::Group as Group>::TopG>,
-    C::Group: MemberOf<C::Group> + MemberOf<<C::Group as Group>::TopG>,
-    V: AnyVisitor<C::Group>,
-{
-    maybe_visit_member::<_, C, C::Group, _>(matcher, visitor)
-}
-
-pub fn maybe_visit_member<M, C, VisitedG, V>(
-    matcher: &M,
-    visitor: V,
-) -> MaybeAnyVisitResult<VisitedG, V>
-where
-    M: Matcher,
-    C: CurrencyDef + PairsGroup<CommonGroup = VisitedG::TopG>,
-    C::Group: MemberOf<VisitedG> + MemberOf<VisitedG::TopG>,
-    V: AnyVisitor<VisitedG>,
-    VisitedG: Group,
-{
-    let member = C::dto();
-    if matcher.r#match(member.definition()) {
-        Ok(visitor.on::<C>(member))
-    } else {
-        Err(visitor)
-    }
-}
-
-pub fn maybe_visit_buddy<C, M, V>(matcher: &M, visitor: V) -> MaybePairsVisitorResult<V>
-where
-    M: Matcher,
-    C: CurrencyDef
-        + InPoolWith<V::Pivot>
-        + PairsGroup<CommonGroup = <V::Pivot as PairsGroup>::CommonGroup>,
-    C::Group: MemberOf<<V::Pivot as PairsGroup>::CommonGroup>,
-    V: PairsVisitor,
-{
-    let buddy = C::dto();
-    if matcher.r#match(buddy.definition()) {
-        Ok(visitor.on::<C>(buddy))
-    } else {
-        Err(visitor)
-    }
-}
-
-pub fn visit_noone<R, V>(visitor: V) -> Result<R, V> {
-    Err(visitor)
 }

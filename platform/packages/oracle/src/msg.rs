@@ -13,7 +13,7 @@ where
 
     /// Provide the price of a currency against the base one
     ///
-    /// Return [BasePrice<G, <BaseCurrency>, <BaseCurrencyGroup>>]
+    /// Return [finance::price::base::BasePrice<G, BaseCurrency, BaseCurrencyGroup>]
     BasePrice { currency: CurrencyDTO<G> },
 }
 
@@ -28,6 +28,6 @@ where
 
     /// Provide the price of a currency against the stable one
     ///
-    /// Return [BasePrice<G, <BaseCurrency>, <BaseCurrencyGroup>>]
+    /// Return [finance::price::base::BasePrice<G, StableCurrency, StableCurrencyGroup>]
     StablePrice { currency: CurrencyDTO<G> },
 }

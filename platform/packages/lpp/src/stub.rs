@@ -1,5 +1,8 @@
-use currency::platform::{Nls, PlatformGroup};
-use finance::coin::{Coin, CoinDTO};
+use currency::{
+    SymbolRef,
+    platform::{Nls, Stable},
+};
+use finance::coin::{Coin, ExternalCoinDTO};
 use platform::{
     batch::{Batch, Emit, Emitter},
     message::Response as MessageResponse,
@@ -8,7 +11,7 @@ use sdk::cosmwasm_std::{Addr, Env, QuerierWrapper};
 
 use crate::{
     CoinStable, Lpp,
-    error::Result,
+    error::{Error, Result},
     msg::{ExecuteMsg, QueryMsg},
 };
 
@@ -25,19 +28,16 @@ impl<'querier, 'env> Stub<'querier, 'env> {
 }
 
 impl Lpp for Stub<'_, '_> {
-    fn balance(&self, oracle: Addr) -> Result<CoinStable> {
+    fn balance(&self, oracle: Addr, stable_ticker: SymbolRef<'_>) -> Result<CoinStable> {
         self.querier
-            .query_wasm_smart::<CoinDTO<PlatformGroup>>(
+            .query_wasm_smart::<ExternalCoinDTO<Stable>>(
                 &self.lpp,
                 &(QueryMsg::StableBalance {
                     oracle_addr: oracle,
                 }),
             )
             .map_err(Into::into)
-            .map(|dto| {
-                dto.try_into()
-                    .unwrap_or_else(|_| unreachable!("Each stable is member of the plaform group!"))
-            })
+            .and_then(|dto| dto.try_coerce(stable_ticker).map_err(Error::Coercion))
     }
 
     fn distribute(self, reward: Coin<Nls>) -> Result<MessageResponse> {

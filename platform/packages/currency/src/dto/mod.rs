@@ -7,15 +7,18 @@ use std::{
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    CurrencyDef, Group, MaybeAnyVisitResult, Symbol, SymbolStatic, Tickers, TypeMatcher,
+    CurrencyDef, Group, MaybeAnyVisitResult, Symbol, SymbolStatic, Tickers,
     definition::DefinitionRef,
     error::{Error, Result},
     group::MemberOf,
+    matcher,
     pairs::{MaybePairsVisitorResult, PairsGroup, PairsVisitor},
+    visit_any::MatchThenVisit,
 };
 
 use super::AnyVisitor;
 
+pub mod single;
 mod unchecked;
 
 /// Data-Transferable currency belonging to a group
@@ -52,7 +55,9 @@ where
         SubG: Group,
         V: AnyVisitor<SubG>,
     {
-        SubG::maybe_visit(&TypeMatcher::new(self.def), visitor)
+        let matcher = matcher::type_matcher(self.def);
+        let match_then_visit = MatchThenVisit::new(matcher, visitor);
+        SubG::find_map(match_then_visit).map_err(MatchThenVisit::release_visitor)
     }
 
     pub fn into_currency_type<V>(self, visitor: V) -> V::Outcome
@@ -67,7 +72,9 @@ where
     where
         V: PairsVisitor,
     {
-        V::Pivot::maybe_visit(&TypeMatcher::new(self.def), visitor)
+        let matcher = matcher::type_matcher(self.def);
+        let match_then_visit = MatchThenVisit::<_, _, V::Pivot>::new(matcher, visitor);
+        V::Pivot::find_map(match_then_visit).map_err(MatchThenVisit::release_visitor)
     }
 
     pub fn into_pair_member_type<V>(self, visitor: V) -> V::Outcome
@@ -89,7 +96,7 @@ where
         }
     }
 
-    pub fn definition(&self) -> DefinitionRef {
+    pub const fn definition(&self) -> DefinitionRef {
         self.def
     }
 

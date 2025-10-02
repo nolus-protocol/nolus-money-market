@@ -1,13 +1,29 @@
-use currency::{AnyVisitor, Group, Matcher, MaybeAnyVisitResult};
+use currency::{FilterMapT, FindMapT};
 
-use super::super::Group as PaymentGroup;
+use super::Group as OnlyGroup;
 
-#[inline]
-pub(super) fn maybe_visit<M, V, VisitedG>(_: &M, visitor: V) -> MaybeAnyVisitResult<VisitedG, V>
-where
-    M: Matcher,
-    V: AnyVisitor<VisitedG>,
-    VisitedG: Group<TopG = PaymentGroup>,
-{
-    currency::visit_noone(visitor)
+pub(super) enum GroupMember {}
+
+impl currency::GroupMember<OnlyGroup> for GroupMember {
+    fn first() -> Option<Self> {
+        None
+    }
+
+    fn next(&self) -> Option<Self> {
+        match *self {}
+    }
+
+    fn filter_map<FilterMap>(&self, _: &FilterMap) -> Option<FilterMap::Outcome>
+    where
+        FilterMap: FilterMapT<VisitedG = OnlyGroup>,
+    {
+        match *self {}
+    }
+
+    fn find_map<FindMap>(&self, _: FindMap) -> Result<FindMap::Outcome, FindMap>
+    where
+        FindMap: FindMapT<TargetG = OnlyGroup>,
+    {
+        match *self {}
+    }
 }

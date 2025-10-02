@@ -27,3 +27,4 @@ thiserror = { workspace = true }
 
 [dev-dependencies]
 currency = { workspace = true, features = ["testing"] }
+platform = { workspace = true, features = ["testing"]}

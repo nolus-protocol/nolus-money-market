@@ -4,7 +4,6 @@ use access_control::SingleUserAccess;
 use admin_contract::msg::{
     ProtocolQueryResponse, ProtocolsQueryResponse, QueryMsg as ProtocolsRegistry,
 };
-use currency::platform::PlatformGroup;
 use finance::{duration::Duration, percent::Percent100};
 use platform::{
     batch::Batch,
@@ -140,13 +139,14 @@ fn try_build_reward<'q>(
         let pools: Result<Vec<_>, _> = protocols
             .into_iter()
             .map(|protocol| {
-                PoolImpl::new(
-                    lpp_platform::new_stub(protocol.contracts.lpp, querier, env),
-                    oracle_platform::new_unchecked_stable_quote_stub::<PlatformGroup, _>(
-                        protocol.contracts.oracle,
-                        querier,
-                    ),
-                )
+                oracle_platform::new_unchecked_stable_quote_stub(protocol.contracts.oracle, querier)
+                    .map_err(ContractError::QueryStableTicker)
+                    .and_then(|oracle| {
+                        PoolImpl::new(
+                            lpp_platform::new_stub(protocol.contracts.lpp, querier, env),
+                            oracle,
+                        )
+                    })
             })
             .collect();
 

@@ -1,10 +1,19 @@
+use std::borrow::Borrow;
+
 use serde::Deserialize;
 
 use crate::{
-    AnyVisitor, CurrencyDTO, Group, Matcher, MaybeAnyVisitResult,
-    from_symbol_any::InPoolWith,
-    group::MemberOf,
-    pairs::{MaybePairsVisitorResult, PairsGroup, PairsVisitor},
+    CurrencyDTO, FindMapT, Group,
+    group::{self, CurrenciesMapping, FilterMapT, MemberOf, SubFilterAdapter, SubGroupFindAdapter},
+    pairs::{self, FindMapT as PairsFindMapT, PairsGroup},
+    test::{
+        sub::{Item as SubGroupItem, SubGroupTestC6Pairs, SubGroupTestC10Pairs},
+        super_::{
+            Item as SuperGroupItem, SuperGroupTestC1Pairs, SuperGroupTestC2Pairs,
+            SuperGroupTestC3Pairs, SuperGroupTestC4Pairs, SuperGroupTestC5Pairs,
+        },
+    },
+    visit_any::InPoolWith,
 };
 
 pub type SuperGroupTestC1 = impl_::TestC1;
@@ -25,63 +34,54 @@ impl Group for SuperGroup {
     const DESCR: &'static str = "super_group";
     type TopG = Self;
 
-    fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<Self, V>
+    fn filter_map<FilterMap, FilterMapRef>(
+        f: FilterMapRef,
+    ) -> impl Iterator<Item = FilterMap::Outcome>
     where
-        M: Matcher,
-        V: AnyVisitor<Self>,
+        FilterMap: FilterMapT<VisitedG = Self>,
+        FilterMapRef: Borrow<FilterMap> + Clone,
     {
-        crate::maybe_visit_any::<_, SuperGroupTestC1, _>(matcher, visitor)
-            .or_else(|visitor| crate::maybe_visit_any::<_, SuperGroupTestC2, _>(matcher, visitor))
-            .or_else(|visitor| crate::maybe_visit_any::<_, SuperGroupTestC3, _>(matcher, visitor))
-            .or_else(|visitor| crate::maybe_visit_any::<_, SuperGroupTestC4, _>(matcher, visitor))
-            .or_else(|visitor| crate::maybe_visit_any::<_, SuperGroupTestC5, _>(matcher, visitor))
-            .or_else(|visitor| SubGroup::maybe_visit_member(matcher, visitor))
+        CurrenciesMapping::<_, SuperGroupItem, _, _>::with_filter(f.clone())
+            .chain(SubGroup::filter_map(SubFilterAdapter::new(f)))
     }
 
-    fn maybe_visit_member<M, V>(_matcher: &M, _visitor: V) -> MaybeAnyVisitResult<Self::TopG, V>
+    fn find_map<FindMap>(v: FindMap) -> Result<FindMap::Outcome, FindMap>
     where
-        M: Matcher,
-        V: AnyVisitor<Self::TopG>,
+        FindMap: FindMapT<TargetG = Self>,
     {
-        unreachable!()
+        group::find_map::<_, SuperGroupItem, _>(v)
+            .or_else(|v| {
+                group::find_map::<_, SubGroupItem, _>(SubGroupFindAdapter::<SubGroup, _, _>::new(v))
+            })
+            .map_err(SubGroupFindAdapter::release_super_map)
     }
 }
 
-//Pool pairs: 1:2, 1:4, 2:3, 4:5, 2:6, 2:10, 5:10, 6:10
+//Pool pairs: 1:2, 1:4, 1:10, 2:3, 2:6, 2:10, 4:5, 5:5, 5:10, 6:10
 impl PairsGroup for SuperGroupTestC1 {
     type CommonGroup = SuperGroup;
 
-    fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybePairsVisitorResult<V>
+    fn find_map<FindMap>(f: FindMap) -> Result<FindMap::Outcome, FindMap>
     where
-        M: Matcher,
-        V: PairsVisitor<Pivot = Self>,
+        FindMap: PairsFindMapT<Pivot = Self>,
     {
-        use crate::maybe_visit_buddy as maybe_visit;
-        maybe_visit::<SuperGroupTestC2, _, _>(matcher, visitor)
-            .or_else(|v| maybe_visit::<SuperGroupTestC4, _, _>(matcher, v))
-            .or_else(|v| maybe_visit::<SuperGroupTestC5, _, _>(matcher, v))
-            .or_else(|v| maybe_visit::<SubGroupTestC10, _, _>(matcher, v))
+        pairs::find_map::<SuperGroupTestC1Pairs, _>(f)
     }
 }
 impl InPoolWith<SuperGroup> for SuperGroupTestC1 {}
 impl InPoolWith<SuperGroupTestC2> for SuperGroupTestC1 {}
 impl InPoolWith<SuperGroupTestC4> for SuperGroupTestC1 {}
-impl InPoolWith<SuperGroupTestC5> for SuperGroupTestC1 {}
+impl InPoolWith<SubGroupTestC10> for SuperGroupTestC1 {}
 
-//Pool pairs: 1:2, 1:4, 2:3, 4:5, 2:6, 2:10, 5:10, 6:10
+//Pool pairs: 1:2, 1:4, 1:10, 2:3, 2:6, 2:10, 4:5, 5:5, 5:10, 6:10
 impl PairsGroup for SuperGroupTestC2 {
     type CommonGroup = SuperGroup;
 
-    fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybePairsVisitorResult<V>
+    fn find_map<FindMap>(f: FindMap) -> Result<FindMap::Outcome, FindMap>
     where
-        M: Matcher,
-        V: PairsVisitor<Pivot = Self>,
+        FindMap: PairsFindMapT<Pivot = Self>,
     {
-        use crate::maybe_visit_buddy as maybe_visit;
-        maybe_visit::<SuperGroupTestC1, _, _>(matcher, visitor)
-            .or_else(|v| maybe_visit::<SuperGroupTestC3, _, _>(matcher, v))
-            .or_else(|v| maybe_visit::<SubGroupTestC6, _, _>(matcher, v))
-            .or_else(|v| maybe_visit::<SubGroupTestC10, _, _>(matcher, v))
+        pairs::find_map::<SuperGroupTestC2Pairs, _>(f)
     }
 }
 impl InPoolWith<SuperGroup> for SuperGroupTestC2 {}
@@ -90,68 +90,49 @@ impl InPoolWith<SuperGroupTestC3> for SuperGroupTestC2 {}
 impl InPoolWith<SubGroupTestC6> for SuperGroupTestC2 {}
 impl InPoolWith<SubGroupTestC10> for SuperGroupTestC2 {}
 
-//Pool pairs: 1:2, 1:4, 2:3, 4:5, 2:6, 2:10, 5:10, 6:10
+//Pool pairs: 1:2, 1:4, 1:10, 2:3, 2:6, 2:10, 4:5, 5:5, 5:10, 6:10
 impl PairsGroup for SuperGroupTestC3 {
     type CommonGroup = SuperGroup;
 
-    fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybePairsVisitorResult<V>
+    fn find_map<FindMap>(f: FindMap) -> Result<FindMap::Outcome, FindMap>
     where
-        M: Matcher,
-        V: PairsVisitor<Pivot = Self>,
+        FindMap: PairsFindMapT<Pivot = Self>,
     {
-        use crate::maybe_visit_buddy as maybe_visit;
-        maybe_visit::<SuperGroupTestC2, _, _>(matcher, visitor)
-            .or_else(|v| maybe_visit::<SuperGroupTestC4, _, _>(matcher, v))
-            .or_else(|v| maybe_visit::<SuperGroupTestC5, _, _>(matcher, v))
-            .or_else(|v| maybe_visit::<SubGroupTestC10, _, _>(matcher, v))
+        pairs::find_map::<SuperGroupTestC3Pairs, _>(f)
     }
 }
 impl InPoolWith<SuperGroup> for SuperGroupTestC3 {}
 impl InPoolWith<SuperGroupTestC2> for SuperGroupTestC3 {}
-impl InPoolWith<SuperGroupTestC5> for SuperGroupTestC3 {}
 
-//Pool pairs: 1:2, 1:4, 2:3, 4:5, 2:6, 2:10, 5:10, 6:10
+//Pool pairs: 1:2, 1:4, 1:10, 2:3, 2:6, 2:10, 4:5, 5:5, 5:10, 6:10
 impl PairsGroup for SuperGroupTestC4 {
     type CommonGroup = SuperGroup;
 
-    fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybePairsVisitorResult<V>
+    fn find_map<FindMap>(f: FindMap) -> Result<FindMap::Outcome, FindMap>
     where
-        M: Matcher,
-        V: PairsVisitor<Pivot = Self>,
+        FindMap: PairsFindMapT<Pivot = Self>,
     {
-        use crate::maybe_visit_buddy as maybe_visit;
-        maybe_visit::<SuperGroupTestC1, _, _>(matcher, visitor)
-            .or_else(|v| maybe_visit::<SuperGroupTestC5, _, _>(matcher, v))
-            .or_else(|v| maybe_visit::<SubGroupTestC10, _, _>(matcher, v))
+        pairs::find_map::<SuperGroupTestC4Pairs, _>(f)
     }
 }
 impl InPoolWith<SuperGroup> for SuperGroupTestC4 {}
 impl InPoolWith<SuperGroupTestC1> for SuperGroupTestC4 {}
-impl InPoolWith<SuperGroupTestC3> for SuperGroupTestC4 {}
 impl InPoolWith<SuperGroupTestC5> for SuperGroupTestC4 {}
 
-//Pool pairs: 1:2, 1:4, 2:3, 4:5, 2:6, 2:10, 5:10, 6:10
+//Pool pairs: 1:2, 1:4, 1:10, 2:3, 2:6, 2:10, 4:5, 5:5, 5:10, 6:10
 impl PairsGroup for SuperGroupTestC5 {
     type CommonGroup = SuperGroup;
 
-    fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybePairsVisitorResult<V>
+    fn find_map<FindMap>(f: FindMap) -> Result<FindMap::Outcome, FindMap>
     where
-        M: Matcher,
-        V: PairsVisitor<Pivot = Self>,
+        FindMap: PairsFindMapT<Pivot = Self>,
     {
-        use crate::maybe_visit_buddy as maybe_visit;
-        maybe_visit::<SuperGroupTestC1, _, _>(matcher, visitor)
-            .or_else(|v| maybe_visit::<SuperGroupTestC3, _, _>(matcher, v))
-            .or_else(|v| maybe_visit::<SuperGroupTestC4, _, _>(matcher, v))
-            .or_else(|v| maybe_visit::<SuperGroupTestC5, _, _>(matcher, v))
-            .or_else(|v| maybe_visit::<SubGroupTestC10, _, _>(matcher, v))
+        pairs::find_map::<SuperGroupTestC5Pairs, _>(f)
     }
 }
 impl InPoolWith<SuperGroup> for SuperGroupTestC5 {}
-impl InPoolWith<SuperGroupTestC1> for SuperGroupTestC5 {}
-impl InPoolWith<SuperGroupTestC3> for SuperGroupTestC5 {}
 impl InPoolWith<SuperGroupTestC4> for SuperGroupTestC5 {}
-impl InPoolWith<SuperGroupTestC5> for SuperGroupTestC5 {} // Note Self is InPoolWith<Self>, defined so to allow 'same-currency' 'unit tests on PriceDTO
+impl InPoolWith<SuperGroupTestC5> for SuperGroupTestC5 {}
 impl InPoolWith<SubGroupTestC10> for SuperGroupTestC5 {}
 
 #[derive(Debug, Copy, Clone, Ord, PartialEq, PartialOrd, Eq, Deserialize)]
@@ -164,73 +145,53 @@ impl Group for SubGroup {
     const DESCR: &'static str = "sub_group";
     type TopG = SuperGroup;
 
-    fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<Self, V>
+    fn filter_map<FilterMap, FilterMapRef>(
+        f: FilterMapRef,
+    ) -> impl Iterator<Item = FilterMap::Outcome>
     where
-        M: Matcher,
-        V: AnyVisitor<Self>,
+        FilterMap: FilterMapT<VisitedG = Self>,
+        FilterMapRef: Borrow<FilterMap>,
     {
-        maybe_visit::<_, Self, _>(matcher, visitor)
+        CurrenciesMapping::<_, SubGroupItem, _, _>::with_filter(f)
     }
 
-    fn maybe_visit_member<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<Self::TopG, V>
+    fn find_map<FindMap>(v: FindMap) -> Result<FindMap::Outcome, FindMap>
     where
-        M: Matcher,
-        V: AnyVisitor<Self::TopG>,
+        FindMap: FindMapT<TargetG = Self>,
     {
-        maybe_visit::<_, Self::TopG, _>(matcher, visitor)
+        group::find_map::<_, SubGroupItem, _>(v)
     }
 }
 
-fn maybe_visit<M, VisitedG, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<VisitedG, V>
-where
-    M: Matcher,
-    V: AnyVisitor<VisitedG>,
-    SubGroup: MemberOf<VisitedG>,
-    VisitedG: Group<TopG = SuperGroup>,
-{
-    crate::maybe_visit_member::<_, SubGroupTestC6, VisitedG, _>(matcher, visitor).or_else(
-        |visitor| crate::maybe_visit_member::<_, SubGroupTestC10, VisitedG, _>(matcher, visitor),
-    )
-}
-
-//Pool pairs: 1:2, 1:4, 2:3, 4:5, 2:6, 2:10, 5:10, 6:10
+//Pool pairs: 1:2, 1:4, 1:10, 2:3, 2:6, 2:10, 4:5, 5:5, 5:10, 6:10
 impl PairsGroup for SubGroupTestC6 {
     type CommonGroup = SuperGroup;
 
-    fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybePairsVisitorResult<V>
+    fn find_map<FindMap>(f: FindMap) -> Result<FindMap::Outcome, FindMap>
     where
-        M: Matcher,
-        V: PairsVisitor<Pivot = Self>,
+        FindMap: PairsFindMapT<Pivot = Self>,
     {
-        use crate::maybe_visit_buddy as maybe_visit;
-        maybe_visit::<SuperGroupTestC2, _, _>(matcher, visitor)
-            .or_else(|v| maybe_visit::<SubGroupTestC10, _, _>(matcher, v))
+        pairs::find_map::<SubGroupTestC6Pairs, _>(f)
     }
 }
 impl InPoolWith<SuperGroup> for SubGroupTestC6 {}
 impl InPoolWith<SuperGroupTestC2> for SubGroupTestC6 {}
 impl InPoolWith<SubGroupTestC10> for SubGroupTestC6 {}
 
-//Pool pairs: 1:2, 1:4, 2:3, 4:5, 2:6, 2:10, 5:10, 6:10
+//Pool pairs: 1:2, 1:4, 1:10, 2:3, 2:6, 2:10, 4:5, 5:5, 5:10, 6:10
 impl PairsGroup for SubGroupTestC10 {
     type CommonGroup = SuperGroup;
 
-    fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybePairsVisitorResult<V>
+    fn find_map<FindMap>(f: FindMap) -> Result<FindMap::Outcome, FindMap>
     where
-        M: Matcher,
-        V: PairsVisitor<Pivot = Self>,
+        FindMap: PairsFindMapT<Pivot = Self>,
     {
-        use crate::maybe_visit_buddy as maybe_visit;
-        maybe_visit::<SuperGroupTestC2, _, _>(matcher, visitor)
-            .or_else(|v| maybe_visit::<SuperGroupTestC5, _, _>(matcher, v))
-            .or_else(|v| maybe_visit::<SubGroupTestC6, _, _>(matcher, v))
+        pairs::find_map::<SubGroupTestC10Pairs, _>(f)
     }
 }
 impl InPoolWith<SuperGroup> for SubGroupTestC10 {}
 impl InPoolWith<SuperGroupTestC1> for SubGroupTestC10 {}
 impl InPoolWith<SuperGroupTestC2> for SubGroupTestC10 {}
-impl InPoolWith<SuperGroupTestC3> for SubGroupTestC10 {}
-impl InPoolWith<SuperGroupTestC4> for SubGroupTestC10 {}
 impl InPoolWith<SuperGroupTestC5> for SubGroupTestC10 {}
 impl InPoolWith<SubGroupTestC6> for SubGroupTestC10 {}
 

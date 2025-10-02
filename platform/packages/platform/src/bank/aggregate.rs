@@ -26,6 +26,18 @@ impl<T> Aggregate for Vec<T> {
     }
 }
 
+impl<T, E> Aggregate for StdResult<T, E>
+where
+    T: Aggregate,
+{
+    fn aggregate(self, other: Self) -> Self
+    where
+        Self: Sized,
+    {
+        self.and_then(|v| other.map(|v_other| v.aggregate(v_other)))
+    }
+}
+
 /// Temporary replacement for functionality similar to
 /// [`Iterator::try_reduce`] until the feature is stabilized.
 pub trait ReduceResults

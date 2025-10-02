@@ -75,12 +75,12 @@ fn marketprice_add_feed_expect_err() {
         .unwrap();
     let ts = Timestamp::from_seconds(now.as_secs());
     let expected_err = market
-        .price::<SuperGroupTestC3, SuperGroup, _>(
+        .price::<SuperGroupTestC2, SuperGroup, _>(
             ts,
             TOTAL_FEEDERS,
             [
-                &currency::dto::<SuperGroupTestC5, _>(),
-                &currency::dto::<SuperGroupTestC3, _>(),
+                &currency::dto::<SuperGroupTestC1, _>(),
+                &currency::dto::<SuperGroupTestC2, _>(),
             ]
             .into_iter(),
         )
@@ -113,9 +113,9 @@ fn marketprice_add_feed() {
     let mut market = PriceFeeds::new(Repo::new(ROOT_NS, storage_dyn_ref), &config);
     let f_address = testing::user("address1");
 
-    let price1 = price::<SuperGroupTestC5, SuperGroupTestC3, _, _>(10, 5);
-    let price2 = price::<SuperGroupTestC5, SubGroupTestC10, _, _>(10000000000, 1000000009);
-    let price3 = price::<SuperGroupTestC5, SuperGroupTestC4, _, _>(10000000000000, 100000000000002);
+    let price1 = price::<SuperGroupTestC1, SuperGroupTestC2, _, _>(10, 5);
+    let price2 = price::<SuperGroupTestC1, SuperGroupTestC4, _, _>(10000000000000, 100000000000002);
+    let price3 = price::<SuperGroupTestC1, SubGroupTestC10, _, _>(10000000000, 1000000009);
 
     let prices = vec![price1.into(), price2.into(), price3.into()];
 
@@ -126,12 +126,12 @@ fn marketprice_add_feed() {
 
     market.feed(ts, f_address, &prices).unwrap();
     let err = market
-        .price::<SuperGroupTestC3, SuperGroup, _>(
+        .price::<SuperGroupTestC4, SuperGroup, _>(
             ts,
             TOTAL_FEEDERS + TOTAL_FEEDERS,
             [
-                &currency::dto::<SuperGroupTestC5, _>(),
-                &currency::dto::<SuperGroupTestC3, _>(),
+                &currency::dto::<SuperGroupTestC1, _>(),
+                &currency::dto::<SuperGroupTestC4, _>(),
             ]
             .into_iter(),
         )
@@ -140,18 +140,18 @@ fn marketprice_add_feed() {
 
     {
         let price_resp = market
-            .price::<SuperGroupTestC3, SuperGroup, _>(
+            .price::<SuperGroupTestC4, SuperGroup, _>(
                 ts,
                 TOTAL_FEEDERS,
                 [
-                    &currency::dto::<SuperGroupTestC5, _>(),
-                    &currency::dto::<SuperGroupTestC3, _>(),
+                    &currency::dto::<SuperGroupTestC1, _>(),
+                    &currency::dto::<SuperGroupTestC4, _>(),
                 ]
                 .into_iter(),
             )
             .unwrap();
 
-        assert_eq!(BasePrice::from(price1), price_resp);
+        assert_eq!(BasePrice::from(price2), price_resp);
     }
 }
 
@@ -164,7 +164,7 @@ fn marketprice_follow_the_path() {
 
     feed_price(
         &mut market,
-        price::<SuperGroupTestC3, SubGroupTestC10, _, _>(1, 1),
+        price::<SuperGroupTestC1, SubGroupTestC10, _, _>(1, 4),
     )
     .unwrap();
     feed_price(
@@ -181,7 +181,7 @@ fn marketprice_follow_the_path() {
 
     feed_price(
         &mut market,
-        price::<SuperGroupTestC3, SuperGroupTestC5, _, _>(1, 1),
+        price::<SuperGroupTestC5, SuperGroupTestC4, _, _>(5, 1),
     )
     .unwrap();
 
@@ -192,19 +192,19 @@ fn marketprice_follow_the_path() {
     .unwrap();
     feed_price(
         &mut market,
-        price::<SuperGroupTestC5, SuperGroupTestC1, _, _>(1, 2),
+        price::<SuperGroupTestC4, SuperGroupTestC1, _, _>(1, 2),
     )
     .unwrap();
 
     feed_price(
         &mut market,
-        price::<SuperGroupTestC1, SuperGroupTestC5, _, _>(1, 3),
+        price::<SubGroupTestC6, SubGroupTestC10, _, _>(1, 3),
     )
     .unwrap();
 
     feed_price(
         &mut market,
-        price::<SuperGroupTestC4, SubGroupTestC10, _, _>(1, 3),
+        price::<SuperGroupTestC2, SubGroupTestC10, _, _>(1, 3),
     )
     .unwrap();
 
@@ -225,15 +225,15 @@ fn marketprice_follow_the_path() {
             last_feed_time,
             TOTAL_FEEDERS,
             [
-                &currency::dto::<SuperGroupTestC3, _>(),
                 &currency::dto::<SuperGroupTestC5, _>(),
+                &currency::dto::<SuperGroupTestC4, _>(),
                 &currency::dto::<SuperGroupTestC1, _>(),
                 &currency::dto::<SuperGroupTestC2, _>(),
             ]
             .into_iter(),
         )
         .unwrap();
-    let expected = price::<SuperGroupTestC3, SuperGroupTestC2, _, _>(1, 6);
+    let expected = price::<SuperGroupTestC5, SuperGroupTestC2, _, _>(5, 6);
     let expected_dto = BasePrice::from(expected);
 
     assert_eq!(expected_dto, price_resp);
@@ -291,9 +291,9 @@ fn marketprice_follow_the_path() {
                 last_feed_time,
                 TOTAL_FEEDERS,
                 [
-                    &currency::dto::<SuperGroupTestC3, _>(),
-                    &currency::dto::<SubGroupTestC10, _>(),
                     &currency::dto::<SuperGroupTestC2, _>(),
+                    &currency::dto::<SubGroupTestC10, _>(),
+                    &currency::dto::<SuperGroupTestC1, _>(),
                 ]
                 .into_iter()
             )

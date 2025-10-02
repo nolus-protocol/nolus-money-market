@@ -75,15 +75,15 @@ pub(super) struct Builder<
     'dex_currencies,
     'dex_currency_ticker,
     'dex_currency_definition,
-> {
-    static_context: &'static_context StaticContext<
+>(
+    &'static_context StaticContext<
         'protocol,
         'host_currency,
         'dex_currencies,
         'dex_currency_ticker,
         'dex_currency_definition,
     >,
-}
+);
 
 impl<
     'static_context,
@@ -112,7 +112,7 @@ impl<
             'dex_currency_definition,
         >,
     ) -> Self {
-        Self { static_context }
+        Self(static_context)
     }
 
     #[inline]
@@ -126,12 +126,8 @@ impl<
         'dex_currency_ticker,
         'dex_currency_definition,
         true,
-        true,
     > {
-        Generator {
-            static_context: self.static_context,
-            current_module: CurrentModule::Lease,
-        }
+        self.build(CurrentModule::Lease)
     }
 
     #[inline]
@@ -144,13 +140,9 @@ impl<
         'dex_currencies,
         'dex_currency_ticker,
         'dex_currency_definition,
-        false,
-        false,
+        true,
     > {
-        Generator {
-            static_context: self.static_context,
-            current_module: CurrentModule::Lpn,
-        }
+        self.build(CurrentModule::Lpn)
     }
 
     #[inline]
@@ -163,13 +155,9 @@ impl<
         'dex_currencies,
         'dex_currency_ticker,
         'dex_currency_definition,
-        false,
         true,
     > {
-        Generator {
-            static_context: self.static_context,
-            current_module: CurrentModule::Native,
-        }
+        self.build(CurrentModule::Native)
     }
 
     #[inline]
@@ -183,11 +171,28 @@ impl<
         'dex_currency_ticker,
         'dex_currency_definition,
         true,
-        true,
     > {
+        self.build(CurrentModule::PaymentOnly)
+    }
+
+    #[inline]
+    const fn build<const PAIRS_GROUP: bool>(
+        &self,
+        current_module: CurrentModule,
+    ) -> Generator<
+        'static_context,
+        'protocol,
+        'host_currency,
+        'dex_currencies,
+        'dex_currency_ticker,
+        'dex_currency_definition,
+        PAIRS_GROUP,
+    > {
+        let Self(static_context) = *self;
+
         Generator {
-            static_context: self.static_context,
-            current_module: CurrentModule::PaymentOnly,
+            static_context,
+            current_module,
         }
     }
 }
@@ -199,7 +204,6 @@ pub(super) struct Generator<
     'dex_currencies,
     'dex_currency_ticker,
     'dex_currency_definition,
-    const MAYBE_VISIT: bool,
     const PAIRS_GROUP: bool,
 > {
     static_context: &'static_context StaticContext<
@@ -216,9 +220,9 @@ pub(super) trait Resolver<'name, 'definition> {
     fn resolve(&self, ticker: &str) -> Result<ResolvedCurrency<'name, 'definition>>;
 }
 
-impl<'host_currency, 'dex_currencies, 'definition, const MAYBE_VISIT: bool, const PAIRS_GROUP: bool>
+impl<'host_currency, 'dex_currencies, 'definition, const PAIRS_GROUP: bool>
     Resolver<'dex_currencies, 'definition>
-    for Generator<'_, '_, 'host_currency, 'dex_currencies, '_, '_, MAYBE_VISIT, PAIRS_GROUP>
+    for Generator<'_, '_, 'host_currency, 'dex_currencies, '_, '_, PAIRS_GROUP>
 where
     'host_currency: 'definition,
     'dex_currencies: 'definition,
@@ -235,17 +239,16 @@ where
     }
 }
 
-pub(super) trait MaybeVisit {
-    const GENERATE: bool;
+pub(super) trait GroupMembers<'dex_currencies, 'dex_currency_ticker, 'dex_currency_definition>
+where
+    'dex_currency_ticker: 'dex_currencies,
+    'dex_currency_definition: 'dex_currencies,
+{
+    fn group_members<'name>(&self, name: &'name str) -> Result<impl Iterator<Item = &'name str>>;
 }
 
-impl<
-    'dex_currencies,
-    'dex_currency_ticker,
-    'dex_currency_definition,
-    const MAYBE_VISIT: bool,
-    const PAIRS_GROUP: bool,
-> MaybeVisit
+impl<'dex_currencies, 'dex_currency_ticker, 'dex_currency_definition, const PAIRS_GROUP: bool>
+    GroupMembers<'dex_currencies, 'dex_currency_ticker, 'dex_currency_definition>
     for Generator<
         '_,
         '_,
@@ -253,14 +256,19 @@ impl<
         'dex_currencies,
         'dex_currency_ticker,
         'dex_currency_definition,
-        MAYBE_VISIT,
         PAIRS_GROUP,
     >
-where
-    'dex_currency_ticker: 'dex_currencies,
-    'dex_currency_definition: 'dex_currencies,
 {
-    const GENERATE: bool = MAYBE_VISIT;
+    #[inline]
+    fn group_members<'name>(&self, name: &'name str) -> Result<impl Iterator<Item = &'name str>> {
+        Ok([
+            "
+        Self::",
+            name,
+            " => ",
+        ]
+        .into_iter())
+    }
 }
 
 pub(super) trait PairsGroup<'dex_currencies, 'dex_currency_ticker, 'dex_currency_definition>
@@ -280,10 +288,11 @@ where
     >
     where
         'dex_currencies: 'r,
-        'name: 'r;
+        'name: 'r,
+        'parent: 'r;
 }
 
-impl<'dex_currencies, 'dex_currency_ticker, 'dex_currency_definition, const MAYBE_VISIT: bool>
+impl<'dex_currencies, 'dex_currency_ticker, 'dex_currency_definition>
     PairsGroup<'dex_currencies, 'dex_currency_ticker, 'dex_currency_definition>
     for Generator<
         '_,
@@ -292,7 +301,6 @@ impl<'dex_currencies, 'dex_currency_ticker, 'dex_currency_definition, const MAYB
         'dex_currencies,
         'dex_currency_ticker,
         'dex_currency_definition,
-        MAYBE_VISIT,
         false,
     >
 where
@@ -313,23 +321,15 @@ where
     where
         'dex_currencies: 'r,
         'name: 'r,
+        'parent: 'r,
     {
         const { Ok(iter::empty()) }
     }
 }
 
-impl<'dex_currencies, 'dex_currency_ticker, 'dex_currency_definition, const MAYBE_VISIT: bool>
+impl<'dex_currencies, 'dex_currency_ticker, 'dex_currency_definition>
     PairsGroup<'dex_currencies, 'dex_currency_ticker, 'dex_currency_definition>
-    for Generator<
-        '_,
-        '_,
-        '_,
-        'dex_currencies,
-        'dex_currency_ticker,
-        'dex_currency_definition,
-        MAYBE_VISIT,
-        true,
-    >
+    for Generator<'_, '_, '_, 'dex_currencies, 'dex_currency_ticker, 'dex_currency_definition, true>
 where
     'dex_currency_ticker: 'dex_currencies,
     'dex_currency_definition: 'dex_currencies,
@@ -348,6 +348,7 @@ where
     where
         'dex_currencies: 'r,
         'name: 'r,
+        'parent: 'r,
     {
         pairs_group::pairs_group(
             self.current_module,
@@ -380,13 +381,8 @@ where
         'name: 'r;
 }
 
-impl<
-    'dex_currencies,
-    'dex_currency_ticker,
-    'dex_currency_definition,
-    const MAYBE_VISIT: bool,
-    const PAIRS_GROUP: bool,
-> InPoolWith<'dex_currencies, 'dex_currency_ticker, 'dex_currency_definition>
+impl<'dex_currencies, 'dex_currency_ticker, 'dex_currency_definition, const PAIRS_GROUP: bool>
+    InPoolWith<'dex_currencies, 'dex_currency_ticker, 'dex_currency_definition>
     for Generator<
         '_,
         '_,
@@ -394,7 +390,6 @@ impl<
         'dex_currencies,
         'dex_currency_ticker,
         'dex_currency_definition,
-        MAYBE_VISIT,
         PAIRS_GROUP,
     >
 {
@@ -441,8 +436,7 @@ impl<
                         resolved.name(),
                         "> for ",
                         name,
-                        " {}
-",
+                        " {}\n",
                     ]
                 })
             })

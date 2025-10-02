@@ -1,6 +1,8 @@
+use std::borrow::Borrow;
+
 use serde::{Deserialize, Serialize};
 
-use currency::{AnyVisitor, Matcher, MaybeAnyVisitResult, MemberOf};
+use currency::{FilterMapT, FindMapT, MemberOf, SubFilterAdapter, SubGroupFindAdapter};
 
 use crate::{lease::Group as LeaseGroup, lpn::Group as LpnGroup, native::Group as NativeGroup};
 
@@ -24,23 +26,38 @@ impl currency::Group for Group {
 
     type TopG = Self;
 
-    fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybeAnyVisitResult<Self, V>
+    fn filter_map<FilterMap, FilterMapRef>(
+        filter_map: FilterMapRef,
+    ) -> impl Iterator<Item = FilterMap::Outcome>
     where
-        M: Matcher,
-        V: AnyVisitor<Self>,
+        FilterMap: FilterMapT<VisitedG = Self>,
+        FilterMapRef: Borrow<FilterMap> + Clone,
     {
-        LeaseGroup::maybe_visit_member(matcher, visitor)
-            .or_else(|visitor| LpnGroup::maybe_visit_member(matcher, visitor))
-            .or_else(|visitor| NativeGroup::maybe_visit_member(matcher, visitor))
-            .or_else(|visitor| OnlyGroup::maybe_visit_member(matcher, visitor))
+        LpnGroup::filter_map(SubFilterAdapter::new(filter_map.clone()))
+            .chain(NativeGroup::filter_map(SubFilterAdapter::new(
+                filter_map.clone(),
+            )))
+            .chain(LeaseGroup::filter_map(SubFilterAdapter::new(
+                filter_map.clone(),
+            )))
+            .chain(OnlyGroup::filter_map(SubFilterAdapter::new(filter_map)))
     }
 
-    fn maybe_visit_member<M, V>(_: &M, _: V) -> MaybeAnyVisitResult<Self::TopG, V>
+    fn find_map<FindMap>(find_map: FindMap) -> Result<FindMap::Outcome, FindMap>
     where
-        M: Matcher,
-        V: AnyVisitor<Self::TopG>,
+        FindMap: FindMapT<TargetG = Self>,
     {
-        unreachable!()
+        LpnGroup::find_map(SubGroupFindAdapter::new(find_map))
+            .or_else(|find_map| {
+                NativeGroup::find_map(SubGroupFindAdapter::new(find_map.release_super_map()))
+            })
+            .or_else(|find_map| {
+                LeaseGroup::find_map(SubGroupFindAdapter::new(find_map.release_super_map()))
+            })
+            .or_else(|find_map| {
+                OnlyGroup::find_map(SubGroupFindAdapter::new(find_map.release_super_map()))
+            })
+            .map_err(SubGroupFindAdapter::release_super_map)
     }
 }
 

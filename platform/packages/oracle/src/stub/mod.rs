@@ -1,11 +1,15 @@
 use std::{fmt::Debug, marker::PhantomData, result::Result as StdResult};
 
+#[cfg(feature = "unchecked-stable-quote")]
+use currency::platform::{PlatformGroup, Stable};
 use serde::{Deserialize, Serialize};
 
 use currency::{Currency, CurrencyDTO, CurrencyDef, Group, MemberOf};
 use finance::price::Price;
 use sdk::cosmwasm_std::{Addr, QuerierWrapper};
 
+#[cfg(feature = "unchecked-stable-quote")]
+pub use self::impl_::{StablePriceSource, StablePriceStub};
 use crate::error::{Error, Result};
 
 use self::impl_::{BasePriceRequest, OracleStub, RequestBuilder};
@@ -13,21 +17,14 @@ use self::impl_::{BasePriceRequest, OracleStub, RequestBuilder};
 mod impl_;
 
 #[cfg(feature = "unchecked-stable-quote")]
-pub fn new_unchecked_stable_quote_stub<G, StableC>(
+pub fn new_unchecked_stable_quote_stub<G>(
     oracle: Addr,
     querier: QuerierWrapper<'_>,
-) -> impl Oracle<G, QuoteC = StableC, QuoteG = G> + AsRef<OracleRef<StableC, G>>
+) -> Result<impl Oracle<G, QuoteC = Stable, QuoteG = PlatformGroup> + AsRef<StablePriceSource>>
 where
-    G: Group<TopG = G>,
-    StableC: CurrencyDef,
-    StableC::Group: MemberOf<G>,
+    G: Group,
 {
-    use self::impl_::StablePriceRequest;
-
-    impl_::OracleStub::<G, StableC, G, StablePriceRequest>::new(
-        OracleRef::unchecked(oracle),
-        querier,
-    )
+    StablePriceStub::try_new(oracle, querier)
 }
 
 pub trait Oracle<G>

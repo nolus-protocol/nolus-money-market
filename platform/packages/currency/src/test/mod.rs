@@ -1,13 +1,24 @@
 use std::marker::PhantomData;
 
 use crate::{
-    AnyVisitor, AnyVisitorPair, Currency, CurrencyDTO, CurrencyDef, Group, MemberOf, SingleVisitor,
-    error::Error,
+    AnyVisitor, Currency, CurrencyDTO, CurrencyDef, Group, MemberOf, SingleVisitor, error::Error,
+    visit_any::AnyVisitorPair,
 };
 
 pub use self::group::*;
+#[cfg(test)]
+pub(crate) use self::{
+    filter::{Dto, FindByTicker},
+    find::FindCurrencyBySymbol,
+};
 
+#[cfg(test)]
+mod filter;
+#[cfg(test)]
+mod find;
 mod group;
+mod sub;
+mod super_;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Expect<CDef, VisitedG, VisitorG>(

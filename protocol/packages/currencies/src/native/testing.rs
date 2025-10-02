@@ -1,14 +1,50 @@
+use currency::{CurrencyDef, FilterMapT, FindMapT};
+
+use self::definitions::Nls;
+
+use super::Group as NativeGroup;
+
+pub(super) struct GroupMember;
+
+impl currency::GroupMember<NativeGroup> for GroupMember {
+    fn first() -> Option<Self> {
+        Some(Self)
+    }
+
+    fn next(&self) -> Option<Self> {
+        let Self {} = self;
+
+        None
+    }
+
+    fn filter_map<FilterMap>(&self, filter_map: &FilterMap) -> Option<FilterMap::Outcome>
+    where
+        FilterMap: FilterMapT<VisitedG = NativeGroup>,
+    {
+        let Self {} = self;
+
+        filter_map.on::<Nls>(Nls::dto())
+    }
+
+    fn find_map<FindMap>(&self, find_map: FindMap) -> Result<FindMap::Outcome, FindMap>
+    where
+        FindMap: FindMapT<TargetG = NativeGroup>,
+    {
+        find_map.on::<Nls>(Nls::dto())
+    }
+}
+
 pub(super) mod definitions {
     use serde::{Deserialize, Serialize};
 
     use currency::{
-        CurrencyDTO, CurrencyDef, Definition, InPoolWith, Matcher, MaybePairsVisitorResult,
-        PairsGroup, PairsVisitor,
+        CurrencyDTO, CurrencyDef, Definition, InPoolWith, PairsFindMapT, PairsGroup,
+        PairsGroupMember, pairs_find_map,
     };
 
     use crate::{lease::LeaseC5, lpn::Lpn, payment::Group as PaymentGroup};
 
-    use super::super::Group as NativeGroup;
+    use super::NativeGroup;
 
     #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
     #[serde(deny_unknown_fields, rename_all = "snake_case")]
@@ -25,15 +61,35 @@ pub(super) mod definitions {
     impl PairsGroup for Nls {
         type CommonGroup = PaymentGroup;
 
-        #[inline]
-        fn maybe_visit<M, V>(matcher: &M, visitor: V) -> MaybePairsVisitorResult<V>
+        fn find_map<FindMap>(find_map: FindMap) -> Result<FindMap::Outcome, FindMap>
         where
-            M: Matcher,
-            V: PairsVisitor<Pivot = Self>,
+            FindMap: PairsFindMapT<Pivot = Self>,
         {
-            use currency::maybe_visit_buddy as visit;
+            struct Pairs;
 
-            visit::<Lpn, _, _>(matcher, visitor)
+            impl PairsGroupMember for Pairs {
+                type Group = Nls;
+
+                fn first() -> Option<Self> {
+                    Some(Self)
+                }
+
+                fn next(&self) -> Option<Self> {
+                    None
+                }
+
+                fn find_map<PairsFindMap>(
+                    &self,
+                    find_map: PairsFindMap,
+                ) -> Result<PairsFindMap::Outcome, PairsFindMap>
+                where
+                    PairsFindMap: PairsFindMapT<Pivot = Self::Group>,
+                {
+                    find_map.on::<Lpn>(<Lpn>::dto())
+                }
+            }
+
+            pairs_find_map::<Pairs, _>(find_map)
         }
     }
 

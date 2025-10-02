@@ -34,9 +34,8 @@ where
     type Error = Error;
 
     fn try_from(unchecked: BasePrice<BaseG, QuoteG>) -> Result<Self, Self::Error> {
-        Coin::<QuoteC>::try_from(unchecked.amount_quote).and_then(|amount_quote| {
-            ValidatedBasePrice::new_checked(unchecked.amount, amount_quote)
-        })
+        Coin::<QuoteC>::try_from(unchecked.amount_quote)
+            .and_then(|amount_quote| Self::new_checked(unchecked.amount, amount_quote))
     }
 }
 

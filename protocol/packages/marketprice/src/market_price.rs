@@ -2,7 +2,7 @@ use std::{marker::PhantomData, mem};
 
 use currency::{
     self, AnyVisitor, Currency, CurrencyDTO, CurrencyDef, Group, InPoolWith, MemberOf, PairsGroup,
-    PairsVisitor, PairsVisitorResult,
+    PairsVisitor,
 };
 use finance::price::{
     Price,
@@ -365,7 +365,7 @@ where
 
     type Outcome = Result<BasePrice<G, BaseC, BaseG>, PriceFeedsError>;
 
-    fn on<QuoteC>(self, def: &CurrencyDTO<QuoteC::Group>) -> PairsVisitorResult<Self>
+    fn on<QuoteC>(self, def: &CurrencyDTO<QuoteC::Group>) -> Self::Outcome
     where
         QuoteC: CurrencyDef
             + InPoolWith<Self::Pivot>
@@ -434,7 +434,7 @@ mod test {
                 NOW,
                 TOTAL_FEEDERS,
                 [
-                    &currency::dto::<SuperGroupTestC5, _>(),
+                    &currency::dto::<SuperGroupTestC4, _>(),
                     &currency::dto::<SuperGroupTestC1, _>(),
                 ]
                 .into_iter()
@@ -459,12 +459,12 @@ mod test {
 
         assert_eq!(
             Err(PriceFeedsError::NoPrice()),
-            feeds.price::<SuperGroupTestC1, SuperGroup, _>(
+            feeds.price::<SuperGroupTestC4, SuperGroup, _>(
                 NOW,
                 TOTAL_FEEDERS,
                 [
                     &currency::dto::<SuperGroupTestC5, _>(),
-                    &currency::dto::<SuperGroupTestC1, _>(),
+                    &currency::dto::<SuperGroupTestC4, _>(),
                 ]
                 .into_iter()
             )
