@@ -9,8 +9,11 @@ use serde::{Deserialize, Serialize};
 use sdk::cosmwasm_std::Timestamp;
 
 use crate::{
-    fraction::Unit as FractionUnit, fractionable::FractionableLegacy, ratio::SimpleFraction,
-    rational::RationalLegacy, zero::Zero,
+    fraction::Unit as FractionUnit,
+    fractionable::{CommonDoublePrimitive, Fractionable, FractionableLegacy, IntoMax},
+    ratio::SimpleFraction,
+    rational::Rational,
+    zero::Zero,
 };
 
 pub type Units = u64;
@@ -122,14 +125,13 @@ impl Duration {
         annual_amount.safe_mul(&SimpleFraction::new(self.nanos(), Self::YEAR.nanos()))
     }
 
-    pub fn into_slice_per_ratio<U>(self, amount: U, annual_amount: U) -> Self
+    pub fn into_slice_per_ratio<U>(self, amount: U, annual_amount: U) -> Option<Self>
     where
-        Self: FractionableLegacy<U>,
-        U: FractionUnit,
+        Self: Fractionable<U>,
+        U: FractionUnit + IntoMax<<Self as CommonDoublePrimitive<U>>::CommonDouble>,
     {
-        SimpleFraction::new(amount, annual_amount)
-            .of(self)
-            .expect("TODO the method has to return Option")
+        // TODO remove the full syntax once RationLegacy does not exist
+        Rational::of(&SimpleFraction::new(amount, annual_amount), self)
     }
 }
 
@@ -409,28 +411,37 @@ mod tests {
     fn into_slice_per_ratio() {
         assert_eq!(
             D::from_days(365 / 5),
-            D::YEAR.into_slice_per_ratio(test_coin(1), test_coin(5))
+            D::YEAR
+                .into_slice_per_ratio(test_coin(1), test_coin(5))
+                .unwrap()
         );
         assert_eq!(
             D::from_days(10),
-            D::from_days(30).into_slice_per_ratio(test_coin(25), test_coin(75))
+            D::from_days(30)
+                .into_slice_per_ratio(test_coin(25), test_coin(75))
+                .unwrap()
         );
         assert_eq!(
             D::ZERO,
-            D::YEAR.into_slice_per_ratio(Coin::ZERO, test_coin(Amount::MAX))
+            D::YEAR
+                .into_slice_per_ratio(Coin::ZERO, test_coin(Amount::MAX))
+                .unwrap()
         );
         assert_eq!(
             D::from_days(365 / 5),
-            D::YEAR.into_slice_per_ratio(test_coin(Amount::MAX / 5), test_coin(Amount::MAX))
+            D::YEAR
+                .into_slice_per_ratio(test_coin(Amount::MAX / 5), test_coin(Amount::MAX))
+                .unwrap()
         );
     }
 
     #[test]
-    #[should_panic = "TODO remove when refactor Fractionable. Overflow computing a fraction of duration"]
     fn panic_into_slice_per_ratio() {
-        // TODO remove the `#[should_panic]` and assert that is None when
-        // SimpleFraction::of() calls its checked_mul method instead of safe_mul
-        _ = D::YEAR.into_slice_per_ratio(test_coin(585), test_coin(1));
+        assert!(
+            D::YEAR
+                .into_slice_per_ratio(test_coin(585), test_coin(1))
+                .is_none()
+        )
     }
 
     const fn test_coin(amount: Amount) -> Coin<SubGroupTestC10> {
