@@ -43,11 +43,7 @@ impl DummyLpp {
     }
 }
 impl Lpp for DummyLpp {
-    fn balance<'stable_ticker>(
-        &self,
-        _oracle: Addr,
-        _stable_ticker: SymbolRef<'stable_ticker>,
-    ) -> Result<CoinStable> {
+    fn balance(&self, _oracle: Addr, _stable_ticker: SymbolRef<'_>) -> Result<CoinStable> {
         self.balance
             .ok_or_else(|| Error::Std(StdError::generic_err("Test failing Lpp::balance()")))
     }
