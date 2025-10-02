@@ -123,9 +123,7 @@ fn cover_losses_enough_balance() {
     test_case.send_funds_from_admin(reserve.clone(), &[cwcoin::<Lpn, _>(losses)]);
 
     let _resp = cover_losses_ok(&mut test_case, reserve.clone(), lease_addr, losses);
-    let balance_past_cover = bank::balance::<Lpn>(&reserve, test_case.app.query()).unwrap();
-
-    assert!(balance_past_cover.is_zero());
+    assert_balance_eq(&test_case, &reserve, Coin::ZERO);
 }
 
 #[test]
@@ -169,15 +167,31 @@ fn dump_balance_ok() {
         .unwrap()
         .unwrap_response();
 
-    assert_eq!(
-        Ok(Coin::ZERO),
-        bank::balance::<Lpn>(&reserve, test_case.app.query())
-    );
+    assert_balance_eq(&test_case, &reserve, Coin::ZERO);
+    assert_balance_eq(&test_case, &receiver, balance);
+}
 
-    assert_eq!(
-        Ok(balance),
-        bank::balance::<Lpn>(&receiver, test_case.app.query())
-    );
+#[test]
+fn dump_zero_balance() {
+    let mut test_case = lease::create_test_case::<Lpn>();
+    let reserve = test_case.address_book.reserve().clone();
+    let receiver = testing::user("USER");
+
+    assert_balance_eq(&test_case, &reserve, Coin::ZERO);
+
+    let msg = reserve::api::ExecuteMsg::DumpBalanceTo(receiver.clone());
+    let _resp = test_case
+        .app
+        .execute(
+            LeaserInstantiator::expected_addr(),
+            reserve.clone(),
+            &msg,
+            &[],
+        )
+        .unwrap()
+        .unwrap_response();
+
+    assert_balance_eq(&test_case, &reserve, Coin::ZERO);
 }
 
 fn cover_losses_err(
@@ -237,4 +251,11 @@ fn assert_lpn(test: &ReserveTest, reserve: Addr, exp_lpn: &LpnCurrencyDTO) {
         .query_wasm_smart(reserve, &QueryMsg::ReserveLpn())
         .unwrap();
     assert_eq!(exp_lpn, &cfg);
+}
+
+fn assert_balance_eq(test: &LeaseTestCase, account: &Addr, expected_balance: Coin<Lpn>) {
+    assert_eq!(
+        Ok(expected_balance),
+        bank::balance::<Lpn>(account, test.app.query())
+    );
 }

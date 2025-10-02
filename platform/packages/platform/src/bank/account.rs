@@ -16,6 +16,7 @@ pub trait BankAccount
 where
     Self: BankAccountView + Into<Batch>,
 {
+    /// pre-condition: arg 'amount' is not zero
     fn send<C>(&mut self, amount: Coin<C>, to: Addr)
     where
         C: CurrencyDef;

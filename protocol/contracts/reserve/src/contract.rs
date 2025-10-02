@@ -174,7 +174,9 @@ fn dump_balance_to(
         .balance::<LpnCurrency>()
         .map_err(Error::ObtainBalance)
         .map(|balance| {
-            reserve_account.send(balance, receiver);
+            if !balance.is_zero() {
+                reserve_account.send(balance, receiver);
+            }
             PlatformResponse::messages_only(reserve_account.into())
         })
 }
