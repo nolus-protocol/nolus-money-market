@@ -10,8 +10,11 @@ use crate::{
     error::{Error, Result as FinanceResult},
 };
 
+pub use self::external::Price as ExternalPrice;
+
 use super::Price;
 
+mod external;
 mod unchecked;
 pub mod with_price;
 

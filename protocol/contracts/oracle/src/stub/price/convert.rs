@@ -52,10 +52,7 @@ where
         where
             OracleImpl: Oracle<OutG, QuoteC = QuoteC, QuoteG = QuoteG>,
         {
-            oracle_platform::convert::from_quote::<_, _, _, OutC, _>(
-                &oracle,
-                self.in_amount,
-            )
+            oracle_platform::convert::from_quote::<_, _, _, OutC, _>(&oracle, self.in_amount)
         }
     }
 

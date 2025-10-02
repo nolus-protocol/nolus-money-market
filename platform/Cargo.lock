@@ -649,6 +649,7 @@ dependencies = [
  "bnum 0.13.0",
  "currency",
  "gcd",
+ "platform",
  "sdk",
  "serde",
  "thiserror 2.0.12",

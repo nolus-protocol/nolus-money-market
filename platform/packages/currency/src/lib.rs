@@ -2,7 +2,7 @@ use std::{any::TypeId, fmt::Debug};
 
 pub use crate::{
     definition::{Definition, DefinitionRef},
-    dto::{CurrencyDTO, dto, to_string},
+    dto::{CurrencyDTO, dto, single::expect_received as expect_exact_received, to_string},
     from_symbol::{CurrencyVisit, SingleVisitor},
     from_symbol_any::GroupVisit,
     group::{
@@ -33,9 +33,8 @@ mod symbol;
 pub mod test;
 mod visit_any;
 
-// TODO get rid of these definitions. Move some to much smaller scope, for example move SymbolOwned close to CurrencyDTO
-// and SymbolStatic close to Symbols
-pub type SymbolStatic = &'static str;
+pub type SymbolRef<'symbol> = &'symbol str;
+pub type SymbolStatic = SymbolRef<'static>;
 pub type SymbolOwned = String;
 
 /// Currency market trait

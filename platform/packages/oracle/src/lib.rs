@@ -4,5 +4,5 @@ pub mod convert;
 pub mod error;
 pub mod msg;
 mod stub;
-#[cfg(feature = "testing")]
+#[cfg(all(feature = "testing", feature = "unchecked-stable-quote"))]
 pub mod test;

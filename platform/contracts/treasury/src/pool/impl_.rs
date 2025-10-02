@@ -1,7 +1,7 @@
 use currency::platform::{PlatformGroup, Stable};
 use finance::{duration::Duration, interest, percent::Percent100};
 use lpp_platform::{CoinStable, Lpp as LppTrait};
-use oracle_platform::{Oracle, OracleRef, convert};
+use oracle_platform::{Oracle, StablePriceSource, convert};
 use platform::message::Response as MessageResponse;
 
 use crate::ContractError;
@@ -17,11 +17,12 @@ pub struct Pool<Lpp, StableOracle> {
 impl<Lpp, StableOracle> Pool<Lpp, StableOracle>
 where
     Lpp: LppTrait,
-    StableOracle: Oracle<PlatformGroup, QuoteC = Stable, QuoteG = PlatformGroup>
-        + AsRef<OracleRef<StableOracle::QuoteC, StableOracle::QuoteG>>,
+    StableOracle:
+        Oracle<PlatformGroup, QuoteC = Stable, QuoteG = PlatformGroup> + AsRef<StablePriceSource>,
 {
     pub fn new(lpp: Lpp, oracle: StableOracle) -> Result<Self, ContractError> {
-        lpp.balance(oracle.as_ref().addr().clone())
+        let price_source = oracle.as_ref();
+        lpp.balance(price_source.addr().clone(), price_source.quote_ticker())
             .map_err(ContractError::ReadLppBalance)
             .map(|balance| Self {
                 lpp,

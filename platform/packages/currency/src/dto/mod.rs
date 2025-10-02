@@ -18,6 +18,7 @@ use crate::{
 
 use super::AnyVisitor;
 
+pub mod single;
 mod unchecked;
 
 /// Data-Transferable currency belonging to a group
@@ -95,7 +96,7 @@ where
         }
     }
 
-    pub fn definition(&self) -> DefinitionRef {
+    pub const fn definition(&self) -> DefinitionRef {
         self.def
     }
 

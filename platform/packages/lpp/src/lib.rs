@@ -1,4 +1,7 @@
-use currency::platform::{Nls, Stable};
+use currency::{
+    SymbolRef,
+    platform::{Nls, Stable},
+};
 use error::Result;
 use finance::coin::Coin;
 use platform::message::Response as MessageResponse;
@@ -18,7 +21,11 @@ pub type CoinStable = Coin<Stable>;
 
 pub trait Lpp {
     /// Return the total value in the stable currency
-    fn balance(&self, oracle: Addr) -> Result<CoinStable>;
+    fn balance<'stable_ticker>(
+        &self,
+        oracle: Addr,
+        stable_ticker: SymbolRef<'stable_ticker>,
+    ) -> Result<CoinStable>;
 
     /// Distributes a reward amount to an Lpp
     ///
@@ -26,6 +33,10 @@ pub trait Lpp {
     fn distribute(self, reward: Coin<Nls>) -> Result<MessageResponse>;
 }
 
-pub fn new_stub(lpp: Addr, querier: QuerierWrapper<'_>, env: &Env) -> impl Lpp {
+pub fn new_stub<'querier, 'stable_ticker, 'env>(
+    lpp: Addr,
+    querier: QuerierWrapper<'querier>,
+    env: &'env Env,
+) -> impl Lpp + use<'querier, 'stable_ticker, 'env> {
     Stub::new(lpp, querier, env)
 }

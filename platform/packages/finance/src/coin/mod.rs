@@ -15,10 +15,14 @@ use currency::{Currency, CurrencyDef, Group, MemberOf};
 
 use crate::{fraction::Unit as FractionUnit, zero::Zero};
 
-pub use self::dto::{CoinDTO, IntoDTO};
+pub use self::{
+    dto::{CoinDTO, IntoDTO},
+    external::Coin as ExternalCoinDTO,
+};
 
 mod amount_serde;
 mod dto;
+mod external;
 mod serde;
 
 pub type Amount = u128;

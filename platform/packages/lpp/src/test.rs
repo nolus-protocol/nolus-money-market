@@ -1,4 +1,4 @@
-use currency::platform::Nls;
+use currency::{SymbolRef, platform::Nls};
 use finance::coin::Coin;
 use platform::{
     batch::{Batch, Emit, Emitter},
@@ -43,7 +43,11 @@ impl DummyLpp {
     }
 }
 impl Lpp for DummyLpp {
-    fn balance(&self, _oracle: Addr) -> Result<CoinStable> {
+    fn balance<'stable_ticker>(
+        &self,
+        _oracle: Addr,
+        _stable_ticker: SymbolRef<'stable_ticker>,
+    ) -> Result<CoinStable> {
         self.balance
             .ok_or_else(|| Error::Std(StdError::generic_err("Test failing Lpp::balance()")))
     }
