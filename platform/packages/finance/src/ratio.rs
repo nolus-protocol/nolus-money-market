@@ -8,7 +8,7 @@ use crate::{
     fractionable::{
         Fractionable, FractionableLegacy, IntoMax, TryFromMax, checked_mul::CheckedMul,
     },
-    rational::RationalLegacy,
+    rational::{Rational, RationalLegacy},
     zero::Zero,
 };
 
@@ -72,8 +72,7 @@ where
     where
         A: FractionableLegacy<U>,
     {
-        self.0
-            .of(whole)
+        RationalLegacy::of(&self.0, whole)
             .expect("Ratio is a part of a whole, multiplication cannot overflow")
     }
 }
@@ -138,6 +137,19 @@ where
 
     fn total(&self) -> U {
         self.denominator.into()
+    }
+}
+
+impl<U> Rational<U> for SimpleFraction<U>
+where
+    U: FractionUnit,
+{
+    fn of<A>(&self, whole: A) -> Option<A>
+    where
+        U: IntoMax<A::CommonDouble>,
+        A: Fractionable<U>,
+    {
+        self.checked_mul(whole)
     }
 }
 
