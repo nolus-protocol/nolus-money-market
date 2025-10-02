@@ -21,10 +21,10 @@ pub type CoinStable = Coin<Stable>;
 
 pub trait Lpp {
     /// Return the total value in the stable currency
-    fn balance<'stable_ticker>(
+    fn balance(
         &self,
         oracle: Addr,
-        stable_ticker: SymbolRef<'stable_ticker>,
+        stable_ticker: SymbolRef<'_>,
     ) -> Result<CoinStable>;
 
     /// Distributes a reward amount to an Lpp

@@ -28,10 +28,10 @@ impl<'querier, 'env> Stub<'querier, 'env> {
 }
 
 impl Lpp for Stub<'_, '_> {
-    fn balance<'stable_ticker>(
+    fn balance(
         &self,
         oracle: Addr,
-        stable_ticker: SymbolRef<'stable_ticker>,
+        stable_ticker: SymbolRef<'_>,
     ) -> Result<CoinStable> {
         self.querier
             .query_wasm_smart::<ExternalCoinDTO<Stable>>(

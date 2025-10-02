@@ -31,9 +31,8 @@ impl PriceSource {
     }
 }
 
-
 /// An implementation of [`Oracle<G>`] for prices with [`Stable`] as a quote currency
-/// 
+///
 /// Handling of different and unknown stable protocol currencies is done through 'coercion'.
 /// Refer to [`ExternalPrice`] for more details.
 pub struct PriceStub<'a> {
