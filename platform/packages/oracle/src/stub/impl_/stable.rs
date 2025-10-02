@@ -26,7 +26,7 @@ impl PriceSource {
         &self.addr
     }
 
-    pub fn quote_ticker<'source>(&'source self) -> SymbolRef<'source> {
+    pub fn quote_ticker(&self) -> SymbolRef<'_> {
         &self.quote_ticker
     }
 }
@@ -86,7 +86,7 @@ where
     }
 }
 
-impl<'a> AsRef<PriceSource> for PriceStub<'a> {
+impl AsRef<PriceSource> for PriceStub<'_> {
     fn as_ref(&self) -> &PriceSource {
         &self.source
     }
