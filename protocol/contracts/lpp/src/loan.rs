@@ -37,7 +37,8 @@ impl<Lpn> Loan<Lpn> {
             self.principal_due,
             repayment,
             self.due_period(by),
-        );
+        )
+        .expect("TODO Method should return Option");
 
         let interest_paid = repayment - interest_change;
         let principal_paid = interest_change.min(self.principal_due);

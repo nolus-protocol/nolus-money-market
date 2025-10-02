@@ -5,7 +5,7 @@ use finance::{
 };
 use lpp::{
     loan::RepayShares,
-    stub::{LppBatch, LppRef as LppGenericRef, loan::LppLoan as LppLoanTrait},
+    stub::{loan::LppLoan as LppLoanTrait, LppBatch, LppRef as LppGenericRef},
 };
 use platform::{bank::FixedAddressSender, batch::Batch};
 use profit::stub::ProfitRef;
@@ -216,7 +216,8 @@ where
             principal_due,
             margin_paid,
             Duration::between(&self.margin_paid_by, by),
-        );
+        )
+        .expect("TODO Method should return Option");
         debug_assert!(margin_payment_change.is_zero());
         self.margin_paid_by += margin_paid_for;
     }
@@ -257,8 +258,8 @@ mod tests {
         loan::RepayShares,
         msg::LoanResponse,
         stub::{
-            LppBatch,
             loan::{Error as LppLoanError, LppLoan as LppLoanTrait},
+            LppBatch,
         },
     };
     use platform::bank::FixedAddressSender;
@@ -287,13 +288,13 @@ mod tests {
         use sdk::cosmwasm_std::{Addr, Timestamp};
 
         use crate::loan::{
-            Loan, Overdue, State,
             repay::Receipt as RepayReceipt,
-            tests::{PROFIT_ADDR, create_loan_custom, lpn_coin, profit_stub},
+            tests::{create_loan_custom, lpn_coin, profit_stub, PROFIT_ADDR},
+            Loan, Overdue, State,
         };
 
         use super::{
-            LEASE_START, LOAN_INTEREST_RATE, LppLoanLocal, MARGIN_INTEREST_RATE, create_loan,
+            create_loan, LppLoanLocal, LEASE_START, LOAN_INTEREST_RATE, MARGIN_INTEREST_RATE,
         };
 
         #[test]
@@ -449,7 +450,9 @@ mod tests {
                     },
                 ),
                 receipt(principal, 0, 0, 0, payment, 0, 0),
-                Duration::YEAR.into_slice_per_ratio(lpn_coin(payment), lpn_coin(due_margin)),
+                Duration::YEAR
+                    .into_slice_per_ratio(lpn_coin(payment), lpn_coin(due_margin))
+                    .unwrap(),
                 &now,
             );
         }
@@ -637,10 +640,13 @@ mod tests {
             let overdue_margin = overdue_period.annualized_slice_of(due_margin);
             let overdue_interest = overdue_period.annualized_slice_of(due_interest);
             let payment = overdue_interest + overdue_margin + due_interest + due_margin_payment;
-            let due_period_paid = Duration::between(&LEASE_START, &repay_at).into_slice_per_ratio(
-                lpn_coin(overdue_margin + due_margin_payment),
-                lpn_coin(overdue_margin + due_margin),
-            ) - overdue_period;
+            let due_period_paid = Duration::between(&LEASE_START, &repay_at)
+                .into_slice_per_ratio(
+                    lpn_coin(overdue_margin + due_margin_payment),
+                    lpn_coin(overdue_margin + due_margin),
+                )
+                .unwrap()
+                - overdue_period;
 
             let mut loan = create_loan(loan);
             repay(
@@ -1051,8 +1057,8 @@ mod tests {
         use sdk::cosmwasm_std::Timestamp;
 
         use crate::loan::{
+            tests::{create_loan_custom, lpn_coin, LppLoanLocal},
             Overdue, State,
-            tests::{LppLoanLocal, create_loan_custom, lpn_coin},
         };
 
         use super::{LEASE_START, MARGIN_INTEREST_RATE};
