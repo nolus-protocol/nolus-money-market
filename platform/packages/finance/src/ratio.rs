@@ -4,9 +4,9 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     error::{Error, Result as FinanceResult},
-    fraction::{Fraction, Unit as FractionUnit},
+    fraction::{Coprime, Fraction, Unit as FractionUnit},
     fractionable::{
-        Fractionable, FractionableLegacy, IntoMax, TryFromMax, checked_mul::CheckedMul,
+        checked_mul::CheckedMul, Fractionable, FractionableLegacy, IntoMax, TryFromMax
     },
     rational::Rational,
     zero::Zero,
@@ -94,13 +94,13 @@ pub struct SimpleFraction<U> {
 
 impl<U> SimpleFraction<U>
 where
-    U: FractionUnit,
+    U: Coprime,
 {
     #[track_caller]
     pub fn new(nominator: U, denominator: U) -> Self {
         debug_assert_ne!(denominator, Zero::ZERO);
 
-        let (nominator, denominator) = into_coprime(nominator, denominator);
+        let (nominator, denominator) = nominator.coprime_with(denominator);
 
         Self {
             nominator,
@@ -153,7 +153,8 @@ where
     }
 }
 
-fn into_coprime<U>(a: U, b: U) -> (U, U)
+// make it into extension trait
+/* fn into_coprime<U>(a: U, b: U) -> (U, U)
 where
     U: FractionUnit,
 {
@@ -172,7 +173,7 @@ where
     );
 
     (a.scale_down(gcd), b.scale_down(gcd))
-}
+} */
 
 #[cfg(test)]
 mod test_ratio {
