@@ -1,38 +1,4 @@
-use currency::{CurrencyDef, FilterMapT, FindMapT};
-
-use self::definitions::Nls;
-
-use super::Group as NativeGroup;
-
-pub(super) struct GroupMember;
-
-impl currency::GroupMember<NativeGroup> for GroupMember {
-    fn first() -> Option<Self> {
-        Some(Self)
-    }
-
-    fn next(&self) -> Option<Self> {
-        let Self {} = self;
-
-        None
-    }
-
-    fn filter_map<FilterMap>(&self, filter_map: &FilterMap) -> Option<FilterMap::Outcome>
-    where
-        FilterMap: FilterMapT<VisitedG = NativeGroup>,
-    {
-        let Self {} = self;
-
-        filter_map.on::<Nls>(Nls::dto())
-    }
-
-    fn find_map<FindMap>(&self, find_map: FindMap) -> Result<FindMap::Outcome, FindMap>
-    where
-        FindMap: FindMapT<TargetG = NativeGroup>,
-    {
-        find_map.on::<Nls>(Nls::dto())
-    }
-}
+pub(super) type Members = (self::definitions::Nls,);
 
 pub(super) mod definitions {
     use serde::{Deserialize, Serialize};
@@ -44,7 +10,7 @@ pub(super) mod definitions {
 
     use crate::{lease::LeaseC5, lpn::Lpn, payment::Group as PaymentGroup};
 
-    use super::NativeGroup;
+    use super::super::Group as NativeGroup;
 
     #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
     #[serde(deny_unknown_fields, rename_all = "snake_case")]

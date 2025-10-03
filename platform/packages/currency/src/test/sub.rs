@@ -1,52 +1,10 @@
 use crate::{
-    CurrencyDef, FindMapT,
-    group::{FilterMapT, GroupMember},
+    CurrencyDef,
     pairs::{FindMapT as PairsFindMapT, PairsGroupMember},
-    test::{
-        SubGroup, SubGroupTestC6, SubGroupTestC10, SuperGroupTestC1, SuperGroupTestC2,
-        SuperGroupTestC5,
-    },
+    test::{SubGroupTestC6, SubGroupTestC10, SuperGroupTestC1, SuperGroupTestC2, SuperGroupTestC5},
 };
 
 // ======== START GENERATED CODE =========
-pub(super) enum Item {
-    SubGroupTestC6(),
-    SubGroupTestC10(),
-}
-
-impl GroupMember<SubGroup> for Item {
-    fn first() -> Option<Self> {
-        Some(Self::SubGroupTestC6())
-    }
-
-    fn next(&self) -> Option<Self> {
-        match self {
-            Item::SubGroupTestC6() => Some(Self::SubGroupTestC10()),
-            Item::SubGroupTestC10() => None,
-        }
-    }
-
-    fn filter_map<FilterMap>(&self, filter_map: &FilterMap) -> Option<FilterMap::Outcome>
-    where
-        FilterMap: FilterMapT<VisitedG = SubGroup>,
-    {
-        match *self {
-            Item::SubGroupTestC6() => filter_map.on::<SubGroupTestC6>(SubGroupTestC6::dto()),
-            Item::SubGroupTestC10() => filter_map.on::<SubGroupTestC10>(SubGroupTestC10::dto()),
-        }
-    }
-
-    fn find_map<FindMap>(&self, find_map: FindMap) -> Result<FindMap::Outcome, FindMap>
-    where
-        FindMap: FindMapT<TargetG = SubGroup>,
-    {
-        match *self {
-            Item::SubGroupTestC6() => find_map.on::<SubGroupTestC6>(SubGroupTestC6::dto()),
-            Item::SubGroupTestC10() => find_map.on::<SubGroupTestC10>(SubGroupTestC10::dto()),
-        }
-    }
-}
-
 pub(super) enum SubGroupTestC6Pairs {
     SuperGroupTestC2,
     SubGroupTestC10,

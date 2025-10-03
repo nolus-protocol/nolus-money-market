@@ -8,6 +8,7 @@ pub use crate::{
     group::{
         CurrenciesMapping, FilterMapT, FindMapT, Group, GroupMember, MaybeAnyVisitResult, MemberOf,
         SubFilterAdapter, SubGroupFindAdapter, find_map as group_find_map,
+        non_recursive_filter_map, non_recursive_find_map,
     },
     matcher::Matcher,
     pairs::{

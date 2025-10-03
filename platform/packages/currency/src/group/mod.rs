@@ -45,10 +45,7 @@ where
     ) -> impl Iterator<Item = FilterMap::Outcome>
     where
         FilterMap: FilterMapT<VisitedG = Self>,
-        FilterMapRef: Borrow<FilterMap> + Clone,
-    {
-        self::filter_map(filter_map)
-    }
+        FilterMapRef: Borrow<FilterMap> + Clone;
 
     /// Find and map a currency to value
     ///
@@ -95,21 +92,21 @@ where
     }
 }
 
-fn filter_map<G, FilterMap, FilterMapRef>(
+pub fn non_recursive_filter_map<VisitedGroup, FilterMap, FilterMapRef>(
     filter_map: FilterMapRef,
 ) -> impl Iterator<Item = FilterMap::Outcome>
 where
-    G: Group,
-    FilterMap: FilterMapT<VisitedG = G>,
+    VisitedGroup: Group,
+    FilterMap: FilterMapT<VisitedG = VisitedGroup>,
     FilterMapRef: Borrow<FilterMap> + Clone,
 {
-    struct CurrencyAdapter<FilterMap, FilterMapRef>(FilterMapRef, PhantomData<FilterMap>)
+    struct Adapter<FilterMap, FilterMapRef>(FilterMapRef, PhantomData<FilterMap>)
     where
         FilterMap: FilterMapT,
         FilterMapRef: Borrow<FilterMap> + Clone;
 
     impl<FilterMap, FilterMapRef> CurrencyDefVisitor<FilterMap::VisitedG>
-        for CurrencyAdapter<FilterMap, FilterMapRef>
+        for Adapter<FilterMap, FilterMapRef>
     where
         FilterMap: FilterMapT,
         FilterMapRef: Borrow<FilterMap> + Clone,
@@ -126,10 +123,52 @@ where
         }
     }
 
-    let mut members = const { MembersIter::<G, _>::new() };
+    let mut members = const { MembersIter::new() };
 
     iter::from_fn(move || members.next())
-        .filter_map(move |visit| visit(CurrencyAdapter(filter_map.clone(), PhantomData)))
+        .filter_map(move |visit| visit(Adapter(filter_map.clone(), PhantomData)))
+}
+
+pub fn non_recursive_find_map<VisitedGroup, FindMap>(
+    find_map: FindMap,
+) -> Result<FindMap::Outcome, FindMap>
+where
+    VisitedGroup: Group,
+    FindMap: FindMapT<TargetG = VisitedGroup>,
+{
+    struct Adapter<FindMap>(FindMap)
+    where
+        FindMap: FindMapT;
+
+    impl<FindMap> CurrencyDefVisitor<FindMap::TargetG> for Adapter<FindMap>
+    where
+        FindMap: FindMapT,
+    {
+        type Output = Result<FindMap::Outcome, FindMap>;
+
+        fn visit<C>(self) -> Self::Output
+        where
+            C: CurrencyDef + PairsGroup<CommonGroup = <FindMap::TargetG as Group>::TopG>,
+            C::Group: MemberOf<FindMap::TargetG> + MemberOf<<FindMap::TargetG as Group>::TopG>,
+        {
+            self.0.on::<C>(C::dto())
+        }
+    }
+
+    let mut members = const { MembersIter::new() };
+
+    let output = iter::from_fn(move || members.next()).try_fold(
+        find_map,
+        move |find_map, visit| match visit(Adapter(find_map)) {
+            Ok(output) => ControlFlow::Break(output),
+            Err(find_map) => ControlFlow::Continue(find_map),
+        },
+    );
+
+    match output {
+        ControlFlow::Continue(find_map) => Err(find_map),
+        ControlFlow::Break(output) => Ok(output),
+    }
 }
 
 pub type MaybeAnyVisitResult<VisitedG, V> = Result<<V as AnyVisitor<VisitedG>>::Outcome, V>;

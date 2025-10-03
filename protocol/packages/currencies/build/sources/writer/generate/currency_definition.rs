@@ -48,22 +48,10 @@ impl<'currencies_tree, 'parents_of, 'parent, 'children_of, 'child, 'generator, G
 }
 
 pub(super) struct GeneratedEntry<
-    Variants,
-    FirstEntry,
-    HeadNextEntry,
-    MiddleNextEntry,
-    TailNextEntry,
-    FilterMapEntry,
-    FindMapEntry,
+    Currency,
     CurrencyDefinition,
 > {
-    pub variant: Variants,
-    pub first_entry: FirstEntry,
-    pub head_next_entry: HeadNextEntry,
-    pub middle_next_entry: MiddleNextEntry,
-    pub tail_next_entry: TailNextEntry,
-    pub filter_map_entry: FilterMapEntry,
-    pub find_map_entry: FindMapEntry,
+    pub currency: Currency,
     pub currency_definition: CurrencyDefinition,
 }
 
@@ -91,12 +79,6 @@ where
         &self,
         ticker: &'r str,
     ) -> GeneratedEntryResult<
-        impl Iterator<Item = &'r str> + use<'r, Generator>,
-        impl Iterator<Item = &'r str> + use<'r, Generator>,
-        impl Iterator<Item = &'r str> + use<'r, Generator>,
-        impl Iterator<Item = &'r str> + use<'r, Generator>,
-        impl Iterator<Item = &'r str> + use<'r, Generator>,
-        impl Iterator<Item = &'r str> + use<'r, Generator>,
         impl Iterator<Item = &'r str> + use<'r, Generator>,
         impl Iterator<Item = Cow<'r, str>>
         + use<
@@ -135,12 +117,6 @@ where
         parents: &'parents currencies_tree::Parents<'parent>,
     ) -> GeneratedEntryResult<
         impl Iterator<Item = &'r str> + use<'r, Generator>,
-        impl Iterator<Item = &'r str> + use<'r, Generator>,
-        impl Iterator<Item = &'r str> + use<'r, Generator>,
-        impl Iterator<Item = &'r str> + use<'r, Generator>,
-        impl Iterator<Item = &'r str> + use<'r, Generator>,
-        impl Iterator<Item = &'r str> + use<'r, Generator>,
-        impl Iterator<Item = &'r str> + use<'r, Generator>,
         impl Iterator<Item = Cow<'r, str>>
         + use<
             'r,
@@ -171,55 +147,7 @@ where
         self.generator
             .in_pool_with(resolved.name(), children)
             .map(|in_pool_with| GeneratedEntry {
-                variant: [
-                    "
-    ",
-                    resolved.name(),
-                    ",",
-                ]
-                .into_iter(),
-                first_entry: ["Some(Self::", resolved.name(), ")"].into_iter(),
-                head_next_entry: [
-                    "
-            Self::",
-                    resolved.name(),
-                    " => ",
-                ]
-                .into_iter(),
-                middle_next_entry: [
-                    "Some(Self::",
-                    resolved.name(),
-                    "),
-            Self::",
-                    resolved.name(),
-                    " => ",
-                ]
-                .into_iter(),
-                tail_next_entry: ["None,
-        "]
-                .into_iter(),
-                filter_map_entry: [
-                    "
-            Self::",
-                    resolved.name(),
-                    " => filter_map.on::<self::definitions::",
-                    resolved.name(),
-                    ">(<self::definitions::",
-                    resolved.name(),
-                    " as currency::CurrencyDef>::dto()),",
-                ]
-                .into_iter(),
-                find_map_entry: [
-                    "
-            Self::",
-                    resolved.name(),
-                    " => find_map.on::<self::definitions::",
-                    resolved.name(),
-                    ">(<self::definitions::",
-                    resolved.name(),
-                    " as currency::CurrencyDef>::dto()),",
-                ]
-                .into_iter(),
+                currency: ["self::definitions::", resolved.name()].into_iter(),
                 currency_definition: currency_definition(
                     resolved.name(),
                     ticker,
@@ -230,27 +158,8 @@ where
     }
 }
 
-pub(super) type GeneratedEntryResult<
-    Variants,
-    FirstEntry,
-    HeadNextEntry,
-    MiddleNextEntry,
-    TailNextEntry,
-    FilterMapEntry,
-    FindMapEntry,
-    CurrencyDefinition,
-> = Result<
-    GeneratedEntry<
-        Variants,
-        FirstEntry,
-        HeadNextEntry,
-        MiddleNextEntry,
-        TailNextEntry,
-        FilterMapEntry,
-        FindMapEntry,
-        CurrencyDefinition,
-    >,
->;
+pub(super) type GeneratedEntryResult<Currency, CurrencyDefinition> =
+    Result<GeneratedEntry<Currency, CurrencyDefinition>>;
 
 fn currency_definition<'r>(
     name: &'r str,

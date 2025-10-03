@@ -1,64 +1,13 @@
 use crate::{
-    CurrencyDef, FindMapT,
-    group::{FilterMapT, GroupMember},
+    CurrencyDef,
     pairs::{FindMapT as PairsFindMapT, PairsGroupMember},
     test::{
-        SubGroupTestC6, SubGroupTestC10, SuperGroup, SuperGroupTestC1, SuperGroupTestC2,
-        SuperGroupTestC3, SuperGroupTestC4, SuperGroupTestC5,
+        SubGroupTestC6, SubGroupTestC10, SuperGroupTestC1, SuperGroupTestC2, SuperGroupTestC3,
+        SuperGroupTestC4, SuperGroupTestC5,
     },
 };
 
 // ======== START GENERATED CODE =========
-pub(super) enum Item {
-    SuperGroupTestC1,
-    SuperGroupTestC2,
-    SuperGroupTestC3,
-    SuperGroupTestC4,
-    SuperGroupTestC5,
-}
-
-impl GroupMember<SuperGroup> for Item {
-    fn first() -> Option<Self> {
-        Some(Self::SuperGroupTestC1)
-    }
-
-    fn next(&self) -> Option<Self> {
-        match self {
-            Self::SuperGroupTestC1 => Some(Self::SuperGroupTestC2),
-            Self::SuperGroupTestC2 => Some(Self::SuperGroupTestC3),
-            Self::SuperGroupTestC3 => Some(Self::SuperGroupTestC4),
-            Self::SuperGroupTestC4 => Some(Self::SuperGroupTestC5),
-            Self::SuperGroupTestC5 => None,
-        }
-    }
-
-    fn filter_map<FilterMap>(&self, filter_map: &FilterMap) -> Option<FilterMap::Outcome>
-    where
-        FilterMap: FilterMapT<VisitedG = SuperGroup>,
-    {
-        match *self {
-            Self::SuperGroupTestC1 => filter_map.on::<SuperGroupTestC1>(SuperGroupTestC1::dto()),
-            Self::SuperGroupTestC2 => filter_map.on::<SuperGroupTestC2>(SuperGroupTestC2::dto()),
-            Self::SuperGroupTestC3 => filter_map.on::<SuperGroupTestC3>(SuperGroupTestC3::dto()),
-            Self::SuperGroupTestC4 => filter_map.on::<SuperGroupTestC4>(SuperGroupTestC4::dto()),
-            Self::SuperGroupTestC5 => filter_map.on::<SuperGroupTestC5>(SuperGroupTestC5::dto()),
-        }
-    }
-
-    fn find_map<FindMap>(&self, find_map: FindMap) -> Result<FindMap::Outcome, FindMap>
-    where
-        FindMap: FindMapT<TargetG = SuperGroup>,
-    {
-        match *self {
-            Self::SuperGroupTestC1 => find_map.on::<SuperGroupTestC1>(SuperGroupTestC1::dto()),
-            Self::SuperGroupTestC2 => find_map.on::<SuperGroupTestC2>(SuperGroupTestC2::dto()),
-            Self::SuperGroupTestC3 => find_map.on::<SuperGroupTestC3>(SuperGroupTestC3::dto()),
-            Self::SuperGroupTestC4 => find_map.on::<SuperGroupTestC4>(SuperGroupTestC4::dto()),
-            Self::SuperGroupTestC5 => find_map.on::<SuperGroupTestC5>(SuperGroupTestC5::dto()),
-        }
-    }
-}
-
 pub(super) enum SuperGroupTestC1Pairs {
     SuperGroupTestC2,
     SuperGroupTestC4,

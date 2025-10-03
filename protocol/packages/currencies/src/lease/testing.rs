@@ -1,66 +1,12 @@
-use currency::{CurrencyDef as _, FilterMapT, FindMapT};
-
 use self::definitions::{LeaseC1, LeaseC2, LeaseC3, LeaseC4, LeaseC5, LeaseC6, LeaseC7};
 
-use super::Group as LeaseGroup;
-
-pub(super) enum GroupMember {
+pub(super) type Members = (
     LeaseC1,
-    LeaseC2,
-    LeaseC3,
-    LeaseC4,
-    LeaseC5,
-    LeaseC6,
-    LeaseC7,
-}
-
-impl currency::GroupMember<super::Group> for GroupMember {
-    fn first() -> Option<Self> {
-        Some(Self::LeaseC1)
-    }
-
-    fn next(&self) -> Option<Self> {
-        match self {
-            Self::LeaseC1 => Some(Self::LeaseC2),
-            Self::LeaseC2 => Some(Self::LeaseC3),
-            Self::LeaseC3 => Some(Self::LeaseC4),
-            Self::LeaseC4 => Some(Self::LeaseC5),
-            Self::LeaseC5 => Some(Self::LeaseC6),
-            Self::LeaseC6 => Some(Self::LeaseC7),
-            Self::LeaseC7 => None,
-        }
-    }
-
-    fn filter_map<FilterMap>(&self, filter_map: &FilterMap) -> Option<FilterMap::Outcome>
-    where
-        FilterMap: FilterMapT<VisitedG = super::Group>,
-    {
-        match self {
-            Self::LeaseC1 => filter_map.on::<LeaseC1>(LeaseC1::dto()),
-            Self::LeaseC2 => filter_map.on::<LeaseC2>(LeaseC2::dto()),
-            Self::LeaseC3 => filter_map.on::<LeaseC3>(LeaseC3::dto()),
-            Self::LeaseC4 => filter_map.on::<LeaseC4>(LeaseC4::dto()),
-            Self::LeaseC5 => filter_map.on::<LeaseC5>(LeaseC5::dto()),
-            Self::LeaseC6 => filter_map.on::<LeaseC6>(LeaseC6::dto()),
-            Self::LeaseC7 => filter_map.on::<LeaseC7>(LeaseC7::dto()),
-        }
-    }
-
-    fn find_map<FindMap>(&self, find_map: FindMap) -> Result<FindMap::Outcome, FindMap>
-    where
-        FindMap: FindMapT<TargetG = super::Group>,
-    {
-        match self {
-            Self::LeaseC1 => find_map.on::<LeaseC1>(LeaseC1::dto()),
-            Self::LeaseC2 => find_map.on::<LeaseC2>(LeaseC2::dto()),
-            Self::LeaseC3 => find_map.on::<LeaseC3>(LeaseC3::dto()),
-            Self::LeaseC4 => find_map.on::<LeaseC4>(LeaseC4::dto()),
-            Self::LeaseC5 => find_map.on::<LeaseC5>(LeaseC5::dto()),
-            Self::LeaseC6 => find_map.on::<LeaseC6>(LeaseC6::dto()),
-            Self::LeaseC7 => find_map.on::<LeaseC7>(LeaseC7::dto()),
-        }
-    }
-}
+    (
+        LeaseC2,
+        (LeaseC3, (LeaseC4, (LeaseC5, (LeaseC6, (LeaseC7,))))),
+    ),
+);
 
 pub(super) mod definitions {
     use serde::{Deserialize, Serialize};
@@ -72,7 +18,7 @@ pub(super) mod definitions {
 
     use crate::{lpn::Lpn, native::Nls, payment::Group as PaymentGroup};
 
-    use super::LeaseGroup;
+    use super::super::Group as LeaseGroup;
 
     #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
     #[serde(deny_unknown_fields, rename_all = "snake_case")]

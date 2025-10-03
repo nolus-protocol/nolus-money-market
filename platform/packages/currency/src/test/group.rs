@@ -3,14 +3,14 @@ use std::borrow::Borrow;
 use serde::Deserialize;
 
 use crate::{
-    CurrencyDTO, FindMapT, Group,
-    group::{self, CurrenciesMapping, FilterMapT, MemberOf, SubGroupFindAdapter},
+    CurrencyDTO, FindMapT, Group, SubFilterAdapter,
+    group::{self, FilterMapT, MemberOf, SubGroupFindAdapter},
     pairs::{self, FindMapT as PairsFindMapT, PairsGroup},
     test::{
-        sub::{Item as SubGroupItem, SubGroupTestC6Pairs, SubGroupTestC10Pairs},
+        sub::{SubGroupTestC6Pairs, SubGroupTestC10Pairs},
         super_::{
-            Item as SuperGroupItem, SuperGroupTestC1Pairs, SuperGroupTestC2Pairs,
-            SuperGroupTestC3Pairs, SuperGroupTestC4Pairs, SuperGroupTestC5Pairs,
+            SuperGroupTestC1Pairs, SuperGroupTestC2Pairs, SuperGroupTestC3Pairs,
+            SuperGroupTestC4Pairs, SuperGroupTestC5Pairs,
         },
     },
     visit_any::InPoolWith,
@@ -43,26 +43,26 @@ impl Group for SuperGroup {
         ),
     );
 
-    // fn filter_map<FilterMap, FilterMapRef>(
-    //     f: FilterMapRef,
-    // ) -> impl Iterator<Item = FilterMap::Outcome>
-    // where
-    //     FilterMap: FilterMapT<VisitedG = Self>,
-    //     FilterMapRef: Borrow<FilterMap> + Clone,
-    // {
-    //     CurrenciesMapping::<_, SuperGroupItem, _, _>::with_filter(f.clone())
-    //         .chain(SubGroup::filter_map(SubFilterAdapter::new(f)))
-    // }
+    fn filter_map<FilterMap, FilterMapRef>(
+        filter_map: FilterMapRef,
+    ) -> impl Iterator<Item = FilterMap::Outcome>
+    where
+        FilterMap: FilterMapT<VisitedG = Self>,
+        FilterMapRef: Borrow<FilterMap> + Clone,
+    {
+        group::non_recursive_filter_map(filter_map.clone()).chain(group::non_recursive_filter_map(
+            SubFilterAdapter::<SubGroup, _, _>::new(filter_map),
+        ))
+    }
 
-    fn find_map<FindMap>(v: FindMap) -> Result<FindMap::Outcome, FindMap>
+    fn find_map<FindMap>(find_map: FindMap) -> Result<FindMap::Outcome, FindMap>
     where
         FindMap: FindMapT<TargetG = Self>,
     {
-        group::find_map::<_, SuperGroupItem, _>(v)
-            .or_else(|v| {
-                group::find_map::<_, SubGroupItem, _>(SubGroupFindAdapter::<SubGroup, _, _>::new(v))
-            })
-            .map_err(SubGroupFindAdapter::release_super_map)
+        group::non_recursive_find_map(find_map).or_else(|find_map| {
+            group::non_recursive_find_map(SubGroupFindAdapter::<SubGroup, _>::new(find_map))
+                .map_err(SubGroupFindAdapter::release_super_map)
+        })
     }
 }
 
@@ -155,23 +155,23 @@ impl Group for SubGroup {
 
     type TopG = SuperGroup;
 
-    type Members = ();
+    type Members = (SubGroupTestC6, (SubGroupTestC10,));
 
     fn filter_map<FilterMap, FilterMapRef>(
-        f: FilterMapRef,
+        filter_map: FilterMapRef,
     ) -> impl Iterator<Item = FilterMap::Outcome>
     where
         FilterMap: FilterMapT<VisitedG = Self>,
-        FilterMapRef: Borrow<FilterMap>,
+        FilterMapRef: Borrow<FilterMap> + Clone,
     {
-        CurrenciesMapping::<_, SubGroupItem, _, _>::with_filter(f)
+        group::non_recursive_filter_map(filter_map)
     }
 
-    fn find_map<FindMap>(v: FindMap) -> Result<FindMap::Outcome, FindMap>
+    fn find_map<FindMap>(find_map: FindMap) -> Result<FindMap::Outcome, FindMap>
     where
         FindMap: FindMapT<TargetG = Self>,
     {
-        group::find_map::<_, SubGroupItem, _>(v)
+        group::non_recursive_find_map(find_map)
     }
 }
 
