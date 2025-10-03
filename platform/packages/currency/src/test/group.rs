@@ -6,13 +6,6 @@ use crate::{
     CurrencyDTO, FindMapT, Group, SubFilterAdapter,
     group::{self, FilterMapT, MemberOf, SubGroupFindAdapter},
     pairs::{self, FindMapT as PairsFindMapT, PairsGroup},
-    test::{
-        sub::{SubGroupTestC6Pairs, SubGroupTestC10Pairs},
-        super_::{
-            SuperGroupTestC1Pairs, SuperGroupTestC2Pairs, SuperGroupTestC3Pairs,
-            SuperGroupTestC4Pairs, SuperGroupTestC5Pairs,
-        },
-    },
     visit_any::InPoolWith,
 };
 
@@ -39,7 +32,7 @@ impl Group for SuperGroup {
         SuperGroupTestC1,
         (
             SuperGroupTestC2,
-            (SuperGroupTestC3, (SuperGroupTestC4, (SuperGroupTestC5, ()))),
+            (SuperGroupTestC3, (SuperGroupTestC4, (SuperGroupTestC5,))),
         ),
     );
 
@@ -70,11 +63,13 @@ impl Group for SuperGroup {
 impl PairsGroup for SuperGroupTestC1 {
     type CommonGroup = SuperGroup;
 
-    fn find_map<FindMap>(f: FindMap) -> Result<FindMap::Outcome, FindMap>
+    type PairedWith = (SuperGroupTestC2, (SuperGroupTestC4, (SubGroupTestC10,)));
+
+    fn find_map<FindMap>(find_map: FindMap) -> Result<FindMap::Outcome, FindMap>
     where
         FindMap: PairsFindMapT<Pivot = Self>,
     {
-        pairs::find_map::<SuperGroupTestC1Pairs, _>(f)
+        pairs::find(find_map)
     }
 }
 impl InPoolWith<SuperGroup> for SuperGroupTestC1 {}
@@ -86,11 +81,16 @@ impl InPoolWith<SubGroupTestC10> for SuperGroupTestC1 {}
 impl PairsGroup for SuperGroupTestC2 {
     type CommonGroup = SuperGroup;
 
-    fn find_map<FindMap>(f: FindMap) -> Result<FindMap::Outcome, FindMap>
+    type PairedWith = (
+        SuperGroupTestC1,
+        (SuperGroupTestC3, (SubGroupTestC6, (SubGroupTestC10,))),
+    );
+
+    fn find_map<FindMap>(find_map: FindMap) -> Result<FindMap::Outcome, FindMap>
     where
         FindMap: PairsFindMapT<Pivot = Self>,
     {
-        pairs::find_map::<SuperGroupTestC2Pairs, _>(f)
+        pairs::find(find_map)
     }
 }
 impl InPoolWith<SuperGroup> for SuperGroupTestC2 {}
@@ -103,11 +103,13 @@ impl InPoolWith<SubGroupTestC10> for SuperGroupTestC2 {}
 impl PairsGroup for SuperGroupTestC3 {
     type CommonGroup = SuperGroup;
 
-    fn find_map<FindMap>(f: FindMap) -> Result<FindMap::Outcome, FindMap>
+    type PairedWith = (SuperGroupTestC2,);
+
+    fn find_map<FindMap>(find_map: FindMap) -> Result<FindMap::Outcome, FindMap>
     where
         FindMap: PairsFindMapT<Pivot = Self>,
     {
-        pairs::find_map::<SuperGroupTestC3Pairs, _>(f)
+        pairs::find(find_map)
     }
 }
 impl InPoolWith<SuperGroup> for SuperGroupTestC3 {}
@@ -117,11 +119,13 @@ impl InPoolWith<SuperGroupTestC2> for SuperGroupTestC3 {}
 impl PairsGroup for SuperGroupTestC4 {
     type CommonGroup = SuperGroup;
 
-    fn find_map<FindMap>(f: FindMap) -> Result<FindMap::Outcome, FindMap>
+    type PairedWith = (SuperGroupTestC1, (SuperGroupTestC5,));
+
+    fn find_map<FindMap>(find_map: FindMap) -> Result<FindMap::Outcome, FindMap>
     where
         FindMap: PairsFindMapT<Pivot = Self>,
     {
-        pairs::find_map::<SuperGroupTestC4Pairs, _>(f)
+        pairs::find(find_map)
     }
 }
 impl InPoolWith<SuperGroup> for SuperGroupTestC4 {}
@@ -132,11 +136,13 @@ impl InPoolWith<SuperGroupTestC5> for SuperGroupTestC4 {}
 impl PairsGroup for SuperGroupTestC5 {
     type CommonGroup = SuperGroup;
 
-    fn find_map<FindMap>(f: FindMap) -> Result<FindMap::Outcome, FindMap>
+    type PairedWith = (SuperGroupTestC4, (SuperGroupTestC5, (SubGroupTestC10,)));
+
+    fn find_map<FindMap>(find_map: FindMap) -> Result<FindMap::Outcome, FindMap>
     where
         FindMap: PairsFindMapT<Pivot = Self>,
     {
-        pairs::find_map::<SuperGroupTestC5Pairs, _>(f)
+        pairs::find(find_map)
     }
 }
 impl InPoolWith<SuperGroup> for SuperGroupTestC5 {}
@@ -179,11 +185,13 @@ impl Group for SubGroup {
 impl PairsGroup for SubGroupTestC6 {
     type CommonGroup = SuperGroup;
 
-    fn find_map<FindMap>(f: FindMap) -> Result<FindMap::Outcome, FindMap>
+    type PairedWith = (SuperGroupTestC2, (SubGroupTestC10,));
+
+    fn find_map<FindMap>(find_map: FindMap) -> Result<FindMap::Outcome, FindMap>
     where
         FindMap: PairsFindMapT<Pivot = Self>,
     {
-        pairs::find_map::<SubGroupTestC6Pairs, _>(f)
+        pairs::find(find_map)
     }
 }
 impl InPoolWith<SuperGroup> for SubGroupTestC6 {}
@@ -194,11 +202,16 @@ impl InPoolWith<SubGroupTestC10> for SubGroupTestC6 {}
 impl PairsGroup for SubGroupTestC10 {
     type CommonGroup = SuperGroup;
 
-    fn find_map<FindMap>(f: FindMap) -> Result<FindMap::Outcome, FindMap>
+    type PairedWith = (
+        SuperGroupTestC1,
+        (SuperGroupTestC2, (SuperGroupTestC5, (SubGroupTestC6,))),
+    );
+
+    fn find_map<FindMap>(find_map: FindMap) -> Result<FindMap::Outcome, FindMap>
     where
         FindMap: PairsFindMapT<Pivot = Self>,
     {
-        pairs::find_map::<SubGroupTestC10Pairs, _>(f)
+        pairs::find(find_map)
     }
 }
 impl InPoolWith<SuperGroup> for SubGroupTestC10 {}

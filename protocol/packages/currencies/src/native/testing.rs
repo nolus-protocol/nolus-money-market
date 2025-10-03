@@ -27,6 +27,8 @@ pub(super) mod definitions {
     impl PairsGroup for Nls {
         type CommonGroup = PaymentGroup;
 
+        type PairedWith = (Lpn,);
+
         fn find_map<FindMap>(find_map: FindMap) -> Result<FindMap::Outcome, FindMap>
         where
             FindMap: PairsFindMapT<Pivot = Self>,

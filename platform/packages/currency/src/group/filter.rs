@@ -1,6 +1,45 @@
-use std::{borrow::Borrow, marker::PhantomData};
+use std::{borrow::Borrow, iter, marker::PhantomData};
 
-use crate::{FilterMapT, Group, group::GroupMember};
+use crate::{CurrencyDef, FilterMapT, Group, GroupMember, MemberOf, PairsGroup};
+
+use super::visit::{Visitor, MembersIter};
+
+pub fn non_recursive<VisitedGroup, FilterMap, FilterMapRef>(
+    filter_map: FilterMapRef,
+) -> impl Iterator<Item = FilterMap::Outcome>
+where
+    VisitedGroup: Group,
+    FilterMap: FilterMapT<VisitedG = VisitedGroup>,
+    FilterMapRef: Borrow<FilterMap> + Clone,
+{
+    struct Adapter<FilterMap, FilterMapRef>(FilterMapRef, PhantomData<FilterMap>)
+    where
+        FilterMap: FilterMapT,
+        FilterMapRef: Borrow<FilterMap> + Clone;
+
+    impl<FilterMap, FilterMapRef> Visitor<FilterMap::VisitedG>
+        for Adapter<FilterMap, FilterMapRef>
+    where
+        FilterMap: FilterMapT,
+        FilterMapRef: Borrow<FilterMap> + Clone,
+    {
+        type Output = Option<FilterMap::Outcome>;
+
+        fn visit<C>(self) -> Self::Output
+        where
+            C: CurrencyDef + PairsGroup<CommonGroup = <FilterMap::VisitedG as Group>::TopG>,
+            C::Group:
+                MemberOf<FilterMap::VisitedG> + MemberOf<<FilterMap::VisitedG as Group>::TopG>,
+        {
+            self.0.borrow().on::<C>(C::dto())
+        }
+    }
+
+    let mut members = const { MembersIter::new() };
+
+    iter::from_fn(move || members.next())
+        .filter_map(move |visit| visit(Adapter(filter_map.clone(), PhantomData)))
+}
 
 /// Iterator over group currency types mapped to some values
 pub struct CurrenciesMapping<Group, GroupMember, FilterMap, FilterMapRef> {

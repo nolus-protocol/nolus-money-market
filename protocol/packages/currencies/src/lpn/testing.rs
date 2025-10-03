@@ -20,6 +20,8 @@ pub(super) mod definitions {
     impl PairsGroup for Lpn {
         type CommonGroup = PaymentGroup;
 
+        type PairedWith = ();
+
         fn find_map<FindMap>(find_map: FindMap) -> Result<FindMap::Outcome, FindMap>
         where
             FindMap: PairsFindMapT<Pivot = Self>,

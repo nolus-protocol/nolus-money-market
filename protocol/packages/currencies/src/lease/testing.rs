@@ -11,10 +11,7 @@ pub(super) type Members = (
 pub(super) mod definitions {
     use serde::{Deserialize, Serialize};
 
-    use currency::{
-        CurrencyDTO, CurrencyDef, Definition, InPoolWith, PairsFindMapT, PairsGroup,
-        PairsGroupMember, pairs_find_map,
-    };
+    use currency::{CurrencyDTO, CurrencyDef, Definition, InPoolWith, PairsFindMapT, PairsGroup};
 
     use crate::{lpn::Lpn, native::Nls, payment::Group as PaymentGroup};
 
@@ -40,44 +37,13 @@ pub(super) mod definitions {
     impl PairsGroup for LeaseC1 {
         type CommonGroup = PaymentGroup;
 
+        type PairedWith = (LeaseC2, (LeaseC3,));
+
         fn find_map<FindMap>(find_map: FindMap) -> Result<FindMap::Outcome, FindMap>
         where
             FindMap: PairsFindMapT<Pivot = Self>,
         {
-            enum Pairs {
-                LeaseC2,
-                LeaseC3,
-            }
-
-            impl PairsGroupMember for Pairs {
-                type Group = LeaseC1;
-
-                fn first() -> Option<Self> {
-                    Some(Self::LeaseC2)
-                }
-
-                fn next(&self) -> Option<Self> {
-                    match self {
-                        Self::LeaseC2 => Some(Self::LeaseC3),
-                        Self::LeaseC3 => None,
-                    }
-                }
-
-                fn find_map<PairsFindMap>(
-                    &self,
-                    find_map: PairsFindMap,
-                ) -> Result<PairsFindMap::Outcome, PairsFindMap>
-                where
-                    PairsFindMap: PairsFindMapT<Pivot = Self::Group>,
-                {
-                    match self {
-                        Self::LeaseC2 => find_map.on::<LeaseC2>(LeaseC2::dto()),
-                        Self::LeaseC3 => find_map.on::<LeaseC3>(LeaseC3::dto()),
-                    }
-                }
-            }
-
-            pairs_find_map::<Pairs, _>(find_map)
+            currency::find_paired_currency(find_map)
         }
     }
 
@@ -101,39 +67,13 @@ pub(super) mod definitions {
     impl PairsGroup for LeaseC2 {
         type CommonGroup = PaymentGroup;
 
+        type PairedWith = (Lpn,);
+
         fn find_map<FindMap>(find_map: FindMap) -> Result<FindMap::Outcome, FindMap>
         where
             FindMap: PairsFindMapT<Pivot = Self>,
         {
-            struct Pairs;
-
-            impl PairsGroupMember for Pairs {
-                type Group = LeaseC2;
-
-                fn first() -> Option<Self> {
-                    Some(Self)
-                }
-
-                fn next(&self) -> Option<Self> {
-                    let Self {} = self;
-
-                    None
-                }
-
-                fn find_map<PairsFindMap>(
-                    &self,
-                    find_map: PairsFindMap,
-                ) -> Result<PairsFindMap::Outcome, PairsFindMap>
-                where
-                    PairsFindMap: PairsFindMapT<Pivot = Self::Group>,
-                {
-                    let Self {} = self;
-
-                    find_map.on::<Lpn>(Lpn::dto())
-                }
-            }
-
-            pairs_find_map::<Pairs, _>(find_map)
+            currency::find_paired_currency(find_map)
         }
     }
 
@@ -162,39 +102,13 @@ pub(super) mod definitions {
     impl PairsGroup for LeaseC3 {
         type CommonGroup = PaymentGroup;
 
+        type PairedWith = (LeaseC2,);
+
         fn find_map<FindMap>(find_map: FindMap) -> Result<FindMap::Outcome, FindMap>
         where
             FindMap: PairsFindMapT<Pivot = Self>,
         {
-            struct Pairs;
-
-            impl PairsGroupMember for Pairs {
-                type Group = LeaseC3;
-
-                fn first() -> Option<Self> {
-                    Some(Self)
-                }
-
-                fn next(&self) -> Option<Self> {
-                    let Self {} = self;
-
-                    None
-                }
-
-                fn find_map<PairsFindMap>(
-                    &self,
-                    find_map: PairsFindMap,
-                ) -> Result<PairsFindMap::Outcome, PairsFindMap>
-                where
-                    PairsFindMap: PairsFindMapT<Pivot = Self::Group>,
-                {
-                    let Self {} = self;
-
-                    find_map.on::<LeaseC2>(LeaseC2::dto())
-                }
-            }
-
-            pairs_find_map::<Pairs, _>(find_map)
+            currency::find_paired_currency(find_map)
         }
     }
 
@@ -219,39 +133,13 @@ pub(super) mod definitions {
     impl PairsGroup for LeaseC4 {
         type CommonGroup = PaymentGroup;
 
+        type PairedWith = (LeaseC2,);
+
         fn find_map<FindMap>(find_map: FindMap) -> Result<FindMap::Outcome, FindMap>
         where
             FindMap: PairsFindMapT<Pivot = Self>,
         {
-            struct Pairs;
-
-            impl PairsGroupMember for Pairs {
-                type Group = LeaseC4;
-
-                fn first() -> Option<Self> {
-                    Some(Self)
-                }
-
-                fn next(&self) -> Option<Self> {
-                    let Self {} = self;
-
-                    None
-                }
-
-                fn find_map<PairsFindMap>(
-                    &self,
-                    find_map: PairsFindMap,
-                ) -> Result<PairsFindMap::Outcome, PairsFindMap>
-                where
-                    PairsFindMap: PairsFindMapT<Pivot = Self::Group>,
-                {
-                    let Self {} = self;
-
-                    find_map.on::<LeaseC2>(LeaseC2::dto())
-                }
-            }
-
-            pairs_find_map::<Pairs, _>(find_map)
+            currency::find_paired_currency(find_map)
         }
     }
 
@@ -274,39 +162,13 @@ pub(super) mod definitions {
     impl PairsGroup for LeaseC5 {
         type CommonGroup = PaymentGroup;
 
+        type PairedWith = (Nls,);
+
         fn find_map<FindMap>(find_map: FindMap) -> Result<FindMap::Outcome, FindMap>
         where
             FindMap: PairsFindMapT<Pivot = Self>,
         {
-            struct Pairs;
-
-            impl PairsGroupMember for Pairs {
-                type Group = LeaseC5;
-
-                fn first() -> Option<Self> {
-                    Some(Self)
-                }
-
-                fn next(&self) -> Option<Self> {
-                    let Self {} = self;
-
-                    None
-                }
-
-                fn find_map<PairsFindMap>(
-                    &self,
-                    find_map: PairsFindMap,
-                ) -> Result<PairsFindMap::Outcome, PairsFindMap>
-                where
-                    PairsFindMap: PairsFindMapT<Pivot = Self::Group>,
-                {
-                    let Self {} = self;
-
-                    find_map.on::<Nls>(Nls::dto())
-                }
-            }
-
-            pairs_find_map::<Pairs, _>(find_map)
+            currency::find_paired_currency(find_map)
         }
     }
 
@@ -329,11 +191,13 @@ pub(super) mod definitions {
     impl PairsGroup for LeaseC6 {
         type CommonGroup = PaymentGroup;
 
+        type PairedWith = ();
+
         fn find_map<FindMap>(find_map: FindMap) -> Result<FindMap::Outcome, FindMap>
         where
             FindMap: PairsFindMapT<Pivot = Self>,
         {
-            Err(find_map)
+            currency::find_paired_currency(find_map)
         }
     }
 
@@ -356,39 +220,13 @@ pub(super) mod definitions {
     impl PairsGroup for LeaseC7 {
         type CommonGroup = PaymentGroup;
 
+        type PairedWith = (Lpn,);
+
         fn find_map<FindMap>(find_map: FindMap) -> Result<FindMap::Outcome, FindMap>
         where
             FindMap: PairsFindMapT<Pivot = Self>,
         {
-            struct Pairs;
-
-            impl PairsGroupMember for Pairs {
-                type Group = LeaseC7;
-
-                fn first() -> Option<Self> {
-                    Some(Self)
-                }
-
-                fn next(&self) -> Option<Self> {
-                    let Self {} = self;
-
-                    None
-                }
-
-                fn find_map<PairsFindMap>(
-                    &self,
-                    find_map: PairsFindMap,
-                ) -> Result<PairsFindMap::Outcome, PairsFindMap>
-                where
-                    PairsFindMap: PairsFindMapT<Pivot = Self::Group>,
-                {
-                    let Self {} = self;
-
-                    find_map.on::<Lpn>(Lpn::dto())
-                }
-            }
-
-            pairs_find_map::<Pairs, _>(find_map)
+            currency::find_paired_currency(find_map)
         }
     }
 }

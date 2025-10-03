@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     CurrencyDTO, CurrencyDef, Definition, Group, MemberOf, PairsGroup,
-    group::{self, CurrenciesMapping, FilterMapT, FindMapT, GroupMember},
+    group::{self, FilterMapT, FindMapT},
     pairs::FindMapT as PairsFindMapT,
 };
 
@@ -20,6 +20,8 @@ impl CurrencyDef for Stable {
 }
 impl PairsGroup for Stable {
     type CommonGroup = PlatformGroup;
+
+    type PairedWith = ();
 
     fn find_map<FindMap>(_f: FindMap) -> Result<FindMap::Outcome, FindMap>
     where
@@ -61,6 +63,8 @@ impl CurrencyDef for Nls {
 impl PairsGroup for Nls {
     type CommonGroup = PlatformGroup;
 
+    type PairedWith = ();
+
     fn find_map<FindMap>(_f: FindMap) -> Result<FindMap::Outcome, FindMap>
     where
         FindMap: PairsFindMapT<Pivot = Self>,
@@ -76,67 +80,27 @@ impl Group for PlatformGroup {
 
     type TopG = Self;
 
-    type Members = (Nls,);
+    type Members = (Nls, (Stable,));
 
     fn filter_map<FilterMap, FilterMapRef>(
-        f: FilterMapRef,
+        filter_map: FilterMapRef,
     ) -> impl Iterator<Item = FilterMap::Outcome>
     where
         FilterMap: FilterMapT<VisitedG = Self>,
-        FilterMapRef: Borrow<FilterMap>,
+        FilterMapRef: Borrow<FilterMap> + Clone,
     {
-        CurrenciesMapping::<_, Item, _, _>::with_filter(f)
+        group::non_recursive_filter_map(filter_map)
     }
 
-    fn find_map<FindMap>(f: FindMap) -> Result<FindMap::Outcome, FindMap>
+    fn find_map<FindMap>(find_map: FindMap) -> Result<FindMap::Outcome, FindMap>
     where
         FindMap: FindMapT<TargetG = Self>,
     {
-        group::find_map::<_, Item, _>(f)
+        group::non_recursive_find_map(find_map)
     }
 }
 
 impl MemberOf<Self> for PlatformGroup {}
-
-// ======== START GENERATED CODE =========
-enum Item {
-    Nls(),
-    Stable(),
-}
-
-impl GroupMember<PlatformGroup> for Item {
-    fn first() -> Option<Self> {
-        Some(Self::Nls())
-    }
-
-    fn next(&self) -> Option<Self> {
-        match self {
-            Item::Nls() => Some(Self::Stable()),
-            Item::Stable() => None,
-        }
-    }
-
-    fn filter_map<FilterMap>(&self, filter_map: &FilterMap) -> Option<FilterMap::Outcome>
-    where
-        FilterMap: FilterMapT<VisitedG = PlatformGroup>,
-    {
-        match *self {
-            Item::Nls() => filter_map.on::<Nls>(Nls::dto()),
-            Item::Stable() => filter_map.on::<Stable>(Stable::dto()),
-        }
-    }
-
-    fn find_map<FindMap>(&self, find_map: FindMap) -> Result<FindMap::Outcome, FindMap>
-    where
-        FindMap: FindMapT<TargetG = PlatformGroup>,
-    {
-        match *self {
-            Item::Nls() => find_map.on::<Nls>(Nls::dto()),
-            Item::Stable() => find_map.on::<Stable>(Stable::dto()),
-        }
-    }
-}
-// ======== END GENERATED CODE =========
 
 #[cfg(test)]
 mod test {

@@ -2,34 +2,13 @@ use crate::{CurrencyDef, PairsGroup};
 
 use super::{Group, MemberOf};
 
-pub trait CurrencyDefVisitor<VisitedGroup>
-where
-    VisitedGroup: Group,
-{
-    type Output;
-
-    fn visit<C>(self) -> Self::Output
-    where
-        C: CurrencyDef<Group = VisitedGroup> + PairsGroup<CommonGroup = VisitedGroup::TopG>,
-        C::Group: MemberOf<VisitedGroup::TopG>;
-}
-
-pub struct Member<VisitedGroup, Visitor>
-where
-    VisitedGroup: Group,
-    Visitor: CurrencyDefVisitor<VisitedGroup>,
-{
-    visit: fn(Visitor) -> Visitor::Output,
-    next: fn() -> Option<Self>,
-}
-
 pub trait MembersList<VisitedGroup>
 where
     VisitedGroup: Group,
 {
     fn next<Visitor>() -> Option<Member<VisitedGroup, Visitor>>
     where
-        Visitor: CurrencyDefVisitor<VisitedGroup>;
+        Visitor: self::Visitor<VisitedGroup>;
 }
 
 impl<VisitedGroup> MembersList<VisitedGroup> for ()
@@ -38,7 +17,7 @@ where
 {
     fn next<Visitor>() -> Option<Member<VisitedGroup, Visitor>>
     where
-        Visitor: CurrencyDefVisitor<VisitedGroup>,
+        Visitor: self::Visitor<VisitedGroup>,
     {
         None
     }
@@ -52,7 +31,7 @@ where
 {
     fn next<Visitor>() -> Option<Member<VisitedGroup, Visitor>>
     where
-        Visitor: CurrencyDefVisitor<VisitedGroup>,
+        Visitor: self::Visitor<VisitedGroup>,
     {
         Some(Member {
             visit: Visitor::visit::<Head>,
@@ -70,7 +49,7 @@ where
 {
     fn next<Visitor>() -> Option<Member<VisitedGroup, Visitor>>
     where
-        Visitor: CurrencyDefVisitor<VisitedGroup>,
+        Visitor: self::Visitor<VisitedGroup>,
     {
         Some(Member {
             visit: Visitor::visit::<Head>,
@@ -79,10 +58,31 @@ where
     }
 }
 
+pub(super) trait Visitor<VisitedGroup>
+where
+    VisitedGroup: Group,
+{
+    type Output;
+
+    fn visit<C>(self) -> Self::Output
+    where
+        C: CurrencyDef<Group = VisitedGroup> + PairsGroup<CommonGroup = VisitedGroup::TopG>,
+        C::Group: MemberOf<VisitedGroup::TopG>;
+}
+
+pub(super) struct Member<VisitedGroup, Visitor>
+where
+    VisitedGroup: Group,
+    Visitor: self::Visitor<VisitedGroup>,
+{
+    visit: fn(Visitor) -> Visitor::Output,
+    next: fn() -> Option<Self>,
+}
+
 pub(super) struct MembersIter<VisitedGroup, Visitor>
 where
     VisitedGroup: Group,
-    Visitor: CurrencyDefVisitor<VisitedGroup>,
+    Visitor: self::Visitor<VisitedGroup>,
 {
     next: fn() -> Option<Member<VisitedGroup, Visitor>>,
 }
@@ -90,7 +90,7 @@ where
 impl<VisitedGroup, Visitor> MembersIter<VisitedGroup, Visitor>
 where
     VisitedGroup: Group,
-    Visitor: CurrencyDefVisitor<VisitedGroup>,
+    Visitor: self::Visitor<VisitedGroup>,
 {
     pub const fn new() -> Self {
         const {
@@ -109,15 +109,5 @@ where
         } = (self.next)()?;
 
         Some(visit)
-    }
-}
-
-impl<VisitedGroup, Visitor> Default for MembersIter<VisitedGroup, Visitor>
-where
-    VisitedGroup: Group,
-    Visitor: CurrencyDefVisitor<VisitedGroup>,
-{
-    fn default() -> Self {
-        const { Self::new() }
     }
 }
