@@ -164,7 +164,7 @@ impl<C> FractionUnit for Coin<C> {
     fn scale_down(self, scale: Self::Times) -> Self {
         debug_assert_ne!(scale, Self::Times::ZERO);
 
-        Coin::new(self.amount.scale_down(scale))
+        Coin::new(self.amount.div(scale))
     }
 
     fn modulo(self, scale: Self::Times) -> Self::Times {

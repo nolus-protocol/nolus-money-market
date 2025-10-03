@@ -152,7 +152,7 @@ impl FractionUnit for Duration {
     fn scale_down(self, scale: Self::Times) -> Self {
         debug_assert_ne!(scale, Self::Times::ZERO);
 
-        Self::from_nanos(self.nanos().scale_down(scale))
+        Self::from_nanos(self.nanos().div(scale))
     }
 
     fn modulo(self, scale: Self::Times) -> Self::Times {
