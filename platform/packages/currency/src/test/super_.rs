@@ -1,7 +1,5 @@
 use crate::{
-    CurrencyDef, GroupFilterMap, GroupFindMap,
-    group::GroupMember,
-    pairs::{FindMapT as PairsFindMap, PairsGroupMember},
+    CurrencyDef, GroupFilterMap, GroupFindMap, GroupMember, PairsFindMap, PairsGroupMember,
     test::{
         SubGroupTestC6, SubGroupTestC10, SuperGroup, SuperGroupTestC1, SuperGroupTestC2,
         SuperGroupTestC3, SuperGroupTestC4, SuperGroupTestC5,

@@ -12,8 +12,8 @@ pub use crate::{
     },
     matcher::Matcher,
     pairs::{
-        FindMapT as PairsFindMap, MaybePairsVisitorResult, PairsGroup, PairsGroupMember,
-        PairsVisitor, find_map as pairs_find_map,
+        FindMap as PairsFindMap, GroupMember as PairsGroupMember, MaybePairsVisitorResult,
+        PairsGroup, PairsVisitor, find_map as pairs_find_map,
     },
     symbol::{BankSymbols, DexSymbols, Symbol, Tickers},
     visit_any::{AnyVisitor, AnyVisitorPair, InPoolWith, visit_any_on_currencies},

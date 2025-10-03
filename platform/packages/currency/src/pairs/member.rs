@@ -7,7 +7,7 @@ use crate::{PairsFindMap, PairsGroup};
 /// Intended to facilitate the iteration of pairs group members.
 ///
 /// Not to be confused [`MemberOf`] nor [`crate::FindMapT`]!
-pub trait PairsGroupMember
+pub trait GroupMember
 where
     Self: Sized,
 {

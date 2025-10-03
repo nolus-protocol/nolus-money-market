@@ -1,6 +1,6 @@
 use crate::{CurrencyDTO, CurrencyDef, Group, MemberOf, visit_any::InPoolWith};
 
-pub use self::{find::find_map, member::PairsGroupMember};
+pub use self::{find::find_map, member::GroupMember};
 
 mod find;
 mod member;
@@ -17,12 +17,12 @@ pub type MaybePairsVisitorResult<V> = Result<<V as PairsVisitor>::Outcome, V>;
 pub trait PairsGroup {
     type CommonGroup: Group;
 
-    fn find_map<FindMap>(f: FindMap) -> Result<FindMap::Outcome, FindMap>
+    fn find_map<FindMapImpl>(f: FindMapImpl) -> Result<FindMapImpl::Outcome, FindMapImpl>
     where
-        FindMap: FindMapT<Pivot = Self>;
+        FindMapImpl: FindMap<Pivot = Self>;
 }
 
-pub trait FindMapT
+pub trait FindMap
 where
     Self: Sized,
 {
