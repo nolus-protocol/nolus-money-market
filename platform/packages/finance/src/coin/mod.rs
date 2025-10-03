@@ -110,30 +110,6 @@ impl<C> Coin<C> {
     pub const fn checked_div(self, rhs: Amount) -> Option<Self> {
         Self::may_new(self.amount.checked_div(rhs))
     }
-
-    #[track_caller]
-    pub(super) fn into_coprime_with<OtherC>(self, other: Coin<OtherC>) -> (Self, Coin<OtherC>) {
-        debug_assert!(!self.is_zero(), "LHS-value's amount is zero!");
-        debug_assert!(!other.is_zero(), "RHS-value's amount is zero!");
-
-        let gcd: Amount = gcd::binary_u128(self.amount, other.amount);
-
-        debug_assert!(gcd > 0);
-
-        debug_assert!(
-            self.amount % gcd == 0,
-            "LHS-value's amount is not divisible by the GCD!"
-        );
-        debug_assert!(
-            other.amount % gcd == 0,
-            "RHS-value's amount is not divisible by the GCD!"
-        );
-
-        (
-            Self::new(self.amount / gcd),
-            Coin::<OtherC>::new(other.amount / gcd),
-        )
-    }
 }
 
 impl<C> Coin<C>
