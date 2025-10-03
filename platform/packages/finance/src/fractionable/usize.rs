@@ -1,4 +1,4 @@
-use crate::{fraction::Unit as FractionUnit, percent::Units as PercentUnits, ratio::RatioLegacy};
+use crate::{percent::Units as PercentUnits, ratio::RatioLegacy};
 
 use super::FractionableLegacy;
 
@@ -15,8 +15,6 @@ impl FractionableLegacy<PercentUnits> for usize {
             .expect("usize overflow on percent calculation")
     }
 }
-
-impl FractionUnit for usize {}
 
 #[cfg(test)]
 mod test {

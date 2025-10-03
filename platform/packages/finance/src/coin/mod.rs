@@ -6,10 +6,11 @@ use std::{
     fmt::{Debug, Display, Formatter},
     iter::Sum,
     marker::PhantomData,
-    ops::{Add, AddAssign, Sub, SubAssign},
+    ops::{Add, AddAssign, Div, Rem, Sub, SubAssign},
 };
 
 use ::serde::{Deserialize, Serialize};
+use gcd::Gcd;
 
 use currency::{Currency, CurrencyDef, Group, MemberOf};
 
@@ -30,7 +31,32 @@ pub type Amount = u128;
 pub type NonZeroAmount = NonZeroU128;
 
 // Used only for average price calculation
-impl FractionUnit for u128 {}
+impl FractionUnit for u128 {
+    type Times = Self;
+
+    fn gcd<U>(self, other: U) -> Self::Times
+    where
+        U: FractionUnit<Times = Self::Times>,
+    {
+        Gcd::gcd(self, other.to_primitive())
+    }
+
+    fn scale_down(self, scale: Self::Times) -> Self {
+        debug_assert_ne!(scale, Self::Times::ZERO);
+
+        self.div(scale)
+    }
+
+    fn modulo(self, scale: Self::Times) -> Self::Times {
+        debug_assert_ne!(scale, Self::Times::ZERO);
+
+        self.rem(scale)
+    }
+
+    fn to_primitive(self) -> Self::Times {
+        self
+    }
+}
 
 #[derive(Serialize, Deserialize)]
 pub struct Coin<C> {
@@ -84,33 +110,6 @@ impl<C> Coin<C> {
     pub const fn checked_div(self, rhs: Amount) -> Option<Self> {
         Self::may_new(self.amount.checked_div(rhs))
     }
-
-    #[track_caller]
-    pub(super) const fn into_coprime_with<OtherC>(
-        self,
-        other: Coin<OtherC>,
-    ) -> (Self, Coin<OtherC>) {
-        debug_assert!(!self.is_zero(), "LHS-value's amount is zero!");
-        debug_assert!(!other.is_zero(), "RHS-value's amount is zero!");
-
-        let gcd: Amount = gcd::binary_u128(self.amount, other.amount);
-
-        debug_assert!(gcd > 0);
-
-        debug_assert!(
-            self.amount % gcd == 0,
-            "LHS-value's amount is not divisible by the GCD!"
-        );
-        debug_assert!(
-            other.amount % gcd == 0,
-            "RHS-value's amount is not divisible by the GCD!"
-        );
-
-        (
-            Self::new(self.amount / gcd),
-            Coin::<OtherC>::new(other.amount / gcd),
-        )
-    }
 }
 
 impl<C> Coin<C>
@@ -152,7 +151,32 @@ impl<C> Default for Coin<C> {
     }
 }
 
-impl<C> FractionUnit for Coin<C> {}
+impl<C> FractionUnit for Coin<C> {
+    type Times = Amount;
+
+    fn gcd<U>(self, other: U) -> Self::Times
+    where
+        U: FractionUnit<Times = Self::Times>,
+    {
+        Gcd::gcd(self.amount, other.to_primitive())
+    }
+
+    fn scale_down(self, scale: Self::Times) -> Self {
+        debug_assert_ne!(scale, Self::Times::ZERO);
+
+        Coin::new(self.amount.div(scale))
+    }
+
+    fn modulo(self, scale: Self::Times) -> Self::Times {
+        debug_assert_ne!(scale, Self::Times::ZERO);
+
+        self.amount.rem(scale)
+    }
+
+    fn to_primitive(self) -> Self::Times {
+        self.amount
+    }
+}
 
 impl<C> Eq for Coin<C> {}
 
@@ -261,7 +285,7 @@ mod test {
 
     use currency::test::{SuperGroupTestC1, SuperGroupTestC2};
 
-    use crate::{percent::test::test_of, test::coin};
+    use crate::{fraction::Coprime, percent::test::test_of, test::coin};
 
     use super::{Amount, Coin};
 
@@ -459,11 +483,11 @@ mod test {
     fn coprime_impl(gcd: Amount, a1: Amount, a2: Amount) {
         assert_eq!(
             (coin::coin1(a1 / gcd), coin::coin2(a2 / gcd)),
-            coin::coin1(a1).into_coprime_with(coin::coin2(a2))
+            coin::coin1(a1).to_coprime_with(coin::coin2(a2))
         );
         assert_eq!(
             (coin::coin2(a1 / gcd), coin::coin2(a2 / gcd)),
-            coin::coin2(a1).into_coprime_with(coin::coin2(a2))
+            coin::coin2(a1).to_coprime_with(coin::coin2(a2))
         );
     }
 }

@@ -8,6 +8,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     coin::{Amount, Coin},
     error::{Error, Result},
+    fraction::Coprime,
     fractionable::HigherRank,
     ratio::{RatioLegacy, SimpleFraction},
     rational::Rational,
@@ -81,7 +82,7 @@ where
 
     fn new_inner(amount: Coin<C>, amount_quote: Coin<QuoteC>) -> Self {
         let (amount_normalized, amount_quote_normalized): (Coin<C>, Coin<QuoteC>) =
-            amount.into_coprime_with(amount_quote);
+            amount.to_coprime_with(amount_quote);
 
         Self {
             amount: amount_normalized,
@@ -105,10 +106,10 @@ where
         R: RatioLegacy<Amount>,
     {
         let (amount_normalized, rhs_nominator_normalized) =
-            self.amount.into_coprime_with(Coin::<C>::new(rhs.parts()));
+            self.amount.to_coprime_with(Coin::<C>::new(rhs.parts()));
         let (amount_quote_normalized, rhs_denominator_normalized) = self
             .amount_quote
-            .into_coprime_with(Coin::<QuoteC>::new(rhs.total()));
+            .to_coprime_with(Coin::<QuoteC>::new(rhs.total()));
 
         let double_amount =
             DoubleAmount::from(amount_normalized) * DoubleAmount::from(rhs_denominator_normalized);
@@ -154,7 +155,7 @@ where
         // let a1 = a / gcd(a, c), and c1 = c / gcd(a, c), then
         // b / a + d / c = (b * c1 + d * a1) / (a1 * c1 * gcd(a, c))
         // taking into account that Price is like amount_quote/amount
-        let (a1, c1) = self.amount.into_coprime_with(rhs.amount);
+        let (a1, c1) = self.amount.to_coprime_with(rhs.amount);
         debug_assert_eq!(0, Amount::from(self.amount) % Amount::from(a1));
         debug_assert_eq!(0, Amount::from(rhs.amount) % Amount::from(c1));
         let gcd: Amount = match self.amount.checked_div(a1.into()) {

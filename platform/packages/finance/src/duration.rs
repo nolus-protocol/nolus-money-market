@@ -1,8 +1,9 @@
 use std::{
     fmt::{Debug, Display, Formatter, Result as FmtResult},
-    ops::{Add, AddAssign, Sub, SubAssign},
+    ops::{Add, AddAssign, Div, Rem, Sub, SubAssign},
 };
 
+use gcd::Gcd;
 use serde::{Deserialize, Serialize};
 
 use sdk::cosmwasm_std::Timestamp;
@@ -16,7 +17,32 @@ pub type Units = u64;
 
 pub type Seconds = u32;
 
-impl FractionUnit for Units {}
+impl FractionUnit for Units {
+    type Times = Self;
+
+    fn gcd<U>(self, other: U) -> Self::Times
+    where
+        U: FractionUnit<Times = Self::Times>,
+    {
+        Gcd::gcd(self, other.to_primitive())
+    }
+
+    fn scale_down(self, scale: Self::Times) -> Self {
+        debug_assert_ne!(scale, Self::Times::ZERO);
+
+        self.div(scale)
+    }
+
+    fn modulo(self, scale: Self::Times) -> Self::Times {
+        debug_assert_ne!(scale, Self::Times::ZERO);
+
+        self.rem(scale)
+    }
+
+    fn to_primitive(self) -> Self::Times {
+        self
+    }
+}
 
 /// A more storage and compute optimal version of its counterpart in the std::time.
 /// Designed to represent a timespan between cosmwasm_std::Timestamp-s.
@@ -113,7 +139,32 @@ impl From<Duration> for u128 {
     }
 }
 
-impl FractionUnit for Duration {}
+impl FractionUnit for Duration {
+    type Times = Units;
+
+    fn gcd<U>(self, other: U) -> Self::Times
+    where
+        U: FractionUnit<Times = Self::Times>,
+    {
+        Gcd::gcd(self.nanos(), other.to_primitive())
+    }
+
+    fn scale_down(self, scale: Self::Times) -> Self {
+        debug_assert_ne!(scale, Self::Times::ZERO);
+
+        Self::from_nanos(self.nanos().div(scale))
+    }
+
+    fn modulo(self, scale: Self::Times) -> Self::Times {
+        debug_assert_ne!(scale, Self::Times::ZERO);
+
+        self.nanos().rem(scale)
+    }
+
+    fn to_primitive(self) -> Self::Times {
+        self.nanos()
+    }
+}
 
 impl Zero for Duration {
     const ZERO: Self = Self::from_nanos(0);
