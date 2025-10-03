@@ -2,46 +2,37 @@ use std::{borrow::Borrow, marker::PhantomData};
 
 use crate::{CurrencyDTO, CurrencyDef, FilterMapT, FindMapT, Group, MemberOf, PairsGroup};
 
-/// Adapter of [`FilterMapT<SuperG>`] to [`FilterMapT<G>`]
+/// Adapter of [`FilterMapT<G::TopG>`] to [`FilterMapT<G>`]
 ///
 /// Aimed for use in super group 'filter_map' implementations
-pub struct SubFilterAdapter<G, SuperG, FilterMap, FilterMapRef>(
+pub struct SubFilterAdapter<G, FilterMap, FilterMapRef>(
     PhantomData<G>,
-    PhantomData<SuperG>,
     FilterMapRef,
     PhantomData<FilterMap>,
 );
 
-impl<G, SuperG, FilterMap, FilterMapRef> SubFilterAdapter<G, SuperG, FilterMap, FilterMapRef> {
+impl<G, FilterMap, FilterMapRef> SubFilterAdapter<G, FilterMap, FilterMapRef> {
     pub fn new(f: FilterMapRef) -> Self {
-        Self(
-            PhantomData::<G>,
-            PhantomData::<SuperG>,
-            f,
-            PhantomData::<FilterMap>,
-        )
+        Self(PhantomData, f, PhantomData)
     }
 }
 
-impl<G, SuperG, FilterMap, FilterMapRef> Clone
-    for SubFilterAdapter<G, SuperG, FilterMap, FilterMapRef>
+impl<G, FilterMap, FilterMapRef> Clone for SubFilterAdapter<G, FilterMap, FilterMapRef>
 where
     FilterMapRef: Clone,
 {
     fn clone(&self) -> Self {
         Self {
-            2: self.2.clone(),
+            1: self.1.clone(),
             ..*self
         }
     }
 }
 
-impl<G, SuperG, FilterMap, FilterMapRef> FilterMapT
-    for SubFilterAdapter<G, SuperG, FilterMap, FilterMapRef>
+impl<G, FilterMap, FilterMapRef> FilterMapT for SubFilterAdapter<G, FilterMap, FilterMapRef>
 where
-    G: Group<TopG = SuperG>,
-    SuperG: Group<TopG = G::TopG>,
-    FilterMap: FilterMapT<VisitedG = SuperG>,
+    G: Group,
+    FilterMap: FilterMapT<VisitedG = G::TopG>,
     FilterMapRef: Borrow<FilterMap>,
 {
     type VisitedG = G;
@@ -53,37 +44,35 @@ where
         C: CurrencyDef + PairsGroup<CommonGroup = <G as Group>::TopG>,
         C::Group: MemberOf<<G as Group>::TopG>,
     {
-        self.2.borrow().on::<C>(def)
+        self.1.borrow().on::<C>(def)
     }
 }
 
-/// Adapter of [`FindMapT<SuperG>`] to [`FindMapT<G>`]
+/// Adapter of [`FindMapT<G::TopG>`] to [`FindMapT<G>`]
 ///
 /// Aimed for use in super group 'find_map' implementations
-pub struct SubGroupFindAdapter<G, SuperG, FindMap>(PhantomData<G>, PhantomData<SuperG>, FindMap);
+pub struct SubGroupFindAdapter<G, FindMap>(PhantomData<G>, FindMap);
 
-impl<G, SuperG, FindMap> SubGroupFindAdapter<G, SuperG, FindMap> {
+impl<G, FindMap> SubGroupFindAdapter<G, FindMap> {
     pub fn new(f: FindMap) -> Self {
-        Self(PhantomData::<G>, PhantomData::<SuperG>, f)
+        Self(PhantomData, f)
     }
 }
 
-impl<G, SuperG, FindMap> SubGroupFindAdapter<G, SuperG, FindMap>
+impl<G, FindMap> SubGroupFindAdapter<G, FindMap>
 where
-    G: Group<TopG = SuperG>,
-    SuperG: Group<TopG = G::TopG>,
-    FindMap: FindMapT<TargetG = SuperG>,
+    G: Group,
+    FindMap: FindMapT<TargetG = G::TopG>,
 {
     pub fn release_super_map(self) -> FindMap {
-        self.2
+        self.1
     }
 }
 
-impl<G, SuperG, FindMap> FindMapT for SubGroupFindAdapter<G, SuperG, FindMap>
+impl<G, FindMap> FindMapT for SubGroupFindAdapter<G, FindMap>
 where
-    G: Group<TopG = SuperG>,
-    SuperG: Group<TopG = G::TopG>,
-    FindMap: FindMapT<TargetG = SuperG>,
+    G: Group,
+    FindMap: FindMapT<TargetG = G::TopG>,
 {
     type TargetG = G;
     type Outcome = FindMap::Outcome;
@@ -93,6 +82,6 @@ where
         C: CurrencyDef + PairsGroup<CommonGroup = <G as Group>::TopG>,
         C::Group: MemberOf<G> + MemberOf<<G as Group>::TopG>,
     {
-        self.2.on::<C>(def).map_err(Self::new)
+        self.1.on::<C>(def).map_err(Self::new)
     }
 }
