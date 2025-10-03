@@ -158,7 +158,7 @@ impl FractionUnit for Duration {
     fn modulo(self, scale: Self::Times) -> Self::Times {
         debug_assert_ne!(scale, Self::Times::ZERO);
 
-        self.nanos().modulo(scale)
+        self.nanos().rem(scale)
     }
 
     fn to_primitive(self) -> Self::Times {

@@ -170,7 +170,7 @@ impl<C> FractionUnit for Coin<C> {
     fn modulo(self, scale: Self::Times) -> Self::Times {
         debug_assert_ne!(scale, Self::Times::ZERO);
 
-        self.amount.modulo(scale)
+        self.amount.rem(scale)
     }
 
     fn to_primitive(self) -> Self::Times {
