@@ -1,4 +1,4 @@
-use currency::{CurrencyDef as _, GroupFindMap, GroupFilterMap};
+use currency::{CurrencyDef as _, GroupFilterMap, GroupFindMap};
 
 use self::definitions::Lpn;
 

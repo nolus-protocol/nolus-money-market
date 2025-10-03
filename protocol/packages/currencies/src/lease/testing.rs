@@ -1,4 +1,4 @@
-use currency::{CurrencyDef as _, GroupFindMap, GroupFilterMap};
+use currency::{CurrencyDef as _, GroupFilterMap, GroupFindMap};
 
 use self::definitions::{LeaseC1, LeaseC2, LeaseC3, LeaseC4, LeaseC5, LeaseC6, LeaseC7};
 

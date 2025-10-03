@@ -1,4 +1,4 @@
-use currency::{CurrencyDef, GroupFindMap, GroupFilterMap};
+use currency::{CurrencyDef, GroupFilterMap, GroupFindMap};
 
 use self::definitions::Nls;
 

@@ -1,4 +1,4 @@
-use currency::{GroupFindMap, GroupFilterMap};
+use currency::{GroupFilterMap, GroupFindMap};
 
 use super::Group as OnlyGroup;
 

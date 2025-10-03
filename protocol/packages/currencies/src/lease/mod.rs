@@ -2,7 +2,7 @@ use std::borrow::Borrow;
 
 use serde::{Deserialize, Serialize};
 
-use currency::{CurrenciesMapping, GroupFindMap, GroupFilterMap, MemberOf};
+use currency::{CurrenciesMapping, GroupFilterMap, GroupFindMap, MemberOf};
 
 use crate::payment::Group as PaymentGroup;
 
