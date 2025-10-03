@@ -37,6 +37,7 @@ pub trait Coprime
 where
     Self: Unit,
 {
+    /// [other] should be nonzero
     fn coprime_with<U>(self, other: U) -> (Self, U)
     where
         U: Unit<Times = Self::Times>;
