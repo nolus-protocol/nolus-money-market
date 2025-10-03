@@ -1,12 +1,13 @@
 use std::{
     fmt::{Debug, Display, Formatter, Result as FmtResult, Write},
-    ops::Rem,
+    ops::{Div, Rem},
 };
 
 #[cfg(any(test, feature = "testing"))]
 use std::ops::{Add, Sub};
 
 use bnum::types::U256;
+use gcd::Gcd;
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -124,12 +125,12 @@ where
     where
         U: FractionUnit<Times = Self::Times>,
     {
-        FractionUnit::gcd(self.units(), other.primitive())
+        Gcd::gcd(self.units(), other.primitive())
     }
 
     fn scale_down(self, scale: Self::Times) -> Self {
         debug_assert_ne!(scale, Self::Times::ZERO);
-        Self::try_from_permille(self.units().scale_down(scale))
+        Self::try_from_permille(self.units().div(scale))
             .expect("Units should be less than UPPER_BOUND")
     }
 
