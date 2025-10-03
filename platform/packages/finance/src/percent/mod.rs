@@ -35,6 +35,8 @@ impl FractionUnit for Units {
     }
 
     fn modulo(self, scale: Self::Times) -> Self::Times {
+        debug_assert_ne!(scale, Self::Times::ZERO);
+
         self.rem(scale)
     }
 

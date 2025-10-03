@@ -48,6 +48,8 @@ impl FractionUnit for u128 {
     }
 
     fn modulo(self, scale: Self::Times) -> Self::Times {
+        debug_assert_ne!(scale, Self::Times::ZERO);
+
         self.rem(scale)
     }
 
@@ -190,6 +192,8 @@ impl<C> FractionUnit for Coin<C> {
     }
 
     fn modulo(self, scale: Self::Times) -> Self::Times {
+        debug_assert_ne!(scale, Self::Times::ZERO);
+
         self.amount.modulo(scale)
     }
 
