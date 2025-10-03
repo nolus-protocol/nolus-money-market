@@ -96,7 +96,9 @@ impl Overdue {
 
 #[cfg(all(feature = "internal.test.contract", test))]
 mod test {
-    use finance::{coin::Coin, duration::Duration, interest, percent::Percent100, period::Period};
+    use finance::{
+        coin::Coin, duration::Duration, interest, percent::Percent100, period::Period, zero::Zero,
+    };
     use lpp::{loan::Loan, stub::loan::LppLoan};
     use sdk::cosmwasm_std::Timestamp;
 
@@ -143,8 +145,8 @@ mod test {
         );
         assert_eq!(
             Overdue::Accrued {
-                interest: 0.into(),
-                margin: 0.into()
+                interest: Coin::ZERO,
+                margin: Coin::ZERO
             },
             overdue
         );

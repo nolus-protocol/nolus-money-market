@@ -14,15 +14,11 @@ use crate::msg::{Config, InstantiateMsg, NewConfig};
 
 mod contract_tests;
 
-pub fn lpn_coin(amount: Amount) -> LpnCoinDTO {
-    Coin::<Lpn>::from(amount).into()
-}
-
-pub fn config() -> Config {
+pub(crate) fn config() -> Config {
     Config::new(Code::unchecked(10), dummy_instantiate_msg())
 }
 
-pub fn new_config() -> NewConfig {
+pub(crate) fn new_config() -> NewConfig {
     NewConfig {
         lease_interest_rate_margin: Percent100::from_percent(5),
         lease_position_spec: PositionSpecDTO::new(
@@ -35,14 +31,18 @@ pub fn new_config() -> NewConfig {
                 Percent100::from_percent(65),
                 Duration::from_hours(12),
             ),
-            lpn_coin(4_211_442_000),
-            lpn_coin(100_000),
+            lpn_coin_dto(4_211_442_000),
+            lpn_coin_dto(100_000),
         ),
         lease_due_period: Duration::from_secs(100),
         lease_max_slippages: MaxSlippages {
             liquidation: MaxSlippage::unchecked(Percent100::from_percent(13)),
         },
     }
+}
+
+pub(super) fn lpn_coin_dto(amount: Amount) -> LpnCoinDTO {
+    Coin::<Lpn>::new(amount).into()
 }
 
 fn dummy_instantiate_msg() -> InstantiateMsg {
@@ -64,8 +64,8 @@ fn dummy_instantiate_msg() -> InstantiateMsg {
                 Percent100::from_percent(80),
                 Duration::from_hours(12),
             ),
-            min_asset: Coin::<Lpn>::from(120_000).into(),
-            min_transaction: Coin::<Lpn>::from(12_000).into(),
+            min_asset: lpn_coin_dto(120_000),
+            min_transaction: lpn_coin_dto(12_000),
         },
         lease_interest_rate_margin: Percent100::from_percent(3),
         lease_due_period: Duration::from_days(14),

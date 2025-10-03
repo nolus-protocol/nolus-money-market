@@ -12,7 +12,10 @@ where
 }
 
 pub mod coin {
-    use currency::{Currency, CurrencyDef, equal};
+    use currency::{
+        Currency, CurrencyDef, equal,
+        test::{SuperGroupTestC1, SuperGroupTestC2},
+    };
 
     use crate::coin::{Amount, Coin, WithCoin};
 
@@ -33,5 +36,13 @@ pub mod coin {
         {
             equal::<CExp, C>() && Amount::from(coin) == self.0.into()
         }
+    }
+
+    pub fn coin1(amount: Amount) -> Coin<SuperGroupTestC1> {
+        Coin::new(amount)
+    }
+
+    pub fn coin2(amount: Amount) -> Coin<SuperGroupTestC2> {
+        Coin::new(amount)
     }
 }

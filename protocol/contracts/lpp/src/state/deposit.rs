@@ -192,9 +192,9 @@ mod test {
 
         let rewards = TotalRewards::load_or_default(&store).unwrap();
         let mut deposit1 = Deposit::load_or_default(&store, addr1.clone(), rewards).unwrap();
-        let deposit1_1 = 1000.into();
-        let withdraw1_1 = 500.into();
-        let deposit2_1 = 500.into();
+        let deposit1_1 = Coin::new(1000);
+        let withdraw1_1 = Coin::new(500);
+        let deposit2_1 = Coin::new(500);
         assert_eq!(
             ContractError::InsufficientBalance {},
             deposit1.withdraw(deposit1_1).unwrap_err()

@@ -114,8 +114,8 @@ impl<'c> From<Sender<'c>> for Batch {
 
 #[cfg(test)]
 mod test {
-    use currency::test::{SubGroupTestC10, SuperGroup, SuperGroupTestC1};
-    use finance::coin::Coin;
+    use currency::test::{SubGroupTestC10, SuperGroup};
+    use finance::{coin::Coin, test::coin};
     use sdk::cosmwasm_std::{Addr, Timestamp};
 
     use crate::{
@@ -133,8 +133,8 @@ mod test {
         let timeout = Timestamp::from_seconds(100);
         let mut funds_sender = Sender::new(channel, &sender, &receiver, timeout, "MEMO".into());
 
-        let coin1: Coin<SubGroupTestC10> = 234214.into();
-        let coin2: Coin<SuperGroupTestC1> = 234214.into();
+        let coin1: Coin<SubGroupTestC10> = Coin::new(234214);
+        let coin2 = coin::coin1(234214);
         funds_sender.send::<SuperGroup>(&coin1.into());
         funds_sender.send::<SuperGroup>(&coin2.into());
 

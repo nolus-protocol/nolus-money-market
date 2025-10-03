@@ -163,7 +163,11 @@ where
 #[cfg(test)]
 mod test {
     use currency::test::{SuperGroupTestC4, SuperGroupTestC5};
-    use finance::{coin::Amount, duration::Duration, price};
+    use finance::{
+        coin::{Amount, Coin},
+        duration::Duration,
+        price,
+    };
     use sdk::cosmwasm_std::{Addr, Timestamp};
 
     use crate::feed::{
@@ -248,7 +252,7 @@ mod test {
     }
 
     fn price(of: Amount, is: Amount) -> price::Price<TheCurrency, TheQuote> {
-        price::total_of(of.into()).is(is.into())
+        price::total_of(Coin::<TheCurrency>::new(of)).is(Coin::<TheQuote>::new(is))
     }
 
     fn feeder1() -> Addr {

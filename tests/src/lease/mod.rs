@@ -20,7 +20,7 @@ use sdk::{
 
 use crate::common::{
     self, ADDON_OPTIMAL_INTEREST_RATE, ADMIN, BASE_INTEREST_RATE, USER, UTILIZATION_OPTIMAL,
-    cwcoin, cwcoin_dex,
+    cwcoin, cwcoin_dex, cwcoin_from_amount,
     leaser::{self as leaser_mod, Instantiator as LeaserInstantiator},
     protocols::Registry,
     test_case::{
@@ -99,14 +99,14 @@ where
     InitFundsC: CurrencyDef,
 {
     let mut test_case = TestCaseBuilder::<LpnCurrency, _, _, _, _, _, _, _, _>::with_reserve(&[
-        cwcoin::<PaymentCurrency, _>(10_000_000_000_000_000_000_000_000_000),
-        cwcoin_dex::<PaymentCurrency, _>(10_000_000_000_000_000_000_000_000_000),
-        cwcoin::<LpnCurrency, _>(10_000_000_000_000_000_000_000_000_000),
-        cwcoin_dex::<LpnCurrency, _>(10_000_000_000_000_000_000_000_000_000),
-        cwcoin::<LeaseCurrency, _>(10_000_000_000_000_000_000_000_000_000),
-        cwcoin_dex::<LeaseCurrency, _>(10_000_000_000_000_000_000_000_000_000),
-        cwcoin::<InitFundsC, _>(10_000_000_000_000_000_000_000_000_000),
-        cwcoin_dex::<InitFundsC, _>(10_000_000_000_000_000_000_000_000_000),
+        cwcoin_from_amount::<PaymentCurrency>(10_000_000_000_000_000_000_000_000_000),
+        cwcoin_dex::<PaymentCurrency>(10_000_000_000_000_000_000_000_000_000),
+        cwcoin_from_amount::<LpnCurrency>(10_000_000_000_000_000_000_000_000_000),
+        cwcoin_dex::<LpnCurrency>(10_000_000_000_000_000_000_000_000_000),
+        cwcoin_from_amount::<LeaseCurrency>(10_000_000_000_000_000_000_000_000_000),
+        cwcoin_dex::<LeaseCurrency>(10_000_000_000_000_000_000_000_000_000),
+        cwcoin_from_amount::<InitFundsC>(10_000_000_000_000_000_000_000_000_000),
+        cwcoin_dex::<InitFundsC>(10_000_000_000_000_000_000_000_000_000),
     ])
     .init_lpp_with_funds(
         None,
@@ -130,7 +130,9 @@ where
 
     test_case.send_funds_from_admin(
         testing::user(USER),
-        &[cwcoin::<InitFundsC, _>(1_000_000_000_000_000_000_000_000)],
+        &[cwcoin_from_amount::<InitFundsC>(
+            1_000_000_000_000_000_000_000_000,
+        )],
     );
 
     common::oracle::add_feeder(&mut test_case, testing::user(ADMIN));
@@ -206,7 +208,7 @@ pub(super) fn try_init_lease<
 where
     D: CurrencyDef,
 {
-    let downpayment = (!downpayment.is_zero()).then(|| cwcoin::<D, _>(downpayment));
+    let downpayment = (!downpayment.is_zero()).then(|| cwcoin::<D>(downpayment));
 
     let mut response = test_case
         .app

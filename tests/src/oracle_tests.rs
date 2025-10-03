@@ -35,8 +35,8 @@ use versioning::{
 };
 
 use crate::common::{
-    ADDON_OPTIMAL_INTEREST_RATE, ADMIN, BASE_INTEREST_RATE, CwCoin, USER, UTILIZATION_OPTIMAL,
-    leaser as leaser_mod, oracle as oracle_mod, oracle as oracle_common,
+    self, ADDON_OPTIMAL_INTEREST_RATE, ADMIN, BASE_INTEREST_RATE, CwCoin, USER,
+    UTILIZATION_OPTIMAL, leaser as leaser_mod, oracle as oracle_mod, oracle as oracle_common,
     protocols::Registry,
     test_case::{
         TestCase,
@@ -55,40 +55,39 @@ type Alarm = oracle::api::Alarm<AlarmCurrencies, BaseCurrency, BaseCurrencies>;
 type ExecuteMsg =
     oracle::api::ExecuteMsg<BaseCurrency, BaseCurrencies, AlarmCurrencies, PriceCurrencies>;
 
-fn cw_coin<CoinT>(coin: CoinT) -> CwCoin
-where
-    CoinT: Into<Coin<Lpn>>,
-{
-    coin_legacy::to_cosmwasm_on_nolus(coin.into())
+fn cw_coin(coin: Coin<Lpn>) -> CwCoin {
+    coin_legacy::to_cosmwasm_on_nolus(coin)
 }
 
 fn create_test_case() -> TestCase<Addr, Addr, Addr, Addr, Addr, Addr, Addr, Addr> {
-    TestCaseBuilder::<Lpn>::with_reserve(&[cw_coin(10_000_000_000_000_000_000_000_000_000)])
-        .init_lpp_with_funds(
-            None,
-            &[coin(5_000_000_000_000_000_000_000_000_000, Lpn::bank())],
-            BASE_INTEREST_RATE,
-            UTILIZATION_OPTIMAL,
-            ADDON_OPTIMAL_INTEREST_RATE,
-            TestCase::DEFAULT_LPP_MIN_UTILIZATION,
+    TestCaseBuilder::<Lpn>::with_reserve(&[cw_coin(common::coin(
+        10_000_000_000_000_000_000_000_000_000,
+    ))])
+    .init_lpp_with_funds(
+        None,
+        &[coin(5_000_000_000_000_000_000_000_000_000, Lpn::bank())],
+        BASE_INTEREST_RATE,
+        UTILIZATION_OPTIMAL,
+        ADDON_OPTIMAL_INTEREST_RATE,
+        TestCase::DEFAULT_LPP_MIN_UTILIZATION,
+    )
+    .init_time_alarms()
+    .init_protocols_registry(Registry::NoProtocol)
+    .init_oracle(Some(
+        CwContractWrapper::new(
+            oracle::contract::execute,
+            oracle::contract::instantiate,
+            oracle::contract::query,
         )
-        .init_time_alarms()
-        .init_protocols_registry(Registry::NoProtocol)
-        .init_oracle(Some(
-            CwContractWrapper::new(
-                oracle::contract::execute,
-                oracle::contract::instantiate,
-                oracle::contract::query,
-            )
-            .with_reply(oracle::contract::reply)
-            .with_sudo(oracle::contract::sudo)
-            .with_migrate(oracle::contract::migrate),
-        ))
-        .init_treasury()
-        .init_profit(24)
-        .init_reserve()
-        .init_leaser()
-        .into_generic()
+        .with_reply(oracle::contract::reply)
+        .with_sudo(oracle::contract::sudo)
+        .with_migrate(oracle::contract::migrate),
+    ))
+    .init_treasury()
+    .init_profit(24)
+    .init_reserve()
+    .init_leaser()
+    .into_generic()
 }
 
 #[test]
@@ -528,7 +527,7 @@ fn schedule_alarm(
                 ORACLE_ADDR.load(storage).unwrap(),
                 &ExecuteMsg::AddPriceAlarm {
                     alarm: Alarm::new(
-                        price::total_of::<BaseC>(base.into()).is::<Lpn>(quote.into()),
+                        price::total_of(common::coin::<BaseC>(base)).is(common::coin::<Lpn>(quote)),
                         None,
                     ),
                 },

@@ -201,17 +201,14 @@ mod test_invariant {
     };
     use sdk::cosmwasm_std::{StdError, StdResult, from_json, to_json_string};
 
-    use crate::coin::Coin;
+    use crate::{coin::Coin, test::coin};
 
     use super::BasePrice;
 
     #[test]
     #[should_panic = "zero"]
     fn base_zero() {
-        new_invalid(
-            Coin::<SuperGroupTestC1>::new(0),
-            Coin::<SuperGroupTestC2>::new(3),
-        )
+        new_invalid(coin::coin1(0), coin::coin2(3))
     }
 
     #[test]
@@ -231,10 +228,7 @@ mod test_invariant {
     #[test]
     #[should_panic = "zero"]
     fn quote_zero() {
-        new_invalid(
-            Coin::<SuperGroupTestC1>::new(6),
-            Coin::<SuperGroupTestC2>::new(0),
-        );
+        new_invalid(coin::coin1(6), coin::coin2(0));
     }
 
     #[test]
@@ -254,7 +248,7 @@ mod test_invariant {
     #[test]
     fn test_serialize_deserialize() {
         let base_price = BasePrice::<SuperGroup, SubGroupTestC10, SubGroup>::new(
-            Coin::<SuperGroupTestC2>::new(2).into(),
+            coin::coin2(2).into(),
             Coin::<SubGroupTestC10>::new(10),
         );
 

@@ -11,7 +11,7 @@ use super::{SwapAmountInRoute, SwapTarget};
 
 #[test]
 fn to_dex_cwcoin() {
-    let coin: Coin<SuperGroupTestC1> = 3541415.into();
+    let coin: Coin<SuperGroupTestC1> = Coin::new(3541415);
     assert_eq!(
         CwCoin::new(Amount::from(coin), SuperGroupTestC1::dex()),
         super::to_dex_cwcoin::<SuperGroup>(&coin.into())

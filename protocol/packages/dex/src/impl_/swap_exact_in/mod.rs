@@ -315,7 +315,7 @@ where
                     |total_out, _in| {
                         filtered = true;
                         SwapClient::parse_response(&mut responses)
-                            .map(|out| total_out + out.into())
+                            .map(|out| total_out + Coin::new(out))
                             .map_err(Into::into)
                     },
                 )

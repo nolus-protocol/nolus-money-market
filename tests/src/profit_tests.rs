@@ -20,7 +20,7 @@ use sdk::{
 use timealarms::msg::DispatchAlarmsResponse;
 
 use crate::common::{
-    self, ADMIN, CwCoin, USER, cwcoin, cwcoin_dex, ibc,
+    self, ADMIN, CwCoin, USER, cwcoin, cwcoin_dex, cwcoin_from_amount, ibc,
     protocols::Registry,
     swap::DexDenom,
     test_case::{
@@ -132,7 +132,7 @@ fn on_alarm_from_unknown() {
 
     let mut test_case = test_case::<Lpn>();
 
-    test_case.send_funds_from_admin(user_addr.clone(), &[cwcoin::<Lpn, _>(500)]);
+    test_case.send_funds_from_admin(user_addr.clone(), &[cwcoin_from_amount::<Lpn>(500)]);
 
     let treasury_balance = test_case
         .app
@@ -146,7 +146,7 @@ fn on_alarm_from_unknown() {
             user_addr,
             test_case.address_book.profit().clone(),
             &profit::msg::ExecuteMsg::TimeAlarm {},
-            &[cwcoin::<Lpn, _>(40)],
+            &[cwcoin_from_amount::<Lpn>(40)],
         )
         .unwrap_err();
 
@@ -167,7 +167,7 @@ fn on_alarm_zero_balance() {
 
     let mut test_case = test_case::<Lpn>();
 
-    test_case.send_funds_from_admin(time_oracle_addr, &[cwcoin::<Lpn, _>(500)]);
+    test_case.send_funds_from_admin(time_oracle_addr, &[cwcoin_from_amount::<Lpn>(500)]);
 
     () = test_case
         .app
@@ -432,10 +432,10 @@ fn on_time_alarm_do_transfers<Lpn>(
     let mut test_case = test_case_with::<Lpn>(
         2,
         Some(&[
-            cwcoin::<Lpn, _>(1_000_000_000),
-            cwcoin_dex::<Lpn, _>(1_000_000_000),
-            cwcoin::<Nls, _>(1_000_000_000),
-            cwcoin_dex::<Nls, _>(1_000_000_000),
+            cwcoin_from_amount::<Lpn>(1_000_000_000),
+            cwcoin_dex::<Lpn>(1_000_000_000),
+            cwcoin_from_amount::<Nls>(1_000_000_000),
+            cwcoin_dex::<Nls>(1_000_000_000),
         ]),
     );
 
@@ -453,7 +453,7 @@ fn on_time_alarm_do_transfers<Lpn>(
     }
 
     let lpn_profit = if let Some((lpn_profit_swap_in, lpn_profit_swap_out)) = lpn_profit {
-        let lpn_profit_swap_in_cw = cwcoin::<Lpn, _>(lpn_profit_swap_in);
+        let lpn_profit_swap_in_cw = cwcoin::<Lpn>(lpn_profit_swap_in);
 
         //send LPN tokens to the profit contract
         test_case.send_funds_from_admin(
@@ -493,24 +493,24 @@ fn on_time_alarm_do_transfers<Lpn>(
 
 #[test]
 fn on_alarm_native_only_transfer() {
-    let native_profit = 1000.into();
+    let native_profit = common::coin::<Nls>(1000);
 
     on_time_alarm_do_transfers::<Lpn>(native_profit, None);
 }
 
 #[test]
 fn on_alarm_foreign_only_transfer() {
-    let lpn_profit = 500.into();
-    let swapped_lpn_profit = 250.into();
+    let lpn_profit = common::coin::<Lpn>(500);
+    let swapped_lpn_profit = common::coin::<Nls>(250);
 
     on_time_alarm_do_transfers::<Lpn>(Zero::ZERO, Some((lpn_profit, swapped_lpn_profit)));
 }
 
 #[test]
 fn on_alarm_native_and_foreign_transfer() {
-    let native_profit = 1000.into();
-    let lpn_profit = 500.into();
-    let swapped_lpn_profit = 250.into();
+    let native_profit = common::coin::<Nls>(1000);
+    let lpn_profit = common::coin::<Lpn>(500);
+    let swapped_lpn_profit = common::coin::<Nls>(250);
 
     on_time_alarm_do_transfers::<Lpn>(native_profit, Some((lpn_profit, swapped_lpn_profit)));
 }
@@ -527,7 +527,7 @@ fn integration_with_time_alarms() {
 
     test_case.send_funds_from_admin(
         test_case.address_book.profit().clone(),
-        &[cwcoin::<Nls, _>(500)],
+        &[cwcoin_from_amount::<Nls>(500)],
     );
 
     assert!(

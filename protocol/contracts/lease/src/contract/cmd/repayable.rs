@@ -227,7 +227,7 @@ mod test {
     #[test]
     fn reset_take_profit() {
         let now = Timestamp::from_seconds(24412515);
-        let lease_amount = 1000.into();
+        let lease_amount = Coin::new(1000);
         let lease_lpn = price::total(lease_amount, Price::identity());
         let current_ltv = Percent::from_percent(30);
         let stop_loss = Percent100::from_percent(59);
@@ -254,7 +254,7 @@ mod test {
             })
             .expect("change close policy succeed");
 
-        let payment: Coin<TestLpn> = due_amount - take_profit.of(lease_lpn);
+        let payment = due_amount - take_profit.of(lease_lpn);
         let close_status = repay(lease, payment, &now);
         match close_status {
             CloseStatusDTO::None {

@@ -134,10 +134,10 @@ mod test {
         }
     }
     fn c(a: Amount) -> Coin<SubGroupTestC10> {
-        Coin::<SubGroupTestC10>::from(a)
+        Coin::new(a)
     }
 
     fn q(a: Amount) -> Coin<SuperGroupTestC1> {
-        Coin::<SuperGroupTestC1>::from(a)
+        Coin::new(a)
     }
 }
