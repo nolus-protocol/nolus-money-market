@@ -6,7 +6,7 @@ use crate::{
     error::{Error, Result as FinanceResult},
     fraction::{Coprime, Fraction, Unit as FractionUnit},
     fractionable::{
-        checked_mul::CheckedMul, Fractionable, FractionableLegacy, IntoMax, TryFromMax
+        Fractionable, FractionableLegacy, IntoMax, TryFromMax, checked_mul::CheckedMul,
     },
     rational::Rational,
     zero::Zero,
@@ -152,28 +152,6 @@ where
         Some(whole.safe_mul(self))
     }
 }
-
-// make it into extension trait
-/* fn into_coprime<U>(a: U, b: U) -> (U, U)
-where
-    U: FractionUnit,
-{
-    debug_assert_ne!(b, Zero::ZERO, "RHS-value is zero!");
-
-    let gcd = a.gcd(b);
-
-    debug_assert_ne!(gcd, Zero::ZERO);
-    debug_assert!(
-        a.modulo(gcd) == Zero::ZERO,
-        "LHS-value is not divisible by the GCD!"
-    );
-    debug_assert!(
-        b.modulo(gcd) == Zero::ZERO,
-        "RHS-value is not divisible by the GCD!"
-    );
-
-    (a.scale_down(gcd), b.scale_down(gcd))
-} */
 
 #[cfg(test)]
 mod test_ratio {
