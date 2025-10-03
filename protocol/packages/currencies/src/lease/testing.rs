@@ -66,7 +66,7 @@ pub(super) mod definitions {
     use serde::{Deserialize, Serialize};
 
     use currency::{
-        CurrencyDTO, CurrencyDef, Definition, InPoolWith, PairsFindMapT, PairsGroup,
+        CurrencyDTO, CurrencyDef, Definition, InPoolWith, PairsFindMap, PairsGroup,
         PairsGroupMember, pairs_find_map,
     };
 
@@ -96,7 +96,7 @@ pub(super) mod definitions {
 
         fn find_map<FindMap>(find_map: FindMap) -> Result<FindMap::Outcome, FindMap>
         where
-            FindMap: PairsFindMapT<Pivot = Self>,
+            FindMap: PairsFindMap<Pivot = Self>,
         {
             enum Pairs {
                 LeaseC2,
@@ -117,12 +117,12 @@ pub(super) mod definitions {
                     }
                 }
 
-                fn find_map<PairsFindMap>(
+                fn find_map<PairsFindMapImpl>(
                     &self,
-                    find_map: PairsFindMap,
-                ) -> Result<PairsFindMap::Outcome, PairsFindMap>
+                    find_map: PairsFindMapImpl,
+                ) -> Result<PairsFindMapImpl::Outcome, PairsFindMapImpl>
                 where
-                    PairsFindMap: PairsFindMapT<Pivot = Self::Group>,
+                    PairsFindMapImpl: PairsFindMap<Pivot = Self::Group>,
                 {
                     match self {
                         Self::LeaseC2 => find_map.on::<LeaseC2>(LeaseC2::dto()),
@@ -157,7 +157,7 @@ pub(super) mod definitions {
 
         fn find_map<FindMap>(find_map: FindMap) -> Result<FindMap::Outcome, FindMap>
         where
-            FindMap: PairsFindMapT<Pivot = Self>,
+            FindMap: PairsFindMap<Pivot = Self>,
         {
             struct Pairs;
 
@@ -174,12 +174,12 @@ pub(super) mod definitions {
                     None
                 }
 
-                fn find_map<PairsFindMap>(
+                fn find_map<PairsFindMapImpl>(
                     &self,
-                    find_map: PairsFindMap,
-                ) -> Result<PairsFindMap::Outcome, PairsFindMap>
+                    find_map: PairsFindMapImpl,
+                ) -> Result<PairsFindMapImpl::Outcome, PairsFindMapImpl>
                 where
-                    PairsFindMap: PairsFindMapT<Pivot = Self::Group>,
+                    PairsFindMapImpl: PairsFindMap<Pivot = Self::Group>,
                 {
                     let Self {} = self;
 
@@ -218,7 +218,7 @@ pub(super) mod definitions {
 
         fn find_map<FindMap>(find_map: FindMap) -> Result<FindMap::Outcome, FindMap>
         where
-            FindMap: PairsFindMapT<Pivot = Self>,
+            FindMap: PairsFindMap<Pivot = Self>,
         {
             struct Pairs;
 
@@ -235,12 +235,12 @@ pub(super) mod definitions {
                     None
                 }
 
-                fn find_map<PairsFindMap>(
+                fn find_map<PairsFindMapImpl>(
                     &self,
-                    find_map: PairsFindMap,
-                ) -> Result<PairsFindMap::Outcome, PairsFindMap>
+                    find_map: PairsFindMapImpl,
+                ) -> Result<PairsFindMapImpl::Outcome, PairsFindMapImpl>
                 where
-                    PairsFindMap: PairsFindMapT<Pivot = Self::Group>,
+                    PairsFindMapImpl: PairsFindMap<Pivot = Self::Group>,
                 {
                     let Self {} = self;
 
@@ -275,7 +275,7 @@ pub(super) mod definitions {
 
         fn find_map<FindMap>(find_map: FindMap) -> Result<FindMap::Outcome, FindMap>
         where
-            FindMap: PairsFindMapT<Pivot = Self>,
+            FindMap: PairsFindMap<Pivot = Self>,
         {
             struct Pairs;
 
@@ -292,12 +292,12 @@ pub(super) mod definitions {
                     None
                 }
 
-                fn find_map<PairsFindMap>(
+                fn find_map<PairsFindMapImpl>(
                     &self,
-                    find_map: PairsFindMap,
-                ) -> Result<PairsFindMap::Outcome, PairsFindMap>
+                    find_map: PairsFindMapImpl,
+                ) -> Result<PairsFindMapImpl::Outcome, PairsFindMapImpl>
                 where
-                    PairsFindMap: PairsFindMapT<Pivot = Self::Group>,
+                    PairsFindMapImpl: PairsFindMap<Pivot = Self::Group>,
                 {
                     let Self {} = self;
 
@@ -330,7 +330,7 @@ pub(super) mod definitions {
 
         fn find_map<FindMap>(find_map: FindMap) -> Result<FindMap::Outcome, FindMap>
         where
-            FindMap: PairsFindMapT<Pivot = Self>,
+            FindMap: PairsFindMap<Pivot = Self>,
         {
             struct Pairs;
 
@@ -347,12 +347,12 @@ pub(super) mod definitions {
                     None
                 }
 
-                fn find_map<PairsFindMap>(
+                fn find_map<PairsFindMapImpl>(
                     &self,
-                    find_map: PairsFindMap,
-                ) -> Result<PairsFindMap::Outcome, PairsFindMap>
+                    find_map: PairsFindMapImpl,
+                ) -> Result<PairsFindMapImpl::Outcome, PairsFindMapImpl>
                 where
-                    PairsFindMap: PairsFindMapT<Pivot = Self::Group>,
+                    PairsFindMapImpl: PairsFindMap<Pivot = Self::Group>,
                 {
                     let Self {} = self;
 
@@ -385,7 +385,7 @@ pub(super) mod definitions {
 
         fn find_map<FindMap>(find_map: FindMap) -> Result<FindMap::Outcome, FindMap>
         where
-            FindMap: PairsFindMapT<Pivot = Self>,
+            FindMap: PairsFindMap<Pivot = Self>,
         {
             Err(find_map)
         }
@@ -412,7 +412,7 @@ pub(super) mod definitions {
 
         fn find_map<FindMap>(find_map: FindMap) -> Result<FindMap::Outcome, FindMap>
         where
-            FindMap: PairsFindMapT<Pivot = Self>,
+            FindMap: PairsFindMap<Pivot = Self>,
         {
             struct Pairs;
 
@@ -429,12 +429,12 @@ pub(super) mod definitions {
                     None
                 }
 
-                fn find_map<PairsFindMap>(
+                fn find_map<PairsFindMapImpl>(
                     &self,
-                    find_map: PairsFindMap,
-                ) -> Result<PairsFindMap::Outcome, PairsFindMap>
+                    find_map: PairsFindMapImpl,
+                ) -> Result<PairsFindMapImpl::Outcome, PairsFindMapImpl>
                 where
-                    PairsFindMap: PairsFindMapT<Pivot = Self::Group>,
+                    PairsFindMapImpl: PairsFindMap<Pivot = Self::Group>,
                 {
                     let Self {} = self;
 

@@ -3,9 +3,8 @@ use std::borrow::Borrow;
 use serde::Deserialize;
 
 use crate::{
-    CurrencyDTO, Group, GroupFilterMap, GroupFindMap,
-    group::{self, CurrenciesMapping, MemberOf, SubFilterAdapter, SubGroupFindAdapter},
-    pairs::{self, FindMapT as PairsFindMapT, PairsGroup},
+    CurrenciesMapping, CurrencyDTO, Group, GroupFilterMap, GroupFindMap, InPoolWith, MemberOf,
+    PairsFindMap, PairsGroup, SubFilterAdapter, SubGroupFindAdapter, group, pairs,
     test::{
         sub::{Item as SubGroupItem, SubGroupTestC6Pairs, SubGroupTestC10Pairs},
         super_::{
@@ -13,7 +12,6 @@ use crate::{
             SuperGroupTestC3Pairs, SuperGroupTestC4Pairs, SuperGroupTestC5Pairs,
         },
     },
-    visit_any::InPoolWith,
 };
 
 pub type SuperGroupTestC1 = impl_::TestC1;
@@ -63,7 +61,7 @@ impl PairsGroup for SuperGroupTestC1 {
 
     fn find_map<FindMap>(f: FindMap) -> Result<FindMap::Outcome, FindMap>
     where
-        FindMap: PairsFindMapT<Pivot = Self>,
+        FindMap: PairsFindMap<Pivot = Self>,
     {
         pairs::find_map::<SuperGroupTestC1Pairs, _>(f)
     }
@@ -79,7 +77,7 @@ impl PairsGroup for SuperGroupTestC2 {
 
     fn find_map<FindMap>(f: FindMap) -> Result<FindMap::Outcome, FindMap>
     where
-        FindMap: PairsFindMapT<Pivot = Self>,
+        FindMap: PairsFindMap<Pivot = Self>,
     {
         pairs::find_map::<SuperGroupTestC2Pairs, _>(f)
     }
@@ -96,7 +94,7 @@ impl PairsGroup for SuperGroupTestC3 {
 
     fn find_map<FindMap>(f: FindMap) -> Result<FindMap::Outcome, FindMap>
     where
-        FindMap: PairsFindMapT<Pivot = Self>,
+        FindMap: PairsFindMap<Pivot = Self>,
     {
         pairs::find_map::<SuperGroupTestC3Pairs, _>(f)
     }
@@ -110,7 +108,7 @@ impl PairsGroup for SuperGroupTestC4 {
 
     fn find_map<FindMap>(f: FindMap) -> Result<FindMap::Outcome, FindMap>
     where
-        FindMap: PairsFindMapT<Pivot = Self>,
+        FindMap: PairsFindMap<Pivot = Self>,
     {
         pairs::find_map::<SuperGroupTestC4Pairs, _>(f)
     }
@@ -125,7 +123,7 @@ impl PairsGroup for SuperGroupTestC5 {
 
     fn find_map<FindMap>(f: FindMap) -> Result<FindMap::Outcome, FindMap>
     where
-        FindMap: PairsFindMapT<Pivot = Self>,
+        FindMap: PairsFindMap<Pivot = Self>,
     {
         pairs::find_map::<SuperGroupTestC5Pairs, _>(f)
     }
@@ -169,7 +167,7 @@ impl PairsGroup for SubGroupTestC6 {
 
     fn find_map<FindMap>(f: FindMap) -> Result<FindMap::Outcome, FindMap>
     where
-        FindMap: PairsFindMapT<Pivot = Self>,
+        FindMap: PairsFindMap<Pivot = Self>,
     {
         pairs::find_map::<SubGroupTestC6Pairs, _>(f)
     }
@@ -184,7 +182,7 @@ impl PairsGroup for SubGroupTestC10 {
 
     fn find_map<FindMap>(f: FindMap) -> Result<FindMap::Outcome, FindMap>
     where
-        FindMap: PairsFindMapT<Pivot = Self>,
+        FindMap: PairsFindMap<Pivot = Self>,
     {
         pairs::find_map::<SubGroupTestC10Pairs, _>(f)
     }

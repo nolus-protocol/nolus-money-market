@@ -4,9 +4,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     CurrencyDTO, CurrencyDef, Definition, Group, GroupFilterMap, GroupFindMap, MemberOf,
-    PairsGroup,
+    PairsFindMap, PairsGroup,
     group::{self, CurrenciesMapping, GroupMember},
-    pairs::FindMapT as PairsFindMapT,
 };
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Serialize, Deserialize)]
@@ -24,7 +23,7 @@ impl PairsGroup for Stable {
 
     fn find_map<FindMap>(_f: FindMap) -> Result<FindMap::Outcome, FindMap>
     where
-        FindMap: PairsFindMapT<Pivot = Self>,
+        FindMap: PairsFindMap<Pivot = Self>,
     {
         unreachable!("The 'Stable' platform currency used in pairs resolution!")
     }
@@ -64,7 +63,7 @@ impl PairsGroup for Nls {
 
     fn find_map<FindMap>(_f: FindMap) -> Result<FindMap::Outcome, FindMap>
     where
-        FindMap: PairsFindMapT<Pivot = Self>,
+        FindMap: PairsFindMap<Pivot = Self>,
     {
         unreachable!("The 'Nls' platform currency used in pairs resolution!")
     }

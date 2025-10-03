@@ -39,7 +39,7 @@ impl currency::GroupMember<LpnGroup> for GroupMember {
 pub(super) mod definitions {
     use serde::{Deserialize, Serialize};
 
-    use currency::{CurrencyDTO, CurrencyDef, Definition, InPoolWith, PairsFindMapT, PairsGroup};
+    use currency::{CurrencyDTO, CurrencyDef, Definition, InPoolWith, PairsFindMap, PairsGroup};
 
     use crate::{
         lease::{LeaseC2, LeaseC7},
@@ -58,7 +58,7 @@ pub(super) mod definitions {
 
         fn find_map<FindMap>(find_map: FindMap) -> Result<FindMap::Outcome, FindMap>
         where
-            FindMap: PairsFindMapT<Pivot = Self>,
+            FindMap: PairsFindMap<Pivot = Self>,
         {
             Err(find_map)
         }

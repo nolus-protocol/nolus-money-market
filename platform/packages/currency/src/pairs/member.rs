@@ -1,4 +1,4 @@
-use crate::{PairsGroup, pairs::FindMapT as PairsFindMapT};
+use crate::{PairsFindMap, PairsGroup};
 
 /// Member of a pairs group
 ///
@@ -17,10 +17,10 @@ where
 
     fn next(&self) -> Option<Self>;
 
-    fn find_map<PairsFindMap>(
+    fn find_map<PairsFindMapImpl>(
         &self,
-        find_map: PairsFindMap,
-    ) -> Result<PairsFindMap::Outcome, PairsFindMap>
+        find_map: PairsFindMapImpl,
+    ) -> Result<PairsFindMapImpl::Outcome, PairsFindMapImpl>
     where
-        PairsFindMap: PairsFindMapT<Pivot = Self::Group>;
+        PairsFindMapImpl: PairsFindMap<Pivot = Self::Group>;
 }

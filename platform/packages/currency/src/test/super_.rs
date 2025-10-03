@@ -1,7 +1,7 @@
 use crate::{
     CurrencyDef, GroupFilterMap, GroupFindMap,
     group::GroupMember,
-    pairs::{FindMapT as PairsFindMapT, PairsGroupMember},
+    pairs::{FindMapT as PairsFindMap, PairsGroupMember},
     test::{
         SubGroupTestC6, SubGroupTestC10, SuperGroup, SuperGroupTestC1, SuperGroupTestC2,
         SuperGroupTestC3, SuperGroupTestC4, SuperGroupTestC5,
@@ -80,12 +80,12 @@ impl PairsGroupMember for SuperGroupTestC1Pairs {
         }
     }
 
-    fn find_map<PairsFindMap>(
+    fn find_map<PairsFindMapImpl>(
         &self,
-        find_map: PairsFindMap,
-    ) -> Result<PairsFindMap::Outcome, PairsFindMap>
+        find_map: PairsFindMapImpl,
+    ) -> Result<PairsFindMapImpl::Outcome, PairsFindMapImpl>
     where
-        PairsFindMap: PairsFindMapT<Pivot = Self::Group>,
+        PairsFindMapImpl: PairsFindMap<Pivot = Self::Group>,
     {
         match *self {
             Self::SuperGroupTestC2 => find_map.on::<SuperGroupTestC2>(SuperGroupTestC2::dto()),
@@ -118,12 +118,12 @@ impl PairsGroupMember for SuperGroupTestC2Pairs {
         }
     }
 
-    fn find_map<PairsFindMap>(
+    fn find_map<PairsFindMapImpl>(
         &self,
-        find_map: PairsFindMap,
-    ) -> Result<PairsFindMap::Outcome, PairsFindMap>
+        find_map: PairsFindMapImpl,
+    ) -> Result<PairsFindMapImpl::Outcome, PairsFindMapImpl>
     where
-        PairsFindMap: PairsFindMapT<Pivot = Self::Group>,
+        PairsFindMapImpl: PairsFindMap<Pivot = Self::Group>,
     {
         match *self {
             Self::SuperGroupTestC1 => find_map.on::<SuperGroupTestC1>(SuperGroupTestC1::dto()),
@@ -151,12 +151,12 @@ impl PairsGroupMember for SuperGroupTestC3Pairs {
         }
     }
 
-    fn find_map<PairsFindMap>(
+    fn find_map<PairsFindMapImpl>(
         &self,
-        find_map: PairsFindMap,
-    ) -> Result<PairsFindMap::Outcome, PairsFindMap>
+        find_map: PairsFindMapImpl,
+    ) -> Result<PairsFindMapImpl::Outcome, PairsFindMapImpl>
     where
-        PairsFindMap: PairsFindMapT<Pivot = Self::Group>,
+        PairsFindMapImpl: PairsFindMap<Pivot = Self::Group>,
     {
         match *self {
             Self::SuperGroupTestC2 => find_map.on::<SuperGroupTestC2>(SuperGroupTestC2::dto()),
@@ -183,12 +183,12 @@ impl PairsGroupMember for SuperGroupTestC4Pairs {
         }
     }
 
-    fn find_map<PairsFindMap>(
+    fn find_map<PairsFindMapImpl>(
         &self,
-        find_map: PairsFindMap,
-    ) -> Result<PairsFindMap::Outcome, PairsFindMap>
+        find_map: PairsFindMapImpl,
+    ) -> Result<PairsFindMapImpl::Outcome, PairsFindMapImpl>
     where
-        PairsFindMap: PairsFindMapT<Pivot = Self::Group>,
+        PairsFindMapImpl: PairsFindMap<Pivot = Self::Group>,
     {
         match *self {
             Self::SuperGroupTestC1 => find_map.on::<SuperGroupTestC1>(SuperGroupTestC1::dto()),
@@ -218,12 +218,12 @@ impl PairsGroupMember for SuperGroupTestC5Pairs {
         }
     }
 
-    fn find_map<PairsFindMap>(
+    fn find_map<PairsFindMapImpl>(
         &self,
-        find_map: PairsFindMap,
-    ) -> Result<PairsFindMap::Outcome, PairsFindMap>
+        find_map: PairsFindMapImpl,
+    ) -> Result<PairsFindMapImpl::Outcome, PairsFindMapImpl>
     where
-        PairsFindMap: PairsFindMapT<Pivot = Self::Group>,
+        PairsFindMapImpl: PairsFindMap<Pivot = Self::Group>,
     {
         match *self {
             Self::SuperGroupTestC4 => find_map.on::<SuperGroupTestC4>(SuperGroupTestC4::dto()),

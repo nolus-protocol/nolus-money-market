@@ -122,9 +122,9 @@ where
                 fn find_map<FindMap>(
                     &self,
                     find_map: FindMap,
-                ) -> Result<<FindMap as currency::PairsFindMapT>::Outcome, FindMap>
+                ) -> Result<<FindMap as currency::PairsFindMap>::Outcome, FindMap>
                 where
-                    FindMap: currency::PairsFindMapT<Pivot = Self::Group>,
+                    FindMap: currency::PairsFindMap<Pivot = Self::Group>,
                 {
                     match *self {",
         ));
@@ -179,9 +179,9 @@ where
                 fn find_map<FindMap>(
                     &self,
                     _: FindMap,
-                ) -> Result<<FindMap as currency::PairsFindMapT>::Outcome, FindMap>
+                ) -> Result<<FindMap as currency::PairsFindMap>::Outcome, FindMap>
                 where
-                    FindMap: currency::PairsFindMapT<Pivot = Self::Group>,
+                    FindMap: currency::PairsFindMap<Pivot = Self::Group>,
                 {
                     match *self {}
                 }
@@ -200,9 +200,9 @@ where
 
         fn find_map<FindMap>(
             find_map: FindMap,
-        ) -> Result<<FindMap as currency::PairsFindMapT>::Outcome, FindMap>
+        ) -> Result<<FindMap as currency::PairsFindMap>::Outcome, FindMap>
         where
-            FindMap: currency::PairsFindMapT<Pivot = Self>,
+            FindMap: currency::PairsFindMap<Pivot = Self>,
         {
             "#,
         ]

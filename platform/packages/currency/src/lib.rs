@@ -12,7 +12,7 @@ pub use crate::{
     },
     matcher::Matcher,
     pairs::{
-        FindMapT as PairsFindMapT, MaybePairsVisitorResult, PairsGroup, PairsGroupMember,
+        FindMapT as PairsFindMap, MaybePairsVisitorResult, PairsGroup, PairsGroupMember,
         PairsVisitor, find_map as pairs_find_map,
     },
     symbol::{BankSymbols, DexSymbols, Symbol, Tickers},
