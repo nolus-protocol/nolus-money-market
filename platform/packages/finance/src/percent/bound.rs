@@ -125,7 +125,7 @@ where
     where
         U: FractionUnit<Times = Self::Times>,
     {
-        Gcd::gcd(self.units(), other.primitive())
+        Gcd::gcd(self.units(), other.to_primitive())
     }
 
     fn scale_down(self, scale: Self::Times) -> Self {
@@ -140,7 +140,7 @@ where
         self.units().rem(scale)
     }
 
-    fn primitive(self) -> Self::Times {
+    fn to_primitive(self) -> Self::Times {
         self.units()
     }
 }

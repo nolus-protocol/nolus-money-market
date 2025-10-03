@@ -38,7 +38,7 @@ impl FractionUnit for u128 {
     where
         U: FractionUnit<Times = Self::Times>,
     {
-        Gcd::gcd(self, other.primitive())
+        Gcd::gcd(self, other.to_primitive())
     }
 
     fn scale_down(self, scale: Self::Times) -> Self {
@@ -53,7 +53,7 @@ impl FractionUnit for u128 {
         self.rem(scale)
     }
 
-    fn primitive(self) -> Self::Times {
+    fn to_primitive(self) -> Self::Times {
         self
     }
 }
@@ -158,7 +158,7 @@ impl<C> FractionUnit for Coin<C> {
     where
         U: FractionUnit<Times = Self::Times>,
     {
-        Gcd::gcd(self.amount, other.primitive())
+        Gcd::gcd(self.amount, other.to_primitive())
     }
 
     fn scale_down(self, scale: Self::Times) -> Self {
@@ -173,7 +173,7 @@ impl<C> FractionUnit for Coin<C> {
         self.amount.modulo(scale)
     }
 
-    fn primitive(self) -> Self::Times {
+    fn to_primitive(self) -> Self::Times {
         self.amount
     }
 }

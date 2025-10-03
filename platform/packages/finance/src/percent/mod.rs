@@ -25,7 +25,7 @@ impl FractionUnit for Units {
     where
         U: FractionUnit<Times = Self::Times>,
     {
-        Gcd::gcd(self, other.primitive())
+        Gcd::gcd(self, other.to_primitive())
     }
 
     fn scale_down(self, scale: Self::Times) -> Self {
@@ -40,7 +40,7 @@ impl FractionUnit for Units {
         self.rem(scale)
     }
 
-    fn primitive(self) -> Self::Times {
+    fn to_primitive(self) -> Self::Times {
         self
     }
 }

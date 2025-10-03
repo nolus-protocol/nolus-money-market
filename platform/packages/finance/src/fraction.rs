@@ -30,7 +30,7 @@ where
     /// [scale] should be non zero
     fn modulo(self, scale: Self::Times) -> Self::Times;
 
-    fn primitive(self) -> Self::Times;
+    fn to_primitive(self) -> Self::Times;
 }
 
 pub trait Coprime
