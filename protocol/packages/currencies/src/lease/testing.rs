@@ -1,4 +1,4 @@
-use currency::{CurrencyDef as _, GroupFilterMap, FindMapT};
+use currency::{CurrencyDef as _, GroupFindMap, GroupFilterMap};
 
 use self::definitions::{LeaseC1, LeaseC2, LeaseC3, LeaseC4, LeaseC5, LeaseC6, LeaseC7};
 
@@ -48,7 +48,7 @@ impl currency::GroupMember<super::Group> for GroupMember {
 
     fn find_map<FindMap>(&self, find_map: FindMap) -> Result<FindMap::Outcome, FindMap>
     where
-        FindMap: FindMapT<TargetG = super::Group>,
+        FindMap: GroupFindMap<TargetG = super::Group>,
     {
         match self {
             Self::LeaseC1 => find_map.on::<LeaseC1>(LeaseC1::dto()),

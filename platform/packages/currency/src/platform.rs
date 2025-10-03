@@ -3,8 +3,9 @@ use std::borrow::Borrow;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    CurrencyDTO, CurrencyDef, Definition, Group, GroupFilterMap, MemberOf, PairsGroup,
-    group::{self, CurrenciesMapping, FindMapT, GroupMember},
+    CurrencyDTO, CurrencyDef, Definition, Group, GroupFilterMap, GroupFindMap, MemberOf,
+    PairsGroup,
+    group::{self, CurrenciesMapping, GroupMember},
     pairs::FindMapT as PairsFindMapT,
 };
 
@@ -87,7 +88,7 @@ impl Group for PlatformGroup {
 
     fn find_map<FindMap>(f: FindMap) -> Result<FindMap::Outcome, FindMap>
     where
-        FindMap: FindMapT<TargetG = Self>,
+        FindMap: GroupFindMap<TargetG = Self>,
     {
         group::find_map::<_, Item, _>(f)
     }
@@ -125,7 +126,7 @@ impl GroupMember<PlatformGroup> for Item {
 
     fn find_map<FindMap>(&self, find_map: FindMap) -> Result<FindMap::Outcome, FindMap>
     where
-        FindMap: FindMapT<TargetG = PlatformGroup>,
+        FindMap: GroupFindMap<TargetG = PlatformGroup>,
     {
         match *self {
             Item::Nls() => find_map.on::<Nls>(Nls::dto()),

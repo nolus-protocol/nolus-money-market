@@ -748,7 +748,7 @@ impl currency::GroupMember<super::Group> for GroupMember {
                 if find_map.is_some() { "find_map" } else { "_" },
                 ": FindMap) -> Result<FindMap::Outcome, FindMap>
     where
-        FindMap: currency::FindMapT<TargetG = super::Group>,
+        FindMap: currency::GroupFindMap<TargetG = super::Group>,
     {
         match *self {",
             ])

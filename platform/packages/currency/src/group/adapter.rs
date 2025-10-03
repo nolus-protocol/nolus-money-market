@@ -1,6 +1,6 @@
 use std::{borrow::Borrow, marker::PhantomData};
 
-use crate::{CurrencyDTO, CurrencyDef, FindMapT, Group, GroupFilterMap, MemberOf, PairsGroup};
+use crate::{CurrencyDTO, CurrencyDef, Group, GroupFilterMap, GroupFindMap, MemberOf, PairsGroup};
 
 /// Adapter of [`GroupFilterMap<SuperG>`] to [`GroupFilterMap<G>`]
 ///
@@ -57,7 +57,7 @@ where
     }
 }
 
-/// Adapter of [`FindMapT<SuperG>`] to [`FindMapT<G>`]
+/// Adapter of [`GroupFindMap<SuperG>`] to [`GroupFindMap<G>`]
 ///
 /// Aimed for use in super group 'find_map' implementations
 pub struct SubGroupFindAdapter<G, SuperG, FindMap>(PhantomData<G>, PhantomData<SuperG>, FindMap);
@@ -72,18 +72,18 @@ impl<G, SuperG, FindMap> SubGroupFindAdapter<G, SuperG, FindMap>
 where
     G: Group<TopG = SuperG>,
     SuperG: Group<TopG = G::TopG>,
-    FindMap: FindMapT<TargetG = SuperG>,
+    FindMap: GroupFindMap<TargetG = SuperG>,
 {
     pub fn release_super_map(self) -> FindMap {
         self.2
     }
 }
 
-impl<G, SuperG, FindMap> FindMapT for SubGroupFindAdapter<G, SuperG, FindMap>
+impl<G, SuperG, FindMap> GroupFindMap for SubGroupFindAdapter<G, SuperG, FindMap>
 where
     G: Group<TopG = SuperG>,
     SuperG: Group<TopG = G::TopG>,
-    FindMap: FindMapT<TargetG = SuperG>,
+    FindMap: GroupFindMap<TargetG = SuperG>,
 {
     type TargetG = G;
     type Outcome = FindMap::Outcome;

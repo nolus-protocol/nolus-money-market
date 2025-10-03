@@ -3,7 +3,7 @@ use std::borrow::Borrow;
 use serde::Deserialize;
 
 use crate::{
-    CurrencyDTO, FindMapT, Group, GroupFilterMap,
+    CurrencyDTO, Group, GroupFilterMap, GroupFindMap,
     group::{self, CurrenciesMapping, MemberOf, SubFilterAdapter, SubGroupFindAdapter},
     pairs::{self, FindMapT as PairsFindMapT, PairsGroup},
     test::{
@@ -47,7 +47,7 @@ impl Group for SuperGroup {
 
     fn find_map<FindMap>(v: FindMap) -> Result<FindMap::Outcome, FindMap>
     where
-        FindMap: FindMapT<TargetG = Self>,
+        FindMap: GroupFindMap<TargetG = Self>,
     {
         group::find_map::<_, SuperGroupItem, _>(v)
             .or_else(|v| {
@@ -157,7 +157,7 @@ impl Group for SubGroup {
 
     fn find_map<FindMap>(v: FindMap) -> Result<FindMap::Outcome, FindMap>
     where
-        FindMap: FindMapT<TargetG = Self>,
+        FindMap: GroupFindMap<TargetG = Self>,
     {
         group::find_map::<_, SubGroupItem, _>(v)
     }

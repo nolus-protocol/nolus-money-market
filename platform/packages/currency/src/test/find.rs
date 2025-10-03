@@ -1,6 +1,6 @@
 use std::{fmt::Debug, marker::PhantomData};
 
-use crate::{CurrencyDTO, CurrencyDef, FindMapT, Group, Matcher, MemberOf, PairsGroup};
+use crate::{CurrencyDTO, CurrencyDef, Group, GroupFindMap, Matcher, MemberOf, PairsGroup};
 
 pub struct FindCurrencyBySymbol<Matcher, TargetG>(Matcher, PhantomData<TargetG>);
 
@@ -18,7 +18,7 @@ impl<Matcher, TargetG> Debug for FindCurrencyBySymbol<Matcher, TargetG> {
     }
 }
 
-impl<MatcherImpl, TargetG> FindMapT for FindCurrencyBySymbol<MatcherImpl, TargetG>
+impl<MatcherImpl, TargetG> GroupFindMap for FindCurrencyBySymbol<MatcherImpl, TargetG>
 where
     MatcherImpl: Matcher,
     TargetG: Group,

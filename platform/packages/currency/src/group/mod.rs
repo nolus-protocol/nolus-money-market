@@ -47,9 +47,9 @@ where
     /// The first currency for which the [`FindMap`] argument produces [`Ok(mapped_value)`]
     /// stops the iteration and that result is returned.
     /// If there is no such currency, [`Err(v)`] is returned.
-    fn find_map<FindMap>(v: FindMap) -> Result<FindMap::Outcome, FindMap>
+    fn find_map<FindMapImpl>(v: FindMapImpl) -> Result<FindMapImpl::Outcome, FindMapImpl>
     where
-        FindMap: FindMapT<TargetG = Self>;
+        FindMapImpl: FindMap<TargetG = Self>;
 }
 
 pub type MaybeAnyVisitResult<VisitedG, V> = Result<<V as AnyVisitor<VisitedG>>::Outcome, V>;
@@ -66,7 +66,7 @@ pub trait FilterMap {
         C::Group: MemberOf<Self::VisitedG> + MemberOf<<Self::VisitedG as Group>::TopG>;
 }
 
-pub trait FindMapT
+pub trait FindMap
 where
     Self: Sized,
 {

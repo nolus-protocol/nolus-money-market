@@ -2,7 +2,7 @@ use std::borrow::Borrow;
 
 use serde::{Deserialize, Serialize};
 
-use currency::{GroupFilterMap, FindMapT, MemberOf, SubFilterAdapter, SubGroupFindAdapter};
+use currency::{GroupFindMap, GroupFilterMap, MemberOf, SubFilterAdapter, SubGroupFindAdapter};
 
 use crate::{lease::Group as LeaseGroup, lpn::Group as LpnGroup, native::Group as NativeGroup};
 
@@ -45,7 +45,7 @@ impl currency::Group for Group {
 
     fn find_map<FindMap>(find_map: FindMap) -> Result<FindMap::Outcome, FindMap>
     where
-        FindMap: FindMapT<TargetG = Self>,
+        FindMap: GroupFindMap<TargetG = Self>,
     {
         LpnGroup::find_map(SubGroupFindAdapter::new(find_map))
             .or_else(|find_map| {

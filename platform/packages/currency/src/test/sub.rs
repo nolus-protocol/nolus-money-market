@@ -1,5 +1,5 @@
 use crate::{
-    CurrencyDef, FindMapT, GroupFilterMap,
+    CurrencyDef, GroupFilterMap, GroupFindMap,
     group::GroupMember,
     pairs::{FindMapT as PairsFindMapT, PairsGroupMember},
     test::{
@@ -38,7 +38,7 @@ impl GroupMember<SubGroup> for Item {
 
     fn find_map<FindMap>(&self, find_map: FindMap) -> Result<FindMap::Outcome, FindMap>
     where
-        FindMap: FindMapT<TargetG = SubGroup>,
+        FindMap: GroupFindMap<TargetG = SubGroup>,
     {
         match *self {
             Item::SubGroupTestC6() => find_map.on::<SubGroupTestC6>(SubGroupTestC6::dto()),

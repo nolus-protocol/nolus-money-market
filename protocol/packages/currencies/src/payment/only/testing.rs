@@ -1,4 +1,4 @@
-use currency::{GroupFilterMap, FindMapT};
+use currency::{GroupFindMap, GroupFilterMap};
 
 use super::Group as OnlyGroup;
 
@@ -22,7 +22,7 @@ impl currency::GroupMember<OnlyGroup> for GroupMember {
 
     fn find_map<FindMap>(&self, _: FindMap) -> Result<FindMap::Outcome, FindMap>
     where
-        FindMap: FindMapT<TargetG = OnlyGroup>,
+        FindMap: GroupFindMap<TargetG = OnlyGroup>,
     {
         match *self {}
     }

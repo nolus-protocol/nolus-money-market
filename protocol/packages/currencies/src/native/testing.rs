@@ -1,4 +1,4 @@
-use currency::{CurrencyDef, GroupFilterMap, FindMapT};
+use currency::{CurrencyDef, GroupFindMap, GroupFilterMap};
 
 use self::definitions::Nls;
 
@@ -28,7 +28,7 @@ impl currency::GroupMember<NativeGroup> for GroupMember {
 
     fn find_map<FindMap>(&self, find_map: FindMap) -> Result<FindMap::Outcome, FindMap>
     where
-        FindMap: FindMapT<TargetG = NativeGroup>,
+        FindMap: GroupFindMap<TargetG = NativeGroup>,
     {
         find_map.on::<Nls>(Nls::dto())
     }

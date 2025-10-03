@@ -1,4 +1,4 @@
-use currency::{CurrencyDef as _, GroupFilterMap, FindMapT};
+use currency::{CurrencyDef as _, GroupFindMap, GroupFilterMap};
 
 use self::definitions::Lpn;
 
@@ -28,7 +28,7 @@ impl currency::GroupMember<LpnGroup> for GroupMember {
 
     fn find_map<FindMap>(&self, find_map: FindMap) -> Result<FindMap::Outcome, FindMap>
     where
-        FindMap: FindMapT<TargetG = LpnGroup>,
+        FindMap: GroupFindMap<TargetG = LpnGroup>,
     {
         let Self {} = self;
 

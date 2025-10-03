@@ -1,7 +1,7 @@
 use std::marker::PhantomData;
 
 use crate::{
-    CurrencyDTO, CurrencyDef, FindMapT, Group, Matcher, MemberOf, PairsGroup, PairsVisitor,
+    CurrencyDTO, CurrencyDef, Group, GroupFindMap, Matcher, MemberOf, PairsGroup, PairsVisitor,
     error::Error, pairs::FindMapT as PairsFindMapT,
 };
 
@@ -60,7 +60,7 @@ impl<M, V, VisitedG> MatchThenVisit<M, V, VisitedG> {
     }
 }
 
-impl<M, V, VisitedG> FindMapT for MatchThenVisit<M, V, VisitedG>
+impl<M, V, VisitedG> GroupFindMap for MatchThenVisit<M, V, VisitedG>
 where
     M: Matcher,
     V: AnyVisitor<VisitedG>,
