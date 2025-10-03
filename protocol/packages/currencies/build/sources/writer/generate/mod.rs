@@ -728,7 +728,7 @@ impl currency::GroupMember<super::Group> for GroupMember {
                     "_"
                 },
                 ": &FilterMap) -> Option<FilterMap::Outcome>    where
-        FilterMap: currency::FilterMapT<VisitedG = super::Group>,
+        FilterMap: currency::GroupFilterMap<VisitedG = super::Group>,
     {
         match *self {",
             ])

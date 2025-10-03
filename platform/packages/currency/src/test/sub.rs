@@ -1,6 +1,6 @@
 use crate::{
-    CurrencyDef, FindMapT,
-    group::{FilterMapT, GroupMember},
+    CurrencyDef, FindMapT, GroupFilterMap,
+    group::GroupMember,
     pairs::{FindMapT as PairsFindMapT, PairsGroupMember},
     test::{
         SubGroup, SubGroupTestC6, SubGroupTestC10, SuperGroupTestC1, SuperGroupTestC2,
@@ -28,7 +28,7 @@ impl GroupMember<SubGroup> for Item {
 
     fn filter_map<FilterMap>(&self, filter_map: &FilterMap) -> Option<FilterMap::Outcome>
     where
-        FilterMap: FilterMapT<VisitedG = SubGroup>,
+        FilterMap: GroupFilterMap<VisitedG = SubGroup>,
     {
         match *self {
             Item::SubGroupTestC6() => filter_map.on::<SubGroupTestC6>(SubGroupTestC6::dto()),

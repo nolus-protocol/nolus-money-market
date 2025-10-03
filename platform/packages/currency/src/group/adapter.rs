@@ -1,8 +1,8 @@
 use std::{borrow::Borrow, marker::PhantomData};
 
-use crate::{CurrencyDTO, CurrencyDef, FilterMapT, FindMapT, Group, MemberOf, PairsGroup};
+use crate::{CurrencyDTO, CurrencyDef, FindMapT, Group, GroupFilterMap, MemberOf, PairsGroup};
 
-/// Adapter of [`FilterMapT<SuperG>`] to [`FilterMapT<G>`]
+/// Adapter of [`GroupFilterMap<SuperG>`] to [`GroupFilterMap<G>`]
 ///
 /// Aimed for use in super group 'filter_map' implementations
 pub struct SubFilterAdapter<G, SuperG, FilterMap, FilterMapRef>(
@@ -36,12 +36,12 @@ where
     }
 }
 
-impl<G, SuperG, FilterMap, FilterMapRef> FilterMapT
+impl<G, SuperG, FilterMap, FilterMapRef> GroupFilterMap
     for SubFilterAdapter<G, SuperG, FilterMap, FilterMapRef>
 where
     G: Group<TopG = SuperG>,
     SuperG: Group<TopG = G::TopG>,
-    FilterMap: FilterMapT<VisitedG = SuperG>,
+    FilterMap: GroupFilterMap<VisitedG = SuperG>,
     FilterMapRef: Borrow<FilterMap>,
 {
     type VisitedG = G;

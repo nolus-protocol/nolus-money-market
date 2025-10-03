@@ -1,4 +1,4 @@
-use currency::{FilterMapT, FindMapT};
+use currency::{GroupFilterMap, FindMapT};
 
 use super::Group as OnlyGroup;
 
@@ -15,7 +15,7 @@ impl currency::GroupMember<OnlyGroup> for GroupMember {
 
     fn filter_map<FilterMap>(&self, _: &FilterMap) -> Option<FilterMap::Outcome>
     where
-        FilterMap: FilterMapT<VisitedG = OnlyGroup>,
+        FilterMap: GroupFilterMap<VisitedG = OnlyGroup>,
     {
         match *self {}
     }

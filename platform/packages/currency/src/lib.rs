@@ -6,8 +6,9 @@ pub use crate::{
     from_symbol::{CurrencyVisit, SingleVisitor},
     from_symbol_any::GroupVisit,
     group::{
-        CurrenciesMapping, FilterMapT, FindMapT, Group, GroupMember, MaybeAnyVisitResult, MemberOf,
-        SubFilterAdapter, SubGroupFindAdapter, find_map as group_find_map,
+        CurrenciesMapping, FilterMap as GroupFilterMap, FindMapT, Group, GroupMember,
+        MaybeAnyVisitResult, MemberOf, SubFilterAdapter, SubGroupFindAdapter,
+        find_map as group_find_map,
     },
     matcher::Matcher,
     pairs::{

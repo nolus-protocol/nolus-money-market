@@ -2,7 +2,7 @@ use std::borrow::Borrow;
 
 use serde::{Deserialize, Serialize};
 
-use currency::{CurrenciesMapping, FilterMapT, FindMapT, MemberOf, group_find_map};
+use currency::{CurrenciesMapping, GroupFilterMap, FindMapT, MemberOf, group_find_map};
 
 use crate::payment::Group as PaymentGroup;
 
@@ -31,7 +31,7 @@ impl currency::Group for Group {
         filter_map: FilterMapRef,
     ) -> impl Iterator<Item = FilterMap::Outcome>
     where
-        FilterMap: FilterMapT<VisitedG = Self>,
+        FilterMap: GroupFilterMap<VisitedG = Self>,
         FilterMapRef: Borrow<FilterMap> + Clone,
     {
         CurrenciesMapping::<_, GroupMember, _, _>::with_filter(filter_map)

@@ -1,6 +1,6 @@
 use std::marker::PhantomData;
 
-use currency::{CurrencyDTO, CurrencyDef, FilterMapT, Group, MemberOf};
+use currency::{CurrencyDTO, CurrencyDef, Group, GroupFilterMap, MemberOf};
 use finance::coin::WithCoin;
 
 use crate::{bank::Aggregate, coin_legacy, result::Result};
@@ -23,7 +23,7 @@ impl<'addr, 'view, GBalances, CmdBalances> NonZeroBalances<'addr, 'view, GBalanc
     }
 }
 
-impl<GBalances, CmdBalances> FilterMapT for NonZeroBalances<'_, '_, GBalances, CmdBalances>
+impl<GBalances, CmdBalances> GroupFilterMap for NonZeroBalances<'_, '_, GBalances, CmdBalances>
 where
     GBalances: Group,
     CmdBalances: WithCoin<GBalances> + Clone,

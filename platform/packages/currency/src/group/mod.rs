@@ -35,12 +35,12 @@ where
     /// The elements of the returned iterator are produced by the provided functor
     /// mapping a currency to `Some(value)`. A currency for which the functor returns
     /// `None` is skipped.
-    fn filter_map<FilterMap, FilterMapRef>(
+    fn filter_map<FilterMapImpl, FilterMapRef>(
         f: FilterMapRef,
-    ) -> impl Iterator<Item = FilterMap::Outcome>
+    ) -> impl Iterator<Item = FilterMapImpl::Outcome>
     where
-        FilterMap: FilterMapT<VisitedG = Self>,
-        FilterMapRef: Borrow<FilterMap> + Clone;
+        FilterMapImpl: FilterMap<VisitedG = Self>,
+        FilterMapRef: Borrow<FilterMapImpl> + Clone;
 
     /// Find and map a currency to value
     ///
@@ -54,7 +54,7 @@ where
 
 pub type MaybeAnyVisitResult<VisitedG, V> = Result<<V as AnyVisitor<VisitedG>>::Outcome, V>;
 
-pub trait FilterMapT {
+pub trait FilterMap {
     type VisitedG: Group;
 
     type Outcome;

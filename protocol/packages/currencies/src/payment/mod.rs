@@ -2,7 +2,7 @@ use std::borrow::Borrow;
 
 use serde::{Deserialize, Serialize};
 
-use currency::{FilterMapT, FindMapT, MemberOf, SubFilterAdapter, SubGroupFindAdapter};
+use currency::{GroupFilterMap, FindMapT, MemberOf, SubFilterAdapter, SubGroupFindAdapter};
 
 use crate::{lease::Group as LeaseGroup, lpn::Group as LpnGroup, native::Group as NativeGroup};
 
@@ -30,7 +30,7 @@ impl currency::Group for Group {
         filter_map: FilterMapRef,
     ) -> impl Iterator<Item = FilterMap::Outcome>
     where
-        FilterMap: FilterMapT<VisitedG = Self>,
+        FilterMap: GroupFilterMap<VisitedG = Self>,
         FilterMapRef: Borrow<FilterMap> + Clone,
     {
         LpnGroup::filter_map(SubFilterAdapter::new(filter_map.clone()))

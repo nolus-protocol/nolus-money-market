@@ -1,6 +1,6 @@
 use std::marker::PhantomData;
 
-use crate::{CurrencyDTO, CurrencyDef, Group, MemberOf, SymbolStatic, group::FilterMapT};
+use crate::{CurrencyDTO, CurrencyDef, Group, GroupFilterMap, MemberOf, SymbolStatic};
 
 #[derive(Clone)]
 pub(crate) struct Dto<FilterG>(PhantomData<FilterG>);
@@ -10,7 +10,7 @@ impl<FilterG> Default for Dto<FilterG> {
         Self(PhantomData)
     }
 }
-impl<FilterG> FilterMapT for Dto<FilterG>
+impl<FilterG> GroupFilterMap for Dto<FilterG>
 where
     FilterG: Group,
 {
@@ -44,7 +44,7 @@ impl<FilterG> FindByTicker<FilterG> {
     }
 }
 
-impl<FilterG> FilterMapT for FindByTicker<FilterG>
+impl<FilterG> GroupFilterMap for FindByTicker<FilterG>
 where
     FilterG: Group,
 {
