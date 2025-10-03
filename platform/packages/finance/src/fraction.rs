@@ -38,7 +38,7 @@ where
     Self: Unit,
 {
     /// [other] should be nonzero
-    fn coprime_with<U>(self, other: U) -> (Self, U)
+    fn to_coprime_with<U>(self, other: U) -> (Self, U)
     where
         U: Unit<Times = Self::Times>;
 }
@@ -47,7 +47,7 @@ impl<T> Coprime for T
 where
     T: Unit,
 {
-    fn coprime_with<U>(self, other: U) -> (Self, U)
+    fn to_coprime_with<U>(self, other: U) -> (Self, U)
     where
         U: Unit<Times = Self::Times>,
     {

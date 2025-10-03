@@ -285,7 +285,7 @@ mod test {
 
     use currency::test::{SuperGroupTestC1, SuperGroupTestC2};
 
-    use crate::{percent::test::test_of, test::coin};
+    use crate::{fraction::Coprime, percent::test::test_of, test::coin};
 
     use super::{Amount, Coin};
 
@@ -483,11 +483,11 @@ mod test {
     fn coprime_impl(gcd: Amount, a1: Amount, a2: Amount) {
         assert_eq!(
             (coin::coin1(a1 / gcd), coin::coin2(a2 / gcd)),
-            coin::coin1(a1).into_coprime_with(coin::coin2(a2))
+            coin::coin1(a1).to_coprime_with(coin::coin2(a2))
         );
         assert_eq!(
             (coin::coin2(a1 / gcd), coin::coin2(a2 / gcd)),
-            coin::coin2(a1).into_coprime_with(coin::coin2(a2))
+            coin::coin2(a1).to_coprime_with(coin::coin2(a2))
         );
     }
 }

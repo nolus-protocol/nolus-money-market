@@ -100,7 +100,7 @@ where
     pub fn new(nominator: U, denominator: U) -> Self {
         debug_assert_ne!(denominator, Zero::ZERO);
 
-        let (nominator, denominator) = nominator.coprime_with(denominator);
+        let (nominator, denominator) = nominator.to_coprime_with(denominator);
 
         Self {
             nominator,
