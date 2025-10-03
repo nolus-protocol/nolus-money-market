@@ -58,7 +58,9 @@ where
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[cfg_attr(feature = "testing", derive(PartialEq, Eq))]
-#[serde(deny_unknown_fields, rename_all = "snake_case")]
+// TODO get back to deny unknown fields once all leases have passed through read/write cycle
+// [06.08.2024] there are still 19 leases in PaidActive that have "base_currency" field. We would proceed once get closed.
+#[serde(rename_all = "snake_case")]
 pub struct OracleRef<QuoteC, QuoteG>
 where
     QuoteC: Currency + MemberOf<QuoteG>,
