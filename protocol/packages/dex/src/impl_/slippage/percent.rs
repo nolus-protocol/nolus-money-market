@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use currency::{Currency, CurrencyDef, Group, MemberOf};
 use finance::{
     coin::{Coin, CoinDTO, WithCoin},
-    fraction::Fraction,
+    fraction::FractionLegacy,
     percent::Percent100,
 };
 use oracle::stub;
@@ -134,7 +134,7 @@ where
 #[cfg(test)]
 mod test {
     use currency::test::SuperGroupTestC1;
-    use finance::{coin::Coin, fraction::Fraction, percent::Percent100};
+    use finance::{coin::Coin, fraction::FractionLegacy, percent::Percent100};
 
     use super::MaxSlippage;
 

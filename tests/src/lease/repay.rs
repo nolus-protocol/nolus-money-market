@@ -9,7 +9,7 @@ use finance::{
     percent::{Percent, Percent100},
     price::{self, Price},
     ratio::SimpleFraction,
-    rational::Rational,
+    rational::RationalLegacy,
     zero::Zero,
 };
 use lease::api::{
@@ -44,7 +44,7 @@ fn partial_repay() {
     let downpayment = DOWNPAYMENT;
 
     let amount = super::quote_borrow(&test_case, downpayment);
-    let partial_payment = Rational::<PaymentCoin>::of(
+    let partial_payment = RationalLegacy::<PaymentCoin>::of(
         &SimpleFraction::new(PaymentCoin::new(1), PaymentCoin::new(2)),
         super::create_payment_coin(amount.into()),
     )

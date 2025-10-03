@@ -54,7 +54,7 @@ mod test {
     use crate::coin::{Amount, Coin};
 
     mod percent {
-        use crate::fraction::Fraction;
+        use crate::fraction::FractionLegacy;
         use crate::fractionable::price::test::{c, q};
         use crate::{percent::Percent100, price};
 
@@ -80,7 +80,7 @@ mod test {
             fractionable::price::test::{c, q},
             price,
             ratio::SimpleFraction,
-            rational::Rational,
+            rational::RationalLegacy,
         };
 
         #[test]
@@ -128,7 +128,7 @@ mod test {
             let price = price::total_of(amount1).is(quote1);
             let ratio = SimpleFraction::new(nominator, denominator);
             assert_eq!(
-                Rational::<u128>::of(&ratio, price).unwrap(),
+                RationalLegacy::<u128>::of(&ratio, price).unwrap(),
                 price::total_of(amount_exp).is(quote_exp)
             );
         }

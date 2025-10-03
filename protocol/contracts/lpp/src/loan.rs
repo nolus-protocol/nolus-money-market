@@ -37,7 +37,8 @@ impl<Lpn> Loan<Lpn> {
             self.principal_due,
             repayment,
             self.due_period(by),
-        );
+        )
+        .expect("TODO Method should return Option");
 
         let interest_paid = repayment - interest_change;
         let principal_paid = interest_change.min(self.principal_due);
@@ -62,7 +63,7 @@ impl<Lpn> Loan<Lpn> {
 mod test {
     use currencies::Lpn;
     use finance::{
-        coin::Coin, duration::Duration, fraction::Fraction, percent::Percent100, zero::Zero,
+        coin::Coin, duration::Duration, fraction::FractionLegacy, percent::Percent100, zero::Zero,
     };
     use sdk::cosmwasm_std::Timestamp;
 

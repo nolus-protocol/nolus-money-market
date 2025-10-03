@@ -176,7 +176,7 @@ pub(crate) mod tests {
     use currencies::{Lpn, testing::PaymentC7};
     use currency::{Currency, Group, MemberOf};
     use finance::{
-        coin::Coin, duration::Duration, fraction::Fraction, liability::Liability,
+        coin::Coin, duration::Duration, fraction::FractionLegacy, liability::Liability,
         percent::Percent100, price::Price,
     };
     use lpp::{
@@ -442,10 +442,12 @@ pub(crate) mod tests {
                 principal_due,
                 overdue_margin: lpn_coin(0),
                 overdue_interest: lpn_coin(0),
-                overdue_collect_in: Duration::YEAR.into_slice_per_ratio(
-                    MIN_TRANSACTION - exp_due_interest - exp_due_margin,
-                    (interest_rate + MARGIN_INTEREST_RATE).of(principal_due)
-                ),
+                overdue_collect_in: Duration::YEAR
+                    .into_slice_per_ratio(
+                        MIN_TRANSACTION - exp_due_interest - exp_due_margin,
+                        (interest_rate + MARGIN_INTEREST_RATE).of(principal_due)
+                    )
+                    .expect("Failed to compute overdue_collect_in"),
                 due_margin: exp_due_margin,
                 due_interest: exp_due_interest,
                 due_projection,

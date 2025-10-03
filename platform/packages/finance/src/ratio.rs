@@ -4,11 +4,11 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     error::{Error, Result as FinanceResult},
-    fraction::{Fraction, Unit as FractionUnit},
+    fraction::{FractionLegacy, Unit as FractionUnit},
     fractionable::{
         Fractionable, FractionableLegacy, IntoMax, TryFromMax, checked_mul::CheckedMul,
     },
-    rational::Rational,
+    rational::{Rational, RationalLegacy},
     zero::Zero,
 };
 
@@ -64,7 +64,7 @@ where
     }
 }
 
-impl<U> Fraction<U> for Ratio<U>
+impl<U> FractionLegacy<U> for Ratio<U>
 where
     U: FractionUnit,
 {
@@ -72,8 +72,7 @@ where
     where
         A: FractionableLegacy<U>,
     {
-        self.0
-            .of(whole)
+        RationalLegacy::of(&self.0, whole)
             .expect("Ratio is a part of a whole, multiplication cannot overflow")
     }
 }
@@ -138,7 +137,20 @@ where
     }
 }
 
-impl<U, T> Rational<U> for SimpleFraction<T>
+impl<U> Rational<U> for SimpleFraction<U>
+where
+    U: FractionUnit,
+{
+    fn of<A>(&self, whole: A) -> Option<A>
+    where
+        U: IntoMax<A::CommonDouble>,
+        A: Fractionable<U>,
+    {
+        self.checked_mul(whole)
+    }
+}
+
+impl<U, T> RationalLegacy<U> for SimpleFraction<T>
 where
     Self: RatioLegacy<U>,
 {

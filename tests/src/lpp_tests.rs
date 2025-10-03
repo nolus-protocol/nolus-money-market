@@ -3,11 +3,11 @@ use currency::CurrencyDef;
 use finance::{
     coin::{Amount, Coin},
     duration::Duration,
-    fraction::Fraction,
+    fraction::FractionLegacy,
     percent::{Percent, Percent100, Units as PercentUnits},
     price,
     ratio::SimpleFraction,
-    rational::Rational,
+    rational::RationalLegacy,
     test,
     zero::Zero,
 };
@@ -64,7 +64,7 @@ fn general_interest_rate(
                     optimal_rate.complement().units(),
                 ).expect("The utilization must be a valid Percent").min(utilization_factor_max);
 
-            Rational::<PercentUnits>::of(
+            RationalLegacy::<PercentUnits>::of(
             &SimpleFraction::new(addon_rate, optimal_rate),
             utilization_factor,
         )

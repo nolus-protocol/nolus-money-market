@@ -61,7 +61,9 @@ where
 #[cfg(test)]
 mod test {
     use currency::platform::Nls;
-    use finance::{coin::Coin, duration::Duration, fraction::Fraction, percent::Percent100, price};
+    use finance::{
+        coin::Coin, duration::Duration, fraction::FractionLegacy, percent::Percent100, price,
+    };
     use lpp_platform::{CoinStable, test::DummyLpp};
     use oracle_platform::{Oracle, test::DummyOracle};
     use platform::response;
