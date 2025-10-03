@@ -4,7 +4,7 @@ use serde::Deserialize;
 
 use crate::{
     CurrencyDTO, FindMapT, Group,
-    group::{self, CurrenciesMapping, FilterMapT, MemberOf, SubFilterAdapter, SubGroupFindAdapter},
+    group::{self, CurrenciesMapping, FilterMapT, MemberOf, SubGroupFindAdapter},
     pairs::{self, FindMapT as PairsFindMapT, PairsGroup},
     test::{
         sub::{Item as SubGroupItem, SubGroupTestC6Pairs, SubGroupTestC10Pairs},
@@ -32,18 +32,27 @@ pub type SuperGroupCurrency = CurrencyDTO<SuperGroup>;
 impl MemberOf<Self> for SuperGroup {}
 impl Group for SuperGroup {
     const DESCR: &'static str = "super_group";
+
     type TopG = Self;
 
-    fn filter_map<FilterMap, FilterMapRef>(
-        f: FilterMapRef,
-    ) -> impl Iterator<Item = FilterMap::Outcome>
-    where
-        FilterMap: FilterMapT<VisitedG = Self>,
-        FilterMapRef: Borrow<FilterMap> + Clone,
-    {
-        CurrenciesMapping::<_, SuperGroupItem, _, _>::with_filter(f.clone())
-            .chain(SubGroup::filter_map(SubFilterAdapter::new(f)))
-    }
+    type Members = (
+        SuperGroupTestC1,
+        (
+            SuperGroupTestC2,
+            (SuperGroupTestC3, (SuperGroupTestC4, (SuperGroupTestC5, ()))),
+        ),
+    );
+
+    // fn filter_map<FilterMap, FilterMapRef>(
+    //     f: FilterMapRef,
+    // ) -> impl Iterator<Item = FilterMap::Outcome>
+    // where
+    //     FilterMap: FilterMapT<VisitedG = Self>,
+    //     FilterMapRef: Borrow<FilterMap> + Clone,
+    // {
+    //     CurrenciesMapping::<_, SuperGroupItem, _, _>::with_filter(f.clone())
+    //         .chain(SubGroup::filter_map(SubFilterAdapter::new(f)))
+    // }
 
     fn find_map<FindMap>(v: FindMap) -> Result<FindMap::Outcome, FindMap>
     where
@@ -143,7 +152,10 @@ impl MemberOf<Self> for SubGroup {}
 impl MemberOf<SuperGroup> for SubGroup {}
 impl Group for SubGroup {
     const DESCR: &'static str = "sub_group";
+
     type TopG = SuperGroup;
+
+    type Members = ();
 
     fn filter_map<FilterMap, FilterMapRef>(
         f: FilterMapRef,

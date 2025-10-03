@@ -73,7 +73,10 @@ impl PairsGroup for Nls {
 pub struct PlatformGroup;
 impl Group for PlatformGroup {
     const DESCR: &'static str = "platform currencies";
+
     type TopG = Self;
+
+    type Members = (Nls,);
 
     fn filter_map<FilterMap, FilterMapRef>(
         f: FilterMapRef,
