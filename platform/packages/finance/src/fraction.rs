@@ -10,14 +10,15 @@ pub trait Fraction<U> {
     where
         A: FractionableLegacy<U>;
 }
-
 pub trait Unit
 where
     Self: Copy + Debug + PartialOrd + Sized + Zero,
 {
     type Times: Copy + Debug + PartialEq + Zero;
 
-    fn gcd(self, other: Self) -> Self::Times;
+    fn gcd<U>(self, other: U) -> Self::Times
+    where
+        U: Unit<Times = Self::Times>;
 
     /// Divides `self` by the given `scale`
     ///
@@ -28,4 +29,7 @@ where
     ///
     /// [scale] should be non zero
     fn modulo(self, scale: Self::Times) -> Self::Times;
+
+    fn primitive(self) -> Self::Times;
+}
 }
