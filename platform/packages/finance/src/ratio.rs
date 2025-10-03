@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     error::{Error, Result as FinanceResult},
-    fraction::{Coprime, FractionLegacy, Unit as FractionUnit},
+    fraction::{Coprime, Fraction, FractionLegacy, Unit as FractionUnit},
     fractionable::{
         Fractionable, FractionableLegacy, IntoMax, TryFromMax, checked_mul::CheckedMul,
     },
@@ -61,6 +61,21 @@ where
 {
     fn from(ratio: Ratio<U>) -> SimpleFraction<U> {
         ratio.0
+    }
+}
+
+impl<U> Fraction<U> for Ratio<U>
+where
+    U: FractionUnit,
+{
+    fn of<A>(&self, whole: A) -> A
+    where
+        U: IntoMax<A::CommonDouble>,
+        A: Fractionable<U>,
+    {
+        // TODO remove the full syntax when removing the RationalLegacy
+        Rational::of(&self.0, whole)
+            .expect("Ratio is a part of a whole, multiplication cannot overflow")
     }
 }
 
