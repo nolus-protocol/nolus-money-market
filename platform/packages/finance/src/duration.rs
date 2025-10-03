@@ -20,8 +20,11 @@ pub type Seconds = u32;
 impl FractionUnit for Units {
     type Times = Self;
 
-    fn gcd(self, other: Self) -> Self::Times {
-        Gcd::gcd(self, other)
+    fn gcd<U>(self, other: U) -> Self::Times
+    where
+        U: FractionUnit<Times = Self::Times>,
+    {
+        Gcd::gcd(self, other.primitive())
     }
 
     fn scale_down(self, scale: Self::Times) -> Self {
@@ -32,6 +35,10 @@ impl FractionUnit for Units {
 
     fn modulo(self, scale: Self::Times) -> Self::Times {
         self.rem(scale)
+    }
+
+    fn primitive(self) -> Self::Times {
+        self
     }
 }
 
@@ -133,8 +140,11 @@ impl From<Duration> for u128 {
 impl FractionUnit for Duration {
     type Times = Units;
 
-    fn gcd(self, other: Self) -> Self::Times {
-        Gcd::gcd(self.nanos(), other.nanos())
+    fn gcd<U>(self, other: U) -> Self::Times
+    where
+        U: FractionUnit<Times = Self::Times>,
+    {
+        Gcd::gcd(self.nanos(), other.primitive())
     }
 
     fn scale_down(self, scale: Self::Times) -> Self {
@@ -145,6 +155,10 @@ impl FractionUnit for Duration {
 
     fn modulo(self, scale: Self::Times) -> Self::Times {
         self.nanos().modulo(scale)
+    }
+
+    fn primitive(self) -> Self::Times {
+        self.nanos()
     }
 }
 

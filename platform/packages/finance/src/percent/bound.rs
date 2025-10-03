@@ -120,8 +120,11 @@ where
 {
     type Times = Units;
 
-    fn gcd(self, other: Self) -> Self::Times {
-        FractionUnit::gcd(self.units(), other.units())
+    fn gcd<U>(self, other: U) -> Self::Times
+    where
+        U: FractionUnit<Times = Self::Times>,
+    {
+        FractionUnit::gcd(self.units(), other.primitive())
     }
 
     fn scale_down(self, scale: Self::Times) -> Self {
@@ -132,6 +135,10 @@ where
 
     fn modulo(self, scale: Self::Times) -> Self::Times {
         self.units().rem(scale)
+    }
+
+    fn primitive(self) -> Self::Times {
+        self.units()
     }
 }
 

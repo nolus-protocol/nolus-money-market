@@ -34,8 +34,11 @@ pub type NonZeroAmount = NonZeroU128;
 impl FractionUnit for u128 {
     type Times = Self;
 
-    fn gcd(self, other: Self) -> Self::Times {
-        Gcd::gcd(self, other)
+    fn gcd<U>(self, other: U) -> Self::Times
+    where
+        U: FractionUnit<Times = Self::Times>,
+    {
+        Gcd::gcd(self, other.primitive())
     }
 
     fn scale_down(self, scale: Self::Times) -> Self {
@@ -46,6 +49,10 @@ impl FractionUnit for u128 {
 
     fn modulo(self, scale: Self::Times) -> Self::Times {
         self.rem(scale)
+    }
+
+    fn primitive(self) -> Self::Times {
+        self
     }
 }
 
@@ -103,10 +110,7 @@ impl<C> Coin<C> {
     }
 
     #[track_caller]
-    pub(super) const fn into_coprime_with<OtherC>(
-        self,
-        other: Coin<OtherC>,
-    ) -> (Self, Coin<OtherC>) {
+    pub(super) fn into_coprime_with<OtherC>(self, other: Coin<OtherC>) -> (Self, Coin<OtherC>) {
         debug_assert!(!self.is_zero(), "LHS-value's amount is zero!");
         debug_assert!(!other.is_zero(), "RHS-value's amount is zero!");
 
@@ -172,8 +176,11 @@ impl<C> Default for Coin<C> {
 impl<C> FractionUnit for Coin<C> {
     type Times = Amount;
 
-    fn gcd(self, other: Self) -> Self::Times {
-        Gcd::gcd(self.amount, other.amount)
+    fn gcd<U>(self, other: U) -> Self::Times
+    where
+        U: FractionUnit<Times = Self::Times>,
+    {
+        Gcd::gcd(self.amount, other.primitive())
     }
 
     fn scale_down(self, scale: Self::Times) -> Self {
@@ -184,6 +191,10 @@ impl<C> FractionUnit for Coin<C> {
 
     fn modulo(self, scale: Self::Times) -> Self::Times {
         self.amount.modulo(scale)
+    }
+
+    fn primitive(self) -> Self::Times {
+        self.amount
     }
 }
 
