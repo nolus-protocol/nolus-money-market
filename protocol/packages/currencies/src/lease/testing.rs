@@ -43,7 +43,7 @@ pub(super) mod definitions {
         where
             FindMap: PairsFindMapT<Pivot = Self>,
         {
-            currency::find_paired_currency(find_map)
+            currency::pairs_find(find_map)
         }
     }
 
@@ -73,7 +73,7 @@ pub(super) mod definitions {
         where
             FindMap: PairsFindMapT<Pivot = Self>,
         {
-            currency::find_paired_currency(find_map)
+            currency::pairs_find(find_map)
         }
     }
 
@@ -108,7 +108,7 @@ pub(super) mod definitions {
         where
             FindMap: PairsFindMapT<Pivot = Self>,
         {
-            currency::find_paired_currency(find_map)
+            currency::pairs_find(find_map)
         }
     }
 
@@ -139,7 +139,7 @@ pub(super) mod definitions {
         where
             FindMap: PairsFindMapT<Pivot = Self>,
         {
-            currency::find_paired_currency(find_map)
+            currency::pairs_find(find_map)
         }
     }
 
@@ -168,7 +168,7 @@ pub(super) mod definitions {
         where
             FindMap: PairsFindMapT<Pivot = Self>,
         {
-            currency::find_paired_currency(find_map)
+            currency::pairs_find(find_map)
         }
     }
 
@@ -197,7 +197,7 @@ pub(super) mod definitions {
         where
             FindMap: PairsFindMapT<Pivot = Self>,
         {
-            currency::find_paired_currency(find_map)
+            currency::pairs_find(find_map)
         }
     }
 
@@ -226,7 +226,7 @@ pub(super) mod definitions {
         where
             FindMap: PairsFindMapT<Pivot = Self>,
         {
-            currency::find_paired_currency(find_map)
+            currency::pairs_find(find_map)
         }
     }
 }

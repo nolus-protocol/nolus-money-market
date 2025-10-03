@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     CurrencyDTO, CurrencyDef, Definition, Group, MemberOf, PairsGroup,
     group::{self, FilterMapT, FindMapT},
-    pairs::FindMapT as PairsFindMapT,
+    pairs::{self, FindMapT as PairsFindMapT, PairedWith, PairedWithList},
 };
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Serialize, Deserialize)]
@@ -21,13 +21,27 @@ impl CurrencyDef for Stable {
 impl PairsGroup for Stable {
     type CommonGroup = PlatformGroup;
 
-    type PairedWith = ();
+    type PairedWith = StablePairedWithList;
 
-    fn find_map<FindMap>(_f: FindMap) -> Result<FindMap::Outcome, FindMap>
+    fn find_map<FindMap>(find_map: FindMap) -> Result<FindMap::Outcome, FindMap>
     where
         FindMap: PairsFindMapT<Pivot = Self>,
     {
-        unreachable!("The 'Stable' platform currency used in pairs resolution!")
+        pairs::find(find_map)
+    }
+}
+
+pub struct StablePairedWithList;
+
+impl<Pivot> PairedWithList<Pivot> for StablePairedWithList
+where
+    Pivot: PairsGroup,
+{
+    fn next<Visitor>() -> Option<PairedWith<Pivot, Visitor>>
+    where
+        Visitor: pairs::Visitor<Pivot>,
+    {
+        unimplemented!("The 'Stable' platform currency used in pairs resolution!")
     }
 }
 
@@ -63,13 +77,27 @@ impl CurrencyDef for Nls {
 impl PairsGroup for Nls {
     type CommonGroup = PlatformGroup;
 
-    type PairedWith = ();
+    type PairedWith = NlsPairedWithList;
 
-    fn find_map<FindMap>(_f: FindMap) -> Result<FindMap::Outcome, FindMap>
+    fn find_map<FindMap>(find_map: FindMap) -> Result<FindMap::Outcome, FindMap>
     where
         FindMap: PairsFindMapT<Pivot = Self>,
     {
-        unreachable!("The 'Nls' platform currency used in pairs resolution!")
+        pairs::find(find_map)
+    }
+}
+
+pub struct NlsPairedWithList;
+
+impl<Pivot> PairedWithList<Pivot> for NlsPairedWithList
+where
+    Pivot: PairsGroup,
+{
+    fn next<Visitor>() -> Option<PairedWith<Pivot, Visitor>>
+    where
+        Visitor: pairs::Visitor<Pivot>,
+    {
+        unimplemented!("The 'Nls' platform currency used in pairs resolution!")
     }
 }
 

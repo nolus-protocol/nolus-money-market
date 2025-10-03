@@ -9,9 +9,9 @@ use super::AnyVisitor;
 use self::visit::MembersList;
 pub use self::{
     adapter::{SubFilterAdapter, SubGroupFindAdapter},
-    filter::{CurrenciesMapping, non_recursive as non_recursive_filter_map},
-    find::{find_map, non_recursive as non_recursive_find_map},
-    member::{GroupMember, MemberOf},
+    filter::non_recursive as non_recursive_filter_map,
+    find::non_recursive as non_recursive_find_map,
+    member::MemberOf,
 };
 
 mod adapter;

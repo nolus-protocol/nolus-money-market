@@ -3,10 +3,7 @@ pub(super) type Members = (self::definitions::Nls,);
 pub(super) mod definitions {
     use serde::{Deserialize, Serialize};
 
-    use currency::{
-        CurrencyDTO, CurrencyDef, Definition, InPoolWith, PairsFindMapT, PairsGroup,
-        PairsGroupMember, pairs_find_map,
-    };
+    use currency::{CurrencyDTO, CurrencyDef, Definition, InPoolWith, PairsFindMapT, PairsGroup};
 
     use crate::{lease::LeaseC5, lpn::Lpn, payment::Group as PaymentGroup};
 
@@ -33,31 +30,7 @@ pub(super) mod definitions {
         where
             FindMap: PairsFindMapT<Pivot = Self>,
         {
-            struct Pairs;
-
-            impl PairsGroupMember for Pairs {
-                type Group = Nls;
-
-                fn first() -> Option<Self> {
-                    Some(Self)
-                }
-
-                fn next(&self) -> Option<Self> {
-                    None
-                }
-
-                fn find_map<PairsFindMap>(
-                    &self,
-                    find_map: PairsFindMap,
-                ) -> Result<PairsFindMap::Outcome, PairsFindMap>
-                where
-                    PairsFindMap: PairsFindMapT<Pivot = Self::Group>,
-                {
-                    find_map.on::<Lpn>(<Lpn>::dto())
-                }
-            }
-
-            pairs_find_map::<Pairs, _>(find_map)
+            currency::pairs_find(find_map)
         }
     }
 

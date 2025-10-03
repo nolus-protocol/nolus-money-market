@@ -1,9 +1,6 @@
 use crate::{CurrencyDef, Group, InPoolWith, PairsFindMapT, PairsGroup};
 
-use super::{
-    FindMapT, PairsGroupMember,
-    visit::{MembersIter, Visitor},
-};
+use super::visit::{MembersIter, Visitor};
 
 pub fn find<FindMap>(find_map: FindMap) -> Result<FindMap::Outcome, FindMap>
 where
@@ -12,27 +9,6 @@ where
     <FindMap::Pivot as CurrencyDef>::Group:
         Group<TopG = <FindMap::Pivot as PairsGroup>::CommonGroup>,
 {
-    struct Adapter<FindMap>(FindMap)
-    where
-        FindMap: PairsFindMapT;
-
-    impl<FindMap> Visitor<FindMap::Pivot> for Adapter<FindMap>
-    where
-        FindMap: PairsFindMapT,
-    {
-        type Output = Result<FindMap::Outcome, FindMap>;
-
-        fn visit<C>(self) -> Self::Output
-        where
-            C: CurrencyDef
-                + InPoolWith<<FindMap as PairsFindMapT>::Pivot>
-                + PairsGroup<CommonGroup = <FindMap::Pivot as PairsGroup>::CommonGroup>,
-            C::Group: Group<TopG = <FindMap::Pivot as PairsGroup>::CommonGroup>,
-        {
-            self.0.on::<C>(C::dto())
-        }
-    }
-
     let mut members = const { MembersIter::new() };
 
     let output =
@@ -49,20 +25,23 @@ where
     }
 }
 
-pub fn find_map<PairsGroupMemberImpl, FindMap>(f: FindMap) -> Result<FindMap::Outcome, FindMap>
+struct Adapter<FindMap>(FindMap)
 where
-    PairsGroupMemberImpl: PairsGroupMember,
-    FindMap: FindMapT<Pivot = PairsGroupMemberImpl::Group>,
+    FindMap: PairsFindMapT;
+
+impl<FindMap> Visitor<FindMap::Pivot> for Adapter<FindMap>
+where
+    FindMap: PairsFindMapT,
 {
-    let mut may_next = PairsGroupMemberImpl::first();
-    let mut result = Err(f);
-    while let Some(next) = may_next {
-        result = if let Err(f) = result {
-            next.find_map(f)
-        } else {
-            break;
-        };
-        may_next = next.next();
+    type Output = Result<FindMap::Outcome, FindMap>;
+
+    fn visit<C>(self) -> Self::Output
+    where
+        C: CurrencyDef
+            + InPoolWith<<FindMap as PairsFindMapT>::Pivot>
+            + PairsGroup<CommonGroup = <FindMap::Pivot as PairsGroup>::CommonGroup>,
+        C::Group: Group<TopG = <FindMap::Pivot as PairsGroup>::CommonGroup>,
+    {
+        self.0.on::<C>(C::dto())
     }
-    result
 }

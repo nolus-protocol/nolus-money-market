@@ -1,10 +1,7 @@
 use crate::{CurrencyDTO, CurrencyDef, Group, MemberOf, visit_any::InPoolWith};
 
-use self::visit::PairedWithList;
-pub use self::{
-    find::{find, find_map},
-    member::PairsGroupMember,
-};
+pub(crate) use self::visit::{PairedWith, PairedWithList, Visitor};
+pub use self::{find::find, member::PairsGroupMember};
 
 mod find;
 mod member;

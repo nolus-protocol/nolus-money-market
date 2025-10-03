@@ -6,14 +6,13 @@ pub use crate::{
     from_symbol::{CurrencyVisit, SingleVisitor},
     from_symbol_any::GroupVisit,
     group::{
-        CurrenciesMapping, FilterMapT, FindMapT, Group, GroupMember, MaybeAnyVisitResult, MemberOf,
-        SubFilterAdapter, SubGroupFindAdapter, find_map as group_find_map,
-        non_recursive_filter_map, non_recursive_find_map,
+        FilterMapT, FindMapT, Group, MaybeAnyVisitResult, MemberOf, SubFilterAdapter,
+        SubGroupFindAdapter, non_recursive_filter_map, non_recursive_find_map,
     },
     matcher::Matcher,
     pairs::{
         FindMapT as PairsFindMapT, MaybePairsVisitorResult, PairsGroup, PairsGroupMember,
-        PairsVisitor, find as pairs_find, find_map as pairs_find_map,
+        PairsVisitor, find as pairs_find,
     },
     symbol::{BankSymbols, DexSymbols, Symbol, Tickers},
     visit_any::{AnyVisitor, AnyVisitorPair, InPoolWith, visit_any_on_currencies},
