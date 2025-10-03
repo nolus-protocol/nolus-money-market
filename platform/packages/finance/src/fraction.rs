@@ -32,4 +32,38 @@ where
 
     fn primitive(self) -> Self::Times;
 }
+
+pub trait Coprime
+where
+    Self: Unit,
+{
+    fn coprime_with<U>(self, other: U) -> (Self, U)
+    where
+        U: Unit<Times = Self::Times>;
+}
+
+impl<T> Coprime for T
+where
+    T: Unit,
+{
+    fn coprime_with<U>(self, other: U) -> (Self, U)
+    where
+        U: Unit<Times = Self::Times>,
+    {
+        debug_assert_ne!(other, Zero::ZERO, "RHS-value is zero!");
+
+        let gcd = self.gcd(other);
+
+        debug_assert_ne!(gcd, Zero::ZERO);
+        debug_assert!(
+            self.modulo(gcd) == Zero::ZERO,
+            "LHS-value is not divisible by the GCD!"
+        );
+        debug_assert!(
+            other.modulo(gcd) == Zero::ZERO,
+            "RHS-value is not divisible by the GCD!"
+        );
+
+        (self.scale_down(gcd), other.scale_down(gcd))
+    }
 }
