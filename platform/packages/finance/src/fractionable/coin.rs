@@ -30,16 +30,12 @@ impl<C> TryInto<Coin<C>> for U256 {
 mod test {
 
     use crate::{
-        coin::{Amount, Coin},
-        fractionable::FractionableLegacy,
-        percent::Percent,
-        ratio::SimpleFraction,
+        coin::Amount, fractionable::FractionableLegacy, percent::Percent, ratio::SimpleFraction,
         test::coin,
     };
 
     #[test]
     fn safe_mul() {
-        use crate::fractionable::Fractionable;
         assert_eq!(
             coin::coin1(30),
             coin::coin1(3).safe_mul(&Percent::from_percent(1000))

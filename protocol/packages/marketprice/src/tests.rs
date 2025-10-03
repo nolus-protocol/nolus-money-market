@@ -197,11 +197,7 @@ fn marketprice_follow_the_path() {
     )
     .unwrap();
 
-    feed_price(
-        &mut market,
-        price::<SubGroupTestC6, SubGroupTestC10>(1, 3),
-    )
-    .unwrap();
+    feed_price(&mut market, price::<SubGroupTestC6, SubGroupTestC10>(1, 3)).unwrap();
 
     feed_price(
         &mut market,
