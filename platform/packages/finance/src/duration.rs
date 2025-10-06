@@ -10,7 +10,7 @@ use sdk::cosmwasm_std::Timestamp;
 
 use crate::{
     fraction::Unit as FractionUnit,
-    fractionable::{CommonDoublePrimitive, Fractionable, FractionableLegacy, IntoMax},
+    fractionable::{CommonDoublePrimitive, Fractionable, IntoMax},
     ratio::SimpleFraction,
     rational::Rational,
     zero::Zero,
@@ -118,11 +118,12 @@ impl Duration {
     }
 
     #[track_caller]
-    pub fn annualized_slice_of<T>(&self, annual_amount: T) -> T
+    pub fn annualized_slice_of<T>(&self, annual_amount: T) -> Option<T>
     where
-        T: FractionableLegacy<Units>,
+        Self: IntoMax<T::CommonDouble>,
+        T: Fractionable<Self>,
     {
-        annual_amount.safe_mul(&SimpleFraction::new(self.nanos(), Self::YEAR.nanos()))
+        SimpleFraction::new(*self, Self::YEAR).of(annual_amount)
     }
 
     pub fn into_slice_per_ratio<U>(self, amount: U, annual_amount: U) -> Option<Self>
@@ -130,8 +131,7 @@ impl Duration {
         Self: Fractionable<U>,
         U: FractionUnit + IntoMax<<Self as CommonDoublePrimitive<U>>::CommonDouble>,
     {
-        // TODO remove the full syntax once RationLegacy does not exist
-        Rational::of(&SimpleFraction::new(amount, annual_amount), self)
+        SimpleFraction::new(amount, annual_amount).of(self)
     }
 }
 
@@ -386,25 +386,29 @@ mod tests {
     #[test]
     fn annualized_slice_of() {
         let annual_amount = test_coin(100000);
-        assert_eq!(annual_amount, D::YEAR.annualized_slice_of(annual_amount));
+        assert_eq!(
+            annual_amount,
+            D::YEAR.annualized_slice_of(annual_amount).unwrap()
+        );
         let expect_day_amount = annual_amount.checked_div(365).unwrap();
         assert_eq!(
             expect_day_amount,
-            D::from_days(1).annualized_slice_of(annual_amount)
+            D::from_days(1).annualized_slice_of(annual_amount).unwrap()
         );
         let expect_hour_amount = expect_day_amount.checked_div(24).unwrap();
         assert_eq!(
             expect_hour_amount,
-            D::HOUR.annualized_slice_of(annual_amount)
+            D::HOUR.annualized_slice_of(annual_amount).unwrap()
         )
     }
 
     #[test]
-    #[should_panic = "unexpected overflow"]
     fn panic_annualized_slice_of() {
-        // TODO remove the `#[should_panic]` and assert that is None when
-        // SimpleFraction::of() calls its checked_mul method instead of safe_mul
-        _ = (D::YEAR + D::HOUR).annualized_slice_of(test_coin(Amount::MAX));
+        assert!(
+            (D::YEAR + D::HOUR)
+                .annualized_slice_of(test_coin(Amount::MAX))
+                .is_none()
+        )
     }
 
     #[test]
