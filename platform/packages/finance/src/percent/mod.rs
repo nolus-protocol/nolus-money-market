@@ -5,8 +5,8 @@ use gcd::Gcd;
 
 use crate::{
     error::Error,
-    fraction::{FractionLegacy, Unit as FractionUnit},
-    fractionable::FractionableLegacy,
+    fraction::{Fraction, FractionLegacy, Unit as FractionUnit},
+    fractionable::{CommonDoublePrimitive, Fractionable, FractionableLegacy, IntoMax},
     ratio::{Ratio, SimpleFraction},
     rational::RationalLegacy,
     zero::Zero,
@@ -59,11 +59,11 @@ impl Percent100 {
     {
         debug_assert!(parts <= total);
 
-        Ratio::new(parts, total).of(Self::HUNDRED)
+        FractionLegacy::of(&Ratio::new(parts, total), Self::HUNDRED)
     }
 
-    fn to_ratio(self) -> Ratio<Units> {
-        Ratio::new(self.units(), Self::HUNDRED.units())
+    fn to_ratio(self) -> Ratio<Self> {
+        Ratio::new(self, Self::HUNDRED)
     }
 }
 
@@ -77,12 +77,23 @@ impl Percent {
     }
 }
 
+impl Fraction<Self> for Percent100 {
+    fn of<A>(&self, whole: A) -> A
+    where
+        Self: IntoMax<<A as CommonDoublePrimitive<Self>>::CommonDouble>,
+        A: Fractionable<Self>,
+    {
+        // TODO remove the full syntax when removing the FractionLegacy
+        Fraction::of(&self.to_ratio(), whole)
+    }
+}
+
 impl FractionLegacy<Units> for Percent100 {
     fn of<A>(&self, whole: A) -> A
     where
         A: FractionableLegacy<Units>,
     {
-        self.to_ratio().of(whole)
+        FractionLegacy::of(&Ratio::new(self.units(), Self::HUNDRED.units()), whole)
     }
 }
 
@@ -157,10 +168,7 @@ pub(super) mod test {
 
     #[test]
     fn from_ratio() {
-        assert_eq!(
-            Percent100::from_permille(750),
-            Percent100::from_ratio(3u32, 4u32)
-        );
+        assert_eq!(percent100(750), Percent100::from_ratio(3u32, 4u32));
         assert_eq!(Percent100::HUNDRED, Percent100::from_ratio(3u32, 3u32));
         assert_eq!(
             Percent100::HUNDRED,
@@ -170,7 +178,7 @@ pub(super) mod test {
             )
         );
         assert_eq!(
-            Percent100::from_permille(50),
+            percent100(50),
             Percent100::from_ratio(
                 Coin::<SubGroupTestC10>::new(1),
                 Coin::<SubGroupTestC10>::new(20)
@@ -180,25 +188,25 @@ pub(super) mod test {
 
     #[test]
     fn to_ratio() {
-        assert_eq!(Ratio::new(0, 1000), Percent100::ZERO.to_ratio());
         assert_eq!(
-            Ratio::new(100, 1000),
+            Ratio::new(Percent100::ZERO, Percent100::HUNDRED),
+            Percent100::ZERO.to_ratio()
+        );
+        assert_eq!(
+            Ratio::new(percent100(100), Percent100::HUNDRED),
             Percent100::from_permille(100).to_ratio()
         );
-        assert_eq!(Ratio::new(1000, 1000), Percent100::HUNDRED.to_ratio());
+        assert_eq!(
+            Ratio::new(Percent100::HUNDRED, Percent100::HUNDRED),
+            Percent100::HUNDRED.to_ratio()
+        );
     }
 
     #[test]
     fn percent_to_percent100() {
-        assert_eq!(
-            Percent100::from_permille(500),
-            Percent::from_permille(500).try_into().unwrap()
-        );
-        assert_eq!(
-            Percent100::from_permille(1000),
-            Percent::from_permille(1000).try_into().unwrap()
-        );
-        assert!(Percent100::try_from(Percent::from_permille(1001)).is_err());
+        assert_eq!(percent100(500), percent(500).try_into().unwrap());
+        assert_eq!(percent100(1000), percent(1000).try_into().unwrap());
+        assert!(Percent100::try_from(percent(1001)).is_err());
     }
 
     #[test]
@@ -214,11 +222,19 @@ pub(super) mod test {
     where
         P: Clone + Debug + Display + FractionableLegacy<Units> + PartialEq,
     {
-        let perm = Percent100::from_permille(permille);
+        let perm = percent100(permille);
         assert_eq!(
             exp,
             perm.of(quantity.clone()),
             "Calculating {perm} of {quantity}",
         );
+    }
+
+    fn percent100(permille: Units) -> Percent100 {
+        Percent100::from_permille(permille)
+    }
+
+    fn percent(permille: Units) -> Percent {
+        Percent::from_permille(permille)
     }
 }
