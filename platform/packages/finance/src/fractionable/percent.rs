@@ -1,5 +1,8 @@
+use bnum::types::U256;
+
 use crate::{
     coin::Coin,
+    fractionable::{IntoMax, ToDoublePrimitive},
     percent::{Units, bound::BoundPercent},
     ratio::RatioLegacy,
 };
@@ -37,6 +40,20 @@ impl<C, const UPPER_BOUND: Units> FractionableLegacy<Coin<C>> for BoundPercent<U
             .try_into()
             .expect("overflow computing a fraction of permille");
         Self::try_from(res).expect("TODO remove when refactor Fractionable. Resulting permille exceeds BoundPercent upper bound")
+    }
+}
+
+impl<const UPPER_BOUND: Units> ToDoublePrimitive for BoundPercent<UPPER_BOUND> {
+    type Double = u64;
+
+    fn to_double(self) -> Self::Double {
+        self.units().into()
+    }
+}
+
+impl<const UPPER_BOUND: Units> IntoMax<U256> for BoundPercent<UPPER_BOUND> {
+    fn into(self) -> U256 {
+        self.to_double().into()
     }
 }
 
