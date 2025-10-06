@@ -39,7 +39,7 @@ impl TryFromMax<U256> for Duration {
     fn try_from(max: U256) -> Option<Self> {
         u128::try_from(max)
             .ok()
-            .and_then(|u_128| Units::try_from(u_128).ok().map(Duration::from_nanos))
+            .and_then(|u_128| Units::try_from(u_128).ok().map(Self::from_nanos))
     }
 }
 
@@ -49,7 +49,7 @@ mod tests {
     use crate::{duration::Duration, ratio::SimpleFraction, rational::Rational, test::coin};
 
     #[test]
-    fn safe_mul() {
+    fn of() {
         let d = Duration::from_secs(10);
         let res = SimpleFraction::new(coin::coin1(10), coin::coin1(20))
             .of(d)
@@ -58,7 +58,7 @@ mod tests {
     }
 
     #[test]
-    fn safe_mul_max() {
+    fn of_max() {
         let d = Duration::from_secs(10);
         let res = SimpleFraction::new(coin::coin1(u128::MAX), coin::coin1(u128::MAX / 2))
             .of(d)
