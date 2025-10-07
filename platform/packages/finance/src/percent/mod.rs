@@ -159,22 +159,10 @@ pub(super) mod test {
             Percent100::from_percent(40),
             Percent100::from_percent(4),
         );
-        test_of(
-            100,
-            Percent100::from_percent(40),
-            Percent100::from_permille(40),
-        );
-        test_of(
-            10,
-            Percent100::from_permille(800),
-            Percent100::from_permille(8),
-        );
-        test_of(
-            10,
-            Percent100::from_permille(890),
-            Percent100::from_permille(8),
-        );
-        test_of(1, Percent100::from_permille(123), Percent100::ZERO);
+        test_of(100, Percent100::from_percent(40), percent100(40));
+        test_of(10, percent100(800), percent100(8));
+        test_of(10, percent100(890), percent100(8));
+        test_of(1, percent100(123), Percent100::ZERO);
         test_of(0, Percent100::HUNDRED, Percent100::ZERO);
         test_of(1000, Percent100::HUNDRED, Percent100::HUNDRED);
         test_of(100, Percent100::ZERO, Percent100::ZERO);
@@ -208,11 +196,27 @@ pub(super) mod test {
         );
         assert_eq!(
             Ratio::new(percent100(100), Percent100::HUNDRED),
-            Percent100::from_permille(100).to_ratio()
+            percent100(100).to_ratio()
         );
         assert_eq!(
             Ratio::new(Percent100::HUNDRED, Percent100::HUNDRED),
             Percent100::HUNDRED.to_ratio()
+        );
+    }
+
+    #[test]
+    fn to_fraction() {
+        assert_eq!(
+            SimpleFraction::new(Percent::ZERO, Percent::HUNDRED),
+            Percent::ZERO.to_fraction()
+        );
+        assert_eq!(
+            SimpleFraction::new(Percent::HUNDRED, Percent::HUNDRED),
+            Percent::HUNDRED.to_fraction()
+        );
+        assert_eq!(
+            SimpleFraction::new(percent(1001), Percent::HUNDRED),
+            percent(1001).to_fraction()
         );
     }
 
@@ -229,7 +233,7 @@ pub(super) mod test {
         let d: Units = 1890;
         let r = SimpleFraction::new(n, d);
         let res: Percent = RationalLegacy::<Units>::of(&r, Percent::HUNDRED).unwrap();
-        assert_eq!(Percent::from_permille(n * 1000 / d), res);
+        assert_eq!(percent(n * 1000 / d), res);
     }
 
     pub(crate) fn test_of<P>(permille: Units, quantity: P, exp: P)
