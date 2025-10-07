@@ -8,7 +8,7 @@ use crate::{
     fraction::{Fraction, FractionLegacy, Unit as FractionUnit},
     fractionable::{CommonDoublePrimitive, Fractionable, FractionableLegacy, IntoMax},
     ratio::{Ratio, SimpleFraction},
-    rational::RationalLegacy,
+    rational::{Rational, RationalLegacy},
     zero::Zero,
 };
 
@@ -73,7 +73,10 @@ impl Percent {
         Self: FractionableLegacy<U>,
         U: FractionUnit,
     {
-        SimpleFraction::new(nominator, denominator).of(Self::HUNDRED)
+        RationalLegacy::of(&SimpleFraction::new(nominator, denominator), Self::HUNDRED)
+    }
+    fn to_fraction(self) -> SimpleFraction<Self> {
+        SimpleFraction::new(self, Self::HUNDRED)
     }
 }
 
@@ -94,6 +97,17 @@ impl FractionLegacy<Units> for Percent100 {
         A: FractionableLegacy<Units>,
     {
         FractionLegacy::of(&Ratio::new(self.units(), Self::HUNDRED.units()), whole)
+    }
+}
+
+impl Rational<Self> for Percent {
+    fn of<A>(&self, whole: A) -> Option<A>
+    where
+        Self: IntoMax<A::CommonDouble>,
+        A: Fractionable<Self>,
+    {
+        // TODO remove the full syntax when removing the RationalLegacy
+        Rational::of(&self.to_fraction(), whole)
     }
 }
 
