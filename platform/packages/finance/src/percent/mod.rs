@@ -54,12 +54,12 @@ impl Percent100 {
 
     pub fn from_ratio<U>(parts: U, total: U) -> Self
     where
-        Self: FractionableLegacy<U>,
-        U: FractionUnit,
+        Self: Fractionable<U>,
+        U: FractionUnit + IntoMax<<Self as CommonDoublePrimitive<U>>::CommonDouble>,
     {
         debug_assert!(parts <= total);
 
-        FractionLegacy::of(&Ratio::new(parts, total), Self::HUNDRED)
+        Fraction::of(&Ratio::new(parts, total), Self::HUNDRED)
     }
 
     fn to_ratio(self) -> Ratio<Self> {
@@ -70,11 +70,12 @@ impl Percent100 {
 impl Percent {
     pub fn from_fraction<U>(nominator: U, denominator: U) -> Option<Self>
     where
-        Self: FractionableLegacy<U>,
-        U: FractionUnit,
+        Self: Fractionable<U>,
+        U: FractionUnit + IntoMax<<Self as CommonDoublePrimitive<U>>::CommonDouble>,
     {
-        RationalLegacy::of(&SimpleFraction::new(nominator, denominator), Self::HUNDRED)
+        Rational::of(&SimpleFraction::new(nominator, denominator), Self::HUNDRED)
     }
+
     fn to_fraction(self) -> SimpleFraction<Self> {
         SimpleFraction::new(self, Self::HUNDRED)
     }
@@ -83,7 +84,7 @@ impl Percent {
 impl Fraction<Self> for Percent100 {
     fn of<A>(&self, whole: A) -> A
     where
-        Self: IntoMax<<A as CommonDoublePrimitive<Self>>::CommonDouble>,
+        Self: IntoMax<A::CommonDouble>,
         A: Fractionable<Self>,
     {
         // TODO remove the full syntax when removing the FractionLegacy
@@ -139,15 +140,14 @@ impl TryFrom<Percent> for Percent100 {
 pub(super) mod test {
     use std::fmt::{Debug, Display};
 
-    use currency::test::SubGroupTestC10;
-
     use crate::{
-        coin::{Amount, Coin},
+        coin::Amount,
         fraction::FractionLegacy,
         fractionable::FractionableLegacy,
         percent::{Percent, Percent100},
         ratio::{Ratio, SimpleFraction},
         rational::RationalLegacy,
+        test::coin,
     };
 
     use super::Units;
@@ -170,21 +170,21 @@ pub(super) mod test {
 
     #[test]
     fn from_ratio() {
-        assert_eq!(percent100(750), Percent100::from_ratio(3u32, 4u32));
-        assert_eq!(Percent100::HUNDRED, Percent100::from_ratio(3u32, 3u32));
+        assert_eq!(
+            percent100(750),
+            Percent100::from_ratio(coin::coin1(3), coin::coin1(4))
+        );
         assert_eq!(
             Percent100::HUNDRED,
-            Percent100::from_ratio(
-                Coin::<SubGroupTestC10>::new(Amount::MAX),
-                Coin::<SubGroupTestC10>::new(Amount::MAX)
-            )
+            Percent100::from_ratio(coin::coin1(3), coin::coin1(3))
+        );
+        assert_eq!(
+            Percent100::HUNDRED,
+            Percent100::from_ratio(coin::coin1(Amount::MAX), coin::coin1(Amount::MAX))
         );
         assert_eq!(
             percent100(50),
-            Percent100::from_ratio(
-                Coin::<SubGroupTestC10>::new(1),
-                Coin::<SubGroupTestC10>::new(20)
-            )
+            Percent100::from_ratio(coin::coin1(1), coin::coin1(20))
         );
     }
 
