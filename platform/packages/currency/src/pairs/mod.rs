@@ -1,21 +1,23 @@
 use crate::{CurrencyDTO, CurrencyDef, Group, MemberOf, visit_any::InPoolWith};
 
-pub use self::{find::find_map, member::GroupMember};
+pub use self::find::find;
+pub(crate) use self::visit::{PairedWith, PairedWithList, Visitor};
 
 mod find;
-mod member;
+mod visit;
 
 pub type MaybePairsVisitorResult<V> = Result<<V as PairsVisitor>::Outcome, V>;
 
 /// A group of strong typed [`Currency`]-ies that form with [`self`] valid swap pools on the DEX.
 ///
 /// For each currency *C*, a swap pool ([`self`], *C*`) or (*C*, [`self`]) exists on the Dex.
-///
-/// The collection of pair types are validated statically by the Rust compiler.
-/// Since there is no notion of a 'meta-types', the members of a group cannot be iterated over.
-/// Instead, we deal with their mapped values.
-pub trait PairsGroup {
-    type CommonGroup: Group;
+pub trait PairsGroup
+where
+    Self: Sized,
+{
+    type CommonGroup: Group<TopG = Self::CommonGroup>;
+
+    type PairedWith: PairedWithList<Self>;
 
     fn find_map<FindMapImpl>(f: FindMapImpl) -> Result<FindMapImpl::Outcome, FindMapImpl>
     where

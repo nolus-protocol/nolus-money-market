@@ -4,8 +4,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     CurrencyDTO, CurrencyDef, Definition, Group, GroupFilterMap, GroupFindMap, MemberOf,
-    PairsFindMap, PairsGroup,
-    group::{self, CurrenciesMapping, GroupMember},
+    PairsFindMap, PairsGroup, group,
+    pairs::{self, PairedWith, PairedWithList},
 };
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Serialize, Deserialize)]
@@ -21,11 +21,27 @@ impl CurrencyDef for Stable {
 impl PairsGroup for Stable {
     type CommonGroup = PlatformGroup;
 
-    fn find_map<FindMap>(_f: FindMap) -> Result<FindMap::Outcome, FindMap>
+    type PairedWith = StablePairedWithList;
+
+    fn find_map<FindMap>(find_map: FindMap) -> Result<FindMap::Outcome, FindMap>
     where
         FindMap: PairsFindMap<Pivot = Self>,
     {
-        unreachable!("The 'Stable' platform currency used in pairs resolution!")
+        pairs::find(find_map)
+    }
+}
+
+pub struct StablePairedWithList;
+
+impl<Pivot> PairedWithList<Pivot> for StablePairedWithList
+where
+    Pivot: PairsGroup,
+{
+    fn next<Visitor>() -> Option<PairedWith<Pivot, Visitor>>
+    where
+        Visitor: pairs::Visitor<Pivot>,
+    {
+        unimplemented!("The 'Stable' platform currency used in pairs resolution!")
     }
 }
 
@@ -61,11 +77,27 @@ impl CurrencyDef for Nls {
 impl PairsGroup for Nls {
     type CommonGroup = PlatformGroup;
 
-    fn find_map<FindMap>(_f: FindMap) -> Result<FindMap::Outcome, FindMap>
+    type PairedWith = NlsPairedWithList;
+
+    fn find_map<FindMap>(find_map: FindMap) -> Result<FindMap::Outcome, FindMap>
     where
         FindMap: PairsFindMap<Pivot = Self>,
     {
-        unreachable!("The 'Nls' platform currency used in pairs resolution!")
+        pairs::find(find_map)
+    }
+}
+
+pub struct NlsPairedWithList;
+
+impl<Pivot> PairedWithList<Pivot> for NlsPairedWithList
+where
+    Pivot: PairsGroup,
+{
+    fn next<Visitor>() -> Option<PairedWith<Pivot, Visitor>>
+    where
+        Visitor: pairs::Visitor<Pivot>,
+    {
+        unimplemented!("The 'Nls' platform currency used in pairs resolution!")
     }
 }
 
@@ -73,67 +105,30 @@ impl PairsGroup for Nls {
 pub struct PlatformGroup;
 impl Group for PlatformGroup {
     const DESCR: &'static str = "platform currencies";
+
     type TopG = Self;
 
+    type Members = (Nls, (Stable,));
+
     fn filter_map<FilterMap, FilterMapRef>(
-        f: FilterMapRef,
+        filter_map: FilterMapRef,
     ) -> impl Iterator<Item = FilterMap::Outcome>
     where
         FilterMap: GroupFilterMap<VisitedG = Self>,
-        FilterMapRef: Borrow<FilterMap>,
+        FilterMapRef: Borrow<FilterMap> + Clone,
     {
-        CurrenciesMapping::<_, Item, _, _>::with_filter(f)
+        group::non_recursive_filter_map(filter_map)
     }
 
-    fn find_map<FindMap>(f: FindMap) -> Result<FindMap::Outcome, FindMap>
+    fn find_map<FindMap>(find_map: FindMap) -> Result<FindMap::Outcome, FindMap>
     where
         FindMap: GroupFindMap<TargetG = Self>,
     {
-        group::find_map::<_, Item, _>(f)
+        group::non_recursive_find_map(find_map)
     }
 }
 
 impl MemberOf<Self> for PlatformGroup {}
-
-// ======== START GENERATED CODE =========
-enum Item {
-    Nls(),
-    Stable(),
-}
-
-impl GroupMember<PlatformGroup> for Item {
-    fn first() -> Option<Self> {
-        Some(Self::Nls())
-    }
-
-    fn next(&self) -> Option<Self> {
-        match self {
-            Item::Nls() => Some(Self::Stable()),
-            Item::Stable() => None,
-        }
-    }
-
-    fn filter_map<FilterMap>(&self, filter_map: &FilterMap) -> Option<FilterMap::Outcome>
-    where
-        FilterMap: GroupFilterMap<VisitedG = PlatformGroup>,
-    {
-        match *self {
-            Item::Nls() => filter_map.on::<Nls>(Nls::dto()),
-            Item::Stable() => filter_map.on::<Stable>(Stable::dto()),
-        }
-    }
-
-    fn find_map<FindMap>(&self, find_map: FindMap) -> Result<FindMap::Outcome, FindMap>
-    where
-        FindMap: GroupFindMap<TargetG = PlatformGroup>,
-    {
-        match *self {
-            Item::Nls() => find_map.on::<Nls>(Nls::dto()),
-            Item::Stable() => find_map.on::<Stable>(Stable::dto()),
-        }
-    }
-}
-// ======== END GENERATED CODE =========
 
 #[cfg(test)]
 mod test {
