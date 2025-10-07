@@ -44,7 +44,7 @@ pub trait TryFromMax<Max>
 where
     Self: IntoMax<Max> + Sized,
 {
-    fn try_from(max: Max) -> Option<Self>;
+    fn try_from_max(max: Max) -> Option<Self>;
 }
 
 pub trait FractionableLegacy<U> {

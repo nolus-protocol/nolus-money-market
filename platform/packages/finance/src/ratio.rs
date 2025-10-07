@@ -137,7 +137,7 @@ where
             nominator_max
                 .checked_mul(rhs_max)
                 .map(|product| product.div(denominator_max))
-                .and_then(TryFromMax::try_from)
+                .and_then(TryFromMax::try_from_max)
         }
     }
 }

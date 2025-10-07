@@ -36,7 +36,7 @@ impl IntoMax<U256> for Duration {
 }
 
 impl TryFromMax<U256> for Duration {
-    fn try_from(max: U256) -> Option<Self> {
+    fn try_from_max(max: U256) -> Option<Self> {
         u128::try_from(max)
             .ok()
             .and_then(|u_128| Units::try_from(u_128).ok().map(Self::from_nanos))

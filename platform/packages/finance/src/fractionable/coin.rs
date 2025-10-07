@@ -62,7 +62,7 @@ impl<C> IntoMax<U256> for Coin<C> {
 }
 
 impl<C> TryFromMax<U256> for Coin<C> {
-    fn try_from(max: U256) -> Option<Self> {
+    fn try_from_max(max: U256) -> Option<Self> {
         max.try_into().ok().map(Coin::new)
     }
 }
