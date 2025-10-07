@@ -2,7 +2,7 @@ use bnum::types::U256;
 
 use crate::{
     coin::Coin,
-    fractionable::{IntoMax, ToDoublePrimitive},
+    fractionable::{CommonDoublePrimitive, Fractionable, IntoMax, ToDoublePrimitive, TryFromMax},
     percent::{Units, bound::BoundPercent},
     ratio::RatioLegacy,
 };
@@ -51,9 +51,25 @@ impl<const UPPER_BOUND: Units> ToDoublePrimitive for BoundPercent<UPPER_BOUND> {
     }
 }
 
+impl<C, const UPPER_BOUND: Units> CommonDoublePrimitive<Coin<C>> for BoundPercent<UPPER_BOUND> {
+    type CommonDouble = U256;
+}
+
+impl<C, const UPPER_BOUND: Units> Fractionable<Coin<C>> for BoundPercent<UPPER_BOUND> {}
+
 impl<const UPPER_BOUND: Units> IntoMax<U256> for BoundPercent<UPPER_BOUND> {
     fn into(self) -> U256 {
         self.to_double().into()
+    }
+}
+
+impl<const UPPER_BOUND: Units> TryFromMax<U256> for BoundPercent<UPPER_BOUND> {
+    fn try_from_max(max: U256) -> Option<Self> {
+        u128::try_from(max).ok().and_then(|u_128| {
+            Units::try_from(u_128)
+                .ok()
+                .and_then(|units| Self::try_from(units).ok())
+        })
     }
 }
 
