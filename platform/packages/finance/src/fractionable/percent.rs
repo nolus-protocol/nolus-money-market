@@ -27,22 +27,6 @@ impl<const UPPER_BOUND: Units> FractionableLegacy<Units> for BoundPercent<UPPER_
     }
 }
 
-impl<C, const UPPER_BOUND: Units> FractionableLegacy<Coin<C>> for BoundPercent<UPPER_BOUND> {
-    #[track_caller]
-    fn safe_mul<F>(self, fraction: &F) -> Self
-    where
-        F: RatioLegacy<Coin<C>>,
-    {
-        let p128: u128 = self.units().into();
-        // TODO re-assess the design of Ratio ... and whether it could be > 1
-        let res: Units = p128
-            .safe_mul(fraction)
-            .try_into()
-            .expect("overflow computing a fraction of permille");
-        Self::try_from(res).expect("TODO remove when refactor Fractionable. Resulting permille exceeds BoundPercent upper bound")
-    }
-}
-
 impl<const UPPER_BOUND: Units> ToDoublePrimitive for BoundPercent<UPPER_BOUND> {
     type Double = u64;
 
@@ -126,48 +110,47 @@ mod test {
         }
     }
 
-    mod rational {
+    mod fraction {
 
         use crate::{
-            coin::Coin,
-            fractionable::FractionableLegacy,
-            percent::{Percent, Units},
-            ratio::SimpleFraction,
+            fraction::Fraction,
+            percent::{Percent, Percent100, Units},
+            ratio::{Ratio, SimpleFraction},
+            rational::Rational,
             test::coin,
         };
 
         #[test]
-        fn safe_mul() {
+        fn of() {
             assert_eq!(
                 Percent::from_permille(Units::MAX),
-                FractionableLegacy::<Coin<_>>::safe_mul(
-                    Percent::from_permille(Units::MAX),
-                    &SimpleFraction::new(coin::coin1(u128::MAX), coin::coin1(u128::MAX))
-                )
+                SimpleFraction::new(coin::coin1(u128::MAX), coin::coin1(u128::MAX))
+                    .of(Percent::from_permille(Units::MAX))
+                    .unwrap()
             );
             assert_eq!(
-                Percent::from_percent(20),
-                FractionableLegacy::<Coin<_>>::safe_mul(
-                    Percent::HUNDRED,
-                    &SimpleFraction::new(coin::coin1(1), coin::coin1(5))
-                )
+                Percent::from_permille(1500),
+                Ratio::new(coin::coin1(3), coin::coin1(4)).of(Percent::from_permille(2000))
             );
             assert_eq!(
-                Percent::from_permille(225),
-                FractionableLegacy::<Coin<_>>::safe_mul(
-                    Percent::from_permille(150),
-                    &SimpleFraction::new(coin::coin1(3), coin::coin1(2))
-                )
+                Percent100::from_percent(20),
+                Ratio::new(coin::coin1(1), coin::coin1(5)).of(Percent100::HUNDRED)
+            );
+            assert_eq!(
+                Percent100::from_permille(225),
+                SimpleFraction::new(coin::coin1(3), coin::coin1(2))
+                    .of(Percent100::from_permille(150))
+                    .unwrap()
             );
         }
 
         #[test]
-        #[should_panic]
-        fn safe_mul_overflow() {
-            FractionableLegacy::<Coin<_>>::safe_mul(
-                Percent::from_percent(1),
-                &SimpleFraction::new(coin::coin1(u128::MAX), coin::coin1(1)),
-            );
+        fn of_overflow() {
+            assert!(
+                SimpleFraction::new(coin::coin1(u128::MAX), coin::coin1(1))
+                    .of(Percent::from_percent(1))
+                    .is_none()
+            )
         }
     }
 }
