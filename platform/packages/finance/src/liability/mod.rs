@@ -5,11 +5,11 @@ use serde::{Deserialize, Serialize};
 use crate::{
     duration::Duration,
     error::{Error, Result},
-    fraction::FractionLegacy,
-    fractionable::FractionableLegacy,
-    percent::{Percent, Percent100, Units as PercentUnits},
+    fraction::Fraction,
+    fractionable::{CommonDoublePrimitive, Fractionable, IntoMax},
+    percent::{Percent, Percent100},
     ratio::SimpleFraction,
-    rational::RationalLegacy,
+    rational::Rational,
     zero::Zero,
 };
 
@@ -112,7 +112,9 @@ impl Liability {
 
     pub fn init_borrow_amount<P>(&self, downpayment: P, may_max_ltd: Option<Percent>) -> P
     where
-        P: Copy + FractionableLegacy<PercentUnits> + Ord,
+        P: Copy + Fractionable<Percent100> + Fractionable<Percent> + Ord,
+        Percent100: IntoMax<<P as CommonDoublePrimitive<Percent100>>::CommonDouble>,
+        Percent: IntoMax<<P as CommonDoublePrimitive<Percent>>::CommonDouble>,
     {
         debug_assert!(self.initial > Percent100::ZERO);
         debug_assert!(self.initial < Percent100::HUNDRED);
@@ -133,7 +135,8 @@ impl Liability {
     /// Otherwise, amount_to_liquidate == total_due
     pub fn amount_to_liquidate<P>(&self, lease_amount: P, total_due: P) -> P
     where
-        P: Copy + FractionableLegacy<PercentUnits> + Ord + Sub<Output = P> + Zero,
+        P: Copy + Fractionable<Percent100> + Ord + Sub<Output = P> + Zero,
+        Percent100: IntoMax<<P as CommonDoublePrimitive<Percent100>>::CommonDouble>,
     {
         if total_due < self.max.of(lease_amount) {
             return P::ZERO;
@@ -194,14 +197,15 @@ fn check(invariant: bool, msg: &str) -> Result<()> {
 
 #[cfg(test)]
 mod test {
-    use currency::test::SubGroupTestC10;
+    use currency::test::{SubGroupTestC10, SuperGroupTestC1};
     use sdk::cosmwasm_std::{StdError, from_json};
 
     use crate::{
         coin::{Amount, Coin},
         duration::Duration,
-        fraction::FractionLegacy,
+        fraction::{Fraction, Unit},
         percent::{Percent, Percent100, Units},
+        test::coin,
         zero::Zero,
     };
 
@@ -369,22 +373,47 @@ mod test {
             third_liq_warn: Percent100::from_permille(870),
             recalc_time: Duration::from_secs(20000),
         };
-        let lease_amount: Amount = 100;
+        let lease_amount = Coin::new(100);
         let healthy_amount = Percent100::from_percent(healthy).of(lease_amount);
         let max_amount = Percent100::from_percent(max).of(lease_amount);
-        amount_to_liquidate_int(liability, lease_amount, Amount::ZERO, Amount::ZERO);
-        amount_to_liquidate_int(liability, lease_amount, healthy_amount - 10, Amount::ZERO);
-        amount_to_liquidate_int(liability, lease_amount, healthy_amount - 1, Amount::ZERO);
-        amount_to_liquidate_int(liability, lease_amount, healthy_amount, Amount::ZERO);
-        amount_to_liquidate_int(liability, lease_amount, healthy_amount + 1, Amount::ZERO);
-        amount_to_liquidate_int(liability, lease_amount, max_amount - 1, Amount::ZERO);
-        amount_to_liquidate_int(liability, lease_amount, max_amount, 33);
-        amount_to_liquidate_int(liability, lease_amount, max_amount + 1, 40);
-        amount_to_liquidate_int(liability, lease_amount, max_amount + 8, 86);
-        amount_to_liquidate_int(liability, lease_amount, lease_amount - 1, 93);
+        amount_to_liquidate_int(liability, lease_amount, Coin::ZERO, Coin::ZERO);
+        amount_to_liquidate_int(
+            liability,
+            lease_amount,
+            healthy_amount - coin(10),
+            Coin::ZERO,
+        );
+        amount_to_liquidate_int(
+            liability,
+            lease_amount,
+            healthy_amount - coin(1),
+            Coin::ZERO,
+        );
+        amount_to_liquidate_int(liability, lease_amount, healthy_amount, Coin::ZERO);
+        amount_to_liquidate_int(
+            liability,
+            lease_amount,
+            healthy_amount + coin(1),
+            Coin::ZERO,
+        );
+        amount_to_liquidate_int(liability, lease_amount, max_amount - coin(1), Coin::ZERO);
+        amount_to_liquidate_int(liability, lease_amount, max_amount, coin(33));
+        amount_to_liquidate_int(liability, lease_amount, max_amount + coin(1), coin(40));
+        amount_to_liquidate_int(liability, lease_amount, max_amount + coin(8), coin(86));
+        amount_to_liquidate_int(liability, lease_amount, lease_amount - coin(1), coin(93));
         amount_to_liquidate_int(liability, lease_amount, lease_amount, lease_amount);
-        amount_to_liquidate_int(liability, lease_amount, lease_amount + 1, lease_amount);
-        amount_to_liquidate_int(liability, lease_amount, lease_amount + 10, lease_amount);
+        amount_to_liquidate_int(
+            liability,
+            lease_amount,
+            lease_amount + coin(1),
+            lease_amount,
+        );
+        amount_to_liquidate_int(
+            liability,
+            lease_amount,
+            lease_amount + coin(10),
+            lease_amount,
+        );
     }
 
     #[test]
@@ -415,12 +444,22 @@ mod test {
     }
 
     #[track_caller]
-    fn amount_to_liquidate_int(liability: Liability, lease: Amount, due: Amount, exp: Amount) {
+    fn amount_to_liquidate_int<C>(
+        liability: Liability,
+        lease: Coin<C>,
+        due: Coin<C>,
+        exp: Coin<C>,
+    ) {
         let liq = liability.amount_to_liquidate(lease, due);
         assert_eq!(exp, liq);
         if due.clamp(liability.max.of(lease), lease) == due {
             assert!(
-                liability.healthy.of(lease - exp).abs_diff(due - exp) <= 1,
+                liability
+                    .healthy
+                    .of(lease - exp)
+                    .to_primitive()
+                    .abs_diff((due - exp).to_primitive())
+                    <= 1,
                 "Lease = {lease}, due = {due}, exp = {exp}"
             );
         }
@@ -463,5 +502,10 @@ mod test {
         .init_borrow_amount(downpayment, max_p);
 
         assert_eq!(calculated, Coin::<Currency>::new(exp));
+    }
+
+    // TODO select a better currency
+    fn coin(amount: Amount) -> Coin<SuperGroupTestC1> {
+        coin::coin1(amount)
     }
 }
