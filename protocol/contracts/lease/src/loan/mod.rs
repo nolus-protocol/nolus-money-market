@@ -5,7 +5,7 @@ use finance::{
 };
 use lpp::{
     loan::RepayShares,
-    stub::{loan::LppLoan as LppLoanTrait, LppBatch, LppRef as LppGenericRef},
+    stub::{LppBatch, LppRef as LppGenericRef, loan::LppLoan as LppLoanTrait},
 };
 use platform::{bank::FixedAddressSender, batch::Batch};
 use profit::stub::ProfitRef;
@@ -258,8 +258,8 @@ mod tests {
         loan::RepayShares,
         msg::LoanResponse,
         stub::{
-            loan::{Error as LppLoanError, LppLoan as LppLoanTrait},
             LppBatch,
+            loan::{Error as LppLoanError, LppLoan as LppLoanTrait},
         },
     };
     use platform::bank::FixedAddressSender;
@@ -288,13 +288,13 @@ mod tests {
         use sdk::cosmwasm_std::{Addr, Timestamp};
 
         use crate::loan::{
-            repay::Receipt as RepayReceipt,
-            tests::{create_loan_custom, lpn_coin, profit_stub, PROFIT_ADDR},
             Loan, Overdue, State,
+            repay::Receipt as RepayReceipt,
+            tests::{PROFIT_ADDR, create_loan_custom, lpn_coin, profit_stub},
         };
 
         use super::{
-            create_loan, LppLoanLocal, LEASE_START, LOAN_INTEREST_RATE, MARGIN_INTEREST_RATE,
+            LEASE_START, LOAN_INTEREST_RATE, LppLoanLocal, MARGIN_INTEREST_RATE, create_loan,
         };
 
         #[test]
@@ -1057,8 +1057,8 @@ mod tests {
         use sdk::cosmwasm_std::Timestamp;
 
         use crate::loan::{
-            tests::{create_loan_custom, lpn_coin, LppLoanLocal},
             Overdue, State,
+            tests::{LppLoanLocal, create_loan_custom, lpn_coin},
         };
 
         use super::{LEASE_START, MARGIN_INTEREST_RATE};

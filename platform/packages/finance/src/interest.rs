@@ -56,7 +56,8 @@ mod tests {
         coin::{Amount, Coin},
         duration::Duration,
         fraction::FractionLegacy,
-        percent::Percent100, zero::Zero,
+        percent::Percent100,
+        zero::Zero,
     };
 
     type MyCoin = Coin<SubGroupTestC10>;
