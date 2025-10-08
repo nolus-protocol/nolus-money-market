@@ -7,7 +7,7 @@ pub type NeutronResult<T> = Result<T, NeutronError>;
 #[derive(Error, Debug, PartialEq)]
 pub enum NeutronError {
     #[error("{0}")]
-    Std(#[from] StdError),
+    Std(String),
 
     #[error("{0}")]
     Fmt(#[from] std::fmt::Error),
@@ -53,6 +53,12 @@ pub enum NeutronError {
 
     #[error("Can't deconstruct account denom balance key: {0}")]
     AccountDenomBalanceKeyDeconstructionError(String),
+}
+
+impl From<StdError> for NeutronError {
+    fn from(value: StdError) -> Self {
+        Self::Std(value.to_string())
+    }
 }
 
 impl From<serde_json_wasm::de::Error> for NeutronError {

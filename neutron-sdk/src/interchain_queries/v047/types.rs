@@ -123,7 +123,7 @@ impl KVReconstruct for Delegations {
                 .checked_mul(validator_tokens)?
                 .div(delegator_shares)
                 .atomics()
-                .div(Uint256::from_u128(DECIMAL_FRACTIONAL));
+                .div(Uint256::from(DECIMAL_FRACTIONAL));
 
             delegation_std.amount =
                 Coin::new(uint256_to_u128(delegated_tokens)?, &params.bond_denom);

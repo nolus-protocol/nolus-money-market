@@ -305,7 +305,7 @@ impl NeutronMsg {
                         query_type: QueryType::TX.into(),
                         keys: vec![],
                         transactions_filter: to_string(&transactions_filters)
-                            .map_err(|e| StdError::generic_err(e.to_string()))?,
+                            .map_err(|e| StdError::msg(e.to_string()))?,
                         connection_id,
                         update_period,
                     }
@@ -337,7 +337,7 @@ impl NeutronMsg {
                     } else {
                         Some(
                             to_string(&filters)
-                                .map_err(|e| StdError::generic_err(e.to_string()))?,
+                                .map_err(|e| StdError::msg(e.to_string()))?,
                         )
                     }
                 }
