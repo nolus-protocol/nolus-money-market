@@ -226,7 +226,7 @@ mod test_invariant {
             SuperGroup, SuperGroupTestC1, SuperGroupTestC2, SuperGroupTestC4, SuperGroupTestC5,
         },
     };
-    use sdk::cosmwasm_std::{StdError as CWError, StdResult as CWResult, from_json};
+    use sdk::cosmwasm_std::{StdErrorKind as CwErrorKind, StdResult as CWResult, from_json};
 
     use crate::test::coin;
     use crate::{
@@ -379,11 +379,8 @@ mod test_invariant {
     {
         assert!(matches!(
             r,
-            Err(CWError::ParseErr {
-                target_type,
-                msg: real_msg,
-                backtrace: _,
-            }) if target_type.contains("PriceDTO") && real_msg.contains(msg)
+            Err(error) if error.kind() == CwErrorKind::Serialization &&
+                format!("{error}").contains(msg)
         ));
     }
 

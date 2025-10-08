@@ -213,7 +213,7 @@ fn to_json_binary<T>(data: &T) -> Result<Binary, PriceCurrencies>
 where
     T: Serialize + ?Sized,
 {
-    cosmwasm_std::to_json_binary(data).map_err(Error::ConvertToBinary)
+    cosmwasm_std::to_json_binary(data).map_err(Error::convert_to_binary)
 }
 
 #[cfg(all(feature = "internal.test.contract", test))]
@@ -229,7 +229,7 @@ mod tests {
         price::{self, Price},
     };
     use platform::tests as platform_tests;
-    use sdk::cosmwasm_std::{self, testing::mock_env};
+    use sdk::cosmwasm_std::{self, StdError as CwError, testing::mock_env};
 
     use crate::{
         api::{Alarm, Config, ExecuteMsg, QueryMsg, SwapLeg, swap::SwapTarget},
@@ -326,8 +326,10 @@ mod tests {
     #[test]
     fn release() {
         assert_eq!(
-            Ok(QueryMsg::<PaymentGroup>::ProtocolPackageRelease {}),
-            platform_tests::ser_de(&versioning::query::ProtocolPackage::Release {}),
+            Ok(&QueryMsg::<PaymentGroup>::ProtocolPackageRelease {}),
+            platform_tests::ser_de(&versioning::query::ProtocolPackage::Release {})
+                .as_ref()
+                .map_err(CwError::to_string),
         );
     }
 

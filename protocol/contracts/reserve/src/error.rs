@@ -5,7 +5,7 @@ use sdk::cosmwasm_std::StdError;
 #[derive(Error, Debug, PartialEq)]
 pub enum Error {
     #[error("[Reserve] [Std] {0}")]
-    Std(#[from] StdError),
+    Std(String),
 
     #[error("[Reserve] {0}")]
     Finance(#[from] finance::error::Error),
@@ -24,6 +24,12 @@ pub enum Error {
 
     #[error("[Reserve] Insufficient balance")]
     InsufficientBalance,
+}
+
+impl From<StdError> for Error {
+    fn from(value: StdError) -> Self {
+        Self::Std(value.to_string())
+    }
 }
 
 pub type Result<T> = std::result::Result<T, Error>;

@@ -38,7 +38,7 @@ impl<'q> CosmwasmValidator<'q> {
                 }
                 .into(),
             )
-            .map_err(Error::CosmWasmQueryContractInfo)
+            .map_err(Error::cosm_wasm_query_contract_info)
     }
 }
 
@@ -46,7 +46,7 @@ impl Validator for CosmwasmValidator<'_> {
     fn check_code(&self, id: CodeId) -> Result<CodeId> {
         self.0
             .query(&WasmQuery::CodeInfo { code_id: id }.into())
-            .map_err(Error::CosmWasmQueryCodeInfo)
+            .map_err(Error::cosm_wasm_query_code_info)
             .inspect(|response: &CodeInfoResponse| assert_eq!(id, response.code_id))
             .map(|_| id)
     }
@@ -182,6 +182,7 @@ pub mod testing {
                 testing::user("user"),
                 None,
                 false,
+                None,
                 None,
             ))
             .expect("serialization succeedeed"),

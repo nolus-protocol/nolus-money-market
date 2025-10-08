@@ -38,6 +38,7 @@ mod test {
     use finance::{duration::Duration, liability::Liability, percent::Percent100};
     use lease::api::{limits::MaxSlippages, open::PositionSpecDTO};
     use platform::tests as platform_tests;
+    use sdk::cosmwasm_std::StdError as CwError;
 
     use crate::{msg::NewConfig as ValidatedConfig, tests};
 
@@ -67,13 +68,15 @@ mod test {
         };
 
         assert_eq!(
-            Ok(validated(spec, max_slippages)),
+            Ok(&validated(spec, max_slippages)),
             platform_tests::ser_de(&NonvalidatedConfig {
                 lease_interest_rate_margin: INTEREST_RATE_MARGIN,
                 lease_position_spec: spec,
                 lease_due_period: DUE_PERIOD,
                 lease_max_slippages: max_slippages,
             })
+            .as_ref()
+            .map_err(CwError::to_string)
         );
     }
 

@@ -21,7 +21,7 @@ pub use crate::position::PositionError;
 #[derive(Error, Debug, PartialEq)]
 pub enum ContractError {
     #[error("[Lease] [Std] {0}")]
-    Std(#[from] StdError),
+    Std(String),
 
     #[error("[Lease] {0}")]
     Unauthorized(#[from] access_control::error::Error),
@@ -92,11 +92,11 @@ pub enum ContractError {
     #[error("[Lease] Inconsistency not detected")]
     InconsistencyNotDetected(),
 
-    #[error("[Lease] Failed to query Position Limits")]
-    PositionLimitsQuery(StdError),
+    #[error("[Lease] Failed to query Position Limits: {0}")]
+    PositionLimitsQuery(String),
 
-    #[error("[Lease] Failed to query Access Check")]
-    CheckAccessQuery(StdError),
+    #[error("[Lease] Failed to query Access Check: {0}")]
+    CheckAccessQuery(String),
 }
 
 impl ContractError {
@@ -113,6 +113,20 @@ impl ContractError {
         } else {
             Ok(())
         }
+    }
+
+    pub(crate) fn position_limits_query(error: StdError) -> Self {
+        Self::PositionLimitsQuery(error.to_string())
+    }
+
+    pub(crate) fn check_access_query(error: StdError) -> Self {
+        Self::CheckAccessQuery(error.to_string())
+    }
+}
+
+impl From<StdError> for ContractError {
+    fn from(value: StdError) -> Self {
+        Self::Std(value.to_string())
     }
 }
 

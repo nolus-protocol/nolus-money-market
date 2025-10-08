@@ -54,7 +54,7 @@ where
                 error::failed_to_fetch_price(
                     C::dto(),
                     Self::QuoteC::dto(),
-                    StdError::generic_err("Test failing Oracle::price_of()"),
+                    StdError::msg("Test failing Oracle::price_of()"),
                 )
             })
     }

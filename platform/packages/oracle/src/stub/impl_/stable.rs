@@ -47,7 +47,7 @@ impl<'a> PriceStub<'a> {
                 oracle_addr.clone(),
                 &StableCurrencyQueryMsg::<PlatformGroup>::StableCurrency {},
             )
-            .map_err(Error::StubConfigQuery)
+            .map_err(Error::stub_config_query)
             .map(|stable_ticker: SymbolOwned| Self {
                 source: PriceSource::new(oracle_addr, stable_ticker),
                 querier,

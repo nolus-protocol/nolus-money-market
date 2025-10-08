@@ -38,7 +38,7 @@ fn query_release(
 ) -> ContractResult<ProtocolPackageRelease> {
     querier
         .query_wasm_smart(instance, &ProtocolPackageRelease::VERSION_QUERY)
-        .map_err(ContractError::QueryLeasePackage)
+        .map_err(ContractError::query_lease_package)
 }
 
 #[cfg(all(feature = "internal.test.testing", test))]

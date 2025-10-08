@@ -104,7 +104,7 @@ where
     {
         querier
             .query_wasm_smart(addr.clone(), &CurrencyReq::currency::<QuoteG>())
-            .map_err(Error::StubConfigQuery)
+            .map_err(Error::stub_config_query)
             .and_then(|quote_c: CurrencyDTO<QuoteG>| {
                 quote_c
                     .of_currency(QuoteC::dto())

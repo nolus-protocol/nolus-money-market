@@ -298,7 +298,7 @@ fn to_json_binary<T>(data: &T) -> Result<Binary>
 where
     T: Serialize,
 {
-    cosmwasm_std::to_json_binary(data).map_err(ContractError::ConvertToBinary)
+    cosmwasm_std::to_json_binary(data).map_err(ContractError::convert_to_binary)
 }
 
 fn to_stable(

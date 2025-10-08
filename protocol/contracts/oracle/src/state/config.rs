@@ -22,7 +22,7 @@ impl Config {
     {
         Self::STORAGE
             .save(storage, &self)
-            .map_err(Error::<PriceG>::StoreConfig)
+            .map_err(Error::<PriceG>::store_config)
     }
 
     pub fn load<PriceG>(storage: &dyn Storage) -> Result<Self, PriceG>
@@ -31,7 +31,7 @@ impl Config {
     {
         Self::STORAGE
             .load(storage)
-            .map_err(Error::<PriceG>::LoadConfig)
+            .map_err(Error::<PriceG>::load_config)
     }
 
     pub fn update<PriceG>(
@@ -47,6 +47,6 @@ impl Config {
                 Ok(c)
             })
             .map(mem::drop)
-            .map_err(Error::<PriceG>::UpdateConfig)
+            .map_err(Error::<PriceG>::update_config)
     }
 }

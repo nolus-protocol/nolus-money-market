@@ -160,7 +160,7 @@ impl Batch {
         M: Serialize + ?Sized,
     {
         to_json_binary(msg)
-            .map_err(Error::Serialization)
+            .map_err(Error::serialization)
             .map(|raw_msg| WasmMsg::Execute {
                 contract_addr: addr.into_string(),
                 funds: vec![],
@@ -174,7 +174,7 @@ impl Batch {
         C: CurrencyDef,
     {
         to_json_binary(msg)
-            .map_err(Error::Serialization)
+            .map_err(Error::serialization)
             .map(|msg| WasmMsg::Execute {
                 contract_addr: addr.into_string(),
                 funds: if let Some(funds) = funds {
@@ -197,7 +197,7 @@ impl Batch {
         M: Serialize + ?Sized,
     {
         to_json_binary(msg)
-            .map_err(Error::Serialization)
+            .map_err(Error::serialization)
             .map(|msg| WasmMsg::Instantiate {
                 admin: admin.map(Addr::into_string),
                 code_id: code.into(),
@@ -212,7 +212,7 @@ impl Batch {
         M: Serialize + ?Sized,
     {
         to_json_binary(msg)
-            .map_err(Error::Serialization)
+            .map_err(Error::serialization)
             .map(|msg| WasmMsg::Migrate {
                 contract_addr: addr.into_string(),
                 new_code_id: new_code.into(),

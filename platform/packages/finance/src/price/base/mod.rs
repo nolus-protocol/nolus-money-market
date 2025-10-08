@@ -199,7 +199,7 @@ mod test_invariant {
         CurrencyDef, Group, MemberOf, SymbolStatic,
         test::{SubGroup, SubGroupTestC10, SuperGroup, SuperGroupTestC1, SuperGroupTestC2},
     };
-    use sdk::cosmwasm_std::{StdError, StdResult, from_json, to_json_string};
+    use sdk::cosmwasm_std::{StdErrorKind, StdResult, from_json, to_json_string};
 
     use crate::{coin::Coin, test::coin};
 
@@ -287,11 +287,8 @@ mod test_invariant {
     {
         assert!(matches!(
             r,
-            Err(StdError::ParseErr {
-                target_type,
-                msg: real_msg,
-                backtrace: _,
-            }) if target_type.contains("BasePrice") && real_msg.contains(msg)
+            Err(error) if error.kind() == StdErrorKind::Serialization &&
+                format!("{error}").contains(msg)
         ));
     }
 

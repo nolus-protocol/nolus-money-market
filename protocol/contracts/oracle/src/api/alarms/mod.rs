@@ -1,6 +1,7 @@
 use std::result::Result as StdResult;
 
 use serde::{Deserialize, Serialize};
+use thiserror::Error;
 
 use currency::{CurrencyDef, Group, MemberOf};
 use finance::{
@@ -13,7 +14,6 @@ use finance::{
         },
     },
 };
-use thiserror::Error;
 
 use sdk::cosmwasm_std::StdError as CosmWasmError;
 
@@ -37,13 +37,19 @@ pub type Result<T> = StdResult<T, Error>;
 #[derive(Error, Debug, PartialEq)]
 pub enum Error {
     #[error("[Oracle; Stub] Failed to add alarm! Cause: {0}")]
-    StubAddAlarm(CosmWasmError),
+    StubAddAlarm(String),
 
     #[error("[PriceAlarms] {0}")]
     FinanceError(#[from] error::Error),
 
     #[error("[PriceAlarms] {0}")]
     InvariantBroken(&'static str),
+}
+
+impl Error {
+    pub(crate) fn stub_add_alarm(error: CosmWasmError) -> Self {
+        Self::StubAddAlarm(error.to_string())
+    }
 }
 
 #[derive(Serialize, Deserialize, PartialEq, Eq)]
@@ -180,7 +186,7 @@ mod test {
         coin::{Coin, CoinDTO},
         price::base::BasePrice,
     };
-    use sdk::cosmwasm_std::{StdError, from_json, to_json_vec};
+    use sdk::cosmwasm_std::{StdError, StdErrorKind, from_json, to_json_vec};
 
     use super::Alarm;
 
@@ -206,8 +212,10 @@ mod test {
     #[test]
     fn below_price_ok() {
         let exp_price = BasePriceTest::new(Coin::<LeaseC2>::new(10).into(), Coin::<Lpn>::new(10));
-        let exp_res = Ok(Alarm::new(exp_price, None));
-        assert_eq!(exp_res, from_below(exp_price));
+        assert_eq!(
+            Ok(&Alarm::new(exp_price, None)),
+            from_below(exp_price).as_ref().map_err(StdError::to_string)
+        );
     }
 
     #[test]
@@ -323,14 +331,10 @@ mod test {
         QuoteC::Group: MemberOf<QuoteG> + MemberOf<G::TopG>,
         QuoteG: Group,
     {
-        assert!(r.is_err());
         assert!(matches!(
             r,
-            Err(StdError::ParseErr{
-                target_type,
-                msg: real_msg,
-                backtrace:_,
-            }) if target_type.contains("Alarm") && real_msg.contains(msg)
+            Err(error) if error.kind() == StdErrorKind::Serialization &&
+                format!("{error}").contains(msg)
         ));
     }
 

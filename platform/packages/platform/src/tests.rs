@@ -50,5 +50,12 @@ pub fn assert_ser_string<T>(obj: &T, expected: &str)
 where
     T: Serialize,
 {
-    assert_eq!(Ok(expected), cosmwasm_std::to_json_string(obj).as_deref())
+    use sdk::cosmwasm_std::StdError as CwError;
+
+    assert_eq!(
+        Ok(expected),
+        cosmwasm_std::to_json_string(obj)
+            .as_deref()
+            .map_err(CwError::to_string)
+    )
 }

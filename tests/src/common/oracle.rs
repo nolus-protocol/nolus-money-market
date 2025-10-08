@@ -90,7 +90,7 @@ pub(crate) fn mock_query(
                     prices: vec![price.into()],
                 },
             )
-            .map_err(Error::ConvertToBinary)
+            .map_err(Error::convert_to_binary)
         }
         _ => query(deps, env, msg),
     }

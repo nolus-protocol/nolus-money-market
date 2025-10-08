@@ -35,25 +35,24 @@ pub enum Error {
     Finance(#[from] finance::error::Error),
 
     #[error("[Platform] [Std] An error occured while querying code info: {0}")]
-    CosmWasmQueryCodeInfo(StdError),
+    CosmWasmQueryCodeInfo(String),
 
     #[error("[Platform] [Std] An error occured while querying contract info: {0}")]
-    CosmWasmQueryContractInfo(StdError),
+    CosmWasmQueryContractInfo(String),
+
+    #[error("[Platform] [Std] An error occured while querying a currency balance: {0}; Error: {1}")]
+    CosmWasmAddressInvalid(String, String),
 
     #[error("[Platform] [Std] An error occured while querying a currency balance: {0}")]
-    CosmWasmAddressInvalid(String, StdError),
+    CosmWasmQueryBalance(String),
 
-    #[error("[Platform] [Std] An error occured while querying a currency balance: {0}")]
-    CosmWasmQueryBalance(StdError),
-
-    #[error("[Platform] [Std] An error occured while querying all balances: {0}")]
-    CosmWasmQueryAllBalances(StdError),
-
+    // #[error("[Platform] [Std] An error occured while querying all balances: {0}")]
+    // CosmWasmQueryAllBalances(String),
     #[error("[Platform] [Std] An error occured on data serialization: {0}")]
-    Serialization(StdError),
+    Serialization(String),
 
     #[error("[Platform] [Std] An error occured on data deserialization: {0}")]
-    Deserialization(StdError),
+    Deserialization(String),
 
     #[error("[ICA] Invalid ICA host account")]
     InvalidICAHostAccount(),
@@ -69,6 +68,36 @@ pub enum Error {
 
     #[error("[Platform] Reply is empty!")]
     EmptyReply(),
+}
+
+impl Error {
+    pub(crate) fn cosm_wasm_query_code_info(error: StdError) -> Self {
+        Self::CosmWasmQueryCodeInfo(error.to_string())
+    }
+
+    pub(crate) fn cosm_wasm_query_contract_info(error: StdError) -> Self {
+        Self::CosmWasmQueryContractInfo(error.to_string())
+    }
+
+    pub(crate) fn cosm_wasm_address_invalid(address: String, error: StdError) -> Self {
+        Self::CosmWasmAddressInvalid(address, error.to_string())
+    }
+
+    pub(crate) fn cosm_wasm_query_balance(error: StdError) -> Self {
+        Self::CosmWasmQueryBalance(error.to_string())
+    }
+
+    // pub(crate) fn cosm_wasm_query_all_balances(error: StdError) -> Self {
+    //     Self::CosmWasmQueryAllBalances(error.to_string())
+    // }
+
+    pub(crate) fn serialization(error: StdError) -> Self {
+        Self::Serialization(error.to_string())
+    }
+
+    pub(crate) fn deserialization(error: StdError) -> Self {
+        Self::Deserialization(error.to_string())
+    }
 }
 
 impl Error {

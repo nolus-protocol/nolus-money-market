@@ -48,7 +48,7 @@ where
     fn next(&mut self) -> Option<Self::Item> {
         self.0.next().map(|res| {
             res.map(|pair| pair.0)
-                .map_err(AlarmError::IteratorLoadFailed)
+                .map_err(AlarmError::iterator_load_failed)
         })
     }
 }
@@ -174,7 +174,7 @@ where
             Ok(false) => Err(AlarmError::NonEmptyAlarmsInDeliveryQueue(String::from(
                 "Assertion requested",
             ))),
-            Err(error) => Err(AlarmError::InDeliveryIsEmptyFailed(error)),
+            Err(error) => Err(AlarmError::in_delivery_is_empty_failed(error)),
         }
     }
 
@@ -234,13 +234,13 @@ where
     pub fn remove_above_or_equal(&mut self, subscriber: Addr) -> Result<(), AlarmError> {
         self.alarms_above_or_equal
             .remove(self.storage.deref_mut(), subscriber)
-            .map_err(AlarmError::RemoveAboveOrEqual)
+            .map_err(AlarmError::remove_above_or_equal)
     }
 
     pub fn remove_all(&mut self, subscriber: Addr) -> Result<(), AlarmError> {
         self.alarms_below
             .remove(self.storage.deref_mut(), subscriber.clone())
-            .map_err(AlarmError::RemoveBelow)
+            .map_err(AlarmError::remove_below)
             .and_then(|()| self.remove_above_or_equal(subscriber))
     }
 
@@ -248,7 +248,7 @@ where
         let below: NormalizedPrice<G> = self
             .alarms_below
             .load(self.storage.deref(), subscriber.clone())
-            .map_err(AlarmError::InDeliveryLoadBelow)?;
+            .map_err(AlarmError::in_delivery_load_below)?;
 
         self.alarms_below
             .replace(
@@ -257,12 +257,12 @@ where
                 None,
                 Some(&below),
             )
-            .map_err(AlarmError::InDeliveryRemoveBelow)?;
+            .map_err(AlarmError::in_delivery_remove_below)?;
 
         let above: Option<NormalizedPrice<G>> = self
             .alarms_above_or_equal
             .may_load(self.storage.deref(), subscriber.clone())
-            .map_err(AlarmError::InDeliveryLoadAboveOrEqual)?;
+            .map_err(AlarmError::in_delivery_load_above_or_equal)?;
 
         if let Some(above) = &above {
             self.alarms_above_or_equal
@@ -272,7 +272,7 @@ where
                     None,
                     Some(above),
                 )
-                .map_err(AlarmError::InDeliveryRemoveAboveOrEqual)?;
+                .map_err(AlarmError::in_delivery_remove_above_or_equal)?;
         }
 
         self.in_delivery
@@ -284,12 +284,12 @@ where
                     above,
                 },
             )
-            .map_err(AlarmError::InDeliveryAppend)
+            .map_err(AlarmError::in_delivery_append)
     }
 
     pub fn last_delivered(&mut self) -> Result<(), AlarmError> {
         self.pop_front_in_delivery(
-            AlarmError::LastDeliveredRemove,
+            AlarmError::last_delivered_remove,
             "Received success reply status",
         )
         .map(|_: AlarmWithSubscriber<G>| ())
@@ -297,7 +297,7 @@ where
 
     pub fn last_failed(&mut self) -> Result<(), AlarmError> {
         self.pop_front_in_delivery(
-            AlarmError::LastFailedRemove,
+            AlarmError::last_failed_remove,
             "Received failure reply status",
         )
         .and_then(|alarm: AlarmWithSubscriber<G>| {
@@ -340,7 +340,7 @@ where
             &self.alarms_below,
             subscriber,
             alarm,
-            AlarmError::AddAlarmStoreBelow,
+            AlarmError::add_alarm_store_below,
         )
     }
 
@@ -354,7 +354,7 @@ where
             &self.alarms_above_or_equal,
             subscriber,
             alarm,
-            AlarmError::AddAlarmStoreAboveOrEqual,
+            AlarmError::add_alarm_store_above_or_equal,
         )
     }
 

@@ -89,6 +89,7 @@ mod test {
         test::SuperGroupTestC5,
     };
     use platform::tests as platform_tests;
+    use sdk::cosmwasm_std::StdError as CwError;
 
     use crate::{
         coin::{Amount, Coin as GenericCoin},
@@ -106,7 +107,7 @@ mod test {
     #[test]
     fn dto_to_type() {
         assert_eq!(
-            Ok(Price::<PlatformGroup, Stable>::test_new::<BaseC, _>(
+            Ok(&Price::<PlatformGroup, Stable>::test_new::<BaseC, _>(
                 AMOUNT,
                 AMOUNT_QUOTE,
                 ExternalQuoteC::ticker()
@@ -114,7 +115,9 @@ mod test {
             platform_tests::ser_de(&BasePrice::new(
                 GenericCoin::<BaseC>::new(AMOUNT).into(),
                 GenericCoin::<ExternalQuoteC>::new(AMOUNT_QUOTE)
-            )),
+            ))
+            .as_ref()
+            .map_err(CwError::to_string),
         );
     }
 

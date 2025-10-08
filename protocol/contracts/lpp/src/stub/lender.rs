@@ -27,7 +27,7 @@ where
 #[derive(Error, Debug, PartialEq)]
 pub enum Error {
     #[error("[Lpp][Lender] [Std] {0}")]
-    Std(StdError),
+    Std(String),
 
     #[error("[Lpp][Lender] {0}")]
     Platform(platform::error::Error),
@@ -37,6 +37,12 @@ pub enum Error {
 
     #[error("[Lpp][Lender] The loan does not exist")]
     NoLoan {},
+}
+
+impl Error {
+    pub(crate) fn std(error: StdError) -> Self {
+        Self::Std(error.to_string())
+    }
 }
 
 pub trait WithLppLender<Lpn> {
@@ -102,7 +108,7 @@ where
         };
         self.querier
             .query_wasm_smart(self.id(), &msg)
-            .map_err(Error::Std)
+            .map_err(Error::std)
     }
 }
 

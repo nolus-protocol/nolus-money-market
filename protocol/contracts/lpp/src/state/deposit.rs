@@ -49,7 +49,7 @@ impl Deposit {
 
     pub fn load(storage: &dyn Storage, addr: Addr, total_rewards: Index) -> Result<Self> {
         Self::may_load(storage, addr.clone(), total_rewards)
-            .and_then(|may_deposit| may_deposit.ok_or_else(|| ContractError::NoDeposit {}))
+            .and_then(|may_deposit| may_deposit.ok_or(ContractError::NoDeposit {}))
     }
 
     pub fn iter(

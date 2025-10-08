@@ -80,7 +80,7 @@ where
 
 pub fn parse_register_response(response: &str) -> Result<HostAccount> {
     sdk::cosmwasm_std::from_json::<OpenAckVersion>(response)
-        .map_err(Error::Deserialization)
+        .map_err(Error::deserialization)
         .and_then(|open_ack| open_ack.address.try_into())
 }
 

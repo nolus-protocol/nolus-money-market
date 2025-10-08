@@ -5,7 +5,7 @@ use currency::{
     MemberOf, SingleVisitor, Symbol, error::Error as CurrencyError,
 };
 use finance::coin::{Amount, Coin, CoinDTO, WithCoin};
-use sdk::cosmwasm_std::Coin as CosmWasmCoin;
+use sdk::cosmwasm_std::{Coin as CosmWasmCoin, Uint128 as CwUint128};
 
 use crate::{error::Error, result::Result};
 
@@ -153,7 +153,11 @@ where
 {
     debug_assert_eq!(CDef::dto().definition().bank_symbol, coin.denom);
     assert!(currency::equal::<COut, CDef>());
-    Coin::new(coin.amount.into())
+    Coin::new(
+        CwUint128::try_from(coin.amount)
+            .expect("Amount should fit in a 128-bit unsigned integer!")
+            .into(),
+    )
 }
 
 #[cfg(test)]

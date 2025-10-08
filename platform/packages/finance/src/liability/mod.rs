@@ -195,7 +195,7 @@ fn check(invariant: bool, msg: &str) -> Result<()> {
 #[cfg(test)]
 mod test {
     use currency::test::SubGroupTestC10;
-    use sdk::cosmwasm_std::{StdError, from_json};
+    use sdk::cosmwasm_std::{StdError, StdErrorKind, from_json};
 
     use crate::{
         coin::{Amount, Coin},
@@ -245,28 +245,30 @@ mod test {
 
     #[test]
     fn new_overflow_percent() {
-        const ERR_MSG: &str = "Invalid number";
+        const INT_ERR_MSG: &str = "invalid value: integer ";
+
+        const FLOAT_ERR_MSG: &str = "invalid type: floating point ";
 
         assert_load_err(br#"{"initial":4294967296,"healthy":10,"first_liq_warn":11,"second_liq_warn":12,"third_liq_warn":13,
-                        "max":14,"recalc_time":3600000000000}"#, ERR_MSG); // u32::MAX + 1
+                        "max":14,"recalc_time":3600000000000}"#, INT_ERR_MSG); // u32::MAX + 1
 
         assert_load_err(br#"{"initial":10,"healthy":4294967296,"first_liq_warn":11,"second_liq_warn":12,"third_liq_warn":13,
-                        "max":14,"recalc_time":3600000000000}"#, ERR_MSG); // u32::MAX + 1
+                        "max":14,"recalc_time":3600000000000}"#, INT_ERR_MSG); // u32::MAX + 1
 
         assert_load_err(br#"{"initial":10,"healthy":10,"first_liq_warn":4294967296,"second_liq_warn":12,"third_liq_warn":13,
-                        "max":14,"recalc_time":3600000000000}"#, ERR_MSG); // u32::MAX + 1
+                        "max":14,"recalc_time":3600000000000}"#, INT_ERR_MSG); // u32::MAX + 1
 
         assert_load_err(br#"{"initial":10,"healthy":10,"first_liq_warn":11,"second_liq_warn":4294967296,"third_liq_warn":13,
-                        "max":14,"recalc_time":3600000000000}"#, ERR_MSG); // u32::MAX + 1
+                        "max":14,"recalc_time":3600000000000}"#, INT_ERR_MSG); // u32::MAX + 1
 
         assert_load_err(br#"{"initial":10,"healthy":10,"first_liq_warn":11,"second_liq_warn":12,"third_liq_warn":4294967296,
-                        "max":14,"recalc_time":3600000000000}"#, ERR_MSG); // u32::MAX + 1
+                        "max":14,"recalc_time":3600000000000}"#, INT_ERR_MSG); // u32::MAX + 1
 
         assert_load_err(br#"{"initial":10,"healthy":10,"first_liq_warn":11,"second_liq_warn":12,"third_liq_warn":13,
-                        "max":4294967296,"recalc_time":3600000000000}"#, ERR_MSG); // u32::MAX + 1
+                        "max":4294967296,"recalc_time":3600000000000}"#, INT_ERR_MSG); // u32::MAX + 1
 
         assert_load_err(br#"{"initial":10,"healthy":10,"first_liq_warn":11,"second_liq_warn":12,"third_liq_warn":13,
-                        "max":14,"recalc_time":18446744073709551616}"#, ERR_MSG);
+                        "max":14,"recalc_time":18446744073709551616}"#, FLOAT_ERR_MSG);
         // u64::MAX + 1
     }
 
@@ -427,18 +429,20 @@ mod test {
     }
 
     fn assert_load_ok(exp: Liability, json: &[u8]) {
-        assert_eq!(Ok(exp), from_json::<Liability>(json));
+        assert_eq!(
+            Ok(&exp),
+            from_json::<Liability>(json)
+                .as_ref()
+                .map_err(StdError::to_string)
+        );
     }
 
     #[track_caller]
     fn assert_load_err(json: &[u8], msg: &str) {
         assert!(matches!(
             from_json::<Liability>(json),
-            Err(StdError::ParseErr {
-                target_type,
-                msg: real_msg,
-                backtrace: _
-            }) if target_type.contains("Liability") && real_msg.contains(msg)
+            Err(error) if error.kind() == StdErrorKind::Serialization &&
+                format!("{error}").contains(msg)
         ));
     }
 

@@ -39,7 +39,7 @@ where
     M: Into<MessageResponse>,
 {
     to_json_binary(&response)
-        .map_err(Error::Serialization)
+        .map_err(Error::serialization)
         .map_err(Into::into)
         .map(|resp_bin| response_only_messages(messages).set_data(resp_bin))
 }

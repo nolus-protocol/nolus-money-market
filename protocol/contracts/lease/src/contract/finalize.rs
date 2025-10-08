@@ -43,7 +43,7 @@ impl LeasesRef {
         let query = PositionLimits::MaxSlippages {};
         querier
             .query_wasm_smart(self.addr.clone(), &query)
-            .map_err(ContractError::PositionLimitsQuery)
+            .map_err(ContractError::position_limits_query)
     }
 
     pub(super) fn check_access(
@@ -54,7 +54,7 @@ impl LeasesRef {
         let query = AccessCheck::AnomalyResolution { by: caller };
         querier
             .query_wasm_smart(self.addr.clone(), &query)
-            .map_err(ContractError::CheckAccessQuery)
+            .map_err(ContractError::check_access_query)
             .and_then(|access: AccessGranted| match access {
                 AccessGranted::No => Err(ContractError::Unauthorized(
                     access_control::error::Error::Unauthorized {},

@@ -74,7 +74,7 @@ impl<'a> BankView<'a> {
     {
         self.querier
             .query_balance(self.account, currency.definition().bank_symbol)
-            .map_err(Error::CosmWasmQueryBalance)
+            .map_err(Error::cosm_wasm_query_balance)
     }
 }
 

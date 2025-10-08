@@ -8,7 +8,13 @@ pub enum Error {
     Unauthorized {},
 
     #[error("[Access Control] [Std] {0}")]
-    Std(#[from] StdError),
+    Std(String),
+}
+
+impl From<StdError> for Error {
+    fn from(value: StdError) -> Self {
+        Self::Std(value.to_string())
+    }
 }
 
 pub type Result = std::result::Result<(), Error>;

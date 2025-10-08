@@ -317,12 +317,12 @@ fn finalizer(env: Env) -> Addr {
 fn validate(addr: &Addr, sdk_api: &dyn Api) -> ContractResult<Addr> {
     sdk_api
         .addr_validate(addr.as_str())
-        .map_err(ContractError::InvalidAddress)
+        .map_err(ContractError::invalid_address)
 }
 
 fn serialize_to_json<Resp>(resp: Resp) -> ContractResult<Binary>
 where
     Resp: Serialize,
 {
-    cosmwasm_std::to_json_binary(&resp).map_err(ContractError::SerializeToJson)
+    cosmwasm_std::to_json_binary(&resp).map_err(ContractError::serialize_to_json)
 }

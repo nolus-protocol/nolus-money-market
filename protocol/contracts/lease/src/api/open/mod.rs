@@ -159,7 +159,7 @@ mod test_position_spec {
     use currencies::Lpn;
     use currency::CurrencyDef;
     use finance::{coin::Coin, duration::Duration, liability::Liability, percent::Percent100};
-    use sdk::cosmwasm_std::{StdError, from_json};
+    use sdk::cosmwasm_std::{StdError, StdErrorKind, from_json};
 
     use super::PositionSpecDTO;
 
@@ -207,18 +207,20 @@ mod test_position_spec {
     where
         Json: AsRef<[u8]>,
     {
-        assert_eq!(Ok(exp), from_json::<PositionSpecDTO>(json));
+        assert_eq!(
+            Ok(&exp),
+            from_json::<PositionSpecDTO>(json)
+                .as_ref()
+                .map_err(StdError::to_string)
+        );
     }
 
     fn assert_err(r: Result<PositionSpecDTO, StdError>, msg: &str) {
         assert!(
             matches!( // TODO migrate to using assert_matches!() once stabilized
                 r,
-                Err(StdError::ParseErr {
-                    target_type,
-                    msg: real_msg,
-                    backtrace: _,
-                }) if target_type.contains("PositionSpec") && real_msg.contains(msg)
+                Err(error) if error.kind() == StdErrorKind::Serialization &&
+                    format!("{error}").contains(msg)
             )
         );
     }

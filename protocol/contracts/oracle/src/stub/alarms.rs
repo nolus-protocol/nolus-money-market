@@ -92,7 +92,7 @@ where
                 &ExecuteMsg::AddPriceAlarm { alarm },
                 vec![],
             )
-            .map_err(Error::StubAddAlarm)?,
+            .map_err(Error::stub_add_alarm)?,
         );
 
         Ok(())

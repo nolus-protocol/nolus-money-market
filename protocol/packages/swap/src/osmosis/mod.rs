@@ -1,5 +1,8 @@
-use osmosis_std::types::osmosis::poolmanager::v1beta1::{
-    MsgSwapExactAmountIn, MsgSwapExactAmountInResponse, SwapAmountInRoute,
+use osmosis_std::types::{
+    cosmos::base::v1beta1::Coin as DexCoin,
+    osmosis::poolmanager::v1beta1::{
+        MsgSwapExactAmountIn, MsgSwapExactAmountInResponse, SwapAmountInRoute,
+    },
 };
 
 use currency::{DexSymbols, Group};
@@ -44,12 +47,19 @@ impl ExactAmountIn for Impl {
         // Then apply the parameterized maximum slippage to get the minimum amount.
         // For the first version, we accept whatever price impact and slippage.
         let routes = to_route::<GSwap>(swap_path);
-        let token_in = Some(to_dex_cwcoin(amount_in));
+        let token_in = Some({
+            let CwCoin { denom, amount } = to_dex_cwcoin(amount_in);
+
+            DexCoin {
+                denom,
+                amount: amount.to_string(),
+            }
+        });
         let token_out_min_amount = min_amount_out.amount().to_string();
         let msg = RequestMsg {
             sender: sender.into(),
             routes,
-            token_in: token_in.map(Into::into),
+            token_in,
             token_out_min_amount,
         };
 

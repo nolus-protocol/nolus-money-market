@@ -60,26 +60,34 @@ pub enum Dex {
 
 #[cfg(test)]
 mod tests {
+    use sdk::cosmwasm_std::StdError as CwError;
+
+    use super::Dex;
+
     #[test]
     fn test_dex_serde() {
         const ASTROPORT_ROUTER_ADDRESS: &str = "neutron0123456789ABCDEF";
 
         assert_eq!(
-            sdk::cosmwasm_std::from_json(format!(
+            sdk::cosmwasm_std::from_json::<Dex>(format!(
                 r#"{{
                     "Astroport": {{
                         "router_address": {ASTROPORT_ROUTER_ADDRESS:?}
                     }}
                 }}"#
-            )),
-            Ok(super::Dex::Astroport {
+            ))
+            .as_ref()
+            .map_err(CwError::to_string),
+            Ok(&Dex::Astroport {
                 router_address: ASTROPORT_ROUTER_ADDRESS.to_string()
             })
         );
 
         assert_eq!(
-            sdk::cosmwasm_std::from_json(r#""Osmosis""#),
-            Ok(super::Dex::Osmosis {})
+            sdk::cosmwasm_std::from_json(r#""Osmosis""#)
+                .as_ref()
+                .map_err(CwError::to_string),
+            Ok(&Dex::Osmosis {})
         );
     }
 }

@@ -174,7 +174,7 @@ mod test {
         open::PositionSpecDTO,
     };
     use platform::tests as platform_tests;
-    use sdk::cosmwasm_std::Addr;
+    use sdk::cosmwasm_std::{Addr, StdError as CwError};
     use serde::Deserialize;
 
     use crate::{
@@ -188,8 +188,10 @@ mod test {
     fn anomaly_resolution_api_match() {
         let admin = Addr::unchecked("my test admin");
         assert_eq!(
-            Ok(AccessCheck::AnomalyResolution { by: admin.clone() }),
-            platform_tests::ser_de(&QueryMsg::CheckAnomalyResolutionPermission { by: admin }),
+            Ok(&AccessCheck::AnomalyResolution { by: admin.clone() }),
+            platform_tests::ser_de(&QueryMsg::CheckAnomalyResolutionPermission { by: admin })
+                .as_ref()
+                .map_err(CwError::to_string),
         );
     }
 
@@ -198,26 +200,32 @@ mod test {
         let customer = Addr::unchecked("c");
 
         assert_eq!(
-            Ok(FinalizerExecuteMsg::FinalizeLease {
+            Ok(&FinalizerExecuteMsg::FinalizeLease {
                 customer: customer.clone()
             }),
-            platform_tests::ser_de(&ExecuteMsg::FinalizeLease { customer }),
+            platform_tests::ser_de(&ExecuteMsg::FinalizeLease { customer })
+                .as_ref()
+                .map_err(CwError::to_string),
         );
     }
 
     #[test]
     fn max_slippage_api_match() {
         assert_eq!(
-            Ok(PositionLimits::MaxSlippages {}),
-            platform_tests::ser_de(&QueryMsg::MaxSlippages {}),
+            Ok(&PositionLimits::MaxSlippages {}),
+            platform_tests::ser_de(&QueryMsg::MaxSlippages {})
+                .as_ref()
+                .map_err(CwError::to_string),
         );
     }
 
     #[test]
     fn release() {
         assert_eq!(
-            Ok(QueryMsg::ProtocolPackageRelease {}),
-            platform_tests::ser_de(&versioning::query::ProtocolPackage::Release {}),
+            Ok(&QueryMsg::ProtocolPackageRelease {}),
+            platform_tests::ser_de(&versioning::query::ProtocolPackage::Release {})
+                .as_ref()
+                .map_err(CwError::to_string),
         );
 
         platform_tests::ser_de::<_, QueryMsg>(&versioning::query::PlatformPackage::Release {})
@@ -240,13 +248,15 @@ mod test {
         let new_config = tests::new_config();
 
         assert_eq!(
-            Ok(ConfigInlineInSudoMsg::Config {
+            Ok(&ConfigInlineInSudoMsg::Config {
                 lease_interest_rate_margin: new_config.lease_interest_rate_margin,
                 lease_position_spec: new_config.lease_position_spec,
                 lease_due_period: new_config.lease_due_period,
                 lease_max_slippages: new_config.lease_max_slippages
             }),
-            platform_tests::ser_de(&SudoMsg::Config(new_config)),
+            platform_tests::ser_de(&SudoMsg::Config(new_config))
+                .as_ref()
+                .map_err(CwError::to_string),
         );
     }
 

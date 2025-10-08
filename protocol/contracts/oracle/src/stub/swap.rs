@@ -43,6 +43,6 @@ where
                     to: to.into_super_group::<SwapGroup>(),
                 },
             )
-            .map_err(Error::StubSwapPathQuery)
+            .map_err(Error::stub_swap_path_query)
     }
 }

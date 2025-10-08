@@ -64,6 +64,7 @@ where
 mod test {
     use currency::{CurrencyDef, platform::Nls, test::SuperGroupTestC1};
     use platform::tests as platform_tests;
+    use sdk::cosmwasm_std::StdError as CwError;
 
     use crate::coin::{Amount, Coin as GenericCoin, CoinDTO};
 
@@ -76,8 +77,10 @@ mod test {
     #[test]
     fn dto_to_type() {
         assert_eq!(
-            Ok(Coin::<Nls>::test_new(AMOUNT, ExternalC::ticker())),
-            platform_tests::ser_de(&CoinDTO::from(GenericCoin::<ExternalC>::new(AMOUNT))),
+            Ok(&Coin::<Nls>::test_new(AMOUNT, ExternalC::ticker())),
+            platform_tests::ser_de(&CoinDTO::from(GenericCoin::<ExternalC>::new(AMOUNT)))
+                .as_ref()
+                .map_err(CwError::to_string),
         );
     }
 

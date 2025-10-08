@@ -8,7 +8,7 @@ use time_oracle::AlarmError;
 #[derive(Error, Debug, PartialEq)]
 pub enum ContractError {
     #[error("[TimeAlarms] [Std] {0}")]
-    Std(#[from] StdError),
+    Std(String),
 
     #[error("[TimeAlarms] {0}")]
     Versioning(#[from] versioning::Error),
@@ -30,4 +30,10 @@ pub enum ContractError {
 
     #[error("[TimeAlarms] integer conversion {0}")]
     Conversion(#[from] TryFromIntError),
+}
+
+impl From<StdError> for ContractError {
+    fn from(value: StdError) -> Self {
+        Self::Std(value.to_string())
+    }
 }

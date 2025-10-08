@@ -111,10 +111,10 @@ pub fn sudo(deps: DepsMut<'_>, _env: Env, msg: SudoMsg) -> ContractResult<CwResp
 pub fn query(deps: Deps<'_>, env: Env, msg: QueryMsg) -> ContractResult<Binary> {
     match msg {
         QueryMsg::Config {} => {
-            to_json_binary(&query_config(deps.storage)?).map_err(ContractError::Serialize)
+            to_json_binary(&query_config(deps.storage)?).map_err(ContractError::serialize)
         }
         QueryMsg::CalculateRewards {} => query_reward_apr(deps.storage, deps.querier, &env)
-            .and_then(|ref apr| to_json_binary(apr).map_err(ContractError::Serialize)),
+            .and_then(|ref apr| to_json_binary(apr).map_err(ContractError::serialize)),
         QueryMsg::PlatformPackageRelease {} => {
             cosmwasm_std::to_json_binary(&CURRENT_RELEASE).map_err(Into::into)
         }
@@ -123,7 +123,7 @@ pub fn query(deps: Deps<'_>, env: Env, msg: QueryMsg) -> ContractResult<Binary> 
 }
 
 fn try_load_config(storage: &dyn Storage) -> ContractResult<Config> {
-    Config::load(storage).map_err(ContractError::LoadConfig)
+    Config::load(storage).map_err(ContractError::load_config)
 }
 
 fn query_config(storage: &dyn Storage) -> ContractResult<ConfigResponse> {
@@ -195,7 +195,7 @@ fn protocols(
 ) -> ContractResult<impl IntoIterator<Item = ProtocolQueryResponse> + use<>> {
     querier
         .query_wasm_smart(protocols_registry.clone(), &ProtocolsRegistry::Protocols {})
-        .map_err(ContractError::QueryProtocols)
+        .map_err(ContractError::query_protocols)
         .and_then(|protocols: ProtocolsQueryResponse| {
             protocols
                 .into_iter()
@@ -205,7 +205,7 @@ fn protocols(
                             protocols_registry.clone(),
                             &ProtocolsRegistry::Protocol(protocol),
                         )
-                        .map_err(ContractError::QueryProtocols)
+                        .map_err(ContractError::query_protocols)
                 })
                 .collect::<ContractResult<Vec<_>>>()
         })
@@ -238,7 +238,7 @@ fn setup_dispatching(
     // cannot validate the address since the Admin plays the role of the registry
     // and it is not yet instantiated
     api.addr_validate(msg.protocols_registry.as_str())
-        .map_err(ContractError::ValidateRegistryAddr)?;
+        .map_err(ContractError::validate_registry_addr)?;
 
     SingleUserAccess::new(
         storage.deref_mut(),
@@ -248,7 +248,7 @@ fn setup_dispatching(
 
     Config::new(msg.cadence_hours, msg.protocols_registry, msg.tvl_to_apr)
         .store(storage)
-        .map_err(ContractError::SaveConfig)?;
+        .map_err(ContractError::save_config)?;
     DispatchLog::update(storage, env.block.time)?;
 
     setup_alarm(

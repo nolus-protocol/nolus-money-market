@@ -7,37 +7,36 @@ use sdk::cosmwasm_std::StdError;
 #[derive(Error, Debug, PartialEq)]
 pub enum ContractError {
     #[error("[Leaser] Save Config failed, cause: {0}")]
-    SaveConfigFailure(StdError),
+    SaveConfigFailure(String),
 
     #[error("[Leaser] Update Config failed, cause: {0}")]
-    UpdateConfigFailure(StdError),
+    UpdateConfigFailure(String),
 
     #[error("[Leaser] Load Config failed, cause: {0}")]
-    LoadConfigFailure(StdError),
+    LoadConfigFailure(String),
 
-    #[error("[Leaser] Loading the old Config failed, cause: {0}")]
-    LoadOldConfig(StdError),
-
+    // #[error("[Leaser] Loading the old Config failed, cause: {0}")]
+    // LoadOldConfig(String),
     #[error("[Leaser] Iterate Cutomer Leases failed, cause: {0}")]
-    IterateLeasesFailure(StdError),
+    IterateLeasesFailure(String),
 
     #[error("[Leaser] Registration of a Lease failed, cause: {0}")]
-    SaveLeaseFailure(StdError),
+    SaveLeaseFailure(String),
 
     #[error("[Leaser] Deregistration of a Lease failed, cause: {0}")]
-    RemoveLeaseFailure(StdError),
+    RemoveLeaseFailure(String),
 
     #[error("[Leaser] Load Customer Leases failed, cause: {0}")]
-    LoadLeasesFailure(StdError),
+    LoadLeasesFailure(String),
 
     #[error("[Leaser] Save pending Customer failed, cause: {0}")]
-    SavePendingCustomerFailure(StdError),
+    SavePendingCustomerFailure(String),
 
     #[error("[Leaser] Address validation failed, cause: {0}")]
-    InvalidAddress(StdError),
+    InvalidAddress(String),
 
     #[error("[Leaser] Failed to serialize to JSON, cause: {0}")]
-    SerializeToJson(StdError),
+    SerializeToJson(String),
 
     #[error("[Leaser] integer conversion {0}")]
     Conversion(#[from] TryFromIntError),
@@ -93,5 +92,55 @@ pub enum ContractError {
     ScheduleReserveDump(platform::error::Error),
 
     #[error("[Leaser] Failed to query for the Lease package, cause: {0}")]
-    QueryLeasePackage(StdError),
+    QueryLeasePackage(String),
+}
+
+impl ContractError {
+    pub(crate) fn save_config_failure(error: StdError) -> Self {
+        Self::SaveConfigFailure(error.to_string())
+    }
+
+    pub(crate) fn update_config_failure(error: StdError) -> Self {
+        Self::UpdateConfigFailure(error.to_string())
+    }
+
+    pub(crate) fn load_config_failure(error: StdError) -> Self {
+        Self::LoadConfigFailure(error.to_string())
+    }
+
+    // pub(crate) fn load_old_config(error: StdError) -> Self {
+    //     Self::LoadOldConfig(error.to_string())
+    // }
+
+    pub(crate) fn iterate_leases_failure(error: StdError) -> Self {
+        Self::IterateLeasesFailure(error.to_string())
+    }
+
+    pub(crate) fn save_lease_failure(error: StdError) -> Self {
+        Self::SaveLeaseFailure(error.to_string())
+    }
+
+    pub(crate) fn remove_lease_failure(error: StdError) -> Self {
+        Self::RemoveLeaseFailure(error.to_string())
+    }
+
+    pub(crate) fn load_leases_failure(error: StdError) -> Self {
+        Self::LoadLeasesFailure(error.to_string())
+    }
+
+    pub(crate) fn save_pending_customer_failure(error: StdError) -> Self {
+        Self::SavePendingCustomerFailure(error.to_string())
+    }
+
+    pub(crate) fn invalid_address(error: StdError) -> Self {
+        Self::InvalidAddress(error.to_string())
+    }
+
+    pub(crate) fn serialize_to_json(error: StdError) -> Self {
+        Self::SerializeToJson(error.to_string())
+    }
+
+    pub(crate) fn query_lease_package(error: StdError) -> Self {
+        Self::QueryLeasePackage(error.to_string())
+    }
 }

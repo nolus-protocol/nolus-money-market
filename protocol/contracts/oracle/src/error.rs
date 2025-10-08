@@ -17,10 +17,10 @@ where
     PriceG: Group,
 {
     #[error("[Oracle] Failed to validate address while trying to register feeder! Cause: {0}")]
-    RegisterFeederAddressValidation(StdError),
+    RegisterFeederAddressValidation(String),
 
     #[error("[Oracle] Failed to validate address while trying to unregister feeder! Cause: {0}")]
-    UnregisterFeederAddressValidation(StdError),
+    UnregisterFeederAddressValidation(String),
 
     #[error("[Oracle] Failed to update software! Cause: {0}")]
     UpdateSoftware(VersioningError),
@@ -29,25 +29,25 @@ where
     BrokenSwapTree(String),
 
     #[error("[Oracle] Failed to load feeders! Cause: {0}")]
-    LoadFeeders(StdError),
+    LoadFeeders(String),
 
     #[error("[Oracle] Failed to load configuration! Cause: {0}")]
-    LoadConfig(StdError),
+    LoadConfig(String),
 
     #[error("[Oracle] Failed to update configuration! Cause: {0}")]
-    UpdateConfig(StdError),
+    UpdateConfig(String),
 
     #[error("[Oracle] Failed to store configuration! Cause: {0}")]
-    StoreConfig(StdError),
+    StoreConfig(String),
 
     #[error("[Oracle] Failed to load supported pairs! Cause: {0}")]
-    LoadSupportedPairs(StdError),
+    LoadSupportedPairs(String),
 
     #[error("[Oracle] Failed to store supported pairs! Cause: {0}")]
-    StoreSupportedPairs(StdError),
+    StoreSupportedPairs(String),
 
     #[error("[Oracle] Failed to convert query response to binary! Cause: {0}")]
-    ConvertToBinary(StdError),
+    ConvertToBinary(String),
 
     #[error("[Oracle] {0}")]
     PriceFeedersError(#[from] PriceFeedersError),
@@ -99,6 +99,47 @@ where
 
     #[error("[Oracle] integer conversion {0}")]
     Conversion(#[from] TryFromIntError),
+}
+
+impl<PriceG> Error<PriceG>
+where
+    PriceG: Group,
+{
+    pub(crate) fn register_feeder_address_validation(error: StdError) -> Self {
+        Self::RegisterFeederAddressValidation(error.to_string())
+    }
+
+    pub(crate) fn unregister_feeder_address_validation(error: StdError) -> Self {
+        Self::UnregisterFeederAddressValidation(error.to_string())
+    }
+
+    pub(crate) fn load_feeders(error: StdError) -> Self {
+        Self::LoadFeeders(error.to_string())
+    }
+
+    pub(crate) fn load_config(error: StdError) -> Self {
+        Self::LoadConfig(error.to_string())
+    }
+
+    pub(crate) fn update_config(error: StdError) -> Self {
+        Self::UpdateConfig(error.to_string())
+    }
+
+    pub(crate) fn store_config(error: StdError) -> Self {
+        Self::StoreConfig(error.to_string())
+    }
+
+    pub(crate) fn load_supported_pairs(error: StdError) -> Self {
+        Self::LoadSupportedPairs(error.to_string())
+    }
+
+    pub(crate) fn store_supported_pairs(error: StdError) -> Self {
+        Self::StoreSupportedPairs(error.to_string())
+    }
+
+    pub fn convert_to_binary(error: StdError) -> Self {
+        Self::ConvertToBinary(error.to_string())
+    }
 }
 
 #[cfg(feature = "contract")]
