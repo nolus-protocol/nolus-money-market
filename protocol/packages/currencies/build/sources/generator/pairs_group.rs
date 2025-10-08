@@ -8,7 +8,6 @@ use topology::HostCurrency;
 use crate::{
     protocol::Protocol,
     sources::resolved_currency::{CurrentModule, ResolvedCurrency},
-    subtype_lifetime::SubtypeLifetime,
 };
 
 use super::DexCurrencies;
@@ -26,177 +25,42 @@ where
     'parent: 'r,
     Parents: Iterator<Item = &'parent str> + Clone,
 {
-    const ENUM_IDENT: &str = "Pairs";
-
     if let Some(ticker) = parents.next() {
-        fn find_map_source_segment<'r, 'ticker, 'dex_currencies>(
-            ticker: &'ticker str,
-            current_module: CurrentModule,
-            protocol: &Protocol,
-            host_currency: &HostCurrency,
-            dex_currencies: &'dex_currencies DexCurrencies<'_, '_>,
-        ) -> Result<impl IntoIterator<Item = &'r str> + use<'r>>
-        where
-            'ticker: 'r,
-            'dex_currencies: 'r,
-        {
-            ResolvedCurrency::resolve(
-                current_module,
-                protocol,
-                host_currency,
-                dex_currencies,
-                ticker,
-            )
-            .map(|resolved| {
-                [
-                    "
-                        Self::",
-                    ticker,
-                    " => find_map.on::<",
-                    resolved.module(),
-                    "::",
-                    resolved.name(),
-                    ">(<",
-                    resolved.module(),
-                    "::",
-                    resolved.name(),
-                    " as currency::CurrencyDef>::dto()),",
-                ]
-            })
-        }
-
-        let source = [
-            r#"#[allow(non_camel_case_types, clippy::upper_case_acronyms)]
-            enum "#,
-            ENUM_IDENT,
-            r#" {
-                "#,
-            ticker,
-            ",",
-        ]
-        .into_iter()
-        .chain(parents.clone().flat_map(|ticker| {
-            [
-                "
-                ",
-                ticker,
-                ",",
-            ]
-        }))
-        .chain([
-            r#"
-            }
-
-            impl currency::PairsGroupMember for "#,
-            ENUM_IDENT,
-            r#" {
-                type Group = "#,
-            name,
-            r#";
-
-                fn first() -> Option<Self> {
-                    Some(Self::"#,
-            ticker,
-            r#")
-                }
-
-                fn next(&self) -> Option<Self> {
-                    match *self {
-                        Self::"#,
-            ticker,
-        ])
-        .chain(parents.clone().flat_map(|ticker| {
-            [
-                " => Some(Self::",
-                ticker,
-                "),
-                        Self::",
-                ticker,
-            ]
-        }))
-        .chain(iter::once(
-            " => None,
-                    }
-                }
-
-                fn find_map<FindMap>(
-                    &self,
-                    find_map: FindMap,
-                ) -> Result<<FindMap as currency::PairsFindMap>::Outcome, FindMap>
-                where
-                    FindMap: currency::PairsFindMap<Pivot = Self::Group>,
-                {
-                    match *self {",
-        ));
-
         iter::once(ticker)
             .chain(parents)
-            .try_fold(vec![], |mut find_map_source, ticker| {
-                find_map_source_segment(
-                    ticker,
+            .map(|ticker| {
+                ResolvedCurrency::resolve(
                     current_module,
                     protocol,
                     host_currency,
                     dex_currencies,
+                    ticker,
                 )
-                .map(|source| {
-                    find_map_source.extend(source);
+                .map(|resolved| [" (", resolved.module(), "::", resolved.name(), ","])
+            })
+            .collect::<Result<Vec<_>>>()
+            .map(|currencies| {
+                let closing_parenthesis = iter::repeat_n(")", currencies.len());
 
-                    find_map_source
-                })
+                Either::Left(currencies.into_iter().flatten().chain(closing_parenthesis))
             })
-            .map(|find_map_source| {
-                source.chain(find_map_source).chain(iter::once(
-                    "
-                    }
-                }
-            }",
-                ))
-            })
-            .map(Either::Left)
     } else {
-        Ok(Either::Right(
-            [
-                r#"enum "#,
-                ENUM_IDENT,
-                r#" {}
-
-            impl currency::PairsGroupMember for "#,
-                ENUM_IDENT,
-                r#" {
-                type Group = "#,
-                name,
-                r#";
-
-                fn first() -> Option<Self> {
-                    None
-                }
-
-                fn next(&self) -> Option<Self> {
-                    match *self {}
-                }
-
-                fn find_map<FindMap>(
-                    &self,
-                    _: FindMap,
-                ) -> Result<<FindMap as currency::PairsFindMap>::Outcome, FindMap>
-                where
-                    FindMap: currency::PairsFindMap<Pivot = Self::Group>,
-                {
-                    match *self {}
-                }
-            }"#,
-            ]
-            .into_iter(),
-        ))
+        Ok(Either::Right(iter::once(" ()")))
     }
-    .map(|sources| {
+    .map(|currencies| {
         [
-            r#"
-    impl currency::PairsGroup for "#,
+            "
+    impl currency::PairsGroup for ",
             name,
-            r#" {
+            " {
         type CommonGroup = crate::payment::Group;
+
+        type PairedWith =",
+        ]
+        .into_iter()
+        .chain(currencies)
+        .chain(iter::once(
+            ";
 
         fn find_map<FindMap>(
             find_map: FindMap,
@@ -204,19 +68,10 @@ where
         where
             FindMap: currency::PairsFindMap<Pivot = Self>,
         {
-            "#,
-        ]
-        .into_iter()
-        .chain(sources.map(SubtypeLifetime::subtype))
-        .chain([
-            r#"
-
-            currency::pairs_find_map::<"#,
-            ENUM_IDENT,
-            r#", _>(find_map)
+            currency::pairs_find(find_map)
         }
     }
-"#,
-        ])
+",
+        ))
     })
 }

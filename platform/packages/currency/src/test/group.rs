@@ -3,15 +3,8 @@ use std::borrow::Borrow;
 use serde::Deserialize;
 
 use crate::{
-    CurrenciesMapping, CurrencyDTO, Group, GroupFilterMap, GroupFindMap, InPoolWith, MemberOf,
-    PairsFindMap, PairsGroup, SubFilterAdapter, SubGroupFindAdapter, group, pairs,
-    test::{
-        sub::{Item as SubGroupItem, SubGroupTestC6Pairs, SubGroupTestC10Pairs},
-        super_::{
-            Item as SuperGroupItem, SuperGroupTestC1Pairs, SuperGroupTestC2Pairs,
-            SuperGroupTestC3Pairs, SuperGroupTestC4Pairs, SuperGroupTestC5Pairs,
-        },
-    },
+    CurrencyDTO, Group, GroupFilterMap, GroupFindMap, InPoolWith, MemberOf, PairsFindMap,
+    PairsGroup, SubFilterAdapter, SubGroupFindAdapter, group, pairs,
 };
 
 pub type SuperGroupTestC1 = impl_::TestC1;
@@ -30,28 +23,37 @@ pub type SuperGroupCurrency = CurrencyDTO<SuperGroup>;
 impl MemberOf<Self> for SuperGroup {}
 impl Group for SuperGroup {
     const DESCR: &'static str = "super_group";
+
     type TopG = Self;
 
+    type Members = (
+        SuperGroupTestC1,
+        (
+            SuperGroupTestC2,
+            (SuperGroupTestC3, (SuperGroupTestC4, (SuperGroupTestC5,))),
+        ),
+    );
+
     fn filter_map<FilterMap, FilterMapRef>(
-        f: FilterMapRef,
+        filter_map: FilterMapRef,
     ) -> impl Iterator<Item = FilterMap::Outcome>
     where
         FilterMap: GroupFilterMap<VisitedG = Self>,
         FilterMapRef: Borrow<FilterMap> + Clone,
     {
-        CurrenciesMapping::<_, SuperGroupItem, _, _>::with_filter(f.clone())
-            .chain(SubGroup::filter_map(SubFilterAdapter::new(f)))
+        group::non_recursive_filter_map(filter_map.clone()).chain(group::non_recursive_filter_map(
+            SubFilterAdapter::<SubGroup, _, _, _>::new(filter_map),
+        ))
     }
 
-    fn find_map<FindMap>(v: FindMap) -> Result<FindMap::Outcome, FindMap>
+    fn find_map<FindMap>(find_map: FindMap) -> Result<FindMap::Outcome, FindMap>
     where
         FindMap: GroupFindMap<TargetG = Self>,
     {
-        group::find_map::<_, SuperGroupItem, _>(v)
-            .or_else(|v| {
-                group::find_map::<_, SubGroupItem, _>(SubGroupFindAdapter::<SubGroup, _, _>::new(v))
-            })
-            .map_err(SubGroupFindAdapter::release_super_map)
+        group::non_recursive_find_map(find_map).or_else(|find_map| {
+            group::non_recursive_find_map(SubGroupFindAdapter::<SubGroup, _, _>::new(find_map))
+                .map_err(SubGroupFindAdapter::release_super_map)
+        })
     }
 }
 
@@ -59,11 +61,13 @@ impl Group for SuperGroup {
 impl PairsGroup for SuperGroupTestC1 {
     type CommonGroup = SuperGroup;
 
-    fn find_map<FindMap>(f: FindMap) -> Result<FindMap::Outcome, FindMap>
+    type PairedWith = (SuperGroupTestC2, (SuperGroupTestC4, (SubGroupTestC10,)));
+
+    fn find_map<FindMap>(find_map: FindMap) -> Result<FindMap::Outcome, FindMap>
     where
         FindMap: PairsFindMap<Pivot = Self>,
     {
-        pairs::find_map::<SuperGroupTestC1Pairs, _>(f)
+        pairs::find(find_map)
     }
 }
 impl InPoolWith<SuperGroup> for SuperGroupTestC1 {}
@@ -75,11 +79,16 @@ impl InPoolWith<SubGroupTestC10> for SuperGroupTestC1 {}
 impl PairsGroup for SuperGroupTestC2 {
     type CommonGroup = SuperGroup;
 
-    fn find_map<FindMap>(f: FindMap) -> Result<FindMap::Outcome, FindMap>
+    type PairedWith = (
+        SuperGroupTestC1,
+        (SuperGroupTestC3, (SubGroupTestC6, (SubGroupTestC10,))),
+    );
+
+    fn find_map<FindMap>(find_map: FindMap) -> Result<FindMap::Outcome, FindMap>
     where
         FindMap: PairsFindMap<Pivot = Self>,
     {
-        pairs::find_map::<SuperGroupTestC2Pairs, _>(f)
+        pairs::find(find_map)
     }
 }
 impl InPoolWith<SuperGroup> for SuperGroupTestC2 {}
@@ -92,11 +101,13 @@ impl InPoolWith<SubGroupTestC10> for SuperGroupTestC2 {}
 impl PairsGroup for SuperGroupTestC3 {
     type CommonGroup = SuperGroup;
 
-    fn find_map<FindMap>(f: FindMap) -> Result<FindMap::Outcome, FindMap>
+    type PairedWith = (SuperGroupTestC2,);
+
+    fn find_map<FindMap>(find_map: FindMap) -> Result<FindMap::Outcome, FindMap>
     where
         FindMap: PairsFindMap<Pivot = Self>,
     {
-        pairs::find_map::<SuperGroupTestC3Pairs, _>(f)
+        pairs::find(find_map)
     }
 }
 impl InPoolWith<SuperGroup> for SuperGroupTestC3 {}
@@ -106,11 +117,13 @@ impl InPoolWith<SuperGroupTestC2> for SuperGroupTestC3 {}
 impl PairsGroup for SuperGroupTestC4 {
     type CommonGroup = SuperGroup;
 
-    fn find_map<FindMap>(f: FindMap) -> Result<FindMap::Outcome, FindMap>
+    type PairedWith = (SuperGroupTestC1, (SuperGroupTestC5,));
+
+    fn find_map<FindMap>(find_map: FindMap) -> Result<FindMap::Outcome, FindMap>
     where
         FindMap: PairsFindMap<Pivot = Self>,
     {
-        pairs::find_map::<SuperGroupTestC4Pairs, _>(f)
+        pairs::find(find_map)
     }
 }
 impl InPoolWith<SuperGroup> for SuperGroupTestC4 {}
@@ -121,11 +134,13 @@ impl InPoolWith<SuperGroupTestC5> for SuperGroupTestC4 {}
 impl PairsGroup for SuperGroupTestC5 {
     type CommonGroup = SuperGroup;
 
-    fn find_map<FindMap>(f: FindMap) -> Result<FindMap::Outcome, FindMap>
+    type PairedWith = (SuperGroupTestC4, (SuperGroupTestC5, (SubGroupTestC10,)));
+
+    fn find_map<FindMap>(find_map: FindMap) -> Result<FindMap::Outcome, FindMap>
     where
         FindMap: PairsFindMap<Pivot = Self>,
     {
-        pairs::find_map::<SuperGroupTestC5Pairs, _>(f)
+        pairs::find(find_map)
     }
 }
 impl InPoolWith<SuperGroup> for SuperGroupTestC5 {}
@@ -141,23 +156,26 @@ impl MemberOf<Self> for SubGroup {}
 impl MemberOf<SuperGroup> for SubGroup {}
 impl Group for SubGroup {
     const DESCR: &'static str = "sub_group";
+
     type TopG = SuperGroup;
 
+    type Members = (SubGroupTestC6, (SubGroupTestC10,));
+
     fn filter_map<FilterMap, FilterMapRef>(
-        f: FilterMapRef,
+        filter_map: FilterMapRef,
     ) -> impl Iterator<Item = FilterMap::Outcome>
     where
         FilterMap: GroupFilterMap<VisitedG = Self>,
-        FilterMapRef: Borrow<FilterMap>,
+        FilterMapRef: Borrow<FilterMap> + Clone,
     {
-        CurrenciesMapping::<_, SubGroupItem, _, _>::with_filter(f)
+        group::non_recursive_filter_map(filter_map)
     }
 
-    fn find_map<FindMap>(v: FindMap) -> Result<FindMap::Outcome, FindMap>
+    fn find_map<FindMap>(find_map: FindMap) -> Result<FindMap::Outcome, FindMap>
     where
         FindMap: GroupFindMap<TargetG = Self>,
     {
-        group::find_map::<_, SubGroupItem, _>(v)
+        group::non_recursive_find_map(find_map)
     }
 }
 
@@ -165,11 +183,13 @@ impl Group for SubGroup {
 impl PairsGroup for SubGroupTestC6 {
     type CommonGroup = SuperGroup;
 
-    fn find_map<FindMap>(f: FindMap) -> Result<FindMap::Outcome, FindMap>
+    type PairedWith = (SuperGroupTestC2, (SubGroupTestC10,));
+
+    fn find_map<FindMap>(find_map: FindMap) -> Result<FindMap::Outcome, FindMap>
     where
         FindMap: PairsFindMap<Pivot = Self>,
     {
-        pairs::find_map::<SubGroupTestC6Pairs, _>(f)
+        pairs::find(find_map)
     }
 }
 impl InPoolWith<SuperGroup> for SubGroupTestC6 {}
@@ -180,11 +200,16 @@ impl InPoolWith<SubGroupTestC10> for SubGroupTestC6 {}
 impl PairsGroup for SubGroupTestC10 {
     type CommonGroup = SuperGroup;
 
-    fn find_map<FindMap>(f: FindMap) -> Result<FindMap::Outcome, FindMap>
+    type PairedWith = (
+        SuperGroupTestC1,
+        (SuperGroupTestC2, (SuperGroupTestC5, (SubGroupTestC6,))),
+    );
+
+    fn find_map<FindMap>(find_map: FindMap) -> Result<FindMap::Outcome, FindMap>
     where
         FindMap: PairsFindMap<Pivot = Self>,
     {
-        pairs::find_map::<SubGroupTestC10Pairs, _>(f)
+        pairs::find(find_map)
     }
 }
 impl InPoolWith<SuperGroup> for SubGroupTestC10 {}

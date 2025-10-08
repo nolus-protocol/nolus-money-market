@@ -140,7 +140,7 @@ impl<
         'dex_currencies,
         'dex_currency_ticker,
         'dex_currency_definition,
-        true,
+        false,
     > {
         self.build(CurrentModule::Lpn)
     }

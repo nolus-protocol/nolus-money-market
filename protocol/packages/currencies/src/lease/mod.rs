@@ -2,11 +2,11 @@ use std::borrow::Borrow;
 
 use serde::{Deserialize, Serialize};
 
-use currency::{CurrenciesMapping, GroupFilterMap, GroupFindMap, MemberOf};
+use currency::{GroupFilterMap, GroupFindMap, MemberOf};
 
 use crate::payment::Group as PaymentGroup;
 
-use self::impl_mod::GroupMember;
+use self::impl_mod::Members;
 // TODO use cfg_match! once gets stabilized
 #[cfg(not(feature = "testing"))]
 #[allow(unused_imports)]
@@ -34,6 +34,8 @@ impl currency::Group for Group {
 
     type TopG = PaymentGroup;
 
+    type Members = Members;
+
     fn filter_map<FilterMap, FilterMapRef>(
         filter_map: FilterMapRef,
     ) -> impl Iterator<Item = FilterMap::Outcome>
@@ -41,14 +43,14 @@ impl currency::Group for Group {
         FilterMap: GroupFilterMap<VisitedG = Self>,
         FilterMapRef: Borrow<FilterMap> + Clone,
     {
-        CurrenciesMapping::<_, GroupMember, _, _>::with_filter(filter_map)
+        currency::non_recursive_group_filter_map(filter_map)
     }
 
     fn find_map<FindMap>(find_map: FindMap) -> Result<FindMap::Outcome, FindMap>
     where
         FindMap: GroupFindMap<TargetG = Self>,
     {
-        currency::group_find_map::<_, GroupMember, _>(find_map)
+        currency::non_recursive_group_find_map(find_map)
     }
 }
 
