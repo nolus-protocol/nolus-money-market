@@ -1,0 +1,30 @@
+[package]
+name = "neutron-sdk"
+description = "Neutron CosmWasm SDK for interacting with Neutron blockchain"
+version = "0.11.1"
+edition = "2021"
+license = "Apache-2.0"
+repository = "https://github.com/neutron-org/neutron-sdk"
+homepage = "https://neutron.org"
+readme = "README.md"
+
+[dependencies]
+cosmwasm-std = { workspace = true, features = ["stargate"] }
+cosmos-sdk-proto = { workspace = true }
+serde = { workspace = true }
+schemars = { workspace = true }
+serde-json-wasm = { workspace = true }
+bech32 = { workspace = true }
+thiserror = { workspace = true }
+protobuf = { workspace = true }
+serde_json = { workspace = true }
+cosmwasm-schema = { workspace = true }
+prost = { workspace = true }
+prost-types = { workspace = true }
+tendermint-proto = { workspace = true }
+speedate = { workspace = true }
+
+[dev-dependencies]
+base64 = { workspace = true }
+prost-types = { workspace = true }
+hex = { workspace = true }

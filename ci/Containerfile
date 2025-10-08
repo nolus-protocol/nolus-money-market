@@ -279,6 +279,12 @@ ONBUILD COPY \
   "." \
   "/src/platform"
 
+ONBUILD COPY \
+  --from="neutron-sdk" \
+  --link=true \
+  "." \
+  "/src/neutron-sdk"
+
 RUN "rustup" "target" "add" "wasm32-unknown-unknown"
 
 ARG binaryen_version
