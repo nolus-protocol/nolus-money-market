@@ -232,13 +232,7 @@ pub(crate) fn complete_initialization<DownpaymentC, Lpn>(
 
     check_state_opening(app, lease_addr.clone());
 
-    assert_eq!(
-        app.query()
-            .query_all_balances(lease_addr.clone())
-            .unwrap()
-            .as_slice(),
-        [],
-    );
+    assert_eq!(super::query_all_balances(&lease_addr, app.query()), [],);
 
     () = super::swap::do_swap(
         app,

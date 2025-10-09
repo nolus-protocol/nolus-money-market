@@ -99,11 +99,7 @@ fn liquidation_time_alarm(
     let liquidation_end_response: AppResponse = response.unwrap_response();
 
     assert_eq!(
-        test_case
-            .app
-            .query()
-            .query_all_balances(lease_addr.clone())
-            .unwrap(),
+        common::query_all_balances(&lease_addr, test_case.app.query()),
         &[],
     );
 

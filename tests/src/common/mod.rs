@@ -1,8 +1,8 @@
 use serde::{Deserialize, Serialize};
 
 use ::lease::api::LpnCoinDTO;
-use currencies::{Lpn, Nls};
-use currency::CurrencyDef;
+use currencies::{Lpn, Nls, PaymentGroup};
+use currency::{CurrencyDTO, CurrencyDef, Group, GroupFilterMap, MemberOf, PairsGroup};
 use finance::{
     coin::{Amount, Coin},
     duration::Duration,
@@ -13,8 +13,8 @@ pub use sdk::cosmwasm_std::Coin as CwCoin;
 use sdk::{
     cosmwasm_ext::InterChainMsg,
     cosmwasm_std::{
-        Binary, BlockInfo, Deps, Empty, Env, StdResult, Timestamp, testing::mock_env,
-        to_json_binary,
+        Addr, Binary, BlockInfo, Deps, Empty, Env, QuerierWrapper, StdResult,
+        StdResult as CwResult, Timestamp, testing::mock_env, to_json_binary,
     },
     testing::{self, CwApp, InterChainMsgSender, new_app},
 };
@@ -67,6 +67,39 @@ pub mod treasury;
 pub const USER: &str = "user";
 pub const ADMIN: &str = "admin";
 pub const LEASE_ADMIN: &str = "lease_admin";
+
+pub fn query_all_balances(addr: &Addr, querier: QuerierWrapper<'_>) -> Vec<CwCoin> {
+    #[derive(Clone, Copy)]
+    struct QueryAllBalances<'addr, 'querier>(&'addr Addr, QuerierWrapper<'querier>);
+
+    impl GroupFilterMap for QueryAllBalances<'_, '_> {
+        type VisitedG = PaymentGroup;
+
+        type Outcome = CwResult<[CwCoin; 2]>;
+
+        fn on<C>(&self, _: &CurrencyDTO<C::Group>) -> Option<Self::Outcome>
+        where
+            C: CurrencyDef + PairsGroup<CommonGroup = <Self::VisitedG as Group>::TopG>,
+            C::Group: MemberOf<Self::VisitedG> + MemberOf<<Self::VisitedG as Group>::TopG>,
+        {
+            let query = |denom| self.1.query_balance(self.0.clone(), denom);
+
+            Some(
+                query(C::bank())
+                    .and_then(|bank_coin| query(C::dex()).map(|dex_coin| [bank_coin, dex_coin])),
+            )
+        }
+    }
+
+    let mut balances = PaymentGroup::filter_map(QueryAllBalances(addr, querier))
+        .collect::<Result<Vec<_>, _>>()
+        .expect("All currencies should be queriable!")
+        .into_flattened();
+
+    balances.retain(|coin| !coin.amount.is_zero());
+
+    balances
+}
 
 pub fn native_cwcoin(amount: Amount) -> CwCoin {
     cwcoin_from_amount::<Nls>(amount)
