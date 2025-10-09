@@ -30,7 +30,7 @@ impl<C> CommonDoublePrimitive<Coin<C>> for Duration {
 impl<C> Fractionable<Coin<C>> for Duration {}
 
 impl IntoMax<U256> for Duration {
-    fn into(self) -> U256 {
+    fn into_max(self) -> U256 {
         self.to_double().into()
     }
 }

@@ -49,13 +49,13 @@ impl<const UPPER_BOUND: Units> Fractionable<Self> for BoundPercent<UPPER_BOUND> 
 impl<C, const UPPER_BOUND: Units> Fractionable<Coin<C>> for BoundPercent<UPPER_BOUND> {}
 
 impl<const UPPER_BOUND: Units> IntoMax<u64> for BoundPercent<UPPER_BOUND> {
-    fn into(self) -> u64 {
+    fn into_max(self) -> u64 {
         self.to_double()
     }
 }
 
 impl<const UPPER_BOUND: Units> IntoMax<U256> for BoundPercent<UPPER_BOUND> {
-    fn into(self) -> U256 {
+    fn into_max(self) -> U256 {
         self.to_double().into()
     }
 }

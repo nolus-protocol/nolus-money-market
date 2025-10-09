@@ -36,7 +36,7 @@ pub trait IntoMax<Max>
 where
     Self: ToDoublePrimitive,
 {
-    fn into(self) -> Max;
+    fn into_max(self) -> Max;
 }
 
 /// Conversion from `Max` back to the domain type

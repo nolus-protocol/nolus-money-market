@@ -131,9 +131,9 @@ where
         if self.nominator == self.denominator {
             Some(rhs)
         } else {
-            let nominator_max = self.nominator.into();
-            let rhs_max = rhs.into();
-            let denominator_max = self.denominator.into();
+            let nominator_max = self.nominator.into_max();
+            let rhs_max = rhs.into_max();
+            let denominator_max = self.denominator.into_max();
 
             nominator_max
                 .checked_mul(rhs_max)
