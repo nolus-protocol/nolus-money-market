@@ -149,11 +149,7 @@ fn full_liquidation() {
     );
 
     assert_eq!(
-        test_case
-            .app
-            .query()
-            .query_all_balances(lease_addr.clone())
-            .unwrap(),
+        common::query_all_balances(&lease_addr, test_case.app.query()),
         &[],
     );
 

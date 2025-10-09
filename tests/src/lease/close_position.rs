@@ -71,7 +71,7 @@ fn full_close() {
     assert_eq!(StateResponse::Closed(), state);
 
     assert_eq!(
-        lease_balance(&test_case, lease),
+        lease_balance(&test_case, &lease),
         common::cwcoin_as_balance(LeaseCoin::ZERO),
     );
 
@@ -125,7 +125,7 @@ fn partial_close_loan_not_closed() {
         state
     );
     assert_eq!(
-        lease_balance(&test_case, lease),
+        lease_balance(&test_case, &lease),
         common::cwcoin_as_balance(exp_change),
     );
 
@@ -174,7 +174,7 @@ fn partial_close_loan_closed() {
     );
 
     assert_eq!(
-        lease_balance(&test_case, lease),
+        lease_balance(&test_case, &lease),
         common::cwcoin_as_balance(exp_change),
     );
 
@@ -365,13 +365,8 @@ fn do_close(
 
     if !exp_lease_amount_after.is_zero() {
         assert_eq!(
-            test_case
-                .app
-                .query()
-                .query_all_balances(lease_ica)
-                .unwrap()
-                .as_slice(),
-            &[to_cosmwasm_on_dex(exp_lease_amount_after)],
+            lease_balance(test_case, &lease_ica),
+            [to_cosmwasm_on_dex(exp_lease_amount_after)],
         );
     }
 
@@ -412,8 +407,8 @@ where
     platform::bank::balance::<C>(customer, test_case.app.query()).unwrap()
 }
 
-fn lease_balance(test_case: &LeaseTestCase, lease: Addr) -> Vec<CwCoin> {
-    test_case.app.query().query_all_balances(lease).unwrap()
+fn lease_balance(test_case: &LeaseTestCase, lease: &Addr) -> Vec<CwCoin> {
+    common::query_all_balances(lease, test_case.app.query())
 }
 
 fn lease_amount() -> LeaseCoin {

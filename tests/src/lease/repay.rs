@@ -465,22 +465,17 @@ fn expect_lease_amounts<ProtocolsRegistry, Treasury, Profit, Reserve, Lpp, Oracl
 ) {
     if !excess_balance.is_zero() {
         assert_eq!(
-            test_case
-                .app
-                .query()
-                .query_all_balances(lease.clone())
-                .unwrap(),
+            common::query_all_balances(&lease, test_case.app.query()),
             &[cwcoin::<LpnCurrency>(excess_balance)],
         )
     }
 
     assert_eq!(
-        test_case
-            .app
-            .query()
-            .query_all_balances(TestCase::ica_addr(&lease, TestCase::LEASE_ICA_ID))
-            .unwrap(),
-        &[to_cosmwasm_on_dex(expected_funds)],
+        common::query_all_balances(
+            &TestCase::ica_addr(&lease, TestCase::LEASE_ICA_ID),
+            test_case.app.query()
+        ),
+        [to_cosmwasm_on_dex(expected_funds)],
     );
 }
 
