@@ -196,7 +196,9 @@ where
             self.margin_interest,
             principal_due,
             due_period_margin.length(),
-        ) - overdue.margin();
+        )
+        .expect("TODO: handle potential None from interest::interest() properly")
+            - overdue.margin();
         let due_interest =
             self.lpp_loan.interest_due(&due_period_margin.till()) - overdue.interest();
 
@@ -1092,7 +1094,7 @@ mod tests {
             );
             let due_period = due_period_len.min(due_period_margin.length());
             let expected_margin_due =
-                interest::interest(annual_interest_margin, principal_due, due_period);
+                interest::interest(annual_interest_margin, principal_due, due_period).unwrap();
             let expected_interest_due =
                 lpp_loan.interest_due(&due_period_margin.till()) - overdue.interest();
 

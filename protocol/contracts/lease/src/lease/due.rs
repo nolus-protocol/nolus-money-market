@@ -24,7 +24,8 @@ impl DueTrait for State {
                     .expect("TODO: propagate up the stack potential overflow"),
                 self.principal_due,
                 Duration::YEAR,
-            );
+            )
+            .expect("TODO: handle potential None from interest::interest() properly");
             if total_interest_a_year.is_zero() {
                 Duration::MAX
             } else {
@@ -98,7 +99,8 @@ mod test {
             annual_interest + annual_interest_margin,
             principal_due,
             till_due_end,
-        );
+        )
+        .unwrap();
         let s = State {
             annual_interest,
             annual_interest_margin,
@@ -138,7 +140,8 @@ mod test {
                     annual_interest + annual_interest_margin,
                     principal_due,
                     Duration::YEAR,
-                ),
+                )
+                .unwrap(),
             )
             .unwrap();
 
