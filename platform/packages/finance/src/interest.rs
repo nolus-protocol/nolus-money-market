@@ -57,6 +57,7 @@ mod tests {
         duration::Duration,
         fraction::FractionLegacy,
         percent::Percent100,
+        ratio::Ratio,
         zero::Zero,
     };
 
@@ -150,15 +151,15 @@ mod tests {
         );
     }
 
-    // #[test]
-    // fn interest() {
-    //     let whole = my_coin(1001);
-    //     let part = my_coin(125);
-    //     let r = Ratio::new(part, whole);
+    #[test]
+    fn interest() {
+        let whole = my_coin(1001);
+        let part = my_coin(125);
+        let r = Ratio::new(part, whole);
 
-    //     let res = super::interest(r, whole, PERIOD_LENGTH).unwrap();
-    //     assert_eq!(part, res);
-    // }
+        let res = super::interest(r, whole, PERIOD_LENGTH).unwrap();
+        assert_eq!(part, res);
+    }
 
     #[test]
     fn interest_zero() {
