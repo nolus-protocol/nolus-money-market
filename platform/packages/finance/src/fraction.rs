@@ -21,6 +21,7 @@ pub trait FractionLegacy<U> {
     where
         A: FractionableLegacy<U>;
 }
+
 pub trait Unit
 where
     Self: Copy + Debug + PartialOrd + Sized + Zero,
