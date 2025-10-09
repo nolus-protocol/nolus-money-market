@@ -88,9 +88,9 @@ impl InterestRate {
     }
 
     fn utilization_factor_max(&self) -> Percent {
-        Percent::from_fraction(
-            self.utilization_optimal.units(),
-            self.utilization_optimal.complement().units(),
+        Percent::from_fraction::<Percent>(
+            self.utilization_optimal.into(),
+            self.utilization_optimal.complement().into(),
         )
         .expect("The utilization_max must be a valid Percent: utilization_opt < 100% ensures the ratio is valid Percent100, which always fits within Percent's wider range")
     }
