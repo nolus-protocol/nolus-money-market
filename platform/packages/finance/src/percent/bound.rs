@@ -196,13 +196,11 @@ impl<const UPPER_BOUND: Units> Sub for BoundPercent<UPPER_BOUND> {
 
 #[cfg(test)]
 mod test {
-    use currency::test::SubGroupTestC10;
-
     use crate::{
-        coin::Coin,
-        fraction::FractionLegacy,
+        fraction::Fraction,
         percent::{Percent, Percent100, Units},
-        rational::RationalLegacy,
+        rational::Rational,
+        test::coin,
     };
 
     #[test]
@@ -251,20 +249,14 @@ mod test {
 
     #[test]
     fn test_zero() {
-        let zero_amount = Coin::<SubGroupTestC10>::new(0);
-        assert_eq!(
-            zero_amount,
-            Percent100::ZERO.of(Coin::<SubGroupTestC10>::new(10))
-        );
-        assert_eq!(
-            zero_amount,
-            Percent::ZERO.of(Coin::<SubGroupTestC10>::new(10)).unwrap()
-        )
+        let zero_amount = coin::coin1(0);
+        assert_eq!(zero_amount, Percent100::ZERO.of(coin::coin1(10)));
+        assert_eq!(zero_amount, Percent::ZERO.of(coin::coin1(10)).unwrap())
     }
 
     #[test]
     fn test_hundred() {
-        let amount = Coin::<SubGroupTestC10>::new(123);
+        let amount = coin::coin1(123);
         assert_eq!(amount, Percent100::HUNDRED.of(amount));
         assert_eq!(amount, Percent::HUNDRED.of(amount).unwrap())
     }
@@ -318,6 +310,6 @@ mod test {
     }
 
     fn test_display(exp: &str, permilles: Units) {
-        assert_eq!(exp, format!("{}", Percent100::from_permille(permilles)));
+        assert_eq!(exp, format!("{}", from(permilles)));
     }
 }

@@ -79,6 +79,7 @@ where
     }
 }
 
+// TODO remove when removing FractionLegacy<Units> for Percent100
 impl<U> FractionLegacy<U> for Ratio<U>
 where
     U: FractionUnit,
@@ -168,6 +169,7 @@ where
     }
 }
 
+// TODO remove when removing FractionLegacy<Units> for Percent100
 impl<U, T> RationalLegacy<U> for SimpleFraction<T>
 where
     Self: RatioLegacy<U>,

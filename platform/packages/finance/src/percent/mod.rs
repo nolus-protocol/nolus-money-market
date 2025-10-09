@@ -18,6 +18,7 @@ pub type Units = u32;
 pub type Percent100 = BoundPercent<{ Percent::HUNDRED.units() }>;
 pub type Percent = BoundPercent<{ Units::MAX }>;
 
+// TODO revisit it's usage after removing FractionLegacy<Units> for Percent100
 impl FractionUnit for Units {
     type Times = Self;
 
@@ -92,6 +93,7 @@ impl Fraction<Self> for Percent100 {
     }
 }
 
+// TODO remove when implement Fractionable<BoundPercent> for Price
 impl FractionLegacy<Units> for Percent100 {
     fn of<A>(&self, whole: A) -> A
     where
