@@ -16,6 +16,7 @@ where
     type Type = u64;
 }
 
+// TODO remove after implementing Fractionable<BoundPercent> for Price
 impl<const UPPER_BOUND: Units> FractionableLegacy<Units> for BoundPercent<UPPER_BOUND> {
     #[track_caller]
     fn safe_mul<R>(self, ratio: &R) -> Self
@@ -35,15 +36,35 @@ impl<const UPPER_BOUND: Units> ToDoublePrimitive for BoundPercent<UPPER_BOUND> {
     }
 }
 
+impl<const UPPER_BOUND: Units> CommonDoublePrimitive<Self> for BoundPercent<UPPER_BOUND> {
+    type CommonDouble = u64;
+}
+
 impl<C, const UPPER_BOUND: Units> CommonDoublePrimitive<Coin<C>> for BoundPercent<UPPER_BOUND> {
     type CommonDouble = U256;
 }
 
+impl<const UPPER_BOUND: Units> Fractionable<Self> for BoundPercent<UPPER_BOUND> {}
+
 impl<C, const UPPER_BOUND: Units> Fractionable<Coin<C>> for BoundPercent<UPPER_BOUND> {}
+
+impl<const UPPER_BOUND: Units> IntoMax<u64> for BoundPercent<UPPER_BOUND> {
+    fn into(self) -> u64 {
+        self.to_double()
+    }
+}
 
 impl<const UPPER_BOUND: Units> IntoMax<U256> for BoundPercent<UPPER_BOUND> {
     fn into(self) -> U256 {
         self.to_double().into()
+    }
+}
+
+impl<const UPPER_BOUND: Units> TryFromMax<u64> for BoundPercent<UPPER_BOUND> {
+    fn try_from_max(max: u64) -> Option<Self> {
+        Units::try_from(max)
+            .ok()
+            .and_then(|units| Self::try_from(units).ok())
     }
 }
 
@@ -61,27 +82,33 @@ impl<const UPPER_BOUND: Units> TryFromMax<U256> for BoundPercent<UPPER_BOUND> {
 mod test {
     mod percent {
         use crate::{
-            fractionable::{FractionableLegacy, HigherRank},
+            fraction::Fraction,
+            fractionable::HigherRank,
             percent::{Percent, Percent100, Units},
+            rational::Rational,
         };
 
         #[test]
-        fn safe_mul() {
+        fn of() {
             assert_eq!(
                 Percent100::from_permille(410 * 222 / 1000),
-                Percent100::from_percent(41).safe_mul(&Percent100::from_permille(222))
+                Percent100::from_percent(41).of(Percent100::from_permille(222))
             );
             assert_eq!(
                 Percent100::from_permille(999),
-                Percent100::from_percent(100).safe_mul(&Percent100::from_permille(999))
+                Percent100::from_percent(100).of(Percent100::from_permille(999))
             );
             assert_eq!(
                 Percent::from_permille(410 * 222222 / 1000),
-                Percent::from_percent(41).safe_mul(&Percent::from_permille(222222))
+                Percent::from_percent(41)
+                    .of(Percent::from_permille(222222))
+                    .unwrap()
             );
             assert_eq!(
                 Percent::from_permille(Units::MAX),
-                Percent::from_percent(100).safe_mul(&Percent::from_permille(Units::MAX))
+                Percent::from_percent(100)
+                    .of(Percent::from_permille(Units::MAX))
+                    .unwrap()
             );
 
             let p_units: Units = 410;
@@ -91,22 +118,29 @@ mod test {
 
             assert_eq!(
                 Percent::from_permille(p_units_res),
-                Percent::from_percent(41).safe_mul(&Percent::from_permille(Units::MAX))
+                Percent::from_percent(41)
+                    .of(Percent::from_permille(Units::MAX))
+                    .unwrap()
             );
         }
 
         #[test]
-        fn safe_mul_hundred_percent() {
+        fn of_hundred_percent() {
             assert_eq!(
                 Percent::from_permille(Units::MAX),
-                Percent::from_percent(100).safe_mul(&Percent::from_permille(Units::MAX))
+                Percent::from_percent(100)
+                    .of(Percent::from_permille(Units::MAX))
+                    .unwrap()
             );
         }
 
         #[test]
-        #[should_panic]
-        fn safe_mul_overflow() {
-            Percent::from_permille(1001).safe_mul(&Percent::from_permille(Units::MAX));
+        fn of_overflow() {
+            assert!(
+                Percent::from_permille(1001)
+                    .of(Percent::from_permille(Units::MAX))
+                    .is_none()
+            )
         }
     }
 

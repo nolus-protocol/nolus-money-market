@@ -72,14 +72,14 @@ mod test {
 
     use crate::{
         coin::Amount, fractionable::FractionableLegacy, percent::Percent, ratio::SimpleFraction,
-        test::coin,
+        rational::Rational, test::coin,
     };
 
     #[test]
     fn safe_mul() {
         assert_eq!(
             coin::coin1(30),
-            coin::coin1(3).safe_mul(&Percent::from_percent(1000))
+            Percent::from_percent(1000).of(coin::coin1(3)).unwrap()
         );
 
         assert_eq!(

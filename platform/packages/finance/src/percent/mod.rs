@@ -142,11 +142,11 @@ pub(super) mod test {
 
     use crate::{
         coin::Amount,
-        fraction::FractionLegacy,
-        fractionable::FractionableLegacy,
+        fraction::Fraction,
+        fractionable::{CommonDoublePrimitive, Fractionable, IntoMax},
         percent::{Percent, Percent100},
         ratio::{Ratio, SimpleFraction},
-        rational::RationalLegacy,
+        rational::Rational,
         test::coin,
     };
 
@@ -228,17 +228,18 @@ pub(super) mod test {
     }
 
     #[test]
-    fn rational_to_percents() {
+    fn from_fraction() {
         let n: Units = 189;
         let d: Units = 1890;
-        let r = SimpleFraction::new(n, d);
-        let res: Percent = RationalLegacy::<Units>::of(&r, Percent::HUNDRED).unwrap();
+        let r = SimpleFraction::new(percent(n), percent(d));
+        let res = r.of(Percent::HUNDRED).unwrap();
         assert_eq!(percent(n * 1000 / d), res);
     }
 
     pub(crate) fn test_of<P>(permille: Units, quantity: P, exp: P)
     where
-        P: Clone + Debug + Display + FractionableLegacy<Units> + PartialEq,
+        P: Clone + Debug + Display + Fractionable<Percent100> + PartialEq,
+        Percent100: IntoMax<<P as CommonDoublePrimitive<Percent100>>::CommonDouble>,
     {
         let perm = percent100(permille);
         assert_eq!(
