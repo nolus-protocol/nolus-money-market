@@ -110,7 +110,7 @@ impl Liability {
         self.recalc_time
     }
 
-    pub fn init_borrow_amount<P>(&self, downpayment: P, may_max_ltd: Option<Percent>) -> P
+    pub fn init_borrow_amount<P>(&self, downpayment: P, may_max_ltd: Option<Percent>) -> Option<P>
     where
         P: Copy + Fractionable<Percent100> + Fractionable<Percent> + Ord,
         Percent100: IntoMax<<P as CommonDoublePrimitive<Percent100>>::CommonDouble>,
@@ -120,38 +120,32 @@ impl Liability {
         debug_assert!(self.initial < Percent100::HUNDRED);
 
         let default_ltd = SimpleFraction::new(self.initial, self.initial.complement());
-        default_ltd
-            .of(downpayment)
-            .map(|default_borrow| {
-                may_max_ltd
-                    .and_then(|max_ltd| max_ltd.of(downpayment))
-                    .map(|requested_borrow| requested_borrow.min(default_borrow))
-                    .unwrap_or(default_borrow)
-            })
-            .expect("TODO method has to return Option")
+        default_ltd.of(downpayment).map(|default_borrow| {
+            may_max_ltd
+                .and_then(|max_ltd| max_ltd.of(downpayment))
+                .map(|requested_borrow| requested_borrow.min(default_borrow))
+                .unwrap_or(default_borrow)
+        })
     }
 
     /// Post-assert: (total_due - amount_to_liquidate) / (lease_amount - amount_to_liquidate) ~= self.healthy_percent(), if total_due < lease_amount.
     /// Otherwise, amount_to_liquidate == total_due
-    pub fn amount_to_liquidate<P>(&self, lease_amount: P, total_due: P) -> P
+    pub fn amount_to_liquidate<P>(&self, lease_amount: P, total_due: P) -> Option<P>
     where
         P: Copy + Fractionable<Percent100> + Ord + Sub<Output = P> + Zero,
         Percent100: IntoMax<<P as CommonDoublePrimitive<Percent100>>::CommonDouble>,
     {
-        if total_due < self.max.of(lease_amount) {
-            return P::ZERO;
-        }
-        if lease_amount <= total_due {
-            return lease_amount;
-        }
-
-        // from 'due - liquidation = healthy% of (lease - liquidation)' follows
-        // liquidation = 100% / (100% - healthy%) of (due - healthy% of lease)
-        let multiplier = SimpleFraction::new(Percent100::HUNDRED, self.healthy.complement());
-        let extra_liability_lpn = total_due - total_due.min(self.healthy.of(lease_amount));
-        multiplier
-            .of(extra_liability_lpn)
-            .expect("TODO the method has to return Option")
+        (total_due < self.max.of(lease_amount))
+            .then_some(P::ZERO)
+            .or_else(|| (lease_amount <= total_due).then_some(lease_amount))
+            .or_else(|| {
+                // from 'due - liquidation = healthy% of (lease - liquidation)' follows
+                // liquidation = 100% / (100% - healthy%) of (due - healthy% of lease)
+                let multiplier =
+                    SimpleFraction::new(Percent100::HUNDRED, self.healthy.complement());
+                let extra_liability_lpn = total_due - total_due.min(self.healthy.of(lease_amount));
+                multiplier.of(extra_liability_lpn)
+            })
     }
 
     fn invariant_held(&self) -> Result<()> {
@@ -450,7 +444,7 @@ mod test {
         due: Coin<C>,
         exp: Coin<C>,
     ) {
-        let liq = liability.amount_to_liquidate(lease, due);
+        let liq = liability.amount_to_liquidate(lease, due).unwrap();
         assert_eq!(exp, liq);
         if due.clamp(liability.max.of(lease), lease) == due {
             assert!(
@@ -499,7 +493,8 @@ mod test {
             third_liq_warn: Percent100::from_permille(998),
             recalc_time: Duration::from_secs(20000),
         }
-        .init_borrow_amount(downpayment, max_p);
+        .init_borrow_amount(downpayment, max_p)
+        .unwrap();
 
         assert_eq!(calculated, Coin::<Currency>::new(exp));
     }
