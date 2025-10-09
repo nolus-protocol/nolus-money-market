@@ -31,7 +31,7 @@ impl<const UPPER_BOUND: Units> FractionableLegacy<Units> for BoundPercent<UPPER_
 impl<const UPPER_BOUND: Units> ToDoublePrimitive for BoundPercent<UPPER_BOUND> {
     type Double = u64;
 
-    fn to_double(self) -> Self::Double {
+    fn to_double(&self) -> Self::Double {
         self.units().into()
     }
 }

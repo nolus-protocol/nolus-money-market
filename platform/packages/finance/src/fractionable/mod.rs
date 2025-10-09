@@ -15,7 +15,7 @@ mod usize;
 pub trait ToDoublePrimitive {
     type Double;
 
-    fn to_double(self) -> Self::Double;
+    fn to_double(&self) -> Self::Double;
 }
 
 /// Defines a common `Max` type, chosen as one of `Double` the types from either `Self` or `Other`

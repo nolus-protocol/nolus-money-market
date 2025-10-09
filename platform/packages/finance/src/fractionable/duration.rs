@@ -18,7 +18,7 @@ where
 impl ToDoublePrimitive for Duration {
     type Double = u128;
 
-    fn to_double(self) -> Self::Double {
+    fn to_double(&self) -> Self::Double {
         self.nanos().into()
     }
 }

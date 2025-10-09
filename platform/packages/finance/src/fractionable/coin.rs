@@ -36,8 +36,8 @@ impl<C> TryInto<Coin<C>> for U256 {
 impl<C> ToDoublePrimitive for Coin<C> {
     type Double = U256;
 
-    fn to_double(self) -> Self::Double {
-        U256::from(self)
+    fn to_double(&self) -> Self::Double {
+        self.amount().into()
     }
 }
 
