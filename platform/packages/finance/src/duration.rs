@@ -108,12 +108,6 @@ impl Duration {
     }
 }
 
-impl From<Duration> for u128 {
-    fn from(d: Duration) -> Self {
-        d.nanos().into()
-    }
-}
-
 impl FractionUnit for Duration {
     type Times = Units;
 
@@ -143,14 +137,6 @@ impl FractionUnit for Duration {
 
 impl Zero for Duration {
     const ZERO: Self = Self::from_nanos(0);
-}
-
-impl TryFrom<u128> for Duration {
-    type Error = <Units as TryFrom<u128>>::Error;
-
-    fn try_from(value: u128) -> Result<Self, Self::Error> {
-        Ok(Self::from_nanos(value.try_into()?))
-    }
 }
 
 impl Add<Duration> for Timestamp {
