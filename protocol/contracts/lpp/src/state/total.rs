@@ -84,7 +84,9 @@ impl<Lpn> Total<Lpn> {
                 self.annual_interest_rate,
                 self.total_principal_due,
                 Duration::between(&self.last_update_time, ctime),
-            ) + self.total_interest_due
+            )
+            .expect("TODO: the method should return Option<_>")
+                + self.total_interest_due
         }
     }
 

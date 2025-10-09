@@ -29,6 +29,7 @@ impl<Lpn> Loan<Lpn> {
             self.principal_due,
             self.due_period(by),
         )
+        .expect("TODO: the method should return Option<_>")
     }
 
     pub fn repay(&mut self, by: &Timestamp, repayment: Coin<Lpn>) -> RepayShares<Lpn> {
