@@ -2,9 +2,9 @@ use serde::{Deserialize, Serialize};
 
 use finance::{
     coin::Coin,
-    percent::{Percent, Percent100, Units as PercentUnits},
+    percent::{Percent, Percent100},
     ratio::SimpleFraction,
-    rational::RationalLegacy,
+    rational::Rational,
 };
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Serialize, Deserialize)]
@@ -69,10 +69,11 @@ impl InterestRate {
                 .min(utilization_factor_max)
         };
 
-        RationalLegacy::<PercentUnits>::of(
-            &SimpleFraction::new(self.addon_optimal_interest_rate, self.utilization_optimal),
-            utilization_factor,
+        SimpleFraction::<Percent>::new(
+            self.addon_optimal_interest_rate.into(),
+            self.utilization_optimal.into(),
         )
+        .of(utilization_factor)
         .map(|utilization_config| {
             utilization_config
                 .checked_add(self.base_interest_rate.into())
