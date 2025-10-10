@@ -13,6 +13,7 @@ use crate::{
 };
 
 pub mod bound;
+mod fractionable;
 
 pub type Units = u32;
 pub type Percent100 = BoundPercent<{ Percent::HUNDRED.units() }>;
