@@ -7,7 +7,6 @@ use crate::{fractionable::checked_mul::CheckedMul, ratio::RatioLegacy, zero::Zer
 
 pub(crate) mod checked_mul;
 mod percent;
-mod price;
 mod usize;
 
 /// Converts the domain type into its wider primitive `Double` type

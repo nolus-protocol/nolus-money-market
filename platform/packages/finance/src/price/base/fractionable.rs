@@ -1,8 +1,9 @@
 use std::marker::PhantomData;
 
-use crate::{coin::Amount, percent::Units as PercentUnits, price::Price, ratio::RatioLegacy};
-
-use super::FractionableLegacy;
+use crate::{
+    coin::Amount, fractionable::FractionableLegacy, percent::Units as PercentUnits, price::Price,
+    ratio::RatioLegacy,
+};
 
 impl<C, QuoteC> FractionableLegacy<PercentUnits> for Price<C, QuoteC>
 where
@@ -54,10 +55,14 @@ mod test {
     use crate::coin::{Amount, Coin};
 
     mod percent {
-        use crate::fraction::FractionLegacy;
-        use crate::fractionable::price::test::{c, q};
-        use crate::{percent::Percent100, price};
-
+        use crate::{
+            fraction::FractionLegacy,
+            percent::Percent100,
+            price::{
+                self,
+                base::fractionable::test::{c, q},
+            },
+        };
         #[test]
         fn greater_than_one() {
             let price = price::total_of(c(1)).is(q(1000));
@@ -77,8 +82,10 @@ mod test {
 
         use crate::{
             coin::{Amount, Coin},
-            fractionable::price::test::{c, q},
-            price,
+            price::{
+                self,
+                base::fractionable::test::{c, q},
+            },
             ratio::SimpleFraction,
             rational::RationalLegacy,
         };
