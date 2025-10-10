@@ -432,9 +432,16 @@ pub(crate) mod tests {
         lease: &TestLease,
         due_projection: Duration,
     ) {
-        let exp_due_margin =
-            due_projection.annualized_slice_of(MARGIN_INTEREST_RATE.of(principal_due));
-        let exp_due_interest = due_projection.annualized_slice_of(interest_rate.of(principal_due));
+        let exp_due_margin = due_projection
+            .annualized_slice_of(MARGIN_INTEREST_RATE.of(principal_due))
+            .expect(
+                "Failed to calculate due margin: overflow during annualized_slice_of() calculation",
+            );
+        let exp_due_interest = due_projection
+            .annualized_slice_of(interest_rate.of(principal_due))
+            .expect(
+                "Failed to calculate due interest: overflow during annualized_slice_of() calculation",
+            );
         assert_eq!(
             State {
                 amount: lease_amount,

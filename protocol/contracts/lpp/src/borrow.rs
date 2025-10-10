@@ -198,7 +198,7 @@ mod tests {
         }
 
         fn ratio(n: Units, d: Units) -> Percent100 {
-            Percent100::from_ratio(n, d)
+            Percent100::from_ratio(Percent100::from_permille(n), Percent100::from_permille(d))
         }
 
         #[derive(Copy, Clone)]
