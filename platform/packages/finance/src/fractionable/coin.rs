@@ -42,17 +42,17 @@ impl<C> ToDoublePrimitive for Coin<C> {
 }
 
 impl<C> CommonDoublePrimitive<Duration> for Coin<C> {
-    type CommonDouble = U256;
+    type CommonDouble = <Self as ToDoublePrimitive>::Double;
 }
 
 impl<C, const UPPER_BOUND: PercentUnits> CommonDoublePrimitive<BoundPercent<UPPER_BOUND>>
     for Coin<C>
 {
-    type CommonDouble = U256;
+    type CommonDouble = <Self as ToDoublePrimitive>::Double;
 }
 
 impl<C> CommonDoublePrimitive<Self> for Coin<C> {
-    type CommonDouble = U256;
+    type CommonDouble = <Self as ToDoublePrimitive>::Double;
 }
 
 impl<C> Fractionable<Duration> for Coin<C> {}

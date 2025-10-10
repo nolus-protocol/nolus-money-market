@@ -24,7 +24,7 @@ impl ToDoublePrimitive for Duration {
 }
 
 impl<C> CommonDoublePrimitive<Coin<C>> for Duration {
-    type CommonDouble = U256;
+    type CommonDouble = <Coin<C> as ToDoublePrimitive>::Double;
 }
 
 impl<C> Fractionable<Coin<C>> for Duration {}

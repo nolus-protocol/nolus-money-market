@@ -37,11 +37,11 @@ impl<const UPPER_BOUND: Units> ToDoublePrimitive for BoundPercent<UPPER_BOUND> {
 }
 
 impl<const UPPER_BOUND: Units> CommonDoublePrimitive<Self> for BoundPercent<UPPER_BOUND> {
-    type CommonDouble = u64;
+    type CommonDouble = <Self as ToDoublePrimitive>::Double;
 }
 
 impl<C, const UPPER_BOUND: Units> CommonDoublePrimitive<Coin<C>> for BoundPercent<UPPER_BOUND> {
-    type CommonDouble = U256;
+    type CommonDouble = <Coin<C> as ToDoublePrimitive>::Double;
 }
 
 impl<const UPPER_BOUND: Units> Fractionable<Self> for BoundPercent<UPPER_BOUND> {}
