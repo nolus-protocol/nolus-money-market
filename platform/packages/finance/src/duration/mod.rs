@@ -16,6 +16,8 @@ use crate::{
     zero::Zero,
 };
 
+mod fractionable;
+
 pub type Units = u64;
 
 pub type Seconds = u32;
