@@ -3,11 +3,11 @@ use bnum::types::U256;
 use crate::{
     coin::{Amount, Coin},
     duration::Duration,
-    fractionable::{CommonDoublePrimitive, Fractionable, IntoMax, ToDoublePrimitive, TryFromMax},
+    fractionable::{
+        CommonDoublePrimitive, Fractionable, HigherRank, IntoMax, ToDoublePrimitive, TryFromMax,
+    },
     percent::{Units as PercentUnits, bound::BoundPercent},
 };
-
-use super::HigherRank;
 
 impl<U, C> HigherRank<U> for Coin<C>
 where
@@ -37,7 +37,7 @@ impl<C> ToDoublePrimitive for Coin<C> {
     type Double = U256;
 
     fn to_double(&self) -> Self::Double {
-        self.amount().into()
+        self.amount.into()
     }
 }
 
