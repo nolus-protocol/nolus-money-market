@@ -249,6 +249,7 @@ impl<C> Display for Coin<C> {
     }
 }
 
+// TODO remove it when finish refactoring Fractionable
 impl<C> From<Coin<C>> for Amount {
     fn from(coin: Coin<C>) -> Self {
         coin.amount

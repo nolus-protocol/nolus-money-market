@@ -7,6 +7,8 @@ use crate::{
 };
 
 /// Computes how much interest is accrued
+///
+/// Returns `None` if an overflow occurs during the calculation
 pub fn interest<U, R, P>(rate: R, principal: P, period: Duration) -> Option<P>
 where
     U: IntoMax<<P as CommonDoublePrimitive<U>>::CommonDouble>,
@@ -21,6 +23,8 @@ where
 /// Computes how much time this payment covers, return.0, and the change, return.1
 ///
 /// The actual payment is equal to the payment minus the returned change.
+///
+/// Returns `None` if an overflow occurs during the calculation
 pub fn pay<U, R, P>(rate: R, principal: P, payment: P, period: Duration) -> Option<(Duration, P)>
 where
     U: IntoMax<<P as CommonDoublePrimitive<U>>::CommonDouble>,
@@ -48,6 +52,7 @@ where
         }
     })
 }
+
 #[cfg(test)]
 mod tests {
     use currency::test::SubGroupTestC10;

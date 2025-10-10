@@ -12,6 +12,7 @@ mod percent;
 mod price;
 mod usize;
 
+/// Converts the domain type into its wider primitive `Double` type
 pub trait ToDoublePrimitive {
     type Double;
 

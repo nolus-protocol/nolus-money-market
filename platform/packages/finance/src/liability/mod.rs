@@ -110,6 +110,7 @@ impl Liability {
         self.recalc_time
     }
 
+    /// Returns `None` if an overflow occurs during the calculation
     pub fn init_borrow_amount<P>(&self, downpayment: P, may_max_ltd: Option<Percent>) -> Option<P>
     where
         P: Copy + Fractionable<Percent100> + Fractionable<Percent> + Ord,
@@ -128,8 +129,11 @@ impl Liability {
         })
     }
 
+    /// Calculates the amount that must be liquidated to restore the healthy LTV.
     /// Post-assert: (total_due - amount_to_liquidate) / (lease_amount - amount_to_liquidate) ~= self.healthy_percent(), if total_due < lease_amount.
     /// Otherwise, amount_to_liquidate == total_due
+    ///
+    /// Returns `None` if an overflow occurs during the calculation
     pub fn amount_to_liquidate<P>(&self, lease_amount: P, total_due: P) -> Option<P>
     where
         P: Copy + Fractionable<Percent100> + Ord + Sub<Output = P> + Zero,
