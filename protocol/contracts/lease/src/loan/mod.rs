@@ -306,12 +306,12 @@ mod tests {
         #[test]
         fn full_max_overdue_full_max_due_repay() {
             let principal = lpn_coin(1000);
-            let delta_to_fully_paid = 30;
+            let delta_to_fully_paid = lpn_coin(30);
             let payment_at = LEASE_START + Duration::YEAR + Duration::YEAR;
             let one_year_margin = MARGIN_INTEREST_RATE.of(principal);
             let one_year_interest = LOAN_INTEREST_RATE.of(principal);
-            assert!(delta_to_fully_paid < one_year_margin.amount());
-            assert!(delta_to_fully_paid < one_year_interest.amount());
+            assert!(delta_to_fully_paid < one_year_margin);
+            assert!(delta_to_fully_paid < one_year_interest);
 
             let loan = LoanResponse {
                 principal_due: principal,
@@ -321,7 +321,7 @@ mod tests {
 
             let mut loan = create_loan(loan);
             {
-                let repay_overdue_interest = one_year_interest - lpn_coin(delta_to_fully_paid);
+                let repay_overdue_interest = one_year_interest - delta_to_fully_paid;
                 repay(
                     &mut loan,
                     repay_overdue_interest,
@@ -350,7 +350,7 @@ mod tests {
 
             {
                 let repay_fully_overdue_interest_and_some_margin =
-                    lpn_coin(delta_to_fully_paid + delta_to_fully_paid);
+                    delta_to_fully_paid + delta_to_fully_paid;
                 repay(
                     &mut loan,
                     repay_fully_overdue_interest_and_some_margin,
@@ -359,16 +359,15 @@ mod tests {
                         one_year_margin,
                         one_year_interest,
                         Overdue::Accrued {
-                            interest: lpn_coin(delta_to_fully_paid),
+                            interest: delta_to_fully_paid,
                             margin: one_year_margin,
                         },
                     ),
                     receipt(
                         principal,
                         ZERO_COIN,
-                        repay_fully_overdue_interest_and_some_margin
-                            - lpn_coin(delta_to_fully_paid),
-                        lpn_coin(delta_to_fully_paid),
+                        repay_fully_overdue_interest_and_some_margin - delta_to_fully_paid,
+                        delta_to_fully_paid,
                         ZERO_COIN,
                         ZERO_COIN,
                         ZERO_COIN,
@@ -379,9 +378,9 @@ mod tests {
             }
 
             {
-                let overdue_margin = one_year_margin - lpn_coin(delta_to_fully_paid);
+                let overdue_margin = one_year_margin - delta_to_fully_paid;
                 let repay_fully_overdue_margin_and_some_due_interest =
-                    overdue_margin + lpn_coin(delta_to_fully_paid);
+                    overdue_margin + delta_to_fully_paid;
                 repay(
                     &mut loan,
                     repay_fully_overdue_margin_and_some_due_interest,
@@ -409,8 +408,8 @@ mod tests {
             }
 
             {
-                let interest_due = one_year_interest - lpn_coin(delta_to_fully_paid);
-                let surplus = lpn_coin(delta_to_fully_paid);
+                let interest_due = one_year_interest - delta_to_fully_paid;
+                let surplus = delta_to_fully_paid;
                 let full_repayment = interest_due + one_year_margin + principal + surplus;
                 repay(
                     &mut loan,

@@ -86,7 +86,7 @@ impl<C> Coin<C> {
         self.amount == Zero::ZERO
     }
 
-    pub const fn amount(&self) -> Amount {
+    pub(super) const fn amount(&self) -> Amount {
         self.amount
     }
 
