@@ -4,7 +4,7 @@ use finance::{
     coin::{Amount, Coin},
     duration::Duration,
     fraction::FractionLegacy,
-    percent::{Percent, Percent100, Units as PercentUnits},
+    percent::{Percent, Percent100},
     price,
     ratio::SimpleFraction,
     rational::RationalLegacy,
@@ -29,7 +29,7 @@ use sdk::{
 use crate::{
     common::{
         self, ADDON_OPTIMAL_INTEREST_RATE, ADMIN, BASE_INTEREST_RATE, CwCoin, UTILIZATION_OPTIMAL,
-        cwcoin, cwcoin_from_amount,
+        coin, cwcoin, cwcoin_from_amount,
         lease::{
             InitConfig as LeaseInitConfig, Instantiator as LeaseInstantiator,
             InstantiatorAddresses as LeaseInstantiatorAddresses,
@@ -56,18 +56,15 @@ fn general_interest_rate(
     optimal_rate: Percent100,
 ) -> Percent100 {
     // TODO migrate to using SimpleFraction once it starts implementing Ord
-    Percent::from_fraction(loan, balance)
+    Percent::from_fraction::<Coin<Lpn>>(coin(loan.into()), coin(balance.into()))
     .map(|utilization_factor_max| {
             // TODO migrate to using SimpleFraction once it starts implementing Ord
-            let utilization_factor = Percent::from_fraction(
-                    optimal_rate.units(),
-                    optimal_rate.complement().units(),
+            let utilization_factor = Percent::from_fraction::<Percent>(
+                    optimal_rate.into(),
+                    optimal_rate.complement().into(),
                 ).expect("The utilization must be a valid Percent").min(utilization_factor_max);
 
-            RationalLegacy::<PercentUnits>::of(
-            &SimpleFraction::new(addon_rate, optimal_rate),
-            utilization_factor,
-        )
+            SimpleFraction::new(addon_rate, optimal_rate).of(utilization_factor)
         .map(|utilization_config| Percent100::try_from(utilization_config + base_rate.into()).expect("The borrow rate must not exceed 100%"))     
         .expect("The utilization_config must be a valid Percent")     
     })
