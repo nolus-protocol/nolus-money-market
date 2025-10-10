@@ -71,4 +71,7 @@ pub enum ContractError {
         "[Treasury] Invalid time configuration. Current reward distribution time is before the last distribution time"
     )]
     InvalidTimeConfiguration {},
+
+    #[error("Overflow occurred while calculating interest")]
+    InterestOverflow,
 }

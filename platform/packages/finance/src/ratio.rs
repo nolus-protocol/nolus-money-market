@@ -4,11 +4,11 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     error::{Error, Result as FinanceResult},
-    fraction::{Coprime, Fraction, Unit as FractionUnit},
+    fraction::{Coprime, Fraction, FractionLegacy, Unit as FractionUnit},
     fractionable::{
         Fractionable, FractionableLegacy, IntoMax, TryFromMax, checked_mul::CheckedMul,
     },
-    rational::Rational,
+    rational::{Rational, RationalLegacy},
     zero::Zero,
 };
 
@@ -70,10 +70,25 @@ where
 {
     fn of<A>(&self, whole: A) -> A
     where
+        U: IntoMax<A::CommonDouble>,
+        A: Fractionable<U>,
+    {
+        // TODO remove the full syntax when removing the RationalLegacy
+        Rational::of(&self.0, whole)
+            .expect("Ratio is a part of a whole, multiplication cannot overflow")
+    }
+}
+
+// TODO remove when removing FractionLegacy<Units> for Percent100
+impl<U> FractionLegacy<U> for Ratio<U>
+where
+    U: FractionUnit,
+{
+    fn of<A>(&self, whole: A) -> A
+    where
         A: FractionableLegacy<U>,
     {
-        self.0
-            .of(whole)
+        RationalLegacy::of(&self.0, whole)
             .expect("Ratio is a part of a whole, multiplication cannot overflow")
     }
 }
@@ -116,14 +131,14 @@ where
         if self.nominator == self.denominator {
             Some(rhs)
         } else {
-            let nominator_max = self.nominator.into();
-            let rhs_max = rhs.into();
-            let denominator_max = self.denominator.into();
+            let nominator_max = self.nominator.into_max();
+            let rhs_max = rhs.into_max();
+            let denominator_max = self.denominator.into_max();
 
             nominator_max
                 .checked_mul(rhs_max)
                 .map(|product| product.div(denominator_max))
-                .and_then(TryFromMax::try_from)
+                .and_then(TryFromMax::try_from_max)
         }
     }
 }
@@ -141,7 +156,21 @@ where
     }
 }
 
-impl<U, T> Rational<U> for SimpleFraction<T>
+impl<U> Rational<U> for SimpleFraction<U>
+where
+    U: FractionUnit,
+{
+    fn of<A>(&self, whole: A) -> Option<A>
+    where
+        U: IntoMax<A::CommonDouble>,
+        A: Fractionable<U>,
+    {
+        self.checked_mul(whole)
+    }
+}
+
+// TODO remove when removing FractionLegacy<Units> for Percent100
+impl<U, T> RationalLegacy<U> for SimpleFraction<T>
 where
     Self: RatioLegacy<U>,
 {

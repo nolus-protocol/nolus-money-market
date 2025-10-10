@@ -3,7 +3,7 @@ use std::fmt::{Debug, Display, Formatter, Result as FmtResult};
 use serde::{Deserialize, Serialize};
 
 use finance::{
-    fraction::Fraction,
+    fraction::FractionLegacy,
     fractionable::FractionableLegacy,
     percent::{Percent100, Units as PercentUnits},
     range::{Ascending, RightOpenRange},

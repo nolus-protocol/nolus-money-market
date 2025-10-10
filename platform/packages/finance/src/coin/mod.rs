@@ -86,6 +86,10 @@ impl<C> Coin<C> {
         self.amount == Zero::ZERO
     }
 
+    pub(super) const fn amount(&self) -> Amount {
+        self.amount
+    }
+
     #[track_caller]
     pub const fn checked_add(self, rhs: Self) -> Option<Self> {
         Self::may_new(self.amount.checked_add(rhs.amount))
@@ -245,6 +249,7 @@ impl<C> Display for Coin<C> {
     }
 }
 
+// TODO remove it when finish refactoring Fractionable
 impl<C> From<Coin<C>> for Amount {
     fn from(coin: Coin<C>) -> Self {
         coin.amount

@@ -220,7 +220,8 @@ where
 
         let borrow = self
             .liability
-            .init_borrow_amount(downpayment_lpn, self.max_ltd);
+            .init_borrow_amount(downpayment_lpn, self.max_ltd)
+            .expect("TODO: handle potential None from Liability::init_borrow_amount() properly");
 
         let asset_price = self.oracle.price_of::<Asset>()?.inv();
 

@@ -56,7 +56,8 @@ impl Overdue {
                 margin_interest,
                 lpp_loan.principal_due(),
                 overdue_period.length(),
-            );
+            )
+            .expect("TODO: handle potential None from interest::interest() properly");
             let interest = lpp_loan.interest_due(&overdue_period.till());
 
             Self::Accrued { interest, margin }
@@ -167,7 +168,7 @@ mod test {
         let exp_interest =
             lpp_loan.interest_due(&(LOAN.interest_paid + due_period_length - max_due));
         let exp_margin =
-            interest::interest(MARGIN_INTEREST_RATE, LOAN.principal_due, overdue_period);
+            interest::interest(MARGIN_INTEREST_RATE, LOAN.principal_due, overdue_period).unwrap();
         assert_eq!(
             Overdue::Accrued {
                 interest: exp_interest,

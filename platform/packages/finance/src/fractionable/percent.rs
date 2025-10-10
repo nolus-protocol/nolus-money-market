@@ -1,5 +1,8 @@
+use bnum::types::U256;
+
 use crate::{
     coin::Coin,
+    fractionable::{CommonDoublePrimitive, Fractionable, IntoMax, ToDoublePrimitive, TryFromMax},
     percent::{Units, bound::BoundPercent},
     ratio::RatioLegacy,
 };
@@ -13,6 +16,7 @@ where
     type Type = u64;
 }
 
+// TODO remove after implementing Fractionable<BoundPercent> for Price
 impl<const UPPER_BOUND: Units> FractionableLegacy<Units> for BoundPercent<UPPER_BOUND> {
     #[track_caller]
     fn safe_mul<R>(self, ratio: &R) -> Self
@@ -24,19 +28,53 @@ impl<const UPPER_BOUND: Units> FractionableLegacy<Units> for BoundPercent<UPPER_
     }
 }
 
-impl<C, const UPPER_BOUND: Units> FractionableLegacy<Coin<C>> for BoundPercent<UPPER_BOUND> {
-    #[track_caller]
-    fn safe_mul<F>(self, fraction: &F) -> Self
-    where
-        F: RatioLegacy<Coin<C>>,
-    {
-        let p128: u128 = self.units().into();
-        // TODO re-assess the design of Ratio ... and whether it could be > 1
-        let res: Units = p128
-            .safe_mul(fraction)
-            .try_into()
-            .expect("overflow computing a fraction of permille");
-        Self::try_from(res).expect("TODO remove when refactor Fractionable. Resulting permille exceeds BoundPercent upper bound")
+impl<const UPPER_BOUND: Units> ToDoublePrimitive for BoundPercent<UPPER_BOUND> {
+    type Double = u64;
+
+    fn to_double(&self) -> Self::Double {
+        self.units().into()
+    }
+}
+
+impl<const UPPER_BOUND: Units> CommonDoublePrimitive<Self> for BoundPercent<UPPER_BOUND> {
+    type CommonDouble = <Self as ToDoublePrimitive>::Double;
+}
+
+impl<C, const UPPER_BOUND: Units> CommonDoublePrimitive<Coin<C>> for BoundPercent<UPPER_BOUND> {
+    type CommonDouble = <Coin<C> as ToDoublePrimitive>::Double;
+}
+
+impl<const UPPER_BOUND: Units> Fractionable<Self> for BoundPercent<UPPER_BOUND> {}
+
+impl<C, const UPPER_BOUND: Units> Fractionable<Coin<C>> for BoundPercent<UPPER_BOUND> {}
+
+impl<const UPPER_BOUND: Units> IntoMax<u64> for BoundPercent<UPPER_BOUND> {
+    fn into_max(self) -> u64 {
+        self.to_double()
+    }
+}
+
+impl<const UPPER_BOUND: Units> IntoMax<U256> for BoundPercent<UPPER_BOUND> {
+    fn into_max(self) -> U256 {
+        self.to_double().into()
+    }
+}
+
+impl<const UPPER_BOUND: Units> TryFromMax<u64> for BoundPercent<UPPER_BOUND> {
+    fn try_from_max(max: u64) -> Option<Self> {
+        Units::try_from(max)
+            .ok()
+            .and_then(|units| Self::try_from(units).ok())
+    }
+}
+
+impl<const UPPER_BOUND: Units> TryFromMax<U256> for BoundPercent<UPPER_BOUND> {
+    fn try_from_max(max: U256) -> Option<Self> {
+        u128::try_from(max).ok().and_then(|u_128| {
+            Units::try_from(u_128)
+                .ok()
+                .and_then(|units| Self::try_from(units).ok())
+        })
     }
 }
 
@@ -44,27 +82,33 @@ impl<C, const UPPER_BOUND: Units> FractionableLegacy<Coin<C>> for BoundPercent<U
 mod test {
     mod percent {
         use crate::{
-            fractionable::{FractionableLegacy, HigherRank},
+            fraction::Fraction,
+            fractionable::HigherRank,
             percent::{Percent, Percent100, Units},
+            rational::Rational,
         };
 
         #[test]
-        fn safe_mul() {
+        fn of() {
             assert_eq!(
                 Percent100::from_permille(410 * 222 / 1000),
-                Percent100::from_percent(41).safe_mul(&Percent100::from_permille(222))
+                Percent100::from_percent(41).of(Percent100::from_permille(222))
             );
             assert_eq!(
                 Percent100::from_permille(999),
-                Percent100::from_percent(100).safe_mul(&Percent100::from_permille(999))
+                Percent100::from_percent(100).of(Percent100::from_permille(999))
             );
             assert_eq!(
                 Percent::from_permille(410 * 222222 / 1000),
-                Percent::from_percent(41).safe_mul(&Percent::from_permille(222222))
+                Percent::from_percent(41)
+                    .of(Percent::from_permille(222222))
+                    .unwrap()
             );
             assert_eq!(
                 Percent::from_permille(Units::MAX),
-                Percent::from_percent(100).safe_mul(&Percent::from_permille(Units::MAX))
+                Percent::from_percent(100)
+                    .of(Percent::from_permille(Units::MAX))
+                    .unwrap()
             );
 
             let p_units: Units = 410;
@@ -74,67 +118,73 @@ mod test {
 
             assert_eq!(
                 Percent::from_permille(p_units_res),
-                Percent::from_percent(41).safe_mul(&Percent::from_permille(Units::MAX))
+                Percent::from_percent(41)
+                    .of(Percent::from_permille(Units::MAX))
+                    .unwrap()
             );
         }
 
         #[test]
-        fn safe_mul_hundred_percent() {
+        fn of_hundred_percent() {
             assert_eq!(
                 Percent::from_permille(Units::MAX),
-                Percent::from_percent(100).safe_mul(&Percent::from_permille(Units::MAX))
+                Percent::from_percent(100)
+                    .of(Percent::from_permille(Units::MAX))
+                    .unwrap()
             );
         }
 
         #[test]
-        #[should_panic]
-        fn safe_mul_overflow() {
-            Percent::from_permille(1001).safe_mul(&Percent::from_permille(Units::MAX));
+        fn of_overflow() {
+            assert!(
+                Percent::from_permille(1001)
+                    .of(Percent::from_permille(Units::MAX))
+                    .is_none()
+            )
         }
     }
 
-    mod rational {
+    mod fraction {
 
         use crate::{
-            coin::Coin,
-            fractionable::FractionableLegacy,
-            percent::{Percent, Units},
-            ratio::SimpleFraction,
+            fraction::Fraction,
+            percent::{Percent, Percent100, Units},
+            ratio::{Ratio, SimpleFraction},
+            rational::Rational,
             test::coin,
         };
 
         #[test]
-        fn safe_mul() {
+        fn of() {
             assert_eq!(
                 Percent::from_permille(Units::MAX),
-                FractionableLegacy::<Coin<_>>::safe_mul(
-                    Percent::from_permille(Units::MAX),
-                    &SimpleFraction::new(coin::coin1(u128::MAX), coin::coin1(u128::MAX))
-                )
+                SimpleFraction::new(coin::coin1(u128::MAX), coin::coin1(u128::MAX))
+                    .of(Percent::from_permille(Units::MAX))
+                    .unwrap()
             );
             assert_eq!(
-                Percent::from_percent(20),
-                FractionableLegacy::<Coin<_>>::safe_mul(
-                    Percent::HUNDRED,
-                    &SimpleFraction::new(coin::coin1(1), coin::coin1(5))
-                )
+                Percent::from_permille(1500),
+                Ratio::new(coin::coin1(3), coin::coin1(4)).of(Percent::from_permille(2000))
             );
             assert_eq!(
-                Percent::from_permille(225),
-                FractionableLegacy::<Coin<_>>::safe_mul(
-                    Percent::from_permille(150),
-                    &SimpleFraction::new(coin::coin1(3), coin::coin1(2))
-                )
+                Percent100::from_percent(20),
+                Ratio::new(coin::coin1(1), coin::coin1(5)).of(Percent100::HUNDRED)
+            );
+            assert_eq!(
+                Percent100::from_permille(225),
+                SimpleFraction::new(coin::coin1(3), coin::coin1(2))
+                    .of(Percent100::from_permille(150))
+                    .unwrap()
             );
         }
 
         #[test]
-        #[should_panic]
-        fn safe_mul_overflow() {
-            FractionableLegacy::<Coin<_>>::safe_mul(
-                Percent::from_percent(1),
-                &SimpleFraction::new(coin::coin1(u128::MAX), coin::coin1(1)),
-            );
+        fn of_overflow() {
+            assert!(
+                SimpleFraction::new(coin::coin1(u128::MAX), coin::coin1(1))
+                    .of(Percent::from_percent(1))
+                    .is_none()
+            )
         }
     }
 }

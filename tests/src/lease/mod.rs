@@ -148,6 +148,7 @@ pub(super) fn calculate_interest(
     duration: Duration,
 ) -> Coin<LpnCurrency> {
     interest::interest(interest_rate, principal, duration)
+        .expect("Failed to calculate the interest")
 }
 
 pub(super) fn open_lease<
