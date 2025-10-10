@@ -2,12 +2,13 @@ use bnum::types::U256;
 
 use crate::{
     coin::Coin,
-    fractionable::{CommonDoublePrimitive, Fractionable, IntoMax, ToDoublePrimitive, TryFromMax},
+    fractionable::{
+        CommonDoublePrimitive, Fractionable, FractionableLegacy, HigherRank, IntoMax,
+        ToDoublePrimitive, TryFromMax,
+    },
     percent::{Units, bound::BoundPercent},
     ratio::RatioLegacy,
 };
-
-use super::{FractionableLegacy, HigherRank};
 
 impl<T> HigherRank<T> for u32
 where
