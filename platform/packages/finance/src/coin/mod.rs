@@ -24,6 +24,7 @@ pub use self::{
 mod amount_serde;
 mod dto;
 mod external;
+mod fractionable;
 mod serde;
 
 pub type Amount = u128;
@@ -84,11 +85,6 @@ impl<C> Coin<C> {
 
     pub const fn is_zero(&self) -> bool {
         self.amount == Zero::ZERO
-    }
-
-    // TODO remove when `ToDoublePrimitive for Coin` implementation is moved under root module
-    pub(super) const fn amount(&self) -> Amount {
-        self.amount
     }
 
     #[track_caller]
