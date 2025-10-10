@@ -6,7 +6,6 @@ use std::{
 use crate::{fractionable::checked_mul::CheckedMul, ratio::RatioLegacy, zero::Zero};
 
 pub(crate) mod checked_mul;
-mod coin;
 mod duration;
 mod percent;
 mod price;

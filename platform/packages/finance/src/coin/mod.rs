@@ -24,6 +24,7 @@ pub use self::{
 mod amount_serde;
 mod dto;
 mod external;
+mod fractionable;
 mod serde;
 
 pub type Amount = u128;
@@ -84,10 +85,6 @@ impl<C> Coin<C> {
 
     pub const fn is_zero(&self) -> bool {
         self.amount == Zero::ZERO
-    }
-
-    pub(super) const fn amount(&self) -> Amount {
-        self.amount
     }
 
     #[track_caller]
