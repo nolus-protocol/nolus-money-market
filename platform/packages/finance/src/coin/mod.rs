@@ -86,6 +86,7 @@ impl<C> Coin<C> {
         self.amount == Zero::ZERO
     }
 
+    // TODO remove when `ToDoublePrimitive for Coin` implementation is moved under root module
     pub(super) const fn amount(&self) -> Amount {
         self.amount
     }
