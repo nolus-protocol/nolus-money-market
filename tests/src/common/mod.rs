@@ -2,7 +2,10 @@ use serde::{Deserialize, Serialize};
 
 use ::lease::api::LpnCoinDTO;
 use currencies::{Lpn, Nls, PaymentGroup};
-use currency::{CurrencyDTO, CurrencyDef, Group, GroupFilterMap, MemberOf, PairsGroup};
+use currency::{
+    CurrencyDTO, CurrencyDef, DefinitionRef, Group, GroupFilterMap, MemberOf, PairsGroup,
+    SymbolStatic,
+};
 use finance::{
     coin::{Amount, Coin},
     duration::Duration,
@@ -70,35 +73,44 @@ pub const LEASE_ADMIN: &str = "lease_admin";
 
 pub fn query_all_balances(addr: &Addr, querier: QuerierWrapper<'_>) -> Vec<CwCoin> {
     #[derive(Clone, Copy)]
-    struct QueryAllBalances<'addr, 'querier>(&'addr Addr, QuerierWrapper<'querier>);
+    struct QueryAllBalances<'addr, 'querier, TickerF> {
+        addr: &'addr Addr,
+        querier: QuerierWrapper<'querier>,
+        ticker_f: TickerF,
+    }
 
-    impl GroupFilterMap for QueryAllBalances<'_, '_> {
+    impl<TickerF> GroupFilterMap for QueryAllBalances<'_, '_, TickerF>
+    where
+        TickerF: Fn(DefinitionRef) -> SymbolStatic,
+    {
         type VisitedG = PaymentGroup;
 
-        type Outcome = CwResult<[CwCoin; 2]>;
+        type Outcome = CwResult<CwCoin>;
 
         fn on<C>(&self, _: &CurrencyDTO<C::Group>) -> Option<Self::Outcome>
         where
             C: CurrencyDef + PairsGroup<CommonGroup = <Self::VisitedG as Group>::TopG>,
             C::Group: MemberOf<Self::VisitedG> + MemberOf<<Self::VisitedG as Group>::TopG>,
         {
-            let query = |denom| self.1.query_balance(self.0.clone(), denom);
-
-            Some(
-                query(C::bank())
-                    .and_then(|bank_coin| query(C::dex()).map(|dex_coin| [bank_coin, dex_coin])),
-            )
+            self.querier
+                .query_balance(self.addr, self.ticker_f(C::dto().definition()))
+                .map(|coin| (!coin.amount.is_zero()).then_some(coin))
+                .transpose()
         }
     }
 
-    let mut balances = PaymentGroup::filter_map(QueryAllBalances(addr, querier))
-        .collect::<Result<Vec<_>, _>>()
-        .expect("All currencies should be queriable!")
-        .into_flattened();
-
-    balances.retain(|coin| !coin.amount.is_zero());
-
-    balances
+    PaymentGroup::filter_map(QueryAllBalances {
+        addr,
+        querier,
+        ticker_f: |definition| definition.bank_symbol,
+    })
+    .chain(PaymentGroup::filter_map(QueryAllBalances {
+        addr,
+        querier,
+        ticker_f: |definition| definition.dex_symbol,
+    }))
+    .collect::<Result<_, _>>()
+    .expect("All currencies should be queriable!")
 }
 
 pub fn native_cwcoin(amount: Amount) -> CwCoin {
