@@ -10,7 +10,6 @@ use finance::{
     liability::{Liability, Zone},
     percent::{Percent, Percent100},
     price::{self},
-    zero::Zero,
 };
 
 use crate::{
@@ -411,12 +410,9 @@ impl Spec {
 
     fn ltv<P>(total_due: P, lease_asset: P) -> Percent100
     where
-        P: Copy
-            + Debug
-            + FractionUnit
+        P: FractionUnit
             + IntoMax<<Percent100 as CommonDoublePrimitive<P>>::CommonDouble>
-            + PartialEq
-            + Zero,
+            + PartialEq,
         Percent100: Fractionable<P>,
     {
         debug_assert!(total_due <= lease_asset);
