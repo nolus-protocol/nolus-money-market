@@ -29,7 +29,7 @@ use sdk::{
 use crate::{
     common::{
         self, ADDON_OPTIMAL_INTEREST_RATE, ADMIN, BASE_INTEREST_RATE, CwCoin, UTILIZATION_OPTIMAL,
-        coin, cwcoin, cwcoin_from_amount,
+        cwcoin, cwcoin_from_amount,
         lease::{
             InitConfig as LeaseInitConfig, Instantiator as LeaseInstantiator,
             InstantiatorAddresses as LeaseInstantiatorAddresses,
@@ -56,11 +56,11 @@ fn general_interest_rate(
     optimal_rate: Percent100,
 ) -> Percent100 {
     // TODO migrate to using SimpleFraction once it starts implementing Ord
-    Percent::from_fraction::<Coin<Lpn>>(coin(loan.into()), coin(balance.into()))
+    Percent::from_fraction(common::coin::<Lpn>(loan.into()), common::coin(balance.into()))
     .map(|utilization_factor_max| {
             // TODO migrate to using SimpleFraction once it starts implementing Ord
-            let utilization_factor = Percent::from_fraction::<Percent>(
-                    optimal_rate.into(),
+            let utilization_factor = Percent::from_fraction(
+                    Percent::from(optimal_rate),
                     optimal_rate.complement().into(),
                 ).expect("The utilization must be a valid Percent").min(utilization_factor_max);
 
