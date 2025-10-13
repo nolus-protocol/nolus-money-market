@@ -130,21 +130,19 @@ pub fn reply(deps: DepsMut<'_>, env: Env, msg: Reply) -> ContractResult<CwRespon
 mod tests {
     use sdk::cosmwasm_std::{
         self, Addr, MessageInfo,
-        testing::{mock_dependencies, mock_env},
+        testing::{self},
     };
 
     use crate::msg::InstantiateMsg;
 
-    use super::instantiate;
-
     #[test]
     fn proper_initialization() {
         let msg = InstantiateMsg {};
-        let mut deps = mock_dependencies();
+        let mut deps = testing::mock_dependencies();
         let info = MessageInfo {
             sender: Addr::unchecked("CREATOR"),
             funds: vec![cosmwasm_std::coin(1000, "token")],
         };
-        instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
+        super::instantiate(deps.as_mut(), testing::mock_env(), info, msg).unwrap();
     }
 }

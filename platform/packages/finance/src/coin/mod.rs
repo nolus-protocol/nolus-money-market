@@ -228,7 +228,7 @@ mod test {
 
     use currency::test::{SuperGroupTestC1, SuperGroupTestC2};
 
-    use crate::{fraction::Coprime, percent::test::test_of, test::coin};
+    use crate::{fraction::Coprime, percent::test, test::coin};
 
     use super::{Amount, Coin};
 
@@ -246,21 +246,21 @@ mod test {
 
     #[test]
     fn of_are() {
-        test_of(10, coin::coin1(100), coin::coin1(1));
-        test_of(11, coin::coin1(100), coin::coin1(1));
-        test_of(11, coin::coin1(90), coin::coin1(0));
-        test_of(11, coin::coin1(91), coin::coin1(1));
-        test_of(110, coin::coin1(100), coin::coin1(11));
-        test_of(12, coin::coin1(100), coin::coin1(1));
-        test_of(12, coin::coin1(84), coin::coin1(1));
-        test_of(12, coin::coin1(83), coin::coin1(0));
-        test_of(18, coin::coin1(100), coin::coin1(1));
-        test_of(18, coin::coin1(56), coin::coin1(1));
-        test_of(18, coin::coin1(55), coin::coin1(0));
-        test_of(18, coin::coin1(120), coin::coin1(2));
-        test_of(18, coin::coin1(112), coin::coin1(2));
-        test_of(18, coin::coin1(111), coin::coin1(1));
-        test_of(1000, coin::coin1(Amount::MAX), coin::coin1(Amount::MAX));
+        test::test_of(10, coin::coin1(100), coin::coin1(1));
+        test::test_of(11, coin::coin1(100), coin::coin1(1));
+        test::test_of(11, coin::coin1(90), coin::coin1(0));
+        test::test_of(11, coin::coin1(91), coin::coin1(1));
+        test::test_of(110, coin::coin1(100), coin::coin1(11));
+        test::test_of(12, coin::coin1(100), coin::coin1(1));
+        test::test_of(12, coin::coin1(84), coin::coin1(1));
+        test::test_of(12, coin::coin1(83), coin::coin1(0));
+        test::test_of(18, coin::coin1(100), coin::coin1(1));
+        test::test_of(18, coin::coin1(56), coin::coin1(1));
+        test::test_of(18, coin::coin1(55), coin::coin1(0));
+        test::test_of(18, coin::coin1(120), coin::coin1(2));
+        test::test_of(18, coin::coin1(112), coin::coin1(2));
+        test::test_of(18, coin::coin1(111), coin::coin1(1));
+        test::test_of(1000, coin::coin1(Amount::MAX), coin::coin1(Amount::MAX));
     }
 
     #[test]
@@ -378,7 +378,7 @@ mod test {
     #[should_panic]
     fn of_overflow() {
         let max_amount = coin::coin1(Amount::MAX);
-        test_of(1001, max_amount, max_amount);
+        test::test_of(1001, max_amount, max_amount);
     }
 
     #[test]

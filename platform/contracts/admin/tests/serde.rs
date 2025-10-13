@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 
-use serde_test::{Token, assert_tokens};
+use serde_test::Token;
 
 use admin_contract::msg::{
     ContractsExecute, ExecuteSpec, PlatformContractsWithoutAdmin, PlatformExecute,
@@ -150,7 +150,7 @@ fn contracts_execute() {
         ]),
     };
 
-    assert_tokens(
+    serde_test::assert_tokens(
         &value,
         &r#struct(
             CONTRACTS_STRUCT_NAME,

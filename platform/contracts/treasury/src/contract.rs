@@ -265,20 +265,15 @@ mod tests {
     use finance::percent::Percent100;
     use sdk::{
         cosmwasm_ext::Response as CwResponse,
-        cosmwasm_std::{
-            DepsMut, coins, from_json,
-            testing::{mock_dependencies_with_balance, mock_env},
-        },
+        cosmwasm_std::{DepsMut, coins, from_json, testing as cosmwasm_test},
         testing,
     };
 
     use crate::{
-        contract::sudo,
+        contract,
         msg::{ConfigResponse, InstantiateMsg, QueryMsg, SudoMsg},
         state::reward_scale::{Bar, RewardScale, TotalValueLocked},
     };
-
-    use super::{instantiate, query};
 
     const PROTOCOLS_REGISTRY_ADDR: &str = "admin";
     const TIMEALARMS_ADDR: &str = "timealarms";
@@ -306,14 +301,15 @@ mod tests {
             funds: vec![cosmwasm_std::coin(1000, "unolus")],
         };
 
-        let res: CwResponse = instantiate(deps, mock_env(), info, msg).unwrap();
+        let res: CwResponse =
+            super::instantiate(deps, cosmwasm_test::mock_env(), info, msg).unwrap();
         assert_eq!(1, res.messages.len());
     }
 
     #[test]
     fn proper_initialization() {
         let mut deps = testing::customized_mock_deps_with_contracts(
-            mock_dependencies_with_balance(&coins(2, "token")),
+            cosmwasm_test::mock_dependencies_with_balance(&coins(2, "token")),
             [
                 testing::user(PROTOCOLS_REGISTRY_ADDR),
                 testing::user(TIMEALARMS_ADDR),
@@ -322,7 +318,12 @@ mod tests {
         );
         do_instantiate(deps.as_mut());
 
-        let res = query(deps.as_ref(), mock_env(), QueryMsg::Config {}).unwrap();
+        let res = super::query(
+            deps.as_ref(),
+            cosmwasm_test::mock_env(),
+            QueryMsg::Config {},
+        )
+        .unwrap();
         let value: ConfigResponse = from_json(res).unwrap();
         assert_eq!(10, value.cadence_hours);
     }
@@ -330,7 +331,7 @@ mod tests {
     #[test]
     fn configure() {
         let mut deps = testing::customized_mock_deps_with_contracts(
-            mock_dependencies_with_balance(&coins(2, "token")),
+            cosmwasm_test::mock_dependencies_with_balance(&coins(2, "token")),
             [
                 testing::user(PROTOCOLS_REGISTRY_ADDR),
                 testing::user(TIMEALARMS_ADDR),
@@ -346,9 +347,9 @@ mod tests {
             events,
             data,
             ..
-        }: CwResponse = sudo(
+        }: CwResponse = contract::sudo(
             deps.as_mut(),
-            mock_env(),
+            cosmwasm_test::mock_env(),
             SudoMsg::Config { cadence_hours: 12 },
         )
         .unwrap();
@@ -359,7 +360,12 @@ mod tests {
         assert_eq!(data, None);
 
         // should now be 12
-        let res = query(deps.as_ref(), mock_env(), QueryMsg::Config {}).unwrap();
+        let res = super::query(
+            deps.as_ref(),
+            cosmwasm_test::mock_env(),
+            QueryMsg::Config {},
+        )
+        .unwrap();
         let value: ConfigResponse = from_json(res).unwrap();
         assert_eq!(value.cadence_hours, 12);
 
@@ -369,9 +375,9 @@ mod tests {
             events,
             data,
             ..
-        }: CwResponse = sudo(
+        }: CwResponse = contract::sudo(
             deps.as_mut(),
-            mock_env(),
+            cosmwasm_test::mock_env(),
             SudoMsg::Config { cadence_hours: 20 },
         )
         .unwrap();
@@ -382,7 +388,12 @@ mod tests {
         assert_eq!(data, None);
 
         // should now be 12
-        let res = query(deps.as_ref(), mock_env(), QueryMsg::Config {}).unwrap();
+        let res = super::query(
+            deps.as_ref(),
+            cosmwasm_test::mock_env(),
+            QueryMsg::Config {},
+        )
+        .unwrap();
         let value: ConfigResponse = from_json(res).unwrap();
         assert_eq!(value.cadence_hours, 20);
     }

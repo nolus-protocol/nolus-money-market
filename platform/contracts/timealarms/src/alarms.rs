@@ -117,14 +117,14 @@ where
 mod tests {
     use sdk::cosmwasm_std::{
         Addr, Timestamp,
-        testing::{self, mock_dependencies},
+        testing::{self},
     };
 
     use super::TimeAlarms;
 
     #[test]
     fn try_add_valid_contract_address() {
-        let mut deps_temp = mock_dependencies();
+        let mut deps_temp = testing::mock_dependencies();
         let deps = deps_temp.as_mut();
         let mut env = testing::mock_env();
         env.block.time = Timestamp::from_seconds(0);
@@ -139,7 +139,7 @@ mod tests {
 
     #[test]
     fn try_add_alarm_in_the_past() {
-        let mut deps_temp = mock_dependencies();
+        let mut deps_temp = testing::mock_dependencies();
         let deps = deps_temp.as_mut();
 
         let mut env = testing::mock_env();
