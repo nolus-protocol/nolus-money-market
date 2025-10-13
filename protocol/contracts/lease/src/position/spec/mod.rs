@@ -1,4 +1,4 @@
-use std::{fmt::Debug, ops::Add};
+use std::ops::Add;
 
 use currency::{CurrencyDef, MemberOf};
 use finance::{
