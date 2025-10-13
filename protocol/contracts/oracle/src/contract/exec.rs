@@ -32,20 +32,25 @@ where
     PriceCurrencies: Group<TopG = PriceCurrencies>,
 {
     match msg {
-        ExecuteMsg::FeedPrices { prices } => {
-            if !Feeders::is_feeder(deps.storage, &sender)? {
-                return Err(Error::UnknownFeeder {});
-            }
-
-            let mut oracle = Oracle::<_, PriceCurrencies, BaseCurrency, BaseCurrencies>::load(deps.storage)?;
-            let warning_emitter = oracle.try_feed_prices(env.block.time, sender, prices)?;
-            
-            let response = if let Some(emitter) = warning_emitter {
-                MessageResponse::messages_with_events(Default::default(), emitter)
-            } else {
-                MessageResponse::default()
-            };
-        }
+        ExecuteMsg::FeedPrices { prices } => Feeders::is_feeder(deps.storage, &sender)
+            .and_then(|found| {
+                if found {
+                    Ok(())
+                } else {
+                    Err(Error::UnknownFeeder {})
+                }
+            })
+            .and_then(|()| {
+                Oracle::<_, PriceCurrencies, BaseCurrency, BaseCurrencies>::load(deps.storage)
+            })
+            .and_then(|mut oracle| oracle.try_feed_prices(env.block.time, sender, prices))
+            .map(|warning_emitter| {
+                if let Some(emitter) = warning_emitter {
+                    MessageResponse::messages_with_events(Default::default(), emitter)
+                } else {
+                    MessageResponse::default()
+                }
+            }),
         ExecuteMsg::DispatchAlarms { max_count } => {
             Oracle::<_, PriceCurrencies, BaseCurrency, BaseCurrencies>::load(deps.storage)?
                 .try_notify_alarms(env.block.time, max_count)

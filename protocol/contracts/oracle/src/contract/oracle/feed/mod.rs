@@ -8,7 +8,7 @@ use finance::{
 use marketprice::{
     ObservationsReadRepo, ObservationsRepo, config::Config, market_price::PriceFeeds,
 };
-use platform::batch::Emitter;
+use platform::batch::{Emit, Emitter};
 use sdk::cosmwasm_std::{Addr, Timestamp};
 
 use crate::{
@@ -106,9 +106,7 @@ where
         sender_raw: Addr,
         prices: &[PriceDTO<PriceG>],
     ) -> Result<Option<Emitter>, PriceG> {
-        let (supported, unsupported): (Vec<_>, Vec<_>) = prices
-        .iter()
-        .partition(|price| {
+        let (supported, unsupported): (Vec<_>, Vec<_>) = prices.iter().partition::<Vec<_>, _>(|price| {
             tree.swap_pairs_df().any(
                 |SwapLeg {
                      from,
@@ -123,23 +121,25 @@ where
             )
         });
 
-        const EVENT_TYPE: &str = "unsupported-currency";
-    
-        let mut warning_emitter = None;
-        if !unsupported.is_empty() {
-            let mut emitter = Emitter::of_type(EVENT_TYPE);
-            for price in &unsupported {
-                emitter = emitter.emit("ignored", price.to_string());
-            }
-            warning_emitter = Some(emitter);
-        }
-    
+        const EVENT_TYPE: &str = "unsupported-currency";    
+
+        let warning_emitter = if !unsupported.is_empty() {
+            Some(
+                unsupported.iter().fold(
+                    Emitter::of_type(EVENT_TYPE),
+                    |emitter, price| emitter.emit("ignored", price.to_string())
+                )
+            )
+        } else {
+            None
+        };
+
         if !supported.is_empty() {
             self.feeds
                 .feed(block_time, sender_raw, &supported)
                 .map_err(Into::into)?;
         }
-    
+
         Ok(warning_emitter)
     }
 
