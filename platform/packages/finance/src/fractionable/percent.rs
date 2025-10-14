@@ -70,9 +70,9 @@ impl<const UPPER_BOUND: Units> TryFromMax<u64> for BoundPercent<UPPER_BOUND> {
 
 impl<const UPPER_BOUND: Units> TryFromMax<U256> for BoundPercent<UPPER_BOUND> {
     fn try_from_max(max: U256) -> Option<Self> {
-        max.try_into()
+        Units::try_from(max)
             .ok()
-            .and_then(|units: Units| Self::try_from(units).ok())
+            .and_then(|units| Self::try_from(units).ok())
     }
 }
 
