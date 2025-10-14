@@ -16,7 +16,7 @@ use sdk::{
     cosmwasm_ext::Response as CwResponse,
     cosmwasm_std::{
         Addr, Api, Binary, Deps, DepsMut, Env, MessageInfo, QuerierWrapper, Storage, Timestamp,
-        entry_point, to_json_binary,
+        entry_point,
     },
 };
 use timealarms::stub::TimeAlarmsRef;
@@ -110,11 +110,12 @@ pub fn sudo(deps: DepsMut<'_>, _env: Env, msg: SudoMsg) -> ContractResult<CwResp
 #[entry_point]
 pub fn query(deps: Deps<'_>, env: Env, msg: QueryMsg) -> ContractResult<Binary> {
     match msg {
-        QueryMsg::Config {} => {
-            to_json_binary(&query_config(deps.storage)?).map_err(ContractError::Serialize)
-        }
+        QueryMsg::Config {} => cosmwasm_std::to_json_binary(&query_config(deps.storage)?)
+            .map_err(ContractError::Serialize),
         QueryMsg::CalculateRewards {} => query_reward_apr(deps.storage, deps.querier, &env)
-            .and_then(|ref apr| to_json_binary(apr).map_err(ContractError::Serialize)),
+            .and_then(|ref apr| {
+                cosmwasm_std::to_json_binary(apr).map_err(ContractError::Serialize)
+            }),
         QueryMsg::PlatformPackageRelease {} => {
             cosmwasm_std::to_json_binary(&CURRENT_RELEASE).map_err(Into::into)
         }
@@ -265,7 +266,7 @@ mod tests {
     use finance::percent::Percent100;
     use sdk::{
         cosmwasm_ext::Response as CwResponse,
-        cosmwasm_std::{DepsMut, coins, from_json, testing as cosmwasm_test},
+        cosmwasm_std::{DepsMut, coins, testing as cosmwasm_test},
         testing,
     };
 
@@ -324,7 +325,7 @@ mod tests {
             QueryMsg::Config {},
         )
         .unwrap();
-        let value: ConfigResponse = from_json(res).unwrap();
+        let value: ConfigResponse = cosmwasm_std::from_json(res).unwrap();
         assert_eq!(10, value.cadence_hours);
     }
 
@@ -366,7 +367,7 @@ mod tests {
             QueryMsg::Config {},
         )
         .unwrap();
-        let value: ConfigResponse = from_json(res).unwrap();
+        let value: ConfigResponse = cosmwasm_std::from_json(res).unwrap();
         assert_eq!(value.cadence_hours, 12);
 
         let CwResponse {
@@ -394,7 +395,7 @@ mod tests {
             QueryMsg::Config {},
         )
         .unwrap();
-        let value: ConfigResponse = from_json(res).unwrap();
+        let value: ConfigResponse = cosmwasm_std::from_json(res).unwrap();
         assert_eq!(value.cadence_hours, 20);
     }
 }

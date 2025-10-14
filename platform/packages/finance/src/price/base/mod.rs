@@ -200,7 +200,7 @@ mod test_invariant {
         CurrencyDef, Group, MemberOf, SymbolStatic,
         test::{SubGroup, SubGroupTestC10, SuperGroup, SuperGroupTestC1, SuperGroupTestC2},
     };
-    use sdk::cosmwasm_std::{StdError, StdResult, from_json, to_json_string};
+    use sdk::cosmwasm_std::{self, StdError, StdResult};
 
     use crate::{coin::Coin, test::coin};
 
@@ -253,7 +253,7 @@ mod test_invariant {
             Coin::<SubGroupTestC10>::new(10),
         );
 
-        let serialized = to_json_string(&base_price).expect("Failed to serialize");
+        let serialized = cosmwasm_std::to_json_string(&base_price).expect("Failed to serialize");
         let loaded = load::<SuperGroup, SubGroupTestC10, SubGroup>(&serialized.into_bytes())
             .expect("Failed to deserialize");
         assert_eq!(base_price, loaded);
@@ -313,7 +313,7 @@ mod test_invariant {
         QuoteC::Group: MemberOf<QuoteG>,
         QuoteG: Group + MemberOf<G>,
     {
-        from_json::<BasePrice<G, QuoteC, QuoteG>>(json)
+        cosmwasm_std::from_json::<BasePrice<G, QuoteC, QuoteG>>(json)
     }
 
     fn ticker<C>() -> SymbolStatic

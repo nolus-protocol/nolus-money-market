@@ -6,7 +6,7 @@ use currency::CurrencyDef;
 use finance::coin::Coin;
 use sdk::{
     cosmwasm_ext::{CosmosMsg, SubMsg},
-    cosmwasm_std::{Addr, Coin as CoinCw, WasmMsg, to_json_binary},
+    cosmwasm_std::{self, Addr, Coin as CoinCw, WasmMsg},
 };
 
 pub use crate::emit::{Emit, Emitter};
@@ -159,7 +159,7 @@ impl Batch {
     where
         M: Serialize + ?Sized,
     {
-        to_json_binary(msg)
+        cosmwasm_std::to_json_binary(msg)
             .map_err(Error::Serialization)
             .map(|raw_msg| WasmMsg::Execute {
                 contract_addr: addr.into_string(),
@@ -173,7 +173,7 @@ impl Batch {
         M: Serialize + ?Sized,
         C: CurrencyDef,
     {
-        to_json_binary(msg)
+        cosmwasm_std::to_json_binary(msg)
             .map_err(Error::Serialization)
             .map(|msg| WasmMsg::Execute {
                 contract_addr: addr.into_string(),
@@ -196,7 +196,7 @@ impl Batch {
     where
         M: Serialize + ?Sized,
     {
-        to_json_binary(msg)
+        cosmwasm_std::to_json_binary(msg)
             .map_err(Error::Serialization)
             .map(|msg| WasmMsg::Instantiate {
                 admin: admin.map(Addr::into_string),
@@ -211,7 +211,7 @@ impl Batch {
     where
         M: Serialize + ?Sized,
     {
-        to_json_binary(msg)
+        cosmwasm_std::to_json_binary(msg)
             .map_err(Error::Serialization)
             .map(|msg| WasmMsg::Migrate {
                 contract_addr: addr.into_string(),

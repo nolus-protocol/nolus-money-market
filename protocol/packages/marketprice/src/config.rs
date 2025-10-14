@@ -164,7 +164,7 @@ mod unchecked {
 mod test {
     use finance::{duration::Duration, percent::Percent100};
     use platform::tests as platform_tests;
-    use sdk::cosmwasm_std::{StdError, Timestamp, from_json};
+    use sdk::cosmwasm_std::{self, StdError, Timestamp};
 
     use crate::config::Config;
 
@@ -301,7 +301,7 @@ mod test {
         samples_number: u16,
         discount_factor: u32,
     ) -> Result<Config, StdError> {
-        from_json(
+        cosmwasm_std::from_json(
             format!("{{\"min_feeders\": {min_feeders}, \"sample_period_secs\": {sample_period},\"samples_number\": {samples_number}, \"discount_factor\": {discount_factor}}}")
                 .as_bytes(),
         )

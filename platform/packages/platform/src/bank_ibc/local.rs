@@ -119,7 +119,7 @@ mod test {
     use sdk::cosmwasm_std::{Addr, Timestamp};
 
     use crate::{
-        bank_ibc::local::{Sender, new_msg},
+        bank_ibc::local::{self, Sender},
         batch::Batch,
         coin_legacy::{self},
         ica::HostAccount,
@@ -140,7 +140,7 @@ mod test {
 
         assert_eq!(Batch::from(funds_sender), {
             let mut batch = Batch::default();
-            batch.schedule_execute_no_reply(new_msg(
+            batch.schedule_execute_no_reply(local::new_msg(
                 channel,
                 sender.clone(),
                 receiver.clone(),
@@ -148,7 +148,7 @@ mod test {
                 timeout,
                 "MEMO".into(),
             ));
-            batch.schedule_execute_no_reply(new_msg(
+            batch.schedule_execute_no_reply(local::new_msg(
                 channel,
                 sender,
                 receiver,

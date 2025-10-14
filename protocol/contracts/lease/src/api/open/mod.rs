@@ -159,7 +159,7 @@ mod test_position_spec {
     use currencies::Lpn;
     use currency::CurrencyDef;
     use finance::{coin::Coin, duration::Duration, liability::Liability, percent::Percent100};
-    use sdk::cosmwasm_std::{StdError, from_json};
+    use sdk::cosmwasm_std::{self, StdError};
 
     use super::PositionSpecDTO;
 
@@ -178,7 +178,7 @@ mod test_position_spec {
 
     #[test]
     fn zero_min_asset() {
-        let r = from_json(format!(
+        let r = cosmwasm_std::from_json(format!(
             r#"{{"liability":{{"initial":650,"healthy":700,"first_liq_warn":730,"second_liq_warn":750,"third_liq_warn":780,"max":800,"recalc_time":3600000000000}},"min_asset":{{"amount":"0","ticker":"{lpn}"}},"min_transaction":{{"amount":"5000","ticker":"{lpn}"}}}}"#,
             lpn = Lpn::ticker()
         ));
@@ -187,7 +187,7 @@ mod test_position_spec {
 
     #[test]
     fn zero_min_transaction() {
-        let r = from_json(format!(
+        let r = cosmwasm_std::from_json(format!(
             r#"{{"liability":{{"initial":650,"healthy":700,"first_liq_warn":730,"second_liq_warn":750,"third_liq_warn":780,"max":800,"recalc_time":3600000000000}},"min_asset":{{"amount":"9000000","ticker":"{lpn}"}},"min_transaction":{{"amount":"0","ticker":"{lpn}"}}}}"#,
             lpn = Lpn::ticker()
         ));
@@ -196,7 +196,7 @@ mod test_position_spec {
 
     #[test]
     fn invalid_ticker() {
-        let r = from_json(format!(
+        let r = cosmwasm_std::from_json(format!(
             r#"{{"liability":{{"initial":650,"healthy":700,"first_liq_warn":730,"second_liq_warn":750,"third_liq_warn":780,"max":800,"recalc_time":3600000000000}},"min_asset":{{"amount":"9000000","ticker":"{lpn}"}},"min_transaction":{{"amount":"5000","ticker":"ATOM"}}}}"#,
             lpn = Lpn::ticker()
         ));
@@ -207,7 +207,7 @@ mod test_position_spec {
     where
         Json: AsRef<[u8]>,
     {
-        assert_eq!(Ok(exp), from_json::<PositionSpecDTO>(json));
+        assert_eq!(Ok(exp), cosmwasm_std::from_json::<PositionSpecDTO>(json));
     }
 
     fn assert_err(r: Result<PositionSpecDTO, StdError>, msg: &str) {

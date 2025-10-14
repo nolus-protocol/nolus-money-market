@@ -77,7 +77,7 @@ mod tests {
     use currencies::PaymentGroup as PriceCurrencies;
     use sdk::{
         cosmwasm_ext::Response as CwResponse,
-        cosmwasm_std::{Addr, DepsMut, from_json, testing as cosmwasm_test},
+        cosmwasm_std::{Addr, DepsMut, testing as cosmwasm_test},
         testing,
     };
 
@@ -105,7 +105,7 @@ mod tests {
             QueryMsg::Feeders {},
         )
         .unwrap();
-        let resp: HashSet<Addr> = from_json(res).unwrap();
+        let resp: HashSet<Addr> = cosmwasm_std::from_json(res).unwrap();
         assert_eq!(2, resp.len());
         assert!(resp.contains(&feeder0));
 
@@ -121,7 +121,7 @@ mod tests {
             QueryMsg::Feeders {},
         )
         .unwrap();
-        let resp: HashSet<Addr> = from_json(res).unwrap();
+        let resp: HashSet<Addr> = cosmwasm_std::from_json(res).unwrap();
         assert_eq!(3, resp.len());
         assert!(resp.contains(&feeder0));
         assert!(resp.contains(&feeder1));
@@ -148,7 +148,7 @@ mod tests {
             QueryMsg::Feeders {},
         )
         .unwrap();
-        let resp: HashSet<Addr> = from_json(res).unwrap();
+        let resp: HashSet<Addr> = cosmwasm_std::from_json(res).unwrap();
         assert_eq!(5, resp.len());
         assert!(resp.contains(&feeder0));
         assert!(resp.contains(&feeder1));
@@ -161,7 +161,7 @@ mod tests {
             QueryMsg::Feeders {},
         )
         .unwrap();
-        let resp: HashSet<Addr> = from_json(res).unwrap();
+        let resp: HashSet<Addr> = cosmwasm_std::from_json(res).unwrap();
         assert_eq!(3, resp.len());
         assert!(!resp.contains(&feeder0));
         assert!(!resp.contains(&feeder1));

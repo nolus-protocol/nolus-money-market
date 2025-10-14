@@ -14,10 +14,7 @@ where
 mod tests {
     use currencies::{Lpn, PaymentGroup as PriceCurrencies, testing::PaymentC9};
     use finance::{duration::Duration, percent::Percent100};
-    use sdk::{
-        cosmwasm_ext::Response,
-        cosmwasm_std::{from_json, testing},
-    };
+    use sdk::{cosmwasm_ext::Response, cosmwasm_std::testing};
 
     use crate::{
         api::{Config, QueryMsg, SudoMsg, SwapLeg, swap::SwapTarget},
@@ -57,7 +54,7 @@ mod tests {
         assert!(data.is_none());
 
         let res = contract::query(deps.as_ref(), testing::mock_env(), QueryMsg::Config {}).unwrap();
-        let value: Config = from_json(res).unwrap();
+        let value: Config = cosmwasm_std::from_json(res).unwrap();
         assert_eq!(
             value,
             Config {
@@ -90,7 +87,7 @@ mod tests {
             QueryMsg::SupportedCurrencyPairs {},
         )
         .unwrap();
-        let mut value: Vec<SwapLeg<PriceCurrencies>> = from_json(res).unwrap();
+        let mut value: Vec<SwapLeg<PriceCurrencies>> = cosmwasm_std::from_json(res).unwrap();
         value.sort_by(|a, b| a.from.cmp(&b.from));
 
         let mut expected = vec![SwapLeg::<PriceCurrencies> {

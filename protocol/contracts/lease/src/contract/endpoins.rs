@@ -10,7 +10,6 @@ use sdk::{
     cosmwasm_ext::Response as CwResponse,
     cosmwasm_std::{
         Api, Binary, Deps, DepsMut, Env, MessageInfo, QuerierWrapper, Reply, Storage, entry_point,
-        to_json_binary,
     },
     neutron_sdk::sudo::msg::SudoMsg,
 };
@@ -115,8 +114,10 @@ pub fn query(deps: Deps<'_>, env: Env, msg: QueryMsg) -> ContractResult<Binary> 
                     deps.querier,
                 )
             })
-            .and_then(|resp| to_json_binary(&resp).map_err(Into::into)),
-        QueryMsg::ProtocolPackageRelease {} => to_json_binary(&CURRENT_RELEASE).map_err(Into::into),
+            .and_then(|resp| cosmwasm_std::to_json_binary(&resp).map_err(Into::into)),
+        QueryMsg::ProtocolPackageRelease {} => {
+            cosmwasm_std::to_json_binary(&CURRENT_RELEASE).map_err(Into::into)
+        }
     }
     .inspect_err(platform_error::log(deps.api))
 }

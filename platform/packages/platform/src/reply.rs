@@ -12,7 +12,7 @@ use sdk::{
         },
         prost::Message,
     },
-    cosmwasm_std::{Addr, Api, Reply, SubMsgResponse, from_json},
+    cosmwasm_std::{self, Addr, Api, Reply, SubMsgResponse},
 };
 
 use crate::{error::Error, result::Result};
@@ -43,7 +43,7 @@ where
     T: DeserializeOwned,
 {
     decode_first_response::<MsgExecuteContractResponse>(reply)
-        .and_then(|data| from_json(data.data).map_err(Error::Serialization))
+        .and_then(|data| cosmwasm_std::from_json(data.data).map_err(Error::Serialization))
 }
 
 trait InstantiationResponse

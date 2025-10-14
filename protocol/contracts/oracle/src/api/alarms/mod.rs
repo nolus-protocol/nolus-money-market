@@ -180,7 +180,7 @@ mod test {
         coin::{Coin, CoinDTO},
         price::base::BasePrice,
     };
-    use sdk::cosmwasm_std::{StdError, from_json, to_json_vec};
+    use sdk::cosmwasm_std::{self, StdError};
 
     use super::Alarm;
 
@@ -278,7 +278,7 @@ mod test {
             Lpn::ticker()
         );
 
-        assert_err::<PaymentGroup, Lpn, Lpns>(from_json(full_json.into_bytes()), msg);
+        assert_err::<PaymentGroup, Lpn, Lpns>(cosmwasm_std::from_json(full_json.into_bytes()), msg);
     }
 
     #[test]
@@ -398,7 +398,7 @@ mod test {
             || format!(r#"{{{}}}"#, below.as_ref()),
             |above| format!(r#"{{{}, {}}}"#, below.as_ref(), above.as_ref()),
         );
-        from_json(full_json.into_bytes())
+        cosmwasm_std::from_json(full_json.into_bytes())
     }
 
     enum AlarmPrice {
@@ -455,7 +455,7 @@ mod test {
     where
         S: Serialize,
     {
-        to_json_vec(to_serialize)
+        cosmwasm_std::to_json_vec(to_serialize)
             .and_then(|json_bytes| String::from_utf8(json_bytes).map_err(Into::into))
     }
 }

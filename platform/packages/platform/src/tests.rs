@@ -2,7 +2,7 @@ use std::fmt::Debug;
 
 use serde::{Deserialize, Serialize, de::DeserializeOwned};
 
-use sdk::cosmwasm_std::{self, Binary, Event, StdError, from_json};
+use sdk::cosmwasm_std::{self, Binary, Event, StdError};
 
 pub trait EventSource<'a> {
     type EventIter: Iterator<Item = &'a Event>;
@@ -35,7 +35,7 @@ where
     Resp: DeserializeOwned,
 {
     resp.as_ref()
-        .map(|data| from_json(data).expect("deserialization succeed"))
+        .map(|data| cosmwasm_std::from_json(data).expect("deserialization succeed"))
 }
 
 pub fn ser_de<T, R>(obj: &T) -> Result<R, StdError>
