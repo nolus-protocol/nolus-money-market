@@ -1,8 +1,13 @@
+use std::marker::PhantomData;
+
 use serde::{Deserialize, Serialize};
 
 use ::lease::api::LpnCoinDTO;
-use currencies::{Lpn, Nls};
-use currency::CurrencyDef;
+use currencies::{Lpn, Nls, PaymentGroup};
+use currency::{
+    BankSymbols, CurrencyDTO, CurrencyDef, DexSymbols, Group, GroupFilterMap, MemberOf, PairsGroup,
+    Symbol,
+};
 use finance::{
     coin::{Amount, Coin},
     duration::Duration,
@@ -13,8 +18,8 @@ pub use sdk::cosmwasm_std::Coin as CwCoin;
 use sdk::{
     cosmwasm_ext::InterChainMsg,
     cosmwasm_std::{
-        Binary, BlockInfo, Deps, Empty, Env, StdResult, Timestamp, testing::mock_env,
-        to_json_binary,
+        Addr, Binary, BlockInfo, Deps, Empty, Env, QuerierWrapper, StdResult,
+        StdResult as CwResult, Timestamp, testing::mock_env, to_json_binary,
     },
     testing::{self, CwApp, InterChainMsgSender, new_app},
 };
@@ -68,6 +73,67 @@ pub const USER: &str = "user";
 pub const ADMIN: &str = "admin";
 pub const LEASE_ADMIN: &str = "lease_admin";
 
+pub fn query_all_balances(addr: &Addr, querier: QuerierWrapper<'_>) -> Vec<CwCoin> {
+    struct QueryAllBalances<'addr, 'querier, Symbol> {
+        addr: &'addr Addr,
+        querier: QuerierWrapper<'querier>,
+        _symbol: PhantomData<Symbol>,
+    }
+
+    impl<Symbol> Clone for QueryAllBalances<'_, '_, Symbol> {
+        fn clone(&self) -> Self {
+            *self
+        }
+    }
+
+    impl<Symbol> Copy for QueryAllBalances<'_, '_, Symbol> {}
+
+    impl<'addr, 'querier, Symbol> QueryAllBalances<'addr, 'querier, Symbol> {
+        fn new(addr: &'addr Addr, querier: QuerierWrapper<'querier>) -> Self {
+            Self {
+                addr,
+                querier,
+                _symbol: PhantomData,
+            }
+        }
+    }
+
+    impl<Symbol> GroupFilterMap for QueryAllBalances<'_, '_, Symbol>
+    where
+        Symbol: self::Symbol,
+    {
+        type VisitedG = Symbol::Group;
+
+        type Outcome = CwResult<CwCoin>;
+
+        fn on<C>(&self, _: &CurrencyDTO<C::Group>) -> Option<Self::Outcome>
+        where
+            C: CurrencyDef + PairsGroup<CommonGroup = <Self::VisitedG as Group>::TopG>,
+            C::Group: MemberOf<Self::VisitedG> + MemberOf<<Self::VisitedG as Group>::TopG>,
+        {
+            self.querier
+                .query_balance(self.addr, C::dto().into_symbol::<Symbol>())
+                .map(|coin| (!coin.amount.is_zero()).then_some(coin))
+                .transpose()
+        }
+    }
+
+    fn group_filter_map<Symbol>(
+        addr: &Addr,
+        querier: QuerierWrapper<'_>,
+    ) -> impl Iterator<Item = CwResult<CwCoin>>
+    where
+        Symbol: self::Symbol,
+    {
+        <Symbol::Group as Group>::filter_map(QueryAllBalances::<'_, '_, Symbol>::new(addr, querier))
+    }
+
+    group_filter_map::<BankSymbols<PaymentGroup>>(addr, querier)
+        .chain(group_filter_map::<DexSymbols<PaymentGroup>>(addr, querier))
+        .collect::<Result<_, _>>()
+        .expect("All currencies should be queriable!")
+}
+
 pub fn native_cwcoin(amount: Amount) -> CwCoin {
     cwcoin_from_amount::<Nls>(amount)
 }
@@ -92,17 +158,6 @@ where
     C: CurrencyDef,
 {
     cwcoin(coin::<C>(amount))
-}
-
-pub fn cwcoin_as_balance<C>(coin: Coin<C>) -> Vec<CwCoin>
-where
-    C: CurrencyDef,
-{
-    if coin.is_zero() {
-        vec![]
-    } else {
-        vec![cwcoin::<C>(coin)]
-    }
 }
 
 pub fn cwcoin_dex<C>(amount: Amount) -> CwCoin

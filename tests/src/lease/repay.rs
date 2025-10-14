@@ -26,9 +26,9 @@ use sdk::{
 
 use crate::{
     common::{
-        self, CwCoin, USER, cwcoin, ibc,
+        self, CwCoin, USER, cwcoin, ibc, lease as common_lease,
         leaser::{self as leaser_mod, Instantiator as LeaserInstantiator},
-        swap::{self},
+        swap,
         test_case::{TestCase, app::App, response::ResponseWithInterChainMsgs},
     },
     lease::heal,
@@ -463,24 +463,12 @@ fn expect_lease_amounts<ProtocolsRegistry, Treasury, Profit, Reserve, Lpp, Oracl
     expected_funds: LeaseCoin,
     excess_balance: LpnCoin,
 ) {
-    if !excess_balance.is_zero() {
-        assert_eq!(
-            test_case
-                .app
-                .query()
-                .query_all_balances(lease.clone())
-                .unwrap(),
-            &[cwcoin::<LpnCurrency>(excess_balance)],
-        )
-    }
+    common_lease::assert_lease_balance_eq(&test_case.app, &lease, cwcoin(excess_balance));
 
-    assert_eq!(
-        test_case
-            .app
-            .query()
-            .query_all_balances(TestCase::ica_addr(&lease, TestCase::LEASE_ICA_ID))
-            .unwrap(),
-        &[to_cosmwasm_on_dex(expected_funds)],
+    common_lease::assert_lease_balance_eq(
+        &test_case.app,
+        &TestCase::ica_addr(&lease, TestCase::LEASE_ICA_ID),
+        to_cosmwasm_on_dex(expected_funds),
     );
 }
 

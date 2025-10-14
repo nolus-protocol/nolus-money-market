@@ -134,11 +134,11 @@ fn on_alarm_from_unknown() {
 
     test_case.send_funds_from_admin(user_addr.clone(), &[cwcoin_from_amount::<Lpn>(500)]);
 
-    let treasury_balance = test_case
-        .app
-        .query()
-        .query_all_balances(test_case.address_book.treasury().clone())
-        .unwrap();
+    let query_treasury_balance = |test_case: &TestCase<_, Addr, _, _, _, _, _, _>| {
+        common::query_all_balances(test_case.address_book.treasury(), test_case.app.query())
+    };
+
+    let treasury_balance = query_treasury_balance(&test_case);
 
     _ = test_case
         .app
@@ -151,14 +151,7 @@ fn on_alarm_from_unknown() {
         .unwrap_err();
 
     //assert that no transfer is made to treasury
-    assert_eq!(
-        treasury_balance,
-        test_case
-            .app
-            .query()
-            .query_all_balances(test_case.address_book.treasury().clone())
-            .unwrap()
-    );
+    assert_eq!(treasury_balance, query_treasury_balance(&test_case));
 }
 
 #[test]

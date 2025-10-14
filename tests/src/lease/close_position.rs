@@ -22,7 +22,7 @@ use sdk::{
 use swap::testing::SwapRequest;
 
 use crate::common::{
-    self, ADMIN, CwCoin, USER, ibc,
+    self, ADMIN, CwCoin, USER, ibc, lease as common_lease,
     leaser::{self, Instantiator},
     test_case::{TestCase, response::ResponseWithInterChainMsgs},
 };
@@ -70,10 +70,7 @@ fn full_close() {
     let state = super::state_query(&test_case, lease.clone());
     assert_eq!(StateResponse::Closed(), state);
 
-    assert_eq!(
-        lease_balance(&test_case, lease),
-        common::cwcoin_as_balance(LeaseCoin::ZERO),
-    );
+    common_lease::assert_lease_balance_eq(&test_case.app, &lease, common::cwcoin(LeaseCoin::ZERO));
 
     leaser::assert_no_leases(
         &test_case.app,
@@ -124,10 +121,7 @@ fn partial_close_loan_not_closed() {
         ),
         state
     );
-    assert_eq!(
-        lease_balance(&test_case, lease),
-        common::cwcoin_as_balance(exp_change),
-    );
+    common_lease::assert_lease_balance_eq(&test_case.app, &lease, common::cwcoin(exp_change));
 
     assert_eq!(
         user_balance::<LpnCurrency>(&customer, &test_case),
@@ -173,10 +167,7 @@ fn partial_close_loan_closed() {
         state
     );
 
-    assert_eq!(
-        lease_balance(&test_case, lease),
-        common::cwcoin_as_balance(exp_change),
-    );
+    common_lease::assert_lease_balance_eq(&test_case.app, &lease, common::cwcoin(exp_change));
 
     assert_eq!(
         LpnCoin::ZERO,
@@ -363,17 +354,11 @@ fn do_close(
         user_balance_before - DOWNPAYMENT,
     );
 
-    if !exp_lease_amount_after.is_zero() {
-        assert_eq!(
-            test_case
-                .app
-                .query()
-                .query_all_balances(lease_ica)
-                .unwrap()
-                .as_slice(),
-            &[to_cosmwasm_on_dex(exp_lease_amount_after)],
-        );
-    }
+    common_lease::assert_lease_balance_eq(
+        &test_case.app,
+        &lease_ica,
+        to_cosmwasm_on_dex(exp_lease_amount_after),
+    );
 
     lease_addr
 }
@@ -410,10 +395,6 @@ where
     C: CurrencyDef,
 {
     platform::bank::balance::<C>(customer, test_case.app.query()).unwrap()
-}
-
-fn lease_balance(test_case: &LeaseTestCase, lease: Addr) -> Vec<CwCoin> {
-    test_case.app.query().query_all_balances(lease).unwrap()
 }
 
 fn lease_amount() -> LeaseCoin {
