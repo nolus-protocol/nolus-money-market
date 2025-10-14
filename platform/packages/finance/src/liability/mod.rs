@@ -133,8 +133,8 @@ impl Liability {
     /// Post-assert: (total_due - amount_to_liquidate) / (lease_amount - amount_to_liquidate) ~= self.healthy_percent(), if total_due < lease_amount.
     /// Otherwise, amount_to_liquidate == total_due
     ///
-    /// Returns `None` if an overflow occurs during the calculation
-    pub fn amount_to_liquidate<P>(&self, lease_amount: P, total_due: P) -> Option<P>
+    /// Followup: it is mathematically proved that for any total due less than the lease amount, the amount to liquidate is less than the lease amount
+    pub fn amount_to_liquidate<P>(&self, lease_amount: P, total_due: P) -> P
     where
         P: Copy + Fractionable<Percent100> + Ord + Sub<Output = P> + Zero,
         Percent100: IntoMax<<P as CommonDoublePrimitive<Percent100>>::CommonDouble>,
@@ -145,11 +145,13 @@ impl Liability {
             .or_else(|| {
                 // from 'due - liquidation = healthy% of (lease - liquidation)' follows
                 // liquidation = 100% / (100% - healthy%) of (due - healthy% of lease)
+                // the amount to liquiate is strongly less than total due
                 let multiplier =
                     SimpleFraction::new(Percent100::HUNDRED, self.healthy.complement());
                 let extra_liability_lpn = total_due - total_due.min(self.healthy.of(lease_amount));
                 multiplier.of(extra_liability_lpn)
             })
+            .expect("Post-assert violation")
     }
 
     fn invariant_held(&self) -> Result<()> {
@@ -448,7 +450,7 @@ mod test {
         due: Coin<C>,
         exp: Coin<C>,
     ) {
-        let liq = liability.amount_to_liquidate(lease, due).unwrap();
+        let liq = liability.amount_to_liquidate(lease, due);
         assert_eq!(exp, liq);
         if due.clamp(liability.max.of(lease), lease) == due {
             assert!(
