@@ -5,8 +5,8 @@ use serde::{Deserialize, Serialize};
 use ::lease::api::LpnCoinDTO;
 use currencies::{Lpn, Nls, PaymentGroup};
 use currency::{
-    BankSymbols, CurrencyDTO, CurrencyDef, DefinitionRef, DexSymbols, Group, GroupFilterMap,
-    MemberOf, PairsGroup, Symbol, SymbolStatic,
+    BankSymbols, CurrencyDTO, CurrencyDef, DexSymbols, Group, GroupFilterMap, MemberOf, PairsGroup,
+    Symbol,
 };
 use finance::{
     coin::{Amount, Coin},
@@ -80,13 +80,13 @@ pub fn query_all_balances(addr: &Addr, querier: QuerierWrapper<'_>) -> Vec<CwCoi
         _symbol: PhantomData<Symbol>,
     }
 
-    impl<'addr, 'querier, Symbol> Clone for QueryAllBalances<'addr, 'querier, Symbol> {
+    impl<Symbol> Clone for QueryAllBalances<'_, '_, Symbol> {
         fn clone(&self) -> Self {
             *self
         }
     }
 
-    impl<'addr, 'querier, Symbol> Copy for QueryAllBalances<'addr, 'querier, Symbol> {}
+    impl<Symbol> Copy for QueryAllBalances<'_, '_, Symbol> {}
 
     impl<'addr, 'querier, Symbol> QueryAllBalances<'addr, 'querier, Symbol> {
         fn new(addr: &'addr Addr, querier: QuerierWrapper<'querier>) -> Self {
@@ -121,11 +121,11 @@ pub fn query_all_balances(addr: &Addr, querier: QuerierWrapper<'_>) -> Vec<CwCoi
     fn group_filter_map<Symbol>(
         addr: &Addr,
         querier: QuerierWrapper<'_>,
-    ) -> impl Iterator<Item = CwResult<CwCoin>> + use<Symbol>
+    ) -> impl Iterator<Item = CwResult<CwCoin>>
     where
         Symbol: self::Symbol,
     {
-        <Symbol::Group as Group>::filter_map(QueryAllBalances::<Symbol>::new(addr, querier))
+        <Symbol::Group as Group>::filter_map(QueryAllBalances::<'_, '_, Symbol>::new(addr, querier))
     }
 
     group_filter_map::<BankSymbols<PaymentGroup>>(addr, querier)
