@@ -133,7 +133,7 @@ impl Liability {
     /// Post-assert: (total_due - amount_to_liquidate) / (lease_amount - amount_to_liquidate) ~= self.healthy_percent(), if total_due < lease_amount.
     /// Otherwise, amount_to_liquidate == total_due
     ///
-    /// Followup: it is mathematically proved that for any total due less than the lease amount, the amount to liquidate is less than the lease amount
+    /// Followup: it is mathematically proved that amount_to_liquidate < lease_amount
     pub fn amount_to_liquidate<P>(&self, lease_amount: P, total_due: P) -> P
     where
         P: Copy + Fractionable<Percent100> + Ord + Sub<Output = P> + Zero,
