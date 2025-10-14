@@ -19,11 +19,7 @@ pub trait Symbol {
 pub struct Tickers<G> {
     group: PhantomData<G>,
 }
-impl<G> Tickers<G> {
-    pub fn new() -> Self {
-        Self { group: PhantomData }
-    }
-}
+
 impl<G> Symbol for Tickers<G>
 where
     G: Group,
@@ -46,11 +42,7 @@ where
 pub struct BankSymbols<G> {
     group: PhantomData<G>,
 }
-impl<G> BankSymbols<G> {
-    pub fn new() -> Self {
-        Self { group: PhantomData }
-    }
-}
+
 impl<G> Symbol for BankSymbols<G>
 where
     G: Group,
@@ -74,11 +66,6 @@ pub struct DexSymbols<G> {
     group: PhantomData<G>,
 }
 
-impl<G> DexSymbols<G> {
-    pub fn new() -> Self {
-        Self { group: PhantomData }
-    }
-}
 impl<G> Symbol for DexSymbols<G>
 where
     G: Group,
