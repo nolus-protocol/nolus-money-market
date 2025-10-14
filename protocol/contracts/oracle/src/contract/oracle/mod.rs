@@ -230,6 +230,13 @@ where
             self.feeds_read_write()
                 .feed_prices(&tree, block_time, sender, &prices)
         })
+        .map(|warning_emitter| {
+            if let Some(emitter) = warning_emitter {
+                MessageResponse::messages_with_events(Default::default(), emitter)
+            } else {
+                MessageResponse::default()
+            }
+        })
     }
 
     pub(super) fn try_notify_alarms(
