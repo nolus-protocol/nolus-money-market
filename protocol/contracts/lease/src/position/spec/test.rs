@@ -860,7 +860,7 @@ mod test_steadiness {
         position::{DueTrait, Steadiness, spec::test::STEP},
     };
 
-    use super::{HALF_STEP, RECALC_IN, TestCurrency, ltv_to_price};
+    use super::{HALF_STEP, RECALC_IN, TestCurrency};
 
     const TP: Percent100 = Percent100::from_permille(490);
     const LTV: Percent100 = TP.checked_add(STEP).expect("should not exceed 100%");
@@ -1388,7 +1388,7 @@ mod test_steadiness {
     ) -> Steadiness<TestCurrency> {
         Steadiness::new(
             RECALC_IN,
-            RightOpenRange::up_to(ltv).invert(ltv_to_price(asset, due)),
+            RightOpenRange::up_to(ltv).invert(super::ltv_to_price(asset, due)),
         )
     }
 
@@ -1402,7 +1402,7 @@ mod test_steadiness {
             RECALC_IN,
             RightOpenRange::up_to(ltv_to)
                 .cut_to(ltv_from)
-                .invert(ltv_to_price(asset, due)),
+                .invert(super::ltv_to_price(asset, due)),
         )
     }
 }

@@ -31,7 +31,7 @@ use crate::{
     state::supported_pairs::SupportedPairs,
 };
 
-use self::{config::query_config, oracle::feeder::Feeders};
+use self::oracle::feeder::Feeders;
 
 mod alarms;
 mod config;
@@ -92,7 +92,7 @@ pub fn query(
     match msg {
         QueryMsg::ContractVersion {} => to_json_binary(CURRENT_VERSION),
         QueryMsg::ProtocolPackageRelease {} => to_json_binary(&CURRENT_RELEASE),
-        QueryMsg::Config {} => to_json_binary(&query_config(deps.storage)?),
+        QueryMsg::Config {} => to_json_binary(&config::query_config(deps.storage)?),
         QueryMsg::Feeders {} => {
             Feeders::get(deps.storage).and_then(|ref feeders| to_json_binary(feeders))
         }
@@ -229,13 +229,11 @@ mod tests {
         price::{self, Price},
     };
     use platform::tests as platform_tests;
-    use sdk::cosmwasm_std::{self, testing::mock_env};
+    use sdk::cosmwasm_std::{self, testing};
 
     use crate::{
         api::{Alarm, Config, ExecuteMsg, QueryMsg, SwapLeg, swap::SwapTarget},
-        contract::query,
-        test_tree,
-        tests::{dummy_instantiate_msg, setup_test},
+        contract, test_tree, tests,
     };
 
     use super::{AlarmCurrencies, BaseCurrencies, BaseCurrency, PriceCurrencies};
@@ -243,14 +241,14 @@ mod tests {
     #[test]
     fn proper_initialization() {
         use marketprice::config::Config as PriceConfig;
-        let msg = dummy_instantiate_msg(
+        let msg = tests::dummy_instantiate_msg(
             60,
             Percent100::from_percent(50),
             test_tree::minimal_swap_tree(),
         );
-        let (deps, _info) = setup_test(msg).unwrap();
+        let (deps, _info) = tests::setup_test(msg).unwrap();
 
-        let res = query(deps.as_ref(), mock_env(), QueryMsg::Config {}).unwrap();
+        let res = contract::query(deps.as_ref(), testing::mock_env(), QueryMsg::Config {}).unwrap();
         let value: Config = cosmwasm_std::from_json(res).unwrap();
         assert_eq!(
             Config {
@@ -264,9 +262,9 @@ mod tests {
             value
         );
 
-        let res = query(
+        let res = contract::query(
             deps.as_ref(),
-            mock_env(),
+            testing::mock_env(),
             QueryMsg::SupportedCurrencyPairs {},
         )
         .unwrap();

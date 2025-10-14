@@ -67,7 +67,7 @@ pub(super) mod definitions {
 
     use currency::{
         CurrencyDTO, CurrencyDef, Definition, InPoolWith, PairsFindMap, PairsGroup,
-        PairsGroupMember, pairs_find_map,
+        PairsGroupMember,
     };
 
     use crate::{lpn::Lpn, native::Nls, payment::Group as PaymentGroup};
@@ -131,7 +131,7 @@ pub(super) mod definitions {
                 }
             }
 
-            pairs_find_map::<Pairs, _>(find_map)
+            currency::pairs_find_map::<Pairs, _>(find_map)
         }
     }
 
@@ -187,7 +187,7 @@ pub(super) mod definitions {
                 }
             }
 
-            pairs_find_map::<Pairs, _>(find_map)
+            currency::pairs_find_map::<Pairs, _>(find_map)
         }
     }
 
@@ -248,7 +248,7 @@ pub(super) mod definitions {
                 }
             }
 
-            pairs_find_map::<Pairs, _>(find_map)
+            currency::pairs_find_map::<Pairs, _>(find_map)
         }
     }
 
@@ -305,7 +305,7 @@ pub(super) mod definitions {
                 }
             }
 
-            pairs_find_map::<Pairs, _>(find_map)
+            currency::pairs_find_map::<Pairs, _>(find_map)
         }
     }
 
@@ -360,7 +360,7 @@ pub(super) mod definitions {
                 }
             }
 
-            pairs_find_map::<Pairs, _>(find_map)
+            currency::pairs_find_map::<Pairs, _>(find_map)
         }
     }
 
@@ -442,7 +442,7 @@ pub(super) mod definitions {
                 }
             }
 
-            pairs_find_map::<Pairs, _>(find_map)
+            currency::pairs_find_map::<Pairs, _>(find_map)
         }
     }
 }
@@ -455,43 +455,40 @@ mod test {
         LeaseGroup,
         lpn::{Group as Lpns, Lpn},
         native::Nls,
-        test_impl::{
-            maybe_visit_on_bank_symbol_err, maybe_visit_on_bank_symbol_impl,
-            maybe_visit_on_ticker_err, maybe_visit_on_ticker_impl,
-        },
+        test_impl,
     };
 
     use super::{LeaseC1, LeaseC2, LeaseC3, LeaseC4, LeaseC5, LeaseC6, LeaseC7};
 
     #[test]
     fn maybe_visit_on_ticker() {
-        maybe_visit_on_ticker_impl::<LeaseC1, LeaseGroup>();
-        maybe_visit_on_ticker_impl::<LeaseC2, LeaseGroup>();
-        maybe_visit_on_ticker_impl::<LeaseC3, LeaseGroup>();
-        maybe_visit_on_ticker_impl::<LeaseC4, LeaseGroup>();
-        maybe_visit_on_ticker_impl::<LeaseC5, LeaseGroup>();
-        maybe_visit_on_ticker_impl::<LeaseC6, LeaseGroup>();
-        maybe_visit_on_ticker_impl::<LeaseC7, LeaseGroup>();
-        maybe_visit_on_ticker_err::<Lpn, Lpns>(Lpn::bank());
-        maybe_visit_on_ticker_err::<LeaseC2, LeaseGroup>(LeaseC2::bank());
-        maybe_visit_on_ticker_err::<LeaseC3, LeaseGroup>(LeaseC3::dex());
+        test_impl::maybe_visit_on_ticker_impl::<LeaseC1, LeaseGroup>();
+        test_impl::maybe_visit_on_ticker_impl::<LeaseC2, LeaseGroup>();
+        test_impl::maybe_visit_on_ticker_impl::<LeaseC3, LeaseGroup>();
+        test_impl::maybe_visit_on_ticker_impl::<LeaseC4, LeaseGroup>();
+        test_impl::maybe_visit_on_ticker_impl::<LeaseC5, LeaseGroup>();
+        test_impl::maybe_visit_on_ticker_impl::<LeaseC6, LeaseGroup>();
+        test_impl::maybe_visit_on_ticker_impl::<LeaseC7, LeaseGroup>();
+        test_impl::maybe_visit_on_ticker_err::<Lpn, Lpns>(Lpn::bank());
+        test_impl::maybe_visit_on_ticker_err::<LeaseC2, LeaseGroup>(LeaseC2::bank());
+        test_impl::maybe_visit_on_ticker_err::<LeaseC3, LeaseGroup>(LeaseC3::dex());
     }
 
     #[test]
     fn maybe_visit_on_bank_symbol() {
-        maybe_visit_on_bank_symbol_impl::<LeaseC1, LeaseGroup>();
-        maybe_visit_on_bank_symbol_impl::<LeaseC2, LeaseGroup>();
-        maybe_visit_on_bank_symbol_impl::<LeaseC3, LeaseGroup>();
-        maybe_visit_on_bank_symbol_impl::<LeaseC4, LeaseGroup>();
-        maybe_visit_on_bank_symbol_impl::<LeaseC5, LeaseGroup>();
-        maybe_visit_on_bank_symbol_impl::<LeaseC6, LeaseGroup>();
-        maybe_visit_on_bank_symbol_impl::<LeaseC7, LeaseGroup>();
-        maybe_visit_on_bank_symbol_err::<Lpn, Lpns>(Lpn::ticker());
-        maybe_visit_on_bank_symbol_err::<LeaseC1, LeaseGroup>(LeaseC1::ticker());
-        maybe_visit_on_bank_symbol_err::<LeaseC1, LeaseGroup>(LeaseC1::dex());
-        maybe_visit_on_bank_symbol_err::<LeaseC1, LeaseGroup>(Lpn::ticker());
-        maybe_visit_on_bank_symbol_err::<LeaseC1, LeaseGroup>(Nls::bank());
-        maybe_visit_on_bank_symbol_err::<LeaseC1, LeaseGroup>(Nls::ticker());
-        maybe_visit_on_bank_symbol_err::<LeaseC5, LeaseGroup>(LeaseC5::ticker());
+        test_impl::maybe_visit_on_bank_symbol_impl::<LeaseC1, LeaseGroup>();
+        test_impl::maybe_visit_on_bank_symbol_impl::<LeaseC2, LeaseGroup>();
+        test_impl::maybe_visit_on_bank_symbol_impl::<LeaseC3, LeaseGroup>();
+        test_impl::maybe_visit_on_bank_symbol_impl::<LeaseC4, LeaseGroup>();
+        test_impl::maybe_visit_on_bank_symbol_impl::<LeaseC5, LeaseGroup>();
+        test_impl::maybe_visit_on_bank_symbol_impl::<LeaseC6, LeaseGroup>();
+        test_impl::maybe_visit_on_bank_symbol_impl::<LeaseC7, LeaseGroup>();
+        test_impl::maybe_visit_on_bank_symbol_err::<Lpn, Lpns>(Lpn::ticker());
+        test_impl::maybe_visit_on_bank_symbol_err::<LeaseC1, LeaseGroup>(LeaseC1::ticker());
+        test_impl::maybe_visit_on_bank_symbol_err::<LeaseC1, LeaseGroup>(LeaseC1::dex());
+        test_impl::maybe_visit_on_bank_symbol_err::<LeaseC1, LeaseGroup>(Lpn::ticker());
+        test_impl::maybe_visit_on_bank_symbol_err::<LeaseC1, LeaseGroup>(Nls::bank());
+        test_impl::maybe_visit_on_bank_symbol_err::<LeaseC1, LeaseGroup>(Nls::ticker());
+        test_impl::maybe_visit_on_bank_symbol_err::<LeaseC5, LeaseGroup>(LeaseC5::ticker());
     }
 }

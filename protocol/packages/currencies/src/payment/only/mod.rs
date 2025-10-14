@@ -2,7 +2,7 @@ use std::borrow::Borrow;
 
 use serde::{Deserialize, Serialize};
 
-use currency::{CurrenciesMapping, GroupFilterMap, GroupFindMap, MemberOf, group_find_map};
+use currency::{CurrenciesMapping, GroupFilterMap, GroupFindMap, MemberOf};
 
 use super::Group as PaymentGroup;
 
@@ -43,7 +43,7 @@ impl currency::Group for Group {
     where
         FindMap: GroupFindMap<TargetG = Self>,
     {
-        group_find_map::<_, GroupMember, _>(find_map)
+        currency::group_find_map::<_, GroupMember, _>(find_map)
     }
 }
 

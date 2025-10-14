@@ -60,28 +60,21 @@ impl MemberOf<PaymentGroup> for Group {}
 mod test {
     use currency::CurrencyDef as _;
 
-    use crate::{
-        lpn::Lpn,
-        native::Nls,
-        test_impl::{
-            maybe_visit_on_bank_symbol_err, maybe_visit_on_bank_symbol_impl,
-            maybe_visit_on_ticker_err, maybe_visit_on_ticker_impl,
-        },
-    };
+    use crate::{lpn::Lpn, native::Nls, test_impl};
 
     use super::{Group, LeaseC1};
 
     #[test]
     fn maybe_visit_on_ticker() {
-        maybe_visit_on_ticker_impl::<LeaseC1, Group>();
-        maybe_visit_on_ticker_err::<LeaseC1, Group>(Lpn::ticker());
-        maybe_visit_on_ticker_err::<LeaseC1, Group>(Nls::ticker());
+        test_impl::maybe_visit_on_ticker_impl::<LeaseC1, Group>();
+        test_impl::maybe_visit_on_ticker_err::<LeaseC1, Group>(Lpn::ticker());
+        test_impl::maybe_visit_on_ticker_err::<LeaseC1, Group>(Nls::ticker());
     }
 
     #[test]
     fn maybe_visit_on_bank_symbol() {
-        maybe_visit_on_bank_symbol_impl::<LeaseC1, Group>();
-        maybe_visit_on_bank_symbol_err::<LeaseC1, Group>(Lpn::bank());
-        maybe_visit_on_bank_symbol_err::<LeaseC1, Group>(Nls::bank());
+        test_impl::maybe_visit_on_bank_symbol_impl::<LeaseC1, Group>();
+        test_impl::maybe_visit_on_bank_symbol_err::<LeaseC1, Group>(Lpn::bank());
+        test_impl::maybe_visit_on_bank_symbol_err::<LeaseC1, Group>(Nls::bank());
     }
 }

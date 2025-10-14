@@ -90,13 +90,13 @@ mod test {
         LeaseGroup,
         testing::{PaymentC3, PaymentC7},
     };
-    use finance::{coin::Coin, price::total_of};
+    use finance::{coin::Coin, price};
 
     use super::*;
 
     #[test]
     fn test_maybe_price() {
-        let price = total_of(Coin::<PaymentC3>::new(1)).is(Coin::<PaymentC7>::new(2));
+        let price = price::total_of(Coin::<PaymentC3>::new(1)).is(Coin::<PaymentC7>::new(2));
         assert_eq!(maybe_price::<_, _, LeaseGroup>(Ok(price)), Ok(Some(price)));
         assert_eq!(
             maybe_price::<PaymentC3, PaymentC7, LeaseGroup>(Err(PriceFeedsError::NoPrice())),
