@@ -1,7 +1,7 @@
 use currency::{CurrencyDef, Group, MemberOf};
 use platform::{
     contract::{self, Validator},
-    response
+    response,
 };
 use sdk::{
     cosmwasm_ext::Response as CwResponse,
@@ -43,7 +43,8 @@ where
             .and_then(|()| {
                 Oracle::<_, PriceCurrencies, BaseCurrency, BaseCurrencies>::load(deps.storage)
             })
-            .and_then(|mut oracle| oracle.try_feed_prices(env.block.time, sender, prices)),
+            .and_then(|mut oracle| oracle.try_feed_prices(env.block.time, sender, prices))
+            .map(response::response_only_messages),
         ExecuteMsg::DispatchAlarms { max_count } => {
             Oracle::<_, PriceCurrencies, BaseCurrency, BaseCurrencies>::load(deps.storage)?
                 .try_notify_alarms(env.block.time, max_count)

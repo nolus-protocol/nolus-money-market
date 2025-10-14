@@ -13,7 +13,7 @@ use sdk::cosmwasm_std::{Addr, Timestamp};
 
 use crate::{
     api::{SwapLeg, swap::SwapTarget},
-    error::{self, Error},
+    error::Error,
     result::Result,
     state::supported_pairs::SupportedPairs,
 };
@@ -106,30 +106,30 @@ where
         sender_raw: Addr,
         prices: &[PriceDTO<PriceG>],
     ) -> Result<Option<Emitter>, PriceG> {
-        let (supported, unsupported): (Vec<_>, Vec<_>) = prices.iter().partition::<Vec<_>, _>(|price| {
-            tree.swap_pairs_df().any(
-                |SwapLeg {
-                     from,
-                     to: SwapTarget { target: to, .. },
-                 }| {
-                    price
-                        .base()
-                        .of_currency_dto(&from)
-                        .and_then(|()| price.quote().of_currency_dto(&to))
-                        .is_ok()
-                },
-            )
-        });
+        let (supported, unsupported): (Vec<PriceDTO<PriceG>>, Vec<PriceDTO<PriceG>>) =
+            prices.iter().cloned().partition(|price| {
+                tree.swap_pairs_df().any(
+                    |SwapLeg {
+                         from,
+                         to: SwapTarget { target: to, .. },
+                     }| {
+                        price
+                            .base()
+                            .of_currency_dto(&from)
+                            .and_then(|()| price.quote().of_currency_dto(&to))
+                            .is_ok()
+                    },
+                )
+            });
 
-        const EVENT_TYPE: &str = "unsupported-currency";    
+        const EVENT_TYPE: &str = "unsupported-currency";
 
         let warning_emitter = if !unsupported.is_empty() {
-            Some(
-                unsupported.iter().fold(
-                    Emitter::of_type(EVENT_TYPE),
-                    |emitter, price| emitter.emit("ignored", price.to_string())
-                )
-            )
+            let mut emitter = Emitter::of_type(EVENT_TYPE);
+            for price in &unsupported {
+                emitter = emitter.emit("ignored", price.to_string());
+            }
+            Some(emitter)
         } else {
             None
         };
@@ -137,12 +137,11 @@ where
         if !supported.is_empty() {
             self.feeds
                 .feed(block_time, sender_raw, &supported)
-                .map_err(Into::into)?;
+                .map_err(Into::<Error<PriceG>>::into)?;
         }
 
         Ok(warning_emitter)
     }
-
 }
 
 #[cfg(all(feature = "internal.test.contract", test))]
