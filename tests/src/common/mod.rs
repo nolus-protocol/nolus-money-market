@@ -74,12 +74,19 @@ pub const ADMIN: &str = "admin";
 pub const LEASE_ADMIN: &str = "lease_admin";
 
 pub fn query_all_balances(addr: &Addr, querier: QuerierWrapper<'_>) -> Vec<CwCoin> {
-    #[derive(Clone, Copy)]
     struct QueryAllBalances<'addr, 'querier, Symbol> {
         addr: &'addr Addr,
         querier: QuerierWrapper<'querier>,
         _symbol: PhantomData<Symbol>,
     }
+
+    impl<'addr, 'querier, Symbol> Clone for QueryAllBalances<'addr, 'querier, Symbol> {
+        fn clone(&self) -> Self {
+            *self
+        }
+    }
+
+    impl<'addr, 'querier, Symbol> Copy for QueryAllBalances<'addr, 'querier, Symbol> {}
 
     impl<'addr, 'querier, Symbol> QueryAllBalances<'addr, 'querier, Symbol> {
         fn new(addr: &'addr Addr, querier: QuerierWrapper<'querier>) -> Self {
