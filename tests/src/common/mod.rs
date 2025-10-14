@@ -160,17 +160,6 @@ where
     cwcoin(coin::<C>(amount))
 }
 
-pub fn cwcoin_as_balance<C>(coin: Coin<C>) -> Vec<CwCoin>
-where
-    C: CurrencyDef,
-{
-    if coin.is_zero() {
-        vec![]
-    } else {
-        vec![cwcoin::<C>(coin)]
-    }
-}
-
 pub fn cwcoin_dex<C>(amount: Amount) -> CwCoin
 where
     C: CurrencyDef,

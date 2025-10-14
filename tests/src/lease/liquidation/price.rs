@@ -1,6 +1,6 @@
 use currencies::PaymentGroup;
 use currency::CurrencyDef as _;
-use finance::{coin::Amount, percent::Percent100};
+use finance::{coin::Amount, percent::Percent100, zero::Zero as _};
 use lease::api::query::StateResponse;
 use platform::coin_legacy::to_cosmwasm_on_dex;
 use sdk::{
@@ -12,14 +12,14 @@ use swap::testing::SwapRequest;
 
 use crate::{
     common::{
-        self, CwCoin, USER, cwcoin_from_amount, ibc,
+        self, CwCoin, USER, cwcoin_from_amount, ibc, lease as common_lease,
         leaser::{self, Instantiator as LeaserInstantiator},
         test_case::{TestCase, response::ResponseWithInterChainMsgs},
     },
-    lease::{self as lease_mod, LpnCurrency},
+    lease as lease_mod,
 };
 
-use super::{DOWNPAYMENT, LeaseCurrency, LpnCoin, PaymentCurrency};
+use super::super::{DOWNPAYMENT, LeaseCoin, LeaseCurrency, LpnCoin, LpnCurrency, PaymentCurrency};
 
 #[test]
 #[should_panic = "No liquidation warning emitted!"]
@@ -148,9 +148,10 @@ fn full_liquidation() {
             .is_zero()
     );
 
-    assert_eq!(
-        common::query_all_balances(&lease_addr, test_case.app.query()),
-        &[],
+    common_lease::assert_lease_balance_eq(
+        &test_case.app,
+        &lease_addr,
+        common::cwcoin(LeaseCoin::ZERO),
     );
 
     let state = lease_mod::state_query(&test_case, lease_addr);

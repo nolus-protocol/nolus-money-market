@@ -232,7 +232,7 @@ pub(crate) fn complete_initialization<DownpaymentC, Lpn>(
 
     check_state_opening(app, lease_addr.clone());
 
-    assert_eq!(super::query_all_balances(&lease_addr, app.query()), [],);
+    assert_lease_balance_eq(app, &lease_addr, super::native_cwcoin(0));
 
     () = super::swap::do_swap(
         app,
@@ -334,6 +334,13 @@ fn send_open_ica_response<'r>(
         },
     )
     .unwrap()
+}
+
+pub(crate) fn assert_lease_balance_eq(app: &App, lease: &Addr, balance: CwCoin) {
+    assert_eq!(
+        super::query_all_balances(lease, app.query()),
+        (!balance.amount.is_zero()).then_some(balance).as_slice(),
+    );
 }
 
 #[track_caller]
