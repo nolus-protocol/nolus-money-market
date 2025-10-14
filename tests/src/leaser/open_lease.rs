@@ -12,9 +12,16 @@ use sdk::{
 };
 
 use crate::common::{
-    self, lease as lease_mod, leaser as leaser_mod, lpp::LppExecuteMsg, oracle as oracle_mod, protocols::Registry, test_case::{
-        builder::BlankBuilder as TestCaseBuilder, response::{RemoteChain as _, ResponseWithInterChainMsgs}, TestCase
-    }, ADDON_OPTIMAL_INTEREST_RATE, BASE_INTEREST_RATE, USER, UTILIZATION_OPTIMAL
+    self, ADDON_OPTIMAL_INTEREST_RATE, BASE_INTEREST_RATE, USER, UTILIZATION_OPTIMAL,
+    lease as lease_mod, leaser as leaser_mod,
+    lpp::LppExecuteMsg,
+    oracle as oracle_mod,
+    protocols::Registry,
+    test_case::{
+        TestCase,
+        builder::BlankBuilder as TestCaseBuilder,
+        response::{RemoteChain as _, ResponseWithInterChainMsgs},
+    },
 };
 
 #[test]
@@ -59,7 +66,10 @@ fn open_multiple_loans() {
 
     test_case
         .send_funds_from_admin(user_addr.clone(), &[common::cwcoin_from_amount::<Lpn>(450)])
-        .send_funds_from_admin(other_user_addr.clone(), &[common::cwcoin_from_amount::<Lpn>(225)]);
+        .send_funds_from_admin(
+            other_user_addr.clone(),
+            &[common::cwcoin_from_amount::<Lpn>(225)],
+        );
 
     leaser_mod::assert_no_leases(
         &test_case.app,

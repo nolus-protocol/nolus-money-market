@@ -36,9 +36,10 @@ pub(crate) struct Instantiator;
 
 impl Instantiator {
     pub fn store(app: &mut App) -> Code {
-        let endpoints = CwContractWrapper::new(contract::execute, contract::instantiate, contract::query)
-            .with_reply(contract::reply)
-            .with_sudo(contract::sudo);
+        let endpoints =
+            CwContractWrapper::new(contract::execute, contract::instantiate, contract::query)
+                .with_reply(contract::reply)
+                .with_sudo(contract::sudo);
 
         app.store_code(Box::new(endpoints))
     }

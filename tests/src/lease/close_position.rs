@@ -308,7 +308,10 @@ fn do_close(
         TestCase::LEASE_ICA_ID,
     );
 
-    assert_eq!(transfer_amount, coin_legacy::to_cosmwasm_on_dex(close_amount_in_lpn));
+    assert_eq!(
+        transfer_amount,
+        coin_legacy::to_cosmwasm_on_dex(close_amount_in_lpn)
+    );
 
     let mut response_transfer_in = ibc::do_transfer(
         &mut test_case.app,

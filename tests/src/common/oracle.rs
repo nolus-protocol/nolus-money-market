@@ -20,9 +20,7 @@ use oracle::{
     test_tree,
 };
 use sdk::{
-    cosmwasm_std::{
-        self, Addr, Binary, Deps, Empty, Env, Event, QuerierWrapper, StdResult 
-    },
+    cosmwasm_std::{self, Addr, Binary, Deps, Empty, Env, Event, QuerierWrapper, StdResult},
     cw_multi_test::AppResponse,
     testing::{self, CwContract, CwContractWrapper},
 };
@@ -84,14 +82,14 @@ pub(crate) fn mock_query(
         price::total_of(Coin::<Nls>::new(123456789)).is(Coin::<BaseCurrency>::new(100000000));
 
     match msg {
-        QueryMsg::Prices {} => {
-            cosmwasm_std::to_json_binary(
-                &PricesResponse::<PriceCurrencies, BaseCurrency, BaseCurrencies> {
-                    prices: vec![price.into()],
-                },
-            )
-            .map_err(Error::ConvertToBinary)
-        }
+        QueryMsg::Prices {} => cosmwasm_std::to_json_binary(&PricesResponse::<
+            PriceCurrencies,
+            BaseCurrency,
+            BaseCurrencies,
+        > {
+            prices: vec![price.into()],
+        })
+        .map_err(Error::ConvertToBinary),
         _ => contract::query(deps, env, msg),
     }
 }

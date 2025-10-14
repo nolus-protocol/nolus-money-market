@@ -18,7 +18,7 @@ use sdk::{
 
 use crate::common::{
     self, ADDON_OPTIMAL_INTEREST_RATE, BASE_INTEREST_RATE, USER, UTILIZATION_OPTIMAL,
-     leaser as leaser_mod,
+    leaser as leaser_mod,
     lpp::{self as lpp_mod},
     oracle as oracle_mod,
     protocols::Registry,
@@ -50,9 +50,13 @@ fn test_quote() {
         .init_leaser()
         .into_generic();
 
-    test_case.send_funds_from_admin(testing::user(USER), &[common::cwcoin_from_amount::<Lpn>(500)]);
+    test_case.send_funds_from_admin(
+        testing::user(USER),
+        &[common::cwcoin_from_amount::<Lpn>(500)],
+    );
 
-    let price_lease_lpn: Price<LeaseCurrency, Lpn> = price::total_of(common::coin(2)).is(common::coin(1));
+    let price_lease_lpn: Price<LeaseCurrency, Lpn> =
+        price::total_of(common::coin(2)).is(common::coin(1));
     let feeder = setup_feeder(&mut test_case);
     oracle_mod::feed_price(
         &mut test_case,

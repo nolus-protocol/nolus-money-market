@@ -16,7 +16,16 @@ use sdk::{
 };
 
 use crate::common::{
-    self, leaser::{Alarms, Instantiator as LeaserInstantiator}, lpp::Instantiator as LppInstantiator, oracle::Instantiator as OracleInstantiator, profit::Instantiator as ProfitInstantiator, protocols::{Instantiator as ProtocolsInstantiator, Registry}, reserve::Instantiator as ReserveInstantiator, test_case::{OptionalLppEndpoints, OptionalOracleWrapper, TestCase}, timealarms::Instantiator as TimeAlarmsInstantiator, treasury::Instantiator as TreasuryInstantiator
+    self,
+    leaser::{Alarms, Instantiator as LeaserInstantiator},
+    lpp::Instantiator as LppInstantiator,
+    oracle::Instantiator as OracleInstantiator,
+    profit::Instantiator as ProfitInstantiator,
+    protocols::{Instantiator as ProtocolsInstantiator, Registry},
+    reserve::Instantiator as ReserveInstantiator,
+    test_case::{OptionalLppEndpoints, OptionalOracleWrapper, TestCase},
+    timealarms::Instantiator as TimeAlarmsInstantiator,
+    treasury::Instantiator as TreasuryInstantiator,
 };
 
 pub(crate) type BlankBuilder<Lpn> = Builder<Lpn, (), (), (), (), (), (), (), ()>;
@@ -43,7 +52,10 @@ where
     Lpn::Group: MemberOf<Lpns>,
 {
     pub fn new() -> Self {
-        Self::with_reserve(&[common::cwcoin_from_amount::<Lpn>(10_000), common::cwcoin_dex::<Lpn>(10_000)])
+        Self::with_reserve(&[
+            common::cwcoin_from_amount::<Lpn>(10_000),
+            common::cwcoin_dex::<Lpn>(10_000),
+        ])
     }
 
     pub fn with_reserve(reserve: &[CwCoin]) -> Self {

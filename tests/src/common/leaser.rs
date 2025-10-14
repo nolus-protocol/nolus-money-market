@@ -11,9 +11,7 @@ use finance::{
     test,
 };
 use lease::api::{LpnCoinDTO, limits::MaxSlippages, open::PositionSpecDTO};
-use leaser::{
-    msg::{InstantiateMsg, NewConfig, QueryMsg, QuoteResponse},
-};
+use leaser::msg::{InstantiateMsg, NewConfig, QueryMsg, QuoteResponse};
 use platform::contract::{Code, CodeId};
 use sdk::{cosmwasm_std::Addr, testing};
 

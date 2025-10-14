@@ -18,8 +18,7 @@ pub use sdk::cosmwasm_std::Coin as CwCoin;
 use sdk::{
     cosmwasm_ext::InterChainMsg,
     cosmwasm_std::{
-        self, Addr, Binary, BlockInfo, Deps, Empty, Env, QuerierWrapper, StdResult,
-        StdResult as CwResult, Timestamp, testing as cosmwasm_test,
+        self, testing as cosmwasm_test, Addr, Binary, BlockInfo, Deps, Empty, Env, QuerierWrapper, StdResult as CwResult, Timestamp
     },
     testing::{self, CwApp, InterChainMsgSender},
 };
@@ -172,7 +171,7 @@ struct MockResponse {}
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 struct MockQueryMsg {}
 
-fn dummy_query(_deps: Deps<'_>, _env: Env, _msg: MockQueryMsg) -> StdResult<Binary> {
+fn dummy_query(_deps: Deps<'_>, _env: Env, _msg: MockQueryMsg) -> CwResult<Binary> {
     cosmwasm_std::to_json_binary(&MockResponse {})
 }
 

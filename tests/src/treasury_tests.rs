@@ -13,7 +13,11 @@ use sdk::{
 use treasury::msg::ConfigResponse;
 
 use crate::common::{
-    self, lpp::{LppExecuteMsg, LppQueryMsg}, oracle as oracle_mod, protocols::Registry, test_case::{builder::BlankBuilder as TestCaseBuilder, TestCase}, ADDON_OPTIMAL_INTEREST_RATE, BASE_INTEREST_RATE, USER, UTILIZATION_OPTIMAL
+    self, ADDON_OPTIMAL_INTEREST_RATE, BASE_INTEREST_RATE, USER, UTILIZATION_OPTIMAL,
+    lpp::{LppExecuteMsg, LppQueryMsg},
+    oracle as oracle_mod,
+    protocols::Registry,
+    test_case::{TestCase, builder::BlankBuilder as TestCaseBuilder},
 };
 
 type DispatcherTestCase = TestCase<Addr, Addr, (), (), (), Addr, Addr, Addr>;
@@ -22,7 +26,10 @@ type DispatcherTestCase = TestCase<Addr, Addr, (), (), (), Addr, Addr, Addr>;
 fn on_alarm_zero_reward() {
     let mut test_case = new_test_case(Registry::NoProtocol);
 
-    test_case.send_funds_from_admin(testing::user(USER), &[common::cwcoin_from_amount::<Lpn>(500)]);
+    test_case.send_funds_from_admin(
+        testing::user(USER),
+        &[common::cwcoin_from_amount::<Lpn>(500)],
+    );
 
     test_case.send_funds_from_admin(
         test_case.address_book.time_alarms().clone(),
