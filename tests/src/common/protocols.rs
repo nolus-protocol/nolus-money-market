@@ -7,11 +7,11 @@ use admin_contract::{
 };
 use sdk::{
     cosmwasm_ext::Response as CwResponse,
-    cosmwasm_std::{Addr, Binary, Deps, DepsMut, Empty, Env, MessageInfo, to_json_binary},
+    cosmwasm_std::{self, Addr, Binary, Deps, DepsMut, Empty, Env, MessageInfo},
     testing,
 };
 
-use super::{ADMIN, CwContractWrapper, MockQueryMsg, dummy_query, test_case::app::App};
+use super::{ADMIN, CwContractWrapper, MockQueryMsg, test_case::app::App};
 
 pub(crate) type QueryFn =
     fn(deps: Deps<'_, Empty>, env: Env, msg: QueryMsg) -> ContractResult<Binary>;
@@ -85,14 +85,14 @@ fn protocols_repo_query(
     msg: QueryMsg,
 ) -> ContractResult<Binary> {
     let res = match msg {
-        QueryMsg::Protocols {} => to_json_binary::<ProtocolsQueryResponse>(
+        QueryMsg::Protocols {} => cosmwasm_std::to_json_binary::<ProtocolsQueryResponse>(
             &(0..protocols_nb).map(protocol_name).collect(),
         ),
         QueryMsg::Protocol(_) => {
             const NETWORK: Network = Network::Osmosis;
             const DEX: Dex = Dex::Osmosis;
 
-            to_json_binary(&ProtocolQueryResponse {
+            cosmwasm_std::to_json_binary(&ProtocolQueryResponse {
                 network: NETWORK,
                 dex: DEX,
                 contracts: ProtocolContractAddresses {
@@ -104,7 +104,7 @@ fn protocols_repo_query(
                 },
             })
         }
-        _ => Ok(dummy_query(deps, env, MockQueryMsg {})?),
+        _ => Ok(super::dummy_query(deps, env, MockQueryMsg {})?),
     }?;
 
     Ok(res)

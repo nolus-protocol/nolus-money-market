@@ -13,7 +13,7 @@ use lease::{
     },
     error::{ContractError, PositionError},
 };
-use platform::coin_legacy::to_cosmwasm_on_dex;
+use platform::coin_legacy;
 use sdk::{
     cosmwasm_std::{Addr, Event},
     cw_multi_test::AppResponse,
@@ -308,7 +308,7 @@ fn do_close(
         TestCase::LEASE_ICA_ID,
     );
 
-    assert_eq!(transfer_amount, to_cosmwasm_on_dex(close_amount_in_lpn));
+    assert_eq!(transfer_amount, coin_legacy::to_cosmwasm_on_dex(close_amount_in_lpn));
 
     let mut response_transfer_in = ibc::do_transfer(
         &mut test_case.app,
@@ -326,7 +326,7 @@ fn do_close(
         );
 
         assert_eq!(
-            to_cosmwasm_on_dex(exp_lease_amount_after),
+            coin_legacy::to_cosmwasm_on_dex(exp_lease_amount_after),
             lease_amount_after
         );
     }
@@ -357,7 +357,7 @@ fn do_close(
     common_lease::assert_lease_balance_eq(
         &test_case.app,
         &lease_ica,
-        to_cosmwasm_on_dex(exp_lease_amount_after),
+        coin_legacy::to_cosmwasm_on_dex(exp_lease_amount_after),
     );
 
     lease_addr

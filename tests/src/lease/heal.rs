@@ -3,7 +3,7 @@ use sdk::{cosmwasm_std::Addr, cw_multi_test::AppResponse, testing};
 
 use crate::{
     common::{
-        self, USER, cwcoin, swap as test_swap,
+        self, USER, swap as test_swap,
         test_case::{
             TestCase,
             app::App,
@@ -26,7 +26,7 @@ fn active_state() {
 
     let unutilized_amount: LpnCoin = common::coin(100);
 
-    test_case.send_funds_from_admin(lease.clone(), &[cwcoin(unutilized_amount)]);
+    test_case.send_funds_from_admin(lease.clone(), &[common::cwcoin(unutilized_amount)]);
     heal_ok(&mut test_case.app, lease.clone(), testing::user(USER))
         .ignore_response()
         .expect_empty();
@@ -56,7 +56,7 @@ fn swap_on_repay() {
     assert_eq!(query_result, expected_result);
 
     let payment = super::create_payment_coin(1_000);
-    test_case.send_funds_from_admin(testing::user(USER), &[cwcoin(payment)]);
+    test_case.send_funds_from_admin(testing::user(USER), &[common::cwcoin(payment)]);
 
     () = repay::repay_with_hook_on_swap(&mut test_case, lease.clone(), payment, |ref mut app| {
         let swap_response_retry = common::swap::do_swap_with_error(app, lease.clone())

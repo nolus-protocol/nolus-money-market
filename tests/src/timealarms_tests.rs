@@ -1,4 +1,4 @@
-use std::array::from_fn;
+use std::array;
 
 use currencies::{Lpn, Nls};
 use currency::CurrencyDef;
@@ -12,7 +12,7 @@ use sdk::{
 use timealarms::msg::{AlarmsCount, DispatchAlarmsResponse};
 
 use crate::common::{
-    ADMIN, cwcoin,
+    self, ADMIN,
     protocols::Registry,
     test_case::{TestCase, builder::BlankBuilder as TestCaseBuilder},
 };
@@ -28,9 +28,7 @@ mod mock_lease {
     use platform::{message::Response as PlatformResponse, response};
     use sdk::{
         cosmwasm_ext::Response,
-        cosmwasm_std::{
-            Addr, Binary, Deps, DepsMut, Env, MessageInfo, StdError, StdResult, to_json_binary,
-        },
+        cosmwasm_std::{self, Addr, Binary, Deps, DepsMut, Env, MessageInfo, StdError, StdResult},
         cw_storage_plus::Item,
         testing::{self, CwContract, CwContractWrapper},
     };
@@ -87,7 +85,7 @@ mod mock_lease {
                 if gate {
                     Ok(Response::new()
                         .add_attribute("lease_reply", env.block.time.to_string())
-                        .set_data(to_json_binary(&env.contract.address)?))
+                        .set_data(cosmwasm_std::to_json_binary(&env.contract.address)?))
                 } else {
                     Err(StdError::generic_err("closed gate"))
                 }
@@ -387,7 +385,7 @@ fn reschedule_failing_alarms_mix() {
 
     const ALARMS_COUNT: usize = 8;
 
-    let _leases: [Addr; ALARMS_COUNT] = from_fn(|index| {
+    let _leases: [Addr; ALARMS_COUNT] = array::from_fn(|index| {
         let alarm_subscriber: Addr = instantiate_may_fail_contract(&mut test_case.app);
 
         () = test_case
@@ -487,8 +485,8 @@ fn test_time_notify() {
 #[test]
 fn test_profit_alarms() {
     let mut test_case = TestCaseBuilder::<Lpn>::with_reserve(&[
-        cwcoin(Coin::<Lpn>::new(1_000_000)),
-        cwcoin(Coin::<Nls>::new(1_000_000)),
+        common::cwcoin(Coin::<Lpn>::new(1_000_000)),
+        common::cwcoin(Coin::<Nls>::new(1_000_000)),
     ])
     .init_time_alarms()
     .init_protocols_registry(Registry::NoProtocol)
@@ -499,7 +497,7 @@ fn test_profit_alarms() {
 
     test_case.send_funds_from_admin(
         test_case.address_book.profit().clone(),
-        &[cwcoin(Coin::<Nls>::new(100_000))],
+        &[common::cwcoin(Coin::<Nls>::new(100_000))],
     );
 
     test_case.app.time_shift(Duration::from_hours(10));

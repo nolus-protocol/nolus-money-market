@@ -11,21 +11,12 @@ use profit::{
 };
 use sdk::{
     cosmwasm_std::{self, Addr, Coin as CwCoin},
-    cw_multi_test::next_block,
+    cw_multi_test::{self as cw_test},
     neutron_sdk::sudo::msg::SudoMsg as NeutronSudoMsg,
 };
 
 use crate::common::{
-    cwcoin_dex, cwcoin_from_amount,
-    leaser::{Alarms, Instantiator as LeaserInstantiator},
-    lpp::Instantiator as LppInstantiator,
-    oracle::Instantiator as OracleInstantiator,
-    profit::Instantiator as ProfitInstantiator,
-    protocols::{Instantiator as ProtocolsInstantiator, Registry},
-    reserve::Instantiator as ReserveInstantiator,
-    test_case::{OptionalLppEndpoints, OptionalOracleWrapper, TestCase},
-    timealarms::Instantiator as TimeAlarmsInstantiator,
-    treasury::Instantiator as TreasuryInstantiator,
+    self, leaser::{Alarms, Instantiator as LeaserInstantiator}, lpp::Instantiator as LppInstantiator, oracle::Instantiator as OracleInstantiator, profit::Instantiator as ProfitInstantiator, protocols::{Instantiator as ProtocolsInstantiator, Registry}, reserve::Instantiator as ReserveInstantiator, test_case::{OptionalLppEndpoints, OptionalOracleWrapper, TestCase}, timealarms::Instantiator as TimeAlarmsInstantiator, treasury::Instantiator as TreasuryInstantiator
 };
 
 pub(crate) type BlankBuilder<Lpn> = Builder<Lpn, (), (), (), (), (), (), (), ()>;
@@ -52,7 +43,7 @@ where
     Lpn::Group: MemberOf<Lpns>,
 {
     pub fn new() -> Self {
-        Self::with_reserve(&[cwcoin_from_amount::<Lpn>(10_000), cwcoin_dex::<Lpn>(10_000)])
+        Self::with_reserve(&[common::cwcoin_from_amount::<Lpn>(10_000), common::cwcoin_dex::<Lpn>(10_000)])
     }
 
     pub fn with_reserve(reserve: &[CwCoin]) -> Self {
@@ -93,7 +84,7 @@ where
         let protocols_registry: Addr =
             ProtocolsInstantiator().instantiate(&mut test_case.app, registry);
 
-        test_case.app.update_block(next_block);
+        test_case.app.update_block(cw_test::next_block);
 
         Builder {
             test_case: TestCase {
@@ -126,7 +117,7 @@ where
             test_case.address_book.time_alarms().clone(),
         );
 
-        test_case.app.update_block(next_block);
+        test_case.app.update_block(cw_test::next_block);
 
         Builder {
             test_case: TestCase {
@@ -163,7 +154,7 @@ where
         Self::send_open_ica_response(&mut test_case, profit_addr.clone());
         Self::test_config(&mut test_case, profit_addr.clone(), cadence_hours);
 
-        test_case.app.update_block(next_block);
+        test_case.app.update_block(cw_test::next_block);
 
         let profit_ica_addr: Addr = TestCase::ica_addr(&profit_addr, TestCase::PROFIT_ICA_ID);
 
@@ -244,7 +235,7 @@ where
             test_case.address_book.lease_code(),
         );
 
-        test_case.app.update_block(next_block);
+        test_case.app.update_block(cw_test::next_block);
 
         Builder {
             test_case: TestCase {
@@ -279,7 +270,7 @@ where
             test_case.address_book.protocols_registry().clone(),
         );
 
-        test_case.app.update_block(next_block);
+        test_case.app.update_block(cw_test::next_block);
 
         Builder {
             test_case: TestCase {
@@ -359,7 +350,7 @@ where
             )
         };
 
-        test_case.app.update_block(next_block);
+        test_case.app.update_block(cw_test::next_block);
 
         Builder {
             test_case: TestCase {
@@ -395,7 +386,7 @@ where
             OracleInstantiator::instantiate_default(&mut test_case.app)
         };
 
-        test_case.app.update_block(next_block);
+        test_case.app.update_block(cw_test::next_block);
 
         Builder {
             test_case: TestCase {
@@ -422,7 +413,7 @@ where
 
         let time_alarms_addr: Addr = TimeAlarmsInstantiator::instantiate(&mut test_case.app);
 
-        test_case.app.update_block(next_block);
+        test_case.app.update_block(cw_test::next_block);
 
         Builder {
             test_case: TestCase {

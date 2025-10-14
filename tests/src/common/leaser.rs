@@ -12,9 +12,7 @@ use finance::{
 };
 use lease::api::{LpnCoinDTO, limits::MaxSlippages, open::PositionSpecDTO};
 use leaser::{
-    execute, instantiate,
     msg::{InstantiateMsg, NewConfig, QueryMsg, QuoteResponse},
-    query, reply, sudo,
 };
 use platform::contract::{Code, CodeId};
 use sdk::{cosmwasm_std::Addr, testing};
@@ -102,9 +100,9 @@ impl Instantiator {
         protocols_registry: Addr,
     ) -> Addr {
         // TODO [Rust 1.70] Convert to static item with OnceCell
-        let endpoints = CwContractWrapper::new(execute, instantiate, query)
-            .with_reply(reply)
-            .with_sudo(sudo);
+        let endpoints = CwContractWrapper::new(leaser::execute, leaser::instantiate, leaser::query)
+            .with_reply(leaser::reply)
+            .with_sudo(leaser::sudo);
 
         let code_id = app.store_code(Box::new(endpoints));
 

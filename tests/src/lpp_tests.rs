@@ -29,7 +29,6 @@ use sdk::{
 use crate::{
     common::{
         self, ADDON_OPTIMAL_INTEREST_RATE, ADMIN, BASE_INTEREST_RATE, CwCoin, UTILIZATION_OPTIMAL,
-        cwcoin, cwcoin_from_amount,
         lease::{
             InitConfig as LeaseInitConfig, Instantiator as LeaseInstantiator,
             InstantiatorAddresses as LeaseInstantiatorAddresses,
@@ -87,7 +86,7 @@ fn config_update_parameters() {
 
     let mut test_case = TestCaseBuilder::<Lpn>::with_reserve(&[
         lpn_cwcoin(app_balance),
-        cwcoin_from_amount::<Nls>(app_balance),
+        common::cwcoin_from_amount::<Nls>(app_balance),
     ])
     .init_lpp(
         None,
@@ -536,7 +535,7 @@ fn loan_open_and_repay() {
 
     let mut test_case = TestCaseBuilder::<Lpn>::with_reserve(&[
         lpn_cwcoin(app_balance),
-        cwcoin_from_amount::<Nls>(app_balance),
+        common::cwcoin_from_amount::<Nls>(app_balance),
     ])
     .init_lpp_with_funds(
         None,
@@ -1190,7 +1189,7 @@ fn test_rewards() {
 
     let mut test_case = TestCaseBuilder::<Lpn>::with_reserve(&[
         lpn_cwcoin(app_balance),
-        cwcoin_from_amount::<Nls>(app_balance),
+        common::cwcoin_from_amount::<Nls>(app_balance),
     ])
     .init_lpp_with_funds(
         None,
@@ -1554,5 +1553,5 @@ where
 }
 
 fn lpn_cwcoin(amount: Amount) -> CwCoin {
-    cwcoin(common::coin::<Lpn>(amount))
+    common::cwcoin(common::coin::<Lpn>(amount))
 }

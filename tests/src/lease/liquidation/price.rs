@@ -2,7 +2,7 @@ use currencies::PaymentGroup;
 use currency::CurrencyDef as _;
 use finance::{coin::Amount, percent::Percent100, zero::Zero as _};
 use lease::api::query::StateResponse;
-use platform::coin_legacy::to_cosmwasm_on_dex;
+use platform::coin_legacy;
 use sdk::{
     cosmwasm_std::{Addr, Event},
     cw_multi_test::AppResponse,
@@ -12,7 +12,7 @@ use swap::testing::SwapRequest;
 
 use crate::{
     common::{
-        self, CwCoin, USER, cwcoin_from_amount, ibc, lease as common_lease,
+        self, CwCoin, USER, ibc, lease as common_lease,
         leaser::{self, Instantiator as LeaserInstantiator},
         test_case::{TestCase, response::ResponseWithInterChainMsgs},
     },
@@ -83,7 +83,7 @@ fn full_liquidation() {
     let liq_outcome = borrowed_amount - 11123; // to trigger an interaction with Reserve
     test_case.send_funds_from_admin(
         reserve.clone(),
-        &[cwcoin_from_amount::<LpnCurrency>(
+        &[common::cwcoin_from_amount::<LpnCurrency>(
             borrowed_amount - liq_outcome,
         )],
     );
@@ -125,7 +125,7 @@ fn full_liquidation() {
 
     assert_eq!(
         transfer_amount,
-        to_cosmwasm_on_dex(LpnCoin::new(liq_outcome))
+        coin_legacy::to_cosmwasm_on_dex(LpnCoin::new(liq_outcome))
     );
 
     let response: AppResponse = ibc::do_transfer(
