@@ -1,18 +1,12 @@
-use std::{
-    fmt::{Debug, Display, Formatter, Result as FmtResult, Write},
-    ops::{Div, Rem},
-};
+use std::fmt::{Debug, Display, Formatter, Result as FmtResult, Write};
 
 #[cfg(any(test, feature = "testing"))]
 use std::ops::{Add, Sub};
 
 use bnum::types::U256;
-use gcd::Gcd;
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    coin::Amount, error::Error, fraction::Unit as FractionUnit, ratio::RatioLegacy, zero::Zero,
-};
+use crate::{coin::Amount, error::Error, ratio::RatioLegacy};
 
 use super::Units;
 
@@ -115,36 +109,6 @@ impl<const UPPER_BOUND: Units> Display for BoundPercent<UPPER_BOUND> {
     }
 }
 
-impl<const UPPER: Units> FractionUnit for BoundPercent<UPPER>
-where
-    BoundPercent<UPPER>: Copy + Debug + Ord + Zero,
-{
-    type Times = Units;
-
-    fn gcd<U>(self, other: U) -> Self::Times
-    where
-        U: FractionUnit<Times = Self::Times>,
-    {
-        Gcd::gcd(self.units(), other.to_primitive())
-    }
-
-    fn scale_down(self, scale: Self::Times) -> Self {
-        debug_assert_ne!(scale, Self::Times::ZERO);
-        Self::try_from_permille(self.units().div(scale))
-            .expect("Units should be less than UPPER_BOUND")
-    }
-
-    fn modulo(self, scale: Self::Times) -> Self::Times {
-        debug_assert_ne!(scale, Self::Times::ZERO);
-
-        self.units().rem(scale)
-    }
-
-    fn to_primitive(self) -> Self::Times {
-        self.units()
-    }
-}
-
 // TODO: Revisit it's usage after refactoring Fractionable
 impl<const UPPER_BOUND: Units> From<BoundPercent<UPPER_BOUND>> for u128 {
     fn from(percent: BoundPercent<UPPER_BOUND>) -> Self {
@@ -167,10 +131,6 @@ impl<const UPPER_BOUND: Units> RatioLegacy<Units> for BoundPercent<UPPER_BOUND> 
     fn total(&self) -> Units {
         Self::HUNDRED.0
     }
-}
-
-impl<const UPPER_BOUND: Units> Zero for BoundPercent<UPPER_BOUND> {
-    const ZERO: Self = Self::ZERO;
 }
 
 #[cfg(any(test, feature = "testing"))]

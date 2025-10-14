@@ -1,9 +1,8 @@
 use std::{
     fmt::{Debug, Display, Formatter, Result as FmtResult},
-    ops::{Add, AddAssign, Div, Rem, Sub, SubAssign},
+    ops::{Add, AddAssign, Sub, SubAssign},
 };
 
-use gcd::Gcd;
 use serde::{Deserialize, Serialize};
 
 use sdk::cosmwasm_std::Timestamp;
@@ -13,8 +12,10 @@ use crate::{
     fractionable::{CommonDoublePrimitive, Fractionable, IntoMax},
     ratio::SimpleFraction,
     rational::Rational,
-    zero::Zero,
 };
+
+mod fraction;
+mod fractionable;
 
 pub type Units = u64;
 
@@ -106,37 +107,6 @@ impl Duration {
     {
         SimpleFraction::new(amount, annual_amount).of(self)
     }
-}
-
-impl FractionUnit for Duration {
-    type Times = Units;
-
-    fn gcd<U>(self, other: U) -> Self::Times
-    where
-        U: FractionUnit<Times = Self::Times>,
-    {
-        Gcd::gcd(self.nanos(), other.to_primitive())
-    }
-
-    fn scale_down(self, scale: Self::Times) -> Self {
-        debug_assert_ne!(scale, Self::Times::ZERO);
-
-        Self::from_nanos(self.nanos().div(scale))
-    }
-
-    fn modulo(self, scale: Self::Times) -> Self::Times {
-        debug_assert_ne!(scale, Self::Times::ZERO);
-
-        self.nanos().rem(scale)
-    }
-
-    fn to_primitive(self) -> Self::Times {
-        self.nanos()
-    }
-}
-
-impl Zero for Duration {
-    const ZERO: Self = Self::from_nanos(0);
 }
 
 impl Add<Duration> for Timestamp {
