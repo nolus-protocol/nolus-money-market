@@ -112,7 +112,7 @@ pub fn query_all_balances(addr: &Addr, querier: QuerierWrapper<'_>) -> Vec<CwCoi
             C::Group: MemberOf<Self::VisitedG> + MemberOf<<Self::VisitedG as Group>::TopG>,
         {
             self.querier
-                .query_balance(self.addr, Symbol::symbol(C::dto().definition()))
+                .query_balance(self.addr, C::dto().into_symbol::<Symbol>())
                 .map(|coin| (!coin.amount.is_zero()).then_some(coin))
                 .transpose()
         }
