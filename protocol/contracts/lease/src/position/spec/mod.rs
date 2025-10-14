@@ -326,19 +326,18 @@ impl Spec {
     where
         Asset: 'static,
     {
-        self.liability
-            .amount_to_liquidate(asset, total_due)
-            .and_then(|liquidation_amount| {
-                self.may_ask_liquidation(
-                    asset,
-                    Cause::Liability {
-                        ltv: self.liability.max(),
-                        healthy_ltv: self.liability.healthy_percent(),
-                    },
-                    liquidation_amount,
-                    asset_in_lpns,
-                )
-            })
+        let liquidation_amount = self.liability.amount_to_liquidate(asset, total_due);
+
+        self.may_ask_liquidation(
+            asset,
+            Cause::Liability {
+                ltv: self.liability.max(),
+
+                healthy_ltv: self.liability.healthy_percent(),
+            },
+            liquidation_amount,
+            asset_in_lpns,
+        )
     }
 
     fn may_ask_liquidation_overdue<Asset, Due>(
