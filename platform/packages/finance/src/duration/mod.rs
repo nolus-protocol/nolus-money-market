@@ -1,48 +1,25 @@
 use std::{
     fmt::{Debug, Display, Formatter, Result as FmtResult},
-    ops::{Add, AddAssign, Div, Rem, Sub, SubAssign},
+    ops::{Add, AddAssign, Sub, SubAssign},
 };
 
-use gcd::Gcd;
 use serde::{Deserialize, Serialize};
 
 use sdk::cosmwasm_std::Timestamp;
 
 use crate::{
-    fraction::Unit as FractionUnit, fractionable::FractionableLegacy, ratio::SimpleFraction,
-    rational::Rational, zero::Zero,
+    fraction::Unit as FractionUnit,
+    fractionable::{CommonDoublePrimitive, Fractionable, IntoMax},
+    ratio::SimpleFraction,
+    rational::Rational,
 };
+
+mod fraction;
+mod fractionable;
 
 pub type Units = u64;
 
 pub type Seconds = u32;
-
-impl FractionUnit for Units {
-    type Times = Self;
-
-    fn gcd<U>(self, other: U) -> Self::Times
-    where
-        U: FractionUnit<Times = Self::Times>,
-    {
-        Gcd::gcd(self, other.to_primitive())
-    }
-
-    fn scale_down(self, scale: Self::Times) -> Self {
-        debug_assert_ne!(scale, Self::Times::ZERO);
-
-        self.div(scale)
-    }
-
-    fn modulo(self, scale: Self::Times) -> Self::Times {
-        debug_assert_ne!(scale, Self::Times::ZERO);
-
-        self.rem(scale)
-    }
-
-    fn to_primitive(self) -> Self::Times {
-        self
-    }
-}
 
 /// A more storage and compute optimal version of its counterpart in the std::time.
 /// Designed to represent a timespan between cosmwasm_std::Timestamp-s.
@@ -115,66 +92,20 @@ impl Duration {
     }
 
     #[track_caller]
-    pub fn annualized_slice_of<T>(&self, annual_amount: T) -> T
+    pub fn annualized_slice_of<T>(&self, annual_amount: T) -> Option<T>
     where
-        T: FractionableLegacy<Units>,
+        Self: IntoMax<T::CommonDouble>,
+        T: Fractionable<Self>,
     {
-        annual_amount.safe_mul(&SimpleFraction::new(self.nanos(), Self::YEAR.nanos()))
+        SimpleFraction::new(*self, Self::YEAR).of(annual_amount)
     }
 
-    pub fn into_slice_per_ratio<U>(self, amount: U, annual_amount: U) -> Self
+    pub fn into_slice_per_ratio<U>(self, amount: U, annual_amount: U) -> Option<Self>
     where
-        Self: FractionableLegacy<U>,
-        U: FractionUnit,
+        Self: Fractionable<U>,
+        U: FractionUnit + IntoMax<<Self as CommonDoublePrimitive<U>>::CommonDouble>,
     {
-        SimpleFraction::new(amount, annual_amount)
-            .of(self)
-            .expect("TODO the method has to return Option")
-    }
-}
-
-impl From<Duration> for u128 {
-    fn from(d: Duration) -> Self {
-        d.nanos().into()
-    }
-}
-
-impl FractionUnit for Duration {
-    type Times = Units;
-
-    fn gcd<U>(self, other: U) -> Self::Times
-    where
-        U: FractionUnit<Times = Self::Times>,
-    {
-        Gcd::gcd(self.nanos(), other.to_primitive())
-    }
-
-    fn scale_down(self, scale: Self::Times) -> Self {
-        debug_assert_ne!(scale, Self::Times::ZERO);
-
-        Self::from_nanos(self.nanos().div(scale))
-    }
-
-    fn modulo(self, scale: Self::Times) -> Self::Times {
-        debug_assert_ne!(scale, Self::Times::ZERO);
-
-        self.nanos().rem(scale)
-    }
-
-    fn to_primitive(self) -> Self::Times {
-        self.nanos()
-    }
-}
-
-impl Zero for Duration {
-    const ZERO: Self = Self::from_nanos(0);
-}
-
-impl TryFrom<u128> for Duration {
-    type Error = <Units as TryFrom<u128>>::Error;
-
-    fn try_from(value: u128) -> Result<Self, Self::Error> {
-        Ok(Self::from_nanos(value.try_into()?))
+        SimpleFraction::new(amount, annual_amount).of(self)
     }
 }
 
@@ -384,53 +315,66 @@ mod tests {
     #[test]
     fn annualized_slice_of() {
         let annual_amount = test_coin(100000);
-        assert_eq!(annual_amount, D::YEAR.annualized_slice_of(annual_amount));
+        assert_eq!(
+            annual_amount,
+            D::YEAR.annualized_slice_of(annual_amount).unwrap()
+        );
         let expect_day_amount = annual_amount.checked_div(365).unwrap();
         assert_eq!(
             expect_day_amount,
-            D::from_days(1).annualized_slice_of(annual_amount)
+            D::from_days(1).annualized_slice_of(annual_amount).unwrap()
         );
         let expect_hour_amount = expect_day_amount.checked_div(24).unwrap();
         assert_eq!(
             expect_hour_amount,
-            D::HOUR.annualized_slice_of(annual_amount)
+            D::HOUR.annualized_slice_of(annual_amount).unwrap()
         )
     }
 
     #[test]
-    #[should_panic = "unexpected overflow"]
     fn panic_annualized_slice_of() {
-        // TODO remove the `#[should_panic]` and assert that is None when
-        // SimpleFraction::of() calls its checked_mul method instead of safe_mul
-        _ = (D::YEAR + D::HOUR).annualized_slice_of(test_coin(Amount::MAX));
+        assert!(
+            (D::YEAR + D::HOUR)
+                .annualized_slice_of(test_coin(Amount::MAX))
+                .is_none()
+        )
     }
 
     #[test]
     fn into_slice_per_ratio() {
         assert_eq!(
             D::from_days(365 / 5),
-            D::YEAR.into_slice_per_ratio(test_coin(1), test_coin(5))
+            D::YEAR
+                .into_slice_per_ratio(test_coin(1), test_coin(5))
+                .unwrap()
         );
         assert_eq!(
             D::from_days(10),
-            D::from_days(30).into_slice_per_ratio(test_coin(25), test_coin(75))
+            D::from_days(30)
+                .into_slice_per_ratio(test_coin(25), test_coin(75))
+                .unwrap()
         );
         assert_eq!(
             D::ZERO,
-            D::YEAR.into_slice_per_ratio(Coin::ZERO, test_coin(Amount::MAX))
+            D::YEAR
+                .into_slice_per_ratio(Coin::ZERO, test_coin(Amount::MAX))
+                .unwrap()
         );
         assert_eq!(
             D::from_days(365 / 5),
-            D::YEAR.into_slice_per_ratio(test_coin(Amount::MAX / 5), test_coin(Amount::MAX))
+            D::YEAR
+                .into_slice_per_ratio(test_coin(Amount::MAX / 5), test_coin(Amount::MAX))
+                .unwrap()
         );
     }
 
     #[test]
-    #[should_panic = "TODO remove when refactor Fractionable. Overflow computing a fraction of duration"]
     fn panic_into_slice_per_ratio() {
-        // TODO remove the `#[should_panic]` and assert that is None when
-        // SimpleFraction::of() calls its checked_mul method instead of safe_mul
-        _ = D::YEAR.into_slice_per_ratio(test_coin(585), test_coin(1));
+        assert!(
+            D::YEAR
+                .into_slice_per_ratio(test_coin(585), test_coin(1))
+                .is_none()
+        )
     }
 
     const fn test_coin(amount: Amount) -> Coin<SubGroupTestC10> {

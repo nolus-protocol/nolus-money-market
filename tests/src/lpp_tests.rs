@@ -3,11 +3,11 @@ use currency::CurrencyDef;
 use finance::{
     coin::{Amount, Coin},
     duration::Duration,
-    fraction::Fraction,
-    percent::{Percent, Percent100, Units as PercentUnits},
+    fraction::FractionLegacy,
+    percent::{Percent, Percent100},
     price,
     ratio::SimpleFraction,
-    rational::Rational,
+    rational::RationalLegacy,
     test,
     zero::Zero,
 };
@@ -56,18 +56,15 @@ fn general_interest_rate(
     optimal_rate: Percent100,
 ) -> Percent100 {
     // TODO migrate to using SimpleFraction once it starts implementing Ord
-    Percent::from_fraction(loan, balance)
+    Percent::from_fraction(common::coin::<Lpn>(loan.into()), common::coin(balance.into()))
     .map(|utilization_factor_max| {
             // TODO migrate to using SimpleFraction once it starts implementing Ord
             let utilization_factor = Percent::from_fraction(
-                    optimal_rate.units(),
-                    optimal_rate.complement().units(),
+                    Percent::from(optimal_rate),
+                    optimal_rate.complement().into(),
                 ).expect("The utilization must be a valid Percent").min(utilization_factor_max);
 
-            Rational::<PercentUnits>::of(
-            &SimpleFraction::new(addon_rate, optimal_rate),
-            utilization_factor,
-        )
+            SimpleFraction::new(addon_rate, optimal_rate).of(utilization_factor)
         .map(|utilization_config| Percent100::try_from(utilization_config + base_rate.into()).expect("The borrow rate must not exceed 100%"))     
         .expect("The utilization_config must be a valid Percent")     
     })

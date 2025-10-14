@@ -24,11 +24,14 @@ impl DueTrait for State {
                     .expect("TODO: propagate up the stack potential overflow"),
                 self.principal_due,
                 Duration::YEAR,
-            );
+            )
+            .expect("TODO: handle potential None from interest::interest() properly");
             if total_interest_a_year.is_zero() {
                 Duration::MAX
             } else {
-                Duration::YEAR.into_slice_per_ratio(overdue_left, total_interest_a_year)
+                Duration::YEAR
+                    .into_slice_per_ratio(overdue_left, total_interest_a_year)
+                    .expect("TODO Method should return Option")
             }
         };
         let time_to_collect = self.overdue.start_in().max(time_to_accrue_min_amount);
@@ -96,7 +99,8 @@ mod test {
             annual_interest + annual_interest_margin,
             principal_due,
             till_due_end,
-        );
+        )
+        .unwrap();
         let s = State {
             annual_interest,
             annual_interest_margin,
@@ -129,14 +133,17 @@ mod test {
             due_interest + due_margin_interest + overdue_interest + overdue_margin_interest;
 
         let delta_to_overdue = tests::lpn_coin(40);
-        let till_overdue = Duration::YEAR.into_slice_per_ratio(
-            delta_to_overdue,
-            interest::interest(
-                annual_interest + annual_interest_margin,
-                principal_due,
-                Duration::YEAR,
-            ),
-        );
+        let till_overdue = Duration::YEAR
+            .into_slice_per_ratio(
+                delta_to_overdue,
+                interest::interest(
+                    annual_interest + annual_interest_margin,
+                    principal_due,
+                    Duration::YEAR,
+                )
+                .unwrap(),
+            )
+            .unwrap();
 
         let s = State {
             annual_interest,

@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 use finance::{
-    coin::Coin, duration::Duration, fraction::Fraction, interest, percent::Percent100,
+    coin::Coin, duration::Duration, fraction::FractionLegacy, interest, percent::Percent100,
     ratio::Ratio, zero::Zero,
 };
 use lpp_platform::NLpn;
@@ -84,7 +84,9 @@ impl<Lpn> Total<Lpn> {
                 self.annual_interest_rate,
                 self.total_principal_due,
                 Duration::between(&self.last_update_time, ctime),
-            ) + self.total_interest_due
+            )
+            .expect("TODO: the method should return Option<_>")
+                + self.total_interest_due
         }
     }
 
@@ -192,7 +194,7 @@ impl<Lpn> Total<Lpn> {
     }
 
     fn estimated_annual_interest(&self) -> Coin<Lpn> {
-        Fraction::<Coin<Lpn>>::of(&self.annual_interest_rate, self.total_principal_due)
+        FractionLegacy::<Coin<Lpn>>::of(&self.annual_interest_rate, self.total_principal_due)
     }
 }
 

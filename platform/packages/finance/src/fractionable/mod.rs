@@ -6,16 +6,13 @@ use std::{
 use crate::{fractionable::checked_mul::CheckedMul, ratio::RatioLegacy, zero::Zero};
 
 pub(crate) mod checked_mul;
-mod coin;
-mod duration;
-mod percent;
-mod price;
 mod usize;
 
+/// Converts the domain type into its wider primitive `Double` type
 pub trait ToDoublePrimitive {
     type Double;
 
-    fn to_double(self) -> Self::Double;
+    fn to_double(&self) -> Self::Double;
 }
 
 /// Defines a common `Max` type, chosen as one of `Double` the types from either `Self` or `Other`
@@ -36,7 +33,7 @@ pub trait IntoMax<Max>
 where
     Self: ToDoublePrimitive,
 {
-    fn into(self) -> Max;
+    fn into_max(self) -> Max;
 }
 
 /// Conversion from `Max` back to the domain type
@@ -44,7 +41,7 @@ pub trait TryFromMax<Max>
 where
     Self: IntoMax<Max> + Sized,
 {
-    fn try_from(max: Max) -> Option<Self>;
+    fn try_from_max(max: Max) -> Option<Self>;
 }
 
 pub trait FractionableLegacy<U> {

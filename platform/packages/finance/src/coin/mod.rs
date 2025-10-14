@@ -6,15 +6,14 @@ use std::{
     fmt::{Debug, Display, Formatter},
     iter::Sum,
     marker::PhantomData,
-    ops::{Add, AddAssign, Div, Rem, Sub, SubAssign},
+    ops::{Add, AddAssign, Sub, SubAssign},
 };
 
 use ::serde::{Deserialize, Serialize};
-use gcd::Gcd;
 
 use currency::{Currency, CurrencyDef, Group, MemberOf};
 
-use crate::{fraction::Unit as FractionUnit, zero::Zero};
+use crate::zero::Zero;
 
 pub use self::{
     dto::{CoinDTO, IntoDTO},
@@ -24,39 +23,13 @@ pub use self::{
 mod amount_serde;
 mod dto;
 mod external;
+mod fraction;
+mod fractionable;
 mod serde;
 
 pub type Amount = u128;
 #[cfg(feature = "testing")]
 pub type NonZeroAmount = NonZeroU128;
-
-// Used only for average price calculation
-impl FractionUnit for u128 {
-    type Times = Self;
-
-    fn gcd<U>(self, other: U) -> Self::Times
-    where
-        U: FractionUnit<Times = Self::Times>,
-    {
-        Gcd::gcd(self, other.to_primitive())
-    }
-
-    fn scale_down(self, scale: Self::Times) -> Self {
-        debug_assert_ne!(scale, Self::Times::ZERO);
-
-        self.div(scale)
-    }
-
-    fn modulo(self, scale: Self::Times) -> Self::Times {
-        debug_assert_ne!(scale, Self::Times::ZERO);
-
-        self.rem(scale)
-    }
-
-    fn to_primitive(self) -> Self::Times {
-        self
-    }
-}
 
 #[derive(Serialize, Deserialize)]
 pub struct Coin<C> {
@@ -151,33 +124,6 @@ impl<C> Default for Coin<C> {
     }
 }
 
-impl<C> FractionUnit for Coin<C> {
-    type Times = Amount;
-
-    fn gcd<U>(self, other: U) -> Self::Times
-    where
-        U: FractionUnit<Times = Self::Times>,
-    {
-        Gcd::gcd(self.amount, other.to_primitive())
-    }
-
-    fn scale_down(self, scale: Self::Times) -> Self {
-        debug_assert_ne!(scale, Self::Times::ZERO);
-
-        Coin::new(self.amount.div(scale))
-    }
-
-    fn modulo(self, scale: Self::Times) -> Self::Times {
-        debug_assert_ne!(scale, Self::Times::ZERO);
-
-        self.amount.rem(scale)
-    }
-
-    fn to_primitive(self) -> Self::Times {
-        self.amount
-    }
-}
-
 impl<C> Eq for Coin<C> {}
 
 impl<C> PartialEq for Coin<C> {
@@ -199,10 +145,6 @@ where
     fn cmp(&self, other: &Self) -> Ordering {
         self.amount.cmp(&other.amount)
     }
-}
-
-impl<C> Zero for Coin<C> {
-    const ZERO: Self = Self::new(Zero::ZERO);
 }
 
 impl<C> Add for Coin<C> {
@@ -245,6 +187,7 @@ impl<C> Display for Coin<C> {
     }
 }
 
+// TODO remove it when finish refactoring Fractionable
 impl<C> From<Coin<C>> for Amount {
     fn from(coin: Coin<C>) -> Self {
         coin.amount

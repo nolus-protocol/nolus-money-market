@@ -29,6 +29,7 @@ impl<Lpn> Loan<Lpn> {
             self.principal_due,
             self.due_period(by),
         )
+        .expect("TODO: handle potential None from interest::interest() properly")
     }
 
     pub fn repay(&mut self, by: &Timestamp, repayment: Coin<Lpn>) -> RepayShares<Lpn> {
@@ -37,7 +38,8 @@ impl<Lpn> Loan<Lpn> {
             self.principal_due,
             repayment,
             self.due_period(by),
-        );
+        )
+        .expect("TODO Method should return Option");
 
         let interest_paid = repayment - interest_change;
         let principal_paid = interest_change.min(self.principal_due);
@@ -64,7 +66,7 @@ mod test {
     use finance::{
         coin::{Amount, Coin},
         duration::Duration,
-        fraction::Fraction,
+        fraction::FractionLegacy,
         percent::Percent100,
         zero::Zero,
     };

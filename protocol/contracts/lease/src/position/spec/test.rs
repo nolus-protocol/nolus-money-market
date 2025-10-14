@@ -2,7 +2,7 @@ use currencies::{Lpn, testing::PaymentC3};
 use finance::{
     coin::{Amount, Coin},
     duration::Duration,
-    fraction::Fraction,
+    fraction::FractionLegacy,
     liability::Liability,
     percent::Percent100,
     price::{self, Price},
@@ -849,7 +849,10 @@ mod test_debt {
 }
 
 mod test_steadiness {
-    use finance::{coin::Coin, fraction::Fraction, percent::Percent100, range::RightOpenRange};
+
+    use finance::{
+        coin::Coin, fraction::FractionLegacy, percent::Percent100, range::RightOpenRange,
+    };
 
     use crate::{
         api::position::{ChangeCmd, ClosePolicyChange},
@@ -1515,11 +1518,11 @@ mod test_validate_close {
 }
 
 mod test_check_close {
-    use finance::percent::Percent100;
+    use finance::{coin::Coin, percent::Percent100};
 
     use crate::{
         api::position::{ChangeCmd, ClosePolicyChange},
-        position::{CloseStrategy, PositionError},
+        position::{CloseStrategy, PositionError, spec::test::TestCurrency},
     };
 
     #[test]
@@ -1557,7 +1560,10 @@ mod test_check_close {
         let stop_loss_trigger = Percent100::from_percent(46);
         assert_eq!(
             Err(PositionError::trigger_close(
-                Percent100::from_ratio(920, 1000 * 2),
+                Percent100::from_ratio::<Coin<TestCurrency>>(
+                    super::coin(920),
+                    super::coin(1000 * 2)
+                ),
                 CloseStrategy::StopLoss(stop_loss_trigger)
             )),
             spec.change_close_policy(
@@ -1631,7 +1637,10 @@ mod test_check_close {
         let take_profit_trigger = Percent100::from_percent(46);
         assert_eq!(
             Err(PositionError::trigger_close(
-                Percent100::from_ratio(919, 1000 * 2),
+                Percent100::from_ratio::<Coin<TestCurrency>>(
+                    super::coin(919),
+                    super::coin(1000 * 2)
+                ),
                 CloseStrategy::TakeProfit(take_profit_trigger)
             )),
             spec.change_close_policy(

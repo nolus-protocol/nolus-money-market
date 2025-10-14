@@ -1,6 +1,6 @@
 use std::{collections::HashSet, marker::PhantomData};
 
-use finance::{fraction::Fraction, price::Price};
+use finance::{fraction::FractionLegacy, price::Price};
 use observations::{Observations, ObservationsRead};
 use sdk::cosmwasm_std::{Addr, Timestamp};
 

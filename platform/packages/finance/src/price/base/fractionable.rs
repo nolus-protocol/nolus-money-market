@@ -1,8 +1,9 @@
 use std::marker::PhantomData;
 
-use crate::{coin::Amount, percent::Units as PercentUnits, price::Price, ratio::RatioLegacy};
-
-use super::FractionableLegacy;
+use crate::{
+    coin::Amount, fractionable::FractionableLegacy, percent::Units as PercentUnits, price::Price,
+    ratio::RatioLegacy,
+};
 
 impl<C, QuoteC> FractionableLegacy<PercentUnits> for Price<C, QuoteC>
 where
@@ -54,10 +55,14 @@ mod test {
     use crate::coin::{Amount, Coin};
 
     mod percent {
-        use crate::fraction::Fraction;
-        use crate::fractionable::price::test::{c, q};
-        use crate::{percent::Percent100, price};
-
+        use crate::{
+            fraction::FractionLegacy,
+            percent::Percent100,
+            price::{
+                self,
+                base::fractionable::test::{c, q},
+            },
+        };
         #[test]
         fn greater_than_one() {
             let price = price::total_of(c(1)).is(q(1000));
@@ -77,10 +82,12 @@ mod test {
 
         use crate::{
             coin::{Amount, Coin},
-            fractionable::price::test::{c, q},
-            price,
+            price::{
+                self,
+                base::fractionable::test::{c, q},
+            },
             ratio::SimpleFraction,
-            rational::Rational,
+            rational::RationalLegacy,
         };
 
         #[test]
@@ -128,7 +135,7 @@ mod test {
             let price = price::total_of(amount1).is(quote1);
             let ratio = SimpleFraction::new(nominator, denominator);
             assert_eq!(
-                Rational::<u128>::of(&ratio, price).unwrap(),
+                RationalLegacy::<u128>::of(&ratio, price).unwrap(),
                 price::total_of(amount_exp).is(quote_exp)
             );
         }

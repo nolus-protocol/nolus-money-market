@@ -1,0 +1,189 @@
+use bnum::types::U256;
+
+use crate::{
+    coin::Coin,
+    fractionable::{
+        CommonDoublePrimitive, Fractionable, FractionableLegacy, HigherRank, IntoMax,
+        ToDoublePrimitive, TryFromMax,
+    },
+    percent::{Units, bound::BoundPercent},
+    ratio::RatioLegacy,
+};
+
+impl<T> HigherRank<T> for u32
+where
+    T: Into<Self>,
+{
+    type Type = u64;
+}
+
+// TODO remove after implementing Fractionable<BoundPercent> for Price
+impl<const UPPER_BOUND: Units> FractionableLegacy<Units> for BoundPercent<UPPER_BOUND> {
+    #[track_caller]
+    fn safe_mul<R>(self, ratio: &R) -> Self
+    where
+        R: RatioLegacy<Units>,
+    {
+        Self::try_from(self.units().safe_mul(ratio))
+            .expect("TODO remove when refactor Fractionable. Resulting permille exceeds BoundPercent upper bound")
+    }
+}
+
+impl<const UPPER_BOUND: Units> ToDoublePrimitive for BoundPercent<UPPER_BOUND> {
+    type Double = u64;
+
+    fn to_double(&self) -> Self::Double {
+        self.units().into()
+    }
+}
+
+impl<const UPPER_BOUND: Units> CommonDoublePrimitive<Self> for BoundPercent<UPPER_BOUND> {
+    type CommonDouble = <Self as ToDoublePrimitive>::Double;
+}
+
+impl<C, const UPPER_BOUND: Units> CommonDoublePrimitive<Coin<C>> for BoundPercent<UPPER_BOUND> {
+    type CommonDouble = <Coin<C> as ToDoublePrimitive>::Double;
+}
+
+impl<const UPPER_BOUND: Units> Fractionable<Self> for BoundPercent<UPPER_BOUND> {}
+
+impl<C, const UPPER_BOUND: Units> Fractionable<Coin<C>> for BoundPercent<UPPER_BOUND> {}
+
+impl<const UPPER_BOUND: Units> IntoMax<u64> for BoundPercent<UPPER_BOUND> {
+    fn into_max(self) -> u64 {
+        self.to_double()
+    }
+}
+
+impl<const UPPER_BOUND: Units> IntoMax<U256> for BoundPercent<UPPER_BOUND> {
+    fn into_max(self) -> U256 {
+        self.to_double().into()
+    }
+}
+
+impl<const UPPER_BOUND: Units> TryFromMax<u64> for BoundPercent<UPPER_BOUND> {
+    fn try_from_max(max: u64) -> Option<Self> {
+        Units::try_from(max)
+            .ok()
+            .and_then(|units| Self::try_from(units).ok())
+    }
+}
+
+impl<const UPPER_BOUND: Units> TryFromMax<U256> for BoundPercent<UPPER_BOUND> {
+    fn try_from_max(max: U256) -> Option<Self> {
+        Units::try_from(max)
+            .ok()
+            .and_then(|units| Self::try_from(units).ok())
+    }
+}
+
+#[cfg(test)]
+mod test {
+    mod percent {
+        use crate::{
+            fraction::Fraction,
+            fractionable::HigherRank,
+            percent::{Percent, Percent100, Units},
+            rational::Rational,
+        };
+
+        #[test]
+        fn of() {
+            assert_eq!(
+                Percent100::from_permille(410 * 222 / 1000),
+                Percent100::from_percent(41).of(Percent100::from_permille(222))
+            );
+            assert_eq!(
+                Percent100::from_permille(999),
+                Percent100::from_percent(100).of(Percent100::from_permille(999))
+            );
+            assert_eq!(
+                Percent::from_permille(410 * 222222 / 1000),
+                Percent::from_percent(41)
+                    .of(Percent::from_permille(222222))
+                    .unwrap()
+            );
+            assert_eq!(
+                Percent::from_permille(Units::MAX),
+                Percent::from_percent(100)
+                    .of(Percent::from_permille(Units::MAX))
+                    .unwrap()
+            );
+
+            let p_units: Units = 410;
+            let p64: <u32 as HigherRank<u8>>::Type = p_units.into();
+            let p64_res: <u32 as HigherRank<u8>>::Type = p64 * u64::from(Units::MAX) / 1000;
+            let p_units_res: Units = p64_res.try_into().expect("u64 -> Units overflow");
+
+            assert_eq!(
+                Percent::from_permille(p_units_res),
+                Percent::from_percent(41)
+                    .of(Percent::from_permille(Units::MAX))
+                    .unwrap()
+            );
+        }
+
+        #[test]
+        fn of_hundred_percent() {
+            assert_eq!(
+                Percent::from_permille(Units::MAX),
+                Percent::from_percent(100)
+                    .of(Percent::from_permille(Units::MAX))
+                    .unwrap()
+            );
+        }
+
+        #[test]
+        fn of_overflow() {
+            assert!(
+                Percent::from_permille(1001)
+                    .of(Percent::from_permille(Units::MAX))
+                    .is_none()
+            )
+        }
+    }
+
+    mod fraction {
+
+        use crate::{
+            fraction::Fraction,
+            percent::{Percent, Percent100, Units},
+            ratio::{Ratio, SimpleFraction},
+            rational::Rational,
+            test::coin,
+        };
+
+        #[test]
+        fn of() {
+            assert_eq!(
+                Percent::from_permille(Units::MAX),
+                SimpleFraction::new(coin::coin1(u128::MAX), coin::coin1(u128::MAX))
+                    .of(Percent::from_permille(Units::MAX))
+                    .unwrap()
+            );
+            assert_eq!(
+                Percent::from_permille(1500),
+                Ratio::new(coin::coin1(3), coin::coin1(4)).of(Percent::from_permille(2000))
+            );
+            assert_eq!(
+                Percent100::from_percent(20),
+                Ratio::new(coin::coin1(1), coin::coin1(5)).of(Percent100::HUNDRED)
+            );
+            assert_eq!(
+                Percent100::from_permille(225),
+                SimpleFraction::new(coin::coin1(3), coin::coin1(2))
+                    .of(Percent100::from_permille(150))
+                    .unwrap()
+            );
+        }
+
+        #[test]
+        fn of_overflow() {
+            assert!(
+                SimpleFraction::new(coin::coin1(u128::MAX), coin::coin1(1))
+                    .of(Percent::from_percent(1))
+                    .is_none()
+            )
+        }
+    }
+}

@@ -1,15 +1,15 @@
-use std::{fmt::Debug, ops::Add};
+use std::ops::Add;
 
 use currency::{CurrencyDef, MemberOf};
 use finance::{
     coin::Coin,
     duration::Duration,
+    error::Error as FinanceError,
     fraction::{Fraction, Unit as FractionUnit},
-    fractionable::FractionableLegacy,
+    fractionable::{CommonDoublePrimitive, Fractionable, IntoMax},
     liability::{Liability, Zone},
     percent::{Percent, Percent100},
     price::{self},
-    zero::Zero,
 };
 
 use crate::{
@@ -134,16 +134,26 @@ impl Spec {
             PositionError::InsufficientTransactionAmount,
         )
         .and_then(|()| {
-            let borrow = self.liability.init_borrow_amount(downpayment, may_max_ltd);
-            self.validate_transaction(borrow, one, PositionError::InsufficientTransactionAmount)
-                .and_then(|()| {
-                    self.validate_asset(
-                        downpayment.add(borrow),
+            self.liability
+                .init_borrow_amount(downpayment, may_max_ltd)
+                .ok_or(PositionError::Finance(FinanceError::Overflow(
+                    "Borrrow amount overflow during calculation",
+                )))
+                .and_then(|borrow| {
+                    self.validate_transaction(
+                        borrow,
                         one,
-                        PositionError::InsufficientAssetAmount,
+                        PositionError::InsufficientTransactionAmount,
                     )
+                    .and_then(|()| {
+                        self.validate_asset(
+                            downpayment.add(borrow),
+                            one,
+                            PositionError::InsufficientAssetAmount,
+                        )
+                    })
+                    .map(|()| borrow)
                 })
-                .map(|()| borrow)
         })
     }
 
@@ -317,10 +327,12 @@ impl Spec {
         Asset: 'static,
     {
         let liquidation_amount = self.liability.amount_to_liquidate(asset, total_due);
+
         self.may_ask_liquidation(
             asset,
             Cause::Liability {
                 ltv: self.liability.max(),
+
                 healthy_ltv: self.liability.healthy_percent(),
             },
             liquidation_amount,
@@ -397,8 +409,10 @@ impl Spec {
 
     fn ltv<P>(total_due: P, lease_asset: P) -> Percent100
     where
-        P: Copy + Debug + FractionUnit + PartialEq + Zero,
-        Percent100: FractionableLegacy<P>,
+        P: FractionUnit
+            + IntoMax<<Percent100 as CommonDoublePrimitive<P>>::CommonDouble>
+            + PartialEq,
+        Percent100: Fractionable<P>,
     {
         debug_assert!(total_due <= lease_asset);
 

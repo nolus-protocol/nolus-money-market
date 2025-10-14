@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 
 use finance::{
     coin::Coin,
-    percent::{Percent, Percent100, Units as PercentUnits},
+    percent::{Percent, Percent100},
     ratio::SimpleFraction,
     rational::Rational,
 };
@@ -69,10 +69,11 @@ impl InterestRate {
                 .min(utilization_factor_max)
         };
 
-        Rational::<PercentUnits>::of(
-            &SimpleFraction::new(self.addon_optimal_interest_rate, self.utilization_optimal),
-            utilization_factor,
+        SimpleFraction::<Percent>::new(
+            self.addon_optimal_interest_rate.into(),
+            self.utilization_optimal.into(),
         )
+        .of(utilization_factor)
         .map(|utilization_config| {
             utilization_config
                 .checked_add(self.base_interest_rate.into())
@@ -88,9 +89,9 @@ impl InterestRate {
     }
 
     fn utilization_factor_max(&self) -> Percent {
-        Percent::from_fraction(
-            self.utilization_optimal.units(),
-            self.utilization_optimal.complement().units(),
+        Percent::from_fraction::<Percent>(
+            self.utilization_optimal.into(),
+            self.utilization_optimal.complement().into(),
         )
         .expect("The utilization_max must be a valid Percent: utilization_opt < 100% ensures the ratio is valid Percent100, which always fits within Percent's wider range")
     }
@@ -198,7 +199,7 @@ mod tests {
         }
 
         fn ratio(n: Units, d: Units) -> Percent100 {
-            Percent100::from_ratio(n, d)
+            Percent100::from_ratio(Percent100::from_permille(n), Percent100::from_permille(d))
         }
 
         #[derive(Copy, Clone)]
