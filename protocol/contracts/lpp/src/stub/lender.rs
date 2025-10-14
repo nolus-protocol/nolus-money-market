@@ -121,7 +121,7 @@ mod test {
 
     use currencies::{Lpn, Lpns};
     use finance::coin::Coin;
-    use platform::response::{self};
+    use platform::response;
     use sdk::{
         cosmwasm_ext::{CosmosMsg, Response as CwResponse},
         cosmwasm_std::{self, Addr, QuerierWrapper, ReplyOn, WasmMsg, testing::MockQuerier},

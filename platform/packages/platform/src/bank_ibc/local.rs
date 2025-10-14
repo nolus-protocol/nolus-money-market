@@ -121,7 +121,7 @@ mod test {
     use crate::{
         bank_ibc::local::{self, Sender},
         batch::Batch,
-        coin_legacy::{self},
+        coin_legacy,
         ica::HostAccount,
     };
 

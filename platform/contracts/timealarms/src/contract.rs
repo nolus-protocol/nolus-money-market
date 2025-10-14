@@ -129,10 +129,7 @@ pub fn reply(deps: DepsMut<'_>, env: Env, msg: Reply) -> ContractResult<CwRespon
 
 #[cfg(test)]
 mod tests {
-    use sdk::cosmwasm_std::{
-        self, Addr, MessageInfo,
-        testing::{self},
-    };
+    use sdk::cosmwasm_std::{self, Addr, MessageInfo, testing};
 
     use crate::msg::InstantiateMsg;
 

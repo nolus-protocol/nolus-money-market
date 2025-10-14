@@ -115,10 +115,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use sdk::cosmwasm_std::{
-        Addr, Timestamp,
-        testing::{self},
-    };
+    use sdk::cosmwasm_std::{Addr, Timestamp, testing};
 
     use super::TimeAlarms;
 
