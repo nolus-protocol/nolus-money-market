@@ -129,8 +129,16 @@ fn feed_prices_unsupported_pairs() {
     ];
 
     let msg = ExecuteMsg::FeedPrices { prices };
-    let err = contract::execute(deps.as_mut(), cw_testing::mock_env(), info, msg).unwrap_err();
-    assert_eq!(error::unsupported_denom_pairs(&unsupported), err);
+    let response = contract::execute(deps.as_mut(), cw_testing::mock_env(), info, msg).unwrap();
+    assert_eq!(1, response.events.len());
+    assert_eq!("unsupported-currency", response.events[0].ty);
+
+    let ignored_attr = response.events[0]
+        .attributes
+        .iter()
+        .find(|attr| attr.key == "ignored")
+        .expect("Should have 'ignored' attribute");
+    assert_eq!(unsupported.to_string(), ignored_attr.value);
 }
 
 #[test]
