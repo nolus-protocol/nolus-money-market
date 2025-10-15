@@ -18,7 +18,8 @@ pub use sdk::cosmwasm_std::Coin as CwCoin;
 use sdk::{
     cosmwasm_ext::InterChainMsg,
     cosmwasm_std::{
-        self, testing as cosmwasm_test, Addr, Binary, BlockInfo, Deps, Empty, Env, QuerierWrapper, StdResult as CwResult, Timestamp
+        self, Addr, Binary, BlockInfo, Deps, Empty, Env, QuerierWrapper, StdResult as CwResult,
+        Timestamp, testing as cosmwasm_test,
     },
     testing::{self, CwApp, InterChainMsgSender},
 };
