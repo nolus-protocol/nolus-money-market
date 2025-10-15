@@ -26,6 +26,8 @@ impl currency::Group for Group {
 
     type TopG = Self;
 
+    type Members = ();
+
     fn filter_map<FilterMap, FilterMapRef>(
         filter_map: FilterMapRef,
     ) -> impl Iterator<Item = FilterMap::Outcome>

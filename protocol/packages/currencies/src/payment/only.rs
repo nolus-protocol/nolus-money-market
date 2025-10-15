@@ -2,23 +2,21 @@ use std::borrow::Borrow;
 
 use serde::{Deserialize, Serialize};
 
-use currency::{CurrenciesMapping, GroupFilterMap, GroupFindMap, MemberOf, group_find_map};
+use currency::{GroupFilterMap, GroupFindMap, MemberOf};
 
 use super::Group as PaymentGroup;
 
-use self::impl_mod::GroupMember;
 #[cfg(not(feature = "testing"))]
 #[allow(unused_imports)]
 pub(crate) use self::impl_mod::definitions::*;
 
-#[cfg(not(feature = "testing"))]
 mod impl_mod {
+    #[cfg(feature = "testing")]
+    pub(super) type Members = ();
+
+    #[cfg(not(feature = "testing"))]
     include!(concat!(env!("OUT_DIR"), "/payment_only.rs"));
 }
-
-#[cfg(feature = "testing")]
-#[path = "testing.rs"]
-mod impl_mod;
 
 #[derive(Clone, Copy, Debug, Ord, PartialEq, PartialOrd, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
@@ -29,6 +27,8 @@ impl currency::Group for Group {
 
     type TopG = PaymentGroup;
 
+    type Members = self::impl_mod::Members;
+
     fn filter_map<FilterMap, FilterMapRef>(
         filter_map: FilterMapRef,
     ) -> impl Iterator<Item = FilterMap::Outcome>
@@ -36,14 +36,14 @@ impl currency::Group for Group {
         FilterMap: GroupFilterMap<VisitedG = Self>,
         FilterMapRef: Borrow<FilterMap> + Clone,
     {
-        CurrenciesMapping::<_, GroupMember, _, _>::with_filter(filter_map)
+        currency::non_recursive_group_filter_map(filter_map)
     }
 
     fn find_map<FindMap>(find_map: FindMap) -> Result<FindMap::Outcome, FindMap>
     where
         FindMap: GroupFindMap<TargetG = Self>,
     {
-        group_find_map::<_, GroupMember, _>(find_map)
+        currency::non_recursive_group_find_map(find_map)
     }
 }
 

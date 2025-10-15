@@ -1,32 +1,37 @@
+#![warn(unused, warnings)]
+
 use std::{borrow::Borrow, fmt::Debug};
 
 use crate::{CurrencyDTO, CurrencyDef, PairsGroup};
 
 use super::AnyVisitor;
 
+use self::visit::MembersList;
 pub use self::{
     adapter::{SubFilterAdapter, SubGroupFindAdapter},
-    filter::CurrenciesMapping,
-    find::find_map,
-    member::{GroupMember, MemberOf},
+    filter::non_recursive as non_recursive_filter_map,
+    find::non_recursive as non_recursive_find_map,
+    member::MemberOf,
 };
 
 mod adapter;
 mod filter;
 mod find;
 mod member;
+mod visit;
 
 /// A group of strong typed [`Currency`]-ies
 ///
 /// It is like a collection of types validated statically by the Rust compiler.
-/// Since there is no notion of a 'meta-types', the members of a group cannot be iterated over.
-/// Instead, we can deal with their mapped values, though.
 pub trait Group
 where
     Self: Copy + Clone + Debug + Ord + PartialEq + MemberOf<Self> + MemberOf<Self::TopG>,
 {
     const DESCR: &'static str;
+
     type TopG: Group<TopG = Self::TopG>;
+
+    type Members: MembersList<Self>;
 
     /// Creates an iterator that both filters and maps currencies.
     ///
@@ -36,7 +41,7 @@ where
     /// mapping a currency to `Some(value)`. A currency for which the functor returns
     /// `None` is skipped.
     fn filter_map<FilterMapImpl, FilterMapRef>(
-        f: FilterMapRef,
+        filter_map: FilterMapRef,
     ) -> impl Iterator<Item = FilterMapImpl::Outcome>
     where
         FilterMapImpl: FilterMap<VisitedG = Self>,
@@ -47,7 +52,7 @@ where
     /// The first currency for which the [`FindMap`] argument produces [`Ok(mapped_value)`]
     /// stops the iteration and that result is returned.
     /// If there is no such currency, [`Err(v)`] is returned.
-    fn find_map<FindMapImpl>(v: FindMapImpl) -> Result<FindMapImpl::Outcome, FindMapImpl>
+    fn find_map<FindMapImpl>(find_map: FindMapImpl) -> Result<FindMapImpl::Outcome, FindMapImpl>
     where
         FindMapImpl: FindMap<TargetG = Self>;
 }
