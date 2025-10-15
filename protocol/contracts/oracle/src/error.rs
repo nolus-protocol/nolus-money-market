@@ -6,7 +6,6 @@ use thiserror::Error;
 use currency::{CurrencyDTO, CurrencyDef, Group, MemberOf};
 
 #[cfg(feature = "contract")]
-use finance::price::dto::PriceDTO;
 use marketprice::{alarms::errors::AlarmError, error::PriceFeedsError, feeders::PriceFeedersError};
 use sdk::cosmwasm_std::{Addr, StdError};
 use versioning::Error as VersioningError;
@@ -125,12 +124,4 @@ where
         base: BaseC::dto().into_super_group(),
         invalid: configured_base,
     }
-}
-
-#[cfg(feature = "contract")]
-pub(crate) fn unsupported_denom_pairs<G>(price: &PriceDTO<G>) -> Error<G>
-where
-    G: Group,
-{
-    Error::UnsupportedDenomPairs(price.to_string())
 }
