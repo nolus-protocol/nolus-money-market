@@ -20,7 +20,6 @@ use super::{
         InitConfig, Instantiator as LeaseInstantiator, InstantiatorAddresses,
         InstantiatorConfig as LeaseInstantiatorConfig,
     },
-    mock_app,
 };
 
 use self::{address_book::AddressBook, app::App};
@@ -99,7 +98,7 @@ impl TestCase<(), (), (), (), (), (), (), ()> {
         ) = testing::new_inter_chain_msg_queue();
 
         let mut app: App = App::new(
-            mock_app(custom_message_sender, reserve),
+            super::mock_app(custom_message_sender, reserve),
             custom_message_receiver,
         );
 

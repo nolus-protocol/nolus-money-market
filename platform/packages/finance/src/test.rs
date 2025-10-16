@@ -13,7 +13,7 @@ where
 
 pub mod coin {
     use currency::{
-        Currency, CurrencyDef, equal,
+        Currency, CurrencyDef,
         test::{SuperGroupTestC1, SuperGroupTestC2},
     };
 
@@ -34,7 +34,7 @@ pub mod coin {
         where
             C: Currency,
         {
-            equal::<CExp, C>() && Amount::from(coin) == self.0.into()
+            currency::equal::<CExp, C>() && Amount::from(coin) == self.0.into()
         }
     }
 

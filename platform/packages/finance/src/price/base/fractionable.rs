@@ -55,26 +55,27 @@ mod test {
     use crate::coin::{Amount, Coin};
 
     mod percent {
-        use crate::{
-            fraction::FractionLegacy,
-            percent::Percent100,
-            price::{
-                self,
-                base::fractionable::test::{c, q},
-            },
-        };
+        use crate::fraction::FractionLegacy;
+        use crate::{percent::Percent100, price};
+
         #[test]
         fn greater_than_one() {
-            let price = price::total_of(c(1)).is(q(1000));
+            let price = price::total_of(super::c(1)).is(super::q(1000));
             let permille = Percent100::from_permille(1);
-            assert_eq!(permille.of(price), price::total_of(c(1)).is(q(1)));
+            assert_eq!(
+                permille.of(price),
+                price::total_of(super::c(1)).is(super::q(1))
+            );
         }
 
         #[test]
         fn less_than_one() {
-            let price = price::total_of(c(10)).is(q(1));
+            let price = price::total_of(super::c(10)).is(super::q(1));
             let twenty_percents = Percent100::from_percent(20);
-            assert_eq!(twenty_percents.of(price), price::total_of(c(50)).is(q(1)));
+            assert_eq!(
+                twenty_percents.of(price),
+                price::total_of(super::c(50)).is(super::q(1))
+            );
         }
     }
     mod u128_ratio {
@@ -82,45 +83,84 @@ mod test {
 
         use crate::{
             coin::{Amount, Coin},
-            price::{
-                self,
-                base::fractionable::test::{c, q},
-            },
+            price,
             ratio::SimpleFraction,
             rational::RationalLegacy,
         };
 
         #[test]
         fn greater_than_one() {
-            test_impl(c(1), q(999), 2, 3, c(1), q(666));
-            test_impl(c(2), q(Amount::MAX), 2, 1, c(1), q(Amount::MAX));
+            test_impl(super::c(1), super::q(999), 2, 3, super::c(1), super::q(666));
+            test_impl(
+                super::c(2),
+                super::q(Amount::MAX),
+                2,
+                1,
+                super::c(1),
+                super::q(Amount::MAX),
+            );
             // follow with rounding
             {
                 let exp_q = 255211775190703847597530955573826158591; // (Amount::MAX * 3) >> 2;
                 let exp_c = (2 * 4) >> 2;
-                test_impl(c(2), q(Amount::MAX), 3, 4, c(exp_c), q(exp_q));
+                test_impl(
+                    super::c(2),
+                    super::q(Amount::MAX),
+                    3,
+                    4,
+                    super::c(exp_c),
+                    super::q(exp_q),
+                );
             }
             {
                 let exp_q = 212676479325586539664609129644855132159; // (Amount::MAX * 5) >> 3;
                 let exp_c = (2 * 4) >> 3;
-                test_impl(c(2), q(Amount::MAX), 5, 4, c(exp_c), q(exp_q));
+                test_impl(
+                    super::c(2),
+                    super::q(Amount::MAX),
+                    5,
+                    4,
+                    super::c(exp_c),
+                    super::q(exp_q),
+                );
             }
         }
 
         #[test]
         fn less_than_one() {
-            test_impl(c(150), q(1), 3, 2, c(100), q(1));
-            test_impl(c(Amount::MAX), q(6), 2, 3, c(Amount::MAX), q(4));
+            test_impl(super::c(150), super::q(1), 3, 2, super::c(100), super::q(1));
+            test_impl(
+                super::c(Amount::MAX),
+                super::q(6),
+                2,
+                3,
+                super::c(Amount::MAX),
+                super::q(4),
+            );
             // follow with rounding
             let exp_c = 191408831393027885698148216680369618943; // (Amount::MAX * 9) >> 4;
             let exp_q = (8 * 4) >> 4;
-            test_impl(c(Amount::MAX), q(8), 4, 9, c(exp_c), q(exp_q));
+            test_impl(
+                super::c(Amount::MAX),
+                super::q(8),
+                4,
+                9,
+                super::c(exp_c),
+                super::q(exp_q),
+            );
         }
 
         #[test]
         #[should_panic = "price overflow"]
         fn overflow() {
-            test_impl(c(2), q(Amount::MAX), 9, 4, c(1), q(Amount::MAX));
+            test_impl(
+                super::c(2),
+                super::q(Amount::MAX),
+                9,
+                4,
+                super::c(1),
+                super::q(Amount::MAX),
+            );
         }
 
         #[track_caller]

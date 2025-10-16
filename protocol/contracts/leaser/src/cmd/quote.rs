@@ -5,7 +5,7 @@ use finance::{
     coin::{Coin, WithCoin},
     liability::Liability,
     percent::{Percent, Percent100},
-    price::total,
+    price,
 };
 use lease::api::DownpaymentCoin;
 use lpp::{
@@ -212,7 +212,7 @@ where
         Asset: CurrencyDef,
         Asset::Group: MemberOf<LeaseCurrencies> + MemberOf<PaymentCurrencies>,
     {
-        let downpayment_lpn = total(self.downpayment, self.oracle.price_of::<Dpc>()?);
+        let downpayment_lpn = price::total(self.downpayment, self.oracle.price_of::<Dpc>()?);
 
         if downpayment_lpn.is_zero() {
             return Err(ContractError::ZeroDownpayment {});
@@ -225,7 +225,7 @@ where
 
         let asset_price = self.oracle.price_of::<Asset>()?.inv();
 
-        let total_asset = total(downpayment_lpn + borrow, asset_price);
+        let total_asset = price::total(downpayment_lpn + borrow, asset_price);
 
         let annual_interest_rate = self.lpp_quote.with(borrow)?;
 

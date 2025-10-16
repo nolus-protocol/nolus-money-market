@@ -121,10 +121,10 @@ mod test {
 
     use currencies::{Lpn, Lpns};
     use finance::coin::Coin;
-    use platform::response::{self};
+    use platform::response;
     use sdk::{
         cosmwasm_ext::{CosmosMsg, Response as CwResponse},
-        cosmwasm_std::{Addr, QuerierWrapper, ReplyOn, WasmMsg, from_json, testing::MockQuerier},
+        cosmwasm_std::{self, Addr, QuerierWrapper, ReplyOn, WasmMsg, testing::MockQuerier},
     };
 
     use crate::{
@@ -158,7 +158,8 @@ mod test {
         {
             assert_eq!(addr.as_str(), contract_addr);
             assert!(funds.is_empty());
-            let lpp_msg: ExecuteMsg<Lpns> = from_json(msg).expect("invalid Lpp message");
+            let lpp_msg: ExecuteMsg<Lpns> =
+                cosmwasm_std::from_json(msg).expect("invalid Lpp message");
             if let ExecuteMsg::<Lpns>::OpenLoan { amount } = lpp_msg {
                 assert_eq!(borrow_amount, amount.try_into().unwrap());
             } else {

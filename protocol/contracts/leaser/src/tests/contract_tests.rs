@@ -10,9 +10,8 @@ use lease::api::{limits::MaxSlippages, open::PositionSpecDTO};
 use platform::contract::{Code, CodeId};
 use sdk::{
     cosmwasm_std::{
-        Addr, CosmosMsg, Deps, DepsMut, MessageInfo, OwnedDeps, SubMsg, WasmMsg, coins, from_json,
+        Addr, CosmosMsg, Deps, DepsMut, MessageInfo, OwnedDeps, SubMsg, WasmMsg, coins,
         testing::{self, MockApi, MockQuerier, MockStorage},
-        to_json_binary,
     },
     testing as sdk_testing,
 };
@@ -96,7 +95,7 @@ fn setup_test_case(deps: DepsMut<'_>) {
 
 fn query_config(deps: Deps<'_>) -> Config {
     let res = query(deps, testing::mock_env(), QueryMsg::Config {}).unwrap();
-    let config_response: ConfigResponse = from_json(res).unwrap();
+    let config_response: ConfigResponse = cosmwasm_std::from_json(res).unwrap();
     config_response.config
 }
 
@@ -123,7 +122,7 @@ fn proper_initialization() {
 
     // it worked, let's query the state
     let res = query(deps.as_ref(), testing::mock_env(), QueryMsg::Config {}).unwrap();
-    let config_response: ConfigResponse = from_json(res).unwrap();
+    let config_response: ConfigResponse = cosmwasm_std::from_json(res).unwrap();
     let config = config_response.config;
     assert_eq!(lease_code, config.lease_code);
     assert_eq!(lpp_addr, config.lpp);
@@ -175,7 +174,7 @@ fn open_lease_with(max_ltd: Option<Percent>) {
         vec![SubMsg::reply_on_success(
             CosmosMsg::Wasm(WasmMsg::Instantiate {
                 funds: info.funds,
-                msg: to_json_binary(&msg).unwrap(),
+                msg: cosmwasm_std::to_json_binary(&msg).unwrap(),
                 admin: Some(admin.into()),
                 code_id: 1,
                 label: "lease".to_string(),

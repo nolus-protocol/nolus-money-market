@@ -292,21 +292,18 @@ mod tests {
 
         use crate::{
             finance::LpnCoin,
-            loan::{
-                Loan, Overdue, State,
-                repay::Receipt as RepayReceipt,
-                tests::{PROFIT_ADDR, ZERO_COIN, create_loan_custom, lpn_coin, profit_stub},
-            },
+            loan::{Loan, Overdue, State, repay::Receipt as RepayReceipt},
         };
 
         use super::{
-            LEASE_START, LOAN_INTEREST_RATE, LppLoanLocal, MARGIN_INTEREST_RATE, create_loan,
+            LEASE_START, LOAN_INTEREST_RATE, LppLoanLocal, MARGIN_INTEREST_RATE, PROFIT_ADDR,
+            ZERO_COIN,
         };
 
         #[test]
         fn full_max_overdue_full_max_due_repay() {
-            let principal = lpn_coin(1000);
-            let delta_to_fully_paid = lpn_coin(30);
+            let principal = super::lpn_coin(1000);
+            let delta_to_fully_paid = super::lpn_coin(30);
             let payment_at = LEASE_START + Duration::YEAR + Duration::YEAR;
             let one_year_margin = MARGIN_INTEREST_RATE.of(principal);
             let one_year_interest = LOAN_INTEREST_RATE.of(principal);
@@ -319,7 +316,7 @@ mod tests {
                 interest_paid: LEASE_START,
             };
 
-            let mut loan = create_loan(loan);
+            let mut loan = super::create_loan(loan);
             {
                 let repay_overdue_interest = one_year_interest - delta_to_fully_paid;
                 repay(
@@ -440,12 +437,12 @@ mod tests {
 
         #[test]
         fn partial_max_due_margin_repay() {
-            let principal = lpn_coin(1000);
+            let principal = super::lpn_coin(1000);
             let due_margin = MARGIN_INTEREST_RATE.of(principal);
             let payment = due_margin.scale_down(2u128);
             let now = LEASE_START + Duration::YEAR;
 
-            let mut loan = create_loan(LoanResponse {
+            let mut loan = super::create_loan(LoanResponse {
                 principal_due: principal,
                 annual_interest_rate: LOAN_INTEREST_RATE,
                 interest_paid: now,
@@ -475,7 +472,7 @@ mod tests {
 
         #[test]
         fn partial_overdue_interest_repay() {
-            let principal = lpn_coin(1000);
+            let principal = super::lpn_coin(1000);
             let one_year_margin = MARGIN_INTEREST_RATE.of(principal);
             let one_year_interest = LOAN_INTEREST_RATE.of(principal);
             let overdue_period = Duration::from_days(100);
@@ -484,7 +481,7 @@ mod tests {
                 .unwrap();
             let overdue_margin = overdue_period.annualized_slice_of(one_year_margin).unwrap();
 
-            let partial_overdue_interest = overdue_interest - lpn_coin(10);
+            let partial_overdue_interest = overdue_interest - super::lpn_coin(10);
             let repay_at = LEASE_START + Duration::YEAR + overdue_period;
 
             let loan = LoanResponse {
@@ -493,7 +490,7 @@ mod tests {
                 interest_paid: LEASE_START,
             };
 
-            let mut loan = create_loan(loan);
+            let mut loan = super::create_loan(loan);
             {
                 let payment = partial_overdue_interest;
                 repay(
@@ -525,7 +522,7 @@ mod tests {
 
         #[test]
         fn multiple_periods() {
-            let principal = lpn_coin(1000);
+            let principal = super::lpn_coin(1000);
             let one_year_margin = MARGIN_INTEREST_RATE.of(principal);
             let one_year_interest = LOAN_INTEREST_RATE.of(principal);
             let overdue_period_molulo_year = Duration::from_days(120);
@@ -541,7 +538,7 @@ mod tests {
             let overdue_interest_modulo_year = overdue_period_molulo_year
                 .annualized_slice_of(one_year_interest)
                 .unwrap();
-            let interest_payment = overdue_interest_modulo_year - lpn_coin(10);
+            let interest_payment = overdue_interest_modulo_year - super::lpn_coin(10);
 
             let loan = LoanResponse {
                 principal_due: principal,
@@ -549,7 +546,7 @@ mod tests {
                 interest_paid: LEASE_START,
             };
 
-            let mut loan = create_loan(loan);
+            let mut loan = super::create_loan(loan);
             {
                 let payment = one_year_interest + one_year_interest + interest_payment;
                 repay(
@@ -630,7 +627,7 @@ mod tests {
                 );
             }
             {
-                let change = lpn_coin(3);
+                let change = super::lpn_coin(3);
                 let payment =
                     (one_year_interest - interest_payment) + one_year_margin + principal + change;
                 repay(
@@ -662,8 +659,8 @@ mod tests {
 
         #[test]
         fn full_max_overdue_full_due_repay() {
-            let principal = lpn_coin(57326);
-            let due_margin_payment = lpn_coin(42);
+            let principal = super::lpn_coin(57326);
+            let due_margin_payment = super::lpn_coin(42);
             let due_margin = MARGIN_INTEREST_RATE.of(principal);
             let due_interest = LOAN_INTEREST_RATE.of(principal);
 
@@ -687,7 +684,7 @@ mod tests {
                 .unwrap()
                 - overdue_period;
 
-            let mut loan = create_loan(loan);
+            let mut loan = super::create_loan(loan);
             repay(
                 &mut loan,
                 payment,
@@ -716,8 +713,8 @@ mod tests {
 
         #[test]
         fn full_partial_due_repay() {
-            let principal = lpn_coin(36463892);
-            let principal_paid = lpn_coin(234);
+            let principal = super::lpn_coin(36463892);
+            let principal_paid = super::lpn_coin(234);
             let one_year_margin = MARGIN_INTEREST_RATE.of(principal);
             let one_year_interest = LOAN_INTEREST_RATE.of(principal);
             let due_period = Duration::HOUR + Duration::HOUR + Duration::HOUR;
@@ -726,7 +723,7 @@ mod tests {
             let payment = due_margin + due_interest + principal_paid;
 
             let repay_at = LEASE_START + due_period;
-            let mut loan = create_loan(LoanResponse {
+            let mut loan = super::create_loan(LoanResponse {
                 principal_due: principal,
                 annual_interest_rate: LOAN_INTEREST_RATE,
                 interest_paid: LEASE_START,
@@ -757,10 +754,10 @@ mod tests {
         #[test]
         fn full_zero_loan_overdue_partial_due_repay() {
             // selected to have interest > 0 and margin == 0 for the overdue period of 2 hours
-            let principal = lpn_coin(9818);
+            let principal = super::lpn_coin(9818);
             let loan_interest_rate = MARGIN_INTEREST_RATE; // we aim at simulating the margin paid-by going ahead of the loan paid-by
             let margin_interest_rate = LOAN_INTEREST_RATE;
-            let principal_paid = lpn_coin(23);
+            let principal_paid = super::lpn_coin(23);
             let due_margin = margin_interest_rate.of(principal);
             let due_interest = loan_interest_rate.of(principal);
             let overdue_period = Duration::HOUR + Duration::HOUR;
@@ -777,7 +774,7 @@ mod tests {
 
             let repay_at = LEASE_START + Duration::YEAR + Duration::HOUR + Duration::HOUR;
             let mut loan =
-                create_loan_custom(margin_interest_rate, loan, LEASE_START, Duration::YEAR);
+                super::create_loan_custom(margin_interest_rate, loan, LEASE_START, Duration::YEAR);
             repay(
                 &mut loan,
                 overdue_interest + overdue_margin,
@@ -834,14 +831,14 @@ mod tests {
 
         #[test]
         fn full_principal_repay() {
-            let principal = lpn_coin(3646389225881);
-            let principal_paid = lpn_coin(234);
+            let principal = super::lpn_coin(3646389225881);
+            let principal_paid = super::lpn_coin(234);
             let one_year_margin = MARGIN_INTEREST_RATE.of(principal);
             let one_year_interest = LOAN_INTEREST_RATE.of(principal);
             let due_period = Duration::HOUR + Duration::HOUR + Duration::HOUR;
             let due_margin = due_period.annualized_slice_of(one_year_margin).unwrap();
             let due_interest = due_period.annualized_slice_of(one_year_interest).unwrap();
-            let mut loan = create_loan(LoanResponse {
+            let mut loan = super::create_loan(LoanResponse {
                 principal_due: principal,
                 annual_interest_rate: LOAN_INTEREST_RATE,
                 interest_paid: LEASE_START,
@@ -874,7 +871,7 @@ mod tests {
 
             {
                 let principal_due = principal - principal_paid;
-                let change = lpn_coin(97);
+                let change = super::lpn_coin(97);
                 let duration_since_prev_payment = Duration::YEAR - due_period;
                 let due_margin = duration_since_prev_payment
                     .annualized_slice_of(MARGIN_INTEREST_RATE.of(principal_due))
@@ -910,13 +907,13 @@ mod tests {
 
         #[test]
         fn repay_zero() {
-            let principal = lpn_coin(13);
+            let principal = super::lpn_coin(13);
             let total_margin = MARGIN_INTEREST_RATE.of(principal);
             let total_interest = LOAN_INTEREST_RATE.of(principal);
 
             let due_period = Duration::HOUR;
             let since_start = Duration::YEAR;
-            let mut loan = create_loan_custom(
+            let mut loan = super::create_loan_custom(
                 MARGIN_INTEREST_RATE,
                 LoanResponse {
                     principal_due: principal,
@@ -941,9 +938,9 @@ mod tests {
                     .annualized_slice_of(total_interest)
                     .unwrap();
                 let due_interest = total_interest - overdue_interest;
-                assert_eq!(lpn_coin(1), due_interest);
+                assert_eq!(super::lpn_coin(1), due_interest);
 
-                let payment = lpn_coin(15);
+                let payment = super::lpn_coin(15);
                 let principal_paid =
                     payment - overdue_margin - due_margin - overdue_interest - due_interest;
 
@@ -979,7 +976,7 @@ mod tests {
                 principal - principal_paid
             };
             {
-                let change = lpn_coin(2);
+                let change = super::lpn_coin(2);
                 let payment = principal_left + change;
                 let repay_at = LEASE_START + since_start;
                 repay(
@@ -1018,7 +1015,7 @@ mod tests {
             exp_due_period_paid: Duration,
             now: &Timestamp,
         ) {
-            let mut profit = profit_stub();
+            let mut profit = super::profit_stub();
 
             assert_eq!(before_state, loan.state(now), "Expected state before");
             assert_eq!(Ok(exp_receipt), loan.repay(payment, now, &mut profit));
@@ -1137,16 +1134,13 @@ mod tests {
         use lpp::{msg::LoanResponse, stub::loan::LppLoan};
         use sdk::cosmwasm_std::Timestamp;
 
-        use crate::loan::{
-            Overdue, State,
-            tests::{LppLoanLocal, create_loan_custom, lpn_coin},
-        };
+        use crate::loan::{Overdue, State};
 
-        use super::{LEASE_START, MARGIN_INTEREST_RATE};
+        use super::{LEASE_START, LppLoanLocal, MARGIN_INTEREST_RATE};
 
         #[track_caller]
         fn test_state(interest_paid_by: Timestamp, margin_paid_by: Timestamp, now: &Timestamp) {
-            let principal_due = lpn_coin(10000);
+            let principal_due = super::lpn_coin(10000);
             let due_period_len = Duration::YEAR;
             let annual_interest_margin = MARGIN_INTEREST_RATE;
             let annual_interest = Percent100::from_permille(145);
@@ -1157,7 +1151,7 @@ mod tests {
                 interest_paid: interest_paid_by,
             };
 
-            let loan = create_loan_custom(
+            let loan = super::create_loan_custom(
                 MARGIN_INTEREST_RATE,
                 loan_resp,
                 margin_paid_by,

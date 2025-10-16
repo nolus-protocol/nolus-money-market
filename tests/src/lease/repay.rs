@@ -17,7 +17,7 @@ use lease::api::{
     ExecuteMsg,
     query::{ClosePolicy, StateResponse, opened::Status, paid::ClosingTrx},
 };
-use platform::coin_legacy::to_cosmwasm_on_dex;
+use platform::coin_legacy;
 use sdk::{
     cosmwasm_std::{Addr, Timestamp},
     cw_multi_test::AppResponse,
@@ -26,7 +26,7 @@ use sdk::{
 
 use crate::{
     common::{
-        self, CwCoin, USER, cwcoin, ibc, lease as common_lease,
+        self, CwCoin, USER, ibc, lease as common_lease,
         leaser::{self as leaser_mod, Instantiator as LeaserInstantiator},
         swap,
         test_case::{TestCase, app::App, response::ResponseWithInterChainMsgs},
@@ -36,7 +36,7 @@ use crate::{
 
 use super::{
     DOWNPAYMENT, LeaseCoin, LeaseCurrency, LeaseTestCase, LpnCoin, LpnCurrency, PaymentCoin,
-    PaymentCurrency, price_lpn_of,
+    PaymentCurrency,
 };
 
 #[test]
@@ -226,8 +226,8 @@ fn full_repay_with_excess() {
         super::price_lpn_of().inv(),
     );
     let lease_position = price::total(
-        price::total(downpayment + borrowed, price_lpn_of()),
-        price_lpn_of().inv(),
+        price::total(downpayment + borrowed, super::price_lpn_of()),
+        super::price_lpn_of().inv(),
     );
 
     let overpayment = super::create_payment_coin(5);
@@ -345,7 +345,7 @@ where
         TestCase::LEASE_ICA_ID,
     );
 
-    assert_eq!(transfer_amount, to_cosmwasm_on_dex(paid));
+    assert_eq!(transfer_amount, coin_legacy::to_cosmwasm_on_dex(paid));
 
     _ = response.unwrap_response();
 
@@ -422,7 +422,10 @@ fn expect_started_closing(
         TestCase::LEASE_ICA_ID,
     );
 
-    assert_eq!(transfer_amount, to_cosmwasm_on_dex(expected_funds));
+    assert_eq!(
+        transfer_amount,
+        coin_legacy::to_cosmwasm_on_dex(expected_funds)
+    );
 
     () = repay_response.unwrap_response();
 }
@@ -463,12 +466,12 @@ fn expect_lease_amounts<ProtocolsRegistry, Treasury, Profit, Reserve, Lpp, Oracl
     expected_funds: LeaseCoin,
     excess_balance: LpnCoin,
 ) {
-    common_lease::assert_lease_balance_eq(&test_case.app, &lease, cwcoin(excess_balance));
+    common_lease::assert_lease_balance_eq(&test_case.app, &lease, common::cwcoin(excess_balance));
 
     common_lease::assert_lease_balance_eq(
         &test_case.app,
         &TestCase::ica_addr(&lease, TestCase::LEASE_ICA_ID),
-        to_cosmwasm_on_dex(expected_funds),
+        coin_legacy::to_cosmwasm_on_dex(expected_funds),
     );
 }
 
@@ -497,7 +500,7 @@ fn finish_closing<ProtocolsRegistry, Treasury, Profit, Reserve, Lpp, Oracle, Tim
         ica_addr,
         lease.clone(),
         true,
-        &to_cosmwasm_on_dex(expected_funds),
+        &coin_legacy::to_cosmwasm_on_dex(expected_funds),
     )
     .unwrap_response();
 

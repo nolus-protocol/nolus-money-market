@@ -3,12 +3,12 @@ use currency::{CurrencyDef, MemberOf};
 use finance::percent::Percent100;
 use lpp::{
     borrow::InterestRate,
-    contract::{ContractError, sudo},
+    contract::{self, ContractError},
     msg::{ExecuteMsg, InstantiateMsg, QueryMsg},
 };
 use platform::contract::{Code, CodeId};
 use sdk::{
-    cosmwasm_std::{Addr, Binary, Coin as CwCoin, Deps, Env, to_json_binary},
+    cosmwasm_std::{self, Addr, Binary, Coin as CwCoin, Deps, Env},
     testing::{self, CwContract},
 };
 
@@ -40,7 +40,7 @@ impl Instantiator {
             lpp::contract::instantiate,
             lpp::contract::query,
         )
-        .with_sudo(sudo);
+        .with_sudo(contract::sudo);
 
         Self::instantiate::<Lpn>(
             app,
@@ -93,7 +93,7 @@ pub(crate) fn mock_quote_query(
     msg: QueryMsg<Lpns>,
 ) -> Result<Binary, ContractError> {
     let res = match msg {
-        QueryMsg::Quote { amount: _amount } => to_json_binary(
+        QueryMsg::Quote { amount: _amount } => cosmwasm_std::to_json_binary(
             &lpp::msg::QueryQuoteResponse::QuoteInterestRate(Percent100::HUNDRED),
         ),
         _ => Ok(lpp::contract::query(deps, env, msg)?),

@@ -3,12 +3,13 @@ use currencies::{
     testing::{PaymentC1, PaymentC3, PaymentC4, PaymentC5, PaymentC6, PaymentC7, PaymentC9},
 };
 use currency::CurrencyDef;
+use sdk::cosmwasm_std;
 use tree::HumanReadableTree;
 
 use crate::api::swap::SwapTarget;
 
 pub fn dummy_swap_tree() -> HumanReadableTree<SwapTarget<PriceCurrencies>> {
-    sdk::cosmwasm_std::from_json(format!(
+    cosmwasm_std::from_json(format!(
         r#"{{
             "value":[0,"{lpn}"],
             "children":[
@@ -48,7 +49,7 @@ pub fn dummy_swap_tree() -> HumanReadableTree<SwapTarget<PriceCurrencies>> {
 }
 
 pub fn minimal_swap_tree() -> HumanReadableTree<SwapTarget<PriceCurrencies>> {
-    sdk::cosmwasm_std::from_json(format!(
+    cosmwasm_std::from_json(format!(
         r#"{{
             "value":[0,"{lpn}"],
             "children":[
@@ -64,7 +65,7 @@ pub fn minimal_swap_tree() -> HumanReadableTree<SwapTarget<PriceCurrencies>> {
 }
 
 pub fn invalid_pair_swap_tree() -> HumanReadableTree<SwapTarget<PriceCurrencies>> {
-    sdk::cosmwasm_std::from_json(format!(
+    cosmwasm_std::from_json(format!(
         r#"{{
             "value":[0,"{lpn}"],
             "children":[

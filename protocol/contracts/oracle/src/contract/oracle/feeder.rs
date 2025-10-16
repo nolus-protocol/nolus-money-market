@@ -77,20 +77,20 @@ mod tests {
     use currencies::PaymentGroup as PriceCurrencies;
     use sdk::{
         cosmwasm_ext::Response as CwResponse,
-        cosmwasm_std::{Addr, DepsMut, from_json, testing::mock_env},
+        cosmwasm_std::{Addr, DepsMut, testing as cosmwasm_test},
         testing,
     };
 
     use crate::{
         api::{QueryMsg, SudoMsg},
-        contract::{query, sudo},
+        contract,
         result::Result,
-        tests::{dummy_default_instantiate_msg, setup_test},
+        tests,
     };
 
     #[test]
     fn register_feeder() {
-        let (mut deps, _info) = setup_test(dummy_default_instantiate_msg()).unwrap();
+        let (mut deps, _info) = tests::setup_test(tests::dummy_default_instantiate_msg()).unwrap();
 
         let feeder0 = testing::user("addr0000");
         let feeder1 = testing::user("addr0001");
@@ -99,8 +99,13 @@ mod tests {
         register(deps.as_mut(), &feeder0).unwrap();
 
         // check if the new address is added to FEEDERS Item
-        let res = query(deps.as_ref(), mock_env(), QueryMsg::Feeders {}).unwrap();
-        let resp: HashSet<Addr> = from_json(res).unwrap();
+        let res = contract::query(
+            deps.as_ref(),
+            cosmwasm_test::mock_env(),
+            QueryMsg::Feeders {},
+        )
+        .unwrap();
+        let resp: HashSet<Addr> = cosmwasm_std::from_json(res).unwrap();
         assert_eq!(2, resp.len());
         assert!(resp.contains(&feeder0));
 
@@ -110,8 +115,13 @@ mod tests {
         // register new feeder address
         register(deps.as_mut(), &feeder1).unwrap();
         // check if the new address is added to FEEDERS Item
-        let res = query(deps.as_ref(), mock_env(), QueryMsg::Feeders {}).unwrap();
-        let resp: HashSet<Addr> = from_json(res).unwrap();
+        let res = contract::query(
+            deps.as_ref(),
+            cosmwasm_test::mock_env(),
+            QueryMsg::Feeders {},
+        )
+        .unwrap();
+        let resp: HashSet<Addr> = cosmwasm_std::from_json(res).unwrap();
         assert_eq!(3, resp.len());
         assert!(resp.contains(&feeder0));
         assert!(resp.contains(&feeder1));
@@ -119,7 +129,7 @@ mod tests {
 
     #[test]
     fn remove_feeder() {
-        let (mut deps, _info) = setup_test(dummy_default_instantiate_msg()).unwrap();
+        let (mut deps, _info) = tests::setup_test(tests::dummy_default_instantiate_msg()).unwrap();
 
         let feeder0 = testing::user("addr0000");
         let feeder1 = testing::user("addr0001");
@@ -132,25 +142,35 @@ mod tests {
         register(deps.as_mut(), &feeder3).unwrap();
 
         // check if the new address is added to FEEDERS Item
-        let res = query(deps.as_ref(), mock_env(), QueryMsg::Feeders {}).unwrap();
-        let resp: HashSet<Addr> = from_json(res).unwrap();
+        let res = contract::query(
+            deps.as_ref(),
+            cosmwasm_test::mock_env(),
+            QueryMsg::Feeders {},
+        )
+        .unwrap();
+        let resp: HashSet<Addr> = cosmwasm_std::from_json(res).unwrap();
         assert_eq!(5, resp.len());
         assert!(resp.contains(&feeder0));
         assert!(resp.contains(&feeder1));
 
         remove(deps.as_mut(), &feeder0);
         remove(deps.as_mut(), &feeder1);
-        let res = query(deps.as_ref(), mock_env(), QueryMsg::Feeders {}).unwrap();
-        let resp: HashSet<Addr> = from_json(res).unwrap();
+        let res = contract::query(
+            deps.as_ref(),
+            cosmwasm_test::mock_env(),
+            QueryMsg::Feeders {},
+        )
+        .unwrap();
+        let resp: HashSet<Addr> = cosmwasm_std::from_json(res).unwrap();
         assert_eq!(3, resp.len());
         assert!(!resp.contains(&feeder0));
         assert!(!resp.contains(&feeder1));
     }
 
     fn register(deps: DepsMut<'_>, feeder: &Addr) -> Result<CwResponse, PriceCurrencies> {
-        sudo(
+        contract::sudo(
             deps,
-            mock_env(),
+            cosmwasm_test::mock_env(),
             SudoMsg::RegisterFeeder {
                 feeder_address: feeder.to_string(),
             },
@@ -164,9 +184,9 @@ mod tests {
             events,
             data,
             ..
-        }: CwResponse = sudo(
+        }: CwResponse = contract::sudo(
             deps,
-            mock_env(),
+            cosmwasm_test::mock_env(),
             SudoMsg::RemoveFeeder {
                 feeder_address: feeder.to_string(),
             },

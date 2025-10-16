@@ -1,6 +1,6 @@
 use serde::Serialize;
 
-use sdk::{cosmwasm_ext::Response as CwResponse, cosmwasm_std::to_json_binary};
+use sdk::{cosmwasm_ext::Response as CwResponse, cosmwasm_std};
 
 use crate::{
     error::{self, Error},
@@ -38,7 +38,7 @@ where
     error::Error: Into<E>,
     M: Into<MessageResponse>,
 {
-    to_json_binary(&response)
+    cosmwasm_std::to_json_binary(&response)
         .map_err(Error::Serialization)
         .map_err(Into::into)
         .map(|resp_bin| response_only_messages(messages).set_data(resp_bin))
@@ -48,7 +48,7 @@ where
 mod test {
     use sdk::{
         cosmwasm_ext::{CosmosMsg, Response},
-        cosmwasm_std::{Event, WasmMsg, to_json_binary},
+        cosmwasm_std::{self, Event, WasmMsg},
     };
 
     use crate::{
@@ -128,7 +128,7 @@ mod test {
         assert_eq!(0, resp.messages.len());
         assert_eq!(0, resp.attributes.len());
         assert_eq!(0, resp.events.len());
-        assert_eq!(Some(to_json_binary(&ret).unwrap()), resp.data);
+        assert_eq!(Some(cosmwasm_std::to_json_binary(&ret).unwrap()), resp.data);
     }
 
     #[test]
@@ -147,6 +147,6 @@ mod test {
         assert_eq!(1, resp.messages.len());
         assert_eq!(0, resp.attributes.len());
         assert_eq!(1, resp.events.len());
-        assert_eq!(Some(to_json_binary(&ret).unwrap()), resp.data);
+        assert_eq!(Some(cosmwasm_std::to_json_binary(&ret).unwrap()), resp.data);
     }
 }

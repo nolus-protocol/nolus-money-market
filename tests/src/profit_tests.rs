@@ -13,14 +13,14 @@ use profit::{
     typedefs::CadenceHours,
 };
 use sdk::{
-    cosmwasm_std::{Addr, Event, from_json},
+    cosmwasm_std::{self, Addr, Event},
     cw_multi_test::AppResponse,
     testing,
 };
 use timealarms::msg::DispatchAlarmsResponse;
 
 use crate::common::{
-    self, ADMIN, CwCoin, USER, cwcoin, cwcoin_dex, cwcoin_from_amount, ibc,
+    self, ADMIN, CwCoin, USER, ibc,
     protocols::Registry,
     swap::DexDenom,
     test_case::{
@@ -132,7 +132,7 @@ fn on_alarm_from_unknown() {
 
     let mut test_case = test_case::<Lpn>();
 
-    test_case.send_funds_from_admin(user_addr.clone(), &[cwcoin_from_amount::<Lpn>(500)]);
+    test_case.send_funds_from_admin(user_addr.clone(), &[common::cwcoin_from_amount::<Lpn>(500)]);
 
     let query_treasury_balance = |test_case: &TestCase<_, Addr, _, _, _, _, _, _>| {
         common::query_all_balances(test_case.address_book.treasury(), test_case.app.query())
@@ -146,7 +146,7 @@ fn on_alarm_from_unknown() {
             user_addr,
             test_case.address_book.profit().clone(),
             &profit::msg::ExecuteMsg::TimeAlarm {},
-            &[cwcoin_from_amount::<Lpn>(40)],
+            &[common::cwcoin_from_amount::<Lpn>(40)],
         )
         .unwrap_err();
 
@@ -160,7 +160,7 @@ fn on_alarm_zero_balance() {
 
     let mut test_case = test_case::<Lpn>();
 
-    test_case.send_funds_from_admin(time_oracle_addr, &[cwcoin_from_amount::<Lpn>(500)]);
+    test_case.send_funds_from_admin(time_oracle_addr, &[common::cwcoin_from_amount::<Lpn>(500)]);
 
     () = test_case
         .app
@@ -425,10 +425,10 @@ fn on_time_alarm_do_transfers<Lpn>(
     let mut test_case = test_case_with::<Lpn>(
         2,
         Some(&[
-            cwcoin_from_amount::<Lpn>(1_000_000_000),
-            cwcoin_dex::<Lpn>(1_000_000_000),
-            cwcoin_from_amount::<Nls>(1_000_000_000),
-            cwcoin_dex::<Nls>(1_000_000_000),
+            common::cwcoin_from_amount::<Lpn>(1_000_000_000),
+            common::cwcoin_dex::<Lpn>(1_000_000_000),
+            common::cwcoin_from_amount::<Nls>(1_000_000_000),
+            common::cwcoin_dex::<Nls>(1_000_000_000),
         ]),
     );
 
@@ -441,12 +441,12 @@ fn on_time_alarm_do_transfers<Lpn>(
         //send native tokens to the profit contract
         test_case.send_funds_from_admin(
             test_case.address_book.profit().clone(),
-            &[cwcoin(native_profit)],
+            &[common::cwcoin(native_profit)],
         );
     }
 
     let lpn_profit = if let Some((lpn_profit_swap_in, lpn_profit_swap_out)) = lpn_profit {
-        let lpn_profit_swap_in_cw = cwcoin::<Lpn>(lpn_profit_swap_in);
+        let lpn_profit_swap_in_cw = common::cwcoin::<Lpn>(lpn_profit_swap_in);
 
         //send LPN tokens to the profit contract
         test_case.send_funds_from_admin(
@@ -520,7 +520,7 @@ fn integration_with_time_alarms() {
 
     test_case.send_funds_from_admin(
         test_case.address_book.profit().clone(),
-        &[cwcoin_from_amount::<Nls>(500)],
+        &[common::cwcoin_from_amount::<Nls>(500)],
     );
 
     assert!(
@@ -545,7 +545,7 @@ fn integration_with_time_alarms() {
         .unwrap_response();
 
     assert_eq!(
-        from_json(resp.data.clone().unwrap()),
+        cosmwasm_std::from_json(resp.data.clone().unwrap()),
         Ok(DispatchAlarmsResponse(1))
     );
 

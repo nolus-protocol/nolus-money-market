@@ -18,10 +18,10 @@ pub use sdk::cosmwasm_std::Coin as CwCoin;
 use sdk::{
     cosmwasm_ext::InterChainMsg,
     cosmwasm_std::{
-        Addr, Binary, BlockInfo, Deps, Empty, Env, QuerierWrapper, StdResult,
-        StdResult as CwResult, Timestamp, testing::mock_env, to_json_binary,
+        self, Addr, Binary, BlockInfo, Deps, Empty, Env, QuerierWrapper, StdResult as CwResult,
+        Timestamp, testing as cosmwasm_test,
     },
-    testing::{self, CwApp, InterChainMsgSender, new_app},
+    testing::{self, CwApp, InterChainMsgSender},
 };
 
 pub(crate) const BASE_INTEREST_RATE: Percent100 = Percent100::from_permille(70);
@@ -172,14 +172,17 @@ struct MockResponse {}
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 struct MockQueryMsg {}
 
-fn dummy_query(_deps: Deps<'_>, _env: Env, _msg: MockQueryMsg) -> StdResult<Binary> {
-    to_json_binary(&MockResponse {})
+fn dummy_query(_deps: Deps<'_>, _env: Env, _msg: MockQueryMsg) -> CwResult<Binary> {
+    cosmwasm_std::to_json_binary(&MockResponse {})
 }
 
 pub(crate) type MockApp = CwApp<InterChainMsg, Empty>;
 
 pub(crate) fn mock_app(message_sender: InterChainMsgSender, init_funds: &[CwCoin]) -> MockApp {
-    let return_time = mock_env().block.time.minus_seconds(400 * 24 * 60 * 60);
+    let return_time = cosmwasm_test::mock_env()
+        .block
+        .time
+        .minus_seconds(400 * 24 * 60 * 60);
 
     let mock_start_block = BlockInfo {
         height: 12_345,
@@ -190,7 +193,7 @@ pub(crate) fn mock_app(message_sender: InterChainMsgSender, init_funds: &[CwCoin
     let mut funds = vec![native_cwcoin(100000)];
     funds.append(&mut init_funds.to_vec());
 
-    new_app(message_sender)
+    testing::new_app(message_sender)
         .with_block(mock_start_block)
         .build(|router, _, storage| {
             router

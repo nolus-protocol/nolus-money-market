@@ -14,16 +14,13 @@ use finance::{
 use marketprice::config::Config as PriceConfig;
 use oracle::{
     api::{Config, ExecuteMsg, InstantiateMsg, PricesResponse, QueryMsg, SudoMsg},
-    contract::{execute, instantiate, query, reply, sudo},
+    contract,
     error::Error,
     result::Result,
     test_tree,
 };
 use sdk::{
-    cosmwasm_std::{
-        Addr, Binary, Deps, Empty, Env, Event, QuerierWrapper, StdResult, to_json_binary,
-        wasm_execute,
-    },
+    cosmwasm_std::{self, Addr, Binary, Deps, Empty, Env, Event, QuerierWrapper, StdResult},
     cw_multi_test::AppResponse,
     testing::{self, CwContract, CwContractWrapper},
 };
@@ -39,9 +36,10 @@ impl Instantiator {
     #[track_caller]
     pub fn instantiate_default(app: &mut App) -> Addr {
         // TODO [Rust 1.70] Convert to static item with OnceCell
-        let endpoints = CwContractWrapper::new(execute, instantiate, query)
-            .with_reply(reply)
-            .with_sudo(sudo);
+        let endpoints =
+            CwContractWrapper::new(contract::execute, contract::instantiate, contract::query)
+                .with_reply(contract::reply)
+                .with_sudo(contract::sudo);
 
         Self::instantiate(app, Box::new(endpoints), None)
     }
@@ -84,15 +82,15 @@ pub(crate) fn mock_query(
         price::total_of(Coin::<Nls>::new(123456789)).is(Coin::<BaseCurrency>::new(100000000));
 
     match msg {
-        QueryMsg::Prices {} => {
-            to_json_binary(
-                &PricesResponse::<PriceCurrencies, BaseCurrency, BaseCurrencies> {
-                    prices: vec![price.into()],
-                },
-            )
-            .map_err(Error::ConvertToBinary)
-        }
-        _ => query(deps, env, msg),
+        QueryMsg::Prices {} => cosmwasm_std::to_json_binary(&PricesResponse::<
+            PriceCurrencies,
+            BaseCurrency,
+            BaseCurrencies,
+        > {
+            prices: vec![price.into()],
+        })
+        .map_err(Error::ConvertToBinary),
+        _ => contract::query(deps, env, msg),
     }
 }
 
@@ -166,7 +164,7 @@ where
         .app
         .execute_raw(
             sender,
-            wasm_execute(
+            cosmwasm_std::wasm_execute(
                 oracle,
                 &ExecuteMsg::<BaseCurrency, BaseCurrencies, AlarmCurrencies, PriceCurrencies>::FeedPrices {
                     prices: vec![price.into()],
@@ -232,7 +230,7 @@ pub(crate) fn dispatch<ProtocolsRegistry, Treasury, Profit, Reserve, Leaser, Lpp
     .app
     .execute_raw(
         sender,
-        wasm_execute(
+        cosmwasm_std::wasm_execute(
             oracle,
             &ExecuteMsg::<BaseCurrency, BaseCurrencies, AlarmCurrencies, PriceCurrencies>::DispatchAlarms { max_count: 32 },
             vec![],

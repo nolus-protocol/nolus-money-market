@@ -101,7 +101,7 @@ pub enum FinalizerExecuteMsg {
 
 #[cfg(all(feature = "internal.test.skel", test))]
 mod test {
-    use sdk::cosmwasm_std::{from_json, to_json_vec};
+    use sdk::cosmwasm_std;
 
     use crate::api::{
         ExecuteMsg,
@@ -111,24 +111,31 @@ mod test {
     #[test]
     fn test_repay_representation() {
         let msg = ExecuteMsg::Repay();
-        let repay_bin = to_json_vec(&msg).expect("serialization failed");
-        assert_eq!(msg, from_json(&repay_bin).expect("deserialization failed"),);
+        let repay_bin = cosmwasm_std::to_json_vec(&msg).expect("serialization failed");
+        assert_eq!(
+            msg,
+            cosmwasm_std::from_json(&repay_bin).expect("deserialization failed"),
+        );
 
         assert_eq!(
             msg,
-            from_json("{\"repay\":[]}").expect("deserialization failed")
+            cosmwasm_std::from_json("{\"repay\":[]}").expect("deserialization failed")
         );
     }
 
     #[test]
     fn test_close_position_representation() {
         let msg = ExecuteMsg::ClosePosition(PositionClose::FullClose(FullClose {}));
-        let close_bin = to_json_vec(&msg).expect("serialization failed");
-        assert_eq!(msg, from_json(&close_bin).expect("deserialization failed"),);
+        let close_bin = cosmwasm_std::to_json_vec(&msg).expect("serialization failed");
+        assert_eq!(
+            msg,
+            cosmwasm_std::from_json(&close_bin).expect("deserialization failed"),
+        );
 
         assert_eq!(
             msg,
-            from_json("{\"close_position\":{\"full_close\":{}}}").expect("deserialization failed"),
+            cosmwasm_std::from_json("{\"close_position\":{\"full_close\":{}}}")
+                .expect("deserialization failed"),
         );
     }
 }

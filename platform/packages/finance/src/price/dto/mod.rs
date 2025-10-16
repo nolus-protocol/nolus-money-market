@@ -226,7 +226,7 @@ mod test_invariant {
             SuperGroup, SuperGroupTestC1, SuperGroupTestC2, SuperGroupTestC4, SuperGroupTestC5,
         },
     };
-    use sdk::cosmwasm_std::{StdError as CWError, StdResult as CWResult, from_json};
+    use sdk::cosmwasm_std::{self, StdError as CWError, StdResult as CWResult};
 
     use crate::test::coin;
     use crate::{
@@ -370,7 +370,7 @@ mod test_invariant {
     where
         G: Group<TopG = G>,
     {
-        from_json::<PriceDTO<G>>(json)
+        cosmwasm_std::from_json::<PriceDTO<G>>(json)
     }
 
     fn assert_load_err<G>(r: CWResult<PriceDTO<G>>, msg: &str)

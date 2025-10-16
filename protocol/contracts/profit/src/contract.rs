@@ -16,7 +16,6 @@ use sdk::{
     cosmwasm_ext::Response as CwResponse,
     cosmwasm_std::{
         Api, Binary, Deps, DepsMut, Env, MessageInfo, QuerierWrapper, Reply, entry_point,
-        to_json_binary,
     },
     neutron_sdk::sudo::msg::SudoMsg as NeutronSudoMsg,
 };
@@ -237,12 +236,12 @@ where
 #[entry_point]
 pub fn query(deps: Deps<'_>, env: Env, msg: QueryMsg) -> ContractResult<Binary> {
     match msg {
-        QueryMsg::Config {} => to_json_binary(&Profit::query_config(
+        QueryMsg::Config {} => cosmwasm_std::to_json_binary(&Profit::query_config(
             deps.storage,
             env.block.time,
             deps.querier,
         )?),
-        QueryMsg::ProtocolPackageRelease {} => to_json_binary(&CURRENT_RELEASE),
+        QueryMsg::ProtocolPackageRelease {} => cosmwasm_std::to_json_binary(&CURRENT_RELEASE),
     }
     .map_err(Into::into)
 }

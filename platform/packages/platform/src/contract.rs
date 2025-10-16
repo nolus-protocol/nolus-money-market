@@ -165,8 +165,7 @@ pub mod tests {
 pub mod testing {
     use sdk::{
         cosmwasm_std::{
-            ContractInfoResponse, ContractResult, QuerierResult, SystemResult, WasmQuery,
-            to_json_binary,
+            self, ContractInfoResponse, ContractResult, QuerierResult, SystemResult, WasmQuery,
         },
         testing,
     };
@@ -177,7 +176,7 @@ pub mod testing {
 
     pub fn valid_contract_handler(_: &WasmQuery) -> QuerierResult {
         SystemResult::Ok(ContractResult::Ok(
-            to_json_binary(&ContractInfoResponse::new(
+            cosmwasm_std::to_json_binary(&ContractInfoResponse::new(
                 CODE.into(),
                 testing::user("user"),
                 None,

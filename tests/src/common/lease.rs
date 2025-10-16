@@ -12,7 +12,7 @@ use lease::{
         open::{LoanForm, NewLeaseContract, NewLeaseForm, PositionSpecDTO},
         query::{QueryMsg, StateResponse},
     },
-    contract::{execute, instantiate, query, reply, sudo},
+    contract,
 };
 use platform::{coin_legacy, contract::Code};
 use sdk::{
@@ -36,9 +36,10 @@ pub(crate) struct Instantiator;
 
 impl Instantiator {
     pub fn store(app: &mut App) -> Code {
-        let endpoints = CwContractWrapper::new(execute, instantiate, query)
-            .with_reply(reply)
-            .with_sudo(sudo);
+        let endpoints =
+            CwContractWrapper::new(contract::execute, contract::instantiate, contract::query)
+                .with_reply(contract::reply)
+                .with_sudo(contract::sudo);
 
         app.store_code(Box::new(endpoints))
     }

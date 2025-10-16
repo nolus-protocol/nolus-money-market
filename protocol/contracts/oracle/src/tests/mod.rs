@@ -23,8 +23,7 @@ use tree::HumanReadableTree;
 
 use crate::{
     api::{Config, ExecuteMsg, InstantiateMsg, SudoMsg, swap::SwapTarget},
-    contract::{instantiate, sudo},
-    test_tree,
+    contract, test_tree,
 };
 
 mod oracle_tests;
@@ -113,8 +112,9 @@ pub(crate) fn setup_test(
         funds: coins(1000, Nls::ticker()),
     };
 
-    let res: CwResponse = instantiate(deps.as_mut(), testing::mock_env(), info.clone(), msg)
-        .expect("Contract should be instantiatable");
+    let res: CwResponse =
+        contract::instantiate(deps.as_mut(), testing::mock_env(), info.clone(), msg)
+            .expect("Contract should be instantiatable");
     assert!(res.messages.is_empty());
 
     // register single feeder address
@@ -124,7 +124,7 @@ pub(crate) fn setup_test(
         events,
         data,
         ..
-    }: CwResponse = sudo(
+    }: CwResponse = contract::sudo(
         deps.as_mut(),
         testing::mock_env(),
         SudoMsg::RegisterFeeder {

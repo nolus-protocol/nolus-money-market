@@ -7,7 +7,6 @@ use sdk::{
     cosmwasm_ext::Response as CwResponse,
     cosmwasm_std::{
         Binary, Deps, DepsMut, Env, MessageInfo, Reply, Storage, SubMsgResult, entry_point,
-        to_json_binary,
     },
 };
 use versioning::{
@@ -91,8 +90,10 @@ pub fn sudo(_deps: DepsMut<'_>, _env: Env, msg: SudoMsg) -> ContractResult<CwRes
 #[entry_point]
 pub fn query(deps: Deps<'_>, env: Env, msg: QueryMsg) -> ContractResult<Binary> {
     match msg {
-        QueryMsg::ContractVersion {} => Ok(to_json_binary(&CURRENT_RELEASE.version())?),
-        QueryMsg::AlarmsStatus {} => Ok(to_json_binary(
+        QueryMsg::ContractVersion {} => {
+            Ok(cosmwasm_std::to_json_binary(&CURRENT_RELEASE.version())?)
+        }
+        QueryMsg::AlarmsStatus {} => Ok(cosmwasm_std::to_json_binary(
             &TimeAlarms::new(deps.storage).try_any_alarm(env.block.time)?,
         )?),
         QueryMsg::PlatformPackageRelease {} => {
@@ -128,23 +129,18 @@ pub fn reply(deps: DepsMut<'_>, env: Env, msg: Reply) -> ContractResult<CwRespon
 
 #[cfg(test)]
 mod tests {
-    use sdk::cosmwasm_std::{
-        self, Addr, MessageInfo,
-        testing::{mock_dependencies, mock_env},
-    };
+    use sdk::cosmwasm_std::{self, Addr, MessageInfo, testing};
 
     use crate::msg::InstantiateMsg;
-
-    use super::instantiate;
 
     #[test]
     fn proper_initialization() {
         let msg = InstantiateMsg {};
-        let mut deps = mock_dependencies();
+        let mut deps = testing::mock_dependencies();
         let info = MessageInfo {
             sender: Addr::unchecked("CREATOR"),
             funds: vec![cosmwasm_std::coin(1000, "token")],
         };
-        instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
+        super::instantiate(deps.as_mut(), testing::mock_env(), info, msg).unwrap();
     }
 }

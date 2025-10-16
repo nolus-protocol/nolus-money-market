@@ -1,9 +1,5 @@
 use dex::{ConnectionParams, Ics20Channel};
-use profit::{
-    contract::{execute, instantiate, query, reply, sudo},
-    msg::InstantiateMsg,
-    typedefs::CadenceHours,
-};
+use profit::{contract, msg::InstantiateMsg, typedefs::CadenceHours};
 use sdk::{cosmwasm_std::Addr, testing};
 
 use crate::common::test_case::response::RemoteChain;
@@ -25,9 +21,10 @@ impl Instantiator {
         timealarms: Addr,
     ) -> Addr {
         // TODO [Rust 1.70] Convert to static item with OnceCell
-        let endpoints = CwContractWrapper::new(execute, instantiate, query)
-            .with_reply(reply)
-            .with_sudo(sudo);
+        let endpoints =
+            CwContractWrapper::new(contract::execute, contract::instantiate, contract::query)
+                .with_reply(contract::reply)
+                .with_sudo(contract::sudo);
 
         let code_id = app.store_code(Box::new(endpoints));
 

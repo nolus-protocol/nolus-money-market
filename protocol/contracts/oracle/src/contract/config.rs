@@ -14,14 +14,11 @@ where
 mod tests {
     use currencies::{Lpn, PaymentGroup as PriceCurrencies, testing::PaymentC9};
     use finance::{duration::Duration, percent::Percent100};
-    use sdk::{
-        cosmwasm_ext::Response,
-        cosmwasm_std::{from_json, testing::mock_env},
-    };
+    use sdk::{cosmwasm_ext::Response, cosmwasm_std::testing};
 
     use crate::{
         api::{Config, QueryMsg, SudoMsg, SwapLeg, swap::SwapTarget},
-        contract::{query, sudo},
+        contract,
         error::Error,
         test_tree, tests,
     };
@@ -49,15 +46,15 @@ mod tests {
             events,
             data,
             ..
-        }: Response = sudo(deps.as_mut(), mock_env(), msg).unwrap();
+        }: Response = contract::sudo(deps.as_mut(), testing::mock_env(), msg).unwrap();
 
         assert!(messages.is_empty());
         assert!(attributes.is_empty());
         assert!(events.is_empty());
         assert!(data.is_none());
 
-        let res = query(deps.as_ref(), mock_env(), QueryMsg::Config {}).unwrap();
-        let value: Config = from_json(res).unwrap();
+        let res = contract::query(deps.as_ref(), testing::mock_env(), QueryMsg::Config {}).unwrap();
+        let value: Config = cosmwasm_std::from_json(res).unwrap();
         assert_eq!(
             value,
             Config {
@@ -77,20 +74,20 @@ mod tests {
 
         let test_tree = test_tree::minimal_swap_tree();
 
-        let res = sudo(
+        let res = contract::sudo(
             deps.as_mut(),
-            mock_env(),
+            testing::mock_env(),
             SudoMsg::SwapTree { tree: test_tree },
         );
         assert!(res.is_ok());
 
-        let res = query(
+        let res = contract::query(
             deps.as_ref(),
-            mock_env(),
+            testing::mock_env(),
             QueryMsg::SupportedCurrencyPairs {},
         )
         .unwrap();
-        let mut value: Vec<SwapLeg<PriceCurrencies>> = from_json(res).unwrap();
+        let mut value: Vec<SwapLeg<PriceCurrencies>> = cosmwasm_std::from_json(res).unwrap();
         value.sort_by(|a, b| a.from.cmp(&b.from));
 
         let mut expected = vec![SwapLeg::<PriceCurrencies> {
@@ -111,9 +108,9 @@ mod tests {
 
         let test_tree = test_tree::invalid_pair_swap_tree();
 
-        let err = sudo(
+        let err = contract::sudo(
             deps.as_mut(),
-            mock_env(),
+            testing::mock_env(),
             SudoMsg::SwapTree { tree: test_tree },
         )
         .unwrap_err();

@@ -9,7 +9,7 @@ use finance::{
     fractionable::{CommonDoublePrimitive, Fractionable, IntoMax},
     liability::{Liability, Zone},
     percent::{Percent, Percent100},
-    price::{self},
+    price,
 };
 
 use crate::{

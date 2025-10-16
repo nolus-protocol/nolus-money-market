@@ -165,7 +165,7 @@ mod test {
     use finance::test::coin;
     use sdk::cosmwasm_std::Coin as CosmWasmCoin;
 
-    use crate::{coin_legacy::to_cosmwasm_on_nolus, error::Error};
+    use crate::error::Error;
 
     use super::Coin;
 
@@ -278,13 +278,13 @@ mod test {
         let c_nls = coin::coin2(24563);
         assert_eq!(
             Ok(c_nls),
-            super::from_cosmwasm(&to_cosmwasm_on_nolus(c_nls))
+            super::from_cosmwasm(&super::to_cosmwasm_on_nolus(c_nls))
         );
 
         let c_usdc = coin::coin1(u128::MAX);
         assert_eq!(
             Ok(c_usdc),
-            super::from_cosmwasm(&to_cosmwasm_on_nolus(c_usdc))
+            super::from_cosmwasm(&super::to_cosmwasm_on_nolus(c_usdc))
         );
     }
 }

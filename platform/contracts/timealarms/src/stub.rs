@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use access_control::{AccessPermission, user::User};
 use platform::{batch::Batch, contract::Validator};
-use sdk::cosmwasm_std::{Addr, StdError as SdkError, Timestamp, wasm_execute};
+use sdk::cosmwasm_std::{self, Addr, StdError as SdkError, Timestamp};
 
 use crate::msg::ExecuteMsg;
 
@@ -96,11 +96,12 @@ impl TimeAlarmsStub<'_> {
 
 impl TimeAlarms for TimeAlarmsStub<'_> {
     fn add_alarm(&mut self, time: Timestamp) -> Result<()> {
-        self.batch.schedule_execute_no_reply(wasm_execute(
-            self.addr().clone(),
-            &ExecuteMsg::AddAlarm { time },
-            vec![],
-        )?);
+        self.batch
+            .schedule_execute_no_reply(cosmwasm_std::wasm_execute(
+                self.addr().clone(),
+                &ExecuteMsg::AddAlarm { time },
+                vec![],
+            )?);
 
         Ok(())
     }

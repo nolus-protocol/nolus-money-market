@@ -39,7 +39,7 @@ pub(super) mod definitions {
 
     use currency::{
         CurrencyDTO, CurrencyDef, Definition, InPoolWith, PairsFindMap, PairsGroup,
-        PairsGroupMember, pairs_find_map,
+        PairsGroupMember,
     };
 
     use crate::{lease::LeaseC5, lpn::Lpn, payment::Group as PaymentGroup};
@@ -89,7 +89,7 @@ pub(super) mod definitions {
                 }
             }
 
-            pairs_find_map::<Pairs, _>(find_map)
+            currency::pairs_find_map::<Pairs, _>(find_map)
         }
     }
 

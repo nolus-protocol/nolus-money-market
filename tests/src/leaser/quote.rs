@@ -8,7 +8,7 @@ use currency::CurrencyDef;
 use finance::{
     coin::{Amount, Coin},
     percent::Percent100,
-    price::{Price, total, total_of},
+    price::{self, Price},
 };
 use sdk::{
     cosmwasm_std::{Addr, coin},
@@ -18,7 +18,7 @@ use sdk::{
 
 use crate::common::{
     self, ADDON_OPTIMAL_INTEREST_RATE, BASE_INTEREST_RATE, USER, UTILIZATION_OPTIMAL,
-    cwcoin_from_amount, leaser as leaser_mod,
+    leaser as leaser_mod,
     lpp::{self as lpp_mod},
     oracle as oracle_mod,
     protocols::Registry,
@@ -50,9 +50,13 @@ fn test_quote() {
         .init_leaser()
         .into_generic();
 
-    test_case.send_funds_from_admin(testing::user(USER), &[cwcoin_from_amount::<Lpn>(500)]);
+    test_case.send_funds_from_admin(
+        testing::user(USER),
+        &[common::cwcoin_from_amount::<Lpn>(500)],
+    );
 
-    let price_lease_lpn: Price<LeaseCurrency, Lpn> = total_of(common::coin(2)).is(common::coin(1));
+    let price_lease_lpn: Price<LeaseCurrency, Lpn> =
+        price::total_of(common::coin(2)).is(common::coin(1));
     let feeder = setup_feeder(&mut test_case);
     oracle_mod::feed_price(
         &mut test_case,
@@ -74,7 +78,7 @@ fn test_quote() {
     assert_eq!(resp.borrow.try_into(), Ok(borrow));
     assert_eq!(
         resp.total.try_into(),
-        Ok(total(downpayment + borrow, price_lease_lpn.inv()))
+        Ok(price::total(downpayment + borrow, price_lease_lpn.inv()))
     );
 
     /*   TODO: test with different time periods and amounts in LPP
@@ -116,17 +120,17 @@ fn common_quote_with_conversion(
     const USER_ATOMS: Amount = 5_000_000_000;
 
     let lpp_reserve = vec![
-        cwcoin_from_amount::<Lpn>(LPNS),
-        cwcoin_from_amount::<LeaseC3>(OSMOS),
-        cwcoin_from_amount::<LeaseCurrency>(CROS),
+        common::cwcoin_from_amount::<Lpn>(LPNS),
+        common::cwcoin_from_amount::<LeaseC3>(OSMOS),
+        common::cwcoin_from_amount::<LeaseCurrency>(CROS),
     ];
 
-    let user_reserve = cwcoin_from_amount::<LeaseC1>(USER_ATOMS);
+    let user_reserve = common::cwcoin_from_amount::<LeaseC1>(USER_ATOMS);
 
     let user_addr = testing::user(USER);
 
     let mut test_case = TestCaseBuilder::<Lpn>::with_reserve(&{
-        let mut reserve = vec![cwcoin_from_amount::<Lpn>(1_000_000_000)];
+        let mut reserve = vec![common::cwcoin_from_amount::<Lpn>(1_000_000_000)];
 
         reserve.extend_from_slice(&lpp_reserve);
 
@@ -163,11 +167,11 @@ fn common_quote_with_conversion(
 
     let dpn_lpn_base = Coin::<PaymentC1>::new(1);
     let dpn_lpn_quote = Coin::<Lpn>::new(2);
-    let dpn_lpn_price = total_of(dpn_lpn_base).is(dpn_lpn_quote);
+    let dpn_lpn_price = price::total_of(dpn_lpn_base).is(dpn_lpn_quote);
 
     let lpn_asset_base = Coin::<Lpn>::new(1);
     let lpn_asset_quote = Coin::<LeaseCurrency>::new(2);
-    let lpn_asset_price = total_of(lpn_asset_base).is(lpn_asset_quote);
+    let lpn_asset_price = price::total_of(lpn_asset_base).is(lpn_asset_quote);
 
     oracle_mod::feed_price(
         &mut test_case,
@@ -191,8 +195,8 @@ fn common_quote_with_conversion(
     );
     assert_eq!(
         resp.total.try_into(),
-        Ok(total(
-            total(downpayment, dpn_lpn_price) + borrow_after_mul2,
+        Ok(price::total(
+            price::total(downpayment, dpn_lpn_price) + borrow_after_mul2,
             lpn_asset_price
         )),
         "Total amount is different!"

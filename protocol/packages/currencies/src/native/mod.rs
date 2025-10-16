@@ -2,7 +2,7 @@ use std::borrow::Borrow;
 
 use serde::{Deserialize, Serialize};
 
-use currency::{CurrenciesMapping, GroupFilterMap, GroupFindMap, MemberOf, group_find_map};
+use currency::{CurrenciesMapping, GroupFilterMap, GroupFindMap, MemberOf};
 
 use crate::payment::Group as PaymentGroup;
 
@@ -41,7 +41,7 @@ impl currency::Group for Group {
     where
         FindMap: GroupFindMap<TargetG = Self>,
     {
-        group_find_map::<_, GroupMember, _>(find_map)
+        currency::group_find_map::<_, GroupMember, _>(find_map)
     }
 }
 
@@ -53,27 +53,21 @@ impl MemberOf<PaymentGroup> for Group {}
 mod test {
     use currency::CurrencyDef as _;
 
-    use crate::{
-        lpn::Lpn,
-        test_impl::{
-            maybe_visit_on_bank_symbol_err, maybe_visit_on_bank_symbol_impl,
-            maybe_visit_on_ticker_err, maybe_visit_on_ticker_impl,
-        },
-    };
+    use crate::{lpn::Lpn, test_impl};
 
     use super::{Group as NativeGroup, Nls};
 
     #[test]
     fn maybe_visit_on_ticker() {
-        maybe_visit_on_ticker_impl::<Nls, NativeGroup>();
-        maybe_visit_on_ticker_err::<Nls, NativeGroup>(Nls::bank());
-        maybe_visit_on_ticker_err::<Nls, NativeGroup>(Lpn::ticker());
+        test_impl::maybe_visit_on_ticker_impl::<Nls, NativeGroup>();
+        test_impl::maybe_visit_on_ticker_err::<Nls, NativeGroup>(Nls::bank());
+        test_impl::maybe_visit_on_ticker_err::<Nls, NativeGroup>(Lpn::ticker());
     }
 
     #[test]
     fn maybe_visit_on_bank_symbol() {
-        maybe_visit_on_bank_symbol_impl::<Nls, NativeGroup>();
-        maybe_visit_on_bank_symbol_err::<Nls, NativeGroup>(Nls::ticker());
-        maybe_visit_on_bank_symbol_err::<Nls, NativeGroup>(Lpn::bank());
+        test_impl::maybe_visit_on_bank_symbol_impl::<Nls, NativeGroup>();
+        test_impl::maybe_visit_on_bank_symbol_err::<Nls, NativeGroup>(Nls::ticker());
+        test_impl::maybe_visit_on_bank_symbol_err::<Nls, NativeGroup>(Lpn::bank());
     }
 }
