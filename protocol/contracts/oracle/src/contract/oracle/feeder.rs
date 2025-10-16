@@ -38,6 +38,12 @@ impl Feeders {
     where
         PriceG: Group,
     {
+        const MAX_FEEDERS: usize = u32::MAX as usize;
+
+        if Self::total_registered(deps.storage)?.ge(&MAX_FEEDERS) {
+            return Err(Error::MaxFeederCount {});
+        }
+
         deps.api
             .addr_validate(&feeder_txt)
             .map_err(Error::<PriceG>::RegisterFeederAddressValidation)
