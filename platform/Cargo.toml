@@ -82,6 +82,7 @@ ibc-proto = { version = "0.51", default-features = false }
 # Other
 bnum = { version = "0.13", default-features = false }
 neutron-sdk = { version = "0.11", default-features = false }
+num-integer = {version = "0.1", default-features = false}
 
 # Testing
 serde_test = "1"
