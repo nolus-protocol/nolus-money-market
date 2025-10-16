@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     coin::{Amount, Coin},
     error::{Error, Result},
-    fraction::Coprime,
+    fraction::{Coprime, Unit as FractionUnit},
     fractionable::HigherRank,
     ratio::{RatioLegacy, SimpleFraction},
     rational::RationalLegacy,
@@ -209,6 +209,22 @@ where
         assert!(amount > 0, "price overflow during multiplication");
         amount
     }
+
+    fn try_from_fraction<U>(fraction: SimpleFraction<U>) -> Option<Self>
+    where
+        U: FractionUnit + TryInto<Amount>,
+    {
+        fraction
+            .nominator()
+            .try_into()
+            .and_then(|amount_quote| {
+                fraction
+                    .denominator()
+                    .try_into()
+                    .map(|amount| Self::new(Coin::new(amount), Coin::new(amount_quote)))
+            })
+            .ok()
+    }
 }
 
 impl<C, QuoteC> Clone for Price<C, QuoteC>
@@ -388,6 +404,15 @@ mod test {
     fn ord_max() {
         ord_impl(Amount::MAX, 1);
         ord_impl(Amount::MAX, Amount::MAX - 2);
+    }
+
+    #[test]
+    fn from_fraction() {
+        let expect = price(c(1), q(4));
+        assert_eq!(
+            expect,
+            Price::try_from_fraction(SimpleFraction::new(4u128, 1u128)).unwrap()
+        );
     }
 
     #[test]
@@ -655,6 +680,10 @@ mod test {
         let a_exp = shift_product(a1, a2, shifts);
         let q_exp = shift_product(q1, q2, shifts);
         lossy_mul_impl(c(a1), q(q1), q(a2), qq(q2), c(a_exp), qq(q_exp));
+    }
+
+    fn price(amount: Coin, amount_quote: QuoteCoin) -> Price<SuperGroupTestC2, SuperGroupTestC1> {
+        Price::new(amount, amount_quote)
     }
 }
 

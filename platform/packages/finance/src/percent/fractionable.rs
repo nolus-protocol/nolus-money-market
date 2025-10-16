@@ -7,7 +7,7 @@ use crate::{
         ToDoublePrimitive, TryFromMax,
     },
     percent::{Units, bound::BoundPercent},
-    ratio::RatioLegacy,
+    ratio::{RatioLegacy, SimpleFraction},
 };
 
 impl<T> HigherRank<T> for u32
@@ -58,6 +58,12 @@ impl<const UPPER_BOUND: Units> IntoMax<u64> for BoundPercent<UPPER_BOUND> {
 impl<const UPPER_BOUND: Units> IntoMax<U256> for BoundPercent<UPPER_BOUND> {
     fn into_max(self) -> U256 {
         self.to_double().into()
+    }
+}
+
+impl<const UPPER_BOUND: Units> IntoMax<SimpleFraction<U256>> for BoundPercent<UPPER_BOUND> {
+    fn into_max(self) -> SimpleFraction<U256> {
+        self.to_fraction()
     }
 }
 

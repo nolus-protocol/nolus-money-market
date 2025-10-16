@@ -1,9 +1,55 @@
 use std::marker::PhantomData;
 
+use bnum::types::U256;
+
 use crate::{
-    coin::Amount, fractionable::FractionableLegacy, percent::Units as PercentUnits, price::Price,
-    ratio::RatioLegacy,
+    coin::Amount,
+    fractionable::{
+        CommonDoublePrimitive, Fractionable, FractionableLegacy, IntoMax, ToDoublePrimitive,
+        TryFromMax,
+    },
+    percent::{Units as PercentUnits, bound::BoundPercent},
+    price::Price,
+    ratio::{RatioLegacy, SimpleFraction},
 };
+
+impl<C, QuoteC> ToDoublePrimitive for Price<C, QuoteC> {
+    type Double = SimpleFraction<U256>;
+
+    fn to_double(&self) -> Self::Double {
+        SimpleFraction::new(self.amount_quote.to_double(), self.amount.to_double())
+    }
+}
+
+impl<C, QuoteC, const UPPER_BOUND: PercentUnits> Fractionable<BoundPercent<UPPER_BOUND>>
+    for Price<C, QuoteC>
+where
+    C: 'static,
+    QuoteC: 'static,
+{
+}
+
+impl<C, QuoteC, const UPPER_BOUND: PercentUnits> CommonDoublePrimitive<BoundPercent<UPPER_BOUND>>
+    for Price<C, QuoteC>
+{
+    type CommonDouble = <Self as ToDoublePrimitive>::Double;
+}
+
+impl<C, QuoteC> IntoMax<SimpleFraction<U256>> for Price<C, QuoteC> {
+    fn into_max(self) -> SimpleFraction<U256> {
+        self.to_double()
+    }
+}
+
+impl<C, QuoteC> TryFromMax<SimpleFraction<U256>> for Price<C, QuoteC>
+where
+    C: 'static,
+    QuoteC: 'static,
+{
+    fn try_from_max(max: SimpleFraction<U256>) -> Option<Self> {
+        Self::try_from_fraction(max)
+    }
+}
 
 impl<C, QuoteC> FractionableLegacy<PercentUnits> for Price<C, QuoteC>
 where
