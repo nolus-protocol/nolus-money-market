@@ -6,7 +6,12 @@ use std::ops::{Add, Sub};
 use bnum::types::U256;
 use serde::{Deserialize, Serialize};
 
-use crate::{coin::Amount, error::Error, ratio::RatioLegacy};
+use crate::{
+    coin::Amount,
+    error::Error,
+    fraction::Unit as FractionUnit,
+    ratio::{RatioLegacy, SimpleFraction},
+};
 
 use super::Units;
 
@@ -72,6 +77,14 @@ impl<const UPPER_BOUND: Units> BoundPercent<UPPER_BOUND> {
             None
         }
     }
+
+    pub(crate) fn to_fraction<U>(self) -> SimpleFraction<U>
+    where
+        Self: BoundedAs<U>,
+        U: FractionUnit,
+    {
+        SimpleFraction::new(self.into_target(), Self::HUNDRED.into_target())
+    }
 }
 
 impl<const UPPER_BOUND: Units> From<BoundPercent<UPPER_BOUND>> for Units {
@@ -133,6 +146,24 @@ impl<const UPPER_BOUND: Units> RatioLegacy<Units> for BoundPercent<UPPER_BOUND> 
     }
 }
 
+/// Defines how a BoundPercent can be represented in another type.
+/// This replaces the generic `From` to allow only explicitly permitted conversions.
+pub(crate) trait BoundedAs<T> {
+    fn into_target(self) -> T;
+}
+
+impl<const UPPER_BOUND: u32> BoundedAs<U256> for BoundPercent<UPPER_BOUND> {
+    fn into_target(self) -> U256 {
+        self.units().into()
+    }
+}
+
+impl<const UPPER_BOUND: u32> BoundedAs<BoundPercent<UPPER_BOUND>> for BoundPercent<UPPER_BOUND> {
+    fn into_target(self) -> Self {
+        self
+    }
+}
+
 #[cfg(any(test, feature = "testing"))]
 impl<const UPPER_BOUND: Units> Add for BoundPercent<UPPER_BOUND> {
     type Output = Self;
@@ -156,9 +187,12 @@ impl<const UPPER_BOUND: Units> Sub for BoundPercent<UPPER_BOUND> {
 
 #[cfg(test)]
 mod test {
+    use bnum::types::U256;
+
     use crate::{
         fraction::Fraction,
-        percent::{Percent, Percent100, Units},
+        percent::{Percent, Percent100, Units, test},
+        ratio::SimpleFraction,
         rational::Rational,
         test::coin,
     };
@@ -168,22 +202,22 @@ mod test {
         assert_eq!(Percent100::try_from_primitive(0).unwrap(), Percent100::ZERO);
         assert_eq!(
             Percent100::try_from_primitive(10).unwrap(),
-            Percent100::from_percent(10)
+            test::percent100(100)
         );
         assert_eq!(
             Percent100::try_from_primitive(99).unwrap(),
-            Percent100::from_percent(99)
+            test::percent100(990)
         );
         assert_eq!(
             Percent100::try_from_primitive(100).unwrap(),
-            Percent100::from_percent(100)
+            test::percent100(1000)
         );
         assert!(Percent100::try_from_primitive(101).is_none());
 
         assert_eq!(Percent::try_from_primitive(0).unwrap(), Percent::ZERO);
         assert_eq!(
             Percent::try_from_primitive(101).unwrap(),
-            Percent::from_percent(101)
+            test::percent(1010)
         );
     }
 
@@ -192,17 +226,17 @@ mod test {
         assert_eq!(Percent100::try_from_permille(0).unwrap(), Percent100::ZERO);
         assert_eq!(
             Percent100::try_from_permille(10).unwrap(),
-            Percent100::from_permille(10)
+            test::percent100(10)
         );
         assert_eq!(
             Percent100::try_from_permille(1000).unwrap(),
-            Percent100::from_permille(1000)
+            test::percent100(1000)
         );
 
         assert_eq!(Percent::try_from_permille(0).unwrap(), Percent::ZERO);
         assert_eq!(
             Percent::try_from_permille(1001).unwrap(),
-            Percent::from_permille(1001)
+            test::percent(1001)
         );
         assert!(Percent::try_from_primitive(u32::MAX / 10 + 1).is_none());
     }
@@ -223,15 +257,31 @@ mod test {
 
     #[test]
     fn checked_add() {
-        assert_eq!(from(40), from(25) + (from(15)));
-        assert_eq!(from(39), from(0) + (from(39)));
-        assert_eq!(from(39), from(39) + (from(0)));
-        assert_eq!(Percent100::HUNDRED, from(999) + (from(1)));
+        assert_eq!(
+            test::percent100(40),
+            test::percent100(25) + (test::percent100(15))
+        );
+        assert_eq!(
+            test::percent100(39),
+            test::percent100(0) + (test::percent100(39))
+        );
+        assert_eq!(
+            test::percent100(39),
+            test::percent100(39) + (test::percent100(0))
+        );
+        assert_eq!(
+            Percent100::HUNDRED,
+            test::percent100(999) + (test::percent100(1))
+        );
     }
 
     #[test]
     fn add_overflow() {
-        assert!(Percent100::HUNDRED.checked_add(from(1)).is_none());
+        assert!(
+            Percent100::HUNDRED
+                .checked_add(test::percent100(1))
+                .is_none()
+        );
         assert!(
             Percent::from_permille(Units::MAX)
                 .checked_add(Percent::from_permille(1))
@@ -241,16 +291,53 @@ mod test {
 
     #[test]
     fn sub() {
-        assert_eq!(from(67), from(79) - (from(12)));
-        assert_eq!(from(0), from(34) - (from(34)));
-        assert_eq!(from(39), from(39) - (from(0)));
-        assert_eq!(from(990), from(10).complement());
-        assert_eq!(from(0), from(1000).complement());
+        assert_eq!(
+            test::percent100(67),
+            test::percent100(79) - (test::percent100(12))
+        );
+        assert_eq!(
+            test::percent100(0),
+            test::percent100(34) - (test::percent100(34))
+        );
+        assert_eq!(
+            test::percent100(39),
+            test::percent100(39) - (test::percent100(0))
+        );
+        assert_eq!(test::percent100(990), test::percent100(10).complement());
+        assert_eq!(test::percent100(0), test::percent100(1000).complement());
     }
 
     #[test]
     fn sub_overflow() {
-        assert!(from(34).checked_sub(from(35)).is_none())
+        assert!(
+            test::percent100(34)
+                .checked_sub(test::percent100(35))
+                .is_none()
+        )
+    }
+
+    #[test]
+    fn to_fraction() {
+        assert_eq!(
+            SimpleFraction::new(Percent100::ZERO, Percent100::HUNDRED),
+            Percent100::ZERO.to_fraction()
+        );
+        assert_eq!(
+            SimpleFraction::new(Percent::HUNDRED, Percent::HUNDRED),
+            Percent::HUNDRED.to_fraction()
+        );
+        assert_eq!(
+            SimpleFraction::new(test::percent(1001), Percent::HUNDRED),
+            test::percent(1001).to_fraction()
+        );
+        assert_eq!(
+            SimpleFraction::new(u_256(400), u_256(1000)),
+            test::percent100(400).to_fraction()
+        );
+        assert_eq!(
+            SimpleFraction::new(u_256(Units::MAX), u_256(1000)),
+            test::percent(Units::MAX).to_fraction()
+        )
     }
 
     #[test]
@@ -265,11 +352,11 @@ mod test {
         test_display("100%", 1000);
     }
 
-    fn from(permille: Units) -> Percent100 {
-        Percent100::from_permille(permille)
+    fn u_256(quantity: Units) -> U256 {
+        U256::from(quantity)
     }
 
     fn test_display(exp: &str, permilles: Units) {
-        assert_eq!(exp, format!("{}", from(permilles)));
+        assert_eq!(exp, format!("{}", test::percent100(permilles)));
     }
 }

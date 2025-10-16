@@ -48,10 +48,6 @@ impl Percent {
     {
         Rational::of(&SimpleFraction::new(nominator, denominator), Self::HUNDRED)
     }
-
-    fn to_fraction(self) -> SimpleFraction<Self> {
-        SimpleFraction::new(self, Self::HUNDRED)
-    }
 }
 
 impl Fraction<Self> for Percent100 {
@@ -179,22 +175,6 @@ pub(super) mod test {
     }
 
     #[test]
-    fn to_fraction() {
-        assert_eq!(
-            SimpleFraction::new(Percent::ZERO, Percent::HUNDRED),
-            Percent::ZERO.to_fraction()
-        );
-        assert_eq!(
-            SimpleFraction::new(Percent::HUNDRED, Percent::HUNDRED),
-            Percent::HUNDRED.to_fraction()
-        );
-        assert_eq!(
-            SimpleFraction::new(percent(1001), Percent::HUNDRED),
-            percent(1001).to_fraction()
-        );
-    }
-
-    #[test]
     fn percent_to_percent100() {
         assert_eq!(percent100(500), percent(500).try_into().unwrap());
         assert_eq!(percent100(1000), percent(1000).try_into().unwrap());
@@ -223,11 +203,11 @@ pub(super) mod test {
         );
     }
 
-    fn percent100(permille: Units) -> Percent100 {
+    pub(super) fn percent100(permille: Units) -> Percent100 {
         Percent100::from_permille(permille)
     }
 
-    fn percent(permille: Units) -> Percent {
+    pub(super) fn percent(permille: Units) -> Percent {
         Percent::from_permille(permille)
     }
 }
