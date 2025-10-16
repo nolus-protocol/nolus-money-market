@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     coin::{Amount, Coin},
     error::{Error, Result},
-    fraction::Coprime,
+    fraction::{Coprime, Unit as FractionUnit},
     fractionable::HigherRank,
     ratio::{RatioLegacy, SimpleFraction},
     rational::RationalLegacy,
@@ -243,6 +243,22 @@ where
         debug_assert!(amount > 0, "the precision loss exceeds the value bits");
         amount
     }
+
+    fn try_from_fraction<U>(fraction: SimpleFraction<U>) -> Option<Self>
+    where
+        U: FractionUnit + TryInto<Amount>,
+    {
+        fraction
+            .nominator()
+            .try_into()
+            .and_then(|amount_quote| {
+                fraction
+                    .denominator()
+                    .try_into()
+                    .map(|amount| Self::new(Coin::new(amount), Coin::new(amount_quote)))
+            })
+            .ok()
+    }
 }
 
 impl<C, QuoteC> Clone for Price<C, QuoteC>
@@ -420,6 +436,15 @@ mod test {
     fn ord_max() {
         ord_impl(Amount::MAX, 1);
         ord_impl(Amount::MAX, Amount::MAX - 2);
+    }
+
+    #[test]
+    fn from_fraction() {
+        let expect = price(c(1), q(4));
+        assert_eq!(
+            expect,
+            Price::try_from_fraction(SimpleFraction::new(4u128, 1u128)).unwrap()
+        );
     }
 
     #[test]
