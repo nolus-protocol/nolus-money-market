@@ -398,8 +398,8 @@ mod test {
         let amount_quote = 15;
         let factor = 32;
         assert_eq!(
-            Price::new(Coin::new(amount), q(amount_quote)),
-            Price::new(Coin::new(amount * factor), q(amount_quote * factor))
+            price(c(amount), q(amount_quote)),
+            price(c(amount * factor), q(amount_quote * factor))
         );
     }
 
@@ -408,22 +408,22 @@ mod test {
         let amount = 13;
         let amount_quote = 15;
         assert_ne!(
-            Price::new(Coin::new(amount), q(amount_quote)),
-            Price::new(Coin::new(amount), q(amount_quote + 1))
+            price(c(amount), q(amount_quote)),
+            price(c(amount), q(amount_quote + 1))
         );
         assert_ne!(
-            Price::new(Coin::new(amount - 1), q(amount_quote)),
-            Price::new(Coin::new(amount), q(amount_quote))
+            price(c(amount - 1), q(amount_quote)),
+            price(c(amount), q(amount_quote))
         );
 
         assert_eq!(
-            Price::new(Coin::new(amount), q(amount_quote)),
-            Price::new(Coin::new(amount), q(amount_quote))
+            price(c(amount), q(amount_quote)),
+            price(c(amount), q(amount_quote))
         );
 
         assert_eq!(
-            Price::new(q(amount_quote), Coin::new(amount)),
-            Price::new(Coin::new(amount), q(amount_quote)).inv()
+            Price::new(q(amount_quote), c(amount)),
+            price(c(amount), q(amount_quote)).inv()
         );
     }
 
@@ -454,7 +454,7 @@ mod test {
         let price = price::total_of(c(amount)).is(q(amount_quote));
         let factor = 17;
         let coin_quote = q(amount_quote * factor);
-        let coin = Coin::new(amount * factor);
+        let coin = c(amount * factor);
 
         assert_eq!(coin_quote, super::total(coin, price));
         assert_eq!(coin, super::total(coin_quote, price.inv()));
@@ -468,11 +468,11 @@ mod test {
         let coin_quote = q(633);
 
         // 47 * 647 / 48 -> 633.5208333333334
-        let coin_in = Coin::new(47);
+        let coin_in = c(47);
         assert_eq!(coin_quote, super::total(coin_in, price));
 
         // 633 * 48 / 647 -> 46.9613601236476
-        let coin_out = Coin::new(46);
+        let coin_out = c(46);
         assert_eq!(coin_out, super::total(coin_quote, price.inv()));
     }
 
@@ -486,9 +486,8 @@ mod test {
     #[test]
     #[should_panic]
     fn total_overflow() {
-        let price = price::total_of::<SuperGroupTestC2>(Coin::new(1))
-            .is::<SuperGroupTestC1>(q(Amount::MAX / 2 + 1));
-        super::total(Coin::new(2), price);
+        let price = price::total_of(c(1)).is(q(Amount::MAX / 2 + 1));
+        super::total(c(2), price);
     }
 
     #[test]
