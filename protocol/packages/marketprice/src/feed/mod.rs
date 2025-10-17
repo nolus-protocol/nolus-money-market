@@ -8,6 +8,7 @@ use crate::{
     config::Config,
     error::{PriceFeedsError, Result},
     feed::sample::Sample,
+    feeders::FeederCount,
 };
 
 pub(crate) use self::observation::Observation;
@@ -117,14 +118,20 @@ where
     where
         Observations: for<'item> Iterator<Item = &'items Observation<C, QuoteC>>,
     {
-        self.count_unique_feeders(items) >= config.min_feeders(total_feeders)
+        self.count_unique_feeders(items)
+            .count()
+            .ge(&config.min_feeders(total_feeders.into()).count())
     }
 
-    fn count_unique_feeders<'items, Observations>(&self, items: Observations) -> usize
+    fn count_unique_feeders<'items, Observations>(&self, items: Observations) -> FeederCount
     where
         Observations: for<'item> Iterator<Item = &'items Observation<C, QuoteC>>,
     {
-        items.map(Observation::feeder).collect::<HashSet<_>>().len()
+        items
+            .map(Observation::feeder)
+            .collect::<HashSet<_>>()
+            .len()
+            .into()
     }
 }
 

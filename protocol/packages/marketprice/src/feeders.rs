@@ -72,6 +72,42 @@ impl PriceFeeders {
     }
 }
 
+pub struct FeederCount(u32);
+
+impl FeederCount {
+    pub const MAX: Self = Self(u32::MAX);
+
+    pub(super) fn new(count: u32) -> Self {
+        Self(count)
+    }
+
+    pub(super) fn count(&self) -> u32 {
+        self.0
+    }
+}
+
+impl From<usize> for FeederCount {
+    fn from(value: usize) -> Self {
+        Self::new(
+            value
+                .try_into()
+                .expect("The total amount of feeders is upper bounded by u32::MAX"),
+        )
+    }
+}
+
+impl PartialEq for FeederCount {
+    fn eq(&self, other: &Self) -> bool {
+        self.0 == other.0
+    }
+}
+
+impl PartialOrd for FeederCount {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        self.0.partial_cmp(&other.0)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use sdk::cosmwasm_std::{Addr, testing};

@@ -3,7 +3,10 @@ use serde::{Deserialize, Serialize};
 use finance::{duration::Duration, fraction::FractionLegacy, percent::Percent100};
 use sdk::cosmwasm_std::Timestamp;
 
-use crate::error::{self, PriceFeedsError};
+use crate::{
+    error::{self, PriceFeedsError},
+    feeders::FeederCount,
+};
 
 #[derive(Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[cfg_attr(any(test, feature = "testing"), derive(Debug))]
@@ -55,8 +58,8 @@ impl Config {
         }
     }
 
-    pub fn min_feeders(&self, total: usize) -> usize {
-        self.min_feeders.of(total)
+    pub fn min_feeders(&self, total: FeederCount) -> FeederCount {
+        FeederCount::new(self.min_feeders.of(total.count()))
     }
 
     pub const fn sample_period(&self) -> Duration {
@@ -166,7 +169,7 @@ mod test {
     use platform::tests as platform_tests;
     use sdk::cosmwasm_std::{self, StdError, Timestamp};
 
-    use crate::config::Config;
+    use crate::{config::Config, feeders::FeederCount};
 
     #[test]
     fn feed_valid_since() {
@@ -198,14 +201,14 @@ mod test {
         );
     }
 
-    fn min_feders_impl(min_feeders: u32, total: usize, exp: usize) {
+    fn min_feders_impl(min_feeders: u32, total: u32, exp: u32) {
         let c = Config::new(
             Percent100::from_percent(min_feeders),
             Duration::HOUR,
             1,
             Percent100::from_percent(75),
         );
-        assert_eq!(exp, c.min_feeders(total));
+        assert_eq!(exp, c.min_feeders(FeederCount::new(total)).count());
     }
     #[test]
     fn feeders_needed_rounds_properly() {
