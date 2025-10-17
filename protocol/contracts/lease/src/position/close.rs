@@ -3,9 +3,9 @@ use std::fmt::{Debug, Display, Formatter, Result as FmtResult};
 use serde::{Deserialize, Serialize};
 
 use finance::{
-    fraction::FractionLegacy,
-    fractionable::FractionableLegacy,
-    percent::{Percent100, Units as PercentUnits},
+    fraction::Fraction,
+    fractionable::{CommonDoublePrimitive, Fractionable, IntoMax},
+    percent::Percent100,
     range::{Ascending, RightOpenRange},
 };
 
@@ -88,7 +88,8 @@ impl Policy {
     // Note that in edge cases the ltv may go above 100%
     pub fn may_trigger<P>(&self, lease_asset: P, total_due: P) -> Option<Strategy>
     where
-        P: FractionableLegacy<PercentUnits> + PartialOrd + Copy,
+        Percent100: IntoMax<<P as CommonDoublePrimitive<Percent100>>::CommonDouble>,
+        P: Fractionable<Percent100> + PartialOrd + Copy,
     {
         self.may_stop_loss(lease_asset, total_due)
             .or_else(|| self.may_take_profit(lease_asset, total_due))
@@ -134,7 +135,8 @@ impl Policy {
 
     fn may_stop_loss<P>(&self, lease_asset: P, total_due: P) -> Option<Strategy>
     where
-        P: FractionableLegacy<PercentUnits> + PartialOrd,
+        Percent100: IntoMax<<P as CommonDoublePrimitive<Percent100>>::CommonDouble>,
+        P: Fractionable<Percent100> + PartialOrd,
     {
         self.stop_loss.and_then(|stop_loss| {
             (stop_loss.of(lease_asset) <= total_due).then_some(Strategy::StopLoss(stop_loss))
@@ -143,7 +145,8 @@ impl Policy {
 
     fn may_take_profit<P>(&self, lease_asset: P, total_due: P) -> Option<Strategy>
     where
-        P: FractionableLegacy<PercentUnits> + PartialOrd,
+        Percent100: IntoMax<<P as CommonDoublePrimitive<Percent100>>::CommonDouble>,
+        P: Fractionable<Percent100> + PartialOrd,
     {
         self.take_profit.and_then(|take_profit| {
             (take_profit.of(lease_asset) > total_due).then_some(Strategy::TakeProfit(take_profit))
@@ -174,9 +177,15 @@ impl Display for Strategy {
 mod test {
 
     mod may_trigger {
-        use finance::{coin::Amount, percent::Percent100};
+        use currencies::testing::PaymentC3;
+        use finance::{
+            coin::{Amount, Coin},
+            percent::Percent100,
+        };
 
         use crate::position::{CloseStrategy, close::Policy};
+
+        type TestAsset = PaymentC3;
 
         #[test]
         fn no_sl_no_tp() {
@@ -275,7 +284,7 @@ mod test {
                 stop_loss: sl,
                 take_profit: tp,
             }
-            .may_trigger(asset, due)
+            .may_trigger(Coin::<TestAsset>::new(asset), Coin::new(due))
         }
     }
 
