@@ -51,6 +51,7 @@ where
     }
 }
 
+// TODO remove after removing usize
 impl<C, QuoteC> FractionableLegacy<PercentUnits> for Price<C, QuoteC>
 where
     C: 'static,
@@ -104,7 +105,7 @@ mod test {
     use crate::coin::{Amount, Coin};
 
     mod percent {
-        use crate::fraction::FractionLegacy;
+        use crate::fraction::Fraction;
         use crate::{percent::Percent100, price};
 
         #[test]
