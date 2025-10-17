@@ -16,8 +16,6 @@ pub type Units = u32;
 pub type Percent100 = BoundPercent<{ Percent::HUNDRED.units() }>;
 pub type Percent = BoundPercent<{ Units::MAX }>;
 
-// TODO revisit it's usage after removing FractionLegacy<Units> for Percent100
-
 impl Percent100 {
     pub const fn complement(self) -> Self {
         Self::HUNDRED
@@ -61,7 +59,7 @@ impl Fraction<Self> for Percent100 {
     }
 }
 
-// TODO remove when implement Fractionable<BoundPercent> for Price
+// TODO remove after removing usize
 impl FractionLegacy<Units> for Percent100 {
     fn of<A>(&self, whole: A) -> A
     where
@@ -82,6 +80,7 @@ impl Rational<Self> for Percent {
     }
 }
 
+// TODO remove after removing usize
 impl RationalLegacy<Units> for Percent {
     fn of<A>(&self, whole: A) -> Option<A>
     where
