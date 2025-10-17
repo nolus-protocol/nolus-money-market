@@ -5,12 +5,12 @@ use serde::{Deserialize, Serialize};
 use crate::{
     error::{Error, Result as FinanceResult},
     fraction::{Coprime, Fraction, FractionLegacy, Unit as FractionUnit},
-    fractionable::{
-        Fractionable, FractionableLegacy, IntoMax, TryFromMax, checked_mul::CheckedMul,
-    },
+    fractionable::{Fractionable, FractionableLegacy, IntoMax, checked_mul::CheckedMul},
     rational::{Rational, RationalLegacy},
     zero::Zero,
 };
+
+mod multiplication;
 
 /// A part of something that is divisible.
 /// The total should be non-zero.
@@ -124,25 +124,6 @@ where
         }
     }
 
-    pub fn checked_mul<M>(&self, rhs: M) -> Option<M>
-    where
-        U: IntoMax<M::CommonDouble>,
-        M: Fractionable<U>,
-    {
-        if self.nominator == self.denominator {
-            Some(rhs)
-        } else {
-            let nominator_max = self.nominator.into_max();
-            let rhs_max = rhs.into_max();
-            let denominator_max = self.denominator.into_max();
-
-            nominator_max
-                .checked_mul(rhs_max)
-                .map(|product| product.div(denominator_max))
-                .and_then(TryFromMax::try_from_max)
-        }
-    }
-
     pub(super) const fn nominator(&self) -> U {
         self.nominator
     }
@@ -192,24 +173,6 @@ where
         A: FractionableLegacy<U>,
     {
         Some(whole.safe_mul(self))
-    }
-}
-
-// TODO unify the multiplication using the logic from SimpleFraction::checked_mul(Fractionable)
-impl<U> CheckedMul for SimpleFraction<U>
-where
-    U: CheckedMul<U, Output = U> + FractionUnit,
-{
-    type Output = Self;
-
-    fn checked_mul(self, rhs: Self) -> Option<Self::Output> {
-        self.nominator
-            .checked_mul(rhs.nominator)
-            .and_then(|nominator| {
-                self.denominator
-                    .checked_mul(rhs.denominator)
-                    .map(|denominator| Self::new(nominator, denominator))
-            })
     }
 }
 
