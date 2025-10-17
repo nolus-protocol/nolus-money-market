@@ -3,11 +3,10 @@ use bnum::types::U256;
 use crate::{
     coin::Coin,
     fractionable::{
-        CommonDoublePrimitive, Fractionable, FractionableLegacy, HigherRank, IntoMax,
-        ToDoublePrimitive, TryFromMax,
+        CommonDoublePrimitive, Fractionable, HigherRank, IntoMax, ToDoublePrimitive, TryFromMax,
     },
     percent::{Units, bound::BoundPercent},
-    ratio::{RatioLegacy, SimpleFraction},
+    ratio::SimpleFraction,
 };
 
 impl<T> HigherRank<T> for u32
@@ -15,18 +14,6 @@ where
     T: Into<Self>,
 {
     type Type = u64;
-}
-
-// TODO remove after implementing Fractionable<BoundPercent> for Price
-impl<const UPPER_BOUND: Units> FractionableLegacy<Units> for BoundPercent<UPPER_BOUND> {
-    #[track_caller]
-    fn safe_mul<R>(self, ratio: &R) -> Self
-    where
-        R: RatioLegacy<Units>,
-    {
-        Self::try_from(self.units().safe_mul(ratio))
-            .expect("TODO remove when refactor Fractionable. Resulting permille exceeds BoundPercent upper bound")
-    }
 }
 
 impl<const UPPER_BOUND: Units> ToDoublePrimitive for BoundPercent<UPPER_BOUND> {
