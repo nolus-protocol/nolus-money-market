@@ -72,6 +72,7 @@ impl PriceFeeders {
     }
 }
 
+#[derive(PartialEq, PartialOrd)]
 pub struct FeederCount(u32);
 
 impl FeederCount {
@@ -93,18 +94,6 @@ impl From<usize> for FeederCount {
                 .try_into()
                 .expect("The total amount of feeders is upper bounded by u32::MAX"),
         )
-    }
-}
-
-impl PartialEq for FeederCount {
-    fn eq(&self, other: &Self) -> bool {
-        self.0 == other.0
-    }
-}
-
-impl PartialOrd for FeederCount {
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        self.0.partial_cmp(&other.0)
     }
 }
 
