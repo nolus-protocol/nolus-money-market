@@ -98,10 +98,16 @@ where
         }
     }
 
-    /// Price(amount, amount_quote) * Ratio(nominator / denominator) = Price(amount * denominator, amount_quote * nominator)
+    /// Price(amount, amount_quote) * SimpleFraction(nominator / denominator) = Price(amount * denominator, amount_quote * nominator)
     /// where the pairs (amount, nominator) and (amount_quote, denominator) are transformed into co-prime numbers.
-    /// Please note that Price(amount, amount_quote) is like Ratio(amount_quote / amount).
-    pub(crate) fn lossy_mul<R>(self, rhs: &R) -> Self
+    /// Please note that Price(amount, amount_quote) is like SimpleFraction(amount_quote / amount).
+    #[allow(dead_code)]
+    pub(crate) fn lossy_mul(self, rhs: SimpleFraction<Amount>) -> Self {
+        Self::try_from_fraction(self.to_fraction().lossy_mul(rhs))
+            .expect("failed to convert lossy_mul result into price")
+    }
+
+    pub(crate) fn lossy_mul_legacy<R>(self, rhs: &R) -> Self
     where
         R: RatioLegacy<Amount>,
     {
@@ -190,6 +196,10 @@ where
         let may_factored_total =
             total(factored_amount, self).checked_add(total(factored_amount, rhs));
         may_factored_total.map(|factored_total| total_of(factored_amount).is(factored_total))
+    }
+
+    fn to_fraction(self) -> SimpleFraction<Amount> {
+        SimpleFraction::new(Amount::from(self.amount_quote), Amount::from(self.amount))
     }
 
     #[track_caller]
@@ -330,7 +340,7 @@ where
         // Please note that Price(amount, amount_quote) is like Ratio(amount_quote / amount).
 
         Self::Output::new(self.amount, rhs.amount_quote)
-            .lossy_mul(&SimpleFraction::new(self.amount_quote, rhs.amount))
+            .lossy_mul_legacy(&SimpleFraction::new(self.amount_quote, rhs.amount))
     }
 }
 
@@ -662,7 +672,7 @@ mod test {
 
         let price3 = price::total_of(amount1).is(quote2);
         let ratio = SimpleFraction::new(quote1, amount2);
-        assert_eq!(exp, price3.lossy_mul(&ratio));
+        assert_eq!(exp, price3.lossy_mul_legacy(&ratio));
     }
 
     fn lossy_mul_shifts_impl(q1: Amount, shifts: u8) {

@@ -61,7 +61,7 @@ where
     where
         F: RatioLegacy<PercentUnits>,
     {
-        self.lossy_mul(&RatioUpcast(PhantomData, fraction))
+        self.lossy_mul_legacy(&RatioUpcast(PhantomData, fraction))
     }
 }
 
@@ -75,7 +75,7 @@ where
     where
         F: RatioLegacy<u128>,
     {
-        self.lossy_mul(fraction)
+        self.lossy_mul_legacy(fraction)
     }
 }
 
