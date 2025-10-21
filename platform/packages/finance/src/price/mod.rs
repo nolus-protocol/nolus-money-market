@@ -206,6 +206,10 @@ where
         DoubleAmount::BITS - double_amount.leading_zeros()
     }
 
+    fn to_fraction(self) -> SimpleFraction<Amount> {
+        SimpleFraction::new(Amount::from(self.amount_quote), Amount::from(self.amount))
+    }
+
     #[track_caller]
     fn bits_above_max(double_amount: DoubleAmount) -> u32 {
         Self::bits(double_amount).saturating_sub(Amount::BITS)
