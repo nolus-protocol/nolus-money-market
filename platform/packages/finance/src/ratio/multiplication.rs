@@ -87,7 +87,7 @@ impl Bits for Amount {
     const BITS: u32 = Self::BITS;
 
     fn leading_zeros(&self) -> u32 {
-        todo!()
+        Amount::leading_zeros(*self)
     }
 }
 
