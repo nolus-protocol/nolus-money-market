@@ -78,11 +78,11 @@ pub struct FeederCount(u32);
 impl FeederCount {
     pub const MAX: Self = Self(u32::MAX);
 
-    pub(super) fn new(count: u32) -> Self {
+    pub(super) const fn new(count: u32) -> Self {
         Self(count)
     }
 
-    pub(super) fn count(&self) -> u32 {
+    pub(super) const fn count(&self) -> u32 {
         self.0
     }
 }
