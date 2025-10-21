@@ -71,7 +71,6 @@ where
     U: Bits + PartialOrd + TryFromMax<D> + Zero,
     D: Shr<u32, Output = D>,
 {
-    debug_assert!(bits <= U::BITS);
     let trimmed_unit = U::try_from_max(double >> bits).expect("insufficient bits to trim");
     assert!(trimmed_unit > U::ZERO, "overflow during multiplication");
     trimmed_unit
@@ -114,9 +113,47 @@ mod test {
     use bnum::types::U256;
 
     use crate::{
-        fractionable::checked_mul::CheckedMul, percent::Units as PercentUnits,
+        coin::Amount, fractionable::checked_mul::CheckedMul, percent::Units as PercentUnits,
         ratio::SimpleFraction,
     };
+
+    #[test]
+    fn lossy_mul() {
+        assert_eq!(fraction(3, 10), fraction(3, 4).lossy_mul(fraction(2, 5)));
+        assert_eq!(
+            fraction(Amount::MAX, 20),
+            fraction(Amount::MAX, 4).lossy_mul(fraction(1, 5))
+        );
+        assert_eq!(
+            fraction(3, 2),
+            fraction(Amount::MAX, 4).lossy_mul(fraction(6, Amount::MAX))
+        );
+        assert_eq!(
+            fraction(1, 2),
+            fraction(Amount::MAX / 3, 4).lossy_mul(fraction(6, Amount::MAX - 1))
+        );
+    }
+
+    #[test]
+    fn lossy_mul_with_trim() {
+        assert_eq!(
+            fraction(Amount::MAX - 1, 27 >> 1),
+            fraction(Amount::MAX - 1, 3).lossy_mul(fraction(2, 9))
+        );
+        assert_eq!(
+            fraction(Amount::MAX - 1, 27 >> 1),
+            fraction(Amount::MAX / 2, 3).lossy_mul(fraction(4, 9))
+        );
+    }
+
+    #[test]
+    #[should_panic = "overflow"]
+    fn lossy_mul_panic() {
+        let lhs = fraction(Amount::MAX / 5, 3);
+        let rhs = fraction(Amount::MAX / 2, 7);
+
+        let _ = lhs.lossy_mul(rhs);
+    }
 
     #[test]
     fn checked_mul_trait() {
@@ -131,6 +168,10 @@ mod test {
         let lhs = SimpleFraction::new(U256::MAX - u_256(1), u_256(1000));
         let rhs = SimpleFraction::new(u_256(3), u_256(1000));
         assert!(lhs.checked_mul(rhs).is_none())
+    }
+
+    fn fraction(nom: Amount, denom: Amount) -> SimpleFraction<Amount> {
+        SimpleFraction::new(nom, denom)
     }
 
     fn u_256(quantity: PercentUnits) -> U256 {
