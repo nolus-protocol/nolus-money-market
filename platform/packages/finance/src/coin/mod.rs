@@ -20,6 +20,7 @@ pub use self::{
     external::Coin as ExternalCoinDTO,
 };
 
+mod amount;
 mod amount_serde;
 mod dto;
 mod external;
