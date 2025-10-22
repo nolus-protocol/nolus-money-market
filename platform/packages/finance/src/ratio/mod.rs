@@ -1,11 +1,11 @@
-use std::{fmt::Debug, ops::Div};
+use std::fmt::Debug;
 
 use serde::{Deserialize, Serialize};
 
 use crate::{
     error::{Error, Result as FinanceResult},
     fraction::{Coprime, Fraction, FractionLegacy, Unit as FractionUnit},
-    fractionable::{Fractionable, FractionableLegacy, IntoMax, checked_mul::CheckedMul},
+    fractionable::{Fractionable, FractionableLegacy, IntoMax},
     rational::{Rational, RationalLegacy},
     zero::Zero,
 };
@@ -173,21 +173,6 @@ where
         A: FractionableLegacy<U>,
     {
         Some(whole.safe_mul(self))
-    }
-}
-
-impl<U> Div for SimpleFraction<U>
-where
-    U: CheckedMul<U, Output = U> + FractionUnit,
-{
-    type Output = Self;
-
-    // (a / b) ÷ (c / d) = (a * d) / (b * c)
-    fn div(self, rhs: Self) -> Self::Output {
-        debug_assert_ne!(rhs.nominator, Zero::ZERO, "Cannot divide by zero fraction");
-
-        self.checked_mul(rhs.inv())
-            .expect("Division should not overflow")
     }
 }
 
