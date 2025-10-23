@@ -339,8 +339,10 @@ where
         // Price(a, b) * Price(c, d) = Price(a, d) * Rational(b / c)
         // Please note that Price(amount, amount_quote) is like Ratio(amount_quote / amount).
 
-        Self::Output::new(self.amount, rhs.amount_quote)
-            .lossy_mul_legacy(&SimpleFraction::new(self.amount_quote, rhs.amount))
+        Self::Output::new(self.amount, rhs.amount_quote).lossy_mul(SimpleFraction::new(
+            self.amount_quote.to_primitive(),
+            rhs.amount.to_primitive(),
+        ))
     }
 }
 
