@@ -29,9 +29,21 @@ where
 {
 }
 
+// Used only for average price calculation
+impl<C, QuoteC> Fractionable<u128> for Price<C, QuoteC>
+where
+    C: 'static,
+    QuoteC: 'static,
+{
+}
+
 impl<C, QuoteC, const UPPER_BOUND: PercentUnits> CommonDoublePrimitive<BoundPercent<UPPER_BOUND>>
     for Price<C, QuoteC>
 {
+    type CommonDouble = <Self as ToDoublePrimitive>::Double;
+}
+
+impl<C, QuoteC> CommonDoublePrimitive<u128> for Price<C, QuoteC> {
     type CommonDouble = <Self as ToDoublePrimitive>::Double;
 }
 
@@ -135,7 +147,6 @@ mod test {
             coin::{Amount, Coin},
             price,
             ratio::SimpleFraction,
-            rational::RationalLegacy,
         };
 
         #[test]
@@ -225,7 +236,7 @@ mod test {
             let price = price::total_of(amount1).is(quote1);
             let ratio = SimpleFraction::new(nominator, denominator);
             assert_eq!(
-                RationalLegacy::<u128>::of(&ratio, price).unwrap(),
+                price.lossy_mul(ratio),
                 price::total_of(amount_exp).is(quote_exp)
             );
         }
