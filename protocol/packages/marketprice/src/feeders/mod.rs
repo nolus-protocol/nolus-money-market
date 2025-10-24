@@ -7,6 +7,8 @@ use sdk::{
     cw_storage_plus::Item,
 };
 
+mod count;
+pub(super) use count::Count as FeederCount;
 
 /// Errors returned from Feeders
 #[derive(Error, Debug, PartialEq)]
