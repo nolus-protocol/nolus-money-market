@@ -7,6 +7,7 @@ use sdk::{
     cw_storage_plus::Item,
 };
 
+
 /// Errors returned from Feeders
 #[derive(Error, Debug, PartialEq)]
 pub enum PriceFeedersError {
@@ -35,7 +36,6 @@ impl PriceFeeders {
         Self(Item::new(namespace))
     }
 
-    // TODO? rename to `feeders()`
     pub fn feeders(&self, storage: &dyn Storage) -> StdResult<HashSet<Addr>> {
         self.0.may_load(storage).map(Option::unwrap_or_default)
     }
@@ -77,32 +77,6 @@ impl PriceFeeders {
                 })
             })
             .map_err(Into::into)
-    }
-}
-
-#[derive(PartialEq, PartialOrd)]
-pub struct FeederCount(u32);
-
-impl FeederCount {
-    pub const MAX: Self = Self(u32::MAX);
-
-    pub(super) const fn new(count: u32) -> Self {
-        Self(count)
-    }
-
-    pub(super) const fn count(&self) -> u32 {
-        self.0
-    }
-}
-
-impl TryFrom<usize> for FeederCount {
-    type Error = PriceFeedersError;
-
-    fn try_from(value: usize) -> Result<Self, Self::Error> {
-        value
-            .try_into()
-            .map_err(|_| Self::Error::MaxFeederCount {})
-            .map(|count| Self::new(count))
     }
 }
 
