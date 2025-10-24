@@ -32,7 +32,8 @@ impl PriceFeeders {
         Self(Item::new(namespace))
     }
 
-    pub fn get(&self, storage: &dyn Storage) -> StdResult<HashSet<Addr>> {
+    // TODO? rename to `feeders()`
+    pub fn feeders(&self, storage: &dyn Storage) -> StdResult<HashSet<Addr>> {
         self.0.may_load(storage).map(Option::unwrap_or_default)
     }
 

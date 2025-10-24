@@ -47,7 +47,7 @@ fn register_feeder() {
     let resp = control.is_registered(&deps.storage, &f_address).unwrap();
     assert!(resp);
 
-    let feeders = control.get(&deps.storage).unwrap();
+    let feeders = control.feeders(&deps.storage).unwrap();
     assert_eq!(1, feeders.len());
 
     // should return error that address is already added
@@ -60,7 +60,7 @@ fn register_feeder() {
     let f_address = testing::user("address3");
     control.register(deps.as_mut(), f_address).unwrap();
 
-    let feeders = control.get(&deps.storage).unwrap();
+    let feeders = control.feeders(&deps.storage).unwrap();
     assert_eq!(3, feeders.len());
 }
 

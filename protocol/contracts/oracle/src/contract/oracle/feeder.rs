@@ -21,7 +21,7 @@ impl Feeders {
         PriceG: Group,
     {
         Self::FEEDERS
-            .get(storage)
+            .feeders(storage)
             .map_err(Error::<PriceG>::LoadFeeders)
     }
 
