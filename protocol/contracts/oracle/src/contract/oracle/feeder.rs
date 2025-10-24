@@ -3,7 +3,7 @@ use std::collections::HashSet;
 use currency::Group;
 use serde::{Deserialize, Serialize};
 
-use marketprice::feeders::{FeederCount, PriceFeeders};
+use marketprice::feeders::PriceFeeders;
 use sdk::cosmwasm_std::{Addr, DepsMut, Storage};
 
 use crate::{api::Config, error::Error, result::Result};
@@ -38,10 +38,6 @@ impl Feeders {
     where
         PriceG: Group,
     {
-        if FeederCount::from(Self::total_registered(deps.storage)?).ge(&FeederCount::MAX) {
-            return Err(Error::MaxFeederCount {});
-        }
-
         deps.api
             .addr_validate(&feeder_txt)
             .map_err(Error::<PriceG>::RegisterFeederAddressValidation)

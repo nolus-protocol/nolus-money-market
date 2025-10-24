@@ -99,9 +99,6 @@ where
 
     #[error("[Oracle] integer conversion {0}")]
     Conversion(#[from] TryFromIntError),
-
-    #[error("[Oracle] Maximum feeder count reached")]
-    MaxFeederCount {},
 }
 
 #[cfg(feature = "contract")]
