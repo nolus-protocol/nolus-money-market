@@ -87,13 +87,14 @@ impl FeederCount {
     }
 }
 
-impl From<usize> for FeederCount {
-    fn from(value: usize) -> Self {
-        Self::new(
-            value
-                .try_into()
-                .expect("The total amount of feeders is upper bounded by u32::MAX"),
-        )
+impl TryFrom<usize> for FeederCount {
+    type Error = PriceFeedersError;
+
+    fn try_from(value: usize) -> Result<Self, Self::Error> {
+        value
+            .try_into()
+            .map_err(|_| Self::Error::MaxFeederCount {})
+            .map(|count| Self::new(count))
     }
 }
 
