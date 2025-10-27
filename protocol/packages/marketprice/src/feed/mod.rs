@@ -119,7 +119,7 @@ where
         Observations: for<'item> Iterator<Item = &'items Observation<C, QuoteC>>,
     {
         self.count_unique_feeders(items)
-            <= (config.min_feeders(total_feeders.try_into().expect("Feeder count exceeded")))
+            >= (config.min_feeders(total_feeders.try_into().expect("Feeder count exceeded")))
     }
 
     fn count_unique_feeders<'items, Observations>(&self, items: Observations) -> FeederCount
