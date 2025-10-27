@@ -1,10 +1,9 @@
-use serde::{Deserialize, Serialize};
-
-use currency::CurrencyDef;
 use dex::Enterable;
 use finance::{coin::IntoDTO, duration::Duration};
+use oracle_platform::GrantedOracle;
 use platform::{bank, batch::Emitter, message::Response as MessageResponse};
 use sdk::cosmwasm_std::{Coin as CwCoin, Env, MessageInfo, QuerierWrapper, Timestamp};
+use serde::{Deserialize, Serialize};
 use timealarms::stub::TimeAlarmDelivery;
 
 use crate::{
@@ -80,6 +79,16 @@ impl Active {
         querier: QuerierWrapper<'_>,
         env: &Env,
     ) -> ContractResult<Response> {
+        self.try_on_alarm(querier, env)
+    }
+
+    fn try_on_time_alarm(
+        self,
+        querier: QuerierWrapper<'_>,
+        env: &Env,
+        info: MessageInfo,
+    ) -> ContractResult<Response> {
+        access_control::check(self.lease.lease.time_alarms, &info)?;
         self.try_on_alarm(querier, env)
     }
 

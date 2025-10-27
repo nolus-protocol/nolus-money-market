@@ -147,6 +147,7 @@ mod test {
         let mut deps = testing::mock_dependencies();
         let env = testing::mock_env();
         let now = env.block.time;
+        let protocol_admin = Addr::unchecked("admin");
 
         const INITIAL_LPP_BALANCE: Coin<TheCurrency> = Coin::ZERO;
         const DEPOSIT: Coin<TheCurrency> = Coin::new(20_000);
@@ -161,6 +162,7 @@ mod test {
             )
             .expect("Couldn't construct interest rate value!"),
             DEFAULT_MIN_UTILIZATION,
+            protocol_admin,
         );
         Config::store(&config, deps.as_mut().storage).unwrap();
         LiquidityPool::<TheCurrency, _>::new(&config, &bank)

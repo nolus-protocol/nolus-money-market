@@ -1,11 +1,6 @@
 pub mod msg;
 pub mod typedefs;
 
-#[cfg(feature = "stub")]
-pub mod stub;
-
-#[cfg(feature = "contract")]
-mod access_control;
 #[cfg(feature = "contract")]
 pub mod contract;
 #[cfg(feature = "contract")]
@@ -16,3 +11,5 @@ pub mod profit;
 pub mod result;
 #[cfg(feature = "contract")]
 pub mod state;
+#[cfg(feature = "stub")]
+pub mod stub;

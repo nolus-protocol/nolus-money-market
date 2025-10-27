@@ -262,7 +262,8 @@ mod test {
         F: FnOnce(MockStorage, ApiConfig, MockBankView<TheCurrency, TheCurrency>, Timestamp),
     {
         let mut store = testing::MockStorage::default();
-        let now = Timestamp::from_nanos(1_571_897_419_879_405_538);
+        let now: Timestamp = Timestamp::from_nanos(1_571_897_419_879_405_538);
+        let protocol_admin = Addr::unchecked("admin");
 
         let config = ApiConfig::new(
             Code::unchecked(0xDEADC0DE_u64),
@@ -273,6 +274,7 @@ mod test {
             )
             .expect("Couldn't construct interest rate value!"),
             Percent100::ZERO,
+            protocol_admin,
         );
         let bank = MockBankView::only_balance(initial_lpp_balance);
         setup_storage(&mut store, &config, &bank);
@@ -288,8 +290,12 @@ mod test {
             .unwrap();
         }
 
-        let config_custom =
-            ApiConfig::new(config.lease_code(), *config.borrow_rate(), min_utilization);
+        let config_custom = ApiConfig::new(
+            config.lease_code(),
+            *config.borrow_rate(),
+            min_utilization,
+            protocol_admin,
+        );
         Config::store(&config_custom, &mut store).unwrap();
         f(store, config_custom, bank, now)
     }

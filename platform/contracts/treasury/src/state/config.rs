@@ -4,6 +4,7 @@ use sdk::{
     cosmwasm_std::{Addr, StdResult, Storage},
     cw_storage_plus::Item,
 };
+use timealarms::stub::TimeAlarmsRef;
 
 use crate::{error::ContractError, result::ContractResult};
 
@@ -19,6 +20,8 @@ pub(crate) struct Config {
     pub protocols_registry: Addr,
     // A list of (minTVL_MNLS: u32, APR%o) which defines the APR as per the TVL.
     pub tvl_to_apr: RewardScale,
+    // A timealarms reference with address that has permission to dispatch alarms
+    pub timealarms: TimeAlarmsRef,
 }
 
 impl Config {
@@ -28,11 +31,13 @@ impl Config {
         cadence_hours: CadenceHours,
         protocols_registry: Addr,
         tvl_to_apr: RewardScale,
+        timealarms: TimeAlarmsRef,
     ) -> Self {
         Config {
             cadence_hours,
             protocols_registry,
             tvl_to_apr,
+            timealarms,
         }
     }
 
@@ -42,6 +47,10 @@ impl Config {
 
     pub fn load(storage: &dyn Storage) -> StdResult<Self> {
         Self::STORAGE.load(storage)
+    }
+
+    pub const fn timealarms(&self) -> &TimeAlarmsRef {
+        &self.timealarms
     }
 
     pub fn update_cadence_hours(

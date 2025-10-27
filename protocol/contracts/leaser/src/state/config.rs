@@ -33,12 +33,31 @@ pub struct Config {
     pub lease_max_slippages: MaxSlippages,
     pub lease_admin: Addr,
     pub dex: ConnectionParams,
+    pub contract_owner: Addr,
 }
 
 impl Config {
     const STORAGE: Item<Self> = Item::new("config");
 
-    pub fn new(lease_code: Code, msg: InstantiateMsg) -> Self {
+    pub fn new(
+        lease_code: Code,
+        InstantiateMsg {
+            lease_code,
+            lpp,
+            profit,
+            reserve,
+            time_alarms,
+            market_price_oracle,
+            protocols_registry,
+            lease_position_spec,
+            lease_interest_rate_margin,
+            lease_due_period,
+            lease_max_slippages,
+            lease_admin,
+            dex,
+        }: InstantiateMsg,
+        contract_owner: Addr,
+    ) -> Self {
         Self {
             lease_code,
             lpp: msg.lpp,
@@ -53,6 +72,7 @@ impl Config {
             lease_max_slippages: msg.lease_max_slippages,
             lease_admin: msg.lease_admin,
             dex: msg.dex,
+            contract_owner,
         }
     }
 
@@ -103,6 +123,10 @@ impl Config {
                 })
             })
             .map_err(Into::into)
+    }
+
+    pub const fn contract_owner(&self) -> &Addr {
+        &self.contract_owner
     }
 }
 

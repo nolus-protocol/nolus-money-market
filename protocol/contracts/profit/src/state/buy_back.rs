@@ -18,7 +18,7 @@ use timealarms::stub::TimeAlarmsRef;
 use crate::{msg::ConfigResponse, result::ContractResult};
 
 use super::{
-    Config, ConfigManagement, State, StateEnum, SwapClient, idle::Idle,
+    Config, State, StateEnum, SwapClient, idle::Idle,
     resp_delivery::ForwardToDexEntry,
 };
 
@@ -157,5 +157,3 @@ impl ContractInSwap for BuyBack {
         }
     }
 }
-
-impl ConfigManagement for StateLocalOut<BuyBack, SwapClient, ForwardToDexEntry> {}

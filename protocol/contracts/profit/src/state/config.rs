@@ -16,6 +16,7 @@ pub(crate) struct Config {
     treasury: Addr,
     oracle: OracleRef,
     time_alarms: TimeAlarmsRef,
+    contract_owner: Addr,
 }
 
 impl Config {
@@ -24,12 +25,14 @@ impl Config {
         treasury: Addr,
         oracle: OracleRef,
         time_alarms: TimeAlarmsRef,
+        contract_owner: Addr,
     ) -> Self {
         Self {
             cadence_hours,
             treasury,
             oracle,
             time_alarms,
+            contract_owner,
         }
     }
 
@@ -57,5 +60,9 @@ impl Config {
 
     pub fn time_alarms(&self) -> &TimeAlarmsRef {
         &self.time_alarms
+    }
+
+    pub const fn contract_owner(&self) -> &Addr {
+        &self.contract_owner
     }
 }

@@ -4,7 +4,7 @@ use platform::contract::CodeId;
 use sdk::cosmwasm_std::{Addr, StdError};
 use versioning::ReleaseId;
 
-#[derive(Debug, ThisError)]
+#[derive(Debug, PartialEq, ThisError)]
 pub enum Error {
     #[error("[Admin] [Std] {0}")]
     StdError(#[from] StdError),
@@ -41,6 +41,8 @@ pub enum Error {
         post-migration execution messages! Protocol's friendly name: {0}"
     )]
     MissingProtocol(String),
+    #[error("[Admin] Failed to load the configuration! Cause: {0}")]
+    LoadConfig(StdError),
     #[error(
         "[Admin] Protocol deregistration message not sent by a registered \
         protocol leaser!"

@@ -1,16 +1,13 @@
-use std::ops::DerefMut as _;
+use serde::Serialize;
 
+use access_control::permissions::ProtocolAdminPermission;
+use currencies::{
+    Lpn as LpnCurrency, Lpns as LpnCurrencies, PaymentGroup, Stable as StableCurrency,
+};
 use currency::CurrencyDef;
 use finance::coin::{Coin, CoinDTO};
 use oracle::stub;
 use oracle_platform::OracleRef;
-use serde::Serialize;
-
-use access_control::SingleUserAccess;
-use currencies::{
-    Lpn as LpnCurrency, Lpns as LpnCurrencies, PaymentGroup, Stable as StableCurrency,
-};
-
 use platform::{
     bank, contract::Code, error as platform_error, message::Response as PlatformResponse, response,
 };
@@ -52,18 +49,7 @@ pub fn instantiate(
     _info: MessageInfo,
     msg: InstantiateMsg,
 ) -> Result<CwResponse> {
-    deps.api
-        .addr_validate(msg.protocol_admin.as_str())
-        .map_err(Into::<ContractError>::into)
-        // cannot validate the protocol admin contract for existence, since it is not yet instantiated
-        .and_then(|protocol_admin| {
-            SingleUserAccess::new(
-                deps.storage.deref_mut(),
-                crate::access_control::PROTOCOL_ADMIN_KEY,
-            )
-            .grant_to(&protocol_admin)
-            .map_err(Into::into)
-        })?;
+    let protocol_admin = deps.api.addr_validate(msg.protocol_admin.as_str())?;
 
     Code::try_new(
         msg.lease_code.into(),
@@ -71,7 +57,12 @@ pub fn instantiate(
     )
     .map_err(Into::into)
     .and_then(|lease_code| {
-        let config = ApiConfig::new(lease_code, msg.borrow_rate, msg.min_utilization);
+        let config = ApiConfig::new(
+            lease_code,
+            msg.borrow_rate,
+            msg.min_utilization,
+            protocol_admin,
+        );
         Config::store(&config, deps.storage).map(|()| config)
     })
     .and_then(|ref config| {
@@ -114,11 +105,12 @@ pub fn execute(
         ExecuteMsg::NewLeaseCode {
             lease_code: new_lease_code,
         } => {
-            SingleUserAccess::new(
-                deps.storage.deref_mut(),
-                crate::access_control::PROTOCOL_ADMIN_KEY,
-            )
-            .check(&info)?;
+            let loaded_config = Config::load(deps.storage)?;
+
+            access_control::check(
+                &ProtocolAdminPermission::new(loaded_config.protocol_admin()),
+                &info,
+            )?;
 
             Config::update_lease_code(deps.storage, new_lease_code)
                 .map(|()| PlatformResponse::default())
@@ -185,11 +177,12 @@ pub fn execute(
         )
         .map(response::response_only_messages),
         ExecuteMsg::CloseAllDeposits() => {
-            SingleUserAccess::new(
-                deps.storage.deref_mut(),
-                crate::access_control::PROTOCOL_ADMIN_KEY,
-            )
-            .check(&info)?;
+            let loaded_config = Config::load(deps.storage)?;
+
+            access_control::check(
+                &ProtocolAdminPermission::new(loaded_config.protocol_admin()),
+                &info,
+            )?;
 
             assert!(
                 borrow::query_empty::<LpnCurrency>(deps.storage),
