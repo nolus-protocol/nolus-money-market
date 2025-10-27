@@ -16,14 +16,6 @@ where
     type Type = u64;
 }
 
-impl<const UPPER_BOUND: Units> ToDoublePrimitive for BoundPercent<UPPER_BOUND> {
-    type Double = u64;
-
-    fn to_double(&self) -> Self::Double {
-        self.units().into()
-    }
-}
-
 impl<const UPPER_BOUND: Units> CommonDoublePrimitive<Self> for BoundPercent<UPPER_BOUND> {
     type CommonDouble = <Self as ToDoublePrimitive>::Double;
 }
@@ -51,6 +43,14 @@ impl<const UPPER_BOUND: Units> IntoMax<U256> for BoundPercent<UPPER_BOUND> {
 impl<const UPPER_BOUND: Units> IntoMax<SimpleFraction<U256>> for BoundPercent<UPPER_BOUND> {
     fn into_max(self) -> SimpleFraction<U256> {
         self.to_fraction()
+    }
+}
+
+impl<const UPPER_BOUND: Units> ToDoublePrimitive for BoundPercent<UPPER_BOUND> {
+    type Double = u64;
+
+    fn to_double(&self) -> Self::Double {
+        self.units().into()
     }
 }
 

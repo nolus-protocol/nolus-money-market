@@ -7,12 +7,14 @@ use crate::{
     ratio::SimpleFraction,
 };
 
-impl<C, QuoteC> ToDoublePrimitive for Price<C, QuoteC> {
-    type Double = SimpleFraction<U256>;
+impl<C, QuoteC, const UPPER_BOUND: PercentUnits> CommonDoublePrimitive<BoundPercent<UPPER_BOUND>>
+    for Price<C, QuoteC>
+{
+    type CommonDouble = <Self as ToDoublePrimitive>::Double;
+}
 
-    fn to_double(&self) -> Self::Double {
-        SimpleFraction::new(self.amount_quote.to_double(), self.amount.to_double())
-    }
+impl<C, QuoteC> CommonDoublePrimitive<u128> for Price<C, QuoteC> {
+    type CommonDouble = <Self as ToDoublePrimitive>::Double;
 }
 
 impl<C, QuoteC, const UPPER_BOUND: PercentUnits> Fractionable<BoundPercent<UPPER_BOUND>>
@@ -31,19 +33,17 @@ where
 {
 }
 
-impl<C, QuoteC, const UPPER_BOUND: PercentUnits> CommonDoublePrimitive<BoundPercent<UPPER_BOUND>>
-    for Price<C, QuoteC>
-{
-    type CommonDouble = <Self as ToDoublePrimitive>::Double;
-}
-
-impl<C, QuoteC> CommonDoublePrimitive<u128> for Price<C, QuoteC> {
-    type CommonDouble = <Self as ToDoublePrimitive>::Double;
-}
-
 impl<C, QuoteC> IntoMax<SimpleFraction<U256>> for Price<C, QuoteC> {
     fn into_max(self) -> SimpleFraction<U256> {
         self.to_double()
+    }
+}
+
+impl<C, QuoteC> ToDoublePrimitive for Price<C, QuoteC> {
+    type Double = SimpleFraction<U256>;
+
+    fn to_double(&self) -> Self::Double {
+        SimpleFraction::new(self.amount_quote.to_double(), self.amount.to_double())
     }
 }
 

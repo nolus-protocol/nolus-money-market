@@ -16,14 +16,6 @@ where
     type Type = U256;
 }
 
-impl<C> ToDoublePrimitive for Coin<C> {
-    type Double = U256;
-
-    fn to_double(&self) -> Self::Double {
-        self.amount.into()
-    }
-}
-
 impl<C> CommonDoublePrimitive<Duration> for Coin<C> {
     type CommonDouble = <Self as ToDoublePrimitive>::Double;
 }
@@ -53,6 +45,14 @@ impl<C> Fractionable<u128> for Coin<C> {}
 impl<C> IntoMax<U256> for Coin<C> {
     fn into_max(self) -> U256 {
         self.to_double()
+    }
+}
+
+impl<C> ToDoublePrimitive for Coin<C> {
+    type Double = U256;
+
+    fn to_double(&self) -> Self::Double {
+        self.amount.into()
     }
 }
 
