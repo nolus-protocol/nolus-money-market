@@ -1,16 +1,10 @@
-use std::marker::PhantomData;
-
 use bnum::types::U256;
 
 use crate::{
-    coin::Amount,
-    fractionable::{
-        CommonDoublePrimitive, Fractionable, FractionableLegacy, IntoMax, ToDoublePrimitive,
-        TryFromMax,
-    },
+    fractionable::{CommonDoublePrimitive, Fractionable, IntoMax, ToDoublePrimitive, TryFromMax},
     percent::{Units as PercentUnits, bound::BoundPercent},
     price::Price,
-    ratio::{RatioLegacy, SimpleFraction},
+    ratio::SimpleFraction,
 };
 
 impl<C, QuoteC> ToDoublePrimitive for Price<C, QuoteC> {
