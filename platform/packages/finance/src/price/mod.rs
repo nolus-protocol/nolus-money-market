@@ -9,9 +9,9 @@ use crate::{
     coin::{Amount, Coin},
     error::{Error, Result},
     fraction::{Coprime, Unit as FractionUnit},
-    fractionable::HigherRank,
-    ratio::{RatioLegacy, SimpleFraction},
-    rational::RationalLegacy,
+    fractionable::ToDoublePrimitive,
+    ratio::SimpleFraction,
+    rational::Rational,
 };
 
 pub mod base;
@@ -36,8 +36,6 @@ where
         Price::new(self.0, to)
     }
 }
-
-type DoubleAmount = <Amount as HigherRank<Amount>>::Type;
 
 /// Represents the price of a currency in a quote currency, ref: <https://en.wikipedia.org/wiki/Currency_pair>
 ///
@@ -101,34 +99,9 @@ where
     /// Price(amount, amount_quote) * SimpleFraction(nominator / denominator) = Price(amount * denominator, amount_quote * nominator)
     /// where the pairs (amount, nominator) and (amount_quote, denominator) are transformed into co-prime numbers.
     /// Please note that Price(amount, amount_quote) is like SimpleFraction(amount_quote / amount).
-    #[allow(dead_code)]
     pub(crate) fn lossy_mul(self, rhs: SimpleFraction<Amount>) -> Self {
         Self::try_from_fraction(self.to_fraction().lossy_mul(rhs))
             .expect("failed to convert lossy_mul result into price")
-    }
-
-    pub(crate) fn lossy_mul_legacy<R>(self, rhs: &R) -> Self
-    where
-        R: RatioLegacy<Amount>,
-    {
-        let (amount_normalized, rhs_nominator_normalized) =
-            self.amount.to_coprime_with(Coin::<C>::new(rhs.parts()));
-        let (amount_quote_normalized, rhs_denominator_normalized) = self
-            .amount_quote
-            .to_coprime_with(Coin::<QuoteC>::new(rhs.total()));
-
-        let double_amount =
-            DoubleAmount::from(amount_normalized) * DoubleAmount::from(rhs_denominator_normalized);
-        let double_amount_quote = DoubleAmount::from(amount_quote_normalized)
-            * DoubleAmount::from(rhs_nominator_normalized);
-
-        let extra_bits =
-            Self::bits_above_max(double_amount).max(Self::bits_above_max(double_amount_quote));
-
-        Price::new(
-            Coin::new(Self::trim_down(double_amount, extra_bits)),
-            Coin::new(Self::trim_down(double_amount_quote, extra_bits)),
-        )
     }
 
     pub fn inv(self) -> Price<QuoteC, C> {
@@ -202,24 +175,6 @@ where
         SimpleFraction::new(Amount::from(self.amount_quote), Amount::from(self.amount))
     }
 
-    #[track_caller]
-    fn bits_above_max(double_amount: DoubleAmount) -> u32 {
-        const BITS_MAX_AMOUNT: u32 = Amount::BITS;
-        let higher_half = Amount::try_from(double_amount >> BITS_MAX_AMOUNT)
-            .expect("Bigger Amount Higher Rank Type than required!");
-        BITS_MAX_AMOUNT - higher_half.leading_zeros()
-    }
-
-    #[track_caller]
-    fn trim_down(double_amount: DoubleAmount, bits: u32) -> Amount {
-        debug_assert!(bits <= Amount::BITS);
-        let amount: Amount = (double_amount >> bits)
-            .try_into()
-            .expect("insufficient bits to trim");
-        assert!(amount > 0, "price overflow during multiplication");
-        amount
-    }
-
     fn try_from_fraction<U>(fraction: SimpleFraction<U>) -> Option<Self>
     where
         U: FractionUnit + TryInto<Amount>,
@@ -280,11 +235,11 @@ where
         // a/b < c/d if and only if a * d < b * c
         // Please note that Price(amount, amount_quote) is like Ratio(amount_quote / amount).
 
-        let a: DoubleAmount = self.amount_quote.into();
-        let d: DoubleAmount = other.amount.into();
+        let a = self.amount_quote.to_double();
+        let d = other.amount.to_double();
 
-        let b: DoubleAmount = self.amount.into();
-        let c: DoubleAmount = other.amount_quote.into();
+        let b = self.amount.to_double();
+        let c = other.amount_quote.to_double();
         (a * d).cmp(&(b * c))
     }
 }
@@ -350,8 +305,9 @@ where
 ///
 /// For example, total(10 EUR, 1.01 EURUSD) = 10.1 USD
 pub fn total<C, QuoteC>(of: Coin<C>, price: Price<C, QuoteC>) -> Coin<QuoteC> {
-    let ratio_impl = SimpleFraction::new(of, price.amount);
-    RationalLegacy::<Coin<C>>::of(&ratio_impl, price.amount_quote)
+    let ratio_impl = SimpleFraction::new(of.to_primitive(), price.amount.to_primitive());
+    ratio_impl
+        .of(price.amount_quote)
         .expect("TODO the method has to return Option")
 }
 
@@ -364,6 +320,7 @@ mod test {
 
     use crate::{
         coin::{Amount, Coin as CoinT},
+        fraction::Unit,
         price::{self, Price},
         ratio::SimpleFraction,
     };
@@ -673,8 +630,8 @@ mod test {
         assert_eq!(exp, price1.mul(price2));
 
         let price3 = price::total_of(amount1).is(quote2);
-        let ratio = SimpleFraction::new(quote1, amount2);
-        assert_eq!(exp, price3.lossy_mul_legacy(&ratio));
+        let ratio = SimpleFraction::new(quote1.to_primitive(), amount2.to_primitive());
+        assert_eq!(exp, price3.lossy_mul(ratio));
     }
 
     fn lossy_mul_shifts_impl(q1: Amount, shifts: u8) {

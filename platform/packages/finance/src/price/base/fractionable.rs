@@ -1,16 +1,10 @@
-use std::marker::PhantomData;
-
 use bnum::types::U256;
 
 use crate::{
-    coin::Amount,
-    fractionable::{
-        CommonDoublePrimitive, Fractionable, FractionableLegacy, IntoMax, ToDoublePrimitive,
-        TryFromMax,
-    },
+    fractionable::{CommonDoublePrimitive, Fractionable, IntoMax, ToDoublePrimitive, TryFromMax},
     percent::{Units as PercentUnits, bound::BoundPercent},
     price::Price,
-    ratio::{RatioLegacy, SimpleFraction},
+    ratio::SimpleFraction,
 };
 
 impl<C, QuoteC> ToDoublePrimitive for Price<C, QuoteC> {
@@ -60,36 +54,6 @@ where
 {
     fn try_from_max(max: SimpleFraction<U256>) -> Option<Self> {
         Self::try_from_fraction(max)
-    }
-}
-
-// TODO remove after removing usize
-impl<C, QuoteC> FractionableLegacy<PercentUnits> for Price<C, QuoteC>
-where
-    C: 'static,
-    QuoteC: 'static,
-{
-    fn safe_mul<F>(self, fraction: &F) -> Self
-    where
-        F: RatioLegacy<PercentUnits>,
-    {
-        self.lossy_mul_legacy(&RatioUpcast(PhantomData, fraction))
-    }
-}
-
-struct RatioUpcast<'a, U, R>(PhantomData<U>, &'a R)
-where
-    R: RatioLegacy<U>;
-impl<U, R> RatioLegacy<Amount> for RatioUpcast<'_, U, R>
-where
-    U: Into<Amount>,
-    R: RatioLegacy<U>,
-{
-    fn parts(&self) -> Amount {
-        self.1.parts().into()
-    }
-    fn total(&self) -> Amount {
-        self.1.total().into()
     }
 }
 

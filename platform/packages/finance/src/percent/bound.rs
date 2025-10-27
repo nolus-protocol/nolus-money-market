@@ -6,12 +6,7 @@ use std::ops::{Add, Sub};
 use bnum::types::U256;
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    coin::Amount,
-    error::Error,
-    fraction::Unit as FractionUnit,
-    ratio::{RatioLegacy, SimpleFraction},
-};
+use crate::{coin::Amount, error::Error, fraction::Unit as FractionUnit, ratio::SimpleFraction};
 
 use super::Units;
 
@@ -133,16 +128,6 @@ impl<const UPPER_BOUND: Units> From<BoundPercent<UPPER_BOUND>> for u128 {
 impl<const UPPER_BOUND: Units> From<BoundPercent<UPPER_BOUND>> for U256 {
     fn from(percent: BoundPercent<UPPER_BOUND>) -> Self {
         Amount::from(percent).into()
-    }
-}
-
-impl<const UPPER_BOUND: Units> RatioLegacy<Units> for BoundPercent<UPPER_BOUND> {
-    fn parts(&self) -> Units {
-        self.0
-    }
-
-    fn total(&self) -> Units {
-        Self::HUNDRED.0
     }
 }
 
