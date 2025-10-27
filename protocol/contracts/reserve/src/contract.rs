@@ -1,11 +1,6 @@
-<<<<<<< HEAD
 use cosmwasm_std::Storage;
-use std::ops::{Deref, DerefMut};
 
-use access_control::{Sender, permissions::ProtocolAdminPermission};
-=======
 use access_control::permissions::ProtocolAdminPermission;
->>>>>>> 0eddcabeb (fix: CI)
 use currencies::Lpn as LpnCurrency;
 use currency::CurrencyDef;
 use finance::coin::Coin;
