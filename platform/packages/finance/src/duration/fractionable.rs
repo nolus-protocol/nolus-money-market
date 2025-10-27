@@ -3,17 +3,8 @@ use bnum::types::U256;
 use crate::{
     coin::Coin,
     duration::Duration,
-    fractionable::{
-        CommonDoublePrimitive, Fractionable, HigherRank, IntoMax, ToDoublePrimitive, TryFromMax,
-    },
+    fractionable::{CommonDoublePrimitive, Fractionable, IntoMax, ToDoublePrimitive, TryFromMax},
 };
-
-impl<T> HigherRank<T> for u128
-where
-    T: Into<Self>,
-{
-    type Type = U256;
-}
 
 impl<C> CommonDoublePrimitive<Coin<C>> for Duration {
     type CommonDouble = <Coin<C> as ToDoublePrimitive>::Double;

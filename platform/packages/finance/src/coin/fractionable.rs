@@ -1,20 +1,11 @@
 use bnum::types::U256;
 
 use crate::{
-    coin::{Amount, Coin},
+    coin::Coin,
     duration::Duration,
-    fractionable::{
-        CommonDoublePrimitive, Fractionable, HigherRank, IntoMax, ToDoublePrimitive, TryFromMax,
-    },
+    fractionable::{CommonDoublePrimitive, Fractionable, IntoMax, ToDoublePrimitive, TryFromMax},
     percent::{Units as PercentUnits, bound::BoundPercent},
 };
-
-impl<U, C> HigherRank<U> for Coin<C>
-where
-    U: Into<Amount>,
-{
-    type Type = U256;
-}
 
 impl<C> CommonDoublePrimitive<Duration> for Coin<C> {
     type CommonDouble = <Self as ToDoublePrimitive>::Double;
