@@ -39,7 +39,3 @@ where
 {
     fn try_from_max(max: Max) -> Option<Self>;
 }
-
-pub trait HigherRank<T> {
-    type Type;
-}
