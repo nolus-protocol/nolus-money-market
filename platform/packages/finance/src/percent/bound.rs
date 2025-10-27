@@ -6,7 +6,7 @@ use std::ops::{Add, Sub};
 use bnum::types::U256;
 use serde::{Deserialize, Serialize};
 
-use crate::{coin::Amount, error::Error, fraction::Unit as FractionUnit, ratio::SimpleFraction};
+use crate::{error::Error, fraction::Unit as FractionUnit, ratio::SimpleFraction};
 
 use super::Units;
 
@@ -114,20 +114,6 @@ impl<const UPPER_BOUND: Units> Display for BoundPercent<UPPER_BOUND> {
         }
         f.write_char('%')?;
         Ok(())
-    }
-}
-
-// TODO: Revisit it's usage after refactoring Fractionable
-impl<const UPPER_BOUND: Units> From<BoundPercent<UPPER_BOUND>> for u128 {
-    fn from(percent: BoundPercent<UPPER_BOUND>) -> Self {
-        Amount::from(percent.0)
-    }
-}
-
-// TODO: Remove when Fractionable trait boundaries include the traits ToPrimitive and TryFromPrimitive
-impl<const UPPER_BOUND: Units> From<BoundPercent<UPPER_BOUND>> for U256 {
-    fn from(percent: BoundPercent<UPPER_BOUND>) -> Self {
-        Amount::from(percent).into()
     }
 }
 
