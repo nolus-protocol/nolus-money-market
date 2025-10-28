@@ -2,7 +2,7 @@ use std::ops::{Deref, DerefMut};
 
 use serde::Serialize;
 
-use access_control::{AccessPermission, ContractOwnerAccess, Sender};
+use access_control::{ContractOwnerAccess, permissions::ContractOwnerPermission};
 use lease::api::{MigrateMsg as LeaseMigrateMsg, authz::AccessGranted};
 use platform::{
     contract::{self, Code, CodeId, Validator},
@@ -40,26 +40,6 @@ const CURRENT_RELEASE: ProtocolPackageRelease = ProtocolPackageRelease::current(
     package_version!(),
     CONTRACT_STORAGE_VERSION,
 );
-
-struct LeaseAdminOnly<'a> {
-    lease_config: &'a Config,
-}
-
-impl<'a> LeaseAdminOnly<'a> {
-    fn new(lease_config: &'a Config) -> Self {
-        Self { lease_config }
-    }
-}
-
-impl AccessPermission for LeaseAdminOnly<'_> {
-    fn is_granted_to(&self, caller: &Addr) -> bool {
-        self.lease_config.lease_admin == caller
-    }
-}
-
-type LeasesConfigurationPermission<'a> = LeaseAdminOnly<'a>;
-type ChangeLeaseAdminPermission<'a> = LeaseAdminOnly<'a>;
-type AnomalyResolutionPermission<'a> = LeaseAdminOnly<'a>;
 
 #[entry_point]
 pub fn instantiate(

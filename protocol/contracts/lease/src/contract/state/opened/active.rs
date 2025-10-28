@@ -15,7 +15,6 @@ use crate::{
     },
     contract::{
         Lease,
-        PriceAlarmDelivery,
         cmd::{
             ChangeClosePolicy, CloseStatusCmd, CloseStatusDTO, ObtainPayment, OpenLoanRespResult,
         },
