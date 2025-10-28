@@ -5,7 +5,7 @@ use finance::{
 
 use crate::feeders::PriceFeedersError;
 
-#[derive(PartialEq, PartialOrd)]
+#[derive(Debug, PartialEq, PartialOrd)]
 pub struct Count(u32);
 
 impl Count {
@@ -13,10 +13,6 @@ impl Count {
 
     pub const fn new(count: u32) -> Self {
         Self(count)
-    }
-
-    pub const fn count(&self) -> u32 {
-        self.0
     }
 }
 

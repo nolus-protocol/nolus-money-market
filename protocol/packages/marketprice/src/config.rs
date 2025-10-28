@@ -208,7 +208,10 @@ mod test {
             1,
             Percent100::from_percent(75),
         );
-        assert_eq!(exp, c.min_feeders(FeederCount::new(total)).count());
+        assert_eq!(
+            FeederCount::new(exp),
+            c.min_feeders(FeederCount::new(total))
+        );
     }
     #[test]
     fn feeders_needed_rounds_properly() {
