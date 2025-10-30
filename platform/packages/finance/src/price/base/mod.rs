@@ -16,7 +16,6 @@ use super::Price;
 
 mod external;
 mod fraction;
-mod fractionable;
 mod unchecked;
 pub mod with_price;
 
