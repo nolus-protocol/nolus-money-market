@@ -1,5 +1,3 @@
-use cosmwasm_std::Storage;
-
 use access_control::permissions::ProtocolAdminPermission;
 use currencies::Lpn as LpnCurrency;
 use currency::CurrencyDef;
@@ -38,21 +36,21 @@ const CURRENT_RELEASE: ProtocolPackageRelease = ProtocolPackageRelease::current(
 
 #[entry_point]
 pub fn instantiate(
-    mut deps: DepsMut<'_>,
+    deps: DepsMut<'_>,
     _env: Env,
     _info: MessageInfo,
     new_reserve: InstantiateMsg,
 ) -> Result<CwResponse> {
-    let lease_code_admin = deps
+    let protocol_admin = deps
         .api
-        .addr_validate(new_reserve.lease_code_admin.as_str())?;
+        .addr_validate(new_reserve.protocol_admin.as_str())?;
 
     Code::try_new(
         new_reserve.lease_code.into(),
         &platform::contract::validator(deps.querier),
     )
     .map_err(Into::into)
-    .and_then(|lease_code| Config::new(lease_code, lease_code_admin).store(deps.storage))
+    .and_then(|lease_code| Config::new(lease_code, protocol_admin).store(deps.storage))
     .map(|()| response::empty_response())
     .inspect_err(platform_error::log(deps.api))
 }
@@ -82,12 +80,11 @@ pub fn execute(
     msg: ExecuteMsg,
 ) -> Result<CwResponse> {
     let cfg = Config::load(deps.storage)?;
-    let lease_code_admin = cfg.lease_code_admin();
+    let protocol_admin = cfg.protocol_admin();
 
     match msg {
         ExecuteMsg::NewLeaseCode(code) => {
-            access_control::check(&ProtocolAdminPermission::new(&lease_code_admin), &info)
-                .map_err(Into::into)
+            authorize_protocol_admin_only(&protocol_admin, &info)
                 .and_then(|()| Config::update_lease_code(deps.storage, code)) // TODO - reuse cfg
                 .map(|()| PlatformResponse::default())
         }
@@ -100,7 +97,7 @@ pub fn execute(
                 })
             }),
         ExecuteMsg::DumpBalanceTo(receiver) => {
-            authorize_protocol_admin_only(deps.storage.deref(), &info)
+            authorize_protocol_admin_only(protocol_admin, &info)
                 .and_then(|()| dump_balance_to(&env.contract.address, receiver, deps.querier))
         }
     }
@@ -125,10 +122,12 @@ pub fn query(deps: Deps<'_>, _env: Env, msg: QueryMsg) -> Result<Binary> {
     .inspect_err(platform_error::log(deps.api))
 }
 
-fn authorize_protocol_admin_only(store: &dyn Storage, call_message: &MessageInfo) -> Result<()> {
-    SingleUserAccess::new(store, crate::access_control::PROTOCOL_ADMIN_KEY)
-        .check(call_message)
-        .map_err(Into::into)
+fn authorize_protocol_admin_only(protocol_admin: &Addr, call_message: &MessageInfo) -> Result<()> {
+    access_control::check(
+        &ProtocolAdminPermission::new(protocol_admin),
+        call_message,
+    )
+    .map_err(Into::into)
 }
 
 fn do_cover_losses(

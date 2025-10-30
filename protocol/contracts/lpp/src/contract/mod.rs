@@ -44,7 +44,7 @@ const CURRENT_RELEASE: ProtocolPackageRelease = ProtocolPackageRelease::current(
 
 #[entry_point]
 pub fn instantiate(
-    mut deps: DepsMut<'_>,
+    deps: DepsMut<'_>,
     env: Env,
     _info: MessageInfo,
     msg: InstantiateMsg,
@@ -95,7 +95,7 @@ pub fn migrate(
 
 #[entry_point]
 pub fn execute(
-    mut deps: DepsMut<'_>,
+    deps: DepsMut<'_>,
     env: Env,
     info: MessageInfo,
     msg: ExecuteMsg<LpnCurrencies>,

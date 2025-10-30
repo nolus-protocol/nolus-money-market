@@ -1,5 +1,3 @@
-use std::ops::{Deref, DerefMut};
-
 use access_control::user::User;
 use dex::{CheckType, ContinueResult as DexResult, Handler as _, Response as DexResponse};
 use oracle_platform::OracleRef;
@@ -14,7 +12,7 @@ use sdk::{
     cosmwasm_ext::Response as CwResponse,
     cosmwasm_std::{
         Api, Binary, ContractInfo, Deps, DepsMut, Env, MessageInfo, QuerierWrapper, Reply,
-        entry_point, to_json_binary,
+        entry_point,
     },
     neutron_sdk::sudo::msg::SudoMsg as NeutronSudoMsg,
 };
@@ -29,7 +27,7 @@ use crate::{
     msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg},
     profit::Profit,
     result::ContractResult,
-    state::{Config, State},
+    state::{Config, ConfigManagement as _, State},
 };
 
 const CONTRACT_STORAGE_VERSION: VersionSegment = 1;
@@ -41,7 +39,7 @@ const CURRENT_RELEASE: ProtocolPackageRelease = ProtocolPackageRelease::current(
 
 #[entry_point]
 pub fn instantiate(
-    mut deps: DepsMut<'_>,
+    deps: DepsMut<'_>,
     _env: Env,
     info: MessageInfo,
     msg: InstantiateMsg,
@@ -91,49 +89,59 @@ pub fn execute(
     info: MessageInfo,
     msg: ExecuteMsg,
 ) -> ContractResult<CwResponse> {
+    let contract_info = env.contract.clone();
     match msg {
-        ExecuteMsg::TimeAlarm {} => try_handle_execute_message(
-            deps,
-            env,
-            |state, querier, env| State::on_time_alarm(state, querier, env, info),
-            (info, CheckType::Timealarm, env.contract),
-        )
-        .map(response::response_only_messages),
+        ExecuteMsg::TimeAlarm {} => {
+            let info_clone = info.clone();
+            try_handle_execute_message(
+                deps,
+                env,
+                |state, querier, env| State::on_time_alarm(state, querier, env, info),
+                (info_clone, CheckType::Timealarm, contract_info),
+            )
+            .map(response::response_only_messages)
+        }
         ExecuteMsg::Config { cadence_hours } => {
             let state = State::load(deps.storage)?;
 
-            state.check_permission(&info, CheckType::ContractOwner, env.contract)?;
+            state.check_permission(&info, CheckType::ContractOwner, contract_info)?;
 
             let StateMachineResponse {
                 response,
                 next_state,
-            } = State::load(deps.storage)?.try_update_config(env.block.time, cadence_hours)?;
+            } = state.try_update_config(env.block.time, cadence_hours)?;
 
             next_state.store(deps.storage)?;
 
             Ok(response::response_only_messages(response))
         }
-        ExecuteMsg::DexCallback() => try_handle_execute_message(
-            deps,
-            env,
-            State::on_inner,
-            (info, CheckType::DexResponseSafeDelivery, env.contract),
-        )
-        .map(response::response_only_messages),
-        ExecuteMsg::DexCallbackContinue() => try_handle_execute_message(
-            deps,
-            env,
-            State::on_inner_continue,
-            (info, CheckType::DexResponseSafeDelivery, env.contract),
-        )
-        .map(response::response_only_messages),
-        ExecuteMsg::Heal() => try_handle_execute_message(
-            deps,
-            env,
-            State::heal,
-            (info, CheckType::None, env.contract),
-        )
-        .map(response::response_only_messages),
+        ExecuteMsg::DexCallback() => {
+            try_handle_execute_message(
+                deps,
+                env,
+                State::on_inner,
+                (info, CheckType::DexResponseSafeDelivery, contract_info),
+            )
+            .map(response::response_only_messages)
+        }
+        ExecuteMsg::DexCallbackContinue() => {
+            try_handle_execute_message(
+                deps,
+                env,
+                State::on_inner_continue,
+                (info, CheckType::DexResponseSafeDelivery, contract_info),
+            )
+            .map(response::response_only_messages)
+        }
+        ExecuteMsg::Heal() => {
+            try_handle_execute_message(
+                deps,
+                env,
+                State::heal,
+                (info, CheckType::None, contract_info),
+            )
+            .map(response::response_only_messages)
+        }
     }
 }
 

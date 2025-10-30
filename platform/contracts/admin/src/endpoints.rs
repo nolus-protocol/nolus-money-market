@@ -123,7 +123,6 @@ pub fn sudo(deps: DepsMut<'_>, env: Env, msg: SudoMsg) -> ContractResult<CwRespo
                 Config::new(new_dex_admin)
                     .store(deps.storage)
                     .map(|()| response::empty_response())
-                    .map_err(Into::into)
             }),
         SudoMsg::RegisterProtocol { name, ref protocol } => {
             register_protocol(deps.storage, deps.querier, name, protocol)

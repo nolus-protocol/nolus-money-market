@@ -6,14 +6,14 @@ use access_control::{
     user::User,
 };
 use dex::{
-    Account, CheckType, Connectable, ConnectionParams, Contract, Handler, IcaConnectee,
-    Response as DexResponse, error::Result as DexResult,
+    Account, CheckType, Connectable, ConnectionParams, Contract, Error as DexError,
+    Handler, IcaConnectee, Response as DexResponse,
 };
 use finance::duration::Duration;
 use sdk::cosmwasm_std::{ContractInfo, QuerierWrapper, Timestamp};
 use timealarms::stub::TimeAlarmDelivery;
 
-use crate::{error::ContractError, msg::ConfigResponse, result::ContractResult};
+use crate::{msg::ConfigResponse, result::ContractResult};
 
 use super::{Config, ConfigManagement, IcaConnector, State, idle::Idle};
 
@@ -79,30 +79,31 @@ impl Handler for OpenIca {
         user: &U,
         check_type: CheckType,
         contract_info: ContractInfo,
-    ) -> DexResult<Self>
+    ) -> Result<(), DexError>
     where
         U: User,
     {
         match check_type {
             CheckType::Timealarm => {
                 access_control::check(&TimeAlarmDelivery::new(&self.config.time_alarms()), user)
-                    .map_err(|e| map_err(DexError::Unauthorized(e)))?;
+                    .map_err(DexError::Unauthorized)?;
             }
             CheckType::ContractOwner => {
                 access_control::check(
                     &ContractOwnerPermission::new(&self.config.contract_owner()),
                     user,
                 )
-                .map_err(|e| map_err(DexError::Unauthorized(e)))?;
+                .map_err(DexError::Unauthorized)?;
             }
             CheckType::DexResponseSafeDelivery => {
                 access_control::check(
                     &DexResponseSafeDeliveryPermission::new(&contract_info),
                     user,
                 )
-                .map_err(|e| map_err(DexError::Unauthorized(e)))?;
+                .map_err(DexError::Unauthorized)?;
             }
             CheckType::None => {}
         }
+        Ok(())
     }
 }

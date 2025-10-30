@@ -1,10 +1,10 @@
 use serde::{Deserialize, Serialize};
-use std::fmt::{Display, Formatter, result::Result as StdResult};
+use std::fmt::{Display, Formatter};
 
 use access_control::user::User;
 use dex::{
-    CheckType, ConnectionParams, ContinueResult, Contract, Handler, Response as DexResponse,
-    Result as DexResult, StateLocalOut, error::Result as DexErrResult,
+    CheckType, ConnectionParams, ContinueResult, Contract, Error as DexError, Handler,
+    Response as DexResponse, Result as DexResult, StateLocalOut,
 };
 use finance::duration::Duration;
 use platform::{
@@ -244,17 +244,16 @@ impl Handler for State {
         user: &U,
         check_type: CheckType,
         contract_info: ContractInfo,
-    ) -> StdResult<(), Error>
+    ) -> Result<(), DexError>
     where
         U: User,
     {
         match &self.0 {
-            StateEnum::OpenIca(ica) => ica
-                .check_permission(user, check_type, contract_info),
-            StateEnum::Idle(idle) => idle
-                .check_permission(user, check_type, contract_info),
-            StateEnum::BuyBack(buy_back) => buy_back
-                .check_permission(user, check_type, contract_info),
+            StateEnum::OpenIca(ica) => ica.check_permission(user, check_type, contract_info),
+            StateEnum::Idle(idle) => idle.check_permission(user, check_type, contract_info),
+            StateEnum::BuyBack(buy_back) => {
+                buy_back.check_permission(user, check_type, contract_info)
+            }
         }
     }
 }

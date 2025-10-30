@@ -1,5 +1,3 @@
-use std::ops::{Deref, DerefMut};
-
 use admin_contract::msg::{
     ProtocolQueryResponse, ProtocolsQueryResponse, QueryMsg as ProtocolsRegistry,
 };
@@ -228,7 +226,7 @@ where
 }
 
 fn setup_dispatching(
-    mut storage: &mut dyn Storage,
+    storage: &mut dyn Storage,
     querier: QuerierWrapper<'_>,
     api: &dyn Api,
     env: Env,

@@ -1,6 +1,4 @@
-use access_control::{
-    AccessPermission, permissions::SameContractOnly,
-};
+use access_control::{AccessPermission, permissions::SameContractOnly};
 use serde::{Deserialize, Serialize};
 
 use currency::{Currency, Group, MemberOf};
