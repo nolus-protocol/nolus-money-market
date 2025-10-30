@@ -3,7 +3,6 @@ use std::fmt::{Debug, Display, Formatter, Result as FmtResult, Write};
 #[cfg(any(test, feature = "testing"))]
 use std::ops::{Add, Sub};
 
-use bnum::types::U256;
 use serde::{Deserialize, Serialize};
 
 use crate::{error::Error, fraction::Unit as FractionUnit, ratio::SimpleFraction};
@@ -99,6 +98,16 @@ impl<const UPPER_BOUND: Units> TryFrom<Units> for BoundPercent<UPPER_BOUND> {
     }
 }
 
+impl<U, const UPPER_BOUND: Units> From<BoundPercent<UPPER_BOUND>> for SimpleFraction<U>
+where
+    U: FractionUnit,
+    BoundPercent<UPPER_BOUND>: BoundedAs<U>,
+{
+    fn from(percent: BoundPercent<UPPER_BOUND>) -> Self {
+        percent.to_fraction()
+    }
+}
+
 impl<const UPPER_BOUND: Units> Display for BoundPercent<UPPER_BOUND> {
     #[track_caller]
     fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
@@ -123,8 +132,8 @@ pub(crate) trait BoundedAs<T> {
     fn into_target(self) -> T;
 }
 
-impl<const UPPER_BOUND: u32> BoundedAs<U256> for BoundPercent<UPPER_BOUND> {
-    fn into_target(self) -> U256 {
+impl<const UPPER_BOUND: u32> BoundedAs<u128> for BoundPercent<UPPER_BOUND> {
+    fn into_target(self) -> u128 {
         self.units().into()
     }
 }
@@ -158,8 +167,6 @@ impl<const UPPER_BOUND: Units> Sub for BoundPercent<UPPER_BOUND> {
 
 #[cfg(test)]
 mod test {
-    use bnum::types::U256;
-
     use crate::{
         fraction::Fraction,
         percent::{Percent, Percent100, Units, test},
@@ -302,11 +309,11 @@ mod test {
             test::percent(1001).to_fraction()
         );
         assert_eq!(
-            SimpleFraction::new(u_256(400), u_256(1000)),
+            SimpleFraction::new(u_128(400), u_128(1000)),
             test::percent100(400).to_fraction()
         );
         assert_eq!(
-            SimpleFraction::new(u_256(Units::MAX), u_256(1000)),
+            SimpleFraction::new(u_128(Units::MAX), u_128(1000)),
             test::percent(Units::MAX).to_fraction()
         )
     }
@@ -323,8 +330,8 @@ mod test {
         test_display("100%", 1000);
     }
 
-    fn u_256(quantity: Units) -> U256 {
-        U256::from(quantity)
+    fn u_128(quantity: Units) -> u128 {
+        quantity.into()
     }
 
     fn test_display(exp: &str, permilles: Units) {
