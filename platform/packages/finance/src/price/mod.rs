@@ -105,8 +105,11 @@ where
     /// Price(amount, amount_quote) * Ratio(nominator / denominator) = Price(amount * denominator, amount_quote * nominator)
     /// where the pairs (amount, nominator) and (amount_quote, denominator) are transformed into co-prime numbers.
     /// Please note that Price(amount, amount_quote) is like SimpleFraction(amount_quote / amount).
-    pub(crate) fn lossy_mul(self, rhs: SimpleFraction<Amount>) -> Option<Self> {
-        Self::try_from_fraction(self.to_fraction().lossy_mul(rhs))
+    pub fn lossy_mul<F>(self, rhs: F) -> Option<Self>
+    where
+        F: Into<SimpleFraction<Amount>>,
+    {
+        Self::try_from_fraction(self.to_fraction().lossy_mul(rhs.into()))
     }
 
     pub fn inv(self) -> Price<QuoteC, C> {
@@ -297,8 +300,10 @@ where
         // Price(a, b) * Price(c, d) = Price(a, d) * Rational(b / c)
         // Please note that Price(amount, amount_quote) is like Ratio(amount_quote / amount).
 
-        Price::new(self.amount, rhs.amount_quote)
-            .lossy_mul(&SimpleFraction::new(self.amount_quote, rhs.amount))
+        Price::new(self.amount, rhs.amount_quote).lossy_mul(SimpleFraction::new(
+            self.amount_quote.to_primitive(),
+            rhs.amount.to_primitive(),
+        ))
     }
 }
 
@@ -652,6 +657,153 @@ mod test {
         let price1 = price::total_of(c(a1)).is(q(q1));
         let price2 = price::total_of(q(a2)).is(qq(q2));
         assert_eq!(None, price1.mul(price2));
+    }
+
+    fn price(amount: Coin, amount_quote: QuoteCoin) -> Price<SuperGroupTestC2, SuperGroupTestC1> {
+        Price::new(amount, amount_quote)
+    }
+}
+
+#[cfg(test)]
+mod test_lossy {
+    use currency::test::{SubGroupTestC10, SuperGroupTestC1};
+
+    use crate::coin::{Amount, Coin};
+
+    mod percent {
+        use crate::{
+            percent::Percent100,
+            price::{self},
+        };
+
+        #[test]
+        fn greater_than_one() {
+            let price = price::total_of(super::c(1)).is(super::q(1000));
+            let percent = Percent100::from_permille(1);
+            assert_eq!(
+                price.lossy_mul(percent),
+                price::total_of(super::c(1)).is(super::q(1))
+            );
+        }
+
+        #[test]
+        fn less_than_one() {
+            let price = price::total_of(super::c(10)).is(super::q(1));
+            let twenty_percents = Percent100::from_percent(20);
+            assert_eq!(
+                price.lossy_mul(twenty_percents),
+                price::total_of(super::c(50)).is(super::q(1))
+            );
+        }
+    }
+
+    mod u128_ratio {
+        use currency::test::{SubGroupTestC10, SuperGroupTestC1};
+
+        use crate::{
+            coin::{Amount, Coin},
+            price::{self},
+            ratio::SimpleFraction,
+        };
+
+        #[test]
+        fn greater_than_one() {
+            test_impl(super::c(1), super::q(999), 2, 3, super::c(1), super::q(666));
+            test_impl(
+                super::c(2),
+                super::q(Amount::MAX),
+                2,
+                1,
+                super::c(1),
+                super::q(Amount::MAX),
+            );
+            // follow with rounding
+            {
+                let exp_q = 255211775190703847597530955573826158591; // (Amount::MAX * 3) >> 2;
+                let exp_c = (2 * 4) >> 2;
+                test_impl(
+                    super::c(2),
+                    super::q(Amount::MAX),
+                    3,
+                    4,
+                    super::c(exp_c),
+                    super::q(exp_q),
+                );
+            }
+            {
+                let exp_q = 212676479325586539664609129644855132159; // (Amount::MAX * 5) >> 3;
+                let exp_c = (2 * 4) >> 3;
+                test_impl(
+                    super::c(2),
+                    super::q(Amount::MAX),
+                    5,
+                    4,
+                    super::c(exp_c),
+                    super::q(exp_q),
+                );
+            }
+        }
+
+        #[test]
+        fn less_than_one() {
+            test_impl(super::c(150), super::q(1), 3, 2, super::c(100), super::q(1));
+            test_impl(
+                super::c(Amount::MAX),
+                super::q(6),
+                2,
+                3,
+                super::c(Amount::MAX),
+                super::q(4),
+            );
+            // follow with rounding
+            let exp_c = 191408831393027885698148216680369618943; // (Amount::MAX * 9) >> 4;
+            let exp_q = (8 * 4) >> 4;
+            test_impl(
+                super::c(Amount::MAX),
+                super::q(8),
+                4,
+                9,
+                super::c(exp_c),
+                super::q(exp_q),
+            );
+        }
+
+        #[test]
+        #[should_panic = "overflow"]
+        fn overflow() {
+            test_impl(
+                super::c(2),
+                super::q(Amount::MAX),
+                9,
+                4,
+                super::c(1),
+                super::q(Amount::MAX),
+            );
+        }
+
+        #[track_caller]
+        fn test_impl(
+            amount1: Coin<SubGroupTestC10>,
+            quote1: Coin<SuperGroupTestC1>,
+            nominator: u128,
+            denominator: u128,
+            amount_exp: Coin<SubGroupTestC10>,
+            quote_exp: Coin<SuperGroupTestC1>,
+        ) {
+            let price = price::total_of(amount1).is(quote1);
+            let ratio = SimpleFraction::new(nominator, denominator);
+            assert_eq!(
+                price.lossy_mul(ratio),
+                price::total_of(amount_exp).is(quote_exp)
+            );
+        }
+    }
+    fn c(a: Amount) -> Coin<SubGroupTestC10> {
+        Coin::new(a)
+    }
+
+    fn q(a: Amount) -> Coin<SuperGroupTestC1> {
+        Coin::new(a)
     }
 }
 
