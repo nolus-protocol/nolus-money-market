@@ -27,13 +27,13 @@ impl TryFrom<usize> for Count {
     }
 }
 impl CommonDoublePrimitive<Percent100> for Count {
-    type CommonDouble = u64;
+    type CommonDouble = <Count as ToDoublePrimitive>::Double;
 }
 
 impl Fractionable<Percent100> for Count {}
 
-impl IntoMax<u64> for Count {
-    fn into_max(self) -> u64 {
+impl IntoMax<<Count as ToDoublePrimitive>::Double> for Count {
+    fn into_max(self) -> <Count as ToDoublePrimitive>::Double {
         self.to_double()
     }
 }
@@ -46,8 +46,8 @@ impl ToDoublePrimitive for Count {
     }
 }
 
-impl TryFromMax<u64> for Count {
-    fn try_from_max(max: u64) -> Option<Self> {
+impl TryFromMax<<Count as ToDoublePrimitive>::Double> for Count {
+    fn try_from_max(max: <Count as ToDoublePrimitive>::Double) -> Option<Self> {
         max.try_into().map(Self::new).ok()
     }
 }
