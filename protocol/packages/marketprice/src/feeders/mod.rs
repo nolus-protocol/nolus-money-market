@@ -25,7 +25,7 @@ pub enum PriceFeedersError {
     #[error("Unauthorized")]
     Unauthorized {},
 
-    #[error("Maximum feeder count reached")]
+    #[error("Given amount exceeds the maximum count of feeders supported")]
     MaxFeederCount {},
 }
 
@@ -53,9 +53,7 @@ impl PriceFeeders {
     pub fn register(&self, deps: DepsMut<'_>, feeder: Addr) -> Result<(), PriceFeedersError> {
         let mut db = self.feeders(deps.storage)?;
 
-        if FeederCount::try_from(db.len()).is_err() {
-            return Err(PriceFeedersError::MaxFeederCount {});
-        }
+        FeederCount::try_from(db.len()).map_err(|_| PriceFeedersError::MaxFeederCount {})?;
 
         if db.contains(&feeder) {
             return Err(PriceFeedersError::FeederAlreadyRegistered {});
