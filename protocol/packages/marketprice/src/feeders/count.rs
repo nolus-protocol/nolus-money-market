@@ -9,8 +9,6 @@ use crate::feeders::PriceFeedersError;
 pub struct Count(u32);
 
 impl Count {
-    pub const MAX: Self = Self(u32::MAX);
-
     pub const fn new(count: u32) -> Self {
         Self(count)
     }
