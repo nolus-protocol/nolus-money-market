@@ -399,13 +399,13 @@ mod test {
     };
     use sdk::cosmwasm_std::{Addr, Storage, Timestamp, testing::MockStorage};
 
-    use crate::{Repo, error::PriceFeedsError, market_price::Config};
+    use crate::{Repo, error::PriceFeedsError, feeders::FeederCount, market_price::Config};
 
     use super::PriceFeeds;
 
     const FEEDER: &str = "0xifeege";
     const ROOT_NS: &str = "root_ns";
-    const TOTAL_FEEDERS: usize = 1;
+    const TOTAL_FEEDERS: FeederCount = FeederCount::new(1);
     const FEED_VALIDITY: Duration = Duration::from_secs(30);
     const SAMPLE_PERIOD_SECS: Duration = Duration::from_secs(5);
     const SAMPLES_NUMBER: u16 = 6;

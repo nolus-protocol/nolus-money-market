@@ -23,12 +23,14 @@ use sdk::{
 
 use crate::Repo;
 use crate::feed::ObservationsRepo;
+use crate::feeders::FeederCount;
 use crate::{
     config::Config, error::PriceFeedsError, feeders::PriceFeeders, market_price::PriceFeeds,
 };
 
 const ROOT_NS: &str = "root_ns";
-const TOTAL_FEEDERS: usize = 1;
+const TOTAL_FEEDERS: FeederCount = FeederCount::new(1);
+const TWICE_TOTAL_FEEDERS: FeederCount = FeederCount::new(2);
 const SAMPLE_PERIOD_SECS: u32 = 5;
 const SAMPLES_NUMBER: u16 = 12;
 const DISCOUNTING_FACTOR: Percent100 = Percent100::from_permille(750);
@@ -129,7 +131,7 @@ fn marketprice_add_feed() {
     let err = market
         .price::<SuperGroupTestC4, SuperGroup, _>(
             ts,
-            TOTAL_FEEDERS + TOTAL_FEEDERS,
+            TWICE_TOTAL_FEEDERS,
             [
                 &currency::dto::<SuperGroupTestC1, _>(),
                 &currency::dto::<SuperGroupTestC4, _>(),

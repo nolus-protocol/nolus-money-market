@@ -169,11 +169,12 @@ mod test {
     };
     use sdk::cosmwasm_std::{Addr, Timestamp};
 
-    use crate::{config::Config, error::PriceFeedsError};
+    use crate::{config::Config, error::PriceFeedsError, feeders::FeederCount};
 
     use super::{PriceFeed, memory::InMemoryObservations, observations::Observations};
 
-    const ONE_FEEDER: usize = 1;
+    const ONE_FEEDER: FeederCount = FeederCount::new(1);
+    const TWO_FEEDERS: FeederCount = FeederCount::new(2);
     const SAMPLE_PERIOD: Duration = Duration::from_secs(5);
     const SAMPLES_NUMBER: u16 = 12;
     const VALIDITY: Duration = Duration::from_secs(60);
@@ -253,7 +254,7 @@ mod test {
         );
         assert_eq!(
             Err(PriceFeedsError::NoPrice()),
-            feed.calc_price(&config, block_time, ONE_FEEDER + ONE_FEEDER)
+            feed.calc_price(&config, block_time, TWO_FEEDERS)
         );
 
         assert_eq!(
@@ -301,28 +302,20 @@ mod test {
         );
         assert_eq!(
             Ok(price(19, 5050)),
-            feed.calc_price(&config, feed2_time, ONE_FEEDER + ONE_FEEDER)
+            feed.calc_price(&config, feed2_time, TWO_FEEDERS)
         );
         assert_eq!(
             Ok(price(19, 5050)),
-            feed.calc_price(
-                &config,
-                block_time - Duration::from_nanos(1),
-                ONE_FEEDER + ONE_FEEDER
-            )
+            feed.calc_price(&config, block_time - Duration::from_nanos(1), TWO_FEEDERS)
         );
         assert_eq!(
             Ok(price(19, 5000)),
-            feed.calc_price(&config, block_time, ONE_FEEDER + ONE_FEEDER)
+            feed.calc_price(&config, block_time, TWO_FEEDERS)
         );
 
         assert_eq!(
             Err(PriceFeedsError::NoPrice()),
-            feed.calc_price(
-                &config,
-                block_time + Duration::from_nanos(1),
-                ONE_FEEDER + ONE_FEEDER
-            )
+            feed.calc_price(&config, block_time + Duration::from_nanos(1), TWO_FEEDERS)
         );
     }
 
