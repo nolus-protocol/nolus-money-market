@@ -191,7 +191,7 @@ mod test {
             testing::{PaymentC1, PaymentC3, PaymentC4, PaymentC5, PaymentC6, PaymentC7},
         };
         use finance::{duration::Duration, percent::Percent100, price::base::BasePrice};
-        use marketprice::{Repo, config::Config};
+        use marketprice::{FeederCount, Repo, config::Config};
         use sdk::cosmwasm_std::{
             Addr, Storage,
             testing::{self, MockStorage},
@@ -203,6 +203,7 @@ mod test {
         };
 
         const ROOT_NS: &str = "root";
+        const TOTAL_FEEDERS: FeederCount = FeederCount::new(1);
 
         #[test]
         fn normal() {
@@ -242,7 +243,7 @@ mod test {
                 .unwrap();
 
             let prices: Vec<_> = oracle
-                .all_prices_iter(tree.swap_pairs_df(), env.block.time, 1)
+                .all_prices_iter(tree.swap_pairs_df(), env.block.time, TOTAL_FEEDERS)
                 .flatten()
                 .collect();
 
@@ -303,7 +304,7 @@ mod test {
             ];
 
             let prices: Vec<_> = oracle
-                .all_prices_iter(tree.swap_pairs_df(), env.block.time, 1)
+                .all_prices_iter(tree.swap_pairs_df(), env.block.time, TOTAL_FEEDERS)
                 .collect::<Result<_, _>>()
                 .unwrap();
 
