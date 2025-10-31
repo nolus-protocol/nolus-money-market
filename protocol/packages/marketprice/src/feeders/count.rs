@@ -20,7 +20,7 @@ impl TryFrom<usize> for Count {
     fn try_from(value: usize) -> Result<Self, Self::Error> {
         value
             .try_into()
-            .map_err(|_| Self::Error::MaxFeederCount {})
+            .map_err(Self::Error::MaxFeederCount)
             .map(Self::new)
     }
 }
@@ -30,7 +30,7 @@ impl CommonDoublePrimitive<Percent100> for Count {
 
 impl Fractionable<Percent100> for Count {}
 
-impl IntoMax<<Count as ToDoublePrimitive>::Double> for Count {
+impl IntoMax<<Count as CommonDoublePrimitive<Percent100>>::CommonDouble> for Count {
     fn into_max(self) -> <Count as ToDoublePrimitive>::Double {
         self.to_double()
     }
