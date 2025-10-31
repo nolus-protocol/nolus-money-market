@@ -84,7 +84,7 @@ pub fn execute(
 
     match msg {
         ExecuteMsg::NewLeaseCode(code) => {
-            authorize_protocol_admin_only(&protocol_admin, &info)
+            authorize_protocol_admin_only(protocol_admin, &info)
                 .and_then(|()| Config::update_lease_code(deps.storage, code)) // TODO - reuse cfg
                 .map(|()| PlatformResponse::default())
         }
@@ -96,10 +96,8 @@ pub fn execute(
                     do_cover_losses(lease, losses, &env.contract.address, deps.querier)
                 })
             }),
-        ExecuteMsg::DumpBalanceTo(receiver) => {
-            authorize_protocol_admin_only(protocol_admin, &info)
-                .and_then(|()| dump_balance_to(&env.contract.address, receiver, deps.querier))
-        }
+        ExecuteMsg::DumpBalanceTo(receiver) => authorize_protocol_admin_only(protocol_admin, &info)
+            .and_then(|()| dump_balance_to(&env.contract.address, receiver, deps.querier)),
     }
     .map(response::response_only_messages)
     .inspect_err(platform_error::log(deps.api))
@@ -123,11 +121,8 @@ pub fn query(deps: Deps<'_>, _env: Env, msg: QueryMsg) -> Result<Binary> {
 }
 
 fn authorize_protocol_admin_only(protocol_admin: &Addr, call_message: &MessageInfo) -> Result<()> {
-    access_control::check(
-        &ProtocolAdminPermission::new(protocol_admin),
-        call_message,
-    )
-    .map_err(Into::into)
+    access_control::check(&ProtocolAdminPermission::new(protocol_admin), call_message)
+        .map_err(Into::into)
 }
 
 fn do_cover_losses(

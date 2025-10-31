@@ -236,7 +236,7 @@ mod test {
         contract::Code,
     };
     use sdk::cosmwasm_std::{
-        Storage, Timestamp,
+        Addr, Storage, Timestamp,
         testing::{self, MockStorage},
     };
 
@@ -274,7 +274,7 @@ mod test {
             )
             .expect("Couldn't construct interest rate value!"),
             Percent100::ZERO,
-            protocol_admin,
+            protocol_admin.clone(),
         );
         let bank = MockBankView::only_balance(initial_lpp_balance);
         setup_storage(&mut store, &config, &bank);

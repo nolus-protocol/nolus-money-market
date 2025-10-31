@@ -54,7 +54,7 @@ impl Config {
 #[cfg(test)]
 mod test {
     use platform::contract::{Code, CodeId};
-    use sdk::cosmwasm_std::{Storage, testing::MockStorage};
+    use sdk::cosmwasm_std::{Addr, Storage, testing::MockStorage};
 
     use super::Config;
 

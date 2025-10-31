@@ -325,27 +325,21 @@ mod test {
         let lease_code_id = Code::unchecked(123);
         let protocol_admin = Addr::unchecked("admin");
 
-        Config::store(
-            &ApiConfig::new(
-                lease_code_id,
-                InterestRate::new(
-                    BASE_INTEREST_RATE,
-                    UTILIZATION_OPTIMAL,
-                    ADDON_OPTIMAL_INTEREST_RATE,
-                )
-                .expect("Couldn't construct interest rate value!"),
-                DEFAULT_MIN_UTILIZATION,
-                protocol_admin,
-            ),
-            deps.as_mut().storage,
-        )
-        .expect("Failed to store Config!");
-        Total::<TheCurrency>::new()
-            .store(deps.as_mut().storage)
-            .expect("can't initialize Total");
+        let config = ApiConfig::new(
+            lease_code_id,
+            InterestRate::new(
+                BASE_INTEREST_RATE,
+                UTILIZATION_OPTIMAL,
+                ADDON_OPTIMAL_INTEREST_RATE,
+            )
+            .expect("Couldn't construct interest rate value!"),
+            DEFAULT_MIN_UTILIZATION,
+            protocol_admin,
+        );
 
         let mut store = MockStorage::new();
         let now = Timestamp::default();
+        let lpp = LiquidityPool::<TheCurrency, _>::new(&config, &bank);
         lpp.save(&mut store).unwrap();
         let lpp = LiquidityPool::<'_, '_, TheCurrency, _>::load(&store, &config, &bank).unwrap();
         assert_eq!(
@@ -764,13 +758,6 @@ mod test {
         assert_eq!(withdraw, Coin::new(1110));
     }
 
-    fn coin_cw<IntoCoin>(into_coin: IntoCoin) -> CwCoin
-    where
-        IntoCoin: Into<Coin<TheCurrency>>,
-    {
-        coin_legacy::to_cosmwasm_on_nolus::<TheCurrency>(into_coin.into())
-    }
-
     mod min_utilization {
         use finance::{
             coin::{Amount, Coin},
@@ -778,7 +765,7 @@ mod test {
             zero::Zero,
         };
         use platform::{bank::testing::MockBankView, contract::Code};
-        use sdk::cosmwasm_std::Timestamp;
+        use sdk::cosmwasm_std::{Addr, Timestamp};
 
         use crate::{borrow::InterestRate, config::Config as ApiConfig, state::Total};
 
@@ -812,7 +799,7 @@ mod test {
                     )
                     .unwrap(),
                     min_utilization,
-                    admin,
+                    protocol_admin,
                 ),
                 total,
                 bank: &bank,
@@ -885,7 +872,7 @@ mod test {
         };
         use lpp_platform::NLpn;
         use platform::{bank::testing::MockBankView, contract::Code};
-        use sdk::cosmwasm_std::{Timestamp, testing::MockStorage};
+        use sdk::cosmwasm_std::{Addr, Timestamp, testing::MockStorage};
 
         use crate::{
             borrow::InterestRate,
@@ -913,6 +900,7 @@ mod test {
                 )
                 .unwrap(),
                 Percent100::ZERO,
+                Addr::unchecked("protocol_admin"),
             );
             let bank = MockBankView::<TheCurrency, TheCurrency>::only_balance(DEPOSIT1);
             let mut lpp = LiquidityPool::<TheCurrency, _>::new(&config, &bank);
@@ -962,6 +950,7 @@ mod test {
                 )
                 .unwrap(),
                 Percent100::ZERO,
+                Addr::unchecked("protocol_admin"),
             );
             let bank = MockBankView::<TheCurrency, TheCurrency>::only_balance(DEPOSIT1);
             let mut lpp = LiquidityPool::<TheCurrency, _>::new(&config, &bank);
@@ -1014,6 +1003,7 @@ mod test {
                 )
                 .unwrap(),
                 Percent100::ZERO,
+                Addr::unchecked("protocol_admin"),
             );
             let bank = MockBankView::<TheCurrency, TheCurrency>::only_balance(DEPOSIT1);
             let mut lpp = LiquidityPool::<TheCurrency, _>::new(&config, &bank);

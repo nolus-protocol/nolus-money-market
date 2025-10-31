@@ -15,7 +15,11 @@ use crate::msg::{Config, InstantiateMsg, NewConfig};
 mod contract_tests;
 
 pub(crate) fn config() -> Config {
-    Config::new(Code::unchecked(10), dummy_instantiate_msg())
+    Config::new(
+        Code::unchecked(10),
+        dummy_instantiate_msg(),
+        Addr::unchecked("contract_owner"),
+    )
 }
 
 pub(crate) fn new_config() -> NewConfig {

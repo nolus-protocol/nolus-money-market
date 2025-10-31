@@ -115,33 +115,27 @@ pub fn execute(
 
             Ok(response::response_only_messages(response))
         }
-        ExecuteMsg::DexCallback() => {
-            try_handle_execute_message(
-                deps,
-                env,
-                State::on_inner,
-                (info, CheckType::DexResponseSafeDelivery, contract_info),
-            )
-            .map(response::response_only_messages)
-        }
-        ExecuteMsg::DexCallbackContinue() => {
-            try_handle_execute_message(
-                deps,
-                env,
-                State::on_inner_continue,
-                (info, CheckType::DexResponseSafeDelivery, contract_info),
-            )
-            .map(response::response_only_messages)
-        }
-        ExecuteMsg::Heal() => {
-            try_handle_execute_message(
-                deps,
-                env,
-                State::heal,
-                (info, CheckType::None, contract_info),
-            )
-            .map(response::response_only_messages)
-        }
+        ExecuteMsg::DexCallback() => try_handle_execute_message(
+            deps,
+            env,
+            State::on_inner,
+            (info, CheckType::DexResponseSafeDelivery, contract_info),
+        )
+        .map(response::response_only_messages),
+        ExecuteMsg::DexCallbackContinue() => try_handle_execute_message(
+            deps,
+            env,
+            State::on_inner_continue,
+            (info, CheckType::DexResponseSafeDelivery, contract_info),
+        )
+        .map(response::response_only_messages),
+        ExecuteMsg::Heal() => try_handle_execute_message(
+            deps,
+            env,
+            State::heal,
+            (info, CheckType::None, contract_info),
+        )
+        .map(response::response_only_messages)
     }
 }
 

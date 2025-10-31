@@ -8,9 +8,9 @@ use access_control::{
 };
 use currencies::{Native, Nls, PaymentGroup};
 use dex::{
-    AcceptAnyNonZeroSwap, Account, AnomalyTreatment, CheckType, ContractInSwap,
-    Error as DexError, Handler, Response as DexResponse, Stage, StateLocalOut, SwapOutputTask,
-    SwapTask, WithCalculator, WithOutputTask,
+    AcceptAnyNonZeroSwap, Account, AnomalyTreatment, CheckType, ContractInSwap, Error as DexError,
+    Handler, Response as DexResponse, Stage, StateLocalOut, SwapOutputTask, SwapTask,
+    WithCalculator, WithOutputTask,
 };
 use finance::{
     coin::{Coin, CoinDTO},
@@ -181,12 +181,12 @@ impl Handler for BuyBack {
     {
         match check_type {
             CheckType::Timealarm => {
-                access_control::check(&TimeAlarmDelivery::new(&self.config.time_alarms()), user)
+                access_control::check(&TimeAlarmDelivery::new(self.config.time_alarms()), user)
                     .map_err(DexError::Unauthorized)?;
             }
             CheckType::ContractOwner => {
                 access_control::check(
-                    &ContractOwnerPermission::new(&self.config.contract_owner()),
+                    &ContractOwnerPermission::new(self.config.contract_owner()),
                     user,
                 )
                 .map_err(DexError::Unauthorized)?;

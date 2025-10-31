@@ -11,8 +11,8 @@ use access_control::{
 use currencies::{Nls, PaymentGroup};
 use currency::{Currency, CurrencyDef, Group, MemberOf};
 use dex::{
-    Account, CheckType, Contract, Enterable, Error as DexError, Handler,
-    Response as DexResponse, Result as DexResult, StartLocalLocalState,
+    Account, CheckType, Contract, Enterable, Error as DexError, Handler, Response as DexResponse,
+    Result as DexResult, StartLocalLocalState,
 };
 use finance::{
     coin::{Coin, CoinDTO, WithCoin},
@@ -185,12 +185,12 @@ impl Handler for Idle {
     {
         match check_type {
             CheckType::Timealarm => {
-                access_control::check(&TimeAlarmDelivery::new(&self.config.time_alarms()), user)
+                access_control::check(&TimeAlarmDelivery::new(self.config.time_alarms()), user)
                     .map_err(DexError::Unauthorized)?;
             }
             CheckType::ContractOwner => {
                 access_control::check(
-                    &ContractOwnerPermission::new(&self.config.contract_owner()),
+                    &ContractOwnerPermission::new(self.config.contract_owner()),
                     user,
                 )
                 .map_err(DexError::Unauthorized)?;

@@ -6,8 +6,8 @@ use access_control::{
     user::User,
 };
 use dex::{
-    Account, CheckType, Connectable, ConnectionParams, Contract, Error as DexError,
-    Handler, IcaConnectee, Response as DexResponse,
+    Account, CheckType, Connectable, ConnectionParams, Contract, Error as DexError, Handler,
+    IcaConnectee, Response as DexResponse,
 };
 use finance::duration::Duration;
 use sdk::cosmwasm_std::{ContractInfo, QuerierWrapper, Timestamp};
@@ -85,12 +85,12 @@ impl Handler for OpenIca {
     {
         match check_type {
             CheckType::Timealarm => {
-                access_control::check(&TimeAlarmDelivery::new(&self.config.time_alarms()), user)
+                access_control::check(&TimeAlarmDelivery::new(self.config.time_alarms()), user)
                     .map_err(DexError::Unauthorized)?;
             }
             CheckType::ContractOwner => {
                 access_control::check(
-                    &ContractOwnerPermission::new(&self.config.contract_owner()),
+                    &ContractOwnerPermission::new(self.config.contract_owner()),
                     user,
                 )
                 .map_err(DexError::Unauthorized)?;

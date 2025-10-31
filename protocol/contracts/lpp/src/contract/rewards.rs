@@ -121,7 +121,7 @@ mod test {
     use lpp_platform::NLpn;
     use platform::{bank::testing::MockBankView, contract::Code};
     use sdk::cosmwasm_std::{
-        Timestamp,
+        Addr, Timestamp,
         testing::{self, MockStorage},
     };
 
@@ -214,6 +214,7 @@ mod test {
             )
             .expect("Couldn't construct interest rate value!"),
             DEFAULT_MIN_UTILIZATION,
+            Addr::unchecked("protocol_admin"),
         );
         let bank = MockBankView::<_, TheCurrency>::only_balance(DEPOSIT);
 
