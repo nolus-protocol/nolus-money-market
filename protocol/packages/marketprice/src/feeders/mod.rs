@@ -55,9 +55,9 @@ impl PriceFeeders {
 
         FeederCount::try_from(db.len())?;
 
-        if db.contains(&feeder) {
-            return Err(PriceFeedersError::FeederAlreadyRegistered {});
-        }
+        (!db.contains(&feeder))
+            .then_some(())
+            .ok_or(PriceFeedersError::FeederAlreadyRegistered {})?;
 
         db.insert(feeder);
 
