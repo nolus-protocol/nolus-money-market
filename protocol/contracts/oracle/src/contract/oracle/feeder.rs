@@ -3,7 +3,7 @@ use std::collections::HashSet;
 use currency::Group;
 use serde::{Deserialize, Serialize};
 
-use marketprice::feeders::PriceFeeders;
+use marketprice::{FeederCount, feeders::PriceFeeders};
 use sdk::cosmwasm_std::{Addr, DepsMut, Storage};
 
 use crate::{api::Config, error::Error, result::Result};
@@ -62,11 +62,14 @@ impl Feeders {
             })
     }
 
-    pub(crate) fn total_registered<PriceG>(storage: &dyn Storage) -> Result<usize, PriceG>
+    pub(crate) fn total_registered<PriceG>(storage: &dyn Storage) -> Result<FeederCount, PriceG>
     where
         PriceG: Group,
     {
-        Self::get(storage).map(|ref c| c.len())
+        Self::FEEDERS
+            .total_registered(storage)
+            .map_err(Error::<PriceG>::LoadFeeders)?
+            .map_err(Error::<PriceG>::PriceFeedersError)
     }
 }
 
