@@ -6,7 +6,8 @@ use sdk::cosmwasm_std::{Addr, QuerierWrapper};
 use crate::{
     api::{
         FinalizerExecuteMsg,
-        limits::{MaxSlippage, PositionLimits},
+        authz::{AccessCheck, AccessGranted},
+        limits::{MaxSlippages, PositionLimits},
     },
     error::{ContractError, ContractResult},
 };
