@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use finance::{duration::Duration, fractionable::FractionableLegacy, price::Price};
+use finance::{duration::Duration, price::Price, ratio::Ratio};
 use sdk::cosmwasm_std::{Addr, Timestamp};
 
 use crate::feeders::Count;

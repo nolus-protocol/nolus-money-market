@@ -282,7 +282,7 @@ mod tests {
         use finance::{
             coin::Coin,
             duration::Duration,
-            fraction::{FractionLegacy, Unit},
+            fraction::{Fraction, Unit},
             percent::Percent100,
             zero::Zero,
         };

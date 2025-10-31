@@ -1,6 +1,6 @@
 use std::{collections::HashSet, marker::PhantomData};
 
-use finance::{fraction::FractionLegacy, price::Price};
+use finance::price::Price;
 use observations::{Observations, ObservationsRead};
 use sdk::cosmwasm_std::{Addr, Timestamp};
 
@@ -88,7 +88,8 @@ where
             .skip_while(Option::is_none)
             .map(|price| Option::expect(price, "sample prices should keep being present"))
             .reduce(|acc, sample_price| {
-                discount_factor.of(sample_price) + discount_factor.complement().of(acc)
+                sample_price.lossy_mul(discount_factor)
+                    + acc.lossy_mul(discount_factor.complement())
             })
             .ok_or(PriceFeedsError::NoPrice {})
     }
