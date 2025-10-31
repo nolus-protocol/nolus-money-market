@@ -12,7 +12,7 @@ use finance::price::{
     },
     dto::PriceDTO,
 };
-use marketprice::{Repo, config::Config as PriceConfig};
+use marketprice::{FeederCount, Repo, config::Config as PriceConfig};
 use platform::{
     dispatcher::{AlarmsDispatcher, Id},
     message::Response as MessageResponse,
@@ -49,7 +49,7 @@ where
     BaseG: Group,
 {
     storage: S,
-    feeders: usize,
+    feeders: FeederCount,
     config: Config,
     _price_g: PhantomData<PriceG>,
     _base_c: PhantomData<BaseC>,

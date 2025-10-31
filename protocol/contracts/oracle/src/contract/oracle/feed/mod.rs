@@ -6,7 +6,7 @@ use finance::{
     price::{base::BasePrice, dto::PriceDTO},
 };
 use marketprice::{
-    ObservationsReadRepo, ObservationsRepo, config::Config, market_price::PriceFeeds,
+    FeederCount, ObservationsReadRepo, ObservationsRepo, config::Config, market_price::PriceFeeds,
 };
 use sdk::cosmwasm_std::{Addr, Timestamp};
 
@@ -54,7 +54,7 @@ where
         &self,
         swap_pairs_df: I,
         at: Timestamp,
-        total_feeders: usize,
+        total_feeders: FeederCount,
     ) -> impl Iterator<Item = PriceResult<PriceG, BaseC, BaseG, PriceG>>
     where
         I: Iterator<Item = SwapLeg<PriceG>>,
@@ -79,7 +79,7 @@ where
         tree: &SupportedPairs<PriceG, BaseC>,
         currency: &CurrencyDTO<PriceG>,
         at: Timestamp,
-        total_feeders: usize,
+        total_feeders: FeederCount,
     ) -> Result<BasePrice<PriceG, BaseC, BaseG>, PriceG> {
         tree.load_path(currency)
             .and_then(|leaf_to_base_currencies| {
