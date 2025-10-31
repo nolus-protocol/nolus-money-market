@@ -195,11 +195,11 @@ where
 mod test {
     use finance::{
         coin::Coin,
-        fraction::FractionLegacy,
+        fraction::Fraction,
         liability::Zone,
         percent::{Percent, Percent100},
         price::{self, Price},
-        rational::RationalLegacy,
+        rational::Rational,
     };
     use lpp::msg::LoanResponse;
     use platform::batch::Emitter as PlatformEmitter;
