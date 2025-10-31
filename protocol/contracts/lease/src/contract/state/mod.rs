@@ -13,7 +13,6 @@ use sdk::{
     cw_storage_plus::Item,
 };
 use swap::Impl;
-use timealarms::stub::TimeAlarmDelivery;
 
 use crate::{
     api::{
@@ -84,20 +83,6 @@ pub enum State {
     ClosingTransferIn,
     Closed,
     Liquidated,
-}
-
-pub(crate) trait TimeAlarmPermission {
-    fn check_time_alarm_permission(&self, info: &MessageInfo) -> ContractResult<Response>;
-}
-
-impl TimeAlarmPermission for State {
-    fn check_time_alarm_permission(&self, info: &MessageInfo) -> ContractResult<Response> {
-        if matches!(self, State::OpenedActive) {
-            access_control::check(&TimeAlarmDelivery::new(&self.lease.time_alarms), info);
-        } else {
-            ignore_msg(self)
-        }
-    }
 }
 
 const STATE_DB_ITEM: Item<State> = Item::new("state");

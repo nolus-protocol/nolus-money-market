@@ -42,7 +42,7 @@ impl Config {
     pub fn new(
         lease_code: Code,
         InstantiateMsg {
-            lease_code,
+            lease_code: _,
             lpp,
             profit,
             reserve,
@@ -60,18 +60,18 @@ impl Config {
     ) -> Self {
         Self {
             lease_code,
-            lpp: msg.lpp,
-            profit: msg.profit,
-            reserve: msg.reserve,
-            time_alarms: msg.time_alarms,
-            market_price_oracle: msg.market_price_oracle,
-            protocols_registry: msg.protocols_registry,
-            lease_position_spec: msg.lease_position_spec,
-            lease_interest_rate_margin: msg.lease_interest_rate_margin,
-            lease_due_period: msg.lease_due_period,
-            lease_max_slippages: msg.lease_max_slippages,
-            lease_admin: msg.lease_admin,
-            dex: msg.dex,
+            lpp,
+            profit,
+            reserve,
+            time_alarms,
+            market_price_oracle,
+            protocols_registry,
+            lease_position_spec,
+            lease_interest_rate_margin,
+            lease_due_period,
+            lease_max_slippages,
+            lease_admin,
+            dex,
             contract_owner,
         }
     }

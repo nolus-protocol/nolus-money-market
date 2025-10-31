@@ -1,8 +1,6 @@
-use std::ops::{Deref, DerefMut};
-
 use serde::Serialize;
 
-use access_control::{ContractOwnerAccess, permissions::ContractOwnerPermission};
+use access_control::{AccessPermission, permissions::ContractOwnerPermission};
 use lease::api::{MigrateMsg as LeaseMigrateMsg, authz::AccessGranted};
 use platform::{
     contract::{self, Code, CodeId, Validator},
@@ -43,7 +41,7 @@ const CURRENT_RELEASE: ProtocolPackageRelease = ProtocolPackageRelease::current(
 
 #[entry_point]
 pub fn instantiate(
-    mut deps: DepsMut<'_>,
+    deps: DepsMut<'_>,
     _env: Env,
     info: MessageInfo,
     msg: InstantiateMsg,
@@ -57,8 +55,6 @@ pub fn instantiate(
     addr_validator.check_contract(&msg.protocols_registry)?;
 
     validate(&msg.lease_admin, deps.api)?;
-
-    ContractOwnerAccess::new(deps.storage.deref_mut()).grant_to(&info)?;
 
     new_code(msg.lease_code, &addr_validator)
         .map(|lease_code| Config::new(lease_code, msg, info.sender))
@@ -126,7 +122,7 @@ pub fn execute(
             max_leases,
             to_release,
         } => {
-            let config = Config::load(&deps.storage)?;
+            let config = Config::load(deps.storage)?;
             access_control::check(
                 &ContractOwnerPermission::new(config.contract_owner()),
                 &info,
@@ -147,14 +143,14 @@ pub fn execute(
             key: next_customer,
             max_leases,
             to_release,
-        } => Config::load(&deps.storage)
+        } => Config::load(deps.storage)
             .and_then(|config| {
                 access_control::check(
                     &ContractOwnerPermission::new(config.contract_owner()),
                     &info,
                 )
+                .map_err(Into::into)
             })
-            .map_err(Into::into)
             .and_then(|()| {
                 validate_customer(next_customer, deps.api, &contract::validator(deps.querier))
             })
