@@ -5,7 +5,7 @@ use finance::{
 
 use crate::feeders::PriceFeedersError;
 
-#[derive(Debug, PartialEq, PartialOrd)]
+#[derive(Clone, Copy, Debug, PartialEq, PartialOrd)]
 pub struct Count(u32);
 
 impl Count {

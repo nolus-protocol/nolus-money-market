@@ -8,7 +8,7 @@ use sdk::{
 };
 
 mod count;
-pub(super) use count::Count as FeederCount;
+pub use count::Count as FeederCount;
 
 /// Errors returned from Feeders
 #[derive(Error, Debug, PartialEq)]
