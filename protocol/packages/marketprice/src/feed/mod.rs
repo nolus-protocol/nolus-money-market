@@ -64,7 +64,7 @@ where
         &self,
         config: &Config,
         at: Timestamp,
-        total_feeders: usize,
+        total_feeders: FeederCount,
     ) -> Result<Price<C, QuoteC>> {
         let valid_since = config.feed_valid_since(at);
         // a trade-off of eager loading of the observations from the persistence
@@ -113,13 +113,12 @@ where
         &self,
         items: Observations,
         config: &Config,
-        total_feeders: usize,
+        total_feeders: FeederCount,
     ) -> bool
     where
         Observations: for<'item> Iterator<Item = &'items Observation<C, QuoteC>>,
     {
-        self.count_unique_feeders(items)
-            >= (config.min_feeders(total_feeders.try_into().expect("Feeder count exceeded")))
+        self.count_unique_feeders(items) >= (config.min_feeders(total_feeders))
     }
 
     fn count_unique_feeders<'items, Observations>(&self, items: Observations) -> FeederCount

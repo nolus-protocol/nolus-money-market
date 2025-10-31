@@ -15,6 +15,7 @@ use crate::{
     config::Config,
     error::PriceFeedsError,
     feed::{ObservationsReadRepo, ObservationsRepo, PriceFeed},
+    feeders::FeederCount,
 };
 
 pub struct PriceFeeds<'config, PriceG, ObservationsRepoImpl> {
@@ -41,7 +42,7 @@ where
     pub fn price<'self_, 'currency_dto, BaseC, BaseG, CurrenciesToBaseC>(
         &'self_ self,
         at: Timestamp,
-        total_feeders: usize,
+        total_feeders: FeederCount,
         mut leaf_to_base: CurrenciesToBaseC,
     ) -> Result<BasePrice<PriceG, BaseC, BaseG>, PriceFeedsError>
     where
@@ -67,7 +68,7 @@ where
         {
             feeds: &'feeds PriceFeeds<'config, G, ObservationsRepoImpl>,
             at: Timestamp,
-            total_feeders: usize,
+            total_feeders: FeederCount,
             leaf_to_base: CurrenciesToBaseC,
             _base_c: PhantomData<BaseC>,
             _base_g: PhantomData<BaseG>,
@@ -134,7 +135,7 @@ where
         amount_c: &CurrencyDTO<PriceG>,
         quote_c: &CurrencyDTO<PriceG>,
         at: Timestamp,
-        total_feeders: usize,
+        total_feeders: FeederCount,
     ) -> Result<Price<C, QuoteC>, PriceFeedsError>
     where
         C: Currency + MemberOf<PriceG>,
@@ -251,7 +252,7 @@ struct PriceCollect<
     leaf_to_base: CurrenciesToBaseC,
     feeds: &'feeds PriceFeeds<'config, G, ObservationsRepoImpl>,
     at: Timestamp,
-    total_feeders: usize,
+    total_feeders: FeederCount,
     current_c: &'currency CurrencyDTO<G>,
     _base_c: PhantomData<BaseC>,
     _base_g: PhantomData<BaseG>,
