@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::{collections::HashSet, num::TryFromIntError};
 
 use thiserror::Error;
 
@@ -25,8 +25,8 @@ pub enum PriceFeedersError {
     #[error("Unauthorized")]
     Unauthorized {},
 
-    #[error("Given amount exceeds the maximum count of feeders supported")]
-    MaxFeederCount {},
+    #[error("Maximum feeder count reached: {0}")]
+    MaxFeederCount(TryFromIntError),
 }
 
 // state/logic
@@ -53,7 +53,7 @@ impl PriceFeeders {
     pub fn register(&self, deps: DepsMut<'_>, feeder: Addr) -> Result<(), PriceFeedersError> {
         let mut db = self.feeders(deps.storage)?;
 
-        FeederCount::try_from(db.len()).map_err(|_| PriceFeedersError::MaxFeederCount {})?;
+        FeederCount::try_from(db.len())?;
 
         if db.contains(&feeder) {
             return Err(PriceFeedersError::FeederAlreadyRegistered {});
