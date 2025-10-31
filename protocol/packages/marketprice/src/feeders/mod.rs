@@ -78,6 +78,14 @@ impl PriceFeeders {
             })
             .map_err(Into::into)
     }
+
+    pub fn total_registered(
+        &self,
+        storage: &dyn Storage,
+    ) -> StdResult<Result<FeederCount, PriceFeedersError>> {
+        self.feeders(storage)
+            .map(|feeders| FeederCount::try_from(feeders.len()))
+    }
 }
 
 #[cfg(test)]
