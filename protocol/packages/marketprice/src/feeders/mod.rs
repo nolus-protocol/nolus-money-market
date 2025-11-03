@@ -83,9 +83,16 @@ impl PriceFeeders {
         &self,
         storage: &dyn Storage,
     ) -> Result<FeederCount, PriceFeedersError> {
-        self.feeders(storage)
+        let result = self
+            .feeders(storage)
             .map_err(PriceFeedersError::Std)
-            .and_then(|feeders| FeederCount::try_from(feeders.len()))
+            .and_then(|feeders| FeederCount::try_from(feeders.len()));
+
+        if let Err(PriceFeedersError::MaxFeederCount(_)) = result {
+            panic!("More registred feeders than allowed!")
+        };
+
+        result
     }
 }
 
