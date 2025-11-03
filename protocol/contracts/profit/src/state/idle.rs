@@ -178,7 +178,7 @@ impl Handler for Idle {
         &self,
         user: &U,
         check_type: CheckType,
-        contract_info: ContractInfo,
+        contract_info: &ContractInfo,
     ) -> Result<(), DexError>
     where
         U: User,
@@ -197,7 +197,7 @@ impl Handler for Idle {
             }
             CheckType::DexResponseSafeDelivery => {
                 access_control::check(
-                    &DexResponseSafeDeliveryPermission::new(&contract_info),
+                    &DexResponseSafeDeliveryPermission::new(contract_info),
                     user,
                 )
                 .map_err(DexError::Unauthorized)?;

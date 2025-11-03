@@ -117,7 +117,7 @@ where
         &self,
         _user: &U,
         _check_type: CheckType,
-        _contract_info: ContractInfo,
+        _contract_info: &ContractInfo,
     ) -> StdResult<(), Error>
     where
         U: User,

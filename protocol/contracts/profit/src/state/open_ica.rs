@@ -78,7 +78,7 @@ impl Handler for OpenIca {
         &self,
         user: &U,
         check_type: CheckType,
-        contract_info: ContractInfo,
+        contract_info: &ContractInfo,
     ) -> Result<(), DexError>
     where
         U: User,
