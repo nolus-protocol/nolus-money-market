@@ -1,7 +1,5 @@
-use bnum::types::U256;
-
 use crate::{
-    coin::Coin,
+    coin::{Coin, DoubleCoinPrimitive},
     fractionable::{
         CommonDoublePrimitive, Fractionable, FractionableLegacy, HigherRank, IntoMax,
         ToDoublePrimitive, TryFromMax,
@@ -34,21 +32,32 @@ impl<const UPPER_BOUND: Units> FractionableLegacy<Units> for BoundPercent<UPPER_
     }
 }
 
-impl<T> HigherRank<T> for u32
-where
-    T: Into<Self>,
-{
-    type Type = u64;
+impl<const UPPER_BOUND: Units> ToDoublePrimitive for BoundPercent<UPPER_BOUND> {
+    type Double = u64;
+
+    fn to_double(&self) -> Self::Double {
+        self.units().into()
+    }
 }
 
-impl<const UPPER_BOUND: Units> IntoMax<u64> for BoundPercent<UPPER_BOUND> {
-    fn into_max(self) -> u64 {
+impl<const UPPER_BOUND: Units> CommonDoublePrimitive<Self> for BoundPercent<UPPER_BOUND> {
+    type CommonDouble = <Self as ToDoublePrimitive>::Double;
+}
+
+impl<C, const UPPER_BOUND: Units> CommonDoublePrimitive<Coin<C>> for BoundPercent<UPPER_BOUND> {
+    type CommonDouble = DoubleCoinPrimitive;
+}
+
+impl<const UPPER_BOUND: Units> IntoMax<<Self as CommonDoublePrimitive<Self>>::CommonDouble>
+    for BoundPercent<UPPER_BOUND>
+{
+    fn into_max(self) -> <Self as CommonDoublePrimitive<Self>>::CommonDouble {
         self.to_double()
     }
 }
 
-impl<const UPPER_BOUND: Units> IntoMax<U256> for BoundPercent<UPPER_BOUND> {
-    fn into_max(self) -> U256 {
+impl<const UPPER_BOUND: Units> IntoMax<DoubleCoinPrimitive> for BoundPercent<UPPER_BOUND> {
+    fn into_max(self) -> DoubleCoinPrimitive {
         self.to_double().into()
     }
 }
@@ -61,16 +70,18 @@ impl<const UPPER_BOUND: Units> ToDoublePrimitive for BoundPercent<UPPER_BOUND> {
     }
 }
 
-impl<const UPPER_BOUND: Units> TryFromMax<u64> for BoundPercent<UPPER_BOUND> {
-    fn try_from_max(max: u64) -> Option<Self> {
+impl<const UPPER_BOUND: Units> TryFromMax<<Self as CommonDoublePrimitive<Self>>::CommonDouble>
+    for BoundPercent<UPPER_BOUND>
+{
+    fn try_from_max(max: <Self as CommonDoublePrimitive<Self>>::CommonDouble) -> Option<Self> {
         Units::try_from(max)
             .ok()
             .and_then(|units| Self::try_from(units).ok())
     }
 }
 
-impl<const UPPER_BOUND: Units> TryFromMax<U256> for BoundPercent<UPPER_BOUND> {
-    fn try_from_max(max: U256) -> Option<Self> {
+impl<const UPPER_BOUND: Units> TryFromMax<DoubleCoinPrimitive> for BoundPercent<UPPER_BOUND> {
+    fn try_from_max(max: DoubleCoinPrimitive) -> Option<Self> {
         Units::try_from(max)
             .ok()
             .and_then(|units| Self::try_from(units).ok())

@@ -10,17 +10,17 @@ use crate::{
 };
 
 impl<C> CommonDoublePrimitive<Duration> for Coin<C> {
-    type CommonDouble = <Self as ToDoublePrimitive>::Double;
+    type CommonDouble = DoubleCoinPrimitive;
 }
 
 impl<C, const UPPER_BOUND: PercentUnits> CommonDoublePrimitive<BoundPercent<UPPER_BOUND>>
     for Coin<C>
 {
-    type CommonDouble = <Self as ToDoublePrimitive>::Double;
+    type CommonDouble = DoubleCoinPrimitive;
 }
 
 impl<C> CommonDoublePrimitive<Self> for Coin<C> {
-    type CommonDouble = <Self as ToDoublePrimitive>::Double;
+    type CommonDouble = DoubleCoinPrimitive;
 }
 
 impl<C> Fractionable<Duration> for Coin<C> {}
@@ -30,10 +30,9 @@ impl<C, const UPPER_BOUND: PercentUnits> Fractionable<BoundPercent<UPPER_BOUND>>
 impl<C> Fractionable<Self> for Coin<C> {}
 
 // TODO remove when FractionableLegacy usages are replaced
-impl<C> From<Coin<C>> for U256 {
+impl<C> From<Coin<C>> for DoubleCoinPrimitive {
     fn from(coin: Coin<C>) -> Self {
-        let c = Amount::from(coin);
-        c.into()
+        Amount::from(coin).into()
     }
 }
 
@@ -41,32 +40,35 @@ impl<U, C> HigherRank<U> for Coin<C>
 where
     U: Into<Amount>,
 {
-    type Type = U256;
+    type Type = DoubleCoinPrimitive;
 }
 
-impl<C> IntoMax<U256> for Coin<C> {
-    fn into_max(self) -> U256 {
+// Since both Duration and BoundPercent may appear as generic parameters,
+// ToDoublePrimitive is used instead of CommonDoublePrimitive to avoid ambiguity
+impl<C> IntoMax<DoubleCoinPrimitive> for Coin<C> {
+    fn into_max(self) -> DoubleCoinPrimitive {
         self.to_double()
     }
 }
 
 impl<C> ToDoublePrimitive for Coin<C> {
-    type Double = U256;
+    type Double = DoubleCoinPrimitive;
 
     fn to_double(&self) -> Self::Double {
         self.amount.into()
     }
 }
 
-impl<C> TryFromMax<U256> for Coin<C> {
-    fn try_from_max(max: U256) -> Option<Self> {
+
+impl<C> TryFromMax<DoubleCoinPrimitive> for Coin<C> {
+    fn try_from_max(max: DoubleCoinPrimitive) -> Option<Self> {
         max.try_into().map(Coin::new).ok()
     }
 }
 
 // TODO remove when FractionableLegacy usages are replaced
-impl<C> TryInto<Coin<C>> for U256 {
-    type Error = <u128 as TryFrom<U256>>::Error;
+impl<C> TryInto<Coin<C>> for DoubleCoinPrimitive {
+    type Error = <u128 as TryFrom<DoubleCoinPrimitive>>::Error;
 
     fn try_into(self) -> Result<Coin<C>, Self::Error> {
         self.try_into().map(Coin::new)
