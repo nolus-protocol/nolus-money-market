@@ -82,9 +82,10 @@ impl PriceFeeders {
     pub fn total_registered(
         &self,
         storage: &dyn Storage,
-    ) -> StdResult<Result<FeederCount, PriceFeedersError>> {
+    ) -> Result<FeederCount, PriceFeedersError> {
         self.feeders(storage)
-            .map(|feeders| FeederCount::try_from(feeders.len()))
+            .map_err(PriceFeedersError::Std)
+            .and_then(|feeders| FeederCount::try_from(feeders.len()))
     }
 }
 

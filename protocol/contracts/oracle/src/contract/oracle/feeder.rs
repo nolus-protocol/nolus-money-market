@@ -68,7 +68,6 @@ impl Feeders {
     {
         Self::FEEDERS
             .total_registered(storage)
-            .map_err(Error::<PriceG>::LoadFeeders)?
             .map_err(Error::<PriceG>::PriceFeedersError)
     }
 }
