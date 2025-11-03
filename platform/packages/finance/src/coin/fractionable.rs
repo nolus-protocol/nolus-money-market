@@ -28,7 +28,7 @@ impl<C> From<Coin<C>> for DoubleCoinPrimitive {
 
 // TODO remove when FractionableLegacy usages are replaced
 impl<C> TryInto<Coin<C>> for DoubleCoinPrimitive {
-    type Error = <u128 as TryFrom<DoubleCoinPrimitive>>::Error;
+    type Error = <Amount as TryFrom<DoubleCoinPrimitive>>::Error;
 
     fn try_into(self) -> Result<Coin<C>, Self::Error> {
         self.try_into().map(Coin::new)
