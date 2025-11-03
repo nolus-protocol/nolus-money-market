@@ -53,7 +53,7 @@ impl PriceFeeders {
     pub fn register(&self, deps: DepsMut<'_>, feeder: Addr) -> Result<(), PriceFeedersError> {
         let mut db = self.feeders(deps.storage)?;
 
-        FeederCount::try_from(db.len())?;
+        FeederCount::try_from(db.len())?.can_increment();
 
         (!db.contains(&feeder))
             .then_some(())
