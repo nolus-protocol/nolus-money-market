@@ -249,10 +249,27 @@ impl Handler for State {
         U: User,
     {
         match &self.0 {
-            StateEnum::OpenIca(ica) => ica.check_permission(user, check_type, contract_info),
             StateEnum::Idle(idle) => idle.check_permission(user, check_type, contract_info),
-            StateEnum::BuyBack(buy_back) => {
-                buy_back.check_permission(user, check_type, contract_info)
+            StateEnum::OpenIca(_) | StateEnum::BuyBack(_) => {
+                // OpenIca and BuyBack are internal wrapper states that only handle callbacks.
+                // They only check DexResponseSafeDelivery permission for callbacks.
+                // Timealarm and ContractOwner checks only happen in Idle state.
+                match check_type {
+                    CheckType::DexResponseSafeDelivery => {
+                        access_control::check(
+                            &access_control::permissions::DexResponseSafeDeliveryPermission::new(
+                                contract_info,
+                            ),
+                            user,
+                        )
+                        .map_err(DexError::Unauthorized)?;
+                    }
+                    CheckType::Timealarm | CheckType::ContractOwner | CheckType::None => {
+                        // These wrapper states don't handle TimeAlarm or Config messages.
+                        // Permission was already checked in Idle state before transitioning.
+                    }
+                }
+                Ok(())
             }
         }
     }

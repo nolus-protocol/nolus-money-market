@@ -135,7 +135,7 @@ pub fn execute(
             State::heal,
             (info, CheckType::None, &contract_info),
         )
-        .map(response::response_only_messages)
+        .map(response::response_only_messages),
     }
 }
 

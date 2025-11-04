@@ -196,11 +196,8 @@ impl Handler for Idle {
                 .map_err(DexError::Unauthorized)?;
             }
             CheckType::DexResponseSafeDelivery => {
-                access_control::check(
-                    &DexResponseSafeDeliveryPermission::new(contract_info),
-                    user,
-                )
-                .map_err(DexError::Unauthorized)?;
+                access_control::check(&DexResponseSafeDeliveryPermission::new(contract_info), user)
+                    .map_err(DexError::Unauthorized)?;
             }
             CheckType::None => {}
         }
