@@ -18,6 +18,9 @@ impl Count {
     pub fn can_increment(&self) -> Option<()> {
         (self != &Self::MAX).then_some(())
     }
+    pub fn non_zero(&self) -> Option<()> {
+        (self.0 > 0).then_some(())
+    }
 }
 
 impl TryFrom<usize> for Count {
@@ -30,6 +33,15 @@ impl TryFrom<usize> for Count {
             .map(Self::new)
     }
 }
+
+impl TryInto<usize> for Count {
+    type Error = PriceFeedersError;
+
+    fn try_into(self) -> Result<usize, Self::Error> {
+        self.0.try_into().map_err(Self::Error::MaxFeederCount)
+    }
+}
+
 impl CommonDoublePrimitive<Percent100> for Count {
     type CommonDouble = <Count as ToDoublePrimitive>::Double;
 }

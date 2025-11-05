@@ -1,7 +1,9 @@
-use std::{cmp, collections::HashMap};
+use std::collections::HashMap;
 
 use finance::{duration::Duration, fraction::FractionLegacy, price::Price, ratio::Ratio};
 use sdk::cosmwasm_std::{Addr, Timestamp};
+
+use crate::FeederCount;
 
 use super::observation::Observation;
 
@@ -102,21 +104,28 @@ where
     }
 
     fn end_of_period(&mut self) {
-        let prices_number = Self::prices_number(self.sample_prices.len());
+        let prices_number: FeederCount = self
+            .sample_prices
+            .len()
+            .try_into()
+            .expect("More prices stored than allowed");
 
-        if prices_number > 0 {
+        if prices_number.non_zero().is_some() {
             let mut values = self.sample_prices.values();
             let first = values
                 .next()
                 .expect("should have been checked that there is at least one member");
 
+            let number = TryInto::<usize>::try_into(prices_number)
+                .expect("The conversion into wider type must not fail");
+
             let sum = values
-                .take(prices_number - 1)
+                .take(number - 1)
                 .fold(*first, |acc, current| acc + *current);
 
             let part = Ratio::new(
                 1,
-                u128::try_from(prices_number)
+                u128::try_from(number)
                     .expect("prices_number is already restricted to fit in u128::MAX"),
             );
             let avg = FractionLegacy::of(&part, sum);
@@ -125,10 +134,6 @@ where
 
         self.sample_prices.clear();
         self.sample_start = self.sample_end();
-    }
-
-    fn prices_number(len: usize) -> usize {
-        cmp::min(len, u128::MAX.try_into().unwrap_or(usize::MAX))
     }
 }
 
