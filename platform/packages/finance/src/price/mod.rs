@@ -174,9 +174,11 @@ where
     fn lossy_add(self, rhs: Self) -> Option<Self> {
         const FACTOR: Amount = 1_000_000_000_000_000_000; // 1*10^18
         let factored_amount = Coin::new(FACTOR);
-        let may_factored_total =
-            total(factored_amount, self).checked_add(total(factored_amount, rhs));
-        may_factored_total.map(|factored_total| total_of(factored_amount).is(factored_total))
+
+        total(factored_amount, self)
+            .zip(total(factored_amount, rhs))
+            .and_then(|(factored_self, factored_rhs)| factored_self.checked_add(factored_rhs))
+            .map(|factored_total| total_of(factored_amount).is(factored_total))
     }
 
     fn to_fraction(self) -> SimpleFraction<Amount> {
@@ -307,14 +309,12 @@ where
     }
 }
 
-/// Calculates the amount of given coins in another currency, referred here as `quote currency`
+/// Calculates the amount of given coins in another currency, referred here as `quote currency`.
+/// Returns `None` if an overflow occurs during the calculation.
 ///
 /// For example, total(10 EUR, 1.01 EURUSD) = 10.1 USD
-pub fn total<C, QuoteC>(of: Coin<C>, price: Price<C, QuoteC>) -> Coin<QuoteC> {
-    let ratio_impl = SimpleFraction::new(of.to_primitive(), price.amount.to_primitive());
-    ratio_impl
-        .of(price.amount_quote)
-        .expect("TODO the method has to return Option")
+pub fn total<C, QuoteC>(of: Coin<C>, price: Price<C, QuoteC>) -> Option<Coin<QuoteC>> {
+    SimpleFraction::new(of.to_primitive(), price.amount.to_primitive()).of(price.amount_quote)
 }
 
 #[cfg(test)]
@@ -399,8 +399,8 @@ mod test {
         let coin_quote = q(amount_quote * factor);
         let coin = c(amount * factor);
 
-        assert_eq!(coin_quote, super::total(coin, price));
-        assert_eq!(coin, super::total(coin_quote, price.inv()));
+        assert_eq!(coin_quote, calc_total(coin, price));
+        assert_eq!(coin, super::total(coin_quote, price.inv()).unwrap());
     }
 
     #[test]
@@ -412,11 +412,11 @@ mod test {
 
         // 47 * 647 / 48 -> 633.5208333333334
         let coin_in = c(47);
-        assert_eq!(coin_quote, super::total(coin_in, price));
+        assert_eq!(coin_quote, calc_total(coin_in, price));
 
         // 633 * 48 / 647 -> 46.9613601236476
         let coin_out = c(46);
-        assert_eq!(coin_out, super::total(coin_quote, price.inv()));
+        assert_eq!(coin_out, super::total(coin_quote, price.inv()).unwrap());
     }
 
     #[test]
@@ -427,10 +427,9 @@ mod test {
     }
 
     #[test]
-    #[should_panic]
     fn total_overflow() {
         let price = price::total_of(c(1)).is(q(Amount::MAX / 2 + 1));
-        super::total(c(2), price);
+        assert!(super::total(c(2), price).is_none());
     }
 
     #[test]
@@ -541,8 +540,8 @@ mod test {
         let price2 = Price::new(c(amount), q(amount_quote + 1));
         assert!(price1 < price2);
 
-        let total1 = super::total(Coin::new(amount), price1);
-        assert!(total1 < super::total(Coin::new(amount), price2));
+        let total1 = calc_total(Coin::new(amount), price1);
+        assert!(total1 < calc_total(Coin::new(amount), price2));
         assert_eq!(q(amount_quote), total1);
     }
 
@@ -556,8 +555,8 @@ mod test {
         let expected = q(expected);
         let input = Coin::new(amount);
 
-        assert_eq!(expected, super::total(input, price));
-        assert_eq!(input, super::total(expected, price.inv()));
+        assert_eq!(expected, calc_total(input, price));
+        assert_eq!(input, super::total(expected, price.inv()).unwrap());
     }
 
     fn add_impl(
@@ -661,6 +660,10 @@ mod test {
 
     fn price(amount: Coin, amount_quote: QuoteCoin) -> Price<SuperGroupTestC2, SuperGroupTestC1> {
         Price::new(amount, amount_quote)
+    }
+
+    fn calc_total(coin: Coin, price: Price<SuperGroupTestC2, SuperGroupTestC1>) -> QuoteCoin {
+        super::total(coin, price).unwrap()
     }
 }
 

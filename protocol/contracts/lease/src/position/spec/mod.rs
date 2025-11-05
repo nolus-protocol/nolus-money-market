@@ -289,13 +289,12 @@ impl Spec {
         TransactionC: 'static,
         ErrFn: FnOnce(LpnCoinDTO) -> PositionError,
     {
-        let amount_in_lpn = price::total(amount, transaction_currency_in_lpn);
-
-        if amount_in_lpn >= self.min_transaction {
-            Ok(())
-        } else {
-            Err(err_fn(self.min_transaction.into()))
-        }
+        self.validate_min_amount(
+            amount,
+            transaction_currency_in_lpn,
+            self.min_transaction,
+            err_fn,
+        )
     }
 
     fn validate_asset<TransactionC, ErrFn>(
@@ -308,13 +307,38 @@ impl Spec {
         TransactionC: 'static,
         ErrFn: FnOnce(LpnCoinDTO) -> PositionError,
     {
-        let asset_amount_in_lpn = price::total(asset_amount, transaction_currency_in_lpn);
+        self.validate_min_amount(
+            asset_amount,
+            transaction_currency_in_lpn,
+            self.min_asset,
+            err_fn,
+        )
+    }
 
-        if asset_amount_in_lpn >= self.min_asset {
-            Ok(())
-        } else {
-            Err(err_fn(self.min_asset.into()))
-        }
+    fn validate_min(
+        &self,
+        amount: Coin<TransactionC>,
+        transaction_lpn: Price<TransactionC>,
+        min_required: LpnCoin,
+        err_fn: ErrFn,
+    ) -> Result<(), PositionError>
+    where
+        TransactionC: 'static,
+        ErrFn: FnOnce(LpnCoinDTO) -> PositionError,
+    {
+        price::total(asset_amount, transaction_lpn)
+            .ok_or({
+                PositionError::Finance(FinanceError::Overflow(
+                    "Overflow while calculating the total value",
+                ))
+            })
+            .and_then(|asset_amount_in_lpn| {
+                if asset_amount_in_lpn >= min_required {
+                    Ok(())
+                } else {
+                    Err(err_fn(min_required.into()))
+                }
+            })
     }
 
     fn may_ask_liquidation_liability<Asset>(
@@ -433,7 +457,7 @@ impl Spec {
         zone
     }
 
-    fn due_asset<Asset, Due>(due: &Due, asset_in_lpns: Price<Asset>) -> Coin<Asset>
+    fn due_asset<Asset, Due>(due: &Due, asset_in_lpns: Price<Asset>) -> Option<Coin<Asset>>
     where
         Asset: 'static,
         Due: DueTrait,
@@ -441,7 +465,7 @@ impl Spec {
         Self::to_assets(due.total_due(), asset_in_lpns)
     }
 
-    fn to_assets<Asset>(lpn_coin: LpnCoin, asset_in_lpns: Price<Asset>) -> Coin<Asset>
+    fn to_assets<Asset>(lpn_coin: LpnCoin, asset_in_lpns: Price<Asset>) -> Option<Coin<Asset>>
     where
         Asset: 'static,
     {
