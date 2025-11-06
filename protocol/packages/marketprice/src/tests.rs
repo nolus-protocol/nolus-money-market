@@ -29,8 +29,8 @@ use crate::{
 };
 
 const ROOT_NS: &str = "root_ns";
-const TOTAL_FEEDERS: FeederCount = FeederCount::new(1);
-const TWICE_TOTAL_FEEDERS: FeederCount = FeederCount::new(2);
+const TOTAL_FEEDERS: FeederCount = FeederCount::ONE;
+const TWICE_TOTAL_FEEDERS: FeederCount = FeederCount::new_test(2);
 const SAMPLE_PERIOD_SECS: u32 = 5;
 const SAMPLES_NUMBER: u16 = 12;
 const DISCOUNTING_FACTOR: Percent100 = Percent100::from_permille(750);

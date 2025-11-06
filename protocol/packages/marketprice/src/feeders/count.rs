@@ -9,18 +9,24 @@ use crate::feeders::PriceFeedersError;
 pub struct Count(u32);
 
 impl Count {
+    pub const ONE: Self = Self(1);
     pub const MAX: Self = Self(u32::MAX);
 
-    pub const fn new(count: u32) -> Self {
+    const fn new(count: u32) -> Self {
         Self(count)
+    }
+
+    #[cfg(test)]
+    pub(crate) const fn new_test(count: u32) -> Self {
+        Self::new(count)
     }
 
     pub fn can_increment(&self) -> Option<()> {
         (self != &Self::MAX).then_some(())
     }
-    pub fn non_zero(&self) -> Option<()> {
+    /* pub fn non_zero(&self) -> Option<()> {
         (self.0 > 0).then_some(())
-    }
+    } */
 }
 
 impl TryFrom<usize> for Count {

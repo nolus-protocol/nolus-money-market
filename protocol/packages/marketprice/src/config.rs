@@ -209,8 +209,8 @@ mod test {
             Percent100::from_percent(75),
         );
         assert_eq!(
-            FeederCount::new(exp),
-            c.min_feeders(FeederCount::new(total))
+            FeederCount::new_test(exp),
+            c.min_feeders(FeederCount::new_test(total))
         );
     }
     #[test]

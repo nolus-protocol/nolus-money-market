@@ -405,7 +405,7 @@ mod test {
 
     const FEEDER: &str = "0xifeege";
     const ROOT_NS: &str = "root_ns";
-    const TOTAL_FEEDERS: FeederCount = FeederCount::new(1);
+    const TOTAL_FEEDERS: FeederCount = FeederCount::ONE;
     const FEED_VALIDITY: Duration = Duration::from_secs(30);
     const SAMPLE_PERIOD_SECS: Duration = Duration::from_secs(5);
     const SAMPLES_NUMBER: u16 = 6;

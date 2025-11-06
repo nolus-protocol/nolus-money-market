@@ -173,8 +173,8 @@ mod test {
 
     use super::{PriceFeed, memory::InMemoryObservations, observations::Observations};
 
-    const ONE_FEEDER: FeederCount = FeederCount::new(1);
-    const TWO_FEEDERS: FeederCount = FeederCount::new(2);
+    const ONE_FEEDER: FeederCount = FeederCount::ONE;
+    const TWO_FEEDERS: FeederCount = FeederCount::new_test(2);
     const SAMPLE_PERIOD: Duration = Duration::from_secs(5);
     const SAMPLES_NUMBER: u16 = 12;
     const VALIDITY: Duration = Duration::from_secs(60);
