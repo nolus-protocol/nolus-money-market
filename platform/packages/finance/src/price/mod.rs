@@ -1,5 +1,6 @@
 use std::{
     fmt::Debug,
+    iter::Sum,
     ops::{Add, AddAssign, Mul},
 };
 
@@ -295,6 +296,16 @@ where
     #[track_caller]
     fn add_assign(&mut self, rhs: Price<C, QuoteC>) {
         *self = self.add(rhs);
+    }
+}
+
+impl<'a, C, QuoteC> Sum<&'a Price<C, QuoteC>> for Price<C, QuoteC>
+where
+    C: 'static,
+    QuoteC: 'static,
+{
+    fn sum<I: Iterator<Item = &'a Price<C, QuoteC>>>(iter: I) -> Self {
+        iter.fold(Price::<C, QuoteC>::identity(), |acc, p| acc + *p)
     }
 }
 
