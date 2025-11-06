@@ -104,9 +104,9 @@ where
     }
 
     fn end_of_period(&mut self) {
-        let prices_number: FeederCount = self
-            .sample_prices
-            .len()
+        let prices_len = self.sample_prices.len();
+
+        let prices_number: FeederCount = prices_len
             .try_into()
             .expect("More prices stored than allowed");
 
@@ -116,16 +116,13 @@ where
                 .next()
                 .expect("should have been checked that there is at least one member");
 
-            let number = TryInto::<usize>::try_into(prices_number)
-                .expect("The conversion into wider type must not fail");
-
             let sum = values
-                .take(number - 1)
+                .take(prices_len - 1)
                 .fold(*first, |acc, current| acc + *current);
 
             let part = Ratio::new(
                 1,
-                u128::try_from(number)
+                u128::try_from(prices_len)
                     .expect("prices_number is already restricted to fit in u128::MAX"),
             );
             let avg = FractionLegacy::of(&part, sum);
