@@ -101,7 +101,7 @@ where
     /// Price(amount, amount_quote) * Ratio(nominator / denominator) = Price(amount * denominator, amount_quote * nominator)
     /// where the pairs (amount, nominator) and (amount_quote, denominator) are transformed into co-prime numbers.
     /// Please note that Price(amount, amount_quote) is like Ratio(amount_quote / amount).
-    pub(crate) fn lossy_mul<R>(self, rhs: &R) -> Self
+    pub fn lossy_mul<R>(self, rhs: &R) -> Self
     where
         R: RatioLegacy<Amount>,
     {
