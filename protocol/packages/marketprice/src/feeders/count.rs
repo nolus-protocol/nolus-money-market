@@ -1,6 +1,8 @@
 use finance::{
+    coin::Amount,
     fractionable::{CommonDoublePrimitive, Fractionable, IntoMax, ToDoublePrimitive, TryFromMax},
     percent::Percent100,
+    ratio::RatioLegacy,
 };
 
 use crate::feeders::PriceFeedersError;
@@ -24,9 +26,6 @@ impl Count {
     pub fn can_increment(&self) -> Option<()> {
         (self != &Self::MAX).then_some(())
     }
-    /* pub fn non_zero(&self) -> Option<()> {
-        (self.0 > 0).then_some(())
-    } */
 }
 
 impl TryFrom<usize> for Count {
@@ -40,11 +39,19 @@ impl TryFrom<usize> for Count {
     }
 }
 
-impl TryInto<usize> for Count {
-    type Error = PriceFeedersError;
+impl From<Count> for u128 {
+    fn from(val: Count) -> Self {
+        val.0.into()
+    }
+}
 
-    fn try_into(self) -> Result<usize, Self::Error> {
-        self.0.try_into().map_err(Self::Error::MaxFeederCount)
+impl RatioLegacy<Amount> for Count {
+    fn parts(&self) -> Amount {
+        Count::ONE.into()
+    }
+
+    fn total(&self) -> Amount {
+        (*self).into()
     }
 }
 

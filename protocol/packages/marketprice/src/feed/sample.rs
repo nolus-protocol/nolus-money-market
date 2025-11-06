@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use finance::{duration::Duration, fraction::FractionLegacy, price::Price, ratio::Ratio};
+use finance::{duration::Duration, price::Price};
 use sdk::cosmwasm_std::{Addr, Timestamp};
 
 use crate::FeederCount;
@@ -105,27 +105,18 @@ where
 
     fn end_of_period(&mut self) {
         let prices_len = self.sample_prices.len();
+        let prices_count =
+            FeederCount::try_from(prices_len).expect("More prices stored than allowed");
 
-        let prices_number: FeederCount = prices_len
-            .try_into()
-            .expect("More prices stored than allowed");
-
-        if prices_number.non_zero().is_some() {
+        if prices_len > 0 {
             let mut values = self.sample_prices.values();
             let first = values
                 .next()
                 .expect("should have been checked that there is at least one member");
 
-            let sum = values
-                .take(prices_len - 1)
-                .fold(*first, |acc, current| acc + *current);
+            let sum = values.fold(*first, |acc, current| acc + *current);
 
-            let part = Ratio::new(
-                1,
-                u128::try_from(prices_len)
-                    .expect("prices_number is already restricted to fit in u128::MAX"),
-            );
-            let avg = FractionLegacy::of(&part, sum);
+            let avg = sum.lossy_mul(&prices_count);
             self.last_sample = Sample { price: Some(avg) };
         }
 
