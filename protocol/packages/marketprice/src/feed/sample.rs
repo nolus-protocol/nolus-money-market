@@ -119,11 +119,11 @@ where
 
             let sum = values.fold(*first, |acc, current| acc + *current);
 
-            let reciproral = prices_count.try_into_reciproral().expect("msg");
+            let avg = prices_count
+                .try_into_reciproral()
+                .map(|reciproral| sum.lossy_mul(&RatioUpcast(PhantomData, &reciproral)))
+                .expect("should have provided positive value for count");
 
-            let count_ratio = RatioUpcast(PhantomData, &reciproral);
-
-            let avg = sum.lossy_mul(&count_ratio);
             self.last_sample = Sample { price: Some(avg) };
         }
 
