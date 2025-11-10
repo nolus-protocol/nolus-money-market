@@ -1,8 +1,13 @@
+use std::ops::{Div, Rem};
+
+use gcd::Gcd;
+
 use finance::{
-    coin::Amount,
+    fraction::Unit as FractionUnit,
     fractionable::{CommonDoublePrimitive, Fractionable, IntoMax, ToDoublePrimitive, TryFromMax},
     percent::Percent100,
-    ratio::RatioLegacy,
+    ratio::{RatioLegacy, SimpleFraction},
+    zero::Zero,
 };
 
 use crate::feeders::PriceFeedersError;
@@ -26,6 +31,10 @@ impl Count {
     pub fn can_increment(&self) -> Option<()> {
         (self != &Self::MAX).then_some(())
     }
+
+    pub fn try_into_reciproral(self) -> Option<impl RatioLegacy<Self>> {
+        (self.0 != 0).then_some(SimpleFraction::new(Self::ONE, self))
+    }
 }
 
 impl TryFrom<usize> for Count {
@@ -42,16 +51,6 @@ impl TryFrom<usize> for Count {
 impl From<Count> for u128 {
     fn from(val: Count) -> Self {
         val.0.into()
-    }
-}
-
-impl RatioLegacy<Amount> for Count {
-    fn parts(&self) -> Amount {
-        Count::ONE.into()
-    }
-
-    fn total(&self) -> Amount {
-        (*self).into()
     }
 }
 
@@ -79,4 +78,35 @@ impl TryFromMax<<Count as ToDoublePrimitive>::Double> for Count {
     fn try_from_max(max: <Count as ToDoublePrimitive>::Double) -> Option<Self> {
         max.try_into().map(Self::new).ok()
     }
+}
+
+impl FractionUnit for Count {
+    type Times = u32;
+
+    fn gcd<U>(self, other: U) -> Self::Times
+    where
+        U: FractionUnit<Times = Self::Times>,
+    {
+        Gcd::gcd(self.0, other.to_primitive())
+    }
+
+    fn scale_down(self, scale: Self::Times) -> Self {
+        debug_assert_ne!(scale, Self::Times::ZERO);
+
+        Self::new(self.0.div(scale))
+    }
+
+    fn modulo(self, scale: Self::Times) -> Self::Times {
+        debug_assert_ne!(scale, Self::Times::ZERO);
+
+        self.0.rem(scale)
+    }
+
+    fn to_primitive(self) -> Self::Times {
+        self.0
+    }
+}
+
+impl Zero for Count {
+    const ZERO: Self = Self::new(0);
 }

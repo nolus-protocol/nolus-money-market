@@ -1,6 +1,9 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, marker::PhantomData};
 
-use finance::{duration::Duration, price::Price};
+use finance::{
+    duration::Duration,
+    price::{Price, base::fractionable::RatioUpcast},
+};
 use sdk::cosmwasm_std::{Addr, Timestamp};
 
 use crate::FeederCount;
@@ -116,7 +119,11 @@ where
 
             let sum = values.fold(*first, |acc, current| acc + *current);
 
-            let avg = sum.lossy_mul(&prices_count);
+            let reciproral = prices_count.try_into_reciproral().expect("msg");
+
+            let count_ratio = RatioUpcast(PhantomData, &reciproral);
+
+            let avg = sum.lossy_mul(&count_ratio);
             self.last_sample = Sample { price: Some(avg) };
         }
 
