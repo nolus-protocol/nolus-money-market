@@ -3,7 +3,7 @@ use std::{collections::HashSet, num::TryFromIntError};
 use thiserror::Error;
 
 use sdk::{
-    cosmwasm_std::{Addr, DepsMut, StdError, StdResult, Storage},
+    cosmwasm_std::{Addr, StdError, StdResult, Storage},
     cw_storage_plus::Item,
 };
 
@@ -50,8 +50,12 @@ impl PriceFeeders {
             })
     }
 
-    pub fn register(&self, deps: DepsMut<'_>, feeder: Addr) -> Result<(), PriceFeedersError> {
-        let mut db = self.feeders(deps.storage)?;
+    pub fn register(
+        &self,
+        storage: &mut dyn Storage,
+        feeder: Addr,
+    ) -> Result<(), PriceFeedersError> {
+        let mut db = self.feeders(storage)?;
 
         Count::try_from(db.len())?.can_increment();
 
@@ -61,19 +65,23 @@ impl PriceFeeders {
 
         db.insert(feeder);
 
-        self.0.save(deps.storage, &db)?;
+        self.0.save(storage, &db)?;
 
         Ok(())
     }
 
-    pub fn remove(&self, deps: DepsMut<'_>, feeder: &Addr) -> Result<(), PriceFeedersError> {
+    pub fn remove(
+        &self,
+        storage: &mut dyn Storage,
+        feeder: &Addr,
+    ) -> Result<(), PriceFeedersError> {
         self.0
-            .may_load(deps.storage)
+            .may_load(storage)
             .and_then(|feeders| {
                 feeders.map_or(const { Ok(()) }, |mut feeders| {
                     feeders.remove(feeder);
 
-                    self.0.save(deps.storage, &feeders)
+                    self.0.save(storage, &feeders)
                 })
             })
             .map_err(Into::into)
@@ -101,23 +109,23 @@ mod tests {
 
     #[test]
     fn remove_empty() {
-        let mut deps = testing::mock_dependencies();
+        let mut storage = testing::mock_dependencies().storage;
         let feeders = PriceFeeders::new("storage_namespace");
         feeders
-            .remove(deps.as_mut(), &Addr::unchecked("test_feeder"))
+            .remove(&mut storage, &Addr::unchecked("test_feeder"))
             .unwrap();
     }
 
     #[test]
     fn remove_existing() {
-        let mut deps = testing::mock_dependencies();
+        let mut storage = testing::mock_dependencies().storage;
         let feeders = PriceFeeders::new("storage_namespace");
         let new_feeder = Addr::unchecked("feeder34");
-        feeders.register(deps.as_mut(), new_feeder.clone()).unwrap();
-        assert_eq!(Ok(true), feeders.is_registered(&deps.storage, &new_feeder));
+        feeders.register(&mut storage, new_feeder.clone()).unwrap();
+        assert_eq!(Ok(true), feeders.is_registered(&storage, &new_feeder));
 
-        feeders.remove(deps.as_mut(), &new_feeder).unwrap();
+        feeders.remove(&mut storage, &new_feeder).unwrap();
 
-        assert_eq!(Ok(false), feeders.is_registered(&deps.storage, &new_feeder));
+        assert_eq!(Ok(false), feeders.is_registered(&storage, &new_feeder));
     }
 }

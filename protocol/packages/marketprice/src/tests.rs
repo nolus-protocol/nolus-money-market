@@ -37,32 +37,32 @@ const DISCOUNTING_FACTOR: Percent100 = Percent100::from_permille(750);
 
 #[test]
 fn register_feeder() {
-    let mut deps = cosmwasm_test::mock_dependencies();
+    let mut storage = cosmwasm_test::mock_dependencies().storage;
 
     let control = PriceFeeders::new("foo");
     let f_address = testing::user("address1");
-    let resp = control.is_registered(&deps.storage, &f_address).unwrap();
+    let resp = control.is_registered(&storage, &f_address).unwrap();
     assert!(!resp);
 
-    control.register(deps.as_mut(), f_address.clone()).unwrap();
+    control.register(&mut storage, f_address.clone()).unwrap();
 
-    let resp = control.is_registered(&deps.storage, &f_address).unwrap();
+    let resp = control.is_registered(&storage, &f_address).unwrap();
     assert!(resp);
 
-    let feeders = control.feeders(&deps.storage).unwrap();
+    let feeders = control.feeders(&storage).unwrap();
     assert_eq!(1, feeders.len());
 
     // should return error that address is already added
-    let res = control.register(deps.as_mut(), f_address);
+    let res = control.register(&mut storage, f_address);
     assert!(res.is_err());
 
     let f_address = testing::user("address2");
-    control.register(deps.as_mut(), f_address).unwrap();
+    control.register(&mut storage, f_address).unwrap();
 
     let f_address = testing::user("address3");
-    control.register(deps.as_mut(), f_address).unwrap();
+    control.register(&mut storage, f_address).unwrap();
 
-    let feeders = control.feeders(&deps.storage).unwrap();
+    let feeders = control.feeders(&storage).unwrap();
     assert_eq!(3, feeders.len());
 }
 
