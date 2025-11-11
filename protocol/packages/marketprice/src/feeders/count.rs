@@ -16,6 +16,7 @@ use crate::feeders::PriceFeedersError;
 pub struct Count(u32);
 
 impl Count {
+    const ZERO: Self = Self(0);
     pub const ONE: Self = Self(1);
     pub const MAX: Self = Self(u32::MAX);
 
@@ -33,7 +34,7 @@ impl Count {
     }
 
     pub fn try_into_reciproral(self) -> Option<impl RatioLegacy<Self>> {
-        (self.0 != 0).then_some(SimpleFraction::new(Self::ONE, self))
+        (self != Self::ZERO).then_some(SimpleFraction::new(Self::ONE, self))
     }
 }
 
@@ -108,5 +109,5 @@ impl FractionUnit for Count {
 }
 
 impl Zero for Count {
-    const ZERO: Self = Self::new(0);
+    const ZERO: Self = Self::ZERO;
 }
