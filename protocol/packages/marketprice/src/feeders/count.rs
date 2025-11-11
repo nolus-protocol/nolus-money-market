@@ -29,10 +29,12 @@ impl Count {
         Self::new(count)
     }
 
+    /// Checks if [self] can be safely incremented
     pub fn can_increment(&self) -> Option<()> {
         (self != &Self::MAX).then_some(())
     }
 
+    /// Converts [self] into typle, which can be used for division through reciproral multiplication
     pub fn try_into_reciproral(self) -> Option<impl RatioLegacy<Self>> {
         (self != Self::ZERO).then(|| SimpleFraction::new(Self::ONE, self))
     }
