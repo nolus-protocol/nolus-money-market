@@ -34,7 +34,7 @@ impl Count {
     }
 
     pub fn try_into_reciproral(self) -> Option<impl RatioLegacy<Self>> {
-        (self != Self::ZERO).then_some(SimpleFraction::new(Self::ONE, self))
+        (self != Self::ZERO).then(|| SimpleFraction::new(Self::ONE, self))
     }
 }
 
