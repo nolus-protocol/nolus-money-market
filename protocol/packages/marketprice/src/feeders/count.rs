@@ -111,3 +111,32 @@ impl FractionUnit for Count {
 impl Zero for Count {
     const ZERO: Self = Self::ZERO;
 }
+
+#[cfg(test)]
+mod test {
+
+    use super::Count;
+
+    #[test]
+    fn try_into_reciproral_nonzero() {
+        assert!(Count::new_test(4096).try_into_reciproral().is_some())
+    }
+
+    #[test]
+    fn try_into_reciproral_zero() {
+        assert!(Count::ZERO.try_into_reciproral().is_none())
+    }
+
+    #[test]
+    fn can_increment_some() {
+        assert_eq!(Some(()), Count::ZERO.can_increment());
+        assert_eq!(Some(()), Count::new_test(100).can_increment());
+        assert_eq!(Some(()), Count::new_test(65536).can_increment());
+        assert_eq!(Some(()), Count::new_test(u32::MAX - 1).can_increment());
+    }
+
+    #[test]
+    fn can_increment_none() {
+        assert!(Count::MAX.can_increment().is_none());
+    }
+}
