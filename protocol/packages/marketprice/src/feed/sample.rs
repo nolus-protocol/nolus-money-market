@@ -1,8 +1,10 @@
-use std::{collections::HashMap, marker::PhantomData};
+use std::collections::HashMap;
 
 use finance::{
+    coin::Amount,
     duration::Duration,
-    price::{Price, base::fractionable::RatioUpcast},
+    price::Price,
+    ratio::{RatioLegacy, SimpleFraction},
 };
 use sdk::cosmwasm_std::{Addr, Timestamp};
 
@@ -121,7 +123,13 @@ where
 
             let avg = prices_count
                 .try_into_reciproral()
-                .map(|reciproral| sum.lossy_mul(&RatioUpcast(PhantomData, &reciproral)))
+                .map(|reciproral| {
+                    SimpleFraction::new(
+                        Amount::from(reciproral.parts()),
+                        Amount::from(reciproral.total()),
+                    )
+                })
+                .map(|fraction| sum.lossy_mul(&fraction))
                 .expect("should have provided positive value for count");
 
             self.last_sample = Sample { price: Some(avg) };
