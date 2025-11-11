@@ -130,7 +130,7 @@ where
             .collect::<HashSet<_>>()
             .len()
             .try_into()
-            .expect("Feeder count exceeded")
+            .expect("count should fit within defined bounds")
     }
 }
 

@@ -108,7 +108,8 @@ where
 
     fn end_of_period(&mut self) {
         let prices_len = self.sample_prices.len();
-        let prices_count = Count::try_from(prices_len).expect("More prices stored than allowed");
+        let prices_count =
+            Count::try_from(prices_len).expect("count should fit within defined bounds");
 
         if prices_len > 0 {
             let mut values = self.sample_prices.values();
