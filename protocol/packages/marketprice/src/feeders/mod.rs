@@ -8,7 +8,7 @@ use sdk::{
 };
 
 mod count;
-pub use count::Count as FeederCount;
+pub use count::Count;
 
 /// Errors returned from Feeders
 #[derive(Error, Debug, PartialEq)]
@@ -53,7 +53,7 @@ impl PriceFeeders {
     pub fn register(&self, deps: DepsMut<'_>, feeder: Addr) -> Result<(), PriceFeedersError> {
         let mut db = self.feeders(deps.storage)?;
 
-        FeederCount::try_from(db.len())?.can_increment();
+        Count::try_from(db.len())?.can_increment();
 
         (!db.contains(&feeder))
             .then_some(())
@@ -79,14 +79,11 @@ impl PriceFeeders {
             .map_err(Into::into)
     }
 
-    pub fn total_registered(
-        &self,
-        storage: &dyn Storage,
-    ) -> Result<FeederCount, PriceFeedersError> {
+    pub fn total_registered(&self, storage: &dyn Storage) -> Result<Count, PriceFeedersError> {
         let result = self
             .feeders(storage)
             .map_err(PriceFeedersError::Std)
-            .and_then(|feeders| FeederCount::try_from(feeders.len()));
+            .and_then(|feeders| Count::try_from(feeders.len()));
 
         if let Err(PriceFeedersError::MaxFeederCount(_)) = result {
             panic!("More registred feeders than allowed!")

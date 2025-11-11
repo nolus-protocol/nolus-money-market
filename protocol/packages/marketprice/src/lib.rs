@@ -1,5 +1,5 @@
 pub use feed::{ObservationsReadRepo, ObservationsRepo, Repo};
-pub use feeders::FeederCount;
+pub use feeders::Count as FeederCount;
 
 pub mod alarms;
 pub mod config;

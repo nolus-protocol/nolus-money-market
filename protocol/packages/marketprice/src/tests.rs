@@ -23,14 +23,14 @@ use sdk::{
 
 use crate::Repo;
 use crate::feed::ObservationsRepo;
-use crate::feeders::FeederCount;
+use crate::feeders::Count;
 use crate::{
     config::Config, error::PriceFeedsError, feeders::PriceFeeders, market_price::PriceFeeds,
 };
 
 const ROOT_NS: &str = "root_ns";
-const TOTAL_FEEDERS: FeederCount = FeederCount::ONE;
-const TWICE_TOTAL_FEEDERS: FeederCount = FeederCount::new_test(2);
+const TOTAL_FEEDERS: Count = Count::ONE;
+const TWICE_TOTAL_FEEDERS: Count = Count::new_test(2);
 const SAMPLE_PERIOD_SECS: u32 = 5;
 const SAMPLES_NUMBER: u16 = 12;
 const DISCOUNTING_FACTOR: Percent100 = Percent100::from_permille(750);
