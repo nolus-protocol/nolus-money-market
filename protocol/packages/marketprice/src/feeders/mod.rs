@@ -109,7 +109,7 @@ mod tests {
 
     #[test]
     fn remove_empty() {
-        let mut storage = testing::mock_dependencies().storage;
+        let mut storage = testing::MockStorage::default();
         let feeders = PriceFeeders::new("storage_namespace");
         feeders
             .remove(&mut storage, &Addr::unchecked("test_feeder"))

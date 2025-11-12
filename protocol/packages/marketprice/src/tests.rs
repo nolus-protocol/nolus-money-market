@@ -14,10 +14,7 @@ use finance::{
     price::{self, Price, dto::PriceDTO},
 };
 use sdk::{
-    cosmwasm_std::{
-        Storage, Timestamp,
-        testing::{self as cosmwasm_test, MockStorage},
-    },
+    cosmwasm_std::{Storage, Timestamp, testing::MockStorage},
     testing,
 };
 
@@ -37,7 +34,7 @@ const DISCOUNTING_FACTOR: Percent100 = Percent100::from_permille(750);
 
 #[test]
 fn register_feeder() {
-    let mut storage = cosmwasm_test::mock_dependencies().storage;
+    let mut storage = MockStorage::default();
 
     let control = PriceFeeders::new("foo");
     let f_address = testing::user("address1");
