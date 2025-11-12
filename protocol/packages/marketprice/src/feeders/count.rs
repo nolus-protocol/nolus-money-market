@@ -46,48 +46,11 @@ impl Count {
     }
 }
 
-impl TryFrom<usize> for Count {
-    type Error = PriceFeedersError;
-
-    fn try_from(value: usize) -> Result<Self, Self::Error> {
-        value
-            .try_into()
-            .map_err(Self::Error::MaxFeederCount)
-            .map(Self::new)
-    }
-}
-
-impl From<Count> for u128 {
-    fn from(val: Count) -> Self {
-        val.0.into()
-    }
-}
-
 impl CommonDoublePrimitive<Percent100> for Count {
     type CommonDouble = <Count as ToDoublePrimitive>::Double;
 }
 
 impl Fractionable<Percent100> for Count {}
-
-impl IntoMax<<Count as CommonDoublePrimitive<Percent100>>::CommonDouble> for Count {
-    fn into_max(self) -> <Count as ToDoublePrimitive>::Double {
-        self.to_double()
-    }
-}
-
-impl ToDoublePrimitive for Count {
-    type Double = u64;
-
-    fn to_double(&self) -> Self::Double {
-        self.0.into()
-    }
-}
-
-impl TryFromMax<<Count as ToDoublePrimitive>::Double> for Count {
-    fn try_from_max(max: <Count as ToDoublePrimitive>::Double) -> Option<Self> {
-        max.try_into().map(Self::new).ok()
-    }
-}
 
 impl FractionUnit for Count {
     type Times = Unit;
@@ -113,6 +76,43 @@ impl FractionUnit for Count {
 
     fn to_primitive(self) -> Self::Times {
         self.0
+    }
+}
+
+impl From<Count> for u128 {
+    fn from(val: Count) -> Self {
+        val.0.into()
+    }
+}
+
+impl IntoMax<<Count as CommonDoublePrimitive<Percent100>>::CommonDouble> for Count {
+    fn into_max(self) -> <Count as ToDoublePrimitive>::Double {
+        self.to_double()
+    }
+}
+
+impl ToDoublePrimitive for Count {
+    type Double = u64;
+
+    fn to_double(&self) -> Self::Double {
+        self.0.into()
+    }
+}
+
+impl TryFrom<usize> for Count {
+    type Error = PriceFeedersError;
+
+    fn try_from(value: usize) -> Result<Self, Self::Error> {
+        value
+            .try_into()
+            .map_err(Self::Error::MaxFeederCount)
+            .map(Self::new)
+    }
+}
+
+impl TryFromMax<<Count as ToDoublePrimitive>::Double> for Count {
+    fn try_from_max(max: <Count as ToDoublePrimitive>::Double) -> Option<Self> {
+        max.try_into().map(Self::new).ok()
     }
 }
 
