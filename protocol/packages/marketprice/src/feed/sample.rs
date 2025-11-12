@@ -116,10 +116,11 @@ where
 
             let sum = values.fold(*first, |acc, current| acc + *current);
 
-            let avg = prices_count
+            let reciproral = prices_count
                 .try_into_reciproral()
-                .map(|fraction| sum.safe_mul(&fraction))
                 .expect("should have provided positive value for count");
+
+            let avg = sum.safe_mul(&reciproral);
 
             self.last_sample = Sample { price: Some(avg) };
         }
