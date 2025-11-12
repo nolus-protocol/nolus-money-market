@@ -235,10 +235,7 @@ mod test {
         bank::{BankAccountView, testing::MockBankView},
         contract::Code,
     };
-    use sdk::cosmwasm_std::{
-        Storage, Timestamp,
-        testing::{self, MockStorage},
-    };
+    use sdk::cosmwasm_std::{Storage, Timestamp, testing::MockStorage};
 
     use crate::{
         borrow::InterestRate,
@@ -261,7 +258,7 @@ mod test {
     where
         F: FnOnce(MockStorage, ApiConfig, MockBankView<TheCurrency, TheCurrency>, Timestamp),
     {
-        let mut store = testing::MockStorage::default();
+        let mut store = MockStorage::default();
         let now = Timestamp::from_nanos(1_571_897_419_879_405_538);
 
         let config = ApiConfig::new(

@@ -300,10 +300,7 @@ mod test {
     };
     use lpp_platform::NLpn;
     use platform::{bank::testing::MockBankView, contract::Code};
-    use sdk::cosmwasm_std::{
-        Addr, Timestamp,
-        testing::{self, MockStorage},
-    };
+    use sdk::cosmwasm_std::{Addr, Timestamp, testing::MockStorage};
 
     use crate::{
         borrow::InterestRate, config::Config as ApiConfig, contract::ContractError, loan::Loan,
@@ -382,7 +379,7 @@ mod test {
     fn test_query_quote() {
         const BALANCE: Coin<TheCurrency> = Coin::new(10_000_000);
         const DEPOSIT_AMOUNT: Coin<TheCurrency> = Coin::new(7_000_000);
-        let mut store = testing::MockStorage::default();
+        let mut store = MockStorage::default();
 
         let now = Timestamp::from_nanos(0);
 

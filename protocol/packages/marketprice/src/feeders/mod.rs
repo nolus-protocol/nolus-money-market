@@ -103,13 +103,16 @@ impl PriceFeeders {
 
 #[cfg(test)]
 mod tests {
-    use sdk::cosmwasm_std::{Addr, testing};
+    use sdk::cosmwasm_std::{
+        Addr,
+        testing::{self, MockStorage},
+    };
 
     use crate::feeders::PriceFeeders;
 
     #[test]
     fn remove_empty() {
-        let mut storage = testing::MockStorage::default();
+        let mut storage = MockStorage::default();
         let feeders = PriceFeeders::new("storage_namespace");
         feeders
             .remove(&mut storage, &Addr::unchecked("test_feeder"))
