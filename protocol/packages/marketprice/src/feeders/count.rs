@@ -12,23 +12,23 @@ use finance::{
 
 use crate::feeders::PriceFeedersError;
 
-type CountUnit = u32;
-const ONE: CountUnit = 1;
+type Unit = u32;
+const ONE: Unit = 1;
 
 #[derive(Clone, Copy, Debug, PartialEq, PartialOrd)]
-pub struct Count(u32);
+pub struct Count(Unit);
 
 impl Count {
     const ZERO: Self = Self(0);
     pub const ONE: Self = Self(1);
-    pub const MAX: Self = Self(u32::MAX);
+    pub const MAX: Self = Self(Unit::MAX);
 
-    const fn new(count: u32) -> Self {
+    const fn new(count: Unit) -> Self {
         Self(count)
     }
 
     #[cfg(test)]
-    pub(crate) const fn new_test(count: u32) -> Self {
+    pub(crate) const fn new_test(count: Unit) -> Self {
         Self::new(count)
     }
 
@@ -40,7 +40,7 @@ impl Count {
     /// Converts [self] into a reciproral fraction
     ///
     /// Returns [None] if the Count is zero
-    pub fn try_into_reciproral(self) -> Option<impl RatioLegacy<CountUnit>> {
+    pub fn try_into_reciproral(self) -> Option<impl RatioLegacy<Unit>> {
         // TODO use Ratio instead of `SimpleFraction`
         (self != Self::ZERO).then(|| SimpleFraction::new(ONE, self.0))
     }
@@ -90,7 +90,7 @@ impl TryFromMax<<Count as ToDoublePrimitive>::Double> for Count {
 }
 
 impl FractionUnit for Count {
-    type Times = u32;
+    type Times = Unit;
 
     fn gcd<U>(self, other: U) -> Self::Times
     where
@@ -123,6 +123,8 @@ impl Zero for Count {
 #[cfg(test)]
 mod test {
 
+    use crate::feeders::count::Unit;
+
     use super::Count;
 
     #[test]
@@ -140,7 +142,7 @@ mod test {
         assert_eq!(Some(()), Count::ZERO.can_increment());
         assert_eq!(Some(()), Count::new_test(100).can_increment());
         assert_eq!(Some(()), Count::new_test(65536).can_increment());
-        assert_eq!(Some(()), Count::new_test(u32::MAX - 1).can_increment());
+        assert_eq!(Some(()), Count::new_test(Unit::MAX - 1).can_increment());
     }
 
     #[test]
