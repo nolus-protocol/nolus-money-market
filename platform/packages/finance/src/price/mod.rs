@@ -109,7 +109,7 @@ where
     where
         F: Into<SimpleFraction<Amount>>,
     {
-        Self::try_from_fraction(self.to_fraction().lossy_mul(rhs.into()))
+        self.map_with_fraction(|self_as_fraction| self_as_fraction.lossy_mul(rhs.into()))
     }
 
     pub fn inv(self) -> Price<QuoteC, C> {
@@ -136,6 +136,16 @@ where
 
     fn check(invariant: bool, msg: &str) -> Result<()> {
         Error::broken_invariant_if::<Self>(!invariant, msg)
+    }
+
+    fn map_with_fraction<WithFraction>(self, f: WithFraction) -> Self
+    where
+        WithFraction: FnOnce(SimpleFraction<Amount>) -> SimpleFraction<Amount>,
+    {
+        Self::from_fraction(f(SimpleFraction::new(
+            Amount::from(self.amount_quote),
+            Amount::from(self.amount),
+        )))
     }
 
     fn checked_add(self, rhs: Self) -> Option<Self> {
@@ -181,24 +191,14 @@ where
             .map(|factored_total| total_of(factored_amount).is(factored_total))
     }
 
-    fn to_fraction(self) -> SimpleFraction<Amount> {
-        SimpleFraction::new(Amount::from(self.amount_quote), Amount::from(self.amount))
-    }
-
-    fn try_from_fraction<U>(fraction: SimpleFraction<U>) -> Option<Self>
+    fn from_fraction<U>(fraction: SimpleFraction<U>) -> Self
     where
-        U: FractionUnit + TryInto<Amount>,
+        U: FractionUnit + Into<Amount>,
     {
-        fraction
-            .nominator()
-            .try_into()
-            .and_then(|amount_quote| {
-                fraction
-                    .denominator()
-                    .try_into()
-                    .map(|amount| Self::new(Coin::new(amount), Coin::new(amount_quote)))
-            })
-            .ok()
+        Self::new(
+            Coin::new(fraction.denominator().into()),
+            Coin::new(fraction.nominator().into()),
+        )
     }
 }
 
@@ -386,7 +386,7 @@ mod test {
         let expect = price(c(1), q(4));
         assert_eq!(
             expect,
-            Price::try_from_fraction(SimpleFraction::new(4u128, 1u128)).unwrap()
+            Price::from_fraction(SimpleFraction::new(4u128, 1u128))
         );
     }
 
@@ -480,12 +480,11 @@ mod test {
     }
 
     #[test]
-    #[should_panic]
     fn lossy_add_overflow() {
         // 2^128 / FACTOR (10^18) / 2^64 ~ 18.446744073709553
         let p1 = price::total_of(c(1)).is(q(u128::from(u64::MAX) * 19u128));
         let p2 = Price::identity();
-        p1.lossy_add(p2);
+        assert!(p1.lossy_add(p2).is_none())
     }
 
     #[test]
