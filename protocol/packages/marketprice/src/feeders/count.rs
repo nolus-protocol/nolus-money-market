@@ -12,6 +12,9 @@ use finance::{
 
 use crate::feeders::PriceFeedersError;
 
+type CountUnit = u32;
+const ONE: CountUnit = 1;
+
 #[derive(Clone, Copy, Debug, PartialEq, PartialOrd)]
 pub struct Count(u32);
 
@@ -34,9 +37,12 @@ impl Count {
         (self != &Self::MAX).then_some(())
     }
 
-    /// Converts [self] into typle, which can be used for division through reciproral multiplication
-    pub fn try_into_reciproral(self) -> Option<impl RatioLegacy<Self>> {
-        (self != Self::ZERO).then(|| SimpleFraction::new(Self::ONE, self))
+    /// Converts [self] into a reciproral fraction
+    ///
+    /// Returns [None] if the Count is zero
+    pub fn try_into_reciproral(self) -> Option<impl RatioLegacy<CountUnit>> {
+        // TODO use Ratio instead of `SimpleFraction`
+        (self != Self::ZERO).then(|| SimpleFraction::new(ONE, self.0))
     }
 }
 

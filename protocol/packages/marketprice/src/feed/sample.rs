@@ -1,11 +1,6 @@
 use std::collections::HashMap;
 
-use finance::{
-    coin::Amount,
-    duration::Duration,
-    price::Price,
-    ratio::{RatioLegacy, SimpleFraction},
-};
+use finance::{duration::Duration, fractionable::FractionableLegacy, price::Price};
 use sdk::cosmwasm_std::{Addr, Timestamp};
 
 use crate::feeders::Count;
@@ -123,13 +118,7 @@ where
 
             let avg = prices_count
                 .try_into_reciproral()
-                .map(|reciproral| {
-                    SimpleFraction::new(
-                        Amount::from(reciproral.parts()),
-                        Amount::from(reciproral.total()),
-                    )
-                })
-                .map(|fraction| sum.lossy_mul(&fraction))
+                .map(|fraction| sum.safe_mul(&fraction))
                 .expect("should have provided positive value for count");
 
             self.last_sample = Sample { price: Some(avg) };
