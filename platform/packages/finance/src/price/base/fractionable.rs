@@ -32,7 +32,7 @@ where
     }
 }
 
-struct RatioUpcast<'a, U, R>(pub PhantomData<U>, pub &'a R)
+struct RatioUpcast<'a, U, R>(PhantomData<U>, &'a R)
 where
     R: RatioLegacy<U>;
 
