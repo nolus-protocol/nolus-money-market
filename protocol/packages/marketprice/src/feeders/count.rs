@@ -99,7 +99,7 @@ impl TryFrom<usize> for Count {
     fn try_from(value: usize) -> Result<Self, Self::Error> {
         value
             .try_into()
-            .map_err(Self::Error::MaxFeederCount)
+            .map_err(Self::Error::FeederCountExceeded)
             .map(Self::new)
     }
 }
@@ -117,13 +117,22 @@ impl Zero for Count {
 #[cfg(test)]
 mod test {
 
+    use finance::ratio::RatioLegacy;
+
     use crate::feeders::count::Unit;
 
     use super::Count;
 
     #[test]
     fn try_into_reciproral_nonzero() {
-        assert!(Count::new_test(4096).try_into_reciproral().is_some())
+        let count = 4096;
+        assert_eq!(
+            count,
+            Count::new_test(count)
+                .try_into_reciproral()
+                .unwrap()
+                .total()
+        );
     }
 
     #[test]
