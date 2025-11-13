@@ -26,7 +26,7 @@ use crate::{
 };
 
 const ROOT_NS: &str = "root_ns";
-const TOTAL_FEEDERS: Count = Count::ONE;
+const TOTAL_FEEDERS: Count = Count::new_test(1);
 const TWICE_TOTAL_FEEDERS: Count = Count::new_test(2);
 const SAMPLE_PERIOD_SECS: u32 = 5;
 const SAMPLES_NUMBER: u16 = 12;

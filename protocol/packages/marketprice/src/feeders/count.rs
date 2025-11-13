@@ -13,22 +13,23 @@ use finance::{
 use crate::feeders::PriceFeedersError;
 
 type Unit = u32;
+const ZERO: Unit = 0;
 const ONE: Unit = 1;
+const MAX: Unit = u32::MAX;
 
 #[derive(Clone, Copy, Debug, PartialEq, PartialOrd)]
 pub struct Count(Unit);
 
 impl Count {
-    const ZERO: Self = Self(0);
-    pub const ONE: Self = Self(1);
-    pub const MAX: Self = Self(Unit::MAX);
+    const ZERO: Self = Self(ZERO);
+    pub const MAX: Self = Self(MAX);
 
     const fn new(count: Unit) -> Self {
         Self(count)
     }
 
-    #[cfg(test)]
-    pub(crate) const fn new_test(count: Unit) -> Self {
+    #[cfg(any(test, feature = "testing"))]
+    pub const fn new_test(count: Unit) -> Self {
         Self::new(count)
     }
 
