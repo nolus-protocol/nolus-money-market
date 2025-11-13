@@ -203,7 +203,7 @@ mod test {
         };
 
         const ROOT_NS: &str = "root";
-        const TOTAL_FEEDERS: FeederCount = FeederCount::ONE;
+        const TOTAL_FEEDERS: FeederCount = FeederCount::new_test(1);
 
         #[test]
         fn normal() {
