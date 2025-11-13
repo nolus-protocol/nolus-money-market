@@ -79,12 +79,6 @@ impl FractionUnit for Count {
     }
 }
 
-impl From<Count> for u128 {
-    fn from(val: Count) -> Self {
-        val.0.into()
-    }
-}
-
 impl IntoMax<<Count as CommonDoublePrimitive<Percent100>>::CommonDouble> for Count {
     fn into_max(self) -> <Count as ToDoublePrimitive>::Double {
         self.to_double()
