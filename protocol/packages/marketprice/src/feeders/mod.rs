@@ -105,10 +105,7 @@ fn count_of<T>(db: &HashSet<T>) -> Count {
 
 #[cfg(test)]
 mod tests {
-    use sdk::cosmwasm_std::{
-        Addr,
-        testing::{self, MockStorage},
-    };
+    use sdk::cosmwasm_std::{Addr, testing::MockStorage};
 
     use crate::feeders::PriceFeeders;
 
@@ -123,7 +120,7 @@ mod tests {
 
     #[test]
     fn remove_existing() {
-        let mut storage = testing::mock_dependencies().storage;
+        let mut storage = MockStorage::default();
         let feeders = PriceFeeders::new("storage_namespace");
         let new_feeder = Addr::unchecked("feeder34");
         feeders.register(&mut storage, new_feeder.clone()).unwrap();
