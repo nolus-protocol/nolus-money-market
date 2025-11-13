@@ -60,7 +60,7 @@ impl PriceFeeders {
     ) -> Result<(), PriceFeedersError> {
         let mut db = self.feeders(storage)?;
 
-        Count::try_from(db.len())?
+        count_of(&db)
             .can_increment()
             .ok_or(PriceFeedersError::MaxFeederCount {})?;
 
@@ -93,17 +93,14 @@ impl PriceFeeders {
     }
 
     pub fn total_registered(&self, storage: &dyn Storage) -> Result<Count, PriceFeedersError> {
-        let result = self
-            .feeders(storage)
+        self.feeders(storage)
             .map_err(PriceFeedersError::Std)
-            .and_then(|feeders| Count::try_from(feeders.len()));
-
-        if let Err(PriceFeedersError::FeederCountExceeded(_)) = result {
-            panic!("More registred feeders than allowed!")
-        };
-
-        result
+            .map(|feeders| count_of(&feeders))
     }
+}
+
+fn count_of<T>(db: &HashSet<T>) -> Count {
+    Count::try_from(db.len()).expect("registered feeders fit the allowed maximum!")
 }
 
 #[cfg(test)]
