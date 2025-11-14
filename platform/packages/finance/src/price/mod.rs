@@ -217,27 +217,31 @@ where
         bits_to_trim: u32,
         min_precision_loss_overflow: u32,
     ) -> Option<Amount> {
+        debug_assert!(bits_to_trim <= Amount::BITS);
+
+        (bits_to_trim < min_precision_loss_overflow)
+            .then(|| Self::trim_down_checked(double_amount, bits_to_trim))
+    }
+
+    #[track_caller]
+    fn trim_down_checked(double_amount: DoubleAmount, bits_to_trim: u32) -> Amount {
         const INSUFFICIENT_BITS: &str = "insufficient trimming bits";
 
-        debug_assert!(bits_to_trim <= Amount::BITS);
         debug_assert!(
             Self::bits_above_max(double_amount) <= bits_to_trim,
             "{}",
             INSUFFICIENT_BITS
         );
-
-        (bits_to_trim < min_precision_loss_overflow).then(|| {
-            debug_assert!(
-                bits_to_trim < Self::bits(double_amount),
-                "the precision loss {bits_to_trim} exceeds the value bits {loss}",
-                loss = Self::bits(double_amount)
-            );
-            let amount: Amount = (double_amount >> bits_to_trim)
-                .try_into()
-                .expect(INSUFFICIENT_BITS);
-            debug_assert!(amount > 0, "the precision loss exceeds the value bits");
-            amount
-        })
+        debug_assert!(
+            bits_to_trim < Self::bits(double_amount),
+            "the precision loss {bits_to_trim} exceeds the value bits {loss}",
+            loss = Self::bits(double_amount)
+        );
+        let amount: Amount = (double_amount >> bits_to_trim)
+            .try_into()
+            .expect(INSUFFICIENT_BITS);
+        debug_assert!(amount > 0, "the precision loss exceeds the value bits");
+        amount
     }
 }
 
