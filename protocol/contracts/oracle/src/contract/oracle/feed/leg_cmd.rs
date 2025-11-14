@@ -23,13 +23,37 @@ where
     BaseC: CurrencyDef,
     BaseC::Group: MemberOf<BaseG> + MemberOf<PriceG>,
     BaseG: Group + MemberOf<PriceG>,
-    Querier: PriceQuerier,
+    Querier: PriceQuerier<CurrencyGroup = PriceG>,
 {
     pub fn new(price_querier: Querier) -> Self {
         Self {
             price_querier,
             stack: vec![Price::<BaseC, BaseC>::identity().into()],
         }
+    }
+
+    // Price<TargetC, BaseC> = Price<TargetC, QuoteC> * Price<QuoteC, BaseC>
+    fn stretch_price<T, Q>(
+        &self,
+        target_c: &CurrencyDTO<PriceG>,
+        quote_c: &CurrencyDTO<PriceG>,
+        quote_price: Price<Q, BaseC>,
+    ) -> Result<Option<BasePrice<PriceG, BaseC, BaseG>>, Error<PriceG>>
+    where
+        T: Currency + MemberOf<PriceG>,
+        Q: Currency + MemberOf<PriceG>,
+    {
+        self.price_querier
+            .price::<T, Q>(target_c, quote_c)
+            .and_then(|target_quote_price| {
+                target_quote_price
+                    .map(|price| {
+                        (price * quote_price)
+                            .ok_or_else(Error::PriceMultiplicationOverflow)
+                            .map(|not_overflown| BasePrice::from_price(&not_overflown, *target_c))
+                    })
+                    .transpose()
+            })
     }
 }
 
@@ -45,45 +69,45 @@ where
 
     type Outcome = Result<Option<BasePrice<PriceG, BaseC, BaseG>>, Error<PriceG>>;
 
-    fn on<B, Q>(
+    fn on<T, Q>(
         self,
-        dto1: &CurrencyDTO<Self::VisitedG>,
-        dto2: &CurrencyDTO<Self::VisitedG>,
+        target_c: &CurrencyDTO<Self::VisitedG>,
+        quote_c: &CurrencyDTO<Self::VisitedG>,
     ) -> Self::Outcome
     where
-        B: Currency + MemberOf<Self::VisitedG>,
+        T: Currency + MemberOf<Self::VisitedG>,
         Q: Currency + MemberOf<Self::VisitedG>,
     {
         // tries to find price for non empty stack (in a branch of the tree)
-        // covers both normal flow and NoPrice cases
-        let idx_price = self
+        // covers both lack-of-a-price and normal flow usecases, including multiplication overflows.
+        let idx_target_price = self
             .stack
             .iter()
             .enumerate()
             .rev()
-            .find_map(|(i, parent_bprice)| {
-                parent_bprice
-                    .try_as_specific::<Q, Self::VisitedG>(dto2)
+            .find_map(|(i, quote_bprice)| {
+                quote_bprice
+                    .try_as_specific::<Q, Self::VisitedG>(quote_c)
                     .ok()
-                    .map(|parent_price| {
-                        self.price_querier
-                            .price::<B, Q>(dto1, dto2)
-                            .map(|res_price| {
-                                res_price.map(|price| {
-                                    (i + 1, BasePrice::from_price(&(price * parent_price), *dto1))
-                                })
-                            })
-                    })
+                    .map(|quote_price| (i, quote_price))
             })
-            .transpose()
-            .map(Option::flatten)?;
+            .map(|(idx_quote_price, quote_price)| {
+                self.stretch_price::<T, Q>(target_c, quote_c, quote_price)
+                    .map(|may_target_price| {
+                        may_target_price.map(|target_price| (idx_quote_price + 1, target_price))
+                    })
+                    .transpose()
+            })
+            .flatten()
+            .transpose();
 
-        if let Some((idx, price)) = idx_price {
-            self.stack.truncate(idx);
-            self.stack.push(price);
-        }
-
-        Ok(idx_price.map(|(_, price)| price))
+        idx_target_price.map(|a| {
+            a.map(|(idx, target_price)| {
+                self.stack.truncate(idx);
+                self.stack.push(target_price);
+                target_price
+            })
+        })
     }
 }
 
