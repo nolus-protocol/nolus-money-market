@@ -91,14 +91,13 @@ where
                     .ok()
                     .map(|quote_price| (i, quote_price))
             })
-            .map(|(idx_quote_price, quote_price)| {
+            .and_then(|(idx_quote_price, quote_price)| {
                 self.extend_quote_to_target::<T, Q>(target_c, quote_c, quote_price)
                     .map(|may_target_price| {
                         may_target_price.map(|target_price| (idx_quote_price + 1, target_price))
                     })
                     .transpose()
             })
-            .flatten()
             .transpose();
 
         idx_target_price.map(|a| {
