@@ -60,9 +60,7 @@ impl PriceFeeders {
     ) -> Result<(), PriceFeedersError> {
         let mut db = self.feeders(storage)?;
 
-        count_of(&db)
-            .can_increment()
-            .ok_or(PriceFeedersError::MaxFeederCount {})?;
+        count_of(&db).check_increment()?;
 
         (!db.contains(&feeder))
             .then_some(())

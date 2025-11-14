@@ -34,8 +34,12 @@ impl Count {
     }
 
     /// Checks if [self] can be safely incremented
-    pub fn can_increment(&self) -> Option<()> {
-        (self != &Self::MAX).then_some(())
+    pub fn check_increment(&self) -> Result<(), PriceFeedersError> {
+        if self != &Self::MAX {
+            Ok(())
+        } else {
+            Err(PriceFeedersError::MaxFeederCount {})
+        }
     }
 
     /// Converts [self] into a reciproral fraction
@@ -143,14 +147,14 @@ mod test {
 
     #[test]
     fn can_increment_some() {
-        assert_eq!(Some(()), Count::ZERO.can_increment());
-        assert_eq!(Some(()), Count::new_test(100).can_increment());
-        assert_eq!(Some(()), Count::new_test(65536).can_increment());
-        assert_eq!(Some(()), Count::new_test(Unit::MAX - 1).can_increment());
+        assert_eq!(Ok(()), Count::ZERO.check_increment());
+        assert_eq!(Ok(()), Count::new_test(100).check_increment());
+        assert_eq!(Ok(()), Count::new_test(65536).check_increment());
+        assert_eq!(Ok(()), Count::new_test(Unit::MAX - 1).check_increment());
     }
 
     #[test]
     fn can_increment_none() {
-        assert!(Count::MAX.can_increment().is_none());
+        assert!(Count::MAX.check_increment().is_err());
     }
 }
