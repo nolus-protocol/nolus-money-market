@@ -33,7 +33,7 @@ where
     }
 
     // Price<TargetC, BaseC> = Price<TargetC, QuoteC> * Price<QuoteC, BaseC>
-    fn stretch_price<T, Q>(
+    fn extend_quote_to_target<T, Q>(
         &self,
         target_c: &CurrencyDTO<PriceG>,
         quote_c: &CurrencyDTO<PriceG>,
@@ -92,7 +92,7 @@ where
                     .map(|quote_price| (i, quote_price))
             })
             .map(|(idx_quote_price, quote_price)| {
-                self.stretch_price::<T, Q>(target_c, quote_c, quote_price)
+                self.extend_quote_to_target::<T, Q>(target_c, quote_c, quote_price)
                     .map(|may_target_price| {
                         may_target_price.map(|target_price| (idx_quote_price + 1, target_price))
                     })
