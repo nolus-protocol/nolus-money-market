@@ -43,7 +43,7 @@ where
     T: Serialize,
     R: Debug + for<'a> Deserialize<'a> + PartialEq,
 {
-    cosmwasm_std::from_json(cosmwasm_std::to_json_vec(obj).expect("serialization succeed"))
+    cosmwasm_std::to_json_vec(obj).and_then(cosmwasm_std::from_json)
 }
 
 pub fn assert_ser_string<T>(obj: &T, expected: &str)

@@ -21,6 +21,9 @@ pub enum PriceFeedsError {
     #[error("[Market Price; Feeds] {0}")]
     Currency(#[from] currency::error::Error),
 
+    #[error("[Market Price; Feeds] Price multiplication overflow")]
+    PriceMultiplicationOverflow(),
+
     #[error("[Market Price; Feeds] {0}")]
     Finance(#[from] finance::error::Error),
 

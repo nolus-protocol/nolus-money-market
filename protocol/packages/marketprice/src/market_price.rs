@@ -330,10 +330,16 @@ where
         if let Some(next_currency) = self.leaf_to_base.next() {
             next_currency.into_pair_member_type(self)
         } else {
-            debug_assert_eq!(self.current_c, &currency::dto::<BaseC, BaseG>());
-
-            Ok((self.price * Price::<CurrentC, BaseC>::identity()).into())
+            Ok(self.do_collect_base())
         }
+    }
+
+    fn do_collect_base(self) -> BasePrice<G, BaseC, BaseG> {
+        debug_assert_eq!(self.current_c, &currency::dto::<BaseC, BaseG>());
+
+        (self.price * Price::<CurrentC, BaseC>::identity())
+            .expect("multiplication by the price identity should not overflow")
+            .into()
     }
 }
 impl<'currency_dto, CurrenciesToBaseC, C, CurrentC, G, BaseC, BaseG, ObservationsRepoImpl>
@@ -380,8 +386,9 @@ where
             self.at,
             self.total_feeders,
         )?;
-        let total_price = self.price * next_price;
-        self.advance(total_price, &quote_c).do_collect()
+        (self.price * next_price)
+            .ok_or_else(PriceFeedsError::PriceMultiplicationOverflow)
+            .and_then(|total_price| self.advance(total_price, &quote_c).do_collect())
     }
 }
 
@@ -554,7 +561,7 @@ mod test {
             )
         );
         assert_eq!(
-            Ok((new_price21 * new_price14).into()),
+            Ok((new_price21 * new_price14).unwrap().into()),
             feeds.price::<SuperGroupTestC4, SuperGroup, _>(
                 NOW,
                 TOTAL_FEEDERS,
@@ -567,7 +574,7 @@ mod test {
             )
         );
         assert_eq!(
-            Ok((new_price21 * new_price110).into()),
+            Ok((new_price21 * new_price110).unwrap().into()),
             feeds.price::<SubGroupTestC10, SubGroup, _>(
                 NOW,
                 TOTAL_FEEDERS,

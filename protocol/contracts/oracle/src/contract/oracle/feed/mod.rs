@@ -71,9 +71,18 @@ where
                         .transpose(),
                 )
             })
-            .flatten()
+            .flatten() // ignores no-price values (None)
     }
 
+    // TODO consider merging the 'all-prices-iter' and 'calc-base-price' algorithms
+    // The former traverses the entire tree in depth-first order and caches
+    // already computed base prices in a stack-like structure to reuse.
+    // The latter recursively goes from the target leaf currency up to
+    // the root base currency with no need of a cache.
+    // It seems the latter is a specific case of the former. The latter, though,
+    // benefits from an optimized algorithm visiting each currency only once,
+    // whereas the former visits each time the two nodes of an edge, duplicating
+    // same node - once as a right-end, another as a left-end.
     pub fn calc_base_price(
         &self,
         tree: &SupportedPairs<PriceG, BaseC>,

@@ -268,8 +268,11 @@ mod test_ratio {
 
     fn invalid_ratio_deserialization()
     -> Result<Ratio<Coin<SuperGroupTestC1>>, cosmwasm_std::StdError> {
-        let serialized = cosmwasm_std::to_json_vec(&SimpleFraction::new(coin(5), coin(4))).unwrap();
-        cosmwasm_std::from_json::<Ratio<Coin<SuperGroupTestC1>>>(&serialized)
+        cosmwasm_std::from_json::<Ratio<Coin<SuperGroupTestC1>>>(&serialize_fraction())
+    }
+
+    fn serialize_fraction() -> Vec<u8> {
+        cosmwasm_std::to_json_vec(&SimpleFraction::new(coin(5), coin(4))).unwrap()
     }
 
     mod into_coprime {

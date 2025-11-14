@@ -150,7 +150,9 @@ where
                 BaseC: CurrencyDef,
                 BaseC::Group: MemberOf<Self::PriceG>,
             {
-                Ok((base_price * self.stable_to_base.inv()).into())
+                (base_price * self.stable_to_base.inv())
+                    .ok_or_else(Self::Error::PriceMultiplicationOverflow)
+                    .map(Into::into)
             }
         }
         self.try_query_base_price(at, &currency::dto::<StableCurrency, _>())

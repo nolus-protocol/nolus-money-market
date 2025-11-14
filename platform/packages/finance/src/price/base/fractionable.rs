@@ -15,6 +15,7 @@ where
         F: RatioLegacy<PercentUnits>,
     {
         self.lossy_mul(&RatioUpcast(PhantomData, fraction))
+            .expect("TODO replace with Fraction/Ratio multiplication")
     }
 }
 
@@ -29,6 +30,7 @@ where
         F: RatioLegacy<u128>,
     {
         self.lossy_mul(fraction)
+            .expect("TODO replace with Fraction/Ratio multiplication")
     }
 }
 
@@ -152,7 +154,7 @@ mod test {
         }
 
         #[test]
-        #[should_panic = "price overflow"]
+        #[should_panic = "TODO replace with Fraction/Ratio multiplication"]
         fn overflow() {
             test_impl(
                 super::c(2),
