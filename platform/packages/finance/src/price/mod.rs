@@ -203,8 +203,7 @@ where
 
     #[track_caller]
     fn bits(double_amount: DoubleAmount) -> u32 {
-        const BITS_MAX_DOUBLE_AMOUNT: u32 = DoubleAmount::BITS;
-        BITS_MAX_DOUBLE_AMOUNT - double_amount.leading_zeros()
+        DoubleAmount::BITS - double_amount.leading_zeros()
     }
 
     #[track_caller]
