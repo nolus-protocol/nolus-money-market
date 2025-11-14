@@ -209,10 +209,7 @@ where
 
     #[track_caller]
     fn bits_above_max(double_amount: DoubleAmount) -> u32 {
-        const BITS_MAX_AMOUNT: u32 = Amount::BITS;
-        let higher_half = Amount::try_from(double_amount >> BITS_MAX_AMOUNT)
-            .expect("Bigger Amount Higher Rank Type than required!");
-        BITS_MAX_AMOUNT - higher_half.leading_zeros()
+        Self::bits(double_amount).saturating_sub(Amount::BITS)
     }
 
     #[track_caller]
