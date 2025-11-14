@@ -70,10 +70,7 @@ fn marketprice_add_feed_expect_err() {
     let storage_dyn_ref: &mut dyn Storage = &mut storage;
     let market = PriceFeeds::new(Repo::new(ROOT_NS, storage_dyn_ref), &config);
 
-    let now = SystemTime::now()
-        .duration_since(SystemTime::UNIX_EPOCH)
-        .unwrap();
-    let ts = Timestamp::from_seconds(now.as_secs());
+    let ts = now();
     let expected_err = market
         .price::<SuperGroupTestC2, SuperGroup, _>(
             ts,
@@ -96,13 +93,8 @@ fn marketprice_add_feed_empty_vec() {
     let mut market = PriceFeeds::new(Repo::new(ROOT_NS, storage_dyn_ref), &config);
     let f_address = testing::user("address1");
 
-    let now = SystemTime::now()
-        .duration_since(SystemTime::UNIX_EPOCH)
-        .unwrap();
-    let ts = Timestamp::from_seconds(now.as_secs());
-
     let prices: Vec<PriceDTO<SuperGroup>> = Vec::new();
-    market.feed(ts, f_address, &prices).unwrap();
+    market.feed(now(), f_address, &prices).unwrap();
 }
 
 #[test]
@@ -119,15 +111,11 @@ fn marketprice_add_feed() {
 
     let prices = vec![price1.into(), price2.into(), price3.into()];
 
-    let now = SystemTime::now()
-        .duration_since(SystemTime::UNIX_EPOCH)
-        .unwrap();
-    let ts = Timestamp::from_seconds(now.as_secs());
-
-    market.feed(ts, f_address, &prices).unwrap();
+    let now = now();
+    market.feed(now, f_address, &prices).unwrap();
     let err = market
         .price::<SuperGroupTestC4, SuperGroup, _>(
-            ts,
+            now,
             TWICE_TOTAL_FEEDERS,
             [
                 &currency::dto::<SuperGroupTestC1, _>(),
@@ -141,7 +129,7 @@ fn marketprice_add_feed() {
     {
         let price_resp = market
             .price::<SuperGroupTestC4, SuperGroup, _>(
-                ts,
+                now,
                 TOTAL_FEEDERS,
                 [
                     &currency::dto::<SuperGroupTestC1, _>(),
@@ -309,14 +297,11 @@ where
 {
     let f_address = testing::user("address1");
 
-    let now = SystemTime::now()
-        .duration_since(SystemTime::UNIX_EPOCH)
-        .unwrap();
-    let ts = Timestamp::from_seconds(now.as_secs());
+    let now = now();
 
     let price = PriceDTO::<G>::from(price);
 
-    market.feed(ts, f_address, &[price]).map(|()| ts)
+    market.feed(now, f_address, &[price]).map(|()| now)
 }
 
 fn config() -> Config {
@@ -334,4 +319,11 @@ where
     C2: 'static,
 {
     price::total_of(Coin::<C1>::new(coin1)).is(Coin::<C2>::new(coin2))
+}
+
+fn now() -> Timestamp {
+    let now = SystemTime::now()
+        .duration_since(SystemTime::UNIX_EPOCH)
+        .unwrap();
+    Timestamp::from_seconds(now.as_secs())
 }

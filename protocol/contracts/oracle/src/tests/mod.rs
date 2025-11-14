@@ -104,7 +104,7 @@ pub(crate) fn dummy_feed_prices_msg()
 
 pub(crate) fn setup_test(
     msg: InstantiateMsg<PriceCurrencies>,
-) -> Result<(OwnedDeps<MemoryStorage, MockApi, MockQuerier>, MessageInfo), PriceCurrencies> {
+) -> (OwnedDeps<MemoryStorage, MockApi, MockQuerier>, MessageInfo) {
     let mut deps = testing::mock_dependencies();
 
     let info = MessageInfo {
@@ -138,5 +138,5 @@ pub(crate) fn setup_test(
     assert!(events.is_empty());
     assert!(data.is_none());
 
-    Ok((deps, info))
+    (deps, info)
 }

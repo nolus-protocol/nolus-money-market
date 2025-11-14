@@ -200,7 +200,7 @@ mod test {
         let p1 = price(1, 12000);
         let p2 = price(1, 13000);
         let p3 = price(1, 14000);
-        let obs = vec![
+        let obs = [
             Observation::new(feeder1(), t11, p1), // first period
             Observation::new(feeder1(), t21, p2), // second period
             Observation::new(feeder2(), t21, p3),

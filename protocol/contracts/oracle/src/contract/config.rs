@@ -31,7 +31,7 @@ mod tests {
             Percent100::from_percent(50),
             test_tree::dummy_swap_tree(),
         );
-        let (mut deps, _info) = tests::setup_test(msg).unwrap();
+        let (mut deps, _info) = tests::setup_test(msg);
 
         let msg = SudoMsg::UpdateConfig(PriceConfig::new(
             Percent100::from_percent(44),
@@ -70,7 +70,7 @@ mod tests {
 
     #[test]
     fn config_supported_pairs() {
-        let (mut deps, _info) = tests::setup_test(tests::dummy_default_instantiate_msg()).unwrap();
+        let (mut deps, _info) = tests::setup_test(tests::dummy_default_instantiate_msg());
 
         let test_tree = test_tree::minimal_swap_tree();
 
@@ -104,7 +104,7 @@ mod tests {
 
     #[test]
     fn invalid_supported_pairs() {
-        let (mut deps, _info) = tests::setup_test(tests::dummy_default_instantiate_msg()).unwrap();
+        let (mut deps, _info) = tests::setup_test(tests::dummy_default_instantiate_msg());
 
         let test_tree = test_tree::invalid_pair_swap_tree();
 

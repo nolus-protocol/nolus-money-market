@@ -246,7 +246,7 @@ mod tests {
             Percent100::from_percent(50),
             test_tree::minimal_swap_tree(),
         );
-        let (deps, _info) = tests::setup_test(msg).unwrap();
+        let (deps, _info) = tests::setup_test(msg);
 
         let res = contract::query(deps.as_ref(), testing::mock_env(), QueryMsg::Config {}).unwrap();
         let value: Config = cosmwasm_std::from_json(res).unwrap();
