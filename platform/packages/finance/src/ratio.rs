@@ -12,7 +12,8 @@ use crate::{
     zero::Zero,
 };
 
-/// A part of something that is divisible
+/// A part of something that is divisible.
+/// The total should be non-zero.
 #[derive(Clone, Copy, Deserialize, Serialize)]
 #[cfg_attr(any(test, feature = "testing"), derive(Debug, PartialEq))]
 #[serde(
@@ -98,7 +99,7 @@ pub trait RatioLegacy<U> {
     fn total(&self) -> U;
 }
 
-/// [denominator] should be non zero
+/// A fraction where [denominator](Self::denominator) should be non zero
 #[derive(Clone, Copy, Debug, Deserialize, Serialize)]
 #[cfg_attr(any(test, feature = "testing"), derive(PartialEq))]
 #[serde(rename_all = "snake_case")]

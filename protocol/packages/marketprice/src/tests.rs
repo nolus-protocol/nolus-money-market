@@ -14,53 +14,52 @@ use finance::{
     price::{self, Price, dto::PriceDTO},
 };
 use sdk::{
-    cosmwasm_std::{
-        Storage, Timestamp,
-        testing::{self as cosmwasm_test, MockStorage},
-    },
+    cosmwasm_std::{Storage, Timestamp, testing::MockStorage},
     testing,
 };
 
 use crate::Repo;
 use crate::feed::ObservationsRepo;
+use crate::feeders::Count;
 use crate::{
     config::Config, error::PriceFeedsError, feeders::PriceFeeders, market_price::PriceFeeds,
 };
 
 const ROOT_NS: &str = "root_ns";
-const TOTAL_FEEDERS: usize = 1;
+const TOTAL_FEEDERS: Count = Count::new_test(1);
+const TWICE_TOTAL_FEEDERS: Count = Count::new_test(2);
 const SAMPLE_PERIOD_SECS: u32 = 5;
 const SAMPLES_NUMBER: u16 = 12;
 const DISCOUNTING_FACTOR: Percent100 = Percent100::from_permille(750);
 
 #[test]
 fn register_feeder() {
-    let mut deps = cosmwasm_test::mock_dependencies();
+    let mut storage = MockStorage::default();
 
     let control = PriceFeeders::new("foo");
     let f_address = testing::user("address1");
-    let resp = control.is_registered(&deps.storage, &f_address).unwrap();
+    let resp = control.is_registered(&storage, &f_address).unwrap();
     assert!(!resp);
 
-    control.register(deps.as_mut(), f_address.clone()).unwrap();
+    control.register(&mut storage, f_address.clone()).unwrap();
 
-    let resp = control.is_registered(&deps.storage, &f_address).unwrap();
+    let resp = control.is_registered(&storage, &f_address).unwrap();
     assert!(resp);
 
-    let feeders = control.get(&deps.storage).unwrap();
+    let feeders = control.feeders(&storage).unwrap();
     assert_eq!(1, feeders.len());
 
     // should return error that address is already added
-    let res = control.register(deps.as_mut(), f_address);
+    let res = control.register(&mut storage, f_address);
     assert!(res.is_err());
 
     let f_address = testing::user("address2");
-    control.register(deps.as_mut(), f_address).unwrap();
+    control.register(&mut storage, f_address).unwrap();
 
     let f_address = testing::user("address3");
-    control.register(deps.as_mut(), f_address).unwrap();
+    control.register(&mut storage, f_address).unwrap();
 
-    let feeders = control.get(&deps.storage).unwrap();
+    let feeders = control.feeders(&storage).unwrap();
     assert_eq!(3, feeders.len());
 }
 
@@ -129,7 +128,7 @@ fn marketprice_add_feed() {
     let err = market
         .price::<SuperGroupTestC4, SuperGroup, _>(
             ts,
-            TOTAL_FEEDERS + TOTAL_FEEDERS,
+            TWICE_TOTAL_FEEDERS,
             [
                 &currency::dto::<SuperGroupTestC1, _>(),
                 &currency::dto::<SuperGroupTestC4, _>(),

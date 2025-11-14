@@ -3,7 +3,7 @@ use std::collections::HashSet;
 use currency::Group;
 use serde::{Deserialize, Serialize};
 
-use marketprice::feeders::PriceFeeders;
+use marketprice::{FeederCount, feeders::PriceFeeders};
 use sdk::cosmwasm_std::{Addr, DepsMut, Storage};
 
 use crate::{api::Config, error::Error, result::Result};
@@ -21,7 +21,7 @@ impl Feeders {
         PriceG: Group,
     {
         Self::FEEDERS
-            .get(storage)
+            .feeders(storage)
             .map_err(Error::<PriceG>::LoadFeeders)
     }
 
@@ -41,7 +41,11 @@ impl Feeders {
         deps.api
             .addr_validate(&feeder_txt)
             .map_err(Error::<PriceG>::RegisterFeederAddressValidation)
-            .and_then(|feeder| Self::FEEDERS.register(deps, feeder).map_err(Into::into))
+            .and_then(|feeder| {
+                Self::FEEDERS
+                    .register(deps.storage, feeder)
+                    .map_err(Into::into)
+            })
     }
 
     pub(crate) fn try_remove<PriceG>(deps: DepsMut<'_>, address: String) -> Result<(), PriceG>
@@ -54,7 +58,9 @@ impl Feeders {
             .and_then(|f_address| {
                 Self::is_feeder(deps.storage, &f_address).and_then(|is_feeder| {
                     if is_feeder {
-                        Self::FEEDERS.remove(deps, &f_address).map_err(Into::into)
+                        Self::FEEDERS
+                            .remove(deps.storage, &f_address)
+                            .map_err(Into::into)
                     } else {
                         Err(Error::<PriceG>::UnknownFeeder {})
                     }
@@ -62,11 +68,13 @@ impl Feeders {
             })
     }
 
-    pub(crate) fn total_registered<PriceG>(storage: &dyn Storage) -> Result<usize, PriceG>
+    pub(crate) fn total_registered<PriceG>(storage: &dyn Storage) -> Result<FeederCount, PriceG>
     where
         PriceG: Group,
     {
-        Self::get(storage).map(|ref c| c.len())
+        Self::FEEDERS
+            .total_registered(storage)
+            .map_err(Error::<PriceG>::PriceFeedersError)
     }
 }
 

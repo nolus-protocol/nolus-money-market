@@ -21,6 +21,7 @@ currency = { workspace = true }
 finance = { workspace = true }
 sdk = { workspace = true, features = ["storage"] }
 
+gcd = {workspace = true}
 thiserror = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 

@@ -15,6 +15,7 @@ use crate::{
     config::Config,
     error::PriceFeedsError,
     feed::{ObservationsReadRepo, ObservationsRepo, PriceFeed},
+    feeders::Count,
 };
 
 pub struct PriceFeeds<'config, PriceG, ObservationsRepoImpl> {
@@ -41,7 +42,7 @@ where
     pub fn price<'self_, 'currency_dto, BaseC, BaseG, CurrenciesToBaseC>(
         &'self_ self,
         at: Timestamp,
-        total_feeders: usize,
+        total_feeders: Count,
         mut leaf_to_base: CurrenciesToBaseC,
     ) -> Result<BasePrice<PriceG, BaseC, BaseG>, PriceFeedsError>
     where
@@ -67,7 +68,7 @@ where
         {
             feeds: &'feeds PriceFeeds<'config, G, ObservationsRepoImpl>,
             at: Timestamp,
-            total_feeders: usize,
+            total_feeders: Count,
             leaf_to_base: CurrenciesToBaseC,
             _base_c: PhantomData<BaseC>,
             _base_g: PhantomData<BaseG>,
@@ -134,7 +135,7 @@ where
         amount_c: &CurrencyDTO<PriceG>,
         quote_c: &CurrencyDTO<PriceG>,
         at: Timestamp,
-        total_feeders: usize,
+        total_feeders: Count,
     ) -> Result<Price<C, QuoteC>, PriceFeedsError>
     where
         C: Currency + MemberOf<PriceG>,
@@ -251,7 +252,7 @@ struct PriceCollect<
     leaf_to_base: CurrenciesToBaseC,
     feeds: &'feeds PriceFeeds<'config, G, ObservationsRepoImpl>,
     at: Timestamp,
-    total_feeders: usize,
+    total_feeders: Count,
     current_c: &'currency CurrencyDTO<G>,
     _base_c: PhantomData<BaseC>,
     _base_g: PhantomData<BaseG>,
@@ -398,13 +399,13 @@ mod test {
     };
     use sdk::cosmwasm_std::{Addr, Storage, Timestamp, testing::MockStorage};
 
-    use crate::{Repo, error::PriceFeedsError, market_price::Config};
+    use crate::{Repo, error::PriceFeedsError, feeders::Count, market_price::Config};
 
     use super::PriceFeeds;
 
     const FEEDER: &str = "0xifeege";
     const ROOT_NS: &str = "root_ns";
-    const TOTAL_FEEDERS: usize = 1;
+    const TOTAL_FEEDERS: Count = Count::new_test(1);
     const FEED_VALIDITY: Duration = Duration::from_secs(30);
     const SAMPLE_PERIOD_SECS: Duration = Duration::from_secs(5);
     const SAMPLES_NUMBER: u16 = 6;
