@@ -1,7 +1,8 @@
 use currencies::Lpns;
 use currency::{CurrencyDef, MemberOf};
 use finance::{
-    coin::Coin, percent::Percent100, price, ratio::SimpleFraction, rational::Rational, zero::Zero,
+    coin::Coin, error::Error as FinanceError, percent::Percent100, price, ratio::SimpleFraction,
+    rational::Rational, zero::Zero,
 };
 use lpp_platform::NLpn;
 use platform::{bank::BankAccountView, contract::Validator};
@@ -160,7 +161,7 @@ where
         self.calculate_price(now, amount)
             .and_then(|price| {
                 price::total(amount, price.inv()).ok_or({
-                    PositionError::Finance(FinanceError::Overflow(
+                    ContractError::Finance(FinanceError::Overflow(
                         "Overflow while calculating the total value",
                     ))
                 })
@@ -186,7 +187,7 @@ where
         self.calculate_price(now, pending_withdraw)
             .and_then(|price| {
                 price::total(receipts, price).ok_or({
-                    PositionError::Finance(FinanceError::Overflow(
+                    ContractError::Finance(FinanceError::Overflow(
                         "Overflow while calculating the total value",
                     ))
                 })

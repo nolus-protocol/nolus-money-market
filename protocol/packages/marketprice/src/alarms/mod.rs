@@ -57,14 +57,16 @@ impl<G> NormalizedPrice<G>
 where
     G: Group + Clone,
 {
-    fn new<C, BaseC>(price: &Price<C, BaseC>) -> Self
+    fn new<C, BaseC>(price: &Price<C, BaseC>) -> Result<Self, AlarmError>
     where
         C: CurrencyDef,
         C::Group: MemberOf<G>,
         BaseC: CurrencyDef,
     {
         const NORM_SCALE: Amount = 10u128.pow(18);
-        NormalizedPrice::<G>(price::total(Coin::new(NORM_SCALE), price.inv()).into())
+        price::total(Coin::new(NORM_SCALE), price.inv())
+            .ok_or(AlarmError::ComputationOverflow)
+            .map(|normalized| NormalizedPrice::<G>(normalized.into()))
     }
 }
 
@@ -154,18 +156,21 @@ where
         }
     }
 
-    pub fn alarms<C, BaseC>(&self, price: Price<C, BaseC>) -> AlarmsIterator<'_, G>
+    pub fn alarms<C, BaseC>(
+        &self,
+        price: Price<C, BaseC>,
+    ) -> Result<AlarmsIterator<'_, G>, AlarmError>
     where
         C: CurrencyDef,
         C::Group: MemberOf<G>,
         BaseC: CurrencyDef,
     {
-        let norm_price = NormalizedPrice::new(&price);
-
-        AlarmsIterator(
-            self.iter_below(&norm_price)
-                .chain(self.iter_above_or_equal(&norm_price)),
-        )
+        NormalizedPrice::new(&price).map(|norm_price| {
+            AlarmsIterator(
+                self.iter_below(&norm_price)
+                    .chain(self.iter_above_or_equal(&norm_price)),
+            )
+        })
     }
 
     pub fn ensure_no_in_delivery(&self) -> Result<(), AlarmError> {
@@ -221,13 +226,20 @@ where
         C::Group: MemberOf<G>,
         BaseC: CurrencyDef,
     {
-        self.add_alarm_below_internal(subscriber.clone(), &NormalizedPrice::new(&below))
+        NormalizedPrice::new(&below)
+            .and_then(|normalized_below| {
+                self.add_alarm_below_internal(subscriber.clone(), &normalized_below)
+            })
             .and_then(|()| match above_or_equal {
                 None => self.remove_above_or_equal(subscriber),
-                Some(above_or_equal) => self.add_alarm_above_or_equal_internal(
-                    subscriber,
-                    &NormalizedPrice::new(&above_or_equal),
-                ),
+                Some(above_or_equal) => {
+                    NormalizedPrice::new(&above_or_equal).and_then(|normalized_above_or_equal| {
+                        self.add_alarm_above_or_equal_internal(
+                            subscriber,
+                            &normalized_above_or_equal,
+                        )
+                    })
+                }
             })
     }
 
@@ -404,7 +416,7 @@ pub mod tests {
             price::total_of(Coin::<SuperGroupTestC4>::new(1)).is(Coin::<BaseCurrency>::new(20));
         alarms.add_alarm(addr1, price, None).unwrap();
 
-        assert_eq!(None, alarms.alarms(price).next());
+        assert_eq!(None, alarms.alarms(price).unwrap().next());
     }
 
     #[test]
@@ -424,7 +436,7 @@ pub mod tests {
             )
             .unwrap();
 
-        let mut triggered_alarms = alarms.alarms(price);
+        let mut triggered_alarms = alarms.alarms(price).unwrap();
         assert_eq!(Some(Ok(addr1)), triggered_alarms.next());
         assert_eq!(None, triggered_alarms.next());
     }
@@ -447,7 +459,7 @@ pub mod tests {
             )
             .unwrap();
 
-        let mut triggered_alarms = alarms.alarms(price);
+        let mut triggered_alarms = alarms.alarms(price).unwrap();
         assert_eq!(Some(Ok(addr1)), triggered_alarms.next());
         assert_eq!(None, triggered_alarms.next());
     }
@@ -467,10 +479,10 @@ pub mod tests {
             alarms: &PriceAlarms<'storage, SuperGroup, &mut (dyn Storage + 'storage)>,
         ) {
             // Catch below
-            assert_eq!(alarms.alarms(LOWER_PRICE()).count(), 0);
+            assert_eq!(alarms.alarms(LOWER_PRICE()).unwrap().count(), 0);
 
             // Catch above or equal
-            assert_eq!(alarms.alarms(PRICE()).count(), 0);
+            assert_eq!(alarms.alarms(PRICE()).unwrap().count(), 0);
         }
 
         /* TEST START */
@@ -547,6 +559,7 @@ pub mod tests {
             .alarms(
                 price::total_of(Coin::<SuperGroupTestC4>::new(1)).is(Coin::<BaseCurrency>::new(15)),
             )
+            .unwrap()
             .collect();
 
         assert_eq!(resp, vec![Ok(addr3)]);
@@ -609,6 +622,7 @@ pub mod tests {
             .alarms(
                 price::total_of(Coin::<SuperGroupTestC2>::new(1)).is(Coin::<BaseCurrency>::new(15)),
             )
+            .unwrap()
             .collect();
 
         assert_eq!(resp, vec![Ok(addr2)]);
@@ -617,6 +631,7 @@ pub mod tests {
             .alarms(
                 price::total_of(Coin::<SuperGroupTestC4>::new(1)).is(Coin::<BaseCurrency>::new(26)),
             )
+            .unwrap()
             .collect();
 
         assert_eq!(resp, vec![Ok(addr3), Ok(addr4)]);
@@ -733,6 +748,7 @@ pub mod tests {
         assert_eq!(
             alarms
                 .alarms(subscriber2_below_price)
+                .unwrap()
                 .collect::<Result<Vec<_>, _>>()
                 .unwrap(),
             vec![subscriber2.clone()]
@@ -740,6 +756,7 @@ pub mod tests {
         assert_eq!(
             alarms
                 .alarms(subscriber2_above_or_equal_price)
+                .unwrap()
                 .collect::<Result<Vec<_>, _>>()
                 .unwrap(),
             vec![subscriber2]
