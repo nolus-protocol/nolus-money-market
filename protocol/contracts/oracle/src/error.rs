@@ -55,6 +55,9 @@ where
     #[error("[Oracle] {0}")]
     PriceFeedsError(#[from] PriceFeedsError),
 
+    #[error("[Oracle] Price multiplication overflow")]
+    PriceMultiplicationOverflow(),
+
     #[error("[Oracle] {0}")]
     AlarmError(#[from] AlarmError),
 
