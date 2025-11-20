@@ -3,6 +3,7 @@ use std::fmt::Debug;
 use serde::{Deserialize, Serialize};
 
 use crate::{
+    coin::Amount,
     error::{Error, Result as FinanceResult},
     fraction::{Coprime, Fraction, Unit as FractionUnit},
     fractionable::{Fractionable, IntoMax},
@@ -103,6 +104,14 @@ where
             nominator,
             denominator,
         }
+    }
+
+    // Used by Price::lossy_mul() to convert the rhs to SimpleFraction<Amount>
+    pub fn to_amount_fraction(self) -> SimpleFraction<Amount>
+    where
+        U: Into<Amount>,
+    {
+        SimpleFraction::new(self.nominator.into(), self.denominator.into())
     }
 
     pub(super) const fn nominator(&self) -> U {

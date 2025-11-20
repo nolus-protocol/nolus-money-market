@@ -105,11 +105,14 @@ where
     /// Price(amount, amount_quote) * Ratio(nominator / denominator) = Price(amount * denominator, amount_quote * nominator)
     /// where the pairs (amount, nominator) and (amount_quote, denominator) are transformed into co-prime numbers.
     /// Please note that Price(amount, amount_quote) is like SimpleFraction(amount_quote / amount).
-    pub fn lossy_mul<F>(self, rhs: F) -> Option<Self>
+    pub fn lossy_mul<F, U>(self, rhs: F) -> Option<Self>
     where
-        F: Into<SimpleFraction<Amount>>,
+        F: Into<SimpleFraction<U>>,
+        U: FractionUnit + Into<Amount>,
     {
-        self.map_with_fraction(|self_as_fraction| self_as_fraction.lossy_mul(rhs.into()))
+        self.map_with_fraction(|self_as_fraction| {
+            self_as_fraction.lossy_mul(rhs.into().to_amount_fraction())
+        })
     }
 
     pub fn inv(self) -> Price<QuoteC, C> {
@@ -683,7 +686,7 @@ mod test_lossy {
             let price = price::total_of(super::c(1)).is(super::q(1000));
             let percent = Percent100::from_permille(1);
             assert_eq!(
-                price.lossy_mul(percent),
+                price.lossy_mul::<_, u128>(percent),
                 price::total_of(super::c(1)).is(super::q(1))
             );
         }
@@ -693,7 +696,7 @@ mod test_lossy {
             let price = price::total_of(super::c(10)).is(super::q(1));
             let twenty_percents = Percent100::from_percent(20);
             assert_eq!(
-                price.lossy_mul(twenty_percents),
+                price.lossy_mul::<_, u128>(twenty_percents),
                 price::total_of(super::c(50)).is(super::q(1))
             );
         }

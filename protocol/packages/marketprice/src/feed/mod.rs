@@ -88,8 +88,8 @@ where
             .skip_while(Option::is_none)
             .map(|price| Option::expect(price, "sample prices should keep being present"))
             .reduce(|acc, sample_price| {
-                sample_price.lossy_mul(discount_factor)
-                    + acc.lossy_mul(discount_factor.complement())
+                sample_price.lossy_mul::<_, u128>(discount_factor)
+                    + acc.lossy_mul::<_, u128>(discount_factor.complement())
             })
             .ok_or(PriceFeedsError::NoPrice {})
     }
