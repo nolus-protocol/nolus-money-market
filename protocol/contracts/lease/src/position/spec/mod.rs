@@ -187,11 +187,11 @@ impl Spec {
                     .map(Debt::Bad)
                     .unwrap_or_else(|| self.no_liquidation(asset, due, due_asset))
             })
-            .unwrap_or(
+            .unwrap_or_else(|| {
                 self.may_ask_liquidation_liability(asset, asset, asset_in_lpns)
                     .map(Debt::Bad)
-                    .expect("Liquidation is required, debt is too large"),
-            )
+                    .expect("Liquidation is required, debt is too large")
+            })
     }
 
     /// Determine the `steadiness`'s range
@@ -236,8 +236,8 @@ impl Spec {
         Due: DueTrait,
     {
         Self::to_assets(due.total_due(), asset_in_lpns)
-            .and_then(|due_in_assets| self.close.may_trigger(asset, due_in_assets))
-            .or(self.close.may_trigger(asset, asset))
+            .map(|due_in_assets| self.close.may_trigger(asset, due_in_assets))
+            .unwrap_or_else(|| self.close.may_trigger(asset, asset))
     }
 
     /// Check if the amount can be used for repayment.
