@@ -11,7 +11,7 @@ use crate::{
     zero::Zero,
 };
 
-mod multiplication;
+pub(crate) mod multiplication;
 
 /// A part of something that is divisible.
 /// The total should be non-zero.

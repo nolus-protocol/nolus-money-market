@@ -10,7 +10,7 @@ use crate::{
     error::{Error, Result},
     fraction::{Coprime, Unit as FractionUnit},
     fractionable::ToDoublePrimitive,
-    ratio::SimpleFraction,
+    ratio::{SimpleFraction, multiplication::Bits},
     rational::Rational,
 };
 
@@ -108,7 +108,7 @@ where
     pub fn lossy_mul<F, U>(self, rhs: F) -> Option<Self>
     where
         F: Into<SimpleFraction<U>>,
-        U: FractionUnit + Into<Amount>,
+        U: Bits + FractionUnit + Into<Amount>,
     {
         self.map_with_fraction(|self_as_fraction| {
             self_as_fraction.lossy_mul(rhs.into().to_amount_fraction())
@@ -141,17 +141,28 @@ where
         Error::broken_invariant_if::<Self>(!invariant, msg)
     }
 
-    fn map_with_fraction<WithFraction>(self, f: WithFraction) -> Self
+    fn map_with_fraction<WithFraction>(self, f: WithFraction) -> Option<Self>
     where
-        WithFraction: FnOnce(SimpleFraction<Amount>) -> SimpleFraction<Amount>,
+        WithFraction: FnOnce(SimpleFraction<Amount>) -> Option<SimpleFraction<Amount>>,
     {
-        Self::from_fraction(f(SimpleFraction::new(
+        f(SimpleFraction::new(
             Amount::from(self.amount_quote),
             Amount::from(self.amount),
-        )))
+        ))
+        .map(Self::from_fraction)
     }
 
-    fn checked_add(self, rhs: Self) -> Option<Self> {
+    fn from_fraction<U>(fraction: SimpleFraction<U>) -> Self
+    where
+        U: FractionUnit + Into<Amount>,
+    {
+        Self::new(
+            Coin::new(fraction.denominator().into()),
+            Coin::new(fraction.nominator().into()),
+        )
+    }
+
+    pub fn checked_add(self, rhs: Self) -> Option<Self> {
         // let a1 = a / gcd(a, c), and c1 = c / gcd(a, c), then
         // b / a + d / c = (b * c1 + d * a1) / (a1 * c1 * gcd(a, c))
         // taking into account that Price is like amount_quote/amount
@@ -192,16 +203,6 @@ where
             .zip(total(factored_amount, rhs))
             .and_then(|(factored_self, factored_rhs)| factored_self.checked_add(factored_rhs))
             .map(|factored_total| total_of(factored_amount).is(factored_total))
-    }
-
-    fn from_fraction<U>(fraction: SimpleFraction<U>) -> Self
-    where
-        U: FractionUnit + Into<Amount>,
-    {
-        Self::new(
-            Coin::new(fraction.denominator().into()),
-            Coin::new(fraction.nominator().into()),
-        )
     }
 }
 
@@ -687,7 +688,7 @@ mod test_lossy {
             let percent = Percent100::from_permille(1);
             assert_eq!(
                 price.lossy_mul::<_, u128>(percent),
-                price::total_of(super::c(1)).is(super::q(1))
+                Some(price::total_of(super::c(1)).is(super::q(1)))
             );
         }
 
@@ -697,7 +698,7 @@ mod test_lossy {
             let twenty_percents = Percent100::from_percent(20);
             assert_eq!(
                 price.lossy_mul::<_, u128>(twenty_percents),
-                price::total_of(super::c(50)).is(super::q(1))
+                Some(price::total_of(super::c(50)).is(super::q(1)))
             );
         }
     }
@@ -798,7 +799,7 @@ mod test_lossy {
             let price = price::total_of(amount1).is(quote1);
             let ratio = SimpleFraction::new(nominator, denominator);
             assert_eq!(
-                price.lossy_mul(ratio),
+                price.lossy_mul(ratio).expect("overflow"),
                 price::total_of(amount_exp).is(quote_exp)
             );
         }

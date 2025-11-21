@@ -1,6 +1,6 @@
 use std::{collections::HashSet, marker::PhantomData};
 
-use finance::price::Price;
+use finance::{error::Error as FinanceError, price::Price};
 use observations::{Observations, ObservationsRead};
 use sdk::cosmwasm_std::{Addr, Timestamp};
 
@@ -82,16 +82,35 @@ where
 
         let samples_nb = config.samples_number().into();
 
-        samples
+        let mut item_iter = samples
             .take(samples_nb)
             .map(Sample::into_maybe_price)
             .skip_while(Option::is_none)
-            .map(|price| Option::expect(price, "sample prices should keep being present"))
-            .reduce(|acc, sample_price| {
-                sample_price.lossy_mul::<_, u128>(discount_factor)
-                    + acc.lossy_mul::<_, u128>(discount_factor.complement())
+            .map(|price| Option::expect(price, "sample prices should keep being present"));
+
+        let first = item_iter.next().ok_or(PriceFeedsError::NoPrice {})?;
+
+        item_iter
+            .try_fold(first, |acc, current| {
+                current.lossy_mul::<_, u128>(discount_factor).and_then(|a| {
+                    acc.lossy_mul::<_, u128>(discount_factor.complement())
+                        .and_then(|b| a.checked_add(b))
+                })
             })
-            .ok_or(PriceFeedsError::NoPrice {})
+            .ok_or(PriceFeedsError::Finance(FinanceError::Overflow(
+                "Overflow while calculating the sum of the prices",
+            )))
+
+        // samples
+        //     .take(samples_nb)
+        //     .map(Sample::into_maybe_price)
+        //     .skip_while(Option::is_none)
+        //     .map(|price| Option::expect(price, "sample prices should keep being present"))
+        //     .reduce(|acc, sample_price| {
+        //         sample_price.lossy_mul::<_, u128>(discount_factor)
+        //             + acc.lossy_mul::<_, u128>(discount_factor.complement())
+        //     })
+        //     .ok_or(PriceFeedsError::NoPrice {})
     }
 
     fn valid_observations(&self, since: &Timestamp) -> Result<Vec<Observation<C, QuoteC>>> {

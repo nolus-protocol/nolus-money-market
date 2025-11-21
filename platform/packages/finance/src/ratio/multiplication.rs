@@ -1,7 +1,8 @@
 use std::ops::{Div, Mul, Shr};
 
+use bnum::types::U256;
+
 use crate::{
-    coin::Amount,
     fraction::{Coprime, Unit as FractionUnit},
     fractionable::{Fractionable, IntoMax, ToDoublePrimitive, TryFromMax, checked_mul::CheckedMul},
     ratio::SimpleFraction,
@@ -32,23 +33,26 @@ where
     }
 
     /// Multiplies two `SimpleFraction`-s with possible precision lost
-    pub fn lossy_mul(&self, rhs: Self) -> Self
+    pub fn lossy_mul(&self, rhs: Self) -> Option<Self>
     where
         U: Bits + Coprime + TryFromMax<<U as ToDoublePrimitive>::Double>,
-        <U as ToDoublePrimitive>::Double:
-            Clone + Mul<Output = <U as ToDoublePrimitive>::Double> + Shr<u32, Output = U::Double>,
+        <U as ToDoublePrimitive>::Double: Bits
+            + Copy
+            + Mul<Output = <U as ToDoublePrimitive>::Double>
+            + Shr<u32, Output = U::Double>,
     {
         let (lhs, rhs) = self.cross_normalize(rhs);
         let double_nom = lhs.nominator.to_double().mul(rhs.nominator.to_double());
         let double_denom = lhs.denominator.to_double().mul(rhs.denominator.to_double());
 
-        let extra_bits = bits_above_max::<U, _>(double_nom.clone())
-            .max(bits_above_max::<U, _>(double_denom.clone()));
+        let extra_bits = Self::bits_above_max(double_nom).max(Self::bits_above_max(double_denom));
 
-        Self::new(
-            trim_down::<U, _>(double_nom, extra_bits),
-            trim_down::<U, _>(double_denom, extra_bits),
-        )
+        let min_precision_loss_overflow = Self::bits(double_nom).min(Self::bits(double_denom));
+
+        Self::trim_down(double_nom, extra_bits, min_precision_loss_overflow).and_then(|amount| {
+            Self::trim_down(double_denom, extra_bits, min_precision_loss_overflow)
+                .map(|amount_quote| Self::new(amount, amount_quote))
+        })
     }
 
     fn cross_normalize(&self, rhs: Self) -> (Self, Self) {
@@ -58,42 +62,91 @@ where
             Self::new(rhs.nominator, self.denominator),
         )
     }
-}
 
-#[track_caller]
-fn bits_above_max<U, D>(double: D) -> u32
-where
-    U: Bits + TryFromMax<D>,
-    D: Shr<u32, Output = D>,
-{
-    let bits_max: u32 = U::BITS;
-    let higher_half =
-        U::try_from_max(double >> bits_max).expect("Bigger Double Type than required!");
-    bits_max - higher_half.leading_zeros()
-}
+    #[track_caller]
+    fn bits<D>(double: D) -> u32
+    where
+        U: TryFromMax<D>,
+        D: Bits,
+    {
+        D::BITS - double.leading_zeros()
+    }
 
-#[track_caller]
-fn trim_down<U, D>(double: D, bits: u32) -> U
-where
-    U: Bits + PartialOrd + TryFromMax<D> + Zero,
-    D: Shr<u32, Output = D>,
-{
-    let trimmed_unit = U::try_from_max(double >> bits).expect("insufficient bits to trim");
-    assert!(trimmed_unit > U::ZERO, "overflow during multiplication");
-    trimmed_unit
+    #[track_caller]
+    fn bits_above_max<D>(double: D) -> u32
+    where
+        U: Bits + TryFromMax<D>,
+        D: Bits,
+    {
+        Self::bits(double).saturating_sub(U::BITS)
+    }
+
+    #[track_caller]
+    fn trim_down<D>(double: D, bits_to_trim: u32, min_precision_loss_overflow: u32) -> Option<U>
+    where
+        U: Bits + TryFromMax<D>,
+        D: Bits + Copy + Shr<u32, Output = D>,
+    {
+        debug_assert!(bits_to_trim <= U::BITS);
+
+        (bits_to_trim < min_precision_loss_overflow)
+            .then(|| Self::trim_down_checked(double, bits_to_trim))
+    }
+
+    #[track_caller]
+    fn trim_down_checked<D>(double: D, bits_to_trim: u32) -> U
+    where
+        U: Bits + TryFromMax<D>,
+        D: Bits + Copy + Shr<u32, Output = D>,
+    {
+        const INSUFFICIENT_BITS: &str = "insufficient trimming bits";
+
+        debug_assert!(
+            Self::bits_above_max(double) <= bits_to_trim,
+            "{}",
+            INSUFFICIENT_BITS
+        );
+        debug_assert!(
+            bits_to_trim < Self::bits(double),
+            "the precision loss {bits_to_trim} exceeds the value bits {loss}",
+            loss = Self::bits(double)
+        );
+        let unit_amount = U::try_from_max(double >> bits_to_trim).expect(INSUFFICIENT_BITS);
+        debug_assert!(
+            unit_amount > U::ZERO,
+            "the precision loss exceeds the value bits"
+        );
+        unit_amount
+    }
 }
 
 pub trait Bits {
     const BITS: u32;
 
-    fn leading_zeros(&self) -> u32;
+    fn leading_zeros(self) -> u32;
 }
 
-impl Bits for Amount {
+impl Bits for u32 {
     const BITS: u32 = Self::BITS;
 
-    fn leading_zeros(&self) -> u32 {
-        Amount::leading_zeros(*self)
+    fn leading_zeros(self) -> u32 {
+        self.leading_zeros()
+    }
+}
+
+impl Bits for u128 {
+    const BITS: u32 = Self::BITS;
+
+    fn leading_zeros(self) -> u32 {
+        self.leading_zeros()
+    }
+}
+
+impl Bits for U256 {
+    const BITS: u32 = Self::BITS;
+
+    fn leading_zeros(self) -> u32 {
+        self.leading_zeros()
     }
 }
 
@@ -149,17 +202,20 @@ mod test {
 
     #[test]
     fn lossy_mul() {
-        assert_eq!(fraction(3, 10), fraction(3, 4).lossy_mul(fraction(2, 5)));
         assert_eq!(
-            fraction(Amount::MAX, 20),
+            Some(fraction(3, 10)),
+            fraction(3, 4).lossy_mul(fraction(2, 5))
+        );
+        assert_eq!(
+            Some(fraction(Amount::MAX, 20)),
             fraction(Amount::MAX, 4).lossy_mul(fraction(1, 5))
         );
         assert_eq!(
-            fraction(3, 2),
+            Some(fraction(3, 2)),
             fraction(Amount::MAX, 4).lossy_mul(fraction(6, Amount::MAX))
         );
         assert_eq!(
-            fraction(1, 2),
+            Some(fraction(1, 2)),
             fraction(Amount::MAX / 3, 4).lossy_mul(fraction(6, Amount::MAX - 1))
         );
     }
@@ -167,22 +223,21 @@ mod test {
     #[test]
     fn lossy_mul_with_trim() {
         assert_eq!(
-            fraction(Amount::MAX - 1, 27 >> 1),
+            Some(fraction(Amount::MAX - 1, 27 >> 1)),
             fraction(Amount::MAX - 1, 3).lossy_mul(fraction(2, 9))
         );
         assert_eq!(
-            fraction(Amount::MAX - 1, 27 >> 1),
+            Some(fraction(Amount::MAX - 1, 27 >> 1)),
             fraction(Amount::MAX / 2, 3).lossy_mul(fraction(4, 9))
         );
     }
 
     #[test]
-    #[should_panic = "overflow"]
     fn lossy_mul_panic() {
         let lhs = fraction(Amount::MAX / 5, 3);
         let rhs = fraction(Amount::MAX / 2, 7);
 
-        let _ = lhs.lossy_mul(rhs);
+        assert!(lhs.lossy_mul(rhs).is_none())
     }
 
     #[test]

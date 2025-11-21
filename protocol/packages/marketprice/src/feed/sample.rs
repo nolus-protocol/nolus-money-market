@@ -32,7 +32,7 @@ where
     C: 'static,
     QuoteC: 'static,
 {
-    /// Sample with no price means there has not been enough valid data to compute it.
+    /// Sample with no price means there has not been enough valid data to compute it or there has been an overflow.
     /// For example, none feed has been received within the validity window.
     price: Option<Price<C, QuoteC>>,
 }
@@ -122,7 +122,7 @@ where
 
             let avg = sum.lossy_mul::<_, CountUnit>(reciproral);
 
-            self.last_sample = Sample { price: Some(avg) };
+            self.last_sample = Sample { price: avg };
         }
 
         self.sample_prices.clear();
