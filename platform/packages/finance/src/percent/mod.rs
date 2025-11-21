@@ -11,6 +11,9 @@ use crate::{
 pub mod bound;
 mod fraction;
 mod fractionable;
+// TODO Remove once integration tests use BoundPercent::of(Coin)
+#[cfg(any(test, feature = "testing"))]
+mod units;
 
 pub type Units = u32;
 pub type Percent100 = BoundPercent<{ Percent::HUNDRED.units() }>;
