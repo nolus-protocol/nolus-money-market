@@ -8,10 +8,10 @@ use serde::{Deserialize, Serialize};
 use crate::{
     coin::{Amount, Coin},
     error::{Error, Result},
-    fraction::Coprime,
-    fractionable::HigherRank,
-    ratio::{RatioLegacy, SimpleFraction},
-    rational::RationalLegacy,
+    fraction::{Coprime, Unit as FractionUnit},
+    fractionable::ToDoublePrimitive,
+    ratio::{SimpleFraction, multiplication::Bits},
+    rational::Rational,
 };
 
 pub mod base;
@@ -36,8 +36,6 @@ where
         Price::new(self.0, to)
     }
 }
-
-type DoubleAmount = <Amount as HigherRank<Amount>>::Type;
 
 /// Represents the price of a currency in a quote currency, ref: <https://en.wikipedia.org/wiki/Currency_pair>
 ///
@@ -106,31 +104,14 @@ where
     ///
     /// Price(amount, amount_quote) * Ratio(nominator / denominator) = Price(amount * denominator, amount_quote * nominator)
     /// where the pairs (amount, nominator) and (amount_quote, denominator) are transformed into co-prime numbers.
-    /// Please note that Price(amount, amount_quote) is like Ratio(amount_quote / amount).
-    fn lossy_mul<R>(self, rhs: &R) -> Option<Self>
+    /// Please note that Price(amount, amount_quote) is like SimpleFraction(amount_quote / amount).
+    pub fn lossy_mul<F, U>(self, rhs: F) -> Option<Self>
     where
-        R: RatioLegacy<Amount>,
+        F: Into<SimpleFraction<U>>,
+        U: Bits + FractionUnit + Into<Amount>,
     {
-        let (amount_normalized, rhs_nominator_normalized) =
-            self.amount.to_coprime_with(Coin::<C>::new(rhs.parts()));
-        let (amount_quote_normalized, rhs_denominator_normalized) = self
-            .amount_quote
-            .to_coprime_with(Coin::<QuoteC>::new(rhs.total()));
-
-        let double_amount =
-            DoubleAmount::from(amount_normalized) * DoubleAmount::from(rhs_denominator_normalized);
-        let double_amount_quote = DoubleAmount::from(amount_quote_normalized)
-            * DoubleAmount::from(rhs_nominator_normalized);
-
-        let extra_bits =
-            Self::bits_above_max(double_amount).max(Self::bits_above_max(double_amount_quote));
-
-        let min_precision_loss_overflow =
-            Self::bits(double_amount).min(Self::bits(double_amount_quote));
-
-        Self::trim_down(double_amount, extra_bits, min_precision_loss_overflow).and_then(|amount| {
-            Self::trim_down(double_amount_quote, extra_bits, min_precision_loss_overflow)
-                .map(|amount_quote| Price::new(Coin::new(amount), Coin::new(amount_quote)))
+        self.map_with_fraction(|self_as_fraction| {
+            self_as_fraction.lossy_mul(rhs.into().to_amount_fraction())
         })
     }
 
@@ -160,7 +141,28 @@ where
         Error::broken_invariant_if::<Self>(!invariant, msg)
     }
 
-    fn checked_add(self, rhs: Self) -> Option<Self> {
+    fn map_with_fraction<WithFraction>(self, f: WithFraction) -> Option<Self>
+    where
+        WithFraction: FnOnce(SimpleFraction<Amount>) -> Option<SimpleFraction<Amount>>,
+    {
+        f(SimpleFraction::new(
+            Amount::from(self.amount_quote),
+            Amount::from(self.amount),
+        ))
+        .map(Self::from_fraction)
+    }
+
+    fn from_fraction<U>(fraction: SimpleFraction<U>) -> Self
+    where
+        U: FractionUnit + Into<Amount>,
+    {
+        Self::new(
+            Coin::new(fraction.denominator().into()),
+            Coin::new(fraction.nominator().into()),
+        )
+    }
+
+    pub fn checked_add(self, rhs: Self) -> Option<Self> {
         // let a1 = a / gcd(a, c), and c1 = c / gcd(a, c), then
         // b / a + d / c = (b * c1 + d * a1) / (a1 * c1 * gcd(a, c))
         // taking into account that Price is like amount_quote/amount
@@ -196,52 +198,11 @@ where
     fn lossy_add(self, rhs: Self) -> Option<Self> {
         const FACTOR: Amount = 1_000_000_000_000_000_000; // 1*10^18
         let factored_amount = Coin::new(FACTOR);
-        let may_factored_total =
-            total(factored_amount, self).checked_add(total(factored_amount, rhs));
-        may_factored_total.map(|factored_total| total_of(factored_amount).is(factored_total))
-    }
 
-    #[track_caller]
-    fn bits(double_amount: DoubleAmount) -> u32 {
-        DoubleAmount::BITS - double_amount.leading_zeros()
-    }
-
-    #[track_caller]
-    fn bits_above_max(double_amount: DoubleAmount) -> u32 {
-        Self::bits(double_amount).saturating_sub(Amount::BITS)
-    }
-
-    #[track_caller]
-    fn trim_down(
-        double_amount: DoubleAmount,
-        bits_to_trim: u32,
-        min_precision_loss_overflow: u32,
-    ) -> Option<Amount> {
-        debug_assert!(bits_to_trim <= Amount::BITS);
-
-        (bits_to_trim < min_precision_loss_overflow)
-            .then(|| Self::trim_down_checked(double_amount, bits_to_trim))
-    }
-
-    #[track_caller]
-    fn trim_down_checked(double_amount: DoubleAmount, bits_to_trim: u32) -> Amount {
-        const INSUFFICIENT_BITS: &str = "insufficient trimming bits";
-
-        debug_assert!(
-            Self::bits_above_max(double_amount) <= bits_to_trim,
-            "{}",
-            INSUFFICIENT_BITS
-        );
-        debug_assert!(
-            bits_to_trim < Self::bits(double_amount),
-            "the precision loss {bits_to_trim} exceeds the value bits {loss}",
-            loss = Self::bits(double_amount)
-        );
-        let amount: Amount = (double_amount >> bits_to_trim)
-            .try_into()
-            .expect(INSUFFICIENT_BITS);
-        debug_assert!(amount > 0, "the precision loss exceeds the value bits");
-        amount
+        total(factored_amount, self)
+            .zip(total(factored_amount, rhs))
+            .and_then(|(factored_self, factored_rhs)| factored_self.checked_add(factored_rhs))
+            .map(|factored_total| total_of(factored_amount).is(factored_total))
     }
 }
 
@@ -288,11 +249,11 @@ where
         // a/b < c/d if and only if a * d < b * c
         // Please note that Price(amount, amount_quote) is like Ratio(amount_quote / amount).
 
-        let a: DoubleAmount = self.amount_quote.into();
-        let d: DoubleAmount = other.amount.into();
+        let a = self.amount_quote.to_double();
+        let d = other.amount.to_double();
 
-        let b: DoubleAmount = self.amount.into();
-        let c: DoubleAmount = other.amount_quote.into();
+        let b = self.amount.to_double();
+        let c = other.amount_quote.to_double();
         (a * d).cmp(&(b * c))
     }
 }
@@ -345,18 +306,19 @@ where
         // Price(a, b) * Price(c, d) = Price(a, d) * Rational(b / c)
         // Please note that Price(amount, amount_quote) is like Ratio(amount_quote / amount).
 
-        Price::new(self.amount, rhs.amount_quote)
-            .lossy_mul(&SimpleFraction::new(self.amount_quote, rhs.amount))
+        Price::new(self.amount, rhs.amount_quote).lossy_mul(SimpleFraction::new(
+            self.amount_quote.to_primitive(),
+            rhs.amount.to_primitive(),
+        ))
     }
 }
 
-/// Calculates the amount of given coins in another currency, referred here as `quote currency`
+/// Calculates the amount of given coins in another currency, referred here as `quote currency`.
+/// Returns `None` if an overflow occurs during the calculation.
 ///
 /// For example, total(10 EUR, 1.01 EURUSD) = 10.1 USD
-pub fn total<C, QuoteC>(of: Coin<C>, price: Price<C, QuoteC>) -> Coin<QuoteC> {
-    let ratio_impl = SimpleFraction::new(of, price.amount);
-    RationalLegacy::<Coin<C>>::of(&ratio_impl, price.amount_quote)
-        .expect("TODO the method has to return Option")
+pub fn total<C, QuoteC>(of: Coin<C>, price: Price<C, QuoteC>) -> Option<Coin<QuoteC>> {
+    SimpleFraction::new(of.to_primitive(), price.amount.to_primitive()).of(price.amount_quote)
 }
 
 #[cfg(test)]
@@ -368,6 +330,7 @@ mod test {
 
     use crate::{
         coin::{Amount, Coin as CoinT},
+        fraction::Unit,
         price::{self, Price},
         ratio::SimpleFraction,
     };
@@ -382,8 +345,8 @@ mod test {
         let amount_quote = 15;
         let factor = 32;
         assert_eq!(
-            Price::new(Coin::new(amount), q(amount_quote)),
-            Price::new(Coin::new(amount * factor), q(amount_quote * factor))
+            price(c(amount), q(amount_quote)),
+            price(c(amount * factor), q(amount_quote * factor))
         );
     }
 
@@ -392,22 +355,22 @@ mod test {
         let amount = 13;
         let amount_quote = 15;
         assert_ne!(
-            Price::new(Coin::new(amount), q(amount_quote)),
-            Price::new(Coin::new(amount), q(amount_quote + 1))
+            price(c(amount), q(amount_quote)),
+            price(c(amount), q(amount_quote + 1))
         );
         assert_ne!(
-            Price::new(Coin::new(amount - 1), q(amount_quote)),
-            Price::new(Coin::new(amount), q(amount_quote))
+            price(c(amount - 1), q(amount_quote)),
+            price(c(amount), q(amount_quote))
         );
 
         assert_eq!(
-            Price::new(Coin::new(amount), q(amount_quote)),
-            Price::new(Coin::new(amount), q(amount_quote))
+            price(c(amount), q(amount_quote)),
+            price(c(amount), q(amount_quote))
         );
 
         assert_eq!(
-            Price::new(q(amount_quote), Coin::new(amount)),
-            Price::new(Coin::new(amount), q(amount_quote)).inv()
+            Price::new(q(amount_quote), c(amount)),
+            price(c(amount), q(amount_quote)).inv()
         );
     }
 
@@ -423,16 +386,25 @@ mod test {
     }
 
     #[test]
+    fn from_fraction() {
+        let expect = price(c(1), q(4));
+        assert_eq!(
+            expect,
+            Price::from_fraction(SimpleFraction::new(4u128, 1u128))
+        );
+    }
+
+    #[test]
     fn total() {
         let amount_quote = 647;
         let amount = 48;
         let price = price::total_of(c(amount)).is(q(amount_quote));
         let factor = 17;
         let coin_quote = q(amount_quote * factor);
-        let coin = Coin::new(amount * factor);
+        let coin = c(amount * factor);
 
-        assert_eq!(coin_quote, super::total(coin, price));
-        assert_eq!(coin, super::total(coin_quote, price.inv()));
+        assert_eq!(coin_quote, calc_total(coin, price));
+        assert_eq!(coin, super::total(coin_quote, price.inv()).unwrap());
     }
 
     #[test]
@@ -443,12 +415,12 @@ mod test {
         let coin_quote = q(633);
 
         // 47 * 647 / 48 -> 633.5208333333334
-        let coin_in = Coin::new(47);
-        assert_eq!(coin_quote, super::total(coin_in, price));
+        let coin_in = c(47);
+        assert_eq!(coin_quote, calc_total(coin_in, price));
 
         // 633 * 48 / 647 -> 46.9613601236476
-        let coin_out = Coin::new(46);
-        assert_eq!(coin_out, super::total(coin_quote, price.inv()));
+        let coin_out = c(46);
+        assert_eq!(coin_out, super::total(coin_quote, price.inv()).unwrap());
     }
 
     #[test]
@@ -459,11 +431,9 @@ mod test {
     }
 
     #[test]
-    #[should_panic]
     fn total_overflow() {
-        let price = price::total_of::<SuperGroupTestC2>(Coin::new(1))
-            .is::<SuperGroupTestC1>(q(Amount::MAX / 2 + 1));
-        super::total(Coin::new(2), price);
+        let price = price::total_of(c(1)).is(q(Amount::MAX / 2 + 1));
+        assert!(super::total(c(2), price).is_none());
     }
 
     #[test]
@@ -514,12 +484,11 @@ mod test {
     }
 
     #[test]
-    #[should_panic]
     fn lossy_add_overflow() {
         // 2^128 / FACTOR (10^18) / 2^64 ~ 18.446744073709553
         let p1 = price::total_of(c(1)).is(q(u128::from(u64::MAX) * 19u128));
         let p2 = Price::identity();
-        p1.lossy_add(p2);
+        assert!(p1.lossy_add(p2).is_none())
     }
 
     #[test]
@@ -574,8 +543,8 @@ mod test {
         let price2 = Price::new(c(amount), q(amount_quote + 1));
         assert!(price1 < price2);
 
-        let total1 = super::total(Coin::new(amount), price1);
-        assert!(total1 < super::total(Coin::new(amount), price2));
+        let total1 = calc_total(Coin::new(amount), price1);
+        assert!(total1 < calc_total(Coin::new(amount), price2));
         assert_eq!(q(amount_quote), total1);
     }
 
@@ -589,8 +558,8 @@ mod test {
         let expected = q(expected);
         let input = Coin::new(amount);
 
-        assert_eq!(expected, super::total(input, price));
-        assert_eq!(input, super::total(expected, price.inv()));
+        assert_eq!(expected, calc_total(input, price));
+        assert_eq!(input, super::total(expected, price.inv()).unwrap());
     }
 
     fn add_impl(
@@ -660,8 +629,8 @@ mod test {
         assert_eq!(Some(exp), price1.mul(price2));
 
         let price3 = price::total_of(amount1).is(quote2);
-        let ratio = SimpleFraction::new(quote1, amount2);
-        assert_eq!(Some(exp), price3.lossy_mul(&ratio));
+        let ratio = SimpleFraction::new(quote1.to_primitive(), amount2.to_primitive());
+        assert_eq!(Some(exp), price3.lossy_mul(ratio));
     }
 
     fn lossy_mul_shifts_impl(q1: Amount, shifts: u8) {
@@ -690,6 +659,157 @@ mod test {
         let price1 = price::total_of(c(a1)).is(q(q1));
         let price2 = price::total_of(q(a2)).is(qq(q2));
         assert_eq!(None, price1.mul(price2));
+    }
+
+    fn price(amount: Coin, amount_quote: QuoteCoin) -> Price<SuperGroupTestC2, SuperGroupTestC1> {
+        Price::new(amount, amount_quote)
+    }
+
+    fn calc_total(coin: Coin, price: Price<SuperGroupTestC2, SuperGroupTestC1>) -> QuoteCoin {
+        super::total(coin, price).unwrap()
+    }
+}
+
+#[cfg(test)]
+mod test_lossy {
+    use currency::test::{SubGroupTestC10, SuperGroupTestC1};
+
+    use crate::coin::{Amount, Coin};
+
+    mod percent {
+        use crate::{
+            percent::Percent100,
+            price::{self},
+        };
+
+        #[test]
+        fn greater_than_one() {
+            let price = price::total_of(super::c(1)).is(super::q(1000));
+            let percent = Percent100::from_permille(1);
+            assert_eq!(
+                price.lossy_mul::<_, u128>(percent),
+                Some(price::total_of(super::c(1)).is(super::q(1)))
+            );
+        }
+
+        #[test]
+        fn less_than_one() {
+            let price = price::total_of(super::c(10)).is(super::q(1));
+            let twenty_percents = Percent100::from_percent(20);
+            assert_eq!(
+                price.lossy_mul::<_, u128>(twenty_percents),
+                Some(price::total_of(super::c(50)).is(super::q(1)))
+            );
+        }
+    }
+
+    mod u128_ratio {
+        use currency::test::{SubGroupTestC10, SuperGroupTestC1};
+
+        use crate::{
+            coin::{Amount, Coin},
+            price::{self},
+            ratio::SimpleFraction,
+        };
+
+        #[test]
+        fn greater_than_one() {
+            test_impl(super::c(1), super::q(999), 2, 3, super::c(1), super::q(666));
+            test_impl(
+                super::c(2),
+                super::q(Amount::MAX),
+                2,
+                1,
+                super::c(1),
+                super::q(Amount::MAX),
+            );
+            // follow with rounding
+            {
+                let exp_q = 255211775190703847597530955573826158591; // (Amount::MAX * 3) >> 2;
+                let exp_c = (2 * 4) >> 2;
+                test_impl(
+                    super::c(2),
+                    super::q(Amount::MAX),
+                    3,
+                    4,
+                    super::c(exp_c),
+                    super::q(exp_q),
+                );
+            }
+            {
+                let exp_q = 212676479325586539664609129644855132159; // (Amount::MAX * 5) >> 3;
+                let exp_c = (2 * 4) >> 3;
+                test_impl(
+                    super::c(2),
+                    super::q(Amount::MAX),
+                    5,
+                    4,
+                    super::c(exp_c),
+                    super::q(exp_q),
+                );
+            }
+        }
+
+        #[test]
+        fn less_than_one() {
+            test_impl(super::c(150), super::q(1), 3, 2, super::c(100), super::q(1));
+            test_impl(
+                super::c(Amount::MAX),
+                super::q(6),
+                2,
+                3,
+                super::c(Amount::MAX),
+                super::q(4),
+            );
+            // follow with rounding
+            let exp_c = 191408831393027885698148216680369618943; // (Amount::MAX * 9) >> 4;
+            let exp_q = (8 * 4) >> 4;
+            test_impl(
+                super::c(Amount::MAX),
+                super::q(8),
+                4,
+                9,
+                super::c(exp_c),
+                super::q(exp_q),
+            );
+        }
+
+        #[test]
+        #[should_panic = "overflow"]
+        fn overflow() {
+            test_impl(
+                super::c(2),
+                super::q(Amount::MAX),
+                9,
+                4,
+                super::c(1),
+                super::q(Amount::MAX),
+            );
+        }
+
+        #[track_caller]
+        fn test_impl(
+            amount1: Coin<SubGroupTestC10>,
+            quote1: Coin<SuperGroupTestC1>,
+            nominator: u128,
+            denominator: u128,
+            amount_exp: Coin<SubGroupTestC10>,
+            quote_exp: Coin<SuperGroupTestC1>,
+        ) {
+            let price = price::total_of(amount1).is(quote1);
+            let ratio = SimpleFraction::new(nominator, denominator);
+            assert_eq!(
+                price.lossy_mul(ratio).expect("overflow"),
+                price::total_of(amount_exp).is(quote_exp)
+            );
+        }
+    }
+    fn c(a: Amount) -> Coin<SubGroupTestC10> {
+        Coin::new(a)
+    }
+
+    fn q(a: Amount) -> Coin<SuperGroupTestC1> {
+        Coin::new(a)
     }
 }
 

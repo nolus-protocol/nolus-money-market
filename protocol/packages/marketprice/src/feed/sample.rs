@@ -1,9 +1,9 @@
 use std::collections::HashMap;
 
-use finance::{duration::Duration, fractionable::FractionableLegacy, price::Price};
+use finance::{duration::Duration, price::Price};
 use sdk::cosmwasm_std::{Addr, Timestamp};
 
-use crate::feeders::Count;
+use crate::feeders::{Count, Unit as CountUnit};
 
 use super::observation::Observation;
 
@@ -32,7 +32,7 @@ where
     C: 'static,
     QuoteC: 'static,
 {
-    /// Sample with no price means there has not been enough valid data to compute it.
+    /// Sample with no price means there has not been enough valid data to compute it or there has been an overflow.
     /// For example, none feed has been received within the validity window.
     price: Option<Price<C, QuoteC>>,
 }
@@ -120,9 +120,9 @@ where
                 .try_into_reciproral()
                 .expect("should have provided positive value for count");
 
-            let avg = sum.safe_mul(&reciproral);
+            let avg = sum.lossy_mul::<_, CountUnit>(reciproral);
 
-            self.last_sample = Sample { price: Some(avg) };
+            self.last_sample = Sample { price: avg };
         }
 
         self.sample_prices.clear();

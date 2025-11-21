@@ -195,11 +195,11 @@ where
 mod test {
     use finance::{
         coin::Coin,
-        fraction::FractionLegacy,
+        fraction::Fraction,
         liability::Zone,
         percent::{Percent, Percent100},
         price::{self, Price},
-        rational::RationalLegacy,
+        rational::Rational,
     };
     use lpp::msg::LoanResponse;
     use platform::batch::Emitter as PlatformEmitter;
@@ -228,7 +228,7 @@ mod test {
     fn reset_take_profit() {
         let now = Timestamp::from_seconds(24412515);
         let lease_amount = Coin::new(1000);
-        let lease_lpn = price::total(lease_amount, Price::identity());
+        let lease_lpn = price::total(lease_amount, Price::identity()).unwrap();
         let current_ltv = Percent::from_percent(30);
         let stop_loss = Percent100::from_percent(59);
         let take_profit = Percent100::from_percent(29);

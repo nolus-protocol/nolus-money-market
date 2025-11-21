@@ -90,29 +90,33 @@ impl Spec {
         Asset: 'static,
         Due: DueTrait,
     {
-        let total_due = Self::to_assets(due.total_due(), asset_in_lpns);
-
-        self.close
-            .change_policy(cmd)
-            .and_then(|close_policy| close_policy.liquidation_check(self.liability.max()))
-            .and_then(|close_policy| {
-                close_policy.may_trigger(asset, total_due).map_or_else(
-                    || Ok(close_policy),
-                    |strategy| {
-                        Err(PositionError::trigger_close(
-                            Self::ltv(total_due, asset),
-                            strategy,
-                        ))
-                    },
-                )
-            })
-            .map(|close_policy| {
-                Self::new(
-                    self.liability,
-                    close_policy,
-                    self.min_asset,
-                    self.min_transaction,
-                )
+        Self::to_assets(due.total_due(), asset_in_lpns)
+            .ok_or(PositionError::Finance(FinanceError::Overflow(
+                "Overflow while converting to asset value",
+            )))
+            .and_then(|total_due| {
+                self.close
+                    .change_policy(cmd)
+                    .and_then(|close_policy| close_policy.liquidation_check(self.liability.max()))
+                    .and_then(|close_policy| {
+                        close_policy.may_trigger(asset, total_due).map_or_else(
+                            || Ok(close_policy),
+                            |strategy| {
+                                Err(PositionError::trigger_close(
+                                    Self::ltv(total_due, asset),
+                                    strategy,
+                                ))
+                            },
+                        )
+                    })
+                    .map(|close_policy| {
+                        Self::new(
+                            self.liability,
+                            close_policy,
+                            self.min_asset,
+                            self.min_transaction,
+                        )
+                    })
             })
     }
 
@@ -176,12 +180,18 @@ impl Spec {
         Liquidation<Asset>: Ord,
         Due: DueTrait,
     {
-        let due_asset = Self::due_asset(due, asset_in_lpns);
-
-        self.may_ask_liquidation_liability(asset, due_asset, asset_in_lpns)
-            .max(self.may_ask_liquidation_overdue(asset, due, asset_in_lpns))
-            .map(Debt::Bad)
-            .unwrap_or_else(|| self.no_liquidation(asset, due, due_asset))
+        Self::due_asset(due, asset_in_lpns)
+            .map(|due_asset| {
+                self.may_ask_liquidation_liability(asset, due_asset, asset_in_lpns)
+                    .max(self.may_ask_liquidation_overdue(asset, due, asset_in_lpns))
+                    .map(Debt::Bad)
+                    .unwrap_or_else(|| self.no_liquidation(asset, due, due_asset))
+            })
+            .unwrap_or_else(|| {
+                self.may_ask_liquidation_liability(asset, asset, asset_in_lpns)
+                    .map(Debt::Bad)
+                    .expect("Liquidation is required, debt is too large")
+            })
     }
 
     /// Determine the `steadiness`'s range
@@ -200,7 +210,7 @@ impl Spec {
     {
         debug_assert_eq!(None, self.check_close(asset, due, asset_in_lpns));
 
-        let debt_zone = self.zone(asset, Self::due_asset(due, asset_in_lpns));
+        let debt_zone = self.zone(asset, Self::due_asset(due, asset_in_lpns).expect(""));
 
         let steady_within = self.close.no_close(debt_zone.range());
 
@@ -225,8 +235,9 @@ impl Spec {
         Asset: 'static,
         Due: DueTrait,
     {
-        self.close
-            .may_trigger(asset, Self::to_assets(due.total_due(), asset_in_lpns))
+        Self::to_assets(due.total_due(), asset_in_lpns)
+            .map(|due_in_assets| self.close.may_trigger(asset, due_in_assets))
+            .unwrap_or_else(|| self.close.may_trigger(asset, asset))
     }
 
     /// Check if the amount can be used for repayment.
@@ -289,13 +300,12 @@ impl Spec {
         TransactionC: 'static,
         ErrFn: FnOnce(LpnCoinDTO) -> PositionError,
     {
-        let amount_in_lpn = price::total(amount, transaction_currency_in_lpn);
-
-        if amount_in_lpn >= self.min_transaction {
-            Ok(())
-        } else {
-            Err(err_fn(self.min_transaction.into()))
-        }
+        self.validate_min_amount(
+            amount,
+            transaction_currency_in_lpn,
+            self.min_transaction,
+            err_fn,
+        )
     }
 
     fn validate_asset<TransactionC, ErrFn>(
@@ -308,13 +318,38 @@ impl Spec {
         TransactionC: 'static,
         ErrFn: FnOnce(LpnCoinDTO) -> PositionError,
     {
-        let asset_amount_in_lpn = price::total(asset_amount, transaction_currency_in_lpn);
+        self.validate_min_amount(
+            asset_amount,
+            transaction_currency_in_lpn,
+            self.min_asset,
+            err_fn,
+        )
+    }
 
-        if asset_amount_in_lpn >= self.min_asset {
-            Ok(())
-        } else {
-            Err(err_fn(self.min_asset.into()))
-        }
+    fn validate_min_amount<TransactionC, ErrFn>(
+        &self,
+        amount: Coin<TransactionC>,
+        transaction_lpn: Price<TransactionC>,
+        min_required: LpnCoin,
+        err_fn: ErrFn,
+    ) -> Result<(), PositionError>
+    where
+        TransactionC: 'static,
+        ErrFn: FnOnce(LpnCoinDTO) -> PositionError,
+    {
+        price::total(amount, transaction_lpn)
+            .ok_or({
+                PositionError::Finance(FinanceError::Overflow(
+                    "Overflow while calculating the total value",
+                ))
+            })
+            .and_then(|amount_in_lpn| {
+                if amount_in_lpn >= min_required {
+                    Ok(())
+                } else {
+                    Err(err_fn(min_required.into()))
+                }
+            })
     }
 
     fn may_ask_liquidation_liability<Asset>(
@@ -352,8 +387,9 @@ impl Spec {
     {
         let collectable = self.overdue_collection(due).amount();
         debug_assert!(collectable <= due.total_due());
-        let to_liquidate = Self::to_assets(collectable, asset_in_lpns);
-        self.may_ask_liquidation(asset, Cause::Overdue(), to_liquidate, asset_in_lpns)
+        Self::to_assets(collectable, asset_in_lpns).and_then(|to_liquidate| {
+            self.may_ask_liquidation(asset, Cause::Overdue(), to_liquidate, asset_in_lpns)
+        })
     }
 
     fn may_ask_liquidation<Asset>(
@@ -433,7 +469,7 @@ impl Spec {
         zone
     }
 
-    fn due_asset<Asset, Due>(due: &Due, asset_in_lpns: Price<Asset>) -> Coin<Asset>
+    fn due_asset<Asset, Due>(due: &Due, asset_in_lpns: Price<Asset>) -> Option<Coin<Asset>>
     where
         Asset: 'static,
         Due: DueTrait,
@@ -441,7 +477,7 @@ impl Spec {
         Self::to_assets(due.total_due(), asset_in_lpns)
     }
 
-    fn to_assets<Asset>(lpn_coin: LpnCoin, asset_in_lpns: Price<Asset>) -> Coin<Asset>
+    fn to_assets<Asset>(lpn_coin: LpnCoin, asset_in_lpns: Price<Asset>) -> Option<Coin<Asset>>
     where
         Asset: 'static,
     {

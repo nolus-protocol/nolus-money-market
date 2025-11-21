@@ -50,7 +50,7 @@ impl Index {
     ///  Calculate rewards
     pub fn rewards(&self, receipts: Coin<NLpn>) -> Coin<Nls> {
         self.reward_per_token
-            .map(|price| price::total(receipts, price))
+            .and_then(|price| price::total(receipts, price))
             .unwrap_or_default()
     }
 

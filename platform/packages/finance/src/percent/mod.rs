@@ -2,21 +2,22 @@ use bound::BoundPercent;
 
 use crate::{
     error::Error,
-    fraction::{Fraction, FractionLegacy, Unit as FractionUnit},
-    fractionable::{CommonDoublePrimitive, Fractionable, FractionableLegacy, IntoMax},
+    fraction::{Fraction, Unit as FractionUnit},
+    fractionable::{CommonDoublePrimitive, Fractionable, IntoMax},
     ratio::{Ratio, SimpleFraction},
-    rational::{Rational, RationalLegacy},
+    rational::Rational,
 };
 
 pub mod bound;
 mod fraction;
 mod fractionable;
+// TODO Remove once integration tests use BoundPercent::of(Coin)
+#[cfg(any(test, feature = "testing"))]
+mod units;
 
 pub type Units = u32;
 pub type Percent100 = BoundPercent<{ Percent::HUNDRED.units() }>;
 pub type Percent = BoundPercent<{ Units::MAX }>;
-
-// TODO revisit it's usage after removing FractionLegacy<Units> for Percent100
 
 impl Percent100 {
     pub const fn complement(self) -> Self {
@@ -32,7 +33,7 @@ impl Percent100 {
     {
         debug_assert!(parts <= total);
 
-        Fraction::of(&Ratio::new(parts, total), Self::HUNDRED)
+        Ratio::new(parts, total).of(Self::HUNDRED)
     }
 
     fn to_ratio(self) -> Ratio<Self> {
@@ -46,11 +47,7 @@ impl Percent {
         Self: Fractionable<U>,
         U: FractionUnit + IntoMax<<Self as CommonDoublePrimitive<U>>::CommonDouble>,
     {
-        Rational::of(&SimpleFraction::new(nominator, denominator), Self::HUNDRED)
-    }
-
-    fn to_fraction(self) -> SimpleFraction<Self> {
-        SimpleFraction::new(self, Self::HUNDRED)
+        SimpleFraction::new(nominator, denominator).of(Self::HUNDRED)
     }
 }
 
@@ -60,18 +57,7 @@ impl Fraction<Self> for Percent100 {
         Self: IntoMax<A::CommonDouble>,
         A: Fractionable<Self>,
     {
-        // TODO remove the full syntax when removing the FractionLegacy
-        Fraction::of(&self.to_ratio(), whole)
-    }
-}
-
-// TODO remove when implement Fractionable<BoundPercent> for Price
-impl FractionLegacy<Units> for Percent100 {
-    fn of<A>(&self, whole: A) -> A
-    where
-        A: FractionableLegacy<Units>,
-    {
-        FractionLegacy::of(&Ratio::new(self.units(), Self::HUNDRED.units()), whole)
+        self.to_ratio().of(whole)
     }
 }
 
@@ -81,17 +67,7 @@ impl Rational<Self> for Percent {
         Self: IntoMax<A::CommonDouble>,
         A: Fractionable<Self>,
     {
-        // TODO remove the full syntax when removing the RationalLegacy
-        Rational::of(&self.to_fraction(), whole)
-    }
-}
-
-impl RationalLegacy<Units> for Percent {
-    fn of<A>(&self, whole: A) -> Option<A>
-    where
-        A: FractionableLegacy<Units>,
-    {
-        Some(whole.safe_mul(self))
+        self.to_fraction().of(whole)
     }
 }
 
@@ -179,22 +155,6 @@ pub(super) mod test {
     }
 
     #[test]
-    fn to_fraction() {
-        assert_eq!(
-            SimpleFraction::new(Percent::ZERO, Percent::HUNDRED),
-            Percent::ZERO.to_fraction()
-        );
-        assert_eq!(
-            SimpleFraction::new(Percent::HUNDRED, Percent::HUNDRED),
-            Percent::HUNDRED.to_fraction()
-        );
-        assert_eq!(
-            SimpleFraction::new(percent(1001), Percent::HUNDRED),
-            percent(1001).to_fraction()
-        );
-    }
-
-    #[test]
     fn percent_to_percent100() {
         assert_eq!(percent100(500), percent(500).try_into().unwrap());
         assert_eq!(percent100(1000), percent(1000).try_into().unwrap());
@@ -223,11 +183,11 @@ pub(super) mod test {
         );
     }
 
-    fn percent100(permille: Units) -> Percent100 {
+    pub(super) fn percent100(permille: Units) -> Percent100 {
         Percent100::from_permille(permille)
     }
 
-    fn percent(permille: Units) -> Percent {
+    pub(super) fn percent(permille: Units) -> Percent {
         Percent::from_permille(permille)
     }
 }
