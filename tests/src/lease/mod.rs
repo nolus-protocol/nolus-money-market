@@ -398,10 +398,10 @@ where
     let last_paid = now;
     let quote_result = quote_query(test_case, downpayment);
     let total: Coin<AssetC> = Coin::<AssetC>::try_from(quote_result.total).unwrap();
-    let total_lpn: LpnCoin = price::total(total, price_lpn_of::<AssetC>());
-    let expected_principal: LpnCoin = total_lpn
-        - price::total(downpayment, price_lpn_of::<DownpaymentC>())
-        - price::total(payments, price_lpn_of::<PaymentC>());
+    let total_lpn = price::total(total, price_lpn_of::<AssetC>()).unwrap();
+    let expected_principal = total_lpn
+        - price::total(downpayment, price_lpn_of::<DownpaymentC>()).unwrap()
+        - price::total(payments, price_lpn_of::<PaymentC>()).unwrap();
     let due_period_start = (now - max_due).max(last_paid);
     let (overdue, due) = (
         Duration::between(&last_paid, &due_period_start),
