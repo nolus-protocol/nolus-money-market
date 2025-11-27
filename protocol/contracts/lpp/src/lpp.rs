@@ -108,7 +108,12 @@ where
 
         let total_principal_due = self.total.total_principal_due();
 
-        let total_interest_due = self.total.total_interest_due_by_now(now);
+        let total_interest_due =
+            self.total
+                .total_interest_due_by_now(now)
+                .ok_or(ContractError::OverflowError(
+                    "Total interest due by now overflow",
+                ))?;
 
         Ok(LppBalances {
             balance,
@@ -223,7 +228,12 @@ where
         }
 
         let total_principal_due = self.total.total_principal_due();
-        let total_interest = self.total.total_interest_due_by_now(now);
+        let total_interest =
+            self.total
+                .total_interest_due_by_now(now)
+                .ok_or(ContractError::OverflowError(
+                    "Total interest due by now overflow",
+                ))?;
         let total_liability_past_quote = total_principal_due + quote + total_interest;
         let total_balance_past_quote = balance - quote;
 
