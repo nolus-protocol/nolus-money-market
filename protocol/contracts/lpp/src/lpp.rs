@@ -88,7 +88,9 @@ where
         if min_utilization.is_zero() {
             Ok(None)
         } else {
-            let total_due = self.total_due(now);
+            let total_due = self
+                .total_due(now)
+                .ok_or(ContractError::OverflowError("Total due overflow"))?;
 
             self.commited_balance(pending_deposit).map(|balance| {
                 if self.utilization(balance, total_due) > min_utilization {
@@ -289,13 +291,19 @@ where
         })
     }
 
-    fn total_due(&self, now: &Timestamp) -> Coin<Lpn> {
-        self.total.total_principal_due() + self.total.total_interest_due_by_now(now)
+    fn total_due(&self, now: &Timestamp) -> Option<Coin<Lpn>> {
+        self.total
+            .total_interest_due_by_now(now)
+            .map(|interest_due| interest_due + self.total.total_principal_due())
     }
 
     fn total_lpn(&self, now: &Timestamp, uncommited_amount: Coin<Lpn>) -> Result<Coin<Lpn>> {
+        let total_due = self
+            .total_due(now)
+            .ok_or(ContractError::OverflowError("Total due overflow"))?;
+
         self.commited_balance(uncommited_amount)
-            .map(|balance: Coin<Lpn>| balance + self.total_due(now))
+            .map(|balance| balance + total_due)
     }
 
     fn utilization(&self, balance: Coin<Lpn>, total_due: Coin<Lpn>) -> Percent100 {
