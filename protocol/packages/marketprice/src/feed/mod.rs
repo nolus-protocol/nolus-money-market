@@ -100,17 +100,6 @@ where
             .ok_or(PriceFeedsError::Finance(FinanceError::Overflow(
                 "Overflow while calculating the sum of the prices",
             )))
-
-        // samples
-        //     .take(samples_nb)
-        //     .map(Sample::into_maybe_price)
-        //     .skip_while(Option::is_none)
-        //     .map(|price| Option::expect(price, "sample prices should keep being present"))
-        //     .reduce(|acc, sample_price| {
-        //         sample_price.lossy_mul::<_, u128>(discount_factor)
-        //             + acc.lossy_mul::<_, u128>(discount_factor.complement())
-        //     })
-        //     .ok_or(PriceFeedsError::NoPrice {})
     }
 
     fn valid_observations(&self, since: &Timestamp) -> Result<Vec<Observation<C, QuoteC>>> {
