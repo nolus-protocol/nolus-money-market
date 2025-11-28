@@ -28,9 +28,18 @@ where
                 .and_then(TryFromMax::try_from_max)
         }
     }
+
+    fn cross_normalize(&self, rhs: Self) -> (Self, Self) {
+        // from (a / b) and (c / d), to (a / d) and (c / b)
+        (
+            Self::new(self.nominator, rhs.denominator),
+            Self::new(rhs.nominator, self.denominator),
+        )
+    }
 }
 
-// TODO unify the multiplication using the logic from SimpleFraction::checked_mul(Fractionable)
+/// Checked multiplication of two `SimpleFraction`-s
+/// Returns `None` if either the numerator or denominator multiplication overflows
 impl<U> CheckedMul for SimpleFraction<U>
 where
     U: CheckedMul<U, Output = U> + FractionUnit,
@@ -38,11 +47,16 @@ where
     type Output = Self;
 
     fn checked_mul(self, rhs: Self) -> Option<Self::Output> {
-        self.nominator
-            .checked_mul(rhs.nominator)
+        // (a / b).checked_mul(c / d) = (a / d).checked_mul(c / b)
+        // => (a1.checked_mul(c1)) / (d1.checked_mul(b1))
+        // where a1, b1, c1 and d1 are normalized
+        let (ad, cb) = self.cross_normalize(rhs);
+
+        ad.nominator
+            .checked_mul(cb.nominator)
             .and_then(|nominator| {
-                self.denominator
-                    .checked_mul(rhs.denominator)
+                ad.denominator
+                    .checked_mul(cb.denominator)
                     .map(|denominator| Self::new(nominator, denominator))
             })
     }
@@ -53,9 +67,17 @@ mod test {
     use bnum::types::U256;
 
     use crate::{
-        fractionable::checked_mul::CheckedMul, percent::Units as PercentUnits,
+        coin::Amount, fractionable::checked_mul::CheckedMul, percent::Units as PercentUnits,
         ratio::SimpleFraction,
     };
+
+    #[test]
+    fn cross_normalize() {
+        let a = fraction(12, 25);
+        let b = fraction(35, 9);
+
+        assert_eq!((fraction(4, 3), fraction(7, 5)), a.cross_normalize(b))
+    }
 
     #[test]
     fn checked_mul_trait() {
@@ -70,6 +92,10 @@ mod test {
         let lhs = SimpleFraction::new(U256::MAX - u_256(1), u_256(1000));
         let rhs = SimpleFraction::new(u_256(3), u_256(1000));
         assert!(lhs.checked_mul(rhs).is_none())
+    }
+
+    fn fraction(nom: Amount, denom: Amount) -> SimpleFraction<Amount> {
+        SimpleFraction::new(nom, denom)
     }
 
     fn u_256(quantity: PercentUnits) -> U256 {
