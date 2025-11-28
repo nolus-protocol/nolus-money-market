@@ -90,33 +90,29 @@ impl Spec {
         Asset: 'static,
         Due: DueTrait,
     {
-        Self::to_assets(due.total_due(), asset_in_lpns)
-            .ok_or(PositionError::Finance(FinanceError::Overflow(
-                "Overflow while converting to asset value",
-            )))
-            .and_then(|total_due| {
-                self.close
-                    .change_policy(cmd)
-                    .and_then(|close_policy| close_policy.liquidation_check(self.liability.max()))
-                    .and_then(|close_policy| {
-                        close_policy.may_trigger(asset, total_due).map_or_else(
-                            || Ok(close_policy),
-                            |strategy| {
-                                Err(PositionError::trigger_close(
-                                    Self::ltv(total_due, asset),
-                                    strategy,
-                                ))
-                            },
-                        )
-                    })
-                    .map(|close_policy| {
-                        Self::new(
-                            self.liability,
-                            close_policy,
-                            self.min_asset,
-                            self.min_transaction,
-                        )
-                    })
+        let capped_due = Self::capped_due_asset(asset, due.total_due(), asset_in_lpns);
+
+        self.close
+            .change_policy(cmd)
+            .and_then(|close_policy| close_policy.liquidation_check(self.liability.max()))
+            .and_then(|close_policy| {
+                close_policy.may_trigger(asset, capped_due).map_or_else(
+                    || Ok(close_policy),
+                    |strategy| {
+                        Err(PositionError::trigger_close(
+                            Self::ltv(capped_due, asset),
+                            strategy,
+                        ))
+                    },
+                )
+            })
+            .map(|close_policy| {
+                Self::new(
+                    self.liability,
+                    close_policy,
+                    self.min_asset,
+                    self.min_transaction,
+                )
             })
     }
 
@@ -180,18 +176,12 @@ impl Spec {
         Liquidation<Asset>: Ord,
         Due: DueTrait,
     {
-        Self::due_asset(due, asset_in_lpns)
-            .map(|due_asset| {
-                self.may_ask_liquidation_liability(asset, due_asset, asset_in_lpns)
-                    .max(self.may_ask_liquidation_overdue(asset, due, asset_in_lpns))
-                    .map(Debt::Bad)
-                    .unwrap_or_else(|| self.no_liquidation(asset, due, due_asset))
-            })
-            .unwrap_or_else(|| {
-                self.may_ask_liquidation_liability(asset, asset, asset_in_lpns)
-                    .map(Debt::Bad)
-                    .expect("Liquidation is required, debt is too large")
-            })
+        let capped_due = Self::capped_due_asset(asset, due.total_due(), asset_in_lpns);
+
+        self.may_ask_liquidation_liability(asset, capped_due, asset_in_lpns)
+            .max(self.may_ask_liquidation_overdue(asset, due, asset_in_lpns))
+            .map(Debt::Bad)
+            .unwrap_or_else(|| self.no_liquidation(asset, due, capped_due))
     }
 
     /// Determine the `steadiness`'s range
@@ -210,7 +200,10 @@ impl Spec {
     {
         debug_assert_eq!(None, self.check_close(asset, due, asset_in_lpns));
 
-        let debt_zone = self.zone(asset, Self::due_asset(due, asset_in_lpns).expect(""));
+        let debt_zone = self.zone(
+            asset,
+            Self::capped_due_asset(asset, due.total_due(), asset_in_lpns),
+        );
 
         let steady_within = self.close.no_close(debt_zone.range());
 
@@ -235,9 +228,10 @@ impl Spec {
         Asset: 'static,
         Due: DueTrait,
     {
-        Self::to_assets(due.total_due(), asset_in_lpns)
-            .map(|due_in_assets| self.close.may_trigger(asset, due_in_assets))
-            .unwrap_or_else(|| self.close.may_trigger(asset, asset))
+        self.close.may_trigger(
+            asset,
+            Self::capped_due_asset(asset, due.total_due(), asset_in_lpns),
+        )
     }
 
     /// Check if the amount can be used for repayment.
@@ -387,9 +381,8 @@ impl Spec {
     {
         let collectable = self.overdue_collection(due).amount();
         debug_assert!(collectable <= due.total_due());
-        Self::to_assets(collectable, asset_in_lpns).and_then(|to_liquidate| {
-            self.may_ask_liquidation(asset, Cause::Overdue(), to_liquidate, asset_in_lpns)
-        })
+        let to_liquidate = Self::capped_due_asset(asset, collectable, asset_in_lpns);
+        self.may_ask_liquidation(asset, Cause::Overdue(), to_liquidate, asset_in_lpns)
     }
 
     fn may_ask_liquidation<Asset>(
@@ -469,18 +462,22 @@ impl Spec {
         zone
     }
 
-    fn due_asset<Asset, Due>(due: &Due, asset_in_lpns: Price<Asset>) -> Option<Coin<Asset>>
+    /// Converts the `due` into `Asset`, capping the result to the `asset` amount if the convertion overflows
+    fn capped_due_asset<Asset>(
+        asset: Coin<Asset>,
+        due: LpnCoin,
+        asset_in_lpns: Price<Asset>,
+    ) -> Coin<Asset>
     where
         Asset: 'static,
-        Due: DueTrait,
     {
-        Self::to_assets(due.total_due(), asset_in_lpns)
+        price::total(due, asset_in_lpns.inv()).unwrap_or(asset)
     }
 
-    fn to_assets<Asset>(lpn_coin: LpnCoin, asset_in_lpns: Price<Asset>) -> Option<Coin<Asset>>
-    where
-        Asset: 'static,
-    {
-        price::total(lpn_coin, asset_in_lpns.inv())
-    }
+    // fn to_assets<Asset>(lpn_coin: LpnCoin, asset_in_lpns: Price<Asset>) -> Option<Coin<Asset>>
+    // where
+    //     Asset: 'static,
+    // {
+    //     price::total(lpn_coin, asset_in_lpns.inv())
+    // }
 }
