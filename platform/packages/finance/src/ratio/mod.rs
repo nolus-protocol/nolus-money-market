@@ -1,16 +1,16 @@
-use std::{fmt::Debug, ops::Div};
+use std::fmt::Debug;
 
 use serde::{Deserialize, Serialize};
 
 use crate::{
     error::{Error, Result as FinanceResult},
     fraction::{Coprime, Fraction, FractionLegacy, Unit as FractionUnit},
-    fractionable::{
-        Fractionable, FractionableLegacy, IntoMax, TryFromMax, checked_mul::CheckedMul,
-    },
+    fractionable::{Fractionable, FractionableLegacy, IntoMax},
     rational::{Rational, RationalLegacy},
     zero::Zero,
 };
+
+mod multiplication;
 
 /// A part of something that is divisible.
 /// The total should be non-zero.
@@ -121,25 +121,6 @@ where
         Self {
             nominator,
             denominator,
-        }
-    }
-
-    pub fn checked_mul<M>(&self, rhs: M) -> Option<M>
-    where
-        U: IntoMax<M::CommonDouble>,
-        M: Fractionable<U>,
-    {
-        if self.nominator == self.denominator {
-            Some(rhs)
-        } else {
-            let nominator_max = self.nominator.into_max();
-            let rhs_max = rhs.into_max();
-            let denominator_max = self.denominator.into_max();
-
-            nominator_max
-                .checked_mul(rhs_max)
-                .map(|product| product.div(denominator_max))
-                .and_then(TryFromMax::try_from_max)
         }
     }
 }
