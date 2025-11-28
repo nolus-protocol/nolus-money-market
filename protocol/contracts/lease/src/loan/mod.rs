@@ -1,7 +1,8 @@
 use serde::{Deserialize, Serialize};
 
 use finance::{
-    coin::Coin, duration::Duration, interest, percent::Percent100, period::Period, zero::Zero,
+    coin::Coin, duration::Duration, error::Error as FinanceError, interest, percent::Percent100,
+    period::Period, zero::Zero,
 };
 use lpp::{
     loan::RepayShares,
@@ -161,7 +162,10 @@ where
             interest_paid + margin_paid + principal_paid + change
         );
 
-        self.repay_margin(state.principal_due, margin_paid, by);
+        self.repay_margin(state.principal_due, margin_paid, by)
+            .ok_or(ContractError::FinanceError(FinanceError::Overflow(
+                "Repay margin overflow",
+            )))?;
         profit.send(margin_paid);
         self.repay_loan(interest_paid, principal_paid, by);
 
@@ -212,16 +216,22 @@ where
         }
     }
 
-    fn repay_margin(&mut self, principal_due: LpnCoin, margin_paid: LpnCoin, by: &Timestamp) {
-        let (margin_paid_for, margin_payment_change) = interest::pay(
+    fn repay_margin(
+        &mut self,
+        principal_due: LpnCoin,
+        margin_paid: LpnCoin,
+        by: &Timestamp,
+    ) -> Option<()> {
+        interest::pay(
             self.margin_interest,
             principal_due,
             margin_paid,
             Duration::between(&self.margin_paid_by, by),
         )
-        .expect("TODO Method should return Option");
-        debug_assert!(margin_payment_change.is_zero());
-        self.margin_paid_by += margin_paid_for;
+        .map(|(margin_paid_for, margin_payment_change)| {
+            debug_assert!(margin_payment_change.is_zero());
+            self.margin_paid_by += margin_paid_for
+        })
     }
 
     fn repay_loan(&mut self, interest_paid: LpnCoin, principal_paid: LpnCoin, by: &Timestamp) {
