@@ -1,8 +1,8 @@
 use currencies::Lpns;
 use currency::{CurrencyDef, MemberOf};
 use finance::{
-    coin::Coin, percent::Percent100, price, ratio::SimpleFraction, rational::RationalLegacy,
-    zero::Zero,
+    coin::Coin, error::Error as FinanceError, percent::Percent100, price, ratio::SimpleFraction,
+    rational::Rational, zero::Zero,
 };
 use lpp_platform::NLpn;
 use platform::{bank::BankAccountView, contract::Validator};
@@ -78,6 +78,11 @@ where
     Lpn: CurrencyDef,
     Bank: BankAccountView,
 {
+    /// Computes the remaining deposit capacity under the minimum utilization constraint.
+    /// Returns:
+    /// - `Ok(None)` -> no minimum utilization constraint is set
+    /// - `Ok(Some(amount))` -> the maximum additional deposit allowed (may be zero)
+    /// - `Err(_)` -> an error occured while computing the commited balance
     pub fn deposit_capacity(
         &self,
         now: &Timestamp,
@@ -93,11 +98,9 @@ where
             self.commited_balance(pending_deposit).map(|balance| {
                 if self.utilization(balance, total_due) > min_utilization {
                     // a followup from the above true value is (total_due * 100 / min_utilization) > (balance + total_due)
-                    RationalLegacy::<Percent100>::of(
-                        &SimpleFraction::new(Percent100::HUNDRED, min_utilization),
-                        total_due,
-                    )
-                    .map(|res| res - balance - total_due)
+                    SimpleFraction::new(Percent100::HUNDRED, min_utilization)
+                        .of(total_due)
+                        .map(|res| res - balance - total_due)
                 } else {
                     Some(Coin::ZERO)
                 }
@@ -161,7 +164,13 @@ where
         }
 
         self.calculate_price(now, amount)
-            .map(|price| price::total(amount, price.inv()))
+            .and_then(|price| {
+                price::total(amount, price.inv()).ok_or({
+                    ContractError::Finance(FinanceError::Overflow(
+                        "Overflow while calculating the total value",
+                    ))
+                })
+            })
             .and_then(|receipts| {
                 if receipts.is_zero() {
                     Err(ContractError::DepositLessThanAReceipt)
@@ -181,7 +190,13 @@ where
 
         // the price calculation should go before the withdrawal from the total
         self.calculate_price(now, pending_withdraw)
-            .map(|price| price::total(receipts, price))
+            .and_then(|price| {
+                price::total(receipts, price).ok_or({
+                    ContractError::Finance(FinanceError::Overflow(
+                        "Overflow while calculating the total value",
+                    ))
+                })
+            })
             .and_then(|amount_lpn: Coin<Lpn>| {
                 debug_assert_ne!(
                     Coin::ZERO,
@@ -293,7 +308,7 @@ mod test {
     use finance::{
         coin::Coin,
         duration::Duration,
-        fraction::FractionLegacy,
+        fraction::Fraction,
         percent::Percent100,
         price::{self, Price},
         zero::Zero,
@@ -897,7 +912,7 @@ mod test {
 
             let nlpn_to_lpn_before = lpp.calculate_price(&now, DEPOSIT2).unwrap();
             assert!(nlpn_to_lpn_before > Price::identity());
-            let expected_receipt2 = price::total(DEPOSIT2, nlpn_to_lpn_before.inv());
+            let expected_receipt2 = price::total(DEPOSIT2, nlpn_to_lpn_before.inv()).unwrap();
             assert_eq!(expected_receipt2, lpp.deposit(DEPOSIT2, &now).unwrap());
             assert_eq!(RECEIPT1 + expected_receipt2, lpp.balance_nlpn());
         }
@@ -945,7 +960,7 @@ mod test {
 
             let nlpn_to_lpn_before = lpp.calculate_price(&now, Coin::ZERO).unwrap();
             assert!(nlpn_to_lpn_before > Price::identity());
-            let expected_withdraw1 = price::total(WITHDRAW1, nlpn_to_lpn_before);
+            let expected_withdraw1 = price::total(WITHDRAW1, nlpn_to_lpn_before).unwrap();
             assert_eq!(
                 expected_withdraw1,
                 lpp.withdraw_lpn(WITHDRAW1, Coin::ZERO, &now).unwrap()

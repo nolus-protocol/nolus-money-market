@@ -1,16 +1,17 @@
-use std::{fmt::Debug, ops::Div};
+use std::fmt::Debug;
 
 use serde::{Deserialize, Serialize};
 
 use crate::{
+    coin::Amount,
     error::{Error, Result as FinanceResult},
-    fraction::{Coprime, Fraction, FractionLegacy, Unit as FractionUnit},
-    fractionable::{
-        Fractionable, FractionableLegacy, IntoMax, TryFromMax, checked_mul::CheckedMul,
-    },
-    rational::{Rational, RationalLegacy},
+    fraction::{Coprime, Fraction, Unit as FractionUnit},
+    fractionable::{Fractionable, IntoMax},
+    rational::Rational,
     zero::Zero,
 };
+
+pub(crate) mod multiplication;
 
 /// A part of something that is divisible.
 /// The total should be non-zero.
@@ -74,29 +75,10 @@ where
         U: IntoMax<A::CommonDouble>,
         A: Fractionable<U>,
     {
-        // TODO remove the full syntax when removing the RationalLegacy
-        Rational::of(&self.0, whole)
+        self.0
+            .of(whole)
             .expect("Ratio is a part of a whole, multiplication cannot overflow")
     }
-}
-
-// TODO remove when removing FractionLegacy<Units> for Percent100
-impl<U> FractionLegacy<U> for Ratio<U>
-where
-    U: FractionUnit,
-{
-    fn of<A>(&self, whole: A) -> A
-    where
-        A: FractionableLegacy<U>,
-    {
-        RationalLegacy::of(&self.0, whole)
-            .expect("Ratio is a part of a whole, multiplication cannot overflow")
-    }
-}
-
-pub trait RatioLegacy<U> {
-    fn parts(&self) -> U;
-    fn total(&self) -> U;
 }
 
 /// A fraction where [denominator](Self::denominator) should be non zero
@@ -124,36 +106,24 @@ where
         }
     }
 
-    pub fn checked_mul<M>(&self, rhs: M) -> Option<M>
+    // Used by Price::lossy_mul() to convert the rhs to SimpleFraction<Amount>
+    pub fn to_amount_fraction(self) -> SimpleFraction<Amount>
     where
-        U: IntoMax<M::CommonDouble>,
-        M: Fractionable<U>,
+        U: Into<Amount>,
     {
-        if self.nominator == self.denominator {
-            Some(rhs)
-        } else {
-            let nominator_max = self.nominator.into_max();
-            let rhs_max = rhs.into_max();
-            let denominator_max = self.denominator.into_max();
-
-            nominator_max
-                .checked_mul(rhs_max)
-                .map(|product| product.div(denominator_max))
-                .and_then(TryFromMax::try_from_max)
-        }
-    }
-}
-
-impl<U, T> RatioLegacy<U> for SimpleFraction<T>
-where
-    T: Copy + Into<U> + PartialEq + Zero,
-{
-    fn parts(&self) -> U {
-        self.nominator.into()
+        SimpleFraction::new(self.nominator.into(), self.denominator.into())
     }
 
-    fn total(&self) -> U {
-        self.denominator.into()
+    pub(super) const fn nominator(&self) -> U {
+        self.nominator
+    }
+
+    pub(super) const fn denominator(&self) -> U {
+        self.denominator
+    }
+
+    fn inv(self) -> Self {
+        Self::new(self.denominator, self.nominator)
     }
 }
 
@@ -167,19 +137,6 @@ where
         A: Fractionable<U>,
     {
         self.checked_mul(whole)
-    }
-}
-
-// TODO remove when removing FractionLegacy<Units> for Percent100
-impl<U, T> RationalLegacy<U> for SimpleFraction<T>
-where
-    Self: RatioLegacy<U>,
-{
-    fn of<A>(&self, whole: A) -> Option<A>
-    where
-        A: FractionableLegacy<U>,
-    {
-        Some(whole.safe_mul(self))
     }
 }
 

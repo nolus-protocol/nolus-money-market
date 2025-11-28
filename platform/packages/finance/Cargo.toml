@@ -20,8 +20,9 @@ testing = ["currency/testing"]
 currency = { workspace = true }
 sdk = { workspace = true }
 
-bnum = { workspace = true }
+bnum = { workspace = true, features = ["numtraits"] }
 gcd = { workspace = true }
+num-integer = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 thiserror = { workspace = true }
 

@@ -3,11 +3,11 @@ use currency::CurrencyDef;
 use finance::{
     coin::{Amount, Coin},
     duration::Duration,
-    fraction::FractionLegacy,
+    fraction::Fraction,
     percent::{Percent, Percent100},
     price,
     ratio::SimpleFraction,
-    rational::RationalLegacy,
+    rational::Rational,
     test,
     zero::Zero,
 };
@@ -63,7 +63,7 @@ fn general_interest_rate(
                     optimal_rate.complement().into(),
                 ).expect("The utilization must be a valid Percent").min(utilization_factor_max);
 
-            SimpleFraction::new(addon_rate, optimal_rate).of(utilization_factor)
+            SimpleFraction::<Percent>::new(addon_rate.into(), optimal_rate.into()).of(utilization_factor)
         .map(|utilization_config| Percent100::try_from(utilization_config + base_rate.into()).expect("The borrow rate must not exceed 100%"))     
         .expect("The utilization_config must be a valid Percent")     
     })
@@ -295,7 +295,7 @@ fn deposit_and_withdraw() {
 
     let amount: Amount = 1_000;
     assert_eq!(
-        price::total(Coin::new(amount), price.0),
+        price::total(Coin::new(amount), price.0).unwrap(),
         Coin::<Lpn>::new(1_000 * pushed_price)
     );
 
@@ -319,7 +319,7 @@ fn deposit_and_withdraw() {
         .query_wasm_smart(test_case.address_book.lpp().clone(), &LppQueryMsg::Price())
         .unwrap();
     assert_eq!(
-        price::total(balance_nlpn.balance, price.0),
+        price::total(balance_nlpn.balance, price.0).unwrap(),
         Coin::<Lpn>::new(test_deposit - rounding_error)
     );
 
@@ -342,7 +342,7 @@ fn deposit_and_withdraw() {
         .query_wasm_smart(test_case.address_book.lpp().clone(), &LppQueryMsg::Price())
         .unwrap();
     assert_eq!(
-        price::total(balance_nlpn.balance, price.0),
+        price::total(balance_nlpn.balance, price.0).unwrap(),
         Coin::<Lpn>::new(test_deposit - rounding_error)
     );
 
@@ -387,7 +387,7 @@ fn deposit_and_withdraw() {
         .query_wasm_smart(test_case.address_book.lpp().clone(), &LppQueryMsg::Price())
         .unwrap();
     assert_eq!(
-        price::total(balance_nlpn2.balance, price.0),
+        price::total(balance_nlpn2.balance, price.0).unwrap(),
         Coin::<Lpn>::new(test_deposit - rounding_error)
     );
 

@@ -3,25 +3,8 @@ use bnum::types::U256;
 use crate::{
     coin::Coin,
     duration::Duration,
-    fractionable::{
-        CommonDoublePrimitive, Fractionable, HigherRank, IntoMax, ToDoublePrimitive, TryFromMax,
-    },
+    fractionable::{CommonDoublePrimitive, Fractionable, IntoMax, ToDoublePrimitive, TryFromMax},
 };
-
-impl<T> HigherRank<T> for u128
-where
-    T: Into<Self>,
-{
-    type Type = U256;
-}
-
-impl ToDoublePrimitive for Duration {
-    type Double = u128;
-
-    fn to_double(&self) -> Self::Double {
-        self.nanos().into()
-    }
-}
 
 impl<C> CommonDoublePrimitive<Coin<C>> for Duration {
     type CommonDouble = <Coin<C> as ToDoublePrimitive>::Double;
@@ -32,6 +15,14 @@ impl<C> Fractionable<Coin<C>> for Duration {}
 impl IntoMax<U256> for Duration {
     fn into_max(self) -> U256 {
         self.to_double().into()
+    }
+}
+
+impl ToDoublePrimitive for Duration {
+    type Double = u128;
+
+    fn to_double(&self) -> Self::Double {
+        self.nanos().into()
     }
 }
 

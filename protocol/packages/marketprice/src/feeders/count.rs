@@ -6,13 +6,13 @@ use finance::{
     fraction::Unit as FractionUnit,
     fractionable::{CommonDoublePrimitive, Fractionable, IntoMax, ToDoublePrimitive, TryFromMax},
     percent::Percent100,
-    ratio::{RatioLegacy, SimpleFraction},
+    ratio::Ratio,
     zero::Zero,
 };
 
 use crate::feeders::PriceFeedersError;
 
-type Unit = u32;
+pub type Unit = u32;
 const ZERO: Unit = 0;
 const ONE: Unit = 1;
 const MAX: Unit = u32::MAX;
@@ -45,9 +45,8 @@ impl Count {
     /// Converts [self] into a reciproral fraction
     ///
     /// Returns [None] if the Count is zero
-    pub fn try_into_reciproral(self) -> Option<impl RatioLegacy<Unit>> {
-        // TODO use Ratio instead of `SimpleFraction`
-        (self != Self::ZERO).then(|| SimpleFraction::new(ONE, self.0))
+    pub fn try_into_reciproral(self) -> Option<Ratio<Unit>> {
+        (self != Self::ZERO).then(|| Ratio::new(ONE, self.0))
     }
 }
 
@@ -122,7 +121,7 @@ impl Zero for Count {
 #[cfg(test)]
 mod test {
 
-    use finance::ratio::RatioLegacy;
+    use finance::ratio::Ratio;
 
     use crate::feeders::count::Unit;
 
@@ -132,11 +131,8 @@ mod test {
     fn try_into_reciproral_nonzero() {
         let count = 4096;
         assert_eq!(
-            count,
-            Count::new_test(count)
-                .try_into_reciproral()
-                .unwrap()
-                .total()
+            Ratio::new(1, count),
+            Count::new_test(count).try_into_reciproral().unwrap()
         );
     }
 

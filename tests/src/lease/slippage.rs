@@ -2,7 +2,7 @@ use currencies::{LeaseGroup, Lpn, Lpns, PaymentGroup};
 use dex::MaxSlippage;
 use finance::{
     coin::CoinDTO,
-    fraction::FractionLegacy,
+    fraction::Fraction,
     price::{self, Price},
 };
 use lease::api::{
@@ -239,7 +239,7 @@ fn assert_min_out(
     .try_into()
     .unwrap();
 
-    let position_in_lpn = price::total(lease_amount, price);
+    let position_in_lpn = price::total(lease_amount, price).unwrap();
     assert_eq!(
         MaxSlippage::unchecked(LeaserInstantiator::MAX_SLIPPAGE).min_out(position_in_lpn),
         common::coin(requests[0].min_token_out)
