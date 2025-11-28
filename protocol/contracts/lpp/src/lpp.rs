@@ -78,6 +78,11 @@ where
     Lpn: CurrencyDef,
     Bank: BankAccountView,
 {
+    /// Computes the remaining deposit capacity under the minimum utilization constraint.
+    /// Returns:
+    /// - `Ok(None)` -> no minimum utilization constraint is set
+    /// - `Ok(Some(amount))` -> the maximum additional deposit allowed (may be zero)
+    /// - `Err(_)` -> an error occured while computing the commited balance
     pub fn deposit_capacity(
         &self,
         now: &Timestamp,
