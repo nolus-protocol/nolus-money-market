@@ -8,13 +8,6 @@ use crate::{fractionable::checked_mul::CheckedMul, ratio::RatioLegacy, zero::Zer
 pub(crate) mod checked_mul;
 mod usize;
 
-/// Converts the domain type into its wider primitive `Double` type
-pub trait ToDoublePrimitive {
-    type Double;
-
-    fn to_double(&self) -> Self::Double;
-}
-
 /// Defines a common `Max` type, chosen as one of `Double` the types from either `Self` or `Other`
 pub trait CommonDoublePrimitive<Other> {
     type CommonDouble: CheckedMul<Output = Self::CommonDouble> + Div<Output = Self::CommonDouble>;
@@ -29,21 +22,6 @@ where
 {
 }
 
-pub trait IntoMax<Max>
-where
-    Self: ToDoublePrimitive,
-{
-    fn into_max(self) -> Max;
-}
-
-/// Conversion from `Max` back to the domain type
-pub trait TryFromMax<Max>
-where
-    Self: IntoMax<Max> + Sized,
-{
-    fn try_from_max(max: Max) -> Option<Self>;
-}
-
 pub trait FractionableLegacy<U> {
     #[track_caller]
     fn safe_mul<F>(self, fraction: &F) -> Self
@@ -53,6 +31,28 @@ pub trait FractionableLegacy<U> {
 
 pub trait HigherRank<T> {
     type Type;
+}
+
+pub trait IntoMax<Max>
+where
+    Self: ToDoublePrimitive,
+{
+    fn into_max(self) -> Max;
+}
+
+/// Converts the domain type into its wider primitive `Double` type
+pub trait ToDoublePrimitive {
+    type Double;
+
+    fn to_double(&self) -> Self::Double;
+}
+
+/// Conversion from `Max` back to the domain type
+pub trait TryFromMax<Max>
+where
+    Self: IntoMax<Max> + Sized,
+{
+    fn try_from_max(max: Max) -> Option<Self>;
 }
 
 impl<T, D, U> FractionableLegacy<U> for T
