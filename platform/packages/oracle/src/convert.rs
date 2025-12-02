@@ -41,7 +41,11 @@ mod impl_ {
     use std::marker::PhantomData;
 
     use currency::{Currency, CurrencyDef, Group, MemberOf};
-    use finance::{coin::Coin, price};
+    use finance::{
+        coin::Coin,
+        error::Error as FinanceError,
+        price::{self, Price},
+    };
 
     use crate::{Oracle, error::Error};
 
@@ -85,7 +89,7 @@ mod impl_ {
         {
             oracle
                 .price_of::<OutC>()
-                .map(|price| price::total(self.in_amount, price.inv()))
+                .and_then(|price| self.total_with(price.inv()))
         }
 
         pub(super) fn with_quote_out<OracleImpl>(
@@ -97,7 +101,15 @@ mod impl_ {
         {
             oracle
                 .price_of::<InC>()
-                .map(|price| price::total(self.in_amount, price))
+                .and_then(|price| self.total_with(price))
+        }
+
+        fn total_with(&self, price: Price<InC, OutC>) -> Result<Coin<OutC>, Error> {
+            price::total(self.in_amount, price).ok_or({
+                Error::Finance(FinanceError::Overflow(
+                    "Overflow while calculating the total value",
+                ))
+            })
         }
     }
 }
