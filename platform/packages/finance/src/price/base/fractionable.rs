@@ -55,7 +55,10 @@ where
 mod test {
     use currency::test::{SubGroupTestC10, SuperGroupTestC1};
 
-    use crate::coin::{Amount, Coin};
+    use crate::{
+        coin::{Amount, Coin},
+        test::coin,
+    };
 
     mod percent {
         use crate::fraction::FractionLegacy;
@@ -183,11 +186,12 @@ mod test {
             );
         }
     }
+
     fn c(a: Amount) -> Coin<SubGroupTestC10> {
         Coin::new(a)
     }
 
     fn q(a: Amount) -> Coin<SuperGroupTestC1> {
-        Coin::new(a)
+        coin::coin1(a)
     }
 }
