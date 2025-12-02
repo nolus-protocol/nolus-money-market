@@ -22,6 +22,7 @@ pub use self::{
 
 pub(crate) use fractionable::DoubleCoinPrimitive;
 
+mod amount;
 mod amount_serde;
 mod dto;
 mod external;
