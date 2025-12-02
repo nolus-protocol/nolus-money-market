@@ -25,11 +25,19 @@ impl<C> CommonDoublePrimitive<Self> for Coin<C> {
     type CommonDouble = DoubleCoinPrimitive;
 }
 
+// TODO remove this implemenatation when Price converts to SimpleFraction<Quote, C>
+impl<C> CommonDoublePrimitive<u128> for Coin<C> {
+    type CommonDouble = <Self as ToDoublePrimitive>::Double;
+}
+
 impl<C> Fractionable<Duration> for Coin<C> {}
 
 impl<C, const UPPER_BOUND: PercentUnits> Fractionable<BoundPercent<UPPER_BOUND>> for Coin<C> {}
 
 impl<C> Fractionable<Self> for Coin<C> {}
+
+// TODO remove this implemenatation when Price converts to SimpleFraction<Quote, C>
+impl<C> Fractionable<u128> for Coin<C> {}
 
 // TODO remove when FractionableLegacy usages are replaced
 impl<C> From<Coin<C>> for DoubleCoinPrimitive {
