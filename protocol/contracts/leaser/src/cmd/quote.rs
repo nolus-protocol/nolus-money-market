@@ -212,7 +212,8 @@ where
         Asset: CurrencyDef,
         Asset::Group: MemberOf<LeaseCurrencies> + MemberOf<PaymentCurrencies>,
     {
-        let downpayment_lpn = price::total(self.downpayment, self.oracle.price_of::<Dpc>()?);
+        let downpayment_lpn = price::total(self.downpayment, self.oracle.price_of::<Dpc>()?)
+            .expect("TODO: handle potential None from price::total() properly");
 
         if downpayment_lpn.is_zero() {
             return Err(ContractError::ZeroDownpayment {});
@@ -225,7 +226,8 @@ where
 
         let asset_price = self.oracle.price_of::<Asset>()?.inv();
 
-        let total_asset = price::total(downpayment_lpn + borrow, asset_price);
+        let total_asset = price::total(downpayment_lpn + borrow, asset_price)
+            .expect("TODO: handle potential None from price::total() properly");
 
         let annual_interest_rate = self.lpp_quote.with(borrow)?;
 
