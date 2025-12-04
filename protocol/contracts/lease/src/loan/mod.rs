@@ -251,11 +251,7 @@ mod tests {
     use serde::{Deserialize, Serialize};
 
     pub use currencies::Lpn;
-    use finance::{
-        coin::{Amount, Coin},
-        duration::Duration,
-        percent::Percent100,
-    };
+    use finance::{duration::Duration, percent::Percent100};
     use lpp::{
         loan::RepayShares,
         msg::LoanResponse,
@@ -268,7 +264,7 @@ mod tests {
     use profit::stub::ProfitRef;
     use sdk::cosmwasm_std::Timestamp;
 
-    use crate::finance::LpnCoin;
+    use crate::{finance::LpnCoin, lease::tests};
 
     use super::{Loan, LppRef};
 
@@ -276,7 +272,7 @@ mod tests {
     const LOAN_INTEREST_RATE: Percent100 = Percent100::from_permille(500);
     const LEASE_START: Timestamp = Timestamp::from_nanos(100);
     const PROFIT_ADDR: &str = "profit_addr";
-    const ZERO_COIN: LpnCoin = lpn_coin(0);
+    const ZERO_COIN: LpnCoin = tests::lpn_coin(0);
 
     mod test_repay {
         use finance::{
@@ -292,6 +288,7 @@ mod tests {
 
         use crate::{
             finance::LpnCoin,
+            lease::tests,
             loan::{Loan, Overdue, State, repay::Receipt as RepayReceipt},
         };
 
@@ -302,8 +299,8 @@ mod tests {
 
         #[test]
         fn full_max_overdue_full_max_due_repay() {
-            let principal = super::lpn_coin(1000);
-            let delta_to_fully_paid = super::lpn_coin(30);
+            let principal = tests::lpn_coin(1000);
+            let delta_to_fully_paid = tests::lpn_coin(30);
             let payment_at = LEASE_START + Duration::YEAR + Duration::YEAR;
             let one_year_margin = MARGIN_INTEREST_RATE.of(principal);
             let one_year_interest = LOAN_INTEREST_RATE.of(principal);
@@ -437,7 +434,7 @@ mod tests {
 
         #[test]
         fn partial_max_due_margin_repay() {
-            let principal = super::lpn_coin(1000);
+            let principal = tests::lpn_coin(1000);
             let due_margin = MARGIN_INTEREST_RATE.of(principal);
             let payment = due_margin.scale_down(2u128);
             let now = LEASE_START + Duration::YEAR;
@@ -472,7 +469,7 @@ mod tests {
 
         #[test]
         fn partial_overdue_interest_repay() {
-            let principal = super::lpn_coin(1000);
+            let principal = tests::lpn_coin(1000);
             let one_year_margin = MARGIN_INTEREST_RATE.of(principal);
             let one_year_interest = LOAN_INTEREST_RATE.of(principal);
             let overdue_period = Duration::from_days(100);
@@ -481,7 +478,7 @@ mod tests {
                 .unwrap();
             let overdue_margin = overdue_period.annualized_slice_of(one_year_margin).unwrap();
 
-            let partial_overdue_interest = overdue_interest - super::lpn_coin(10);
+            let partial_overdue_interest = overdue_interest - tests::lpn_coin(10);
             let repay_at = LEASE_START + Duration::YEAR + overdue_period;
 
             let loan = LoanResponse {
@@ -522,7 +519,7 @@ mod tests {
 
         #[test]
         fn multiple_periods() {
-            let principal = super::lpn_coin(1000);
+            let principal = tests::lpn_coin(1000);
             let one_year_margin = MARGIN_INTEREST_RATE.of(principal);
             let one_year_interest = LOAN_INTEREST_RATE.of(principal);
             let overdue_period_molulo_year = Duration::from_days(120);
@@ -538,7 +535,7 @@ mod tests {
             let overdue_interest_modulo_year = overdue_period_molulo_year
                 .annualized_slice_of(one_year_interest)
                 .unwrap();
-            let interest_payment = overdue_interest_modulo_year - super::lpn_coin(10);
+            let interest_payment = overdue_interest_modulo_year - tests::lpn_coin(10);
 
             let loan = LoanResponse {
                 principal_due: principal,
@@ -627,7 +624,7 @@ mod tests {
                 );
             }
             {
-                let change = super::lpn_coin(3);
+                let change = tests::lpn_coin(3);
                 let payment =
                     (one_year_interest - interest_payment) + one_year_margin + principal + change;
                 repay(
@@ -659,8 +656,8 @@ mod tests {
 
         #[test]
         fn full_max_overdue_full_due_repay() {
-            let principal = super::lpn_coin(57326);
-            let due_margin_payment = super::lpn_coin(42);
+            let principal = tests::lpn_coin(57326);
+            let due_margin_payment = tests::lpn_coin(42);
             let due_margin = MARGIN_INTEREST_RATE.of(principal);
             let due_interest = LOAN_INTEREST_RATE.of(principal);
 
@@ -713,8 +710,8 @@ mod tests {
 
         #[test]
         fn full_partial_due_repay() {
-            let principal = super::lpn_coin(36463892);
-            let principal_paid = super::lpn_coin(234);
+            let principal = tests::lpn_coin(36463892);
+            let principal_paid = tests::lpn_coin(234);
             let one_year_margin = MARGIN_INTEREST_RATE.of(principal);
             let one_year_interest = LOAN_INTEREST_RATE.of(principal);
             let due_period = Duration::HOUR + Duration::HOUR + Duration::HOUR;
@@ -754,10 +751,10 @@ mod tests {
         #[test]
         fn full_zero_loan_overdue_partial_due_repay() {
             // selected to have interest > 0 and margin == 0 for the overdue period of 2 hours
-            let principal = super::lpn_coin(9818);
+            let principal = tests::lpn_coin(9818);
             let loan_interest_rate = MARGIN_INTEREST_RATE; // we aim at simulating the margin paid-by going ahead of the loan paid-by
             let margin_interest_rate = LOAN_INTEREST_RATE;
-            let principal_paid = super::lpn_coin(23);
+            let principal_paid = tests::lpn_coin(23);
             let due_margin = margin_interest_rate.of(principal);
             let due_interest = loan_interest_rate.of(principal);
             let overdue_period = Duration::HOUR + Duration::HOUR;
@@ -831,8 +828,8 @@ mod tests {
 
         #[test]
         fn full_principal_repay() {
-            let principal = super::lpn_coin(3646389225881);
-            let principal_paid = super::lpn_coin(234);
+            let principal = tests::lpn_coin(3646389225881);
+            let principal_paid = tests::lpn_coin(234);
             let one_year_margin = MARGIN_INTEREST_RATE.of(principal);
             let one_year_interest = LOAN_INTEREST_RATE.of(principal);
             let due_period = Duration::HOUR + Duration::HOUR + Duration::HOUR;
@@ -871,7 +868,7 @@ mod tests {
 
             {
                 let principal_due = principal - principal_paid;
-                let change = super::lpn_coin(97);
+                let change = tests::lpn_coin(97);
                 let duration_since_prev_payment = Duration::YEAR - due_period;
                 let due_margin = duration_since_prev_payment
                     .annualized_slice_of(MARGIN_INTEREST_RATE.of(principal_due))
@@ -907,7 +904,7 @@ mod tests {
 
         #[test]
         fn repay_zero() {
-            let principal = super::lpn_coin(13);
+            let principal = tests::lpn_coin(13);
             let total_margin = MARGIN_INTEREST_RATE.of(principal);
             let total_interest = LOAN_INTEREST_RATE.of(principal);
 
@@ -938,9 +935,9 @@ mod tests {
                     .annualized_slice_of(total_interest)
                     .unwrap();
                 let due_interest = total_interest - overdue_interest;
-                assert_eq!(super::lpn_coin(1), due_interest);
+                assert_eq!(tests::lpn_coin(1), due_interest);
 
-                let payment = super::lpn_coin(15);
+                let payment = tests::lpn_coin(15);
                 let principal_paid =
                     payment - overdue_margin - due_margin - overdue_interest - due_interest;
 
@@ -976,7 +973,7 @@ mod tests {
                 principal - principal_paid
             };
             {
-                let change = super::lpn_coin(2);
+                let change = tests::lpn_coin(2);
                 let payment = principal_left + change;
                 let repay_at = LEASE_START + since_start;
                 repay(
@@ -1134,13 +1131,16 @@ mod tests {
         use lpp::{msg::LoanResponse, stub::loan::LppLoan};
         use sdk::cosmwasm_std::Timestamp;
 
-        use crate::loan::{Overdue, State};
+        use crate::{
+            lease::tests,
+            loan::{Overdue, State},
+        };
 
         use super::{LEASE_START, LppLoanLocal, MARGIN_INTEREST_RATE};
 
         #[track_caller]
         fn test_state(interest_paid_by: Timestamp, margin_paid_by: Timestamp, now: &Timestamp) {
-            let principal_due = super::lpn_coin(10000);
+            let principal_due = tests::lpn_coin(10000);
             let due_period_len = Duration::YEAR;
             let annual_interest_margin = MARGIN_INTEREST_RATE;
             let annual_interest = Percent100::from_permille(145);
@@ -1291,9 +1291,5 @@ mod tests {
 
     fn profit_stub() -> impl FixedAddressSender {
         ProfitRef::unchecked(PROFIT_ADDR).into_stub()
-    }
-
-    const fn lpn_coin(amount: Amount) -> Coin<Lpn> {
-        Coin::new(amount)
     }
 }
