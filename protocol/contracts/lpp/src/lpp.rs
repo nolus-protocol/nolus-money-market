@@ -79,7 +79,7 @@ where
     Bank: BankAccountView,
 {
     /// Computation of the remaining deposit capacity depending on the minimum utilization constraint.
-    /// 
+    ///
     /// Returns:
     /// - `Ok(None)` -> no minimum utilization constraint is set
     /// - `Ok(Some(amount))` -> the maximum additional deposit allowed (may be zero)
