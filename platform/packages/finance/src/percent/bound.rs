@@ -145,24 +145,6 @@ impl<const UPPER_BOUND: Units> RatioLegacy<Units> for BoundPercent<UPPER_BOUND> 
     }
 }
 
-// /// Defines how a BoundPercent can be represented in another type.
-// /// This replaces the generic `From` to allow only explicitly permitted conversions.
-// pub(crate) trait BoundedAs<T> {
-//     fn into_target(self) -> T;
-// }
-
-// impl<const UPPER_BOUND: u32> BoundedAs<U256> for BoundPercent<UPPER_BOUND> {
-//     fn into_target(self) -> U256 {
-//         self.units().into()
-//     }
-// }
-
-// impl<const UPPER_BOUND: u32> BoundedAs<BoundPercent<UPPER_BOUND>> for BoundPercent<UPPER_BOUND> {
-//     fn into_target(self) -> Self {
-//         self
-//     }
-// }
-
 #[cfg(any(test, feature = "testing"))]
 impl<const UPPER_BOUND: Units> Add for BoundPercent<UPPER_BOUND> {
     type Output = Self;
