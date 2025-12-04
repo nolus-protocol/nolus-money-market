@@ -311,11 +311,16 @@ fn to_stable(
 }
 
 #[cfg(test)]
-mod test {
+pub(crate) mod test {
     use currencies::Lpn;
+    use finance::coin::{Amount, Coin};
     use sdk::cosmwasm_std::{Addr, MessageInfo};
 
-    pub(super) type TheCurrency = Lpn;
+    pub(crate) type TheCurrency = Lpn;
+
+    pub(crate) const fn lpn_coin(amount: Amount) -> Coin<TheCurrency> {
+        Coin::new(amount)
+    }
 
     pub(super) fn lender() -> Addr {
         const LENDER: &str = "lender";
