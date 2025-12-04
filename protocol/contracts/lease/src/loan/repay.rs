@@ -79,11 +79,11 @@ impl Receipt {
 mod tests {
     use finance::{coin::Coin, zero::Zero};
 
-    use crate::loan::RepayReceipt;
+    use crate::{lease::tests, loan::RepayReceipt};
 
     #[test]
     fn pay_principal_full() {
-        let principal = Coin::new(10);
+        let principal = tests::lpn_coin(10);
 
         let receipt = RepayReceipt::new(
             Coin::ZERO,
@@ -104,7 +104,7 @@ mod tests {
     #[test]
     #[should_panic = "Payment exceeds principal!"]
     fn pay_principal_overpaid() {
-        let principal = Coin::new(10);
+        let principal = tests::lpn_coin(10);
 
         RepayReceipt::new(
             Coin::ZERO,
@@ -112,7 +112,7 @@ mod tests {
             Coin::ZERO,
             Coin::ZERO,
             principal,
-            principal + Coin::new(1),
+            principal + tests::lpn_coin(1),
             Coin::ZERO,
         );
     }

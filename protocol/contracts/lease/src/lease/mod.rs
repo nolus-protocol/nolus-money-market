@@ -338,13 +338,13 @@ pub(crate) mod tests {
         Lease::new(
             lease,
             Addr::unchecked(CUSTOMER),
-            Position::<TestCurrency>::new(amount, position_spec),
+            Position::new(amount, position_spec),
             loan,
             oracle,
         )
     }
 
-    pub(super) const fn lpn_coin(a: Amount) -> Coin<TestLpn> {
+    pub(crate) const fn lpn_coin(a: Amount) -> Coin<TestLpn> {
         Coin::new(a)
     }
 
