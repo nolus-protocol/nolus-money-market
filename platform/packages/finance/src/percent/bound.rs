@@ -80,10 +80,9 @@ impl<const UPPER_BOUND: Units> BoundPercent<UPPER_BOUND> {
 
     pub(crate) fn to_fraction<U>(self) -> SimpleFraction<U>
     where
-        Self: BoundedAs<U>,
-        U: FractionUnit,
+        U: FractionUnit + From<Self>,
     {
-        SimpleFraction::new(self.into_target(), Self::HUNDRED.into_target())
+        SimpleFraction::new(self.into(), Self::HUNDRED.into())
     }
 }
 
@@ -132,7 +131,7 @@ impl<const UPPER_BOUND: Units> From<BoundPercent<UPPER_BOUND>> for u128 {
 // TODO: Remove when Fractionable trait boundaries include the traits ToPrimitive and TryFromPrimitive
 impl<const UPPER_BOUND: Units> From<BoundPercent<UPPER_BOUND>> for U256 {
     fn from(percent: BoundPercent<UPPER_BOUND>) -> Self {
-        Amount::from(percent).into()
+        percent.units().into()
     }
 }
 
@@ -146,23 +145,23 @@ impl<const UPPER_BOUND: Units> RatioLegacy<Units> for BoundPercent<UPPER_BOUND> 
     }
 }
 
-/// Defines how a BoundPercent can be represented in another type.
-/// This replaces the generic `From` to allow only explicitly permitted conversions.
-pub(crate) trait BoundedAs<T> {
-    fn into_target(self) -> T;
-}
+// /// Defines how a BoundPercent can be represented in another type.
+// /// This replaces the generic `From` to allow only explicitly permitted conversions.
+// pub(crate) trait BoundedAs<T> {
+//     fn into_target(self) -> T;
+// }
 
-impl<const UPPER_BOUND: u32> BoundedAs<U256> for BoundPercent<UPPER_BOUND> {
-    fn into_target(self) -> U256 {
-        self.units().into()
-    }
-}
+// impl<const UPPER_BOUND: u32> BoundedAs<U256> for BoundPercent<UPPER_BOUND> {
+//     fn into_target(self) -> U256 {
+//         self.units().into()
+//     }
+// }
 
-impl<const UPPER_BOUND: u32> BoundedAs<BoundPercent<UPPER_BOUND>> for BoundPercent<UPPER_BOUND> {
-    fn into_target(self) -> Self {
-        self
-    }
-}
+// impl<const UPPER_BOUND: u32> BoundedAs<BoundPercent<UPPER_BOUND>> for BoundPercent<UPPER_BOUND> {
+//     fn into_target(self) -> Self {
+//         self
+//     }
+// }
 
 #[cfg(any(test, feature = "testing"))]
 impl<const UPPER_BOUND: Units> Add for BoundPercent<UPPER_BOUND> {
