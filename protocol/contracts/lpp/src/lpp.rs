@@ -78,7 +78,8 @@ where
     Lpn: CurrencyDef,
     Bank: BankAccountView,
 {
-    /// Computes the remaining deposit capacity under the minimum utilization constraint.
+    /// Computation of the remaining deposit capacity depending on the minimum utilization constraint.
+    /// 
     /// Returns:
     /// - `Ok(None)` -> no minimum utilization constraint is set
     /// - `Ok(Some(amount))` -> the maximum additional deposit allowed (may be zero)
