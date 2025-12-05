@@ -1,5 +1,3 @@
-use bnum::types::U256;
-
 use crate::{
     coin::{Coin, DoubleCoinPrimitive},
     duration::Duration,
@@ -19,12 +17,6 @@ where
     T: Into<Self>,
 {
     type Type = DoubleCoinPrimitive;
-}
-
-impl IntoMax<DoubleCoinPrimitive> for Duration {
-    fn into_max(self) -> DoubleCoinPrimitive {
-        self.to_double().into()
-    }
 }
 
 impl ToDoublePrimitive for Duration {
