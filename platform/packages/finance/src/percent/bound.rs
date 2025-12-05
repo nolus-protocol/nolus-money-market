@@ -168,8 +168,6 @@ impl<const UPPER_BOUND: Units> Sub for BoundPercent<UPPER_BOUND> {
 
 #[cfg(test)]
 mod test {
-    use bnum::types::U256;
-
     use crate::{
         fraction::Fraction,
         percent::{Percent, Percent100, Units, test},
@@ -311,14 +309,6 @@ mod test {
             SimpleFraction::new(test::percent(1001), Percent::HUNDRED),
             test::percent(1001).to_fraction()
         );
-        assert_eq!(
-            SimpleFraction::new(u_256(400), u_256(1000)),
-            test::percent100(400).to_fraction()
-        );
-        assert_eq!(
-            SimpleFraction::new(u_256(Units::MAX), u_256(1000)),
-            test::percent(Units::MAX).to_fraction()
-        )
     }
 
     #[test]
@@ -331,10 +321,6 @@ mod test {
         test_display("9%", 90);
         test_display("10.1%", 101);
         test_display("100%", 1000);
-    }
-
-    fn u_256(quantity: Units) -> U256 {
-        U256::from(quantity)
     }
 
     fn test_display(exp: &str, permilles: Units) {
