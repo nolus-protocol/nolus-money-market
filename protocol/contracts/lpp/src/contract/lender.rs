@@ -309,12 +309,12 @@ mod test {
 
         use lpp_platform::NLpn;
 
-        use crate::contract::lender;
+        use crate::contract::{lender, test};
 
         use super::TheCurrency;
 
         const TEST_AMOUNT: Amount = 100;
-        const DEPOSIT_LPN: Coin<TheCurrency> = Coin::new(TEST_AMOUNT);
+        const DEPOSIT_LPN: Coin<TheCurrency> = test::lpn_coin(TEST_AMOUNT);
         // as long as there is no interest amount paid, the NLPN price stays equal to 1 LPN
         const DEPOSIT_NLPN: Coin<NLpn> = Coin::new(TEST_AMOUNT);
 
@@ -416,7 +416,7 @@ mod test {
             fn test_partial_withdraw() {
                 const WITHDRAWN: Coin<NLpn> = Coin::new(TEST_AMOUNT.checked_div(2).unwrap());
                 const WITHDRAWN_LPN: Coin<TheCurrency> =
-                    Coin::new(TEST_AMOUNT.checked_div(2).unwrap());
+                    test_tools::lpn_coin(TEST_AMOUNT.checked_div(2).unwrap());
                 const LEFTOVER: Coin<NLpn> = DEPOSIT_NLPN.checked_sub(WITHDRAWN).unwrap();
 
                 test::test_case(
@@ -498,7 +498,7 @@ mod test {
 
             #[test]
             fn test_full_withdraw_interest() {
-                const INTEREST_TOTAL: Coin<TheCurrency> = Coin::new(48);
+                const INTEREST_TOTAL: Coin<TheCurrency> = test_tools::lpn_coin(48);
                 const INTEREST_A_DEPOSIT: Coin<TheCurrency> =
                     INTEREST_TOTAL.checked_div(2).unwrap();
                 let other_lender = Addr::unchecked("other_lender");
@@ -587,7 +587,7 @@ mod test {
 
             #[test]
             fn test_no_liquidity() {
-                const LOAN_AMOUNT: Coin<TheCurrency> = Coin::new(1);
+                const LOAN_AMOUNT: Coin<TheCurrency> = test_tools::lpn_coin(1);
 
                 test::test_case(
                     DEPOSIT_LPN,
@@ -685,7 +685,7 @@ mod test {
 
             #[test]
             fn test_close_all() {
-                const INTEREST_TOTAL: Coin<TheCurrency> = Coin::new(48);
+                const INTEREST_TOTAL: Coin<TheCurrency> = test_tools::lpn_coin(48);
                 const INTEREST_A_DEPOSIT: Coin<TheCurrency> =
                     INTEREST_TOTAL.checked_div(2).unwrap();
                 let other_lender = Addr::unchecked("other_lender");
@@ -741,10 +741,7 @@ mod test {
     }
 
     mod min_utilization {
-        use finance::{
-            coin::{Amount, Coin},
-            percent::Percent100,
-        };
+        use finance::{coin::Amount, percent::Percent100};
         use platform::bank::testing::MockBankView;
 
         use crate::contract::{
@@ -766,26 +763,26 @@ mod test {
         ) {
             debug_assert!(deposit != 0);
             test::test_case(
-                Coin::new(lpp_balance_at_deposit + borrowed),
+                test_tools::lpn_coin(lpp_balance_at_deposit + borrowed),
                 min_utilization,
                 |mut store, config, bank, now| {
                     if borrowed != 0 {
                         let mut lpp = LiquidityPool::load(&store, &config, &bank).unwrap();
-                        lpp.try_open_loan(now, Coin::<TheCurrency>::new(borrowed))
+                        lpp.try_open_loan(now, test_tools::lpn_coin(borrowed))
                             .unwrap();
                         lpp.save(&mut store).unwrap();
                     }
 
                     //do deposit
-                    let bank = MockBankView::<TheCurrency, TheCurrency>::only_balance(Coin::new(
-                        lpp_balance_at_deposit + deposit,
-                    ));
+                    let bank = MockBankView::<TheCurrency, TheCurrency>::only_balance(
+                        test_tools::lpn_coin(lpp_balance_at_deposit + deposit),
+                    );
 
                     let result = lender::try_deposit::<TheCurrency, _>(
                         &mut store,
                         &bank,
                         test_tools::lender(),
-                        Coin::new(deposit),
+                        test_tools::lpn_coin(deposit),
                         &now,
                     );
 

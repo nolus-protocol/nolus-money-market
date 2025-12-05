@@ -150,7 +150,7 @@ mod test {
         let now = env.block.time;
 
         const INITIAL_LPP_BALANCE: Coin<TheCurrency> = Coin::ZERO;
-        const DEPOSIT: Coin<TheCurrency> = Coin::new(20_000);
+        const DEPOSIT: Coin<TheCurrency> = test::lpn_coin(20_000);
 
         let bank = MockBankView::<TheCurrency, TheCurrency>::only_balance(INITIAL_LPP_BALANCE);
         let config = ApiConfig::new(
@@ -199,7 +199,7 @@ mod test {
         let rewards = TotalRewards::load_or_default(&store).unwrap();
         let mut deposit = Deposit::load_or_default(&store, lender, rewards).unwrap();
 
-        const DEPOSIT: Coin<TheCurrency> = Coin::new(1000);
+        const DEPOSIT: Coin<TheCurrency> = test::lpn_coin(1000);
         const RECEIPTS: Coin<NLpn> = Coin::new(1000);
         deposit.try_deposit(RECEIPTS).unwrap();
         deposit.save(&mut store).unwrap();

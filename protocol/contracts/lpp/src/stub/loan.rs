@@ -119,7 +119,12 @@ where
 #[cfg(test)]
 mod test {
     use currencies::{Lpn, Lpns};
-    use finance::{coin::Coin, duration::Duration, percent::Percent100, zero::Zero};
+    use finance::{
+        coin::{Amount, Coin},
+        duration::Duration,
+        percent::Percent100,
+        zero::Zero,
+    };
     use platform::batch::Batch;
     use sdk::cosmwasm_std::Timestamp;
 
@@ -138,7 +143,7 @@ mod test {
         let mut loan = LppLoanImpl::new(
             lpp_ref.clone(),
             Loan {
-                principal_due: Coin::<Lpn>::new(100),
+                principal_due: lpn_coin(100),
                 annual_interest_rate: Percent100::from_percent(12),
                 interest_paid: start,
             },
@@ -157,13 +162,13 @@ mod test {
         let mut loan = LppLoanImpl::new(
             lpp_ref.clone(),
             Loan {
-                principal_due: Coin::<Lpn>::new(100),
+                principal_due: lpn_coin(100),
                 annual_interest_rate: Percent100::from_percent(12),
                 interest_paid: start,
             },
         );
-        let payment1 = Coin::new(8);
-        let payment2 = Coin::new(4);
+        let payment1 = lpn_coin(8);
+        let payment2 = lpn_coin(4);
         loan.repay(&(start + Duration::YEAR), payment1);
         loan.repay(&(start + Duration::YEAR), payment2);
         let batch: LppBatch<LppRef<Lpn>> = loan.try_into().unwrap();
@@ -179,5 +184,9 @@ mod test {
             .unwrap();
             assert_eq!(exp, batch.batch);
         }
+    }
+
+    const fn lpn_coin(amount: Amount) -> Coin<Lpn> {
+        Coin::new(amount)
     }
 }
