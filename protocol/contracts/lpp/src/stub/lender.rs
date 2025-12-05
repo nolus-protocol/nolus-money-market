@@ -138,7 +138,7 @@ mod test {
             addr: addr.clone(),
             _lpn: PhantomData::<Lpn>,
         };
-        let borrow_amount = Coin::<Lpn>::new(10);
+        let borrow_amount = Coin::new(10);
         let querier = MockQuerier::default();
         let wrapper = QuerierWrapper::new(&querier);
         let mut lpp_stub = lpp.into_lender(wrapper);

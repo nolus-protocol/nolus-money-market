@@ -188,7 +188,7 @@ where
         // the price calculation should go before the withdrawal from the total
         self.calculate_price(now, pending_withdraw)
             .map(|price| price::total(receipts, price))
-            .and_then(|amount_lpn: Coin<Lpn>| {
+            .and_then(|amount_lpn| {
                 debug_assert_ne!(
                     Coin::ZERO,
                     amount_lpn,
@@ -196,7 +196,7 @@ where
                 );
                 self.total.withdraw(receipts).map(|_| amount_lpn)
             })
-            .and_then(|amount_lpn: Coin<Lpn>| {
+            .and_then(|amount_lpn| {
                 self.commited_balance(pending_withdraw).and_then(|balance| {
                     if balance < amount_lpn {
                         Err(ContractError::NoLiquidity {})
@@ -266,7 +266,7 @@ where
     }
 
     fn commited_balance(&self, uncommited_amount: Coin<Lpn>) -> Result<Coin<Lpn>> {
-        self.uncommited_balance().map(|balance: Coin<Lpn>| {
+        self.uncommited_balance().map(|balance| {
             debug_assert!(
                 uncommited_amount <= balance,
                 "Pending deposit or withdraw {{{uncommited_amount:?}}} > Current Balance: {{{balance}}}!"
@@ -281,7 +281,7 @@ where
 
     fn total_lpn(&self, now: &Timestamp, uncommited_amount: Coin<Lpn>) -> Result<Coin<Lpn>> {
         self.commited_balance(uncommited_amount)
-            .map(|balance: Coin<Lpn>| balance + self.total_due(now))
+            .map(|balance| balance + self.total_due(now))
     }
 
     fn utilization(&self, balance: Coin<Lpn>, total_due: Coin<Lpn>) -> Percent100 {
