@@ -85,10 +85,9 @@ fn liquidation_time_alarm(
 
     assert_eq!(
         transfer_amount,
-        coin_legacy::to_cosmwasm_on_dex(price::total(
-            liquidation_amount,
-            lease_test::price_lpn_of()
-        ))
+        coin_legacy::to_cosmwasm_on_dex(
+            price::total(liquidation_amount, lease_test::price_lpn_of()).unwrap()
+        )
     );
 
     let response: ResponseWithInterChainMsgs<'_, AppResponse> = ibc::do_transfer(

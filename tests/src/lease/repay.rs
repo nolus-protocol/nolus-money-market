@@ -100,7 +100,8 @@ fn partial_repay_after_time() {
                 + LpnCoin::try_from(overdue_interest).unwrap()
                 + due_margin_to_pay,
             super::price_lpn_of::<PaymentCurrency>().inv(),
-        ),
+        )
+        .unwrap(),
     );
 
     let query_result = super::state_query(&test_case, lease);
@@ -146,15 +147,17 @@ fn full_repay() {
     let lease = super::open_lease(&mut test_case, downpayment, None);
 
     let borrowed_lpn = super::quote_borrow(&test_case, downpayment);
-    let borrowed: PaymentCoin = price::total(borrowed_lpn, super::price_lpn_of().inv());
+    let borrowed: PaymentCoin = price::total(borrowed_lpn, super::price_lpn_of().inv()).unwrap();
 
     let expected_amount: LeaseCoin = price::total(
         price::total(
             downpayment + borrowed,
             /* Payment -> LPN */ super::price_lpn_of(),
-        ),
+        )
+        .unwrap(),
         /* LPN -> Lease */ super::price_lpn_of().inv(),
-    );
+    )
+    .unwrap();
     repay_full(
         &mut test_case,
         lease.clone(),
@@ -176,13 +179,16 @@ fn full_repay_with_max_ltd() {
         .of(price::total(
             downpayment,
             Price::<PaymentCurrency, LeaseCurrency>::identity(),
-        ))
+        )
+        .unwrap())
         .unwrap();
     let expected_result = StateResponse::Opened {
         amount: lease_amount.into(),
         loan_interest_rate: Percent100::from_permille(70),
         margin_interest_rate: Percent100::from_permille(30),
-        principal_due: price::total(max_ltd.of(downpayment).unwrap(), super::price_lpn_of()).into(),
+        principal_due: price::total(max_ltd.of(downpayment).unwrap(), super::price_lpn_of())
+            .unwrap()
+            .into(),
         overdue_margin: LpnCoin::ZERO.into(),
         overdue_interest: LpnCoin::ZERO.into(),
         overdue_collect_in: LeaserInstantiator::REPAYMENT_PERIOD,
@@ -202,9 +208,11 @@ fn full_repay_with_max_ltd() {
         price::total(
             downpayment + borrowed,
             /* Payment -> LPN */ super::price_lpn_of(),
-        ),
+        )
+        .unwrap(),
         /* LPN -> Lease */ super::price_lpn_of().inv(),
-    );
+    )
+    .unwrap();
 
     repay_full(
         &mut test_case,
@@ -224,14 +232,16 @@ fn full_repay_with_excess() {
     let borrowed: PaymentCoin = price::total(
         super::quote_borrow(&test_case, downpayment),
         super::price_lpn_of().inv(),
-    );
+    )
+    .unwrap();
     let lease_position = price::total(
-        price::total(downpayment + borrowed, super::price_lpn_of()),
+        price::total(downpayment + borrowed, super::price_lpn_of()).unwrap(),
         super::price_lpn_of().inv(),
-    );
+    )
+    .unwrap();
 
     let overpayment = super::create_payment_coin(5);
-    let overpayment_lpn = price::total(overpayment, super::price_lpn_of());
+    let overpayment_lpn = price::total(overpayment, super::price_lpn_of()).unwrap();
     let payment: PaymentCoin = borrowed + overpayment;
 
     repay_full(
@@ -306,7 +316,7 @@ where
 {
     let response = send_payment_and_transfer(test_case, lease.clone(), payment);
 
-    let paid = price::total(payment, super::price_lpn_of());
+    let paid = price::total(payment, super::price_lpn_of()).unwrap();
 
     let requests: Vec<SwapRequest<PaymentGroup, PaymentGroup>> = swap::expect_swap(
         response,
