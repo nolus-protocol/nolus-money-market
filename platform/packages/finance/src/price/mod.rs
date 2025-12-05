@@ -9,7 +9,7 @@ use crate::{
     coin::{Amount, Coin},
     error::{Error, Result},
     fraction::Coprime,
-    fractionable::HigherRank,
+    fractionable::{HigherRank, ToDoublePrimitive},
     ratio::{RatioLegacy, SimpleFraction},
     rational::RationalLegacy,
 };
@@ -117,10 +117,9 @@ where
             .amount_quote
             .to_coprime_with(Coin::<QuoteC>::new(rhs.total()));
 
-        let double_amount =
-            DoubleAmount::from(amount_normalized) * DoubleAmount::from(rhs_denominator_normalized);
-        let double_amount_quote = DoubleAmount::from(amount_quote_normalized)
-            * DoubleAmount::from(rhs_nominator_normalized);
+        let double_amount = amount_normalized.to_double() * rhs_denominator_normalized.to_double();
+        let double_amount_quote =
+            amount_quote_normalized.to_double() * rhs_nominator_normalized.to_double();
 
         let extra_bits =
             Self::bits_above_max(double_amount).max(Self::bits_above_max(double_amount_quote));
@@ -288,11 +287,11 @@ where
         // a/b < c/d if and only if a * d < b * c
         // Please note that Price(amount, amount_quote) is like Ratio(amount_quote / amount).
 
-        let a: DoubleAmount = self.amount_quote.into();
-        let d: DoubleAmount = other.amount.into();
+        let a = self.amount_quote.to_double();
+        let d = other.amount.to_double();
 
-        let b: DoubleAmount = self.amount.into();
-        let c: DoubleAmount = other.amount_quote.into();
+        let b = self.amount.to_double();
+        let c = other.amount_quote.to_double();
         (a * d).cmp(&(b * c))
     }
 }

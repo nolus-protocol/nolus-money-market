@@ -10,12 +10,17 @@ use crate::{
     ratio::RatioLegacy,
 };
 
-impl<T> HigherRank<T> for u32
-where
-    T: Into<Self>,
-{
-    type Type = u64;
+impl<const UPPER_BOUND: Units> CommonDoublePrimitive<Self> for BoundPercent<UPPER_BOUND> {
+    type CommonDouble = <Self as ToDoublePrimitive>::Double;
 }
+
+impl<C, const UPPER_BOUND: Units> CommonDoublePrimitive<Coin<C>> for BoundPercent<UPPER_BOUND> {
+    type CommonDouble = <Coin<C> as ToDoublePrimitive>::Double;
+}
+
+impl<const UPPER_BOUND: Units> Fractionable<Self> for BoundPercent<UPPER_BOUND> {}
+
+impl<C, const UPPER_BOUND: Units> Fractionable<Coin<C>> for BoundPercent<UPPER_BOUND> {}
 
 // TODO remove after implementing Fractionable<BoundPercent> for Price
 impl<const UPPER_BOUND: Units> FractionableLegacy<Units> for BoundPercent<UPPER_BOUND> {
@@ -29,25 +34,12 @@ impl<const UPPER_BOUND: Units> FractionableLegacy<Units> for BoundPercent<UPPER_
     }
 }
 
-impl<const UPPER_BOUND: Units> ToDoublePrimitive for BoundPercent<UPPER_BOUND> {
-    type Double = u64;
-
-    fn to_double(&self) -> Self::Double {
-        self.units().into()
-    }
+impl<T> HigherRank<T> for u32
+where
+    T: Into<Self>,
+{
+    type Type = u64;
 }
-
-impl<const UPPER_BOUND: Units> CommonDoublePrimitive<Self> for BoundPercent<UPPER_BOUND> {
-    type CommonDouble = <Self as ToDoublePrimitive>::Double;
-}
-
-impl<C, const UPPER_BOUND: Units> CommonDoublePrimitive<Coin<C>> for BoundPercent<UPPER_BOUND> {
-    type CommonDouble = <Coin<C> as ToDoublePrimitive>::Double;
-}
-
-impl<const UPPER_BOUND: Units> Fractionable<Self> for BoundPercent<UPPER_BOUND> {}
-
-impl<C, const UPPER_BOUND: Units> Fractionable<Coin<C>> for BoundPercent<UPPER_BOUND> {}
 
 impl<const UPPER_BOUND: Units> IntoMax<u64> for BoundPercent<UPPER_BOUND> {
     fn into_max(self) -> u64 {
@@ -58,6 +50,14 @@ impl<const UPPER_BOUND: Units> IntoMax<u64> for BoundPercent<UPPER_BOUND> {
 impl<const UPPER_BOUND: Units> IntoMax<U256> for BoundPercent<UPPER_BOUND> {
     fn into_max(self) -> U256 {
         self.to_double().into()
+    }
+}
+
+impl<const UPPER_BOUND: Units> ToDoublePrimitive for BoundPercent<UPPER_BOUND> {
+    type Double = u64;
+
+    fn to_double(&self) -> Self::Double {
+        self.units().into()
     }
 }
 

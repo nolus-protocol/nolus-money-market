@@ -8,6 +8,12 @@ use crate::{
     },
 };
 
+impl<C> CommonDoublePrimitive<Coin<C>> for Duration {
+    type CommonDouble = <Coin<C> as ToDoublePrimitive>::Double;
+}
+
+impl<C> Fractionable<Coin<C>> for Duration {}
+
 impl<T> HigherRank<T> for u128
 where
     T: Into<Self>,
@@ -15,23 +21,17 @@ where
     type Type = U256;
 }
 
+impl IntoMax<U256> for Duration {
+    fn into_max(self) -> U256 {
+        self.to_double().into()
+    }
+}
+
 impl ToDoublePrimitive for Duration {
     type Double = u128;
 
     fn to_double(&self) -> Self::Double {
         self.nanos().into()
-    }
-}
-
-impl<C> CommonDoublePrimitive<Coin<C>> for Duration {
-    type CommonDouble = <Coin<C> as ToDoublePrimitive>::Double;
-}
-
-impl<C> Fractionable<Coin<C>> for Duration {}
-
-impl IntoMax<U256> for Duration {
-    fn into_max(self) -> U256 {
-        self.to_double().into()
     }
 }
 

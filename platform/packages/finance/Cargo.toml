@@ -20,8 +20,10 @@ testing = ["currency/testing"]
 currency = { workspace = true }
 sdk = { workspace = true }
 
-bnum = { workspace = true }
+#`numtraits` required for calling `num_integer::gcd` in custom gcd impl
+bnum = { workspace = true, features = ["numtraits"] }
 gcd = { workspace = true }
+num-integer = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 thiserror = { workspace = true }
 
