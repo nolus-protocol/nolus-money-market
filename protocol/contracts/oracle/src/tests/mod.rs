@@ -8,7 +8,7 @@ use finance::{
     coin::{Amount, Coin},
     duration::Duration,
     percent::Percent100,
-    price::{self, base::BasePrice, dto::PriceDTO},
+    price::{self, Price, base::BasePrice, dto::PriceDTO},
 };
 use marketprice::config::Config as PriceConfig;
 use sdk::{
@@ -38,9 +38,7 @@ where
     Q: CurrencyDef,
     Q::Group: MemberOf<G>,
 {
-    price::total_of(Coin::<C>::new(total_of))
-        .is(Coin::<Q>::new(is))
-        .into()
+    test_price::<C, Q>(total_of, is).into()
 }
 
 pub(crate) fn base_price<C>(
@@ -51,9 +49,7 @@ where
     C: CurrencyDef,
     C::Group: MemberOf<PriceCurrencies>,
 {
-    price::total_of(Coin::<C>::new(total_of))
-        .is(Coin::new(is))
-        .into()
+    test_price::<C, BaseCurrency>(total_of, is).into()
 }
 
 pub(crate) fn dummy_instantiate_msg(
@@ -86,18 +82,10 @@ pub(crate) fn dummy_feed_prices_msg()
 -> ExecuteMsg<BaseCurrency, BaseCurrencies, AlarmCurrencies, PriceCurrencies> {
     ExecuteMsg::FeedPrices {
         prices: vec![
-            PriceDTO::from(
-                price::total_of(Coin::<PaymentC3>::new(10)).is(Coin::<PaymentC5>::new(12)),
-            ),
-            PriceDTO::from(
-                price::total_of(Coin::<PaymentC5>::new(10)).is(Coin::<PaymentC4>::new(32)),
-            ),
-            PriceDTO::from(
-                price::total_of(Coin::<PaymentC4>::new(10)).is(Coin::<BaseCurrency>::new(12)),
-            ),
-            PriceDTO::from(
-                price::total_of(Coin::<PaymentC1>::new(10)).is(Coin::<BaseCurrency>::new(120)),
-            ),
+            test_price::<PaymentC3, PaymentC5>(10, 12).into(),
+            test_price::<PaymentC5, PaymentC4>(10, 32).into(),
+            test_price::<PaymentC4, BaseCurrency>(10, 12).into(),
+            test_price::<PaymentC1, BaseCurrency>(10, 120).into(),
         ],
     }
 }
@@ -139,4 +127,12 @@ pub(crate) fn setup_test(
     assert!(data.is_none());
 
     (deps, info)
+}
+
+pub(crate) fn test_price<C, Q>(total_of: Amount, is: Amount) -> Price<C, Q>
+where
+    C: CurrencyDef,
+    Q: CurrencyDef,
+{
+    price::total_of(Coin::<C>::new(total_of)).is(Coin::<Q>::new(is))
 }
