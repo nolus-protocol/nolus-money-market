@@ -6,7 +6,6 @@ use std::{
 use crate::{fractionable::checked_mul::CheckedMul, ratio::RatioLegacy, zero::Zero};
 
 pub(crate) mod checked_mul;
-mod usize;
 
 /// Defines a common `Max` type, chosen as one of `Double` the types from either `Self` or `Other`
 pub trait CommonDoublePrimitive<Other> {
