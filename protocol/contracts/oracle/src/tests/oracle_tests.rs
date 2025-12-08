@@ -2,10 +2,7 @@ use currencies::{
     LeaseGroup, Lpn, Lpns, PaymentGroup as PriceCurrencies,
     testing::{PaymentC1, PaymentC3, PaymentC4, PaymentC5, PaymentC8},
 };
-use finance::{
-    coin::Coin,
-    price::{self, base::BasePrice, dto::PriceDTO},
-};
+use finance::price::{base::BasePrice, dto::PriceDTO};
 use platform::{contract::testing, tests};
 use sdk::{
     cosmwasm_ext::Response as CwResponse,
@@ -17,8 +14,8 @@ use sdk::{
 
 use crate::{
     api::{Alarm, AlarmsCount, DispatchAlarmsResponse, ExecuteMsg, QueryMsg},
-    contract, error,
-    error::Error,
+    contract,
+    error::{self, Error},
 };
 
 #[test]
@@ -39,9 +36,7 @@ fn feed_prices_unknown_feeder() {
 #[test]
 fn feed_direct_price() {
     fn generate_price() -> PriceDTO<PriceCurrencies> {
-        price::total_of(Coin::<PaymentC1>::new(10))
-            .is(Coin::<Lpn>::new(120))
-            .into()
+        super::test_price::<PaymentC1, Lpn>(10, 120).into()
     }
     let (mut deps, info) = super::setup_test(super::dummy_default_instantiate_msg());
 
@@ -68,12 +63,9 @@ fn feed_direct_price() {
 fn feed_indirect_price() {
     let (mut deps, info) = super::setup_test(super::dummy_default_instantiate_msg());
 
-    let price_a_to_b =
-        PriceDTO::from(price::total_of(Coin::<PaymentC3>::new(10)).is(Coin::<PaymentC5>::new(120)));
-    let price_b_to_c =
-        PriceDTO::from(price::total_of(Coin::<PaymentC5>::new(10)).is(Coin::<PaymentC4>::new(5)));
-    let price_c_to_usdc =
-        PriceDTO::from(price::total_of(Coin::<PaymentC4>::new(10)).is(Coin::<Lpn>::new(5)));
+    let price_a_to_b = super::test_price::<PaymentC3, PaymentC5>(10, 120).into();
+    let price_b_to_c = super::test_price::<PaymentC5, PaymentC4>(10, 5).into();
+    let price_c_to_usdc = super::test_price::<PaymentC4, Lpn>(10, 5).into();
 
     // Feed indirect price from PaymentC3 to OracleBaseAsset
     let msg = ExecuteMsg::FeedPrices {
@@ -91,9 +83,9 @@ fn feed_indirect_price() {
     )
     .unwrap();
 
-    let expected_price = BasePrice::<LeaseGroup, _, Lpns>::from(
-        price::total_of(Coin::<PaymentC3>::new(1)).is(Coin::<Lpn>::new(3)),
-    );
+    let expected_price =
+        BasePrice::<LeaseGroup, _, Lpns>::from(super::test_price::<PaymentC3, Lpn>(1, 3));
+
     let value: BasePrice<LeaseGroup, _, _> = cosmwasm_std::from_json(res).unwrap();
     assert_eq!(expected_price, value)
 }
@@ -118,11 +110,10 @@ fn query_prices_unsupported_denom() {
 fn feed_prices_unsupported_pairs() {
     let (mut deps, info) = super::setup_test(super::dummy_default_instantiate_msg());
 
-    let unsupported =
-        PriceDTO::from(price::total_of(Coin::<PaymentC3>::new(10)).is(Coin::<PaymentC4>::new(12)));
+    let unsupported = super::test_price::<PaymentC3, PaymentC4>(10, 12).into();
     let prices = vec![
         unsupported,
-        PriceDTO::from(price::total_of(Coin::<PaymentC5>::new(10)).is(Coin::<PaymentC4>::new(22))),
+        super::test_price::<PaymentC5, PaymentC4>(10, 22).into(),
     ];
 
     let msg = ExecuteMsg::FeedPrices { prices };
@@ -135,7 +126,7 @@ fn deliver_alarm() {
     let (mut deps, info) = super::setup_test(super::dummy_default_instantiate_msg());
     setup_receiver(&mut deps.querier);
 
-    let current_price = price::total_of(Coin::<PaymentC4>::new(10)).is(Coin::<Lpn>::new(23451));
+    let current_price = super::test_price::<PaymentC4, Lpn>(10, 23451);
     let feed_price_msg = ExecuteMsg::FeedPrices {
         prices: vec![current_price.into()],
     };
@@ -148,8 +139,7 @@ fn deliver_alarm() {
     assert_eq!(Ok(CwResponse::default()), feed_resp);
 
     {
-        let alarm_below_price =
-            price::total_of(Coin::<PaymentC4>::new(10)).is(Coin::<Lpn>::new(23450));
+        let alarm_below_price = super::test_price::<PaymentC4, Lpn>(10, 23450);
         let add_alarm_msg = ExecuteMsg::AddPriceAlarm {
             alarm: Alarm::new(alarm_below_price, None),
         };
@@ -174,8 +164,7 @@ fn deliver_alarm() {
         assert_eq!(0, dispatch_alarms_resp.messages.len());
     }
     {
-        let alarm_below_price =
-            price::total_of(Coin::<PaymentC4>::new(10)).is(Coin::<Lpn>::new(23452));
+        let alarm_below_price = super::test_price::<PaymentC4, Lpn>(10, 23452);
         let add_alarm_msg = ExecuteMsg::AddPriceAlarm {
             alarm: Alarm::new(alarm_below_price, None),
         };
