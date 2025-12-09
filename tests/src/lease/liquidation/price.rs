@@ -107,7 +107,7 @@ fn full_liquidation() {
         lease_addr.clone(),
         ica_addr.clone(),
         requests.into_iter(),
-        |amount: u128, _, _| {
+        |amount, _, _| {
             assert_eq!(amount, lease_amount);
 
             liq_outcome
