@@ -90,7 +90,7 @@ impl Spec {
         Asset: 'static,
         Due: DueTrait,
     {
-        let capped_due = Self::capped_due_asset(asset, due.total_due(), asset_in_lpns);
+        let capped_due = Self::due_asset(asset, due, asset_in_lpns);
 
         self.close
             .change_policy(cmd)
@@ -176,7 +176,7 @@ impl Spec {
         Liquidation<Asset>: Ord,
         Due: DueTrait,
     {
-        let capped_due = Self::capped_due_asset(asset, due.total_due(), asset_in_lpns);
+        let capped_due = Self::due_asset(asset, due, asset_in_lpns);
 
         self.may_ask_liquidation_liability(asset, capped_due, asset_in_lpns)
             .max(self.may_ask_liquidation_overdue(asset, due, asset_in_lpns))
@@ -200,10 +200,7 @@ impl Spec {
     {
         debug_assert_eq!(None, self.check_close(asset, due, asset_in_lpns));
 
-        let debt_zone = self.zone(
-            asset,
-            Self::capped_due_asset(asset, due.total_due(), asset_in_lpns),
-        );
+        let debt_zone = self.zone(asset, Self::due_asset(asset, due, asset_in_lpns));
 
         let steady_within = self.close.no_close(debt_zone.range());
 
@@ -228,10 +225,8 @@ impl Spec {
         Asset: 'static,
         Due: DueTrait,
     {
-        self.close.may_trigger(
-            asset,
-            Self::capped_due_asset(asset, due.total_due(), asset_in_lpns),
-        )
+        self.close
+            .may_trigger(asset, Self::due_asset(asset, due, asset_in_lpns))
     }
 
     /// Check if the amount can be used for repayment.
@@ -381,7 +376,7 @@ impl Spec {
     {
         let collectable = self.overdue_collection(due).amount();
         debug_assert!(collectable <= due.total_due());
-        let to_liquidate = Self::capped_due_asset(asset, collectable, asset_in_lpns);
+        let to_liquidate = Self::capped_to_assets(asset, collectable, asset_in_lpns);
         self.may_ask_liquidation(asset, Cause::Overdue(), to_liquidate, asset_in_lpns)
     }
 
@@ -462,14 +457,26 @@ impl Spec {
         zone
     }
 
-    fn capped_due_asset<Asset>(
+    fn due_asset<Asset, Due>(
         asset: Coin<Asset>,
-        due: LpnCoin,
+        due: &Due,
+        asset_in_lpns: Price<Asset>,
+    ) -> Coin<Asset>
+    where
+        Asset: 'static,
+        Due: DueTrait,
+    {
+        Self::capped_to_assets(asset, due.total_due(), asset_in_lpns)
+    }
+
+    fn capped_to_assets<Asset>(
+        asset: Coin<Asset>,
+        lpn_coin: LpnCoin,
         asset_in_lpns: Price<Asset>,
     ) -> Coin<Asset>
     where
         Asset: 'static,
     {
-        price::total(due, asset_in_lpns.inv()).unwrap_or(asset)
+        price::total(lpn_coin, asset_in_lpns.inv()).unwrap_or(asset)
     }
 }
