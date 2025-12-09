@@ -468,7 +468,7 @@ where
     price::total(amount, transaction_lpn)
         .ok_or({
             PositionError::Finance(FinanceError::Overflow(
-                "Overflow while calculating the total value",
+                "Overflow while converting the transaction amount to Lpn",
             ))
         })
         .and_then(|amount_in_lpn| {
