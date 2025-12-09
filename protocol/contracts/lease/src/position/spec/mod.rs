@@ -462,7 +462,6 @@ impl Spec {
         zone
     }
 
-    /// Converts the `due` into `Asset`, capping the result to the `asset` amount if the convertion overflows
     fn capped_due_asset<Asset>(
         asset: Coin<Asset>,
         due: LpnCoin,
