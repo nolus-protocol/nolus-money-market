@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     coin::{Amount, Coin},
     error::{Error, Result},
-    fraction::{Coprime, Unit},
+    fraction::Coprime,
     fractionable::{HigherRank, ToDoublePrimitive},
     ratio::{RatioLegacy, SimpleFraction},
     rational::Rational,
@@ -356,7 +356,7 @@ where
 ///
 /// For example, total(10 EUR, 1.01 EURUSD) = 10.1 USD
 pub fn total<C, QuoteC>(of: Coin<C>, price: Price<C, QuoteC>) -> Option<Coin<QuoteC>> {
-    SimpleFraction::new(of.to_primitive(), price.amount.to_primitive()).of(price.amount_quote)
+    SimpleFraction::new(of, price.amount).of(price.amount_quote)
 }
 
 #[cfg(test)]
