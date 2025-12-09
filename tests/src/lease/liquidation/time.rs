@@ -71,7 +71,7 @@ fn liquidation_time_alarm(
         lease_addr.clone(),
         ica_addr.clone(),
         requests.into_iter(),
-        |amount: u128, _, _| amount,
+        |amount, _, _| amount,
     )
     .ignore_response();
 

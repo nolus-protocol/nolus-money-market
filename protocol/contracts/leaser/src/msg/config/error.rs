@@ -24,15 +24,17 @@ impl<T> BrokenInvariant<T> {
 
 #[cfg(all(feature = "internal.test.testing", test))]
 mod test {
+    use finance::coin::Amount;
+
     use super::BrokenInvariant;
 
     #[test]
     fn err() {
-        assert!(BrokenInvariant::<u128>::r#if(true, "").is_err());
+        assert!(BrokenInvariant::<Amount>::r#if(true, "").is_err());
     }
 
     #[test]
     fn ok() {
-        assert!(BrokenInvariant::<u128>::r#if(false, "").is_ok());
+        assert!(BrokenInvariant::<Amount>::r#if(false, "").is_ok());
     }
 }
