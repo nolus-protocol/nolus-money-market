@@ -170,7 +170,7 @@ where
             .and_then(|price| {
                 price::total(amount, price.inv()).ok_or({
                     ContractError::Finance(FinanceError::Overflow(
-                        "Overflow while calculating the total value",
+                        "Overflow while calculating the receipts",
                     ))
                 })
             })
@@ -196,7 +196,7 @@ where
             .and_then(|price| {
                 price::total(receipts, price).ok_or({
                     ContractError::Finance(FinanceError::Overflow(
-                        "Overflow while calculating the total value",
+                        "Overflow while calculating the receipts",
                     ))
                 })
             })

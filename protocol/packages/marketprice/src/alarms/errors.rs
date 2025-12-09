@@ -58,6 +58,6 @@ pub enum AlarmError {
     #[error("[Market Price; Alarm] Alarms delivery queue is not empty! Cause: {0}")]
     NonEmptyAlarmsInDeliveryQueue(String),
 
-    #[error("[Market Price; Alarm] Overflow while calculating price total!")]
+    #[error("[Market Price; Alarm] Overflow while converting amount using price")]
     ComputationOverflow,
 }
