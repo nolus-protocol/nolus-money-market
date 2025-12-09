@@ -289,7 +289,7 @@ impl Spec {
         TransactionC: 'static,
         ErrFn: FnOnce(LpnCoinDTO) -> PositionError,
     {
-        self.validate_min_amount(
+        validate_min_amount(
             amount,
             transaction_currency_in_lpn,
             self.min_transaction,
@@ -307,38 +307,12 @@ impl Spec {
         TransactionC: 'static,
         ErrFn: FnOnce(LpnCoinDTO) -> PositionError,
     {
-        self.validate_min_amount(
+        validate_min_amount(
             asset_amount,
             transaction_currency_in_lpn,
             self.min_asset,
             err_fn,
         )
-    }
-
-    fn validate_min_amount<TransactionC, ErrFn>(
-        &self,
-        amount: Coin<TransactionC>,
-        transaction_lpn: Price<TransactionC>,
-        min_required: LpnCoin,
-        err_fn: ErrFn,
-    ) -> Result<(), PositionError>
-    where
-        TransactionC: 'static,
-        ErrFn: FnOnce(LpnCoinDTO) -> PositionError,
-    {
-        price::total(amount, transaction_lpn)
-            .ok_or({
-                PositionError::Finance(FinanceError::Overflow(
-                    "Overflow while calculating the total value",
-                ))
-            })
-            .and_then(|amount_in_lpn| {
-                if amount_in_lpn >= min_required {
-                    Ok(())
-                } else {
-                    Err(err_fn(min_required.into()))
-                }
-            })
     }
 
     fn may_ask_liquidation_liability<Asset>(
@@ -479,4 +453,29 @@ impl Spec {
     {
         price::total(lpn_coin, asset_in_lpns.inv()).unwrap_or(asset)
     }
+}
+
+fn validate_min_amount<TransactionC, ErrFn>(
+    amount: Coin<TransactionC>,
+    transaction_lpn: Price<TransactionC>,
+    min_required: LpnCoin,
+    err_fn: ErrFn,
+) -> Result<(), PositionError>
+where
+    TransactionC: 'static,
+    ErrFn: FnOnce(LpnCoinDTO) -> PositionError,
+{
+    price::total(amount, transaction_lpn)
+        .ok_or({
+            PositionError::Finance(FinanceError::Overflow(
+                "Overflow while calculating the total value",
+            ))
+        })
+        .and_then(|amount_in_lpn| {
+            if amount_in_lpn >= min_required {
+                Ok(())
+            } else {
+                Err(err_fn(min_required.into()))
+            }
+        })
 }
