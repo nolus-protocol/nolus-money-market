@@ -87,12 +87,11 @@ impl Deposit {
         self.data.deposited_nlpn
     }
 
-    pub fn deposit(&mut self, deposited_nlpn: Coin<NLpn>) {
+    pub fn try_deposit(&mut self, deposited_nlpn: Coin<NLpn>) -> Result<()> {
         debug_assert_ne!(Coin::ZERO, deposited_nlpn);
 
-        self.update_rewards();
-
-        self.data.deposited_nlpn += deposited_nlpn;
+        self.try_update_rewards()
+            .map(|()| self.data.deposited_nlpn += deposited_nlpn)
     }
 
     /// return optional NLS reward in case of deleting account
@@ -101,45 +100,45 @@ impl Deposit {
             return Err(ContractError::InsufficientBalance);
         }
 
-        self.update_rewards();
+        self.try_update_rewards().map(|()| {
+            self.data.deposited_nlpn -= amount_nlpn;
 
-        self.data.deposited_nlpn -= amount_nlpn;
-
-        let maybe_reward = if self.data.deposited_nlpn.is_zero() {
-            Some(self.data.pending_rewards_nls)
-        } else {
-            None
-        };
-
-        Ok(maybe_reward)
+            if self.data.deposited_nlpn.is_zero() {
+                Some(self.data.pending_rewards_nls)
+            } else {
+                None
+            }
+        })
     }
 
     /// query accounted rewards
-    pub fn query_rewards(&self) -> Coin<Nls> {
+    pub fn query_rewards(&self) -> Result<Coin<Nls>> {
         let deposit = &self.data;
 
-        let global_reward = self.total_rewards.rewards(deposit.deposited_nlpn);
-
-        let deposit_reward = deposit
-            .pending_rewards_index
-            .rewards(deposit.deposited_nlpn);
-
-        debug_assert!(
-            deposit_reward <= global_reward,
-            "the global rewards index should only go up"
-        );
-
-        deposit.pending_rewards_nls + global_reward - deposit_reward
+        self.total_rewards
+            .may_rewards(deposit.deposited_nlpn)
+            .and_then(|global_reward| {
+                deposit
+                    .pending_rewards_index
+                    .may_rewards(deposit.deposited_nlpn)
+                    .map(|deposit_reward| {
+                        debug_assert!(
+                            deposit_reward <= global_reward,
+                            "the global rewards index should only go up"
+                        );
+                        deposit.pending_rewards_nls + global_reward - deposit_reward
+                    })
+            })
     }
 
     /// take any pending rewards out
-    pub fn claim_rewards(&mut self) -> Coin<Nls> {
-        self.update_rewards();
+    pub fn may_claim_rewards(&mut self) -> Result<Coin<Nls>> {
+        self.try_update_rewards().map(|()| {
+            let reward = self.data.pending_rewards_nls;
+            self.data.pending_rewards_nls = Coin::ZERO;
 
-        let reward = self.data.pending_rewards_nls;
-        self.data.pending_rewards_nls = Coin::ZERO;
-
-        reward
+            reward
+        })
     }
 
     fn may_load(storage: &dyn Storage, addr: Addr, total_rewards: Index) -> Result<Option<Self>> {
@@ -155,9 +154,11 @@ impl Deposit {
             })
     }
 
-    fn update_rewards(&mut self) {
-        self.data.pending_rewards_nls = self.query_rewards();
-        self.data.pending_rewards_index = self.total_rewards;
+    fn try_update_rewards(&mut self) -> Result<()> {
+        self.query_rewards().map(|rewards| {
+            self.data.pending_rewards_nls = rewards;
+            self.data.pending_rewards_index = self.total_rewards;
+        })
     }
 }
 
@@ -199,22 +200,25 @@ mod test {
             ContractError::InsufficientBalance {},
             deposit1.withdraw(deposit1_1).unwrap_err()
         );
-        deposit1.deposit(deposit1_1);
+        deposit1.try_deposit(deposit1_1).unwrap();
 
         assert_eq!(deposit1_1, deposit1.receipts());
-        assert_eq!(Coin::ZERO, deposit1.query_rewards());
+        assert_eq!(Coin::ZERO, deposit1.query_rewards().unwrap());
         deposit1.save(&mut store).unwrap();
 
         // for simplicity, to maintain price 1:1, we keep rewards amount equal to the total receipts
         let rewards = rewards.add(Coin::new(deposit1_1.into()), deposit1_1);
         let deposit1 = Deposit::load(&store, addr1.clone(), rewards).unwrap();
-        assert_eq!(Coin::new(deposit1_1.into()), deposit1.query_rewards());
+        assert_eq!(
+            Coin::new(deposit1_1.into()),
+            deposit1.query_rewards().unwrap()
+        );
 
         let mut deposit2 = Deposit::load_or_default(&store, addr2.clone(), rewards).unwrap();
-        deposit2.deposit(deposit2_1);
+        deposit2.try_deposit(deposit2_1).unwrap();
 
         assert_eq!(deposit2_1, deposit2.receipts());
-        assert_eq!(Coin::ZERO, deposit2.query_rewards());
+        assert_eq!(Coin::ZERO, deposit2.query_rewards().unwrap());
         deposit2.save(&mut store).unwrap();
 
         let rewards = rewards.add(
@@ -225,14 +229,14 @@ mod test {
         let mut deposit2 = Deposit::load(&store, addr2.clone(), rewards).unwrap();
 
         let rewards1_1 = Coin::new((deposit1_1 + deposit1_1).into());
-        assert_eq!(rewards1_1, deposit1.query_rewards());
+        assert_eq!(rewards1_1, deposit1.query_rewards().unwrap());
         let rewards2 = Coin::new(deposit2_1.into());
-        assert_eq!(rewards2, deposit2.query_rewards());
+        assert_eq!(rewards2, deposit2.query_rewards().unwrap());
 
         assert!(withdraw1_1 < deposit1_1 && deposit1.withdraw(withdraw1_1).unwrap().is_none());
 
-        assert_eq!(rewards1_1, deposit1.claim_rewards());
-        assert_eq!(rewards2, deposit2.claim_rewards());
+        assert_eq!(rewards1_1, deposit1.may_claim_rewards().unwrap());
+        assert_eq!(rewards2, deposit2.may_claim_rewards().unwrap());
 
         let rewards1_2 = Coin::new((deposit1_1 - withdraw1_1).into());
         deposit1.save(&mut store).unwrap();
@@ -242,8 +246,8 @@ mod test {
         let mut deposit1 = Deposit::load(&store, addr1.clone(), rewards).unwrap();
         let mut deposit2 = Deposit::load(&store, addr2.clone(), rewards).unwrap();
 
-        assert_eq!(rewards1_2, deposit1.query_rewards());
-        assert_eq!(rewards2, deposit2.query_rewards());
+        assert_eq!(rewards1_2, deposit1.query_rewards().unwrap());
+        assert_eq!(rewards2, deposit2.query_rewards().unwrap());
 
         // withdraw all, return rewards, close deposit
         assert_eq!(
@@ -262,12 +266,12 @@ mod test {
         let mut deposit = Deposit::load_or_default(&store, addr, rewards).unwrap();
 
         // balance_nls = 0, balance_nlpn = 0
-        assert!(deposit.query_rewards().is_zero());
+        assert!(deposit.query_rewards().unwrap().is_zero());
 
         // balance_nls = 0, balance_nlpn != 0
-        deposit.deposit(Coin::new(1000));
+        deposit.try_deposit(Coin::new(1000)).unwrap();
 
-        assert!(deposit.query_rewards().is_zero());
+        assert!(deposit.query_rewards().unwrap().is_zero());
     }
 
     #[test]
@@ -282,33 +286,33 @@ mod test {
         let mut rewards = TotalRewards::load_or_default(&store).unwrap();
 
         let mut deposit1 = Deposit::load_or_default(&store, addr1.clone(), rewards).unwrap();
-        deposit1.deposit(RECEIPTS);
+        deposit1.try_deposit(RECEIPTS).unwrap();
         deposit1.save(&mut store).unwrap();
 
         rewards = rewards.add(REWARDS, RECEIPTS);
         let mut deposit1 = Deposit::load_or_default(&store, addr1.clone(), rewards).unwrap();
-        assert_eq!(REWARDS, deposit1.query_rewards());
-        assert_eq!(REWARDS, deposit1.claim_rewards());
-        assert_eq!(Coin::ZERO, deposit1.query_rewards());
+        assert_eq!(REWARDS, deposit1.query_rewards().unwrap());
+        assert_eq!(REWARDS, deposit1.may_claim_rewards().unwrap());
+        assert_eq!(Coin::ZERO, deposit1.query_rewards().unwrap());
         deposit1.save(&mut store).unwrap();
 
         let mut deposit2 = Deposit::load_or_default(&store, addr2.clone(), rewards).unwrap();
-        deposit2.deposit(RECEIPTS);
-        assert_eq!(Coin::ZERO, deposit2.query_rewards());
-        assert_eq!(Coin::ZERO, deposit2.claim_rewards());
+        deposit2.try_deposit(RECEIPTS).unwrap();
+        assert_eq!(Coin::ZERO, deposit2.query_rewards().unwrap());
+        assert_eq!(Coin::ZERO, deposit2.may_claim_rewards().unwrap());
         deposit2.save(&mut store).unwrap();
 
         rewards = rewards.add(REWARDS, RECEIPTS + RECEIPTS);
 
         let mut deposit2 = Deposit::load(&store, addr2.clone(), rewards).unwrap();
-        assert_eq!(REWARD_DEPOSIT, deposit2.query_rewards());
-        assert_eq!(REWARD_DEPOSIT, deposit2.claim_rewards());
-        assert_eq!(Coin::ZERO, deposit2.query_rewards());
+        assert_eq!(REWARD_DEPOSIT, deposit2.query_rewards().unwrap());
+        assert_eq!(REWARD_DEPOSIT, deposit2.may_claim_rewards().unwrap());
+        assert_eq!(Coin::ZERO, deposit2.query_rewards().unwrap());
 
         let mut deposit1 = Deposit::load(&store, addr1, rewards).unwrap();
-        assert_eq!(REWARD_DEPOSIT, deposit1.query_rewards());
-        assert_eq!(REWARD_DEPOSIT, deposit1.claim_rewards());
-        assert_eq!(Coin::ZERO, deposit1.query_rewards());
+        assert_eq!(REWARD_DEPOSIT, deposit1.query_rewards().unwrap());
+        assert_eq!(REWARD_DEPOSIT, deposit1.may_claim_rewards().unwrap());
+        assert_eq!(Coin::ZERO, deposit1.query_rewards().unwrap());
     }
 
     #[test]
@@ -326,7 +330,7 @@ mod test {
         const WITHDRAW1_RECEIPTS: Coin<NLpn> = Coin::new(245);
         const WITHDRAW2_RECEIPTS: Option<Coin<NLpn>> =
             DEPOSIT_RECEIPTS.checked_sub(WITHDRAW1_RECEIPTS);
-        deposit1.deposit(DEPOSIT_RECEIPTS);
+        deposit1.try_deposit(DEPOSIT_RECEIPTS).unwrap();
         deposit1.save(&mut store).unwrap();
 
         let mut deposit1 = Deposit::load(&store, addr1.clone(), rewards).unwrap();
@@ -368,12 +372,12 @@ mod test {
 
         {
             let mut deposit1 = Deposit::load_or_default(&store, addr1.clone(), rewards).unwrap();
-            deposit1.deposit(DEPOSIT1_RECEIPTS);
+            deposit1.try_deposit(DEPOSIT1_RECEIPTS).unwrap();
             deposit1.save(&mut store).unwrap();
         }
         {
             let mut deposit2 = Deposit::load_or_default(&store, addr2.clone(), rewards).unwrap();
-            deposit2.deposit(DEPOSIT2_RECEIPTS);
+            deposit2.try_deposit(DEPOSIT2_RECEIPTS).unwrap();
             deposit2.save(&mut store).unwrap();
         }
 
