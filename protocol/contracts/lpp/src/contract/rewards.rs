@@ -65,8 +65,9 @@ pub(super) fn try_claim_rewards(
     let reward = TotalRewards::load_or_default(deps.storage)
         .and_then(|total_rewards| Deposit::load(deps.storage, info.sender, total_rewards))
         .and_then(|mut deposit| {
-            let rewards = deposit.claim_rewards();
-            deposit.save(deps.storage).map(|()| rewards)
+            deposit
+                .may_claim_rewards()
+                .and_then(|rewards| deposit.save(deps.storage).map(|()| rewards))
         })
         .and_then(|reward| {
             if reward.is_zero() {
@@ -111,7 +112,7 @@ where
 pub(super) fn query_rewards(storage: &dyn Storage, addr: Addr) -> Result<RewardsResponse> {
     TotalRewards::load_or_default(storage)
         .and_then(|total_rewards| Deposit::load(storage, addr, total_rewards))
-        .map(|ref deposit| deposit.query_rewards())
+        .and_then(|ref deposit| deposit.query_rewards())
         .map(|rewards| RewardsResponse { rewards })
 }
 
@@ -200,7 +201,7 @@ mod test {
 
         const DEPOSIT: Coin<TheCurrency> = Coin::new(1000);
         const RECEIPTS: Coin<NLpn> = Coin::new(1000);
-        deposit.deposit(RECEIPTS);
+        deposit.try_deposit(RECEIPTS).unwrap();
         deposit.save(&mut store).unwrap();
 
         let config = ApiConfig::new(

@@ -44,8 +44,9 @@ where
                 .and_then(|total_rewards| {
                     Deposit::load_or_default(storage, lender.clone(), total_rewards).and_then(
                         |mut deposit| {
-                            deposit.deposit(receipts);
-                            deposit.save(storage)
+                            deposit
+                                .try_deposit(receipts)
+                                .and_then(|()| deposit.save(storage))
                         },
                     )
                 })
