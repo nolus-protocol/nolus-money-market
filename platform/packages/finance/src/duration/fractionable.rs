@@ -19,6 +19,12 @@ where
     type Type = DoubleCoinPrimitive;
 }
 
+impl IntoMax<DoubleCoinPrimitive> for Duration {
+    fn into_max(self) -> DoubleCoinPrimitive {
+        self.to_double().into()
+    }
+}
+
 impl ToDoublePrimitive for Duration {
     type Double = u128;
 

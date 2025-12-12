@@ -6,14 +6,10 @@ use std::ops::{Add, Sub};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    
-    coin::{Amount,
-    DoubleCoinPrimitive},
+    coin::{Amount, DoubleCoinPrimitive},
     error::Error,
     fraction::Unit as FractionUnit,
-   
     ratio::{RatioLegacy, SimpleFraction},
-,
 };
 
 use super::Units;

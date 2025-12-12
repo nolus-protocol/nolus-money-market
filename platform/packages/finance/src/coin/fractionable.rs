@@ -9,6 +9,8 @@ use crate::{
     percent::{Units as PercentUnits, bound::BoundPercent},
 };
 
+pub(crate) type DoubleCoinPrimitive = U256;
+
 impl<C> CommonDoublePrimitive<Duration> for Coin<C> {
     type CommonDouble = DoubleCoinPrimitive;
 }
@@ -58,7 +60,6 @@ impl<C> ToDoublePrimitive for Coin<C> {
         self.amount.into()
     }
 }
-
 
 impl<C> TryFromMax<DoubleCoinPrimitive> for Coin<C> {
     fn try_from_max(max: DoubleCoinPrimitive) -> Option<Self> {
