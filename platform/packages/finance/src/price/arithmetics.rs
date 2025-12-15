@@ -16,7 +16,7 @@ where
     C: 'static,
     QuoteC: 'static,
 {
-    fn checked_add(self, rhs: Self) -> Option<Self> {
+    pub fn checked_add(self, rhs: Self) -> Option<Self> {
         // let a1 = a / gcd(a, c), and c1 = c / gcd(a, c), then
         // b / a + d / c = (b * c1 + d * a1) / (a1 * c1 * gcd(a, c))
         // taking into account that Price is like amount_quote/amount
@@ -42,23 +42,6 @@ where
             .map(|(amount_quote, amount)| Self::new(amount, amount_quote))
     }
 
-    /// Add two prices rounding each of them to 1.10-18, simmilarly to
-    /// the precision provided by CosmWasm's ['Decimal'][sdk::cosmwasm_std::Decimal].
-    ///
-    /// TODO Implement a variable precision algorithm depending on the
-    /// value of the prices. The rounding would be done by shifting to
-    /// the right both amounts of the price with a bigger denominator
-    /// until a * d + b * c and b * d do not overflow.
-    fn lossy_add(self, rhs: Self) -> Option<Self> {
-        const FACTOR: Amount = 1_000_000_000_000_000_000; // 1*10^18
-        let factored_amount = Coin::new(FACTOR);
-
-        super::total(factored_amount, self)
-            .zip(super::total(factored_amount, rhs))
-            .and_then(|(factored_self, factored_rhs)| factored_self.checked_add(factored_rhs))
-            .map(|factored_total| super::total_of(factored_amount).is(factored_total))
-    }
-
     /// Multiplication with а potential loss of precision
     ///
     /// In case the nominator or denominator overflows, they both are trimmed with so many bits as necessary for
@@ -76,6 +59,23 @@ where
         self.map_with_fraction(|self_as_fraction| {
             lossy_mul_inner(self_as_fraction, to_amount_fraction(rhs.into()))
         })
+    }
+
+     /// Add two prices rounding each of them to 1.10-18, simmilarly to
+    /// the precision provided by CosmWasm's ['Decimal'][sdk::cosmwasm_std::Decimal].
+    ///
+    /// TODO Implement a variable precision algorithm depending on the
+    /// value of the prices. The rounding would be done by shifting to
+    /// the right both amounts of the price with a bigger denominator
+    /// until a * d + b * c and b * d do not overflow.
+    fn lossy_add(self, rhs: Self) -> Option<Self> {
+        const FACTOR: Amount = 1_000_000_000_000_000_000; // 1*10^18
+        let factored_amount = Coin::new(FACTOR);
+
+        super::total(factored_amount, self)
+            .zip(super::total(factored_amount, rhs))
+            .and_then(|(factored_self, factored_rhs)| factored_self.checked_add(factored_rhs))
+            .map(|factored_total| super::total_of(factored_amount).is(factored_total))
     }
 
     fn map_with_fraction<WithFraction>(self, f: WithFraction) -> Option<Self>
