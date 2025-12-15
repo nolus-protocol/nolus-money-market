@@ -123,6 +123,14 @@ where
             denominator,
         }
     }
+
+    pub(super) fn nominator(&self) -> U {
+        self.nominator
+    }
+
+    pub(super) fn denominator(&self) -> U {
+        self.denominator
+    }
 }
 
 impl<U, T> RatioLegacy<U> for SimpleFraction<T>

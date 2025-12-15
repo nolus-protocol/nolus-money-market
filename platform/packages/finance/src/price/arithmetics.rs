@@ -1,14 +1,15 @@
-use std::ops::{Add, AddAssign, Mul};
+use std::ops::{Add, AddAssign, Mul, Shr};
+
+use bnum::types::U256;
 
 use crate::{
     coin::{Amount, Coin},
-    fraction::Coprime,
-    fractionable::{HigherRank, ToDoublePrimitive},
+    fraction::{Coprime, Unit as FractionUnit},
+    fractionable::{ToDoublePrimitive, TryFromMax},
+    percent::Units as PercentUnits,
     price::Price,
-    ratio::{RatioLegacy, SimpleFraction},
+    ratio::SimpleFraction,
 };
-
-type DoubleAmount = <Amount as HigherRank<Amount>>::Type;
 
 impl<C, QuoteC> Price<C, QuoteC>
 where
@@ -67,73 +68,174 @@ where
     /// Price(amount, amount_quote) * Ratio(nominator / denominator) = Price(amount * denominator, amount_quote * nominator)
     /// where the pairs (amount, nominator) and (amount_quote, denominator) are transformed into co-prime numbers.
     /// Please note that Price(amount, amount_quote) is like Ratio(amount_quote / amount).
-    fn lossy_mul<R>(self, rhs: &R) -> Option<Self>
+    pub fn lossy_mul<F, U>(self, rhs: F) -> Option<Self>
     where
-        R: RatioLegacy<Amount>,
+        F: Into<SimpleFraction<U>>,
+        U: Bits + FractionUnit + Into<Amount>,
     {
-        let (amount_normalized, rhs_nominator_normalized) =
-            self.amount.to_coprime_with(Coin::<C>::new(rhs.parts()));
-        let (amount_quote_normalized, rhs_denominator_normalized) = self
-            .amount_quote
-            .to_coprime_with(Coin::<QuoteC>::new(rhs.total()));
-
-        let double_amount = amount_normalized.to_double() * rhs_denominator_normalized.to_double();
-        let double_amount_quote =
-            amount_quote_normalized.to_double() * rhs_nominator_normalized.to_double();
-
-        let extra_bits =
-            Self::bits_above_max(double_amount).max(Self::bits_above_max(double_amount_quote));
-
-        let min_precision_loss_overflow =
-            Self::bits(double_amount).min(Self::bits(double_amount_quote));
-
-        Self::trim_down(double_amount, extra_bits, min_precision_loss_overflow).and_then(|amount| {
-            Self::trim_down(double_amount_quote, extra_bits, min_precision_loss_overflow)
-                .map(|amount_quote| Price::new(Coin::new(amount), Coin::new(amount_quote)))
+        self.map_with_fraction(|self_as_fraction| {
+            lossy_mul_inner(self_as_fraction, to_amount_fraction(rhs.into()))
         })
     }
 
-    #[track_caller]
-    fn bits(double_amount: DoubleAmount) -> u32 {
-        DoubleAmount::BITS - double_amount.leading_zeros()
+    fn map_with_fraction<WithFraction>(self, f: WithFraction) -> Option<Self>
+    where
+        WithFraction: FnOnce(SimpleFraction<Amount>) -> Option<SimpleFraction<Amount>>,
+    {
+        f(SimpleFraction::new(
+            self.amount_quote.to_primitive(),
+            self.amount.to_primitive(),
+        ))
+        .map(Self::from_fraction)
     }
 
-    #[track_caller]
-    fn bits_above_max(double_amount: DoubleAmount) -> u32 {
-        Self::bits(double_amount).saturating_sub(Amount::BITS)
+    fn from_fraction<U>(fraction: SimpleFraction<U>) -> Self
+    where
+        U: FractionUnit + Into<Amount>,
+    {
+        Self::new(
+            Coin::new(fraction.denominator().into()),
+            Coin::new(fraction.nominator().into()),
+        )
     }
+}
 
-    #[track_caller]
-    fn trim_down(
-        double_amount: DoubleAmount,
-        bits_to_trim: u32,
-        min_precision_loss_overflow: u32,
-    ) -> Option<Amount> {
-        debug_assert!(bits_to_trim <= Amount::BITS);
+fn lossy_mul_inner<U>(lhs: SimpleFraction<U>, rhs: SimpleFraction<U>) -> Option<SimpleFraction<U>>
+where
+    U: Bits + Coprime + TryFromMax<<U as ToDoublePrimitive>::Double>,
+    <U as ToDoublePrimitive>::Double:
+        Bits + Copy + Mul<Output = <U as ToDoublePrimitive>::Double> + Shr<u32, Output = U::Double>,
+{
+    let (lhs, rhs) = cross_normalize(lhs, rhs);
+    let double_nom = lhs.nominator().to_double().mul(rhs.nominator().to_double());
+    let double_denom = lhs
+        .denominator()
+        .to_double()
+        .mul(rhs.denominator().to_double());
 
-        (bits_to_trim < min_precision_loss_overflow)
-            .then(|| Self::trim_down_checked(double_amount, bits_to_trim))
+    let extra_bits = bits_above_max::<_, U>(double_nom).max(bits_above_max::<_, U>(double_denom));
+
+    let min_precision_loss_overflow = bits(double_nom).min(bits(double_denom));
+
+    trim_down(double_nom, extra_bits, min_precision_loss_overflow).and_then(|amount| {
+        trim_down(double_denom, extra_bits, min_precision_loss_overflow)
+            .map(|amount_quote| SimpleFraction::new(amount, amount_quote))
+    })
+}
+
+fn to_amount_fraction<U>(fraction: SimpleFraction<U>) -> SimpleFraction<Amount>
+where
+    U: FractionUnit + Into<Amount>,
+{
+    SimpleFraction::new(fraction.nominator().into(), fraction.denominator().into())
+}
+
+fn cross_normalize<U>(
+    lhs: SimpleFraction<U>,
+    rhs: SimpleFraction<U>,
+) -> (SimpleFraction<U>, SimpleFraction<U>)
+where
+    U: FractionUnit,
+{
+    // from (a / b) and (c / d), to (a / d) and (c / b)
+    (
+        SimpleFraction::new(lhs.nominator(), rhs.denominator()),
+        SimpleFraction::new(rhs.nominator(), lhs.denominator()),
+    )
+}
+
+#[track_caller]
+fn bits<D>(double: D) -> u32
+where
+    D: Bits,
+{
+    D::BITS - double.leading_zeros()
+}
+
+#[track_caller]
+fn bits_above_max<D, U>(double: D) -> u32
+where
+    U: Bits + FractionUnit + TryFromMax<D>,
+    D: Bits,
+{
+    bits(double).saturating_sub(U::BITS)
+}
+
+#[track_caller]
+fn trim_down<D, U>(double: D, bits_to_trim: u32, min_precision_loss_overflow: u32) -> Option<U>
+where
+    U: Bits + FractionUnit + TryFromMax<D>,
+    D: Bits + Copy + Shr<u32, Output = D>,
+{
+    debug_assert!(bits_to_trim <= U::BITS);
+
+    (bits_to_trim < min_precision_loss_overflow).then(|| trim_down_checked(double, bits_to_trim))
+}
+
+#[track_caller]
+fn trim_down_checked<D, U>(double: D, bits_to_trim: u32) -> U
+where
+    U: Bits + FractionUnit + TryFromMax<D>,
+    D: Bits + Copy + Shr<u32, Output = D>,
+{
+    const INSUFFICIENT_BITS: &str = "insufficient trimming bits";
+
+    debug_assert!(
+        bits_above_max::<D, U>(double) <= bits_to_trim,
+        "{}",
+        INSUFFICIENT_BITS
+    );
+    debug_assert!(
+        bits_to_trim < bits(double),
+        "the precision loss {bits_to_trim} exceeds the value bits {loss}",
+        loss = bits(double)
+    );
+    let unit_amount = U::try_from_max(double >> bits_to_trim).expect(INSUFFICIENT_BITS);
+    debug_assert!(
+        unit_amount > U::ZERO,
+        "the precision loss exceeds the value bits"
+    );
+    unit_amount
+}
+
+pub trait Bits {
+    const BITS: u32;
+
+    fn leading_zeros(self) -> u32;
+}
+
+impl Bits for PercentUnits {
+    const BITS: u32 = Self::BITS;
+
+    fn leading_zeros(self) -> u32 {
+        self.leading_zeros()
     }
+}
 
-    #[track_caller]
-    fn trim_down_checked(double_amount: DoubleAmount, bits_to_trim: u32) -> Amount {
-        const INSUFFICIENT_BITS: &str = "insufficient trimming bits";
+impl Bits for Amount {
+    const BITS: u32 = Self::BITS;
 
-        debug_assert!(
-            Self::bits_above_max(double_amount) <= bits_to_trim,
-            "{}",
-            INSUFFICIENT_BITS
-        );
-        debug_assert!(
-            bits_to_trim < Self::bits(double_amount),
-            "the precision loss {bits_to_trim} exceeds the value bits {loss}",
-            loss = Self::bits(double_amount)
-        );
-        let amount: Amount = (double_amount >> bits_to_trim)
-            .try_into()
-            .expect(INSUFFICIENT_BITS);
-        debug_assert!(amount > 0, "the precision loss exceeds the value bits");
-        amount
+    fn leading_zeros(self) -> u32 {
+        self.leading_zeros()
+    }
+}
+
+impl<C> Bits for Coin<C>
+where
+    C: 'static,
+{
+    const BITS: u32 = Self::BITS;
+
+    fn leading_zeros(self) -> u32 {
+        self.to_primitive().leading_zeros()
+    }
+}
+
+impl Bits for U256 {
+    const BITS: u32 = Self::BITS;
+
+    fn leading_zeros(self) -> u32 {
+        self.leading_zeros()
     }
 }
 
@@ -175,8 +277,10 @@ where
         // Price(a, b) * Price(c, d) = Price(a, d) * Rational(b / c)
         // Please note that Price(amount, amount_quote) is like Ratio(amount_quote / amount).
 
-        Price::new(self.amount, rhs.amount_quote)
-            .lossy_mul(&SimpleFraction::new(self.amount_quote, rhs.amount))
+        Price::new(self.amount, rhs.amount_quote).lossy_mul(SimpleFraction::new(
+            self.amount_quote.to_primitive(),
+            rhs.amount.to_primitive(),
+        ))
     }
 }
 
@@ -286,6 +390,17 @@ mod test {
         lossy_mul_overflow_impl(Q1, Amount::MAX - 1, A2 / Q1 - 1, A2, SHIFTS); // the aim is a1 * a2 < q2
     }
 
+    #[test]
+    fn cross_normalize() {
+        let a = fraction(12, 25);
+        let b = fraction(35, 9);
+
+        assert_eq!(
+            (fraction(4, 3), fraction(7, 5)),
+            super::cross_normalize(a, b)
+        )
+    }
+
     fn shift_product<A1, A2>(a1: A1, a2: A2, shifts: u8) -> Amount
     where
         A1: Into<Uint256>,
@@ -311,7 +426,7 @@ mod test {
 
         let price3 = price::total_of(amount1).is(quote2);
         let ratio = SimpleFraction::new(quote1, amount2);
-        assert_eq!(Some(exp), price3.lossy_mul(&ratio));
+        assert_eq!(Some(exp), price3.lossy_mul(ratio));
     }
 
     fn lossy_mul_shifts_impl(q1: Amount, shifts: u8) {
@@ -395,5 +510,9 @@ mod test {
 
     fn qq(a: Amount) -> QuoteQuoteCoin {
         QuoteQuoteCoin::new(a)
+    }
+
+    fn fraction(nom: Amount, denom: Amount) -> SimpleFraction<Amount> {
+        SimpleFraction::new(nom, denom)
     }
 }
