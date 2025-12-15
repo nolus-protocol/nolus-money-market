@@ -93,6 +93,15 @@ impl<const UPPER_BOUND: Units> TryFrom<Units> for BoundPercent<UPPER_BOUND> {
     }
 }
 
+impl<U, const UPPER_BOUND: Units> From<BoundPercent<UPPER_BOUND>> for SimpleFraction<U>
+where
+    U: FractionUnit + From<BoundPercent<UPPER_BOUND>>,
+{
+    fn from(percent: BoundPercent<UPPER_BOUND>) -> Self {
+        percent.to_fraction()
+    }
+}
+
 impl<const UPPER_BOUND: Units> Display for BoundPercent<UPPER_BOUND> {
     #[track_caller]
     fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {

@@ -87,9 +87,16 @@ where
             .map(Sample::into_maybe_price)
             .skip_while(Option::is_none)
             // no `price.expect(msg)` since on Rust 1.86 `clippy::unwrap-in-result` is triggered. TODO once increment the version
-            .map(|price| Option::expect(price, "sample prices should keep being present"))
-            .reduce(|acc, sample_price| {
-                discount_factor.of(sample_price) + discount_factor.complement().of(acc)
+            .map(|price| Option::expect(price, "sample prices should keep being present"));
+
+        let first = item_iter.next().ok_or(PriceFeedsError::NoPrice {})?;
+
+        item_iter
+            .try_fold(first, |acc, current| {
+                current.lossy_mul::<_, u128>(discount_factor).and_then(|a| {
+                    acc.lossy_mul::<_, u128>(discount_factor.complement())
+                        .and_then(|b| a.checked_add(b))
+                })
             })
             .ok_or(PriceFeedsError::NoPrice {})
             .and_then(|first| {
