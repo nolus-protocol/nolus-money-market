@@ -9,6 +9,7 @@ use sdk::{
 
 mod count;
 pub use count::Count;
+pub(crate) use count::Unit;
 
 /// Errors returned from Feeders
 #[derive(Error, Debug, PartialEq)]
