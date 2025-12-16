@@ -1,4 +1,4 @@
-use bnum::types::U256;
+use crate::coin::DoubleCoinPrimitive;
 
 pub trait CheckedMul<Rhs = Self> {
     type Output;
@@ -14,7 +14,7 @@ impl CheckedMul for u64 {
     }
 }
 
-impl CheckedMul for U256 {
+impl CheckedMul for DoubleCoinPrimitive {
     type Output = Self;
 
     fn checked_mul(self, rhs: Self) -> Option<Self::Output> {

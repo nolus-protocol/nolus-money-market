@@ -16,8 +16,6 @@ pub type Units = u32;
 pub type Percent100 = BoundPercent<{ Percent::HUNDRED.units() }>;
 pub type Percent = BoundPercent<{ Units::MAX }>;
 
-// TODO revisit it's usage after removing FractionLegacy<Units> for Percent100
-
 impl Percent100 {
     pub const fn complement(self) -> Self {
         Self::HUNDRED

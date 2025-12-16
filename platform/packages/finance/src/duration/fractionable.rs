@@ -1,7 +1,5 @@
-use bnum::types::U256;
-
 use crate::{
-    coin::Coin,
+    coin::{Coin, DoubleCoinPrimitive},
     duration::Duration,
     fractionable::{
         CommonDoublePrimitive, Fractionable, HigherRank, IntoMax, ToDoublePrimitive, TryFromMax,
@@ -9,7 +7,7 @@ use crate::{
 };
 
 impl<C> CommonDoublePrimitive<Coin<C>> for Duration {
-    type CommonDouble = <Coin<C> as ToDoublePrimitive>::Double;
+    type CommonDouble = DoubleCoinPrimitive;
 }
 
 impl<C> Fractionable<Coin<C>> for Duration {}
@@ -18,11 +16,11 @@ impl<T> HigherRank<T> for u128
 where
     T: Into<Self>,
 {
-    type Type = U256;
+    type Type = DoubleCoinPrimitive;
 }
 
-impl IntoMax<U256> for Duration {
-    fn into_max(self) -> U256 {
+impl IntoMax<DoubleCoinPrimitive> for Duration {
+    fn into_max(self) -> DoubleCoinPrimitive {
         self.to_double().into()
     }
 }
@@ -35,8 +33,8 @@ impl ToDoublePrimitive for Duration {
     }
 }
 
-impl TryFromMax<U256> for Duration {
-    fn try_from_max(max: U256) -> Option<Self> {
+impl TryFromMax<DoubleCoinPrimitive> for Duration {
+    fn try_from_max(max: DoubleCoinPrimitive) -> Option<Self> {
         max.try_into().map(Self::from_nanos).ok()
     }
 }

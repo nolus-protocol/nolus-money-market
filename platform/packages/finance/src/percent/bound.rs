@@ -3,11 +3,10 @@ use std::fmt::{Debug, Display, Formatter, Result as FmtResult, Write};
 #[cfg(any(test, feature = "testing"))]
 use std::ops::{Add, Sub};
 
-use bnum::types::U256;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    coin::Amount,
+    coin::{Amount, DoubleCoinPrimitive},
     error::Error,
     fraction::Unit as FractionUnit,
     ratio::{RatioLegacy, SimpleFraction},
@@ -129,7 +128,7 @@ impl<const UPPER_BOUND: Units> From<BoundPercent<UPPER_BOUND>> for u128 {
 }
 
 // TODO: Remove when Fractionable trait boundaries include the traits ToPrimitive and TryFromPrimitive
-impl<const UPPER_BOUND: Units> From<BoundPercent<UPPER_BOUND>> for U256 {
+impl<const UPPER_BOUND: Units> From<BoundPercent<UPPER_BOUND>> for DoubleCoinPrimitive {
     fn from(percent: BoundPercent<UPPER_BOUND>) -> Self {
         percent.units().into()
     }
