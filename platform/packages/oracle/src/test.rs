@@ -78,10 +78,13 @@ mod test_convert {
     fn from_quote() {
         assert_from_quote(3, 12, 4);
         assert_from_quote(1, 4, 4);
+        assert_from_quote(4, 4, 1);
         assert_from_quote(2, 14, 7);
+        assert_from_quote(10, 9, 0);
         assert_from_quote(2, Amount::MAX, Amount::MAX / 2);
         assert_from_quote(Amount::MAX / 5, 4, 20 / Amount::MAX);
         assert_from_quote(Amount::MAX, 5, 0);
+        assert_from_quote(Amount::MAX, Amount::MAX, 1);
     }
 
     #[test]
@@ -94,9 +97,18 @@ mod test_convert {
     }
 
     #[test]
-    fn to_quote_overflow() {
-        let oracle = DummyOracle::with_price(Amount::MAX / 4);
-        assert!(convert::to_quote(&oracle, Coin::<SuperGroupTestC1>::new(8)).is_err());
+    fn to_quote_error() {
+        let oracle_1 = DummyOracle::with_price(Amount::MAX / 4);
+        assert!(convert::to_quote(&oracle_1, Coin::<SuperGroupTestC1>::new(8)).is_err());
+
+        let oracle_2 = DummyOracle::with_price(2);
+        assert!(
+            convert::to_quote(
+                &oracle_2,
+                Coin::<SuperGroupTestC1>::new(Amount::MAX / 2 + 1),
+            )
+            .is_err()
+        );
     }
 
     fn assert_from_quote(oracle_price: Amount, in_amount: Amount, expected_out: Amount) {
