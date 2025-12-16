@@ -27,7 +27,7 @@ impl<C, Q> CommonDoublePrimitive<Coin<Q>> for Coin<C> {
 
 // TODO remove this implemenatation when Price converts to SimpleFraction<Quote, C>
 impl<C> CommonDoublePrimitive<Amount> for Coin<C> {
-    type CommonDouble = <Self as ToDoublePrimitive>::Double;
+    type CommonDouble = DoubleCoinPrimitive;
 }
 
 impl<C> Fractionable<Duration> for Coin<C> {}
