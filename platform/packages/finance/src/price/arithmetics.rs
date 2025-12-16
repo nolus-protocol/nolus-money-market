@@ -1,9 +1,7 @@
 use std::ops::{Add, AddAssign, Mul, Shr};
 
-use bnum::types::U256;
-
 use crate::{
-    coin::{Amount, Coin},
+    coin::{Amount, Coin, DoubleCoinPrimitive},
     fraction::{Coprime, Unit as FractionUnit},
     fractionable::{ToDoublePrimitive, TryFromMax},
     percent::Units as PercentUnits,
@@ -231,7 +229,7 @@ where
     }
 }
 
-impl Bits for U256 {
+impl Bits for DoubleCoinPrimitive {
     const BITS: u32 = Self::BITS;
 
     fn leading_zeros(self) -> u32 {
