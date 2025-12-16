@@ -1,5 +1,7 @@
 use crate::{
-    coin::{{Amount, Coin}, DoubleCoinPrimitive},
+    coin::{
+        DoubleCoinPrimitive, {Amount, Coin},
+    },
     duration::Duration,
     fractionable::{
         CommonDoublePrimitive, Fractionable, HigherRank, IntoMax, ToDoublePrimitive, TryFromMax,
