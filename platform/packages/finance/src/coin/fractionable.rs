@@ -21,7 +21,7 @@ impl<C, const UPPER_BOUND: PercentUnits> CommonDoublePrimitive<BoundPercent<UPPE
     type CommonDouble = DoubleCoinPrimitive;
 }
 
-impl<C> CommonDoublePrimitive<Self> for Coin<C> {
+impl<C, Q> CommonDoublePrimitive<Coin<Q>> for Coin<C> {
     type CommonDouble = DoubleCoinPrimitive;
 }
 
