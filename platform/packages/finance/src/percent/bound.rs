@@ -5,7 +5,12 @@ use std::ops::{Add, Sub};
 
 use serde::{Deserialize, Serialize};
 
-use crate::{coin::{Amount, DoubleCoinPrimitive}, error::Error, fraction::Unit as FractionUnit, ratio::SimpleFraction};
+use crate::{
+    coin::{Amount, DoubleCoinPrimitive},
+    error::Error,
+    fraction::Unit as FractionUnit,
+    ratio::SimpleFraction,
+};
 
 use super::Units;
 
