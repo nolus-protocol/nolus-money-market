@@ -60,7 +60,7 @@ mod tests {
     use crate::{
         coin::{Amount, Coin},
         duration::Duration,
-        fraction::FractionLegacy,
+        fraction::Fraction,
         percent::Percent100,
         ratio::Ratio,
         zero::Zero,

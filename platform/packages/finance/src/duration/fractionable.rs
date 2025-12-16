@@ -1,9 +1,7 @@
 use crate::{
     coin::{Coin, DoubleCoinPrimitive},
     duration::Duration,
-    fractionable::{
-        CommonDoublePrimitive, Fractionable, HigherRank, IntoMax, ToDoublePrimitive, TryFromMax,
-    },
+    fractionable::{CommonDoublePrimitive, Fractionable, IntoMax, ToDoublePrimitive, TryFromMax},
 };
 
 type DoubleDurationPrimitive = u128;
