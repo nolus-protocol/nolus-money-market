@@ -28,7 +28,7 @@ impl IntoMax<DoubleCoinPrimitive> for Duration {
 }
 
 impl ToDoublePrimitive for Duration {
-    type Double = Amount;
+    type Double = u128;
 
     fn to_double(&self) -> Self::Double {
         self.nanos().into()
