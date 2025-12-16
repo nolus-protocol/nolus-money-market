@@ -8,6 +8,8 @@ use crate::{
     },
 };
 
+type DoubleDurationPrimitive = u128;
+
 impl<C> CommonDoublePrimitive<Coin<C>> for Duration {
     type CommonDouble = DoubleCoinPrimitive;
 }
@@ -28,7 +30,7 @@ impl IntoMax<DoubleCoinPrimitive> for Duration {
 }
 
 impl ToDoublePrimitive for Duration {
-    type Double = u128;
+    type Double = DoubleDurationPrimitive;
 
     fn to_double(&self) -> Self::Double {
         self.nanos().into()
