@@ -61,7 +61,7 @@ where
         })
     }
 
-     /// Add two prices rounding each of them to 1.10-18, simmilarly to
+    /// Add two prices rounding each of them to 1.10-18, simmilarly to
     /// the precision provided by CosmWasm's ['Decimal'][sdk::cosmwasm_std::Decimal].
     ///
     /// TODO Implement a variable precision algorithm depending on the

@@ -1,7 +1,7 @@
 use std::fmt::Debug;
 
 use crate::{
-    fractionable::{Fractionable, FractionableLegacy, IntoMax},
+    fractionable::{Fractionable, IntoMax},
     zero::Zero,
 };
 
@@ -13,13 +13,6 @@ pub trait Fraction<U> {
     where
         U: IntoMax<A::CommonDouble>,
         A: Fractionable<U>;
-}
-
-// TODO remove when all Fractionable usages are replaced
-pub trait FractionLegacy<U> {
-    fn of<A>(&self, whole: A) -> A
-    where
-        A: FractionableLegacy<U>;
 }
 
 pub trait Unit
