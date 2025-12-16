@@ -1,11 +1,9 @@
 use bnum::types::U256;
 
 use crate::{
-    coin::{Amount, Coin},
+    coin::Coin,
     duration::Duration,
-    fractionable::{
-        CommonDoublePrimitive, Fractionable, HigherRank, IntoMax, ToDoublePrimitive, TryFromMax,
-    },
+    fractionable::{CommonDoublePrimitive, Fractionable, IntoMax, ToDoublePrimitive, TryFromMax},
     percent::{Units as PercentUnits, bound::BoundPercent},
 };
 
@@ -36,20 +34,6 @@ impl<C, const UPPER_BOUND: PercentUnits> Fractionable<BoundPercent<UPPER_BOUND>>
 
 impl<C, Q> Fractionable<Coin<Q>> for Coin<C> {}
 
-// TODO remove when FractionableLegacy usages are replaced
-impl<C> From<Coin<C>> for DoubleCoinPrimitive {
-    fn from(coin: Coin<C>) -> Self {
-        Amount::from(coin).into()
-    }
-}
-
-impl<U, C> HigherRank<U> for Coin<C>
-where
-    U: Into<Amount>,
-{
-    type Type = DoubleCoinPrimitive;
-}
-
 // Since both Duration and BoundPercent may appear as generic parameters,
 // ToDoublePrimitive is used instead of CommonDoublePrimitive to avoid ambiguity
 impl<C> IntoMax<DoubleCoinPrimitive> for Coin<C> {
@@ -69,15 +53,6 @@ impl<C> ToDoublePrimitive for Coin<C> {
 impl<C> TryFromMax<DoubleCoinPrimitive> for Coin<C> {
     fn try_from_max(max: DoubleCoinPrimitive) -> Option<Self> {
         max.try_into().map(Coin::new).ok()
-    }
-}
-
-// TODO remove when FractionableLegacy usages are replaced
-impl<C> TryInto<Coin<C>> for DoubleCoinPrimitive {
-    type Error = <u128 as TryFrom<DoubleCoinPrimitive>>::Error;
-
-    fn try_into(self) -> Result<Coin<C>, Self::Error> {
-        self.try_into().map(Coin::new)
     }
 }
 

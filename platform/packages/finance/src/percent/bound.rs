@@ -5,12 +5,7 @@ use std::ops::{Add, Sub};
 
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    coin::{Amount, DoubleCoinPrimitive},
-    error::Error,
-    fraction::Unit as FractionUnit,
-    ratio::{RatioLegacy, SimpleFraction},
-};
+use crate::{coin::{Amount, DoubleCoinPrimitive}, error::Error, fraction::Unit as FractionUnit, ratio::SimpleFraction};
 
 use super::Units;
 
@@ -143,16 +138,6 @@ impl<const UPPER_BOUND: Units> From<BoundPercent<UPPER_BOUND>> for Amount {
 impl<const UPPER_BOUND: Units> From<BoundPercent<UPPER_BOUND>> for DoubleCoinPrimitive {
     fn from(percent: BoundPercent<UPPER_BOUND>) -> Self {
         percent.units().into()
-    }
-}
-
-impl<const UPPER_BOUND: Units> RatioLegacy<Units> for BoundPercent<UPPER_BOUND> {
-    fn parts(&self) -> Units {
-        self.0
-    }
-
-    fn total(&self) -> Units {
-        Self::HUNDRED.0
     }
 }
 
