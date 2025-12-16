@@ -1,7 +1,5 @@
 use crate::{
-    coin::{
-        DoubleCoinPrimitive, {Amount, Coin},
-    },
+    coin::{Coin, DoubleCoinPrimitive},
     duration::Duration,
     fractionable::{
         CommonDoublePrimitive, Fractionable, HigherRank, IntoMax, ToDoublePrimitive, TryFromMax,
@@ -16,7 +14,7 @@ impl<C> CommonDoublePrimitive<Coin<C>> for Duration {
 
 impl<C> Fractionable<Coin<C>> for Duration {}
 
-impl<T> HigherRank<T> for Amount
+impl<T> HigherRank<T> for DoubleDurationPrimitive
 where
     T: Into<Self>,
 {
@@ -47,7 +45,10 @@ impl TryFromMax<DoubleCoinPrimitive> for Duration {
 mod tests {
 
     use crate::{
-        coin::Amount, duration::Duration, ratio::SimpleFraction, rational::Rational, test::coin,
+        duration::{Duration, fractionable::DoubleDurationPrimitive},
+        ratio::SimpleFraction,
+        rational::Rational,
+        test::coin,
     };
 
     #[test]
@@ -62,9 +63,12 @@ mod tests {
     #[test]
     fn of_max() {
         let d = Duration::from_secs(10);
-        let res = SimpleFraction::new(coin::coin1(Amount::MAX), coin::coin1(Amount::MAX / 2))
-            .of(d)
-            .unwrap();
+        let res = SimpleFraction::new(
+            coin::coin1(DoubleDurationPrimitive::MAX),
+            coin::coin1(DoubleDurationPrimitive::MAX / 2),
+        )
+        .of(d)
+        .unwrap();
 
         assert_eq!(Duration::from_secs(20), res);
     }
