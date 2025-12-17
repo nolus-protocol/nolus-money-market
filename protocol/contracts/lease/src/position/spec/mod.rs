@@ -4,7 +4,6 @@ use currency::{CurrencyDef, MemberOf};
 use finance::{
     coin::Coin,
     duration::Duration,
-    error::Error as FinanceError,
     fraction::{Fraction, Unit as FractionUnit},
     fractionable::{CommonDoublePrimitive, Fractionable, IntoMax},
     liability::{Liability, Zone},
@@ -136,9 +135,9 @@ impl Spec {
         .and_then(|()| {
             self.liability
                 .init_borrow_amount(downpayment, may_max_ltd)
-                .ok_or(PositionError::Finance(FinanceError::Overflow(
+                .ok_or(PositionError::overflow(
                     "Borrrow amount overflow during calculation",
-                )))
+                ))
                 .and_then(|borrow| {
                     self.validate_transaction(
                         borrow,
@@ -467,9 +466,7 @@ where
 {
     price::total(amount, transaction_lpn)
         .ok_or({
-            PositionError::Finance(FinanceError::Overflow(
-                "Overflow while converting the transaction amount to Lpn",
-            ))
+            PositionError::overflow("Overflow while converting the transaction amount to Lpn")
         })
         .and_then(|amount_in_lpn| {
             if amount_in_lpn >= min_required {

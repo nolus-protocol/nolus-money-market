@@ -76,6 +76,10 @@ impl Error {
             strategy,
         }
     }
+
+    pub fn overflow(msg: &'static str) -> Self {
+        Error::Finance(FinanceError::Overflow(msg))
+    }
 }
 
 pub type Result<T> = StdResult<T, Error>;
