@@ -1,8 +1,8 @@
 use currencies::Lpns;
 use currency::{CurrencyDef, MemberOf};
 use finance::{
-    coin::Coin, error::Error as FinanceError, percent::Percent100, price, ratio::SimpleFraction,
-    rational::RationalLegacy, zero::Zero,
+    coin::Coin, percent::Percent100, price, ratio::SimpleFraction, rational::RationalLegacy,
+    zero::Zero,
 };
 use lpp_platform::NLpn;
 use platform::{bank::BankAccountView, contract::Validator};
@@ -168,11 +168,9 @@ where
 
         self.calculate_price(now, amount)
             .and_then(|price| {
-                price::total(amount, price.inv()).ok_or({
-                    ContractError::Finance(FinanceError::Overflow(
-                        "Overflow while calculating the receipts",
-                    ))
-                })
+                price::total(amount, price.inv()).ok_or(ContractError::overflow(
+                    "Overflow while calculating the receipts",
+                ))
             })
             .and_then(|receipts| {
                 if receipts.is_zero() {
@@ -194,11 +192,9 @@ where
         // the price calculation should go before the withdrawal from the total
         self.calculate_price(now, pending_withdraw)
             .and_then(|price| {
-                price::total(receipts, price).ok_or({
-                    ContractError::Finance(FinanceError::Overflow(
-                        "Overflow while calculating the receipts",
-                    ))
-                })
+                price::total(receipts, price).ok_or(ContractError::overflow(
+                    "Overflow while calculating the receipts",
+                ))
             })
             .and_then(|amount_lpn: Coin<Lpn>| {
                 debug_assert_ne!(
@@ -856,6 +852,7 @@ mod test {
         use finance::{
             coin::Coin,
             duration::Duration,
+            error::Error as FinanceError,
             percent::Percent100,
             price::{self, Price},
             zero::Zero,
@@ -945,7 +942,7 @@ mod test {
 
             assert!(matches!(
                 lpp.withdraw_lpn(RECEIPT1, Coin::ZERO, &now).unwrap_err(),
-                ContractError::OverflowError(_)
+                ContractError::Finance(FinanceError::Overflow(_))
             ));
 
             assert_eq!(RECEIPT1, lpp.deposit(DEPOSIT1, &now).unwrap());
