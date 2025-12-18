@@ -103,11 +103,10 @@ impl Deposit {
         self.try_update_rewards().map(|()| {
             self.data.deposited_nlpn -= amount_nlpn;
 
-            if self.data.deposited_nlpn.is_zero() {
-                Some(self.data.pending_rewards_nls)
-            } else {
-                None
-            }
+            self.data
+                .deposited_nlpn
+                .is_zero()
+                .then_some(self.data.pending_rewards_nls)
         })
     }
 

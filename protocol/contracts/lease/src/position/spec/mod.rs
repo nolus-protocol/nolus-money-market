@@ -293,6 +293,7 @@ impl Spec {
             transaction_currency_in_lpn,
             self.min_transaction,
             err_fn,
+            || PositionError::overflow("Overflow while converting the transaction amount to Lpn"),
         )
     }
 
@@ -311,6 +312,7 @@ impl Spec {
             transaction_currency_in_lpn,
             self.min_asset,
             err_fn,
+            || PositionError::overflow("Overflow while converting the position amount to Lpn"),
         )
     }
 
@@ -454,25 +456,25 @@ impl Spec {
     }
 }
 
-fn validate_min_amount<TransactionC, ErrFn>(
+fn validate_min_amount<TransactionC, MinErrFn, OverflowErrFn>(
     amount: Coin<TransactionC>,
     transaction_lpn: Price<TransactionC>,
     min_required: LpnCoin,
-    err_fn: ErrFn,
+    min_err_fn: MinErrFn,
+    overflow_err_fn: OverflowErrFn,
 ) -> Result<(), PositionError>
 where
     TransactionC: 'static,
-    ErrFn: FnOnce(LpnCoinDTO) -> PositionError,
+    MinErrFn: FnOnce(LpnCoinDTO) -> PositionError,
+    OverflowErrFn: FnOnce() -> PositionError,
 {
     price::total(amount, transaction_lpn)
-        .ok_or({
-            PositionError::overflow("Overflow while converting the transaction amount to Lpn")
-        })
+        .ok_or_else(overflow_err_fn)
         .and_then(|amount_in_lpn| {
             if amount_in_lpn >= min_required {
                 Ok(())
             } else {
-                Err(err_fn(min_required.into()))
+                Err(min_err_fn(min_required.into()))
             }
         })
 }
