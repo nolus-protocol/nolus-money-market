@@ -142,10 +142,10 @@ mod test {
 
     #[test]
     fn to_quote_error() {
-        let oracle_1 = DummyOracle::with_price(Amount::MAX / 4);
+        let oracle_1 = DummyOracle::with_price(1, Amount::MAX / 4);
         assert!(super::to_quote(&oracle_1, Coin::<SuperGroupTestC1>::new(8)).is_err());
 
-        let oracle_2 = DummyOracle::with_price(2);
+        let oracle_2 = DummyOracle::with_price(1, 2);
         assert!(
             super::to_quote(
                 &oracle_2,
@@ -155,16 +155,16 @@ mod test {
         );
     }
 
-    fn assert_from_quote(oracle_price: Amount, in_amount: Amount, expected_out: Amount) {
-        let oracle = DummyOracle::with_price(oracle_price);
+    fn assert_from_quote(quote: Amount, in_amount: Amount, expected_out: Amount) {
+        let oracle = DummyOracle::with_price(1, quote);
 
         let out_amount = super::from_quote(&oracle, Coin::new(in_amount)).unwrap();
 
         assert_eq!(Coin::<SuperGroupTestC1>::new(expected_out), out_amount);
     }
 
-    fn assert_to_quote(oracle_price: Amount, in_amount: Amount, expected_out: Amount) {
-        let oracle = DummyOracle::with_price(oracle_price);
+    fn assert_to_quote(quote: Amount, in_amount: Amount, expected_out: Amount) {
+        let oracle = DummyOracle::with_price(1, quote);
         let out_amount =
             super::to_quote(&oracle, Coin::<SuperGroupTestC1>::new(in_amount)).unwrap();
         assert_eq!(Coin::<Stable>::new(expected_out), out_amount);
