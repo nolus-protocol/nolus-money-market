@@ -144,18 +144,12 @@ where
         C: CurrencyDef,
         C::Group: MemberOf<Self::PriceG>,
     {
-        fn map_alarm_res<ErrorG>(
-            item: StdResult<Addr, AlarmError>,
-        ) -> StdResult<Addr, Error<ErrorG>>
-        where
-            ErrorG: Group,
-        {
-            item.map_err(Into::into)
-        }
-
         self.alarms
             .alarms(price)
             .map_err(Into::into)
-            .map(|alarms_iter| alarms_iter.map(map_alarm_res::<ErrorG> as AlarmIterMapFn<ErrorG>))
+            .map(|alarms_iter| {
+                let mapper: AlarmIterMapFn<ErrorG> = |item| item.map_err(Into::into);
+                alarms_iter.map(mapper)
+            })
     }
 }
