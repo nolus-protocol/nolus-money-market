@@ -105,13 +105,13 @@ impl<Lpn> Total<Lpn> {
         let new_total_principal_due = self
             .total_principal_due
             .checked_add(amount)
-            .ok_or(ContractError::OverflowError("Total principal due overflow"))?;
+            .ok_or(ContractError::overflow("Total principal due overflow"))?;
 
         // TODO: get rid of fully qualified syntax
         let new_annual_interest = self
             .estimated_annual_interest()
             .checked_add(loan_interest_rate.of(amount))
-            .ok_or(ContractError::OverflowError(
+            .ok_or(ContractError::overflow(
                 "Annual interest calculation overflow",
             ))?;
 
@@ -174,7 +174,7 @@ impl<Lpn> Total<Lpn> {
 
         self.receipts
             .checked_add(receipts)
-            .ok_or(ContractError::OverflowError("Deposit receipts overflow"))
+            .ok_or(ContractError::overflow("Deposit receipts overflow"))
             .map(|total| {
                 self.receipts = total;
                 self
@@ -186,7 +186,7 @@ impl<Lpn> Total<Lpn> {
 
         self.receipts
             .checked_sub(receipts)
-            .ok_or(ContractError::OverflowError("Withdraw receipts overflow"))
+            .ok_or(ContractError::overflow("Withdraw receipts overflow"))
             .map(|total| {
                 self.receipts = total;
                 self
@@ -205,7 +205,7 @@ fn zero_interest_rate<Lpn>() -> Ratio<Coin<Lpn>> {
 #[cfg(test)]
 mod test {
     use currencies::Lpn;
-    use finance::{coin::Amount, duration::Duration};
+    use finance::{coin::Amount, duration::Duration, error::Error as FinanceError};
     use sdk::cosmwasm_std::testing::MockStorage;
 
     use crate::loan::Loan;
@@ -335,7 +335,7 @@ mod test {
                 .unwrap()
                 .deposit(Coin::new(Amount::MAX))
                 .unwrap_err(),
-            ContractError::OverflowError(_)
+            ContractError::Finance(FinanceError::Overflow(_))
         ));
         assert_eq!(
             Total::<Lpn>::default()
@@ -388,7 +388,7 @@ mod test {
         assert_eq!(Coin::ZERO, total.withdraw(RECEIPTS2).unwrap().receipts(),);
         assert!(matches!(
             total.withdraw(RECEIPTS1).unwrap_err(),
-            ContractError::OverflowError(_)
+            ContractError::Finance(FinanceError::Overflow(_))
         ));
     }
 

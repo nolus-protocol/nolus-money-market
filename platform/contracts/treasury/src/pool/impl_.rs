@@ -107,8 +107,9 @@ mod test {
         let bar0_apr = Percent100::from_percent(20);
         let lpp0_tvl = CoinStable::new(15_000);
 
-        let oracle = DummyOracle::with_price(4);
-        let exp_reward = price::total(bar0_apr.of(lpp0_tvl), oracle.price_of().unwrap().inv());
+        let oracle = DummyOracle::with_price(1, 4);
+        let exp_reward =
+            price::total(bar0_apr.of(lpp0_tvl), oracle.price_of().unwrap().inv()).unwrap();
         let lpp = DummyLpp::failing_reward(lpp0_tvl, exp_reward);
 
         let pool = PoolImpl::new(lpp, oracle).unwrap();
@@ -124,8 +125,9 @@ mod test {
     fn ok() {
         let bar0_apr = Percent100::from_percent(20);
         let lpp0_tvl = CoinStable::new(23_000);
-        let oracle = DummyOracle::with_price(2);
-        let exp_reward = price::total(bar0_apr.of(lpp0_tvl), oracle.price_of().unwrap().inv());
+        let oracle = DummyOracle::with_price(1, 2);
+        let exp_reward =
+            price::total(bar0_apr.of(lpp0_tvl), oracle.price_of().unwrap().inv()).unwrap();
 
         let pool = PoolImpl::new(DummyLpp::with_balance(lpp0_tvl, exp_reward), oracle).unwrap();
         assert_eq!(lpp0_tvl, pool.balance());

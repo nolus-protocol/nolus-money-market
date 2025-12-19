@@ -8,7 +8,7 @@ use currency::{Currency, CurrencyDTO, CurrencyDef, Group, MemberOf};
 use finance::price::Price;
 use sdk::cosmwasm_std::{Addr, QuerierWrapper};
 
-#[cfg(feature = "unchecked-stable-quote")]
+#[cfg(any(test, feature = "unchecked-stable-quote"))]
 pub use self::impl_::{StablePriceSource, StablePriceStub};
 use crate::error::{Error, Result};
 

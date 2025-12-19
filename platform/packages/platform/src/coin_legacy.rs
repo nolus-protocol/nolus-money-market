@@ -162,7 +162,7 @@ mod test {
         BankSymbols, CurrencyDef,
         test::{SuperGroup, SuperGroupTestC1, SuperGroupTestC2},
     };
-    use finance::test::coin;
+    use finance::{coin::Amount, test::coin};
     use sdk::cosmwasm_std::Coin as CosmWasmCoin;
 
     use crate::error::Error;
@@ -281,7 +281,7 @@ mod test {
             super::from_cosmwasm(&super::to_cosmwasm_on_nolus(c_nls))
         );
 
-        let c_usdc = coin::coin1(u128::MAX);
+        let c_usdc = coin::coin1(Amount::MAX);
         assert_eq!(
             Ok(c_usdc),
             super::from_cosmwasm(&super::to_cosmwasm_on_nolus(c_usdc))

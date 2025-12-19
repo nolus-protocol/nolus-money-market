@@ -191,6 +191,7 @@ mod test {
         Lpn as BaseCurrency, Lpns as BaseCurrencies, PaymentGroup as PriceCurrencies,
         testing::{PaymentC5, PaymentC6, PaymentC7},
     };
+    use finance::coin::Amount;
     use sdk::cosmwasm_std::testing::MockStorage;
 
     use crate::tests;
@@ -198,8 +199,8 @@ mod test {
     use super::*;
 
     fn alarm_dto<C>(
-        below: (u128, u128),
-        above: Option<(u128, u128)>,
+        below: (Amount, Amount),
+        above: Option<(Amount, Amount)>,
     ) -> AlarmDTO<PriceCurrencies, BaseCurrency, BaseCurrencies>
     where
         C: CurrencyDef,

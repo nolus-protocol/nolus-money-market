@@ -9,7 +9,7 @@ use crate::{
 };
 
 // Used only for average price calculation
-impl FractionUnit for u128 {
+impl FractionUnit for Amount {
     type Times = Self;
 
     fn gcd<U>(self, other: U) -> Self::Times

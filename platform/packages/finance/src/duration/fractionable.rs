@@ -6,13 +6,15 @@ use crate::{
     },
 };
 
+type DoubleDurationPrimitive = u128;
+
 impl<C> CommonDoublePrimitive<Coin<C>> for Duration {
     type CommonDouble = DoubleCoinPrimitive;
 }
 
 impl<C> Fractionable<Coin<C>> for Duration {}
 
-impl<T> HigherRank<T> for u128
+impl<T> HigherRank<T> for DoubleDurationPrimitive
 where
     T: Into<Self>,
 {
@@ -26,7 +28,7 @@ impl IntoMax<DoubleCoinPrimitive> for Duration {
 }
 
 impl ToDoublePrimitive for Duration {
-    type Double = u128;
+    type Double = DoubleDurationPrimitive;
 
     fn to_double(&self) -> Self::Double {
         self.nanos().into()
@@ -42,7 +44,12 @@ impl TryFromMax<DoubleCoinPrimitive> for Duration {
 #[cfg(test)]
 mod tests {
 
-    use crate::{duration::Duration, ratio::SimpleFraction, rational::Rational, test::coin};
+    use crate::{
+        duration::{Duration, fractionable::DoubleDurationPrimitive},
+        ratio::SimpleFraction,
+        rational::Rational,
+        test::coin,
+    };
 
     #[test]
     fn of() {
@@ -56,9 +63,12 @@ mod tests {
     #[test]
     fn of_max() {
         let d = Duration::from_secs(10);
-        let res = SimpleFraction::new(coin::coin1(u128::MAX), coin::coin1(u128::MAX / 2))
-            .of(d)
-            .unwrap();
+        let res = SimpleFraction::new(
+            coin::coin1(DoubleDurationPrimitive::MAX),
+            coin::coin1(DoubleDurationPrimitive::MAX / 2),
+        )
+        .of(d)
+        .unwrap();
 
         assert_eq!(Duration::from_secs(20), res);
     }

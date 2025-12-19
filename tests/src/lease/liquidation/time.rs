@@ -71,7 +71,7 @@ fn liquidation_time_alarm(
         lease_addr.clone(),
         ica_addr.clone(),
         requests.into_iter(),
-        |amount: u128, _, _| amount,
+        |amount, _, _| amount,
     )
     .ignore_response();
 
@@ -85,10 +85,9 @@ fn liquidation_time_alarm(
 
     assert_eq!(
         transfer_amount,
-        coin_legacy::to_cosmwasm_on_dex(price::total(
-            liquidation_amount,
-            lease_test::price_lpn_of()
-        ))
+        coin_legacy::to_cosmwasm_on_dex(
+            price::total(liquidation_amount, lease_test::price_lpn_of()).unwrap()
+        )
     );
 
     let response: ResponseWithInterChainMsgs<'_, AppResponse> = ibc::do_transfer(

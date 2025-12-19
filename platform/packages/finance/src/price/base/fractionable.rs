@@ -20,14 +20,14 @@ where
 }
 
 // Used only for average price calculation
-impl<C, QuoteC> FractionableLegacy<u128> for Price<C, QuoteC>
+impl<C, QuoteC> FractionableLegacy<Amount> for Price<C, QuoteC>
 where
     C: 'static,
     QuoteC: 'static,
 {
     fn safe_mul<F>(self, fraction: &F) -> Self
     where
-        F: RatioLegacy<u128>,
+        F: RatioLegacy<Amount>,
     {
         self.lossy_mul(fraction)
             .expect("TODO replace with Fraction/Ratio multiplication")
@@ -55,7 +55,10 @@ where
 mod test {
     use currency::test::{SubGroupTestC10, SuperGroupTestC1};
 
-    use crate::coin::{Amount, Coin};
+    use crate::{
+        coin::{Amount, Coin},
+        test::coin,
+    };
 
     mod percent {
         use crate::fraction::FractionLegacy;
@@ -170,24 +173,25 @@ mod test {
         fn test_impl(
             amount1: Coin<SubGroupTestC10>,
             quote1: Coin<SuperGroupTestC1>,
-            nominator: u128,
-            denominator: u128,
+            nominator: Amount,
+            denominator: Amount,
             amount_exp: Coin<SubGroupTestC10>,
             quote_exp: Coin<SuperGroupTestC1>,
         ) {
             let price = price::total_of(amount1).is(quote1);
             let ratio = SimpleFraction::new(nominator, denominator);
             assert_eq!(
-                RationalLegacy::<u128>::of(&ratio, price).unwrap(),
+                RationalLegacy::<Amount>::of(&ratio, price).unwrap(),
                 price::total_of(amount_exp).is(quote_exp)
             );
         }
     }
+
     fn c(a: Amount) -> Coin<SubGroupTestC10> {
         Coin::new(a)
     }
 
     fn q(a: Amount) -> Coin<SuperGroupTestC1> {
-        Coin::new(a)
+        coin::coin1(a)
     }
 }

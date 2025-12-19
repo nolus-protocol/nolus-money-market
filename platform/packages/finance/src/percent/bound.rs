@@ -121,7 +121,7 @@ impl<const UPPER_BOUND: Units> Display for BoundPercent<UPPER_BOUND> {
 }
 
 // TODO: Revisit it's usage after refactoring Fractionable
-impl<const UPPER_BOUND: Units> From<BoundPercent<UPPER_BOUND>> for u128 {
+impl<const UPPER_BOUND: Units> From<BoundPercent<UPPER_BOUND>> for Amount {
     fn from(percent: BoundPercent<UPPER_BOUND>) -> Self {
         Amount::from(percent.0)
     }

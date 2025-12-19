@@ -13,14 +13,14 @@ use crate::{
 
 pub struct DummyOracle {
     source: StablePriceSource,
-    price: Option<Amount>,
+    price: Option<(Amount, Amount)>,
 }
 
 impl DummyOracle {
-    pub fn with_price(c_in_base: Amount) -> Self {
+    pub fn with_price(amount: Amount, quote: Amount) -> Self {
         Self {
             source: Self::dummy_source(),
-            price: Some(c_in_base),
+            price: Some((amount, quote)),
         }
     }
 
@@ -49,7 +49,7 @@ where
         C::Group: MemberOf<G>,
     {
         self.price
-            .map(|price| price::total_of(Coin::new(1)).is(Coin::new(price)))
+            .map(|(amount, quote)| price::total_of(Coin::new(amount)).is(Coin::new(quote)))
             .ok_or_else(|| {
                 error::failed_to_fetch_price(
                     C::dto(),
