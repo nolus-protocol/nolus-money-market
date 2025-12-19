@@ -113,7 +113,7 @@ mod impl_ {
 
 #[cfg(test)]
 mod test {
-    use currency::{platform::Stable, test::SuperGroupTestC1};
+    use currency::test::SuperGroupTestC1;
     use finance::coin::{Amount, Coin};
 
     use crate::test::DummyOracle;
@@ -138,6 +138,24 @@ mod test {
         assert_to_quote(10, 4, 40);
         assert_to_quote(7, 1, 7);
         assert_to_quote(Amount::MAX / 10, 5, Amount::MAX / 2 - 2);
+    }
+
+    #[test]
+    fn from_quote_overflow() {
+        let oracle_1 = DummyOracle::with_price(100, 1);
+        assert!(
+            super::from_quote::<_, _, _, SuperGroupTestC1, _>(
+                &oracle_1,
+                Coin::new(Amount::MAX / 50)
+            )
+            .is_err()
+        );
+
+        let oracle_2 = DummyOracle::with_price(2, 1);
+        assert!(
+            super::from_quote::<_, _, _, SuperGroupTestC1, _>(&oracle_2, Coin::new(Amount::MAX))
+                .is_err()
+        );
     }
 
     #[test]
@@ -167,6 +185,6 @@ mod test {
         let oracle = DummyOracle::with_price(1, quote);
         let out_amount =
             super::to_quote(&oracle, Coin::<SuperGroupTestC1>::new(in_amount)).unwrap();
-        assert_eq!(Coin::<Stable>::new(expected_out), out_amount);
+        assert_eq!(Coin::new(expected_out), out_amount);
     }
 }
