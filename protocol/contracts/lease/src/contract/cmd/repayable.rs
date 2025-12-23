@@ -199,7 +199,7 @@ mod test {
         liability::Zone,
         percent::{Percent, Percent100},
         price::{self, Price},
-        rational::RationalLegacy,
+        rational::Rational,
     };
     use lpp::msg::LoanResponse;
     use platform::batch::Emitter as PlatformEmitter;
