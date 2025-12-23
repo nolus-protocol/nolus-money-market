@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 use finance::{
-    coin::Coin, duration::Duration, fraction::FractionLegacy, interest, percent::Percent100,
+    coin::Coin, duration::Duration, fraction::Fraction, interest, percent::Percent100,
     ratio::Ratio, zero::Zero,
 };
 use lpp_platform::NLpn;
@@ -217,7 +217,7 @@ impl<Lpn> Total<Lpn> {
     }
 
     fn estimated_annual_interest(&self) -> Coin<Lpn> {
-        FractionLegacy::of(&self.annual_interest_rate, self.total_principal_due)
+        self.annual_interest_rate.of(self.total_principal_due)
     }
 }
 
