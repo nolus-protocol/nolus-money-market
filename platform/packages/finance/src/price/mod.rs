@@ -1,19 +1,17 @@
-use std::{
-    fmt::Debug,
-    ops::{Add, AddAssign, Mul},
-};
+use std::fmt::Debug;
 
 use serde::{Deserialize, Serialize};
 
 use crate::{
     coin::{Amount, Coin},
     error::{Error, Result},
-    fraction::Coprime,
-    fractionable::{HigherRank, ToDoublePrimitive},
-    ratio::{RatioLegacy, SimpleFraction},
+    fraction::{Coprime, Unit},
+    fractionable::ToDoublePrimitive,
+    ratio::SimpleFraction,
     rational::Rational,
 };
 
+mod arithmetics;
 pub mod base;
 pub mod dto;
 
@@ -36,8 +34,6 @@ where
         Price::new(self.0, to)
     }
 }
-
-type DoubleAmount = <Amount as HigherRank<Amount>>::Type;
 
 /// Represents the price of a currency in a quote currency, ref: <https://en.wikipedia.org/wiki/Currency_pair>
 ///
@@ -98,41 +94,6 @@ where
         }
     }
 
-    /// Multiplication with а potential loss of precision
-    ///
-    /// In case the nominator or denominator overflows, they both are trimmed with so many bits as necessary for
-    /// the larger value to fit within the price amount limits. If that would make any of them get to zero,
-    /// then return [None].
-    ///
-    /// Price(amount, amount_quote) * Ratio(nominator / denominator) = Price(amount * denominator, amount_quote * nominator)
-    /// where the pairs (amount, nominator) and (amount_quote, denominator) are transformed into co-prime numbers.
-    /// Please note that Price(amount, amount_quote) is like Ratio(amount_quote / amount).
-    fn lossy_mul<R>(self, rhs: &R) -> Option<Self>
-    where
-        R: RatioLegacy<Amount>,
-    {
-        let (amount_normalized, rhs_nominator_normalized) =
-            self.amount.to_coprime_with(Coin::<C>::new(rhs.parts()));
-        let (amount_quote_normalized, rhs_denominator_normalized) = self
-            .amount_quote
-            .to_coprime_with(Coin::<QuoteC>::new(rhs.total()));
-
-        let double_amount = amount_normalized.to_double() * rhs_denominator_normalized.to_double();
-        let double_amount_quote =
-            amount_quote_normalized.to_double() * rhs_nominator_normalized.to_double();
-
-        let extra_bits =
-            Self::bits_above_max(double_amount).max(Self::bits_above_max(double_amount_quote));
-
-        let min_precision_loss_overflow =
-            Self::bits(double_amount).min(Self::bits(double_amount_quote));
-
-        Self::trim_down(double_amount, extra_bits, min_precision_loss_overflow).and_then(|amount| {
-            Self::trim_down(double_amount_quote, extra_bits, min_precision_loss_overflow)
-                .map(|amount_quote| Price::new(Coin::new(amount), Coin::new(amount_quote)))
-        })
-    }
-
     pub fn inv(self) -> Price<QuoteC, C> {
         Price {
             amount: self.amount_quote,
@@ -157,92 +118,6 @@ where
 
     fn check(invariant: bool, msg: &str) -> Result<()> {
         Error::broken_invariant_if::<Self>(!invariant, msg)
-    }
-
-    fn checked_add(self, rhs: Self) -> Option<Self> {
-        // let a1 = a / gcd(a, c), and c1 = c / gcd(a, c), then
-        // b / a + d / c = (b * c1 + d * a1) / (a1 * c1 * gcd(a, c))
-        // taking into account that Price is like amount_quote/amount
-        let (a1, c1) = self.amount.to_coprime_with(rhs.amount);
-        debug_assert_eq!(0, Amount::from(self.amount) % Amount::from(a1));
-        debug_assert_eq!(0, Amount::from(rhs.amount) % Amount::from(c1));
-        let gcd: Amount = match self.amount.checked_div(a1.into()) {
-            None => unreachable!("invariant on amount != 0 should have passed!"),
-            Some(gcd) => gcd.into(),
-        };
-        debug_assert_eq!(Some(Coin::new(gcd)), rhs.amount.checked_div(c1.into()));
-
-        let may_b_c1 = self.amount_quote.checked_mul(c1.into());
-        let may_d_a1 = rhs.amount_quote.checked_mul(a1.into());
-        let may_amount_quote = may_b_c1
-            .zip(may_d_a1)
-            .and_then(|(b_c1, d_a1)| b_c1.checked_add(d_a1));
-        let may_amount = a1
-            .checked_mul(c1.into())
-            .and_then(|a1_c1| a1_c1.checked_mul(gcd));
-        may_amount_quote
-            .zip(may_amount)
-            .map(|(amount_quote, amount)| Self::new(amount, amount_quote))
-    }
-
-    /// Add two prices rounding each of them to 1.10-18, simmilarly to
-    /// the precision provided by CosmWasm's ['Decimal'][sdk::cosmwasm_std::Decimal].
-    ///
-    /// TODO Implement a variable precision algorithm depending on the
-    /// value of the prices. The rounding would be done by shifting to
-    /// the right both amounts of the price with a bigger denominator
-    /// until a * d + b * c and b * d do not overflow.
-    fn lossy_add(self, rhs: Self) -> Option<Self> {
-        const FACTOR: Amount = 1_000_000_000_000_000_000; // 1*10^18
-        let factored_amount = Coin::new(FACTOR);
-
-        total(factored_amount, self)
-            .zip(total(factored_amount, rhs))
-            .and_then(|(factored_self, factored_rhs)| factored_self.checked_add(factored_rhs))
-            .map(|factored_total| total_of(factored_amount).is(factored_total))
-    }
-
-    #[track_caller]
-    fn bits(double_amount: DoubleAmount) -> u32 {
-        DoubleAmount::BITS - double_amount.leading_zeros()
-    }
-
-    #[track_caller]
-    fn bits_above_max(double_amount: DoubleAmount) -> u32 {
-        Self::bits(double_amount).saturating_sub(Amount::BITS)
-    }
-
-    #[track_caller]
-    fn trim_down(
-        double_amount: DoubleAmount,
-        bits_to_trim: u32,
-        min_precision_loss_overflow: u32,
-    ) -> Option<Amount> {
-        debug_assert!(bits_to_trim <= Amount::BITS);
-
-        (bits_to_trim < min_precision_loss_overflow)
-            .then(|| Self::trim_down_checked(double_amount, bits_to_trim))
-    }
-
-    #[track_caller]
-    fn trim_down_checked(double_amount: DoubleAmount, bits_to_trim: u32) -> Amount {
-        const INSUFFICIENT_BITS: &str = "insufficient trimming bits";
-
-        debug_assert!(
-            Self::bits_above_max(double_amount) <= bits_to_trim,
-            "{}",
-            INSUFFICIENT_BITS
-        );
-        debug_assert!(
-            bits_to_trim < Self::bits(double_amount),
-            "the precision loss {bits_to_trim} exceeds the value bits {loss}",
-            loss = Self::bits(double_amount)
-        );
-        let amount: Amount = (double_amount >> bits_to_trim)
-            .try_into()
-            .expect(INSUFFICIENT_BITS);
-        debug_assert!(amount > 0, "the precision loss exceeds the value bits");
-        amount
     }
 }
 
@@ -308,49 +183,6 @@ where
     }
 }
 
-impl<C, QuoteC> Add<Price<C, QuoteC>> for Price<C, QuoteC>
-where
-    C: 'static,
-    QuoteC: 'static,
-{
-    type Output = Price<C, QuoteC>;
-
-    fn add(self, rhs: Price<C, QuoteC>) -> Self::Output {
-        self.checked_add(rhs)
-            .or_else(|| self.lossy_add(rhs))
-            .expect("should not observe huge prices")
-    }
-}
-
-impl<C, QuoteC> AddAssign<Price<C, QuoteC>> for Price<C, QuoteC>
-where
-    C: 'static,
-    QuoteC: 'static,
-{
-    #[track_caller]
-    fn add_assign(&mut self, rhs: Price<C, QuoteC>) {
-        *self = self.add(rhs);
-    }
-}
-
-impl<C, QuoteC, QuoteQuoteC> Mul<Price<QuoteC, QuoteQuoteC>> for Price<C, QuoteC>
-where
-    C: 'static,
-    QuoteC: 'static,
-    QuoteQuoteC: 'static,
-{
-    type Output = Option<Price<C, QuoteQuoteC>>;
-
-    #[track_caller]
-    fn mul(self, rhs: Price<QuoteC, QuoteQuoteC>) -> Self::Output {
-        // Price(a, b) * Price(c, d) = Price(a, d) * Rational(b / c)
-        // Please note that Price(amount, amount_quote) is like Ratio(amount_quote / amount).
-
-        Price::new(self.amount, rhs.amount_quote)
-            .lossy_mul(&SimpleFraction::new(self.amount_quote, rhs.amount))
-    }
-}
-
 /// Calculates the amount of given coins in another currency, referred here as `quote currency`.
 /// Returns `None` if an overflow occurs during the calculation.
 ///
@@ -361,21 +193,17 @@ pub fn total<C, QuoteC>(of: Coin<C>, price: Price<C, QuoteC>) -> Option<Coin<Quo
 
 #[cfg(test)]
 mod test {
-    use std::ops::{Add, AddAssign, Mul};
-
     use currency::test::{SubGroupTestC10, SuperGroupTestC1, SuperGroupTestC2};
-    use sdk::cosmwasm_std::{Uint128, Uint256};
 
     use crate::{
         coin::{Amount, Coin as CoinT},
         price::{self, Price},
-        ratio::SimpleFraction,
         test::coin,
     };
 
-    type QuoteQuoteCoin = CoinT<SubGroupTestC10>;
-    type QuoteCoin = CoinT<SuperGroupTestC1>;
-    type Coin = CoinT<SuperGroupTestC2>;
+    pub(super) type QuoteQuoteCoin = CoinT<SubGroupTestC10>;
+    pub(super) type QuoteCoin = CoinT<SuperGroupTestC1>;
+    pub(super) type Coin = CoinT<SuperGroupTestC2>;
 
     #[test]
     fn new_c16n() {
@@ -568,10 +396,6 @@ mod test {
 
     fn q(a: Amount) -> QuoteCoin {
         coin::coin1(a)
-    }
-
-    fn qq(a: Amount) -> QuoteQuoteCoin {
-        QuoteQuoteCoin::new(a)
     }
 
     fn price(amount: Coin, amount_quote: QuoteCoin) -> Price<SuperGroupTestC2, SuperGroupTestC1> {
