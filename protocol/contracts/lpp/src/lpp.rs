@@ -314,7 +314,7 @@ mod test {
     use finance::{
         coin::Coin,
         duration::Duration,
-        fraction::FractionLegacy,
+        fraction::Fraction,
         percent::Percent100,
         price::{self, Price},
         zero::Zero,

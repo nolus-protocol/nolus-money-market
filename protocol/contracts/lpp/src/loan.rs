@@ -66,7 +66,7 @@ mod test {
     use finance::{
         coin::{Amount, Coin},
         duration::Duration,
-        fraction::FractionLegacy,
+        fraction::Fraction,
         percent::Percent100,
         zero::Zero,
     };
