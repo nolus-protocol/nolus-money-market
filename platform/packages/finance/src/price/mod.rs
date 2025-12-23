@@ -293,15 +293,18 @@ mod test {
         assert!(super::total(c(2), price).is_none());
     }
 
-    fn c(a: Amount) -> Coin {
+    pub(super) fn c(a: Amount) -> Coin {
         coin::coin2(a)
     }
 
-    fn q(a: Amount) -> QuoteCoin {
+    pub(super) fn q(a: Amount) -> QuoteCoin {
         coin::coin1(a)
     }
 
-    fn price(amount: Coin, amount_quote: QuoteCoin) -> Price<SuperGroupTestC2, SuperGroupTestC1> {
+    pub(super) fn price(
+        amount: Coin,
+        amount_quote: QuoteCoin,
+    ) -> Price<SuperGroupTestC2, SuperGroupTestC1> {
         Price::new(amount, amount_quote)
     }
 
