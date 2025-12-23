@@ -292,11 +292,19 @@ mod test {
         coin::Amount,
         price::{
             self, Price,
-            test::{Coin, QuoteCoin, QuoteQuoteCoin},
+            test::{Coin, QuoteCoin, QuoteQuoteCoin, c, price, q},
         },
         ratio::SimpleFraction,
-        test::coin,
     };
+
+    #[test]
+    fn from_fraction() {
+        let expect = price(c(1), q(4));
+        assert_eq!(
+            expect,
+            Price::from_fraction(SimpleFraction::new(4u128, 1u128))
+        );
+    }
 
     #[test]
     fn add_no_round() {
@@ -496,14 +504,6 @@ mod test {
         let exp = price::total_of(amount_exp).is(quote_exp);
         assert_eq!(Some(exp), price1.lossy_add(price2));
         assert!(exp <= price1.add(price2));
-    }
-
-    fn c(a: Amount) -> Coin {
-        coin::coin2(a)
-    }
-
-    fn q(a: Amount) -> QuoteCoin {
-        coin::coin1(a)
     }
 
     fn qq(a: Amount) -> QuoteQuoteCoin {
