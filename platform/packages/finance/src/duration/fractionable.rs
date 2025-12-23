@@ -12,13 +12,6 @@ impl<C> CommonDoublePrimitive<Coin<C>> for Duration {
 
 impl<C> Fractionable<Coin<C>> for Duration {}
 
-impl<T> HigherRank<T> for DoubleDurationPrimitive
-where
-    T: Into<Self>,
-{
-    type Type = DoubleCoinPrimitive;
-}
-
 impl IntoMax<DoubleCoinPrimitive> for Duration {
     fn into_max(self) -> DoubleCoinPrimitive {
         self.to_double().into()
