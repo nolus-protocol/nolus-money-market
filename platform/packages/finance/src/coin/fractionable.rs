@@ -1,7 +1,7 @@
 use bnum::types::U256;
 
 use crate::{
-    coin::Coin,
+    coin::{Amount, Coin},
     duration::Duration,
     fractionable::{CommonDoublePrimitive, Fractionable, IntoMax, ToDoublePrimitive, TryFromMax},
     percent::{Units as PercentUnits, bound::BoundPercent},
