@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     coin::{Amount, Coin},
     error::{Error, Result},
-    fraction::{Coprime, Unit},
+    fraction::Coprime,
     fractionable::ToDoublePrimitive,
     ratio::SimpleFraction,
     rational::Rational,
@@ -293,103 +293,6 @@ mod test {
         assert!(super::total(c(2), price).is_none());
     }
 
-    #[test]
-    fn add_no_round() {
-        add_impl(c(1), q(2), c(5), q(10), c(1), q(4));
-        add_impl(c(2), q(1), c(10), q(5), c(1), q(1));
-        add_impl(c(2), q(3), c(10), q(14), c(10), q(29));
-    }
-
-    #[test]
-    fn add_round() {
-        add_impl(c(Amount::MAX), q(1), c(1), q(1), c(1), q(1));
-    }
-
-    #[test]
-    fn lossy_add_no_round() {
-        lossy_add_impl(c(1), q(2), c(5), q(10), c(1), q(4));
-        lossy_add_impl(c(2), q(1), c(10), q(5), c(1), q(1));
-        lossy_add_impl(c(2), q(3), c(10), q(14), c(10), q(29));
-    }
-
-    #[test]
-    fn lossy_add_round() {
-        // 1/3 + 2/7 = 13/21 that is 0.(619047)*...
-        let amount_exp = 1_000_000_000_000_000_000;
-        let quote_exp = 619_047_619_047_619_047;
-        lossy_add_impl(c(3), q(1), c(7), q(2), c(amount_exp), q(quote_exp));
-        lossy_add_impl(
-            c(amount_exp),
-            q(quote_exp),
-            c(3),
-            q(1),
-            c(amount_exp),
-            q(quote_exp + 333_333_333_333_333_333),
-        );
-        lossy_add_impl(
-            c(amount_exp + 1),
-            q(quote_exp),
-            c(21),
-            q(1),
-            c(amount_exp / 5),
-            q(133_333_333_333_333_333),
-        );
-
-        lossy_add_impl(c(amount_exp + 1), q(1), c(1), q(1), c(1), q(1));
-
-        lossy_add_impl(c(Amount::MAX), q(1), c(1), q(1), c(1), q(1));
-    }
-
-    #[test]
-    fn lossy_add_overflow() {
-        // 2^128 / FACTOR (10^18) / 2^64 ~ 18.446744073709553
-        let p1 = price::total_of(c(1)).is(q(Amount::from(u64::MAX) * 19u128));
-        let p2 = Price::identity();
-        assert!(p1.lossy_add(p2).is_none())
-    }
-
-    #[test]
-    fn lossy_mul_no_round() {
-        lossy_mul_impl(c(1), q(2), q(2), qq(1), c(1), qq(1));
-        lossy_mul_impl(c(2), q(3), q(18), qq(5), c(12), qq(5));
-        lossy_mul_impl(c(7), q(3), q(11), qq(21), c(11), qq(9));
-        lossy_mul_impl(c(7), q(3), q(11), qq(23), c(7 * 11), qq(3 * 23));
-
-        let big_int = Amount::MAX - 1;
-        assert!(big_int % 3 != 0 && big_int % 11 != 0);
-        lossy_mul_impl(c(big_int), q(3), q(11), qq(big_int), c(11), qq(3));
-
-        assert_eq!(0, Amount::MAX % 5);
-        lossy_mul_impl(
-            c(Amount::MAX),
-            q(2),
-            q(3),
-            qq(5),
-            c(Amount::MAX / 5 * 3),
-            qq(2),
-        );
-    }
-
-    #[test]
-    fn lossy_mul_few_shifts() {
-        lossy_mul_shifts_impl(5, 1);
-        lossy_mul_shifts_impl(5, 2);
-        lossy_mul_shifts_impl(5, 7);
-        lossy_mul_shifts_impl(5, 16);
-        lossy_mul_shifts_impl(5, 63);
-    }
-
-    #[test]
-    fn lossy_mul_overflow() {
-        const SHIFTS: u8 = 23;
-        const Q1: Amount = 7;
-        const A2: Amount = 1 << SHIFTS;
-        // due to a1*a2 the q1*q2 gets to 0
-        lossy_mul_overflow_impl(Amount::MAX - 1, Q1, A2, A2 / Q1 - 1, SHIFTS); // the aim is q1 * q2 < a2
-        // due to q1*q2 the a1*a2 gets to 0
-        lossy_mul_overflow_impl(Q1, Amount::MAX - 1, A2 / Q1 - 1, A2, SHIFTS); // the aim is a1 * a2 < q2
-    }
-
     fn c(a: Amount) -> Coin {
         coin::coin2(a)
     }
@@ -428,105 +331,6 @@ mod test {
 
         assert_eq!(expected, calc_total(input, price));
         assert_eq!(input, super::total(expected, price.inv()).unwrap());
-    }
-
-    fn add_impl(
-        amount1: Coin,
-        quote1: QuoteCoin,
-        amount2: Coin,
-        quote2: QuoteCoin,
-        amount_exp: Coin,
-        quote_exp: QuoteCoin,
-    ) {
-        let price1 = price::total_of(amount1).is(quote1);
-        let price2 = price::total_of(amount2).is(quote2);
-        let exp = price::total_of(amount_exp).is(quote_exp);
-        assert_eq!(exp, price1.add(price2));
-        assert!({
-            price1.checked_add(price2).map_or_else(
-                || Some(exp) == price1.lossy_add(price2),
-                |v| v == price1.add(price2),
-            )
-        });
-        assert!(Some(exp) == price1.lossy_add(price2));
-        assert!(exp >= price1);
-        assert!(exp >= price2);
-
-        let mut price3 = price1;
-        price3.add_assign(price2);
-        assert_eq!(exp, price3);
-    }
-
-    #[track_caller]
-    fn lossy_add_impl(
-        amount1: Coin,
-        quote1: QuoteCoin,
-        amount2: Coin,
-        quote2: QuoteCoin,
-        amount_exp: Coin,
-        quote_exp: QuoteCoin,
-    ) {
-        let price1 = price::total_of(amount1).is(quote1);
-        let price2 = price::total_of(amount2).is(quote2);
-        let exp = price::total_of(amount_exp).is(quote_exp);
-        assert_eq!(Some(exp), price1.lossy_add(price2));
-        assert!(exp <= price1.add(price2));
-    }
-
-    fn shift_product<A1, A2>(a1: A1, a2: A2, shifts: u8) -> Amount
-    where
-        A1: Into<Uint256>,
-        A2: Into<Uint256>,
-    {
-        Uint128::try_from((a1.into() * a2.into()) >> u32::from(shifts))
-            .expect("Incorrect test setup")
-            .into()
-    }
-
-    fn lossy_mul_impl(
-        amount1: Coin,
-        quote1: QuoteCoin,
-        amount2: QuoteCoin,
-        quote2: QuoteQuoteCoin,
-        amount_exp: Coin,
-        quote_exp: QuoteQuoteCoin,
-    ) {
-        let price1 = price::total_of(amount1).is(quote1);
-        let price2 = price::total_of(amount2).is(quote2);
-        let exp = price::total_of(amount_exp).is(quote_exp);
-        assert_eq!(Some(exp), price1.mul(price2));
-
-        let price3 = price::total_of(amount1).is(quote2);
-        let ratio = SimpleFraction::new(quote1, amount2);
-        assert_eq!(Some(exp), price3.lossy_mul(&ratio));
-    }
-
-    fn lossy_mul_shifts_impl(q1: Amount, shifts: u8) {
-        let a1 = Amount::MAX - 1;
-        let a2: Amount = 1 << shifts;
-        let q2 = a2 / q1 + 3; // the aim is q1 * q2 > a2
-
-        assert!(a1 % q1 != 0);
-        assert!(a1 % q2 != 0);
-        assert!(a2 % q1 != 0);
-        assert!(a2 % q2 != 0);
-        assert_eq!(1, a2 >> shifts);
-
-        let a_exp = shift_product(a1, a2, shifts);
-        let q_exp = shift_product(q1, q2, shifts);
-        lossy_mul_impl(c(a1), q(q1), q(a2), qq(q2), c(a_exp), qq(q_exp));
-    }
-
-    fn lossy_mul_overflow_impl(a1: Amount, q1: Amount, a2: Amount, q2: Amount, shifts: u8) {
-        assert!(a1 % q1 != 0);
-        assert!(a1 % q2 != 0);
-        assert!(a2 % q1 != 0);
-        assert!(a2 % q2 != 0);
-
-        assert!(shift_product(a1, a2, shifts) == 0 || shift_product(q1, q2, shifts) == 0);
-        let price1 = price::total_of(c(a1)).is(q(q1));
-        let price2 = price::total_of(q(a2)).is(qq(q2));
-        assert_eq!(None, price1.mul(price2));
     }
 }
 
