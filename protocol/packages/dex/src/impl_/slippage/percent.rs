@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use currency::{Currency, CurrencyDef, Group, MemberOf};
 use finance::{
     coin::{Coin, CoinDTO, WithCoin},
-    fraction::FractionLegacy,
+    fraction::Fraction,
     percent::Percent100,
 };
 use oracle::stub;
@@ -136,7 +136,7 @@ mod test {
     use currency::test::SuperGroupTestC1;
     use finance::{
         coin::{Amount, Coin},
-        fraction::FractionLegacy,
+        fraction::Fraction,
         percent::Percent100,
     };
 
