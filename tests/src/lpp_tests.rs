@@ -3,11 +3,11 @@ use currency::CurrencyDef;
 use finance::{
     coin::{Amount, Coin},
     duration::Duration,
-    fraction::FractionLegacy,
+    fraction::Fraction,
     percent::{Percent, Percent100},
     price,
     ratio::SimpleFraction,
-    rational::RationalLegacy,
+    rational::Rational,
     test,
     zero::Zero,
 };
