@@ -105,11 +105,11 @@ where
         }
     }
 
-    pub(super) fn nominator(&self) -> U {
+    pub(super) const fn nominator(&self) -> U {
         self.nominator
     }
 
-    pub(super) fn denominator(&self) -> U {
+    pub(super) const fn denominator(&self) -> U {
         self.denominator
     }
 }

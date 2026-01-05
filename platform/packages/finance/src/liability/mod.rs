@@ -505,7 +505,6 @@ mod test {
         assert_eq!(calculated, Coin::<Currency>::new(exp));
     }
 
-    // TODO select a better currency
     fn coin(amount: Amount) -> Coin<SuperGroupTestC1> {
         coin::coin1(amount)
     }

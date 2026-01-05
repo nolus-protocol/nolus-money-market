@@ -92,7 +92,7 @@ impl IntoMax<<Count as CommonDoublePrimitive<Percent100>>::CommonDouble> for Cou
 impl ToDoublePrimitive for Count {
     type Double = u64;
 
-    fn to_double(&self) -> Self::Double {
+    fn to_double(self) -> Self::Double {
         self.0.into()
     }
 }
