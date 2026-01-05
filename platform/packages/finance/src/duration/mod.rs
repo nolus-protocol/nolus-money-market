@@ -204,8 +204,8 @@ mod tests {
             assert_eq!(T::from_nanos(t.nanos() + 1), t + D::from_nanos(1));
             assert_eq!(t, t + D::from_secs(0));
             assert_eq!(
-                T::from_nanos(u64::MAX),
-                T::from_nanos(u64::MAX - 12) + D::from_nanos(12)
+                T::from_nanos(Units::MAX),
+                T::from_nanos(Units::MAX - 12) + D::from_nanos(12)
             );
         }
 
@@ -219,7 +219,7 @@ mod tests {
         #[test]
         #[should_panic]
         fn add_overflow() {
-            let _ = T::from_nanos(u64::MAX - 12) + D::from_nanos(13);
+            let _ = T::from_nanos(Units::MAX - 12) + D::from_nanos(13);
         }
 
         #[test]

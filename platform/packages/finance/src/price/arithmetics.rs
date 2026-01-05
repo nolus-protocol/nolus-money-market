@@ -356,7 +356,7 @@ mod test {
     #[test]
     fn lossy_add_overflow() {
         // 2^128 / FACTOR (10^18) / 2^64 ~ 18.446744073709553
-        let p1 = price::total_of(c(1)).is(q(u128::from(u64::MAX) * 19u128));
+        let p1 = price::total_of(c(1)).is(q(Amount::from(u64::MAX) * 19u128));
         let p2 = Price::identity();
         assert!(p1.lossy_add(p2).is_none())
     }
@@ -368,12 +368,19 @@ mod test {
         lossy_mul_impl(c(7), q(3), q(11), qq(21), c(11), qq(9));
         lossy_mul_impl(c(7), q(3), q(11), qq(23), c(7 * 11), qq(3 * 23));
 
-        let big_int = u128::MAX - 1;
+        let big_int = Amount::MAX - 1;
         assert!(big_int % 3 != 0 && big_int % 11 != 0);
         lossy_mul_impl(c(big_int), q(3), q(11), qq(big_int), c(11), qq(3));
 
-        assert_eq!(0, u128::MAX % 5);
-        lossy_mul_impl(c(u128::MAX), q(2), q(3), qq(5), c(u128::MAX / 5 * 3), qq(2));
+        assert_eq!(0, Amount::MAX % 5);
+        lossy_mul_impl(
+            c(Amount::MAX),
+            q(2),
+            q(3),
+            qq(5),
+            c(Amount::MAX / 5 * 3),
+            qq(2),
+        );
     }
 
     #[test]
@@ -436,7 +443,7 @@ mod test {
     }
 
     fn lossy_mul_shifts_impl(q1: Amount, shifts: u8) {
-        let a1 = u128::MAX - 1;
+        let a1 = Amount::MAX - 1;
         let a2: Amount = 1 << shifts;
         let q2 = a2 / q1 + 3; // the aim is q1 * q2 > a2
 

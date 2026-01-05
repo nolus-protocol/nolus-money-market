@@ -4,8 +4,10 @@ use crate::{
     percent::{Units, bound::BoundPercent},
 };
 
+pub(crate) type DoubleBoundPercentPrimitive = u64;
+
 impl<const UPPER_BOUND: Units> CommonDoublePrimitive<Self> for BoundPercent<UPPER_BOUND> {
-    type CommonDouble = <Self as ToDoublePrimitive>::Double;
+    type CommonDouble = DoubleBoundPercentPrimitive;
 }
 
 impl<C, const UPPER_BOUND: Units> CommonDoublePrimitive<Coin<C>> for BoundPercent<UPPER_BOUND> {
@@ -16,10 +18,8 @@ impl<const UPPER_BOUND: Units> Fractionable<Self> for BoundPercent<UPPER_BOUND> 
 
 impl<C, const UPPER_BOUND: Units> Fractionable<Coin<C>> for BoundPercent<UPPER_BOUND> {}
 
-impl<const UPPER_BOUND: Units> IntoMax<<Self as ToDoublePrimitive>::Double>
-    for BoundPercent<UPPER_BOUND>
-{
-    fn into_max(self) -> <Self as ToDoublePrimitive>::Double {
+impl<const UPPER_BOUND: Units> IntoMax<DoubleBoundPercentPrimitive> for BoundPercent<UPPER_BOUND> {
+    fn into_max(self) -> DoubleBoundPercentPrimitive {
         self.to_double()
     }
 }
@@ -31,17 +31,17 @@ impl<const UPPER_BOUND: Units> IntoMax<DoubleCoinPrimitive> for BoundPercent<UPP
 }
 
 impl<const UPPER_BOUND: Units> ToDoublePrimitive for BoundPercent<UPPER_BOUND> {
-    type Double = u64;
+    type Double = DoubleBoundPercentPrimitive;
 
     fn to_double(self) -> Self::Double {
         self.units().into()
     }
 }
 
-impl<const UPPER_BOUND: Units> TryFromMax<<Self as ToDoublePrimitive>::Double>
+impl<const UPPER_BOUND: Units> TryFromMax<DoubleBoundPercentPrimitive>
     for BoundPercent<UPPER_BOUND>
 {
-    fn try_from_max(max: <Self as ToDoublePrimitive>::Double) -> Option<Self> {
+    fn try_from_max(max: DoubleBoundPercentPrimitive) -> Option<Self> {
         Units::try_from(max)
             .ok()
             .and_then(|units| Self::try_from(units).ok())
@@ -62,7 +62,7 @@ mod test {
         use crate::{
             fraction::Fraction,
             fractionable::{ToDoublePrimitive, TryFromMax},
-            percent::{Percent, Percent100, Units},
+            percent::{DoubleBoundPercentPrimitive, Percent, Percent100, Units},
             rational::Rational,
         };
 
@@ -91,8 +91,9 @@ mod test {
 
             let percent = Percent::from_permille(410);
             let p64 = percent.to_double();
-            let p64_res = p64 * u64::from(Units::MAX) / 1000;
-            let percent_res = Percent::try_from_max(p64_res).expect("u64 -> Percent overflow");
+            let p64_res = p64 * DoubleBoundPercentPrimitive::from(Units::MAX) / 1000;
+            let percent_res = Percent::try_from_max(p64_res)
+                .expect("DoubleBoundPercentPrimitive -> Percent overflow");
 
             assert_eq!(
                 percent_res,
