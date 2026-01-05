@@ -113,7 +113,10 @@ where
 
         let total_principal_due = self.total.total_principal_due();
 
-        let total_interest_due = self.total.total_interest_due_by_now(now);
+        let total_interest_due = self
+            .total
+            .total_interest_due_by_now(now)
+            .ok_or(ContractError::overflow("Lpp balance interest overflow"))?;
 
         Ok(LppBalances {
             balance,
@@ -232,7 +235,10 @@ where
         }
 
         let total_principal_due = self.total.total_principal_due();
-        let total_interest = self.total.total_interest_due_by_now(now);
+        let total_interest = self
+            .total
+            .total_interest_due_by_now(now)
+            .ok_or(ContractError::overflow("Quote interest overflow"))?;
         let total_liability_past_quote = total_principal_due + quote + total_interest;
         let total_balance_past_quote = balance - quote;
 
@@ -288,8 +294,10 @@ where
         })
     }
 
-    fn total_due(&self, now: &Timestamp) -> Coin<Lpn> {
-        self.total.total_principal_due() + self.total.total_interest_due_by_now(now)
+    fn total_due(&self, now: &Timestamp) -> Option<Coin<Lpn>> {
+        self.total
+            .total_interest_due_by_now(now)
+            .map(|interest| interest + self.total.total_principal_due())
     }
 
     fn total_lpn(&self, now: &Timestamp, uncommited_amount: Coin<Lpn>) -> Result<Coin<Lpn>> {

@@ -73,11 +73,11 @@ impl<Lpn> Total<Lpn> {
         self.total_principal_due
     }
 
-    pub fn total_interest_due_by_now(&self, ctime: &Timestamp) -> Coin<Lpn> {
+    pub fn total_interest_due_by_now(&self, ctime: &Timestamp) -> Option<Coin<Lpn>> {
         if self.total_principal_due.is_zero() {
             // TODO remove this case once close protocols with `total_principal_due == 0` and `total_interest_due > 0`
             // the newly added invariant: if `total_principal_due == 0` then `total_interest_due == 0`
-            Coin::ZERO
+            Some(Coin::ZERO)
             //debug_assert!(self.total_interest_due.is_zero());
         } else {
             interest::interest(
@@ -85,8 +85,7 @@ impl<Lpn> Total<Lpn> {
                 self.total_principal_due,
                 Duration::between(&self.last_update_time, ctime),
             )
-            .expect("TODO: the method should return Option<_>")
-                + self.total_interest_due
+            .map(|interest| interest + self.total_interest_due)
         }
     }
 
@@ -100,7 +99,9 @@ impl<Lpn> Total<Lpn> {
         amount: Coin<Lpn>,
         loan_interest_rate: Percent100,
     ) -> Result<&Self, ContractError> {
-        self.total_interest_due = self.total_interest_due_by_now(&ctime);
+        self.total_interest_due = self
+            .total_interest_due_by_now(&ctime)
+            .ok_or(ContractError::overflow("Borrow interest overflow"))?;
 
         let new_total_principal_due =
             self.total_principal_due
@@ -141,13 +142,13 @@ impl<Lpn> Total<Lpn> {
         loan_interest_payment: Coin<Lpn>,
         loan_principal_payment: Coin<Lpn>,
         loan_interest_rate: Percent100,
-    ) -> &Self {
+    ) -> Option<&Self> {
         // The interest payment calculation of loans is the source of truth.
         // Therefore, it is possible for the rounded-down total interest due from `total_interest_due_by_now`
         // to become less than the sum of loans' interests. Taking 0 when subtracting a loan's interest from the total is a safe solution.
         let new_total_interest_due = self
             .total_interest_due_by_now(&ctime)
-            .saturating_sub(loan_interest_payment);
+            .map(|interest| interest.saturating_sub(loan_interest_payment))?;
 
         let new_total_principal_due = self
             .total_principal_due
@@ -177,7 +178,7 @@ impl<Lpn> Total<Lpn> {
 
         self.last_update_time = ctime;
 
-        self
+        Some(self)
     }
 
     pub fn deposit(&mut self, receipts: Coin<NLpn>) -> Result<&mut Self, ContractError> {
@@ -259,7 +260,7 @@ mod test {
 
         block_time = block_time.plus_nanos(Duration::YEAR.nanos() / 2);
         let interest_due = total.total_interest_due_by_now(&block_time);
-        assert_eq!(interest_due, test::lpn_coin(1000));
+        assert_eq!(interest_due, Some(test::lpn_coin(1000)));
 
         total.repay(
             block_time,
@@ -271,7 +272,7 @@ mod test {
 
         block_time = block_time.plus_nanos(Duration::YEAR.nanos() / 2);
         let interest_due = total.total_interest_due_by_now(&block_time);
-        assert_eq!(interest_due, test::lpn_coin(500));
+        assert_eq!(interest_due, Some(test::lpn_coin(500)));
     }
 
     #[test]
@@ -293,7 +294,10 @@ mod test {
             .borrow(block_time, borrow_loan1, loan1_annual_interest_rate)
             .unwrap();
         assert_eq!(total.total_principal_due(), borrow_loan1);
-        assert_eq!(total.total_interest_due_by_now(&block_time), Coin::ZERO);
+        assert_eq!(
+            total.total_interest_due_by_now(&block_time),
+            Some(Coin::ZERO)
+        );
 
         block_time = block_time.plus_days(59);
 
@@ -307,7 +311,7 @@ mod test {
         };
 
         let total_interest_due = total.total_interest_due_by_now(&block_time);
-        assert_eq!(total_interest_due, loan1.interest_due(&block_time));
+        assert_eq!(total_interest_due, Some(loan1.interest_due(&block_time)));
 
         total
             .borrow(block_time, borrow_loan2, loan2_annual_interest_rate)
