@@ -1,6 +1,6 @@
 use std::{collections::HashSet, marker::PhantomData};
 
-use finance::{error::Error as FinanceError, price::Price};
+use finance::price::Price;
 use observations::{Observations, ObservationsRead};
 use sdk::cosmwasm_std::{Addr, Timestamp};
 
@@ -97,9 +97,9 @@ where
                         .and_then(|b| a.checked_add(b))
                 })
             })
-            .ok_or(PriceFeedsError::Finance(FinanceError::Overflow(
+            .ok_or(PriceFeedsError::overflow(
                 "Overflow while calculating the sum of the prices",
-            )))
+            ))
     }
 
     fn valid_observations(&self, since: &Timestamp) -> Result<Vec<Observation<C, QuoteC>>> {

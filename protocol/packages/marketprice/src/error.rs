@@ -2,6 +2,7 @@ use std::convert::Infallible;
 
 use thiserror::Error;
 
+use finance::error::Error as FinanceError;
 use sdk::cosmwasm_std::StdError;
 
 #[derive(Error, Debug, PartialEq)]
@@ -21,8 +22,8 @@ pub enum PriceFeedsError {
     #[error("[Market Price; Feeds] {0}")]
     Currency(#[from] currency::error::Error),
 
-    #[error("[Market Price; Feeds] Price multiplication overflow")]
-    PriceMultiplicationOverflow(),
+    #[error("[Market Price; Feeds] {0}")]
+    Finance(#[from] FinanceError),
 
     #[error("[Market Price; Feeds] {0}")]
     Finance(#[from] finance::error::Error),
@@ -41,6 +42,12 @@ pub enum PriceFeedsError {
 }
 
 pub type Result<T> = std::result::Result<T, PriceFeedsError>;
+
+impl PriceFeedsError {
+    pub fn overflow(msg: &'static str) -> Self {
+        PriceFeedsError::Finance(FinanceError::Overflow(msg))
+    }
+}
 
 pub(crate) fn config_error_if(check: bool, msg: &str) -> Result<()> {
     if check {
