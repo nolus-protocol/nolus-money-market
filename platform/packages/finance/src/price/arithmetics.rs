@@ -46,7 +46,7 @@ where
     /// the larger value to fit within the price amount limits. If that would make any of them get to zero,
     /// then return [None].
     ///
-    /// Price(amount, amount_quote) * Ratio(nominator / denominator) = Price(amount * denominator, amount_quote * nominator)
+    /// Price(amount, amount_quote) * SimpleFraction(nominator / denominator) = Price(amount * denominator, amount_quote * nominator)
     /// where the pairs (amount, nominator) and (amount_quote, denominator) are transformed into co-prime numbers.
     /// Please note that Price(amount, amount_quote) is like SimpleFraction(amount_quote / amount).
     pub fn lossy_mul<F, U>(self, rhs: F) -> Option<Self>

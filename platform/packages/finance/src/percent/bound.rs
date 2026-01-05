@@ -5,12 +5,7 @@ use std::ops::{Add, Sub};
 
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    coin::{Amount, DoubleCoinPrimitive},
-    error::Error,
-    fraction::Unit as FractionUnit,
-    ratio::SimpleFraction,
-};
+use crate::{coin::Amount, error::Error, fraction::Unit as FractionUnit, ratio::SimpleFraction};
 
 use super::Units;
 
@@ -132,17 +127,10 @@ impl<const UPPER_BOUND: Units> Display for BoundPercent<UPPER_BOUND> {
     }
 }
 
-// TODO: Revisit it's usage after refactoring Fractionable
+// TODO: Revisit it's usage after refactoring Price::lossy_mul() to use SimpleFraction<Quote, C>
 impl<const UPPER_BOUND: Units> From<BoundPercent<UPPER_BOUND>> for Amount {
     fn from(percent: BoundPercent<UPPER_BOUND>) -> Self {
         Amount::from(percent.0)
-    }
-}
-
-// TODO: Remove when Fractionable trait boundaries include the traits ToPrimitive and TryFromPrimitive
-impl<const UPPER_BOUND: Units> From<BoundPercent<UPPER_BOUND>> for DoubleCoinPrimitive {
-    fn from(percent: BoundPercent<UPPER_BOUND>) -> Self {
-        percent.units().into()
     }
 }
 

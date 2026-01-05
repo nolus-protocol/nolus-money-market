@@ -34,8 +34,6 @@ impl<C, const UPPER_BOUND: PercentUnits> Fractionable<BoundPercent<UPPER_BOUND>>
 
 impl<C, Q> Fractionable<Coin<Q>> for Coin<C> {}
 
-// Since both Duration and BoundPercent may appear as generic parameters,
-// ToDoublePrimitive is used instead of CommonDoublePrimitive to avoid ambiguity
 impl<C> IntoMax<DoubleCoinPrimitive> for Coin<C> {
     fn into_max(self) -> DoubleCoinPrimitive {
         self.to_double()
