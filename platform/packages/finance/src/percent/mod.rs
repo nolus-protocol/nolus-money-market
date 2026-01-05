@@ -36,7 +36,7 @@ impl Percent100 {
     {
         debug_assert!(parts <= total);
 
-        Fraction::of(&Ratio::new(parts, total), Self::HUNDRED)
+        Ratio::new(parts, total).of(Self::HUNDRED)
     }
 
     fn to_ratio(self) -> Ratio<Self> {
@@ -50,7 +50,7 @@ impl Percent {
         Self: Fractionable<U>,
         U: FractionUnit + IntoMax<<Self as CommonDoublePrimitive<U>>::CommonDouble>,
     {
-        Rational::of(&SimpleFraction::new(nominator, denominator), Self::HUNDRED)
+        SimpleFraction::new(nominator, denominator).of(Self::HUNDRED)
     }
 }
 
