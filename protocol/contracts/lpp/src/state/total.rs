@@ -150,10 +150,7 @@ impl<Lpn> Total<Lpn> {
             .total_interest_due_by_now(&ctime)
             .map(|interest| interest.saturating_sub(loan_interest_payment))?;
 
-        let new_total_principal_due = self
-            .total_principal_due
-            .checked_sub(loan_principal_payment)
-            .expect("Unexpected overflow when subtracting loan principal payment from total principal due");
+        let new_total_principal_due = self.calculate_total_principal_due(loan_principal_payment);
 
         if new_total_principal_due.is_zero() {
             // Due to rounding errors, the calculated total interest due might deviate from
@@ -219,6 +216,13 @@ impl<Lpn> Total<Lpn> {
 
     fn estimated_annual_interest(&self) -> Coin<Lpn> {
         self.annual_interest_rate.of(self.total_principal_due)
+    }
+
+    fn calculate_total_principal_due(&self, loan_principal_payment: Coin<Lpn>) -> Coin<Lpn> {
+        self
+            .total_principal_due
+            .checked_sub(loan_principal_payment)
+            .expect("Unexpected overflow when subtracting loan principal payment from total principal due")
     }
 }
 
