@@ -45,7 +45,7 @@ impl<C> IntoMax<DoubleCoinPrimitive> for Coin<C> {
 impl<C> ToDoublePrimitive for Coin<C> {
     type Double = DoubleCoinPrimitive;
 
-    fn to_double(&self) -> Self::Double {
+    fn to_double(self) -> Self::Double {
         self.amount.into()
     }
 }
