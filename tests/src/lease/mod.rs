@@ -260,7 +260,7 @@ pub(super) fn complete_init_lease<
     DownpaymentC: CurrencyDef,
     DownpaymentC::Group: MemberOf<PaymentGroup>,
 {
-    let quote: QuoteResponse = common::leaser::query_quote::<DownpaymentC, LeaseCurrency>(
+    let quote = common::leaser::query_quote::<DownpaymentC, LeaseCurrency>(
         &test_case.app,
         test_case.address_book.leaser().clone(),
         downpayment,
@@ -398,8 +398,8 @@ where
     let last_paid = now;
     let quote_result = quote_query(test_case, downpayment);
     let total: Coin<AssetC> = Coin::<AssetC>::try_from(quote_result.total).unwrap();
-    let total_lpn: LpnCoin = price::total(total, price_lpn_of::<AssetC>()).unwrap();
-    let expected_principal: LpnCoin = total_lpn
+    let total_lpn = price::total(total, price_lpn_of::<AssetC>()).unwrap();
+    let expected_principal = total_lpn
         - price::total(downpayment, price_lpn_of::<DownpaymentC>()).unwrap()
         - price::total(payments, price_lpn_of::<PaymentC>()).unwrap();
     let due_period_start = (now - max_due).max(last_paid);

@@ -26,7 +26,7 @@ use sdk::{
 
 use crate::{
     common::{
-        self, CwCoin, USER, ibc, lease as common_lease,
+        self, USER, ibc, lease as common_lease,
         leaser::{self as leaser_mod, Instantiator as LeaserInstantiator},
         swap,
         test_case::{TestCase, app::App, response::ResponseWithInterChainMsgs},
@@ -35,17 +35,16 @@ use crate::{
 };
 
 use super::{
-    DOWNPAYMENT, LeaseCoin, LeaseCurrency, LeaseTestCase, LpnCoin, LpnCurrency, PaymentCoin,
-    PaymentCurrency,
+    DOWNPAYMENT, LeaseCoin, LeaseCurrency, LpnCoin, LpnCurrency, PaymentCoin, PaymentCurrency,
 };
 
 #[test]
 fn partial_repay() {
-    let mut test_case: LeaseTestCase = super::create_test_case::<PaymentCurrency>();
+    let mut test_case = super::create_test_case::<PaymentCurrency>();
     let downpayment = DOWNPAYMENT;
 
     let amount = super::quote_borrow(&test_case, downpayment);
-    let partial_payment: PaymentCoin = Fraction::<PaymentCoin>::of(
+    let partial_payment = Fraction::<PaymentCoin>::of(
         &Ratio::new(common::coin(1), common::coin(2)),
         super::create_payment_coin(amount.into()),
     );
@@ -65,7 +64,7 @@ fn partial_repay() {
 #[test]
 fn partial_repay_after_time() {
     let mut test_case = super::create_test_case::<PaymentCurrency>();
-    let downpayment: PaymentCoin = DOWNPAYMENT;
+    let downpayment = DOWNPAYMENT;
 
     let lease = super::open_lease(&mut test_case, downpayment, None);
 
@@ -87,7 +86,7 @@ fn partial_repay_after_time() {
 
     super::feed_price(&mut test_case);
 
-    let due_margin_to_pay: LpnCoin = LpnCoin::try_from(due_margin)
+    let due_margin_to_pay = LpnCoin::try_from(due_margin)
         .unwrap()
         .checked_div(2)
         .unwrap();
@@ -136,20 +135,20 @@ fn insufficient_payment() {
 
     let lease = super::open_lease(&mut test_case, downpayment, None);
 
-    let payment: PaymentCoin = super::create_payment_coin(49);
+    let payment = super::create_payment_coin(49);
     repay_partial(&mut test_case, lease, payment);
 }
 
 #[test]
 fn full_repay() {
     let mut test_case = super::create_test_case::<PaymentCurrency>();
-    let downpayment: PaymentCoin = DOWNPAYMENT;
+    let downpayment = DOWNPAYMENT;
     let lease = super::open_lease(&mut test_case, downpayment, None);
 
     let borrowed_lpn = super::quote_borrow(&test_case, downpayment);
-    let borrowed: PaymentCoin = price::total(borrowed_lpn, super::price_lpn_of().inv()).unwrap();
+    let borrowed = price::total(borrowed_lpn, super::price_lpn_of().inv()).unwrap();
 
-    let expected_amount: LeaseCoin = price::total(
+    let expected_amount = price::total(
         price::total(
             downpayment + borrowed,
             /* Payment -> LPN */ super::price_lpn_of(),
@@ -204,7 +203,7 @@ fn full_repay_with_max_ltd() {
         super::state_query(&test_case, lease.clone())
     );
 
-    let expected_amount: LeaseCoin = price::total(
+    let expected_amount = price::total(
         price::total(
             downpayment + borrowed,
             /* Payment -> LPN */ super::price_lpn_of(),
@@ -226,10 +225,10 @@ fn full_repay_with_max_ltd() {
 #[test]
 fn full_repay_with_excess() {
     let mut test_case = super::create_test_case::<PaymentCurrency>();
-    let downpayment: PaymentCoin = DOWNPAYMENT;
+    let downpayment = DOWNPAYMENT;
     let lease = super::open_lease(&mut test_case, downpayment, None);
 
-    let borrowed: PaymentCoin = price::total(
+    let borrowed = price::total(
         super::quote_borrow(&test_case, downpayment),
         super::price_lpn_of().inv(),
     )
@@ -242,7 +241,7 @@ fn full_repay_with_excess() {
 
     let overpayment = super::create_payment_coin(5);
     let overpayment_lpn = price::total(overpayment, super::price_lpn_of()).unwrap();
-    let payment: PaymentCoin = borrowed + overpayment;
+    let payment = borrowed + overpayment;
 
     repay_full(
         &mut test_case,
@@ -349,7 +348,7 @@ where
         },
     );
 
-    let transfer_amount: CwCoin = ibc::expect_remote_transfer(
+    let transfer_amount = ibc::expect_remote_transfer(
         &mut response,
         TestCase::DEX_CONNECTION_ID,
         TestCase::LEASE_ICA_ID,
@@ -388,7 +387,7 @@ fn send_payment_and_transfer<
 where
     PaymentC: CurrencyDef,
 {
-    let payment_cw: CwCoin = common::cwcoin(payment);
+    let payment_cw = common::cwcoin(payment);
     let mut response: ResponseWithInterChainMsgs<'_, ()> = test_case
         .app
         .execute(
@@ -400,9 +399,9 @@ where
         .unwrap()
         .ignore_response();
 
-    let ica_addr: Addr = TestCase::ica_addr(&lease_addr, TestCase::LEASE_ICA_ID);
+    let ica_addr = TestCase::ica_addr(&lease_addr, TestCase::LEASE_ICA_ID);
 
-    let transfer_amount: CwCoin = ibc::expect_transfer(
+    let transfer_amount = ibc::expect_transfer(
         &mut response,
         TestCase::LEASER_IBC_CHANNEL,
         lease_addr.as_str(),
@@ -426,7 +425,7 @@ fn expect_started_closing(
     mut repay_response: ResponseWithInterChainMsgs<'_, ()>,
     expected_funds: LeaseCoin,
 ) {
-    let transfer_amount: CwCoin = ibc::expect_remote_transfer(
+    let transfer_amount = ibc::expect_remote_transfer(
         &mut repay_response,
         TestCase::DEX_CONNECTION_ID,
         TestCase::LEASE_ICA_ID,
@@ -499,11 +498,10 @@ fn finish_closing<ProtocolsRegistry, Treasury, Profit, Reserve, Lpp, Oracle, Tim
     lease: Addr,
     expected_funds: LeaseCoin,
 ) -> AppResponse {
-    let customer_addr: Addr = testing::user(USER);
-    let ica_addr: Addr = TestCase::ica_addr(&lease, TestCase::LEASE_ICA_ID);
+    let customer_addr = testing::user(USER);
+    let ica_addr = TestCase::ica_addr(&lease, TestCase::LEASE_ICA_ID);
 
-    let user_balance: LeaseCoin =
-        platform::bank::balance(&customer_addr, test_case.app.query()).unwrap();
+    let user_balance = platform::bank::balance(&customer_addr, test_case.app.query()).unwrap();
 
     let app_resp = ibc::do_transfer(
         &mut test_case.app,

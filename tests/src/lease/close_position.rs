@@ -22,14 +22,13 @@ use sdk::{
 use swap::testing::SwapRequest;
 
 use crate::common::{
-    self, ADMIN, CwCoin, USER, ibc, lease as common_lease,
+    self, ADMIN, USER, ibc, lease as common_lease,
     leaser::{self, Instantiator},
     test_case::{TestCase, response::ResponseWithInterChainMsgs},
 };
 
 use super::{
-    DOWNPAYMENT, LeaseCoin, LeaseCurrency, LeaseTestCase, LpnCoin, LpnCurrency, PaymentCoin,
-    PaymentCurrency,
+    DOWNPAYMENT, LeaseCoin, LeaseCurrency, LeaseTestCase, LpnCoin, LpnCurrency, PaymentCurrency,
 };
 
 #[test]
@@ -52,7 +51,7 @@ fn close_by_another_user() {
 
 #[test]
 fn full_close() {
-    let lease_amount: LeaseCoin = lease_amount();
+    let lease_amount = lease_amount();
     let customer = testing::user(USER);
     let mut test_case = super::create_test_case::<PaymentCurrency>();
 
@@ -86,10 +85,10 @@ fn full_close() {
 
 #[test]
 fn partial_close_loan_not_closed() {
-    let lease_amount: LeaseCoin = lease_amount();
-    let principal: LpnCoin = price::total(lease_amount, super::price_lpn_of()).unwrap()
+    let lease_amount = lease_amount();
+    let principal = price::total(lease_amount, super::price_lpn_of()).unwrap()
         - price::total(DOWNPAYMENT, super::price_lpn_of()).unwrap();
-    let close_amount: LeaseCoin = price::total(
+    let close_amount = price::total(
         principal - common::coin(1234567),
         super::price_lpn_of().inv(),
     )
@@ -136,14 +135,13 @@ fn partial_close_loan_not_closed() {
 
 #[test]
 fn partial_close_loan_closed() {
-    let lease_amount: LeaseCoin = lease_amount();
-    let principal: LpnCoin = price::total(lease_amount, super::price_lpn_of()).unwrap()
+    let lease_amount = lease_amount();
+    let principal = price::total(lease_amount, super::price_lpn_of()).unwrap()
         - price::total(DOWNPAYMENT, super::price_lpn_of()).unwrap();
-    let exp_change: LpnCoin = common::coin(345);
+    let exp_change = common::coin(345);
 
     let repay_principal = principal + exp_change;
-    let close_amount: LeaseCoin =
-        price::total(repay_principal, super::price_lpn_of().inv()).unwrap();
+    let close_amount = price::total(repay_principal, super::price_lpn_of().inv()).unwrap();
 
     let customer = testing::user(USER);
     let mut test_case = super::create_test_case::<PaymentCurrency>();
@@ -183,9 +181,9 @@ fn partial_close_loan_closed() {
 
 #[test]
 fn partial_close_invalid_currency() {
-    let mut test_case: LeaseTestCase = super::create_test_case::<PaymentCurrency>();
+    let mut test_case = super::create_test_case::<PaymentCurrency>();
 
-    let lease: Addr = super::open_lease(&mut test_case, DOWNPAYMENT, None);
+    let lease = super::open_lease(&mut test_case, DOWNPAYMENT, None);
 
     let err = test_case
         .app
@@ -214,7 +212,7 @@ fn partial_close_invalid_currency() {
 fn partial_close_min_asset() {
     let min_asset_lpn = Instantiator::min_asset().try_into().unwrap();
     let min_asset = price::total(min_asset_lpn, super::price_lpn_of().inv()).unwrap();
-    let lease_amount: LeaseCoin = lease_amount();
+    let lease_amount = lease_amount();
 
     let mut test_case = super::create_test_case::<PaymentCurrency>();
 
@@ -269,8 +267,8 @@ fn do_close(
     exp_change: LpnCoin,
     exp_lease_amount_after: LeaseCoin,
 ) -> Addr {
-    let user_balance_before: PaymentCoin = user_balance(customer_addr, test_case);
-    let lease_addr: Addr = super::open_lease(test_case, DOWNPAYMENT, None);
+    let user_balance_before = user_balance(customer_addr, test_case);
+    let lease_addr = super::open_lease(test_case, DOWNPAYMENT, None);
     let lease_ica = TestCase::ica_addr(&lease_addr, TestCase::LEASE_ICA_ID);
 
     assert!(matches!(
@@ -278,7 +276,7 @@ fn do_close(
         StateResponse::Opened { .. }
     ));
 
-    let close_amount_in_lpn: LpnCoin = price::total(close_amount, super::price_lpn_of()).unwrap();
+    let close_amount_in_lpn = price::total(close_amount, super::price_lpn_of()).unwrap();
     let response_close = send_close(
         test_case,
         lease_addr.clone(),
@@ -305,7 +303,7 @@ fn do_close(
     )
     .ignore_response();
 
-    let transfer_amount: CwCoin = ibc::expect_remote_transfer(
+    let transfer_amount = ibc::expect_remote_transfer(
         &mut response_swap,
         TestCase::DEX_CONNECTION_ID,
         TestCase::LEASE_ICA_ID,
