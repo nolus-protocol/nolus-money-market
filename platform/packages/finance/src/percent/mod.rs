@@ -8,6 +8,8 @@ use crate::{
     rational::Rational,
 };
 
+pub(crate) use fractionable::DoubleBoundPercentPrimitive;
+
 pub mod bound;
 mod fraction;
 mod fractionable;
