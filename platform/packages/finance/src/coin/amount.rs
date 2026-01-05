@@ -30,8 +30,8 @@ impl IntoMax<DoubleCoinPrimitive> for Amount {
 impl ToDoublePrimitive for Amount {
     type Double = DoubleCoinPrimitive;
 
-    fn to_double(&self) -> Self::Double {
-        DoubleCoinPrimitive::from(*self)
+    fn to_double(self) -> Self::Double {
+        DoubleCoinPrimitive::from(self)
     }
 }
 

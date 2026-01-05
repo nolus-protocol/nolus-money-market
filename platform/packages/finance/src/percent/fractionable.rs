@@ -33,7 +33,7 @@ impl<const UPPER_BOUND: Units> IntoMax<DoubleCoinPrimitive> for BoundPercent<UPP
 impl<const UPPER_BOUND: Units> ToDoublePrimitive for BoundPercent<UPPER_BOUND> {
     type Double = u64;
 
-    fn to_double(&self) -> Self::Double {
+    fn to_double(self) -> Self::Double {
         self.units().into()
     }
 }
