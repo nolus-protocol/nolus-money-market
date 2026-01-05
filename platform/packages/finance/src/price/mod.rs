@@ -258,7 +258,7 @@ mod test {
         let price = price::total_of(c(amount)).is(q(amount_quote));
         let factor = 17;
         let coin_quote = q(amount_quote * factor);
-        let coin = Coin::new(amount * factor);
+        let coin = c(amount * factor);
 
         assert_eq!(coin_quote, calc_total(coin, price));
         assert_eq!(coin, super::total(coin_quote, price.inv()).unwrap());
