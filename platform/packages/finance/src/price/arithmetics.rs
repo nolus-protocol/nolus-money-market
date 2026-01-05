@@ -48,7 +48,7 @@ where
     ///
     /// Price(amount, amount_quote) * Ratio(nominator / denominator) = Price(amount * denominator, amount_quote * nominator)
     /// where the pairs (amount, nominator) and (amount_quote, denominator) are transformed into co-prime numbers.
-    /// Please note that Price(amount, amount_quote) is like Ratio(amount_quote / amount).
+    /// Please note that Price(amount, amount_quote) is like SimpleFraction(amount_quote / amount).
     pub fn lossy_mul<F, U>(self, rhs: F) -> Option<Self>
     where
         F: Into<SimpleFraction<U>>,
@@ -292,6 +292,7 @@ mod test {
         coin::Amount,
         price::{
             self, Price,
+            arithmetics::lossy_mul_inner,
             test::{Coin, QuoteCoin, QuoteQuoteCoin, c, price, q},
         },
         ratio::SimpleFraction,
@@ -401,6 +402,45 @@ mod test {
         lossy_mul_overflow_impl(Amount::MAX - 1, Q1, A2, A2 / Q1 - 1, SHIFTS); // the aim is q1 * q2 < a2
         // due to q1*q2 the a1*a2 gets to 0
         lossy_mul_overflow_impl(Q1, Amount::MAX - 1, A2 / Q1 - 1, A2, SHIFTS); // the aim is a1 * a2 < q2
+    }
+
+    #[test]
+    fn lossy_mul() {
+        assert_eq!(
+            Some(fraction(3, 10)),
+            lossy_mul_inner(fraction(3, 4), fraction(2, 5))
+        );
+        assert_eq!(
+            Some(fraction(Amount::MAX, 20)),
+            lossy_mul_inner(fraction(Amount::MAX, 4), fraction(1, 5))
+        );
+        assert_eq!(
+            Some(fraction(3, 2)),
+            lossy_mul_inner(fraction(Amount::MAX, 4), fraction(6, Amount::MAX))
+        );
+        assert_eq!(
+            Some(fraction(1, 2)),
+            lossy_mul_inner(fraction(Amount::MAX / 3, 4), fraction(6, Amount::MAX - 1))
+        );
+    }
+
+    #[test]
+    fn lossy_mul_inner_with_trim() {
+        assert_eq!(
+            Some(fraction(Amount::MAX - 1, 27 >> 1)),
+            lossy_mul_inner(fraction(Amount::MAX - 1, 3), fraction(2, 9))
+        );
+        assert_eq!(
+            Some(fraction(Amount::MAX - 1, 27 >> 1)),
+            lossy_mul_inner(fraction(Amount::MAX / 2, 3), fraction(4, 9))
+        );
+    }
+
+    #[test]
+    fn lossy_mul_inner_panic() {
+        let lhs = fraction(Amount::MAX / 5, 3);
+        let rhs = fraction(Amount::MAX / 2, 7);
+        assert!(lossy_mul_inner(lhs, rhs).is_none())
     }
 
     #[test]
