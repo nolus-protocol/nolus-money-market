@@ -22,7 +22,7 @@ pub enum ContractError {
     ConvertFromQuote(oracle::stub::Error),
 
     #[error("[Lpp] {0}")]
-    Finance(#[from] finance::error::Error),
+    Finance(#[from] FinanceError),
 
     #[error("[Lpp] {0}")]
     Platform(#[from] platform::error::Error),
