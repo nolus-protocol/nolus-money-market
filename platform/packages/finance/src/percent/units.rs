@@ -21,8 +21,8 @@ impl IntoMax<u64> for Units {
 impl ToDoublePrimitive for Units {
     type Double = u64;
 
-    fn to_double(&self) -> Self::Double {
-        u64::from(*self)
+    fn to_double(self) -> Self::Double {
+        u64::from(self)
     }
 }
 

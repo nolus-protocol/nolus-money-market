@@ -29,7 +29,7 @@ where
 pub trait ToDoublePrimitive {
     type Double;
 
-    fn to_double(&self) -> Self::Double;
+    fn to_double(self) -> Self::Double;
 }
 
 /// Conversion from `Max` back to the domain type
