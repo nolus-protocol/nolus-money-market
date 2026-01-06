@@ -16,7 +16,7 @@ ARG binaryen_checksum="e959f2170af4c20c552e9de3a0253704d6a9d2766e8fdb88e4d6ac4ba
 
 ARG binaryen_version="123"
 
-ARG cargo_audit_version="0.21.2"
+ARG cargo_audit_version="0.22.0"
 
 ARG cargo_udeps_version="0.1.57"
 
