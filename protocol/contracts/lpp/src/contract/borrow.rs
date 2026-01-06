@@ -9,6 +9,7 @@ use platform::{
 use sdk::cosmwasm_std::{Addr, Deps, DepsMut, Env, MessageInfo, Storage};
 
 use crate::{
+    contract::ContractError,
     loans::Repo,
     lpp::LiquidityPool,
     msg::{LoanResponse, QueryLoanResponse, QueryQuoteResponse},
@@ -62,7 +63,10 @@ where
         let now = env.block.time;
         let payment = loan.repay(&now, repay_amount);
         Repo::save(deps.storage, lease_addr.clone(), &loan)
-            .inspect(|()| lpp.register_repay_loan(now, &loan, &payment))
+            .and_then(|()| {
+                lpp.register_repay_loan(now, &loan, &payment)
+                    .ok_or(ContractError::overflow("Repay loan overflow"))
+            })
             .and_then(|()| lpp.save(deps.storage))
             .map(|()| payment)
     })?;
