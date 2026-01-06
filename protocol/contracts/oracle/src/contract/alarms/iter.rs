@@ -148,8 +148,9 @@ where
             .alarms(price)
             .map_err(Into::into)
             .map(|alarms_iter| {
-                let mapper: AlarmIterMapFn<ErrorG> = |item| item.map_err(Into::into);
-                alarms_iter.map(mapper)
+                let error_handler: AlarmIterMapFn<ErrorG> =
+                    |may_alarm| may_alarm.map_err(Into::into);
+                alarms_iter.map(error_handler)
             })
     }
 }

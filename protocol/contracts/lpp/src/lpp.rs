@@ -193,7 +193,7 @@ where
         self.calculate_price(now, pending_withdraw)
             .and_then(|price| {
                 price::total(receipts, price).ok_or(ContractError::overflow(
-                    "Overflow while calculating the receipts",
+                    "Overflow while calculating the withdrawal amount",
                 ))
             })
             .and_then(|amount_lpn: Coin<Lpn>| {
