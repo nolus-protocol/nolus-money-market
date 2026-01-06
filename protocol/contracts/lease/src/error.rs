@@ -114,6 +114,10 @@ impl ContractError {
             Ok(())
         }
     }
+
+    pub fn overflow(msg: &'static str) -> Self {
+        ContractError::FinanceError(FinanceError::Overflow(msg))
+    }
 }
 
 pub type ContractResult<T> = Result<T, ContractError>;
