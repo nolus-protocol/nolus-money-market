@@ -85,6 +85,7 @@ pub enum ContractError {
 
 pub type Result<T> = std::result::Result<T, ContractError>;
 
+// TODO: Replace `FinanceError::Overflow` with a generic template with parameters (next branch)
 impl ContractError {
     pub fn overflow(msg: &'static str) -> Self {
         ContractError::Finance(FinanceError::Overflow(msg))
