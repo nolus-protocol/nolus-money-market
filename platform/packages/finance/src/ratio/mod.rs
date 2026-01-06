@@ -3,6 +3,7 @@ use std::fmt::Debug;
 use serde::{Deserialize, Serialize};
 
 use crate::{
+    coin::Amount,
     error::{Error, Result as FinanceResult},
     fraction::{Coprime, Fraction, Unit as FractionUnit},
     fractionable::{Fractionable, IntoMax},
@@ -10,7 +11,7 @@ use crate::{
     zero::Zero,
 };
 
-mod multiplication;
+pub(super) mod multiplication;
 
 /// A part of something that is divisible.
 /// The total should be non-zero.
@@ -111,6 +112,13 @@ where
 
     pub(super) const fn denominator(&self) -> U {
         self.denominator
+    }
+
+    pub(super) fn to_amount_fraction(self) -> SimpleFraction<Amount>
+    where
+        U: Into<Amount>,
+    {
+        SimpleFraction::new(self.nominator.into(), self.denominator.into())
     }
 }
 
