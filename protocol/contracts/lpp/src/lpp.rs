@@ -273,13 +273,15 @@ where
         now: Timestamp,
         loan: &Loan<Lpn>,
         payment: &RepayShares<Lpn>,
-    ) {
-        self.total.repay(
-            now,
-            payment.interest,
-            payment.principal,
-            loan.annual_interest_rate,
-        );
+    ) -> Option<()> {
+        self.total
+            .repay(
+                now,
+                payment.interest,
+                payment.principal,
+                loan.annual_interest_rate,
+            )
+            .map(|_| ())
     }
 
     fn uncommited_balance(&self) -> Result<Coin<Lpn>> {
@@ -505,7 +507,8 @@ mod test {
         let payment = loan.interest_due(&now);
 
         let repay = loan.repay(&now, payment);
-        lpp.register_repay_loan(now, &loan, &repay);
+        let registration = lpp.register_repay_loan(now, &loan, &repay);
+        assert_eq!(registration, Some(()));
         Repo::save(&mut store, lease_addr.clone(), &loan).unwrap();
 
         assert_eq!(Coin::ZERO, repay.excess);
@@ -526,7 +529,8 @@ mod test {
 
         // an immediate repay after repay should pass (loan_interest_due==0 bug)
         let repay = loan.repay(&now, Coin::ZERO);
-        lpp.register_repay_loan(now, &loan, &repay);
+        let registration1 = lpp.register_repay_loan(now, &loan, &repay);
+        assert_eq!(registration1, Some(()));
 
         // wait for another 36 days
         let now = now + Duration::from_days(36);
@@ -534,7 +538,8 @@ mod test {
         const PAYED_EXTRA: Coin<TheCurrency> = test::lpn_coin(100);
         // pay everything + excess
         let repay = loan.repay(&now, loan.interest_due(&now) + LOAN_AMOUNT + PAYED_EXTRA);
-        lpp.register_repay_loan(now, &loan, &repay);
+        let registration2 = lpp.register_repay_loan(now, &loan, &repay);
+        assert_eq!(registration2, Some(()));
 
         assert_eq!(PAYED_EXTRA, repay.excess);
     }
@@ -615,7 +620,9 @@ mod test {
 
         //zero repay
         let payment = loan_before.repay(&now, Coin::ZERO);
-        lpp.register_repay_loan(now, &loan_before, &payment);
+        let registration = lpp.register_repay_loan(now, &loan_before, &payment);
+        assert_eq!(registration, Some(()));
+
         Repo::save(&mut store, loan_addr.clone(), &loan_before).unwrap();
 
         let loan_after = Repo::query(&store, loan_addr).unwrap().unwrap();
@@ -660,7 +667,9 @@ mod test {
         assert_eq!(Coin::ZERO, loan.interest_due(&now));
 
         let repay = loan.repay(&now, test::lpn_coin(5_000));
-        lpp.register_repay_loan(now, &loan, &repay);
+        let registration = lpp.register_repay_loan(now, &loan, &repay);
+        assert_eq!(registration, Some(()));
+
         Repo::save(&mut store, loan_addr.clone(), &loan).unwrap();
 
         assert_eq!(Coin::ZERO, repay.excess);
@@ -745,7 +754,9 @@ mod test {
 
             let payment = loan.repay(&now, LOAN_REPAYMENT);
             Repo::save(&mut store, loan_addr.clone(), &loan).unwrap();
-            lpp.register_repay_loan(now, &loan, &payment);
+            let registration = lpp.register_repay_loan(now, &loan, &payment);
+            assert_eq!(registration, Some(()));
+
             assert_eq!(payment.excess, Coin::ZERO,);
             lpp.save(&mut store).unwrap();
         }
