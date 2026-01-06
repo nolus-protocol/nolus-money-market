@@ -20,6 +20,16 @@ where
     period.annualized_slice_of(interest_per_year)
 }
 
+pub fn annual_interest<U, R, P>(rate: R, principal: P) -> P
+where
+    U: IntoMax<<P as CommonDoublePrimitive<U>>::CommonDouble>,
+    R: Fraction<U>,
+    P: Fractionable<U> + Fractionable<Duration>,
+    Duration: IntoMax<<P as CommonDoublePrimitive<Duration>>::CommonDouble>,
+{
+    interest(rate, principal, Duration::YEAR).expect("The annual interest must not exceed 100%")
+}
+
 /// Computes how much time this payment covers, return.0, and the change, return.1
 ///
 /// The actual payment is equal to the payment minus the returned change.
