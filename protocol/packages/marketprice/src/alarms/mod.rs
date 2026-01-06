@@ -167,10 +167,10 @@ where
         C::Group: MemberOf<G>,
         BaseC: CurrencyDef,
     {
-        NormalizedPrice::new(&price).map(|norm_price| {
+        NormalizedPrice::new(&price).map(|ref norm_price| {
             AlarmsIterator(
-                self.iter_below(&norm_price)
-                    .chain(self.iter_above_or_equal(&norm_price)),
+                self.iter_below(norm_price)
+                    .chain(self.iter_above_or_equal(norm_price)),
             )
         })
     }
@@ -229,19 +229,19 @@ where
         BaseC: CurrencyDef,
     {
         NormalizedPrice::new(&below)
-            .and_then(|normalized_below| {
-                self.add_alarm_below_internal(subscriber.clone(), &normalized_below)
+            .and_then(|ref normalized_below| {
+                self.add_alarm_below_internal(subscriber.clone(), normalized_below)
             })
-            .and_then(|()| match above_or_equal {
+            .and_then(|()| match &above_or_equal {
                 None => self.remove_above_or_equal(subscriber),
-                Some(above_or_equal) => {
-                    NormalizedPrice::new(&above_or_equal).and_then(|normalized_above_or_equal| {
+                Some(above_or_equal) => NormalizedPrice::new(above_or_equal).and_then(
+                    |ref normalized_above_or_equal| {
                         self.add_alarm_above_or_equal_internal(
                             subscriber,
-                            &normalized_above_or_equal,
+                            normalized_above_or_equal,
                         )
-                    })
-                }
+                    },
+                ),
             })
     }
 
