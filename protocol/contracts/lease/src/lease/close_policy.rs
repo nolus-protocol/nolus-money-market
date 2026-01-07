@@ -27,20 +27,20 @@ where
         &self,
         asset_in_lpns: Price<Asset>,
         now: &Timestamp,
-    ) -> CloseStatus<Asset> {
-        let due = self.loan.state(now);
+    ) -> ContractResult<CloseStatus<Asset>> {
+        let due = self.loan.state(now)?;
 
         match self.position.debt(&due, asset_in_lpns) {
-            Debt::No => CloseStatus::Paid,
-            Debt::Ok { zone } => self
+            Debt::No => Ok(CloseStatus::Paid),
+            Debt::Ok { zone } => Ok(self
                 .position
                 .check_close(&due, asset_in_lpns)
                 .map(|close| CloseStatus::CloseAsked(close))
                 .unwrap_or_else(|| CloseStatus::None {
                     current_liability: zone,
                     steadiness: self.position.steadiness(&due, asset_in_lpns),
-                }),
-            Debt::Bad(liquidation) => CloseStatus::NeedLiquidation(liquidation),
+                })),
+            Debt::Bad(liquidation) => Ok(CloseStatus::NeedLiquidation(liquidation)),
         }
     }
 
