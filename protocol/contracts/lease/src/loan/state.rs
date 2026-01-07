@@ -58,7 +58,9 @@ impl Overdue {
                 overdue_period.length(),
             )
             .expect("TODO: handle potential None from interest::interest() properly");
-            let interest = lpp_loan.interest_due(&overdue_period.till());
+            let interest = lpp_loan
+                .interest_due(&overdue_period.till())
+                .expect("TODO: handle interest_due");
 
             Self::Accrued { interest, margin }
         }
