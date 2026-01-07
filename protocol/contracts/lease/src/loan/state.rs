@@ -170,8 +170,9 @@ mod test {
 
         let lpp_loan = LppLoanLocal::new(LOAN);
         let overdue = Overdue::new(&due_period_margin, max_due, MARGIN_INTEREST_RATE, &lpp_loan);
-        let exp_interest =
-            lpp_loan.interest_due(&(LOAN.interest_paid + due_period_length - max_due));
+        let exp_interest = lpp_loan
+            .interest_due(&(LOAN.interest_paid + due_period_length - max_due))
+            .unwrap();
         let exp_margin =
             interest::interest(MARGIN_INTEREST_RATE, LOAN.principal_due, overdue_period).unwrap();
         assert_eq!(
