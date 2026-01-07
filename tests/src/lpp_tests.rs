@@ -704,7 +704,7 @@ fn loan_open_and_repay() {
     assert_eq!(loan1_resp.annual_interest_rate, interest1);
     assert_eq!(
         loan1_resp.interest_due(&crate::block_time(&test_case)),
-        common::lpn_coin(interest1.of(loan1))
+        Some(common::coin(interest1.of(loan1)))
     );
 
     // repay from other addr
@@ -747,7 +747,7 @@ fn loan_open_and_repay() {
     assert_eq!(loan1_resp.principal_due, common::lpn_coin(loan1));
     assert_eq!(
         loan1_resp.interest_due(&crate::block_time(&test_case)),
-        common::lpn_coin(interest1.of(loan1) - repay_interest_part)
+        Some(common::coin(interest1.of(loan1) - repay_interest_part))
     );
 
     // repay interest + due part
@@ -778,7 +778,7 @@ fn loan_open_and_repay() {
 
     assert_eq!(
         loan1_resp.interest_due(&crate::block_time(&test_case)),
-        Coin::ZERO
+        Some(Coin::ZERO)
     );
 
     // repay interest + due part, close the loan
@@ -1040,7 +1040,7 @@ fn compare_lpp_states() {
     assert_eq!(loan1_resp.annual_interest_rate, interest1);
     assert_eq!(
         loan1_resp.interest_due(&crate::block_time(&test_case)),
-        common::lpn_coin(interest1.of(loan1))
+        Some(common::coin(interest1.of(loan1)))
     );
 
     // repay from other addr
@@ -1083,7 +1083,7 @@ fn compare_lpp_states() {
     assert_eq!(loan1_resp.principal_due, common::lpn_coin(loan1));
     assert_eq!(
         loan1_resp.interest_due(&crate::block_time(&test_case)),
-        common::lpn_coin(interest1.of(loan1) - repay_interest_part)
+        Some(common::coin(interest1.of(loan1) - repay_interest_part))
     );
 
     // repay interest + due part
@@ -1113,7 +1113,7 @@ fn compare_lpp_states() {
     );
     assert_eq!(
         loan1_resp.interest_due(&crate::block_time(&test_case)),
-        Coin::ZERO
+        Some(Coin::ZERO)
     );
 
     // repay interest + due part, close the loan
