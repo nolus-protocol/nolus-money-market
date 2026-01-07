@@ -50,7 +50,7 @@ where
         asset_in_lpns: Price<Asset>,
         now: &Timestamp,
     ) -> ContractResult<()> {
-        let due = self.loan.state(now);
+        let due = self.loan.state(now)?;
 
         self.position
             .change_close_policy(cmd, &due, asset_in_lpns)
