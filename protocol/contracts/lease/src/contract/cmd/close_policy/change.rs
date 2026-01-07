@@ -70,7 +70,7 @@ impl WithLease for ChangeCmd<'_, '_> {
             .and_then(|asset_in_lpns| {
                 lease
                     .change_close_policy(self.change, asset_in_lpns, self.now)
-                    .map(|()| lease.check_close_policy(asset_in_lpns, self.now))
+                    .and_then(|()| lease.check_close_policy(asset_in_lpns, self.now))
             })
             .and_then(|status| {
                 CloseStatusDTO::try_from_do(status, self.now, &self.time_alarms, self.price_alarms)

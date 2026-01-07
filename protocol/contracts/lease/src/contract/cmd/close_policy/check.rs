@@ -27,7 +27,7 @@ where
 {
     lease
         .price_of_lease_currency()
-        .map(|asset_in_lpns| lease.check_close_policy(asset_in_lpns, when))
+        .and_then(|asset_in_lpns| lease.check_close_policy(asset_in_lpns, when))
         .and_then(|status| CloseStatusDTO::try_from_do(status, when, time_alarms, price_alarms))
 }
 
