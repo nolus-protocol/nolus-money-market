@@ -49,11 +49,8 @@ pub enum Error {
         top_bound: Percent100,
     },
 
-    #[error("[Position] Computation overflow during `{operation}`: {details}")]
-    ComputationOverflow {
-        operation: &'static str,
-        details: String,
-    },
+    #[error("[Position] Overflow during `{0}`")]
+    ComputationOverflow(String),
 }
 
 impl Error {
@@ -83,8 +80,8 @@ impl Error {
         }
     }
 
-    pub fn overflow(operation: &'static str, details: String) -> Self {
-        Error::ComputationOverflow { operation, details }
+    pub fn overflow(cause: &'static str, details: String) -> Self {
+        Error::ComputationOverflow(format!("`{cause}`. `{details}`"))
     }
 }
 
