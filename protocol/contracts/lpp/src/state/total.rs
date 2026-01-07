@@ -102,18 +102,25 @@ impl<Lpn> Total<Lpn> {
     ) -> Result<&Self, ContractError> {
         self.total_interest_due = self.total_interest_due_by_now(&ctime);
 
-        let new_total_principal_due = self
-            .total_principal_due
-            .checked_add(amount)
-            .ok_or(ContractError::overflow("Total principal due overflow"))?;
+        let new_total_principal_due =
+            self.total_principal_due
+                .checked_add(amount)
+                .ok_or(ContractError::overflow(
+                    "calculating the total principal due after borrowing",
+                    format!("{} + {}", self.total_principal_due, amount),
+                ))?;
 
-        // TODO: get rid of fully qualified syntax
-        let new_annual_interest = self
-            .estimated_annual_interest()
-            .checked_add(loan_interest_rate.of(amount))
-            .ok_or(ContractError::overflow(
-                "Annual interest calculation overflow",
-            ))?;
+        let new_annual_interest = {
+            let current_annual = self.estimated_annual_interest();
+            let added_interest = loan_interest_rate.of(amount);
+
+            current_annual
+                .checked_add(added_interest)
+                .ok_or(ContractError::overflow(
+                    "calculating the annual interest after borrowing",
+                    format!("{} + {}", current_annual, added_interest),
+                ))?
+        };
 
         self.annual_interest_rate = Ratio::new(new_annual_interest, new_total_principal_due);
 
@@ -174,7 +181,10 @@ impl<Lpn> Total<Lpn> {
 
         self.receipts
             .checked_add(receipts)
-            .ok_or(ContractError::overflow("Deposit receipts overflow"))
+            .ok_or(ContractError::overflow(
+                "calculating the total receipts after deposit",
+                format!("{} + {}", self.receipts, receipts),
+            ))
             .map(|total| {
                 self.receipts = total;
                 self
@@ -186,7 +196,10 @@ impl<Lpn> Total<Lpn> {
 
         self.receipts
             .checked_sub(receipts)
-            .ok_or(ContractError::overflow("Withdraw receipts overflow"))
+            .ok_or(ContractError::overflow(
+                "calculating the total receipts after withdrawal",
+                format!("{} - {}", self.receipts, receipts),
+            ))
             .map(|total| {
                 self.receipts = total;
                 self
@@ -205,7 +218,7 @@ fn zero_interest_rate<Lpn>() -> Ratio<Coin<Lpn>> {
 #[cfg(test)]
 mod test {
     use currencies::Lpn;
-    use finance::{coin::Amount, duration::Duration, error::Error as FinanceError};
+    use finance::{coin::Amount, duration::Duration};
     use sdk::cosmwasm_std::testing::MockStorage;
 
     use crate::loan::Loan;
@@ -335,7 +348,7 @@ mod test {
                 .unwrap()
                 .deposit(Coin::new(Amount::MAX))
                 .unwrap_err(),
-            ContractError::Finance(FinanceError::Overflow(_))
+            ContractError::ComputationOverflow(_)
         ));
         assert_eq!(
             Total::<Lpn>::default()
@@ -388,7 +401,7 @@ mod test {
         assert_eq!(Coin::ZERO, total.withdraw(RECEIPTS2).unwrap().receipts(),);
         assert!(matches!(
             total.withdraw(RECEIPTS1).unwrap_err(),
-            ContractError::Finance(FinanceError::Overflow(_))
+            ContractError::ComputationOverflow(_)
         ));
     }
 

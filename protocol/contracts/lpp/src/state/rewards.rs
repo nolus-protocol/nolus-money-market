@@ -50,8 +50,12 @@ impl Index {
     ///  Calculate rewards
     pub fn may_rewards(&self, receipts: Coin<NLpn>) -> Result<Coin<Nls>> {
         if let Some(price) = self.reward_per_token {
-            price::total(receipts, price)
-                .ok_or_else(|| ContractError::overflow("Rewards calculation overflow"))
+            price::total(receipts, price).ok_or_else(|| {
+                ContractError::overflow(
+                    "calculating the rewards",
+                    format!("receipts: {}, price: {:?}", receipts, price),
+                )
+            })
         } else {
             Ok(Coin::default())
         }

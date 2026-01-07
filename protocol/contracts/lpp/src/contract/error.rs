@@ -1,6 +1,5 @@
 use thiserror::Error;
 
-use finance::error::Error as FinanceError;
 use sdk::cosmwasm_std::StdError;
 
 #[derive(Error, Debug, PartialEq)]
@@ -81,13 +80,15 @@ pub enum ContractError {
 
     #[error("[Lpp Stub] No response sent back from LPP contract")]
     NoResponseStubError,
+
+    #[error("[Lpp] Computation overflow `{0}`")]
+    ComputationOverflow(String),
 }
 
 pub type Result<T> = std::result::Result<T, ContractError>;
 
-// TODO: Replace `FinanceError::Overflow` with a generic template with parameters (next branch)
 impl ContractError {
-    pub fn overflow(msg: &'static str) -> Self {
-        ContractError::Finance(FinanceError::Overflow(msg))
+    pub fn overflow(cause: &'static str, details: String) -> Self {
+        ContractError::ComputationOverflow(format!("during '{cause}`. `{details}`"))
     }
 }
