@@ -23,13 +23,12 @@ where
 }
 
 impl<Lpn> Loan<Lpn> {
-    pub fn interest_due(&self, by: &Timestamp) -> Coin<Lpn> {
+    pub fn interest_due(&self, by: &Timestamp) -> Option<Coin<Lpn>> {
         interest::interest(
             self.annual_interest_rate,
             self.principal_due,
             self.due_period(by),
         )
-        .expect("TODO: handle potential None from interest::interest() properly")
     }
 
     pub fn repay(&mut self, by: &Timestamp, repayment: Coin<Lpn>) -> RepayShares<Lpn> {
