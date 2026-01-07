@@ -88,7 +88,7 @@ mod test {
         let mut loan = Repo::load(deps.as_ref().storage, addr.clone()).expect("should load loan");
 
         time = Timestamp::from_nanos(Duration::YEAR.nanos() / 2);
-        let interest = loan.interest_due(&time);
+        let interest = loan.interest_due(&time).unwrap();
         assert_eq!(interest, test::lpn_coin(100));
         // partial repay
         let payment = loan.repay(&time, test::lpn_coin(600));
