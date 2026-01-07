@@ -96,7 +96,9 @@ fn lpp_state_implicit_time() {
         query_result,
         (
             loan_resp.principal_due,
-            loan_resp.interest_due(&crate::block_time(&test_case))
+            loan_resp
+                .interest_due(&crate::block_time(&test_case))
+                .unwrap()
         )
     );
 }
@@ -141,7 +143,7 @@ fn lpp_state_explicit_time() {
     };
 
     assert_eq!(
-        query_result,
+        Some(query_result),
         loan.interest_due(&crate::block_time(&test_case))
     );
 }
