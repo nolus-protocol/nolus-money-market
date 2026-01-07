@@ -48,6 +48,12 @@ pub enum Error {
         strategy: CloseStrategy,
         top_bound: Percent100,
     },
+
+    #[error("[Position] Computation overflow during `{operation}`: {details}")]
+    ComputationOverflow {
+        operation: &'static str,
+        details: String,
+    },
 }
 
 impl Error {
@@ -77,9 +83,8 @@ impl Error {
         }
     }
 
-    // TODO: Replace `FinanceError::Overflow` with a generic template with parameters (next branch)
-    pub fn overflow(msg: &'static str) -> Self {
-        Error::Finance(FinanceError::Overflow(msg))
+    pub fn overflow(operation: &'static str, details: String) -> Self {
+        Error::ComputationOverflow { operation, details }
     }
 }
 
