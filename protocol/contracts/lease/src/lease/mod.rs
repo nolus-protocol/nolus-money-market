@@ -240,7 +240,7 @@ pub(crate) mod tests {
             self.loan.principal_due
         }
 
-        fn interest_due(&self, by: &Timestamp) -> Coin<Lpn> {
+        fn interest_due(&self, by: &Timestamp) -> Option<Coin<Lpn>> {
             self.loan.interest_due(by)
         }
 
