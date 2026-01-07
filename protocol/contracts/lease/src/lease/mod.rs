@@ -474,8 +474,10 @@ pub(crate) mod tests {
         let due_projection = Duration::from_days(12);
         let state_now = lease
             .state(state_at + due_projection, Duration::default())
-            .unwrap();
-        let state_projected = lease.state(state_at, due_projection).unwrap();
+            .expect("Overflow while calculating the current lease state");
+        let state_projected = lease
+            .state(state_at, due_projection)
+            .expect("Overflow while calculating the projected lease state");
         assert_eq!(state_now.amount, state_projected.amount);
         assert_eq!(state_now.interest_rate, state_projected.interest_rate);
         assert_eq!(
