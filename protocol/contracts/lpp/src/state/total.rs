@@ -315,7 +315,7 @@ mod test {
         };
 
         let total_interest_due = total.total_interest_due_by_now(&block_time);
-        assert_eq!(total_interest_due, Some(loan1.interest_due(&block_time)));
+        assert_eq!(total_interest_due, loan1.interest_due(&block_time));
 
         total
             .borrow(block_time, borrow_loan2, loan2_annual_interest_rate)
@@ -331,7 +331,7 @@ mod test {
         // Fully repay loan1 after 147 days
         total.repay(
             block_time,
-            loan1.interest_due(&block_time),
+            loan1.interest_due(&block_time).unwrap(),
             loan1.principal_due,
             loan1.annual_interest_rate,
         );
@@ -342,7 +342,7 @@ mod test {
         // Fully repay loan2 after 67 days
         total.repay(
             block_time,
-            loan2.interest_due(&block_time),
+            loan2.interest_due(&block_time).unwrap(),
             loan2.principal_due,
             loan2.annual_interest_rate,
         );

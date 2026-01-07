@@ -82,12 +82,15 @@ mod test {
         };
 
         assert_eq!(
-            lpn_coin(50),
+            Some(coin(50)),
             l.interest_due(&(l.interest_paid + Duration::YEAR))
         );
 
-        assert_eq!(Coin::ZERO, l.interest_due(&l.interest_paid));
-        assert_eq!(Coin::ZERO, l.interest_due(&l.interest_paid.minus_nanos(1)));
+        assert_eq!(Some(Coin::ZERO), l.interest_due(&l.interest_paid));
+        assert_eq!(
+            Some(Coin::ZERO),
+            l.interest_due(&l.interest_paid.minus_nanos(1))
+        );
     }
 
     #[test]
