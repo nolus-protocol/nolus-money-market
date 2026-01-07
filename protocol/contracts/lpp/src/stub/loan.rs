@@ -19,7 +19,10 @@ where
     Self: Into<LppRef<Lpn>> + TryInto<LppBatch<LppRef<Lpn>>, Error = Error>,
 {
     fn principal_due(&self) -> Coin<Lpn>;
-    fn interest_due(&self, by: &Timestamp) -> Coin<Lpn>;
+
+    /// Returns `None` if an overflow occurs
+    fn interest_due(&self, by: &Timestamp) -> Option<Coin<Lpn>>;
+
     /// Repay the due interest and principal by the specified time
     ///
     /// First, the provided 'repayment' is used to repay the due interest,
@@ -69,7 +72,7 @@ where
         self.loan.principal_due
     }
 
-    fn interest_due(&self, by: &Timestamp) -> Coin<Lpn> {
+    fn interest_due(&self, by: &Timestamp) -> Option<Coin<Lpn>> {
         self.loan.interest_due(by)
     }
 
