@@ -203,6 +203,12 @@ where
             self.lpp_loan.interest_due(&due_period_margin.till()) - overdue.interest();
 
         State {
+        let due_interest = self
+            .lpp_loan
+            .interest_due(&due_period_margin.till())
+            .expect("TODO: Next commit")
+            - overdue.interest();
+
             annual_interest: self.lpp_loan.annual_interest_rate(),
             annual_interest_margin: self.margin_interest,
             principal_due,
