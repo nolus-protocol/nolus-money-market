@@ -1174,18 +1174,18 @@ mod tests {
             let due_period = due_period_len.min(due_period_margin.length());
             let expected_margin_due =
                 interest::interest(annual_interest_margin, principal_due, due_period).unwrap();
-            let expected_interest_due =
-                lpp_loan.interest_due(&due_period_margin.till()) - overdue.interest();
+            let interest_due = lpp_loan.interest_due(&due_period_margin.till()).unwrap();
+            let expected_interest_due = interest_due - overdue.interest();
 
             assert_eq!(
-                State {
+                Ok(State {
                     annual_interest,
                     annual_interest_margin,
                     principal_due,
                     due_interest: expected_interest_due,
                     due_margin_interest: expected_margin_due,
                     overdue,
-                },
+                }),
                 loan.state(now),
                 "Got different state than expected!",
             );
@@ -1251,7 +1251,7 @@ mod tests {
             self.loan.principal_due
         }
 
-        fn interest_due(&self, by: &Timestamp) -> LpnCoin {
+        fn interest_due(&self, by: &Timestamp) -> Option<LpnCoin> {
             self.loan.interest_due(by)
         }
 
