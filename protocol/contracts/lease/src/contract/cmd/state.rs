@@ -46,7 +46,7 @@ impl WithLease for LeaseState {
         Oracle: OracleTrait<LeasePaymentCurrencies, QuoteC = LpnCurrency, QuoteG = LpnCurrencies>,
     {
         Ok(StateResponse::opened_from(
-            lease.state(self.now, self.due_projection),
+            lease.state(self.now, self.due_projection)?,
             self.status,
         ))
     }
