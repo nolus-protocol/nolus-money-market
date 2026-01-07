@@ -105,7 +105,8 @@ mod impl_ {
 
         fn total_with(&self, price: Price<InC, OutC>) -> Result<Coin<OutC>, Error> {
             price::total(self.in_amount, price).ok_or(Error::overflow(
-                "Overflow while calculating the total value",
+                "calculating the total value",
+                format!("amount: {}, price: {:?}", self.in_amount, price),
             ))
         }
     }

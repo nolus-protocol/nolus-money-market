@@ -28,12 +28,15 @@ pub enum Error {
         to: SymbolStatic,
         error: StdError,
     },
+
+    #[error("[Oracle] Overflow during `{0}`")]
+    ComputationOverflow(String),
 }
 
 // TODO: Replace `FinanceError::Overflow` with a generic template with parameters (next branch)
 impl Error {
-    pub fn overflow(msg: &'static str) -> Self {
-        Error::Finance(FinanceError::Overflow(msg))
+    pub fn overflow(cause: &'static str, details: String) -> Self {
+        Error::ComputationOverflow(format!("`{cause}`. `{details}`"))
     }
 }
 
