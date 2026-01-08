@@ -30,6 +30,7 @@ pub enum Error {
     },
 }
 
+// TODO: Replace `FinanceError::Overflow` with a generic template with parameters (next branch)
 impl Error {
     pub fn overflow(msg: &'static str) -> Self {
         Error::Finance(FinanceError::Overflow(msg))

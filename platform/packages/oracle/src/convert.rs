@@ -114,9 +114,12 @@ mod impl_ {
 #[cfg(test)]
 mod test {
     use currency::test::SuperGroupTestC1;
-    use finance::coin::{Amount, Coin};
+    use finance::{
+        coin::{Amount, Coin},
+        error::Error as FinanceError,
+    };
 
-    use crate::test::DummyOracle;
+    use crate::{error::Error, test::DummyOracle};
 
     #[test]
     fn from_quote() {
@@ -142,34 +145,39 @@ mod test {
 
     #[test]
     fn from_quote_overflow() {
+        const ERR_MSG: &str = "Overflow while calculating the total value";
         let oracle_1 = DummyOracle::with_price(100, 1);
-        assert!(
+        assert_err(
             super::from_quote::<_, _, _, SuperGroupTestC1, _>(
                 &oracle_1,
-                Coin::new(Amount::MAX / 50)
-            )
-            .is_err()
+                Coin::new(Amount::MAX / 50),
+            ),
+            ERR_MSG,
         );
 
         let oracle_2 = DummyOracle::with_price(2, 1);
-        assert!(
-            super::from_quote::<_, _, _, SuperGroupTestC1, _>(&oracle_2, Coin::new(Amount::MAX))
-                .is_err()
+        assert_err(
+            super::from_quote::<_, _, _, SuperGroupTestC1, _>(&oracle_2, Coin::new(Amount::MAX)),
+            ERR_MSG,
         );
     }
 
     #[test]
     fn to_quote_error() {
+        const ERR_MSG: &str = "Overflow while calculating the total value";
         let oracle_1 = DummyOracle::with_price(1, Amount::MAX / 4);
-        assert!(super::to_quote(&oracle_1, Coin::<SuperGroupTestC1>::new(8)).is_err());
+        assert_err(
+            super::to_quote(&oracle_1, Coin::<SuperGroupTestC1>::new(8)),
+            ERR_MSG,
+        );
 
         let oracle_2 = DummyOracle::with_price(1, 2);
-        assert!(
+        assert_err(
             super::to_quote(
                 &oracle_2,
                 Coin::<SuperGroupTestC1>::new(Amount::MAX / 2 + 1),
-            )
-            .is_err()
+            ),
+            ERR_MSG,
         );
     }
 
@@ -186,5 +194,13 @@ mod test {
         let out_amount =
             super::to_quote(&oracle, Coin::<SuperGroupTestC1>::new(in_amount)).unwrap();
         assert_eq!(Coin::new(expected_out), out_amount);
+    }
+
+    fn assert_err<C>(r: Result<Coin<C>, Error>, msg: &str) {
+        assert!(r.is_err());
+        assert!(matches!(
+            r,
+            Err(Error::Finance(FinanceError::Overflow(real_msg))) if real_msg.contains(msg)
+        ));
     }
 }
