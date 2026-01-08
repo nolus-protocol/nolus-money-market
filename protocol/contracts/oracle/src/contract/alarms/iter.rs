@@ -1,4 +1,4 @@
-use std::{iter, marker::PhantomData, ops::Deref};
+use std::{iter, marker::PhantomData, ops::Deref, result::Result as StdResult};
 
 use currency::{Currency, CurrencyDef, Group, MemberOf};
 use finance::price::{self, Price, base::with_price::WithPrice};
@@ -139,14 +139,18 @@ where
     type Output = AlarmIter<'alarms, AlarmsG, ErrorG>;
     type Error = Error<ErrorG>;
 
-    fn exec<C>(self, price: Price<C, BaseC>) -> std::result::Result<Self::Output, Self::Error>
+    fn exec<C>(self, price: Price<C, BaseC>) -> StdResult<Self::Output, Self::Error>
     where
         C: CurrencyDef,
         C::Group: MemberOf<Self::PriceG>,
     {
-        Ok(self
-            .alarms
+        self.alarms
             .alarms(price)
-            .map(|may_alarm| may_alarm.map_err(Into::into)))
+            .map_err(Into::into)
+            .map(|alarms_iter| {
+                let error_handler: AlarmIterMapFn<ErrorG> =
+                    |may_alarm| may_alarm.map_err(Into::into);
+                alarms_iter.map(error_handler)
+            })
     }
 }

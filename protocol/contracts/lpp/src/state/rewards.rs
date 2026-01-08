@@ -11,7 +11,7 @@ use finance::{
 use lpp_platform::NLpn;
 use sdk::{cosmwasm_std::Storage, cw_storage_plus::Item};
 
-use crate::contract::Result;
+use crate::contract::{ContractError, Result};
 
 #[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq, Default)]
 pub struct TotalRewards();
@@ -48,10 +48,13 @@ impl Index {
         }
     }
     ///  Calculate rewards
-    pub fn rewards(&self, receipts: Coin<NLpn>) -> Coin<Nls> {
-        self.reward_per_token
-            .map(|price| price::total(receipts, price))
-            .unwrap_or_default()
+    pub fn may_rewards(&self, receipts: Coin<NLpn>) -> Result<Coin<Nls>> {
+        if let Some(price) = self.reward_per_token {
+            price::total(receipts, price)
+                .ok_or_else(|| ContractError::overflow("Rewards calculation overflow"))
+        } else {
+            Ok(Coin::default())
+        }
     }
 
     //TODO migrate this to `checked_add() -> Option<Self>` once `Price::checked_add()` gets available

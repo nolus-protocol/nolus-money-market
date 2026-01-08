@@ -148,6 +148,7 @@ mod test {
     mod fraction {
 
         use crate::{
+            coin::Amount,
             fraction::Fraction,
             percent::{Percent, Percent100, Units},
             ratio::{Ratio, SimpleFraction},
@@ -159,7 +160,7 @@ mod test {
         fn of() {
             assert_eq!(
                 Percent::from_permille(Units::MAX),
-                SimpleFraction::new(coin::coin1(u128::MAX), coin::coin1(u128::MAX))
+                SimpleFraction::new(coin::coin1(Amount::MAX), coin::coin1(Amount::MAX))
                     .of(Percent::from_permille(Units::MAX))
                     .unwrap()
             );
@@ -182,7 +183,7 @@ mod test {
         #[test]
         fn of_overflow() {
             assert!(
-                SimpleFraction::new(coin::coin1(u128::MAX), coin::coin1(1))
+                SimpleFraction::new(coin::coin1(Amount::MAX), coin::coin1(1))
                     .of(Percent::from_percent(1))
                     .is_none()
             )

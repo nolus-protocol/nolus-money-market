@@ -295,7 +295,7 @@ fn deposit_and_withdraw() {
 
     let amount: Amount = 1_000;
     assert_eq!(
-        price::total(Coin::new(amount), price.0),
+        price::total(Coin::new(amount), price.0).unwrap(),
         Coin::<Lpn>::new(1_000 * pushed_price)
     );
 
@@ -319,7 +319,7 @@ fn deposit_and_withdraw() {
         .query_wasm_smart(test_case.address_book.lpp().clone(), &LppQueryMsg::Price())
         .unwrap();
     assert_eq!(
-        price::total(balance_nlpn.balance, price.0),
+        price::total(balance_nlpn.balance, price.0).unwrap(),
         Coin::<Lpn>::new(test_deposit - rounding_error)
     );
 
@@ -342,7 +342,7 @@ fn deposit_and_withdraw() {
         .query_wasm_smart(test_case.address_book.lpp().clone(), &LppQueryMsg::Price())
         .unwrap();
     assert_eq!(
-        price::total(balance_nlpn.balance, price.0),
+        price::total(balance_nlpn.balance, price.0).unwrap(),
         Coin::<Lpn>::new(test_deposit - rounding_error)
     );
 
@@ -387,7 +387,7 @@ fn deposit_and_withdraw() {
         .query_wasm_smart(test_case.address_book.lpp().clone(), &LppQueryMsg::Price())
         .unwrap();
     assert_eq!(
-        price::total(balance_nlpn2.balance, price.0),
+        price::total(balance_nlpn2.balance, price.0).unwrap(),
         Coin::<Lpn>::new(test_deposit - rounding_error)
     );
 

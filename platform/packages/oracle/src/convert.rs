@@ -41,7 +41,10 @@ mod impl_ {
     use std::marker::PhantomData;
 
     use currency::{Currency, CurrencyDef, Group, MemberOf};
-    use finance::{coin::Coin, price};
+    use finance::{
+        coin::Coin,
+        price::{self, Price},
+    };
 
     use crate::{Oracle, error::Error};
 
@@ -85,7 +88,7 @@ mod impl_ {
         {
             oracle
                 .price_of::<OutC>()
-                .map(|price| price::total(self.in_amount, price.inv()))
+                .and_then(|price| self.total_with(price.inv()))
         }
 
         pub(super) fn with_quote_out<OracleImpl>(
@@ -97,7 +100,107 @@ mod impl_ {
         {
             oracle
                 .price_of::<InC>()
-                .map(|price| price::total(self.in_amount, price))
+                .and_then(|price| self.total_with(price))
         }
+
+        fn total_with(&self, price: Price<InC, OutC>) -> Result<Coin<OutC>, Error> {
+            price::total(self.in_amount, price).ok_or(Error::overflow(
+                "Overflow while calculating the total value",
+            ))
+        }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use currency::test::SuperGroupTestC1;
+    use finance::{
+        coin::{Amount, Coin},
+        error::Error as FinanceError,
+    };
+
+    use crate::{error::Error, test::DummyOracle};
+
+    #[test]
+    fn from_quote() {
+        assert_from_quote(3, 12, 4);
+        assert_from_quote(1, 4, 4);
+        assert_from_quote(4, 4, 1);
+        assert_from_quote(2, 14, 7);
+        assert_from_quote(10, 9, 0);
+        assert_from_quote(2, Amount::MAX, Amount::MAX / 2);
+        assert_from_quote(Amount::MAX / 5, 4, 20 / Amount::MAX);
+        assert_from_quote(Amount::MAX, 5, 0);
+        assert_from_quote(Amount::MAX, Amount::MAX, 1);
+    }
+
+    #[test]
+    fn to_quote() {
+        assert_to_quote(4, 3, 12);
+        assert_to_quote(1, 6, 6);
+        assert_to_quote(10, 4, 40);
+        assert_to_quote(7, 1, 7);
+        assert_to_quote(Amount::MAX / 10, 5, Amount::MAX / 2 - 2);
+    }
+
+    #[test]
+    fn from_quote_overflow() {
+        const ERR_MSG: &str = "Overflow while calculating the total value";
+        let oracle_1 = DummyOracle::with_price(100, 1);
+        assert_err(
+            super::from_quote::<_, _, _, SuperGroupTestC1, _>(
+                &oracle_1,
+                Coin::new(Amount::MAX / 50),
+            ),
+            ERR_MSG,
+        );
+
+        let oracle_2 = DummyOracle::with_price(2, 1);
+        assert_err(
+            super::from_quote::<_, _, _, SuperGroupTestC1, _>(&oracle_2, Coin::new(Amount::MAX)),
+            ERR_MSG,
+        );
+    }
+
+    #[test]
+    fn to_quote_error() {
+        const ERR_MSG: &str = "Overflow while calculating the total value";
+        let oracle_1 = DummyOracle::with_price(1, Amount::MAX / 4);
+        assert_err(
+            super::to_quote(&oracle_1, Coin::<SuperGroupTestC1>::new(8)),
+            ERR_MSG,
+        );
+
+        let oracle_2 = DummyOracle::with_price(1, 2);
+        assert_err(
+            super::to_quote(
+                &oracle_2,
+                Coin::<SuperGroupTestC1>::new(Amount::MAX / 2 + 1),
+            ),
+            ERR_MSG,
+        );
+    }
+
+    fn assert_from_quote(quote: Amount, in_amount: Amount, expected_out: Amount) {
+        let oracle = DummyOracle::with_price(1, quote);
+
+        let out_amount = super::from_quote(&oracle, Coin::new(in_amount)).unwrap();
+
+        assert_eq!(Coin::<SuperGroupTestC1>::new(expected_out), out_amount);
+    }
+
+    fn assert_to_quote(quote: Amount, in_amount: Amount, expected_out: Amount) {
+        let oracle = DummyOracle::with_price(1, quote);
+        let out_amount =
+            super::to_quote(&oracle, Coin::<SuperGroupTestC1>::new(in_amount)).unwrap();
+        assert_eq!(Coin::new(expected_out), out_amount);
+    }
+
+    fn assert_err<C>(r: Result<Coin<C>, Error>, msg: &str) {
+        assert!(r.is_err());
+        assert!(matches!(
+            r,
+            Err(Error::Finance(FinanceError::Overflow(real_msg))) if real_msg.contains(msg)
+        ));
     }
 }

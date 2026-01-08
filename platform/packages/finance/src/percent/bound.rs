@@ -20,6 +20,9 @@ pub struct BoundPercent<const UPPER_BOUND: Units>(Units);
 
 impl<const UPPER_BOUND: Units> BoundPercent<UPPER_BOUND> {
     pub const ZERO: Self = Self::try_from_primitive(0).expect("0% is a valid instance");
+    // TODO: `HUNDRED` is only valid if `UPPER_BOUND >= 100`.
+    // It should be replaced by `MAX = Self::try_from_primitive(UPPER_BOUND)`.
+    // Use 'HUNDRED: Units = 100' constant when the numeric value `100` is needed.
     pub const HUNDRED: Self = Self::try_from_primitive(100).expect("100% is a valid instance");
     pub const PRECISION: Self = Self::try_from_permille(1).expect("0.1% is a valid instance");
 
@@ -121,7 +124,7 @@ impl<const UPPER_BOUND: Units> Display for BoundPercent<UPPER_BOUND> {
 }
 
 // TODO: Revisit it's usage after refactoring Fractionable
-impl<const UPPER_BOUND: Units> From<BoundPercent<UPPER_BOUND>> for u128 {
+impl<const UPPER_BOUND: Units> From<BoundPercent<UPPER_BOUND>> for Amount {
     fn from(percent: BoundPercent<UPPER_BOUND>) -> Self {
         Amount::from(percent.0)
     }

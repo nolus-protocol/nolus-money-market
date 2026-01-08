@@ -132,7 +132,7 @@ where
     assert!(!request.swap_path.is_empty());
 
     let dex_denom_in: SymbolStatic = request.token_in.currency().into_symbol::<DexSymbols<GIn>>();
-    let amount_in: u128 = request.token_in.amount();
+    let amount_in = request.token_in.amount();
 
     app.send_tokens(
         ica_addr.clone(),

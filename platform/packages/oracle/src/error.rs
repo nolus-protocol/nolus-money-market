@@ -3,6 +3,7 @@ use std::result::Result as StdResult;
 use thiserror::Error;
 
 use currency::{CurrencyDTO, Group, SymbolStatic, Tickers, error::Error as CurrencyError};
+use finance::error::Error as FinanceError;
 use sdk::cosmwasm_std::StdError;
 
 pub type Result<T> = StdResult<T, Error>;
@@ -16,7 +17,7 @@ pub enum Error {
     StubConfigInvalid(CurrencyError),
 
     #[error("[Oracle] {0}")]
-    Finance(#[from] finance::error::Error),
+    Finance(#[from] FinanceError),
 
     // TODO replace SymbolStatic and SymbolOwned with CurrencyDTO<G> where approptiate, i.e. the string represent a currency
     #[error(
@@ -27,6 +28,13 @@ pub enum Error {
         to: SymbolStatic,
         error: StdError,
     },
+}
+
+// TODO: Replace `FinanceError::Overflow` with a generic template with parameters (next branch)
+impl Error {
+    pub fn overflow(msg: &'static str) -> Self {
+        Error::Finance(FinanceError::Overflow(msg))
+    }
 }
 
 pub fn failed_to_fetch_price<G, QuoteG>(

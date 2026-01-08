@@ -76,6 +76,11 @@ impl Error {
             strategy,
         }
     }
+
+    // TODO: Replace `FinanceError::Overflow` with a generic template with parameters (next branch)
+    pub fn overflow(msg: &'static str) -> Self {
+        Error::Finance(FinanceError::Overflow(msg))
+    }
 }
 
 pub type Result<T> = StdResult<T, Error>;
