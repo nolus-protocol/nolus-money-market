@@ -119,6 +119,8 @@ mod test {
 
     use crate::{error::Error, test::DummyOracle};
 
+    const ERR_MSG: &str = "calculating the total value";
+
     #[test]
     fn from_quote() {
         assert_from_quote(3, 12, 4);
@@ -143,7 +145,6 @@ mod test {
 
     #[test]
     fn from_quote_overflow() {
-        const ERR_MSG: &str = "calculating the total value";
         let oracle_1 = DummyOracle::with_price(100, 1);
         assert_err(
             super::from_quote::<_, _, _, SuperGroupTestC1, _>(
@@ -162,7 +163,6 @@ mod test {
 
     #[test]
     fn to_quote_error() {
-        const ERR_MSG: &str = "calculating the total value";
         let oracle_1 = DummyOracle::with_price(1, Amount::MAX / 4);
         assert_err(
             super::to_quote(&oracle_1, Coin::<SuperGroupTestC1>::new(8)),
@@ -195,7 +195,6 @@ mod test {
     }
 
     fn assert_err<C>(r: Result<Coin<C>, Error>, msg: &str) {
-        assert!(r.is_err());
         assert!(matches!(
             r,
             Err(Error::ComputationOverflow(real_msg)) if real_msg.contains(msg)
