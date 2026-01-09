@@ -104,10 +104,7 @@ mod impl_ {
         }
 
         fn total_with(&self, price: Price<InC, OutC>) -> Result<Coin<OutC>, Error> {
-            price::total(self.in_amount, price).ok_or(Error::overflow(
-                "calculating the total value",
-                format!("amount: {}, price: {:?}", self.in_amount, price),
-            ))
+            price::total(self.in_amount, price).ok_or(Error::price_overflow(self.in_amount, price))
         }
     }
 }
@@ -194,10 +191,12 @@ mod test {
         assert_eq!(Coin::new(expected_out), out_amount);
     }
 
-    fn assert_err<C>(r: Result<Coin<C>, Error>, msg: &str) {
+    fn assert_err<C>(r: Result<Coin<C>, Error>, expected_msg: &str) {
         assert!(matches!(
             r,
-            Err(Error::ComputationOverflow(real_msg)) if real_msg.contains(msg)
+            Err(e)
+                if matches!(e, Error::PriceCalculationOverflow { .. })
+                && e.to_string().contains(expected_msg)
         ));
     }
 }

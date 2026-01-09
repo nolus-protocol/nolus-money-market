@@ -352,7 +352,7 @@ mod test {
                 .unwrap()
                 .deposit(Coin::new(Amount::MAX))
                 .unwrap_err(),
-            ContractError::ComputationOverflow(_)
+            ContractError::ComputationOverflow { .. }
         ));
         assert_eq!(
             Total::<Lpn>::default()
@@ -405,7 +405,7 @@ mod test {
         assert_eq!(Coin::ZERO, total.withdraw(RECEIPTS2).unwrap().receipts(),);
         assert!(matches!(
             total.withdraw(RECEIPTS1).unwrap_err(),
-            ContractError::ComputationOverflow(_)
+            ContractError::ComputationOverflow { .. }
         ));
     }
 

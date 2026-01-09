@@ -58,19 +58,6 @@ pub enum AlarmError {
     #[error("[Market Price; Alarm] Alarms delivery queue is not empty! Cause: {0}")]
     NonEmptyAlarmsInDeliveryQueue(String),
 
-    #[error("[Market Price; Alarm] Overflow during {0}")]
-    ComputationOverflow(String),
-}
-
-impl AlarmError {
-    pub fn overflow_price_total<C, P>(cause: &str, amount: C, price: P) -> Self
-    where
-        C: std::fmt::Display,
-        P: std::fmt::Debug,
-    {
-        Self::ComputationOverflow(format!(
-            "during '{cause}`. amount: {}, price: {:?}",
-            amount, price
-        ))
-    }
+    #[error("[Market Price; Alarm] Overflow during normalizing the market price")]
+    PriceNormalizationOverflow,
 }

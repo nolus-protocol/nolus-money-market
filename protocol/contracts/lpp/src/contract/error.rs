@@ -83,37 +83,46 @@ pub enum ContractError {
     #[error("[Lpp Stub] No response sent back from LPP contract")]
     NoResponseStubError,
 
-    #[error("[Lpp] Computation overflow `{0}`")]
-    ComputationOverflow(String),
+    #[error("[Lpp] Computation overflow during '{cause}`. `{details}`")]
+    ComputationOverflow {
+        cause: &'static str,
+        details: String,
+    },
 }
 
 pub type Result<T> = std::result::Result<T, ContractError>;
 
 impl ContractError {
-    pub fn overflow_price_total<C, P>(cause: &str, amount: C, price: P) -> Self
+    pub fn overflow_price_total<C, P>(cause: &'static str, amount: C, price: P) -> Self
     where
         C: Display,
         P: Debug,
     {
-        Self::ComputationOverflow(format!(
-            "during '{cause}`. amount: {}, price: {:?}",
-            amount, price
-        ))
+        Self::ComputationOverflow {
+            cause,
+            details: format!("Amount: {}, price: {:?}", amount, price),
+        }
     }
 
-    pub fn overflow_add<L, R>(cause: &str, lhs: L, rhs: R) -> Self
+    pub fn overflow_add<L, R>(cause: &'static str, lhs: L, rhs: R) -> Self
     where
         L: Display,
         R: Display,
     {
-        Self::ComputationOverflow(format!("during `{cause}`. ({} + {})", lhs, rhs))
+        Self::ComputationOverflow {
+            cause,
+            details: format!("({} + {})", lhs, rhs),
+        }
     }
 
-    pub fn overflow_sub<L, R>(cause: &str, lhs: L, rhs: R) -> Self
+    pub fn overflow_sub<L, R>(cause: &'static str, lhs: L, rhs: R) -> Self
     where
         L: Display,
         R: Display,
     {
-        Self::ComputationOverflow(format!("during `{cause}`. ({} - {})", lhs, rhs))
+        Self::ComputationOverflow {
+            cause,
+            details: format!("({} - {})", lhs, rhs),
+        }
     }
 }

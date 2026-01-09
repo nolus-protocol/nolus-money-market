@@ -65,11 +65,7 @@ where
     {
         const NORM_SCALE: Amount = 10u128.pow(18);
         price::total(Coin::new(NORM_SCALE), price.inv())
-            .ok_or(AlarmError::overflow_price_total(
-                "normalizing market price",
-                NORM_SCALE,
-                price.inv(),
-            ))
+            .ok_or(AlarmError::PriceNormalizationOverflow)
             .map(|normalized| NormalizedPrice::<G>(normalized.into()))
     }
 }

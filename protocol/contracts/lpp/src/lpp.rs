@@ -945,7 +945,7 @@ mod test {
 
             assert!(matches!(
                 lpp.withdraw_lpn(RECEIPT1, Coin::ZERO, &now).unwrap_err(),
-                ContractError::ComputationOverflow(_)
+                ContractError::ComputationOverflow { .. }
             ));
 
             assert_eq!(RECEIPT1, lpp.deposit(DEPOSIT1, &now).unwrap());
