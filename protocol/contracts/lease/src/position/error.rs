@@ -80,8 +80,11 @@ impl Error {
         }
     }
 
-    pub fn overflow(cause: &'static str, details: String) -> Self {
-        Error::ComputationOverflow(format!("`{cause}`. `{details}`"))
+    pub fn overflow<C>(cause: &'static str, amount: C) -> Self
+    where
+        C: std::fmt::Display,
+    {
+        Error::ComputationOverflow(format!("`{cause}`. amount:`{amount}`"))
     }
 }
 
