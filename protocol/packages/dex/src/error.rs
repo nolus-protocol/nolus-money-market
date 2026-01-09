@@ -5,9 +5,6 @@ use crate::swap;
 #[derive(Error, Debug, PartialEq)]
 pub enum Error {
     #[error("[Dex] {0}")]
-    Finance(#[from] finance::error::Error),
-
-    #[error("[Dex] {0}")]
     Platform(#[from] platform::error::Error),
 
     #[error("[Dex] {0}")]

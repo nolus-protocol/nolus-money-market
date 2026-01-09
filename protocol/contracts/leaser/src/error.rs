@@ -42,9 +42,6 @@ pub enum ContractError {
     #[error("[Leaser] integer conversion {0}")]
     Conversion(#[from] TryFromIntError),
 
-    #[error("[Leaser] {0}")]
-    Finance(#[from] finance::error::Error),
-
     #[error("[Lease] {0}")]
     LppStubCreation(lpp::stub::Error),
 

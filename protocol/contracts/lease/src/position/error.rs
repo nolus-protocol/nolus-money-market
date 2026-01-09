@@ -2,7 +2,12 @@ use std::result::Result as StdResult;
 
 use thiserror::Error;
 
-use finance::{error::Error as FinanceError, percent::Percent100};
+use finance::{
+    coin::{Amount, Coin},
+    error::Error as FinanceError,
+    fraction::Unit,
+    percent::Percent100,
+};
 
 use crate::finance::LpnCoinDTO;
 
@@ -48,6 +53,9 @@ pub enum Error {
         strategy: CloseStrategy,
         top_bound: Percent100,
     },
+
+    #[error("[Position] Overflow during `{cause}`. Amount: `{amount}`")]
+    ComputationOverflow { cause: &'static str, amount: Amount },
 }
 
 impl Error {
@@ -77,9 +85,14 @@ impl Error {
         }
     }
 
-    // TODO: Replace `FinanceError::Overflow` with a generic template with parameters (next branch)
-    pub fn overflow(msg: &'static str) -> Self {
-        Error::Finance(FinanceError::Overflow(msg))
+    pub fn overflow<C>(cause: &'static str, amount: Coin<C>) -> Self
+    where
+        C: 'static,
+    {
+        Error::ComputationOverflow {
+            cause,
+            amount: amount.to_primitive(),
+        }
     }
 }
 
