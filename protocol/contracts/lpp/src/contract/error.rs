@@ -90,10 +90,6 @@ pub enum ContractError {
 pub type Result<T> = std::result::Result<T, ContractError>;
 
 impl ContractError {
-    pub fn overflow(cause: &'static str, details: String) -> Self {
-        ContractError::ComputationOverflow(format!("during '{cause}`. `{details}`"))
-    }
-
     pub fn overflow_price_total<C, P>(cause: &str, amount: C, price: P) -> Self
     where
         C: Display,
@@ -111,5 +107,13 @@ impl ContractError {
         R: Display,
     {
         Self::ComputationOverflow(format!("during `{cause}`. ({} + {})", lhs, rhs))
+    }
+
+    pub fn overflow_sub<L, R>(cause: &str, lhs: L, rhs: R) -> Self
+    where
+        L: Display,
+        R: Display,
+    {
+        Self::ComputationOverflow(format!("during `{cause}`. ({} - {})", lhs, rhs))
     }
 }

@@ -183,9 +183,10 @@ impl<Lpn> Total<Lpn> {
 
         self.receipts
             .checked_add(receipts)
-            .ok_or(ContractError::overflow(
+            .ok_or(ContractError::overflow_add(
                 "calculating the total receipts after deposit",
-                format!("{} + {}", self.receipts, receipts),
+                self.receipts,
+                receipts,
             ))
             .map(|total| {
                 self.receipts = total;
@@ -198,9 +199,10 @@ impl<Lpn> Total<Lpn> {
 
         self.receipts
             .checked_sub(receipts)
-            .ok_or(ContractError::overflow(
+            .ok_or(ContractError::overflow_sub(
                 "calculating the total receipts after withdrawal",
-                format!("{} - {}", self.receipts, receipts),
+                self.receipts,
+                receipts,
             ))
             .map(|total| {
                 self.receipts = total;
