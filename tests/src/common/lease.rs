@@ -101,8 +101,8 @@ impl Instantiator {
                         config.liability_max_percent,
                         config.liability_recalc_time,
                     ),
-                    super::lpn_coin(1478),
-                    super::lpn_coin(345),
+                    super::lpn_coin_dto(1478),
+                    super::lpn_coin_dto(345),
                 ),
                 loan: LoanForm {
                     lpp: addresses.lpp,
