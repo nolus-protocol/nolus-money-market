@@ -88,17 +88,17 @@ where
 
 #[cfg(all(feature = "internal.test.contract", test))]
 mod test {
+    use crate::tests;
     use currencies::{
         LeaseGroup,
         testing::{PaymentC3, PaymentC7},
     };
-    use finance::{coin::Coin, price};
 
     use super::*;
 
     #[test]
     fn test_maybe_price() {
-        let price = price::total_of(Coin::<PaymentC3>::new(1)).is(Coin::<PaymentC7>::new(2));
+        let price = tests::test_price::<PaymentC3, PaymentC7>(1, 2);
         assert_eq!(maybe_price::<_, _, LeaseGroup>(Ok(price)), Ok(Some(price)));
         assert_eq!(
             maybe_price::<PaymentC3, PaymentC7, LeaseGroup>(Err(PriceFeedsError::NoPrice())),

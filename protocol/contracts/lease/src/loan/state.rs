@@ -103,13 +103,16 @@ mod test {
     use lpp::{loan::Loan, stub::loan::LppLoan};
     use sdk::cosmwasm_std::Timestamp;
 
-    use crate::loan::tests::{Lpn, LppLoanLocal};
+    use crate::{
+        lease::tests,
+        loan::tests::{Lpn, LppLoanLocal},
+    };
 
     use super::Overdue;
 
     const MARGIN_INTEREST_RATE: Percent100 = Percent100::from_permille(50);
     const LOAN: Loan<Lpn> = Loan {
-        principal_due: Coin::new(1000),
+        principal_due: tests::lpn_coin(1000),
         annual_interest_rate: Percent100::from_permille(165),
         interest_paid: Timestamp::from_seconds(2425252),
     };
