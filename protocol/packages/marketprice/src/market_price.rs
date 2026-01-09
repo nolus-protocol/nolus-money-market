@@ -387,7 +387,7 @@ where
             self.total_feeders,
         )?;
         (self.price * next_price)
-            .ok_or_else(PriceFeedsError::PriceMultiplicationOverflow)
+            .ok_or(PriceFeedsError::overflow("Price multiplication overflow"))
             .and_then(|total_price| self.advance(total_price, &quote_c).do_collect())
     }
 }

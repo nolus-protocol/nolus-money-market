@@ -15,7 +15,6 @@ pub use self::external::Price as ExternalPrice;
 use super::Price;
 
 mod external;
-mod fractionable;
 mod unchecked;
 pub mod with_price;
 

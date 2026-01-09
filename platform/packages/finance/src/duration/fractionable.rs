@@ -1,9 +1,7 @@
 use crate::{
     coin::{Coin, DoubleCoinPrimitive},
     duration::Duration,
-    fractionable::{
-        CommonDoublePrimitive, Fractionable, HigherRank, IntoMax, ToDoublePrimitive, TryFromMax,
-    },
+    fractionable::{CommonDoublePrimitive, Fractionable, IntoMax, ToDoublePrimitive, TryFromMax},
 };
 
 type DoubleDurationPrimitive = u128;
@@ -14,13 +12,6 @@ impl<C> CommonDoublePrimitive<Coin<C>> for Duration {
 
 impl<C> Fractionable<Coin<C>> for Duration {}
 
-impl<T> HigherRank<T> for DoubleDurationPrimitive
-where
-    T: Into<Self>,
-{
-    type Type = DoubleCoinPrimitive;
-}
-
 impl IntoMax<DoubleCoinPrimitive> for Duration {
     fn into_max(self) -> DoubleCoinPrimitive {
         self.to_double().into()
@@ -30,7 +21,7 @@ impl IntoMax<DoubleCoinPrimitive> for Duration {
 impl ToDoublePrimitive for Duration {
     type Double = DoubleDurationPrimitive;
 
-    fn to_double(&self) -> Self::Double {
+    fn to_double(self) -> Self::Double {
         self.nanos().into()
     }
 }

@@ -2,7 +2,7 @@ use currencies::{LeaseGroup, Lpn, Lpns, PaymentGroup};
 use dex::MaxSlippage;
 use finance::{
     coin::CoinDTO,
-    fraction::FractionLegacy,
+    fraction::Fraction,
     price::{self, Price},
 };
 use lease::api::{
