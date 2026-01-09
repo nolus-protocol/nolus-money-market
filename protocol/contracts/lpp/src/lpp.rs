@@ -506,7 +506,7 @@ mod test {
         // pay interest for 36 days
         let payment = loan.interest_due(&now).unwrap();
 
-        let repay = loan.repay(&now, payment);
+        let repay = loan.repay(&now, payment).unwrap();
         let registration = lpp.register_repay_loan(now, &loan, &repay);
         assert_eq!(registration, Some(()));
         Repo::save(&mut store, lease_addr.clone(), &loan).unwrap();
@@ -528,7 +528,7 @@ mod test {
         assert_eq!(loan.interest_due(&now), Some(Coin::ZERO));
 
         // an immediate repay after repay should pass (loan_interest_due==0 bug)
-        let repay = loan.repay(&now, Coin::ZERO);
+        let repay = loan.repay(&now, Coin::ZERO).unwrap();
         let registration1 = lpp.register_repay_loan(now, &loan, &repay);
         assert_eq!(registration1, Some(()));
 
@@ -537,10 +537,12 @@ mod test {
 
         const PAYED_EXTRA: Coin<TheCurrency> = test::lpn_coin(100);
         // pay everything + excess
-        let repay = loan.repay(
-            &now,
-            loan.interest_due(&now).unwrap() + LOAN_AMOUNT + PAYED_EXTRA,
-        );
+
+        let repay = loan
+            .interest_due(&now)
+            .and_then(|due| loan.repay(&now, due + LOAN_AMOUNT + PAYED_EXTRA))
+            .unwrap();
+
         let registration2 = lpp.register_repay_loan(now, &loan, &repay);
         assert_eq!(registration2, Some(()));
 
@@ -622,7 +624,7 @@ mod test {
             .unwrap();
 
         //zero repay
-        let payment = loan_before.repay(&now, Coin::ZERO);
+        let payment = loan_before.repay(&now, Coin::ZERO).unwrap();
         let registration = lpp.register_repay_loan(now, &loan_before, &payment);
         assert_eq!(registration, Some(()));
 
@@ -669,7 +671,7 @@ mod test {
             .unwrap();
         assert_eq!(Some(Coin::ZERO), loan.interest_due(&now));
 
-        let repay = loan.repay(&now, test::lpn_coin(5_000));
+        let repay = loan.repay(&now, test::lpn_coin(5_000)).unwrap();
         let registration = lpp.register_repay_loan(now, &loan, &repay);
         assert_eq!(registration, Some(()));
 
@@ -755,7 +757,7 @@ mod test {
                 price,
             );
 
-            let payment = loan.repay(&now, LOAN_REPAYMENT);
+            let payment = loan.repay(&now, LOAN_REPAYMENT).unwrap();
             Repo::save(&mut store, loan_addr.clone(), &loan).unwrap();
             let registration = lpp.register_repay_loan(now, &loan, &payment);
             assert_eq!(registration, Some(()));
