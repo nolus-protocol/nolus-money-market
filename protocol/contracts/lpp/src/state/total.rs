@@ -80,7 +80,7 @@ impl<Lpn> Total<Lpn> {
             Coin::ZERO
             //debug_assert!(self.total_interest_due.is_zero());
         } else {
-            interest::interest::<Coin<Lpn>, _, _>(
+            interest::interest(
                 self.annual_interest_rate,
                 self.total_principal_due,
                 Duration::between(&self.last_update_time, ctime),
@@ -217,7 +217,7 @@ impl<Lpn> Total<Lpn> {
     }
 
     fn estimated_annual_interest(&self) -> Coin<Lpn> {
-        FractionLegacy::<Coin<Lpn>>::of(&self.annual_interest_rate, self.total_principal_due)
+        FractionLegacy::of(&self.annual_interest_rate, self.total_principal_due)
     }
 }
 

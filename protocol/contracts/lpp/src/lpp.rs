@@ -877,17 +877,17 @@ mod test {
         use crate::{
             borrow::InterestRate,
             config::Config,
-            contract::ContractError,
+            contract::{ContractError, test},
             lpp::{LiquidityPool, test::TheCurrency},
         };
 
         #[test]
         fn test_deposit() {
             let now = Timestamp::from_seconds(120);
-            const DEPOSIT1: Coin<TheCurrency> = Coin::new(1233);
+            const DEPOSIT1: Coin<TheCurrency> = test::lpn_coin(1233);
             const RECEIPT1: Coin<NLpn> = Coin::new(1233);
-            const DEPOSIT2: Coin<TheCurrency> = Coin::new(3113);
-            const LOAN: Coin<TheCurrency> = Coin::new(1000);
+            const DEPOSIT2: Coin<TheCurrency> = test::lpn_coin(3113);
+            const LOAN: Coin<TheCurrency> = test::lpn_coin(1000);
 
             let mut store = MockStorage::default();
 
@@ -933,10 +933,10 @@ mod test {
         #[test]
         fn test_withdraw() {
             let now = Timestamp::from_seconds(120);
-            const DEPOSIT1: Coin<TheCurrency> = Coin::new(1233);
+            const DEPOSIT1: Coin<TheCurrency> = test::lpn_coin(1233);
             const RECEIPT1: Coin<NLpn> = Coin::new(1233);
             const WITHDRAW1: Coin<NLpn> = Coin::new(123);
-            const LOAN: Coin<TheCurrency> = Coin::new(1000);
+            const LOAN: Coin<TheCurrency> = test::lpn_coin(1000);
 
             let mut store = MockStorage::default();
 
@@ -985,10 +985,10 @@ mod test {
         #[test]
         fn test_deposit_less_than_a_receipt() {
             let now = Timestamp::from_seconds(120);
-            const DEPOSIT1: Coin<TheCurrency> = Coin::new(1233);
+            const DEPOSIT1: Coin<TheCurrency> = test::lpn_coin(1233);
             const RECEIPT1: Coin<NLpn> = Coin::new(1233);
-            const INTEREST: Coin<TheCurrency> = Coin::new(1);
-            const DEPOSIT2: Coin<TheCurrency> = Coin::new(1); // the receipts would be 1233/1234 that should trigger an error
+            const INTEREST: Coin<TheCurrency> = test::lpn_coin(1);
+            const DEPOSIT2: Coin<TheCurrency> = test::lpn_coin(1); // the receipts would be 1233/1234 that should trigger an error
 
             let mut store = MockStorage::default();
 
