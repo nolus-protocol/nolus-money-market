@@ -106,11 +106,11 @@ mod test {
 
         let payment1 = lpn_coin(10);
         assert_eq!(
-            RepayShares {
+            Some(RepayShares {
                 interest: Coin::ZERO,
                 principal: payment1,
                 excess: Coin::ZERO
-            },
+            }),
             l.repay(&interest_paid, payment1)
         );
         assert_eq!(
@@ -136,11 +136,11 @@ mod test {
         let interest_a_year = interest.of(principal_start);
         let at_first_year_end = l.interest_paid + Duration::YEAR;
         assert_eq!(
-            RepayShares {
+            Some(RepayShares {
                 interest: interest_a_year,
                 principal: Coin::ZERO,
                 excess: Coin::ZERO
-            },
+            }),
             l.repay(&at_first_year_end, interest_a_year)
         );
         assert_eq!(
@@ -168,11 +168,11 @@ mod test {
         let exp_interest = interest_a_year.checked_div(365 * 24).unwrap();
         let excess = lpn_coin(12441);
         assert_eq!(
-            RepayShares {
+            Some(RepayShares {
                 interest: exp_interest,
                 principal: principal_start,
                 excess,
-            },
+            }),
             l.repay(&at_first_hour_end, exp_interest + principal_start + excess)
         );
         assert_eq!(
