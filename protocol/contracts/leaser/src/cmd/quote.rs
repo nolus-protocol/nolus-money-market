@@ -212,8 +212,15 @@ where
         Asset: CurrencyDef,
         Asset::Group: MemberOf<LeaseCurrencies> + MemberOf<PaymentCurrencies>,
     {
-        let downpayment_lpn = price::total(self.downpayment, self.oracle.price_of::<Dpc>()?)
-            .expect("TODO: handle potential None from price::total() properly");
+        let dpc_price = self.oracle.price_of::<Dpc>()?;
+
+        let downpayment_lpn = price::total(self.downpayment, dpc_price).ok_or(
+            ContractError::overflow_price_total(
+                "calculating the quote's downpayment",
+                self.downpayment,
+                dpc_price,
+            ),
+        )?;
 
         if downpayment_lpn.is_zero() {
             return Err(ContractError::ZeroDownpayment {});
@@ -222,12 +229,21 @@ where
         let borrow = self
             .liability
             .init_borrow_amount(downpayment_lpn, self.max_ltd)
-            .expect("TODO: handle potential None from Liability::init_borrow_amount() properly");
+            .ok_or(ContractError::overflow_init_borrow_amount(
+                "calculating the quote's borrow amount",
+                downpayment_lpn,
+                self.max_ltd,
+            ))?;
 
         let asset_price = self.oracle.price_of::<Asset>()?.inv();
 
-        let total_asset = price::total(downpayment_lpn + borrow, asset_price)
-            .expect("TODO: handle potential None from price::total() properly");
+        let total_asset = price::total(downpayment_lpn + borrow, asset_price).ok_or(
+            ContractError::overflow_price_total(
+                "converting from Lpn to asset currency",
+                downpayment_lpn + borrow,
+                asset_price,
+            ),
+        )?;
 
         let annual_interest_rate = self.lpp_quote.with(borrow)?;
 

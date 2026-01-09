@@ -1,5 +1,9 @@
-use std::num::TryFromIntError;
+use std::{
+    fmt::{Debug, Display},
+    num::TryFromIntError,
+};
 
+use finance::percent::Percent;
 use thiserror::Error;
 
 use sdk::cosmwasm_std::StdError;
@@ -91,4 +95,34 @@ pub enum ContractError {
 
     #[error("[Leaser] Failed to query for the Lease package, cause: {0}")]
     QueryLeasePackage(StdError),
+
+    #[error("[Leaser] Overflow during `{0}`")]
+    ComputationOverflow(String),
+}
+
+impl ContractError {
+    pub fn overflow_price_total<C, P>(cause: &str, amount: C, price: P) -> Self
+    where
+        C: Display,
+        P: Debug,
+    {
+        Self::ComputationOverflow(format!(
+            "during '{cause}`. amount: {}, price: {:?}",
+            amount, price
+        ))
+    }
+
+    pub fn overflow_init_borrow_amount<P>(
+        cause: &str,
+        downpayment: P,
+        may_max_ltd: Option<Percent>,
+    ) -> Self
+    where
+        P: Display,
+    {
+        Self::ComputationOverflow(format!(
+            "during `{cause}`. downpayment: {}, max_ltd: {:?}",
+            downpayment, may_max_ltd
+        ))
+    }
 }
