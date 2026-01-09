@@ -31,14 +31,13 @@ impl<Lpn> Loan<Lpn> {
         )
     }
 
-    pub fn repay(&mut self, by: &Timestamp, repayment: Coin<Lpn>) -> RepayShares<Lpn> {
+    pub fn repay(&mut self, by: &Timestamp, repayment: Coin<Lpn>) -> Option<RepayShares<Lpn>> {
         let (paid_for, interest_change) = interest::pay(
             self.annual_interest_rate,
             self.principal_due,
             repayment,
             self.due_period(by),
-        )
-        .expect("TODO Method should return Option");
+        )?;
 
         let interest_paid = repayment - interest_change;
         let principal_paid = interest_change.min(self.principal_due);
@@ -47,11 +46,11 @@ impl<Lpn> Loan<Lpn> {
         self.principal_due -= principal_paid;
         self.interest_paid += paid_for;
 
-        RepayShares {
+        Some(RepayShares {
             interest: interest_paid,
             principal: principal_paid,
             excess,
-        }
+        })
     }
 
     fn due_period(&self, by: &Timestamp) -> Duration {
