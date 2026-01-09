@@ -235,15 +235,22 @@ where
         Some(())
     }
 
-    fn repay_loan(&mut self, interest_paid: LpnCoin, principal_paid: LpnCoin, by: &Timestamp) {
+    fn repay_loan(
+        &mut self,
+        interest_paid: LpnCoin,
+        principal_paid: LpnCoin,
+        by: &Timestamp,
+    ) -> Option<()> {
         let RepayShares {
             interest,
             principal,
             excess,
-        } = self.lpp_loan.repay(by, interest_paid + principal_paid);
+        } = self.lpp_loan.repay(by, interest_paid + principal_paid)?;
         debug_assert_eq!(interest, interest_paid);
         debug_assert_eq!(principal, principal_paid);
         debug_assert_eq!(excess, Coin::ZERO);
+
+        Some(())
     }
 
     fn debug_check_start_due_before(&self, when: &Timestamp, when_descr: &str) {
@@ -1265,7 +1272,7 @@ mod tests {
             self.loan.interest_due(by)
         }
 
-        fn repay(&mut self, by: &Timestamp, repayment: LpnCoin) -> RepayShares<Lpn> {
+        fn repay(&mut self, by: &Timestamp, repayment: LpnCoin) -> Option<RepayShares<Lpn>> {
             self.loan.repay(by, repayment)
         }
 
