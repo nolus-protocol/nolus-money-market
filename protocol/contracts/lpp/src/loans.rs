@@ -91,7 +91,7 @@ mod test {
         let interest = loan.interest_due(&time).unwrap();
         assert_eq!(interest, coin(100));
         // partial repay
-        let payment = loan.repay(&time, coin(600));
+        let payment = loan.repay(&time, coin(600)).unwrap();
         assert_eq!(payment.interest, coin(100));
         assert_eq!(payment.principal, coin(500));
         assert_eq!(payment.excess, Coin::ZERO);
@@ -103,7 +103,7 @@ mod test {
             Repo::load(deps.as_ref().storage, addr.clone()).expect("should load loan");
 
         // repay with excess, should close the loan
-        let payment = loan.repay(&time, coin(600));
+        let payment = loan.repay(&time, coin(600)).unwrap();
         assert_eq!(payment.interest, Coin::ZERO);
         assert_eq!(payment.principal, coin(500));
         assert_eq!(payment.excess, coin(100));
