@@ -28,7 +28,7 @@ pub(super) fn emit_lease_opened(
             "air",
             loan.annual_interest_rate
                 .checked_add(lease.loan.annual_margin_interest())
-                .expect("TODO propagate up the stack potential overflow"),
+                .expect("Total annual interest rate should not exceed 100%"),
         )
         .emit_currency_dto("currency", &lease.position.amount().currency())
         .emit("loan-pool-id", lease.loan.lpp().addr())
