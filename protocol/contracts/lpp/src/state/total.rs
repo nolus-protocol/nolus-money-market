@@ -105,9 +105,10 @@ impl<Lpn> Total<Lpn> {
         let new_total_principal_due =
             self.total_principal_due
                 .checked_add(amount)
-                .ok_or(ContractError::overflow(
+                .ok_or(ContractError::overflow_add(
                     "calculating the total principal due after borrowing",
-                    format!("{} + {}", self.total_principal_due, amount),
+                    self.total_principal_due,
+                    amount,
                 ))?;
 
         let new_annual_interest = {
@@ -116,9 +117,10 @@ impl<Lpn> Total<Lpn> {
 
             current_annual
                 .checked_add(added_interest)
-                .ok_or(ContractError::overflow(
+                .ok_or(ContractError::overflow_add(
                     "calculating the annual interest after borrowing",
-                    format!("{} + {}", current_annual, added_interest),
+                    current_annual,
+                    added_interest,
                 ))?
         };
 

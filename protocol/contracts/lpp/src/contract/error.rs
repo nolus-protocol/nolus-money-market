@@ -104,4 +104,12 @@ impl ContractError {
             amount, price
         ))
     }
+
+    pub fn overflow_add<L, R>(cause: &str, lhs: L, rhs: R) -> Self
+    where
+        L: Display,
+        R: Display,
+    {
+        Self::ComputationOverflow(format!("during `{cause}`. ({} + {})", lhs, rhs))
+    }
 }
