@@ -63,7 +63,14 @@ pub enum AlarmError {
 }
 
 impl AlarmError {
-    pub fn overflow(cause: &'static str, details: String) -> Self {
-        Self::ComputationOverflow(format!("`{cause}`. `{details}`"))
+    pub fn overflow_price_total<C, P>(cause: &str, amount: C, price: P) -> Self
+    where
+        C: std::fmt::Display,
+        P: std::fmt::Debug,
+    {
+        Self::ComputationOverflow(format!(
+            "during '{cause}`. amount: {}, price: {:?}",
+            amount, price
+        ))
     }
 }
