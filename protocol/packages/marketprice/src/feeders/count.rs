@@ -12,7 +12,7 @@ use finance::{
 
 use crate::feeders::PriceFeedersError;
 
-pub(crate) type Unit = u32;
+type Unit = u32;
 const ZERO: Unit = 0;
 const ONE: Unit = 1;
 const MAX: Unit = u32::MAX;
