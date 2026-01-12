@@ -493,7 +493,7 @@ fn on_alarm_native_only_transfer() {
 
 #[test]
 fn on_alarm_foreign_only_transfer() {
-    let lpn_profit = common::coin::<Lpn>(500);
+    let lpn_profit = common::lpn_coin(500);
     let swapped_lpn_profit = common::coin::<Nls>(250);
 
     on_time_alarm_do_transfers::<Lpn>(Zero::ZERO, Some((lpn_profit, swapped_lpn_profit)));
@@ -502,7 +502,7 @@ fn on_alarm_foreign_only_transfer() {
 #[test]
 fn on_alarm_native_and_foreign_transfer() {
     let native_profit = common::coin::<Nls>(1000);
-    let lpn_profit = common::coin::<Lpn>(500);
+    let lpn_profit = common::lpn_coin(500);
     let swapped_lpn_profit = common::coin::<Nls>(250);
 
     on_time_alarm_do_transfers::<Lpn>(native_profit, Some((lpn_profit, swapped_lpn_profit)));

@@ -123,7 +123,7 @@ fn internal_test_integration_setup_test() {
         &mut test_case,
         testing::user(ADMIN),
         Coin::<BaseC>::new(5),
-        Coin::<Lpn>::new(7),
+        common::lpn_coin(7),
     );
     assert_eq!(response.data, None);
     assert_eq!(
@@ -139,7 +139,7 @@ fn feed_price_with_alarm_issue() {
     let mut test_case = create_test_case();
     oracle_mod::add_feeder(&mut test_case, testing::user(ADMIN));
 
-    let lease = open_lease(&mut test_case, Coin::new(1000));
+    let lease = open_lease(&mut test_case, common::lpn_coin(1000));
 
     // there is no price in the oracle and feed for this alarm
     () = test_case
@@ -149,7 +149,7 @@ fn feed_price_with_alarm_issue() {
             test_case.address_book.oracle().clone(),
             &ExecuteMsg::AddPriceAlarm {
                 alarm: Alarm::new(
-                    price::total_of(Coin::<PaymentC4>::new(1)).is(Coin::<Lpn>::new(1)),
+                    price::total_of(Coin::<PaymentC4>::new(1)).is(common::lpn_coin(1)),
                     None,
                 ),
             },
@@ -163,7 +163,7 @@ fn feed_price_with_alarm_issue() {
         &mut test_case,
         testing::user(ADMIN),
         Coin::<BaseC>::new(5),
-        Coin::<Lpn>::new(7),
+        common::lpn_coin(7),
     );
 }
 
@@ -173,7 +173,7 @@ fn feed_price_with_alarm() {
     let feeder = testing::user(ADMIN);
     oracle_mod::add_feeder(&mut test_case, feeder.clone());
 
-    let lease = open_lease(&mut test_case, Coin::new(1000));
+    let lease = open_lease(&mut test_case, common::lpn_coin(1000));
 
     () = test_case
         .app
@@ -182,7 +182,7 @@ fn feed_price_with_alarm() {
             test_case.address_book.oracle().clone(),
             &ExecuteMsg::AddPriceAlarm {
                 alarm: Alarm::new(
-                    price::total_of(Coin::<PaymentC4>::new(1)).is(Coin::<Lpn>::new(10)),
+                    price::total_of(Coin::<PaymentC4>::new(1)).is(common::lpn_coin(10)),
                     None,
                 ),
             },
@@ -196,7 +196,7 @@ fn feed_price_with_alarm() {
         &mut test_case,
         feeder,
         Coin::<PaymentC4>::new(1),
-        Coin::<Lpn>::new(5),
+        common::lpn_coin(5),
     );
 }
 
@@ -208,7 +208,7 @@ fn overwrite_alarm_and_dispatch() {
     let feeder = testing::user(ADMIN);
     oracle_mod::add_feeder(&mut test_case, feeder.clone());
 
-    let lease = open_lease(&mut test_case, Coin::new(1000));
+    let lease = open_lease(&mut test_case, common::lpn_coin(1000));
 
     () = test_case
         .app
@@ -217,8 +217,8 @@ fn overwrite_alarm_and_dispatch() {
             test_case.address_book.oracle().clone(),
             &ExecuteMsg::AddPriceAlarm {
                 alarm: Alarm::new(
-                    price::total_of(Coin::<PaymentC4>::new(1)).is(Coin::<Lpn>::new(5)),
-                    Some(price::total_of(Coin::<PaymentC4>::new(1)).is(Coin::<Lpn>::new(5))),
+                    price::total_of(Coin::<PaymentC4>::new(1)).is(common::lpn_coin(5)),
+                    Some(price::total_of(Coin::<PaymentC4>::new(1)).is(common::lpn_coin(5))),
                 ),
             },
             &[],
@@ -234,7 +234,7 @@ fn overwrite_alarm_and_dispatch() {
             test_case.address_book.oracle().clone(),
             &ExecuteMsg::AddPriceAlarm {
                 alarm: Alarm::new(
-                    price::total_of(Coin::<PaymentC4>::new(1)).is(Coin::<Lpn>::new(10)),
+                    price::total_of(Coin::<PaymentC4>::new(1)).is(common::lpn_coin(10)),
                     None,
                 ),
             },
@@ -249,7 +249,7 @@ fn overwrite_alarm_and_dispatch() {
         &mut test_case,
         feeder,
         Coin::<PaymentC4>::new(1),
-        Coin::<Lpn>::new(5),
+        common::lpn_coin(5),
     );
 
     let res: AppResponse = oracle_common::dispatch(&mut test_case, lease.clone()).unwrap_response();
@@ -349,13 +349,13 @@ fn test_config_update() {
         &mut test_case,
         feeder1,
         Coin::<BaseC>::new(base),
-        Coin::<Lpn>::new(quote),
+        common::lpn_coin(quote),
     );
     oracle_mod::feed_price(
         &mut test_case,
         feeder2,
         Coin::<BaseC>::new(base),
-        Coin::<Lpn>::new(quote),
+        common::lpn_coin(quote),
     );
 
     let price: BasePrice<LeaseGroup, Lpn, Lpns> = oracle_mod::fetch_price::<BaseC, _, _, _>(
@@ -367,7 +367,7 @@ fn test_config_update() {
     assert_eq!(
         price,
         price::total_of(Coin::<BaseC>::new(base))
-            .is(Coin::<Lpn>::new(quote))
+            .is(common::lpn_coin(quote))
             .into()
     );
 
@@ -527,7 +527,7 @@ fn schedule_alarm(
                 ORACLE_ADDR.load(storage).unwrap(),
                 &ExecuteMsg::AddPriceAlarm {
                     alarm: Alarm::new(
-                        price::total_of(common::coin::<BaseC>(base)).is(common::coin::<Lpn>(quote)),
+                        price::total_of(common::coin::<BaseC>(base)).is(common::lpn_coin(quote)),
                         None,
                     ),
                 },
@@ -674,7 +674,7 @@ fn price_alarm_rescheduling() {
         &mut test_case,
         feeder_addr.clone(),
         Coin::<BaseC>::new(3),
-        Coin::<Lpn>::new(1),
+        common::lpn_coin(1),
     );
 
     let response =
@@ -722,7 +722,7 @@ fn price_alarm_rescheduling() {
         &mut test_case,
         feeder_addr.clone(),
         Coin::<BaseC>::new(4),
-        Coin::<Lpn>::new(1),
+        common::lpn_coin(1),
     );
 
     let response =
@@ -789,7 +789,7 @@ fn price_alarm_rescheduling_with_failing() {
         &mut test_case,
         feeder_addr.clone(),
         Coin::<BaseC>::new(3),
-        Coin::<Lpn>::new(1),
+        common::lpn_coin(1),
     );
 
     let response =

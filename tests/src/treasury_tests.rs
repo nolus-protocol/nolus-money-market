@@ -126,7 +126,7 @@ fn on_alarm_n_protocols(registry: Registry, protocols_nb: usize) {
     let mut test_case = new_test_case(registry);
     let feeder1 = testing::user("feeder1");
     oracle_mod::add_feeder(&mut test_case, feeder1.clone());
-    let price = price::total_of(Coin::<NlsProtocol>::new(23456789)).is(Coin::<Lpn>::new(100000000));
+    let price = price::total_of(Coin::<NlsProtocol>::new(23456789)).is(common::lpn_coin(100000000));
     oracle_mod::feed_price_pair(&mut test_case, feeder1, price);
 
     let treasury = test_case.address_book.treasury().clone();

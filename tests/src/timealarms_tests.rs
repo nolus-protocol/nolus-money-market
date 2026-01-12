@@ -485,7 +485,7 @@ fn test_time_notify() {
 #[test]
 fn test_profit_alarms() {
     let mut test_case = TestCaseBuilder::<Lpn>::with_reserve(&[
-        common::cwcoin(Coin::<Lpn>::new(1_000_000)),
+        common::cwcoin(common::lpn_coin(1_000_000)),
         common::cwcoin(Coin::<Nls>::new(1_000_000)),
     ])
     .init_time_alarms()
