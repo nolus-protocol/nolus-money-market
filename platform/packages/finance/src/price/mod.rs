@@ -293,11 +293,11 @@ mod test {
         assert!(super::total(c(2), price).is_none());
     }
 
-    pub(super) fn c(a: Amount) -> Coin {
+    pub(super) const fn c(a: Amount) -> Coin {
         coin::coin2(a)
     }
 
-    pub(super) fn q(a: Amount) -> QuoteCoin {
+    pub(super) const fn q(a: Amount) -> QuoteCoin {
         coin::coin1(a)
     }
 
