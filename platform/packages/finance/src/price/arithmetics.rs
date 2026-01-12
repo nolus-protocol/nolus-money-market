@@ -52,9 +52,7 @@ where
         F: Into<SimpleFraction<U>>,
         U: Bits + FractionUnit + Into<Amount>,
     {
-        self.map_with_fraction(|self_as_fraction| {
-            self_as_fraction.lossy_mul(rhs.into().to_amount_fraction())
-        })
+        self.map_with_fraction(rhs)
     }
 
     /// Add two prices rounding each of them to 1.10-18, simmilarly to
@@ -74,15 +72,14 @@ where
             .map(|factored_total| super::total_of(factored_amount).is(factored_total))
     }
 
-    fn map_with_fraction<WithFraction>(self, f: WithFraction) -> Option<Self>
+    fn map_with_fraction<F, U>(self, rhs: F) -> Option<Self>
     where
-        WithFraction: FnOnce(SimpleFraction<Amount>) -> Option<SimpleFraction<Amount>>,
+        F: Into<SimpleFraction<U>>,
+        U: Bits + FractionUnit + Into<Amount>,
     {
-        f(SimpleFraction::new(
-            self.amount_quote.to_primitive(),
-            self.amount.to_primitive(),
-        ))
-        .map(Self::from_fraction)
+        SimpleFraction::new(self.amount_quote.to_primitive(), self.amount.to_primitive())
+            .lossy_mul(rhs.into().to_amount_fraction())
+            .map(Self::from_fraction)
     }
 
     fn from_fraction<U>(fraction: SimpleFraction<U>) -> Self
