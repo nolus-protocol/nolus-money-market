@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use finance::{duration::Duration, price::Price};
 use sdk::cosmwasm_std::{Addr, Timestamp};
 
-use crate::feeders::{Count, Unit as CountUnit};
+use crate::feeders::Count;
 
 use super::observation::Observation;
 
@@ -120,9 +120,11 @@ where
                 .try_into_reciproral()
                 .expect("should have provided positive value for count");
 
-            let avg = sum.lossy_mul::<_, CountUnit>(reciproral);
+            let avg = sum
+                .lossy_mul(reciproral)
+                .expect("The reciproral should be less or equal to 1");
 
-            self.last_sample = Sample { price: avg };
+            self.last_sample = Sample { price: Some(avg) };
         }
 
         self.sample_prices.clear();
