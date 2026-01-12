@@ -24,6 +24,8 @@ pub(crate) use fractionable::DoubleCoinPrimitive;
 
 mod amount;
 mod amount_serde;
+#[cfg(any(test, feature = "testing"))]
+mod amount_testing;
 mod dto;
 mod external;
 mod fraction;
