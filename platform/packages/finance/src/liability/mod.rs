@@ -505,7 +505,7 @@ mod test {
         assert_eq!(calculated, Coin::<Currency>::new(exp));
     }
 
-    fn coin(amount: Amount) -> Coin<SuperGroupTestC1> {
+    const fn coin(amount: Amount) -> Coin<SuperGroupTestC1> {
         coin::coin1(amount)
     }
 }
