@@ -1,6 +1,6 @@
 use std::{collections::HashSet, fmt::Debug, marker::PhantomData};
 
-use finance::price::Price;
+use finance::{percent::Percent100, price::Price};
 use observations::{Observations, ObservationsRead};
 use sdk::cosmwasm_std::{Addr, Timestamp};
 
@@ -82,35 +82,18 @@ where
 
         let samples_nb = config.samples_number().into();
 
-        let mut item_iter = samples
+        let mut price_samples = samples
             .take(samples_nb)
             .map(Sample::into_maybe_price)
             .skip_while(Option::is_none)
             .map(|price| Option::expect(price, "sample prices should keep being present"));
 
-        item_iter
+        price_samples
             .next()
             .ok_or(PriceFeedsError::NoPrice {})
             .and_then(|first| {
-                item_iter.try_fold(first, |acc, current| {
-                    current
-                        .lossy_mul::<_, u128>(discount_factor)
-                        .ok_or_else(|| {
-                            PriceFeedsError::overflow_lossy_mul(current, discount_factor)
-                        })
-                        .and_then(|a| {
-                            acc.lossy_mul::<_, u128>(discount_factor.complement())
-                                .ok_or_else(|| {
-                                    PriceFeedsError::overflow_lossy_mul(
-                                        acc,
-                                        discount_factor.complement(),
-                                    )
-                                })
-                                .and_then(|b| {
-                                    a.checked_add(b)
-                                        .ok_or_else(|| PriceFeedsError::overflow_add(a, b))
-                                })
-                        })
+                price_samples.try_fold(first, |acc, current| {
+                    formula_calculation(acc, current, discount_factor)
                 })
             })
     }
@@ -178,6 +161,33 @@ where
             })
             .map(|()| self)
     }
+}
+
+fn formula_calculation<C, QuoteC>(
+    acc: Price<C, QuoteC>,
+    current: Price<C, QuoteC>,
+    discount_factor: Percent100,
+) -> Result<Price<C, QuoteC>>
+where
+    C: 'static + Debug,
+    QuoteC: 'static + Debug,
+{
+    current
+        .lossy_mul::<_, u128>(discount_factor)
+        .ok_or_else(|| PriceFeedsError::overflow_lossy_mul(current, discount_factor))
+        .and_then(|weighted_current| {
+            acc.lossy_mul::<_, u128>(discount_factor.complement())
+                .ok_or_else(|| {
+                    PriceFeedsError::overflow_lossy_mul(acc, discount_factor.complement())
+                })
+                .and_then(|weighted_previous| {
+                    weighted_current
+                        .checked_add(weighted_previous)
+                        .ok_or_else(|| {
+                            PriceFeedsError::overflow_add(weighted_current, weighted_previous)
+                        })
+                })
+        })
 }
 
 #[cfg(test)]
