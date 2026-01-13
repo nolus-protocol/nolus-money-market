@@ -77,13 +77,13 @@ mod test {
     #[test]
     fn interest() {
         let l = Loan {
-            principal_due: coin(100),
+            principal_due: lpn_coin(100),
             annual_interest_rate: Percent100::from_percent(50),
             interest_paid: Timestamp::from_nanos(200),
         };
 
         assert_eq!(
-            coin(50),
+            lpn_coin(50),
             l.interest_due(&(l.interest_paid + Duration::YEAR))
         );
 
@@ -93,7 +93,7 @@ mod test {
 
     #[test]
     fn repay_no_interest() {
-        let principal_at_start = coin(500);
+        let principal_at_start = lpn_coin(500);
         let interest = Percent100::from_percent(50);
         let start_at = Timestamp::from_nanos(200);
         let interest_paid = start_at;
@@ -103,7 +103,7 @@ mod test {
             interest_paid,
         };
 
-        let payment1 = coin(10);
+        let payment1 = lpn_coin(10);
         assert_eq!(
             RepayShares {
                 interest: Coin::ZERO,
@@ -124,7 +124,7 @@ mod test {
 
     #[test]
     fn repay_interest_only() {
-        let principal_start = coin(500);
+        let principal_start = lpn_coin(500);
         let interest = Percent100::from_percent(50);
         let mut l = Loan {
             principal_due: principal_start,
@@ -154,7 +154,7 @@ mod test {
 
     #[test]
     fn repay_all() {
-        let principal_start = coin(50000000000);
+        let principal_start = lpn_coin(50000000000);
         let interest = Percent100::from_percent(50);
         let mut l = Loan {
             principal_due: principal_start,
@@ -165,7 +165,7 @@ mod test {
         let interest_a_year = interest.of(principal_start);
         let at_first_hour_end = l.interest_paid + Duration::HOUR;
         let exp_interest = interest_a_year.checked_div(365 * 24).unwrap();
-        let excess = coin(12441);
+        let excess = lpn_coin(12441);
         assert_eq!(
             RepayShares {
                 interest: exp_interest,
@@ -184,7 +184,7 @@ mod test {
         );
     }
 
-    fn coin(amount: Amount) -> Coin<Lpn> {
+    const fn lpn_coin(amount: Amount) -> Coin<Lpn> {
         Coin::new(amount)
     }
 }

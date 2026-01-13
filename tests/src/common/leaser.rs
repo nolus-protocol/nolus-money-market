@@ -51,11 +51,11 @@ impl Instantiator {
     }
 
     pub fn min_asset() -> LpnCoinDTO {
-        super::lpn_coin(200)
+        super::lpn_coin_dto(200)
     }
 
     pub fn min_transaction() -> LpnCoinDTO {
-        super::lpn_coin(50)
+        super::lpn_coin_dto(50)
     }
 
     pub fn position_spec() -> PositionSpecDTO {

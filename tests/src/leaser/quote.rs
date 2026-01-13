@@ -62,12 +62,12 @@ fn test_quote() {
         &mut test_case,
         feeder,
         Coin::<LeaseCurrency>::new(2),
-        Coin::<Lpn>::new(1),
+        common::lpn_coin(1),
     );
 
     let leaser = test_case.address_book.leaser().clone();
     let downpayment = Coin::new(100);
-    let borrow = Coin::<Lpn>::new(185);
+    let borrow = common::lpn_coin(185);
     let resp = leaser_mod::query_quote::<Downpayment, LeaseCurrency>(
         &test_case.app,
         leaser,
@@ -99,7 +99,7 @@ fn test_quote() {
         None,
     );
 
-    assert_eq!(resp.borrow.try_into(), Ok(Coin::<Lpn>::new(27)));
+    assert_eq!(resp.borrow.try_into(), Ok(common::lpn_coin(27)));
     assert_eq!(
         resp.total.try_into(),
         Ok(Coin::<LeaseCurrency>::new(15 * 2 + 27 * 2))
@@ -166,10 +166,10 @@ fn common_quote_with_conversion(
     oracle_mod::add_feeder(&mut test_case, feeder_addr.clone());
 
     let dpn_lpn_base = Coin::<PaymentC1>::new(1);
-    let dpn_lpn_quote = Coin::<Lpn>::new(2);
+    let dpn_lpn_quote = common::lpn_coin(2);
     let dpn_lpn_price = price::total_of(dpn_lpn_base).is(dpn_lpn_quote);
 
-    let lpn_asset_base = Coin::<Lpn>::new(1);
+    let lpn_asset_base = common::lpn_coin(1);
     let lpn_asset_quote = Coin::<LeaseCurrency>::new(2);
     let lpn_asset_price = price::total_of(lpn_asset_base).is(lpn_asset_quote);
 
@@ -206,17 +206,17 @@ fn common_quote_with_conversion(
 
 #[test]
 fn test_quote_with_conversion_100() {
-    common_quote_with_conversion(Coin::new(100), Coin::new(371));
+    common_quote_with_conversion(Coin::new(100), common::lpn_coin(371));
 }
 
 #[test]
 fn test_quote_with_conversion_200() {
-    common_quote_with_conversion(Coin::new(200), Coin::new(742));
+    common_quote_with_conversion(Coin::new(200), common::lpn_coin(742));
 }
 
 #[test]
 fn test_quote_with_conversion_5000() {
-    common_quote_with_conversion(Coin::new(5000), Coin::new(18571));
+    common_quote_with_conversion(Coin::new(5000), common::lpn_coin(18571));
 }
 
 #[test]
@@ -254,16 +254,16 @@ fn test_quote_fixed_rate() {
         &mut test_case,
         feeder,
         Coin::<LeaseCurrency>::new(3),
-        Coin::<Lpn>::new(1),
+        common::lpn_coin(1),
     );
     let resp = leaser_mod::query_quote::<Downpayment, LeaseCurrency>(
         &test_case.app,
         test_case.address_book.leaser().clone(),
-        Coin::<Downpayment>::new(100),
+        common::lpn_coin(100),
         None,
     );
 
-    assert_eq!(resp.borrow.try_into(), Ok(Coin::<Lpn>::new(185)));
+    assert_eq!(resp.borrow.try_into(), Ok(common::lpn_coin(185)));
     assert_eq!(
         resp.total.try_into(),
         Ok(Coin::<LeaseCurrency>::new(100 * 3 + 185 * 3))

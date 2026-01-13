@@ -212,7 +212,7 @@ where
                 );
                 self.total.withdraw(receipts).map(|_| amount_lpn)
             })
-            .and_then(|amount_lpn: Coin<Lpn>| {
+            .and_then(|amount_lpn| {
                 self.commited_balance(pending_withdraw).and_then(|balance| {
                     if balance < amount_lpn {
                         Err(ContractError::NoLiquidity {})
@@ -282,7 +282,7 @@ where
     }
 
     fn commited_balance(&self, uncommited_amount: Coin<Lpn>) -> Result<Coin<Lpn>> {
-        self.uncommited_balance().map(|balance: Coin<Lpn>| {
+        self.uncommited_balance().map(|balance| {
             debug_assert!(
                 uncommited_amount <= balance,
                 "Pending deposit or withdraw {{{uncommited_amount:?}}} > Current Balance: {{{balance}}}!"
@@ -297,7 +297,7 @@ where
 
     fn total_lpn(&self, now: &Timestamp, uncommited_amount: Coin<Lpn>) -> Result<Coin<Lpn>> {
         self.commited_balance(uncommited_amount)
-            .map(|balance: Coin<Lpn>| balance + self.total_due(now))
+            .map(|balance| balance + self.total_due(now))
     }
 
     fn utilization(&self, balance: Coin<Lpn>, total_due: Coin<Lpn>) -> Percent100 {
@@ -311,7 +311,6 @@ where
 
 #[cfg(test)]
 mod test {
-    use currencies::Lpn;
     use finance::{
         coin::Coin,
         duration::Duration,
@@ -325,13 +324,18 @@ mod test {
     use sdk::cosmwasm_std::{Addr, Timestamp, testing::MockStorage};
 
     use crate::{
-        borrow::InterestRate, config::Config as ApiConfig, contract::ContractError, loan::Loan,
-        loans::Repo, lpp::LppBalances,
+        borrow::InterestRate,
+        config::Config as ApiConfig,
+        contract::{
+            ContractError,
+            test::{self, TheCurrency},
+        },
+        loan::Loan,
+        loans::Repo,
+        lpp::LppBalances,
     };
 
     use super::LiquidityPool;
-
-    type TheCurrency = Lpn;
 
     const BASE_INTEREST_RATE: Percent100 = Percent100::from_permille(70);
     const UTILIZATION_OPTIMAL: Percent100 = Percent100::from_permille(700);
@@ -377,7 +381,7 @@ mod test {
     #[test]
     fn test_balance() {
         let lease_code_id = Code::unchecked(123);
-        let balance = Coin::new(10_000_000);
+        let balance = test::lpn_coin(10_000_000);
 
         let config = ApiConfig::new(
             lease_code_id,
@@ -399,8 +403,8 @@ mod test {
 
     #[test]
     fn test_query_quote() {
-        const BALANCE: Coin<TheCurrency> = Coin::new(10_000_000);
-        const DEPOSIT_AMOUNT: Coin<TheCurrency> = Coin::new(7_000_000);
+        const BALANCE: Coin<TheCurrency> = test::lpn_coin(10_000_000);
+        const DEPOSIT_AMOUNT: Coin<TheCurrency> = test::lpn_coin(7_000_000);
         let mut store = MockStorage::default();
 
         let now = Timestamp::from_nanos(0);
@@ -423,7 +427,7 @@ mod test {
         let now = now + Duration::from_nanos(10); //deliberately hide the variable name
         assert_eq!(
             Percent100::from_permille(136),
-            lpp.query_quote(Coin::new(7_700_000), &now)
+            lpp.query_quote(test::lpn_coin(7_700_000), &now)
                 .expect("can't query quote")
                 .expect("should return some interest_rate")
         );
@@ -436,7 +440,7 @@ mod test {
         let lpp = LiquidityPool::<TheCurrency, _>::load(&store, &config, &bank_past_loan).unwrap();
 
         let result = lpp
-            .query_quote(Coin::new(1_000_000), &now)
+            .query_quote(test::lpn_coin(1_000_000), &now)
             .expect("can't query quote")
             .expect("should return some interest_rate");
 
@@ -445,8 +449,8 @@ mod test {
 
     #[test]
     fn test_open_and_repay_loan() {
-        const LPP_BALANCE: Coin<TheCurrency> = Coin::new(10_000_000);
-        const LOAN_AMOUNT: Coin<TheCurrency> = Coin::new(5_000_000);
+        const LPP_BALANCE: Coin<TheCurrency> = test::lpn_coin(10_000_000);
+        const LOAN_AMOUNT: Coin<TheCurrency> = test::lpn_coin(5_000_000);
 
         let base_rate = BASE_INTEREST_RATE;
         let addon_rate = ADDON_OPTIMAL_INTEREST_RATE;
@@ -516,7 +520,7 @@ mod test {
         // wait for another 36 days
         let now = now + Duration::from_days(36);
 
-        const PAYED_EXTRA: Coin<TheCurrency> = Coin::new(100);
+        const PAYED_EXTRA: Coin<TheCurrency> = test::lpn_coin(100);
         // pay everything + excess
         let repay = loan.repay(&now, loan.interest_due(&now) + LOAN_AMOUNT + PAYED_EXTRA);
         lpp.register_repay_loan(now, &loan, &repay);
@@ -542,13 +546,13 @@ mod test {
         );
         let mut lpp = LiquidityPool::new(&config, &bank);
 
-        let result = lpp.try_open_loan(now, Coin::<TheCurrency>::new(1_000));
+        let result = lpp.try_open_loan(now, test::lpn_coin(1_000));
         assert_eq!(result, Err(ContractError::NoLiquidity {}));
     }
 
     #[test]
     fn try_open_loan_for_zero_amount() {
-        const BALANCE: Coin<TheCurrency> = Coin::new(10_000_000);
+        const BALANCE: Coin<TheCurrency> = test::lpn_coin(10_000_000);
         let now = Timestamp::from_nanos(0);
         let bank = MockBankView::<TheCurrency, TheCurrency>::only_balance(BALANCE);
         let lease_code_id = Code::unchecked(123);
@@ -565,13 +569,13 @@ mod test {
         );
         let mut lpp = LiquidityPool::new(&config, &bank);
 
-        let result = lpp.try_open_loan(now, Coin::<TheCurrency>::new(0));
+        let result = lpp.try_open_loan(now, test::lpn_coin(0));
         assert_eq!(result, Err(ContractError::ZeroLoanAmount));
     }
 
     #[test]
     fn open_loan_repay_zero() {
-        const BALANCE: Coin<TheCurrency> = Coin::new(10_000_000);
+        const BALANCE: Coin<TheCurrency> = test::lpn_coin(10_000_000);
         let mut store = MockStorage::new();
         let now = Timestamp::from_nanos(0);
         let bank = MockBankView::<TheCurrency, TheCurrency>::only_balance(BALANCE);
@@ -590,7 +594,7 @@ mod test {
         );
         let mut lpp = LiquidityPool::new(&config, &bank);
 
-        lpp.try_open_loan(now, Coin::<TheCurrency>::new(5_000))
+        lpp.try_open_loan(now, test::lpn_coin(5_000))
             .and_then(|loan| Repo::open(&mut store, loan_addr.clone(), &loan))
             .unwrap();
 
@@ -616,7 +620,7 @@ mod test {
 
     #[test]
     fn try_open_and_close_loan_without_paying_interest() {
-        const BALANCE: Coin<TheCurrency> = Coin::new(10_000_000);
+        const BALANCE: Coin<TheCurrency> = test::lpn_coin(10_000_000);
         let mut store = MockStorage::new();
         let now = Timestamp::from_nanos(0);
         let bank = MockBankView::<TheCurrency, TheCurrency>::only_balance(BALANCE);
@@ -635,7 +639,7 @@ mod test {
         );
         let mut lpp = LiquidityPool::new(&config, &bank);
 
-        lpp.try_open_loan(now, Coin::<TheCurrency>::new(5_000))
+        lpp.try_open_loan(now, test::lpn_coin(5_000))
             .and_then(|loan| Repo::open(&mut store, loan_addr.clone(), &loan))
             .unwrap();
 
@@ -644,7 +648,7 @@ mod test {
             .unwrap();
         assert_eq!(Coin::ZERO, loan.interest_due(&now));
 
-        let repay = loan.repay(&now, Coin::new(5_000));
+        let repay = loan.repay(&now, test::lpn_coin(5_000));
         lpp.register_repay_loan(now, &loan, &repay);
         Repo::save(&mut store, loan_addr.clone(), &loan).unwrap();
 
@@ -656,12 +660,12 @@ mod test {
 
     #[test]
     fn test_tvl_and_price() {
-        const BALANCE: Coin<TheCurrency> = Coin::new(10_000_000);
-        const DEPOSIT: Coin<TheCurrency> = Coin::new(10_000_000);
+        const BALANCE: Coin<TheCurrency> = test::lpn_coin(10_000_000);
+        const DEPOSIT: Coin<TheCurrency> = test::lpn_coin(10_000_000);
         const DEPOSIT_RECEIPTS: Coin<NLpn> = Coin::new(10_000_000);
-        const LOAN_AMOUNT: Coin<TheCurrency> = Coin::new(5_000_000);
+        const LOAN_AMOUNT: Coin<TheCurrency> = test::lpn_coin(5_000_000);
         const EXPECTED_INTEREST_RATE: Percent100 = Percent100::from_permille(220);
-        const LOAN_REPAYMENT: Coin<TheCurrency> = Coin::new(6_000_000);
+        const LOAN_REPAYMENT: Coin<TheCurrency> = test::lpn_coin(6_000_000);
 
         let mut store = MockStorage::new();
         let now = Timestamp::from_nanos(0);
@@ -751,7 +755,7 @@ mod test {
         let withdraw = lpp
             .withdraw_lpn(Coin::new(1000u128), Coin::ZERO, &now)
             .unwrap();
-        assert_eq!(withdraw, Coin::new(1110));
+        assert_eq!(withdraw, test::lpn_coin(1110));
     }
 
     mod min_utilization {
@@ -763,7 +767,9 @@ mod test {
         use platform::{bank::testing::MockBankView, contract::Code};
         use sdk::cosmwasm_std::Timestamp;
 
-        use crate::{borrow::InterestRate, config::Config as ApiConfig, state::Total};
+        use crate::{
+            borrow::InterestRate, config::Config as ApiConfig, contract::test, state::Total,
+        };
 
         use super::{super::LiquidityPool, TheCurrency};
 
@@ -779,7 +785,7 @@ mod test {
             let mut total: Total<TheCurrency> = Total::new();
 
             total
-                .borrow(now, Coin::new(borrowed), Percent100::ZERO)
+                .borrow(now, test::lpn_coin(borrowed), Percent100::ZERO)
                 .unwrap();
 
             let bank =
@@ -871,17 +877,17 @@ mod test {
         use crate::{
             borrow::InterestRate,
             config::Config,
-            contract::ContractError,
+            contract::{ContractError, test},
             lpp::{LiquidityPool, test::TheCurrency},
         };
 
         #[test]
         fn test_deposit() {
             let now = Timestamp::from_seconds(120);
-            const DEPOSIT1: Coin<TheCurrency> = Coin::new(1233);
+            const DEPOSIT1: Coin<TheCurrency> = test::lpn_coin(1233);
             const RECEIPT1: Coin<NLpn> = Coin::new(1233);
-            const DEPOSIT2: Coin<TheCurrency> = Coin::new(3113);
-            const LOAN: Coin<TheCurrency> = Coin::new(1000);
+            const DEPOSIT2: Coin<TheCurrency> = test::lpn_coin(3113);
+            const LOAN: Coin<TheCurrency> = test::lpn_coin(1000);
 
             let mut store = MockStorage::default();
 
@@ -927,10 +933,10 @@ mod test {
         #[test]
         fn test_withdraw() {
             let now = Timestamp::from_seconds(120);
-            const DEPOSIT1: Coin<TheCurrency> = Coin::new(1233);
+            const DEPOSIT1: Coin<TheCurrency> = test::lpn_coin(1233);
             const RECEIPT1: Coin<NLpn> = Coin::new(1233);
             const WITHDRAW1: Coin<NLpn> = Coin::new(123);
-            const LOAN: Coin<TheCurrency> = Coin::new(1000);
+            const LOAN: Coin<TheCurrency> = test::lpn_coin(1000);
 
             let mut store = MockStorage::default();
 
@@ -979,10 +985,10 @@ mod test {
         #[test]
         fn test_deposit_less_than_a_receipt() {
             let now = Timestamp::from_seconds(120);
-            const DEPOSIT1: Coin<TheCurrency> = Coin::new(1233);
+            const DEPOSIT1: Coin<TheCurrency> = test::lpn_coin(1233);
             const RECEIPT1: Coin<NLpn> = Coin::new(1233);
-            const INTEREST: Coin<TheCurrency> = Coin::new(1);
-            const DEPOSIT2: Coin<TheCurrency> = Coin::new(1); // the receipts would be 1233/1234 that should trigger an error
+            const INTEREST: Coin<TheCurrency> = test::lpn_coin(1);
+            const DEPOSIT2: Coin<TheCurrency> = test::lpn_coin(1); // the receipts would be 1233/1234 that should trigger an error
 
             let mut store = MockStorage::default();
 

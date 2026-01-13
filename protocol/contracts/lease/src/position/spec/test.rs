@@ -10,6 +10,7 @@ use finance::{
 
 use crate::{
     finance::LpnCoin,
+    lease::tests,
     position::{DueTrait, OverdueCollection, close::Policy as ClosePolicy},
 };
 
@@ -42,14 +43,14 @@ impl DueTrait for TestDue {
     }
 }
 
-const fn coin<C>(amount: Amount) -> Coin<C> {
+const fn lease_coin(amount: Amount) -> Coin<TestCurrency> {
     Coin::new(amount)
 }
 
 fn due(total_due: Amount, overdue_collectable: Amount) -> TestDue {
     TestDue {
-        total_due: coin(total_due),
-        overdue: coin(overdue_collectable),
+        total_due: tests::lpn_coin(total_due),
+        overdue: tests::lpn_coin(overdue_collectable),
     }
 }
 
@@ -66,8 +67,8 @@ fn spec(min_asset: Amount, min_transaction: Amount) -> Spec {
     Spec::new(
         liability,
         ClosePolicy::default(),
-        coin(min_asset),
-        coin(min_transaction),
+        tests::lpn_coin(min_asset),
+        tests::lpn_coin(min_transaction),
     )
 }
 
@@ -86,7 +87,7 @@ fn price(
 }
 
 fn price_from_amount(price_asset: Amount, price_lpn: Amount) -> Price<TestCurrency, TestLpn> {
-    price(coin(price_asset), coin(price_lpn))
+    price(lease_coin(price_asset), tests::lpn_coin(price_lpn))
 }
 
 fn spec_with_first(warn: Percent100, min_asset: Amount, min_transaction: Amount) -> Spec {
@@ -123,28 +124,28 @@ fn spec_with_max(max: Percent100, min_asset: Amount, min_transaction: Amount) ->
     Spec::new(
         liability,
         ClosePolicy::default(),
-        coin(min_asset),
-        coin(min_transaction),
+        tests::lpn_coin(min_asset),
+        tests::lpn_coin(min_transaction),
     )
 }
 
 mod test_calc_borrow {
     use finance::percent::Percent;
 
-    use crate::position::PositionError;
+    use crate::{lease::tests, position::PositionError};
 
     #[test]
     fn downpayment_less_than_min() {
         let spec = super::spec(560, 300);
 
-        let downpayment_less = spec.calc_borrow_amount(super::coin(299), None);
+        let downpayment_less = spec.calc_borrow_amount(tests::lpn_coin(299), None);
         assert!(matches!(
             downpayment_less,
             Err(PositionError::InsufficientTransactionAmount(_))
         ));
 
-        let borrow = spec.calc_borrow_amount(super::coin(300), None);
-        assert_eq!(super::coin(557), borrow.unwrap());
+        let borrow = spec.calc_borrow_amount(tests::lpn_coin(300), None);
+        assert_eq!(tests::lpn_coin(557), borrow.unwrap());
     }
 
     #[test]
@@ -152,51 +153,56 @@ mod test_calc_borrow {
         let spec = super::spec(600, 300);
 
         let borrow_less =
-            spec.calc_borrow_amount(super::coin(300), Some(Percent::from_percent(99)));
+            spec.calc_borrow_amount(tests::lpn_coin(300), Some(Percent::from_percent(99)));
         assert!(matches!(
             borrow_less,
             Err(PositionError::InsufficientTransactionAmount(_))
         ));
 
-        let borrow = spec.calc_borrow_amount(super::coin(300), Some(Percent::from_percent(100)));
-        assert_eq!(super::coin(300), borrow.unwrap());
+        let borrow =
+            spec.calc_borrow_amount(tests::lpn_coin(300), Some(Percent::from_percent(100)));
+        assert_eq!(tests::lpn_coin(300), borrow.unwrap());
     }
 
     #[test]
     fn lease_less_than_min() {
         let spec = super::spec(1_000, 300);
 
-        let borrow_1 = spec.calc_borrow_amount(super::coin(349), None);
+        let borrow_1 = spec.calc_borrow_amount(tests::lpn_coin(349), None);
         assert!(matches!(
             borrow_1,
             Err(PositionError::InsufficientAssetAmount(_))
         ));
 
-        let borrow_2 = spec.calc_borrow_amount(super::coin(350), None);
-        assert_eq!(super::coin(650), borrow_2.unwrap());
+        let borrow_2 = spec.calc_borrow_amount(tests::lpn_coin(350), None);
+        assert_eq!(tests::lpn_coin(650), borrow_2.unwrap());
 
-        let borrow_3 = spec.calc_borrow_amount(super::coin(550), Some(Percent::from_percent(81)));
+        let borrow_3 =
+            spec.calc_borrow_amount(tests::lpn_coin(550), Some(Percent::from_percent(81)));
         assert!(matches!(
             borrow_3,
             Err(PositionError::InsufficientAssetAmount(_))
         ));
 
-        let borrow_3 = spec.calc_borrow_amount(super::coin(550), Some(Percent::from_percent(82)));
-        assert_eq!(super::coin(451), borrow_3.unwrap());
+        let borrow_3 =
+            spec.calc_borrow_amount(tests::lpn_coin(550), Some(Percent::from_percent(82)));
+        assert_eq!(tests::lpn_coin(451), borrow_3.unwrap());
     }
 
     #[test]
     fn valid_borrow_amount() {
         let spec = super::spec(1_000, 300);
 
-        let borrow_1 = spec.calc_borrow_amount(super::coin(540), None);
-        assert_eq!(super::coin(1002), borrow_1.unwrap());
+        let borrow_1 = spec.calc_borrow_amount(tests::lpn_coin(540), None);
+        assert_eq!(tests::lpn_coin(1002), borrow_1.unwrap());
 
-        let borrow_2 = spec.calc_borrow_amount(super::coin(870), Some(Percent::from_percent(100)));
-        assert_eq!(super::coin(870), borrow_2.unwrap());
+        let borrow_2 =
+            spec.calc_borrow_amount(tests::lpn_coin(870), Some(Percent::from_percent(100)));
+        assert_eq!(tests::lpn_coin(870), borrow_2.unwrap());
 
-        let borrow_3 = spec.calc_borrow_amount(super::coin(650), Some(Percent::from_percent(150)));
-        assert_eq!(super::coin(975), borrow_3.unwrap());
+        let borrow_3 =
+            spec.calc_borrow_amount(tests::lpn_coin(650), Some(Percent::from_percent(150)));
+        assert_eq!(tests::lpn_coin(975), borrow_3.unwrap());
     }
 }
 
@@ -210,7 +216,7 @@ mod test_debt {
     fn no_debt() {
         let warn_ltv = Percent100::from_permille(11);
         let spec = super::spec_with_first(warn_ltv, 1, 1);
-        let asset = super::coin(100);
+        let asset = super::lease_coin(100);
 
         assert_eq!(
             spec.debt(asset, &super::due(0, 0), super::price_from_amount(1, 1)),
@@ -226,7 +232,7 @@ mod test_debt {
     fn warnings_none_zero_liq() {
         let warn_ltv = Percent100::from_percent(51);
         let spec = super::spec_with_first(warn_ltv, 1, 1);
-        let asset = super::coin(100);
+        let asset = super::lease_coin(100);
 
         assert_eq!(
             spec.debt(asset, &super::due(1, 0), super::price_from_amount(1, 1)),
@@ -276,7 +282,7 @@ mod test_debt {
     fn warnings_none_min_transaction() {
         let warn_ltv = Percent100::from_percent(51);
         let spec = super::spec_with_first(warn_ltv, 1, 15);
-        let asset = super::coin(100);
+        let asset = super::lease_coin(100);
 
         assert_eq!(
             spec.debt(asset, &super::due(50, 14), super::price_from_amount(1, 1)),
@@ -312,7 +318,7 @@ mod test_debt {
     fn warnings_first() {
         let warn_ltv = Percent100::from_permille(712);
         let spec = super::spec_with_first(warn_ltv, 10, 1);
-        let asset = super::coin(1000);
+        let asset = super::lease_coin(1000);
 
         assert_eq!(
             spec.debt(asset, &super::due(711, 0), super::price_from_amount(1, 1)),
@@ -344,11 +350,11 @@ mod test_debt {
         );
         assert_eq!(
             spec.debt(asset, &super::due(712, 1), super::price_from_amount(1, 1)),
-            Debt::partial(super::coin(1), Cause::Overdue()),
+            Debt::partial(super::lease_coin(1), Cause::Overdue()),
         );
         assert_eq!(
             spec.debt(asset, &super::due(89, 1), super::price_from_amount(8, 1)),
-            Debt::partial(super::coin(8), Cause::Overdue()),
+            Debt::partial(super::lease_coin(8), Cause::Overdue()),
         );
         assert_eq!(
             spec.debt(asset, &super::due(712, 0), super::price_from_amount(1, 1)),
@@ -384,7 +390,7 @@ mod test_debt {
     fn warnings_first_min_transaction() {
         let warn_ltv = Percent100::from_permille(712);
         let spec = super::spec_with_first(warn_ltv, 10, 3);
-        let asset = super::coin(1000);
+        let asset = super::lease_coin(1000);
 
         assert_eq!(
             spec.debt(asset, &super::due(712, 2), super::price_from_amount(1, 1)),
@@ -409,11 +415,11 @@ mod test_debt {
         );
         assert_eq!(
             spec.debt(asset, &super::due(721, 5), super::price_from_amount(1, 1)),
-            Debt::partial(super::coin(5), Cause::Overdue()),
+            Debt::partial(super::lease_coin(5), Cause::Overdue()),
         );
         assert_eq!(
             spec.debt(asset, &super::due(240, 3), super::price_from_amount(3, 1)),
-            Debt::partial(super::coin(9), Cause::Overdue()),
+            Debt::partial(super::lease_coin(9), Cause::Overdue()),
         );
     }
 
@@ -421,7 +427,7 @@ mod test_debt {
     fn warnings_second() {
         let warn_ltv = Percent100::from_permille(123);
         let spec = super::spec_with_second(warn_ltv, 10, 1);
-        let asset = super::coin(1000);
+        let asset = super::lease_coin(1000);
 
         assert_eq!(
             spec.debt(asset, &super::due(122, 0), super::price_from_amount(1, 1)),
@@ -453,7 +459,7 @@ mod test_debt {
         );
         assert_eq!(
             spec.debt(asset, &super::due(123, 4), super::price_from_amount(1, 1)),
-            Debt::partial(super::coin(4), Cause::Overdue())
+            Debt::partial(super::lease_coin(4), Cause::Overdue())
         );
         assert_eq!(
             spec.debt(asset, &super::due(132, 0), super::price_from_amount(1, 1)),
@@ -482,7 +488,7 @@ mod test_debt {
     fn warnings_second_min_transaction() {
         let warn_ltv = Percent100::from_permille(123);
         let spec = super::spec_with_second(warn_ltv, 10, 5);
-        let asset = super::coin(1000);
+        let asset = super::lease_coin(1000);
 
         assert_eq!(
             spec.debt(asset, &super::due(128, 4), super::price_from_amount(1, 1)),
@@ -500,7 +506,7 @@ mod test_debt {
         );
         assert_eq!(
             spec.debt(asset, &super::due(128, 5), super::price_from_amount(1, 1)),
-            Debt::partial(super::coin(5), Cause::Overdue())
+            Debt::partial(super::lease_coin(5), Cause::Overdue())
         );
     }
 
@@ -509,7 +515,7 @@ mod test_debt {
         let warn_third_ltv = Percent100::from_permille(381);
         let max_ltv = warn_third_ltv + STEP;
         let spec = super::spec_with_third(warn_third_ltv, 100, 1);
-        let asset = super::coin(1000);
+        let asset = super::lease_coin(1000);
 
         assert_eq!(
             spec.debt(asset, &super::due(380, 0), super::price_from_amount(1, 1)),
@@ -534,11 +540,11 @@ mod test_debt {
         );
         assert_eq!(
             spec.debt(asset, &super::due(381, 375), super::price_from_amount(1, 1)),
-            Debt::partial(super::coin(375), Cause::Overdue())
+            Debt::partial(super::lease_coin(375), Cause::Overdue())
         );
         assert_eq!(
             spec.debt(asset, &super::due(573, 562), super::price_from_amount(2, 3)),
-            Debt::partial(super::coin(374), Cause::Overdue())
+            Debt::partial(super::lease_coin(374), Cause::Overdue())
         );
         assert_eq!(
             spec.debt(asset, &super::due(390, 0), super::price_from_amount(1, 1)),
@@ -550,7 +556,7 @@ mod test_debt {
         assert_eq!(
             spec.debt(asset, &super::due(391, 0), super::price_from_amount(1, 1)),
             Debt::partial(
-                super::coin(384),
+                super::lease_coin(384),
                 Cause::Liability {
                     ltv: max_ltv,
                     healthy_ltv: STEP
@@ -564,7 +570,7 @@ mod test_debt {
         let warn_third_ltv = Percent100::from_permille(381);
         let max_ltv = warn_third_ltv + STEP;
         let spec = super::spec_with_third(warn_third_ltv, 100, 386);
-        let asset = super::coin(1000);
+        let asset = super::lease_coin(1000);
 
         assert_eq!(
             spec.debt(asset, &super::due(380, 1), super::price_from_amount(1, 1)),
@@ -596,7 +602,7 @@ mod test_debt {
         );
         assert_eq!(
             spec.debt(asset, &super::due(391, 386), super::price_from_amount(1, 1)),
-            Debt::partial(super::coin(386), Cause::Overdue()),
+            Debt::partial(super::lease_coin(386), Cause::Overdue()),
         );
         assert_eq!(
             spec.debt(asset, &super::due(392, 0), super::price_from_amount(1, 1)),
@@ -615,7 +621,7 @@ mod test_debt {
         assert_eq!(
             spec.debt(asset, &super::due(393, 0), super::price_from_amount(1, 1)),
             Debt::partial(
-                super::coin(386),
+                super::lease_coin(386),
                 Cause::Liability {
                     ltv: max_ltv,
                     healthy_ltv: STEP
@@ -625,7 +631,7 @@ mod test_debt {
         assert_eq!(
             spec.debt(asset, &super::due(788, 0), super::price_from_amount(1, 2)),
             Debt::partial(
-                super::coin(387),
+                super::lease_coin(387),
                 Cause::Liability {
                     ltv: max_ltv,
                     healthy_ltv: STEP
@@ -638,20 +644,20 @@ mod test_debt {
     fn liquidate_partial() {
         let max_ltv = Percent100::from_permille(881);
         let spec = super::spec_with_max(max_ltv, 100, 1);
-        let asset = super::coin(1000);
+        let asset = super::lease_coin(1000);
 
         assert_eq!(
             spec.debt(asset, &super::due(880, 1), super::price_from_amount(1, 1)),
-            Debt::partial(super::coin(1), Cause::Overdue()),
+            Debt::partial(super::lease_coin(1), Cause::Overdue()),
         );
         assert_eq!(
             spec.debt(asset, &super::due(139, 1), super::price_from_amount(4, 1)),
-            Debt::partial(super::coin(4), Cause::Overdue()),
+            Debt::partial(super::lease_coin(4), Cause::Overdue()),
         );
         assert_eq!(
             spec.debt(asset, &super::due(881, 879), super::price_from_amount(1, 1)),
             Debt::partial(
-                super::coin(879),
+                super::lease_coin(879),
                 Cause::Liability {
                     ltv: max_ltv,
                     healthy_ltv: STEP
@@ -660,11 +666,11 @@ mod test_debt {
         );
         assert_eq!(
             spec.debt(asset, &super::due(881, 880), super::price_from_amount(1, 1)),
-            Debt::partial(super::coin(880), Cause::Overdue()),
+            Debt::partial(super::lease_coin(880), Cause::Overdue()),
         );
         assert_eq!(
             spec.debt(asset, &super::due(294, 294), super::price_from_amount(1, 3)),
-            Debt::partial(super::coin(98), Cause::Overdue()),
+            Debt::partial(super::lease_coin(98), Cause::Overdue()),
         );
         assert_eq!(
             spec.debt(asset, &super::due(294, 293), super::price_from_amount(3, 1)),
@@ -686,12 +692,12 @@ mod test_debt {
     fn liquidate_partial_min_asset() {
         let max_ltv = Percent100::from_permille(881);
         let spec = super::spec_with_max(max_ltv, 100, 1);
-        let asset = super::coin(1000);
+        let asset = super::lease_coin(1000);
 
         assert_eq!(
             spec.debt(asset, &super::due(900, 897), super::price_from_amount(1, 1)),
             Debt::partial(
-                super::coin(898),
+                super::lease_coin(898),
                 Cause::Liability {
                     ltv: max_ltv,
                     healthy_ltv: STEP
@@ -700,16 +706,16 @@ mod test_debt {
         );
         assert_eq!(
             spec.debt(asset, &super::due(900, 899), super::price_from_amount(1, 1)),
-            Debt::partial(super::coin(899), Cause::Overdue()),
+            Debt::partial(super::lease_coin(899), Cause::Overdue()),
         );
         assert_eq!(
             spec.debt(asset, &super::due(233, 233), super::price_from_amount(3, 1)),
-            Debt::partial(super::coin(699), Cause::Overdue()),
+            Debt::partial(super::lease_coin(699), Cause::Overdue()),
         );
         assert_eq!(
             spec.debt(asset, &super::due(901, 889), super::price_from_amount(1, 1)),
             Debt::partial(
-                super::coin(900),
+                super::lease_coin(900),
                 Cause::Liability {
                     ltv: max_ltv,
                     healthy_ltv: STEP
@@ -729,12 +735,12 @@ mod test_debt {
     fn liquidate_full() {
         let max_ltv = Percent100::from_permille(768);
         let spec = super::spec_with_max(max_ltv, 230, 1);
-        let asset = super::coin(1000);
+        let asset = super::lease_coin(1000);
 
         assert_eq!(
             spec.debt(asset, &super::due(768, 765), super::price_from_amount(1, 1)),
             Debt::partial(
-                super::coin(765),
+                super::lease_coin(765),
                 Cause::Liability {
                     ltv: max_ltv,
                     healthy_ltv: STEP
@@ -748,7 +754,7 @@ mod test_debt {
                 super::price_from_amount(1, 2)
             ),
             Debt::partial(
-                super::coin(777),
+                super::lease_coin(777),
                 Cause::Liability {
                     ltv: max_ltv,
                     healthy_ltv: STEP
@@ -757,7 +763,7 @@ mod test_debt {
         );
         assert_eq!(
             spec.debt(asset, &super::due(768, 768), super::price_from_amount(1, 1)),
-            Debt::partial(super::coin(768), Cause::Overdue()),
+            Debt::partial(super::lease_coin(768), Cause::Overdue()),
         );
         assert_eq!(
             spec.debt(
@@ -765,7 +771,7 @@ mod test_debt {
                 &super::due(1560, 1556),
                 super::price_from_amount(1, 2)
             ),
-            Debt::partial(super::coin(778), Cause::Overdue()),
+            Debt::partial(super::lease_coin(778), Cause::Overdue()),
         );
         assert_eq!(
             spec.debt(asset, &super::due(788, 768), super::price_from_amount(1, 1)),
@@ -780,12 +786,12 @@ mod test_debt {
     fn liquidate_full_liability() {
         let max_ltv = Percent100::from_permille(673);
         let spec = super::spec_with_max(max_ltv, 120, 15);
-        let asset = super::coin(1000);
+        let asset = super::lease_coin(1000);
 
         assert_eq!(
             spec.debt(asset, &super::due(882, 1), super::price_from_amount(1, 1)),
             Debt::partial(
-                super::coin(880),
+                super::lease_coin(880),
                 Cause::Liability {
                     ltv: max_ltv,
                     healthy_ltv: STEP
@@ -819,11 +825,11 @@ mod test_debt {
     fn liquidate_full_overdue() {
         let max_ltv = Percent100::from_permille(773);
         let spec = super::spec_with_max(max_ltv, 326, 15);
-        let asset = super::coin(1000);
+        let asset = super::lease_coin(1000);
 
         assert_eq!(
             spec.debt(asset, &super::due(772, 674), super::price_from_amount(1, 1)),
-            Debt::partial(super::coin(674), Cause::Overdue()),
+            Debt::partial(super::lease_coin(674), Cause::Overdue()),
         );
         assert_eq!(
             spec.debt(
@@ -831,7 +837,7 @@ mod test_debt {
                 &super::due(1674, 1674),
                 super::price_from_amount(1, 2)
             ),
-            Debt::partial(super::coin(837), Cause::Overdue()),
+            Debt::partial(super::lease_coin(837), Cause::Overdue()),
         );
         assert_eq!(
             spec.debt(asset, &super::due(772, 675), super::price_from_amount(1, 1)),
@@ -867,9 +873,7 @@ mod test_steadiness {
     const WARN_LTV: Percent100 = LTV.checked_add(STEP).expect("should not exceed 100%");
     const SL: Percent100 = WARN_LTV.checked_add(STEP).expect("should not exceed 100%");
 
-    const ASSET: Coin<TestCurrency> = Coin::new(1000);
-
-    // type TestLpn = Lpn;
+    const ASSET: Coin<TestCurrency> = super::lease_coin(1000);
 
     #[test]
     fn no_close() {
@@ -1413,20 +1417,20 @@ mod test_validate_payment {
     #[test]
     fn insufficient_payment() {
         let spec = super::spec(65, 16);
-        let result_1 = spec.validate_payment(super::coin(15), super::price_from_amount(1, 1));
+        let result_1 = spec.validate_payment(super::lease_coin(15), super::price_from_amount(1, 1));
         assert!(matches!(
             result_1,
             Err(PositionError::InsufficientTransactionAmount(_))
         ));
-        let result_2 = spec.validate_payment(super::coin(16), super::price_from_amount(1, 1));
+        let result_2 = spec.validate_payment(super::lease_coin(16), super::price_from_amount(1, 1));
         assert!(result_2.is_ok());
 
-        let result_3 = spec.validate_payment(super::coin(45), super::price_from_amount(3, 1));
+        let result_3 = spec.validate_payment(super::lease_coin(45), super::price_from_amount(3, 1));
         assert!(matches!(
             result_3,
             Err(PositionError::InsufficientTransactionAmount(_))
         ));
-        let result_4 = spec.validate_payment(super::coin(8), super::price_from_amount(1, 2));
+        let result_4 = spec.validate_payment(super::lease_coin(8), super::price_from_amount(1, 2));
         assert!(result_4.is_ok());
     }
 }
@@ -1437,17 +1441,20 @@ mod test_validate_close {
     #[test]
     fn too_small_amount() {
         let spec = super::spec(75, 15);
-        let asset = super::coin(100);
+        let asset = super::lease_coin(100);
 
-        let result_1 =
-            spec.validate_close_amount(asset, super::coin(14), super::price_from_amount(1, 1));
+        let result_1 = spec.validate_close_amount(
+            asset,
+            super::lease_coin(14),
+            super::price_from_amount(1, 1),
+        );
         assert!(matches!(
             result_1,
             Err(PositionError::PositionCloseAmountTooSmall(_))
         ));
 
         let result_2 =
-            spec.validate_close_amount(asset, super::coin(6), super::price_from_amount(1, 2));
+            spec.validate_close_amount(asset, super::lease_coin(6), super::price_from_amount(1, 2));
         assert!(matches!(
             result_2,
             Err(PositionError::PositionCloseAmountTooSmall(_))
@@ -1457,31 +1464,40 @@ mod test_validate_close {
     #[test]
     fn amount_as_min_transaction() {
         let spec = super::spec(85, 15);
-        let asset = super::coin(100);
+        let asset = super::lease_coin(100);
 
-        let result_1 =
-            spec.validate_close_amount(asset, super::coin(15), super::price_from_amount(1, 1));
+        let result_1 = spec.validate_close_amount(
+            asset,
+            super::lease_coin(15),
+            super::price_from_amount(1, 1),
+        );
         assert!(result_1.is_ok());
 
         let result_2 =
-            spec.validate_close_amount(asset, super::coin(5), super::price_from_amount(1, 3));
+            spec.validate_close_amount(asset, super::lease_coin(5), super::price_from_amount(1, 3));
         assert!(result_2.is_ok());
     }
 
     #[test]
     fn too_big_amount() {
         let spec = super::spec(25, 1);
-        let asset = super::coin(100);
+        let asset = super::lease_coin(100);
 
-        let result_1 =
-            spec.validate_close_amount(asset, super::coin(76), super::price_from_amount(1, 1));
+        let result_1 = spec.validate_close_amount(
+            asset,
+            super::lease_coin(76),
+            super::price_from_amount(1, 1),
+        );
         assert!(matches!(
             result_1,
             Err(PositionError::PositionCloseAmountTooBig(_))
         ));
 
-        let result_2 =
-            spec.validate_close_amount(asset, super::coin(64), super::price_from_amount(3, 2));
+        let result_2 = spec.validate_close_amount(
+            asset,
+            super::lease_coin(64),
+            super::price_from_amount(3, 2),
+        );
         assert!(matches!(
             result_2,
             Err(PositionError::PositionCloseAmountTooBig(_))
@@ -1491,38 +1507,50 @@ mod test_validate_close {
     #[test]
     fn amount_as_min_asset() {
         let spec = super::spec(25, 1);
-        let asset = super::coin(100);
+        let asset = super::lease_coin(100);
 
-        let result_1 =
-            spec.validate_close_amount(asset, super::coin(75), super::price_from_amount(1, 1));
+        let result_1 = spec.validate_close_amount(
+            asset,
+            super::lease_coin(75),
+            super::price_from_amount(1, 1),
+        );
         assert!(result_1.is_ok());
 
-        let result_2 =
-            spec.validate_close_amount(asset, super::coin(62), super::price_from_amount(3, 2));
+        let result_2 = spec.validate_close_amount(
+            asset,
+            super::lease_coin(62),
+            super::price_from_amount(3, 2),
+        );
         assert!(result_2.is_ok());
     }
 
     #[test]
     fn valid_amount() {
         let spec = super::spec(40, 10);
-        let asset = super::coin(100);
+        let asset = super::lease_coin(100);
 
-        let result_1 =
-            spec.validate_close_amount(asset, super::coin(53), super::price_from_amount(1, 1));
+        let result_1 = spec.validate_close_amount(
+            asset,
+            super::lease_coin(53),
+            super::price_from_amount(1, 1),
+        );
         assert!(result_1.is_ok());
 
-        let result_2 =
-            spec.validate_close_amount(asset, super::coin(89), super::price_from_amount(1, 4));
+        let result_2 = spec.validate_close_amount(
+            asset,
+            super::lease_coin(89),
+            super::price_from_amount(1, 4),
+        );
         assert!(result_2.is_ok());
     }
 }
 
 mod test_check_close {
-    use finance::{coin::Coin, percent::Percent100};
+    use finance::percent::Percent100;
 
     use crate::{
         api::position::{ChangeCmd, ClosePolicyChange},
-        position::{CloseStrategy, PositionError, spec::test::TestCurrency},
+        position::{CloseStrategy, PositionError},
     };
 
     #[test]
@@ -1540,7 +1568,7 @@ mod test_check_close {
                     take_profit: None,
                     stop_loss: Some(ChangeCmd::Set(stop_loss_trigger)),
                 },
-                super::coin(1000),
+                super::lease_coin(1000),
                 &super::due(550, 0),
                 super::price_from_amount(1, 2),
             )
@@ -1550,7 +1578,7 @@ mod test_check_close {
     #[test]
     fn set_reset_stop_loss() {
         let spec = super::spec(40, 10);
-        let asset = super::coin(100);
+        let asset = super::lease_coin(100);
 
         assert_eq!(
             None,
@@ -1560,10 +1588,7 @@ mod test_check_close {
         let stop_loss_trigger = Percent100::from_percent(46);
         assert_eq!(
             Err(PositionError::trigger_close(
-                Percent100::from_ratio::<Coin<TestCurrency>>(
-                    super::coin(920),
-                    super::coin(1000 * 2)
-                ),
+                Percent100::from_ratio(super::lease_coin(920), super::lease_coin(1000 * 2)),
                 CloseStrategy::StopLoss(stop_loss_trigger)
             )),
             spec.change_close_policy(
@@ -1571,7 +1596,7 @@ mod test_check_close {
                     take_profit: None,
                     stop_loss: Some(ChangeCmd::Set(stop_loss_trigger)),
                 },
-                super::coin(1000),
+                super::lease_coin(1000),
                 &super::due(920, 0),
                 super::price_from_amount(1, 2),
             )
@@ -1582,7 +1607,7 @@ mod test_check_close {
                     take_profit: None,
                     stop_loss: Some(ChangeCmd::Set(stop_loss_trigger)),
                 },
-                super::coin(1000),
+                super::lease_coin(1000),
                 &super::due(550, 0),
                 super::price_from_amount(1, 2),
             )
@@ -1606,7 +1631,7 @@ mod test_check_close {
                     take_profit: Some(ChangeCmd::Set(stop_loss_trigger)),
                     stop_loss: Some(ChangeCmd::Reset),
                 },
-                super::coin(1000),
+                super::lease_coin(1000),
                 &super::due(920, 0),
                 super::price_from_amount(1, 2),
             )
@@ -1627,7 +1652,7 @@ mod test_check_close {
     #[test]
     fn set_reset_take_profit() {
         let spec = super::spec(40, 10);
-        let asset = super::coin(100);
+        let asset = super::lease_coin(100);
 
         assert_eq!(
             None,
@@ -1637,10 +1662,7 @@ mod test_check_close {
         let take_profit_trigger = Percent100::from_percent(46);
         assert_eq!(
             Err(PositionError::trigger_close(
-                Percent100::from_ratio::<Coin<TestCurrency>>(
-                    super::coin(919),
-                    super::coin(1000 * 2)
-                ),
+                Percent100::from_ratio(super::lease_coin(919), super::lease_coin(1000 * 2)),
                 CloseStrategy::TakeProfit(take_profit_trigger)
             )),
             spec.change_close_policy(
@@ -1648,7 +1670,7 @@ mod test_check_close {
                     take_profit: Some(ChangeCmd::Set(take_profit_trigger)),
                     stop_loss: None,
                 },
-                super::coin(1000),
+                super::lease_coin(1000),
                 &super::due(919, 0),
                 super::price_from_amount(1, 2),
             )
@@ -1659,7 +1681,7 @@ mod test_check_close {
                     take_profit: Some(ChangeCmd::Set(take_profit_trigger)),
                     stop_loss: None,
                 },
-                super::coin(1000),
+                super::lease_coin(1000),
                 &super::due(920, 0),
                 super::price_from_amount(1, 2),
             )
@@ -1683,7 +1705,7 @@ mod test_check_close {
                     take_profit: Some(ChangeCmd::Reset),
                     stop_loss: Some(ChangeCmd::Set(take_profit_trigger)),
                 },
-                super::coin(1000),
+                super::lease_coin(1000),
                 &super::due(550, 0),
                 super::price_from_amount(1, 2),
             )

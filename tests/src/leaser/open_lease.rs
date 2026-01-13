@@ -257,7 +257,7 @@ where
                 &mut test_case,
                 user_addr.clone(),
                 Coin::<DownpaymentC>::new(1),
-                Coin::<Lpn>::new(1),
+                common::lpn_coin(1),
             );
         }
 
@@ -266,7 +266,7 @@ where
                 &mut test_case,
                 user_addr.clone(),
                 Coin::<LeaseC>::new(1),
-                Coin::<Lpn>::new(1),
+                common::lpn_coin(1),
             );
         }
     }

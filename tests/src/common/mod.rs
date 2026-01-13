@@ -138,12 +138,16 @@ pub fn native_cwcoin(amount: Amount) -> CwCoin {
     cwcoin_from_amount::<Nls>(amount)
 }
 
-pub fn lpn_coin(amount: Amount) -> LpnCoinDTO {
-    Coin::<Lpn>::new(amount).into()
+pub fn lpn_coin(amount: Amount) -> Coin<Lpn> {
+    Coin::new(amount)
+}
+
+pub fn lpn_coin_dto(amount: Amount) -> LpnCoinDTO {
+    lpn_coin(amount).into()
 }
 
 pub fn coin<C>(amount: Amount) -> Coin<C> {
-    Coin::<C>::new(amount)
+    Coin::new(amount)
 }
 
 pub fn cwcoin<C>(coin: Coin<C>) -> CwCoin

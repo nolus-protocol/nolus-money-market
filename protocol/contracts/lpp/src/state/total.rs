@@ -80,7 +80,7 @@ impl<Lpn> Total<Lpn> {
             Coin::ZERO
             //debug_assert!(self.total_interest_due.is_zero());
         } else {
-            interest::interest::<Coin<Lpn>, _, _>(
+            interest::interest(
                 self.annual_interest_rate,
                 self.total_principal_due,
                 Duration::between(&self.last_update_time, ctime),
@@ -217,7 +217,7 @@ impl<Lpn> Total<Lpn> {
     }
 
     fn estimated_annual_interest(&self) -> Coin<Lpn> {
-        FractionLegacy::<Coin<Lpn>>::of(&self.annual_interest_rate, self.total_principal_due)
+        FractionLegacy::of(&self.annual_interest_rate, self.total_principal_due)
     }
 }
 
@@ -231,7 +231,7 @@ mod test {
     use finance::{coin::Amount, duration::Duration};
     use sdk::cosmwasm_std::testing::MockStorage;
 
-    use crate::loan::Loan;
+    use crate::{contract::test, loan::Loan};
 
     use super::*;
 
@@ -249,35 +249,39 @@ mod test {
         assert_eq!(Coin::ZERO, total.total_principal_due());
 
         total
-            .borrow(block_time, Coin::new(10000), Percent100::from_percent(20))
+            .borrow(
+                block_time,
+                test::lpn_coin(10000),
+                Percent100::from_percent(20),
+            )
             .expect("should borrow");
-        assert_eq!(total.total_principal_due(), Coin::new(10000));
+        assert_eq!(total.total_principal_due(), test::lpn_coin(10000));
 
         block_time = block_time.plus_nanos(Duration::YEAR.nanos() / 2);
         let interest_due = total.total_interest_due_by_now(&block_time);
-        assert_eq!(interest_due, Coin::new(1000));
+        assert_eq!(interest_due, test::lpn_coin(1000));
 
         total.repay(
             block_time,
-            Coin::new(1000),
-            Coin::new(5000),
+            test::lpn_coin(1000),
+            test::lpn_coin(5000),
             Percent100::from_percent(20),
         );
-        assert_eq!(total.total_principal_due(), Coin::new(5000));
+        assert_eq!(total.total_principal_due(), test::lpn_coin(5000));
 
         block_time = block_time.plus_nanos(Duration::YEAR.nanos() / 2);
         let interest_due = total.total_interest_due_by_now(&block_time);
-        assert_eq!(interest_due, Coin::new(500));
+        assert_eq!(interest_due, test::lpn_coin(500));
     }
 
     #[test]
     fn borrow_and_repay_with_overflow() {
         let mut block_time = Timestamp::from_nanos(0);
 
-        let mut total: Total<Lpn> = Total::default();
-        assert_eq!(total.total_principal_due(), Coin::<Lpn>::new(0));
+        let mut total = Total::default();
+        assert_eq!(total.total_principal_due(), Coin::ZERO);
 
-        let borrow_loan1 = Coin::<Lpn>::new(5_458_329);
+        let borrow_loan1 = test::lpn_coin(5_458_329);
         let loan1_annual_interest_rate = Percent100::from_permille(137);
         let loan1 = Loan {
             principal_due: borrow_loan1,
@@ -294,7 +298,7 @@ mod test {
         block_time = block_time.plus_days(59);
 
         // Open loan2 after 59 days
-        let borrow_loan2 = Coin::<Lpn>::new(3_543_118);
+        let borrow_loan2 = test::lpn_coin(3_543_118);
         let loan2_annual_interest_rate = Percent100::from_permille(133);
         let loan2 = Loan {
             principal_due: borrow_loan2,

@@ -99,7 +99,7 @@ fn cover_losses_unauthortized() {
 #[test]
 fn cover_losses_insufficient_balance() {
     let mut test_case: LeaseTestCase = lease::create_test_case::<Lpn>();
-    let downpayment = Coin::<Lpn>::new(1_000_000);
+    let downpayment = common::lpn_coin(1_000_000);
     let lease_addr: Addr = lease::open_lease(&mut test_case, downpayment, None);
 
     let reserve = test_case.address_book.reserve().clone();
@@ -115,7 +115,7 @@ fn cover_losses_insufficient_balance() {
 #[test]
 fn cover_losses_enough_balance() {
     let mut test_case: LeaseTestCase = lease::create_test_case::<Lpn>();
-    let downpayment = Coin::<Lpn>::new(1_000_000);
+    let downpayment = common::lpn_coin(1_000_000);
     let lease_addr: Addr = lease::open_lease(&mut test_case, downpayment, None);
 
     let reserve = test_case.address_book.reserve().clone();
@@ -154,9 +154,9 @@ fn dump_balance_ok() {
     let mut test_case = lease::create_test_case::<Lpn>();
     let reserve = test_case.address_book.reserve().clone();
     let receiver = testing::user("USER");
-    let balance = Coin::new(4213141);
+    let balance = common::lpn_coin(4213141);
 
-    test_case.send_funds_from_admin(reserve.clone(), &[common::cwcoin::<Lpn>(balance)]);
+    test_case.send_funds_from_admin(reserve.clone(), &[common::cwcoin(balance)]);
 
     let msg = reserve::api::ExecuteMsg::DumpBalanceTo(receiver.clone());
     let _resp = test_case
@@ -223,7 +223,7 @@ fn do_cover_losses(
     sender: Addr,
     reserve: Addr,
 ) -> anyhow::Result<ResponseWithInterChainMsgs<'_, AppResponse>> {
-    let msg = reserve::api::ExecuteMsg::CoverLiquidationLosses(Coin::<Lpn>::new(losses).into());
+    let msg = reserve::api::ExecuteMsg::CoverLiquidationLosses(common::lpn_coin(losses).into());
 
     test_case.app.execute(sender, reserve, &msg, &[])
 }
