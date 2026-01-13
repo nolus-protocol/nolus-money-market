@@ -1,4 +1,7 @@
-use std::result::Result as StdResult;
+use std::{
+    fmt::{Debug, Display},
+    result::Result as StdResult,
+};
 
 use thiserror::Error;
 
@@ -36,8 +39,8 @@ pub enum Error {
 impl Error {
     pub fn price_overflow<C, P>(amount: C, price: P) -> Self
     where
-        C: std::fmt::Display,
-        P: std::fmt::Debug,
+        C: Display,
+        P: Debug,
     {
         Error::PriceCalculationOverflow {
             details: format!("amount: {}, price: {:?}", amount, price),
