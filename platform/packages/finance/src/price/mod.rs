@@ -15,6 +15,8 @@ mod arithmetics;
 pub mod base;
 pub mod dto;
 
+pub use arithmetics::CrossPrice;
+
 pub const fn total_of<C>(amount: Coin<C>) -> PriceBuilder<C> {
     PriceBuilder(amount)
 }

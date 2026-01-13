@@ -50,13 +50,13 @@ impl PriceFeedsError {
         }
     }
 
-    pub fn overflow_mul<L, R>(lhs: L, rhs: R) -> Self
+    pub fn overflow_cross_rate<L, R>(lhs: L, rhs: R) -> Self
     where
         L: Debug,
         R: Debug,
     {
         Self::ComputationOverflow {
-            details: format!("({:?} * {:?})", lhs, rhs),
+            details: format!("({:?}.cross_with({:?}))", lhs, rhs),
         }
     }
 

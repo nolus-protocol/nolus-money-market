@@ -5,7 +5,7 @@ use std::{
 
 use currency::{Currency, CurrencyDTO, CurrencyDef, Group, MemberOf};
 use finance::price::{
-    Price,
+    CrossPrice, Price,
     base::{
         BasePrice,
         with_price::{self, WithPrice},
@@ -150,8 +150,11 @@ where
                 BaseC: CurrencyDef,
                 BaseC::Group: MemberOf<Self::PriceG>,
             {
-                (base_price * self.stable_to_base.inv())
-                    .ok_or_else(Self::Error::PriceMultiplicationOverflow)
+                base_price
+                    .cross_with(self.stable_to_base.inv())
+                    .ok_or_else(|| {
+                        Error::overflow_cross_rate(base_price, self.stable_to_base.inv())
+                    })
                     .map(Into::into)
             }
         }

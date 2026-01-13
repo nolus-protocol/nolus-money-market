@@ -1,5 +1,5 @@
 use currency::{AnyVisitorPair, Currency, CurrencyDTO, CurrencyDef, Group, MemberOf};
-use finance::price::{Price, base::BasePrice};
+use finance::price::{CrossPrice, Price, base::BasePrice};
 
 use crate::error::Error;
 
@@ -48,8 +48,9 @@ where
             .and_then(|target_quote_price| {
                 target_quote_price
                     .map(|price| {
-                        (price * quote_price)
-                            .ok_or_else(Error::PriceMultiplicationOverflow)
+                        price
+                            .cross_with(quote_price)
+                            .ok_or_else(|| Error::overflow_cross_rate(price, quote_price))
                             .map(|not_overflown| BasePrice::from_price(&not_overflown, *target_c))
                     })
                     .transpose()

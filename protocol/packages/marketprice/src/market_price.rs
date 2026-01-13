@@ -5,7 +5,7 @@ use currency::{
     PairsVisitor,
 };
 use finance::price::{
-    Price,
+    CrossPrice, Price,
     base::BasePrice,
     dto::{PriceDTO, WithPrice, with_price},
 };
@@ -337,7 +337,8 @@ where
     fn do_collect_base(self) -> BasePrice<G, BaseC, BaseG> {
         debug_assert_eq!(self.current_c, &currency::dto::<BaseC, BaseG>());
 
-        (self.price * Price::<CurrentC, BaseC>::identity())
+        self.price
+            .cross_with(Price::<CurrentC, BaseC>::identity())
             .expect("multiplication by the price identity should not overflow")
             .into()
     }
@@ -386,8 +387,9 @@ where
             self.at,
             self.total_feeders,
         )?;
-        (self.price * next_price)
-            .ok_or_else(|| PriceFeedsError::overflow_mul(self.price, next_price))
+        self.price
+            .cross_with(next_price)
+            .ok_or_else(|| PriceFeedsError::overflow_cross_rate(self.price, next_price))
             .and_then(|total_price| self.advance(total_price, &quote_c).do_collect())
     }
 }
@@ -402,7 +404,7 @@ mod test {
         coin::Coin,
         duration::Duration,
         percent::Percent100,
-        price::{self, Price},
+        price::{self, CrossPrice, Price},
     };
     use sdk::cosmwasm_std::{Addr, Storage, Timestamp, testing::MockStorage};
 
@@ -561,7 +563,7 @@ mod test {
             )
         );
         assert_eq!(
-            Ok((new_price21 * new_price14).unwrap().into()),
+            Ok(new_price21.cross_with(new_price14).unwrap().into()),
             feeds.price::<SuperGroupTestC4, SuperGroup, _>(
                 NOW,
                 TOTAL_FEEDERS,
@@ -574,7 +576,7 @@ mod test {
             )
         );
         assert_eq!(
-            Ok((new_price21 * new_price110).unwrap().into()),
+            Ok(new_price21.cross_with(new_price110).unwrap().into()),
             feeds.price::<SubGroupTestC10, SubGroup, _>(
                 NOW,
                 TOTAL_FEEDERS,

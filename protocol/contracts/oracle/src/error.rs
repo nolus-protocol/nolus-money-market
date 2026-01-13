@@ -1,4 +1,4 @@
-use std::num::TryFromIntError;
+use std::{fmt::Debug, num::TryFromIntError};
 
 use thiserror::Error;
 
@@ -55,8 +55,8 @@ where
     #[error("[Oracle] {0}")]
     PriceFeedsError(#[from] PriceFeedsError),
 
-    #[error("[Oracle] Price multiplication overflow")]
-    PriceMultiplicationOverflow(),
+    #[error("[Oracle] Overflow during cross rate calculation. `{details}`")]
+    CrossRateOverflow { details: String },
 
     #[error("[Oracle] {0}")]
     AlarmError(#[from] AlarmError),
@@ -102,6 +102,21 @@ where
 
     #[error("[Oracle] integer conversion {0}")]
     Conversion(#[from] TryFromIntError),
+}
+
+impl<PriceG> Error<PriceG>
+where
+    PriceG: Group,
+{
+    pub fn overflow_cross_rate<L, R>(lhs: L, rhs: R) -> Self
+    where
+        L: Debug,
+        R: Debug,
+    {
+        Self::CrossRateOverflow {
+            details: format!("({:?}.cross_with({:?}))", lhs, rhs),
+        }
+    }
 }
 
 #[cfg(feature = "contract")]
