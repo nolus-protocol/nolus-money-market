@@ -168,11 +168,13 @@ where
 
         self.calculate_price(now, amount)
             .and_then(|price| {
-                price::total(amount, price.inv()).ok_or(ContractError::overflow_price_total(
-                    "calculating the receipts",
-                    amount,
-                    price.inv(),
-                ))
+                price::total(amount, price.inv()).ok_or_else(|| {
+                    ContractError::overflow_price_total(
+                        "calculating the receipts",
+                        amount,
+                        price.inv(),
+                    )
+                })
             })
             .and_then(|receipts| {
                 if receipts.is_zero() {
@@ -194,11 +196,13 @@ where
         // the price calculation should go before the withdrawal from the total
         self.calculate_price(now, pending_withdraw)
             .and_then(|price| {
-                price::total(receipts, price).ok_or(ContractError::overflow_price_total(
-                    "calculating the withdrawal amount",
-                    receipts,
-                    price,
-                ))
+                price::total(receipts, price).ok_or_else(|| {
+                    ContractError::overflow_price_total(
+                        "calculating the withdrawal amount",
+                        receipts,
+                        price,
+                    )
+                })
             })
             .and_then(|amount_lpn: Coin<Lpn>| {
                 debug_assert_ne!(

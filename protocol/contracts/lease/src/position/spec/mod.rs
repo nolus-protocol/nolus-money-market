@@ -135,10 +135,7 @@ impl Spec {
         .and_then(|()| {
             self.liability
                 .init_borrow_amount(downpayment, may_max_ltd)
-                .ok_or(PositionError::overflow(
-                    "calculating borrow amount",
-                    downpayment,
-                ))
+                .ok_or_else(|| PositionError::overflow("calculating borrow amount", downpayment))
                 .and_then(|borrow| {
                     self.validate_transaction(
                         borrow,
