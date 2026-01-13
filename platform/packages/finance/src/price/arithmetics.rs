@@ -4,7 +4,7 @@ use crate::{
     coin::{Amount, Coin},
     fraction::{Coprime, Unit as FractionUnit},
     price::Price,
-    ratio::{SimpleFraction, multiplication::Bits},
+    ratio::{SimpleFraction, bits::Bits},
 };
 
 impl<C, QuoteC> Price<C, QuoteC>
