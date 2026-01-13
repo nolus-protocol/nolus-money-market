@@ -104,9 +104,8 @@ mod impl_ {
         }
 
         fn total_with(&self, price: Price<InC, OutC>) -> Result<Coin<OutC>, Error> {
-            price::total(self.in_amount, price).ok_or(Error::overflow(
-                "Overflow while calculating the total value",
-            ))
+            price::total(self.in_amount, price)
+                .ok_or_else(|| Error::price_overflow(self.in_amount, price))
         }
     }
 }
@@ -114,12 +113,11 @@ mod impl_ {
 #[cfg(test)]
 mod test {
     use currency::test::SuperGroupTestC1;
-    use finance::{
-        coin::{Amount, Coin},
-        error::Error as FinanceError,
-    };
+    use finance::coin::{Amount, Coin};
 
     use crate::{error::Error, test::DummyOracle};
+
+    const ERR_MSG: &str = "calculating the total value";
 
     #[test]
     fn from_quote() {
@@ -145,7 +143,6 @@ mod test {
 
     #[test]
     fn from_quote_overflow() {
-        const ERR_MSG: &str = "Overflow while calculating the total value";
         let oracle_1 = DummyOracle::with_price(100, 1);
         assert_err(
             super::from_quote::<_, _, _, SuperGroupTestC1, _>(
@@ -164,7 +161,6 @@ mod test {
 
     #[test]
     fn to_quote_error() {
-        const ERR_MSG: &str = "Overflow while calculating the total value";
         let oracle_1 = DummyOracle::with_price(1, Amount::MAX / 4);
         assert_err(
             super::to_quote(&oracle_1, Coin::<SuperGroupTestC1>::new(8)),
@@ -196,11 +192,12 @@ mod test {
         assert_eq!(Coin::new(expected_out), out_amount);
     }
 
-    fn assert_err<C>(r: Result<Coin<C>, Error>, msg: &str) {
-        assert!(r.is_err());
+    fn assert_err<C>(r: Result<Coin<C>, Error>, expected_msg: &str) {
         assert!(matches!(
             r,
-            Err(Error::Finance(FinanceError::Overflow(real_msg))) if real_msg.contains(msg)
+            Err(e)
+                if matches!(e, Error::PriceCalculationOverflow { .. })
+                && e.to_string().contains(expected_msg)
         ));
     }
 }

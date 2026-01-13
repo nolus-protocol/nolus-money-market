@@ -1,4 +1,7 @@
-use std::result::Result as StdResult;
+use std::{
+    fmt::{Debug, Display},
+    result::Result as StdResult,
+};
 
 use thiserror::Error;
 
@@ -28,12 +31,20 @@ pub enum Error {
         to: SymbolStatic,
         error: StdError,
     },
+
+    #[error("[Oracle] Overflow during calculating the total value. `{details}`")]
+    PriceCalculationOverflow { details: String },
 }
 
-// TODO: Replace `FinanceError::Overflow` with a generic template with parameters (next branch)
 impl Error {
-    pub fn overflow(msg: &'static str) -> Self {
-        Error::Finance(FinanceError::Overflow(msg))
+    pub fn price_overflow<C, P>(amount: C, price: P) -> Self
+    where
+        C: Display,
+        P: Debug,
+    {
+        Error::PriceCalculationOverflow {
+            details: format!("amount: {}, price: {:?}", amount, price),
+        }
     }
 }
 

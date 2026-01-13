@@ -31,9 +31,6 @@ pub enum Error {
     #[error("[Platform] {0}")]
     Currency(#[from] currency::error::Error),
 
-    #[error("[Platform] {0}")]
-    Finance(#[from] finance::error::Error),
-
     #[error("[Platform] [Std] An error occured while querying code info: {0}")]
     CosmWasmQueryCodeInfo(StdError),
 

@@ -58,7 +58,6 @@ pub enum AlarmError {
     #[error("[Market Price; Alarm] Alarms delivery queue is not empty! Cause: {0}")]
     NonEmptyAlarmsInDeliveryQueue(String),
 
-    // TODO: Replace the message with a generic template with parameters (next branch)
-    #[error("[Market Price; Alarm] {0}")]
-    ComputationOverflow(&'static str),
+    #[error("[Market Price; Alarm] Overflow during normalizing the market price")]
+    PriceNormalizationOverflow,
 }

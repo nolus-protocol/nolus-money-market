@@ -11,9 +11,6 @@ pub enum ContractError {
     Dex(#[from] dex::Error),
 
     #[error("[Profit] {0}")]
-    Finance(#[from] finance::error::Error),
-
-    #[error("[Profit] {0}")]
     PriceOracle(#[from] oracle_platform::error::Error),
 
     #[error("[Profit] {0}")]

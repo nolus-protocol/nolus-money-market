@@ -168,9 +168,13 @@ where
 
         self.calculate_price(now, amount)
             .and_then(|price| {
-                price::total(amount, price.inv()).ok_or(ContractError::overflow(
-                    "Overflow while calculating the receipts",
-                ))
+                price::total(amount, price.inv()).ok_or_else(|| {
+                    ContractError::overflow_price_total(
+                        "calculating the receipts",
+                        amount,
+                        price.inv(),
+                    )
+                })
             })
             .and_then(|receipts| {
                 if receipts.is_zero() {
@@ -192,9 +196,13 @@ where
         // the price calculation should go before the withdrawal from the total
         self.calculate_price(now, pending_withdraw)
             .and_then(|price| {
-                price::total(receipts, price).ok_or(ContractError::overflow(
-                    "Overflow while calculating the withdrawal amount",
-                ))
+                price::total(receipts, price).ok_or_else(|| {
+                    ContractError::overflow_price_total(
+                        "calculating the withdrawal amount",
+                        receipts,
+                        price,
+                    )
+                })
             })
             .and_then(|amount_lpn: Coin<Lpn>| {
                 debug_assert_ne!(
@@ -852,7 +860,6 @@ mod test {
         use finance::{
             coin::Coin,
             duration::Duration,
-            error::Error as FinanceError,
             percent::Percent100,
             price::{self, Price},
             zero::Zero,
@@ -942,7 +949,7 @@ mod test {
 
             assert!(matches!(
                 lpp.withdraw_lpn(RECEIPT1, Coin::ZERO, &now).unwrap_err(),
-                ContractError::Finance(FinanceError::Overflow(_))
+                ContractError::ComputationOverflow { .. }
             ));
 
             assert_eq!(RECEIPT1, lpp.deposit(DEPOSIT1, &now).unwrap());

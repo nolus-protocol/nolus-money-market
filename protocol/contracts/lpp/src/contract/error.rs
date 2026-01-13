@@ -1,6 +1,7 @@
+use std::fmt::{Debug, Display};
+
 use thiserror::Error;
 
-use finance::error::Error as FinanceError;
 use sdk::cosmwasm_std::StdError;
 
 #[derive(Error, Debug, PartialEq)]
@@ -81,13 +82,47 @@ pub enum ContractError {
 
     #[error("[Lpp Stub] No response sent back from LPP contract")]
     NoResponseStubError,
+
+    #[error("[Lpp] Computation overflow during '{cause}`. `{details}`")]
+    ComputationOverflow {
+        cause: &'static str,
+        details: String,
+    },
 }
 
 pub type Result<T> = std::result::Result<T, ContractError>;
 
-// TODO: Replace `FinanceError::Overflow` with a generic template with parameters (next branch)
 impl ContractError {
-    pub fn overflow(msg: &'static str) -> Self {
-        ContractError::Finance(FinanceError::Overflow(msg))
+    pub fn overflow_price_total<C, P>(cause: &'static str, amount: C, price: P) -> Self
+    where
+        C: Display,
+        P: Debug,
+    {
+        Self::ComputationOverflow {
+            cause,
+            details: format!("Amount: {}, price: {:?}", amount, price),
+        }
+    }
+
+    pub fn overflow_add<L, R>(cause: &'static str, lhs: L, rhs: R) -> Self
+    where
+        L: Display,
+        R: Display,
+    {
+        Self::ComputationOverflow {
+            cause,
+            details: format!("({} + {})", lhs, rhs),
+        }
+    }
+
+    pub fn overflow_sub<L, R>(cause: &'static str, lhs: L, rhs: R) -> Self
+    where
+        L: Display,
+        R: Display,
+    {
+        Self::ComputationOverflow {
+            cause,
+            details: format!("({} - {})", lhs, rhs),
+        }
     }
 }

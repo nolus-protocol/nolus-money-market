@@ -135,9 +135,7 @@ impl Spec {
         .and_then(|()| {
             self.liability
                 .init_borrow_amount(downpayment, may_max_ltd)
-                .ok_or(PositionError::overflow(
-                    "Borrrow amount overflow during calculation",
-                ))
+                .ok_or_else(|| PositionError::overflow("calculating borrow amount", downpayment))
                 .and_then(|borrow| {
                     self.validate_transaction(
                         borrow,
@@ -293,7 +291,7 @@ impl Spec {
             transaction_currency_in_lpn,
             self.min_transaction,
             err_fn,
-            || PositionError::overflow("Overflow while converting the transaction amount to Lpn"),
+            || PositionError::overflow("converting the transaction amount to Lpn", amount),
         )
     }
 
@@ -312,7 +310,7 @@ impl Spec {
             transaction_currency_in_lpn,
             self.min_asset,
             err_fn,
-            || PositionError::overflow("Overflow while converting the position amount to Lpn"),
+            || PositionError::overflow("converting the position amount to Lpn", asset_amount),
         )
     }
 
