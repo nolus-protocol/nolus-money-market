@@ -89,13 +89,8 @@ where
             // no `price.expect(msg)` since on Rust 1.86 `clippy::unwrap-in-result` is triggered. TODO once increment the version
             .map(|price| Option::expect(price, "sample prices should keep being present"));
 
-        item_iter
-            .try_fold(first, |acc, current| {
-                current.lossy_mul::<_, u128>(discount_factor).and_then(|a| {
-                    acc.lossy_mul::<_, u128>(discount_factor.complement())
-                        .and_then(|b| a.checked_add(b))
-                })
-            })
+        price_samples
+            .next()
             .ok_or(PriceFeedsError::NoPrice {})
             .and_then(|first| {
                 price_samples.try_fold(first, |acc, current| {
@@ -179,14 +174,20 @@ where
     QuoteC: 'static + Debug,
 {
     current
-        .lossy_mul(discount_factor)
+        .lossy_mul::<_, u128>(discount_factor)
         .ok_or_else(|| PriceFeedsError::overflow_lossy_mul(current, discount_factor))
         .and_then(|weighted_current| {
-            acc.lossy_mul(discount_factor.complement())
+            acc.lossy_mul::<_, u128>(discount_factor.complement())
                 .ok_or_else(|| {
                     PriceFeedsError::overflow_lossy_mul(acc, discount_factor.complement())
                 })
-                .map(|weighted_previous| weighted_current + weighted_previous)
+                .and_then(|weighted_previous| {
+                    weighted_current
+                        .checked_add(weighted_previous)
+                        .ok_or_else(|| {
+                            PriceFeedsError::overflow_add(weighted_current, weighted_previous)
+                        })
+                })
         })
 }
 
