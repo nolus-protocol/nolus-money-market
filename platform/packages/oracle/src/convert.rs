@@ -104,7 +104,8 @@ mod impl_ {
         }
 
         fn total_with(&self, price: Price<InC, OutC>) -> Result<Coin<OutC>, Error> {
-            price::total(self.in_amount, price).ok_or(Error::price_overflow(self.in_amount, price))
+            price::total(self.in_amount, price)
+                .ok_or_else(|| Error::price_overflow(self.in_amount, price))
         }
     }
 }
