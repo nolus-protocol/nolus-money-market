@@ -1,4 +1,4 @@
-use std::ops::{Add, AddAssign, Mul};
+use std::ops::{Add, AddAssign};
 
 use crate::{
     coin::{Amount, Coin},
@@ -118,7 +118,14 @@ where
     }
 }
 
-impl<C, QuoteC, QuoteQuoteC> Mul<Price<QuoteC, QuoteQuoteC>> for Price<C, QuoteC>
+/// Represents the financial cross rate operation
+pub trait CrossPrice<Rhs> {
+    type Output;
+
+    fn cross_with(self, rhs: Rhs) -> Self::Output;
+}
+
+impl<C, QuoteC, QuoteQuoteC> CrossPrice<Price<QuoteC, QuoteQuoteC>> for Price<C, QuoteC>
 where
     C: 'static,
     QuoteC: 'static,
@@ -127,9 +134,9 @@ where
     type Output = Option<Price<C, QuoteQuoteC>>;
 
     #[track_caller]
-    fn mul(self, rhs: Price<QuoteC, QuoteQuoteC>) -> Self::Output {
-        // Price(a, b) * Price(c, d) = Price(a, d) * Rational(b / c)
-        // Please note that Price(amount, amount_quote) is like Ratio(amount_quote / amount).
+    fn cross_with(self, rhs: Price<QuoteC, QuoteQuoteC>) -> Self::Output {
+        // Price(a, b) * Price(c, d) = Price(a, d) * SimpleFraction(b / c)
+        // Please note that Price(amount, amount_quote) is like SimpleFraction(amount_quote / amount).
 
         Price::new(self.amount, rhs.amount_quote).lossy_mul(SimpleFraction::new(
             self.amount_quote.to_primitive(),
@@ -140,14 +147,14 @@ where
 
 #[cfg(test)]
 mod test {
-    use std::ops::{Add, AddAssign, Mul};
+    use std::ops::{Add, AddAssign};
 
     use sdk::cosmwasm_std::{Uint128, Uint256};
 
     use crate::{
         coin::Amount,
         price::{
-            self, Price,
+            self, CrossPrice, Price,
             test::{Coin, QuoteCoin, QuoteQuoteCoin, c, price, q},
         },
         ratio::SimpleFraction,
@@ -280,7 +287,7 @@ mod test {
         let price1 = price::total_of(amount1).is(quote1);
         let price2 = price::total_of(amount2).is(quote2);
         let exp = price::total_of(amount_exp).is(quote_exp);
-        assert_eq!(Some(exp), price1.mul(price2));
+        assert_eq!(Some(exp), price1.cross_with(price2));
 
         let price3 = price::total_of(amount1).is(quote2);
         let ratio = SimpleFraction::new(quote1, amount2);
@@ -312,7 +319,7 @@ mod test {
         assert!(shift_product(a1, a2, shifts) == 0 || shift_product(q1, q2, shifts) == 0);
         let price1 = price::total_of(c(a1)).is(q(q1));
         let price2 = price::total_of(q(a2)).is(qq(q2));
-        assert_eq!(None, price1.mul(price2));
+        assert_eq!(None, price1.cross_with(price2));
     }
 
     fn add_impl(
