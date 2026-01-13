@@ -89,8 +89,6 @@ where
             // no `price.expect(msg)` since on Rust 1.86 `clippy::unwrap-in-result` is triggered. TODO once increment the version
             .map(|price| Option::expect(price, "sample prices should keep being present"));
 
-        let first = item_iter.next().ok_or(PriceFeedsError::NoPrice {})?;
-
         item_iter
             .try_fold(first, |acc, current| {
                 current.lossy_mul::<_, u128>(discount_factor).and_then(|a| {
