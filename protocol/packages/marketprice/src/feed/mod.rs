@@ -1,4 +1,4 @@
-use std::{collections::HashSet, marker::PhantomData};
+use std::{collections::HashSet, fmt::Debug, marker::PhantomData};
 
 use finance::price::Price;
 use observations::{Observations, ObservationsRead};
@@ -50,8 +50,8 @@ where
 
 impl<C, QuoteC, ObservationsImpl> PriceFeed<C, QuoteC, ObservationsImpl>
 where
-    C: 'static,
-    QuoteC: 'static,
+    C: 'static + Debug,
+    QuoteC: 'static + Debug,
     ObservationsImpl: ObservationsRead<C = C, QuoteC = QuoteC>,
 {
     /// Calculate the price of this feed
@@ -88,18 +88,31 @@ where
             .skip_while(Option::is_none)
             .map(|price| Option::expect(price, "sample prices should keep being present"));
 
-        let first = item_iter.next().ok_or(PriceFeedsError::NoPrice {})?;
-
         item_iter
-            .try_fold(first, |acc, current| {
-                current.lossy_mul::<_, u128>(discount_factor).and_then(|a| {
-                    acc.lossy_mul::<_, u128>(discount_factor.complement())
-                        .and_then(|b| a.checked_add(b))
+            .next()
+            .ok_or(PriceFeedsError::NoPrice {})
+            .and_then(|first| {
+                item_iter.try_fold(first, |acc, current| {
+                    current
+                        .lossy_mul::<_, u128>(discount_factor)
+                        .ok_or_else(|| {
+                            PriceFeedsError::overflow_lossy_mul(current, discount_factor)
+                        })
+                        .and_then(|a| {
+                            acc.lossy_mul::<_, u128>(discount_factor.complement())
+                                .ok_or_else(|| {
+                                    PriceFeedsError::overflow_lossy_mul(
+                                        acc,
+                                        discount_factor.complement(),
+                                    )
+                                })
+                                .and_then(|b| {
+                                    a.checked_add(b)
+                                        .ok_or_else(|| PriceFeedsError::overflow_add(a, b))
+                                })
+                        })
                 })
             })
-            .ok_or(PriceFeedsError::overflow(
-                "Overflow while calculating the sum of the prices",
-            ))
     }
 
     fn valid_observations(&self, since: &Timestamp) -> Result<Vec<Observation<C, QuoteC>>> {

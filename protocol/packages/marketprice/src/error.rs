@@ -1,4 +1,4 @@
-use std::convert::Infallible;
+use std::{convert::Infallible, fmt::Debug};
 
 use thiserror::Error;
 
@@ -21,8 +21,8 @@ pub enum PriceFeedsError {
     #[error("[Market Price; Feeds] {0}")]
     Currency(#[from] currency::error::Error),
 
-    #[error("[Market Price; Feeds] Price multiplication overflow")]
-    PriceMultiplicationOverflow(),
+    #[error("[Market Price; Feeds] Computation overflow during `{details}`")]
+    ComputationOverflow { details: String },
 
     #[error("[Market Price; Feeds] {0}")]
     FeedsRetrieve(StdError),
@@ -38,6 +38,38 @@ pub enum PriceFeedsError {
 }
 
 pub type Result<T> = std::result::Result<T, PriceFeedsError>;
+
+impl PriceFeedsError {
+    pub fn overflow_add<L, R>(lhs: L, rhs: R) -> Self
+    where
+        L: Debug,
+        R: Debug,
+    {
+        Self::ComputationOverflow {
+            details: format!("({:?} + {:?})", lhs, rhs),
+        }
+    }
+
+    pub fn overflow_mul<L, R>(lhs: L, rhs: R) -> Self
+    where
+        L: Debug,
+        R: Debug,
+    {
+        Self::ComputationOverflow {
+            details: format!("({:?} * {:?})", lhs, rhs),
+        }
+    }
+
+    pub fn overflow_lossy_mul<L, R>(lhs: L, rhs: R) -> Self
+    where
+        L: Debug,
+        R: Debug,
+    {
+        Self::ComputationOverflow {
+            details: format!("({:?}.lossy_mul({:?}))", lhs, rhs),
+        }
+    }
+}
 
 pub(crate) fn config_error_if(check: bool, msg: &str) -> Result<()> {
     if check {
