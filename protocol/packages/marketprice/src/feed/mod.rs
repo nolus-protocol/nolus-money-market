@@ -180,13 +180,7 @@ where
                 .ok_or_else(|| {
                     PriceFeedsError::overflow_lossy_mul(acc, discount_factor.complement())
                 })
-                .and_then(|weighted_previous| {
-                    weighted_current
-                        .checked_add(weighted_previous)
-                        .ok_or_else(|| {
-                            PriceFeedsError::overflow_add(weighted_current, weighted_previous)
-                        })
-                })
+                .map(|weighted_previous| weighted_current + weighted_previous)
         })
 }
 
