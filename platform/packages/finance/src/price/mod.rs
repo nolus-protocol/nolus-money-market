@@ -260,7 +260,7 @@ mod test {
         let price = price::total_of(c(amount)).is(q(amount_quote));
         let factor = 17;
         let coin_quote = q(amount_quote * factor);
-        let coin = Coin::new(amount * factor);
+        let coin = c(amount * factor);
 
         assert_eq!(coin_quote, calc_total(coin, price));
         assert_eq!(coin, super::total(coin_quote, price.inv()).unwrap());
@@ -332,7 +332,7 @@ mod test {
     ) {
         let price = price::total_of(c(price_amount)).is(q(price_amount_quote));
         let expected = q(expected);
-        let input = Coin::new(amount);
+        let input = c(amount);
 
         assert_eq!(expected, calc_total(input, price));
         assert_eq!(input, super::total(expected, price.inv()).unwrap());
