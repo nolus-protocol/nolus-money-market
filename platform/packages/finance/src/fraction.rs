@@ -2,6 +2,7 @@ use std::fmt::Debug;
 
 use crate::{
     fractionable::{Fractionable, IntoMax},
+    ratio::SimpleFraction,
     zero::Zero,
 };
 
@@ -72,4 +73,8 @@ where
 
         (self.scale_down(gcd), other.scale_down(gcd))
     }
+}
+
+pub trait ToFraction<U> {
+    fn to_fraction(self) -> SimpleFraction<U>;
 }

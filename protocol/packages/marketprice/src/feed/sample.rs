@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use finance::{duration::Duration, price::Price};
+use finance::{duration::Duration, price::Price, ratio::SimpleFraction};
 use sdk::cosmwasm_std::{Addr, Timestamp};
 
 use crate::feeders::Count;
@@ -121,7 +121,7 @@ where
                 .expect("should have provided positive value for count");
 
             let avg = sum
-                .lossy_mul(reciproral)
+                .lossy_mul(SimpleFraction::from(reciproral))
                 .expect("The reciproral should be less or equal to 1");
 
             self.last_sample = Sample { price: Some(avg) };

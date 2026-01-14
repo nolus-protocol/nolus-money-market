@@ -2,9 +2,9 @@ use std::ops::{Add, AddAssign};
 
 use crate::{
     coin::{Amount, Coin},
-    fraction::{Coprime, Unit as FractionUnit},
+    fraction::{Coprime, ToFraction, Unit as FractionUnit},
     price::Price,
-    ratio::{SimpleFraction, bits::Bits},
+    ratio::SimpleFraction,
 };
 
 impl<C, QuoteC> Price<C, QuoteC>
@@ -47,10 +47,9 @@ where
     /// Price(amount, amount_quote) * SimpleFraction(nominator / denominator) = Price(amount * denominator, amount_quote * nominator)
     /// where the pairs (amount, nominator) and (amount_quote, denominator) are transformed into co-prime numbers.
     /// Please note that Price(amount, amount_quote) is like SimpleFraction(amount_quote / amount).
-    pub fn lossy_mul<F, U>(self, rhs: F) -> Option<Self>
+    pub fn lossy_mul<F>(self, rhs: F) -> Option<Self>
     where
-        F: Into<SimpleFraction<U>>,
-        U: Bits + FractionUnit + Into<Amount>,
+        F: ToFraction<Amount>,
     {
         self.map_with_fraction(rhs)
     }
@@ -72,23 +71,19 @@ where
             .map(|factored_total| super::total_of(factored_amount).is(factored_total))
     }
 
-    fn map_with_fraction<F, U>(self, rhs: F) -> Option<Self>
+    fn map_with_fraction<F>(self, rhs: F) -> Option<Self>
     where
-        F: Into<SimpleFraction<U>>,
-        U: Bits + FractionUnit + Into<Amount>,
+        F: ToFraction<Amount>,
     {
         SimpleFraction::new(self.amount_quote.to_primitive(), self.amount.to_primitive())
-            .lossy_mul(rhs.into().to_amount_fraction())
+            .lossy_mul(rhs.to_fraction())
             .map(Self::from_fraction)
     }
 
-    fn from_fraction<U>(fraction: SimpleFraction<U>) -> Self
-    where
-        U: FractionUnit + Into<Amount>,
-    {
+    fn from_fraction(fraction: SimpleFraction<Amount>) -> Self {
         Self::new(
-            Coin::new(fraction.denominator().into()),
-            Coin::new(fraction.nominator().into()),
+            Coin::new(fraction.denominator()),
+            Coin::new(fraction.nominator()),
         )
     }
 }

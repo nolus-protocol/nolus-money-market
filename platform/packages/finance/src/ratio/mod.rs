@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     coin::Amount,
     error::{Error, Result as FinanceResult},
-    fraction::{Coprime, Fraction, Unit as FractionUnit},
+    fraction::{Coprime, Fraction, ToFraction, Unit as FractionUnit},
     fractionable::{Fractionable, IntoMax},
     rational::Rational,
     zero::Zero,
@@ -115,7 +115,7 @@ where
         self.denominator
     }
 
-    pub(super) fn to_amount_fraction(self) -> SimpleFraction<Amount>
+    fn to_amount_fraction(self) -> SimpleFraction<Amount>
     where
         U: Into<Amount>,
     {
@@ -133,6 +133,15 @@ where
         A: Fractionable<U>,
     {
         self.checked_mul(whole)
+    }
+}
+
+impl<U> ToFraction<Amount> for SimpleFraction<U>
+where
+    U: FractionUnit + Into<Amount>,
+{
+    fn to_fraction(self) -> SimpleFraction<Amount> {
+        self.to_amount_fraction()
     }
 }
 

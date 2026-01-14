@@ -2,7 +2,7 @@ use bound::BoundPercent;
 
 use crate::{
     error::Error,
-    fraction::{Fraction, Unit as FractionUnit},
+    fraction::{Fraction, ToFraction, Unit as FractionUnit},
     fractionable::{CommonDoublePrimitive, Fractionable, IntoMax},
     ratio::{Ratio, SimpleFraction},
     rational::Rational,

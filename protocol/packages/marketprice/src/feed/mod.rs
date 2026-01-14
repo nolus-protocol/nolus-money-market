@@ -173,10 +173,10 @@ where
     QuoteC: 'static + Debug,
 {
     current
-        .lossy_mul::<_, u128>(discount_factor)
+        .lossy_mul(discount_factor)
         .ok_or_else(|| PriceFeedsError::overflow_lossy_mul(current, discount_factor))
         .and_then(|weighted_current| {
-            acc.lossy_mul::<_, u128>(discount_factor.complement())
+            acc.lossy_mul(discount_factor.complement())
                 .ok_or_else(|| {
                     PriceFeedsError::overflow_lossy_mul(acc, discount_factor.complement())
                 })

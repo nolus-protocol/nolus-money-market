@@ -5,7 +5,7 @@ use std::ops::{Add, Sub};
 
 use serde::{Deserialize, Serialize};
 
-use crate::{coin::Amount, error::Error, fraction::Unit as FractionUnit, ratio::SimpleFraction};
+use crate::error::Error;
 
 use super::Units;
 
@@ -74,13 +74,6 @@ impl<const UPPER_BOUND: Units> BoundPercent<UPPER_BOUND> {
             None
         }
     }
-
-    pub(crate) fn to_fraction<U>(self) -> SimpleFraction<U>
-    where
-        U: FractionUnit + From<Self>,
-    {
-        SimpleFraction::new(self.into(), Self::HUNDRED.into())
-    }
 }
 
 impl<const UPPER_BOUND: Units> From<BoundPercent<UPPER_BOUND>> for Units {
@@ -100,15 +93,6 @@ impl<const UPPER_BOUND: Units> TryFrom<Units> for BoundPercent<UPPER_BOUND> {
     }
 }
 
-impl<U, const UPPER_BOUND: Units> From<BoundPercent<UPPER_BOUND>> for SimpleFraction<U>
-where
-    U: FractionUnit + From<BoundPercent<UPPER_BOUND>>,
-{
-    fn from(percent: BoundPercent<UPPER_BOUND>) -> Self {
-        percent.to_fraction()
-    }
-}
-
 impl<const UPPER_BOUND: Units> Display for BoundPercent<UPPER_BOUND> {
     #[track_caller]
     fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
@@ -124,13 +108,6 @@ impl<const UPPER_BOUND: Units> Display for BoundPercent<UPPER_BOUND> {
         }
         f.write_char('%')?;
         Ok(())
-    }
-}
-
-// TODO: Revisit it's usage after refactoring Price::lossy_mul() to use SimpleFraction<Quote, C>
-impl<const UPPER_BOUND: Units> From<BoundPercent<UPPER_BOUND>> for Amount {
-    fn from(percent: BoundPercent<UPPER_BOUND>) -> Self {
-        Amount::from(percent.0)
     }
 }
 
@@ -158,7 +135,7 @@ impl<const UPPER_BOUND: Units> Sub for BoundPercent<UPPER_BOUND> {
 #[cfg(test)]
 mod test {
     use crate::{
-        fraction::Fraction,
+        fraction::{Fraction, ToFraction},
         percent::{Percent, Percent100, Units, test},
         ratio::SimpleFraction,
         rational::Rational,
