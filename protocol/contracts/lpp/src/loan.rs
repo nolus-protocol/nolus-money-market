@@ -81,7 +81,7 @@ mod test {
         };
 
         assert_eq!(
-            Some(coin(50)),
+            Some(lpn_coin(50)),
             l.interest_due(&(l.interest_paid + Duration::YEAR))
         );
 

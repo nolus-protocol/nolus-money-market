@@ -99,9 +99,12 @@ impl<Lpn> Total<Lpn> {
         amount: Coin<Lpn>,
         loan_interest_rate: Percent100,
     ) -> Result<&Self, ContractError> {
-        self.total_interest_due = self
-            .total_interest_due_by_now(&ctime)
-            .ok_or(ContractError::overflow("Borrow interest overflow"))?;
+        self.total_interest_due = self.total_interest_due_by_now(&ctime).ok_or(
+            ContractError::overflow_total_interest_due_by_now(
+                "calculating the total interest due after borrowing",
+                ctime,
+            ),
+        )?;
 
         let new_total_principal_due =
             self.total_principal_due

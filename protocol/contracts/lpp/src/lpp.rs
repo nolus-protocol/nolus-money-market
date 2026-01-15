@@ -95,7 +95,10 @@ where
         } else {
             let total_due = self
                 .total_due(now)
-                .ok_or(ContractError::overflow("Deposit total due overflow"))?;
+                .ok_or(ContractError::overflow_total_due(
+                    "Calculating pool's total liability",
+                    now,
+                ))?;
 
             self.commited_balance(pending_deposit).map(|balance| {
                 if self.utilization(balance, total_due) > min_utilization {
@@ -115,10 +118,12 @@ where
 
         let total_principal_due = self.total.total_principal_due();
 
-        let total_interest_due = self
-            .total
-            .total_interest_due_by_now(now)
-            .ok_or(ContractError::overflow("Lpp balance interest overflow"))?;
+        let total_interest_due = self.total.total_interest_due_by_now(now).ok_or(
+            ContractError::overflow_total_interest_due_by_now(
+                "Calculating total interest due for Pool's balance",
+                now,
+            ),
+        )?;
 
         Ok(LppBalances {
             balance,
@@ -237,10 +242,9 @@ where
         }
 
         let total_principal_due = self.total.total_principal_due();
-        let total_interest = self
-            .total
-            .total_interest_due_by_now(now)
-            .ok_or(ContractError::overflow("Quote interest overflow"))?;
+        let total_interest = self.total.total_interest_due_by_now(now).ok_or(
+            ContractError::overflow_total_interest_due_by_now("Calculating quote interest", now),
+        )?;
         let total_liability_past_quote = total_principal_due + quote + total_interest;
         let total_balance_past_quote = balance - quote;
 
@@ -306,7 +310,10 @@ where
 
     fn total_lpn(&self, now: &Timestamp, uncommited_amount: Coin<Lpn>) -> Result<Coin<Lpn>> {
         self.total_due(now)
-            .ok_or(ContractError::overflow("Lpn due overflow"))
+            .ok_or(ContractError::overflow_total_due(
+                "Total due overflow while calculating total pool value ",
+                now,
+            ))
             .and_then(|due| {
                 self.commited_balance(uncommited_amount)
                     .map(|balance| due + balance)
