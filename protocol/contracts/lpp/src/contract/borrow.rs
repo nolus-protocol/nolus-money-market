@@ -61,15 +61,20 @@ where
 
     let payment = Repo::load(deps.storage, lease_addr.clone()).and_then(|mut loan| {
         let now = env.block.time;
-        let payment = loan
-            .repay(&now, repay_amount)
-            .ok_or(ContractError::overflow("Loan repayent overflow"))?;
+        let payment = loan.repay(&now, repay_amount).ok_or_else(|| {
+            ContractError::overflow_loan_repayment("Trying to repay loan", now, repay_amount)
+        })?;
         Repo::save(deps.storage, lease_addr.clone(), &loan)
             .and_then(|()| {
                 lpp.register_repay_loan(now, &loan, &payment)
-                    .ok_or(ContractError::overflow(
-                        "Registering loan repayment overflow",
-                    ))
+                    .ok_or_else(|| {
+                        ContractError::overflow_register_repayment(
+                            "Registering repay loan when trying to repay loan",
+                            now,
+                            loan,
+                            &payment,
+                        )
+                    })
             })
             .and_then(|()| lpp.save(deps.storage))
             .map(|()| payment)
