@@ -125,4 +125,58 @@ impl ContractError {
             details: format!("({} - {})", lhs, rhs),
         }
     }
+
+    pub fn overflow_loan_repayment<T, A>(cause: &'static str, timestamp: T, repay_amount: A) -> Self
+    where
+        T: Display,
+        A: Display,
+    {
+        Self::ComputationOverflow {
+            cause,
+            details: format!(
+                "at Timestamp: {}, repay amount: {}",
+                timestamp, repay_amount
+            ),
+        }
+    }
+
+    pub fn overflow_register_repayment<T, L, P>(
+        cause: &'static str,
+        timestamp: T,
+        loan: L,
+        payment: P,
+    ) -> Self
+    where
+        T: Display,
+        L: Debug,
+        P: Debug,
+    {
+        Self::ComputationOverflow {
+            cause,
+            details: format!(
+                "Timestamp: {}, loan: {:?}, payment: {:?}",
+                timestamp, loan, payment
+            ),
+        }
+    }
+
+    pub fn overflow_total_due<T>(cause: &'static str, timestamp: T) -> Self
+    where
+        T: Display,
+    {
+        Self::ComputationOverflow {
+            cause,
+            details: format!("Timestamp: {}", timestamp),
+        }
+    }
+
+    pub fn overflow_total_interest_due_by_now<T>(cause: &'static str, timestamp: T) -> Self
+    where
+        T: Display,
+    {
+        Self::ComputationOverflow {
+            cause,
+            details: format!("Timestamp: {}", timestamp),
+        }
+    }
 }
