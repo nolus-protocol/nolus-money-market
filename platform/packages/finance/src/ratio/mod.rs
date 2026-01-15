@@ -11,8 +11,8 @@ use crate::{
     zero::Zero,
 };
 
-pub(super) mod bits;
-pub(super) mod multiplication;
+mod bits;
+mod multiplication;
 
 /// A part of something that is divisible.
 /// The total should be non-zero.

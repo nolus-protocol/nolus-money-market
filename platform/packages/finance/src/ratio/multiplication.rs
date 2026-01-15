@@ -10,7 +10,7 @@ impl<U> SimpleFraction<U>
 where
     U: FractionUnit,
 {
-    pub(crate) fn checked_mul<M>(&self, rhs: M) -> Option<M>
+    pub(super) fn checked_mul<M>(&self, rhs: M) -> Option<M>
     where
         U: IntoMax<M::CommonDouble>,
         M: Fractionable<U>,
