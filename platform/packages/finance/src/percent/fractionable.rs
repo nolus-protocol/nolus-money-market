@@ -16,6 +16,14 @@ impl<const UPPER_BOUND: Units> CommonDoublePrimitive<Permilles> for BoundPercent
 
 impl<C> Fractionable<Coin<C>> for Permilles {}
 
+impl<const UPPER_BOUND: Units> Fractionable<Permilles> for BoundPercent<UPPER_BOUND> {}
+
+impl<const UPPER_BOUND: Units> IntoMax<DoubleBoundPercentPrimitive> for BoundPercent<UPPER_BOUND> {
+    fn into_max(self) -> DoubleBoundPercentPrimitive {
+        self.into_double()
+    }
+}
+
 impl IntoMax<DoubleBoundPercentPrimitive> for Permilles {
     fn into_max(self) -> DoubleBoundPercentPrimitive {
         self.into_double().into()
@@ -28,6 +36,14 @@ impl IntoMax<DoubleCoinPrimitive> for Permilles {
     }
 }
 
+impl<const UPPER_BOUND: Units> IntoDoublePrimitive for BoundPercent<UPPER_BOUND> {
+    type Double = DoubleBoundPercentPrimitive;
+
+    fn into_double(self) -> Self::Double {
+        self.permilles().into_double()
+    }
+}
+
 impl IntoDoublePrimitive for Permilles {
     type Double = DoubleBoundPercentPrimitive;
 
@@ -36,9 +52,14 @@ impl IntoDoublePrimitive for Permilles {
     }
 }
 
-impl TryFromMax<DoubleBoundPercentPrimitive> for Permilles {
+impl<const UPPER_BOUND: Units> TryFromMax<DoubleBoundPercentPrimitive>
+    for BoundPercent<UPPER_BOUND>
+{
     fn try_from_max(max: DoubleBoundPercentPrimitive) -> Option<Self> {
-        Units::try_from(max).ok().map(Self::new)
+        Units::try_from(max)
+            .ok()
+            .map(Permilles::new)
+            .and_then(|permilles| Self::try_from(permilles).ok())
     }
 }
 
