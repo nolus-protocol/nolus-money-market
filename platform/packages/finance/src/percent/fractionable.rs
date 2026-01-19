@@ -1,7 +1,7 @@
 use crate::{
     coin::{Coin, DoubleCoinPrimitive},
     fractionable::{CommonDoublePrimitive, Fractionable, IntoDoublePrimitive, IntoMax, TryFromMax},
-    percent::{Units, permilles::Permilles},
+    percent::{Units, bound::BoundPercent, permilles::Permilles},
 };
 
 pub(crate) type DoubleBoundPercentPrimitive = u64;
@@ -10,7 +10,17 @@ impl<C> CommonDoublePrimitive<Coin<C>> for Permilles {
     type CommonDouble = DoubleCoinPrimitive;
 }
 
+impl<const UPPER_BOUND: Units> CommonDoublePrimitive<Permilles> for BoundPercent<UPPER_BOUND> {
+    type CommonDouble = DoubleBoundPercentPrimitive;
+}
+
 impl<C> Fractionable<Coin<C>> for Permilles {}
+
+impl IntoMax<DoubleBoundPercentPrimitive> for Permilles {
+    fn into_max(self) -> DoubleBoundPercentPrimitive {
+        self.into_double().into()
+    }
+}
 
 impl IntoMax<DoubleCoinPrimitive> for Permilles {
     fn into_max(self) -> DoubleCoinPrimitive {
@@ -26,9 +36,15 @@ impl IntoDoublePrimitive for Permilles {
     }
 }
 
+impl TryFromMax<DoubleBoundPercentPrimitive> for Permilles {
+    fn try_from_max(max: DoubleBoundPercentPrimitive) -> Option<Self> {
+        Units::try_from(max).ok().map(Self::new)
+    }
+}
+
 impl TryFromMax<DoubleCoinPrimitive> for Permilles {
     fn try_from_max(max: DoubleCoinPrimitive) -> Option<Self> {
-        Units::try_from(max).ok().map(|units| Self::new(units))
+        Units::try_from(max).ok().map(Self::new)
     }
 }
 
