@@ -45,7 +45,7 @@ impl Display for Permilles {
 
 #[cfg(test)]
 mod test {
-    use crate::percent::permilles::Permilles;
+    use crate::percent::{Units, permilles::Permilles};
 
     #[test]
     fn display() {
