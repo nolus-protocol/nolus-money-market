@@ -3,6 +3,7 @@ use std::ops::{Div, Rem};
 use gcd::Gcd;
 
 use crate::{
+    coin::Amount,
     fraction::{ToFraction, Unit as FractionUnit},
     percent::{Units, bound::BoundPercent, permilles::Permilles},
     ratio::SimpleFraction,
@@ -38,6 +39,15 @@ impl FractionUnit for Permilles {
 
 impl Zero for Permilles {
     const ZERO: Self = Self::ZERO;
+}
+
+impl<const UPPER_BOUND: Units> ToFraction<Amount> for BoundPercent<UPPER_BOUND> {
+    fn to_fraction(self) -> SimpleFraction<Amount> {
+        SimpleFraction::new(
+            self.permilles().units().into(),
+            Permilles::MILLE.units().into(),
+        )
+    }
 }
 
 impl<const UPPER_BOUND: Units> ToFraction<Permilles> for BoundPercent<UPPER_BOUND> {

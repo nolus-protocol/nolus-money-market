@@ -5,7 +5,7 @@ use gcd::Gcd;
 use finance::{
     fraction::Unit as FractionUnit,
     fractionable::{CommonDoublePrimitive, Fractionable, IntoDoublePrimitive, IntoMax, TryFromMax},
-    percent::Percent100,
+    percent::permilles::Permilles,
     ratio::Ratio,
     zero::Zero,
 };
@@ -50,11 +50,11 @@ impl Count {
     }
 }
 
-impl CommonDoublePrimitive<Percent100> for Count {
+impl CommonDoublePrimitive<Permilles> for Count {
     type CommonDouble = <Count as IntoDoublePrimitive>::Double;
 }
 
-impl Fractionable<Percent100> for Count {}
+impl Fractionable<Permilles> for Count {}
 
 impl FractionUnit for Count {
     type Times = Unit;
@@ -83,7 +83,7 @@ impl FractionUnit for Count {
     }
 }
 
-impl IntoMax<<Count as CommonDoublePrimitive<Percent100>>::CommonDouble> for Count {
+impl IntoMax<<Count as CommonDoublePrimitive<Permilles>>::CommonDouble> for Count {
     fn into_max(self) -> <Count as IntoDoublePrimitive>::Double {
         self.into_double()
     }
