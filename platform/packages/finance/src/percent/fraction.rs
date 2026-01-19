@@ -45,3 +45,28 @@ impl<const UPPER_BOUND: Units> ToFraction<Permilles> for BoundPercent<UPPER_BOUN
         SimpleFraction::new(self.permilles(), Permilles::MILLE)
     }
 }
+
+#[cfg(test)]
+mod test {
+    use crate::{
+        fraction::ToFraction,
+        percent::{Percent, Percent100, permilles::Permilles, test},
+        ratio::SimpleFraction,
+    };
+
+    #[test]
+    fn to_fraction() {
+        assert_eq!(
+            SimpleFraction::new(Permilles::ZERO, Permilles::MILLE),
+            Percent100::ZERO.to_fraction()
+        );
+        assert_eq!(
+            SimpleFraction::new(Permilles::MILLE, Permilles::MILLE),
+            Percent::HUNDRED.to_fraction()
+        );
+        assert_eq!(
+            SimpleFraction::new(Permilles::new(1001), Permilles::MILLE),
+            test::percent(1001).to_fraction()
+        );
+    }
+}

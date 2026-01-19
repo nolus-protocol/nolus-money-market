@@ -137,9 +137,8 @@ impl<const UPPER_BOUND: Units> Sub for BoundPercent<UPPER_BOUND> {
 #[cfg(test)]
 mod test {
     use crate::{
-        fraction::{Fraction, ToFraction},
+        fraction::Fraction,
         percent::{Percent, Percent100, Units, test},
-        ratio::SimpleFraction,
         rational::Rational,
         test::coin,
     };
@@ -261,22 +260,6 @@ mod test {
                 .checked_sub(test::percent100(35))
                 .is_none()
         )
-    }
-
-    #[test]
-    fn to_fraction() {
-        assert_eq!(
-            SimpleFraction::new(Percent100::ZERO, Percent100::HUNDRED),
-            Percent100::ZERO.to_fraction()
-        );
-        assert_eq!(
-            SimpleFraction::new(Percent::HUNDRED, Percent::HUNDRED),
-            Percent::HUNDRED.to_fraction()
-        );
-        assert_eq!(
-            SimpleFraction::new(test::percent(1001), Percent::HUNDRED),
-            test::percent(1001).to_fraction()
-        );
     }
 
     #[test]
