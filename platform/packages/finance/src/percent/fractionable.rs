@@ -1,13 +1,7 @@
-use std::ops::{Div, Rem};
-
-use gcd::Gcd;
-
 use crate::{
     coin::{Coin, DoubleCoinPrimitive},
-    fraction::Unit as FractionUnit,
     fractionable::{CommonDoublePrimitive, Fractionable, IntoDoublePrimitive, IntoMax, TryFromMax},
     percent::{Units, bound::BoundPercent, permilles::Permilles},
-    zero::Zero,
 };
 
 pub(crate) type DoubleBoundPercentPrimitive = u64;
@@ -16,11 +10,18 @@ impl<C> CommonDoublePrimitive<Coin<C>> for Permilles {
     type CommonDouble = DoubleCoinPrimitive;
 }
 
+impl<C, const UPPER_BOUND: Units> CommonDoublePrimitive<Coin<C>> for BoundPercent<UPPER_BOUND> {
+    type CommonDouble = DoubleCoinPrimitive;
+}
+
 impl<const UPPER_BOUND: Units> CommonDoublePrimitive<Permilles> for BoundPercent<UPPER_BOUND> {
     type CommonDouble = DoubleBoundPercentPrimitive;
 }
 
+// TODO?
 impl<C> Fractionable<Coin<C>> for Permilles {}
+
+impl<C, const UPPER_BOUND: Units> Fractionable<Coin<C>> for BoundPercent<UPPER_BOUND> {}
 
 impl<const UPPER_BOUND: Units> Fractionable<Permilles> for BoundPercent<UPPER_BOUND> {}
 
@@ -36,7 +37,14 @@ impl IntoMax<DoubleBoundPercentPrimitive> for Permilles {
     }
 }
 
+// TODO?
 impl IntoMax<DoubleCoinPrimitive> for Permilles {
+    fn into_max(self) -> DoubleCoinPrimitive {
+        self.into_double().into()
+    }
+}
+
+impl<const UPPER_BOUND: Units> IntoMax<DoubleCoinPrimitive> for BoundPercent<UPPER_BOUND> {
     fn into_max(self) -> DoubleCoinPrimitive {
         self.into_double().into()
     }
@@ -69,36 +77,19 @@ impl<const UPPER_BOUND: Units> TryFromMax<DoubleBoundPercentPrimitive>
     }
 }
 
+// TODO?
 impl TryFromMax<DoubleCoinPrimitive> for Permilles {
     fn try_from_max(max: DoubleCoinPrimitive) -> Option<Self> {
         Units::try_from(max).ok().map(Self::new)
     }
 }
 
-impl FractionUnit for Units {
-    type Times = Self;
-
-    fn gcd<U>(self, other: U) -> Self::Times
-    where
-        U: FractionUnit<Times = Self::Times>,
-    {
-        Gcd::gcd(self, other.to_primitive())
-    }
-
-    fn scale_down(self, scale: Self::Times) -> Self {
-        debug_assert_ne!(scale, Self::Times::ZERO);
-
-        self.div(scale)
-    }
-
-    fn modulo(self, scale: Self::Times) -> Self::Times {
-        debug_assert_ne!(scale, Self::Times::ZERO);
-
-        self.rem(scale)
-    }
-
-    fn to_primitive(self) -> Self::Times {
-        self
+impl<const UPPER_BOUND: Units> TryFromMax<DoubleCoinPrimitive> for BoundPercent<UPPER_BOUND> {
+    fn try_from_max(max: DoubleCoinPrimitive) -> Option<Self> {
+        Units::try_from(max)
+            .ok()
+            .map(Permilles::new)
+            .and_then(|units| Self::try_from(units).ok())
     }
 }
 
