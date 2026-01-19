@@ -4,7 +4,7 @@ use crate::{
     coin::{Amount, Coin},
     duration::Duration,
     fractionable::{CommonDoublePrimitive, Fractionable, IntoDoublePrimitive, IntoMax, TryFromMax},
-    percent::{Units as PercentUnits, bound::BoundPercent},
+    percent::permilles::Permilles,
 };
 
 pub(crate) type DoubleCoinPrimitive = U256;
@@ -13,9 +13,7 @@ impl<C> CommonDoublePrimitive<Duration> for Coin<C> {
     type CommonDouble = DoubleCoinPrimitive;
 }
 
-impl<C, const UPPER_BOUND: PercentUnits> CommonDoublePrimitive<BoundPercent<UPPER_BOUND>>
-    for Coin<C>
-{
+impl<C> CommonDoublePrimitive<Permilles> for Coin<C> {
     type CommonDouble = DoubleCoinPrimitive;
 }
 
@@ -30,7 +28,7 @@ impl<C> CommonDoublePrimitive<Amount> for Coin<C> {
 
 impl<C> Fractionable<Duration> for Coin<C> {}
 
-impl<C, const UPPER_BOUND: PercentUnits> Fractionable<BoundPercent<UPPER_BOUND>> for Coin<C> {}
+impl<C> Fractionable<Permilles> for Coin<C> {}
 
 impl<C, Q> Fractionable<Coin<Q>> for Coin<C> {}
 

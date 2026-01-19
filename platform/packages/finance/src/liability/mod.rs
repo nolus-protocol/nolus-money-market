@@ -5,9 +5,9 @@ use serde::{Deserialize, Serialize};
 use crate::{
     duration::Duration,
     error::{Error, Result},
-    fraction::Fraction,
+    fraction::{Fraction, ToFraction},
     fractionable::{CommonDoublePrimitive, Fractionable, IntoMax},
-    percent::{Percent, Percent100},
+    percent::{Percent, Percent100, permilles::Permilles},
     ratio::SimpleFraction,
     rational::Rational,
     zero::Zero,
@@ -113,14 +113,16 @@ impl Liability {
     /// Returns `None` if an overflow occurs during the calculation
     pub fn init_borrow_amount<P>(&self, downpayment: P, may_max_ltd: Option<Percent>) -> Option<P>
     where
-        P: Copy + Fractionable<Percent100> + Fractionable<Percent> + Ord,
-        Percent100: IntoMax<<P as CommonDoublePrimitive<Percent100>>::CommonDouble>,
-        Percent: IntoMax<<P as CommonDoublePrimitive<Percent>>::CommonDouble>,
+        P: Copy + Fractionable<Permilles> + Ord,
+        Permilles: IntoMax<<P as CommonDoublePrimitive<Permilles>>::CommonDouble>,
     {
         debug_assert!(self.initial > Percent100::ZERO);
         debug_assert!(self.initial < Percent100::HUNDRED);
 
-        let default_ltd = SimpleFraction::new(self.initial, self.initial.complement());
+        let default_ltd = SimpleFraction::new(
+            self.initial.permilles(),
+            self.initial.complement().permilles(),
+        );
         default_ltd.of(downpayment).map(|default_borrow| {
             may_max_ltd
                 .and_then(|max_ltd| max_ltd.of(downpayment))
@@ -136,8 +138,8 @@ impl Liability {
     /// Followup: it is mathematically proved that amount_to_liquidate < lease_amount
     pub fn amount_to_liquidate<P>(&self, lease_amount: P, total_due: P) -> P
     where
-        P: Copy + Fractionable<Percent100> + Ord + Sub<Output = P> + Zero,
-        Percent100: IntoMax<<P as CommonDoublePrimitive<Percent100>>::CommonDouble>,
+        P: Copy + Fractionable<Permilles> + Ord + Sub<Output = P> + Zero,
+        Permilles: IntoMax<<P as CommonDoublePrimitive<Permilles>>::CommonDouble>,
     {
         (total_due < self.max.of(lease_amount))
             .then_some(P::ZERO)
@@ -146,8 +148,7 @@ impl Liability {
                 // from 'due - liquidation = healthy% of (lease - liquidation)' follows
                 // liquidation = 100% / (100% - healthy%) of (due - healthy% of lease)
                 // the amount to liquiate is strongly less than total due
-                let multiplier =
-                    SimpleFraction::new(Percent100::HUNDRED, self.healthy.complement());
+                let multiplier = self.healthy.complement().to_fraction().inv();
                 let extra_liability_lpn = total_due - total_due.min(self.healthy.of(lease_amount));
                 multiplier.of(extra_liability_lpn)
             })

@@ -3,7 +3,6 @@ use std::fmt::Debug;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    coin::Amount,
     error::{Error, Result as FinanceResult},
     fraction::{Coprime, Fraction, ToFraction, Unit as FractionUnit},
     fractionable::{Fractionable, IntoMax},
@@ -115,11 +114,8 @@ where
         self.denominator
     }
 
-    fn to_amount_fraction(self) -> SimpleFraction<Amount>
-    where
-        U: Into<Amount>,
-    {
-        SimpleFraction::new(self.nominator.into(), self.denominator.into())
+    pub(super) fn inv(&self) -> Self {
+        Self::new(self.denominator, self.nominator)
     }
 }
 
@@ -136,12 +132,13 @@ where
     }
 }
 
-impl<U> ToFraction<Amount> for SimpleFraction<U>
+impl<A, U> ToFraction<A> for SimpleFraction<U>
 where
-    U: FractionUnit + Into<Amount>,
+    A: FractionUnit,
+    U: FractionUnit + Into<A>,
 {
-    fn to_fraction(self) -> SimpleFraction<Amount> {
-        self.to_amount_fraction()
+    fn to_fraction(self) -> SimpleFraction<A> {
+        SimpleFraction::new(self.nominator.into(), self.denominator.into())
     }
 }
 
