@@ -5,21 +5,23 @@ use std::ops::{Add, Sub};
 
 use serde::{Deserialize, Serialize};
 
-use crate::error::Error;
+use crate::{error::Error, percent::permilles::Permilles};
 
 use super::Units;
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, Ord, PartialEq, PartialOrd, Serialize)]
-#[serde(into = "Units", try_from = "Units")]
-pub struct BoundPercent<const UPPER_BOUND: Units>(Units);
+#[serde(into = "Permilles", try_from = "Permilles")]
+pub struct BoundPercent<const UPPER_BOUND: Units>(Permilles);
 
 impl<const UPPER_BOUND: Units> BoundPercent<UPPER_BOUND> {
-    pub const ZERO: Self = Self::try_from_primitive(0).expect("0% is a valid instance");
+    pub const ZERO: Self =
+        Self::try_from_permille(Permilles::ZERO).expect("0% is a valid instance");
     // TODO: `HUNDRED` is only valid if `UPPER_BOUND >= 100`.
     // It should be replaced by `MAX = Self::try_from_primitive(UPPER_BOUND)`.
     // Use 'HUNDRED: Units = 100' constant when the numeric value `100` is needed.
     pub const HUNDRED: Self = Self::try_from_primitive(100).expect("100% is a valid instance");
-    pub const PRECISION: Self = Self::try_from_permille(1).expect("0.1% is a valid instance");
+    pub const PRECISION: Self =
+        Self::try_from_permille(Permilles::PRECISION).expect("0.1% is a valid instance");
 
     const UNITS_TO_PERCENT_RATIO: Units = 10;
 
@@ -29,20 +31,20 @@ impl<const UPPER_BOUND: Units> BoundPercent<UPPER_BOUND> {
     }
 
     #[cfg(any(test, feature = "testing"))]
-    pub const fn from_permille(permille: Units) -> Self {
+    pub const fn from_permille(permille: Permilles) -> Self {
         Self::try_from_permille(permille).expect("Permille value exceeds allowed upper bound")
     }
 
     const fn try_from_primitive(percent: u32) -> Option<Self> {
         if let Some(permille) = percent.checked_mul(Self::UNITS_TO_PERCENT_RATIO) {
-            Self::try_from_permille(permille)
+            Self::try_from_permille(Permilles::new(permille))
         } else {
             None
         }
     }
 
-    const fn try_from_permille(permille: Units) -> Option<Self> {
-        if permille <= UPPER_BOUND {
+    const fn try_from_permille(permille: Permilles) -> Option<Self> {
+        if permille.units() <= UPPER_BOUND {
             Some(Self(permille))
         } else {
             None
@@ -50,7 +52,7 @@ impl<const UPPER_BOUND: Units> BoundPercent<UPPER_BOUND> {
     }
 
     // TODO revisit it's usage and remove
-    pub const fn units(&self) -> Units {
+    pub const fn permilles(&self) -> Permilles {
         self.0
     }
 
@@ -76,17 +78,17 @@ impl<const UPPER_BOUND: Units> BoundPercent<UPPER_BOUND> {
     }
 }
 
-impl<const UPPER_BOUND: Units> From<BoundPercent<UPPER_BOUND>> for Units {
+impl<const UPPER_BOUND: Units> From<BoundPercent<UPPER_BOUND>> for Permilles {
     fn from(percent: BoundPercent<UPPER_BOUND>) -> Self {
         percent.0
     }
 }
 
-impl<const UPPER_BOUND: Units> TryFrom<Units> for BoundPercent<UPPER_BOUND> {
+impl<const UPPER_BOUND: Units> TryFrom<Permilles> for BoundPercent<UPPER_BOUND> {
     type Error = Error;
 
-    fn try_from(permille: Units) -> Result<Self, Self::Error> {
-        Self::try_from_permille(permille).ok_or(Error::UpperBoundCrossed {
+    fn try_from(permille: Permilles) -> Result<Self, Self::Error> {
+        Self::try_from_permille(permille).ok_or_else(|| Error::UpperBoundCrossed {
             bound: UPPER_BOUND,
             value: permille,
         })
@@ -96,10 +98,10 @@ impl<const UPPER_BOUND: Units> TryFrom<Units> for BoundPercent<UPPER_BOUND> {
 impl<const UPPER_BOUND: Units> Display for BoundPercent<UPPER_BOUND> {
     #[track_caller]
     fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
-        let whole = (self.0) / Self::UNITS_TO_PERCENT_RATIO;
+        let whole = (self.permilles().units()) / Self::UNITS_TO_PERCENT_RATIO;
         let (no_fraction, overflow) = whole.overflowing_mul(Self::UNITS_TO_PERCENT_RATIO);
         debug_assert!(!overflow);
-        let (fractional, overflow) = (self.0).overflowing_sub(no_fraction);
+        let (fractional, overflow) = (self.permilles().units()).overflowing_sub(no_fraction);
         debug_assert!(!overflow);
 
         f.write_fmt(format_args!("{whole}"))?;

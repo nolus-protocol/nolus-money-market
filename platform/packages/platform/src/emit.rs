@@ -63,7 +63,7 @@ where
     where
         K: Into<String>,
     {
-        self.emit_to_string_value(event_key, percent.units())
+        self.emit_to_string_value(event_key, percent.permilles())
     }
 
     fn emit_coin<K, C>(self, event_key: K, coin: Coin<C>) -> Self
