@@ -138,7 +138,7 @@ impl<const UPPER_BOUND: Units> Sub for BoundPercent<UPPER_BOUND> {
 mod test {
     use crate::{
         fraction::Fraction,
-        percent::{Percent, Percent100, Units, test},
+        percent::{Percent, Percent100, Units, permilles::Permilles, test},
         rational::Rational,
         test::coin,
     };
@@ -165,26 +165,29 @@ mod test {
             Percent::try_from_primitive(101).unwrap(),
             test::percent(1010)
         );
+        assert!(Percent::try_from_primitive(u32::MAX / 10 + 1).is_none());
     }
 
     #[test]
     fn from_permille() {
-        assert_eq!(Percent100::try_from_permille(0).unwrap(), Percent100::ZERO);
         assert_eq!(
-            Percent100::try_from_permille(10).unwrap(),
+            Percent100::from_permille(Permilles::new(0)),
+            Percent100::ZERO
+        );
+        assert_eq!(
+            Percent100::from_permille(Permilles::new(10)),
             test::percent100(10)
         );
         assert_eq!(
-            Percent100::try_from_permille(1000).unwrap(),
+            Percent100::from_permille(Permilles::new(1000)),
             test::percent100(1000)
         );
 
-        assert_eq!(Percent::try_from_permille(0).unwrap(), Percent::ZERO);
+        assert_eq!(Percent::from_permille(Permilles::new(0)), Percent::ZERO);
         assert_eq!(
-            Percent::try_from_permille(1001).unwrap(),
+            Percent::from_permille(Permilles::new(1001)),
             test::percent(1001)
         );
-        assert!(Percent::try_from_primitive(u32::MAX / 10 + 1).is_none());
     }
 
     #[test]
@@ -229,8 +232,8 @@ mod test {
                 .is_none()
         );
         assert!(
-            Percent::from_permille(Units::MAX)
-                .checked_add(Percent::from_permille(1))
+            test::percent(Units::MAX)
+                .checked_add(test::percent(1))
                 .is_none()
         );
     }
