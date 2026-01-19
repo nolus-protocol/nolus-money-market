@@ -174,15 +174,15 @@ pub(super) mod test {
     fn from_fraction() {
         let n: Units = 189;
         let d: Units = 1890;
-        let r = SimpleFraction::new(percent(n), percent(d));
+        let r = SimpleFraction::new(Permilles::new(n), Permilles::new(d));
         let res = r.of(Percent::HUNDRED).unwrap();
         assert_eq!(percent(n * 1000 / d), res);
     }
 
     pub(crate) fn test_of<P>(permille: Units, quantity: P, exp: P)
     where
-        P: Clone + Debug + Display + Fractionable<Percent100> + PartialEq,
-        Percent100: IntoMax<<P as CommonDoublePrimitive<Percent100>>::CommonDouble>,
+        P: Clone + Debug + Display + Fractionable<Permilles> + PartialEq,
+        Permilles: IntoMax<<P as CommonDoublePrimitive<Permilles>>::CommonDouble>,
     {
         let perm = percent100(permille);
         assert_eq!(
