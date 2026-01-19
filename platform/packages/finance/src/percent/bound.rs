@@ -31,8 +31,9 @@ impl<const UPPER_BOUND: Units> BoundPercent<UPPER_BOUND> {
     }
 
     #[cfg(any(test, feature = "testing"))]
-    pub const fn from_permille(permille: Permilles) -> Self {
-        Self::try_from_permille(permille).expect("Permille value exceeds allowed upper bound")
+    pub const fn from_permille(units: Units) -> Self {
+        Self::try_from_permille(Permilles::new(units))
+            .expect("Permille value exceeds allowed upper bound")
     }
 
     const fn try_from_primitive(percent: u32) -> Option<Self> {
@@ -170,24 +171,12 @@ mod test {
 
     #[test]
     fn from_permille() {
-        assert_eq!(
-            Percent100::from_permille(Permilles::new(0)),
-            Percent100::ZERO
-        );
-        assert_eq!(
-            Percent100::from_permille(Permilles::new(10)),
-            test::percent100(10)
-        );
-        assert_eq!(
-            Percent100::from_permille(Permilles::new(1000)),
-            test::percent100(1000)
-        );
+        assert_eq!(Percent100::from_permille(0), Percent100::ZERO);
+        assert_eq!(Percent100::from_permille(10), test::percent100(10));
+        assert_eq!(Percent100::from_permille(1000), test::percent100(1000));
 
-        assert_eq!(Percent::from_permille(Permilles::new(0)), Percent::ZERO);
-        assert_eq!(
-            Percent::from_permille(Permilles::new(1001)),
-            test::percent(1001)
-        );
+        assert_eq!(Percent::from_permille(0), Percent::ZERO);
+        assert_eq!(Percent::from_permille(1001), test::percent(1001));
     }
 
     #[test]
