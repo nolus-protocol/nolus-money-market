@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use finance::{
     fraction::Fraction,
     fractionable::{CommonDoublePrimitive, Fractionable, IntoMax},
-    percent::Percent100,
+    percent::{Percent100, permilles::Permilles},
     range::{Ascending, RightOpenRange},
 };
 
@@ -88,8 +88,8 @@ impl Policy {
     // Note that in edge cases the ltv may go above 100%
     pub fn may_trigger<P>(&self, lease_asset: P, total_due: P) -> Option<Strategy>
     where
-        Percent100: IntoMax<<P as CommonDoublePrimitive<Percent100>>::CommonDouble>,
-        P: Fractionable<Percent100> + PartialOrd + Copy,
+        Permilles: IntoMax<<P as CommonDoublePrimitive<Permilles>>::CommonDouble>,
+        P: Fractionable<Permilles> + PartialOrd + Copy,
     {
         self.may_stop_loss(lease_asset, total_due)
             .or_else(|| self.may_take_profit(lease_asset, total_due))
@@ -135,8 +135,8 @@ impl Policy {
 
     fn may_stop_loss<P>(&self, lease_asset: P, total_due: P) -> Option<Strategy>
     where
-        Percent100: IntoMax<<P as CommonDoublePrimitive<Percent100>>::CommonDouble>,
-        P: Fractionable<Percent100> + PartialOrd,
+        Permilles: IntoMax<<P as CommonDoublePrimitive<Permilles>>::CommonDouble>,
+        P: Fractionable<Permilles> + PartialOrd,
     {
         self.stop_loss.and_then(|stop_loss| {
             (stop_loss.of(lease_asset) <= total_due).then_some(Strategy::StopLoss(stop_loss))
@@ -145,8 +145,8 @@ impl Policy {
 
     fn may_take_profit<P>(&self, lease_asset: P, total_due: P) -> Option<Strategy>
     where
-        Percent100: IntoMax<<P as CommonDoublePrimitive<Percent100>>::CommonDouble>,
-        P: Fractionable<Percent100> + PartialOrd,
+        Permilles: IntoMax<<P as CommonDoublePrimitive<Permilles>>::CommonDouble>,
+        P: Fractionable<Permilles> + PartialOrd,
     {
         self.take_profit.and_then(|take_profit| {
             (take_profit.of(lease_asset) > total_due).then_some(Strategy::TakeProfit(take_profit))
