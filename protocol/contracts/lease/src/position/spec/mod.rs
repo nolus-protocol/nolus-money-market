@@ -28,7 +28,7 @@ pub use dto::SpecDTO;
 mod dto;
 
 #[cfg(all(feature = "internal.test.contract", test))]
-mod test;
+pub(super) mod test;
 
 #[derive(Clone, Copy)]
 #[cfg_attr(feature = "contract_testing", derive(Debug, PartialEq))]
