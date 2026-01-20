@@ -306,7 +306,7 @@ where
 
 fn config() -> Config {
     Config::new(
-        Percent100::HUNDRED,
+        Percent100::MAX,
         Duration::from_secs(SAMPLE_PERIOD_SECS),
         SAMPLES_NUMBER,
         DISCOUNTING_FACTOR,

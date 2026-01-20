@@ -84,8 +84,7 @@ impl InterestRate {
     }
 
     fn validate(&self) -> bool {
-        self.utilization_optimal > Percent100::ZERO
-            && self.utilization_optimal < Percent100::HUNDRED
+        self.utilization_optimal > Percent100::ZERO && self.utilization_optimal < Percent100::MAX
     }
 
     fn utilization_factor_max(&self) -> Percent {
@@ -134,9 +133,7 @@ mod tests {
             .is_some(),
             ""
         );
-        assert!(
-            InterestRate::new(Percent100::ZERO, Percent100::HUNDRED, Percent100::ZERO).is_none()
-        );
+        assert!(InterestRate::new(Percent100::ZERO, Percent100::MAX, Percent100::ZERO).is_none());
         assert!(
             InterestRate::new(
                 Percent100::from_percent(25),
@@ -145,14 +142,7 @@ mod tests {
             )
             .is_some()
         );
-        assert!(
-            InterestRate::new(
-                Percent100::HUNDRED,
-                Percent100::HUNDRED,
-                Percent100::HUNDRED
-            )
-            .is_none()
-        );
+        assert!(InterestRate::new(Percent100::MAX, Percent100::MAX, Percent100::MAX).is_none());
 
         assert!(InterestRate::new(Percent100::ZERO, Percent100::ZERO, Percent100::ZERO).is_none());
         assert!(
@@ -163,9 +153,7 @@ mod tests {
             )
             .is_none()
         );
-        assert!(
-            InterestRate::new(Percent100::HUNDRED, Percent100::ZERO, Percent100::HUNDRED).is_none()
-        );
+        assert!(InterestRate::new(Percent100::MAX, Percent100::ZERO, Percent100::MAX).is_none());
     }
 
     /// Test suit specifically for verifying correctness of [`InterestRate::calculate`](InterestRate::calculate).cargo fmt

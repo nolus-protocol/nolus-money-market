@@ -414,7 +414,7 @@ mod test {
                 },
                 may_p
             );
-            assert_eq!(None, may_p.may_trigger(Percent100::HUNDRED, lower));
+            assert_eq!(None, may_p.may_trigger(Percent100::MAX, lower));
 
             let may_p_1 = may_p
                 .change_policy(ClosePolicyChange {
@@ -431,7 +431,7 @@ mod test {
             );
             assert_eq!(
                 Some(CloseStrategy::StopLoss(lower)),
-                may_p_1.may_trigger(Percent100::HUNDRED, lower)
+                may_p_1.may_trigger(Percent100::MAX, lower)
             );
 
             let may_p_2 = may_p_1
@@ -442,7 +442,7 @@ mod test {
                 .unwrap();
             assert_eq!(
                 Some(CloseStrategy::TakeProfit(higher)),
-                may_p_2.may_trigger(Percent100::HUNDRED, lower)
+                may_p_2.may_trigger(Percent100::MAX, lower)
             );
 
             assert_eq!(
@@ -468,7 +468,7 @@ mod test {
                     stop_loss: Some(ChangeCmd::Set(higher)),
                 })
                 .unwrap();
-            assert_eq!(None, p.may_trigger(Percent100::HUNDRED, lower));
+            assert_eq!(None, p.may_trigger(Percent100::MAX, lower));
             assert_eq!(
                 Some(CloseStrategy::TakeProfit(higher),),
                 p.change_policy(ClosePolicyChange {
@@ -476,7 +476,7 @@ mod test {
                     stop_loss: Some(ChangeCmd::Reset),
                 })
                 .unwrap()
-                .may_trigger(Percent100::HUNDRED, lease_invalid1)
+                .may_trigger(Percent100::MAX, lease_invalid1)
             );
 
             assert_eq!(
@@ -487,7 +487,7 @@ mod test {
                         stop_loss: Some(ChangeCmd::Set(lower)),
                     },)
                     .unwrap()
-                    .may_trigger(Percent100::HUNDRED, lower)
+                    .may_trigger(Percent100::MAX, lower)
             );
         }
     }

@@ -224,7 +224,7 @@ mod test {
     fn old_observations() {
         let block_time = Timestamp::from_seconds(100);
         let config = Config::new(
-            Percent100::HUNDRED,
+            Percent100::MAX,
             SAMPLE_PERIOD,
             SAMPLES_NUMBER,
             DISCOUNTING_FACTOR,
@@ -280,7 +280,7 @@ mod test {
             .unwrap();
 
         let config = Config::new(
-            Percent100::HUNDRED,
+            Percent100::MAX,
             SAMPLE_PERIOD,
             SAMPLES_NUMBER,
             DISCOUNTING_FACTOR,
@@ -356,7 +356,7 @@ mod test {
     fn ema_price() {
         let block_time = Timestamp::from_seconds(100);
         let config = Config::new(
-            Percent100::HUNDRED,
+            Percent100::MAX,
             SAMPLE_PERIOD,
             SAMPLES_NUMBER,
             DISCOUNTING_FACTOR,
