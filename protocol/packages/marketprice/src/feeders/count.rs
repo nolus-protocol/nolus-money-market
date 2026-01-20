@@ -3,6 +3,7 @@ use std::ops::{Div, Rem};
 use gcd::Gcd;
 
 use finance::{
+    coin::Amount,
     fraction::Unit as FractionUnit,
     fractionable::{CommonDoublePrimitive, Fractionable, IntoDoublePrimitive, IntoMax, TryFromMax},
     percent::permilles::Permilles,
@@ -14,15 +15,15 @@ use crate::feeders::PriceFeedersError;
 
 type Unit = u32;
 const ZERO: Unit = 0;
-const ONE: Unit = 1;
 const MAX: Unit = u32::MAX;
 
 #[derive(Clone, Copy, Debug, PartialEq, PartialOrd)]
 pub struct Count(Unit);
 
 impl Count {
-    const ZERO: Self = Self(ZERO);
-    pub const MAX: Self = Self(MAX);
+    const ZERO: Self = Self::new(ZERO);
+    const ONE: Self = Self::new(1);
+    pub const MAX: Self = Self::new(MAX);
 
     const fn new(count: Unit) -> Self {
         Self(count)
@@ -45,8 +46,8 @@ impl Count {
     /// Converts [self] into a reciprocal fraction
     ///
     /// Returns [None] if the Count is zero
-    pub fn try_into_reciprocal(self) -> Option<Ratio<Unit>> {
-        (self != Self::ZERO).then(|| Ratio::new(ONE, self.0))
+    pub fn try_into_reciproral(self) -> Option<Ratio<Self>> {
+        (self != Self::ZERO).then(|| Ratio::new(Self::ONE, self))
     }
 }
 
@@ -80,6 +81,12 @@ impl FractionUnit for Count {
 
     fn to_primitive(self) -> Self::Times {
         self.0
+    }
+}
+
+impl From<Count> for Amount {
+    fn from(val: Count) -> Self {
+        val.0.into()
     }
 }
 
@@ -127,12 +134,12 @@ mod test {
     use super::Count;
 
     #[test]
-    fn try_into_reciprocal_nonzero() {
-        let count = 4096;
+    fn try_into_reciproral_nonzero() {
+        let count = Count::new_test(4096);
 
         assert_eq!(
-            Ratio::new(1, count),
-            Count::new_test(count).try_into_reciprocal().unwrap()
+            Ratio::new(Count::ONE, count),
+            count.try_into_reciproral().unwrap()
         );
     }
 
