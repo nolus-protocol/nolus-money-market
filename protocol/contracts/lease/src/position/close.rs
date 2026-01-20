@@ -179,7 +179,7 @@ mod test {
     mod may_trigger {
         use finance::{coin::Amount, percent::Percent100};
 
-        use crate::position::{CloseStrategy, close::Policy};
+        use crate::position::{CloseStrategy, close::Policy, spec::test};
 
         #[test]
         fn no_sl_no_tp() {
@@ -278,7 +278,7 @@ mod test {
                 stop_loss: sl,
                 take_profit: tp,
             }
-            .may_trigger(asset, due)
+            .may_trigger(test::lease_coin(asset), test::lease_coin(due))
         }
     }
 

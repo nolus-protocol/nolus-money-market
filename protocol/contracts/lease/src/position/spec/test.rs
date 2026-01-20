@@ -43,7 +43,7 @@ impl DueTrait for TestDue {
     }
 }
 
-const fn lease_coin(amount: Amount) -> Coin<TestCurrency> {
+pub(crate) const fn lease_coin(amount: Amount) -> Coin<TestCurrency> {
     Coin::new(amount)
 }
 
