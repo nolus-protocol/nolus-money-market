@@ -94,7 +94,7 @@ pub(crate) fn mock_quote_query(
 ) -> Result<Binary, ContractError> {
     let res = match msg {
         QueryMsg::Quote { amount: _amount } => cosmwasm_std::to_json_binary(
-            &lpp::msg::QueryQuoteResponse::QuoteInterestRate(Percent100::HUNDRED),
+            &lpp::msg::QueryQuoteResponse::QuoteInterestRate(Percent100::MAX),
         ),
         _ => Ok(lpp::contract::query(deps, env, msg)?),
     }?;
