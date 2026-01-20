@@ -66,7 +66,7 @@ mod test {
     #[test]
     fn ord() {
         assert!(
-            Zone::no_warnings(Percent100::HUNDRED)
+            Zone::no_warnings(Percent100::MAX)
                 < Zone::first(Percent100::from_percent(0), Percent100::from_percent(10))
         );
         assert!(

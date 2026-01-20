@@ -26,7 +26,7 @@ pub type Percent = BoundPercent<{ Units::MAX }>;
 
 impl Percent100 {
     pub const fn complement(self) -> Self {
-        Self::HUNDRED
+        Self::MAX
             .checked_sub(self)
             .expect("Invariant violated: percent is bigger than 100%")
     }
@@ -122,8 +122,8 @@ pub(super) mod test {
         test_of(10, percent100(800), percent100(8));
         test_of(10, percent100(890), percent100(8));
         test_of(1, percent100(123), Percent100::ZERO);
-        test_of(0, Percent100::HUNDRED, Percent100::ZERO);
-        test_of(1000, Percent100::HUNDRED, Percent100::HUNDRED);
+        test_of(0, Percent100::MAX, Percent100::ZERO);
+        test_of(HUNDRED, Percent100::MAX, Percent100::MAX);
         test_of(100, Percent100::ZERO, Percent100::ZERO);
     }
 
@@ -134,11 +134,11 @@ pub(super) mod test {
             Percent100::from_ratio(coin::coin1(3), coin::coin1(4))
         );
         assert_eq!(
-            Percent100::HUNDRED,
+            Percent100::MAX,
             Percent100::from_ratio(coin::coin1(3), coin::coin1(3))
         );
         assert_eq!(
-            Percent100::HUNDRED,
+            Percent100::MAX,
             Percent100::from_ratio(coin::coin1(Amount::MAX), coin::coin1(Amount::MAX))
         );
         assert_eq!(
@@ -159,7 +159,7 @@ pub(super) mod test {
         );
         assert_eq!(
             Ratio::new(Permilles::MILLE, Permilles::MILLE),
-            Percent100::HUNDRED.to_ratio()
+            Percent100::MAX.to_ratio()
         );
     }
 
