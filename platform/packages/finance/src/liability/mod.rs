@@ -49,7 +49,7 @@ pub struct Liability {
 }
 
 impl Liability {
-    const MAX_TOP_BOUND: Percent100 = Percent100::HUNDRED;
+    const MAX_TOP_BOUND: Percent100 = Percent100::MAX;
     const MIN_STEP_LTV: Percent100 = Percent100::PRECISION;
 
     #[track_caller]
@@ -117,7 +117,7 @@ impl Liability {
         Permilles: IntoMax<<P as CommonDoublePrimitive<Permilles>>::CommonDouble>,
     {
         debug_assert!(self.initial > Percent100::ZERO);
-        debug_assert!(self.initial < Percent100::HUNDRED);
+        debug_assert!(self.initial < Percent100::MAX);
 
         let default_ltd = SimpleFraction::new(
             self.initial.permilles(),

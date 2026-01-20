@@ -60,7 +60,7 @@ impl<const UPPER_BOUND: Units> ToFraction<Permilles> for BoundPercent<UPPER_BOUN
 mod test {
     use crate::{
         fraction::ToFraction,
-        percent::{Percent, Percent100, permilles::Permilles, test},
+        percent::{Percent100, permilles::Permilles, test},
         ratio::SimpleFraction,
     };
 
@@ -72,7 +72,7 @@ mod test {
         );
         assert_eq!(
             SimpleFraction::new(Permilles::MILLE, Permilles::MILLE),
-            Percent::HUNDRED.to_fraction()
+            Percent100::MAX.to_fraction()
         );
         assert_eq!(
             SimpleFraction::new(Permilles::new(1001), Permilles::MILLE),
