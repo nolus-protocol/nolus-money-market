@@ -195,7 +195,7 @@ fn simulate_min_out_not_satisfied(test_case: &mut LeaseTestCase, lease: Addr) {
             .add_attribute("lease", lease.clone().to_string())
             .add_attribute(
                 "max_slippage",
-                LeaserInstantiator::MAX_SLIPPAGE.units().to_string(),
+                LeaserInstantiator::MAX_SLIPPAGE.permilles().to_string(),
             ),
     );
     assert!(matches!(

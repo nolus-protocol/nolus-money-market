@@ -197,7 +197,7 @@ fn liquidation_warning(base: Amount, quote: Amount, liability: Percent100, level
         .find(|attribute| attribute.key == "ltv")
         .expect("LTV attribute not present!");
 
-    assert_eq!(attribute.value, liability.units().to_string());
+    assert_eq!(attribute.value, liability.permilles().to_string());
 
     let attribute = event
         .attributes
