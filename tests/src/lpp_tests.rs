@@ -3,8 +3,8 @@ use currency::CurrencyDef;
 use finance::{
     coin::{Amount, Coin},
     duration::Duration,
-    fraction::Fraction,
-    percent::{Percent, Percent100},
+    fraction::{Fraction, Unit},
+    percent::{Percent, Percent100, permilles::Permilles},
     price,
     ratio::SimpleFraction,
     rational::Rational,
@@ -59,11 +59,11 @@ fn general_interest_rate(
     .map(|utilization_factor_max| {
             // TODO migrate to using SimpleFraction once it starts implementing Ord
             let utilization_factor = Percent::from_fraction(
-                    Percent::from(optimal_rate),
-                    optimal_rate.complement().into(),
+                    optimal_rate.permilles(),
+                    optimal_rate.complement().permilles(),
                 ).expect("The utilization must be a valid Percent").min(utilization_factor_max);
 
-        SimpleFraction::<Percent>::new(addon_rate.into(), optimal_rate.into()).of(utilization_factor)
+        SimpleFraction::<Permilles>::new(addon_rate.into(), optimal_rate.into()).of(utilization_factor)
         .map(|utilization_config| Percent100::try_from(utilization_config + base_rate.into()).expect("The borrow rate must not exceed 100%"))     
         .expect("The utilization_config must be a valid Percent")     
     })
@@ -532,6 +532,8 @@ fn loan_open_and_repay() {
     let repay_excess = 1_000_000u128;
 
     let interest1 = interest_rate(loan1_u32, balance1_u32);
+    let loan1_coin = common::lpn_coin(loan1);
+    let interest_due1 = interest1.of(loan1_coin);
 
     let mut test_case = TestCaseBuilder::<Lpn>::with_reserve(&[
         lpn_cwcoin(app_balance),
@@ -593,7 +595,7 @@ fn loan_open_and_repay() {
         .query_wasm_smart(
             test_case.address_book.lpp().clone(),
             &LppQueryMsg::Quote {
-                amount: common::lpn_coin(loan1).into(),
+                amount: loan1_coin.into(),
             },
         )
         .unwrap();
@@ -627,7 +629,7 @@ fn loan_open_and_repay() {
             loan_addr1.clone(),
             test_case.address_book.lpp().clone(),
             &LppExecuteMsg::OpenLoan {
-                amount: common::lpn_coin(loan1).into(),
+                amount: loan1_coin.into(),
             },
             &[],
         )
@@ -635,8 +637,8 @@ fn loan_open_and_repay() {
 
     test_case.app.time_shift(Duration::from_nanos(YEAR / 2));
 
-    let total_interest_due_u32 = interest1.of(loan1_u32) / 2;
-    let total_interest_due = Amount::from(total_interest_due_u32);
+    let total_interest_due = interest_due1.checked_div(2).unwrap();
+    let total_interest_due_u32: u32 = total_interest_due.to_primitive().try_into().unwrap();
 
     let resp: LppBalanceResponse<Lpns> = test_case
         .app
@@ -647,12 +649,10 @@ fn loan_open_and_repay() {
         )
         .unwrap();
 
-    assert_eq!(
-        resp.total_interest_due,
-        common::lpn_coin(total_interest_due).into()
-    );
+    assert_eq!(resp.total_interest_due, total_interest_due.into());
 
     let interest2 = interest_rate(loan1_u32 + loan2_u32 + total_interest_due_u32, balance1_u32);
+    let loan2_coin = common::lpn_coin(loan2);
 
     let quote: QueryQuoteResponse = test_case
         .app
@@ -660,7 +660,7 @@ fn loan_open_and_repay() {
         .query_wasm_smart(
             test_case.address_book.lpp().clone(),
             &LppQueryMsg::Quote {
-                amount: common::lpn_coin(loan2).into(),
+                amount: loan2_coin.into(),
             },
         )
         .unwrap();
@@ -674,11 +674,7 @@ fn loan_open_and_repay() {
         &mut test_case.app,
         test_case.address_book.lease_code(),
         lease_addresses,
-        LeaseInitConfig::new(
-            currency::dto::<LeaseCurrency, _>(),
-            common::coin(loan2),
-            None,
-        ),
+        LeaseInitConfig::new(currency::dto::<LeaseCurrency, _>(), loan2_coin, None),
         LeaseInstantiatorConfig {
             liability_init_percent: Percent100::from_percent(50), // simplify case: borrow == downpayment
             ..LeaseInstantiatorConfig::default()
@@ -700,11 +696,11 @@ fn loan_open_and_repay() {
         )
         .unwrap();
     let loan1_resp = maybe_loan1.unwrap();
-    assert_eq!(loan1_resp.principal_due, common::lpn_coin(loan1));
+    assert_eq!(loan1_resp.principal_due, loan1_coin);
     assert_eq!(loan1_resp.annual_interest_rate, interest1);
     assert_eq!(
         loan1_resp.interest_due(&crate::block_time(&test_case)),
-        Some(common::coin(interest1.of(loan1)))
+        interest_due1
     );
 
     // repay from other addr
@@ -744,15 +740,15 @@ fn loan_open_and_repay() {
         )
         .unwrap();
     let loan1_resp = maybe_loan1.unwrap();
-    assert_eq!(loan1_resp.principal_due, common::lpn_coin(loan1));
+    assert_eq!(loan1_resp.principal_due, loan1_coin);
     assert_eq!(
         loan1_resp.interest_due(&crate::block_time(&test_case)),
-        Some(common::coin(interest1.of(loan1) - repay_interest_part))
+        interest_due1 - common::lpn_coin(repay_interest_part)
     );
 
     // repay interest + due part
     () = repay_loan::<Lpn>(
-        interest1.of(loan1) - repay_interest_part + repay_due_part,
+        interest_due1.to_primitive() - repay_interest_part + repay_due_part,
         &mut test_case,
         loan_addr1.clone(),
     )
@@ -805,7 +801,7 @@ fn loan_open_and_repay() {
 
     // repay excess is returned
     let balance = bank::balance(&loan_addr1, test_case.app.query()).unwrap();
-    assert_eq!(balance, common::lpn_coin(loan1 - interest1.of(loan1)));
+    assert_eq!(balance, loan1_coin - interest_due1);
 
     let resp: LppBalanceResponse<Lpns> = test_case
         .app
@@ -819,12 +815,12 @@ fn loan_open_and_repay() {
     // total unpaid interest
     assert_eq!(
         resp.total_interest_due,
-        common::lpn_coin(interest2.of(loan2) / 2u128).into()
+        interest2.of(loan2_coin).checked_div(2).unwrap().into()
     );
-    assert_eq!(resp.total_principal_due, common::lpn_coin(loan2).into());
+    assert_eq!(resp.total_principal_due, loan2_coin.into());
     assert_eq!(
         resp.balance,
-        common::lpn_coin(init_deposit + interest1.of(loan1) - loan2).into()
+        (common::lpn_coin(init_deposit) + interest_due1 - loan2_coin).into()
     );
 }
 
@@ -864,6 +860,8 @@ fn compare_lpp_states() {
     let repay_excess = 1_000_000u128;
 
     let interest1 = interest_rate(loan1_u32, balance1_u32);
+    let loan1_coin = common::lpn_coin(loan1);
+    let interest_due1 = interest1.of(loan1_coin);
 
     let mut test_case = TestCaseBuilder::<Lpn>::with_reserve(&[
         lpn_cwcoin(app_balance),
@@ -916,7 +914,7 @@ fn compare_lpp_states() {
         .query_wasm_smart(
             test_case.address_book.lpp().clone(),
             &LppQueryMsg::Quote {
-                amount: common::lpn_coin(loan1).into(),
+                amount: loan1_coin.into(),
             },
         )
         .unwrap();
@@ -957,7 +955,7 @@ fn compare_lpp_states() {
             loan_addr1.clone(),
             test_case.address_book.lpp().clone(),
             &LppExecuteMsg::OpenLoan {
-                amount: common::lpn_coin(loan1).into(),
+                amount: loan1_coin.into(),
             },
             &[],
         )
@@ -965,8 +963,9 @@ fn compare_lpp_states() {
 
     test_case.app.time_shift(Duration::from_nanos(YEAR / 2));
 
-    let total_interest_due_u32 = interest1.of(loan1_u32) / 2;
-    let total_interest_due = Amount::from(total_interest_due_u32);
+    let total_interest_due = interest_due1.checked_div(2).unwrap();
+
+    let total_interest_due_u32: u32 = total_interest_due.to_primitive().try_into().unwrap();
 
     let resp: LppBalanceResponse<Lpns> = test_case
         .app
@@ -976,12 +975,10 @@ fn compare_lpp_states() {
             &LppQueryMsg::LppBalance(),
         )
         .unwrap();
-    assert_eq!(
-        resp.total_interest_due,
-        common::lpn_coin(total_interest_due).into()
-    );
+    assert_eq!(resp.total_interest_due, total_interest_due.into());
 
     let interest2 = interest_rate(loan1_u32 + loan2_u32 + total_interest_due_u32, balance1_u32);
+    let loan2_coin = common::lpn_coin(loan2);
 
     let quote: QueryQuoteResponse = test_case
         .app
@@ -989,7 +986,7 @@ fn compare_lpp_states() {
         .query_wasm_smart(
             test_case.address_book.lpp().clone(),
             &LppQueryMsg::Quote {
-                amount: common::lpn_coin(loan2).into(),
+                amount: loan2_coin.into(),
             },
         )
         .unwrap();
@@ -1036,11 +1033,11 @@ fn compare_lpp_states() {
         )
         .unwrap();
     let loan1_resp = maybe_loan1.unwrap();
-    assert_eq!(loan1_resp.principal_due, common::lpn_coin(loan1));
+    assert_eq!(loan1_resp.principal_due, loan1_coin);
     assert_eq!(loan1_resp.annual_interest_rate, interest1);
     assert_eq!(
         loan1_resp.interest_due(&crate::block_time(&test_case)),
-        Some(common::coin(interest1.of(loan1)))
+        interest_due1
     );
 
     // repay from other addr
@@ -1080,15 +1077,15 @@ fn compare_lpp_states() {
         )
         .unwrap();
     let loan1_resp = maybe_loan1.unwrap();
-    assert_eq!(loan1_resp.principal_due, common::lpn_coin(loan1));
+    assert_eq!(loan1_resp.principal_due, loan1_coin);
     assert_eq!(
         loan1_resp.interest_due(&crate::block_time(&test_case)),
-        Some(common::coin(interest1.of(loan1) - repay_interest_part))
+        interest_due1 - common::lpn_coin(repay_interest_part)
     );
 
     // repay interest + due part
     () = repay_loan::<Lpn>(
-        interest1.of(loan1) - repay_interest_part + repay_due_part,
+        interest_due1.to_primitive() - repay_interest_part + repay_due_part,
         &mut test_case,
         loan_addr1.clone(),
     )
@@ -1140,7 +1137,7 @@ fn compare_lpp_states() {
 
     // repay excess is returned
     let balance = bank::balance(&loan_addr1, test_case.app.query()).unwrap();
-    assert_eq!(balance, common::lpn_coin(loan1 - interest1.of(loan1)));
+    assert_eq!(balance, loan1_coin - interest_due1);
 
     let resp: LppBalanceResponse<Lpns> = test_case
         .app
@@ -1151,15 +1148,13 @@ fn compare_lpp_states() {
         )
         .unwrap();
 
+    let total_unpaid_interest = interest2.of(loan2_coin).checked_div(2).unwrap();
     // total unpaid interest
-    assert_eq!(
-        resp.total_interest_due,
-        common::lpn_coin(interest2.of(loan2) / 2u128).into()
-    );
-    assert_eq!(resp.total_principal_due, common::lpn_coin(loan2).into());
+    assert_eq!(resp.total_interest_due, total_unpaid_interest.into());
+    assert_eq!(resp.total_principal_due, loan2_coin.into());
     assert_eq!(
         resp.balance,
-        common::lpn_coin(init_deposit + interest1.of(loan1) - loan2).into()
+        (common::lpn_coin(init_deposit) + interest_due1 - loan2_coin).into()
     );
 }
 
