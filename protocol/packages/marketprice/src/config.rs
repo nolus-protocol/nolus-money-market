@@ -88,7 +88,7 @@ impl Config {
 
     fn check_invariant(self) -> Result<Self, PriceFeedsError> {
         error::config_error_if(
-            self.min_feeders == Percent100::ZERO || self.min_feeders > Percent100::HUNDRED,
+            self.min_feeders == Percent100::ZERO || self.min_feeders > Percent100::MAX,
             "The minumum feeders should be greater than 0 and less or equal to 100%",
         )?;
 
@@ -106,7 +106,7 @@ impl Config {
         debug_assert!(self.sample_period <= self.feed_validity);
 
         error::config_error_if(
-            self.discount_factor == Percent100::ZERO || self.discount_factor > Percent100::HUNDRED,
+            self.discount_factor == Percent100::ZERO || self.discount_factor > Percent100::MAX,
             "The discounting factor should be greater than 0 and less or equal to 100%",
         )?;
 

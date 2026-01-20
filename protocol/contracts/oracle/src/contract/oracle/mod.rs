@@ -331,12 +331,8 @@ mod test_normalized_price_not_found {
     fn test() {
         let mut storage: MockStorage = MockStorage::new();
 
-        let price_config: PriceConfig = PriceConfig::new(
-            Percent100::HUNDRED,
-            Duration::from_secs(1),
-            1,
-            Percent100::HUNDRED,
-        );
+        let price_config: PriceConfig =
+            PriceConfig::new(Percent100::MAX, Duration::from_secs(1), 1, Percent100::MAX);
 
         init(&mut storage, &price_config);
 

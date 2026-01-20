@@ -592,7 +592,7 @@ mod test {
 
     fn config() -> Config {
         Config::new(
-            Percent100::HUNDRED,
+            Percent100::MAX,
             SAMPLE_PERIOD_SECS,
             SAMPLES_NUMBER,
             DISCOUNTING_FACTOR,

@@ -103,12 +103,9 @@ where
             self.commited_balance(pending_deposit).map(|balance| {
                 if self.utilization(balance, total_due) > min_utilization {
                     // a followup from the above true value is (total_due * 100 / min_utilization) > (balance + total_due)
-                    SimpleFraction::new(
-                        Percent100::HUNDRED.permilles(),
-                        min_utilization.permilles(),
-                    )
-                    .of(total_due)
-                    .map(|res| res - balance - total_due)
+                    SimpleFraction::new(Percent100::MAX.permilles(), min_utilization.permilles())
+                        .of(total_due)
+                        .map(|res| res - balance - total_due)
                 } else {
                     Some(Coin::ZERO)
                 }
@@ -321,7 +318,7 @@ where
 
     fn utilization(&self, balance: Coin<Lpn>, total_due: Coin<Lpn>) -> Percent100 {
         if balance.is_zero() {
-            Percent100::HUNDRED
+            Percent100::MAX
         } else {
             Percent100::from_ratio(total_due, total_due + balance)
         }
@@ -829,7 +826,7 @@ mod test {
                     InterestRate::new(
                         Percent100::ZERO,
                         Percent100::from_permille(500),
-                        Percent100::HUNDRED,
+                        Percent100::MAX,
                     )
                     .unwrap(),
                     min_utilization,
@@ -1030,7 +1027,7 @@ mod test {
                 InterestRate::new(
                     Percent100::ZERO,
                     Percent100::from_permille(500),
-                    Percent100::HUNDRED,
+                    Percent100::MAX,
                 )
                 .unwrap(),
                 Percent100::ZERO,
