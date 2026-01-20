@@ -16,6 +16,12 @@ impl Permilles {
     pub(super) const fn new(permilles: Units) -> Self {
         Self(permilles)
     }
+
+    #[cfg(any(test, feature = "testing"))]
+    pub const fn new_test(permilles: Units) -> Self {
+        Self::new(permilles)
+    }
+
     pub(super) const fn units(&self) -> Units {
         self.0
     }

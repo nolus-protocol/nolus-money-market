@@ -10,19 +10,17 @@ impl<C> CommonDoublePrimitive<Coin<C>> for Permilles {
     type CommonDouble = DoubleCoinPrimitive;
 }
 
-impl<C, const UPPER_BOUND: Units> CommonDoublePrimitive<Coin<C>> for BoundPercent<UPPER_BOUND> {
-    type CommonDouble = DoubleCoinPrimitive;
+impl CommonDoublePrimitive<Permilles> for Permilles {
+    type CommonDouble = DoubleBoundPercentPrimitive;
 }
 
 impl<const UPPER_BOUND: Units> CommonDoublePrimitive<Permilles> for BoundPercent<UPPER_BOUND> {
     type CommonDouble = DoubleBoundPercentPrimitive;
 }
 
-// TODO?
 impl<C> Fractionable<Coin<C>> for Permilles {}
 
-impl<C, const UPPER_BOUND: Units> Fractionable<Coin<C>> for BoundPercent<UPPER_BOUND> {}
-
+impl Fractionable<Permilles> for Permilles {}
 impl<const UPPER_BOUND: Units> Fractionable<Permilles> for BoundPercent<UPPER_BOUND> {}
 
 impl<const UPPER_BOUND: Units> IntoMax<DoubleBoundPercentPrimitive> for BoundPercent<UPPER_BOUND> {
@@ -37,14 +35,7 @@ impl IntoMax<DoubleBoundPercentPrimitive> for Permilles {
     }
 }
 
-// TODO?
 impl IntoMax<DoubleCoinPrimitive> for Permilles {
-    fn into_max(self) -> DoubleCoinPrimitive {
-        self.into_double().into()
-    }
-}
-
-impl<const UPPER_BOUND: Units> IntoMax<DoubleCoinPrimitive> for BoundPercent<UPPER_BOUND> {
     fn into_max(self) -> DoubleCoinPrimitive {
         self.into_double().into()
     }
@@ -77,19 +68,15 @@ impl<const UPPER_BOUND: Units> TryFromMax<DoubleBoundPercentPrimitive>
     }
 }
 
-// TODO?
-impl TryFromMax<DoubleCoinPrimitive> for Permilles {
-    fn try_from_max(max: DoubleCoinPrimitive) -> Option<Self> {
+impl TryFromMax<DoubleBoundPercentPrimitive> for Permilles {
+    fn try_from_max(max: DoubleBoundPercentPrimitive) -> Option<Self> {
         Units::try_from(max).ok().map(Self::new)
     }
 }
 
-impl<const UPPER_BOUND: Units> TryFromMax<DoubleCoinPrimitive> for BoundPercent<UPPER_BOUND> {
+impl TryFromMax<DoubleCoinPrimitive> for Permilles {
     fn try_from_max(max: DoubleCoinPrimitive) -> Option<Self> {
-        Units::try_from(max)
-            .ok()
-            .map(Permilles::new)
-            .and_then(|units| Self::try_from(units).ok())
+        Units::try_from(max).ok().map(Self::new)
     }
 }
 
@@ -165,7 +152,7 @@ mod test {
         use crate::{
             coin::Amount,
             fraction::Fraction,
-            percent::{Percent, Percent100, Units},
+            percent::{Units, permilles::Permilles},
             ratio::{Ratio, SimpleFraction},
             rational::Rational,
             test::coin,
@@ -174,23 +161,23 @@ mod test {
         #[test]
         fn of() {
             assert_eq!(
-                Percent::from_permille(Units::MAX),
+                Permilles::new_test(Units::MAX),
                 SimpleFraction::new(coin::coin1(Amount::MAX), coin::coin1(Amount::MAX))
-                    .of(Percent::from_permille(Units::MAX))
+                    .of(Permilles::new_test(Units::MAX))
                     .unwrap()
             );
             assert_eq!(
-                Percent::from_permille(1500),
-                Ratio::new(coin::coin1(3), coin::coin1(4)).of(Percent::from_permille(2000))
+                Permilles::new_test(1500),
+                Ratio::new(coin::coin1(3), coin::coin1(4)).of(Permilles::new_test(2000))
             );
             assert_eq!(
-                Percent100::from_percent(20),
-                Ratio::new(coin::coin1(1), coin::coin1(5)).of(Percent100::HUNDRED)
+                Permilles::new_test(200),
+                Ratio::new(coin::coin1(1), coin::coin1(5)).of(Permilles::MILLE)
             );
             assert_eq!(
-                Percent100::from_permille(225),
+                Permilles::new_test(225),
                 SimpleFraction::new(coin::coin1(3), coin::coin1(2))
-                    .of(Percent100::from_permille(150))
+                    .of(Permilles::new_test(150))
                     .unwrap()
             );
         }
@@ -199,7 +186,7 @@ mod test {
         fn of_overflow() {
             assert!(
                 SimpleFraction::new(coin::coin1(Amount::MAX), coin::coin1(1))
-                    .of(Percent::from_percent(1))
+                    .of(Permilles::new_test(10))
                     .is_none()
             )
         }
