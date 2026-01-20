@@ -89,7 +89,7 @@ impl<const UPPER_BOUND: Units> TryFrom<Permilles> for BoundPercent<UPPER_BOUND> 
     type Error = Error;
 
     fn try_from(permille: Permilles) -> Result<Self, Self::Error> {
-        Self::try_from_permille(permille).ok_or_else(|| Error::UpperBoundCrossed {
+        Self::try_from_permille(permille).ok_or(Error::UpperBoundCrossed {
             bound: UPPER_BOUND,
             value: permille,
         })

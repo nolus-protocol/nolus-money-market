@@ -33,7 +33,7 @@ impl<const UPPER_BOUND: Units> IntoMax<DoubleBoundPercentPrimitive> for BoundPer
 
 impl IntoMax<DoubleBoundPercentPrimitive> for Permilles {
     fn into_max(self) -> DoubleBoundPercentPrimitive {
-        self.to_double().into()
+        self.to_double()
     }
 }
 
