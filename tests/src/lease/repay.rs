@@ -175,7 +175,7 @@ fn full_repay_with_max_ltd() {
     let borrowed = max_ltd.of(DOWNPAYMENT).unwrap();
     let lease = super::open_lease(&mut test_case, downpayment, Some(max_ltd));
 
-    let lease_amount = (Percent::HUNDRED + max_ltd)
+    let lease_amount = (Percent::from_permille(1000) + max_ltd)
         .of(price::total(
             downpayment,
             Price::<PaymentCurrency, LeaseCurrency>::identity(),
