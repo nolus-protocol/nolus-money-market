@@ -132,7 +132,8 @@ impl<const UPPER_BOUND: Units> Sub for BoundPercent<UPPER_BOUND> {
 mod test {
     use crate::{
         fraction::Fraction,
-        percent::{Percent, Percent100, Units, bound::BoundPercent, permilles::Permilles, test,
+        percent::{
+            HUNDRED, Percent, Percent100, Units, bound::BoundPercent, permilles::Permilles, test,
         },
         rational::Rational,
         test::coin,
@@ -146,8 +147,8 @@ mod test {
         assert_eq!(try_from_permille(100), Some(test::percent(100)));
         assert_eq!(try_from_permille(100), Some(test::percent100(100)));
 
-        assert_eq!(try_from_permille(1000), Some(test::percent(1000)));
-        assert_eq!(try_from_permille(1000), Some(Percent100::MAX));
+        assert_eq!(try_from_permille(HUNDRED), Some(test::percent(HUNDRED)));
+        assert_eq!(try_from_permille(HUNDRED), Some(Percent100::MAX));
 
         assert_eq!(try_from_permille(1001), Some(test::percent(1001)));
         assert_eq!(try_from_permille(1001), Option::<Percent100>::None);
@@ -174,7 +175,7 @@ mod test {
         let amount = coin::coin1(1);
 
         assert_eq!(
-            coin::coin1((Units::MAX / 1000).into()),
+            coin::coin1((Units::MAX / HUNDRED).into()),
             Percent::MAX.of(amount).unwrap()
         );
     }
@@ -224,7 +225,7 @@ mod test {
             test::percent100(39) - (test::percent100(0))
         );
         assert_eq!(test::percent100(990), test::percent100(10).complement());
-        assert_eq!(test::percent100(0), test::percent100(1000).complement());
+        assert_eq!(test::percent100(0), test::percent100(HUNDRED).complement());
     }
 
     #[test]
@@ -245,7 +246,7 @@ mod test {
         test_display("1.9%", 19);
         test_display("9%", 90);
         test_display("10.1%", 101);
-        test_display("100%", 1000);
+        test_display("100%", HUNDRED);
     }
 
     fn test_display(exp: &str, permilles: Units) {

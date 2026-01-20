@@ -93,7 +93,7 @@ mod test {
         #[test]
         fn of() {
             assert_eq!(
-                Percent100::from_permille(410 * 222 / 1000),
+                Percent100::from_permille(410 * 222 / HUNDRED),
                 Percent100::from_percent(41).of(Percent100::from_permille(222))
             );
             assert_eq!(
@@ -101,7 +101,7 @@ mod test {
                 Percent100::from_percent(100).of(Percent100::from_permille(999))
             );
             assert_eq!(
-                Percent::from_permille(410 * 222222 / 1000),
+                Percent::from_permille(410 * 222222 / HUNDRED),
                 Percent::from_percent(41)
                     .of(Percent::from_permille(222222))
                     .unwrap()
