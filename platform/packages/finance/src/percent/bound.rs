@@ -139,7 +139,7 @@ impl<const UPPER_BOUND: Units> Sub for BoundPercent<UPPER_BOUND> {
 mod test {
     use crate::{
         fraction::Fraction,
-        percent::{Percent, Percent100, Units, permilles::Permilles, test},
+        percent::{Percent, Percent100, Units, test},
         rational::Rational,
         test::coin,
     };

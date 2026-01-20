@@ -2,13 +2,11 @@ use std::ops::{Div, Rem};
 
 use gcd::Gcd;
 
-use crate::fraction::Unit as FractionUnit;
-use crate::fractionable::{IntoMax, IntoDoublePrimitive, TryFromMax};
-use crate::percent::{DoubleBoundPercentPrimitive, Units};
-use crate::zero::Zero;
 use crate::{
-    fractionable::{CommonDoublePrimitive, Fractionable},
-    percent::bound::BoundPercent,
+    fraction::Unit as FractionUnit,
+    fractionable::{CommonDoublePrimitive, Fractionable, IntoDoublePrimitive, IntoMax, TryFromMax},
+    percent::{DoubleBoundPercentPrimitive, Units, bound::BoundPercent},
+    zero::Zero,
 };
 
 impl<const UPPER_BOUND: Units> CommonDoublePrimitive<BoundPercent<UPPER_BOUND>> for Units {
