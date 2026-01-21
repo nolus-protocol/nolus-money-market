@@ -48,29 +48,6 @@ use crate::{
 type LeaseCurrency = LeaseC1;
 const HALF_YEAR: Duration = Duration::from_nanos(Duration::YEAR.nanos() / 2);
 
-fn general_interest_rate(
-    loan: u32,
-    balance: u32,
-    base_rate: Percent100,
-    addon_rate: Percent100,
-    optimal_rate: Percent100,
-) -> Percent100 {
-    // TODO migrate to using SimpleFraction once it starts implementing Ord
-    Percent::from_fraction(common::lpn_coin(loan.into()), common::lpn_coin(balance.into()))
-    .map(|utilization_factor_max| {
-            // TODO migrate to using SimpleFraction once it starts implementing Ord
-            let utilization_factor = Percent::from_fraction(
-                    optimal_rate.permilles(),
-                    optimal_rate.complement().permilles(),
-                ).expect("The utilization must be a valid Percent").min(utilization_factor_max);
-
-        SimpleFraction::<Permilles>::new(addon_rate.into(), optimal_rate.into()).of(utilization_factor)
-        .map(|utilization_config| Percent100::try_from(utilization_config + base_rate.into()).expect("The borrow rate must not exceed 100%"))     
-        .expect("The utilization_config must be a valid Percent")     
-    })
-    .expect("The utilization_max must be a valid Percent: utilization_opt < 100% ensures the ratio is valid Percent100, which always fits within Percent's wider range")
-}
-
 #[test]
 fn config_update_parameters() {
     let app_balance = 10_000_000_000u128;
@@ -503,7 +480,7 @@ fn loan_open_and_repay() {
     const LOCAL_ADDON_OPTIMAL_INTEREST_RATE: Percent100 = Percent100::from_permille(200);
     const LOCAL_UTILIZATION_OPTIMAL_RATE: Percent100 = Percent100::from_permille(550);
 
-    fn interest_rate(loan: u32, balance: u32) -> Percent100 {
+    fn interest_rate(loan: Amount, balance: Amount) -> Percent100 {
         general_interest_rate(
             loan,
             balance,
@@ -523,14 +500,14 @@ fn loan_open_and_repay() {
     let init_deposit = Amount::from(init_deposit_u32);
     let loan1_u32 = 10_000_000u32;
     let loan1 = Amount::from(loan1_u32);
-    let balance1_u32 = init_deposit_u32 - loan1_u32;
+    let balance1 = init_deposit - loan1;
     let loan2_u32 = 5_000_000u32;
     let loan2 = Amount::from(loan2_u32);
     let repay_interest_part = 1_000_000u128;
     let repay_due_part = 1_000_000u128;
     let repay_excess = 1_000_000u128;
 
-    let interest1 = interest_rate(loan1_u32, balance1_u32);
+    let interest1 = interest_rate(loan1, balance1);
     let loan1_coin = common::lpn_coin(loan1);
     let interest_due1 = interest1.of(loan1_coin);
 
@@ -637,7 +614,6 @@ fn loan_open_and_repay() {
     test_case.app.time_shift(HALF_YEAR);
 
     let total_interest_due = interest_due1.checked_div(2).unwrap();
-    let total_interest_due_u32: u32 = total_interest_due.to_primitive().try_into().unwrap();
 
     let resp: LppBalanceResponse<Lpns> = test_case
         .app
@@ -650,7 +626,7 @@ fn loan_open_and_repay() {
 
     assert_eq!(resp.total_interest_due, total_interest_due.into());
 
-    let interest2 = interest_rate(loan1_u32 + loan2_u32 + total_interest_due_u32, balance1_u32);
+    let interest2 = interest_rate(loan1 + loan2 + total_interest_due.to_primitive(), balance1);
     let loan2_coin = common::lpn_coin(loan2);
 
     let quote: QueryQuoteResponse = test_case
@@ -829,7 +805,7 @@ fn compare_lpp_states() {
     const LOCAL_ADDON_OPTIMAL_INTEREST_RATE: Percent100 = Percent100::from_permille(200);
     const LOCAL_UTILIZATION_OPTIMAL_RATE: Percent100 = Percent100::from_permille(550);
 
-    fn interest_rate(loan: u32, balance: u32) -> Percent100 {
+    fn interest_rate(loan: Amount, balance: Amount) -> Percent100 {
         general_interest_rate(
             loan,
             balance,
@@ -849,14 +825,14 @@ fn compare_lpp_states() {
     let init_deposit = Amount::from(init_deposit_u32);
     let loan1_u32 = 10_000_000u32;
     let loan1 = Amount::from(loan1_u32);
-    let balance1_u32 = init_deposit_u32 - loan1_u32;
+    let balance1 = init_deposit - loan1;
     let loan2_u32 = 5_000_000u32;
     let loan2 = Amount::from(loan2_u32);
     let repay_interest_part = 1_000_000u128;
     let repay_due_part = 1_000_000u128;
     let repay_excess = 1_000_000u128;
 
-    let interest1 = interest_rate(loan1_u32, balance1_u32);
+    let interest1 = interest_rate(loan1, balance1);
     let loan1_coin = common::lpn_coin(loan1);
     let interest_due1 = interest1.of(loan1_coin);
 
@@ -962,8 +938,6 @@ fn compare_lpp_states() {
 
     let total_interest_due = interest_due1.checked_div(2).unwrap();
 
-    let total_interest_due_u32: u32 = total_interest_due.to_primitive().try_into().unwrap();
-
     let resp: LppBalanceResponse<Lpns> = test_case
         .app
         .query()
@@ -974,7 +948,7 @@ fn compare_lpp_states() {
         .unwrap();
     assert_eq!(resp.total_interest_due, total_interest_due.into());
 
-    let interest2 = interest_rate(loan1_u32 + loan2_u32 + total_interest_due_u32, balance1_u32);
+    let interest2 = interest_rate(loan1 + loan2 + total_interest_due.to_primitive(), balance1);
     let loan2_coin = common::lpn_coin(loan2);
 
     let quote: QueryQuoteResponse = test_case
@@ -1498,6 +1472,29 @@ where
         amount.into(),
         bank::balance::<Lpn>(&lender, app.query()).unwrap()
     )
+}
+
+fn general_interest_rate(
+    loan: Amount,
+    balance: Amount,
+    base_rate: Percent100,
+    addon_rate: Percent100,
+    optimal_rate: Percent100,
+) -> Percent100 {
+    // TODO migrate to using SimpleFraction once it starts implementing Ord
+    Percent::from_fraction(common::lpn_coin(loan), common::lpn_coin(balance))
+    .map(|utilization_factor_max| {
+            // TODO migrate to using SimpleFraction once it starts implementing Ord
+            let utilization_factor = Percent::from_fraction(
+                    optimal_rate.permilles(),
+                    optimal_rate.complement().permilles(),
+                ).expect("The utilization must be a valid Percent").min(utilization_factor_max);
+
+        SimpleFraction::<Permilles>::new(addon_rate.into(), optimal_rate.into()).of(utilization_factor)
+        .map(|utilization_config| Percent100::try_from(utilization_config + base_rate.into()).expect("The borrow rate must not exceed 100%"))     
+        .expect("The utilization_config must be a valid Percent")     
+    })
+    .expect("The utilization_max must be a valid Percent: utilization_opt < 100% ensures the ratio is valid Percent100, which always fits within Percent's wider range")
 }
 
 fn deposit<ProtocolsRegistry, Treasury, Profit, Reserve, Leaser, Oracle, TimeAlarms>(
