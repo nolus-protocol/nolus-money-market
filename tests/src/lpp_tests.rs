@@ -50,7 +50,7 @@ const HALF_YEAR: Duration = Duration::from_nanos(Duration::YEAR.nanos() / 2);
 
 #[test]
 fn config_update_parameters() {
-    let app_balance = 10_000_000_000u128;
+    let app_balance = 10_000_000_000;
 
     let base_interest_rate = Percent100::from_permille(210);
     let addon_optimal_interest_rate = Percent100::from_permille(200);
@@ -214,7 +214,7 @@ fn deposit_and_withdraw() {
     let post_deposit = 1_000_000;
     let loan = 1_000_000;
     let overdraft = 5_000;
-    let withdraw_amount_nlpn = 1000u128;
+    let withdraw_amount_nlpn = 1000;
     let rest_nlpn = test_deposit / pushed_price - withdraw_amount_nlpn;
 
     let admin = testing::user(ADMIN);
@@ -442,10 +442,10 @@ fn loan_open_wrong_id() {
     let lender = testing::user("lender");
     let hacker = testing::user("Mallory");
 
-    let app_balance = 10_000_000_000u128;
+    let app_balance = 10_000_000_000;
     let hacker_balance = 10_000_000;
-    let init_deposit = 20_000_000u128;
-    let loan = 10_000u128;
+    let init_deposit = 20_000_000;
+    let loan = 10_000;
 
     let mut test_case = TestCaseBuilder::<Lpn>::with_reserve(&[lpn_cwcoin(app_balance)])
         .init_lpp(
@@ -494,18 +494,15 @@ fn loan_open_and_repay() {
     let lender = testing::user("lender");
     let hacker = testing::user("Mallory");
 
-    let app_balance = 10_000_000_000u128;
+    let app_balance = 10_000_000_000;
     let hacker_balance = 10_000_000;
-    let init_deposit_u32 = 20_000_000u32;
-    let init_deposit = Amount::from(init_deposit_u32);
-    let loan1_u32 = 10_000_000u32;
-    let loan1 = Amount::from(loan1_u32);
+    let init_deposit = 20_000_000;
+    let loan1 = 10_000_000;
     let balance1 = init_deposit - loan1;
-    let loan2_u32 = 5_000_000u32;
-    let loan2 = Amount::from(loan2_u32);
-    let repay_interest_part = 1_000_000u128;
-    let repay_due_part = 1_000_000u128;
-    let repay_excess = 1_000_000u128;
+    let loan2 = 5_000_000;
+    let repay_interest_part = 1_000_000;
+    let repay_due_part = 1_000_000;
+    let repay_excess = 1_000_000;
 
     let interest1 = interest_rate(loan1, balance1);
     let loan1_coin = common::lpn_coin(loan1);
@@ -819,18 +816,15 @@ fn compare_lpp_states() {
     let lender = testing::user("lender");
     let hacker = testing::user("Mallory");
 
-    let app_balance = 10_000_000_000u128;
+    let app_balance = 10_000_000_000;
     let hacker_balance = 10_000_000;
-    let init_deposit_u32 = 20_000_000u32;
-    let init_deposit = Amount::from(init_deposit_u32);
-    let loan1_u32 = 10_000_000u32;
-    let loan1 = Amount::from(loan1_u32);
+    let init_deposit = 20_000_000;
+    let loan1 = 10_000_000;
     let balance1 = init_deposit - loan1;
-    let loan2_u32 = 5_000_000u32;
-    let loan2 = Amount::from(loan2_u32);
-    let repay_interest_part = 1_000_000u128;
-    let repay_due_part = 1_000_000u128;
-    let repay_excess = 1_000_000u128;
+    let loan2 = 5_000_000;
+    let repay_interest_part = 1_000_000;
+    let repay_due_part = 1_000_000;
+    let repay_excess = 1_000_000;
 
     let interest1 = interest_rate(loan1, balance1);
     let loan1_coin = common::lpn_coin(loan1);
