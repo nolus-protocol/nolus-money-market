@@ -46,6 +46,7 @@ use crate::{
 };
 
 type LeaseCurrency = LeaseC1;
+const HALF_YEAR: Duration = Duration::from_nanos(Duration::YEAR.nanos() / 2);
 
 fn general_interest_rate(
     loan: u32,
@@ -512,8 +513,6 @@ fn loan_open_and_repay() {
         )
     }
 
-    const YEAR: u64 = Duration::YEAR.nanos();
-
     let admin = testing::user(ADMIN);
     let lender = testing::user("lender");
     let hacker = testing::user("Mallory");
@@ -635,7 +634,7 @@ fn loan_open_and_repay() {
         )
         .unwrap_err();
 
-    test_case.app.time_shift(Duration::from_nanos(YEAR / 2));
+    test_case.app.time_shift(HALF_YEAR);
 
     let total_interest_due = interest_due1.checked_div(2).unwrap();
     let total_interest_due_u32: u32 = total_interest_due.to_primitive().try_into().unwrap();
@@ -683,7 +682,7 @@ fn loan_open_and_repay() {
         TestCase::LEASE_ICA_ID,
     );
 
-    test_case.app.time_shift(Duration::from_nanos(YEAR / 2));
+    test_case.app.time_shift(HALF_YEAR);
 
     let maybe_loan1: QueryLoanResponse<Lpn> = test_case
         .app
@@ -840,8 +839,6 @@ fn compare_lpp_states() {
         )
     }
 
-    const YEAR: u64 = Duration::YEAR.nanos();
-
     let admin = testing::user(ADMIN);
     let lender = testing::user("lender");
     let hacker = testing::user("Mallory");
@@ -961,7 +958,7 @@ fn compare_lpp_states() {
         )
         .unwrap_err();
 
-    test_case.app.time_shift(Duration::from_nanos(YEAR / 2));
+    test_case.app.time_shift(HALF_YEAR);
 
     let total_interest_due = interest_due1.checked_div(2).unwrap();
 
@@ -1020,7 +1017,7 @@ fn compare_lpp_states() {
         TestCase::LEASE_ICA_ID,
     );
 
-    test_case.app.time_shift(Duration::from_nanos(YEAR / 2));
+    test_case.app.time_shift(HALF_YEAR);
 
     let maybe_loan1: QueryLoanResponse<Lpn> = test_case
         .app
