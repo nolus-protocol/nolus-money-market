@@ -325,29 +325,7 @@ fn deposit_and_withdraw() {
     );
 
     // loans should not change asserts for lender2, the default loan
-    let _: Addr = LeaseInstantiator::instantiate::<Lpn>(
-        &mut test_case.app,
-        test_case.address_book.lease_code(),
-        LeaseInstantiatorAddresses {
-            lpp: test_case.address_book.lpp().clone(),
-            time_alarms: test_case.address_book.time_alarms().clone(),
-            oracle: test_case.address_book.oracle().clone(),
-            profit: test_case.address_book.profit().clone(),
-            reserve: test_case.address_book.reserve().clone(),
-            finalizer: test_case.address_book.leaser().clone(),
-        },
-        LeaseInitConfig::new(
-            currency::dto::<LeaseCurrency, _>(),
-            common::coin(loan),
-            None,
-        ),
-        LeaseInstantiatorConfig {
-            liability_init_percent: Percent100::from_percent(50), // simplify case: borrow == downpayment
-            ..LeaseInstantiatorConfig::default()
-        },
-        TestCase::DEX_CONNECTION_ID,
-        TestCase::LEASE_ICA_ID,
-    );
+    instantiate_lease(&mut test_case, loan, Percent100::from_percent(50));
 
     let balance_nlpn2: BalanceResponse = test_case
         .app
@@ -533,15 +511,6 @@ fn loan_open_and_repay() {
         .send_funds_from_admin(lender.clone(), &[lpn_cwcoin(init_deposit)])
         .send_funds_from_admin(hacker.clone(), &[lpn_cwcoin(hacker_balance)]);
 
-    let lease_addresses = LeaseInstantiatorAddresses {
-        lpp: contract_address(&test_case),
-        time_alarms: test_case.address_book.time_alarms().clone(),
-        oracle: test_case.address_book.oracle().clone(),
-        profit: test_case.address_book.profit().clone(),
-        reserve: test_case.address_book.reserve().clone(),
-        finalizer: test_case.address_book.leaser().clone(),
-    };
-
     // initial deposit
     deposit(&mut test_case, lender, init_deposit);
 
@@ -578,22 +547,7 @@ fn loan_open_and_repay() {
     }
 
     // borrow
-    let loan_addr1 = LeaseInstantiator::instantiate::<Lpn>(
-        &mut test_case.app,
-        test_case.address_book.lease_code(),
-        lease_addresses.clone(),
-        LeaseInitConfig::new(
-            currency::dto::<LeaseCurrency, _>(),
-            common::coin(loan1),
-            None,
-        ),
-        LeaseInstantiatorConfig {
-            liability_init_percent: Percent100::from_percent(50), // simplify case: borrow == downpayment
-            ..LeaseInstantiatorConfig::default()
-        },
-        TestCase::DEX_CONNECTION_ID,
-        TestCase::LEASE_ICA_ID,
-    );
+    let loan_addr1 = instantiate_lease(&mut test_case, loan1, Percent100::from_percent(50));
 
     // double borrow
     _ = test_case
@@ -639,18 +593,7 @@ fn loan_open_and_repay() {
     }
 
     // borrow 2
-    let loan_addr2 = LeaseInstantiator::instantiate::<Lpn>(
-        &mut test_case.app,
-        test_case.address_book.lease_code(),
-        lease_addresses,
-        LeaseInitConfig::new(currency::dto::<LeaseCurrency, _>(), loan2_coin, None),
-        LeaseInstantiatorConfig {
-            liability_init_percent: Percent100::from_percent(50), // simplify case: borrow == downpayment
-            ..LeaseInstantiatorConfig::default()
-        },
-        TestCase::DEX_CONNECTION_ID,
-        TestCase::LEASE_ICA_ID,
-    );
+    let loan_addr2 = instantiate_lease(&mut test_case, loan2, Percent100::from_percent(50));
 
     test_case.app.time_shift(HALF_YEAR);
 
@@ -885,29 +828,7 @@ fn compare_lpp_states() {
     }
 
     // borrow
-    let loan_addr1 = LeaseInstantiator::instantiate::<Lpn>(
-        &mut test_case.app,
-        test_case.address_book.lease_code(),
-        LeaseInstantiatorAddresses {
-            lpp: test_case.address_book.lpp().clone(),
-            time_alarms: test_case.address_book.time_alarms().clone(),
-            oracle: test_case.address_book.oracle().clone(),
-            profit: test_case.address_book.profit().clone(),
-            reserve: test_case.address_book.reserve().clone(),
-            finalizer: test_case.address_book.leaser().clone(),
-        },
-        LeaseInitConfig::new(
-            currency::dto::<LeaseCurrency, _>(),
-            common::coin(loan1),
-            None,
-        ),
-        LeaseInstantiatorConfig {
-            liability_init_percent: Percent100::from_percent(50), // simplify case: borrow == downpayment
-            ..LeaseInstantiatorConfig::default()
-        },
-        TestCase::DEX_CONNECTION_ID,
-        TestCase::LEASE_ICA_ID,
-    );
+    let loan_addr1 = instantiate_lease(&mut test_case, loan1, Percent100::from_percent(50));
 
     // double borrow
     _ = test_case
@@ -952,29 +873,7 @@ fn compare_lpp_states() {
     }
 
     // borrow 2
-    let loan_addr2 = LeaseInstantiator::instantiate::<Lpn>(
-        &mut test_case.app,
-        test_case.address_book.lease_code(),
-        LeaseInstantiatorAddresses {
-            lpp: test_case.address_book.lpp().clone(),
-            time_alarms: test_case.address_book.time_alarms().clone(),
-            oracle: test_case.address_book.oracle().clone(),
-            profit: test_case.address_book.profit().clone(),
-            reserve: test_case.address_book.reserve().clone(),
-            finalizer: test_case.address_book.leaser().clone(),
-        },
-        LeaseInitConfig::new(
-            currency::dto::<LeaseCurrency, _>(),
-            common::coin(loan2),
-            None,
-        ),
-        LeaseInstantiatorConfig {
-            liability_init_percent: Percent100::from_percent(50), // simplify case: borrow == downpayment
-            ..LeaseInstantiatorConfig::default()
-        },
-        TestCase::DEX_CONNECTION_ID,
-        TestCase::LEASE_ICA_ID,
-    );
+    let loan_addr2 = instantiate_lease(&mut test_case, loan2, Percent100::from_percent(50));
 
     test_case.app.time_shift(HALF_YEAR);
 
@@ -1504,6 +1403,36 @@ fn deposit<ProtocolsRegistry, Treasury, Profit, Reserve, Leaser, Oracle, TimeAla
         .unwrap()
         .ignore_response()
         .unwrap_response()
+}
+
+fn instantiate_lease<ProtReg, Tr>(
+    test_case: &mut TestCase<ProtReg, Tr, Addr, Addr, Addr, Addr, Addr, Addr>,
+    downpayment: Amount,
+    liability_init_percent: Percent100,
+) -> Addr {
+    LeaseInstantiator::instantiate::<Lpn>(
+        &mut test_case.app,
+        test_case.address_book.lease_code(),
+        LeaseInstantiatorAddresses {
+            lpp: test_case.address_book.lpp().clone(),
+            time_alarms: test_case.address_book.time_alarms().clone(),
+            oracle: test_case.address_book.oracle().clone(),
+            profit: test_case.address_book.profit().clone(),
+            reserve: test_case.address_book.reserve().clone(),
+            finalizer: test_case.address_book.leaser().clone(),
+        },
+        LeaseInitConfig::new(
+            currency::dto::<LeaseCurrency, _>(),
+            common::coin(downpayment),
+            None,
+        ),
+        LeaseInstantiatorConfig {
+            liability_init_percent, // simplify case: borrow == downpayment
+            ..LeaseInstantiatorConfig::default()
+        },
+        TestCase::DEX_CONNECTION_ID,
+        TestCase::LEASE_ICA_ID,
+    )
 }
 
 fn repay_loan<Currency>(
