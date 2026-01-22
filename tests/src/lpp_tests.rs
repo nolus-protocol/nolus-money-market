@@ -938,17 +938,7 @@ fn test_rewards() {
         );
 
     // rewards before deposits
-    _ = test_case
-        .app
-        .execute(
-            treasury.clone(),
-            contract_address(&test_case),
-            &LppExecuteMsg::DistributeRewards(),
-            &[coin_legacy::to_cosmwasm_on_nolus::<Nls>(common::coin(
-                tot_rewards0,
-            ))],
-        )
-        .unwrap_err();
+    try_distribute_rewards(&mut test_case, treasury.clone(), tot_rewards0).unwrap_err();
 
     // initial deposit
     deposit(&mut test_case, lender1.clone(), deposit1);
@@ -975,19 +965,7 @@ fn test_rewards() {
         &[lpn_cwcoin(lpp_balance_push)],
     );
 
-    () = test_case
-        .app
-        .execute(
-            treasury.clone(),
-            contract_address(&test_case),
-            &LppExecuteMsg::DistributeRewards(),
-            &[coin_legacy::to_cosmwasm_on_nolus::<Nls>(common::coin(
-                tot_rewards1,
-            ))],
-        )
-        .unwrap()
-        .ignore_response()
-        .unwrap_response();
+    distribute_rewards(&mut test_case, treasury.clone(), tot_rewards1);
 
     // deposit after disributing rewards should not get anything
     deposit(&mut test_case, lender2.clone(), deposit2);
@@ -1075,19 +1053,7 @@ fn test_rewards() {
     let balance = bank::balance(&lender1, test_case.app.query()).unwrap();
     assert_eq!(balance, common::coin::<Nls>(tot_rewards1));
 
-    () = test_case
-        .app
-        .execute(
-            treasury,
-            contract_address(&test_case),
-            &LppExecuteMsg::DistributeRewards(),
-            &[coin_legacy::to_cosmwasm_on_nolus::<Nls>(common::coin(
-                tot_rewards2,
-            ))],
-        )
-        .unwrap()
-        .ignore_response()
-        .unwrap_response();
+    distribute_rewards(&mut test_case, treasury, tot_rewards2);
 
     let resp: RewardsResponse = test_case
         .app
@@ -1331,6 +1297,32 @@ fn quote<ProtoReg, T, P, R, L, O, TAlarms>(
             },
         )
         .unwrap()
+}
+
+fn try_distribute_rewards<ProtoReg, T, P, R, L, O, TAlarms>(
+    test_case: &mut TestCase<ProtoReg, T, P, R, L, Addr, O, TAlarms>,
+    lender: Addr,
+    amount: Amount,
+) -> anyhow::Result<ResponseWithInterChainMsgs<'_, AppResponse>> {
+    test_case.app.execute(
+        lender,
+        contract_address(test_case),
+        &LppExecuteMsg::DistributeRewards(),
+        &[coin_legacy::to_cosmwasm_on_nolus::<Nls>(common::coin(
+            amount,
+        ))],
+    )
+}
+
+fn distribute_rewards<ProtoReg, T, P, R, L, O, TAlarms>(
+    test_case: &mut TestCase<ProtoReg, T, P, R, L, Addr, O, TAlarms>,
+    lender: Addr,
+    amount: Amount,
+) {
+    try_distribute_rewards(test_case, lender, amount)
+        .unwrap()
+        .ignore_response()
+        .unwrap_response()
 }
 
 fn try_burn<ProtoReg, T, P, R, L, O, TAlarms>(
