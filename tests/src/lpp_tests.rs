@@ -263,16 +263,8 @@ fn deposit_and_withdraw() {
     deposit(&mut test_case, lender2.clone(), test_deposit);
 
     // got rounding error
-    let balance_nlpn: BalanceResponse = test_case
-        .app
-        .query()
-        .query_wasm_smart(
-            contract_address(&test_case),
-            &LppQueryMsg::Balance {
-                address: lender2.clone(),
-            },
-        )
-        .unwrap();
+    let balance_nlpn = balance(&mut test_case, lender2.clone());
+
     let price: PriceResponse<Lpn> = test_case
         .app
         .query()
@@ -286,16 +278,8 @@ fn deposit_and_withdraw() {
     // other deposits should not change asserts for lender2
     deposit(&mut test_case, lender3.clone(), post_deposit);
 
-    let balance_nlpn: BalanceResponse = test_case
-        .app
-        .query()
-        .query_wasm_smart(
-            contract_address(&test_case),
-            &LppQueryMsg::Balance {
-                address: lender2.clone(),
-            },
-        )
-        .unwrap();
+    let balance_nlpn = balance(&mut test_case, lender2.clone());
+
     let price: PriceResponse<Lpn> = test_case
         .app
         .query()
@@ -309,16 +293,8 @@ fn deposit_and_withdraw() {
     // loans should not change asserts for lender2, the default loan
     instantiate_lease(&mut test_case, loan, Percent100::from_percent(50));
 
-    let balance_nlpn2: BalanceResponse = test_case
-        .app
-        .query()
-        .query_wasm_smart(
-            contract_address(&test_case),
-            &LppQueryMsg::Balance {
-                address: lender2.clone(),
-            },
-        )
-        .unwrap();
+    let balance_nlpn2 = balance(&mut test_case, lender2.clone());
+
     let price: PriceResponse<Lpn> = test_case
         .app
         .query()
@@ -336,29 +312,13 @@ fn deposit_and_withdraw() {
     // partial withdraw
     burn(&mut test_case, lender2.clone(), withdraw_amount_nlpn);
 
-    let balance_nlpn: BalanceResponse = test_case
-        .app
-        .query()
-        .query_wasm_smart(
-            contract_address(&test_case),
-            &LppQueryMsg::Balance {
-                address: lender2.clone(),
-            },
-        )
-        .unwrap();
+    let balance_nlpn = balance(&mut test_case, lender2.clone());
     assert_eq!(balance_nlpn.balance, Coin::new(rest_nlpn));
 
     // full withdraw, should close lender's account
     burn(&mut test_case, lender2.clone(), rest_nlpn);
 
-    let balance_nlpn: BalanceResponse = test_case
-        .app
-        .query()
-        .query_wasm_smart(
-            contract_address_ref(&test_case),
-            &LppQueryMsg::Balance { address: lender2 },
-        )
-        .unwrap();
+    let balance_nlpn = balance(&mut test_case, lender2);
     assert_eq!(balance_nlpn.balance, Coin::ZERO);
 }
 
@@ -945,18 +905,7 @@ fn test_rewards() {
     // the initial price is 1 Nlpn = 1 LPN
     assert_eq!(
         deposit1,
-        test_case
-            .app
-            .query()
-            .query_wasm_smart::<BalanceResponse>(
-                contract_address(&test_case),
-                &LppQueryMsg::Balance {
-                    address: lender1.clone(),
-                },
-            )
-            .unwrap()
-            .balance
-            .into()
+        balance(&mut test_case, lender1.clone()).balance.into()
     );
 
     // push the price from 1, should be allowed as an interest from previous leases for example.
@@ -1283,22 +1232,6 @@ fn deposit<ProtocolsRegistry, Treasury, Profit, Reserve, Leaser, Oracle, TimeAla
         .unwrap_response()
 }
 
-fn quote<ProtoReg, T, P, R, L, O, TAlarms>(
-    test_case: &mut TestCase<ProtoReg, T, P, R, L, Addr, O, TAlarms>,
-    amount: Amount,
-) -> QueryQuoteResponse {
-    test_case
-        .app
-        .query()
-        .query_wasm_smart(
-            contract_address(test_case),
-            &LppQueryMsg::Quote {
-                amount: common::lpn_coin_dto(amount),
-            },
-        )
-        .unwrap()
-}
-
 fn try_distribute_rewards<ProtoReg, T, P, R, L, O, TAlarms>(
     test_case: &mut TestCase<ProtoReg, T, P, R, L, Addr, O, TAlarms>,
     lender: Addr,
@@ -1367,6 +1300,36 @@ where
             common::coin::<Currency>(repay_amount),
         )],
     )
+}
+
+fn quote<ProtoReg, T, P, R, L, O, TAlarms>(
+    test_case: &mut TestCase<ProtoReg, T, P, R, L, Addr, O, TAlarms>,
+    amount: Amount,
+) -> QueryQuoteResponse {
+    test_case
+        .app
+        .query()
+        .query_wasm_smart(
+            contract_address(test_case),
+            &LppQueryMsg::Quote {
+                amount: common::lpn_coin_dto(amount),
+            },
+        )
+        .unwrap()
+}
+
+fn balance<ProtoReg, T, P, R, L, O, TAlarms>(
+    test_case: &mut TestCase<ProtoReg, T, P, R, L, Addr, O, TAlarms>,
+    address: Addr,
+) -> BalanceResponse {
+    test_case
+        .app
+        .query()
+        .query_wasm_smart(
+            contract_address(test_case),
+            &LppQueryMsg::Balance { address },
+        )
+        .unwrap()
 }
 
 fn lpn_cwcoin(amount: Amount) -> CwCoin {
