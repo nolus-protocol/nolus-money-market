@@ -349,32 +349,10 @@ fn deposit_and_withdraw() {
 
     // try to withdraw with overdraft
     let to_burn = Amount::from(balance_nlpn.balance) - rounding_error + overdraft;
-    _ = test_case
-        .app
-        .execute(
-            lender2.clone(),
-            contract_address(&test_case),
-            &LppExecuteMsg::Burn {
-                amount: common::coin(to_burn),
-            },
-            &[],
-        )
-        .unwrap_err();
+    try_burn(&mut test_case, lender2.clone(), to_burn).unwrap_err();
 
     // partial withdraw
-    () = test_case
-        .app
-        .execute(
-            lender2.clone(),
-            contract_address(&test_case),
-            &LppExecuteMsg::Burn {
-                amount: common::coin(withdraw_amount_nlpn),
-            },
-            &[],
-        )
-        .unwrap()
-        .ignore_response()
-        .unwrap_response();
+    burn(&mut test_case, lender2.clone(), withdraw_amount_nlpn);
 
     let balance_nlpn: BalanceResponse = test_case
         .app
@@ -389,19 +367,7 @@ fn deposit_and_withdraw() {
     assert_eq!(balance_nlpn.balance, Coin::new(rest_nlpn));
 
     // full withdraw, should close lender's account
-    () = test_case
-        .app
-        .execute(
-            lender2.clone(),
-            contract_address(&test_case),
-            &LppExecuteMsg::Burn {
-                amount: common::coin(rest_nlpn),
-            },
-            &[],
-        )
-        .unwrap()
-        .ignore_response()
-        .unwrap_response();
+    burn(&mut test_case, lender2.clone(), rest_nlpn);
 
     let balance_nlpn: BalanceResponse = test_case
         .app
@@ -1238,19 +1204,7 @@ fn test_rewards() {
     assert_eq!(resp.rewards, common::coin(lender_reward2));
 
     // full withdraw, should send rewards to the lender
-    () = test_case
-        .app
-        .execute(
-            lender1.clone(),
-            contract_address(&test_case),
-            &LppExecuteMsg::Burn {
-                amount: common::coin(deposit1),
-            },
-            &[],
-        )
-        .unwrap()
-        .ignore_response()
-        .unwrap_response();
+    burn(&mut test_case, lender1.clone(), deposit1);
 
     let balance = bank::balance(&lender1, test_case.app.query()).unwrap();
     assert_eq!(balance, common::coin::<Nls>(tot_rewards1 + lender_reward1));
@@ -1433,6 +1387,32 @@ fn instantiate_lease<ProtReg, Tr>(
         TestCase::DEX_CONNECTION_ID,
         TestCase::LEASE_ICA_ID,
     )
+}
+
+fn try_burn<ProtoReg, T, P, R, L, O, TAlarms>(
+    test_case: &mut TestCase<ProtoReg, T, P, R, L, Addr, O, TAlarms>,
+    lender: Addr,
+    amount: Amount,
+) -> anyhow::Result<ResponseWithInterChainMsgs<'_, AppResponse>> {
+    test_case.app.execute(
+        lender,
+        contract_address(test_case),
+        &LppExecuteMsg::Burn {
+            amount: common::coin(amount),
+        },
+        &[],
+    )
+}
+
+fn burn<ProtoReg, T, P, R, L, O, TAlarms>(
+    test_case: &mut TestCase<ProtoReg, T, P, R, L, Addr, O, TAlarms>,
+    lender: Addr,
+    amount: Amount,
+) {
+    try_burn(test_case, lender, amount)
+        .unwrap()
+        .ignore_response()
+        .unwrap_response()
 }
 
 fn repay_loan<Currency>(
