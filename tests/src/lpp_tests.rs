@@ -469,17 +469,7 @@ fn loan_open_and_repay() {
         .ignore_response()
         .unwrap_response();
 
-    let quote: QueryQuoteResponse = test_case
-        .app
-        .query()
-        .query_wasm_smart(
-            contract_address(&test_case),
-            &LppQueryMsg::Quote {
-                amount: loan1_coin.into(),
-            },
-        )
-        .unwrap();
-    match quote {
+    match quote(&mut test_case, loan1) {
         QueryQuoteResponse::QuoteInterestRate(quote) => assert_eq!(quote, interest1),
         _ => panic!("no liquidity"),
     }
@@ -505,17 +495,7 @@ fn loan_open_and_repay() {
     let interest2 = interest_rate(loan1 + loan2 + total_interest_due.to_primitive(), balance1);
     let loan2_coin = common::lpn_coin(loan2);
 
-    let quote: QueryQuoteResponse = test_case
-        .app
-        .query()
-        .query_wasm_smart(
-            contract_address(&test_case),
-            &LppQueryMsg::Quote {
-                amount: loan2_coin.into(),
-            },
-        )
-        .unwrap();
-    match quote {
+    match quote(&mut test_case, loan2) {
         QueryQuoteResponse::QuoteInterestRate(quote) => assert_eq!(quote, interest2),
         _ => panic!("no liquidity"),
     }
@@ -740,17 +720,7 @@ fn compare_lpp_states() {
         .ignore_response()
         .unwrap_response();
 
-    let quote: QueryQuoteResponse = test_case
-        .app
-        .query()
-        .query_wasm_smart(
-            contract_address(&test_case),
-            &LppQueryMsg::Quote {
-                amount: loan1_coin.into(),
-            },
-        )
-        .unwrap();
-    match quote {
+    match quote(&mut test_case, loan1) {
         QueryQuoteResponse::QuoteInterestRate(quote) => assert_eq!(quote, interest1),
         _ => panic!("no liquidity"),
     }
@@ -775,17 +745,7 @@ fn compare_lpp_states() {
     let interest2 = interest_rate(loan1 + loan2 + total_interest_due.to_primitive(), balance1);
     let loan2_coin = common::lpn_coin(loan2);
 
-    let quote: QueryQuoteResponse = test_case
-        .app
-        .query()
-        .query_wasm_smart(
-            contract_address(&test_case),
-            &LppQueryMsg::Quote {
-                amount: loan2_coin.into(),
-            },
-        )
-        .unwrap();
-    match quote {
+    match quote(&mut test_case, loan2) {
         QueryQuoteResponse::QuoteInterestRate(quote) => assert_eq!(quote, interest2),
         _ => panic!("no liquidity"),
     }
@@ -1355,6 +1315,22 @@ fn deposit<ProtocolsRegistry, Treasury, Profit, Reserve, Leaser, Oracle, TimeAla
         .unwrap()
         .ignore_response()
         .unwrap_response()
+}
+
+fn quote<ProtoReg, T, P, R, L, O, TAlarms>(
+    test_case: &mut TestCase<ProtoReg, T, P, R, L, Addr, O, TAlarms>,
+    amount: Amount,
+) -> QueryQuoteResponse {
+    test_case
+        .app
+        .query()
+        .query_wasm_smart(
+            contract_address(test_case),
+            &LppQueryMsg::Quote {
+                amount: common::lpn_coin_dto(amount),
+            },
+        )
+        .unwrap()
 }
 
 fn try_burn<ProtoReg, T, P, R, L, O, TAlarms>(
