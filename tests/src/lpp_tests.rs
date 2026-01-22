@@ -8,7 +8,6 @@ use finance::{
     price,
     ratio::SimpleFraction,
     rational::Rational,
-    test,
     zero::Zero,
 };
 use lpp::{
@@ -147,17 +146,9 @@ fn open_loan_unauthorized_contract_id() {
         .init_profit(24)
         .into_generic();
 
-    let err = test_case
-        .app
-        .execute(
-            contract_address(&test_case),
-            contract_address(&test_case),
-            &LppExecuteMsg::OpenLoan {
-                amount: test::funds::<_, Lpn>(100),
-            },
-            &[lpn_cwcoin(200)],
-        )
-        .unwrap_err();
+    let lender_addr = contract_address(&test_case);
+    let err = try_open_loan(&mut test_case, lender_addr, 100, &[lpn_cwcoin(200)]).unwrap_err();
+
     assert!(matches!(
         err.downcast_ref::<ContractError>(),
         Some(&ContractError::Platform(
@@ -188,19 +179,10 @@ fn open_loan_no_liquidity() {
 
     let lease_addr: Addr = test_case.open_lease::<Lpn>(currency::dto::<LeaseCurrency, _>());
 
-    () = test_case
-        .app
-        .execute(
-            lease_addr,
-            contract_address(&test_case),
-            &LppExecuteMsg::OpenLoan {
-                amount: test::funds::<_, Lpn>(2500),
-            },
-            &[lpn_cwcoin(200)],
-        )
+    try_open_loan(&mut test_case, lease_addr, 2500, &[lpn_cwcoin(200)])
         .unwrap()
         .ignore_response()
-        .unwrap_response();
+        .unwrap_response()
 }
 
 #[test]
@@ -405,17 +387,7 @@ fn loan_open_wrong_id() {
         .send_funds_from_admin(lender, &[lpn_cwcoin(init_deposit)])
         .send_funds_from_admin(hacker.clone(), &[lpn_cwcoin(hacker_balance)]);
 
-    _ = test_case
-        .app
-        .execute(
-            hacker,
-            contract_address(&test_case),
-            &LppExecuteMsg::OpenLoan {
-                amount: common::lpn_coin(loan).into(),
-            },
-            &[],
-        )
-        .unwrap_err();
+    try_open_loan(&mut test_case, hacker, loan, &[]).unwrap_err();
 }
 
 #[test]
@@ -516,17 +488,7 @@ fn loan_open_and_repay() {
     let loan_addr1 = instantiate_lease(&mut test_case, loan1, Percent100::from_percent(50));
 
     // double borrow
-    _ = test_case
-        .app
-        .execute(
-            loan_addr1.clone(),
-            contract_address(&test_case),
-            &LppExecuteMsg::OpenLoan {
-                amount: loan1_coin.into(),
-            },
-            &[],
-        )
-        .unwrap_err();
+    try_open_loan(&mut test_case, loan_addr1.clone(), loan1, &[]).unwrap_err();
 
     test_case.app.time_shift(HALF_YEAR);
 
@@ -797,17 +759,7 @@ fn compare_lpp_states() {
     let loan_addr1 = instantiate_lease(&mut test_case, loan1, Percent100::from_percent(50));
 
     // double borrow
-    _ = test_case
-        .app
-        .execute(
-            loan_addr1.clone(),
-            contract_address(&test_case),
-            &LppExecuteMsg::OpenLoan {
-                amount: loan1_coin.into(),
-            },
-            &[],
-        )
-        .unwrap_err();
+    try_open_loan(&mut test_case, loan_addr1.clone(), loan1, &[]).unwrap_err();
 
     test_case.app.time_shift(HALF_YEAR);
 
@@ -1309,56 +1261,6 @@ where
     )
 }
 
-fn general_interest_rate(
-    loan: Amount,
-    balance: Amount,
-    base_rate: Percent100,
-    addon_rate: Percent100,
-    optimal_rate: Percent100,
-) -> Percent100 {
-    // TODO migrate to using SimpleFraction once it starts implementing Ord
-    Percent::from_fraction(common::lpn_coin(loan), common::lpn_coin(balance))
-    .map(|utilization_factor_max| {
-            // TODO migrate to using SimpleFraction once it starts implementing Ord
-            let utilization_factor = Percent::from_fraction(
-                    optimal_rate.permilles(),
-                    optimal_rate.complement().permilles(),
-                ).expect("The utilization must be a valid Percent").min(utilization_factor_max);
-
-        SimpleFraction::<Permilles>::new(addon_rate.into(), optimal_rate.into()).of(utilization_factor)
-        .map(|utilization_config| Percent100::try_from(utilization_config + base_rate.into()).expect("The borrow rate must not exceed 100%"))     
-        .expect("The utilization_config must be a valid Percent")     
-    })
-    .expect("The utilization_max must be a valid Percent: utilization_opt < 100% ensures the ratio is valid Percent100, which always fits within Percent's wider range")
-}
-
-fn deposit<ProtocolsRegistry, Treasury, Profit, Reserve, Leaser, Oracle, TimeAlarms>(
-    test_case: &mut TestCase<
-        ProtocolsRegistry,
-        Treasury,
-        Profit,
-        Reserve,
-        Leaser,
-        Addr,
-        Oracle,
-        TimeAlarms,
-    >,
-    lender: Addr,
-    amount: Amount,
-) {
-    test_case
-        .app
-        .execute(
-            lender,
-            contract_address(test_case),
-            &LppExecuteMsg::Deposit(),
-            &[lpn_cwcoin(amount)],
-        )
-        .unwrap()
-        .ignore_response()
-        .unwrap_response()
-}
-
 fn instantiate_lease<ProtReg, Tr>(
     test_case: &mut TestCase<ProtReg, Tr, Addr, Addr, Addr, Addr, Addr, Addr>,
     downpayment: Amount,
@@ -1387,6 +1289,72 @@ fn instantiate_lease<ProtReg, Tr>(
         TestCase::DEX_CONNECTION_ID,
         TestCase::LEASE_ICA_ID,
     )
+}
+
+fn general_interest_rate(
+    loan: Amount,
+    balance: Amount,
+    base_rate: Percent100,
+    addon_rate: Percent100,
+    optimal_rate: Percent100,
+) -> Percent100 {
+    // TODO migrate to using SimpleFraction once it starts implementing Ord
+    Percent::from_fraction(common::lpn_coin(loan), common::lpn_coin(balance))
+    .map(|utilization_factor_max| {
+            // TODO migrate to using SimpleFraction once it starts implementing Ord
+            let utilization_factor = Percent::from_fraction(
+                    optimal_rate.permilles(),
+                    optimal_rate.complement().permilles(),
+                ).expect("The utilization must be a valid Percent").min(utilization_factor_max);
+
+        SimpleFraction::<Permilles>::new(addon_rate.into(), optimal_rate.into()).of(utilization_factor)
+        .map(|utilization_config| Percent100::try_from(utilization_config + base_rate.into()).expect("The borrow rate must not exceed 100%"))     
+        .expect("The utilization_config must be a valid Percent")     
+    })
+    .expect("The utilization_max must be a valid Percent: utilization_opt < 100% ensures the ratio is valid Percent100, which always fits within Percent's wider range")
+}
+
+fn try_open_loan<'a, ProtoReg, T, P, R, L, O, TAlarms>(
+    test_case: &'a mut TestCase<ProtoReg, T, P, R, L, Addr, O, TAlarms>,
+    lender: Addr,
+    amount: Amount,
+    send_funds: &[CwCoin],
+) -> anyhow::Result<ResponseWithInterChainMsgs<'a, AppResponse>> {
+    test_case.app.execute(
+        lender,
+        contract_address(test_case),
+        &LppExecuteMsg::OpenLoan {
+            amount: common::lpn_coin_dto(amount),
+        },
+        send_funds,
+    )
+}
+
+fn deposit<ProtocolsRegistry, Treasury, Profit, Reserve, Leaser, Oracle, TimeAlarms>(
+    test_case: &mut TestCase<
+        ProtocolsRegistry,
+        Treasury,
+        Profit,
+        Reserve,
+        Leaser,
+        Addr,
+        Oracle,
+        TimeAlarms,
+    >,
+    lender: Addr,
+    amount: Amount,
+) {
+    test_case
+        .app
+        .execute(
+            lender,
+            contract_address(test_case),
+            &LppExecuteMsg::Deposit(),
+            &[lpn_cwcoin(amount)],
+        )
+        .unwrap()
+        .ignore_response()
+        .unwrap_response()
 }
 
 fn try_burn<ProtoReg, T, P, R, L, O, TAlarms>(
