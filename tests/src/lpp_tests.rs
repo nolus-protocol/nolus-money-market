@@ -74,22 +74,12 @@ fn config_update_parameters() {
     )
     .into_generic();
 
-    let response: AppResponse = test_case
-        .app
-        .sudo(
-            contract_address(&test_case),
-            &SudoMsg::NewBorrowRate {
-                borrow_rate: InterestRate::new(
-                    base_interest_rate,
-                    utilization_optimal,
-                    addon_optimal_interest_rate,
-                )
-                .expect("Couldn't construct interest rate value!"),
-            },
-        )
-        .unwrap()
-        .unwrap_response();
-
+    let response = new_borrow_rate(
+        &mut test_case,
+        base_interest_rate,
+        utilization_optimal,
+        addon_optimal_interest_rate,
+    );
     assert!(response.data.is_none());
     assert_eq!(
         &response.events,
@@ -412,22 +402,12 @@ fn loan_open_and_repay() {
     // initial deposit
     deposit(&mut test_case, lender, init_deposit);
 
-    () = test_case
-        .app
-        .sudo(
-            contract_address(&test_case),
-            &SudoMsg::NewBorrowRate {
-                borrow_rate: InterestRate::new(
-                    LOCAL_BASE_INTEREST_RATE,
-                    LOCAL_UTILIZATION_OPTIMAL_RATE,
-                    LOCAL_ADDON_OPTIMAL_INTEREST_RATE,
-                )
-                .expect("Couldn't construct interest rate value!"),
-            },
-        )
-        .unwrap()
-        .ignore_response()
-        .unwrap_response();
+    new_borrow_rate(
+        &mut test_case,
+        LOCAL_BASE_INTEREST_RATE,
+        LOCAL_UTILIZATION_OPTIMAL_RATE,
+        LOCAL_ADDON_OPTIMAL_INTEREST_RATE,
+    );
 
     match quote(&mut test_case, loan1) {
         QueryQuoteResponse::QuoteInterestRate(quote) => assert_eq!(quote, interest1),
@@ -663,22 +643,12 @@ fn compare_lpp_states() {
     // initial deposit
     deposit(&mut test_case, lender, init_deposit);
 
-    () = test_case
-        .app
-        .sudo(
-            contract_address(&test_case),
-            &SudoMsg::NewBorrowRate {
-                borrow_rate: InterestRate::new(
-                    LOCAL_BASE_INTEREST_RATE,
-                    LOCAL_UTILIZATION_OPTIMAL_RATE,
-                    LOCAL_ADDON_OPTIMAL_INTEREST_RATE,
-                )
-                .expect("Couldn't construct interest rate value!"),
-            },
-        )
-        .unwrap()
-        .ignore_response()
-        .unwrap_response();
+    new_borrow_rate(
+        &mut test_case,
+        LOCAL_BASE_INTEREST_RATE,
+        LOCAL_UTILIZATION_OPTIMAL_RATE,
+        LOCAL_ADDON_OPTIMAL_INTEREST_RATE,
+    );
 
     match quote(&mut test_case, loan1) {
         QueryQuoteResponse::QuoteInterestRate(quote) => assert_eq!(quote, interest1),
@@ -1187,6 +1157,29 @@ fn general_interest_rate(
         .expect("The utilization_config must be a valid Percent")     
     })
     .expect("The utilization_max must be a valid Percent: utilization_opt < 100% ensures the ratio is valid Percent100, which always fits within Percent's wider range")
+}
+
+fn new_borrow_rate<ProtoReg, T, P, R, L, O, TAlarms>(
+    test_case: &mut TestCase<ProtoReg, T, P, R, L, Addr, O, TAlarms>,
+    base_interest_rate: Percent100,
+    utilization_optimal: Percent100,
+    addon_optimal_interest_rate: Percent100,
+) -> AppResponse {
+    test_case
+        .app
+        .sudo(
+            contract_address(test_case),
+            &SudoMsg::NewBorrowRate {
+                borrow_rate: InterestRate::new(
+                    base_interest_rate,
+                    utilization_optimal,
+                    addon_optimal_interest_rate,
+                )
+                .expect("Couldn't construct interest rate value!"),
+            },
+        )
+        .unwrap()
+        .unwrap_response()
 }
 
 fn try_open_loan<'a, ProtoReg, T, P, R, L, O, TAlarms>(
