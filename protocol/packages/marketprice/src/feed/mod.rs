@@ -86,7 +86,7 @@ where
             .take(samples_nb)
             .map(Sample::into_maybe_price)
             .skip_while(Option::is_none)
-            .map(|price| Option::expect(price, "sample prices should keep being present"))
+            .map(|price| price.expect("sample prices should keep being present"))
             .reduce(|acc, sample_price| {
                 discount_factor.of(sample_price) + discount_factor.complement().of(acc)
             })
