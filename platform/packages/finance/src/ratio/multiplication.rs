@@ -81,7 +81,7 @@ where
 fn bits_above_max<U>(double: U::Double) -> u32
 where
     U: Bits + ToDoublePrimitive,
-    <U as ToDoublePrimitive>::Double: Bits,
+    U::Double: Bits,
 {
     bits(double).saturating_sub(U::BITS)
 }
