@@ -89,7 +89,7 @@ where
 #[track_caller]
 fn trim_down<D, U>(double: D, bits_to_trim: u32, min_precision_loss_overflow: u32) -> Option<U>
 where
-    U: Bits + FractionUnit + TryFromMax<D>,
+    U: Bits + ToDoublePrimitive<Double = D> + FractionUnit + TryFromMax<D>,
     D: Bits + Copy + Shr<u32, Output = D>,
 {
     debug_assert!(bits_to_trim <= U::BITS);
@@ -98,10 +98,10 @@ where
 }
 
 #[track_caller]
-fn trim_down_checked<U>(double: U::Double, bits_to_trim: u32) -> U
+fn trim_down_checked<U, D>(double: D, bits_to_trim: u32) -> U
 where
-    U: Bits + FractionUnit + TryFromMax<U::Double> + ToDoublePrimitive<Double = D>,
-    U::Double: Bits + Copy + Shr<u32, Output = D>,
+    U: Bits + ToDoublePrimitive<Double = D> + FractionUnit + TryFromMax<D>,
+    D: Bits + Copy + Shr<u32, Output = D>,
 {
     const INSUFFICIENT_BITS: &str = "insufficient trimming bits";
 
