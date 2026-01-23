@@ -12,9 +12,7 @@ pub trait CommonDoublePrimitive<Other> {
 /// Domain entity for which a fraction could be calculated.
 pub trait Fractionable<FractionUnit>
 where
-    Self: CommonDoublePrimitive<FractionUnit>
-        + TryFromMax<<Self as CommonDoublePrimitive<FractionUnit>>::CommonDouble>
-        + Sized,
+    Self: CommonDoublePrimitive<FractionUnit> + TryFromMax<Self::CommonDouble> + Sized,
 {
 }
 
