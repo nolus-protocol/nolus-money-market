@@ -51,7 +51,9 @@ where
     where
         F: ToFraction<Amount>,
     {
-        self.map_with_fraction(rhs)
+        self.to_fraction()
+            .lossy_mul(rhs.to_fraction())
+            .map(Self::from_fraction)
     }
 
     /// Add two prices rounding each of them to 1.10-18, simmilarly to
@@ -69,15 +71,6 @@ where
             .zip(super::total(factored_amount, rhs))
             .and_then(|(factored_self, factored_rhs)| factored_self.checked_add(factored_rhs))
             .map(|factored_total| super::total_of(factored_amount).is(factored_total))
-    }
-
-    fn map_with_fraction<F>(self, rhs: F) -> Option<Self>
-    where
-        F: ToFraction<Amount>,
-    {
-        SimpleFraction::new(self.amount_quote.to_primitive(), self.amount.to_primitive())
-            .lossy_mul(rhs.to_fraction())
-            .map(Self::from_fraction)
     }
 
     fn from_fraction(fraction: SimpleFraction<Amount>) -> Self {
@@ -110,6 +103,12 @@ where
     #[track_caller]
     fn add_assign(&mut self, rhs: Price<C, QuoteC>) {
         *self = self.add(rhs);
+    }
+}
+
+impl<C, Q> ToFraction<Amount> for Price<C, Q> {
+    fn to_fraction(self) -> SimpleFraction<Amount> {
+        SimpleFraction::new(self.amount_quote.to_primitive(), self.amount.to_primitive())
     }
 }
 
