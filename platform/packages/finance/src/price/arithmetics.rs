@@ -149,7 +149,7 @@ mod test {
         coin::Amount,
         price::{
             self, CrossPrice, Price,
-            test::{Coin, QuoteCoin, QuoteQuoteCoin, price},
+            test::{self, Coin, QuoteCoin, QuoteQuoteCoin},
         },
         ratio::SimpleFraction,
         test::coin,
@@ -157,7 +157,7 @@ mod test {
 
     #[test]
     fn from_fraction() {
-        let expect = price(coin::coin2(1), coin::coin1(4));
+        let expect = test::price(coin::coin2(1), coin::coin1(4));
         assert_eq!(
             expect,
             Price::from_fraction(SimpleFraction::new(4u128, 1u128))
@@ -295,33 +295,33 @@ mod test {
             coin::coin2(1),
             coin::coin1(2),
             coin::coin1(2),
-            qq(1),
+            QuoteQuoteCoin::new(1),
             coin::coin2(1),
-            qq(1),
+            QuoteQuoteCoin::new(1),
         );
         lossy_mul_impl(
             coin::coin2(2),
             coin::coin1(3),
             coin::coin1(18),
-            qq(5),
+            QuoteQuoteCoin::new(5),
             coin::coin2(12),
-            qq(5),
+            QuoteQuoteCoin::new(5),
         );
         lossy_mul_impl(
             coin::coin2(7),
             coin::coin1(3),
             coin::coin1(11),
-            qq(21),
+            QuoteQuoteCoin::new(21),
             coin::coin2(11),
-            qq(9),
+            QuoteQuoteCoin::new(9),
         );
         lossy_mul_impl(
             coin::coin2(7),
             coin::coin1(3),
             coin::coin1(11),
-            qq(23),
+            QuoteQuoteCoin::new(23),
             coin::coin2(7 * 11),
-            qq(3 * 23),
+            QuoteQuoteCoin::new(3 * 23),
         );
 
         let big_int = Amount::MAX - 1;
@@ -330,9 +330,9 @@ mod test {
             coin::coin2(big_int),
             coin::coin1(3),
             coin::coin1(11),
-            qq(big_int),
+            QuoteQuoteCoin::new(big_int),
             coin::coin2(11),
-            qq(3),
+            QuoteQuoteCoin::new(3),
         );
 
         assert_eq!(0, Amount::MAX % 5);
@@ -340,9 +340,9 @@ mod test {
             coin::coin2(Amount::MAX),
             coin::coin1(2),
             coin::coin1(3),
-            qq(5),
+            QuoteQuoteCoin::new(5),
             coin::coin2(Amount::MAX / 5 * 3),
-            qq(2),
+            QuoteQuoteCoin::new(2),
         );
     }
 
@@ -411,9 +411,9 @@ mod test {
             coin::coin2(a1),
             coin::coin1(q1),
             coin::coin1(a2),
-            qq(q2),
+            QuoteQuoteCoin::new(q2),
             coin::coin2(a_exp),
-            qq(q_exp),
+            QuoteQuoteCoin::new(q_exp),
         );
     }
 
@@ -425,7 +425,7 @@ mod test {
 
         assert!(shift_product(a1, a2, shifts) == 0 || shift_product(q1, q2, shifts) == 0);
         let price1 = price::total_of(coin::coin2(a1)).is(coin::coin1(q1));
-        let price2 = price::total_of(coin::coin1(a2)).is(qq(q2));
+        let price2 = price::total_of(coin::coin1(a2)).is(QuoteQuoteCoin::new(q2));
         assert_eq!(None, price1.cross_with(price2));
     }
 
@@ -470,9 +470,5 @@ mod test {
         let exp = price::total_of(amount_exp).is(quote_exp);
         assert_eq!(Some(exp), price1.lossy_add(price2));
         assert!(exp <= price1.add(price2));
-    }
-
-    fn qq(a: Amount) -> QuoteQuoteCoin {
-        QuoteQuoteCoin::new(a)
     }
 }
