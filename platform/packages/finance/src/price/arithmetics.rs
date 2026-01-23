@@ -56,7 +56,21 @@ where
             .map(Self::from_fraction)
     }
 
-    /// Add two prices rounding each of them to 1.10-18, simmilarly to
+    /// Calculates a `Price` between two not directly quoted currencies, through an intermediate one, ref: https://www.investopedia.com/terms/c/crossrate.asp
+    ///
+    /// Example: Price<USD, RON> = Price<USD, EUR> * Price<EUR, RON> where USD/EUR = 0.85 and EUR/RON = 5.09, therefore USD/RON = 0.85 * 5.09 = 4.33
+    pub fn cross_with<QuoteQuoteC>(
+        self,
+        rhs: Price<QuoteC, QuoteQuoteC>,
+    ) -> Option<Price<C, QuoteQuoteC>>
+    where
+        QuoteQuoteC: 'static,
+    {
+        Price::new(self.amount, rhs.amount_quote)
+            .lossy_mul(SimpleFraction::new(self.amount_quote, rhs.amount).to_fraction())
+    }
+
+    /// Add two prices rounding each of them to 1.10-18, similarly to
     /// the precision provided by CosmWasm's ['Decimal'][sdk::cosmwasm_std::Decimal].
     ///
     /// TODO Implement a variable precision algorithm depending on the
@@ -112,33 +126,6 @@ impl<C, Q> ToFraction<Amount> for Price<C, Q> {
     }
 }
 
-/// Represents the financial cross rate operation
-pub trait CrossPrice<Rhs> {
-    type Output;
-
-    fn cross_with(self, rhs: Rhs) -> Self::Output;
-}
-
-impl<C, QuoteC, QuoteQuoteC> CrossPrice<Price<QuoteC, QuoteQuoteC>> for Price<C, QuoteC>
-where
-    C: 'static,
-    QuoteC: 'static,
-    QuoteQuoteC: 'static,
-{
-    type Output = Option<Price<C, QuoteQuoteC>>;
-
-    #[track_caller]
-    fn cross_with(self, rhs: Price<QuoteC, QuoteQuoteC>) -> Self::Output {
-        // Price(a, b) * Price(c, d) = Price(a, d) * SimpleFraction(b / c)
-        // Please note that Price(amount, amount_quote) is like SimpleFraction(amount_quote / amount).
-
-        Price::new(self.amount, rhs.amount_quote).lossy_mul(SimpleFraction::new(
-            self.amount_quote.to_primitive(),
-            rhs.amount.to_primitive(),
-        ))
-    }
-}
-
 #[cfg(test)]
 mod test {
     use std::ops::{Add, AddAssign};
@@ -148,7 +135,7 @@ mod test {
     use crate::{
         coin::Amount,
         price::{
-            self, CrossPrice, Price,
+            self, Price,
             test::{self, Coin, QuoteCoin, QuoteQuoteCoin},
         },
         ratio::SimpleFraction,

@@ -15,8 +15,6 @@ mod arithmetics;
 pub mod base;
 pub mod dto;
 
-pub use arithmetics::CrossPrice;
-
 pub const fn total_of<C>(amount: Coin<C>) -> PriceBuilder<C> {
     PriceBuilder(amount)
 }
@@ -69,7 +67,7 @@ where
         res
     }
 
-    /// Contructor intended to be used with non-validated input,
+    /// Constructor intended to be used with non-validated input,
     /// for example when deserializing from an user request
     #[track_caller]
     fn try_new(amount: Coin<C>, amount_quote: Coin<QuoteC>) -> Result<Self> {
