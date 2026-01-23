@@ -4,7 +4,9 @@ use crate::fractionable::checked_mul::CheckedMul;
 
 pub(crate) mod checked_mul;
 
-/// Defines a common `Max` type, chosen as one of `Double` the types from either `Self` or `Other`
+/// Defines a `CommonDouble` type, which is the [ToDoublePrimitive::Double] of either domain types: `Self` or `Other`.
+///
+/// `CommonDouble` is used as a wider buffer for performing multiplication opperations without an overflow.
 pub trait CommonDoublePrimitive<Other> {
     type CommonDouble: CheckedMul<Output = Self::CommonDouble> + Div<Output = Self::CommonDouble>;
 }
@@ -16,6 +18,8 @@ where
 {
 }
 
+/// Converts a domain type into `Max`
+/// where `Max = <Self as CommonDoublePrimitive<Other>>::CommonDouble`
 pub trait IntoMax<Max>
 where
     Self: ToDoublePrimitive,
@@ -23,14 +27,17 @@ where
     fn into_max(self) -> Max;
 }
 
-/// Converts the domain type into its wider primitive `Double` type
+/// Converts a domain type into its wider primitive `Double` type
 pub trait ToDoublePrimitive {
     type Double;
 
     fn to_double(self) -> Self::Double;
 }
 
-/// Conversion from `Max` back to the domain type
+/// Attempts to convert `Max` into the domain type `Self`
+/// where `Max = <Self as CommonDoublePrimitive<Other>>::CommonDouble`
+///
+/// Returns [None] if the value cannot fit within the `Self` type
 pub trait TryFromMax<Max>
 where
     Self: IntoMax<Max> + Sized,

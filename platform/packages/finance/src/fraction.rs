@@ -75,6 +75,7 @@ where
     }
 }
 
+/// Implemented by types, which can be represented as [SimpleFraction], allowing for multiplication logic
 pub trait ToFraction<U> {
     fn to_fraction(self) -> SimpleFraction<U>;
 }

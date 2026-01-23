@@ -31,15 +31,13 @@ where
 
     /// Multiplication with а potential loss of precision
     ///
-    /// In case the numerator or denominator overflows, they both are trimmed with so many bits as necessary for
-    /// the larger value to fit within the price amount limits.
+    /// In case the numerator or denominator overflows, they both are trimmed with as many bits as necessary for
+    /// the larger of the two values to fit within the limits of `<U>`.
     ///
-    /// SimpleFraction(numerator'′, denominator') * SimpleFraction(numerator" / denominator") = SimpleFraction(numerator' * denominator", denominator' * numerator")
+    /// SimpleFraction(numerator' / denominator') * SimpleFraction(numerator" / denominator") = SimpleFraction((numerator' * denominator") / (denominator' * numerator"))
     /// where the pairs (numerator', numerator") and (denominator', denominator") are transformed into co-prime numbers.
     ///
-    /// Returns [None] when:
-    /// * an overflow occurs regardless of bit trimming
-    /// * an agressive bit trimming is required, resulting in a greater precision loss than acceptable
+    /// Returns [None] when the aforementioned bit trimming operation resulted in an overshift, causing the value to become zero
     pub(crate) fn lossy_mul(&self, rhs: Self) -> Option<Self>
     where
         U: Bits + Coprime + TryFromMax<<U as ToDoublePrimitive>::Double>,
