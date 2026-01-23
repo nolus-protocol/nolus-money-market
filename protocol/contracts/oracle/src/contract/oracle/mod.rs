@@ -5,7 +5,7 @@ use std::{
 
 use currency::{Currency, CurrencyDTO, CurrencyDef, Group, MemberOf};
 use finance::price::{
-    CrossPrice, Price,
+    Price,
     base::{
         BasePrice,
         with_price::{self, WithPrice},

@@ -1,5 +1,5 @@
 use currency::{AnyVisitorPair, Currency, CurrencyDTO, CurrencyDef, Group, MemberOf};
-use finance::price::{CrossPrice, Price, base::BasePrice};
+use finance::price::{Price, base::BasePrice};
 
 use crate::error::Error;
 

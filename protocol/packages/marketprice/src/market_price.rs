@@ -5,7 +5,7 @@ use currency::{
     PairsVisitor,
 };
 use finance::price::{
-    CrossPrice, Price,
+    Price,
     base::BasePrice,
     dto::{PriceDTO, WithPrice, with_price},
 };
@@ -404,7 +404,7 @@ mod test {
         coin::Coin,
         duration::Duration,
         percent::Percent100,
-        price::{self, CrossPrice, Price},
+        price::{self, Price},
     };
     use sdk::cosmwasm_std::{Addr, Storage, Timestamp, testing::MockStorage};
 
