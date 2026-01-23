@@ -50,8 +50,7 @@ where
         let double_nom = lhs.nominator.to_double().mul(rhs.nominator.to_double());
         let double_denom = lhs.denominator.to_double().mul(rhs.denominator.to_double());
 
-        let extra_bits =
-            bits_above_max::<_, U>(double_nom).max(bits_above_max::<_, U>(double_denom));
+        let extra_bits = bits_above_max::<U>(double_nom).max(bits_above_max::<U>(double_denom));
 
         let min_precision_loss_overflow = bits(double_nom).min(bits(double_denom));
 
@@ -79,10 +78,10 @@ where
 }
 
 #[track_caller]
-fn bits_above_max<D, U>(double: D) -> u32
+fn bits_above_max<U>(double: U::Double) -> u32
 where
-    U: Bits + FractionUnit + TryFromMax<D>,
-    D: Bits,
+    U: Bits + ToDoublePrimitive,
+    <U as ToDoublePrimitive>::Double: Bits,
 {
     bits(double).saturating_sub(U::BITS)
 }
@@ -99,15 +98,15 @@ where
 }
 
 #[track_caller]
-fn trim_down_checked<D, U>(double: D, bits_to_trim: u32) -> U
+fn trim_down_checked<U>(double: U::Double, bits_to_trim: u32) -> U
 where
-    U: Bits + FractionUnit + TryFromMax<D>,
-    D: Bits + Copy + Shr<u32, Output = D>,
+    U: Bits + FractionUnit + TryFromMax<U::Double> + ToDoublePrimitive<Double = D>,
+    U::Double: Bits + Copy + Shr<u32, Output = D>,
 {
     const INSUFFICIENT_BITS: &str = "insufficient trimming bits";
 
     debug_assert!(
-        bits_above_max::<D, U>(double) <= bits_to_trim,
+        bits_above_max::<U>(double) <= bits_to_trim,
         "{}",
         INSUFFICIENT_BITS
     );
