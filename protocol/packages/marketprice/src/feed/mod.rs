@@ -94,7 +94,7 @@ where
             .ok_or(PriceFeedsError::NoPrice {})
             .and_then(|first| {
                 price_samples.try_fold(first, |acc, current| {
-                    formula_calculation(acc, current, discount_factor)
+                    calc_for_next_period(acc, current, discount_factor)
                 })
             })
     }
@@ -164,7 +164,7 @@ where
     }
 }
 
-fn formula_calculation<C, QuoteC>(
+fn calc_for_next_period<C, QuoteC>(
     acc: Price<C, QuoteC>,
     current: Price<C, QuoteC>,
     discount_factor: Percent100,
