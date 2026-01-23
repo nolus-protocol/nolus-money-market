@@ -1,6 +1,5 @@
 use crate::{
-    coin::{Amount, Coin, DoubleCoinPrimitive},
-    fraction::Unit as _,
+    coin::{Amount, DoubleCoinPrimitive},
     percent::Units as PercentUnits,
 };
 
@@ -23,17 +22,6 @@ impl Bits for Amount {
 
     fn leading_zeros(self) -> u32 {
         self.leading_zeros()
-    }
-}
-
-impl<C> Bits for Coin<C>
-where
-    C: 'static,
-{
-    const BITS: u32 = Self::BITS;
-
-    fn leading_zeros(self) -> u32 {
-        self.to_primitive().leading_zeros()
     }
 }
 
