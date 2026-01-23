@@ -149,14 +149,15 @@ mod test {
         coin::Amount,
         price::{
             self, CrossPrice, Price,
-            test::{Coin, QuoteCoin, QuoteQuoteCoin, c, price, q},
+            test::{Coin, QuoteCoin, QuoteQuoteCoin, price},
         },
         ratio::SimpleFraction,
+        test::coin,
     };
 
     #[test]
     fn from_fraction() {
-        let expect = price(c(1), q(4));
+        let expect = price(coin::coin2(1), coin::coin1(4));
         assert_eq!(
             expect,
             Price::from_fraction(SimpleFraction::new(4u128, 1u128))
@@ -165,21 +166,70 @@ mod test {
 
     #[test]
     fn add_no_round() {
-        add_impl(c(1), q(2), c(5), q(10), c(1), q(4));
-        add_impl(c(2), q(1), c(10), q(5), c(1), q(1));
-        add_impl(c(2), q(3), c(10), q(14), c(10), q(29));
+        add_impl(
+            coin::coin2(1),
+            coin::coin1(2),
+            coin::coin2(5),
+            coin::coin1(10),
+            coin::coin2(1),
+            coin::coin1(4),
+        );
+        add_impl(
+            coin::coin2(2),
+            coin::coin1(1),
+            coin::coin2(10),
+            coin::coin1(5),
+            coin::coin2(1),
+            coin::coin1(1),
+        );
+        add_impl(
+            coin::coin2(2),
+            coin::coin1(3),
+            coin::coin2(10),
+            coin::coin1(14),
+            coin::coin2(10),
+            coin::coin1(29),
+        );
     }
 
     #[test]
     fn add_round() {
-        add_impl(c(Amount::MAX), q(1), c(1), q(1), c(1), q(1));
+        add_impl(
+            coin::coin2(Amount::MAX),
+            coin::coin1(1),
+            coin::coin2(1),
+            coin::coin1(1),
+            coin::coin2(1),
+            coin::coin1(1),
+        );
     }
 
     #[test]
     fn lossy_add_no_round() {
-        lossy_add_impl(c(1), q(2), c(5), q(10), c(1), q(4));
-        lossy_add_impl(c(2), q(1), c(10), q(5), c(1), q(1));
-        lossy_add_impl(c(2), q(3), c(10), q(14), c(10), q(29));
+        lossy_add_impl(
+            coin::coin2(1),
+            coin::coin1(2),
+            coin::coin2(5),
+            coin::coin1(10),
+            coin::coin2(1),
+            coin::coin1(4),
+        );
+        lossy_add_impl(
+            coin::coin2(2),
+            coin::coin1(1),
+            coin::coin2(10),
+            coin::coin1(5),
+            coin::coin2(1),
+            coin::coin1(1),
+        );
+        lossy_add_impl(
+            coin::coin2(2),
+            coin::coin1(3),
+            coin::coin2(10),
+            coin::coin1(14),
+            coin::coin2(10),
+            coin::coin1(29),
+        );
     }
 
     #[test]
@@ -187,55 +237,111 @@ mod test {
         // 1/3 + 2/7 = 13/21 that is 0.(619047)*...
         let amount_exp = 1_000_000_000_000_000_000;
         let quote_exp = 619_047_619_047_619_047;
-        lossy_add_impl(c(3), q(1), c(7), q(2), c(amount_exp), q(quote_exp));
         lossy_add_impl(
-            c(amount_exp),
-            q(quote_exp),
-            c(3),
-            q(1),
-            c(amount_exp),
-            q(quote_exp + 333_333_333_333_333_333),
+            coin::coin2(3),
+            coin::coin1(1),
+            coin::coin2(7),
+            coin::coin1(2),
+            coin::coin2(amount_exp),
+            coin::coin1(quote_exp),
         );
         lossy_add_impl(
-            c(amount_exp + 1),
-            q(quote_exp),
-            c(21),
-            q(1),
-            c(amount_exp / 5),
-            q(133_333_333_333_333_333),
+            coin::coin2(amount_exp),
+            coin::coin1(quote_exp),
+            coin::coin2(3),
+            coin::coin1(1),
+            coin::coin2(amount_exp),
+            coin::coin1(quote_exp + 333_333_333_333_333_333),
+        );
+        lossy_add_impl(
+            coin::coin2(amount_exp + 1),
+            coin::coin1(quote_exp),
+            coin::coin2(21),
+            coin::coin1(1),
+            coin::coin2(amount_exp / 5),
+            coin::coin1(133_333_333_333_333_333),
         );
 
-        lossy_add_impl(c(amount_exp + 1), q(1), c(1), q(1), c(1), q(1));
+        lossy_add_impl(
+            coin::coin2(amount_exp + 1),
+            coin::coin1(1),
+            coin::coin2(1),
+            coin::coin1(1),
+            coin::coin2(1),
+            coin::coin1(1),
+        );
 
-        lossy_add_impl(c(Amount::MAX), q(1), c(1), q(1), c(1), q(1));
+        lossy_add_impl(
+            coin::coin2(Amount::MAX),
+            coin::coin1(1),
+            coin::coin2(1),
+            coin::coin1(1),
+            coin::coin2(1),
+            coin::coin1(1),
+        );
     }
 
     #[test]
     fn lossy_add_overflow() {
         // 2^128 / FACTOR (10^18) / 2^64 ~ 18.446744073709553
-        let p1 = price::total_of(c(1)).is(q(Amount::from(u64::MAX) * 19u128));
+        let p1 = price::total_of(coin::coin2(1)).is(coin::coin1(Amount::from(u64::MAX) * 19u128));
         let p2 = Price::identity();
         assert!(p1.lossy_add(p2).is_none())
     }
 
     #[test]
     fn lossy_mul_no_round() {
-        lossy_mul_impl(c(1), q(2), q(2), qq(1), c(1), qq(1));
-        lossy_mul_impl(c(2), q(3), q(18), qq(5), c(12), qq(5));
-        lossy_mul_impl(c(7), q(3), q(11), qq(21), c(11), qq(9));
-        lossy_mul_impl(c(7), q(3), q(11), qq(23), c(7 * 11), qq(3 * 23));
+        lossy_mul_impl(
+            coin::coin2(1),
+            coin::coin1(2),
+            coin::coin1(2),
+            qq(1),
+            coin::coin2(1),
+            qq(1),
+        );
+        lossy_mul_impl(
+            coin::coin2(2),
+            coin::coin1(3),
+            coin::coin1(18),
+            qq(5),
+            coin::coin2(12),
+            qq(5),
+        );
+        lossy_mul_impl(
+            coin::coin2(7),
+            coin::coin1(3),
+            coin::coin1(11),
+            qq(21),
+            coin::coin2(11),
+            qq(9),
+        );
+        lossy_mul_impl(
+            coin::coin2(7),
+            coin::coin1(3),
+            coin::coin1(11),
+            qq(23),
+            coin::coin2(7 * 11),
+            qq(3 * 23),
+        );
 
         let big_int = Amount::MAX - 1;
         assert!(big_int % 3 != 0 && big_int % 11 != 0);
-        lossy_mul_impl(c(big_int), q(3), q(11), qq(big_int), c(11), qq(3));
+        lossy_mul_impl(
+            coin::coin2(big_int),
+            coin::coin1(3),
+            coin::coin1(11),
+            qq(big_int),
+            coin::coin2(11),
+            qq(3),
+        );
 
         assert_eq!(0, Amount::MAX % 5);
         lossy_mul_impl(
-            c(Amount::MAX),
-            q(2),
-            q(3),
+            coin::coin2(Amount::MAX),
+            coin::coin1(2),
+            coin::coin1(3),
             qq(5),
-            c(Amount::MAX / 5 * 3),
+            coin::coin2(Amount::MAX / 5 * 3),
             qq(2),
         );
     }
@@ -301,7 +407,14 @@ mod test {
 
         let a_exp = shift_product(a1, a2, shifts);
         let q_exp = shift_product(q1, q2, shifts);
-        lossy_mul_impl(c(a1), q(q1), q(a2), qq(q2), c(a_exp), qq(q_exp));
+        lossy_mul_impl(
+            coin::coin2(a1),
+            coin::coin1(q1),
+            coin::coin1(a2),
+            qq(q2),
+            coin::coin2(a_exp),
+            qq(q_exp),
+        );
     }
 
     fn lossy_mul_overflow_impl(a1: Amount, q1: Amount, a2: Amount, q2: Amount, shifts: u8) {
@@ -311,8 +424,8 @@ mod test {
         assert!(a2 % q2 != 0);
 
         assert!(shift_product(a1, a2, shifts) == 0 || shift_product(q1, q2, shifts) == 0);
-        let price1 = price::total_of(c(a1)).is(q(q1));
-        let price2 = price::total_of(q(a2)).is(qq(q2));
+        let price1 = price::total_of(coin::coin2(a1)).is(coin::coin1(q1));
+        let price2 = price::total_of(coin::coin1(a2)).is(qq(q2));
         assert_eq!(None, price1.cross_with(price2));
     }
 
