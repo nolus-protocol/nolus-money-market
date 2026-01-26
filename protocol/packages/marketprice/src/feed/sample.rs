@@ -116,13 +116,13 @@ where
 
             let sum = values.fold(*first, |acc, current| acc + *current);
 
-            let reciproral = prices_count
-                .try_into_reciproral()
+            let reciprocal = prices_count
+                .try_into_reciprocal()
                 .expect("should have provided positive value for count");
 
             let avg = sum
-                .lossy_mul(SimpleFraction::from(reciproral))
-                .expect("The reciproral should be less or equal to 1");
+                .lossy_mul(SimpleFraction::from(reciprocal))
+                .expect("The reciprocal should be less or equal to 1");
 
             self.last_sample = Sample { price: Some(avg) };
         }

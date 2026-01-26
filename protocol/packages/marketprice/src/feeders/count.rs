@@ -42,10 +42,10 @@ impl Count {
         }
     }
 
-    /// Converts [self] into a reciproral fraction
+    /// Converts [self] into a reciprocal fraction
     ///
     /// Returns [None] if the Count is zero
-    pub fn try_into_reciproral(self) -> Option<Ratio<Unit>> {
+    pub fn try_into_reciprocal(self) -> Option<Ratio<Unit>> {
         (self != Self::ZERO).then(|| Ratio::new(ONE, self.0))
     }
 }
@@ -127,18 +127,18 @@ mod test {
     use super::Count;
 
     #[test]
-    fn try_into_reciproral_nonzero() {
+    fn try_into_reciprocal_nonzero() {
         let count = 4096;
 
         assert_eq!(
             Ratio::new(1, count),
-            Count::new_test(count).try_into_reciproral().unwrap()
+            Count::new_test(count).try_into_reciprocal().unwrap()
         );
     }
 
     #[test]
-    fn try_into_reciproral_zero() {
-        assert!(Count::ZERO.try_into_reciproral().is_none())
+    fn try_into_reciprocal_zero() {
+        assert!(Count::ZERO.try_into_reciprocal().is_none())
     }
 
     #[test]
