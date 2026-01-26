@@ -134,6 +134,7 @@ mod test {
 
     use crate::{
         coin::Amount,
+        percent::Percent100,
         price::{
             self, Price,
             test::{self, Coin, QuoteCoin, QuoteQuoteCoin},
@@ -340,6 +341,16 @@ mod test {
         lossy_mul_shifts_impl(5, 7);
         lossy_mul_shifts_impl(5, 16);
         lossy_mul_shifts_impl(5, 63);
+    }
+
+    #[test]
+    fn lossy_mul_underflow() {
+        let price = price::total_of(coin::coin2(Amount::MAX)).is(coin::coin1(11));
+        let rhs_1 = Percent100::from_permille(9);
+        assert!(price.lossy_mul(rhs_1).is_none());
+
+        let rhs_2 = SimpleFraction::new(coin::coin2(1), coin::coin2(100));
+        assert!(price.lossy_mul(rhs_2).is_none());
     }
 
     #[test]
