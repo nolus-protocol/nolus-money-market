@@ -142,22 +142,12 @@ fn feed_price_with_alarm_issue() {
     let lease = open_lease(&mut test_case, common::lpn_coin(1000));
 
     // there is no price in the oracle and feed for this alarm
-    () = test_case
-        .app
-        .execute(
-            lease,
-            test_case.address_book.oracle().clone(),
-            &ExecuteMsg::AddPriceAlarm {
-                alarm: Alarm::new(
-                    price::total_of(Coin::<PaymentC4>::new(1)).is(common::lpn_coin(1)),
-                    None,
-                ),
-            },
-            &[],
-        )
-        .unwrap()
-        .ignore_response()
-        .unwrap_response();
+    _ = add_price_alarm(
+        &mut test_case,
+        lease.clone(),
+        price::total_of(Coin::<PaymentC4>::new(1)).is(common::lpn_coin(1)),
+        None,
+    );
 
     let _: AppResponse = oracle_mod::feed_price(
         &mut test_case,
@@ -175,22 +165,12 @@ fn feed_price_with_alarm() {
 
     let lease = open_lease(&mut test_case, common::lpn_coin(1000));
 
-    () = test_case
-        .app
-        .execute(
-            lease,
-            test_case.address_book.oracle().clone(),
-            &ExecuteMsg::AddPriceAlarm {
-                alarm: Alarm::new(
-                    price::total_of(Coin::<PaymentC4>::new(1)).is(common::lpn_coin(10)),
-                    None,
-                ),
-            },
-            &[],
-        )
-        .unwrap()
-        .ignore_response()
-        .unwrap_response();
+    _ = add_price_alarm(
+        &mut test_case,
+        lease.clone(),
+        price::total_of(Coin::<PaymentC4>::new(1)).is(common::lpn_coin(10)),
+        None,
+    );
 
     let _: AppResponse = oracle_mod::feed_price(
         &mut test_case,
@@ -210,39 +190,19 @@ fn overwrite_alarm_and_dispatch() {
 
     let lease = open_lease(&mut test_case, common::lpn_coin(1000));
 
-    () = test_case
-        .app
-        .execute(
-            lease.clone(),
-            test_case.address_book.oracle().clone(),
-            &ExecuteMsg::AddPriceAlarm {
-                alarm: Alarm::new(
-                    price::total_of(Coin::<PaymentC4>::new(1)).is(common::lpn_coin(5)),
-                    Some(price::total_of(Coin::<PaymentC4>::new(1)).is(common::lpn_coin(5))),
-                ),
-            },
-            &[],
-        )
-        .unwrap()
-        .ignore_response()
-        .unwrap_response();
+    _ = add_price_alarm(
+        &mut test_case,
+        lease.clone(),
+        price::total_of(Coin::<PaymentC4>::new(1)).is(common::lpn_coin(5)),
+        Some(price::total_of(Coin::<PaymentC4>::new(1)).is(common::lpn_coin(5))),
+    );
 
-    () = test_case
-        .app
-        .execute(
-            lease.clone(),
-            test_case.address_book.oracle().clone(),
-            &ExecuteMsg::AddPriceAlarm {
-                alarm: Alarm::new(
-                    price::total_of(Coin::<PaymentC4>::new(1)).is(common::lpn_coin(10)),
-                    None,
-                ),
-            },
-            &[],
-        )
-        .unwrap()
-        .ignore_response()
-        .unwrap_response();
+    _ = add_price_alarm(
+        &mut test_case,
+        lease.clone(),
+        price::total_of(Coin::<PaymentC4>::new(1)).is(common::lpn_coin(10)),
+        None,
+    );
 
     // If doesn't panic, then prices should be fed successfully.
     let _: AppResponse = oracle_mod::feed_price(
@@ -938,4 +898,24 @@ fn update_tree(
         &response.events,
         &[Event::new("sudo").add_attribute("_contract_address", test_case.address_book.oracle())]
     );
+}
+
+fn add_price_alarm<ProtoReg, T, P, R, L, Lp, TAlarms>(
+    test_case: &mut TestCase<ProtoReg, T, P, R, L, Lp, Addr, TAlarms>,
+    sender: Addr,
+    below: Price<PaymentC4, Lpn>,
+    above_or_equal: Option<Price<PaymentC4, Lpn>>,
+) -> ResponseWithInterChainMsgs<'_, ()> {
+    test_case
+        .app
+        .execute(
+            sender,
+            test_case.address_book.oracle().clone(),
+            &ExecuteMsg::AddPriceAlarm {
+                alarm: Alarm::new(below, above_or_equal),
+            },
+            &[],
+        )
+        .unwrap()
+        .ignore_response()
 }
