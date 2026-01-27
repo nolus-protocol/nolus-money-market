@@ -1,3 +1,5 @@
+use std::result::Result as StdResult;
+
 use currencies::{Lpn, Lpns, Nls, testing::LeaseC1};
 use currency::CurrencyDef;
 use finance::{
@@ -20,7 +22,7 @@ use lpp::{
 };
 use platform::{bank, coin_legacy};
 use sdk::{
-    cosmwasm_std::{Addr, Event},
+    cosmwasm_std::{Addr, Event, StdError as CosmStdError},
     cw_multi_test::AppResponse,
     testing,
 };
@@ -873,29 +875,11 @@ fn test_rewards() {
     // deposit after disributing rewards should not get anything
     deposit(&mut test_case, lender2.clone(), deposit2);
 
-    let resp: RewardsResponse = test_case
-        .app
-        .query()
-        .query_wasm_smart(
-            contract_address(&test_case),
-            &LppQueryMsg::Rewards {
-                address: lender1.clone(),
-            },
-        )
-        .unwrap();
+    let resp = query_rewards(&test_case, lender1.clone());
 
     assert_eq!(resp.rewards, common::coin(tot_rewards1));
 
-    let resp: RewardsResponse = test_case
-        .app
-        .query()
-        .query_wasm_smart(
-            contract_address(&test_case),
-            &LppQueryMsg::Rewards {
-                address: lender2.clone(),
-            },
-        )
-        .unwrap();
+    let resp = query_rewards(&test_case, lender2.clone());
 
     assert_eq!(Coin::ZERO, resp.rewards);
 
@@ -916,16 +900,7 @@ fn test_rewards() {
         .ignore_response()
         .unwrap_response();
 
-    let resp: RewardsResponse = test_case
-        .app
-        .query()
-        .query_wasm_smart(
-            contract_address(&test_case),
-            &LppQueryMsg::Rewards {
-                address: lender1.clone(),
-            },
-        )
-        .unwrap();
+    let resp = query_rewards(&test_case, lender1.clone());
 
     assert_eq!(Coin::ZERO, resp.rewards,);
 
@@ -934,30 +909,10 @@ fn test_rewards() {
 
     distribute_rewards(&mut test_case, treasury, tot_rewards2);
 
-    let resp: RewardsResponse = test_case
-        .app
-        .query()
-        .query_wasm_smart(
-            contract_address(&test_case),
-            &LppQueryMsg::Rewards {
-                address: lender1.clone(),
-            },
-        )
-        .unwrap();
-
+    let resp = query_rewards(&test_case, lender1.clone());
     assert_eq!(resp.rewards, common::coin(lender_reward1));
 
-    let resp: RewardsResponse = test_case
-        .app
-        .query()
-        .query_wasm_smart(
-            contract_address(&test_case),
-            &LppQueryMsg::Rewards {
-                address: lender2.clone(),
-            },
-        )
-        .unwrap();
-
+    let resp = query_rewards(&test_case, lender2.clone());
     assert_eq!(resp.rewards, common::coin(lender_reward2));
 
     // full withdraw, should send rewards to the lender
@@ -967,10 +922,7 @@ fn test_rewards() {
     assert_eq!(balance, common::coin::<Nls>(tot_rewards1 + lender_reward1));
 
     // lender account is removed
-    let resp: Result<RewardsResponse, _> = test_case.app.query().query_wasm_smart(
-        contract_address(&test_case),
-        &LppQueryMsg::Rewards { address: lender1 },
-    );
+    let resp = try_query_rewards(&test_case, lender1.clone());
 
     assert!(resp.is_err());
 
@@ -980,15 +932,7 @@ fn test_rewards() {
         .ignore_response()
         .unwrap_response();
 
-    let resp: RewardsResponse = test_case
-        .app
-        .query()
-        .query_wasm_smart(
-            contract_address(&test_case),
-            &LppQueryMsg::Rewards { address: lender2 },
-        )
-        .unwrap();
-
+    let resp = query_rewards(&test_case, lender2.clone());
     assert_eq!(resp.rewards, Coin::ZERO);
     let balance = bank::balance(&recipient, test_case.app.query()).unwrap();
     assert_eq!(balance, common::coin::<Nls>(lender_reward2));
@@ -1297,6 +1241,23 @@ fn query_price<ProtoReg, T, P, R, L, O, TAlarms>(
         .query()
         .query_wasm_smart(contract_address(test_case), &LppQueryMsg::Price())
         .unwrap()
+}
+
+fn query_rewards<ProtoReg, T, P, R, L, O, TAlarms>(
+    test_case: &TestCase<ProtoReg, T, P, R, L, Addr, O, TAlarms>,
+    address: Addr,
+) -> RewardsResponse {
+    try_query_rewards(test_case, address).unwrap()
+}
+
+fn try_query_rewards<ProtoReg, T, P, R, L, O, TAlarms>(
+    test_case: &TestCase<ProtoReg, T, P, R, L, Addr, O, TAlarms>,
+    address: Addr,
+) -> StdResult<RewardsResponse, CosmStdError> {
+    test_case.app.query().query_wasm_smart(
+        contract_address(test_case),
+        &LppQueryMsg::Rewards { address },
+    )
 }
 
 fn lpn_cwcoin(amount: Amount) -> CwCoin {
