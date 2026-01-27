@@ -427,17 +427,7 @@ fn loan_open_and_repay() {
 
     test_case.app.time_shift(HALF_YEAR);
 
-    let maybe_loan1: QueryLoanResponse<Lpn> = test_case
-        .app
-        .query()
-        .query_wasm_smart(
-            contract_address(&test_case),
-            &LppQueryMsg::Loan {
-                lease_addr: loan_addr1.clone(),
-            },
-        )
-        .unwrap();
-    let loan1_resp = maybe_loan1.unwrap();
+    let loan1_resp = query_loan(&test_case, loan_addr1.clone()).unwrap();
     assert_eq!(loan1_resp.principal_due, loan1_coin);
     assert_eq!(loan1_resp.annual_interest_rate, interest1);
     assert_eq!(
@@ -471,17 +461,7 @@ fn loan_open_and_repay() {
         .ignore_response()
         .unwrap_response();
 
-    let maybe_loan1: QueryLoanResponse<Lpn> = test_case
-        .app
-        .query()
-        .query_wasm_smart(
-            contract_address(&test_case),
-            &LppQueryMsg::Loan {
-                lease_addr: loan_addr1.clone(),
-            },
-        )
-        .unwrap();
-    let loan1_resp = maybe_loan1.unwrap();
+    let loan1_resp = query_loan(&test_case, loan_addr1.clone()).unwrap();
     assert_eq!(loan1_resp.principal_due, loan1_coin);
     assert_eq!(
         loan1_resp.interest_due(&crate::block_time(&test_case)),
@@ -498,17 +478,7 @@ fn loan_open_and_repay() {
     .ignore_response()
     .unwrap_response();
 
-    let maybe_loan1: QueryLoanResponse<Lpn> = test_case
-        .app
-        .query()
-        .query_wasm_smart(
-            contract_address(&test_case),
-            &LppQueryMsg::Loan {
-                lease_addr: loan_addr1.clone(),
-            },
-        )
-        .unwrap();
-    let loan1_resp = maybe_loan1.unwrap();
+    let loan1_resp = query_loan(&test_case, loan_addr1.clone()).unwrap();
     assert_eq!(
         loan1_resp.principal_due,
         common::lpn_coin(loan1 - repay_due_part)
@@ -529,16 +499,7 @@ fn loan_open_and_repay() {
     .ignore_response()
     .unwrap_response();
 
-    let maybe_loan1: QueryLoanResponse<Lpn> = test_case
-        .app
-        .query()
-        .query_wasm_smart(
-            contract_address(&test_case),
-            &LppQueryMsg::Loan {
-                lease_addr: loan_addr1.clone(),
-            },
-        )
-        .unwrap();
+    let maybe_loan1 = query_loan(&test_case, loan_addr1.clone());
     assert!(maybe_loan1.is_none());
 
     // repay excess is returned
@@ -659,17 +620,7 @@ fn compare_lpp_states() {
 
     test_case.app.time_shift(HALF_YEAR);
 
-    let maybe_loan1: QueryLoanResponse<Lpn> = test_case
-        .app
-        .query()
-        .query_wasm_smart(
-            contract_address(&test_case),
-            &LppQueryMsg::Loan {
-                lease_addr: loan_addr1.clone(),
-            },
-        )
-        .unwrap();
-    let loan1_resp = maybe_loan1.unwrap();
+    let loan1_resp = query_loan(&test_case, loan_addr1.clone()).unwrap();
     assert_eq!(loan1_resp.principal_due, loan1_coin);
     assert_eq!(loan1_resp.annual_interest_rate, interest1);
     assert_eq!(
@@ -703,17 +654,7 @@ fn compare_lpp_states() {
         .ignore_response()
         .unwrap_response();
 
-    let maybe_loan1: QueryLoanResponse<Lpn> = test_case
-        .app
-        .query()
-        .query_wasm_smart(
-            contract_address(&test_case),
-            &LppQueryMsg::Loan {
-                lease_addr: loan_addr1.clone(),
-            },
-        )
-        .unwrap();
-    let loan1_resp = maybe_loan1.unwrap();
+    let loan1_resp = query_loan(&test_case, loan_addr1.clone()).unwrap();
     assert_eq!(loan1_resp.principal_due, loan1_coin);
     assert_eq!(
         loan1_resp.interest_due(&crate::block_time(&test_case)),
@@ -730,17 +671,7 @@ fn compare_lpp_states() {
     .ignore_response()
     .unwrap_response();
 
-    let maybe_loan1: QueryLoanResponse<Lpn> = test_case
-        .app
-        .query()
-        .query_wasm_smart(
-            contract_address(&test_case),
-            &LppQueryMsg::Loan {
-                lease_addr: loan_addr1.clone(),
-            },
-        )
-        .unwrap();
-    let loan1_resp = maybe_loan1.unwrap();
+    let loan1_resp = query_loan(&test_case, loan_addr1.clone()).unwrap();
     assert_eq!(
         loan1_resp.principal_due,
         common::lpn_coin(loan1 - repay_due_part)
@@ -760,16 +691,7 @@ fn compare_lpp_states() {
     .ignore_response()
     .unwrap_response();
 
-    let maybe_loan1: QueryLoanResponse<Lpn> = test_case
-        .app
-        .query()
-        .query_wasm_smart(
-            contract_address(&test_case),
-            &LppQueryMsg::Loan {
-                lease_addr: loan_addr1.clone(),
-            },
-        )
-        .unwrap();
+    let maybe_loan1 = query_loan(&test_case, loan_addr1.clone());
     assert!(maybe_loan1.is_none());
 
     // repay excess is returned
@@ -1234,6 +1156,20 @@ fn query_price<ProtoReg, T, P, R, L, O, TAlarms>(
         .app
         .query()
         .query_wasm_smart(contract_address(test_case), &LppQueryMsg::Price())
+        .unwrap()
+}
+
+fn query_loan<ProtoReg, T, P, R, L, O, TAlarms>(
+    test_case: &TestCase<ProtoReg, T, P, R, L, Addr, O, TAlarms>,
+    lease_addr: Addr,
+) -> QueryLoanResponse<Lpn> {
+    test_case
+        .app
+        .query()
+        .query_wasm_smart(
+            contract_address(test_case),
+            &LppQueryMsg::Loan { lease_addr },
+        )
         .unwrap()
 }
 
