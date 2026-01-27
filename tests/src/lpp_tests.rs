@@ -410,11 +410,7 @@ fn loan_open_and_repay() {
 
     let total_interest_due = interest_due1.checked_div(2).unwrap();
 
-    let resp: LppBalanceResponse<Lpns> = test_case
-        .app
-        .query()
-        .query_wasm_smart(contract_address(&test_case), &LppQueryMsg::LppBalance())
-        .unwrap();
+    let resp = lpp_balance(&test_case);
 
     assert_eq!(resp.total_interest_due, total_interest_due.into());
 
@@ -549,11 +545,7 @@ fn loan_open_and_repay() {
     let balance = bank::balance(&loan_addr1, test_case.app.query()).unwrap();
     assert_eq!(balance, loan1_coin - interest_due1);
 
-    let resp: LppBalanceResponse<Lpns> = test_case
-        .app
-        .query()
-        .query_wasm_smart(contract_address(&test_case), &LppQueryMsg::LppBalance())
-        .unwrap();
+    let resp = lpp_balance(&test_case);
 
     // total unpaid interest
     assert_eq!(
@@ -651,11 +643,7 @@ fn compare_lpp_states() {
 
     let total_interest_due = interest_due1.checked_div(2).unwrap();
 
-    let resp: LppBalanceResponse<Lpns> = test_case
-        .app
-        .query()
-        .query_wasm_smart(contract_address(&test_case), &LppQueryMsg::LppBalance())
-        .unwrap();
+    let resp = lpp_balance(&test_case);
     assert_eq!(resp.total_interest_due, total_interest_due.into());
 
     let interest2 = interest_rate(loan1 + loan2 + total_interest_due.to_primitive(), balance1);
@@ -788,11 +776,7 @@ fn compare_lpp_states() {
     let balance = bank::balance(&loan_addr1, test_case.app.query()).unwrap();
     assert_eq!(balance, loan1_coin - interest_due1);
 
-    let resp: LppBalanceResponse<Lpns> = test_case
-        .app
-        .query()
-        .query_wasm_smart(contract_address(&test_case), &LppQueryMsg::LppBalance())
-        .unwrap();
+    let resp = lpp_balance(&test_case);
 
     let total_unpaid_interest = interest2.of(loan2_coin).checked_div(2).unwrap();
     // total unpaid interest
@@ -1230,6 +1214,16 @@ fn balance<ProtoReg, T, P, R, L, O, TAlarms>(
             contract_address(test_case),
             &LppQueryMsg::Balance { address },
         )
+        .unwrap()
+}
+
+fn lpp_balance<ProtoReg, T, P, R, L, O, TAlarms>(
+    test_case: &TestCase<ProtoReg, T, P, R, L, Addr, O, TAlarms>,
+) -> LppBalanceResponse<Lpns> {
+    test_case
+        .app
+        .query()
+        .query_wasm_smart(contract_address(test_case), &LppQueryMsg::LppBalance())
         .unwrap()
 }
 
