@@ -916,42 +916,18 @@ fn test_rewards() {
     assert_eq!(Coin::ZERO, resp.rewards);
 
     // claim zero rewards
-    _ = test_case
-        .app
-        .execute(
-            lender2.clone(),
-            contract_address(&test_case),
-            &LppExecuteMsg::ClaimRewards {
-                other_recipient: None,
-            },
-            &[],
-        )
-        .unwrap_err();
+    _ = try_claim_rewards(&mut test_case, lender2.clone(), None).unwrap_err();
 
     // check reward claim with nonvalid recipient
-    _ = test_case
-        .app
-        .execute(
-            lender1.clone(),
-            contract_address(&test_case),
-            &LppExecuteMsg::ClaimRewards {
-                other_recipient: Some(Addr::unchecked("invalid address")),
-            },
-            &[],
-        )
-        .unwrap_err();
+    _ = try_claim_rewards(
+        &mut test_case,
+        lender1.clone(),
+        Some(Addr::unchecked("invalid address")),
+    )
+    .unwrap_err();
 
     // check reward claim
-    () = test_case
-        .app
-        .execute(
-            lender1.clone(),
-            contract_address(&test_case),
-            &LppExecuteMsg::ClaimRewards {
-                other_recipient: None,
-            },
-            &[],
-        )
+    () = try_claim_rewards(&mut test_case, lender1.clone(), None)
         .unwrap()
         .ignore_response()
         .unwrap_response();
@@ -1015,16 +991,7 @@ fn test_rewards() {
     assert!(resp.is_err());
 
     // claim rewards to other recipient
-    () = test_case
-        .app
-        .execute(
-            lender2.clone(),
-            contract_address(&test_case),
-            &LppExecuteMsg::ClaimRewards {
-                other_recipient: Some(recipient.clone()),
-            },
-            &[],
-        )
+    () = try_claim_rewards(&mut test_case, lender2.clone(), Some(recipient.clone()))
         .unwrap()
         .ignore_response()
         .unwrap_response();
@@ -1292,6 +1259,19 @@ where
         &[coin_legacy::to_cosmwasm_on_nolus::<Currency>(
             common::coin::<Currency>(repay_amount),
         )],
+    )
+}
+
+fn try_claim_rewards<ProtoReg, T, P, R, L, O, TAlarms>(
+    test_case: &mut TestCase<ProtoReg, T, P, R, L, Addr, O, TAlarms>,
+    lender: Addr,
+    other_recipient: Option<Addr>,
+) -> anyhow::Result<ResponseWithInterChainMsgs<'_, AppResponse>> {
+    test_case.app.execute(
+        lender,
+        contract_address(test_case),
+        &LppExecuteMsg::ClaimRewards { other_recipient },
+        &[],
     )
 }
 
