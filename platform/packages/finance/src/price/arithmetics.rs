@@ -66,8 +66,9 @@ where
     where
         QuoteQuoteC: 'static,
     {
-        Price::new(self.amount, rhs.amount_quote)
-            .lossy_mul(SimpleFraction::new(self.amount_quote, rhs.amount).to_fraction())
+        Price::new(self.amount, rhs.amount_quote).lossy_mul(ToFraction::<Amount>::to_fraction(
+            SimpleFraction::new(self.amount_quote, rhs.amount),
+        ))
     }
 
     /// Add two prices rounding each of them to 1.10-18, similarly to
