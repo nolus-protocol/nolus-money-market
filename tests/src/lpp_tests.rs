@@ -237,11 +237,7 @@ fn deposit_and_withdraw() {
         )
         .unwrap();
 
-    let price: PriceResponse<Lpn> = test_case
-        .app
-        .query()
-        .query_wasm_smart(contract_address(&test_case), &LppQueryMsg::Price())
-        .unwrap();
+    let price = query_price(&test_case);
 
     let amount: Amount = 1_000;
     assert_eq!(
@@ -255,11 +251,7 @@ fn deposit_and_withdraw() {
     // got rounding error
     let balance_nlpn = balance(&mut test_case, lender2.clone());
 
-    let price: PriceResponse<Lpn> = test_case
-        .app
-        .query()
-        .query_wasm_smart(contract_address(&test_case), &LppQueryMsg::Price())
-        .unwrap();
+    let price = query_price(&test_case);
     assert_eq!(
         price::total(balance_nlpn.balance, price.0).unwrap(),
         common::lpn_coin(test_deposit - rounding_error)
@@ -270,11 +262,7 @@ fn deposit_and_withdraw() {
 
     let balance_nlpn = balance(&mut test_case, lender2.clone());
 
-    let price: PriceResponse<Lpn> = test_case
-        .app
-        .query()
-        .query_wasm_smart(contract_address(&test_case), &LppQueryMsg::Price())
-        .unwrap();
+    let price = query_price(&test_case);
     assert_eq!(
         price::total(balance_nlpn.balance, price.0).unwrap(),
         common::lpn_coin(test_deposit - rounding_error)
@@ -285,11 +273,7 @@ fn deposit_and_withdraw() {
 
     let balance_nlpn2 = balance(&mut test_case, lender2.clone());
 
-    let price: PriceResponse<Lpn> = test_case
-        .app
-        .query()
-        .query_wasm_smart(contract_address(&test_case), &LppQueryMsg::Price())
-        .unwrap();
+    let price = query_price(&test_case);
     assert_eq!(
         price::total(balance_nlpn2.balance, price.0).unwrap(),
         common::lpn_coin(test_deposit - rounding_error)
@@ -1302,6 +1286,16 @@ fn balance<ProtoReg, T, P, R, L, O, TAlarms>(
             contract_address(test_case),
             &LppQueryMsg::Balance { address },
         )
+        .unwrap()
+}
+
+fn query_price<ProtoReg, T, P, R, L, O, TAlarms>(
+    test_case: &TestCase<ProtoReg, T, P, R, L, Addr, O, TAlarms>,
+) -> PriceResponse<Lpn> {
+    test_case
+        .app
+        .query()
+        .query_wasm_smart(contract_address(test_case), &LppQueryMsg::Price())
         .unwrap()
 }
 
