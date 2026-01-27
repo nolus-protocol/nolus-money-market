@@ -134,7 +134,7 @@ mod test {
 
     use crate::{
         coin::Amount,
-        percent::Percent100,
+        percent::{Percent, Percent100},
         price::{
             self, Price,
             test::{self, Coin, QuoteCoin, QuoteQuoteCoin},
@@ -344,12 +344,25 @@ mod test {
     }
 
     #[test]
-    fn lossy_mul_underflow() {
+    fn lossy_mul_denominator_overflow() {
         let price = price::total_of(coin::coin2(Amount::MAX)).is(coin::coin1(11));
         let rhs_1 = Percent100::from_permille(9);
         assert!(price.lossy_mul(rhs_1).is_none());
 
         let rhs_2 = SimpleFraction::new(coin::coin2(1), coin::coin2(100));
+        assert!(price.lossy_mul(rhs_2).is_none());
+    }
+
+    #[test]
+    fn lossy_mul_numerator_overflow() {
+        let price = price::total_of(coin::coin2(3)).is(coin::coin1(Amount::MAX));
+        let rhs_1 = Percent::from_permille(2_u32.pow(14) - 1);
+
+        assert!(price.lossy_mul(rhs_1).is_none());
+        // (Amount::MAX * 2^14 -1) / (3 * 1000) where  (2^14 -1) is divisible by 3, but the result is still coprime to both Amount::MAX and 1000.
+        // bitwise form -> (128 + 13) / (2 + 10) = (128 + 13) / 12 where the numerator overflows with 13 bits, which cannot be trimmed from the denominator (12)
+
+        let rhs_2 = SimpleFraction::new(coin::coin2(100), coin::coin2(1));
         assert!(price.lossy_mul(rhs_2).is_none());
     }
 
