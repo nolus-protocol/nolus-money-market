@@ -249,7 +249,7 @@ fn deposit_and_withdraw() {
     deposit(&mut test_case, lender2.clone(), test_deposit);
 
     // got rounding error
-    let balance_nlpn = balance(&mut test_case, lender2.clone());
+    let balance_nlpn = balance(&test_case, lender2.clone());
 
     let price = query_price(&test_case);
     assert_eq!(
@@ -260,7 +260,7 @@ fn deposit_and_withdraw() {
     // other deposits should not change asserts for lender2
     deposit(&mut test_case, lender3.clone(), post_deposit);
 
-    let balance_nlpn = balance(&mut test_case, lender2.clone());
+    let balance_nlpn = balance(&test_case, lender2.clone());
 
     let price = query_price(&test_case);
     assert_eq!(
@@ -271,7 +271,7 @@ fn deposit_and_withdraw() {
     // loans should not change asserts for lender2, the default loan
     instantiate_lease(&mut test_case, loan, Percent100::from_percent(50));
 
-    let balance_nlpn2 = balance(&mut test_case, lender2.clone());
+    let balance_nlpn2 = balance(&test_case, lender2.clone());
 
     let price = query_price(&test_case);
     assert_eq!(
@@ -286,13 +286,13 @@ fn deposit_and_withdraw() {
     // partial withdraw
     burn(&mut test_case, lender2.clone(), withdraw_amount_nlpn);
 
-    let balance_nlpn = balance(&mut test_case, lender2.clone());
+    let balance_nlpn = balance(&test_case, lender2.clone());
     assert_eq!(balance_nlpn.balance, Coin::new(rest_nlpn));
 
     // full withdraw, should close lender's account
     burn(&mut test_case, lender2.clone(), rest_nlpn);
 
-    let balance_nlpn = balance(&mut test_case, lender2);
+    let balance_nlpn = balance(&test_case, lender2);
     assert_eq!(balance_nlpn.balance, Coin::ZERO);
 }
 
@@ -393,7 +393,7 @@ fn loan_open_and_repay() {
         LOCAL_ADDON_OPTIMAL_INTEREST_RATE,
     );
 
-    match quote(&mut test_case, loan1) {
+    match quote(&test_case, loan1) {
         QueryQuoteResponse::QuoteInterestRate(quote) => assert_eq!(quote, interest1),
         _ => panic!("no liquidity"),
     }
@@ -419,7 +419,7 @@ fn loan_open_and_repay() {
     let interest2 = interest_rate(loan1 + loan2 + total_interest_due.to_primitive(), balance1);
     let loan2_coin = common::lpn_coin(loan2);
 
-    match quote(&mut test_case, loan2) {
+    match quote(&test_case, loan2) {
         QueryQuoteResponse::QuoteInterestRate(quote) => assert_eq!(quote, interest2),
         _ => panic!("no liquidity"),
     }
@@ -634,7 +634,7 @@ fn compare_lpp_states() {
         LOCAL_ADDON_OPTIMAL_INTEREST_RATE,
     );
 
-    match quote(&mut test_case, loan1) {
+    match quote(&test_case, loan1) {
         QueryQuoteResponse::QuoteInterestRate(quote) => assert_eq!(quote, interest1),
         _ => panic!("no liquidity"),
     }
@@ -659,7 +659,7 @@ fn compare_lpp_states() {
     let interest2 = interest_rate(loan1 + loan2 + total_interest_due.to_primitive(), balance1);
     let loan2_coin = common::lpn_coin(loan2);
 
-    match quote(&mut test_case, loan2) {
+    match quote(&test_case, loan2) {
         QueryQuoteResponse::QuoteInterestRate(quote) => assert_eq!(quote, interest2),
         _ => panic!("no liquidity"),
     }
@@ -859,7 +859,7 @@ fn test_rewards() {
     // the initial price is 1 Nlpn = 1 LPN
     assert_eq!(
         deposit1,
-        balance(&mut test_case, lender1.clone()).balance.into()
+        balance(&test_case, lender1.clone()).balance.into()
     );
 
     // push the price from 1, should be allowed as an interest from previous leases for example.
@@ -1260,7 +1260,7 @@ fn try_claim_rewards<ProtoReg, T, P, R, L, O, TAlarms>(
 }
 
 fn quote<ProtoReg, T, P, R, L, O, TAlarms>(
-    test_case: &mut TestCase<ProtoReg, T, P, R, L, Addr, O, TAlarms>,
+    test_case: &TestCase<ProtoReg, T, P, R, L, Addr, O, TAlarms>,
     amount: Amount,
 ) -> QueryQuoteResponse {
     test_case
@@ -1276,7 +1276,7 @@ fn quote<ProtoReg, T, P, R, L, O, TAlarms>(
 }
 
 fn balance<ProtoReg, T, P, R, L, O, TAlarms>(
-    test_case: &mut TestCase<ProtoReg, T, P, R, L, Addr, O, TAlarms>,
+    test_case: &TestCase<ProtoReg, T, P, R, L, Addr, O, TAlarms>,
     address: Addr,
 ) -> BalanceResponse {
     test_case
