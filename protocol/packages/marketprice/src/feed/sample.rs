@@ -166,7 +166,7 @@ mod test {
     use finance::{
         coin::{Amount, Coin},
         duration::Duration,
-        price,
+        price::{self},
     };
     use sdk::cosmwasm_std::{Addr, Timestamp};
 
@@ -249,6 +249,67 @@ mod test {
         assert_eq!(Some(Sample { price: Some(p23) }), samples.next());
         assert_eq!(Some(Sample { price: Some(p1) }), samples.next());
         assert_eq!(Some(Sample { price: Some(p1) }), samples.next());
+    }
+
+    #[should_panic]
+    #[test]
+    fn price_sum_overflow_from_c() {
+        let start_from = Timestamp::from_seconds(150);
+        let t1 = Timestamp::from_seconds(160);
+        let t2 = Timestamp::from_seconds(165);
+
+        let p1 = price(Amount::MAX / 2, 1);
+        let p2 = price(Amount::MAX / 2 + 1, 1);
+
+        let obs = vec![
+            Observation::new(feeder1(), t1, p1),
+            Observation::new(feeder2(), t2, p2),
+        ];
+
+        let mut samples =
+            sample::from_observations(obs.iter(), start_from, Duration::from_secs(25));
+
+        samples.next();
+    }
+
+    #[should_panic]
+    #[test]
+    fn price_sum_overflow_from_quotec() {
+        let start_from = Timestamp::from_seconds(150);
+        let t1 = Timestamp::from_seconds(160);
+        let t2 = Timestamp::from_seconds(165);
+
+        let p1 = price(1, Amount::MAX / 2);
+        let p2 = price(1, (Amount::MAX / 2) + 2);
+
+        let obs = vec![
+            Observation::new(feeder1(), t1, p1),
+            Observation::new(feeder2(), t2, p2),
+        ];
+
+        let mut samples =
+            sample::from_observations(obs.iter(), start_from, Duration::from_secs(25));
+
+        samples.next();
+    }
+    #[test]
+    fn price_max_sum() {
+        let start_from = Timestamp::from_seconds(150);
+        let t1 = Timestamp::from_seconds(160);
+        let t2 = Timestamp::from_seconds(165);
+
+        let p1 = price(1, Amount::MAX / 2);
+        let p2 = price(1, (Amount::MAX / 2) + 1);
+
+        let obs = vec![
+            Observation::new(feeder1(), t1, p1),
+            Observation::new(feeder2(), t2, p2),
+        ];
+
+        let mut samples =
+            sample::from_observations(obs.iter(), start_from, Duration::from_secs(25));
+
+        samples.next();
     }
 
     fn price(of: Amount, is: Amount) -> price::Price<TheCurrency, TheQuote> {
