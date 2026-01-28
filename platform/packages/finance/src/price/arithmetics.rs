@@ -274,7 +274,17 @@ mod test {
         // 2^128 / FACTOR (10^18) / 2^64 ~ 18.446744073709553
         let p1 = price::total_of(coin::coin2(1)).is(coin::coin1(Amount::from(u64::MAX) * 19u128));
         let p2 = Price::identity();
-        assert!(p1.lossy_add(p2).is_none())
+        assert!(p1.lossy_add(p2).is_none());
+    }
+
+    #[should_panic]
+    #[test]
+    fn lossy_add_too_little_values() {
+        // To add both Prices, they get represented as 1 / [(Amount::MAX / 2) * ((Amount::MAX / 2) + 1)].
+        //The denominator takes 254 bits (126 above Amount), which cannot be trimmed from the numerator, which only takes 1 bite
+        let a = Price::new(coin::coin2(Amount::MAX / 2), coin::coin1(1));
+        let b = Price::new(coin::coin2((Amount::MAX / 2) + 1), coin::coin1(1));
+        a.lossy_add(b);
     }
 
     #[test]
