@@ -261,7 +261,7 @@ mod test {
         let p1 = price(Amount::MAX / 2, 1);
         let p2 = price(Amount::MAX / 2 + 1, 1);
 
-        let obs = vec![
+        let obs = [
             Observation::new(feeder1(), t1, p1),
             Observation::new(feeder2(), t2, p2),
         ];
@@ -282,7 +282,7 @@ mod test {
         let p1 = price(1, Amount::MAX / 2);
         let p2 = price(1, (Amount::MAX / 2) + 2);
 
-        let obs = vec![
+        let obs = [
             Observation::new(feeder1(), t1, p1),
             Observation::new(feeder2(), t2, p2),
         ];
@@ -301,7 +301,7 @@ mod test {
         let p1 = price(1, Amount::MAX / 2);
         let p2 = price(1, (Amount::MAX / 2) + 1);
 
-        let obs = vec![
+        let obs = [
             Observation::new(feeder1(), t1, p1),
             Observation::new(feeder2(), t2, p2),
         ];
