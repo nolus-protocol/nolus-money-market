@@ -2,11 +2,12 @@ use std::marker::PhantomData;
 
 use currency::{CurrencyDTO, CurrencyDef, Group, MemberOf};
 use finance::{
+    average_price::FeederCount,
     flatten::Flatten,
     price::{base::BasePrice, dto::PriceDTO},
 };
 use marketprice::{
-    FeederCount, ObservationsReadRepo, ObservationsRepo, config::Config, market_price::PriceFeeds,
+    ObservationsReadRepo, ObservationsRepo, config::Config, market_price::PriceFeeds,
 };
 use sdk::cosmwasm_std::{Addr, Timestamp};
 
@@ -199,8 +200,11 @@ mod test {
             Lpns as BaseCurrencies, PaymentGroup as PriceCurrencies,
             testing::{PaymentC1, PaymentC3, PaymentC4, PaymentC5, PaymentC6, PaymentC7},
         };
-        use finance::{duration::Duration, percent::Percent100, price::base::BasePrice};
-        use marketprice::{FeederCount, Repo, config::Config};
+        use finance::{
+            average_price::FeederCount, duration::Duration, percent::Percent100,
+            price::base::BasePrice,
+        };
+        use marketprice::{Repo, config::Config};
         use sdk::cosmwasm_std::{
             Addr, Storage,
             testing::{self, MockStorage},

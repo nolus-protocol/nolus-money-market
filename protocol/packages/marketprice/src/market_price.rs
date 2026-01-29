@@ -4,10 +4,13 @@ use currency::{
     self, AnyVisitor, Currency, CurrencyDTO, CurrencyDef, Group, InPoolWith, MemberOf, PairsGroup,
     PairsVisitor,
 };
-use finance::price::{
-    Price,
-    base::BasePrice,
-    dto::{PriceDTO, WithPrice, with_price},
+use finance::{
+    average_price::FeederCount,
+    price::{
+        Price,
+        base::BasePrice,
+        dto::{PriceDTO, WithPrice, with_price},
+    },
 };
 use sdk::cosmwasm_std::{Addr, Timestamp};
 
@@ -15,7 +18,6 @@ use crate::{
     config::Config,
     error::PriceFeedsError,
     feed::{ObservationsReadRepo, ObservationsRepo, PriceFeed},
-    feeders::Count,
 };
 
 pub struct PriceFeeds<'config, PriceG, ObservationsRepoImpl> {
@@ -42,7 +44,7 @@ where
     pub fn price<'self_, 'currency_dto, BaseC, BaseG, CurrenciesToBaseC>(
         &'self_ self,
         at: Timestamp,
-        total_feeders: Count,
+        total_feeders: FeederCount,
         mut leaf_to_base: CurrenciesToBaseC,
     ) -> Result<BasePrice<PriceG, BaseC, BaseG>, PriceFeedsError>
     where
@@ -68,7 +70,7 @@ where
         {
             feeds: &'feeds PriceFeeds<'config, G, ObservationsRepoImpl>,
             at: Timestamp,
-            total_feeders: Count,
+            total_feeders: FeederCount,
             leaf_to_base: CurrenciesToBaseC,
             _base_c: PhantomData<BaseC>,
             _base_g: PhantomData<BaseG>,
@@ -135,7 +137,7 @@ where
         amount_c: &CurrencyDTO<PriceG>,
         quote_c: &CurrencyDTO<PriceG>,
         at: Timestamp,
-        total_feeders: Count,
+        total_feeders: FeederCount,
     ) -> Result<Price<C, QuoteC>, PriceFeedsError>
     where
         C: Currency + MemberOf<PriceG>,
@@ -252,7 +254,7 @@ struct PriceCollect<
     leaf_to_base: CurrenciesToBaseC,
     feeds: &'feeds PriceFeeds<'config, G, ObservationsRepoImpl>,
     at: Timestamp,
-    total_feeders: Count,
+    total_feeders: FeederCount,
     current_c: &'currency CurrencyDTO<G>,
     _base_c: PhantomData<BaseC>,
     _base_g: PhantomData<BaseG>,
@@ -401,6 +403,7 @@ mod test {
         SuperGroupTestC3, SuperGroupTestC4, SuperGroupTestC5,
     };
     use finance::{
+        average_price::FeederCount,
         coin::Coin,
         duration::Duration,
         percent::Percent100,
@@ -408,13 +411,13 @@ mod test {
     };
     use sdk::cosmwasm_std::{Addr, Storage, Timestamp, testing::MockStorage};
 
-    use crate::{Repo, error::PriceFeedsError, feeders::Count, market_price::Config};
+    use crate::{Repo, error::PriceFeedsError, market_price::Config};
 
     use super::PriceFeeds;
 
     const FEEDER: &str = "0xifeege";
     const ROOT_NS: &str = "root_ns";
-    const TOTAL_FEEDERS: Count = Count::new_test(1);
+    const TOTAL_FEEDERS: FeederCount = FeederCount::new_test(1);
     const FEED_VALIDITY: Duration = Duration::from_secs(30);
     const SAMPLE_PERIOD_SECS: Duration = Duration::from_secs(5);
     const SAMPLES_NUMBER: u16 = 6;

@@ -4,15 +4,18 @@ use std::{
 };
 
 use currency::{Currency, CurrencyDTO, CurrencyDef, Group, MemberOf};
-use finance::price::{
-    Price,
-    base::{
-        BasePrice,
-        with_price::{self, WithPrice},
+use finance::{
+    average_price::FeederCount,
+    price::{
+        Price,
+        base::{
+            BasePrice,
+            with_price::{self, WithPrice},
+        },
+        dto::PriceDTO,
     },
-    dto::PriceDTO,
 };
-use marketprice::{FeederCount, Repo, config::Config as PriceConfig};
+use marketprice::{Repo, config::Config as PriceConfig};
 use platform::{
     dispatcher::{AlarmsDispatcher, Id},
     message::Response as MessageResponse,

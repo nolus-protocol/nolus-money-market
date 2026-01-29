@@ -1,9 +1,10 @@
 use std::collections::HashSet;
 
 use currency::Group;
+use finance::average_price::FeederCount;
 use serde::{Deserialize, Serialize};
 
-use marketprice::{FeederCount, feeders::PriceFeeders};
+use marketprice::feeders::PriceFeeders;
 use sdk::cosmwasm_std::{Addr, DepsMut, Storage};
 
 use crate::{api::Config, error::Error, result::Result};

@@ -1,8 +1,6 @@
 use currency::{Currency, CurrencyDTO, Group, MemberOf};
-use finance::price::Price;
-use marketprice::{
-    FeederCount, ObservationsReadRepo, error::PriceFeedsError, market_price::PriceFeeds,
-};
+use finance::{average_price::FeederCount, price::Price};
+use marketprice::{ObservationsReadRepo, error::PriceFeedsError, market_price::PriceFeeds};
 use sdk::cosmwasm_std::Timestamp;
 
 use crate::result::Result;

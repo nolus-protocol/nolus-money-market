@@ -1,9 +1,8 @@
 use std::collections::HashMap;
 
-use finance::{duration::Duration, price::Price, ratio::SimpleFraction};
+use finance::{average_price::FeederCount, duration::Duration, price::Price, ratio::SimpleFraction
+};
 use sdk::cosmwasm_std::{Addr, Timestamp};
-
-use crate::feeders::Count;
 
 use super::observation::Observation;
 
@@ -106,7 +105,7 @@ where
     fn end_of_period(&mut self) {
         let prices_len = self.sample_prices.len();
         let prices_count =
-            Count::try_from(prices_len).expect("count should fit within defined bounds");
+            FeederCount::try_from(prices_len).expect("count should fit within defined bounds");
 
         if prices_len > 0 {
             let mut values = self.sample_prices.values();

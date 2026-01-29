@@ -1,6 +1,6 @@
 use std::{collections::HashSet, marker::PhantomData};
 
-use finance::{percent::Percent100, price::Price};
+use finance::{average_price::FeederCount, percent::Percent100, price::Price};
 use observations::{Observations, ObservationsRead};
 use sdk::cosmwasm_std::{Addr, Timestamp};
 
@@ -8,7 +8,6 @@ use crate::{
     config::Config,
     error::{PriceFeedsError, Result},
     feed::sample::Sample,
-    feeders::Count,
 };
 
 pub(crate) use self::observation::Observation;
@@ -64,7 +63,7 @@ where
         &self,
         config: &Config,
         at: Timestamp,
-        total_feeders: Count,
+        total_feeders: FeederCount,
     ) -> Result<Price<C, QuoteC>> {
         let valid_since = config.feed_valid_since(at);
         // a trade-off of eager loading of the observations from the persistence
@@ -119,7 +118,7 @@ where
         &self,
         items: Observations,
         config: &Config,
-        total_feeders: Count,
+        total_feeders: FeederCount,
     ) -> bool
     where
         Observations: for<'item> Iterator<Item = &'items Observation<C, QuoteC>>,
@@ -127,7 +126,7 @@ where
         self.count_unique_feeders(items) >= config.min_feeders(total_feeders)
     }
 
-    fn count_unique_feeders<'items, Observations>(&self, items: Observations) -> Count
+    fn count_unique_feeders<'items, Observations>(&self, items: Observations) -> FeederCount
     where
         Observations: for<'item> Iterator<Item = &'items Observation<C, QuoteC>>,
     {
@@ -195,6 +194,7 @@ where
 mod test {
     use currency::test::{SuperGroupTestC4, SuperGroupTestC5};
     use finance::{
+        average_price::FeederCount,
         coin::{Amount, Coin},
         duration::Duration,
         percent::Percent100,
@@ -202,12 +202,12 @@ mod test {
     };
     use sdk::cosmwasm_std::{Addr, Timestamp};
 
-    use crate::{config::Config, error::PriceFeedsError, feeders::Count};
+    use crate::{config::Config, error::PriceFeedsError};
 
     use super::{PriceFeed, memory::InMemoryObservations, observations::Observations};
 
-    const ONE_FEEDER: Count = Count::new_test(1);
-    const TWO_FEEDERS: Count = Count::new_test(2);
+    const ONE_FEEDER: FeederCount = FeederCount::new_test(1);
+    const TWO_FEEDERS: FeederCount = FeederCount::new_test(2);
     const SAMPLE_PERIOD: Duration = Duration::from_secs(5);
     const SAMPLES_NUMBER: u16 = 12;
     const VALIDITY: Duration = Duration::from_secs(60);

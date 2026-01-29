@@ -5,13 +5,12 @@ use currency::test::{
     SuperGroupTestC3, SuperGroupTestC4, SuperGroupTestC5,
 };
 use currency::{CurrencyDef, Group, MemberOf};
-use finance::coin::Amount;
-use finance::price::base::BasePrice;
 use finance::{
-    coin::Coin,
+    average_price::FeederCount,
+    coin::{Amount, Coin},
     duration::Duration,
     percent::Percent100,
-    price::{self, Price, dto::PriceDTO},
+    price::{self, Price, base::BasePrice, dto::PriceDTO},
 };
 use sdk::{
     cosmwasm_std::{Storage, Timestamp, testing::MockStorage},
@@ -20,14 +19,13 @@ use sdk::{
 
 use crate::Repo;
 use crate::feed::ObservationsRepo;
-use crate::feeders::Count;
 use crate::{
     config::Config, error::PriceFeedsError, feeders::PriceFeeders, market_price::PriceFeeds,
 };
 
 const ROOT_NS: &str = "root_ns";
-const TOTAL_FEEDERS: Count = Count::new_test(1);
-const TWICE_TOTAL_FEEDERS: Count = Count::new_test(2);
+const TOTAL_FEEDERS: FeederCount = FeederCount::new_test(1);
+const TWICE_TOTAL_FEEDERS: FeederCount = FeederCount::new_test(2);
 const SAMPLE_PERIOD_SECS: u32 = 5;
 const SAMPLES_NUMBER: u16 = 12;
 const DISCOUNTING_FACTOR: Percent100 = Percent100::from_permille(750);
