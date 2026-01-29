@@ -2,6 +2,7 @@ use std::fmt::Debug;
 
 use crate::price::Price;
 
+
 #[cfg_attr(any(test, feature = "testing"), derive(PartialEq))]
 #[derive(Debug)]
 struct AveragePrice<C, QuoteC>
