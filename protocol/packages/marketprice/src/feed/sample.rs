@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use finance::{average_price::FeederCount, duration::Duration, price::Price, ratio::SimpleFraction
+use finance::{FeederCount, duration::Duration, price::Price, ratio::SimpleFraction
 };
 use sdk::cosmwasm_std::{Addr, Timestamp};
 

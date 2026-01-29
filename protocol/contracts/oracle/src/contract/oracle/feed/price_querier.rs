@@ -1,5 +1,5 @@
 use currency::{Currency, CurrencyDTO, Group, MemberOf};
-use finance::{average_price::FeederCount, price::Price};
+use finance::{FeederCount, price::Price};
 use marketprice::{ObservationsReadRepo, error::PriceFeedsError, market_price::PriceFeeds};
 use sdk::cosmwasm_std::Timestamp;
 

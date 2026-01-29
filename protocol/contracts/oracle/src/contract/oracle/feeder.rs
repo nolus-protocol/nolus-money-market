@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 
 use currency::Group;
-use finance::average_price::FeederCount;
+use finance::FeederCount;
 use serde::{Deserialize, Serialize};
 
 use marketprice::feeders::PriceFeeders;

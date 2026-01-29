@@ -1,6 +1,6 @@
 use std::{collections::HashSet, num::TryFromIntError};
 
-use finance::average_price::count::Count;
+use finance::FeederCount;
 use thiserror::Error;
 
 use sdk::{
@@ -90,15 +90,15 @@ impl PriceFeeders {
             .map_err(Into::into)
     }
 
-    pub fn total_registered(&self, storage: &dyn Storage) -> Result<Count, PriceFeedersError> {
+    pub fn total_registered(&self, storage: &dyn Storage) -> Result<FeederCount, PriceFeedersError> {
         self.feeders(storage)
             .map_err(PriceFeedersError::Std)
             .map(|feeders| count_of(&feeders))
     }
 }
 
-fn count_of<T>(db: &HashSet<T>) -> Count {
-    Count::try_from(db.len()).expect("registered feeders fit the allowed maximum!")
+fn count_of<T>(db: &HashSet<T>) -> FeederCount {
+    FeederCount::try_from(db.len()).expect("registered feeders fit the allowed maximum!")
 }
 
 #[cfg(test)]

@@ -5,7 +5,7 @@ use std::{
 
 use currency::{Currency, CurrencyDTO, CurrencyDef, Group, MemberOf};
 use finance::{
-    average_price::FeederCount,
+    FeederCount,
     price::{
         Price,
         base::{

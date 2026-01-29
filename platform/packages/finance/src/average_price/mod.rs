@@ -3,7 +3,7 @@ use std::fmt::Debug;
 use crate::price::Price;
 
 pub mod count;
-pub use count::Count as FeederCount;
+pub use count::Count;
 
 #[cfg_attr(any(test, feature = "testing"), derive(PartialEq))]
 #[derive(Debug)]

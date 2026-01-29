@@ -2,7 +2,7 @@ use std::marker::PhantomData;
 
 use currency::{CurrencyDTO, CurrencyDef, Group, MemberOf};
 use finance::{
-    average_price::FeederCount,
+    FeederCount,
     flatten::Flatten,
     price::{base::BasePrice, dto::PriceDTO},
 };
@@ -201,8 +201,7 @@ mod test {
             testing::{PaymentC1, PaymentC3, PaymentC4, PaymentC5, PaymentC6, PaymentC7},
         };
         use finance::{
-            average_price::FeederCount, duration::Duration, percent::Percent100,
-            price::base::BasePrice,
+            FeederCount, duration::Duration, percent::Percent100, price::base::BasePrice,
         };
         use marketprice::{Repo, config::Config};
         use sdk::cosmwasm_std::{
@@ -216,7 +215,7 @@ mod test {
         };
 
         const ROOT_NS: &str = "root";
-        const TOTAL_FEEDERS: FeederCount = FeederCount::new_test(1);
+        const TOTAL_FEEDERS: FeederCount = FeederCount::test_new(1);
 
         #[test]
         fn normal() {

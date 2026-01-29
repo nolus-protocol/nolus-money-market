@@ -1,8 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use finance::{
-    average_price::FeederCount, duration::Duration, fraction::Fraction, percent::Percent100,
-};
+use finance::{FeederCount, duration::Duration, fraction::Fraction, percent::Percent100};
 use sdk::cosmwasm_std::Timestamp;
 
 use crate::error::{self, PriceFeedsError};
@@ -164,7 +162,7 @@ mod unchecked {
 
 #[cfg(test)]
 mod test {
-    use finance::{average_price::FeederCount, duration::Duration, percent::Percent100};
+    use finance::{FeederCount, duration::Duration, percent::Percent100};
     use platform::tests as platform_tests;
     use sdk::cosmwasm_std::{self, StdError, Timestamp};
 
@@ -208,8 +206,8 @@ mod test {
             Percent100::from_percent(75),
         );
         assert_eq!(
-            FeederCount::new_test(exp),
-            c.min_feeders(FeederCount::new_test(total))
+            FeederCount::test_new(exp),
+            c.min_feeders(FeederCount::test_new(total))
         );
     }
     #[test]

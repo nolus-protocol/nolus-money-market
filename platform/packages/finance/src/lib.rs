@@ -17,3 +17,5 @@ pub mod zero;
 
 #[cfg(any(test, feature = "testing"))]
 pub mod test;
+
+pub use average_price::Count as FeederCount;

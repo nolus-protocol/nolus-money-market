@@ -1,6 +1,6 @@
 use std::{collections::HashSet, marker::PhantomData};
 
-use finance::{average_price::FeederCount, percent::Percent100, price::Price};
+use finance::{FeederCount, percent::Percent100, price::Price};
 use observations::{Observations, ObservationsRead};
 use sdk::cosmwasm_std::{Addr, Timestamp};
 
@@ -194,7 +194,7 @@ where
 mod test {
     use currency::test::{SuperGroupTestC4, SuperGroupTestC5};
     use finance::{
-        average_price::FeederCount,
+        FeederCount,
         coin::{Amount, Coin},
         duration::Duration,
         percent::Percent100,
@@ -206,8 +206,8 @@ mod test {
 
     use super::{PriceFeed, memory::InMemoryObservations, observations::Observations};
 
-    const ONE_FEEDER: FeederCount = FeederCount::new_test(1);
-    const TWO_FEEDERS: FeederCount = FeederCount::new_test(2);
+    const ONE_FEEDER: FeederCount = FeederCount::test_new(1);
+    const TWO_FEEDERS: FeederCount = FeederCount::test_new(2);
     const SAMPLE_PERIOD: Duration = Duration::from_secs(5);
     const SAMPLES_NUMBER: u16 = 12;
     const VALIDITY: Duration = Duration::from_secs(60);
