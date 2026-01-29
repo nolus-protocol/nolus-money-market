@@ -40,8 +40,10 @@ impl Count {
     /// Converts [self] into a reciprocal fraction
     ///
     /// Returns [None] if the Count is zero
-    pub fn try_into_reciprocal(self) -> Option<Ratio<Unit>> {
-        (self != Self::ZERO).then(|| Ratio::new(ONE, self.0))
+    pub fn try_into_reciprocal(self) -> Option<Ratio<Self>> {
+        (self != Self::ZERO).then(|| Ratio::new(Self::ONE, self))
+    }
+
     }
 }
 
@@ -106,6 +108,12 @@ impl TryFromMax<<Count as ToDoublePrimitive>::Double> for Count {
     }
 }
 
+impl From<Count> for Amount {
+    fn from(val: Count) -> Self {
+        val.0.into()
+    }
+}
+
 impl Zero for Count {
     const ZERO: Self = Self::ZERO;
 }
@@ -119,11 +127,11 @@ mod test {
 
     #[test]
     fn try_into_reciprocal_nonzero() {
-        let count = 4096;
+        let count = Count::test_new(4096);
 
         assert_eq!(
-            Ratio::new(1, count),
-            Count::test_new(count).try_into_reciprocal().unwrap()
+            Ratio::new(Count::ONE, count),
+            count.try_into_reciprocal().unwrap()
         );
     }
 
