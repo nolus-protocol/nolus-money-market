@@ -7,7 +7,7 @@ pub use count::Count;
 
 #[cfg_attr(any(test, feature = "testing"), derive(PartialEq))]
 #[derive(Debug)]
-struct AveragePrice<C, QuoteC>
+struct AveragePriceBuilder<C, QuoteC>
 where
     C: 'static + Debug,
     QuoteC: 'static + Debug,
@@ -17,7 +17,7 @@ where
     count: Count,
 }
 
-impl<C, QuoteC> AveragePrice<C, QuoteC>
+impl<C, QuoteC> AveragePriceBuilder<C, QuoteC>
 where
     C: 'static + Debug,
     QuoteC: 'static + Debug,
@@ -40,16 +40,16 @@ mod test {
         test::coin,
     };
 
-    use super::{AveragePrice, Count};
+    use super::{AveragePriceBuilder, Count};
 
     #[test]
     fn new() {
         assert_eq!(
-            AveragePrice {
+            AveragePriceBuilder {
                 total: price(1, 2),
                 count: Count::ONE
             },
-            AveragePrice::new(price(1, 2))
+            AveragePriceBuilder::new(price(1, 2))
         );
     }
 
