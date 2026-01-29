@@ -3,6 +3,7 @@ use std::ops::{Div, Rem};
 use gcd::Gcd;
 
 use crate::{
+    coin::Amount,
     fraction::Unit as FractionUnit,
     fractionable::{CommonDoublePrimitive, Fractionable, IntoMax, ToDoublePrimitive, TryFromMax},
     percent::Percent100,
@@ -10,7 +11,7 @@ use crate::{
     zero::Zero,
 };
 
-type Unit = u32;
+pub(super) type Unit = u32;
 const ZERO: Unit = 0;
 const ONE: Unit = 1;
 const MAX: Unit = u32::MAX;
@@ -44,6 +45,9 @@ impl Count {
         (self != Self::ZERO).then(|| Ratio::new(Self::ONE, self))
     }
 
+    #[cfg(test)]
+    pub(super) fn assert_nonzero(&self) {
+        debug_assert!(self != &Self::ZERO, "Count must be non-zero");
     }
 }
 

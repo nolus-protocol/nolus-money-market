@@ -1,11 +1,13 @@
 use std::fmt::Debug;
 
-use crate::price::Price;
+#[cfg(test)]
+use crate::average_price::count::Unit;
+use crate::{price::Price, ratio::SimpleFraction};
 
 pub mod count;
 pub use count::Count;
 
-#[cfg_attr(any(test, feature = "testing"), derive(PartialEq))]
+#[cfg_attr(test, derive(PartialEq))]
 #[derive(Debug)]
 struct AveragePriceBuilder<C, QuoteC>
 where
@@ -27,6 +29,27 @@ where
             total: initial,
             count: Count::ONE,
         }
+    }
+
+    #[cfg(test)]
+    fn test_new(initial: Price<C, QuoteC>, count: Unit) -> Self {
+        let count = Count::test_new(count);
+        count.assert_nonzero();
+        Self {
+            total: initial,
+            count,
+        }
+    }
+
+    pub fn calculate(self) -> Option<Price<C, QuoteC>> {
+        self.total.lossy_mul(Self::reciprocal_count(self.count))
+    }
+
+    fn reciprocal_count(count: Count) -> SimpleFraction<Count> {
+        count
+            .try_into_reciprocal()
+            .map(SimpleFraction::from)
+            .expect("Count in AveragePriceBuilder is never zero")
     }
 }
 
@@ -51,6 +74,13 @@ mod test {
             },
             AveragePriceBuilder::new(price(1, 2))
         );
+    }
+
+    #[test]
+    fn price_calculate() {
+        let builder = AveragePriceBuilder::test_new(price(3, 4), 5);
+        let exp = price(15, 4);
+        assert_eq!(Some(exp), builder.calculate());
     }
 
     fn price(amount: Amount, quote_amount: Amount) -> Price<SuperGroupTestC2, SuperGroupTestC1> {
