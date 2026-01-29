@@ -1,3 +1,4 @@
+pub mod average_price;
 pub mod coin;
 pub mod duration;
 pub mod error;
