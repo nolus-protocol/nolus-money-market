@@ -1,14 +1,12 @@
 use std::{collections::HashSet, num::TryFromIntError};
 
+use finance::average_price::count::Count;
 use thiserror::Error;
 
 use sdk::{
     cosmwasm_std::{Addr, StdError, StdResult, Storage},
     cw_storage_plus::Item,
 };
-
-mod count;
-pub use count::Count;
 
 /// Errors returned from Feeders
 #[derive(Error, Debug, PartialEq)]
@@ -60,7 +58,9 @@ impl PriceFeeders {
     ) -> Result<(), PriceFeedersError> {
         let mut db = self.feeders(storage)?;
 
-        count_of(&db).check_increment()?;
+        count_of(&db)
+            .check_increment()
+            .ok_or(PriceFeedersError::MaxFeederCount {})?;
 
         (!db.contains(&feeder))
             .then_some(())
