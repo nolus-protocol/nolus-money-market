@@ -19,8 +19,9 @@ const MAX: Unit = u32::MAX;
 pub struct Count(Unit);
 
 impl Count {
-    const ZERO: Self = Self(ZERO);
-    pub const MAX: Self = Self(MAX);
+    const ZERO: Self = Self::new(ZERO);
+    pub(super) const ONE: Self = Self::new(ONE);
+    pub const MAX: Self = Self::new(MAX);
 
     const fn new(count: Unit) -> Self {
         Self(count)
@@ -109,11 +110,10 @@ impl Zero for Count {
     const ZERO: Self = Self::ZERO;
 }
 
-/* #[cfg(test)]
+#[cfg(test)]
 mod test {
-    use finance::ratio::Ratio;
 
-    use crate::feeders::count::Unit;
+    use crate::{average_price::count::Unit, ratio::Ratio};
 
     use super::Count;
 
@@ -123,7 +123,7 @@ mod test {
 
         assert_eq!(
             Ratio::new(1, count),
-            Count::new_test(count).try_into_reciprocal().unwrap()
+            Count::test_new(count).try_into_reciprocal().unwrap()
         );
     }
 
@@ -134,15 +134,14 @@ mod test {
 
     #[test]
     fn can_increment_some() {
-        assert_eq!(Ok(()), Count::ZERO.check_increment());
-        assert_eq!(Ok(()), Count::new_test(100).check_increment());
-        assert_eq!(Ok(()), Count::new_test(65536).check_increment());
-        assert_eq!(Ok(()), Count::new_test(Unit::MAX - 1).check_increment());
+        assert_eq!(Some(()), Count::ZERO.check_increment());
+        assert_eq!(Some(()), Count::test_new(100).check_increment());
+        assert_eq!(Some(()), Count::test_new(65536).check_increment());
+        assert_eq!(Some(()), Count::test_new(Unit::MAX - 1).check_increment());
     }
 
     #[test]
     fn can_increment_none() {
-        assert!(Count::MAX.check_increment().is_err());
+        assert!(Count::MAX.check_increment().is_none());
     }
 }
- */

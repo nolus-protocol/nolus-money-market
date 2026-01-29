@@ -14,8 +14,7 @@ where
 {
     // An instance of AveragePrice will have at least one Price
     total: Price<C, QuoteC>,
-    // > 0; TODO: replace with Count
-    count: u32,
+    count: Count,
 }
 
 impl<C, QuoteC> AveragePrice<C, QuoteC>
@@ -26,29 +25,29 @@ where
     fn new(initial: Price<C, QuoteC>) -> Self {
         Self {
             total: initial,
-            count: 1,
+            count: Count::ONE,
         }
     }
 }
 
 #[cfg(test)]
 mod test {
-    use currency::test::SuperGroupTestC2;
+    use currency::test::{SuperGroupTestC1, SuperGroupTestC2};
 
     use crate::{
-        super::AveragePrice,
-        average_price::AveragePrice,
         coin::Amount,
-        price::{self, Price, PriceBuilder},
+        price::{self, Price},
         test::coin,
     };
+
+    use super::{AveragePrice, Count};
 
     #[test]
     fn new() {
         assert_eq!(
             AveragePrice {
                 total: price(1, 2),
-                count: 1
+                count: Count::ONE
             },
             AveragePrice::new(price(1, 2))
         );
