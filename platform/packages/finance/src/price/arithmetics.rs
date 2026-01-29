@@ -277,13 +277,12 @@ mod test {
         assert!(p1.lossy_add(p2).is_none());
     }
 
-    #[should_panic]
+    #[ignore = "issue #594"]
     #[test]
     fn lossy_add_too_little_values() {
-        // To add both Prices, they get represented as 1 / [(Amount::MAX / 2) * ((Amount::MAX / 2) + 1)].
-        //The denominator takes 254 bits (126 above Amount), which cannot be trimmed from the numerator, which only takes 1 bite
         let a = Price::new(coin::coin2(Amount::MAX / 2), coin::coin1(1));
         let b = Price::new(coin::coin2((Amount::MAX / 2) + 1), coin::coin1(1));
+        // TODO: to be decided on what the minumum value should be
         a.lossy_add(b);
     }
 

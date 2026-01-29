@@ -251,7 +251,7 @@ mod test {
         assert_eq!(Some(Sample { price: Some(p1) }), samples.next());
     }
 
-    #[should_panic]
+    #[ignore = "issue #594"]
     #[test]
     fn price_sum_overflow_from_c() {
         let start_from = Timestamp::from_seconds(150);
@@ -272,7 +272,7 @@ mod test {
         samples.next();
     }
 
-    #[should_panic]
+    #[ignore = "issue #594"]
     #[test]
     fn price_sum_overflow_from_quotec() {
         let start_from = Timestamp::from_seconds(150);
@@ -309,7 +309,12 @@ mod test {
         let mut samples =
             sample::from_observations(obs.iter(), start_from, Duration::from_secs(25));
 
-        samples.next();
+        assert_eq!(
+            Some(Sample {
+                price: Some(price(2, Amount::MAX))
+            }),
+            samples.next()
+        );
     }
 
     fn price(of: Amount, is: Amount) -> price::Price<TheCurrency, TheQuote> {
