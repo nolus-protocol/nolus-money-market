@@ -77,7 +77,7 @@ where
     /// value of the prices. The rounding would be done by shifting to
     /// the right both amounts of the price with a bigger denominator
     /// until a * d + b * c and b * d do not overflow.
-    fn lossy_add(self, rhs: Self) -> Option<Self> {
+    pub(crate) fn lossy_add(self, rhs: Self) -> Option<Self> {
         const FACTOR: Amount = 1_000_000_000_000_000_000; // 1*10^18
         let factored_amount = Coin::new(FACTOR);
 
