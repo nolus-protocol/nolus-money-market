@@ -1,6 +1,8 @@
 use std::collections::HashMap;
 
-use finance::{FeederCount, duration::Duration, price::Price, ratio::SimpleFraction
+use finance::{
+    duration::Duration,
+    price::{Price, average::PriceAccumulator},
 };
 use sdk::cosmwasm_std::{Addr, Timestamp};
 
@@ -104,25 +106,18 @@ where
 
     fn end_of_period(&mut self) {
         let prices_len = self.sample_prices.len();
-        let prices_count =
-            FeederCount::try_from(prices_len).expect("count should fit within defined bounds");
 
         if prices_len > 0 {
             let mut values = self.sample_prices.values();
-            let first = values
+            let initial = values
                 .next()
+                .map(|price| PriceAccumulator::init_with(*price))
                 .expect("should have been checked that there is at least one member");
 
-            let sum = values.fold(*first, |acc, current| acc + *current);
-
-            let reciprocal = prices_count
-                .try_into_reciprocal()
-                .expect("should have provided positive value for count");
-
-            let avg = sum
-                .lossy_mul(SimpleFraction::from(reciprocal))
-                .expect("The reciprocal should be less or equal to 1");
-
+            let avg = values
+                .try_fold(initial, |acc, next| acc.try_add(*next))
+                .and_then(|acc| acc.average())
+                .expect("TODO: propagate calculation error");
             self.last_sample = Sample { price: Some(avg) };
         }
 
