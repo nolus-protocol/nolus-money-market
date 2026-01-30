@@ -6,7 +6,7 @@ pub(crate) mod checked_mul;
 
 /// Defines a `CommonDouble` type, which is the [ToDoublePrimitive::Double] of either domain types: `Self` or `Other`.
 ///
-/// `CommonDouble` is used as a wider buffer for performing multiplication opperations without an overflow.
+/// `CommonDouble` is used as a wider buffer for performing multiplication operations without an overflow.
 pub trait CommonDoublePrimitive<Other> {
     type CommonDouble: CheckedMul<Output = Self::CommonDouble> + Div<Output = Self::CommonDouble>;
 }
