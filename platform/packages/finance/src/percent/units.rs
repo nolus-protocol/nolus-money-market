@@ -5,7 +5,6 @@ use crate::{
     percent::bound::BoundPercent,
 };
 
-// TODO Remove once integration tests use BoundPercent::of(Coin)
 impl<const UPPER_BOUND: Units> CommonDoublePrimitive<BoundPercent<UPPER_BOUND>> for Units {
     type CommonDouble = DoubleBoundPercentPrimitive;
 }
