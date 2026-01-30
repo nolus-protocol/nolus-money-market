@@ -1,4 +1,3 @@
-pub mod average_price;
 pub mod coin;
 pub mod duration;
 pub mod error;
@@ -18,4 +17,4 @@ pub mod zero;
 #[cfg(any(test, feature = "testing"))]
 pub mod test;
 
-pub use average_price::Count as FeederCount;
+pub use price::average::Count as FeederCount;

@@ -127,10 +127,9 @@ impl Zero for Count {
 
 #[cfg(test)]
 mod test {
+    use crate::ratio::Ratio;
 
-    use crate::{average_price::count::Unit, ratio::Ratio};
-
-    use super::Count;
+    use super::{Count, Unit};
 
     #[test]
     fn try_into_reciprocal_nonzero() {

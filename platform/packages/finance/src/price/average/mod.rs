@@ -1,8 +1,8 @@
 use std::fmt::Debug;
 
-#[cfg(test)]
-use crate::average_price::count::Unit;
 use crate::{price::Price, ratio::SimpleFraction};
+#[cfg(test)]
+use count::Unit;
 
 pub mod count;
 pub use count::Count;
@@ -67,13 +67,12 @@ mod test {
     use currency::test::{SuperGroupTestC1, SuperGroupTestC2};
 
     use crate::{
-        average_price::Unit,
         coin::Amount,
         price::{self, Price},
         test::coin,
     };
 
-    use super::{Count, PriceAccumulator};
+    use super::{Count, PriceAccumulator, count::Unit};
 
     #[test]
     fn init_with() {
