@@ -1,4 +1,4 @@
-use std::{collections::HashSet, fmt::Debug, marker::PhantomData};
+use std::{collections::HashSet, marker::PhantomData};
 
 use finance::{percent::Percent100, price::Price};
 use observations::{Observations, ObservationsRead};
@@ -50,8 +50,8 @@ where
 
 impl<C, QuoteC, ObservationsImpl> PriceFeed<C, QuoteC, ObservationsImpl>
 where
-    C: 'static + Debug,
-    QuoteC: 'static + Debug,
+    C: 'static,
+    QuoteC: 'static,
     ObservationsImpl: ObservationsRead<C = C, QuoteC = QuoteC>,
 {
     /// Calculate the price of this feed
@@ -170,8 +170,8 @@ fn calc_for_next_period<C, QuoteC>(
     discount_factor: Percent100,
 ) -> Result<Price<C, QuoteC>>
 where
-    C: 'static + Debug,
-    QuoteC: 'static + Debug,
+    C: 'static,
+    QuoteC: 'static,
 {
     current
         .lossy_mul(discount_factor)

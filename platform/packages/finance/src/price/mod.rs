@@ -1,4 +1,4 @@
-use std::fmt::Debug;
+use std::fmt::{Debug, Formatter};
 
 use serde::{Deserialize, Serialize};
 
@@ -42,7 +42,7 @@ where
 /// Both amounts a price is composed of should be non-zero.
 ///
 /// Not designed to be used in public APIs
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Serialize, Deserialize)]
 #[serde(bound(serialize = "", deserialize = ""))]
 pub struct Price<C, QuoteC> {
     amount: Coin<C>,
@@ -136,6 +136,15 @@ where
     C: 'static,
     QuoteC: 'static,
 {
+}
+
+impl<C, QuoteC> Debug for Price<C, QuoteC> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Price")
+            .field("amount", &self.amount)
+            .field(" amount_quote", &self.amount_quote)
+            .finish()
+    }
 }
 
 impl<C, QuoteC> Eq for Price<C, QuoteC>
