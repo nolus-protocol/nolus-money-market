@@ -23,7 +23,6 @@ pub use self::{
 pub(crate) use fractionable::DoubleCoinPrimitive;
 
 mod amount;
-mod amount_serde;
 mod dto;
 mod external;
 mod fraction;
@@ -36,7 +35,7 @@ pub type NonZeroAmount = NonZeroU128;
 
 #[derive(Serialize, Deserialize)]
 pub struct Coin<C> {
-    #[serde(with = "amount_serde")]
+    #[serde(with = "amount::serde")]
     amount: Amount,
     #[serde(skip)]
     currency: PhantomData<C>,

@@ -1,6 +1,6 @@
 use std::{collections::HashSet, marker::PhantomData};
 
-use finance::{fraction::FractionLegacy, price::Price};
+use finance::{percent::Percent100, price::Price};
 use observations::{Observations, ObservationsRead};
 use sdk::cosmwasm_std::{Addr, Timestamp};
 
@@ -82,16 +82,21 @@ where
 
         let samples_nb = config.samples_number().into();
 
-        samples
+        let mut price_samples = samples
             .take(samples_nb)
             .map(Sample::into_maybe_price)
             .skip_while(Option::is_none)
             // no `price.expect(msg)` since on Rust 1.86 `clippy::unwrap-in-result` is triggered. TODO once increment the version
-            .map(|price| Option::expect(price, "sample prices should keep being present"))
-            .reduce(|acc, sample_price| {
-                discount_factor.of(sample_price) + discount_factor.complement().of(acc)
-            })
+            .map(|price| Option::expect(price, "sample prices should keep being present"));
+
+        price_samples
+            .next()
             .ok_or(PriceFeedsError::NoPrice {})
+            .and_then(|first| {
+                price_samples.try_fold(first, |acc, current| {
+                    calc_for_next_period(acc, current, discount_factor)
+                })
+            })
     }
 
     fn valid_observations(&self, since: &Timestamp) -> Result<Vec<Observation<C, QuoteC>>> {
@@ -157,6 +162,33 @@ where
             })
             .map(|()| self)
     }
+}
+
+fn calc_for_next_period<C, QuoteC>(
+    acc: Price<C, QuoteC>,
+    current: Price<C, QuoteC>,
+    discount_factor: Percent100,
+) -> Result<Price<C, QuoteC>>
+where
+    C: 'static,
+    QuoteC: 'static,
+{
+    current
+        .lossy_mul(discount_factor)
+        .ok_or_else(|| PriceFeedsError::overflow_lossy_mul(current, discount_factor))
+        .and_then(|weighted_current| {
+            acc.lossy_mul(discount_factor.complement())
+                .ok_or_else(|| {
+                    PriceFeedsError::overflow_lossy_mul(acc, discount_factor.complement())
+                })
+                .and_then(|weighted_previous| {
+                    weighted_current
+                        .checked_add(weighted_previous)
+                        .ok_or_else(|| {
+                            PriceFeedsError::overflow_add(weighted_current, weighted_previous)
+                        })
+                })
+        })
 }
 
 #[cfg(test)]

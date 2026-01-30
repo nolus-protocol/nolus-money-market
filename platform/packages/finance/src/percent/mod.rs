@@ -2,15 +2,21 @@ use bound::BoundPercent;
 
 use crate::{
     error::Error,
-    fraction::{Fraction, FractionLegacy, Unit as FractionUnit},
-    fractionable::{CommonDoublePrimitive, Fractionable, FractionableLegacy, IntoMax},
+    fraction::{Fraction, ToFraction, Unit as FractionUnit},
+    fractionable::{CommonDoublePrimitive, Fractionable, IntoMax},
     ratio::{Ratio, SimpleFraction},
-    rational::{Rational, RationalLegacy},
+    rational::Rational,
 };
+
+pub(crate) use fractionable::DoubleBoundPercentPrimitive;
 
 pub mod bound;
 mod fraction;
 mod fractionable;
+
+// TODO Remove once integration tests use BoundPercent::of(Coin)
+#[cfg(any(test, feature = "testing"))]
+mod units;
 
 pub type Units = u32;
 pub type Percent100 = BoundPercent<{ Percent::HUNDRED.units() }>;
@@ -30,7 +36,7 @@ impl Percent100 {
     {
         debug_assert!(parts <= total);
 
-        Fraction::of(&Ratio::new(parts, total), Self::HUNDRED)
+        Ratio::new(parts, total).of(Self::HUNDRED)
     }
 
     fn to_ratio(self) -> Ratio<Self> {
@@ -44,7 +50,7 @@ impl Percent {
         Self: Fractionable<U>,
         U: FractionUnit + IntoMax<<Self as CommonDoublePrimitive<U>>::CommonDouble>,
     {
-        Rational::of(&SimpleFraction::new(nominator, denominator), Self::HUNDRED)
+        SimpleFraction::new(nominator, denominator).of(Self::HUNDRED)
     }
 }
 
@@ -54,18 +60,7 @@ impl Fraction<Self> for Percent100 {
         Self: IntoMax<A::CommonDouble>,
         A: Fractionable<Self>,
     {
-        // TODO remove the full syntax when removing the FractionLegacy
-        Fraction::of(&self.to_ratio(), whole)
-    }
-}
-
-// TODO remove when implement Fractionable<BoundPercent> for Price
-impl FractionLegacy<Units> for Percent100 {
-    fn of<A>(&self, whole: A) -> A
-    where
-        A: FractionableLegacy<Units>,
-    {
-        FractionLegacy::of(&Ratio::new(self.units(), Self::HUNDRED.units()), whole)
+        self.to_ratio().of(whole)
     }
 }
 
@@ -75,17 +70,7 @@ impl Rational<Self> for Percent {
         Self: IntoMax<A::CommonDouble>,
         A: Fractionable<Self>,
     {
-        // TODO remove the full syntax when removing the RationalLegacy
-        Rational::of(&self.to_fraction(), whole)
-    }
-}
-
-impl RationalLegacy<Units> for Percent {
-    fn of<A>(&self, whole: A) -> Option<A>
-    where
-        A: FractionableLegacy<Units>,
-    {
-        Some(whole.safe_mul(self))
+        self.to_fraction().of(whole)
     }
 }
 

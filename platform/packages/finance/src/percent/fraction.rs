@@ -6,8 +6,10 @@ use std::{
 use gcd::Gcd;
 
 use crate::{
-    fraction::Unit as FractionUnit,
+    coin::Amount,
+    fraction::{ToFraction, Unit as FractionUnit},
     percent::{Units, bound::BoundPercent},
+    ratio::SimpleFraction,
     zero::Zero,
 };
 
@@ -69,4 +71,19 @@ where
 
 impl<const UPPER_BOUND: Units> Zero for BoundPercent<UPPER_BOUND> {
     const ZERO: Self = Self::ZERO;
+}
+
+impl<const UPPER_BOUND: Units> ToFraction<Self> for BoundPercent<UPPER_BOUND> {
+    fn to_fraction(self) -> SimpleFraction<Self> {
+        SimpleFraction::new(self, Self::HUNDRED)
+    }
+}
+
+impl<const UPPER_BOUND: Units> ToFraction<Amount> for BoundPercent<UPPER_BOUND> {
+    fn to_fraction(self) -> SimpleFraction<Amount> {
+        SimpleFraction::new(
+            self.to_primitive().into(),
+            Self::HUNDRED.to_primitive().into(),
+        )
+    }
 }

@@ -5,12 +5,7 @@ use std::ops::{Add, Sub};
 
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    coin::{Amount, DoubleCoinPrimitive},
-    error::Error,
-    fraction::Unit as FractionUnit,
-    ratio::{RatioLegacy, SimpleFraction},
-};
+use crate::error::Error;
 
 use super::Units;
 
@@ -79,13 +74,6 @@ impl<const UPPER_BOUND: Units> BoundPercent<UPPER_BOUND> {
             None
         }
     }
-
-    pub(crate) fn to_fraction<U>(self) -> SimpleFraction<U>
-    where
-        U: FractionUnit + From<Self>,
-    {
-        SimpleFraction::new(self.into(), Self::HUNDRED.into())
-    }
 }
 
 impl<const UPPER_BOUND: Units> From<BoundPercent<UPPER_BOUND>> for Units {
@@ -123,30 +111,6 @@ impl<const UPPER_BOUND: Units> Display for BoundPercent<UPPER_BOUND> {
     }
 }
 
-// TODO: Revisit it's usage after refactoring Fractionable
-impl<const UPPER_BOUND: Units> From<BoundPercent<UPPER_BOUND>> for Amount {
-    fn from(percent: BoundPercent<UPPER_BOUND>) -> Self {
-        Amount::from(percent.0)
-    }
-}
-
-// TODO: Remove when Fractionable trait boundaries include the traits ToPrimitive and TryFromPrimitive
-impl<const UPPER_BOUND: Units> From<BoundPercent<UPPER_BOUND>> for DoubleCoinPrimitive {
-    fn from(percent: BoundPercent<UPPER_BOUND>) -> Self {
-        percent.units().into()
-    }
-}
-
-impl<const UPPER_BOUND: Units> RatioLegacy<Units> for BoundPercent<UPPER_BOUND> {
-    fn parts(&self) -> Units {
-        self.0
-    }
-
-    fn total(&self) -> Units {
-        Self::HUNDRED.0
-    }
-}
-
 #[cfg(any(test, feature = "testing"))]
 impl<const UPPER_BOUND: Units> Add for BoundPercent<UPPER_BOUND> {
     type Output = Self;
@@ -171,7 +135,7 @@ impl<const UPPER_BOUND: Units> Sub for BoundPercent<UPPER_BOUND> {
 #[cfg(test)]
 mod test {
     use crate::{
-        fraction::Fraction,
+        fraction::{Fraction, ToFraction},
         percent::{Percent, Percent100, Units, test},
         ratio::SimpleFraction,
         rational::Rational,

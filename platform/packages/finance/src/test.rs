@@ -38,11 +38,11 @@ pub mod coin {
         }
     }
 
-    pub fn coin1(amount: Amount) -> Coin<SuperGroupTestC1> {
+    pub const fn coin1(amount: Amount) -> Coin<SuperGroupTestC1> {
         Coin::new(amount)
     }
 
-    pub fn coin2(amount: Amount) -> Coin<SuperGroupTestC2> {
+    pub const fn coin2(amount: Amount) -> Coin<SuperGroupTestC2> {
         Coin::new(amount)
     }
 }

@@ -34,7 +34,7 @@ pub struct CoinDTO<G>
 where
     G: Group,
 {
-    #[serde(with = "super::amount_serde")]
+    #[serde(with = "super::amount::serde")]
     amount: Amount,
     #[serde(rename = "ticker")] // it is more descriptive on the wire than currency
     currency: CurrencyDTO<G>,

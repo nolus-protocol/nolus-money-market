@@ -1,34 +1,13 @@
 use crate::{
     coin::{Coin, DoubleCoinPrimitive},
-    fractionable::{
-        CommonDoublePrimitive, Fractionable, FractionableLegacy, HigherRank, IntoMax,
-        ToDoublePrimitive, TryFromMax,
-    },
+    fractionable::{CommonDoublePrimitive, Fractionable, IntoDoublePrimitive, IntoMax, TryFromMax},
     percent::{Units, bound::BoundPercent},
-    ratio::RatioLegacy,
 };
 
-// TODO remove after implementing Fractionable<BoundPercent> for Price
-impl<const UPPER_BOUND: Units> FractionableLegacy<Units> for BoundPercent<UPPER_BOUND> {
-    #[track_caller]
-    fn safe_mul<R>(self, ratio: &R) -> Self
-    where
-        R: RatioLegacy<Units>,
-    {
-        Self::try_from(self.units().safe_mul(ratio))
-            .expect("TODO remove when refactor Fractionable. Resulting permille exceeds BoundPercent upper bound")
-    }
-}
-
-impl<T> HigherRank<T> for u32
-where
-    T: Into<Self>,
-{
-    type Type = u64;
-}
+pub(crate) type DoubleBoundPercentPrimitive = u64;
 
 impl<const UPPER_BOUND: Units> CommonDoublePrimitive<Self> for BoundPercent<UPPER_BOUND> {
-    type CommonDouble = <Self as ToDoublePrimitive>::Double;
+    type CommonDouble = DoubleBoundPercentPrimitive;
 }
 
 impl<C, const UPPER_BOUND: Units> CommonDoublePrimitive<Coin<C>> for BoundPercent<UPPER_BOUND> {
@@ -39,32 +18,30 @@ impl<const UPPER_BOUND: Units> Fractionable<Self> for BoundPercent<UPPER_BOUND> 
 
 impl<C, const UPPER_BOUND: Units> Fractionable<Coin<C>> for BoundPercent<UPPER_BOUND> {}
 
-impl<const UPPER_BOUND: Units> IntoMax<<Self as ToDoublePrimitive>::Double>
-    for BoundPercent<UPPER_BOUND>
-{
-    fn into_max(self) -> <Self as ToDoublePrimitive>::Double {
-        self.to_double()
+impl<const UPPER_BOUND: Units> IntoMax<DoubleBoundPercentPrimitive> for BoundPercent<UPPER_BOUND> {
+    fn into_max(self) -> DoubleBoundPercentPrimitive {
+        self.into_double()
     }
 }
 
 impl<const UPPER_BOUND: Units> IntoMax<DoubleCoinPrimitive> for BoundPercent<UPPER_BOUND> {
     fn into_max(self) -> DoubleCoinPrimitive {
-        self.to_double().into()
+        self.into_double().into()
     }
 }
 
-impl<const UPPER_BOUND: Units> ToDoublePrimitive for BoundPercent<UPPER_BOUND> {
-    type Double = u64;
+impl<const UPPER_BOUND: Units> IntoDoublePrimitive for BoundPercent<UPPER_BOUND> {
+    type Double = DoubleBoundPercentPrimitive;
 
-    fn to_double(&self) -> Self::Double {
+    fn into_double(self) -> Self::Double {
         self.units().into()
     }
 }
 
-impl<const UPPER_BOUND: Units> TryFromMax<<Self as ToDoublePrimitive>::Double>
+impl<const UPPER_BOUND: Units> TryFromMax<DoubleBoundPercentPrimitive>
     for BoundPercent<UPPER_BOUND>
 {
-    fn try_from_max(max: <Self as ToDoublePrimitive>::Double) -> Option<Self> {
+    fn try_from_max(max: DoubleBoundPercentPrimitive) -> Option<Self> {
         Units::try_from(max)
             .ok()
             .and_then(|units| Self::try_from(units).ok())
@@ -84,8 +61,8 @@ mod test {
     mod percent {
         use crate::{
             fraction::Fraction,
-            fractionable::HigherRank,
-            percent::{Percent, Percent100, Units},
+            fractionable::{IntoDoublePrimitive, TryFromMax},
+            percent::{DoubleBoundPercentPrimitive, Percent, Percent100, Units},
             rational::Rational,
         };
 
@@ -112,13 +89,14 @@ mod test {
                     .unwrap()
             );
 
-            let p_units: Units = 410;
-            let p64: <u32 as HigherRank<u8>>::Type = p_units.into();
-            let p64_res: <u32 as HigherRank<u8>>::Type = p64 * u64::from(Units::MAX) / 1000;
-            let p_units_res: Units = p64_res.try_into().expect("u64 -> Units overflow");
+            let percent = Percent::from_permille(410);
+            let p64 = percent.into_double();
+            let p64_res = p64 * DoubleBoundPercentPrimitive::from(Units::MAX) / 1000;
+            let percent_res = Percent::try_from_max(p64_res)
+                .expect("DoubleBoundPercentPrimitive -> Percent overflow");
 
             assert_eq!(
-                Percent::from_permille(p_units_res),
+                percent_res,
                 Percent::from_percent(41)
                     .of(Percent::from_permille(Units::MAX))
                     .unwrap()

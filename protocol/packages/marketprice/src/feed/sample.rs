@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use finance::{duration::Duration, fractionable::FractionableLegacy, price::Price};
+use finance::{duration::Duration, price::Price, ratio::SimpleFraction};
 use sdk::cosmwasm_std::{Addr, Timestamp};
 
 use crate::feeders::Count;
@@ -116,11 +116,13 @@ where
 
             let sum = values.fold(*first, |acc, current| acc + *current);
 
-            let reciproral = prices_count
-                .try_into_reciproral()
+            let reciprocal = prices_count
+                .try_into_reciprocal()
                 .expect("should have provided positive value for count");
 
-            let avg = sum.safe_mul(&reciproral);
+            let avg = sum
+                .lossy_mul(SimpleFraction::from(reciprocal))
+                .expect("The reciprocal should be less or equal to 1");
 
             self.last_sample = Sample { price: Some(avg) };
         }
@@ -164,7 +166,7 @@ mod test {
     use finance::{
         coin::{Amount, Coin},
         duration::Duration,
-        price,
+        price::{self},
     };
     use sdk::cosmwasm_std::{Addr, Timestamp};
 
@@ -247,6 +249,72 @@ mod test {
         assert_eq!(Some(Sample { price: Some(p23) }), samples.next());
         assert_eq!(Some(Sample { price: Some(p1) }), samples.next());
         assert_eq!(Some(Sample { price: Some(p1) }), samples.next());
+    }
+
+    #[ignore = "issue #594"]
+    #[test]
+    fn price_sum_overflow_from_c() {
+        let start_from = Timestamp::from_seconds(150);
+        let t1 = Timestamp::from_seconds(160);
+        let t2 = Timestamp::from_seconds(165);
+
+        let p1 = price(Amount::MAX / 2, 1);
+        let p2 = price(Amount::MAX / 2 + 1, 1);
+
+        let obs = [
+            Observation::new(feeder1(), t1, p1),
+            Observation::new(feeder2(), t2, p2),
+        ];
+
+        let mut samples =
+            sample::from_observations(obs.iter(), start_from, Duration::from_secs(25));
+
+        samples.next();
+    }
+
+    #[ignore = "issue #594"]
+    #[test]
+    fn price_sum_overflow_from_quotec() {
+        let start_from = Timestamp::from_seconds(150);
+        let t1 = Timestamp::from_seconds(160);
+        let t2 = Timestamp::from_seconds(165);
+
+        let p1 = price(1, Amount::MAX / 2);
+        let p2 = price(1, (Amount::MAX / 2) + 2);
+
+        let obs = [
+            Observation::new(feeder1(), t1, p1),
+            Observation::new(feeder2(), t2, p2),
+        ];
+
+        let mut samples =
+            sample::from_observations(obs.iter(), start_from, Duration::from_secs(25));
+
+        samples.next();
+    }
+    #[test]
+    fn price_max_sum() {
+        let start_from = Timestamp::from_seconds(150);
+        let t1 = Timestamp::from_seconds(160);
+        let t2 = Timestamp::from_seconds(165);
+
+        let p1 = price(1, Amount::MAX / 2);
+        let p2 = price(1, (Amount::MAX / 2) + 1);
+
+        let obs = [
+            Observation::new(feeder1(), t1, p1),
+            Observation::new(feeder2(), t2, p2),
+        ];
+
+        let mut samples =
+            sample::from_observations(obs.iter(), start_from, Duration::from_secs(25));
+
+        assert_eq!(
+            Some(Sample {
+                price: Some(price(2, Amount::MAX))
+            }),
+            samples.next()
+        );
     }
 
     fn price(of: Amount, is: Amount) -> price::Price<TheCurrency, TheQuote> {

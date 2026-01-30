@@ -9,14 +9,14 @@ use serde::{
 
 use crate::coin::Amount;
 
-pub(super) fn serialize<S>(amount: &Amount, serializer: S) -> Result<S::Ok, S::Error>
+pub(crate) fn serialize<S>(amount: &Amount, serializer: S) -> Result<S::Ok, S::Error>
 where
     S: Serializer,
 {
     serializer.serialize_str(&amount.to_string())
 }
 
-pub(super) fn deserialize<'de, D>(deserializer: D) -> Result<Amount, D::Error>
+pub(crate) fn deserialize<'de, D>(deserializer: D) -> Result<Amount, D::Error>
 where
     D: Deserializer<'de>,
 {

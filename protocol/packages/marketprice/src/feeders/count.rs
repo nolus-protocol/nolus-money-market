@@ -4,9 +4,9 @@ use gcd::Gcd;
 
 use finance::{
     fraction::Unit as FractionUnit,
-    fractionable::{CommonDoublePrimitive, Fractionable, IntoMax, ToDoublePrimitive, TryFromMax},
+    fractionable::{CommonDoublePrimitive, Fractionable, IntoDoublePrimitive, IntoMax, TryFromMax},
     percent::Percent100,
-    ratio::{RatioLegacy, SimpleFraction},
+    ratio::Ratio,
     zero::Zero,
 };
 
@@ -42,17 +42,16 @@ impl Count {
         }
     }
 
-    /// Converts [self] into a reciproral fraction
+    /// Converts [self] into a reciprocal fraction
     ///
     /// Returns [None] if the Count is zero
-    pub fn try_into_reciproral(self) -> Option<impl RatioLegacy<Unit>> {
-        // TODO use Ratio instead of `SimpleFraction`
-        (self != Self::ZERO).then(|| SimpleFraction::new(ONE, self.0))
+    pub fn try_into_reciprocal(self) -> Option<Ratio<Unit>> {
+        (self != Self::ZERO).then(|| Ratio::new(ONE, self.0))
     }
 }
 
 impl CommonDoublePrimitive<Percent100> for Count {
-    type CommonDouble = <Count as ToDoublePrimitive>::Double;
+    type CommonDouble = <Count as IntoDoublePrimitive>::Double;
 }
 
 impl Fractionable<Percent100> for Count {}
@@ -85,15 +84,15 @@ impl FractionUnit for Count {
 }
 
 impl IntoMax<<Count as CommonDoublePrimitive<Percent100>>::CommonDouble> for Count {
-    fn into_max(self) -> <Count as ToDoublePrimitive>::Double {
-        self.to_double()
+    fn into_max(self) -> <Count as IntoDoublePrimitive>::Double {
+        self.into_double()
     }
 }
 
-impl ToDoublePrimitive for Count {
+impl IntoDoublePrimitive for Count {
     type Double = u64;
 
-    fn to_double(&self) -> Self::Double {
+    fn into_double(self) -> Self::Double {
         self.0.into()
     }
 }
@@ -109,8 +108,8 @@ impl TryFrom<usize> for Count {
     }
 }
 
-impl TryFromMax<<Count as ToDoublePrimitive>::Double> for Count {
-    fn try_from_max(max: <Count as ToDoublePrimitive>::Double) -> Option<Self> {
+impl TryFromMax<<Count as IntoDoublePrimitive>::Double> for Count {
+    fn try_from_max(max: <Count as IntoDoublePrimitive>::Double) -> Option<Self> {
         max.try_into().map(Self::new).ok()
     }
 }
@@ -121,28 +120,25 @@ impl Zero for Count {
 
 #[cfg(test)]
 mod test {
-
-    use finance::ratio::RatioLegacy;
+    use finance::ratio::Ratio;
 
     use crate::feeders::count::Unit;
 
     use super::Count;
 
     #[test]
-    fn try_into_reciproral_nonzero() {
+    fn try_into_reciprocal_nonzero() {
         let count = 4096;
+
         assert_eq!(
-            count,
-            Count::new_test(count)
-                .try_into_reciproral()
-                .unwrap()
-                .total()
+            Ratio::new(1, count),
+            Count::new_test(count).try_into_reciprocal().unwrap()
         );
     }
 
     #[test]
-    fn try_into_reciproral_zero() {
-        assert!(Count::ZERO.try_into_reciproral().is_none())
+    fn try_into_reciprocal_zero() {
+        assert!(Count::ZERO.try_into_reciprocal().is_none())
     }
 
     #[test]

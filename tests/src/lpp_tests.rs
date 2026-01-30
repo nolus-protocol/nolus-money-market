@@ -3,11 +3,11 @@ use currency::CurrencyDef;
 use finance::{
     coin::{Amount, Coin},
     duration::Duration,
-    fraction::FractionLegacy,
+    fraction::Fraction,
     percent::{Percent, Percent100},
     price,
     ratio::SimpleFraction,
-    rational::RationalLegacy,
+    rational::Rational,
     test,
     zero::Zero,
 };
@@ -63,7 +63,7 @@ fn general_interest_rate(
                     optimal_rate.complement().into(),
                 ).expect("The utilization must be a valid Percent").min(utilization_factor_max);
 
-            SimpleFraction::new(addon_rate, optimal_rate).of(utilization_factor)
+        SimpleFraction::<Percent>::new(addon_rate.into(), optimal_rate.into()).of(utilization_factor)
         .map(|utilization_config| Percent100::try_from(utilization_config + base_rate.into()).expect("The borrow rate must not exceed 100%"))     
         .expect("The utilization_config must be a valid Percent")     
     })
@@ -775,6 +775,7 @@ fn loan_open_and_repay() {
         loan1_resp.principal_due,
         common::lpn_coin(loan1 - repay_due_part)
     );
+
     assert_eq!(
         loan1_resp.interest_due(&crate::block_time(&test_case)),
         Coin::ZERO

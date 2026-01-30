@@ -1,7 +1,8 @@
 use std::fmt::Debug;
 
 use crate::{
-    fractionable::{Fractionable, FractionableLegacy, IntoMax},
+    fractionable::{Fractionable, IntoMax},
+    ratio::SimpleFraction,
     zero::Zero,
 };
 
@@ -13,13 +14,6 @@ pub trait Fraction<U> {
     where
         U: IntoMax<A::CommonDouble>,
         A: Fractionable<U>;
-}
-
-// TODO remove when all Fractionable usages are replaced
-pub trait FractionLegacy<U> {
-    fn of<A>(&self, whole: A) -> A
-    where
-        A: FractionableLegacy<U>;
 }
 
 pub trait Unit
@@ -79,4 +73,9 @@ where
 
         (self.scale_down(gcd), other.scale_down(gcd))
     }
+}
+
+/// Implemented by types, which can be represented as [SimpleFraction], allowing for multiplication logic
+pub trait ToFraction<U> {
+    fn to_fraction(self) -> SimpleFraction<U>;
 }
