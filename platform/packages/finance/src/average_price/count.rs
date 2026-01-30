@@ -35,19 +35,22 @@ impl Count {
 
     /// Checks if [self] can be safely incremented
     pub fn check_increment(&self) -> Option<()> {
-        if self != &Self::MAX { Some(()) } else { None }
+        if !self.is_zero() { Some(()) } else { None }
+    }
+
+    pub fn try_increment(self) -> Option<Self> {
+        self.check_increment().map(|()| Self::new(self.0 + 1))
     }
 
     /// Converts [self] into a reciprocal fraction
     ///
     /// Returns [None] if the Count is zero
     pub fn try_into_reciprocal(self) -> Option<Ratio<Self>> {
-        (self != Self::ZERO).then(|| Ratio::new(Self::ONE, self))
+        (!self.is_zero()).then(|| Ratio::new(Self::ONE, self))
     }
 
-    #[cfg(test)]
-    pub(super) fn assert_nonzero(&self) {
-        debug_assert!(self != &Self::ZERO, "Count must be non-zero");
+    pub(super) fn is_zero(&self) -> bool {
+        self == &Self::ZERO
     }
 }
 
