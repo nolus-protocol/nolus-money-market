@@ -11,8 +11,8 @@ pub use count::Count;
 #[derive(Debug)]
 pub struct PriceAccumulator<C, QuoteC>
 where
-    C: 'static + Debug,
-    QuoteC: 'static + Debug,
+    C: 'static,
+    QuoteC: 'static,
 {
     // An instance of AveragePrice will have at least one Price
     total: Price<C, QuoteC>,
@@ -21,8 +21,8 @@ where
 
 impl<C, QuoteC> PriceAccumulator<C, QuoteC>
 where
-    C: 'static + Debug,
-    QuoteC: 'static + Debug,
+    C: 'static,
+    QuoteC: 'static,
 {
     pub fn init_with(initial: Price<C, QuoteC>) -> Self {
         Self::new(initial, Count::ONE)
