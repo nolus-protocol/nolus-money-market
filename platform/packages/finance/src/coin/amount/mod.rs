@@ -1,6 +1,6 @@
 use crate::{
     coin::{Amount, DoubleCoinPrimitive},
-    fractionable::{IntoMax, ToDoublePrimitive, TryFromMax},
+    fractionable::{IntoDoublePrimitive, IntoMax, TryFromMax},
 };
 
 pub(super) mod serde;
@@ -9,14 +9,14 @@ mod testing;
 
 impl IntoMax<DoubleCoinPrimitive> for Amount {
     fn into_max(self) -> DoubleCoinPrimitive {
-        self.to_double()
+        self.into_double()
     }
 }
 
-impl ToDoublePrimitive for Amount {
+impl IntoDoublePrimitive for Amount {
     type Double = DoubleCoinPrimitive;
 
-    fn to_double(self) -> Self::Double {
+    fn into_double(self) -> Self::Double {
         DoubleCoinPrimitive::from(self)
     }
 }

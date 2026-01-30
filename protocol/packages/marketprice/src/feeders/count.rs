@@ -4,7 +4,7 @@ use gcd::Gcd;
 
 use finance::{
     fraction::Unit as FractionUnit,
-    fractionable::{CommonDoublePrimitive, Fractionable, IntoMax, ToDoublePrimitive, TryFromMax},
+    fractionable::{CommonDoublePrimitive, Fractionable, IntoDoublePrimitive, IntoMax, TryFromMax},
     percent::Percent100,
     ratio::Ratio,
     zero::Zero,
@@ -51,7 +51,7 @@ impl Count {
 }
 
 impl CommonDoublePrimitive<Percent100> for Count {
-    type CommonDouble = <Count as ToDoublePrimitive>::Double;
+    type CommonDouble = <Count as IntoDoublePrimitive>::Double;
 }
 
 impl Fractionable<Percent100> for Count {}
@@ -84,15 +84,15 @@ impl FractionUnit for Count {
 }
 
 impl IntoMax<<Count as CommonDoublePrimitive<Percent100>>::CommonDouble> for Count {
-    fn into_max(self) -> <Count as ToDoublePrimitive>::Double {
-        self.to_double()
+    fn into_max(self) -> <Count as IntoDoublePrimitive>::Double {
+        self.into_double()
     }
 }
 
-impl ToDoublePrimitive for Count {
+impl IntoDoublePrimitive for Count {
     type Double = u64;
 
-    fn to_double(self) -> Self::Double {
+    fn into_double(self) -> Self::Double {
         self.0.into()
     }
 }
@@ -108,8 +108,8 @@ impl TryFrom<usize> for Count {
     }
 }
 
-impl TryFromMax<<Count as ToDoublePrimitive>::Double> for Count {
-    fn try_from_max(max: <Count as ToDoublePrimitive>::Double) -> Option<Self> {
+impl TryFromMax<<Count as IntoDoublePrimitive>::Double> for Count {
+    fn try_from_max(max: <Count as IntoDoublePrimitive>::Double) -> Option<Self> {
         max.try_into().map(Self::new).ok()
     }
 }

@@ -1,7 +1,7 @@
 use crate::{
     coin::{Coin, DoubleCoinPrimitive},
     duration::Duration,
-    fractionable::{CommonDoublePrimitive, Fractionable, IntoMax, ToDoublePrimitive, TryFromMax},
+    fractionable::{CommonDoublePrimitive, Fractionable, IntoDoublePrimitive, IntoMax, TryFromMax},
 };
 
 type DoubleDurationPrimitive = u128;
@@ -14,14 +14,14 @@ impl<C> Fractionable<Coin<C>> for Duration {}
 
 impl IntoMax<DoubleCoinPrimitive> for Duration {
     fn into_max(self) -> DoubleCoinPrimitive {
-        self.to_double().into()
+        self.into_double().into()
     }
 }
 
-impl ToDoublePrimitive for Duration {
+impl IntoDoublePrimitive for Duration {
     type Double = DoubleDurationPrimitive;
 
-    fn to_double(self) -> Self::Double {
+    fn into_double(self) -> Self::Double {
         self.nanos().into()
     }
 }

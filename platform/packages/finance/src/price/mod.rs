@@ -6,7 +6,7 @@ use crate::{
     coin::{Amount, Coin},
     error::{Error, Result},
     fraction::Coprime,
-    fractionable::ToDoublePrimitive,
+    fractionable::IntoDoublePrimitive,
     ratio::SimpleFraction,
     rational::Rational,
 };
@@ -164,11 +164,11 @@ where
         // a/b < c/d if and only if a * d < b * c
         // Please note that Price(amount, amount_quote) is like Ratio(amount_quote / amount).
 
-        let a = self.amount_quote.to_double();
-        let d = other.amount.to_double();
+        let a = self.amount_quote.into_double();
+        let d = other.amount.into_double();
 
-        let b = self.amount.to_double();
-        let c = other.amount_quote.to_double();
+        let b = self.amount.into_double();
+        let c = other.amount_quote.into_double();
         (a * d).cmp(&(b * c))
     }
 }

@@ -1,6 +1,6 @@
 use crate::{
     coin::{Coin, DoubleCoinPrimitive},
-    fractionable::{CommonDoublePrimitive, Fractionable, IntoMax, ToDoublePrimitive, TryFromMax},
+    fractionable::{CommonDoublePrimitive, Fractionable, IntoDoublePrimitive, IntoMax, TryFromMax},
     percent::{Units, bound::BoundPercent},
 };
 
@@ -20,20 +20,20 @@ impl<C, const UPPER_BOUND: Units> Fractionable<Coin<C>> for BoundPercent<UPPER_B
 
 impl<const UPPER_BOUND: Units> IntoMax<DoubleBoundPercentPrimitive> for BoundPercent<UPPER_BOUND> {
     fn into_max(self) -> DoubleBoundPercentPrimitive {
-        self.to_double()
+        self.into_double()
     }
 }
 
 impl<const UPPER_BOUND: Units> IntoMax<DoubleCoinPrimitive> for BoundPercent<UPPER_BOUND> {
     fn into_max(self) -> DoubleCoinPrimitive {
-        self.to_double().into()
+        self.into_double().into()
     }
 }
 
-impl<const UPPER_BOUND: Units> ToDoublePrimitive for BoundPercent<UPPER_BOUND> {
+impl<const UPPER_BOUND: Units> IntoDoublePrimitive for BoundPercent<UPPER_BOUND> {
     type Double = DoubleBoundPercentPrimitive;
 
-    fn to_double(self) -> Self::Double {
+    fn into_double(self) -> Self::Double {
         self.units().into()
     }
 }
@@ -61,7 +61,7 @@ mod test {
     mod percent {
         use crate::{
             fraction::Fraction,
-            fractionable::{ToDoublePrimitive, TryFromMax},
+            fractionable::{IntoDoublePrimitive, TryFromMax},
             percent::{DoubleBoundPercentPrimitive, Percent, Percent100, Units},
             rational::Rational,
         };
@@ -90,7 +90,7 @@ mod test {
             );
 
             let percent = Percent::from_permille(410);
-            let p64 = percent.to_double();
+            let p64 = percent.into_double();
             let p64_res = p64 * DoubleBoundPercentPrimitive::from(Units::MAX) / 1000;
             let percent_res = Percent::try_from_max(p64_res)
                 .expect("DoubleBoundPercentPrimitive -> Percent overflow");

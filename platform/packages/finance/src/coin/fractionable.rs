@@ -3,7 +3,7 @@ use bnum::types::U256;
 use crate::{
     coin::{Amount, Coin},
     duration::Duration,
-    fractionable::{CommonDoublePrimitive, Fractionable, IntoMax, ToDoublePrimitive, TryFromMax},
+    fractionable::{CommonDoublePrimitive, Fractionable, IntoDoublePrimitive, IntoMax, TryFromMax},
     percent::{Units as PercentUnits, bound::BoundPercent},
 };
 
@@ -36,14 +36,14 @@ impl<C, Q> Fractionable<Coin<Q>> for Coin<C> {}
 
 impl<C> IntoMax<DoubleCoinPrimitive> for Coin<C> {
     fn into_max(self) -> DoubleCoinPrimitive {
-        self.to_double()
+        self.into_double()
     }
 }
 
-impl<C> ToDoublePrimitive for Coin<C> {
+impl<C> IntoDoublePrimitive for Coin<C> {
     type Double = DoubleCoinPrimitive;
 
-    fn to_double(self) -> Self::Double {
+    fn into_double(self) -> Self::Double {
         self.amount.into()
     }
 }

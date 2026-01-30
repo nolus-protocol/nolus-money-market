@@ -1,4 +1,4 @@
-use crate::fractionable::{IntoMax, ToDoublePrimitive, TryFromMax};
+use crate::fractionable::{IntoDoublePrimitive, IntoMax, TryFromMax};
 use crate::percent::{DoubleBoundPercentPrimitive, Units};
 use crate::{
     fractionable::{CommonDoublePrimitive, Fractionable},
@@ -14,14 +14,14 @@ impl<const UPPER_BOUND: Units> Fractionable<BoundPercent<UPPER_BOUND>> for Units
 
 impl IntoMax<DoubleBoundPercentPrimitive> for Units {
     fn into_max(self) -> DoubleBoundPercentPrimitive {
-        self.to_double()
+        self.into_double()
     }
 }
 
-impl ToDoublePrimitive for Units {
+impl IntoDoublePrimitive for Units {
     type Double = DoubleBoundPercentPrimitive;
 
-    fn to_double(self) -> Self::Double {
+    fn into_double(self) -> Self::Double {
         DoubleBoundPercentPrimitive::from(self)
     }
 }

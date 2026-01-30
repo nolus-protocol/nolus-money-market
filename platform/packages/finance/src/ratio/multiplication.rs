@@ -2,7 +2,9 @@ use std::ops::{Div, Mul, Shr};
 
 use crate::{
     fraction::{Coprime, Unit as FractionUnit},
-    fractionable::{Fractionable, IntoMax, ToDoublePrimitive, TryFromMax, checked_mul::CheckedMul},
+    fractionable::{
+        Fractionable, IntoDoublePrimitive, IntoMax, TryFromMax, checked_mul::CheckedMul,
+    },
     ratio::{SimpleFraction, bits::Bits},
 };
 
@@ -40,15 +42,18 @@ where
     /// Returns [None] when the aforementioned bit trimming operation resulted in an overshift, causing the value to become zero
     pub(crate) fn lossy_mul(&self, rhs: Self) -> Option<Self>
     where
-        U: Bits + Coprime + TryFromMax<<U as ToDoublePrimitive>::Double>,
-        <U as ToDoublePrimitive>::Double: Bits
+        U: Bits + Coprime + TryFromMax<<U as IntoDoublePrimitive>::Double>,
+        <U as IntoDoublePrimitive>::Double: Bits
             + Copy
-            + Mul<Output = <U as ToDoublePrimitive>::Double>
+            + Mul<Output = <U as IntoDoublePrimitive>::Double>
             + Shr<u32, Output = U::Double>,
     {
         let (lhs, rhs) = self.cross_normalize(rhs);
-        let double_nom = lhs.nominator.to_double().mul(rhs.nominator.to_double());
-        let double_denom = lhs.denominator.to_double().mul(rhs.denominator.to_double());
+        let double_nom = lhs.nominator.into_double().mul(rhs.nominator.into_double());
+        let double_denom = lhs
+            .denominator
+            .into_double()
+            .mul(rhs.denominator.into_double());
 
         let extra_bits = bits_above_max::<U>(double_nom).max(bits_above_max::<U>(double_denom));
 
@@ -80,7 +85,7 @@ where
 #[track_caller]
 fn bits_above_max<U>(double: U::Double) -> u32
 where
-    U: Bits + ToDoublePrimitive,
+    U: Bits + IntoDoublePrimitive,
     U::Double: Bits,
 {
     bits(double).saturating_sub(U::BITS)
@@ -89,7 +94,7 @@ where
 #[track_caller]
 fn trim_down<D, U>(double: D, bits_to_trim: u32, min_precision_loss_overflow: u32) -> Option<U>
 where
-    U: Bits + ToDoublePrimitive<Double = D> + FractionUnit + TryFromMax<D>,
+    U: Bits + IntoDoublePrimitive<Double = D> + FractionUnit + TryFromMax<D>,
     D: Bits + Copy + Shr<u32, Output = D>,
 {
     debug_assert!(bits_to_trim <= U::BITS);
@@ -100,7 +105,7 @@ where
 #[track_caller]
 fn trim_down_checked<U, D>(double: D, bits_to_trim: u32) -> U
 where
-    U: Bits + ToDoublePrimitive<Double = D> + FractionUnit + TryFromMax<D>,
+    U: Bits + IntoDoublePrimitive<Double = D> + FractionUnit + TryFromMax<D>,
     D: Bits + Copy + Shr<u32, Output = D>,
 {
     const INSUFFICIENT_BITS: &str = "insufficient trimming bits";

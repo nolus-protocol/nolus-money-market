@@ -22,16 +22,16 @@ where
 /// where `Max = <Self as CommonDoublePrimitive<Other>>::CommonDouble`
 pub trait IntoMax<Max>
 where
-    Self: ToDoublePrimitive,
+    Self: IntoDoublePrimitive,
 {
     fn into_max(self) -> Max;
 }
 
 /// Converts a domain type into its wider primitive `Double` type
-pub trait ToDoublePrimitive {
+pub trait IntoDoublePrimitive {
     type Double;
 
-    fn to_double(self) -> Self::Double;
+    fn into_double(self) -> Self::Double;
 }
 
 /// Attempts to convert `Max` into the domain type `Self`
