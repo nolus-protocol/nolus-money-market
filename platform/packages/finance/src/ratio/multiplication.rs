@@ -49,6 +49,8 @@ where
             + Shr<u32, Output = U::Double>,
     {
         let (lhs, rhs) = self.cross_normalize(rhs);
+
+        // The multiplication is performed with two `DoublePrimitive`-s wich cannot panic, even if `U` maximum values are used
         let double_nom = lhs.nominator.into_double().mul(rhs.nominator.into_double());
         let double_denom = lhs
             .denominator
