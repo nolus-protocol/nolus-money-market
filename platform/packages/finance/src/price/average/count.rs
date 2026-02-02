@@ -35,7 +35,7 @@ impl Count {
 
     /// Checks if [self] can be safely incremented
     pub fn check_increment(&self) -> Option<()> {
-        if !self.is_zero() { Some(()) } else { None }
+        (self != &Self::MAX).then_some(())
     }
 
     pub fn try_increment(self) -> Option<Self> {
