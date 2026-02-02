@@ -12,6 +12,7 @@ use crate::{
 };
 
 mod arithmetics;
+pub mod average;
 pub mod base;
 pub mod dto;
 
