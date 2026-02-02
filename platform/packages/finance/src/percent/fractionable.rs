@@ -31,7 +31,7 @@ impl<const UPPER_BOUND: Units> IntoMax<DoubleBoundPercentPrimitive> for BoundPer
 
 impl IntoMax<DoubleBoundPercentPrimitive> for Permilles {
     fn into_max(self) -> DoubleBoundPercentPrimitive {
-        self.into_double().into()
+        self.into_double()
     }
 }
 
@@ -86,7 +86,7 @@ mod test {
         use crate::{
             fraction::Fraction,
             fractionable::{IntoDoublePrimitive, TryFromMax},
-            percent::{DoubleBoundPercentPrimitive, Percent, Percent100, Units},
+            percent::{DoubleBoundPercentPrimitive, HUNDRED, Percent, Percent100, Units},
             rational::Rational,
         };
 
