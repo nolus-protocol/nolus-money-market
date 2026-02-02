@@ -471,7 +471,8 @@ mod test {
                     |mut store, _config, bank, now| {
                         let rewards = TotalRewards::load_or_default(&store)
                             .unwrap()
-                            .add(REWARDS, DEPOSIT_NLPN);
+                            .try_add(REWARDS, DEPOSIT_NLPN)
+                            .unwrap();
                         TotalRewards::save(&rewards, &mut store).unwrap();
 
                         let lender = test_tools::lender();

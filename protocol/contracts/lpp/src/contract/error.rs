@@ -106,12 +106,12 @@ impl ContractError {
 
     pub fn overflow_add<L, R>(cause: &'static str, lhs: L, rhs: R) -> Self
     where
-        L: Display,
-        R: Display,
+        L: Debug,
+        R: Debug,
     {
         Self::ComputationOverflow {
             cause,
-            details: format!("({} + {})", lhs, rhs),
+            details: format!("({:?} + {:?})", lhs, rhs),
         }
     }
 

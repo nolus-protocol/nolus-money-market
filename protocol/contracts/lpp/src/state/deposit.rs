@@ -206,7 +206,9 @@ mod test {
         deposit1.save(&mut store).unwrap();
 
         // for simplicity, to maintain price 1:1, we keep rewards amount equal to the total receipts
-        let rewards = rewards.add(Coin::new(deposit1_1.into()), deposit1_1);
+        let rewards = rewards
+            .try_add(Coin::new(deposit1_1.into()), deposit1_1)
+            .unwrap();
         let deposit1 = Deposit::load(&store, addr1.clone(), rewards).unwrap();
         assert_eq!(
             Coin::new(deposit1_1.into()),
@@ -220,10 +222,12 @@ mod test {
         assert_eq!(Coin::ZERO, deposit2.query_rewards().unwrap());
         deposit2.save(&mut store).unwrap();
 
-        let rewards = rewards.add(
-            Coin::new((deposit1_1 + deposit2_1).into()),
-            deposit1_1 + deposit2_1,
-        );
+        let rewards = rewards
+            .try_add(
+                Coin::new((deposit1_1 + deposit2_1).into()),
+                deposit1_1 + deposit2_1,
+            )
+            .unwrap();
         let mut deposit1 = Deposit::load(&store, addr1.clone(), rewards).unwrap();
         let mut deposit2 = Deposit::load(&store, addr2.clone(), rewards).unwrap();
 
@@ -241,7 +245,9 @@ mod test {
         deposit1.save(&mut store).unwrap();
         deposit2.save(&mut store).unwrap();
 
-        let rewards = rewards.add(rewards1_2 + rewards2, deposit1_1 - withdraw1_1 + deposit2_1);
+        let rewards = rewards
+            .try_add(rewards1_2 + rewards2, deposit1_1 - withdraw1_1 + deposit2_1)
+            .unwrap();
         let mut deposit1 = Deposit::load(&store, addr1.clone(), rewards).unwrap();
         let mut deposit2 = Deposit::load(&store, addr2.clone(), rewards).unwrap();
 
@@ -288,7 +294,7 @@ mod test {
         deposit1.try_deposit(RECEIPTS).unwrap();
         deposit1.save(&mut store).unwrap();
 
-        rewards = rewards.add(REWARDS, RECEIPTS);
+        rewards = rewards.try_add(REWARDS, RECEIPTS).unwrap();
         let mut deposit1 = Deposit::load_or_default(&store, addr1.clone(), rewards).unwrap();
         assert_eq!(REWARDS, deposit1.query_rewards().unwrap());
         assert_eq!(REWARDS, deposit1.may_claim_rewards().unwrap());
@@ -301,7 +307,7 @@ mod test {
         assert_eq!(Coin::ZERO, deposit2.may_claim_rewards().unwrap());
         deposit2.save(&mut store).unwrap();
 
-        rewards = rewards.add(REWARDS, RECEIPTS + RECEIPTS);
+        rewards = rewards.try_add(REWARDS, RECEIPTS + RECEIPTS).unwrap();
 
         let mut deposit2 = Deposit::load(&store, addr2.clone(), rewards).unwrap();
         assert_eq!(REWARD_DEPOSIT, deposit2.query_rewards().unwrap());

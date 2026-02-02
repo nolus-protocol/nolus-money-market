@@ -1,4 +1,4 @@
-use std::ops::Add;
+// use std::ops::Add;
 
 use serde::{Deserialize, Serialize};
 
@@ -58,16 +58,17 @@ impl Index {
         }
     }
 
-    //TODO migrate this to `checked_add() -> Option<Self>` once `Price::checked_add()` gets available
-    pub fn add(self, new_rewards: Coin<Nls>, total_receipts: Coin<NLpn>) -> Self {
+    pub fn try_add(self, new_rewards: Coin<Nls>, total_receipts: Coin<NLpn>) -> Result<Self> {
         debug_assert_ne!(Coin::ZERO, new_rewards);
         debug_assert_ne!(Coin::ZERO, total_receipts);
 
         let new_rewards = price::total_of(total_receipts).is(new_rewards);
         if let Some(lhs) = self.reward_per_token {
-            Self::new(lhs.add(new_rewards))
+            lhs.checked_add(new_rewards).map(Self::new).ok_or_else(|| {
+                ContractError::overflow_add("updating the total rewards index", lhs, new_rewards)
+            })
         } else {
-            Self::new(new_rewards)
+            Ok(Self::new(new_rewards))
         }
     }
 }

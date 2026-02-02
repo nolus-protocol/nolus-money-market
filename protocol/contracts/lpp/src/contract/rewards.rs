@@ -39,12 +39,9 @@ where
                     if total_receipts.is_zero() {
                         Err(ContractError::ZeroBalanceRewards {})
                     } else {
-                        TotalRewards::load_or_default(store).and_then(|total_rewards| {
-                            TotalRewards::save(
-                                &total_rewards.add(new_rewards, total_receipts),
-                                store,
-                            )
-                        })
+                        TotalRewards::load_or_default(store)
+                            .and_then(|current| current.try_add(new_rewards, total_receipts))
+                            .and_then(|total_rewards| TotalRewards::save(&total_rewards, store))
                     }
                 })
                 .map(|()| Default::default())
