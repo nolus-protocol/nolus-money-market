@@ -90,17 +90,17 @@ impl From<Count> for Amount {
     }
 }
 
-impl IntoMax<<Count as CommonDoublePrimitive<Permilles>>::CommonDouble> for Count {
-    fn into_max(self) -> <Count as IntoDoublePrimitive>::Double {
-        self.into_double()
-    }
-}
-
 impl IntoDoublePrimitive for Count {
     type Double = u64;
 
     fn into_double(self) -> Self::Double {
         self.0.into()
+    }
+}
+
+impl IntoMax<<Count as CommonDoublePrimitive<Permilles>>::CommonDouble> for Count {
+    fn into_max(self) -> <Count as IntoDoublePrimitive>::Double {
+        self.into_double()
     }
 }
 

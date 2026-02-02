@@ -42,17 +42,17 @@ impl FractionUnit for Units {
     }
 }
 
-impl IntoMax<DoubleBoundPercentPrimitive> for Units {
-    fn into_max(self) -> DoubleBoundPercentPrimitive {
-        self.into_double()
-    }
-}
-
 impl IntoDoublePrimitive for Units {
     type Double = DoubleBoundPercentPrimitive;
 
     fn into_double(self) -> Self::Double {
         DoubleBoundPercentPrimitive::from(self)
+    }
+}
+
+impl IntoMax<DoubleBoundPercentPrimitive> for Units {
+    fn into_max(self) -> DoubleBoundPercentPrimitive {
+        self.into_double()
     }
 }
 

@@ -12,17 +12,17 @@ impl<C> CommonDoublePrimitive<Coin<C>> for Duration {
 
 impl<C> Fractionable<Coin<C>> for Duration {}
 
-impl IntoMax<DoubleCoinPrimitive> for Duration {
-    fn into_max(self) -> DoubleCoinPrimitive {
-        self.into_double().into()
-    }
-}
-
 impl IntoDoublePrimitive for Duration {
     type Double = DoubleDurationPrimitive;
 
     fn into_double(self) -> Self::Double {
         self.nanos().into()
+    }
+}
+
+impl IntoMax<DoubleCoinPrimitive> for Duration {
+    fn into_max(self) -> DoubleCoinPrimitive {
+        self.into_double().into()
     }
 }
 

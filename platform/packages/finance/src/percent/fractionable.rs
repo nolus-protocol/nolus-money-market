@@ -23,6 +23,22 @@ impl<C> Fractionable<Coin<C>> for Permilles {}
 impl Fractionable<Permilles> for Permilles {}
 impl<const UPPER_BOUND: Units> Fractionable<Permilles> for BoundPercent<UPPER_BOUND> {}
 
+impl<const UPPER_BOUND: Units> IntoDoublePrimitive for BoundPercent<UPPER_BOUND> {
+    type Double = DoubleBoundPercentPrimitive;
+
+    fn into_double(self) -> Self::Double {
+        self.permilles().into_double()
+    }
+}
+
+impl IntoDoublePrimitive for Permilles {
+    type Double = DoubleBoundPercentPrimitive;
+
+    fn into_double(self) -> Self::Double {
+        self.units().into()
+    }
+}
+
 impl<const UPPER_BOUND: Units> IntoMax<DoubleBoundPercentPrimitive> for BoundPercent<UPPER_BOUND> {
     fn into_max(self) -> DoubleBoundPercentPrimitive {
         self.into_double()
@@ -38,22 +54,6 @@ impl IntoMax<DoubleBoundPercentPrimitive> for Permilles {
 impl IntoMax<DoubleCoinPrimitive> for Permilles {
     fn into_max(self) -> DoubleCoinPrimitive {
         self.into_double().into()
-    }
-}
-
-impl<const UPPER_BOUND: Units> IntoDoublePrimitive for BoundPercent<UPPER_BOUND> {
-    type Double = DoubleBoundPercentPrimitive;
-
-    fn into_double(self) -> Self::Double {
-        self.permilles().into_double()
-    }
-}
-
-impl IntoDoublePrimitive for Permilles {
-    type Double = DoubleBoundPercentPrimitive;
-
-    fn into_double(self) -> Self::Double {
-        self.units().into()
     }
 }
 

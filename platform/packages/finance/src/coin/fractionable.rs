@@ -32,17 +32,17 @@ impl<C> Fractionable<Permilles> for Coin<C> {}
 
 impl<C, Q> Fractionable<Coin<Q>> for Coin<C> {}
 
-impl<C> IntoMax<DoubleCoinPrimitive> for Coin<C> {
-    fn into_max(self) -> DoubleCoinPrimitive {
-        self.into_double()
-    }
-}
-
 impl<C> IntoDoublePrimitive for Coin<C> {
     type Double = DoubleCoinPrimitive;
 
     fn into_double(self) -> Self::Double {
         self.amount.into()
+    }
+}
+
+impl<C> IntoMax<DoubleCoinPrimitive> for Coin<C> {
+    fn into_max(self) -> DoubleCoinPrimitive {
+        self.into_double()
     }
 }
 
