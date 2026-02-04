@@ -13,7 +13,7 @@ impl Permilles {
     pub(super) const PRECISION: Self = Self::new(1);
     pub(super) const MILLE: Self = Self::new(super::HUNDRED);
 
-    pub(super) const fn new(permilles: Units) -> Self {
+    pub const fn new(permilles: Units) -> Self {
         Self(permilles)
     }
 
