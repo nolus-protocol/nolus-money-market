@@ -161,23 +161,23 @@ mod test {
         #[test]
         fn of() {
             assert_eq!(
-                Permilles::new_test(Units::MAX),
+                Permilles::new(Units::MAX),
                 SimpleFraction::new(coin::coin1(Amount::MAX), coin::coin1(Amount::MAX))
-                    .of(Permilles::new_test(Units::MAX))
+                    .of(Permilles::new(Units::MAX))
                     .unwrap()
             );
             assert_eq!(
-                Permilles::new_test(1500),
-                Ratio::new(coin::coin1(3), coin::coin1(4)).of(Permilles::new_test(2000))
+                Permilles::new(1500),
+                Ratio::new(coin::coin1(3), coin::coin1(4)).of(Permilles::new(2000))
             );
             assert_eq!(
-                Permilles::new_test(200),
+                Permilles::new(200),
                 Ratio::new(coin::coin1(1), coin::coin1(5)).of(Permilles::MILLE)
             );
             assert_eq!(
-                Permilles::new_test(225),
+                Permilles::new(225),
                 SimpleFraction::new(coin::coin1(3), coin::coin1(2))
-                    .of(Permilles::new_test(150))
+                    .of(Permilles::new(150))
                     .unwrap()
             );
         }
@@ -186,7 +186,7 @@ mod test {
         fn of_overflow() {
             assert!(
                 SimpleFraction::new(coin::coin1(Amount::MAX), coin::coin1(1))
-                    .of(Permilles::new_test(10))
+                    .of(Permilles::new(10))
                     .is_none()
             )
         }
