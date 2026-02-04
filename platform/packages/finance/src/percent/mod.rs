@@ -55,9 +55,10 @@ impl Percent {
         Permilles: Fractionable<U>,
         U: FractionUnit + IntoMax<<Permilles as CommonDoublePrimitive<U>>::CommonDouble>,
     {
-        SimpleFraction::new(nominator, denominator)
+        let fraction = SimpleFraction::new(nominator, denominator);
+        fraction
             .of(Permilles::MILLE)
-            .ok_or(Error::MultiplicationOverflow())
+            .ok_or_else(|| Error::multiplication_overflow(fraction, Permilles::MILLE))
             .and_then(Self::try_from)
     }
 }

@@ -1,4 +1,4 @@
-use std::any::type_name;
+use std::{any::type_name, fmt::Debug};
 
 use thiserror::Error;
 
@@ -11,10 +11,8 @@ pub enum Error {
     #[error("[Finance] Programming error or invalid serialized object of '{0}' type, cause '{1}'")]
     BrokenInvariant(String, String),
 
-    #[error(
-        "[Finance] Fraction multiplication overflow when evaluating Fraction::of(Fractionable)"
-    )]
-    MultiplicationOverflow(),
+    #[error("[Finance] Fraction multiplication overflow when evaluating `{details}`")]
+    MultiplicationOverflow { details: String },
 
     #[error("[Finance] {0}")]
     CurrencyError(#[from] CurrencyError),
@@ -34,6 +32,16 @@ impl Error {
             Err(Self::BrokenInvariant(type_name::<T>().into(), msg.into()))
         } else {
             Ok(())
+        }
+    }
+
+    pub fn multiplication_overflow<L, R>(lhs: L, rhs: R) -> Self
+    where
+        L: Debug,
+        R: Debug,
+    {
+        Self::MultiplicationOverflow {
+            details: format!("({:?}.of({:?}))", lhs, rhs),
         }
     }
 }
