@@ -2,18 +2,7 @@ use std::ops::{Div, Rem};
 
 use gcd::Gcd;
 
-use crate::{
-    fraction::Unit as FractionUnit,
-    fractionable::{CommonDoublePrimitive, Fractionable, IntoDoublePrimitive, IntoMax, TryFromMax},
-    percent::{DoubleBoundPercentPrimitive, Units, bound::BoundPercent},
-    zero::Zero,
-};
-
-impl<const UPPER_BOUND: Units> CommonDoublePrimitive<BoundPercent<UPPER_BOUND>> for Units {
-    type CommonDouble = DoubleBoundPercentPrimitive;
-}
-
-impl<const UPPER_BOUND: Units> Fractionable<BoundPercent<UPPER_BOUND>> for Units {}
+use crate::{fraction::Unit as FractionUnit, percent::Units, zero::Zero};
 
 impl FractionUnit for Units {
     type Times = Self;
@@ -39,25 +28,5 @@ impl FractionUnit for Units {
 
     fn to_primitive(self) -> Self::Times {
         self
-    }
-}
-
-impl IntoDoublePrimitive for Units {
-    type Double = DoubleBoundPercentPrimitive;
-
-    fn into_double(self) -> Self::Double {
-        DoubleBoundPercentPrimitive::from(self)
-    }
-}
-
-impl IntoMax<DoubleBoundPercentPrimitive> for Units {
-    fn into_max(self) -> DoubleBoundPercentPrimitive {
-        self.into_double()
-    }
-}
-
-impl TryFromMax<DoubleBoundPercentPrimitive> for Units {
-    fn try_from_max(max: DoubleBoundPercentPrimitive) -> Option<Self> {
-        max.try_into().ok()
     }
 }
