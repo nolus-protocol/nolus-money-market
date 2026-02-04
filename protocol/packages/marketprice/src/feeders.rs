@@ -90,7 +90,10 @@ impl PriceFeeders {
             .map_err(Into::into)
     }
 
-    pub fn total_registered(&self, storage: &dyn Storage) -> Result<FeederCount, PriceFeedersError> {
+    pub fn total_registered(
+        &self,
+        storage: &dyn Storage,
+    ) -> Result<FeederCount, PriceFeedersError> {
         self.feeders(storage)
             .map_err(PriceFeedersError::Std)
             .map(|feeders| count_of(&feeders))
