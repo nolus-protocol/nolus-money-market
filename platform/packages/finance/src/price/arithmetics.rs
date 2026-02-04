@@ -1,5 +1,3 @@
-use std::ops::{Add, AddAssign};
-
 use crate::{
     coin::{Amount, Coin},
     fraction::{Coprime, ToFraction, Unit as FractionUnit},
@@ -95,31 +93,6 @@ where
     }
 }
 
-impl<C, QuoteC> Add<Price<C, QuoteC>> for Price<C, QuoteC>
-where
-    C: 'static,
-    QuoteC: 'static,
-{
-    type Output = Price<C, QuoteC>;
-
-    fn add(self, rhs: Price<C, QuoteC>) -> Self::Output {
-        self.checked_add(rhs)
-            .or_else(|| self.lossy_add(rhs))
-            .expect("should not observe huge prices")
-    }
-}
-
-impl<C, QuoteC> AddAssign<Price<C, QuoteC>> for Price<C, QuoteC>
-where
-    C: 'static,
-    QuoteC: 'static,
-{
-    #[track_caller]
-    fn add_assign(&mut self, rhs: Price<C, QuoteC>) {
-        *self = self.add(rhs);
-    }
-}
-
 impl<C, Q> ToFraction<Amount> for Price<C, Q> {
     fn to_fraction(self) -> SimpleFraction<Amount> {
         SimpleFraction::new(self.amount_quote.to_primitive(), self.amount.to_primitive())
@@ -128,8 +101,6 @@ impl<C, Q> ToFraction<Amount> for Price<C, Q> {
 
 #[cfg(test)]
 mod test {
-    use std::ops::{Add, AddAssign};
-
     use sdk::cosmwasm_std::{Uint128, Uint256};
 
     use crate::{
@@ -153,8 +124,8 @@ mod test {
     }
 
     #[test]
-    fn add_no_round() {
-        add_impl(
+    fn checked_add_no_round() {
+        checked_add_impl(
             coin::coin2(1),
             coin::coin1(2),
             coin::coin2(5),
@@ -162,7 +133,7 @@ mod test {
             coin::coin2(1),
             coin::coin1(4),
         );
-        add_impl(
+        checked_add_impl(
             coin::coin2(2),
             coin::coin1(1),
             coin::coin2(10),
@@ -170,25 +141,13 @@ mod test {
             coin::coin2(1),
             coin::coin1(1),
         );
-        add_impl(
+        checked_add_impl(
             coin::coin2(2),
             coin::coin1(3),
             coin::coin2(10),
             coin::coin1(14),
             coin::coin2(10),
             coin::coin1(29),
-        );
-    }
-
-    #[test]
-    fn add_round() {
-        add_impl(
-            coin::coin2(Amount::MAX),
-            coin::coin1(1),
-            coin::coin2(1),
-            coin::coin1(1),
-            coin::coin2(1),
-            coin::coin1(1),
         );
     }
 
@@ -449,7 +408,7 @@ mod test {
         assert_eq!(None, price1.cross_with(price2));
     }
 
-    fn add_impl(
+    fn checked_add_impl(
         amount1: Coin,
         quote1: QuoteCoin,
         amount2: Coin,
@@ -460,20 +419,10 @@ mod test {
         let price1 = price::total_of(amount1).is(quote1);
         let price2 = price::total_of(amount2).is(quote2);
         let exp = price::total_of(amount_exp).is(quote_exp);
-        assert_eq!(exp, price1.add(price2));
-        assert!({
-            price1.checked_add(price2).map_or_else(
-                || Some(exp) == price1.lossy_add(price2),
-                |v| v == price1.add(price2),
-            )
-        });
-        assert!(Some(exp) == price1.lossy_add(price2));
+
         assert!(exp >= price1);
         assert!(exp >= price2);
-
-        let mut price3 = price1;
-        price3.add_assign(price2);
-        assert_eq!(exp, price3);
+        assert_eq!(Some(exp), price1.checked_add(price2));
     }
 
     #[track_caller]
@@ -489,6 +438,5 @@ mod test {
         let price2 = price::total_of(amount2).is(quote2);
         let exp = price::total_of(amount_exp).is(quote_exp);
         assert_eq!(Some(exp), price1.lossy_add(price2));
-        assert!(exp <= price1.add(price2));
     }
 }
