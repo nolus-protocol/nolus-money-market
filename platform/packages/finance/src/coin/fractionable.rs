@@ -1,7 +1,7 @@
 use bnum::types::U256;
 
 use crate::{
-    coin::{Amount, Coin},
+    coin::Coin,
     duration::Duration,
     fractionable::{CommonDoublePrimitive, Fractionable, IntoDoublePrimitive, IntoMax, TryFromMax},
     percent::permilles::Permilles,
@@ -18,11 +18,6 @@ impl<C> CommonDoublePrimitive<Permilles> for Coin<C> {
 }
 
 impl<C, Q> CommonDoublePrimitive<Coin<Q>> for Coin<C> {
-    type CommonDouble = DoubleCoinPrimitive;
-}
-
-// TODO remove this implemenatation when Price converts to SimpleFraction<Quote, C>
-impl<C> CommonDoublePrimitive<Amount> for Coin<C> {
     type CommonDouble = DoubleCoinPrimitive;
 }
 
