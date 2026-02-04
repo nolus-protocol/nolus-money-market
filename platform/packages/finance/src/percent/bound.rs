@@ -130,6 +130,8 @@ impl<const UPPER_BOUND: Units> Sub for BoundPercent<UPPER_BOUND> {
 
 #[cfg(test)]
 mod test {
+    use sdk::cosmwasm_std;
+
     use crate::{
         fraction::Fraction,
         percent::{
@@ -138,6 +140,52 @@ mod test {
         rational::Rational,
         test::coin,
     };
+
+    #[test]
+    fn serialize() {
+        assert_eq!(
+            r#"650"#,
+            cosmwasm_std::to_json_string(&Percent100::from_permille(650)).unwrap()
+        );
+        assert_eq!(
+            r#"2001"#,
+            cosmwasm_std::to_json_string(&Percent::from_permille(2001)).unwrap()
+        );
+    }
+
+    #[test]
+    fn deserialize() {
+        assert_eq!(
+            Percent100::from_permille(999),
+            cosmwasm_std::from_json(r#"999"#).unwrap()
+        );
+        assert_eq!(
+            Percent::from_permille(4000),
+            cosmwasm_std::from_json(r#"4000"#).unwrap()
+        );
+    }
+
+    #[test]
+    fn deserialize_upper_bound_crossed() {
+        assert_err(
+            cosmwasm_std::from_json::<Percent100>("1001"),
+            "Upper bound has been crossed",
+        );
+
+        let too_big = (u64::from(Units::MAX) + 1u64).to_string();
+        assert_err(cosmwasm_std::from_json::<Percent>(&too_big), "Invalid");
+    }
+
+    #[test]
+    fn serialize_deserialize() {
+        let percent100 = Percent100::from_permille(250);
+        let serialized = cosmwasm_std::to_json_vec(&percent100).unwrap();
+        assert_eq!(percent100, cosmwasm_std::from_json(&serialized).unwrap());
+
+        let percent = Percent::from_permille(1001);
+        let serialized = cosmwasm_std::to_json_vec(&percent).unwrap();
+        assert_eq!(percent, cosmwasm_std::from_json(&serialized).unwrap());
+    }
 
     #[test]
     fn test_try_from_permille() {
@@ -247,6 +295,13 @@ mod test {
         test_display("9%", 90);
         test_display("10.1%", 101);
         test_display("100%", HUNDRED);
+    }
+
+    fn assert_err<P>(r: Result<P, cosmwasm_std::StdError>, msg: &str)
+    where
+        P: std::fmt::Debug,
+    {
+        assert!(r.expect_err("expected an error").to_string().contains(msg));
     }
 
     fn test_display(exp: &str, permilles: Units) {
