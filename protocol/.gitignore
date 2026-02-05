@@ -16,6 +16,7 @@ artifacts
 .idea
 /artifacts
 .vscode
+.zed
 
 # Deploying process
 setup-dev-network.zip
