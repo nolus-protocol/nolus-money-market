@@ -164,7 +164,8 @@ where
         self.repay_margin(state.principal_due, margin_paid, by)
             .ok_or(ContractError::overflow("Repay margin overflow"))?;
         profit.send(margin_paid);
-        self.repay_loan(interest_paid, principal_paid, by);
+        self.repay_loan(interest_paid, principal_paid, by)
+            .ok_or(ContractError::overflow("Repay loan overflow"))?;
 
         let receipt = RepayReceipt::new(
             overdue_interest_payment,
