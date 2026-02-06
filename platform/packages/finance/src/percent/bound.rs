@@ -50,11 +50,6 @@ impl<const UPPER_BOUND: Units> BoundPercent<UPPER_BOUND> {
         }
     }
 
-    // TODO revisit it's usage and remove
-    pub const fn permilles(&self) -> Permilles {
-        self.0
-    }
-
     // Cannot be const because const impl of PartialEq is not available.
     pub fn is_zero(&self) -> bool {
         self == &Self::ZERO
@@ -97,10 +92,10 @@ impl<const UPPER_BOUND: Units> TryFrom<Permilles> for BoundPercent<UPPER_BOUND> 
 impl<const UPPER_BOUND: Units> Display for BoundPercent<UPPER_BOUND> {
     #[track_caller]
     fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
-        let whole = (self.permilles().units()) / Self::UNITS_TO_PERCENT_RATIO;
+        let whole = (Permilles::from(*self).units()) / Self::UNITS_TO_PERCENT_RATIO;
         let (no_fraction, overflow) = whole.overflowing_mul(Self::UNITS_TO_PERCENT_RATIO);
         debug_assert!(!overflow);
-        let (fractional, overflow) = (self.permilles().units()).overflowing_sub(no_fraction);
+        let (fractional, overflow) = (Permilles::from(*self).units()).overflowing_sub(no_fraction);
         debug_assert!(!overflow);
 
         f.write_fmt(format_args!("{whole}"))?;

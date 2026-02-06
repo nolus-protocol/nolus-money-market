@@ -119,10 +119,8 @@ impl Liability {
         debug_assert!(self.initial > Percent100::ZERO);
         debug_assert!(self.initial < Percent100::MAX);
 
-        let default_ltd = SimpleFraction::new(
-            self.initial.permilles(),
-            self.initial.complement().permilles(),
-        );
+        let default_ltd =
+            SimpleFraction::new(self.initial.into(), self.initial.complement().into());
         default_ltd.of(downpayment).map(|default_borrow| {
             may_max_ltd
                 .and_then(|max_ltd| max_ltd.of(downpayment))

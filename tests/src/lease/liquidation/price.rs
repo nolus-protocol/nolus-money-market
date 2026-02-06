@@ -1,6 +1,10 @@
 use currencies::PaymentGroup;
 use currency::CurrencyDef as _;
-use finance::{coin::Amount, percent::Percent100, zero::Zero as _};
+use finance::{
+    coin::Amount,
+    percent::{Percent100, permilles::Permilles},
+    zero::Zero as _,
+};
 use lease::api::query::StateResponse;
 use platform::coin_legacy;
 use sdk::{
@@ -197,7 +201,7 @@ fn liquidation_warning(base: Amount, quote: Amount, liability: Percent100, level
         .find(|attribute| attribute.key == "ltv")
         .expect("LTV attribute not present!");
 
-    assert_eq!(attribute.value, liability.permilles().to_string());
+    assert_eq!(attribute.value, Permilles::from(liability).to_string());
 
     let attribute = event
         .attributes

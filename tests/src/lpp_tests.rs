@@ -948,9 +948,9 @@ fn general_interest_rate(
     Percent::from_fraction(common::lpn_coin(loan), common::lpn_coin(balance))
     .map(|utilization_factor_max| {
             // TODO migrate to using SimpleFraction once it starts implementing Ord
-            let utilization_factor = Percent::from_fraction(
-                    optimal_rate.permilles(),
-                    optimal_rate.complement().permilles(),
+            let utilization_factor = Percent::from_fraction::<Permilles>(
+                    optimal_rate.into(),
+                    optimal_rate.complement().into(),
                 ).expect("The utilization must be a valid Percent").min(utilization_factor_max);
 
         SimpleFraction::<Permilles>::new(addon_rate.into(), optimal_rate.into()).of(utilization_factor)

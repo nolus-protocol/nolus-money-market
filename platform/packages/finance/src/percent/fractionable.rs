@@ -27,7 +27,7 @@ impl<const UPPER_BOUND: Units> IntoDoublePrimitive for BoundPercent<UPPER_BOUND>
     type Double = DoubleBoundPercentPrimitive;
 
     fn into_double(self) -> Self::Double {
-        self.permilles().into_double()
+        Permilles::from(self).into_double()
     }
 }
 

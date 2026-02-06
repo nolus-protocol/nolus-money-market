@@ -45,7 +45,7 @@ impl Percent100 {
     }
 
     fn to_ratio(self) -> Ratio<Permilles> {
-        Ratio::new(self.permilles(), Permilles::MILLE)
+        Ratio::new(self.into(), Permilles::MILLE)
     }
 }
 
@@ -85,7 +85,7 @@ impl Rational<Permilles> for Percent {
 
 impl From<Percent100> for Percent {
     fn from(percent: Percent100) -> Self {
-        Self::try_from(percent.permilles())
+        Self::try_from(Permilles::from(percent))
             .expect("Percent value safely fits in internal representation")
     }
 }
@@ -94,7 +94,7 @@ impl TryFrom<Percent> for Percent100 {
     type Error = Error;
 
     fn try_from(percent: Percent) -> Result<Self, Self::Error> {
-        percent.permilles().try_into()
+        Permilles::from(percent).try_into()
     }
 }
 

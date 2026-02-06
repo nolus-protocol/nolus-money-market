@@ -11,7 +11,7 @@ pub struct Permilles(Units);
 impl Permilles {
     pub(super) const ZERO: Self = Self::new(0);
     pub(super) const PRECISION: Self = Self::new(1);
-    pub(super) const MILLE: Self = Self::new(super::HUNDRED);
+    pub const MILLE: Self = Self::new(super::HUNDRED);
 
     pub const fn new(permilles: Units) -> Self {
         Self(permilles)

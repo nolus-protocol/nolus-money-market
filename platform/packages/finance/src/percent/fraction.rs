@@ -44,15 +44,15 @@ impl Zero for Permilles {
 impl<const UPPER_BOUND: Units> ToFraction<Amount> for BoundPercent<UPPER_BOUND> {
     fn to_fraction(self) -> SimpleFraction<Amount> {
         SimpleFraction::new(
-            self.permilles().units().into(),
-            Permilles::MILLE.units().into(),
+            Permilles::from(self).to_primitive().into(),
+            Permilles::MILLE.to_primitive().into(),
         )
     }
 }
 
 impl<const UPPER_BOUND: Units> ToFraction<Permilles> for BoundPercent<UPPER_BOUND> {
     fn to_fraction(self) -> SimpleFraction<Permilles> {
-        SimpleFraction::new(self.permilles(), Permilles::MILLE)
+        SimpleFraction::new(self.into(), Permilles::MILLE)
     }
 }
 

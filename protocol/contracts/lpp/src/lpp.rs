@@ -1,7 +1,12 @@
 use currencies::Lpns;
 use currency::{CurrencyDef, MemberOf};
 use finance::{
-    coin::Coin, percent::Percent100, price, ratio::SimpleFraction, rational::Rational, zero::Zero,
+    coin::Coin,
+    percent::{Percent100, permilles::Permilles},
+    price,
+    ratio::SimpleFraction,
+    rational::Rational,
+    zero::Zero,
 };
 use lpp_platform::NLpn;
 use platform::{bank::BankAccountView, contract::Validator};
@@ -103,7 +108,7 @@ where
             self.commited_balance(pending_deposit).map(|balance| {
                 if self.utilization(balance, total_due) > min_utilization {
                     // a followup from the above true value is (total_due * 100 / min_utilization) > (balance + total_due)
-                    SimpleFraction::new(Percent100::MAX.permilles(), min_utilization.permilles())
+                    SimpleFraction::new(Permilles::MILLE, min_utilization.into())
                         .of(total_due)
                         .map(|res| res - balance - total_due)
                 } else {
