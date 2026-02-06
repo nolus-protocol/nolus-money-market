@@ -107,7 +107,7 @@ impl ContractError {
         P: Debug,
     {
         Self::ComputationOverflow(format!(
-            "during '{cause}`. amount: {}, price: {:?}",
+            "during `{cause}`. amount: {}, price: {:?}",
             amount, price
         ))
     }
