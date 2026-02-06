@@ -9,6 +9,11 @@ use crate::{error::Error, percent::permilles::Permilles};
 
 use super::Units;
 
+/// Represents a percentage value used in domain logic.
+/// The const generic parameter `UPPER_BOUND` defines the maximum allowed percentage (inclusive).
+///
+/// Values are stored in `Permilles`.
+/// For example, `UPPER_BOUND = 1000` represents 100%, and a value of `700` represents 70%.
 #[derive(Clone, Copy, Debug, Deserialize, Eq, Ord, PartialEq, PartialOrd, Serialize)]
 #[serde(into = "Permilles", try_from = "Permilles")]
 pub struct BoundPercent<const UPPER_BOUND: Units>(Permilles);
