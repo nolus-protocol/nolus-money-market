@@ -1,7 +1,10 @@
 use std::{
-    ffi::OsString,
+    borrow::Cow,
+    env::var_os,
+    ffi::{OsStr, OsString},
     path::{Path, PathBuf},
     process::{Command, ExitStatus},
+    sync::OnceLock,
 };
 
 use anyhow::{Context, Result, anyhow, bail};
@@ -23,7 +26,7 @@ pub(crate) struct Arguments {
 }
 
 pub(crate) fn subcommand(
-    cargo_path: PathBuf,
+    rust_path: Option<PathBuf>,
     metadata: &Metadata,
     current_dir: PathBuf,
     mode: Mode,
@@ -43,7 +46,7 @@ pub(crate) fn subcommand(
         if external_command {
             CommandType::ExternalCommand
         } else {
-            CommandType::CargoSubcommand { cargo_path }
+            CommandType::CargoSubcommand { rust_path }
         },
         print_command,
         pass_package_manifest,
@@ -155,7 +158,7 @@ where
 }
 
 enum CommandType {
-    CargoSubcommand { cargo_path: PathBuf },
+    CargoSubcommand { rust_path: Option<PathBuf> },
     ExternalCommand,
 }
 
@@ -171,8 +174,51 @@ fn execute_command_builder(
         .context("Failed to resolve subcommand!")
         .map(|ResolveSubcommandOutput { subcommand }| {
             let build_base = move || match command_type {
-                CommandType::CargoSubcommand { ref cargo_path } => Command::new(cargo_path)
-                    .pipe_mut(|command| _ = command.arg(subcommand.as_os_str())),
+                CommandType::CargoSubcommand { ref rust_path } => {
+                    let mut command = Command::new({
+                        static CARGO_PATH: OnceLock<Cow<'static, OsStr>> = OnceLock::new();
+
+                        CARGO_PATH.get_or_init(|| {
+                            if let Some(rust_path) = rust_path {
+                                Cow::Owned(crate::build_cargo_bin_path(rust_path).into_os_string())
+                            } else {
+                                Cow::Borrowed("cargo".as_ref())
+                            }
+                        })
+                    });
+
+                    if let Some(rust_path) = rust_path {
+                        static PATH: OnceLock<OsString> = OnceLock::new();
+
+                        command.env(
+                            "PATH",
+                            PATH.get_or_init(|| {
+                                let mut rust_path = rust_path.clone().into_os_string();
+
+                                if let Some(path) = var_os("PATH") {
+                                    rust_path.push(
+                                        const {
+                                            if cfg!(unix) {
+                                                ":"
+                                            } else if cfg!(windows) {
+                                                ";"
+                                            } else {
+                                                unimplemented!()
+                                            }
+                                        },
+                                    );
+
+                                    rust_path.push(path);
+                                }
+
+                                rust_path
+                            }),
+                        );
+                    }
+
+                    command
+                }
+                .pipe_mut(|command| _ = command.arg(subcommand.as_os_str())),
                 CommandType::ExternalCommand => Command::new(subcommand.as_os_str()),
             };
 
