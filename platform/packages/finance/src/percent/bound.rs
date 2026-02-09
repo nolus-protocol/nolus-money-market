@@ -50,6 +50,10 @@ impl<const UPPER_BOUND: Units> BoundPercent<UPPER_BOUND> {
         }
     }
 
+    pub fn display_primitive(&self) -> String {
+        format!("{}", self.0.to_primitive())
+    }
+
     // Cannot be const because const impl of PartialEq is not available.
     pub fn is_zero(&self) -> bool {
         self == &Self::ZERO
@@ -227,6 +231,12 @@ mod test {
             coin::coin1((Units::MAX / HUNDRED).into()),
             Percent::MAX.of(amount).unwrap()
         );
+    }
+
+    #[test]
+    fn test_display_primitive() {
+        assert_eq!("304", Percent100::from_permille(304).display_primitive());
+        assert_eq!("0", Percent100::ZERO.display_primitive());
     }
 
     #[test]

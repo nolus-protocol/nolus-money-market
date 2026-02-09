@@ -1,10 +1,7 @@
 use ::lease::api::position::ChangeCmd;
 use ::swap::testing::SwapRequest;
 use currencies::PaymentGroup;
-use finance::{
-    coin::Amount,
-    percent::{Percent100, permilles::Permilles},
-};
+use finance::{coin::Amount, percent::Percent100};
 use sdk::{
     cosmwasm_std::{Addr, Event},
     cw_multi_test::AppResponse,
@@ -89,6 +86,6 @@ fn assert_events(resp: &AppResponse, lease: &Addr, exp_strategy_key: &str, exp_l
         &resp.events,
         &Event::new("wasm-ls-auto-close-position")
             .add_attribute("to", lease)
-            .add_attribute(exp_strategy_key, Permilles::from(exp_ltv).to_string()),
+            .add_attribute(exp_strategy_key, exp_ltv.display_primitive()),
     );
 }

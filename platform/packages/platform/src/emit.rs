@@ -1,7 +1,7 @@
 use currency::{CurrencyDTO, CurrencyDef, Group};
 use finance::{
     coin::{Amount, Coin, CoinDTO},
-    percent::{Percent100, permilles::Permilles},
+    percent::Percent100,
 };
 use sdk::cosmwasm_std::{Env, Event, Timestamp};
 
@@ -63,7 +63,7 @@ where
     where
         K: Into<String>,
     {
-        self.emit_to_string_value(event_key, Permilles::from(percent))
+        self.emit_to_string_value(event_key, percent.display_primitive())
     }
 
     fn emit_coin<K, C>(self, event_key: K, coin: Coin<C>) -> Self
