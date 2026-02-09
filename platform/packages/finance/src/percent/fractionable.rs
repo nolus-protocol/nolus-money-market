@@ -1,5 +1,6 @@
 use crate::{
     coin::{Coin, DoubleCoinPrimitive},
+    fraction::Unit,
     fractionable::{CommonDoublePrimitive, Fractionable, IntoDoublePrimitive, IntoMax, TryFromMax},
     percent::{Units, bound::BoundPercent, permilles::Permilles},
 };
@@ -35,7 +36,7 @@ impl IntoDoublePrimitive for Permilles {
     type Double = DoubleBoundPercentPrimitive;
 
     fn into_double(self) -> Self::Double {
-        self.units().into()
+        self.to_primitive().into()
     }
 }
 
