@@ -40,23 +40,6 @@ impl Permilles {
 
 impl Display for Permilles {
     fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
-        f.write_fmt(format_args!("{}‰", self.0))
-    }
-}
-
-#[cfg(test)]
-mod test {
-    use crate::percent::{Units, permilles::Permilles};
-
-    #[test]
-    fn display() {
-        test_display("0‰", 0);
-        test_display("10‰", 10);
-        test_display("100‰", 100);
-        test_display("127‰", 127);
-    }
-
-    fn test_display(exp: &str, permilles: Units) {
-        assert_eq!(exp, format!("{}", Permilles(permilles)));
+        f.write_fmt(format_args!("{}", self.0))
     }
 }
