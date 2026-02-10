@@ -221,16 +221,16 @@ where
         margin_paid: LpnCoin,
         by: &Timestamp,
     ) -> Option<()> {
-        let (margin_paid_for, margin_payment_change) = interest::pay(
+        interest::pay(
             self.margin_interest,
             principal_due,
             margin_paid,
             Duration::between(&self.margin_paid_by, by),
-        )?;
-        debug_assert!(margin_payment_change.is_zero());
-        self.margin_paid_by += margin_paid_for;
-
-        Some(())
+        )
+        .inspect(|(_, margin_payment_change)| debug_assert!(margin_payment_change.is_zero()))
+        .map(|(margin_paid_for, _)| {
+            self.margin_paid_by += margin_paid_for;
+        })
     }
 
     fn repay_loan(
