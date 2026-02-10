@@ -3,10 +3,7 @@ use serde::{Deserialize, Serialize};
 use finance::{
     coin::Coin, duration::Duration, interest, percent::Percent100, period::Period, zero::Zero,
 };
-use lpp::{
-    loan::RepayShares,
-    stub::{LppBatch, LppRef as LppGenericRef, loan::LppLoan as LppLoanTrait},
-};
+use lpp::stub::{LppBatch, LppRef as LppGenericRef, loan::LppLoan as LppLoanTrait};
 use platform::{bank::FixedAddressSender, batch::Batch};
 use profit::stub::ProfitRef;
 use sdk::cosmwasm_std::Timestamp;
@@ -242,16 +239,14 @@ where
         principal_paid: LpnCoin,
         by: &Timestamp,
     ) -> Option<()> {
-        let RepayShares {
-            interest,
-            principal,
-            excess,
-        } = self.lpp_loan.repay(by, interest_paid + principal_paid)?;
-        debug_assert_eq!(interest, interest_paid);
-        debug_assert_eq!(principal, principal_paid);
-        debug_assert_eq!(excess, Coin::ZERO);
-
-        Some(())
+        self.lpp_loan
+            .repay(by, interest_paid + principal_paid)
+            .inspect(|shares| {
+                debug_assert_eq!(shares.interest, interest_paid);
+                debug_assert_eq!(shares.principal, principal_paid);
+                debug_assert_eq!(shares.excess, Coin::ZERO);
+            })
+            .map(|_| ())
     }
 
     fn debug_check_start_due_before(&self, when: &Timestamp, when_descr: &str) {
