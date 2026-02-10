@@ -43,7 +43,7 @@ impl<const UPPER_BOUND: Units> BoundPercent<UPPER_BOUND> {
     }
 
     const fn try_from_permille(permille: Permilles) -> Option<Self> {
-        if permille.units() <= UPPER_BOUND {
+        if permille.within(UPPER_BOUND) {
             Some(Self(permille))
         } else {
             None

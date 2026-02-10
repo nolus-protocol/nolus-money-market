@@ -36,6 +36,11 @@ impl Permilles {
             None
         }
     }
+
+    // Inclusive check
+    pub(super) const fn within(&self, max: Units) -> bool {
+        self.0 <= max
+    }
 }
 
 impl Display for Permilles {
@@ -46,7 +51,7 @@ impl Display for Permilles {
 
 #[cfg(test)]
 mod test {
-    use crate::percent::{Units, permilles::Permilles};
+    use crate::percent::{self, Units, permilles::Permilles};
 
     #[test]
     fn display() {
@@ -54,6 +59,13 @@ mod test {
         test_display("10‰", 10);
         test_display("100‰", 100);
         test_display("127‰", 127);
+    }
+
+    #[test]
+    fn within() {
+        assert!(Permilles::new(100).within(percent::HUNDRED));
+        assert!(Permilles::MILLE.within(percent::HUNDRED));
+        assert!(!Permilles::new(1001).within(percent::HUNDRED));
     }
 
     fn test_display(exp: &str, permilles: Units) {
