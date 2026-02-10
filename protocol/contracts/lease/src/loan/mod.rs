@@ -159,23 +159,24 @@ where
         );
 
         self.repay_margin(state.principal_due, margin_paid, by)
-            .ok_or(ContractError::overflow("Repay margin overflow"))?;
-        profit.send(margin_paid);
-        self.repay_loan(interest_paid, principal_paid, by)
-            .ok_or(ContractError::overflow("Repay loan overflow"))?;
-
-        let receipt = RepayReceipt::new(
-            overdue_interest_payment,
-            overdue_margin_payment,
-            due_interest_payment,
-            due_margin_payment,
-            state.principal_due,
-            principal_paid,
-            change,
-        );
-        debug_assert_eq!(payment, receipt.total());
-
-        Ok(receipt)
+            .ok_or(ContractError::overflow("Repay margin overflow"))
+            .inspect(|()| profit.send(margin_paid))
+            .and_then(|()| {
+                self.repay_loan(interest_paid, principal_paid, by)
+                    .ok_or(ContractError::overflow("Repay loan overflow"))
+            })
+            .map(|()| {
+                RepayReceipt::new(
+                    overdue_interest_payment,
+                    overdue_margin_payment,
+                    due_interest_payment,
+                    due_margin_payment,
+                    state.principal_due,
+                    principal_paid,
+                    change,
+                )
+            })
+            .inspect(|receipt| debug_assert_eq!(payment, receipt.total()))
     }
 
     pub(crate) fn state(&self, now: &Timestamp) -> Result<State, ContractError> {
