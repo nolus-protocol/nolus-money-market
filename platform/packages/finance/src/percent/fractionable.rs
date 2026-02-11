@@ -87,14 +87,14 @@ mod test {
         use crate::{
             fraction::Fraction,
             fractionable::{IntoDoublePrimitive, TryFromMax},
-            percent::{DoubleBoundPercentPrimitive, HUNDRED, Percent, Percent100, Units},
+            percent::{DoubleBoundPercentPrimitive, Percent, Percent100, Units, test},
             rational::Rational,
         };
 
         #[test]
         fn of() {
             assert_eq!(
-                Percent100::from_permille(410 * 222 / HUNDRED),
+                Percent100::from_permille(410 * 222 / test::MILLE_UNITS),
                 Percent100::from_percent(41).of(Percent100::from_permille(222))
             );
             assert_eq!(
@@ -102,7 +102,7 @@ mod test {
                 Percent100::from_percent(100).of(Percent100::from_permille(999))
             );
             assert_eq!(
-                Percent::from_permille(410 * 222222 / HUNDRED),
+                Percent::from_permille(410 * 222222 / test::MILLE_UNITS),
                 Percent::from_percent(41)
                     .of(Percent::from_permille(222222))
                     .unwrap()

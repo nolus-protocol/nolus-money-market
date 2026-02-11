@@ -52,7 +52,7 @@ mod test {
 
     use crate::{
         coin::Amount,
-        percent::{HUNDRED, Percent},
+        percent::{Percent, test},
         ratio::SimpleFraction,
         rational::Rational,
         test::coin,
@@ -62,7 +62,9 @@ mod test {
     fn of() {
         assert_eq!(
             coin::coin1(30),
-            Percent::from_percent(HUNDRED).of(coin::coin1(3)).unwrap()
+            Percent::from_percent(test::MILLE_UNITS)
+                .of(coin::coin1(3))
+                .unwrap()
         );
 
         assert_eq!(

@@ -20,10 +20,8 @@ pub mod permilles;
 #[cfg(any(test, feature = "testing"))]
 mod units;
 
-pub(crate) const HUNDRED: Units = 1000;
-
 pub type Units = u32;
-pub type Percent100 = BoundPercent<HUNDRED>;
+pub type Percent100 = BoundPercent<{ Permilles::MILLE.units() }>;
 pub type Percent = BoundPercent<{ Units::MAX }>;
 
 impl Percent100 {
@@ -106,12 +104,14 @@ pub(super) mod test {
         coin::Amount,
         fraction::Fraction,
         fractionable::{CommonDoublePrimitive, Fractionable, IntoMax},
-        percent::{HUNDRED, Percent, Percent100, permilles::Permilles},
+        percent::{Percent, Percent100, permilles::Permilles},
         ratio::Ratio,
         test::coin,
     };
 
     use super::Units;
+
+    pub const MILLE_UNITS: Units = 1000;
 
     #[test]
     fn of() {
@@ -125,7 +125,7 @@ pub(super) mod test {
         test_of(10, percent100(890), percent100(8));
         test_of(1, percent100(123), Percent100::ZERO);
         test_of(0, Percent100::MAX, Percent100::ZERO);
-        test_of(HUNDRED, Percent100::MAX, Percent100::MAX);
+        test_of(MILLE_UNITS, Percent100::MAX, Percent100::MAX);
         test_of(100, Percent100::ZERO, Percent100::ZERO);
     }
 
@@ -168,7 +168,10 @@ pub(super) mod test {
     #[test]
     fn percent_to_percent100() {
         assert_eq!(percent100(500), percent(500).try_into().unwrap());
-        assert_eq!(percent100(HUNDRED), percent(HUNDRED).try_into().unwrap());
+        assert_eq!(
+            percent100(MILLE_UNITS),
+            percent(MILLE_UNITS).try_into().unwrap()
+        );
         assert!(Percent100::try_from(percent(1001)).is_err());
     }
 
@@ -177,7 +180,7 @@ pub(super) mod test {
         let n: Units = 189;
         let d: Units = 1890;
         let res = Percent::from_fraction(Permilles::new(n), Permilles::new(d)).unwrap();
-        assert_eq!(percent(n * HUNDRED / d), res);
+        assert_eq!(percent(n * MILLE_UNITS / d), res);
     }
 
     pub(crate) fn test_of<P>(permille: Units, quantity: P, exp: P)

@@ -230,11 +230,7 @@ mod test {
 
     use currency::test::{SuperGroupTestC1, SuperGroupTestC2};
 
-    use crate::{
-        fraction::Coprime,
-        percent::{HUNDRED, test},
-        test::coin,
-    };
+    use crate::{fraction::Coprime, percent::test, test::coin};
 
     use super::{Amount, Coin};
 
@@ -266,7 +262,11 @@ mod test {
         test::test_of(18, coin::coin1(120), coin::coin1(2));
         test::test_of(18, coin::coin1(112), coin::coin1(2));
         test::test_of(18, coin::coin1(111), coin::coin1(1));
-        test::test_of(HUNDRED, coin::coin1(Amount::MAX), coin::coin1(Amount::MAX));
+        test::test_of(
+            test::MILLE_UNITS,
+            coin::coin1(Amount::MAX),
+            coin::coin1(Amount::MAX),
+        );
     }
 
     #[test]

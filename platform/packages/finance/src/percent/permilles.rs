@@ -11,7 +11,7 @@ pub struct Permilles(Units);
 impl Permilles {
     pub(super) const ZERO: Self = Self::new(0);
     pub(super) const PRECISION: Self = Self::new(1);
-    pub const MILLE: Self = Self::new(super::HUNDRED);
+    pub const MILLE: Self = Self::new(1000);
 
     pub const fn new(permilles: Units) -> Self {
         Self(permilles)
@@ -51,7 +51,7 @@ impl Display for Permilles {
 
 #[cfg(test)]
 mod test {
-    use crate::percent::{self, Units, permilles::Permilles};
+    use crate::percent::{Units, permilles::Permilles, test};
 
     #[test]
     fn display() {
@@ -63,9 +63,9 @@ mod test {
 
     #[test]
     fn within() {
-        assert!(Permilles::new(100).within(percent::HUNDRED));
-        assert!(Permilles::MILLE.within(percent::HUNDRED));
-        assert!(!Permilles::new(1001).within(percent::HUNDRED));
+        assert!(Permilles::new(100).within(test::MILLE_UNITS));
+        assert!(Permilles::MILLE.within(test::MILLE_UNITS));
+        assert!(!Permilles::new(1001).within(test::MILLE_UNITS));
     }
 
     fn test_display(exp: &str, permilles: Units) {

@@ -139,9 +139,7 @@ mod test {
 
     use crate::{
         fraction::Fraction,
-        percent::{
-            HUNDRED, Percent, Percent100, Units, bound::BoundPercent, permilles::Permilles, test,
-        },
+        percent::{Percent, Percent100, Units, bound::BoundPercent, permilles::Permilles, test},
         rational::Rational,
         test::coin,
     };
@@ -200,8 +198,11 @@ mod test {
         assert_eq!(try_from_permille(100), Some(test::percent(100)));
         assert_eq!(try_from_permille(100), Some(test::percent100(100)));
 
-        assert_eq!(try_from_permille(HUNDRED), Some(test::percent(HUNDRED)));
-        assert_eq!(try_from_permille(HUNDRED), Some(Percent100::MAX));
+        assert_eq!(
+            try_from_permille(test::MILLE_UNITS),
+            Some(test::percent(test::MILLE_UNITS))
+        );
+        assert_eq!(try_from_permille(test::MILLE_UNITS), Some(Percent100::MAX));
 
         assert_eq!(try_from_permille(1001), Some(test::percent(1001)));
         assert_eq!(try_from_permille(1001), Option::<Percent100>::None);
@@ -228,7 +229,7 @@ mod test {
         let amount = coin::coin1(1);
 
         assert_eq!(
-            coin::coin1((Units::MAX / HUNDRED).into()),
+            coin::coin1((Units::MAX / test::MILLE_UNITS).into()),
             Percent::MAX.of(amount).unwrap()
         );
     }
@@ -284,7 +285,10 @@ mod test {
             test::percent100(39) - (test::percent100(0))
         );
         assert_eq!(test::percent100(990), test::percent100(10).complement());
-        assert_eq!(test::percent100(0), test::percent100(HUNDRED).complement());
+        assert_eq!(
+            test::percent100(0),
+            test::percent100(test::MILLE_UNITS).complement()
+        );
     }
 
     #[test]
@@ -305,7 +309,7 @@ mod test {
         test_display("1.9%", 19);
         test_display("9%", 90);
         test_display("10.1%", 101);
-        test_display("100%", HUNDRED);
+        test_display("100%", test::MILLE_UNITS);
     }
 
     fn assert_err<P>(r: Result<P, cosmwasm_std::StdError>, msg: &str)
