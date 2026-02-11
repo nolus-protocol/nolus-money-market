@@ -96,11 +96,11 @@ impl<const UPPER_BOUND: Units> TryFrom<Permilles> for BoundPercent<UPPER_BOUND> 
 impl<const UPPER_BOUND: Units> Display for BoundPercent<UPPER_BOUND> {
     #[track_caller]
     fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
-        let whole = (Permilles::from(*self).to_primitive()) / Self::UNITS_TO_PERCENT_RATIO;
+        let permille_units = Permilles::from(*self).to_primitive();
+        let whole = permille_units / Self::UNITS_TO_PERCENT_RATIO;
         let (no_fraction, overflow) = whole.overflowing_mul(Self::UNITS_TO_PERCENT_RATIO);
         debug_assert!(!overflow);
-        let (fractional, overflow) =
-            (Permilles::from(*self).to_primitive()).overflowing_sub(no_fraction);
+        let (fractional, overflow) = permille_units.overflowing_sub(no_fraction);
         debug_assert!(!overflow);
 
         f.write_fmt(format_args!("{whole}"))?;
