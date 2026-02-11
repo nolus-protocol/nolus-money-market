@@ -216,6 +216,7 @@ where
         })
     }
 
+    #[must_use]
     fn repay_margin(
         &mut self,
         principal_due: LpnCoin,
@@ -234,6 +235,7 @@ where
         })
     }
 
+    #[must_use]
     fn repay_loan(
         &mut self,
         interest_paid: LpnCoin,
