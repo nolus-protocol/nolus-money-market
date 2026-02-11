@@ -1,3 +1,5 @@
+use std::mem;
+
 use serde::{Deserialize, Serialize};
 
 use finance::{
@@ -249,7 +251,7 @@ where
                 debug_assert_eq!(shares.principal, principal_paid);
                 debug_assert_eq!(shares.excess, Coin::ZERO);
             })
-            .map(|_| ())
+            .map(mem::drop)
     }
 
     fn debug_check_start_due_before(&self, when: &Timestamp, when_descr: &str) {

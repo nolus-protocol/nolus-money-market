@@ -167,8 +167,7 @@ where
 
         if self
             .deposit_capacity(now, amount)?
-            .map(|capacity| amount > capacity)
-            .unwrap_or_default()
+            .is_some_and(|capacity| amount > capacity)
         {
             return Err(ContractError::UtilizationBelowMinimalRates);
         }

@@ -50,11 +50,11 @@ where
         asset_in_lpns: Price<Asset>,
         now: &Timestamp,
     ) -> ContractResult<()> {
-        let due = self.loan.state(now)?;
-
-        self.position
-            .change_close_policy(cmd, &due, asset_in_lpns)
-            .map_err(Into::into)
+        self.loan.state(now).and_then(|due| {
+            self.position
+                .change_close_policy(cmd, &due, asset_in_lpns)
+                .map_err(Into::into)
+        })
     }
 
     pub(crate) fn price_of_lease_currency(&self) -> ContractResult<Price<Asset>> {

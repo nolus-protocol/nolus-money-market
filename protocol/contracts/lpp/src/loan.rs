@@ -32,24 +32,25 @@ impl<Lpn> Loan<Lpn> {
     }
 
     pub fn repay(&mut self, by: &Timestamp, repayment: Coin<Lpn>) -> Option<RepayShares<Lpn>> {
-        let (paid_for, interest_change) = interest::pay(
+        interest::pay(
             self.annual_interest_rate,
             self.principal_due,
             repayment,
             self.due_period(by),
-        )?;
+        )
+        .map(|(paid_for, interest_change)| {
+            let interest_paid = repayment - interest_change;
+            let principal_paid = interest_change.min(self.principal_due);
+            let excess = interest_change - principal_paid;
 
-        let interest_paid = repayment - interest_change;
-        let principal_paid = interest_change.min(self.principal_due);
-        let excess = interest_change - principal_paid;
+            self.principal_due -= principal_paid;
+            self.interest_paid += paid_for;
 
-        self.principal_due -= principal_paid;
-        self.interest_paid += paid_for;
-
-        Some(RepayShares {
-            interest: interest_paid,
-            principal: principal_paid,
-            excess,
+            RepayShares {
+                interest: interest_paid,
+                principal: principal_paid,
+                excess,
+            }
         })
     }
 
