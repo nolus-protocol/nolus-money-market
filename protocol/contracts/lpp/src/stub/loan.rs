@@ -77,8 +77,9 @@ where
     }
 
     fn repay(&mut self, by: &Timestamp, repayment: Coin<Lpn>) -> Option<RepayShares<Lpn>> {
-        self.repayment += repayment;
-        self.loan.repay(by, repayment)
+        self.loan
+            .repay(by, repayment)
+            .inspect(|_| self.repayment += repayment)
     }
 
     fn annual_interest_rate(&self) -> Percent100 {
