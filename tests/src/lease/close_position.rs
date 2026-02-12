@@ -343,16 +343,18 @@ fn do_close(
             .add_attribute("to", lease_addr.clone())
             .add_attribute(
                 "payment-amount",
-                Amount::from(close_amount_in_lpn).to_string(),
+                close_amount_in_lpn.amount_testing().to_string(),
             )
             .add_attribute("payment-symbol", LpnCurrency::ticker())
             .add_attribute("loan-close", exp_loan_close.to_string())
             .add_attribute(
                 "principal",
-                Amount::from(close_amount_in_lpn - exp_change).to_string(),
+                (close_amount_in_lpn - exp_change)
+                    .amount_testing()
+                    .to_string(),
             )
-            .add_attribute("change", Amount::from(exp_change).to_string())
-            .add_attribute("amount-amount", Amount::from(close_amount).to_string())
+            .add_attribute("change", exp_change.amount_testing().to_string())
+            .add_attribute("amount-amount", close_amount.amount_testing().to_string())
             .add_attribute("amount-symbol", LeaseCurrency::ticker()),
     );
 

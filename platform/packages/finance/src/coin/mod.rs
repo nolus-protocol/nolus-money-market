@@ -57,6 +57,11 @@ impl<C> Coin<C> {
         }
     }
 
+    #[cfg(any(test, feature = "testing"))]
+    pub fn amount_testing(&self) -> Amount {
+        self.amount
+    }
+
     pub const fn is_zero(&self) -> bool {
         self.amount == Zero::ZERO
     }
@@ -189,7 +194,8 @@ impl<C> Display for Coin<C> {
     }
 }
 
-// TODO remove it when finish refactoring Fractionable
+// NOTE: This conversion is currently required by `SimpleFraction::to_fraction()`.
+// TODO: Remove it after refactoring `SimpleFraction::to_fraction()`
 impl<C> From<Coin<C>> for Amount {
     fn from(coin: Coin<C>) -> Self {
         coin.amount

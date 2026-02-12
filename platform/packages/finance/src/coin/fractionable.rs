@@ -51,7 +51,6 @@ impl<C> TryFromMax<DoubleCoinPrimitive> for Coin<C> {
 mod test {
 
     use crate::{
-        coin::Amount,
         percent::{Percent, test},
         ratio::SimpleFraction,
         rational::Rational,
@@ -75,10 +74,13 @@ mod test {
         );
 
         assert_eq!(
-            coin::coin1(2 * Amount::from(u32::MAX)),
-            SimpleFraction::new(coin::coin1(Amount::from(u32::MAX)), coin::coin1(1))
-                .of(coin::coin1(2))
-                .unwrap()
+            coin::coin1(2 * coin::coin1(u32::MAX as u128).amount_testing()),
+            SimpleFraction::new(
+                coin::coin1(coin::coin1(u32::MAX as u128).amount_testing()),
+                coin::coin1(1)
+            )
+            .of(coin::coin1(2))
+            .unwrap()
         );
     }
 }

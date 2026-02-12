@@ -358,7 +358,7 @@ fn expect_transfer_events<ProtocolsRegistry, Reserve, Leaser, Lpp, Oracle>(
             ("idx", "0"),
             (
                 "profit-amount-amount",
-                &Amount::from(total_native_profit).to_string()
+                &total_native_profit.amount_testing().to_string()
             ),
             ("profit-amount-symbol", Nls::ticker())
         ]
@@ -374,7 +374,7 @@ fn expect_transfer_events<ProtocolsRegistry, Reserve, Leaser, Lpp, Oracle>(
             ("sender", test_case.address_book.profit().as_str()),
             (
                 "amount",
-                &format!("{}{}", Amount::from(total_native_profit), Nls::bank())
+                &format!("{}{}", total_native_profit.amount_testing(), Nls::bank())
             )
         ]
     );

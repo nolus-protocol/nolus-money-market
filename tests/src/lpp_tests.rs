@@ -282,7 +282,7 @@ fn deposit_and_withdraw() {
     );
 
     // try to withdraw with overdraft
-    let to_burn = Amount::from(balance_nlpn.balance) - rounding_error + overdraft;
+    let to_burn = balance_nlpn.balance.amount_testing() - rounding_error + overdraft;
     try_burn(&mut test_case, lender2.clone(), to_burn).unwrap_err();
 
     // partial withdraw
@@ -954,8 +954,8 @@ fn general_interest_rate(
                 ).expect("The utilization must be a valid Percent").min(utilization_factor_max);
 
         SimpleFraction::<Permilles>::new(addon_rate.into(), optimal_rate.into()).of(utilization_factor)
-        .map(|utilization_config| Percent100::try_from(utilization_config + base_rate.into()).expect("The borrow rate must not exceed 100%"))     
-        .expect("The utilization_config must be a valid Percent")     
+        .map(|utilization_config| Percent100::try_from(utilization_config + base_rate.into()).expect("The borrow rate must not exceed 100%"))
+        .expect("The utilization_config must be a valid Percent")
     })
     .expect("The utilization_max must be a valid Percent: utilization_opt < 100% ensures the ratio is valid Percent100, which always fits within Percent's wider range")
 }
