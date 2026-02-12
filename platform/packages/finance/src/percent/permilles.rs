@@ -45,7 +45,7 @@ impl Permilles {
 
 impl Display for Permilles {
     fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
-        f.write_fmt(format_args!("{}‰", self.0))
+        self.0.fmt(f).and_then(|()| f.write_str("‰"))
     }
 }
 
