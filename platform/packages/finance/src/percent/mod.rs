@@ -111,7 +111,7 @@ pub(super) mod test {
 
     use super::Units;
 
-    pub const MILLE_UNITS: Units = 1000;
+    pub const MILLE_UNITS: Units = Permilles::MILLE.units();
 
     #[test]
     fn of() {

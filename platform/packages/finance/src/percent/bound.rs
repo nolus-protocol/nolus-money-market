@@ -51,7 +51,7 @@ impl<const UPPER_BOUND: Units> BoundPercent<UPPER_BOUND> {
     }
 
     pub fn display_primitive(&self) -> String {
-        format!("{}", self.0.to_primitive())
+        self.0.to_primitive().to_string()
     }
 
     // Cannot be const because const impl of PartialEq is not available.
