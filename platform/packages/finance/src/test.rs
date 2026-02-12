@@ -34,7 +34,7 @@ pub mod coin {
         where
             C: Currency,
         {
-            currency::equal::<CExp, C>() && Amount::from(coin) == self.0.into()
+            currency::equal::<CExp, C>() && coin == self.0.coerce_into()
         }
     }
 
