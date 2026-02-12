@@ -66,9 +66,11 @@ where
     where
         QuoteQuoteC: 'static,
     {
-        Price::new(self.amount, rhs.amount_quote).lossy_mul(ToFraction::<Amount>::to_fraction(
-            SimpleFraction::new(self.amount_quote, rhs.amount),
-        ))
+        // The second multiplicand could not be a Price.
+        // Constructing Price<QuoteC, QuoteC> would enforce the invariant that same-currency prices are identity (1/1),
+        // which is incorrect for cross-rate arithmetic intermediates and would panic.
+        Price::new(self.amount, rhs.amount_quote)
+            .lossy_mul(SimpleFraction::new(self.amount_quote, rhs.amount))
     }
 
     /// Add two prices rounding each of them to 1.10-18, similarly to
