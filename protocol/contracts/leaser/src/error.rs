@@ -106,10 +106,7 @@ impl ContractError {
         C: Display,
         P: Debug,
     {
-        Self::ComputationOverflow(format!(
-            "during `{cause}`. amount: {}, price: {:?}",
-            amount, price
-        ))
+        Self::ComputationOverflow(format!("`{cause}`. amount: {}, price: {:?}", amount, price))
     }
 
     pub fn overflow_init_borrow_amount<P>(
@@ -121,7 +118,7 @@ impl ContractError {
         P: Display,
     {
         Self::ComputationOverflow(format!(
-            "during `{cause}`. downpayment: {}, max_ltd: {:?}",
+            "`{cause}`. downpayment: {}, max_ltd: {:?}",
             downpayment, may_max_ltd
         ))
     }
