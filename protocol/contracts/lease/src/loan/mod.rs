@@ -161,12 +161,8 @@ where
         );
 
         self.repay_margin(state.principal_due, margin_paid, by)
-            .ok_or(ContractError::overflow("Repay margin overflow"))
             .inspect(|()| profit.send(margin_paid))
-            .and_then(|()| {
-                self.repay_loan(interest_paid, principal_paid, by)
-                    .ok_or(ContractError::overflow("Repay loan overflow"))
-            })
+            .and_then(|()| self.repay_loan(interest_paid, principal_paid, by))
             .map(|()| {
                 RepayReceipt::new(
                     overdue_interest_payment,
@@ -218,13 +214,12 @@ where
         })
     }
 
-    #[must_use]
     fn repay_margin(
         &mut self,
         principal_due: LpnCoin,
         margin_paid: LpnCoin,
         by: &Timestamp,
-    ) -> Option<()> {
+    ) -> ContractResult<()> {
         interest::pay(
             self.margin_interest,
             principal_due,
@@ -235,15 +230,15 @@ where
         .map(|(margin_paid_for, _)| {
             self.margin_paid_by += margin_paid_for;
         })
+        .ok_or_else(|| ContractError::overflow("Repay margin overflow"))
     }
 
-    #[must_use]
     fn repay_loan(
         &mut self,
         interest_paid: LpnCoin,
         principal_paid: LpnCoin,
         by: &Timestamp,
-    ) -> Option<()> {
+    ) -> ContractResult<()> {
         self.lpp_loan
             .repay(by, interest_paid + principal_paid)
             .inspect(|shares| {
@@ -252,6 +247,7 @@ where
                 debug_assert_eq!(shares.excess, Coin::ZERO);
             })
             .map(mem::drop)
+            .ok_or_else(|| ContractError::overflow("Repay loan overflow"))
     }
 
     fn debug_check_start_due_before(&self, when: &Timestamp, when_descr: &str) {
