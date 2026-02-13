@@ -133,10 +133,7 @@ impl ContractError {
     {
         Self::ComputationOverflow {
             cause,
-            details: format!(
-                "at Timestamp: {}, repay amount: {}",
-                timestamp, repay_amount
-            ),
+            details: format!("repay amount: {}, timestamp: {}", repay_amount, timestamp),
         }
     }
 
@@ -154,7 +151,7 @@ impl ContractError {
         Self::ComputationOverflow {
             cause,
             details: format!(
-                "Timestamp: {}, loan: {:?}, payment: {:?}",
+                "timestamp: {}, loan: {:?}, payment: {:?}",
                 timestamp, loan, payment
             ),
         }
@@ -166,7 +163,7 @@ impl ContractError {
     {
         Self::ComputationOverflow {
             cause,
-            details: format!("Timestamp: {}", timestamp),
+            details: format!("timestamp: {}", timestamp),
         }
     }
 
@@ -176,7 +173,7 @@ impl ContractError {
     {
         Self::ComputationOverflow {
             cause,
-            details: format!("Timestamp: {}", timestamp),
+            details: format!("timestamp: {}", timestamp),
         }
     }
 }
