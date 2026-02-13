@@ -8,6 +8,7 @@ use crate::{
     finance::{LpnCoin, LpnCurrency},
 };
 
+// TODO: An instance of State should not be created if the sum of the annaul interest and the margin overflows.
 #[cfg_attr(feature = "contract_testing", derive(PartialEq, Eq, Debug))]
 pub struct State {
     pub annual_interest: Percent100,
