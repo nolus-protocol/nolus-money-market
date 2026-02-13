@@ -32,6 +32,9 @@ pub enum ContractError {
     #[error("[Lease] {0}")]
     FinanceError(#[from] FinanceError),
 
+    #[error("[Lease] Arithmetic overflow: {0}")]
+    Overflow(&'static str),
+
     #[error("[Lease] {0}")]
     PlatformError(#[from] PlatformError),
 
@@ -113,10 +116,6 @@ impl ContractError {
         } else {
             Ok(())
         }
-    }
-
-    pub fn overflow(msg: &'static str) -> Self {
-        ContractError::FinanceError(FinanceError::Overflow(msg))
     }
 }
 

@@ -195,13 +195,13 @@ where
             principal_due,
             due_period_margin.length(),
         )
-        .ok_or(ContractError::overflow("Due interest margin overflow"))
+        .ok_or(ContractError::Overflow("Due interest margin overflow"))
         .map(|margin| margin - overdue.margin())?;
 
         let due_interest = self
             .lpp_loan
             .interest_due(&due_period_margin.till())
-            .ok_or(ContractError::overflow("Due interest overflow"))
+            .ok_or(ContractError::Overflow("Due interest overflow"))
             .map(|due| due - overdue.interest())?;
 
         Ok(State {
@@ -230,7 +230,7 @@ where
         .map(|(margin_paid_for, _)| {
             self.margin_paid_by += margin_paid_for;
         })
-        .ok_or_else(|| ContractError::overflow("Repay margin overflow"))
+        .ok_or(ContractError::Overflow("Repay margin overflow"))
     }
 
     fn repay_loan(
@@ -247,7 +247,7 @@ where
                 debug_assert_eq!(shares.excess, Coin::ZERO);
             })
             .map(mem::drop)
-            .ok_or_else(|| ContractError::overflow("Repay loan overflow"))
+            .ok_or(ContractError::Overflow("Repay loan overflow"))
     }
 
     fn debug_check_start_due_before(&self, when: &Timestamp, when_descr: &str) {

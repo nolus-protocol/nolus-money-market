@@ -61,11 +61,11 @@ impl Overdue {
                 lpp_loan.principal_due(),
                 overdue_period.length(),
             )
-            .ok_or(ContractError::overflow("Overdue margin overflow"))?;
+            .ok_or(ContractError::Overflow("Overdue margin overflow"))?;
 
             let interest = lpp_loan
                 .interest_due(&overdue_period.till())
-                .ok_or(ContractError::overflow("Overdue interest overflow"))?;
+                .ok_or(ContractError::Overflow("Overdue interest overflow"))?;
 
             Ok(Self::Accrued { interest, margin })
         }
