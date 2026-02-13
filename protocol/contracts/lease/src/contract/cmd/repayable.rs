@@ -150,12 +150,16 @@ where
         Oracle: OracleTrait<LeasePaymentCurrencies, QuoteC = LpnCurrency, QuoteG = LpnCurrencies>
             + Into<OracleRef>,
     {
-        let amount = self.amount.try_into()?;
         let mut profit_sender = self.profit.clone().into_stub();
 
         let receipt = self
-            .repay_fn
-            .do_repay(&mut lease, amount, self.now, &mut profit_sender)?;
+            .amount
+            .try_into()
+            .map_err(Into::into)
+            .and_then(|amount| {
+                self.repay_fn
+                    .do_repay(&mut lease, amount, self.now, &mut profit_sender)
+            })?;
 
         let events = self.emitter_fn.emit(lease.addr(), &receipt);
 
