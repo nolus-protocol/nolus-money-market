@@ -96,18 +96,14 @@ where
         now: Timestamp,
         due_projection: Duration,
     ) -> ContractResult<State<Asset>> {
-        let estimate_at = now + due_projection;
-        let loan = self.loan.state(&estimate_at)?;
-        let overdue_collect_in = self.position.overdue_collection_in(&loan);
-
-        Ok(State {
+        self.loan.state(&(now + due_projection)).map(|loan| State {
             amount: self.position.amount(),
             interest_rate: loan.annual_interest,
             interest_rate_margin: loan.annual_interest_margin,
             principal_due: loan.principal_due,
             overdue_margin: loan.overdue.margin(),
             overdue_interest: loan.overdue.interest(),
-            overdue_collect_in,
+            overdue_collect_in: self.position.overdue_collection_in(&loan),
             due_margin: loan.due_margin_interest,
             due_interest: loan.due_interest,
             due_projection,
