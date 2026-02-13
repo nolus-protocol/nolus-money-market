@@ -212,8 +212,39 @@ where
         Asset: CurrencyDef,
         Asset::Group: MemberOf<LeaseCurrencies> + MemberOf<PaymentCurrencies>,
     {
-        let downpayment_lpn = self
-            .oracle
+        self.calc_downpayment_lpn()
+            .and_then(|downpayment_lpn| {
+                self.calc_borrow(downpayment_lpn).and_then(|borrow| {
+                    self.calc_total_asset::<Asset>(downpayment_lpn, borrow)
+                        .and_then(|total_asset| {
+                            self.lpp_quote.with(borrow).map(|annual_interest_rate| {
+                                (borrow, total_asset, annual_interest_rate)
+                            })
+                        })
+                })
+            })
+            .map(
+                |(borrow, total_asset, annual_interest_rate)| QuoteResponse {
+                    total: total_asset.into(),
+                    borrow: borrow.into(),
+                    annual_interest_rate,
+                    annual_interest_rate_margin: self.lease_interest_rate_margin,
+                },
+            )
+    }
+}
+
+impl<Lpn, Dpc, Lpp, Oracle> QuoteStage4<Lpn, Dpc, Lpp, Oracle>
+where
+    Lpn: CurrencyDef,
+    Lpn::Group: MemberOf<LpnCurrencies>,
+    Dpc: CurrencyDef,
+    Dpc::Group: MemberOf<PaymentCurrencies>,
+    Lpp: LppLenderTrait<Lpn>,
+    Oracle: OracleTrait<PaymentCurrencies, QuoteC = Lpn, QuoteG = LpnCurrencies>,
+{
+    fn calc_downpayment_lpn(&self) -> ContractResult<Coin<Lpn>> {
+        self.oracle
             .price_of::<Dpc>()
             .map_err(ContractError::from)
             .and_then(|dpc_price| {
@@ -224,45 +255,49 @@ where
                         dpc_price,
                     )
                 })
-            })?;
+            })
+            .and_then(|downpayment| {
+                if downpayment.is_zero() {
+                    Err(ContractError::ZeroDownpayment {})
+                } else {
+                    Ok(downpayment)
+                }
+            })
+    }
 
-        if downpayment_lpn.is_zero() {
-            return Err(ContractError::ZeroDownpayment {});
-        }
-
-        let borrow = self
-            .liability
-            .init_borrow_amount(downpayment_lpn, self.max_ltd)
+    fn calc_borrow(&self, downpayment: Coin<Lpn>) -> ContractResult<Coin<Lpn>> {
+        self.liability
+            .init_borrow_amount(downpayment, self.max_ltd)
             .ok_or_else(|| {
                 ContractError::overflow_init_borrow_amount(
                     "calculating the quote's borrow amount",
-                    downpayment_lpn,
+                    downpayment,
                     self.max_ltd,
                 )
-            })?;
+            })
+    }
 
-        let total_asset = self
-            .oracle
+    fn calc_total_asset<Asset>(
+        &self,
+        downpayment: Coin<Lpn>,
+        borrow: Coin<Lpn>,
+    ) -> ContractResult<Coin<Asset>>
+    where
+        Asset: CurrencyDef,
+        Asset::Group: MemberOf<PaymentCurrencies>,
+    {
+        self.oracle
             .price_of::<Asset>()
             .map_err(ContractError::from)
             .map(Price::inv)
             .and_then(|asset_price| {
-                price::total(downpayment_lpn + borrow, asset_price).ok_or_else(|| {
+                price::total(downpayment + borrow, asset_price).ok_or_else(|| {
                     ContractError::overflow_price_total(
                         "converting from Lpn to asset currency",
-                        downpayment_lpn + borrow,
+                        downpayment + borrow,
                         asset_price,
                     )
                 })
-            })?;
-
-        let annual_interest_rate = self.lpp_quote.with(borrow)?;
-
-        Ok(QuoteResponse {
-            total: total_asset.into(),
-            borrow: borrow.into(),
-            annual_interest_rate,
-            annual_interest_rate_margin: self.lease_interest_rate_margin,
-        })
+            })
     }
 }
