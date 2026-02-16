@@ -13,11 +13,11 @@ use platform::{
     state_machine::Response as StateMachineResponse,
 };
 use sdk::{
+    api::SudoMsg,
     cosmwasm_ext::Response as CwResponse,
     cosmwasm_std::{
         Api, Binary, Deps, DepsMut, Env, MessageInfo, QuerierWrapper, Reply, entry_point,
     },
-    neutron_sdk::sudo::msg::SudoMsg as NeutronSudoMsg,
 };
 use timealarms::stub::TimeAlarmsRef;
 use versioning::{
@@ -149,7 +149,7 @@ pub fn execute(
 }
 
 #[entry_point]
-pub fn sudo(deps: DepsMut<'_>, env: Env, msg: NeutronSudoMsg) -> ContractResult<CwResponse> {
+pub fn sudo(deps: DepsMut<'_>, env: Env, msg: SudoMsg) -> ContractResult<CwResponse> {
     State::load(deps.storage)
         .and_then(|state| try_handle_neutron_msg(deps.api, deps.as_ref(), env, msg, state))
         .and_then(
@@ -171,24 +171,24 @@ fn try_handle_neutron_msg(
     api: &dyn Api,
     deps: Deps<'_>,
     env: Env,
-    msg: NeutronSudoMsg,
+    msg: SudoMsg,
     state: State,
 ) -> ContractResult<DexResponse<State>> {
     match msg {
-        NeutronSudoMsg::Response { data, .. } => state.on_response(data, deps.querier, env).into(),
-        NeutronSudoMsg::Error { details, .. } => {
+        SudoMsg::Response { data, .. } => state.on_response(data, deps.querier, env).into(),
+        SudoMsg::Error { details, .. } => {
             let resp = details.into();
             api.debug(&format!("SudoMsg::Error({resp})",));
             state.on_error(resp, deps.querier, env).into()
         }
-        NeutronSudoMsg::Timeout { .. } => state.on_timeout(deps.querier, env).map_err(Into::into),
-        NeutronSudoMsg::OpenAck {
+        SudoMsg::Timeout { .. } => state.on_timeout(deps.querier, env).map_err(Into::into),
+        SudoMsg::OpenAck {
             counterparty_version,
             ..
         } => state
             .on_open_ica(counterparty_version, deps.querier, env)
             .map_err(Into::into),
-        NeutronSudoMsg::TxQueryResult { .. } | NeutronSudoMsg::KVQueryResult { .. } => {
+        SudoMsg::TxQueryResult { .. } | SudoMsg::KVQueryResult { .. } => {
             unimplemented!()
         }
     }

@@ -10,9 +10,9 @@ use profit::{
     typedefs::CadenceHours,
 };
 use sdk::{
+    api::SudoMsg,
     cosmwasm_std::{self, Addr, Coin as CwCoin},
     cw_multi_test::{self as cw_test},
-    neutron_sdk::sudo::msg::SudoMsg as NeutronSudoMsg,
 };
 
 use crate::common::{
@@ -207,7 +207,7 @@ where
             .app
             .sudo(
                 profit_addr.clone(),
-                &NeutronSudoMsg::OpenAck {
+                &SudoMsg::OpenAck {
                     port_id: "ica-port".into(),
                     channel_id: TestCase::PROFIT_IBC_CHANNEL.into(),
                     counterparty_channel_id: TestCase::PROFIT_IBC_CHANNEL.into(),

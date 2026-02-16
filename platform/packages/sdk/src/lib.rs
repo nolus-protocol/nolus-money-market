@@ -9,6 +9,10 @@ pub use cw_storage_plus;
 pub use ibc_proto;
 
 pub mod ica;
+
+pub mod api {
+    pub use crate::ica::SudoMsg;
+}
 #[cfg(feature = "testing")]
 pub mod testing;
 
