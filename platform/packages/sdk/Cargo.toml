@@ -28,7 +28,7 @@ testing = [
 ]
 cosmos_ibc = ["dep:ibc-proto"]
 cosmos_proto = ["dep:cosmos-sdk-proto", "cosmos-sdk-proto/cosmwasm"]
-neutron = ["cosmwasm-std/stargate", "dep:neutron-sdk"]
+neutron = ["cosmwasm-std/stargate"]
 
 [dependencies]
 cosmwasm-std = { workspace = true }
@@ -36,7 +36,6 @@ schemars = { workspace = true }
 cw-storage-plus = { workspace = true, optional = true }
 cosmos-sdk-proto = { workspace = true, optional = true }
 ibc-proto = { workspace = true, optional = true }
-neutron-sdk = { workspace = true, optional = true }
 
 base64 = { workspace = true, optional = true, features = ["alloc"] }
 serde = { workspace = true }
