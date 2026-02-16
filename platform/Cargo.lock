@@ -1233,6 +1233,7 @@ dependencies = [
  "cw-storage-plus",
  "ibc-proto",
  "neutron-sdk",
+ "schemars",
  "serde",
  "thiserror 2.0.18",
 ]
