@@ -3,7 +3,7 @@ use std::fmt::{Display, Formatter, Result as FmtResult};
 use serde::{Deserialize, Serialize};
 
 use finance::duration::Duration;
-use sdk::neutron_sdk::bindings::msg::{IbcFee, NeutronMsg};
+use sdk::ica::{IbcFee, InterChainMsg};
 
 use crate::{batch::Batch, error::Error, result::Result, trx::Transaction};
 
@@ -70,7 +70,7 @@ where
     C: Into<String>,
 {
     let mut batch = Batch::default();
-    batch.schedule_execute_no_reply(NeutronMsg::register_interchain_account(
+    batch.schedule_execute_no_reply(InterChainMsg::register_interchain_account(
         connection.into(),
         ICA_ACCOUNT_ID.into(),
         None,
@@ -96,7 +96,7 @@ where
 {
     let mut batch = Batch::default();
 
-    batch.schedule_execute_no_reply(NeutronMsg::submit_tx(
+    batch.schedule_execute_no_reply(InterChainMsg::submit_tx(
         connection.into(),
         ICA_ACCOUNT_ID.into(),
         trx.into_msgs(),
