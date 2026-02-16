@@ -1,6 +1,6 @@
 use sdk::{
-    cosmwasm_ext::InterChainMsg, cosmwasm_std::Coin as CwCoin,
-    neutron_sdk::bindings::types::ProtobufAny, testing::InterChainMsgReceiver,
+    cosmwasm_ext::InterChainMsg, cosmwasm_std::Coin as CwCoin, ica::ProtobufAny,
+    testing::InterChainMsgReceiver,
 };
 
 #[must_use]

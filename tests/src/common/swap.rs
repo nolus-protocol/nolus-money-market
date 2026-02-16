@@ -7,7 +7,7 @@ use sdk::{
     cosmos_sdk_proto::Any as CosmosAny,
     cosmwasm_std::{Addr, Binary, Coin as CwCoin},
     cw_multi_test::AppResponse,
-    neutron_sdk::bindings::types::ProtobufAny as NeutronAny,
+    ica::ProtobufAny,
     testing,
 };
 use swap::{
@@ -56,11 +56,9 @@ where
     let requests: Vec<SwapRequest<PaymentGroup, PaymentGroup>> = response
         .expect_submit_tx(connection_id, ica_id)
         .into_iter()
-        .map(|NeutronAny { type_url, value }| {
-            <Impl as ExactAmountInSkel>::parse_request(CosmosAny {
-                type_url,
-                value: value.into(),
-            })
+        .map(|msg: ProtobufAny| {
+            let any: CosmosAny = msg.into();
+            <Impl as ExactAmountInSkel>::parse_request(any)
         })
         .collect();
 
