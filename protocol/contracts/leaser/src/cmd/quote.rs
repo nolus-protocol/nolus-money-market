@@ -212,25 +212,25 @@ where
         Asset: CurrencyDef,
         Asset::Group: MemberOf<LeaseCurrencies> + MemberOf<PaymentCurrencies>,
     {
-self.calc_downpayment_lpn()
-    .and_then(|downpayment_lpn| {
-        self.calc_borrow(downpayment_lpn)
-            .map(|borrow| (downpayment_lpn, borrow))
-    })
-    .and_then(|(downpayment_lpn, borrow)| {
-        self.calc_total_asset::<Asset>(downpayment_lpn, borrow)
-            .map(|total_asset| (borrow, total_asset))
-    })
-    .and_then(|(borrow, total_asset)| {
-        self.lpp_quote
-            .with(borrow)
-            .map(|annual_interest_rate| QuoteResponse {
-                total: total_asset.into(),
-                borrow: borrow.into(),
-                annual_interest_rate,
-                annual_interest_rate_margin: self.lease_interest_rate_margin,
+        self.calc_downpayment_lpn()
+            .and_then(|downpayment_lpn| {
+                self.calc_borrow(downpayment_lpn)
+                    .map(|borrow| (downpayment_lpn, borrow))
             })
-    })
+            .and_then(|(downpayment_lpn, borrow)| {
+                self.calc_total_asset::<Asset>(downpayment_lpn, borrow)
+                    .map(|total_asset| (borrow, total_asset))
+            })
+            .and_then(|(borrow, total_asset)| {
+                self.lpp_quote
+                    .with(borrow)
+                    .map(|annual_interest_rate| QuoteResponse {
+                        total: total_asset.into(),
+                        borrow: borrow.into(),
+                        annual_interest_rate,
+                        annual_interest_rate_margin: self.lease_interest_rate_margin,
+                    })
+            })
     }
 }
 
