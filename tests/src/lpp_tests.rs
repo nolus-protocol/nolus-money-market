@@ -282,7 +282,7 @@ fn deposit_and_withdraw() {
     );
 
     // try to withdraw with overdraft
-    let to_burn = balance_nlpn.balance.amount_testing() - rounding_error + overdraft;
+    let to_burn = Amount::from(balance_nlpn.balance) - rounding_error + overdraft;
     try_burn(&mut test_case, lender2.clone(), to_burn).unwrap_err();
 
     // partial withdraw

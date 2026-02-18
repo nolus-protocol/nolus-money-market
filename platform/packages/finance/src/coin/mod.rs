@@ -57,13 +57,12 @@ impl<C> Coin<C> {
         }
     }
 
-    #[cfg(any(test, feature = "testing"))]
-    pub fn amount_testing(&self) -> Amount {
-        self.amount
-    }
-
     pub const fn is_zero(&self) -> bool {
         self.amount == Zero::ZERO
+    }
+
+    pub fn display_primitive(&self) -> String {
+        self.amount.to_string()
     }
 
     #[track_caller]

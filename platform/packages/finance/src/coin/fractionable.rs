@@ -74,13 +74,10 @@ mod test {
         );
 
         assert_eq!(
-            coin::coin1(2 * coin::coin1(u32::MAX as u128).amount_testing()),
-            SimpleFraction::new(
-                coin::coin1(coin::coin1(u32::MAX as u128).amount_testing()),
-                coin::coin1(1)
-            )
-            .of(coin::coin1(2))
-            .unwrap()
+            coin::coin1(u32::MAX as u128).checked_mul(2).unwrap(),
+            SimpleFraction::new(coin::coin1(u32::MAX as u128), coin::coin1(1))
+                .of(coin::coin1(2))
+                .unwrap()
         );
     }
 }

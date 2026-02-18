@@ -1,5 +1,8 @@
 use ::lease::api::query::{ClosePolicy, StateResponse, opened::Status};
-use finance::{coin::Coin, duration::Duration};
+use finance::{
+    coin::{Amount, Coin},
+    duration::Duration,
+};
 
 use crate::{
     common::{leaser::Instantiator as LeaserInstantiator, lpp::LppQueryMsg},
