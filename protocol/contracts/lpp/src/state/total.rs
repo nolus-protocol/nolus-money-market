@@ -145,57 +145,22 @@ impl<Lpn> Total<Lpn> {
         loan_interest_payment: Coin<Lpn>,
         loan_principal_payment: Coin<Lpn>,
         loan_interest_rate: Percent100,
-    ) -> Option<&Self> {
+    ) -> Option<()> {
         let new_total_principal_due = self.calculate_total_principal_due(loan_principal_payment);
 
-        if new_total_principal_due.is_zero() {
-            // Due to rounding errors, the calculated total interest due might deviate from
-            // the sum of loans' interest due. This is an important checkpoint at which
-            // the deviation could be cleared.
-            self.apply_repayment(
-                Coin::ZERO,
-                zero_interest_rate(),
-                new_total_principal_due,
-                ctime,
-            )
-        } else {
-            // The interest payment calculation of loans is the source of truth.
-            // Therefore, it is possible for the rounded-down total interest due from `total_interest_due_by_now`
-            // to become less than the sum of loans' interests. Taking 0 when subtracting a loan's interest from the total is a safe solution.
-            self.total_interest_due_by_now(&ctime)
-                .map(|interest| interest.saturating_sub(loan_interest_payment))
-                .and_then(|new_total_interest_due| {
-                    // Please refer to the comment above for more detailed information on why using `saturating_sub` is a safe solution
-                    // for updating the annual interest
-                    let new_annual_interest_rate = Ratio::new(
-                        self.estimated_annual_interest()
-                            .saturating_sub(loan_interest_rate.of(loan_principal_payment)),
-                        new_total_principal_due,
-                    );
-
-                    self.apply_repayment(
-                        new_total_interest_due,
-                        new_annual_interest_rate,
-                        new_total_principal_due,
-                        ctime,
-                    )
-                })
-        }
-    }
-
-    fn apply_repayment(
-        &mut self,
-        total_interest_due: Coin<Lpn>,
-        annual_interest_rate: Ratio<Coin<Lpn>>,
-        total_principal_due: Coin<Lpn>,
-        last_update_time: Timestamp,
-    ) -> Option<&Self> {
-        self.total_interest_due = total_interest_due;
-        self.annual_interest_rate = annual_interest_rate;
-        self.total_principal_due = total_principal_due;
-        self.last_update_time = last_update_time;
-
-        Some(self)
+        self.repay_interest(
+            ctime,
+            loan_interest_payment,
+            loan_principal_payment,
+            loan_interest_rate,
+            new_total_principal_due,
+        )
+        .map(|(new_total_interest_due, new_annual_interest_rate)| {
+            self.total_interest_due = new_total_interest_due;
+            self.annual_interest_rate = new_annual_interest_rate;
+            self.total_principal_due = new_total_principal_due;
+            self.last_update_time = ctime;
+        })
     }
 
     pub fn deposit(&mut self, receipts: Coin<NLpn>) -> Result<&mut Self, ContractError> {
@@ -234,6 +199,32 @@ impl<Lpn> Total<Lpn> {
             })
     }
 
+    fn repay_interest(
+        &self,
+        ctime: Timestamp,
+        loan_interest_payment: Coin<Lpn>,
+        loan_principal_payment: Coin<Lpn>,
+        loan_interest_rate: Percent100,
+        new_total_principal_due: Coin<Lpn>,
+    ) -> Option<(Coin<Lpn>, Ratio<Coin<Lpn>>)> {
+        if new_total_principal_due.is_zero() {
+            // Due to rounding errors, the calculated total interest due might deviate from
+            // the sum of loans' interest due. This is an important checkpoint at which
+            // the deviation could be cleared.
+            Some((Coin::ZERO, zero_interest_rate()))
+        } else {
+            self.calculate_total_interest_due(ctime, loan_interest_payment)
+                .map(|new_total_interest_due| {
+                    let new_annual_interest_rate = self.calculate_annual_interest_rate(
+                        loan_interest_rate,
+                        loan_principal_payment,
+                        new_total_principal_due,
+                    );
+                    (new_total_interest_due, new_annual_interest_rate)
+                })
+        }
+    }
+
     fn estimated_annual_interest(&self) -> Coin<Lpn> {
         self.annual_interest_rate.of(self.total_principal_due)
     }
@@ -243,6 +234,33 @@ impl<Lpn> Total<Lpn> {
             .total_principal_due
             .checked_sub(loan_principal_payment)
             .expect("Unexpected overflow when subtracting loan principal payment from total principal due")
+    }
+
+    fn calculate_annual_interest_rate(
+        &self,
+        loan_interest_rate: Percent100,
+        loan_principal_payment: Coin<Lpn>,
+        new_total_principal_due: Coin<Lpn>,
+    ) -> Ratio<Coin<Lpn>> {
+        // Please refer to the comment in repay_interest for more detailed information
+        // on why using `saturating_sub` is a safe solution for updating the annual interest
+        Ratio::new(
+            self.estimated_annual_interest()
+                .saturating_sub(loan_interest_rate.of(loan_principal_payment)),
+            new_total_principal_due,
+        )
+    }
+
+    fn calculate_total_interest_due(
+        &self,
+        ctime: Timestamp,
+        loan_interest_payment: Coin<Lpn>,
+    ) -> Option<Coin<Lpn>> {
+        // The interest payment calculation of loans is the source of truth.
+        // Therefore, it is possible for the rounded-down total interest due from `total_interest_due_by_now`
+        // to become less than the sum of loans' interests. Taking 0 when subtracting a loan's interest from the total is a safe solution.
+        self.total_interest_due_by_now(&ctime)
+            .map(|interest| interest.saturating_sub(loan_interest_payment))
     }
 }
 

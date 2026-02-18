@@ -277,14 +277,12 @@ where
         loan: &Loan<Lpn>,
         payment: &RepayShares<Lpn>,
     ) -> Option<()> {
-        self.total
-            .repay(
-                now,
-                payment.interest,
-                payment.principal,
-                loan.annual_interest_rate,
-            )
-            .map(|_| ())
+        self.total.repay(
+            now,
+            payment.interest,
+            payment.principal,
+            loan.annual_interest_rate,
+        )
     }
 
     fn uncommited_balance(&self) -> Result<Coin<Lpn>> {
