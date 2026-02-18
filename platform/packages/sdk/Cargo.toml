@@ -10,10 +10,10 @@ rust-version.workspace = true
 
 [package.metadata.cargo-each]
 combinations = [
-    { tags = ["ci", "@agnostic"], feature-groups = ["storage", "cosmos-ibc-or-testing", "neutron"], include-rest = false },
+    { tags = ["ci", "@agnostic"], feature-groups = ["storage", "cosmos-ibc-or-testing"], include-rest = false },
     { tags = ["ci", "@agnostic"], feature-groups = ["contract", "cosmos-ibc-or-testing"], always-on = ["contract"], include-rest = true },
 ]
-feature-groups = { storage = { members = ["storage"], at-least-one = false, mutually-exclusive = false }, contract = { members = ["contract", "storage"], at-least-one = false, mutually-exclusive = true }, cosmos-ibc-or-testing = { members = ["cosmos_ibc", "testing"], at-least-one = false, mutually-exclusive = true }, neutron = { members = ["neutron"], at-least-one = false, mutually-exclusive = false } }
+feature-groups = { storage = { members = ["storage"], at-least-one = false, mutually-exclusive = false }, contract = { members = ["contract", "storage"], at-least-one = false, mutually-exclusive = true }, cosmos-ibc-or-testing = { members = ["cosmos_ibc", "testing"], at-least-one = false, mutually-exclusive = true } }
 
 [features]
 contract = ["storage"]
@@ -28,7 +28,6 @@ testing = [
 ]
 cosmos_ibc = ["dep:ibc-proto"]
 cosmos_proto = ["dep:cosmos-sdk-proto", "cosmos-sdk-proto/cosmwasm"]
-neutron = ["cosmwasm-std/stargate"]
 
 [dependencies]
 cosmwasm-std = { workspace = true }
