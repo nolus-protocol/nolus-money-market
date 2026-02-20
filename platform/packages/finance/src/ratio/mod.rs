@@ -106,16 +106,16 @@ where
         }
     }
 
-    pub(super) const fn nominator(&self) -> U {
-        self.nominator
-    }
-
-    pub(super) const fn denominator(&self) -> U {
-        self.denominator
-    }
-
     pub(super) fn inv(&self) -> Self {
         Self::new(self.denominator, self.nominator)
+    }
+
+    // Deconstruct this fraction by passing its nominator and denominator to a callback
+    pub(crate) fn with<F, R>(self, f: F) -> R
+    where
+        F: FnOnce(U, U) -> R,
+    {
+        f(self.nominator, self.denominator)
     }
 }
 

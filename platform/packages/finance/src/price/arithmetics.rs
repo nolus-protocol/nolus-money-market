@@ -94,10 +94,8 @@ where
     }
 
     fn from_fraction(fraction: SimpleFraction<Amount>) -> Self {
-        Self::new(
-            Coin::new(fraction.denominator()),
-            Coin::new(fraction.nominator()),
-        )
+        fraction
+            .with(|nominator, denominator| Self::new(Coin::new(denominator), Coin::new(nominator)))
     }
 }
 
