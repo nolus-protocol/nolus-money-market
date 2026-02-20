@@ -4,7 +4,10 @@ use currency::{
     AnyVisitor, BankSymbols, Currency, CurrencyDTO, CurrencyDef, CurrencyVisit, Group, GroupVisit,
     MemberOf, SingleVisitor, Symbol, error::Error as CurrencyError,
 };
-use finance::coin::{Amount, Coin, CoinDTO, WithCoin};
+use finance::{
+    coin::{Coin, CoinDTO, WithCoin},
+    fraction::Unit,
+};
 use sdk::cosmwasm_std::Coin as CosmWasmCoin;
 
 use crate::{error::Error, result::Result};

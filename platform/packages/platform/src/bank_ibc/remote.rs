@@ -99,7 +99,7 @@ mod test {
         CurrencyDef,
         test::{SuperGroup, SuperGroupTestC1, SuperGroupTestC2},
     };
-    use finance::coin::{Amount, Coin};
+    use finance::coin::Coin;
     use sdk::{
         cosmos_sdk_proto::prost::Name,
         cosmwasm_std::{Addr, Timestamp},
