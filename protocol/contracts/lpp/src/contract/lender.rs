@@ -734,9 +734,12 @@ mod test {
         }
 
         pub(super) fn query_balance(storage: &dyn Storage, addr: Addr) -> Coin<NLpn> {
-            Coin::new(Amount::from(
-                lender::query_balance(storage, addr).unwrap().balance,
-            ))
+            Coin::new(
+                lender::query_balance(storage, addr)
+                    .unwrap()
+                    .balance
+                    .to_primitive(),
+            )
         }
     }
 

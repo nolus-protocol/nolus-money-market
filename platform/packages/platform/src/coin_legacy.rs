@@ -109,7 +109,7 @@ where
     C::Group: MemberOf<S::Group>,
     S: Symbol,
 {
-    CosmWasmCoin::new(Amount::from(coin), S::symbol(C::dto().definition()))
+    CosmWasmCoin::new(coin.to_primitive(), S::symbol(C::dto().definition()))
 }
 
 struct CoinTransformer<'a, COut>(&'a CosmWasmCoin, PhantomData<COut>);

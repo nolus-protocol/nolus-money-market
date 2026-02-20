@@ -3,9 +3,9 @@ use std::fmt::{Debug, Formatter};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    coin::{Amount, Coin},
+    coin::Coin,
     error::{Error, Result},
-    fraction::Coprime,
+    fraction::{Coprime, Unit},
     fractionable::IntoDoublePrimitive,
     ratio::SimpleFraction,
     rational::Rational,
@@ -110,7 +110,7 @@ where
 
     fn invariant_held(&self) -> Result<()> {
         Self::precondition_check(self.amount, self.amount_quote).and(Self::check(
-            Amount::from(self.amount) == Amount::from(self.amount_quote)
+            self.amount.to_primitive() == self.amount_quote.to_primitive()
                 || !currency::equal::<C, QuoteC>(),
             "The price should be equal to the identity if the currencies match",
         ))
