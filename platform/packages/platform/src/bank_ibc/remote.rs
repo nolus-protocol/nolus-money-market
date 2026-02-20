@@ -153,7 +153,7 @@ mod test {
         C: CurrencyDef,
     {
         CosmosSdkCoin {
-            amount: Amount::from(coin).to_string(),
+            amount: coin.display_primitive(),
             denom: C::dex().into(),
         }
     }
