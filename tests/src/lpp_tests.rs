@@ -767,7 +767,7 @@ fn test_rewards() {
     // the initial price is 1 Nlpn = 1 LPN
     assert_eq!(
         deposit1,
-        balance(&test_case, lender1.clone()).balance.into()
+        balance(&test_case, lender1.clone()).balance.to_primitive()
     );
 
     // push the price from 1, should be allowed as an interest from previous leases for example.
