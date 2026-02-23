@@ -3,7 +3,6 @@ use std::ops::{Div, Rem};
 use gcd::Gcd;
 
 use finance::{
-    coin::Amount,
     fraction::Unit as FractionUnit,
     fractionable::{CommonDoublePrimitive, Fractionable, IntoDoublePrimitive, IntoMax, TryFromMax},
     percent::permilles::Permilles,
@@ -81,12 +80,6 @@ impl FractionUnit for Count {
 
     fn to_primitive(self) -> Self::Times {
         self.0
-    }
-}
-
-impl From<Count> for Amount {
-    fn from(val: Count) -> Self {
-        val.0.into()
     }
 }
 
