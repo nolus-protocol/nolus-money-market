@@ -117,6 +117,14 @@ where
     {
         f(self.nominator, self.denominator)
     }
+
+    pub fn map<F, V>(self, f: F) -> SimpleFraction<V>
+    where
+        F: Fn(U) -> V,
+        V: Coprime,
+    {
+        SimpleFraction::new(f(self.nominator), f(self.denominator))
+    }
 }
 
 impl<U> Rational<U> for SimpleFraction<U>
@@ -132,13 +140,13 @@ where
     }
 }
 
-impl<A, U> ToFraction<A> for SimpleFraction<U>
+impl<U> ToFraction<U::Times> for SimpleFraction<U>
 where
-    A: FractionUnit,
-    U: FractionUnit + Into<A>,
+    U: FractionUnit,
+    U::Times: FractionUnit,
 {
-    fn to_fraction(self) -> SimpleFraction<A> {
-        SimpleFraction::new(self.nominator.into(), self.denominator.into())
+    fn to_fraction(self) -> SimpleFraction<U::Times> {
+        self.map(FractionUnit::to_primitive)
     }
 }
 

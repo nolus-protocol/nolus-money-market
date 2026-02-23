@@ -193,14 +193,6 @@ impl<C> Display for Coin<C> {
     }
 }
 
-// NOTE: This conversion is currently required by `SimpleFraction::to_fraction()`.
-// TODO: Remove it after refactoring `SimpleFraction::to_fraction()`
-impl<C> From<Coin<C>> for Amount {
-    fn from(coin: Coin<C>) -> Self {
-        coin.amount
-    }
-}
-
 pub trait WithCoin<VisitedG>
 where
     VisitedG: Group,
