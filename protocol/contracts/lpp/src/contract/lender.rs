@@ -304,7 +304,10 @@ mod test {
     }
 
     mod deposit_withdraw_price {
-        use finance::coin::{Amount, Coin};
+        use finance::{
+            coin::{Amount, Coin},
+            fraction::Unit,
+        };
         use sdk::cosmwasm_std::{Addr, Storage};
 
         use lpp_platform::NLpn;

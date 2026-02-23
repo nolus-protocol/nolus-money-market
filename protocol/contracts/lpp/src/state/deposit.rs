@@ -164,7 +164,7 @@ impl Deposit {
 #[cfg(test)]
 mod test {
     use currency::platform::Nls;
-    use finance::{coin::Coin, zero::Zero};
+    use finance::{coin::Coin, fraction::Unit, zero::Zero};
     use lpp_platform::NLpn;
     use sdk::cosmwasm_std::{Addr, testing::MockStorage};
 
