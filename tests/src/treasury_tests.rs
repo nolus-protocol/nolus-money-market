@@ -1,10 +1,6 @@
 use currencies::{Lpn, Nls as NlsProtocol};
 use currency::{CurrencyDef, platform::Nls as NlsPlatform};
-use finance::{
-    coin::{Amount, Coin},
-    duration::Duration,
-    price,
-};
+use finance::{coin::Coin, duration::Duration, price};
 use sdk::{
     cosmwasm_std::{Addr, Event, QuerierWrapper},
     cw_multi_test::{AppResponse, ContractWrapper},
@@ -217,10 +213,7 @@ fn check_events(
                 ("at", &crate::block_time(test_case).nanos().to_string()),
                 ("idx", "0"),
                 ("to", test_case.address_book.lpp().as_str()),
-                (
-                    "rewards-amount",
-                    &Into::<Amount>::into(exp_reward).to_string()
-                ),
+                ("rewards-amount", &exp_reward.display_primitive()),
                 ("rewards-symbol", NlsPlatform::ticker()),
             ]
         );
