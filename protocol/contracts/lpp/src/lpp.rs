@@ -118,18 +118,17 @@ where
 
         let total_principal_due = self.total.total_principal_due();
 
-        let total_interest_due = self.total.total_interest_due_by_now(now).ok_or(
-            ContractError::overflow_total_interest_due_by_now(
+        self.total
+            .total_interest_due_by_now(now)
+            .ok_or(ContractError::overflow_total_interest_due_by_now(
                 "Calculating total interest due for Pool's balance",
                 now,
-            ),
-        )?;
-
-        Ok(LppBalances {
-            balance,
-            total_principal_due,
-            total_interest_due,
-        })
+            ))
+            .map(|total_interest_due| LppBalances {
+                balance,
+                total_principal_due,
+                total_interest_due,
+            })
     }
 
     pub fn calculate_price(

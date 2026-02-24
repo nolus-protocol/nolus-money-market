@@ -162,7 +162,7 @@ impl ContractError {
         Self::computation_overflow(cause, format!("timestamp: {}", timestamp))
     }
 
-    pub fn computation_overflow(cause: &'static str, details: String) -> Self {
+    fn computation_overflow(cause: &'static str, details: String) -> Self {
         Self::ComputationOverflow { cause, details }
     }
 }

@@ -213,7 +213,11 @@ impl<Lpn> Total<Lpn> {
             // the deviation could be cleared.
             Some((Coin::ZERO, zero_interest_rate()))
         } else {
-            self.calculate_total_interest_due(ctime, loan_interest_payment)
+            // The interest payment calculation of loans is the source of truth.
+            // Therefore, it is possible for the rounded-down total interest due from `total_interest_due_by_now`
+            // to become less than the sum of loans' interests. Taking 0 when subtracting a loan's interest from the total is a safe solution.
+            self.total_interest_due_by_now(&ctime)
+                .map(|interest| interest.saturating_sub(loan_interest_payment))
                 .map(|new_total_interest_due| {
                     let new_annual_interest_rate = self.calculate_annual_interest_rate(
                         loan_interest_rate,
@@ -249,18 +253,6 @@ impl<Lpn> Total<Lpn> {
                 .saturating_sub(loan_interest_rate.of(loan_principal_payment)),
             new_total_principal_due,
         )
-    }
-
-    fn calculate_total_interest_due(
-        &self,
-        ctime: Timestamp,
-        loan_interest_payment: Coin<Lpn>,
-    ) -> Option<Coin<Lpn>> {
-        // The interest payment calculation of loans is the source of truth.
-        // Therefore, it is possible for the rounded-down total interest due from `total_interest_due_by_now`
-        // to become less than the sum of loans' interests. Taking 0 when subtracting a loan's interest from the total is a safe solution.
-        self.total_interest_due_by_now(&ctime)
-            .map(|interest| interest.saturating_sub(loan_interest_payment))
     }
 }
 
