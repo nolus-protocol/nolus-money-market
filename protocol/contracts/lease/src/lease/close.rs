@@ -74,7 +74,7 @@ where
         Reserve: ReserveTrait<LpnCurrency>,
         ContractError: From<Reserve::Error>,
     {
-        let total_due = self.state(now, Duration::default()).total_due();
+        let total_due = self.state(now, Duration::default())?.total_due();
         let payment = if total_due > payment {
             reserve.cover_liquidation_losses(total_due - payment);
             total_due

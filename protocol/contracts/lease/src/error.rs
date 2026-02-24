@@ -32,6 +32,9 @@ pub enum ContractError {
     #[error("[Lease] {0}")]
     FinanceError(#[from] FinanceError),
 
+    #[error("[Lease] Arithmetic overflow: {0}")]
+    Overflow(&'static str),
+
     #[error("[Lease] {0}")]
     PlatformError(#[from] PlatformError),
 

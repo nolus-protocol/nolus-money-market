@@ -1,12 +1,11 @@
+use std::mem;
+
 use serde::{Deserialize, Serialize};
 
 use finance::{
     coin::Coin, duration::Duration, interest, percent::Percent100, period::Period, zero::Zero,
 };
-use lpp::{
-    loan::RepayShares,
-    stub::{LppBatch, LppRef as LppGenericRef, loan::LppLoan as LppLoanTrait},
-};
+use lpp::stub::{LppBatch, LppRef as LppGenericRef, loan::LppLoan as LppLoanTrait};
 use platform::{bank::FixedAddressSender, batch::Batch};
 use profit::stub::ProfitRef;
 use sdk::cosmwasm_std::Timestamp;
@@ -137,7 +136,7 @@ where
     {
         self.debug_check_start_due_before(by, "before the 'repay-by' time");
 
-        let state = self.state(by);
+        let state = self.state(by)?;
         let overdue_interest_payment = state.overdue.interest().min(payment);
         let overdue_margin_payment = state
             .overdue
@@ -161,25 +160,24 @@ where
             interest_paid + margin_paid + principal_paid + change
         );
 
-        self.repay_margin(state.principal_due, margin_paid, by);
-        profit.send(margin_paid);
-        self.repay_loan(interest_paid, principal_paid, by);
-
-        let receipt = RepayReceipt::new(
-            overdue_interest_payment,
-            overdue_margin_payment,
-            due_interest_payment,
-            due_margin_payment,
-            state.principal_due,
-            principal_paid,
-            change,
-        );
-        debug_assert_eq!(payment, receipt.total());
-
-        Ok(receipt)
+        self.repay_margin(state.principal_due, margin_paid, by)
+            .inspect(|()| profit.send(margin_paid))
+            .and_then(|()| self.repay_loan(interest_paid, principal_paid, by))
+            .map(|()| {
+                RepayReceipt::new(
+                    overdue_interest_payment,
+                    overdue_margin_payment,
+                    due_interest_payment,
+                    due_margin_payment,
+                    state.principal_due,
+                    principal_paid,
+                    change,
+                )
+            })
+            .inspect(|receipt| debug_assert_eq!(payment, receipt.total()))
     }
 
-    pub(crate) fn state(&self, now: &Timestamp) -> State {
+    pub(crate) fn state(&self, now: &Timestamp) -> Result<State, ContractError> {
         self.debug_check_start_due_before(now, "in the past. Now is ");
 
         let due_period_margin = Period::from_till(self.margin_paid_by, now);
@@ -189,7 +187,7 @@ where
             self.due_period,
             self.margin_interest,
             &self.lpp_loan,
-        );
+        )?;
 
         let principal_due = self.lpp_loan.principal_due();
         let due_margin_interest = interest::interest(
@@ -197,42 +195,59 @@ where
             principal_due,
             due_period_margin.length(),
         )
-        .expect("TODO: handle potential None from interest::interest() properly")
-            - overdue.margin();
-        let due_interest =
-            self.lpp_loan.interest_due(&due_period_margin.till()) - overdue.interest();
+        .ok_or(ContractError::Overflow("Due interest margin overflow"))
+        .map(|margin| margin - overdue.margin())?;
 
-        State {
+        let due_interest = self
+            .lpp_loan
+            .interest_due(&due_period_margin.till())
+            .ok_or(ContractError::Overflow("Due interest overflow"))
+            .map(|due| due - overdue.interest())?;
+
+        Ok(State {
             annual_interest: self.lpp_loan.annual_interest_rate(),
             annual_interest_margin: self.margin_interest,
             principal_due,
             due_interest,
             due_margin_interest,
             overdue,
-        }
+        })
     }
 
-    fn repay_margin(&mut self, principal_due: LpnCoin, margin_paid: LpnCoin, by: &Timestamp) {
-        let (margin_paid_for, margin_payment_change) = interest::pay(
+    fn repay_margin(
+        &mut self,
+        principal_due: LpnCoin,
+        margin_paid: LpnCoin,
+        by: &Timestamp,
+    ) -> ContractResult<()> {
+        interest::pay(
             self.margin_interest,
             principal_due,
             margin_paid,
             Duration::between(&self.margin_paid_by, by),
         )
-        .expect("TODO Method should return Option");
-        debug_assert!(margin_payment_change.is_zero());
-        self.margin_paid_by += margin_paid_for;
+        .inspect(|(_, margin_payment_change)| debug_assert!(margin_payment_change.is_zero()))
+        .map(|(margin_paid_for, _)| {
+            self.margin_paid_by += margin_paid_for;
+        })
+        .ok_or(ContractError::Overflow("Repay margin overflow"))
     }
 
-    fn repay_loan(&mut self, interest_paid: LpnCoin, principal_paid: LpnCoin, by: &Timestamp) {
-        let RepayShares {
-            interest,
-            principal,
-            excess,
-        } = self.lpp_loan.repay(by, interest_paid + principal_paid);
-        debug_assert_eq!(interest, interest_paid);
-        debug_assert_eq!(principal, principal_paid);
-        debug_assert_eq!(excess, Coin::ZERO);
+    fn repay_loan(
+        &mut self,
+        interest_paid: LpnCoin,
+        principal_paid: LpnCoin,
+        by: &Timestamp,
+    ) -> ContractResult<()> {
+        self.lpp_loan
+            .repay(by, interest_paid + principal_paid)
+            .inspect(|shares| {
+                debug_assert_eq!(shares.interest, interest_paid);
+                debug_assert_eq!(shares.principal, principal_paid);
+                debug_assert_eq!(shares.excess, Coin::ZERO);
+            })
+            .map(mem::drop)
+            .ok_or(ContractError::Overflow("Repay loan overflow"))
     }
 
     fn debug_check_start_due_before(&self, when: &Timestamp, when_descr: &str) {
@@ -1014,10 +1029,14 @@ mod tests {
         ) {
             let mut profit = super::profit_stub();
 
-            assert_eq!(before_state, loan.state(now), "Expected state before");
+            assert_eq!(
+                Ok(&before_state),
+                loan.state(now).as_ref(),
+                "Expected state before"
+            );
             assert_eq!(Ok(exp_receipt), loan.repay(payment, now, &mut profit));
             assert_eq!(
-                after_state(before_state, exp_due_period_paid, exp_receipt),
+                Ok(after_state(before_state, exp_due_period_paid, exp_receipt)),
                 loan.state(now),
                 "Expected state after"
             );
@@ -1164,22 +1183,23 @@ mod tests {
                 due_period_len,
                 annual_interest_margin,
                 &lpp_loan,
-            );
+            )
+            .unwrap();
             let due_period = due_period_len.min(due_period_margin.length());
             let expected_margin_due =
                 interest::interest(annual_interest_margin, principal_due, due_period).unwrap();
-            let expected_interest_due =
-                lpp_loan.interest_due(&due_period_margin.till()) - overdue.interest();
+            let interest_due = lpp_loan.interest_due(&due_period_margin.till()).unwrap();
+            let expected_interest_due = interest_due - overdue.interest();
 
             assert_eq!(
-                State {
+                Ok(State {
                     annual_interest,
                     annual_interest_margin,
                     principal_due,
                     due_interest: expected_interest_due,
                     due_margin_interest: expected_margin_due,
                     overdue,
-                },
+                }),
                 loan.state(now),
                 "Got different state than expected!",
             );
@@ -1245,11 +1265,11 @@ mod tests {
             self.loan.principal_due
         }
 
-        fn interest_due(&self, by: &Timestamp) -> LpnCoin {
+        fn interest_due(&self, by: &Timestamp) -> Option<LpnCoin> {
             self.loan.interest_due(by)
         }
 
-        fn repay(&mut self, by: &Timestamp, repayment: LpnCoin) -> RepayShares<Lpn> {
+        fn repay(&mut self, by: &Timestamp, repayment: LpnCoin) -> Option<RepayShares<Lpn>> {
             self.loan.repay(by, repayment)
         }
 

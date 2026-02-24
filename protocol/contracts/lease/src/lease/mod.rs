@@ -91,25 +91,25 @@ where
         )
     }
 
-    pub(crate) fn state(&self, now: Timestamp, due_projection: Duration) -> State<Asset> {
-        let estimate_at = now + due_projection;
-        let loan = self.loan.state(&estimate_at);
-        let overdue_collect_in = self.position.overdue_collection_in(&loan);
-
-        State {
+    pub(crate) fn state(
+        &self,
+        now: Timestamp,
+        due_projection: Duration,
+    ) -> ContractResult<State<Asset>> {
+        self.loan.state(&(now + due_projection)).map(|loan| State {
             amount: self.position.amount(),
             interest_rate: loan.annual_interest,
             interest_rate_margin: loan.annual_interest_margin,
             principal_due: loan.principal_due,
             overdue_margin: loan.overdue.margin(),
             overdue_interest: loan.overdue.interest(),
-            overdue_collect_in,
+            overdue_collect_in: self.position.overdue_collection_in(&loan),
             due_margin: loan.due_margin_interest,
             due_interest: loan.due_interest,
             due_projection,
             close_policy: self.position.close_policy(),
             validity: now,
-        }
+        })
     }
 }
 
@@ -240,11 +240,11 @@ pub(crate) mod tests {
             self.loan.principal_due
         }
 
-        fn interest_due(&self, by: &Timestamp) -> Coin<Lpn> {
+        fn interest_due(&self, by: &Timestamp) -> Option<Coin<Lpn>> {
             self.loan.interest_due(by)
         }
 
-        fn repay(&mut self, by: &Timestamp, repayment: Coin<Lpn>) -> RepayShares<Lpn> {
+        fn repay(&mut self, by: &Timestamp, repayment: Coin<Lpn>) -> Option<RepayShares<Lpn>> {
             self.loan.repay(by, repayment)
         }
 
@@ -382,7 +382,7 @@ pub(crate) mod tests {
         {
             let due_projection = Duration::default();
             assert_eq!(
-                State {
+                Ok(State {
                     amount: lease_amount,
                     interest_rate,
                     interest_rate_margin: MARGIN_INTEREST_RATE,
@@ -395,7 +395,7 @@ pub(crate) mod tests {
                     due_projection,
                     close_policy: ClosePolicy::new(Some(take_profit), None),
                     validity: state_at,
-                },
+                }),
                 lease.state(state_at, due_projection)
             );
         }
@@ -443,7 +443,7 @@ pub(crate) mod tests {
                 "Failed to calculate due interest: overflow during annualized_slice_of() calculation",
             );
         assert_eq!(
-            State {
+            Ok(State {
                 amount: lease_amount,
                 interest_rate,
                 interest_rate_margin: MARGIN_INTEREST_RATE,
@@ -461,15 +461,19 @@ pub(crate) mod tests {
                 due_projection,
                 close_policy: ClosePolicy::new(Some(take_profit), None),
                 validity: state_at,
-            },
+            }),
             lease.state(state_at, due_projection)
         );
     }
 
     fn compare_now_vs_projected(lease: &TestLease, state_at: Timestamp) {
         let due_projection = Duration::from_days(12);
-        let state_now = lease.state(state_at + due_projection, Duration::default());
-        let state_projected = lease.state(state_at, due_projection);
+        let state_now = lease
+            .state(state_at + due_projection, Duration::default())
+            .expect("Overflow while calculating the current lease state");
+        let state_projected = lease
+            .state(state_at, due_projection)
+            .expect("Overflow while calculating the projected lease state");
         assert_eq!(state_now.amount, state_projected.amount);
         assert_eq!(state_now.interest_rate, state_projected.interest_rate);
         assert_eq!(

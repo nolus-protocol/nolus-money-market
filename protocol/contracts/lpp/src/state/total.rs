@@ -73,11 +73,11 @@ impl<Lpn> Total<Lpn> {
         self.total_principal_due
     }
 
-    pub fn total_interest_due_by_now(&self, ctime: &Timestamp) -> Coin<Lpn> {
+    pub fn total_interest_due_by_now(&self, ctime: &Timestamp) -> Option<Coin<Lpn>> {
         if self.total_principal_due.is_zero() {
             // TODO remove this case once close protocols with `total_principal_due == 0` and `total_interest_due > 0`
             // the newly added invariant: if `total_principal_due == 0` then `total_interest_due == 0`
-            Coin::ZERO
+            Some(Coin::ZERO)
             //debug_assert!(self.total_interest_due.is_zero());
         } else {
             interest::interest(
@@ -85,8 +85,7 @@ impl<Lpn> Total<Lpn> {
                 self.total_principal_due,
                 Duration::between(&self.last_update_time, ctime),
             )
-            .expect("TODO: the method should return Option<_>")
-                + self.total_interest_due
+            .map(|interest| interest + self.total_interest_due)
         }
     }
 
@@ -100,7 +99,12 @@ impl<Lpn> Total<Lpn> {
         amount: Coin<Lpn>,
         loan_interest_rate: Percent100,
     ) -> Result<&Self, ContractError> {
-        self.total_interest_due = self.total_interest_due_by_now(&ctime);
+        self.total_interest_due = self.total_interest_due_by_now(&ctime).ok_or(
+            ContractError::overflow_total_interest_due_by_now(
+                "calculating the total interest due after borrowing",
+                ctime,
+            ),
+        )?;
 
         let new_total_principal_due =
             self.total_principal_due
@@ -141,43 +145,22 @@ impl<Lpn> Total<Lpn> {
         loan_interest_payment: Coin<Lpn>,
         loan_principal_payment: Coin<Lpn>,
         loan_interest_rate: Percent100,
-    ) -> &Self {
-        // The interest payment calculation of loans is the source of truth.
-        // Therefore, it is possible for the rounded-down total interest due from `total_interest_due_by_now`
-        // to become less than the sum of loans' interests. Taking 0 when subtracting a loan's interest from the total is a safe solution.
-        let new_total_interest_due = self
-            .total_interest_due_by_now(&ctime)
-            .saturating_sub(loan_interest_payment);
+    ) -> Option<()> {
+        let new_total_principal_due = self.calculate_total_principal_due(loan_principal_payment);
 
-        let new_total_principal_due = self
-            .total_principal_due
-            .checked_sub(loan_principal_payment)
-            .expect("Unexpected overflow when subtracting loan principal payment from total principal due");
-
-        if new_total_principal_due.is_zero() {
-            // Due to rounding errors, the calculated total interest due might deviate from
-            // the sum of loans' interest due. This is an important checkpoint at which
-            // the deviation could be cleared.
-            self.total_interest_due = Coin::ZERO;
-
-            self.annual_interest_rate = zero_interest_rate();
-        } else {
+        self.repay_interest(
+            ctime,
+            loan_interest_payment,
+            loan_principal_payment,
+            loan_interest_rate,
+            new_total_principal_due,
+        )
+        .map(|(new_total_interest_due, new_annual_interest_rate)| {
             self.total_interest_due = new_total_interest_due;
-
-            // Please refer to the comment above for more detailed information on why using `saturating_sub` is a safe solution
-            // for updating the annual interest
-            self.annual_interest_rate = Ratio::new(
-                self.estimated_annual_interest()
-                    .saturating_sub(loan_interest_rate.of(loan_principal_payment)),
-                new_total_principal_due,
-            )
-        };
-
-        self.total_principal_due = new_total_principal_due;
-
-        self.last_update_time = ctime;
-
-        self
+            self.annual_interest_rate = new_annual_interest_rate;
+            self.total_principal_due = new_total_principal_due;
+            self.last_update_time = ctime;
+        })
     }
 
     pub fn deposit(&mut self, receipts: Coin<NLpn>) -> Result<&mut Self, ContractError> {
@@ -216,8 +199,60 @@ impl<Lpn> Total<Lpn> {
             })
     }
 
+    fn repay_interest(
+        &self,
+        ctime: Timestamp,
+        loan_interest_payment: Coin<Lpn>,
+        loan_principal_payment: Coin<Lpn>,
+        loan_interest_rate: Percent100,
+        new_total_principal_due: Coin<Lpn>,
+    ) -> Option<(Coin<Lpn>, Ratio<Coin<Lpn>>)> {
+        if new_total_principal_due.is_zero() {
+            // Due to rounding errors, the calculated total interest due might deviate from
+            // the sum of loans' interest due. This is an important checkpoint at which
+            // the deviation could be cleared.
+            Some((Coin::ZERO, zero_interest_rate()))
+        } else {
+            // The interest payment calculation of loans is the source of truth.
+            // Therefore, it is possible for the rounded-down total interest due from `total_interest_due_by_now`
+            // to become less than the sum of loans' interests. Taking 0 when subtracting a loan's interest from the total is a safe solution.
+            self.total_interest_due_by_now(&ctime)
+                .map(|interest| interest.saturating_sub(loan_interest_payment))
+                .map(|new_total_interest_due| {
+                    let new_annual_interest_rate = self.calculate_annual_interest_rate(
+                        loan_interest_rate,
+                        loan_principal_payment,
+                        new_total_principal_due,
+                    );
+                    (new_total_interest_due, new_annual_interest_rate)
+                })
+        }
+    }
+
     fn estimated_annual_interest(&self) -> Coin<Lpn> {
         self.annual_interest_rate.of(self.total_principal_due)
+    }
+
+    fn calculate_total_principal_due(&self, loan_principal_payment: Coin<Lpn>) -> Coin<Lpn> {
+        self
+            .total_principal_due
+            .checked_sub(loan_principal_payment)
+            .expect("Unexpected overflow when subtracting loan principal payment from total principal due")
+    }
+
+    fn calculate_annual_interest_rate(
+        &self,
+        loan_interest_rate: Percent100,
+        loan_principal_payment: Coin<Lpn>,
+        new_total_principal_due: Coin<Lpn>,
+    ) -> Ratio<Coin<Lpn>> {
+        // Please refer to the comment in repay_interest for more detailed information
+        // on why using `saturating_sub` is a safe solution for updating the annual interest
+        Ratio::new(
+            self.estimated_annual_interest()
+                .saturating_sub(loan_interest_rate.of(loan_principal_payment)),
+            new_total_principal_due,
+        )
     }
 }
 
@@ -259,7 +294,7 @@ mod test {
 
         block_time = block_time.plus_nanos(Duration::YEAR.nanos() / 2);
         let interest_due = total.total_interest_due_by_now(&block_time);
-        assert_eq!(interest_due, test::lpn_coin(1000));
+        assert_eq!(interest_due, Some(test::lpn_coin(1000)));
 
         total.repay(
             block_time,
@@ -271,7 +306,7 @@ mod test {
 
         block_time = block_time.plus_nanos(Duration::YEAR.nanos() / 2);
         let interest_due = total.total_interest_due_by_now(&block_time);
-        assert_eq!(interest_due, test::lpn_coin(500));
+        assert_eq!(interest_due, Some(test::lpn_coin(500)));
     }
 
     #[test]
@@ -293,7 +328,10 @@ mod test {
             .borrow(block_time, borrow_loan1, loan1_annual_interest_rate)
             .unwrap();
         assert_eq!(total.total_principal_due(), borrow_loan1);
-        assert_eq!(total.total_interest_due_by_now(&block_time), Coin::ZERO);
+        assert_eq!(
+            total.total_interest_due_by_now(&block_time),
+            Some(Coin::ZERO)
+        );
 
         block_time = block_time.plus_days(59);
 
@@ -323,7 +361,7 @@ mod test {
         // Fully repay loan1 after 147 days
         total.repay(
             block_time,
-            loan1.interest_due(&block_time),
+            loan1.interest_due(&block_time).unwrap(),
             loan1.principal_due,
             loan1.annual_interest_rate,
         );
@@ -334,7 +372,7 @@ mod test {
         // Fully repay loan2 after 67 days
         total.repay(
             block_time,
-            loan2.interest_due(&block_time),
+            loan2.interest_due(&block_time).unwrap(),
             loan2.principal_due,
             loan2.annual_interest_rate,
         );

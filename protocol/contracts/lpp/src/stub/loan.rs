@@ -19,13 +19,16 @@ where
     Self: Into<LppRef<Lpn>> + TryInto<LppBatch<LppRef<Lpn>>, Error = Error>,
 {
     fn principal_due(&self) -> Coin<Lpn>;
-    fn interest_due(&self, by: &Timestamp) -> Coin<Lpn>;
+
+    /// Returns `None` if an overflow occurs
+    fn interest_due(&self, by: &Timestamp) -> Option<Coin<Lpn>>;
+
     /// Repay the due interest and principal by the specified time
     ///
     /// First, the provided 'repayment' is used to repay the due interest,
     /// and then, if there is any remaining amount, to repay the principal.
     /// Amount 0 is acceptable although does not change the loan.
-    fn repay(&mut self, by: &Timestamp, repayment: Coin<Lpn>) -> RepayShares<Lpn>;
+    fn repay(&mut self, by: &Timestamp, repayment: Coin<Lpn>) -> Option<RepayShares<Lpn>>;
     fn annual_interest_rate(&self) -> Percent100;
 }
 
@@ -69,13 +72,14 @@ where
         self.loan.principal_due
     }
 
-    fn interest_due(&self, by: &Timestamp) -> Coin<Lpn> {
+    fn interest_due(&self, by: &Timestamp) -> Option<Coin<Lpn>> {
         self.loan.interest_due(by)
     }
 
-    fn repay(&mut self, by: &Timestamp, repayment: Coin<Lpn>) -> RepayShares<Lpn> {
-        self.repayment += repayment;
-        self.loan.repay(by, repayment)
+    fn repay(&mut self, by: &Timestamp, repayment: Coin<Lpn>) -> Option<RepayShares<Lpn>> {
+        self.loan
+            .repay(by, repayment)
+            .inspect(|_| self.repayment += repayment)
     }
 
     fn annual_interest_rate(&self) -> Percent100 {

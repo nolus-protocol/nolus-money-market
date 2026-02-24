@@ -1,4 +1,4 @@
-use finance::{duration::Duration, interest};
+use finance::{duration::Duration, interest, percent::Percent100};
 
 use crate::{
     finance::LpnCoin,
@@ -18,20 +18,15 @@ impl DueTrait for State {
         } else {
             let overdue_left = min_amount - total_due_interest;
 
-            let total_interest_a_year = interest::interest(
-                self.annual_interest
-                    .checked_add(self.annual_interest_margin)
-                    .expect("TODO: propagate up the stack potential overflow"),
-                self.principal_due,
-                Duration::YEAR,
-            )
-            .expect("TODO: handle potential None from interest::interest() properly");
+            let total_interest_a_year =
+                interest::annual_interest(self.total_annual_interest(), self.principal_due);
+
             if total_interest_a_year.is_zero() {
                 Duration::MAX
             } else {
                 Duration::YEAR
                     .into_slice_per_ratio(overdue_left, total_interest_a_year)
-                    .expect("TODO Method should return Option")
+                    .unwrap_or(Duration::MAX)
             }
         };
         let time_to_collect = self.overdue.start_in().max(time_to_accrue_min_amount);
@@ -49,6 +44,12 @@ impl State {
             + self.due_margin_interest
             + self.overdue.interest()
             + self.overdue.margin()
+    }
+
+    fn total_annual_interest(&self) -> Percent100 {
+        self.annual_interest
+            .checked_add(self.annual_interest_margin)
+            .expect("The annual interest rate must not exceed 100%")
     }
 }
 

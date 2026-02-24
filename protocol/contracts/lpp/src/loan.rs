@@ -23,36 +23,35 @@ where
 }
 
 impl<Lpn> Loan<Lpn> {
-    pub fn interest_due(&self, by: &Timestamp) -> Coin<Lpn> {
+    pub fn interest_due(&self, by: &Timestamp) -> Option<Coin<Lpn>> {
         interest::interest(
             self.annual_interest_rate,
             self.principal_due,
             self.due_period(by),
         )
-        .expect("TODO: handle potential None from interest::interest() properly")
     }
 
-    pub fn repay(&mut self, by: &Timestamp, repayment: Coin<Lpn>) -> RepayShares<Lpn> {
-        let (paid_for, interest_change) = interest::pay(
+    pub fn repay(&mut self, by: &Timestamp, repayment: Coin<Lpn>) -> Option<RepayShares<Lpn>> {
+        interest::pay(
             self.annual_interest_rate,
             self.principal_due,
             repayment,
             self.due_period(by),
         )
-        .expect("TODO Method should return Option");
+        .map(|(paid_for, interest_change)| {
+            let interest_paid = repayment - interest_change;
+            let principal_paid = interest_change.min(self.principal_due);
+            let excess = interest_change - principal_paid;
 
-        let interest_paid = repayment - interest_change;
-        let principal_paid = interest_change.min(self.principal_due);
-        let excess = interest_change - principal_paid;
+            self.principal_due -= principal_paid;
+            self.interest_paid += paid_for;
 
-        self.principal_due -= principal_paid;
-        self.interest_paid += paid_for;
-
-        RepayShares {
-            interest: interest_paid,
-            principal: principal_paid,
-            excess,
-        }
+            RepayShares {
+                interest: interest_paid,
+                principal: principal_paid,
+                excess,
+            }
+        })
     }
 
     fn due_period(&self, by: &Timestamp) -> Duration {
@@ -83,12 +82,15 @@ mod test {
         };
 
         assert_eq!(
-            lpn_coin(50),
+            Some(lpn_coin(50)),
             l.interest_due(&(l.interest_paid + Duration::YEAR))
         );
 
-        assert_eq!(Coin::ZERO, l.interest_due(&l.interest_paid));
-        assert_eq!(Coin::ZERO, l.interest_due(&l.interest_paid.minus_nanos(1)));
+        assert_eq!(Some(Coin::ZERO), l.interest_due(&l.interest_paid));
+        assert_eq!(
+            Some(Coin::ZERO),
+            l.interest_due(&l.interest_paid.minus_nanos(1))
+        );
     }
 
     #[test]
@@ -105,11 +107,11 @@ mod test {
 
         let payment1 = lpn_coin(10);
         assert_eq!(
-            RepayShares {
+            Some(RepayShares {
                 interest: Coin::ZERO,
                 principal: payment1,
                 excess: Coin::ZERO
-            },
+            }),
             l.repay(&interest_paid, payment1)
         );
         assert_eq!(
@@ -135,11 +137,11 @@ mod test {
         let interest_a_year = interest.of(principal_start);
         let at_first_year_end = l.interest_paid + Duration::YEAR;
         assert_eq!(
-            RepayShares {
+            Some(RepayShares {
                 interest: interest_a_year,
                 principal: Coin::ZERO,
                 excess: Coin::ZERO
-            },
+            }),
             l.repay(&at_first_year_end, interest_a_year)
         );
         assert_eq!(
@@ -167,11 +169,11 @@ mod test {
         let exp_interest = interest_a_year.checked_div(365 * 24).unwrap();
         let excess = lpn_coin(12441);
         assert_eq!(
-            RepayShares {
+            Some(RepayShares {
                 interest: exp_interest,
                 principal: principal_start,
                 excess,
-            },
+            }),
             l.repay(&at_first_hour_end, exp_interest + principal_start + excess)
         );
         assert_eq!(

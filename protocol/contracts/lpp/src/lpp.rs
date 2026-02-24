@@ -93,7 +93,12 @@ where
         if min_utilization.is_zero() {
             Ok(None)
         } else {
-            let total_due = self.total_due(now);
+            let total_due = self
+                .total_due(now)
+                .ok_or(ContractError::overflow_total_due(
+                    "Calculating pool's total liability",
+                    now,
+                ))?;
 
             self.commited_balance(pending_deposit).map(|balance| {
                 if self.utilization(balance, total_due) > min_utilization {
@@ -113,13 +118,17 @@ where
 
         let total_principal_due = self.total.total_principal_due();
 
-        let total_interest_due = self.total.total_interest_due_by_now(now);
-
-        Ok(LppBalances {
-            balance,
-            total_principal_due,
-            total_interest_due,
-        })
+        self.total
+            .total_interest_due_by_now(now)
+            .ok_or(ContractError::overflow_total_interest_due_by_now(
+                "Calculating total interest due for Pool's balance",
+                now,
+            ))
+            .map(|total_interest_due| LppBalances {
+                balance,
+                total_principal_due,
+                total_interest_due,
+            })
     }
 
     pub fn calculate_price(
@@ -157,8 +166,7 @@ where
 
         if self
             .deposit_capacity(now, amount)?
-            .map(|capacity| amount > capacity)
-            .unwrap_or_default()
+            .is_some_and(|capacity| amount > capacity)
         {
             return Err(ContractError::UtilizationBelowMinimalRates);
         }
@@ -232,7 +240,9 @@ where
         }
 
         let total_principal_due = self.total.total_principal_due();
-        let total_interest = self.total.total_interest_due_by_now(now);
+        let total_interest = self.total.total_interest_due_by_now(now).ok_or(
+            ContractError::overflow_total_interest_due_by_now("Calculating quote interest", now),
+        )?;
         let total_liability_past_quote = total_principal_due + quote + total_interest;
         let total_balance_past_quote = balance - quote;
 
@@ -265,13 +275,13 @@ where
         now: Timestamp,
         loan: &Loan<Lpn>,
         payment: &RepayShares<Lpn>,
-    ) {
+    ) -> Option<()> {
         self.total.repay(
             now,
             payment.interest,
             payment.principal,
             loan.annual_interest_rate,
-        );
+        )
     }
 
     fn uncommited_balance(&self) -> Result<Coin<Lpn>> {
@@ -288,13 +298,22 @@ where
         })
     }
 
-    fn total_due(&self, now: &Timestamp) -> Coin<Lpn> {
-        self.total.total_principal_due() + self.total.total_interest_due_by_now(now)
+    fn total_due(&self, now: &Timestamp) -> Option<Coin<Lpn>> {
+        self.total
+            .total_interest_due_by_now(now)
+            .map(|interest| interest + self.total.total_principal_due())
     }
 
     fn total_lpn(&self, now: &Timestamp, uncommited_amount: Coin<Lpn>) -> Result<Coin<Lpn>> {
-        self.commited_balance(uncommited_amount)
-            .map(|balance| balance + self.total_due(now))
+        self.total_due(now)
+            .ok_or(ContractError::overflow_total_due(
+                "Total due overflow while calculating total pool value ",
+                now,
+            ))
+            .and_then(|due| {
+                self.commited_balance(uncommited_amount)
+                    .map(|balance| due + balance)
+            })
     }
 
     fn utilization(&self, balance: Coin<Lpn>, total_due: Coin<Lpn>) -> Percent100 {
@@ -482,16 +501,17 @@ mod test {
             },
             loan
         );
-        assert_eq!(loan.interest_due(&now), Coin::ZERO);
+        assert_eq!(loan.interest_due(&now), Some(Coin::ZERO));
 
         // wait for 36 days
         let now = now + Duration::from_days(36);
 
         // pay interest for 36 days
-        let payment = loan.interest_due(&now);
+        let payment = loan.interest_due(&now).unwrap();
 
-        let repay = loan.repay(&now, payment);
-        lpp.register_repay_loan(now, &loan, &repay);
+        let repay = loan.repay(&now, payment).unwrap();
+        let registration = lpp.register_repay_loan(now, &loan, &repay);
+        assert_eq!(registration, Some(()));
         Repo::save(&mut store, lease_addr.clone(), &loan).unwrap();
 
         assert_eq!(Coin::ZERO, repay.excess);
@@ -508,19 +528,26 @@ mod test {
             loan,
             Repo::query(&store, lease_addr.clone()).unwrap().unwrap()
         );
-        assert_eq!(loan.interest_due(&now), Coin::ZERO);
+        assert_eq!(loan.interest_due(&now), Some(Coin::ZERO));
 
         // an immediate repay after repay should pass (loan_interest_due==0 bug)
-        let repay = loan.repay(&now, Coin::ZERO);
-        lpp.register_repay_loan(now, &loan, &repay);
+        let repay = loan.repay(&now, Coin::ZERO).unwrap();
+        let registration1 = lpp.register_repay_loan(now, &loan, &repay);
+        assert_eq!(registration1, Some(()));
 
         // wait for another 36 days
         let now = now + Duration::from_days(36);
 
         const PAYED_EXTRA: Coin<TheCurrency> = test::lpn_coin(100);
         // pay everything + excess
-        let repay = loan.repay(&now, loan.interest_due(&now) + LOAN_AMOUNT + PAYED_EXTRA);
-        lpp.register_repay_loan(now, &loan, &repay);
+
+        let repay = loan
+            .interest_due(&now)
+            .and_then(|due| loan.repay(&now, due + LOAN_AMOUNT + PAYED_EXTRA))
+            .unwrap();
+
+        let registration2 = lpp.register_repay_loan(now, &loan, &repay);
+        assert_eq!(registration2, Some(()));
 
         assert_eq!(PAYED_EXTRA, repay.excess);
     }
@@ -600,8 +627,10 @@ mod test {
             .unwrap();
 
         //zero repay
-        let payment = loan_before.repay(&now, Coin::ZERO);
-        lpp.register_repay_loan(now, &loan_before, &payment);
+        let payment = loan_before.repay(&now, Coin::ZERO).unwrap();
+        let registration = lpp.register_repay_loan(now, &loan_before, &payment);
+        assert_eq!(registration, Some(()));
+
         Repo::save(&mut store, loan_addr.clone(), &loan_before).unwrap();
 
         let loan_after = Repo::query(&store, loan_addr).unwrap().unwrap();
@@ -643,10 +672,12 @@ mod test {
         let mut loan = Repo::<TheCurrency>::query(&store, loan_addr.clone())
             .unwrap()
             .unwrap();
-        assert_eq!(Coin::ZERO, loan.interest_due(&now));
+        assert_eq!(Some(Coin::ZERO), loan.interest_due(&now));
 
-        let repay = loan.repay(&now, test::lpn_coin(5_000));
-        lpp.register_repay_loan(now, &loan, &repay);
+        let repay = loan.repay(&now, test::lpn_coin(5_000)).unwrap();
+        let registration = lpp.register_repay_loan(now, &loan, &repay);
+        assert_eq!(registration, Some(()));
+
         Repo::save(&mut store, loan_addr.clone(), &loan).unwrap();
 
         assert_eq!(Coin::ZERO, repay.excess);
@@ -729,9 +760,11 @@ mod test {
                 price,
             );
 
-            let payment = loan.repay(&now, LOAN_REPAYMENT);
+            let payment = loan.repay(&now, LOAN_REPAYMENT).unwrap();
             Repo::save(&mut store, loan_addr.clone(), &loan).unwrap();
-            lpp.register_repay_loan(now, &loan, &payment);
+            let registration = lpp.register_repay_loan(now, &loan, &payment);
+            assert_eq!(registration, Some(()));
+
             assert_eq!(payment.excess, Coin::ZERO,);
             lpp.save(&mut store).unwrap();
         }
