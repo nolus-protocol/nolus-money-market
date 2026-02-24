@@ -98,10 +98,7 @@ impl ContractError {
         C: Display,
         P: Debug,
     {
-        Self::ComputationOverflow {
-            cause,
-            details: format!("Amount: {}, price: {:?}", amount, price),
-        }
+        Self::computation_overflow(cause, format!("Amount: {}, price: {:?}", amount, price))
     }
 
     pub fn overflow_add<L, R>(cause: &'static str, lhs: L, rhs: R) -> Self
@@ -109,10 +106,7 @@ impl ContractError {
         L: Display,
         R: Display,
     {
-        Self::ComputationOverflow {
-            cause,
-            details: format!("({} + {})", lhs, rhs),
-        }
+        Self::computation_overflow(cause, format!("({} + {})", lhs, rhs))
     }
 
     pub fn overflow_sub<L, R>(cause: &'static str, lhs: L, rhs: R) -> Self
@@ -120,10 +114,7 @@ impl ContractError {
         L: Display,
         R: Display,
     {
-        Self::ComputationOverflow {
-            cause,
-            details: format!("({} - {})", lhs, rhs),
-        }
+        Self::computation_overflow(cause, format!("({} - {})", lhs, rhs))
     }
 
     pub fn overflow_loan_repayment<T, A>(cause: &'static str, timestamp: T, repay_amount: A) -> Self
@@ -131,10 +122,10 @@ impl ContractError {
         T: Display,
         A: Display,
     {
-        Self::ComputationOverflow {
+        Self::computation_overflow(
             cause,
-            details: format!("repay amount: {}, timestamp: {}", repay_amount, timestamp),
-        }
+            format!("repay amount: {}, timestamp: {}", repay_amount, timestamp),
+        )
     }
 
     pub fn overflow_register_repayment<T, L, P>(
@@ -148,32 +139,30 @@ impl ContractError {
         L: Debug,
         P: Debug,
     {
-        Self::ComputationOverflow {
+        Self::computation_overflow(
             cause,
-            details: format!(
+            format!(
                 "timestamp: {}, loan: {:?}, payment: {:?}",
                 timestamp, loan, payment
             ),
-        }
+        )
     }
 
     pub fn overflow_total_due<T>(cause: &'static str, timestamp: T) -> Self
     where
         T: Display,
     {
-        Self::ComputationOverflow {
-            cause,
-            details: format!("timestamp: {}", timestamp),
-        }
+        Self::computation_overflow(cause, format!("timestamp: {}", timestamp))
     }
 
     pub fn overflow_total_interest_due_by_now<T>(cause: &'static str, timestamp: T) -> Self
     where
         T: Display,
     {
-        Self::ComputationOverflow {
-            cause,
-            details: format!("timestamp: {}", timestamp),
-        }
+        Self::computation_overflow(cause, format!("timestamp: {}", timestamp))
+    }
+
+    pub fn computation_overflow(cause: &'static str, details: String) -> Self {
+        Self::ComputationOverflow { cause, details }
     }
 }
