@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use cosmwasm_std::{Binary, Coin as CwCoin, CosmosMsg, CustomMsg};
+use cosmwasm_std::{Binary, Coin as CwCoin, CosmosMsg, CustomMsg, StdResult};
 use schemars::JsonSchema;
 
 #[cfg(feature = "cosmos_proto")]
@@ -130,6 +130,23 @@ impl From<InterChainMsg> for CosmosMsg<InterChainMsg> {
 }
 
 impl CustomMsg for InterChainMsg {}
+
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "snake_case")]
+pub struct OpenAckVersion {
+    pub version: String,
+    pub controller_connection_id: String,
+    pub host_connection_id: String,
+    pub address: String,
+    pub encoding: String,
+    pub tx_type: String,
+}
+
+impl OpenAckVersion {
+    pub fn parse(response: &str) -> StdResult<Self> {
+        cosmwasm_std::from_json(response)
+    }
+}
 
 // Minimal replacement for `neutron_sdk::sudo::msg::RequestPacket`.
 #[derive(Clone, Deserialize, JsonSchema, PartialEq, Serialize)]
