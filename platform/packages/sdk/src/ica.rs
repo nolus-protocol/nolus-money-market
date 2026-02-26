@@ -7,6 +7,10 @@ use schemars::JsonSchema;
 use super::cosmos_sdk_proto::Any as CosmosAny;
 
 /// Minimal replacement for `neutron_sdk::bindings::types::ProtobufAny`.
+///
+// TODO: Replace with `ibc_proto::Any` once cosmwasm-std v3 drops the `JsonSchema` requirement.
+// Exists only because `ibc_proto::Any` cannot derive `JsonSchema`, which is
+// currently forced on `InterChainMsg` by `cw-multi-test`'s `WasmKeeper` trait bounds.
 #[derive(Clone, Debug, Deserialize, Eq, JsonSchema, PartialEq, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub struct ProtobufAny {
@@ -52,7 +56,7 @@ pub struct IbcFee {
     pub timeout_fee: Vec<CwCoin>,
 }
 
-// Minimal replacement for `neutron_sdk::sudo::msg::RequestPacketTimeoutHeight`.
+/// Minimal replacement for `neutron_sdk::sudo::msg::RequestPacketTimeoutHeight`.
 #[derive(Clone, Debug, Deserialize, Eq, JsonSchema, PartialEq, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub struct RequestPacketTimeoutHeight {
@@ -60,7 +64,9 @@ pub struct RequestPacketTimeoutHeight {
     pub revision_height: Option<u64>,
 }
 
-// Minimal replacement for `neutron_sdk::bindings::msg::NeutronMsg`.
+/// Minimal replacement for `neutron_sdk::bindings::msg::NeutronMsg`.
+///
+// TODO: Remove `JsonSchema` derives and the `schemars` dependency once we upgrade to cosmwasm-std v3.
 #[derive(Clone, Debug, Deserialize, Eq, JsonSchema, PartialEq, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum InterChainMsg {
