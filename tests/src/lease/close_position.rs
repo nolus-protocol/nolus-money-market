@@ -2,6 +2,7 @@ use currencies::{LeaseGroup, PaymentGroup, testing::PaymentC5};
 use currency::CurrencyDef;
 use finance::{
     coin::{Amount, Coin},
+    fraction::Unit,
     price,
     zero::Zero,
 };
@@ -298,9 +299,9 @@ fn do_close(
         lease_ica.clone(),
         requests.into_iter(),
         |amount: Amount, _, _| {
-            assert_eq!(amount, close_amount.into());
+            assert_eq!(amount, close_amount.to_primitive());
 
-            close_amount_in_lpn.into()
+            close_amount_in_lpn.to_primitive()
         },
     )
     .ignore_response();

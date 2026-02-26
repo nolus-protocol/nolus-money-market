@@ -6,7 +6,7 @@ use currency::CurrencyDef;
 use finance::{
     coin::{Coin, CoinDTO},
     duration::Duration,
-    fraction::Fraction,
+    fraction::{Fraction, Unit},
     percent::{Percent, Percent100},
     price::{self, Price},
     ratio::Ratio,
@@ -44,10 +44,10 @@ fn partial_repay() {
     let mut test_case: LeaseTestCase = super::create_test_case::<PaymentCurrency>();
     let downpayment = DOWNPAYMENT;
 
-    let amount = super::quote_borrow(&test_case, downpayment);
+    let amount = super::quote_borrow(&test_case, downpayment).to_primitive();
     let partial_payment: PaymentCoin = Fraction::<PaymentCoin>::of(
         &Ratio::new(common::coin(1), common::coin(2)),
-        super::create_payment_coin(amount.into()),
+        super::create_payment_coin(amount),
     );
 
     let expected_result =
@@ -341,11 +341,11 @@ where
         lease_ica.clone(),
         requests.into_iter(),
         |amount_in, in_denom, out_denom| {
-            assert_eq!(amount_in, payment.into());
+            assert_eq!(amount_in, payment.to_primitive());
             assert_eq!(in_denom, PaymentCurrency::dex());
             assert_eq!(out_denom, LpnCurrency::dex());
 
-            paid.into()
+            paid.to_primitive()
         },
     );
 
