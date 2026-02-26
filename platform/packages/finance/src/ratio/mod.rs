@@ -106,7 +106,10 @@ where
         }
     }
 
+    /// pre: nominator != Zero::ZERO
     pub(super) fn inv(&self) -> Self {
+        debug_assert_ne!(self.nominator, Zero::ZERO, "Nominator must be non-zero");
+
         Self::new(self.denominator, self.nominator)
     }
 
@@ -281,5 +284,25 @@ mod test_ratio {
         ) -> SimpleFraction<PercentUnits> {
             SimpleFraction::new(nominator, denominator)
         }
+    }
+}
+
+#[cfg(test)]
+mod test_fraction {
+    use crate::ratio::SimpleFraction;
+
+    #[test]
+    fn inv() {
+        assert_eq!(
+            SimpleFraction::new(4u32, 2),
+            SimpleFraction::new(2, 4).inv()
+        );
+    }
+
+    #[test]
+    #[cfg(debug_assertions)]
+    #[should_panic = "Nominator must be non-zero"]
+    fn inv_pre_not_satisfied() {
+        _ = SimpleFraction::new(0u32, 4).inv();
     }
 }

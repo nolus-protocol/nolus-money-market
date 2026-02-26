@@ -146,7 +146,12 @@ impl Liability {
                 // from 'due - liquidation = healthy% of (lease - liquidation)' follows
                 // liquidation = 100% / (100% - healthy%) of (due - healthy% of lease)
                 // the amount to liquiate is strongly less than total due
-                let multiplier = self.healthy.complement().to_fraction().inv();
+                let complement_to_hundred = self.healthy.complement();
+                debug_assert!(
+                    !complement_to_hundred.is_zero(),
+                    "A type invariant violation! Healthy% == 100%"
+                );
+                let multiplier = complement_to_hundred.to_fraction().inv();
                 let extra_liability_lpn = total_due - total_due.min(self.healthy.of(lease_amount));
                 multiplier.of(extra_liability_lpn)
             })
