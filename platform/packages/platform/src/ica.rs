@@ -3,14 +3,9 @@ use std::fmt::{Display, Formatter, Result as FmtResult};
 use serde::{Deserialize, Serialize};
 
 use finance::duration::Duration;
-use sdk::neutron_sdk::bindings::msg::{IbcFee, NeutronMsg};
+use sdk::ica::{IbcFee, InterChainMsg, OpenAckVersion};
 
 use crate::{batch::Batch, error::Error, result::Result, trx::Transaction};
-
-#[cfg(not(feature = "testing"))]
-use self::impl_::OpenAckVersion;
-#[cfg(feature = "testing")]
-pub use self::impl_::OpenAckVersion;
 
 /// Identifier of the ICA account opened by a lease
 /// It is unique for a lease and allows the support of multiple accounts per lease
@@ -70,7 +65,7 @@ where
     C: Into<String>,
 {
     let mut batch = Batch::default();
-    batch.schedule_execute_no_reply(NeutronMsg::register_interchain_account(
+    batch.schedule_execute_no_reply(InterChainMsg::register_interchain_account(
         connection.into(),
         ICA_ACCOUNT_ID.into(),
         None,
@@ -79,7 +74,7 @@ where
 }
 
 pub fn parse_register_response(response: &str) -> Result<HostAccount> {
-    sdk::cosmwasm_std::from_json::<OpenAckVersion>(response)
+    OpenAckVersion::parse(response)
         .map_err(Error::Deserialization)
         .and_then(|open_ack| open_ack.address.try_into())
 }
@@ -96,7 +91,7 @@ where
 {
     let mut batch = Batch::default();
 
-    batch.schedule_execute_no_reply(NeutronMsg::submit_tx(
+    batch.schedule_execute_no_reply(InterChainMsg::submit_tx(
         connection.into(),
         ICA_ACCOUNT_ID.into(),
         trx.into_msgs(),
@@ -109,19 +104,4 @@ where
         },
     ));
     batch
-}
-
-mod impl_ {
-    use serde::{Deserialize, Serialize};
-
-    #[derive(Serialize, Deserialize, Debug)]
-    #[serde(rename_all = "snake_case")]
-    pub struct OpenAckVersion {
-        pub version: String,
-        pub controller_connection_id: String,
-        pub host_connection_id: String,
-        pub address: String,
-        pub encoding: String,
-        pub tx_type: String,
-    }
 }

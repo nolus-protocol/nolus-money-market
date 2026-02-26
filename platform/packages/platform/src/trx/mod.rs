@@ -1,6 +1,6 @@
 use sdk::{
     cosmos_sdk_proto::{Any, cosmos::base::abci::v1beta1::TxMsgData, traits::Message},
-    neutron_sdk::bindings::types::ProtobufAny,
+    ica::ProtobufAny,
 };
 
 use crate::{error::Error, result::Result};
@@ -20,8 +20,7 @@ impl Transaction {
         let mut buf = Vec::with_capacity(msg.encoded_len());
         msg.encode_raw(&mut buf);
 
-        self.msgs
-            .push(ProtobufAny::new(msg_type.into(), buf.into()));
+        self.msgs.push(ProtobufAny::new(msg_type.into(), buf));
     }
 
     pub(super) fn into_msgs(self) -> Vec<ProtobufAny> {

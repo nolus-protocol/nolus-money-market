@@ -7,11 +7,11 @@ use platform::{
     response,
 };
 use sdk::{
+    api::SudoMsg,
     cosmwasm_ext::Response as CwResponse,
     cosmwasm_std::{
         Api, Binary, Deps, DepsMut, Env, MessageInfo, QuerierWrapper, Reply, Storage, entry_point,
     },
-    neutron_sdk::sudo::msg::SudoMsg,
 };
 use versioning::{
     ProtocolMigrationMessage, ProtocolPackageRelease, UpdatablePackage as _, VersionSegment,

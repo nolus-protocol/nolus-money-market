@@ -1,11 +1,9 @@
 use currency::{BankSymbols, Group};
 use finance::coin::CoinDTO;
 use sdk::{
+    cosmwasm_ext::CosmosMsg,
     cosmwasm_std::{Addr, Coin as CwCoin, Timestamp},
-    neutron_sdk::{
-        bindings::msg::{IbcFee, NeutronMsg},
-        sudo::msg::RequestPacketTimeoutHeight,
-    },
+    ica::{IbcFee, InterChainMsg, RequestPacketTimeoutHeight},
 };
 
 use crate::{batch::Batch, coin_legacy, ica::HostAccount};
@@ -47,7 +45,7 @@ impl<'conn> Sender<'conn> {
             ));
     }
 
-    fn into_ibc_msgs(self) -> impl Iterator<Item = NeutronMsg> {
+    fn into_ibc_msgs(self) -> impl Iterator<Item = InterChainMsg> {
         let Self {
             channel,
             sender,
@@ -79,12 +77,12 @@ fn new_msg(
     amount: CwCoin,
     timeout: Timestamp,
     memo: String,
-) -> NeutronMsg {
+) -> InterChainMsg {
     let timeout_height = RequestPacketTimeoutHeight {
         revision_height: None,
         revision_number: None,
     };
-    NeutronMsg::IbcTransfer {
+    InterChainMsg::IbcTransfer {
         source_port: ICS20_PORT_AT_NOLUS.into(),
         source_channel: channel.into(),
         token: amount,
@@ -107,7 +105,7 @@ impl<'c> From<Sender<'c>> for Batch {
 
         sender
             .into_ibc_msgs()
-            .for_each(|msg| batch.schedule_execute_no_reply(msg));
+            .for_each(|msg| batch.schedule_execute_no_reply(CosmosMsg::Custom(msg)));
         batch
     }
 }

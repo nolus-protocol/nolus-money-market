@@ -6,6 +6,7 @@ use dex::{ConnectionParams, Ics20Channel, MaxSlippage};
 use finance::{
     coin::Coin,
     duration::Duration,
+    fraction::Unit,
     liability::Liability,
     percent::{Percent, Percent100},
     test,
@@ -176,7 +177,7 @@ where
         .query_wasm_smart(
             leaser,
             &QueryMsg::Quote {
-                downpayment: test::funds::<_, DownpaymentC>(downpayment.into()),
+                downpayment: test::funds::<_, DownpaymentC>(downpayment.to_primitive()),
                 lease_asset: currency::dto::<LeaseC, _>(),
                 max_ltd,
             },

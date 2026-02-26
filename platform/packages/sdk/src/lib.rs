@@ -7,17 +7,17 @@ pub use cw_multi_test;
 pub use cw_storage_plus;
 #[cfg(feature = "cosmos_ibc")]
 pub use ibc_proto;
-#[cfg(feature = "neutron")]
-pub use neutron_sdk;
 
+pub mod ica;
+
+pub mod api {
+    pub use crate::ica::SudoMsg;
+}
 #[cfg(feature = "testing")]
 pub mod testing;
 
 pub mod cosmwasm_ext {
-    #[cfg(not(feature = "neutron"))]
-    pub use cosmwasm_std::Empty as InterChainMsg;
-    #[cfg(feature = "neutron")]
-    pub use neutron_sdk::bindings::msg::NeutronMsg as InterChainMsg;
+    pub use crate::ica::InterChainMsg;
 
     pub type Response = cosmwasm_std::Response<InterChainMsg>;
     pub type CosmosMsg = cosmwasm_std::CosmosMsg<InterChainMsg>;

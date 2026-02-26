@@ -16,9 +16,9 @@ use lease::{
 };
 use platform::{coin_legacy, contract::Code};
 use sdk::{
+    api::SudoMsg,
     cosmwasm_std::{Addr, Coin as CwCoin},
     cw_multi_test::AppResponse,
-    neutron_sdk::sudo::msg::SudoMsg,
     testing,
 };
 use swap::testing::SwapRequest;

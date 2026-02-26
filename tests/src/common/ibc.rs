@@ -10,10 +10,7 @@ use sdk::{
     ibc_proto::{
         cosmos::base::v1beta1::Coin as ProtobufCoin, ibc::applications::transfer::v1::MsgTransfer,
     },
-    neutron_sdk::{
-        bindings::types::ProtobufAny,
-        sudo::msg::{RequestPacket, SudoMsg},
-    },
+    ica::{ProtobufAny, RequestPacket, SudoMsg},
     testing,
 };
 
