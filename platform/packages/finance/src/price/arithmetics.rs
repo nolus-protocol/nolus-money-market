@@ -73,7 +73,7 @@ where
         // Constructing Price<QuoteC, QuoteC> would enforce the invariant that same-currency prices are identity (1/1),
         // which is incorrect for cross-rate arithmetic intermediates and would panic.
         Price::new(self.amount, rhs.amount_quote)
-            .lossy_mul(SimpleFraction::new(self.amount_quote, rhs.amount).map(Coin::to_primitive))
+            .lossy_mul(SimpleFraction::new(self.amount_quote, rhs.amount))
     }
 
     /// Add two prices rounding each of them to 1.10-18, similarly to
