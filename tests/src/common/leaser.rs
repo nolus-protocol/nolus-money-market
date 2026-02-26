@@ -4,7 +4,12 @@ use currencies::{LeaseGroup, Lpn, PaymentGroup};
 use currency::{CurrencyDef, MemberOf};
 use dex::{ConnectionParams, Ics20Channel, MaxSlippage};
 use finance::{
-    coin::Coin, duration::Duration, fraction::Unit, liability::Liability, percent::{Percent, Percent100}, test
+    coin::Coin,
+    duration::Duration,
+    fraction::Unit,
+    liability::Liability,
+    percent::{Percent, Percent100},
+    test,
 };
 use lease::api::{LpnCoinDTO, limits::MaxSlippages, open::PositionSpecDTO};
 use leaser::msg::{InstantiateMsg, NewConfig, QueryMsg, QuoteResponse};
