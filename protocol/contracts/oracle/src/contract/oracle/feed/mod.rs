@@ -226,7 +226,7 @@ mod test {
             tree.save(&mut storage).unwrap();
 
             let config = Config::new(
-                Percent100::HUNDRED,
+                Percent100::MAX,
                 Duration::from_secs(5),
                 10,
                 Percent100::from_percent(50),
@@ -280,7 +280,7 @@ mod test {
             tree.save(&mut storage).unwrap();
 
             let config = Config::new(
-                Percent100::HUNDRED,
+                Percent100::MAX,
                 Duration::from_secs(5),
                 10,
                 Percent100::from_percent(50),

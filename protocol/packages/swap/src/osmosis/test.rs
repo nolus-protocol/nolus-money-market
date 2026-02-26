@@ -2,7 +2,7 @@ use currency::{
     CurrencyDef as _,
     test::{SuperGroup, SuperGroupTestC1},
 };
-use finance::coin::{Amount, Coin};
+use finance::{coin::Coin, fraction::Unit as _};
 use sdk::cosmwasm_std::Coin as CwCoin;
 
 use crate::testing;
@@ -13,7 +13,7 @@ use super::{SwapAmountInRoute, SwapTarget};
 fn to_dex_cwcoin() {
     let coin: Coin<SuperGroupTestC1> = Coin::new(3541415);
     assert_eq!(
-        CwCoin::new(Amount::from(coin), SuperGroupTestC1::dex()),
+        CwCoin::new(coin.to_primitive(), SuperGroupTestC1::dex()),
         super::to_dex_cwcoin::<SuperGroup>(&coin.into())
     );
 }

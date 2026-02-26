@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 
 use finance::{
     coin::Coin,
-    percent::{Percent, Percent100},
+    percent::{Percent, Percent100, permilles::Permilles},
     ratio::SimpleFraction,
     rational::Rational,
 };
@@ -69,7 +69,7 @@ impl InterestRate {
                 .min(utilization_factor_max)
         };
 
-        SimpleFraction::<Percent>::new(
+        SimpleFraction::<Permilles>::new(
             self.addon_optimal_interest_rate.into(),
             self.utilization_optimal.into(),
         )
@@ -84,12 +84,11 @@ impl InterestRate {
     }
 
     fn validate(&self) -> bool {
-        self.utilization_optimal > Percent100::ZERO
-            && self.utilization_optimal < Percent100::HUNDRED
+        self.utilization_optimal > Percent100::ZERO && self.utilization_optimal < Percent100::MAX
     }
 
     fn utilization_factor_max(&self) -> Percent {
-        Percent::from_fraction::<Percent>(
+        Percent::from_fraction::<Permilles>(
             self.utilization_optimal.into(),
             self.utilization_optimal.complement().into(),
         )
@@ -134,9 +133,7 @@ mod tests {
             .is_some(),
             ""
         );
-        assert!(
-            InterestRate::new(Percent100::ZERO, Percent100::HUNDRED, Percent100::ZERO).is_none()
-        );
+        assert!(InterestRate::new(Percent100::ZERO, Percent100::MAX, Percent100::ZERO).is_none());
         assert!(
             InterestRate::new(
                 Percent100::from_percent(25),
@@ -145,14 +142,7 @@ mod tests {
             )
             .is_some()
         );
-        assert!(
-            InterestRate::new(
-                Percent100::HUNDRED,
-                Percent100::HUNDRED,
-                Percent100::HUNDRED
-            )
-            .is_none()
-        );
+        assert!(InterestRate::new(Percent100::MAX, Percent100::MAX, Percent100::MAX).is_none());
 
         assert!(InterestRate::new(Percent100::ZERO, Percent100::ZERO, Percent100::ZERO).is_none());
         assert!(
@@ -163,9 +153,7 @@ mod tests {
             )
             .is_none()
         );
-        assert!(
-            InterestRate::new(Percent100::HUNDRED, Percent100::ZERO, Percent100::HUNDRED).is_none()
-        );
+        assert!(InterestRate::new(Percent100::MAX, Percent100::ZERO, Percent100::MAX).is_none());
     }
 
     /// Test suit specifically for verifying correctness of [`InterestRate::calculate`](InterestRate::calculate).cargo fmt
@@ -173,7 +161,7 @@ mod tests {
         use crate::borrow::InterestRate;
         use finance::{
             coin::{Amount, Coin},
-            percent::{Percent100, Units},
+            percent::{Percent100, Units, permilles::Permilles},
         };
         use lpp_platform::NLpn;
 
@@ -199,7 +187,7 @@ mod tests {
         }
 
         fn ratio(n: Units, d: Units) -> Percent100 {
-            Percent100::from_ratio(Percent100::from_permille(n), Percent100::from_permille(d))
+            Percent100::from_ratio(Permilles::new(n), Permilles::new(d))
         }
 
         #[derive(Copy, Clone)]

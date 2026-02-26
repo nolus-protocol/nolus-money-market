@@ -5,7 +5,7 @@ use gcd::Gcd;
 use finance::{
     fraction::Unit as FractionUnit,
     fractionable::{CommonDoublePrimitive, Fractionable, IntoDoublePrimitive, IntoMax, TryFromMax},
-    percent::Percent100,
+    percent::permilles::Permilles,
     ratio::Ratio,
     zero::Zero,
 };
@@ -14,15 +14,15 @@ use crate::feeders::PriceFeedersError;
 
 type Unit = u32;
 const ZERO: Unit = 0;
-const ONE: Unit = 1;
 const MAX: Unit = u32::MAX;
 
 #[derive(Clone, Copy, Debug, PartialEq, PartialOrd)]
 pub struct Count(Unit);
 
 impl Count {
-    const ZERO: Self = Self(ZERO);
-    pub const MAX: Self = Self(MAX);
+    const ZERO: Self = Self::new(ZERO);
+    const ONE: Self = Self::new(1);
+    pub const MAX: Self = Self::new(MAX);
 
     const fn new(count: Unit) -> Self {
         Self(count)
@@ -45,16 +45,16 @@ impl Count {
     /// Converts [self] into a reciprocal fraction
     ///
     /// Returns [None] if the Count is zero
-    pub fn try_into_reciprocal(self) -> Option<Ratio<Unit>> {
-        (self != Self::ZERO).then(|| Ratio::new(ONE, self.0))
+    pub fn try_into_reciprocal(self) -> Option<Ratio<Self>> {
+        (self != Self::ZERO).then(|| Ratio::new(Self::ONE, self))
     }
 }
 
-impl CommonDoublePrimitive<Percent100> for Count {
+impl CommonDoublePrimitive<Permilles> for Count {
     type CommonDouble = <Count as IntoDoublePrimitive>::Double;
 }
 
-impl Fractionable<Percent100> for Count {}
+impl Fractionable<Permilles> for Count {}
 
 impl FractionUnit for Count {
     type Times = Unit;
@@ -83,17 +83,17 @@ impl FractionUnit for Count {
     }
 }
 
-impl IntoMax<<Count as CommonDoublePrimitive<Percent100>>::CommonDouble> for Count {
-    fn into_max(self) -> <Count as IntoDoublePrimitive>::Double {
-        self.into_double()
-    }
-}
-
 impl IntoDoublePrimitive for Count {
     type Double = u64;
 
     fn into_double(self) -> Self::Double {
         self.0.into()
+    }
+}
+
+impl IntoMax<<Count as CommonDoublePrimitive<Permilles>>::CommonDouble> for Count {
+    fn into_max(self) -> <Count as IntoDoublePrimitive>::Double {
+        self.into_double()
     }
 }
 
@@ -128,11 +128,11 @@ mod test {
 
     #[test]
     fn try_into_reciprocal_nonzero() {
-        let count = 4096;
+        let count = Count::new_test(4096);
 
         assert_eq!(
-            Ratio::new(1, count),
-            Count::new_test(count).try_into_reciprocal().unwrap()
+            Ratio::new(Count::ONE, count),
+            count.try_into_reciprocal().unwrap()
         );
     }
 

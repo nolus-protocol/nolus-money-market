@@ -5,6 +5,7 @@ use currency::{CurrencyDef, MemberOf};
 use finance::{
     coin::{Amount, Coin},
     duration::Duration,
+    fraction::Unit,
     zero::Zero,
 };
 use platform::bank;
@@ -265,11 +266,11 @@ where
             test_case.address_book.profit_ica().clone(),
             requests.into_iter(),
             |amount: Amount, from_denom: DexDenom<'_>, to_denom: DexDenom<'_>| {
-                assert_eq!(amount, lpn_profit_swap_in.into());
+                assert_eq!(amount, lpn_profit_swap_in.to_primitive());
                 assert_eq!(from_denom, Lpn::dex());
                 assert_eq!(to_denom, Nls::dex());
 
-                lpn_profit_swap_out.into()
+                lpn_profit_swap_out.to_primitive()
             },
         )
         .ignore_response();
@@ -280,7 +281,10 @@ where
             TestCase::PROFIT_ICA_ID,
         );
 
-        assert_eq!(transfer_amount.amount.u128(), lpn_profit_swap_out.into());
+        assert_eq!(
+            transfer_amount.amount.u128(),
+            lpn_profit_swap_out.to_primitive()
+        );
 
         let response = ibc::do_transfer(
             &mut test_case.app,
@@ -358,7 +362,7 @@ fn expect_transfer_events<ProtocolsRegistry, Reserve, Leaser, Lpp, Oracle>(
             ("idx", "0"),
             (
                 "profit-amount-amount",
-                &Amount::from(total_native_profit).to_string()
+                &total_native_profit.display_primitive()
             ),
             ("profit-amount-symbol", Nls::ticker())
         ]
@@ -374,7 +378,7 @@ fn expect_transfer_events<ProtocolsRegistry, Reserve, Leaser, Lpp, Oracle>(
             ("sender", test_case.address_book.profit().as_str()),
             (
                 "amount",
-                &format!("{}{}", Amount::from(total_native_profit), Nls::bank())
+                &format!("{}{}", total_native_profit.display_primitive(), Nls::bank())
             )
         ]
     );
@@ -559,6 +563,6 @@ fn integration_with_time_alarms() {
             .unwrap()
             .amount
             .u128(),
-        ::profit::profit::Profit::IBC_FEE_RESERVE.into(),
+        ::profit::profit::Profit::IBC_FEE_RESERVE.to_primitive(),
     );
 }

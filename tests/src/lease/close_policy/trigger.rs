@@ -86,6 +86,6 @@ fn assert_events(resp: &AppResponse, lease: &Addr, exp_strategy_key: &str, exp_l
         &resp.events,
         &Event::new("wasm-ls-auto-close-position")
             .add_attribute("to", lease)
-            .add_attribute(exp_strategy_key, exp_ltv.units().to_string()),
+            .add_attribute(exp_strategy_key, exp_ltv.display_primitive()),
     );
 }

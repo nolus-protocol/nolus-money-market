@@ -1,10 +1,10 @@
 use bnum::types::U256;
 
 use crate::{
-    coin::{Amount, Coin},
+    coin::Coin,
     duration::Duration,
     fractionable::{CommonDoublePrimitive, Fractionable, IntoDoublePrimitive, IntoMax, TryFromMax},
-    percent::{Units as PercentUnits, bound::BoundPercent},
+    percent::permilles::Permilles,
 };
 
 pub(crate) type DoubleCoinPrimitive = U256;
@@ -13,9 +13,7 @@ impl<C> CommonDoublePrimitive<Duration> for Coin<C> {
     type CommonDouble = DoubleCoinPrimitive;
 }
 
-impl<C, const UPPER_BOUND: PercentUnits> CommonDoublePrimitive<BoundPercent<UPPER_BOUND>>
-    for Coin<C>
-{
+impl<C> CommonDoublePrimitive<Permilles> for Coin<C> {
     type CommonDouble = DoubleCoinPrimitive;
 }
 
@@ -23,28 +21,23 @@ impl<C, Q> CommonDoublePrimitive<Coin<Q>> for Coin<C> {
     type CommonDouble = DoubleCoinPrimitive;
 }
 
-// TODO remove this implemenatation when Price converts to SimpleFraction<Quote, C>
-impl<C> CommonDoublePrimitive<Amount> for Coin<C> {
-    type CommonDouble = DoubleCoinPrimitive;
-}
-
 impl<C> Fractionable<Duration> for Coin<C> {}
 
-impl<C, const UPPER_BOUND: PercentUnits> Fractionable<BoundPercent<UPPER_BOUND>> for Coin<C> {}
+impl<C> Fractionable<Permilles> for Coin<C> {}
 
 impl<C, Q> Fractionable<Coin<Q>> for Coin<C> {}
-
-impl<C> IntoMax<DoubleCoinPrimitive> for Coin<C> {
-    fn into_max(self) -> DoubleCoinPrimitive {
-        self.into_double()
-    }
-}
 
 impl<C> IntoDoublePrimitive for Coin<C> {
     type Double = DoubleCoinPrimitive;
 
     fn into_double(self) -> Self::Double {
         self.amount.into()
+    }
+}
+
+impl<C> IntoMax<DoubleCoinPrimitive> for Coin<C> {
+    fn into_max(self) -> DoubleCoinPrimitive {
+        self.into_double()
     }
 }
 
@@ -58,14 +51,19 @@ impl<C> TryFromMax<DoubleCoinPrimitive> for Coin<C> {
 mod test {
 
     use crate::{
-        coin::Amount, percent::Percent, ratio::SimpleFraction, rational::Rational, test::coin,
+        percent::{Percent, test},
+        ratio::SimpleFraction,
+        rational::Rational,
+        test::coin,
     };
 
     #[test]
     fn of() {
         assert_eq!(
             coin::coin1(30),
-            Percent::from_percent(1000).of(coin::coin1(3)).unwrap()
+            Percent::from_percent(test::MILLE_UNITS)
+                .of(coin::coin1(3))
+                .unwrap()
         );
 
         assert_eq!(
@@ -76,8 +74,8 @@ mod test {
         );
 
         assert_eq!(
-            coin::coin1(2 * Amount::from(u32::MAX)),
-            SimpleFraction::new(coin::coin1(Amount::from(u32::MAX)), coin::coin1(1))
+            coin::coin1(u32::MAX as u128).checked_mul(2).unwrap(),
+            SimpleFraction::new(coin::coin1(u32::MAX as u128), coin::coin1(1))
                 .of(coin::coin1(2))
                 .unwrap()
         );

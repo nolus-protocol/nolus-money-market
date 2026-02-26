@@ -304,7 +304,10 @@ mod test {
     }
 
     mod deposit_withdraw_price {
-        use finance::coin::{Amount, Coin};
+        use finance::{
+            coin::{Amount, Coin},
+            fraction::Unit,
+        };
         use sdk::cosmwasm_std::{Addr, Storage};
 
         use lpp_platform::NLpn;
@@ -734,9 +737,12 @@ mod test {
         }
 
         pub(super) fn query_balance(storage: &dyn Storage, addr: Addr) -> Coin<NLpn> {
-            Coin::new(Amount::from(
-                lender::query_balance(storage, addr).unwrap().balance,
-            ))
+            Coin::new(
+                lender::query_balance(storage, addr)
+                    .unwrap()
+                    .balance
+                    .to_primitive(),
+            )
         }
     }
 

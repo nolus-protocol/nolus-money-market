@@ -1,7 +1,12 @@
 use currencies::Lpns;
 use currency::{CurrencyDef, MemberOf};
 use finance::{
-    coin::Coin, percent::Percent100, price, ratio::SimpleFraction, rational::Rational, zero::Zero,
+    coin::Coin,
+    percent::{Percent100, permilles::Permilles},
+    price,
+    ratio::SimpleFraction,
+    rational::Rational,
+    zero::Zero,
 };
 use lpp_platform::NLpn;
 use platform::{bank::BankAccountView, contract::Validator};
@@ -103,7 +108,7 @@ where
             self.commited_balance(pending_deposit).map(|balance| {
                 if self.utilization(balance, total_due) > min_utilization {
                     // a followup from the above true value is (total_due * 100 / min_utilization) > (balance + total_due)
-                    SimpleFraction::new(Percent100::HUNDRED, min_utilization)
+                    SimpleFraction::new(Permilles::MILLE, min_utilization.into())
                         .of(total_due)
                         .map(|res| res - balance - total_due)
                 } else {
@@ -318,7 +323,7 @@ where
 
     fn utilization(&self, balance: Coin<Lpn>, total_due: Coin<Lpn>) -> Percent100 {
         if balance.is_zero() {
-            Percent100::HUNDRED
+            Percent100::MAX
         } else {
             Percent100::from_ratio(total_due, total_due + balance)
         }
@@ -826,7 +831,7 @@ mod test {
                     InterestRate::new(
                         Percent100::ZERO,
                         Percent100::from_permille(500),
-                        Percent100::HUNDRED,
+                        Percent100::MAX,
                     )
                     .unwrap(),
                     min_utilization,
@@ -1027,7 +1032,7 @@ mod test {
                 InterestRate::new(
                     Percent100::ZERO,
                     Percent100::from_permille(500),
-                    Percent100::HUNDRED,
+                    Percent100::MAX,
                 )
                 .unwrap(),
                 Percent100::ZERO,

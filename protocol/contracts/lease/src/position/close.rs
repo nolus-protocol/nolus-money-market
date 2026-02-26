@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use finance::{
     fraction::Fraction,
     fractionable::{CommonDoublePrimitive, Fractionable, IntoMax},
-    percent::Percent100,
+    percent::{Percent100, permilles::Permilles},
     range::{Ascending, RightOpenRange},
 };
 
@@ -88,8 +88,8 @@ impl Policy {
     // Note that in edge cases the ltv may go above 100%
     pub fn may_trigger<P>(&self, lease_asset: P, total_due: P) -> Option<Strategy>
     where
-        Percent100: IntoMax<<P as CommonDoublePrimitive<Percent100>>::CommonDouble>,
-        P: Fractionable<Percent100> + PartialOrd + Copy,
+        Permilles: IntoMax<<P as CommonDoublePrimitive<Permilles>>::CommonDouble>,
+        P: Fractionable<Permilles> + PartialOrd + Copy,
     {
         self.may_stop_loss(lease_asset, total_due)
             .or_else(|| self.may_take_profit(lease_asset, total_due))
@@ -135,8 +135,8 @@ impl Policy {
 
     fn may_stop_loss<P>(&self, lease_asset: P, total_due: P) -> Option<Strategy>
     where
-        Percent100: IntoMax<<P as CommonDoublePrimitive<Percent100>>::CommonDouble>,
-        P: Fractionable<Percent100> + PartialOrd,
+        Permilles: IntoMax<<P as CommonDoublePrimitive<Permilles>>::CommonDouble>,
+        P: Fractionable<Permilles> + PartialOrd,
     {
         self.stop_loss.and_then(|stop_loss| {
             (stop_loss.of(lease_asset) <= total_due).then_some(Strategy::StopLoss(stop_loss))
@@ -145,8 +145,8 @@ impl Policy {
 
     fn may_take_profit<P>(&self, lease_asset: P, total_due: P) -> Option<Strategy>
     where
-        Percent100: IntoMax<<P as CommonDoublePrimitive<Percent100>>::CommonDouble>,
-        P: Fractionable<Percent100> + PartialOrd,
+        Permilles: IntoMax<<P as CommonDoublePrimitive<Permilles>>::CommonDouble>,
+        P: Fractionable<Permilles> + PartialOrd,
     {
         self.take_profit.and_then(|take_profit| {
             (take_profit.of(lease_asset) > total_due).then_some(Strategy::TakeProfit(take_profit))
@@ -179,7 +179,7 @@ mod test {
     mod may_trigger {
         use finance::{coin::Amount, percent::Percent100};
 
-        use crate::position::{CloseStrategy, close::Policy};
+        use crate::position::{CloseStrategy, close::Policy, spec::test};
 
         #[test]
         fn no_sl_no_tp() {
@@ -278,7 +278,7 @@ mod test {
                 stop_loss: sl,
                 take_profit: tp,
             }
-            .may_trigger(asset, due)
+            .may_trigger(test::lease_coin(asset), test::lease_coin(due))
         }
     }
 
@@ -414,7 +414,7 @@ mod test {
                 },
                 may_p
             );
-            assert_eq!(None, may_p.may_trigger(Percent100::HUNDRED, lower));
+            assert_eq!(None, may_p.may_trigger(Percent100::MAX, lower));
 
             let may_p_1 = may_p
                 .change_policy(ClosePolicyChange {
@@ -431,7 +431,7 @@ mod test {
             );
             assert_eq!(
                 Some(CloseStrategy::StopLoss(lower)),
-                may_p_1.may_trigger(Percent100::HUNDRED, lower)
+                may_p_1.may_trigger(Percent100::MAX, lower)
             );
 
             let may_p_2 = may_p_1
@@ -442,7 +442,7 @@ mod test {
                 .unwrap();
             assert_eq!(
                 Some(CloseStrategy::TakeProfit(higher)),
-                may_p_2.may_trigger(Percent100::HUNDRED, lower)
+                may_p_2.may_trigger(Percent100::MAX, lower)
             );
 
             assert_eq!(
@@ -468,7 +468,7 @@ mod test {
                     stop_loss: Some(ChangeCmd::Set(higher)),
                 })
                 .unwrap();
-            assert_eq!(None, p.may_trigger(Percent100::HUNDRED, lower));
+            assert_eq!(None, p.may_trigger(Percent100::MAX, lower));
             assert_eq!(
                 Some(CloseStrategy::TakeProfit(higher),),
                 p.change_policy(ClosePolicyChange {
@@ -476,7 +476,7 @@ mod test {
                     stop_loss: Some(ChangeCmd::Reset),
                 })
                 .unwrap()
-                .may_trigger(Percent100::HUNDRED, lease_invalid1)
+                .may_trigger(Percent100::MAX, lease_invalid1)
             );
 
             assert_eq!(
@@ -487,7 +487,7 @@ mod test {
                         stop_loss: Some(ChangeCmd::Set(lower)),
                     },)
                     .unwrap()
-                    .may_trigger(Percent100::HUNDRED, lower)
+                    .may_trigger(Percent100::MAX, lower)
             );
         }
     }

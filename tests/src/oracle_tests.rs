@@ -55,41 +55,6 @@ type Alarm = oracle::api::Alarm<AlarmCurrencies, BaseCurrency, BaseCurrencies>;
 type ExecuteMsg =
     oracle::api::ExecuteMsg<BaseCurrency, BaseCurrencies, AlarmCurrencies, PriceCurrencies>;
 
-fn cw_coin(coin: Coin<Lpn>) -> CwCoin {
-    coin_legacy::to_cosmwasm_on_nolus(coin)
-}
-
-fn create_test_case() -> TestCase<Addr, Addr, Addr, Addr, Addr, Addr, Addr, Addr> {
-    TestCaseBuilder::<Lpn>::with_reserve(&[cw_coin(common::coin(
-        10_000_000_000_000_000_000_000_000_000,
-    ))])
-    .init_lpp_with_funds(
-        None,
-        &[coin(5_000_000_000_000_000_000_000_000_000, Lpn::bank())],
-        BASE_INTEREST_RATE,
-        UTILIZATION_OPTIMAL,
-        ADDON_OPTIMAL_INTEREST_RATE,
-        TestCase::DEFAULT_LPP_MIN_UTILIZATION,
-    )
-    .init_time_alarms()
-    .init_protocols_registry(Registry::NoProtocol)
-    .init_oracle(Some(
-        CwContractWrapper::new(
-            oracle::contract::execute,
-            oracle::contract::instantiate,
-            oracle::contract::query,
-        )
-        .with_reply(oracle::contract::reply)
-        .with_sudo(oracle::contract::sudo)
-        .with_migrate(oracle::contract::migrate),
-    ))
-    .init_treasury()
-    .init_profit(24)
-    .init_reserve()
-    .init_leaser()
-    .into_generic()
-}
-
 #[test]
 fn test_lease_serde() {
     use lease::api::ExecuteMsg::PriceAlarm as LeasePriceAlarm;
@@ -142,22 +107,7 @@ fn feed_price_with_alarm_issue() {
     let lease = open_lease(&mut test_case, common::lpn_coin(1000));
 
     // there is no price in the oracle and feed for this alarm
-    () = test_case
-        .app
-        .execute(
-            lease,
-            test_case.address_book.oracle().clone(),
-            &ExecuteMsg::AddPriceAlarm {
-                alarm: Alarm::new(
-                    price::total_of(Coin::<PaymentC4>::new(1)).is(common::lpn_coin(1)),
-                    None,
-                ),
-            },
-            &[],
-        )
-        .unwrap()
-        .ignore_response()
-        .unwrap_response();
+    _ = add_price_alarm(&mut test_case, lease.clone(), price(1, 1), None);
 
     let _: AppResponse = oracle_mod::feed_price(
         &mut test_case,
@@ -175,27 +125,12 @@ fn feed_price_with_alarm() {
 
     let lease = open_lease(&mut test_case, common::lpn_coin(1000));
 
-    () = test_case
-        .app
-        .execute(
-            lease,
-            test_case.address_book.oracle().clone(),
-            &ExecuteMsg::AddPriceAlarm {
-                alarm: Alarm::new(
-                    price::total_of(Coin::<PaymentC4>::new(1)).is(common::lpn_coin(10)),
-                    None,
-                ),
-            },
-            &[],
-        )
-        .unwrap()
-        .ignore_response()
-        .unwrap_response();
+    _ = add_price_alarm(&mut test_case, lease.clone(), price(1, 10), None);
 
     let _: AppResponse = oracle_mod::feed_price(
         &mut test_case,
         feeder,
-        Coin::<PaymentC4>::new(1),
+        Coin::<BaseC>::new(1),
         common::lpn_coin(5),
     );
 }
@@ -210,45 +145,20 @@ fn overwrite_alarm_and_dispatch() {
 
     let lease = open_lease(&mut test_case, common::lpn_coin(1000));
 
-    () = test_case
-        .app
-        .execute(
-            lease.clone(),
-            test_case.address_book.oracle().clone(),
-            &ExecuteMsg::AddPriceAlarm {
-                alarm: Alarm::new(
-                    price::total_of(Coin::<PaymentC4>::new(1)).is(common::lpn_coin(5)),
-                    Some(price::total_of(Coin::<PaymentC4>::new(1)).is(common::lpn_coin(5))),
-                ),
-            },
-            &[],
-        )
-        .unwrap()
-        .ignore_response()
-        .unwrap_response();
+    _ = add_price_alarm(
+        &mut test_case,
+        lease.clone(),
+        price(1, 5),
+        Some(price(1, 5)),
+    );
 
-    () = test_case
-        .app
-        .execute(
-            lease.clone(),
-            test_case.address_book.oracle().clone(),
-            &ExecuteMsg::AddPriceAlarm {
-                alarm: Alarm::new(
-                    price::total_of(Coin::<PaymentC4>::new(1)).is(common::lpn_coin(10)),
-                    None,
-                ),
-            },
-            &[],
-        )
-        .unwrap()
-        .ignore_response()
-        .unwrap_response();
+    _ = add_price_alarm(&mut test_case, lease.clone(), price(1, 10), None);
 
     // If doesn't panic, then prices should be fed successfully.
     let _: AppResponse = oracle_mod::feed_price(
         &mut test_case,
         feeder,
-        Coin::<PaymentC4>::new(1),
+        Coin::<BaseC>::new(1),
         common::lpn_coin(5),
     );
 
@@ -358,18 +268,13 @@ fn test_config_update() {
         common::lpn_coin(quote),
     );
 
-    let price: BasePrice<LeaseGroup, Lpn, Lpns> = oracle_mod::fetch_price::<BaseC, _, _, _>(
+    let base_price: BasePrice<LeaseGroup, Lpn, Lpns> = oracle_mod::fetch_price::<BaseC, _, _, _>(
         test_case.app.query(),
         test_case.address_book.oracle().clone(),
     )
     .unwrap();
 
-    assert_eq!(
-        price,
-        price::total_of(Coin::<BaseC>::new(base))
-            .is(common::lpn_coin(quote))
-            .into()
-    );
+    assert_eq!(base_price, price(base, quote).into());
 
     let response: AppResponse = test_case
         .app
@@ -411,7 +316,7 @@ fn test_swap_path() {
         .query_wasm_smart(
             test_case.address_book.oracle().clone(),
             &OracleQ::<PriceCurrencies>::SwapPath {
-                from: currency::dto::<PaymentC4, _>(),
+                from: currency::dto::<BaseC, _>(),
                 to: currency::dto::<PaymentC1, _>(),
             },
         )
@@ -884,6 +789,41 @@ fn price_alarm_rescheduling_with_failing() {
     );
 }
 
+fn create_test_case() -> TestCase<Addr, Addr, Addr, Addr, Addr, Addr, Addr, Addr> {
+    TestCaseBuilder::<Lpn>::with_reserve(&[cw_coin(common::coin(
+        10_000_000_000_000_000_000_000_000_000,
+    ))])
+    .init_lpp_with_funds(
+        None,
+        &[coin(5_000_000_000_000_000_000_000_000_000, Lpn::bank())],
+        BASE_INTEREST_RATE,
+        UTILIZATION_OPTIMAL,
+        ADDON_OPTIMAL_INTEREST_RATE,
+        TestCase::DEFAULT_LPP_MIN_UTILIZATION,
+    )
+    .init_time_alarms()
+    .init_protocols_registry(Registry::NoProtocol)
+    .init_oracle(Some(
+        CwContractWrapper::new(
+            oracle::contract::execute,
+            oracle::contract::instantiate,
+            oracle::contract::query,
+        )
+        .with_reply(oracle::contract::reply)
+        .with_sudo(oracle::contract::sudo)
+        .with_migrate(oracle::contract::migrate),
+    ))
+    .init_treasury()
+    .init_profit(24)
+    .init_reserve()
+    .init_leaser()
+    .into_generic()
+}
+
+fn cw_coin(coin: TheCoin) -> CwCoin {
+    coin_legacy::to_cosmwasm_on_nolus(coin)
+}
+
 fn invalid_swap_tree() -> HumanReadableTree<SwapTarget<PriceCurrencies>> {
     swap_tree_impl::<PaymentC7>()
 }
@@ -938,4 +878,28 @@ fn update_tree(
         &response.events,
         &[Event::new("sudo").add_attribute("_contract_address", test_case.address_book.oracle())]
     );
+}
+
+fn add_price_alarm<ProtoReg, T, P, R, L, Lp, TAlarms>(
+    test_case: &mut TestCase<ProtoReg, T, P, R, L, Lp, Addr, TAlarms>,
+    sender: Addr,
+    below: Price<BaseC, Lpn>,
+    above_or_equal: Option<Price<BaseC, Lpn>>,
+) -> ResponseWithInterChainMsgs<'_, ()> {
+    test_case
+        .app
+        .execute(
+            sender,
+            test_case.address_book.oracle().clone(),
+            &ExecuteMsg::AddPriceAlarm {
+                alarm: Alarm::new(below, above_or_equal),
+            },
+            &[],
+        )
+        .unwrap()
+        .ignore_response()
+}
+
+fn price(amount: Amount, quote: Amount) -> Price<BaseC, Lpn> {
+    price::total_of(Coin::new(amount)).is(common::lpn_coin(quote))
 }

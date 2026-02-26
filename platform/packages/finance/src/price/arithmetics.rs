@@ -17,21 +17,24 @@ where
         // b / a + d / c = (b * c1 + d * a1) / (a1 * c1 * gcd(a, c))
         // taking into account that Price is like amount_quote/amount
         let (a1, c1) = self.amount.to_coprime_with(rhs.amount);
-        debug_assert_eq!(0, Amount::from(self.amount) % Amount::from(a1));
-        debug_assert_eq!(0, Amount::from(rhs.amount) % Amount::from(c1));
-        let gcd: Amount = match self.amount.checked_div(a1.into()) {
+        debug_assert_eq!(0, self.amount.to_primitive() % a1.to_primitive());
+        debug_assert_eq!(0, rhs.amount.to_primitive() % c1.to_primitive());
+        let gcd: Amount = match self.amount.checked_div(a1.to_primitive()) {
             None => unreachable!("invariant on amount != 0 should have passed!"),
-            Some(gcd) => gcd.into(),
+            Some(gcd) => gcd.to_primitive(),
         };
-        debug_assert_eq!(Some(Coin::new(gcd)), rhs.amount.checked_div(c1.into()));
+        debug_assert_eq!(
+            Some(Coin::new(gcd)),
+            rhs.amount.checked_div(c1.to_primitive())
+        );
 
-        let may_b_c1 = self.amount_quote.checked_mul(c1.into());
-        let may_d_a1 = rhs.amount_quote.checked_mul(a1.into());
+        let may_b_c1 = self.amount_quote.checked_mul(c1.to_primitive());
+        let may_d_a1 = rhs.amount_quote.checked_mul(a1.to_primitive());
         let may_amount_quote = may_b_c1
             .zip(may_d_a1)
             .and_then(|(b_c1, d_a1)| b_c1.checked_add(d_a1));
         let may_amount = a1
-            .checked_mul(c1.into())
+            .checked_mul(c1.to_primitive())
             .and_then(|a1_c1| a1_c1.checked_mul(gcd));
         may_amount_quote
             .zip(may_amount)
@@ -66,8 +69,11 @@ where
     where
         QuoteQuoteC: 'static,
     {
+        // The second multiplicand could not be a Price.
+        // Constructing Price<QuoteC, QuoteC> would enforce the invariant that same-currency prices are identity (1/1),
+        // which is incorrect for cross-rate arithmetic intermediates and would panic.
         Price::new(self.amount, rhs.amount_quote)
-            .lossy_mul(SimpleFraction::new(self.amount_quote, rhs.amount).to_fraction())
+            .lossy_mul(SimpleFraction::new(self.amount_quote, rhs.amount))
     }
 
     /// Add two prices rounding each of them to 1.10-18, similarly to
@@ -88,10 +94,8 @@ where
     }
 
     fn from_fraction(fraction: SimpleFraction<Amount>) -> Self {
-        Self::new(
-            Coin::new(fraction.denominator()),
-            Coin::new(fraction.nominator()),
-        )
+        fraction
+            .with(|nominator, denominator| Self::new(Coin::new(denominator), Coin::new(nominator)))
     }
 }
 

@@ -1,0 +1,74 @@
+use std::fmt::{Display, Formatter, Result as FmtResult};
+
+use serde::{Deserialize, Serialize};
+
+use crate::percent::Units;
+
+#[derive(Clone, Copy, Debug, Deserialize, Eq, Ord, PartialEq, PartialOrd, Serialize)]
+#[serde(transparent)]
+pub struct Permilles(Units);
+
+impl Permilles {
+    pub(super) const ZERO: Self = Self::new(0);
+    pub(super) const PRECISION: Self = Self::new(1);
+    pub const MILLE: Self = Self::new(1000);
+
+    pub const fn new(permilles: Units) -> Self {
+        Self(permilles)
+    }
+
+    pub(super) const fn units(&self) -> Units {
+        self.0
+    }
+
+    pub(super) const fn checked_add(self, other: Self) -> Option<Self> {
+        if let Some(res) = self.0.checked_add(other.0) {
+            Some(Self(res))
+        } else {
+            None
+        }
+    }
+
+    pub(super) const fn checked_sub(self, other: Self) -> Option<Self> {
+        if let Some(res) = self.0.checked_sub(other.0) {
+            Some(Self(res))
+        } else {
+            None
+        }
+    }
+
+    // Inclusive check
+    pub(super) const fn within(&self, max: Units) -> bool {
+        self.0 <= max
+    }
+}
+
+impl Display for Permilles {
+    fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
+        self.0.fmt(f).and_then(|()| f.write_str("‰"))
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use crate::percent::{Units, permilles::Permilles, test};
+
+    #[test]
+    fn display() {
+        test_display("0‰", 0);
+        test_display("10‰", 10);
+        test_display("100‰", 100);
+        test_display("127‰", 127);
+    }
+
+    #[test]
+    fn within() {
+        assert!(Permilles::new(100).within(test::MILLE_UNITS));
+        assert!(Permilles::MILLE.within(test::MILLE_UNITS));
+        assert!(!Permilles::new(1001).within(test::MILLE_UNITS));
+    }
+
+    fn test_display(exp: &str, permilles: Units) {
+        assert_eq!(exp, format!("{}", Permilles(permilles)));
+    }
+}

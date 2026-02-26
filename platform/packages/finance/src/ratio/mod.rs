@@ -3,7 +3,6 @@ use std::fmt::Debug;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    coin::Amount,
     error::{Error, Result as FinanceResult},
     fraction::{Coprime, Fraction, ToFraction, Unit as FractionUnit},
     fractionable::{Fractionable, IntoMax},
@@ -107,19 +106,27 @@ where
         }
     }
 
-    pub(super) const fn nominator(&self) -> U {
-        self.nominator
+    /// pre: nominator != Zero::ZERO
+    pub(super) fn inv(&self) -> Self {
+        debug_assert_ne!(self.nominator, Zero::ZERO, "Nominator must be non-zero");
+
+        Self::new(self.denominator, self.nominator)
     }
 
-    pub(super) const fn denominator(&self) -> U {
-        self.denominator
-    }
-
-    fn to_amount_fraction(self) -> SimpleFraction<Amount>
+    // Deconstruct this fraction by passing its nominator and denominator to a callback
+    pub(crate) fn with<F, R>(self, f: F) -> R
     where
-        U: Into<Amount>,
+        F: FnOnce(U, U) -> R,
     {
-        SimpleFraction::new(self.nominator.into(), self.denominator.into())
+        f(self.nominator, self.denominator)
+    }
+
+    pub fn map<F, V>(self, f: F) -> SimpleFraction<V>
+    where
+        F: Fn(U) -> V,
+        V: Coprime,
+    {
+        SimpleFraction::new(f(self.nominator), f(self.denominator))
     }
 }
 
@@ -136,12 +143,13 @@ where
     }
 }
 
-impl<U> ToFraction<Amount> for SimpleFraction<U>
+impl<U> ToFraction<U::Times> for SimpleFraction<U>
 where
-    U: FractionUnit + Into<Amount>,
+    U: FractionUnit,
+    U::Times: FractionUnit,
 {
-    fn to_fraction(self) -> SimpleFraction<Amount> {
-        self.to_amount_fraction()
+    fn to_fraction(self) -> SimpleFraction<U::Times> {
+        self.map(FractionUnit::to_primitive)
     }
 }
 
@@ -276,5 +284,25 @@ mod test_ratio {
         ) -> SimpleFraction<PercentUnits> {
             SimpleFraction::new(nominator, denominator)
         }
+    }
+}
+
+#[cfg(test)]
+mod test_fraction {
+    use crate::ratio::SimpleFraction;
+
+    #[test]
+    fn inv() {
+        assert_eq!(
+            SimpleFraction::new(4u32, 2),
+            SimpleFraction::new(2, 4).inv()
+        );
+    }
+
+    #[test]
+    #[cfg(debug_assertions)]
+    #[should_panic = "Nominator must be non-zero"]
+    fn inv_pre_not_satisfied() {
+        _ = SimpleFraction::new(0u32, 4).inv();
     }
 }

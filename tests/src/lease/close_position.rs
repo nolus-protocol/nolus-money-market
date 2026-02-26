@@ -341,18 +341,15 @@ fn do_close(
     response_transfer_in.unwrap_response().assert_event(
         &Event::new("wasm-ls-close-position")
             .add_attribute("to", lease_addr.clone())
-            .add_attribute(
-                "payment-amount",
-                Amount::from(close_amount_in_lpn).to_string(),
-            )
+            .add_attribute("payment-amount", close_amount_in_lpn.display_primitive())
             .add_attribute("payment-symbol", LpnCurrency::ticker())
             .add_attribute("loan-close", exp_loan_close.to_string())
             .add_attribute(
                 "principal",
-                Amount::from(close_amount_in_lpn - exp_change).to_string(),
+                (close_amount_in_lpn - exp_change).display_primitive(),
             )
-            .add_attribute("change", Amount::from(exp_change).to_string())
-            .add_attribute("amount-amount", Amount::from(close_amount).to_string())
+            .add_attribute("change", exp_change.display_primitive())
+            .add_attribute("amount-amount", close_amount.display_primitive())
             .add_attribute("amount-symbol", LeaseCurrency::ticker()),
     );
 

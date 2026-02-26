@@ -7,7 +7,7 @@ use finance::{
     fraction::{Fraction, Unit as FractionUnit},
     fractionable::{CommonDoublePrimitive, Fractionable, IntoMax},
     liability::{Liability, Zone},
-    percent::{Percent, Percent100},
+    percent::{Percent, Percent100, permilles::Permilles},
     price,
 };
 
@@ -28,7 +28,7 @@ pub use dto::SpecDTO;
 mod dto;
 
 #[cfg(all(feature = "internal.test.contract", test))]
-mod test;
+pub(super) mod test;
 
 #[derive(Clone, Copy)]
 #[cfg_attr(feature = "contract_testing", derive(Debug, PartialEq))]
@@ -407,9 +407,9 @@ impl Spec {
     fn ltv<P>(total_due: P, lease_asset: P) -> Percent100
     where
         P: FractionUnit
-            + IntoMax<<Percent100 as CommonDoublePrimitive<P>>::CommonDouble>
+            + IntoMax<<Permilles as CommonDoublePrimitive<P>>::CommonDouble>
             + PartialEq,
-        Percent100: Fractionable<P>,
+        Permilles: Fractionable<P>,
     {
         debug_assert!(total_due <= lease_asset);
 

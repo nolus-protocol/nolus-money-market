@@ -4,7 +4,10 @@ use currency::{
     AnyVisitor, BankSymbols, Currency, CurrencyDTO, CurrencyDef, CurrencyVisit, Group, GroupVisit,
     MemberOf, SingleVisitor, Symbol, error::Error as CurrencyError,
 };
-use finance::coin::{Amount, Coin, CoinDTO, WithCoin};
+use finance::{
+    coin::{Coin, CoinDTO, WithCoin},
+    fraction::Unit,
+};
 use sdk::cosmwasm_std::Coin as CosmWasmCoin;
 
 use crate::{error::Error, result::Result};
@@ -109,7 +112,7 @@ where
     C::Group: MemberOf<S::Group>,
     S: Symbol,
 {
-    CosmWasmCoin::new(Amount::from(coin), S::symbol(C::dto().definition()))
+    CosmWasmCoin::new(coin.to_primitive(), S::symbol(C::dto().definition()))
 }
 
 struct CoinTransformer<'a, COut>(&'a CosmWasmCoin, PhantomData<COut>);

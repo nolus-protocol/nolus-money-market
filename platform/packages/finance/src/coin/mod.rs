@@ -61,6 +61,10 @@ impl<C> Coin<C> {
         self.amount == Zero::ZERO
     }
 
+    pub fn display_primitive(&self) -> String {
+        self.amount.to_string()
+    }
+
     #[track_caller]
     pub const fn checked_add(self, rhs: Self) -> Option<Self> {
         Self::may_new(self.amount.checked_add(rhs.amount))
@@ -189,13 +193,6 @@ impl<C> Display for Coin<C> {
     }
 }
 
-// TODO remove it when finish refactoring Fractionable
-impl<C> From<Coin<C>> for Amount {
-    fn from(coin: Coin<C>) -> Self {
-        coin.amount
-    }
-}
-
 pub trait WithCoin<VisitedG>
 where
     VisitedG: Group,
@@ -262,7 +259,11 @@ mod test {
         test::test_of(18, coin::coin1(120), coin::coin1(2));
         test::test_of(18, coin::coin1(112), coin::coin1(2));
         test::test_of(18, coin::coin1(111), coin::coin1(1));
-        test::test_of(1000, coin::coin1(Amount::MAX), coin::coin1(Amount::MAX));
+        test::test_of(
+            test::MILLE_UNITS,
+            coin::coin1(Amount::MAX),
+            coin::coin1(Amount::MAX),
+        );
     }
 
     #[test]

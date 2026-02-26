@@ -164,7 +164,7 @@ impl Deposit {
 #[cfg(test)]
 mod test {
     use currency::platform::Nls;
-    use finance::{coin::Coin, zero::Zero};
+    use finance::{coin::Coin, fraction::Unit, zero::Zero};
     use lpp_platform::NLpn;
     use sdk::cosmwasm_std::{Addr, testing::MockStorage};
 
@@ -206,10 +206,10 @@ mod test {
         deposit1.save(&mut store).unwrap();
 
         // for simplicity, to maintain price 1:1, we keep rewards amount equal to the total receipts
-        let rewards = rewards.add(Coin::new(deposit1_1.into()), deposit1_1);
+        let rewards = rewards.add(Coin::new(deposit1_1.to_primitive()), deposit1_1);
         let deposit1 = Deposit::load(&store, addr1.clone(), rewards).unwrap();
         assert_eq!(
-            Coin::new(deposit1_1.into()),
+            Coin::new(deposit1_1.to_primitive()),
             deposit1.query_rewards().unwrap()
         );
 
@@ -221,15 +221,15 @@ mod test {
         deposit2.save(&mut store).unwrap();
 
         let rewards = rewards.add(
-            Coin::new((deposit1_1 + deposit2_1).into()),
+            Coin::new((deposit1_1 + deposit2_1).to_primitive()),
             deposit1_1 + deposit2_1,
         );
         let mut deposit1 = Deposit::load(&store, addr1.clone(), rewards).unwrap();
         let mut deposit2 = Deposit::load(&store, addr2.clone(), rewards).unwrap();
 
-        let rewards1_1 = Coin::new((deposit1_1 + deposit1_1).into());
+        let rewards1_1 = Coin::new((deposit1_1 + deposit1_1).to_primitive());
         assert_eq!(rewards1_1, deposit1.query_rewards().unwrap());
-        let rewards2 = Coin::new(deposit2_1.into());
+        let rewards2 = Coin::new(deposit2_1.to_primitive());
         assert_eq!(rewards2, deposit2.query_rewards().unwrap());
 
         assert!(withdraw1_1 < deposit1_1 && deposit1.withdraw(withdraw1_1).unwrap().is_none());
@@ -237,7 +237,7 @@ mod test {
         assert_eq!(rewards1_1, deposit1.may_claim_rewards().unwrap());
         assert_eq!(rewards2, deposit2.may_claim_rewards().unwrap());
 
-        let rewards1_2 = Coin::new((deposit1_1 - withdraw1_1).into());
+        let rewards1_2 = Coin::new((deposit1_1 - withdraw1_1).to_primitive());
         deposit1.save(&mut store).unwrap();
         deposit2.save(&mut store).unwrap();
 

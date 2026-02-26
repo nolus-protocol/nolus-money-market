@@ -1,6 +1,7 @@
 use currency::{CurrencyDTO, CurrencyDef, Group};
 use finance::{
     coin::{Amount, Coin, CoinDTO},
+    fraction::Unit as FractionUnit,
     percent::Percent100,
 };
 use sdk::cosmwasm_std::{Env, Event, Timestamp};
@@ -35,9 +36,9 @@ where
     fn emit_coin_amount<K, A>(self, event_key: K, coin_amount: A) -> Self
     where
         K: Into<String>,
-        A: Into<Amount>,
+        A: FractionUnit<Times = Amount>,
     {
-        self.emit_to_string_value(event_key, coin_amount.into())
+        self.emit_to_string_value(event_key, coin_amount.to_primitive())
     }
 
     /// Specialization of [`emit`](Self::emit) for [`Currency`] implementors.
@@ -63,7 +64,7 @@ where
     where
         K: Into<String>,
     {
-        self.emit_to_string_value(event_key, percent.units())
+        self.emit_to_string_value(event_key, percent.display_primitive())
     }
 
     fn emit_coin<K, C>(self, event_key: K, coin: Coin<C>) -> Self
