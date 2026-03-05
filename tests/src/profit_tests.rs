@@ -281,9 +281,7 @@ where
         );
 
         assert_eq!(
-            Uint128::try_from(transfer_amount.amount)
-                .unwrap()
-                .u128(),
+            Uint128::try_from(transfer_amount.amount).unwrap().u128(),
             lpn_profit_swap_out.to_primitive()
         );
 

@@ -1,5 +1,9 @@
 use leaser::ContractError;
-use sdk::{cosmwasm_std::{Addr, StdResult}, cw_multi_test::AppResponse, testing};
+use sdk::{
+    cosmwasm_std::{Addr, StdResult},
+    cw_multi_test::AppResponse,
+    testing,
+};
 
 use crate::common::{
     ADMIN, LEASE_ADMIN, USER,

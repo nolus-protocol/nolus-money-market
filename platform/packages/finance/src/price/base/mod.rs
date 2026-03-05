@@ -285,7 +285,11 @@ mod test_invariant {
         QuoteC::Group: MemberOf<QuoteG>,
         QuoteG: Group,
     {
-        assert!(r.expect_err("expected a parse error").to_string().contains(msg));
+        assert!(
+            r.expect_err("expected a parse error")
+                .to_string()
+                .contains(msg)
+        );
     }
 
     fn load<G, QuoteC, QuoteG>(json: &[u8]) -> StdResult<BasePrice<G, QuoteC, QuoteG>>

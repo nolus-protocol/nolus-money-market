@@ -377,7 +377,11 @@ mod test_invariant {
     where
         G: Group,
     {
-        assert!(r.expect_err("expected a parse error").to_string().contains(msg));
+        assert!(
+            r.expect_err("expected a parse error")
+                .to_string()
+                .contains(msg)
+        );
     }
 
     fn assert_err<G>(r: Result<PriceDTO<G>>, msg: &str)

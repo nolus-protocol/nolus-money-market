@@ -98,7 +98,10 @@ fn test_quote() {
         None,
     );
 
-    assert_eq!(Coin::<Lpn>::try_from(resp.borrow).unwrap(), common::lpn_coin(27));
+    assert_eq!(
+        Coin::<Lpn>::try_from(resp.borrow).unwrap(),
+        common::lpn_coin(27)
+    );
     assert_eq!(
         Coin::<LeaseCurrency>::try_from(resp.total).unwrap(),
         Coin::<LeaseCurrency>::new(15 * 2 + 27 * 2)
@@ -262,7 +265,10 @@ fn test_quote_fixed_rate() {
         None,
     );
 
-    assert_eq!(Coin::<Lpn>::try_from(resp.borrow).unwrap(), common::lpn_coin(185));
+    assert_eq!(
+        Coin::<Lpn>::try_from(resp.borrow).unwrap(),
+        common::lpn_coin(185)
+    );
     assert_eq!(
         Coin::<LeaseCurrency>::try_from(resp.total).unwrap(),
         Coin::<LeaseCurrency>::new(100 * 3 + 185 * 3)

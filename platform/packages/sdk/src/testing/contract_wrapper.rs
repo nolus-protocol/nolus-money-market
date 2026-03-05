@@ -9,8 +9,7 @@ use crate::cosmwasm_ext::InterChainMsg;
 type ExecuteFnBox<C, Q> =
     Box<dyn for<'a> Fn(DepsMut<'a, Q>, Env, MessageInfo, Vec<u8>) -> StdResult<Response<C>>>;
 type QueryFnBox<Q> = Box<dyn for<'a> Fn(Deps<'a, Q>, Env, Vec<u8>) -> StdResult<Binary>>;
-type ReplyFnBox<C, Q> =
-    Box<dyn for<'a> Fn(DepsMut<'a, Q>, Env, Reply) -> StdResult<Response<C>>>;
+type ReplyFnBox<C, Q> = Box<dyn for<'a> Fn(DepsMut<'a, Q>, Env, Reply) -> StdResult<Response<C>>>;
 type SudoMigrateFnBox<C, Q> =
     Box<dyn for<'a> Fn(DepsMut<'a, Q>, Env, Vec<u8>) -> StdResult<Response<C>>>;
 
@@ -65,8 +64,7 @@ where
                     .and_then(|msg| instantiate(deps, env, info, msg).map_err(Into::into))
             }),
             query_fn: Box::new(move |deps, env, msg| {
-                from_json::<T3>(msg)
-                    .and_then(|msg| query(deps, env, msg).map_err(Into::into))
+                from_json::<T3>(msg).and_then(|msg| query(deps, env, msg).map_err(Into::into))
             }),
             reply_fn: None,
             sudo_fn: None,
@@ -74,10 +72,7 @@ where
         }
     }
 
-    pub fn with_reply<E5>(
-        mut self,
-        reply: ReplyFnPtr<C, Q, E5>,
-    ) -> Self
+    pub fn with_reply<E5>(mut self, reply: ReplyFnPtr<C, Q, E5>) -> Self
     where
         E5: Into<StdError> + 'static,
     {
@@ -87,10 +82,7 @@ where
         self
     }
 
-    pub fn with_sudo<T4, E4>(
-        mut self,
-        sudo: SudoMigFnPtr<C, Q, T4, E4>,
-    ) -> Self
+    pub fn with_sudo<T4, E4>(mut self, sudo: SudoMigFnPtr<C, Q, T4, E4>) -> Self
     where
         T4: DeserializeOwned + 'static,
         E4: Into<StdError> + 'static,
@@ -101,10 +93,7 @@ where
         self
     }
 
-    pub fn with_migrate<T6, E6>(
-        mut self,
-        migrate: SudoMigFnPtr<C, Q, T6, E6>,
-    ) -> Self
+    pub fn with_migrate<T6, E6>(mut self, migrate: SudoMigFnPtr<C, Q, T6, E6>) -> Self
     where
         T6: DeserializeOwned + 'static,
         E6: Into<StdError> + 'static,

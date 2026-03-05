@@ -110,9 +110,11 @@ mod test {
         );
         // other errors
         let err_msg: String = "test_err".into();
-        assert!(maybe_price::<PaymentC3, PaymentC7, LeaseGroup>(Err(
-            PriceFeedsError::Configuration(err_msg)
-        ))
-        .is_err());
+        assert!(
+            maybe_price::<PaymentC3, PaymentC7, LeaseGroup>(Err(PriceFeedsError::Configuration(
+                err_msg
+            )))
+            .is_err()
+        );
     }
 }

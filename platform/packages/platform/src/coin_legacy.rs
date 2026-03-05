@@ -200,20 +200,24 @@ mod test {
             SuperGroupTestC1::bank(),
         ));
 
-        assert!(matches!(c1, Err(Error::Currency(e)) if e == currency::error::Error::unexpected_symbol::<_, BankSymbols::<SuperGroup>>(
-            SuperGroupTestC1::bank(),
-            SuperGroupTestC2::dto().definition()
-        )));
+        assert!(
+            matches!(c1, Err(Error::Currency(e)) if e == currency::error::Error::unexpected_symbol::<_, BankSymbols::<SuperGroup>>(
+                SuperGroupTestC1::bank(),
+                SuperGroupTestC2::dto().definition()
+            ))
+        );
 
         let c2 = super::from_cosmwasm::<SuperGroupTestC1>(&CosmWasmCoin::new(
             12u8,
             SuperGroupTestC2::bank(),
         ));
 
-        assert!(matches!(c2, Err(Error::Currency(e)) if e == currency::error::Error::unexpected_symbol::<_, BankSymbols::<SuperGroup>>(
-            SuperGroupTestC2::bank(),
-            SuperGroupTestC1::dto().definition()
-        )));
+        assert!(
+            matches!(c2, Err(Error::Currency(e)) if e == currency::error::Error::unexpected_symbol::<_, BankSymbols::<SuperGroup>>(
+                SuperGroupTestC2::bank(),
+                SuperGroupTestC1::dto().definition()
+            ))
+        );
     }
 
     #[test]

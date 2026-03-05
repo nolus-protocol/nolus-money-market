@@ -9,7 +9,11 @@ use reserve::{
     api::{ConfigResponse, LpnCurrencyDTO, QueryMsg},
     error::Error as ReserveError,
 };
-use sdk::{cosmwasm_std::{Addr, StdError, StdResult}, cw_multi_test::AppResponse, testing};
+use sdk::{
+    cosmwasm_std::{Addr, StdError, StdResult},
+    cw_multi_test::AppResponse,
+    testing,
+};
 
 use crate::{
     common::{
