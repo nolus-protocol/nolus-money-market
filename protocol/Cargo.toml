@@ -75,7 +75,6 @@ enum_dispatch = { version = "0.3", default-features = false }
 gcd = { version = "2", default-features = false }
 serde = { version = "1", default-features = false }
 serde_json = "1"
-postcard = { version = "1", default-features = false }
 thiserror = { version = "2", default-features = false }
 
 # CosmWasm
