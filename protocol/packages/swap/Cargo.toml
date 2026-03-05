@@ -17,18 +17,15 @@ feature-groups = { dex = { members = ["dex-astroport_main", "dex-astroport_test"
 [features]
 # Mandatory features
 dex-astroport_test = [
-    "dep:astroport",
     "sdk/cosmos_proto",
 ]
 dex-astroport_main = [
-    "dep:astroport",
     "sdk/cosmos_proto",
 ]
 dex-osmosis = [
     "dep:osmosis-std",
 ]
 dex-test_impl = [
-    "dep:astroport",
     "sdk/cosmos_proto",
 ]
 
@@ -49,7 +46,6 @@ finance = { workspace = true }
 platform = { workspace = true }
 sdk = { workspace = true }
 
-astroport = { workspace = true, optional = true }
 osmosis-std = { workspace = true, optional = true }
 serde = { workspace = true, features = ["derive"] }
 
