@@ -27,7 +27,7 @@ dex-test_impl = ["swap/dex-test_impl"]
 
 contract = [
     "skel",
-    "dep:cosmwasm-std",
+    "cosmwasm-std/exports",
     "dep:enum_dispatch",
     "dep:lpp",
     "dep:oracle",

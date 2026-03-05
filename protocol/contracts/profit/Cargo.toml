@@ -27,7 +27,7 @@ dex-test_impl = ["swap/dex-test_impl"]
 
 contract = [
     "dep:access-control",
-    "dep:cosmwasm-std",
+    "cosmwasm-std/exports",
     "dep:currencies",
     "dep:currency",
     "dex/impl",

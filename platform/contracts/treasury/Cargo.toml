@@ -31,7 +31,7 @@ sdk = { workspace = true, features = ["contract"] }
 versioning = { workspace = true }
 
 # Required as a dependency by `entry_point` attribute macro
-cosmwasm-std = { workspace = true }
+cosmwasm-std = { workspace = true, features = ["exports"] }
 
 thiserror = { workspace = true }
 serde = { workspace = true, features = ["derive"] }

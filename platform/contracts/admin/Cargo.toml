@@ -18,7 +18,7 @@ combinations = [
 crate-type = ["cdylib", "rlib"]
 
 [features]
-contract = ["dep:cosmwasm-std"]
+contract = ["cosmwasm-std/exports"]
 
 [dependencies]
 access-control = { workspace = true }

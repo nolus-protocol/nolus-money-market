@@ -23,7 +23,7 @@ contract = [
     "stub",
     "sdk/contract",
     "dep:access-control",
-    "dep:cosmwasm-std",
+    "cosmwasm-std/exports",
     "dep:oracle",
     "dep:oracle-platform",
 ]

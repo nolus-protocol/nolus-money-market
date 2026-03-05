@@ -21,7 +21,7 @@ crate-type = ["cdylib", "rlib"]
 [features]
 contract = [
     "dep:access-control",
-    "dep:cosmwasm-std",
+    "cosmwasm-std/exports",
     "sdk/contract",
     "stub",
 ]
