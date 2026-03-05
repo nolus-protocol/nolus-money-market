@@ -5,7 +5,7 @@ use thiserror::Error;
 use sdk::cosmwasm_std::{Addr, StdError, Timestamp};
 use time_oracle::AlarmError;
 
-#[derive(Error, Debug, PartialEq)]
+#[derive(Error, Debug)]
 pub enum ContractError {
     #[error("[TimeAlarms] [Std] {0}")]
     Std(#[from] StdError),

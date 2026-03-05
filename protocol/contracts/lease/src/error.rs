@@ -18,7 +18,7 @@ use timealarms::stub::Error as TimeAlarmsError;
 
 pub use crate::position::PositionError;
 
-#[derive(Error, Debug, PartialEq)]
+#[derive(Error, Debug)]
 pub enum ContractError {
     #[error("[Lease] [Std] {0}")]
     Std(#[from] StdError),

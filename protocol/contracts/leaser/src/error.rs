@@ -8,7 +8,7 @@ use thiserror::Error;
 
 use sdk::cosmwasm_std::StdError;
 
-#[derive(Error, Debug, PartialEq)]
+#[derive(Error, Debug)]
 pub enum ContractError {
     #[error("[Leaser] Save Config failed, cause: {0}")]
     SaveConfigFailure(StdError),

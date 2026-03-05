@@ -397,8 +397,8 @@ where
 #[cfg(test)]
 mod test {
     use currency::test::{
-        SubGroup, SubGroupTestC10, SuperGroup, SuperGroupTestC1, SuperGroupTestC2,
-        SuperGroupTestC3, SuperGroupTestC4, SuperGroupTestC5,
+        SubGroup, SubGroupTestC10, SuperGroupTestC1, SuperGroupTestC2, SuperGroupTestC3,
+        SuperGroupTestC4, SuperGroupTestC5,
     };
     use finance::{
         coin::Coin,
@@ -408,7 +408,12 @@ mod test {
     };
     use sdk::cosmwasm_std::{Addr, Storage, Timestamp, testing::MockStorage};
 
-    use crate::{Repo, error::PriceFeedsError, feeders::Count, market_price::Config};
+    use crate::{
+        Repo,
+        feeders::Count,
+        market_price::Config,
+        tests::{self},
+    };
 
     use super::PriceFeeds;
 
@@ -429,26 +434,23 @@ mod test {
         let storage_dyn_ref: &mut dyn Storage = &mut storage;
         let feeds = PriceFeeds::new(Repo::new(ROOT_NS, storage_dyn_ref), &config);
 
-        assert_eq!(
-            Ok(Price::<SuperGroupTestC1, SuperGroupTestC1>::identity().into()),
-            feeds.price::<SuperGroupTestC1, SuperGroup, _>(
-                NOW,
-                TOTAL_FEEDERS,
-                [&currency::dto::<SuperGroupTestC1, _>(),].into_iter()
-            )
+        tests::assert_price(
+            Price::<SuperGroupTestC1, SuperGroupTestC1>::identity(),
+            &feeds,
+            NOW,
+            TOTAL_FEEDERS,
+            [&currency::dto::<SuperGroupTestC1, _>()].into_iter(),
         );
 
-        assert_eq!(
-            Err(PriceFeedsError::NoPrice()),
-            feeds.price::<SuperGroupTestC1, SuperGroup, _>(
-                NOW,
-                TOTAL_FEEDERS,
-                [
-                    &currency::dto::<SuperGroupTestC4, _>(),
-                    &currency::dto::<SuperGroupTestC1, _>(),
-                ]
-                .into_iter()
-            )
+        tests::assert_no_price::<_, _, SuperGroupTestC4, _, _>(
+            &feeds,
+            NOW,
+            TOTAL_FEEDERS,
+            [
+                &currency::dto::<SuperGroupTestC4, _>(),
+                &currency::dto::<SuperGroupTestC1, _>(),
+            ]
+            .into_iter(),
         );
     }
 
@@ -467,29 +469,26 @@ mod test {
             .feed(NOW, Addr::unchecked(FEEDER), &[build_price().into()])
             .unwrap();
 
-        assert_eq!(
-            Err(PriceFeedsError::NoPrice()),
-            feeds.price::<SuperGroupTestC4, SuperGroup, _>(
-                NOW,
-                TOTAL_FEEDERS,
-                [
-                    &currency::dto::<SuperGroupTestC5, _>(),
-                    &currency::dto::<SuperGroupTestC4, _>(),
-                ]
-                .into_iter()
-            )
+        tests::assert_no_price::<_, _, SuperGroupTestC5, _, _>(
+            &feeds,
+            NOW,
+            TOTAL_FEEDERS,
+            [
+                &currency::dto::<SuperGroupTestC5, _>(),
+                &currency::dto::<SuperGroupTestC4, _>(),
+            ]
+            .into_iter(),
         );
-        assert_eq!(
-            Ok(build_price().into()),
-            feeds.price::<SubGroupTestC10, SubGroup, _>(
-                NOW,
-                TOTAL_FEEDERS,
-                [
-                    &currency::dto::<SuperGroupTestC5, _>(),
-                    &currency::dto::<SubGroupTestC10, _>(),
-                ]
-                .into_iter()
-            )
+        tests::assert_price::<_, _, _, _, SubGroup, _>(
+            build_price(),
+            &feeds,
+            NOW,
+            TOTAL_FEEDERS,
+            [
+                &currency::dto::<SuperGroupTestC5, _>(),
+                &currency::dto::<SubGroupTestC10, _>(),
+            ]
+            .into_iter(),
         );
     }
 
@@ -514,79 +513,72 @@ mod test {
             )
             .unwrap();
 
-        assert_eq!(
-            Err(PriceFeedsError::NoPrice()),
-            feeds.price::<SuperGroupTestC3, SuperGroup, _>(
-                NOW,
-                TOTAL_FEEDERS,
-                [
-                    &currency::dto::<SuperGroupTestC2, _>(),
-                    &currency::dto::<SuperGroupTestC3, _>(),
-                ]
-                .into_iter()
-            )
+        tests::assert_no_price::<_, _, SuperGroupTestC2, _, _>(
+            &feeds,
+            NOW,
+            TOTAL_FEEDERS,
+            [
+                &currency::dto::<SuperGroupTestC2, _>(),
+                &currency::dto::<SuperGroupTestC3, _>(),
+            ]
+            .into_iter(),
         );
-        assert_eq!(
-            Ok(new_price21.into()),
-            feeds.price::<SuperGroupTestC1, SuperGroup, _>(
-                NOW,
-                TOTAL_FEEDERS,
-                [
-                    &currency::dto::<SuperGroupTestC2, _>(),
-                    &currency::dto::<SuperGroupTestC1, _>(),
-                ]
-                .into_iter()
-            )
+        tests::assert_price(
+            new_price21,
+            &feeds,
+            NOW,
+            TOTAL_FEEDERS,
+            [
+                &currency::dto::<SuperGroupTestC2, _>(),
+                &currency::dto::<SuperGroupTestC1, _>(),
+            ]
+            .into_iter(),
         );
-        assert_eq!(
-            Ok(new_price14.into()),
-            feeds.price::<SuperGroupTestC4, SuperGroup, _>(
-                NOW,
-                TOTAL_FEEDERS,
-                [
-                    &currency::dto::<SuperGroupTestC1, _>(),
-                    &currency::dto::<SuperGroupTestC4, _>(),
-                ]
-                .into_iter()
-            )
+        tests::assert_price(
+            new_price14,
+            &feeds,
+            NOW,
+            TOTAL_FEEDERS,
+            [
+                &currency::dto::<SuperGroupTestC1, _>(),
+                &currency::dto::<SuperGroupTestC4, _>(),
+            ]
+            .into_iter(),
         );
-        assert_eq!(
-            Ok(new_price110.into()),
-            feeds.price::<SubGroupTestC10, SubGroup, _>(
-                NOW,
-                TOTAL_FEEDERS,
-                [
-                    &currency::dto::<SuperGroupTestC1, _>(),
-                    &currency::dto::<SubGroupTestC10, _>(),
-                ]
-                .into_iter()
-            )
+        tests::assert_price::<_, _, _, _, SubGroup, _>(
+            new_price110,
+            &feeds,
+            NOW,
+            TOTAL_FEEDERS,
+            [
+                &currency::dto::<SuperGroupTestC1, _>(),
+                &currency::dto::<SubGroupTestC10, _>(),
+            ]
+            .into_iter(),
         );
-        assert_eq!(
-            Ok(new_price21.cross_with(new_price14).unwrap().into()),
-            feeds.price::<SuperGroupTestC4, SuperGroup, _>(
-                NOW,
-                TOTAL_FEEDERS,
-                [
-                    &currency::dto::<SuperGroupTestC2, _>(),
-                    &currency::dto::<SuperGroupTestC1, _>(),
-                    &currency::dto::<SuperGroupTestC4, _>(),
-                ]
-                .into_iter()
-            )
+        tests::assert_price(
+            new_price21.cross_with(new_price14).unwrap(),
+            &feeds,
+            NOW,
+            TOTAL_FEEDERS,
+            [
+                &currency::dto::<SuperGroupTestC2, _>(),
+                &currency::dto::<SuperGroupTestC1, _>(),
+                &currency::dto::<SuperGroupTestC4, _>(),
+            ]
+            .into_iter(),
         );
-        assert_eq!(
-            Ok(new_price21.cross_with(new_price110).unwrap().into()),
-            feeds.price::<SubGroupTestC10, SubGroup, _>(
-                NOW,
-                TOTAL_FEEDERS,
-                [
-                    &currency::dto::<SuperGroupTestC2, _>(),
-                    &currency::dto::<SuperGroupTestC1, _>(),
-                    &currency::dto::<SubGroupTestC10, _>(),
-                ]
-                .into_iter()
-            )
+        tests::assert_price::<_, _, _, _, SubGroup, _>(
+            new_price21.cross_with(new_price110).unwrap(),
+            &feeds,
+            NOW,
+            TOTAL_FEEDERS,
+            [
+                &currency::dto::<SuperGroupTestC2, _>(),
+                &currency::dto::<SuperGroupTestC1, _>(),
+                &currency::dto::<SubGroupTestC10, _>(),
+            ]
+            .into_iter(),
         );
     }
 

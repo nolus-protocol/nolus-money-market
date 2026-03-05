@@ -266,7 +266,7 @@ mod test {
             samples_number,
             Percent100::from_permille(discount_factor),
         );
-        assert_eq!(Ok(c.clone()), platform_tests::ser_de(&c));
+        assert_eq!(c, platform_tests::ser_de(&c).expect("succeed"));
     }
 
     fn deserialize_pass(
@@ -292,10 +292,7 @@ mod test {
         samples_number: u16,
         discount_factor: u32,
     ) {
-        assert!(matches!(
-            deserialize(min_feeders, sample_period, samples_number, discount_factor).unwrap_err(),
-            StdError::ParseErr { .. }
-        ));
+        _ = deserialize(min_feeders, sample_period, samples_number, discount_factor).unwrap_err();
     }
 
     fn deserialize(

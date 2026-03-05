@@ -452,14 +452,16 @@ fn execute<const RESCHEDULE: bool, const PRICE_BASE: Amount, const PRICE_QUOTE: 
 ) -> Result<CwResponse, DummyContractError> {
     match msg {
         DummyExecMsg::PriceAlarm() => {
-            if SHOULD_FAIL.load(storage).map_err(anyhow::Error::from)? {
-                Err(DummyContractError(anyhow::anyhow!(
-                    "Error while delivering price alarm!"
-                )))
+            if SHOULD_FAIL
+                .load(storage)
+                .map_err(|e| DummyContractError(e.to_string()))?
+            {
+                Err(DummyContractError(
+                    "Error while delivering price alarm!".to_string(),
+                ))
             } else if RESCHEDULE {
                 schedule_alarm(storage, PRICE_BASE, PRICE_QUOTE)
-                    .map_err(anyhow::Error::from)
-                    .map_err(DummyContractError)
+                    .map_err(|e| DummyContractError(e.to_string()))
             } else {
                 Ok(CwResponse::new())
             }
@@ -467,14 +469,13 @@ fn execute<const RESCHEDULE: bool, const PRICE_BASE: Amount, const PRICE_QUOTE: 
         DummyExecMsg::ShouldFail(value) => SHOULD_FAIL
             .save(storage, &value)
             .map(|()| CwResponse::new())
-            .map_err(anyhow::Error::from)
-            .map_err(DummyContractError),
+            .map_err(|e| DummyContractError(e.to_string())),
     }
 }
 
 #[derive(Debug, thiserror::Error)]
 #[error("{0}")]
-struct DummyContractError(#[from] anyhow::Error);
+struct DummyContractError(String);
 
 type ExecFn =
     fn(DepsMut<'_>, Env, MessageInfo, DummyExecMsg) -> Result<CwResponse, DummyContractError>;
@@ -494,15 +495,14 @@ fn dummy_contract<const PRICE_BASE: Amount, const PRICE_QUOTE: Amount>(
          -> Result<CwResponse, DummyContractError> {
             ORACLE_ADDR
                 .save(storage, &oracle)
-                .map_err(anyhow::Error::from)?;
+                .map_err(|e| DummyContractError(e.to_string()))?;
 
             SHOULD_FAIL
                 .save(storage, &should_fail)
-                .map_err(anyhow::Error::from)?;
+                .map_err(|e| DummyContractError(e.to_string()))?;
 
             schedule_alarm(storage, PRICE_BASE, PRICE_QUOTE)
-                .map_err(anyhow::Error::from)
-                .map_err(DummyContractError)
+                .map_err(|e| DummyContractError(e.to_string()))
         },
         move |_: Deps<'_>, _: Env, (): ()| -> Result<Binary, DummyContractError> {
             unimplemented!()

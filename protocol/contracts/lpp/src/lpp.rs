@@ -576,7 +576,7 @@ mod test {
         let mut lpp = LiquidityPool::new(&config, &bank);
 
         let result = lpp.try_open_loan(now, test::lpn_coin(1_000));
-        assert_eq!(result, Err(ContractError::NoLiquidity {}));
+        assert!(matches!(result, Err(ContractError::NoLiquidity {})));
     }
 
     #[test]
@@ -599,7 +599,7 @@ mod test {
         let mut lpp = LiquidityPool::new(&config, &bank);
 
         let result = lpp.try_open_loan(now, test::lpn_coin(0));
-        assert_eq!(result, Err(ContractError::ZeroLoanAmount));
+        assert!(matches!(result, Err(ContractError::ZeroLoanAmount)));
     }
 
     #[test]
@@ -718,7 +718,7 @@ mod test {
             DEFAULT_MIN_UTILIZATION,
         );
         let mut lpp = LiquidityPool::new(&config, &bank);
-        assert_eq!(Ok(DEPOSIT_RECEIPTS), lpp.deposit(DEPOSIT, &now));
+        assert_eq!(DEPOSIT_RECEIPTS, lpp.deposit(DEPOSIT, &now).unwrap());
 
         let mut loan = {
             assert_eq!(
@@ -942,10 +942,10 @@ mod test {
             assert_eq!(RECEIPT1, lpp.deposit(DEPOSIT1, &now).unwrap());
             assert_eq!(RECEIPT1, lpp.balance_nlpn());
 
-            assert_eq!(
-                ContractError::NoLiquidity {},
-                lpp.try_open_loan(now, DEPOSIT1 + Coin::new(1)).unwrap_err()
-            );
+            assert!(matches!(
+                lpp.try_open_loan(now, DEPOSIT1 + Coin::new(1)).unwrap_err(),
+                ContractError::NoLiquidity {}
+            ));
 
             lpp.try_open_loan(now, LOAN)
                 .inspect(|loan| assert_eq!(LOAN, loan.principal_due))
@@ -1048,10 +1048,10 @@ mod test {
                 DEPOSIT1 + INTEREST + DEPOSIT2,
             );
             let mut lpp = LiquidityPool::<TheCurrency, _>::load(&store, &config, &bank).unwrap();
-            assert_eq!(
-                ContractError::DepositLessThanAReceipt,
-                lpp.deposit(DEPOSIT2, &now).unwrap_err()
-            );
+            assert!(matches!(
+                lpp.deposit(DEPOSIT2, &now).unwrap_err(),
+                ContractError::DepositLessThanAReceipt
+            ));
         }
     }
 }

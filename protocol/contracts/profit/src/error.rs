@@ -2,7 +2,7 @@ use thiserror::Error;
 
 use sdk::cosmwasm_std::{Addr, StdError};
 
-#[derive(Debug, PartialEq, Error)]
+#[derive(Debug, Error)]
 pub enum ContractError {
     #[error("[Profit] [Std] {0}")]
     Std(#[from] StdError),

@@ -9,7 +9,7 @@ use reserve::{
     api::{ConfigResponse, LpnCurrencyDTO, QueryMsg},
     error::Error as ReserveError,
 };
-use sdk::{cosmwasm_std::Addr, cw_multi_test::AppResponse, testing};
+use sdk::{cosmwasm_std::{Addr, StdError, StdResult}, cw_multi_test::AppResponse, testing};
 
 use crate::{
     common::{
@@ -202,7 +202,7 @@ fn cover_losses_err(
     reserve: Addr,
     sender: Addr,
     losses: Amount,
-) -> anyhow::Error {
+) -> StdError {
     do_cover_losses(losses, test_case, sender, reserve).unwrap_err()
 }
 
@@ -222,7 +222,7 @@ fn do_cover_losses(
     test_case: &mut LeaseTestCase,
     sender: Addr,
     reserve: Addr,
-) -> anyhow::Result<ResponseWithInterChainMsgs<'_, AppResponse>> {
+) -> StdResult<ResponseWithInterChainMsgs<'_, AppResponse>> {
     let msg = reserve::api::ExecuteMsg::CoverLiquidationLosses(common::lpn_coin(losses).into());
 
     test_case.app.execute(sender, reserve, &msg, &[])
@@ -233,7 +233,7 @@ fn set_new_lease_code(
     reserve: Addr,
     sender: Addr,
     new_lease_code: Code,
-) -> anyhow::Result<ResponseWithInterChainMsgs<'_, AppResponse>> {
+) -> StdResult<ResponseWithInterChainMsgs<'_, AppResponse>> {
     let msg = reserve::api::ExecuteMsg::NewLeaseCode(new_lease_code);
     app.execute(sender, reserve.clone(), &msg, &[])
 }
@@ -258,7 +258,7 @@ fn assert_lpn(test: &ReserveTest, reserve: Addr, exp_lpn: &LpnCurrencyDTO) {
 
 fn assert_balance_eq(test: &LeaseTestCase, account: &Addr, expected_balance: Coin<Lpn>) {
     assert_eq!(
-        Ok(expected_balance),
-        bank::balance::<Lpn>(account, test.app.query())
+        expected_balance,
+        bank::balance::<Lpn>(account, test.app.query()).unwrap()
     );
 }

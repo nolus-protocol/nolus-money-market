@@ -24,7 +24,7 @@ where
     fn quote(&self, amount: Coin<Lpn>) -> Result<QueryQuoteResponse, Error>;
 }
 
-#[derive(Error, Debug, PartialEq)]
+#[derive(Error, Debug)]
 pub enum Error {
     #[error("[Lpp][Lender] [Std] {0}")]
     Std(StdError),

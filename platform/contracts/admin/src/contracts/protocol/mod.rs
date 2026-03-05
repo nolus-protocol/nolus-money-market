@@ -67,21 +67,22 @@ mod tests {
         const ASTROPORT_ROUTER_ADDRESS: &str = "neutron0123456789ABCDEF";
 
         assert_eq!(
-            cosmwasm_std::from_json(format!(
+            cosmwasm_std::from_json::<super::Dex>(format!(
                 r#"{{
                     "Astroport": {{
                         "router_address": {ASTROPORT_ROUTER_ADDRESS:?}
                     }}
                 }}"#
-            )),
-            Ok(super::Dex::Astroport {
+            ))
+            .unwrap(),
+            super::Dex::Astroport {
                 router_address: ASTROPORT_ROUTER_ADDRESS.to_string()
-            })
+            }
         );
 
         assert_eq!(
-            cosmwasm_std::from_json(r#""Osmosis""#),
-            Ok(super::Dex::Osmosis {})
+            cosmwasm_std::from_json::<super::Dex>(r#""Osmosis""#).unwrap(),
+            super::Dex::Osmosis {}
         );
     }
 }

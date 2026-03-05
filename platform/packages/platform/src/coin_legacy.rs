@@ -8,7 +8,7 @@ use finance::{
     coin::{Coin, CoinDTO, WithCoin},
     fraction::Unit,
 };
-use sdk::cosmwasm_std::Coin as CosmWasmCoin;
+use sdk::cosmwasm_std::{Coin as CosmWasmCoin, Uint128};
 
 use crate::{error::Error, result::Result};
 
@@ -156,7 +156,12 @@ where
 {
     debug_assert_eq!(CDef::dto().definition().bank_symbol, coin.denom);
     assert!(currency::equal::<COut, CDef>());
-    Coin::new(coin.amount.into())
+    Coin::new(
+        TryInto::<Uint128>::try_into(coin.amount)
+            // intentionally do not wanna tie to cosmwasm::Coin
+            .expect("Incomming amounts and lease balances are less than 10 ^ 38")
+            .into(),
+    )
 }
 
 #[cfg(test)]
@@ -186,7 +191,7 @@ mod test {
             12u8,
             SuperGroupTestC2::bank(),
         ));
-        assert_eq!(Ok(coin::coin2(12)), c1);
+        assert_eq!(coin::coin2(12), c1.unwrap());
     }
     #[test]
     fn from_cosmwasm_unexpected() {
@@ -195,42 +200,32 @@ mod test {
             SuperGroupTestC1::bank(),
         ));
 
-        assert_eq!(
-            c1,
-            Err(Error::Currency(
-                currency::error::Error::unexpected_symbol::<_, BankSymbols::<SuperGroup>>(
-                    SuperGroupTestC1::bank(),
-                    SuperGroupTestC2::dto().definition()
-                )
-            )),
-        );
+        assert!(matches!(c1, Err(Error::Currency(e)) if e == currency::error::Error::unexpected_symbol::<_, BankSymbols::<SuperGroup>>(
+            SuperGroupTestC1::bank(),
+            SuperGroupTestC2::dto().definition()
+        )));
 
         let c2 = super::from_cosmwasm::<SuperGroupTestC1>(&CosmWasmCoin::new(
             12u8,
             SuperGroupTestC2::bank(),
         ));
 
-        assert_eq!(
-            c2,
-            Err(Error::Currency(
-                currency::error::Error::unexpected_symbol::<_, BankSymbols::<SuperGroup>>(
-                    SuperGroupTestC2::bank(),
-                    SuperGroupTestC1::dto().definition()
-                )
-            )),
-        );
+        assert!(matches!(c2, Err(Error::Currency(e)) if e == currency::error::Error::unexpected_symbol::<_, BankSymbols::<SuperGroup>>(
+            SuperGroupTestC2::bank(),
+            SuperGroupTestC1::dto().definition()
+        )));
     }
 
     #[test]
     fn from_cosmwasm_any_impl() {
         let amount = 42;
         type TheCurrency = SuperGroupTestC1;
-        assert_eq!(
-            Ok(true),
+        assert!(
             super::from_cosmwasm_seek_any(
                 &CosmWasmCoin::new(amount, SuperGroupTestC1::bank()),
                 coin::Expect(Coin::<TheCurrency>::new(amount))
             )
+            .unwrap()
         );
     }
 
@@ -280,14 +275,14 @@ mod test {
     fn from_to_cosmwasm() {
         let c_nls = coin::coin2(24563);
         assert_eq!(
-            Ok(c_nls),
-            super::from_cosmwasm(&super::to_cosmwasm_on_nolus(c_nls))
+            c_nls,
+            super::from_cosmwasm(&super::to_cosmwasm_on_nolus(c_nls)).unwrap()
         );
 
         let c_usdc = coin::coin1(Amount::MAX);
         assert_eq!(
-            Ok(c_usdc),
-            super::from_cosmwasm(&super::to_cosmwasm_on_nolus(c_usdc))
+            c_usdc,
+            super::from_cosmwasm(&super::to_cosmwasm_on_nolus(c_usdc)).unwrap()
         );
     }
 }

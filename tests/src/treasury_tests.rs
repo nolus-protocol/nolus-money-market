@@ -3,8 +3,8 @@ use currency::{CurrencyDef, platform::Nls as NlsPlatform};
 use finance::{coin::Coin, duration::Duration, price};
 use sdk::{
     cosmwasm_std::{Addr, Event, QuerierWrapper},
-    cw_multi_test::{AppResponse, ContractWrapper},
-    testing,
+    cw_multi_test::AppResponse,
+    testing::{self, CwContractWrapper},
 };
 use treasury::msg::ConfigResponse;
 
@@ -98,7 +98,7 @@ fn new_test_case(registry: Registry) -> DispatcherTestCase {
         )
         .init_protocols_registry(registry)
         .init_oracle(Some(
-            ContractWrapper::new(
+            CwContractWrapper::new(
                 oracle::contract::execute,
                 oracle::contract::instantiate,
                 oracle_mod::mock_query,

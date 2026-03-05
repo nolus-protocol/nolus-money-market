@@ -2,7 +2,7 @@ use thiserror::Error;
 
 use sdk::cosmwasm_std::StdError;
 
-#[derive(Error, Debug, PartialEq)]
+#[derive(Error, Debug)]
 pub enum Error {
     #[error("[Reserve] [Std] {0}")]
     Std(#[from] StdError),

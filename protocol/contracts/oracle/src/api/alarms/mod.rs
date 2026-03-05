@@ -34,7 +34,7 @@ where
 
 pub type Result<T> = StdResult<T, Error>;
 
-#[derive(Error, Debug, PartialEq)]
+#[derive(Error, Debug)]
 pub enum Error {
     #[error("[Oracle; Stub] Failed to add alarm! Cause: {0}")]
     StubAddAlarm(CosmWasmError),
@@ -81,7 +81,7 @@ where
             below,
             above: above_or_equal,
         };
-        debug_assert_eq!(Ok(()), alarm.invariant_held());
+        debug_assert!(alarm.invariant_held().is_ok());
         alarm
     }
 
@@ -206,8 +206,7 @@ mod test {
     #[test]
     fn below_price_ok() {
         let exp_price = BasePriceTest::new(Coin::<LeaseC2>::new(10).into(), Coin::<Lpn>::new(10));
-        let exp_res = Ok(Alarm::new(exp_price, None));
-        assert_eq!(exp_res, from_below(exp_price));
+        assert_eq!(Alarm::new(exp_price, None), from_below(exp_price).unwrap());
     }
 
     #[test]
@@ -323,15 +322,11 @@ mod test {
         QuoteC::Group: MemberOf<QuoteG> + MemberOf<G::TopG>,
         QuoteG: Group,
     {
-        assert!(r.is_err());
-        assert!(matches!(
-            r,
-            Err(StdError::ParseErr{
-                target_type,
-                msg: real_msg,
-                backtrace:_,
-            }) if target_type.contains("Alarm") && real_msg.contains(msg)
-        ));
+        assert!(
+            r.expect_err("expected a parse error")
+                .to_string()
+                .contains(msg)
+        );
     }
 
     fn from_below<G, QuoteC, QuoteG>(

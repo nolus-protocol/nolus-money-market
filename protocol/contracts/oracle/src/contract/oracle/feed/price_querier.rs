@@ -99,18 +99,20 @@ mod test {
     #[test]
     fn test_maybe_price() {
         let price = tests::test_price::<PaymentC3, PaymentC7>(1, 2);
-        assert_eq!(maybe_price::<_, _, LeaseGroup>(Ok(price)), Ok(Some(price)));
         assert_eq!(
-            maybe_price::<PaymentC3, PaymentC7, LeaseGroup>(Err(PriceFeedsError::NoPrice())),
-            Ok(None)
+            maybe_price::<_, _, LeaseGroup>(Ok(price)).unwrap(),
+            Some(price)
+        );
+        assert_eq!(
+            maybe_price::<PaymentC3, PaymentC7, LeaseGroup>(Err(PriceFeedsError::NoPrice()))
+                .unwrap(),
+            None
         );
         // other errors
         let err_msg: String = "test_err".into();
-        assert_eq!(
-            maybe_price::<PaymentC3, PaymentC7, LeaseGroup>(Err(PriceFeedsError::Configuration(
-                err_msg.clone()
-            ))),
-            Err(PriceFeedsError::Configuration(err_msg).into())
-        );
+        assert!(maybe_price::<PaymentC3, PaymentC7, LeaseGroup>(Err(
+            PriceFeedsError::Configuration(err_msg)
+        ))
+        .is_err());
     }
 }

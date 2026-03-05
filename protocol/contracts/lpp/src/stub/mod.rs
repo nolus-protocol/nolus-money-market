@@ -28,7 +28,7 @@ pub struct LppRef<Lpn> {
     _lpn: PhantomData<Lpn>,
 }
 
-#[derive(Error, Debug, PartialEq)]
+#[derive(Error, Debug)]
 pub enum Error {
     #[error("[Lpp][Stub] [Std] {0}")]
     Std(StdError),

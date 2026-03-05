@@ -193,8 +193,8 @@ mod test {
     #[test]
     fn release() {
         assert_eq!(
-            Ok(QueryMsg::<Lpns>::ProtocolPackageRelease {}),
-            platform_tests::ser_de(&versioning::query::ProtocolPackage::Release {}),
+            QueryMsg::<Lpns>::ProtocolPackageRelease {},
+            platform_tests::ser_de(&versioning::query::ProtocolPackage::Release {}).unwrap(),
         );
 
         platform_tests::ser_de::<_, QueryMsg<Lpns>>(

@@ -2,7 +2,7 @@ use thiserror::Error;
 
 use sdk::cosmwasm_std::StdError;
 
-#[derive(Error, PartialEq, Debug)]
+#[derive(Error, Debug)]
 pub enum ContractError {
     #[error("[Treasury] [Std] {0}")]
     Std(#[from] StdError),

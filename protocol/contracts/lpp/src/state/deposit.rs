@@ -178,10 +178,10 @@ mod test {
         let store = MockStorage::default();
         let addr1 = Addr::unchecked("depositor1");
         let rewards = TotalRewards::load_or_default(&store).unwrap();
-        assert_eq!(
-            ContractError::NoDeposit {},
+        assert!(matches!(
             Deposit::load(&store, addr1, rewards).unwrap_err(),
-        );
+            ContractError::NoDeposit {}
+        ));
     }
 
     #[test]
@@ -195,10 +195,10 @@ mod test {
         let deposit1_1 = Coin::new(1000);
         let withdraw1_1 = Coin::new(500);
         let deposit2_1 = Coin::new(500);
-        assert_eq!(
-            ContractError::InsufficientBalance {},
-            deposit1.withdraw(deposit1_1).unwrap_err()
-        );
+        assert!(matches!(
+            deposit1.withdraw(deposit1_1).unwrap_err(),
+            ContractError::InsufficientBalance
+        ));
         deposit1.try_deposit(deposit1_1).unwrap();
 
         assert_eq!(deposit1_1, deposit1.receipts());
@@ -318,12 +318,12 @@ mod test {
     fn test_empty_iter() {
         let mut store = MockStorage::default();
         let rewards = TotalRewards::load_or_default(&store).unwrap();
-        assert_eq!(None, Deposit::iter(&store, rewards).next());
+        assert!(Deposit::iter(&store, rewards).next().is_none());
 
         let addr1 = Addr::unchecked("depositor1");
 
         let mut deposit1 = Deposit::load_or_default(&store, addr1.clone(), rewards).unwrap();
-        assert_eq!(None, Deposit::iter(&store, rewards).next()); //non-saved
+        assert!(Deposit::iter(&store, rewards).next().is_none()); //non-saved
 
         const DEPOSIT_RECEIPTS: Coin<NLpn> = Coin::new(1000);
         const WITHDRAW1_RECEIPTS: Coin<NLpn> = Coin::new(245);
@@ -335,27 +335,30 @@ mod test {
         let mut deposit1 = Deposit::load(&store, addr1.clone(), rewards).unwrap();
         {
             let mut deposits = Deposit::iter(&store, rewards);
-            assert_eq!(Some(Ok(deposit1.clone())), deposits.next());
-            assert_eq!(None, deposits.next());
+            assert_eq!(deposit1, deposits.next().unwrap().unwrap());
+            assert!(deposits.next().is_none());
         }
 
-        assert_eq!(Ok(None), deposit1.withdraw(WITHDRAW1_RECEIPTS));
+        assert!(deposit1.withdraw(WITHDRAW1_RECEIPTS).unwrap().is_none());
         deposit1.save(&mut store).unwrap();
 
         let mut deposit1 = Deposit::load(&store, addr1.clone(), rewards).unwrap();
         assert_eq!(
-            Some(Ok(deposit1.clone())),
-            Deposit::iter(&store, rewards).next()
+            deposit1,
+            Deposit::iter(&store, rewards).next().unwrap().unwrap()
         );
 
         assert_eq!(
             // closing the deposit
-            Ok(Some(Coin::ZERO)),
-            deposit1.withdraw(WITHDRAW2_RECEIPTS.unwrap())
+            Coin::ZERO,
+            deposit1
+                .withdraw(WITHDRAW2_RECEIPTS.unwrap())
+                .unwrap()
+                .unwrap()
         );
         assert_eq!(Coin::ZERO, deposit1.receipts());
         deposit1.save(&mut store).unwrap();
-        assert_eq!(None, Deposit::iter(&store, rewards).next());
+        assert!(Deposit::iter(&store, rewards).next().is_none());
     }
 
     #[test]
@@ -367,7 +370,7 @@ mod test {
 
         let mut store = MockStorage::default();
         let rewards = TotalRewards::load_or_default(&store).unwrap();
-        assert_eq!(None, Deposit::iter(&store, rewards).next());
+        assert!(Deposit::iter(&store, rewards).next().is_none());
 
         {
             let mut deposit1 = Deposit::load_or_default(&store, addr1.clone(), rewards).unwrap();
@@ -385,9 +388,9 @@ mod test {
             let deposit2 = Deposit::load(&store, addr2.clone(), rewards).unwrap();
 
             let mut deposits = Deposit::iter(&store, rewards);
-            assert_eq!(Some(Ok(deposit1)), deposits.next());
-            assert_eq!(Some(Ok(deposit2)), deposits.next());
-            assert_eq!(None, deposits.next());
+            assert_eq!(deposit1, deposits.next().unwrap().unwrap());
+            assert_eq!(deposit2, deposits.next().unwrap().unwrap());
+            assert!(deposits.next().is_none());
         }
     }
 }

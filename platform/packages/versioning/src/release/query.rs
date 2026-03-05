@@ -27,7 +27,7 @@ pub enum ProtocolPackage {
     Release {},
 }
 
-#[derive(Error, Debug, PartialEq)]
+#[derive(Error, Debug)]
 pub enum Error {
     #[error("[Versioning][Query] {0}")]
     Transmission(StdError),

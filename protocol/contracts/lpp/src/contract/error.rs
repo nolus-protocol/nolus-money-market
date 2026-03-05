@@ -4,7 +4,7 @@ use thiserror::Error;
 
 use sdk::cosmwasm_std::StdError;
 
-#[derive(Error, Debug, PartialEq)]
+#[derive(Error, Debug)]
 pub enum ContractError {
     #[error("[Lpp] [Std] {0}")]
     Std(#[from] StdError),

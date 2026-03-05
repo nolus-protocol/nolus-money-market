@@ -19,7 +19,6 @@ feature-groups = { storage = { members = ["storage"], at-least-one = false, mutu
 contract = ["storage"]
 storage = ["dep:cw-storage-plus"]
 testing = [
-    "dep:anyhow",
     "dep:cw-multi-test",
     "cw-multi-test/cosmwasm_1_2",
     "dep:base64",
@@ -31,7 +30,6 @@ cosmos_proto = ["dep:cosmos-sdk-proto", "cosmos-sdk-proto/cosmwasm"]
 
 [dependencies]
 cosmwasm-std = { workspace = true }
-schemars = { workspace = true }
 cw-storage-plus = { workspace = true, optional = true }
 cosmos-sdk-proto = { workspace = true, optional = true }
 ibc-proto = { workspace = true, optional = true }

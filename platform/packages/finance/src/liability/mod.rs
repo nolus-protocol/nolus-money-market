@@ -202,7 +202,7 @@ fn check(invariant: bool, msg: &str) -> Result<()> {
 #[cfg(test)]
 mod test {
     use currency::test::{SubGroupTestC10, SuperGroupTestC1};
-    use sdk::cosmwasm_std::{self, StdError};
+    use sdk::cosmwasm_std;
 
     use crate::{
         coin::{Amount, Coin},
@@ -253,7 +253,7 @@ mod test {
 
     #[test]
     fn new_overflow_percent() {
-        const ERR_MSG: &str = "Invalid number";
+        const ERR_MSG: &str = "error: invalid ";
 
         assert_load_err(br#"{"initial":4294967296,"healthy":10,"first_liq_warn":11,"second_liq_warn":12,"third_liq_warn":13,
                         "max":14,"recalc_time":3600000000000}"#, ERR_MSG); // u32::MAX + 1
@@ -470,19 +470,19 @@ mod test {
     }
 
     fn assert_load_ok(exp: Liability, json: &[u8]) {
-        assert_eq!(Ok(exp), cosmwasm_std::from_json::<Liability>(json));
+        assert_eq!(exp, cosmwasm_std::from_json::<Liability>(json).unwrap());
     }
 
     #[track_caller]
     fn assert_load_err(json: &[u8], msg: &str) {
-        assert!(matches!(
-            cosmwasm_std::from_json::<Liability>(json),
-            Err(StdError::ParseErr {
-                target_type,
-                msg: real_msg,
-                backtrace: _
-            }) if target_type.contains("Liability") && real_msg.contains(msg)
-        ));
+        // cannot downcast_ref from StdError since serde Deserialize transforms
+        // the original error into string
+        assert!(
+            cosmwasm_std::from_json::<Liability>(json)
+                .unwrap_err()
+                .to_string()
+                .contains(msg),
+        );
     }
 
     fn zone_of(l: &Liability, permilles: Units) -> Zone {

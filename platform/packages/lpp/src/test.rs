@@ -45,14 +45,14 @@ impl DummyLpp {
 impl Lpp for DummyLpp {
     fn balance(&self, _oracle: Addr, _stable_ticker: SymbolRef<'_>) -> Result<CoinStable> {
         self.balance
-            .ok_or_else(|| Error::Std(StdError::generic_err("Test failing Lpp::balance()")))
+            .ok_or_else(|| Error::Std(StdError::msg("Test failing Lpp::balance()")))
     }
 
     fn distribute(self, reward: Coin<Nls>) -> Result<MessageResponse> {
         assert_eq!(self.expected_reward, Some(reward));
 
         if self.failing_reward {
-            return Err(Error::Std(StdError::generic_err(
+            return Err(Error::Std(StdError::msg(
                 "DummyLpp::distribute_rewards error",
             )));
         }

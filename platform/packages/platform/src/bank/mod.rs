@@ -55,8 +55,9 @@ mod test {
 
     #[test]
     fn reduce_results_empty() {
+        const OK_RES: Result<(), TestError> = Ok(());
         assert_eq!(
-            [const { Ok::<(), TestError>(()) }; 0]
+            [OK_RES; 0]
                 .into_iter()
                 .reduce_results(|(), ()| unreachable!()),
             None

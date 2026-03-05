@@ -1030,14 +1030,17 @@ mod tests {
             let mut profit = super::profit_stub();
 
             assert_eq!(
-                Ok(&before_state),
-                loan.state(now).as_ref(),
+                &before_state,
+                loan.state(now).as_ref().expect("succeed"),
                 "Expected state before"
             );
-            assert_eq!(Ok(exp_receipt), loan.repay(payment, now, &mut profit));
             assert_eq!(
-                Ok(after_state(before_state, exp_due_period_paid, exp_receipt)),
-                loan.state(now),
+                exp_receipt,
+                loan.repay(payment, now, &mut profit).expect("succeed")
+            );
+            assert_eq!(
+                after_state(before_state, exp_due_period_paid, exp_receipt),
+                loan.state(now).expect("succeed"),
                 "Expected state after"
             );
 
@@ -1192,15 +1195,15 @@ mod tests {
             let expected_interest_due = interest_due - overdue.interest();
 
             assert_eq!(
-                Ok(State {
+                State {
                     annual_interest,
                     annual_interest_margin,
                     principal_due,
                     due_interest: expected_interest_due,
                     due_margin_interest: expected_margin_due,
                     overdue,
-                }),
-                loan.state(now),
+                },
+                loan.state(now).unwrap(),
                 "Got different state than expected!",
             );
         }

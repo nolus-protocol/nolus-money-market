@@ -49,7 +49,7 @@ mod test {
     fn store_load() {
         let lease_code = Code::unchecked(12);
         let mut store = MockStorage::new();
-        assert_eq!(Ok(()), Config::new(lease_code).store(&mut store));
+        Config::new(lease_code).store(&mut store).unwrap();
         assert_lease_code_id(lease_code, &store);
     }
 
@@ -58,11 +58,8 @@ mod test {
         let lease_code_id = Code::unchecked(28);
         let new_lease_code_id = Code::unchecked(CodeId::from(lease_code_id) + 10);
         let mut store = MockStorage::new();
-        assert_eq!(Ok(()), Config::new(lease_code_id).store(&mut store));
-        assert_eq!(
-            Ok(()),
-            Config::update_lease_code(&mut store, new_lease_code_id)
-        );
+        Config::new(lease_code_id).store(&mut store).unwrap();
+        Config::update_lease_code(&mut store, new_lease_code_id).unwrap();
         assert_lease_code_id(new_lease_code_id, &store);
     }
 

@@ -382,7 +382,7 @@ pub(crate) mod tests {
         {
             let due_projection = Duration::default();
             assert_eq!(
-                Ok(State {
+                State {
                     amount: lease_amount,
                     interest_rate,
                     interest_rate_margin: MARGIN_INTEREST_RATE,
@@ -395,8 +395,8 @@ pub(crate) mod tests {
                     due_projection,
                     close_policy: ClosePolicy::new(Some(take_profit), None),
                     validity: state_at,
-                }),
-                lease.state(state_at, due_projection)
+                },
+                lease.state(state_at, due_projection).unwrap()
             );
         }
 
@@ -443,7 +443,7 @@ pub(crate) mod tests {
                 "Failed to calculate due interest: overflow during annualized_slice_of() calculation",
             );
         assert_eq!(
-            Ok(State {
+            State {
                 amount: lease_amount,
                 interest_rate,
                 interest_rate_margin: MARGIN_INTEREST_RATE,
@@ -461,8 +461,8 @@ pub(crate) mod tests {
                 due_projection,
                 close_policy: ClosePolicy::new(Some(take_profit), None),
                 validity: state_at,
-            }),
-            lease.state(state_at, due_projection)
+            },
+            lease.state(state_at, due_projection).expect("succeed")
         );
     }
 

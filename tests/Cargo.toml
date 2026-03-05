@@ -61,7 +61,6 @@ swap = { path = "../protocol/packages/swap", features = ["testing"], default-fea
 tree = { path = "../platform/packages/tree", features = ["testing"], default-features = false }
 versioning = { path = "../platform/packages/versioning", features = ["testing"], default-features = false }
 
-anyhow = "1"
 thiserror = { version = "2", default-features = false }
 serde = { version = "1", features = ["derive"], default-features = false }
 
@@ -77,3 +76,6 @@ panic = "abort"
 [profile.ci_dev_no_debug_assertions]
 inherits = "ci_dev"
 debug-assertions = false
+
+[patch.crates-io]
+cw-multi-test = { git = "https://github.com/nolus-protocol/cw-multi-test", branch = "fix-execute-error-wrapping" }

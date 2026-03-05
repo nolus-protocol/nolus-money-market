@@ -264,7 +264,8 @@ fn deregister_protocol(
 #[test]
 fn test_release() {
     assert_eq!(
-        Ok(QueryMsg::PlatformPackageRelease {}),
-        platform::tests::ser_de(&versioning::query::PlatformPackage::Release {}),
+        QueryMsg::PlatformPackageRelease {},
+        platform::tests::ser_de::<_, QueryMsg>(&versioning::query::PlatformPackage::Release {})
+            .unwrap(),
     );
 }

@@ -176,7 +176,10 @@ mod test {
         );
 
         let too_big = (u64::from(Units::MAX) + 1u64).to_string();
-        assert_err(cosmwasm_std::from_json::<Percent>(&too_big), "Invalid");
+        assert_err(
+            cosmwasm_std::from_json::<Percent>(&too_big),
+            "invalid value:",
+        );
     }
 
     #[test]
@@ -316,11 +319,13 @@ mod test {
     where
         P: std::fmt::Debug,
     {
-        assert!(r.expect_err("expected an error").to_string().contains(msg));
+        // cannot downcast_ref from StdError since serde Deserialize transforms
+        // the original error into string
+        assert!(dbg!(r.expect_err("expected an error").to_string()).contains(dbg!(msg)));
     }
 
     fn test_display(exp: &str, permilles: Units) {
-        assert_eq!(exp, format!("{}", test::percent100(permilles)));
+        assert_eq!(exp, test::percent100(permilles).to_string());
     }
 
     fn try_from_permille<const UPPER_BOUND: Units>(

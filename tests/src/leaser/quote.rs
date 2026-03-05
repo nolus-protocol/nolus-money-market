@@ -12,8 +12,7 @@ use finance::{
 };
 use sdk::{
     cosmwasm_std::{Addr, coin},
-    cw_multi_test::ContractWrapper,
-    testing,
+    testing::{self, CwContractWrapper},
 };
 
 use crate::common::{
@@ -75,10 +74,10 @@ fn test_quote() {
         None,
     );
 
-    assert_eq!(resp.borrow.try_into(), Ok(borrow));
+    assert_eq!(Coin::<Lpn>::try_from(resp.borrow).unwrap(), borrow);
     assert_eq!(
-        resp.total.try_into(),
-        Ok(price::total(downpayment + borrow, price_lease_lpn.inv()).unwrap())
+        Coin::<LeaseCurrency>::try_from(resp.total).unwrap(),
+        price::total(downpayment + borrow, price_lease_lpn.inv()).unwrap()
     );
 
     /*   TODO: test with different time periods and amounts in LPP
@@ -99,10 +98,10 @@ fn test_quote() {
         None,
     );
 
-    assert_eq!(resp.borrow.try_into(), Ok(common::lpn_coin(27)));
+    assert_eq!(Coin::<Lpn>::try_from(resp.borrow).unwrap(), common::lpn_coin(27));
     assert_eq!(
-        resp.total.try_into(),
-        Ok(Coin::<LeaseCurrency>::new(15 * 2 + 27 * 2))
+        Coin::<LeaseCurrency>::try_from(resp.total).unwrap(),
+        Coin::<LeaseCurrency>::new(15 * 2 + 27 * 2)
     );
 }
 
@@ -189,17 +188,17 @@ fn common_quote_with_conversion(
     );
 
     assert_eq!(
-        resp.borrow.try_into(),
-        Ok(borrow_after_mul2),
+        Coin::<Lpn>::try_from(resp.borrow).unwrap(),
+        borrow_after_mul2,
         "Borrow amount is different!"
     );
     assert_eq!(
-        resp.total.try_into(),
-        Ok(price::total(
+        Coin::<LeaseCurrency>::try_from(resp.total).unwrap(),
+        price::total(
             price::total(downpayment, dpn_lpn_price).unwrap() + borrow_after_mul2,
             lpn_asset_price
         )
-        .unwrap()),
+        .unwrap(),
         "Total amount is different!"
     );
 }
@@ -228,7 +227,7 @@ fn test_quote_fixed_rate() {
     let mut test_case = TestCaseBuilder::<Lpn>::new()
         .init_lpp(
             Some(
-                ContractWrapper::new(
+                CwContractWrapper::new(
                     lpp::contract::execute,
                     lpp::contract::instantiate,
                     lpp_mod::mock_quote_query,
@@ -263,10 +262,10 @@ fn test_quote_fixed_rate() {
         None,
     );
 
-    assert_eq!(resp.borrow.try_into(), Ok(common::lpn_coin(185)));
+    assert_eq!(Coin::<Lpn>::try_from(resp.borrow).unwrap(), common::lpn_coin(185));
     assert_eq!(
-        resp.total.try_into(),
-        Ok(Coin::<LeaseCurrency>::new(100 * 3 + 185 * 3))
+        Coin::<LeaseCurrency>::try_from(resp.total).unwrap(),
+        Coin::<LeaseCurrency>::new(100 * 3 + 185 * 3)
     );
 
     /*   TODO: test with different time periods and amounts in LPP

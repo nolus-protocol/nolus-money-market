@@ -83,8 +83,8 @@ mod test {
         let lpp_addr = Addr::unchecked("LPP");
         let stub = Stub::new(lpp_addr, querier, &env);
         assert_eq!(
-            Ok(MessageResponse::default()),
-            stub.distribute(Coin::new(0))
+            MessageResponse::default(),
+            stub.distribute(Coin::new(0)).unwrap()
         );
     }
 }

@@ -4,7 +4,7 @@ use finance::error::Error as FinanceError;
 use platform::error::Error as PlatformError;
 use sdk::cosmwasm_std::StdError;
 
-#[derive(Error, Debug, PartialEq)]
+#[derive(Error, Debug)]
 pub enum Error {
     #[error("[Lpp Platform] [Std] {0}")]
     Std(#[from] StdError),

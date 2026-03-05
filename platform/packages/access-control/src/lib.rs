@@ -146,9 +146,9 @@ mod tests {
 
     #[test]
     fn check_fail() {
-        assert_eq!(
-            Error::Unauthorized {},
+        matches!(
             check_addr_permission("user12", "user21").unwrap_err(),
+            Error::Unauthorized {}
         );
     }
 

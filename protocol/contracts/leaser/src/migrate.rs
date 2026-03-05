@@ -187,7 +187,7 @@ mod test {
         let new_code = Code::unchecked(242);
         let no_leases: Vec<Customer<IntoIter<Addr, 0>>> = vec![];
         assert_eq!(
-            Ok(MigrationResult::default()),
+            MigrationResult::default(),
             super::migrate_leases(
                 no_leases.into_iter().map(Ok),
                 new_code,
@@ -195,6 +195,7 @@ mod test {
                 2,
                 migrate_msg
             )
+            .unwrap()
         );
     }
 
@@ -214,7 +215,7 @@ mod test {
                 ..Default::default()
             };
             assert_eq!(
-                Ok(exp),
+                exp,
                 super::migrate_leases(
                     customers.into_iter(),
                     new_code,
@@ -222,6 +223,7 @@ mod test {
                     2,
                     migrate_msg
                 )
+                .unwrap()
             );
         }
     }
@@ -255,24 +257,27 @@ mod test {
                 ..Default::default()
             };
             assert_eq!(
-                Ok(exp),
+                exp,
                 super::migrate_leases(test_customers(), new_code, dummy_release(), 0, migrate_msg)
+                    .unwrap()
             );
         }
         {
             let mut exp = add_expected(MigrationResult::default(), lease1.clone(), new_code);
             exp.next_customer = Some(customer2());
             assert_eq!(
-                Ok(exp),
+                exp,
                 super::migrate_leases(test_customers(), new_code, dummy_release(), 1, migrate_msg)
+                    .unwrap()
             );
         }
         {
             let mut exp = add_expected(MigrationResult::default(), lease1.clone(), new_code);
             exp.next_customer = Some(customer2());
             assert_eq!(
-                Ok(exp),
+                exp,
                 super::migrate_leases(test_customers(), new_code, dummy_release(), 2, migrate_msg)
+                    .unwrap()
             );
         }
         {
@@ -281,8 +286,9 @@ mod test {
             let mut exp = add_expected(exp, lease22.clone(), new_code);
             exp.next_customer = Some(customer3());
             assert_eq!(
-                Ok(exp),
+                exp,
                 super::migrate_leases(test_customers(), new_code, dummy_release(), 3, migrate_msg)
+                    .unwrap()
             );
         }
         {
@@ -292,8 +298,9 @@ mod test {
             let mut exp = add_expected(exp, lease3.clone(), new_code);
             exp.next_customer = Some(customer4());
             assert_eq!(
-                Ok(exp),
+                exp,
                 super::migrate_leases(test_customers(), new_code, dummy_release(), 4, migrate_msg)
+                    .unwrap()
             );
         }
         {
@@ -303,8 +310,9 @@ mod test {
             let mut exp = add_expected(exp, lease3.clone(), new_code);
             exp.next_customer = Some(customer4());
             assert_eq!(
-                Ok(exp),
+                exp,
                 super::migrate_leases(test_customers(), new_code, dummy_release(), 5, migrate_msg)
+                    .unwrap()
             );
         }
         {
@@ -317,8 +325,9 @@ mod test {
             let mut exp = add_expected(exp, lease43, new_code);
             exp.next_customer = None;
             assert_eq!(
-                Ok(exp),
+                exp,
                 super::migrate_leases(test_customers(), new_code, dummy_release(), 7, migrate_msg)
+                    .unwrap()
             );
         }
     }
@@ -333,11 +342,15 @@ mod test {
             Addr::unchecked("customer1"),
             [lease1, lease2, lease3].into_iter(),
         );
-        let err = "testing error";
+        let exp_err = "testing error";
 
-        let customers = [Ok(cust1), Err(ContractError::Parsing { err: err.into() })];
-        assert_eq!(
-            Err(ContractError::Parsing { err: err.into() }),
+        let customers = [
+            Ok(cust1),
+            Err(ContractError::Parsing {
+                err: exp_err.into(),
+            }),
+        ];
+        assert!(matches!(
             super::migrate_leases(
                 customers.into_iter(),
                 new_code,
@@ -345,7 +358,9 @@ mod test {
                 3,
                 migrate_msg
             )
-        );
+            .unwrap_err(),
+            ContractError::Parsing { err } if err == exp_err
+        ));
     }
 
     fn add_expected(mut exp: MigrationResult, lease_addr: Addr, new_code: Code) -> MigrationResult {

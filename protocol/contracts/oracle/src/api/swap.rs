@@ -30,7 +30,7 @@ where
 
 pub type Result<T> = StdResult<T, Error>;
 
-#[derive(Error, Debug, PartialEq)]
+#[derive(Error, Debug)]
 pub enum Error {
     #[error("[Oracle; Stub] Failed to query swap path! Cause: {0}")]
     StubSwapPathQuery(StdError),

@@ -57,8 +57,9 @@ mod test {
     #[test]
     fn release() {
         assert_eq!(
-            Ok(QueryMsg::PlatformPackageRelease {}),
-            platform_tests::ser_de(&versioning::query::PlatformPackage::Release {}),
+            QueryMsg::PlatformPackageRelease {},
+            platform_tests::ser_de::<_, QueryMsg>(&versioning::query::PlatformPackage::Release {})
+                .unwrap(),
         );
     }
 }

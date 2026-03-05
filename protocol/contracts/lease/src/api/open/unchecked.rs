@@ -43,7 +43,7 @@ mod test {
 
     #[test]
     fn read_5_0() {
-        assert_eq!(Ok(loan_v5_0()), platform_tests::ser_de(&loan_v5_0()));
+        assert_eq!(loan_v5_0(), platform_tests::ser_de(&loan_v5_0()).unwrap());
     }
 
     fn loan_v5_0() -> LoanForm {

@@ -159,7 +159,7 @@ mod test_position_spec {
     use currencies::Lpn;
     use currency::CurrencyDef;
     use finance::{coin::Coin, duration::Duration, liability::Liability, percent::Percent100};
-    use sdk::cosmwasm_std::{self, StdError};
+    use sdk::cosmwasm_std::{self, StdError, StdErrorKind};
 
     use super::PositionSpecDTO;
 
@@ -207,20 +207,16 @@ mod test_position_spec {
     where
         Json: AsRef<[u8]>,
     {
-        assert_eq!(Ok(exp), cosmwasm_std::from_json::<PositionSpecDTO>(json));
+        assert_eq!(
+            exp,
+            cosmwasm_std::from_json::<PositionSpecDTO>(json).expect("valid JSON")
+        );
     }
 
     fn assert_err(r: Result<PositionSpecDTO, StdError>, msg: &str) {
-        assert!(
-            matches!( // TODO migrate to using assert_matches!() once stabilized
-                r,
-                Err(StdError::ParseErr {
-                    target_type,
-                    msg: real_msg,
-                    backtrace: _,
-                }) if target_type.contains("PositionSpec") && real_msg.contains(msg)
-            )
-        );
+        let err = r.expect_err("invalid JSON");
+        assert_eq!(StdErrorKind::Serialization, err.kind());
+        assert!(err.to_string().contains(msg));
     }
 
     fn spec_dto() -> PositionSpecDTO {

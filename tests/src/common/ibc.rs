@@ -92,7 +92,7 @@ fn do_transfer_no_response(
     app.send_tokens(
         testing::user(ADMIN),
         recipient,
-        &[CwCoin::new(cw_coin.amount.u128(), new_symbol)],
+        &[CwCoin::new(cw_coin.amount, new_symbol)],
     )
     .unwrap();
 }
@@ -125,7 +125,7 @@ pub(super) fn send_response(
 pub(super) fn send_error(
     app: &mut App,
     contract: Addr,
-) -> anyhow::Result<ResponseWithInterChainMsgs<'_, AppResponse>> {
+) -> sdk::cosmwasm_std::StdResult<ResponseWithInterChainMsgs<'_, AppResponse>> {
     app.sudo(
         contract,
         &SudoMsg::Error {

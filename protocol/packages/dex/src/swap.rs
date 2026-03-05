@@ -33,7 +33,7 @@ pub trait ExactAmountIn {
 
 pub type Result<T> = core::result::Result<T, Error>;
 
-#[derive(Error, Debug, PartialEq)]
+#[derive(Error, Debug)]
 pub enum Error {
     #[error("[Swap] {0}")]
     Currency(#[from] currency::error::Error),

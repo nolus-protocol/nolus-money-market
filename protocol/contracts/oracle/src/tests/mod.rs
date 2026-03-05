@@ -14,8 +14,8 @@ use marketprice::config::Config as PriceConfig;
 use sdk::{
     cosmwasm_ext::Response as CwResponse,
     cosmwasm_std::{
-        MemoryStorage, MessageInfo, OwnedDeps, coins,
-        testing::{self, MockApi, MockQuerier},
+        MessageInfo, OwnedDeps, coins,
+        testing::{self, MockApi, MockQuerier, MockStorage as MemoryStorage},
     },
     testing as sdk_testing,
 };

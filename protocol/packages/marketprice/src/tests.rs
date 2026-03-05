@@ -1,10 +1,10 @@
 use std::time::SystemTime;
 
 use currency::test::{
-    SubGroupTestC6, SubGroupTestC10, SuperGroup, SuperGroupTestC1, SuperGroupTestC2,
+    SubGroup, SubGroupTestC6, SubGroupTestC10, SuperGroup, SuperGroupTestC1, SuperGroupTestC2,
     SuperGroupTestC3, SuperGroupTestC4, SuperGroupTestC5,
 };
-use currency::{CurrencyDef, Group, MemberOf};
+use currency::{CurrencyDTO, CurrencyDef, Group, MemberOf};
 use finance::coin::Amount;
 use finance::price::base::BasePrice;
 use finance::{
@@ -31,6 +31,78 @@ const TWICE_TOTAL_FEEDERS: Count = Count::new_test(2);
 const SAMPLE_PERIOD_SECS: u32 = 5;
 const SAMPLES_NUMBER: u16 = 12;
 const DISCOUNTING_FACTOR: Percent100 = Percent100::from_permille(750);
+
+#[track_caller]
+pub(super) fn assert_price<
+    'config,
+    'currency_dto,
+    ObservationsRepoImpl,
+    C,
+    PriceG,
+    BaseC,
+    BaseG,
+    CurrenciesToBaseC,
+>(
+    expected: Price<C, BaseC>,
+    feeds: &PriceFeeds<'config, PriceG, ObservationsRepoImpl>,
+    at: Timestamp,
+    total_feeders: Count,
+    leaf_to_base: CurrenciesToBaseC,
+) where
+    ObservationsRepoImpl: ObservationsRepo<Group = PriceG>,
+    C: CurrencyDef,
+    C::Group: MemberOf<PriceG>,
+    PriceG: Group<TopG = PriceG> + 'currency_dto,
+    BaseC: CurrencyDef,
+    BaseC::Group: MemberOf<BaseG> + MemberOf<PriceG>,
+    BaseG: Group + MemberOf<PriceG>,
+    CurrenciesToBaseC: Iterator<Item = &'currency_dto CurrencyDTO<PriceG>> + DoubleEndedIterator,
+{
+    assert_eq!(
+        BasePrice::<PriceG, BaseC, BaseG>::from(expected),
+        price::<ObservationsRepoImpl, PriceG, BaseC, BaseG, CurrenciesToBaseC>(
+            feeds,
+            at,
+            total_feeders,
+            leaf_to_base
+        )
+        .unwrap()
+    );
+}
+
+#[track_caller]
+pub(super) fn assert_no_price<
+    'config,
+    'currency_dto,
+    ObservationsRepoImpl,
+    PriceG,
+    BaseC,
+    BaseG,
+    CurrenciesToBaseC,
+>(
+    feeds: &PriceFeeds<'config, PriceG, ObservationsRepoImpl>,
+    at: Timestamp,
+    total_feeders: Count,
+    leaf_to_base: CurrenciesToBaseC,
+) where
+    ObservationsRepoImpl: ObservationsRepo<Group = PriceG>,
+    PriceG: Group<TopG = PriceG> + 'currency_dto,
+    BaseC: CurrencyDef,
+    BaseC::Group: MemberOf<BaseG> + MemberOf<PriceG>,
+    BaseG: Group + MemberOf<PriceG>,
+    CurrenciesToBaseC: Iterator<Item = &'currency_dto CurrencyDTO<PriceG>> + DoubleEndedIterator,
+{
+    assert!(matches!(
+        price::<ObservationsRepoImpl, PriceG, BaseC, BaseG, CurrenciesToBaseC>(
+            feeds,
+            at,
+            total_feeders,
+            leaf_to_base
+        )
+        .unwrap_err(),
+        PriceFeedsError::NoPrice()
+    ));
+}
 
 #[test]
 fn register_feeder() {
@@ -70,19 +142,16 @@ fn marketprice_add_feed_expect_err() {
     let storage_dyn_ref: &mut dyn Storage = &mut storage;
     let market = PriceFeeds::new(Repo::new(ROOT_NS, storage_dyn_ref), &config);
 
-    let ts = now();
-    let expected_err = market
-        .price::<SuperGroupTestC2, SuperGroup, _>(
-            ts,
-            TOTAL_FEEDERS,
-            [
-                &currency::dto::<SuperGroupTestC1, _>(),
-                &currency::dto::<SuperGroupTestC2, _>(),
-            ]
-            .into_iter(),
-        )
-        .unwrap_err();
-    assert_eq!(expected_err, PriceFeedsError::NoPrice {});
+    assert_no_price::<_, _, SuperGroupTestC1, _, _>(
+        &market,
+        now(),
+        TOTAL_FEEDERS,
+        [
+            &currency::dto::<SuperGroupTestC1, _>(),
+            &currency::dto::<SuperGroupTestC2, _>(),
+        ]
+        .into_iter(),
+    );
 }
 
 #[test]
@@ -105,42 +174,36 @@ fn marketprice_add_feed() {
     let mut market = PriceFeeds::new(Repo::new(ROOT_NS, storage_dyn_ref), &config);
     let f_address = testing::user("address1");
 
-    let price1 = price::<SuperGroupTestC1, SuperGroupTestC2>(10, 5);
-    let price2 = price::<SuperGroupTestC1, SuperGroupTestC4>(10000000000000, 100000000000002);
-    let price3 = price::<SuperGroupTestC1, SubGroupTestC10>(10000000000, 1000000009);
+    let price1 = price_new::<SuperGroupTestC1, SuperGroupTestC2>(10, 5);
+    let price2 = price_new::<SuperGroupTestC1, SuperGroupTestC4>(10000000000000, 100000000000002);
+    let price3 = price_new::<SuperGroupTestC1, SubGroupTestC10>(10000000000, 1000000009);
 
     let prices = vec![price1.into(), price2.into(), price3.into()];
 
     let now = now();
     market.feed(now, f_address, &prices).unwrap();
-    let err = market
-        .price::<SuperGroupTestC4, SuperGroup, _>(
-            now,
-            TWICE_TOTAL_FEEDERS,
-            [
-                &currency::dto::<SuperGroupTestC1, _>(),
-                &currency::dto::<SuperGroupTestC4, _>(),
-            ]
-            .into_iter(),
-        )
-        .unwrap_err();
-    assert_eq!(err, PriceFeedsError::NoPrice {});
+    assert_no_price::<_, _, SuperGroupTestC1, _, _>(
+        &market,
+        now,
+        TWICE_TOTAL_FEEDERS,
+        [
+            &currency::dto::<SuperGroupTestC1, _>(),
+            &currency::dto::<SuperGroupTestC4, _>(),
+        ]
+        .into_iter(),
+    );
 
-    {
-        let price_resp = market
-            .price::<SuperGroupTestC4, SuperGroup, _>(
-                now,
-                TOTAL_FEEDERS,
-                [
-                    &currency::dto::<SuperGroupTestC1, _>(),
-                    &currency::dto::<SuperGroupTestC4, _>(),
-                ]
-                .into_iter(),
-            )
-            .unwrap();
-
-        assert_eq!(BasePrice::from(price2), price_resp);
-    }
+    assert_price(
+        price2,
+        &market,
+        now,
+        TOTAL_FEEDERS,
+        [
+            &currency::dto::<SuperGroupTestC1, _>(),
+            &currency::dto::<SuperGroupTestC4, _>(),
+        ]
+        .into_iter(),
+    );
 }
 
 #[test]
@@ -152,134 +215,123 @@ fn marketprice_follow_the_path() {
 
     feed_price(
         &mut market,
-        price::<SuperGroupTestC1, SubGroupTestC10>(1, 4),
+        price_new::<SuperGroupTestC1, SubGroupTestC10>(1, 4),
     )
     .unwrap();
     feed_price(
         &mut market,
-        price::<SuperGroupTestC1, SuperGroupTestC2>(1, 3),
-    )
-    .unwrap();
-
-    feed_price(
-        &mut market,
-        price::<SuperGroupTestC1, SubGroupTestC10>(1, 3),
+        price_new::<SuperGroupTestC1, SuperGroupTestC2>(1, 3),
     )
     .unwrap();
 
     feed_price(
         &mut market,
-        price::<SuperGroupTestC5, SuperGroupTestC4>(5, 1),
+        price_new::<SuperGroupTestC1, SubGroupTestC10>(1, 3),
     )
     .unwrap();
 
     feed_price(
         &mut market,
-        price::<SuperGroupTestC1, SuperGroupTestC2>(1, 3),
-    )
-    .unwrap();
-    feed_price(
-        &mut market,
-        price::<SuperGroupTestC4, SuperGroupTestC1>(1, 2),
-    )
-    .unwrap();
-
-    feed_price(&mut market, price::<SubGroupTestC6, SubGroupTestC10>(1, 3)).unwrap();
-
-    feed_price(
-        &mut market,
-        price::<SuperGroupTestC2, SubGroupTestC10>(1, 3),
+        price_new::<SuperGroupTestC5, SuperGroupTestC4>(5, 1),
     )
     .unwrap();
 
     feed_price(
         &mut market,
-        price::<SuperGroupTestC2, SuperGroupTestC3>(1, 3),
+        price_new::<SuperGroupTestC1, SuperGroupTestC2>(1, 3),
+    )
+    .unwrap();
+    feed_price(
+        &mut market,
+        price_new::<SuperGroupTestC4, SuperGroupTestC1>(1, 2),
     )
     .unwrap();
 
-    let last_feed_time =
-        feed_price(&mut market, price::<SubGroupTestC6, SuperGroupTestC2>(1, 3)).unwrap();
+    feed_price(
+        &mut market,
+        price_new::<SubGroupTestC6, SubGroupTestC10>(1, 3),
+    )
+    .unwrap();
 
-    let price_resp = market
-        .price::<SuperGroupTestC2, SuperGroup, _>(
-            last_feed_time,
-            TOTAL_FEEDERS,
-            [
-                &currency::dto::<SuperGroupTestC5, _>(),
-                &currency::dto::<SuperGroupTestC4, _>(),
-                &currency::dto::<SuperGroupTestC1, _>(),
-                &currency::dto::<SuperGroupTestC2, _>(),
-            ]
-            .into_iter(),
-        )
-        .unwrap();
-    let expected = price::<SuperGroupTestC5, SuperGroupTestC2>(5, 6);
-    let expected_dto = BasePrice::from(expected);
+    feed_price(
+        &mut market,
+        price_new::<SuperGroupTestC2, SubGroupTestC10>(1, 3),
+    )
+    .unwrap();
 
-    assert_eq!(expected_dto, price_resp);
+    feed_price(
+        &mut market,
+        price_new::<SuperGroupTestC2, SuperGroupTestC3>(1, 3),
+    )
+    .unwrap();
+
+    let last_feed_time = feed_price(
+        &mut market,
+        price_new::<SubGroupTestC6, SuperGroupTestC2>(1, 3),
+    )
+    .unwrap();
+
+    assert_price(
+        price_new::<SuperGroupTestC5, SuperGroupTestC2>(5, 6),
+        &market,
+        last_feed_time,
+        TOTAL_FEEDERS,
+        [
+            &currency::dto::<SuperGroupTestC5, _>(),
+            &currency::dto::<SuperGroupTestC4, _>(),
+            &currency::dto::<SuperGroupTestC1, _>(),
+            &currency::dto::<SuperGroupTestC2, _>(),
+        ]
+        .into_iter(),
+    );
 
     // first and second part of denom pair are the same
-    let price_resp = market
-        .price::<SuperGroupTestC2, SuperGroup, _>(
-            last_feed_time,
-            TOTAL_FEEDERS,
-            [
-                &currency::dto::<SuperGroupTestC3, _>(),
-                &currency::dto::<SuperGroupTestC2, _>(),
-            ]
-            .into_iter(),
-        )
-        .unwrap_err();
-    assert_eq!(price_resp, PriceFeedsError::NoPrice());
+    assert_no_price::<_, _, SuperGroupTestC3, _, _>(
+        &market,
+        last_feed_time,
+        TOTAL_FEEDERS,
+        [
+            &currency::dto::<SuperGroupTestC3, _>(),
+            &currency::dto::<SuperGroupTestC2, _>(),
+        ]
+        .into_iter(),
+    );
 
     // second part of denome pair doesn't exists in the storage
-    assert_eq!(
-        market
-            .price::<SuperGroupTestC2, SuperGroup, _>(
-                last_feed_time,
-                TOTAL_FEEDERS,
-                [
-                    &currency::dto::<SubGroupTestC10, _>(),
-                    &currency::dto::<SuperGroupTestC2, _>(),
-                ]
-                .into_iter(),
-            )
-            .unwrap_err(),
-        PriceFeedsError::NoPrice()
+    assert_no_price::<_, _, SubGroupTestC10, SubGroup, _>(
+        &market,
+        last_feed_time,
+        TOTAL_FEEDERS,
+        [
+            &currency::dto::<SubGroupTestC10, _>(),
+            &currency::dto::<SuperGroupTestC2, _>(),
+        ]
+        .into_iter(),
     );
 
     // first part of denome pair doesn't exists in the storage
-    assert_eq!(
-        market
-            .price::<SuperGroupTestC5, SuperGroup, _>(
-                last_feed_time,
-                TOTAL_FEEDERS,
-                [
-                    &currency::dto::<SubGroupTestC10, _>(),
-                    &currency::dto::<SuperGroupTestC5, _>(),
-                ]
-                .into_iter()
-            )
-            .unwrap_err(),
-        PriceFeedsError::NoPrice {}
+    assert_no_price::<_, _, SubGroupTestC10, SubGroup, _>(
+        &market,
+        last_feed_time,
+        TOTAL_FEEDERS,
+        [
+            &currency::dto::<SubGroupTestC10, _>(),
+            &currency::dto::<SuperGroupTestC5, _>(),
+        ]
+        .into_iter(),
     );
 
     // the second leg doesn't exists in the storage
-    assert_eq!(
-        market
-            .price::<SuperGroupTestC2, SuperGroup, _>(
-                last_feed_time,
-                TOTAL_FEEDERS,
-                [
-                    &currency::dto::<SuperGroupTestC2, _>(),
-                    &currency::dto::<SubGroupTestC10, _>(),
-                    &currency::dto::<SuperGroupTestC1, _>(),
-                ]
-                .into_iter()
-            )
-            .unwrap_err(),
-        PriceFeedsError::NoPrice {}
+    assert_no_price::<_, _, SuperGroupTestC2, _, _>(
+        &market,
+        last_feed_time,
+        TOTAL_FEEDERS,
+        [
+            &currency::dto::<SuperGroupTestC2, _>(),
+            &currency::dto::<SubGroupTestC10, _>(),
+            &currency::dto::<SuperGroupTestC1, _>(),
+        ]
+        .into_iter(),
     );
 }
 
@@ -304,6 +356,23 @@ where
     market.feed(now, f_address, &[price]).map(|()| now)
 }
 
+fn price<'config, 'currency_dto, ObservationsRepoImpl, PriceG, BaseC, BaseG, CurrenciesToBaseC>(
+    feeds: &PriceFeeds<'config, PriceG, ObservationsRepoImpl>,
+    at: Timestamp,
+    total_feeders: Count,
+    leaf_to_base: CurrenciesToBaseC,
+) -> Result<BasePrice<PriceG, BaseC, BaseG>, PriceFeedsError>
+where
+    ObservationsRepoImpl: ObservationsRepo<Group = PriceG>,
+    PriceG: Group<TopG = PriceG> + 'currency_dto,
+    BaseC: CurrencyDef,
+    BaseC::Group: MemberOf<BaseG> + MemberOf<PriceG>,
+    BaseG: Group + MemberOf<PriceG>,
+    CurrenciesToBaseC: Iterator<Item = &'currency_dto CurrencyDTO<PriceG>> + DoubleEndedIterator,
+{
+    feeds.price::<BaseC, BaseG, CurrenciesToBaseC>(at, total_feeders, leaf_to_base)
+}
+
 fn config() -> Config {
     Config::new(
         Percent100::MAX,
@@ -313,7 +382,7 @@ fn config() -> Config {
     )
 }
 
-fn price<C1, C2>(coin1: Amount, coin2: Amount) -> Price<C1, C2>
+fn price_new<C1, C2>(coin1: Amount, coin2: Amount) -> Price<C1, C2>
 where
     C1: 'static,
     C2: 'static,

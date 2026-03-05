@@ -210,7 +210,7 @@ mod tests {
 
     use crate::{
         api::{self, SwapLeg, swap::SwapTarget},
-        error::{self, Error},
+        error::Error,
     };
 
     type SupportedPairs = super::SupportedPairs<PriceCurrencies, TheCurrency>;
@@ -281,12 +281,10 @@ mod tests {
         ))
         .unwrap();
 
-        assert_eq!(
+        assert!(matches!(
             SupportedPairs::new::<Lpn>(tree.into_tree()),
-            Err(error::invalid_base_currency::<PriceCurrencies, Lpn>(
-                LeaseC1::dto().into_super_group()
-            ))
-        );
+            Err(Error::InvalidBaseCurrency { .. })
+        ));
     }
 
     #[test]
@@ -314,10 +312,10 @@ mod tests {
         ))
         .unwrap();
 
-        assert_eq!(
+        assert!(matches!(
             SupportedPairs::new::<TheCurrency>(tree.into_tree()),
             Err(Error::DuplicatedNodes {})
-        );
+        ));
     }
 
     #[test]
@@ -336,10 +334,10 @@ mod tests {
         ))
         .unwrap();
 
-        assert_eq!(
+        assert!(matches!(
             SupportedPairs::new::<PaymentC4>(tree.into_tree()),
             Err(Error::StableCurrencyNotInTree {})
-        );
+        ));
     }
 
     #[test]

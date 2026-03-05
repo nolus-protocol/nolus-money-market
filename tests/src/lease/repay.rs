@@ -129,7 +129,7 @@ fn partial_repay_after_time() {
 }
 
 #[test]
-#[should_panic = "[Lease] [Position] The transaction amount should worth at least"]
+#[should_panic = "InsufficientTransactionAmount"]
 fn insufficient_payment() {
     let mut test_case = super::create_test_case::<PaymentCurrency>();
     let downpayment = DOWNPAYMENT;

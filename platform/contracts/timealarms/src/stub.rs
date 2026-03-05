@@ -26,7 +26,7 @@ pub trait WithTimeAlarms {
         TA: TimeAlarms;
 }
 
-#[derive(thiserror::Error, Debug, PartialEq)]
+#[derive(thiserror::Error, Debug)]
 pub enum Error {
     #[error("[TimeAlarms Stub] [Sdk] {0}")]
     Sdk(#[from] SdkError),

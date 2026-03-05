@@ -1,16 +1,11 @@
-use currencies::{
-    LeaseGroup as AlarmCurrencies, LeaseGroup as AssetCurrencies, Lpn as BaseCurrency,
-    Lpns as BaseCurrencies, Lpns, PaymentGroup as PriceCurrencies,
-};
+use currencies::LeaseGroup as AssetCurrencies;
 use currency::{CurrencyDTO, CurrencyDef};
 use finance::percent::Percent100;
 use platform::contract::Code;
 use sdk::{
     cosmwasm_std::{Addr, Coin as CwCoin},
-    cw_multi_test::{AppResponse, Executor as _},
     testing::{self, InterChainMsgReceiver, InterChainMsgSender},
 };
-use versioning::ProtocolMigrationMessage;
 
 use crate::common;
 
@@ -29,35 +24,9 @@ pub mod app;
 pub mod builder;
 pub mod response;
 
-type OptionalLppEndpoints = Option<
-    CwContractWrapper<
-        lpp::msg::ExecuteMsg<Lpns>,
-        lpp::contract::ContractError,
-        lpp::msg::InstantiateMsg,
-        lpp::contract::ContractError,
-        lpp::msg::QueryMsg<Lpns>,
-        lpp::contract::ContractError,
-        lpp::msg::SudoMsg,
-        lpp::contract::ContractError,
-    >,
->;
+type OptionalLppEndpoints = Option<CwContractWrapper>;
 
-type OracleError = oracle::error::Error<PriceCurrencies>;
-type OptionalOracleWrapper = Option<
-    CwContractWrapper<
-        oracle::api::ExecuteMsg<BaseCurrency, BaseCurrencies, AlarmCurrencies, PriceCurrencies>,
-        OracleError,
-        oracle::api::InstantiateMsg<PriceCurrencies>,
-        OracleError,
-        oracle::api::QueryMsg<PriceCurrencies>,
-        OracleError,
-        oracle::api::SudoMsg<PriceCurrencies>,
-        OracleError,
-        OracleError,
-        ProtocolMigrationMessage<oracle::api::MigrateMsg>,
-        OracleError,
-    >,
->;
+type OptionalOracleWrapper = Option<CwContractWrapper>;
 
 #[must_use]
 pub(crate) struct TestCase<
@@ -115,11 +84,9 @@ impl<ProtocolsRegistry, Treasury, Profit, Reserve, Leaser, Lpp, Oracle, TimeAlar
     TestCase<ProtocolsRegistry, Treasury, Profit, Reserve, Leaser, Lpp, Oracle, TimeAlarms>
 {
     pub fn send_funds_from_admin(&mut self, user_addr: Addr, funds: &[CwCoin]) -> &mut Self {
-        let _: AppResponse = self
-            .app
-            .with_mock_app(|app| app.send_tokens(testing::user(ADMIN), user_addr, funds))
-            .unwrap()
-            .unwrap_response();
+        self.app
+            .send_tokens(testing::user(ADMIN), user_addr, funds)
+            .unwrap();
 
         self
     }

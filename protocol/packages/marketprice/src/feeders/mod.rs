@@ -3,7 +3,7 @@ use std::{collections::HashSet, num::TryFromIntError};
 use thiserror::Error;
 
 use sdk::{
-    cosmwasm_std::{Addr, StdError, StdResult, Storage},
+    cosmwasm_std::{Addr, Storage},
     cw_storage_plus::Item,
 };
 
@@ -13,8 +13,11 @@ pub use count::Count;
 /// Errors returned from Feeders
 #[derive(Error, Debug, PartialEq)]
 pub enum PriceFeedersError {
-    #[error("{0}")]
-    Std(#[from] StdError),
+    #[error("Failed to load price feeders: {cause}")]
+    LoadingFailure { cause: String },
+
+    #[error("Failed to save a price feeder: {cause}")]
+    SavingFailure { cause: String },
 
     #[error("Given address already registered as a price feeder")]
     FeederAlreadyRegistered {},
@@ -41,13 +44,16 @@ impl PriceFeeders {
         Self(Item::new(namespace))
     }
 
-    pub fn feeders(&self, storage: &dyn Storage) -> StdResult<HashSet<Addr>> {
-        self.0.may_load(storage).map(Option::unwrap_or_default)
+    pub fn feeders(&self, storage: &dyn Storage) -> Result<HashSet<Addr>, PriceFeedersError> {
+        self.load(storage).map(Option::unwrap_or_default)
     }
 
-    pub fn is_registered(&self, storage: &dyn Storage, address: &Addr) -> StdResult<bool> {
-        self.0
-            .may_load(storage)
+    pub fn is_registered(
+        &self,
+        storage: &dyn Storage,
+        address: &Addr,
+    ) -> Result<bool, PriceFeedersError> {
+        self.load(storage)
             .map(|maybe_addrs: Option<HashSet<Addr>>| {
                 maybe_addrs.is_some_and(|addrs: HashSet<Addr>| addrs.contains(address))
             })
@@ -68,9 +74,11 @@ impl PriceFeeders {
 
         db.insert(feeder);
 
-        self.0.save(storage, &db)?;
-
-        Ok(())
+        self.0
+            .save(storage, &db)
+            .map_err(|ref err| PriceFeedersError::SavingFailure {
+                cause: err.to_string(),
+            })
     }
 
     pub fn remove(
@@ -78,22 +86,37 @@ impl PriceFeeders {
         storage: &mut dyn Storage,
         feeder: &Addr,
     ) -> Result<(), PriceFeedersError> {
-        self.0
-            .may_load(storage)
-            .and_then(|feeders| {
-                feeders.map_or(const { Ok(()) }, |mut feeders| {
-                    feeders.remove(feeder);
+        self.load(storage).and_then(|feeders| {
+            feeders.map_or(const { Ok(()) }, |mut feeders| {
+                feeders.remove(feeder);
 
-                    self.0.save(storage, &feeders)
-                })
+                self.save(storage, &feeders)
             })
-            .map_err(Into::into)
+        })
     }
 
     pub fn total_registered(&self, storage: &dyn Storage) -> Result<Count, PriceFeedersError> {
-        self.feeders(storage)
-            .map_err(PriceFeedersError::Std)
-            .map(|feeders| count_of(&feeders))
+        self.feeders(storage).map(|feeders| count_of(&feeders))
+    }
+
+    fn load(&self, storage: &dyn Storage) -> Result<Option<HashSet<Addr>>, PriceFeedersError> {
+        self.0
+            .may_load(storage)
+            .map_err(|err| PriceFeedersError::LoadingFailure {
+                cause: err.to_string(),
+            })
+    }
+
+    fn save(
+        &self,
+        storage: &mut dyn Storage,
+        feeders: &HashSet<Addr>,
+    ) -> Result<(), PriceFeedersError> {
+        self.0
+            .save(storage, feeders)
+            .map_err(|err| PriceFeedersError::SavingFailure {
+                cause: err.to_string(),
+            })
     }
 }
 
@@ -122,10 +145,10 @@ mod tests {
         let feeders = PriceFeeders::new("storage_namespace");
         let new_feeder = Addr::unchecked("feeder34");
         feeders.register(&mut storage, new_feeder.clone()).unwrap();
-        assert_eq!(Ok(true), feeders.is_registered(&storage, &new_feeder));
+        assert!(feeders.is_registered(&storage, &new_feeder).unwrap());
 
         feeders.remove(&mut storage, &new_feeder).unwrap();
 
-        assert_eq!(Ok(false), feeders.is_registered(&storage, &new_feeder));
+        assert!(!feeders.is_registered(&storage, &new_feeder).unwrap());
     }
 }

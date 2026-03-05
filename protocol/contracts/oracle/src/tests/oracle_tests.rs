@@ -30,7 +30,7 @@ fn feed_prices_unknown_feeder() {
     };
 
     let err = contract::execute(deps.as_mut(), cw_testing::mock_env(), info, msg).unwrap_err();
-    assert_eq!(Error::UnknownFeeder {}, err)
+    assert!(matches!(err, Error::UnknownFeeder {}))
 }
 
 #[test]
@@ -96,13 +96,14 @@ fn query_prices_unsupported_denom() {
 
     let detached = currency::dto::<PaymentC8, PriceCurrencies>().into_super_group();
     assert_eq!(
-        error::unsupported_currency::<_, Lpn>(detached),
+        error::unsupported_currency::<_, Lpn>(detached).to_string(),
         contract::query(
             deps.as_ref(),
             cw_testing::mock_env(),
             QueryMsg::BasePrice { currency: detached },
         )
         .unwrap_err()
+        .to_string()
     );
 }
 
@@ -118,7 +119,7 @@ fn feed_prices_unsupported_pairs() {
 
     let msg = ExecuteMsg::FeedPrices { prices };
     let err = contract::execute(deps.as_mut(), cw_testing::mock_env(), info, msg).unwrap_err();
-    assert_eq!(error::unsupported_denom_pairs(&unsupported), err);
+    assert!(matches!(err, Error::UnsupportedDenomPairs(_)));
 }
 
 #[test]
@@ -136,7 +137,7 @@ fn deliver_alarm() {
         info.clone(),
         feed_price_msg,
     );
-    assert_eq!(Ok(CwResponse::default()), feed_resp);
+    assert_eq!(CwResponse::default(), feed_resp.unwrap());
 
     {
         let alarm_below_price = super::test_price::<PaymentC4, Lpn>(10, 23450);
@@ -149,7 +150,7 @@ fn deliver_alarm() {
             info.clone(),
             add_alarm_msg,
         );
-        assert_eq!(Ok(CwResponse::default()), add_alarm_resp);
+        assert_eq!(CwResponse::default(), add_alarm_resp.unwrap());
 
         let dispatch_alarms_msg = ExecuteMsg::DispatchAlarms { max_count: 10 };
         let dispatch_alarms_resp = contract::execute(
@@ -174,7 +175,7 @@ fn deliver_alarm() {
             info.clone(),
             add_alarm_msg,
         );
-        assert_eq!(Ok(CwResponse::default()), add_alarm_resp);
+        assert_eq!(CwResponse::default(), add_alarm_resp.unwrap());
 
         let dispatch_alarms_msg = ExecuteMsg::DispatchAlarms { max_count: 10 };
         let receiver = info.sender.clone();

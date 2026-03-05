@@ -6,7 +6,7 @@ pub use crate::alarms::Alarms;
 
 mod alarms;
 
-#[derive(Error, Debug, PartialEq)]
+#[derive(Error, Debug)]
 pub enum AlarmError {
     #[error("{0}")]
     Std(#[from] StdError),

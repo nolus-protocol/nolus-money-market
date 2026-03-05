@@ -416,7 +416,7 @@ pub mod tests {
             price::total_of(Coin::<SuperGroupTestC4>::new(1)).is(Coin::<BaseCurrency>::new(20));
         alarms.add_alarm(addr1, price, None).unwrap();
 
-        assert_eq!(None, alarms.alarms(price).unwrap().next());
+        assert!(alarms.alarms(price).unwrap().next().is_none());
     }
 
     #[test]
@@ -437,8 +437,8 @@ pub mod tests {
             .unwrap();
 
         let mut triggered_alarms = alarms.alarms(price).unwrap();
-        assert_eq!(Some(Ok(addr1)), triggered_alarms.next());
-        assert_eq!(None, triggered_alarms.next());
+        assert_eq!(addr1, triggered_alarms.next().unwrap().unwrap());
+        assert!(triggered_alarms.next().is_none());
     }
 
     #[test]
@@ -460,8 +460,8 @@ pub mod tests {
             .unwrap();
 
         let mut triggered_alarms = alarms.alarms(price).unwrap();
-        assert_eq!(Some(Ok(addr1)), triggered_alarms.next());
-        assert_eq!(None, triggered_alarms.next());
+        assert_eq!(addr1, triggered_alarms.next().unwrap().unwrap());
+        assert!(triggered_alarms.next().is_none());
     }
 
     #[test]
@@ -562,7 +562,8 @@ pub mod tests {
             .unwrap()
             .collect();
 
-        assert_eq!(resp, vec![Ok(addr3)]);
+        assert_eq!(1, resp.len());
+        assert_eq!(addr3, resp[0].as_ref().unwrap());
     }
 
     #[test]
@@ -625,7 +626,8 @@ pub mod tests {
             .unwrap()
             .collect();
 
-        assert_eq!(resp, vec![Ok(addr2)]);
+        assert_eq!(1, resp.len());
+        assert_eq!(addr2, resp[0].as_ref().unwrap());
 
         let resp: Vec<_> = alarms
             .alarms(
@@ -634,7 +636,9 @@ pub mod tests {
             .unwrap()
             .collect();
 
-        assert_eq!(resp, vec![Ok(addr3), Ok(addr4)]);
+        assert_eq!(2, resp.len());
+        assert_eq!(addr3, resp[0].as_ref().unwrap());
+        assert_eq!(addr4, resp[1].as_ref().unwrap());
     }
 
     #[test]

@@ -76,8 +76,8 @@ mod test {
     #[test]
     fn dto_to_type() {
         assert_eq!(
-            Ok(Coin::<Nls>::test_new(AMOUNT, ExternalC::ticker())),
-            platform_tests::ser_de(&CoinDTO::from(GenericCoin::<ExternalC>::new(AMOUNT))),
+            Coin::<Nls>::test_new(AMOUNT, ExternalC::ticker()),
+            platform_tests::ser_de(&CoinDTO::from(GenericCoin::<ExternalC>::new(AMOUNT))).unwrap(),
         );
     }
 

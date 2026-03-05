@@ -9,7 +9,7 @@ use crate::{
 use super::{DOWNPAYMENT, LeaseCoin, LeaseCurrency, PaymentCurrency};
 
 #[test]
-#[should_panic = "[Lease] No payment sent"]
+#[should_panic = "NoPaymentError"]
 fn open_zero_downpayment() {
     let mut test_case = super::create_test_case::<PaymentCurrency>();
     let downpayment = Coin::<PaymentCurrency>::ZERO;

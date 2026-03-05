@@ -133,33 +133,37 @@ mod tests {
         recheck_in: Duration,
         exp_alarm: Alarm<LeaseAssetCurrencies, TestLpn, Lpns>,
     ) {
-        assert_eq!(s.try_into_alarms(&now, &timealarms(), &pricealarms()), {
-            let mut batch = Batch::default();
+        assert_eq!(
+            s.try_into_alarms(&now, &timealarms(), &pricealarms())
+                .expect("succeed"),
+            {
+                let mut batch = Batch::default();
 
-            batch.schedule_execute_no_reply(WasmMsg::Execute {
-                contract_addr: TIME_ALARMS_ADDR.into(),
-                msg: cosmwasm_std::to_json_binary(&TimeAlarmsCmd::AddAlarm {
-                    time: now + recheck_in,
-                })
-                .expect("Time alarms serialization message should be serializable to JSON"),
-                funds: vec![],
-            });
+                batch.schedule_execute_no_reply(WasmMsg::Execute {
+                    contract_addr: TIME_ALARMS_ADDR.into(),
+                    msg: cosmwasm_std::to_json_binary(&TimeAlarmsCmd::AddAlarm {
+                        time: now + recheck_in,
+                    })
+                    .expect("Time alarms serialization message should be serializable to JSON"),
+                    funds: vec![],
+                });
 
-            batch.schedule_execute_no_reply(WasmMsg::Execute {
-                contract_addr: ORACLE_ADDR.into(),
-                msg: cosmwasm_std::to_json_binary(&PriceAlarmsCmd::AddPriceAlarm::<
-                    LeaseGroup,
-                    TestLpn,
-                    Lpns,
-                > {
-                    alarm: exp_alarm,
-                })
-                .expect("Time alarms serialization message should be serializable to JSON"),
-                funds: vec![],
-            });
+                batch.schedule_execute_no_reply(WasmMsg::Execute {
+                    contract_addr: ORACLE_ADDR.into(),
+                    msg: cosmwasm_std::to_json_binary(&PriceAlarmsCmd::AddPriceAlarm::<
+                        LeaseGroup,
+                        TestLpn,
+                        Lpns,
+                    > {
+                        alarm: exp_alarm,
+                    })
+                    .expect("Time alarms serialization message should be serializable to JSON"),
+                    funds: vec![],
+                });
 
-            Ok(batch)
-        });
+                batch
+            }
+        );
     }
 
     fn timealarms() -> TimeAlarmsRef {

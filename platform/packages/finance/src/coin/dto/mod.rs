@@ -313,8 +313,8 @@ mod test {
     fn distinct_currencies() {
         let amount = 432;
         assert_ne!(
-            cosmwasm_std::to_json_vec(&test_coin::<SuperGroupTestC1, SuperGroup>(amount)),
-            cosmwasm_std::to_json_vec(&test_coin::<SuperGroupTestC2, SuperGroup>(amount))
+            cosmwasm_std::to_json_vec(&test_coin::<SuperGroupTestC1, SuperGroup>(amount)).unwrap(),
+            cosmwasm_std::to_json_vec(&test_coin::<SuperGroupTestC2, SuperGroup>(amount)).unwrap()
         );
     }
 

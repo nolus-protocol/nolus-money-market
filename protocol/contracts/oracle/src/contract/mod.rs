@@ -324,8 +324,11 @@ mod tests {
     #[test]
     fn release() {
         assert_eq!(
-            Ok(QueryMsg::<PaymentGroup>::ProtocolPackageRelease {}),
-            platform_tests::ser_de(&versioning::query::ProtocolPackage::Release {}),
+            QueryMsg::<PaymentGroup>::ProtocolPackageRelease {},
+            platform_tests::ser_de::<_, QueryMsg<PaymentGroup>>(
+                &versioning::query::ProtocolPackage::Release {}
+            )
+            .unwrap(),
         );
     }
 

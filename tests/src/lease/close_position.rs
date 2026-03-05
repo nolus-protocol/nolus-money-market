@@ -1,4 +1,4 @@
-use currencies::{LeaseGroup, PaymentGroup, testing::PaymentC5};
+use currencies::{PaymentGroup, testing::PaymentC5};
 use currency::CurrencyDef;
 use finance::{
     coin::{Amount, Coin},
@@ -8,7 +8,7 @@ use finance::{
 };
 use lease::{
     api::{
-        ExecuteMsg,
+        ExecuteMsg, LpnCoinDTO,
         position::{FullClose, PartialClose, PositionClose},
         query::{StateResponse, paid::ClosingTrx},
     },
@@ -200,15 +200,15 @@ fn partial_close_invalid_currency() {
         )
         .unwrap_err();
 
-    assert_eq!(
-        err.downcast_ref::<ContractError>(),
-        Some(&ContractError::FinanceError(
-            finance::error::Error::CurrencyError(currency::error::Error::currency_mismatch(
-                &currency::dto::<LeaseCurrency, LeaseGroup>(),
-                &currency::dto::<PaymentC5, PaymentGroup>()
-            ))
+    assert!(matches!(
+        err.downcast_ref::<ContractError>().unwrap(),
+        ContractError::FinanceError(finance::error::Error::CurrencyError(
+            currency::error::Error::CurrencyMismatch {
+                expected: _,
+                found: _
+            }
         ))
-    );
+    ));
 }
 
 #[test]
@@ -228,12 +228,11 @@ fn partial_close_min_asset() {
         .app
         .execute(testing::user(USER), lease, msg, &[])
         .unwrap_err();
-    assert_eq!(
-        err.downcast_ref::<ContractError>(),
-        Some(&ContractError::PositionError(
-            PositionError::PositionCloseAmountTooBig(min_asset_lpn.into())
-        ))
-    );
+    assert!(matches!(
+        err.downcast_ref::<ContractError>().unwrap(),
+        &ContractError::PositionError(
+            PositionError::PositionCloseAmountTooBig(coin)
+        ) if coin == LpnCoinDTO::from(min_asset_lpn)));
 }
 
 #[test]
@@ -253,12 +252,11 @@ fn partial_close_min_transaction() {
         .app
         .execute(testing::user(USER), lease, msg, &[])
         .unwrap_err();
-    assert_eq!(
-        err.downcast_ref::<ContractError>(),
-        Some(&ContractError::PositionError(
-            PositionError::PositionCloseAmountTooSmall(min_transaction_lpn.into())
-        ))
-    );
+    assert!(matches!(
+        err.downcast_ref::<ContractError>().unwrap(),
+        &ContractError::PositionError(PositionError::PositionCloseAmountTooSmall(coin
+       )) if coin == LpnCoinDTO::from(min_transaction_lpn)
+    ));
 }
 
 fn do_close(
@@ -387,10 +385,10 @@ fn assert_unauthorized(test_case: &mut LeaseTestCase, lease: Addr, close_msg: Ex
             .app
             .execute(sender, lease, &close_msg, &[])
             .unwrap_err();
-        assert_eq!(
-            err.downcast_ref::<ContractError>(),
-            Some(&ContractError::Unauthorized(Error::Unauthorized {}))
-        );
+        assert!(matches!(
+            err.downcast_ref::<ContractError>().unwrap(),
+            &ContractError::Unauthorized(Error::Unauthorized {})
+        ));
     }
 }
 

@@ -11,7 +11,7 @@ use marketprice::{alarms::errors::AlarmError, error::PriceFeedsError, feeders::P
 use sdk::cosmwasm_std::{Addr, StdError};
 use versioning::Error as VersioningError;
 
-#[derive(Error, Debug, PartialEq)]
+#[derive(Error, Debug)]
 pub enum Error<PriceG>
 where
     PriceG: Group,
@@ -29,7 +29,7 @@ where
     BrokenSwapTree(String),
 
     #[error("[Oracle] Failed to load feeders! Cause: {0}")]
-    LoadFeeders(StdError),
+    LoadFeeders(PriceFeedersError),
 
     #[error("[Oracle] Failed to load configuration! Cause: {0}")]
     LoadConfig(StdError),

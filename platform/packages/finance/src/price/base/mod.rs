@@ -199,7 +199,7 @@ mod test_invariant {
         CurrencyDef, Group, MemberOf, SymbolStatic,
         test::{SubGroup, SubGroupTestC10, SuperGroup, SuperGroupTestC1, SuperGroupTestC2},
     };
-    use sdk::cosmwasm_std::{self, StdError, StdResult};
+    use sdk::cosmwasm_std::{self, StdResult};
 
     use crate::{coin::Coin, test::coin};
 
@@ -285,14 +285,7 @@ mod test_invariant {
         QuoteC::Group: MemberOf<QuoteG>,
         QuoteG: Group,
     {
-        assert!(matches!(
-            r,
-            Err(StdError::ParseErr {
-                target_type,
-                msg: real_msg,
-                backtrace: _,
-            }) if target_type.contains("BasePrice") && real_msg.contains(msg)
-        ));
+        assert!(r.expect_err("expected a parse error").to_string().contains(msg));
     }
 
     fn load<G, QuoteC, QuoteG>(json: &[u8]) -> StdResult<BasePrice<G, QuoteC, QuoteG>>

@@ -15,7 +15,7 @@ pub struct ProfitRef {
     addr: Addr,
 }
 
-#[derive(Debug, PartialEq, Error)]
+#[derive(Debug, Error)]
 pub enum Error {
     #[error("[Profit] [Std] {0}")]
     Std(#[from] StdError),

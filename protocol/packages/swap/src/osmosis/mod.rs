@@ -1,5 +1,8 @@
-use osmosis_std::types::osmosis::poolmanager::v1beta1::{
-    MsgSwapExactAmountIn, MsgSwapExactAmountInResponse, SwapAmountInRoute,
+use osmosis_std::types::{
+    cosmos::base::v1beta1::Coin as OsmosisCoin,
+    osmosis::poolmanager::v1beta1::{
+        MsgSwapExactAmountIn, MsgSwapExactAmountInResponse, SwapAmountInRoute,
+    },
 };
 
 use currency::{DexSymbols, Group};
@@ -44,18 +47,19 @@ impl ExactAmountIn for Impl {
         // Then apply the parameterized maximum slippage to get the minimum amount.
         // For the first version, we accept whatever price impact and slippage.
         let routes = to_route::<GSwap>(swap_path);
-        let token_in = Some(to_dex_cwcoin(amount_in));
+        let token_in = to_dex_cwcoin(amount_in);
         let token_out_min_amount = min_amount_out.amount().to_string();
-        let msg = RequestMsg {
-            sender: sender.into(),
-            routes,
-            token_in: token_in.map(Into::into),
-            token_out_min_amount,
-        };
-
-        trx.add_message(RequestMsg::TYPE_URL, msg);
-
-        Ok(())
+        to_osmosis_coin(token_in).map(|osmosis_coin| {
+            trx.add_message(
+                RequestMsg::TYPE_URL,
+                RequestMsg {
+                    sender: sender.into(),
+                    routes,
+                    token_in: Some(osmosis_coin),
+                    token_out_min_amount,
+                },
+            );
+        })
     }
 
     fn parse_response<I>(trx_resps: &mut I) -> Result<Amount>
@@ -92,4 +96,39 @@ where
     G: Group,
 {
     coin_legacy::to_cosmwasm_on_network::<DexSymbols<G>>(token)
+}
+
+fn to_osmosis_coin(cw_coin: CwCoin) -> Result<OsmosisCoin> {
+    let amount_str = cw_coin.amount.to_string();
+    // cosmwasm_std::to_json_string(&cw_coin.amount)
+    //     .map_err(Into::into)
+    // .map(|amount_str| OsmosisCoin {
+    Ok(OsmosisCoin {
+        denom: cw_coin.denom,
+        amount: amount_str,
+    })
+}
+
+#[cfg(test)]
+mod test_amount {
+
+    use osmosis_std::types::cosmos::base::v1beta1::Coin as OsmosisCoin;
+    use sdk::cosmwasm_std::Coin as CwCoin;
+
+    #[test]
+    fn test_cw_to_osmosis_amount() {
+        const DENOM: &str = "uatom";
+        const AMOUNT: u128 = 298464284;
+        assert_eq!(
+            OsmosisCoin {
+                denom: DENOM.to_string(),
+                amount: format!("{}", AMOUNT)
+            },
+            super::to_osmosis_coin(CwCoin {
+                denom: DENOM.to_string(),
+                amount: AMOUNT.into(),
+            },)
+            .unwrap()
+        );
+    }
 }

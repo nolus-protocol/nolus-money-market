@@ -1,5 +1,3 @@
-use anyhow::Error;
-
 use ::lease::{
     CloseStrategy,
     api::{
@@ -9,7 +7,10 @@ use ::lease::{
     error::{ContractError, PositionError},
 };
 use finance::{coin::Coin, percent::Percent100};
-use sdk::{cosmwasm_std::Addr, testing};
+use sdk::{
+    cosmwasm_std::{Addr, StdError},
+    testing,
+};
 
 use crate::{
     common::{ADMIN, oracle},
@@ -38,12 +39,10 @@ fn tp_zero() {
         Some(ChangeCmd::Reset),
     );
 
-    assert_eq!(
-        err.downcast_ref::<ContractError>(),
-        Some(&ContractError::PositionError(
-            PositionError::ZeroClosePolicy("take profit")
-        ))
-    );
+    assert!(matches!(
+        err.downcast_ref::<ContractError>().unwrap(),
+        &ContractError::PositionError(PositionError::ZeroClosePolicy("take profit"))
+    ));
 }
 
 #[test]
@@ -58,12 +57,10 @@ fn sl_zero() {
         Some(ChangeCmd::Set(Percent100::ZERO)),
     );
 
-    assert_eq!(
-        err.downcast_ref::<ContractError>(),
-        Some(&ContractError::PositionError(
-            PositionError::ZeroClosePolicy("stop loss")
-        ))
-    );
+    assert!(matches!(
+        err.downcast_ref::<ContractError>().unwrap(),
+        &ContractError::PositionError(PositionError::ZeroClosePolicy("stop loss"))
+    ));
 }
 
 #[test]
@@ -193,7 +190,7 @@ fn query_policy(test_case: &LeaseTestCase, lease: Addr) -> ClosePolicy {
     close_policy
 }
 
-fn assert_trigger_tp_error(err: Error, exp_tp: Percent100) {
+fn assert_trigger_tp_error(err: StdError, exp_tp: Percent100) {
     let Some(ContractError::PositionError(PositionError::TriggerClose {
         lease_ltv: _,
         strategy: CloseStrategy::TakeProfit(tp_trigger),

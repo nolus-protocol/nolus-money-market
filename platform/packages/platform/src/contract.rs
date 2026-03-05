@@ -132,10 +132,9 @@ pub mod tests {
         mock_querier.update_wasm(testing::valid_contract_handler);
         let querier = QuerierWrapper::new(&mock_querier);
 
-        assert_eq!(
-            Ok(()),
-            super::validator(querier).check_contract(&sdk_testing::user(USER))
-        );
+        super::validator(querier)
+            .check_contract(&sdk_testing::user(USER))
+            .unwrap();
     }
 
     #[test]
@@ -146,8 +145,10 @@ pub mod tests {
 
         let user_addr = sdk_testing::user(USER);
         assert_eq!(
-            Ok(user_addr.clone()),
-            super::validator(querier).check_contract_code(user_addr, &CODE)
+            user_addr.clone(),
+            super::validator(querier)
+                .check_contract_code(user_addr, &CODE)
+                .unwrap()
         );
     }
 
@@ -181,6 +182,7 @@ pub mod testing {
                 testing::user("user"),
                 None,
                 false,
+                None,
                 None,
             ))
             .expect("serialization succeedeed"),

@@ -1,5 +1,5 @@
 use leaser::ContractError;
-use sdk::{cosmwasm_std::Addr, cw_multi_test::AppResponse, testing};
+use sdk::{cosmwasm_std::{Addr, StdResult}, cw_multi_test::AppResponse, testing};
 
 use crate::common::{
     ADMIN, LEASE_ADMIN, USER,
@@ -38,7 +38,7 @@ pub(super) fn change_admin(
     leaser: Addr,
     caller: Addr,
     new_admin: Addr,
-) -> anyhow::Result<ResponseWithInterChainMsgs<'_, AppResponse>> {
+) -> StdResult<ResponseWithInterChainMsgs<'_, AppResponse>> {
     app.execute(
         caller,
         leaser,

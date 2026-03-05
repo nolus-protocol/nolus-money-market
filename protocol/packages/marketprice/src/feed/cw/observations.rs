@@ -139,7 +139,10 @@ mod test {
         let observation1 = Observation::new(Addr::unchecked(FEEDER), feed1_time, feed1_price);
         deque.register(observation1.clone()).unwrap();
         assert_eq!(1, deque.len());
-        assert_eq!(Some(Ok(observation1)), deque.as_iter().unwrap().next());
+        assert_eq!(
+            observation1,
+            deque.as_iter().unwrap().next().unwrap().unwrap()
+        );
 
         deque
             .retain(&(feed1_time - Duration::from_nanos(1)))
@@ -191,8 +194,8 @@ mod test {
         QuoteC: Debug + PartialEq,
     {
         let mut it = deque.as_iter().unwrap();
-        assert_eq!(Some(Ok(observation1)), it.next());
-        assert_eq!(Some(Ok(observation2)), it.next());
+        assert_eq!(observation1, it.next().unwrap().unwrap());
+        assert_eq!(observation2, it.next().unwrap().unwrap());
     }
 
     fn price(c: Amount, q: Amount) -> Price<C1, C2> {

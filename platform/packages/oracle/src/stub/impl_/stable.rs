@@ -47,7 +47,7 @@ impl<'a> PriceStub<'a> {
                 oracle_addr.clone(),
                 &StableCurrencyQueryMsg::<PlatformGroup>::StableCurrency {},
             )
-            .map_err(Error::StubConfigQuery)
+            .map_err(|ref err| Error::stub_config_query(err))
             .map(|stable_ticker: SymbolOwned| Self {
                 source: PriceSource::new(oracle_addr, stable_ticker),
                 querier,
@@ -76,7 +76,7 @@ where
         };
         self.querier
             .query_wasm_smart(self.source.addr.clone(), &req)
-            .map_err(|error| error::failed_to_fetch_price(C::dto(), Self::QuoteC::dto(), error))
+            .map_err(|ref error| error::failed_to_fetch_price(C::dto(), Self::QuoteC::dto(), error))
             .and_then(|price: ExternalPrice<G, Self::QuoteC>| {
                 price
                     .try_coerce(&self.source.quote_ticker)

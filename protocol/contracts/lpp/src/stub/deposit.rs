@@ -20,7 +20,7 @@ where
     fn close_all(&mut self) -> Result<(), Error>;
 }
 
-#[derive(Error, Debug, PartialEq)]
+#[derive(Error, Debug)]
 pub enum Error {
     #[error("[Lpp][Deposit] Failed to schedule a message! Cause: {0}")]
     ScheduleMessage(platform::error::Error),

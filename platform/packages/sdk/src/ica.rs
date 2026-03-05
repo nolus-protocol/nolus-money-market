@@ -1,7 +1,6 @@
 use serde::{Deserialize, Serialize};
 
 use cosmwasm_std::{Binary, Coin as CwCoin, CosmosMsg, CustomMsg, StdResult};
-use schemars::JsonSchema;
 
 #[cfg(feature = "cosmos_proto")]
 use super::cosmos_sdk_proto::Any as CosmosAny;
@@ -11,7 +10,7 @@ use super::cosmos_sdk_proto::Any as CosmosAny;
 // TODO: Replace with `ibc_proto::Any` once cosmwasm-std v3 drops the `JsonSchema` requirement.
 // Exists only because `ibc_proto::Any` cannot derive `JsonSchema`, which is
 // currently forced on `InterChainMsg` by `cw-multi-test`'s `WasmKeeper` trait bounds.
-#[derive(Clone, Debug, Deserialize, Eq, JsonSchema, PartialEq, Serialize)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub struct ProtobufAny {
     pub type_url: String,
@@ -48,7 +47,7 @@ impl From<CosmosAny> for ProtobufAny {
 }
 
 /// IbcFee defines struct for fees that refund the relayer for `SudoMsg` messages submission.
-#[derive(Clone, Debug, Deserialize, Eq, JsonSchema, PartialEq, Serialize)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub struct IbcFee {
     pub recv_fee: Vec<CwCoin>,
@@ -57,7 +56,7 @@ pub struct IbcFee {
 }
 
 /// Minimal replacement for `neutron_sdk::sudo::msg::RequestPacketTimeoutHeight`.
-#[derive(Clone, Debug, Deserialize, Eq, JsonSchema, PartialEq, Serialize)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub struct RequestPacketTimeoutHeight {
     pub revision_number: Option<u64>,
@@ -66,8 +65,7 @@ pub struct RequestPacketTimeoutHeight {
 
 /// Minimal replacement for `neutron_sdk::bindings::msg::NeutronMsg`.
 ///
-// TODO: Remove `JsonSchema` derives and the `schemars` dependency once we upgrade to cosmwasm-std v3.
-#[derive(Clone, Debug, Deserialize, Eq, JsonSchema, PartialEq, Serialize)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum InterChainMsg {
     RegisterAccount {
@@ -155,7 +153,7 @@ impl OpenAckVersion {
 }
 
 // Minimal replacement for `neutron_sdk::sudo::msg::RequestPacket`.
-#[derive(Clone, Deserialize, JsonSchema, PartialEq, Serialize)]
+#[derive(Clone, Deserialize, PartialEq, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub struct RequestPacket {
     pub sequence: Option<u64>,

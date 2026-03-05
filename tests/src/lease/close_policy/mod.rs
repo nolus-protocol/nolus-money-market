@@ -1,5 +1,3 @@
-use anyhow::Error;
-
 use ::lease::{
     api::{
         ExecuteMsg,
@@ -7,7 +5,11 @@ use ::lease::{
     },
     error::ContractError,
 };
-use sdk::{cosmwasm_std::Addr, cw_multi_test::AppResponse, testing};
+use sdk::{
+    cosmwasm_std::{Addr, StdError, StdResult},
+    cw_multi_test::AppResponse,
+    testing,
+};
 
 use crate::{
     common::{ADMIN, USER, test_case::response::ResponseWithInterChainMsgs},
@@ -42,7 +44,7 @@ fn change_err(
     lease: Addr,
     take_profit: Option<ChangeCmd>,
     stop_loss: Option<ChangeCmd>,
-) -> Error {
+) -> StdError {
     send_change(
         test_case,
         USER,
@@ -69,10 +71,10 @@ fn change_unauthorized(test_case: &mut LeaseTestCase, lease: Addr) {
     )
     .unwrap_err();
 
-    assert_eq!(
-        err.downcast_ref::<ContractError>(),
-        Some(&ContractError::Unauthorized(Error::Unauthorized {}))
-    );
+    assert!(matches!(
+        err.downcast_ref::<ContractError>().unwrap(),
+        &ContractError::Unauthorized(Error::Unauthorized {})
+    ));
 }
 
 fn send_change<'r>(
@@ -80,7 +82,7 @@ fn send_change<'r>(
     sender: &str,
     lease: Addr,
     change: ClosePolicyChange,
-) -> anyhow::Result<ResponseWithInterChainMsgs<'r, AppResponse>> {
+) -> StdResult<ResponseWithInterChainMsgs<'r, AppResponse>> {
     test_case.app.execute(
         testing::user(sender),
         lease,

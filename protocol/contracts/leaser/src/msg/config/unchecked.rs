@@ -67,13 +67,14 @@ mod test {
         };
 
         assert_eq!(
-            Ok(validated(spec, max_slippages)),
+            validated(spec, max_slippages),
             platform_tests::ser_de(&NonvalidatedConfig {
                 lease_interest_rate_margin: INTEREST_RATE_MARGIN,
                 lease_position_spec: spec,
                 lease_due_period: DUE_PERIOD,
                 lease_max_slippages: max_slippages,
             })
+            .unwrap()
         );
     }
 

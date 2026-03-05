@@ -83,7 +83,7 @@ mod test {
         Repo::open(deps.as_mut().storage, addr.clone(), &loan).expect("should open loan");
 
         let result = Repo::open(deps.as_mut().storage, addr.clone(), &loan);
-        assert_eq!(result, Err(ContractError::LoanExists {}));
+        assert!(matches!(result.unwrap_err(), ContractError::LoanExists {}));
 
         let mut loan = Repo::load(deps.as_ref().storage, addr.clone()).expect("should load loan");
 

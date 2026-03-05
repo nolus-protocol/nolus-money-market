@@ -171,7 +171,7 @@ mod test {
         // no deposit
         let info = test::lender_msg_no_funds();
         let response = super::try_claim_rewards(deps.as_mut(), env.clone(), info, None);
-        assert_eq!(response, Err(ContractError::NoDeposit {}));
+        assert!(matches!(response, Err(ContractError::NoDeposit {})));
 
         let bank =
             MockBankView::<TheCurrency, TheCurrency>::only_balance(INITIAL_LPP_BALANCE + DEPOSIT);
@@ -188,7 +188,7 @@ mod test {
         // pending rewards == 0
         let info = test::lender_msg_no_funds();
         let response = rewards::try_claim_rewards(deps.as_mut(), env, info, None);
-        assert_eq!(response, Err(ContractError::NoRewards {}));
+        assert!(matches!(response, Err(ContractError::NoRewards {})));
     }
 
     #[test]

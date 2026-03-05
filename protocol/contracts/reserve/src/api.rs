@@ -73,8 +73,8 @@ mod test {
     #[test]
     fn release() {
         assert_eq!(
-            Ok(QueryMsg::ProtocolPackageRelease {}),
-            platform_tests::ser_de(&versioning::query::ProtocolPackage::Release {}),
+            QueryMsg::ProtocolPackageRelease {},
+            platform_tests::ser_de(&versioning::query::ProtocolPackage::Release {}).unwrap(),
         );
     }
 }

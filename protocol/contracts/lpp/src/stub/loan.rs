@@ -32,7 +32,7 @@ where
     fn annual_interest_rate(&self) -> Percent100;
 }
 
-#[derive(Error, Debug, PartialEq)]
+#[derive(Error, Debug)]
 pub enum Error {
     #[error("[Lpp][Loan] {0}")]
     Platform(platform::error::Error),

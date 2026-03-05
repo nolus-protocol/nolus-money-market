@@ -1,5 +1,9 @@
 use lease::{api::ExecuteMsg, error::ContractError};
-use sdk::{cosmwasm_std::Addr, cw_multi_test::AppResponse, testing};
+use sdk::{
+    cosmwasm_std::{Addr, StdResult},
+    cw_multi_test::AppResponse,
+    testing,
+};
 
 use crate::{
     common::{
@@ -81,19 +85,18 @@ fn swap_on_repay() {
 
 pub(super) fn heal_no_inconsistency(app: &mut App, lease: Addr, caller: Addr) {
     let err = try_heal(app, lease, caller).unwrap_err();
-    let heal_err = err.downcast_ref::<ContractError>();
-    assert_eq!(Some(&ContractError::InconsistencyNotDetected()), heal_err);
+    assert!(matches!(
+        err.downcast_ref::<ContractError>().unwrap(),
+        &ContractError::InconsistencyNotDetected()
+    ));
 }
 
 pub(super) fn heal_no_rights(app: &mut App, lease: Addr, caller: Addr) {
     let err = try_heal(app, lease, caller).unwrap_err();
-    let heal_err = err.downcast_ref::<ContractError>();
-    assert_eq!(
-        Some(&ContractError::from(
-            access_control::error::Error::Unauthorized {}
-        )),
-        heal_err
-    );
+    assert!(matches!(
+        err.downcast_ref::<ContractError>().unwrap(),
+        &ContractError::Unauthorized(access_control::error::Error::Unauthorized {})
+    ));
 }
 
 // pub(super) fn heal_unsupported(app: &mut App, lease: Addr) {
@@ -117,6 +120,6 @@ fn try_heal(
     app: &mut App,
     lease: Addr,
     caller: Addr,
-) -> anyhow::Result<ResponseWithInterChainMsgs<'_, AppResponse>> {
+) -> StdResult<ResponseWithInterChainMsgs<'_, AppResponse>> {
     app.execute(caller, lease, &ExecuteMsg::Heal(), &[])
 }

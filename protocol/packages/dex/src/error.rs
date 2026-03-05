@@ -2,7 +2,7 @@ use thiserror::Error;
 
 use crate::swap;
 
-#[derive(Error, Debug, PartialEq)]
+#[derive(Error, Debug)]
 pub enum Error {
     #[error("[Dex] {0}")]
     Platform(#[from] platform::error::Error),

@@ -1,8 +1,9 @@
 use currencies::{Lpn, Lpns, PaymentGroup};
 use sdk::{
     cosmwasm_std::{
-        self, Binary, Deps, Env, Storage, Timestamp,
+        self,
         testing::{self as cw_testing},
+        Binary, Deps, Env, Storage, Timestamp,
     },
     testing::manage_state,
 };
@@ -46,8 +47,7 @@ fn migrate_oracle() {
 fn query_prices() {
     let mut deps = cw_testing::mock_dependencies();
 
-    manage_state::try_load_into_storage_from_csv(&mut deps.storage, "data/oracle_v2.txt".as_ref())
-        .expect("state load succeeded");
+    import_state(&mut deps.storage);
 
     let env = set_export_date_time(cw_testing::mock_env());
 

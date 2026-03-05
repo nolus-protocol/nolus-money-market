@@ -226,7 +226,7 @@ mod test_invariant {
             SuperGroup, SuperGroupTestC1, SuperGroupTestC2, SuperGroupTestC4, SuperGroupTestC5,
         },
     };
-    use sdk::cosmwasm_std::{self, StdError as CWError, StdResult as CWResult};
+    use sdk::cosmwasm_std::{self, StdResult as CWResult};
 
     use crate::test::coin;
     use crate::{
@@ -377,14 +377,7 @@ mod test_invariant {
     where
         G: Group,
     {
-        assert!(matches!(
-            r,
-            Err(CWError::ParseErr {
-                target_type,
-                msg: real_msg,
-                backtrace: _,
-            }) if target_type.contains("PriceDTO") && real_msg.contains(msg)
-        ));
+        assert!(r.expect_err("expected a parse error").to_string().contains(msg));
     }
 
     fn assert_err<G>(r: Result<PriceDTO<G>>, msg: &str)

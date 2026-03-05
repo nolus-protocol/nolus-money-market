@@ -244,10 +244,11 @@ mod test {
             )
             .unwrap();
 
-        assert_eq!(
-            Err(PriceFeedsError::NoPrice()),
+        assert!(matches!(
             feed.calc_price(&config, block_time, ONE_FEEDER)
-        );
+                .unwrap_err(),
+            PriceFeedsError::NoPrice()
+        ));
 
         let feed2_time = feed1_time + Duration::from_nanos(1);
         let feed2_price = price(19, 5000);
@@ -255,8 +256,8 @@ mod test {
             .add_observation(feeder1, feed2_time, feed2_price, &feed1_time)
             .unwrap();
         assert_eq!(
-            Ok(feed2_price),
-            feed.calc_price(&config, block_time, ONE_FEEDER)
+            feed2_price,
+            feed.calc_price(&config, block_time, ONE_FEEDER).unwrap()
         );
     }
 
@@ -285,14 +286,15 @@ mod test {
             SAMPLES_NUMBER,
             DISCOUNTING_FACTOR,
         );
-        assert_eq!(
-            Err(PriceFeedsError::NoPrice()),
+        assert!(matches!(
             feed.calc_price(&config, block_time, TWO_FEEDERS)
-        );
+                .unwrap_err(),
+            PriceFeedsError::NoPrice(),
+        ));
 
         assert_eq!(
-            Ok(feed1_price),
-            feed.calc_price(&config, block_time, ONE_FEEDER)
+            feed1_price,
+            feed.calc_price(&config, block_time, ONE_FEEDER).unwrap()
         );
     }
 
@@ -334,22 +336,24 @@ mod test {
             DISCOUNTING_FACTOR,
         );
         assert_eq!(
-            Ok(price(19, 5050)),
-            feed.calc_price(&config, feed2_time, TWO_FEEDERS)
+            price(19, 5050),
+            feed.calc_price(&config, feed2_time, TWO_FEEDERS).unwrap()
         );
         assert_eq!(
-            Ok(price(19, 5050)),
+            price(19, 5050),
             feed.calc_price(&config, block_time - Duration::from_nanos(1), TWO_FEEDERS)
+                .unwrap()
         );
         assert_eq!(
-            Ok(price(19, 5000)),
-            feed.calc_price(&config, block_time, TWO_FEEDERS)
+            price(19, 5000),
+            feed.calc_price(&config, block_time, TWO_FEEDERS).unwrap()
         );
 
-        assert_eq!(
-            Err(PriceFeedsError::NoPrice()),
+        assert!(matches!(
             feed.calc_price(&config, block_time + Duration::from_nanos(1), TWO_FEEDERS)
-        );
+                .unwrap_err(),
+            PriceFeedsError::NoPrice()
+        ));
     }
 
     #[test]
@@ -408,8 +412,8 @@ mod test {
             .unwrap();
 
         assert_eq!(
-            Ok(price(19, 5010)),
-            feed.calc_price(&config, block_time, ONE_FEEDER)
+            price(19, 5010),
+            feed.calc_price(&config, block_time, ONE_FEEDER).unwrap()
         );
     }
 

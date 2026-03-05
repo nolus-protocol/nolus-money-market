@@ -14,7 +14,7 @@ use profit::{
     typedefs::CadenceHours,
 };
 use sdk::{
-    cosmwasm_std::{self, Addr, Event},
+    cosmwasm_std::{self, Addr, Event, Uint128},
     cw_multi_test::AppResponse,
     testing,
 };
@@ -121,7 +121,6 @@ fn update_config_unauthorized() {
                 &[],
             )
             .unwrap_err()
-            .root_cause()
             .to_string()
             .contains("Unauthorized")
     );
@@ -282,7 +281,9 @@ where
         );
 
         assert_eq!(
-            transfer_amount.amount.u128(),
+            Uint128::try_from(transfer_amount.amount)
+                .unwrap()
+                .u128(),
             lpn_profit_swap_out.to_primitive()
         );
 
@@ -549,20 +550,23 @@ fn integration_with_time_alarms() {
         .unwrap_response();
 
     assert_eq!(
-        cosmwasm_std::from_json(resp.data.clone().unwrap()),
-        Ok(DispatchAlarmsResponse(1))
+        cosmwasm_std::from_json::<DispatchAlarmsResponse>(resp.data.clone().unwrap()).unwrap(),
+        DispatchAlarmsResponse(1)
     );
 
     resp.assert_event(&Event::new("wasm-time-alarm").add_attribute("delivered", "success"));
 
     assert_eq!(
-        test_case
-            .app
-            .query()
-            .query_balance(test_case.address_book.profit().clone(), Nls::bank())
-            .unwrap()
-            .amount
-            .u128(),
+        Uint128::try_from(
+            test_case
+                .app
+                .query()
+                .query_balance(test_case.address_book.profit().clone(), Nls::bank())
+                .unwrap()
+                .amount
+        )
+        .unwrap()
+        .u128(),
         ::profit::profit::Profit::IBC_FEE_RESERVE.to_primitive(),
     );
 }

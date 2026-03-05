@@ -274,8 +274,11 @@ mod test {
     #[test]
     fn release() {
         assert_eq!(
-            Ok(QueryMsg::<Lpns>::ProtocolPackageRelease {}),
-            platform_tests::ser_de(&versioning::query::ProtocolPackage::Release {}),
+            QueryMsg::<Lpns>::ProtocolPackageRelease {},
+            platform_tests::ser_de::<_, QueryMsg<Lpns>>(
+                &versioning::query::ProtocolPackage::Release {}
+            )
+            .unwrap(),
         );
 
         platform_tests::ser_de::<_, QueryMsg<Lpns>>(
@@ -301,14 +304,14 @@ mod test {
         };
 
         assert_eq!(
-            Ok(ExpectedCurrency {
+            ExpectedCurrency {
                 ticker: definition_in.ticker.into(),
                 bank_symbol: definition_in.bank_symbol.into(),
                 dex_symbol: definition_in.dex_symbol.into(),
                 decimal_digits: definition_in.decimal_digits,
                 group: currency_in.group
-            }),
-            platform_tests::ser_de(&currency_in),
+            },
+            platform_tests::ser_de(&currency_in).unwrap(),
         );
 
         platform_tests::ser_de::<_, QueryMsg<Lpns>>(

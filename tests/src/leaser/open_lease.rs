@@ -7,8 +7,8 @@ use finance::coin::{Amount, Coin};
 use sdk::{
     cosmwasm_ext::Response,
     cosmwasm_std::{Addr, DepsMut, Env, Event, MessageInfo},
-    cw_multi_test::{self as cw_test, AppResponse, ContractWrapper},
-    testing,
+    cw_multi_test::{self as cw_test, AppResponse},
+    testing::{self, CwContractWrapper},
 };
 
 use crate::common::{
@@ -133,7 +133,7 @@ fn open_multiple_loans() {
 }
 
 #[test]
-#[should_panic(expected = "Insufficient balance")]
+#[should_panic(expected = "InsufficientBalance")]
 fn open_loans_lpp_fails() {
     type LeaseCurrency = LeaseC1;
 
@@ -157,7 +157,7 @@ fn open_loans_lpp_fails() {
     let mut test_case = TestCaseBuilder::<Lpn>::new()
         .init_lpp(
             Some(
-                ContractWrapper::new(
+                CwContractWrapper::new(
                     mock_lpp_execute,
                     lpp::contract::instantiate,
                     lpp::contract::query,
@@ -196,13 +196,13 @@ fn open_loans_lpp_fails() {
 }
 
 #[test]
-#[should_panic(expected = "The transaction amount should worth")]
+#[should_panic(expected = "InsufficientTransactionAmount")]
 fn open_loans_insufficient_transaction_amount() {
     open_loans_insufficient_amount(49);
 }
 
 #[test]
-#[should_panic(expected = "The asset amount should worth")]
+#[should_panic(expected = "InsufficientAssetAmount")]
 fn open_loans_insufficient_asset() {
     open_loans_insufficient_amount(62);
 }

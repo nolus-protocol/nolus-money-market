@@ -6,7 +6,7 @@ use finance::duration::Duration;
 use platform::contract::Code;
 use sdk::{
     cosmwasm_ext::{CosmosMsg, InterChainMsg},
-    cosmwasm_std::{Addr, BlockInfo, Coin as CwCoin, Empty, QuerierWrapper},
+    cosmwasm_std::{Addr, BlockInfo, Coin as CwCoin, Empty, QuerierWrapper, StdResult},
     cw_multi_test::{AppResponse, Contract as CwContract, Executor},
     testing::InterChainMsgReceiver,
 };
@@ -53,7 +53,7 @@ impl App {
         sender: Addr,
         recipient: Addr,
         amount: &[CwCoin],
-    ) -> anyhow::Result<()> {
+    ) -> StdResult<()> {
         self.app
             .send_tokens(sender, recipient, amount)
             .map(|_: AppResponse| ())
@@ -67,7 +67,7 @@ impl App {
         send_funds: &[CwCoin],
         label: U,
         admin: Option<String>,
-    ) -> anyhow::Result<ResponseWithInterChainMsgs<'r, Addr>>
+    ) -> StdResult<ResponseWithInterChainMsgs<'r, Addr>>
     where
         T: Debug + Serialize,
         U: Into<String>,
@@ -83,7 +83,7 @@ impl App {
         contract_addr: Addr,
         msg: &T,
         send_funds: &[CwCoin],
-    ) -> anyhow::Result<ResponseWithInterChainMsgs<'r, AppResponse>>
+    ) -> StdResult<ResponseWithInterChainMsgs<'r, AppResponse>>
     where
         T: Debug + Serialize,
     {
@@ -96,7 +96,7 @@ impl App {
         &mut self,
         sender: Addr,
         msg: T,
-    ) -> anyhow::Result<ResponseWithInterChainMsgs<'_, AppResponse>>
+    ) -> StdResult<ResponseWithInterChainMsgs<'_, AppResponse>>
     where
         T: Into<CosmosMsg>,
     {
@@ -109,7 +109,7 @@ impl App {
         contract_addr: Addr,
         msg: &T,
         new_code_id: u64,
-    ) -> anyhow::Result<ResponseWithInterChainMsgs<'r, AppResponse>>
+    ) -> StdResult<ResponseWithInterChainMsgs<'r, AppResponse>>
     where
         T: Serialize,
     {
@@ -122,7 +122,7 @@ impl App {
         &'r mut self,
         contract_addr: T,
         msg: &U,
-    ) -> anyhow::Result<ResponseWithInterChainMsgs<'r, AppResponse>>
+    ) -> StdResult<ResponseWithInterChainMsgs<'r, AppResponse>>
     where
         T: Into<Addr>,
         U: Serialize,
@@ -130,9 +130,12 @@ impl App {
         self.with_mock_app(|app: &mut MockApp| app.wasm_sudo(contract_addr, msg))
     }
 
-    pub fn with_mock_app<F, R>(&mut self, f: F) -> anyhow::Result<ResponseWithInterChainMsgs<'_, R>>
+    pub fn with_mock_app<F, R>(
+        &mut self,
+        f: F,
+    ) -> StdResult<ResponseWithInterChainMsgs<'_, R>>
     where
-        F: FnOnce(&'_ mut MockApp) -> anyhow::Result<R>,
+        F: FnOnce(&'_ mut MockApp) -> StdResult<R>,
     {
         assert_eq!(self.message_receiver.try_recv().ok(), None);
 

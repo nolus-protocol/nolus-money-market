@@ -106,15 +106,16 @@ mod test {
     #[test]
     fn dto_to_type() {
         assert_eq!(
-            Ok(Price::<PlatformGroup, Stable>::test_new::<BaseC, _>(
+            Price::<PlatformGroup, Stable>::test_new::<BaseC, _>(
                 AMOUNT,
                 AMOUNT_QUOTE,
                 ExternalQuoteC::ticker()
-            )),
+            ),
             platform_tests::ser_de(&BasePrice::new(
                 GenericCoin::<BaseC>::new(AMOUNT).into(),
                 GenericCoin::<ExternalQuoteC>::new(AMOUNT_QUOTE)
-            )),
+            ))
+            .unwrap(),
         );
     }
 

@@ -188,8 +188,9 @@ mod test {
     fn anomaly_resolution_api_match() {
         let admin = Addr::unchecked("my test admin");
         assert_eq!(
-            Ok(AccessCheck::AnomalyResolution { by: admin.clone() }),
-            platform_tests::ser_de(&QueryMsg::CheckAnomalyResolutionPermission { by: admin }),
+            AccessCheck::AnomalyResolution { by: admin.clone() },
+            platform_tests::ser_de(&QueryMsg::CheckAnomalyResolutionPermission { by: admin })
+                .unwrap(),
         );
     }
 
@@ -198,26 +199,26 @@ mod test {
         let customer = Addr::unchecked("c");
 
         assert_eq!(
-            Ok(FinalizerExecuteMsg::FinalizeLease {
+            FinalizerExecuteMsg::FinalizeLease {
                 customer: customer.clone()
-            }),
-            platform_tests::ser_de(&ExecuteMsg::FinalizeLease { customer }),
+            },
+            platform_tests::ser_de(&ExecuteMsg::FinalizeLease { customer }).unwrap(),
         );
     }
 
     #[test]
     fn max_slippage_api_match() {
         assert_eq!(
-            Ok(PositionLimits::MaxSlippages {}),
-            platform_tests::ser_de(&QueryMsg::MaxSlippages {}),
+            PositionLimits::MaxSlippages {},
+            platform_tests::ser_de(&QueryMsg::MaxSlippages {}).unwrap(),
         );
     }
 
     #[test]
     fn release() {
         assert_eq!(
-            Ok(QueryMsg::ProtocolPackageRelease {}),
-            platform_tests::ser_de(&versioning::query::ProtocolPackage::Release {}),
+            QueryMsg::ProtocolPackageRelease {},
+            platform_tests::ser_de(&versioning::query::ProtocolPackage::Release {}).unwrap(),
         );
 
         platform_tests::ser_de::<_, QueryMsg>(&versioning::query::PlatformPackage::Release {})
@@ -240,13 +241,13 @@ mod test {
         let new_config = tests::new_config();
 
         assert_eq!(
-            Ok(ConfigInlineInSudoMsg::Config {
+            ConfigInlineInSudoMsg::Config {
                 lease_interest_rate_margin: new_config.lease_interest_rate_margin,
                 lease_position_spec: new_config.lease_position_spec,
                 lease_due_period: new_config.lease_due_period,
                 lease_max_slippages: new_config.lease_max_slippages
-            }),
-            platform_tests::ser_de(&SudoMsg::Config(new_config)),
+            },
+            platform_tests::ser_de(&SudoMsg::Config(new_config)).unwrap(),
         );
     }
 

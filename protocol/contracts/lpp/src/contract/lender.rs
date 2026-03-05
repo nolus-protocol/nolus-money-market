@@ -572,8 +572,7 @@ mod test {
                     DEPOSIT_LPN,
                     DEFAULT_MIN_UTILIZATION,
                     |mut store, _config, bank, now| {
-                        assert_eq!(
-                            ContractError::InsufficientBalance {},
+                        assert!(matches!(
                             lender::try_withdraw::<TheCurrency, _>(
                                 &mut store,
                                 testing::no_transfers(bank),
@@ -582,8 +581,9 @@ mod test {
                                 &now,
                                 WithdrawEmitter::new(&sdk_testing::mock_env()),
                             )
-                            .unwrap_err()
-                        );
+                            .unwrap_err(),
+                            ContractError::InsufficientBalance
+                        ));
                     },
                 )
             }
@@ -600,8 +600,7 @@ mod test {
                         lpp.try_open_loan(now, LOAN_AMOUNT).unwrap();
                         lpp.save(&mut store).unwrap();
 
-                        assert_eq!(
-                            ContractError::NoLiquidity {},
+                        assert!(matches!(
                             lender::try_withdraw::<TheCurrency, _>(
                                 &mut store,
                                 testing::no_transfers(bank),
@@ -610,8 +609,9 @@ mod test {
                                 &now,
                                 WithdrawEmitter::new(&sdk_testing::mock_env()),
                             )
-                            .unwrap_err()
-                        );
+                            .unwrap_err(),
+                            ContractError::NoLiquidity {},
+                        ));
                     },
                 )
             }
@@ -793,9 +793,9 @@ mod test {
                     );
 
                     if expect_error {
-                        assert_eq!(
+                        matches!(
+                            result.unwrap_err(),
                             ContractError::UtilizationBelowMinimalRates,
-                            result.unwrap_err()
                         );
                     } else {
                         assert!(result.is_ok(), "{result:#?}");

@@ -14,7 +14,7 @@ pub type Result<T> = StdResult<T, Error>;
 #[derive(Error, Debug, PartialEq)]
 pub enum Error {
     #[error("[Oracle; Stub] Failed to query configuration! Cause: {0}")]
-    StubConfigQuery(StdError),
+    StubConfigQuery(String),
 
     #[error("[Oracle; Stub] Invalid configuration! Cause: {0}")]
     StubConfigInvalid(CurrencyError),
@@ -24,12 +24,12 @@ pub enum Error {
 
     // TODO replace SymbolStatic and SymbolOwned with CurrencyDTO<G> where approptiate, i.e. the string represent a currency
     #[error(
-        "[Oracle] Failed to fetch price for the pair {from}/{to}! Possibly no price is available! Cause: {error}"
+        "[Oracle] Failed to fetch price for the pair {from}/{to}! Possibly no price is available! Cause: {cause}"
     )]
     FailedToFetchPrice {
         from: SymbolStatic,
         to: SymbolStatic,
-        error: StdError,
+        cause: String,
     },
 
     #[error("[Oracle] Overflow during calculating the total value. `{details}`")]
@@ -37,12 +37,16 @@ pub enum Error {
 }
 
 impl Error {
+    pub fn stub_config_query(err: &StdError) -> Self {
+        Self::StubConfigQuery(err.to_string())
+    }
+
     pub fn price_overflow<C, P>(amount: C, price: P) -> Self
     where
         C: Display,
         P: Debug,
     {
-        Error::PriceCalculationOverflow {
+        Self::PriceCalculationOverflow {
             details: format!("amount: {}, price: {:?}", amount, price),
         }
     }
@@ -51,7 +55,7 @@ impl Error {
 pub fn failed_to_fetch_price<G, QuoteG>(
     from: &CurrencyDTO<G>,
     to: &CurrencyDTO<QuoteG>,
-    error: StdError,
+    error: &StdError,
 ) -> Error
 where
     G: Group,
@@ -60,6 +64,6 @@ where
     Error::FailedToFetchPrice {
         from: from.into_symbol::<Tickers<G>>(),
         to: to.into_symbol::<Tickers<G>>(),
-        error,
+        cause: error.to_string(),
     }
 }

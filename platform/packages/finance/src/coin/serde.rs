@@ -41,8 +41,8 @@ mod test {
     fn distinct_repr() {
         let amount = 432;
         assert_eq!(
-            to_json_vec(&coin::coin1(amount)),
-            to_json_vec(&coin::coin2(amount))
+            to_json_vec(&coin::coin1(amount)).unwrap(),
+            to_json_vec(&coin::coin2(amount)).unwrap()
         );
     }
 
@@ -51,7 +51,7 @@ mod test {
         let amount = 134;
         let nls_bin = to_json_vec(&coin::coin1(amount)).unwrap();
         let res = from_json::<Coin<SuperGroupTestC2>>(&nls_bin);
-        assert_eq!(Ok(coin::coin2(amount)), res);
+        assert_eq!(coin::coin2(amount), res.unwrap());
     }
 
     fn serialize_deserialize_coin<C>(amount: Amount, exp_txt: &str)

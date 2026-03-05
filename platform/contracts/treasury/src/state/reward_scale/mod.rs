@@ -75,7 +75,7 @@ impl RewardScale {
             .zip(self.bars.iter().skip(1))
             .any(|(left, right)| left.tvl == right.tvl)
         {
-            return Err(StdError::generic_err(if NEW {
+            return Err(StdError::msg(if NEW {
                 "Argument vector contains duplicates!"
             } else {
                 "Argument vector contains duplicates of already defined bars!"
@@ -102,11 +102,11 @@ impl TryFrom<Vec<Bar>> for RewardScale {
 
     fn try_from(bars: Vec<Bar>) -> Result<Self, Self::Error> {
         if bars.is_empty() {
-            return Err(StdError::generic_err("Argument vector contains no bars!"));
+            return Err(StdError::msg("Argument vector contains no bars!"));
         }
 
         if !bars.iter().any(|bar| bar.tvl == Default::default()) {
-            return Err(StdError::generic_err("No zero TVL reward scale bar found!"));
+            return Err(StdError::msg("No zero TVL reward scale bar found!"));
         }
 
         Self { bars: vec![] }.internal_add_non_overlapping::<true>(bars)

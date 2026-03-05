@@ -28,33 +28,7 @@ pub(crate) const BASE_INTEREST_RATE: Percent100 = Percent100::from_permille(70);
 pub(crate) const UTILIZATION_OPTIMAL: Percent100 = Percent100::from_permille(700);
 pub(crate) const ADDON_OPTIMAL_INTEREST_RATE: Percent100 = Percent100::from_permille(20);
 
-type CwContractWrapper<
-    ExecMsg,
-    ExecErr,
-    InstMsg,
-    InstErr,
-    QueryMsg,
-    QueryErr,
-    Sudo = Empty,
-    SudoErr = anyhow::Error,
-    ReplyErr = anyhow::Error,
-    MigrMsg = Empty,
-    MigrErr = anyhow::Error,
-> = testing::CwContractWrapper<
-    ExecMsg,       // execute msg
-    InstMsg,       // instantiate msg
-    QueryMsg,      // query msg
-    ExecErr,       // execute err
-    InstErr,       // instantiate err
-    QueryErr,      // query err
-    InterChainMsg, // C
-    Empty,         // Q
-    Sudo,          // sudo msg
-    SudoErr,       // sudo err
-    ReplyErr,      // reply err
-    MigrMsg,       // migrate msg
-    MigrErr,       // migrate err
->;
+type CwContractWrapper = testing::CwContractWrapper;
 
 pub mod ibc;
 pub mod lease;

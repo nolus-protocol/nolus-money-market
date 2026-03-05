@@ -1,5 +1,3 @@
-use std::result::Result as StdResult;
-
 use currencies::{Lpn, Lpns, Nls, testing::LeaseC1};
 use currency::CurrencyDef;
 use finance::{
@@ -22,7 +20,7 @@ use lpp::{
 };
 use platform::{bank, coin_legacy};
 use sdk::{
-    cosmwasm_std::{Addr, Event, StdError as CosmStdError},
+    cosmwasm_std::{Addr, Event, StdError as CosmStdError, StdResult},
     cw_multi_test::AppResponse,
     testing,
 };
@@ -150,7 +148,7 @@ fn open_loan_unauthorized_contract_id() {
 }
 
 #[test]
-#[should_panic(expected = "No liquidity")]
+#[should_panic(expected = "NoLiquidity")]
 fn open_loan_no_liquidity() {
     let mut test_case = TestCaseBuilder::<Lpn>::new()
         .init_lpp(
@@ -988,7 +986,7 @@ fn try_open_loan<'a, ProtoReg, T, P, R, L, O, TAlarms>(
     lender: Addr,
     amount: Amount,
     send_funds: &[CwCoin],
-) -> anyhow::Result<ResponseWithInterChainMsgs<'a, AppResponse>> {
+) -> StdResult<ResponseWithInterChainMsgs<'a, AppResponse>> {
     test_case.app.execute(
         lender,
         contract_address(test_case),
@@ -1030,7 +1028,7 @@ fn try_distribute_rewards<ProtoReg, T, P, R, L, O, TAlarms>(
     test_case: &mut TestCase<ProtoReg, T, P, R, L, Addr, O, TAlarms>,
     lender: Addr,
     amount: Amount,
-) -> anyhow::Result<ResponseWithInterChainMsgs<'_, AppResponse>> {
+) -> StdResult<ResponseWithInterChainMsgs<'_, AppResponse>> {
     test_case.app.execute(
         lender,
         contract_address(test_case),
@@ -1056,7 +1054,7 @@ fn try_burn<ProtoReg, T, P, R, L, O, TAlarms>(
     test_case: &mut TestCase<ProtoReg, T, P, R, L, Addr, O, TAlarms>,
     lender: Addr,
     amount: Amount,
-) -> anyhow::Result<ResponseWithInterChainMsgs<'_, AppResponse>> {
+) -> StdResult<ResponseWithInterChainMsgs<'_, AppResponse>> {
     test_case.app.execute(
         lender,
         contract_address(test_case),
@@ -1082,7 +1080,7 @@ fn repay_loan<Currency>(
     repay_amount: Amount,
     test_case: &mut LeaseTestCase,
     loan_addr2: Addr,
-) -> anyhow::Result<ResponseWithInterChainMsgs<'_, AppResponse>>
+) -> StdResult<ResponseWithInterChainMsgs<'_, AppResponse>>
 where
     Currency: CurrencyDef,
 {
@@ -1100,7 +1098,7 @@ fn try_claim_rewards<ProtoReg, T, P, R, L, O, TAlarms>(
     test_case: &mut TestCase<ProtoReg, T, P, R, L, Addr, O, TAlarms>,
     lender: Addr,
     other_recipient: Option<Addr>,
-) -> anyhow::Result<ResponseWithInterChainMsgs<'_, AppResponse>> {
+) -> StdResult<ResponseWithInterChainMsgs<'_, AppResponse>> {
     test_case.app.execute(
         lender,
         contract_address(test_case),

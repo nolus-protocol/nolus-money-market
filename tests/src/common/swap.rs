@@ -112,7 +112,7 @@ where
 pub(crate) fn do_swap_with_error(
     app: &mut App,
     requester_contract: Addr,
-) -> anyhow::Result<ResponseWithInterChainMsgs<'_, AppResponse>> {
+) -> sdk::cosmwasm_std::StdResult<ResponseWithInterChainMsgs<'_, AppResponse>> {
     send_error_response(app, requester_contract)
 }
 
@@ -179,6 +179,6 @@ fn send_response<'r>(
 fn send_error_response(
     app: &mut App,
     requester_contract: Addr,
-) -> anyhow::Result<ResponseWithInterChainMsgs<'_, AppResponse>> {
+) -> sdk::cosmwasm_std::StdResult<ResponseWithInterChainMsgs<'_, AppResponse>> {
     ibc::send_error(app, requester_contract.clone())
 }

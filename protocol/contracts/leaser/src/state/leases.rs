@@ -124,7 +124,7 @@ mod test {
         assert_lease_not_exist(&storage);
         Leases::cache_open_req(&mut storage, &test_customer()).unwrap();
 
-        assert_eq!(Ok(true), Leases::save(&mut storage, test_lease()));
+        assert!(Leases::save(&mut storage, test_lease()).unwrap());
         assert_lease_exist(&storage);
         assert!(!Leases::empty(&storage));
     }
@@ -133,11 +133,11 @@ mod test {
     fn test_save_same_lease() {
         let mut storage = MockStorage::default();
         Leases::cache_open_req(&mut storage, &test_customer()).unwrap();
-        assert_eq!(Ok(true), Leases::save(&mut storage, test_lease()));
+        assert!(Leases::save(&mut storage, test_lease()).unwrap());
         assert_lease_exist(&storage);
 
         Leases::cache_open_req(&mut storage, &test_customer()).unwrap();
-        assert_eq!(Ok(false), Leases::save(&mut storage, test_lease()));
+        assert!(!Leases::save(&mut storage, test_lease()).unwrap());
         assert_lease_exist(&storage);
     }
 
@@ -146,12 +146,12 @@ mod test {
         let mut storage = MockStorage::default();
         Leases::cache_open_req(&mut storage, &test_customer()).unwrap();
         assert!(Leases::empty(&storage));
-        assert_eq!(Ok(true), Leases::save(&mut storage, test_lease()));
+        assert!(Leases::save(&mut storage, test_lease()).unwrap());
         assert_lease_exist(&storage);
         assert!(!Leases::empty(&storage));
 
         Leases::cache_open_req(&mut storage, &test_customer()).unwrap();
-        assert_eq!(Ok(true), Leases::save(&mut storage, test_another_lease()));
+        assert!(Leases::save(&mut storage, test_another_lease()).unwrap());
         assert_lease_exist(&storage);
         assert!(lease_exist(
             &storage,
@@ -167,13 +167,13 @@ mod test {
         assert_lease_not_exist(&storage);
         assert!(Leases::empty(&storage));
 
-        assert_eq!(
-            Ok(false),
-            Leases::remove(
+        assert!(
+            !Leases::remove(
                 &mut storage,
                 Addr::unchecked("customer"),
                 &Addr::unchecked("lease1"),
             )
+            .unwrap()
         );
     }
 
@@ -187,10 +187,7 @@ mod test {
         assert_lease_exist(&storage);
         assert!(!Leases::empty(&storage));
 
-        assert_eq!(
-            Ok(true),
-            Leases::remove(&mut storage, test_customer(), &test_lease(),)
-        );
+        assert!(Leases::remove(&mut storage, test_customer(), &test_lease(),).unwrap());
         assert_lease_not_exist(&storage);
         assert!(Leases::empty(&storage));
     }
@@ -219,16 +216,12 @@ mod test {
         assert_another_lease_exist(&storage);
         assert!(!Leases::empty(&storage));
 
-        assert_eq!(
-            Ok(true),
-            Leases::remove(&mut storage, test_customer(), &test_lease(),)
-        );
+        assert!(Leases::remove(&mut storage, test_customer(), &test_lease()).unwrap());
         assert_lease_not_exist(&storage);
         assert!(!Leases::empty(&storage));
 
-        assert_eq!(
-            Ok(true),
-            Leases::remove(&mut storage, test_another_customer(), &test_another_lease(),)
+        assert!(
+            Leases::remove(&mut storage, test_another_customer(), &test_another_lease(),).unwrap()
         );
         assert!(!lease_exist(
             &storage,
@@ -237,14 +230,8 @@ mod test {
         ));
         assert!(!Leases::empty(&storage));
 
-        assert_eq!(
-            Ok(false),
-            Leases::remove(&mut storage, test_customer(), &test_lease(),)
-        );
-        assert_eq!(
-            Ok(true),
-            Leases::remove(&mut storage, test_customer(), &test_another_lease(),)
-        );
+        assert!(!Leases::remove(&mut storage, test_customer(), &test_lease(),).unwrap());
+        assert!(Leases::remove(&mut storage, test_customer(), &test_another_lease()).unwrap(),);
         assert!(!lease_exist(
             &storage,
             test_customer(),

@@ -2,7 +2,7 @@ use thiserror::Error;
 
 use sdk::cosmwasm_std::StdError;
 
-#[derive(Error, Debug, PartialEq)]
+#[derive(Error, Debug)]
 pub enum AlarmError {
     #[error("[Market Price; Alarm] Failed to load next subscriber! Cause: {0}")]
     IteratorLoadFailed(StdError),

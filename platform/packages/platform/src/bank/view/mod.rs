@@ -170,18 +170,18 @@ mod test {
     fn cache_view_ok() {
         let view = testing::MockBankView::new(BALANCE1, BALANCE2);
         let cache = super::cache::<SuperGroupTestC1, _>(view);
-        assert_eq!(Ok(BALANCE1), cache.balance());
-        assert_eq!(Ok(BALANCE2), cache.balance());
-        assert_eq!(Ok(BALANCE2), cache.balance());
+        assert_eq!(BALANCE1, cache.balance().unwrap());
+        assert_eq!(BALANCE2, cache.balance().unwrap());
+        assert_eq!(BALANCE2, cache.balance().unwrap());
     }
 
     #[test]
     fn query_once() {
         let view = testing::take_balance_once(BALANCE1, testing::not_taking_balance());
         let cache = super::cache::<SuperGroupTestC1, _>(view);
-        assert_eq!(Ok(BALANCE1), cache.balance());
-        assert_eq!(Ok(BALANCE1), cache.balance());
-        assert_eq!(Ok(BALANCE1), cache.balance());
+        assert_eq!(BALANCE1, cache.balance().unwrap());
+        assert_eq!(BALANCE1, cache.balance().unwrap());
+        assert_eq!(BALANCE1, cache.balance().unwrap());
     }
 
     #[test]
@@ -191,9 +191,9 @@ mod test {
             testing::take_balance_once(BALANCE2, testing::not_taking_balance()),
         );
         let cache = super::cache::<SuperGroupTestC1, _>(super::cache::<SuperGroupTestC2, _>(view));
-        assert_eq!(Ok(BALANCE1), cache.balance());
-        assert_eq!(Ok(BALANCE2), cache.balance());
-        assert_eq!(Ok(BALANCE2), cache.balance());
-        assert_eq!(Ok(BALANCE1), cache.balance());
+        assert_eq!(BALANCE1, cache.balance().unwrap());
+        assert_eq!(BALANCE2, cache.balance().unwrap());
+        assert_eq!(BALANCE2, cache.balance().unwrap());
+        assert_eq!(BALANCE1, cache.balance().unwrap());
     }
 }
