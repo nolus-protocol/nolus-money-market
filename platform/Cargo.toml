@@ -55,7 +55,6 @@ versioning = { path = "packages/versioning", default-features = false }
 json-value = { path = "../tools/json-value", default-features = false }
 
 # General
-anyhow = "1"
 base64 = { version = "0.22", default-features = false }
 gcd = "2"
 serde = { version = "1", default-features = false }

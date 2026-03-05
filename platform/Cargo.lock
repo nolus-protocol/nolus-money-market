@@ -1320,7 +1320,6 @@ dependencies = [
 name = "sdk"
 version = "0.2.1"
 dependencies = [
- "anyhow",
  "base64",
  "cosmos-sdk-proto",
  "cosmwasm-std",
