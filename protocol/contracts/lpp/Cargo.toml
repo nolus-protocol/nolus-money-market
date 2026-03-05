@@ -20,10 +20,11 @@ crate-type = ["cdylib", "rlib"]
 
 [features]
 contract = [
+    "cosmwasm-std/exports",
     "stub",
     "sdk/contract",
     "dep:access-control",
-    "cosmwasm-std/exports",
+    "dep:cosmwasm-std",
     "dep:oracle",
     "dep:oracle-platform",
 ]

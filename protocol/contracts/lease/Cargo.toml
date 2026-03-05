@@ -26,8 +26,9 @@ dex-osmosis = ["swap/dex-osmosis"]
 dex-test_impl = ["swap/dex-test_impl"]
 
 contract = [
-    "skel",
     "cosmwasm-std/exports",
+    "skel",
+    "dep:cosmwasm-std",
     "dep:enum_dispatch",
     "dep:lpp",
     "dep:oracle",

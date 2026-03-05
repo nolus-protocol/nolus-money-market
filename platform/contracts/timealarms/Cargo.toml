@@ -19,7 +19,7 @@ feature-groups = { contract-and-stub = { members = ["contract", "stub"], at-leas
 crate-type = ["cdylib", "rlib"]
 
 [features]
-contract = ["dep:time-oracle", "cosmwasm-std/exports", "stub"]
+contract = ["dep:time-oracle", "dep:cosmwasm-std", "cosmwasm-std/exports", "stub"]
 stub = []
 testing = []
 
