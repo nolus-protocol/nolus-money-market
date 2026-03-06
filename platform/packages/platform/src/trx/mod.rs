@@ -1,6 +1,5 @@
-use sdk::{
-    cosmos_sdk_proto::{Any, cosmos::base::abci::v1beta1::TxMsgData, traits::Message},
-    ica::ProtobufAny,
+use sdk::cosmos_sdk_proto::{
+    Any as ProtobufAny, cosmos::base::abci::v1beta1::TxMsgData, traits::Message,
 };
 
 use crate::{error::Error, result::Result};
@@ -20,7 +19,10 @@ impl Transaction {
         let mut buf = Vec::with_capacity(msg.encoded_len());
         msg.encode_raw(&mut buf);
 
-        self.msgs.push(ProtobufAny::new(msg_type.into(), buf));
+        self.msgs.push(ProtobufAny {
+            type_url: msg_type.into(),
+            value: buf,
+        });
     }
 
     pub(super) fn into_msgs(self) -> Vec<ProtobufAny> {
@@ -39,7 +41,7 @@ impl IntoIterator for Transaction {
     }
 }
 
-pub fn decode_msg_responses(data: &[u8]) -> Result<impl Iterator<Item = Any> + use<>> {
+pub fn decode_msg_responses(data: &[u8]) -> Result<impl Iterator<Item = ProtobufAny> + use<>> {
     TxMsgData::decode(data)
         .map(|tx_msg_data| tx_msg_data.msg_responses.into_iter())
         .map_err(Into::into)
@@ -48,7 +50,7 @@ pub fn decode_msg_responses(data: &[u8]) -> Result<impl Iterator<Item = Any> + u
 #[cfg(feature = "testing")]
 pub fn encode_msg_responses<I>(msgs: I) -> Vec<u8>
 where
-    I: Iterator<Item = Any>,
+    I: Iterator<Item = ProtobufAny>,
 {
     let tx = TxMsgData {
         msg_responses: msgs.collect(),
@@ -57,7 +59,7 @@ where
     tx.encode_to_vec()
 }
 
-pub fn decode_msg_response<T, M>(resp: Any, msg_type: T) -> Result<M>
+pub fn decode_msg_response<T, M>(resp: ProtobufAny, msg_type: T) -> Result<M>
 where
     T: Into<String>,
     M: Message + Default,
@@ -94,7 +96,7 @@ mod test {
         assert!(responses.next().is_none());
     }
 
-    fn decode_msg_responses(resp_base64: &str) -> impl Iterator<Item = Any> + use<> {
+    fn decode_msg_responses(resp_base64: &str) -> impl Iterator<Item = Any> {
         let resp = general_purpose::STANDARD.decode(resp_base64).unwrap();
         super::decode_msg_responses(&resp).unwrap()
     }

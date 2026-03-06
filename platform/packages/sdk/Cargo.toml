@@ -26,12 +26,12 @@ testing = [
     "cosmos_ibc",
 ]
 cosmos_ibc = ["dep:ibc-proto"]
-cosmos_proto = ["dep:cosmos-sdk-proto", "cosmos-sdk-proto/cosmwasm"]
+cosmos_proto = ["cosmos-sdk-proto/cosmwasm"]
 
 [dependencies]
 cosmwasm-std = { workspace = true }
 cw-storage-plus = { workspace = true, optional = true }
-cosmos-sdk-proto = { workspace = true, optional = true }
+cosmos-sdk-proto = { workspace = true }
 ibc-proto = { workspace = true, optional = true }
 
 base64 = { workspace = true, optional = true, features = ["alloc"] }

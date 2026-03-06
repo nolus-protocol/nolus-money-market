@@ -2,49 +2,7 @@ use serde::{Deserialize, Serialize};
 
 use cosmwasm_std::{Binary, Coin as CwCoin, CosmosMsg, CustomMsg, StdResult};
 
-#[cfg(feature = "cosmos_proto")]
-use super::cosmos_sdk_proto::Any as CosmosAny;
-
-/// Minimal replacement for `neutron_sdk::bindings::types::ProtobufAny`.
-///
-// TODO: Replace with `ibc_proto::Any` once cosmwasm-std v3 drops the `JsonSchema` requirement.
-// Exists only because `ibc_proto::Any` cannot derive `JsonSchema`, which is
-// currently forced on `InterChainMsg` by `cw-multi-test`'s `WasmKeeper` trait bounds.
-#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
-#[serde(rename_all = "snake_case")]
-pub struct ProtobufAny {
-    pub type_url: String,
-    pub value: Binary,
-}
-
-impl ProtobufAny {
-    pub fn new(type_url: String, value: Vec<u8>) -> Self {
-        Self {
-            type_url,
-            value: Binary::new(value),
-        }
-    }
-}
-
-#[cfg(feature = "cosmos_proto")]
-impl From<ProtobufAny> for CosmosAny {
-    fn from(p: ProtobufAny) -> Self {
-        Self {
-            type_url: p.type_url,
-            value: p.value.to_vec(),
-        }
-    }
-}
-
-#[cfg(feature = "cosmos_proto")]
-impl From<CosmosAny> for ProtobufAny {
-    fn from(a: CosmosAny) -> Self {
-        Self {
-            type_url: a.type_url,
-            value: Binary::new(a.value.to_vec()),
-        }
-    }
-}
+use crate::cosmos_sdk_proto::Any as ProtobufAny;
 
 /// IbcFee defines struct for fees that refund the relayer for `SudoMsg` messages submission.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]

@@ -3,7 +3,7 @@ use dex::swap::{ExactAmountIn, SwapPathSlice};
 use finance::coin::{Coin, CoinDTO};
 use oracle::api::swap::SwapTarget;
 use platform::trx::Transaction;
-use sdk::{cosmos_sdk_proto::Any as CosmosAny, ica::ProtobufAny};
+use sdk::cosmos_sdk_proto::Any as ProtobufAny;
 
 use crate::{
     Impl,
@@ -26,7 +26,7 @@ fn build_and_parse() {
         },
     ];
 
-    let request: CosmosAny =
+    let request: ProtobufAny =
         build_request(&expected_token_in, &expected_token_out, &expected_swap_path);
 
     let SwapRequest {
@@ -44,7 +44,7 @@ fn build_request(
     expected_token_in: &CoinDTO<SubGroup>,
     expected_token_out: &CoinDTO<SuperGroup>,
     expected_swap_path: SwapPathSlice<'_, SuperGroup>,
-) -> CosmosAny {
+) -> ProtobufAny {
     let mut tx = Transaction::default();
 
     <Impl as ExactAmountIn>::build_request(
@@ -58,9 +58,9 @@ fn build_request(
 
     let mut msgs = tx.into_iter();
 
-    let msg: ProtobufAny = msgs.next().unwrap();
+    let msg = msgs.next().unwrap();
 
     assert!(msgs.next().is_none());
 
-    CosmosAny::from(msg)
+    msg
 }

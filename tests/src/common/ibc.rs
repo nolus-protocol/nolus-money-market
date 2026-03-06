@@ -4,13 +4,16 @@ use currencies::PaymentGroup;
 use currency::{BankSymbols, CurrencyDTO, DexSymbols, Symbol, SymbolStatic};
 use finance::coin::Amount;
 use sdk::{
-    cosmos_sdk_proto::traits::{Message, Name},
+    cosmos_sdk_proto::{
+        Any as ProtobufAny,
+        traits::{Message, Name},
+    },
     cosmwasm_std::{Addr, Binary},
     cw_multi_test::AppResponse,
     ibc_proto::{
         cosmos::base::v1beta1::Coin as ProtobufCoin, ibc::applications::transfer::v1::MsgTransfer,
     },
-    ica::{ProtobufAny, RequestPacket, SudoMsg},
+    ica::{RequestPacket, SudoMsg},
     testing,
 };
 

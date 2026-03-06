@@ -1,4 +1,3 @@
-#[cfg(feature = "cosmos_proto")]
 pub use cosmos_sdk_proto;
 pub use cosmwasm_std;
 #[cfg(feature = "testing")]

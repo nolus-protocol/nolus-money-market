@@ -4,10 +4,9 @@ use currencies::PaymentGroup;
 use currency::{DexSymbols, Group, SymbolStatic};
 use finance::coin::Amount;
 use sdk::{
-    cosmos_sdk_proto::Any as CosmosAny,
+    cosmos_sdk_proto::Any as ProtobufAny,
     cosmwasm_std::{Addr, Binary, Coin as CwCoin},
     cw_multi_test::AppResponse,
-    ica::ProtobufAny,
     testing,
 };
 use swap::{
@@ -56,10 +55,7 @@ where
     let requests: Vec<SwapRequest<PaymentGroup, PaymentGroup>> = response
         .expect_submit_tx(connection_id, ica_id)
         .into_iter()
-        .map(|msg: ProtobufAny| {
-            let any: CosmosAny = msg.into();
-            <Impl as ExactAmountInSkel>::parse_request(any)
-        })
+        .map(|msg: ProtobufAny| <Impl as ExactAmountInSkel>::parse_request(msg))
         .collect();
 
     assert!(!requests.is_empty());
