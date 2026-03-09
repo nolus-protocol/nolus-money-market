@@ -9,22 +9,22 @@
 ## beneath the image's tag name when a concrete tag is opened.                ##
 ################################################################################
 
-### 3.22.1
-ARG alpine_digest="sha256:4bcff63911fcb4448bd4fdacec207030997caf25e9bea4045fa6c8c44de311d1"
+### 3.23.3
+ARG alpine_digest="sha256:25109184c71bdad752c8312a8623239686a9a2071e8825f20acb8f2198c3f659"
 
-ARG binaryen_checksum="e959f2170af4c20c552e9de3a0253704d6a9d2766e8fdb88e4d6ac4bae9388fe"
+ARG binaryen_checksum="e487e0eac1f02a6739816c617270b033e5d3f8ca90439301fd0286460322fd76"
 
-ARG binaryen_version="123"
+ARG binaryen_version="126"
 
-ARG cargo_audit_version="0.22.0"
+ARG cargo_audit_version="0.22.1"
 
-ARG cargo_udeps_version="0.1.57"
+ARG cargo_udeps_version="0.1.59"
 
-ARG cosmwasm_check_version="3.0.1"
+ARG cosmwasm_check_version="3.0.4"
 
 ARG cosmwasm_capabilities="cosmwasm_1_1,cosmwasm_1_2,iterator,neutron,staking,stargate"
 
-ARG git_cliff_version="2.10.0"
+ARG git_cliff_version="2.12.0"
 
 ARG platform_contracts_count="3"
 
@@ -37,11 +37,11 @@ ARG production_network_max_binary_size="5242880"
 
 ARG protocol_contracts_count="7"
 
-### 1.86.0-alpine3.21
-ARG rust_image_digest="sha256:661d708cc863ce32007cf46807a72062a80d2944a6fae9e0d83742d2e04d5375"
+### 1.94.0-alpine3.23
+ARG rust_image_digest="sha256:ef7b340d4201444fa2757dfddfd4c03be9d2bde468de7b7a68b0e9fabb794334"
 
-### 1.91.0
-ARG rust_nightly_version="2025-08-10"
+### 1.96.0
+ARG rust_nightly_version="2026-03-05"
 
 ARG test_network_build_profile="test_nets_release"
 
@@ -141,6 +141,8 @@ RUN \
 FROM tooling-rust AS cosmwasm-check
 
 RUN "apk" "add" "llvm-dev" "clang-static"
+
+ARG LLVM_CONFIG_PATH="llvm-config"
 
 ARG cosmwasm_check_version
 
@@ -244,7 +246,7 @@ COPY \
   --link=true \
   "/usr/local/cargo/bin/cargo-each" \
   "/usr/local/bin/"
-  
+
 FROM rust-ci AS test
 
 ENTRYPOINT ["/usr/local/bin/test.sh"]
@@ -278,6 +280,8 @@ ONBUILD COPY \
   --link=true \
   "." \
   "/src/platform"
+
+RUN "rustup" "component" "add" "rust-src"
 
 RUN "rustup" "target" "add" "wasm32-unknown-unknown"
 
