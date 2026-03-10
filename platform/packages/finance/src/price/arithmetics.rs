@@ -17,8 +17,8 @@ where
         // b / a + d / c = (b * c1 + d * a1) / (a1 * c1 * gcd(a, c))
         // taking into account that Price is like amount_quote/amount
         let (a1, c1) = self.amount.to_coprime_with(rhs.amount);
-        debug_assert_eq!(0, self.amount.to_primitive() % a1.to_primitive());
-        debug_assert_eq!(0, rhs.amount.to_primitive() % c1.to_primitive());
+        debug_assert!(self.amount.to_primitive().is_multiple_of(a1.to_primitive()));
+        debug_assert!(rhs.amount.to_primitive().is_multiple_of(c1.to_primitive()));
         let gcd: Amount = match self.amount.checked_div(a1.to_primitive()) {
             None => unreachable!("invariant on amount != 0 should have passed!"),
             Some(gcd) => gcd.to_primitive(),
@@ -326,7 +326,8 @@ mod test {
         );
 
         let big_int = Amount::MAX - 1;
-        assert!(big_int % 3 != 0 && big_int % 11 != 0);
+        assert!(!big_int.is_multiple_of(3));
+        assert!(!big_int.is_multiple_of(11));
         lossy_mul_impl(
             coin::coin2(big_int),
             coin::coin1(3),
@@ -336,7 +337,7 @@ mod test {
             QuoteQuoteCoin::new(3),
         );
 
-        assert_eq!(0, Amount::MAX % 5);
+        assert!(Amount::MAX.is_multiple_of(5));
         lossy_mul_impl(
             coin::coin2(Amount::MAX),
             coin::coin1(2),
@@ -423,10 +424,10 @@ mod test {
         let a2: Amount = 1 << shifts;
         let q2 = a2 / q1 + 3; // the aim is q1 * q2 > a2
 
-        assert!(a1 % q1 != 0);
-        assert!(a1 % q2 != 0);
-        assert!(a2 % q1 != 0);
-        assert!(a2 % q2 != 0);
+        assert!(!a1.is_multiple_of(q1));
+        assert!(!a1.is_multiple_of(q2));
+        assert!(!a2.is_multiple_of(q1));
+        assert!(!a2.is_multiple_of(q2));
         assert_eq!(1, a2 >> shifts);
 
         let a_exp = shift_product(a1, a2, shifts);
@@ -442,10 +443,10 @@ mod test {
     }
 
     fn lossy_mul_overflow_impl(a1: Amount, q1: Amount, a2: Amount, q2: Amount, shifts: u8) {
-        assert!(a1 % q1 != 0);
-        assert!(a1 % q2 != 0);
-        assert!(a2 % q1 != 0);
-        assert!(a2 % q2 != 0);
+        assert!(!a1.is_multiple_of(q1));
+        assert!(!a1.is_multiple_of(q2));
+        assert!(!a2.is_multiple_of(q1));
+        assert!(!a2.is_multiple_of(q2));
 
         assert!(shift_product(a1, a2, shifts) == 0 || shift_product(q1, q2, shifts) == 0);
         let price1 = price::total_of(coin::coin2(a1)).is(coin::coin1(q1));
