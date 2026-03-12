@@ -23,7 +23,7 @@ fn not_privileged() {
         change_admin(&mut test_case.app, leaser, user, admin)
             .expect_err("change lease admin by non authorized user should fail")
             .downcast_ref::<ContractError>(),
-        Some(&ContractError::Unauthorized(_))
+        Some(&ContractError::CheckPermission(_))
     ));
 }
 #[test]

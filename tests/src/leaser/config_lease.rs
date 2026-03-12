@@ -28,7 +28,7 @@ fn not_privileged() {
         config_leases(&mut test_case.app, leaser, user, Instantiator::new_config())
             .expect_err("config by non authorized user should fail")
             .downcast_ref::<ContractError>(),
-        Some(&ContractError::Unauthorized(_))
+        Some(&ContractError::CheckPermission(_))
     ));
 }
 
