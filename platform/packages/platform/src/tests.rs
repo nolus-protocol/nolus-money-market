@@ -57,3 +57,14 @@ where
             .expect("serialization succeeded")
     )
 }
+
+pub fn assert_ser_de<Expected, T>(expected: &Expected, obj: &T)
+where
+    T: Serialize,
+    Expected: Debug + for<'a> Deserialize<'a> + PartialEq,
+{
+    assert_eq!(
+        expected,
+        &self::ser_de::<_, Expected>(obj).expect("deserialization succeed")
+    );
+}

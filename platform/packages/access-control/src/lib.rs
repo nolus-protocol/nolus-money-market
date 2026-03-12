@@ -1,4 +1,7 @@
-use std::ops::{Deref, DerefMut};
+use std::{
+    ops::{Deref, DerefMut},
+    result::Result as StdResult,
+};
 
 use sdk::{
     cosmwasm_std::{Addr, Storage},
@@ -10,13 +13,14 @@ use self::error::{Error, Result};
 use self::permissions::SingleUserPermission;
 use self::user::User;
 
+pub mod composite;
 mod contract_owner;
 pub mod error;
 pub mod permissions;
 pub mod user;
 
 pub trait AccessPermission {
-    fn granted_to<U>(&self, user: &U) -> bool
+    fn granted_to<U>(&self, user: &U) -> StdResult<bool, Error>
     where
         U: User;
 }
@@ -24,14 +28,16 @@ pub trait AccessPermission {
 /// Checks if access is granted to the given user.
 pub fn check<P, U>(permission: &P, user: &U) -> Result
 where
-    P: AccessPermission + ?Sized,
+    P: AccessPermission,
     U: User,
 {
-    if permission.granted_to(user) {
-        Ok(())
-    } else {
-        Err(Error::Unauthorized {})
-    }
+    permission.granted_to(user).and_then(|granted| {
+        if granted {
+            Ok(())
+        } else {
+            Err(Error::Unauthorized {})
+        }
+    })
 }
 
 pub struct SingleUserAccess<'storage, S>

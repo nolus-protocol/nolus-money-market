@@ -2,8 +2,8 @@ use std::ops::{Deref, DerefMut};
 
 use serde::Serialize;
 
-use access_control::{AccessPermission, ContractOwnerAccess};
-use lease::api::{MigrateMsg as LeaseMigrateMsg, authz::AccessGranted};
+use access_control::ContractOwnerAccess;
+use lease::api::MigrateMsg as LeaseMigrateMsg;
 use platform::{
     contract::{self, Code, CodeId, Validator},
     error as platform_error,
@@ -28,7 +28,8 @@ use crate::{
     leaser::{self, Leaser},
     msg::{ConfigResponse, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg, SudoMsg},
     permissions::{
-        AnomalyResolutionPermission, ChangeLeaseAdminPermission, LeasesConfigurationPermission,
+        AnomalyResolutionPermission, ChangeLeaseAdminPermission, ClosePositionPermission,
+        LeasesConfigurationPermission,
     },
     result::ContractResult,
     state::{config::Config, leases::Leases},
@@ -58,7 +59,9 @@ pub fn instantiate(
 
     validate(&msg.lease_admin, deps.api)?;
 
-    ContractOwnerAccess::new(deps.storage.deref_mut()).grant_to(&info)?;
+    ContractOwnerAccess::new(deps.storage.deref_mut())
+        .grant_to(&info)
+        .map_err(ContractError::GrantPermission)?;
 
     new_code(msg.lease_code, &addr_validator)
         .map(|lease_code| Config::new(lease_code, msg))
@@ -105,7 +108,7 @@ pub fn execute(
             .config()
             .and_then(|ref config| {
                 access_control::check(&LeasesConfigurationPermission::new(config), &info)
-                    .map_err(Into::into)
+                    .map_err(ContractError::CheckPermission)
             })
             .and_then(|()| leaser::try_configure(deps.storage, new_config)),
         ExecuteMsg::FinalizeLease { customer } => {
@@ -127,7 +130,7 @@ pub fn execute(
             to_release,
         } => ContractOwnerAccess::new(deps.storage.deref())
             .check(&info)
-            .map_err(Into::into)
+            .map_err(ContractError::CheckPermission)
             .and_then(|()| new_code(new_code_id, &contract::validator(deps.querier)))
             .and_then(|new_lease_code| {
                 leaser::try_migrate_leases(
@@ -144,7 +147,7 @@ pub fn execute(
             to_release,
         } => ContractOwnerAccess::new(deps.storage.deref())
             .check(&info)
-            .map_err(Into::into)
+            .map_err(ContractError::CheckPermission)
             .and_then(|()| {
                 validate_customer(next_customer, deps.api, &contract::validator(deps.querier))
             })
@@ -161,7 +164,7 @@ pub fn execute(
             .config()
             .and_then(|ref config| {
                 access_control::check(&ChangeLeaseAdminPermission::new(config), &info)
-                    .map_err(Into::into)
+                    .map_err(ContractError::CheckPermission)
             })
             .and_then(|()| validate(&new, deps.api))
             .and_then(|valid_new_admin| {
@@ -203,14 +206,11 @@ pub fn query(deps: Deps<'_>, _env: Env, msg: QueryMsg) -> ContractResult<Binary>
     match msg {
         QueryMsg::CheckAnomalyResolutionPermission { by: caller } => Leaser::new(deps)
             .config()
-            .map(|ref config| AnomalyResolutionPermission::new(config).granted_to(&caller))
-            .map(|granted| {
-                if granted {
-                    AccessGranted::Yes
-                } else {
-                    AccessGranted::No
-                }
-            })
+            .and_then(|ref cfg| AnomalyResolutionPermission::new(cfg).check_permission(&caller))
+            .and_then(serialize_to_json),
+        QueryMsg::CheckClosePositionPermission { by: caller } => Leaser::new(deps)
+            .config()
+            .and_then(|ref cfg| ClosePositionPermission::new(cfg).check_permission(&caller))
             .and_then(serialize_to_json),
         QueryMsg::Config {} => Leaser::new(deps)
             .config()

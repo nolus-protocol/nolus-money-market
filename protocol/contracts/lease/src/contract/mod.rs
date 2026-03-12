@@ -12,6 +12,7 @@ pub use self::endpoins::{execute, instantiate, migrate, query, reply, sudo};
 use self::finalize::LeasesRef;
 
 mod api;
+mod authz;
 mod cmd;
 mod endpoins;
 mod finalize;

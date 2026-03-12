@@ -1,4 +1,7 @@
-use access_control::{AccessPermission, permissions::SingleUserPermission, user::User};
+use access_control::{
+    AccessPermission, error::Error as AccessControlError, permissions::SingleUserPermission,
+    user::User,
+};
 use currency::{Currency, Group, MemberOf};
 use oracle_platform::OracleRef;
 
@@ -29,10 +32,10 @@ where
     QuoteC: Currency + MemberOf<QuoteG>,
     QuoteG: Group,
 {
-    fn granted_to<U>(&self, user: &U) -> bool
+    fn granted_to<U>(&self, user: &U) -> Result<bool, AccessControlError>
     where
         U: User,
     {
-        self.oracle_ref.owned_by(user.addr())
+        Ok(self.oracle_ref.owned_by(user.addr()))
     }
 }

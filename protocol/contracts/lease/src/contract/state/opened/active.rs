@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 
+use access_control::composite::Permission as CompositePermission;
 use currency::CurrencyDef;
 use dex::Enterable;
 use finance::{coin::IntoDTO, duration::Duration};
@@ -220,10 +221,14 @@ impl Handler for Active {
         env: Env,
         info: MessageInfo,
     ) -> ContractResult<Response> {
-        access_control::check(
-            &ClosePositionPermission::new(&self.lease.lease.customer),
-            &info,
-        )
+        {
+            let customer_permission = ClosePositionPermission::new(&self.lease.lease.customer);
+            let leases_admin_permission = self.lease.leases.close_position_permission(querier);
+            access_control::check(
+                &CompositePermission::new(&customer_permission, &leases_admin_permission),
+                &info,
+            )
+        }
         .map_err(Into::into)
         .and_then(|()| customer_close::start(spec, self.lease, &env, querier))
     }

@@ -53,9 +53,13 @@ impl Handler for SlippageAnomaly {
         env: Env,
         info: MessageInfo,
     ) -> ContractResult<Response> {
-        self.lease
-            .leases
-            .check_access(info.sender, querier)
-            .and_then(|()| Active::new(self.lease).assess_close_status(querier, &env))
+        {
+            access_control::check(
+                &self.lease.leases.anomaly_resolution_permission(querier),
+                &info,
+            )
+        }
+        .map_err(Into::into)
+        .and_then(|()| Active::new(self.lease).assess_close_status(querier, &env))
     }
 }

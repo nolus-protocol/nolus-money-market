@@ -15,11 +15,15 @@ pub enum AccessCheck {
     // a meaningfull name on the wire
     #[serde(rename = "check_anomaly_resolution_permission")]
     AnomalyResolution { by: Addr },
+
+    /// Check for a permission to user to execute a `close_position` on a lease
+    #[serde(rename = "check_close_position_permission")]
+    ClosePosition { by: Addr },
 }
 
 /// Response to any [AccessCheck] query
-#[derive(Serialize, Deserialize)]
-#[cfg_attr(feature = "skel_testing", derive(Debug, PartialEq, Eq))]
+#[derive(Serialize, Deserialize, PartialEq, Eq)]
+#[cfg_attr(feature = "skel_testing", derive(Debug))]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub enum AccessGranted {
     Yes,

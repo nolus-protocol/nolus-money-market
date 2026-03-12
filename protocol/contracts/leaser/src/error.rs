@@ -6,6 +6,7 @@ use std::{
 use finance::percent::Percent;
 use thiserror::Error;
 
+use access_control::error::Error as AccessControlError;
 use sdk::cosmwasm_std::StdError;
 
 #[derive(Error, Debug)]
@@ -40,6 +41,12 @@ pub enum ContractError {
     #[error("[Leaser] Address validation failed, cause: {0}")]
     InvalidAddress(StdError),
 
+    #[error("[Leaser] Grant permission failed, cause: {0}")]
+    GrantPermission(AccessControlError),
+
+    #[error("[Leaser] Check permission failed, cause: {0}")]
+    CheckPermission(AccessControlError),
+
     #[error("[Leaser] Failed to serialize to JSON, cause: {0}")]
     SerializeToJson(StdError),
 
@@ -63,9 +70,6 @@ pub enum ContractError {
 
     #[error("[Leaser] Failed to update software! Cause: {0}")]
     UpdateSoftware(versioning::Error),
-
-    #[error("[Leaser] {0}")]
-    Unauthorized(#[from] access_control::error::Error),
 
     #[error("[Leaser] ParseError {err:?}")]
     Parsing { err: String },

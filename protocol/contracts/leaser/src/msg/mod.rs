@@ -129,6 +129,10 @@ pub enum QueryMsg {
     CheckAnomalyResolutionPermission {
         by: Addr,
     },
+    /// Implementation of [lease::api::authz::AccessCheck::ClosePosition]
+    CheckClosePositionPermission {
+        by: Addr,
+    },
     /// Return [ConfigResponse]
     Config {},
     Leases {
@@ -187,10 +191,18 @@ mod test {
     #[test]
     fn anomaly_resolution_api_match() {
         let admin = Addr::unchecked("my test admin");
-        assert_eq!(
-            AccessCheck::AnomalyResolution { by: admin.clone() },
-            platform_tests::ser_de(&QueryMsg::CheckAnomalyResolutionPermission { by: admin })
-                .unwrap(),
+        platform_tests::assert_ser_de(
+            &AccessCheck::AnomalyResolution { by: admin.clone() },
+            &QueryMsg::CheckAnomalyResolutionPermission { by: admin },
+        );
+    }
+
+    #[test]
+    fn close_position_api_match() {
+        let admin = Addr::unchecked("my test admin");
+        platform_tests::assert_ser_de(
+            &AccessCheck::ClosePosition { by: admin.clone() },
+            &QueryMsg::CheckClosePositionPermission { by: admin },
         );
     }
 
@@ -198,27 +210,24 @@ mod test {
     fn finalize_api_match() {
         let customer = Addr::unchecked("c");
 
-        assert_eq!(
-            FinalizerExecuteMsg::FinalizeLease {
-                customer: customer.clone()
+        platform_tests::assert_ser_de(
+            &FinalizerExecuteMsg::FinalizeLease {
+                customer: customer.clone(),
             },
-            platform_tests::ser_de(&ExecuteMsg::FinalizeLease { customer }).unwrap(),
+            &ExecuteMsg::FinalizeLease { customer },
         );
     }
 
     #[test]
     fn max_slippage_api_match() {
-        assert_eq!(
-            PositionLimits::MaxSlippages {},
-            platform_tests::ser_de(&QueryMsg::MaxSlippages {}).unwrap(),
-        );
+        platform_tests::assert_ser_de(&PositionLimits::MaxSlippages {}, &QueryMsg::MaxSlippages {});
     }
 
     #[test]
     fn release() {
-        assert_eq!(
-            QueryMsg::ProtocolPackageRelease {},
-            platform_tests::ser_de(&versioning::query::ProtocolPackage::Release {}).unwrap(),
+        platform_tests::assert_ser_de(
+            &QueryMsg::ProtocolPackageRelease {},
+            &versioning::query::ProtocolPackage::Release {},
         );
 
         platform_tests::ser_de::<_, QueryMsg>(&versioning::query::PlatformPackage::Release {})

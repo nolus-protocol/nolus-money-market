@@ -1,3 +1,4 @@
+use access_control::AccessPermission;
 use serde::{Deserialize, Serialize};
 
 use platform::{batch::Batch, contract::Validator};
@@ -6,9 +7,10 @@ use sdk::cosmwasm_std::{Addr, QuerierWrapper};
 use crate::{
     api::{
         FinalizerExecuteMsg,
-        authz::{AccessCheck, AccessGranted},
+        authz::AccessCheck,
         limits::{MaxSlippages, PositionLimits},
     },
+    contract::authz::RemotelyGrantedPermission,
     error::{ContractError, ContractResult},
 };
 
@@ -46,20 +48,21 @@ impl LeasesRef {
             .map_err(ContractError::PositionLimitsQuery)
     }
 
-    pub(super) fn check_access(
-        &self,
-        caller: Addr,
-        querier: QuerierWrapper<'_>,
-    ) -> ContractResult<()> {
-        let query = AccessCheck::AnomalyResolution { by: caller };
-        querier
-            .query_wasm_smart(self.addr.clone(), &query)
-            .map_err(ContractError::CheckAccessQuery)
-            .and_then(|access: AccessGranted| match access {
-                AccessGranted::No => Err(ContractError::Unauthorized(
-                    access_control::error::Error::Unauthorized {},
-                )),
-                AccessGranted::Yes => Ok(()),
-            })
+    pub(super) fn anomaly_resolution_permission<'self_, 'querier>(
+        &'self_ self,
+        querier: QuerierWrapper<'querier>,
+    ) -> impl AccessPermission + use<'self_, 'querier> {
+        RemotelyGrantedPermission::new(&self.addr, querier, |caller| {
+            AccessCheck::AnomalyResolution { by: caller }
+        })
+    }
+
+    pub(super) fn close_position_permission<'self_, 'querier>(
+        &'self_ self,
+        querier: QuerierWrapper<'querier>,
+    ) -> impl AccessPermission + use<'self_, 'querier> {
+        RemotelyGrantedPermission::new(&self.addr, querier, |caller| AccessCheck::ClosePosition {
+            by: caller,
+        })
     }
 }
