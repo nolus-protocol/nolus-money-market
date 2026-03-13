@@ -120,6 +120,7 @@ jobs:
           "docker" \
             "container" \
             "run" \
+            --env "GITHUB_ACTIONS_LOGGING=true" \
             --rm \
             --tty \
             --volume ".:/src:ro" \
@@ -149,6 +150,7 @@ jobs:
           "docker" \
             "container" \
             "run" \
+            --env "GITHUB_ACTIONS_LOGGING=true" \
             --rm \
             --tty \
             --volume ".:/src:ro" \
@@ -191,6 +193,7 @@ jobs:
           "docker" \
             "container" \
             "run" \
+            --env "GITHUB_ACTIONS_LOGGING=true" \
             --rm \
             --tty \
             --volume ".:/src:ro" \
@@ -234,6 +237,7 @@ jobs:
           "docker" \
             "container" \
             "run" \
+            --env "GITHUB_ACTIONS_LOGGING=true" \
             --rm \
             --tty \
             --volume ".:/src:ro" \
@@ -282,6 +286,7 @@ jobs:
           "docker" \
             "container" \
             "run" \
+            --env "GITHUB_ACTIONS_LOGGING=true" \
             --env "PROFILE=${profile:?}" \
             --rm \
             --tty \
@@ -332,6 +337,7 @@ jobs:
           "docker" \
             "container" \
             "run" \
+            --env "GITHUB_ACTIONS_LOGGING=true" \
             --env "PROFILE=${profile:?}" \
             --rm \
             --tty \
@@ -382,6 +388,7 @@ jobs:
           "docker" \
             "container" \
             "run" \
+            --env "GITHUB_ACTIONS_LOGGING=true" \
             --env "PROFILE=${profile:?}" \
             --rm \
             --tty \
@@ -466,6 +473,7 @@ jobs:
             "docker" \
               "container" \
               "run" \
+              --env "GITHUB_ACTIONS_LOGGING=true" \
               --rm \
               --tty \
               --volume "./${network_group:?}-artifacts:/artifacts" \
