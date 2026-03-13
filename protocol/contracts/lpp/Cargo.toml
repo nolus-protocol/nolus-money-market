@@ -29,7 +29,7 @@ contract = [
     "dep:oracle-platform",
 ]
 stub = []
-testing = ["currency/testing"]
+testing = ["currency/testing", "finance/testing"]
 
 [dependencies]
 access-control = { workspace = true, optional = true }

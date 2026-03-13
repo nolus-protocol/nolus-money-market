@@ -12,8 +12,8 @@ use sdk::{
 
 use crate::contract::{ContractError, Result as ContractResult};
 
-#[derive(Serialize, Deserialize, Debug)]
-#[cfg_attr(any(test, feature = "testing"), derive(PartialEq,))]
+#[derive(Serialize, Deserialize)]
+#[cfg_attr(any(test, feature = "testing"), derive(Debug, PartialEq,))]
 #[serde(bound(serialize = "", deserialize = ""))]
 pub struct Total<Lpn> {
     /// The total due principle amount
