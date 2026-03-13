@@ -240,7 +240,7 @@ jobs:
             "${image_tag:?}" \
             "${workspace:?}"
   lint:
-    name: "Lint codebase"
+    name: "Lint codebase without tests"
     needs:
       - "matrix-arguments"
     runs-on: "ubuntu-latest"
@@ -287,7 +287,58 @@ jobs:
             --tty \
             --volume ".:/src:ro" \
             "${image_tag:?}" \
-            "${workspace:?}"
+            "${workspace:?}" \
+            "lint"
+  lint_with_tests:
+    name: "Lint codebase with tests"
+    needs:
+      - "matrix-arguments"
+    runs-on: "ubuntu-latest"
+    strategy:
+      matrix:
+        profile: |-
+          ${{ fromJSON(needs.matrix-arguments.outputs.profiles-json) }}
+        workspace: |-
+          ${{ fromJSON(needs.matrix-arguments.outputs.workspaces-json) }}
+    steps:
+      - name: "Checkout repository"
+        uses: "actions/checkout@v5"
+      - name: "Setup Docker"
+        uses: "nolus-protocol/actions/setup-docker@v1"
+      - name: "Setup workspaces"
+        uses: "./.github/actions/setup-workspaces"
+      - id: "build-container"
+        name: "Build container image"
+        uses: "nolus-protocol/actions/build-image@v1"
+        with:
+          build-contexts: "tools=./tools"
+          context: "./ci"
+          file: "./ci/Containerfile"
+          target: "lint"
+      - name: "Use testing build configuration"
+        run: |-
+          "mv" \
+            "./.github/test-data/build-configuration" \
+            "./"
+      - env:
+          image_tag: |-
+            ${{ steps.build-container.outputs.tag }}
+          profile: |-
+            ${{ matrix.profile }}
+          workspace: |-
+            ${{ matrix.workspace }}
+        name: "Run container"
+        run: |-
+          "docker" \
+            "container" \
+            "run" \
+            --env "PROFILE=${profile:?}" \
+            --rm \
+            --tty \
+            --volume ".:/src:ro" \
+            "${image_tag:?}" \
+            "${workspace:?}" \
+            "lint-all"
   test:
     name: "Run tests"
     needs:

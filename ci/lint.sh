@@ -18,7 +18,7 @@
 ## environments.                                                              ##
 ################################################################################
 ## Used utilities outside the POSIX standard:                                 ##
-## [in-tree] cargo-each [inherited from 'lint' alias]                         ##
+## [in-tree] cargo-each [inherited from 'lint' + 'lint-all' aliases]          ##
 ## [Cargo command alias] lint                                                 ##
 ## cargo [with:]                                                              ##
 ##   * Rust compiler                                                          ##
@@ -28,10 +28,10 @@
 set -eu
 
 case "${#}" in
-  ("1") ;;
+  ("2") ;;
   (*)
     "echo" \
-      "This script takes only one argument, the workspace name!" \
+      "This script takes exactly two arguments, the workspace name and the lint subcommand!" \
       >&2
 
     exit "1"
@@ -42,5 +42,5 @@ shift
 
 "cargo" \
   -- \
-  "lint" \
+  "${1:?}" \
   --profile "${PROFILE:?}"
