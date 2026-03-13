@@ -1,6 +1,7 @@
 [alias]
 lint = "each --tag ci run --print-command -- clippy --locked"
 lint-all = "each --tag ci run --print-command -- clippy --all-targets --locked"
+
 run-test = "each --tag ci run --print-command -- test --all-targets --locked"
 
 [target.wasm32-unknown-unknown]
