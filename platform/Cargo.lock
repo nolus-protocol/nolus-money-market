@@ -4,7 +4,7 @@ version = 4
 
 [[package]]
 name = "access-control"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "sdk",
  "thiserror 2.0.18",
@@ -12,7 +12,7 @@ dependencies = [
 
 [[package]]
 name = "admin_contract"
-version = "0.6.1"
+version = "0.6.2"
 dependencies = [
  "access-control",
  "cosmwasm-std",
@@ -416,7 +416,7 @@ dependencies = [
 
 [[package]]
 name = "currency"
-version = "0.6.2"
+version = "0.7.0"
 dependencies = [
  "sdk",
  "serde",
@@ -731,7 +731,7 @@ checksum = "28dea519a9695b9977216879a3ebfddf92f1c08c05d984f8996aecd6ecdc811d"
 
 [[package]]
 name = "finance"
-version = "0.2.3"
+version = "0.3.0"
 dependencies = [
  "bnum 0.13.0",
  "currency",
@@ -961,7 +961,7 @@ checksum = "b5b646652bf6661599e1da8901b3b9522896f01e736bad5f723fe7a3a27f899d"
 
 [[package]]
 name = "lpp-platform"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "currency",
  "finance",
@@ -1019,7 +1019,7 @@ checksum = "9f7c3e4beb33f85d45ae3e3a1792185706c8e16d043238c593331cc7cd313b50"
 
 [[package]]
 name = "oracle-platform"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "currency",
  "finance",
@@ -1058,7 +1058,7 @@ checksum = "57c0d7b74b563b49d38dae00a0c37d4d6de9b432382b2892f0574ddcae73fd0a"
 
 [[package]]
 name = "platform"
-version = "0.3.1"
+version = "0.4.0"
 dependencies = [
  "base64",
  "currency",
@@ -1318,7 +1318,7 @@ dependencies = [
 
 [[package]]
 name = "sdk"
-version = "0.2.1"
+version = "0.3.0"
 dependencies = [
  "base64",
  "cosmos-sdk-proto",
@@ -1614,7 +1614,7 @@ dependencies = [
 
 [[package]]
 name = "time-oracle"
-version = "0.2.1"
+version = "0.2.2"
 dependencies = [
  "sdk",
  "serde",
@@ -1623,7 +1623,7 @@ dependencies = [
 
 [[package]]
 name = "timealarms"
-version = "0.5.1"
+version = "0.5.2"
 dependencies = [
  "access-control",
  "cosmwasm-std",
@@ -1637,7 +1637,7 @@ dependencies = [
 
 [[package]]
 name = "treasury"
-version = "0.5.1"
+version = "0.5.2"
 dependencies = [
  "access-control",
  "admin_contract",
@@ -1694,7 +1694,7 @@ checksum = "0b928f33d975fc6ad9f86c8f283853ad26bdd5b10b7f1542aa2fa15e2289105a"
 
 [[package]]
 name = "versioning"
-version = "0.2.2"
+version = "0.2.3"
 dependencies = [
  "sdk",
  "serde",
