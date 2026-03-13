@@ -178,6 +178,7 @@ ___build_unoptimized() {
     --tag "${dex_type:?}" \
     "run" \
     --exact \
+    --print-command \
     -- \
     "build" \
     -Zbuild-std="panic_abort,std" \

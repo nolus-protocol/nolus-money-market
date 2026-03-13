@@ -44,6 +44,7 @@ shift
   "each" \
   "run" \
   --external-command \
+  --print-command \
   -- \
   "cargo" \
   "+${RUST_NIGHTLY_VERSION:?}" \

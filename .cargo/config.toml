@@ -1,8 +1,8 @@
 [alias]
-lint-prod = "each --tag ci run -- clippy --bins --lib --locked"
-lint-test = "each --tag ci run -- clippy --tests --benches --examples"
+lint = "each --tag ci run --print-command -- clippy --locked"
+lint-all = "each --tag ci run --print-command -- clippy --all-targets --locked"
 
-run-test = "each --tag ci run -- test --all-targets --locked"
+run-test = "each --tag ci run --print-command -- test --all-targets --locked"
 
 [target.wasm32-unknown-unknown]
 rustflags = ["-C", "link-arg=-s"]

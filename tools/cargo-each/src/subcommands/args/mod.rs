@@ -21,7 +21,7 @@ pub(crate) struct Parser {
         help = "Select only packages containing all tags."
     )]
     tags: Vec<String>,
-    #[arg(global = true, long, visible_alias = "gha-log")]
+    #[arg(global = true, long, env, visible_alias = "gha-log")]
     github_actions_logging: bool,
     #[command(subcommand)]
     subcommand: CommandCallType,
