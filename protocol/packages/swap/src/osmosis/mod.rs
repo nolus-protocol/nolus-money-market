@@ -1,10 +1,3 @@
-use osmosis_std::types::{
-    cosmos::base::v1beta1::Coin as OsmosisCoin,
-    osmosis::poolmanager::v1beta1::{
-        MsgSwapExactAmountIn, MsgSwapExactAmountInResponse, SwapAmountInRoute,
-    },
-};
-
 use currency::{DexSymbols, Group};
 use dex::swap::{Error, ExactAmountIn, Result, SwapPathSlice};
 use finance::coin::{Amount, CoinDTO};
@@ -14,8 +7,16 @@ use platform::{
     ica::HostAccount,
     trx::{self, Transaction},
 };
-use sdk::{cosmos_sdk_proto::Any as CosmosAny, cosmwasm_std::Coin as CwCoin};
+use sdk::{
+    cosmos_sdk_proto::{Any as CosmosAny, cosmos::base::v1beta1::Coin as ProtoCoin},
+    cosmwasm_std::Coin as CwCoin,
+};
 
+use self::api::{
+    MsgSwapExactAmountIn, MsgSwapExactAmountInResponse, SwapAmountInRoute, TypeUrl as _,
+};
+
+mod api;
 #[cfg(test)]
 mod test;
 #[cfg(any(test, feature = "testing"))]
@@ -98,12 +99,12 @@ where
     coin_legacy::to_cosmwasm_on_network::<DexSymbols<G>>(token)
 }
 
-fn to_osmosis_coin(cw_coin: CwCoin) -> Result<OsmosisCoin> {
+fn to_osmosis_coin(cw_coin: CwCoin) -> Result<ProtoCoin> {
     let amount_str = cw_coin.amount.to_string();
     // cosmwasm_std::to_json_string(&cw_coin.amount)
     //     .map_err(Into::into)
-    // .map(|amount_str| OsmosisCoin {
-    Ok(OsmosisCoin {
+    // .map(|amount_str| ProtoCoin {
+    Ok(ProtoCoin {
         denom: cw_coin.denom,
         amount: amount_str,
     })
@@ -111,16 +112,14 @@ fn to_osmosis_coin(cw_coin: CwCoin) -> Result<OsmosisCoin> {
 
 #[cfg(test)]
 mod test_amount {
-
-    use osmosis_std::types::cosmos::base::v1beta1::Coin as OsmosisCoin;
-    use sdk::cosmwasm_std::Coin as CwCoin;
+    use super::{CwCoin, ProtoCoin};
 
     #[test]
     fn test_cw_to_osmosis_amount() {
         const DENOM: &str = "uatom";
         const AMOUNT: u128 = 298464284;
         assert_eq!(
-            OsmosisCoin {
+            ProtoCoin {
                 denom: DENOM.to_string(),
                 amount: format!("{}", AMOUNT)
             },
