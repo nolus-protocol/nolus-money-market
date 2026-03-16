@@ -483,6 +483,32 @@ jobs:
       - env:
           image_tag: |-
             ${{ steps.build-protocol.outputs.tag }}
+        name: "(Sanity check) Run protocol building container for each network group"
+        run: |-
+          set -eu
+
+          for network_group in "test-net" "production-net"
+          do
+            "echo" \
+              "Running for network group: ${network_group:?}" \
+              >&2
+
+            "docker" \
+              "container" \
+              "run" \
+              --env "GITHUB_ACTIONS_LOGGING=true" \
+              --env "PROTOCOL_NETWORK=ci-sanity-check-network" \
+              --env "PROTOCOL_NAME=ci-sanity-check-protocol" \
+              --rm \
+              --tmpfs "/artifacts" \
+              --tty \
+              --volume "./.github/test-data/build-configuration/:/src/build-configuration/:ro" \
+              "${image_tag:?}" \
+              "${network_group:?}"
+          done
+      - env:
+          image_tag: |-
+            ${{ steps.build-protocol.outputs.tag }}
         if: |-
           fromJSON(env.upload-artifacts)
         name: "Export protocol building container image"
