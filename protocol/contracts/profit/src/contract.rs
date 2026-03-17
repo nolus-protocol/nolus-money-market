@@ -188,9 +188,6 @@ fn try_handle_neutron_msg(
         } => state
             .on_open_ica(counterparty_version, deps.querier, env)
             .map_err(Into::into),
-        SudoMsg::TxQueryResult { .. } | SudoMsg::KVQueryResult { .. } => {
-            unimplemented!()
-        }
     }
 }
 
