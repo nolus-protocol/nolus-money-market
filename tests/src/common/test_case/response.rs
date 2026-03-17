@@ -62,9 +62,9 @@ impl<T> RemoteChain for ResponseWithInterChainMsgs<'_, T> {
             .try_recv()
             .expect("Expected message for ICA registration!");
 
-        if let InterChainMsg::RegisterAccount {
+        if let InterChainMsg::RegisterInterchainAccount {
             connection_id,
-            ica_id,
+            interchain_account_id,
             register_fee,
         } = message
         {
