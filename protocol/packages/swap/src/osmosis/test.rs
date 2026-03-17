@@ -7,7 +7,7 @@ use sdk::cosmwasm_std::Coin as CwCoin;
 
 use crate::testing;
 
-use super::{SwapAmountInRoute, SwapTarget};
+use super::{SwapTarget, api::SwapAmountInRoute};
 
 #[test]
 fn to_dex_cwcoin() {

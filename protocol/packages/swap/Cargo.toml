@@ -23,7 +23,7 @@ dex-astroport_main = [
     "sdk/cosmos_proto",
 ]
 dex-osmosis = [
-    "dep:osmosis-std",
+    "dep:prost"
 ]
 dex-test_impl = [
     "sdk/cosmos_proto",
@@ -46,7 +46,7 @@ finance = { workspace = true }
 platform = { workspace = true }
 sdk = { workspace = true }
 
-osmosis-std = { workspace = true, optional = true }
+prost = { workspace = true, optional = true }
 serde = { workspace = true, features = ["derive"] }
 
 [dev-dependencies]

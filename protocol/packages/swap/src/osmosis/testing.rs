@@ -1,7 +1,5 @@
 use std::any::type_name;
 
-use osmosis_std::types::osmosis::poolmanager::v1beta1::SwapAmountInRoute;
-
 use currency::Group;
 use finance::coin::Amount;
 use oracle::api::swap::SwapTarget;
@@ -9,7 +7,10 @@ use sdk::{cosmos_sdk_proto::Any as CosmosAny, cosmos_sdk_proto::prost::Message a
 
 use crate::testing::{self, ExactAmountInSkel, SwapRequest};
 
-use super::{Impl, RequestMsg, ResponseMsg};
+use super::{
+    Impl, RequestMsg, ResponseMsg,
+    api::{SwapAmountInRoute, TypeUrl as _},
+};
 
 impl ExactAmountInSkel for Impl {
     fn parse_request<GIn, GSwap>(request: CosmosAny) -> SwapRequest<GIn, GSwap>
