@@ -26,20 +26,21 @@ pub struct RequestPacketTimeoutHeight {
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum InterChainMsg {
-    RegisterAccount {
+    RegisterInterchainAccount {
         connection_id: String,
-        ica_id: String,
+        interchain_account_id: String,
         register_fee: Option<Vec<CwCoin>>,
     },
 
     SubmitTx {
         connection_id: String,
-        ica_id: String,
+        interchain_account_id: String,
         msgs: Vec<ProtobufAny>,
         memo: String,
         timeout: u64,
         fee: IbcFee,
     },
+
     IbcTransfer {
         source_port: String,
         source_channel: String,
@@ -48,27 +49,27 @@ pub enum InterChainMsg {
         receiver: String,
         timeout_height: RequestPacketTimeoutHeight,
         timeout_timestamp: u64,
-        fee: IbcFee,
         memo: String,
+        fee: IbcFee,
     },
 }
 
 impl InterChainMsg {
     pub fn register_interchain_account(
         connection_id: String,
-        ica_id: String,
+        interchain_account_id: String,
         register_fee: Option<Vec<CwCoin>>,
     ) -> Self {
-        InterChainMsg::RegisterAccount {
+        InterChainMsg::RegisterInterchainAccount {
             connection_id,
-            ica_id,
+            interchain_account_id,
             register_fee,
         }
     }
 
     pub fn submit_tx(
         connection_id: String,
-        ica_id: String,
+        interchain_account_id: String,
         msgs: Vec<ProtobufAny>,
         memo: String,
         timeout: u64,
@@ -76,7 +77,7 @@ impl InterChainMsg {
     ) -> Self {
         InterChainMsg::SubmitTx {
             connection_id,
-            ica_id,
+            interchain_account_id,
             msgs,
             memo,
             timeout,
@@ -128,27 +129,21 @@ pub struct RequestPacket {
 #[derive(Clone, Deserialize, PartialEq, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum SudoMsg {
-    OpenAck {
-        port_id: String,
-        channel_id: String,
-        counterparty_channel_id: String,
-        counterparty_version: String,
-    },
     Response {
         request: RequestPacket,
         data: Binary,
-    },
-    Timeout {
-        request: RequestPacket,
     },
     Error {
         request: RequestPacket,
         details: String,
     },
-    TxQueryResult {
-        query_id: u64,
+    Timeout {
+        request: RequestPacket,
     },
-    KVQueryResult {
-        query_id: u64,
+    OpenAck {
+        port_id: String,
+        channel_id: String,
+        counterparty_channel_id: String,
+        counterparty_version: String,
     },
 }

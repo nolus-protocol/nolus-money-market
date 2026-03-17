@@ -62,14 +62,14 @@ impl<T> RemoteChain for ResponseWithInterChainMsgs<'_, T> {
             .try_recv()
             .expect("Expected message for ICA registration!");
 
-        if let InterChainMsg::RegisterAccount {
+        if let InterChainMsg::RegisterInterchainAccount {
             connection_id,
-            ica_id,
+            interchain_account_id,
             register_fee,
         } = message
         {
             assert_eq!(connection_id, expected_connection_id);
-            assert_eq!(ica_id, expected_ica_id);
+            assert_eq!(interchain_account_id, expected_ica_id);
             assert_eq!(register_fee, None);
         } else {
             panic!("Expected message for ICA registration, got {message:?}!");
@@ -114,13 +114,13 @@ impl<T> RemoteChain for ResponseWithInterChainMsgs<'_, T> {
 
         if let InterChainMsg::SubmitTx {
             connection_id,
-            ica_id,
+            interchain_account_id,
             msgs: messages,
             ..
         } = message
         {
             assert_eq!(connection_id, expected_connection_id);
-            assert_eq!(ica_id, expected_ica_id);
+            assert_eq!(interchain_account_id, expected_ica_id);
 
             assert!(!messages.is_empty());
 

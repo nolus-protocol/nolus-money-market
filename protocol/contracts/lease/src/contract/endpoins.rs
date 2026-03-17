@@ -178,14 +178,7 @@ fn process_sudo(
     env: Env,
 ) -> ContractResult<Response> {
     match msg {
-        SudoMsg::OpenAck {
-            port_id: _,
-            channel_id: _,
-            counterparty_channel_id: _,
-            counterparty_version,
-        } => state.on_open_ica(counterparty_version, querier, env),
         SudoMsg::Response { request: _, data } => state.on_dex_response(data, querier, env),
-        SudoMsg::Timeout { request: _ } => state.on_dex_timeout(querier, env),
         SudoMsg::Error {
             request: _,
             details,
@@ -194,6 +187,12 @@ fn process_sudo(
             api.debug(&format!("SudoMsg::Error({resp})"));
             state.on_dex_error(resp, querier, env)
         }
-        _ => unreachable!(),
+        SudoMsg::Timeout { request: _ } => state.on_dex_timeout(querier, env),
+        SudoMsg::OpenAck {
+            port_id: _,
+            channel_id: _,
+            counterparty_channel_id: _,
+            counterparty_version,
+        } => state.on_open_ica(counterparty_version, querier, env),
     }
 }
