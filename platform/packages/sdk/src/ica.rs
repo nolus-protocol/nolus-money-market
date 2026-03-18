@@ -120,7 +120,7 @@ pub struct RequestPacket {
     pub source_channel: Option<String>,
     pub destination_port: Option<String>,
     pub destination_channel: Option<String>,
-    pub data: Option<Vec<u8>>,
+    pub data: Option<Binary>,
     pub timeout_height: Option<RequestPacketTimeoutHeight>,
     pub timeout_timestamp: Option<u64>,
 }
