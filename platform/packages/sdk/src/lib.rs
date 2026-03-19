@@ -7,11 +7,13 @@ pub use cw_storage_plus;
 #[cfg(feature = "cosmos_ibc")]
 pub use ibc_proto;
 
+mod any;
 pub mod ica;
 
 pub mod api {
-    pub use crate::ica::SudoMsg;
+    pub use crate::{any::ProtobufAny, ica::SudoMsg};
 }
+
 #[cfg(feature = "testing")]
 pub mod testing;
 

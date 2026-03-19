@@ -3,18 +3,18 @@ use std::marker::PhantomData;
 use currency::{AnyVisitor, CurrencyDTO, CurrencyDef, DexSymbols, Group, GroupVisit, MemberOf};
 use finance::coin::{Amount, Coin, CoinDTO, NonZeroAmount};
 use oracle::api::swap::SwapTarget;
-use sdk::cosmos_sdk_proto::Any as CosmosAny;
+use sdk::api::ProtobufAny;
 
 #[cfg(test)]
 mod tests;
 
 pub trait ExactAmountInSkel {
-    fn parse_request<GIn, GSwap>(request: CosmosAny) -> SwapRequest<GIn, GSwap>
+    fn parse_request<GIn, GSwap>(request: ProtobufAny) -> SwapRequest<GIn, GSwap>
     where
         GIn: Group + MemberOf<GSwap>,
         GSwap: Group;
 
-    fn build_response(amount_out: Amount) -> CosmosAny;
+    fn build_response(amount_out: Amount) -> ProtobufAny;
 }
 
 pub struct SwapRequest<GIn, GSwap>

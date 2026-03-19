@@ -5,8 +5,8 @@ use dex::swap::ExactAmountIn;
 use finance::coin::{Amount, CoinDTO};
 use oracle::api::swap::SwapTarget;
 use sdk::{
+    api::ProtobufAny,
     cosmos_sdk_proto::{
-        Any as CosmosAny,
         cosmos::base::v1beta1::Coin as ProtoCoin,
         prost::{Message as _, Name as _},
     },
@@ -26,7 +26,7 @@ where
     Self: ExactAmountIn,
     R: Router,
 {
-    fn parse_request<GIn, GSwap>(request: CosmosAny) -> SwapRequest<GIn, GSwap>
+    fn parse_request<GIn, GSwap>(request: ProtobufAny) -> SwapRequest<GIn, GSwap>
     where
         GIn: Group + MemberOf<GSwap>,
         GSwap: Group,
@@ -71,16 +71,16 @@ where
         }
     }
 
-    fn build_response(amount_out: Amount) -> CosmosAny {
+    fn build_response(amount_out: Amount) -> ProtobufAny {
         let swap_resp = cosmwasm_std::to_json_vec(&SwapResponseData {
             return_amount: amount_out.into(),
         })
         .expect("test result serialization works");
 
-        CosmosAny {
-            type_url: ResponseMsg::type_url(),
-            value: (ResponseMsg { data: swap_resp }).encode_to_vec(),
-        }
+        ProtobufAny::new(
+            ResponseMsg::type_url(),
+            (ResponseMsg { data: swap_resp }).encode_to_vec(),
+        )
     }
 }
 
@@ -134,8 +134,8 @@ where
         .collect()
 }
 
-fn parse_request_from_any(request: CosmosAny) -> RequestMsg {
-    request.to_msg().expect("Expected a swap request message!")
+fn parse_request_from_any(request: ProtobufAny) -> RequestMsg {
+    request.decode().expect("Expected a swap request message!")
 }
 
 fn parse_one_token_from_vec<G>(funds: Vec<ProtoCoin>) -> CoinDTO<G>

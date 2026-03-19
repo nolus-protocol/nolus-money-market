@@ -4,7 +4,7 @@ use currencies::PaymentGroup;
 use currency::{DexSymbols, Group, SymbolStatic};
 use finance::coin::Amount;
 use sdk::{
-    cosmos_sdk_proto::Any as ProtobufAny,
+    api::ProtobufAny,
     cosmwasm_std::{Addr, Binary, Coin as CwCoin},
     cw_multi_test::AppResponse,
     testing,

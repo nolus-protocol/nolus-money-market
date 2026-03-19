@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 
 use cosmwasm_std::{Binary, Coin as CwCoin, CosmosMsg, CustomMsg, StdResult};
 
-use crate::cosmos_sdk_proto::Any as ProtobufAny;
+use crate::api::ProtobufAny;
 
 /// IbcFee defines struct for fees that refund the relayer for `SudoMsg` messages submission.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]

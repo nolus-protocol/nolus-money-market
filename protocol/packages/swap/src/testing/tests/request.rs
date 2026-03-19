@@ -3,7 +3,7 @@ use dex::swap::{ExactAmountIn, SwapPathSlice};
 use finance::coin::{Coin, CoinDTO};
 use oracle::api::swap::SwapTarget;
 use platform::trx::Transaction;
-use sdk::cosmos_sdk_proto::Any as ProtobufAny;
+use sdk::api::ProtobufAny;
 
 use crate::{
     Impl,

@@ -9,8 +9,8 @@ use platform::{
     trx::{self, Transaction},
 };
 use sdk::{
+    api::ProtobufAny,
     cosmos_sdk_proto::{
-        Any as CosmosAny,
         cosmos::base::v1beta1::Coin as ProtoCoin,
         cosmwasm::wasm::v1::{MsgExecuteContract, MsgExecuteContractResponse},
         traits::Name,
@@ -87,7 +87,7 @@ where
 
     fn parse_response<I>(trx_resps: &mut I) -> Result<Amount>
     where
-        I: Iterator<Item = CosmosAny>,
+        I: Iterator<Item = ProtobufAny>,
     {
         trx_resps
             .next()

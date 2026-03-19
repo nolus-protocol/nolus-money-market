@@ -4,10 +4,8 @@ use currencies::PaymentGroup;
 use currency::{BankSymbols, CurrencyDTO, DexSymbols, Symbol, SymbolStatic};
 use finance::coin::Amount;
 use sdk::{
-    cosmos_sdk_proto::{
-        Any as ProtobufAny,
-        traits::{Message, Name},
-    },
+    api::ProtobufAny,
+    cosmos_sdk_proto::traits::Name,
     cosmwasm_std::{Addr, Binary},
     cw_multi_test::AppResponse,
     ibc_proto::{
@@ -46,9 +44,7 @@ pub(crate) fn expect_remote_transfer<T>(
     let messages: Vec<ProtobufAny> = response.expect_submit_tx(connection_id, ica_id);
 
     let message: MsgTransfer = match messages.as_slice() {
-        [message] if message.type_url == MsgTransfer::type_url() => {
-            Message::decode(message.value.as_slice()).unwrap()
-        }
+        [message] if message.of_type(&MsgTransfer::type_url()) => message.decode().unwrap(),
         _ => unimplemented!(),
     };
 

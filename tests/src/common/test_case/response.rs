@@ -1,5 +1,5 @@
 use sdk::{
-    cosmos_sdk_proto::Any as ProtobufAny, cosmwasm_std::Coin as CwCoin, ica::InterChainMsg,
+    api::ProtobufAny, cosmwasm_std::Coin as CwCoin, ica::InterChainMsg,
     testing::InterChainMsgReceiver,
 };
 

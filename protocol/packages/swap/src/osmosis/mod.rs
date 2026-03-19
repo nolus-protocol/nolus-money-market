@@ -8,7 +8,7 @@ use platform::{
     trx::{self, Transaction},
 };
 use sdk::{
-    cosmos_sdk_proto::{Any as CosmosAny, cosmos::base::v1beta1::Coin as ProtoCoin},
+    api::ProtobufAny, cosmos_sdk_proto::cosmos::base::v1beta1::Coin as ProtoCoin,
     cosmwasm_std::Coin as CwCoin,
 };
 
@@ -65,7 +65,7 @@ impl ExactAmountIn for Impl {
 
     fn parse_response<I>(trx_resps: &mut I) -> Result<Amount>
     where
-        I: Iterator<Item = CosmosAny>,
+        I: Iterator<Item = ProtobufAny>,
     {
         trx_resps
             .next()

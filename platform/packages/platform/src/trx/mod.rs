@@ -1,5 +1,6 @@
-use sdk::cosmos_sdk_proto::{
-    Any as ProtobufAny, cosmos::base::abci::v1beta1::TxMsgData, traits::Message,
+use sdk::{
+    api::ProtobufAny,
+    cosmos_sdk_proto::{cosmos::base::abci::v1beta1::TxMsgData, traits::Message},
 };
 
 use crate::{error::Error, result::Result};
@@ -19,10 +20,7 @@ impl Transaction {
         let mut buf = Vec::with_capacity(msg.encoded_len());
         msg.encode_raw(&mut buf);
 
-        self.msgs.push(ProtobufAny {
-            type_url: msg_type.into(),
-            value: buf,
-        });
+        self.msgs.push(ProtobufAny::new(msg_type, buf));
     }
 
     pub(super) fn into_msgs(self) -> Vec<ProtobufAny> {
@@ -43,7 +41,7 @@ impl IntoIterator for Transaction {
 
 pub fn decode_msg_responses(data: &[u8]) -> Result<impl Iterator<Item = ProtobufAny> + use<>> {
     TxMsgData::decode(data)
-        .map(|tx_msg_data| tx_msg_data.msg_responses.into_iter())
+        .map(|tx_msg_data| tx_msg_data.msg_responses.into_iter().map(Into::into))
         .map_err(Into::into)
 }
 
@@ -53,7 +51,7 @@ where
     I: Iterator<Item = ProtobufAny>,
 {
     let tx = TxMsgData {
-        msg_responses: msgs.collect(),
+        msg_responses: msgs.map(|google_any| google_any.into()).collect(),
         ..Default::default()
     };
     tx.encode_to_vec()
@@ -66,17 +64,17 @@ where
 {
     let msg_type = msg_type.into();
 
-    if resp.type_url != msg_type {
-        return Err(Error::ProtobufInvalidType(msg_type, resp.type_url));
+    if !resp.of_type(&msg_type) {
+        return Err(Error::protobuf_invalid_type(msg_type, resp));
     }
-    M::decode(resp.value.as_slice()).map_err(Into::into)
+    resp.decode().map_err(Into::into)
 }
 
 #[cfg(test)]
 mod test {
     use base64::{Engine as _, engine::general_purpose};
 
-    use sdk::cosmos_sdk_proto::Any;
+    use sdk::api::ProtobufAny;
 
     #[test]
     fn decode_post_0_47_response() {
@@ -96,7 +94,7 @@ mod test {
         assert!(responses.next().is_none());
     }
 
-    fn decode_msg_responses(resp_base64: &str) -> impl Iterator<Item = Any> {
+    fn decode_msg_responses(resp_base64: &str) -> impl Iterator<Item = ProtobufAny> {
         let resp = general_purpose::STANDARD.decode(resp_base64).unwrap();
         super::decode_msg_responses(&resp).unwrap()
     }
