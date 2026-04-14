@@ -46,17 +46,20 @@ impl Topology {
             ResolvedNonHostIbcCurrency {
                 traversed_networks: vec![dex_network],
                 dex_symbol: symbol::Builder::NEW,
+                overriden_symbol: None,
                 currency,
             },
             |ResolvedNonHostIbcCurrency {
                  traversed_networks,
                  dex_symbol,
+                 overriden_symbol,
                  currency,
              }| {
                 match currency {
                     Currency::Native(native) => Ok(ControlFlow::Break(DexResolvedCurrency {
                         traversed_networks,
                         dex_symbol,
+                        overriden_symbol,
                         currency: native,
                         host_local: false,
                     })),
@@ -66,6 +69,7 @@ impl Topology {
                             host_to_dex_path,
                             traversed_networks,
                             dex_symbol,
+                            overriden_symbol,
                             ibc,
                         )))
                     }
@@ -74,6 +78,7 @@ impl Topology {
                         channels,
                         traversed_networks,
                         dex_symbol,
+                        overriden_symbol,
                         ibc,
                     )
                     .map(ControlFlow::Continue),
@@ -87,6 +92,7 @@ impl Topology {
         host_to_dex_path: &[host_to_dex::Channel<'_>],
         mut traversed_networks: Vec<&'network network::Id>,
         mut dex_symbol: symbol::Builder,
+        mut overriden_symbol: Option<&'currency currency::Id>,
         ibc: &'currency currency::Ibc,
     ) -> DexResolvedCurrency<'network, 'currency>
     where
@@ -99,13 +105,18 @@ impl Topology {
 
         assert_eq!(ibc.currency(), host_network.currency().id());
 
+        overriden_symbol = overriden_symbol.or_else(|| ibc.overriden_symbol());
+
         traversed_networks.push(host_network.name());
 
-        dex_symbol.add_channel(host_to_dex_path[0].counterpart_channel_id());
+        if overriden_symbol.is_none() {
+            dex_symbol.add_channel(host_to_dex_path[0].counterpart_channel_id());
+        }
 
         DexResolvedCurrency {
             traversed_networks,
             dex_symbol,
+            overriden_symbol,
             currency: host_network.currency().native(),
             host_local: true,
         }
@@ -116,6 +127,7 @@ impl Topology {
         channels: &'channels Channels,
         mut traversed_networks: Vec<&'network network::Id>,
         mut dex_symbol: symbol::Builder,
+        mut overriden_symbol: Option<&'currency currency::Id>,
         ibc: &'currency currency::Ibc,
     ) -> Result<ResolvedNonHostIbcCurrency<'network, 'currency>, error::ResolveCurrency>
     where
@@ -125,22 +137,26 @@ impl Topology {
         if traversed_networks.contains(&ibc.network()) {
             Err(error::ResolveCurrency::CycleCreated)
         } else {
-            if let Some(channel_id) = channels
-                .get(traversed_networks.last().unwrap_or_else(
-                    #[inline]
-                    || {
-                        unreachable!(
-                            "Traversed networks list has to contain at least \
-                                the starting network!",
-                        )
-                    },
-                ))
-                .and_then(|connected_networks| connected_networks.get(ibc.network()))
-            {
-                dex_symbol.add_channel(channel_id);
-            }
+            overriden_symbol = overriden_symbol.or_else(|| ibc.overriden_symbol());
 
-            traversed_networks.push(ibc.network());
+            if overriden_symbol.is_none() {
+                if let Some(channel_id) = channels
+                    .get(traversed_networks.last().unwrap_or_else(
+                        #[inline]
+                        || {
+                            unreachable!(
+                                "Traversed networks list has to contain at least \
+                                the starting network!",
+                            )
+                        },
+                    ))
+                    .and_then(|connected_networks| connected_networks.get(ibc.network()))
+                {
+                    dex_symbol.add_channel(channel_id);
+                }
+
+                traversed_networks.push(ibc.network());
+            }
 
             networks
                 .get(ibc.network())
@@ -155,6 +171,7 @@ impl Topology {
                         .map(|currency| ResolvedNonHostIbcCurrency {
                             traversed_networks,
                             dex_symbol,
+                            overriden_symbol,
                             currency,
                         })
                         .ok_or_else(
@@ -182,6 +199,7 @@ where
 {
     traversed_networks: Vec<&'network network::Id>,
     dex_symbol: symbol::Builder,
+    overriden_symbol: Option<&'currency currency::Id>,
     currency: &'currency currency::Native,
     host_local: bool,
 }
@@ -208,8 +226,17 @@ where
             .map(|bank_symbol| {
                 CurrencyDefinition::new(
                     ticker.as_ref().into(),
-                    bank_symbol.add_symbol(self.currency.symbol()),
-                    self.dex_symbol.add_symbol(self.currency.symbol()),
+                    bank_symbol.add_symbol(
+                        if let Some(symbol) = self.overriden_symbol
+                            && !self.host_local
+                        {
+                            symbol
+                        } else {
+                            self.currency.symbol()
+                        },
+                    ),
+                    self.dex_symbol
+                        .add_symbol(self.overriden_symbol.unwrap_or(self.currency.symbol())),
                     self.currency.decimal_digits(),
                 )
             })
@@ -301,6 +328,7 @@ where
 {
     traversed_networks: Vec<&'network network::Id>,
     dex_symbol: symbol::Builder,
+    overriden_symbol: Option<&'currency currency::Id>,
     currency: &'currency Currency,
 }
 

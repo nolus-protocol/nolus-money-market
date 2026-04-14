@@ -133,7 +133,8 @@
         "NLS": {
           "ibc": {
             "network": "NOLUS",
-            "currency": "NLS"
+            "currency": "NLS",
+            "override_symbol": "osmo-nls"
           },
           "icon": "https://raw.githubusercontent.com/nolus-protocol/webapp/main/src/config/currencies/icons/osmosis-nls.svg"
         },
@@ -155,7 +156,8 @@
         "USDC_AXELAR": {
           "ibc": {
             "network": "AXELAR",
-            "currency": "USDC"
+            "currency": "USDC",
+            "override_symbol": "osmo-usdc"
           },
           "icon": "https://raw.githubusercontent.com/nolus-protocol/webapp/main/src/config/currencies/icons/osmosis-usdc.svg"
         },
