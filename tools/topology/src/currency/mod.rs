@@ -2,6 +2,8 @@ use std::borrow::Borrow;
 
 use serde::Deserialize;
 
+use crate::skippable::Skippable;
+
 pub(crate) use self::{ibc::Ibc, native::Native};
 
 mod ibc;
@@ -46,8 +48,8 @@ impl From<RawWithIcon> for Currency {
 struct RawWithIcon {
     #[serde(flatten)]
     currency: Raw,
-    #[serde(rename = "icon")]
-    _icon: Option<String>,
+    #[serde(default, rename = "icon")]
+    _icon: Skippable<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Deserialize)]
