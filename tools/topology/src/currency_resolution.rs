@@ -247,23 +247,9 @@ where
 
         (
             bank_symbol,
-            // TODO [feature=array_windows]
-            //  PR: https://github.com/rust-lang/rust/issues/75027
-            //  Change `windows` to `array_windows` and remove `unreachable!`
-            //  use.
             traversed_networks[traversal_start..]
-                .windows(2)
-                .map(|networks| {
-                    networks.try_into().unwrap_or_else(
-                        #[inline]
-                        |error| {
-                            unreachable!(
-                                "Window slice should be exactly two elements! \
-                                Error: {error:?}"
-                            )
-                        },
-                    )
-                }),
+                .array_windows()
+                .copied(),
         )
     }
 
