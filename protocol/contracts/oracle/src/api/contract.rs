@@ -178,8 +178,11 @@ pub struct Currency {
 }
 
 impl Currency {
-    pub fn new(definition: DefinitionRef, group: CurrencyGroup) -> Self
-where {
+    pub fn new(definition: DefinitionRef, group: CurrencyGroup) -> Self {
+        debug_assert!(
+            !definition.ticker.is_empty() && !definition.bank_symbol.is_empty(),
+            "currency definition must have non-empty ticker and bank_symbol"
+        );
         Self { definition, group }
     }
 }
