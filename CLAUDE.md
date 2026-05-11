@@ -144,7 +144,7 @@ All clippy lints denied. Key rules:
     1. `use` statements in decreasing order of their scope
     2. `mod` declarations, if any, alphabetically
     3. Constants in decreasing order of their visibility
-    4. New types in decreasing order of their visibility
+    4. Type declarations in decreasing order of their visibility
     5. `impl` blocks with functions ordered in decreasing order of their visibility
 
 26. **Import all types**: Always import types via `use` statements rather than referencing them inline with full paths (e.g., `use std::cell::RefMut;` then `RefMut<...>`, not `std::cell::RefMut<...>`).
@@ -159,9 +159,9 @@ All clippy lints denied. Key rules:
 
 31. **Name lifetimes after their binding — one name per shared constraint**: When a lifetime belongs to exactly one binding, name it after that binding (e.g., `'lease` for `lease: &'lease T`). When multiple bindings share the same lifetime constraint, give the shared lifetime a single descriptive conceptual name instead of splitting it. Never use opaque single-letter names like `'a`.
 
-32. **`const` methods by default**: Declare every method `const fn` unless it calls a non-const function or performs heap allocation. Methods that move or copy fields into a struct, return a `Copy` type (e.g., `u8`, `u64`, `Addr` once const-stable), or return a shared reference (`&T`) to a field qualify unconditionally. Returning `&str` from a `String` field does not (`.as_str()` is not `const`-stable) — keep those non-const or change the return type to `&String` if `const` is needed.
+32. **`const` methods by default**: Declare every method `const fn` unless it calls a non-const function or performs heap allocation. Methods that move or copy fields into a struct, return a `Copy` type (e.g., `u8`, `u64`, `Timestamp`), or return a shared reference (`&T`) to a field qualify unconditionally. Returning `&str` from a `String` field does not (`.as_str()` is not `const`-stable) — keep those non-const or change the return type to `&String` if `const` is needed. Note that `Addr` is not `Copy` (it wraps `String`), so methods returning `Addr` by value cannot be `const fn`.
 
-33. **Struct fields follow the natural English description of the operation they represent, grouped semantics-first, infrastructure last.** Declare semantic fields in the order they appear in the sentence that describes the operation, then group infrastructure fields (storage keys, derived IDs, authority references) after them. Apply the same ordering to struct initialisers and destructuring patterns. Example — a lease repayment: `lease_id → payer → amount → currency` (semantic), then `storage handle → bumps/ids` (infrastructure). When a single field encapsulates multiple semantic concepts, it stands first as the primary payload.
+33. **Struct fields follow the natural English description of the operation they represent, grouped semantics-first, infrastructure last.** Declare semantic fields in the order they appear in the sentence that describes the operation, then group infrastructure fields (storage handles, derived IDs, authority references) after them. Apply the same ordering to struct initialisers and destructuring patterns. Example — a lease repayment: `lease_id → payer → amount → currency` (semantic), then `storage handle → version markers` (infrastructure). When a single field encapsulates multiple semantic concepts, it stands first as the primary payload.
 
 34. **Closure parameter naming**: For a unit parameter write the tuple pattern `|()| ...`, not `|_| ...`. For an unused non-unit parameter give it a descriptive name prefixed with `_` (e.g. `|_events| ...`), not bare `_`. Bare `_` discards type information and makes the closure harder to read.
 
@@ -174,7 +174,7 @@ All clippy lints denied. Key rules:
     - For `Copy` or small types, cloning is acceptable; avoid cloning large heap data (`String`, `Vec`, `Arc` unless intended).
     - If you must store a copy internally, take ownership (`T`) or require the caller to pass `Arc`/`Rc` so cloning is explicit.
 
-36. **Doc-comments on private items only when the *why* is non-obvious**: Public API items (`pub` / `pub(crate)` re-exports) use doc-comments to document their contract. Private items (private fns, private structs, inherent impls of private types) default to no doc-comment. A private item gets a doc-comment only when the comment encodes a non-obvious *why* — a hidden invariant, a workaround for a specific CosmWasm / IBC / DEX behaviour, a non-trivial choice between two reasonable implementations. The function's own name and signature carry the *what*. The word "helper" is banned — it carries no information the function name does not already convey.
+36. **Doc-comments on private items only when the *why* is non-obvious**: Public API items (`pub` / `pub(crate)` re-exports) use doc-comments to document their contract. Private items (private fns, private structs, inherent impls of private types) default to no doc-comment. A private item gets a doc-comment only when the comment encodes a non-obvious *why* — a hidden invariant, a workaround for a specific CosmWasm / IBC / DEX behaviour, a non-trivial choice between two reasonable implementations. The function's own name and signature carry the *what*. The word "helper" is banned **in identifiers and doc-comments** — it carries no information the function's own name and signature do not already convey. (Prose use of "helper" as a descriptive noun, e.g., in this file, is fine.)
 
 37. **Prefix unused-yet items with `_`; never `#[allow(dead_code)]`**: When adding an item that has no caller yet (because the calling code is landing in a follow-up PR), prefix the item's name with `_` rather than attaching `#[allow(dead_code)]`. Example: `fn _build_lease_id(ordinal: u64) -> LeaseId { … }`. The leading underscore is local, mechanical, and disappears the moment a real caller arrives. `#[allow]` is invisible to grep, survives forever, and tends to be forgotten when the caller eventually lands.
 
@@ -203,16 +203,16 @@ These extend or replace the corresponding entries in the global `~/.claude/CLAUD
   - Oracle / price-feed comparison, fraction / ratio math on untrusted input → `constant-time-analysis`
   - Code handling private keys, mnemonics, or any sensitive material → `zeroize-audit`
   - New/updated workspace dependencies → `supply-chain-risk-auditor`
-- **Diff Reviewer additions** (on top of the global checklist):
-  - No `unwrap()` / `expect()` outside tests — clippy enforces, but reviewers verify the test/non-test split is correct
+- **Review checklist additions** (on top of the global checklist):
+  - No `unwrap()` outside tests — clippy denies `unwrap_used` / `unwrap_in_result`. `expect()` is not lint-denied; reviewers still verify it does not appear outside tests.
   - No `as` casts except in `const fn` widening helpers (Code Style rule 15)
   - Feature-flag correctness: items used only under `contract` or `testing` are properly gated
   - New workspace members declare appropriate `[package.metadata.cargo-each]` tags
   - Errors are typed in library code (no `anyhow` strings reaching public APIs)
   - Invariant methods (`invariant_held`) called after constructors and mutations (Code Style rule 10)
   - `[workspace.lints]` blocks remain in sync across `platform/`, `protocol/`, `tests/` (Architectural Pattern 5)
-- **Coding-agent gate:** every coding agent must pass `cargo build`, `cargo lint`, and `cargo run-test` before handoff.
-- **Discovery-tax location:** runbook entries for this repo live in `RUNBOOK.md` at the repo root (not in personal memory), grouped by domain (CosmWasm, IBC, DEX, build).
+- **Quality gate for delegated work:** any agent performing a coding task must pass `cargo build`, `cargo fmt --all -- --check`, `cargo lint`, and `cargo run-test` before reporting the task complete.
+- **Discovery-tax location:** runbook entries for this repo live in `RUNBOOK.md` at the repo root (create on first entry), grouped by domain (CosmWasm, IBC, DEX, build).
 
 ## Build Profiles
 
