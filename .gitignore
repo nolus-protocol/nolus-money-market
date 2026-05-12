@@ -16,6 +16,9 @@
 # Cargo+Git helper file (https://github.com/rust-lang/cargo/blob/0.44.1/src/cargo/sources/git/utils.rs#L320-L327)
 .cargo-ok
 
+# Quality code criteria
+CLAUDE.md
+
 # Text file backups
 **/*.rs.bk
 
@@ -26,6 +29,7 @@
 *.iml
 .idea
 .vscode
+.serena/
 
 # Deploying process
 setup-dev-network.zip
