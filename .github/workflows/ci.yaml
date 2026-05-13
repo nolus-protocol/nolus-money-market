@@ -47,7 +47,7 @@ jobs:
         ${{ steps.out.outputs.profiles-json }}
       workspaces-json: |-
         ${{ steps.out.outputs.workspaces-json }}
-    runs-on: "ubuntu-latest"
+    runs-on: ["self-hosted", "nolus-ci"]
     steps:
       - name: "Checkout repository"
         uses: "actions/checkout@v5"
@@ -97,7 +97,7 @@ jobs:
             >>"${GITHUB_OUTPUT:?}"
   audit-dependencies:
     name: "Audit dependencies"
-    runs-on: "ubuntu-latest"
+    runs-on: ["self-hosted", "nolus-ci"]
     steps:
       - name: "Checkout repository"
         uses: "actions/checkout@v5"
@@ -127,7 +127,7 @@ jobs:
             "${image_tag:?}"
   check-formatting:
     name: "Check formatting"
-    runs-on: "ubuntu-latest"
+    runs-on: ["self-hosted", "nolus-ci"]
     steps:
       - name: "Checkout repository"
         uses: "actions/checkout@v5"
@@ -160,7 +160,7 @@ jobs:
       check-dependencies-versions: |-
         ${{ toJSON(github.ref_type == 'tag' || (github.event_name == 'workflow_dispatch' && inputs.check-dependencies-version)) }}
     name: "Check lockfiles"
-    runs-on: "ubuntu-latest"
+    runs-on: ["self-hosted", "nolus-ci"]
     steps:
       - if: |-
           fromJSON(env.check-dependencies-versions)
@@ -202,7 +202,7 @@ jobs:
     name: "Check for unused dependencies"
     needs:
       - "matrix-arguments"
-    runs-on: "ubuntu-latest"
+    runs-on: ["self-hosted", "nolus-ci"]
     strategy:
       matrix:
         workspace: |-
@@ -247,7 +247,7 @@ jobs:
     name: "Lint codebase without tests"
     needs:
       - "matrix-arguments"
-    runs-on: "ubuntu-latest"
+    runs-on: ["self-hosted", "nolus-ci"]
     strategy:
       matrix:
         profile: |-
@@ -298,7 +298,7 @@ jobs:
     name: "Lint codebase with tests"
     needs:
       - "matrix-arguments"
-    runs-on: "ubuntu-latest"
+    runs-on: ["self-hosted", "nolus-ci"]
     strategy:
       matrix:
         profile: |-
@@ -349,7 +349,7 @@ jobs:
     name: "Run tests"
     needs:
       - "matrix-arguments"
-    runs-on: "ubuntu-latest"
+    runs-on: ["self-hosted", "nolus-ci"]
     strategy:
       matrix:
         profile: |-
@@ -402,7 +402,7 @@ jobs:
       upload-artifacts: |-
         ${{ toJSON(github.ref_type == 'tag' || (github.event_name == 'workflow_dispatch' && inputs.upload-artifacts)) }}
     name: "Build contracts"
-    runs-on: "ubuntu-latest"
+    runs-on: ["self-hosted", "nolus-ci"]
     steps:
       - name: "Checkout repository"
         uses: "actions/checkout@v5"
@@ -596,7 +596,7 @@ jobs:
     name: "Create draft release"
     permissions:
       contents: "write"
-    runs-on: "ubuntu-latest"
+    runs-on: ["self-hosted", "nolus-ci"]
     steps:
       - name: "Checkout repository"
         uses: "actions/checkout@v5"
