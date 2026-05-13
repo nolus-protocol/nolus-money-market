@@ -22,7 +22,7 @@ pub enum LeaseOperationsMsg {
     try_from = "OpenLeaseParamsRaw"
 )]
 pub struct OpenLeaseParams {
-    expected_instance_ordinal: u8,
+    expected_instance_ordinal: u16,
     downpayment_currency: CurrencyDTO<PaymentGroup>,
     lpn_currency: CurrencyDTO<PaymentGroup>,
     asset_currency: CurrencyDTO<PaymentGroup>,
@@ -30,7 +30,7 @@ pub struct OpenLeaseParams {
 
 impl OpenLeaseParams {
     pub fn new(
-        expected_instance_ordinal: u8,
+        expected_instance_ordinal: u16,
         downpayment_currency: CurrencyDTO<PaymentGroup>,
         lpn_currency: CurrencyDTO<PaymentGroup>,
         asset_currency: CurrencyDTO<PaymentGroup>,
@@ -48,7 +48,7 @@ impl OpenLeaseParams {
             .inspect(|p| debug_assert!(p.invariant_held()))
     }
 
-    pub const fn expected_instance_ordinal(&self) -> u8 {
+    pub const fn expected_instance_ordinal(&self) -> u16 {
         self.expected_instance_ordinal
     }
 
@@ -74,7 +74,7 @@ impl OpenLeaseParams {
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 struct OpenLeaseParamsRaw {
-    expected_instance_ordinal: u8,
+    expected_instance_ordinal: u16,
     downpayment_currency: CurrencyDTO<PaymentGroup>,
     lpn_currency: CurrencyDTO<PaymentGroup>,
     asset_currency: CurrencyDTO<PaymentGroup>,
@@ -113,6 +113,9 @@ impl SwapParams {
         coin_in: CoinDTO<PaymentGroup>,
         min_out: CoinDTO<PaymentGroup>,
     ) -> Result<Self, Error> {
+        if coin_in.is_zero() || min_out.is_zero() {
+            return Err(Error::ZeroSwapAmount);
+        }
         let params = Self { coin_in, min_out };
         params
             .invariant_held()
@@ -130,7 +133,9 @@ impl SwapParams {
     }
 
     pub fn invariant_held(&self) -> bool {
-        self.coin_in.currency() != self.min_out.currency()
+        !self.coin_in.is_zero()
+            && !self.min_out.is_zero()
+            && self.coin_in.currency() != self.min_out.currency()
     }
 }
 
@@ -150,7 +155,44 @@ impl TryFrom<SwapParamsRaw> for SwapParams {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
-#[serde(deny_unknown_fields, rename_all = "snake_case")]
+#[serde(
+    deny_unknown_fields,
+    rename_all = "snake_case",
+    try_from = "TransferOutParamsRaw"
+)]
 pub struct TransferOutParams {
-    pub amount: CoinDTO<PaymentGroup>,
+    amount: CoinDTO<PaymentGroup>,
+}
+
+impl TransferOutParams {
+    pub fn new(amount: CoinDTO<PaymentGroup>) -> Result<Self, Error> {
+        let params = Self { amount };
+        params
+            .invariant_held()
+            .then_some(params)
+            .ok_or(Error::ZeroTransferAmount)
+            .inspect(|p| debug_assert!(p.invariant_held()))
+    }
+
+    pub const fn amount(&self) -> &CoinDTO<PaymentGroup> {
+        &self.amount
+    }
+
+    pub fn invariant_held(&self) -> bool {
+        !self.amount.is_zero()
+    }
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields, rename_all = "snake_case")]
+struct TransferOutParamsRaw {
+    amount: CoinDTO<PaymentGroup>,
+}
+
+impl TryFrom<TransferOutParamsRaw> for TransferOutParams {
+    type Error = Error;
+
+    fn try_from(raw: TransferOutParamsRaw) -> Result<Self, Self::Error> {
+        TransferOutParams::new(raw.amount)
+    }
 }

@@ -3,6 +3,7 @@ pub mod envelope;
 pub mod error;
 pub mod msg;
 pub mod response;
+pub mod version;
 
 #[cfg(feature = "stub")]
 pub mod stub;

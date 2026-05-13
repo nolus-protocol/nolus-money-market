@@ -7,6 +7,20 @@ use crate::msg::{
     CloseLeaseParams, LeaseOperationsMsg, OpenLeaseParams, SwapParams, TransferOutParams,
 };
 
+/// Marker trait the consuming controller must implement on its own
+/// `ExecuteMsg` (or whichever outer enum carries [`LeaseOperationsMsg`]).
+///
+/// Why a marker: the stub builders accept an `op_to_msg` closure that wraps
+/// a [`LeaseOperationsMsg`] into the controller's outer message before it
+/// goes onto the wire. Without this bound, any `Serialize` value would work
+/// — including `LeaseOperationsMsg` itself, which would let the controller
+/// (or a contributor) accidentally emit a flat-embedded operation that
+/// bypasses the controller's own authorisation layer. By requiring the
+/// closure's output to implement `ControllerInnerMessage` the crate forces
+/// a deliberate one-line opt-in on the consumer side; the orphan rule
+/// prevents the consumer from implementing it on `LeaseOperationsMsg`.
+pub trait ControllerInnerMessage: Serialize {}
+
 pub struct Factory<'controller> {
     controller: &'controller Addr,
 }
@@ -19,7 +33,7 @@ impl<'controller> Factory<'controller> {
     pub fn open<F, M>(&self, params: OpenLeaseParams, op_to_msg: F) -> PlatformResult<Batch>
     where
         F: FnOnce(LeaseOperationsMsg) -> M,
-        M: Serialize,
+        M: ControllerInnerMessage,
     {
         schedule(
             self.controller,
@@ -30,7 +44,7 @@ impl<'controller> Factory<'controller> {
     pub fn close<F, M>(&self, params: CloseLeaseParams, op_to_msg: F) -> PlatformResult<Batch>
     where
         F: FnOnce(LeaseOperationsMsg) -> M,
-        M: Serialize,
+        M: ControllerInnerMessage,
     {
         schedule(
             self.controller,
@@ -51,7 +65,7 @@ impl<'controller> Lease<'controller> {
     pub fn swap<F, M>(&self, params: SwapParams, op_to_msg: F) -> PlatformResult<Batch>
     where
         F: FnOnce(LeaseOperationsMsg) -> M,
-        M: Serialize,
+        M: ControllerInnerMessage,
     {
         schedule(
             self.controller,
@@ -66,7 +80,7 @@ impl<'controller> Lease<'controller> {
     ) -> PlatformResult<Batch>
     where
         F: FnOnce(LeaseOperationsMsg) -> M,
-        M: Serialize,
+        M: ControllerInnerMessage,
     {
         schedule(
             self.controller,
@@ -100,13 +114,15 @@ mod tests {
         CloseLeaseParams, LeaseOperationsMsg, OpenLeaseParams, SwapParams, TransferOutParams,
     };
 
-    use super::{Factory, Lease};
+    use super::{ControllerInnerMessage, Factory, Lease};
 
     #[derive(Serialize)]
     #[serde(rename_all = "snake_case")]
     enum OuterExecuteMsg {
         LeaseOperations(LeaseOperationsMsg),
     }
+
+    impl ControllerInnerMessage for OuterExecuteMsg {}
 
     #[test]
     fn factory_open_schedules_one_message() {
@@ -144,9 +160,7 @@ mod tests {
         let lease = Lease::new(&controller);
         let batch = lease
             .transfer_out(
-                TransferOutParams {
-                    amount: Coin::<PaymentC3>::new(1000).into(),
-                },
+                sample_transfer_out_params(),
                 OuterExecuteMsg::LeaseOperations,
             )
             .expect("scheduling must succeed");
@@ -168,6 +182,11 @@ mod tests {
             Coin::<PaymentC1>::new(1000).into(),
             Coin::<PaymentC2>::new(42).into(),
         )
-        .expect("sample uses two distinct currencies")
+        .expect("sample uses two distinct non-zero amounts")
+    }
+
+    fn sample_transfer_out_params() -> TransferOutParams {
+        TransferOutParams::new(Coin::<PaymentC3>::new(1000).into())
+            .expect("sample uses a non-zero amount")
     }
 }
