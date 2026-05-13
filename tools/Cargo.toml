@@ -31,21 +31,26 @@ warnings = "deny"
 
 [workspace.dependencies]
 # Own packages
-json-value = { path = "json-value" }
-topology = { path = "topology" }
+json-value = { path = "json-value", default-features = false }
+topology = { path = "topology", default-features = false }
 
 # General packages
-anyhow = "1"
-cargo_metadata = "0.20"
-clap = { version = "4.5", features = ["derive", "unicode"] }
+anyhow = { version = "1", default-features = false }
+cargo_metadata = { version = "0.20", default-features = false }
+clap = { version = "4.5", default-features = false, features = [
+    "derive",
+    "help",
+    "std",
+    "usage",
+] }
 either = { version = "1", default-features = false }
-thiserror = "2"
-serde = { version = "1", features = ["derive"] }
-serde_json = "1"
-sha2 = "0.10.8"
+thiserror = { version = "2", default-features = false }
+serde = { version = "1", default-features = false, features = ["derive", "std"] }
+serde_json = { version = "1", default-features = false, features = ["std"] }
+sha2 = { version = "0.10.8", default-features = false }
 
 # Testing packages
-serde_test = "1"
+serde_test = { version = "1", default-features = false }
 
 [profile.dev.build-override]
 opt-level = 3
