@@ -35,16 +35,12 @@ json-value = { path = "json-value", default-features = false }
 topology = { path = "topology", default-features = false }
 
 # General packages
-anyhow = { version = "1", default-features = false, features = ["std"] }
+anyhow = { version = "1", default-features = false }
 cargo_metadata = { version = "0.20", default-features = false }
 clap = { version = "4.5", default-features = false, features = [
-    "color",
     "derive",
-    "error-context",
     "help",
     "std",
-    "suggestions",
-    "unicode",
     "usage",
 ] }
 either = { version = "1", default-features = false }

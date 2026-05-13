@@ -73,7 +73,7 @@ base64 = { version = "0.22", default-features = false }
 either = { version = "1", default-features = false }
 enum_dispatch = { version = "0.3", default-features = false }
 gcd = { version = "2", default-features = false }
-prost = { version = "0.13", default-features = false, features = ["derive", "std"] }
+prost = { version = "0.13", default-features = false, features = ["derive"] }
 serde = { version = "1", default-features = false }
 serde_json = { version = "1", default-features = false, features = ["std"] }
 thiserror = { version = "2", default-features = false }
