@@ -56,7 +56,7 @@ json-value = { path = "../tools/json-value", default-features = false }
 
 # General
 base64 = { version = "0.22", default-features = false }
-gcd = "2"
+gcd = { version = "2", default-features = false }
 serde = { version = "1", default-features = false }
 thiserror = { version = "2", default-features = false }
 
@@ -66,7 +66,7 @@ cosmwasm-std = { version = "3", default-features = false, features = [
     "iterator",
     "std",
 ] }
-cw-storage-plus = "3"
+cw-storage-plus = { version = "3", default-features = false, features = ["iterator"] }
 cw-multi-test = { version = "3", default-features = false, features = [
     "cosmwasm_1_2",
     "staking",
@@ -81,7 +81,7 @@ bnum = { version = "0.13", default-features = false }
 num-integer = {version = "0.1", default-features = false}
 
 # Testing
-serde_test = "1"
+serde_test = { version = "1", default-features = false }
 
 [profile.dev.build-override]
 opt-level = 3
