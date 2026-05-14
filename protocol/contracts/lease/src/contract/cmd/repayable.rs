@@ -201,6 +201,7 @@ mod test {
     use finance::{
         coin::Coin,
         fraction::Fraction,
+        instant::Instant,
         liability::Zone,
         percent::{Percent, Percent100},
         price::{self, Price},

@@ -296,11 +296,11 @@ where
 
 #[cfg(all(feature = "internal.test.contract", test))]
 mod test_normalized_price_not_found {
-    use finance::instant::Instant;
     use currencies::{
         Lpn as BaseCurrency, Lpns as BaseCurrencies, Nls, PaymentGroup as PriceCurrencies,
         PaymentGroup as AlarmCurrencies, Stable as StableCurrency,
     };
+    use finance::instant::Instant;
     use finance::{coin::Coin, duration::Duration, percent::Percent100, price};
     use marketprice::{Repo, config::Config as PriceConfig};
     use sdk::{

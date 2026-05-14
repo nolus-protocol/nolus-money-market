@@ -71,8 +71,8 @@ where
 mod tests {
     use currencies::{LeaseGroup, Lpn, Lpns, testing::PaymentC3};
     use finance::{
-        coin::Coin, duration::Duration, fraction::Fraction, percent::Percent100, price,
-        range::RightOpenRange,
+        coin::Coin, duration::Duration, fraction::Fraction, instant::Instant, percent::Percent100,
+        price, range::RightOpenRange,
     };
     use oracle::api::alarms::{Alarm, ExecuteMsg as PriceAlarmsCmd};
     use oracle_platform::OracleRef;

@@ -180,6 +180,7 @@ pub(crate) mod tests {
         coin::{Amount, Coin},
         duration::Duration,
         fraction::Fraction,
+        instant::Instant,
         liability::Liability,
         percent::Percent100,
         price::Price,

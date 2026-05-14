@@ -266,7 +266,7 @@ mod tests {
 
     use crate::{finance::LpnCoin, lease::tests};
     pub use currencies::Lpn;
-    use finance::{duration::Duration, percent::Percent100};
+    use finance::{duration::Duration, instant::Instant, percent::Percent100};
     use lpp::{
         loan::RepayShares,
         msg::LoanResponse,
