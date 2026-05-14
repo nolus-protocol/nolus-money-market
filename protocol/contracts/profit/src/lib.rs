@@ -16,11 +16,12 @@ pub mod msg;
 mod profit;
 
 #[cfg(feature = "contract")]
+pub mod reserve;
+
+#[cfg(feature = "contract")]
 pub mod result;
 
 #[cfg(feature = "contract")]
 mod state;
 
-pub mod typedefs;
-
-type CadenceHours = u16;
+pub type CadenceHours = u16;

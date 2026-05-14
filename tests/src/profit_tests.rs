@@ -10,8 +10,9 @@ use finance::{
 };
 use platform::bank;
 use profit::{
+    CadenceHours,
     msg::{ConfigResponse, ExecuteMsg, QueryMsg},
-    typedefs::CadenceHours,
+    reserve::IBC_FEE_RESERVE,
 };
 use sdk::{
     cosmwasm_std::{self, Addr, Event, Uint128},
@@ -309,7 +310,7 @@ where
 }
 
 fn total_native_profit(native_profit: Coin<Nls>, lpn_profit_swap_out: Coin<Nls>) -> Coin<Nls> {
-    (native_profit + lpn_profit_swap_out).saturating_sub(::profit::profit::Profit::IBC_FEE_RESERVE)
+    (native_profit + lpn_profit_swap_out).saturating_sub(IBC_FEE_RESERVE)
 }
 
 fn expect_transfer_events<ProtocolsRegistry, Reserve, Leaser, Lpp, Oracle>(
@@ -565,6 +566,6 @@ fn integration_with_time_alarms() {
         )
         .unwrap()
         .u128(),
-        ::profit::profit::Profit::IBC_FEE_RESERVE.to_primitive(),
+        IBC_FEE_RESERVE.to_primitive(),
     );
 }

@@ -1,5 +1,5 @@
 use dex::{ConnectionParams, Ics20Channel};
-use profit::{contract, msg::InstantiateMsg, typedefs::CadenceHours};
+use profit::{CadenceHours, contract, msg::InstantiateMsg};
 use sdk::{cosmwasm_std::Addr, testing};
 
 use crate::common::test_case::response::RemoteChain;
