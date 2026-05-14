@@ -291,6 +291,7 @@ mod tests {
             coin::Coin,
             duration::Duration,
             fraction::{Fraction, Unit},
+            instant::Instant,
             percent::Percent100,
             zero::Zero,
         };
