@@ -430,7 +430,6 @@ dependencies = [
 name = "currency"
 version = "0.7.0"
 dependencies = [
- "sdk",
  "serde",
  "thiserror 2.0.18",
 ]
