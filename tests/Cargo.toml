@@ -49,6 +49,7 @@ timealarms = { path = "../platform/contracts/timealarms", features = ["contract"
 treasury = { path = "../platform/contracts/treasury", default-features = false }
 
 access-control = { path = "../platform/packages/access-control", default-features = false }
+cw-time = { path = "../platform/packages/cw-time", default-features = false }
 currencies = { path = "../protocol/packages/currencies", features = ["testing"], default-features = false }
 currency = { path = "../platform/packages/currency", features = ["testing"], default-features = false }
 dex = { path = "../protocol/packages/dex", features = ["testing"], default-features = false }

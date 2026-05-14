@@ -8,6 +8,7 @@ use serde::{Deserialize, Serialize};
 use currency::{CurrencyDTO, CurrencyDef, Group, MemberOf};
 use decode_resp::{DecodeThenFinish, DecodeThenTransferIn};
 use encode_req::EncodeRequest;
+use finance::instant::Instant;
 use finance::{
     coin::{Coin, CoinDTO},
     duration::Duration,
@@ -15,7 +16,7 @@ use finance::{
 };
 use platform::{batch::Batch, ica::ErrorResponse as ICAErrorResponse, trx};
 use report_anomaly::ReportAnomalyCmd;
-use sdk::cosmwasm_std::{Binary, Env, QuerierWrapper, Timestamp};
+use sdk::cosmwasm_std::{Binary, Env, QuerierWrapper};
 
 use crate::{
     AnomalyTreatment, ConnectionParams, Contract, Stage, error::Result, swap::ExactAmountIn,
@@ -32,6 +33,7 @@ use crate::{
 
 #[cfg(feature = "migration")]
 use super::migration::{InspectSpec, MigrateSpec};
+use cw_time::IntoInstant;
 
 mod decode_resp;
 mod encode_req;
@@ -68,11 +70,7 @@ where
     SwapTask: SwapTaskT,
     SwapClient: ExactAmountIn,
 {
-    pub(super) fn enter_state(
-        &self,
-        _now: Timestamp,
-        querier: QuerierWrapper<'_>,
-    ) -> Result<Batch> {
+    pub(super) fn enter_state(&self, _now: Instant, querier: QuerierWrapper<'_>) -> Result<Batch> {
         self.spec
             .with_slippage_calc(EncodeRequest::<'_, '_, _, SwapClient>::from(
                 &self.spec, querier,
@@ -91,7 +89,7 @@ where
             AnomalyTreatment::Retry(spec) => {
                 let swap_exact_in = SwapExactIn::new(spec);
                 swap_exact_in
-                    .enter(env.block.time, querier)
+                    .enter(env.block.time.into_instant(), querier)
                     .and_then(|batch| response::res_continue::<_, _, Self>(batch, swap_exact_in))
                     .into()
             }
@@ -105,7 +103,7 @@ where
     SwapTask: SwapTaskT,
     SwapClient: ExactAmountIn,
 {
-    fn enter(&self, now: Timestamp, querier: QuerierWrapper<'_>) -> Result<Batch> {
+    fn enter(&self, now: Instant, querier: QuerierWrapper<'_>) -> Result<Batch> {
         self.enter_state(now, querier)
     }
 }
@@ -145,7 +143,7 @@ where
             ))
             .and_then(|next_state| {
                 next_state
-                    .enter(env.block.time, querier)
+                    .enter(env.block.time.into_instant(), querier)
                     .and_then(|resp| response::res_continue::<_, _, Self>(resp, next_state))
             })
             .into()
@@ -228,7 +226,7 @@ where
 
     fn state(
         self,
-        now: Timestamp,
+        now: Instant,
         due_projection: Duration,
         querier: QuerierWrapper<'_>,
     ) -> Self::StateResponse {
@@ -249,7 +247,7 @@ impl<SwapTask, SEnum, SwapClient> TimeAlarm for SwapExactIn<SwapTask, SEnum, Swa
 where
     SwapTask: SwapTaskT,
 {
-    fn setup_alarm(&self, forr: Timestamp) -> Result<Batch> {
+    fn setup_alarm(&self, forr: Instant) -> Result<Batch> {
         self.spec.time_alarm().setup_alarm(forr).map_err(Into::into)
     }
 }

@@ -14,6 +14,7 @@ combinations = [
 ]
 
 [dependencies]
+finance = { workspace = true }
 sdk = { workspace = true, features = ["storage"] }
 
 thiserror = { workspace = true }

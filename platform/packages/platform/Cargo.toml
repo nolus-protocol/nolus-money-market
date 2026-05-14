@@ -16,6 +16,7 @@ testing = ["currency/testing", "finance/testing", "sdk/testing"]
 
 [dependencies]
 currency = { workspace = true }
+cw-time = { workspace = true }
 finance = { workspace = true }
 sdk = { workspace = true, features = ["cosmos_ibc", "cosmos_proto"] }
 

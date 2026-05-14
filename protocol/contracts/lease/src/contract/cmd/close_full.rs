@@ -1,8 +1,8 @@
 use currency::{CurrencyDef, MemberOf};
+use finance::instant::Instant;
 use lpp::stub::loan::LppLoan as LppLoanTrait;
 use oracle_platform::Oracle as OracleTrait;
 use platform::{bank::FixedAddressSender, message::Response as MessageResponse};
-use sdk::cosmwasm_std::Timestamp;
 
 use crate::{
     api::{LeaseAssetCurrencies, LeasePaymentCurrencies},
@@ -15,7 +15,7 @@ use super::repayable::Emitter;
 
 pub(crate) struct Close<ProfitSender, ChangeSender, EmitterT> {
     payment: LpnCoinDTO,
-    now: Timestamp,
+    now: Instant,
     profit: ProfitSender,
     reserve: ReserveRef,
     change: ChangeSender,
@@ -25,7 +25,7 @@ pub(crate) struct Close<ProfitSender, ChangeSender, EmitterT> {
 impl<ProfitSender, ChangeSender, EmitterT> Close<ProfitSender, ChangeSender, EmitterT> {
     pub fn new(
         payment: LpnCoinDTO,
-        now: Timestamp,
+        now: Instant,
         profit: ProfitSender,
         reserve: ReserveRef,
         change: ChangeSender,

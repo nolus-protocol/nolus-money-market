@@ -2,10 +2,12 @@ use serde::{Deserialize, Serialize};
 
 use access_control::composite::Permission as CompositePermission;
 use currency::CurrencyDef;
+use cw_time::IntoInstant;
 use dex::Enterable;
+use finance::instant::Instant;
 use finance::{coin::IntoDTO, duration::Duration};
 use platform::{bank, batch::Emitter, message::Response as MessageResponse};
-use sdk::cosmwasm_std::{Coin as CwCoin, Env, MessageInfo, QuerierWrapper, Timestamp};
+use sdk::cosmwasm_std::{Coin as CwCoin, Env, MessageInfo, QuerierWrapper};
 use timealarms::stub::TimeAlarmDelivery;
 
 use crate::{
@@ -71,7 +73,7 @@ impl Active {
                 debug_assert!(payment.of_currency_dto(LpnCurrency::dto()).is_ok());
                 repay::repay(self.lease, payment, env, querier)
             }
-            None => self.start_swap(info.funds, env.block.time, querier),
+            None => self.start_swap(info.funds, env.block.time.into_instant(), querier),
         }
     }
 
@@ -88,7 +90,11 @@ impl Active {
         let time_alarms_ref = self.lease.lease.time_alarms.clone();
         let oracle_ref = self.lease.lease.oracle.clone();
         let close_status = self.lease.lease.clone().execute(
-            CloseStatusCmd::new(&env.block.time, &time_alarms_ref, &oracle_ref),
+            CloseStatusCmd::new(
+                &env.block.time.into_instant(),
+                &time_alarms_ref,
+                &oracle_ref,
+            ),
             querier,
         )?;
 
@@ -119,7 +125,7 @@ impl Active {
     fn start_swap(
         self,
         cw_amount: Vec<CwCoin>,
-        now: Timestamp,
+        now: Instant,
         querier: QuerierWrapper<'_>,
     ) -> ContractResult<Response> {
         self.lease
@@ -145,7 +151,7 @@ impl From<Active> for Lease {
 impl Handler for Active {
     fn state(
         self,
-        now: Timestamp,
+        now: Instant,
         due_projection: Duration,
         querier: QuerierWrapper<'_>,
     ) -> ContractResult<StateResponse> {
@@ -181,7 +187,7 @@ impl Handler for Active {
             self.lease.update(
                 ChangeClosePolicy::new(
                     change,
-                    &env.block.time,
+                    &env.block.time.into_instant(),
                     profit,
                     time_alarms,
                     &oracle_ref,

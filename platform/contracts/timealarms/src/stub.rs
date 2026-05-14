@@ -3,8 +3,9 @@ use std::result::Result as StdResult;
 use serde::{Deserialize, Serialize};
 
 use access_control::{AccessPermission, error::Error as AccessControlError, user::User};
+use finance::instant::Instant;
 use platform::{batch::Batch, contract::Validator};
-use sdk::cosmwasm_std::{self, Addr, StdError as SdkError, Timestamp};
+use sdk::cosmwasm_std::{self, Addr, StdError as SdkError};
 
 use crate::msg::ExecuteMsg;
 
@@ -14,7 +15,7 @@ pub trait TimeAlarms
 where
     Self: Into<Batch>,
 {
-    fn add_alarm(&mut self, time: Timestamp) -> Result<()>;
+    fn add_alarm(&mut self, time: Instant) -> Result<()>;
 }
 
 pub trait WithTimeAlarms {
@@ -56,7 +57,7 @@ impl TimeAlarmsRef {
         self.addr == addr
     }
 
-    pub fn setup_alarm(&self, when: Timestamp) -> Result<Batch> {
+    pub fn setup_alarm(&self, when: Instant) -> Result<Batch> {
         let mut stub = self.as_stub();
         stub.add_alarm(when)?;
         Ok(stub.into())
@@ -95,7 +96,7 @@ impl TimeAlarmsStub<'_> {
 }
 
 impl TimeAlarms for TimeAlarmsStub<'_> {
-    fn add_alarm(&mut self, time: Timestamp) -> Result<()> {
+    fn add_alarm(&mut self, time: Instant) -> Result<()> {
         self.batch
             .schedule_execute_no_reply(cosmwasm_std::wasm_execute(
                 self.addr().clone(),

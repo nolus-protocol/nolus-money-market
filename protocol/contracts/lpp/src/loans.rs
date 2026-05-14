@@ -56,8 +56,9 @@ impl<Lpn> Repo<Lpn> {
 
 #[cfg(test)]
 mod test {
+    use finance::instant::Instant;
     use finance::{coin::Coin, duration::Duration, percent::Percent100, zero::Zero};
-    use sdk::cosmwasm_std::{Addr, Timestamp, testing};
+    use sdk::cosmwasm_std::{Addr, testing};
 
     use crate::{
         contract::{
@@ -72,7 +73,7 @@ mod test {
     fn test_open_and_repay_loan() {
         let mut deps = testing::mock_dependencies();
 
-        let mut time = Timestamp::from_nanos(0);
+        let mut time = Instant::from_nanos(0);
 
         let addr = Addr::unchecked("leaser");
         let loan = Loan {
@@ -87,7 +88,7 @@ mod test {
 
         let mut loan = Repo::load(deps.as_ref().storage, addr.clone()).expect("should load loan");
 
-        time = Timestamp::from_nanos(Duration::YEAR.nanos() / 2);
+        time = Instant::from_nanos(Duration::YEAR.nanos() / 2);
         let interest = loan.interest_due(&time).unwrap();
         assert_eq!(interest, test::lpn_coin(100));
         // partial repay

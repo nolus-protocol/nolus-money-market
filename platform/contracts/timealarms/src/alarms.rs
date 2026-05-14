@@ -1,10 +1,12 @@
 use std::ops::{Deref, DerefMut};
 
+use cw_time::IntoInstant;
+use finance::instant::Instant;
 use platform::{
     dispatcher::{AlarmsDispatcher, Id},
     message::Response as MessageResponse,
 };
-use sdk::cosmwasm_std::{Addr, Env, Storage, Timestamp};
+use sdk::cosmwasm_std::{Addr, Env, Storage};
 use time_oracle::Alarms;
 
 use crate::{
@@ -41,7 +43,7 @@ where
         }
     }
 
-    pub fn try_any_alarm(&self, ctime: Timestamp) -> Result<AlarmsStatusResponse, ContractError> {
+    pub fn try_any_alarm(&self, ctime: Instant) -> Result<AlarmsStatusResponse, ContractError> {
         let remaining_alarms = self
             .time_alarms
             .alarms_selection(ctime)
@@ -63,9 +65,9 @@ where
         &mut self,
         env: &Env,
         subscriber: Addr,
-        time: Timestamp,
+        time: Instant,
     ) -> ContractResult<MessageResponse> {
-        if time < env.block.time {
+        if time < env.block.time.into_instant() {
             return Err(ContractError::InvalidAlarm(time));
         }
         self.time_alarms
@@ -76,7 +78,7 @@ where
 
     pub fn try_notify(
         &mut self,
-        ctime: Timestamp,
+        ctime: Instant,
         max_count: AlarmsCount,
     ) -> ContractResult<(AlarmsCount, MessageResponse)> {
         self.time_alarms
@@ -108,14 +110,15 @@ where
         self.time_alarms.last_delivered().map_err(Into::into)
     }
 
-    pub fn last_failed(&mut self, now: Timestamp) -> ContractResult<()> {
+    pub fn last_failed(&mut self, now: Instant) -> ContractResult<()> {
         self.time_alarms.last_failed(now).map_err(Into::into)
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use sdk::cosmwasm_std::{Addr, Timestamp, testing};
+    use super::Instant;
+    use sdk::cosmwasm_std::{Addr, testing};
 
     use super::TimeAlarms;
 
@@ -129,7 +132,7 @@ mod tests {
         let msg_sender = Addr::unchecked("some address");
         assert!(
             TimeAlarms::new(deps.storage)
-                .try_add(&env, msg_sender, Timestamp::from_nanos(4),)
+                .try_add(&env, msg_sender, Instant::from_nanos(4),)
                 .is_ok()
         );
     }
@@ -144,7 +147,7 @@ mod tests {
 
         let msg_sender = Addr::unchecked("some address");
         TimeAlarms::new(deps.storage)
-            .try_add(&env, msg_sender, Timestamp::from_nanos(4))
+            .try_add(&env, msg_sender, Instant::from_nanos(4))
             .unwrap_err();
     }
 }

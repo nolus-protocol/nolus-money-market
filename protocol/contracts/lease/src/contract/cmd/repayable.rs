@@ -1,4 +1,5 @@
 use currency::{CurrencyDef, MemberOf};
+use finance::instant::Instant;
 use lpp::stub::loan::LppLoan as LppLoanTrait;
 use oracle_platform::Oracle as OracleTrait;
 use platform::{
@@ -6,7 +7,7 @@ use platform::{
     message::Response as MessageResponse,
 };
 use profit::stub::ProfitRef;
-use sdk::cosmwasm_std::{Addr, Timestamp};
+use sdk::cosmwasm_std::Addr;
 use timealarms::stub::TimeAlarmsRef;
 
 use crate::{
@@ -29,7 +30,7 @@ pub(crate) trait RepayFn {
         self,
         lease: &mut LeaseDO<Asset, Lpp, Oracle>,
         amount: LpnCoin,
-        now: &Timestamp,
+        now: &Instant,
         profit: &mut Profit,
     ) -> ContractResult<RepayReceipt>
     where
@@ -52,7 +53,7 @@ where
 {
     repay_fn: RepayableT,
     amount: LpnCoinDTO,
-    now: &'now Timestamp,
+    now: &'now Instant,
     emitter_fn: EmitterT,
     profit: ProfitRef,
     alarms: (TimeAlarmsRef, &'price_alarm OracleRef),
@@ -67,7 +68,7 @@ where
     pub fn new(
         repay_fn: RepayableT,
         amount: LpnCoinDTO,
-        now: &'now Timestamp,
+        now: &'now Instant,
         emitter_fn: EmitterT,
         profit: ProfitRef,
         alarms: (TimeAlarmsRef, &'price_alarm OracleRef),
@@ -87,7 +88,7 @@ where
     fn check_close_with_init<'time_alarm, Asset, Lpp, Oracle>(
         lease: &mut LeaseDO<Asset, Lpp, Oracle>,
         receipt_close: bool,
-        now: &'now Timestamp,
+        now: &'now Instant,
         time_alarm: &'time_alarm TimeAlarmsRef,
         price_alarm: &'price_alarm OracleRef,
     ) -> ContractResult<CloseStatusDTO>
@@ -208,7 +209,7 @@ mod test {
     use lpp::msg::LoanResponse;
     use platform::batch::Emitter as PlatformEmitter;
     use profit::stub::ProfitRef;
-    use sdk::cosmwasm_std::{Addr, Timestamp};
+    use sdk::cosmwasm_std::Addr;
     use timealarms::stub::TimeAlarmsRef;
 
     use crate::{
@@ -230,7 +231,7 @@ mod test {
     }
     #[test]
     fn reset_take_profit() {
-        let now = Timestamp::from_seconds(24412515);
+        let now = Instant::from_seconds(24412515);
         let lease_amount = Coin::new(1000);
         let lease_lpn = price::total(lease_amount, Price::identity()).unwrap();
         let current_ltv = Percent::from_percent(30);
@@ -269,7 +270,7 @@ mod test {
         }
     }
 
-    fn repay(lease: TestLease, payment: Coin<TestLpn>, now: &Timestamp) -> CloseStatusDTO {
+    fn repay(lease: TestLease, payment: Coin<TestLpn>, now: &Instant) -> CloseStatusDTO {
         let oracle = OracleRef::unchecked(Addr::unchecked("price_alarms_addr"));
 
         let cmd = Repay::new(

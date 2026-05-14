@@ -1,7 +1,8 @@
 use serde::{Deserialize, Serialize};
 
+use finance::instant::Instant;
 use finance::price::Price;
-use sdk::cosmwasm_std::{Addr, Timestamp};
+use sdk::cosmwasm_std::Addr;
 
 #[derive(Serialize, Deserialize)]
 #[cfg_attr(test, derive(Debug, Eq, PartialEq))]
@@ -12,14 +13,14 @@ where
     QuoteC: 'static,
 {
     feeder_addr: Addr,
-    time: Timestamp,
+    time: Instant,
     price: Price<C, QuoteC>,
 }
 
 impl<C, QuoteC> Observation<C, QuoteC> {
     pub fn new(
         feeder_addr: Addr,
-        time: Timestamp,
+        time: Instant,
         price: Price<C, QuoteC>,
     ) -> Observation<C, QuoteC> {
         Observation {
@@ -37,7 +38,7 @@ impl<C, QuoteC> Observation<C, QuoteC> {
         self.price
     }
 
-    pub fn valid_since(&self, since: &Timestamp) -> bool {
+    pub fn valid_since(&self, since: &Instant) -> bool {
         since < &self.time
     }
 }

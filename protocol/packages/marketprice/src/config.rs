@@ -1,12 +1,11 @@
 use serde::{Deserialize, Serialize};
 
-use finance::{duration::Duration, fraction::Fraction, percent::Percent100};
-use sdk::cosmwasm_std::Timestamp;
-
 use crate::{
     error::{self, PriceFeedsError},
     feeders::Count,
 };
+use finance::instant::Instant;
+use finance::{duration::Duration, fraction::Fraction, percent::Percent100};
 
 #[derive(Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[cfg_attr(any(test, feature = "testing"), derive(Debug))]
@@ -70,13 +69,13 @@ impl Config {
         self.samples_number
     }
 
-    pub fn feed_valid_since(&self, now: Timestamp) -> Timestamp {
-        debug_assert!(now > Timestamp::default());
+    pub fn feed_valid_since(&self, now: Instant) -> Instant {
+        debug_assert!(now > Instant::default());
 
-        let ret = if Timestamp::default() + self.feed_validity <= now {
+        let ret = if Instant::default() + self.feed_validity <= now {
             now - self.feed_validity
         } else {
-            Timestamp::default()
+            Instant::default()
         };
         debug_assert!(ret < now, "{ret} >= {now}");
         ret
@@ -165,9 +164,10 @@ mod unchecked {
 
 #[cfg(test)]
 mod test {
+    use finance::instant::Instant;
     use finance::{duration::Duration, percent::Percent100};
     use platform::tests as platform_tests;
-    use sdk::cosmwasm_std::{self, StdError, Timestamp};
+    use sdk::cosmwasm_std::{self, StdError};
 
     use crate::{config::Config, feeders::Count};
 
@@ -180,24 +180,24 @@ mod test {
             Percent100::from_permille(1000),
         );
         assert_eq!(
-            Timestamp::from_seconds(0),
-            c.feed_valid_since(Timestamp::from_seconds(1))
+            Instant::from_seconds(0),
+            c.feed_valid_since(Instant::from_seconds(1))
         );
         assert_eq!(
-            Timestamp::from_seconds(0),
-            c.feed_valid_since(Timestamp::from_seconds(40))
+            Instant::from_seconds(0),
+            c.feed_valid_since(Instant::from_seconds(40))
         );
         assert_eq!(
-            Timestamp::from_seconds(0),
-            c.feed_valid_since(Timestamp::from_seconds(60))
+            Instant::from_seconds(0),
+            c.feed_valid_since(Instant::from_seconds(60))
         );
         assert_eq!(
-            Timestamp::from_seconds(1),
-            c.feed_valid_since(Timestamp::from_seconds(61))
+            Instant::from_seconds(1),
+            c.feed_valid_since(Instant::from_seconds(61))
         );
         assert_eq!(
-            Timestamp::from_seconds(40),
-            c.feed_valid_since(Timestamp::from_seconds(100))
+            Instant::from_seconds(40),
+            c.feed_valid_since(Instant::from_seconds(100))
         );
     }
 

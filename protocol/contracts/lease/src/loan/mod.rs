@@ -2,18 +2,17 @@ use std::mem;
 
 use serde::{Deserialize, Serialize};
 
+use crate::{
+    error::{ContractError, ContractResult},
+    finance::{LpnCoin, LpnCurrency},
+};
+use finance::instant::Instant;
 use finance::{
     coin::Coin, duration::Duration, interest, percent::Percent100, period::Period, zero::Zero,
 };
 use lpp::stub::{LppBatch, LppRef as LppGenericRef, loan::LppLoan as LppLoanTrait};
 use platform::{bank::FixedAddressSender, batch::Batch};
 use profit::stub::ProfitRef;
-use sdk::cosmwasm_std::Timestamp;
-
-use crate::{
-    error::{ContractError, ContractResult},
-    finance::{LpnCoin, LpnCurrency},
-};
 
 pub(crate) use self::repay::Receipt as RepayReceipt;
 pub use self::state::{Overdue, State};
@@ -31,7 +30,7 @@ pub(crate) struct LoanDTO {
     profit: ProfitRef,
     due_period: Duration,
     margin_interest: Percent100,
-    margin_paid_by: Timestamp, // only this one should vary!
+    margin_paid_by: Instant, // only this one should vary!
 }
 
 impl LoanDTO {
@@ -53,7 +52,7 @@ pub(crate) struct Loan<LppLoan> {
     lpp_loan: LppLoan,
     due_period: Duration,
     margin_interest: Percent100,
-    margin_paid_by: Timestamp, // only this one should vary!
+    margin_paid_by: Instant, // only this one should vary!
 }
 
 impl<LppLoan> Loan<LppLoan>
@@ -101,7 +100,7 @@ where
 {
     pub(super) fn new(
         lpp_loan: LppLoan,
-        start: Timestamp,
+        start: Instant,
         annual_margin_interest: Percent100,
         due_period: Duration,
     ) -> Self {
@@ -128,7 +127,7 @@ where
     pub(crate) fn repay<Profit>(
         &mut self,
         payment: LpnCoin,
-        by: &Timestamp,
+        by: &Instant,
         profit: &mut Profit,
     ) -> ContractResult<RepayReceipt>
     where
@@ -177,7 +176,7 @@ where
             .inspect(|receipt| debug_assert_eq!(payment, receipt.total()))
     }
 
-    pub(crate) fn state(&self, now: &Timestamp) -> Result<State, ContractError> {
+    pub(crate) fn state(&self, now: &Instant) -> Result<State, ContractError> {
         self.debug_check_start_due_before(now, "in the past. Now is ");
 
         let due_period_margin = Period::from_till(self.margin_paid_by, now);
@@ -218,7 +217,7 @@ where
         &mut self,
         principal_due: LpnCoin,
         margin_paid: LpnCoin,
-        by: &Timestamp,
+        by: &Instant,
     ) -> ContractResult<()> {
         interest::pay(
             self.margin_interest,
@@ -237,7 +236,7 @@ where
         &mut self,
         interest_paid: LpnCoin,
         principal_paid: LpnCoin,
-        by: &Timestamp,
+        by: &Instant,
     ) -> ContractResult<()> {
         self.lpp_loan
             .repay(by, interest_paid + principal_paid)
@@ -250,7 +249,7 @@ where
             .ok_or(ContractError::Overflow("Repay loan overflow"))
     }
 
-    fn debug_check_start_due_before(&self, when: &Timestamp, when_descr: &str) {
+    fn debug_check_start_due_before(&self, when: &Instant, when_descr: &str) {
         debug_assert!(
             &self.margin_paid_by <= when,
             "The current due period starting at {}s, should begin {} {}s",
@@ -265,6 +264,7 @@ where
 mod tests {
     use serde::{Deserialize, Serialize};
 
+    use crate::{finance::LpnCoin, lease::tests};
     pub use currencies::Lpn;
     use finance::{duration::Duration, percent::Percent100};
     use lpp::{
@@ -277,15 +277,12 @@ mod tests {
     };
     use platform::bank::FixedAddressSender;
     use profit::stub::ProfitRef;
-    use sdk::cosmwasm_std::Timestamp;
-
-    use crate::{finance::LpnCoin, lease::tests};
 
     use super::{Loan, LppRef};
 
     const MARGIN_INTEREST_RATE: Percent100 = Percent100::from_permille(50);
     const LOAN_INTEREST_RATE: Percent100 = Percent100::from_permille(500);
-    const LEASE_START: Timestamp = Timestamp::from_nanos(100);
+    const LEASE_START: Instant = Instant::from_nanos(100);
     const PROFIT_ADDR: &str = "profit_addr";
     const ZERO_COIN: LpnCoin = tests::lpn_coin(0);
 
@@ -299,7 +296,7 @@ mod tests {
         };
         use lpp::msg::LoanResponse;
         use platform::{bank, batch::Batch};
-        use sdk::cosmwasm_std::{Addr, Timestamp};
+        use sdk::cosmwasm_std::Addr;
 
         use crate::{
             finance::LpnCoin,
@@ -1025,7 +1022,7 @@ mod tests {
             before_state: State,
             exp_receipt: RepayReceipt,
             exp_due_period_paid: Duration,
-            now: &Timestamp,
+            now: &Instant,
         ) {
             let mut profit = super::profit_stub();
 
@@ -1149,19 +1146,18 @@ mod tests {
 
     #[cfg(test)]
     mod test_state {
-        use finance::{duration::Duration, interest, percent::Percent100, period::Period};
-        use lpp::{msg::LoanResponse, stub::loan::LppLoan};
-        use sdk::cosmwasm_std::Timestamp;
-
         use crate::{
             lease::tests,
             loan::{Overdue, State},
         };
+        use finance::instant::Instant;
+        use finance::{duration::Duration, interest, percent::Percent100, period::Period};
+        use lpp::{msg::LoanResponse, stub::loan::LppLoan};
 
         use super::{LEASE_START, LppLoanLocal, MARGIN_INTEREST_RATE};
 
         #[track_caller]
-        fn test_state(interest_paid_by: Timestamp, margin_paid_by: Timestamp, now: &Timestamp) {
+        fn test_state(interest_paid_by: Instant, margin_paid_by: Instant, now: &Instant) {
             let principal_due = tests::lpn_coin(10000);
             let due_period_len = Duration::YEAR;
             let annual_interest_margin = MARGIN_INTEREST_RATE;
@@ -1268,11 +1264,11 @@ mod tests {
             self.loan.principal_due
         }
 
-        fn interest_due(&self, by: &Timestamp) -> Option<LpnCoin> {
+        fn interest_due(&self, by: &Instant) -> Option<LpnCoin> {
             self.loan.interest_due(by)
         }
 
-        fn repay(&mut self, by: &Timestamp, repayment: LpnCoin) -> Option<RepayShares<Lpn>> {
+        fn repay(&mut self, by: &Instant, repayment: LpnCoin) -> Option<RepayShares<Lpn>> {
             self.loan.repay(by, repayment)
         }
 
@@ -1301,7 +1297,7 @@ mod tests {
     fn create_loan_custom(
         annual_margin_interest: Percent100,
         loan: LoanResponse<Lpn>,
-        due_start: Timestamp,
+        due_start: Instant,
         due_period: Duration,
     ) -> Loan<LppLoanLocal> {
         Loan::new(

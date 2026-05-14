@@ -29,6 +29,7 @@ use crate::{
 };
 
 use super::Repayable;
+use cw_time::IntoInstant;
 
 pub(crate) trait RepayAlgo {
     type RepayFn: RepayFn;
@@ -91,7 +92,7 @@ where
             RepayCmd::new(
                 self.0.repay_fn(),
                 amount,
-                &env.block.time,
+                &env.block.time.into_instant(),
                 self.0.emitter_fn(env),
                 profit,
                 (time_alarms, &price_alarms),

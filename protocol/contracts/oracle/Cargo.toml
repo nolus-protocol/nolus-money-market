@@ -99,6 +99,7 @@ stub_swap_testing = [
 ]
 
 [dependencies]
+cw-time = { workspace = true }
 currencies = { workspace = true, optional = true }
 currency = { workspace = true, optional = true }
 finance = { workspace = true, optional = true }

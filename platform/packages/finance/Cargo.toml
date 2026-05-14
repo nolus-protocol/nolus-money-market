@@ -18,7 +18,6 @@ testing = ["currency/testing"]
 
 [dependencies]
 currency = { workspace = true }
-sdk = { workspace = true }
 
 #`numtraits` required for calling `num_integer::gcd` in custom gcd impl
 bnum = { workspace = true, features = ["numtraits"] }

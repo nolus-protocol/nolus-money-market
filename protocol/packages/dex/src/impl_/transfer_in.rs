@@ -1,7 +1,8 @@
 use currency::CurrencyDef;
+use finance::instant::Instant;
 use finance::{coin::Coin, duration::Duration};
 use platform::{bank, batch::Batch};
-use sdk::cosmwasm_std::{Addr, QuerierWrapper, Timestamp};
+use sdk::cosmwasm_std::{Addr, QuerierWrapper};
 use timealarms::stub::TimeAlarmsRef;
 
 use crate::error::Result;
@@ -21,7 +22,7 @@ where
         .map(|ref balance| balance >= expected_payment)
 }
 
-pub(super) fn setup_alarm(time_alarms: &TimeAlarmsRef, now: Timestamp) -> Result<Batch> {
+pub(super) fn setup_alarm(time_alarms: &TimeAlarmsRef, now: Instant) -> Result<Batch> {
     time_alarms
         .setup_alarm(now + POLLING_INTERVAL)
         .map_err(Into::into)

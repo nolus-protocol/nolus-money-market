@@ -1,8 +1,8 @@
+use finance::instant::Instant;
 use platform::batch::Batch;
-use sdk::cosmwasm_std::Timestamp;
 
 use crate::DexResult;
 
 pub trait TimeAlarm {
-    fn setup_alarm(&self, r#for: Timestamp) -> DexResult<Batch>;
+    fn setup_alarm(&self, r#for: Instant) -> DexResult<Batch>;
 }

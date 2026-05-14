@@ -56,6 +56,7 @@ timealarms = { path = "../platform/contracts/timealarms", default-features = fal
 # Platform Packages
 access-control = { path = "../platform/packages/access-control", default-features = false }
 currency = { path = "../platform/packages/currency", default-features = false }
+cw-time = { path = "../platform/packages/cw-time", default-features = false }
 finance = { path = "../platform/packages/finance", default-features = false }
 lpp-platform = { path = "../platform/packages/lpp", default-features = false }
 oracle-platform = { path = "../platform/packages/oracle", default-features = false }

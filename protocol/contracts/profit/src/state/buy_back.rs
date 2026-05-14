@@ -6,13 +6,14 @@ use dex::{
     AcceptAnyNonZeroSwap, Account, AnomalyTreatment, ContractInSwap, Response as DexResponse,
     Stage, StateLocalOut, SwapOutputTask, SwapTask, WithCalculator, WithOutputTask,
 };
+use finance::instant::Instant;
 use finance::{
     coin::{Coin, CoinDTO},
     duration::Duration,
 };
 use oracle::stub::SwapPath;
 use platform::bank::{self, BankAccountView};
-use sdk::cosmwasm_std::{Addr, Env, QuerierWrapper, Timestamp};
+use sdk::cosmwasm_std::{Addr, Env, QuerierWrapper};
 use timealarms::stub::TimeAlarmsRef;
 
 use crate::{msg::ConfigResponse, result::ContractResult};
@@ -148,7 +149,7 @@ impl ContractInSwap for BuyBack {
     fn state(
         self,
         _in_progress: Stage,
-        _now: Timestamp,
+        _now: Instant,
         _due_projection: Duration,
         _querier: QuerierWrapper<'_>,
     ) -> <Self as SwapTask>::StateResponse {

@@ -8,9 +8,10 @@ use dex::{
     Account, ContractInSwap, Stage, StartLocalRemoteState, SwapOutputTask, SwapTask,
     WithCalculator, WithOutputTask,
 };
+use finance::instant::Instant;
 use finance::{coin::CoinDTO, duration::Duration};
 use platform::ica::HostAccount;
-use sdk::cosmwasm_std::{QuerierWrapper, Timestamp};
+use sdk::cosmwasm_std::QuerierWrapper;
 use timealarms::stub::TimeAlarmsRef;
 
 use crate::{
@@ -53,7 +54,7 @@ pub(super) fn start(
     downpayment: DownpaymentCoin,
     loan: OpenLoanRespResult,
     deps: (LppRef, OracleRef, TimeAlarmsRef, LeasesRef),
-    start_opening_at: Timestamp,
+    start_opening_at: Instant,
 ) -> StartState {
     dex::start_local_remote::<_, BuyAsset>(OpenIcaAccount::new(
         new_lease,
@@ -73,7 +74,7 @@ pub struct BuyAsset {
     downpayment: DownpaymentCoin,
     loan: OpenLoanRespResult,
     deps: (LppRef, OracleRef, TimeAlarmsRef, LeasesRef),
-    start_opening_at: Timestamp,
+    start_opening_at: Instant,
 }
 
 impl BuyAsset {
@@ -83,7 +84,7 @@ impl BuyAsset {
         downpayment: DownpaymentCoin,
         loan: OpenLoanRespResult,
         deps: (LppRef, OracleRef, TimeAlarmsRef, LeasesRef),
-        start_opening_at: Timestamp,
+        start_opening_at: Instant,
     ) -> Self {
         Self {
             form,
@@ -174,7 +175,7 @@ impl ContractInSwap for BuyAsset {
     fn state(
         self,
         in_progress: Stage,
-        _now: Timestamp,
+        _now: Instant,
         _due_projection: Duration,
         _querier: QuerierWrapper<'_>,
     ) -> Self::StateResponse {

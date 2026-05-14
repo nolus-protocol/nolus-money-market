@@ -1,5 +1,6 @@
 use finance::duration::Duration;
-use sdk::cosmwasm_std::{QuerierWrapper, Timestamp};
+use finance::instant::Instant;
+use sdk::cosmwasm_std::QuerierWrapper;
 
 use crate::{
     api::query::{StateResponse, opened::Status},
@@ -19,7 +20,7 @@ pub mod repay;
 fn lease_state(
     lease: Lease,
     status: Status,
-    now: Timestamp,
+    now: Instant,
     due_projection: Duration,
     querier: QuerierWrapper<'_>,
 ) -> ContractResult<StateResponse> {

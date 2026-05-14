@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use sdk::cosmwasm_std::Timestamp;
+use finance::instant::Instant;
 
 pub type AlarmsCount = platform::dispatcher::AlarmsCount;
 
@@ -18,7 +18,7 @@ pub struct MigrateMsg {}
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub enum ExecuteMsg {
     AddAlarm {
-        time: Timestamp,
+        time: Instant,
     },
     /// Returns [`DispatchAlarmsResponse`] as response data.
     DispatchAlarms {

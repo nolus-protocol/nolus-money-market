@@ -1,13 +1,14 @@
 use finance::duration::Duration;
 use serde::{Deserialize, Serialize};
 
+use finance::instant::Instant;
 use platform::{
     batch::{Batch, Emit, Emitter},
     contract,
     message::Response as MessageResponse,
     state_machine::Response as StateMachineResponse,
 };
-use sdk::cosmwasm_std::{Addr, Env, MessageInfo, QuerierWrapper, Reply, Timestamp};
+use sdk::cosmwasm_std::{Addr, Env, MessageInfo, QuerierWrapper, Reply};
 use timealarms::stub::TimeAlarmsRef;
 
 use crate::{
@@ -23,6 +24,7 @@ use crate::{
 };
 
 use super::buy_asset::DexState;
+use cw_time::IntoInstant;
 
 #[derive(Serialize, Deserialize)]
 pub(crate) struct RequestLoan {
@@ -86,7 +88,7 @@ impl RequestLoan {
             self.downpayment,
             loan,
             self.deps,
-            env.block.time,
+            env.block.time.into_instant(),
         );
         Ok(StateMachineResponse::from(
             MessageResponse::messages_with_event(open_ica.enter(), emitter),
@@ -102,7 +104,7 @@ impl RequestLoan {
 impl Handler for RequestLoan {
     fn state(
         self,
-        _now: Timestamp,
+        _now: Instant,
         _due_projection: Duration,
         _querier: QuerierWrapper<'_>,
     ) -> ContractResult<QueryStateResponse> {

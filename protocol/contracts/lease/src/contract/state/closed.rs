@@ -1,7 +1,8 @@
 use serde::{Deserialize, Serialize};
 
 use finance::duration::Duration;
-use sdk::cosmwasm_std::{Env, MessageInfo, QuerierWrapper, Timestamp};
+use finance::instant::Instant;
+use sdk::cosmwasm_std::{Env, MessageInfo, QuerierWrapper};
 
 use crate::{api::query::StateResponse, error::ContractResult};
 
@@ -13,7 +14,7 @@ pub struct Closed {}
 impl Handler for Closed {
     fn state(
         self,
-        _now: Timestamp,
+        _now: Instant,
         _due_projection: Duration,
         _querier: QuerierWrapper<'_>,
     ) -> ContractResult<StateResponse> {

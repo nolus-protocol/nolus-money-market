@@ -1,7 +1,8 @@
 use serde::{Deserialize, Serialize};
 
 use finance::duration::Duration;
-use sdk::cosmwasm_std::{Env, MessageInfo, QuerierWrapper, Reply, Timestamp};
+use finance::instant::Instant;
+use sdk::cosmwasm_std::{Env, MessageInfo, QuerierWrapper, Reply};
 
 use crate::{
     api::{
@@ -31,7 +32,7 @@ where
 {
     fn state(
         self,
-        now: Timestamp,
+        now: Instant,
         due_projection: Duration,
         querier: QuerierWrapper<'_>,
     ) -> ContractResult<StateResponse> {

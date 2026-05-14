@@ -1,7 +1,8 @@
 use serde::{Deserialize, Serialize};
 
+use finance::instant::Instant;
 use sdk::{
-    cosmwasm_std::{StdResult, Storage, Timestamp},
+    cosmwasm_std::{StdResult, Storage},
     cw_storage_plus::Item,
 };
 
@@ -9,18 +10,18 @@ use crate::ContractError;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct DispatchLog {
-    pub last_dispatch: Timestamp,
+    pub last_dispatch: Instant,
 }
 
 impl DispatchLog {
     const STORAGE: Item<Self> = Item::new("dispatch_log");
 
-    pub fn new(last_dispatch: Timestamp) -> Self {
+    pub fn new(last_dispatch: Instant) -> Self {
         DispatchLog { last_dispatch }
     }
 
     // TODO merge the functionality of this and `update`
-    pub fn last_dispatch(storage: &dyn Storage) -> Timestamp {
+    pub fn last_dispatch(storage: &dyn Storage) -> Instant {
         Self::STORAGE
             .load(storage)
             .map(|log| log.last_dispatch)
@@ -29,7 +30,7 @@ impl DispatchLog {
 
     pub fn update(
         storage: &mut dyn Storage,
-        current_dispatch: Timestamp,
+        current_dispatch: Instant,
     ) -> Result<(), ContractError> {
         Self::STORAGE
             .may_load(storage)

@@ -17,6 +17,7 @@ use crate::{
 };
 
 use super::Result;
+use cw_time::IntoInstant;
 
 pub(super) fn try_open_loan<Lpn>(
     deps: DepsMut<'_>,
@@ -32,7 +33,7 @@ where
     let mut lpp = LiquidityPool::load(deps.storage, &config, &bank)?;
     let lease_addr = lpp.validate_lease_addr(&contract::validator(deps.querier), info.sender)?;
 
-    let loan = lpp.try_open_loan(env.block.time, amount)?;
+    let loan = lpp.try_open_loan(env.block.time.into_instant(), amount)?;
     Repo::open(deps.storage, lease_addr.clone(), &loan)?;
 
     lpp.save(deps.storage)?;
@@ -60,7 +61,7 @@ where
     let lease_addr = lpp.validate_lease_addr(&contract::validator(deps.querier), info.sender)?;
 
     let payment = Repo::load(deps.storage, lease_addr.clone()).and_then(|mut loan| {
-        let now = env.block.time;
+        let now = env.block.time.into_instant();
         let payment = loan.repay(&now, repay_amount).ok_or_else(|| {
             ContractError::overflow_loan_repayment("Trying to repay loan", now, repay_amount)
         })?;
@@ -102,7 +103,7 @@ where
     let bank = bank::account_view(&env.contract.address, deps.querier);
     let lpp = LiquidityPool::load(deps.storage, &config, &bank)?;
 
-    match lpp.query_quote(quote, &env.block.time)? {
+    match lpp.query_quote(quote, &env.block.time.into_instant())? {
         Some(quote) => Ok(QueryQuoteResponse::QuoteInterestRate(quote)),
         None => Ok(QueryQuoteResponse::NoLiquidity),
     }

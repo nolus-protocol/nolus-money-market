@@ -19,6 +19,7 @@ use crate::{
 };
 
 use super::Repayable;
+use cw_time::IntoInstant;
 
 pub(crate) trait CloseAlgo {
     type OutState: Default + Into<State>;
@@ -97,7 +98,7 @@ where
                     .execute(
                         FullCloseCmd::new(
                             amount,
-                            env.block.time,
+                            env.block.time.into_instant(),
                             profit,
                             reserve,
                             change,

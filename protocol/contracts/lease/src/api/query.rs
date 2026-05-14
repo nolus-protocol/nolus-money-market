@@ -1,11 +1,11 @@
 use serde::{Deserialize, Serialize};
 
 use currency::CurrencyDTO;
+use finance::instant::Instant;
 use finance::{
     duration::{Duration, Seconds},
     percent::Percent100,
 };
-use sdk::cosmwasm_std::Timestamp;
 
 use crate::finance::LpnCoinDTO;
 
@@ -60,7 +60,7 @@ pub enum StateResponse {
         #[serde(rename = "due_projection_ns")]
         due_projection: Duration,
         close_policy: ClosePolicy,
-        validity: Timestamp,
+        validity: Instant,
         status: opened::Status,
     },
     Closing {

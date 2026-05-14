@@ -11,8 +11,7 @@ use platform::{
 use sdk::{
     cosmwasm_ext::Response as CwResponse,
     cosmwasm_std::{
-        self, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Storage, SubMsgResult, Timestamp,
-        entry_point,
+        self, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Storage, SubMsgResult, entry_point,
     },
 };
 use versioning::{
@@ -32,6 +31,8 @@ use crate::{
 };
 
 use self::oracle::feeder::Feeders;
+use cw_time::IntoInstant;
+use finance::instant::Instant;
 
 mod alarms;
 mod config;
@@ -61,7 +62,7 @@ pub fn instantiate(
             )
         })
         .and_then(|supported_pairs| supported_pairs.save(deps.storage))
-        .and_then(|()| validate_swap_tree(deps.storage, env.block.time))
+        .and_then(|()| validate_swap_tree(deps.storage, env.block.time.into_instant()))
         .map(|()| response::empty_response())
 }
 
@@ -78,7 +79,7 @@ pub fn migrate(
     migrate_from
         .update_software(&CURRENT_RELEASE, &to_release)
         .map_err(Error::UpdateSoftware)
-        .and_then(|()| validate_swap_tree(deps.storage, env.block.time))
+        .and_then(|()| validate_swap_tree(deps.storage, env.block.time.into_instant()))
         .map(|()| response::empty_response())
         .inspect_err(platform_error::log(deps.api))
 }
@@ -116,14 +117,18 @@ pub fn query(
                 .collect::<Vec<_>>(),
         ),
         QueryMsg::BasePrice { currency } => to_json_binary(
-            &Oracle::load(deps.storage)?.try_query_base_price(env.block.time, &currency)?,
+            &Oracle::load(deps.storage)?
+                .try_query_base_price(env.block.time.into_instant(), &currency)?,
         ),
         QueryMsg::StablePrice { currency } => to_json_binary(
-            &Oracle::load(deps.storage)?
-                .try_query_stable_price::<StableCurrency>(env.block.time, &currency)?,
+            &Oracle::load(deps.storage)?.try_query_stable_price::<StableCurrency>(
+                env.block.time.into_instant(),
+                &currency,
+            )?,
         ),
         QueryMsg::Prices {} => {
-            let prices = Oracle::load(deps.storage)?.try_query_prices(env.block.time)?;
+            let prices =
+                Oracle::load(deps.storage)?.try_query_prices(env.block.time.into_instant())?;
 
             to_json_binary(&PricesResponse { prices })
         }
@@ -136,9 +141,9 @@ pub fn query(
                 .query_swap_tree()
                 .into_human_readable(),
         }),
-        QueryMsg::AlarmsStatus {} => {
-            to_json_binary(&Oracle::load(deps.storage)?.try_query_alarms(env.block.time)?)
-        }
+        QueryMsg::AlarmsStatus {} => to_json_binary(
+            &Oracle::load(deps.storage)?.try_query_alarms(env.block.time.into_instant())?,
+        ),
     }
 }
 
@@ -165,7 +170,7 @@ pub fn sudo(
         SudoMsg::SwapTree { tree } => {
             SupportedPairs::<PriceCurrencies, BaseCurrency>::new::<StableCurrency>(tree.into_tree())
                 .and_then(|supported_pairs| supported_pairs.save(deps.storage))
-                .and_then(|()| validate_swap_tree(deps.storage, env.block.time))
+                .and_then(|()| validate_swap_tree(deps.storage, env.block.time.into_instant()))
             // TODO move the swap tree validation at the tree instantiation
         }
     }
@@ -197,7 +202,7 @@ pub fn reply(deps: DepsMut<'_>, _env: Env, msg: Reply) -> Result<CwResponse, Pri
     .map(response::response_only_messages)
 }
 
-fn validate_swap_tree(store: &dyn Storage, now: Timestamp) -> Result<(), PriceCurrencies> {
+fn validate_swap_tree(store: &dyn Storage, now: Instant) -> Result<(), PriceCurrencies> {
     // we use calculation of all prices since it does not add a significant overhead over the swap tree validation
     // otherwise we would have to implement a separate and mostly mirroring algorithm
     Oracle::load(store)

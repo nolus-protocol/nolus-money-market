@@ -6,12 +6,13 @@ use std::{
 use serde::{Deserialize, Serialize};
 
 use currency::{CurrencyDef, MemberOf};
+use finance::instant::Instant;
 use finance::{coin::CoinDTO, duration::Duration};
 use platform::{
     batch::{Emit, Emitter},
     message::Response as MessageResponse,
 };
-use sdk::cosmwasm_std::{Env, MessageInfo, QuerierWrapper, Timestamp};
+use sdk::cosmwasm_std::{Env, MessageInfo, QuerierWrapper};
 use timealarms::stub::TimeAlarmDelivery;
 
 use crate::{
@@ -26,6 +27,7 @@ use super::{
     transfer_in,
     transfer_in_init::TransferInInit,
 };
+use cw_time::IntoInstant;
 
 #[derive(Serialize, Deserialize)]
 pub struct TransferInFinish<SwapTask, SEnum>
@@ -34,7 +36,7 @@ where
 {
     spec: SwapTask,
     amount_in: CoinDTO<SwapTask::OutG>,
-    timeout: Timestamp,
+    timeout: Instant,
     #[serde(skip)]
     _state_enum: PhantomData<SEnum>,
 }
@@ -46,7 +48,7 @@ where
     pub(super) fn new(
         spec: SwapTask,
         amount_in: CoinDTO<SwapTask::OutG>,
-        timeout: Timestamp,
+        timeout: Instant,
     ) -> Self {
         Self {
             spec,
@@ -109,7 +111,7 @@ where
             SwapTask: SwapTaskT,
         {
             amount_in: CoinDTO<SwapTask::OutG>,
-            timeout: Timestamp,
+            timeout: Instant,
             querier: QuerierWrapper<'querier>,
             env: Env,
             _task: PhantomData<SwapTask>,
@@ -122,7 +124,7 @@ where
         {
             fn from(
                 amount_in: CoinDTO<SwapTask::OutG>,
-                timeout: Timestamp,
+                timeout: Instant,
                 querier: QuerierWrapper<'querier>,
                 env: Env,
             ) -> Self {
@@ -145,7 +147,7 @@ where
             TransferInFinish<SwapTask, Handler::Response>: Into<Handler::Response>,
         {
             fn try_again(self, spec: SwapTask) -> HandlerResult<Handler> {
-                let now = self.env.block.time;
+                let now = self.env.block.time.into_instant();
                 let emitter = self.emit_ok(&spec);
                 if now >= self.timeout {
                     let next_state = TransferInInit::new(spec, self.amount_in);
@@ -255,7 +257,7 @@ where
 
     fn state(
         self,
-        now: Timestamp,
+        now: Instant,
         due_projection: Duration,
         querier: QuerierWrapper<'_>,
     ) -> Self::StateResponse {

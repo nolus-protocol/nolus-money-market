@@ -38,6 +38,25 @@ impl Instant {
     pub const fn minus_nanos(&self, nanos: u64) -> Self {
         Self(self.0 - nanos)
     }
+
+    pub const fn plus_seconds(&self, secs: u64) -> Self {
+        self.plus_nanos(secs * NANOS_PER_SECOND)
+    }
+
+    pub const fn plus_days(&self, days: u64) -> Self {
+        self.plus_seconds(days * 86_400)
+    }
+}
+
+impl fmt::Display for Instant {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "{}.{:09}",
+            self.0 / NANOS_PER_SECOND,
+            self.0 % NANOS_PER_SECOND
+        )
+    }
 }
 
 impl Serialize for Instant {
@@ -64,7 +83,10 @@ impl<'de> de::Visitor<'de> for InstantVisitor {
     type Value = Instant;
 
     fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "a u64 nanos value, accepted as either a JSON string or a JSON integer (matching cosmwasm_std::Timestamp / Uint64 leniency)")
+        write!(
+            f,
+            "a u64 nanos value, accepted as either a JSON string or a JSON integer (matching cosmwasm_std::Timestamp / Uint64 leniency)"
+        )
     }
 
     fn visit_u64<E>(self, value: u64) -> Result<Self::Value, E>

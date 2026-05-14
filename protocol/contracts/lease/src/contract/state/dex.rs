@@ -2,8 +2,9 @@ use serde::{Deserialize, Serialize};
 
 use dex::{Contract as DexContract, Handler as DexHandler};
 use finance::duration::Duration;
+use finance::instant::Instant;
 use platform::{ica::ErrorResponse as ICAErrorResponse, state_machine};
-use sdk::cosmwasm_std::{Binary, Env, MessageInfo, QuerierWrapper, Reply, Timestamp};
+use sdk::cosmwasm_std::{Binary, Env, MessageInfo, QuerierWrapper, Reply};
 
 use crate::{
     api::query::StateResponse as QueryStateResponse,
@@ -95,7 +96,7 @@ where
 
     fn state(
         self,
-        now: Timestamp,
+        now: Instant,
         due_projection: Duration,
         querier: QuerierWrapper<'_>,
     ) -> ContractResult<ContractStateResponse> {
