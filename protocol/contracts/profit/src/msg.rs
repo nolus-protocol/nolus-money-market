@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use dex::ConnectionParams;
 use sdk::cosmwasm_std::Addr;
 
-use crate::typedefs::CadenceHours;
+use crate::CadenceHours;
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "testing", derive(Debug))]

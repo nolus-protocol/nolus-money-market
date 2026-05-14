@@ -24,7 +24,7 @@ use platform::{
 use sdk::cosmwasm_std::{Addr, Env, MessageInfo, QuerierWrapper, Timestamp};
 use timealarms::stub::Result as TimeAlarmsResult;
 
-use crate::{msg::ConfigResponse, profit::Profit, result::ContractResult, typedefs::CadenceHours};
+use crate::{CadenceHours, msg::ConfigResponse, profit::Profit, result::ContractResult};
 
 use super::{
     Config, ConfigManagement, State, StateEnum, SwapClient, buy_back::BuyBack,
