@@ -166,7 +166,7 @@ fn construct_generic_mappings<'r>(
             .is_empty()
             .then(BTreeMap::new)
             .into_iter()
-            .chain(generics_mappings.into_iter())
+            .chain(generics_mappings)
             .flat_map(move |generics_mapping| {
                 generics.iter().map(move |&replacement| {
                     let mut generics_mapping = generics_mapping.clone();
