@@ -1,8 +1,8 @@
 use currency::{Currency, CurrencyDef, MemberOf};
+use finance::instant::Instant;
 use finance::liability::Zone;
 use lpp::stub::loan::LppLoan as LppLoanTrait;
 use oracle_platform::Oracle as OracleTrait;
-use sdk::cosmwasm_std::Timestamp;
 
 use crate::{
     api::{LeaseAssetCurrencies, LeasePaymentCurrencies, position::ClosePolicyChange},
@@ -26,7 +26,7 @@ where
     pub(crate) fn check_close_policy(
         &self,
         asset_in_lpns: Price<Asset>,
-        now: &Timestamp,
+        now: &Instant,
     ) -> ContractResult<CloseStatus<Asset>> {
         self.loan
             .state(now)
@@ -48,7 +48,7 @@ where
         &mut self,
         cmd: ClosePolicyChange,
         asset_in_lpns: Price<Asset>,
-        now: &Timestamp,
+        now: &Instant,
     ) -> ContractResult<()> {
         self.loan.state(now).and_then(|due| {
             self.position

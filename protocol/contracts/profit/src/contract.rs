@@ -3,6 +3,7 @@ use std::ops::{Deref, DerefMut};
 use access_control::{
     ContractOwnerAccess, SingleUserAccess, permissions::DexResponseSafeDeliveryPermission,
 };
+use cw_time::IntoInstant;
 use dex::{ContinueResult as DexResult, Handler as _, Response as DexResponse};
 use oracle_platform::OracleRef;
 use platform::{
@@ -118,7 +119,8 @@ pub fn execute(
             let StateMachineResponse {
                 response,
                 next_state,
-            } = State::load(deps.storage)?.try_update_config(env.block.time, cadence_hours)?;
+            } = State::load(deps.storage)?
+                .try_update_config(env.block.time.into_instant(), cadence_hours)?;
 
             next_state.store(deps.storage)?;
 
@@ -235,7 +237,7 @@ pub fn query(deps: Deps<'_>, env: Env, msg: QueryMsg) -> ContractResult<Binary> 
     match msg {
         QueryMsg::Config {} => cosmwasm_std::to_json_binary(&Profit::query_config(
             deps.storage,
-            env.block.time,
+            env.block.time.into_instant(),
             deps.querier,
         )?),
         QueryMsg::ProtocolPackageRelease {} => cosmwasm_std::to_json_binary(&CURRENT_RELEASE),

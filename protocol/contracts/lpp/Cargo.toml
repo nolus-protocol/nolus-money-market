@@ -32,6 +32,7 @@ stub = []
 testing = ["currency/testing", "finance/testing"]
 
 [dependencies]
+cw-time = { workspace = true }
 access-control = { workspace = true, optional = true }
 currencies = { workspace = true }
 currency = { workspace = true }

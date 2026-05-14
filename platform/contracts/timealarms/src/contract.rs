@@ -1,3 +1,4 @@
+use cw_time::IntoInstant;
 use platform::{
     batch::{Emit, Emitter},
     contract::{self, Validator},
@@ -74,7 +75,7 @@ pub fn execute(
                 .map(response::response_only_messages)
         }
         ExecuteMsg::DispatchAlarms { max_count } => time_alarms
-            .try_notify(env.block.time, max_count)
+            .try_notify(env.block.time.into_instant(), max_count)
             .and_then(|(total, resp)| {
                 response::response_with_messages(DispatchAlarmsResponse(total), resp)
             }),
@@ -94,7 +95,7 @@ pub fn query(deps: Deps<'_>, env: Env, msg: QueryMsg) -> ContractResult<Binary> 
             Ok(cosmwasm_std::to_json_binary(&CURRENT_RELEASE.version())?)
         }
         QueryMsg::AlarmsStatus {} => Ok(cosmwasm_std::to_json_binary(
-            &TimeAlarms::new(deps.storage).try_any_alarm(env.block.time)?,
+            &TimeAlarms::new(deps.storage).try_any_alarm(env.block.time.into_instant())?,
         )?),
         QueryMsg::PlatformPackageRelease {} => {
             cosmwasm_std::to_json_binary(&CURRENT_RELEASE).map_err(Into::into)
@@ -120,7 +121,7 @@ pub fn reply(deps: DepsMut<'_>, env: Env, msg: Reply) -> ContractResult<CwRespon
             emitter.emit(KEY_DELIVERED, "success")
         }
         SubMsgResult::Err(err) => {
-            time_alarms.last_failed(env.block.time)?;
+            time_alarms.last_failed(env.block.time.into_instant())?;
 
             emitter.emit(KEY_DELIVERED, "error").emit(KEY_DETAILS, err)
         }

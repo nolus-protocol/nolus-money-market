@@ -10,6 +10,7 @@ use access_control::SingleUserAccess;
 use currencies::{
     Lpn as LpnCurrency, Lpns as LpnCurrencies, PaymentGroup, Stable as StableCurrency,
 };
+use cw_time::IntoInstant;
 
 use platform::{
     bank, contract::Code, error as platform_error, message::Response as PlatformResponse, response,
@@ -163,7 +164,7 @@ pub fn execute(
                     &bank::account_view(&env.contract.address.clone(), deps.querier),
                     info.sender.clone(),
                     pending_deposit,
-                    &env.block.time,
+                    &env.block.time.into_instant(),
                 )
                 .map(|receipts| {
                     PlatformResponse::from(event::emit_deposit(
@@ -180,7 +181,7 @@ pub fn execute(
             bank::account(&env.contract.address, deps.querier),
             info.sender.clone(),
             amount,
-            &env.block.time,
+            &env.block.time.into_instant(),
             WithdrawEmitter::new(&env),
         )
         .map(response::response_only_messages),
@@ -199,7 +200,7 @@ pub fn execute(
                 deps.storage,
                 bank::account_view(&env.contract.address.clone(), deps.querier),
                 bank::account(&env.contract.address.clone(), deps.querier),
-                &env.block.time,
+                &env.block.time.into_instant(),
                 WithdrawEmitter::new(&env),
             )
             .map(response::response_only_messages)
@@ -253,7 +254,7 @@ pub fn query(deps: Deps<'_>, env: Env, msg: QueryMsg<LpnCurrencies>) -> Result<B
                         deps.storage,
                         config,
                         &bank,
-                        &env.block.time,
+                        &env.block.time.into_instant(),
                     )
                     .and_then(|lpp_balances| {
                         rewards::query_total_receipts::<LpnCurrency, _>(deps.storage, config, &bank)
@@ -268,7 +269,7 @@ pub fn query(deps: Deps<'_>, env: Env, msg: QueryMsg<LpnCurrencies>) -> Result<B
                     deps.storage,
                     config,
                     &bank::account_view(&env.contract.address, deps.querier),
-                    &env.block.time,
+                    &env.block.time.into_instant(),
                 )
             })
             .map(LppBalances::into_total)
@@ -282,13 +283,13 @@ pub fn query(deps: Deps<'_>, env: Env, msg: QueryMsg<LpnCurrencies>) -> Result<B
         QueryMsg::Price() => lender::query_ntoken_price::<LpnCurrency, _>(
             deps.storage,
             &bank::account_view(&env.contract.address, deps.querier),
-            &env.block.time,
+            &env.block.time.into_instant(),
         )
         .and_then(|ref resp| to_json_binary(resp)),
         QueryMsg::DepositCapacity() => to_json_binary(&lender::deposit_capacity::<LpnCurrency, _>(
             deps.storage,
             &bank::account_view(&env.contract.address, deps.querier),
-            &env.block.time,
+            &env.block.time.into_instant(),
         )?),
     }
     .inspect_err(platform_error::log(deps.api))

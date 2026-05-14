@@ -8,11 +8,12 @@ use dex::{
     AcceptAnyNonZeroSwap, Account, AnomalyTreatment, ContractInSwap, Stage, StartLocalLocalState,
     SwapOutputTask, SwapTask, WithCalculator, WithOutputTask,
 };
+use finance::instant::Instant;
 use finance::{
     coin::{Coin, CoinDTO},
     duration::Duration,
 };
-use sdk::cosmwasm_std::{Env, QuerierWrapper, Timestamp};
+use sdk::cosmwasm_std::{Env, QuerierWrapper};
 use timealarms::stub::TimeAlarmsRef;
 
 use crate::{
@@ -57,7 +58,7 @@ impl BuyLpn {
     fn query(
         self,
         in_progress: RepayTrx,
-        now: Timestamp,
+        now: Instant,
         due_projection: Duration,
         querier: QuerierWrapper<'_>,
     ) -> ContractResult<ContractStateResponse> {
@@ -156,7 +157,7 @@ impl ContractInSwap for BuyLpn {
     fn state(
         self,
         in_progress: Stage,
-        now: Timestamp,
+        now: Instant,
         due_projection: Duration,
         querier: QuerierWrapper<'_>,
     ) -> Self::StateResponse {

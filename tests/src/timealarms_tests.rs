@@ -2,7 +2,8 @@ use std::array;
 
 use currencies::{Lpn, Nls};
 use currency::CurrencyDef;
-use finance::{coin::Coin, duration::Duration};
+use cw_time::IntoInstant;
+use finance::{coin::Coin, duration::Duration, instant::Instant};
 use platform::tests;
 use sdk::{
     cosmwasm_std::{Addr, Attribute, Event, Timestamp, coin},
@@ -24,6 +25,7 @@ use self::mock_lease::*;
 mod mock_lease {
     use serde::{Deserialize, Serialize};
 
+    use cw_time::IntoInstant;
     use finance::duration::Duration;
     use platform::{message::Response as PlatformResponse, response};
     use sdk::{
@@ -84,7 +86,7 @@ mod mock_lease {
 
                 if gate {
                     Ok(Response::new()
-                        .add_attribute("lease_reply", env.block.time.to_string())
+                        .add_attribute("lease_reply", env.block.time.into_instant().to_string())
                         .set_data(cosmwasm_std::to_json_binary(&env.contract.address)?))
                 } else {
                     Err(StdError::msg("closed gate"))
@@ -110,7 +112,7 @@ mod mock_lease {
                     .load(deps.storage)
                     .expect("test setup error");
                 let batch = TimeAlarmsRef::unchecked(timealarms)
-                    .setup_alarm(env.block.time + Duration::from_secs(5))
+                    .setup_alarm(env.block.time.into_instant() + Duration::from_secs(5))
                     .unwrap();
 
                 Ok(response::response_only_messages(
@@ -232,7 +234,7 @@ fn add_alarm<ProtocolsRegistry, Treasury, Profit, Reserve, Leaser, Lpp, Oracle>(
     time_secs: u64,
 ) {
     let alarm_msg = timealarms::msg::ExecuteMsg::AddAlarm {
-        time: Timestamp::from_seconds(time_secs),
+        time: Instant::from_seconds(time_secs),
     };
     () = test_case
         .app

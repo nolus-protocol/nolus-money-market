@@ -4,12 +4,13 @@ use currency::{
     self, AnyVisitor, Currency, CurrencyDTO, CurrencyDef, Group, InPoolWith, MemberOf, PairsGroup,
     PairsVisitor,
 };
+use finance::instant::Instant;
 use finance::price::{
     Price,
     base::BasePrice,
     dto::{PriceDTO, WithPrice, with_price},
 };
-use sdk::cosmwasm_std::{Addr, Timestamp};
+use sdk::cosmwasm_std::Addr;
 
 use crate::{
     config::Config,
@@ -41,7 +42,7 @@ where
 {
     pub fn price<'self_, 'currency_dto, BaseC, BaseG, CurrenciesToBaseC>(
         &'self_ self,
-        at: Timestamp,
+        at: Instant,
         total_feeders: Count,
         mut leaf_to_base: CurrenciesToBaseC,
     ) -> Result<BasePrice<PriceG, BaseC, BaseG>, PriceFeedsError>
@@ -67,7 +68,7 @@ where
             G: Group,
         {
             feeds: &'feeds PriceFeeds<'config, G, ObservationsRepoImpl>,
-            at: Timestamp,
+            at: Instant,
             total_feeders: Count,
             leaf_to_base: CurrenciesToBaseC,
             _base_c: PhantomData<BaseC>,
@@ -134,7 +135,7 @@ where
         &self,
         amount_c: &CurrencyDTO<PriceG>,
         quote_c: &CurrencyDTO<PriceG>,
-        at: Timestamp,
+        at: Instant,
         total_feeders: Count,
     ) -> Result<Price<C, QuoteC>, PriceFeedsError>
     where
@@ -159,7 +160,7 @@ where
     /// The time `at` must always flow monotonically forward!
     pub fn feed(
         &mut self,
-        at: Timestamp,
+        at: Instant,
         sender_raw: Addr,
         prices: &[PriceDTO<PriceG>],
     ) -> Result<(), PriceFeedsError> {
@@ -176,9 +177,9 @@ where
     fn add_observation(
         &mut self,
         from: Addr,
-        at: Timestamp,
+        at: Instant,
         price: &PriceDTO<PriceG>,
-        valid_since: &Timestamp,
+        valid_since: &Instant,
     ) -> Result<(), PriceFeedsError> {
         debug_assert!(valid_since < &at);
         struct AddObservation<'feeds, 'since, G, ObservationsRepoImpl>
@@ -189,8 +190,8 @@ where
             amount_c: CurrencyDTO<G>,
             quote_c: CurrencyDTO<G>,
             from: Addr,
-            at: Timestamp,
-            valid_since: &'since Timestamp,
+            at: Instant,
+            valid_since: &'since Instant,
             group: PhantomData<G>,
         }
 
@@ -251,7 +252,7 @@ struct PriceCollect<
 {
     leaf_to_base: CurrenciesToBaseC,
     feeds: &'feeds PriceFeeds<'config, G, ObservationsRepoImpl>,
-    at: Timestamp,
+    at: Instant,
     total_feeders: Count,
     current_c: &'currency CurrencyDTO<G>,
     _base_c: PhantomData<BaseC>,
@@ -400,13 +401,14 @@ mod test {
         SubGroup, SubGroupTestC10, SuperGroupTestC1, SuperGroupTestC2, SuperGroupTestC3,
         SuperGroupTestC4, SuperGroupTestC5,
     };
+    use finance::instant::Instant;
     use finance::{
         coin::Coin,
         duration::Duration,
         percent::Percent100,
         price::{self, Price},
     };
-    use sdk::cosmwasm_std::{Addr, Storage, Timestamp, testing::MockStorage};
+    use sdk::cosmwasm_std::{Addr, Storage, testing::MockStorage};
 
     use crate::{
         Repo,
@@ -425,7 +427,7 @@ mod test {
     const SAMPLES_NUMBER: u16 = 6;
     const DISCOUNTING_FACTOR: Percent100 = Percent100::from_permille(750);
 
-    const NOW: Timestamp = Timestamp::from_seconds(FEED_VALIDITY.secs() * 2);
+    const NOW: Instant = Instant::from_seconds(FEED_VALIDITY.secs() * 2);
 
     #[test]
     fn no_feed() {

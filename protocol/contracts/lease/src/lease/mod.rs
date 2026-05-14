@@ -1,10 +1,11 @@
 use currency::{Currency, CurrencyDef, MemberOf};
 use finance::duration::Duration;
+use finance::instant::Instant;
 use lpp::stub::loan::LppLoan as LppLoanTrait;
 use oracle_platform::Oracle as OracleTrait;
 use platform::batch::Batch;
 use profit::stub::ProfitRef;
-use sdk::cosmwasm_std::{Addr, Timestamp};
+use sdk::cosmwasm_std::Addr;
 use timealarms::stub::TimeAlarmsRef;
 
 use crate::{
@@ -93,7 +94,7 @@ where
 
     pub(crate) fn state(
         &self,
-        now: Timestamp,
+        now: Instant,
         due_projection: Duration,
     ) -> ContractResult<State<Asset>> {
         self.loan.state(&(now + due_projection)).map(|loan| State {
@@ -179,6 +180,7 @@ pub(crate) mod tests {
         coin::{Amount, Coin},
         duration::Duration,
         fraction::Fraction,
+        instant::Instant,
         liability::Liability,
         percent::Percent100,
         price::Price,
@@ -194,7 +196,7 @@ pub(crate) mod tests {
     };
     use oracle_platform::{Oracle, error::Result as PriceOracleResult};
     use platform::batch::Batch;
-    use sdk::cosmwasm_std::{Addr, Timestamp};
+    use sdk::cosmwasm_std::Addr;
 
     use crate::{
         api::{
@@ -212,7 +214,7 @@ pub(crate) mod tests {
     const LEASE_ADDR: &str = "lease_addr";
     const ORACLE_ADDR: &str = "oracle_addr";
     const MARGIN_INTEREST_RATE: Percent100 = Percent100::from_permille(23);
-    pub(super) const LEASE_START: Timestamp = Timestamp::from_nanos(100);
+    pub(super) const LEASE_START: Instant = Instant::from_nanos(100);
     pub(super) const DUE_PERIOD: Duration = Duration::from_days(100);
     pub(crate) const FIRST_LIQ_WARN: Percent100 = Percent100::from_permille(730);
     pub(super) const SECOND_LIQ_WARN: Percent100 = Percent100::from_permille(750);
@@ -240,11 +242,11 @@ pub(crate) mod tests {
             self.loan.principal_due
         }
 
-        fn interest_due(&self, by: &Timestamp) -> Option<Coin<Lpn>> {
+        fn interest_due(&self, by: &Instant) -> Option<Coin<Lpn>> {
             self.loan.interest_due(by)
         }
 
-        fn repay(&mut self, by: &Timestamp, repayment: Coin<Lpn>) -> Option<RepayShares<Lpn>> {
+        fn repay(&mut self, by: &Instant, repayment: Coin<Lpn>) -> Option<RepayShares<Lpn>> {
             self.loan.repay(by, repayment)
         }
 
@@ -428,7 +430,7 @@ pub(crate) mod tests {
         interest_rate: Percent100,
         lease_amount: Coin<TestCurrency>,
         take_profit: Percent100,
-        state_at: Timestamp,
+        state_at: Instant,
         lease: &TestLease,
         due_projection: Duration,
     ) {
@@ -466,7 +468,7 @@ pub(crate) mod tests {
         );
     }
 
-    fn compare_now_vs_projected(lease: &TestLease, state_at: Timestamp) {
+    fn compare_now_vs_projected(lease: &TestLease, state_at: Instant) {
         let due_projection = Duration::from_days(12);
         let state_now = lease
             .state(state_at + due_projection, Duration::default())

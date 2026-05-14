@@ -25,6 +25,7 @@ timealarms = { workspace = true, features = ["stub"] }
 
 access-control = { workspace = true }
 currency = { workspace = true }
+cw-time = { workspace = true }
 finance = { workspace = true }
 platform = { workspace = true }
 sdk = { workspace = true, features = ["contract"] }

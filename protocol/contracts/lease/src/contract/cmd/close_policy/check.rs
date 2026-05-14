@@ -1,7 +1,7 @@
 use currency::{CurrencyDef, MemberOf};
+use finance::instant::Instant;
 use lpp::stub::loan::LppLoan as LppLoanTrait;
 use oracle_platform::Oracle as OracleTrait;
-use sdk::cosmwasm_std::Timestamp;
 use timealarms::stub::TimeAlarmsRef;
 
 use crate::{
@@ -15,7 +15,7 @@ use super::CloseStatusDTO;
 
 pub(crate) fn check<Asset, Lpp, Oracle>(
     lease: &LeaseDO<Asset, Lpp, Oracle>,
-    when: &Timestamp,
+    when: &Instant,
     time_alarms: &TimeAlarmsRef,
     price_alarms: &OracleRef,
 ) -> ContractResult<CloseStatusDTO>
@@ -32,14 +32,14 @@ where
 }
 
 pub(crate) struct CheckCmd<'a> {
-    now: &'a Timestamp,
+    now: &'a Instant,
     time_alarms: &'a TimeAlarmsRef,
     price_alarms: &'a OracleRef,
 }
 
 impl<'a> CheckCmd<'a> {
     pub fn new(
-        now: &'a Timestamp,
+        now: &'a Instant,
         time_alarms: &'a TimeAlarmsRef,
         price_alarms: &'a OracleRef,
     ) -> Self {

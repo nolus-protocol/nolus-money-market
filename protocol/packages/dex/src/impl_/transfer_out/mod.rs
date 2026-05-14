@@ -6,12 +6,13 @@ use std::{
 use serde::{Deserialize, Serialize};
 
 use finance::duration::Duration;
+use finance::instant::Instant;
 use platform::{
     batch::{Batch, Emitter},
     ica::ErrorResponse as ICAErrorResponse,
     message::Response as MessageResponse,
 };
-use sdk::cosmwasm_std::{Binary, Env, QuerierWrapper, Timestamp};
+use sdk::cosmwasm_std::{Binary, Env, QuerierWrapper};
 
 use crate::{
     CoinsNb, Contract, ContractInSwap, Enterable, Stage, SwapTask as SwapTaskT, TimeAlarm,
@@ -26,6 +27,7 @@ use super::{
     timeout,
     trx::TransferOutTrx,
 };
+use cw_time::IntoInstant;
 
 /// Transfer out a list of coins to DEX
 ///
@@ -83,7 +85,7 @@ where
             .expect("Functionality doesn't support this many coins!")
     }
 
-    fn generate_requests(&self, now: Timestamp) -> Batch {
+    fn generate_requests(&self, now: Instant) -> Batch {
         debug_assert_eq!(
             Self::coins_len(&self.spec),
             self.acks_left,
@@ -145,7 +147,7 @@ where
     Self: Into<SEnum>,
     SwapExactIn<SwapTask, SEnum, SwapClient>: Into<SEnum>,
 {
-    fn enter(&self, now: Timestamp, _querier: QuerierWrapper<'_>) -> Result<Batch> {
+    fn enter(&self, now: Instant, _querier: QuerierWrapper<'_>) -> Result<Batch> {
         Ok(self.generate_requests(now))
     }
 }
@@ -169,7 +171,7 @@ where
         let label = self.spec.label();
         if self.last_ack() {
             let next = SwapExactIn::new(self.spec);
-            next.enter(env.block.time, querier)
+            next.enter(env.block.time.into_instant(), querier)
                 .and_then(|msgs| Self::on_response(next, label, msgs))
         } else {
             Self::on_response(self.next(), label, Batch::default())
@@ -202,7 +204,7 @@ where
 
     fn state(
         self,
-        now: Timestamp,
+        now: Instant,
         due_projection: Duration,
         querier: QuerierWrapper<'_>,
     ) -> Self::StateResponse {
@@ -224,7 +226,7 @@ impl<SwapTask, SEnum, SwapClient> TimeAlarm for TransferOut<SwapTask, SEnum, Swa
 where
     SwapTask: SwapTaskT,
 {
-    fn setup_alarm(&self, r#for: Timestamp) -> Result<Batch> {
+    fn setup_alarm(&self, r#for: Instant) -> Result<Batch> {
         self.spec
             .time_alarm()
             .setup_alarm(r#for)

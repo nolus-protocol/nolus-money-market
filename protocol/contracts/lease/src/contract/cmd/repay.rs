@@ -1,8 +1,8 @@
 use currency::{Currency, MemberOf};
+use finance::instant::Instant;
 use lpp::stub::loan::LppLoan as LppLoanTrait;
 use oracle_platform::Oracle as OracleTrait;
 use platform::bank::FixedAddressSender;
-use sdk::cosmwasm_std::Timestamp;
 
 use crate::{
     api::{LeaseAssetCurrencies, LeasePaymentCurrencies},
@@ -20,7 +20,7 @@ impl RepayFn for RepayLeaseFn {
         self,
         lease: &mut Lease<Asset, Lpp, Oracle>,
         payment: LpnCoin,
-        now: &Timestamp,
+        now: &Instant,
         profit: &mut Profit,
     ) -> ContractResult<RepayReceipt>
     where

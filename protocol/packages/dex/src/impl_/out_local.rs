@@ -383,7 +383,8 @@ mod impl_handler {
 
 mod impl_contract {
     use finance::duration::Duration;
-    use sdk::cosmwasm_std::{QuerierWrapper, Timestamp};
+    use finance::instant::Instant;
+    use sdk::cosmwasm_std::QuerierWrapper;
 
     use crate::{Contract, ContractInSwap, ForwardToInner, SwapTask as SwapTaskT};
 
@@ -400,7 +401,7 @@ mod impl_contract {
 
         fn state(
             self,
-            now: Timestamp,
+            now: Instant,
             due_projection: Duration,
             querier: QuerierWrapper<'_>,
         ) -> Self::StateResponse {

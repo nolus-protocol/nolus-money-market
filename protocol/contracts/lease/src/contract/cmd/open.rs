@@ -1,8 +1,9 @@
 use currency::{CurrencyDef, MemberOf};
+use finance::instant::Instant;
 use lpp::stub::loan::LppLoan as LppLoanTrait;
 use oracle_platform::Oracle as OracleTrait;
 use profit::stub::ProfitRef;
-use sdk::cosmwasm_std::{Addr, Timestamp};
+use sdk::cosmwasm_std::Addr;
 use timealarms::stub::TimeAlarmsRef;
 
 use crate::{
@@ -24,8 +25,8 @@ pub struct LeaseFactory<'a> {
     reserve: ReserveRef,
     time_alarms: TimeAlarmsRef,
     price_alarms: OracleRef,
-    start_at: Timestamp,
-    now: &'a Timestamp,
+    start_at: Instant,
+    now: &'a Instant,
 }
 
 pub type OpenLeaseResult = LeaseDTOResult<CloseStatusDTO>;
@@ -37,8 +38,8 @@ impl<'a> LeaseFactory<'a> {
         profit: ProfitRef,
         reserve: ReserveRef,
         alarms: (TimeAlarmsRef, OracleRef),
-        start_at: Timestamp,
-        now: &'a Timestamp,
+        start_at: Instant,
+        now: &'a Instant,
     ) -> Self {
         Self {
             form,

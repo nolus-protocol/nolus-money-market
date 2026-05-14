@@ -1,6 +1,8 @@
 use std::marker::PhantomData;
 
 use currency::{Group, MemberOf};
+use cw_time::IntoTimestamp;
+use finance::instant::Instant;
 use finance::{coin::CoinDTO, duration::Duration};
 use oracle::stub::SwapPath;
 use platform::{
@@ -9,7 +11,7 @@ use platform::{
     ica::{self, HostAccount},
     trx::Transaction,
 };
-use sdk::cosmwasm_std::{QuerierWrapper, Timestamp};
+use sdk::cosmwasm_std::QuerierWrapper;
 
 use crate::{Account, Connectable, error::Result, swap::ExactAmountIn};
 
@@ -20,13 +22,13 @@ pub(super) struct TransferOutTrx<'ica> {
 }
 
 impl<'ica> TransferOutTrx<'ica> {
-    pub(super) fn new(ica: &'ica Account, now: Timestamp) -> Self {
+    pub(super) fn new(ica: &'ica Account, now: Instant) -> Self {
         Self {
             sender: LocalSender::new(
                 &ica.dex().transfer_channel.local_endpoint,
                 ica.owner(),
                 ica.host(),
-                now + IBC_TIMEOUT,
+                (now + IBC_TIMEOUT).into_timestamp(),
                 format!(
                     "Transfer out: {sender} -> {receiver}",
                     sender = ica.owner(),
@@ -122,12 +124,12 @@ pub(super) struct TransferInTrx<'a> {
 }
 
 impl<'ica> TransferInTrx<'ica> {
-    pub(super) fn new(ica: &'ica Account, now: Timestamp) -> Self {
+    pub(super) fn new(ica: &'ica Account, now: Instant) -> Self {
         let sender = RemoteSender::new(
             &ica.dex().transfer_channel.remote_endpoint,
             ica.host(),
             ica.owner(),
-            now + IBC_TIMEOUT,
+            (now + IBC_TIMEOUT).into_timestamp(),
         );
         TransferInTrx {
             conn: &ica.dex().connection_id,

@@ -11,6 +11,7 @@ use dex::{
     Account, Contract, Enterable, Error as DexError, Handler, Response as DexResponse,
     Result as DexResult, StartLocalLocalState,
 };
+use finance::instant::Instant;
 use finance::{
     coin::{Coin, CoinDTO, WithCoin},
     duration::Duration,
@@ -21,10 +22,11 @@ use platform::{
     message::Response as PlatformResponse,
     state_machine::Response as StateMachineResponse,
 };
-use sdk::cosmwasm_std::{Addr, Env, MessageInfo, QuerierWrapper, Timestamp};
+use sdk::cosmwasm_std::{Addr, Env, MessageInfo, QuerierWrapper};
 use timealarms::stub::Result as TimeAlarmsResult;
 
 use crate::{CadenceHours, msg::ConfigResponse, profit::Profit, result::ContractResult};
+use cw_time::IntoInstant;
 
 use super::{
     Config, ConfigManagement, State, StateEnum, SwapClient, buy_back::BuyBack,
@@ -52,7 +54,7 @@ impl Idle {
     where
         B: BankAccount,
     {
-        self.enter(env.block.time, querier)
+        self.enter(env.block.time.into_instant(), querier)
             .map(PlatformResponse::messages_only)
             .map(|state_response: PlatformResponse| {
                 Profit::transfer_nls(account, self.config.treasury().clone(), nls, env)
@@ -82,7 +84,7 @@ impl Idle {
             self.try_enter_buy_back(
                 querier,
                 env.contract.address.clone(),
-                env.block.time,
+                env.block.time.into_instant(),
                 balances.rest,
             )
         }
@@ -92,7 +94,7 @@ impl Idle {
         self,
         querier: QuerierWrapper<'_>,
         profit_addr: Addr,
-        now: Timestamp,
+        now: Instant,
         balances: Vec<CoinDTO<PaymentGroup>>,
     ) -> ContractResult<DexResponse<Self>> {
         let state: StartLocalLocalState<BuyBack, SwapClient, ForwardToDexEntry> =
@@ -112,7 +114,7 @@ impl Idle {
             .map_err(Into::into)
     }
 
-    fn setup_time_alarm(config: &Config, now: Timestamp) -> TimeAlarmsResult<Batch> {
+    fn setup_time_alarm(config: &Config, now: Instant) -> TimeAlarmsResult<Batch> {
         config
             .time_alarms()
             .setup_alarm(now + Duration::from_hours(config.cadence_hours()))
@@ -120,7 +122,7 @@ impl Idle {
 }
 
 impl Enterable for Idle {
-    fn enter(&self, now: Timestamp, _: QuerierWrapper<'_>) -> Result<Batch, DexError> {
+    fn enter(&self, now: Instant, _: QuerierWrapper<'_>) -> Result<Batch, DexError> {
         Self::setup_time_alarm(&self.config, now).map_err(DexError::TimeAlarmError)
     }
 }
@@ -130,7 +132,7 @@ impl Contract for Idle {
 
     fn state(
         self,
-        _now: Timestamp,
+        _now: Instant,
         _due_projection: Duration,
         _querier: QuerierWrapper<'_>,
     ) -> Self::StateResponse {
@@ -143,7 +145,7 @@ impl Contract for Idle {
 impl ConfigManagement for Idle {
     fn try_update_config(
         self,
-        now: Timestamp,
+        now: Instant,
         cadence_hours: CadenceHours,
     ) -> ContractResult<StateMachineResponse<Self>> {
         let config: Config = self.config.update(cadence_hours);

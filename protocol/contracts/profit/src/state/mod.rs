@@ -13,9 +13,7 @@ use platform::{
     state_machine::{self, Response as StateMachineResponse},
 };
 use sdk::{
-    cosmwasm_std::{
-        Binary, Env, MessageInfo, QuerierWrapper, Reply as CwReply, Storage, Timestamp,
-    },
+    cosmwasm_std::{Binary, Env, MessageInfo, QuerierWrapper, Reply as CwReply, Storage},
     cw_storage_plus::Item,
 };
 use swap::Impl;
@@ -24,6 +22,7 @@ use crate::{CadenceHours, error::ContractError, msg::ConfigResponse, result::Con
 
 pub(crate) use self::config::Config;
 use self::{buy_back::BuyBack, idle::Idle, open_ica::OpenIca, resp_delivery::ForwardToDexEntry};
+use finance::instant::Instant;
 
 mod buy_back;
 mod config;
@@ -42,7 +41,7 @@ where
 {
     fn try_update_config(
         self,
-        _: Timestamp,
+        _: Instant,
         _: CadenceHours,
     ) -> ContractResult<StateMachineResponse<Self>> {
         Err(ContractError::unsupported_operation(
@@ -65,7 +64,7 @@ pub(crate) struct State(StateEnum);
 impl ConfigManagement for State {
     fn try_update_config(
         self,
-        now: Timestamp,
+        now: Instant,
         cadence_hours: CadenceHours,
     ) -> ContractResult<StateMachineResponse<Self>> {
         match self.0 {
@@ -123,7 +122,7 @@ impl Contract for State {
 
     fn state(
         self,
-        now: Timestamp,
+        now: Instant,
         due_projection: Duration,
         querier: QuerierWrapper<'_>,
     ) -> Self::StateResponse {

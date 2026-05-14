@@ -1,8 +1,8 @@
 use currency::{CurrencyDef, MemberOf};
 use finance::duration::Duration;
+use finance::instant::Instant;
 use lpp::stub::loan::LppLoan as LppLoanTrait;
 use oracle_platform::Oracle as OracleTrait;
-use sdk::cosmwasm_std::Timestamp;
 
 use crate::{
     api::{
@@ -15,13 +15,13 @@ use crate::{
 };
 
 pub struct LeaseState {
-    now: Timestamp,
+    now: Instant,
     due_projection: Duration,
     status: Status,
 }
 
 impl LeaseState {
-    pub fn new(now: Timestamp, due_projection: Duration, status: Status) -> Self {
+    pub fn new(now: Instant, due_projection: Duration, status: Status) -> Self {
         Self {
             now,
             due_projection,

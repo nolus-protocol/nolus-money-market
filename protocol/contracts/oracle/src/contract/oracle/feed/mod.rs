@@ -1,6 +1,7 @@
 use std::marker::PhantomData;
 
 use currency::{CurrencyDTO, CurrencyDef, Group, MemberOf};
+use finance::instant::Instant;
 use finance::{
     flatten::Flatten,
     price::{base::BasePrice, dto::PriceDTO},
@@ -8,7 +9,7 @@ use finance::{
 use marketprice::{
     FeederCount, ObservationsReadRepo, ObservationsRepo, config::Config, market_price::PriceFeeds,
 };
-use sdk::cosmwasm_std::{Addr, Timestamp};
+use sdk::cosmwasm_std::Addr;
 
 use crate::{
     api::{SwapLeg, swap::SwapTarget},
@@ -53,7 +54,7 @@ where
     pub fn all_prices_iter<I>(
         &self,
         swap_pairs_df: I,
-        at: Timestamp,
+        at: Instant,
         total_feeders: FeederCount,
     ) -> impl Iterator<Item = PriceResult<PriceG, BaseC, BaseG, PriceG>>
     where
@@ -87,7 +88,7 @@ where
         &self,
         tree: &SupportedPairs<PriceG, BaseC>,
         currency: &CurrencyDTO<PriceG>,
-        at: Timestamp,
+        at: Instant,
         total_feeders: FeederCount,
     ) -> Result<BasePrice<PriceG, BaseC, BaseG>, PriceG> {
         tree.load_path(currency)
@@ -110,7 +111,7 @@ where
     pub(crate) fn feed_prices(
         &mut self,
         tree: &SupportedPairs<PriceG, BaseC>,
-        block_time: Timestamp,
+        block_time: Instant,
         sender_raw: Addr,
         prices: &[PriceDTO<PriceG>],
     ) -> Result<(), PriceG> {
@@ -199,6 +200,7 @@ mod test {
             Lpns as BaseCurrencies, PaymentGroup as PriceCurrencies,
             testing::{PaymentC1, PaymentC3, PaymentC4, PaymentC5, PaymentC6, PaymentC7},
         };
+        use cw_time::IntoInstant;
         use finance::{duration::Duration, percent::Percent100, price::base::BasePrice};
         use marketprice::{FeederCount, Repo, config::Config};
         use sdk::cosmwasm_std::{
@@ -238,7 +240,7 @@ mod test {
             oracle
                 .feed_prices(
                     &tree,
-                    env.block.time,
+                    env.block.time.into_instant(),
                     Addr::unchecked("feeder"),
                     &[
                         tests::dto_price::<PaymentC4, _, BaseCurrency>(2, 1),
@@ -252,7 +254,11 @@ mod test {
                 .unwrap();
 
             let prices: Vec<_> = oracle
-                .all_prices_iter(tree.swap_pairs_df(), env.block.time, TOTAL_FEEDERS)
+                .all_prices_iter(
+                    tree.swap_pairs_df(),
+                    env.block.time.into_instant(),
+                    TOTAL_FEEDERS,
+                )
                 .flatten()
                 .collect();
 
@@ -292,7 +298,7 @@ mod test {
             oracle
                 .feed_prices(
                     &tree,
-                    env.block.time,
+                    env.block.time.into_instant(),
                     Addr::unchecked("feeder"),
                     &[
                         // tests::dto_price::<PaymentC1, _, BaseCurrency, _>(5, 1), a gap for PaymentC7
@@ -313,7 +319,11 @@ mod test {
             ];
 
             let prices: Vec<_> = oracle
-                .all_prices_iter(tree.swap_pairs_df(), env.block.time, TOTAL_FEEDERS)
+                .all_prices_iter(
+                    tree.swap_pairs_df(),
+                    env.block.time.into_instant(),
+                    TOTAL_FEEDERS,
+                )
                 .collect::<Result<_, _>>()
                 .unwrap();
 

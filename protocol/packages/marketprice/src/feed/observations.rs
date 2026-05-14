@@ -1,5 +1,5 @@
 use currency::{CurrencyDTO, Group};
-use sdk::cosmwasm_std::Timestamp;
+use finance::instant::Instant;
 
 use crate::error::Result;
 
@@ -23,7 +23,7 @@ where
     Self::C: 'static,
     Self::QuoteC: 'static,
 {
-    fn retain(&mut self, valid_since: &Timestamp) -> Result<()>;
+    fn retain(&mut self, valid_since: &Instant) -> Result<()>;
 
     /// Register a newer observation
     ///

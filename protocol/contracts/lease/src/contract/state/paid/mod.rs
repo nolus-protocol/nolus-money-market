@@ -7,6 +7,7 @@ use crate::{contract::Lease, error::ContractResult};
 use super::Response;
 
 use self::transfer_in::DexState;
+use cw_time::IntoInstant;
 
 pub mod transfer_in;
 
@@ -18,7 +19,7 @@ pub fn start_close(
 ) -> ContractResult<Response> {
     let start_transfer_in = transfer_in::start(lease);
     start_transfer_in
-        .enter(env.block.time, querier)
+        .enter(env.block.time.into_instant(), querier)
         .map(|close_msgs| curr_request_response.merge_with(close_msgs))
         .map(|batch| Response::from(batch, DexState::from(start_transfer_in)))
         .map_err(Into::into)

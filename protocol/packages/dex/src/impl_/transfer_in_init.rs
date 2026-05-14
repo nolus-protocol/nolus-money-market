@@ -5,8 +5,9 @@ use finance::duration::Duration;
 use serde::{Deserialize, Serialize};
 
 use finance::coin::CoinDTO;
+use finance::instant::Instant;
 use platform::batch::Batch;
-use sdk::cosmwasm_std::{Binary, Env, QuerierWrapper, Timestamp};
+use sdk::cosmwasm_std::{Binary, Env, QuerierWrapper};
 
 use crate::{
     Connectable, ConnectionParams, Contract, ContractInSwap, Enterable, Stage, TimeAlarm,
@@ -22,6 +23,7 @@ use super::{
     transfer_in_finish::TransferInFinish,
     trx::{IBC_TIMEOUT, TransferInTrx},
 };
+use cw_time::IntoInstant;
 
 /// Transfer in a coin from DEX
 ///
@@ -83,7 +85,7 @@ impl<SwapTask, SEnum> TransferInInit<SwapTask, SEnum>
 where
     SwapTask: SwapTaskT,
 {
-    fn enter_state(&self, now: Timestamp) -> Result<Batch> {
+    fn enter_state(&self, now: Instant) -> Result<Batch> {
         let mut sender = TransferInTrx::new(self.spec.dex_account(), now);
         sender.send(&self.amount_in);
         Ok(sender.into())
@@ -97,8 +99,11 @@ where
     TransferInFinish<SwapTask, SEnum>: Into<SEnum>,
 {
     fn on_response(self, querier: QuerierWrapper<'_>, env: Env) -> HandlerResult<Self> {
-        let finish: TransferInFinish<SwapTask, SEnum> =
-            TransferInFinish::new(self.spec, self.amount_in, env.block.time + IBC_TIMEOUT);
+        let finish: TransferInFinish<SwapTask, SEnum> = TransferInFinish::new(
+            self.spec,
+            self.amount_in,
+            env.block.time.into_instant() + IBC_TIMEOUT,
+        );
         finish.try_complete(querier, env).map_into()
     }
 }
@@ -116,7 +121,7 @@ impl<SwapTask, SEnum> Enterable for TransferInInit<SwapTask, SEnum>
 where
     SwapTask: SwapTaskT,
 {
-    fn enter(&self, now: Timestamp, _querier: QuerierWrapper<'_>) -> Result<Batch> {
+    fn enter(&self, now: Instant, _querier: QuerierWrapper<'_>) -> Result<Batch> {
         self.enter_state(now)
     }
 }
@@ -156,7 +161,7 @@ where
 
     fn state(
         self,
-        now: Timestamp,
+        now: Instant,
         due_projection: Duration,
         querier: QuerierWrapper<'_>,
     ) -> Self::StateResponse {
@@ -181,7 +186,7 @@ impl<SwapTask, SEnum> TimeAlarm for TransferInInit<SwapTask, SEnum>
 where
     SwapTask: SwapTaskT,
 {
-    fn setup_alarm(&self, r#for: Timestamp) -> Result<Batch> {
+    fn setup_alarm(&self, r#for: Instant) -> Result<Batch> {
         self.spec
             .time_alarm()
             .setup_alarm(r#for)

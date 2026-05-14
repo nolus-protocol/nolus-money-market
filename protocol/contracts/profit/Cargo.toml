@@ -71,6 +71,7 @@ testing = [
 ]
 
 [dependencies]
+cw-time = { workspace = true }
 access-control = { workspace = true, optional = true }
 currencies = { workspace = true, optional = true }
 currency = { workspace = true, optional = true }

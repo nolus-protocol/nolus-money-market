@@ -508,6 +508,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "cw-time"
+version = "0.1.0"
+dependencies = [
+ "finance",
+ "sdk",
+]
+
+[[package]]
 name = "cw-utils"
 version = "3.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -739,6 +747,7 @@ dependencies = [
  "platform",
  "sdk",
  "serde",
+ "serde_json",
  "thiserror 2.0.18",
 ]
 
@@ -1061,6 +1070,7 @@ version = "0.4.0"
 dependencies = [
  "base64",
  "currency",
+ "cw-time",
  "finance",
  "sdk",
  "serde",
@@ -1615,6 +1625,7 @@ dependencies = [
 name = "time-oracle"
 version = "0.2.2"
 dependencies = [
+ "finance",
  "sdk",
  "serde",
  "thiserror 2.0.18",
@@ -1626,6 +1637,8 @@ version = "0.5.2"
 dependencies = [
  "access-control",
  "cosmwasm-std",
+ "cw-time",
+ "finance",
  "platform",
  "sdk",
  "serde",
@@ -1642,6 +1655,7 @@ dependencies = [
  "admin_contract",
  "cosmwasm-std",
  "currency",
+ "cw-time",
  "finance",
  "lpp-platform",
  "oracle-platform",

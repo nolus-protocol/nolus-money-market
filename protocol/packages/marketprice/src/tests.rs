@@ -14,7 +14,7 @@ use finance::{
     price::{self, Price, dto::PriceDTO},
 };
 use sdk::{
-    cosmwasm_std::{Storage, Timestamp, testing::MockStorage},
+    cosmwasm_std::{Storage, testing::MockStorage},
     testing,
 };
 
@@ -24,6 +24,7 @@ use crate::feeders::Count;
 use crate::{
     config::Config, error::PriceFeedsError, feeders::PriceFeeders, market_price::PriceFeeds,
 };
+use finance::instant::Instant;
 
 const ROOT_NS: &str = "root_ns";
 const TOTAL_FEEDERS: Count = Count::new_test(1);
@@ -45,7 +46,7 @@ pub(super) fn assert_price<
 >(
     expected: Price<C, BaseC>,
     feeds: &PriceFeeds<'config, PriceG, ObservationsRepoImpl>,
-    at: Timestamp,
+    at: Instant,
     total_feeders: Count,
     leaf_to_base: CurrenciesToBaseC,
 ) where
@@ -81,7 +82,7 @@ pub(super) fn assert_no_price<
     CurrenciesToBaseC,
 >(
     feeds: &PriceFeeds<'config, PriceG, ObservationsRepoImpl>,
-    at: Timestamp,
+    at: Instant,
     total_feeders: Count,
     leaf_to_base: CurrenciesToBaseC,
 ) where
@@ -338,7 +339,7 @@ fn marketprice_follow_the_path() {
 fn feed_price<C1, C2, G, ObservationsRepoT>(
     market: &mut PriceFeeds<'_, G, ObservationsRepoT>,
     price: Price<C1, C2>,
-) -> Result<Timestamp, PriceFeedsError>
+) -> Result<Instant, PriceFeedsError>
 where
     C1: CurrencyDef,
     C1::Group: MemberOf<G>,
@@ -358,7 +359,7 @@ where
 
 fn price<'config, 'currency_dto, ObservationsRepoImpl, PriceG, BaseC, BaseG, CurrenciesToBaseC>(
     feeds: &PriceFeeds<'config, PriceG, ObservationsRepoImpl>,
-    at: Timestamp,
+    at: Instant,
     total_feeders: Count,
     leaf_to_base: CurrenciesToBaseC,
 ) -> Result<BasePrice<PriceG, BaseC, BaseG>, PriceFeedsError>
@@ -390,9 +391,9 @@ where
     price::total_of(Coin::<C1>::new(coin1)).is(Coin::<C2>::new(coin2))
 }
 
-fn now() -> Timestamp {
+fn now() -> Instant {
     let now = SystemTime::now()
         .duration_since(SystemTime::UNIX_EPOCH)
         .unwrap();
-    Timestamp::from_seconds(now.as_secs())
+    Instant::from_seconds(now.as_secs())
 }

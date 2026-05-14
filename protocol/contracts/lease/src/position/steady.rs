@@ -1,4 +1,5 @@
 use currency::{CurrencyDef, MemberOf};
+use finance::instant::Instant;
 use finance::{
     duration::Duration,
     range::{Descending, RightOpenRange},
@@ -8,7 +9,6 @@ use oracle::{
     stub::{AsAlarms, PriceAlarms},
 };
 use platform::batch::Batch;
-use sdk::cosmwasm_std::Timestamp;
 use timealarms::stub::TimeAlarmsRef;
 
 use crate::{api::LeaseAssetCurrencies, error::ContractResult, finance::OracleRef};
@@ -43,7 +43,7 @@ where
 {
     pub fn try_into_alarms(
         self,
-        when: &Timestamp,
+        when: &Instant,
         time_alarms: &TimeAlarmsRef,
         price_alarms: &OracleRef,
     ) -> ContractResult<Batch> {
@@ -71,13 +71,13 @@ where
 mod tests {
     use currencies::{LeaseGroup, Lpn, Lpns, testing::PaymentC3};
     use finance::{
-        coin::Coin, duration::Duration, fraction::Fraction, percent::Percent100, price,
-        range::RightOpenRange,
+        coin::Coin, duration::Duration, fraction::Fraction, instant::Instant, percent::Percent100,
+        price, range::RightOpenRange,
     };
     use oracle::api::alarms::{Alarm, ExecuteMsg as PriceAlarmsCmd};
     use oracle_platform::OracleRef;
     use platform::batch::Batch;
-    use sdk::cosmwasm_std::{self, Addr, Timestamp, WasmMsg};
+    use sdk::cosmwasm_std::{self, Addr, WasmMsg};
     use timealarms::{msg::ExecuteMsg as TimeAlarmsCmd, stub::TimeAlarmsRef};
 
     use crate::{api::LeaseAssetCurrencies, position::Steadiness};
@@ -90,7 +90,7 @@ mod tests {
 
     #[test]
     fn try_into_alarms() {
-        let now = Timestamp::from_seconds(1732016180);
+        let now = Instant::from_seconds(1732016180);
         let recheck_in = Duration::from_secs(765758);
         let ltv_to_price = |ltv: Percent100| {
             price::total_of::<TestCurrency>(ltv.of(Coin::new(100))).is(Coin::new(45))
@@ -129,7 +129,7 @@ mod tests {
 
     fn try_into_alarms_int(
         s: Steadiness<TestCurrency>,
-        now: Timestamp,
+        now: Instant,
         recheck_in: Duration,
         exp_alarm: Alarm<LeaseAssetCurrencies, TestLpn, Lpns>,
     ) {

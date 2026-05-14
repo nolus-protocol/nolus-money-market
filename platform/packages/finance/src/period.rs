@@ -2,36 +2,36 @@ use std::ops::{Add, Sub};
 
 use serde::{Deserialize, Serialize};
 
-use sdk::cosmwasm_std::Timestamp;
+use crate::instant::Instant;
 
 use crate::duration::Duration;
 
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct Period {
-    start: Timestamp,
+    start: Instant,
     length: Duration,
 }
 
 impl Period {
-    pub fn from_till(start: Timestamp, till: &Timestamp) -> Self {
+    pub fn from_till(start: Instant, till: &Instant) -> Self {
         debug_assert!(&start <= till);
         Self::from_length(start, Duration::between(&start, till))
     }
 
-    pub fn from_length(start: Timestamp, length: Duration) -> Self {
+    pub fn from_length(start: Instant, length: Duration) -> Self {
         Self { start, length }
     }
 
-    pub fn till_length(till: &Timestamp, max_length: Duration) -> Self {
-        let start = if till < &Timestamp::default().add(max_length) {
-            Timestamp::default()
+    pub fn till_length(till: &Instant, max_length: Duration) -> Self {
+        let start = if till < &Instant::default().add(max_length) {
+            Instant::default()
         } else {
             till.sub(max_length)
         };
         Self::from_till(start, till)
     }
 
-    pub fn start(&self) -> Timestamp {
+    pub fn start(&self) -> Instant {
         self.start
     }
 
@@ -43,7 +43,7 @@ impl Period {
         self.length() == Duration::default()
     }
 
-    pub fn till(&self) -> Timestamp {
+    pub fn till(&self) -> Instant {
         self.start + self.length
     }
 
@@ -76,14 +76,14 @@ impl Period {
         )
     }
 
-    fn move_within(&self, timestamp: Timestamp) -> Timestamp {
+    fn move_within(&self, timestamp: Instant) -> Instant {
         timestamp.clamp(self.start, self.till())
     }
 }
 
 #[cfg(test)]
 mod test {
-    use sdk::cosmwasm_std::Timestamp;
+    use crate::instant::Instant;
 
     use crate::duration::Duration;
 
@@ -97,18 +97,18 @@ mod test {
 
     #[test]
     fn till_length() {
-        let p = Period::till_length(&Timestamp::from_seconds(1000), Duration::from_secs(200));
+        let p = Period::till_length(&Instant::from_seconds(1000), Duration::from_secs(200));
 
         assert_eq!(from_till(800, 1000), p);
         assert!(!p.zero_length());
         assert!(
-            Period::till_length(&Timestamp::from_seconds(1000), Duration::default()).zero_length()
+            Period::till_length(&Instant::from_seconds(1000), Duration::default()).zero_length()
         );
     }
 
     #[test]
     fn till_length_max() {
-        let p = Period::till_length(&Timestamp::from_seconds(1000), Duration::from_secs(1000));
+        let p = Period::till_length(&Instant::from_seconds(1000), Duration::from_secs(1000));
 
         assert_eq!(from_till(0, 1000), p);
         assert!(!p.zero_length());
@@ -116,7 +116,7 @@ mod test {
 
     #[test]
     fn till_length_underflow() {
-        let p = Period::till_length(&Timestamp::from_seconds(200), Duration::from_secs(1000));
+        let p = Period::till_length(&Instant::from_seconds(200), Duration::from_secs(1000));
 
         assert_eq!(from_till(0, 200), p);
         assert!(!p.zero_length());
@@ -156,8 +156,8 @@ mod test {
 
     fn from_till(from_sec: u64, till_sec: u64) -> Period {
         Period::from_till(
-            Timestamp::from_seconds(from_sec),
-            &Timestamp::from_seconds(till_sec),
+            Instant::from_seconds(from_sec),
+            &Instant::from_seconds(till_sec),
         )
     }
 }

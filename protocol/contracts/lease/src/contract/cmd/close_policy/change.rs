@@ -1,8 +1,8 @@
 use currency::{CurrencyDef, MemberOf};
+use finance::instant::Instant;
 use lpp::stub::loan::LppLoan as LppLoanTrait;
 use oracle_platform::Oracle as OracleTrait;
 use profit::stub::ProfitRef;
-use sdk::cosmwasm_std::Timestamp;
 use timealarms::stub::TimeAlarmsRef;
 
 use crate::{
@@ -17,7 +17,7 @@ use super::CloseStatusDTO;
 
 pub(crate) struct ChangeCmd<'now, 'price_alarms> {
     change: ClosePolicyChange,
-    now: &'now Timestamp,
+    now: &'now Instant,
     // LeaseDTO attributes
     profit: ProfitRef,
     reserve: ReserveRef,
@@ -31,7 +31,7 @@ pub(crate) type ChangePolicyResult = LeaseDTOResult<CloseStatusDTO>;
 impl<'now, 'price_alarms> ChangeCmd<'now, 'price_alarms> {
     pub fn new(
         change: ClosePolicyChange,
-        now: &'now Timestamp,
+        now: &'now Instant,
         // LeaseDTO attributes follow
         profit: ProfitRef,
         time_alarms: TimeAlarmsRef,

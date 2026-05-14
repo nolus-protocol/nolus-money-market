@@ -6,7 +6,7 @@ use platform::{
     batch::Batch,
     message::Response as MessageResponse,
 };
-use sdk::cosmwasm_std::{Addr, DepsMut, Env, MessageInfo, Storage, Timestamp};
+use sdk::cosmwasm_std::{Addr, DepsMut, Env, MessageInfo, Storage};
 
 use crate::{
     config::Config as ApiConfig,
@@ -16,6 +16,7 @@ use crate::{
 };
 
 use super::error::{ContractError, Result};
+use finance::instant::Instant;
 
 pub(super) fn try_distribute_rewards<Lpn, Bank>(
     store: &mut dyn Storage,
@@ -88,7 +89,7 @@ pub(super) fn query_lpp_balance<Lpn, Bank>(
     storage: &dyn Storage,
     config: &ApiConfig,
     bank: &Bank,
-    now: &Timestamp,
+    now: &Instant,
 ) -> Result<LppBalances<Lpn>>
 where
     Lpn: CurrencyDef,
@@ -118,13 +119,12 @@ pub(super) fn query_rewards(storage: &dyn Storage, addr: Addr) -> Result<Rewards
 
 #[cfg(test)]
 mod test {
+    use cw_time::IntoInstant;
+    use finance::instant::Instant;
     use finance::{coin::Coin, percent::Percent100, zero::Zero};
     use lpp_platform::NLpn;
     use platform::{bank::testing::MockBankView, contract::Code};
-    use sdk::cosmwasm_std::{
-        Timestamp,
-        testing::{self, MockStorage},
-    };
+    use sdk::cosmwasm_std::testing::{self, MockStorage};
 
     use crate::{
         borrow::InterestRate,
@@ -147,7 +147,7 @@ mod test {
     fn test_claim_zero_rewards() {
         let mut deps = testing::mock_dependencies();
         let env = testing::mock_env();
-        let now = env.block.time;
+        let now = env.block.time.into_instant();
 
         const INITIAL_LPP_BALANCE: Coin<TheCurrency> = Coin::ZERO;
         const DEPOSIT: Coin<TheCurrency> = test::lpn_coin(20_000);
@@ -217,7 +217,7 @@ mod test {
         let bank = MockBankView::<_, TheCurrency>::only_balance(DEPOSIT);
 
         let mut lpp = LiquidityPool::<TheCurrency, _>::new(&config, &bank);
-        lpp.deposit(DEPOSIT, &Timestamp::from_seconds(100)).unwrap();
+        lpp.deposit(DEPOSIT, &Instant::from_seconds(100)).unwrap();
         lpp.save(&mut store).unwrap();
 
         let info = test::lender_msg_no_funds();

@@ -5,13 +5,10 @@ use finance::{
     ratio::Ratio, zero::Zero,
 };
 use lpp_platform::NLpn;
-use sdk::{
-    cosmwasm_std::{Storage, Timestamp},
-    cw_storage_plus::Item,
-};
+use sdk::{cosmwasm_std::Storage, cw_storage_plus::Item};
 
 use crate::contract::{ContractError, Result as ContractResult};
-
+use finance::instant::Instant;
 #[derive(Serialize, Deserialize)]
 #[cfg_attr(any(test, feature = "testing"), derive(Debug, PartialEq,))]
 #[serde(bound(serialize = "", deserialize = ""))]
@@ -36,7 +33,7 @@ pub struct Total<Lpn> {
     /// The last time a borrow-related operation is performed
     ///
     /// This concerns only loan open and payments.
-    last_update_time: Timestamp,
+    last_update_time: Instant,
 
     /// The total receipts issued to lenders for their deposits
     receipts: Coin<NLpn>,
@@ -56,7 +53,7 @@ impl<Lpn> Total<Lpn> {
             total_principal_due: Coin::ZERO,
             total_interest_due: Coin::ZERO,
             annual_interest_rate: zero_interest_rate(),
-            last_update_time: Timestamp::default(),
+            last_update_time: Instant::default(),
             receipts: Coin::ZERO,
         }
     }
@@ -73,7 +70,7 @@ impl<Lpn> Total<Lpn> {
         self.total_principal_due
     }
 
-    pub fn total_interest_due_by_now(&self, ctime: &Timestamp) -> Option<Coin<Lpn>> {
+    pub fn total_interest_due_by_now(&self, ctime: &Instant) -> Option<Coin<Lpn>> {
         if self.total_principal_due.is_zero() {
             // TODO remove this case once close protocols with `total_principal_due == 0` and `total_interest_due > 0`
             // the newly added invariant: if `total_principal_due == 0` then `total_interest_due == 0`
@@ -95,7 +92,7 @@ impl<Lpn> Total<Lpn> {
 
     pub fn borrow(
         &mut self,
-        ctime: Timestamp,
+        ctime: Instant,
         amount: Coin<Lpn>,
         loan_interest_rate: Percent100,
     ) -> Result<&Self, ContractError> {
@@ -141,7 +138,7 @@ impl<Lpn> Total<Lpn> {
 
     pub fn repay(
         &mut self,
-        ctime: Timestamp,
+        ctime: Instant,
         loan_interest_payment: Coin<Lpn>,
         loan_principal_payment: Coin<Lpn>,
         loan_interest_rate: Percent100,
@@ -201,7 +198,7 @@ impl<Lpn> Total<Lpn> {
 
     fn repay_interest(
         &self,
-        ctime: Timestamp,
+        ctime: Instant,
         loan_interest_payment: Coin<Lpn>,
         loan_principal_payment: Coin<Lpn>,
         loan_interest_rate: Percent100,
@@ -263,6 +260,7 @@ fn zero_interest_rate<Lpn>() -> Ratio<Coin<Lpn>> {
 #[cfg(test)]
 mod test {
     use currencies::Lpn;
+    use finance::instant::Instant;
     use finance::{coin::Amount, duration::Duration};
     use sdk::cosmwasm_std::testing::MockStorage;
 
@@ -273,7 +271,7 @@ mod test {
     #[test]
     fn borrow_and_repay() {
         let mut store = MockStorage::default();
-        let mut block_time = Timestamp::from_nanos(1_571_797_419_879_305_533);
+        let mut block_time = Instant::from_nanos(1_571_797_419_879_305_533);
 
         let total: Total<Lpn> = Total::default();
         total.store(&mut store).expect("should store");
@@ -311,7 +309,7 @@ mod test {
 
     #[test]
     fn borrow_and_repay_with_overflow() {
-        let mut block_time = Timestamp::from_nanos(0);
+        let mut block_time = Instant::from_nanos(0);
 
         let mut total = Total::default();
         assert_eq!(total.total_principal_due(), Coin::ZERO);

@@ -2,7 +2,8 @@ use std::num::TryFromIntError;
 
 use thiserror::Error;
 
-use sdk::cosmwasm_std::{Addr, StdError, Timestamp};
+use finance::instant::Instant;
+use sdk::cosmwasm_std::{Addr, StdError};
 use time_oracle::AlarmError;
 
 #[derive(Error, Debug)]
@@ -20,7 +21,7 @@ pub enum ContractError {
     InvalidAlarmAddress(Addr),
 
     #[error("[TimeAlarms] Alarm is in the past: {0:?}")]
-    InvalidAlarm(Timestamp),
+    InvalidAlarm(Instant),
 
     #[error("[TimeAlarms] {0}")]
     Platform(#[from] platform::error::Error),

@@ -3,6 +3,7 @@ use std::slice;
 use ::swap::testing::SwapRequest;
 use currencies::PaymentGroup;
 use currency::CurrencyDef;
+use finance::instant::Instant;
 use finance::{
     coin::{Coin, CoinDTO},
     duration::Duration,
@@ -18,11 +19,7 @@ use lease::api::{
     query::{ClosePolicy, StateResponse, opened::Status, paid::ClosingTrx},
 };
 use platform::coin_legacy;
-use sdk::{
-    cosmwasm_std::{Addr, Timestamp},
-    cw_multi_test::AppResponse,
-    testing,
-};
+use sdk::{cosmwasm_std::Addr, cw_multi_test::AppResponse, testing};
 
 use crate::{
     common::{
@@ -196,7 +193,7 @@ fn full_repay_with_max_ltd() {
         due_interest: LpnCoin::ZERO.into(),
         due_projection: Duration::default(),
         close_policy: ClosePolicy::default(),
-        validity: Timestamp::from_nanos(1537237459879305533),
+        validity: Instant::from_nanos(1537237459879305533),
         status: Status::Idle,
     };
     assert_eq!(
