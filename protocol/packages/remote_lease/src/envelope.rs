@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::{msg::LeaseOperationsMsg, version::ProtocolVersion};
+use crate::{msg::Operation, version::ProtocolVersion};
 
 /// IBC packet payload exchanged between the Nolus controller and the Solana
 /// passive vault.
@@ -15,7 +15,7 @@ use crate::{msg::LeaseOperationsMsg, version::ProtocolVersion};
 #[serde(deny_unknown_fields)]
 pub struct PacketEnvelope {
     pub lease: LeaseAddrOnWire,
-    pub operation: LeaseOperationsMsg,
+    pub operation: Operation,
     pub version: ProtocolVersion,
 }
 

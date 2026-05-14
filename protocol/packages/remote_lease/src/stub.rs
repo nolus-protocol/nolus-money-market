@@ -3,22 +3,20 @@ use serde::Serialize;
 use platform::{batch::Batch, result::Result as PlatformResult};
 use sdk::cosmwasm_std::Addr;
 
-use crate::msg::{
-    CloseLeaseParams, LeaseOperationsMsg, OpenLeaseParams, SwapParams, TransferOutParams,
-};
+use crate::msg::{CloseLeaseParams, OpenLeaseParams, Operation, SwapParams, TransferOutParams};
 
 /// Marker trait the consuming controller must implement on its own
-/// `ExecuteMsg` (or whichever outer enum carries [`LeaseOperationsMsg`]).
+/// `ExecuteMsg` (or whichever outer enum carries [`Operation`]).
 ///
 /// Why a marker: the stub builders accept an `op_to_msg` closure that wraps
-/// a [`LeaseOperationsMsg`] into the controller's outer message before it
+/// a [`Operation`] into the controller's outer message before it
 /// goes onto the wire. Without this bound, any `Serialize` value would work
-/// — including `LeaseOperationsMsg` itself, which would let the controller
+/// — including `Operation` itself, which would let the controller
 /// (or a contributor) accidentally emit a flat-embedded operation that
 /// bypasses the controller's own authorisation layer. By requiring the
 /// closure's output to implement `ControllerInnerMessage` the crate forces
 /// a deliberate one-line opt-in on the consumer side; the orphan rule
-/// prevents the consumer from implementing it on `LeaseOperationsMsg`.
+/// prevents the consumer from implementing it on `Operation`.
 pub trait ControllerInnerMessage: Serialize {}
 
 pub struct Factory<'controller> {
@@ -32,24 +30,18 @@ impl<'controller> Factory<'controller> {
 
     pub fn open<F, M>(&self, params: OpenLeaseParams, op_to_msg: F) -> PlatformResult<Batch>
     where
-        F: FnOnce(LeaseOperationsMsg) -> M,
+        F: FnOnce(Operation) -> M,
         M: ControllerInnerMessage,
     {
-        schedule(
-            self.controller,
-            &op_to_msg(LeaseOperationsMsg::OpenLease(params)),
-        )
+        schedule(self.controller, &op_to_msg(Operation::OpenLease(params)))
     }
 
     pub fn close<F, M>(&self, params: CloseLeaseParams, op_to_msg: F) -> PlatformResult<Batch>
     where
-        F: FnOnce(LeaseOperationsMsg) -> M,
+        F: FnOnce(Operation) -> M,
         M: ControllerInnerMessage,
     {
-        schedule(
-            self.controller,
-            &op_to_msg(LeaseOperationsMsg::CloseLease(params)),
-        )
+        schedule(self.controller, &op_to_msg(Operation::CloseLease(params)))
     }
 }
 
@@ -64,13 +56,10 @@ impl<'controller> Lease<'controller> {
 
     pub fn swap<F, M>(&self, params: SwapParams, op_to_msg: F) -> PlatformResult<Batch>
     where
-        F: FnOnce(LeaseOperationsMsg) -> M,
+        F: FnOnce(Operation) -> M,
         M: ControllerInnerMessage,
     {
-        schedule(
-            self.controller,
-            &op_to_msg(LeaseOperationsMsg::Swap(params)),
-        )
+        schedule(self.controller, &op_to_msg(Operation::Swap(params)))
     }
 
     pub fn transfer_out<F, M>(
@@ -79,13 +68,10 @@ impl<'controller> Lease<'controller> {
         op_to_msg: F,
     ) -> PlatformResult<Batch>
     where
-        F: FnOnce(LeaseOperationsMsg) -> M,
+        F: FnOnce(Operation) -> M,
         M: ControllerInnerMessage,
     {
-        schedule(
-            self.controller,
-            &op_to_msg(LeaseOperationsMsg::TransferOut(params)),
-        )
+        schedule(self.controller, &op_to_msg(Operation::TransferOut(params)))
     }
 }
 
@@ -110,16 +96,14 @@ mod tests {
     use finance::coin::Coin;
     use sdk::cosmwasm_std::Addr;
 
-    use crate::msg::{
-        CloseLeaseParams, LeaseOperationsMsg, OpenLeaseParams, SwapParams, TransferOutParams,
-    };
+    use crate::msg::{CloseLeaseParams, OpenLeaseParams, Operation, SwapParams, TransferOutParams};
 
     use super::{ControllerInnerMessage, Factory, Lease};
 
     #[derive(Serialize)]
     #[serde(rename_all = "snake_case")]
     enum OuterExecuteMsg {
-        LeaseOperations(LeaseOperationsMsg),
+        LeaseOperations(Operation),
     }
 
     impl ControllerInnerMessage for OuterExecuteMsg {}

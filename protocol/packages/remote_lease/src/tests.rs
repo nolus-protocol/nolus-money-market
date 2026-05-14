@@ -22,7 +22,7 @@ use crate::{
     callback::{OPERATION_ERR_MAX_BYTES, RemoteErrorMessage, RemoteLeaseCallback},
     envelope::{LeaseAddrOnWire, PacketEnvelope},
     error::Error,
-    msg::{CloseLeaseParams, LeaseOperationsMsg, OpenLeaseParams, SwapParams, TransferOutParams},
+    msg::{CloseLeaseParams, OpenLeaseParams, Operation, SwapParams, TransferOutParams},
     port_id_for,
     response::{
         CloseLeaseResponse, OpenLeaseResponse, OperationResponse, SwapResponse, TransferOutResponse,
@@ -31,12 +31,12 @@ use crate::{
 };
 
 // ---------------------------------------------------------------------------
-// 1. LeaseOperationsMsg variants — round-trip + literal JSON
+// 1. Operation variants — round-trip + literal JSON
 // ---------------------------------------------------------------------------
 
 #[test]
 fn open_lease_msg_serde() {
-    let value = LeaseOperationsMsg::OpenLease(sample_open_lease_params());
+    let value = Operation::OpenLease(sample_open_lease_params());
     assert_round_trip_eq(
         r#"{"open_lease":{"expected_instance_ordinal":7,"downpayment_currency":"NLS","lpn_currency":"LPN","asset_currency":"LC1"}}"#,
         &value,
@@ -45,13 +45,13 @@ fn open_lease_msg_serde() {
 
 #[test]
 fn close_lease_msg_serde() {
-    let value = LeaseOperationsMsg::CloseLease(CloseLeaseParams {});
+    let value = Operation::CloseLease(CloseLeaseParams {});
     assert_round_trip_eq(r#"{"close_lease":{}}"#, &value);
 }
 
 #[test]
 fn swap_msg_serde() {
-    let value = LeaseOperationsMsg::Swap(sample_swap_params());
+    let value = Operation::Swap(sample_swap_params());
     assert_round_trip_eq(
         r#"{"swap":{"coin_in":{"amount":"1000","ticker":"NLS"},"min_out":{"amount":"42","ticker":"LPN"}}}"#,
         &value,
@@ -60,7 +60,7 @@ fn swap_msg_serde() {
 
 #[test]
 fn transfer_out_msg_serde() {
-    let value = LeaseOperationsMsg::TransferOut(sample_transfer_out_params());
+    let value = Operation::TransferOut(sample_transfer_out_params());
     assert_round_trip_eq(
         r#"{"transfer_out":{"amount":{"amount":"1000","ticker":"LC1"}}}"#,
         &value,
@@ -164,7 +164,7 @@ fn callback_error_message_deserialize_over_cap_rejected() {
 fn packet_envelope_serde() {
     let value = PacketEnvelope {
         lease: LeaseAddrOnWire::new("nolus1leaseaddr"),
-        operation: LeaseOperationsMsg::CloseLease(CloseLeaseParams {}),
+        operation: Operation::CloseLease(CloseLeaseParams {}),
         version: ProtocolVersion,
     };
     assert_round_trip_eq(

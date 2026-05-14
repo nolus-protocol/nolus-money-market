@@ -10,7 +10,7 @@ The `remote_lease` crate defines the IBC packet types exchanged between the Nolu
 
 ## Envelope
 
-`PacketEnvelope { lease: LeaseAddrOnWire, operation: LeaseOperationsMsg, version: ProtocolVersion }`. `deny_unknown_fields` everywhere. The lease address is wrapped in `LeaseAddrOnWire`; receivers must call `into_validated(api)` (CosmWasm) before treating it as an `Addr`.
+`PacketEnvelope { lease: LeaseAddrOnWire, operation: Operation, version: ProtocolVersion }`. `deny_unknown_fields` everywhere. The lease address is wrapped in `LeaseAddrOnWire`; receivers must call `into_validated(api)` (CosmWasm) before treating it as an `Addr`.
 
 ## Operations
 
