@@ -53,9 +53,8 @@ impl Config {
         Self::STORAGE
             .update(storage, |config: Self| {
                 Ok(Self {
-                    connection_id: config.connection_id,
-                    dex_label: config.dex_label,
                     lease_code,
+                    ..config
                 })
             })
             .map(mem::drop)

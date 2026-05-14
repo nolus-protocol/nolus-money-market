@@ -69,14 +69,6 @@ pub fn instantiate(
         .inspect_err(platform_error::log(deps.api))
 }
 
-fn require_non_empty(field: &'static str, value: &str) -> Result<()> {
-    if value.is_empty() {
-        Err(Error::EmptyInstantiateField(field))
-    } else {
-        Ok(())
-    }
-}
-
 #[entry_point]
 pub fn migrate(
     deps: DepsMut<'_>,
@@ -126,6 +118,14 @@ pub fn query(deps: Deps<'_>, _env: Env, msg: QueryMsg) -> Result<Binary> {
         }
     }
     .inspect_err(platform_error::log(deps.api))
+}
+
+fn require_non_empty(field: &'static str, value: &str) -> Result<()> {
+    if value.is_empty() {
+        Err(Error::EmptyInstantiateField(field))
+    } else {
+        Ok(())
+    }
 }
 
 fn authorize_protocol_admin_only(store: &dyn Storage, call_message: &MessageInfo) -> Result<()> {
