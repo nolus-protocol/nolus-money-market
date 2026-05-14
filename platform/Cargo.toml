@@ -54,10 +54,14 @@ versioning = { path = "packages/versioning", default-features = false }
 # Tools Packages
 json-value = { path = "../tools/json-value", default-features = false }
 
+# Own Bridge Packages
+cw-time = { path = "packages/cw-time", default-features = false }
+
 # General
 base64 = { version = "0.22", default-features = false }
 gcd = { version = "2", default-features = false }
 serde = { version = "1", default-features = false }
+serde_json = { version = "1", default-features = false, features = ["std"] }
 thiserror = { version = "2", default-features = false }
 
 # CosmWasm
