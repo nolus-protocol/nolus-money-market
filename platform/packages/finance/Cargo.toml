@@ -29,4 +29,6 @@ thiserror = { workspace = true }
 
 [dev-dependencies]
 currency = { workspace = true, features = ["testing"] }
-platform = { workspace = true, features = ["testing"]}
+platform = { workspace = true, features = ["testing"] }
+sdk = { workspace = true }
+serde_json = { workspace = true, default-features = false, features = ["std"] }

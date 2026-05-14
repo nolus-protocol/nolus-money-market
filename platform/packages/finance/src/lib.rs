@@ -4,6 +4,7 @@ pub mod error;
 pub mod flatten;
 pub mod fraction;
 pub mod fractionable;
+pub mod instant;
 pub mod interest;
 pub mod liability;
 pub mod percent;
