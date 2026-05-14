@@ -17,10 +17,8 @@ combinations = [
 testing = []
 
 [dependencies]
-sdk = { workspace = true }
-
 thiserror = { workspace = true }
-serde = { workspace = true, features = ["derive"] }
+serde = { workspace = true, features = ["derive", "std"] }
 
 [dev-dependencies]
 sdk = { workspace = true, features = ["testing"] }

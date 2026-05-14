@@ -429,7 +429,6 @@ dependencies = [
 name = "currency"
 version = "0.7.0"
 dependencies = [
- "sdk",
  "serde",
  "thiserror 2.0.18",
 ]
@@ -1387,6 +1386,20 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn",
+]
+
+[[package]]
+name = "remote_lease"
+version = "0.1.0"
+dependencies = [
+ "currencies",
+ "currency",
+ "finance",
+ "platform",
+ "sdk",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.18",
 ]
 
 [[package]]
