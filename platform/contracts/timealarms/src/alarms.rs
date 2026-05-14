@@ -117,10 +117,9 @@ where
 
 #[cfg(test)]
 mod tests {
-    use super::Instant;
-    use sdk::cosmwasm_std::{Addr, testing};
+    use sdk::cosmwasm_std::{Addr, Timestamp, testing};
 
-    use super::TimeAlarms;
+    use super::{Instant, TimeAlarms};
 
     #[test]
     fn try_add_valid_contract_address() {
