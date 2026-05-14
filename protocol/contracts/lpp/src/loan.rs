@@ -1,15 +1,14 @@
 use serde::{Deserialize, Serialize};
 
+use finance::instant::Instant;
 use finance::{coin::Coin, duration::Duration, interest, percent::Percent100};
-use sdk::cosmwasm_std::Timestamp;
-
 #[derive(Serialize, Deserialize, Clone, Copy, Debug)]
 #[cfg_attr(any(test, feature = "testing"), derive(Eq, PartialEq))]
 #[serde(rename_all = "snake_case", bound(serialize = "", deserialize = ""))]
 pub struct Loan<Lpn> {
     pub principal_due: Coin<Lpn>,
     pub annual_interest_rate: Percent100,
-    pub interest_paid: Timestamp,
+    pub interest_paid: Instant,
 }
 
 #[derive(Debug, Default, Eq, PartialEq)]
@@ -23,7 +22,7 @@ where
 }
 
 impl<Lpn> Loan<Lpn> {
-    pub fn interest_due(&self, by: &Timestamp) -> Option<Coin<Lpn>> {
+    pub fn interest_due(&self, by: &Instant) -> Option<Coin<Lpn>> {
         interest::interest(
             self.annual_interest_rate,
             self.principal_due,
@@ -31,7 +30,7 @@ impl<Lpn> Loan<Lpn> {
         )
     }
 
-    pub fn repay(&mut self, by: &Timestamp, repayment: Coin<Lpn>) -> Option<RepayShares<Lpn>> {
+    pub fn repay(&mut self, by: &Instant, repayment: Coin<Lpn>) -> Option<RepayShares<Lpn>> {
         interest::pay(
             self.annual_interest_rate,
             self.principal_due,
@@ -54,14 +53,16 @@ impl<Lpn> Loan<Lpn> {
         })
     }
 
-    fn due_period(&self, by: &Timestamp) -> Duration {
+    fn due_period(&self, by: &Instant) -> Duration {
         Duration::between(&self.interest_paid, by.max(&self.interest_paid))
     }
 }
 
 #[cfg(test)]
 mod test {
+    use crate::loan::{Loan, RepayShares};
     use currencies::Lpn;
+    use finance::instant::Instant;
     use finance::{
         coin::{Amount, Coin},
         duration::Duration,
@@ -69,16 +70,13 @@ mod test {
         percent::Percent100,
         zero::Zero,
     };
-    use sdk::cosmwasm_std::Timestamp;
-
-    use crate::loan::{Loan, RepayShares};
 
     #[test]
     fn interest() {
         let l = Loan {
             principal_due: lpn_coin(100),
             annual_interest_rate: Percent100::from_percent(50),
-            interest_paid: Timestamp::from_nanos(200),
+            interest_paid: Instant::from_nanos(200),
         };
 
         assert_eq!(
@@ -97,7 +95,7 @@ mod test {
     fn repay_no_interest() {
         let principal_at_start = lpn_coin(500);
         let interest = Percent100::from_percent(50);
-        let start_at = Timestamp::from_nanos(200);
+        let start_at = Instant::from_nanos(200);
         let interest_paid = start_at;
         let mut l = Loan {
             principal_due: principal_at_start,
@@ -131,7 +129,7 @@ mod test {
         let mut l = Loan {
             principal_due: principal_start,
             annual_interest_rate: interest,
-            interest_paid: Timestamp::from_nanos(200),
+            interest_paid: Instant::from_nanos(200),
         };
 
         let interest_a_year = interest.of(principal_start);
@@ -161,7 +159,7 @@ mod test {
         let mut l = Loan {
             principal_due: principal_start,
             annual_interest_rate: interest,
-            interest_paid: Timestamp::from_nanos(200),
+            interest_paid: Instant::from_nanos(200),
         };
 
         let interest_a_year = interest.of(principal_start);

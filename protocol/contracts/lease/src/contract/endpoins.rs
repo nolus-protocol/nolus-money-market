@@ -25,6 +25,7 @@ use crate::{
 };
 
 use super::state::{self, Response, State};
+use cw_time::IntoInstant;
 
 const CONTRACT_STORAGE_VERSION: VersionSegment = 9;
 const CURRENT_RELEASE: ProtocolPackageRelease = ProtocolPackageRelease::current(
@@ -109,7 +110,7 @@ pub fn query(deps: Deps<'_>, env: Env, msg: QueryMsg) -> ContractResult<Binary> 
         QueryMsg::State { due_projection } => state::load(deps.storage)
             .and_then(|state| {
                 state.state(
-                    env.block.time,
+                    env.block.time.into_instant(),
                     Duration::from_secs(due_projection),
                     deps.querier,
                 )

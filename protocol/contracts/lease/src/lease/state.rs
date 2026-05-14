@@ -1,5 +1,5 @@
+use finance::instant::Instant;
 use finance::{coin::Coin, duration::Duration, percent::Percent100};
-use sdk::cosmwasm_std::Timestamp;
 
 use crate::{api::query::opened::ClosePolicy, finance::LpnCoin};
 
@@ -17,7 +17,7 @@ pub struct State<Asset> {
     pub due_projection: Duration,
     // Intentionally not using the internal domain type close::Policy
     pub close_policy: ClosePolicy,
-    pub validity: Timestamp,
+    pub validity: Instant,
 }
 
 impl<Asset> State<Asset> {

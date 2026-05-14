@@ -5,7 +5,7 @@ use platform::{
     bank::{self, BankAccount, BankAccountView},
     message::Response as MessageResponse,
 };
-use sdk::cosmwasm_std::{Addr, Storage, Timestamp};
+use sdk::cosmwasm_std::{Addr, Storage};
 
 use crate::{
     event::WithdrawEmitter,
@@ -15,6 +15,7 @@ use crate::{
 };
 
 use super::error::{ContractError, Result};
+use finance::instant::Instant;
 
 /// Deposit `Lpn`-s and return the amount of receipts
 pub(super) fn try_deposit<Lpn, Bank>(
@@ -22,7 +23,7 @@ pub(super) fn try_deposit<Lpn, Bank>(
     bank: &Bank,
     lender: Addr,
     pending_deposit: Coin<Lpn>,
-    now: &Timestamp,
+    now: &Instant,
 ) -> Result<Coin<NLpn>>
 where
     Lpn: CurrencyDef,
@@ -57,7 +58,7 @@ where
 pub(super) fn deposit_capacity<Lpn, Bank>(
     storage: &dyn Storage,
     bank: &Bank,
-    now: &Timestamp,
+    now: &Instant,
 ) -> Result<Option<Coin<Lpn>>>
 where
     Lpn: CurrencyDef,
@@ -79,7 +80,7 @@ pub(super) fn try_withdraw<Lpn, Bank>(
     mut pool_account: Bank,
     lender: Addr,
     receipts: Coin<NLpn>,
-    now: &Timestamp,
+    now: &Instant,
     mut emitter: WithdrawEmitter<'_, Lpn>,
 ) -> Result<MessageResponse>
 where
@@ -121,7 +122,7 @@ pub(super) fn try_close_all<Lpn, BankView, Bank>(
     storage: &mut dyn Storage,
     pool_view: BankView, // acceptable trick since the bank transfers get visible after the ransaction finishes
     mut pool_account: Bank, // enable transfer scheduling while in process of reading balances
-    now: &Timestamp,
+    now: &Instant,
     mut emitter: WithdrawEmitter<'_, Lpn>,
 ) -> Result<MessageResponse>
 where
@@ -175,7 +176,7 @@ fn withdraw<Lpn, Bank>(
     deposit: &mut Deposit,
     lpp: &mut LiquidityPool<'_, '_, Lpn, Bank>,
     receipts: Coin<NLpn>,
-    now: &Timestamp,
+    now: &Instant,
     pending_withdraw: Coin<Lpn>,
 ) -> Result<(Coin<Lpn>, Option<Coin<Nls>>)>
 where
@@ -208,7 +209,7 @@ fn transfer_to<Lpn, Bank>(
 pub fn query_ntoken_price<Lpn, Bank>(
     storage: &dyn Storage,
     bank: &Bank,
-    now: &Timestamp,
+    now: &Instant,
 ) -> Result<PriceResponse<Lpn>>
 where
     Lpn: CurrencyDef,
@@ -231,12 +232,13 @@ pub fn query_balance(storage: &dyn Storage, addr: Addr) -> Result<BalanceRespons
 
 #[cfg(test)]
 mod test {
+    use finance::instant::Instant;
     use finance::{coin::Coin, percent::Percent100};
     use platform::{
         bank::{BankAccountView, testing::MockBankView},
         contract::Code,
     };
-    use sdk::cosmwasm_std::{Storage, Timestamp, testing::MockStorage};
+    use sdk::cosmwasm_std::{Storage, testing::MockStorage};
 
     use crate::{
         borrow::InterestRate,
@@ -257,10 +259,10 @@ mod test {
 
     fn test_case<F>(initial_lpp_balance: Coin<TheCurrency>, min_utilization: Percent100, f: F)
     where
-        F: FnOnce(MockStorage, ApiConfig, MockBankView<TheCurrency, TheCurrency>, Timestamp),
+        F: FnOnce(MockStorage, ApiConfig, MockBankView<TheCurrency, TheCurrency>, Instant),
     {
         let mut store = MockStorage::default();
-        let now = Timestamp::from_nanos(1_571_897_419_879_405_538);
+        let now = Instant::from_nanos(1_571_897_419_879_405_538);
 
         let config = ApiConfig::new(
             Code::unchecked(0xDEADC0DE_u64),

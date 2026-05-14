@@ -1,8 +1,9 @@
 use std::{collections::HashSet, marker::PhantomData};
 
+use finance::instant::Instant;
 use finance::{percent::Percent100, price::Price};
 use observations::{Observations, ObservationsRead};
-use sdk::cosmwasm_std::{Addr, Timestamp};
+use sdk::cosmwasm_std::Addr;
 
 use crate::{
     config::Config,
@@ -63,7 +64,7 @@ where
     pub fn calc_price(
         &self,
         config: &Config,
-        at: Timestamp,
+        at: Instant,
         total_feeders: Count,
     ) -> Result<Price<C, QuoteC>> {
         let valid_since = config.feed_valid_since(at);
@@ -99,7 +100,7 @@ where
             })
     }
 
-    fn valid_observations(&self, since: &Timestamp) -> Result<Vec<Observation<C, QuoteC>>> {
+    fn valid_observations(&self, since: &Instant) -> Result<Vec<Observation<C, QuoteC>>> {
         self.observations.as_iter().and_then(|mut items| {
             items.try_fold(
                 Vec::with_capacity(self.observations.len()),
@@ -149,9 +150,9 @@ where
     pub fn add_observation(
         mut self,
         from: Addr,
-        at: Timestamp,
+        at: Instant,
         price: Price<C, QuoteC>,
-        valid_since: &Timestamp,
+        valid_since: &Instant,
     ) -> Result<Self> {
         debug_assert!(valid_since < &at, "{valid_since} >= {at}");
         self.observations
@@ -194,13 +195,14 @@ where
 #[cfg(test)]
 mod test {
     use currency::test::{SuperGroupTestC4, SuperGroupTestC5};
+    use finance::instant::Instant;
     use finance::{
         coin::{Amount, Coin},
         duration::Duration,
         percent::Percent100,
         price::{self, Price},
     };
-    use sdk::cosmwasm_std::{Addr, Timestamp};
+    use sdk::cosmwasm_std::Addr;
 
     use crate::{config::Config, error::PriceFeedsError, feeders::Count};
 
@@ -222,7 +224,7 @@ mod test {
 
     #[test]
     fn old_observations() {
-        let block_time = Timestamp::from_seconds(100);
+        let block_time = Instant::from_seconds(100);
         let config = Config::new(
             Percent100::MAX,
             SAMPLE_PERIOD,
@@ -264,7 +266,7 @@ mod test {
     #[test]
     fn less_feeders() {
         let validity_period = Duration::from_secs(60);
-        let block_time = Timestamp::from_seconds(100);
+        let block_time = Instant::from_seconds(100);
 
         let feeder1 = Addr::unchecked("feeder1");
         let feed1_time = block_time;
@@ -301,7 +303,7 @@ mod test {
     #[test]
     fn less_feeders_with_valid_observations() {
         let validity_period = Duration::from_secs(60);
-        let block_time = Timestamp::from_seconds(150);
+        let block_time = Instant::from_seconds(150);
 
         let feeder1 = Addr::unchecked("feeder1");
         let feed1_time = block_time - validity_period;
@@ -358,7 +360,7 @@ mod test {
 
     #[test]
     fn ema_price() {
-        let block_time = Timestamp::from_seconds(100);
+        let block_time = Instant::from_seconds(100);
         let config = Config::new(
             Percent100::MAX,
             SAMPLE_PERIOD,

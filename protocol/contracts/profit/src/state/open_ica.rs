@@ -4,7 +4,8 @@ use finance::duration::Duration;
 use serde::{Deserialize, Serialize};
 
 use dex::{Account, Connectable, ConnectionParams, Contract, IcaConnectee};
-use sdk::cosmwasm_std::{QuerierWrapper, Timestamp};
+use finance::instant::Instant;
+use sdk::cosmwasm_std::QuerierWrapper;
 
 use crate::msg::ConfigResponse;
 
@@ -45,7 +46,7 @@ impl Contract for OpenIca {
 
     fn state(
         self,
-        _now: Timestamp,
+        _now: Instant,
         _due_projection: Duration,
         _querier: QuerierWrapper<'_>,
     ) -> Self::StateResponse {

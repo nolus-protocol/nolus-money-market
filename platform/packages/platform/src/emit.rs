@@ -1,10 +1,12 @@
 use currency::{CurrencyDTO, CurrencyDef, Group};
+use cw_time::IntoInstant;
 use finance::{
     coin::{Amount, Coin, CoinDTO},
     fraction::Unit as FractionUnit,
+    instant::Instant,
     percent::Percent100,
 };
-use sdk::cosmwasm_std::{Env, Event, Timestamp};
+use sdk::cosmwasm_std::{Env, Event};
 
 pub trait Emit
 where
@@ -15,8 +17,8 @@ where
         K: Into<String>,
         V: Into<String>;
 
-    /// Specialization of [`emit`](Self::emit) for [`Timestamp`].
-    fn emit_timestamp<K>(self, event_key: K, timestamp: &Timestamp) -> Self
+    /// Specialization of [`emit`](Self::emit) for [`Instant`].
+    fn emit_timestamp<K>(self, event_key: K, timestamp: &Instant) -> Self
     where
         K: Into<String>,
     {
@@ -85,7 +87,7 @@ where
 
     fn emit_tx_info(self, env: &Env) -> Self {
         self.emit_to_string_value("height", env.block.height)
-            .emit_timestamp("at", &env.block.time)
+            .emit_timestamp("at", &env.block.time.into_instant())
             .emit_to_string_value(
                 "idx",
                 // TODO use `.expect(...)` when layer 1 upgrades to `wasmd` v0.29

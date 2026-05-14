@@ -4,6 +4,7 @@ use std::{
 };
 
 use currency::{Currency, CurrencyDTO, CurrencyDef, Group, MemberOf};
+use finance::instant::Instant;
 use finance::price::{
     Price,
     base::{
@@ -17,7 +18,7 @@ use platform::{
     dispatcher::{AlarmsDispatcher, Id},
     message::Response as MessageResponse,
 };
-use sdk::cosmwasm_std::{Addr, Storage, Timestamp};
+use sdk::cosmwasm_std::{Addr, Storage};
 
 use crate::{
     api::{AlarmsStatusResponse, Config, ExecuteAlarmMsg},
@@ -79,7 +80,7 @@ where
 
     pub(super) fn try_query_alarms(
         &self,
-        block_time: Timestamp,
+        block_time: Instant,
     ) -> Result<AlarmsStatusResponse, PriceG> {
         self.tree().and_then(|tree| {
             MarketAlarms::new(self.storage.deref())
@@ -94,7 +95,7 @@ where
 
     pub(super) fn try_query_prices(
         &self,
-        block_time: Timestamp,
+        block_time: Instant,
     ) -> Result<Vec<BasePrice<PriceG, BaseC, BaseG>>, PriceG> {
         self.tree().and_then(|tree| {
             self.calc_all_prices(&tree, &self.feeds_read_only(), block_time)
@@ -104,7 +105,7 @@ where
 
     pub(super) fn try_query_base_price(
         &self,
-        at: Timestamp,
+        at: Instant,
         currency: &CurrencyDTO<PriceG>,
     ) -> Result<BasePrice<PriceG, BaseC, BaseG>, PriceG> {
         self.tree().and_then(|tree| {
@@ -115,7 +116,7 @@ where
 
     pub(super) fn try_query_stable_price<StableCurrency>(
         &self,
-        at: Timestamp,
+        at: Instant,
         currency: &CurrencyDTO<PriceG>,
     ) -> Result<BasePrice<PriceG, StableCurrency, PriceG>, PriceG>
     where
@@ -187,7 +188,7 @@ where
             BaseG,
             Repo<'repo_storage, &(dyn Storage + 'repo_storage), PriceG>,
         >,
-        at: Timestamp,
+        at: Instant,
     ) -> impl Iterator<Item = PriceResult<PriceG, BaseC, BaseG, PriceG>>
     + use<'tree, 'feeds, S, PriceG, BaseC, BaseG> {
         feeds.all_prices_iter(tree.swap_pairs_df(), at, self.feeders)
@@ -227,7 +228,7 @@ where
 
     pub(super) fn try_feed_prices(
         &mut self,
-        block_time: Timestamp,
+        block_time: Instant,
         sender: Addr,
         prices: Vec<PriceDTO<PriceG>>,
     ) -> Result<(), PriceG> {
@@ -239,7 +240,7 @@ where
 
     pub(super) fn try_notify_alarms(
         &mut self,
-        block_time: Timestamp,
+        block_time: Instant,
         max_count: u32,
     ) -> Result<(u32, MessageResponse), PriceG> {
         let subscribers: Vec<Addr> = self.tree().and_then(|tree| {
@@ -299,11 +300,12 @@ mod test_normalized_price_not_found {
         Lpn as BaseCurrency, Lpns as BaseCurrencies, Nls, PaymentGroup as PriceCurrencies,
         PaymentGroup as AlarmCurrencies, Stable as StableCurrency,
     };
+    use finance::instant::Instant;
     use finance::{coin::Coin, duration::Duration, percent::Percent100, price};
     use marketprice::{Repo, config::Config as PriceConfig};
     use sdk::{
         cosmwasm_std::{
-            Addr, DepsMut, Empty, QuerierWrapper, Storage, Timestamp,
+            Addr, DepsMut, Empty, QuerierWrapper, Storage,
             testing::{MockApi, MockQuerier, MockStorage},
         },
         testing,
@@ -322,7 +324,7 @@ mod test_normalized_price_not_found {
     type BaseCoin = Coin<BaseCurrency>;
     type TestSupportedPairs = SupportedPairs<PriceCurrencies, BaseCurrency>;
 
-    const NOW: Timestamp = Timestamp::from_seconds(1);
+    const NOW: Instant = Instant::from_seconds(1);
 
     const PRICE_BASE: NlsCoin = Coin::new(1);
     const PRICE_QUOTE: BaseCoin = Coin::new(1);

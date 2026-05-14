@@ -30,8 +30,9 @@ contract = [
     "stub_alarms",
     "stub_price",
     "stub_swap",
-"dep:cosmwasm-std",
-"dep:currencies",
+    "dep:cosmwasm-std",
+    "dep:currencies",
+    "dep:cw-time",
     "dep:marketprice",
     "dep:platform",
     "sdk/contract",
@@ -99,6 +100,7 @@ stub_swap_testing = [
 ]
 
 [dependencies]
+cw-time = { workspace = true, optional = true }
 currencies = { workspace = true, optional = true }
 currency = { workspace = true, optional = true }
 finance = { workspace = true, optional = true }

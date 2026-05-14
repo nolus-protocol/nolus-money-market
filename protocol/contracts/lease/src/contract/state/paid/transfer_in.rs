@@ -8,6 +8,7 @@ use dex::{
     Account, AnomalyTreatment, ContractInSwap, Stage, StartTransferInState, SwapOutputTask,
     SwapTask, WithCalculator, WithOutputTask,
 };
+use finance::instant::Instant;
 use finance::{
     coin::{Coin, CoinDTO},
     duration::Duration,
@@ -18,7 +19,7 @@ use platform::{
     message::Response as MessageResponse,
     state_machine::Response as StateMachineResponse,
 };
-use sdk::cosmwasm_std::{Env, QuerierWrapper, Timestamp};
+use sdk::cosmwasm_std::{Env, QuerierWrapper};
 use timealarms::stub::TimeAlarmsRef;
 
 use crate::{
@@ -140,7 +141,7 @@ impl ContractInSwap for TransferIn {
     fn state(
         self,
         in_progress: Stage,
-        _now: Timestamp,
+        _now: Instant,
         _due_projection: Duration,
         _querier: QuerierWrapper<'_>,
     ) -> Self::StateResponse {

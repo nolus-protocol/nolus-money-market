@@ -4,7 +4,8 @@ use access_control::SingleUserAccess;
 use admin_contract::msg::{
     ProtocolQueryResponse, ProtocolsQueryResponse, QueryMsg as ProtocolsRegistry,
 };
-use finance::{duration::Duration, percent::Percent100};
+use cw_time::IntoInstant;
+use finance::{duration::Duration, instant::Instant, percent::Percent100};
 use platform::{
     batch::Batch,
     contract::{self, Validator},
@@ -15,8 +16,7 @@ use platform::{
 use sdk::{
     cosmwasm_ext::Response as CwResponse,
     cosmwasm_std::{
-        Addr, Api, Binary, Deps, DepsMut, Env, MessageInfo, QuerierWrapper, Storage, Timestamp,
-        entry_point,
+        Addr, Api, Binary, Deps, DepsMut, Env, MessageInfo, QuerierWrapper, Storage, entry_point,
     },
 };
 use timealarms::stub::TimeAlarmsRef;
@@ -171,7 +171,7 @@ fn try_dispatch(
     env: &Env,
     timealarm: Addr,
 ) -> ContractResult<MessageResponse> {
-    let now = env.block.time;
+    let now = env.block.time.into_instant();
 
     let config = try_load_config(storage)?;
     let setup_alarm = setup_alarm(
@@ -182,7 +182,7 @@ fn try_dispatch(
     )?;
 
     let last_dispatch = DispatchLog::last_dispatch(storage);
-    DispatchLog::update(storage, env.block.time)?;
+    DispatchLog::update(storage, env.block.time.into_instant())?;
     let rewards_span = Duration::between(&last_dispatch, &now);
 
     try_build_reward(config, querier, env)
@@ -214,7 +214,7 @@ fn protocols(
 
 fn setup_alarm<V>(
     timealarm: Addr,
-    now: &Timestamp,
+    now: &Instant,
     alarm_in: Duration,
     validator: &V,
 ) -> ContractResult<Batch>
@@ -250,11 +250,11 @@ fn setup_dispatching(
     Config::new(msg.cadence_hours, msg.protocols_registry, msg.tvl_to_apr)
         .store(storage)
         .map_err(ContractError::SaveConfig)?;
-    DispatchLog::update(storage, env.block.time)?;
+    DispatchLog::update(storage, env.block.time.into_instant())?;
 
     setup_alarm(
         msg.timealarms,
-        &env.block.time,
+        &env.block.time.into_instant(),
         Duration::from_hours(msg.cadence_hours),
         &contract::validator(querier),
     )

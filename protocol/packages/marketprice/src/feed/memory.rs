@@ -1,4 +1,4 @@
-use sdk::cosmwasm_std::Timestamp;
+use finance::instant::Instant;
 
 use crate::error::PriceFeedsError;
 
@@ -47,7 +47,7 @@ where
     C: 'static,
     QuoteC: 'static,
 {
-    fn retain(&mut self, valid_since: &Timestamp) -> Result<(), PriceFeedsError> {
+    fn retain(&mut self, valid_since: &Instant) -> Result<(), PriceFeedsError> {
         self.0.retain(|o| o.valid_since(valid_since));
         Ok(())
     }

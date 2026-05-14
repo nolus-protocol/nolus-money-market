@@ -4,11 +4,12 @@ use std::{
 };
 
 use finance::duration::Duration;
+use finance::instant::Instant;
 use platform::{
     batch::{Batch, Emit, Emitter},
     message::Response as MessageResponse,
 };
-use sdk::cosmwasm_std::{Addr, Binary, Env, MessageInfo, QuerierWrapper, Reply, Timestamp};
+use sdk::cosmwasm_std::{Addr, Binary, Env, MessageInfo, QuerierWrapper, Reply};
 
 use serde::{Deserialize, Serialize};
 
@@ -22,6 +23,7 @@ use crate::{
 use super::migration::{InspectSpec, MigrateSpec};
 
 use self::adapter::{DeliveryAdapter, ICAOpenDeliveryAdapter, ResponseDeliveryAdapter};
+use cw_time::IntoInstant;
 
 mod adapter;
 
@@ -139,7 +141,7 @@ where
         Delivery::deliver_again(self.handler, self.response, querier, env).map_into()
     }
 
-    fn setup_next_delivery(self, now: Timestamp) -> ContinueResult<Self> {
+    fn setup_next_delivery(self, now: Instant) -> ContinueResult<Self> {
         self.handler
             .setup_alarm(now + Self::RIGHT_AFTER_NOW)
             .map(|msgs| MessageResponse::messages_with_event(msgs, self.emit_setup_next_delivery()))
@@ -176,7 +178,7 @@ where
         debug_assert_eq!(msg.id, REPLY_ID);
         debug_assert!(msg.result.is_err());
 
-        self.setup_next_delivery(env.block.time)
+        self.setup_next_delivery(env.block.time.into_instant())
     }
 
     fn on_time_alarm(
@@ -199,7 +201,7 @@ where
 
     fn state(
         self,
-        now: Timestamp,
+        now: Instant,
         due_projection: Duration,
         querier: QuerierWrapper<'_>,
     ) -> Self::StateResponse {

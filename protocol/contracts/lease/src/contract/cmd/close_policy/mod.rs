@@ -1,9 +1,9 @@
 use serde::{Deserialize, Serialize};
 
 use currency::{CurrencyDef, MemberOf};
+use finance::instant::Instant;
 use finance::liability::Zone;
 use platform::batch::Batch;
-use sdk::cosmwasm_std::Timestamp;
 use timealarms::stub::TimeAlarmsRef;
 
 use crate::{
@@ -46,7 +46,7 @@ pub(crate) struct FullLiquidationDTO {
 impl CloseStatusDTO {
     fn try_from_do<Asset>(
         status: CloseStatus<Asset>,
-        when: &Timestamp,
+        when: &Instant,
         time_alarms: &TimeAlarmsRef,
         price_alarms: &OracleRef,
     ) -> ContractResult<Self>

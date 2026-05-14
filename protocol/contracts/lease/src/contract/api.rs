@@ -1,8 +1,9 @@
 use enum_dispatch::enum_dispatch;
 
 use finance::duration::Duration;
+use finance::instant::Instant;
 use platform::ica::ErrorResponse as ICAErrorResponse;
-use sdk::cosmwasm_std::{Binary, Env, MessageInfo, QuerierWrapper, Reply, Timestamp};
+use sdk::cosmwasm_std::{Binary, Env, MessageInfo, QuerierWrapper, Reply};
 
 use crate::{
     api::{
@@ -91,7 +92,7 @@ where
 
     fn state(
         self,
-        now: Timestamp,
+        now: Instant,
         due_projection: Duration,
         querier: QuerierWrapper<'_>,
     ) -> ContractResult<StateResponse>;

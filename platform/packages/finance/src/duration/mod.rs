@@ -5,11 +5,10 @@ use std::{
 
 use serde::{Deserialize, Serialize};
 
-use sdk::cosmwasm_std::Timestamp;
-
 use crate::{
     fraction::Unit as FractionUnit,
     fractionable::{CommonDoublePrimitive, Fractionable, IntoMax},
+    instant::Instant,
     ratio::SimpleFraction,
     rational::Rational,
 };
@@ -22,7 +21,7 @@ pub type Units = u64;
 pub type Seconds = u32;
 
 /// A more storage and compute optimal version of its counterpart in the std::time.
-/// Designed to represent a timespan between cosmwasm_std::Timestamp-s.
+/// Designed to represent a timespan between Instant-s.
 ///
 /// Implementation note: We use `as` safely for numeric upcasts instead of `from/into`
 /// in order to get const result.
@@ -66,7 +65,7 @@ impl Duration {
     }
 
     #[track_caller]
-    pub fn between(start: &Timestamp, end: &Timestamp) -> Self {
+    pub fn between(start: &Instant, end: &Instant) -> Self {
         debug_assert!(start <= end);
         Self(end.nanos() - start.nanos())
     }
@@ -109,7 +108,7 @@ impl Duration {
     }
 }
 
-impl Add<Duration> for Timestamp {
+impl Add<Duration> for Instant {
     type Output = Self;
 
     #[track_caller]
@@ -118,8 +117,8 @@ impl Add<Duration> for Timestamp {
     }
 }
 
-impl Add<Duration> for &Timestamp {
-    type Output = Timestamp;
+impl Add<Duration> for &Instant {
+    type Output = Instant;
 
     #[track_caller]
     fn add(self, rhs: Duration) -> Self::Output {
@@ -127,7 +126,7 @@ impl Add<Duration> for &Timestamp {
     }
 }
 
-impl AddAssign<Duration> for Timestamp {
+impl AddAssign<Duration> for Instant {
     #[track_caller]
     fn add_assign(&mut self, rhs: Duration) {
         *self = self.add(rhs);
@@ -143,7 +142,7 @@ impl Add<Duration> for Duration {
     }
 }
 
-impl Sub<Duration> for Timestamp {
+impl Sub<Duration> for Instant {
     type Output = Self;
 
     #[track_caller]
@@ -152,8 +151,8 @@ impl Sub<Duration> for Timestamp {
     }
 }
 
-impl Sub<Duration> for &Timestamp {
-    type Output = Timestamp;
+impl Sub<Duration> for &Instant {
+    type Output = Instant;
 
     #[track_caller]
     fn sub(self, rhs: Duration) -> Self::Output {
@@ -161,7 +160,7 @@ impl Sub<Duration> for &Timestamp {
     }
 }
 
-impl SubAssign<Duration> for Timestamp {
+impl SubAssign<Duration> for Instant {
     #[track_caller]
     fn sub_assign(&mut self, rhs: Duration) {
         *self = self.sub(rhs);
@@ -186,11 +185,11 @@ impl Display for Duration {
 #[cfg(test)]
 mod tests {
     use currency::test::SubGroupTestC10;
-    use sdk::cosmwasm_std::Timestamp as T;
 
     use crate::{
         coin::{Amount, Coin},
         duration::{Duration as D, Seconds, Units},
+        instant::Instant as T,
         zero::Zero,
     };
 

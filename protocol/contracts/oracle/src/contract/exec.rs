@@ -16,6 +16,7 @@ use crate::{
 };
 
 use super::oracle::{Oracle, feeder::Feeders};
+use cw_time::IntoInstant;
 
 pub fn do_execute<BaseCurrency, BaseCurrencies, AlarmCurrencies, PriceCurrencies>(
     deps: DepsMut<'_>,
@@ -43,11 +44,13 @@ where
             .and_then(|()| {
                 Oracle::<_, PriceCurrencies, BaseCurrency, BaseCurrencies>::load(deps.storage)
             })
-            .and_then(|mut oracle| oracle.try_feed_prices(env.block.time, sender, prices))
+            .and_then(|mut oracle| {
+                oracle.try_feed_prices(env.block.time.into_instant(), sender, prices)
+            })
             .map(|()| Default::default()),
         ExecuteMsg::DispatchAlarms { max_count } => {
             Oracle::<_, PriceCurrencies, BaseCurrency, BaseCurrencies>::load(deps.storage)?
-                .try_notify_alarms(env.block.time, max_count)
+                .try_notify_alarms(env.block.time.into_instant(), max_count)
                 .and_then(|(total, resp)| {
                     response::response_with_messages(DispatchAlarmsResponse(total), resp)
                 })

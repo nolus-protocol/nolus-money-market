@@ -22,6 +22,7 @@ use crate::{
 };
 
 use super::BuyAsset;
+use cw_time::IntoInstant;
 
 pub struct BuyAssetFinish<SwapTask, OutC> {
     swap_task: SwapTask,
@@ -82,6 +83,7 @@ where
             .try_into()
             .map(|spec| Position::new(amount_out, spec))?;
         let lease_addr = spec.dex_account.owner().clone();
+        let now = env.block.time.into_instant();
         let cmd = {
             let profit = ProfitRef::new(spec.form.loan.profit.clone(), &querier)?;
             let reserve = ReserveRef::try_new(spec.form.reserve.clone(), &querier)?;
@@ -93,7 +95,7 @@ where
                 reserve,
                 (spec.deps.2, spec.deps.1.clone()),
                 spec.start_opening_at,
-                &env.block.time,
+                &now,
             )
         };
         let OpenLeaseResult {

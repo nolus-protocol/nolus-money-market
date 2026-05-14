@@ -8,11 +8,12 @@ use dex::{
     Account, AnomalyTreatment, ContractInSwap, SlippageCalculator, Stage, SwapOutputTask, SwapTask,
     WithCalculator, WithOutputTask,
 };
+use finance::instant::Instant;
 use finance::{
     coin::{Coin, CoinDTO},
     duration::Duration,
 };
-use sdk::cosmwasm_std::{Env, QuerierWrapper, Timestamp};
+use sdk::cosmwasm_std::{Env, QuerierWrapper};
 use timealarms::stub::TimeAlarmsRef;
 
 use crate::{
@@ -74,7 +75,7 @@ where
     fn query(
         self,
         in_progress: PositionCloseTrx,
-        now: Timestamp,
+        now: Instant,
         due_projection: Duration,
         querier: QuerierWrapper<'_>,
     ) -> ContractResult<QueryStateResponse> {
@@ -182,7 +183,7 @@ where
     fn state(
         self,
         in_progress: Stage,
-        now: Timestamp,
+        now: Instant,
         due_projection: Duration,
         querier: QuerierWrapper<'_>,
     ) -> Self::StateResponse {

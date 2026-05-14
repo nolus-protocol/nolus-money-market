@@ -1,7 +1,8 @@
 use std::ops::{Deref, DerefMut};
 
+use finance::instant::Instant;
 use sdk::{
-    cosmwasm_std::{Addr, Order, Storage, Timestamp},
+    cosmwasm_std::{Addr, Order, Storage},
     cw_storage_plus::{Bound, Deque, Index, IndexList, IndexedMap as CwIndexedMap, MultiIndex},
 };
 
@@ -9,7 +10,7 @@ use crate::AlarmError;
 
 type TimeSeconds = u64;
 
-fn as_seconds(from: Timestamp) -> TimeSeconds {
+fn as_seconds(from: Instant) -> TimeSeconds {
     from.seconds()
 }
 
@@ -63,7 +64,7 @@ where
 
     pub fn alarms_selection(
         &self,
-        ctime: Timestamp,
+        ctime: Instant,
     ) -> impl Iterator<Item = Result<Addr, AlarmError>> + use<'_, S> {
         self.alarms
             .idx
@@ -85,7 +86,7 @@ impl<'storage, S> Alarms<'storage, S>
 where
     S: Deref<Target = dyn Storage + 'storage> + DerefMut,
 {
-    pub fn add(&mut self, subscriber: Addr, time: Timestamp) -> Result<(), AlarmError> {
+    pub fn add(&mut self, subscriber: Addr, time: Instant) -> Result<(), AlarmError> {
         self.add_internal(subscriber, as_seconds(time))
     }
 
@@ -122,7 +123,7 @@ where
             })
     }
 
-    pub fn last_failed(&mut self, now: Timestamp) -> Result<(), AlarmError> {
+    pub fn last_failed(&mut self, now: Instant) -> Result<(), AlarmError> {
         self.in_delivery
             .pop_front(self.storage.deref_mut())
             .map_err(Into::into)
@@ -157,7 +158,7 @@ pub mod tests {
         S: Deref<Target = dyn Storage + 'r>,
     {
         alarms
-            .alarms_selection(Timestamp::from_seconds(t_sec))
+            .alarms_selection(Instant::from_seconds(t_sec))
             .map(Result::unwrap)
             .collect()
     }
@@ -167,8 +168,8 @@ pub mod tests {
         let mut storage = MockStorage::new();
         let mut alarms = alarms(&mut storage);
 
-        let t1 = Timestamp::from_seconds(1);
-        let t2 = Timestamp::from_seconds(3);
+        let t1 = Instant::from_seconds(1);
+        let t2 = Instant::from_seconds(3);
         let addr1 = Addr::unchecked("addr1");
         let addr2 = Addr::unchecked("addr2");
 
@@ -191,10 +192,10 @@ pub mod tests {
         let mut storage = MockStorage::new();
         let mut alarms = alarms(&mut storage);
 
-        let t1 = Timestamp::from_seconds(1);
-        let t2 = Timestamp::from_seconds(2);
+        let t1 = Instant::from_seconds(1);
+        let t2 = Instant::from_seconds(2);
         let t3_sec = 3;
-        let t4 = Timestamp::from_seconds(4);
+        let t4 = Instant::from_seconds(4);
         let addr1 = Addr::unchecked("addr1");
         let addr2 = Addr::unchecked("addr2");
         let addr3 = Addr::unchecked("addr3");

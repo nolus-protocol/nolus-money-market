@@ -1,9 +1,9 @@
 use currency::{Currency, CurrencyDTO, Group, MemberOf};
+use finance::instant::Instant;
 use finance::price::Price;
 use marketprice::{
     FeederCount, ObservationsReadRepo, error::PriceFeedsError, market_price::PriceFeeds,
 };
-use sdk::cosmwasm_std::Timestamp;
 
 use crate::result::Result;
 
@@ -12,7 +12,7 @@ where
     G: Group,
 {
     feeds: &'a PriceFeeds<'config, G, Observations>,
-    at: Timestamp,
+    at: Instant,
     total_feeders: FeederCount,
 }
 
@@ -22,7 +22,7 @@ where
 {
     pub fn new(
         feeds: &'a PriceFeeds<'config, G, Observations>,
-        at: Timestamp,
+        at: Instant,
         total_feeders: FeederCount,
     ) -> Self {
         Self {

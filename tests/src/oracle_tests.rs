@@ -6,6 +6,7 @@ use currencies::{
     testing::{LeaseC1, LeaseC2, PaymentC1, PaymentC4, PaymentC5, PaymentC6, PaymentC7},
 };
 use currency::CurrencyDef;
+use finance::instant::Instant;
 use finance::{
     coin::{Amount, Coin},
     duration::Duration,
@@ -22,8 +23,7 @@ use platform::{batch::Batch, coin_legacy, contract::Code};
 use sdk::{
     cosmwasm_ext::{InterChainMsg, Response as CwResponse},
     cosmwasm_std::{
-        self, Addr, Attribute, Binary, Deps, DepsMut, Env, Event, MessageInfo, Storage, Timestamp,
-        coin,
+        self, Addr, Attribute, Binary, Deps, DepsMut, Env, Event, MessageInfo, Storage, coin,
     },
     cw_multi_test::{AppResponse, Contract as CwContract},
     cw_storage_plus::Item,
@@ -224,7 +224,7 @@ fn wrong_timealarms_addr() {
     let mut test_case = create_test_case();
 
     let alarm_msg = timealarms::msg::ExecuteMsg::AddAlarm {
-        time: Timestamp::from_seconds(100),
+        time: Instant::from_seconds(100),
     };
 
     () = test_case

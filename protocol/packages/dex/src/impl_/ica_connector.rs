@@ -6,12 +6,13 @@ use std::{
 use finance::duration::Duration;
 use serde::{Deserialize, Serialize};
 
+use finance::instant::Instant;
 use platform::{
     batch::{Batch, Emit, Emitter},
     ica::HostAccount,
     message,
 };
-use sdk::cosmwasm_std::{Addr, Env, QuerierWrapper, Timestamp};
+use sdk::cosmwasm_std::{Addr, Env, QuerierWrapper};
 
 use crate::{
     Account, Connectable, ContinueResult, Contract, Enterable, Handler, IcaConnectee, Response,
@@ -20,6 +21,7 @@ use crate::{
 
 #[cfg(feature = "migration")]
 use super::migration::{InspectSpec, MigrateSpec};
+use cw_time::IntoInstant;
 
 #[derive(Serialize, Deserialize)]
 #[serde(bound(
@@ -100,7 +102,7 @@ impl<Connectee, SwapResult> Enterable for IcaConnector<Connectee, SwapResult>
 where
     Connectee: IcaConnectee + Connectable,
 {
-    fn enter(&self, _now: Timestamp, _querier: QuerierWrapper<'_>) -> Result<Batch> {
+    fn enter(&self, _now: Instant, _querier: QuerierWrapper<'_>) -> Result<Batch> {
         Ok(self.enter())
     }
 }
@@ -122,7 +124,7 @@ where
         let event = Self::emit_ok(env.contract.address, ica.host().clone());
         let next_state = self.connectee.connected(ica);
         next_state
-            .enter(env.block.time, querier)
+            .enter(env.block.time.into_instant(), querier)
             .map(|batch| message::Response::messages_with_event(batch, event))
             .map(|cw_resp| Response::<Self>::from(cw_resp, next_state))
     }
@@ -136,7 +138,7 @@ where
 
     fn state(
         self,
-        now: Timestamp,
+        now: Instant,
         due_projection: Duration,
         querier: QuerierWrapper<'_>,
     ) -> Self::StateResponse {
@@ -157,7 +159,7 @@ impl<Connectee, SwapResult> TimeAlarm for IcaConnector<Connectee, SwapResult>
 where
     Connectee: TimeAlarm,
 {
-    fn setup_alarm(&self, r#for: Timestamp) -> Result<Batch> {
+    fn setup_alarm(&self, r#for: Instant) -> Result<Batch> {
         self.connectee.setup_alarm(r#for)
     }
 }

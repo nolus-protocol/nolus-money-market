@@ -6,8 +6,9 @@ use dex::{
     Account, Connectable, ConnectionParams, Contract as DexContract, DexResult, IcaConnectee,
     TimeAlarm, TransferOut,
 };
+use finance::instant::Instant;
 use platform::batch::Batch;
-use sdk::cosmwasm_std::{QuerierWrapper, Timestamp};
+use sdk::cosmwasm_std::QuerierWrapper;
 use timealarms::stub::TimeAlarmsRef;
 
 use crate::{
@@ -29,7 +30,7 @@ pub(crate) struct OpenIcaAccount {
     downpayment: DownpaymentCoin,
     loan: OpenLoanRespResult,
     deps: (LppRef, OracleRef, TimeAlarmsRef, LeasesRef),
-    start_opening_at: Timestamp,
+    start_opening_at: Instant,
 }
 
 impl OpenIcaAccount {
@@ -38,7 +39,7 @@ impl OpenIcaAccount {
         downpayment: DownpaymentCoin,
         loan: OpenLoanRespResult,
         deps: (LppRef, OracleRef, TimeAlarmsRef, LeasesRef),
-        start_opening_at: Timestamp,
+        start_opening_at: Instant,
     ) -> Self {
         Self {
             new_lease,
@@ -77,7 +78,7 @@ impl DexContract for OpenIcaAccount {
 
     fn state(
         self,
-        _now: Timestamp,
+        _now: Instant,
         _due_projection: Duration,
         _querier: QuerierWrapper<'_>,
     ) -> Self::StateResponse {
@@ -98,7 +99,7 @@ impl Display for OpenIcaAccount {
 }
 
 impl TimeAlarm for OpenIcaAccount {
-    fn setup_alarm(&self, r#for: Timestamp) -> DexResult<Batch> {
+    fn setup_alarm(&self, r#for: Instant) -> DexResult<Batch> {
         self.deps.2.setup_alarm(r#for).map_err(Into::into)
     }
 }

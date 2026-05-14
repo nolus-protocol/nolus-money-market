@@ -2,7 +2,8 @@
 #![allow(clippy::unwrap_used)]
 
 use common::test_case::TestCase;
-use sdk::cosmwasm_std::Timestamp;
+use cw_time::IntoInstant;
+use finance::instant::Instant;
 
 mod common;
 mod lease;
@@ -25,6 +26,6 @@ fn block_time<ProtocolsRegistry, Treasury, Profit, Reserve, Leaser, Lpp, Oracle,
         Oracle,
         TimeAlarms,
     >,
-) -> Timestamp {
-    test_case.app.block_info().time
+) -> Instant {
+    test_case.app.block_info().time.into_instant()
 }

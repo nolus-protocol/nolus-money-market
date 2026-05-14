@@ -1,5 +1,6 @@
 use finance::duration::Duration;
-use sdk::cosmwasm_std::{QuerierWrapper, Timestamp};
+use finance::instant::Instant;
+use sdk::cosmwasm_std::QuerierWrapper;
 
 /// Contract during a DEX workflow
 pub trait Contract
@@ -10,7 +11,7 @@ where
 
     fn state(
         self,
-        now: Timestamp,
+        now: Instant,
         due_projection: Duration,
         querier: QuerierWrapper<'_>,
     ) -> Self::StateResponse;
@@ -26,7 +27,7 @@ where
     fn state(
         self,
         in_progress: Stage,
-        now: Timestamp,
+        now: Instant,
         due_projection: Duration,
         querier: QuerierWrapper<'_>,
     ) -> Self::StateResponse;

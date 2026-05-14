@@ -104,11 +104,11 @@ impl Overdue {
 
 #[cfg(all(feature = "internal.test.contract", test))]
 mod test {
+    use finance::instant::Instant;
     use finance::{
         coin::Coin, duration::Duration, interest, percent::Percent100, period::Period, zero::Zero,
     };
     use lpp::{loan::Loan, stub::loan::LppLoan};
-    use sdk::cosmwasm_std::Timestamp;
 
     use crate::{
         lease::tests,
@@ -121,15 +121,14 @@ mod test {
     const LOAN: Loan<Lpn> = Loan {
         principal_due: tests::lpn_coin(1000),
         annual_interest_rate: Percent100::from_permille(165),
-        interest_paid: Timestamp::from_seconds(2425252),
+        interest_paid: Instant::from_seconds(2425252),
     };
 
     #[test]
     fn due_period_less_than_max() {
         let max_due = Duration::YEAR;
         let due_period_length = Duration::from_days(130);
-        let due_period_margin =
-            Period::from_length(Timestamp::from_seconds(100), due_period_length);
+        let due_period_margin = Period::from_length(Instant::from_seconds(100), due_period_length);
 
         let overdue = Overdue::new(
             &due_period_margin,
@@ -148,7 +147,7 @@ mod test {
     #[test]
     fn due_period_equals_to_max() {
         let max_due = Duration::from_minutes(124);
-        let due_period_margin = Period::from_length(Timestamp::from_seconds(100), max_due);
+        let due_period_margin = Period::from_length(Instant::from_seconds(100), max_due);
 
         let overdue = Overdue::new(
             &due_period_margin,

@@ -1,9 +1,9 @@
-use std::ops::{Deref, DerefMut};
-
+use finance::instant::Instant;
 use sdk::{
-    cosmwasm_std::{Storage, Timestamp},
+    cosmwasm_std::Storage,
     cw_storage_plus::{Deque as CwDeque, Namespace},
 };
+use std::ops::{Deref, DerefMut};
 
 use crate::{
     error::PriceFeedsError,
@@ -72,7 +72,7 @@ where
     QuoteC: 'static,
     S: Deref<Target = dyn Storage + 'storage> + DerefMut,
 {
-    fn retain(&mut self, valid_since: &Timestamp) -> Result<(), PriceFeedsError> {
+    fn retain(&mut self, valid_since: &Instant) -> Result<(), PriceFeedsError> {
         loop {
             match self
                 .storage
@@ -108,6 +108,7 @@ where
 
 #[cfg(test)]
 mod test {
+    use finance::instant::Instant;
     use std::fmt::Debug;
 
     use currency::test::{SuperGroupTestC4, SuperGroupTestC5};
@@ -116,14 +117,14 @@ mod test {
         duration::Duration,
         price::{self, Price},
     };
-    use sdk::cosmwasm_std::{Addr, Storage, Timestamp, testing::MockStorage};
+    use sdk::cosmwasm_std::{Addr, Storage, testing::MockStorage};
 
     use crate::feed::observations::{Observations, ObservationsRead};
 
     use super::{Deque, Observation};
 
     const VALIDITY_PERIOD: Duration = Duration::from_secs(60);
-    const BLOCK_TIME: Timestamp = Timestamp::from_seconds(150);
+    const BLOCK_TIME: Instant = Instant::from_seconds(150);
     const FEEDER: &str = "feeder1";
 
     type C1 = SuperGroupTestC4;

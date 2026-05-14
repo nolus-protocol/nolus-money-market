@@ -3,11 +3,12 @@ use std::collections::HashMap;
 use finance::{
     coin::Amount, duration::Duration, fraction::Unit, price::Price, ratio::SimpleFraction,
 };
-use sdk::cosmwasm_std::{Addr, Timestamp};
+use sdk::cosmwasm_std::Addr;
 
 use crate::feeders::Count;
 
 use super::observation::Observation;
+use finance::instant::Instant;
 
 /// Builds an infinite iterator of samples
 ///
@@ -17,7 +18,7 @@ use super::observation::Observation;
 /// period is yielded again.
 pub fn from_observations<'a, Observations, C, QuoteC>(
     observations: Observations,
-    start_from: Timestamp,
+    start_from: Instant,
     sample_span: Duration,
 ) -> impl Iterator<Item = Sample<C, QuoteC>>
 where
@@ -79,7 +80,7 @@ where
     QuoteC: 'static,
 {
     observations: IterO,
-    sample_start: Timestamp,
+    sample_start: Instant,
     sample_span: Duration,
     consumed: Option<IterO::Item>,
     sample_prices: HashMap<&'a Addr, Price<C, QuoteC>>,
@@ -90,7 +91,7 @@ impl<'a, IterO, C, QuoteC> SampleBuilder<'a, IterO, C, QuoteC>
 where
     IterO: Iterator<Item = &'a Observation<C, QuoteC>>,
 {
-    fn from(observations: IterO, start_from: Timestamp, sample_span: Duration) -> Self {
+    fn from(observations: IterO, start_from: Instant, sample_span: Duration) -> Self {
         Self {
             observations,
             sample_start: start_from,
@@ -101,7 +102,7 @@ where
         }
     }
 
-    fn sample_end(&self) -> Timestamp {
+    fn sample_end(&self) -> Instant {
         self.sample_start + self.sample_span
     }
 
@@ -168,12 +169,13 @@ where
 #[cfg(test)]
 mod test {
     use currency::test::{SuperGroupTestC4, SuperGroupTestC5};
+    use finance::instant::Instant;
     use finance::{
         coin::{Amount, Coin},
         duration::Duration,
         price::{self},
     };
-    use sdk::cosmwasm_std::{Addr, Timestamp};
+    use sdk::cosmwasm_std::Addr;
 
     use crate::feed::{
         observation::Observation,
@@ -185,8 +187,8 @@ mod test {
 
     #[test]
     fn one_observation() {
-        let start_from = Timestamp::from_seconds(150);
-        let t1 = Timestamp::from_seconds(200);
+        let start_from = Instant::from_seconds(150);
+        let t1 = Instant::from_seconds(200);
         let p1 = price(1, 12000);
         let obs = [Observation::new(feeder1(), t1, p1)];
 
@@ -200,10 +202,10 @@ mod test {
 
     #[test]
     fn a_few_observations_per_feeder() {
-        let start_from = Timestamp::from_seconds(150);
-        let t11 = Timestamp::from_seconds(160);
-        let t21 = Timestamp::from_seconds(180);
-        let t22 = Timestamp::from_seconds(200);
+        let start_from = Instant::from_seconds(150);
+        let t11 = Instant::from_seconds(160);
+        let t21 = Instant::from_seconds(180);
+        let t22 = Instant::from_seconds(200);
         let p1 = price(1, 12000);
         let p2 = price(1, 13000);
         let p3 = price(1, 14000);
@@ -224,12 +226,12 @@ mod test {
 
     #[test]
     fn real_observations() {
-        let start_from = Timestamp::from_seconds(150);
-        let t11 = Timestamp::from_seconds(160);
-        let t21 = Timestamp::from_seconds(180);
-        let t22 = Timestamp::from_seconds(200);
-        let t31 = Timestamp::from_seconds(201);
-        let t32 = Timestamp::from_seconds(225);
+        let start_from = Instant::from_seconds(150);
+        let t11 = Instant::from_seconds(160);
+        let t21 = Instant::from_seconds(180);
+        let t22 = Instant::from_seconds(200);
+        let t31 = Instant::from_seconds(201);
+        let t32 = Instant::from_seconds(225);
 
         let p1 = price(1, 12000);
         let p2 = price(1, 13000);
@@ -259,9 +261,9 @@ mod test {
     #[ignore = "issue #594"]
     #[test]
     fn price_sum_overflow_from_c() {
-        let start_from = Timestamp::from_seconds(150);
-        let t1 = Timestamp::from_seconds(160);
-        let t2 = Timestamp::from_seconds(165);
+        let start_from = Instant::from_seconds(150);
+        let t1 = Instant::from_seconds(160);
+        let t2 = Instant::from_seconds(165);
 
         let p1 = price(Amount::MAX / 2, 1);
         let p2 = price(Amount::MAX / 2 + 1, 1);
@@ -280,9 +282,9 @@ mod test {
     #[ignore = "issue #594"]
     #[test]
     fn price_sum_overflow_from_quotec() {
-        let start_from = Timestamp::from_seconds(150);
-        let t1 = Timestamp::from_seconds(160);
-        let t2 = Timestamp::from_seconds(165);
+        let start_from = Instant::from_seconds(150);
+        let t1 = Instant::from_seconds(160);
+        let t2 = Instant::from_seconds(165);
 
         let p1 = price(1, Amount::MAX / 2);
         let p2 = price(1, (Amount::MAX / 2) + 2);
@@ -299,9 +301,9 @@ mod test {
     }
     #[test]
     fn price_max_sum() {
-        let start_from = Timestamp::from_seconds(150);
-        let t1 = Timestamp::from_seconds(160);
-        let t2 = Timestamp::from_seconds(165);
+        let start_from = Instant::from_seconds(150);
+        let t1 = Instant::from_seconds(160);
+        let t2 = Instant::from_seconds(165);
 
         let p1 = price(1, Amount::MAX / 2);
         let p2 = price(1, (Amount::MAX / 2) + 1);

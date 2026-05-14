@@ -1,10 +1,10 @@
 use currency::{CurrencyDef, MemberOf};
+use finance::instant::Instant;
 use finance::{coin::Coin, duration::Duration};
 use lpp::stub::loan::LppLoan as LppLoanTrait;
 use oracle_platform::Oracle as OracleTrait;
 use platform::{bank::FixedAddressSender, batch::Batch};
 use reserve::stub::Reserve as ReserveTrait;
-use sdk::cosmwasm_std::Timestamp;
 
 use crate::{
     api::{LeaseAssetCurrencies, LeasePaymentCurrencies},
@@ -50,7 +50,7 @@ where
         &mut self,
         asset: Coin<Asset>,
         payment: LpnCoin,
-        now: &Timestamp,
+        now: &Instant,
         profit: &mut Profit,
     ) -> ContractResult<RepayReceipt>
     where
@@ -63,7 +63,7 @@ where
     pub(crate) fn close_full<Profit, Reserve, Change>(
         mut self,
         payment: LpnCoin,
-        now: Timestamp,
+        now: Instant,
         mut profit: Profit,
         mut reserve: Reserve,
         mut change_recipient: Change,

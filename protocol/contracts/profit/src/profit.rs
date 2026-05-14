@@ -1,12 +1,13 @@
 use currencies::Nls;
 use dex::Contract;
+use finance::instant::Instant;
 use finance::{coin::Coin, duration::Duration};
 use platform::{
     bank::BankAccount,
     batch::{Emit as _, Emitter},
     message::Response as PlatformResponse,
 };
-use sdk::cosmwasm_std::{Addr, Env, QuerierWrapper, Storage, Timestamp};
+use sdk::cosmwasm_std::{Addr, Env, QuerierWrapper, Storage};
 
 use crate::{msg::ConfigResponse, result::ContractResult, state::State};
 
@@ -42,7 +43,7 @@ impl Profit {
 
     pub fn query_config(
         storage: &dyn Storage,
-        now: Timestamp,
+        now: Instant,
         querier: QuerierWrapper<'_>,
     ) -> ContractResult<ConfigResponse> {
         State::load(storage).map(|state: State| state.state(now, Duration::default(), querier))

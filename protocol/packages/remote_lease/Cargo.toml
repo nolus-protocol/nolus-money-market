@@ -30,5 +30,4 @@ thiserror = { workspace = true }
 currencies = { workspace = true, features = ["testing"] }
 currency = { workspace = true, features = ["testing"] }
 finance = { workspace = true, features = ["testing"] }
-sdk = { workspace = true, features = ["testing"] }
 serde_json = { workspace = true }

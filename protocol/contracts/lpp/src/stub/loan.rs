@@ -2,17 +2,16 @@ use std::{marker::PhantomData, result::Result as StdResult};
 
 use thiserror::Error;
 
-use currency::CurrencyDef;
-use finance::{coin::Coin, percent::Percent100};
-use platform::batch::Batch;
-use sdk::cosmwasm_std::Timestamp;
-
 use crate::{
     loan::{Loan, RepayShares},
     msg::ExecuteMsg,
 };
+use currency::CurrencyDef;
+use finance::{coin::Coin, percent::Percent100};
+use platform::batch::Batch;
 
 use super::{LppBatch, LppRef};
+use finance::instant::Instant;
 
 pub trait LppLoan<Lpn>
 where
@@ -21,14 +20,14 @@ where
     fn principal_due(&self) -> Coin<Lpn>;
 
     /// Returns `None` if an overflow occurs
-    fn interest_due(&self, by: &Timestamp) -> Option<Coin<Lpn>>;
+    fn interest_due(&self, by: &Instant) -> Option<Coin<Lpn>>;
 
     /// Repay the due interest and principal by the specified time
     ///
     /// First, the provided 'repayment' is used to repay the due interest,
     /// and then, if there is any remaining amount, to repay the principal.
     /// Amount 0 is acceptable although does not change the loan.
-    fn repay(&mut self, by: &Timestamp, repayment: Coin<Lpn>) -> Option<RepayShares<Lpn>>;
+    fn repay(&mut self, by: &Instant, repayment: Coin<Lpn>) -> Option<RepayShares<Lpn>>;
     fn annual_interest_rate(&self) -> Percent100;
 }
 
@@ -72,11 +71,11 @@ where
         self.loan.principal_due
     }
 
-    fn interest_due(&self, by: &Timestamp) -> Option<Coin<Lpn>> {
+    fn interest_due(&self, by: &Instant) -> Option<Coin<Lpn>> {
         self.loan.interest_due(by)
     }
 
-    fn repay(&mut self, by: &Timestamp, repayment: Coin<Lpn>) -> Option<RepayShares<Lpn>> {
+    fn repay(&mut self, by: &Instant, repayment: Coin<Lpn>) -> Option<RepayShares<Lpn>> {
         self.loan
             .repay(by, repayment)
             .inspect(|_| self.repayment += repayment)
@@ -122,7 +121,13 @@ where
 
 #[cfg(test)]
 mod test {
+    use crate::{
+        loan::Loan,
+        msg::ExecuteMsg,
+        stub::{LppBatch, LppRef, loan::LppLoan},
+    };
     use currencies::{Lpn, Lpns};
+    use finance::instant::Instant;
     use finance::{
         coin::{Amount, Coin},
         duration::Duration,
@@ -130,20 +135,13 @@ mod test {
         zero::Zero,
     };
     use platform::batch::Batch;
-    use sdk::cosmwasm_std::Timestamp;
-
-    use crate::{
-        loan::Loan,
-        msg::ExecuteMsg,
-        stub::{LppBatch, LppRef, loan::LppLoan},
-    };
 
     use super::LppLoanImpl;
 
     #[test]
     fn try_from_no_payments() {
         let lpp_ref = LppRef::<Lpn>::unchecked("lpp_address");
-        let start = Timestamp::from_seconds(10);
+        let start = Instant::from_seconds(10);
         let mut loan = LppLoanImpl::new(
             lpp_ref.clone(),
             Loan {
@@ -162,7 +160,7 @@ mod test {
     #[test]
     fn try_from_a_few_payments() {
         let lpp_ref = LppRef::<Lpn>::unchecked("lpp_address");
-        let start = Timestamp::from_seconds(0);
+        let start = Instant::from_seconds(0);
         let mut loan = LppLoanImpl::new(
             lpp_ref.clone(),
             Loan {

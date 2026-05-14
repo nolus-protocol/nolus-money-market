@@ -1,7 +1,8 @@
 use currencies::{Lpn, Lpns, PaymentGroup};
+use finance::instant::Instant;
 use sdk::{
     cosmwasm_std::{
-        self, Binary, Deps, Env, Storage, Timestamp,
+        self, Binary, Deps, Env, Storage,
         testing::{self as cw_testing},
     },
     testing::manage_state,
