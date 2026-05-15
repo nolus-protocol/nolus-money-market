@@ -6,7 +6,7 @@ use oracle::stub::SwapPath;
 use sdk::cosmwasm_std::Addr;
 use timealarms::stub::TimeAlarmsRef;
 
-use crate::typedefs::CadenceHours;
+use crate::CadenceHours;
 
 type OracleRef = oracle_platform::OracleRef<QuoteC, QuoteG>;
 

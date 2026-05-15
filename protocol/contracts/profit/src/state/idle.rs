@@ -25,7 +25,7 @@ use platform::{
 use sdk::cosmwasm_std::{Addr, Env, MessageInfo, QuerierWrapper};
 use timealarms::stub::Result as TimeAlarmsResult;
 
-use crate::{msg::ConfigResponse, profit::Profit, result::ContractResult, typedefs::CadenceHours};
+use crate::{CadenceHours, msg::ConfigResponse, profit::Profit, result::ContractResult};
 use cw_time::IntoInstant;
 
 use super::{

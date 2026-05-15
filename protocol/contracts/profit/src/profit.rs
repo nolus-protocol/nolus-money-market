@@ -9,13 +9,11 @@ use platform::{
 };
 use sdk::cosmwasm_std::{Addr, Env, QuerierWrapper, Storage};
 
-use crate::{msg::ConfigResponse, result::ContractResult, state::State};
+use crate::{msg::ConfigResponse, reserve::IBC_FEE_RESERVE, result::ContractResult, state::State};
 
 pub struct Profit;
 
 impl Profit {
-    pub const IBC_FEE_RESERVE: Coin<Nls> = Coin::new(100);
-
     pub(crate) fn transfer_nls<B>(
         mut from_my_account: B,
         to_treasury: Addr,
@@ -25,7 +23,7 @@ impl Profit {
     where
         B: BankAccount,
     {
-        amount = amount.saturating_sub(Self::IBC_FEE_RESERVE);
+        amount = amount.saturating_sub(IBC_FEE_RESERVE);
 
         if amount.is_zero() {
             PlatformResponse::messages_only(from_my_account.into())

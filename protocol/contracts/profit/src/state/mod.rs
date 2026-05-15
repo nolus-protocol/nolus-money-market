@@ -18,9 +18,7 @@ use sdk::{
 };
 use swap::Impl;
 
-use crate::{
-    error::ContractError, msg::ConfigResponse, result::ContractResult, typedefs::CadenceHours,
-};
+use crate::{CadenceHours, error::ContractError, msg::ConfigResponse, result::ContractResult};
 
 pub(crate) use self::config::Config;
 use self::{buy_back::BuyBack, idle::Idle, open_ica::OpenIca, resp_delivery::ForwardToDexEntry};

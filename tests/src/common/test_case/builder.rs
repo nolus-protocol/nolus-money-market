@@ -5,8 +5,8 @@ use currency::{Currency, CurrencyDef, MemberOf};
 use finance::percent::Percent100;
 use lpp::borrow::InterestRate;
 use profit::{
+    CadenceHours,
     msg::{ConfigResponse as ProfitConfigResponse, QueryMsg as ProfitQueryMsg},
-    typedefs::CadenceHours,
 };
 use sdk::{
     api::SudoMsg,

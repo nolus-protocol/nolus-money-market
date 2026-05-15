@@ -1416,6 +1416,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "remote_lease_controller"
+version = "0.1.0"
+dependencies = [
+ "access-control",
+ "cosmwasm-std",
+ "platform",
+ "sdk",
+ "serde",
+ "thiserror 2.0.18",
+ "versioning",
+]
+
+[[package]]
 name = "reserve"
 version = "0.2.2"
 dependencies = [

@@ -1,18 +1,27 @@
-pub mod msg;
-pub mod typedefs;
-
 #[cfg(feature = "stub")]
 pub mod stub;
 
 #[cfg(feature = "contract")]
 mod access_control;
+
 #[cfg(feature = "contract")]
 pub mod contract;
+
 #[cfg(feature = "contract")]
 pub mod error;
+
+pub mod msg;
+
 #[cfg(feature = "contract")]
-pub mod profit;
+mod profit;
+
+#[cfg(feature = "contract")]
+pub mod reserve;
+
 #[cfg(feature = "contract")]
 pub mod result;
+
 #[cfg(feature = "contract")]
-pub mod state;
+mod state;
+
+pub type CadenceHours = u16;
