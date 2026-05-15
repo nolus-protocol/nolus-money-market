@@ -22,7 +22,7 @@ ARG cargo_udeps_version="0.1.59"
 
 ARG cosmwasm_check_version="3.0.4"
 
-ARG cosmwasm_capabilities="cosmwasm_1_1,cosmwasm_1_2,iterator,neutron,staking,stargate"
+ARG cosmwasm_capabilities="cosmwasm_1_1,cosmwasm_1_2,cosmwasm_1_3,cosmwasm_1_4,cosmwasm_2_0,cosmwasm_2_1,cosmwasm_2_2,cosmwasm_3_0,iterator,neutron,staking,stargate"
 
 ARG git_cliff_version="2.12.0"
 
