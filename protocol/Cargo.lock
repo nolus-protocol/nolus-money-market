@@ -1422,6 +1422,7 @@ dependencies = [
  "access-control",
  "cosmwasm-std",
  "platform",
+ "remote_lease",
  "sdk",
  "serde",
  "thiserror 2.0.18",
