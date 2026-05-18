@@ -70,6 +70,14 @@ impl Channel {
         }
     }
 
+    /// Guard for outbound packet emission: accept only `Open`.
+    pub fn usable_or_err(&self) -> Result<()> {
+        match self.state {
+            ChannelState::Open => Ok(()),
+            ChannelState::Closing => Err(Error::ChannelNotOperational),
+        }
+    }
+
     pub(super) fn into_parts(self) -> (String, String, String, String, ChannelState) {
         (
             self.local_channel_id,
@@ -121,6 +129,21 @@ mod test {
     fn into_closing_from_closing_errors() {
         let closing = open_channel().into_closing().unwrap();
         let err = closing.into_closing().unwrap_err();
+        assert!(matches!(err, Error::ChannelNotOperational), "got {err:?}");
+    }
+
+    #[test]
+    fn usable_or_err_open() {
+        open_channel().usable_or_err().unwrap();
+    }
+
+    #[test]
+    fn usable_or_err_closing() {
+        let err = open_channel()
+            .into_closing()
+            .unwrap()
+            .usable_or_err()
+            .unwrap_err();
         assert!(matches!(err, Error::ChannelNotOperational), "got {err:?}");
     }
 

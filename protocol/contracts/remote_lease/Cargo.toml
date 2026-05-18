@@ -27,7 +27,6 @@ contract = [
     "cosmwasm-std/cosmwasm_2_0",
     "sdk/contract",
     "sdk/cosmos_ibc",
-    "dep:remote_lease",
     "stub",
 ]
 stub = []
@@ -35,8 +34,10 @@ testing = []
 
 [dependencies]
 access-control = { workspace = true, optional = true }
+cw-time = { workspace = true }
+finance = { workspace = true }
 platform = { workspace = true }
-remote_lease = { workspace = true, optional = true }
+remote_lease = { workspace = true }
 sdk = { workspace = true }
 versioning = { workspace = true, features = ["protocol_contract"] }
 
@@ -47,5 +48,8 @@ thiserror = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 
 [dev-dependencies]
+currencies = { workspace = true, features = ["testing"] }
+currency = { workspace = true, features = ["testing"] }
+finance = { workspace = true, features = ["testing"] }
 platform = { workspace = true, features = ["testing"] }
 sdk = { workspace = true, features = ["testing"] }

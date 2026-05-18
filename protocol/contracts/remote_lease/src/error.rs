@@ -16,6 +16,9 @@ pub enum Error {
     #[error("[RemoteLease] {0}")]
     Unauthorized(#[from] access_control::error::Error),
 
+    #[error("[RemoteLease] Caller is not an authorised Lease instance")]
+    UnauthorisedCaller,
+
     #[error("[RemoteLease] {0} must be non-empty")]
     EmptyInstantiateField(&'static str),
 

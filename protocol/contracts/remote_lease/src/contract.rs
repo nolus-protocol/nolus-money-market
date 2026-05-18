@@ -2,12 +2,22 @@ use std::ops::{Deref, DerefMut};
 
 use access_control::SingleUserAccess;
 use cosmwasm_std::Storage;
+use cw_time::{IntoInstant as _, IntoTimestamp as _};
+use finance::{duration::Duration, instant::Instant};
 use platform::{
     contract::Code, error as platform_error, message::Response as PlatformResponse, response,
 };
+use remote_lease::{
+    envelope::{LeaseAddrOnWire, PacketEnvelope},
+    msg::Operation,
+    version::ProtocolVersion,
+};
 use sdk::{
     cosmwasm_ext::{CosmosMsg, Response as CwResponse},
-    cosmwasm_std::{self, Binary, Deps, DepsMut, Env, MessageInfo, entry_point},
+    cosmwasm_std::{
+        self, Addr, Binary, Deps, DepsMut, Env, IbcMsg, IbcTimeout, MessageInfo, QuerierWrapper,
+        entry_point,
+    },
 };
 use versioning::{
     ProtocolMigrationMessage, ProtocolPackageRelease, UpdatablePackage as _, VersionSegment,
@@ -94,6 +104,7 @@ pub fn execute(
     info: MessageInfo,
     msg: ExecuteMsg,
 ) -> Result<CwResponse> {
+    let api = deps.api;
     match msg {
         ExecuteMsg::OpenChannel() => authorize_protocol_admin_only(deps.storage.deref(), &info)
             .and_then(|()| open_channel(deps.storage, &env)),
@@ -104,9 +115,33 @@ pub fn execute(
         } => authorize_protocol_admin_only(deps.storage.deref(), &info)
             .and_then(|()| Config::update_lease_code(deps.storage, new_lease_code))
             .map(|()| PlatformResponse::default()),
+        ExecuteMsg::OpenLease { params, timeout } => send_operation(
+            deps,
+            &env,
+            info.sender,
+            Operation::OpenLease(params),
+            timeout,
+        ),
+        ExecuteMsg::CloseLease { params, timeout } => send_operation(
+            deps,
+            &env,
+            info.sender,
+            Operation::CloseLease(params),
+            timeout,
+        ),
+        ExecuteMsg::Swap { params, timeout } => {
+            send_operation(deps, &env, info.sender, Operation::Swap(params), timeout)
+        }
+        ExecuteMsg::TransferOut { params, timeout } => send_operation(
+            deps,
+            &env,
+            info.sender,
+            Operation::TransferOut(params),
+            timeout,
+        ),
     }
     .map(response::response_only_messages)
-    .inspect_err(platform_error::log(deps.api))
+    .inspect_err(platform_error::log(api))
 }
 
 #[entry_point]
@@ -164,6 +199,67 @@ fn close_channel(storage: &mut dyn Storage) -> Result<PlatformResponse> {
                 batch.schedule_execute_no_reply(close_msg);
                 PlatformResponse::messages_only(batch)
             })
+        })
+}
+
+fn send_operation(
+    deps: DepsMut<'_>,
+    env: &Env,
+    caller: Addr,
+    operation: Operation,
+    timeout: Duration,
+) -> Result<PlatformResponse> {
+    let DepsMut {
+        storage, querier, ..
+    } = deps;
+    authorise_and_load_channel(storage, querier, caller).and_then(|(lease, channel)| {
+        build_packet(
+            env.block.time.into_instant(),
+            &channel,
+            lease,
+            operation,
+            timeout,
+        )
+    })
+}
+
+fn authorise_and_load_channel(
+    storage: &dyn Storage,
+    querier: QuerierWrapper<'_>,
+    caller: Addr,
+) -> Result<(Addr, Channel)> {
+    Config::load(storage)
+        .and_then(|config| config.auth_caller(querier, caller))
+        .and_then(|lease| {
+            Channel::may_load(storage)
+                .and_then(|maybe| maybe.ok_or(Error::ChannelNotOpen))
+                .and_then(|channel| channel.usable_or_err().map(|()| (lease, channel)))
+        })
+}
+
+fn build_packet(
+    now: Instant,
+    channel: &Channel,
+    lease: Addr,
+    operation: Operation,
+    timeout: Duration,
+) -> Result<PlatformResponse> {
+    let envelope = PacketEnvelope {
+        lease: LeaseAddrOnWire::new(lease),
+        operation,
+        version: ProtocolVersion,
+    };
+    cosmwasm_std::to_json_binary(&envelope)
+        .map_err(Error::from)
+        .map(|data| {
+            let send = CosmosMsg::Ibc(IbcMsg::SendPacket {
+                channel_id: channel.local_channel_id().to_string(),
+                data,
+                timeout: IbcTimeout::with_timestamp((now + timeout).into_timestamp()),
+            });
+            let mut batch = platform::batch::Batch::default();
+            batch.schedule_execute_no_reply(send);
+            PlatformResponse::messages_only(batch)
         })
 }
 

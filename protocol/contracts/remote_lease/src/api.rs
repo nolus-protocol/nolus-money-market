@@ -1,6 +1,8 @@
 use serde::{Deserialize, Serialize};
 
+use finance::duration::Duration;
 use platform::contract::{Code, CodeId};
+use remote_lease::msg::{CloseLeaseParams, OpenLeaseParams, SwapParams, TransferOutParams};
 use sdk::cosmwasm_std::Uint64;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
@@ -29,6 +31,28 @@ pub enum ExecuteMsg {
     NewLeaseCode {
         // This is an internal system API and we use [Code]
         lease_code: Code,
+    },
+    /// Outbound `OpenLease` packet. Caller must be an instance of `Config.lease_code`.
+    /// `timeout` is the relative duration after which the ICS-04 packet expires;
+    /// the controller anchors it to its own block time at send.
+    OpenLease {
+        params: OpenLeaseParams,
+        timeout: Duration,
+    },
+    /// Outbound `CloseLease` packet. See [`ExecuteMsg::OpenLease`] for `timeout` semantics.
+    CloseLease {
+        params: CloseLeaseParams,
+        timeout: Duration,
+    },
+    /// Outbound `Swap` packet. See [`ExecuteMsg::OpenLease`] for `timeout` semantics.
+    Swap {
+        params: SwapParams,
+        timeout: Duration,
+    },
+    /// Outbound `TransferOut` packet. See [`ExecuteMsg::OpenLease`] for `timeout` semantics.
+    TransferOut {
+        params: TransferOutParams,
+        timeout: Duration,
     },
 }
 
