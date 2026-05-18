@@ -105,7 +105,9 @@ fn new_lease_code_admin_succeeds() {
         deps.as_mut(),
         testing::mock_env(),
         sender(ADMIN),
-        ExecuteMsg::NewLeaseCode(new_code),
+        ExecuteMsg::NewLeaseCode {
+            lease_code: new_code,
+        },
     )
     .unwrap();
     assert_eq!(0, res.messages.len());
@@ -261,7 +263,9 @@ fn new_lease_code_non_admin_rejected() {
         deps.as_mut(),
         testing::mock_env(),
         sender(NON_ADMIN),
-        ExecuteMsg::NewLeaseCode(Code::unchecked(LEASE_CODE_ID + 1)),
+        ExecuteMsg::NewLeaseCode {
+            lease_code: Code::unchecked(LEASE_CODE_ID + 1),
+        },
     )
     .unwrap_err();
     assert!(matches!(err, Error::Unauthorized(_)), "got {err:?}");
