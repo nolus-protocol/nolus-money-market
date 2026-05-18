@@ -99,11 +99,11 @@ pub fn execute(
             .and_then(|()| open_channel(deps.storage, &env)),
         ExecuteMsg::CloseChannel() => authorize_protocol_admin_only(deps.storage.deref(), &info)
             .and_then(|()| close_channel(deps.storage)),
-        ExecuteMsg::NewLeaseCode(code) => {
-            authorize_protocol_admin_only(deps.storage.deref(), &info)
-                .and_then(|()| Config::update_lease_code(deps.storage, code))
-                .map(|()| PlatformResponse::default())
-        }
+        ExecuteMsg::NewLeaseCode {
+            lease_code: new_lease_code,
+        } => authorize_protocol_admin_only(deps.storage.deref(), &info)
+            .and_then(|()| Config::update_lease_code(deps.storage, new_lease_code))
+            .map(|()| PlatformResponse::default()),
     }
     .map(response::response_only_messages)
     .inspect_err(platform_error::log(deps.api))

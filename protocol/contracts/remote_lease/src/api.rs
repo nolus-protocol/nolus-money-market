@@ -26,8 +26,10 @@ pub enum ExecuteMsg {
     OpenChannel(),
     /// Begin closing the recorded channel. Allowed only when it is currently `Open`.
     CloseChannel(),
-    // Internal system API — the validated `Code` wrapper is used.
-    NewLeaseCode(Code),
+    NewLeaseCode {
+        // This is an internal system API and we use [Code]
+        lease_code: Code,
+    },
 }
 
 #[derive(Serialize, Deserialize, Clone, Eq, PartialEq)]
