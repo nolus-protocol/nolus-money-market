@@ -23,7 +23,11 @@ contract = [
     "dep:access-control",
     "dep:cosmwasm-std",
     "cosmwasm-std/exports",
+    "cosmwasm-std/stargate",
+    "cosmwasm-std/cosmwasm_2_0",
     "sdk/contract",
+    "sdk/cosmos_ibc",
+    "dep:remote_lease",
     "stub",
 ]
 stub = []
@@ -32,6 +36,7 @@ testing = []
 [dependencies]
 access-control = { workspace = true, optional = true }
 platform = { workspace = true }
+remote_lease = { workspace = true, optional = true }
 sdk = { workspace = true }
 versioning = { workspace = true, features = ["protocol_contract"] }
 

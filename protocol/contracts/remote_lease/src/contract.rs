@@ -6,7 +6,7 @@ use platform::{
     contract::Code, error as platform_error, message::Response as PlatformResponse, response,
 };
 use sdk::{
-    cosmwasm_ext::Response as CwResponse,
+    cosmwasm_ext::{CosmosMsg, Response as CwResponse},
     cosmwasm_std::{self, Binary, Deps, DepsMut, Env, MessageInfo, entry_point},
 };
 use versioning::{
@@ -17,6 +17,7 @@ use versioning::{
 use crate::{
     api::{ChannelResponse, ConfigResponse, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg},
     error::{Error, Result},
+    ibc as ibc_msg,
     state::{Channel, Config},
 };
 
@@ -89,11 +90,15 @@ pub fn migrate(
 #[entry_point]
 pub fn execute(
     deps: DepsMut<'_>,
-    _env: Env,
+    env: Env,
     info: MessageInfo,
     msg: ExecuteMsg,
 ) -> Result<CwResponse> {
     match msg {
+        ExecuteMsg::OpenChannel() => authorize_protocol_admin_only(deps.storage.deref(), &info)
+            .and_then(|()| open_channel(deps.storage, &env)),
+        ExecuteMsg::CloseChannel() => authorize_protocol_admin_only(deps.storage.deref(), &info)
+            .and_then(|()| close_channel(deps.storage)),
         ExecuteMsg::NewLeaseCode(code) => {
             authorize_protocol_admin_only(deps.storage.deref(), &info)
                 .and_then(|()| Config::update_lease_code(deps.storage, code))
@@ -132,6 +137,34 @@ fn authorize_protocol_admin_only(store: &dyn Storage, call_message: &MessageInfo
     SingleUserAccess::new(store, crate::access_control::PROTOCOL_ADMIN_KEY)
         .check(call_message)
         .map_err(Into::into)
+}
+
+fn open_channel(storage: &mut dyn Storage, env: &Env) -> Result<PlatformResponse> {
+    Channel::may_load(storage)
+        .and_then(|existing| match existing {
+            Some(_) => Err(Error::ChannelAlreadyExists),
+            None => Config::load(storage),
+        })
+        .map(|config| {
+            let open_init: CosmosMsg = ibc_msg::build_channel_open_init(env, &config);
+            let mut batch = platform::batch::Batch::default();
+            batch.schedule_execute_no_reply(open_init);
+            PlatformResponse::messages_only(batch)
+        })
+}
+
+fn close_channel(storage: &mut dyn Storage) -> Result<PlatformResponse> {
+    Channel::may_load(storage)
+        .and_then(|maybe_channel| maybe_channel.ok_or(Error::ChannelNotOpen))
+        .and_then(Channel::into_closing)
+        .and_then(|closing| {
+            closing.store(storage).map(|()| {
+                let close_msg: CosmosMsg = ibc_msg::build_channel_close(&closing);
+                let mut batch = platform::batch::Batch::default();
+                batch.schedule_execute_no_reply(close_msg);
+                PlatformResponse::messages_only(batch)
+            })
+        })
 }
 
 #[cfg(test)]

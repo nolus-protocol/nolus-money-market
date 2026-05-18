@@ -6,4 +6,6 @@ pub mod contract;
 #[cfg(feature = "contract")]
 pub mod error;
 #[cfg(feature = "contract")]
+pub mod ibc;
+#[cfg(feature = "contract")]
 mod state;

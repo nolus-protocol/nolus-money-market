@@ -22,6 +22,10 @@ pub struct MigrateMsg {}
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub enum ExecuteMsg {
+    /// Initiate the channel handshake. Allowed only when no channel is recorded.
+    OpenChannel(),
+    /// Begin closing the recorded channel. Allowed only when it is currently `Open`.
+    CloseChannel(),
     // Internal system API — the validated `Code` wrapper is used.
     NewLeaseCode(Code),
 }
