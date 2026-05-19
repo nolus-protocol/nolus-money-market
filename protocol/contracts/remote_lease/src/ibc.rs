@@ -1,11 +1,16 @@
+use remote_lease::{
+    callback::{RemoteErrorMessage, RemoteLeaseCallback},
+    envelope::PacketEnvelope,
+    response::OperationResponse,
+};
 use sdk::{
     cosmos_sdk_proto::prost::Message as _,
     cosmwasm_ext::CosmosMsg,
     cosmwasm_std::{
-        Addr, AnyMsg, Binary, DepsMut, Env, IbcBasicResponse, IbcChannel, IbcChannelCloseMsg,
-        IbcChannelConnectMsg, IbcChannelOpenMsg, IbcChannelOpenResponse, IbcMsg, IbcOrder,
-        IbcPacketAckMsg, IbcPacketReceiveMsg, IbcPacketTimeoutMsg, IbcReceiveResponse, Never,
-        StdAck, entry_point,
+        self, Addr, AnyMsg, Api, Binary, DepsMut, Env, IbcBasicResponse, IbcChannel,
+        IbcChannelCloseMsg, IbcChannelConnectMsg, IbcChannelOpenMsg, IbcChannelOpenResponse,
+        IbcMsg, IbcOrder, IbcPacketAckMsg, IbcPacketReceiveMsg, IbcPacketTimeoutMsg,
+        IbcReceiveResponse, Never, StdAck, WasmMsg, entry_point,
     },
     ibc_proto::ibc::core::channel::v1::{
         Channel as ProtoChannel, Counterparty as ProtoCounterparty, MsgChannelOpenInit,
@@ -15,6 +20,7 @@ use sdk::{
 
 use crate::{
     error::{Error, Result},
+    lease_callback::LeaseExecuteMsg,
     state::{Channel, ChannelState, Config},
 };
 
@@ -121,20 +127,70 @@ pub fn ibc_packet_receive(
 
 #[entry_point]
 pub fn ibc_packet_ack(
-    _deps: DepsMut<'_>,
+    deps: DepsMut<'_>,
     _env: Env,
-    _msg: IbcPacketAckMsg,
+    msg: IbcPacketAckMsg,
 ) -> Result<IbcBasicResponse> {
-    Ok(IbcBasicResponse::new())
+    cosmwasm_std::from_json::<PacketEnvelope>(&msg.original_packet.data)
+        .map_err(Error::from)
+        .and_then(|envelope| {
+            cosmwasm_std::from_json::<StdAck>(&msg.acknowledgement.data)
+                .map_err(Error::from)
+                .and_then(ack_to_callback)
+                .and_then(|callback| dispatch_lease_callback(deps.api, envelope, callback))
+        })
 }
 
 #[entry_point]
 pub fn ibc_packet_timeout(
-    _deps: DepsMut<'_>,
+    deps: DepsMut<'_>,
     _env: Env,
-    _msg: IbcPacketTimeoutMsg,
+    msg: IbcPacketTimeoutMsg,
 ) -> Result<IbcBasicResponse> {
-    Ok(IbcBasicResponse::new())
+    cosmwasm_std::from_json::<PacketEnvelope>(&msg.packet.data)
+        .map_err(Error::from)
+        .and_then(|envelope| {
+            dispatch_lease_callback(deps.api, envelope, RemoteLeaseCallback::OperationTimeout)
+        })
+}
+
+fn ack_to_callback(ack: StdAck) -> Result<RemoteLeaseCallback> {
+    match ack {
+        StdAck::Success(data) => cosmwasm_std::from_json::<OperationResponse>(&data)
+            .map(RemoteLeaseCallback::OperationOk)
+            .map_err(Error::from),
+        StdAck::Error(message) => RemoteErrorMessage::new(message)
+            .map(RemoteLeaseCallback::OperationErr)
+            .map_err(Error::from),
+    }
+}
+
+// Trust model for `envelope.lease`: `into_validated` checks format only — the
+// returned `Addr` is not re-checked against `Config.lease_code`. The address
+// was placed in `original_packet.data` by this controller at send-time
+// (`contract::send_operation` → `auth_caller`), and ibc-go commits packet
+// bytes on-chain at send-time, so the inbound bytes are tamper-resistant by
+// the light-client. Per ADR 0001 §5 identity flows from the light client +
+// port uniqueness, not from a per-packet whitelist.
+fn dispatch_lease_callback(
+    api: &dyn Api,
+    envelope: PacketEnvelope,
+    callback: RemoteLeaseCallback,
+) -> Result<IbcBasicResponse> {
+    envelope
+        .lease
+        .into_validated(api)
+        .map_err(Error::from)
+        .and_then(|lease_addr| {
+            cosmwasm_std::to_json_binary(&LeaseExecuteMsg::RemoteLeaseCallback(callback))
+                .map_err(Error::from)
+                .map(|msg| WasmMsg::Execute {
+                    contract_addr: lease_addr.into_string(),
+                    msg,
+                    funds: vec![],
+                })
+        })
+        .map(|wasm_msg| IbcBasicResponse::new().add_message(wasm_msg))
 }
 
 fn validate_handshake_channel(channel: &IbcChannel, config: &Config) -> Result<()> {

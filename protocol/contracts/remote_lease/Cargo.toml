@@ -29,7 +29,7 @@ contract = [
     "sdk/cosmos_ibc",
     "stub",
 ]
-stub = []
+stub = ["remote_lease/stub"]
 testing = []
 
 [dependencies]

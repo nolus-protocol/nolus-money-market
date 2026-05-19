@@ -25,6 +25,38 @@ Invariants are enforced both in constructors (`new`) and on the deserialiser pat
 
 `RemoteLeaseCallback::{OperationOk(OperationResponse), OperationErr(RemoteErrorMessage), OperationTimeout}`. Timeout is structurally separate from error — recovery paths differ.
 
+## Controller surface (Nolus side)
+
+The `remote_lease` controller exposes one `ExecuteMsg` variant per `Operation`:
+
+- `ExecuteMsg::OpenLease { params: OpenLeaseParams, timeout: Duration }`
+- `ExecuteMsg::CloseLease { params: CloseLeaseParams, timeout: Duration }`
+- `ExecuteMsg::Swap { params: SwapParams, timeout: Duration }`
+- `ExecuteMsg::TransferOut { params: TransferOutParams, timeout: Duration }`
+
+Each call:
+
+1. Authorises the sender against `Config.lease_code` — the caller must be a contract instance of the configured lease code id. Non-contract callers and contracts with a different code id collapse to a single `UnauthorisedCaller`; the controller does not distinguish them on the protocol surface.
+2. Loads the channel and rejects anything other than `Open` (absent → `ChannelNotOpen`, `Closing` → `ChannelNotOperational`).
+3. Wraps the operation in `PacketEnvelope { lease, operation, version }` and emits `IbcMsg::SendPacket` on the locally stored channel id.
+4. Sets the packet timeout to `env.block.time + timeout` — the caller owns its own retry cadence.
+
+## Controller → Lease callback dispatch
+
+On `ibc_packet_ack` and `ibc_packet_timeout` the controller decodes the original packet's `PacketEnvelope`, builds the appropriate `RemoteLeaseCallback` variant, and forwards it to the originating lease via a plain `WasmMsg::Execute` — `add_message`, not `SubMsg::reply_*`. The dispatched payload is:
+
+```json
+{"remote_lease_callback": <RemoteLeaseCallback>}
+```
+
+mapping the IBC outcomes:
+
+- `StdAck::Success(data)` → `RemoteLeaseCallback::OperationOk(OperationResponse)` (decoded from `data`).
+- `StdAck::Error(message)` → `RemoteLeaseCallback::OperationErr(RemoteErrorMessage)` (rejected if > 512 bytes).
+- timeout → `RemoteLeaseCallback::OperationTimeout` (unit; the original `Operation` is recoverable from the lease's own pending-state).
+
+The lease address travels with the packet (`envelope.lease`) — the controller keeps no per-packet correlation map. The lease contract authorises the call with `info.sender == controller_addr` (set in its `Config` at instantiate); the controller does not retry on the lease's behalf. See ADR 0001 §3.7 in `nolus-protocol/ibc-solray` for the atomicity model.
+
 ## Design principle
 
 All policy lives on Nolus. Solana is a passive vault — see ADRs 0001 / 0002 in `nolus-protocol/ibc-solray`.
