@@ -1,10 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use currencies::PaymentGroup;
-use currency::CurrencyDTO;
-use finance::coin::CoinDTO;
-
-use crate::error::Error;
+use crate::{coin::WireCoin, error::Error, ticker::Ticker};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
@@ -23,17 +19,17 @@ pub enum Operation {
 )]
 pub struct OpenLeaseParams {
     expected_instance_ordinal: u16,
-    downpayment_currency: CurrencyDTO<PaymentGroup>,
-    lpn_currency: CurrencyDTO<PaymentGroup>,
-    asset_currency: CurrencyDTO<PaymentGroup>,
+    downpayment_currency: Ticker,
+    lpn_currency: Ticker,
+    asset_currency: Ticker,
 }
 
 impl OpenLeaseParams {
     pub fn new(
         expected_instance_ordinal: u16,
-        downpayment_currency: CurrencyDTO<PaymentGroup>,
-        lpn_currency: CurrencyDTO<PaymentGroup>,
-        asset_currency: CurrencyDTO<PaymentGroup>,
+        downpayment_currency: Ticker,
+        lpn_currency: Ticker,
+        asset_currency: Ticker,
     ) -> Result<Self, Error> {
         let params = Self {
             expected_instance_ordinal,
@@ -52,15 +48,15 @@ impl OpenLeaseParams {
         self.expected_instance_ordinal
     }
 
-    pub const fn downpayment_currency(&self) -> &CurrencyDTO<PaymentGroup> {
+    pub const fn downpayment_currency(&self) -> &Ticker {
         &self.downpayment_currency
     }
 
-    pub const fn lpn_currency(&self) -> &CurrencyDTO<PaymentGroup> {
+    pub const fn lpn_currency(&self) -> &Ticker {
         &self.lpn_currency
     }
 
-    pub const fn asset_currency(&self) -> &CurrencyDTO<PaymentGroup> {
+    pub const fn asset_currency(&self) -> &Ticker {
         &self.asset_currency
     }
 
@@ -75,9 +71,9 @@ impl OpenLeaseParams {
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 struct OpenLeaseParamsRaw {
     expected_instance_ordinal: u16,
-    downpayment_currency: CurrencyDTO<PaymentGroup>,
-    lpn_currency: CurrencyDTO<PaymentGroup>,
-    asset_currency: CurrencyDTO<PaymentGroup>,
+    downpayment_currency: Ticker,
+    lpn_currency: Ticker,
+    asset_currency: Ticker,
 }
 
 impl TryFrom<OpenLeaseParamsRaw> for OpenLeaseParams {
@@ -104,15 +100,12 @@ pub struct CloseLeaseParams {}
     try_from = "SwapParamsRaw"
 )]
 pub struct SwapParams {
-    coin_in: CoinDTO<PaymentGroup>,
-    min_out: CoinDTO<PaymentGroup>,
+    coin_in: WireCoin,
+    min_out: WireCoin,
 }
 
 impl SwapParams {
-    pub fn new(
-        coin_in: CoinDTO<PaymentGroup>,
-        min_out: CoinDTO<PaymentGroup>,
-    ) -> Result<Self, Error> {
+    pub fn new(coin_in: WireCoin, min_out: WireCoin) -> Result<Self, Error> {
         if coin_in.is_zero() || min_out.is_zero() {
             return Err(Error::ZeroSwapAmount);
         }
@@ -124,26 +117,26 @@ impl SwapParams {
             .inspect(|p| debug_assert!(p.invariant_held()))
     }
 
-    pub const fn coin_in(&self) -> &CoinDTO<PaymentGroup> {
+    pub const fn coin_in(&self) -> &WireCoin {
         &self.coin_in
     }
 
-    pub const fn min_out(&self) -> &CoinDTO<PaymentGroup> {
+    pub const fn min_out(&self) -> &WireCoin {
         &self.min_out
     }
 
     pub fn invariant_held(&self) -> bool {
         !self.coin_in.is_zero()
             && !self.min_out.is_zero()
-            && self.coin_in.currency() != self.min_out.currency()
+            && self.coin_in.ticker() != self.min_out.ticker()
     }
 }
 
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 struct SwapParamsRaw {
-    coin_in: CoinDTO<PaymentGroup>,
-    min_out: CoinDTO<PaymentGroup>,
+    coin_in: WireCoin,
+    min_out: WireCoin,
 }
 
 impl TryFrom<SwapParamsRaw> for SwapParams {
@@ -161,11 +154,11 @@ impl TryFrom<SwapParamsRaw> for SwapParams {
     try_from = "TransferOutParamsRaw"
 )]
 pub struct TransferOutParams {
-    amount: CoinDTO<PaymentGroup>,
+    amount: WireCoin,
 }
 
 impl TransferOutParams {
-    pub fn new(amount: CoinDTO<PaymentGroup>) -> Result<Self, Error> {
+    pub fn new(amount: WireCoin) -> Result<Self, Error> {
         let params = Self { amount };
         params
             .invariant_held()
@@ -174,7 +167,7 @@ impl TransferOutParams {
             .inspect(|p| debug_assert!(p.invariant_held()))
     }
 
-    pub const fn amount(&self) -> &CoinDTO<PaymentGroup> {
+    pub const fn amount(&self) -> &WireCoin {
         &self.amount
     }
 
@@ -186,7 +179,7 @@ impl TransferOutParams {
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 struct TransferOutParamsRaw {
-    amount: CoinDTO<PaymentGroup>,
+    amount: WireCoin,
 }
 
 impl TryFrom<TransferOutParamsRaw> for TransferOutParams {
@@ -194,62 +187,5 @@ impl TryFrom<TransferOutParamsRaw> for TransferOutParams {
 
     fn try_from(raw: TransferOutParamsRaw) -> Result<Self, Self::Error> {
         TransferOutParams::new(raw.amount)
-    }
-}
-
-// ---------------------------------------------------------------------------
-// Typed → wire conversions.
-//
-// These are infallible because the typed surface enforces the same invariants
-// the wire surface enforces (distinct currencies, non-zero amounts), so the
-// stringly-typed wire constructors cannot fail given a valid typed input.
-// The cross-surface integration test verifies byte-identical JSON for each
-// variant.
-// ---------------------------------------------------------------------------
-
-fn wire_ticker(currency: &CurrencyDTO<PaymentGroup>) -> remote_lease_wire::ticker::Ticker {
-    remote_lease_wire::ticker::Ticker::new(currency.to_string())
-}
-
-fn wire_coin(coin: &CoinDTO<PaymentGroup>) -> remote_lease_wire::coin::WireCoin {
-    remote_lease_wire::coin::WireCoin::new(coin.amount(), wire_ticker(&coin.currency()))
-}
-
-impl From<&OpenLeaseParams> for remote_lease_wire::msg::OpenLeaseParams {
-    fn from(typed: &OpenLeaseParams) -> Self {
-        Self::new(
-            typed.expected_instance_ordinal(),
-            wire_ticker(typed.downpayment_currency()),
-            wire_ticker(typed.lpn_currency()),
-            wire_ticker(typed.asset_currency()),
-        )
-        .expect("typed OpenLeaseParams already upholds the pairwise-distinct invariant")
-    }
-}
-
-impl From<&SwapParams> for remote_lease_wire::msg::SwapParams {
-    fn from(typed: &SwapParams) -> Self {
-        Self::new(wire_coin(typed.coin_in()), wire_coin(typed.min_out()))
-            .expect("typed SwapParams already upholds the non-zero distinct-currency invariant")
-    }
-}
-
-impl From<&TransferOutParams> for remote_lease_wire::msg::TransferOutParams {
-    fn from(typed: &TransferOutParams) -> Self {
-        Self::new(wire_coin(typed.amount()))
-            .expect("typed TransferOutParams already upholds the non-zero invariant")
-    }
-}
-
-impl From<&Operation> for remote_lease_wire::msg::Operation {
-    fn from(typed: &Operation) -> Self {
-        match typed {
-            Operation::OpenLease(p) => Self::OpenLease(p.into()),
-            Operation::CloseLease(CloseLeaseParams {}) => {
-                Self::CloseLease(remote_lease_wire::msg::CloseLeaseParams {})
-            }
-            Operation::Swap(p) => Self::Swap(p.into()),
-            Operation::TransferOut(p) => Self::TransferOut(p.into()),
-        }
     }
 }
