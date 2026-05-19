@@ -30,7 +30,7 @@ contract = [
     "stub",
 ]
 stub = ["remote_lease/stub"]
-testing = []
+testing = ["versioning/testing"]
 
 [dependencies]
 access-control = { workspace = true, optional = true }

@@ -2,7 +2,7 @@ use remote_lease::{
     callback::{OPERATION_ERR_MAX_BYTES, RemoteErrorMessage, RemoteLeaseCallback},
     envelope::{LeaseAddrOnWire, PacketEnvelope},
     msg::{CloseLeaseParams, Operation},
-    response::{CloseLeaseResponse, OperationResponse},
+    response::{CloseLeaseResponse, OpenLeaseResponse, OperationResponse},
     version::ProtocolVersion,
 };
 use sdk::{
@@ -202,6 +202,46 @@ fn connect_open_confirm_persists_channel() {
 fn connect_rejects_when_channel_exists() {
     let mut deps = deps_with_config();
     persist_existing_open_channel(deps.as_mut());
+
+    let err = ibc_channel_connect(
+        deps.as_mut(),
+        testing::mock_env(),
+        IbcChannelConnectMsg::OpenConfirm {
+            channel: channel(
+                IbcOrder::Unordered,
+                VERSION,
+                CONNECTION_ID,
+                COUNTERPARTY_PORT_ID,
+            ),
+        },
+    )
+    .unwrap_err();
+    assert!(matches!(err, Error::ChannelAlreadyExists), "got {err:?}");
+}
+
+// `connect_rejects_when_channel_exists` pre-loads the channel directly. This
+// variant exercises the *sequence* — first OpenAck persists, second handshake
+// callback (whether OpenAck or OpenConfirm) must reject. This is the test that
+// answers the "simultaneous handshake" wording in ADR 0001 §3 by walking the
+// sequential entry-point path; cw-multi-test is single-threaded so a real race
+// cannot be exercised in-process.
+#[test]
+fn ibc_connect_rejects_when_channel_already_persisted() {
+    let mut deps = deps_with_config();
+    ibc_channel_connect(
+        deps.as_mut(),
+        testing::mock_env(),
+        IbcChannelConnectMsg::OpenAck {
+            channel: channel(
+                IbcOrder::Unordered,
+                VERSION,
+                CONNECTION_ID,
+                COUNTERPARTY_PORT_ID,
+            ),
+            counterparty_version: VERSION.into(),
+        },
+    )
+    .unwrap();
 
     let err = ibc_channel_connect(
         deps.as_mut(),
@@ -463,6 +503,48 @@ fn packet_ack_malformed_acknowledgement_errors() {
 }
 
 #[test]
+fn packet_ack_malformed_lease_addr_in_envelope_errors() {
+    let mut deps = deps_with_config();
+    let envelope = PacketEnvelope {
+        lease: LeaseAddrOnWire::new("NOT_BECH32!"),
+        operation: Operation::CloseLease(CloseLeaseParams {}),
+        version: ProtocolVersion,
+    };
+    let envelope_bytes = cosmwasm_std::to_json_binary(&envelope).expect("envelope serialises");
+    let response = OperationResponse::CloseLease(CloseLeaseResponse {});
+    let ack_bytes = StdAck::Success(cosmwasm_std::to_json_binary(&response).unwrap()).to_binary();
+
+    let err = ibc_packet_ack(
+        deps.as_mut(),
+        testing::mock_env(),
+        ack_msg(envelope_bytes, ack_bytes),
+    )
+    .unwrap_err();
+
+    assert!(matches!(err, Error::Std(_)), "got {err:?}");
+}
+
+#[test]
+fn packet_timeout_malformed_lease_addr_in_envelope_errors() {
+    let mut deps = deps_with_config();
+    let envelope = PacketEnvelope {
+        lease: LeaseAddrOnWire::new("NOT_BECH32!"),
+        operation: Operation::CloseLease(CloseLeaseParams {}),
+        version: ProtocolVersion,
+    };
+    let envelope_bytes = cosmwasm_std::to_json_binary(&envelope).expect("envelope serialises");
+
+    let err = ibc_packet_timeout(
+        deps.as_mut(),
+        testing::mock_env(),
+        timeout_msg(envelope_bytes),
+    )
+    .unwrap_err();
+
+    assert!(matches!(err, Error::Std(_)), "got {err:?}");
+}
+
+#[test]
 fn packet_ack_success_with_malformed_response_errors() {
     let mut deps = deps_with_config();
     let lease = sdk_testing::user("lease-5");
@@ -503,6 +585,72 @@ fn dispatched_callback_wire_shape_pinned() {
     assert_eq!(
         br#"{"remote_lease_callback":"operation_timeout"}"#,
         msg.as_slice(),
+    );
+}
+
+// Inbound-ack fixtures per ADR 0001 §3.5. The bytes the controller must accept
+// from the Solana counterparty live under `tests/fixtures/` so they survive as
+// a frozen, byte-exact reference even if the inline wire-types tests in the
+// shared `remote_lease` crate ever drift. See `tests/fixtures/README.md` for
+// regeneration steps and the placeholder note (Solana-emitted bytes are TBD).
+#[test]
+fn fixture_stdack_success_open_lease_decodes_to_callback() {
+    const FIXTURE_REMOTE_LEASE_ID: &str = "sol-lease-fixture-0001";
+    const ACK_BYTES: &[u8] = include_bytes!("../../tests/fixtures/stdack_success_open_lease.bin");
+    let response = OperationResponse::OpenLease(OpenLeaseResponse {
+        remote_lease_id: FIXTURE_REMOTE_LEASE_ID.into(),
+    });
+
+    let computed = StdAck::Success(cosmwasm_std::to_json_binary(&response).unwrap()).to_binary();
+    assert_eq!(
+        ACK_BYTES,
+        computed.as_slice(),
+        "fixture must match the canonical wire shape"
+    );
+
+    let mut deps = deps_with_config();
+    let lease = sdk_testing::user("lease-fixture");
+    let envelope_bytes = encode_envelope(&envelope_with_close_lease(&lease));
+    let res = ibc_packet_ack(
+        deps.as_mut(),
+        testing::mock_env(),
+        ack_msg(envelope_bytes, Binary::new(ACK_BYTES.to_vec())),
+    )
+    .unwrap();
+    assert_dispatched_callback(
+        &lease,
+        RemoteLeaseCallback::OperationOk(response),
+        &res.messages,
+    );
+}
+
+#[test]
+fn fixture_stdack_error_decodes_to_callback() {
+    const FIXTURE_ERROR_MESSAGE: &str = "dex pool drained";
+    const ACK_BYTES: &[u8] = include_bytes!("../../tests/fixtures/stdack_error.bin");
+
+    let computed = StdAck::error(FIXTURE_ERROR_MESSAGE).to_binary();
+    assert_eq!(
+        ACK_BYTES,
+        computed.as_slice(),
+        "fixture must match the canonical wire shape"
+    );
+
+    let mut deps = deps_with_config();
+    let lease = sdk_testing::user("lease-fixture-err");
+    let envelope_bytes = encode_envelope(&envelope_with_close_lease(&lease));
+    let res = ibc_packet_ack(
+        deps.as_mut(),
+        testing::mock_env(),
+        ack_msg(envelope_bytes, Binary::new(ACK_BYTES.to_vec())),
+    )
+    .unwrap();
+    assert_dispatched_callback(
+        &lease,
+        RemoteLeaseCallback::OperationErr(
+            RemoteErrorMessage::new(FIXTURE_ERROR_MESSAGE).expect("under the cap"),
+        ),
+        &res.messages,
     );
 }
 

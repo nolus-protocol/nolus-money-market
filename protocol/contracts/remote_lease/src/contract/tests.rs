@@ -5,24 +5,37 @@ use currencies::{
 use finance::{coin::Coin, duration::Duration, instant::Instant};
 use platform::contract::{Code, CodeId};
 use remote_lease::{
+    callback::RemoteLeaseCallback,
     envelope::{LeaseAddrOnWire, PacketEnvelope},
     msg::{CloseLeaseParams, OpenLeaseParams, Operation, SwapParams, TransferOutParams},
+    response::{OpenLeaseResponse, OperationResponse},
     version::ProtocolVersion,
 };
 use sdk::{
     cosmwasm_ext::{CosmosMsg, SubMsg},
     cosmwasm_std::{
-        Addr, AnyMsg, Binary, ContractInfoResponse, ContractResult, Deps, DepsMut, IbcMsg,
-        IbcTimeout, MessageInfo, OwnedDeps, SystemError, SystemResult, Uint64, WasmQuery,
+        self, Addr, AnyMsg, Binary, ContractInfoResponse, ContractResult, Deps, DepsMut,
+        IbcAcknowledgement, IbcChannel, IbcChannelCloseMsg, IbcChannelConnectMsg, IbcEndpoint,
+        IbcMsg, IbcOrder, IbcPacket, IbcPacketAckMsg, IbcTimeout, MessageInfo, OwnedDeps, StdAck,
+        SubMsg as StdSubMsg, SystemError, SystemResult, Timestamp, Uint64, WasmMsg, WasmQuery,
         testing::{self, MockApi, MockQuerier, MockStorage},
     },
     testing as sdk_testing,
 };
+use versioning::{
+    ProtocolMigrationMessage, ProtocolPackageRelease, ProtocolPackageReleaseId, ReleaseId,
+    VersionSegment, package_name, package_version,
+};
 
 use crate::{
-    api::{ChannelResponse, ConfigResponse, ExecuteMsg, InstantiateMsg, QueryMsg},
-    contract::{execute, instantiate, query},
+    api::{
+        ChannelResponse, ChannelStateResponse, ConfigResponse, ExecuteMsg, InstantiateMsg,
+        MigrateMsg, QueryMsg,
+    },
+    contract::{execute, instantiate, migrate, query},
     error::Error,
+    ibc::{ibc_channel_close, ibc_channel_connect, ibc_packet_ack},
+    lease_callback::LeaseExecuteMsg,
     state::Channel,
 };
 
@@ -41,6 +54,7 @@ const LOCAL_CHANNEL_ID: &str = "channel-0";
 const COUNTERPARTY_CHANNEL_ID: &str = "channel-77";
 const COUNTERPARTY_PORT_ID: &str = "nls-remote-lease.osmosis";
 const VERSION: &str = "nls-remote-lease.v1";
+const CONTRACT_STORAGE_VERSION: VersionSegment = 0;
 
 #[test]
 fn proper_initialization() {
@@ -103,6 +117,62 @@ fn instantiate_rejects_malformed_admin() {
     };
     let err = instantiate(deps.as_mut(), testing::mock_env(), sender(CREATOR), msg).unwrap_err();
     assert!(matches!(err, Error::Std(_)), "got {err:?}");
+}
+
+#[test]
+fn instantiate_rejects_unknown_lease_code() {
+    let mut deps = deps_with_failing_code_info();
+    let err = instantiate(
+        deps.as_mut(),
+        testing::mock_env(),
+        sender(CREATOR),
+        instantiate_msg(),
+    )
+    .unwrap_err();
+    assert!(matches!(err, Error::Platform(_)), "got {err:?}");
+}
+
+#[test]
+fn migrate_same_release_succeeds() {
+    let mut deps = deps();
+    instantiate_default(deps.as_mut());
+
+    let res = migrate(deps.as_mut(), testing::mock_env(), migrate_msg()).unwrap();
+    assert_eq!(0, res.messages.len());
+}
+
+#[test]
+fn query_protocol_package_release_returns_current() {
+    let deps = deps();
+    let raw = query(
+        deps.as_ref(),
+        testing::mock_env(),
+        QueryMsg::ProtocolPackageRelease {},
+    )
+    .unwrap();
+    let parsed: ProtocolPackageRelease = sdk::cosmwasm_std::from_json(raw).unwrap();
+    let expected = ProtocolPackageRelease::current(
+        package_name!(),
+        package_version!(),
+        CONTRACT_STORAGE_VERSION,
+    );
+    assert_eq!(
+        sdk::cosmwasm_std::to_json_binary(&expected).unwrap(),
+        sdk::cosmwasm_std::to_json_binary(&parsed).unwrap(),
+    );
+}
+
+#[test]
+fn query_channel_returns_open_state_when_channel_is_open() {
+    let mut deps = deps();
+    instantiate_default(deps.as_mut());
+    store_open_channel(deps.as_mut());
+
+    let info = query_channel(deps.as_ref())
+        .channel
+        .expect("an open channel is recorded");
+    assert!(matches!(info.state, ChannelStateResponse::Open));
+    assert_eq!(LOCAL_CHANNEL_ID, info.local_channel_id);
 }
 
 #[test]
@@ -433,6 +503,85 @@ fn outbound_non_contract_caller_rejected() {
     assert!(matches!(err, Error::UnauthorisedCaller), "got {err:?}");
 }
 
+#[test]
+fn scenario_open_channel_through_ack_dispatches_callback() {
+    let mut deps = deps_with_lease();
+    instantiate_default(deps.as_mut());
+    open_channel_via_admin(deps.as_mut());
+    drive_open_ack(deps.as_mut());
+
+    let packet_data = drive_open_lease(deps.as_mut());
+
+    let response = OperationResponse::OpenLease(OpenLeaseResponse {
+        remote_lease_id: "sol-lease-7".into(),
+    });
+    let res = ibc_packet_ack(
+        deps.as_mut(),
+        testing::mock_env(),
+        ack_msg_with(
+            packet_data,
+            StdAck::Success(cosmwasm_std::to_json_binary(&response).unwrap()).to_binary(),
+        ),
+    )
+    .unwrap();
+
+    assert_callback_to(
+        &sdk_testing::user(LEASE),
+        RemoteLeaseCallback::OperationOk(response),
+        &res.messages,
+    );
+}
+
+#[test]
+fn scenario_close_channel_full_handshake_clears_state() {
+    let mut deps = deps();
+    instantiate_default(deps.as_mut());
+    open_channel_via_admin(deps.as_mut());
+    drive_open_ack(deps.as_mut());
+
+    let res = execute(
+        deps.as_mut(),
+        testing::mock_env(),
+        sender(ADMIN),
+        ExecuteMsg::CloseChannel(),
+    )
+    .unwrap();
+    assert_eq!(1, res.messages.len());
+    assert!(matches!(
+        &res.messages[0].msg,
+        CosmosMsg::Ibc(IbcMsg::CloseChannel { channel_id }) if channel_id == LOCAL_CHANNEL_ID
+    ));
+
+    ibc_channel_close(
+        deps.as_mut(),
+        testing::mock_env(),
+        IbcChannelCloseMsg::CloseConfirm {
+            channel: handshake_channel(),
+        },
+    )
+    .unwrap();
+
+    assert!(Channel::may_load(&deps.storage).unwrap().is_none());
+}
+
+#[test]
+fn scenario_unsolicited_close_init_while_open_rejected() {
+    let mut deps = deps();
+    instantiate_default(deps.as_mut());
+    open_channel_via_admin(deps.as_mut());
+    drive_open_ack(deps.as_mut());
+
+    let err = ibc_channel_close(
+        deps.as_mut(),
+        testing::mock_env(),
+        IbcChannelCloseMsg::CloseInit {
+            channel: handshake_channel(),
+        },
+    )
+    .unwrap_err();
+    assert!(matches!(err, Error::UnsolicitedChannelClose), "got {err:?}");
+}
+
 fn deps() -> OwnedDeps<MockStorage, MockApi, MockQuerier> {
     sdk_testing::mock_deps_with_contracts([])
 }
@@ -483,6 +632,39 @@ fn contract_info_response(code_id: u64) -> SystemResult<ContractResult<Binary>> 
         ))
         .expect("serialization succeeds"),
     ))
+}
+
+// Querier that returns `NoSuchCode` for every `CodeInfo` query. The contract's
+// `Code::try_new` resolves to a `CodeInfo` query under the hood; replacing the
+// default closure (which would unconditionally return a happy `CodeInfoResponse`)
+// is the only way to exercise that error arm.
+fn deps_with_failing_code_info() -> OwnedDeps<MockStorage, MockApi, MockQuerier> {
+    let mut deps = sdk_testing::mock_deps_with_contracts([]);
+    deps.querier.update_wasm(|query| match query {
+        WasmQuery::CodeInfo { code_id } => {
+            SystemResult::Err(SystemError::NoSuchCode { code_id: *code_id })
+        }
+        _ => unimplemented!("unexpected wasm query in this test"),
+    });
+    deps
+}
+
+fn migrate_msg() -> ProtocolMigrationMessage<MigrateMsg> {
+    const SOFTWARE_ID: &str = env!("SOFTWARE_RELEASE_ID");
+    const PROTOCOL_ID: &str = env!("PROTOCOL_RELEASE_ID");
+    let release = ProtocolPackageRelease::current(
+        package_name!(),
+        package_version!(),
+        CONTRACT_STORAGE_VERSION,
+    );
+    ProtocolMigrationMessage {
+        migrate_from: release,
+        to_release: ProtocolPackageReleaseId::new(
+            ReleaseId::new_test(SOFTWARE_ID),
+            ReleaseId::new_test(PROTOCOL_ID),
+        ),
+        message: MigrateMsg {},
+    }
 }
 
 fn instantiate_default(deps: DepsMut<'_>) {
@@ -601,4 +783,105 @@ fn expected_timeout() -> IbcTimeout {
     use cw_time::{IntoInstant as _, IntoTimestamp as _};
     let now: Instant = testing::mock_env().block.time.into_instant();
     IbcTimeout::with_timestamp((now + PACKET_TIMEOUT).into_timestamp())
+}
+
+fn open_channel_via_admin(deps: DepsMut<'_>) {
+    let res = execute(
+        deps,
+        testing::mock_env(),
+        sender(ADMIN),
+        ExecuteMsg::OpenChannel(),
+    )
+    .expect("OpenChannel from admin must succeed");
+    assert_eq!(1, res.messages.len());
+}
+
+fn drive_open_ack(deps: DepsMut<'_>) {
+    ibc_channel_connect(
+        deps,
+        testing::mock_env(),
+        IbcChannelConnectMsg::OpenAck {
+            channel: handshake_channel(),
+            counterparty_version: VERSION.into(),
+        },
+    )
+    .expect("OpenAck must persist the channel");
+}
+
+fn drive_open_lease(deps: DepsMut<'_>) -> Binary {
+    let params = sample_open_lease_params();
+    let res = execute(
+        deps,
+        testing::mock_env(),
+        sender(LEASE),
+        ExecuteMsg::OpenLease {
+            params,
+            timeout: PACKET_TIMEOUT,
+        },
+    )
+    .expect("OpenLease from authorised lease must succeed");
+    match &res.messages[0].msg {
+        CosmosMsg::Ibc(IbcMsg::SendPacket { data, .. }) => data.clone(),
+        other => panic!("expected SendPacket, got {other:?}"),
+    }
+}
+
+fn handshake_channel() -> IbcChannel {
+    IbcChannel::new(
+        IbcEndpoint {
+            port_id: format!("wasm.{}", testing::mock_env().contract.address),
+            channel_id: LOCAL_CHANNEL_ID.into(),
+        },
+        IbcEndpoint {
+            port_id: COUNTERPARTY_PORT_ID.into(),
+            channel_id: COUNTERPARTY_CHANNEL_ID.into(),
+        },
+        IbcOrder::Unordered,
+        VERSION,
+        CONNECTION_ID,
+    )
+}
+
+fn ack_msg_with(envelope_bytes: Binary, ack_bytes: Binary) -> IbcPacketAckMsg {
+    IbcPacketAckMsg::new(
+        IbcAcknowledgement::new(ack_bytes),
+        IbcPacket::new(
+            envelope_bytes,
+            IbcEndpoint {
+                port_id: format!("wasm.{}", testing::mock_env().contract.address),
+                channel_id: LOCAL_CHANNEL_ID.into(),
+            },
+            IbcEndpoint {
+                port_id: COUNTERPARTY_PORT_ID.into(),
+                channel_id: COUNTERPARTY_CHANNEL_ID.into(),
+            },
+            1,
+            IbcTimeout::with_timestamp(Timestamp::from_seconds(1)),
+        ),
+        sdk_testing::user("relayer"),
+    )
+}
+
+fn assert_callback_to(
+    expected_lease: &Addr,
+    expected_callback: RemoteLeaseCallback,
+    messages: &[StdSubMsg],
+) {
+    assert_eq!(1, messages.len(), "expected one dispatched callback");
+    match &messages[0].msg {
+        cosmwasm_std::CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr,
+            msg,
+            funds,
+        }) => {
+            assert_eq!(expected_lease.as_str(), contract_addr);
+            assert!(funds.is_empty(), "callback must carry no funds");
+            let expected = cosmwasm_std::to_json_binary(&LeaseExecuteMsg::RemoteLeaseCallback(
+                expected_callback,
+            ))
+            .expect("expected callback serialises");
+            assert_eq!(&expected, msg);
+        }
+        other => panic!("expected WasmMsg::Execute, got {other:?}"),
+    }
 }
