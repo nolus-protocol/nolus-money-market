@@ -58,3 +58,24 @@ Tried first (rejected at review): editing the tracked `/.cargo/config.toml`.
 **Alternative (not taken in #621):** Use the deprecated `CosmosMsg::Stargate { type_url, value }` — works under `stargate` alone, no `cosmwasm_2_0` needed, no Containerfile change. Rejected because `Stargate` is deprecated and `Any` is the forward path.
 
 Tried first (did not work): enabling only `cosmwasm-std/stargate`; adding only `cosmwasm_2_0` to the contract Cargo.toml without expanding the Containerfile allowlist.
+
+## Cargo
+
+### A workspace dep's feature does not propagate from a consumer's same-named feature
+
+**Symptom:** Contract crate `A` declares `feature = "stub"` and depends on workspace crate `B` which also has `feature = "stub"` (typically gating test or mock helpers). `cargo build --features stub` on `A` compiles, but the stub-gated items in `B` are unreachable — the items behind `#[cfg(feature = "stub")]` in `B` never compile in. Or: tests in `A` that rely on `B`'s stub helpers fail to find symbols.
+
+**Cause:** Cargo features do not propagate by name. Declaring `[features] stub = []` in `A` does not turn on `stub` in `A`'s deps. The propagation must be spelled explicitly: `stub = ["B/stub"]`.
+
+**Fix:** In `A`'s Cargo.toml:
+
+```
+[features]
+stub = ["B/stub"]
+```
+
+If `A` also has a higher-level feature (e.g. `contract = [..., "stub"]`) that already lists `stub`, the propagation rides along automatically once the line above is in place — no extra work.
+
+**Reviewer check:** any new `stub` (or test-helper / mock) feature on a contract crate that depends on a workspace crate exposing the same-named feature must propagate explicitly. Greppable: `git grep -n '^stub = \[\]$' protocol/contracts` should be empty.
+
+Tried first (did not work): `stub = []` on the contract crate, expecting Cargo to forward by name.

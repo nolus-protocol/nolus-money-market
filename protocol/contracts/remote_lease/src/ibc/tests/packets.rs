@@ -1,0 +1,401 @@
+use remote_lease::{
+    callback::{OPERATION_ERR_MAX_BYTES, RemoteErrorMessage, RemoteLeaseCallback},
+    envelope::{LeaseAddrOnWire, PacketEnvelope},
+    msg::{CloseLeaseParams, Operation},
+    response::{CloseLeaseResponse, OpenLeaseResponse, OperationResponse},
+    version::ProtocolVersion,
+};
+use sdk::{
+    cosmwasm_std::{
+        self, Addr, Binary, CosmosMsg, IbcAcknowledgement, IbcEndpoint, IbcPacket, IbcPacketAckMsg,
+        IbcPacketReceiveMsg, IbcPacketTimeoutMsg, IbcTimeout, StdAck, SubMsg, Timestamp, WasmMsg,
+        testing,
+    },
+    testing as sdk_testing,
+};
+
+use crate::{
+    error::Error,
+    ibc::{ibc_packet_ack, ibc_packet_receive, ibc_packet_timeout},
+    lease_callback::LeaseExecuteMsg,
+};
+
+use super::{
+    COUNTERPARTY_CHANNEL_ID, COUNTERPARTY_PORT_ID, LOCAL_CHANNEL_ID, LOCAL_PORT_ID,
+    deps_with_config,
+};
+
+#[test]
+fn packet_receive_returns_error_ack() {
+    let mut deps = deps_with_config();
+    let packet = IbcPacket::new(
+        Binary::new(b"anything".to_vec()),
+        IbcEndpoint {
+            port_id: COUNTERPARTY_PORT_ID.into(),
+            channel_id: COUNTERPARTY_CHANNEL_ID.into(),
+        },
+        IbcEndpoint {
+            port_id: LOCAL_PORT_ID.into(),
+            channel_id: LOCAL_CHANNEL_ID.into(),
+        },
+        1,
+        IbcTimeout::with_timestamp(Timestamp::from_seconds(1)),
+    );
+    let relayer = sdk_testing::user("relayer");
+    let msg = IbcPacketReceiveMsg::new(packet, relayer);
+
+    let res = ibc_packet_receive(deps.as_mut(), testing::mock_env(), msg).unwrap();
+    let ack: StdAck =
+        sdk::cosmwasm_std::from_json(res.acknowledgement.expect("ack present")).unwrap();
+    assert!(matches!(ack, StdAck::Error(_)));
+    assert!(res.messages.is_empty());
+}
+
+#[test]
+fn packet_ack_success_dispatches_operation_ok() {
+    let mut deps = deps_with_config();
+    let lease = sdk_testing::user("lease-1");
+    let envelope_bytes = encode_envelope(&envelope_with_close_lease(&lease));
+    let response = OperationResponse::CloseLease(CloseLeaseResponse {});
+    let ack_bytes = StdAck::Success(cosmwasm_std::to_json_binary(&response).unwrap()).to_binary();
+
+    let res = ibc_packet_ack(
+        deps.as_mut(),
+        testing::mock_env(),
+        ack_msg(envelope_bytes, ack_bytes),
+    )
+    .unwrap();
+
+    assert_dispatched_callback(
+        &lease,
+        RemoteLeaseCallback::OperationOk(response),
+        &res.messages,
+    );
+}
+
+#[test]
+fn packet_ack_error_dispatches_operation_err() {
+    const ERROR_MESSAGE: &str = "dex pool drained";
+
+    let mut deps = deps_with_config();
+    let lease = sdk_testing::user("lease-2");
+    let envelope_bytes = encode_envelope(&envelope_with_close_lease(&lease));
+    let ack_bytes = StdAck::error(ERROR_MESSAGE).to_binary();
+
+    let res = ibc_packet_ack(
+        deps.as_mut(),
+        testing::mock_env(),
+        ack_msg(envelope_bytes, ack_bytes),
+    )
+    .unwrap();
+
+    assert_dispatched_callback(
+        &lease,
+        RemoteLeaseCallback::OperationErr(
+            RemoteErrorMessage::new(ERROR_MESSAGE).expect("test fixture under the cap"),
+        ),
+        &res.messages,
+    );
+}
+
+#[test]
+fn packet_timeout_dispatches_operation_timeout() {
+    let mut deps = deps_with_config();
+    let lease = sdk_testing::user("lease-3");
+    let envelope_bytes = encode_envelope(&envelope_with_close_lease(&lease));
+
+    let res = ibc_packet_timeout(
+        deps.as_mut(),
+        testing::mock_env(),
+        timeout_msg(envelope_bytes),
+    )
+    .unwrap();
+
+    assert_dispatched_callback(&lease, RemoteLeaseCallback::OperationTimeout, &res.messages);
+}
+
+#[test]
+fn packet_ack_malformed_envelope_errors() {
+    let mut deps = deps_with_config();
+    let envelope_bytes = Binary::new(b"not-an-envelope".to_vec());
+    let ack_bytes = StdAck::Success(Binary::new(b"{}".to_vec())).to_binary();
+
+    let err = ibc_packet_ack(
+        deps.as_mut(),
+        testing::mock_env(),
+        ack_msg(envelope_bytes, ack_bytes),
+    )
+    .unwrap_err();
+
+    assert!(matches!(err, Error::Std(_)), "got {err:?}");
+}
+
+#[test]
+fn packet_timeout_malformed_envelope_errors() {
+    let mut deps = deps_with_config();
+    let envelope_bytes = Binary::new(b"not-an-envelope".to_vec());
+
+    let err = ibc_packet_timeout(
+        deps.as_mut(),
+        testing::mock_env(),
+        timeout_msg(envelope_bytes),
+    )
+    .unwrap_err();
+
+    assert!(matches!(err, Error::Std(_)), "got {err:?}");
+}
+
+#[test]
+fn packet_ack_malformed_acknowledgement_errors() {
+    let mut deps = deps_with_config();
+    let lease = sdk_testing::user("lease-4");
+    let envelope_bytes = encode_envelope(&envelope_with_close_lease(&lease));
+    let ack_bytes = Binary::new(b"not-a-std-ack".to_vec());
+
+    let err = ibc_packet_ack(
+        deps.as_mut(),
+        testing::mock_env(),
+        ack_msg(envelope_bytes, ack_bytes),
+    )
+    .unwrap_err();
+
+    assert!(matches!(err, Error::Std(_)), "got {err:?}");
+}
+
+#[test]
+fn packet_ack_success_with_malformed_response_errors() {
+    let mut deps = deps_with_config();
+    let lease = sdk_testing::user("lease-5");
+    let envelope_bytes = encode_envelope(&envelope_with_close_lease(&lease));
+    let ack_bytes = StdAck::Success(Binary::new(b"not-an-operation-response".to_vec())).to_binary();
+
+    let err = ibc_packet_ack(
+        deps.as_mut(),
+        testing::mock_env(),
+        ack_msg(envelope_bytes, ack_bytes),
+    )
+    .unwrap_err();
+
+    assert!(matches!(err, Error::Std(_)), "got {err:?}");
+}
+
+#[test]
+fn dispatched_callback_wire_shape_pinned() {
+    let mut deps = deps_with_config();
+    let lease = sdk_testing::user("lease-wire");
+    let envelope_bytes = encode_envelope(&envelope_with_close_lease(&lease));
+
+    let res = ibc_packet_timeout(
+        deps.as_mut(),
+        testing::mock_env(),
+        timeout_msg(envelope_bytes),
+    )
+    .unwrap();
+
+    let SubMsg { msg, .. } = res.messages.into_iter().next().expect("one message");
+    let CosmosMsg::Wasm(WasmMsg::Execute { msg, .. }) = msg else {
+        panic!("expected WasmMsg::Execute, got {msg:?}");
+    };
+
+    // Pin the JSON the lease contract must accept. Any drift in the enum tag
+    // breaks the wire contract between this controller and the lease-side
+    // `ExecuteMsg::RemoteLeaseCallback` variant.
+    assert_eq!(
+        br#"{"remote_lease_callback":"operation_timeout"}"#,
+        msg.as_slice(),
+    );
+}
+
+#[test]
+fn packet_ack_malformed_lease_addr_in_envelope_errors() {
+    let mut deps = deps_with_config();
+    let envelope = PacketEnvelope {
+        lease: LeaseAddrOnWire::new("NOT_BECH32!"),
+        operation: Operation::CloseLease(CloseLeaseParams {}),
+        version: ProtocolVersion,
+    };
+    let envelope_bytes = cosmwasm_std::to_json_binary(&envelope).expect("envelope serialises");
+    let response = OperationResponse::CloseLease(CloseLeaseResponse {});
+    let ack_bytes = StdAck::Success(cosmwasm_std::to_json_binary(&response).unwrap()).to_binary();
+
+    let err = ibc_packet_ack(
+        deps.as_mut(),
+        testing::mock_env(),
+        ack_msg(envelope_bytes, ack_bytes),
+    )
+    .unwrap_err();
+
+    assert!(matches!(err, Error::Std(_)), "got {err:?}");
+}
+
+#[test]
+fn packet_timeout_malformed_lease_addr_in_envelope_errors() {
+    let mut deps = deps_with_config();
+    let envelope = PacketEnvelope {
+        lease: LeaseAddrOnWire::new("NOT_BECH32!"),
+        operation: Operation::CloseLease(CloseLeaseParams {}),
+        version: ProtocolVersion,
+    };
+    let envelope_bytes = cosmwasm_std::to_json_binary(&envelope).expect("envelope serialises");
+
+    let err = ibc_packet_timeout(
+        deps.as_mut(),
+        testing::mock_env(),
+        timeout_msg(envelope_bytes),
+    )
+    .unwrap_err();
+
+    assert!(matches!(err, Error::Std(_)), "got {err:?}");
+}
+
+// Inbound-ack fixtures per ADR 0001 §3.5. The bytes the controller must accept
+// from the Solana counterparty live under `tests/fixtures/` so they survive as
+// a frozen, byte-exact reference even if the inline wire-types tests in the
+// shared `remote_lease` crate ever drift. See `tests/fixtures/README.md` for
+// regeneration steps and the placeholder note (Solana-emitted bytes are TBD).
+#[test]
+fn fixture_stdack_success_open_lease_decodes_to_callback() {
+    const FIXTURE_REMOTE_LEASE_ID: &str = "sol-lease-fixture-0001";
+    const ACK_BYTES: &[u8] =
+        include_bytes!("../../../tests/fixtures/stdack_success_open_lease.bin");
+    let response = OperationResponse::OpenLease(OpenLeaseResponse {
+        remote_lease_id: FIXTURE_REMOTE_LEASE_ID.into(),
+    });
+
+    let computed = StdAck::Success(cosmwasm_std::to_json_binary(&response).unwrap()).to_binary();
+    assert_eq!(
+        ACK_BYTES,
+        computed.as_slice(),
+        "fixture must match the canonical wire shape"
+    );
+
+    let mut deps = deps_with_config();
+    let lease = sdk_testing::user("lease-fixture");
+    let envelope_bytes = encode_envelope(&envelope_with_close_lease(&lease));
+    let res = ibc_packet_ack(
+        deps.as_mut(),
+        testing::mock_env(),
+        ack_msg(envelope_bytes, Binary::new(ACK_BYTES.to_vec())),
+    )
+    .unwrap();
+    assert_dispatched_callback(
+        &lease,
+        RemoteLeaseCallback::OperationOk(response),
+        &res.messages,
+    );
+}
+
+#[test]
+fn fixture_stdack_error_decodes_to_callback() {
+    const FIXTURE_ERROR_MESSAGE: &str = "dex pool drained";
+    const ACK_BYTES: &[u8] = include_bytes!("../../../tests/fixtures/stdack_error.bin");
+
+    let computed = StdAck::error(FIXTURE_ERROR_MESSAGE).to_binary();
+    assert_eq!(
+        ACK_BYTES,
+        computed.as_slice(),
+        "fixture must match the canonical wire shape"
+    );
+
+    let mut deps = deps_with_config();
+    let lease = sdk_testing::user("lease-fixture-err");
+    let envelope_bytes = encode_envelope(&envelope_with_close_lease(&lease));
+    let res = ibc_packet_ack(
+        deps.as_mut(),
+        testing::mock_env(),
+        ack_msg(envelope_bytes, Binary::new(ACK_BYTES.to_vec())),
+    )
+    .unwrap();
+    assert_dispatched_callback(
+        &lease,
+        RemoteLeaseCallback::OperationErr(
+            RemoteErrorMessage::new(FIXTURE_ERROR_MESSAGE).expect("under the cap"),
+        ),
+        &res.messages,
+    );
+}
+
+#[test]
+fn packet_ack_oversized_error_message_errors() {
+    let mut deps = deps_with_config();
+    let lease = sdk_testing::user("lease-6");
+    let envelope_bytes = encode_envelope(&envelope_with_close_lease(&lease));
+    let oversized = "x".repeat(OPERATION_ERR_MAX_BYTES + 1);
+    let ack_bytes = StdAck::error(oversized).to_binary();
+
+    let err = ibc_packet_ack(
+        deps.as_mut(),
+        testing::mock_env(),
+        ack_msg(envelope_bytes, ack_bytes),
+    )
+    .unwrap_err();
+
+    assert!(matches!(err, Error::RemoteCallback(_)), "got {err:?}");
+}
+
+fn envelope_with_close_lease(lease: &Addr) -> PacketEnvelope {
+    PacketEnvelope {
+        lease: LeaseAddrOnWire::new(lease.as_str()),
+        operation: Operation::CloseLease(CloseLeaseParams {}),
+        version: ProtocolVersion,
+    }
+}
+
+fn encode_envelope(envelope: &PacketEnvelope) -> Binary {
+    cosmwasm_std::to_json_binary(envelope).expect("envelope must serialise")
+}
+
+fn ack_msg(envelope_bytes: Binary, ack_bytes: Binary) -> IbcPacketAckMsg {
+    IbcPacketAckMsg::new(
+        IbcAcknowledgement::new(ack_bytes),
+        outbound_packet(envelope_bytes),
+        sdk_testing::user("relayer"),
+    )
+}
+
+fn timeout_msg(envelope_bytes: Binary) -> IbcPacketTimeoutMsg {
+    IbcPacketTimeoutMsg::new(
+        outbound_packet(envelope_bytes),
+        sdk_testing::user("relayer"),
+    )
+}
+
+fn outbound_packet(data: Binary) -> IbcPacket {
+    IbcPacket::new(
+        data,
+        IbcEndpoint {
+            port_id: LOCAL_PORT_ID.into(),
+            channel_id: LOCAL_CHANNEL_ID.into(),
+        },
+        IbcEndpoint {
+            port_id: COUNTERPARTY_PORT_ID.into(),
+            channel_id: COUNTERPARTY_CHANNEL_ID.into(),
+        },
+        1,
+        IbcTimeout::with_timestamp(Timestamp::from_seconds(1)),
+    )
+}
+
+fn assert_dispatched_callback(
+    expected_lease: &Addr,
+    expected_callback: RemoteLeaseCallback,
+    messages: &[SubMsg],
+) {
+    assert_eq!(1, messages.len(), "expected one dispatched message");
+    match &messages[0].msg {
+        CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr,
+            msg,
+            funds,
+        }) => {
+            assert_eq!(expected_lease.as_str(), contract_addr);
+            assert!(funds.is_empty(), "callback must carry no funds");
+            let expected_msg = cosmwasm_std::to_json_binary(&LeaseExecuteMsg::RemoteLeaseCallback(
+                expected_callback,
+            ))
+            .expect("expected callback must serialise");
+            assert_eq!(&expected_msg, msg);
+        }
+        other => panic!("expected WasmMsg::Execute, got {other:?}"),
+    }
+}

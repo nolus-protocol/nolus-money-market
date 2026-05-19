@@ -121,6 +121,14 @@ mod test {
     }
 
     #[test]
+    fn update_lease_code_when_storage_empty_errors() {
+        let mut store = MockStorage::new();
+        let err = Config::update_lease_code(&mut store, Code::unchecked(7)).unwrap_err();
+        assert!(matches!(err, Error::Std(_)), "got {err:?}");
+        assert!(Config::load(&store).is_err());
+    }
+
+    #[test]
     fn auth_caller_matching_code() {
         let lease_code = Code::unchecked(11);
         let lease = sdk_testing::user(LEASE_USER);
