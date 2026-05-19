@@ -79,3 +79,28 @@ If `A` also has a higher-level feature (e.g. `contract = [..., "stub"]`) that al
 **Reviewer check:** any new `stub` (or test-helper / mock) feature on a contract crate that depends on a workspace crate exposing the same-named feature must propagate explicitly. Greppable: `git grep -n '^stub = \[\]$' protocol/contracts` should be empty.
 
 Tried first (did not work): `stub = []` on the contract crate, expecting Cargo to forward by name.
+
+### Pre-push lint: `cargo lint-all`, not `cargo lint`
+
+**Symptom:** `cargo lint` passes locally, CI's "Lint codebase with tests" job fails with errors in `#[cfg(test)]` code — e.g. an unresolved test-only path like `versioning::ReleaseId::new_test` under a feature combination that does not activate `versioning/testing`.
+
+**Cause:** The repo has two distinct CI lint jobs, mirroring two distinct aliases in `/.cargo/config.toml`:
+
+- `lint = "each --tag ci run --print-command -- clippy --locked"` — runs every cargo-each feature combination **without** `--all-targets`. Test binaries are not compiled. `cfg(test) = false`. Any compile error gated `#[cfg(test)]` is invisible.
+- `lint-all = "each --tag ci run --print-command -- clippy --all-targets --locked"` — same matrix, **with** `--all-targets`. Test binaries compile under every combination. `cfg(test) = true`. This catches errors in `mod tests {}` blocks that only surface under feature combinations the test was not authored against.
+
+CI runs both. Running only `cargo lint` locally and assuming "lint passes ⇒ ready to push" misses every cross-combination test-compile bug.
+
+A second trap: `cargo test --features contract,testing` and `cargo clippy --features contract,testing --all-targets` both exercise test code, but only in the union combo. Test code that references symbols gated on `versioning/testing` (or any other dev-only feature) will compile under `contract,testing` but fail under `contract` alone — which CI's lint-with-tests matrix exercises.
+
+**Fix / pre-push checklist:** before `git push` on any branch that touches `#[cfg(test)]` or `[dev-dependencies]`, run **both**:
+
+```
+cargo lint           # all combos, library only
+cargo lint-all       # all combos, library + tests + bins + examples
+cargo run-test       # tests across every CI feature combo
+```
+
+If `cargo lint-all` errors only under specific combinations, fix the root cause by activating the needed dev-only feature via `[dev-dependencies]` (Cargo unifies dev-dep features with regular-dep features whenever test/all-targets builds run) rather than wiring the test-only feature into the crate's own `[features]` table — the latter only helps when the consumer explicitly passes that feature flag, and CI's matrix doesn't.
+
+Tried first (did not catch the bug): `cargo lint` + `cargo clippy --features contract,testing --all-targets` + `cargo test --features contract,testing`. None of these compile test code under the `--features contract` (alone) combination that CI exercises.
