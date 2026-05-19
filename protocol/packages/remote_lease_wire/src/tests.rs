@@ -353,8 +353,7 @@ fn transfer_out_params_deserialize_zero_rejected() {
 #[test]
 fn wire_coin_deserialize_empty_amount_rejected() {
     let bad_wire = r#"{"amount":"","ticker":"NLS"}"#;
-    serde_json::from_str::<WireCoin>(bad_wire)
-        .expect_err("empty amount must fail deserialization");
+    serde_json::from_str::<WireCoin>(bad_wire).expect_err("empty amount must fail deserialization");
 }
 
 #[test]

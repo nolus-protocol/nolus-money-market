@@ -29,10 +29,8 @@ use remote_lease::{
 };
 
 use remote_lease_wire::{
-    callback::RemoteLeaseCallback as WireCallback,
-    envelope::PacketEnvelope as WireEnvelope,
-    msg::Operation as WireOperation,
-    response::OperationResponse as WireResponse,
+    callback::RemoteLeaseCallback as WireCallback, envelope::PacketEnvelope as WireEnvelope,
+    msg::Operation as WireOperation, response::OperationResponse as WireResponse,
 };
 
 #[test]
@@ -42,7 +40,9 @@ fn operation_open_lease_byte_identical() {
 
 #[test]
 fn operation_close_lease_byte_identical() {
-    assert_cross_surface_eq::<Operation, WireOperation>(&Operation::CloseLease(CloseLeaseParams {}));
+    assert_cross_surface_eq::<Operation, WireOperation>(&Operation::CloseLease(
+        CloseLeaseParams {},
+    ));
 }
 
 #[test]
@@ -123,7 +123,10 @@ where
     let wire: W =
         serde_json::from_str(&typed_json).expect("wire crate must accept typed-emitted JSON");
     let wire_json = serde_json::to_string(&wire).expect("wire serialization");
-    assert_eq!(typed_json, wire_json, "wire round-trip must be byte-identical");
+    assert_eq!(
+        typed_json, wire_json,
+        "wire round-trip must be byte-identical"
+    );
 }
 
 fn open_lease() -> OpenLeaseParams {
