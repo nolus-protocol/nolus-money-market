@@ -1,6 +1,6 @@
 use remote_lease::{
     callback::{RemoteErrorMessage, RemoteLeaseCallback},
-    envelope::PacketEnvelope,
+    envelope::{NolusLeaseAddr, PacketEnvelope},
     response::OperationResponse,
 };
 use sdk::{

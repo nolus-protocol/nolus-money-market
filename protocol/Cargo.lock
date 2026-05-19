@@ -1409,6 +1409,7 @@ dependencies = [
  "currency",
  "finance",
  "platform",
+ "remote_lease_wire",
  "sdk",
  "serde",
  "serde_json",
@@ -1431,6 +1432,15 @@ dependencies = [
  "serde",
  "thiserror 2.0.18",
  "versioning",
+]
+
+[[package]]
+name = "remote_lease_wire"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "thiserror 2.0.18",
 ]
 
 [[package]]
