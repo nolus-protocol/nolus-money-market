@@ -142,6 +142,19 @@ fn migrate_same_release_succeeds() {
 }
 
 #[test]
+fn migrate_mismatched_to_release_id_propagates_update_software_error() {
+    let mut deps = deps();
+    instantiate_default(deps.as_mut());
+    let mut msg = migrate_msg();
+    msg.to_release = ProtocolPackageReleaseId::new(
+        ReleaseId::new_test("not-the-build-id"),
+        ReleaseId::new_test("not-the-build-id"),
+    );
+    let err = migrate(deps.as_mut(), testing::mock_env(), msg).unwrap_err();
+    assert!(matches!(err, Error::UpdateSoftware(_)), "got {err:?}");
+}
+
+#[test]
 fn query_protocol_package_release_returns_current() {
     let deps = deps();
     let raw = query(
@@ -650,6 +663,10 @@ fn deps_with_failing_code_info() -> OwnedDeps<MockStorage, MockApi, MockQuerier>
 }
 
 fn migrate_msg() -> ProtocolMigrationMessage<MigrateMsg> {
+    // Both env vars are supplied by `protocol/.cargo/config.toml` (see RUNBOOK
+    // entry "Cargo / cargo config override entry for SOFTWARE_RELEASE_ID").
+    // Running `cargo test` from outside the protocol workspace will fail to
+    // compile this file with a missing-env-var error.
     const SOFTWARE_ID: &str = env!("SOFTWARE_RELEASE_ID");
     const PROTOCOL_ID: &str = env!("PROTOCOL_RELEASE_ID");
     let release = ProtocolPackageRelease::current(
@@ -828,10 +845,7 @@ fn drive_open_lease(deps: DepsMut<'_>) -> Binary {
 
 fn handshake_channel() -> IbcChannel {
     IbcChannel::new(
-        IbcEndpoint {
-            port_id: format!("wasm.{}", testing::mock_env().contract.address),
-            channel_id: LOCAL_CHANNEL_ID.into(),
-        },
+        local_endpoint(),
         IbcEndpoint {
             port_id: COUNTERPARTY_PORT_ID.into(),
             channel_id: COUNTERPARTY_CHANNEL_ID.into(),
@@ -842,20 +856,25 @@ fn handshake_channel() -> IbcChannel {
     )
 }
 
+fn local_endpoint() -> IbcEndpoint {
+    IbcEndpoint {
+        port_id: format!("wasm.{}", testing::mock_env().contract.address),
+        channel_id: LOCAL_CHANNEL_ID.into(),
+    }
+}
+
 fn ack_msg_with(envelope_bytes: Binary, ack_bytes: Binary) -> IbcPacketAckMsg {
+    const PACKET_SEQUENCE: u64 = 1;
     IbcPacketAckMsg::new(
         IbcAcknowledgement::new(ack_bytes),
         IbcPacket::new(
             envelope_bytes,
-            IbcEndpoint {
-                port_id: format!("wasm.{}", testing::mock_env().contract.address),
-                channel_id: LOCAL_CHANNEL_ID.into(),
-            },
+            local_endpoint(),
             IbcEndpoint {
                 port_id: COUNTERPARTY_PORT_ID.into(),
                 channel_id: COUNTERPARTY_CHANNEL_ID.into(),
             },
-            1,
+            PACKET_SEQUENCE,
             IbcTimeout::with_timestamp(Timestamp::from_seconds(1)),
         ),
         sdk_testing::user("relayer"),
