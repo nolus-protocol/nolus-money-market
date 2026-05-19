@@ -21,6 +21,23 @@ Then re-run `SOFTWARE_RELEASE_ID=dev-release cargo build`.
 
 Tried first (did not work): `cargo build` from the bare worktree; setting `SOFTWARE_RELEASE_ID` alone.
 
+### Setting `SOFTWARE_RELEASE_ID` (and friends) without polluting the repo
+
+**Symptom:** Tempting to add an `[env]` block to the repo-tracked `/.cargo/config.toml` so `cargo build` works without exporting `SOFTWARE_RELEASE_ID`. Diff-review rejects this — the value is developer-local, not a project default.
+
+**Cause:** Cargo walks upward from the invocation directory and merges every `.cargo/config.toml` it finds. The repo-level one is tracked; anything checked in there becomes the default for everyone.
+
+**Fix:** Put developer-local env in `protocol/.cargo/config.toml` (or any nested workspace `.cargo/config.toml`). `.gitignore:13` already excludes `**/.cargo` while keeping the tracked root file (`!/.cargo/`), so the override is automatically ignored. Cargo merges nested files over the root one when invoked from the protocol workspace.
+
+Example `protocol/.cargo/config.toml`:
+
+```
+[env]
+SOFTWARE_RELEASE_ID = "dev-release"
+```
+
+Tried first (rejected at review): editing the tracked `/.cargo/config.toml`.
+
 ## CosmWasm
 
 ### `CosmosMsg::Any` rejected by the WASM optimizer's `cosmwasm-check` step
