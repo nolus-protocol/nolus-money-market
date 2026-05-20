@@ -33,6 +33,9 @@ pub struct NewLeaseContract {
     ///
     /// The finalizer API should provide all `FinalizerExecuteMsg` variants.
     pub finalizer: Addr,
+    /// The remote-lease controller authorised to dispatch
+    /// `ExecuteMsg::RemoteLeaseCallback` to this lease.
+    pub remote_lease: Addr,
 }
 
 #[derive(Serialize, Clone, PartialEq, Eq)]

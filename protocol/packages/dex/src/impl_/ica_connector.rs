@@ -114,6 +114,17 @@ where
     type Response = Connectee::State;
     type SwapResult = SwapResult;
 
+    fn authz_remote_lease_callback(
+        &self,
+        info: &sdk::cosmwasm_std::MessageInfo,
+    ) -> crate::error::Result<()> {
+        crate::impl_::response::check_remote_lease_callback(
+            self.connectee.remote_lease(),
+            info,
+            self,
+        )
+    }
+
     fn on_open_ica(
         self,
         counterparty_version: String,

@@ -14,8 +14,8 @@ use sdk::{
     },
 };
 use versioning::{
-    ProtocolMigrationMessage, ProtocolPackageRelease, UpdatablePackage as _, VersionSegment,
-    package_name, package_version,
+    ProtocolMigrationMessage, ProtocolPackageRelease, VersionSegment, package_name,
+    package_version,
 };
 
 use crate::{
@@ -27,7 +27,7 @@ use crate::{
 use super::state::{self, Response, State};
 use cw_time::IntoInstant;
 
-const CONTRACT_STORAGE_VERSION: VersionSegment = 9;
+const CONTRACT_STORAGE_VERSION: VersionSegment = 10;
 const CURRENT_RELEASE: ProtocolPackageRelease = ProtocolPackageRelease::current(
     package_name!(),
     package_version!(),
@@ -50,6 +50,7 @@ pub fn instantiate(
     addr_validator.check_contract(&new_lease.form.market_price_oracle)?;
     addr_validator.check_contract(&new_lease.form.loan.lpp)?;
     addr_validator.check_contract(&new_lease.form.loan.profit)?;
+    addr_validator.check_contract(&new_lease.remote_lease)?;
 
     state::new_lease(deps.querier, info, new_lease)
         .and_then(|(batch, next_state)| state::save(deps.storage, &next_state).map(|()| batch))
@@ -61,17 +62,14 @@ pub fn instantiate(
 pub fn migrate(
     deps: DepsMut<'_>,
     _env: Env,
-    ProtocolMigrationMessage {
-        migrate_from,
-        to_release,
-        message: MigrateMsg {},
-    }: ProtocolMigrationMessage<MigrateMsg>,
+    _msg: ProtocolMigrationMessage<MigrateMsg>,
 ) -> ContractResult<CwResponse> {
-    migrate_from
-        .update_software(&CURRENT_RELEASE, &to_release)
-        .map(|()| response::empty_response())
-        .map_err(ContractError::UpdateSoftware)
-        .inspect_err(platform_error::log(deps.api))
+    // v10 adds the `remote_lease` controller address to the on-chain Lease
+    // state. No existing pre-v10 instance is planned to be carried across the
+    // protocol cut-over — a fresh deployment is required. Reject any migrate
+    // call explicitly so an accidental upgrade attempt fails loudly rather
+    // than silently leaving the field uninitialised.
+    Err(ContractError::UnsupportedMigration).inspect_err(platform_error::log(deps.api))
 }
 
 #[entry_point]
@@ -166,6 +164,9 @@ fn process_execute(
                 &info,
             )?;
             state.on_dex_inner_continue(querier, env)
+        }
+        ExecuteMsg::RemoteLeaseCallback(callback) => {
+            state.on_remote_lease_callback(callback, info, querier, env)
         }
         ExecuteMsg::Heal() => state.heal(querier, env, info),
     }

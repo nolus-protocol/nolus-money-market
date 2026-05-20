@@ -172,6 +172,21 @@ mod impl_handler {
         type Response = Self;
         type SwapResult = SwapTask::Result;
 
+        fn authz_remote_lease_callback(
+            &self,
+            info: &sdk::cosmwasm_std::MessageInfo,
+        ) -> crate::error::Result<()> {
+            match self {
+                State::TransferOut(inner) => inner.authz_remote_lease_callback(info),
+                State::TransferOutRespDelivery(inner) => inner.authz_remote_lease_callback(info),
+                State::SwapExactIn(inner) => inner.authz_remote_lease_callback(info),
+                State::SwapExactInRespDelivery(inner) => inner.authz_remote_lease_callback(info),
+                State::TransferInInit(inner) => inner.authz_remote_lease_callback(info),
+                State::TransferInInitRespDelivery(inner) => inner.authz_remote_lease_callback(info),
+                State::TransferInFinish(inner) => inner.authz_remote_lease_callback(info),
+            }
+        }
+
         fn on_open_ica(
             self,
             counterparty_version: String,

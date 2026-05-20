@@ -135,6 +135,13 @@ where
     type Response = SEnum;
     type SwapResult = SwapTask::Result;
 
+    fn authz_remote_lease_callback(
+        &self,
+        info: &sdk::cosmwasm_std::MessageInfo,
+    ) -> crate::error::Result<()> {
+        crate::impl_::response::check_remote_lease_callback(self.spec.remote_lease(), info, self)
+    }
+
     fn on_response(
         self,
         _data: Binary,

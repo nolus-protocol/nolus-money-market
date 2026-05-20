@@ -1015,6 +1015,7 @@ dependencies = [
  "oracle-platform",
  "platform",
  "profit",
+ "remote_lease",
  "reserve",
  "sdk",
  "serde",

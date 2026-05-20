@@ -8,6 +8,7 @@ use finance::duration::Duration;
 use platform::{
     batch::Batch, ica::ErrorResponse as ICAErrorResponse, message::Response as MessageResponse,
 };
+use remote_lease::callback::RemoteLeaseCallback;
 use sdk::{
     cosmwasm_std::{Binary, Env, MessageInfo, QuerierWrapper, Reply, Storage},
     cw_storage_plus::Item,

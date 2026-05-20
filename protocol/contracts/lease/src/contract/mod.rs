@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 use dex::{Account, Connectable, ConnectionParams};
-use sdk::cosmwasm_std::QuerierWrapper;
+use sdk::cosmwasm_std::{Addr, QuerierWrapper};
 
 use crate::{
     lease::{LeaseDTO, with_lease::WithLease},
@@ -25,6 +25,7 @@ pub(crate) struct Lease {
     lease: LeaseDTO,
     dex: Account,
     leases: LeasesRef,
+    remote_lease: Addr,
 }
 
 pub(crate) struct LeaseDTOResult<Result> {
@@ -33,8 +34,17 @@ pub(crate) struct LeaseDTOResult<Result> {
 }
 
 impl Lease {
-    fn new(lease: LeaseDTO, dex: Account, leases: LeasesRef) -> Self {
-        Self { lease, dex, leases }
+    fn new(lease: LeaseDTO, dex: Account, leases: LeasesRef, remote_lease: Addr) -> Self {
+        Self {
+            lease,
+            dex,
+            leases,
+            remote_lease,
+        }
+    }
+
+    fn remote_lease(&self) -> &Addr {
+        &self.remote_lease
     }
 
     fn update<Cmd, CmdResult>(
@@ -51,7 +61,7 @@ impl Lease {
     {
         self.lease.execute(cmd, querier).map(|result| {
             (
-                Self::new(result.lease, self.dex, self.leases),
+                Self::new(result.lease, self.dex, self.leases, self.remote_lease),
                 result.result,
             )
         })

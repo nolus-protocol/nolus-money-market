@@ -1045,6 +1045,7 @@ dependencies = [
  "oracle-platform",
  "platform",
  "profit",
+ "remote_lease",
  "reserve",
  "sdk",
  "serde",
@@ -1419,6 +1420,17 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn",
+]
+
+[[package]]
+name = "remote_lease"
+version = "0.1.0"
+dependencies = [
+ "currencies",
+ "currency",
+ "finance",
+ "serde",
+ "thiserror 2.0.18",
 ]
 
 [[package]]

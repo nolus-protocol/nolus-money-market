@@ -4,12 +4,13 @@ use dex::{Contract as DexContract, Handler as DexHandler};
 use finance::duration::Duration;
 use finance::instant::Instant;
 use platform::{ica::ErrorResponse as ICAErrorResponse, state_machine};
-use sdk::cosmwasm_std::{Binary, Env, MessageInfo, QuerierWrapper, Reply};
+use remote_lease::callback::RemoteLeaseCallback;
+use sdk::cosmwasm_std::{self, Binary, Env, MessageInfo, QuerierWrapper, Reply};
 
 use crate::{
     api::query::StateResponse as QueryStateResponse,
     contract::{api::Contract, state::StateResponse as ContractStateResponse},
-    error::ContractResult,
+    error::{ContractError, ContractResult},
 };
 
 use super::{Response, State as ContractState};
@@ -70,6 +71,24 @@ where
             .map_err(Into::into)
     }
 
+    fn on_remote_lease_callback(
+        self,
+        callback: RemoteLeaseCallback,
+        info: MessageInfo,
+        querier: QuerierWrapper<'_>,
+        env: Env,
+    ) -> ContractResult<Response> {
+        self.handler
+            .authz_remote_lease_callback(&info)
+            .map_err(ContractError::from)
+            .and_then(|()| classify_callback(callback))
+            .and_then(|dispatch| match dispatch {
+                CallbackDispatch::Response(data) => self.on_dex_response(data, querier, env),
+                CallbackDispatch::Error(details) => self.on_dex_error(details, querier, env),
+                CallbackDispatch::Timeout => self.on_dex_timeout(querier, env),
+            })
+    }
+
     fn on_dex_inner(self, querier: QuerierWrapper<'_>, env: Env) -> ContractResult<Response> {
         self.handler.on_inner(querier, env).into()
     }
@@ -126,5 +145,74 @@ where
         _info: MessageInfo,
     ) -> ContractResult<Response> {
         super::ignore_msg(self)
+    }
+}
+
+/// Per-variant landing target derived from a `RemoteLeaseCallback`.
+///
+/// Bridges the wire representation of the callback to the corresponding
+/// safe-delivery entry point on the dex state machine.
+enum CallbackDispatch {
+    Response(Binary),
+    Error(ICAErrorResponse),
+    Timeout,
+}
+
+/// Pure projection from a `RemoteLeaseCallback` variant to the
+/// `CallbackDispatch` shape consumed by `on_dex_response` / `on_dex_error` /
+/// `on_dex_timeout`.
+fn classify_callback(callback: RemoteLeaseCallback) -> ContractResult<CallbackDispatch> {
+    match callback {
+        RemoteLeaseCallback::OperationOk(response) => cosmwasm_std::to_json_binary(&response)
+            .map(CallbackDispatch::Response)
+            .map_err(Into::into),
+        RemoteLeaseCallback::OperationErr(message) => Ok(CallbackDispatch::Error(
+            ICAErrorResponse::from(message.as_str().to_owned()),
+        )),
+        RemoteLeaseCallback::OperationTimeout => Ok(CallbackDispatch::Timeout),
+    }
+}
+
+#[cfg(all(feature = "internal.test.contract", test))]
+mod tests {
+    use remote_lease::{
+        callback::{RemoteErrorMessage, RemoteLeaseCallback},
+        response::{CloseLeaseResponse, OperationResponse},
+    };
+    use sdk::cosmwasm_std;
+
+    use super::{CallbackDispatch, classify_callback};
+
+    #[test]
+    fn operation_ok_serialises_response_to_binary() {
+        let response = OperationResponse::CloseLease(CloseLeaseResponse {});
+        let dispatch =
+            classify_callback(RemoteLeaseCallback::OperationOk(response.clone())).unwrap();
+        let expected_bytes = cosmwasm_std::to_json_binary(&response).unwrap();
+        match dispatch {
+            CallbackDispatch::Response(actual) => assert_eq!(expected_bytes, actual),
+            CallbackDispatch::Error(_) => panic!("expected Response, got Error"),
+            CallbackDispatch::Timeout => panic!("expected Response, got Timeout"),
+        }
+    }
+
+    #[test]
+    fn operation_err_passes_message_verbatim() {
+        let message = RemoteErrorMessage::new("solana side rejected").expect("within length cap");
+        let dispatch = classify_callback(RemoteLeaseCallback::OperationErr(message)).unwrap();
+        match dispatch {
+            CallbackDispatch::Error(details) => assert_eq!(
+                "ICA error with details 'solana side rejected'",
+                format!("{details}"),
+            ),
+            CallbackDispatch::Response(_) => panic!("expected Error, got Response"),
+            CallbackDispatch::Timeout => panic!("expected Error, got Timeout"),
+        }
+    }
+
+    #[test]
+    fn operation_timeout_classifies_as_timeout() {
+        let dispatch = classify_callback(RemoteLeaseCallback::OperationTimeout).unwrap();
+        assert!(matches!(dispatch, CallbackDispatch::Timeout));
     }
 }

@@ -163,6 +163,10 @@ where
     type Response = H::Response;
     type SwapResult = H::SwapResult;
 
+    fn authz_remote_lease_callback(&self, info: &MessageInfo) -> DexResult<()> {
+        self.handler.authz_remote_lease_callback(info)
+    }
+
     fn on_inner(self, querier: QuerierWrapper<'_>, env: Env) -> Result<Self> {
         // the errors from the response delivery herebelow and from a sub-message would be
         // reported in the `fn reply`

@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 use currencies::{LeaseGroup, PaymentGroup};
 use finance::coin::CoinDTO;
 use position::ClosePolicyChange;
+use remote_lease::callback::RemoteLeaseCallback;
 use sdk::cosmwasm_std::Addr;
 
 use self::position::PositionClose;
@@ -83,6 +84,17 @@ pub enum ExecuteMsg {
     /// Invoked always by the same contract instance.
     DexCallbackContinue(),
 
+    /// A callback delivering the outcome of a remote-lease operation
+    ///
+    /// Invoked by the configured `remote_lease` controller contract after it
+    /// receives an IBC ack or timeout for an operation it dispatched on this
+    /// lease's behalf. The handler gates on `info.sender == remote_lease`,
+    /// persists a delivery state holding the callback, emits a
+    /// `SubMsg::reply_on_error` self-message that runs the inner work via the
+    /// existing `DexCallback` path, and returns `Ok` so the controller's
+    /// `ibc_packet_ack` commits.
+    RemoteLeaseCallback(RemoteLeaseCallback),
+
     /// Heal a lease past a middleware failure
     ///
     /// It cures a lease in the following cases:
@@ -101,12 +113,72 @@ pub enum FinalizerExecuteMsg {
 
 #[cfg(all(feature = "internal.test.skel", test))]
 mod test {
+    use remote_lease::{
+        callback::{RemoteErrorMessage, RemoteLeaseCallback},
+        response::{CloseLeaseResponse, OperationResponse},
+    };
     use sdk::cosmwasm_std;
 
     use crate::api::{
         ExecuteMsg,
         position::{FullClose, PositionClose},
     };
+
+    #[test]
+    fn test_remote_lease_callback_timeout_representation() {
+        let msg = ExecuteMsg::RemoteLeaseCallback(RemoteLeaseCallback::OperationTimeout);
+        let bin = cosmwasm_std::to_json_vec(&msg).expect("serialization failed");
+        assert_eq!(
+            msg,
+            cosmwasm_std::from_json(&bin).expect("deserialization failed"),
+        );
+
+        assert_eq!(
+            msg,
+            cosmwasm_std::from_json("{\"remote_lease_callback\":\"operation_timeout\"}")
+                .expect("deserialization failed"),
+        );
+    }
+
+    #[test]
+    fn test_remote_lease_callback_operation_ok_representation() {
+        let msg = ExecuteMsg::RemoteLeaseCallback(RemoteLeaseCallback::OperationOk(
+            OperationResponse::CloseLease(CloseLeaseResponse {}),
+        ));
+        let bin = cosmwasm_std::to_json_vec(&msg).expect("serialization failed");
+        assert_eq!(
+            msg,
+            cosmwasm_std::from_json(&bin).expect("deserialization failed"),
+        );
+
+        assert_eq!(
+            msg,
+            cosmwasm_std::from_json(
+                "{\"remote_lease_callback\":{\"operation_ok\":{\"close_lease\":{}}}}"
+            )
+            .expect("deserialization failed"),
+        );
+    }
+
+    #[test]
+    fn test_remote_lease_callback_operation_err_representation() {
+        let msg = ExecuteMsg::RemoteLeaseCallback(RemoteLeaseCallback::OperationErr(
+            RemoteErrorMessage::new("solana side rejected").expect("within length cap"),
+        ));
+        let bin = cosmwasm_std::to_json_vec(&msg).expect("serialization failed");
+        assert_eq!(
+            msg,
+            cosmwasm_std::from_json(&bin).expect("deserialization failed"),
+        );
+
+        assert_eq!(
+            msg,
+            cosmwasm_std::from_json(
+                "{\"remote_lease_callback\":{\"operation_err\":\"solana side rejected\"}}"
+            )
+            .expect("deserialization failed"),
+        );
+    }
 
     #[test]
     fn test_repay_representation() {

@@ -1,7 +1,7 @@
 use currency::{CurrencyDef, Group, MemberOf};
 use finance::coin::{Coin, CoinDTO};
 use oracle::stub::SwapPath;
-use sdk::cosmwasm_std::{Env, QuerierWrapper};
+use sdk::cosmwasm_std::{Addr, Env, QuerierWrapper};
 use timealarms::stub::TimeAlarmsRef;
 
 use crate::{Account, AnomalyTreatment, slippage::WithCalculator};
@@ -25,6 +25,13 @@ where
     fn dex_account(&self) -> &Account;
     fn oracle(&self) -> &impl SwapPath<<Self::InG as Group>::TopG>;
     fn time_alarm(&self) -> &TimeAlarmsRef;
+    /// The remote-lease controller authorised to dispatch a
+    /// `RemoteLeaseCallback` to this task's owning contract, when one
+    /// applies. Tasks that do not participate in the remote-lease protocol
+    /// leave the default (`None`); inbound callbacks are rejected for them.
+    fn remote_lease(&self) -> Option<&Addr> {
+        None
+    }
 
     /// Provide the coins, at least one, this swap is about.
     /// The iteration is done always in the same order.

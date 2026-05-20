@@ -100,6 +100,12 @@ pub enum ContractError {
 
     #[error("[Lease] Failed to query Access Check")]
     CheckAccessQuery(StdError),
+
+    #[error(
+        "[Lease] Migration from a pre-v10 storage layout is not supported — \
+         deploy a fresh lease instead"
+    )]
+    UnsupportedMigration,
 }
 
 impl ContractError {

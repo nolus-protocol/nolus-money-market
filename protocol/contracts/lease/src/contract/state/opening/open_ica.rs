@@ -8,7 +8,7 @@ use dex::{
 };
 use finance::instant::Instant;
 use platform::batch::Batch;
-use sdk::cosmwasm_std::QuerierWrapper;
+use sdk::cosmwasm_std::{Addr, QuerierWrapper};
 use timealarms::stub::TimeAlarmsRef;
 
 use crate::{
@@ -63,7 +63,12 @@ impl IcaConnectee for OpenIcaAccount {
             self.loan,
             self.deps,
             self.start_opening_at,
+            self.new_lease.remote_lease,
         ))
+    }
+
+    fn remote_lease(&self) -> Option<&Addr> {
+        Some(&self.new_lease.remote_lease)
     }
 }
 

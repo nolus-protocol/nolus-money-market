@@ -19,7 +19,7 @@ use platform::{
     message::Response as MessageResponse,
     state_machine::Response as StateMachineResponse,
 };
-use sdk::cosmwasm_std::{Env, QuerierWrapper};
+use sdk::cosmwasm_std::{Addr, Env, QuerierWrapper};
 use timealarms::stub::TimeAlarmsRef;
 
 use crate::{
@@ -101,6 +101,10 @@ impl SwapTask for TransferIn {
 
     fn time_alarm(&self) -> &TimeAlarmsRef {
         &self.lease.lease.time_alarms
+    }
+
+    fn remote_lease(&self) -> Option<&Addr> {
+        Some(self.lease.remote_lease())
     }
 
     fn coins(&self) -> impl IntoIterator<Item = CoinDTO<Self::InG>> {

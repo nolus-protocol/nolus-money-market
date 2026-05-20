@@ -68,6 +68,7 @@ fn leaser_instantiate_msg(lease_code: Code, lpp: Addr) -> crate::msg::Instantiat
         },
         lease_admin: sdk_testing::user(LEASE_ADMIN),
         dex: dex_params(),
+        remote_lease: sdk_testing::user("remote_lease_controller"),
     }
 }
 
