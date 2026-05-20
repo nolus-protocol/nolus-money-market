@@ -88,11 +88,17 @@ pub enum ExecuteMsg {
     ///
     /// Invoked by the configured `remote_lease` controller contract after it
     /// receives an IBC ack or timeout for an operation it dispatched on this
-    /// lease's behalf. The handler gates on `info.sender == remote_lease`,
-    /// persists a delivery state holding the callback, emits a
-    /// `SubMsg::reply_on_error` self-message that runs the inner work via the
-    /// existing `DexCallback` path, and returns `Ok` so the controller's
-    /// `ibc_packet_ack` commits.
+    /// lease's behalf. Only the currently-pending dex sub-state of the lease
+    /// accepts the callback; it authorises `info.sender == remote_lease`,
+    /// classifies the variant, and forwards it through the existing
+    /// `on_dex_response` / `on_dex_error` / `on_dex_timeout` pipeline — which
+    /// itself enters the `ResponseDelivery` + `DexCallback` safe-delivery
+    /// machinery. Synchronous failures (auth mismatch, serialisation,
+    /// pre-`ResponseDelivery` storage faults) propagate as `Err` and revert
+    /// the controller's `ibc_packet_ack`, letting the relayer retry the same
+    /// ack; once `ResponseDelivery` state is persisted the controller's ack
+    /// commits and the inner work runs via the lease's own time-alarm
+    /// fallback on error.
     RemoteLeaseCallback(RemoteLeaseCallback),
 
     /// Heal a lease past a middleware failure

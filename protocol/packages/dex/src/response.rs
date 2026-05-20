@@ -207,14 +207,13 @@ mod test {
 
     use crate::error::Error;
 
-    use super::check_remote_lease_callback;
-
-    const STATE: &str = "test-state";
+    const DISPLAY_LABEL: &str = "test-state";
 
     #[test]
     fn no_controller_configured_is_unsupported() {
         let info = caller("anyone");
-        let err = check_remote_lease_callback(None, &info, &STATE).expect_err("expected rejection");
+        let err = super::check_remote_lease_callback(None, &info, &DISPLAY_LABEL)
+            .expect_err("expected rejection");
         assert!(
             matches!(err, Error::UnsupportedOperation(_, _)),
             "got {err:?}"
@@ -225,7 +224,7 @@ mod test {
     fn matching_sender_passes() {
         let controller = Addr::unchecked("controller");
         let info = caller("controller");
-        check_remote_lease_callback(Some(&controller), &info, &STATE)
+        super::check_remote_lease_callback(Some(&controller), &info, &DISPLAY_LABEL)
             .expect("matching sender must pass");
     }
 
@@ -233,7 +232,7 @@ mod test {
     fn mismatched_sender_is_unauthorized() {
         let controller = Addr::unchecked("controller");
         let info = caller("intruder");
-        let err = check_remote_lease_callback(Some(&controller), &info, &STATE)
+        let err = super::check_remote_lease_callback(Some(&controller), &info, &DISPLAY_LABEL)
             .expect_err("expected rejection");
         assert!(matches!(err, Error::Unauthorized(_)), "got {err:?}");
     }

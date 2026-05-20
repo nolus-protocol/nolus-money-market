@@ -71,6 +71,12 @@ pub enum ContractError {
     #[error("[Leaser] Failed to update software! Cause: {0}")]
     UpdateSoftware(versioning::Error),
 
+    #[error(
+        "[Leaser] Migration from a pre-v7 storage layout is not supported — \
+         deploy a fresh leaser instead"
+    )]
+    UnsupportedMigration,
+
     #[error("[Leaser] ParseError {err:?}")]
     Parsing { err: String },
 

@@ -52,13 +52,17 @@ where
         err("dex timeout")
     }
 
-    /// The entry point for safe delivery of a remote-lease callback
+    /// The entry point for a remote-lease callback
     ///
-    /// Authorises `info.sender` against this state's configured remote-lease
-    /// controller, then routes the variant to the existing `on_dex_response` /
-    /// `on_dex_error` / `on_dex_timeout` pipeline so the inner work is wrapped
-    /// in the same `ResponseDelivery` + `DexCallback` safe-delivery mechanism
-    /// used today.
+    /// Only the dex sub-state overrides this default to handle the callback:
+    /// it authorises `info.sender` against the configured controller, then
+    /// classifies the variant and forwards it through `on_dex_response` /
+    /// `on_dex_error` / `on_dex_timeout`, which themselves enter the existing
+    /// `ResponseDelivery` + `DexCallback` safe-delivery machinery. Every
+    /// other state rejects the callback with `UnsupportedOperation` — a
+    /// callback that arrives after the lease has left its dex sub-state
+    /// indicates either a relayer or middleware bug and must surface to the
+    /// controller so it can retry or alert.
     fn on_remote_lease_callback(
         self,
         _callback: RemoteLeaseCallback,

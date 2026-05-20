@@ -158,9 +158,6 @@ enum CallbackDispatch {
     Timeout,
 }
 
-/// Pure projection from a `RemoteLeaseCallback` variant to the
-/// `CallbackDispatch` shape consumed by `on_dex_response` / `on_dex_error` /
-/// `on_dex_timeout`.
 fn classify_callback(callback: RemoteLeaseCallback) -> ContractResult<CallbackDispatch> {
     match callback {
         RemoteLeaseCallback::OperationOk(response) => cosmwasm_std::to_json_binary(&response)
@@ -181,13 +178,13 @@ mod tests {
     };
     use sdk::cosmwasm_std;
 
-    use super::{CallbackDispatch, classify_callback};
+    use super::CallbackDispatch;
 
     #[test]
     fn operation_ok_serialises_response_to_binary() {
         let response = OperationResponse::CloseLease(CloseLeaseResponse {});
         let dispatch =
-            classify_callback(RemoteLeaseCallback::OperationOk(response.clone())).unwrap();
+            super::classify_callback(RemoteLeaseCallback::OperationOk(response.clone())).unwrap();
         let expected_bytes = cosmwasm_std::to_json_binary(&response).unwrap();
         match dispatch {
             CallbackDispatch::Response(actual) => assert_eq!(expected_bytes, actual),
@@ -199,7 +196,8 @@ mod tests {
     #[test]
     fn operation_err_passes_message_verbatim() {
         let message = RemoteErrorMessage::new("solana side rejected").expect("within length cap");
-        let dispatch = classify_callback(RemoteLeaseCallback::OperationErr(message)).unwrap();
+        let dispatch =
+            super::classify_callback(RemoteLeaseCallback::OperationErr(message)).unwrap();
         match dispatch {
             CallbackDispatch::Error(details) => assert_eq!(
                 "ICA error with details 'solana side rejected'",
@@ -212,7 +210,7 @@ mod tests {
 
     #[test]
     fn operation_timeout_classifies_as_timeout() {
-        let dispatch = classify_callback(RemoteLeaseCallback::OperationTimeout).unwrap();
+        let dispatch = super::classify_callback(RemoteLeaseCallback::OperationTimeout).unwrap();
         assert!(matches!(dispatch, CallbackDispatch::Timeout));
     }
 }

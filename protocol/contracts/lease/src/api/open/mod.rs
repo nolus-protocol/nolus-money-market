@@ -29,13 +29,13 @@ pub struct NewLeaseContract {
     pub form: NewLeaseForm,
     /// Connection parameters of a Dex capable to perform currency swaps
     pub dex: ConnectionParams,
+    /// The remote-lease controller authorised to dispatch
+    /// `ExecuteMsg::RemoteLeaseCallback` to this lease.
+    pub remote_lease: Addr,
     /// A contract to be notified when a lease just went into a final state
     ///
     /// The finalizer API should provide all `FinalizerExecuteMsg` variants.
     pub finalizer: Addr,
-    /// The remote-lease controller authorised to dispatch
-    /// `ExecuteMsg::RemoteLeaseCallback` to this lease.
-    pub remote_lease: Addr,
 }
 
 #[derive(Serialize, Clone, PartialEq, Eq)]

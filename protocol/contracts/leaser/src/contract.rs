@@ -17,8 +17,8 @@ use sdk::{
     },
 };
 use versioning::{
-    ProtocolMigrationMessage, ProtocolPackageRelease, ProtocolPackageReleaseId, UpdatablePackage,
-    VersionSegment, package_name, package_version,
+    ProtocolMigrationMessage, ProtocolPackageRelease, ProtocolPackageReleaseId, VersionSegment,
+    package_name, package_version,
 };
 
 use crate::{
@@ -74,17 +74,14 @@ pub fn instantiate(
 pub fn migrate(
     deps: DepsMut<'_>,
     _env: Env,
-    ProtocolMigrationMessage {
-        migrate_from,
-        to_release,
-        message: MigrateMsg {},
-    }: ProtocolMigrationMessage<MigrateMsg>,
+    _msg: ProtocolMigrationMessage<MigrateMsg>,
 ) -> ContractResult<Response> {
-    migrate_from
-        .update_software(&CURRENT_RELEASE, &to_release)
-        .map(|()| response::empty_response())
-        .map_err(ContractError::UpdateSoftware)
-        .inspect_err(platform_error::log(deps.api))
+    // v7 adds the `remote_lease` controller address to the on-chain Config.
+    // No existing pre-v7 instance is planned to be carried across the
+    // protocol cut-over — a fresh deployment is required. Reject any migrate
+    // call explicitly so an accidental upgrade attempt fails loudly rather
+    // than silently failing to deserialise the v6 Config on first read.
+    Err(ContractError::UnsupportedMigration).inspect_err(platform_error::log(deps.api))
 }
 
 #[entry_point]

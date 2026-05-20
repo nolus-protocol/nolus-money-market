@@ -43,7 +43,7 @@ impl Lease {
         }
     }
 
-    fn remote_lease(&self) -> &Addr {
+    const fn remote_lease(&self) -> &Addr {
         &self.remote_lease
     }
 
