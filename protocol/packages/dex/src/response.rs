@@ -214,8 +214,7 @@ mod test {
     #[test]
     fn no_controller_configured_is_unsupported() {
         let info = caller("anyone");
-        let err =
-            check_remote_lease_callback(None, &info, &STATE).expect_err("expected rejection");
+        let err = check_remote_lease_callback(None, &info, &STATE).expect_err("expected rejection");
         assert!(
             matches!(err, Error::UnsupportedOperation(_, _)),
             "got {err:?}"
