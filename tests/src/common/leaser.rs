@@ -105,6 +105,13 @@ impl Instantiator {
 
         let code_id = app.store_code(Box::new(endpoints));
 
+        // No remote_lease_controller contract is instantiated in the test
+        // harness. Reusing `reserve` as a stand-in satisfies the
+        // `check_contract` validator (it just needs an address that resolves
+        // to a registered contract); the integration tests do not exercise
+        // the `RemoteLeaseCallback` path itself.
+        let remote_lease = reserve.clone();
+
         let msg = InstantiateMsg {
             lease_code: CodeId::from(lease_code).into(),
             lpp,
@@ -127,6 +134,7 @@ impl Instantiator {
                     remote_endpoint: "channel-422".into(),
                 },
             },
+            remote_lease,
         };
 
         app.instantiate(code_id, testing::user(ADMIN), &msg, &[], "leaser", None)

@@ -116,6 +116,7 @@ impl Instantiator {
             },
             dex: config.dex,
             finalizer: addresses.finalizer,
+            remote_lease: addresses.remote_lease,
         }
     }
 }
@@ -198,6 +199,7 @@ pub struct InstantiatorAddresses {
     pub profit: Addr,
     pub reserve: Addr,
     pub finalizer: Addr,
+    pub remote_lease: Addr,
 }
 
 pub(crate) fn complete_initialization<DownpaymentC, Lpn>(

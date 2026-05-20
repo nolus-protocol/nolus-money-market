@@ -920,6 +920,7 @@ fn instantiate_lease<ProtReg, Tr>(
             profit: test_case.address_book.profit().clone(),
             reserve: test_case.address_book.reserve().clone(),
             finalizer: test_case.address_book.leaser().clone(),
+            remote_lease: test_case.address_book.reserve().clone(),
         },
         LeaseInitConfig::new(
             currency::dto::<LeaseCurrency, _>(),
