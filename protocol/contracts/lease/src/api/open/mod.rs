@@ -20,6 +20,10 @@ use super::LeaseAssetCurrencies;
 #[cfg(feature = "skel")]
 mod unchecked;
 
+/// Fields are ordered by lifecycle role: lease identity (`form`), DEX
+/// transport (`dex`), controller authority that drives the lease during its
+/// operational phase (`remote_lease`), and finally the downstream
+/// notification sink invoked at terminal states (`finalizer`).
 #[derive(Serialize, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "skel", derive(Deserialize))]
 #[cfg_attr(feature = "skel_testing", derive(Debug))]

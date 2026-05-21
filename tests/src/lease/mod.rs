@@ -36,6 +36,7 @@ mod compare_with_lpp;
 mod heal;
 mod liquidation;
 mod open;
+mod remote_lease_callback;
 mod repay;
 mod slippage;
 
