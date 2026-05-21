@@ -1,45 +1,41 @@
 //! End-to-end coverage of `ExecuteMsg::RemoteLeaseCallback` (ibc-solray#141).
 //!
-//! Each test drives the lease to its first dex sub-state (`OpenIca`) where
-//! the dex `Handler::authz_remote_lease_callback` is reachable, then sends
-//! the callback via `app.execute` and asserts the outcome at the public
-//! `ExecuteMsg` boundary.
+//! Drives the lease to `BuyAsset` (post-transfers, swap-pending — a real
+//! `SwapExactIn` dex sub-state) and exercises the public entry point with:
 //!
-//! The `OpenIca` handler is `IcaConnector`, which overrides only
-//! `authz_remote_lease_callback` and `on_open_ica`. Its `on_response` /
-//! `on_error` / `on_timeout` use the dex `Handler` defaults that return
-//! `UnsupportedOperation`. The tests therefore observe:
+//! - mismatched sender → `DexError::Unauthorized` (auth gate rejects),
+//! - matched sender + `OperationTimeout` → real `on_dex_timeout` runs and
+//!   schedules a retry — the call succeeds at the contract surface,
+//! - matched sender + `OperationErr` → real `on_dex_error` runs — same.
 //!
-//! - mismatched sender → `Unauthorized` (auth gate rejects),
-//! - matched sender + each variant → `UnsupportedOperation` with the
-//!   handler-specific message (auth gate passes; `classify_callback`
-//!   produces the right `CallbackDispatch`; control reaches `on_dex_*`
-//!   which the IcaConnector handler refuses).
-//!
-//! Together these prove the dispatch is wired end-to-end through the
-//! public `on_remote_lease_callback` entry point.
+//! `OperationOk` is intentionally not covered here. The current dex
+//! `Handler::on_response` decodes `data` as a protobuf swap response from
+//! the chain; the `RemoteLeaseCallback` path will not deliver responses
+//! that satisfy that contract until ibc-solray#142 switches the lease
+//! lifecycle calls to `remote_lease` stubs. Until then, an authorised
+//! `OperationOk` produces a decoding failure rather than meaningful
+//! semantics; the unit-level coverage in `state/dex.rs::classify_callback`
+//! and `api/mod.rs` pins the wire shape and the dispatch.
 
 use access_control::error::Error as AccessError;
+use currencies::PaymentGroup;
 use dex::Error as DexError;
 use lease::{api::ExecuteMsg, error::ContractError};
-use remote_lease::{
-    callback::{RemoteErrorMessage, RemoteLeaseCallback},
-    response::{CloseLeaseResponse, OperationResponse},
-};
+use remote_lease::callback::{RemoteErrorMessage, RemoteLeaseCallback};
 use sdk::{
     cosmwasm_std::{Addr, StdError},
     testing,
 };
+use swap::testing::SwapRequest;
 
-use crate::{common, lease::LeaseCoin};
-
-const CALLBACK_OP_HANDLE_RESPONSE: &str = "handle transaction response";
-const CALLBACK_OP_HANDLE_TIMEOUT: &str = "handle transaction timeout";
-const CALLBACK_OP_HANDLE_ERROR_PREFIX: &str = "handle ICA error with details";
+use crate::{
+    common::{self, swap as test_swap},
+    lease::{LeaseCoin, LeaseCurrency, LpnCoin, LpnCurrency},
+};
 
 #[test]
-fn rejects_mismatched_sender() {
-    let (mut test_case, lease) = setup();
+fn rejects_mismatched_sender_at_swap_state() {
+    let (mut test_case, lease, _requests) = drive_to_swap_pending();
     let err = send_callback(
         &mut test_case.app,
         &lease,
@@ -47,63 +43,110 @@ fn rejects_mismatched_sender() {
         RemoteLeaseCallback::OperationTimeout,
     );
 
-    assert_dex_error(err, |dex_err| {
+    let contract_err = err
+        .downcast_ref::<ContractError>()
+        .expect("must surface as lease ContractError");
+    assert!(
         matches!(
-            dex_err,
-            DexError::Unauthorized(AccessError::Unauthorized {})
-        )
-    });
+            contract_err,
+            ContractError::DexError(DexError::Unauthorized(AccessError::Unauthorized {}))
+        ),
+        "expected DexError::Unauthorized, got {contract_err:?}"
+    );
 }
 
 #[test]
 fn operation_timeout_reaches_on_dex_timeout() {
-    let (mut test_case, lease) = setup();
+    let (mut test_case, lease, _requests) = drive_to_swap_pending();
     let controller = controller_addr(&test_case);
-    let err = send_callback(
-        &mut test_case.app,
-        &lease,
-        controller,
-        RemoteLeaseCallback::OperationTimeout,
-    );
 
-    assert_unsupported_operation(err, CALLBACK_OP_HANDLE_TIMEOUT);
-}
-
-#[test]
-fn operation_ok_reaches_on_dex_response() {
-    let (mut test_case, lease) = setup();
-    let controller = controller_addr(&test_case);
-    let err = send_callback(
-        &mut test_case.app,
-        &lease,
-        controller,
-        RemoteLeaseCallback::OperationOk(OperationResponse::CloseLease(CloseLeaseResponse {})),
-    );
-
-    assert_unsupported_operation(err, CALLBACK_OP_HANDLE_RESPONSE);
+    let response = test_case
+        .app
+        .execute(
+            controller,
+            lease,
+            &ExecuteMsg::RemoteLeaseCallback(RemoteLeaseCallback::OperationTimeout),
+            &[],
+        )
+        .expect("authorised OperationTimeout must reach on_dex_timeout and return Ok");
+    // The real on_dex_timeout for SwapExactIn schedules a retry — drain the
+    // resulting SubmitTx so the test_case is left with an empty queue.
+    expect_swap_retry(response);
 }
 
 #[test]
 fn operation_err_reaches_on_dex_error() {
-    let (mut test_case, lease) = setup();
+    let (mut test_case, lease, _requests) = drive_to_swap_pending();
     let controller = controller_addr(&test_case);
     let payload = RemoteErrorMessage::new("solana side rejected").expect("within the length cap");
-    let err = send_callback(
-        &mut test_case.app,
-        &lease,
-        controller,
-        RemoteLeaseCallback::OperationErr(payload),
-    );
 
-    assert_unsupported_operation_starts_with(err, CALLBACK_OP_HANDLE_ERROR_PREFIX);
+    let response = test_case
+        .app
+        .execute(
+            controller,
+            lease,
+            &ExecuteMsg::RemoteLeaseCallback(RemoteLeaseCallback::OperationErr(payload)),
+            &[],
+        )
+        .expect("authorised OperationErr must reach on_dex_error and return Ok");
+    // The real on_dex_error for SwapExactIn schedules a retry — drain the
+    // resulting SubmitTx so the test_case is left with an empty queue.
+    expect_swap_retry(response);
+}
+
+fn expect_swap_retry(
+    response: crate::common::test_case::response::ResponseWithInterChainMsgs<
+        '_,
+        sdk::cw_multi_test::AppResponse,
+    >,
+) {
+    let _retry = test_swap::expect_swap(
+        response,
+        super::TestCase::DEX_CONNECTION_ID,
+        super::TestCase::LEASE_ICA_ID,
+        |_| {},
+    );
 }
 
 type LeaseTestCase = super::TestCase<Addr, Addr, Addr, Addr, Addr, Addr, Addr, Addr>;
 
-fn setup() -> (LeaseTestCase, Addr) {
-    let mut test_case = super::create_test_case::<super::LeaseCurrency>();
-    let lease = super::try_init_lease(&mut test_case, LeaseCoin::new(10_000), None);
-    (test_case, lease)
+fn drive_to_swap_pending() -> (
+    LeaseTestCase,
+    Addr,
+    Vec<SwapRequest<PaymentGroup, PaymentGroup>>,
+) {
+    let mut test_case = super::create_test_case::<LeaseCurrency>();
+    let downpayment = LeaseCoin::new(10_000);
+    let lease = super::try_init_lease(&mut test_case, downpayment, None);
+
+    let quote = common::leaser::query_quote::<LeaseCurrency, LeaseCurrency>(
+        &test_case.app,
+        test_case.address_book.leaser().clone(),
+        downpayment,
+        None,
+    );
+    let exp_borrow: LpnCoin = quote.borrow.try_into().unwrap();
+
+    let ica_addr = super::TestCase::ica_addr(&lease, super::TestCase::LEASE_ICA_ID);
+    let ica_port = format!("icacontroller-{ica_addr}");
+    let ica_channel = format!("channel-{ica_addr}");
+
+    let response = common::lease::confirm_ica_and_transfer_funds::<LeaseCurrency, LpnCurrency>(
+        &mut test_case.app,
+        lease.clone(),
+        super::TestCase::DEX_CONNECTION_ID,
+        (&ica_channel, &ica_port, ica_addr),
+        (downpayment, exp_borrow),
+    );
+
+    let requests = test_swap::expect_swap(
+        response,
+        super::TestCase::DEX_CONNECTION_ID,
+        super::TestCase::LEASE_ICA_ID,
+        |_| {},
+    );
+
+    (test_case, lease, requests)
 }
 
 fn controller_addr(test_case: &LeaseTestCase) -> Addr {
@@ -125,45 +168,5 @@ fn send_callback(
         &ExecuteMsg::RemoteLeaseCallback(callback),
         &[],
     )
-    .expect_err("callback must be rejected at OpenIca state")
-}
-
-#[track_caller]
-fn assert_dex_error<P>(err: StdError, predicate: P)
-where
-    P: FnOnce(&DexError) -> bool,
-{
-    let contract_err = err
-        .downcast_ref::<ContractError>()
-        .expect("must surface as lease ContractError");
-    match contract_err {
-        ContractError::DexError(inner) if predicate(inner) => {}
-        other => panic!("expected DexError matching predicate, got {other:?}"),
-    }
-}
-
-#[track_caller]
-fn assert_unsupported_operation(err: StdError, expected_op: &str) {
-    let op = expect_unsupported_op(err);
-    assert_eq!(expected_op, op);
-}
-
-#[track_caller]
-fn assert_unsupported_operation_starts_with(err: StdError, prefix: &str) {
-    let op = expect_unsupported_op(err);
-    assert!(
-        op.starts_with(prefix),
-        "expected op to start with {prefix:?}, got {op:?}"
-    );
-}
-
-#[track_caller]
-fn expect_unsupported_op(err: StdError) -> String {
-    let contract_err = err
-        .downcast_ref::<ContractError>()
-        .expect("must surface as lease ContractError");
-    match contract_err {
-        ContractError::DexError(DexError::UnsupportedOperation(op, _)) => op.clone(),
-        other => panic!("expected DexError::UnsupportedOperation, got {other:?}"),
-    }
+    .expect_err("callback must be rejected")
 }
