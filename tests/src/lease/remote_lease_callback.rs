@@ -6,32 +6,42 @@
 //! - mismatched sender → `DexError::Unauthorized` (auth gate rejects),
 //! - matched sender + `OperationTimeout` → real `on_dex_timeout` runs and
 //!   schedules a retry — the call succeeds at the contract surface,
-//! - matched sender + `OperationErr` → real `on_dex_error` runs — same.
-//!
-//! `OperationOk` is intentionally not covered here. The current dex
-//! `Handler::on_response` decodes `data` as a protobuf swap response from
-//! the chain; the `RemoteLeaseCallback` path will not deliver responses
-//! that satisfy that contract until ibc-solray#142 switches the lease
-//! lifecycle calls to `remote_lease` stubs. Until then, an authorised
-//! `OperationOk` produces a decoding failure rather than meaningful
-//! semantics; the unit-level coverage in `state/dex.rs::classify_callback`
-//! and `api/mod.rs` pins the wire shape and the dispatch.
+//! - matched sender + `OperationErr` → real `on_dex_error` runs — same,
+//! - matched sender + `OperationOk` → the outer call returns `Ok` and the
+//!   safe-delivery machinery activates: `on_dex_response` wraps the
+//!   response in `ResponseDelivery` and emits the
+//!   `SubMsg::reply_on_error(DexCallback)`; the inner `DexCallback`
+//!   then runs synchronously, fails to decode the JSON payload as the
+//!   chain's protobuf swap response, and the reply handler schedules
+//!   a retry via `TimeAlarms`. The test asserts the surface contract
+//!   (outer tx commits, `wasm-next-delivery` event is emitted) — the
+//!   real success-path semantics land with ibc-solray#142, which
+//!   switches the in-lease decoder to JSON.
 
 use access_control::error::Error as AccessError;
 use currencies::PaymentGroup;
 use dex::Error as DexError;
 use lease::{api::ExecuteMsg, error::ContractError};
-use remote_lease::callback::{RemoteErrorMessage, RemoteLeaseCallback};
+use remote_lease::{
+    callback::{RemoteErrorMessage, RemoteLeaseCallback},
+    response::{CloseLeaseResponse, OperationResponse},
+};
 use sdk::{
     cosmwasm_std::{Addr, StdError},
+    cw_multi_test::AppResponse,
     testing,
 };
 use swap::testing::SwapRequest;
 
 use crate::{
-    common::{self, swap as test_swap},
+    common::{
+        self, swap as test_swap,
+        test_case::{app::App, response::ResponseWithInterChainMsgs},
+    },
     lease::{LeaseCoin, LeaseCurrency, LpnCoin, LpnCurrency},
 };
+
+type LeaseTestCase = super::TestCase<Addr, Addr, Addr, Addr, Addr, Addr, Addr, Addr>;
 
 #[test]
 fn rejects_mismatched_sender_at_swap_state() {
@@ -94,27 +104,45 @@ fn operation_err_reaches_on_dex_error() {
     expect_swap_retry(response);
 }
 
-fn expect_swap_retry(
-    response: crate::common::test_case::response::ResponseWithInterChainMsgs<
-        '_,
-        sdk::cw_multi_test::AppResponse,
-    >,
-) {
-    let _retry = test_swap::expect_swap(
-        response,
-        super::TestCase::DEX_CONNECTION_ID,
-        super::TestCase::LEASE_ICA_ID,
-        |_| {},
+#[test]
+fn operation_ok_activates_safe_delivery() {
+    let (mut test_case, lease, _requests) = drive_to_swap_pending();
+    let controller = controller_addr(&test_case);
+    // `CloseLeaseResponse` is a stand-in payload — see the module
+    // doc-comment for why the success path is deferred to ibc-solray#142.
+    let payload = OperationResponse::CloseLease(CloseLeaseResponse {});
+
+    let response = test_case
+        .app
+        .execute(
+            controller,
+            lease,
+            &ExecuteMsg::RemoteLeaseCallback(RemoteLeaseCallback::OperationOk(payload)),
+            &[],
+        )
+        .expect("authorised OperationOk: outer tx must commit via the safe-delivery wrapper");
+    let app_response = response.unwrap_response();
+
+    // Safe-delivery proof: the outer `on_dex_response` returned Ok after
+    // wrapping in `ResponseDelivery` + scheduling `DexCallback`; the inner
+    // `DexCallback` failed the protobuf decode; the reply handler caught
+    // the failure and scheduled the retry via `TimeAlarms` — emitting the
+    // `wasm-next-delivery` event with `what = dex-response`.
+    let event_observed = app_response.events.iter().any(|event| {
+        event.ty == "wasm-next-delivery"
+            && event
+                .attributes
+                .iter()
+                .any(|attr| attr.key == "what" && attr.value == "dex-response")
+    });
+    assert!(
+        event_observed,
+        "expected the safe-delivery retry to be scheduled (`wasm-next-delivery`), got events {:?}",
+        app_response.events,
     );
 }
 
-type LeaseTestCase = super::TestCase<Addr, Addr, Addr, Addr, Addr, Addr, Addr, Addr>;
-
-fn drive_to_swap_pending() -> (
-    LeaseTestCase,
-    Addr,
-    Vec<SwapRequest<PaymentGroup, PaymentGroup>>,
-) {
+fn drive_to_swap_pending() -> (LeaseTestCase, Addr, Vec<SwapRequest<PaymentGroup, PaymentGroup>>) {
     let mut test_case = super::create_test_case::<LeaseCurrency>();
     let downpayment = LeaseCoin::new(10_000);
     let lease = super::try_init_lease(&mut test_case, downpayment, None);
@@ -157,7 +185,7 @@ fn controller_addr(test_case: &LeaseTestCase) -> Addr {
 }
 
 fn send_callback(
-    app: &mut crate::common::test_case::app::App,
+    app: &mut App,
     lease: &Addr,
     sender: Addr,
     callback: RemoteLeaseCallback,
@@ -170,3 +198,13 @@ fn send_callback(
     )
     .expect_err("callback must be rejected")
 }
+
+fn expect_swap_retry(response: ResponseWithInterChainMsgs<'_, AppResponse>) {
+    let _retry = test_swap::expect_swap(
+        response,
+        super::TestCase::DEX_CONNECTION_ID,
+        super::TestCase::LEASE_ICA_ID,
+        |_| {},
+    );
+}
+
