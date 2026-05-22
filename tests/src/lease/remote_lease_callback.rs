@@ -142,7 +142,11 @@ fn operation_ok_activates_safe_delivery() {
     );
 }
 
-fn drive_to_swap_pending() -> (LeaseTestCase, Addr, Vec<SwapRequest<PaymentGroup, PaymentGroup>>) {
+fn drive_to_swap_pending() -> (
+    LeaseTestCase,
+    Addr,
+    Vec<SwapRequest<PaymentGroup, PaymentGroup>>,
+) {
     let mut test_case = super::create_test_case::<LeaseCurrency>();
     let downpayment = LeaseCoin::new(10_000);
     let lease = super::try_init_lease(&mut test_case, downpayment, None);
@@ -207,4 +211,3 @@ fn expect_swap_retry(response: ResponseWithInterChainMsgs<'_, AppResponse>) {
         |_| {},
     );
 }
-
