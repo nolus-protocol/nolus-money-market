@@ -175,7 +175,7 @@ fn drive_to_swap_pending() -> (
         response,
         super::TestCase::DEX_CONNECTION_ID,
         super::TestCase::LEASE_ICA_ID,
-        |_| {},
+        |_response| {},
     );
 
     (test_case, lease, requests)
@@ -208,6 +208,6 @@ fn expect_swap_retry(response: ResponseWithInterChainMsgs<'_, AppResponse>) {
         response,
         super::TestCase::DEX_CONNECTION_ID,
         super::TestCase::LEASE_ICA_ID,
-        |_| {},
+        |_response| {},
     );
 }
