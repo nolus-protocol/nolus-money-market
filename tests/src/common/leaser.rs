@@ -110,7 +110,7 @@ impl Instantiator {
         // `check_contract` validator (it just needs an address that resolves
         // to a registered contract); the integration tests do not exercise
         // the `RemoteLeaseCallback` path itself.
-        let remote_lease = reserve.clone();
+        let remote_lease_controller = reserve.clone();
 
         let msg = InstantiateMsg {
             lease_code: CodeId::from(lease_code).into(),
@@ -134,7 +134,7 @@ impl Instantiator {
                     remote_endpoint: "channel-422".into(),
                 },
             },
-            remote_lease,
+            remote_lease_controller,
         };
 
         app.instantiate(code_id, testing::user(ADMIN), &msg, &[], "leaser", None)

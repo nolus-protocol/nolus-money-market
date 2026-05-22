@@ -27,11 +27,12 @@ where
     fn time_alarm(&self) -> &TimeAlarmsRef;
 
     /// Authorise an inbound `RemoteLeaseCallback` against this task's
-    /// owning contract. Implementations decide internally what
-    /// "authorised" means (typically: a permission query to the upstream
-    /// authority that holds the configured controller). Tasks that do
-    /// not participate in the remote-lease protocol reject with
-    /// `Error::Unauthorized`.
+    /// owning contract.
+    ///
+    /// Implementations decide what "authorised" means (typically: only
+    /// the remote lease controller is allowed to return a callback).
+    /// Tasks that do not participate in the remote-lease protocol reject
+    /// with `Error::Unauthorized`.
     fn authz_remote_callback(
         &self,
         querier: QuerierWrapper<'_>,

@@ -8,7 +8,7 @@ use currency::{
     BankSymbols, CurrencyDTO, CurrencyDef, DexSymbols, Group, GroupFilterMap, MemberOf, PairsGroup,
     Symbol,
 };
-use finance::instant::Instant;
+
 use finance::{
     coin::{Amount, Coin},
     duration::Duration,

@@ -43,11 +43,6 @@ where
     type SwapResult;
 
     /// Authorise an inbound `RemoteLeaseCallback`.
-    ///
-    /// Each handler decides what "authorised" means against its own state
-    /// — typically by delegating to its `SwapTask` or `IcaConnectee`, which
-    /// in turn run the relevant permission query against the upstream
-    /// authority (e.g. the leaser for lease-side tasks).
     fn authz_remote_callback(
         &self,
         querier: QuerierWrapper<'_>,
