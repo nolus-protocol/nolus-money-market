@@ -22,9 +22,8 @@ pub enum AccessCheck {
 
     /// Check for a permission to dispatch a `RemoteLeaseCallback` to a lease.
     ///
-    /// `by` is the inbound `info.sender`; the leaser compares it against the
-    /// configured local remote-lease controller and replies with
-    /// `AccessGranted::Yes` on a match.
+    /// Reply with `AccessGranted::Yes` if `by` is authorized to dispatch a callback.
+    /// Otherwise, reply with `AccessGranted::No`.
     #[serde(rename = "check_remote_lease_callback_permission")]
     RemoteLeaseCallback { by: Addr },
 }
