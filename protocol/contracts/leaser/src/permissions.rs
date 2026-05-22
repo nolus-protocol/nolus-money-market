@@ -47,7 +47,7 @@ pub struct RemoteLeaseCallbackPermission<'a> {
 }
 
 impl<'a> RemoteLeaseCallbackPermission<'a> {
-    pub fn new(lease_config: &'a Config) -> Self {
+    pub const fn new(lease_config: &'a Config) -> Self {
         Self { lease_config }
     }
 
@@ -70,5 +70,35 @@ impl AccessPermission for RemoteLeaseCallbackPermission<'_> {
         U: User,
     {
         Ok(self.lease_config.remote_lease == user.addr())
+    }
+}
+
+#[cfg(all(feature = "internal.test.testing", test))]
+mod test {
+    use sdk::cosmwasm_std::Addr;
+
+    use lease::api::authz::AccessGranted;
+
+    use crate::tests;
+
+    use super::RemoteLeaseCallbackPermission;
+
+    #[test]
+    fn matching_caller_is_granted() {
+        let config = tests::config();
+        let caller = config.remote_lease.clone();
+        let granted = RemoteLeaseCallbackPermission::new(&config)
+            .check_permission(&caller)
+            .expect("permission check must not error");
+        assert_eq!(AccessGranted::Yes, granted);
+    }
+
+    #[test]
+    fn mismatched_caller_is_denied() {
+        let config = tests::config();
+        let granted = RemoteLeaseCallbackPermission::new(&config)
+            .check_permission(&Addr::unchecked("not the controller"))
+            .expect("permission check must not error");
+        assert_eq!(AccessGranted::No, granted);
     }
 }

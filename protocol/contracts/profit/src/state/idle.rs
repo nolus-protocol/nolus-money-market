@@ -8,8 +8,8 @@ use serde::{Deserialize, Serialize};
 use currencies::{Nls, PaymentGroup};
 use currency::{Currency, CurrencyDef, Group, MemberOf};
 use dex::{
-    Account, Contract, Enterable, Error as DexError, Handler, Response as DexResponse,
-    Result as DexResult, StartLocalLocalState,
+    Account, Contract, DexResult, Enterable, Error as DexError, Handler, Response as DexResponse,
+    Result as SwapDecision, StartLocalLocalState,
 };
 use finance::instant::Instant;
 use finance::{
@@ -168,8 +168,8 @@ impl Handler for Idle {
         &self,
         _querier: QuerierWrapper<'_>,
         _info: &MessageInfo,
-    ) -> dex::DexResult<()> {
-        Err(dex::Error::Unauthorized(
+    ) -> DexResult<()> {
+        Err(DexError::Unauthorized(
             access_control::error::Error::Unauthorized {},
         ))
     }
@@ -179,8 +179,8 @@ impl Handler for Idle {
         querier: QuerierWrapper<'_>,
         env: Env,
         _info: MessageInfo,
-    ) -> DexResult<Self> {
-        DexResult::Finished(self.on_time_alarm(querier, env))
+    ) -> SwapDecision<Self> {
+        SwapDecision::Finished(self.on_time_alarm(querier, env))
     }
 }
 

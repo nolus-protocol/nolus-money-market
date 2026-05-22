@@ -4,8 +4,8 @@ use finance::duration::Duration;
 use serde::{Deserialize, Serialize};
 
 use dex::{
-    ConnectionParams, ContinueResult, Contract, Handler, Response as DexResponse,
-    Result as DexResult, StateLocalOut,
+    ConnectionParams, ContinueResult, Contract, DexResult, Handler, Response as DexResponse,
+    Result as SwapDecision, StateLocalOut,
 };
 use platform::{
     batch::Batch,
@@ -142,7 +142,7 @@ impl Handler for State {
         &self,
         querier: QuerierWrapper<'_>,
         info: &MessageInfo,
-    ) -> dex::DexResult<()> {
+    ) -> DexResult<()> {
         match &self.0 {
             StateEnum::OpenIca(ica) => ica.authz_remote_callback(querier, info),
             StateEnum::Idle(idle) => idle.authz_remote_callback(querier, info),
@@ -165,7 +165,12 @@ impl Handler for State {
         }
     }
 
-    fn on_response(self, data: Binary, querier: QuerierWrapper<'_>, env: Env) -> DexResult<Self> {
+    fn on_response(
+        self,
+        data: Binary,
+        querier: QuerierWrapper<'_>,
+        env: Env,
+    ) -> SwapDecision<Self> {
         match self.0 {
             StateEnum::OpenIca(ica) => ica.on_response(data, querier, env).map_into(),
             StateEnum::Idle(idle) => idle.on_response(data, querier, env).map_into(),
@@ -178,7 +183,7 @@ impl Handler for State {
         response: ICAErrorResponse,
         querier: QuerierWrapper<'_>,
         env: Env,
-    ) -> DexResult<Self> {
+    ) -> SwapDecision<Self> {
         match self.0 {
             StateEnum::OpenIca(ica) => ica.on_error(response, querier, env).map_into(),
             StateEnum::Idle(idle) => idle.on_error(response, querier, env).map_into(),
@@ -196,7 +201,7 @@ impl Handler for State {
         }
     }
 
-    fn on_inner(self, querier: QuerierWrapper<'_>, env: Env) -> DexResult<Self> {
+    fn on_inner(self, querier: QuerierWrapper<'_>, env: Env) -> SwapDecision<Self> {
         match self.0 {
             StateEnum::OpenIca(ica) => ica.on_inner(querier, env).map_into(),
             StateEnum::Idle(idle) => idle.on_inner(querier, env).map_into(),
@@ -216,7 +221,7 @@ impl Handler for State {
         }
     }
 
-    fn heal(self, querier: QuerierWrapper<'_>, env: Env) -> DexResult<Self> {
+    fn heal(self, querier: QuerierWrapper<'_>, env: Env) -> SwapDecision<Self> {
         match self.0 {
             StateEnum::OpenIca(ica) => ica.heal(querier, env).map_into(),
             StateEnum::Idle(idle) => idle.heal(querier, env).map_into(),
@@ -239,7 +244,7 @@ impl Handler for State {
         querier: QuerierWrapper<'_>,
         env: Env,
         info: MessageInfo,
-    ) -> DexResult<Self> {
+    ) -> SwapDecision<Self> {
         match self.0 {
             StateEnum::OpenIca(ica) => ica.on_time_alarm(querier, env, info).map_into(),
             StateEnum::Idle(idle) => idle.on_time_alarm(querier, env, info).map_into(),
