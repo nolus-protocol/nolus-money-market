@@ -1,37 +1,13 @@
 use std::{fmt::Display, result::Result as StdResult};
 
-use access_control::permissions::SingleUserPermission;
 use platform::{
     ica::ErrorResponse as ICAErrorResponse,
     message::Response as MessageResponse,
     state_machine::{self, Response as StateMachineResponse},
 };
-use sdk::cosmwasm_std::{Addr, Binary, Env, MessageInfo, QuerierWrapper, Reply};
+use sdk::cosmwasm_std::{Binary, Env, MessageInfo, QuerierWrapper, Reply};
 
 use crate::error::{Error, Result as DexResult};
-
-/// Gate an inbound `RemoteLeaseCallback` against the configured controller.
-///
-/// `remote_lease` is sourced one layer down (from a `SwapTask` or
-/// `IcaConnectee`). `None` means this state's task does not participate in
-/// the remote-lease protocol; the inbound callback is rejected as
-/// unsupported. `Some(addr)` checks `info.sender == addr` and yields a
-/// typed `Unauthorized` on mismatch.
-pub fn check_remote_lease_callback<S>(
-    remote_lease: Option<&Addr>,
-    info: &MessageInfo,
-    state: &S,
-) -> DexResult<()>
-where
-    S: Display,
-{
-    remote_lease
-        .ok_or_else(|| Error::unsupported_operation("authorise remote lease callback", state))
-        .and_then(|addr| {
-            access_control::check(&SingleUserPermission::new(addr), info)
-                .map_err(Error::Unauthorized)
-        })
-}
 
 pub type Response<H> = StateMachineResponse<<H as Handler>::Response>;
 pub type ContinueResult<H> = DexResult<Response<H>>;
@@ -66,22 +42,17 @@ where
     type Response;
     type SwapResult;
 
-    /// Authorise an inbound `RemoteLeaseCallback` against this state's
-    /// configured remote-lease controller.
+    /// Authorise an inbound `RemoteLeaseCallback`.
     ///
-    /// Implementations read the controller address from their own
-    /// member (typically `self.spec`, `self.connectee`, or a nested
-    /// `self.handler`) and reject when `info.sender` differs.
-    ///
-    /// The default rejects every caller so a handler that never expects
-    /// a remote-lease callback does not have to opt in.
-    fn authz_remote_lease_callback(&self, info: &MessageInfo) -> DexResult<()> {
-        let _ = info;
-        Err(Error::unsupported_operation(
-            "authorise remote lease callback",
-            self,
-        ))
-    }
+    /// Each handler decides what "authorised" means against its own state
+    /// — typically by delegating to its `SwapTask` or `IcaConnectee`, which
+    /// in turn run the relevant permission query against the upstream
+    /// authority (e.g. the leaser for lease-side tasks).
+    fn authz_remote_callback(
+        &self,
+        querier: QuerierWrapper<'_>,
+        info: &MessageInfo,
+    ) -> DexResult<()>;
 
     fn on_open_ica(
         self,
@@ -198,49 +169,5 @@ where
 {
     fn from(value: Error) -> Self {
         Self::Continue(Err(value))
-    }
-}
-
-#[cfg(test)]
-mod test {
-    use sdk::cosmwasm_std::{Addr, MessageInfo};
-
-    use crate::error::Error;
-
-    const DISPLAY_LABEL: &str = "test-state";
-
-    #[test]
-    fn no_controller_configured_is_unsupported() {
-        let info = caller("anyone");
-        let err = super::check_remote_lease_callback(None, &info, &DISPLAY_LABEL)
-            .expect_err("expected rejection");
-        assert!(
-            matches!(err, Error::UnsupportedOperation(_, _)),
-            "got {err:?}"
-        );
-    }
-
-    #[test]
-    fn matching_sender_passes() {
-        let controller = Addr::unchecked("controller");
-        let info = caller("controller");
-        super::check_remote_lease_callback(Some(&controller), &info, &DISPLAY_LABEL)
-            .expect("matching sender must pass");
-    }
-
-    #[test]
-    fn mismatched_sender_is_unauthorized() {
-        let controller = Addr::unchecked("controller");
-        let info = caller("intruder");
-        let err = super::check_remote_lease_callback(Some(&controller), &info, &DISPLAY_LABEL)
-            .expect_err("expected rejection");
-        assert!(matches!(err, Error::Unauthorized(_)), "got {err:?}");
-    }
-
-    fn caller(who: &str) -> MessageInfo {
-        MessageInfo {
-            sender: Addr::unchecked(who),
-            funds: vec![],
-        }
     }
 }

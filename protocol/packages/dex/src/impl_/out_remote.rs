@@ -152,14 +152,18 @@ mod impl_handler {
         type Response = Self;
         type SwapResult = SwapTask::Result;
 
-        fn authz_remote_lease_callback(&self, info: &MessageInfo) -> crate::error::Result<()> {
+        fn authz_remote_callback(
+            &self,
+            querier: QuerierWrapper<'_>,
+            info: &MessageInfo,
+        ) -> crate::error::Result<()> {
             match self {
-                State::OpenIca(inner) => inner.authz_remote_lease_callback(info),
-                State::OpenIcaRespDelivery(inner) => inner.authz_remote_lease_callback(info),
-                State::TransferOut(inner) => inner.authz_remote_lease_callback(info),
-                State::TransferOutRespDelivery(inner) => inner.authz_remote_lease_callback(info),
-                State::SwapExactIn(inner) => inner.authz_remote_lease_callback(info),
-                State::SwapExactInRespDelivery(inner) => inner.authz_remote_lease_callback(info),
+                State::OpenIca(inner) => inner.authz_remote_callback(querier, info),
+                State::OpenIcaRespDelivery(inner) => inner.authz_remote_callback(querier, info),
+                State::TransferOut(inner) => inner.authz_remote_callback(querier, info),
+                State::TransferOutRespDelivery(inner) => inner.authz_remote_callback(querier, info),
+                State::SwapExactIn(inner) => inner.authz_remote_callback(querier, info),
+                State::SwapExactInRespDelivery(inner) => inner.authz_remote_callback(querier, info),
             }
         }
 

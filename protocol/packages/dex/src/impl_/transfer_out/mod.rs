@@ -162,11 +162,12 @@ where
     type Response = SEnum;
     type SwapResult = SwapTask::Result;
 
-    fn authz_remote_lease_callback(
+    fn authz_remote_callback(
         &self,
+        querier: QuerierWrapper<'_>,
         info: &sdk::cosmwasm_std::MessageInfo,
     ) -> crate::error::Result<()> {
-        crate::impl_::response::check_remote_lease_callback(self.spec.remote_lease(), info, self)
+        self.spec.authz_remote_callback(querier, info)
     }
 
     fn on_response(

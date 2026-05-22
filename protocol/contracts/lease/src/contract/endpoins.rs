@@ -49,7 +49,6 @@ pub fn instantiate(
     addr_validator.check_contract(&new_lease.form.market_price_oracle)?;
     addr_validator.check_contract(&new_lease.form.loan.lpp)?;
     addr_validator.check_contract(&new_lease.form.loan.profit)?;
-    addr_validator.check_contract(&new_lease.remote_lease)?;
 
     state::new_lease(deps.querier, info, new_lease)
         .and_then(|(batch, next_state)| state::save(deps.storage, &next_state).map(|()| batch))

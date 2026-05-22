@@ -79,7 +79,7 @@ where
         env: Env,
     ) -> ContractResult<Response> {
         self.handler
-            .authz_remote_lease_callback(&info)
+            .authz_remote_callback(querier, &info)
             .map_err(ContractError::from)
             .and_then(|()| classify_callback(callback))
             .and_then(|dispatch| match dispatch {

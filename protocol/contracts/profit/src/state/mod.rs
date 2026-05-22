@@ -138,6 +138,18 @@ impl Handler for State {
     type Response = State;
     type SwapResult = ContractResult<DexResponse<State>>;
 
+    fn authz_remote_callback(
+        &self,
+        querier: QuerierWrapper<'_>,
+        info: &MessageInfo,
+    ) -> dex::DexResult<()> {
+        match &self.0 {
+            StateEnum::OpenIca(ica) => ica.authz_remote_callback(querier, info),
+            StateEnum::Idle(idle) => idle.authz_remote_callback(querier, info),
+            StateEnum::BuyBack(buy_back) => buy_back.authz_remote_callback(querier, info),
+        }
+    }
+
     fn on_open_ica(
         self,
         counterparty_version: String,

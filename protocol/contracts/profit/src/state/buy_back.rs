@@ -3,8 +3,9 @@ use serde::{Deserialize, Serialize};
 
 use currencies::{Native, Nls, PaymentGroup};
 use dex::{
-    AcceptAnyNonZeroSwap, Account, AnomalyTreatment, ContractInSwap, Response as DexResponse,
-    Stage, StateLocalOut, SwapOutputTask, SwapTask, WithCalculator, WithOutputTask,
+    AcceptAnyNonZeroSwap, Account, AnomalyTreatment, ContractInSwap, DexResult, Error as DexError,
+    Response as DexResponse, Stage, StateLocalOut, SwapOutputTask, SwapTask, WithCalculator,
+    WithOutputTask,
 };
 use finance::instant::Instant;
 use finance::{
@@ -13,7 +14,7 @@ use finance::{
 };
 use oracle::stub::SwapPath;
 use platform::bank::{self, BankAccountView};
-use sdk::cosmwasm_std::{Addr, Env, QuerierWrapper};
+use sdk::cosmwasm_std::{Addr, Env, MessageInfo, QuerierWrapper};
 use timealarms::stub::TimeAlarmsRef;
 
 use crate::{msg::ConfigResponse, result::ContractResult};
@@ -81,6 +82,17 @@ impl SwapTask for BuyBack {
 
     fn time_alarm(&self) -> &TimeAlarmsRef {
         self.config.time_alarms()
+    }
+
+    fn authz_remote_callback(
+        &self,
+        _querier: QuerierWrapper<'_>,
+        _info: &MessageInfo,
+    ) -> DexResult<()> {
+        // Profit does not participate in the remote-lease protocol.
+        Err(DexError::Unauthorized(
+            access_control::error::Error::Unauthorized {},
+        ))
     }
 
     fn coins(&self) -> impl IntoIterator<Item = CoinDTO<Self::InG>> {

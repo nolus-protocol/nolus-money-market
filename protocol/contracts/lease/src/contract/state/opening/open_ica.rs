@@ -3,12 +3,12 @@ use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter, Result as FmtResult};
 
 use dex::{
-    Account, Connectable, ConnectionParams, Contract as DexContract, DexResult, IcaConnectee,
-    TimeAlarm, TransferOut,
+    Account, Connectable, ConnectionParams, Contract as DexContract, DexResult, Error as DexError,
+    IcaConnectee, TimeAlarm, TransferOut,
 };
 use finance::instant::Instant;
 use platform::batch::Batch;
-use sdk::cosmwasm_std::{Addr, QuerierWrapper};
+use sdk::cosmwasm_std::{MessageInfo, QuerierWrapper};
 use timealarms::stub::TimeAlarmsRef;
 
 use crate::{
@@ -63,12 +63,16 @@ impl IcaConnectee for OpenIcaAccount {
             self.loan,
             self.deps,
             self.start_opening_at,
-            self.new_lease.remote_lease,
         ))
     }
 
-    fn remote_lease(&self) -> Option<&Addr> {
-        Some(&self.new_lease.remote_lease)
+    fn authz_remote_callback(
+        &self,
+        querier: QuerierWrapper<'_>,
+        info: &MessageInfo,
+    ) -> DexResult<()> {
+        access_control::check(&self.deps.3.remote_lease_callback_permission(querier), info)
+            .map_err(DexError::Unauthorized)
     }
 }
 

@@ -164,6 +164,16 @@ impl Handler for Idle {
     type Response = State;
     type SwapResult = ContractResult<DexResponse<State>>;
 
+    fn authz_remote_callback(
+        &self,
+        _querier: QuerierWrapper<'_>,
+        _info: &MessageInfo,
+    ) -> dex::DexResult<()> {
+        Err(dex::Error::Unauthorized(
+            access_control::error::Error::Unauthorized {},
+        ))
+    }
+
     fn on_time_alarm(
         self,
         querier: QuerierWrapper<'_>,

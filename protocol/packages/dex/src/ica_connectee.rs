@@ -1,6 +1,6 @@
-use sdk::cosmwasm_std::Addr;
+use sdk::cosmwasm_std::{MessageInfo, QuerierWrapper};
 
-use crate::{Account, Enterable};
+use crate::{Account, Enterable, error::Result as DexResult};
 
 /// Entity expecting to be connected to ICA
 pub trait IcaConnectee {
@@ -9,11 +9,13 @@ pub trait IcaConnectee {
 
     fn connected(self, ica_account: Account) -> Self::NextState;
 
-    /// The remote-lease controller authorised to dispatch a
-    /// `RemoteLeaseCallback` to the connectee, when one applies. Connectees
-    /// that do not participate in the remote-lease protocol leave the
-    /// default (`None`); inbound callbacks are rejected for them.
-    fn remote_lease(&self) -> Option<&Addr> {
-        None
-    }
+    /// Authorise an inbound `RemoteLeaseCallback` against this
+    /// connectee's owning contract. Connectees decide internally what
+    /// "authorised" means; those that do not participate in the
+    /// remote-lease protocol reject with `Error::Unauthorized`.
+    fn authz_remote_callback(
+        &self,
+        querier: QuerierWrapper<'_>,
+        info: &MessageInfo,
+    ) -> DexResult<()>;
 }

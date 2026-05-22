@@ -21,9 +21,8 @@ use super::LeaseAssetCurrencies;
 mod unchecked;
 
 /// Fields are ordered by lifecycle role: lease identity (`form`), DEX
-/// transport (`dex`), controller authority that drives the lease during its
-/// operational phase (`remote_lease`), and finally the downstream
-/// notification sink invoked at terminal states (`finalizer`).
+/// transport (`dex`), and finally the downstream notification sink invoked
+/// at terminal states (`finalizer`).
 #[derive(Serialize, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "skel", derive(Deserialize))]
 #[cfg_attr(feature = "skel_testing", derive(Debug))]
@@ -33,9 +32,6 @@ pub struct NewLeaseContract {
     pub form: NewLeaseForm,
     /// Connection parameters of a Dex capable to perform currency swaps
     pub dex: ConnectionParams,
-    /// The remote-lease controller authorised to dispatch
-    /// `ExecuteMsg::RemoteLeaseCallback` to this lease.
-    pub remote_lease: Addr,
     /// A contract to be notified when a lease just went into a final state
     ///
     /// The finalizer API should provide all `FinalizerExecuteMsg` variants.

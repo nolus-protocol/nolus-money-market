@@ -110,7 +110,7 @@ where
             querier,
         )?;
 
-        let lease = Lease::new(lease, spec.dex_account, spec.deps.3, spec.remote_lease);
+        let lease = Lease::new(lease, spec.dex_account, spec.deps.3);
         let active = Active::new(lease);
         let emitter = active.emit_opened(env, spec.downpayment, spec.loan);
 

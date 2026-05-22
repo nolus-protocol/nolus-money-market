@@ -233,8 +233,12 @@ where
     type Response = SEnum;
     type SwapResult = SwapTask::Result;
 
-    fn authz_remote_lease_callback(&self, info: &MessageInfo) -> crate::error::Result<()> {
-        crate::impl_::response::check_remote_lease_callback(self.spec.remote_lease(), info, self)
+    fn authz_remote_callback(
+        &self,
+        querier: QuerierWrapper<'_>,
+        info: &MessageInfo,
+    ) -> crate::error::Result<()> {
+        self.spec.authz_remote_callback(querier, info)
     }
 
     fn heal(self, querier: QuerierWrapper<'_>, env: Env) -> HandlerResult<Self> {

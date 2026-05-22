@@ -5,13 +5,13 @@ use oracle::stub::SwapPath;
 use serde::{Deserialize, Serialize};
 
 use dex::{
-    Account, ContractInSwap, Stage, StartLocalRemoteState, SwapOutputTask, SwapTask,
-    WithCalculator, WithOutputTask,
+    Account, ContractInSwap, Error as DexError, Stage, StartLocalRemoteState, SwapOutputTask,
+    SwapTask, WithCalculator, WithOutputTask,
 };
 use finance::instant::Instant;
 use finance::{coin::CoinDTO, duration::Duration};
 use platform::ica::HostAccount;
-use sdk::cosmwasm_std::{Addr, QuerierWrapper};
+use sdk::cosmwasm_std::{MessageInfo, QuerierWrapper};
 use timealarms::stub::TimeAlarmsRef;
 
 use crate::{
@@ -75,7 +75,6 @@ pub struct BuyAsset {
     loan: OpenLoanRespResult,
     deps: (LppRef, OracleRef, TimeAlarmsRef, LeasesRef),
     start_opening_at: Instant,
-    remote_lease: Addr,
 }
 
 impl BuyAsset {
@@ -86,7 +85,6 @@ impl BuyAsset {
         loan: OpenLoanRespResult,
         deps: (LppRef, OracleRef, TimeAlarmsRef, LeasesRef),
         start_opening_at: Instant,
-        remote_lease: Addr,
     ) -> Self {
         Self {
             form,
@@ -95,7 +93,6 @@ impl BuyAsset {
             loan,
             deps,
             start_opening_at,
-            remote_lease,
         }
     }
 
@@ -136,8 +133,13 @@ impl SwapTask for BuyAsset {
         &self.deps.2
     }
 
-    fn remote_lease(&self) -> Option<&Addr> {
-        Some(&self.remote_lease)
+    fn authz_remote_callback(
+        &self,
+        querier: QuerierWrapper<'_>,
+        info: &MessageInfo,
+    ) -> dex::DexResult<()> {
+        access_control::check(&self.deps.3.remote_lease_callback_permission(querier), info)
+            .map_err(DexError::Unauthorized)
     }
 
     fn coins(&self) -> impl IntoIterator<Item = CoinDTO<Self::InG>> {
