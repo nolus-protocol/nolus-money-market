@@ -36,9 +36,7 @@ pub struct InstantiateMsg {
     pub lease_max_slippages: MaxSlippages,
     pub lease_admin: Addr,
     pub dex: ConnectionParams,
-    /// Remote-lease controller; populated into each Lease's `remote_lease`
-    /// at open time.
-    pub remote_lease: Addr,
+    pub remote_lease_controller: Addr,
 }
 
 #[derive(Serialize, Deserialize)]

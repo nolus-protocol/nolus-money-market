@@ -1,4 +1,5 @@
 use access_control::permissions::DexResponseSafeDeliveryPermission;
+use cw_time::IntoInstant;
 use finance::duration::Duration;
 use platform::{
     contract::{self, Validator},
@@ -25,7 +26,6 @@ use crate::{
 };
 
 use super::state::{self, Response, State};
-use cw_time::IntoInstant;
 
 const CONTRACT_STORAGE_VERSION: VersionSegment = 9;
 const CURRENT_RELEASE: ProtocolPackageRelease = ProtocolPackageRelease::current(

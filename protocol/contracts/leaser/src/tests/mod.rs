@@ -80,6 +80,6 @@ fn dummy_instantiate_msg() -> InstantiateMsg {
                 remote_endpoint: "chan-13".into(),
             },
         },
-        remote_lease: Addr::unchecked("remote_lease_controller"),
+        remote_lease_controller: Addr::unchecked("remote_lease_controller"),
     }
 }

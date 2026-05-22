@@ -33,7 +33,7 @@ pub struct Config {
     pub lease_max_slippages: MaxSlippages,
     pub lease_admin: Addr,
     pub dex: ConnectionParams,
-    pub remote_lease: Addr,
+    pub remote_lease_controller: Addr,
 }
 
 impl Config {
@@ -54,7 +54,7 @@ impl Config {
             lease_max_slippages: msg.lease_max_slippages,
             lease_admin: msg.lease_admin,
             dex: msg.dex,
-            remote_lease: msg.remote_lease,
+            remote_lease_controller: msg.remote_lease_controller,
         }
     }
 

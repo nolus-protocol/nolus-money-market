@@ -54,15 +54,12 @@ where
 
     /// The entry point for a remote-lease callback
     ///
-    /// Only the dex sub-state overrides this default to handle the callback:
-    /// it authorises `info.sender` against the configured controller, then
-    /// classifies the variant and forwards it through `on_dex_response` /
-    /// `on_dex_error` / `on_dex_timeout`, which themselves enter the existing
-    /// `ResponseDelivery` + `DexCallback` safe-delivery machinery. Every
-    /// other state rejects the callback with `UnsupportedOperation` — a
-    /// callback that arrives after the lease has left its dex sub-state
-    /// indicates either a relayer or middleware bug and must surface to the
-    /// controller so it can retry or alert.
+    /// Only the states that have initiated remote chain operations should
+    /// implement it. The default implementation rejects the callback with
+    /// `UnsupportedOperation`;
+    /// That same states should enter the existing
+    /// `ResponseDelivery` + `DexCallback` safe-delivery mechanism forwarding
+    /// the callback through `on_dex_response` / `on_dex_error` / `on_dex_timeout`.
     fn on_remote_lease_callback(
         self,
         _callback: RemoteLeaseCallback,

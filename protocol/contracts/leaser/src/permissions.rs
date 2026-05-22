@@ -6,6 +6,16 @@ use sdk::cosmwasm_std::Addr;
 
 use crate::{ContractError, result::ContractResult, state::config::Config};
 
+pub type LeasesConfigurationPermission<'a> = LeaseAdminOnly<'a>;
+pub type ChangeLeaseAdminPermission<'a> = LeaseAdminOnly<'a>;
+pub type AnomalyResolutionPermission<'a> = LeaseAdminOnly<'a>;
+pub type ClosePositionPermission<'a> = LeaseAdminOnly<'a>;
+pub type LeaseAdminOnly<'a> = ConfigAddrPermission<'a, LeaseAdmin>;
+
+/// Authorises `ExecuteMsg::RemoteLeaseCallback` dispatched to a lease — granted
+/// only to the local remote-lease controller recorded in `Config.remote_lease_controller`.
+pub type RemoteLeaseCallbackPermission<'a> = ConfigAddrPermission<'a, RemoteLeaseController>;
+
 /// Selects which `Addr` in the leaser's [`Config`] gates a given permission.
 ///
 /// Each topic (lease-admin operations, remote-lease callback, …) is a
@@ -59,29 +69,19 @@ where
     }
 }
 
-pub struct LeaseAdminAddr;
-impl ConfigAddrSelector for LeaseAdminAddr {
+pub struct LeaseAdmin;
+impl ConfigAddrSelector for LeaseAdmin {
     fn select(config: &Config) -> &Addr {
         &config.lease_admin
     }
 }
 
-pub struct RemoteLeaseAddr;
-impl ConfigAddrSelector for RemoteLeaseAddr {
+pub struct RemoteLeaseController;
+impl ConfigAddrSelector for RemoteLeaseController {
     fn select(config: &Config) -> &Addr {
-        &config.remote_lease
+        &config.remote_lease_controller
     }
 }
-
-pub type LeaseAdminOnly<'a> = ConfigAddrPermission<'a, LeaseAdminAddr>;
-pub type LeasesConfigurationPermission<'a> = LeaseAdminOnly<'a>;
-pub type ChangeLeaseAdminPermission<'a> = LeaseAdminOnly<'a>;
-pub type AnomalyResolutionPermission<'a> = LeaseAdminOnly<'a>;
-pub type ClosePositionPermission<'a> = LeaseAdminOnly<'a>;
-
-/// Authorises `ExecuteMsg::RemoteLeaseCallback` dispatched to a lease — granted
-/// only to the local remote-lease controller recorded in `Config.remote_lease`.
-pub type RemoteLeaseCallbackPermission<'a> = ConfigAddrPermission<'a, RemoteLeaseAddr>;
 
 #[cfg(all(feature = "internal.test.testing", test))]
 mod test {
@@ -96,7 +96,7 @@ mod test {
     #[test]
     fn matching_caller_is_granted() {
         let config = tests::config();
-        let caller = config.remote_lease.clone();
+        let caller = config.remote_lease_controller.clone();
         let granted = RemoteLeaseCallbackPermission::new(&config)
             .check_permission(&caller)
             .expect("permission check must not error");
