@@ -81,11 +81,18 @@ where
         self.handler
             .authz_remote_callback(querier, &info)
             .map_err(ContractError::from)
-            .and_then(|()| classify_callback(callback))
-            .and_then(|dispatch| match dispatch {
-                CallbackDispatch::Response(data) => self.on_dex_response(data, querier, env),
-                CallbackDispatch::Error(details) => self.on_dex_error(details, querier, env),
-                CallbackDispatch::Timeout => self.on_dex_timeout(querier, env),
+            .and_then(|()| match callback {
+                RemoteLeaseCallback::OperationOk(response) => {
+                    cosmwasm_std::to_json_binary(&response)
+                        .map_err(Into::into)
+                        .and_then(|data| self.on_dex_response(data, querier, env))
+                }
+                RemoteLeaseCallback::OperationErr(message) => self.on_dex_error(
+                    ICAErrorResponse::from(message.as_str().to_owned()),
+                    querier,
+                    env,
+                ),
+                RemoteLeaseCallback::OperationTimeout => self.on_dex_timeout(querier, env),
             })
     }
 
@@ -145,27 +152,5 @@ where
         _info: MessageInfo,
     ) -> ContractResult<Response> {
         super::ignore_msg(self)
-    }
-}
-
-/// Per-variant landing target derived from a `RemoteLeaseCallback`.
-///
-/// Bridges the wire representation of the callback to the corresponding
-/// safe-delivery entry point on the dex state machine.
-enum CallbackDispatch {
-    Response(Binary),
-    Error(ICAErrorResponse),
-    Timeout,
-}
-
-fn classify_callback(callback: RemoteLeaseCallback) -> ContractResult<CallbackDispatch> {
-    match callback {
-        RemoteLeaseCallback::OperationOk(response) => cosmwasm_std::to_json_binary(&response)
-            .map(CallbackDispatch::Response)
-            .map_err(Into::into),
-        RemoteLeaseCallback::OperationErr(message) => Ok(CallbackDispatch::Error(
-            ICAErrorResponse::from(message.as_str().to_owned()),
-        )),
-        RemoteLeaseCallback::OperationTimeout => Ok(CallbackDispatch::Timeout),
     }
 }
