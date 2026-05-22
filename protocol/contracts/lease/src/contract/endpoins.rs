@@ -14,7 +14,8 @@ use sdk::{
     },
 };
 use versioning::{
-    ProtocolMigrationMessage, ProtocolPackageRelease, VersionSegment, package_name, package_version,
+    ProtocolMigrationMessage, ProtocolPackageRelease, UpdatablePackage, VersionSegment,
+    package_name, package_version,
 };
 
 use crate::{
@@ -26,7 +27,7 @@ use crate::{
 use super::state::{self, Response, State};
 use cw_time::IntoInstant;
 
-const CONTRACT_STORAGE_VERSION: VersionSegment = 10;
+const CONTRACT_STORAGE_VERSION: VersionSegment = 9;
 const CURRENT_RELEASE: ProtocolPackageRelease = ProtocolPackageRelease::current(
     package_name!(),
     package_version!(),
@@ -60,14 +61,17 @@ pub fn instantiate(
 pub fn migrate(
     deps: DepsMut<'_>,
     _env: Env,
-    _msg: ProtocolMigrationMessage<MigrateMsg>,
+    ProtocolMigrationMessage {
+        migrate_from,
+        to_release,
+        message: MigrateMsg {},
+    }: ProtocolMigrationMessage<MigrateMsg>,
 ) -> ContractResult<CwResponse> {
-    // v10 adds the `remote_lease` controller address to the on-chain Lease
-    // state. No existing pre-v10 instance is planned to be carried across the
-    // protocol cut-over — a fresh deployment is required. Reject any migrate
-    // call explicitly so an accidental upgrade attempt fails loudly rather
-    // than silently leaving the field uninitialised.
-    Err(ContractError::UnsupportedMigration).inspect_err(platform_error::log(deps.api))
+    migrate_from
+        .update_software(&CURRENT_RELEASE, &to_release)
+        .map(|()| response::empty_response())
+        .map_err(ContractError::UpdateSoftware)
+        .inspect_err(platform_error::log(deps.api))
 }
 
 #[entry_point]
