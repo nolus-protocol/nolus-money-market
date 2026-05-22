@@ -5,8 +5,8 @@ use serde::{Deserialize, Serialize};
 
 use currency::{CurrencyDef, Group, MemberOf};
 use dex::{
-    Account, AnomalyTreatment, ContractInSwap, Stage, StartTransferInState, SwapOutputTask,
-    SwapTask, WithCalculator, WithOutputTask,
+    Account, AnomalyTreatment, ContractInSwap, Error as DexError, Stage, StartTransferInState,
+    SwapOutputTask, SwapTask, WithCalculator, WithOutputTask,
 };
 use finance::instant::Instant;
 use finance::{
@@ -19,7 +19,7 @@ use platform::{
     message::Response as MessageResponse,
     state_machine::Response as StateMachineResponse,
 };
-use sdk::cosmwasm_std::{Env, QuerierWrapper};
+use sdk::cosmwasm_std::{Env, MessageInfo, QuerierWrapper};
 use timealarms::stub::TimeAlarmsRef;
 
 use crate::{
@@ -101,6 +101,18 @@ impl SwapTask for TransferIn {
 
     fn time_alarm(&self) -> &TimeAlarmsRef {
         &self.lease.lease.time_alarms
+    }
+
+    fn authz_remote_callback(
+        &self,
+        querier: QuerierWrapper<'_>,
+        info: &MessageInfo,
+    ) -> dex::DexResult<()> {
+        access_control::check(
+            &self.lease.leases.remote_lease_callback_permission(querier),
+            info,
+        )
+        .map_err(DexError::Unauthorized)
     }
 
     fn coins(&self) -> impl IntoIterator<Item = CoinDTO<Self::InG>> {

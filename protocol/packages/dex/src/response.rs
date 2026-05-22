@@ -42,6 +42,13 @@ where
     type Response;
     type SwapResult;
 
+    /// Authorise an inbound `RemoteLeaseCallback`.
+    fn authz_remote_callback(
+        &self,
+        querier: QuerierWrapper<'_>,
+        info: &MessageInfo,
+    ) -> DexResult<()>;
+
     fn on_open_ica(
         self,
         _counterparty_version: String,

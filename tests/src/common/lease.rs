@@ -248,7 +248,7 @@ pub(crate) fn complete_initialization<DownpaymentC, Lpn>(
     check_state_opened(app, lease_addr);
 }
 
-fn confirm_ica_and_transfer_funds<'r, DownpaymentC, Lpn>(
+pub(crate) fn confirm_ica_and_transfer_funds<'r, DownpaymentC, Lpn>(
     app: &'r mut App,
     lease_addr: Addr,
     connection_id: &str,

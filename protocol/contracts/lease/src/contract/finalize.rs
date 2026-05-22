@@ -65,4 +65,13 @@ impl LeasesRef {
             by: caller,
         })
     }
+
+    pub(crate) fn remote_lease_callback_permission<'self_, 'querier>(
+        &'self_ self,
+        querier: QuerierWrapper<'querier>,
+    ) -> impl AccessPermission + use<'self_, 'querier> {
+        RemotelyGrantedPermission::new(&self.addr, querier, |caller| {
+            AccessCheck::RemoteLeaseCallback { by: caller }
+        })
+    }
 }

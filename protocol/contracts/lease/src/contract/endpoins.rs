@@ -1,4 +1,5 @@
 use access_control::permissions::DexResponseSafeDeliveryPermission;
+use cw_time::IntoInstant;
 use finance::duration::Duration;
 use platform::{
     contract::{self, Validator},
@@ -14,7 +15,7 @@ use sdk::{
     },
 };
 use versioning::{
-    ProtocolMigrationMessage, ProtocolPackageRelease, UpdatablePackage as _, VersionSegment,
+    ProtocolMigrationMessage, ProtocolPackageRelease, UpdatablePackage, VersionSegment,
     package_name, package_version,
 };
 
@@ -25,7 +26,6 @@ use crate::{
 };
 
 use super::state::{self, Response, State};
-use cw_time::IntoInstant;
 
 const CONTRACT_STORAGE_VERSION: VersionSegment = 9;
 const CURRENT_RELEASE: ProtocolPackageRelease = ProtocolPackageRelease::current(
@@ -166,6 +166,9 @@ fn process_execute(
                 &info,
             )?;
             state.on_dex_inner_continue(querier, env)
+        }
+        ExecuteMsg::RemoteLeaseCallback(callback) => {
+            state.on_remote_lease_callback(callback, info, querier, env)
         }
         ExecuteMsg::Heal() => state.heal(querier, env, info),
     }

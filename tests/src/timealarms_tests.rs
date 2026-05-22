@@ -2,7 +2,6 @@ use std::array;
 
 use currencies::{Lpn, Nls};
 use currency::CurrencyDef;
-use cw_time::IntoInstant;
 use finance::{coin::Coin, duration::Duration, instant::Instant};
 use platform::tests;
 use sdk::{

@@ -114,6 +114,14 @@ where
     type Response = Connectee::State;
     type SwapResult = SwapResult;
 
+    fn authz_remote_callback(
+        &self,
+        querier: QuerierWrapper<'_>,
+        info: &sdk::cosmwasm_std::MessageInfo,
+    ) -> crate::error::Result<()> {
+        self.connectee.authz_remote_callback(querier, info)
+    }
+
     fn on_open_ica(
         self,
         counterparty_version: String,

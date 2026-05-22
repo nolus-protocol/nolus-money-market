@@ -135,6 +135,14 @@ where
     type Response = SEnum;
     type SwapResult = SwapTask::Result;
 
+    fn authz_remote_callback(
+        &self,
+        querier: QuerierWrapper<'_>,
+        info: &sdk::cosmwasm_std::MessageInfo,
+    ) -> crate::error::Result<()> {
+        self.spec.authz_remote_callback(querier, info)
+    }
+
     fn on_response(
         self,
         _data: Binary,

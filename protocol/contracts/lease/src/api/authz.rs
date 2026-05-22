@@ -19,6 +19,13 @@ pub enum AccessCheck {
     /// Check for a permission to user to execute a `close_position` on a lease
     #[serde(rename = "check_close_position_permission")]
     ClosePosition { by: Addr },
+
+    /// Check for a permission to dispatch a `RemoteLeaseCallback` to a lease.
+    ///
+    /// Reply with `AccessGranted::Yes` if `by` is authorized to dispatch a callback.
+    /// Otherwise, reply with `AccessGranted::No`.
+    #[serde(rename = "check_remote_lease_callback_permission")]
+    RemoteLeaseCallback { by: Addr },
 }
 
 /// Response to any [AccessCheck] query

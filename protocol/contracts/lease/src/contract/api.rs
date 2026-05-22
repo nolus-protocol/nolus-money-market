@@ -3,6 +3,7 @@ use enum_dispatch::enum_dispatch;
 use finance::duration::Duration;
 use finance::instant::Instant;
 use platform::ica::ErrorResponse as ICAErrorResponse;
+use remote_lease::callback::RemoteLeaseCallback;
 use sdk::cosmwasm_std::{Binary, Env, MessageInfo, QuerierWrapper, Reply};
 
 use crate::{
@@ -49,6 +50,24 @@ where
 
     fn on_dex_timeout(self, _querier: QuerierWrapper<'_>, _env: Env) -> ContractResult<Response> {
         err("dex timeout")
+    }
+
+    /// The entry point for a remote-lease callback
+    ///
+    /// Only the states that have initiated remote chain operations should
+    /// implement it. The default implementation rejects the callback with
+    /// `UnsupportedOperation`;
+    /// That same states should enter the existing
+    /// `ResponseDelivery` + `DexCallback` safe-delivery mechanism forwarding
+    /// the callback through `on_dex_response` / `on_dex_error` / `on_dex_timeout`.
+    fn on_remote_lease_callback(
+        self,
+        _callback: RemoteLeaseCallback,
+        _info: MessageInfo,
+        _querier: QuerierWrapper<'_>,
+        _env: Env,
+    ) -> ContractResult<Response> {
+        err("remote lease callback")
     }
 
     /// The inner entry point for safe delivery of a Dex response

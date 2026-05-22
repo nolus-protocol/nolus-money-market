@@ -4,12 +4,13 @@ use dex::{Contract as DexContract, Handler as DexHandler};
 use finance::duration::Duration;
 use finance::instant::Instant;
 use platform::{ica::ErrorResponse as ICAErrorResponse, state_machine};
-use sdk::cosmwasm_std::{Binary, Env, MessageInfo, QuerierWrapper, Reply};
+use remote_lease::callback::RemoteLeaseCallback;
+use sdk::cosmwasm_std::{self, Binary, Env, MessageInfo, QuerierWrapper, Reply};
 
 use crate::{
     api::query::StateResponse as QueryStateResponse,
     contract::{api::Contract, state::StateResponse as ContractStateResponse},
-    error::ContractResult,
+    error::{ContractError, ContractResult},
 };
 
 use super::{Response, State as ContractState};
@@ -68,6 +69,31 @@ where
             .on_timeout(querier, env)
             .map(state_machine::from)
             .map_err(Into::into)
+    }
+
+    fn on_remote_lease_callback(
+        self,
+        callback: RemoteLeaseCallback,
+        info: MessageInfo,
+        querier: QuerierWrapper<'_>,
+        env: Env,
+    ) -> ContractResult<Response> {
+        self.handler
+            .authz_remote_callback(querier, &info)
+            .map_err(ContractError::from)
+            .and_then(|()| match callback {
+                RemoteLeaseCallback::OperationOk(response) => {
+                    cosmwasm_std::to_json_binary(&response)
+                        .map_err(Into::into)
+                        .and_then(|data| self.on_dex_response(data, querier, env))
+                }
+                RemoteLeaseCallback::OperationErr(message) => self.on_dex_error(
+                    ICAErrorResponse::from(message.as_str().to_owned()),
+                    querier,
+                    env,
+                ),
+                RemoteLeaseCallback::OperationTimeout => self.on_dex_timeout(querier, env),
+            })
     }
 
     fn on_dex_inner(self, querier: QuerierWrapper<'_>, env: Env) -> ContractResult<Response> {

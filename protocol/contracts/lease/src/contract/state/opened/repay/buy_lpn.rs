@@ -5,15 +5,15 @@ use oracle::stub::SwapPath;
 use serde::{Deserialize, Serialize};
 
 use dex::{
-    AcceptAnyNonZeroSwap, Account, AnomalyTreatment, ContractInSwap, Stage, StartLocalLocalState,
-    SwapOutputTask, SwapTask, WithCalculator, WithOutputTask,
+    AcceptAnyNonZeroSwap, Account, AnomalyTreatment, ContractInSwap, Error as DexError, Stage,
+    StartLocalLocalState, SwapOutputTask, SwapTask, WithCalculator, WithOutputTask,
 };
 use finance::instant::Instant;
 use finance::{
     coin::{Coin, CoinDTO},
     duration::Duration,
 };
-use sdk::cosmwasm_std::{Env, QuerierWrapper};
+use sdk::cosmwasm_std::{Env, MessageInfo, QuerierWrapper};
 use timealarms::stub::TimeAlarmsRef;
 
 use crate::{
@@ -98,6 +98,18 @@ impl SwapTask for BuyLpn {
 
     fn time_alarm(&self) -> &TimeAlarmsRef {
         &self.lease.lease.time_alarms
+    }
+
+    fn authz_remote_callback(
+        &self,
+        querier: QuerierWrapper<'_>,
+        info: &MessageInfo,
+    ) -> dex::DexResult<()> {
+        access_control::check(
+            &self.lease.leases.remote_lease_callback_permission(querier),
+            info,
+        )
+        .map_err(DexError::Unauthorized)
     }
 
     fn coins(&self) -> impl IntoIterator<Item = CoinDTO<Self::InG>> {

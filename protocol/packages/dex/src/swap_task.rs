@@ -1,10 +1,10 @@
 use currency::{CurrencyDef, Group, MemberOf};
 use finance::coin::{Coin, CoinDTO};
 use oracle::stub::SwapPath;
-use sdk::cosmwasm_std::{Env, QuerierWrapper};
+use sdk::cosmwasm_std::{Env, MessageInfo, QuerierWrapper};
 use timealarms::stub::TimeAlarmsRef;
 
-use crate::{Account, AnomalyTreatment, slippage::WithCalculator};
+use crate::{Account, AnomalyTreatment, error::Result as DexResult, slippage::WithCalculator};
 
 pub type CoinsNb = u8;
 
@@ -25,6 +25,19 @@ where
     fn dex_account(&self) -> &Account;
     fn oracle(&self) -> &impl SwapPath<<Self::InG as Group>::TopG>;
     fn time_alarm(&self) -> &TimeAlarmsRef;
+
+    /// Authorise an inbound `RemoteLeaseCallback` against this task's
+    /// owning contract.
+    ///
+    /// Implementations decide what "authorised" means (typically: only
+    /// the remote lease controller is allowed to return a callback).
+    /// Tasks that do not participate in the remote-lease protocol reject
+    /// with `Error::Unauthorized`.
+    fn authz_remote_callback(
+        &self,
+        querier: QuerierWrapper<'_>,
+        info: &MessageInfo,
+    ) -> DexResult<()>;
 
     /// Provide the coins, at least one, this swap is about.
     /// The iteration is done always in the same order.

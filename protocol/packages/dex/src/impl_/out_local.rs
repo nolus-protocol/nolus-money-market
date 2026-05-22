@@ -172,6 +172,24 @@ mod impl_handler {
         type Response = Self;
         type SwapResult = SwapTask::Result;
 
+        fn authz_remote_callback(
+            &self,
+            querier: QuerierWrapper<'_>,
+            info: &sdk::cosmwasm_std::MessageInfo,
+        ) -> crate::error::Result<()> {
+            match self {
+                State::TransferOut(inner) => inner.authz_remote_callback(querier, info),
+                State::TransferOutRespDelivery(inner) => inner.authz_remote_callback(querier, info),
+                State::SwapExactIn(inner) => inner.authz_remote_callback(querier, info),
+                State::SwapExactInRespDelivery(inner) => inner.authz_remote_callback(querier, info),
+                State::TransferInInit(inner) => inner.authz_remote_callback(querier, info),
+                State::TransferInInitRespDelivery(inner) => {
+                    inner.authz_remote_callback(querier, info)
+                }
+                State::TransferInFinish(inner) => inner.authz_remote_callback(querier, info),
+            }
+        }
+
         fn on_open_ica(
             self,
             counterparty_version: String,

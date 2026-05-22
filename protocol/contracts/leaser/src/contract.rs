@@ -17,8 +17,8 @@ use sdk::{
     },
 };
 use versioning::{
-    ProtocolMigrationMessage, ProtocolPackageRelease, ProtocolPackageReleaseId, UpdatablePackage,
-    VersionSegment, package_name, package_version,
+    ProtocolMigrationMessage, ProtocolPackageRelease, ProtocolPackageReleaseId, VersionSegment,
+    package_name, package_version,
 };
 
 use crate::{
@@ -29,13 +29,13 @@ use crate::{
     msg::{ConfigResponse, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg, SudoMsg},
     permissions::{
         AnomalyResolutionPermission, ChangeLeaseAdminPermission, ClosePositionPermission,
-        LeasesConfigurationPermission,
+        LeasesConfigurationPermission, RemoteLeaseCallbackPermission,
     },
     result::ContractResult,
     state::{config::Config, leases::Leases},
 };
 
-const CONTRACT_STORAGE_VERSION: VersionSegment = 6;
+const CONTRACT_STORAGE_VERSION: VersionSegment = 7;
 const CURRENT_RELEASE: ProtocolPackageRelease = ProtocolPackageRelease::current(
     package_name!(),
     package_version!(),
@@ -74,17 +74,14 @@ pub fn instantiate(
 pub fn migrate(
     deps: DepsMut<'_>,
     _env: Env,
-    ProtocolMigrationMessage {
-        migrate_from,
-        to_release,
-        message: MigrateMsg {},
-    }: ProtocolMigrationMessage<MigrateMsg>,
+    _msg: ProtocolMigrationMessage<MigrateMsg>,
 ) -> ContractResult<Response> {
-    migrate_from
-        .update_software(&CURRENT_RELEASE, &to_release)
-        .map(|()| response::empty_response())
-        .map_err(ContractError::UpdateSoftware)
-        .inspect_err(platform_error::log(deps.api))
+    // v7 adds the `remote_lease` controller address to the on-chain Config.
+    // No existing pre-v7 instance is planned to be carried across the
+    // protocol cut-over — a fresh deployment is required. Reject any migrate
+    // call explicitly so an accidental upgrade attempt fails loudly rather
+    // than silently failing to deserialise the v6 Config on first read.
+    Err(ContractError::UnsupportedMigration).inspect_err(platform_error::log(deps.api))
 }
 
 #[entry_point]
@@ -211,6 +208,10 @@ pub fn query(deps: Deps<'_>, _env: Env, msg: QueryMsg) -> ContractResult<Binary>
         QueryMsg::CheckClosePositionPermission { by: caller } => Leaser::new(deps)
             .config()
             .and_then(|ref cfg| ClosePositionPermission::new(cfg).check_permission(&caller))
+            .and_then(serialize_to_json),
+        QueryMsg::CheckRemoteLeaseCallbackPermission { by: caller } => Leaser::new(deps)
+            .config()
+            .and_then(|ref cfg| RemoteLeaseCallbackPermission::new(cfg).check_permission(&caller))
             .and_then(serialize_to_json),
         QueryMsg::Config {} => Leaser::new(deps)
             .config()

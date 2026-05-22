@@ -3,9 +3,11 @@ use std::fmt::{Display, Formatter, Result as FmtResult};
 use finance::duration::Duration;
 use serde::{Deserialize, Serialize};
 
-use dex::{Account, Connectable, ConnectionParams, Contract, IcaConnectee};
+use dex::{
+    Account, Connectable, ConnectionParams, Contract, DexResult, Error as DexError, IcaConnectee,
+};
 use finance::instant::Instant;
-use sdk::cosmwasm_std::QuerierWrapper;
+use sdk::cosmwasm_std::{MessageInfo, QuerierWrapper};
 
 use crate::msg::ConfigResponse;
 
@@ -32,6 +34,17 @@ impl IcaConnectee for OpenIca {
 
     fn connected(self, account: Account) -> Self::NextState {
         Idle::new(self.config, account)
+    }
+
+    fn authz_remote_callback(
+        &self,
+        _querier: QuerierWrapper<'_>,
+        _info: &MessageInfo,
+    ) -> DexResult<()> {
+        // Profit does not participate in the remote-lease protocol.
+        Err(DexError::Unauthorized(
+            access_control::error::Error::Unauthorized {},
+        ))
     }
 }
 
