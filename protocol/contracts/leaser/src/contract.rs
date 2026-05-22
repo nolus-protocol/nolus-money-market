@@ -29,7 +29,7 @@ use crate::{
     msg::{ConfigResponse, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg, SudoMsg},
     permissions::{
         AnomalyResolutionPermission, ChangeLeaseAdminPermission, ClosePositionPermission,
-        LeasesConfigurationPermission,
+        LeasesConfigurationPermission, RemoteLeaseCallbackPermission,
     },
     result::ContractResult,
     state::{config::Config, leases::Leases},
@@ -208,6 +208,10 @@ pub fn query(deps: Deps<'_>, _env: Env, msg: QueryMsg) -> ContractResult<Binary>
         QueryMsg::CheckClosePositionPermission { by: caller } => Leaser::new(deps)
             .config()
             .and_then(|ref cfg| ClosePositionPermission::new(cfg).check_permission(&caller))
+            .and_then(serialize_to_json),
+        QueryMsg::CheckRemoteLeaseCallbackPermission { by: caller } => Leaser::new(deps)
+            .config()
+            .and_then(|ref cfg| RemoteLeaseCallbackPermission::new(cfg).check_permission(&caller))
             .and_then(serialize_to_json),
         QueryMsg::Config {} => Leaser::new(deps)
             .config()

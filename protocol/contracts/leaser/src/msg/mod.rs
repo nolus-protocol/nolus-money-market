@@ -136,6 +136,10 @@ pub enum QueryMsg {
     CheckClosePositionPermission {
         by: Addr,
     },
+    /// Implementation of [lease::api::authz::AccessCheck::RemoteLeaseCallback]
+    CheckRemoteLeaseCallbackPermission {
+        by: Addr,
+    },
     /// Return [ConfigResponse]
     Config {},
     Leases {
@@ -206,6 +210,15 @@ mod test {
         platform_tests::assert_ser_de(
             &AccessCheck::ClosePosition { by: admin.clone() },
             &QueryMsg::CheckClosePositionPermission { by: admin },
+        );
+    }
+
+    #[test]
+    fn remote_lease_callback_api_match() {
+        let caller = Addr::unchecked("my test caller");
+        platform_tests::assert_ser_de(
+            &AccessCheck::RemoteLeaseCallback { by: caller.clone() },
+            &QueryMsg::CheckRemoteLeaseCallbackPermission { by: caller },
         );
     }
 

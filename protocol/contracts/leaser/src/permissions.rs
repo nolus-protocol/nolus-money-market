@@ -39,3 +39,36 @@ pub type LeasesConfigurationPermission<'a> = LeaseAdminOnly<'a>;
 pub type ChangeLeaseAdminPermission<'a> = LeaseAdminOnly<'a>;
 pub type AnomalyResolutionPermission<'a> = LeaseAdminOnly<'a>;
 pub type ClosePositionPermission<'a> = LeaseAdminOnly<'a>;
+
+/// Authorises `ExecuteMsg::RemoteLeaseCallback` dispatched to a lease — granted
+/// only to the local remote-lease controller recorded in `Config.remote_lease`.
+pub struct RemoteLeaseCallbackPermission<'a> {
+    lease_config: &'a Config,
+}
+
+impl<'a> RemoteLeaseCallbackPermission<'a> {
+    pub fn new(lease_config: &'a Config) -> Self {
+        Self { lease_config }
+    }
+
+    pub fn check_permission(&self, caller: &Addr) -> ContractResult<AccessGranted> {
+        self.granted_to(caller)
+            .map_err(ContractError::CheckPermission)
+            .map(|granted| {
+                if granted {
+                    AccessGranted::Yes
+                } else {
+                    AccessGranted::No
+                }
+            })
+    }
+}
+
+impl AccessPermission for RemoteLeaseCallbackPermission<'_> {
+    fn granted_to<U>(&self, user: &U) -> Result<bool, AccessControlError>
+    where
+        U: User,
+    {
+        Ok(self.lease_config.remote_lease == user.addr())
+    }
+}
