@@ -40,6 +40,11 @@ ARG protocol_contracts_count="8"
 ### 1.94.0-alpine3.23
 ARG rust_image_digest="sha256:ef7b340d4201444fa2757dfddfd4c03be9d2bde468de7b7a68b0e9fabb794334"
 
+### 1.89-alpine (pinned MSRV for the `remote_lease_wire` wire crate, consumed by
+### the external `ibc-solray` repo). Bump in lockstep with `rust-version` in
+### `protocol/packages/remote_lease_wire/Cargo.toml`.
+ARG msrv_rust_image_digest="sha256:4b800f2e72e04be908e5f634c504c741bd943b763d1d8ad7b096cc340e1b5b46"
+
 ### 1.96.0
 ARG rust_nightly_version="2026-03-05"
 
@@ -72,6 +77,29 @@ ENV CARGO_INCREMENTAL="0" \
 WORKDIR "/src"
 
 RUN "apk" "update" && "apk" "add" "libc-dev"
+
+FROM docker.io/library/rust@${msrv_rust_image_digest:?} AS msrv-rust
+
+ENV CARGO_INCREMENTAL="0" \
+  CARGO_TARGET_DIR="/tmp/cargo-target/" \
+  CARGO_TERM_COLOR="always" \
+  POSIXLY_CORRECT="1" \
+  SOURCE_DATE_EPOCH="0"
+
+WORKDIR "/src/protocol"
+
+RUN "apk" "update" && "apk" "add" "libc-dev"
+
+FROM msrv-rust AS check-remote-lease-wire-msrv
+
+VOLUME ["/src"]
+
+ENTRYPOINT [ \
+  "cargo", "check", \
+  "--locked", \
+  "--all-targets", \
+  "--package", "remote_lease_wire" \
+]
 
 FROM docker.io/library/rust@${tooling_rust_image_digest:?} AS tooling-rust
 
