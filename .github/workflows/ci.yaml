@@ -243,6 +243,36 @@ jobs:
             --volume ".:/src:ro" \
             "${image_tag:?}" \
             "${workspace:?}"
+  check-remote-lease-wire-msrv:
+    name: "Check remote_lease_wire MSRV (Rust 1.89)"
+    runs-on: ["self-hosted", "nolus-ci"]
+    steps:
+      - name: "Checkout repository"
+        uses: "actions/checkout@v5"
+      - name: "Setup Docker"
+        uses: "nolus-protocol/actions/setup-docker@v1"
+      - name: "Setup workspaces"
+        uses: "./.github/actions/setup-workspaces"
+      - id: "build-container"
+        name: "Build container image"
+        uses: "nolus-protocol/actions/build-image@v1"
+        with:
+          context: "./ci"
+          file: "./ci/Containerfile"
+          target: "check-remote-lease-wire-msrv"
+      - env:
+          image_tag: |-
+            ${{ steps.build-container.outputs.tag }}
+        name: "Run container"
+        run: |-
+          "docker" \
+            "container" \
+            "run" \
+            --env "GITHUB_ACTIONS_LOGGING=true" \
+            --rm \
+            --tty \
+            --volume ".:/src:ro" \
+            "${image_tag:?}"
   lint:
     name: "Lint codebase without tests"
     needs:
@@ -587,6 +617,7 @@ jobs:
       - "audit-dependencies"
       - "check-lockfiles"
       - "check-formatting"
+      - "check-remote-lease-wire-msrv"
       - "lint"
       - "test"
       - "check-unused-dependencies"
