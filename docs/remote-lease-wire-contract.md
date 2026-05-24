@@ -56,7 +56,7 @@ mapping the IBC outcomes:
 - `StdAck::Error(message)` → `RemoteLeaseCallback::OperationErr(RemoteErrorMessage)` (rejected if > 512 bytes).
 - timeout → `RemoteLeaseCallback::OperationTimeout` (unit; the original `Operation` is recoverable from the lease's own pending-state).
 
-The lease address travels with the packet (`envelope.lease`) — the controller keeps no per-packet correlation map. The lease contract authorises the call by querying its leaser (`QueryMsg::CheckRemoteLeaseCallbackPermission { by: info.sender }`); the leaser compares the caller against its protocol-wide `Config.remote_lease`, set at leaser instantiation. That address is immutable — no `ExecuteMsg` or `SudoMsg` variant updates `remote_lease` — so the live-query semantic is equivalent to a pin set at lease open. The controller does not retry on the lease's behalf. See ADR 0001 §3.7 in `nolus-protocol/ibc-solray` for the atomicity model.
+The lease address travels with the packet (`envelope.lease`) — the controller keeps no per-packet correlation map. The lease contract authorises the call by querying its leaser (`QueryMsg::CheckRemoteLeaseCallbackPermission { by: info.sender }`); the leaser compares the caller against its protocol-wide `Config.remote_lease_controller`, set at leaser instantiation. That address is immutable — no `ExecuteMsg` or `SudoMsg` variant updates `remote_lease_controller` — so the live-query semantic is equivalent to a pin set at lease open. The controller does not retry on the lease's behalf. See ADR 0001 §3.7 in `nolus-protocol/ibc-solray` for the atomicity model.
 
 ## Design principle
 
