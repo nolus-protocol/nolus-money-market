@@ -55,7 +55,7 @@ fn validate(value: &str) -> Result<(), Error> {
         return Err(Error::RemoteLeaseIdEmpty);
     }
     let len = value.len();
-    if len > REMOTE_LEASE_ID_MAX_BYTES {
+    if REMOTE_LEASE_ID_MAX_BYTES < len {
         return Err(Error::RemoteLeaseIdTooLong {
             actual: len,
             max: REMOTE_LEASE_ID_MAX_BYTES,

@@ -334,6 +334,14 @@ fn remote_lease_id_round_trip_is_bare_string() {
 }
 
 #[test]
+fn remote_lease_id_accessors_expose_the_payload() {
+    let id = RemoteLeaseId::new("So1RayLease1").expect("base58 lease id");
+    assert_eq!("So1RayLease1", id.as_str());
+    assert_eq!("So1RayLease1", AsRef::<str>::as_ref(&id));
+    assert_eq!("So1RayLease1", id.to_string());
+}
+
+#[test]
 fn remote_lease_id_empty_rejected() {
     let res = RemoteLeaseId::new("");
     assert!(matches!(res, Err(Error::RemoteLeaseIdEmpty)));
