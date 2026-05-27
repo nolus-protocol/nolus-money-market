@@ -23,7 +23,8 @@ use remote_lease::{
     envelope::{LeaseAddrOnWire, PacketEnvelope},
     msg::{CloseLeaseParams, OpenLeaseParams, Operation, SwapParams, TransferOutParams},
     response::{
-        CloseLeaseResponse, OpenLeaseResponse, OperationResponse, SwapResponse, TransferOutResponse,
+        CloseLeaseResponse, OpenLeaseResponse, OperationResponse, RemoteLeaseId, SwapResponse,
+        TransferOutResponse,
     },
     version::ProtocolVersion,
 };
@@ -58,7 +59,7 @@ fn operation_transfer_out_byte_identical() {
 #[test]
 fn response_open_lease_byte_identical() {
     let typed = OperationResponse::OpenLease(OpenLeaseResponse {
-        remote_lease_id: "solray-lease-1".to_owned(),
+        remote_lease_id: RemoteLeaseId::new("So1RayLease1").expect("base58 lease id"),
     });
     assert_cross_surface_eq::<OperationResponse, WireResponse>(&typed);
 }

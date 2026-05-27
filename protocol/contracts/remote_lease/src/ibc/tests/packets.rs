@@ -2,7 +2,7 @@ use remote_lease::{
     callback::{OPERATION_ERR_MAX_BYTES, RemoteErrorMessage, RemoteLeaseCallback},
     envelope::{LeaseAddrOnWire, PacketEnvelope},
     msg::{CloseLeaseParams, Operation},
-    response::{CloseLeaseResponse, OpenLeaseResponse, OperationResponse},
+    response::{CloseLeaseResponse, OpenLeaseResponse, OperationResponse, RemoteLeaseId},
     version::ProtocolVersion,
 };
 use sdk::{
@@ -255,11 +255,11 @@ fn packet_timeout_malformed_lease_addr_in_envelope_errors() {
 // regeneration steps and the placeholder note (Solana-emitted bytes are TBD).
 #[test]
 fn fixture_stdack_success_open_lease_decodes_to_callback() {
-    const FIXTURE_REMOTE_LEASE_ID: &str = "sol-lease-fixture-0001";
+    const FIXTURE_REMOTE_LEASE_ID: &str = "So1RayF1xtureLease1";
     const ACK_BYTES: &[u8] =
         include_bytes!("../../../tests/fixtures/stdack_success_open_lease.bin");
     let response = OperationResponse::OpenLease(OpenLeaseResponse {
-        remote_lease_id: FIXTURE_REMOTE_LEASE_ID.into(),
+        remote_lease_id: RemoteLeaseId::new(FIXTURE_REMOTE_LEASE_ID).expect("base58 fixture id"),
     });
 
     let computed = StdAck::Success(cosmwasm_std::to_json_binary(&response).unwrap()).to_binary();

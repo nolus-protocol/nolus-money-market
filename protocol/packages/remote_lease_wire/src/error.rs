@@ -19,6 +19,15 @@ pub enum Error {
     #[error("callback error message exceeds the {max}-byte cap (was {actual})")]
     CallbackErrorTooLong { actual: usize, max: usize },
 
+    #[error("remote-lease-id must not be empty")]
+    RemoteLeaseIdEmpty,
+
+    #[error("remote-lease-id exceeds the {max}-byte cap (was {actual})")]
+    RemoteLeaseIdTooLong { actual: usize, max: usize },
+
+    #[error("remote-lease-id contains a non-base58 byte 0x{byte:02x}")]
+    RemoteLeaseIdInvalidCharacter { byte: u8 },
+
     #[error("protocol version mismatch: expected {expected}, got {actual}")]
     ProtocolVersionMismatch {
         expected: &'static str,
