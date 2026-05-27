@@ -3,6 +3,12 @@ use serde::{Deserialize, Serialize};
 use currencies::PaymentGroup;
 use finance::coin::CoinDTO;
 
+use remote_lease_wire::{
+    coin::WireCoin,
+    response::{OperationResponse as WireOperationResponse, SwapResponse as WireSwapResponse},
+    ticker::Ticker,
+};
+
 pub use remote_lease_wire::{
     lease_id::RemoteLeaseId,
     response::{CloseLeaseResponse, OpenLeaseResponse, TransferOutResponse},
@@ -30,18 +36,18 @@ pub struct SwapResponse {
 // Typed → wire conversions. See `msg.rs` for the rationale.
 // ---------------------------------------------------------------------------
 
-impl From<SwapResponse> for remote_lease_wire::response::SwapResponse {
+impl From<SwapResponse> for WireSwapResponse {
     fn from(typed: SwapResponse) -> Self {
         Self {
-            amount_out: remote_lease_wire::coin::WireCoin::new(
+            amount_out: WireCoin::new(
                 typed.amount_out.amount(),
-                remote_lease_wire::ticker::Ticker::new(typed.amount_out.currency().to_string()),
+                Ticker::new(typed.amount_out.currency().to_string()),
             ),
         }
     }
 }
 
-impl From<OperationResponse> for remote_lease_wire::response::OperationResponse {
+impl From<OperationResponse> for WireOperationResponse {
     fn from(typed: OperationResponse) -> Self {
         match typed {
             OperationResponse::OpenLease(r) => Self::OpenLease(r),
