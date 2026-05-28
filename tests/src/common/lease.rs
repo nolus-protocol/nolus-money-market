@@ -116,6 +116,7 @@ impl Instantiator {
             },
             dex: config.dex,
             finalizer: addresses.finalizer,
+            expected_instance_ordinal: 1,
         }
     }
 }

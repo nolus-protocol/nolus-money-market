@@ -66,6 +66,7 @@ impl Borrow {
             },
             dex: config.dex,
             finalizer,
+            expected_instance_ordinal: config.expected_instance_ordinal,
         }
     }
 }
