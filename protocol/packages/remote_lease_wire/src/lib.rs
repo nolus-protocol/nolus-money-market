@@ -9,6 +9,7 @@ pub mod callback;
 pub mod coin;
 pub mod envelope;
 pub mod error;
+pub mod lease_id;
 pub mod msg;
 pub mod response;
 pub mod ticker;

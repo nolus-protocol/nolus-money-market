@@ -25,7 +25,8 @@ use crate::{
     msg::{CloseLeaseParams, OpenLeaseParams, Operation, SwapParams, TransferOutParams},
     port_id_for,
     response::{
-        CloseLeaseResponse, OpenLeaseResponse, OperationResponse, SwapResponse, TransferOutResponse,
+        CloseLeaseResponse, OpenLeaseResponse, OperationResponse, RemoteLeaseId, SwapResponse,
+        TransferOutResponse,
     },
     version::ProtocolVersion,
 };
@@ -74,10 +75,10 @@ fn transfer_out_msg_serde() {
 #[test]
 fn open_lease_response_serde() {
     let value = OperationResponse::OpenLease(OpenLeaseResponse {
-        remote_lease_id: "solray-lease-1".to_owned(),
+        remote_lease_id: RemoteLeaseId::new("So1RayLease1").expect("base58 lease id"),
     });
     assert_round_trip_eq(
-        r#"{"open_lease":{"remote_lease_id":"solray-lease-1"}}"#,
+        r#"{"open_lease":{"remote_lease_id":"So1RayLease1"}}"#,
         &value,
     );
 }

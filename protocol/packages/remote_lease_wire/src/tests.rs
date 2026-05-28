@@ -18,6 +18,7 @@ use crate::{
     coin::WireCoin,
     envelope::{LeaseAddrOnWire, PacketEnvelope},
     error::Error,
+    lease_id::{REMOTE_LEASE_ID_MAX_BYTES, RemoteLeaseId},
     msg::{CloseLeaseParams, OpenLeaseParams, Operation, SwapParams, TransferOutParams},
     port_id_for,
     response::{
@@ -71,10 +72,10 @@ fn transfer_out_msg_serde() {
 #[test]
 fn open_lease_response_serde() {
     let value = OperationResponse::OpenLease(OpenLeaseResponse {
-        remote_lease_id: "solray-lease-1".to_owned(),
+        remote_lease_id: RemoteLeaseId::new("So1RayLease1").expect("base58 lease id"),
     });
     assert_round_trip_eq(
-        r#"{"open_lease":{"remote_lease_id":"solray-lease-1"}}"#,
+        r#"{"open_lease":{"remote_lease_id":"So1RayLease1"}}"#,
         &value,
     );
 }
@@ -320,6 +321,88 @@ fn swap_params_deserialize_zero_amount_rejected() {
         r#"{"coin_in":{"amount":"0","ticker":"NLS"},"min_out":{"amount":"42","ticker":"LPN"}}"#;
     serde_json::from_str::<SwapParams>(bad_wire)
         .expect_err("zero coin_in must fail deserialization");
+}
+
+// ---------------------------------------------------------------------------
+// 6b. RemoteLeaseId — round-trip + validation
+// ---------------------------------------------------------------------------
+
+#[test]
+fn remote_lease_id_round_trip_is_bare_string() {
+    let id = RemoteLeaseId::new("So1RayLease1").expect("base58 lease id");
+    assert_round_trip_eq(r#""So1RayLease1""#, &id);
+}
+
+#[test]
+fn remote_lease_id_accessors_expose_the_payload() {
+    let id = RemoteLeaseId::new("So1RayLease1").expect("base58 lease id");
+    assert_eq!("So1RayLease1", id.as_str());
+    assert_eq!("So1RayLease1", AsRef::<str>::as_ref(&id));
+    assert_eq!("So1RayLease1", id.to_string());
+}
+
+#[test]
+fn remote_lease_id_empty_rejected() {
+    let res = RemoteLeaseId::new("");
+    assert!(matches!(res, Err(Error::RemoteLeaseIdEmpty)));
+}
+
+#[test]
+fn remote_lease_id_at_cap_accepted() {
+    let payload = "a".repeat(REMOTE_LEASE_ID_MAX_BYTES);
+    RemoteLeaseId::new(payload).expect("payload at the cap must be accepted");
+}
+
+#[test]
+fn remote_lease_id_over_cap_rejected() {
+    let payload = "a".repeat(REMOTE_LEASE_ID_MAX_BYTES + 1);
+    let res = RemoteLeaseId::new(payload);
+    assert!(matches!(
+        res,
+        Err(Error::RemoteLeaseIdTooLong {
+            actual,
+            max: REMOTE_LEASE_ID_MAX_BYTES,
+        }) if actual == REMOTE_LEASE_ID_MAX_BYTES + 1,
+    ));
+}
+
+#[test]
+fn remote_lease_id_non_base58_rejected() {
+    // The base58 alphabet excludes 0, O, I, l.
+    for &bad in &[
+        "0badId",
+        "OBadId",
+        "IbadId",
+        "lbadId",
+        "with-hyphen",
+        "with space",
+    ] {
+        let res = RemoteLeaseId::new(bad);
+        assert!(
+            matches!(res, Err(Error::RemoteLeaseIdInvalidCharacter { .. })),
+            "expected rejection for {bad:?}, got {res:?}",
+        );
+    }
+}
+
+#[test]
+fn remote_lease_id_deserialize_empty_rejected() {
+    serde_json::from_str::<RemoteLeaseId>(r#""""#)
+        .expect_err("empty lease id must fail deserialization");
+}
+
+#[test]
+fn remote_lease_id_deserialize_non_base58_rejected() {
+    serde_json::from_str::<RemoteLeaseId>(r#""bad-id""#)
+        .expect_err("non-base58 character must fail deserialization");
+}
+
+#[test]
+fn remote_lease_id_deserialize_over_cap_rejected() {
+    let payload = "a".repeat(REMOTE_LEASE_ID_MAX_BYTES + 1);
+    let bad_wire = format!(r#""{payload}""#);
+    serde_json::from_str::<RemoteLeaseId>(&bad_wire)
+        .expect_err("over-cap lease id must fail deserialization");
 }
 
 // ---------------------------------------------------------------------------
