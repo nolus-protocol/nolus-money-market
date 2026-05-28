@@ -15,7 +15,7 @@ The `remote_lease` crate defines the IBC packet types exchanged between the Nolu
 
 ## Operations
 
-- `OpenLease { expected_instance_ordinal: u16, downpayment_currency, lpn_currency, asset_currency }` — currencies must be pairwise distinct.
+- `OpenLease { expected_instance_ordinal: u16, downpayment_currency, lpn_currency, asset_currency }` — the only enforced inequality is `lpn_currency != asset_currency`. `downpayment_currency == lpn_currency` and `downpayment_currency == asset_currency` are both permitted; the Solana side does not constrain those pairs. The wire-level invariant is intentionally permissive — any tighter constraint belongs in the Nolus-side caller, not the wire.
 - `CloseLease {}`
 - `Swap { coin_in, min_out }` — both amounts non-zero, currencies distinct.
 - `TransferOut { amount }` — amount non-zero.
