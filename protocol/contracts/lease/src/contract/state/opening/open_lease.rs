@@ -152,7 +152,10 @@ impl OpenLease {
                     .emit("reason", reason.as_str().to_owned());
                 StateMachineResponse::from(
                     MessageResponse::messages_with_event(batch, emitter),
-                    State::from(crate::contract::state::open_failed::OpenFailed::new(reason)),
+                    State::from(crate::contract::state::open_failed::OpenFailed::new(
+                        reason,
+                        leases_ref,
+                    )),
                 )
             })
     }
@@ -170,7 +173,7 @@ impl Contract for OpenLease {
             downpayment: self.downpayment,
             loan: self.loan.principal,
             loan_interest_rate: self.loan.annual_interest_rate,
-            in_progress: OngoingTrx::OpenIcaAccount {},
+            in_progress: OngoingTrx::RequestingOpenLease {},
         })
     }
 

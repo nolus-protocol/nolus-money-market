@@ -13,8 +13,28 @@ use crate::{
 
 pub(crate) struct Leases {}
 
+/// Outcome of [`Leases::save`].
+#[derive(Debug, PartialEq, Eq)]
+pub(crate) enum SaveOutcome {
+    /// The lease has been added to the customer's set.
+    Registered,
+    /// The lease was already present in the customer's set. No state
+    /// change.
+    AlreadyRegistered,
+    /// The open request was cancelled before the leaser's instantiate
+    /// reply landed (the OpenLease auto-refund batch fires inside the
+    /// same cascade). `save` consumes the cancel sentinel and no-ops.
+    Cancelled,
+}
+
 impl Leases {
     const PENDING_CUSTOMER: Item<Addr> = Item::new("pending_customer");
+
+    /// Sentinel set when `Leases::remove` cancels an in-flight open via
+    /// `PENDING_CUSTOMER`. `Leases::save` consumes it to distinguish a
+    /// deliberate cancellation (no-op, return `Ok(SaveOutcome::Cancelled)`)
+    /// from a missing-`cache_open_req` programmer error (`Err`).
+    const CANCELLED_PENDING: Item<()> = Item::new("cancelled_pending");
 
     const CUSTOMER_LEASES: Map<Addr, HashSet<Addr>> = Map::new("loans");
 
@@ -24,31 +44,52 @@ impl Leases {
             .map_err(ContractError::SavePendingCustomerFailure)
     }
 
-    /// Return `Some(true)` if the lease has been stored, `Some(false)` if
-    /// the same lease was already registered, or `None` if the open
-    /// request was cancelled before the reply landed (the OpenLease
-    /// auto-refund path clears `PENDING_CUSTOMER` on the failure side of
-    /// the cascade).
-    pub fn save(storage: &mut dyn Storage, lease: Addr) -> ContractResult<Option<bool>> {
+    /// See [`SaveOutcome`]. `Err` only surfaces real failures: a missing
+    /// `cache_open_req` upstream, or a storage error.
+    pub fn save(storage: &mut dyn Storage, lease: Addr) -> ContractResult<SaveOutcome> {
         Self::PENDING_CUSTOMER
             .may_load(storage)
             .map_err(ContractError::SaveLeaseFailure)
             .and_then(|may_customer| match may_customer {
-                Some(customer) => {
-                    Self::PENDING_CUSTOMER.remove(storage);
-                    let mut stored = false;
-                    let update_fn =
-                        |may_leases: Option<HashSet<Addr>>| -> StdResult<HashSet<Addr>> {
-                            let mut leases = may_leases.unwrap_or_default();
-                            stored = leases.insert(lease.clone());
-                            Ok(leases)
-                        };
-                    Self::CUSTOMER_LEASES
-                        .update(storage, customer, update_fn)
-                        .map(|_| Some(stored))
-                        .map_err(ContractError::SaveLeaseFailure)
+                Some(customer) => Self::save_under(storage, customer, lease),
+                None => Self::consume_cancel_sentinel(storage),
+            })
+    }
+
+    fn save_under(
+        storage: &mut dyn Storage,
+        customer: Addr,
+        lease: Addr,
+    ) -> ContractResult<SaveOutcome> {
+        Self::PENDING_CUSTOMER.remove(storage);
+        let mut stored = false;
+        let update_fn = |may_leases: Option<HashSet<Addr>>| -> StdResult<HashSet<Addr>> {
+            let mut leases = may_leases.unwrap_or_default();
+            stored = leases.insert(lease.clone());
+            Ok(leases)
+        };
+        Self::CUSTOMER_LEASES
+            .update(storage, customer, update_fn)
+            .map(|_| {
+                if stored {
+                    SaveOutcome::Registered
+                } else {
+                    SaveOutcome::AlreadyRegistered
                 }
-                None => Ok(None),
+            })
+            .map_err(ContractError::SaveLeaseFailure)
+    }
+
+    fn consume_cancel_sentinel(storage: &mut dyn Storage) -> ContractResult<SaveOutcome> {
+        Self::CANCELLED_PENDING
+            .may_load(storage)
+            .map_err(ContractError::SaveLeaseFailure)
+            .and_then(|sentinel| match sentinel {
+                Some(()) => {
+                    Self::CANCELLED_PENDING.remove(storage);
+                    Ok(SaveOutcome::Cancelled)
+                }
+                None => Err(ContractError::PendingCustomerNotCached),
             })
     }
 
@@ -70,7 +111,10 @@ impl Leases {
     /// auto-refund batch in `OpenLease::on_remote_lease_callback` fires
     /// inside the same cascade as the leaser's instantiate reply). In
     /// that case the lease is still recorded only as the in-flight
-    /// open — clearing `PENDING_CUSTOMER` cancels it.
+    /// open — clearing `PENDING_CUSTOMER` cancels it, and the
+    /// [`Self::CANCELLED_PENDING`] sentinel lets the subsequent reply's
+    /// `Leases::save` distinguish the cancellation from a programmer
+    /// error.
     pub fn remove(storage: &mut dyn Storage, customer: Addr, lease: &Addr) -> ContractResult<bool> {
         // not using cw_storage_plus::Map::load because it does not differentiate key-not-present
         // from value-cannot-be-deserialized case
@@ -101,6 +145,7 @@ impl Leases {
                 let matches = &pending == customer;
                 if matches {
                     Self::PENDING_CUSTOMER.remove(storage);
+                    let _ = Self::CANCELLED_PENDING.save(storage, &());
                 }
                 matches
             })
@@ -135,12 +180,18 @@ impl Leases {
 mod test {
     use sdk::cosmwasm_std::{Addr, Storage, testing::MockStorage};
 
-    use crate::state::leases::Leases;
+    use crate::{
+        ContractError,
+        state::leases::{Leases, SaveOutcome},
+    };
 
     #[test]
     fn test_save_customer_not_cached() {
         let mut storage = MockStorage::default();
-        assert_eq!(None, Leases::save(&mut storage, test_lease()).unwrap());
+        assert!(matches!(
+            Leases::save(&mut storage, test_lease()),
+            Err(ContractError::PendingCustomerNotCached)
+        ));
         assert_lease_not_exist(&storage);
         assert!(Leases::empty(&storage));
     }
@@ -151,7 +202,10 @@ mod test {
         assert_lease_not_exist(&storage);
         Leases::cache_open_req(&mut storage, &test_customer()).unwrap();
 
-        assert_eq!(Some(true), Leases::save(&mut storage, test_lease()).unwrap());
+        assert_eq!(
+            SaveOutcome::Registered,
+            Leases::save(&mut storage, test_lease()).unwrap()
+        );
         assert_lease_exist(&storage);
         assert!(!Leases::empty(&storage));
     }
@@ -160,11 +214,17 @@ mod test {
     fn test_save_same_lease() {
         let mut storage = MockStorage::default();
         Leases::cache_open_req(&mut storage, &test_customer()).unwrap();
-        assert_eq!(Some(true), Leases::save(&mut storage, test_lease()).unwrap());
+        assert_eq!(
+            SaveOutcome::Registered,
+            Leases::save(&mut storage, test_lease()).unwrap()
+        );
         assert_lease_exist(&storage);
 
         Leases::cache_open_req(&mut storage, &test_customer()).unwrap();
-        assert_eq!(Some(false), Leases::save(&mut storage, test_lease()).unwrap());
+        assert_eq!(
+            SaveOutcome::AlreadyRegistered,
+            Leases::save(&mut storage, test_lease()).unwrap()
+        );
         assert_lease_exist(&storage);
     }
 
@@ -173,13 +233,16 @@ mod test {
         let mut storage = MockStorage::default();
         Leases::cache_open_req(&mut storage, &test_customer()).unwrap();
         assert!(Leases::empty(&storage));
-        assert_eq!(Some(true), Leases::save(&mut storage, test_lease()).unwrap());
+        assert_eq!(
+            SaveOutcome::Registered,
+            Leases::save(&mut storage, test_lease()).unwrap()
+        );
         assert_lease_exist(&storage);
         assert!(!Leases::empty(&storage));
 
         Leases::cache_open_req(&mut storage, &test_customer()).unwrap();
         assert_eq!(
-            Some(true),
+            SaveOutcome::Registered,
             Leases::save(&mut storage, test_another_lease()).unwrap()
         );
         assert_lease_exist(&storage);
@@ -198,8 +261,17 @@ mod test {
         // OpenLease auto-refund cancels the pending open before the
         // leaser's instantiate reply lands.
         assert!(Leases::remove(&mut storage, test_customer(), &test_lease()).unwrap());
-        assert_eq!(None, Leases::save(&mut storage, test_lease()).unwrap());
+        assert_eq!(
+            SaveOutcome::Cancelled,
+            Leases::save(&mut storage, test_lease()).unwrap()
+        );
         assert_lease_not_exist(&storage);
+        // The cancel sentinel must be consumed; a follow-up bug-free
+        // save must surface `PendingCustomerNotCached` again.
+        assert!(matches!(
+            Leases::save(&mut storage, test_lease()),
+            Err(ContractError::PendingCustomerNotCached)
+        ));
     }
 
     #[test]

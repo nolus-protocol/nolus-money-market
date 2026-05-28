@@ -38,6 +38,18 @@ pub enum ContractError {
     #[error("[Leaser] Save pending Customer failed, cause: {0}")]
     SavePendingCustomerFailure(StdError),
 
+    #[error(
+        "[Leaser] Lease save invoked without a prior `cache_open_req` and no \
+         pending-cancellation sentinel — likely a programmer error in the open path"
+    )]
+    PendingCustomerNotCached,
+
+    #[error(
+        "[Leaser] The lease address returned by the instantiate reply was already \
+         registered against the customer — duplicate instantiation"
+    )]
+    DuplicateLeaseAddress,
+
     #[error("[Leaser] Address validation failed, cause: {0}")]
     InvalidAddress(StdError),
 
