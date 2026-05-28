@@ -15,8 +15,8 @@ use sdk::{
     },
 };
 use versioning::{
-    ProtocolMigrationMessage, ProtocolPackageRelease, UpdatablePackage, VersionSegment,
-    package_name, package_version,
+    ProtocolMigrationMessage, ProtocolPackageRelease, VersionSegment, package_name,
+    package_version,
 };
 
 use crate::{
@@ -27,7 +27,7 @@ use crate::{
 
 use super::state::{self, Response, State};
 
-const CONTRACT_STORAGE_VERSION: VersionSegment = 9;
+const CONTRACT_STORAGE_VERSION: VersionSegment = 10;
 const CURRENT_RELEASE: ProtocolPackageRelease = ProtocolPackageRelease::current(
     package_name!(),
     package_version!(),
@@ -61,17 +61,15 @@ pub fn instantiate(
 pub fn migrate(
     deps: DepsMut<'_>,
     _env: Env,
-    ProtocolMigrationMessage {
-        migrate_from,
-        to_release,
-        message: MigrateMsg {},
-    }: ProtocolMigrationMessage<MigrateMsg>,
+    _msg: ProtocolMigrationMessage<MigrateMsg>,
 ) -> ContractResult<CwResponse> {
-    migrate_from
-        .update_software(&CURRENT_RELEASE, &to_release)
-        .map(|()| response::empty_response())
-        .map_err(ContractError::UpdateSoftware)
-        .inspect_err(platform_error::log(deps.api))
+    // v10 reshapes the persisted `LeaseDTO` to carry the Solana-side
+    // remote-lease PDA as a non-optional field, so a pre-v10 lease cannot
+    // be deserialised under the new layout. Mainnet v9-lease population
+    // is zero (plan §10.A.1), so no in-flight state is at risk — reject
+    // any migrate attempt loudly rather than silently failing the first
+    // post-upgrade load.
+    Err(ContractError::UnsupportedMigration).inspect_err(platform_error::log(deps.api))
 }
 
 #[entry_point]
