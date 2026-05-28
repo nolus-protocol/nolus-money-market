@@ -67,9 +67,7 @@ impl OpenLeaseParams {
     }
 
     pub fn invariant_held(&self) -> bool {
-        self.downpayment_currency != self.lpn_currency
-            && self.downpayment_currency != self.asset_currency
-            && self.lpn_currency != self.asset_currency
+        self.lpn_currency != self.asset_currency
     }
 }
 
