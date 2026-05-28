@@ -96,9 +96,15 @@ pub mod opening {
         RequestingOpenLease,
         /// The controller has acked; the lease holds the Solana-side
         /// PDA and is progressing toward the live `Active` state.
-        OpenLease { remote_lease: RemoteLeaseId },
-        TransferOut { ica_account: String },
-        BuyAsset { ica_account: String },
+        OpenLease {
+            remote_lease: RemoteLeaseId,
+        },
+        TransferOut {
+            ica_account: String,
+        },
+        BuyAsset {
+            ica_account: String,
+        },
     }
 }
 

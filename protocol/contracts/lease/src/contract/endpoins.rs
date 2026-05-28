@@ -15,8 +15,7 @@ use sdk::{
     },
 };
 use versioning::{
-    ProtocolMigrationMessage, ProtocolPackageRelease, VersionSegment, package_name,
-    package_version,
+    ProtocolMigrationMessage, ProtocolPackageRelease, VersionSegment, package_name, package_version,
 };
 
 use crate::{

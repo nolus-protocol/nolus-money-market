@@ -204,6 +204,7 @@ pub(crate) mod tests {
     };
     use oracle_platform::{Oracle, error::Result as PriceOracleResult};
     use platform::batch::Batch;
+    use remote_lease::response::RemoteLeaseId;
     use sdk::cosmwasm_std::Addr;
 
     use crate::{
@@ -221,6 +222,7 @@ pub(crate) mod tests {
     const CUSTOMER: &str = "customer";
     const LEASE_ADDR: &str = "lease_addr";
     const ORACLE_ADDR: &str = "oracle_addr";
+    const REMOTE_LEASE_ID: &str = "StubPda11111111111111111111111111111";
     const MARGIN_INTEREST_RATE: Percent100 = Percent100::from_permille(23);
     pub(super) const LEASE_START: Instant = Instant::from_nanos(100);
     pub(super) const DUE_PERIOD: Duration = Duration::from_days(100);
@@ -351,6 +353,7 @@ pub(crate) mod tests {
             Position::new(amount, position_spec),
             loan,
             oracle,
+            RemoteLeaseId::new(REMOTE_LEASE_ID.to_owned()).expect("base58 sample"),
         )
     }
 

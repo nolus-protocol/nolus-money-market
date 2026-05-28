@@ -142,12 +142,13 @@ fn late_open_lease_ack_after_open_failed_is_absorbed() {
 
     // Synthesise the late OK ack that ibc-go would deliver against the
     // already-terminal lease on an UNORDERED channel.
-    let late_callback = RemoteLeaseCallback::OperationOk(OperationResponse::OpenLease(
-        OpenLeaseResponse {
-            remote_lease_id: RemoteLeaseId::new("StubPdaLate111111111111111111111111111".to_owned())
-                .expect("base58 sample"),
-        },
-    ));
+    let late_callback =
+        RemoteLeaseCallback::OperationOk(OperationResponse::OpenLease(OpenLeaseResponse {
+            remote_lease_id: RemoteLeaseId::new(
+                "StubPdaLate111111111111111111111111111".to_owned(),
+            )
+            .expect("base58 sample"),
+        }));
     let late = test_case
         .app
         .execute(

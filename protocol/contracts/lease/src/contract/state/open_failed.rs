@@ -59,8 +59,11 @@ impl Contract for OpenFailed {
         querier: QuerierWrapper<'_>,
         env: Env,
     ) -> ContractResult<Response> {
-        access_control::check(&self.leases.remote_lease_callback_permission(querier), &info)
-            .map_err(ContractError::from)?;
+        access_control::check(
+            &self.leases.remote_lease_callback_permission(querier),
+            &info,
+        )
+        .map_err(ContractError::from)?;
         let emitter = Emitter::of_type(LATE_ACK_EVENT)
             .emit("id", env.contract.address)
             .emit("terminal", "open_failed");

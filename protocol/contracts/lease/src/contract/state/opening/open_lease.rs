@@ -89,11 +89,8 @@ impl OpenLease {
         querier: QuerierWrapper<'_>,
         info: &MessageInfo,
     ) -> ContractResult<()> {
-        access_control::check(
-            &self.deps.3.remote_lease_callback_permission(querier),
-            info,
-        )
-        .map_err(Into::into)
+        access_control::check(&self.deps.3.remote_lease_callback_permission(querier), info)
+            .map_err(Into::into)
     }
 
     fn on_open_lease_ack(
@@ -136,7 +133,11 @@ impl OpenLease {
         Coin::<LpnCurrency>::try_from(loan.principal)
             .map_err(ContractError::from)
             .and_then(|principal| {
-                lpp_ref.execute_loan(RepayOpenLoan { principal, now }, lease_addr.clone(), querier)
+                lpp_ref.execute_loan(
+                    RepayOpenLoan { principal, now },
+                    lease_addr.clone(),
+                    querier,
+                )
             })
             .and_then(|lpp_batch| {
                 let customer_batch = downpayment.with_coin(SendToCustomer {
@@ -153,8 +154,7 @@ impl OpenLease {
                 StateMachineResponse::from(
                     MessageResponse::messages_with_event(batch, emitter),
                     State::from(crate::contract::state::open_failed::OpenFailed::new(
-                        reason,
-                        leases_ref,
+                        reason, leases_ref,
                     )),
                 )
             })
