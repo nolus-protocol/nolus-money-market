@@ -34,6 +34,7 @@ pub struct Config {
     pub lease_admin: Addr,
     pub dex: ConnectionParams,
     pub remote_lease_controller: Addr,
+    pub expected_instance_ordinal: u16,
 }
 
 impl Config {
@@ -55,6 +56,7 @@ impl Config {
             lease_admin: msg.lease_admin,
             dex: msg.dex,
             remote_lease_controller: msg.remote_lease_controller,
+            expected_instance_ordinal: msg.expected_instance_ordinal,
         }
     }
 

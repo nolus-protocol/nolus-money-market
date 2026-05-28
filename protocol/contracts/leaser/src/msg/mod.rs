@@ -37,6 +37,7 @@ pub struct InstantiateMsg {
     pub lease_admin: Addr,
     pub dex: ConnectionParams,
     pub remote_lease_controller: Addr,
+    pub expected_instance_ordinal: u16,
 }
 
 #[derive(Serialize, Deserialize)]

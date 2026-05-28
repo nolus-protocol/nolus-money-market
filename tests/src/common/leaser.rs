@@ -26,6 +26,8 @@ use super::{
 pub(crate) struct Instantiator;
 
 impl Instantiator {
+    pub const EXPECTED_INSTANCE_ORDINAL: u16 = 1;
+
     pub const INTEREST_RATE_MARGIN: Percent100 = Percent100::from_permille(30);
 
     pub const REPAYMENT_PERIOD: Duration = Duration::from_days(90);
@@ -132,6 +134,7 @@ impl Instantiator {
                 },
             },
             remote_lease_controller,
+            expected_instance_ordinal: Self::EXPECTED_INSTANCE_ORDINAL,
         };
 
         app.instantiate(code_id, testing::user(ADMIN), &msg, &[], "leaser", None)
