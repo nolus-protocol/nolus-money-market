@@ -97,12 +97,16 @@ impl DexContract for OpenIcaAccount {
         _due_projection: Duration,
         _querier: QuerierWrapper<'_>,
     ) -> Self::StateResponse {
+        let in_progress = match self.remote_lease_id {
+            Some(remote_lease) => OngoingTrx::OpenLease { remote_lease },
+            None => OngoingTrx::OpenIcaAccount {},
+        };
         Ok(QueryStateResponse::Opening {
             currency: self.new_lease.form.currency,
             downpayment: self.downpayment,
             loan: self.loan.principal,
             loan_interest_rate: self.loan.annual_interest_rate,
-            in_progress: OngoingTrx::OpenIcaAccount {},
+            in_progress,
         })
     }
 }

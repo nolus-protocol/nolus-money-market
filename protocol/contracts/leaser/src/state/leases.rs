@@ -24,24 +24,32 @@ impl Leases {
             .map_err(ContractError::SavePendingCustomerFailure)
     }
 
-    /// Return true if the lease has been stored or false if there has already been the same lease
-    pub fn save(storage: &mut dyn Storage, lease: Addr) -> ContractResult<bool> {
-        let mut stored = false;
-
-        let update_fn = |may_leases: Option<HashSet<Addr>>| -> StdResult<HashSet<Addr>> {
-            let mut leases = may_leases.unwrap_or_default();
-
-            stored = leases.insert(lease);
-
-            Ok(leases)
-        };
-
+    /// Return `Some(true)` if the lease has been stored, `Some(false)` if
+    /// the same lease was already registered, or `None` if the open
+    /// request was cancelled before the reply landed (the OpenLease
+    /// auto-refund path clears `PENDING_CUSTOMER` on the failure side of
+    /// the cascade).
+    pub fn save(storage: &mut dyn Storage, lease: Addr) -> ContractResult<Option<bool>> {
         Self::PENDING_CUSTOMER
-            .load(storage)
-            .inspect(|_| Self::PENDING_CUSTOMER.remove(storage))
-            .and_then(|customer| Self::CUSTOMER_LEASES.update(storage, customer, update_fn))
-            .map(|_| stored)
+            .may_load(storage)
             .map_err(ContractError::SaveLeaseFailure)
+            .and_then(|may_customer| match may_customer {
+                Some(customer) => {
+                    Self::PENDING_CUSTOMER.remove(storage);
+                    let mut stored = false;
+                    let update_fn =
+                        |may_leases: Option<HashSet<Addr>>| -> StdResult<HashSet<Addr>> {
+                            let mut leases = may_leases.unwrap_or_default();
+                            stored = leases.insert(lease.clone());
+                            Ok(leases)
+                        };
+                    Self::CUSTOMER_LEASES
+                        .update(storage, customer, update_fn)
+                        .map(|_| Some(stored))
+                        .map_err(ContractError::SaveLeaseFailure)
+                }
+                None => Ok(None),
+            })
     }
 
     pub fn load_by_customer(
@@ -54,7 +62,15 @@ impl Leases {
             .map_err(ContractError::LoadLeasesFailure)
     }
 
-    /// Return whether the lease was present before the removal
+    /// Return whether the lease (or its still-pending open request) was
+    /// present before the removal.
+    ///
+    /// The remote-lease open lifecycle may finalise a lease before it has
+    /// been moved from `PENDING_CUSTOMER` into `CUSTOMER_LEASES` (the
+    /// auto-refund batch in `OpenLease::on_remote_lease_callback` fires
+    /// inside the same cascade as the leaser's instantiate reply). In
+    /// that case the lease is still recorded only as the in-flight
+    /// open — clearing `PENDING_CUSTOMER` cancels it.
     pub fn remove(storage: &mut dyn Storage, customer: Addr, lease: &Addr) -> ContractResult<bool> {
         // not using cw_storage_plus::Map::load because it does not differentiate key-not-present
         // from value-cannot-be-deserialized case
@@ -72,8 +88,22 @@ impl Leases {
                 })
                 .map_err(ContractError::RemoveLeaseFailure)
         } else {
-            Ok(false)
+            Ok(Self::cancel_pending_if_matches(storage, &customer))
         }
+    }
+
+    fn cancel_pending_if_matches(storage: &mut dyn Storage, customer: &Addr) -> bool {
+        Self::PENDING_CUSTOMER
+            .may_load(storage)
+            .ok()
+            .flatten()
+            .is_some_and(|pending| {
+                let matches = &pending == customer;
+                if matches {
+                    Self::PENDING_CUSTOMER.remove(storage);
+                }
+                matches
+            })
     }
 
     pub fn iter(
@@ -105,15 +135,12 @@ impl Leases {
 mod test {
     use sdk::cosmwasm_std::{Addr, Storage, testing::MockStorage};
 
-    use crate::{ContractError, state::leases::Leases};
+    use crate::state::leases::Leases;
 
     #[test]
     fn test_save_customer_not_cached() {
         let mut storage = MockStorage::default();
-        assert!(matches!(
-            Leases::save(&mut storage, test_lease(),),
-            Err(ContractError::SaveLeaseFailure { .. })
-        ));
+        assert_eq!(None, Leases::save(&mut storage, test_lease()).unwrap());
         assert_lease_not_exist(&storage);
         assert!(Leases::empty(&storage));
     }
@@ -124,7 +151,7 @@ mod test {
         assert_lease_not_exist(&storage);
         Leases::cache_open_req(&mut storage, &test_customer()).unwrap();
 
-        assert!(Leases::save(&mut storage, test_lease()).unwrap());
+        assert_eq!(Some(true), Leases::save(&mut storage, test_lease()).unwrap());
         assert_lease_exist(&storage);
         assert!(!Leases::empty(&storage));
     }
@@ -133,11 +160,11 @@ mod test {
     fn test_save_same_lease() {
         let mut storage = MockStorage::default();
         Leases::cache_open_req(&mut storage, &test_customer()).unwrap();
-        assert!(Leases::save(&mut storage, test_lease()).unwrap());
+        assert_eq!(Some(true), Leases::save(&mut storage, test_lease()).unwrap());
         assert_lease_exist(&storage);
 
         Leases::cache_open_req(&mut storage, &test_customer()).unwrap();
-        assert!(!Leases::save(&mut storage, test_lease()).unwrap());
+        assert_eq!(Some(false), Leases::save(&mut storage, test_lease()).unwrap());
         assert_lease_exist(&storage);
     }
 
@@ -146,12 +173,15 @@ mod test {
         let mut storage = MockStorage::default();
         Leases::cache_open_req(&mut storage, &test_customer()).unwrap();
         assert!(Leases::empty(&storage));
-        assert!(Leases::save(&mut storage, test_lease()).unwrap());
+        assert_eq!(Some(true), Leases::save(&mut storage, test_lease()).unwrap());
         assert_lease_exist(&storage);
         assert!(!Leases::empty(&storage));
 
         Leases::cache_open_req(&mut storage, &test_customer()).unwrap();
-        assert!(Leases::save(&mut storage, test_another_lease()).unwrap());
+        assert_eq!(
+            Some(true),
+            Leases::save(&mut storage, test_another_lease()).unwrap()
+        );
         assert_lease_exist(&storage);
         assert!(lease_exist(
             &storage,
@@ -159,6 +189,17 @@ mod test {
             &test_another_lease()
         ));
         assert!(!Leases::empty(&storage));
+    }
+
+    #[test]
+    fn test_save_after_pending_cancelled() {
+        let mut storage = MockStorage::default();
+        Leases::cache_open_req(&mut storage, &test_customer()).unwrap();
+        // OpenLease auto-refund cancels the pending open before the
+        // leaser's instantiate reply lands.
+        assert!(Leases::remove(&mut storage, test_customer(), &test_lease()).unwrap());
+        assert_eq!(None, Leases::save(&mut storage, test_lease()).unwrap());
+        assert_lease_not_exist(&storage);
     }
 
     #[test]

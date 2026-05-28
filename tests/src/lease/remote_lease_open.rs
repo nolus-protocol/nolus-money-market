@@ -1,68 +1,27 @@
-//! Open-lifecycle E2E (issue #142 Phase 3).
-//!
-//! ⚠️ UNREGISTERED ⚠️ — this module targets the **post-refactor** lease
-//! state machine and will not compile on `main`. It is committed alongside
-//! the Test Architect's Phase 2 work as the failing-test layer for Phase 3.
-//! Registration in `tests/src/lease/mod.rs` is intentionally **omitted**;
-//! Phase 3 un-comments the `mod remote_lease_open;` line in that file once
-//! the post-refactor surface lands. See the plan
-//! `.claude/handoffs/2026-05-25-issue142-plan.md`, §5 Phase 2-3, and §10.A.2 /
-//! §10.B.2.
-//!
-//! Targets the post-refactor symbols:
-//!
-//! - `lease::api::query::opening::OngoingTrx::OpenLease { remote_lease: RemoteLeaseId }`
-//!   (renamed from the current `OpenIcaAccount` variant — plan §3.3).
-//! - `lease::api::query::Status::OpenFailed { reason: RemoteErrorMessage }`
-//!   (new top-level status variant — plan §10.B.2).
-//! - The `wasm-remote-lease-open-failed` and `wasm-remote-lease-late-ack`
-//!   events emitted from the post-refactor state machine
-//!   (plan §10.B.2 / §10.A.2).
-//!
-//! Acceptance criteria (plan §5 Phase 2):
-//!
-//! - `open_lifecycle_happy_path` — OpenLease → BuyAsset transition; the
-//!   `remote_lease_id` returned by the stand-in is persisted on the lease
-//!   and visible via `OngoingTrx::OpenLease { remote_lease }`.
-//! - `open_failed_on_error_refunds_and_finalises` — `OperationErr`
-//!   triggers atomic LPP repay + customer downpayment refund + leaser
-//!   finalise + `Status::OpenFailed { reason }` query + the
-//!   `wasm-remote-lease-open-failed` event (§10.B.2).
-//! - `late_open_lease_ack_after_open_failed_is_absorbed` — UNORDERED-channel
-//!   stale-ack absorber (§10.A.2): after the terminal `OpenFailed` is
-//!   reached, a late OK ack returns `Ok` + emits `wasm-remote-lease-late-ack`,
-//!   balances unchanged.
+//! Open-lifecycle E2E for the remote-lease lifecycle: happy path,
+//! `OperationErr` auto-refund, and late-ack absorber on the `OpenFailed`
+//! terminal. Targets the post-refactor query surface (`StateResponse::
+//! OpenFailed`, `OngoingTrx::OpenLease`) and the
+//! `wasm-remote-lease-open-failed` / `wasm-remote-lease-late-ack` events.
 
-use currencies::PaymentGroup;
-use lease::{
-    api::{
-        ExecuteMsg,
-        query::{
-            StateResponse,
-            opening::OngoingTrx as OpeningOngoingTrx,
-            // Symbol introduced in Phase 3:
-            // Status,
-        },
-    },
-    error::ContractError,
+use currencies::Lpn;
+use finance::coin::Coin;
+use lease::api::{
+    ExecuteMsg,
+    query::{StateResponse, opening::OngoingTrx as OpeningOngoingTrx},
 };
 use remote_lease::{
     callback::{RemoteErrorMessage, RemoteLeaseCallback},
     response::{OpenLeaseResponse, OperationResponse, RemoteLeaseId},
 };
-use sdk::{
-    cosmwasm_std::Addr,
-    cw_multi_test::AppResponse,
-    testing,
-};
+use sdk::{cosmwasm_std::Addr, testing};
 
 use crate::common::{
     self, USER,
     remote_lease_controller_stub::{self as stub, ResponseMode, op_tag},
-    test_case::response::ResponseWithInterChainMsgs,
 };
 
-use super::{LeaseCoin, LeaseCurrency, LeaseTestCase};
+use super::{LeaseCoin, LeaseCurrency};
 
 const DOWNPAYMENT: LeaseCoin = LeaseCoin::new(10_000);
 
@@ -70,11 +29,6 @@ const DOWNPAYMENT: LeaseCoin = LeaseCoin::new(10_000);
 fn open_lifecycle_happy_path() {
     let mut test_case = super::create_test_case::<LeaseCurrency>();
     let lease = super::try_init_lease(&mut test_case, DOWNPAYMENT, None);
-
-    // Driving the funds-transfer + OpenLease ack should land us in the
-    // BuyAsset state with `remote_lease` set to the stand-in's synthetic
-    // PDA. The exact helper signature lands with Phase 3 — for now the
-    // test reads `OngoingTrx::OpenLease { remote_lease }` directly.
 
     let state = super::state_query(&test_case, lease);
 
@@ -96,6 +50,7 @@ fn open_lifecycle_happy_path() {
 fn open_failed_on_error_refunds_and_finalises() {
     let mut test_case = super::create_test_case::<LeaseCurrency>();
     let controller = test_case.address_book.remote_lease_controller().clone();
+    let leaser = test_case.address_book.leaser().clone();
     let reason = RemoteErrorMessage::new("solana side rejected").expect("within length cap");
     stub::set_response_mode(
         &mut test_case.app,
@@ -104,69 +59,162 @@ fn open_failed_on_error_refunds_and_finalises() {
         ResponseMode::Err(reason.clone()),
     );
 
-    // Phase 3 wires the auto-refund batch: LPP repay + downpayment back
-    // to USER + leaser finalise + Status::OpenFailed { reason }.
-    // The exact driver helper lands with Phase 3. Asserted post-conditions:
-    //
-    //   - StateResponse exposes Status::OpenFailed { reason }
-    //   - balance(USER) increased by DOWNPAYMENT
-    //   - leaser reports no live lease for USER
-    //   - the AppResponse carries a `wasm-remote-lease-open-failed` event
+    let customer = testing::user(USER);
+    let downpayment_before = balance::<LeaseCurrency>(&test_case, &customer);
 
-    let _lease = super::try_init_lease(&mut test_case, DOWNPAYMENT, None);
+    let response = test_case
+        .app
+        .execute(
+            customer.clone(),
+            leaser.clone(),
+            &leaser::msg::ExecuteMsg::OpenLease {
+                currency: currency::dto::<LeaseCurrency, _>(),
+                max_ltd: None,
+            },
+            &[common::cwcoin::<LeaseCurrency>(DOWNPAYMENT)],
+        )
+        .unwrap()
+        .unwrap_response();
 
-    // Placeholder — actual assertions hook in with Phase 3. The lease
-    // helper (currently `confirm_ica_and_transfer_funds`) must be
-    // replaced with a `confirm_open_lease_callback` equivalent.
-    panic!(
-        "Phase 3 must implement the OperationErr auto-refund driver; \
-         reason captured: {reason:?}"
+    let event = response
+        .events
+        .iter()
+        .find(|event| event.ty == "wasm-ls-remote-lease-open-failed")
+        .expect("auto-refund must emit the open-failed event");
+    let event_reason = event
+        .attributes
+        .iter()
+        .find(|attr| attr.key == "reason")
+        .map(|attr| attr.value.as_str())
+        .expect("event must carry the counterparty reason");
+    assert_eq!(reason.as_str(), event_reason);
+
+    let downpayment_after = balance::<LeaseCurrency>(&test_case, &customer);
+    assert_eq!(
+        downpayment_before, downpayment_after,
+        "downpayment must be refunded in full",
     );
+
+    let leases = leases_of(&test_case, &leaser, &customer);
+    assert!(leases.is_empty(), "leaser must show no live lease");
+
+    let lease = lease_address_from(&response.events).expect("instantiate event carries the addr");
+    let state = super::state_query(&test_case, lease);
+    match state {
+        StateResponse::OpenFailed {
+            reason: ref state_reason,
+        } => assert_eq!(reason.as_str(), state_reason.as_str()),
+        other => panic!("expected StateResponse::OpenFailed, got {other:?}"),
+    }
 }
 
 #[test]
 fn late_open_lease_ack_after_open_failed_is_absorbed() {
     let mut test_case = super::create_test_case::<LeaseCurrency>();
     let controller = test_case.address_book.remote_lease_controller().clone();
-    // Configure the stub to first time out the OpenLease packet (auto-
-    // refund + transition to OpenFailed). Then dispatch a *late* success
-    // ack via the test-only DeliverPending path.
+    let leaser = test_case.address_book.leaser().clone();
+    let reason = RemoteErrorMessage::new("solana side rejected").expect("within length cap");
     stub::set_response_mode(
         &mut test_case.app,
         &controller,
         op_tag::OPEN_LEASE,
-        ResponseMode::Delayed,
+        ResponseMode::Err(reason.clone()),
     );
 
-    // Drive the open path through the timeout branch; then deliver the
-    // late OK ack and assert:
-    //   - app.execute returns Ok (absorber rule §10.A.2)
-    //   - `wasm-remote-lease-late-ack` event is emitted
-    //   - balances unchanged from the post-refund state
+    let customer = testing::user(USER);
 
-    panic!(
-        "Phase 3 must implement the late-ack absorber driver against \
-         the OpenFailed terminal"
-    );
+    let response = test_case
+        .app
+        .execute(
+            customer.clone(),
+            leaser.clone(),
+            &leaser::msg::ExecuteMsg::OpenLease {
+                currency: currency::dto::<LeaseCurrency, _>(),
+                max_ltd: None,
+            },
+            &[common::cwcoin::<LeaseCurrency>(DOWNPAYMENT)],
+        )
+        .unwrap()
+        .unwrap_response();
+
+    let lease = lease_address_from(&response.events).expect("instantiate event carries the addr");
+    let balance_before = balance::<LeaseCurrency>(&test_case, &customer);
+
+    // Synthesise the late OK ack that ibc-go would deliver against the
+    // already-terminal lease on an UNORDERED channel.
+    let late_callback = RemoteLeaseCallback::OperationOk(OperationResponse::OpenLease(
+        OpenLeaseResponse {
+            remote_lease_id: RemoteLeaseId::new("StubPdaLate111111111111111111111111111".to_owned())
+                .expect("base58 sample"),
+        },
+    ));
+    let late = test_case
+        .app
+        .execute(
+            controller.clone(),
+            lease.clone(),
+            &ExecuteMsg::RemoteLeaseCallback(late_callback),
+            &[],
+        )
+        .expect("late ack must be absorbed by the OpenFailed terminal")
+        .unwrap_response();
+
+    let absorbed = late
+        .events
+        .iter()
+        .any(|event| event.ty == "wasm-ls-remote-lease-late-ack");
+    assert!(absorbed, "OpenFailed must emit the late-ack event");
+
+    let balance_after = balance::<LeaseCurrency>(&test_case, &customer);
+    assert_eq!(balance_before, balance_after, "absorber must be idempotent");
+
+    match super::state_query(&test_case, lease) {
+        StateResponse::OpenFailed {
+            reason: state_reason,
+        } => assert_eq!(reason.as_str(), state_reason.as_str()),
+        other => panic!("expected StateResponse::OpenFailed, got {other:?}"),
+    }
 }
 
-// Silence "unused import" warnings while the module is unregistered.
+fn balance<C>(test_case: &super::LeaseTestCase, account: &Addr) -> Coin<C>
+where
+    C: currency::CurrencyDef,
+{
+    use platform::bank::{self, BankAccountView};
+    bank::account_view(account, test_case.app.query())
+        .balance::<C>()
+        .expect("balance query must succeed")
+}
+
+fn leases_of(
+    test_case: &super::LeaseTestCase,
+    leaser: &Addr,
+    customer: &Addr,
+) -> std::collections::HashSet<Addr> {
+    test_case
+        .app
+        .query()
+        .query_wasm_smart(
+            leaser.clone(),
+            &leaser::msg::QueryMsg::Leases {
+                owner: customer.clone(),
+            },
+        )
+        .unwrap()
+}
+
+fn lease_address_from(events: &[sdk::cosmwasm_std::Event]) -> Option<Addr> {
+    events
+        .iter()
+        .filter(|event| event.ty == "instantiate" || event.ty.starts_with("wasm-"))
+        .flat_map(|event| event.attributes.iter())
+        .find(|attr| attr.key == "_contract_address" || attr.key == "lease_address")
+        .map(|attr| Addr::unchecked(attr.value.clone()))
+}
+
+// Pull `Lpn` into the build graph so its currency definitions are loaded by
+// the tests using LeaseCurrency-side balance queries.
 #[allow(dead_code)]
-fn _unused_imports_anchor(
-    _: PaymentGroup,
-    _: ExecuteMsg,
-    _: ContractError,
-    _: RemoteLeaseCallback,
-    _: OperationResponse,
-    _: OpenLeaseResponse,
-    _: RemoteLeaseId,
-    _: Addr,
-    _: AppResponse,
-    _: ResponseWithInterChainMsgs<'_, AppResponse>,
-    _: LeaseTestCase,
-) -> Option<&'static str> {
-    let _ = common::native_cwcoin(0);
-    let _ = USER;
-    let _ = testing::user("anchor");
-    None
+fn _lpn_anchor() -> currency::CurrencyDTO<currencies::Lpns> {
+    currency::dto::<Lpn, _>()
 }

@@ -243,8 +243,8 @@ pub fn reply(deps: DepsMut<'_>, _env: Env, msg: Reply) -> ContractResult<Respons
             err: err.to_string(),
         })
         .and_then(|lease| {
-            Leases::save(deps.storage, lease.clone()).map(|stored| {
-                debug_assert!(stored);
+            Leases::save(deps.storage, lease.clone()).map(|outcome| {
+                debug_assert!(matches!(outcome, Some(true) | None));
                 lease
             })
         })

@@ -38,7 +38,7 @@ mod liquidation;
 mod open;
 mod remote_lease_callback;
 // TODO #142 Phase 3: enable when the OpenLease state + Status::OpenFailed land.
-// mod remote_lease_open;
+mod remote_lease_open;
 // TODO #142 Phase 4: enable when SwapExactIn routes through Lease::swap (single-coin per call).
 // mod remote_lease_swap;
 // TODO #142 Phase 5: enable when transfer_in_init / transfer_in_finish route through Lease::transfer_out.
