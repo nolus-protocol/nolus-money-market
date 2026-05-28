@@ -22,8 +22,9 @@ mod unchecked;
 
 /// Fields are ordered by lifecycle role: lease identity (`form`), DEX
 /// transport (`dex`), downstream notification sink invoked at terminal
-/// states (`finalizer`), and the remote-instance pin used by the
-/// remote-lease controller (`expected_instance_ordinal`).
+/// states (`finalizer`), the local remote-lease controller invoked for
+/// outbound operations (`remote_lease_controller`), and the remote-instance
+/// pin used by that controller (`expected_instance_ordinal`).
 #[derive(Serialize, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "skel", derive(Deserialize))]
 #[cfg_attr(feature = "skel_testing", derive(Debug))]
@@ -37,6 +38,13 @@ pub struct NewLeaseContract {
     ///
     /// The finalizer API should provide all `FinalizerExecuteMsg` variants.
     pub finalizer: Addr,
+    /// The local remote-lease controller that fronts the IBC channel to
+    /// the Solana side.
+    ///
+    /// Outbound remote-lease operations are dispatched through this
+    /// address via the `remote_lease::stub::Factory` and
+    /// `remote_lease::stub::Lease` builders.
+    pub remote_lease_controller: Addr,
     /// The Solana-side instance ordinal expected by the remote-lease
     /// controller for this protocol deployment.
     ///

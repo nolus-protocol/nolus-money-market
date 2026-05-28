@@ -1431,7 +1431,9 @@ dependencies = [
  "currencies",
  "currency",
  "finance",
+ "platform",
  "remote_lease_wire",
+ "sdk",
  "serde",
  "thiserror 2.0.18",
 ]

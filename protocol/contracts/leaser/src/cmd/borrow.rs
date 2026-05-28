@@ -66,6 +66,7 @@ impl Borrow {
             },
             dex: config.dex,
             finalizer,
+            remote_lease_controller: config.remote_lease_controller,
             expected_instance_ordinal: config.expected_instance_ordinal,
         }
     }

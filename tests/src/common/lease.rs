@@ -116,6 +116,7 @@ impl Instantiator {
             },
             dex: config.dex,
             finalizer: addresses.finalizer,
+            remote_lease_controller: testing::user("remote_lease_controller"),
             expected_instance_ordinal: 1,
         }
     }
