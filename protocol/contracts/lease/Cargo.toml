@@ -38,6 +38,7 @@ contract = [
     "dep:thiserror",
     "dep:timealarms",
     "dep:versioning",
+    "remote_lease/stub",
 ]
 contract_testing = [
     "contract",

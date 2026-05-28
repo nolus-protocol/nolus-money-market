@@ -34,6 +34,7 @@ pub(crate) struct OpenIcaAccount {
 }
 
 impl OpenIcaAccount {
+    #[allow(dead_code)]
     pub(super) fn new(
         new_lease: NewLeaseContract,
         downpayment: DownpaymentCoin,

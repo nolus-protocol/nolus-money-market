@@ -12,6 +12,7 @@ use oracle::{api::alarms::Error as OracleAlarmError, stub::Error as OracleError}
 use oracle_platform::error::Error as OraclePlatformError;
 use platform::error::Error as PlatformError;
 use profit::stub::Error as ProfitError;
+use remote_lease::error::Error as RemoteLeaseError;
 use reserve::stub::Error as ReserveError;
 use sdk::cosmwasm_std::StdError;
 use timealarms::stub::Error as TimeAlarmsError;
@@ -85,6 +86,9 @@ pub enum ContractError {
 
     #[error("[Lease] No payment sent")]
     NoPaymentError(),
+
+    #[error("[Lease] {0}")]
+    OpenLeaseParams(RemoteLeaseError),
 
     #[error("[Lease] The operation '{0}' is not supported in the current state")]
     UnsupportedOperation(String),

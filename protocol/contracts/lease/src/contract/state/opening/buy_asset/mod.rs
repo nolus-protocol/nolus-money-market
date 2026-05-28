@@ -40,6 +40,7 @@ mod calculator;
 mod finish;
 
 type AssetGroup = LeaseAssetCurrencies;
+#[allow(dead_code)]
 pub(super) type StartState = StartLocalRemoteState<OpenIcaAccount, BuyAsset>;
 pub(in super::super) type DexState = dex::StateRemoteOut<
     OpenIcaAccount,
@@ -49,6 +50,7 @@ pub(in super::super) type DexState = dex::StateRemoteOut<
     ForwardToDexEntryContinue,
 >;
 
+#[allow(dead_code)]
 pub(super) fn start(
     new_lease: NewLeaseContract,
     downpayment: DownpaymentCoin,

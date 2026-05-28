@@ -44,6 +44,8 @@ mod resp_delivery;
 
 type RequestLoan = LeaseState<opening::request_loan::RequestLoan>;
 
+type OpenLease = opening::open_lease::OpenLease;
+
 type BuyAsset = DexState<opening::buy_asset::DexState>;
 
 type OpenedActive = LeaseState<opened::active::Active>;
@@ -74,6 +76,7 @@ type SwapClient = Impl;
 #[derive(Serialize, Deserialize)]
 pub enum State {
     RequestLoan,
+    OpenLease,
     BuyAsset,
     OpenedActive,
     BuyLpn,

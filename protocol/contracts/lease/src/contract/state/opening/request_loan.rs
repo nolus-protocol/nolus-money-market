@@ -16,14 +16,14 @@ use crate::{
     contract::{
         cmd::{OpenLoanReq, OpenLoanReqResult, OpenLoanResp},
         finalize::LeasesRef,
-        state::{Handler, Response},
+        state::{Handler, Response, State},
     },
     error::{ContractError, ContractResult},
     event::Type,
     finance::{LppRef, OracleRef},
 };
 
-use super::buy_asset::DexState;
+use super::open_lease::OpenLease;
 use cw_time::IntoInstant;
 
 #[derive(Serialize, Deserialize)]
@@ -83,17 +83,19 @@ impl RequestLoan {
 
         let emitter = self.emit_ok(env.contract.address);
 
-        let open_ica = super::buy_asset::start(
+        let open_lease = OpenLease::new(
             self.new_lease,
             self.downpayment,
             loan,
             self.deps,
             env.block.time.into_instant(),
         );
-        Ok(StateMachineResponse::from(
-            MessageResponse::messages_with_event(open_ica.enter(), emitter),
-            Into::<DexState>::into(open_ica),
-        ))
+        open_lease.enter().map(|batch| {
+            StateMachineResponse::from(
+                MessageResponse::messages_with_event(batch, emitter),
+                State::from(open_lease),
+            )
+        })
     }
 
     fn emit_ok(&self, contract: Addr) -> Emitter {
