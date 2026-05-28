@@ -319,7 +319,9 @@ fn synth_open_lease_response(
     // restricts characters but does not enforce on-chain shape — fine for
     // an integration stand-in. The prefix is fixed so test assertions can
     // pattern-match on it.
-    let raw = format!("StubPda{next:0>32}");
+    // Pad with `1` (smallest valid base58 digit) — `0` is excluded from the
+    // alphabet, which `RemoteLeaseId::new` rejects.
+    let raw = format!("StubPda{next:1>32}");
     let id =
         RemoteLeaseId::new(raw).map_err(|err| StubError::Std(StdError::msg(err.to_string())))?;
     Ok(OperationResponse::OpenLease(OpenLeaseResponse {
