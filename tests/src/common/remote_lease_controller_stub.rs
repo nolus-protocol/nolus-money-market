@@ -216,13 +216,11 @@ pub fn execute(
                 Ok(OperationResponse::CloseLease(CloseLeaseResponse {}))
             })
         }
-        StubExecuteMsg::Swap { params, .. } => {
-            handle_outbound(deps, info, op_tag::SWAP, |_| {
-                Ok(OperationResponse::Swap(SwapResponse {
-                    amount_out: *params.min_out(),
-                }))
-            })
-        }
+        StubExecuteMsg::Swap { params, .. } => handle_outbound(deps, info, op_tag::SWAP, |_| {
+            Ok(OperationResponse::Swap(SwapResponse {
+                amount_out: *params.min_out(),
+            }))
+        }),
         StubExecuteMsg::TransferOut { .. } => {
             handle_outbound(deps, info, op_tag::TRANSFER_OUT, |_| {
                 Ok(OperationResponse::TransferOut(TransferOutResponse {}))
@@ -322,7 +320,8 @@ fn synth_open_lease_response(
     // an integration stand-in. The prefix is fixed so test assertions can
     // pattern-match on it.
     let raw = format!("StubPda{next:0>32}");
-    let id = RemoteLeaseId::new(raw).map_err(|err| StubError::Std(StdError::msg(err.to_string())))?;
+    let id =
+        RemoteLeaseId::new(raw).map_err(|err| StubError::Std(StdError::msg(err.to_string())))?;
     Ok(OperationResponse::OpenLease(OpenLeaseResponse {
         remote_lease_id: id,
     }))
@@ -408,4 +407,3 @@ pub fn deliver_pending_callback(app: &mut App, controller: &Addr, op: &str) {
         })
         .expect("DeliverPending must succeed against the stand-in");
 }
-
