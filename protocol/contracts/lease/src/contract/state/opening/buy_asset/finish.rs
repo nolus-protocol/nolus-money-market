@@ -96,6 +96,7 @@ where
                 (spec.deps.2, spec.deps.1.clone()),
                 spec.start_opening_at,
                 &now,
+                spec.remote_lease_id,
             )
         };
         let OpenLeaseResult {

@@ -116,7 +116,7 @@ impl Instantiator {
             },
             dex: config.dex,
             finalizer: addresses.finalizer,
-            remote_lease_controller: testing::user("remote_lease_controller"),
+            remote_lease_controller: addresses.remote_lease_controller,
             expected_instance_ordinal: 1,
         }
     }
@@ -200,6 +200,7 @@ pub struct InstantiatorAddresses {
     pub profit: Addr,
     pub reserve: Addr,
     pub finalizer: Addr,
+    pub remote_lease_controller: Addr,
 }
 
 pub(crate) fn complete_initialization<DownpaymentC, Lpn>(

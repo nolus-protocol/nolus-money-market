@@ -16,7 +16,7 @@ use platform::{
 use remote_lease::{
     callback::{RemoteErrorMessage, RemoteLeaseCallback},
     msg::OpenLeaseParams,
-    response::OperationResponse,
+    response::{OpenLeaseResponse, OperationResponse, RemoteLeaseId},
     stub::{ControllerInnerMessage, Factory},
 };
 use sdk::cosmwasm_std::{Addr, Env, MessageInfo, QuerierWrapper};
@@ -96,6 +96,26 @@ impl OpenLease {
         .map_err(Into::into)
     }
 
+    fn on_open_lease_ack(
+        self,
+        remote_lease_id: RemoteLeaseId,
+        _env: &Env,
+    ) -> ContractResult<Response> {
+        let next = super::buy_asset::start(
+            self.new_lease,
+            self.downpayment,
+            self.loan,
+            self.deps,
+            self.start_opening_at,
+            Some(remote_lease_id),
+        );
+        let batch = next.enter();
+        Ok(StateMachineResponse::from(
+            MessageResponse::messages_only(batch),
+            State::from(super::buy_asset::DexState::from(next)),
+        ))
+    }
+
     fn on_open_failed(
         self,
         querier: QuerierWrapper<'_>,
@@ -163,9 +183,9 @@ impl Contract for OpenLease {
     ) -> ContractResult<Response> {
         self.authz_callback(querier, &info)
             .and_then(|()| match callback {
-                RemoteLeaseCallback::OperationOk(OperationResponse::OpenLease(_response)) => Err(
-                    ContractError::unsupported_operation("open lease ok (deferred)"),
-                ),
+                RemoteLeaseCallback::OperationOk(OperationResponse::OpenLease(
+                    OpenLeaseResponse { remote_lease_id },
+                )) => self.on_open_lease_ack(remote_lease_id, &env),
                 RemoteLeaseCallback::OperationOk(other) => {
                     Err(ContractError::unsupported_operation(format!(
                         "open lease unexpected operation response: {other:?}"

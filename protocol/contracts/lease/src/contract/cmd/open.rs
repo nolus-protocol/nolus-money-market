@@ -3,6 +3,7 @@ use finance::instant::Instant;
 use lpp::stub::loan::LppLoan as LppLoanTrait;
 use oracle_platform::Oracle as OracleTrait;
 use profit::stub::ProfitRef;
+use remote_lease::response::RemoteLeaseId;
 use sdk::cosmwasm_std::Addr;
 use timealarms::stub::TimeAlarmsRef;
 
@@ -27,11 +28,13 @@ pub struct LeaseFactory<'a> {
     price_alarms: OracleRef,
     start_at: Instant,
     now: &'a Instant,
+    remote_lease_id: Option<RemoteLeaseId>,
 }
 
 pub type OpenLeaseResult = LeaseDTOResult<CloseStatusDTO>;
 
 impl<'a> LeaseFactory<'a> {
+    #[allow(clippy::too_many_arguments)]
     pub(crate) fn new(
         form: NewLeaseForm,
         lease_addr: Addr,
@@ -40,6 +43,7 @@ impl<'a> LeaseFactory<'a> {
         alarms: (TimeAlarmsRef, OracleRef),
         start_at: Instant,
         now: &'a Instant,
+        remote_lease_id: Option<RemoteLeaseId>,
     ) -> Self {
         Self {
             form,
@@ -50,6 +54,7 @@ impl<'a> LeaseFactory<'a> {
             price_alarms: alarms.1,
             start_at,
             now,
+            remote_lease_id,
         }
     }
 }
@@ -78,7 +83,14 @@ impl WithLeaseDeps for LeaseFactory<'_> {
                 self.form.loan.annual_margin_interest,
                 self.form.loan.due_period,
             );
-            Lease::new(self.lease_addr, self.form.customer, position, loan, oracle)
+            Lease::new(
+                self.lease_addr,
+                self.form.customer,
+                position,
+                loan,
+                oracle,
+                self.remote_lease_id,
+            )
         };
 
         check::check(&lease, self.now, &self.time_alarms, &self.price_alarms).map(|status| {

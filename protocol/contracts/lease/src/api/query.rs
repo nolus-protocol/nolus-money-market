@@ -72,6 +72,7 @@ pub enum StateResponse {
 }
 
 pub mod opening {
+    use remote_lease::response::RemoteLeaseId;
     #[cfg(feature = "skel_testing")]
     use serde::Deserialize;
     use serde::Serialize;
@@ -84,6 +85,7 @@ pub mod opening {
     #[serde(deny_unknown_fields, rename_all = "snake_case")]
     pub enum OngoingTrx {
         OpenIcaAccount,
+        OpenLease { remote_lease: RemoteLeaseId },
         TransferOut { ica_account: String },
         BuyAsset { ica_account: String },
     }

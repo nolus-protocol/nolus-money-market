@@ -109,6 +109,7 @@ impl<ProtocolsRegistry, Treasury>
                 profit: self.address_book.profit().clone(),
                 reserve: self.address_book.reserve().clone(),
                 finalizer: self.address_book.leaser().clone(),
+                remote_lease_controller: self.address_book.remote_lease_controller().clone(),
             },
             InitConfig::new(lease_currency, common::coin(1000), None),
             LeaseInstantiatorConfig::default(),

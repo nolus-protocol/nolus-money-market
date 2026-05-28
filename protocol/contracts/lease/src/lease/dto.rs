@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 use currency::{CurrencyDef, MemberOf};
 use lpp::stub::loan::LppLoan as LppLoanTrait;
 use oracle_platform::Oracle as OracleTrait;
+use remote_lease::response::RemoteLeaseId;
 use sdk::cosmwasm_std::{Addr, QuerierWrapper};
 use timealarms::stub::TimeAlarmsRef;
 
@@ -30,9 +31,16 @@ pub struct LeaseDTO {
     pub(crate) time_alarms: TimeAlarmsRef,
     pub(crate) oracle: OracleRef,
     pub(crate) reserve: ReserveRef,
+    /// Solana-side Lease PDA, set once the remote-lease controller's
+    /// OpenLease packet acks. `None` for leases opened before the
+    /// remote-lease lifecycle landed; backward-compatible via
+    /// `#[serde(default)]`.
+    #[serde(default)]
+    pub(crate) remote_lease_id: Option<RemoteLeaseId>,
 }
 
 impl LeaseDTO {
+    #[allow(clippy::too_many_arguments)]
     pub(crate) fn new(
         addr: Addr,
         customer: Addr,
@@ -41,6 +49,7 @@ impl LeaseDTO {
         time_alarms: TimeAlarmsRef,
         oracle: OracleRef,
         reserve: ReserveRef,
+        remote_lease_id: Option<RemoteLeaseId>,
     ) -> Self {
         Self {
             addr,
@@ -50,6 +59,7 @@ impl LeaseDTO {
             time_alarms,
             oracle,
             reserve,
+            remote_lease_id,
         }
     }
 
