@@ -69,6 +69,12 @@ pub enum StateResponse {
     },
     Closed(),
     Liquidated(),
+    /// The remote-lease open lifecycle failed before reaching the live
+    /// lease. The downpayment was refunded to the customer and the LPP
+    /// loan was repaid in the same atomic batch.
+    OpenFailed {
+        reason: remote_lease::callback::RemoteErrorMessage,
+    },
 }
 
 pub mod opening {

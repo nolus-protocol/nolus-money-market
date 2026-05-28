@@ -33,7 +33,7 @@ use crate::{
         api::Contract,
         cmd::OpenLoanRespResult,
         finalize::LeasesRef,
-        state::{Response, State, closed::Closed},
+        state::{Response, State},
     },
     error::{ContractError, ContractResult},
     finance::{LpnCoin, LpnCurrency, LppRef, OracleRef},
@@ -120,7 +120,7 @@ impl OpenLease {
         self,
         querier: QuerierWrapper<'_>,
         env: &Env,
-        reason_label: String,
+        reason: RemoteErrorMessage,
     ) -> ContractResult<Response> {
         let Self {
             new_lease,
@@ -149,10 +149,10 @@ impl OpenLease {
             .map(|batch| {
                 let emitter = Emitter::of_type(OPEN_FAILED_EVENT)
                     .emit("id", lease_addr)
-                    .emit("reason", reason_label);
+                    .emit("reason", reason.as_str().to_owned());
                 StateMachineResponse::from(
                     MessageResponse::messages_with_event(batch, emitter),
-                    State::from(Closed::default()),
+                    State::from(crate::contract::state::open_failed::OpenFailed::new(reason)),
                 )
             })
     }
@@ -192,17 +192,16 @@ impl Contract for OpenLease {
                     )))
                 }
                 RemoteLeaseCallback::OperationErr(reason) => {
-                    self.on_open_failed(querier, &env, reason_to_label(&reason))
+                    self.on_open_failed(querier, &env, reason)
                 }
-                RemoteLeaseCallback::OperationTimeout => {
-                    self.on_open_failed(querier, &env, "timeout".to_owned())
-                }
+                RemoteLeaseCallback::OperationTimeout => self.on_open_failed(
+                    querier,
+                    &env,
+                    RemoteErrorMessage::new("timeout")
+                        .expect("'timeout' is within RemoteErrorMessage cap"),
+                ),
             })
     }
-}
-
-fn reason_to_label(reason: &RemoteErrorMessage) -> String {
-    reason.as_str().to_owned()
 }
 
 #[derive(Serialize)]
