@@ -107,7 +107,7 @@ impl OpenLease {
             self.loan,
             self.deps,
             self.start_opening_at,
-            Some(remote_lease_id),
+            remote_lease_id,
         );
         let batch = next.enter();
         Ok(StateMachineResponse::from(

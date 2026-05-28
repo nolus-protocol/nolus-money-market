@@ -32,8 +32,7 @@ pub(crate) struct OpenIcaAccount {
     loan: OpenLoanRespResult,
     deps: (LppRef, OracleRef, TimeAlarmsRef, LeasesRef),
     start_opening_at: Instant,
-    #[serde(default)]
-    remote_lease_id: Option<RemoteLeaseId>,
+    remote_lease_id: RemoteLeaseId,
 }
 
 impl OpenIcaAccount {
@@ -43,7 +42,7 @@ impl OpenIcaAccount {
         loan: OpenLoanRespResult,
         deps: (LppRef, OracleRef, TimeAlarmsRef, LeasesRef),
         start_opening_at: Instant,
-        remote_lease_id: Option<RemoteLeaseId>,
+        remote_lease_id: RemoteLeaseId,
     ) -> Self {
         Self {
             new_lease,
@@ -97,16 +96,14 @@ impl DexContract for OpenIcaAccount {
         _due_projection: Duration,
         _querier: QuerierWrapper<'_>,
     ) -> Self::StateResponse {
-        let in_progress = match self.remote_lease_id {
-            Some(remote_lease) => OngoingTrx::OpenLease { remote_lease },
-            None => OngoingTrx::OpenIcaAccount {},
-        };
         Ok(QueryStateResponse::Opening {
             currency: self.new_lease.form.currency,
             downpayment: self.downpayment,
             loan: self.loan.principal,
             loan_interest_rate: self.loan.annual_interest_rate,
-            in_progress,
+            in_progress: OngoingTrx::OpenLease {
+                remote_lease: self.remote_lease_id,
+            },
         })
     }
 }

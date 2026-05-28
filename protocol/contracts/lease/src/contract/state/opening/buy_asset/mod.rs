@@ -57,7 +57,7 @@ pub(super) fn start(
     loan: OpenLoanRespResult,
     deps: (LppRef, OracleRef, TimeAlarmsRef, LeasesRef),
     start_opening_at: Instant,
-    remote_lease_id: Option<RemoteLeaseId>,
+    remote_lease_id: RemoteLeaseId,
 ) -> StartState {
     dex::start_local_remote::<_, BuyAsset>(OpenIcaAccount::new(
         new_lease,
@@ -79,8 +79,7 @@ pub struct BuyAsset {
     loan: OpenLoanRespResult,
     deps: (LppRef, OracleRef, TimeAlarmsRef, LeasesRef),
     start_opening_at: Instant,
-    #[serde(default)]
-    remote_lease_id: Option<RemoteLeaseId>,
+    remote_lease_id: RemoteLeaseId,
 }
 
 impl BuyAsset {
@@ -91,7 +90,7 @@ impl BuyAsset {
         loan: OpenLoanRespResult,
         deps: (LppRef, OracleRef, TimeAlarmsRef, LeasesRef),
         start_opening_at: Instant,
-        remote_lease_id: Option<RemoteLeaseId>,
+        remote_lease_id: RemoteLeaseId,
     ) -> Self {
         Self {
             form,

@@ -28,7 +28,7 @@ pub struct LeaseFactory<'a> {
     price_alarms: OracleRef,
     start_at: Instant,
     now: &'a Instant,
-    remote_lease_id: Option<RemoteLeaseId>,
+    remote_lease_id: RemoteLeaseId,
 }
 
 pub type OpenLeaseResult = LeaseDTOResult<CloseStatusDTO>;
@@ -43,7 +43,7 @@ impl<'a> LeaseFactory<'a> {
         alarms: (TimeAlarmsRef, OracleRef),
         start_at: Instant,
         now: &'a Instant,
-        remote_lease_id: Option<RemoteLeaseId>,
+        remote_lease_id: RemoteLeaseId,
     ) -> Self {
         Self {
             form,

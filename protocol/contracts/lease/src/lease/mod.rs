@@ -43,7 +43,7 @@ pub struct Lease<Asset, Lpp, Oracle> {
     position: Position<Asset>,
     loan: Loan<Lpp>,
     oracle: Oracle,
-    remote_lease_id: Option<RemoteLeaseId>,
+    remote_lease_id: RemoteLeaseId,
 }
 
 pub type IntoDTOResult = LeaseDTOResult<Batch>;
@@ -66,7 +66,7 @@ where
         position: Position<Asset>,
         loan: Loan<LppLoan>,
         oracle: Oracle,
-        remote_lease_id: Option<RemoteLeaseId>,
+        remote_lease_id: RemoteLeaseId,
     ) -> Self {
         debug_assert!(!currency::equal::<LpnCurrency, Asset>());
         // TODO specify that Lpn is of Lpns and Asset is of LeaseGroup

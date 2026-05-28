@@ -31,12 +31,12 @@ pub struct LeaseDTO {
     pub(crate) time_alarms: TimeAlarmsRef,
     pub(crate) oracle: OracleRef,
     pub(crate) reserve: ReserveRef,
-    /// Solana-side Lease PDA, set once the remote-lease controller's
-    /// OpenLease packet acks. `None` for leases opened before the
-    /// remote-lease lifecycle landed; backward-compatible via
-    /// `#[serde(default)]`.
-    #[serde(default)]
-    pub(crate) remote_lease_id: Option<RemoteLeaseId>,
+    /// Solana-side Lease PDA, populated from the remote-lease
+    /// controller's OpenLease ack before the live lease is ever
+    /// constructed. Every `LeaseDTO` carries a value — see plan §10.A.1
+    /// (mainnet v9-lease population = 0, so there are no legacy leases
+    /// to deserialise without this field).
+    pub(crate) remote_lease_id: RemoteLeaseId,
 }
 
 impl LeaseDTO {
@@ -49,7 +49,7 @@ impl LeaseDTO {
         time_alarms: TimeAlarmsRef,
         oracle: OracleRef,
         reserve: ReserveRef,
-        remote_lease_id: Option<RemoteLeaseId>,
+        remote_lease_id: RemoteLeaseId,
     ) -> Self {
         Self {
             addr,
