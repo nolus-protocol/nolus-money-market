@@ -182,10 +182,10 @@ fn drive_to_swap_pending() -> (
 }
 
 fn controller_addr(test_case: &LeaseTestCase) -> Addr {
-    // Mirrors the `Instantiator::instantiate` stand-in: the `reserve`
-    // contract address is configured as each lease's `remote_lease`
-    // controller in the integration-test harness.
-    test_case.address_book.reserve().clone()
+    // The controller stand-in is registered alongside the leaser in
+    // `init_leaser` and exposed on the address book — see
+    // `common::remote_lease_controller_stub`.
+    test_case.address_book.remote_lease_controller().clone()
 }
 
 fn send_callback(

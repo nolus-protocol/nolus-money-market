@@ -95,22 +95,19 @@ impl Instantiator {
         lpp: Addr,
         alarms: Alarms,
         profit: Addr,
-        reserve: Addr,
-        protocols_registry: Addr,
+        peers: LeaserPeers,
     ) -> Addr {
+        let LeaserPeers {
+            reserve,
+            protocols_registry,
+            remote_lease_controller,
+        } = peers;
         // TODO [Rust 1.70] Convert to static item with OnceCell
         let endpoints = CwContractWrapper::new(leaser::execute, leaser::instantiate, leaser::query)
             .with_reply(leaser::reply)
             .with_sudo(leaser::sudo);
 
         let code_id = app.store_code(Box::new(endpoints));
-
-        // No remote_lease_controller contract is instantiated in the test
-        // harness. Reusing `reserve` as a stand-in satisfies the
-        // `check_contract` validator (it just needs an address that resolves
-        // to a registered contract); the integration tests do not exercise
-        // the `RemoteLeaseCallback` path itself.
-        let remote_lease_controller = reserve.clone();
 
         let msg = InstantiateMsg {
             lease_code: CodeId::from(lease_code).into(),
@@ -148,6 +145,15 @@ pub(super) type LeaserTestCase = TestCase<Addr, Addr, Addr, Addr, Addr, Addr, Ad
 pub(crate) struct Alarms {
     pub time_alarm: Addr,
     pub market_price_oracle: Addr,
+}
+
+/// Peer-contract addresses the leaser instantiation needs, bundled to
+/// keep `Instantiator::instantiate`'s argument count under the project
+/// clippy cap.
+pub(crate) struct LeaserPeers {
+    pub reserve: Addr,
+    pub protocols_registry: Addr,
+    pub remote_lease_controller: Addr,
 }
 
 pub fn test_case() -> LeaserTestCase {
