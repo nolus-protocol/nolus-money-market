@@ -45,6 +45,13 @@ pub enum ContractError {
     PendingCustomerNotCached,
 
     #[error(
+        "[Leaser] An open request is already in flight — refusing to overwrite the \
+         pending entry; the single-in-flight invariant was violated, likely a \
+         programmer error in the open path"
+    )]
+    PendingOpenAlreadyInFlight,
+
+    #[error(
         "[Leaser] The lease address returned by the instantiate reply was already \
          registered against the customer — duplicate instantiation"
     )]

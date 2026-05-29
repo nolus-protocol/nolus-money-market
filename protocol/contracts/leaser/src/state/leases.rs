@@ -65,16 +65,29 @@ impl Leases {
 
     const CUSTOMER_LEASES: Map<Addr, HashSet<Addr>> = Map::new("loans");
 
+    /// Record the customer whose lease open is starting.
+    ///
+    /// Guards the single-in-flight invariant the instantiate-reply correlator
+    /// depends on: the open path consumes the entry within the same
+    /// transaction (the `reply_on_success` reply runs `take_pending` before
+    /// the tx commits), so a non-empty slot here means the invariant was
+    /// violated — refuse rather than silently overwrite the prior open.
     pub fn cache_open_req(storage: &mut dyn Storage, customer: &Addr) -> ContractResult<()> {
         Self::PENDING_OPENS
-            .save(
-                storage,
-                &PendingOpen {
-                    customer: customer.clone(),
-                    phase: PendingPhase::Cached,
-                },
-            )
+            .may_load(storage)
             .map_err(ContractError::SavePendingCustomerFailure)
+            .and_then(|in_flight| match in_flight {
+                Some(_) => Err(ContractError::PendingOpenAlreadyInFlight),
+                None => Self::PENDING_OPENS
+                    .save(
+                        storage,
+                        &PendingOpen {
+                            customer: customer.clone(),
+                            phase: PendingPhase::Cached,
+                        },
+                    )
+                    .map_err(ContractError::SavePendingCustomerFailure),
+            })
     }
 
     /// See [`SaveOutcome`]. `Err` only surfaces real failures: a missing
@@ -349,6 +362,24 @@ mod test {
         // open — the singleton correlates the cancellation to its customer.
         assert!(!Leases::remove(&mut storage, test_another_customer(), &test_lease()).unwrap());
         // The original customer's open is still `Cached` and registers.
+        assert_eq!(
+            SaveOutcome::Registered,
+            Leases::save(&mut storage, test_lease()).unwrap()
+        );
+        assert_lease_exist(&storage);
+    }
+
+    #[test]
+    fn test_cache_open_req_rejects_a_second_in_flight_open() {
+        let mut storage = MockStorage::default();
+        Leases::cache_open_req(&mut storage, &test_customer()).unwrap();
+        // A second cache before the first open is consumed must fail loudly
+        // rather than silently overwriting the in-flight entry.
+        assert!(matches!(
+            Leases::cache_open_req(&mut storage, &test_another_customer()),
+            Err(ContractError::PendingOpenAlreadyInFlight)
+        ));
+        // The original open is intact and still registers.
         assert_eq!(
             SaveOutcome::Registered,
             Leases::save(&mut storage, test_lease()).unwrap()
