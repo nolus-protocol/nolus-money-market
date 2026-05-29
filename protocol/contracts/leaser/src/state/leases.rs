@@ -151,24 +151,45 @@ impl Leases {
     /// case the lease is still recorded only as the in-flight open —
     /// flipping the customer's entry from `Cached` to `Cancelled` cancels
     /// it, and the subsequent `Leases::save` reads the `Cancelled` arm.
+    ///
+    /// The cancellation must therefore be reached whenever `lease` is not
+    /// one of the customer's *registered* leases — independently of whether
+    /// the customer holds other registered leases. A customer with an
+    /// existing lease that opens a second one which fails before its reply
+    /// lands still has its pending open recorded only in `PENDING_OPENS`.
     pub fn remove(storage: &mut dyn Storage, customer: Addr, lease: &Addr) -> ContractResult<bool> {
         // not using cw_storage_plus::Map::load because it does not differentiate key-not-present
         // from value-cannot-be-deserialized case
-        if let Some(value) = storage.get(&Self::CUSTOMER_LEASES.key(customer.clone())) {
-            cosmwasm_std::from_json(value)
-                .and_then(|mut leases: HashSet<Addr>| {
-                    let removed = leases.remove(lease);
-                    if leases.is_empty() {
-                        Self::CUSTOMER_LEASES.remove(storage, customer);
-                        Ok(())
-                    } else {
-                        Self::CUSTOMER_LEASES.save(storage, customer, &leases)
-                    }
-                    .map(|()| removed)
-                })
+        match storage.get(&Self::CUSTOMER_LEASES.key(customer.clone())) {
+            Some(value) => cosmwasm_std::from_json(value)
                 .map_err(ContractError::RemoveLeaseFailure)
+                .and_then(|mut leases: HashSet<Addr>| {
+                    if leases.remove(lease) {
+                        Self::store_customer_leases(storage, customer, leases).map(|()| true)
+                    } else {
+                        // `lease` is not registered for this customer — it may
+                        // be their in-flight open awaiting the reply.
+                        Self::cancel_pending_if_matches(storage, customer)
+                    }
+                }),
+            None => Self::cancel_pending_if_matches(storage, customer),
+        }
+    }
+
+    /// Persist the customer's lease set after a removal, deleting the entry
+    /// entirely once the customer holds no more leases.
+    fn store_customer_leases(
+        storage: &mut dyn Storage,
+        customer: Addr,
+        leases: HashSet<Addr>,
+    ) -> ContractResult<()> {
+        if leases.is_empty() {
+            Self::CUSTOMER_LEASES.remove(storage, customer);
+            Ok(())
         } else {
-            Self::cancel_pending_if_matches(storage, customer)
+            Self::CUSTOMER_LEASES
+                .save(storage, customer, &leases)
+                .map_err(ContractError::RemoveLeaseFailure)
         }
     }
 
@@ -332,6 +353,39 @@ mod test {
             SaveOutcome::Registered,
             Leases::save(&mut storage, test_lease()).unwrap()
         );
+        assert_lease_exist(&storage);
+    }
+
+    #[test]
+    fn test_remove_pending_open_while_customer_has_a_registered_lease() {
+        let mut storage = MockStorage::default();
+        // The customer already has one registered lease from a prior open.
+        Leases::cache_open_req(&mut storage, &test_customer()).unwrap();
+        Leases::save(&mut storage, test_lease()).unwrap();
+        assert_lease_exist(&storage);
+
+        // A second open is cached; before its instantiate reply lands, the
+        // remote-lease auto-refund finalises it -> remove(customer, lease2).
+        // The pending open must be cancelled even though the customer still
+        // has another registered lease.
+        Leases::cache_open_req(&mut storage, &test_customer()).unwrap();
+        assert!(
+            Leases::remove(&mut storage, test_customer(), &test_another_lease()).unwrap(),
+            "removing the pending open must report it was present and cancel it",
+        );
+
+        // The late instantiate reply must read `Cancelled` and no-op rather
+        // than registering the already-finalised ghost lease.
+        assert_eq!(
+            SaveOutcome::Cancelled,
+            Leases::save(&mut storage, test_another_lease()).unwrap(),
+        );
+        assert!(!lease_exist(
+            &storage,
+            test_customer(),
+            &test_another_lease()
+        ));
+        // The pre-existing lease is untouched.
         assert_lease_exist(&storage);
     }
 
