@@ -1,8 +1,10 @@
 use std::collections::HashSet;
 
+use serde::{Deserialize, Serialize};
+
 use sdk::{
     cosmwasm_std::{Addr, Order, StdResult, Storage},
-    cw_storage_plus::{Bound, Item, Map},
+    cw_storage_plus::{Bound, Map},
 };
 
 use crate::{
@@ -23,37 +25,65 @@ pub(crate) enum SaveOutcome {
     AlreadyRegistered,
     /// The open request was cancelled before the leaser's instantiate
     /// reply landed (the OpenLease auto-refund batch fires inside the
-    /// same cascade). `save` consumes the cancel sentinel and no-ops.
+    /// same cascade). `save` consumes the cancel marker and no-ops.
+    Cancelled,
+}
+
+/// Per-customer state machine for in-flight opens. Keyed by customer in
+/// [`Leases::PENDING_OPENS`]; the open never goes through `CUSTOMER_LEASES`
+/// while in either state. The two-arm enum replaces the previous
+/// `PENDING_CUSTOMER: Item<Addr>` + `CANCELLED_PENDING: Item<()>` split,
+/// keeping all coordination state inside per-customer storage rather than
+/// module-level singletons.
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+enum PendingState {
+    /// `cache_open_req` set this entry; the leaser is expecting the
+    /// instantiate reply to register the lease.
+    Cached,
+    /// `Leases::remove` cancelled the open mid-cascade (the OpenLease
+    /// auto-refund finalised the lease before the leaser's reply landed).
+    /// The subsequent `Leases::save` consumes this state and no-ops.
     Cancelled,
 }
 
 impl Leases {
-    const PENDING_CUSTOMER: Item<Addr> = Item::new("pending_customer");
-
-    /// Sentinel set when `Leases::remove` cancels an in-flight open via
-    /// `PENDING_CUSTOMER`. `Leases::save` consumes it to distinguish a
-    /// deliberate cancellation (no-op, return `Ok(SaveOutcome::Cancelled)`)
-    /// from a missing-`cache_open_req` programmer error (`Err`).
-    const CANCELLED_PENDING: Item<()> = Item::new("cancelled_pending");
+    const PENDING_OPENS: Map<Addr, PendingState> = Map::new("pending_opens");
 
     const CUSTOMER_LEASES: Map<Addr, HashSet<Addr>> = Map::new("loans");
 
     pub fn cache_open_req(storage: &mut dyn Storage, customer: &Addr) -> ContractResult<()> {
-        Self::PENDING_CUSTOMER
-            .save(storage, customer)
+        Self::PENDING_OPENS
+            .save(storage, customer.clone(), &PendingState::Cached)
             .map_err(ContractError::SavePendingCustomerFailure)
     }
 
     /// See [`SaveOutcome`]. `Err` only surfaces real failures: a missing
     /// `cache_open_req` upstream, or a storage error.
     pub fn save(storage: &mut dyn Storage, lease: Addr) -> ContractResult<SaveOutcome> {
-        Self::PENDING_CUSTOMER
-            .may_load(storage)
-            .map_err(ContractError::SaveLeaseFailure)
-            .and_then(|may_customer| match may_customer {
-                Some(customer) => Self::save_under(storage, customer, lease),
-                None => Self::consume_cancel_sentinel(storage),
-            })
+        Self::take_pending(storage).and_then(|maybe_pending| match maybe_pending {
+            Some((customer, PendingState::Cached)) => Self::save_under(storage, customer, lease),
+            Some((_customer, PendingState::Cancelled)) => Ok(SaveOutcome::Cancelled),
+            None => Err(ContractError::PendingCustomerNotCached),
+        })
+    }
+
+    /// Read and remove the single in-flight open. Returns the customer +
+    /// state if present, `None` if nothing is pending. Singleton-flavoured
+    /// usage (only one open at a time) lives in the caller; the map shape
+    /// keeps all state per-customer.
+    fn take_pending(storage: &mut dyn Storage) -> ContractResult<Option<(Addr, PendingState)>> {
+        let first = Self::PENDING_OPENS
+            .range(storage, None, None, Order::Ascending)
+            .next();
+        match first {
+            None => Ok(None),
+            Some(Err(err)) => Err(ContractError::SaveLeaseFailure(err)),
+            Some(Ok((customer, state))) => {
+                Self::PENDING_OPENS.remove(storage, customer.clone());
+                Ok(Some((customer, state)))
+            }
+        }
     }
 
     fn save_under(
@@ -61,7 +91,6 @@ impl Leases {
         customer: Addr,
         lease: Addr,
     ) -> ContractResult<SaveOutcome> {
-        Self::PENDING_CUSTOMER.remove(storage);
         let mut stored = false;
         let update_fn = |may_leases: Option<HashSet<Addr>>| -> StdResult<HashSet<Addr>> {
             let mut leases = may_leases.unwrap_or_default();
@@ -70,7 +99,7 @@ impl Leases {
         };
         Self::CUSTOMER_LEASES
             .update(storage, customer, update_fn)
-            .map(|_| {
+            .map(|_leases| {
                 if stored {
                     SaveOutcome::Registered
                 } else {
@@ -78,19 +107,6 @@ impl Leases {
                 }
             })
             .map_err(ContractError::SaveLeaseFailure)
-    }
-
-    fn consume_cancel_sentinel(storage: &mut dyn Storage) -> ContractResult<SaveOutcome> {
-        Self::CANCELLED_PENDING
-            .may_load(storage)
-            .map_err(ContractError::SaveLeaseFailure)
-            .and_then(|sentinel| match sentinel {
-                Some(()) => {
-                    Self::CANCELLED_PENDING.remove(storage);
-                    Ok(SaveOutcome::Cancelled)
-                }
-                None => Err(ContractError::PendingCustomerNotCached),
-            })
     }
 
     pub fn load_by_customer(
@@ -107,14 +123,12 @@ impl Leases {
     /// present before the removal.
     ///
     /// The remote-lease open lifecycle may finalise a lease before it has
-    /// been moved from `PENDING_CUSTOMER` into `CUSTOMER_LEASES` (the
+    /// been moved from [`Self::PENDING_OPENS`] into `CUSTOMER_LEASES` (the
     /// auto-refund batch in `OpenLease::on_remote_lease_callback` fires
-    /// inside the same cascade as the leaser's instantiate reply). In
-    /// that case the lease is still recorded only as the in-flight
-    /// open — clearing `PENDING_CUSTOMER` cancels it, and the
-    /// [`Self::CANCELLED_PENDING`] sentinel lets the subsequent reply's
-    /// `Leases::save` distinguish the cancellation from a programmer
-    /// error.
+    /// inside the same cascade as the leaser's instantiate reply). In that
+    /// case the lease is still recorded only as the in-flight open —
+    /// flipping the customer's entry from `Cached` to `Cancelled` cancels
+    /// it, and the subsequent `Leases::save` reads the `Cancelled` arm.
     pub fn remove(storage: &mut dyn Storage, customer: Addr, lease: &Addr) -> ContractResult<bool> {
         // not using cw_storage_plus::Map::load because it does not differentiate key-not-present
         // from value-cannot-be-deserialized case
@@ -132,22 +146,23 @@ impl Leases {
                 })
                 .map_err(ContractError::RemoveLeaseFailure)
         } else {
-            Ok(Self::cancel_pending_if_matches(storage, &customer))
+            Self::cancel_pending_if_matches(storage, customer)
         }
     }
 
-    fn cancel_pending_if_matches(storage: &mut dyn Storage, customer: &Addr) -> bool {
-        Self::PENDING_CUSTOMER
-            .may_load(storage)
-            .ok()
-            .flatten()
-            .is_some_and(|pending| {
-                let matches = &pending == customer;
-                if matches {
-                    Self::PENDING_CUSTOMER.remove(storage);
-                    let _ = Self::CANCELLED_PENDING.save(storage, &());
-                }
-                matches
+    fn cancel_pending_if_matches(
+        storage: &mut dyn Storage,
+        customer: Addr,
+    ) -> ContractResult<bool> {
+        Self::PENDING_OPENS
+            .may_load(storage, customer.clone())
+            .map_err(ContractError::RemoveLeaseFailure)
+            .and_then(|maybe_state| match maybe_state {
+                Some(PendingState::Cached) => Self::PENDING_OPENS
+                    .save(storage, customer, &PendingState::Cancelled)
+                    .map(|()| true)
+                    .map_err(ContractError::RemoveLeaseFailure),
+                Some(PendingState::Cancelled) | None => Ok(false),
             })
     }
 

@@ -14,7 +14,7 @@ use crate::{
     error::{ContractError, ContractResult},
 };
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub struct LeasesRef {
     addr: Addr,

@@ -212,17 +212,19 @@ pub fn execute(
             })
         }
         StubExecuteMsg::CloseLease { .. } => {
-            handle_outbound(deps, info, op_tag::CLOSE_LEASE, |_| {
+            handle_outbound(deps, info, op_tag::CLOSE_LEASE, |_storage| {
                 Ok(OperationResponse::CloseLease(CloseLeaseResponse {}))
             })
         }
-        StubExecuteMsg::Swap { params, .. } => handle_outbound(deps, info, op_tag::SWAP, |_| {
-            Ok(OperationResponse::Swap(SwapResponse {
-                amount_out: *params.min_out(),
-            }))
-        }),
+        StubExecuteMsg::Swap { params, .. } => {
+            handle_outbound(deps, info, op_tag::SWAP, |_storage| {
+                Ok(OperationResponse::Swap(SwapResponse {
+                    amount_out: *params.min_out(),
+                }))
+            })
+        }
         StubExecuteMsg::TransferOut { .. } => {
-            handle_outbound(deps, info, op_tag::TRANSFER_OUT, |_| {
+            handle_outbound(deps, info, op_tag::TRANSFER_OUT, |_storage| {
                 Ok(OperationResponse::TransferOut(TransferOutResponse {}))
             })
         }
@@ -239,7 +241,7 @@ pub fn query(deps: Deps<'_>, _env: Env, msg: ControllerQueryMsg) -> StdResult<Bi
         ControllerQueryMsg::Config() => {
             let config = CONFIG
                 .load(deps.storage)
-                .map_err(|_| StubError::NotInitialised)?;
+                .map_err(|_err| StubError::NotInitialised)?;
             to_json_binary(&ConfigResponse {
                 connection_id: config.connection_id,
                 dex_label: config.dex_label,
@@ -303,8 +305,8 @@ fn require_lease_code(
     use platform::contract::Validator as _;
     platform::contract::validator(deps.querier)
         .check_contract_code(info.sender.clone(), &config.lease_code)
-        .map(|_| ())
-        .map_err(|_| StubError::Unauthorised {
+        .map(|_ok| ())
+        .map_err(|_validator_err| StubError::Unauthorised {
             caller: info.sender.clone(),
         })
 }

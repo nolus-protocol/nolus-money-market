@@ -33,7 +33,7 @@ use crate::{
         api::Contract,
         cmd::OpenLoanRespResult,
         finalize::LeasesRef,
-        state::{Response, State},
+        state::{Response, State, open_failed::OpenFailed},
     },
     error::{ContractError, ContractResult},
     finance::{LpnCoin, LpnCurrency, LppRef, OracleRef},
@@ -119,6 +119,19 @@ impl OpenLease {
         env: &Env,
         reason: RemoteErrorMessage,
     ) -> ContractResult<Response> {
+        let lease_addr = env.contract.address.clone();
+        let now = env.block.time.into_instant();
+        let leases_ref = self.deps.3.clone();
+        self.refund_batch(querier, &lease_addr, now)
+            .map(|batch| Self::open_failed_response(batch, lease_addr, reason, leases_ref))
+    }
+
+    fn refund_batch(
+        self,
+        querier: QuerierWrapper<'_>,
+        lease_addr: &Addr,
+        now: Instant,
+    ) -> ContractResult<Batch> {
         let Self {
             new_lease,
             downpayment,
@@ -127,9 +140,6 @@ impl OpenLease {
             start_opening_at: _,
         } = self;
         let customer = new_lease.form.customer;
-        let lease_addr = env.contract.address.clone();
-        let now = env.block.time.into_instant();
-
         Coin::<LpnCurrency>::try_from(loan.principal)
             .map_err(ContractError::from)
             .and_then(|principal| {
@@ -147,17 +157,21 @@ impl OpenLease {
                     .finalize_lease(customer)
                     .map(|finalize_batch| lpp_batch.merge(customer_batch).merge(finalize_batch))
             })
-            .map(|batch| {
-                let emitter = Emitter::of_type(OPEN_FAILED_EVENT)
-                    .emit("id", lease_addr)
-                    .emit("reason", reason.as_str().to_owned());
-                StateMachineResponse::from(
-                    MessageResponse::messages_with_event(batch, emitter),
-                    State::from(crate::contract::state::open_failed::OpenFailed::new(
-                        reason, leases_ref,
-                    )),
-                )
-            })
+    }
+
+    fn open_failed_response(
+        batch: Batch,
+        lease_addr: Addr,
+        reason: RemoteErrorMessage,
+        leases_ref: LeasesRef,
+    ) -> Response {
+        let emitter = Emitter::of_type(OPEN_FAILED_EVENT)
+            .emit("id", lease_addr)
+            .emit("reason", reason.as_str().to_owned());
+        StateMachineResponse::from(
+            MessageResponse::messages_with_event(batch, emitter),
+            State::from(OpenFailed::new(reason, leases_ref)),
+        )
     }
 }
 
