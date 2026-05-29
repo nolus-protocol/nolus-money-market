@@ -12,7 +12,7 @@ use lease::api::{
 };
 use remote_lease::{
     callback::{RemoteErrorMessage, RemoteLeaseCallback},
-    response::{OpenLeaseResponse, OperationResponse, RemoteLeaseId},
+    response::{CloseLeaseResponse, OpenLeaseResponse, OperationResponse, RemoteLeaseId},
 };
 use sdk::{cosmwasm_std::Addr, testing};
 
@@ -104,6 +104,87 @@ fn open_failed_on_error_refunds_and_finalises() {
         StateResponse::OpenFailed {
             reason: ref state_reason,
         } => assert_eq!(reason.as_str(), state_reason.as_str()),
+        other => panic!("expected StateResponse::OpenFailed, got {other:?}"),
+    }
+}
+
+#[test]
+fn open_failed_on_unexpected_operation_refunds_and_finalises() {
+    let mut test_case = super::create_test_case::<LeaseCurrency>();
+    let controller = test_case.address_book.remote_lease_controller().clone();
+    let leaser = test_case.address_book.leaser().clone();
+    // Hold the lease in the pre-ack `OpenLease` state by deferring the
+    // controller's callback, so the wrong-operation ack below reaches the
+    // `OperationOk(other)` arm rather than the auto-synthesised happy path.
+    stub::set_response_mode(
+        &mut test_case.app,
+        &controller,
+        op_tag::OPEN_LEASE,
+        ResponseMode::Delayed,
+    );
+
+    let customer = testing::user(USER);
+    let balance_before = balance::<LeaseCurrency>(&test_case, &customer);
+
+    let response = test_case
+        .app
+        .execute(
+            customer.clone(),
+            leaser.clone(),
+            &leaser::msg::ExecuteMsg::OpenLease {
+                currency: currency::dto::<LeaseCurrency, _>(),
+                max_ltd: None,
+            },
+            &[common::cwcoin::<LeaseCurrency>(DOWNPAYMENT)],
+        )
+        .unwrap()
+        .unwrap_response();
+
+    let lease = lease_address_from(&response.events).expect("instantiate event carries the addr");
+
+    // A `CloseLease` success against an in-flight `OpenLease` can only come
+    // from a buggy or hostile counterparty. The lease must treat it as an
+    // open failure — refund and move to terminal — rather than returning
+    // `Err`, which would revert the controller's ack and strand the relayer.
+    let unexpected =
+        RemoteLeaseCallback::OperationOk(OperationResponse::CloseLease(CloseLeaseResponse {}));
+    let failed = test_case
+        .app
+        .execute(
+            controller.clone(),
+            lease.clone(),
+            &ExecuteMsg::RemoteLeaseCallback(unexpected),
+            &[],
+        )
+        .expect("unexpected operation must be absorbed as an open failure")
+        .unwrap_response();
+
+    let event_reason = failed
+        .events
+        .iter()
+        .find(|event| event.ty == "wasm-ls-remote-lease-open-failed")
+        .and_then(|event| event.attributes.iter().find(|attr| attr.key == "reason"))
+        .map(|attr| attr.value.as_str())
+        .expect("unexpected operation must emit the open-failed event with a reason");
+    assert!(
+        event_reason.starts_with("unexpected operation response"),
+        "reason must name the unexpected variant, got {event_reason:?}",
+    );
+
+    let balance_after = balance::<LeaseCurrency>(&test_case, &customer);
+    assert_eq!(
+        balance_before, balance_after,
+        "downpayment must be refunded in full",
+    );
+
+    let leases = leases_of(&test_case, &leaser, &customer);
+    assert!(leases.is_empty(), "leaser must show no live lease");
+
+    match super::state_query(&test_case, lease) {
+        StateResponse::OpenFailed { reason } => assert!(
+            reason.as_str().starts_with("unexpected operation response"),
+            "terminal reason must name the unexpected variant, got {reason:?}",
+        ),
         other => panic!("expected StateResponse::OpenFailed, got {other:?}"),
     }
 }

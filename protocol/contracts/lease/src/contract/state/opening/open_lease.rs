@@ -204,19 +204,28 @@ impl Contract for OpenLease {
                     OpenLeaseResponse { remote_lease_id },
                 )) => self.on_open_lease_ack(remote_lease_id, &env),
                 RemoteLeaseCallback::OperationOk(other) => {
-                    Err(ContractError::unsupported_operation(format!(
-                        "open lease unexpected operation response: {other:?}"
-                    )))
+                    // A success ack for a non-`OpenLease` operation can only
+                    // come from a buggy or hostile counterparty. Returning
+                    // `Err` here would revert the controller's
+                    // `ibc_packet_ack`, stranding the relayer and freezing the
+                    // lease in `OpenLease`. Treat it as an open failure
+                    // instead: refund the customer and move to the terminal
+                    // `OpenFailed` so the ack commits and operators see a
+                    // `wasm-ls-remote-lease-open-failed` event to audit.
+                    let reason = RemoteErrorMessage::new(format!(
+                        "unexpected operation response: {other:?}"
+                    ))
+                    .unwrap_or_else(|_| {
+                        RemoteErrorMessage::from_static("unexpected operation response")
+                    });
+                    self.on_open_failed(querier, &env, reason)
                 }
                 RemoteLeaseCallback::OperationErr(reason) => {
                     self.on_open_failed(querier, &env, reason)
                 }
-                RemoteLeaseCallback::OperationTimeout => self.on_open_failed(
-                    querier,
-                    &env,
-                    RemoteErrorMessage::new("timeout")
-                        .expect("'timeout' is within RemoteErrorMessage cap"),
-                ),
+                RemoteLeaseCallback::OperationTimeout => {
+                    self.on_open_failed(querier, &env, RemoteErrorMessage::from_static("timeout"))
+                }
             })
     }
 }

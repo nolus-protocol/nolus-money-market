@@ -162,6 +162,17 @@ RequestLoan ──open loan──▶ OpenLease
 
 The legacy ICA-open + DEX swap cascade entered via `super::buy_asset::start` is retained additively; later phases (swap replacement, TransferOut, CloseLease) migrate the remaining lifecycle stages off it.
 
+An `OperationOk` ack carrying any operation other than `OpenLease` (a `CloseLease` / `Swap` / `TransferOut` response against an in-flight open) can only originate from a buggy or hostile counterparty. The lease treats it exactly like `OperationErr`: it refunds the customer, finalises, and moves to `OpenFailed` with a synthesised `unexpected operation response: …` reason. It does **not** return `Err` — an error would revert the controller's `ibc_packet_ack`, stranding the relayer and freezing the lease in `OpenLease`. Operators see the same `wasm-ls-remote-lease-open-failed` event and audit the counterparty per the runbook.
+
+## Storage: v9 → v10 (refuse-migrate)
+
+v10 makes `LeaseDTO.remote_lease_id` a non-optional Solana PDA, which is binary-incompatible with the v9 layout. The `migrate` entry point therefore **rejects unconditionally** (`ContractError::UnsupportedMigration`):
+
+- **Mainnet** carries zero v9 leases (plan §10.A.1), so refusing is strictly safer than risking a silent deserialise failure on the first post-upgrade load.
+- A v9 lease has no meaningful `remote_lease_id` to synthesise — its `dex_account` is an ICA host on the DEX chain, not a Solana PDA — so a "real" migration would only invent a permanent sentinel.
+
+**Operational procedure for non-mainnet (devnet/testnet/local):** drain every v9 lease to a terminal state *before* upgrading the lease code to v10. There is no `ExecuteMsg` escape hatch for a stranded v9 lease, so the drain is a prerequisite, not a recovery step.
+
 ## Closed: in-lease decoder shape
 
 The `OperationOk(SwapResponse)` decoder still feeds the safe-delivery

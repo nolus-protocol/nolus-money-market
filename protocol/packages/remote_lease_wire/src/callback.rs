@@ -32,9 +32,13 @@ pub enum RemoteLeaseCallback {
 
 /// Length-capped error string returned by the Solana counterparty.
 ///
-/// Serialises as a bare JSON string. Deserialisation rejects payloads above
-/// [`OPERATION_ERR_MAX_BYTES`] so storage writes downstream are bounded by
-/// construction.
+/// Serialises as a bare JSON string. The counterparty-facing paths —
+/// deserialisation and the fallible [`new`](Self::new) — reject payloads
+/// above [`OPERATION_ERR_MAX_BYTES`], so any string sourced from over the
+/// wire is bounded before it reaches downstream storage. The
+/// [`from_static`](Self::from_static) constructor is the one exception: it
+/// trusts the (compile-time-known) caller and only `debug_assert!`s the
+/// bound, so it must be fed provably-in-range literals.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct RemoteErrorMessage(String);
 
@@ -53,6 +57,21 @@ impl RemoteErrorMessage {
                 max: OPERATION_ERR_MAX_BYTES,
             })
         }
+    }
+
+    /// Construct from a compile-time-known literal that the caller guarantees
+    /// is within [`OPERATION_ERR_MAX_BYTES`].
+    ///
+    /// For fixed internal reasons (e.g. `"timeout"`) where threading a
+    /// fallible [`new`](Self::new) through the call site would add error
+    /// plumbing for a value that is provably in range. The length invariant
+    /// is enforced with a `debug_assert!`; release builds trust the caller.
+    pub fn from_static(message: &'static str) -> Self {
+        debug_assert!(
+            message.len() <= OPERATION_ERR_MAX_BYTES,
+            "RemoteErrorMessage::from_static exceeds OPERATION_ERR_MAX_BYTES"
+        );
+        Self(message.to_owned())
     }
 
     pub fn as_str(&self) -> &str {
