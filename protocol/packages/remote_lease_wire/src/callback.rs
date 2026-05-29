@@ -59,13 +59,24 @@ impl RemoteErrorMessage {
         }
     }
 
-    /// Construct from a compile-time-known literal that the caller guarantees
-    /// is within [`OPERATION_ERR_MAX_BYTES`].
+    /// Construct from a compile-time-known string literal that is statically
+    /// known to be within [`OPERATION_ERR_MAX_BYTES`].
     ///
     /// For fixed internal reasons (e.g. `"timeout"`) where threading a
     /// fallible [`new`](Self::new) through the call site would add error
-    /// plumbing for a value that is provably in range. The length invariant
-    /// is enforced with a `debug_assert!`; release builds trust the caller.
+    /// plumbing for a value that is provably in range.
+    ///
+    /// Precondition (caller's responsibility): `message` must be a genuine
+    /// literal whose length is verifiable by inspection, never a
+    /// runtime-produced `&'static str` (e.g. a `Box::leak`ed value). The
+    /// length is only `debug_assert!`ed, so an over-cap input that slips past
+    /// review would bypass the bound in release builds — unlike [`new`] and
+    /// deserialisation, which reject it. When the length is not statically
+    /// obvious, use [`new`] instead.
+    ///
+    /// # Panics
+    ///
+    /// In debug builds, panics if `message` exceeds [`OPERATION_ERR_MAX_BYTES`].
     pub fn from_static(message: &'static str) -> Self {
         debug_assert!(
             message.len() <= OPERATION_ERR_MAX_BYTES,

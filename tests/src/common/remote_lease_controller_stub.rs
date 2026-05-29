@@ -270,7 +270,7 @@ where
 {
     let config = CONFIG
         .load(deps.storage)
-        .map_err(|_| StubError::NotInitialised)?;
+        .map_err(|_load_err| StubError::NotInitialised)?;
     require_lease_code(deps.as_ref(), &info, &config)?;
 
     let mode = MODES

@@ -41,6 +41,18 @@ use crate::{
 
 const OPEN_FAILED_EVENT: &str = "ls-remote-lease-open-failed";
 
+/// Open-failure reason recorded when the IBC layer reports the OpenLease
+/// packet was never acknowledged.
+const TIMEOUT_REASON: &str = "timeout";
+
+/// Open-failure reason recorded when the counterparty acks the OpenLease
+/// packet with a success response for a different operation. The offending
+/// variant is intentionally not echoed into the reason — it is
+/// counterparty-controlled and the controller already logs the raw
+/// response; keeping a fixed string avoids interpolating unbounded
+/// attacker-influenced data into stored state and events.
+const UNEXPECTED_OPERATION_REASON: &str = "unexpected operation response";
+
 #[derive(Serialize, Deserialize)]
 pub(crate) struct OpenLease {
     new_lease: NewLeaseContract,
@@ -203,7 +215,7 @@ impl Contract for OpenLease {
                 RemoteLeaseCallback::OperationOk(OperationResponse::OpenLease(
                     OpenLeaseResponse { remote_lease_id },
                 )) => self.on_open_lease_ack(remote_lease_id, &env),
-                RemoteLeaseCallback::OperationOk(other) => {
+                RemoteLeaseCallback::OperationOk(_unexpected) => {
                     // A success ack for a non-`OpenLease` operation can only
                     // come from a buggy or hostile counterparty. Returning
                     // `Err` here would revert the controller's
@@ -212,20 +224,20 @@ impl Contract for OpenLease {
                     // instead: refund the customer and move to the terminal
                     // `OpenFailed` so the ack commits and operators see a
                     // `wasm-ls-remote-lease-open-failed` event to audit.
-                    let reason = RemoteErrorMessage::new(format!(
-                        "unexpected operation response: {other:?}"
-                    ))
-                    .unwrap_or_else(|_| {
-                        RemoteErrorMessage::from_static("unexpected operation response")
-                    });
-                    self.on_open_failed(querier, &env, reason)
+                    self.on_open_failed(
+                        querier,
+                        &env,
+                        RemoteErrorMessage::from_static(UNEXPECTED_OPERATION_REASON),
+                    )
                 }
                 RemoteLeaseCallback::OperationErr(reason) => {
                     self.on_open_failed(querier, &env, reason)
                 }
-                RemoteLeaseCallback::OperationTimeout => {
-                    self.on_open_failed(querier, &env, RemoteErrorMessage::from_static("timeout"))
-                }
+                RemoteLeaseCallback::OperationTimeout => self.on_open_failed(
+                    querier,
+                    &env,
+                    RemoteErrorMessage::from_static(TIMEOUT_REASON),
+                ),
             })
     }
 }

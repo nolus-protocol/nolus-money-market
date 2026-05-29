@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use sdk::{
     cosmwasm_std::{Addr, Order, StdResult, Storage},
-    cw_storage_plus::{Bound, Map},
+    cw_storage_plus::{Bound, Item, Map},
 };
 
 use crate::{
@@ -29,32 +29,51 @@ pub(crate) enum SaveOutcome {
     Cancelled,
 }
 
-/// Per-customer state machine for in-flight opens. Keyed by customer in
-/// [`Leases::PENDING_OPENS`]; the open never goes through `CUSTOMER_LEASES`
-/// while in either state. The two-arm enum replaces the previous
-/// `PENDING_CUSTOMER: Item<Addr>` + `CANCELLED_PENDING: Item<()>` split,
-/// keeping all coordination state inside per-customer storage rather than
-/// module-level singletons.
+/// The single lease open the leaser is coordinating between the customer's
+/// `OpenLease` execute and the lease-instantiate reply.
+///
+/// Held as a singleton because the instantiate reply correlates the new
+/// lease back to its open only by "the one open in flight" — it carries the
+/// lease address but never the customer. A `Map` keyed by customer cannot
+/// satisfy that correlation (the reply has no key to look up), so the
+/// single-in-flight invariant must live in the storage shape itself.
+///
+/// Replaces the earlier `PENDING_CUSTOMER: Item<Addr>` + `CANCELLED_PENDING:
+/// Item<()>` pair: a single typed `Item` carrying the customer and the
+/// lifecycle phase, rather than a data item plus a bare armed/disarmed gate.
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq)]
+struct PendingOpen {
+    customer: Addr,
+    phase: PendingPhase,
+}
+
+/// Lifecycle phase of the in-flight open held in [`Leases::PENDING_OPENS`].
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
-enum PendingState {
-    /// `cache_open_req` set this entry; the leaser is expecting the
-    /// instantiate reply to register the lease.
+enum PendingPhase {
+    /// `cache_open_req` set this; the leaser expects the instantiate reply
+    /// to register the lease.
     Cached,
     /// `Leases::remove` cancelled the open mid-cascade (the OpenLease
     /// auto-refund finalised the lease before the leaser's reply landed).
-    /// The subsequent `Leases::save` consumes this state and no-ops.
+    /// The subsequent `Leases::save` consumes this phase and no-ops.
     Cancelled,
 }
 
 impl Leases {
-    const PENDING_OPENS: Map<Addr, PendingState> = Map::new("pending_opens");
+    const PENDING_OPENS: Item<PendingOpen> = Item::new("pending_opens");
 
     const CUSTOMER_LEASES: Map<Addr, HashSet<Addr>> = Map::new("loans");
 
     pub fn cache_open_req(storage: &mut dyn Storage, customer: &Addr) -> ContractResult<()> {
         Self::PENDING_OPENS
-            .save(storage, customer.clone(), &PendingState::Cached)
+            .save(
+                storage,
+                &PendingOpen {
+                    customer: customer.clone(),
+                    phase: PendingPhase::Cached,
+                },
+            )
             .map_err(ContractError::SavePendingCustomerFailure)
     }
 
@@ -62,28 +81,31 @@ impl Leases {
     /// `cache_open_req` upstream, or a storage error.
     pub fn save(storage: &mut dyn Storage, lease: Addr) -> ContractResult<SaveOutcome> {
         Self::take_pending(storage).and_then(|maybe_pending| match maybe_pending {
-            Some((customer, PendingState::Cached)) => Self::save_under(storage, customer, lease),
-            Some((_customer, PendingState::Cancelled)) => Ok(SaveOutcome::Cancelled),
+            Some(PendingOpen {
+                customer,
+                phase: PendingPhase::Cached,
+            }) => Self::save_under(storage, customer, lease),
+            Some(PendingOpen {
+                phase: PendingPhase::Cancelled,
+                ..
+            }) => Ok(SaveOutcome::Cancelled),
             None => Err(ContractError::PendingCustomerNotCached),
         })
     }
 
-    /// Read and remove the single in-flight open. Returns the customer +
-    /// state if present, `None` if nothing is pending. Singleton-flavoured
-    /// usage (only one open at a time) lives in the caller; the map shape
-    /// keeps all state per-customer.
-    fn take_pending(storage: &mut dyn Storage) -> ContractResult<Option<(Addr, PendingState)>> {
-        let first = Self::PENDING_OPENS
-            .range(storage, None, None, Order::Ascending)
-            .next();
-        match first {
-            None => Ok(None),
-            Some(Err(err)) => Err(ContractError::SaveLeaseFailure(err)),
-            Some(Ok((customer, state))) => {
-                Self::PENDING_OPENS.remove(storage, customer.clone());
-                Ok(Some((customer, state)))
-            }
-        }
+    /// Read and clear the single in-flight open. Returns it if present,
+    /// `None` if nothing is pending. The singleton shape enforces the
+    /// single-in-flight invariant the instantiate reply relies on — it
+    /// correlates by "the one open in flight", never by customer.
+    fn take_pending(storage: &mut dyn Storage) -> ContractResult<Option<PendingOpen>> {
+        Self::PENDING_OPENS
+            .may_load(storage)
+            .inspect(|maybe_pending| {
+                if maybe_pending.is_some() {
+                    Self::PENDING_OPENS.remove(storage);
+                }
+            })
+            .map_err(ContractError::SaveLeaseFailure)
     }
 
     fn save_under(
@@ -155,14 +177,23 @@ impl Leases {
         customer: Addr,
     ) -> ContractResult<bool> {
         Self::PENDING_OPENS
-            .may_load(storage, customer.clone())
+            .may_load(storage)
             .map_err(ContractError::RemoveLeaseFailure)
-            .and_then(|maybe_state| match maybe_state {
-                Some(PendingState::Cached) => Self::PENDING_OPENS
-                    .save(storage, customer, &PendingState::Cancelled)
+            .and_then(|maybe_pending| match maybe_pending {
+                Some(PendingOpen {
+                    customer: pending_customer,
+                    phase: PendingPhase::Cached,
+                }) if pending_customer == customer => Self::PENDING_OPENS
+                    .save(
+                        storage,
+                        &PendingOpen {
+                            customer,
+                            phase: PendingPhase::Cancelled,
+                        },
+                    )
                     .map(|()| true)
                     .map_err(ContractError::RemoveLeaseFailure),
-                Some(PendingState::Cancelled) | None => Ok(false),
+                Some(_) | None => Ok(false),
             })
     }
 
@@ -287,6 +318,21 @@ mod test {
             Leases::save(&mut storage, test_lease()),
             Err(ContractError::PendingCustomerNotCached)
         ));
+    }
+
+    #[test]
+    fn test_remove_other_customer_keeps_pending() {
+        let mut storage = MockStorage::default();
+        Leases::cache_open_req(&mut storage, &test_customer()).unwrap();
+        // A removal for a different customer must not touch the in-flight
+        // open — the singleton correlates the cancellation to its customer.
+        assert!(!Leases::remove(&mut storage, test_another_customer(), &test_lease()).unwrap());
+        // The original customer's open is still `Cached` and registers.
+        assert_eq!(
+            SaveOutcome::Registered,
+            Leases::save(&mut storage, test_lease()).unwrap()
+        );
+        assert_lease_exist(&storage);
     }
 
     #[test]
