@@ -70,15 +70,26 @@ impl Leases {
     /// Guards the single-in-flight invariant the instantiate-reply correlator
     /// depends on: the open path consumes the entry within the same
     /// transaction (the `reply_on_success` reply runs `take_pending` before
-    /// the tx commits), so a non-empty slot here means the invariant was
-    /// violated — refuse rather than silently overwrite the prior open.
+    /// the tx commits). A still-`Cached` slot is therefore a live open —
+    /// refuse rather than silently overwrite it. A leftover `Cancelled` slot
+    /// is an already-consumed open and may be reclaimed by the new one.
     pub fn cache_open_req(storage: &mut dyn Storage, customer: &Addr) -> ContractResult<()> {
         Self::PENDING_OPENS
             .may_load(storage)
             .map_err(ContractError::SavePendingCustomerFailure)
             .and_then(|in_flight| match in_flight {
-                Some(_) => Err(ContractError::PendingOpenAlreadyInFlight),
-                None => Self::PENDING_OPENS
+                Some(PendingOpen {
+                    phase: PendingPhase::Cached,
+                    ..
+                }) => Err(ContractError::PendingOpenAlreadyInFlight),
+                // A leftover `Cancelled` slot is a consumed open whose
+                // instantiate reply never registered it; a fresh open may
+                // reclaim the singleton. `None` is the steady state.
+                Some(PendingOpen {
+                    phase: PendingPhase::Cancelled,
+                    ..
+                })
+                | None => Self::PENDING_OPENS
                     .save(
                         storage,
                         &PendingOpen {
@@ -189,8 +200,13 @@ impl Leases {
         }
     }
 
-    /// Persist the customer's lease set after a removal, deleting the entry
-    /// entirely once the customer holds no more leases.
+    /// Persist the customer's remaining leases, removing the map entry
+    /// entirely when the set is empty.
+    ///
+    /// An empty set must not be stored: [`Self::iter`] and [`Self::empty`]
+    /// treat every present key as a customer that still holds leases, so a
+    /// lingering empty entry would surface a phantom lease-less customer and
+    /// make `empty` report non-empty.
     fn store_customer_leases(
         storage: &mut dyn Storage,
         customer: Addr,
@@ -227,7 +243,19 @@ impl Leases {
                     )
                     .map(|()| true)
                     .map_err(ContractError::RemoveLeaseFailure),
-                Some(_) | None => Ok(false),
+                // A `Cached` open for a different customer, or an already
+                // `Cancelled` slot: neither is this customer's live open to
+                // cancel. Enumerated so a new `PendingPhase` fails to compile
+                // rather than being swept into this no-op.
+                Some(PendingOpen {
+                    phase: PendingPhase::Cached,
+                    ..
+                })
+                | Some(PendingOpen {
+                    phase: PendingPhase::Cancelled,
+                    ..
+                })
+                | None => Ok(false),
             })
     }
 
@@ -385,6 +413,31 @@ mod test {
             Leases::save(&mut storage, test_lease()).unwrap()
         );
         assert_lease_exist(&storage);
+    }
+
+    #[test]
+    fn test_cache_open_req_reclaims_a_cancelled_slot() {
+        let mut storage = MockStorage::default();
+        Leases::cache_open_req(&mut storage, &test_customer()).unwrap();
+        // The open is cancelled mid-cascade; its instantiate reply has not
+        // yet consumed the `Cancelled` slot, so it lingers in storage.
+        assert!(Leases::remove(&mut storage, test_customer(), &test_lease()).unwrap());
+
+        // A fresh open must reclaim the leftover `Cancelled` slot rather than
+        // be rejected as if a live open were still in flight.
+        Leases::cache_open_req(&mut storage, &test_another_customer())
+            .expect("a cancelled slot must not block a new open");
+
+        // The reclaimed open registers normally under the new customer.
+        assert_eq!(
+            SaveOutcome::Registered,
+            Leases::save(&mut storage, test_lease()).unwrap()
+        );
+        assert!(lease_exist(
+            &storage,
+            test_another_customer(),
+            &test_lease()
+        ));
     }
 
     #[test]
