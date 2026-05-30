@@ -383,6 +383,23 @@ mod test {
     }
 
     #[test]
+    fn test_remove_already_cancelled_pending_is_noop() {
+        let mut storage = MockStorage::default();
+        Leases::cache_open_req(&mut storage, &test_customer()).unwrap();
+        // First removal cancels the in-flight open (`Cached` -> `Cancelled`).
+        assert!(Leases::remove(&mut storage, test_customer(), &test_lease()).unwrap());
+        // A second removal finds the slot already `Cancelled` for this
+        // customer: there is no live open left to cancel, so it reports
+        // nothing was present rather than re-flipping or erroring.
+        assert!(!Leases::remove(&mut storage, test_customer(), &test_lease()).unwrap());
+        // The slot is still `Cancelled`; the eventual instantiate reply no-ops.
+        assert_eq!(
+            SaveOutcome::Cancelled,
+            Leases::save(&mut storage, test_lease()).unwrap()
+        );
+    }
+
+    #[test]
     fn test_remove_other_customer_keeps_pending() {
         let mut storage = MockStorage::default();
         Leases::cache_open_req(&mut storage, &test_customer()).unwrap();
