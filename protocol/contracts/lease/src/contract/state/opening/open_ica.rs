@@ -8,6 +8,7 @@ use dex::{
 };
 use finance::instant::Instant;
 use platform::batch::Batch;
+use remote_lease::response::RemoteLeaseId;
 use sdk::cosmwasm_std::{MessageInfo, QuerierWrapper};
 use timealarms::stub::TimeAlarmsRef;
 
@@ -31,6 +32,7 @@ pub(crate) struct OpenIcaAccount {
     loan: OpenLoanRespResult,
     deps: (LppRef, OracleRef, TimeAlarmsRef, LeasesRef),
     start_opening_at: Instant,
+    remote_lease_id: RemoteLeaseId,
 }
 
 impl OpenIcaAccount {
@@ -40,6 +42,7 @@ impl OpenIcaAccount {
         loan: OpenLoanRespResult,
         deps: (LppRef, OracleRef, TimeAlarmsRef, LeasesRef),
         start_opening_at: Instant,
+        remote_lease_id: RemoteLeaseId,
     ) -> Self {
         Self {
             new_lease,
@@ -47,6 +50,7 @@ impl OpenIcaAccount {
             loan,
             deps,
             start_opening_at,
+            remote_lease_id,
         }
     }
 }
@@ -63,6 +67,7 @@ impl IcaConnectee for OpenIcaAccount {
             self.loan,
             self.deps,
             self.start_opening_at,
+            self.remote_lease_id,
         ))
     }
 
@@ -96,7 +101,9 @@ impl DexContract for OpenIcaAccount {
             downpayment: self.downpayment,
             loan: self.loan.principal,
             loan_interest_rate: self.loan.annual_interest_rate,
-            in_progress: OngoingTrx::OpenIcaAccount {},
+            in_progress: OngoingTrx::OpenLease {
+                remote_lease: self.remote_lease_id,
+            },
         })
     }
 }

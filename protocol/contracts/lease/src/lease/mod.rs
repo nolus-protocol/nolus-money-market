@@ -5,6 +5,7 @@ use lpp::stub::loan::LppLoan as LppLoanTrait;
 use oracle_platform::Oracle as OracleTrait;
 use platform::batch::Batch;
 use profit::stub::ProfitRef;
+use remote_lease::response::RemoteLeaseId;
 use sdk::cosmwasm_std::Addr;
 use timealarms::stub::TimeAlarmsRef;
 
@@ -42,6 +43,7 @@ pub struct Lease<Asset, Lpp, Oracle> {
     position: Position<Asset>,
     loan: Loan<Lpp>,
     oracle: Oracle,
+    remote_lease_id: RemoteLeaseId,
 }
 
 pub type IntoDTOResult = LeaseDTOResult<Batch>;
@@ -64,6 +66,7 @@ where
         position: Position<Asset>,
         loan: Loan<LppLoan>,
         oracle: Oracle,
+        remote_lease_id: RemoteLeaseId,
     ) -> Self {
         debug_assert!(!currency::equal::<LpnCurrency, Asset>());
         // TODO specify that Lpn is of Lpns and Asset is of LeaseGroup
@@ -74,6 +77,7 @@ where
             position,
             loan,
             oracle,
+            remote_lease_id,
         }
     }
 
@@ -89,6 +93,7 @@ where
             position,
             Loan::from_dto(dto.loan, lpp_loan),
             oracle,
+            dto.remote_lease_id,
         )
     }
 
@@ -137,6 +142,7 @@ where
             time_alarms,
             self.oracle.into(),
             reserve,
+            self.remote_lease_id,
         )
     }
 
@@ -146,6 +152,7 @@ where
         time_alarms: TimeAlarmsRef,
         reserve: ReserveRef,
     ) -> ContractResult<IntoDTOResult> {
+        let remote_lease_id = self.remote_lease_id.clone();
         self.loan
             .try_into_dto(profit)
             .map(|(loan_dto, loan_batch)| IntoDTOResult {
@@ -157,6 +164,7 @@ where
                     time_alarms,
                     self.oracle.into(),
                     reserve,
+                    remote_lease_id,
                 ),
                 result: loan_batch,
             })
@@ -196,6 +204,7 @@ pub(crate) mod tests {
     };
     use oracle_platform::{Oracle, error::Result as PriceOracleResult};
     use platform::batch::Batch;
+    use remote_lease::response::RemoteLeaseId;
     use sdk::cosmwasm_std::Addr;
 
     use crate::{
@@ -213,6 +222,7 @@ pub(crate) mod tests {
     const CUSTOMER: &str = "customer";
     const LEASE_ADDR: &str = "lease_addr";
     const ORACLE_ADDR: &str = "oracle_addr";
+    const REMOTE_LEASE_ID: &str = "StubPda11111111111111111111111111111";
     const MARGIN_INTEREST_RATE: Percent100 = Percent100::from_permille(23);
     pub(super) const LEASE_START: Instant = Instant::from_nanos(100);
     pub(super) const DUE_PERIOD: Duration = Duration::from_days(100);
@@ -343,6 +353,7 @@ pub(crate) mod tests {
             Position::new(amount, position_spec),
             loan,
             oracle,
+            RemoteLeaseId::new(REMOTE_LEASE_ID.to_owned()).expect("base58 sample"),
         )
     }
 

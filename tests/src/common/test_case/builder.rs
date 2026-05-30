@@ -17,11 +17,12 @@ use sdk::{
 
 use crate::common::{
     self,
-    leaser::{Alarms, Instantiator as LeaserInstantiator},
+    leaser::{Alarms, Instantiator as LeaserInstantiator, LeaserPeers},
     lpp::Instantiator as LppInstantiator,
     oracle::Instantiator as OracleInstantiator,
     profit::Instantiator as ProfitInstantiator,
     protocols::{Instantiator as ProtocolsInstantiator, Registry},
+    remote_lease_controller_stub::Instantiator as RemoteLeaseControllerStubInstantiator,
     reserve::Instantiator as ReserveInstantiator,
     test_case::{OptionalLppEndpoints, OptionalOracleWrapper, TestCase},
     timealarms::Instantiator as TimeAlarmsInstantiator,
@@ -269,6 +270,14 @@ where
             _lpn,
         } = self;
 
+        // Install the controller stand-in first — `LeaserInstantiator`
+        // records its address as `Config.remote_lease_controller` on the
+        // leaser, which then flows into every Lease the leaser opens.
+        let remote_lease_controller = RemoteLeaseControllerStubInstantiator::instantiate(
+            &mut test_case.app,
+            test_case.address_book.lease_code(),
+        );
+
         let leaser_addr = LeaserInstantiator::instantiate(
             &mut test_case.app,
             test_case.address_book.lease_code(),
@@ -278,16 +287,22 @@ where
                 market_price_oracle: test_case.address_book.oracle().clone(),
             },
             test_case.address_book.profit().clone(),
-            test_case.address_book.reserve().clone(),
-            test_case.address_book.protocols_registry().clone(),
+            LeaserPeers {
+                reserve: test_case.address_book.reserve().clone(),
+                protocols_registry: test_case.address_book.protocols_registry().clone(),
+                remote_lease_controller: remote_lease_controller.clone(),
+            },
         );
 
         test_case.app.update_block(cw_test::next_block);
 
+        let mut address_book = test_case.address_book.with_leaser(leaser_addr);
+        address_book.set_remote_lease_controller(remote_lease_controller);
+
         Builder {
             test_case: TestCase {
                 app: test_case.app,
-                address_book: test_case.address_book.with_leaser(leaser_addr),
+                address_book,
             },
             _lpn,
         }

@@ -81,5 +81,6 @@ fn dummy_instantiate_msg() -> InstantiateMsg {
             },
         },
         remote_lease_controller: Addr::unchecked("remote_lease_controller"),
+        expected_instance_ordinal: 1,
     }
 }

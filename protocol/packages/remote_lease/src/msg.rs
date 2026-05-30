@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 
 use currencies::PaymentGroup;
 use currency::CurrencyDTO;
-use finance::coin::CoinDTO;
+use finance::{coin::CoinDTO, duration::Duration};
 
 use crate::error::Error;
 
@@ -29,6 +29,8 @@ pub struct OpenLeaseParams {
 }
 
 impl OpenLeaseParams {
+    pub const TIMEOUT: Duration = Duration::from_secs(60);
+
     pub fn new(
         expected_instance_ordinal: u16,
         downpayment_currency: CurrencyDTO<PaymentGroup>,
@@ -65,9 +67,7 @@ impl OpenLeaseParams {
     }
 
     pub fn invariant_held(&self) -> bool {
-        self.downpayment_currency != self.lpn_currency
-            && self.downpayment_currency != self.asset_currency
-            && self.lpn_currency != self.asset_currency
+        self.lpn_currency != self.asset_currency
     }
 }
 
@@ -97,6 +97,10 @@ impl TryFrom<OpenLeaseParamsRaw> for OpenLeaseParams {
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub struct CloseLeaseParams {}
 
+impl CloseLeaseParams {
+    pub const TIMEOUT: Duration = Duration::from_secs(60);
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 #[serde(
     deny_unknown_fields,
@@ -109,6 +113,8 @@ pub struct SwapParams {
 }
 
 impl SwapParams {
+    pub const TIMEOUT: Duration = Duration::from_secs(300);
+
     pub fn new(
         coin_in: CoinDTO<PaymentGroup>,
         min_out: CoinDTO<PaymentGroup>,
@@ -165,6 +171,8 @@ pub struct TransferOutParams {
 }
 
 impl TransferOutParams {
+    pub const TIMEOUT: Duration = Duration::from_secs(120);
+
     pub fn new(amount: CoinDTO<PaymentGroup>) -> Result<Self, Error> {
         let params = Self { amount };
         params

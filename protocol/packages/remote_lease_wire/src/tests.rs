@@ -154,6 +154,27 @@ fn callback_error_message_deserialize_over_cap_rejected() {
         .expect_err("over-cap payload must fail deserialization");
 }
 
+#[test]
+fn callback_error_message_from_static_accepted() {
+    let value = RemoteErrorMessage::from_static("timeout");
+    assert_eq!("timeout", value.as_str());
+    assert_round_trip_eq(
+        r#"{"operation_err":"timeout"}"#,
+        &RemoteLeaseCallback::OperationErr(value),
+    );
+}
+
+// `from_static` only `debug_assert!`s its length contract, so the panic is
+// observable solely in debug builds — the test is gated to match.
+#[cfg(debug_assertions)]
+#[test]
+#[should_panic(expected = "OPERATION_ERR_MAX_BYTES")]
+fn callback_error_message_from_static_over_cap_panics_in_debug() {
+    let over_cap: &'static str =
+        Box::leak("x".repeat(OPERATION_ERR_MAX_BYTES + 1).into_boxed_str());
+    let _ = RemoteErrorMessage::from_static(over_cap);
+}
+
 // ---------------------------------------------------------------------------
 // 4. PacketEnvelope — round-trip + literal JSON
 // ---------------------------------------------------------------------------
@@ -192,7 +213,7 @@ fn lease_addr_on_wire_round_trip_is_bare_string() {
 }
 
 // ---------------------------------------------------------------------------
-// 5. OpenLeaseParams invariant: three currencies pairwise distinct
+// 5. OpenLeaseParams invariant: lpn != asset (downpayment may overlap either)
 // ---------------------------------------------------------------------------
 
 #[test]
@@ -208,25 +229,25 @@ fn open_lease_params_distinct_currencies_ok() {
 }
 
 #[test]
-fn open_lease_params_downpayment_equals_lpn_rejected() {
-    let res = OpenLeaseParams::new(
+fn open_lease_params_downpayment_equals_lpn_accepted() {
+    OpenLeaseParams::new(
         7,
         Ticker::new("NLS"),
         Ticker::new("NLS"),
         Ticker::new("LC1"),
-    );
-    assert!(matches!(res, Err(Error::DuplicateLeaseCurrencies)));
+    )
+    .expect("downpayment in lpn currency must be accepted");
 }
 
 #[test]
-fn open_lease_params_downpayment_equals_asset_rejected() {
-    let res = OpenLeaseParams::new(
+fn open_lease_params_downpayment_equals_asset_accepted() {
+    OpenLeaseParams::new(
         7,
         Ticker::new("NLS"),
         Ticker::new("LPN"),
         Ticker::new("NLS"),
-    );
-    assert!(matches!(res, Err(Error::DuplicateLeaseCurrencies)));
+    )
+    .expect("downpayment in asset currency must be accepted");
 }
 
 #[test]
@@ -242,9 +263,9 @@ fn open_lease_params_lpn_equals_asset_rejected() {
 
 #[test]
 fn open_lease_params_deserialize_invariant_violation_rejected() {
-    let bad_wire = r#"{"expected_instance_ordinal":7,"downpayment_currency":"NLS","lpn_currency":"NLS","asset_currency":"LC1"}"#;
+    let bad_wire = r#"{"expected_instance_ordinal":7,"downpayment_currency":"NLS","lpn_currency":"LPN","asset_currency":"LPN"}"#;
     serde_json::from_str::<OpenLeaseParams>(bad_wire)
-        .expect_err("invariant violation must fail deserialization");
+        .expect_err("lpn==asset must fail deserialization");
 }
 
 #[test]

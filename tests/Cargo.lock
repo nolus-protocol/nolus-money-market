@@ -958,6 +958,7 @@ dependencies = [
  "platform",
  "profit",
  "remote_lease",
+ "remote_lease_controller",
  "reserve",
  "sdk",
  "serde",
@@ -1430,9 +1431,25 @@ dependencies = [
  "currencies",
  "currency",
  "finance",
+ "platform",
  "remote_lease_wire",
+ "sdk",
  "serde",
  "thiserror 2.0.18",
+]
+
+[[package]]
+name = "remote_lease_controller"
+version = "0.1.0"
+dependencies = [
+ "cw-time",
+ "finance",
+ "platform",
+ "remote_lease",
+ "sdk",
+ "serde",
+ "thiserror 2.0.18",
+ "versioning",
 ]
 
 [[package]]

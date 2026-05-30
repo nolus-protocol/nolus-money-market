@@ -11,6 +11,7 @@ use dex::{
 use finance::instant::Instant;
 use finance::{coin::CoinDTO, duration::Duration};
 use platform::ica::HostAccount;
+use remote_lease::response::RemoteLeaseId;
 use sdk::cosmwasm_std::{MessageInfo, QuerierWrapper};
 use timealarms::stub::TimeAlarmsRef;
 
@@ -40,6 +41,7 @@ mod calculator;
 mod finish;
 
 type AssetGroup = LeaseAssetCurrencies;
+#[allow(dead_code)]
 pub(super) type StartState = StartLocalRemoteState<OpenIcaAccount, BuyAsset>;
 pub(in super::super) type DexState = dex::StateRemoteOut<
     OpenIcaAccount,
@@ -55,6 +57,7 @@ pub(super) fn start(
     loan: OpenLoanRespResult,
     deps: (LppRef, OracleRef, TimeAlarmsRef, LeasesRef),
     start_opening_at: Instant,
+    remote_lease_id: RemoteLeaseId,
 ) -> StartState {
     dex::start_local_remote::<_, BuyAsset>(OpenIcaAccount::new(
         new_lease,
@@ -62,6 +65,7 @@ pub(super) fn start(
         loan,
         deps,
         start_opening_at,
+        remote_lease_id,
     ))
 }
 
@@ -75,6 +79,7 @@ pub struct BuyAsset {
     loan: OpenLoanRespResult,
     deps: (LppRef, OracleRef, TimeAlarmsRef, LeasesRef),
     start_opening_at: Instant,
+    remote_lease_id: RemoteLeaseId,
 }
 
 impl BuyAsset {
@@ -85,6 +90,7 @@ impl BuyAsset {
         loan: OpenLoanRespResult,
         deps: (LppRef, OracleRef, TimeAlarmsRef, LeasesRef),
         start_opening_at: Instant,
+        remote_lease_id: RemoteLeaseId,
     ) -> Self {
         Self {
             form,
@@ -93,6 +99,7 @@ impl BuyAsset {
             loan,
             deps,
             start_opening_at,
+            remote_lease_id,
         }
     }
 

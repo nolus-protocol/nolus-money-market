@@ -36,6 +36,7 @@ mod event;
 mod handler;
 mod lease;
 mod liquidated;
+mod open_failed;
 mod opened;
 mod opening;
 mod out_task;
@@ -43,6 +44,10 @@ mod paid;
 mod resp_delivery;
 
 type RequestLoan = LeaseState<opening::request_loan::RequestLoan>;
+
+type OpenLease = opening::open_lease::OpenLease;
+
+type OpenFailed = open_failed::OpenFailed;
 
 type BuyAsset = DexState<opening::buy_asset::DexState>;
 
@@ -74,6 +79,8 @@ type SwapClient = Impl;
 #[derive(Serialize, Deserialize)]
 pub enum State {
     RequestLoan,
+    OpenLease,
+    OpenFailed,
     BuyAsset,
     OpenedActive,
     BuyLpn,

@@ -15,8 +15,7 @@ use sdk::{
     },
 };
 use versioning::{
-    ProtocolMigrationMessage, ProtocolPackageRelease, UpdatablePackage, VersionSegment,
-    package_name, package_version,
+    ProtocolMigrationMessage, ProtocolPackageRelease, VersionSegment, package_name, package_version,
 };
 
 use crate::{
@@ -27,7 +26,7 @@ use crate::{
 
 use super::state::{self, Response, State};
 
-const CONTRACT_STORAGE_VERSION: VersionSegment = 9;
+const CONTRACT_STORAGE_VERSION: VersionSegment = 10;
 const CURRENT_RELEASE: ProtocolPackageRelease = ProtocolPackageRelease::current(
     package_name!(),
     package_version!(),
@@ -61,17 +60,24 @@ pub fn instantiate(
 pub fn migrate(
     deps: DepsMut<'_>,
     _env: Env,
-    ProtocolMigrationMessage {
-        migrate_from,
-        to_release,
-        message: MigrateMsg {},
-    }: ProtocolMigrationMessage<MigrateMsg>,
+    _msg: ProtocolMigrationMessage<MigrateMsg>,
 ) -> ContractResult<CwResponse> {
-    migrate_from
-        .update_software(&CURRENT_RELEASE, &to_release)
-        .map(|()| response::empty_response())
-        .map_err(ContractError::UpdateSoftware)
-        .inspect_err(platform_error::log(deps.api))
+    // v10 reshapes the persisted `LeaseDTO` to carry the Solana-side
+    // remote-lease PDA as a non-optional field, so a pre-v10 lease cannot
+    // be deserialised under the new layout. A v9 lease has no meaningful
+    // `remote_lease_id` to synthesise — its `dex_account` is an ICA host on
+    // the DEX chain, not a Solana PDA — so a real v9→v10 migration would
+    // have to invent a sentinel and leave the lease permanently Cosmos-side
+    // only. Mainnet v9-lease population is zero (plan §10.A.1), so no
+    // in-flight state is at risk there; reject any migrate attempt loudly
+    // rather than silently failing the first post-upgrade load.
+    //
+    // Operational posture for non-mainnet (devnet/testnet/local): drain all
+    // v9 leases to a terminal state before upgrading the lease code to v10.
+    // There is no `ExecuteMsg` escape hatch for a stranded v9 lease — the
+    // storage layout is binary-incompatible — so the drain is a prerequisite,
+    // not a recovery step. See `protocol/docs/remote-lease-callback-flow.md`.
+    Err(ContractError::UnsupportedMigration).inspect_err(platform_error::log(deps.api))
 }
 
 #[entry_point]

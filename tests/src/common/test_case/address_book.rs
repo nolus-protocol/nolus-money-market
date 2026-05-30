@@ -21,6 +21,10 @@ pub(crate) struct AddressBook<
     oracle_addr: Oracle,
     time_alarms_addr: TimeAlarms,
     lease_code: Code,
+    /// Stand-in remote-lease controller, instantiated alongside the leaser
+    /// for the lease-side integration tests. `None` until the leaser
+    /// builder step has run; readers should `expect`.
+    remote_lease_controller: Option<Addr>,
 }
 
 impl AddressBook<(), (), (), (), (), (), (), ()> {
@@ -36,6 +40,7 @@ impl AddressBook<(), (), (), (), (), (), (), ()> {
             oracle_addr: (),
             time_alarms_addr: (),
             lease_code,
+            remote_lease_controller: None,
         }
     }
 }
@@ -58,6 +63,7 @@ impl<Treasury, Profit, Reserve, Leaser, Lpp, Oracle, TimeAlarms>
             oracle_addr: self.oracle_addr,
             time_alarms_addr: self.time_alarms_addr,
             lease_code: self.lease_code,
+            remote_lease_controller: self.remote_lease_controller,
         }
     }
 }
@@ -89,6 +95,7 @@ impl<ProtocolsRegistry, Profit, Reserve, Leaser, Lpp, Oracle, TimeAlarms>
             oracle_addr: self.oracle_addr,
             time_alarms_addr: self.time_alarms_addr,
             lease_code: self.lease_code,
+            remote_lease_controller: self.remote_lease_controller,
         }
     }
 }
@@ -121,6 +128,7 @@ impl<ProtocolsRegistry, Treasury, Reserve, Leaser, Lpp, Oracle, TimeAlarms>
             oracle_addr: self.oracle_addr,
             time_alarms_addr: self.time_alarms_addr,
             lease_code: self.lease_code,
+            remote_lease_controller: self.remote_lease_controller,
         }
     }
 }
@@ -156,6 +164,7 @@ impl<ProtocolsRegistry, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>
             oracle_addr: self.oracle_addr,
             time_alarms_addr: self.time_alarms_addr,
             lease_code: self.lease_code,
+            remote_lease_controller: self.remote_lease_controller,
         }
     }
 }
@@ -187,6 +196,7 @@ impl<ProtocolsRegistry, Treasury, Profit, Reserve, Lpp, Oracle, TimeAlarms>
             oracle_addr: self.oracle_addr,
             time_alarms_addr: self.time_alarms_addr,
             lease_code: self.lease_code,
+            remote_lease_controller: self.remote_lease_controller,
         }
     }
 }
@@ -219,6 +229,7 @@ impl<ProtocolsRegistry, Treasury, Profit, Reserve, Leaser, Oracle, TimeAlarms>
             oracle_addr: self.oracle_addr,
             time_alarms_addr: self.time_alarms_addr,
             lease_code: self.lease_code,
+            remote_lease_controller: self.remote_lease_controller,
         }
     }
 }
@@ -251,6 +262,7 @@ impl<ProtocolsRegistry, Treasury, Profit, Reserve, Leaser, Lpp, TimeAlarms>
             oracle_addr,
             time_alarms_addr: self.time_alarms_addr,
             lease_code: self.lease_code,
+            remote_lease_controller: self.remote_lease_controller,
         }
     }
 }
@@ -281,6 +293,7 @@ impl<ProtocolsRegistry, Treasury, Profit, Reserve, Leaser, Lpp, Oracle>
             oracle_addr: self.oracle_addr,
             time_alarms_addr,
             lease_code: self.lease_code,
+            remote_lease_controller: self.remote_lease_controller,
         }
     }
 }
@@ -298,5 +311,23 @@ impl<ProtocolsRegistry, Treasury, Profit, Reserve, Leaser, Lpp, Oracle, TimeAlar
 {
     pub const fn lease_code(&self) -> Code {
         self.lease_code
+    }
+
+    /// Stand-in remote-lease controller address.
+    ///
+    /// Panics if accessed before the leaser builder step has run — that
+    /// step is what installs the stand-in alongside the leaser.
+    pub fn remote_lease_controller(&self) -> &Addr {
+        self.remote_lease_controller
+            .as_ref()
+            .expect("remote-lease controller stand-in must be initialised before access")
+    }
+
+    pub(super) fn set_remote_lease_controller(&mut self, controller: Addr) {
+        debug_assert!(
+            self.remote_lease_controller.is_none(),
+            "remote-lease controller already installed",
+        );
+        self.remote_lease_controller = Some(controller);
     }
 }

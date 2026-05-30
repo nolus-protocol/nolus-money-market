@@ -195,7 +195,7 @@ fn lease_addr_on_wire_round_trip_is_bare_string() {
 }
 
 // ---------------------------------------------------------------------------
-// 5. OpenLeaseParams invariant: three currencies pairwise distinct
+// 5. OpenLeaseParams invariant: lpn != asset (downpayment may overlap either)
 // ---------------------------------------------------------------------------
 
 #[test]
@@ -211,25 +211,25 @@ fn open_lease_params_distinct_currencies_ok() {
 }
 
 #[test]
-fn open_lease_params_downpayment_equals_lpn_rejected() {
-    let res = OpenLeaseParams::new(
+fn open_lease_params_downpayment_equals_lpn_accepted() {
+    OpenLeaseParams::new(
         7,
         currency::dto::<PaymentC1, PaymentGroup>(),
         currency::dto::<PaymentC1, PaymentGroup>(),
         currency::dto::<PaymentC3, PaymentGroup>(),
-    );
-    assert!(matches!(res, Err(Error::DuplicateLeaseCurrencies)));
+    )
+    .expect("downpayment in lpn currency must be accepted");
 }
 
 #[test]
-fn open_lease_params_downpayment_equals_asset_rejected() {
-    let res = OpenLeaseParams::new(
+fn open_lease_params_downpayment_equals_asset_accepted() {
+    OpenLeaseParams::new(
         7,
         currency::dto::<PaymentC1, PaymentGroup>(),
         currency::dto::<PaymentC2, PaymentGroup>(),
         currency::dto::<PaymentC1, PaymentGroup>(),
-    );
-    assert!(matches!(res, Err(Error::DuplicateLeaseCurrencies)));
+    )
+    .expect("downpayment in asset currency must be accepted");
 }
 
 #[test]
@@ -245,9 +245,9 @@ fn open_lease_params_lpn_equals_asset_rejected() {
 
 #[test]
 fn open_lease_params_deserialize_invariant_violation_rejected() {
-    let bad_wire = r#"{"expected_instance_ordinal":7,"downpayment_currency":"NLS","lpn_currency":"NLS","asset_currency":"LC1"}"#;
+    let bad_wire = r#"{"expected_instance_ordinal":7,"downpayment_currency":"NLS","lpn_currency":"LPN","asset_currency":"LPN"}"#;
     serde_json::from_str::<OpenLeaseParams>(bad_wire)
-        .expect_err("invariant violation must fail deserialization");
+        .expect_err("lpn==asset must fail deserialization");
 }
 
 #[test]

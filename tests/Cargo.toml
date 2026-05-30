@@ -58,6 +58,7 @@ lpp-platform = { path = "../platform/packages/lpp", features = ["testing"], defa
 marketprice = { path = "../protocol/packages/marketprice", features = ["testing"], default-features = false }
 platform = { path = "../platform/packages/platform", features = ["testing"], default-features = false }
 remote_lease = { path = "../protocol/packages/remote_lease", default-features = false }
+remote_lease_controller = { path = "../protocol/contracts/remote_lease", default-features = false }
 sdk = { path = "../platform/packages/sdk", features = ["testing"], default-features = false }
 swap = { path = "../protocol/packages/swap", features = ["testing"], default-features = false }
 tree = { path = "../platform/packages/tree", features = ["testing"], default-features = false }

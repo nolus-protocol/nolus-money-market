@@ -69,9 +69,16 @@ pub enum StateResponse {
     },
     Closed(),
     Liquidated(),
+    /// The remote-lease open lifecycle failed before reaching the live
+    /// lease. The downpayment was refunded to the customer and the LPP
+    /// loan was repaid in the same atomic batch.
+    OpenFailed {
+        reason: remote_lease::callback::RemoteErrorMessage,
+    },
 }
 
 pub mod opening {
+    use remote_lease::response::RemoteLeaseId;
     #[cfg(feature = "skel_testing")]
     use serde::Deserialize;
     use serde::Serialize;
@@ -83,9 +90,21 @@ pub mod opening {
     )]
     #[serde(deny_unknown_fields, rename_all = "snake_case")]
     pub enum OngoingTrx {
-        OpenIcaAccount,
-        TransferOut { ica_account: String },
-        BuyAsset { ica_account: String },
+        /// The lease has emitted `Factory::open` and is waiting for the
+        /// controller's `OpenLease` ack. The Solana-side PDA is not yet
+        /// known at this point.
+        RequestingOpenLease,
+        /// The controller has acked; the lease holds the Solana-side
+        /// PDA and is progressing toward the live `Active` state.
+        OpenLease {
+            remote_lease: RemoteLeaseId,
+        },
+        TransferOut {
+            ica_account: String,
+        },
+        BuyAsset {
+            ica_account: String,
+        },
     }
 }
 

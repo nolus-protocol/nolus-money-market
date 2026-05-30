@@ -38,6 +38,7 @@ pub mod lpp;
 pub mod oracle;
 pub mod profit;
 pub mod protocols;
+pub mod remote_lease_controller_stub;
 pub mod reserve;
 pub mod swap;
 pub mod test_case;

@@ -32,7 +32,10 @@ use crate::{
         LeasesConfigurationPermission, RemoteLeaseCallbackPermission,
     },
     result::ContractResult,
-    state::{config::Config, leases::Leases},
+    state::{
+        config::Config,
+        leases::{Leases, SaveOutcome},
+    },
 };
 
 const CONTRACT_STORAGE_VERSION: VersionSegment = 7;
@@ -243,9 +246,9 @@ pub fn reply(deps: DepsMut<'_>, _env: Env, msg: Reply) -> ContractResult<Respons
             err: err.to_string(),
         })
         .and_then(|lease| {
-            Leases::save(deps.storage, lease.clone()).map(|stored| {
-                debug_assert!(stored);
-                lease
+            Leases::save(deps.storage, lease.clone()).and_then(|outcome| match outcome {
+                SaveOutcome::Registered | SaveOutcome::Cancelled => Ok(lease),
+                SaveOutcome::AlreadyRegistered => Err(ContractError::DuplicateLeaseAddress),
             })
         })
         .map(|lease| Response::new().add_attribute("lease_address", lease))
