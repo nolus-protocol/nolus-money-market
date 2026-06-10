@@ -108,21 +108,31 @@ impl OpenLease {
     fn on_open_lease_ack(
         self,
         remote_lease_id: RemoteLeaseId,
+        querier: QuerierWrapper<'_>,
         _env: &Env,
     ) -> ContractResult<Response> {
-        let next = super::buy_asset::start(
-            self.new_lease,
-            self.downpayment,
-            self.loan,
-            self.deps,
-            self.start_opening_at,
-            remote_lease_id,
-        );
-        let batch = next.enter();
-        Ok(StateMachineResponse::from(
-            MessageResponse::messages_only(batch),
-            State::from(super::buy_asset::DexState::from(next)),
-        ))
+        // The liquidation bound doubles as the opening-swap bound until a
+        // dedicated opening max-slippage limit gets introduced.
+        self.deps
+            .3
+            .max_slippage(querier)
+            .map(|max_slippages| max_slippages.liquidation)
+            .map(|max_slippage| {
+                let next = super::buy_asset::start(
+                    self.new_lease,
+                    self.downpayment,
+                    self.loan,
+                    self.deps,
+                    self.start_opening_at,
+                    remote_lease_id,
+                    max_slippage,
+                );
+                let batch = next.enter();
+                StateMachineResponse::from(
+                    MessageResponse::messages_only(batch),
+                    State::from(super::buy_asset::DexState::from(next)),
+                )
+            })
     }
 
     fn on_open_failed(
@@ -214,7 +224,7 @@ impl Contract for OpenLease {
             .and_then(|()| match callback {
                 RemoteLeaseCallback::OperationOk(OperationResponse::OpenLease(
                     OpenLeaseResponse { remote_lease_id },
-                )) => self.on_open_lease_ack(remote_lease_id, &env),
+                )) => self.on_open_lease_ack(remote_lease_id, querier, &env),
                 RemoteLeaseCallback::OperationOk(_unexpected) => {
                     // A success ack for a non-`OpenLease` operation can only
                     // come from a buggy or hostile counterparty. Returning

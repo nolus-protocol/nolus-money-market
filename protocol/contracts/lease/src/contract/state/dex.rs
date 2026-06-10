@@ -31,6 +31,7 @@ impl<H> Contract for State<H>
 where
     H: DexHandler<SwapResult = ContractResult<Response>>,
     H: DexContract<StateResponse = ContractResult<QueryStateResponse>>,
+    H: Into<H::Response>,
     H::Response: Into<ContractState>,
     Self: Into<ContractState>,
 {
@@ -71,6 +72,10 @@ where
             .map_err(Into::into)
     }
 
+    /// Remote-lease controller callbacks are routed through the dedicated
+    /// `on_remote_*` entry points rather than the ICA `on_dex_*` ones: an
+    /// ICA leg receiving a controller callback must absorb it instead of
+    /// advancing its own acknowledgment countdown.
     fn on_remote_lease_callback(
         self,
         callback: RemoteLeaseCallback,
@@ -85,14 +90,19 @@ where
                 RemoteLeaseCallback::OperationOk(response) => {
                     cosmwasm_std::to_json_binary(&response)
                         .map_err(Into::into)
-                        .and_then(|data| self.on_dex_response(data, querier, env))
+                        .and_then(|data| self.handler.on_remote_response(data, querier, env).into())
                 }
-                RemoteLeaseCallback::OperationErr(message) => self.on_dex_error(
-                    ICAErrorResponse::from(message.as_str().to_owned()),
-                    querier,
-                    env,
-                ),
-                RemoteLeaseCallback::OperationTimeout => self.on_dex_timeout(querier, env),
+                RemoteLeaseCallback::OperationErr(message) => self
+                    .handler
+                    .on_remote_error(
+                        ICAErrorResponse::from(message.as_str().to_owned()),
+                        querier,
+                        env,
+                    )
+                    .into(),
+                RemoteLeaseCallback::OperationTimeout => {
+                    self.handler.on_remote_timeout(querier, env).into()
+                }
             })
     }
 

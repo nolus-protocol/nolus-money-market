@@ -22,12 +22,12 @@ use crate::{
 #[cfg(feature = "migration")]
 use super::migration::{InspectSpec, MigrateSpec};
 use super::{
+    next_leg::NextLeg as NextLegT,
     response::{self, ContinueResult, Handler, Result as HandlerResult},
     swap_exact_in::SwapExactIn,
     timeout,
     trx::TransferOutTrx,
 };
-use cw_time::IntoInstant;
 
 /// Transfer out a list of coins to DEX
 ///
@@ -127,29 +127,6 @@ where
     }
 }
 
-impl<SwapTask, SEnum, SwapClient, NextLeg> TransferOut<SwapTask, SEnum, SwapClient, NextLeg>
-where
-    SwapTask: SwapTaskT,
-    Self: Into<SEnum>,
-    NextLeg: From<SwapTask> + Enterable + Into<SEnum>,
-{
-    fn on_response<NextState, Label>(
-        next: NextState,
-        label: Label,
-        msgs: Batch,
-    ) -> ContinueResult<Self>
-    where
-        NextState: Enterable + Into<SEnum>,
-        Label: Into<String>,
-    {
-        let emitter = Emitter::of_type(label);
-        response::res_continue::<_, _, Self>(
-            MessageResponse::messages_with_event(msgs, emitter),
-            next,
-        )
-    }
-}
-
 impl<SwapTask, SEnum, SwapClient, NextLeg> Enterable
     for TransferOut<SwapTask, SEnum, SwapClient, NextLeg>
 where
@@ -165,7 +142,7 @@ impl<SwapTask, SEnum, SwapClient, NextLeg> Handler
 where
     SwapTask: SwapTaskT,
     Self: Into<SEnum>,
-    NextLeg: From<SwapTask> + Enterable + Into<SEnum>,
+    NextLeg: NextLegT<SwapTask> + Handler<Response = SEnum, SwapResult = SwapTask::Result>,
 {
     type Response = SEnum;
     type SwapResult = SwapTask::Result;
@@ -184,15 +161,17 @@ where
         querier: QuerierWrapper<'_>,
         env: Env,
     ) -> HandlerResult<Self> {
-        let label = self.spec.label();
         if self.last_ack() {
-            let next = NextLeg::from(self.spec);
-            next.enter(env.block.time.into_instant(), querier)
-                .and_then(|msgs| Self::on_response(next, label, msgs))
+            NextLeg::enter_from(self.spec, querier, &env).map_into()
         } else {
-            Self::on_response(self.next(), label, Batch::default())
+            let label = self.spec.label();
+            let next = self.next();
+            response::res_continue::<_, _, Self>(
+                MessageResponse::messages_with_event(Batch::default(), Emitter::of_type(label)),
+                next,
+            )
+            .into()
         }
-        .into()
     }
 
     fn on_timeout(self, querier: QuerierWrapper<'_>, env: Env) -> ContinueResult<Self> {

@@ -58,7 +58,7 @@ fn full_close() {
     let mut test_case = super::create_test_case::<PaymentCurrency>();
 
     let exp_loan_close = true;
-    let exp_change = price::total(DOWNPAYMENT, super::price_lpn_of()).unwrap();
+    let exp_change = price::total(lease_amount, super::price_lpn_of()).unwrap() - borrowed();
     let lease = do_close(
         &mut test_case,
         &customer,
@@ -88,8 +88,7 @@ fn full_close() {
 #[test]
 fn partial_close_loan_not_closed() {
     let lease_amount: LeaseCoin = lease_amount();
-    let principal: LpnCoin = price::total(lease_amount, super::price_lpn_of()).unwrap()
-        - price::total(DOWNPAYMENT, super::price_lpn_of()).unwrap();
+    let principal: LpnCoin = borrowed();
     let close_amount: LeaseCoin = price::total(
         principal - common::coin(1234567),
         super::price_lpn_of().inv(),
@@ -138,8 +137,7 @@ fn partial_close_loan_not_closed() {
 #[test]
 fn partial_close_loan_closed() {
     let lease_amount: LeaseCoin = lease_amount();
-    let principal: LpnCoin = price::total(lease_amount, super::price_lpn_of()).unwrap()
-        - price::total(DOWNPAYMENT, super::price_lpn_of()).unwrap();
+    let principal: LpnCoin = borrowed();
     let exp_change: LpnCoin = common::coin(345);
 
     let repay_principal = principal + exp_change;
@@ -399,6 +397,12 @@ where
     platform::bank::balance::<C>(customer, test_case.app.query()).unwrap()
 }
 
+fn borrowed() -> LpnCoin {
+    common::coin(1857142857142)
+}
+
 fn lease_amount() -> LeaseCoin {
-    common::coin(2857142857142)
+    // the literal-floor opening: 85% of the downpayment quote plus 85% of
+    // the borrow quote, truncated per swap leg
+    common::coin(2428571428570)
 }

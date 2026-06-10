@@ -4,7 +4,7 @@ use std::fmt::{Display, Formatter, Result as FmtResult};
 
 use dex::{
     Account, Connectable, ConnectionParams, Contract as DexContract, DexResult, Error as DexError,
-    IcaConnectee, TimeAlarm, TransferOut,
+    IcaConnectee, MaxSlippage, RemoteSwap, TimeAlarm, TransferOut,
 };
 use finance::instant::Instant;
 use platform::batch::Batch;
@@ -30,6 +30,7 @@ pub(crate) struct OpenIcaAccount {
     new_lease: NewLeaseContract,
     downpayment: DownpaymentCoin,
     loan: OpenLoanRespResult,
+    max_slippage: MaxSlippage,
     deps: (LppRef, OracleRef, TimeAlarmsRef, LeasesRef),
     start_opening_at: Instant,
     remote_lease_id: RemoteLeaseId,
@@ -40,6 +41,7 @@ impl OpenIcaAccount {
         new_lease: NewLeaseContract,
         downpayment: DownpaymentCoin,
         loan: OpenLoanRespResult,
+        max_slippage: MaxSlippage,
         deps: (LppRef, OracleRef, TimeAlarmsRef, LeasesRef),
         start_opening_at: Instant,
         remote_lease_id: RemoteLeaseId,
@@ -48,6 +50,7 @@ impl OpenIcaAccount {
             new_lease,
             downpayment,
             loan,
+            max_slippage,
             deps,
             start_opening_at,
             remote_lease_id,
@@ -57,14 +60,24 @@ impl OpenIcaAccount {
 
 impl IcaConnectee for OpenIcaAccount {
     type State = DexState;
-    type NextState = TransferOut<BuyAsset, Self::State, SwapClient>;
+    type NextState =
+        TransferOut<BuyAsset, Self::State, SwapClient, RemoteSwap<BuyAsset, Self::State>>;
 
     fn connected(self, dex_account: Account) -> Self::NextState {
+        let NewLeaseContract {
+            form,
+            dex: _,
+            finalizer: _,
+            remote_lease_controller,
+            expected_instance_ordinal: _,
+        } = self.new_lease;
         TransferOut::new(BuyAsset::new(
-            self.new_lease.form,
+            form,
             dex_account,
             self.downpayment,
             self.loan,
+            self.max_slippage,
+            remote_lease_controller,
             self.deps,
             self.start_opening_at,
             self.remote_lease_id,

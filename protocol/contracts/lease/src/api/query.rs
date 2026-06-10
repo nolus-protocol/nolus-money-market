@@ -102,8 +102,11 @@ pub mod opening {
         TransferOut {
             ica_account: String,
         },
+        /// The funds are on the DEX-chain ICA account and the swap legs
+        /// run through the remote-lease controller. `acks_left` counts the
+        /// swap legs still awaiting a controller acknowledgment.
         BuyAsset {
-            ica_account: String,
+            acks_left: u8,
         },
     }
 }

@@ -24,6 +24,7 @@ use crate::{
     SwapTask as SwapTaskT, TimeAlarm, WithCalculator, WithOutputTask,
     error::{Error, Result},
     impl_::{
+        next_leg::NextLeg,
         response::{self, ContinueResult, Handler, Result as HandlerResult},
         timeout,
     },
@@ -33,11 +34,13 @@ use crate::{
 use super::migration::{InspectSpec, MigrateSpec};
 
 const EVENT_KEY_ABSORBED: &str = "absorbed";
+const EVENT_KEY_ANOMALY: &str = "anomaly";
 const EVENT_KEY_HEAL: &str = "heal";
 const EVENT_KEY_TOTAL_OUT: &str = "total-out";
 const EVENT_VALUE_REEMIT: &str = "re-emit";
 const ABSORB_UNDECODABLE: &str = "undecodable-response";
 const ABSORB_CURRENCY_MISMATCH: &str = "out-currency-mismatch";
+const ANOMALY_UNDER_MIN_OUT: &str = "under-min-out";
 
 /// Transport of swap legs to a remote, non-ICA counterparty
 ///
@@ -97,13 +100,12 @@ struct StartOrFinish<'env, 'querier, SEnum> {
     _state_enum: PhantomData<SEnum>,
 }
 
-struct ScheduleLeg<'spec, 'querier, SwapTask>
+struct LegMinOut<'querier, SwapTask>
 where
     SwapTask: SwapTaskT,
 {
     coin_in: CoinDTO<SwapTask::InG>,
     out_currency: CurrencyDTO<SwapTask::OutG>,
-    client: &'spec SwapTask,
     querier: QuerierWrapper<'querier>,
 }
 
@@ -135,16 +137,31 @@ where
         })
     }
 
+    /// An acknowledgment below the leg's slippage-bounded floor is a
+    /// counterparty contract violation - the remote side enforces the
+    /// `min_out` it was given, so a compliant counterparty never reaches
+    /// this branch. The leg is re-emitted instead of accepted or absorbed,
+    /// mirroring the error treatment: only the in-flight leg retries, the
+    /// accumulated progress stays intact. The floor is recomputed at the
+    /// current oracle price since the emitted value is not persisted.
     fn deliver_ack(
         self,
         coin_out: CoinDTO<SwapTask::OutG>,
         querier: QuerierWrapper<'_>,
         env: Env,
     ) -> HandlerResult<Self> {
-        if coin_out.currency() == self.total_out.currency() {
-            self.apply_ack(coin_out, querier, env)
-        } else {
-            self.absorb(ABSORB_CURRENCY_MISMATCH).into()
+        if coin_out.currency() != self.total_out.currency() {
+            return self.absorb(ABSORB_CURRENCY_MISMATCH).into();
+        }
+        match self
+            .in_flight_leg()
+            .and_then(|coin_in| self.leg_min_out(coin_in, querier))
+        {
+            Ok(min_out) if coin_out.amount() < min_out.amount() => {
+                self.reemit_underpaid(querier).into()
+            }
+            Ok(_at_least_floor) => self.apply_ack(coin_out, querier, env),
+            Err(error) => error.into(),
         }
     }
 
@@ -187,12 +204,25 @@ where
         )
     }
 
+    fn reemit_underpaid(self, querier: QuerierWrapper<'_>) -> ContinueResult<Self> {
+        self.enter_state(querier).and_then(|batch| {
+            response::res_continue::<_, _, Self>(
+                MessageResponse::messages_with_event(batch, self.emit_anomaly()),
+                self,
+            )
+        })
+    }
+
     fn emit_total_out(&self) -> Emitter {
         Emitter::of_type(self.spec.label()).emit_coin_dto(EVENT_KEY_TOTAL_OUT, &self.total_out)
     }
 
     fn emit_absorbed(&self, reason: &str) -> Emitter {
         Emitter::of_type(self.spec.label()).emit(EVENT_KEY_ABSORBED, reason)
+    }
+
+    fn emit_anomaly(&self) -> Emitter {
+        Emitter::of_type(self.spec.label()).emit(EVENT_KEY_ANOMALY, ANOMALY_UNDER_MIN_OUT)
     }
 
     fn emit_heal(&self) -> Emitter {
@@ -205,13 +235,23 @@ where
     SwapTask: SwapTaskT + RemoteSwapClient,
 {
     fn enter_state(&self, querier: QuerierWrapper<'_>) -> Result<Batch> {
-        self.in_flight_leg().and_then(|coin_in| {
-            self.spec.with_slippage_calc(ScheduleLeg {
-                coin_in,
-                out_currency: self.total_out.currency(),
-                client: &self.spec,
-                querier,
+        self.in_flight_leg()
+            .and_then(|coin_in| {
+                self.leg_min_out(coin_in, querier)
+                    .map(|min_out| (coin_in, min_out))
             })
+            .and_then(|(coin_in, min_out)| self.spec.schedule_swap(&coin_in, &min_out))
+    }
+
+    fn leg_min_out(
+        &self,
+        coin_in: CoinDTO<SwapTask::InG>,
+        querier: QuerierWrapper<'_>,
+    ) -> Result<CoinDTO<SwapTask::OutG>> {
+        self.spec.with_slippage_calc(LegMinOut {
+            coin_in,
+            out_currency: self.total_out.currency(),
+            querier,
         })
     }
 }
@@ -270,6 +310,20 @@ where
     }
 }
 
+impl<SwapTask, SEnum> NextLeg<SwapTask> for RemoteSwap<SwapTask, SEnum>
+where
+    SwapTask: SwapTaskT + RemoteSwapClient,
+    Self: Handler<Response = SEnum, SwapResult = SwapTask::Result> + Into<SEnum>,
+{
+    /// Delegating to [`RemoteSwap::start`] keeps the fold semantics: coins
+    /// already denominated in the output currency never become swap legs,
+    /// and a task with nothing to swap finishes synchronously instead of
+    /// waiting for an acknowledgment that would never arrive.
+    fn enter_from(spec: SwapTask, querier: QuerierWrapper<'_>, env: &Env) -> HandlerResult<Self> {
+        Self::start(spec, env, querier)
+    }
+}
+
 impl<SwapTask, SEnum> Handler for RemoteSwap<SwapTask, SEnum>
 where
     SwapTask: SwapTaskT + RemoteSwapClient,
@@ -287,13 +341,13 @@ where
     /// controller's acknowledgment transaction and strand the workflow. A
     /// successfully decoded acknowledgment, though, runs the regular flow
     /// and lets any downstream failure propagate.
-    fn on_response(
+    fn on_remote_response(
         self,
-        resp: Binary,
+        data: Binary,
         querier: QuerierWrapper<'_>,
         env: Env,
     ) -> HandlerResult<Self> {
-        match self.spec.decode_response(resp.as_slice()) {
+        match self.spec.decode_response(data.as_slice()) {
             Ok(coin_out) => self.deliver_ack(coin_out, querier, env),
             Err(_undecodable) => self.absorb(ABSORB_UNDECODABLE).into(),
         }
@@ -303,18 +357,18 @@ where
     /// `on_anomaly` - its `Retry` treatment rebuilds the node from the spec
     /// and would re-issue the already-acknowledged legs. Only the in-flight
     /// leg is re-emitted, preserving the accumulated progress.
-    fn on_error(
+    fn on_remote_error(
         self,
         _response: ICAErrorResponse,
         querier: QuerierWrapper<'_>,
         env: Env,
     ) -> HandlerResult<Self> {
-        self.on_timeout(querier, env).into()
+        self.on_remote_timeout(querier, env)
     }
 
-    fn on_timeout(self, querier: QuerierWrapper<'_>, env: Env) -> ContinueResult<Self> {
+    fn on_remote_timeout(self, querier: QuerierWrapper<'_>, env: Env) -> HandlerResult<Self> {
         let state_label = self.spec.label();
-        timeout::on_timeout_retry(self, state_label, querier, env)
+        timeout::on_timeout_retry(self, state_label, querier, env).into()
     }
 
     /// The only operator recovery on this transport - there is neither a
@@ -435,11 +489,11 @@ where
     }
 }
 
-impl<SwapTask> WithCalculator<SwapTask> for ScheduleLeg<'_, '_, SwapTask>
+impl<SwapTask> WithCalculator<SwapTask> for LegMinOut<'_, SwapTask>
 where
-    SwapTask: SwapTaskT + RemoteSwapClient,
+    SwapTask: SwapTaskT,
 {
-    type Output = Result<Batch>;
+    type Output = Result<CoinDTO<SwapTask::OutG>>;
 
     fn on<CalculatorT>(self, calculator: &CalculatorT) -> Self::Output
     where
@@ -451,7 +505,7 @@ where
 
         calculator
             .min_output(&self.coin_in, self.querier)
-            .and_then(|min_out| self.client.schedule_swap(&self.coin_in, &min_out.into()))
+            .map(Into::into)
     }
 }
 
@@ -780,8 +834,11 @@ mod tests {
         let querier = QuerierWrapper::new(&mock_querier);
 
         let (_response, node) = continued(Node::start(spec3(), &testing::mock_env(), querier));
-        let (response, node) =
-            continued(node.on_response(payload(&coin_out(30)), querier, testing::mock_env()));
+        let (response, node) = continued(node.on_remote_response(
+            payload(&coin_out(30)),
+            querier,
+            testing::mock_env(),
+        ));
         assert_eq!(leg_response(&coin_in(70), &coin_out(80)), response);
         assert_node(1, &coin_out(80), &node);
     }
@@ -794,7 +851,7 @@ mod tests {
         let node = after_first_ack(querier);
         assert_eq!(
             coin_out(120),
-            finished(node.on_response(payload(&coin_out(40)), querier, testing::mock_env()))
+            finished(node.on_remote_response(payload(&coin_out(40)), querier, testing::mock_env()))
         );
     }
 
@@ -804,12 +861,28 @@ mod tests {
         let querier = QuerierWrapper::new(&mock_querier);
         let env = testing::mock_env();
 
-        let resp = after_first_ack(querier)
-            .on_timeout(querier, env.clone())
-            .expect("the timeout retry should succeed");
-        let TestState::RemoteSwap(node) = resp.next_state;
-        assert_eq!(timeout_response(&coin_in(70), &env), resp.response);
+        let (response, node) =
+            continued(after_first_ack(querier).on_remote_timeout(querier, env.clone()));
+        assert_eq!(timeout_response(&coin_in(70), &env), response);
         assert_node(1, &coin_out(80), &node);
+    }
+
+    #[test]
+    fn underpaid_ack_reemits_the_in_flight_leg() {
+        let mock_querier = MockQuerier::default();
+        let querier = QuerierWrapper::new(&mock_querier);
+
+        let (_response, node) = continued(Node::start(spec3(), &testing::mock_env(), querier));
+        let (response, node) =
+            continued(node.on_remote_response(payload(&coin_out(0)), querier, testing::mock_env()));
+        assert_eq!(
+            MessageResponse::messages_with_event(
+                mock::swap_request(&coin_in(100), &min_out()).expect("a valid swap request"),
+                Emitter::of_type(mock::LABEL).emit("anomaly", "under-min-out"),
+            ),
+            response
+        );
+        assert_node(2, &coin_out(50), &node);
     }
 
     #[test]
@@ -818,7 +891,7 @@ mod tests {
         let querier = QuerierWrapper::new(&mock_querier);
         let env = testing::mock_env();
 
-        let (response, node) = continued(after_first_ack(querier).on_error(
+        let (response, node) = continued(after_first_ack(querier).on_remote_error(
             ICAErrorResponse::from(String::from("swap failed")),
             querier,
             env.clone(),
@@ -833,7 +906,7 @@ mod tests {
         let querier = QuerierWrapper::new(&mock_querier);
 
         let (_response, node) = continued(Node::start(spec3(), &testing::mock_env(), querier));
-        let (response, node) = continued(node.on_response(
+        let (response, node) = continued(node.on_remote_response(
             Binary::from(b"garbage".as_slice()),
             querier,
             testing::mock_env(),
@@ -849,7 +922,7 @@ mod tests {
 
         let (_response, node) = continued(Node::start(spec3(), &testing::mock_env(), querier));
         let (response, node) =
-            continued(node.on_response(payload(&coin_in(30)), querier, testing::mock_env()));
+            continued(node.on_remote_response(payload(&coin_in(30)), querier, testing::mock_env()));
         assert_eq!(absorb_response("out-currency-mismatch"), response);
         assert_node(2, &coin_out(50), &node);
     }
@@ -926,8 +999,11 @@ mod tests {
 
     fn after_first_ack(querier: QuerierWrapper<'_>) -> Node {
         let (_response, node) = continued(Node::start(spec3(), &testing::mock_env(), querier));
-        let (_response, node) =
-            continued(node.on_response(payload(&coin_out(30)), querier, testing::mock_env()));
+        let (_response, node) = continued(node.on_remote_response(
+            payload(&coin_out(30)),
+            querier,
+            testing::mock_env(),
+        ));
         node
     }
 

@@ -31,6 +31,11 @@ impl LeasesRef {
             .map_err(Into::into)
     }
 
+    #[cfg(all(feature = "internal.test.contract", test))]
+    pub(crate) fn unchecked(addr: Addr) -> Self {
+        Self { addr }
+    }
+
     pub(crate) fn finalize_lease(&self, customer: Addr) -> ContractResult<Batch> {
         let mut msgs = Batch::default();
         msgs.schedule_execute_wasm_no_reply_no_funds(

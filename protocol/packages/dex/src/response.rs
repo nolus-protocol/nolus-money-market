@@ -1,6 +1,7 @@
 use std::{fmt::Display, result::Result as StdResult};
 
 use platform::{
+    batch::{Batch, Emit, Emitter},
     ica::ErrorResponse as ICAErrorResponse,
     message::Response as MessageResponse,
     state_machine::{self, Response as StateMachineResponse},
@@ -8,6 +9,13 @@ use platform::{
 use sdk::cosmwasm_std::{Binary, Env, MessageInfo, QuerierWrapper, Reply};
 
 use crate::error::{Error, Result as DexResult};
+
+const REMOTE_CALLBACK_EVENT: &str = "remote-callback";
+const REMOTE_CALLBACK_KEY_ABSORBED: &str = "absorbed";
+const REMOTE_CALLBACK_KEY_STATE: &str = "state";
+const REMOTE_CALLBACK_RESPONSE: &str = "response";
+const REMOTE_CALLBACK_ERROR: &str = "error";
+const REMOTE_CALLBACK_TIMEOUT: &str = "timeout";
 
 pub type Response<H> = StateMachineResponse<<H as Handler>::Response>;
 pub type ContinueResult<H> = DexResult<Response<H>>;
@@ -110,6 +118,64 @@ where
     ) -> Result<Self> {
         Err(err(self, "handle time alarm")).into()
     }
+
+    /// The entry point of a remote, non-ICA counterparty response
+    ///
+    /// Unlike the ICA `on_*` entry points, an unexpected remote callback is
+    /// absorbed with an event instead of erroring - an error would revert
+    /// the counterparty controller's acknowledgment transaction and strand
+    /// the relayer, while advancing the current leg would corrupt its
+    /// progress. Only legs that schedule remote operations override this.
+    fn on_remote_response(
+        self,
+        _data: Binary,
+        _querier: QuerierWrapper<'_>,
+        _env: Env,
+    ) -> Result<Self>
+    where
+        Self: Into<Self::Response>,
+    {
+        absorb_remote_callback(self, REMOTE_CALLBACK_RESPONSE)
+    }
+
+    /// The entry point of a remote, non-ICA counterparty error
+    ///
+    /// See [`Handler::on_remote_response`] for the absorbing default.
+    fn on_remote_error(
+        self,
+        _response: ICAErrorResponse,
+        _querier: QuerierWrapper<'_>,
+        _env: Env,
+    ) -> Result<Self>
+    where
+        Self: Into<Self::Response>,
+    {
+        absorb_remote_callback(self, REMOTE_CALLBACK_ERROR)
+    }
+
+    /// The entry point of a remote, non-ICA counterparty timeout
+    ///
+    /// See [`Handler::on_remote_response`] for the absorbing default.
+    fn on_remote_timeout(self, _querier: QuerierWrapper<'_>, _env: Env) -> Result<Self>
+    where
+        Self: Into<Self::Response>,
+    {
+        absorb_remote_callback(self, REMOTE_CALLBACK_TIMEOUT)
+    }
+}
+
+fn absorb_remote_callback<H>(state: H, kind: &str) -> Result<H>
+where
+    H: Handler + Into<H::Response>,
+{
+    let emitter = Emitter::of_type(REMOTE_CALLBACK_EVENT)
+        .emit(REMOTE_CALLBACK_KEY_ABSORBED, kind)
+        .emit(REMOTE_CALLBACK_KEY_STATE, state.to_string());
+    res_continue::<_, _, H>(
+        MessageResponse::messages_with_event(Batch::default(), emitter),
+        state,
+    )
+    .into()
 }
 
 impl<H> Result<H>

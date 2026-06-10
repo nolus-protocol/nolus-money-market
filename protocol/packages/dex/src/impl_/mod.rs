@@ -21,6 +21,7 @@ pub use self::{
 mod ica_connector;
 #[cfg(feature = "migration")]
 mod migration;
+mod next_leg;
 mod out_local;
 mod out_remote;
 mod remote_swap;
@@ -34,8 +35,13 @@ mod transfer_in_init;
 mod transfer_out;
 mod trx;
 
-pub type TransferOutRespDelivery<SwapTask, SEnum, SwapClient, ForwardToInnerMsg> =
-    ResponseDelivery<TransferOut<SwapTask, SEnum, SwapClient>, ForwardToInnerMsg>;
+pub type TransferOutRespDelivery<
+    SwapTask,
+    SEnum,
+    SwapClient,
+    ForwardToInnerMsg,
+    NextLeg = SwapExactIn<SwapTask, SEnum, SwapClient>,
+> = ResponseDelivery<TransferOut<SwapTask, SEnum, SwapClient, NextLeg>, ForwardToInnerMsg>;
 
 pub type SwapExactInRespDelivery<SwapTask, SEnum, SwapClient, ForwardToInnerMsg> =
     ResponseDelivery<SwapExactIn<SwapTask, SEnum, SwapClient>, ForwardToInnerMsg>;

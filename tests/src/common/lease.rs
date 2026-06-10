@@ -1,5 +1,5 @@
 use currencies::{LeaseGroup, PaymentGroup};
-use currency::{Currency, CurrencyDTO, CurrencyDef};
+use currency::{Currency, CurrencyDTO, CurrencyDef, DexSymbols};
 use dex::{ConnectionParams, Ics20Channel};
 use finance::{
     coin::Coin,
@@ -21,7 +21,6 @@ use sdk::{
     cw_multi_test::AppResponse,
     testing,
 };
-use swap::testing::SwapRequest;
 
 use super::{
     ADMIN, CwContractWrapper, USER, ibc,
@@ -206,6 +205,7 @@ pub struct InstantiatorAddresses {
 pub(crate) fn complete_initialization<DownpaymentC, Lpn>(
     app: &mut App,
     connection_id: &str,
+    controller: &Addr,
     lease_addr: Addr,
     downpayment: Coin<DownpaymentC>,
     exp_borrow: Coin<Lpn>,
@@ -219,6 +219,9 @@ pub(crate) fn complete_initialization<DownpaymentC, Lpn>(
     let ica_port: String = format!("icacontroller-{ica_addr}");
     let ica_channel: String = format!("channel-{ica_addr}");
 
+    // The last transfer acknowledgment hands off to the remote swap leg;
+    // the controller stand-in acknowledges each emitted `Swap` inline, so
+    // the whole opening settles within this call.
     let response = confirm_ica_and_transfer_funds(
         app,
         lease_addr.clone(),
@@ -226,29 +229,48 @@ pub(crate) fn complete_initialization<DownpaymentC, Lpn>(
         (&ica_channel, &ica_port, ica_addr.clone()),
         (downpayment, exp_borrow),
     );
-
-    let requests: Vec<SwapRequest<PaymentGroup, PaymentGroup>> = super::swap::expect_swap(
-        response,
-        TestCase::DEX_CONNECTION_ID,
-        TestCase::LEASE_ICA_ID,
-        |_| {},
-    );
-
-    check_state_opening(app, lease_addr.clone());
+    () = response.ignore_response().unwrap_response();
 
     assert_lease_balance_eq(app, &lease_addr, super::native_cwcoin(0));
 
-    () = super::swap::do_swap(
-        app,
-        lease_addr.clone(),
-        ica_addr,
-        requests.into_iter(),
-        |price, _, _| price,
-    )
-    .ignore_response()
-    .unwrap_response();
+    settle_remote_swaps_on_ica(app, controller, &lease_addr, &ica_addr);
 
     check_state_opened(app, lease_addr);
+}
+
+/// Mirror the remotely-acknowledged swaps onto the ICA's bank balances.
+///
+/// The remote-lease transport acknowledges swaps without moving any coins
+/// inside the test app, while the still-ICA-based close and liquidation
+/// simulations expect the swapped-out asset on the ICA account. The moved
+/// amounts come verbatim from the `SwapParams` the lease emitted — the
+/// stand-in pays exactly `min_out` — keeping a single source of truth.
+fn settle_remote_swaps_on_ica(app: &mut App, controller: &Addr, lease: &Addr, ica_addr: &Addr) {
+    super::remote_lease_controller_stub::recorded_swaps(app, controller, lease)
+        .iter()
+        .for_each(|params| {
+            let coin_in = params.coin_in();
+            app.send_tokens(
+                ica_addr.clone(),
+                testing::user(ADMIN),
+                &[CwCoin::new(
+                    coin_in.amount(),
+                    coin_in.currency().into_symbol::<DexSymbols<PaymentGroup>>(),
+                )],
+            )
+            .unwrap();
+
+            let min_out = params.min_out();
+            app.send_tokens(
+                testing::user(ADMIN),
+                ica_addr.clone(),
+                &[CwCoin::new(
+                    min_out.amount(),
+                    min_out.currency().into_symbol::<DexSymbols<PaymentGroup>>(),
+                )],
+            )
+            .unwrap();
+        });
 }
 
 pub(crate) fn confirm_ica_and_transfer_funds<'r, DownpaymentC, Lpn>(

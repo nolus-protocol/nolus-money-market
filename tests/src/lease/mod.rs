@@ -3,6 +3,7 @@ use currencies::{
     testing::{LeaseC2, PaymentC1},
 };
 use currency::{Currency, CurrencyDef, MemberOf};
+use dex::MaxSlippage;
 use finance::{
     coin::{Amount, Coin},
     duration::Duration,
@@ -277,9 +278,11 @@ pub(super) fn complete_init_lease<
     );
     let exp_borrow: LpnCoin = quote.borrow.try_into().unwrap();
 
+    let controller = test_case.address_book.remote_lease_controller().clone();
     common::lease::complete_initialization(
         &mut test_case.app,
         TestCase::DEX_CONNECTION_ID,
+        &controller,
         lease.clone(),
         downpayment,
         exp_borrow,
@@ -406,11 +409,10 @@ where
     let now = crate::block_time(test_case);
     let last_paid = now;
     let quote_result = quote_query(test_case, downpayment);
-    let total: Coin<AssetC> = Coin::<AssetC>::try_from(quote_result.total).unwrap();
-    let total_lpn: LpnCoin = price::total(total, price_lpn_of::<AssetC>()).unwrap();
-    let expected_principal: LpnCoin = total_lpn
-        - price::total(downpayment, price_lpn_of::<DownpaymentC>()).unwrap()
-        - price::total(payments, price_lpn_of::<PaymentC>()).unwrap();
+    let borrow: LpnCoin = quote_result.borrow.try_into().unwrap();
+    let total: Coin<AssetC> = expected_opened_amount(downpayment, borrow);
+    let expected_principal: LpnCoin =
+        borrow - price::total(payments, price_lpn_of::<PaymentC>()).unwrap();
     let due_period_start = (now - max_due).max(last_paid);
     let (overdue, due) = (
         Duration::between(&last_paid, &due_period_start),
@@ -455,6 +457,43 @@ where
         validity: now,
         status: Status::Idle,
     }
+}
+
+/// The asset amount a newly-opened lease ends up with under the
+/// literal-floor swap model
+///
+/// A downpayment already denominated in the lease currency folds in
+/// verbatim without a swap; every other coin swaps to exactly the
+/// slippage-bounded floor of its oracle quote — the controller stand-in
+/// pays `min_out` to the letter.
+pub(super) fn expected_opened_amount<DownpaymentC, AssetC>(
+    downpayment: Coin<DownpaymentC>,
+    borrow: LpnCoin,
+) -> Coin<AssetC>
+where
+    DownpaymentC: CurrencyDef,
+    DownpaymentC::Group: MemberOf<PaymentGroup>,
+    AssetC: CurrencyDef,
+    AssetC::Group: MemberOf<LeaseGroup>,
+{
+    let borrow_floor = swap_min_out(price::total(borrow, price_lpn_of::<AssetC>().inv()).unwrap());
+    if currency::equal::<DownpaymentC, AssetC>() {
+        downpayment.coerce_into() + borrow_floor
+    } else {
+        let downpayment_quote = price::total(
+            price::total(downpayment, price_lpn_of::<DownpaymentC>()).unwrap(),
+            price_lpn_of::<AssetC>().inv(),
+        )
+        .unwrap();
+        swap_min_out(downpayment_quote) + borrow_floor
+    }
+}
+
+pub(super) fn swap_min_out<AssetC>(quote: Coin<AssetC>) -> Coin<AssetC>
+where
+    AssetC: Currency,
+{
+    MaxSlippage::unchecked(LeaserInstantiator::MAX_SLIPPAGE).min_out(quote)
 }
 
 pub(super) fn expected_newly_opened_state<

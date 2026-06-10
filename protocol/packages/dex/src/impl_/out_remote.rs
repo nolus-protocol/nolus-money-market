@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     Connectable, IcaConnectee, SwapTask as SwapTaskT,
     impl_::{
-        IcaConnector, SwapExactIn, SwapExactInRespDelivery, TransferOut, TransferOutRespDelivery,
+        IcaConnector, RemoteSwap, TransferOut, TransferOutRespDelivery,
         resp_delivery::ICAOpenResponseDelivery,
     },
 };
@@ -11,6 +11,11 @@ use crate::{
 pub type OpenIcaRespDelivery<OpenIca, SwapResult, ForwardToInnerMsg> =
     ICAOpenResponseDelivery<IcaConnector<OpenIca, SwapResult>, ForwardToInnerMsg>;
 
+/// The composite of the remote-lease opening workflow
+///
+/// The ICA account and the transfer-out legs run over the ICA transport;
+/// the swap leg runs over the remote-lease controller. There is no local
+/// DEX swap leg in this composite.
 #[derive(Serialize, Deserialize)]
 #[serde(bound(
     serialize = "OpenIca: Serialize, SwapTask: Serialize",
@@ -22,10 +27,17 @@ where
 {
     OpenIca(IcaConnector<OpenIca, SwapTask::Result>),
     OpenIcaRespDelivery(OpenIcaRespDelivery<OpenIca, SwapTask::Result, ForwardToInnerContinueMsg>),
-    TransferOut(TransferOut<SwapTask, Self, SwapClient>),
-    TransferOutRespDelivery(TransferOutRespDelivery<SwapTask, Self, SwapClient, ForwardToInnerMsg>),
-    SwapExactIn(SwapExactIn<SwapTask, Self, SwapClient>),
-    SwapExactInRespDelivery(SwapExactInRespDelivery<SwapTask, Self, SwapClient, ForwardToInnerMsg>),
+    TransferOut(TransferOut<SwapTask, Self, SwapClient, RemoteSwap<SwapTask, Self>>),
+    TransferOutRespDelivery(
+        TransferOutRespDelivery<
+            SwapTask,
+            Self,
+            SwapClient,
+            ForwardToInnerMsg,
+            RemoteSwap<SwapTask, Self>,
+        >,
+    ),
+    RemoteSwap(RemoteSwap<SwapTask, Self>),
 }
 
 pub type StartLocalRemoteState<OpenIca, SwapTask> =
@@ -42,10 +54,7 @@ where
 mod impl_into {
     use crate::{
         SwapTask as SwapTaskT,
-        impl_::{
-            IcaConnector, SwapExactIn, SwapExactInRespDelivery, TransferOut,
-            TransferOutRespDelivery,
-        },
+        impl_::{IcaConnector, RemoteSwap, TransferOut, TransferOutRespDelivery},
     };
 
     use super::{OpenIcaRespDelivery, State};
@@ -75,50 +84,52 @@ mod impl_into {
     }
 
     impl<OpenIca, SwapTask, SwapClient, ForwardToInnerMsg, ForwardToInnerContinueMsg>
-        From<TransferOut<SwapTask, Self, SwapClient>>
-        for State<OpenIca, SwapTask, SwapClient, ForwardToInnerMsg, ForwardToInnerContinueMsg>
-    where
-        SwapTask: SwapTaskT,
-    {
-        fn from(value: TransferOut<SwapTask, Self, SwapClient>) -> Self {
-            Self::TransferOut(value)
-        }
-    }
-
-    impl<OpenIca, SwapTask, SwapClient, ForwardToInnerMsg, ForwardToInnerContinueMsg>
-        From<TransferOutRespDelivery<SwapTask, Self, SwapClient, ForwardToInnerMsg>>
+        From<TransferOut<SwapTask, Self, SwapClient, RemoteSwap<SwapTask, Self>>>
         for State<OpenIca, SwapTask, SwapClient, ForwardToInnerMsg, ForwardToInnerContinueMsg>
     where
         SwapTask: SwapTaskT,
     {
         fn from(
-            value: TransferOutRespDelivery<SwapTask, Self, SwapClient, ForwardToInnerMsg>,
+            value: TransferOut<SwapTask, Self, SwapClient, RemoteSwap<SwapTask, Self>>,
+        ) -> Self {
+            Self::TransferOut(value)
+        }
+    }
+
+    impl<OpenIca, SwapTask, SwapClient, ForwardToInnerMsg, ForwardToInnerContinueMsg>
+        From<
+            TransferOutRespDelivery<
+                SwapTask,
+                Self,
+                SwapClient,
+                ForwardToInnerMsg,
+                RemoteSwap<SwapTask, Self>,
+            >,
+        > for State<OpenIca, SwapTask, SwapClient, ForwardToInnerMsg, ForwardToInnerContinueMsg>
+    where
+        SwapTask: SwapTaskT,
+    {
+        fn from(
+            value: TransferOutRespDelivery<
+                SwapTask,
+                Self,
+                SwapClient,
+                ForwardToInnerMsg,
+                RemoteSwap<SwapTask, Self>,
+            >,
         ) -> Self {
             Self::TransferOutRespDelivery(value)
         }
     }
 
     impl<OpenIca, SwapTask, SwapClient, ForwardToInnerMsg, ForwardToInnerContinueMsg>
-        From<SwapExactIn<SwapTask, Self, SwapClient>>
+        From<RemoteSwap<SwapTask, Self>>
         for State<OpenIca, SwapTask, SwapClient, ForwardToInnerMsg, ForwardToInnerContinueMsg>
     where
         SwapTask: SwapTaskT,
     {
-        fn from(value: SwapExactIn<SwapTask, Self, SwapClient>) -> Self {
-            Self::SwapExactIn(value)
-        }
-    }
-
-    impl<OpenIca, SwapTask, SwapClient, ForwardToInnerMsg, ForwardToInnerContinueMsg>
-        From<SwapExactInRespDelivery<SwapTask, Self, SwapClient, ForwardToInnerMsg>>
-        for State<OpenIca, SwapTask, SwapClient, ForwardToInnerMsg, ForwardToInnerContinueMsg>
-    where
-        SwapTask: SwapTaskT,
-    {
-        fn from(
-            value: SwapExactInRespDelivery<SwapTask, Self, SwapClient, ForwardToInnerMsg>,
-        ) -> Self {
-            Self::SwapExactInRespDelivery(value)
+        fn from(value: RemoteSwap<SwapTask, Self>) -> Self {
+            Self::RemoteSwap(value)
         }
     }
 }
@@ -132,10 +143,9 @@ mod impl_handler {
     use crate::{
         Connectable, IcaConnectee, SwapTask as SwapTaskT, TimeAlarm,
         impl_::{
-            self, ForwardToInner, Handler,
+            self, ForwardToInner, Handler, RemoteSwapClient,
             response::{ContinueResult, Result},
         },
-        swap::ExactAmountIn,
     };
 
     use super::State;
@@ -144,8 +154,7 @@ mod impl_handler {
         for State<OpenIca, SwapTask, SwapClient, ForwardToInnerMsg, ForwardToInnerContinueMsg>
     where
         OpenIca: Connectable + IcaConnectee<State = Self> + TimeAlarm + Display,
-        SwapTask: SwapTaskT,
-        SwapClient: ExactAmountIn,
+        SwapTask: SwapTaskT + RemoteSwapClient,
         ForwardToInnerMsg: ForwardToInner,
         ForwardToInnerContinueMsg: ForwardToInner,
     {
@@ -162,8 +171,7 @@ mod impl_handler {
                 State::OpenIcaRespDelivery(inner) => inner.authz_remote_callback(querier, info),
                 State::TransferOut(inner) => inner.authz_remote_callback(querier, info),
                 State::TransferOutRespDelivery(inner) => inner.authz_remote_callback(querier, info),
-                State::SwapExactIn(inner) => inner.authz_remote_callback(querier, info),
-                State::SwapExactInRespDelivery(inner) => inner.authz_remote_callback(querier, info),
+                State::RemoteSwap(inner) => inner.authz_remote_callback(querier, info),
             }
         }
 
@@ -188,10 +196,7 @@ mod impl_handler {
                 State::TransferOutRespDelivery(inner) => {
                     Handler::on_open_ica(inner, counterparty_version, querier, env)
                 }
-                State::SwapExactIn(inner) => {
-                    Handler::on_open_ica(inner, counterparty_version, querier, env)
-                }
-                State::SwapExactInRespDelivery(inner) => {
+                State::RemoteSwap(inner) => {
                     Handler::on_open_ica(inner, counterparty_version, querier, env)
                 }
             }
@@ -213,14 +218,10 @@ mod impl_handler {
                 State::TransferOut(inner) => {
                     impl_::forward_to_inner::<_, ForwardToInnerMsg, Self>(inner, response, env)
                 }
-
                 State::TransferOutRespDelivery(inner) => {
                     Handler::on_response(inner, response, querier, env).map_into()
                 }
-                State::SwapExactIn(inner) => {
-                    impl_::forward_to_inner::<_, ForwardToInnerMsg, Self>(inner, response, env)
-                }
-                State::SwapExactInRespDelivery(inner) => {
+                State::RemoteSwap(inner) => {
                     Handler::on_response(inner, response, querier, env).map_into()
                 }
             }
@@ -245,10 +246,7 @@ mod impl_handler {
                 State::TransferOutRespDelivery(inner) => {
                     Handler::on_error(inner, response, querier, env).map_into()
                 }
-                State::SwapExactIn(inner) => {
-                    Handler::on_error(inner, response, querier, env).map_into()
-                }
-                State::SwapExactInRespDelivery(inner) => {
+                State::RemoteSwap(inner) => {
                     Handler::on_error(inner, response, querier, env).map_into()
                 }
             }
@@ -260,8 +258,7 @@ mod impl_handler {
                 State::OpenIcaRespDelivery(inner) => Handler::on_timeout(inner, querier, env),
                 State::TransferOut(inner) => Handler::on_timeout(inner, querier, env),
                 State::TransferOutRespDelivery(inner) => Handler::on_timeout(inner, querier, env),
-                State::SwapExactIn(inner) => Handler::on_timeout(inner, querier, env),
-                State::SwapExactInRespDelivery(inner) => Handler::on_timeout(inner, querier, env),
+                State::RemoteSwap(inner) => Handler::on_timeout(inner, querier, env),
             }
         }
 
@@ -275,10 +272,7 @@ mod impl_handler {
                 State::TransferOutRespDelivery(inner) => {
                     Handler::on_inner(inner, querier, env).map_into()
                 }
-                State::SwapExactIn(inner) => Handler::on_inner(inner, querier, env).map_into(),
-                State::SwapExactInRespDelivery(inner) => {
-                    Handler::on_inner(inner, querier, env).map_into()
-                }
+                State::RemoteSwap(inner) => Handler::on_inner(inner, querier, env).map_into(),
             }
         }
 
@@ -292,10 +286,7 @@ mod impl_handler {
                 State::TransferOutRespDelivery(inner) => {
                     Handler::on_inner_continue(inner, querier, env)
                 }
-                State::SwapExactIn(inner) => Handler::on_inner_continue(inner, querier, env),
-                State::SwapExactInRespDelivery(inner) => {
-                    Handler::on_inner_continue(inner, querier, env)
-                }
+                State::RemoteSwap(inner) => Handler::on_inner_continue(inner, querier, env),
             }
         }
 
@@ -307,10 +298,7 @@ mod impl_handler {
                 State::TransferOutRespDelivery(inner) => {
                     Handler::heal(inner, querier, env).map_into()
                 }
-                State::SwapExactIn(inner) => Handler::heal(inner, querier, env).map_into(),
-                State::SwapExactInRespDelivery(inner) => {
-                    Handler::heal(inner, querier, env).map_into()
-                }
+                State::RemoteSwap(inner) => Handler::heal(inner, querier, env).map_into(),
             }
         }
 
@@ -320,8 +308,7 @@ mod impl_handler {
                 State::OpenIcaRespDelivery(inner) => Handler::reply(inner, querier, env, msg),
                 State::TransferOut(inner) => Handler::reply(inner, querier, env, msg),
                 State::TransferOutRespDelivery(inner) => Handler::reply(inner, querier, env, msg),
-                State::SwapExactIn(inner) => Handler::reply(inner, querier, env, msg),
-                State::SwapExactInRespDelivery(inner) => Handler::reply(inner, querier, env, msg),
+                State::RemoteSwap(inner) => Handler::reply(inner, querier, env, msg),
             }
         }
 
@@ -344,11 +331,82 @@ mod impl_handler {
                 State::TransferOutRespDelivery(inner) => {
                     Handler::on_time_alarm(inner, querier, env, info).map_into()
                 }
-                State::SwapExactIn(inner) => {
+                State::RemoteSwap(inner) => {
                     Handler::on_time_alarm(inner, querier, env, info).map_into()
                 }
-                State::SwapExactInRespDelivery(inner) => {
-                    Handler::on_time_alarm(inner, querier, env, info).map_into()
+            }
+        }
+
+        /// Remote-lease controller callbacks reach only the leg that
+        /// scheduled a remote operation - the swap leg. Every other leg
+        /// absorbs them with an event via the [`Handler`] defaults: an
+        /// `Err` would revert the controller's acknowledgment transaction
+        /// and strand the relayer, while routing into the leg's ICA entry
+        /// points would silently advance its acknowledgment countdown.
+        fn on_remote_response(
+            self,
+            data: Binary,
+            querier: QuerierWrapper<'_>,
+            env: Env,
+        ) -> Result<Self> {
+            match self {
+                State::OpenIca(inner) => {
+                    Handler::on_remote_response(inner, data, querier, env).map_into()
+                }
+                State::OpenIcaRespDelivery(inner) => {
+                    Handler::on_remote_response(inner, data, querier, env).map_into()
+                }
+                State::TransferOut(inner) => {
+                    Handler::on_remote_response(inner, data, querier, env).map_into()
+                }
+                State::TransferOutRespDelivery(inner) => {
+                    Handler::on_remote_response(inner, data, querier, env).map_into()
+                }
+                State::RemoteSwap(inner) => {
+                    Handler::on_remote_response(inner, data, querier, env).map_into()
+                }
+            }
+        }
+
+        fn on_remote_error(
+            self,
+            response: ICAErrorResponse,
+            querier: QuerierWrapper<'_>,
+            env: Env,
+        ) -> Result<Self> {
+            match self {
+                State::OpenIca(inner) => {
+                    Handler::on_remote_error(inner, response, querier, env).map_into()
+                }
+                State::OpenIcaRespDelivery(inner) => {
+                    Handler::on_remote_error(inner, response, querier, env).map_into()
+                }
+                State::TransferOut(inner) => {
+                    Handler::on_remote_error(inner, response, querier, env).map_into()
+                }
+                State::TransferOutRespDelivery(inner) => {
+                    Handler::on_remote_error(inner, response, querier, env).map_into()
+                }
+                State::RemoteSwap(inner) => {
+                    Handler::on_remote_error(inner, response, querier, env).map_into()
+                }
+            }
+        }
+
+        fn on_remote_timeout(self, querier: QuerierWrapper<'_>, env: Env) -> Result<Self> {
+            match self {
+                State::OpenIca(inner) => Handler::on_remote_timeout(inner, querier, env).map_into(),
+                State::OpenIcaRespDelivery(inner) => {
+                    Handler::on_remote_timeout(inner, querier, env).map_into()
+                }
+                State::TransferOut(inner) => {
+                    Handler::on_remote_timeout(inner, querier, env).map_into()
+                }
+                State::TransferOutRespDelivery(inner) => {
+                    Handler::on_remote_timeout(inner, querier, env).map_into()
+                }
+                State::RemoteSwap(inner) => {
+                    Handler::on_remote_timeout(inner, querier, env).map_into()
                 }
             }
         }
@@ -360,7 +418,7 @@ mod impl_contract {
     use finance::instant::Instant;
     use sdk::cosmwasm_std::QuerierWrapper;
 
-    use crate::{Contract, ContractInSwap, SwapTask as SwapTaskT};
+    use crate::{Contract, ContractInRemoteSwap, ContractInSwap, SwapTask as SwapTaskT};
 
     use super::State;
 
@@ -369,7 +427,8 @@ mod impl_contract {
     where
         OpenIca: Contract,
         SwapTask: SwapTaskT<StateResponse = OpenIca::StateResponse>
-            + ContractInSwap<StateResponse = OpenIca::StateResponse>,
+            + ContractInSwap<StateResponse = OpenIca::StateResponse>
+            + ContractInRemoteSwap<StateResponse = OpenIca::StateResponse>,
     {
         type StateResponse = OpenIca::StateResponse;
 
@@ -388,10 +447,7 @@ mod impl_contract {
                 State::TransferOutRespDelivery(inner) => {
                     Contract::state(inner, now, due_projection, querier)
                 }
-                State::SwapExactIn(inner) => Contract::state(inner, now, due_projection, querier),
-                State::SwapExactInRespDelivery(inner) => {
-                    Contract::state(inner, now, due_projection, querier)
-                }
+                State::RemoteSwap(inner) => Contract::state(inner, now, due_projection, querier),
             }
         }
     }
@@ -416,8 +472,7 @@ mod impl_display {
                 State::OpenIcaRespDelivery(inner) => Display::fmt(inner, f),
                 State::TransferOut(inner) => Display::fmt(inner, f),
                 State::TransferOutRespDelivery(inner) => Display::fmt(inner, f),
-                State::SwapExactIn(inner) => Display::fmt(inner, f),
-                State::SwapExactInRespDelivery(inner) => Display::fmt(inner, f),
+                State::RemoteSwap(inner) => Display::fmt(inner, f),
             }
         }
     }
@@ -430,7 +485,6 @@ mod impl_migration {
     use crate::{
         Connectable, IcaConnectee, SwapTask as SwapTaskT,
         impl_::{ForwardToInner, IcaConnector, migration::MigrateSpec},
-        swap::ExactAmountIn,
     };
 
     //cannot impl MigrateSpec due to the need to migrate OpenIca as well
@@ -438,7 +492,6 @@ mod impl_migration {
         State<OpenIca, SwapTask, SwapClient, ForwardToInnerMsg, ForwardToInnerContinueMsg>
     where
         SwapTask: SwapTaskT,
-        SwapClient: ExactAmountIn,
         ForwardToInnerMsg: ForwardToInner,
     {
         pub fn migrate<MigrateOpenIcaFn, MigrateSpecFn, OpenIcaNew, SwapTaskNew>(
@@ -479,15 +532,14 @@ mod impl_migration {
             >,
             MigrateOpenIcaFn: FnOnce(OpenIca) -> OpenIcaNew,
             MigrateSpecFn: FnOnce(SwapTask) -> SwapTaskNew,
-            SwapTaskNew: SwapTaskT,
+            SwapTaskNew: SwapTaskT<OutG = SwapTask::OutG>,
         {
             match self {
                 State::OpenIca(inner) => inner.migrate_spec(migrate_open_ica).into(),
                 State::OpenIcaRespDelivery(inner) => inner.migrate_spec(migrate_open_ica).into(),
                 State::TransferOut(inner) => inner.migrate_spec(migrate_spec).into(),
                 State::TransferOutRespDelivery(inner) => inner.migrate_spec(migrate_spec).into(),
-                State::SwapExactIn(inner) => inner.migrate_spec(migrate_spec).into(),
-                State::SwapExactInRespDelivery(inner) => inner.migrate_spec(migrate_spec).into(),
+                State::RemoteSwap(inner) => inner.migrate_spec(migrate_spec).into(),
             }
         }
     }
