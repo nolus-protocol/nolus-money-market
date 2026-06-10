@@ -465,7 +465,7 @@ impl Instantiator {
     }
 }
 
-/// Helper for tests: send a `SetResponseMode` to the stub.
+/// Send a `SetResponseMode` to the stub.
 pub fn set_response_mode(app: &mut App, controller: &Addr, op: &str, mode: ResponseMode) {
     let msg = StubExecuteMsg::SetResponseMode {
         op: op.to_owned(),
@@ -478,8 +478,8 @@ pub fn set_response_mode(app: &mut App, controller: &Addr, op: &str, mode: Respo
         .expect("SetResponseMode must succeed against the stand-in");
 }
 
-/// Helper for tests: trigger delivery of a previously stored Delayed
-/// callback for the given op tag.
+/// Trigger delivery of a previously stored Delayed callback for the
+/// given op tag.
 pub fn deliver_pending_callback(
     app: &mut App,
     controller: &Addr,
@@ -491,8 +491,8 @@ pub fn deliver_pending_callback(
         .expect("DeliverPending must succeed against the stand-in")
 }
 
-/// Helper for tests: deliver an arbitrary callback to a lease from the
-/// stand-in's (authorised) address.
+/// Deliver an arbitrary callback to a lease from the stand-in's
+/// (authorised) address.
 pub fn inject_callback(
     app: &mut App,
     controller: &Addr,
@@ -508,7 +508,7 @@ pub fn inject_callback(
         .expect("InjectCallback must succeed against the stand-in")
 }
 
-/// Helper for tests: report every `SwapParams` the given lease has emitted.
+/// Report every `SwapParams` the given lease has emitted.
 pub fn recorded_swaps(app: &App, controller: &Addr, lease: &Addr) -> Vec<SwapParams> {
     app.query()
         .query_wasm_smart(

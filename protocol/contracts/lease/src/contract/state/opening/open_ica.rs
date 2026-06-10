@@ -23,7 +23,7 @@ use crate::{
     finance::{LppRef, OracleRef},
 };
 
-use super::buy_asset::{BuyAsset, DexState};
+use super::buy_asset::{BuyAsset, DexState, RemoteSwapTransport};
 
 #[derive(Serialize, Deserialize)]
 pub(crate) struct OpenIcaAccount {
@@ -76,11 +76,13 @@ impl IcaConnectee for OpenIcaAccount {
             dex_account,
             self.downpayment,
             self.loan,
-            self.max_slippage,
-            remote_lease_controller,
+            RemoteSwapTransport {
+                remote_lease_controller,
+                remote_lease_id: self.remote_lease_id,
+                max_slippage: self.max_slippage,
+            },
             self.deps,
             self.start_opening_at,
-            self.remote_lease_id,
         ))
     }
 

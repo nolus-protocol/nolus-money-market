@@ -101,19 +101,30 @@ pub struct BuyAsset {
     remote_lease_id: RemoteLeaseId,
 }
 
+/// The remote-transport coordinates of the opening swap: which controller
+/// to send the legs through, which remote lease they act on, and the
+/// slippage bound frozen for the whole opening.
+pub(super) struct RemoteSwapTransport {
+    pub remote_lease_controller: Addr,
+    pub remote_lease_id: RemoteLeaseId,
+    pub max_slippage: MaxSlippage,
+}
+
 impl BuyAsset {
-    #[allow(clippy::too_many_arguments)]
     pub(super) fn new(
         form: NewLeaseForm,
         dex_account: Account,
         downpayment: DownpaymentCoin,
         loan: OpenLoanRespResult,
-        max_slippage: MaxSlippage,
-        remote_lease_controller: Addr,
+        transport: RemoteSwapTransport,
         deps: (LppRef, OracleRef, TimeAlarmsRef, LeasesRef),
         start_opening_at: Instant,
-        remote_lease_id: RemoteLeaseId,
     ) -> Self {
+        let RemoteSwapTransport {
+            remote_lease_controller,
+            remote_lease_id,
+            max_slippage,
+        } = transport;
         Self {
             form,
             dex_account,
@@ -240,7 +251,7 @@ impl RemoteSwapClient for BuyAsset {
                 OperationResponse::OpenLease(_)
                 | OperationResponse::CloseLease(_)
                 | OperationResponse::TransferOut(_) => {
-                    Err(DexError::remote_swap_client(NON_SWAP_RESPONSE))
+                    Err(DexError::unexpected_response_variant(NON_SWAP_RESPONSE))
                 }
             })
     }
@@ -313,7 +324,7 @@ fn into_asset_group(
         .may_into_currency_type::<AssetGroup, _>(AsAssetCoin {
             amount: amount_out.amount(),
         })
-        .map_err(|_not_an_asset| DexError::remote_swap_client(OUT_NOT_AN_ASSET))
+        .map_err(|_not_an_asset| DexError::unexpected_response_variant(OUT_NOT_AN_ASSET))
 }
 
 #[cfg(all(feature = "internal.test.contract", test))]
@@ -358,7 +369,7 @@ mod tests {
         finance::{LpnCurrencies, LpnCurrency, OracleRef},
     };
 
-    use super::BuyAsset;
+    use super::{BuyAsset, RemoteSwapTransport};
 
     const MAX_SLIPPAGE_PERCENT: u32 = 20;
     const DOWNPAYMENT_IN: u128 = 100;
@@ -542,8 +553,13 @@ mod tests {
                 principal: Coin::<LpnCurrency>::new(500).into(),
                 annual_interest_rate: Percent100::from_percent(5),
             },
-            MaxSlippage::unchecked(Percent100::from_percent(MAX_SLIPPAGE_PERCENT)),
-            Addr::unchecked("controller"),
+            RemoteSwapTransport {
+                remote_lease_controller: Addr::unchecked("controller"),
+                remote_lease_id: remote_lease_id(),
+                max_slippage: MaxSlippage::unchecked(Percent100::from_percent(
+                    MAX_SLIPPAGE_PERCENT,
+                )),
+            },
             (
                 LppGenericRef::unchecked("lpp"),
                 OracleRef::unchecked(Addr::unchecked("oracle")),
@@ -551,7 +567,6 @@ mod tests {
                 LeasesRef::unchecked(Addr::unchecked("leaser")),
             ),
             Instant::from_seconds(1_000_000),
-            remote_lease_id(),
         )
     }
 

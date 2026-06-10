@@ -24,10 +24,6 @@ use crate::{
 pub struct MaxSlippage(Percent100);
 
 impl MaxSlippage {
-    pub const fn new(max: Percent100) -> Self {
-        Self(max)
-    }
-
     #[cfg(feature = "testing")]
     pub const fn unchecked(max: Percent100) -> Self {
         Self(max)

@@ -124,7 +124,7 @@ fn non_swap_operation_ok_is_absorbed() {
         &response.events,
         OPENING_SWAP_EVENT,
         "absorbed",
-        "undecodable-response",
+        "unexpected-response-variant",
     );
     assert_swap_pending(&test_case, lease);
 }

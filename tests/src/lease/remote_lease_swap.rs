@@ -29,8 +29,9 @@
 //!   while the machine sits in the ICA transfer-out leg is absorbed with
 //!   an event, the countdown does not advance, and the opening still
 //!   completes.
-//! - `garbage_callback_absorbed_then_heal_recovers` — an undecodable
-//!   success payload is absorbed; `ExecuteMsg::Heal` re-emits the
+//! - `wrong_variant_callback_absorbed_then_heal_recovers` — a decodable
+//!   but non-swap success payload is absorbed
+//!   (`unexpected-response-variant`); `ExecuteMsg::Heal` re-emits the
 //!   in-flight leg and the opening completes.
 
 use currencies::PaymentGroup;
@@ -185,10 +186,11 @@ fn underpaid_leg_retries_in_place() {
     );
 
     // the first leg goes out twice - the underpaid attempt and its
-    // retry - the second leg once
+    // retry - the second leg once; the retry repeats the pinned floor
     let swaps = stub::recorded_swaps(&test_case.app, &controller, &lease);
     assert_eq!(3, swaps.len());
     assert_eq!(swaps[0].coin_in(), swaps[1].coin_in());
+    assert_eq!(swaps[0].min_out(), swaps[1].min_out());
     assert_eq!(
         &CoinDTO::<PaymentGroup>::from(DOWNPAYMENT),
         swaps[0].coin_in()
@@ -264,7 +266,7 @@ fn swap_ack_in_transfer_leg_absorbed() {
 }
 
 #[test]
-fn garbage_callback_absorbed_then_heal_recovers() {
+fn wrong_variant_callback_absorbed_then_heal_recovers() {
     let (mut test_case, lease, controller) = start_open(DOWNPAYMENT);
     stub::set_response_mode(
         &mut test_case.app,
@@ -276,14 +278,14 @@ fn garbage_callback_absorbed_then_heal_recovers() {
     let _response = transfer_funds(&mut test_case, &lease, DOWNPAYMENT);
     assert_eq!(2, opening_acks_left(&test_case, lease.clone()));
 
-    let garbage =
+    let wrong_variant =
         RemoteLeaseCallback::OperationOk(OperationResponse::TransferOut(TransferOutResponse {}));
-    let injected = stub::inject_callback(&mut test_case.app, &controller, &lease, garbage);
+    let injected = stub::inject_callback(&mut test_case.app, &controller, &lease, wrong_variant);
     expect_attribute(
         &injected.events,
         OPENING_SWAP_EVENT,
         "absorbed",
-        "undecodable-response",
+        "unexpected-response-variant",
     );
     assert_eq!(2, opening_acks_left(&test_case, lease.clone()));
 
