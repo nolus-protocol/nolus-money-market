@@ -332,7 +332,7 @@ where
     ibc::do_transfer(app, lease_addr.clone(), ica_addr.clone(), false, &borrow)
 }
 
-fn send_open_ica_response<'r>(
+pub(crate) fn send_open_ica_response<'r>(
     app: &'r mut App,
     lease_addr: Addr,
     connection_id: &str,
