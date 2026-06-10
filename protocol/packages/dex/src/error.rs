@@ -28,6 +28,9 @@ pub enum Error {
     #[error("[Dex] [RemoteSwap] {0}")]
     RemoteSwapClient(String),
 
+    #[error("[Dex] [RemoteSwap] {0}")]
+    UnexpectedResponseVariant(String),
+
     #[error("[Dex] [RemoteSwap] No in-flight swap leg matches the current task state")]
     MissingSwapLeg,
 
@@ -45,6 +48,16 @@ impl Error {
         Details: std::fmt::Display,
     {
         Self::RemoteSwapClient(details.to_string())
+    }
+
+    /// Wrap a response that decodes correctly yet does not carry the
+    /// scheduled swap's result - protocol confusion, as opposed to the
+    /// wire garbage [`remote_swap_client`][Self::remote_swap_client] wraps
+    pub fn unexpected_response_variant<Details>(details: Details) -> Self
+    where
+        Details: std::fmt::Display,
+    {
+        Self::UnexpectedResponseVariant(details.to_string())
     }
 
     pub(crate) fn unsupported_operation<Op, State>(op: Op, state: State) -> Self
