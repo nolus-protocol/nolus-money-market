@@ -16,7 +16,7 @@ use sdk::cosmwasm_std::{Binary, Env, QuerierWrapper};
 
 use crate::{
     CoinsNb, Contract, ContractInSwap, Enterable, Stage, SwapTask as SwapTaskT, TimeAlarm,
-    error::Result, swap::ExactAmountIn,
+    error::Result,
 };
 
 #[cfg(feature = "migration")]
@@ -34,6 +34,9 @@ use cw_time::IntoInstant;
 /// Supports up to `CoinsNb::MAX` number of coins.
 /// In does it in a single transaction with multiple messages expecting
 /// an acknowledgment per message.
+///
+/// Once all transfers get acknowledged the workflow proceeds with
+/// `NextLeg`, defaulting to the local DEX swap.
 #[derive(Serialize, Deserialize)]
 #[cfg_attr(test, derive(Clone, Debug, PartialEq, Eq))]
 #[serde(
@@ -44,16 +47,23 @@ use cw_time::IntoInstant;
     deny_unknown_fields,
     rename_all = "snake_case"
 )]
-pub struct TransferOut<SwapTask, SEnum, SwapClient> {
+pub struct TransferOut<
+    SwapTask,
+    SEnum,
+    SwapClient,
+    NextLeg = SwapExactIn<SwapTask, SEnum, SwapClient>,
+> {
     spec: SwapTask,
     acks_left: CoinsNb,
     #[serde(skip)]
     _state_enum: PhantomData<SEnum>,
     #[serde(skip)]
     _swap_client: PhantomData<SwapClient>,
+    #[serde(skip)]
+    _next_leg: PhantomData<NextLeg>,
 }
 
-impl<SwapTask, SEnum, SwapClient> TransferOut<SwapTask, SEnum, SwapClient>
+impl<SwapTask, SEnum, SwapClient, NextLeg> TransferOut<SwapTask, SEnum, SwapClient, NextLeg>
 where
     SwapTask: SwapTaskT,
 {
@@ -68,6 +78,7 @@ where
             acks_left,
             _state_enum: PhantomData,
             _swap_client: PhantomData,
+            _next_leg: PhantomData,
         };
         debug_assert!(ret.invariant());
         ret
@@ -116,12 +127,11 @@ where
     }
 }
 
-impl<SwapTask, SEnum, SwapClient> TransferOut<SwapTask, SEnum, SwapClient>
+impl<SwapTask, SEnum, SwapClient, NextLeg> TransferOut<SwapTask, SEnum, SwapClient, NextLeg>
 where
     SwapTask: SwapTaskT,
-    SwapClient: ExactAmountIn,
     Self: Into<SEnum>,
-    SwapExactIn<SwapTask, SEnum, SwapClient>: Into<SEnum>,
+    NextLeg: From<SwapTask> + Enterable + Into<SEnum>,
 {
     fn on_response<NextState, Label>(
         next: NextState,
@@ -140,24 +150,22 @@ where
     }
 }
 
-impl<SwapTask, SEnum, SwapClient> Enterable for TransferOut<SwapTask, SEnum, SwapClient>
+impl<SwapTask, SEnum, SwapClient, NextLeg> Enterable
+    for TransferOut<SwapTask, SEnum, SwapClient, NextLeg>
 where
     SwapTask: SwapTaskT,
-    SwapClient: ExactAmountIn,
-    Self: Into<SEnum>,
-    SwapExactIn<SwapTask, SEnum, SwapClient>: Into<SEnum>,
 {
     fn enter(&self, now: Instant, _querier: QuerierWrapper<'_>) -> Result<Batch> {
         Ok(self.generate_requests(now))
     }
 }
 
-impl<SwapTask, SEnum, SwapClient> Handler for TransferOut<SwapTask, SEnum, SwapClient>
+impl<SwapTask, SEnum, SwapClient, NextLeg> Handler
+    for TransferOut<SwapTask, SEnum, SwapClient, NextLeg>
 where
     SwapTask: SwapTaskT,
-    SwapClient: ExactAmountIn,
     Self: Into<SEnum>,
-    SwapExactIn<SwapTask, SEnum, SwapClient>: Into<SEnum>,
+    NextLeg: From<SwapTask> + Enterable + Into<SEnum>,
 {
     type Response = SEnum;
     type SwapResult = SwapTask::Result;
@@ -178,7 +186,7 @@ where
     ) -> HandlerResult<Self> {
         let label = self.spec.label();
         if self.last_ack() {
-            let next = SwapExactIn::new(self.spec);
+            let next = NextLeg::from(self.spec);
             next.enter(env.block.time.into_instant(), querier)
                 .and_then(|msgs| Self::on_response(next, label, msgs))
         } else {
@@ -204,7 +212,8 @@ where
     }
 }
 
-impl<SwapTask, SEnum, SwapClient> Contract for TransferOut<SwapTask, SEnum, SwapClient>
+impl<SwapTask, SEnum, SwapClient, NextLeg> Contract
+    for TransferOut<SwapTask, SEnum, SwapClient, NextLeg>
 where
     SwapTask: SwapTaskT + ContractInSwap<StateResponse = <SwapTask as SwapTaskT>::StateResponse>,
 {
@@ -221,7 +230,8 @@ where
     }
 }
 
-impl<SwapTask, SEnum, SwapClient> Display for TransferOut<SwapTask, SEnum, SwapClient>
+impl<SwapTask, SEnum, SwapClient, NextLeg> Display
+    for TransferOut<SwapTask, SEnum, SwapClient, NextLeg>
 where
     SwapTask: SwapTaskT,
 {
@@ -230,7 +240,8 @@ where
     }
 }
 
-impl<SwapTask, SEnum, SwapClient> TimeAlarm for TransferOut<SwapTask, SEnum, SwapClient>
+impl<SwapTask, SEnum, SwapClient, NextLeg> TimeAlarm
+    for TransferOut<SwapTask, SEnum, SwapClient, NextLeg>
 where
     SwapTask: SwapTaskT,
 {
@@ -243,14 +254,16 @@ where
 }
 
 #[cfg(feature = "migration")]
-impl<SwapTask, SwapTaskNew, SEnum, SEnumNew, SwapClient>
-    MigrateSpec<SwapTask, SwapTaskNew, SEnumNew> for TransferOut<SwapTask, SEnum, SwapClient>
+impl<SwapTask, SwapTaskNew, SEnum, SEnumNew, SwapClient, NextLeg>
+    MigrateSpec<SwapTask, SwapTaskNew, SEnumNew>
+    for TransferOut<SwapTask, SEnum, SwapClient, NextLeg>
 where
     Self: Sized,
     SwapTaskNew: SwapTaskT,
-    TransferOut<SwapTaskNew, SEnumNew, SwapClient>: Into<SEnumNew>,
+    NextLeg: MigrateSpec<SwapTask, SwapTaskNew, SEnumNew>,
+    TransferOut<SwapTaskNew, SEnumNew, SwapClient, NextLeg::Out>: Into<SEnumNew>,
 {
-    type Out = TransferOut<SwapTaskNew, SEnumNew, SwapClient>;
+    type Out = TransferOut<SwapTaskNew, SEnumNew, SwapClient, NextLeg::Out>;
 
     fn migrate_spec<MigrateFn>(self, migrate_fn: MigrateFn) -> Self::Out
     where
@@ -261,13 +274,53 @@ where
 }
 
 #[cfg(feature = "migration")]
-impl<SwapTask, R, SEnum, SwapClient> InspectSpec<SwapTask, R>
-    for TransferOut<SwapTask, SEnum, SwapClient>
+impl<SwapTask, R, SEnum, SwapClient, NextLeg> InspectSpec<SwapTask, R>
+    for TransferOut<SwapTask, SEnum, SwapClient, NextLeg>
 {
     fn inspect_spec<InspectFn>(&self, inspect_fn: InspectFn) -> R
     where
         InspectFn: FnOnce(&SwapTask) -> R,
     {
         inspect_fn(&self.spec)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use currency::test::{SuperGroupTestC1, SuperGroupTestC2};
+    use finance::coin::Coin;
+
+    use crate::impl_::remote_swap::mock::MockSpec;
+
+    use super::TransferOut;
+
+    type TestTransferOut = TransferOut<MockSpec, (), ()>;
+
+    #[test]
+    fn serialization_shape_unchanged() {
+        let spec_json =
+            sdk::cosmwasm_std::to_json_string(&spec()).expect("the spec should serialize");
+        assert_eq!(
+            format!(r#"{{"spec":{spec_json},"acks_left":2}}"#),
+            sdk::cosmwasm_std::to_json_string(&TestTransferOut::new(spec()))
+                .expect("the state should serialize")
+        );
+    }
+
+    #[test]
+    fn serde_round_trips() {
+        let transfer_out = TestTransferOut::new(spec());
+        let restored: TestTransferOut = sdk::cosmwasm_std::to_json_vec(&transfer_out)
+            .and_then(sdk::cosmwasm_std::from_json)
+            .expect("the state should round-trip");
+        assert_eq!(transfer_out.spec, restored.spec);
+        assert_eq!(transfer_out.acks_left, restored.acks_left);
+    }
+
+    fn spec() -> MockSpec {
+        MockSpec::new(vec![
+            Coin::<SuperGroupTestC2>::new(100).into(),
+            Coin::<SuperGroupTestC1>::new(50).into(),
+        ])
     }
 }

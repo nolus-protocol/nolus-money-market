@@ -65,6 +65,15 @@ where
     }
 }
 
+impl<SwapTask, SEnum, SwapClient> From<SwapTask> for SwapExactIn<SwapTask, SEnum, SwapClient>
+where
+    Self: Into<SEnum>,
+{
+    fn from(spec: SwapTask) -> Self {
+        Self::new(spec)
+    }
+}
+
 impl<SwapTask, SEnum, SwapClient> SwapExactIn<SwapTask, SEnum, SwapClient>
 where
     SwapTask: SwapTaskT,
