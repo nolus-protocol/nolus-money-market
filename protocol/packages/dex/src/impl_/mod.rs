@@ -9,6 +9,7 @@ pub use self::{
         start_remote_local,
     },
     out_remote::{StartLocalRemoteState, State as StateRemoteOut, start as start_local_remote},
+    remote_swap::{RemoteSwap, RemoteSwapClient},
     resp_delivery::{ICAOpenResponseDelivery, ResponseDelivery},
     slippage::{AcceptAnyNonZeroSwap, Calculator as AcceptUpToMaxSlippage, MaxSlippage},
     swap_exact_in::SwapExactIn,
@@ -22,6 +23,7 @@ mod ica_connector;
 mod migration;
 mod out_local;
 mod out_remote;
+mod remote_swap;
 mod resp_delivery;
 mod slippage;
 mod swap_exact_in;
