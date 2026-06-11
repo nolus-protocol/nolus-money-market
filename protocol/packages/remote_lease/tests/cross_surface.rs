@@ -86,8 +86,7 @@ fn response_transfer_out_byte_identical() {
 
 #[test]
 fn callback_operation_ok_byte_identical() {
-    let typed =
-        RemoteLeaseCallback::OperationOk(OperationResponse::CloseLease(CloseLeaseResponse {}));
+    let typed = RemoteLeaseCallback::OperationOk(WireResponse::CloseLease(CloseLeaseResponse {}));
     assert_cross_surface_eq::<RemoteLeaseCallback, WireCallback>(&typed);
 }
 

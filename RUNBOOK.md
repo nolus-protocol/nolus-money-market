@@ -29,14 +29,45 @@ Tried first (did not work): `cargo build` from the bare worktree; setting `SOFTW
 
 **Fix:** Put developer-local env in `protocol/.cargo/config.toml` (or any nested workspace `.cargo/config.toml`). `.gitignore:13` already excludes `**/.cargo` while keeping the tracked root file (`!/.cargo/`), so the override is automatically ignored. Cargo merges nested files over the root one when invoked from the protocol workspace.
 
-Example `protocol/.cargo/config.toml`:
+Example `protocol/.cargo/config.toml` (the `PROTOCOL_*` trio is read by the
+workspace-wide gates; the values mirror `ci/Containerfile`'s `ENV` block):
 
 ```
 [env]
 SOFTWARE_RELEASE_ID = "dev-release"
+PROTOCOL_NETWORK = "ci-network"
+PROTOCOL_NAME = "ci-protocol"
+PROTOCOL_RELEASE_ID = "ci-protocol-release"
 ```
 
 Tried first (rejected at review): editing the tracked `/.cargo/config.toml`.
+
+### Local clippy (1.95) diverges from CI clippy (1.94)
+
+**Symptom:** `cargo lint` / `cargo lint-all` fails locally on lints CI does not
+run (e.g. `unnecessary_sort_by` in the untouched oracle contract), or passes
+locally while CI fails — the verdicts differ on identical code.
+
+**Cause:** There is no `rust-toolchain.toml`; CI pins its toolchain via the
+`rust_image_digest` build argument in `ci/Containerfile` (currently 1.94),
+while the local default toolchain follows `rustup` (currently 1.95). Clippy
+adds and tightens lints between minor releases.
+
+**Fix:** Run the gate on the CI-pinned toolchain:
+
+```
+rustup toolchain install 1.94.0
+cargo +1.94.0 lint
+cargo +1.94.0 lint-all
+cargo +1.94.0 run-test
+```
+
+A local-only finding from a newer clippy is not a gate failure — fix it only
+if it survives on 1.94. Bump the pinned version here in lockstep with
+`ci/Containerfile`.
+
+Tried first (did not work): treating local 1.95-only findings as CI blockers
+and patching untouched code to silence them.
 
 ## CosmWasm
 

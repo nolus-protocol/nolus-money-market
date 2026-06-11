@@ -16,7 +16,7 @@ use platform::{
 use remote_lease::{
     callback::{RemoteErrorMessage, RemoteLeaseCallback},
     msg::OpenLeaseParams,
-    response::{OpenLeaseResponse, OperationResponse, RemoteLeaseId},
+    response::{OpenLeaseResponse, RemoteLeaseId, WireOperationResponse},
     stub::{ControllerInnerMessage, Factory},
 };
 use sdk::cosmwasm_std::{Addr, Env, MessageInfo, QuerierWrapper};
@@ -222,7 +222,7 @@ impl Contract for OpenLease {
     ) -> ContractResult<Response> {
         self.authz_callback(querier, &info)
             .and_then(|()| match callback {
-                RemoteLeaseCallback::OperationOk(OperationResponse::OpenLease(
+                RemoteLeaseCallback::OperationOk(WireOperationResponse::OpenLease(
                     OpenLeaseResponse { remote_lease_id },
                 )) => self.on_open_lease_ack(remote_lease_id, querier, &env),
                 RemoteLeaseCallback::OperationOk(_unexpected) => {

@@ -27,7 +27,7 @@ use versioning::{
 use crate::{
     api::{ChannelResponse, ConfigResponse, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg},
     error::{Error, Result},
-    ibc as ibc_msg,
+    ibc as ibc_msg, state,
     state::{Channel, Config},
 };
 
@@ -47,6 +47,7 @@ pub fn instantiate(
 ) -> Result<CwResponse> {
     require_non_empty("connection_id", &new_controller.connection_id)
         .and_then(|()| require_non_empty("dex_label", &new_controller.dex_label))
+        .and_then(|()| require_canonical_transfer_channel(&new_controller.transfer_channel))
         .and_then(|()| {
             deps.api
                 .addr_validate(new_controller.protocol_admin.as_str())
@@ -72,6 +73,7 @@ pub fn instantiate(
             Config::new(
                 new_controller.connection_id,
                 new_controller.dex_label,
+                new_controller.transfer_channel,
                 lease_code,
             )
             .store(deps.storage)
@@ -92,8 +94,9 @@ pub fn migrate(
 ) -> Result<CwResponse> {
     migrate_from
         .update_software(&CURRENT_RELEASE, &to_release)
-        .map(|()| response::empty_response())
         .map_err(Error::UpdateSoftware)
+        .and_then(|()| Config::require_current_schema(deps.storage))
+        .map(|()| response::empty_response())
         .inspect_err(platform_error::log(deps.api))
 }
 
@@ -165,6 +168,16 @@ fn require_non_empty(field: &'static str, value: &str) -> Result<()> {
         Err(Error::EmptyInstantiateField(field))
     } else {
         Ok(())
+    }
+}
+
+/// Reject a non-canonical channel id here, at instantiation, instead of
+/// letting the handshake fail cross-chain at the counterparty's responder.
+fn require_canonical_transfer_channel(channel_id: &str) -> Result<()> {
+    if state::canonical_transfer_channel(channel_id) {
+        Ok(())
+    } else {
+        Err(Error::NonCanonicalTransferChannel(channel_id.to_string()))
     }
 }
 

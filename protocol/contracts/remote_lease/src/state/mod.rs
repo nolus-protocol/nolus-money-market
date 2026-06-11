@@ -1,5 +1,6 @@
 use crate::api::{ChannelInfo, ChannelResponse, ChannelStateResponse, ConfigResponse};
 
+pub(crate) use self::config::canonical_transfer_channel;
 pub use self::{
     channel::{Channel, ChannelState},
     config::Config,
@@ -10,8 +11,8 @@ mod config;
 
 impl From<Config> for ConfigResponse {
     fn from(cfg: Config) -> Self {
-        let (connection_id, dex_label, lease_code) = cfg.into_parts();
-        Self::new(connection_id, dex_label, lease_code)
+        let (connection_id, dex_label, transfer_channel, lease_code) = cfg.into_parts();
+        Self::new(connection_id, dex_label, transfer_channel, lease_code)
     }
 }
 

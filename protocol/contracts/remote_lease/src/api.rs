@@ -13,6 +13,10 @@ pub struct InstantiateMsg {
     pub protocol_admin: String,
     pub connection_id: String,
     pub dex_label: String,
+    /// The Solana-side ICS-20 transfer channel paired with this protocol's lease
+    /// channel, in canonical `channel-<N>` form. Proposed to the counterparty in
+    /// the lease channel's handshake version (ADR-0002 §3.3).
+    pub transfer_channel: String,
     // External system API — accept `Uint64`; the contract wraps it in `Code` after validation.
     pub lease_code: Uint64,
 }
@@ -73,14 +77,21 @@ pub enum QueryMsg {
 pub struct ConfigResponse {
     pub connection_id: String,
     pub dex_label: String,
+    pub transfer_channel: String,
     pub lease_code_id: Uint64,
 }
 
 impl ConfigResponse {
-    pub fn new(connection_id: String, dex_label: String, lease_code: Code) -> Self {
+    pub fn new(
+        connection_id: String,
+        dex_label: String,
+        transfer_channel: String,
+        lease_code: Code,
+    ) -> Self {
         Self {
             connection_id,
             dex_label,
+            transfer_channel,
             lease_code_id: CodeId::from(lease_code).into(),
         }
     }
@@ -112,9 +123,10 @@ pub struct ChannelResponse {
 
 #[cfg(test)]
 mod test {
-    use platform::tests as platform_tests;
+    use platform::{contract::Code, tests as platform_tests};
+    use sdk::cosmwasm_std::Uint64;
 
-    use super::QueryMsg;
+    use super::{ConfigResponse, QueryMsg};
 
     #[test]
     fn release() {
@@ -122,5 +134,19 @@ mod test {
             QueryMsg::ProtocolPackageRelease {},
             platform_tests::ser_de(&versioning::query::ProtocolPackage::Release {}).unwrap(),
         );
+    }
+
+    #[test]
+    fn config_response_new() {
+        let response = ConfigResponse::new(
+            "connection-7".into(),
+            "osmosis".into(),
+            "channel-3".into(),
+            Code::unchecked(9),
+        );
+        assert_eq!("connection-7", response.connection_id);
+        assert_eq!("osmosis", response.dex_label);
+        assert_eq!("channel-3", response.transfer_channel);
+        assert_eq!(Uint64::new(9), response.lease_code_id);
     }
 }

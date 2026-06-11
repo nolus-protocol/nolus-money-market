@@ -10,22 +10,39 @@ use sdk::{
 
 use crate::error::{Error, Result};
 
+const TRANSFER_CHANNEL_NAME_PREFIX: &str = "channel-";
+
 #[derive(Serialize, Deserialize, Clone, Eq, PartialEq)]
 pub struct Config {
     connection_id: String,
     dex_label: String,
+    transfer_channel: String,
     lease_code: Code,
 }
 
 impl Config {
     const STORAGE: Item<Self> = Item::new("config");
 
-    pub fn new(connection_id: String, dex_label: String, lease_code: Code) -> Self {
-        Self {
+    pub fn new(
+        connection_id: String,
+        dex_label: String,
+        transfer_channel: String,
+        lease_code: Code,
+    ) -> Self {
+        let obj = Self {
             connection_id,
             dex_label,
+            transfer_channel,
             lease_code,
-        }
+        };
+        debug_assert!(obj.invariant_held());
+        obj
+    }
+
+    pub fn invariant_held(&self) -> bool {
+        !self.connection_id.is_empty()
+            && !self.dex_label.is_empty()
+            && canonical_transfer_channel(&self.transfer_channel)
     }
 
     pub fn connection_id(&self) -> &str {
@@ -36,12 +53,21 @@ impl Config {
         &self.dex_label
     }
 
+    pub fn transfer_channel(&self) -> &str {
+        &self.transfer_channel
+    }
+
     pub const fn lease_code(&self) -> Code {
         self.lease_code
     }
 
-    pub(super) fn into_parts(self) -> (String, String, Code) {
-        (self.connection_id, self.dex_label, self.lease_code)
+    pub(super) fn into_parts(self) -> (String, String, String, Code) {
+        (
+            self.connection_id,
+            self.dex_label,
+            self.transfer_channel,
+            self.lease_code,
+        )
     }
 
     pub fn store(&self, storage: &mut dyn Storage) -> Result<()> {
@@ -55,12 +81,33 @@ impl Config {
     pub fn update_lease_code(storage: &mut dyn Storage, lease_code: Code) -> Result<()> {
         Self::STORAGE
             .update(storage, |config: Self| {
-                Ok(Self {
+                let updated = Self {
                     lease_code,
                     ..config
-                })
+                };
+                debug_assert!(updated.invariant_held());
+                Ok(updated)
             })
             .map(mem::drop)
+    }
+
+    /// Prove the stored config deserializes under the current schema and
+    /// upholds its invariant.
+    ///
+    /// Run by `migrate` so an instance whose stored config predates a required
+    /// field, or carries values the current code would never have accepted,
+    /// refuses the upgrade instead of bricking on the first post-upgrade load.
+    pub fn require_current_schema(storage: &dyn Storage) -> Result<()> {
+        Self::STORAGE
+            .load(storage)
+            .map_err(Error::IncompatibleStoredConfig)
+            .and_then(|config| {
+                if config.invariant_held() {
+                    Ok(())
+                } else {
+                    Err(Error::MalformedStoredConfig)
+                }
+            })
     }
 
     /// Verify the caller is a contract instance of `Config.lease_code`.
@@ -74,6 +121,21 @@ impl Config {
             .check_contract_code(caller, &self.lease_code)
             .map_err(|_| Error::UnauthorisedCaller)
     }
+}
+
+/// `true` only for the canonical decimal rendering of a `u16` ordinal behind
+/// the `channel-` prefix — the counterparty's responder rejects leading zeros,
+/// signs, and ordinals beyond its 16-bit entity range.
+pub(crate) fn canonical_transfer_channel(channel_id: &str) -> bool {
+    channel_id
+        .strip_prefix(TRANSFER_CHANNEL_NAME_PREFIX)
+        .and_then(|ordinal| {
+            ordinal
+                .parse::<u16>()
+                .ok()
+                .filter(|parsed| parsed.to_string() == ordinal)
+        })
+        .is_some()
 }
 
 #[cfg(test)]
@@ -94,6 +156,7 @@ mod test {
 
     const CONNECTION_ID: &str = "connection-0";
     const DEX_LABEL: &str = "osmosis";
+    const TRANSFER_CHANNEL: &str = "channel-4";
     const LEASE_USER: &str = "lease";
 
     #[test]
@@ -104,6 +167,7 @@ mod test {
         let loaded = Config::load(&store).unwrap();
         assert_eq!(CONNECTION_ID, loaded.connection_id());
         assert_eq!(DEX_LABEL, loaded.dex_label());
+        assert_eq!(TRANSFER_CHANNEL, loaded.transfer_channel());
         assert_lease_code(lease_code, &store);
     }
 
@@ -118,6 +182,7 @@ mod test {
         let loaded = Config::load(&store).unwrap();
         assert_eq!(CONNECTION_ID, loaded.connection_id());
         assert_eq!(DEX_LABEL, loaded.dex_label());
+        assert_eq!(TRANSFER_CHANNEL, loaded.transfer_channel());
     }
 
     #[test]
@@ -161,8 +226,34 @@ mod test {
         assert!(matches!(err, Error::UnauthorisedCaller), "got {err:?}");
     }
 
+    #[test]
+    fn invariant_violations_detected() {
+        assert!(config(Code::unchecked(1)).invariant_held());
+
+        let non_canonical_channel = Config {
+            connection_id: CONNECTION_ID.into(),
+            dex_label: DEX_LABEL.into(),
+            transfer_channel: "channel-007".into(),
+            lease_code: Code::unchecked(1),
+        };
+        assert!(!non_canonical_channel.invariant_held());
+
+        let empty_connection = Config {
+            connection_id: String::new(),
+            dex_label: DEX_LABEL.into(),
+            transfer_channel: TRANSFER_CHANNEL.into(),
+            lease_code: Code::unchecked(1),
+        };
+        assert!(!empty_connection.invariant_held());
+    }
+
     fn config(lease_code: Code) -> Config {
-        Config::new(CONNECTION_ID.into(), DEX_LABEL.into(), lease_code)
+        Config::new(
+            CONNECTION_ID.into(),
+            DEX_LABEL.into(),
+            TRANSFER_CHANNEL.into(),
+            lease_code,
+        )
     }
 
     fn assert_lease_code(expected: Code, store: &dyn Storage) {

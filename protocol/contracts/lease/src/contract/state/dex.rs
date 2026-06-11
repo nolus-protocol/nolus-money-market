@@ -6,7 +6,7 @@ use finance::instant::Instant;
 use platform::{ica::ErrorResponse as ICAErrorResponse, state_machine};
 use remote_lease::{
     callback::{RemoteErrorMessage, RemoteLeaseCallback},
-    response::OperationResponse,
+    response::WireOperationResponse,
 };
 use sdk::cosmwasm_std::{self, Binary, Env, MessageInfo, QuerierWrapper, Reply};
 
@@ -178,7 +178,7 @@ where
 
     fn deliver_remote_ok(
         self,
-        response: &OperationResponse,
+        response: &WireOperationResponse,
         querier: QuerierWrapper<'_>,
         env: Env,
     ) -> ContractResult<Response> {

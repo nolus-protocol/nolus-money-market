@@ -1,7 +1,7 @@
 use remote_lease::{
     callback::{RemoteErrorMessage, RemoteLeaseCallback},
     envelope::{NolusLeaseAddr, PacketEnvelope},
-    response::OperationResponse,
+    response::WireOperationResponse,
 };
 use sdk::{
     cosmos_sdk_proto::prost::Message as _,
@@ -25,6 +25,25 @@ use crate::{
 };
 
 const MSG_CHANNEL_OPEN_INIT_TYPE_URL: &str = "/ibc.core.channel.v1.MsgChannelOpenInit";
+const VERSION_TRANSFER_KEY: &str = "+transfer=";
+// Diagnostic bound on the counterparty-authored version echoed into the
+// handshake error — a legitimate version is ~45 characters.
+const COUNTERPARTY_VERSION_ECHO_MAX_CHARS: usize = 64;
+
+/// Compose the channel handshake version: the protocol version extended with
+/// the paired Solana-side ICS-20 transfer channel (ADR-0002 §3.3).
+///
+/// Handshake grammar only — packets keep pinning the bare
+/// [`remote_lease::VERSION`]; extending the shared constant would break packet
+/// deserialization on both sides.
+fn handshake_version(config: &Config) -> String {
+    format!(
+        "{version}{key}{channel}",
+        version = remote_lease::VERSION,
+        key = VERSION_TRANSFER_KEY,
+        channel = config.transfer_channel()
+    )
+}
 
 /// Build the `CosmosMsg::Any { MsgChannelOpenInit }` that initiates the handshake.
 pub fn build_channel_open_init(env: &Env, config: &Config) -> CosmosMsg {
@@ -37,7 +56,7 @@ pub fn build_channel_open_init(env: &Env, config: &Config) -> CosmosMsg {
             channel_id: String::new(),
         }),
         connection_hops: vec![config.connection_id().to_string()],
-        version: remote_lease::VERSION.to_string(),
+        version: handshake_version(config),
         upgrade_sequence: 0,
     };
     let msg = MsgChannelOpenInit {
@@ -79,16 +98,28 @@ pub fn ibc_channel_connect(
     _env: Env,
     msg: IbcChannelConnectMsg,
 ) -> Result<IbcBasicResponse> {
-    let channel = match msg {
-        IbcChannelConnectMsg::OpenAck { channel, .. }
-        | IbcChannelConnectMsg::OpenConfirm { channel } => channel,
+    let (channel, may_counterparty_version) = match msg {
+        IbcChannelConnectMsg::OpenAck {
+            channel,
+            counterparty_version,
+        } => (channel, Some(counterparty_version)),
+        // `OpenConfirm` is delivered only to the try side of a handshake and
+        // carries no counterparty version; this controller rejects `OpenTry`,
+        // so the arm is unreachable while counterparty-initiated opens stay
+        // unsupported.
+        IbcChannelConnectMsg::OpenConfirm { channel } => (channel, None),
     };
 
     Channel::may_load(deps.storage)
         .and_then(|existing| match existing {
             Some(_) => Err(Error::ChannelAlreadyExists),
-            None => Config::load(deps.storage)
-                .and_then(|config| validate_handshake_channel(&channel, &config).map(|()| channel)),
+            None => Config::load(deps.storage).and_then(|config| {
+                validate_handshake_channel(&channel, &config)
+                    .and_then(|()| {
+                        validate_counterparty_version(may_counterparty_version.as_deref(), &config)
+                    })
+                    .map(|()| channel)
+            }),
         })
         .and_then(|channel| persist_open_channel(deps, channel))
         .map(|()| IbcBasicResponse::new())
@@ -154,9 +185,13 @@ pub fn ibc_packet_timeout(
         })
 }
 
+// The success payload is decoded as the wire shape only — currency-registry
+// validation belongs to the addressee lease, which absorbs content failures.
+// Erring here on a registry mismatch would make the relayer retry the ack
+// forever, turning counterparty content drift into a stuck packet.
 fn ack_to_callback(ack: StdAck) -> Result<RemoteLeaseCallback> {
     match ack {
-        StdAck::Success(data) => cosmwasm_std::from_json::<OperationResponse>(&data)
+        StdAck::Success(data) => cosmwasm_std::from_json::<WireOperationResponse>(&data)
             .map(RemoteLeaseCallback::OperationOk)
             .map_err(Error::from),
         StdAck::Error(message) => RemoteErrorMessage::new(message)
@@ -195,11 +230,32 @@ fn dispatch_lease_callback(
 
 fn validate_handshake_channel(channel: &IbcChannel, config: &Config) -> Result<()> {
     require_unordered(channel.order.clone())
-        .and_then(|()| require_version(&channel.version))
+        .and_then(|()| require_version(&channel.version, &handshake_version(config)))
         .and_then(|()| require_connection_id(&channel.connection_id, config.connection_id()))
         .and_then(|()| {
             require_counterparty_port(&channel.counterparty_endpoint.port_id, config.dex_label())
         })
+}
+
+/// Validate the version the counterparty echoed in `OpenAck`. Both sides name
+/// the same Solana-side transfer channel, so the echo must equal the proposed
+/// handshake version verbatim. The counterparty-authored string lands in the
+/// error truncated — never echoed unbounded.
+fn validate_counterparty_version(may_actual: Option<&str>, config: &Config) -> Result<()> {
+    may_actual.map_or(Ok(()), |actual| {
+        let expected = handshake_version(config);
+        if actual == expected {
+            Ok(())
+        } else {
+            Err(Error::InvalidCounterpartyVersion {
+                expected,
+                actual: actual
+                    .chars()
+                    .take(COUNTERPARTY_VERSION_ECHO_MAX_CHARS)
+                    .collect(),
+            })
+        }
+    })
 }
 
 fn require_unordered(order: IbcOrder) -> Result<()> {
@@ -209,12 +265,12 @@ fn require_unordered(order: IbcOrder) -> Result<()> {
     }
 }
 
-fn require_version(actual: &str) -> Result<()> {
-    if actual == remote_lease::VERSION {
+fn require_version(actual: &str, expected: &str) -> Result<()> {
+    if actual == expected {
         Ok(())
     } else {
         Err(Error::InvalidChannelVersion {
-            expected: remote_lease::VERSION.to_string(),
+            expected: expected.to_string(),
             actual: actual.to_string(),
         })
     }

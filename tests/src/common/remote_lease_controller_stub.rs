@@ -181,6 +181,7 @@ const RECORDED_SWAPS: Map<&Addr, Vec<SwapParams>> = Map::new("stub_recorded_swap
 struct StubConfig {
     connection_id: String,
     dex_label: String,
+    transfer_channel: String,
     lease_code: Code,
 }
 
@@ -212,6 +213,7 @@ pub fn instantiate(
     let config = StubConfig {
         connection_id: msg.connection_id,
         dex_label: msg.dex_label,
+        transfer_channel: msg.transfer_channel,
         lease_code,
     };
     CONFIG.save(deps.storage, &config)?;
@@ -279,6 +281,7 @@ pub fn query(deps: Deps<'_>, _env: Env, msg: StubQueryMsg) -> StdResult<Binary> 
             to_json_binary(&ConfigResponse {
                 connection_id: config.connection_id,
                 dex_label: config.dex_label,
+                transfer_channel: config.transfer_channel,
                 lease_code_id: CodeId::from(config.lease_code).into(),
             })
         }
@@ -317,10 +320,10 @@ where
         .unwrap_or(ResponseMode::Ok);
 
     let callback = match mode {
-        ResponseMode::Ok => RemoteLeaseCallback::OperationOk(build_ok(deps.storage)?),
+        ResponseMode::Ok => RemoteLeaseCallback::OperationOk(build_ok(deps.storage)?.into()),
         ResponseMode::Err(reason) => RemoteLeaseCallback::OperationErr(reason),
         ResponseMode::Delayed => {
-            let payload = RemoteLeaseCallback::OperationOk(build_ok(deps.storage)?);
+            let payload = RemoteLeaseCallback::OperationOk(build_ok(deps.storage)?.into());
             PENDING.save(
                 deps.storage,
                 op,
@@ -333,7 +336,7 @@ where
         }
         ResponseMode::UnderpayingOnce => {
             MODES.save(deps.storage, op, &ResponseMode::Ok)?;
-            RemoteLeaseCallback::OperationOk(underpay(build_ok(deps.storage)?))
+            RemoteLeaseCallback::OperationOk(underpay(build_ok(deps.storage)?).into())
         }
     };
 
@@ -449,6 +452,7 @@ impl Instantiator {
             protocol_admin: sdk::testing::user(ADMIN).into_string(),
             connection_id: super::test_case::TestCase::DEX_CONNECTION_ID.into(),
             dex_label: "test-dex".into(),
+            transfer_channel: "channel-0".into(),
             lease_code: Uint64::from(CodeId::from(lease_code)),
         };
 

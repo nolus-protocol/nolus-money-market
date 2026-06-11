@@ -42,7 +42,8 @@ const PACKET_TIMEOUT: Duration = Duration::from_secs(600);
 const LOCAL_CHANNEL_ID: &str = "channel-0";
 const COUNTERPARTY_CHANNEL_ID: &str = "channel-77";
 const COUNTERPARTY_PORT_ID: &str = "nls-remote-lease.osmosis";
-const VERSION: &str = "nls-remote-lease.v1";
+const TRANSFER_CHANNEL: &str = "channel-42";
+const VERSION: &str = "nls-remote-lease.v1+transfer=channel-42";
 const CONTRACT_STORAGE_VERSION: VersionSegment = 0;
 
 fn deps() -> OwnedDeps<MockStorage, MockApi, MockQuerier> {
@@ -137,6 +138,7 @@ fn instantiate_msg() -> InstantiateMsg {
         protocol_admin: sdk_testing::user(ADMIN).into_string(),
         connection_id: CONNECTION_ID.into(),
         dex_label: DEX_LABEL.into(),
+        transfer_channel: TRANSFER_CHANNEL.into(),
         lease_code: LEASE_CODE_ID.into(),
     }
 }

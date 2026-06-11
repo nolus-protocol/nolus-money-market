@@ -10,8 +10,8 @@ use sdk::{
 use crate::{api::InstantiateMsg, contract::instantiate, error::Error};
 
 use super::{
-    CONNECTION_ID, CREATOR, DEX_LABEL, LEASE_CODE_ID, deps, instantiate_msg, query_channel,
-    query_config, sender,
+    CONNECTION_ID, CREATOR, DEX_LABEL, LEASE_CODE_ID, TRANSFER_CHANNEL, deps, instantiate_msg,
+    query_channel, query_config, sender,
 };
 
 #[test]
@@ -29,6 +29,7 @@ fn proper_initialization() {
     let config = query_config(deps.as_ref());
     assert_eq!(CONNECTION_ID, config.connection_id);
     assert_eq!(DEX_LABEL, config.dex_label);
+    assert_eq!(TRANSFER_CHANNEL, config.transfer_channel);
     assert_eq!(
         Uint64::from(CodeId::from(Code::unchecked(LEASE_CODE_ID))),
         config.lease_code_id,
@@ -64,6 +65,36 @@ fn instantiate_rejects_empty_dex_label() {
         matches!(err, Error::EmptyInstantiateField("dex_label")),
         "got {err:?}"
     );
+}
+
+// Mirrors the Solana responder's canonical-channel-id rules: `channel-`
+// prefix, decimal ordinal with no sign or leading zeros, within `u16` range.
+#[test]
+fn instantiate_rejects_non_canonical_transfer_channel() {
+    const NON_CANONICAL: [&str; 8] = [
+        "",
+        "42",
+        "channel-",
+        "channel-abc",
+        "channel-007",
+        "channel-+5",
+        "channel-70000",
+        "transfer/channel-4",
+    ];
+
+    for transfer_channel in NON_CANONICAL {
+        let mut deps = deps();
+        let msg = InstantiateMsg {
+            transfer_channel: transfer_channel.into(),
+            ..instantiate_msg()
+        };
+        let err =
+            instantiate(deps.as_mut(), testing::mock_env(), sender(CREATOR), msg).unwrap_err();
+        assert!(
+            matches!(err, Error::NonCanonicalTransferChannel(_)),
+            "expected reject for {transfer_channel:?}, got {err:?}"
+        );
+    }
 }
 
 #[test]

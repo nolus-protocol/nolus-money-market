@@ -2,7 +2,10 @@ use remote_lease::{
     callback::{OPERATION_ERR_MAX_BYTES, RemoteErrorMessage, RemoteLeaseCallback},
     envelope::{LeaseAddrOnWire, PacketEnvelope},
     msg::{CloseLeaseParams, Operation},
-    response::{CloseLeaseResponse, OpenLeaseResponse, OperationResponse, RemoteLeaseId},
+    response::{
+        CloseLeaseResponse, OpenLeaseResponse, RemoteLeaseId, Ticker, WireCoin,
+        WireOperationResponse, WireSwapResponse,
+    },
     version::ProtocolVersion,
 };
 use sdk::{
@@ -56,7 +59,7 @@ fn packet_ack_success_dispatches_operation_ok() {
     let mut deps = deps_with_config();
     let lease = sdk_testing::user("lease-1");
     let envelope_bytes = encode_envelope(&envelope_with_close_lease(&lease));
-    let response = OperationResponse::CloseLease(CloseLeaseResponse {});
+    let response = WireOperationResponse::CloseLease(CloseLeaseResponse {});
     let ack_bytes = StdAck::Success(cosmwasm_std::to_json_binary(&response).unwrap()).to_binary();
 
     let res = ibc_packet_ack(
@@ -162,6 +165,33 @@ fn packet_ack_malformed_acknowledgement_errors() {
     assert!(matches!(err, Error::Std(_)), "got {err:?}");
 }
 
+// Content validation belongs to the addressee lease — a ticker outside the
+// Nolus currency registry must pass through this controller untouched, or the
+// relayer would retry the ack forever (issue #637).
+#[test]
+fn packet_ack_out_of_registry_ticker_dispatches_ok() {
+    let mut deps = deps_with_config();
+    let lease = sdk_testing::user("lease-alien-ticker");
+    let envelope_bytes = encode_envelope(&envelope_with_close_lease(&lease));
+    let response = WireOperationResponse::Swap(WireSwapResponse {
+        amount_out: WireCoin::new(42, Ticker::new("NOT_IN_REGISTRY")),
+    });
+    let ack_bytes = StdAck::Success(cosmwasm_std::to_json_binary(&response).unwrap()).to_binary();
+
+    let res = ibc_packet_ack(
+        deps.as_mut(),
+        testing::mock_env(),
+        ack_msg(envelope_bytes, ack_bytes),
+    )
+    .unwrap();
+
+    assert_dispatched_callback(
+        &lease,
+        RemoteLeaseCallback::OperationOk(response),
+        &res.messages,
+    );
+}
+
 #[test]
 fn packet_ack_success_with_malformed_response_errors() {
     let mut deps = deps_with_config();
@@ -215,7 +245,7 @@ fn packet_ack_malformed_lease_addr_in_envelope_errors() {
         version: ProtocolVersion,
     };
     let envelope_bytes = cosmwasm_std::to_json_binary(&envelope).expect("envelope serialises");
-    let response = OperationResponse::CloseLease(CloseLeaseResponse {});
+    let response = WireOperationResponse::CloseLease(CloseLeaseResponse {});
     let ack_bytes = StdAck::Success(cosmwasm_std::to_json_binary(&response).unwrap()).to_binary();
 
     let err = ibc_packet_ack(
@@ -258,7 +288,7 @@ fn fixture_stdack_success_open_lease_decodes_to_callback() {
     const FIXTURE_REMOTE_LEASE_ID: &str = "So1RayF1xtureLease1";
     const ACK_BYTES: &[u8] =
         include_bytes!("../../../tests/fixtures/stdack_success_open_lease.bin");
-    let response = OperationResponse::OpenLease(OpenLeaseResponse {
+    let response = WireOperationResponse::OpenLease(OpenLeaseResponse {
         remote_lease_id: RemoteLeaseId::new(FIXTURE_REMOTE_LEASE_ID).expect("base58 fixture id"),
     });
 

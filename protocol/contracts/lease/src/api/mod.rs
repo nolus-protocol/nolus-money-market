@@ -88,17 +88,16 @@ pub enum ExecuteMsg {
     ///
     /// Invoked by the configured `remote_lease` controller contract after it
     /// receives an IBC ack or timeout for an operation it dispatched on this
-    /// lease's behalf. Only the currently-pending dex sub-state of the lease
-    /// accepts the callback; it authorises `info.sender == remote_lease`,
-    /// classifies the variant, and forwards it through the existing
-    /// `on_dex_response` / `on_dex_error` / `on_dex_timeout` pipeline — which
-    /// itself enters the `ResponseDelivery` + `DexCallback` safe-delivery
-    /// machinery. Synchronous failures (auth mismatch, serialisation,
-    /// pre-`ResponseDelivery` storage faults) propagate as `Err` and revert
-    /// the controller's `ibc_packet_ack`, letting the relayer retry the same
-    /// ack; once `ResponseDelivery` state is persisted the controller's ack
-    /// commits and the inner work runs via the lease's own time-alarm
-    /// fallback on error.
+    /// lease's behalf. The lease authorises the caller through its leaser
+    /// (`CheckRemoteLeaseCallbackPermission`), classifies the variant, and
+    /// routes it into the state's dedicated `on_remote_response` /
+    /// `on_remote_error` / `on_remote_timeout` entry points: the leg that
+    /// scheduled the remote operation processes the acknowledgment directly,
+    /// while every other state absorbs the callback with an event — never an
+    /// `Err` — so the controller's `ibc_packet_ack` commits. Only synchronous
+    /// faults whose retry belongs to the relayer (auth mismatch,
+    /// serialisation, storage) propagate as `Err` and revert the controller's
+    /// ack.
     RemoteLeaseCallback(RemoteLeaseCallback),
 
     /// Heal a lease past a middleware failure
@@ -121,7 +120,7 @@ pub enum FinalizerExecuteMsg {
 mod test {
     use remote_lease::{
         callback::{RemoteErrorMessage, RemoteLeaseCallback},
-        response::{CloseLeaseResponse, OperationResponse},
+        response::{CloseLeaseResponse, WireOperationResponse},
     };
     use sdk::cosmwasm_std;
 
@@ -149,7 +148,7 @@ mod test {
     #[test]
     fn test_remote_lease_callback_operation_ok_representation() {
         let msg = ExecuteMsg::RemoteLeaseCallback(RemoteLeaseCallback::OperationOk(
-            OperationResponse::CloseLease(CloseLeaseResponse {}),
+            WireOperationResponse::CloseLease(CloseLeaseResponse {}),
         ));
         let bin = cosmwasm_std::to_json_vec(&msg).expect("serialization failed");
         assert_eq!(

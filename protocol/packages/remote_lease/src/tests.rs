@@ -26,7 +26,7 @@ use crate::{
     port_id_for,
     response::{
         CloseLeaseResponse, OpenLeaseResponse, OperationResponse, RemoteLeaseId, SwapResponse,
-        TransferOutResponse,
+        TransferOutResponse, WireOperationResponse,
     },
     version::ProtocolVersion,
 };
@@ -113,7 +113,7 @@ fn transfer_out_response_serde() {
 #[test]
 fn callback_operation_ok_serde() {
     let value =
-        RemoteLeaseCallback::OperationOk(OperationResponse::CloseLease(CloseLeaseResponse {}));
+        RemoteLeaseCallback::OperationOk(WireOperationResponse::CloseLease(CloseLeaseResponse {}));
     assert_round_trip_eq(r#"{"operation_ok":{"close_lease":{}}}"#, &value);
 }
 
