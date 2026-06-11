@@ -472,7 +472,7 @@ mod impl_display {
                 State::OpenIcaRespDelivery(inner) => Display::fmt(inner, f),
                 State::TransferOut(inner) => Display::fmt(inner, f),
                 State::TransferOutRespDelivery(inner) => Display::fmt(inner, f),
-                State::RemoteSwap(inner) => Display::fmt(inner, f),
+                State::RemoteSwap(inner) => inner.fmt(f),
             }
         }
     }

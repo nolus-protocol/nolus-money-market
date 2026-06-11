@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use thiserror::Error;
 
 use crate::{swap, swap_task::CoinsNb};
@@ -45,7 +47,7 @@ impl Error {
     /// implementation
     pub fn remote_swap_client<Details>(details: Details) -> Self
     where
-        Details: std::fmt::Display,
+        Details: Display,
     {
         Self::RemoteSwapClient(details.to_string())
     }
@@ -55,7 +57,7 @@ impl Error {
     /// wire garbage [`remote_swap_client`][Self::remote_swap_client] wraps
     pub fn unexpected_response_variant<Details>(details: Details) -> Self
     where
-        Details: std::fmt::Display,
+        Details: Display,
     {
         Self::UnexpectedResponseVariant(details.to_string())
     }

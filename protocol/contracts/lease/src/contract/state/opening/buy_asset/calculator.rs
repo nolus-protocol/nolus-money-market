@@ -32,7 +32,11 @@ struct ToAsset<'oracle, OutC> {
 }
 
 impl<'oracle, WithCalc> Factory<'oracle, WithCalc> {
-    pub fn new(with_calc: WithCalc, max_slippage: MaxSlippage, oracle: &'oracle OracleRef) -> Self {
+    pub const fn new(
+        with_calc: WithCalc,
+        max_slippage: MaxSlippage,
+        oracle: &'oracle OracleRef,
+    ) -> Self {
         Self {
             with_calc,
             max_slippage,

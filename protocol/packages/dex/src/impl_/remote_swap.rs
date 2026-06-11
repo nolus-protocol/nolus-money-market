@@ -71,6 +71,7 @@ const EVENT_VALUE_REEMIT: &str = "re-emit";
 const ABSORB_UNDECODABLE: &str = "undecodable-response";
 const ABSORB_UNEXPECTED_VARIANT: &str = "unexpected-response-variant";
 const ABSORB_CURRENCY_MISMATCH: &str = "out-currency-mismatch";
+const ABSORB_OUTPUT_OVERFLOW: &str = "output-overflow";
 const ANOMALY_UNDER_MIN_OUT: &str = "under-min-out";
 
 /// Transport of swap legs to a remote, non-ICA counterparty
@@ -151,7 +152,7 @@ where
     total_out: CoinDTO<SwapTask::OutG>,
     env: &'env Env,
     querier: QuerierWrapper<'querier>,
-    _handler: PhantomData<HandlerT>,
+    _finisher: PhantomData<HandlerT>,
 }
 
 impl<SwapTask, SEnum> RemoteSwap<SwapTask, SEnum>
@@ -198,6 +199,10 @@ where
         }
     }
 
+    /// An acknowledgment overflowing the accumulated total comes from a
+    /// counterparty in breach of the coin amount bounds and is absorbed
+    /// like the other malformed payloads - an error would revert the
+    /// controller's acknowledgment transaction and strand the workflow.
     fn apply_ack(
         self,
         coin_out: CoinDTO<SwapTask::OutG>,
@@ -206,14 +211,25 @@ where
     ) -> HandlerResult<Self> {
         debug_assert!(self.invariant_held());
 
-        let total_out = add_coins(self.total_out, &coin_out);
+        match add_coins(self.total_out, &coin_out) {
+            None => self.absorb(ABSORB_OUTPUT_OVERFLOW).into(),
+            Some(total_out) => self.finish_or_open_next(total_out, querier, env),
+        }
+    }
+
+    fn finish_or_open_next(
+        self,
+        total_out: CoinDTO<SwapTask::OutG>,
+        querier: QuerierWrapper<'_>,
+        env: Env,
+    ) -> HandlerResult<Self> {
         match self.acks_left.checked_sub(1) {
             None => Error::MissingSwapLeg.into(),
             Some(0) => self.spec.into_output_task(FinishWithTotal {
                 total_out,
                 env: &env,
                 querier,
-                _handler: PhantomData::<Self>,
+                _finisher: PhantomData::<Self>,
             }),
             Some(acks_left) => Self::open_leg(self.spec, acks_left, total_out, querier)
                 .and_then(Self::schedule_and_continue)
@@ -648,7 +664,7 @@ where
         })
 }
 
-fn add_coins<G>(total: CoinDTO<G>, more: &CoinDTO<G>) -> CoinDTO<G>
+fn add_coins<G>(total: CoinDTO<G>, more: &CoinDTO<G>) -> Option<CoinDTO<G>>
 where
     G: Group,
 {
@@ -663,14 +679,16 @@ where
     where
         G: Group,
     {
-        type Outcome = CoinDTO<G>;
+        type Outcome = Option<CoinDTO<G>>;
 
         fn on<C>(self, total: Coin<C>) -> Self::Outcome
         where
             C: CurrencyDef,
             C::Group: MemberOf<G> + MemberOf<G::TopG>,
         {
-            (total + self.more.as_specific(C::dto())).into()
+            total
+                .checked_add(self.more.as_specific(C::dto()))
+                .map(Into::into)
         }
     }
 
@@ -922,13 +940,13 @@ mod tests {
     use super::mock::{self, MockSpec};
 
     type OutG = <MockSpec as crate::SwapTask>::OutG;
-    type Node = super::RemoteSwap<MockSpec, TestState>;
+    type Node = super::RemoteSwap<MockSpec, TestWorkflow>;
 
-    enum TestState {
+    enum TestWorkflow {
         RemoteSwap(Node),
     }
 
-    impl From<Node> for TestState {
+    impl From<Node> for TestWorkflow {
         fn from(node: Node) -> Self {
             Self::RemoteSwap(node)
         }
@@ -1125,6 +1143,21 @@ mod tests {
         assert_node(2, &coin_out(50), &min_out(), &node);
     }
 
+    #[test]
+    fn overflowing_ack_absorbed_without_state_change() {
+        let mock_querier = MockQuerier::default();
+        let querier = QuerierWrapper::new(&mock_querier);
+
+        let (_response, node) = continued(Node::start(spec3(), &testing::mock_env(), querier));
+        let (response, node) = continued(node.on_remote_response(
+            payload(&coin_out(Amount::MAX)),
+            querier,
+            testing::mock_env(),
+        ));
+        assert_eq!(absorb_response("output-overflow"), response);
+        assert_node(2, &coin_out(50), &min_out(), &node);
+    }
+
     /// Healing repeats the floor pinned when the leg was opened - a floor
     /// raised afterwards must not leak into the re-emission.
     #[test]
@@ -1196,7 +1229,7 @@ mod tests {
     fn continued(res: HandlerResult<Node>) -> (MessageResponse, Node) {
         match res {
             HandlerResult::Continue(Ok(resp)) => {
-                let TestState::RemoteSwap(node) = resp.next_state;
+                let TestWorkflow::RemoteSwap(node) = resp.next_state;
                 (resp.response, node)
             }
             HandlerResult::Continue(Err(err)) => panic!("expected a continuation, got {err}"),
