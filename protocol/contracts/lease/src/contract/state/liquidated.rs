@@ -4,12 +4,18 @@ use finance::duration::Duration;
 use finance::instant::Instant;
 use sdk::cosmwasm_std::{Env, MessageInfo, QuerierWrapper};
 
-use crate::{api::query::StateResponse, error::ContractResult};
+use crate::{api::query::StateResponse, error::ContractResult, lease::LeaseDTO};
 
 use super::{Handler, Response, drain::DrainAll};
 
 #[derive(Serialize, Deserialize, Default)]
 pub struct Liquidated {}
+
+impl From<&LeaseDTO> for Liquidated {
+    fn from(_lease: &LeaseDTO) -> Self {
+        Self::default()
+    }
+}
 
 impl Handler for Liquidated {
     fn state(

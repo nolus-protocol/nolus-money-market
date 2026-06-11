@@ -6,10 +6,10 @@ use crate::{contract::Lease, error::ContractResult};
 
 use super::Response;
 
-use self::transfer_in::DexState;
+use self::transfer_out::DexState;
 use cw_time::IntoInstant;
 
-pub mod transfer_in;
+pub mod transfer_out;
 
 pub fn start_close(
     lease: Lease,
@@ -17,10 +17,11 @@ pub fn start_close(
     env: &Env,
     querier: QuerierWrapper<'_>,
 ) -> ContractResult<Response> {
-    let start_transfer_in = transfer_in::start(lease);
-    start_transfer_in
-        .enter(env.block.time.into_instant(), querier)
-        .map(|close_msgs| curr_request_response.merge_with(close_msgs))
-        .map(|batch| Response::from(batch, DexState::from(start_transfer_in)))
-        .map_err(Into::into)
+    transfer_out::start(lease).and_then(|start_drain| {
+        start_drain
+            .enter(env.block.time.into_instant(), querier)
+            .map(|drain_msgs| curr_request_response.merge_with(drain_msgs))
+            .map(|batch| Response::from(batch, DexState::from(start_drain)))
+            .map_err(Into::into)
+    })
 }
