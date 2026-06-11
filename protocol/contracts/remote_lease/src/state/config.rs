@@ -91,16 +91,23 @@ impl Config {
             .map(mem::drop)
     }
 
-    /// Prove the stored config deserializes under the current schema.
+    /// Prove the stored config deserializes under the current schema and
+    /// upholds its invariant.
     ///
     /// Run by `migrate` so an instance whose stored config predates a required
-    /// field refuses the upgrade instead of bricking on the first
-    /// post-upgrade load.
+    /// field, or carries values the current code would never have accepted,
+    /// refuses the upgrade instead of bricking on the first post-upgrade load.
     pub fn require_current_schema(storage: &dyn Storage) -> Result<()> {
         Self::STORAGE
             .load(storage)
-            .map(mem::drop)
             .map_err(Error::IncompatibleStoredConfig)
+            .and_then(|config| {
+                if config.invariant_held() {
+                    Ok(())
+                } else {
+                    Err(Error::MalformedStoredConfig)
+                }
+            })
     }
 
     /// Verify the caller is a contract instance of `Config.lease_code`.

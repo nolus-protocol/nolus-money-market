@@ -30,6 +30,9 @@ pub enum Error {
     )]
     IncompatibleStoredConfig(StdError),
 
+    #[error("[RemoteLease] The stored config violates its invariant")]
+    MalformedStoredConfig,
+
     #[error("[RemoteLease] Transfer channel id '{0}' is not a canonical 'channel-<N>' identifier")]
     NonCanonicalTransferChannel(String),
 

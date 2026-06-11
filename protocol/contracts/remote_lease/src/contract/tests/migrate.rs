@@ -55,6 +55,38 @@ fn migrate_with_pre_transfer_channel_config_rejected() {
     );
 }
 
+// Overwrites the stored config with a current-shape value the current code
+// would never have accepted (non-canonical transfer channel) — the probe must
+// refuse the upgrade on the invariant, not just on deserialization.
+#[test]
+fn migrate_with_invariant_violating_config_rejected() {
+    #[derive(Serialize, Deserialize)]
+    struct RawConfig {
+        connection_id: String,
+        dex_label: String,
+        transfer_channel: String,
+        lease_code: Code,
+    }
+    const RAW_STORAGE: Item<RawConfig> = Item::new("config");
+
+    let mut deps = deps();
+    instantiate_default(deps.as_mut());
+    RAW_STORAGE
+        .save(
+            deps.as_mut().storage,
+            &RawConfig {
+                connection_id: CONNECTION_ID.into(),
+                dex_label: DEX_LABEL.into(),
+                transfer_channel: "channel-007".into(),
+                lease_code: Code::unchecked(LEASE_CODE_ID),
+            },
+        )
+        .unwrap();
+
+    let err = migrate(deps.as_mut(), testing::mock_env(), migrate_msg()).unwrap_err();
+    assert!(matches!(err, Error::MalformedStoredConfig), "got {err:?}");
+}
+
 #[test]
 fn migrate_mismatched_to_release_id_propagates_update_software_error() {
     let mut deps = deps();
