@@ -97,6 +97,7 @@ where
                 spec.start_opening_at,
                 &now,
                 spec.remote_lease_id,
+                spec.remote_lease_controller,
             )
         };
         let OpenLeaseResult {

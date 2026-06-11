@@ -44,6 +44,7 @@ pub struct Lease<Asset, Lpp, Oracle> {
     loan: Loan<Lpp>,
     oracle: Oracle,
     remote_lease_id: RemoteLeaseId,
+    remote_lease_controller: Addr,
 }
 
 pub type IntoDTOResult = LeaseDTOResult<Batch>;
@@ -60,6 +61,7 @@ where
     LppLoan: LppLoanTrait<LpnCurrency>,
     Oracle: OracleTrait<LeasePaymentCurrencies, QuoteC = LpnCurrency, QuoteG = LpnCurrencies>,
 {
+    #[allow(clippy::too_many_arguments)]
     pub(super) fn new(
         addr: Addr,
         customer: Addr,
@@ -67,6 +69,7 @@ where
         loan: Loan<LppLoan>,
         oracle: Oracle,
         remote_lease_id: RemoteLeaseId,
+        remote_lease_controller: Addr,
     ) -> Self {
         debug_assert!(!currency::equal::<LpnCurrency, Asset>());
         // TODO specify that Lpn is of Lpns and Asset is of LeaseGroup
@@ -78,6 +81,7 @@ where
             loan,
             oracle,
             remote_lease_id,
+            remote_lease_controller,
         }
     }
 
@@ -94,6 +98,7 @@ where
             Loan::from_dto(dto.loan, lpp_loan),
             oracle,
             dto.remote_lease_id,
+            dto.remote_lease_controller,
         )
     }
 
@@ -143,6 +148,7 @@ where
             self.oracle.into(),
             reserve,
             self.remote_lease_id,
+            self.remote_lease_controller,
         )
     }
 
@@ -153,6 +159,7 @@ where
         reserve: ReserveRef,
     ) -> ContractResult<IntoDTOResult> {
         let remote_lease_id = self.remote_lease_id.clone();
+        let remote_lease_controller = self.remote_lease_controller.clone();
         self.loan
             .try_into_dto(profit)
             .map(|(loan_dto, loan_batch)| IntoDTOResult {
@@ -165,6 +172,7 @@ where
                     self.oracle.into(),
                     reserve,
                     remote_lease_id,
+                    remote_lease_controller,
                 ),
                 result: loan_batch,
             })
@@ -223,6 +231,7 @@ pub(crate) mod tests {
     const LEASE_ADDR: &str = "lease_addr";
     const ORACLE_ADDR: &str = "oracle_addr";
     const REMOTE_LEASE_ID: &str = "StubPda11111111111111111111111111111";
+    const REMOTE_LEASE_CONTROLLER: &str = "remote_lease_controller";
     const MARGIN_INTEREST_RATE: Percent100 = Percent100::from_permille(23);
     pub(super) const LEASE_START: Instant = Instant::from_nanos(100);
     pub(super) const DUE_PERIOD: Duration = Duration::from_days(100);
@@ -354,6 +363,7 @@ pub(crate) mod tests {
             loan,
             oracle,
             RemoteLeaseId::new(REMOTE_LEASE_ID.to_owned()).expect("base58 sample"),
+            Addr::unchecked(REMOTE_LEASE_CONTROLLER),
         )
     }
 

@@ -26,7 +26,7 @@ use crate::{
 
 use super::state::{self, Response, State};
 
-const CONTRACT_STORAGE_VERSION: VersionSegment = 11;
+const CONTRACT_STORAGE_VERSION: VersionSegment = 12;
 const CURRENT_RELEASE: ProtocolPackageRelease = ProtocolPackageRelease::current(
     package_name!(),
     package_version!(),
@@ -81,6 +81,11 @@ pub fn migrate(
     // v11 reshapes the opening-swap state: the BuyAsset spec gains the
     // controller address and slippage bound, and the swap leg moved from the
     // ICA `SwapExactIn` to the `RemoteSwap` transport; no live v10
+    // remote-lease population exists, so the refusal stays.
+    //
+    // v12 reshapes the persisted `LeaseDTO` again: it gains the
+    // non-optional `remote_lease_controller` so the post-opening legs can
+    // emit operations without re-querying the leaser. No live v11
     // remote-lease population exists, so the refusal stays.
     Err(ContractError::UnsupportedMigration).inspect_err(platform_error::log(deps.api))
 }
