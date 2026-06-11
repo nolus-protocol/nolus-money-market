@@ -1,4 +1,7 @@
-use sdk::cosmwasm_std::testing;
+use serde::{Deserialize, Serialize};
+
+use platform::contract::Code;
+use sdk::{cosmwasm_std::testing, cw_storage_plus::Item};
 use versioning::{
     ProtocolMigrationMessage, ProtocolPackageRelease, ProtocolPackageReleaseId, ReleaseId,
     package_name, package_version,
@@ -6,7 +9,9 @@ use versioning::{
 
 use crate::{api::MigrateMsg, contract::migrate, error::Error};
 
-use super::{CONTRACT_STORAGE_VERSION, deps, instantiate_default};
+use super::{
+    CONNECTION_ID, CONTRACT_STORAGE_VERSION, DEX_LABEL, LEASE_CODE_ID, deps, instantiate_default,
+};
 
 #[test]
 fn migrate_same_release_succeeds() {
@@ -15,6 +20,36 @@ fn migrate_same_release_succeeds() {
 
     let res = migrate(deps.as_mut(), testing::mock_env(), migrate_msg()).unwrap();
     assert_eq!(0, res.messages.len());
+}
+
+// Overwrites the stored config with the shape that predates the required
+// `transfer_channel` field — the probe in `migrate` must refuse the upgrade
+// instead of letting the instance brick on the first post-upgrade load.
+#[test]
+fn migrate_with_pre_transfer_channel_config_rejected() {
+    #[derive(Serialize, Deserialize)]
+    struct LegacyConfig {
+        connection_id: String,
+        dex_label: String,
+        lease_code: Code,
+    }
+    const LEGACY_STORAGE: Item<LegacyConfig> = Item::new("config");
+
+    let mut deps = deps();
+    instantiate_default(deps.as_mut());
+    LEGACY_STORAGE
+        .save(
+            deps.as_mut().storage,
+            &LegacyConfig {
+                connection_id: CONNECTION_ID.into(),
+                dex_label: DEX_LABEL.into(),
+                lease_code: Code::unchecked(LEASE_CODE_ID),
+            },
+        )
+        .unwrap();
+
+    let err = migrate(deps.as_mut(), testing::mock_env(), migrate_msg()).unwrap_err();
+    assert!(matches!(err, Error::Std(_)), "got {err:?}");
 }
 
 #[test]

@@ -1,4 +1,7 @@
-use std::ops::{Deref, DerefMut};
+use std::{
+    mem,
+    ops::{Deref, DerefMut},
+};
 
 use access_control::SingleUserAccess;
 use cosmwasm_std::Storage;
@@ -94,8 +97,12 @@ pub fn migrate(
 ) -> Result<CwResponse> {
     migrate_from
         .update_software(&CURRENT_RELEASE, &to_release)
-        .map(|()| response::empty_response())
         .map_err(Error::UpdateSoftware)
+        // Probe the stored config against the current schema: an instance whose
+        // config predates a required field must fail here, reverting the
+        // upgrade, rather than brick on the first post-upgrade load.
+        .and_then(|()| Config::load(deps.storage).map(mem::drop))
+        .map(|()| response::empty_response())
         .inspect_err(platform_error::log(deps.api))
 }
 

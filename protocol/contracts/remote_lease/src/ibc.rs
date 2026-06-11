@@ -100,6 +100,10 @@ pub fn ibc_channel_connect(
             channel,
             counterparty_version,
         } => (channel, Some(counterparty_version)),
+        // `OpenConfirm` is delivered only to the try side of a handshake and
+        // carries no counterparty version; this controller rejects `OpenTry`,
+        // so the arm is unreachable while counterparty-initiated opens stay
+        // unsupported.
         IbcChannelConnectMsg::OpenConfirm { channel } => (channel, None),
     };
 

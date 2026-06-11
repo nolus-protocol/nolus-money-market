@@ -1,7 +1,9 @@
 use platform::contract::{Code, CodeId};
 use sdk::{
+    cosmos_sdk_proto::prost::Message as _,
     cosmwasm_ext::{CosmosMsg, SubMsg},
     cosmwasm_std::{AnyMsg, IbcMsg, Uint64, testing},
+    ibc_proto::ibc::core::channel::v1::MsgChannelOpenInit,
 };
 
 use crate::{
@@ -12,8 +14,9 @@ use crate::{
 };
 
 use super::{
-    ADMIN, LEASE_CODE_ID, LOCAL_CHANNEL_ID, NON_ADMIN, deps, instantiate_default, instantiate_msg,
-    query_channel, query_config, sender, store_closing_channel, store_open_channel,
+    ADMIN, LEASE_CODE_ID, LOCAL_CHANNEL_ID, NON_ADMIN, VERSION, deps, instantiate_default,
+    instantiate_msg, query_channel, query_config, sender, store_closing_channel,
+    store_open_channel,
 };
 
 #[test]
@@ -64,7 +67,12 @@ fn open_channel_admin_emits_any_msg() {
             ..
         } => {
             assert_eq!(CHANNEL_OPEN_INIT, type_url);
-            assert!(!value.is_empty());
+            let open_init =
+                MsgChannelOpenInit::decode(value.as_slice()).expect("a valid protobuf payload");
+            assert_eq!(
+                VERSION,
+                open_init.channel.expect("a channel must be set").version,
+            );
         }
         other => panic!("expected CosmosMsg::Any, got {other:?}"),
     }
