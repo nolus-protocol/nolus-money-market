@@ -5,6 +5,7 @@ The `remote_lease` crate defines the IBC packet types exchanged between the Nolu
 ## Pinned constants
 
 - Protocol version: `nls-remote-lease.v1` (`remote_lease::VERSION`). Encoded on every packet as the `ProtocolVersion` ZST; mismatches are rejected at deserialisation, not in business code.
+- Channel handshake version: `nls-remote-lease.v1+transfer=channel-<N>` — the protocol version extended with the Solana-side ICS-20 transfer channel paired with the lease channel (ADR-0002 §3.3, ibc-solray#322/#388). The controller composes it from its `transfer_channel` config at `MsgChannelOpenInit`, requires it on every handshake callback, and verifies the counterparty's echoed version on `OpenAck`; the responder validates the suffix and persists the binding. `channel-<N>` is canonical: `channel-` prefix, decimal ordinal, no sign or leading zeros, within `u16` range. The suffix exists at the handshake layer only — the per-packet `ProtocolVersion` pin stays bare.
 - IBC port: `nls-remote-lease.<dex>` — built via `remote_lease::port_id_for`.
 - Callback error payload: max 512 bytes (`OPERATION_ERR_MAX_BYTES`); enforced in the `RemoteErrorMessage` visitor before allocation.
 - Remote-lease id: the Solana lease PDA, carried on `OperationResponse::OpenLease.remote_lease_id` as a `RemoteLeaseId`. The Solana Remote Lease App MUST emit it as the canonical base58 encoding of the 32-byte PDA pubkey (32–44 chars); the controller rejects any non-base58 or over-64-byte value (`REMOTE_LEASE_ID_MAX_BYTES`) at ack-decode. This id is **load-bearing** — it is the recipient of the Nolus→Solana funds push, not merely observability — so a non-conforming value fails closed (the lease strands at the OpenLease ack, before any funds move) rather than risk a transfer to a bad address. A conforming counterparty never trips the check; the only path to a reject is a Solana-side bug, which the light-client trust model already excludes from normal operation.
@@ -52,7 +53,7 @@ On `ibc_packet_ack` and `ibc_packet_timeout` the controller decodes the original
 
 mapping the IBC outcomes:
 
-- `StdAck::Success(data)` → `RemoteLeaseCallback::OperationOk(OperationResponse)` (decoded from `data`).
+- `StdAck::Success(data)` → `RemoteLeaseCallback::OperationOk(OperationResponse)` — decoded from `data` as the **wire shape only** (#637): the controller validates that the payload is a well-formed response, while currency-registry validation belongs to the addressee lease, which absorbs content failures so the ack commits.
 - `StdAck::Error(message)` → `RemoteLeaseCallback::OperationErr(RemoteErrorMessage)` (rejected if > 512 bytes).
 - timeout → `RemoteLeaseCallback::OperationTimeout` (unit; the original `Operation` is recoverable from the lease's own pending-state).
 

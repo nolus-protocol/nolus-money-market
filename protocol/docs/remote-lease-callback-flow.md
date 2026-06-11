@@ -1,29 +1,32 @@
 # Remote-Lease Callback — Execution Flow inside a Lease Instance
 
-Trace of a swap callback delivered to the Lease contract via
-`ExecuteMsg::RemoteLeaseCallback`. The focus is the **safe-delivery
-segment** (`ResponseDelivery` + `reply_on_error` + `TimeAlarms` retry
-loop) — boxes **A**–**D** below. Preserved verbatim from today's
-SudoMsg path per ADR `0001-remote-lease-protocol.md` §3.7.1 / §9.5; only
-the outer transport and the auth gate change with #141.
+Trace of a callback delivered to the Lease contract via
+`ExecuteMsg::RemoteLeaseCallback`. Two distinct segments:
 
-## Whole flow
+1. **Controller → lease dispatch** — auth at the lease, then direct
+   routing into the state's `on_remote_*` entry points. The remote-swap
+   leg processes the acknowledgment **directly** — there is no
+   `ResponseDelivery` hop on this path; content problems are absorbed
+   with events so the controller's ack always commits.
+2. **Safe-delivery segment** (`ResponseDelivery` + `reply_on_error` +
+   `TimeAlarms` retry loop, boxes **A**–**D**) — applies to the
+   **still-ICA legs** driven by `SudoMsg` (transfer-out, transfer-in,
+   the repay/liquidation swaps). Controller callbacks never route
+   through it.
+
+## Controller → lease dispatch
 
 ```mermaid
 flowchart TD
     classDef ctrl   fill:#fefaf0,stroke:#b6883a,color:#000;
     classDef lease  fill:#f0f4ff,stroke:#3a5dbe,color:#000;
-    classDef safeA  fill:#e8f5e9,stroke:#3a7d3a,color:#000;
-    classDef safeB  fill:#e8f5e9,stroke:#3a7d3a,color:#000;
-    classDef safeC  fill:#fff3e0,stroke:#b6883a,color:#000;
-    classDef safeD  fill:#fff3e0,stroke:#b6883a,color:#000;
     classDef ok     fill:#dcedc8,stroke:#33691e,color:#000;
     classDef err    fill:#ffcdd2,stroke:#b71c1c,color:#000;
 
     subgraph Controller[remote_lease controller]
         direction TB
         Ack["ibc_packet_ack — packet received from Solana"]:::ctrl
-        Decode["from_json(envelope) → RemoteLeaseCallback::OperationOk(SwapResponse)"]:::ctrl
+        Decode["from_json(StdAck) → wire-shape OperationResponse → RemoteLeaseCallback::OperationOk<br/><i>wire decode only — currency-registry validation belongs to the lease (#637)</i>"]:::ctrl
         WasmExec["add_message: WasmMsg::Execute(lease, ExecuteMsg::RemoteLeaseCallback(cb))<br/><i>plain add_message — not reply_on_*</i>"]:::ctrl
         Ack --> Decode --> WasmExec
     end
@@ -31,12 +34,38 @@ flowchart TD
     subgraph LeaseEntry[Lease — entry & dispatch]
         direction TB
         ExecEntry["contract::endpoins::execute → state.on_remote_lease_callback"]:::lease
-        Auth["DexState&lt;H&gt;::authz_remote_lease_callback<br/>check_remote_lease_callback(h.remote_lease, info)<br/>← SingleUserPermission ↔ info.sender"]:::lease
-        Classify["classify_callback(cb) → CallbackDispatch::Response(to_json_binary(swap_resp))"]:::lease
-        DispatchResp["on_dex_response(data) → H::on_response → SwapExactIn::on_response"]:::lease
-        ExecEntry --> Auth -->|matches| Classify --> DispatchResp
-        Auth -. mismatch / no controller .-> AuthErr["DexError::Unauthorized / UnsupportedOperation<br/>← Err propagates to controller, relayer retries"]:::err
+        Auth["Handler::authz_remote_callback<br/>LeasesRef::remote_lease_callback_permission<br/>← leaser query CheckRemoteLeaseCallbackPermission"]:::lease
+        Classify["deliver_remote_callback:<br/>OperationOk → on_remote_response(bytes) · OperationErr → on_remote_error · OperationTimeout → on_remote_timeout"]:::lease
+        RemoteLeg["RemoteSwap leg (overrides on_remote_*):<br/>decode_response — typed, registry-validating — credits the in-flight leg<br/>absorbed with event on undecodable-response / unexpected-response-variant /<br/>out-currency-mismatch / output-overflow; under-min-out re-emits the leg"]:::ok
+        IcaLeg["ICA legs (default on_remote_*):<br/>absorb with `remote-callback` event — never advance the ICA ack countdown"]:::ok
+        ExecEntry --> Auth -->|granted| Classify
+        Classify --> RemoteLeg
+        Classify --> IcaLeg
+        Auth -. denied .-> AuthErr["DexError::Unauthorized<br/>← Err propagates to controller, its ibc_packet_ack reverts, relayer retries"]:::err
     end
+
+    WasmExec --> ExecEntry
+```
+
+A synchronous `Err` escapes the lease only for faults whose retry
+belongs to the relayer: the auth mismatch above, serialization, and
+storage failures. Everything content-shaped — a payload that does not
+decode, names a currency outside the registry, carries the wrong
+operation variant, or overflows — is absorbed with a distinct event
+reason so the controller's `ibc_packet_ack` commits.
+
+## Safe-delivery segment — still-ICA legs (`SudoMsg` path)
+
+```mermaid
+flowchart TD
+    classDef safeA  fill:#e8f5e9,stroke:#3a7d3a,color:#000;
+    classDef safeB  fill:#e8f5e9,stroke:#3a7d3a,color:#000;
+    classDef safeC  fill:#fff3e0,stroke:#b6883a,color:#000;
+    classDef safeD  fill:#fff3e0,stroke:#b6883a,color:#000;
+    classDef ok     fill:#dcedc8,stroke:#33691e,color:#000;
+    classDef lease  fill:#f0f4ff,stroke:#3a5dbe,color:#000;
+
+    DispatchResp["SudoMsg::Response → on_dex_response(data) → H::on_response"]:::lease
 
     subgraph SafeDelivery[Safe-delivery segment]
         direction TB
@@ -53,7 +82,6 @@ flowchart TD
         D -->|do_deliver| B
     end
 
-    WasmExec --> ExecEntry
     DispatchResp --> A
 ```
 
@@ -122,14 +150,14 @@ on a permanently-unrecoverable state.
    concern of the lease + `TimeAlarms` contract. The controller is
    never invoked again for the same packet.
 
-## What changed in #141 (vs. today's SudoMsg path)
+## Transport comparison (ICA legs vs. remote legs)
 
-| Stage | Today (SudoMsg) | After #141 (ExecuteMsg::RemoteLeaseCallback) |
-|-------|-----------------|----------------------------------------------|
-| Outer transport | `SudoMsg::Response` (chain-delivered) | `ExecuteMsg::RemoteLeaseCallback` (controller-delivered via `WasmMsg::Execute`) |
-| Auth gate | Implicit (Sudo privilege) | `info.sender == remote_lease` at `DexState::on_remote_lease_callback` |
-| Classify | `data` enters directly into `on_dex_response` | `classify_callback` projects variant → `CallbackDispatch::Response/Error/Timeout` |
-| A–D safe-delivery boxes | unchanged | unchanged |
+| Stage | ICA legs (SudoMsg) | Remote legs (ExecuteMsg::RemoteLeaseCallback) |
+|-------|--------------------|-----------------------------------------------|
+| Outer transport | `SudoMsg::Response` (chain-delivered) | `WasmMsg::Execute` from the controller's `ibc_packet_ack` / `ibc_packet_timeout` |
+| Auth gate | Implicit (Sudo privilege) | Leaser query (`CheckRemoteLeaseCallbackPermission` vs `Config.remote_lease_controller`) |
+| Dispatch | `data` enters `on_dex_response` → safe-delivery boxes A–D | `deliver_remote_callback` → `on_remote_response/error/timeout`; `RemoteSwap` processes directly, ICA legs absorb |
+| Content failure | retried locally via the A–D loop | absorbed with a distinct event reason; ack commits |
 
 ## Outbound open-side lifecycle (issue #142)
 
@@ -154,27 +182,29 @@ RequestLoan ──open loan──▶ OpenLease
                      │             │
                      ▼             ▼
         super::buy_asset::start    OpenFailed  (terminal)
-        (legacy ICA-open cascade)  authenticated late-ack absorber:
-                                   emits `wasm-ls-remote-lease-late-ack`
+        (ICA open + transfer-out,  authenticated late-ack absorber:
+        swap legs via RemoteSwap)  emits `wasm-ls-remote-lease-late-ack`
 ```
 
 `OpenLease::on_remote_lease_callback` authenticates `info.sender` via `LeasesRef::remote_lease_callback_permission` before dispatching, identical to the in-flight DexState gate documented above. `OpenFailed` runs the same check — every callback handler that returns `Ok` is authz-gated, regardless of idempotence.
 
-The legacy ICA-open + DEX swap cascade entered via `super::buy_asset::start` is retained additively; later phases (swap replacement, TransferOut, CloseLease) migrate the remaining lifecycle stages off it.
+`super::buy_asset::start` still opens the ICA account and transfers the funds out over ICA, but the swap legs run through the remote-lease controller (`RemoteSwap` — sequential single-coin legs, `acks_left` countdown, pinned per-leg `min_out`). The remaining lifecycle stages (drain-home TransferOut, CloseLease, the repay/liquidation swaps) still ride ICA and migrate in later phases.
 
 An `OperationOk` ack carrying any operation other than `OpenLease` (a `CloseLease` / `Swap` / `TransferOut` response against an in-flight open) can only originate from a buggy or hostile counterparty. The lease treats it exactly like `OperationErr`: it refunds the customer, finalises, and moves to `OpenFailed` with a synthesised `unexpected operation response: …` reason. It does **not** return `Err` — an error would revert the controller's `ibc_packet_ack`, stranding the relayer and freezing the lease in `OpenLease`. Operators see the same `wasm-ls-remote-lease-open-failed` event and audit the counterparty per the runbook.
 
-## Storage: v9 → v10 (refuse-migrate)
+## Storage: v9 → v10 → v11 (refuse-migrate)
 
-v10 makes `LeaseDTO.remote_lease_id` a non-optional Solana PDA, which is binary-incompatible with the v9 layout. The `migrate` entry point therefore **rejects unconditionally** (`ContractError::UnsupportedMigration`):
+v10 makes `LeaseDTO.remote_lease_id` a non-optional Solana PDA, which is binary-incompatible with the v9 layout. v11 reshapes the opening-swap state: the `BuyAsset` spec gains the controller address and slippage bound, and the swap leg moves from the ICA `SwapExactIn` to the `RemoteSwap` transport. The `migrate` entry point **rejects unconditionally** (`ContractError::UnsupportedMigration`):
 
-- **Mainnet** carries zero v9 leases (plan §10.A.1), so refusing is strictly safer than risking a silent deserialise failure on the first post-upgrade load.
-- A v9 lease has no meaningful `remote_lease_id` to synthesise — its `dex_account` is an ICA host on the DEX chain, not a Solana PDA — so a "real" migration would only invent a permanent sentinel.
+- **Mainnet** carries zero pre-v11 remote-lease positions, so refusing is strictly safer than risking a silent deserialise failure on the first post-upgrade load.
+- A v9 lease has no meaningful `remote_lease_id` to synthesise — its `dex_account` is an ICA host on the DEX chain, not a Solana PDA — and a pre-v11 opening state has no transport to resume on, so a "real" migration would only invent permanent sentinels.
 
-**Operational procedure for non-mainnet (devnet/testnet/local):** drain every v9 lease to a terminal state *before* upgrading the lease code to v10. There is no `ExecuteMsg` escape hatch for a stranded v9 lease, so the drain is a prerequisite, not a recovery step.
+**Operational procedure for non-mainnet (devnet/testnet/local):** drain every pre-v11 lease to a terminal state *before* upgrading the lease code. There is no `ExecuteMsg` escape hatch for a stranded pre-v11 lease, so the drain is a prerequisite, not a recovery step.
 
-## Closed: in-lease decoder shape
+## In-lease decoder shape
 
-The `OperationOk(SwapResponse)` decoder still feeds the safe-delivery
-boxes A–D above; the protobuf-vs-JSON shape switch tracked here previously
-moves with the Phase-4 swap replacement work.
+The remote-swap acknowledgment is JSON: the controller forwards the
+wire-shaped `OperationResponse` (#637), and the `RemoteSwap` leg's
+`decode_response` parses the typed, registry-validating twin from those
+bytes — a registry miss is absorbed as `undecodable-response` rather
+than erred.
