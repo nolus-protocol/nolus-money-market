@@ -168,3 +168,150 @@ where
             .map_err(Into::into)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use currency::test::SuperGroupTestC1;
+    use cw_time::IntoInstant;
+    use finance::{
+        coin::{Amount, Coin, CoinDTO},
+        duration::Duration,
+    };
+    use platform::{batch::Emit, batch::Emitter, message::Response as MessageResponse};
+    use sdk::cosmwasm_std::{
+        Addr, Env, MessageInfo, QuerierWrapper,
+        testing::{self, MockQuerier},
+    };
+
+    use crate::{
+        Contract,
+        impl_::{
+            drain::State as DrainState,
+            remote_transfer_out::mock::{self, MockSpec},
+            response::{Handler, Result as HandlerResult},
+            transfer_in,
+        },
+    };
+
+    use super::FundsArrival;
+
+    type Arrival = FundsArrival<MockSpec, DrainState<MockSpec>>;
+
+    #[test]
+    fn alarm_retries_while_funds_are_missing() {
+        let mock_querier = MockQuerier::default();
+        let querier = QuerierWrapper::new(&mock_querier);
+        let env = testing::mock_env();
+
+        let resp = match arrival(false).on_time_alarm(querier, env.clone(), alarms_delivery()) {
+            HandlerResult::Continue(Ok(resp)) => resp,
+            HandlerResult::Continue(Err(err)) => panic!("expected a continuation, got {err}"),
+            HandlerResult::Finished(_result) => panic!("expected a continuation, got a finish"),
+        };
+        assert!(matches!(resp.next_state, DrainState::FundsArrival(_)));
+        assert_eq!(waiting_response(&env), resp.response);
+    }
+
+    #[test]
+    fn alarm_completes_when_funds_arrived() {
+        let mock_querier = MockQuerier::default();
+        let querier = QuerierWrapper::new(&mock_querier);
+
+        assert_eq!(
+            mock::FINISH_RESULT,
+            finished(arrival(true).on_time_alarm(querier, testing::mock_env(), alarms_delivery()))
+        );
+    }
+
+    #[test]
+    fn alarm_from_a_stranger_rejected() {
+        let mock_querier = MockQuerier::default();
+        let querier = QuerierWrapper::new(&mock_querier);
+
+        assert!(matches!(
+            arrival(true).on_time_alarm(
+                querier,
+                testing::mock_env(),
+                MessageInfo {
+                    sender: Addr::unchecked("stranger"),
+                    funds: vec![],
+                }
+            ),
+            HandlerResult::Continue(Err(_unauthorized))
+        ));
+    }
+
+    #[test]
+    fn heal_completes_when_funds_arrived() {
+        let mock_querier = MockQuerier::default();
+        let querier = QuerierWrapper::new(&mock_querier);
+
+        assert_eq!(
+            mock::FINISH_RESULT,
+            finished(arrival(true).heal(querier, testing::mock_env()))
+        );
+    }
+
+    #[test]
+    fn state_serde_round_trips() {
+        let arrival = arrival(false);
+        let serialized = sdk::cosmwasm_std::to_json_vec(&arrival).expect("a serializable state");
+        let restored: Arrival =
+            sdk::cosmwasm_std::from_json(&serialized).expect("the state should round-trip");
+        assert_eq!(
+            serialized,
+            sdk::cosmwasm_std::to_json_vec(&restored).expect("a serializable state")
+        );
+    }
+
+    #[test]
+    fn contract_state_reports_the_arrival_stage() {
+        let mock_querier = MockQuerier::default();
+        let querier = QuerierWrapper::new(&mock_querier);
+        let env = testing::mock_env();
+
+        assert_eq!(
+            None,
+            arrival(false).state(
+                env.block.time.into_instant(),
+                Duration::from_secs(0),
+                querier
+            )
+        );
+    }
+
+    fn arrival(received: bool) -> Arrival {
+        let mut spec = MockSpec::new(vec![coin(100)]);
+        spec.set_received(received);
+        Arrival::new(spec)
+    }
+
+    fn alarms_delivery() -> MessageInfo {
+        MessageInfo {
+            sender: Addr::unchecked(mock::TIME_ALARMS),
+            funds: vec![],
+        }
+    }
+
+    fn finished(res: HandlerResult<Arrival>) -> &'static str {
+        match res {
+            HandlerResult::Finished(result) => result,
+            HandlerResult::Continue(_resp) => panic!("expected a finish, got a continuation"),
+        }
+    }
+
+    fn waiting_response(env: &Env) -> MessageResponse {
+        MessageResponse::messages_with_event(
+            transfer_in::setup_alarm(
+                &timealarms::stub::TimeAlarmsRef::unchecked(mock::TIME_ALARMS),
+                env.block.time.into_instant(),
+            )
+            .expect("a valid alarm setup"),
+            Emitter::of_type(mock::LABEL).emit("stage", "funds-arrival"),
+        )
+    }
+
+    fn coin(amount: Amount) -> CoinDTO<<MockSpec as super::RemoteTransferOutTask>::G> {
+        Coin::<SuperGroupTestC1>::new(amount).into()
+    }
+}
