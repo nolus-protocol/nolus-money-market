@@ -9,7 +9,7 @@ use finance::{
     duration::Duration,
     fraction::{Fraction, Unit},
     percent::{Percent, Percent100},
-    price::{self, Price},
+    price,
     ratio::Ratio,
     rational::Rational,
     zero::Zero,
@@ -32,8 +32,7 @@ use crate::{
 };
 
 use super::{
-    DOWNPAYMENT, LeaseCoin, LeaseCurrency, LeaseTestCase, LpnCoin, LpnCurrency, PaymentCoin,
-    PaymentCurrency,
+    DOWNPAYMENT, LeaseCoin, LeaseTestCase, LpnCoin, LpnCurrency, PaymentCoin, PaymentCurrency,
 };
 
 #[test]
@@ -146,15 +145,7 @@ fn full_repay() {
     let borrowed_lpn = super::quote_borrow(&test_case, downpayment);
     let borrowed: PaymentCoin = price::total(borrowed_lpn, super::price_lpn_of().inv()).unwrap();
 
-    let expected_amount: LeaseCoin = price::total(
-        price::total(
-            downpayment + borrowed,
-            /* Payment -> LPN */ super::price_lpn_of(),
-        )
-        .unwrap(),
-        /* LPN -> Lease */ super::price_lpn_of().inv(),
-    )
-    .unwrap();
+    let expected_amount: LeaseCoin = super::expected_opened_amount(downpayment, borrowed_lpn);
     repay_full(
         &mut test_case,
         lease.clone(),
@@ -172,13 +163,10 @@ fn full_repay_with_max_ltd() {
     let borrowed = max_ltd.of(DOWNPAYMENT).unwrap();
     let lease = super::open_lease(&mut test_case, downpayment, Some(max_ltd));
 
-    let lease_amount = (Percent::from_permille(1000) + max_ltd)
-        .of(price::total(
-            downpayment,
-            Price::<PaymentCurrency, LeaseCurrency>::identity(),
-        )
-        .unwrap())
-        .unwrap();
+    let lease_amount: LeaseCoin = super::expected_opened_amount(
+        downpayment,
+        price::total(borrowed, super::price_lpn_of()).unwrap(),
+    );
     let expected_result = StateResponse::Opened {
         amount: lease_amount.into(),
         loan_interest_rate: Percent100::from_permille(70),
@@ -201,15 +189,7 @@ fn full_repay_with_max_ltd() {
         super::state_query(&test_case, lease.clone())
     );
 
-    let expected_amount: LeaseCoin = price::total(
-        price::total(
-            downpayment + borrowed,
-            /* Payment -> LPN */ super::price_lpn_of(),
-        )
-        .unwrap(),
-        /* LPN -> Lease */ super::price_lpn_of().inv(),
-    )
-    .unwrap();
+    let expected_amount: LeaseCoin = lease_amount;
 
     repay_full(
         &mut test_case,
@@ -231,11 +211,8 @@ fn full_repay_with_excess() {
         super::price_lpn_of().inv(),
     )
     .unwrap();
-    let lease_position = price::total(
-        price::total(downpayment + borrowed, super::price_lpn_of()).unwrap(),
-        super::price_lpn_of().inv(),
-    )
-    .unwrap();
+    let lease_position: LeaseCoin =
+        super::expected_opened_amount(downpayment, super::quote_borrow(&test_case, downpayment));
 
     let overpayment = super::create_payment_coin(5);
     let overpayment_lpn = price::total(overpayment, super::price_lpn_of()).unwrap();

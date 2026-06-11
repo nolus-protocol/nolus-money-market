@@ -32,7 +32,9 @@ use super::{
     DOWNPAYMENT, LeaseCoin, LeaseCurrency, LeaseTestCase, LpnCoin, PaymentCurrency, close_policy,
 };
 
-const LEASE_AMOUNT: LeaseCoin = LeaseCoin::new(2857142857142);
+// the literal-floor opening: 85% of the downpayment quote plus 85% of the
+// borrow quote, truncated per swap leg
+const LEASE_AMOUNT: LeaseCoin = LeaseCoin::new(2428571428570);
 const BORROWED_AMOUNT: LpnCoin = LpnCoin::new(1857142857142);
 
 #[test]

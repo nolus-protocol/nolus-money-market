@@ -6,7 +6,7 @@ use std::{
 use serde::{Deserialize, Serialize};
 
 use currency::{CurrencyDTO, CurrencyDef, Group, MemberOf};
-use decode_resp::{DecodeThenFinish, DecodeThenTransferIn};
+use decode_resp::DecodeThenTransferIn;
 use encode_req::EncodeRequest;
 use finance::instant::Instant;
 use finance::{
@@ -14,7 +14,12 @@ use finance::{
     duration::Duration,
     zero::Zero,
 };
-use platform::{batch::Batch, ica::ErrorResponse as ICAErrorResponse, trx};
+use platform::{
+    batch::{Batch, Emitter},
+    ica::ErrorResponse as ICAErrorResponse,
+    message::Response as MessageResponse,
+    trx,
+};
 use report_anomaly::ReportAnomalyCmd;
 use sdk::cosmwasm_std::{Binary, Env, QuerierWrapper};
 
@@ -26,6 +31,7 @@ use crate::{
     Connectable, ContractInSwap, Enterable, SwapTask as SwapTaskT, TimeAlarm,
     impl_::{
         ForwardToInner,
+        next_leg::NextLeg as NextLegT,
         response::{self, ContinueResult, Handler, Result as HandlerResult},
         timeout,
     },
@@ -172,65 +178,23 @@ where
     }
 }
 
-impl<OpenIca, SwapTask, SwapClient, ForwardToInnerMsg, ForwardToInnerContinueMsg> Handler
-    for SwapExactIn<
-        SwapTask,
-        super::out_remote::State<
-            OpenIca,
-            SwapTask,
-            SwapClient,
-            ForwardToInnerMsg,
-            ForwardToInnerContinueMsg,
-        >,
-        SwapClient,
-    >
+impl<SwapTask, SEnum, SwapClient> NextLegT<SwapTask> for SwapExactIn<SwapTask, SEnum, SwapClient>
 where
     SwapTask: SwapTaskT,
     SwapClient: ExactAmountIn,
+    Self: Handler<Response = SEnum, SwapResult = SwapTask::Result> + Into<SEnum>,
 {
-    type Response = super::out_remote::State<
-        OpenIca,
-        SwapTask,
-        SwapClient,
-        ForwardToInnerMsg,
-        ForwardToInnerContinueMsg,
-    >;
-    type SwapResult = SwapTask::Result;
-
-    fn authz_remote_callback(
-        &self,
-        querier: QuerierWrapper<'_>,
-        info: &sdk::cosmwasm_std::MessageInfo,
-    ) -> crate::error::Result<()> {
-        self.spec.authz_remote_callback(querier, info)
-    }
-
-    fn on_response(
-        self,
-        resp: Binary,
-        querier: QuerierWrapper<'_>,
-        env: Env,
-    ) -> HandlerResult<Self> {
-        self.spec
-            .into_output_task(DecodeThenFinish::<'_, '_, '_, _, _, SwapClient>::from(
-                resp.as_slice(),
-                querier,
-                &env,
-            ))
-    }
-
-    fn on_error(
-        self,
-        _response: ICAErrorResponse,
-        querier: QuerierWrapper<'_>,
-        env: Env,
-    ) -> HandlerResult<Self> {
-        self.handle_error(querier, env)
-    }
-
-    fn on_timeout(self, querier: QuerierWrapper<'_>, env: Env) -> ContinueResult<Self> {
-        let state_label = self.spec.label();
-        timeout::on_timeout_retry(self, state_label, querier, env)
+    fn enter_from(spec: SwapTask, querier: QuerierWrapper<'_>, env: &Env) -> HandlerResult<Self> {
+        let label = spec.label();
+        let next = Self::new(spec);
+        next.enter(env.block.time.into_instant(), querier)
+            .and_then(|msgs| {
+                response::res_continue::<_, _, Self>(
+                    MessageResponse::messages_with_event(msgs, Emitter::of_type(label)),
+                    next,
+                )
+            })
+            .into()
     }
 }
 

@@ -68,8 +68,9 @@ fn tp_trigger() {
     let mut test_case = lease::create_test_case::<PaymentCurrency>();
     let lease = lease::open_lease(&mut test_case, DOWNPAYMENT, None);
 
-    let init_ltv = LeaserInstantiator::INITIAL_LTV;
-    let tp_new = init_ltv + Percent100::from_permille(1);
+    // the literal-floor opening puts the at-open LTV at ~76.5%, above the
+    // initial LTV; a take-profit at 77% triggers immediately
+    let tp_new = Percent100::from_percent(77);
     let err = super::change_err(
         &mut test_case,
         lease,
@@ -167,12 +168,12 @@ fn tp_set() {
         query_policy(&test_case, lease.clone())
     );
 
-    // LeaseC/LpnC = 10/25
+    // LeaseC/LpnC = 10/28 drives the ~76.5% at-open LTV below the 28% TP
     oracle::feed_price(
         &mut test_case,
         testing::user(ADMIN),
         Coin::<LeaseCurrency>::new(10),
-        Coin::<LpnCurrency>::new(25),
+        Coin::<LpnCurrency>::new(28),
     );
     let err = super::change_err(
         &mut test_case,

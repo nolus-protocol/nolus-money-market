@@ -26,7 +26,7 @@ use crate::{
 
 use super::state::{self, Response, State};
 
-const CONTRACT_STORAGE_VERSION: VersionSegment = 10;
+const CONTRACT_STORAGE_VERSION: VersionSegment = 11;
 const CURRENT_RELEASE: ProtocolPackageRelease = ProtocolPackageRelease::current(
     package_name!(),
     package_version!(),
@@ -77,6 +77,11 @@ pub fn migrate(
     // There is no `ExecuteMsg` escape hatch for a stranded v9 lease — the
     // storage layout is binary-incompatible — so the drain is a prerequisite,
     // not a recovery step. See `protocol/docs/remote-lease-callback-flow.md`.
+    //
+    // v11 reshapes the opening-swap state: the BuyAsset spec gains the
+    // controller address and slippage bound, and the swap leg moved from the
+    // ICA `SwapExactIn` to the `RemoteSwap` transport; no live v10
+    // remote-lease population exists, so the refusal stays.
     Err(ContractError::UnsupportedMigration).inspect_err(platform_error::log(deps.api))
 }
 

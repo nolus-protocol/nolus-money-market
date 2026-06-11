@@ -24,19 +24,21 @@ fn trigger_tp() {
     let tp = LeaserInstantiator::INITIAL_LTV;
     let lease = open_lease(&mut test_case, Some(tp), None);
 
-    // LeaseC/LpnC = 0.999999
-    trigger_close(test_case, lease, 999999, 1000000, "take-profit-ltv", tp);
+    // LeaseC/LpnC = 1.18 drives the ~76.5% at-open LTV below the 65% TP
+    trigger_close(test_case, lease, 100, 118, "take-profit-ltv", tp);
 }
 
 #[test]
 fn trigger_sl() {
     let mut test_case = lease::create_test_case::<PaymentCurrency>();
 
-    let sl = LeaserInstantiator::INITIAL_LTV + Percent100::from_permille(1);
+    // the literal-floor opening puts the at-open LTV at ~76.5%; a stop
+    // loss below that would trigger at set time
+    let sl = Percent100::from_percent(78);
     let lease = open_lease(&mut test_case, None, Some(sl));
 
-    // LeaseC/LpnC = 1.01
-    trigger_close(test_case, lease, 101, 100, "stop-loss-ltv", sl);
+    // LeaseC/LpnC = 100/103 drives the LTV to ~78.8%, past the stop loss
+    trigger_close(test_case, lease, 103, 100, "stop-loss-ltv", sl);
 }
 
 fn open_lease(

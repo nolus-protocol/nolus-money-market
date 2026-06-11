@@ -1,6 +1,10 @@
 use currencies::PaymentGroup;
 use currency::CurrencyDef as _;
-use finance::{coin::Amount, percent::Percent100, zero::Zero as _};
+use finance::{
+    coin::Amount,
+    percent::{Percent, Percent100},
+    zero::Zero as _,
+};
 use lease::api::query::StateResponse;
 use platform::coin_legacy;
 use sdk::{
@@ -21,12 +25,17 @@ use crate::{
 
 use super::super::{DOWNPAYMENT, LeaseCoin, LeaseCurrency, LpnCoin, LpnCurrency, PaymentCurrency};
 
+// The warning tests open with a 45% max LTD so the literal-floor opening
+// still lands in the no-warning zone (~36.5% LTV at the identity price);
+// each test then drops the price into the targeted warning band.
+
 #[test]
 #[should_panic = "No liquidation warning emitted!"]
 fn liquidation_warning_price_0() {
     liquidation_warning(
-        2085713,
-        1857159,
+        // LTV ~71.6%, below the first warning level
+        1000000,
+        510000,
         LeaserInstantiator::liability().max(), //not used
         "N/A",
     );
@@ -35,10 +44,9 @@ fn liquidation_warning_price_0() {
 #[test]
 fn liquidation_warning_price_1() {
     liquidation_warning(
-        // ref: 2085713
-        2085713,
-        // ref: 1857159
-        1827159,
+        // LTV ~74.5%
+        1000000,
+        490000,
         LeaserInstantiator::FIRST_LIQ_WARN,
         "1",
     );
@@ -47,10 +55,9 @@ fn liquidation_warning_price_1() {
 #[test]
 fn liquidation_warning_price_2() {
     liquidation_warning(
-        // ref: 2085713
-        2085713,
-        // ref: 1857159
-        1757159,
+        // LTV ~76.1%
+        1000000,
+        480000,
         LeaserInstantiator::SECOND_LIQ_WARN,
         "2",
     );
@@ -59,10 +66,9 @@ fn liquidation_warning_price_2() {
 #[test]
 fn liquidation_warning_price_3() {
     liquidation_warning(
-        // ref: 2085713
-        2085713,
-        // ref: 1857159
-        1707159,
+        // LTV ~79.0%
+        1000000,
+        462000,
         LeaserInstantiator::THIRD_LIQ_WARN,
         "3",
     );
@@ -78,7 +84,9 @@ fn full_liquidation() {
 
     let ica_addr: Addr = TestCase::ica_addr(&lease_addr, TestCase::LEASE_ICA_ID);
 
-    let lease_amount: Amount = 2857142857142;
+    // the literal-floor opening: 85% of the downpayment quote plus 85% of
+    // the borrow quote, truncated per swap leg
+    let lease_amount: Amount = 2428571428570;
     let borrowed_amount: Amount = 1857142857142;
     let liq_outcome = borrowed_amount - 11123; // to trigger an interaction with Reserve
     test_case.send_funds_from_admin(
@@ -168,7 +176,8 @@ fn full_liquidation() {
 
 fn liquidation_warning(base: Amount, quote: Amount, liability: Percent100, level: &str) {
     let mut test_case = lease_mod::create_test_case::<PaymentCurrency>();
-    let _lease = lease_mod::open_lease(&mut test_case, DOWNPAYMENT, None);
+    let _lease =
+        lease_mod::open_lease(&mut test_case, DOWNPAYMENT, Some(Percent::from_percent(45)));
 
     let response: AppResponse = lease_mod::deliver_new_price(
         &mut test_case,

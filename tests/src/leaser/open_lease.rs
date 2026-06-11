@@ -297,9 +297,11 @@ where
 
     let lease = lease_addr(&response.unwrap_response().events);
 
+    let controller = test_case.address_book.remote_lease_controller().clone();
     lease_mod::complete_initialization(
         &mut test_case.app,
         TestCase::DEX_CONNECTION_ID,
+        &controller,
         lease,
         downpayment,
         exp_borrow,
