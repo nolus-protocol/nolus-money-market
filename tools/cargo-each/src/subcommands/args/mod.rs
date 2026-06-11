@@ -6,8 +6,8 @@ mod consts;
 
 #[derive(Debug, clap::Parser)]
 pub(crate) struct Parser {
-    #[arg(global = true, long, env = "CARGO", default_value_os_t = PathBuf::from("cargo"))]
-    cargo_path: PathBuf,
+    #[arg(global = true, long, env = "RUST_PATH")]
+    rust_path: Option<PathBuf>,
     #[arg(global = true, long)]
     manifest_path: Option<PathBuf>,
     #[arg(global = true, short = 'a', long)]
@@ -30,7 +30,7 @@ pub(crate) struct Parser {
 impl Parser {
     pub fn process(self) -> Arguments {
         let Self {
-            cargo_path,
+            rust_path,
             manifest_path,
             workspace,
             package,
@@ -41,7 +41,7 @@ impl Parser {
         } = self;
 
         Arguments::new(
-            cargo_path,
+            rust_path,
             manifest_path,
             workspace,
             package,
@@ -101,7 +101,7 @@ impl Subcommand {
 }
 
 pub(crate) struct Arguments {
-    pub cargo_path: PathBuf,
+    pub rust_path: Option<PathBuf>,
     pub manifest_path: Option<PathBuf>,
     pub mode: Mode,
     pub tags: Vec<String>,
@@ -111,7 +111,7 @@ pub(crate) struct Arguments {
 
 impl Arguments {
     fn new(
-        cargo_path: PathBuf,
+        rust_path: Option<PathBuf>,
         manifest_path: Option<PathBuf>,
         workspace: bool,
         package: Option<String>,
@@ -120,7 +120,7 @@ impl Arguments {
         subcommand: SubcommandArguments,
     ) -> Self {
         Self {
-            cargo_path,
+            rust_path,
             manifest_path,
             mode: workspace
                 .then_some(Mode::Workspace)
