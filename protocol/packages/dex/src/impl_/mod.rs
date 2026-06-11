@@ -3,6 +3,7 @@ use sdk::cosmwasm_std::{Binary, Env};
 use crate::{ContinueResult, ForwardToInner, Handler, Result, SwapTask, response};
 
 pub use self::{
+    drain::{StartDrainState, State as StateDrain, start as start_drain},
     funds_arrival::FundsArrival,
     ica_connector::IcaConnector,
     out_local::{
@@ -20,6 +21,7 @@ pub use self::{
     transfer_out::TransferOut,
 };
 
+mod drain;
 mod funds_arrival;
 mod ica_connector;
 #[cfg(feature = "migration")]
