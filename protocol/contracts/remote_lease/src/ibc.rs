@@ -26,6 +26,9 @@ use crate::{
 
 const MSG_CHANNEL_OPEN_INIT_TYPE_URL: &str = "/ibc.core.channel.v1.MsgChannelOpenInit";
 const VERSION_TRANSFER_KEY: &str = "+transfer=";
+// Diagnostic bound on the counterparty-authored version echoed into the
+// handshake error — a legitimate version is ~45 characters.
+const COUNTERPARTY_VERSION_ECHO_MAX_CHARS: usize = 64;
 
 /// Compose the channel handshake version: the protocol version extended with
 /// the paired Solana-side ICS-20 transfer channel (ADR-0002 §3.3).
@@ -236,7 +239,8 @@ fn validate_handshake_channel(channel: &IbcChannel, config: &Config) -> Result<(
 
 /// Validate the version the counterparty echoed in `OpenAck`. Both sides name
 /// the same Solana-side transfer channel, so the echo must equal the proposed
-/// handshake version verbatim.
+/// handshake version verbatim. The counterparty-authored string lands in the
+/// error truncated — never echoed unbounded.
 fn validate_counterparty_version(may_actual: Option<&str>, config: &Config) -> Result<()> {
     may_actual.map_or(Ok(()), |actual| {
         let expected = handshake_version(config);
@@ -245,7 +249,10 @@ fn validate_counterparty_version(may_actual: Option<&str>, config: &Config) -> R
         } else {
             Err(Error::InvalidCounterpartyVersion {
                 expected,
-                actual: actual.to_string(),
+                actual: actual
+                    .chars()
+                    .take(COUNTERPARTY_VERSION_ECHO_MAX_CHARS)
+                    .collect(),
             })
         }
     })

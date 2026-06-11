@@ -10,6 +10,8 @@ use sdk::{
 
 use crate::error::{Error, Result};
 
+const TRANSFER_CHANNEL_NAME_PREFIX: &str = "channel-";
+
 #[derive(Serialize, Deserialize, Clone, Eq, PartialEq)]
 pub struct Config {
     connection_id: String,
@@ -27,12 +29,20 @@ impl Config {
         transfer_channel: String,
         lease_code: Code,
     ) -> Self {
-        Self {
+        let obj = Self {
             connection_id,
             dex_label,
             transfer_channel,
             lease_code,
-        }
+        };
+        debug_assert!(obj.invariant_held());
+        obj
+    }
+
+    pub fn invariant_held(&self) -> bool {
+        !self.connection_id.is_empty()
+            && !self.dex_label.is_empty()
+            && canonical_transfer_channel(&self.transfer_channel)
     }
 
     pub fn connection_id(&self) -> &str {
@@ -71,12 +81,26 @@ impl Config {
     pub fn update_lease_code(storage: &mut dyn Storage, lease_code: Code) -> Result<()> {
         Self::STORAGE
             .update(storage, |config: Self| {
-                Ok(Self {
+                let updated = Self {
                     lease_code,
                     ..config
-                })
+                };
+                debug_assert!(updated.invariant_held());
+                Ok(updated)
             })
             .map(mem::drop)
+    }
+
+    /// Prove the stored config deserializes under the current schema.
+    ///
+    /// Run by `migrate` so an instance whose stored config predates a required
+    /// field refuses the upgrade instead of bricking on the first
+    /// post-upgrade load.
+    pub fn require_current_schema(storage: &dyn Storage) -> Result<()> {
+        Self::STORAGE
+            .load(storage)
+            .map(mem::drop)
+            .map_err(Error::IncompatibleStoredConfig)
     }
 
     /// Verify the caller is a contract instance of `Config.lease_code`.
@@ -90,6 +114,21 @@ impl Config {
             .check_contract_code(caller, &self.lease_code)
             .map_err(|_| Error::UnauthorisedCaller)
     }
+}
+
+/// `true` only for the canonical decimal rendering of a `u16` ordinal behind
+/// the `channel-` prefix — the counterparty's responder rejects leading zeros,
+/// signs, and ordinals beyond its 16-bit entity range.
+pub(crate) fn canonical_transfer_channel(channel_id: &str) -> bool {
+    channel_id
+        .strip_prefix(TRANSFER_CHANNEL_NAME_PREFIX)
+        .and_then(|ordinal| {
+            ordinal
+                .parse::<u16>()
+                .ok()
+                .filter(|parsed| parsed.to_string() == ordinal)
+        })
+        .is_some()
 }
 
 #[cfg(test)]
@@ -178,6 +217,27 @@ mod test {
             .auth_caller(QuerierWrapper::new(&querier), sdk_testing::user(LEASE_USER))
             .unwrap_err();
         assert!(matches!(err, Error::UnauthorisedCaller), "got {err:?}");
+    }
+
+    #[test]
+    fn invariant_violations_detected() {
+        assert!(config(Code::unchecked(1)).invariant_held());
+
+        let non_canonical_channel = Config {
+            connection_id: CONNECTION_ID.into(),
+            dex_label: DEX_LABEL.into(),
+            transfer_channel: "channel-007".into(),
+            lease_code: Code::unchecked(1),
+        };
+        assert!(!non_canonical_channel.invariant_held());
+
+        let empty_connection = Config {
+            connection_id: String::new(),
+            dex_label: DEX_LABEL.into(),
+            transfer_channel: TRANSFER_CHANNEL.into(),
+            lease_code: Code::unchecked(1),
+        };
+        assert!(!empty_connection.invariant_held());
     }
 
     fn config(lease_code: Code) -> Config {

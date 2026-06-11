@@ -123,9 +123,10 @@ pub struct ChannelResponse {
 
 #[cfg(test)]
 mod test {
-    use platform::tests as platform_tests;
+    use platform::{contract::Code, tests as platform_tests};
+    use sdk::cosmwasm_std::Uint64;
 
-    use super::QueryMsg;
+    use super::{ConfigResponse, QueryMsg};
 
     #[test]
     fn release() {
@@ -133,5 +134,19 @@ mod test {
             QueryMsg::ProtocolPackageRelease {},
             platform_tests::ser_de(&versioning::query::ProtocolPackage::Release {}).unwrap(),
         );
+    }
+
+    #[test]
+    fn config_response_new() {
+        let response = ConfigResponse::new(
+            "connection-7".into(),
+            "osmosis".into(),
+            "channel-3".into(),
+            Code::unchecked(9),
+        );
+        assert_eq!("connection-7", response.connection_id);
+        assert_eq!("osmosis", response.dex_label);
+        assert_eq!("channel-3", response.transfer_channel);
+        assert_eq!(Uint64::new(9), response.lease_code_id);
     }
 }

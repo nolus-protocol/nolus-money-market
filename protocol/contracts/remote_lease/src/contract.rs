@@ -1,7 +1,4 @@
-use std::{
-    mem,
-    ops::{Deref, DerefMut},
-};
+use std::ops::{Deref, DerefMut};
 
 use access_control::SingleUserAccess;
 use cosmwasm_std::Storage;
@@ -30,7 +27,7 @@ use versioning::{
 use crate::{
     api::{ChannelResponse, ConfigResponse, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg},
     error::{Error, Result},
-    ibc as ibc_msg,
+    ibc as ibc_msg, state,
     state::{Channel, Config},
 };
 
@@ -98,10 +95,7 @@ pub fn migrate(
     migrate_from
         .update_software(&CURRENT_RELEASE, &to_release)
         .map_err(Error::UpdateSoftware)
-        // Probe the stored config against the current schema: an instance whose
-        // config predates a required field must fail here, reverting the
-        // upgrade, rather than brick on the first post-upgrade load.
-        .and_then(|()| Config::load(deps.storage).map(mem::drop))
+        .and_then(|()| Config::require_current_schema(deps.storage))
         .map(|()| response::empty_response())
         .inspect_err(platform_error::log(deps.api))
 }
@@ -177,23 +171,14 @@ fn require_non_empty(field: &'static str, value: &str) -> Result<()> {
     }
 }
 
-const TRANSFER_CHANNEL_NAME_PREFIX: &str = "channel-";
-
-/// Accept only the canonical decimal rendering of a `u16` ordinal — the
-/// counterparty's responder rejects leading zeros, signs, and ordinals beyond
-/// its 16-bit entity range, so a non-canonical id would fail the handshake
-/// cross-chain instead of failing here at instantiation.
+/// Reject a non-canonical channel id here, at instantiation, instead of
+/// letting the handshake fail cross-chain at the counterparty's responder.
 fn require_canonical_transfer_channel(channel_id: &str) -> Result<()> {
-    channel_id
-        .strip_prefix(TRANSFER_CHANNEL_NAME_PREFIX)
-        .and_then(|ordinal| {
-            ordinal
-                .parse::<u16>()
-                .ok()
-                .filter(|parsed| parsed.to_string() == ordinal)
-        })
-        .map(|_ordinal| ())
-        .ok_or_else(|| Error::NonCanonicalTransferChannel(channel_id.to_string()))
+    if state::canonical_transfer_channel(channel_id) {
+        Ok(())
+    } else {
+        Err(Error::NonCanonicalTransferChannel(channel_id.to_string()))
+    }
 }
 
 fn authorize_protocol_admin_only(store: &dyn Storage, call_message: &MessageInfo) -> Result<()> {

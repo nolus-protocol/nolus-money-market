@@ -235,6 +235,29 @@ fn connect_open_ack_wrong_counterparty_version_rejected() {
 }
 
 #[test]
+fn connect_open_ack_oversized_counterparty_version_truncated_in_error() {
+    const ECHO_CAP_CHARS: usize = 64;
+
+    let mut deps = deps_with_config();
+    let connect = IbcChannelConnectMsg::OpenAck {
+        channel: channel(
+            IbcOrder::Unordered,
+            VERSION,
+            CONNECTION_ID,
+            COUNTERPARTY_PORT_ID,
+        ),
+        counterparty_version: "x".repeat(ECHO_CAP_CHARS * 4),
+    };
+    let err = ibc_channel_connect(deps.as_mut(), testing::mock_env(), connect).unwrap_err();
+    match err {
+        Error::InvalidCounterpartyVersion { actual, .. } => {
+            assert_eq!(ECHO_CAP_CHARS, actual.chars().count());
+        }
+        other => panic!("expected InvalidCounterpartyVersion, got {other:?}"),
+    }
+}
+
+#[test]
 fn connect_rejects_when_channel_exists() {
     let mut deps = deps_with_config();
     persist_existing_open_channel(deps.as_mut());

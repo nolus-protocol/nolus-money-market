@@ -49,7 +49,10 @@ fn migrate_with_pre_transfer_channel_config_rejected() {
         .unwrap();
 
     let err = migrate(deps.as_mut(), testing::mock_env(), migrate_msg()).unwrap_err();
-    assert!(matches!(err, Error::Std(_)), "got {err:?}");
+    assert!(
+        matches!(err, Error::IncompatibleStoredConfig(_)),
+        "got {err:?}"
+    );
 }
 
 #[test]

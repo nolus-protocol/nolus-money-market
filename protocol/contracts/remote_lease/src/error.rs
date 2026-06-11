@@ -25,6 +25,11 @@ pub enum Error {
     #[error("[RemoteLease] {0} must be non-empty")]
     EmptyInstantiateField(&'static str),
 
+    #[error(
+        "[RemoteLease] The stored config does not deserialize under the current schema, cause: {0}"
+    )]
+    IncompatibleStoredConfig(StdError),
+
     #[error("[RemoteLease] Transfer channel id '{0}' is not a canonical 'channel-<N>' identifier")]
     NonCanonicalTransferChannel(String),
 

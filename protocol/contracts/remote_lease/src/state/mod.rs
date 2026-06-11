@@ -1,5 +1,6 @@
 use crate::api::{ChannelInfo, ChannelResponse, ChannelStateResponse, ConfigResponse};
 
+pub(crate) use self::config::canonical_transfer_channel;
 pub use self::{
     channel::{Channel, ChannelState},
     config::Config,
