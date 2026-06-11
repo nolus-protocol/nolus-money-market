@@ -1,6 +1,6 @@
 use remote_lease::{
     callback::RemoteLeaseCallback,
-    response::{OpenLeaseResponse, OperationResponse, RemoteLeaseId},
+    response::{OpenLeaseResponse, RemoteLeaseId, WireOperationResponse},
 };
 use sdk::{
     cosmwasm_ext::CosmosMsg,
@@ -36,7 +36,7 @@ fn scenario_open_channel_through_ack_dispatches_callback() {
 
     let packet_data = drive_open_lease(deps.as_mut());
 
-    let response = OperationResponse::OpenLease(OpenLeaseResponse {
+    let response = WireOperationResponse::OpenLease(OpenLeaseResponse {
         remote_lease_id: RemoteLeaseId::new("So1Lease7").expect("base58 lease id"),
     });
     let res = crate::ibc::ibc_packet_ack(

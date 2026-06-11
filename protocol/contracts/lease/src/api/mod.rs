@@ -121,7 +121,7 @@ pub enum FinalizerExecuteMsg {
 mod test {
     use remote_lease::{
         callback::{RemoteErrorMessage, RemoteLeaseCallback},
-        response::{CloseLeaseResponse, OperationResponse},
+        response::{CloseLeaseResponse, WireOperationResponse},
     };
     use sdk::cosmwasm_std;
 
@@ -149,7 +149,7 @@ mod test {
     #[test]
     fn test_remote_lease_callback_operation_ok_representation() {
         let msg = ExecuteMsg::RemoteLeaseCallback(RemoteLeaseCallback::OperationOk(
-            OperationResponse::CloseLease(CloseLeaseResponse {}),
+            WireOperationResponse::CloseLease(CloseLeaseResponse {}),
         ));
         let bin = cosmwasm_std::to_json_vec(&msg).expect("serialization failed");
         assert_eq!(

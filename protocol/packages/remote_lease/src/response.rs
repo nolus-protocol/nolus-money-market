@@ -3,15 +3,14 @@ use serde::{Deserialize, Serialize};
 use currencies::PaymentGroup;
 use finance::coin::CoinDTO;
 
-use remote_lease_wire::{
-    coin::WireCoin,
-    response::{OperationResponse as WireOperationResponse, SwapResponse as WireSwapResponse},
-    ticker::Ticker,
-};
-
 pub use remote_lease_wire::{
+    coin::WireCoin,
     lease_id::RemoteLeaseId,
-    response::{CloseLeaseResponse, OpenLeaseResponse, TransferOutResponse},
+    response::{
+        CloseLeaseResponse, OpenLeaseResponse, OperationResponse as WireOperationResponse,
+        SwapResponse as WireSwapResponse, TransferOutResponse,
+    },
+    ticker::Ticker,
 };
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]

@@ -1,7 +1,7 @@
 use remote_lease::{
     callback::{RemoteErrorMessage, RemoteLeaseCallback},
     envelope::{NolusLeaseAddr, PacketEnvelope},
-    response::OperationResponse,
+    response::WireOperationResponse,
 };
 use sdk::{
     cosmos_sdk_proto::prost::Message as _,
@@ -178,9 +178,13 @@ pub fn ibc_packet_timeout(
         })
 }
 
+// The success payload is decoded as the wire shape only — currency-registry
+// validation belongs to the addressee lease, which absorbs content failures.
+// Erring here on a registry mismatch would make the relayer retry the ack
+// forever, turning counterparty content drift into a stuck packet.
 fn ack_to_callback(ack: StdAck) -> Result<RemoteLeaseCallback> {
     match ack {
-        StdAck::Success(data) => cosmwasm_std::from_json::<OperationResponse>(&data)
+        StdAck::Success(data) => cosmwasm_std::from_json::<WireOperationResponse>(&data)
             .map(RemoteLeaseCallback::OperationOk)
             .map_err(Error::from),
         StdAck::Error(message) => RemoteErrorMessage::new(message)

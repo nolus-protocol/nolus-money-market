@@ -33,6 +33,9 @@
 //!   but non-swap success payload is absorbed
 //!   (`unexpected-response-variant`); `ExecuteMsg::Heal` re-emits the
 //!   in-flight leg and the opening completes.
+//! - `out_of_registry_ticker_absorbed_at_lease` — a success ack naming a
+//!   ticker outside the currency registry passes the controller
+//!   wire-shaped and is absorbed at the lease (`undecodable-response`).
 
 use currencies::PaymentGroup;
 use currency::{CurrencyDef, MemberOf};
@@ -46,7 +49,10 @@ use lease::api::{
 };
 use remote_lease::{
     callback::RemoteLeaseCallback,
-    response::{OperationResponse, SwapResponse, TransferOutResponse},
+    response::{
+        OperationResponse, SwapResponse, Ticker, TransferOutResponse, WireCoin,
+        WireOperationResponse, WireSwapResponse,
+    },
 };
 use sdk::{
     cosmwasm_std::{Addr, Event},
@@ -236,9 +242,12 @@ fn swap_ack_in_transfer_leg_absorbed() {
     // a swap acknowledgment arrives while both transfer acknowledgments
     // are still outstanding - it must neither error nor advance the
     // transfer countdown
-    let unexpected = RemoteLeaseCallback::OperationOk(OperationResponse::Swap(SwapResponse {
-        amount_out: Coin::<LeaseCurrency>::new(1).into(),
-    }));
+    let unexpected = RemoteLeaseCallback::OperationOk(
+        OperationResponse::Swap(SwapResponse {
+            amount_out: Coin::<LeaseCurrency>::new(1).into(),
+        })
+        .into(),
+    );
     let injected = stub::inject_callback(&mut test_case.app, &controller, &lease, unexpected);
     expect_attribute(&injected.events, ABSORB_EVENT, "absorbed", "response");
     assert_transfers_pending(&test_case, lease.clone());
@@ -278,8 +287,9 @@ fn wrong_variant_callback_absorbed_then_heal_recovers() {
     let _response = transfer_funds(&mut test_case, &lease, DOWNPAYMENT);
     assert_eq!(2, opening_acks_left(&test_case, lease.clone()));
 
-    let wrong_variant =
-        RemoteLeaseCallback::OperationOk(OperationResponse::TransferOut(TransferOutResponse {}));
+    let wrong_variant = RemoteLeaseCallback::OperationOk(WireOperationResponse::TransferOut(
+        TransferOutResponse {},
+    ));
     let injected = stub::inject_callback(&mut test_case.app, &controller, &lease, wrong_variant);
     expect_attribute(
         &injected.events,
@@ -308,6 +318,36 @@ fn wrong_variant_callback_absorbed_then_heal_recovers() {
     expect_attribute(&healed.events, OPENING_SWAP_EVENT, "heal", "re-emit");
 
     let _amount = opened_amount(&test_case, lease);
+}
+
+// The controller forwards success acks wire-shaped (issue #637): a ticker
+// outside the currency registry reaches the lease, whose typed decode fails
+// and absorbs the callback - the controller's ack tx commits.
+#[test]
+fn out_of_registry_ticker_absorbed_at_lease() {
+    let (mut test_case, lease, controller) = start_open(DOWNPAYMENT);
+    stub::set_response_mode(
+        &mut test_case.app,
+        &controller,
+        op_tag::SWAP,
+        ResponseMode::Delayed,
+    );
+
+    let _response = transfer_funds(&mut test_case, &lease, DOWNPAYMENT);
+    assert_eq!(2, opening_acks_left(&test_case, lease.clone()));
+
+    let alien_ticker =
+        RemoteLeaseCallback::OperationOk(WireOperationResponse::Swap(WireSwapResponse {
+            amount_out: WireCoin::new(42, Ticker::new("NOT_IN_REGISTRY")),
+        }));
+    let injected = stub::inject_callback(&mut test_case.app, &controller, &lease, alien_ticker);
+    expect_attribute(
+        &injected.events,
+        OPENING_SWAP_EVENT,
+        "absorbed",
+        "undecodable-response",
+    );
+    assert_eq!(2, opening_acks_left(&test_case, lease.clone()));
 }
 
 fn start_open<DownpaymentC>(downpayment: Coin<DownpaymentC>) -> (LeaseTestCase, Addr, Addr)

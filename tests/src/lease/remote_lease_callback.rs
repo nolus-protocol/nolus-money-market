@@ -23,7 +23,7 @@ use lease::{
 };
 use remote_lease::{
     callback::{RemoteErrorMessage, RemoteLeaseCallback},
-    response::{CloseLeaseResponse, OperationResponse},
+    response::{CloseLeaseResponse, WireOperationResponse},
 };
 use sdk::{
     cosmwasm_std::{Addr, Event, StdError},
@@ -108,7 +108,7 @@ fn operation_err_retries_the_in_flight_leg() {
 fn non_swap_operation_ok_is_absorbed() {
     let (mut test_case, lease) = drive_to_swap_pending();
     let controller = controller_addr(&test_case);
-    let payload = OperationResponse::CloseLease(CloseLeaseResponse {});
+    let payload = WireOperationResponse::CloseLease(CloseLeaseResponse {});
 
     let response = test_case
         .app

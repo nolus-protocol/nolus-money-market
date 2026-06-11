@@ -320,10 +320,10 @@ where
         .unwrap_or(ResponseMode::Ok);
 
     let callback = match mode {
-        ResponseMode::Ok => RemoteLeaseCallback::OperationOk(build_ok(deps.storage)?),
+        ResponseMode::Ok => RemoteLeaseCallback::OperationOk(build_ok(deps.storage)?.into()),
         ResponseMode::Err(reason) => RemoteLeaseCallback::OperationErr(reason),
         ResponseMode::Delayed => {
-            let payload = RemoteLeaseCallback::OperationOk(build_ok(deps.storage)?);
+            let payload = RemoteLeaseCallback::OperationOk(build_ok(deps.storage)?.into());
             PENDING.save(
                 deps.storage,
                 op,
@@ -336,7 +336,7 @@ where
         }
         ResponseMode::UnderpayingOnce => {
             MODES.save(deps.storage, op, &ResponseMode::Ok)?;
-            RemoteLeaseCallback::OperationOk(underpay(build_ok(deps.storage)?))
+            RemoteLeaseCallback::OperationOk(underpay(build_ok(deps.storage)?).into())
         }
     };
 

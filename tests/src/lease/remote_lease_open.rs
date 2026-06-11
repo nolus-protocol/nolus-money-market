@@ -12,7 +12,7 @@ use lease::api::{
 };
 use remote_lease::{
     callback::{RemoteErrorMessage, RemoteLeaseCallback},
-    response::{CloseLeaseResponse, OpenLeaseResponse, OperationResponse, RemoteLeaseId},
+    response::{CloseLeaseResponse, OpenLeaseResponse, RemoteLeaseId, WireOperationResponse},
 };
 use sdk::{cosmwasm_std::Addr, testing};
 
@@ -147,7 +147,7 @@ fn open_failed_on_unexpected_operation_refunds_and_finalises() {
     // open failure — refund and move to terminal — rather than returning
     // `Err`, which would revert the controller's ack and strand the relayer.
     let unexpected =
-        RemoteLeaseCallback::OperationOk(OperationResponse::CloseLease(CloseLeaseResponse {}));
+        RemoteLeaseCallback::OperationOk(WireOperationResponse::CloseLease(CloseLeaseResponse {}));
     let failed = test_case
         .app
         .execute(
@@ -224,7 +224,7 @@ fn late_open_lease_ack_after_open_failed_is_absorbed() {
     // Synthesise the late OK ack that ibc-go would deliver against the
     // already-terminal lease on an UNORDERED channel.
     let late_callback =
-        RemoteLeaseCallback::OperationOk(OperationResponse::OpenLease(OpenLeaseResponse {
+        RemoteLeaseCallback::OperationOk(WireOperationResponse::OpenLease(OpenLeaseResponse {
             remote_lease_id: RemoteLeaseId::new(
                 "StubPdaLate111111111111111111111111111".to_owned(),
             )
