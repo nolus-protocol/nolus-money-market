@@ -25,6 +25,14 @@ pub enum Error {
     #[error("[RemoteLease] {0} must be non-empty")]
     EmptyInstantiateField(&'static str),
 
+    #[error("[RemoteLease] Transfer channel id '{0}' is not a canonical 'channel-<N>' identifier")]
+    NonCanonicalTransferChannel(String),
+
+    #[error(
+        "[RemoteLease] Counterparty channel version mismatch: expected '{expected}', got '{actual}'"
+    )]
+    InvalidCounterpartyVersion { expected: String, actual: String },
+
     #[error("[RemoteLease] A channel is already recorded for this controller")]
     ChannelAlreadyExists,
 

@@ -14,16 +14,23 @@ use crate::error::{Error, Result};
 pub struct Config {
     connection_id: String,
     dex_label: String,
+    transfer_channel: String,
     lease_code: Code,
 }
 
 impl Config {
     const STORAGE: Item<Self> = Item::new("config");
 
-    pub fn new(connection_id: String, dex_label: String, lease_code: Code) -> Self {
+    pub fn new(
+        connection_id: String,
+        dex_label: String,
+        transfer_channel: String,
+        lease_code: Code,
+    ) -> Self {
         Self {
             connection_id,
             dex_label,
+            transfer_channel,
             lease_code,
         }
     }
@@ -36,12 +43,21 @@ impl Config {
         &self.dex_label
     }
 
+    pub fn transfer_channel(&self) -> &str {
+        &self.transfer_channel
+    }
+
     pub const fn lease_code(&self) -> Code {
         self.lease_code
     }
 
-    pub(super) fn into_parts(self) -> (String, String, Code) {
-        (self.connection_id, self.dex_label, self.lease_code)
+    pub(super) fn into_parts(self) -> (String, String, String, Code) {
+        (
+            self.connection_id,
+            self.dex_label,
+            self.transfer_channel,
+            self.lease_code,
+        )
     }
 
     pub fn store(&self, storage: &mut dyn Storage) -> Result<()> {
@@ -94,6 +110,7 @@ mod test {
 
     const CONNECTION_ID: &str = "connection-0";
     const DEX_LABEL: &str = "osmosis";
+    const TRANSFER_CHANNEL: &str = "channel-4";
     const LEASE_USER: &str = "lease";
 
     #[test]
@@ -104,6 +121,7 @@ mod test {
         let loaded = Config::load(&store).unwrap();
         assert_eq!(CONNECTION_ID, loaded.connection_id());
         assert_eq!(DEX_LABEL, loaded.dex_label());
+        assert_eq!(TRANSFER_CHANNEL, loaded.transfer_channel());
         assert_lease_code(lease_code, &store);
     }
 
@@ -118,6 +136,7 @@ mod test {
         let loaded = Config::load(&store).unwrap();
         assert_eq!(CONNECTION_ID, loaded.connection_id());
         assert_eq!(DEX_LABEL, loaded.dex_label());
+        assert_eq!(TRANSFER_CHANNEL, loaded.transfer_channel());
     }
 
     #[test]
@@ -162,7 +181,12 @@ mod test {
     }
 
     fn config(lease_code: Code) -> Config {
-        Config::new(CONNECTION_ID.into(), DEX_LABEL.into(), lease_code)
+        Config::new(
+            CONNECTION_ID.into(),
+            DEX_LABEL.into(),
+            TRANSFER_CHANNEL.into(),
+            lease_code,
+        )
     }
 
     fn assert_lease_code(expected: Code, store: &dyn Storage) {

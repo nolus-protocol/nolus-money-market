@@ -9,8 +9,9 @@ use crate::{
 };
 
 use super::{
-    CONNECTION_ID, COUNTERPARTY_CHANNEL_ID, COUNTERPARTY_PORT_ID, LOCAL_CHANNEL_ID, VERSION,
-    WRONG_CONNECTION_ID, WRONG_COUNTERPARTY_PORT_ID, WRONG_VERSION, channel, deps_with_config,
+    BARE_VERSION, CONNECTION_ID, COUNTERPARTY_CHANNEL_ID, COUNTERPARTY_PORT_ID, LOCAL_CHANNEL_ID,
+    VERSION, WRONG_CONNECTION_ID, WRONG_COUNTERPARTY_PORT_ID, WRONG_TRANSFER_VERSION,
+    WRONG_VERSION, channel, deps_with_config,
 };
 
 use crate::ibc::{ibc_channel_close, ibc_channel_connect, ibc_channel_open};
@@ -63,6 +64,49 @@ fn open_init_wrong_version_rejected() {
         open_init_msg(channel(
             IbcOrder::Unordered,
             WRONG_VERSION,
+            CONNECTION_ID,
+            COUNTERPARTY_PORT_ID,
+        )),
+    )
+    .unwrap_err();
+    assert!(
+        matches!(err, Error::InvalidChannelVersion { .. }),
+        "got {err:?}"
+    );
+}
+
+// The pre-suffix grammar (bare protocol version, no `+transfer=` pairing) must
+// no longer pass the handshake — the Solana responder requires the paired
+// transfer channel since ibc-solray#322.
+#[test]
+fn open_init_bare_version_rejected() {
+    let mut deps = deps_with_config();
+    let err = ibc_channel_open(
+        deps.as_mut(),
+        testing::mock_env(),
+        open_init_msg(channel(
+            IbcOrder::Unordered,
+            BARE_VERSION,
+            CONNECTION_ID,
+            COUNTERPARTY_PORT_ID,
+        )),
+    )
+    .unwrap_err();
+    assert!(
+        matches!(err, Error::InvalidChannelVersion { .. }),
+        "got {err:?}"
+    );
+}
+
+#[test]
+fn open_init_wrong_transfer_suffix_rejected() {
+    let mut deps = deps_with_config();
+    let err = ibc_channel_open(
+        deps.as_mut(),
+        testing::mock_env(),
+        open_init_msg(channel(
+            IbcOrder::Unordered,
+            WRONG_TRANSFER_VERSION,
             CONNECTION_ID,
             COUNTERPARTY_PORT_ID,
         )),
@@ -168,6 +212,26 @@ fn connect_open_confirm_persists_channel() {
 
     let stored = Channel::may_load(&deps.storage).unwrap().unwrap();
     assert_eq!(ChannelState::Open, stored.state());
+}
+
+#[test]
+fn connect_open_ack_wrong_counterparty_version_rejected() {
+    let mut deps = deps_with_config();
+    let connect = IbcChannelConnectMsg::OpenAck {
+        channel: channel(
+            IbcOrder::Unordered,
+            VERSION,
+            CONNECTION_ID,
+            COUNTERPARTY_PORT_ID,
+        ),
+        counterparty_version: WRONG_TRANSFER_VERSION.into(),
+    };
+    let err = ibc_channel_connect(deps.as_mut(), testing::mock_env(), connect).unwrap_err();
+    assert!(
+        matches!(err, Error::InvalidCounterpartyVersion { .. }),
+        "got {err:?}"
+    );
+    assert!(Channel::may_load(&deps.storage).unwrap().is_none());
 }
 
 #[test]

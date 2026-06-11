@@ -47,6 +47,7 @@ pub fn instantiate(
 ) -> Result<CwResponse> {
     require_non_empty("connection_id", &new_controller.connection_id)
         .and_then(|()| require_non_empty("dex_label", &new_controller.dex_label))
+        .and_then(|()| require_canonical_transfer_channel(&new_controller.transfer_channel))
         .and_then(|()| {
             deps.api
                 .addr_validate(new_controller.protocol_admin.as_str())
@@ -72,6 +73,7 @@ pub fn instantiate(
             Config::new(
                 new_controller.connection_id,
                 new_controller.dex_label,
+                new_controller.transfer_channel,
                 lease_code,
             )
             .store(deps.storage)
@@ -166,6 +168,25 @@ fn require_non_empty(field: &'static str, value: &str) -> Result<()> {
     } else {
         Ok(())
     }
+}
+
+const TRANSFER_CHANNEL_NAME_PREFIX: &str = "channel-";
+
+/// Accept only the canonical decimal rendering of a `u16` ordinal — the
+/// counterparty's responder rejects leading zeros, signs, and ordinals beyond
+/// its 16-bit entity range, so a non-canonical id would fail the handshake
+/// cross-chain instead of failing here at instantiation.
+fn require_canonical_transfer_channel(channel_id: &str) -> Result<()> {
+    channel_id
+        .strip_prefix(TRANSFER_CHANNEL_NAME_PREFIX)
+        .and_then(|ordinal| {
+            ordinal
+                .parse::<u16>()
+                .ok()
+                .filter(|parsed| parsed.to_string() == ordinal)
+        })
+        .map(|_ordinal| ())
+        .ok_or_else(|| Error::NonCanonicalTransferChannel(channel_id.to_string()))
 }
 
 fn authorize_protocol_admin_only(store: &dyn Storage, call_message: &MessageInfo) -> Result<()> {

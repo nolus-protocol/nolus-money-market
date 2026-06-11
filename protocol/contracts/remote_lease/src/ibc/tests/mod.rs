@@ -21,8 +21,11 @@ const LOCAL_CHANNEL_ID: &str = "channel-0";
 const COUNTERPARTY_CHANNEL_ID: &str = "channel-77";
 const COUNTERPARTY_PORT_ID: &str = "nls-remote-lease.osmosis";
 const WRONG_COUNTERPARTY_PORT_ID: &str = "nls-remote-lease.evil";
-const VERSION: &str = "nls-remote-lease.v1";
-const WRONG_VERSION: &str = "nls-remote-lease.v2";
+const TRANSFER_CHANNEL: &str = "channel-42";
+const VERSION: &str = "nls-remote-lease.v1+transfer=channel-42";
+const WRONG_VERSION: &str = "nls-remote-lease.v2+transfer=channel-42";
+const BARE_VERSION: &str = "nls-remote-lease.v1";
+const WRONG_TRANSFER_VERSION: &str = "nls-remote-lease.v1+transfer=channel-7";
 const LEASE_CODE_ID: u64 = 17;
 
 fn deps_with_config() -> OwnedDeps<MockStorage, MockApi, MockQuerier> {
@@ -38,6 +41,7 @@ fn deps_with_config() -> OwnedDeps<MockStorage, MockApi, MockQuerier> {
             protocol_admin: sdk_testing::user(ADMIN).into_string(),
             connection_id: CONNECTION_ID.into(),
             dex_label: DEX_LABEL.into(),
+            transfer_channel: TRANSFER_CHANNEL.into(),
             lease_code: LEASE_CODE_ID.into(),
         },
     )
