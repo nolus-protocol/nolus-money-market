@@ -15,10 +15,10 @@
 //!   to `info.sender` carrying `lease::api::ExecuteMsg::RemoteLeaseCallback`
 //!   with the per-operation response configured for the current test (the
 //!   `Delayed` mode is the exception — see below),
-//! - supports per-operation `ResponseMode::{Ok, Err(reason), Delayed}`,
-//!   set via the test-only `ExecuteMsg::SetResponseMode { op, mode }` and
-//!   stored in `ResponseModes` keyed by operation name (`"open_lease"`,
-//!   `"close_lease"`, `"swap"`, `"transfer_out"`),
+//! - supports per-operation `ResponseMode::{Ok, Err(reason), Delayed,
+//!   FailSync}`, set via the test-only `ExecuteMsg::SetResponseMode
+//!   { op, mode }` and stored in `ResponseModes` keyed by operation name
+//!   (`"open_lease"`, `"close_lease"`, `"swap"`, `"transfer_out"`),
 //! - in `Delayed` mode persists the would-be callback (operation name,
 //!   sender, payload) into `PendingCallbacks` so the test can advance
 //!   blocks and then dispatch via `ExecuteMsg::DeliverPending { op }`.
@@ -86,7 +86,10 @@ pub mod op_tag {
 /// callback for later dispatch via [`StubExecuteMsg::DeliverPending`].
 /// `UnderpayingOnce` answers a swap with `min_out - 1` — a counterparty
 /// contract violation — and resets itself to `Ok` so the lease's in-flight
-/// retry settles within the same transaction tree.
+/// retry settles within the same transaction tree. `FailSync` makes the
+/// stand-in's execute return an `Err` outright — the outbound submessage
+/// reverts (callback never produced, recorders rolled back), modelling a
+/// synchronous controller failure rather than a remote one.
 #[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum ResponseMode {
@@ -95,6 +98,7 @@ pub enum ResponseMode {
     Err(RemoteErrorMessage),
     Delayed,
     UnderpayingOnce,
+    FailSync,
 }
 
 /// Public stand-in `ExecuteMsg` — production variants come straight from
@@ -166,6 +170,11 @@ pub enum StubQueryMsg {
     RecordedTransferOuts {
         lease: Addr,
     },
+    /// Report how many `CloseLease` executes the given lease has emitted.
+    /// `CloseLeaseParams` is field-less, so a count carries the full record.
+    RecordedCloses {
+        lease: Addr,
+    },
 }
 
 /// Stand-in state.
@@ -182,6 +191,7 @@ const LEASE_PDA_COUNTER: Item<u64> = Item::new("stub_pda_counter");
 const RECORDED_SWAPS: Map<&Addr, Vec<SwapParams>> = Map::new("stub_recorded_swaps");
 const RECORDED_TRANSFER_OUTS: Map<&Addr, Vec<TransferOutParams>> =
     Map::new("stub_recorded_transfer_outs");
+const RECORDED_CLOSES: Map<&Addr, u32> = Map::new("stub_recorded_closes");
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 struct StubConfig {
@@ -205,6 +215,8 @@ pub enum StubError {
     Unauthorised { caller: Addr },
     #[error("no pending callback persisted for op `{op}`")]
     NoPending { op: String },
+    #[error("op `{op}` is configured to fail synchronously")]
+    SyncFailure { op: String },
     #[error("std: {0}")]
     Std(#[from] StdError),
 }
@@ -250,6 +262,7 @@ pub fn execute(
             })
         }
         StubExecuteMsg::CloseLease { .. } => {
+            record_close(deps.storage, &info.sender)?;
             handle_outbound(deps, info, op_tag::CLOSE_LEASE, |_storage| {
                 Ok(OperationResponse::CloseLease(CloseLeaseResponse {}))
             })
@@ -310,6 +323,11 @@ pub fn query(deps: Deps<'_>, _env: Env, msg: StubQueryMsg) -> StdResult<Binary> 
                 .may_load(deps.storage, &lease)?
                 .unwrap_or_default(),
         ),
+        StubQueryMsg::RecordedCloses { lease } => to_json_binary(
+            &RECORDED_CLOSES
+                .may_load(deps.storage, &lease)?
+                .unwrap_or_default(),
+        ),
     }
 }
 
@@ -350,6 +368,9 @@ where
             MODES.save(deps.storage, op, &ResponseMode::Ok)?;
             RemoteLeaseCallback::OperationOk(underpay(build_ok(deps.storage)?).into())
         }
+        // The Err reverts this whole sub-execution, so the per-op
+        // recorders written earlier in the same call roll back with it.
+        ResponseMode::FailSync => return Err(StubError::SyncFailure { op: op.to_owned() }),
     };
 
     Ok(CwResponse::new().add_message(callback_msg(info.sender, callback)?))
@@ -393,6 +414,15 @@ fn record_swap(
             let mut recorded = recorded.unwrap_or_default();
             recorded.push(params.clone());
             Ok(recorded)
+        })
+        .map(|_recorded| ())
+        .map_err(Into::into)
+}
+
+fn record_close(storage: &mut dyn Storage, sender: &Addr) -> Result<(), StubError> {
+    RECORDED_CLOSES
+        .update(storage, sender, |recorded| -> Result<_, StdError> {
+            Ok(recorded.unwrap_or_default() + 1)
         })
         .map(|_recorded| ())
         .map_err(Into::into)
@@ -565,4 +595,16 @@ pub fn recorded_transfer_outs(
             },
         )
         .expect("RecordedTransferOuts must succeed against the stand-in")
+}
+
+/// Report how many `CloseLease` executes the given lease has emitted.
+pub fn recorded_closes(app: &App, controller: &Addr, lease: &Addr) -> u32 {
+    app.query()
+        .query_wasm_smart(
+            controller.clone(),
+            &StubQueryMsg::RecordedCloses {
+                lease: lease.clone(),
+            },
+        )
+        .expect("RecordedCloses must succeed against the stand-in")
 }

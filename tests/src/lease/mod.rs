@@ -38,12 +38,11 @@ mod heal;
 mod liquidation;
 mod open;
 mod remote_lease_callback;
+mod remote_lease_close;
 // TODO #142 Phase 3: enable when the OpenLease state + Status::OpenFailed land.
 mod remote_lease_open;
 mod remote_lease_swap;
 mod remote_lease_transfer_out;
-// TODO #142 Phase 6: enable when the CloseLease state + divergence terminal land.
-// mod remote_lease_close;
 mod repay;
 mod slippage;
 
