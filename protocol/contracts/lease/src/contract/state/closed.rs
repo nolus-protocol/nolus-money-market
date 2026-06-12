@@ -31,6 +31,14 @@ pub struct Closed {
     remote_lease_controller: Addr,
 }
 
+impl Closed {
+    pub fn new(remote_lease_controller: Addr) -> Self {
+        Self {
+            remote_lease_controller,
+        }
+    }
+}
+
 impl From<&LeaseDTO> for Closed {
     fn from(lease: &LeaseDTO) -> Self {
         Self {

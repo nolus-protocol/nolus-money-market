@@ -32,7 +32,7 @@ use crate::{
     contract::{
         Lease,
         cmd::Close,
-        state::{SwapResult, closed::Closed},
+        state::{SwapResult, paid::remote_close::ClosingRemoteLease},
     },
     error::ContractResult,
     event::Type,
@@ -124,9 +124,15 @@ impl RemoteTransferOutTask for TransferOut {
         let lease_account = bank::account(&lease_addr, querier);
         let emitter = self.emit_closed(env, &self.lease.lease);
         let customer = self.lease.lease.customer.clone();
-        let closed = Closed::from(&self.lease.lease);
+        let closing = ClosingRemoteLease::from(&self.lease.lease);
 
-        with_lease_paid::execute(self.lease.lease, Close::new(lease_account))
+        closing
+            .schedule_close()
+            .and_then(|close_lease_msgs| {
+                with_lease_paid::execute(self.lease.lease, Close::new(lease_account)).map(
+                    |payout_msgs| payout_msgs.merge(close_lease_msgs), //the payout must precede the best-effort CloseLease
+                )
+            })
             .and_then(|close_msgs| {
                 self.lease
                     .leases
@@ -134,7 +140,7 @@ impl RemoteTransferOutTask for TransferOut {
                     .map(|finalizer_msgs| close_msgs.merge(finalizer_msgs)) //make sure the finalizer messages go out last
             })
             .map(|all_messages| MessageResponse::messages_with_event(all_messages, emitter))
-            .map(|response| StateMachineResponse::from(response, closed))
+            .map(|response| StateMachineResponse::from(response, closing))
     }
 
     fn state(

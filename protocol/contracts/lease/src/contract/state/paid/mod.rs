@@ -9,6 +9,7 @@ use super::Response;
 use self::transfer_out::DexState;
 use cw_time::IntoInstant;
 
+pub mod remote_close;
 pub mod transfer_out;
 
 pub fn start_close(
