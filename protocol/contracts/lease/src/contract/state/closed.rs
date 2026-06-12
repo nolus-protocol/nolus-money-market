@@ -32,7 +32,7 @@ pub struct Closed {
 }
 
 impl Closed {
-    pub fn new(remote_lease_controller: Addr) -> Self {
+    pub const fn new(remote_lease_controller: Addr) -> Self {
         Self {
             remote_lease_controller,
         }

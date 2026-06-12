@@ -51,6 +51,7 @@ const EVENT_VALUE_RETRY: &str = "retry";
 const ABSORB_REMOTE_ERROR: &str = "remote-error";
 const ABSORB_UNEXPECTED_VARIANT: &str = "unexpected-response-variant";
 const ABSORB_EMISSION_FAILED: &str = "emission-failed";
+const ABSORB_UNEXPECTED_REPLY: &str = "unexpected-reply";
 
 /// Await the `CloseLease` acknowledgment after the customer payout
 ///
@@ -145,15 +146,23 @@ impl Handler for ClosingRemoteLease {
     ///
     /// Total by design: the reply fires inside the transaction this
     /// state's protection exists for, so no input may turn into an `Err`.
+    /// The result needs no inspection — the sub-message is scheduled
+    /// reply-on-error, so a success reply cannot arrive. A foreign reply
+    /// id cannot arrive either while this state holds the only
+    /// reply-carrying sub-message, yet it is absorbed under its own
+    /// reason rather than mislabelled as an emission failure.
     fn reply(
         self,
         _querier: QuerierWrapper<'_>,
         _env: Env,
         msg: Reply,
     ) -> ContractResult<Response> {
-        debug_assert_eq!(CLOSE_LEASE_REPLY_ID, msg.id);
-
-        Ok(self.absorb(ABSORB_EMISSION_FAILED))
+        let reason = if msg.id == CLOSE_LEASE_REPLY_ID {
+            ABSORB_EMISSION_FAILED
+        } else {
+            ABSORB_UNEXPECTED_REPLY
+        };
+        Ok(self.absorb(reason))
     }
 
     fn on_time_alarm(
@@ -381,6 +390,25 @@ mod tests {
             .expect("the reply absorber should be total");
         assert_still_closing(&response);
         assert_eq!(absorb_response("emission-failed"), response.response);
+    }
+
+    #[test]
+    fn foreign_reply_absorbed_under_its_own_reason() {
+        let mock_querier = MockQuerier::<Empty>::default();
+        let response = closing()
+            .reply(
+                QuerierWrapper::new(&mock_querier),
+                testing::mock_env(),
+                Reply {
+                    id: CLOSE_LEASE_REPLY_ID + 1,
+                    payload: Binary::default(),
+                    gas_used: 0,
+                    result: SubMsgResult::Err(String::from("not ours")),
+                },
+            )
+            .expect("the reply absorber should be total");
+        assert_still_closing(&response);
+        assert_eq!(absorb_response("unexpected-reply"), response.response);
     }
 
     #[test]
