@@ -29,6 +29,7 @@ pub struct LeaseFactory<'a> {
     start_at: Instant,
     now: &'a Instant,
     remote_lease_id: RemoteLeaseId,
+    remote_lease_controller: Addr,
 }
 
 pub type OpenLeaseResult = LeaseDTOResult<CloseStatusDTO>;
@@ -44,6 +45,7 @@ impl<'a> LeaseFactory<'a> {
         start_at: Instant,
         now: &'a Instant,
         remote_lease_id: RemoteLeaseId,
+        remote_lease_controller: Addr,
     ) -> Self {
         Self {
             form,
@@ -55,6 +57,7 @@ impl<'a> LeaseFactory<'a> {
             start_at,
             now,
             remote_lease_id,
+            remote_lease_controller,
         }
     }
 }
@@ -90,6 +93,7 @@ impl WithLeaseDeps for LeaseFactory<'_> {
                 loan,
                 oracle,
                 self.remote_lease_id,
+                self.remote_lease_controller,
             )
         };
 

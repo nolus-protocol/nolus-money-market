@@ -2,6 +2,7 @@ use serde::{Deserialize, Serialize};
 
 use finance::duration::Duration;
 use finance::instant::Instant;
+use remote_lease::callback::RemoteLeaseCallback;
 use sdk::cosmwasm_std::{Env, MessageInfo, QuerierWrapper, Reply};
 
 use crate::{
@@ -97,5 +98,16 @@ where
         info: MessageInfo,
     ) -> ContractResult<Response> {
         self.handler.heal(querier, env, info)
+    }
+
+    fn on_remote_lease_callback(
+        self,
+        callback: RemoteLeaseCallback,
+        info: MessageInfo,
+        querier: QuerierWrapper<'_>,
+        env: Env,
+    ) -> ContractResult<Response> {
+        self.handler
+            .on_remote_lease_callback(callback, info, querier, env)
     }
 }

@@ -1,7 +1,7 @@
 use currencies::{PaymentGroup, testing::PaymentC5};
 use currency::CurrencyDef;
 use finance::{
-    coin::{Amount, Coin},
+    coin::{Amount, Coin, CoinDTO},
     fraction::Unit,
     price,
     zero::Zero,
@@ -25,6 +25,7 @@ use swap::testing::SwapRequest;
 use crate::common::{
     self, ADMIN, CwCoin, USER, ibc, lease as common_lease,
     leaser::{self, Instantiator},
+    remote_lease_controller_stub as stub,
     test_case::{TestCase, response::ResponseWithInterChainMsgs},
 };
 
@@ -163,7 +164,7 @@ fn partial_close_loan_closed() {
     assert_eq!(
         StateResponse::Closing {
             amount: (lease_amount - close_amount).into(),
-            in_progress: ClosingTrx::TransferInInit
+            in_progress: ClosingTrx::TransferInFinish
         },
         state
     );
@@ -313,28 +314,32 @@ fn do_close(
         coin_legacy::to_cosmwasm_on_dex(close_amount_in_lpn)
     );
 
-    let mut response_transfer_in = ibc::do_transfer(
+    let response_transfer_in = ibc::do_transfer(
         &mut test_case.app,
         lease_ica.clone(),
         lease_addr.clone(),
         true,
         &transfer_amount,
-    );
+    )
+    .unwrap_response();
 
+    // A loan-closing partial close starts the drain over the remote-lease
+    // controller; the stand-in acknowledges the emitted `TransferOut`
+    // inline within the same transaction.
     if exp_loan_close && !exp_lease_amount_after.is_zero() {
-        let lease_amount_after = ibc::expect_remote_transfer(
-            &mut response_transfer_in,
-            TestCase::DEX_CONNECTION_ID,
-            TestCase::LEASE_ICA_ID,
+        let transfer_outs = stub::recorded_transfer_outs(
+            &test_case.app,
+            test_case.address_book.remote_lease_controller(),
+            &lease_addr,
         );
-
+        assert_eq!(1, transfer_outs.len());
         assert_eq!(
-            coin_legacy::to_cosmwasm_on_dex(exp_lease_amount_after),
-            lease_amount_after
+            &CoinDTO::<PaymentGroup>::from(exp_lease_amount_after),
+            transfer_outs[0].amount()
         );
     }
 
-    response_transfer_in.unwrap_response().assert_event(
+    response_transfer_in.assert_event(
         &Event::new("wasm-ls-close-position")
             .add_attribute("to", lease_addr.clone())
             .add_attribute("payment-amount", close_amount_in_lpn.display_primitive())

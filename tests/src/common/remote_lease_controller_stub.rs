@@ -162,6 +162,10 @@ pub enum StubQueryMsg {
     RecordedSwaps {
         lease: Addr,
     },
+    /// Report every `TransferOutParams` the given lease has emitted, in order.
+    RecordedTransferOuts {
+        lease: Addr,
+    },
 }
 
 /// Stand-in state.
@@ -176,6 +180,8 @@ const MODES: Map<&str, ResponseMode> = Map::new("stub_modes");
 const PENDING: Map<&str, PendingCallback> = Map::new("stub_pending");
 const LEASE_PDA_COUNTER: Item<u64> = Item::new("stub_pda_counter");
 const RECORDED_SWAPS: Map<&Addr, Vec<SwapParams>> = Map::new("stub_recorded_swaps");
+const RECORDED_TRANSFER_OUTS: Map<&Addr, Vec<TransferOutParams>> =
+    Map::new("stub_recorded_transfer_outs");
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 struct StubConfig {
@@ -256,7 +262,8 @@ pub fn execute(
                 }))
             })
         }
-        StubExecuteMsg::TransferOut { .. } => {
+        StubExecuteMsg::TransferOut { params, .. } => {
+            record_transfer_out(deps.storage, &info.sender, &params)?;
             handle_outbound(deps, info, op_tag::TRANSFER_OUT, |_storage| {
                 Ok(OperationResponse::TransferOut(TransferOutResponse {}))
             })
@@ -295,6 +302,11 @@ pub fn query(deps: Deps<'_>, _env: Env, msg: StubQueryMsg) -> StdResult<Binary> 
         )),
         StubQueryMsg::RecordedSwaps { lease } => to_json_binary(
             &RECORDED_SWAPS
+                .may_load(deps.storage, &lease)?
+                .unwrap_or_default(),
+        ),
+        StubQueryMsg::RecordedTransferOuts { lease } => to_json_binary(
+            &RECORDED_TRANSFER_OUTS
                 .may_load(deps.storage, &lease)?
                 .unwrap_or_default(),
         ),
@@ -377,6 +389,21 @@ fn record_swap(
     params: &SwapParams,
 ) -> Result<(), StubError> {
     RECORDED_SWAPS
+        .update(storage, sender, |recorded| -> Result<_, StdError> {
+            let mut recorded = recorded.unwrap_or_default();
+            recorded.push(params.clone());
+            Ok(recorded)
+        })
+        .map(|_recorded| ())
+        .map_err(Into::into)
+}
+
+fn record_transfer_out(
+    storage: &mut dyn Storage,
+    sender: &Addr,
+    params: &TransferOutParams,
+) -> Result<(), StubError> {
+    RECORDED_TRANSFER_OUTS
         .update(storage, sender, |recorded| -> Result<_, StdError> {
             let mut recorded = recorded.unwrap_or_default();
             recorded.push(params.clone());
@@ -522,4 +549,20 @@ pub fn recorded_swaps(app: &App, controller: &Addr, lease: &Addr) -> Vec<SwapPar
             },
         )
         .expect("RecordedSwaps must succeed against the stand-in")
+}
+
+/// Report every `TransferOutParams` the given lease has emitted.
+pub fn recorded_transfer_outs(
+    app: &App,
+    controller: &Addr,
+    lease: &Addr,
+) -> Vec<TransferOutParams> {
+    app.query()
+        .query_wasm_smart(
+            controller.clone(),
+            &StubQueryMsg::RecordedTransferOuts {
+                lease: lease.clone(),
+            },
+        )
+        .expect("RecordedTransferOuts must succeed against the stand-in")
 }

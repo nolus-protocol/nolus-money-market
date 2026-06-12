@@ -38,6 +38,14 @@ pub enum Error {
 
     #[error("[Dex] [RemoteSwap] The number of swap legs exceeds the supported maximum of {0}")]
     SwapLegsNbOverflow(CoinsNb),
+
+    #[error("[Dex] [RemoteTransferOut] No in-flight transfer matches the current task state")]
+    MissingTransferOutLeg,
+
+    #[error(
+        "[Dex] [RemoteTransferOut] The number of transfers exceeds the supported maximum of {0}"
+    )]
+    TransferOutLegsNbOverflow(CoinsNb),
 }
 
 pub type Result<T> = core::result::Result<T, Error>;

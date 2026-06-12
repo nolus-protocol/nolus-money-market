@@ -3,6 +3,8 @@ use sdk::cosmwasm_std::{Binary, Env};
 use crate::{ContinueResult, ForwardToInner, Handler, Result, SwapTask, response};
 
 pub use self::{
+    drain::{StartDrainState, State as StateDrain, start as start_drain},
+    funds_arrival::FundsArrival,
     ica_connector::IcaConnector,
     out_local::{
         StartLocalLocalState, StartTransferInState, State as StateLocalOut, start_local_local,
@@ -10,6 +12,7 @@ pub use self::{
     },
     out_remote::{StartLocalRemoteState, State as StateRemoteOut, start as start_local_remote},
     remote_swap::{RemoteSwap, RemoteSwapClient},
+    remote_transfer_out::{DrainStage, RemoteTransferOut, RemoteTransferOutTask},
     resp_delivery::{ICAOpenResponseDelivery, ResponseDelivery},
     slippage::{AcceptAnyNonZeroSwap, Calculator as AcceptUpToMaxSlippage, MaxSlippage},
     swap_exact_in::SwapExactIn,
@@ -18,6 +21,8 @@ pub use self::{
     transfer_out::TransferOut,
 };
 
+mod drain;
+mod funds_arrival;
 mod ica_connector;
 #[cfg(feature = "migration")]
 mod migration;
@@ -25,6 +30,7 @@ mod next_leg;
 mod out_local;
 mod out_remote;
 mod remote_swap;
+mod remote_transfer_out;
 mod resp_delivery;
 mod slippage;
 mod swap_exact_in;

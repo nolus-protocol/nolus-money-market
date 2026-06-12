@@ -37,6 +37,11 @@ pub struct LeaseDTO {
     /// (mainnet v9-lease population = 0, so there are no legacy leases
     /// to deserialise without this field).
     pub(crate) remote_lease_id: RemoteLeaseId,
+    /// The remote-lease controller the post-opening legs emit operations
+    /// to, pinned at lease open from the opening spec. Persisted rather
+    /// than re-queried so a leaser re-configuration can never repoint a
+    /// live lease at a different controller mid-workflow.
+    pub(crate) remote_lease_controller: Addr,
 }
 
 impl LeaseDTO {
@@ -50,6 +55,7 @@ impl LeaseDTO {
         oracle: OracleRef,
         reserve: ReserveRef,
         remote_lease_id: RemoteLeaseId,
+        remote_lease_controller: Addr,
     ) -> Self {
         Self {
             addr,
@@ -60,6 +66,7 @@ impl LeaseDTO {
             oracle,
             reserve,
             remote_lease_id,
+            remote_lease_controller,
         }
     }
 

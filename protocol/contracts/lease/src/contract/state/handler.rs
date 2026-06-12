@@ -3,6 +3,7 @@ use enum_dispatch::enum_dispatch;
 use finance::duration::Duration;
 use finance::instant::Instant;
 use platform::state_machine::Response as StateMachineResponse;
+use remote_lease::callback::RemoteLeaseCallback;
 use sdk::cosmwasm_std::{Env, MessageInfo, QuerierWrapper, Reply};
 
 use crate::{
@@ -96,6 +97,16 @@ where
         _info: MessageInfo,
     ) -> ContractResult<Response> {
         err("heal")
+    }
+
+    fn on_remote_lease_callback(
+        self,
+        _callback: RemoteLeaseCallback,
+        _info: MessageInfo,
+        _querier: QuerierWrapper<'_>,
+        _env: Env,
+    ) -> ContractResult<Response> {
+        err("remote lease callback")
     }
 }
 

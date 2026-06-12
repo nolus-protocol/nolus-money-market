@@ -234,7 +234,11 @@ pub mod paid {
     )]
     #[serde(deny_unknown_fields, rename_all = "snake_case")]
     pub enum ClosingTrx {
-        TransferInInit,
+        /// The lease asset is being transferred out of the remote lease,
+        /// the operation not yet acknowledged
+        TransferOut,
+        /// Every transfer is acknowledged; the coins are in flight on the
+        /// ICS-20 transfer channel, not yet on the lease's local account
         TransferInFinish,
     }
 }
