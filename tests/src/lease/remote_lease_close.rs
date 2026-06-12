@@ -22,12 +22,10 @@
 //!   the terminal's late-ack absorber.
 
 use access_control::error::Error as AccessError;
-use finance::price;
 use lease::{
     api::{ExecuteMsg, query::StateResponse},
     error::ContractError,
 };
-use platform::coin_legacy;
 use remote_lease::{
     callback::{RemoteErrorMessage, RemoteLeaseCallback},
     response::{CloseLeaseResponse, WireOperationResponse},
@@ -39,12 +37,11 @@ use sdk::{
 };
 
 use crate::common::{
-    self, ADMIN, USER, leaser as leaser_mod,
+    USER, leaser as leaser_mod,
     remote_lease_controller_stub::{self as stub, ResponseMode, op_tag},
-    test_case::TestCase,
 };
 
-use super::{DOWNPAYMENT, LeaseCoin, LeaseTestCase, PaymentCoin, PaymentCurrency, repay};
+use super::{LeaseCoin, LeaseTestCase, PaymentCurrency, repay};
 
 const CLOSING_REMOTE_LEASE_EVENT: &str = "wasm-ls-close-remote-lease";
 const LATE_ACK_EVENT: &str = "wasm-ls-remote-lease-late-ack";
@@ -103,7 +100,7 @@ fn close_error_ack_absorbed_until_heal() {
         op_tag::CLOSE_LEASE,
         ResponseMode::Ok,
     );
-    let heal_response = heal(&mut test_case, lease.clone());
+    let heal_response = super::heal(&mut test_case, lease.clone());
     heal_response
         .assert_event(&Event::new(CLOSING_REMOTE_LEASE_EVENT).add_attribute("heal", "re-emit"));
     heal_response.assert_event(&completion_event(&lease));
@@ -147,7 +144,7 @@ fn close_sync_failure_does_not_block_payout() {
         op_tag::CLOSE_LEASE,
         ResponseMode::Ok,
     );
-    let heal_response = heal(&mut test_case, lease.clone());
+    let heal_response = super::heal(&mut test_case, lease.clone());
     heal_response.assert_event(&completion_event(&lease));
     assert_eq!(
         1,
@@ -293,8 +290,8 @@ fn stale_alarms_ignored_while_closing() {
 /// private drivers in `remote_lease_transfer_out.rs`.
 fn open_drain_and_finish(test_case: &mut LeaseTestCase) -> (Addr, AppResponse) {
     let customer = testing::user(USER);
-    let (lease, expected_funds) = open_and_repay_fully(test_case);
-    settle_arrival(test_case, &lease, expected_funds);
+    let (lease, expected_funds, _repay_response) = super::open_and_repay_fully(test_case);
+    super::settle_arrival(test_case, &lease, expected_funds);
 
     let balance_before: LeaseCoin =
         platform::bank::balance(&customer, test_case.app.query()).unwrap();
@@ -304,45 +301,6 @@ fn open_drain_and_finish(test_case: &mut LeaseTestCase) -> (Addr, AppResponse) {
         platform::bank::balance(&customer, test_case.app.query()).unwrap()
     );
     (lease, finish_response)
-}
-
-/// Open a lease and repay the whole loan, leaving the drain started.
-/// Duplicated from the private driver in `remote_lease_transfer_out.rs`.
-fn open_and_repay_fully(test_case: &mut LeaseTestCase) -> (Addr, LeaseCoin) {
-    let downpayment = DOWNPAYMENT;
-    let lease = super::open_lease(test_case, downpayment, None);
-
-    let borrowed_lpn = super::quote_borrow(test_case, downpayment);
-    let borrowed: PaymentCoin =
-        price::total(borrowed_lpn, super::price_lpn_of::<PaymentCurrency>().inv()).unwrap();
-    let expected_funds: LeaseCoin = super::expected_opened_amount(downpayment, borrowed_lpn);
-
-    let _repay_response =
-        repay::repay_with_hook_on_swap(test_case, lease.clone(), borrowed, |_app| {})
-            .unwrap_response();
-    (lease, expected_funds)
-}
-
-/// Mirror the acknowledged transfer onto the bank balances.
-/// Duplicated from the private driver in `remote_lease_transfer_out.rs`.
-fn settle_arrival(test_case: &mut LeaseTestCase, lease: &Addr, funds: LeaseCoin) {
-    let ica_addr: Addr = TestCase::ica_addr(lease, TestCase::LEASE_ICA_ID);
-    test_case
-        .app
-        .send_tokens(
-            ica_addr,
-            testing::user(ADMIN),
-            &[coin_legacy::to_cosmwasm_on_dex(funds)],
-        )
-        .unwrap();
-    test_case
-        .app
-        .send_tokens(
-            testing::user(ADMIN),
-            lease.clone(),
-            &[common::cwcoin(funds)],
-        )
-        .unwrap();
 }
 
 /// Prove the lease reached the `Closed` terminal: only the terminal
@@ -380,15 +338,6 @@ fn completion_event(lease: &Addr) -> Event {
 
 fn close_lease_ack() -> RemoteLeaseCallback {
     RemoteLeaseCallback::OperationOk(WireOperationResponse::CloseLease(CloseLeaseResponse {}))
-}
-
-/// Duplicated from the private driver in `remote_lease_transfer_out.rs`.
-fn heal(test_case: &mut LeaseTestCase, lease: Addr) -> AppResponse {
-    test_case
-        .app
-        .execute(testing::user(USER), lease, &ExecuteMsg::Heal(), &[])
-        .unwrap()
-        .unwrap_response()
 }
 
 fn deliver_price_alarm(test_case: &mut LeaseTestCase, lease: Addr) -> AppResponse {

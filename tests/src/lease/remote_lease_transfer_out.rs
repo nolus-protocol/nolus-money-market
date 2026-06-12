@@ -39,7 +39,7 @@
 use access_control::error::Error as AccessError;
 use currencies::PaymentGroup;
 use dex::Error as DexError;
-use finance::{coin::CoinDTO, price};
+use finance::coin::CoinDTO;
 use lease::{
     api::{
         ExecuteMsg,
@@ -47,24 +47,21 @@ use lease::{
     },
     error::ContractError,
 };
-use platform::coin_legacy;
 use remote_lease::{
     callback::{RemoteErrorMessage, RemoteLeaseCallback},
     response::{TransferOutResponse, WireOperationResponse},
 };
 use sdk::{
     cosmwasm_std::{Addr, Event},
-    cw_multi_test::AppResponse,
     testing,
 };
 
 use crate::common::{
-    self, ADMIN, USER,
+    USER,
     remote_lease_controller_stub::{self as stub, ResponseMode, op_tag},
-    test_case::TestCase,
 };
 
-use super::{DOWNPAYMENT, LeaseCoin, LeaseTestCase, PaymentCoin, PaymentCurrency, repay};
+use super::{LeaseCoin, LeaseTestCase, PaymentCurrency, repay};
 
 const CLOSING_TRANSFER_OUT_EVENT: &str = "wasm-ls-close-transfer-out";
 const LATE_ACK_EVENT: &str = "wasm-ls-remote-lease-late-ack";
@@ -74,7 +71,7 @@ fn transfer_out_single_coin_drain_acks() {
     let mut test_case = super::create_test_case::<PaymentCurrency>();
     let controller = test_case.address_book.remote_lease_controller().clone();
 
-    let (lease, expected_funds, repay_response) = open_and_repay_fully(&mut test_case);
+    let (lease, expected_funds, repay_response) = super::open_and_repay_fully(&mut test_case);
 
     let transfer_outs = stub::recorded_transfer_outs(&test_case.app, &controller, &lease);
     assert_eq!(1, transfer_outs.len());
@@ -93,7 +90,7 @@ fn transfer_out_single_coin_drain_acks() {
         &lease,
     );
 
-    settle_arrival(&mut test_case, &lease, expected_funds);
+    super::settle_arrival(&mut test_case, &lease, expected_funds);
     let _arrival = repay::deliver_funds_arrival_alarm(&mut test_case, lease.clone());
     assert_eq!(
         StateResponse::Closed(),
@@ -112,7 +109,7 @@ fn transfer_out_delayed_ack_in_flight_visible() {
         ResponseMode::Delayed,
     );
 
-    let (lease, expected_funds, _repay_response) = open_and_repay_fully(&mut test_case);
+    let (lease, expected_funds, _repay_response) = super::open_and_repay_fully(&mut test_case);
 
     assert_eq!(
         1,
@@ -129,7 +126,7 @@ fn transfer_out_delayed_ack_in_flight_visible() {
         &lease,
     );
 
-    settle_arrival(&mut test_case, &lease, expected_funds);
+    super::settle_arrival(&mut test_case, &lease, expected_funds);
     let _arrival = repay::deliver_funds_arrival_alarm(&mut test_case, lease.clone());
     assert_eq!(
         StateResponse::Closed(),
@@ -149,7 +146,7 @@ fn transfer_out_error_ack_absorbed_until_heal() {
         ResponseMode::Err(reason),
     );
 
-    let (lease, expected_funds, repay_response) = open_and_repay_fully(&mut test_case);
+    let (lease, expected_funds, repay_response) = super::open_and_repay_fully(&mut test_case);
 
     repay_response.assert_event(
         &Event::new(CLOSING_TRANSFER_OUT_EVENT).add_attribute("absorbed", "remote-error"),
@@ -166,7 +163,7 @@ fn transfer_out_error_ack_absorbed_until_heal() {
         op_tag::TRANSFER_OUT,
         ResponseMode::Ok,
     );
-    let heal_response = heal(&mut test_case, lease.clone());
+    let heal_response = super::heal(&mut test_case, lease.clone());
     heal_response
         .assert_event(&Event::new(CLOSING_TRANSFER_OUT_EVENT).add_attribute("heal", "re-emit"));
     assert_eq!(
@@ -180,7 +177,7 @@ fn transfer_out_error_ack_absorbed_until_heal() {
         &lease,
     );
 
-    settle_arrival(&mut test_case, &lease, expected_funds);
+    super::settle_arrival(&mut test_case, &lease, expected_funds);
     let _arrival = repay::deliver_funds_arrival_alarm(&mut test_case, lease.clone());
     assert_eq!(
         StateResponse::Closed(),
@@ -199,7 +196,7 @@ fn drain_callback_from_stranger_rejected() {
         ResponseMode::Delayed,
     );
 
-    let (lease, expected_funds, _repay_response) = open_and_repay_fully(&mut test_case);
+    let (lease, expected_funds, _repay_response) = super::open_and_repay_fully(&mut test_case);
     assert_closing(expected_funds, ClosingTrx::TransferOut, &test_case, &lease);
 
     let err = test_case
@@ -285,23 +282,6 @@ fn late_ack_from_stranger_rejected() {
     );
 }
 
-/// Open a lease and repay the whole loan, leaving the drain started with
-/// whatever `ResponseMode` the test configured for `transfer_out`
-fn open_and_repay_fully(test_case: &mut LeaseTestCase) -> (Addr, LeaseCoin, AppResponse) {
-    let downpayment = DOWNPAYMENT;
-    let lease = super::open_lease(test_case, downpayment, None);
-
-    let borrowed_lpn = super::quote_borrow(test_case, downpayment);
-    let borrowed: PaymentCoin =
-        price::total(borrowed_lpn, super::price_lpn_of::<PaymentCurrency>().inv()).unwrap();
-    let expected_funds: LeaseCoin = super::expected_opened_amount(downpayment, borrowed_lpn);
-
-    let repay_response =
-        repay::repay_with_hook_on_swap(test_case, lease.clone(), borrowed, |_app| {})
-            .unwrap_response();
-    (lease, expected_funds, repay_response)
-}
-
 fn assert_closing(
     expected_funds: LeaseCoin,
     in_progress: ClosingTrx,
@@ -317,33 +297,10 @@ fn assert_closing(
     );
 }
 
-/// Mirror the acknowledged transfer onto the bank balances: the remote
-/// account (stood in by the ICA address) escrows the asset and the paired
-/// ICS-20 channel lands it on the lease's local account
-fn settle_arrival(test_case: &mut LeaseTestCase, lease: &Addr, funds: LeaseCoin) {
-    let ica_addr: Addr = TestCase::ica_addr(lease, TestCase::LEASE_ICA_ID);
-    test_case
-        .app
-        .send_tokens(
-            ica_addr,
-            testing::user(ADMIN),
-            &[coin_legacy::to_cosmwasm_on_dex(funds)],
-        )
-        .unwrap();
-    test_case
-        .app
-        .send_tokens(
-            testing::user(ADMIN),
-            lease.clone(),
-            &[common::cwcoin(funds)],
-        )
-        .unwrap();
-}
-
 /// Drive a lease through the full drain to the `Closed` terminal
 fn open_and_close(test_case: &mut LeaseTestCase) -> Addr {
-    let (lease, expected_funds, _repay_response) = open_and_repay_fully(test_case);
-    settle_arrival(test_case, &lease, expected_funds);
+    let (lease, expected_funds, _repay_response) = super::open_and_repay_fully(test_case);
+    super::settle_arrival(test_case, &lease, expected_funds);
     let _arrival = repay::deliver_funds_arrival_alarm(test_case, lease.clone());
     assert_eq!(
         StateResponse::Closed(),
@@ -354,12 +311,4 @@ fn open_and_close(test_case: &mut LeaseTestCase) -> Addr {
 
 fn transfer_out_ack() -> RemoteLeaseCallback {
     RemoteLeaseCallback::OperationOk(WireOperationResponse::TransferOut(TransferOutResponse {}))
-}
-
-fn heal(test_case: &mut LeaseTestCase, lease: Addr) -> AppResponse {
-    test_case
-        .app
-        .execute(testing::user(USER), lease, &ExecuteMsg::Heal(), &[])
-        .unwrap()
-        .unwrap_response()
 }
