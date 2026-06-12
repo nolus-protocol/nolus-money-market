@@ -87,10 +87,10 @@ fn transfer_out_single_coin_drain_acks() {
         &Event::new(CLOSING_TRANSFER_OUT_EVENT).add_attribute("stage", "funds-arrival"),
     );
     assert_closing(
-        &test_case,
-        &lease,
         expected_funds,
         ClosingTrx::TransferInFinish,
+        &test_case,
+        &lease,
     );
 
     settle_arrival(&mut test_case, &lease, expected_funds);
@@ -118,15 +118,15 @@ fn transfer_out_delayed_ack_in_flight_visible() {
         1,
         stub::recorded_transfer_outs(&test_case.app, &controller, &lease).len()
     );
-    assert_closing(&test_case, &lease, expected_funds, ClosingTrx::TransferOut);
+    assert_closing(expected_funds, ClosingTrx::TransferOut, &test_case, &lease);
 
     let _delivery =
         stub::deliver_pending_callback(&mut test_case.app, &controller, op_tag::TRANSFER_OUT);
     assert_closing(
-        &test_case,
-        &lease,
         expected_funds,
         ClosingTrx::TransferInFinish,
+        &test_case,
+        &lease,
     );
 
     settle_arrival(&mut test_case, &lease, expected_funds);
@@ -158,7 +158,7 @@ fn transfer_out_error_ack_absorbed_until_heal() {
         1,
         stub::recorded_transfer_outs(&test_case.app, &controller, &lease).len()
     );
-    assert_closing(&test_case, &lease, expected_funds, ClosingTrx::TransferOut);
+    assert_closing(expected_funds, ClosingTrx::TransferOut, &test_case, &lease);
 
     stub::set_response_mode(
         &mut test_case.app,
@@ -174,10 +174,10 @@ fn transfer_out_error_ack_absorbed_until_heal() {
         stub::recorded_transfer_outs(&test_case.app, &controller, &lease).len()
     );
     assert_closing(
-        &test_case,
-        &lease,
         expected_funds,
         ClosingTrx::TransferInFinish,
+        &test_case,
+        &lease,
     );
 
     settle_arrival(&mut test_case, &lease, expected_funds);
@@ -200,7 +200,7 @@ fn drain_callback_from_stranger_rejected() {
     );
 
     let (lease, expected_funds, _repay_response) = open_and_repay_fully(&mut test_case);
-    assert_closing(&test_case, &lease, expected_funds, ClosingTrx::TransferOut);
+    assert_closing(expected_funds, ClosingTrx::TransferOut, &test_case, &lease);
 
     let err = test_case
         .app
@@ -222,7 +222,7 @@ fn drain_callback_from_stranger_rejected() {
         ),
         "expected DexError::Unauthorized, got {contract_err:?}"
     );
-    assert_closing(&test_case, &lease, expected_funds, ClosingTrx::TransferOut);
+    assert_closing(expected_funds, ClosingTrx::TransferOut, &test_case, &lease);
 }
 
 #[test]
@@ -303,10 +303,10 @@ fn open_and_repay_fully(test_case: &mut LeaseTestCase) -> (Addr, LeaseCoin, AppR
 }
 
 fn assert_closing(
-    test_case: &LeaseTestCase,
-    lease: &Addr,
     expected_funds: LeaseCoin,
     in_progress: ClosingTrx,
+    test_case: &LeaseTestCase,
+    lease: &Addr,
 ) {
     assert_eq!(
         StateResponse::Closing {
