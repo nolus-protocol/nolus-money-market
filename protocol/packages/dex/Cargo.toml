@@ -12,6 +12,16 @@ rust-version.workspace = true
 combinations = [{ tags = ["ci", "@agnostic"], feature-groups = ["impl-or-testing"], include-rest = false }]
 feature-groups = { impl-or-testing = { members = ["impl","testing",], at-least-one = false, mutually-exclusive = true }}
 
+# the drain tests need `timealarms/testing` (`TimeAlarmsRef::unchecked`), but
+# dev-dependencies cannot be feature-gated, so under the feature-less
+# combination — where every timealarms-consuming module is `impl`-gated out —
+# cargo-udeps sees the dev-dependency as unused, and its presence in the
+# resolved graph makes the optional regular dependency (off without
+# `dep:timealarms`) get reported as unused too
+[package.metadata.cargo-udeps.ignore]
+development = ["timealarms"]
+normal = ["timealarms"]
+
 
 [features]
 impl = [

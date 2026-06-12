@@ -111,6 +111,44 @@ If `A` also has a higher-level feature (e.g. `contract = [..., "stub"]`) that al
 
 Tried first (did not work): `stub = []` on the contract crate, expecting Cargo to forward by name.
 
+### cargo-udeps flags a dev-dependency used only by feature-gated tests
+
+**Symptom:** CI's "Check for unused dependencies" job fails for a package at
+the feature-less combination: a dev-dependency that only tests inside a
+feature-gated module use is reported unused — and the same-named *optional
+regular* dependency is reported unused alongside it, even though it is off
+without its `dep:` feature.
+
+**Cause (two-part):** dev-dependencies cannot be feature-gated, so under a
+cargo-each combination where the consuming test modules are `cfg`-ed out the
+dev-dependency is genuinely unused there. Its presence in the resolved graph
+then also makes `cargo-udeps` report the disabled optional regular dependency
+as unused.
+
+**Fix:** declare both as known false positives next to the cargo-each
+metadata, with a comment:
+
+```
+[package.metadata.cargo-udeps.ignore]
+development = ["<crate>"]
+normal = ["<crate>"]
+```
+
+Reproduce/verify locally instead of pushing blind (versions from
+`ci/Containerfile`):
+
+```
+cargo install cargo-udeps --version 0.1.59 --locked
+rustup toolchain install nightly-2026-03-05 --profile minimal
+cd <workspace>
+cargo +nightly-2026-03-05 udeps --all-targets --locked -p <pkg>              # per
+cargo +nightly-2026-03-05 udeps --all-targets --locked -p <pkg> --features … # combo
+```
+
+Tried first (did not work): ignoring only `development` — the induced
+`normal` report persists; the plain stable toolchain — `cargo udeps` requires
+nightly, and a too-old nightly fails the workspace's `rust-version`.
+
 ### Pre-push lint: `cargo lint-all`, not `cargo lint`
 
 **Symptom:** `cargo lint` passes locally, CI's "Lint codebase with tests" job fails with errors in `#[cfg(test)]` code — e.g. an unresolved test-only path like `versioning::ReleaseId::new_test` under a feature combination that does not activate `versioning/testing`.
