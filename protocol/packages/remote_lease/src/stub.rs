@@ -1,7 +1,10 @@
 use serde::Serialize;
 
 use finance::duration::Duration;
-use platform::{batch::Batch, result::Result as PlatformResult};
+use platform::{
+    batch::{Batch, ReplyId},
+    result::Result as PlatformResult,
+};
 use sdk::cosmwasm_std::Addr;
 
 use crate::msg::{CloseLeaseParams, OpenLeaseParams, SwapParams, TransferOutParams};
@@ -42,19 +45,6 @@ impl<'controller> Factory<'controller> {
     {
         schedule(self.controller, &msg(params, timeout))
     }
-
-    pub fn close<F, M>(
-        &self,
-        params: CloseLeaseParams,
-        timeout: Duration,
-        msg: F,
-    ) -> PlatformResult<Batch>
-    where
-        F: FnOnce(CloseLeaseParams, Duration) -> M,
-        M: ControllerInnerMessage,
-    {
-        schedule(self.controller, &msg(params, timeout))
-    }
 }
 
 pub struct Lease<'controller> {
@@ -86,6 +76,26 @@ impl<'controller> Lease<'controller> {
     {
         schedule(self.controller, &msg(params, timeout))
     }
+
+    /// Schedule a `CloseLease` as a reply-on-error sub-message
+    ///
+    /// The close is best-effort by design: it rides the same transaction
+    /// as the customer payout, and a synchronous controller failure (for
+    /// example, a non-operational channel) must not revert that payout.
+    /// The caller absorbs the failure in its `reply` handler instead.
+    pub fn close<F, M>(
+        &self,
+        params: CloseLeaseParams,
+        timeout: Duration,
+        reply_id: ReplyId,
+        msg: F,
+    ) -> PlatformResult<Batch>
+    where
+        F: FnOnce(CloseLeaseParams, Duration) -> M,
+        M: ControllerInnerMessage,
+    {
+        schedule_reply_on_error(self.controller, &msg(params, timeout), reply_id)
+    }
 }
 
 fn schedule<M>(controller: &Addr, msg: &M) -> PlatformResult<Batch>
@@ -95,6 +105,20 @@ where
     let mut batch = Batch::default();
     batch
         .schedule_execute_wasm_no_reply_no_funds(controller.clone(), msg)
+        .map(|()| batch)
+}
+
+fn schedule_reply_on_error<M>(
+    controller: &Addr,
+    msg: &M,
+    reply_id: ReplyId,
+) -> PlatformResult<Batch>
+where
+    M: Serialize + ?Sized,
+{
+    let mut batch = Batch::default();
+    batch
+        .schedule_execute_wasm_reply_on_error_no_funds(controller.clone(), msg, reply_id)
         .map(|()| batch)
 }
 
@@ -153,13 +177,14 @@ mod tests {
     }
 
     #[test]
-    fn factory_close_schedules_one_message() {
+    fn lease_close_schedules_one_message() {
         let controller = Addr::unchecked("controller");
-        let factory = Factory::new(&controller);
-        let batch = factory
+        let lease = Lease::new(&controller);
+        let batch = lease
             .close(
                 CloseLeaseParams {},
                 CloseLeaseParams::TIMEOUT,
+                1,
                 |params, timeout| OuterExecuteMsg::CloseLease { params, timeout },
             )
             .expect("scheduling must succeed");

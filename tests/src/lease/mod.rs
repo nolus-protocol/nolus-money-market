@@ -11,8 +11,12 @@ use finance::{
     percent::{Percent, Percent100},
     price::{self, Price},
 };
-use lease::api::query::{ClosePolicy, StateResponse, opened::Status};
+use lease::api::{
+    ExecuteMsg,
+    query::{ClosePolicy, StateResponse, opened::Status},
+};
 use leaser::msg::QuoteResponse;
+use platform::coin_legacy;
 use sdk::{
     cosmwasm_std::{Addr, coin},
     cw_multi_test::AppResponse,
@@ -38,12 +42,11 @@ mod heal;
 mod liquidation;
 mod open;
 mod remote_lease_callback;
+mod remote_lease_close;
 // TODO #142 Phase 3: enable when the OpenLease state + Status::OpenFailed land.
 mod remote_lease_open;
 mod remote_lease_swap;
 mod remote_lease_transfer_out;
-// TODO #142 Phase 6: enable when the CloseLease state + divergence terminal land.
-// mod remote_lease_close;
 mod repay;
 mod slippage;
 
@@ -530,4 +533,54 @@ where
         Coin::<LeaseCurrency>::default(),
         LeaserInstantiator::REPAYMENT_PERIOD,
     )
+}
+
+/// Open a lease and repay the whole loan, leaving the drain started with
+/// whatever `ResponseMode` the test configured for `transfer_out`
+pub(super) fn open_and_repay_fully(
+    test_case: &mut LeaseTestCase,
+) -> (Addr, LeaseCoin, AppResponse) {
+    let downpayment = DOWNPAYMENT;
+    let lease = open_lease(test_case, downpayment, None);
+
+    let borrowed_lpn = quote_borrow(test_case, downpayment);
+    let borrowed: PaymentCoin =
+        price::total(borrowed_lpn, price_lpn_of::<PaymentCurrency>().inv()).unwrap();
+    let expected_funds: LeaseCoin = expected_opened_amount(downpayment, borrowed_lpn);
+
+    let repay_response =
+        repay::repay_with_hook_on_swap(test_case, lease.clone(), borrowed, |_app| {})
+            .unwrap_response();
+    (lease, expected_funds, repay_response)
+}
+
+/// Mirror the acknowledged transfer onto the bank balances: the remote
+/// account (stood in by the ICA address) escrows the asset and the paired
+/// ICS-20 channel lands it on the lease's local account
+pub(super) fn settle_arrival(test_case: &mut LeaseTestCase, lease: &Addr, funds: LeaseCoin) {
+    let ica_addr: Addr = TestCase::ica_addr(lease, TestCase::LEASE_ICA_ID);
+    test_case
+        .app
+        .send_tokens(
+            ica_addr,
+            testing::user(ADMIN),
+            &[coin_legacy::to_cosmwasm_on_dex(funds)],
+        )
+        .unwrap();
+    test_case
+        .app
+        .send_tokens(
+            testing::user(ADMIN),
+            lease.clone(),
+            &[common::cwcoin(funds)],
+        )
+        .unwrap();
+}
+
+pub(super) fn heal(test_case: &mut LeaseTestCase, lease: Addr) -> AppResponse {
+    test_case
+        .app
+        .execute(testing::user(USER), lease, &ExecuteMsg::Heal(), &[])
+        .unwrap()
+        .unwrap_response()
 }

@@ -190,7 +190,7 @@ RequestLoan ──open loan──▶ OpenLease
 
 `OpenLease::on_remote_lease_callback` authenticates `info.sender` via `LeasesRef::remote_lease_callback_permission` before dispatching, identical to the in-flight DexState gate documented above. `OpenFailed` runs the same check — every callback handler that returns `Ok` is authz-gated, regardless of idempotence.
 
-`super::buy_asset::start` still opens the ICA account and transfers the funds out over ICA, but the swap legs run through the remote-lease controller (`RemoteSwap` — sequential single-coin legs, `acks_left` countdown, pinned per-leg `min_out`). The remaining lifecycle stages (CloseLease, the repay/liquidation swaps) still ride ICA and migrate in later phases.
+`super::buy_asset::start` still opens the ICA account and transfers the funds out over ICA, but the swap legs run through the remote-lease controller (`RemoteSwap` — sequential single-coin legs, `acks_left` countdown, pinned per-leg `min_out`). The paid-close drain and the `CloseLease` run through the controller as well (next section); the repay/liquidation swaps still ride ICA and migrate in later phases.
 
 ## Outbound close-side lifecycle — drain-home (issue #142)
 
@@ -216,20 +216,37 @@ Opened ──final repay──▶ paid::start_close
         the funds travel on the paired ICS-20 channel)
                    │ all coins arrived
                    ▼
-        Close (bank send to customer) + finalize_lease ──▶ Closed
-        (authenticated late-ack absorber, like OpenFailed:
-        emits `wasm-ls-remote-lease-late-ack`, terminal = closed)
+        Close (bank send to customer) + CloseLease (reply-on-error
+        sub-message) + finalize_lease ──▶ ClosingRemoteLease
+                   │
+                   │ controller ack (UNORDERED)
+                   │
+        OperationOk(CloseLease) ──▶ Closed (authenticated late-ack
+                   │                absorber, like OpenFailed: emits
+                   │                `wasm-ls-remote-lease-late-ack`,
+                   │                terminal = closed)
+                   │
+        OperationErr / unexpected OperationOk → absorbed (`absorbed =
+        remote-error` / `unexpected-response-variant`), NOT auto-retried —
+        recovery = permissionless Heal (`heal = re-emit`);
+        OperationTimeout → re-emit verbatim (`timeout = retry`);
+        synchronous emission failure → reply absorber (`absorbed =
+        emission-failed`), the payout transaction commits regardless
 ```
 
-`CloseLease` is deliberately not emitted by this phase — its insertion point is between the funds' arrival and the customer payout, pending the bounded-recovery / divergence-terminal design. Any lease closed before that phase leaves its Solana-side account open; no live population exists, so none can.
+**`CloseLease` ordering — payout first.** The customer payout goes out before the `CloseLease`, never the other way around: the remote-account cleanup benefits only the protocol, so it must not delay or endanger the payout. Both ride the same transaction — payout bank-send first, then the `CloseLease` as a *reply-on-error sub-message*, finalize last — so a synchronous controller failure (for example, a non-operational channel) reverts only the sub-message; the payout and finalize commit and the lease parks in `ClosingRemoteLease`, recoverable via the permissionless `Heal`. There is no bounded-retry machinery and no divergence terminal: a failed close is absorbed with an event and waits for a heal, matching the drain leg's recovery model and the ICA-era precedent (remote accounts were never closed at all).
 
-The whole drain leg authorises callbacks against the controller address pinned in `LeaseDTO` (`SingleUserPermission`) instead of the leaser query the opening/swap legs use — the in-flight `TransferOut`/`FundsArrival` states and the `Closed` terminal all check the same pin, the address the drain emits to. A leaser re-configuration mid-drain therefore can neither wedge a live drain (the original controller's acks stay authorised) nor let the new controller inject synthetic acks into it.
+`ClosingRemoteLease` reports `Closed()` on the state query — the customer-facing close completed with the payout; the pending remote cleanup is observable through the `wasm-ls-close-remote-lease` events only. Operational notes that follow from this: (a) the leaser finalizes before the close acknowledgment arrives, so a protocol teardown check that counts registered leases cannot see a lease between finalize and the close ack — close the channel only after the `ClosingRemoteLease` population is drained; (b) a heal issued while the original packet is still resolvable can solicit a duplicate acknowledgment — the `Closed` terminal absorbs it, and the Solana side is assumed to reject a `CloseLease` for an already-closed lease account with an error acknowledgment (it already gates closes on residual balances the same way), which the lease likewise absorbs.
+
+Only this paid-close path closes the Solana-side account. The other terminals — `OpenFailed` (the account was never created), `Liquidated` and the sell-asset customer closes (still ICA-based, migrating in a later phase) — leave it open, as every close did before this phase.
+
+The whole drain leg, the `ClosingRemoteLease` state, and the `Closed` terminal authorise callbacks against the controller address pinned in `LeaseDTO` (`SingleUserPermission`) instead of the leaser query the opening/swap legs use — the same pin the drain and the close emit to. A leaser re-configuration mid-drain therefore can neither wedge a live drain (the original controller's acks stay authorised) nor let the new controller inject synthetic acks into it.
 
 An `OperationOk` ack carrying any operation other than `OpenLease` (a `CloseLease` / `Swap` / `TransferOut` response against an in-flight open) can only originate from a buggy or hostile counterparty. The lease treats it exactly like `OperationErr`: it refunds the customer, finalises, and moves to `OpenFailed` with a synthesised `unexpected operation response: …` reason. It does **not** return `Err` — an error would revert the controller's `ibc_packet_ack`, stranding the relayer and freezing the lease in `OpenLease`. Operators see the same `wasm-ls-remote-lease-open-failed` event and audit the counterparty per the runbook.
 
 ## Storage: v9 → v10 → v11 → v12 (refuse-migrate)
 
-v10 makes `LeaseDTO.remote_lease_id` a non-optional Solana PDA, which is binary-incompatible with the v9 layout. v11 reshapes the opening-swap state: the `BuyAsset` spec gains the controller address and slippage bound, and the swap leg moves from the ICA `SwapExactIn` to the `RemoteSwap` transport. v12 gives `LeaseDTO` the non-optional `remote_lease_controller`, pinned at open, so the post-opening legs emit operations without re-querying the leaser. The `migrate` entry point **rejects unconditionally** (`ContractError::UnsupportedMigration`):
+v10 makes `LeaseDTO.remote_lease_id` a non-optional Solana PDA, which is binary-incompatible with the v9 layout. v11 reshapes the opening-swap state: the `BuyAsset` spec gains the controller address and slippage bound, and the swap leg moves from the ICA `SwapExactIn` to the `RemoteSwap` transport. v12 gives `LeaseDTO` the non-optional `remote_lease_controller`, pinned at open, so the post-opening legs emit operations without re-querying the leaser. The `ClosingRemoteLease` state is additive within v12 — a new externally-tagged variant alongside the existing ones, no stored layout reshaped. The `migrate` entry point **rejects unconditionally** (`ContractError::UnsupportedMigration`):
 
 - **Mainnet** carries zero pre-v11 remote-lease positions, so refusing is strictly safer than risking a silent deserialise failure on the first post-upgrade load.
 - A v9 lease has no meaningful `remote_lease_id` to synthesise — its `dex_account` is an ICA host on the DEX chain, not a Solana PDA — and a pre-v11 opening state has no transport to resume on, so a "real" migration would only invent permanent sentinels.
@@ -246,4 +263,7 @@ than erred. The drain leg decodes the same way but its `TransferOut`
 variant carries no payload — the decode is a pure variant check, so the
 acknowledgment's only information is positional (the `acks_left`
 countdown), an even weaker correlation than the swap leg's pinned-floor
-cross-check.
+cross-check. The close leg needs no decode at all: as a plain state
+(like `OpenLease`) it receives the already-typed callback and matches
+on the `CloseLease` variant, whose response is empty — a single
+in-flight operation, correlated by the state itself.
