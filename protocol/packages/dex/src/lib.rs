@@ -11,9 +11,9 @@ pub use self::{
     impl_::{
         AcceptAnyNonZeroSwap, AcceptUpToMaxSlippage, DrainStage, FundsArrival, IcaConnector,
         MaxSlippage, RemoteSwap, RemoteSwapClient, RemoteTransferOut, RemoteTransferOutTask,
-        StartDrainState, StartLocalLocalState, StartLocalRemoteState, StartTransferInState,
-        StateDrain, StateLocalOut, StateRemoteOut, TransferOut, start_drain, start_local_local,
-        start_local_remote, start_remote_local,
+        StartDrainState, StartLocalLocalState, StartLocalRemoteState, StartSwapState,
+        StartTransferInState, StateDrain, StateLocalOut, StateRemoteOut, StateSwap, TransferOut,
+        start_drain, start_local_local, start_local_remote, start_remote_local, start_swap,
     },
     resp_delivery::ForwardToInner,
     response::{ContinueResult, Handler, Response, Result},
