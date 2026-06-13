@@ -41,6 +41,11 @@ pub enum ContractError {
     #[error("[Lease] Failed to update software! Cause: {0}")]
     UpdateSoftware(versioning::Error),
 
+    #[error(
+        "[Lease] Issue #654 unwind refused: the stored state does not match the audited snapshot"
+    )]
+    Issue654StateMismatch(),
+
     #[error("[Lease] {0}")]
     LppStubError(LppStubError),
 

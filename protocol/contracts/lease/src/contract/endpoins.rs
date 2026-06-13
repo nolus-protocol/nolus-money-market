@@ -59,18 +59,19 @@ pub fn instantiate(
 #[entry_point]
 pub fn migrate(
     deps: DepsMut<'_>,
-    _env: Env,
+    env: Env,
     ProtocolMigrationMessage {
         migrate_from,
         to_release,
         message: MigrateMsg {},
     }: ProtocolMigrationMessage<MigrateMsg>,
 ) -> ContractResult<CwResponse> {
+    let api = deps.api;
     migrate_from
         .update_software(&CURRENT_RELEASE, &to_release)
-        .map(|()| response::empty_response())
         .map_err(ContractError::UpdateSoftware)
-        .inspect_err(platform_error::log(deps.api))
+        .and_then(|()| super::unwind_issue654::unwind(deps, env))
+        .inspect_err(platform_error::log(api))
 }
 
 #[entry_point]

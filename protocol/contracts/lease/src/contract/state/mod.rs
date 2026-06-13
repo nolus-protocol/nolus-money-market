@@ -104,6 +104,10 @@ pub(super) fn new_lease(
         .map(|(batch, start_state)| (batch, start_state.into()))
 }
 
+pub(super) fn closed() -> State {
+    closed::Closed::default().into()
+}
+
 fn ignore_msg<S>(state: S) -> ContractResult<Response>
 where
     S: Into<State>,

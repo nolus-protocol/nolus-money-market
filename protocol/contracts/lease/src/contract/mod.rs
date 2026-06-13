@@ -18,6 +18,7 @@ mod endpoins;
 mod finalize;
 pub mod msg;
 mod state;
+mod unwind_issue654;
 
 #[derive(Serialize, Deserialize)]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
