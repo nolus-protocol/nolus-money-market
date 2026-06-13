@@ -28,10 +28,17 @@
 //! - `OpenLease` → `OperationResponse::OpenLease { remote_lease_id }`
 //!   with a synthetic but valid PDA-looking string (the stub mints a fresh
 //!   one per `OpenLease` call to mirror Solana's unique-per-lease PDA),
-//! - `Swap` → `OperationResponse::Swap { amount_out }` where `amount_out`
-//!   equals the request's configured `min_out` (the literal-floor model
-//!   confirmed in plan §10.A.3 — a happy-path counterparty pays exactly
-//!   the configured floor),
+//! - `Swap` → `OperationResponse::Swap { amount_out }`. An asset-direction
+//!   swap (the opening legs, which buy the lease currency) pays exactly the
+//!   request's configured `min_out` — the literal-floor model confirmed in
+//!   plan §10.A.3, which the opening-swap drivers assert against. A
+//!   home-direction swap (output in `Lpn` — the repay and liquidation/close
+//!   legs that sell the asset for `Lpn`) instead pays a price-derived quote,
+//!   the controller-path analogue of the old ICA `do_swap` price callback
+//!   (`common/swap.rs::do_swap_internal`). Those legs run `AcceptAnyNonZeroSwap`,
+//!   whose `min_out` floors at `1`, so a literal-floor payout would apply
+//!   ~1 `Lpn` of proceeds and never settle the operation; pricing the output
+//!   off `coin_in` at the harness's identity rate pays the realistic amount,
 //! - `TransferOut` → `OperationResponse::TransferOut(TransferOutResponse {})`,
 //!   `CloseLease` → `OperationResponse::CloseLease(CloseLeaseResponse {})`.
 //!
@@ -41,9 +48,9 @@
 
 use serde::{Deserialize, Serialize};
 
-use currencies::PaymentGroup;
-use currency::{CurrencyDef, Group, MemberOf};
-use finance::coin::{Coin, CoinDTO, WithCoin};
+use currencies::{Lpn, PaymentGroup};
+use currency::{self, CurrencyDef, Group, MemberOf};
+use finance::coin::{Amount, Coin, CoinDTO, WithCoin};
 use platform::contract::{Code, CodeId};
 use remote_lease::{
     callback::{RemoteErrorMessage, RemoteLeaseCallback},
@@ -271,7 +278,7 @@ pub fn execute(
             record_swap(deps.storage, &info.sender, &params)?;
             handle_outbound(deps, info, op_tag::SWAP, |_storage| {
                 Ok(OperationResponse::Swap(SwapResponse {
-                    amount_out: *params.min_out(),
+                    amount_out: swap_quote(&params),
                 }))
             })
         }
@@ -374,6 +381,44 @@ where
     };
 
     Ok(CwResponse::new().add_message(callback_msg(info.sender, callback)?))
+}
+
+/// The output a happy-path counterparty pays for a swap.
+///
+/// An asset-direction swap (the opening legs that buy the lease currency)
+/// pays the configured `min_out` floor — the model the opening-swap drivers
+/// assert against. A home-direction swap (output in `Lpn`, i.e. the repay
+/// and liquidation/close legs that sell the asset back for `Lpn`) instead
+/// pays a price-derived quote: the `coin_in` amount re-expressed in the
+/// output currency at the harness's identity rate, the controller-path
+/// analogue of the old ICA `do_swap` price callback. Those legs run
+/// `AcceptAnyNonZeroSwap`, whose floor is `1`, so the literal-floor model
+/// would never settle them.
+fn swap_quote(params: &SwapParams) -> CoinDTO<PaymentGroup> {
+    if params.min_out().currency() == currency::dto::<Lpn, PaymentGroup>() {
+        priced_at_identity(params.coin_in().amount(), params.min_out())
+    } else {
+        *params.min_out()
+    }
+}
+
+/// Build a coin of `out`'s currency holding `amount_in` units — the swap
+/// output under the harness's identity price (1 input unit ⇒ 1 output unit).
+fn priced_at_identity(amount_in: Amount, out: &CoinDTO<PaymentGroup>) -> CoinDTO<PaymentGroup> {
+    struct OfAmount(Amount);
+    impl WithCoin<PaymentGroup> for OfAmount {
+        type Outcome = CoinDTO<PaymentGroup>;
+
+        fn on<C>(self, _coin: Coin<C>) -> Self::Outcome
+        where
+            C: CurrencyDef,
+            C::Group: MemberOf<PaymentGroup> + MemberOf<<PaymentGroup as Group>::TopG>,
+        {
+            Coin::<C>::new(self.0).into()
+        }
+    }
+
+    out.with_coin(OfAmount(amount_in))
 }
 
 fn underpay(response: OperationResponse) -> OperationResponse {

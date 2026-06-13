@@ -1,0 +1,381 @@
+use std::iter;
+
+use serde::{Deserialize, Serialize};
+
+use access_control::permissions::SingleUserPermission;
+use currency::CurrencyDef;
+use dex::{DrainStage, Error as DexError, RemoteTransferOutTask};
+use finance::{
+    coin::{Coin, CoinDTO, WithCoin},
+    duration::Duration,
+    instant::Instant,
+};
+use platform::{bank, batch::Batch};
+use remote_lease::{
+    msg::TransferOutParams,
+    response::OperationResponse,
+    stub::{ControllerInnerMessage, Lease as ControllerLease},
+};
+use sdk::cosmwasm_std::{self, Addr, Env, MessageInfo, QuerierWrapper};
+use timealarms::stub::TimeAlarmsRef;
+
+use crate::{
+    api::{
+        PaymentCoin,
+        query::{
+            StateResponse as QueryStateResponse,
+            opened::{OngoingTrx, RepayTrx, Status},
+        },
+    },
+    contract::{
+        Lease,
+        state::{SwapResult, opened},
+    },
+    error::ContractResult,
+    event::Type,
+    finance::{LpnCoinDTO, LpnCurrencies},
+};
+
+use super::repay;
+
+/// A non-`TransferOut` success acknowledgment can only come from a buggy
+/// or hostile counterparty. The fixed reason keeps the unexpected,
+/// counterparty-controlled variant out of stored state and events.
+const NON_TRANSFER_OUT_RESPONSE: &str = "non-transfer-out operation response";
+
+type ProceedsGroup = LpnCurrencies;
+
+/// The home-bound drain of a swap's LPN proceeds
+///
+/// Generic over the finisher that decides what to do with the proceeds
+/// once they have arrived on the local account, so every swap leg that
+/// drains LPN home reuses the same transfer-out wire and stage mapping.
+#[derive(Serialize, Deserialize)]
+pub(crate) struct RepayDrain<Finisher> {
+    lease: Lease,
+    proceeds: LpnCoinDTO,
+    finisher: Finisher,
+}
+
+impl<Finisher> RepayDrain<Finisher> {
+    pub(in super::super) fn new(lease: Lease, proceeds: LpnCoinDTO, finisher: Finisher) -> Self {
+        Self {
+            lease,
+            proceeds,
+            finisher,
+        }
+    }
+}
+
+impl<Finisher> RemoteTransferOutTask for RepayDrain<Finisher>
+where
+    Finisher: ProceedsFinish,
+{
+    type G = ProceedsGroup;
+    type Label = Type;
+    type StateResponse = ContractResult<QueryStateResponse>;
+    type Result = SwapResult;
+
+    fn label(&self) -> Self::Label {
+        Type::RepaymentTransferOut
+    }
+
+    fn time_alarm(&self) -> &TimeAlarmsRef {
+        &self.lease.lease.time_alarms
+    }
+
+    /// Authorised against the controller pinned in `LeaseDTO` — the swap
+    /// phase authorised the same controller's callback, so a leaser
+    /// re-configuration can neither wedge nor hijack the proceeds drain.
+    fn authz_remote_callback(
+        &self,
+        _querier: QuerierWrapper<'_>,
+        info: &MessageInfo,
+    ) -> dex::DexResult<()> {
+        access_control::check(
+            &SingleUserPermission::new(&self.lease.lease.remote_lease_controller),
+            info,
+        )
+        .map_err(DexError::Unauthorized)
+    }
+
+    fn coins(&self) -> impl IntoIterator<Item = CoinDTO<Self::G>> {
+        iter::once(self.proceeds)
+    }
+
+    fn schedule_transfer_out(&self, coin: &CoinDTO<Self::G>) -> dex::DexResult<Batch> {
+        transfer_out_msg(&self.lease.lease.remote_lease_controller, coin)
+    }
+
+    fn decode_response(&self, payload: &[u8]) -> dex::DexResult<()> {
+        decode_response(payload)
+    }
+
+    fn all_received(&self, account: &Addr, querier: QuerierWrapper<'_>) -> dex::DexResult<bool> {
+        received(&self.proceeds, account, querier)
+    }
+
+    fn finish(self, env: &Env, querier: QuerierWrapper<'_>) -> Self::Result {
+        self.finisher
+            .finish(self.lease, self.proceeds, env, querier)
+    }
+
+    fn state(
+        self,
+        in_progress: DrainStage,
+        now: Instant,
+        due_projection: Duration,
+        querier: QuerierWrapper<'_>,
+    ) -> Self::StateResponse {
+        self.finisher
+            .state(self.lease, in_progress, now, due_projection, querier)
+    }
+}
+
+/// What to do with a swap's LPN proceeds after they reach the local account
+///
+/// Owns both the terminal transition and the in-flight query mapping so a
+/// single drain spec serves every swap leg without per-leg `enum` arms.
+pub(crate) trait ProceedsFinish {
+    fn finish(
+        self,
+        lease: Lease,
+        proceeds: LpnCoinDTO,
+        env: &Env,
+        querier: QuerierWrapper<'_>,
+    ) -> SwapResult;
+
+    fn state(
+        self,
+        lease: Lease,
+        in_progress: DrainStage,
+        now: Instant,
+        due_projection: Duration,
+        querier: QuerierWrapper<'_>,
+    ) -> ContractResult<QueryStateResponse>;
+}
+
+#[derive(Serialize, Deserialize)]
+pub(crate) struct RepayFinish {
+    payment: PaymentCoin,
+}
+
+impl RepayFinish {
+    pub(in super::super) fn new(payment: PaymentCoin) -> Self {
+        Self { payment }
+    }
+}
+
+impl ProceedsFinish for RepayFinish {
+    fn finish(
+        self,
+        lease: Lease,
+        proceeds: LpnCoinDTO,
+        env: &Env,
+        querier: QuerierWrapper<'_>,
+    ) -> SwapResult {
+        repay::repay(lease, proceeds, env, querier)
+    }
+
+    fn state(
+        self,
+        lease: Lease,
+        in_progress: DrainStage,
+        now: Instant,
+        due_projection: Duration,
+        querier: QuerierWrapper<'_>,
+    ) -> ContractResult<QueryStateResponse> {
+        let in_progress = match in_progress {
+            DrainStage::TransferOut { acks_left: _ } => RepayTrx::TransferOut,
+            DrainStage::FundsArrival => RepayTrx::TransferInFinish,
+        };
+        let in_progress = OngoingTrx::Repayment {
+            payment: self.payment,
+            in_progress,
+        };
+
+        opened::lease_state(
+            lease,
+            Status::InProgress(in_progress),
+            now,
+            due_projection,
+            querier,
+        )
+    }
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "snake_case")]
+enum ControllerExecuteMsg {
+    TransferOut {
+        params: TransferOutParams,
+        timeout: Duration,
+    },
+}
+
+impl ControllerInnerMessage for ControllerExecuteMsg {}
+
+fn transfer_out_msg(controller: &Addr, coin: &CoinDTO<ProceedsGroup>) -> dex::DexResult<Batch> {
+    TransferOutParams::new(coin.into_super_group())
+        .map_err(DexError::remote_swap_client)
+        .and_then(|params| {
+            ControllerLease::new(controller)
+                .transfer_out(params, TransferOutParams::TIMEOUT, |params, timeout| {
+                    ControllerExecuteMsg::TransferOut { params, timeout }
+                })
+                .map_err(Into::into)
+        })
+}
+
+fn decode_response(payload: &[u8]) -> dex::DexResult<()> {
+    cosmwasm_std::from_json::<OperationResponse>(payload)
+        .map_err(DexError::remote_swap_client)
+        .and_then(|response| match response {
+            OperationResponse::TransferOut(_confirmation) => Ok(()),
+            OperationResponse::OpenLease(_)
+            | OperationResponse::CloseLease(_)
+            | OperationResponse::Swap(_) => Err(DexError::unexpected_response_variant(
+                NON_TRANSFER_OUT_RESPONSE,
+            )),
+        })
+}
+
+fn received(
+    expected: &CoinDTO<ProceedsGroup>,
+    account: &Addr,
+    querier: QuerierWrapper<'_>,
+) -> dex::DexResult<bool> {
+    struct CheckBalance<'account, 'querier> {
+        account: &'account Addr,
+        querier: QuerierWrapper<'querier>,
+    }
+
+    impl WithCoin<ProceedsGroup> for CheckBalance<'_, '_> {
+        type Outcome = dex::DexResult<bool>;
+
+        fn on<C>(self, expected: Coin<C>) -> Self::Outcome
+        where
+            C: CurrencyDef,
+        {
+            bank::balance::<C>(self.account, self.querier)
+                .map_err(Into::into)
+                .map(|ref balance| expected <= *balance)
+        }
+    }
+
+    expected.with_coin(CheckBalance { account, querier })
+}
+
+#[cfg(all(feature = "internal.test.contract", test))]
+mod tests {
+    use currencies::testing::LeaseC2;
+    use currency::CurrencyDef;
+    use finance::coin::{Coin, CoinDTO};
+    use remote_lease::{
+        msg::TransferOutParams,
+        response::{
+            CloseLeaseResponse, OpenLeaseResponse, OperationResponse, RemoteLeaseId, SwapResponse,
+            TransferOutResponse,
+        },
+    };
+    use sdk::cosmwasm_std::{
+        self, Addr, Coin as CwCoin, Empty, QuerierWrapper, testing::MockQuerier,
+    };
+
+    use crate::finance::{LpnCurrencies, LpnCurrency};
+
+    const CONTROLLER: &str = "controller";
+    const LEASE: &str = "lease";
+
+    #[test]
+    fn transfer_out_msg_shape_matches_the_controller_wire() {
+        let proceeds: CoinDTO<LpnCurrencies> = Coin::<LpnCurrency>::new(1000).into();
+        let params =
+            TransferOutParams::new(proceeds.into_super_group()).expect("a non-zero amount");
+        let msg = super::ControllerExecuteMsg::TransferOut {
+            params: params.clone(),
+            timeout: TransferOutParams::TIMEOUT,
+        };
+
+        let expected = format!(
+            r#"{{"transfer_out":{{"params":{},"timeout":{}}}}}"#,
+            cosmwasm_std::to_json_string(&params).expect("the params should serialize"),
+            cosmwasm_std::to_json_string(&TransferOutParams::TIMEOUT)
+                .expect("the timeout should serialize"),
+        );
+        assert_eq!(
+            expected,
+            cosmwasm_std::to_json_string(&msg).expect("the message should serialize")
+        );
+    }
+
+    #[test]
+    fn transfer_out_msg_targets_the_controller() {
+        let coin: CoinDTO<LpnCurrencies> = Coin::<LpnCurrency>::new(1000).into();
+        let batch = super::transfer_out_msg(&Addr::unchecked(CONTROLLER), &coin)
+            .expect("a valid transfer-out message");
+        assert_eq!(1, batch.len());
+    }
+
+    #[test]
+    fn decode_accepts_a_transfer_out_response() {
+        let payload = OperationResponse::TransferOut(TransferOutResponse {});
+
+        assert_eq!(Ok(()), decode(&payload).map_err(|err| err.to_string()));
+    }
+
+    #[test]
+    fn decode_rejects_non_transfer_out_responses() {
+        let amount_out: CoinDTO<currencies::PaymentGroup> = Coin::<LeaseC2>::new(1000).into();
+        let unexpected = [
+            OperationResponse::OpenLease(OpenLeaseResponse {
+                remote_lease_id: remote_lease_id(),
+            }),
+            OperationResponse::CloseLease(CloseLeaseResponse {}),
+            OperationResponse::Swap(SwapResponse { amount_out }),
+        ];
+        unexpected.into_iter().for_each(|payload| {
+            assert!(matches!(
+                decode(&payload),
+                Err(dex::Error::UnexpectedResponseVariant(_reason))
+            ));
+        });
+    }
+
+    #[test]
+    fn received_only_when_balance_covers_the_proceeds() {
+        let expected: CoinDTO<LpnCurrencies> = Coin::<LpnCurrency>::new(1000).into();
+        let account = Addr::unchecked(LEASE);
+
+        assert_eq!(Ok(false), query_received(&expected, &account, 999));
+        assert_eq!(Ok(true), query_received(&expected, &account, 1000));
+        assert_eq!(Ok(true), query_received(&expected, &account, 1500));
+    }
+
+    fn decode(payload: &OperationResponse) -> dex::DexResult<()> {
+        cosmwasm_std::to_json_vec(payload)
+            .map_err(dex::Error::remote_swap_client)
+            .and_then(|payload| super::decode_response(&payload))
+    }
+
+    fn query_received(
+        expected: &CoinDTO<LpnCurrencies>,
+        account: &Addr,
+        balance: u128,
+    ) -> Result<bool, String> {
+        let mock_querier = MockQuerier::<Empty>::new(&[(
+            LEASE,
+            &[CwCoin::new(
+                balance,
+                LpnCurrency::dto().definition().bank_symbol,
+            )],
+        )]);
+        super::received(expected, account, QuerierWrapper::new(&mock_querier))
+            .map_err(|err| err.to_string())
+    }
+
+    fn remote_lease_id() -> RemoteLeaseId {
+        RemoteLeaseId::new(String::from("StubPda11111111111111111111111111111"))
+            .expect("a base58 sample")
+    }
+}

@@ -1,10 +1,7 @@
 use finance::{price, zero::Zero};
 use sdk::cosmwasm_std::Addr;
 
-use super::{
-    DOWNPAYMENT, LeaseCoin, LeaseCurrency, LeaseTestCase, LpnCoin, PaymentCoin, PaymentCurrency,
-    repay,
-};
+use super::{DOWNPAYMENT, LeaseCoin, LeaseTestCase, LpnCoin, PaymentCoin, PaymentCurrency, repay};
 
 #[test]
 fn close_with_full_repay() {

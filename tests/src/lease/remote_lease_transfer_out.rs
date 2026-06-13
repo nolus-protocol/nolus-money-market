@@ -73,11 +73,14 @@ fn transfer_out_single_coin_drain_acks() {
 
     let (lease, expected_funds, repay_response) = super::open_and_repay_fully(&mut test_case);
 
+    // Two transfer-outs ride the controller: the repay-proceeds drain and,
+    // once the loan is paid, the close leg. The close leg is the last one
+    // and carries the freed lease asset.
     let transfer_outs = stub::recorded_transfer_outs(&test_case.app, &controller, &lease);
-    assert_eq!(1, transfer_outs.len());
+    assert_eq!(2, transfer_outs.len());
     assert_eq!(
         &CoinDTO::<PaymentGroup>::from(expected_funds),
-        transfer_outs[0].amount()
+        transfer_outs[1].amount()
     );
 
     repay_response.assert_event(
@@ -102,17 +105,26 @@ fn transfer_out_single_coin_drain_acks() {
 fn transfer_out_delayed_ack_in_flight_visible() {
     let mut test_case = super::create_test_case::<PaymentCurrency>();
     let controller = test_case.address_book.remote_lease_controller().clone();
-    stub::set_response_mode(
-        &mut test_case.app,
-        &controller,
-        op_tag::TRANSFER_OUT,
-        ResponseMode::Delayed,
-    );
 
-    let (lease, expected_funds, _repay_response) = super::open_and_repay_fully(&mut test_case);
+    // Delay only the close-leg transfer-out: the repay-proceeds drain has
+    // already acked when the hook runs, so the mode applies solely to the
+    // close leg.
+    let (lease, expected_funds, _repay_response) = {
+        let controller = controller.clone();
+        super::open_and_repay_fully_then(&mut test_case, move |app| {
+            stub::set_response_mode(
+                app,
+                &controller,
+                op_tag::TRANSFER_OUT,
+                ResponseMode::Delayed,
+            );
+        })
+    };
 
+    // The repay drain transferred out and acked; the close leg is the
+    // second transfer-out and is the one held in flight.
     assert_eq!(
-        1,
+        2,
         stub::recorded_transfer_outs(&test_case.app, &controller, &lease).len()
     );
     assert_closing(expected_funds, ClosingTrx::TransferOut, &test_case, &lease);
@@ -139,20 +151,28 @@ fn transfer_out_error_ack_absorbed_until_heal() {
     let mut test_case = super::create_test_case::<PaymentCurrency>();
     let controller = test_case.address_book.remote_lease_controller().clone();
     let reason = RemoteErrorMessage::new("partial drain failure").expect("within length cap");
-    stub::set_response_mode(
-        &mut test_case.app,
-        &controller,
-        op_tag::TRANSFER_OUT,
-        ResponseMode::Err(reason),
-    );
 
-    let (lease, expected_funds, repay_response) = super::open_and_repay_fully(&mut test_case);
+    // Error only the close-leg transfer-out: the repay-proceeds drain has
+    // already acked when the hook runs.
+    let (lease, expected_funds, repay_response) = {
+        let controller = controller.clone();
+        super::open_and_repay_fully_then(&mut test_case, move |app| {
+            stub::set_response_mode(
+                app,
+                &controller,
+                op_tag::TRANSFER_OUT,
+                ResponseMode::Err(reason),
+            );
+        })
+    };
 
     repay_response.assert_event(
         &Event::new(CLOSING_TRANSFER_OUT_EVENT).add_attribute("absorbed", "remote-error"),
     );
+    // The repay drain transfer-out plus the errored close attempt (recorded
+    // even on error) make two; the heal re-emit below adds the third.
     assert_eq!(
-        1,
+        2,
         stub::recorded_transfer_outs(&test_case.app, &controller, &lease).len()
     );
     assert_closing(expected_funds, ClosingTrx::TransferOut, &test_case, &lease);
@@ -167,7 +187,7 @@ fn transfer_out_error_ack_absorbed_until_heal() {
     heal_response
         .assert_event(&Event::new(CLOSING_TRANSFER_OUT_EVENT).add_attribute("heal", "re-emit"));
     assert_eq!(
-        2,
+        3,
         stub::recorded_transfer_outs(&test_case.app, &controller, &lease).len()
     );
     assert_closing(
@@ -189,14 +209,20 @@ fn transfer_out_error_ack_absorbed_until_heal() {
 fn drain_callback_from_stranger_rejected() {
     let mut test_case = super::create_test_case::<PaymentCurrency>();
     let controller = test_case.address_book.remote_lease_controller().clone();
-    stub::set_response_mode(
-        &mut test_case.app,
-        &controller,
-        op_tag::TRANSFER_OUT,
-        ResponseMode::Delayed,
-    );
 
-    let (lease, expected_funds, _repay_response) = super::open_and_repay_fully(&mut test_case);
+    // Hold only the close-leg transfer-out in flight: the repay-proceeds
+    // drain has already acked when the hook runs.
+    let (lease, expected_funds, _repay_response) = {
+        let controller = controller.clone();
+        super::open_and_repay_fully_then(&mut test_case, move |app| {
+            stub::set_response_mode(
+                app,
+                &controller,
+                op_tag::TRANSFER_OUT,
+                ResponseMode::Delayed,
+            );
+        })
+    };
     assert_closing(expected_funds, ClosingTrx::TransferOut, &test_case, &lease);
 
     let err = test_case
