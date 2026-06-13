@@ -105,13 +105,6 @@ where
     send_response(app, initiator_contract_addr, &amounts)
 }
 
-pub(crate) fn do_swap_with_error(
-    app: &mut App,
-    requester_contract: Addr,
-) -> sdk::cosmwasm_std::StdResult<ResponseWithInterChainMsgs<'_, AppResponse>> {
-    send_error_response(app, requester_contract)
-}
-
 fn do_swap_internal<GIn, GSwap, F>(
     app: &mut App,
     ica_addr: Addr,
@@ -170,11 +163,4 @@ fn send_response<'r>(
             amounts.iter().copied().map(Impl::build_response),
         )),
     )
-}
-
-fn send_error_response(
-    app: &mut App,
-    requester_contract: Addr,
-) -> sdk::cosmwasm_std::StdResult<ResponseWithInterChainMsgs<'_, AppResponse>> {
-    ibc::send_error(app, requester_contract.clone())
 }

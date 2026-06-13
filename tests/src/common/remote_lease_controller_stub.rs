@@ -145,6 +145,12 @@ pub enum StubExecuteMsg {
         op: String,
         mode: ResponseMode,
     },
+    /// Test-only: override the output the next happy-path `Swap` pays,
+    /// consumed on use. Lets a driver force a single sell→LPN swap below the
+    /// identity quote.
+    SetNextSwapOutput {
+        amount_out: CoinDTO<PaymentGroup>,
+    },
     /// Test-only: dispatch the persisted [`ResponseMode::Delayed`] callback
     /// for the given op tag back to its original sender (the lease).
     DeliverPending {
@@ -199,6 +205,12 @@ const RECORDED_SWAPS: Map<&Addr, Vec<SwapParams>> = Map::new("stub_recorded_swap
 const RECORDED_TRANSFER_OUTS: Map<&Addr, Vec<TransferOutParams>> =
     Map::new("stub_recorded_transfer_outs");
 const RECORDED_CLOSES: Map<&Addr, u32> = Map::new("stub_recorded_closes");
+/// A one-shot output override for the next happy-path `Swap`, consumed on
+/// use. Set via [`StubExecuteMsg::SetNextSwapOutput`] so a driver can make a
+/// single sell→LPN swap pay below the identity quote (e.g. to force a
+/// liquidation outcome under the outstanding loan). Absent by default, so the
+/// price-derived [`swap_quote`] model is unchanged for every other swap.
+const NEXT_SWAP_OUTPUT: Item<CoinDTO<PaymentGroup>> = Item::new("stub_next_swap_output");
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 struct StubConfig {
@@ -276,9 +288,9 @@ pub fn execute(
         }
         StubExecuteMsg::Swap { params, .. } => {
             record_swap(deps.storage, &info.sender, &params)?;
-            handle_outbound(deps, info, op_tag::SWAP, |_storage| {
+            handle_outbound(deps, info, op_tag::SWAP, |storage| {
                 Ok(OperationResponse::Swap(SwapResponse {
-                    amount_out: swap_quote(&params),
+                    amount_out: next_swap_output(storage, &params)?,
                 }))
             })
         }
@@ -290,6 +302,10 @@ pub fn execute(
         }
         StubExecuteMsg::SetResponseMode { op, mode } => {
             MODES.save(deps.storage, op.as_str(), &mode)?;
+            Ok(CwResponse::new())
+        }
+        StubExecuteMsg::SetNextSwapOutput { amount_out } => {
+            NEXT_SWAP_OUTPUT.save(deps.storage, &amount_out)?;
             Ok(CwResponse::new())
         }
         StubExecuteMsg::DeliverPending { op } => deliver_pending(deps.storage, op.as_str()),
@@ -399,6 +415,24 @@ fn swap_quote(params: &SwapParams) -> CoinDTO<PaymentGroup> {
         priced_at_identity(params.coin_in().amount(), params.min_out())
     } else {
         *params.min_out()
+    }
+}
+
+/// The output the next happy-path swap pays.
+///
+/// A one-shot [`NEXT_SWAP_OUTPUT`] override, if set, is consumed and returned
+/// verbatim - letting a driver force a single swap below the identity quote.
+/// Absent (the default), the price-derived [`swap_quote`] applies unchanged.
+fn next_swap_output(
+    storage: &mut dyn Storage,
+    params: &SwapParams,
+) -> Result<CoinDTO<PaymentGroup>, StubError> {
+    match NEXT_SWAP_OUTPUT.may_load(storage)? {
+        Some(amount_out) => {
+            NEXT_SWAP_OUTPUT.remove(storage);
+            Ok(amount_out)
+        }
+        None => Ok(swap_quote(params)),
     }
 }
 
@@ -582,6 +616,16 @@ pub fn set_response_mode(app: &mut App, controller: &Addr, op: &str, mode: Respo
             let _ = response.unwrap_response();
         })
         .expect("SetResponseMode must succeed against the stand-in");
+}
+
+/// Override the output the next happy-path swap pays, consumed on use.
+pub fn set_next_swap_output(app: &mut App, controller: &Addr, amount_out: CoinDTO<PaymentGroup>) {
+    let msg = StubExecuteMsg::SetNextSwapOutput { amount_out };
+    app.execute(sdk::testing::user(ADMIN), controller.clone(), &msg, &[])
+        .map(|response| {
+            let _ = response.unwrap_response();
+        })
+        .expect("SetNextSwapOutput must succeed against the stand-in");
 }
 
 /// Trigger delivery of a previously stored Delayed callback for the

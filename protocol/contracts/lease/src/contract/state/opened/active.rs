@@ -73,15 +73,6 @@ impl Active {
         }
     }
 
-    // Access permission check should already have been done!
-    pub(super) fn assess_close_status(
-        self,
-        querier: QuerierWrapper<'_>,
-        env: &Env,
-    ) -> ContractResult<Response> {
-        self.try_on_alarm(querier, env)
-    }
-
     fn try_on_alarm(self, querier: QuerierWrapper<'_>, env: &Env) -> ContractResult<Response> {
         let time_alarms_ref = self.lease.lease.time_alarms.clone();
         let oracle_ref = self.lease.lease.oracle.clone();

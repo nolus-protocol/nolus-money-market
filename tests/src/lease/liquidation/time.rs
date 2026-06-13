@@ -1,19 +1,18 @@
 use std::collections::HashMap;
 
 use currencies::PaymentGroup;
-use finance::{coin::Amount, duration::Duration, price, zero::Zero};
+use finance::{
+    coin::{Amount, CoinDTO},
+    duration::Duration,
+    price,
+    zero::Zero,
+};
 use lease::api::{ExecuteMsg, query::StateResponse};
-use platform::coin_legacy;
 use sdk::{cosmwasm_std::Addr, cw_multi_test::AppResponse};
-use swap::testing::SwapRequest;
 
 use crate::{
-    common::{
-        self, CwCoin, ibc, lease as common_lease,
-        leaser::Instantiator as LeaserInstantiator,
-        test_case::{TestCase, response::ResponseWithInterChainMsgs},
-    },
-    lease::{self as lease_test, LeaseCoin, PaymentCurrency},
+    common::{self, lease as common_lease, leaser::Instantiator as LeaserInstantiator},
+    lease::{self as lease_test, LeaseCoin, LpnCoin, PaymentCurrency},
 };
 
 use super::super::LeaseTestCase;
@@ -43,7 +42,10 @@ fn liquidation_time_alarm(
 
     lease_test::feed_price(&mut test_case);
 
-    let response = test_case
+    // The time alarm drives a partial liquidation whose close swap now rides
+    // the controller, so no ICA `SwapExactIn` is emitted - `unwrap_response`
+    // would panic on a non-empty ICA queue.
+    let () = test_case
         .app
         .execute(
             test_case.address_book.time_alarms().clone(),
@@ -51,59 +53,33 @@ fn liquidation_time_alarm(
             &ExecuteMsg::TimeAlarm {},
             &[],
         )
-        .unwrap();
+        .unwrap()
+        .ignore_response()
+        .unwrap_response();
 
     let Some(liquidation_amount): Option<LeaseCoin> = liquidation_amount else {
         return;
     };
 
-    let requests: Vec<SwapRequest<PaymentGroup, PaymentGroup>> = crate::common::swap::expect_swap(
-        response,
-        TestCase::DEX_CONNECTION_ID,
-        TestCase::LEASE_ICA_ID,
-        |_| {},
-    );
-
-    let ica_addr: Addr = TestCase::ica_addr(&lease_addr, TestCase::LEASE_ICA_ID);
-
-    let mut response: ResponseWithInterChainMsgs<'_, ()> = crate::common::swap::do_swap(
-        &mut test_case.app,
-        lease_addr.clone(),
-        ica_addr.clone(),
-        requests.into_iter(),
-        |amount, _, _| amount,
-    )
-    .ignore_response();
-
-    let transfer_amount: CwCoin = ibc::expect_remote_transfer(
-        &mut response,
-        TestCase::DEX_CONNECTION_ID,
-        TestCase::LEASE_ICA_ID,
-    );
-
-    () = response.unwrap_response();
-
+    // The liquidated slice sells for LPN on the remote account; the stand-in
+    // pays the price-derived (identity) quote, i.e. the slice amount in LPN.
+    let swap = lease_test::recorded_close_swap(&test_case, &lease_addr);
     assert_eq!(
-        transfer_amount,
-        coin_legacy::to_cosmwasm_on_dex(
-            price::total(liquidation_amount, lease_test::price_lpn_of()).unwrap()
-        )
+        &CoinDTO::<PaymentGroup>::from(liquidation_amount),
+        swap.coin_in()
     );
 
-    let response: ResponseWithInterChainMsgs<'_, AppResponse> = ibc::do_transfer(
-        &mut test_case.app,
-        ica_addr,
-        lease_addr.clone(),
-        true,
-        &transfer_amount,
+    let (proceeds, liquidation_end_response): (LpnCoin, AppResponse) =
+        lease_test::settle_close_proceeds(&mut test_case, &lease_addr);
+    assert_eq!(
+        price::total(liquidation_amount, lease_test::price_lpn_of()).unwrap(),
+        proceeds
     );
-
-    let liquidation_end_response: AppResponse = response.unwrap_response();
 
     common_lease::assert_lease_balance_eq(
         &test_case.app,
         &lease_addr,
-        common::cwcoin(LeaseCoin::ZERO),
+        common::cwcoin(LpnCoin::ZERO),
     );
 
     let liquidation_attributes: HashMap<String, String> = liquidation_end_response

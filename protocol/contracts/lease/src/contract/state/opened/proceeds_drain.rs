@@ -24,7 +24,7 @@ use crate::{
         PaymentCoin,
         query::{
             StateResponse as QueryStateResponse,
-            opened::{OngoingTrx, RepayTrx, Status},
+            opened::{OngoingTrx, PositionCloseTrx, RepayTrx, Status},
         },
     },
     contract::{
@@ -36,7 +36,7 @@ use crate::{
     finance::{LpnCoinDTO, LpnCurrencies},
 };
 
-use super::repay;
+use super::{close::Closable, payment::Repayable, repay};
 
 /// A non-`TransferOut` success acknowledgment can only come from a buggy
 /// or hostile counterparty. The fixed reason keeps the unexpected,
@@ -201,6 +201,54 @@ impl ProceedsFinish for RepayFinish {
             due_projection,
             querier,
         )
+    }
+}
+
+/// Resume a position-close swap leg once its LPN proceeds arrive home
+///
+/// Owns the `Repayable` moved out of `SellAsset::finish`, so the same drain
+/// spec serves every liquidation and customer-close flavour. Both drain
+/// stages map onto `PositionCloseTrx::TransferInFinish` — the swap and any
+/// asset-direction transfer already happened on the remote side, so the
+/// only close transaction left visible is the inbound proceeds settlement.
+#[derive(Serialize, Deserialize)]
+pub(crate) struct CloseFinish<R> {
+    repayable: R,
+}
+
+impl<R> CloseFinish<R> {
+    pub(in super::super) fn new(repayable: R) -> Self {
+        Self { repayable }
+    }
+}
+
+impl<R> ProceedsFinish for CloseFinish<R>
+where
+    R: Repayable + Closable,
+{
+    fn finish(
+        self,
+        lease: Lease,
+        proceeds: LpnCoinDTO,
+        env: &Env,
+        querier: QuerierWrapper<'_>,
+    ) -> SwapResult {
+        self.repayable.try_repay(lease, proceeds, env, querier)
+    }
+
+    fn state(
+        self,
+        lease: Lease,
+        _in_progress: DrainStage,
+        now: Instant,
+        due_projection: Duration,
+        querier: QuerierWrapper<'_>,
+    ) -> ContractResult<QueryStateResponse> {
+        let trx = self
+            .repayable
+            .transaction(&lease, PositionCloseTrx::TransferInFinish);
+
+        opened::lease_state(lease, Status::InProgress(trx), now, due_projection, querier)
     }
 }
 

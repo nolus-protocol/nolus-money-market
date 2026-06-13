@@ -80,7 +80,10 @@ fn swap_on_repay() {
 
     let expected_result =
         super::expected_newly_opened_state(&test_case, downpayment, super::create_payment_coin(0));
-    assert_eq!(super::state_query(&test_case, lease.clone()), expected_result);
+    assert_eq!(
+        super::state_query(&test_case, lease.clone()),
+        expected_result
+    );
 
     let payment = super::create_payment_coin(1_000);
     test_case.send_funds_from_admin(testing::user(USER), &[common::cwcoin(payment)]);
@@ -125,7 +128,10 @@ fn swap_on_repay() {
     let _arrival = repay::deliver_funds_arrival_alarm(&mut test_case, lease.clone());
 
     let expected_result = super::expected_newly_opened_state(&test_case, downpayment, payment);
-    assert_eq!(super::state_query(&test_case, lease.clone()), expected_result);
+    assert_eq!(
+        super::state_query(&test_case, lease.clone()),
+        expected_result
+    );
 
     heal_no_inconsistency(&mut test_case.app, lease, testing::user(USER));
 }
@@ -159,14 +165,6 @@ pub(super) fn heal_no_inconsistency(app: &mut App, lease: Addr, caller: Addr) {
     assert!(matches!(
         err.downcast_ref::<ContractError>().unwrap(),
         &ContractError::InconsistencyNotDetected()
-    ));
-}
-
-pub(super) fn heal_no_rights(app: &mut App, lease: Addr, caller: Addr) {
-    let err = try_heal(app, lease, caller).unwrap_err();
-    assert!(matches!(
-        err.downcast_ref::<ContractError>().unwrap(),
-        &ContractError::Unauthorized(access_control::error::Error::Unauthorized {})
     ));
 }
 

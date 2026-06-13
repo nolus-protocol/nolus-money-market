@@ -1,5 +1,4 @@
 use ::lease::api::position::ChangeCmd;
-use ::swap::testing::SwapRequest;
 use currencies::PaymentGroup;
 use finance::{coin::Amount, percent::Percent100};
 use sdk::{
@@ -8,11 +7,8 @@ use sdk::{
 };
 
 use crate::{
-    common::{self, swap},
-    lease::{
-        self, DOWNPAYMENT, LeaseCurrency, LeaserInstantiator, LpnCurrency, PaymentCurrency,
-        TestCase,
-    },
+    common::{self, test_case::response::RemoteChain as _},
+    lease::{self, DOWNPAYMENT, LeaseCurrency, LeaserInstantiator, LpnCurrency, PaymentCurrency},
 };
 
 use super::LeaseTestCase;
@@ -66,21 +62,30 @@ fn trigger_close(
     exp_strategy_key: &str,
     exp_ltv: Percent100,
 ) {
-    let response = lease::deliver_new_price(
+    // The auto-close swap now rides the controller, so the price alarm emits
+    // no ICA `SwapExactIn`; `unwrap_response` would panic on a non-empty ICA
+    // queue. The auto-close event is part of the same response.
+    let mut response = lease::deliver_new_price(
         &mut test_case,
         common::coin::<LeaseCurrency>(base),
         common::coin::<LpnCurrency>(quote),
     );
+    response.expect_empty();
+    let app_response = response.unwrap_response();
+    assert_events(&app_response, &lease, exp_strategy_key, exp_ltv);
 
-    let requests: Vec<SwapRequest<PaymentGroup, PaymentGroup>> = swap::expect_swap(
-        response,
-        TestCase::DEX_CONNECTION_ID,
-        TestCase::LEASE_ICA_ID,
-        |app_response| {
-            assert_events(app_response, &lease, exp_strategy_key, exp_ltv);
-        },
+    // the auto-close added one swap (selling the position asset for LPN) on
+    // top of the two opening swaps already recorded for the lease
+    let swaps = common::remote_lease_controller_stub::recorded_swaps(
+        &test_case.app,
+        test_case.address_book.remote_lease_controller(),
+        &lease,
     );
-    assert_eq!(1, requests.len());
+    assert_eq!(3, swaps.len());
+    assert_eq!(
+        currency::dto::<LpnCurrency, PaymentGroup>(),
+        swaps.last().expect("the close swap").min_out().currency()
+    );
 }
 
 fn assert_events(resp: &AppResponse, lease: &Addr, exp_strategy_key: &str, exp_ltv: Percent100) {
