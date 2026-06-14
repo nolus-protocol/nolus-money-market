@@ -114,7 +114,12 @@ where
         self.spec.authz_remote_callback(querier, info)
     }
 
-    fn heal(self, querier: QuerierWrapper<'_>, env: Env) -> HandlerResult<Self> {
+    fn heal(
+        self,
+        querier: QuerierWrapper<'_>,
+        env: Env,
+        _info: &MessageInfo,
+    ) -> HandlerResult<Self> {
         self.try_complete(querier, env)
     }
 
@@ -248,7 +253,7 @@ mod tests {
 
         assert_eq!(
             mock::FINISH_RESULT,
-            finished(arrival(true).heal(querier, testing::mock_env()))
+            finished(arrival(true).heal(querier, testing::mock_env(), &alarms_delivery()))
         );
     }
 

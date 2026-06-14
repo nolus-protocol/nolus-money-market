@@ -518,7 +518,12 @@ where
     /// `in_flight_min_out`, the exact promise of the original emission.
     /// See the module doc for the duplicate-acknowledgment risk a heal
     /// issued while the original operation is still resolvable creates.
-    fn heal(self, _querier: QuerierWrapper<'_>, _env: Env) -> HandlerResult<Self> {
+    fn heal(
+        self,
+        _querier: QuerierWrapper<'_>,
+        _env: Env,
+        _info: &MessageInfo,
+    ) -> HandlerResult<Self> {
         self.schedule()
             .and_then(|batch| {
                 response::res_continue::<_, _, Self>(
@@ -1062,7 +1067,7 @@ mod tests {
         message::Response as MessageResponse,
     };
     use sdk::cosmwasm_std::{
-        Binary, Env, QuerierWrapper,
+        Addr, Binary, Env, MessageInfo, QuerierWrapper,
         testing::{self, MockQuerier},
     };
 
@@ -1314,7 +1319,7 @@ mod tests {
         let mut node = after_first_ack(querier);
         node.spec.set_floor(RAISED_FLOOR);
 
-        let (response, node) = continued(node.heal(querier, testing::mock_env()));
+        let (response, node) = continued(node.heal(querier, testing::mock_env(), &healer()));
         assert_eq!(
             MessageResponse::messages_with_event(
                 mock::swap_request(&coin_in(70), &min_out()).expect("a valid swap request"),
@@ -1426,7 +1431,8 @@ mod tests {
         let mut terminal = parked_terminal(querier);
         terminal.spec_mut().set_floor(RAISED_FLOOR);
 
-        let (response, node) = terminal_healed(terminal.heal(querier, testing::mock_env()));
+        let (response, node) =
+            terminal_healed(terminal.heal(querier, testing::mock_env(), &healer()));
         assert_eq!(
             MessageResponse::messages_with_event(
                 mock::swap_request(&coin_in(70), &coin_out(RAISED_FLOOR))
@@ -1687,6 +1693,13 @@ mod tests {
 
     fn spec3() -> MockSpec {
         MockSpec::new(vec![coin_in(100), coin_out(50), coin_in(70)])
+    }
+
+    fn healer() -> MessageInfo {
+        MessageInfo {
+            sender: Addr::unchecked(mock::CONTROLLER),
+            funds: vec![],
+        }
     }
 
     fn leg_response(

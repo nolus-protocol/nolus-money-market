@@ -221,11 +221,11 @@ impl Handler for State {
         }
     }
 
-    fn heal(self, querier: QuerierWrapper<'_>, env: Env) -> SwapDecision<Self> {
+    fn heal(self, querier: QuerierWrapper<'_>, env: Env, info: &MessageInfo) -> SwapDecision<Self> {
         match self.0 {
-            StateEnum::OpenIca(ica) => ica.heal(querier, env).map_into(),
-            StateEnum::Idle(idle) => idle.heal(querier, env).map_into(),
-            StateEnum::BuyBack(buy_back) => buy_back.heal(querier, env).map_into(),
+            StateEnum::OpenIca(ica) => ica.heal(querier, env, info).map_into(),
+            StateEnum::Idle(idle) => idle.heal(querier, env, info).map_into(),
+            StateEnum::BuyBack(buy_back) => buy_back.heal(querier, env, info).map_into(),
         }
     }
 

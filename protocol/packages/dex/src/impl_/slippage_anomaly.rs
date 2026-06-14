@@ -192,7 +192,12 @@ where
     /// advanced - so the heal re-emission promises a floor freshly pinned by
     /// `RemoteSwap::open_leg`. Permissionless for now; an authorisation gate
     /// is layered on by the lease wrapper.
-    fn heal(self, querier: QuerierWrapper<'_>, _env: Env) -> HandlerResult<Self> {
+    fn heal(
+        self,
+        querier: QuerierWrapper<'_>,
+        _env: Env,
+        _info: &MessageInfo,
+    ) -> HandlerResult<Self> {
         RemoteSwap::<SwapTask, SEnum>::open_leg(self.spec, self.acks_left, self.total_out, querier)
             .and_then(RemoteSwap::reemit_healed)
             .into()

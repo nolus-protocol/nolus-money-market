@@ -102,7 +102,7 @@ where
         Err(err(self, "handle inner to 'Continue' response"))
     }
 
-    fn heal(self, _querier: QuerierWrapper<'_>, _env: Env) -> Result<Self> {
+    fn heal(self, _querier: QuerierWrapper<'_>, _env: Env, _info: &MessageInfo) -> Result<Self> {
         Err(err(self, "handle heal")).into()
     }
 

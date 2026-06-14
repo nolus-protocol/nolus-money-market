@@ -172,10 +172,17 @@ mod impl_handler {
             }
         }
 
-        fn heal(self, querier: QuerierWrapper<'_>, env: Env) -> Result<Self> {
+        fn heal(
+            self,
+            querier: QuerierWrapper<'_>,
+            env: Env,
+            info: &MessageInfo,
+        ) -> Result<Self> {
             match self {
-                State::RemoteSwap(inner) => Handler::heal(inner, querier, env).map_into(),
-                State::SlippageAnomaly(inner) => Handler::heal(inner, querier, env).map_into(),
+                State::RemoteSwap(inner) => Handler::heal(inner, querier, env, info).map_into(),
+                State::SlippageAnomaly(inner) => {
+                    Handler::heal(inner, querier, env, info).map_into()
+                }
             }
         }
 
@@ -314,7 +321,7 @@ mod test {
         message::Response as MessageResponse,
     };
     use sdk::cosmwasm_std::{
-        Binary, QuerierWrapper,
+        Addr, Binary, MessageInfo, QuerierWrapper,
         testing::{self, MockQuerier},
     };
 
@@ -370,8 +377,12 @@ mod test {
         let mock_querier = MockQuerier::default();
         let querier = QuerierWrapper::new(&mock_querier);
 
+        let info = MessageInfo {
+            sender: Addr::unchecked(mock::CONTROLLER),
+            funds: vec![],
+        };
         let (response, _state) =
-            continued(after_first_ack(querier).heal(querier, testing::mock_env()));
+            continued(after_first_ack(querier).heal(querier, testing::mock_env(), &info));
         assert_eq!(
             MessageResponse::messages_with_event(
                 mock::swap_request(&coin_in(70), &min_out()).expect("a valid swap request"),

@@ -114,9 +114,9 @@ where
         self,
         querier: QuerierWrapper<'_>,
         env: Env,
-        _info: MessageInfo,
+        info: MessageInfo,
     ) -> ContractResult<Response> {
-        self.handler.heal(querier, env).into()
+        self.handler.heal(querier, env, &info).into()
     }
 
     fn state(
