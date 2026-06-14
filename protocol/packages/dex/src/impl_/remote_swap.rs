@@ -126,6 +126,10 @@ where
     acks_left: CoinsNb,
     total_out: CoinDTO<SwapTask::OutG>,
     in_flight_min_out: CoinDTO<SwapTask::OutG>,
+    #[serde(default)]
+    timeouts: CoinsNb,
+    #[serde(default)]
+    errors: CoinsNb,
     #[serde(skip)]
     _state_enum: PhantomData<SEnum>,
 }
@@ -311,7 +315,7 @@ where
     ) -> Result<Self> {
         in_flight_leg(&spec, total_out.currency(), acks_left)
             .and_then(|coin_in| leg_min_out(&spec, coin_in, total_out.currency(), querier))
-            .map(|min_out| Self::internal_new(spec, acks_left, total_out, min_out))
+            .map(|min_out| Self::internal_new(spec, acks_left, total_out, min_out, 0, 0))
     }
 
     fn internal_new(
@@ -319,12 +323,16 @@ where
         acks_left: CoinsNb,
         total_out: CoinDTO<SwapTask::OutG>,
         in_flight_min_out: CoinDTO<SwapTask::OutG>,
+        timeouts: CoinsNb,
+        errors: CoinsNb,
     ) -> Self {
         let ret = Self {
             spec,
             acks_left,
             total_out,
             in_flight_min_out,
+            timeouts,
+            errors,
             _state_enum: PhantomData,
         };
         debug_assert!(ret.invariant_held());
@@ -506,6 +514,8 @@ where
             self.acks_left,
             self.total_out,
             self.in_flight_min_out,
+            self.timeouts,
+            self.errors,
         )
     }
 }
@@ -1185,7 +1195,9 @@ mod tests {
         let mock_querier = MockQuerier::default();
         let querier = QuerierWrapper::new(&mock_querier);
 
-        let node = after_first_ack(querier);
+        let mut node = after_first_ack(querier);
+        node.timeouts = 4;
+        node.errors = 2;
         let restored: Node = sdk::cosmwasm_std::to_json_vec(&node)
             .and_then(sdk::cosmwasm_std::from_json)
             .expect("the state should round-trip");
@@ -1196,6 +1208,52 @@ mod tests {
             &node.in_flight_min_out,
             &restored,
         );
+        assert_eq!(node.timeouts, restored.timeouts);
+        assert_eq!(node.errors, restored.errors);
+    }
+
+    /// A lease persisted before #655 carries no `timeouts`/`errors` keys;
+    /// `#[serde(default)]` must let it load with both counters cleared so
+    /// the new code-id never bricks an in-flight lease.
+    #[test]
+    fn old_state_without_counters_deserializes_to_zero() {
+        let old_state = br#"{"spec":{"coins":[{"amount":"100","ticker":"ticker#2"},{"amount":"50","ticker":"ticker#1"},{"amount":"70","ticker":"ticker#2"}],"floor":1},"acks_left":1,"total_out":{"amount":"80","ticker":"ticker#1"},"in_flight_min_out":{"amount":"1","ticker":"ticker#1"}}"#;
+
+        let restored: Node = sdk::cosmwasm_std::from_json(old_state.as_slice())
+            .expect("the pre-#655 state should deserialize");
+        assert_eq!(0, restored.timeouts);
+        assert_eq!(0, restored.errors);
+    }
+
+    #[test]
+    fn counters_round_trip() {
+        let mock_querier = MockQuerier::default();
+        let querier = QuerierWrapper::new(&mock_querier);
+
+        let mut node = after_first_ack(querier);
+        node.timeouts = 3;
+        node.errors = 1;
+        let restored: Node = sdk::cosmwasm_std::to_json_vec(&node)
+            .and_then(sdk::cosmwasm_std::from_json)
+            .expect("the counters should round-trip");
+        assert_eq!(3, restored.timeouts);
+        assert_eq!(1, restored.errors);
+    }
+
+    #[cfg(feature = "migration")]
+    #[test]
+    fn migrate_preserves_counters() {
+        use crate::impl_::migration::MigrateSpec;
+
+        let mock_querier = MockQuerier::default();
+        let querier = QuerierWrapper::new(&mock_querier);
+
+        let mut node = after_first_ack(querier);
+        node.timeouts = 4;
+        node.errors = 2;
+        let migrated: Node = node.migrate_spec(|spec| spec);
+        assert_eq!(4, migrated.timeouts);
+        assert_eq!(2, migrated.errors);
     }
 
     #[test]
