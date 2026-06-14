@@ -149,6 +149,10 @@ where
         .map_err(DexError::Unauthorized)
     }
 
+    fn timeout_retry_budget(&self) -> CoinsNb {
+        self.repayable.timeout_retry_budget()
+    }
+
     fn coins(&self) -> impl IntoIterator<Item = CoinDTO<Self::InG>> {
         iter::once(*self.repayable.amount(&self.lease))
     }

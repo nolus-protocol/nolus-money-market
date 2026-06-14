@@ -56,6 +56,8 @@ const NON_SWAP_RESPONSE: &str = "non-swap operation response";
 /// group, so the response cannot have originated from the scheduled swap.
 const OUT_NOT_AN_ASSET: &str = "swapped-out currency is not a lease asset";
 
+const TIMEOUT_RETRY_BUDGET: CoinsNb = 3;
+
 type AssetGroup = LeaseAssetCurrencies;
 pub(super) type StartState = StartLocalRemoteState<OpenIcaAccount, BuyAsset>;
 pub(in super::super) type DexState = dex::StateRemoteOut<
@@ -182,6 +184,10 @@ impl SwapTask for BuyAsset {
     ) -> dex::DexResult<()> {
         access_control::check(&self.deps.3.remote_lease_callback_permission(querier), info)
             .map_err(DexError::Unauthorized)
+    }
+
+    fn timeout_retry_budget(&self) -> CoinsNb {
+        TIMEOUT_RETRY_BUDGET
     }
 
     fn coins(&self) -> impl IntoIterator<Item = CoinDTO<Self::InG>> {

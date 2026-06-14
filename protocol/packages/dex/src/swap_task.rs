@@ -39,6 +39,10 @@ where
         info: &MessageInfo,
     ) -> DexResult<()>;
 
+    /// The number of consecutive remote-swap timeouts tolerated on a leg
+    /// before the slippage-anomaly terminal is entered.
+    fn timeout_retry_budget(&self) -> CoinsNb;
+
     /// Provide the coins, at least one, this swap is about.
     /// The iteration is done always in the same order.
     //

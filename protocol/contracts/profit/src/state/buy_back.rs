@@ -3,9 +3,9 @@ use serde::{Deserialize, Serialize};
 
 use currencies::{Native, Nls, PaymentGroup};
 use dex::{
-    AcceptAnyNonZeroSwap, Account, AnomalyTreatment, ContractInSwap, DexResult, Error as DexError,
-    Response as DexResponse, Stage, StateLocalOut, SwapOutputTask, SwapTask, WithCalculator,
-    WithOutputTask,
+    AcceptAnyNonZeroSwap, Account, AnomalyTreatment, CoinsNb, ContractInSwap, DexResult,
+    Error as DexError, Response as DexResponse, Stage, StateLocalOut, SwapOutputTask, SwapTask,
+    WithCalculator, WithOutputTask,
 };
 use finance::instant::Instant;
 use finance::{
@@ -23,6 +23,8 @@ use super::{
     Config, ConfigManagement, State, StateEnum, SwapClient, idle::Idle,
     resp_delivery::ForwardToDexEntry,
 };
+
+const TIMEOUT_RETRY_BUDGET: CoinsNb = 3;
 
 #[derive(Serialize, Deserialize)]
 pub(super) struct BuyBack {
@@ -93,6 +95,10 @@ impl SwapTask for BuyBack {
         Err(DexError::Unauthorized(
             access_control::error::Error::Unauthorized {},
         ))
+    }
+
+    fn timeout_retry_budget(&self) -> CoinsNb {
+        TIMEOUT_RETRY_BUDGET
     }
 
     fn coins(&self) -> impl IntoIterator<Item = CoinDTO<Self::InG>> {

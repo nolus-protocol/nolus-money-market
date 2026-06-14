@@ -737,12 +737,14 @@ pub(super) mod mock {
     pub const WRONG_VARIANT_PAYLOAD: &[u8] = b"wrong-variant";
 
     const DEFAULT_FLOOR: Amount = 1;
+    const DEFAULT_BUDGET: CoinsNb = 3;
 
     #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
     #[serde(deny_unknown_fields, rename_all = "snake_case")]
     pub struct MockSpec {
         coins: Vec<CoinDTO<SuperGroup>>,
         floor: Amount,
+        budget: CoinsNb,
     }
 
     #[derive(Serialize)]
@@ -762,11 +764,16 @@ pub(super) mod mock {
             Self {
                 coins,
                 floor: DEFAULT_FLOOR,
+                budget: DEFAULT_BUDGET,
             }
         }
 
         pub fn set_floor(&mut self, floor: Amount) {
             self.floor = floor;
+        }
+
+        pub fn set_budget(&mut self, budget: CoinsNb) {
+            self.budget = budget;
         }
     }
 
@@ -799,6 +806,10 @@ pub(super) mod mock {
             _info: &MessageInfo,
         ) -> Result<()> {
             Ok(())
+        }
+
+        fn timeout_retry_budget(&self) -> CoinsNb {
+            self.budget
         }
 
         fn coins(&self) -> impl IntoIterator<Item = CoinDTO<SuperGroup>> {
@@ -1217,7 +1228,7 @@ mod tests {
     /// the new code-id never bricks an in-flight lease.
     #[test]
     fn old_state_without_counters_deserializes_to_zero() {
-        let old_state = br#"{"spec":{"coins":[{"amount":"100","ticker":"ticker#2"},{"amount":"50","ticker":"ticker#1"},{"amount":"70","ticker":"ticker#2"}],"floor":1},"acks_left":1,"total_out":{"amount":"80","ticker":"ticker#1"},"in_flight_min_out":{"amount":"1","ticker":"ticker#1"}}"#;
+        let old_state = br#"{"spec":{"coins":[{"amount":"100","ticker":"ticker#2"},{"amount":"50","ticker":"ticker#1"},{"amount":"70","ticker":"ticker#2"}],"floor":1,"budget":3},"acks_left":1,"total_out":{"amount":"80","ticker":"ticker#1"},"in_flight_min_out":{"amount":"1","ticker":"ticker#1"}}"#;
 
         let restored: Node = sdk::cosmwasm_std::from_json(old_state.as_slice())
             .expect("the pre-#655 state should deserialize");
@@ -1238,6 +1249,15 @@ mod tests {
             .expect("the counters should round-trip");
         assert_eq!(3, restored.timeouts);
         assert_eq!(1, restored.errors);
+    }
+
+    #[test]
+    fn spec_reports_its_timeout_retry_budget() {
+        use crate::SwapTask;
+
+        let mut spec = spec3();
+        spec.set_budget(7);
+        assert_eq!(7, spec.timeout_retry_budget());
     }
 
     #[cfg(feature = "migration")]

@@ -57,6 +57,8 @@ const NON_SWAP_RESPONSE: &str = "non-swap operation response";
 /// response cannot have originated from the scheduled repay swap.
 const OUT_NOT_LPN: &str = "swapped-out currency is not the lease LPN";
 
+const TIMEOUT_RETRY_BUDGET: CoinsNb = 3;
+
 pub(crate) type DexState = dex::StateOutSwap<BuyLpn, SwapClient, ForwardToDexEntry>;
 pub(crate) type DrainState = dex::StateDrain<RepayDrain<RepayFinish>>;
 
@@ -140,6 +142,10 @@ impl SwapTask for BuyLpn {
             info,
         )
         .map_err(DexError::Unauthorized)
+    }
+
+    fn timeout_retry_budget(&self) -> CoinsNb {
+        TIMEOUT_RETRY_BUDGET
     }
 
     fn coins(&self) -> impl IntoIterator<Item = CoinDTO<Self::InG>> {

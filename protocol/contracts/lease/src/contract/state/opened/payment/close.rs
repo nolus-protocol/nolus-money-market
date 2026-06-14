@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 
+use dex::CoinsNb;
 use platform::bank::FixedAddressSender;
 use sdk::cosmwasm_std::{Env, QuerierWrapper};
 
@@ -70,6 +71,10 @@ where
 
     fn event_type(&self) -> Type {
         self.0.event_type()
+    }
+
+    fn timeout_retry_budget(&self) -> CoinsNb {
+        self.0.timeout_retry_budget()
     }
 }
 
