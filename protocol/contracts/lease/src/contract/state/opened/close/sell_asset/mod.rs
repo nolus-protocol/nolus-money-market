@@ -150,6 +150,18 @@ where
         .map_err(DexError::Unauthorized)
     }
 
+    fn authz_anomaly_resolution(
+        &self,
+        querier: QuerierWrapper<'_>,
+        info: &MessageInfo,
+    ) -> dex::DexResult<()> {
+        access_control::check(
+            &self.lease.leases.anomaly_resolution_permission(querier),
+            info,
+        )
+        .map_err(DexError::Unauthorized)
+    }
+
     fn timeout_retry_budget(&self) -> CoinsNb {
         self.repayable.timeout_retry_budget()
     }

@@ -50,6 +50,19 @@ where
         info: &MessageInfo,
     ) -> DexResult<()>;
 
+    /// Authorise an operator `heal` of a leg parked at the slippage-anomaly
+    /// terminal.
+    ///
+    /// The re-quoting heal is operator-only: it re-pins the floor and revives
+    /// a frozen leg. Implementations decide what "authorised" means (typically:
+    /// only the lease admin). Tasks whose legs never park reject - they are
+    /// never reached through this path.
+    fn authz_anomaly_resolution(
+        &self,
+        querier: QuerierWrapper<'_>,
+        info: &MessageInfo,
+    ) -> DexResult<()>;
+
     /// The number of consecutive remote-swap timeouts tolerated on a leg
     /// before the slippage-anomaly terminal is entered.
     fn timeout_retry_budget(&self) -> CoinsNb;

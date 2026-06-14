@@ -97,6 +97,17 @@ impl SwapTask for BuyBack {
         ))
     }
 
+    fn authz_anomaly_resolution(
+        &self,
+        _querier: QuerierWrapper<'_>,
+        _info: &MessageInfo,
+    ) -> DexResult<()> {
+        // Profit's buy-back never parks at the remote-swap terminal.
+        Err(DexError::Unauthorized(
+            access_control::error::Error::Unauthorized {},
+        ))
+    }
+
     fn timeout_retry_budget(&self) -> CoinsNb {
         TIMEOUT_RETRY_BUDGET
     }

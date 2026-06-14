@@ -841,6 +841,8 @@ pub(super) mod mock {
         budget: CoinsNb,
         #[serde(default)]
         escalation: Escalation,
+        #[serde(default)]
+        anomaly_resolution_authorised: bool,
     }
 
     #[derive(Serialize)]
@@ -862,6 +864,7 @@ pub(super) mod mock {
                 floor: DEFAULT_FLOOR,
                 budget: DEFAULT_BUDGET,
                 escalation: Escalation::Park,
+                anomaly_resolution_authorised: true,
             }
         }
 
@@ -875,6 +878,10 @@ pub(super) mod mock {
 
         pub fn set_reemit(&mut self) {
             self.escalation = Escalation::ReEmit;
+        }
+
+        pub fn deny_anomaly_resolution(&mut self) {
+            self.anomaly_resolution_authorised = false;
         }
     }
 
@@ -907,6 +914,20 @@ pub(super) mod mock {
             _info: &MessageInfo,
         ) -> Result<()> {
             Ok(())
+        }
+
+        fn authz_anomaly_resolution(
+            &self,
+            _querier: QuerierWrapper<'_>,
+            _info: &MessageInfo,
+        ) -> Result<()> {
+            if self.anomaly_resolution_authorised {
+                Ok(())
+            } else {
+                Err(Error::Unauthorized(
+                    access_control::error::Error::Unauthorized {},
+                ))
+            }
         }
 
         fn timeout_retry_budget(&self) -> CoinsNb {
@@ -1073,6 +1094,7 @@ mod tests {
 
     use crate::{
         CoinsNb, Contract,
+        error::Error,
         impl_::response::{Handler, Result as HandlerResult},
     };
 
@@ -1444,6 +1466,53 @@ mod tests {
         assert_node(1, &coin_out(80), &coin_out(RAISED_FLOOR), &node);
         assert_eq!(0, node.timeouts);
         assert_eq!(0, node.errors);
+    }
+
+    /// The original packet reaching the parked terminal is absorbed, so the
+    /// operator heal re-emits a single in-flight leg whose acknowledgment
+    /// credits the total exactly once - the at-most-once, single-leg property
+    /// that keeps a stale packet plus the heal re-emission from double-crediting.
+    #[test]
+    fn double_heal_absorbs_second_packet() {
+        let mock_querier = MockQuerier::default();
+        let querier = QuerierWrapper::new(&mock_querier);
+
+        // the original packet lands while parked and is absorbed - no credit
+        let terminal = parked_terminal(querier);
+        let (_response, terminal) = terminal_continued(terminal.on_remote_response(
+            payload(&coin_out(40)),
+            querier,
+            testing::mock_env(),
+        ));
+        assert_terminal(1, &coin_out(80), &min_out(), &terminal);
+
+        // the heal re-emits the SAME in-flight leg without advancing it
+        let (_response, node) =
+            terminal_healed(terminal.heal(querier, testing::mock_env(), &healer()));
+        assert_node(1, &coin_out(80), &min_out(), &node);
+
+        // exactly one acknowledgment of the re-emitted leg finishes the
+        // workflow - the absorbed first packet did not also credit
+        assert_eq!(
+            coin_out(120),
+            finished(node.on_remote_response(payload(&coin_out(40)), querier, testing::mock_env()))
+        );
+    }
+
+    /// An unauthorised operator `heal` of a parked leg is rejected before any
+    /// re-quote - the leg stays frozen at the terminal.
+    #[test]
+    fn heal_rejects_unauthorised_operator() {
+        let mock_querier = MockQuerier::default();
+        let querier = QuerierWrapper::new(&mock_querier);
+
+        let mut terminal = parked_terminal(querier);
+        terminal.spec_mut().deny_anomaly_resolution();
+
+        assert!(matches!(
+            terminal.heal(querier, testing::mock_env(), &healer()),
+            HandlerResult::Continue(Err(Error::Unauthorized(_)))
+        ));
     }
 
     /// A live swap leg drops a price alarm silently, while the parked

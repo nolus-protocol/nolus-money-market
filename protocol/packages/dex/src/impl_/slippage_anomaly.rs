@@ -190,17 +190,25 @@ where
     /// transition back to the live swap sequence with the retry counters
     /// reset. `acks_left` is unchanged - the leg is re-opened, never
     /// advanced - so the heal re-emission promises a floor freshly pinned by
-    /// `RemoteSwap::open_leg`. Permissionless for now; an authorisation gate
-    /// is layered on by the lease wrapper.
+    /// `RemoteSwap::open_leg`. Operator-only: an unauthorised caller is
+    /// rejected before any re-quote, leaving the leg parked.
     fn heal(
         self,
         querier: QuerierWrapper<'_>,
         _env: Env,
-        _info: &MessageInfo,
+        info: &MessageInfo,
     ) -> HandlerResult<Self> {
-        RemoteSwap::<SwapTask, SEnum>::open_leg(self.spec, self.acks_left, self.total_out, querier)
+        match self.spec.authz_anomaly_resolution(querier, info) {
+            Ok(()) => RemoteSwap::<SwapTask, SEnum>::open_leg(
+                self.spec,
+                self.acks_left,
+                self.total_out,
+                querier,
+            )
             .and_then(RemoteSwap::reemit_healed)
-            .into()
+            .into(),
+            Err(err) => HandlerResult::from(err),
+        }
     }
 }
 

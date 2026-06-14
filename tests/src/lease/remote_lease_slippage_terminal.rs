@@ -29,6 +29,7 @@
 //! Phase-1 behaviour lands.
 
 use access_control::error::Error as AccessError;
+use dex::Error as DexError;
 use finance::coin::Amount;
 use lease::{
     api::{
@@ -45,7 +46,7 @@ use sdk::{
 };
 
 use crate::common::{
-    self, ADMIN, USER,
+    self, LEASE_ADMIN, USER,
     remote_lease_controller_stub::{self as stub, ResponseMode, op_tag},
     test_case::TestCase,
 };
@@ -147,9 +148,11 @@ fn heal_rejects_non_admin() {
     assert!(
         matches!(
             err.downcast_ref::<ContractError>(),
-            Some(ContractError::Unauthorized(AccessError::Unauthorized {}))
+            Some(ContractError::DexError(DexError::Unauthorized(
+                AccessError::Unauthorized {}
+            )))
         ),
-        "expected ContractError::Unauthorized, got {err:?}"
+        "expected DexError::Unauthorized, got {err:?}"
     );
     assert_slippage_protection_activated(&test_case, &lease);
 }
@@ -172,7 +175,12 @@ fn heal_accepts_admin_requotes_and_resets_counters() {
 
     let healed = test_case
         .app
-        .execute(testing::user(ADMIN), lease.clone(), &ExecuteMsg::Heal(), &[])
+        .execute(
+            testing::user(LEASE_ADMIN),
+            lease.clone(),
+            &ExecuteMsg::Heal(),
+            &[],
+        )
         .expect("the lease admin must heal a parked lease")
         .unwrap_response();
     expect_attribute(&healed.events, LIQUIDATION_SWAP_EVENT, "heal", "re-emit");
@@ -205,7 +213,12 @@ fn heal_requote_is_noop_for_accept_any_nonzero_floor() {
 
     let healed = test_case
         .app
-        .execute(testing::user(ADMIN), lease.clone(), &ExecuteMsg::Heal(), &[])
+        .execute(
+            testing::user(LEASE_ADMIN),
+            lease.clone(),
+            &ExecuteMsg::Heal(),
+            &[],
+        )
         .expect("the lease admin must heal a parked lease")
         .unwrap_response();
     expect_attribute(&healed.events, CLOSE_POSITION_EVENT, "heal", "re-emit");

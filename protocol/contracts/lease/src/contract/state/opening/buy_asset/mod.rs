@@ -187,6 +187,14 @@ impl SwapTask for BuyAsset {
             .map_err(DexError::Unauthorized)
     }
 
+    fn authz_anomaly_resolution(
+        &self,
+        _querier: QuerierWrapper<'_>,
+        _info: &MessageInfo,
+    ) -> dex::DexResult<()> {
+        unreachable!("the opening swap re-emits on a slippage anomaly and never parks")
+    }
+
     fn timeout_retry_budget(&self) -> CoinsNb {
         TIMEOUT_RETRY_BUDGET
     }
