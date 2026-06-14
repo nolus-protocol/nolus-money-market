@@ -46,6 +46,7 @@ use super::migration::{InspectSpec, MigrateSpec};
 const EVENT_KEY_ANOMALY: &str = "anomaly";
 const EVENT_KEY_ABSORBED: &str = "absorbed";
 const ANOMALY_PARKED: &str = "slippage-anomaly-parked";
+const ANOMALY_PRICE_ALARM_DROPPED: &str = "price-alarm-dropped";
 const ABSORB_PARKED_RESPONSE: &str = "parked-response";
 const ABSORB_PARKED_ERROR: &str = "parked-error";
 const ABSORB_PARKED_TIMEOUT: &str = "parked-timeout";
@@ -97,6 +98,12 @@ where
 
     fn emit_absorbed(&self, reason: &str) -> Emitter {
         Emitter::of_type(self.spec.label()).emit(EVENT_KEY_ABSORBED, reason)
+    }
+
+    /// The dropped-price-alarm event a parked lease emits so monitoring sees
+    /// the price move it would normally have acted on was ignored.
+    fn emit_price_alarm_dropped(&self) -> Emitter {
+        Emitter::of_type(self.spec.label()).emit(EVENT_KEY_ANOMALY, ANOMALY_PRICE_ALARM_DROPPED)
     }
 
     #[cfg(test)]
@@ -173,6 +180,10 @@ where
 
     fn on_remote_timeout(self, _querier: QuerierWrapper<'_>, _env: Env) -> HandlerResult<Self> {
         self.absorb(ABSORB_PARKED_TIMEOUT)
+    }
+
+    fn price_alarm_dropped(&self) -> Option<Emitter> {
+        Some(self.emit_price_alarm_dropped())
     }
 
     /// Re-quote the SAME in-flight leg against a fresh oracle floor and

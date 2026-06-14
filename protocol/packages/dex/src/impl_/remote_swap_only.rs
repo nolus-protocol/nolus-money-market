@@ -73,7 +73,7 @@ mod impl_into {
 }
 
 mod impl_handler {
-    use platform::ica::ErrorResponse as ICAErrorResponse;
+    use platform::{batch::Emitter, ica::ErrorResponse as ICAErrorResponse};
     use sdk::cosmwasm_std::{Binary, Env, MessageInfo, QuerierWrapper, Reply};
 
     use crate::{
@@ -242,6 +242,13 @@ mod impl_handler {
                 State::SlippageAnomaly(inner) => {
                     Handler::on_remote_timeout(inner, querier, env).map_into()
                 }
+            }
+        }
+
+        fn price_alarm_dropped(&self) -> Option<Emitter> {
+            match self {
+                State::RemoteSwap(inner) => inner.price_alarm_dropped(),
+                State::SlippageAnomaly(inner) => inner.price_alarm_dropped(),
             }
         }
     }

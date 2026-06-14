@@ -162,6 +162,16 @@ where
     {
         absorb_remote_callback(self, REMOTE_CALLBACK_TIMEOUT)
     }
+
+    /// The event a parked leg emits when a price alarm is dropped
+    ///
+    /// Live legs drop price alarms silently; only the parked slippage-anomaly
+    /// terminal returns an event, so monitoring sees a frozen lease ignored a
+    /// price move it would normally have acted on. The alarm is still dropped,
+    /// never erroring.
+    fn price_alarm_dropped(&self) -> Option<Emitter> {
+        None
+    }
 }
 
 fn absorb_remote_callback<H>(state: H, kind: &str) -> Result<H>

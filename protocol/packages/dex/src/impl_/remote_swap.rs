@@ -1440,6 +1440,23 @@ mod tests {
         assert_eq!(0, node.errors);
     }
 
+    /// A live swap leg drops a price alarm silently, while the parked
+    /// terminal reports a dropped-alarm event for monitoring.
+    #[test]
+    fn price_alarm_dropped_only_when_parked() {
+        let mock_querier = MockQuerier::default();
+        let querier = QuerierWrapper::new(&mock_querier);
+
+        let live = after_first_ack(querier);
+        assert!(live.price_alarm_dropped().is_none());
+
+        let terminal = parked_terminal(querier);
+        assert_eq!(
+            Some(Emitter::of_type(mock::LABEL).emit("anomaly", "price-alarm-dropped")),
+            terminal.price_alarm_dropped(),
+        );
+    }
+
     /// The parked terminal survives a serde round-trip and keeps absorbing
     /// late callbacks afterwards.
     #[test]
