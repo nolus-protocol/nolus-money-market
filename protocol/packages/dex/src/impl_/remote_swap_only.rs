@@ -11,7 +11,7 @@ use sdk::cosmwasm_std::{Env, QuerierWrapper};
 
 use crate::{
     SwapTask as SwapTaskT,
-    impl_::{RemoteSwap, RemoteSwapClient},
+    impl_::{RemoteSwap, RemoteSwapClient, SlippageAnomaly},
     response::Result as HandlerResult,
 };
 
@@ -25,6 +25,7 @@ where
     SwapTask: SwapTaskT,
 {
     RemoteSwap(RemoteSwap<SwapTask, Self>),
+    SlippageAnomaly(SlippageAnomaly<SwapTask, Self>),
 }
 
 pub type StartSwapState<SwapTask> = RemoteSwap<SwapTask, State<SwapTask>>;
@@ -45,7 +46,10 @@ where
 }
 
 mod impl_into {
-    use crate::{SwapTask as SwapTaskT, impl_::RemoteSwap};
+    use crate::{
+        SwapTask as SwapTaskT,
+        impl_::{RemoteSwap, SlippageAnomaly},
+    };
 
     use super::State;
 
@@ -55,6 +59,15 @@ mod impl_into {
     {
         fn from(value: RemoteSwap<SwapTask, Self>) -> Self {
             Self::RemoteSwap(value)
+        }
+    }
+
+    impl<SwapTask> From<SlippageAnomaly<SwapTask, Self>> for State<SwapTask>
+    where
+        SwapTask: SwapTaskT,
+    {
+        fn from(value: SlippageAnomaly<SwapTask, Self>) -> Self {
+            Self::SlippageAnomaly(value)
         }
     }
 }
@@ -86,6 +99,7 @@ mod impl_handler {
         ) -> DexResult<()> {
             match self {
                 State::RemoteSwap(inner) => inner.authz_remote_callback(querier, info),
+                State::SlippageAnomaly(inner) => inner.authz_remote_callback(querier, info),
             }
         }
 
@@ -97,6 +111,9 @@ mod impl_handler {
         ) -> ContinueResult<Self> {
             match self {
                 State::RemoteSwap(inner) => {
+                    Handler::on_open_ica(inner, counterparty_version, querier, env)
+                }
+                State::SlippageAnomaly(inner) => {
                     Handler::on_open_ica(inner, counterparty_version, querier, env)
                 }
             }
@@ -112,6 +129,9 @@ mod impl_handler {
                 State::RemoteSwap(inner) => {
                     Handler::on_response(inner, response, querier, env).map_into()
                 }
+                State::SlippageAnomaly(inner) => {
+                    Handler::on_response(inner, response, querier, env).map_into()
+                }
             }
         }
 
@@ -125,36 +145,44 @@ mod impl_handler {
                 State::RemoteSwap(inner) => {
                     Handler::on_error(inner, response, querier, env).map_into()
                 }
+                State::SlippageAnomaly(inner) => {
+                    Handler::on_error(inner, response, querier, env).map_into()
+                }
             }
         }
 
         fn on_timeout(self, querier: QuerierWrapper<'_>, env: Env) -> ContinueResult<Self> {
             match self {
                 State::RemoteSwap(inner) => Handler::on_timeout(inner, querier, env),
+                State::SlippageAnomaly(inner) => Handler::on_timeout(inner, querier, env),
             }
         }
 
         fn on_inner(self, querier: QuerierWrapper<'_>, env: Env) -> Result<Self> {
             match self {
                 State::RemoteSwap(inner) => Handler::on_inner(inner, querier, env).map_into(),
+                State::SlippageAnomaly(inner) => Handler::on_inner(inner, querier, env).map_into(),
             }
         }
 
         fn on_inner_continue(self, querier: QuerierWrapper<'_>, env: Env) -> ContinueResult<Self> {
             match self {
                 State::RemoteSwap(inner) => Handler::on_inner_continue(inner, querier, env),
+                State::SlippageAnomaly(inner) => Handler::on_inner_continue(inner, querier, env),
             }
         }
 
         fn heal(self, querier: QuerierWrapper<'_>, env: Env) -> Result<Self> {
             match self {
                 State::RemoteSwap(inner) => Handler::heal(inner, querier, env).map_into(),
+                State::SlippageAnomaly(inner) => Handler::heal(inner, querier, env).map_into(),
             }
         }
 
         fn reply(self, querier: QuerierWrapper<'_>, env: Env, msg: Reply) -> ContinueResult<Self> {
             match self {
                 State::RemoteSwap(inner) => Handler::reply(inner, querier, env, msg),
+                State::SlippageAnomaly(inner) => Handler::reply(inner, querier, env, msg),
             }
         }
 
@@ -166,6 +194,9 @@ mod impl_handler {
         ) -> Result<Self> {
             match self {
                 State::RemoteSwap(inner) => {
+                    Handler::on_time_alarm(inner, querier, env, info).map_into()
+                }
+                State::SlippageAnomaly(inner) => {
                     Handler::on_time_alarm(inner, querier, env, info).map_into()
                 }
             }
@@ -181,6 +212,9 @@ mod impl_handler {
                 State::RemoteSwap(inner) => {
                     Handler::on_remote_response(inner, data, querier, env).map_into()
                 }
+                State::SlippageAnomaly(inner) => {
+                    Handler::on_remote_response(inner, data, querier, env).map_into()
+                }
             }
         }
 
@@ -194,12 +228,18 @@ mod impl_handler {
                 State::RemoteSwap(inner) => {
                     Handler::on_remote_error(inner, response, querier, env).map_into()
                 }
+                State::SlippageAnomaly(inner) => {
+                    Handler::on_remote_error(inner, response, querier, env).map_into()
+                }
             }
         }
 
         fn on_remote_timeout(self, querier: QuerierWrapper<'_>, env: Env) -> Result<Self> {
             match self {
                 State::RemoteSwap(inner) => {
+                    Handler::on_remote_timeout(inner, querier, env).map_into()
+                }
+                State::SlippageAnomaly(inner) => {
                     Handler::on_remote_timeout(inner, querier, env).map_into()
                 }
             }
@@ -230,6 +270,9 @@ mod impl_contract {
         ) -> Self::StateResponse {
             match self {
                 State::RemoteSwap(inner) => Contract::state(inner, now, due_projection, querier),
+                State::SlippageAnomaly(inner) => {
+                    Contract::state(inner, now, due_projection, querier)
+                }
             }
         }
     }
@@ -249,6 +292,7 @@ mod impl_display {
         fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
             match self {
                 State::RemoteSwap(inner) => inner.fmt(f),
+                State::SlippageAnomaly(inner) => inner.fmt(f),
             }
         }
     }
@@ -381,6 +425,63 @@ mod test {
             ),
             response
         );
+    }
+
+    /// An `OperationErr` parks the composite at the `SlippageAnomaly` arm
+    /// without retrying, emitting the on-entry anomaly event.
+    #[test]
+    fn error_parks_at_slippage_anomaly_arm() {
+        use platform::ica::ErrorResponse as ICAErrorResponse;
+
+        let mock_querier = MockQuerier::default();
+        let querier = QuerierWrapper::new(&mock_querier);
+
+        let (response, state) = continued(after_first_ack(querier).on_remote_error(
+            ICAErrorResponse::from(String::from("swap reverted")),
+            querier,
+            testing::mock_env(),
+        ));
+        assert_eq!(
+            MessageResponse::messages_with_event(
+                Default::default(),
+                Emitter::of_type(mock::LABEL).emit("anomaly", "slippage-anomaly-parked"),
+            ),
+            response
+        );
+        assert!(matches!(state, State::SlippageAnomaly(_)));
+    }
+
+    /// The parked `SlippageAnomaly` arm survives a serde round-trip and keeps
+    /// absorbing late callbacks afterwards.
+    #[test]
+    fn anomaly_arm_serde_round_trips() {
+        use platform::ica::ErrorResponse as ICAErrorResponse;
+
+        let mock_querier = MockQuerier::default();
+        let querier = QuerierWrapper::new(&mock_querier);
+
+        let (_response, parked) = continued(after_first_ack(querier).on_remote_error(
+            ICAErrorResponse::from(String::from("swap reverted")),
+            querier,
+            testing::mock_env(),
+        ));
+        assert!(matches!(parked, State::SlippageAnomaly(_)));
+
+        let serialized = sdk::cosmwasm_std::to_json_vec(&parked).expect("a serializable arm");
+        let restored: State<MockSpec> =
+            sdk::cosmwasm_std::from_json(&serialized).expect("the anomaly arm should round-trip");
+        assert_eq!(
+            serialized,
+            sdk::cosmwasm_std::to_json_vec(&restored).expect("a serializable arm"),
+        );
+        assert!(matches!(restored, State::SlippageAnomaly(_)));
+
+        let (_response, still_parked) = continued(restored.on_remote_response(
+            payload(&coin_out(40)),
+            querier,
+            testing::mock_env(),
+        ));
+        assert!(matches!(still_parked, State::SlippageAnomaly(_)));
     }
 
     fn continued(res: HandlerResult<State<MockSpec>>) -> (MessageResponse, State<MockSpec>) {

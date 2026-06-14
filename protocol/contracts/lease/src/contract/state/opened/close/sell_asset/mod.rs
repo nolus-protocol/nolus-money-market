@@ -7,7 +7,8 @@ use serde::{Deserialize, Serialize};
 
 use dex::{
     Account, CoinsNb, ContractInRemoteSwap, Enterable, Error as DexError, RemoteSwapClient,
-    SlippageCalculator, SwapOutputTask, SwapTask, WithCalculator, WithOutputTask,
+    SlippageCalculator, SlippageEscalation, SwapOutputTask, SwapTask, WithCalculator,
+    WithOutputTask,
 };
 use finance::instant::Instant;
 use finance::{
@@ -153,6 +154,10 @@ where
         self.repayable.timeout_retry_budget()
     }
 
+    fn slippage_escalation(&self) -> SlippageEscalation {
+        SlippageEscalation::Park
+    }
+
     fn coins(&self) -> impl IntoIterator<Item = CoinDTO<Self::InG>> {
         iter::once(*self.repayable.amount(&self.lease))
     }
@@ -276,6 +281,22 @@ where
         querier: QuerierWrapper<'_>,
     ) -> Self::StateResponse {
         self.query(PositionCloseTrx::Swap, now, due_projection, querier)
+    }
+
+    fn anomaly_state(
+        self,
+        _acks_left: CoinsNb,
+        now: Instant,
+        due_projection: Duration,
+        querier: QuerierWrapper<'_>,
+    ) -> Self::StateResponse {
+        opened::lease_state(
+            self.lease,
+            Status::SlippageProtectionActivated,
+            now,
+            due_projection,
+            querier,
+        )
     }
 }
 

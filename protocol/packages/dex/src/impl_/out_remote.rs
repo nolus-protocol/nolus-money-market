@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     Connectable, IcaConnectee, SwapTask as SwapTaskT,
     impl_::{
-        IcaConnector, RemoteSwap, TransferOut, TransferOutRespDelivery,
+        IcaConnector, RemoteSwap, SlippageAnomaly, TransferOut, TransferOutRespDelivery,
         resp_delivery::ICAOpenResponseDelivery,
     },
 };
@@ -38,6 +38,10 @@ where
         >,
     ),
     RemoteSwap(RemoteSwap<SwapTask, Self>),
+    /// Present only to satisfy the `RemoteSwap` transport's terminal bound -
+    /// the opening swap re-emits on a slippage anomaly and never parks, so a
+    /// follow-up issue owns the opening-leg terminal (see issue #655).
+    SlippageAnomaly(SlippageAnomaly<SwapTask, Self>),
 }
 
 pub type StartLocalRemoteState<OpenIca, SwapTask> =
@@ -54,7 +58,7 @@ where
 mod impl_into {
     use crate::{
         SwapTask as SwapTaskT,
-        impl_::{IcaConnector, RemoteSwap, TransferOut, TransferOutRespDelivery},
+        impl_::{IcaConnector, RemoteSwap, SlippageAnomaly, TransferOut, TransferOutRespDelivery},
     };
 
     use super::{OpenIcaRespDelivery, State};
@@ -132,6 +136,17 @@ mod impl_into {
             Self::RemoteSwap(value)
         }
     }
+
+    impl<OpenIca, SwapTask, SwapClient, ForwardToInnerMsg, ForwardToInnerContinueMsg>
+        From<SlippageAnomaly<SwapTask, Self>>
+        for State<OpenIca, SwapTask, SwapClient, ForwardToInnerMsg, ForwardToInnerContinueMsg>
+    where
+        SwapTask: SwapTaskT,
+    {
+        fn from(value: SlippageAnomaly<SwapTask, Self>) -> Self {
+            Self::SlippageAnomaly(value)
+        }
+    }
 }
 
 mod impl_handler {
@@ -172,6 +187,7 @@ mod impl_handler {
                 State::TransferOut(inner) => inner.authz_remote_callback(querier, info),
                 State::TransferOutRespDelivery(inner) => inner.authz_remote_callback(querier, info),
                 State::RemoteSwap(inner) => inner.authz_remote_callback(querier, info),
+                State::SlippageAnomaly(inner) => inner.authz_remote_callback(querier, info),
             }
         }
 
@@ -199,6 +215,9 @@ mod impl_handler {
                 State::RemoteSwap(inner) => {
                     Handler::on_open_ica(inner, counterparty_version, querier, env)
                 }
+                State::SlippageAnomaly(inner) => {
+                    Handler::on_open_ica(inner, counterparty_version, querier, env)
+                }
             }
         }
 
@@ -222,6 +241,9 @@ mod impl_handler {
                     Handler::on_response(inner, response, querier, env).map_into()
                 }
                 State::RemoteSwap(inner) => {
+                    Handler::on_response(inner, response, querier, env).map_into()
+                }
+                State::SlippageAnomaly(inner) => {
                     Handler::on_response(inner, response, querier, env).map_into()
                 }
             }
@@ -249,6 +271,9 @@ mod impl_handler {
                 State::RemoteSwap(inner) => {
                     Handler::on_error(inner, response, querier, env).map_into()
                 }
+                State::SlippageAnomaly(inner) => {
+                    Handler::on_error(inner, response, querier, env).map_into()
+                }
             }
         }
 
@@ -259,6 +284,7 @@ mod impl_handler {
                 State::TransferOut(inner) => Handler::on_timeout(inner, querier, env),
                 State::TransferOutRespDelivery(inner) => Handler::on_timeout(inner, querier, env),
                 State::RemoteSwap(inner) => Handler::on_timeout(inner, querier, env),
+                State::SlippageAnomaly(inner) => Handler::on_timeout(inner, querier, env),
             }
         }
 
@@ -273,6 +299,7 @@ mod impl_handler {
                     Handler::on_inner(inner, querier, env).map_into()
                 }
                 State::RemoteSwap(inner) => Handler::on_inner(inner, querier, env).map_into(),
+                State::SlippageAnomaly(inner) => Handler::on_inner(inner, querier, env).map_into(),
             }
         }
 
@@ -287,6 +314,7 @@ mod impl_handler {
                     Handler::on_inner_continue(inner, querier, env)
                 }
                 State::RemoteSwap(inner) => Handler::on_inner_continue(inner, querier, env),
+                State::SlippageAnomaly(inner) => Handler::on_inner_continue(inner, querier, env),
             }
         }
 
@@ -299,6 +327,7 @@ mod impl_handler {
                     Handler::heal(inner, querier, env).map_into()
                 }
                 State::RemoteSwap(inner) => Handler::heal(inner, querier, env).map_into(),
+                State::SlippageAnomaly(inner) => Handler::heal(inner, querier, env).map_into(),
             }
         }
 
@@ -309,6 +338,7 @@ mod impl_handler {
                 State::TransferOut(inner) => Handler::reply(inner, querier, env, msg),
                 State::TransferOutRespDelivery(inner) => Handler::reply(inner, querier, env, msg),
                 State::RemoteSwap(inner) => Handler::reply(inner, querier, env, msg),
+                State::SlippageAnomaly(inner) => Handler::reply(inner, querier, env, msg),
             }
         }
 
@@ -332,6 +362,9 @@ mod impl_handler {
                     Handler::on_time_alarm(inner, querier, env, info).map_into()
                 }
                 State::RemoteSwap(inner) => {
+                    Handler::on_time_alarm(inner, querier, env, info).map_into()
+                }
+                State::SlippageAnomaly(inner) => {
                     Handler::on_time_alarm(inner, querier, env, info).map_into()
                 }
             }
@@ -365,6 +398,9 @@ mod impl_handler {
                 State::RemoteSwap(inner) => {
                     Handler::on_remote_response(inner, data, querier, env).map_into()
                 }
+                State::SlippageAnomaly(inner) => {
+                    Handler::on_remote_response(inner, data, querier, env).map_into()
+                }
             }
         }
 
@@ -390,6 +426,9 @@ mod impl_handler {
                 State::RemoteSwap(inner) => {
                     Handler::on_remote_error(inner, response, querier, env).map_into()
                 }
+                State::SlippageAnomaly(inner) => {
+                    Handler::on_remote_error(inner, response, querier, env).map_into()
+                }
             }
         }
 
@@ -406,6 +445,9 @@ mod impl_handler {
                     Handler::on_remote_timeout(inner, querier, env).map_into()
                 }
                 State::RemoteSwap(inner) => {
+                    Handler::on_remote_timeout(inner, querier, env).map_into()
+                }
+                State::SlippageAnomaly(inner) => {
                     Handler::on_remote_timeout(inner, querier, env).map_into()
                 }
             }
@@ -448,6 +490,9 @@ mod impl_contract {
                     Contract::state(inner, now, due_projection, querier)
                 }
                 State::RemoteSwap(inner) => Contract::state(inner, now, due_projection, querier),
+                State::SlippageAnomaly(inner) => {
+                    Contract::state(inner, now, due_projection, querier)
+                }
             }
         }
     }
@@ -473,6 +518,7 @@ mod impl_display {
                 State::TransferOut(inner) => Display::fmt(inner, f),
                 State::TransferOutRespDelivery(inner) => Display::fmt(inner, f),
                 State::RemoteSwap(inner) => inner.fmt(f),
+                State::SlippageAnomaly(inner) => inner.fmt(f),
             }
         }
     }
@@ -540,6 +586,7 @@ mod impl_migration {
                 State::TransferOut(inner) => inner.migrate_spec(migrate_spec).into(),
                 State::TransferOutRespDelivery(inner) => inner.migrate_spec(migrate_spec).into(),
                 State::RemoteSwap(inner) => inner.migrate_spec(migrate_spec).into(),
+                State::SlippageAnomaly(inner) => inner.migrate_spec(migrate_spec).into(),
             }
         }
     }

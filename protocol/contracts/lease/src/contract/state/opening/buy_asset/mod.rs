@@ -7,7 +7,8 @@ use serde::{Deserialize, Serialize};
 use dex::MaxSlippage;
 use dex::{
     Account, CoinsNb, ContractInRemoteSwap, ContractInSwap, Error as DexError, RemoteSwapClient,
-    Stage, StartLocalRemoteState, SwapOutputTask, SwapTask, WithCalculator, WithOutputTask,
+    SlippageEscalation, Stage, StartLocalRemoteState, SwapOutputTask, SwapTask, WithCalculator,
+    WithOutputTask,
 };
 use finance::coin::{Amount, Coin};
 use finance::instant::Instant;
@@ -190,6 +191,12 @@ impl SwapTask for BuyAsset {
         TIMEOUT_RETRY_BUDGET
     }
 
+    /// The opening swap re-emits on a slippage anomaly and never parks - a
+    /// follow-up issue owns the opening-leg terminal (see issue #655).
+    fn slippage_escalation(&self) -> SlippageEscalation {
+        SlippageEscalation::ReEmit
+    }
+
     fn coins(&self) -> impl IntoIterator<Item = CoinDTO<Self::InG>> {
         [self.downpayment, self.loan.principal.into_super_group()].into_iter()
     }
@@ -293,6 +300,16 @@ impl ContractInRemoteSwap for BuyAsset {
         _querier: QuerierWrapper<'_>,
     ) -> Self::StateResponse {
         self.state(|_ica_account| OngoingTrx::BuyAsset { acks_left })
+    }
+
+    fn anomaly_state(
+        self,
+        _acks_left: CoinsNb,
+        _now: Instant,
+        _due_projection: Duration,
+        _querier: QuerierWrapper<'_>,
+    ) -> Self::StateResponse {
+        unreachable!("the opening swap re-emits on a slippage anomaly and never parks")
     }
 }
 

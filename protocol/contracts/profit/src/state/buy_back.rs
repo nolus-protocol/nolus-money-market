@@ -4,8 +4,8 @@ use serde::{Deserialize, Serialize};
 use currencies::{Native, Nls, PaymentGroup};
 use dex::{
     AcceptAnyNonZeroSwap, Account, AnomalyTreatment, CoinsNb, ContractInSwap, DexResult,
-    Error as DexError, Response as DexResponse, Stage, StateLocalOut, SwapOutputTask, SwapTask,
-    WithCalculator, WithOutputTask,
+    Error as DexError, Response as DexResponse, SlippageEscalation, Stage, StateLocalOut,
+    SwapOutputTask, SwapTask, WithCalculator, WithOutputTask,
 };
 use finance::instant::Instant;
 use finance::{
@@ -99,6 +99,13 @@ impl SwapTask for BuyBack {
 
     fn timeout_retry_budget(&self) -> CoinsNb {
         TIMEOUT_RETRY_BUDGET
+    }
+
+    /// Profit's buy-back runs over the ICA transport, never the remote-lease
+    /// swap, so its anomaly escalation is never consulted; re-emitting keeps
+    /// it aligned with the unbounded local-swap retry.
+    fn slippage_escalation(&self) -> SlippageEscalation {
+        SlippageEscalation::ReEmit
     }
 
     fn coins(&self) -> impl IntoIterator<Item = CoinDTO<Self::InG>> {
