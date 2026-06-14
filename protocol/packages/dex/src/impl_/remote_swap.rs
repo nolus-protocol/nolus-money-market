@@ -57,7 +57,7 @@ use crate::{
         SlippageAnomaly,
         next_leg::NextLeg,
         response::{self, ContinueResult, Handler, Result as HandlerResult},
-        slippage_anomaly, timeout,
+        timeout,
     },
 };
 
@@ -270,8 +270,8 @@ where
     /// Re-emit the in-flight leg verbatim after a transient failure, keeping
     /// the pinned floor and the accumulated progress intact.
     fn reemit_in_flight(self, querier: QuerierWrapper<'_>, env: Env) -> HandlerResult<Self> {
-        let state_label = self.spec.label();
-        timeout::on_timeout_retry(self, state_label, querier, env).into()
+        let leg_label = self.spec.label();
+        timeout::on_timeout_retry(self, leg_label, querier, env).into()
     }
 
     /// Re-emit the in-flight leg after a heal, signalling the recovery with
@@ -437,7 +437,7 @@ where
             self.total_out,
             self.in_flight_min_out,
         );
-        let emitter = slippage_anomaly::emit_parked_on_entry(&terminal);
+        let emitter = terminal.emit_parked();
         response::res_continue::<_, _, Self>(
             MessageResponse::messages_with_event(Batch::default(), emitter),
             terminal,
@@ -693,7 +693,7 @@ where
     }
 }
 
-fn swappable_coins<SwapTask>(
+pub(super) fn swappable_coins<SwapTask>(
     spec: &SwapTask,
     out_currency: CurrencyDTO<SwapTask::OutG>,
 ) -> impl Iterator<Item = CoinDTO<SwapTask::InG>>
@@ -820,7 +820,7 @@ pub(super) mod mock {
     pub const LABEL: &str = "RemoteSwapMock";
     pub const CONTROLLER: &str = "controller";
     pub const WRONG_VARIANT_PAYLOAD: &[u8] = b"wrong-variant";
-    pub const PARKED_STATE: CoinsNb = CoinsNb::MAX;
+    pub const SLIPPAGE_PROTECTION_SENTINEL: CoinsNb = CoinsNb::MAX;
 
     const DEFAULT_FLOOR: Amount = 1;
     const DEFAULT_BUDGET: CoinsNb = 3;
@@ -998,14 +998,14 @@ pub(super) mod mock {
             acks_left
         }
 
-        fn anomaly_state(
+        fn anomaly_response(
             self,
             _acks_left: CoinsNb,
             _now: finance::instant::Instant,
             _due_projection: finance::duration::Duration,
             _querier: QuerierWrapper<'_>,
         ) -> Self::StateResponse {
-            PARKED_STATE
+            SLIPPAGE_PROTECTION_SENTINEL
         }
     }
 
@@ -1572,10 +1572,10 @@ mod tests {
     /// `#[serde(default)]` must let it load with both counters cleared so
     /// the new code-id never bricks an in-flight lease.
     #[test]
-    fn old_state_without_counters_deserializes_to_zero() {
-        let old_state = br#"{"spec":{"coins":[{"amount":"100","ticker":"ticker#2"},{"amount":"50","ticker":"ticker#1"},{"amount":"70","ticker":"ticker#2"}],"floor":1,"budget":3},"acks_left":1,"total_out":{"amount":"80","ticker":"ticker#1"},"in_flight_min_out":{"amount":"1","ticker":"ticker#1"}}"#;
+    fn legacy_remote_swap_without_counters_deserializes_to_zero() {
+        let legacy_remote_swap = br#"{"spec":{"coins":[{"amount":"100","ticker":"ticker#2"},{"amount":"50","ticker":"ticker#1"},{"amount":"70","ticker":"ticker#2"}],"floor":1,"budget":3},"acks_left":1,"total_out":{"amount":"80","ticker":"ticker#1"},"in_flight_min_out":{"amount":"1","ticker":"ticker#1"}}"#;
 
-        let restored: Node = sdk::cosmwasm_std::from_json(old_state.as_slice())
+        let restored: Node = sdk::cosmwasm_std::from_json(legacy_remote_swap.as_slice())
             .expect("the pre-#655 state should deserialize");
         assert_eq!(0, restored.timeouts);
         assert_eq!(0, restored.errors);

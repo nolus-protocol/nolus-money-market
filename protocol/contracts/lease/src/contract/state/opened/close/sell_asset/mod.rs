@@ -295,7 +295,7 @@ where
         self.query(PositionCloseTrx::Swap, now, due_projection, querier)
     }
 
-    fn anomaly_state(
+    fn anomaly_response(
         self,
         _acks_left: CoinsNb,
         now: Instant,

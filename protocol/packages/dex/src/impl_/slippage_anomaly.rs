@@ -70,7 +70,7 @@ where
     total_out: CoinDTO<SwapTask::OutG>,
     in_flight_min_out: CoinDTO<SwapTask::OutG>,
     #[serde(skip)]
-    _state_enum: PhantomData<SEnum>,
+    _variant_set: PhantomData<SEnum>,
 }
 
 impl<SwapTask, SEnum> SlippageAnomaly<SwapTask, SEnum>
@@ -83,16 +83,34 @@ where
         total_out: CoinDTO<SwapTask::OutG>,
         in_flight_min_out: CoinDTO<SwapTask::OutG>,
     ) -> Self {
-        Self {
+        let ret = Self {
             spec,
             acks_left,
             total_out,
             in_flight_min_out,
-            _state_enum: PhantomData,
-        }
+            _variant_set: PhantomData,
+        };
+        debug_assert!(ret.invariant_held());
+        ret
     }
 
-    fn emit_parked(&self) -> Emitter {
+    /// The frozen leg the terminal carries is a snapshot of the live
+    /// [`RemoteSwap`] leg it parked from, so the same invariant holds: an
+    /// in-flight leg the `acks_left` countdown points at within the spec's
+    /// swappable coins, with the pinned floor denominated in the accumulated
+    /// total's currency.
+    fn invariant_held(&self) -> bool {
+        0 < self.acks_left
+            && usize::from(self.acks_left) <= self.legs_nb()
+            && self.in_flight_min_out.currency() == self.total_out.currency()
+    }
+
+    fn legs_nb(&self) -> usize {
+        super::remote_swap::swappable_coins(&self.spec, self.total_out.currency()).count()
+    }
+
+    /// The on-entry event a leg emits as it parks at the terminal.
+    pub(super) fn emit_parked(&self) -> Emitter {
         Emitter::of_type(self.spec.label()).emit(EVENT_KEY_ANOMALY, ANOMALY_PARKED)
     }
 
@@ -226,7 +244,7 @@ where
         querier: QuerierWrapper<'_>,
     ) -> Self::StateResponse {
         self.spec
-            .anomaly_state(self.acks_left, now, due_projection, querier)
+            .anomaly_response(self.acks_left, now, due_projection, querier)
     }
 }
 
@@ -287,14 +305,4 @@ where
     {
         inspect_fn(&self.spec)
     }
-}
-
-/// The on-entry event a leg emits as it parks at the terminal.
-pub(super) fn emit_parked_on_entry<SwapTask, SEnum>(
-    terminal: &SlippageAnomaly<SwapTask, SEnum>,
-) -> Emitter
-where
-    SwapTask: SwapTaskT,
-{
-    terminal.emit_parked()
 }
