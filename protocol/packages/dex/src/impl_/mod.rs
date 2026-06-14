@@ -11,6 +11,7 @@ pub use self::{
         start_remote_local,
     },
     out_remote::{StartLocalRemoteState, State as StateRemoteOut, start as start_local_remote},
+    out_swap::{StartOutSwapState, State as StateOutSwap, start as start_out_swap},
     remote_swap::{RemoteSwap, RemoteSwapClient},
     remote_swap_only::{StartSwapState, State as StateSwap, start as start_swap},
     remote_transfer_out::{DrainStage, RemoteTransferOut, RemoteTransferOutTask},
@@ -30,6 +31,7 @@ mod migration;
 mod next_leg;
 mod out_local;
 mod out_remote;
+mod out_swap;
 mod remote_swap;
 mod remote_swap_only;
 mod remote_transfer_out;
