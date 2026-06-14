@@ -1,3 +1,4 @@
+use dex::CoinsNb;
 use profit::stub::ProfitStub;
 use sdk::cosmwasm_std::Env;
 
@@ -27,6 +28,8 @@ type Spec = FullClose;
 pub(in super::super) type RepayableImpl = Close<Spec>;
 pub(crate) type DexState = close::sell_asset::DexState<RepayableImpl, Calculator>;
 
+const TIMEOUT_RETRY_BUDGET: CoinsNb = 2;
+
 impl IntoRepayable for Spec {
     type Repayable = RepayableImpl;
 
@@ -49,6 +52,10 @@ impl Closable for Spec {
 
     fn event_type(&self) -> Type {
         Type::ClosePosition
+    }
+
+    fn timeout_retry_budget(&self) -> CoinsNb {
+        TIMEOUT_RETRY_BUDGET
     }
 }
 

@@ -127,6 +127,30 @@ fn update_config_unauthorized() {
     );
 }
 
+/// Profit's `Heal` stays permissionless: threading `MessageInfo` through
+/// `Handler::heal` must not gate it. A non-privileged caller is not rejected
+/// by an authz check - an idle profit answers with an unsupported-operation
+/// error, never `Unauthorized`.
+#[test]
+fn heal_is_permissionless() {
+    let mut test_case = test_case::<Lpn>();
+
+    let err = test_case
+        .app
+        .execute(
+            testing::user(USER),
+            test_case.address_book.profit().clone(),
+            &ExecuteMsg::Heal(),
+            &[],
+        )
+        .unwrap_err()
+        .to_string();
+    assert!(
+        !err.contains("Unauthorized"),
+        "profit heal must not be authz-gated, got {err}"
+    );
+}
+
 #[test]
 fn on_alarm_from_unknown() {
     let user_addr: Addr = testing::user(USER);

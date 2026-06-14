@@ -17,6 +17,7 @@ pub use self::{
     remote_transfer_out::{DrainStage, RemoteTransferOut, RemoteTransferOutTask},
     resp_delivery::{ICAOpenResponseDelivery, ResponseDelivery},
     slippage::{AcceptAnyNonZeroSwap, Calculator as AcceptUpToMaxSlippage, MaxSlippage},
+    slippage_anomaly::SlippageAnomaly,
     swap_exact_in::SwapExactIn,
     transfer_in_finish::TransferInFinish,
     transfer_in_init::TransferInInit,
@@ -37,6 +38,7 @@ mod remote_swap_only;
 mod remote_transfer_out;
 mod resp_delivery;
 mod slippage;
+mod slippage_anomaly;
 mod swap_exact_in;
 mod timeout;
 mod transfer_in;

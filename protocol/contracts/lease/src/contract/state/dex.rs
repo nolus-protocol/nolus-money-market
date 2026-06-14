@@ -3,7 +3,10 @@ use serde::{Deserialize, Serialize};
 use dex::{Contract as DexContract, Handler as DexHandler};
 use finance::duration::Duration;
 use finance::instant::Instant;
-use platform::{ica::ErrorResponse as ICAErrorResponse, state_machine};
+use platform::{
+    batch::Batch, ica::ErrorResponse as ICAErrorResponse, message::Response as MessageResponse,
+    state_machine,
+};
 use remote_lease::{
     callback::{RemoteErrorMessage, RemoteLeaseCallback},
     response::WireOperationResponse,
@@ -111,9 +114,9 @@ where
         self,
         querier: QuerierWrapper<'_>,
         env: Env,
-        _info: MessageInfo,
+        info: MessageInfo,
     ) -> ContractResult<Response> {
-        self.handler.heal(querier, env).into()
+        self.handler.heal(querier, env, &info).into()
     }
 
     fn state(
@@ -141,13 +144,24 @@ where
         self.handler.on_time_alarm(querier, env, info).into()
     }
 
+    /// A live dex leg drops a price alarm silently - the swap is mid-flight
+    /// and a re-quote would corrupt its pinned floor. A leg parked at the
+    /// slippage-anomaly terminal is frozen until an operator heal, so it
+    /// still drops the alarm but emits a dropped-alarm event: monitoring must
+    /// see that a frozen lease ignored a price move it would normally act on.
     fn on_price_alarm(
         self,
         _querier: QuerierWrapper<'_>,
         _env: Env,
         _info: MessageInfo,
     ) -> ContractResult<Response> {
-        super::ignore_msg(self)
+        match self.handler.price_alarm_dropped() {
+            None => super::ignore_msg(self),
+            Some(emitter) => Ok(Response::from(
+                MessageResponse::messages_with_event(Batch::default(), emitter),
+                self,
+            )),
+        }
     }
 }
 

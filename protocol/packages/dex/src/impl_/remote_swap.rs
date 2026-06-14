@@ -50,10 +50,11 @@ use platform::{
 use sdk::cosmwasm_std::{Binary, Env, MessageInfo, QuerierWrapper};
 
 use crate::{
-    CoinsNb, Contract, ContractInRemoteSwap, Enterable, SlippageCalculator, SwapOutputTask,
-    SwapTask as SwapTaskT, TimeAlarm, WithCalculator, WithOutputTask,
+    CoinsNb, Contract, ContractInRemoteSwap, Enterable, SlippageCalculator, SlippageEscalation,
+    SwapOutputTask, SwapTask as SwapTaskT, TimeAlarm, WithCalculator, WithOutputTask,
     error::{Error, Result},
     impl_::{
+        SlippageAnomaly,
         next_leg::NextLeg,
         response::{self, ContinueResult, Handler, Result as HandlerResult},
         timeout,
@@ -126,6 +127,10 @@ where
     acks_left: CoinsNb,
     total_out: CoinDTO<SwapTask::OutG>,
     in_flight_min_out: CoinDTO<SwapTask::OutG>,
+    #[serde(default)]
+    timeouts: CoinsNb,
+    #[serde(default)]
+    errors: CoinsNb,
     #[serde(skip)]
     _state_enum: PhantomData<SEnum>,
 }
@@ -262,6 +267,25 @@ where
         })
     }
 
+    /// Re-emit the in-flight leg verbatim after a transient failure, keeping
+    /// the pinned floor and the accumulated progress intact.
+    fn reemit_in_flight(self, querier: QuerierWrapper<'_>, env: Env) -> HandlerResult<Self> {
+        let leg_label = self.spec.label();
+        timeout::on_timeout_retry(self, leg_label, querier, env).into()
+    }
+
+    /// Re-emit the in-flight leg after a heal, signalling the recovery with
+    /// the heal event. The node carries the floor freshly pinned by
+    /// [`RemoteSwap::open_leg`] and the retry counters it reset to zero.
+    pub(super) fn reemit_healed(self) -> ContinueResult<Self> {
+        self.schedule().and_then(|batch| {
+            response::res_continue::<_, _, Self>(
+                MessageResponse::messages_with_event(batch, self.emit_heal()),
+                self,
+            )
+        })
+    }
+
     fn emit_total_out(&self) -> Emitter {
         Emitter::of_type(self.spec.label()).emit_coin_dto(EVENT_KEY_TOTAL_OUT, &self.total_out)
     }
@@ -302,8 +326,9 @@ where
     ///
     /// The single place the oracle is consulted - the resulting floor is
     /// what the leg's emission and every re-emission promise, and what its
-    /// acknowledgment is validated against.
-    fn open_leg(
+    /// acknowledgment is validated against. Re-opening the SAME leg, as a
+    /// heal does, re-quotes the floor and resets the retry counters to zero.
+    pub(super) fn open_leg(
         spec: SwapTask,
         acks_left: CoinsNb,
         total_out: CoinDTO<SwapTask::OutG>,
@@ -311,7 +336,21 @@ where
     ) -> Result<Self> {
         in_flight_leg(&spec, total_out.currency(), acks_left)
             .and_then(|coin_in| leg_min_out(&spec, coin_in, total_out.currency(), querier))
-            .map(|min_out| Self::internal_new(spec, acks_left, total_out, min_out))
+            .map(|min_out| Self::internal_new(spec, acks_left, total_out, min_out, 0, 0))
+    }
+
+    fn with_incremented_errors(self) -> Self {
+        Self {
+            errors: self.errors.saturating_add(1),
+            ..self
+        }
+    }
+
+    fn with_incremented_timeouts(self) -> Self {
+        Self {
+            timeouts: self.timeouts.saturating_add(1),
+            ..self
+        }
     }
 
     fn internal_new(
@@ -319,12 +358,16 @@ where
         acks_left: CoinsNb,
         total_out: CoinDTO<SwapTask::OutG>,
         in_flight_min_out: CoinDTO<SwapTask::OutG>,
+        timeouts: CoinsNb,
+        errors: CoinsNb,
     ) -> Self {
         let ret = Self {
             spec,
             acks_left,
             total_out,
             in_flight_min_out,
+            timeouts,
+            errors,
             _state_enum: PhantomData,
         };
         debug_assert!(ret.invariant_held());
@@ -371,10 +414,43 @@ where
     }
 }
 
+impl<SwapTask, SEnum> RemoteSwap<SwapTask, SEnum>
+where
+    SwapTask: SwapTaskT + RemoteSwapClient,
+    Self: Into<SEnum>,
+    SlippageAnomaly<SwapTask, SEnum>: Into<SEnum>,
+{
+    /// Escalate a spent in-flight leg per the spec's policy: park the opened
+    /// legs at the slippage-anomaly terminal, or re-emit the opening swap
+    /// verbatim.
+    fn escalate(self, querier: QuerierWrapper<'_>, env: Env) -> HandlerResult<Self> {
+        match self.spec.slippage_escalation() {
+            SlippageEscalation::ReEmit => self.reemit_in_flight(querier, env),
+            SlippageEscalation::Park => self.park(),
+        }
+    }
+
+    fn park(self) -> HandlerResult<Self> {
+        let terminal = SlippageAnomaly::new(
+            self.spec,
+            self.acks_left,
+            self.total_out,
+            self.in_flight_min_out,
+        );
+        let emitter = terminal.emit_parked();
+        response::res_continue::<_, _, Self>(
+            MessageResponse::messages_with_event(Batch::default(), emitter),
+            terminal,
+        )
+        .into()
+    }
+}
+
 impl<SwapTask, SEnum> Handler for RemoteSwap<SwapTask, SEnum>
 where
     SwapTask: SwapTaskT + RemoteSwapClient,
     Self: Into<SEnum>,
+    SlippageAnomaly<SwapTask, SEnum>: Into<SEnum>,
 {
     type Response = SEnum;
     type SwapResult = SwapTask::Result;
@@ -406,22 +482,34 @@ where
         }
     }
 
-    /// Anomalies are deliberately not routed through the spec's
-    /// `on_anomaly` - its `Retry` treatment rebuilds the node from the spec
-    /// and would re-issue the already-acknowledged legs. Only the in-flight
-    /// leg is re-emitted, preserving the accumulated progress.
+    /// An error on the in-flight leg escalates immediately - there is no
+    /// retry budget for an explicit under-floor rejection. Opened legs park
+    /// at the slippage-anomaly terminal; the opening swap re-emits verbatim,
+    /// the legacy error-equals-timeout behaviour, and never parks.
+    ///
+    /// Anomalies are deliberately not routed through the spec's `on_anomaly`,
+    /// whose `Retry` treatment rebuilds the node from the spec and would
+    /// re-issue the already-acknowledged legs. Only the in-flight leg is
+    /// re-emitted, preserving the accumulated progress.
     fn on_remote_error(
         self,
         _response: ICAErrorResponse,
         querier: QuerierWrapper<'_>,
         env: Env,
     ) -> HandlerResult<Self> {
-        self.on_remote_timeout(querier, env)
+        self.with_incremented_errors().escalate(querier, env)
     }
 
+    /// A timeout re-emits the in-flight leg up to the spec's per-op retry
+    /// budget and escalates past it - the opened legs park while the opening
+    /// swap keeps re-emitting unbounded.
     fn on_remote_timeout(self, querier: QuerierWrapper<'_>, env: Env) -> HandlerResult<Self> {
-        let state_label = self.spec.label();
-        timeout::on_timeout_retry(self, state_label, querier, env).into()
+        let bumped = self.with_incremented_timeouts();
+        if bumped.timeouts <= bumped.spec.timeout_retry_budget() {
+            bumped.reemit_in_flight(querier, env)
+        } else {
+            bumped.escalate(querier, env)
+        }
     }
 
     /// The only operator recovery on this transport - there is neither a
@@ -430,7 +518,12 @@ where
     /// `in_flight_min_out`, the exact promise of the original emission.
     /// See the module doc for the duplicate-acknowledgment risk a heal
     /// issued while the original operation is still resolvable creates.
-    fn heal(self, _querier: QuerierWrapper<'_>, _env: Env) -> HandlerResult<Self> {
+    fn heal(
+        self,
+        _querier: QuerierWrapper<'_>,
+        _env: Env,
+        _info: &MessageInfo,
+    ) -> HandlerResult<Self> {
         self.schedule()
             .and_then(|batch| {
                 response::res_continue::<_, _, Self>(
@@ -506,6 +599,8 @@ where
             self.acks_left,
             self.total_out,
             self.in_flight_min_out,
+            self.timeouts,
+            self.errors,
         )
     }
 }
@@ -598,7 +693,7 @@ where
     }
 }
 
-fn swappable_coins<SwapTask>(
+pub(super) fn swappable_coins<SwapTask>(
     spec: &SwapTask,
     out_currency: CurrencyDTO<SwapTask::OutG>,
 ) -> impl Iterator<Item = CoinDTO<SwapTask::InG>>
@@ -716,7 +811,7 @@ pub(super) mod mock {
 
     use crate::{
         Account, AnomalyTreatment, CoinsNb, ContractInRemoteSwap, SlippageCalculator,
-        SwapOutputTask, SwapTask, WithCalculator, WithOutputTask,
+        SlippageEscalation, SwapOutputTask, SwapTask, WithCalculator, WithOutputTask,
         error::{Error, Result},
     };
 
@@ -725,14 +820,29 @@ pub(super) mod mock {
     pub const LABEL: &str = "RemoteSwapMock";
     pub const CONTROLLER: &str = "controller";
     pub const WRONG_VARIANT_PAYLOAD: &[u8] = b"wrong-variant";
+    pub const SLIPPAGE_PROTECTION_SENTINEL: CoinsNb = CoinsNb::MAX;
 
     const DEFAULT_FLOOR: Amount = 1;
+    const DEFAULT_BUDGET: CoinsNb = 3;
+
+    #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+    #[serde(rename_all = "snake_case")]
+    enum Escalation {
+        #[default]
+        Park,
+        ReEmit,
+    }
 
     #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
     #[serde(deny_unknown_fields, rename_all = "snake_case")]
     pub struct MockSpec {
         coins: Vec<CoinDTO<SuperGroup>>,
         floor: Amount,
+        budget: CoinsNb,
+        #[serde(default)]
+        escalation: Escalation,
+        #[serde(default)]
+        anomaly_resolution_authorised: bool,
     }
 
     #[derive(Serialize)]
@@ -752,11 +862,26 @@ pub(super) mod mock {
             Self {
                 coins,
                 floor: DEFAULT_FLOOR,
+                budget: DEFAULT_BUDGET,
+                escalation: Escalation::Park,
+                anomaly_resolution_authorised: true,
             }
         }
 
         pub fn set_floor(&mut self, floor: Amount) {
             self.floor = floor;
+        }
+
+        pub fn set_budget(&mut self, budget: CoinsNb) {
+            self.budget = budget;
+        }
+
+        pub fn set_reemit(&mut self) {
+            self.escalation = Escalation::ReEmit;
+        }
+
+        pub fn deny_anomaly_resolution(&mut self) {
+            self.anomaly_resolution_authorised = false;
         }
     }
 
@@ -789,6 +914,31 @@ pub(super) mod mock {
             _info: &MessageInfo,
         ) -> Result<()> {
             Ok(())
+        }
+
+        fn authz_anomaly_resolution(
+            &self,
+            _querier: QuerierWrapper<'_>,
+            _info: &MessageInfo,
+        ) -> Result<()> {
+            if self.anomaly_resolution_authorised {
+                Ok(())
+            } else {
+                Err(Error::Unauthorized(
+                    access_control::error::Error::Unauthorized {},
+                ))
+            }
+        }
+
+        fn timeout_retry_budget(&self) -> CoinsNb {
+            self.budget
+        }
+
+        fn slippage_escalation(&self) -> SlippageEscalation {
+            match self.escalation {
+                Escalation::Park => SlippageEscalation::Park,
+                Escalation::ReEmit => SlippageEscalation::ReEmit,
+            }
         }
 
         fn coins(&self) -> impl IntoIterator<Item = CoinDTO<SuperGroup>> {
@@ -846,6 +996,16 @@ pub(super) mod mock {
             _querier: QuerierWrapper<'_>,
         ) -> Self::StateResponse {
             acks_left
+        }
+
+        fn anomaly_response(
+            self,
+            _acks_left: CoinsNb,
+            _now: finance::instant::Instant,
+            _due_projection: finance::duration::Duration,
+            _querier: QuerierWrapper<'_>,
+        ) -> Self::StateResponse {
+            SLIPPAGE_PROTECTION_SENTINEL
         }
     }
 
@@ -928,12 +1088,13 @@ mod tests {
         message::Response as MessageResponse,
     };
     use sdk::cosmwasm_std::{
-        Binary, Env, QuerierWrapper,
+        Addr, Binary, Env, MessageInfo, QuerierWrapper,
         testing::{self, MockQuerier},
     };
 
     use crate::{
         CoinsNb, Contract,
+        error::Error,
         impl_::response::{Handler, Result as HandlerResult},
     };
 
@@ -941,14 +1102,22 @@ mod tests {
 
     type OutG = <MockSpec as crate::SwapTask>::OutG;
     type Node = super::RemoteSwap<MockSpec, TestWorkflow>;
+    type Terminal = crate::impl_::SlippageAnomaly<MockSpec, TestWorkflow>;
 
     enum TestWorkflow {
         RemoteSwap(Node),
+        SlippageAnomaly(Terminal),
     }
 
     impl From<Node> for TestWorkflow {
         fn from(node: Node) -> Self {
             Self::RemoteSwap(node)
+        }
+    }
+
+    impl From<Terminal> for TestWorkflow {
+        fn from(terminal: Terminal) -> Self {
+            Self::SlippageAnomaly(terminal)
         }
     }
 
@@ -1054,6 +1223,7 @@ mod tests {
             continued(after_first_ack(querier).on_remote_timeout(querier, env.clone()));
         assert_eq!(timeout_response(&coin_in(70), &env), response);
         assert_node(1, &coin_out(80), &min_out(), &node);
+        assert_eq!(1, node.timeouts);
     }
 
     /// The re-emission repeats the floor pinned at the leg's emission even
@@ -1086,19 +1256,21 @@ mod tests {
         assert_node(2, &coin_out(50), &coin_out(PINNED_FLOOR), &node);
     }
 
+    /// An error parks immediately - no retry - freezing the in-flight leg's
+    /// progress at the terminal and emitting the on-entry anomaly event.
     #[test]
-    fn error_reemits_preserving_progress() {
+    fn error_parks_preserving_progress() {
         let mock_querier = MockQuerier::default();
         let querier = QuerierWrapper::new(&mock_querier);
         let env = testing::mock_env();
 
-        let (response, node) = continued(after_first_ack(querier).on_remote_error(
+        let (response, terminal) = parked(after_first_ack(querier).on_remote_error(
             ICAErrorResponse::from(String::from("swap failed")),
             querier,
-            env.clone(),
+            env,
         ));
-        assert_eq!(timeout_response(&coin_in(70), &env), response);
-        assert_node(1, &coin_out(80), &min_out(), &node);
+        assert_eq!(parked_response(), response);
+        assert_terminal(1, &coin_out(80), &min_out(), &terminal);
     }
 
     #[test]
@@ -1169,7 +1341,7 @@ mod tests {
         let mut node = after_first_ack(querier);
         node.spec.set_floor(RAISED_FLOOR);
 
-        let (response, node) = continued(node.heal(querier, testing::mock_env()));
+        let (response, node) = continued(node.heal(querier, testing::mock_env(), &healer()));
         assert_eq!(
             MessageResponse::messages_with_event(
                 mock::swap_request(&coin_in(70), &min_out()).expect("a valid swap request"),
@@ -1180,12 +1352,208 @@ mod tests {
         assert_node(1, &coin_out(80), &min_out(), &node);
     }
 
+    /// A leg parks once its timeout budget is spent: the budget-th timeout
+    /// still re-emits, the next one parks at the terminal.
+    #[test]
+    fn timeout_budget_spent_parks_at_terminal() {
+        let mock_querier = MockQuerier::default();
+        let querier = QuerierWrapper::new(&mock_querier);
+
+        let terminal = parked_terminal(querier);
+        assert_terminal(1, &coin_out(80), &min_out(), &terminal);
+    }
+
+    /// The opening swap escalation re-emits past the budget instead of
+    /// parking - opening keeps the legacy unbounded behaviour.
+    #[test]
+    fn reemit_escalation_never_parks() {
+        let mock_querier = MockQuerier::default();
+        let querier = QuerierWrapper::new(&mock_querier);
+
+        let mut spec = spec3();
+        spec.set_reemit();
+        let (_response, node) = continued(Node::start(spec, &testing::mock_env(), querier));
+        let (_response, mut node) = continued(node.on_remote_response(
+            payload(&coin_out(30)),
+            querier,
+            testing::mock_env(),
+        ));
+
+        let rounds = u16::from(mock_budget()) + 3;
+        for _ in 0..rounds {
+            let (_response, next) = continued(node.on_remote_timeout(querier, testing::mock_env()));
+            node = next;
+        }
+        assert_node(1, &coin_out(80), &min_out(), &node);
+    }
+
+    /// A late acknowledgment of the original packet reaching the parked
+    /// terminal is absorbed without leaving the terminal.
+    #[test]
+    fn terminal_absorbs_late_ok_ack() {
+        let mock_querier = MockQuerier::default();
+        let querier = QuerierWrapper::new(&mock_querier);
+
+        let terminal = parked_terminal(querier);
+        let (response, terminal) = terminal_continued(terminal.on_remote_response(
+            payload(&coin_out(40)),
+            querier,
+            testing::mock_env(),
+        ));
+        assert_eq!(parked_absorb_response("parked-response"), response);
+        assert_terminal(1, &coin_out(80), &min_out(), &terminal);
+    }
+
+    /// A late error and a late timeout reaching the parked terminal are both
+    /// absorbed without advancing or leaving it.
+    #[test]
+    fn terminal_absorbs_late_err_and_timeout() {
+        let mock_querier = MockQuerier::default();
+        let querier = QuerierWrapper::new(&mock_querier);
+
+        let terminal = parked_terminal(querier);
+        let (response, terminal) = terminal_continued(terminal.on_remote_error(
+            ICAErrorResponse::from(String::from("late error")),
+            querier,
+            testing::mock_env(),
+        ));
+        assert_eq!(parked_absorb_response("parked-error"), response);
+
+        let (response, terminal) =
+            terminal_continued(terminal.on_remote_timeout(querier, testing::mock_env()));
+        assert_eq!(parked_absorb_response("parked-timeout"), response);
+        assert_terminal(1, &coin_out(80), &min_out(), &terminal);
+    }
+
+    /// A late callback must not mutate the parked progress: the frozen leg,
+    /// total, and floor are byte-identical before and after.
+    #[test]
+    fn terminal_late_callback_does_not_mutate_counters() {
+        let mock_querier = MockQuerier::default();
+        let querier = QuerierWrapper::new(&mock_querier);
+
+        let terminal = parked_terminal(querier);
+        let before = sdk::cosmwasm_std::to_json_vec(&terminal).expect("a serializable terminal");
+
+        let (_response, terminal) =
+            terminal_continued(terminal.on_remote_timeout(querier, testing::mock_env()));
+        let after = sdk::cosmwasm_std::to_json_vec(&terminal).expect("a serializable terminal");
+        assert_eq!(before, after);
+    }
+
+    /// A heal re-quotes the SAME in-flight leg with a fresh floor, resets the
+    /// retry counters, re-emits, and leaves the terminal back into the live
+    /// swap node.
+    #[test]
+    fn terminal_heal_requotes_and_resets() {
+        const RAISED_FLOOR: Amount = 100;
+        let mock_querier = MockQuerier::default();
+        let querier = QuerierWrapper::new(&mock_querier);
+
+        let mut terminal = parked_terminal(querier);
+        terminal.spec_mut().set_floor(RAISED_FLOOR);
+
+        let (response, node) =
+            terminal_healed(terminal.heal(querier, testing::mock_env(), &healer()));
+        assert_eq!(
+            MessageResponse::messages_with_event(
+                mock::swap_request(&coin_in(70), &coin_out(RAISED_FLOOR))
+                    .expect("a valid swap request"),
+                Emitter::of_type(mock::LABEL).emit("heal", "re-emit"),
+            ),
+            response
+        );
+        assert_node(1, &coin_out(80), &coin_out(RAISED_FLOOR), &node);
+        assert_eq!(0, node.timeouts);
+        assert_eq!(0, node.errors);
+    }
+
+    /// The original packet reaching the parked terminal is absorbed, so the
+    /// operator heal re-emits a single in-flight leg whose acknowledgment
+    /// credits the total exactly once - the at-most-once, single-leg property
+    /// that keeps a stale packet plus the heal re-emission from double-crediting.
+    #[test]
+    fn double_heal_absorbs_second_packet() {
+        let mock_querier = MockQuerier::default();
+        let querier = QuerierWrapper::new(&mock_querier);
+
+        // the original packet lands while parked and is absorbed - no credit
+        let terminal = parked_terminal(querier);
+        let (_response, terminal) = terminal_continued(terminal.on_remote_response(
+            payload(&coin_out(40)),
+            querier,
+            testing::mock_env(),
+        ));
+        assert_terminal(1, &coin_out(80), &min_out(), &terminal);
+
+        // the heal re-emits the SAME in-flight leg without advancing it
+        let (_response, node) =
+            terminal_healed(terminal.heal(querier, testing::mock_env(), &healer()));
+        assert_node(1, &coin_out(80), &min_out(), &node);
+
+        // exactly one acknowledgment of the re-emitted leg finishes the
+        // workflow - the absorbed first packet did not also credit
+        assert_eq!(
+            coin_out(120),
+            finished(node.on_remote_response(payload(&coin_out(40)), querier, testing::mock_env()))
+        );
+    }
+
+    /// An unauthorised operator `heal` of a parked leg is rejected before any
+    /// re-quote - the leg stays frozen at the terminal.
+    #[test]
+    fn heal_rejects_unauthorised_operator() {
+        let mock_querier = MockQuerier::default();
+        let querier = QuerierWrapper::new(&mock_querier);
+
+        let mut terminal = parked_terminal(querier);
+        terminal.spec_mut().deny_anomaly_resolution();
+
+        assert!(matches!(
+            terminal.heal(querier, testing::mock_env(), &healer()),
+            HandlerResult::Continue(Err(Error::Unauthorized(_)))
+        ));
+    }
+
+    /// A live swap leg drops a price alarm silently, while the parked
+    /// terminal reports a dropped-alarm event for monitoring.
+    #[test]
+    fn price_alarm_dropped_only_when_parked() {
+        let mock_querier = MockQuerier::default();
+        let querier = QuerierWrapper::new(&mock_querier);
+
+        let live = after_first_ack(querier);
+        assert!(live.price_alarm_dropped().is_none());
+
+        let terminal = parked_terminal(querier);
+        assert_eq!(
+            Some(Emitter::of_type(mock::LABEL).emit("anomaly", "price-alarm-dropped")),
+            terminal.price_alarm_dropped(),
+        );
+    }
+
+    /// The parked terminal survives a serde round-trip and keeps absorbing
+    /// late callbacks afterwards.
+    #[test]
+    fn terminal_serde_round_trips() {
+        let mock_querier = MockQuerier::default();
+        let querier = QuerierWrapper::new(&mock_querier);
+
+        let terminal = parked_terminal(querier);
+        let restored: Terminal = sdk::cosmwasm_std::to_json_vec(&terminal)
+            .and_then(sdk::cosmwasm_std::from_json)
+            .expect("the terminal should round-trip");
+        assert_terminal(1, &coin_out(80), &min_out(), &restored);
+    }
+
     #[test]
     fn state_serde_round_trips() {
         let mock_querier = MockQuerier::default();
         let querier = QuerierWrapper::new(&mock_querier);
 
-        let node = after_first_ack(querier);
+        let mut node = after_first_ack(querier);
+        node.timeouts = 4;
+        node.errors = 2;
         let restored: Node = sdk::cosmwasm_std::to_json_vec(&node)
             .and_then(sdk::cosmwasm_std::from_json)
             .expect("the state should round-trip");
@@ -1196,6 +1564,61 @@ mod tests {
             &node.in_flight_min_out,
             &restored,
         );
+        assert_eq!(node.timeouts, restored.timeouts);
+        assert_eq!(node.errors, restored.errors);
+    }
+
+    /// A lease persisted before #655 carries no `timeouts`/`errors` keys;
+    /// `#[serde(default)]` must let it load with both counters cleared so
+    /// the new code-id never bricks an in-flight lease.
+    #[test]
+    fn legacy_remote_swap_without_counters_deserializes_to_zero() {
+        let legacy_remote_swap = br#"{"spec":{"coins":[{"amount":"100","ticker":"ticker#2"},{"amount":"50","ticker":"ticker#1"},{"amount":"70","ticker":"ticker#2"}],"floor":1,"budget":3},"acks_left":1,"total_out":{"amount":"80","ticker":"ticker#1"},"in_flight_min_out":{"amount":"1","ticker":"ticker#1"}}"#;
+
+        let restored: Node = sdk::cosmwasm_std::from_json(legacy_remote_swap.as_slice())
+            .expect("the pre-#655 state should deserialize");
+        assert_eq!(0, restored.timeouts);
+        assert_eq!(0, restored.errors);
+    }
+
+    #[test]
+    fn counters_round_trip() {
+        let mock_querier = MockQuerier::default();
+        let querier = QuerierWrapper::new(&mock_querier);
+
+        let mut node = after_first_ack(querier);
+        node.timeouts = 3;
+        node.errors = 1;
+        let restored: Node = sdk::cosmwasm_std::to_json_vec(&node)
+            .and_then(sdk::cosmwasm_std::from_json)
+            .expect("the counters should round-trip");
+        assert_eq!(3, restored.timeouts);
+        assert_eq!(1, restored.errors);
+    }
+
+    #[test]
+    fn spec_reports_its_timeout_retry_budget() {
+        use crate::SwapTask;
+
+        let mut spec = spec3();
+        spec.set_budget(7);
+        assert_eq!(7, spec.timeout_retry_budget());
+    }
+
+    #[cfg(feature = "migration")]
+    #[test]
+    fn migrate_preserves_counters() {
+        use crate::impl_::migration::MigrateSpec;
+
+        let mock_querier = MockQuerier::default();
+        let querier = QuerierWrapper::new(&mock_querier);
+
+        let mut node = after_first_ack(querier);
+        node.timeouts = 4;
+        node.errors = 2;
+        let migrated: Node = node.migrate_spec(|spec| spec);
+        assert_eq!(4, migrated.timeouts);
+        assert_eq!(2, migrated.errors);
     }
 
     #[test]
@@ -1226,14 +1649,80 @@ mod tests {
         assert_eq!(*expected_pinned, node.in_flight_min_out);
     }
 
+    fn assert_terminal(
+        expected_acks: CoinsNb,
+        expected_total: &CoinDTO<OutG>,
+        expected_pinned: &CoinDTO<OutG>,
+        terminal: &Terminal,
+    ) {
+        assert_eq!(expected_acks, terminal.acks_left());
+        assert_eq!(*expected_total, *terminal.total_out());
+        assert_eq!(*expected_pinned, *terminal.in_flight_min_out());
+    }
+
+    fn parked_response() -> MessageResponse {
+        MessageResponse::messages_with_event(
+            Batch::default(),
+            Emitter::of_type(mock::LABEL).emit("anomaly", "slippage-anomaly-parked"),
+        )
+    }
+
+    fn parked_absorb_response(reason: &str) -> MessageResponse {
+        MessageResponse::messages_with_event(
+            Batch::default(),
+            Emitter::of_type(mock::LABEL).emit("absorbed", reason),
+        )
+    }
+
     fn continued(res: HandlerResult<Node>) -> (MessageResponse, Node) {
         match res {
-            HandlerResult::Continue(Ok(resp)) => {
-                let TestWorkflow::RemoteSwap(node) = resp.next_state;
-                (resp.response, node)
-            }
+            HandlerResult::Continue(Ok(resp)) => match resp.next_state {
+                TestWorkflow::RemoteSwap(node) => (resp.response, node),
+                TestWorkflow::SlippageAnomaly(_terminal) => {
+                    panic!("expected the live swap node, got the parked terminal")
+                }
+            },
             HandlerResult::Continue(Err(err)) => panic!("expected a continuation, got {err}"),
             HandlerResult::Finished(_total) => panic!("expected a continuation, got a finish"),
+        }
+    }
+
+    fn parked(res: HandlerResult<Node>) -> (MessageResponse, Terminal) {
+        match res {
+            HandlerResult::Continue(Ok(resp)) => match resp.next_state {
+                TestWorkflow::SlippageAnomaly(terminal) => (resp.response, terminal),
+                TestWorkflow::RemoteSwap(_node) => {
+                    panic!("expected the parked terminal, got the live swap node")
+                }
+            },
+            HandlerResult::Continue(Err(err)) => panic!("expected the terminal, got {err}"),
+            HandlerResult::Finished(_total) => panic!("expected the terminal, got a finish"),
+        }
+    }
+
+    fn terminal_continued(res: HandlerResult<Terminal>) -> (MessageResponse, Terminal) {
+        match res {
+            HandlerResult::Continue(Ok(resp)) => match resp.next_state {
+                TestWorkflow::SlippageAnomaly(terminal) => (resp.response, terminal),
+                TestWorkflow::RemoteSwap(_node) => {
+                    panic!("expected the terminal to stay parked, got the live swap node")
+                }
+            },
+            HandlerResult::Continue(Err(err)) => panic!("expected the terminal, got {err}"),
+            HandlerResult::Finished(_total) => panic!("expected the terminal, got a finish"),
+        }
+    }
+
+    fn terminal_healed(res: HandlerResult<Terminal>) -> (MessageResponse, Node) {
+        match res {
+            HandlerResult::Continue(Ok(resp)) => match resp.next_state {
+                TestWorkflow::RemoteSwap(node) => (resp.response, node),
+                TestWorkflow::SlippageAnomaly(_terminal) => {
+                    panic!("expected the healed swap node, got the parked terminal")
+                }
+            },
+            HandlerResult::Continue(Err(err)) => panic!("expected the healed node, got {err}"),
+            HandlerResult::Finished(_total) => panic!("expected the healed node, got a finish"),
         }
     }
 
@@ -1254,8 +1743,32 @@ mod tests {
         node
     }
 
+    /// Drive the in-flight leg into the parked terminal by exhausting the
+    /// timeout budget: `budget` re-emits keep retrying, the next one parks.
+    fn parked_terminal(querier: QuerierWrapper<'_>) -> Terminal {
+        let node = after_first_ack(querier);
+        let budget = mock_budget();
+        let node = (0..budget).fold(node, |node, _round| {
+            continued(node.on_remote_timeout(querier, testing::mock_env())).1
+        });
+        parked(node.on_remote_timeout(querier, testing::mock_env())).1
+    }
+
+    fn mock_budget() -> CoinsNb {
+        use crate::SwapTask;
+
+        spec3().timeout_retry_budget()
+    }
+
     fn spec3() -> MockSpec {
         MockSpec::new(vec![coin_in(100), coin_out(50), coin_in(70)])
+    }
+
+    fn healer() -> MessageInfo {
+        MessageInfo {
+            sender: Addr::unchecked(mock::CONTROLLER),
+            funds: vec![],
+        }
     }
 
     fn leg_response(

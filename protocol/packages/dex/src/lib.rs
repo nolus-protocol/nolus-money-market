@@ -11,16 +11,16 @@ pub use self::{
     impl_::{
         AcceptAnyNonZeroSwap, AcceptUpToMaxSlippage, DrainStage, FundsArrival, IcaConnector,
         MaxSlippage, RemoteSwap, RemoteSwapClient, RemoteTransferOut, RemoteTransferOutTask,
-        StartDrainState, StartLocalLocalState, StartLocalRemoteState, StartOutSwapState,
-        StartSwapState, StartTransferInState, StateDrain, StateLocalOut, StateOutSwap,
-        StateRemoteOut, StateSwap, TransferOut, start_drain, start_local_local, start_local_remote,
-        start_out_swap, start_remote_local, start_swap,
+        SlippageAnomaly, StartDrainState, StartLocalLocalState, StartLocalRemoteState,
+        StartOutSwapState, StartSwapState, StartTransferInState, StateDrain, StateLocalOut,
+        StateOutSwap, StateRemoteOut, StateSwap, TransferOut, start_drain, start_local_local,
+        start_local_remote, start_out_swap, start_remote_local, start_swap,
     },
     resp_delivery::ForwardToInner,
     response::{ContinueResult, Handler, Response, Result},
     slippage::{Calculator as SlippageCalculator, WithCalculator},
     state::{Contract, ContractInRemoteSwap, ContractInSwap, Stage},
-    swap_task::{CoinsNb, SwapOutputTask, SwapTask, WithOutputTask},
+    swap_task::{CoinsNb, SlippageEscalation, SwapOutputTask, SwapTask, WithOutputTask},
     time_alarm::TimeAlarm,
 };
 

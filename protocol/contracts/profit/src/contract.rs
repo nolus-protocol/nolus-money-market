@@ -144,9 +144,10 @@ pub fn execute(
             try_handle_execute_message(deps, env, State::on_inner_continue)
                 .map(response::response_only_messages)
         }
-        ExecuteMsg::Heal() => {
-            try_handle_execute_message(deps, env, State::heal).map(response::response_only_messages)
-        }
+        ExecuteMsg::Heal() => try_handle_execute_message(deps, env, |machine, querier, env| {
+            State::heal(machine, querier, env, &info)
+        })
+        .map(response::response_only_messages),
     }
 }
 

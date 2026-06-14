@@ -327,7 +327,12 @@ where
     /// duplicate-acknowledgment risk a heal issued while the original
     /// operation is still resolvable creates - with no payload to
     /// cross-check, this transport is credulous to it by construction.
-    fn heal(self, _querier: QuerierWrapper<'_>, _env: Env) -> HandlerResult<Self> {
+    fn heal(
+        self,
+        _querier: QuerierWrapper<'_>,
+        _env: Env,
+        _info: &MessageInfo,
+    ) -> HandlerResult<Self> {
         self.schedule()
             .and_then(|batch| {
                 response::res_continue::<_, _, Self>(
@@ -524,7 +529,7 @@ mod tests {
         message::Response as MessageResponse,
     };
     use sdk::cosmwasm_std::{
-        Binary, Env, QuerierWrapper,
+        Addr, Binary, Env, MessageInfo, QuerierWrapper,
         testing::{self, MockQuerier},
     };
 
@@ -666,7 +671,11 @@ mod tests {
         let querier = QuerierWrapper::new(&mock_querier);
 
         let node = after_first_ack(querier);
-        let (response, node) = continued(node.heal(querier, testing::mock_env()));
+        let info = MessageInfo {
+            sender: Addr::unchecked(mock::CONTROLLER),
+            funds: vec![],
+        };
+        let (response, node) = continued(node.heal(querier, testing::mock_env(), &info));
         assert_eq!(
             MessageResponse::messages_with_event(
                 mock::transfer_request(&coin2(70)).expect("a valid transfer request"),

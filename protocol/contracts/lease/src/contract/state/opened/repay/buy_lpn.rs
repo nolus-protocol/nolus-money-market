@@ -7,8 +7,8 @@ use serde::{Deserialize, Serialize};
 
 use dex::{
     AcceptAnyNonZeroSwap, Account, AnomalyTreatment, CoinsNb, ContractInRemoteSwap, ContractInSwap,
-    Enterable, Error as DexError, RemoteSwapClient, Stage, SwapOutputTask, SwapTask,
-    WithCalculator, WithOutputTask,
+    Enterable, Error as DexError, RemoteSwapClient, SlippageEscalation, Stage, SwapOutputTask,
+    SwapTask, WithCalculator, WithOutputTask,
 };
 use finance::instant::Instant;
 use finance::{
@@ -56,6 +56,8 @@ const NON_SWAP_RESPONSE: &str = "non-swap operation response";
 /// The acknowledged output currency is not the lease's LPN, so the
 /// response cannot have originated from the scheduled repay swap.
 const OUT_NOT_LPN: &str = "swapped-out currency is not the lease LPN";
+
+const TIMEOUT_RETRY_BUDGET: CoinsNb = 3;
 
 pub(crate) type DexState = dex::StateOutSwap<BuyLpn, SwapClient, ForwardToDexEntry>;
 pub(crate) type DrainState = dex::StateDrain<RepayDrain<RepayFinish>>;
@@ -140,6 +142,26 @@ impl SwapTask for BuyLpn {
             info,
         )
         .map_err(DexError::Unauthorized)
+    }
+
+    fn authz_anomaly_resolution(
+        &self,
+        querier: QuerierWrapper<'_>,
+        info: &MessageInfo,
+    ) -> dex::DexResult<()> {
+        access_control::check(
+            &self.lease.leases.anomaly_resolution_permission(querier),
+            info,
+        )
+        .map_err(DexError::Unauthorized)
+    }
+
+    fn timeout_retry_budget(&self) -> CoinsNb {
+        TIMEOUT_RETRY_BUDGET
+    }
+
+    fn slippage_escalation(&self) -> SlippageEscalation {
+        SlippageEscalation::Park
     }
 
     fn coins(&self) -> impl IntoIterator<Item = CoinDTO<Self::InG>> {
@@ -268,6 +290,22 @@ impl ContractInRemoteSwap for BuyLpn {
         querier: QuerierWrapper<'_>,
     ) -> Self::StateResponse {
         self.query(RepayTrx::Swap, now, due_projection, querier)
+    }
+
+    fn anomaly_response(
+        self,
+        _acks_left: CoinsNb,
+        now: Instant,
+        due_projection: Duration,
+        querier: QuerierWrapper<'_>,
+    ) -> Self::StateResponse {
+        opened::lease_state(
+            self.lease,
+            Status::SlippageProtectionActivated,
+            now,
+            due_projection,
+            querier,
+        )
     }
 }
 

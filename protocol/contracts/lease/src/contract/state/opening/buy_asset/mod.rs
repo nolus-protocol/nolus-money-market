@@ -7,7 +7,8 @@ use serde::{Deserialize, Serialize};
 use dex::MaxSlippage;
 use dex::{
     Account, CoinsNb, ContractInRemoteSwap, ContractInSwap, Error as DexError, RemoteSwapClient,
-    Stage, StartLocalRemoteState, SwapOutputTask, SwapTask, WithCalculator, WithOutputTask,
+    SlippageEscalation, Stage, StartLocalRemoteState, SwapOutputTask, SwapTask, WithCalculator,
+    WithOutputTask,
 };
 use finance::coin::{Amount, Coin};
 use finance::instant::Instant;
@@ -37,7 +38,7 @@ use crate::{
             resp_delivery::{ForwardToDexEntry, ForwardToDexEntryContinue},
         },
     },
-    error::ContractResult,
+    error::{ContractError, ContractResult},
     event::Type,
     finance::{LppRef, OracleRef},
 };
@@ -55,6 +56,13 @@ const NON_SWAP_RESPONSE: &str = "non-swap operation response";
 /// The acknowledged output currency does not belong to the lease asset
 /// group, so the response cannot have originated from the scheduled swap.
 const OUT_NOT_AN_ASSET: &str = "swapped-out currency is not a lease asset";
+
+const TIMEOUT_RETRY_BUDGET: CoinsNb = 3;
+
+/// The operation names the never-parking opening swap reports for the two
+/// slippage-anomaly trait methods it can never legitimately reach.
+const ANOMALY_RESOLUTION_OP: &str = "slippage-anomaly resolution";
+const ANOMALY_RESPONSE_OP: &str = "slippage-anomaly state query";
 
 type AssetGroup = LeaseAssetCurrencies;
 pub(super) type StartState = StartLocalRemoteState<OpenIcaAccount, BuyAsset>;
@@ -184,6 +192,31 @@ impl SwapTask for BuyAsset {
             .map_err(DexError::Unauthorized)
     }
 
+    /// The opening swap re-emits on a slippage anomaly and never parks, so the
+    /// heal that this authorisation guards is never reached. A deserialized
+    /// `SlippageAnomaly` arm is not type-excluded, so the unreachable path
+    /// returns a typed error rather than panicking.
+    fn authz_anomaly_resolution(
+        &self,
+        _querier: QuerierWrapper<'_>,
+        _info: &MessageInfo,
+    ) -> dex::DexResult<()> {
+        Err(DexError::UnsupportedOperation(
+            ANOMALY_RESOLUTION_OP.into(),
+            String::from(self.label()),
+        ))
+    }
+
+    fn timeout_retry_budget(&self) -> CoinsNb {
+        TIMEOUT_RETRY_BUDGET
+    }
+
+    /// The opening swap re-emits on a slippage anomaly and never parks - a
+    /// follow-up issue owns the opening-leg terminal (see issue #655).
+    fn slippage_escalation(&self) -> SlippageEscalation {
+        SlippageEscalation::ReEmit
+    }
+
     fn coins(&self) -> impl IntoIterator<Item = CoinDTO<Self::InG>> {
         [self.downpayment, self.loan.principal.into_super_group()].into_iter()
     }
@@ -287,6 +320,20 @@ impl ContractInRemoteSwap for BuyAsset {
         _querier: QuerierWrapper<'_>,
     ) -> Self::StateResponse {
         self.state(|_ica_account| OngoingTrx::BuyAsset { acks_left })
+    }
+
+    /// The opening swap re-emits on a slippage anomaly and never parks, so a
+    /// persisted `SlippageAnomaly` arm for it can only be a corrupt or
+    /// out-of-protocol state. A deserialized state is not type-excluded, so
+    /// the unreachable path returns a typed error rather than panicking.
+    fn anomaly_response(
+        self,
+        _acks_left: CoinsNb,
+        _now: Instant,
+        _due_projection: Duration,
+        _querier: QuerierWrapper<'_>,
+    ) -> Self::StateResponse {
+        Err(ContractError::unsupported_operation(ANOMALY_RESPONSE_OP))
     }
 }
 

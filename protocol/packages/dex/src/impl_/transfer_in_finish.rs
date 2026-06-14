@@ -241,7 +241,12 @@ where
         self.spec.authz_remote_callback(querier, info)
     }
 
-    fn heal(self, querier: QuerierWrapper<'_>, env: Env) -> HandlerResult<Self> {
+    fn heal(
+        self,
+        querier: QuerierWrapper<'_>,
+        env: Env,
+        _info: &MessageInfo,
+    ) -> HandlerResult<Self> {
         self.try_complete(querier, env)
     }
 

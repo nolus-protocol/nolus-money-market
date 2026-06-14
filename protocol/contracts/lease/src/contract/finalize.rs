@@ -53,6 +53,15 @@ impl LeasesRef {
             .map_err(ContractError::PositionLimitsQuery)
     }
 
+    pub(super) fn anomaly_resolution_permission<'self_, 'querier>(
+        &'self_ self,
+        querier: QuerierWrapper<'querier>,
+    ) -> impl AccessPermission + use<'self_, 'querier> {
+        RemotelyGrantedPermission::new(&self.addr, querier, |caller| {
+            AccessCheck::AnomalyResolution { by: caller }
+        })
+    }
+
     pub(super) fn close_position_permission<'self_, 'querier>(
         &'self_ self,
         querier: QuerierWrapper<'querier>,

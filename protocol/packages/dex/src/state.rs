@@ -52,6 +52,19 @@ where
         due_projection: Duration,
         querier: QuerierWrapper<'_>,
     ) -> Self::StateResponse;
+
+    /// The state of a leg parked at the slippage-anomaly terminal
+    ///
+    /// Mirrors [`ContractInRemoteSwap::state`] but reports the anomaly rather
+    /// than the in-flight progress. The leg the `acks_left` countdown points
+    /// at is unchanged - the terminal froze it.
+    fn anomaly_response(
+        self,
+        acks_left: CoinsNb,
+        now: Instant,
+        due_projection: Duration,
+        querier: QuerierWrapper<'_>,
+    ) -> Self::StateResponse;
 }
 
 pub enum Stage {

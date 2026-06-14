@@ -36,6 +36,11 @@ pub enum Error {
     #[error("[Dex] [RemoteSwap] No in-flight swap leg matches the current task state")]
     MissingSwapLeg,
 
+    #[error(
+        "[Dex] [SlippageAnomaly] A restored parked terminal violates its in-flight-leg invariant"
+    )]
+    SlippageAnomalyInvariantViolated,
+
     #[error("[Dex] [RemoteSwap] The number of swap legs exceeds the supported maximum of {0}")]
     SwapLegsNbOverflow(CoinsNb),
 

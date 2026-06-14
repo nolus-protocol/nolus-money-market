@@ -156,7 +156,12 @@ where
         let state_label = self.spec.label();
         timeout::on_timeout_retry(self, state_label, querier, env)
     }
-    fn heal(self, querier: QuerierWrapper<'_>, env: Env) -> HandlerResult<Self> {
+    fn heal(
+        self,
+        querier: QuerierWrapper<'_>,
+        env: Env,
+        _info: &sdk::cosmwasm_std::MessageInfo,
+    ) -> HandlerResult<Self> {
         self.on_response(querier, env)
     }
 }

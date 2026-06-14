@@ -102,7 +102,7 @@ where
         Err(err(self, "handle inner to 'Continue' response"))
     }
 
-    fn heal(self, _querier: QuerierWrapper<'_>, _env: Env) -> Result<Self> {
+    fn heal(self, _querier: QuerierWrapper<'_>, _env: Env, _info: &MessageInfo) -> Result<Self> {
         Err(err(self, "handle heal")).into()
     }
 
@@ -161,6 +161,16 @@ where
         Self: Into<Self::Response>,
     {
         absorb_remote_callback(self, REMOTE_CALLBACK_TIMEOUT)
+    }
+
+    /// The event a parked leg emits when a price alarm is dropped
+    ///
+    /// Live legs drop price alarms silently; only the parked slippage-anomaly
+    /// terminal returns an event, so monitoring sees a frozen lease ignored a
+    /// price move it would normally have acted on. The alarm is still dropped,
+    /// never erroring.
+    fn price_alarm_dropped(&self) -> Option<Emitter> {
+        None
     }
 }
 
