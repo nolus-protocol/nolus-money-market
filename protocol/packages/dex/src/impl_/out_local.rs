@@ -334,12 +334,7 @@ mod impl_handler {
             }
         }
 
-        fn heal(
-            self,
-            querier: QuerierWrapper<'_>,
-            env: Env,
-            info: &MessageInfo,
-        ) -> Result<Self> {
+        fn heal(self, querier: QuerierWrapper<'_>, env: Env, info: &MessageInfo) -> Result<Self> {
             match self {
                 State::TransferOut(inner) => Handler::heal(inner, querier, env, info).map_into(),
                 State::TransferOutRespDelivery(inner) => {

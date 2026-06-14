@@ -51,9 +51,7 @@ use crate::common::{
     test_case::TestCase,
 };
 
-use super::{
-    DOWNPAYMENT, LeaseCoin, LeaseTestCase, LpnCoin, LpnCurrency, PaymentCurrency, repay,
-};
+use super::{DOWNPAYMENT, LeaseCoin, LeaseTestCase, LpnCoin, LpnCurrency, PaymentCurrency, repay};
 
 const LIQUIDATION_SWAP_EVENT: &str = "wasm-ls-liquidation-swap";
 const CLOSE_POSITION_EVENT: &str = "wasm-ls-close-position";
@@ -566,7 +564,9 @@ fn recorded_swap_count(test_case: &LeaseTestCase, lease: &Addr) -> u32 {
 
 /// The `min_out` floor of the latest recorded swap leg for the lease.
 fn latest_min_out(test_case: &LeaseTestCase, lease: &Addr) -> Amount {
-    super::recorded_close_swap(test_case, lease).min_out().amount()
+    super::recorded_close_swap(test_case, lease)
+        .min_out()
+        .amount()
 }
 
 #[track_caller]
