@@ -1,19 +1,27 @@
 use std::iter;
 
 use currency::Group;
+use cw_time::IntoInstant;
 use oracle::stub::SwapPath;
 use serde::{Deserialize, Serialize};
 
 use dex::{
-    AcceptAnyNonZeroSwap, Account, AnomalyTreatment, ContractInSwap, Error as DexError, Stage,
-    StartLocalLocalState, SwapOutputTask, SwapTask, WithCalculator, WithOutputTask,
+    AcceptAnyNonZeroSwap, Account, AnomalyTreatment, CoinsNb, ContractInRemoteSwap, ContractInSwap,
+    Enterable, Error as DexError, RemoteSwapClient, Stage, SwapOutputTask, SwapTask,
+    WithCalculator, WithOutputTask,
 };
 use finance::instant::Instant;
 use finance::{
     coin::{Coin, CoinDTO},
     duration::Duration,
 };
-use sdk::cosmwasm_std::{Env, MessageInfo, QuerierWrapper};
+use platform::batch::Batch;
+use remote_lease::{
+    msg::SwapParams,
+    response::{OperationResponse, SwapResponse},
+    stub::{ControllerInnerMessage, Lease as ControllerLease},
+};
+use sdk::cosmwasm_std::{self, Env, MessageInfo, QuerierWrapper};
 use timealarms::stub::TimeAlarmsRef;
 
 use crate::{
@@ -27,8 +35,11 @@ use crate::{
     contract::{
         Lease,
         state::{
-            StateResponse as ContractStateResponse, SwapClient, SwapResult,
-            opened::{self, repay},
+            Response, StateResponse as ContractStateResponse, SwapClient, SwapResult,
+            opened::{
+                self,
+                proceeds_drain::{RepayDrain, RepayFinish},
+            },
             resp_delivery::ForwardToDexEntry,
         },
     },
@@ -37,11 +48,30 @@ use crate::{
     finance::{LpnCurrencies, LpnCurrency},
 };
 
-pub(super) type StartState = StartLocalLocalState<BuyLpn, SwapClient, ForwardToDexEntry>;
-pub(crate) type DexState = dex::StateLocalOut<BuyLpn, SwapClient, ForwardToDexEntry>;
+/// A non-`Swap` success acknowledgment can only come from a buggy or
+/// hostile counterparty. The fixed reason keeps the unexpected,
+/// counterparty-controlled variant out of stored state and events.
+const NON_SWAP_RESPONSE: &str = "non-swap operation response";
 
-pub(in super::super) fn start(lease: Lease, payment: PaymentCoin) -> StartState {
-    dex::start_local_local(BuyLpn::new(lease, payment))
+/// The acknowledged output currency is not the lease's LPN, so the
+/// response cannot have originated from the scheduled repay swap.
+const OUT_NOT_LPN: &str = "swapped-out currency is not the lease LPN";
+
+pub(crate) type DexState = dex::StateOutSwap<BuyLpn, SwapClient, ForwardToDexEntry>;
+pub(crate) type DrainState = dex::StateDrain<RepayDrain<RepayFinish>>;
+
+pub(in super::super) fn start(
+    lease: Lease,
+    payment: PaymentCoin,
+    env: &Env,
+    querier: QuerierWrapper<'_>,
+) -> SwapResult {
+    let start_state =
+        dex::start_out_swap::<BuyLpn, SwapClient, ForwardToDexEntry>(BuyLpn::new(lease, payment));
+    start_state
+        .enter(env.block.time.into_instant(), querier)
+        .map(|funding_msgs| Response::from(funding_msgs, DexState::from(start_state)))
+        .map_err(Into::into)
 }
 
 #[derive(Serialize, Deserialize)]
@@ -158,8 +188,53 @@ impl SwapOutputTask<Self> for BuyLpn {
         env: &Env,
         querier: QuerierWrapper<'_>,
     ) -> <Self as SwapTask>::Result {
-        // TODO repay with Coin, not CoinDTO
-        repay::repay(self.lease, amount_out.into(), env, querier)
+        let drain = RepayDrain::new(
+            self.lease,
+            amount_out.into(),
+            RepayFinish::new(self.payment),
+        );
+        dex::start_drain(drain)
+            .and_then(|start_drain| {
+                start_drain
+                    .enter(env.block.time.into_instant(), querier)
+                    .map(|drain_msgs| Response::from(drain_msgs, DrainState::from(start_drain)))
+            })
+            .map_err(Into::into)
+    }
+}
+
+impl RemoteSwapClient for BuyLpn {
+    fn schedule_swap(
+        &self,
+        coin_in: &CoinDTO<Self::InG>,
+        min_out: &CoinDTO<Self::OutG>,
+    ) -> dex::DexResult<Batch> {
+        SwapParams::new(*coin_in, min_out.into_super_group())
+            .map_err(DexError::remote_swap_client)
+            .and_then(|params| {
+                ControllerLease::new(&self.lease.lease.remote_lease_controller)
+                    .swap(params, SwapParams::TIMEOUT, |params, timeout| {
+                        ControllerExecuteMsg::Swap { params, timeout }
+                    })
+                    .map_err(Into::into)
+            })
+    }
+
+    fn decode_response(&self, payload: &[u8]) -> dex::DexResult<CoinDTO<Self::OutG>> {
+        cosmwasm_std::from_json::<OperationResponse>(payload)
+            .map_err(DexError::remote_swap_client)
+            .and_then(|response| match response {
+                OperationResponse::Swap(SwapResponse { amount_out }) => {
+                    Coin::<LpnCurrency>::try_from(amount_out)
+                        .map(Into::into)
+                        .map_err(|_not_lpn| DexError::unexpected_response_variant(OUT_NOT_LPN))
+                }
+                OperationResponse::OpenLease(_)
+                | OperationResponse::CloseLease(_)
+                | OperationResponse::TransferOut(_) => {
+                    Err(DexError::unexpected_response_variant(NON_SWAP_RESPONSE))
+                }
+            })
     }
 }
 
@@ -173,17 +248,36 @@ impl ContractInSwap for BuyLpn {
         due_projection: Duration,
         querier: QuerierWrapper<'_>,
     ) -> Self::StateResponse {
-        self.query(in_progress.into(), now, due_projection, querier)
-    }
-}
-
-impl From<Stage> for RepayTrx {
-    fn from(value: Stage) -> Self {
-        match value {
-            Stage::TransferOut => Self::TransferOut,
-            Stage::Swap => Self::Swap,
-            Stage::TransferInInit => Self::TransferInInit,
-            Stage::TransferInFinish => Self::TransferInFinish,
+        match in_progress {
+            Stage::TransferOut => self.query(RepayTrx::TransferOut, now, due_projection, querier),
+            Stage::Swap => unimplemented!("the repay swap runs over the remote-lease transport"),
+            Stage::TransferInInit => unimplemented!(),
+            Stage::TransferInFinish => unimplemented!(),
         }
     }
 }
+
+impl ContractInRemoteSwap for BuyLpn {
+    type StateResponse = <Self as SwapTask>::StateResponse;
+
+    fn state(
+        self,
+        _acks_left: CoinsNb,
+        now: Instant,
+        due_projection: Duration,
+        querier: QuerierWrapper<'_>,
+    ) -> Self::StateResponse {
+        self.query(RepayTrx::Swap, now, due_projection, querier)
+    }
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "snake_case")]
+enum ControllerExecuteMsg {
+    Swap {
+        params: SwapParams,
+        timeout: Duration,
+    },
+}
+
+impl ControllerInnerMessage for ControllerExecuteMsg {}

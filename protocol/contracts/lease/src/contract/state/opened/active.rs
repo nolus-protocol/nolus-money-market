@@ -3,7 +3,6 @@ use serde::{Deserialize, Serialize};
 use access_control::composite::Permission as CompositePermission;
 use currency::CurrencyDef;
 use cw_time::IntoInstant;
-use dex::Enterable;
 use finance::instant::Instant;
 use finance::{coin::IntoDTO, duration::Duration};
 use platform::{bank, batch::Emitter, message::Response as MessageResponse};
@@ -36,10 +35,7 @@ use super::{
     alarm, balance,
     close::sell_asset::{customer_close, liquidation},
     event,
-    repay::{
-        self,
-        buy_lpn::{self, DexState as BuyLpnState},
-    },
+    repay::{self, buy_lpn},
 };
 
 #[derive(Serialize, Deserialize)]
@@ -73,17 +69,8 @@ impl Active {
                 debug_assert!(payment.of_currency_dto(LpnCurrency::dto()).is_ok());
                 repay::repay(self.lease, payment, env, querier)
             }
-            None => self.start_swap(info.funds, env.block.time.into_instant(), querier),
+            None => self.start_swap(info.funds, env, querier),
         }
-    }
-
-    // Access permission check should already have been done!
-    pub(super) fn assess_close_status(
-        self,
-        querier: QuerierWrapper<'_>,
-        env: &Env,
-    ) -> ContractResult<Response> {
-        self.try_on_alarm(querier, env)
     }
 
     fn try_on_alarm(self, querier: QuerierWrapper<'_>, env: &Env) -> ContractResult<Response> {
@@ -125,20 +112,14 @@ impl Active {
     fn start_swap(
         self,
         cw_amount: Vec<CwCoin>,
-        now: Instant,
+        env: &Env,
         querier: QuerierWrapper<'_>,
     ) -> ContractResult<Response> {
         self.lease
             .lease
             .clone()
             .execute(ObtainPayment::new(cw_amount), querier)
-            .and_then(|payment| {
-                let buy_lpn = buy_lpn::start(self.lease, payment);
-                buy_lpn
-                    .enter(now, querier)
-                    .map(|batch| Response::from(batch, BuyLpnState::from(buy_lpn)))
-                    .map_err(Into::into)
-            })
+            .and_then(|payment| buy_lpn::start(self.lease, payment, env, querier))
     }
 }
 

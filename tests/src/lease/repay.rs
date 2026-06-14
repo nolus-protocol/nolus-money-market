@@ -1,11 +1,9 @@
 use std::slice;
 
-use ::swap::testing::SwapRequest;
 use currencies::PaymentGroup;
-use currency::CurrencyDef;
 use finance::instant::Instant;
 use finance::{
-    coin::{Coin, CoinDTO},
+    coin::CoinDTO,
     duration::Duration,
     fraction::{Fraction, Unit},
     percent::{Percent, Percent100},
@@ -27,9 +25,9 @@ use sdk::{
 
 use crate::{
     common::{
-        self, CwCoin, USER, ibc, lease as common_lease,
+        self, CwCoin, USER, lease as common_lease,
         leaser::{self as leaser_mod, Instantiator as LeaserInstantiator},
-        remote_lease_controller_stub as stub, swap,
+        remote_lease_controller_stub as stub,
         test_case::{TestCase, app::App, response::ResponseWithInterChainMsgs},
     },
     lease::heal,
@@ -231,6 +229,126 @@ fn full_repay_with_excess() {
     );
 }
 
+/// Drive a partial repay over the controller transport with the swap and
+/// the proceeds drain delayed, asserting the query inner tags at each stage
+/// and that no ICA `SwapExactIn` is emitted.
+#[test]
+fn repay_swap_then_drain_inner_tags() {
+    use lease::api::query::opened::{OngoingTrx, RepayTrx};
+
+    let mut test_case: LeaseTestCase = super::create_test_case::<PaymentCurrency>();
+    let downpayment = DOWNPAYMENT;
+    let amount = super::quote_borrow(&test_case, downpayment).to_primitive();
+    let payment: PaymentCoin = Fraction::<PaymentCoin>::of(
+        &Ratio::new(common::coin(1), common::coin(2)),
+        super::create_payment_coin(amount),
+    );
+
+    let lease = super::open_lease(&mut test_case, downpayment, None);
+    let controller = test_case.address_book.remote_lease_controller().clone();
+
+    stub::set_response_mode(
+        &mut test_case.app,
+        &controller,
+        stub::op_tag::SWAP,
+        stub::ResponseMode::Delayed,
+    );
+    stub::set_response_mode(
+        &mut test_case.app,
+        &controller,
+        stub::op_tag::TRANSFER_OUT,
+        stub::ResponseMode::Delayed,
+    );
+
+    // `send_repay` funds the swap via a transfer-out and acks it; the
+    // controller swap is then held by the `Delayed` mode, so the lease sits
+    // at `RepayTrx::Swap`.
+    let _repay = send_repay(&mut test_case, lease.clone(), payment);
+    assert_repay_in_progress(&test_case, &lease, RepayTrx::Swap);
+
+    let _swap_ack =
+        stub::deliver_pending_callback(&mut test_case.app, &controller, stub::op_tag::SWAP);
+    assert_repay_in_progress(&test_case, &lease, RepayTrx::TransferOut);
+    assert_eq!(
+        1,
+        stub::recorded_transfer_outs(&test_case.app, &controller, &lease).len()
+    );
+
+    let _drain_ack =
+        stub::deliver_pending_callback(&mut test_case.app, &controller, stub::op_tag::TRANSFER_OUT);
+    assert_repay_in_progress(&test_case, &lease, RepayTrx::TransferInFinish);
+
+    // Land the swapped-out LPN and complete the proceeds drain.
+    let transfers = stub::recorded_transfer_outs(&test_case.app, &controller, &lease);
+    let proceeds: LpnCoin = LpnCoin::try_from(*transfers[0].amount()).expect("LPN proceeds");
+    deposit_lpn_proceeds(&mut test_case, &lease, proceeds);
+    let _arrival = deliver_funds_arrival_alarm(&mut test_case, lease.clone());
+
+    match super::state_query(&test_case, lease) {
+        StateResponse::Opened { .. } => (),
+        other => panic!("expected the lease still opened after a partial repay, got {other:?}"),
+    }
+
+    fn assert_repay_in_progress(
+        test_case: &LeaseTestCase,
+        lease: &Addr,
+        expected: lease::api::query::opened::RepayTrx,
+    ) {
+        match super::state_query(test_case, lease.clone()) {
+            StateResponse::Opened {
+                status: Status::InProgress(OngoingTrx::Repayment { in_progress, .. }),
+                ..
+            } => assert_eq!(expected, in_progress),
+            other => panic!("expected a repayment in progress, got {other:?}"),
+        }
+    }
+}
+
+/// Repay funds the swap before it runs: the customer payment is transferred
+/// to the lease's remote account first (mirroring the opening flow), and only
+/// once that transfer acks is the swap scheduled. The swap-only repay this
+/// replaced emitted no funding transfer and asked the remote account to swap
+/// funds that never left the local contract.
+#[test]
+fn repay_funds_the_swap_before_swapping() {
+    let mut test_case: LeaseTestCase = super::create_test_case::<PaymentCurrency>();
+    let downpayment = DOWNPAYMENT;
+    let amount = super::quote_borrow(&test_case, downpayment).to_primitive();
+    let payment: PaymentCoin = Fraction::<PaymentCoin>::of(
+        &Ratio::new(common::coin(1), common::coin(2)),
+        super::create_payment_coin(amount),
+    );
+
+    let lease = super::open_lease(&mut test_case, downpayment, None);
+    let ica_addr: Addr = TestCase::ica_addr(&lease, TestCase::LEASE_ICA_ID);
+
+    let payment_cw: CwCoin = common::cwcoin(payment);
+    let mut response = test_case
+        .app
+        .execute(
+            testing::user(USER),
+            lease.clone(),
+            &ExecuteMsg::Repay {},
+            slice::from_ref(&payment_cw),
+        )
+        .unwrap();
+
+    // The payment is pushed to the remote account before any swap is scheduled.
+    let funded: CwCoin = common::ibc::expect_transfer(
+        &mut response,
+        TestCase::LEASER_IBC_CHANNEL,
+        lease.as_str(),
+        ica_addr.as_str(),
+    );
+    assert_eq!(payment_cw, funded);
+    let _ = response.unwrap_response();
+
+    // The swap leg appears only after the funding transfer is acknowledged.
+    let _ = common::ibc::do_transfer(&mut test_case.app, lease.clone(), ica_addr, false, &funded)
+        .unwrap_response();
+    assert_swap_recorded(&test_case, &lease, payment);
+}
+
 pub(crate) fn repay_partial<ProtocolsRegistry, Treasury, Profit, Reserve, Leaser, Lpp, Oracle>(
     test_case: &mut TestCase<
         ProtocolsRegistry,
@@ -273,7 +391,7 @@ pub(crate) fn repay_with_hook_on_swap<
     Leaser,
     Lpp,
     Oracle,
-    SwapHook,
+    PreCloseHook,
 >(
     test_case: &mut TestCase<
         ProtocolsRegistry,
@@ -287,60 +405,110 @@ pub(crate) fn repay_with_hook_on_swap<
     >,
     lease: Addr,
     payment: PaymentCoin,
-    swap_pre_hook: SwapHook,
+    pre_close_hook: PreCloseHook,
 ) -> ResponseWithInterChainMsgs<'_, AppResponse>
 where
-    SwapHook: FnOnce(&mut App),
+    PreCloseHook: FnOnce(&mut App),
 {
-    let response = send_payment_and_transfer(test_case, lease.clone(), payment);
+    let remote_account: Addr = TestCase::ica_addr(&lease, TestCase::LEASE_ICA_ID);
 
-    let paid = price::total(payment, super::price_lpn_of()).unwrap();
+    let _swap_response = send_repay(test_case, lease.clone(), payment);
+    assert_swap_recorded(test_case, &lease, payment);
 
-    let requests: Vec<SwapRequest<PaymentGroup, PaymentGroup>> = swap::expect_swap(
-        response,
-        TestCase::DEX_CONNECTION_ID,
-        TestCase::LEASE_ICA_ID,
-        |_| {},
-    );
+    // `send_repay` funded the swap by transferring the payment to the remote
+    // account; the swap spends it there, so drain it off (mirroring
+    // `settle_remote_swaps_on_ica`'s `coin_in` move). The swapped-out LPN
+    // returns below via the drain's `deposit_lpn_proceeds`.
+    consume_repay_swap_input(test_case, &remote_account, payment);
 
-    assert!(!requests.is_empty());
-    assert_eq!(
-        <Coin<PaymentCurrency> as Into<CoinDTO::<PaymentGroup>>>::into(payment),
-        requests[0].token_in
-    );
+    // The swap and the proceeds drain synthesise their controller
+    // acknowledgments inline (the stand-in's default `Ok` mode), so by here
+    // the repay drain's transfer-out has already acked and the lease awaits
+    // the LPN proceeds' local arrival. No ICA leg, no DEX swap, no
+    // remote-transfer back. The hook runs now - after the repay drain
+    // settled, before the funds-arrival alarm pays the loan off and emits
+    // the close-leg transfer-out - so a caller can target a `ResponseMode`
+    // at the close transfer-out alone (it shares `op_tag::TRANSFER_OUT`
+    // with the repay drain).
+    pre_close_hook(&mut test_case.app);
 
-    swap_pre_hook(&mut test_case.app);
+    let proceeds = proceeds_recorded(test_case, &lease);
+    deposit_lpn_proceeds(test_case, &lease, proceeds);
 
-    let lease_ica = TestCase::ica_addr(&lease, TestCase::LEASE_ICA_ID);
-
-    let mut response = swap::do_swap(
-        &mut test_case.app,
-        lease.clone(),
-        lease_ica.clone(),
-        requests.into_iter(),
-        |amount_in, in_denom, out_denom| {
-            assert_eq!(amount_in, payment.to_primitive());
-            assert_eq!(in_denom, PaymentCurrency::dex());
-            assert_eq!(out_denom, LpnCurrency::dex());
-
-            paid.to_primitive()
-        },
-    );
-
-    let transfer_amount: CwCoin = ibc::expect_remote_transfer(
-        &mut response,
-        TestCase::DEX_CONNECTION_ID,
-        TestCase::LEASE_ICA_ID,
-    );
-
-    assert_eq!(transfer_amount, coin_legacy::to_cosmwasm_on_dex(paid));
-
-    _ = response.unwrap_response();
-
-    ibc::do_transfer(&mut test_case.app, lease_ica, lease, true, &transfer_amount)
+    deliver_funds_arrival_alarm_with_msgs(test_case, lease)
 }
 
-fn send_payment_and_transfer<
+/// Send `ExecuteMsg::Repay` and acknowledge the funding transfer-out that
+/// moves the payment to the lease's remote account before the swap, mirroring
+/// the opening flow. Once the transfer acks, the swap leg is scheduled over
+/// the remote-lease controller; in the stand-in's default `Ok` mode it (and
+/// the proceeds drain) acknowledge inline.
+pub(crate) fn send_repay<ProtocolsRegistry, Treasury, Profit, Reserve, Leaser, Lpp, Oracle>(
+    test_case: &mut TestCase<
+        ProtocolsRegistry,
+        Treasury,
+        Profit,
+        Reserve,
+        Leaser,
+        Lpp,
+        Oracle,
+        Addr,
+    >,
+    lease: Addr,
+    payment: PaymentCoin,
+) -> AppResponse {
+    let payment_cw: CwCoin = common::cwcoin(payment);
+    let ica_addr: Addr = TestCase::ica_addr(&lease, TestCase::LEASE_ICA_ID);
+
+    let mut response = test_case
+        .app
+        .execute(
+            testing::user(USER),
+            lease.clone(),
+            &ExecuteMsg::Repay {},
+            slice::from_ref(&payment_cw),
+        )
+        .unwrap();
+
+    let funded: CwCoin = common::ibc::expect_transfer(
+        &mut response,
+        TestCase::LEASER_IBC_CHANNEL,
+        lease.as_str(),
+        ica_addr.as_str(),
+    );
+    assert_eq!(payment_cw, funded);
+    let _ = response.unwrap_response();
+
+    common::ibc::do_transfer(&mut test_case.app, lease, ica_addr, false, &funded).unwrap_response()
+}
+
+fn assert_swap_recorded<ProtocolsRegistry, Treasury, Profit, Reserve, Leaser, Lpp, Oracle>(
+    test_case: &TestCase<ProtocolsRegistry, Treasury, Profit, Reserve, Leaser, Lpp, Oracle, Addr>,
+    lease: &Addr,
+    payment: PaymentCoin,
+) {
+    let controller = test_case.address_book.remote_lease_controller();
+    let swaps = stub::recorded_swaps(&test_case.app, controller, lease);
+    // The opening swaps are recorded against the same lease; the repay swap
+    // is the latest single-coin leg carrying the payment into LPN.
+    let repay_swap = swaps.last().expect("the repay swap to be recorded");
+    assert_eq!(
+        &CoinDTO::<PaymentGroup>::from(payment),
+        repay_swap.coin_in()
+    );
+    assert_eq!(
+        currency::dto::<LpnCurrency, PaymentGroup>(),
+        repay_swap.min_out().currency()
+    );
+}
+
+/// Model the remote swap consuming its funded input. The funding
+/// transfer-out landed the payment on the lease's remote account; the swap
+/// spends it there, so drain it off in the DEX representation (mirroring
+/// `settle_remote_swaps_on_ica`'s `coin_in` move). The amount is the payment
+/// the lease swapped, kept as the single source of truth via the assertion
+/// in `assert_swap_recorded`.
+pub(crate) fn consume_repay_swap_input<
     ProtocolsRegistry,
     Treasury,
     Profit,
@@ -348,7 +516,6 @@ fn send_payment_and_transfer<
     Leaser,
     Lpp,
     Oracle,
-    PaymentC,
 >(
     test_case: &mut TestCase<
         ProtocolsRegistry,
@@ -360,44 +527,92 @@ fn send_payment_and_transfer<
         Oracle,
         Addr,
     >,
-    lease_addr: Addr,
-    payment: Coin<PaymentC>,
-) -> ResponseWithInterChainMsgs<'_, AppResponse>
-where
-    PaymentC: CurrencyDef,
-{
-    let payment_cw: CwCoin = common::cwcoin(payment);
-    let mut response: ResponseWithInterChainMsgs<'_, ()> = test_case
+    remote_account: &Addr,
+    payment: PaymentCoin,
+) {
+    test_case
         .app
-        .execute(
-            testing::user(USER),
-            lease_addr.clone(),
-            &ExecuteMsg::Repay {},
-            slice::from_ref(&payment_cw),
+        .send_tokens(
+            remote_account.clone(),
+            testing::user(common::ADMIN),
+            &[coin_legacy::to_cosmwasm_on_dex(payment)],
         )
+        .unwrap();
+}
+
+/// The LPN proceeds the repay swap drains home, read off the latest
+/// recorded controller transfer-out for the lease.
+pub(crate) fn proceeds_recorded<
+    ProtocolsRegistry,
+    Treasury,
+    Profit,
+    Reserve,
+    Leaser,
+    Lpp,
+    Oracle,
+>(
+    test_case: &TestCase<ProtocolsRegistry, Treasury, Profit, Reserve, Leaser, Lpp, Oracle, Addr>,
+    lease: &Addr,
+) -> LpnCoin {
+    let controller = test_case.address_book.remote_lease_controller();
+    let transfers = stub::recorded_transfer_outs(&test_case.app, controller, lease);
+    let proceeds = transfers.last().expect("a recorded proceeds transfer-out");
+    LpnCoin::try_from(*proceeds.amount()).expect("the proceeds in LPN")
+}
+
+/// Land the swapped-out LPN on the lease's local account, standing in for
+/// the proceeds drain's ICS-20 arrival the controller acknowledged.
+pub(crate) fn deposit_lpn_proceeds<
+    ProtocolsRegistry,
+    Treasury,
+    Profit,
+    Reserve,
+    Leaser,
+    Lpp,
+    Oracle,
+>(
+    test_case: &mut TestCase<
+        ProtocolsRegistry,
+        Treasury,
+        Profit,
+        Reserve,
+        Leaser,
+        Lpp,
+        Oracle,
+        Addr,
+    >,
+    lease: &Addr,
+    proceeds: LpnCoin,
+) {
+    test_case.send_funds_from_admin(lease.clone(), &[common::cwcoin(proceeds)]);
+}
+
+fn deliver_funds_arrival_alarm_with_msgs<
+    ProtocolsRegistry,
+    Treasury,
+    Profit,
+    Reserve,
+    Leaser,
+    Lpp,
+    Oracle,
+>(
+    test_case: &mut TestCase<
+        ProtocolsRegistry,
+        Treasury,
+        Profit,
+        Reserve,
+        Leaser,
+        Lpp,
+        Oracle,
+        Addr,
+    >,
+    lease: Addr,
+) -> ResponseWithInterChainMsgs<'_, AppResponse> {
+    let time_alarms = test_case.address_book.time_alarms().clone();
+    test_case
+        .app
+        .execute(time_alarms, lease, &ExecuteMsg::TimeAlarm {}, &[])
         .unwrap()
-        .ignore_response();
-
-    let ica_addr: Addr = TestCase::ica_addr(&lease_addr, TestCase::LEASE_ICA_ID);
-
-    let transfer_amount: CwCoin = ibc::expect_transfer(
-        &mut response,
-        TestCase::LEASER_IBC_CHANNEL,
-        lease_addr.as_str(),
-        ica_addr.as_str(),
-    );
-
-    assert_eq!(transfer_amount, payment_cw);
-
-    () = response.unwrap_response();
-
-    ibc::do_transfer(
-        &mut test_case.app,
-        lease_addr,
-        ica_addr,
-        false,
-        &transfer_amount,
-    )
 }
 
 /// The drain rides the remote-lease controller: the stand-in acknowledges
@@ -427,10 +642,14 @@ fn expect_started_closing<ProtocolsRegistry, Treasury, Profit, Reserve, Lpp, Ora
         test_case.address_book.remote_lease_controller(),
         lease,
     );
-    assert_eq!(1, transfer_outs.len());
+    // A full repay drains its swapped LPN proceeds home (the first
+    // transfer-out) and, once the loan is paid, the freed lease asset (the
+    // close transfer-out). The close leg is the last one and carries the
+    // asset funds.
+    assert_eq!(2, transfer_outs.len());
     assert_eq!(
         &CoinDTO::<PaymentGroup>::from(expected_funds),
-        transfer_outs[0].amount()
+        transfer_outs[1].amount()
     );
 }
 

@@ -55,15 +55,23 @@ type OpenedActive = LeaseState<opened::active::Active>;
 
 type BuyLpn = DexState<opened::repay::buy_lpn::DexState>;
 
+type BuyLpnDrain = DexState<opened::repay::buy_lpn::DrainState>;
+
 type PartialLiquidation = DexState<opened::close::sell_asset::liquidation::partial::DexState>;
+
+type PartialLiquidationDrain = DexState<opened::close::sell_asset::liquidation::PartialDrainState>;
 
 type FullLiquidation = DexState<opened::close::sell_asset::liquidation::full::DexState>;
 
-type SlippageAnomaly = LeaseState<opened::close::SlippageAnomaly>;
+type FullLiquidationDrain = DexState<opened::close::sell_asset::liquidation::FullDrainState>;
 
 type PartialClose = DexState<opened::close::sell_asset::customer_close::partial::DexState>;
 
+type PartialCloseDrain = DexState<opened::close::sell_asset::customer_close::PartialDrainState>;
+
 type FullClose = DexState<opened::close::sell_asset::customer_close::full::DexState>;
+
+type FullCloseDrain = DexState<opened::close::sell_asset::customer_close::FullDrainState>;
 
 type ClosingTransferOut = DexState<paid::transfer_out::DexState>;
 
@@ -86,11 +94,15 @@ pub enum State {
     BuyAsset,
     OpenedActive,
     BuyLpn,
+    BuyLpnDrain,
     PartialLiquidation,
+    PartialLiquidationDrain,
     FullLiquidation,
-    SlippageAnomaly,
+    FullLiquidationDrain,
     PartialClose,
+    PartialCloseDrain,
     FullClose,
+    FullCloseDrain,
     ClosingTransferOut,
     ClosingRemoteLease,
     Closed,
@@ -125,9 +137,10 @@ where
 
 mod impl_from {
     use super::{
-        BuyAsset, BuyLpn, Closed, ClosingRemoteLease, ClosingTransferOut, FullClose,
-        FullLiquidation, Liquidated, OpenedActive, PartialClose, PartialLiquidation, RequestLoan,
-        SlippageAnomaly, State,
+        BuyAsset, BuyLpn, BuyLpnDrain, Closed, ClosingRemoteLease, ClosingTransferOut, FullClose,
+        FullCloseDrain, FullLiquidation, FullLiquidationDrain, Liquidated, OpenedActive,
+        PartialClose, PartialCloseDrain, PartialLiquidation, PartialLiquidationDrain, RequestLoan,
+        State,
     };
 
     impl From<super::opening::request_loan::RequestLoan> for State {
@@ -154,21 +167,33 @@ mod impl_from {
         }
     }
 
+    impl From<super::opened::repay::buy_lpn::DrainState> for State {
+        fn from(value: super::opened::repay::buy_lpn::DrainState) -> Self {
+            BuyLpnDrain::new(value).into()
+        }
+    }
+
     impl From<super::opened::close::sell_asset::liquidation::partial::DexState> for State {
         fn from(value: super::opened::close::sell_asset::liquidation::partial::DexState) -> Self {
             PartialLiquidation::new(value).into()
         }
     }
 
-    impl From<super::opened::close::SlippageAnomaly> for State {
-        fn from(value: super::opened::close::SlippageAnomaly) -> Self {
-            SlippageAnomaly::new(value).into()
+    impl From<super::opened::close::sell_asset::liquidation::PartialDrainState> for State {
+        fn from(value: super::opened::close::sell_asset::liquidation::PartialDrainState) -> Self {
+            PartialLiquidationDrain::new(value).into()
         }
     }
 
     impl From<super::opened::close::sell_asset::liquidation::full::DexState> for State {
         fn from(value: super::opened::close::sell_asset::liquidation::full::DexState) -> Self {
             FullLiquidation::new(value).into()
+        }
+    }
+
+    impl From<super::opened::close::sell_asset::liquidation::FullDrainState> for State {
+        fn from(value: super::opened::close::sell_asset::liquidation::FullDrainState) -> Self {
+            FullLiquidationDrain::new(value).into()
         }
     }
 
@@ -180,9 +205,23 @@ mod impl_from {
         }
     }
 
+    impl From<super::opened::close::sell_asset::customer_close::PartialDrainState> for State {
+        fn from(
+            value: super::opened::close::sell_asset::customer_close::PartialDrainState,
+        ) -> Self {
+            PartialCloseDrain::new(value).into()
+        }
+    }
+
     impl From<super::opened::close::sell_asset::customer_close::full::DexState> for State {
         fn from(value: super::opened::close::sell_asset::customer_close::full::DexState) -> Self {
             FullClose::new(value).into()
+        }
+    }
+
+    impl From<super::opened::close::sell_asset::customer_close::FullDrainState> for State {
+        fn from(value: super::opened::close::sell_asset::customer_close::FullDrainState) -> Self {
+            FullCloseDrain::new(value).into()
         }
     }
 

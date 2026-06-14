@@ -4,6 +4,7 @@ pub enum Type {
     OpeningSwap,
     OpenedActive,
     RepaymentSwap,
+    RepaymentTransferOut,
     PaidActive,
     ClosingTransferOut,
     ClosingRemoteLease,
@@ -13,7 +14,6 @@ pub enum Type {
     Liquidation,
     ClosePosition,
     AutoClosePosition,
-    SlippageAnomaly,
 }
 
 impl Type {
@@ -25,6 +25,7 @@ impl Type {
             Self::OpeningSwap => "ls-open-swap",
             Self::OpenedActive => "ls-open",
             Self::RepaymentSwap => "ls-repay-swap",
+            Self::RepaymentTransferOut => "ls-repay-transfer-out",
             Self::PaidActive => "ls-repay",
             Self::ClosingTransferOut => "ls-close-transfer-out",
             Self::ClosingRemoteLease => "ls-close-remote-lease",
@@ -34,7 +35,6 @@ impl Type {
             Self::Liquidation => "ls-liquidation",
             Self::ClosePosition => "ls-close-position",
             Self::AutoClosePosition => "ls-auto-close-position",
-            Self::SlippageAnomaly => "ls-slippage-anomaly",
         }
     }
 }

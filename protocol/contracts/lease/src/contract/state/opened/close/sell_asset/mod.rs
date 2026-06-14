@@ -1,19 +1,26 @@
 use std::iter;
 
 use currency::Group;
+use cw_time::IntoInstant;
 use oracle::stub::SwapPath;
 use serde::{Deserialize, Serialize};
 
 use dex::{
-    Account, AnomalyTreatment, ContractInSwap, Error as DexError, SlippageCalculator, Stage,
-    SwapOutputTask, SwapTask, WithCalculator, WithOutputTask,
+    Account, CoinsNb, ContractInRemoteSwap, Enterable, Error as DexError, RemoteSwapClient,
+    SlippageCalculator, SwapOutputTask, SwapTask, WithCalculator, WithOutputTask,
 };
 use finance::instant::Instant;
 use finance::{
     coin::{Coin, CoinDTO},
     duration::Duration,
 };
-use sdk::cosmwasm_std::{Env, MessageInfo, QuerierWrapper};
+use platform::batch::Batch;
+use remote_lease::{
+    msg::SwapParams,
+    response::{OperationResponse, SwapResponse},
+    stub::{ControllerInnerMessage, Lease as ControllerLease},
+};
+use sdk::cosmwasm_std::{self, Env, MessageInfo, QuerierWrapper};
 use timealarms::stub::TimeAlarmsRef;
 
 use crate::{
@@ -27,25 +34,37 @@ use crate::{
     contract::{
         Lease,
         state::{
-            SwapClient, SwapResult,
-            opened::{self, payment::Repayable},
-            resp_delivery::ForwardToDexEntry,
+            Response, State, SwapResult,
+            opened::{
+                self,
+                payment::Repayable,
+                proceeds_drain::{CloseFinish, RepayDrain},
+            },
         },
     },
     error::ContractResult,
     event::Type,
-    finance::LpnCurrencies,
+    finance::{LpnCurrencies, LpnCurrency},
 };
 
-use super::{AnomalyHandler, Calculator, Closable};
+use super::{Calculator, Closable};
 
 pub(in crate::contract::state) mod customer_close;
 pub(in crate::contract::state) mod liquidation;
 mod task;
 
+/// A non-`Swap` success acknowledgment can only come from a buggy or
+/// hostile counterparty. The fixed reason keeps the unexpected,
+/// counterparty-controlled variant out of stored state and events.
+const NON_SWAP_RESPONSE: &str = "non-swap operation response";
+
+/// The acknowledged output currency is not the lease's LPN, so the
+/// response cannot have originated from the scheduled close swap.
+const OUT_NOT_LPN: &str = "swapped-out currency is not the lease LPN";
+
 type Task<RepayableT, CalculatorT> = SellAsset<RepayableT, CalculatorT>;
-type DexState<Repayable, CalculatorT> =
-    dex::StateLocalOut<Task<Repayable, CalculatorT>, SwapClient, ForwardToDexEntry>;
+pub(crate) type DexState<Repayable, CalculatorT> = dex::StateSwap<Task<Repayable, CalculatorT>>;
+pub(crate) type DrainState<Repayable> = dex::StateDrain<RepayDrain<CloseFinish<Repayable>>>;
 
 #[derive(Serialize, Deserialize)]
 pub(crate) struct SellAsset<RepayableT, CalculatorT> {
@@ -94,7 +113,7 @@ impl<RepayableT, CalculatorT> SwapTask for SellAsset<RepayableT, CalculatorT>
 where
     RepayableT: Closable + Repayable,
     CalculatorT: Calculator,
-    Self: AnomalyHandler<Self>,
+    DrainState<RepayableT>: Into<State>,
 {
     type InG = LeaseAssetCurrencies;
     type OutG = LpnCurrencies;
@@ -153,7 +172,7 @@ impl<RepayableT, CalculatorT> SwapOutputTask<Self> for SellAsset<RepayableT, Cal
 where
     RepayableT: Closable + Repayable,
     CalculatorT: Calculator,
-    Self: AnomalyHandler<Self>,
+    DrainState<RepayableT>: Into<State>,
 {
     type OutC = <CalculatorT as SlippageCalculator<<Self as SwapTask>::InG>>::OutC;
 
@@ -165,11 +184,13 @@ where
         self
     }
 
-    fn on_anomaly(self) -> AnomalyTreatment<Self>
+    fn on_anomaly(self) -> dex::AnomalyTreatment<Self>
     where
         Self: Sized,
     {
-        <Self as AnomalyHandler<Self>>::on_anomaly(self)
+        unreachable!(
+            "the swap-only composite re-emits the in-flight leg on an anomaly and never delegates to `on_anomaly`"
+        )
     }
 
     fn finish(
@@ -178,40 +199,89 @@ where
         env: &Env,
         querier: QuerierWrapper<'_>,
     ) -> <Self as SwapTask>::Result {
-        // TODO repay with Coin, not CoinDTO
-        self.repayable
-            .try_repay(self.lease, amount_out.into(), env, querier)
+        let drain = RepayDrain::new(
+            self.lease,
+            amount_out.into(),
+            CloseFinish::new(self.repayable),
+        );
+        dex::start_drain(drain)
+            .and_then(|start_drain| {
+                start_drain
+                    .enter(env.block.time.into_instant(), querier)
+                    .map(|drain_msgs| {
+                        Response::from(drain_msgs, DrainState::<RepayableT>::from(start_drain))
+                    })
+            })
+            .map_err(Into::into)
     }
 }
 
-impl<RepayableT, CalculatorT> ContractInSwap for SellAsset<RepayableT, CalculatorT>
+impl<RepayableT, CalculatorT> RemoteSwapClient for SellAsset<RepayableT, CalculatorT>
 where
     RepayableT: Closable + Repayable,
     CalculatorT: Calculator,
-    Self: AnomalyHandler<Self>,
+    DrainState<RepayableT>: Into<State>,
+{
+    fn schedule_swap(
+        &self,
+        coin_in: &CoinDTO<Self::InG>,
+        min_out: &CoinDTO<Self::OutG>,
+    ) -> dex::DexResult<Batch> {
+        SwapParams::new(coin_in.into_super_group(), min_out.into_super_group())
+            .map_err(DexError::remote_swap_client)
+            .and_then(|params| {
+                ControllerLease::new(&self.lease.lease.remote_lease_controller)
+                    .swap(params, SwapParams::TIMEOUT, |params, timeout| {
+                        ControllerExecuteMsg::Swap { params, timeout }
+                    })
+                    .map_err(Into::into)
+            })
+    }
+
+    fn decode_response(&self, payload: &[u8]) -> dex::DexResult<CoinDTO<Self::OutG>> {
+        cosmwasm_std::from_json::<OperationResponse>(payload)
+            .map_err(DexError::remote_swap_client)
+            .and_then(|response| match response {
+                OperationResponse::Swap(SwapResponse { amount_out }) => {
+                    Coin::<LpnCurrency>::try_from(amount_out)
+                        .map(Into::into)
+                        .map_err(|_not_lpn| DexError::unexpected_response_variant(OUT_NOT_LPN))
+                }
+                OperationResponse::OpenLease(_)
+                | OperationResponse::CloseLease(_)
+                | OperationResponse::TransferOut(_) => {
+                    Err(DexError::unexpected_response_variant(NON_SWAP_RESPONSE))
+                }
+            })
+    }
+}
+
+impl<RepayableT, CalculatorT> ContractInRemoteSwap for SellAsset<RepayableT, CalculatorT>
+where
+    RepayableT: Closable + Repayable,
+    CalculatorT: Calculator,
+    DrainState<RepayableT>: Into<State>,
 {
     type StateResponse = <Self as SwapTask>::StateResponse;
 
     fn state(
         self,
-        in_progress: Stage,
+        _acks_left: CoinsNb,
         now: Instant,
         due_projection: Duration,
         querier: QuerierWrapper<'_>,
     ) -> Self::StateResponse {
-        self.query(in_progress.into(), now, due_projection, querier)
+        self.query(PositionCloseTrx::Swap, now, due_projection, querier)
     }
 }
 
-impl From<Stage> for PositionCloseTrx {
-    fn from(value: Stage) -> Self {
-        match value {
-            Stage::TransferOut => unreachable!(
-                "The sell lease asset on liquidation task never goes through a 'TransferOut' state!"
-            ),
-            Stage::Swap => Self::Swap,
-            Stage::TransferInInit => Self::TransferInInit,
-            Stage::TransferInFinish => Self::TransferInFinish,
-        }
-    }
+#[derive(Serialize)]
+#[serde(rename_all = "snake_case")]
+enum ControllerExecuteMsg {
+    Swap {
+        params: SwapParams,
+        timeout: Duration,
+    },
 }
+
+impl ControllerInnerMessage for ControllerExecuteMsg {}

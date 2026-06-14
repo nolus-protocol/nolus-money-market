@@ -1,8 +1,7 @@
 use currencies::{PaymentGroup, testing::PaymentC5};
-use currency::CurrencyDef;
+use currency::{self, CurrencyDef};
 use finance::{
-    coin::{Amount, Coin, CoinDTO},
-    fraction::Unit,
+    coin::{Coin, CoinDTO},
     price,
     zero::Zero,
 };
@@ -14,19 +13,17 @@ use lease::{
     },
     error::{ContractError, PositionError},
 };
-use platform::coin_legacy;
 use sdk::{
     cosmwasm_std::{Addr, Event},
     cw_multi_test::AppResponse,
     testing,
 };
-use swap::testing::SwapRequest;
 
 use crate::common::{
-    self, ADMIN, CwCoin, USER, ibc, lease as common_lease,
+    self, ADMIN, USER, lease as common_lease,
     leaser::{self, Instantiator},
     remote_lease_controller_stub as stub,
-    test_case::{TestCase, response::ResponseWithInterChainMsgs},
+    test_case::response::ResponseWithInterChainMsgs,
 };
 
 use super::{
@@ -269,7 +266,6 @@ fn do_close(
 ) -> Addr {
     let user_balance_before: PaymentCoin = user_balance(customer_addr, test_case);
     let lease_addr: Addr = super::open_lease(test_case, DOWNPAYMENT, None);
-    let lease_ica = TestCase::ica_addr(&lease_addr, TestCase::LEASE_ICA_ID);
 
     assert!(matches!(
         super::expected_newly_opened_state(test_case, DOWNPAYMENT, Coin::<LpnCurrency>::ZERO),
@@ -277,69 +273,35 @@ fn do_close(
     ));
 
     let close_amount_in_lpn: LpnCoin = price::total(close_amount, super::price_lpn_of()).unwrap();
-    let response_close = send_close(
+
+    // The close swap now rides the controller, so `ClosePosition` emits no
+    // ICA `SwapExactIn` - `unwrap_response` would panic on a non-empty ICA
+    // queue. The stand-in acks the swap and the proceeds-drain transfer-out
+    // inline, leaving the lease awaiting the LPN proceeds' local arrival.
+    let () = send_close(
         test_case,
         lease_addr.clone(),
         &ExecuteMsg::ClosePosition(close_msg),
-    );
-
-    let requests: Vec<SwapRequest<PaymentGroup, PaymentGroup>> = common::swap::expect_swap(
-        response_close,
-        TestCase::DEX_CONNECTION_ID,
-        TestCase::LEASE_ICA_ID,
-        |_| {},
-    );
-
-    let mut response_swap: ResponseWithInterChainMsgs<'_, ()> = common::swap::do_swap(
-        &mut test_case.app,
-        lease_addr.clone(),
-        lease_ica.clone(),
-        requests.into_iter(),
-        |amount: Amount, _, _| {
-            assert_eq!(amount, close_amount.to_primitive());
-
-            close_amount_in_lpn.to_primitive()
-        },
     )
-    .ignore_response();
-
-    let transfer_amount: CwCoin = ibc::expect_remote_transfer(
-        &mut response_swap,
-        TestCase::DEX_CONNECTION_ID,
-        TestCase::LEASE_ICA_ID,
-    );
-
-    assert_eq!(
-        transfer_amount,
-        coin_legacy::to_cosmwasm_on_dex(close_amount_in_lpn)
-    );
-
-    let response_transfer_in = ibc::do_transfer(
-        &mut test_case.app,
-        lease_ica.clone(),
-        lease_addr.clone(),
-        true,
-        &transfer_amount,
-    )
+    .ignore_response()
     .unwrap_response();
 
-    // A loan-closing partial close starts the drain over the remote-lease
-    // controller; the stand-in acknowledges the emitted `TransferOut`
-    // inline within the same transaction.
-    if exp_loan_close && !exp_lease_amount_after.is_zero() {
-        let transfer_outs = stub::recorded_transfer_outs(
-            &test_case.app,
-            test_case.address_book.remote_lease_controller(),
-            &lease_addr,
-        );
-        assert_eq!(1, transfer_outs.len());
-        assert_eq!(
-            &CoinDTO::<PaymentGroup>::from(exp_lease_amount_after),
-            transfer_outs[0].amount()
-        );
-    }
+    // The position slice sells for LPN on the remote account; the stand-in
+    // pays the price-derived (identity) quote, i.e. the slice in LPN.
+    let swap = super::recorded_close_swap(test_case, &lease_addr);
+    assert_eq!(&CoinDTO::<PaymentGroup>::from(close_amount), swap.coin_in());
+    assert_eq!(
+        currency::dto::<LpnCurrency, PaymentGroup>(),
+        swap.min_out().currency()
+    );
 
-    response_transfer_in.assert_event(
+    // Land the LPN proceeds and resume the close via the funds-arrival
+    // alarm; `try_repay` applies the proceeds and emits the close event.
+    let (proceeds, arrival): (LpnCoin, AppResponse) =
+        super::settle_close_proceeds(test_case, &lease_addr);
+    assert_eq!(close_amount_in_lpn, proceeds);
+
+    arrival.assert_event(
         &Event::new("wasm-ls-close-position")
             .add_attribute("to", lease_addr.clone())
             .add_attribute("payment-amount", close_amount_in_lpn.display_primitive())
@@ -354,15 +316,26 @@ fn do_close(
             .add_attribute("amount-symbol", LeaseCurrency::ticker()),
     );
 
+    // A loan-closing partial close pays the loan off and starts the close
+    // drain of the freed asset over the controller; the stand-in acks the
+    // emitted asset `TransferOut` inline. The proceeds drain (LPN) is the
+    // first transfer-out, the close leg (asset) the second.
+    if exp_loan_close && !exp_lease_amount_after.is_zero() {
+        let transfer_outs = stub::recorded_transfer_outs(
+            &test_case.app,
+            test_case.address_book.remote_lease_controller(),
+            &lease_addr,
+        );
+        assert_eq!(2, transfer_outs.len());
+        assert_eq!(
+            &CoinDTO::<PaymentGroup>::from(exp_lease_amount_after),
+            transfer_outs[1].amount()
+        );
+    }
+
     assert_eq!(
         user_balance::<PaymentCurrency>(customer_addr, test_case),
         user_balance_before - DOWNPAYMENT,
-    );
-
-    common_lease::assert_lease_balance_eq(
-        &test_case.app,
-        &lease_ica,
-        coin_legacy::to_cosmwasm_on_dex(exp_lease_amount_after),
     );
 
     lease_addr

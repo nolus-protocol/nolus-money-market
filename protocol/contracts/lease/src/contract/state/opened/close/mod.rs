@@ -1,4 +1,4 @@
-use dex::{AnomalyHandler, SlippageCalculator};
+use dex::SlippageCalculator;
 
 use crate::{
     api::{
@@ -10,11 +10,8 @@ use crate::{
     finance::LpnCurrency,
 };
 
-pub(crate) use anomaly::SlippageAnomaly;
-
 use super::payment::Repayable;
 
-mod anomaly;
 pub mod sell_asset;
 
 pub(crate) trait Closable {

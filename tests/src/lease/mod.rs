@@ -29,6 +29,7 @@ use crate::common::{
     protocols::Registry,
     test_case::{
         TestCase,
+        app::App,
         builder::Builder as TestCaseBuilder,
         response::{RemoteChain, ResponseWithInterChainMsgs},
     },
@@ -48,7 +49,6 @@ mod remote_lease_open;
 mod remote_lease_swap;
 mod remote_lease_transfer_out;
 mod repay;
-mod slippage;
 
 type LpnCurrency = Lpn;
 type LpnCoin = Coin<LpnCurrency>;
@@ -535,11 +535,29 @@ where
     )
 }
 
-/// Open a lease and repay the whole loan, leaving the drain started with
-/// whatever `ResponseMode` the test configured for `transfer_out`
+/// Open a lease and repay the whole loan, driving the lease to `Paid` and
+/// emitting the close-leg transfer-out. The repay-proceeds drain acks
+/// inline (default `Ok`), so by the time this returns only the close
+/// transfer-out is in flight.
 pub(super) fn open_and_repay_fully(
     test_case: &mut LeaseTestCase,
 ) -> (Addr, LeaseCoin, AppResponse) {
+    open_and_repay_fully_then(test_case, |_app| {})
+}
+
+/// As [`open_and_repay_fully`], but runs `pre_close_hook` after the
+/// repay-proceeds drain has acked and before the funds-arrival alarm
+/// triggers the close-leg transfer-out. A close-leg driver sets its
+/// `op_tag::TRANSFER_OUT` `ResponseMode` here so the mode applies only to
+/// the close transfer-out, not to the repay drain that precedes it (both
+/// share the op tag).
+pub(super) fn open_and_repay_fully_then<PreCloseHook>(
+    test_case: &mut LeaseTestCase,
+    pre_close_hook: PreCloseHook,
+) -> (Addr, LeaseCoin, AppResponse)
+where
+    PreCloseHook: FnOnce(&mut App),
+{
     let downpayment = DOWNPAYMENT;
     let lease = open_lease(test_case, downpayment, None);
 
@@ -549,7 +567,7 @@ pub(super) fn open_and_repay_fully(
     let expected_funds: LeaseCoin = expected_opened_amount(downpayment, borrowed_lpn);
 
     let repay_response =
-        repay::repay_with_hook_on_swap(test_case, lease.clone(), borrowed, |_app| {})
+        repay::repay_with_hook_on_swap(test_case, lease.clone(), borrowed, pre_close_hook)
             .unwrap_response();
     (lease, expected_funds, repay_response)
 }
@@ -575,6 +593,40 @@ pub(super) fn settle_arrival(test_case: &mut LeaseTestCase, lease: &Addr, funds:
             &[common::cwcoin(funds)],
         )
         .unwrap();
+}
+
+/// Land the LPN proceeds a position-close swap drained home and fire the
+/// funds-arrival alarm that resumes the close via `try_repay`.
+///
+/// A liquidation or customer close sells the position asset for LPN on the
+/// remote account, then drains those LPN proceeds home over the controller
+/// (the stand-in acks the swap and the drain transfer-out inline). The
+/// drained LPN never touched the lease's local balance, so the test stands
+/// in for the ICS-20 arrival by depositing the recorded proceeds before the
+/// arrival poll runs. Returns the proceeds and the arrival-alarm response.
+pub(super) fn settle_close_proceeds(
+    test_case: &mut LeaseTestCase,
+    lease: &Addr,
+) -> (LpnCoin, AppResponse) {
+    let proceeds = repay::proceeds_recorded(test_case, lease);
+    repay::deposit_lpn_proceeds(test_case, lease, proceeds);
+    let arrival = repay::deliver_funds_arrival_alarm(test_case, lease.clone());
+    (proceeds, arrival)
+}
+
+/// The single `SwapParams` a position-close swap leg emitted to the
+/// controller - the latest recorded swap for the lease.
+pub(super) fn recorded_close_swap(
+    test_case: &LeaseTestCase,
+    lease: &Addr,
+) -> remote_lease::msg::SwapParams {
+    let controller = test_case.address_book.remote_lease_controller();
+    let swaps =
+        common::remote_lease_controller_stub::recorded_swaps(&test_case.app, controller, lease);
+    swaps
+        .last()
+        .cloned()
+        .expect("the close swap to be recorded")
 }
 
 pub(super) fn heal(test_case: &mut LeaseTestCase, lease: Addr) -> AppResponse {

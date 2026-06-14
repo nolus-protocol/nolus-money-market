@@ -1,33 +1,25 @@
-use dex::{AcceptUpToMaxSlippage, AnomalyHandler, AnomalyTreatment};
+use dex::AcceptUpToMaxSlippage;
 use platform::message::Response as MessageResponse;
 use sdk::cosmwasm_std::{Env, QuerierWrapper};
 
 use crate::{
     api::{LeaseAssetCurrencies, query::opened::Cause as ApiCause},
-    contract::{
-        Lease,
-        cmd::LiquidationDTO,
-        state::{
-            Response,
-            opened::{
-                close::{Closable, SlippageAnomaly},
-                event,
-                payment::Repayable,
-            },
-        },
-    },
+    contract::{Lease, cmd::LiquidationDTO, state::Response},
     error::ContractResult,
     finance::{LpnCurrencies, LpnCurrency},
     position::Cause,
 };
 
-use super::{SellAsset, task::ClosePositionTask};
+use super::task::ClosePositionTask;
 
 pub mod full;
 pub mod partial;
 
 type Calculator = AcceptUpToMaxSlippage<LeaseAssetCurrencies, LpnCurrency, LpnCurrencies>;
 impl super::Calculator for Calculator {}
+
+pub(crate) type PartialDrainState = super::DrainState<partial::RepayableImpl>;
+pub(crate) type FullDrainState = super::DrainState<full::RepayableImpl>;
 
 pub fn start(
     lease: Lease,
@@ -61,18 +53,5 @@ impl From<Cause> for ApiCause {
             } => ApiCause::Liability,
             Cause::Overdue() => ApiCause::Overdue,
         }
-    }
-}
-
-impl<RepayableImpl> AnomalyHandler<SellAsset<RepayableImpl, Calculator>>
-    for SellAsset<RepayableImpl, Calculator>
-where
-    RepayableImpl: Closable + Repayable,
-{
-    fn on_anomaly(self) -> AnomalyTreatment<SellAsset<RepayableImpl, Calculator>> {
-        let emitter =
-            event::emit_slippage_anomaly(&self.lease.lease, self.slippage_calc.threshold());
-        let next_state = SlippageAnomaly::new(self.lease);
-        AnomalyTreatment::Exit(Ok(Response::from(emitter, next_state)))
     }
 }
