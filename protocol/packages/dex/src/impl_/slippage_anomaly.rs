@@ -33,7 +33,7 @@ use sdk::cosmwasm_std::{Binary, Env, MessageInfo, QuerierWrapper};
 
 use crate::{
     CoinsNb, Contract, ContractInRemoteSwap, SwapTask as SwapTaskT, TimeAlarm,
-    error::Result,
+    error::{Error, Result},
     impl_::{
         RemoteSwap, RemoteSwapClient,
         response::{self, Handler, Result as HandlerResult},
@@ -52,14 +52,19 @@ const ABSORB_PARKED_ERROR: &str = "parked-error";
 const ABSORB_PARKED_TIMEOUT: &str = "parked-timeout";
 
 /// A remote swap leg parked on a slippage anomaly
+///
+/// The restore path runs through [`SlippageAnomalyRaw`] so a corrupted or
+/// malformed stored terminal is rejected before it reaches the public
+/// state/heal path: the constructor's `debug_assert!` is compiled out in
+/// release and would not guard a `Deserialize`-restored instance anyway.
 #[derive(Serialize, Deserialize)]
 #[serde(
     bound(
         serialize = "SwapTask: Serialize",
         deserialize = "SwapTask: Deserialize<'de> + SwapTaskT"
     ),
-    deny_unknown_fields,
-    rename_all = "snake_case"
+    rename_all = "snake_case",
+    try_from = "SlippageAnomalyRaw<SwapTask, SEnum>"
 )]
 pub struct SlippageAnomaly<SwapTask, SEnum>
 where
@@ -71,6 +76,51 @@ where
     in_flight_min_out: CoinDTO<SwapTask::OutG>,
     #[serde(skip)]
     _variant_set: PhantomData<SEnum>,
+}
+
+/// The wire mirror restored terminals deserialize through. [`TryFrom`]
+/// re-runs the constructor's invariant before handing back a typed terminal,
+/// so a corrupted store yields a typed [`Error`] rather than an unchecked
+/// state that the `debug_assert!`-only constructor would not catch in release.
+#[derive(Deserialize)]
+#[serde(
+    bound(deserialize = "SwapTask: Deserialize<'de> + SwapTaskT"),
+    deny_unknown_fields,
+    rename_all = "snake_case"
+)]
+struct SlippageAnomalyRaw<SwapTask, SEnum>
+where
+    SwapTask: SwapTaskT,
+{
+    spec: SwapTask,
+    acks_left: CoinsNb,
+    total_out: CoinDTO<SwapTask::OutG>,
+    in_flight_min_out: CoinDTO<SwapTask::OutG>,
+    #[serde(skip)]
+    _variant_set: PhantomData<SEnum>,
+}
+
+impl<SwapTask, SEnum> TryFrom<SlippageAnomalyRaw<SwapTask, SEnum>>
+    for SlippageAnomaly<SwapTask, SEnum>
+where
+    SwapTask: SwapTaskT,
+{
+    type Error = Error;
+
+    fn try_from(raw: SlippageAnomalyRaw<SwapTask, SEnum>) -> Result<Self> {
+        let ret = Self {
+            spec: raw.spec,
+            acks_left: raw.acks_left,
+            total_out: raw.total_out,
+            in_flight_min_out: raw.in_flight_min_out,
+            _variant_set: PhantomData,
+        };
+        if ret.invariant_held() {
+            Ok(ret)
+        } else {
+            Err(Error::SlippageAnomalyInvariantViolated)
+        }
+    }
 }
 
 impl<SwapTask, SEnum> SlippageAnomaly<SwapTask, SEnum>

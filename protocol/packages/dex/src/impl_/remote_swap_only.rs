@@ -320,12 +320,31 @@ mod test {
         testing::{self, MockQuerier},
     };
 
+    use serde::Serialize;
+
     use crate::{
-        impl_::remote_swap::mock::{self, MockSpec},
+        CoinsNb,
+        impl_::{
+            SlippageAnomaly,
+            remote_swap::mock::{self, MockSpec},
+        },
         response::{Handler, Result as HandlerResult},
     };
 
     use super::{State, start};
+
+    type Anomaly = SlippageAnomaly<MockSpec, State<MockSpec>>;
+
+    /// A serializable mirror of the parked terminal's wire shape, letting a
+    /// test pin field values the constructor would reject so the restore path
+    /// can be exercised against a corrupted store.
+    #[derive(Serialize)]
+    struct AnomalyWire {
+        spec: MockSpec,
+        acks_left: CoinsNb,
+        total_out: CoinDTO<OutG>,
+        in_flight_min_out: CoinDTO<OutG>,
+    }
 
     type OutG = <MockSpec as crate::SwapTask>::OutG;
 
@@ -495,6 +514,41 @@ mod test {
             testing::mock_env(),
         ));
         assert!(matches!(still_parked, State::SlippageAnomaly(_)));
+    }
+
+    /// A corrupted stored terminal - a zero `acks_left` countdown, or an
+    /// `in_flight_min_out` floor denominated in a currency other than the
+    /// accumulated `total_out` - is rejected on restore instead of reaching
+    /// the public state/heal path unchecked. The constructor's `debug_assert!`
+    /// is compiled out in release and never guards the deserialize path, so the
+    /// invariant has to be re-run through `try_from`.
+    #[test]
+    fn malformed_slippage_terminal_is_rejected_on_restore() {
+        let zero_acks = AnomalyWire {
+            spec: spec3(),
+            acks_left: 0,
+            total_out: coin_out(120),
+            in_flight_min_out: coin_out(40),
+        };
+        let serialized =
+            sdk::cosmwasm_std::to_json_vec(&zero_acks).expect("a serializable wire terminal");
+        assert!(
+            sdk::cosmwasm_std::from_json::<Anomaly>(&serialized).is_err(),
+            "a zero-acks-left terminal must be rejected on restore"
+        );
+
+        let currency_mismatch = AnomalyWire {
+            spec: spec3(),
+            acks_left: 1,
+            total_out: coin_out(120),
+            in_flight_min_out: coin_in(40),
+        };
+        let serialized = sdk::cosmwasm_std::to_json_vec(&currency_mismatch)
+            .expect("a serializable wire terminal");
+        assert!(
+            sdk::cosmwasm_std::from_json::<Anomaly>(&serialized).is_err(),
+            "a currency-mismatched floor must be rejected on restore"
+        );
     }
 
     fn continued(res: HandlerResult<State<MockSpec>>) -> (MessageResponse, State<MockSpec>) {
