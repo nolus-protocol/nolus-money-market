@@ -23,6 +23,7 @@ use crate::{
         self, USER,
         remote_lease_controller_stub::{self as stub, ResponseMode, op_tag},
         test_case::{
+            TestCase,
             app::App,
             response::{RemoteChain, ResponseWithInterChainMsgs},
         },
@@ -97,7 +98,11 @@ fn swap_on_repay() {
         ResponseMode::Delayed,
     );
     let _repay = repay::send_repay(&mut test_case, lease.clone(), payment);
-    repay::consume_repay_swap_input(&mut test_case, &lease, payment);
+    repay::consume_repay_swap_input(
+        &mut test_case,
+        &TestCase::ica_addr(&lease, TestCase::LEASE_ICA_ID),
+        payment,
+    );
     assert_repay_swap_in_flight(&test_case, &lease);
 
     let wrong_variant = RemoteLeaseCallback::OperationOk(WireOperationResponse::TransferOut(

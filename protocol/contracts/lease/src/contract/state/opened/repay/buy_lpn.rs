@@ -6,8 +6,9 @@ use oracle::stub::SwapPath;
 use serde::{Deserialize, Serialize};
 
 use dex::{
-    AcceptAnyNonZeroSwap, Account, AnomalyTreatment, CoinsNb, ContractInRemoteSwap, Enterable,
-    Error as DexError, RemoteSwapClient, SwapOutputTask, SwapTask, WithCalculator, WithOutputTask,
+    AcceptAnyNonZeroSwap, Account, AnomalyTreatment, CoinsNb, ContractInRemoteSwap, ContractInSwap,
+    Enterable, Error as DexError, RemoteSwapClient, Stage, SwapOutputTask, SwapTask,
+    WithCalculator, WithOutputTask,
 };
 use finance::instant::Instant;
 use finance::{
@@ -34,11 +35,12 @@ use crate::{
     contract::{
         Lease,
         state::{
-            Response, StateResponse as ContractStateResponse, SwapResult,
+            Response, StateResponse as ContractStateResponse, SwapClient, SwapResult,
             opened::{
                 self,
                 proceeds_drain::{RepayDrain, RepayFinish},
             },
+            resp_delivery::ForwardToDexEntry,
         },
     },
     error::ContractResult,
@@ -55,7 +57,7 @@ const NON_SWAP_RESPONSE: &str = "non-swap operation response";
 /// response cannot have originated from the scheduled repay swap.
 const OUT_NOT_LPN: &str = "swapped-out currency is not the lease LPN";
 
-pub(crate) type DexState = dex::StateSwap<BuyLpn>;
+pub(crate) type DexState = dex::StateOutSwap<BuyLpn, SwapClient, ForwardToDexEntry>;
 pub(crate) type DrainState = dex::StateDrain<RepayDrain<RepayFinish>>;
 
 pub(in super::super) fn start(
@@ -64,7 +66,12 @@ pub(in super::super) fn start(
     env: &Env,
     querier: QuerierWrapper<'_>,
 ) -> SwapResult {
-    dex::start_swap(BuyLpn::new(lease, payment), env, querier).into()
+    let start_state =
+        dex::start_out_swap::<BuyLpn, SwapClient, ForwardToDexEntry>(BuyLpn::new(lease, payment));
+    start_state
+        .enter(env.block.time.into_instant(), querier)
+        .map(|funding_msgs| Response::from(funding_msgs, DexState::from(start_state)))
+        .map_err(Into::into)
 }
 
 #[derive(Serialize, Deserialize)]
@@ -228,6 +235,25 @@ impl RemoteSwapClient for BuyLpn {
                     Err(DexError::unexpected_response_variant(NON_SWAP_RESPONSE))
                 }
             })
+    }
+}
+
+impl ContractInSwap for BuyLpn {
+    type StateResponse = <Self as SwapTask>::StateResponse;
+
+    fn state(
+        self,
+        in_progress: Stage,
+        now: Instant,
+        due_projection: Duration,
+        querier: QuerierWrapper<'_>,
+    ) -> Self::StateResponse {
+        match in_progress {
+            Stage::TransferOut => self.query(RepayTrx::TransferOut, now, due_projection, querier),
+            Stage::Swap => unimplemented!("the repay swap runs over the remote-lease transport"),
+            Stage::TransferInInit => unimplemented!(),
+            Stage::TransferInFinish => unimplemented!(),
+        }
     }
 }
 
