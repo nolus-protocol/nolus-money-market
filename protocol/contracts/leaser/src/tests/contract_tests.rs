@@ -19,6 +19,7 @@ use sdk::{
 use crate::{
     cmd::Borrow,
     contract::{execute, instantiate, query, sudo},
+    error::ContractError,
     msg::{ConfigResponse, ExecuteMsg, NewConfig, QueryMsg, SudoMsg},
     state::config::Config,
     tests,
@@ -129,6 +130,19 @@ fn proper_initialization() {
     let config = config_response.config;
     assert_eq!(lease_code, config.lease_code);
     assert_eq!(lpp_addr, config.lpp);
+}
+
+#[test]
+fn instantiate_rejects_zero_min_out_slippage() {
+    let mut deps = deps();
+    let mut msg = leaser_instantiate_msg(Code::unchecked(1), sdk_testing::user(LPP_ADDR));
+    // min_transaction is 10 LPN; a 91% bound leaves (100% - 91%) * 10 = 0 min-out
+    msg.lease_max_slippages.opening = MaxSlippage::unchecked(Percent100::from_percent(91));
+
+    assert!(matches!(
+        instantiate(deps.as_mut(), testing::mock_env(), owner(), msg).unwrap_err(),
+        ContractError::MaxSlippageLeavesZeroFloor
+    ));
 }
 
 #[test]

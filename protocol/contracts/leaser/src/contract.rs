@@ -26,7 +26,7 @@ use crate::{
     error::ContractError,
     lease::CacheFirstRelease,
     leaser::{self, Leaser},
-    msg::{ConfigResponse, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg, SudoMsg},
+    msg::{self, ConfigResponse, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg, SudoMsg},
     permissions::{
         AnomalyResolutionPermission, ChangeLeaseAdminPermission, ClosePositionPermission,
         LeasesConfigurationPermission, RemoteLeaseCallbackPermission,
@@ -61,6 +61,10 @@ pub fn instantiate(
     addr_validator.check_contract(&msg.protocols_registry)?;
 
     validate(&msg.lease_admin, deps.api)?;
+
+    if !msg::slippages_admit_min_transaction(&msg.lease_position_spec, &msg.lease_max_slippages) {
+        return Err(ContractError::MaxSlippageLeavesZeroFloor);
+    }
 
     ContractOwnerAccess::new(deps.storage.deref_mut())
         .grant_to(&info)

@@ -20,6 +20,12 @@ pub enum ContractError {
     #[error("[Leaser] Load Config failed, cause: {0}")]
     LoadConfigFailure(StdError),
 
+    #[error(
+        "[Leaser] A configured max-slippage bound leaves a zero min-output floor \
+         for the minimum transaction amount"
+    )]
+    MaxSlippageLeavesZeroFloor,
+
     #[error("[Leaser] Loading the old Config failed, cause: {0}")]
     LoadOldConfig(StdError),
 
