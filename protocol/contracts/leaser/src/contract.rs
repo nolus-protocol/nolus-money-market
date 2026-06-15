@@ -52,6 +52,10 @@ pub fn instantiate(
     info: MessageInfo,
     msg: InstantiateMsg,
 ) -> ContractResult<Response> {
+    if !msg::slippages_admit_min_transaction(&msg.lease_position_spec, &msg.lease_max_slippages) {
+        return Err(ContractError::MaxSlippageLeavesZeroFloor);
+    }
+
     let addr_validator = contract::validator(deps.querier);
     addr_validator.check_contract(&msg.lpp)?;
     addr_validator.check_contract(&msg.profit)?;
@@ -61,10 +65,6 @@ pub fn instantiate(
     addr_validator.check_contract(&msg.protocols_registry)?;
 
     validate(&msg.lease_admin, deps.api)?;
-
-    if !msg::slippages_admit_min_transaction(&msg.lease_position_spec, &msg.lease_max_slippages) {
-        return Err(ContractError::MaxSlippageLeavesZeroFloor);
-    }
 
     ContractOwnerAccess::new(deps.storage.deref_mut())
         .grant_to(&info)

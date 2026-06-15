@@ -29,7 +29,7 @@ impl NewConfig {
     }
 }
 
-pub(crate) fn slippages_admit_min_transaction(
+pub fn slippages_admit_min_transaction(
     lease_position_spec: &PositionSpecDTO,
     lease_max_slippages: &MaxSlippages,
 ) -> bool {
