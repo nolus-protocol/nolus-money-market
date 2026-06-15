@@ -5,7 +5,11 @@
 //! The cross-surface integration test under `remote_lease/tests/` validates
 //! that equivalence end-to-end; this module locks the wire encoding so the
 //! Solana side can rely on a stable surface — **any edit to a literal pin is
-//! a breaking protocol change and MUST bump [`crate::VERSION`]**.
+//! a breaking protocol change and MUST bump [`crate::VERSION`]**, with one
+//! exception: an additive field marked `#[serde(default)]` (e.g. `nonce`,
+//! #636) extends the wire without a version bump, because updated consumers
+//! decode both the old and new shapes and the rollout is coordinated
+//! consumer-first rather than signalled by the version.
 
 use std::fmt::Debug;
 

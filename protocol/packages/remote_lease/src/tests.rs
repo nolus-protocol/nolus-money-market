@@ -4,7 +4,11 @@
 //! variant against `cosmwasm_std::to_json_binary` output. The Solana-side
 //! consumer is a foreign codebase, so every literal-JSON pin below is part of
 //! the wire contract — **any edit to a literal pin is a breaking protocol
-//! change and MUST bump [`crate::VERSION`]**.
+//! change and MUST bump [`crate::VERSION`]**, with one exception: an additive
+//! field marked `#[serde(default)]` (e.g. `nonce`, #636) extends the wire
+//! without a version bump, because updated consumers decode both the old and
+//! new shapes and the rollout is coordinated consumer-first rather than
+//! signalled by the version.
 
 use std::fmt::Debug;
 

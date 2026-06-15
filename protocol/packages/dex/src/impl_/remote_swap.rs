@@ -398,10 +398,12 @@ where
     /// Advance the in-flight nonce ahead of a same-leg re-emission, so the
     /// superseded packet's late callback no longer matches and is absorbed.
     fn with_bumped_nonce(self) -> Self {
-        Self {
+        let ret = Self {
             in_flight_nonce: self.in_flight_nonce.saturating_add(1),
             ..self
-        }
+        };
+        debug_assert!(ret.invariant_held());
+        ret
     }
 
     fn internal_new(
