@@ -4,7 +4,7 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer, de};
 
 use crate::{error::Error, response::OperationResponse};
 
-/// Maximum byte length of a [`RemoteLeaseCallback::OperationErr`] payload.
+/// Maximum byte length of a [`RemoteOperationOutcome::OperationErr`] payload.
 ///
 /// Why a cap: the string is authored by the Solana counterparty and consumed
 /// by Nolus storage / event emission. Without a bound, a hostile or
@@ -12,6 +12,20 @@ use crate::{error::Error, response::OperationResponse};
 /// arbitrarily. 512 bytes is enough to carry a structured short message
 /// ("dex error: <code> <reason>") but small enough to forbid abuse.
 pub const OPERATION_ERR_MAX_BYTES: usize = 512;
+
+/// A remote operation outcome paired with the nonce of the emission it
+/// resolves.
+///
+/// The controller reads `nonce` back from its own committed outbound packet
+/// on ack/timeout (never from the counterparty's reply) and returns it here,
+/// so the lease can credit the outcome to the exact in-flight emission and
+/// reject a duplicate, stale, or heal-superseded callback.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[serde(deny_unknown_fields, rename_all = "snake_case")]
+pub struct RemoteLeaseCallback {
+    pub nonce: u64,
+    pub outcome: RemoteOperationOutcome,
+}
 
 /// Outcome of a remote operation as reported back to the Nolus controller.
 ///
@@ -24,7 +38,7 @@ pub const OPERATION_ERR_MAX_BYTES: usize = 512;
 /// be in flight on the Solana side until the channel times out).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
-pub enum RemoteLeaseCallback {
+pub enum RemoteOperationOutcome {
     OperationOk(OperationResponse),
     OperationErr(RemoteErrorMessage),
     OperationTimeout,

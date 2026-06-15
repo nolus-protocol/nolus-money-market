@@ -20,7 +20,7 @@ use platform::{
     state_machine::Response as StateMachineResponse,
 };
 use remote_lease::{
-    callback::RemoteLeaseCallback,
+    callback::{RemoteLeaseCallback, RemoteOperationOutcome},
     msg::CloseLeaseParams,
     response::{CloseLeaseResponse, WireOperationResponse},
     stub::{ControllerInnerMessage, Lease as ControllerLease},
@@ -200,22 +200,28 @@ impl Handler for ClosingRemoteLease {
         _querier: QuerierWrapper<'_>,
         env: Env,
     ) -> ContractResult<Response> {
-        self.authz_callback(&info).and_then(|()| match callback {
-            RemoteLeaseCallback::OperationOk(WireOperationResponse::CloseLease(
-                CloseLeaseResponse {},
-            )) => Ok(self.into_closed(&env)),
-            RemoteLeaseCallback::OperationOk(_unexpected) => {
-                Ok(self.absorb(ABSORB_UNEXPECTED_VARIANT))
-            }
-            RemoteLeaseCallback::OperationErr(_reason) => Ok(self.absorb(ABSORB_REMOTE_ERROR)),
-            RemoteLeaseCallback::OperationTimeout => {
-                let emitter = self
-                    .emitter()
-                    .emit(EVENT_KEY_ID, env.contract.address.clone())
-                    .emit(EVENT_KEY_TIMEOUT, EVENT_VALUE_RETRY);
-                self.reemit(emitter)
-            }
-        })
+        // CloseLease/TransferOut over this transport are not yet
+        // nonce-correlated (they convert in a later phase), so the callback
+        // nonce is not consulted here.
+        self.authz_callback(&info)
+            .and_then(|()| match callback.outcome {
+                RemoteOperationOutcome::OperationOk(WireOperationResponse::CloseLease(
+                    CloseLeaseResponse {},
+                )) => Ok(self.into_closed(&env)),
+                RemoteOperationOutcome::OperationOk(_unexpected) => {
+                    Ok(self.absorb(ABSORB_UNEXPECTED_VARIANT))
+                }
+                RemoteOperationOutcome::OperationErr(_reason) => {
+                    Ok(self.absorb(ABSORB_REMOTE_ERROR))
+                }
+                RemoteOperationOutcome::OperationTimeout => {
+                    let emitter = self
+                        .emitter()
+                        .emit(EVENT_KEY_ID, env.contract.address.clone())
+                        .emit(EVENT_KEY_TIMEOUT, EVENT_VALUE_RETRY);
+                    self.reemit(emitter)
+                }
+            })
     }
 }
 
@@ -239,7 +245,7 @@ mod tests {
         message::Response as MessageResponse,
     };
     use remote_lease::{
-        callback::{RemoteErrorMessage, RemoteLeaseCallback},
+        callback::{RemoteErrorMessage, RemoteLeaseCallback, RemoteOperationOutcome},
         msg::CloseLeaseParams,
         response::{CloseLeaseResponse, TransferOutResponse, WireOperationResponse},
     };
@@ -304,7 +310,13 @@ mod tests {
     fn error_ack_absorbed_without_reemission() {
         let reason =
             RemoteErrorMessage::new("balance mismatch with solana state").expect("within the cap");
-        let response = deliver(RemoteLeaseCallback::OperationErr(reason), controller_info());
+        let response = deliver(
+            RemoteLeaseCallback {
+                nonce: 0,
+                outcome: RemoteOperationOutcome::OperationErr(reason),
+            },
+            controller_info(),
+        );
         assert_still_closing(&response);
         assert_eq!(absorb_response("remote-error"), response.response);
     }
@@ -312,9 +324,12 @@ mod tests {
     #[test]
     fn unexpected_ok_ack_absorbed_without_reemission() {
         let response = deliver(
-            RemoteLeaseCallback::OperationOk(WireOperationResponse::TransferOut(
-                TransferOutResponse {},
-            )),
+            RemoteLeaseCallback {
+                nonce: 0,
+                outcome: RemoteOperationOutcome::OperationOk(WireOperationResponse::TransferOut(
+                    TransferOutResponse {},
+                )),
+            },
             controller_info(),
         );
         assert_still_closing(&response);
@@ -326,7 +341,13 @@ mod tests {
 
     #[test]
     fn timeout_reemits_the_close() {
-        let response = deliver(RemoteLeaseCallback::OperationTimeout, controller_info());
+        let response = deliver(
+            RemoteLeaseCallback {
+                nonce: 0,
+                outcome: RemoteOperationOutcome::OperationTimeout,
+            },
+            controller_info(),
+        );
         assert_still_closing(&response);
         assert_eq!(
             MessageResponse::messages_with_event(
@@ -484,7 +505,12 @@ mod tests {
     }
 
     fn ok_close_ack() -> RemoteLeaseCallback {
-        RemoteLeaseCallback::OperationOk(WireOperationResponse::CloseLease(CloseLeaseResponse {}))
+        RemoteLeaseCallback {
+            nonce: 0,
+            outcome: RemoteOperationOutcome::OperationOk(WireOperationResponse::CloseLease(
+                CloseLeaseResponse {},
+            )),
+        }
     }
 
     fn controller_info() -> MessageInfo {

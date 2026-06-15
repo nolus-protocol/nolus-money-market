@@ -53,7 +53,7 @@ use currency::{self, CurrencyDef, Group, MemberOf};
 use finance::coin::{Amount, Coin, CoinDTO, WithCoin};
 use platform::contract::{Code, CodeId};
 use remote_lease::{
-    callback::{RemoteErrorMessage, RemoteLeaseCallback},
+    callback::{RemoteErrorMessage, RemoteLeaseCallback, RemoteOperationOutcome},
     msg::{CloseLeaseParams, OpenLeaseParams, SwapParams, TransferOutParams},
     response::{
         CloseLeaseResponse, OpenLeaseResponse, OperationResponse, RemoteLeaseId, SwapResponse,
@@ -132,9 +132,14 @@ pub enum StubExecuteMsg {
         params: CloseLeaseParams,
         timeout: finance::duration::Duration,
     },
+    // #636: `Swap` carries the per-emission `nonce` the lease tags the packet
+    // with; the stand-in echoes it into the synthesised callback exactly as the
+    // production controller forwards `envelope.nonce`.
     Swap {
         params: SwapParams,
         timeout: finance::duration::Duration,
+        #[serde(default)]
+        nonce: u64,
     },
     TransferOut {
         params: TransferOutParams,
@@ -164,6 +169,16 @@ pub enum StubExecuteMsg {
         to: Addr,
         callback: RemoteLeaseCallback,
     },
+    /// Test-only (#636): send a callback carrying a SPECIFIC `nonce` to a
+    /// lease, so a driver can replay the original packet's nonce as a stale
+    /// duplicate or deliver a healed re-emission's fresh nonce. Mirrors
+    /// [`InjectCallback`] but lets the driver control the per-emission nonce
+    /// the production controller would otherwise forward from the envelope.
+    InjectCallbackWithNonce {
+        to: Addr,
+        nonce: u64,
+        outcome: RemoteOperationOutcome,
+    },
 }
 
 /// Stand-in `QueryMsg` — the production variants mirror
@@ -181,6 +196,13 @@ pub enum StubQueryMsg {
     },
     /// Report every `TransferOutParams` the given lease has emitted, in order.
     RecordedTransferOuts {
+        lease: Addr,
+    },
+    /// Test-only (#636): report the per-emission `nonce` of every `Swap` the
+    /// given lease has emitted, in order, so a driver can replay the in-flight
+    /// nonce (matching), the original after a heal (stale), or the healed
+    /// re-emission (fresh).
+    RecordedSwapNonces {
         lease: Addr,
     },
     /// Report how many `CloseLease` executes the given lease has emitted.
@@ -202,6 +224,10 @@ const MODES: Map<&str, ResponseMode> = Map::new("stub_modes");
 const PENDING: Map<&str, PendingCallback> = Map::new("stub_pending");
 const LEASE_PDA_COUNTER: Item<u64> = Item::new("stub_pda_counter");
 const RECORDED_SWAPS: Map<&Addr, Vec<SwapParams>> = Map::new("stub_recorded_swaps");
+/// #636: the per-emission nonce each recorded swap went out with, parallel to
+/// [`RECORDED_SWAPS`]. Lets a driver replay the in-flight nonce (matching) or
+/// the superseded one after a heal (stale).
+const RECORDED_SWAP_NONCES: Map<&Addr, Vec<u64>> = Map::new("stub_recorded_swap_nonces");
 const RECORDED_TRANSFER_OUTS: Map<&Addr, Vec<TransferOutParams>> =
     Map::new("stub_recorded_transfer_outs");
 const RECORDED_CLOSES: Map<&Addr, u32> = Map::new("stub_recorded_closes");
@@ -276,19 +302,20 @@ pub fn execute(
             Ok(CwResponse::new())
         }
         StubExecuteMsg::OpenLease { params, .. } => {
-            handle_outbound(deps, info, op_tag::OPEN_LEASE, |storage| {
+            handle_outbound(deps, info, op_tag::OPEN_LEASE, 0, |storage| {
                 synth_open_lease_response(storage, &params)
             })
         }
         StubExecuteMsg::CloseLease { .. } => {
             record_close(deps.storage, &info.sender)?;
-            handle_outbound(deps, info, op_tag::CLOSE_LEASE, |_storage| {
+            handle_outbound(deps, info, op_tag::CLOSE_LEASE, 0, |_storage| {
                 Ok(OperationResponse::CloseLease(CloseLeaseResponse {}))
             })
         }
-        StubExecuteMsg::Swap { params, .. } => {
+        StubExecuteMsg::Swap { params, nonce, .. } => {
             record_swap(deps.storage, &info.sender, &params)?;
-            handle_outbound(deps, info, op_tag::SWAP, |storage| {
+            record_swap_nonce(deps.storage, &info.sender, nonce)?;
+            handle_outbound(deps, info, op_tag::SWAP, nonce, |storage| {
                 Ok(OperationResponse::Swap(SwapResponse {
                     amount_out: next_swap_output(storage, &params)?,
                 }))
@@ -296,7 +323,7 @@ pub fn execute(
         }
         StubExecuteMsg::TransferOut { params, .. } => {
             record_transfer_out(deps.storage, &info.sender, &params)?;
-            handle_outbound(deps, info, op_tag::TRANSFER_OUT, |_storage| {
+            handle_outbound(deps, info, op_tag::TRANSFER_OUT, 0, |_storage| {
                 Ok(OperationResponse::TransferOut(TransferOutResponse {}))
             })
         }
@@ -310,8 +337,23 @@ pub fn execute(
         }
         StubExecuteMsg::DeliverPending { op } => deliver_pending(deps.storage, op.as_str()),
         StubExecuteMsg::InjectCallback { to, callback } => {
-            Ok(CwResponse::new().add_message(callback_msg(to, callback)?))
+            // #636: a manually-injected "valid" callback must carry the lease's
+            // current in-flight nonce so a live swap leg matches it (the leg
+            // absorbs any other nonce as `nonce-mismatch`). Stamp the last
+            // recorded swap nonce for `to` over the caller's placeholder; if the
+            // lease has emitted no swap yet (open/close/transfer-out flows that
+            // ignore the nonce), fall back to the caller's value.
+            let nonce = last_recorded_swap_nonce(deps.storage, &to)?.unwrap_or(callback.nonce);
+            Ok(CwResponse::new().add_message(callback_msg(
+                to,
+                RemoteLeaseCallback {
+                    nonce,
+                    outcome: callback.outcome,
+                },
+            )?))
         }
+        StubExecuteMsg::InjectCallbackWithNonce { to, nonce, outcome } => Ok(CwResponse::new()
+            .add_message(callback_msg(to, RemoteLeaseCallback { nonce, outcome })?)),
     }
 }
 
@@ -346,6 +388,11 @@ pub fn query(deps: Deps<'_>, _env: Env, msg: StubQueryMsg) -> StdResult<Binary> 
                 .may_load(deps.storage, &lease)?
                 .unwrap_or_default(),
         ),
+        StubQueryMsg::RecordedSwapNonces { lease } => to_json_binary(
+            &RECORDED_SWAP_NONCES
+                .may_load(deps.storage, &lease)?
+                .unwrap_or_default(),
+        ),
         StubQueryMsg::RecordedCloses { lease } => to_json_binary(
             &RECORDED_CLOSES
                 .may_load(deps.storage, &lease)?
@@ -358,6 +405,7 @@ fn handle_outbound<F>(
     deps: cosmwasm_std::DepsMut<'_>,
     info: MessageInfo,
     op: &str,
+    nonce: u64,
     build_ok: F,
 ) -> Result<CwResponse, StubError>
 where
@@ -372,31 +420,41 @@ where
         .may_load(deps.storage, op)?
         .unwrap_or(ResponseMode::Ok);
 
-    let callback = match mode {
-        ResponseMode::Ok => RemoteLeaseCallback::OperationOk(build_ok(deps.storage)?.into()),
-        ResponseMode::Err(reason) => RemoteLeaseCallback::OperationErr(reason),
+    // #636: the synthesised callback echoes the emitting packet's `nonce`
+    // exactly as the production controller forwards `envelope.nonce`, so a
+    // live swap leg credits it instead of absorbing it as `nonce-mismatch`.
+    // Non-swap operations pass `0`; their callback handlers ignore the nonce.
+    let outcome = match mode {
+        ResponseMode::Ok => RemoteOperationOutcome::OperationOk(build_ok(deps.storage)?.into()),
+        ResponseMode::Err(reason) => RemoteOperationOutcome::OperationErr(reason),
         ResponseMode::Delayed => {
-            let payload = RemoteLeaseCallback::OperationOk(build_ok(deps.storage)?.into());
+            let payload = RemoteOperationOutcome::OperationOk(build_ok(deps.storage)?.into());
             PENDING.save(
                 deps.storage,
                 op,
                 &PendingCallback {
                     sender: info.sender.clone(),
-                    callback: payload,
+                    callback: RemoteLeaseCallback {
+                        nonce,
+                        outcome: payload,
+                    },
                 },
             )?;
             return Ok(CwResponse::new());
         }
         ResponseMode::UnderpayingOnce => {
             MODES.save(deps.storage, op, &ResponseMode::Ok)?;
-            RemoteLeaseCallback::OperationOk(underpay(build_ok(deps.storage)?).into())
+            RemoteOperationOutcome::OperationOk(underpay(build_ok(deps.storage)?).into())
         }
         // The Err reverts this whole sub-execution, so the per-op
         // recorders written earlier in the same call roll back with it.
         ResponseMode::FailSync => return Err(StubError::SyncFailure { op: op.to_owned() }),
     };
 
-    Ok(CwResponse::new().add_message(callback_msg(info.sender, callback)?))
+    Ok(CwResponse::new().add_message(callback_msg(
+        info.sender,
+        RemoteLeaseCallback { nonce, outcome },
+    )?))
 }
 
 /// The output a happy-path counterparty pays for a swap.
@@ -496,6 +554,30 @@ fn record_swap(
         })
         .map(|_recorded| ())
         .map_err(Into::into)
+}
+
+fn record_swap_nonce(
+    storage: &mut dyn Storage,
+    sender: &Addr,
+    nonce: u64,
+) -> Result<(), StubError> {
+    RECORDED_SWAP_NONCES
+        .update(storage, sender, |recorded| -> Result<_, StdError> {
+            let mut recorded = recorded.unwrap_or_default();
+            recorded.push(nonce);
+            Ok(recorded)
+        })
+        .map(|_recorded| ())
+        .map_err(Into::into)
+}
+
+/// #636: the last `nonce` the given lease emitted a swap with, i.e. its
+/// current in-flight swap nonce. `None` when the lease has emitted no swap
+/// yet (open/close/transfer-out flows that ignore the nonce).
+fn last_recorded_swap_nonce(storage: &dyn Storage, lease: &Addr) -> Result<Option<u64>, StubError> {
+    Ok(RECORDED_SWAP_NONCES
+        .may_load(storage, lease)?
+        .and_then(|nonces| nonces.last().copied()))
 }
 
 fn record_close(storage: &mut dyn Storage, sender: &Addr) -> Result<(), StubError> {
@@ -658,6 +740,26 @@ pub fn inject_callback(
         .expect("InjectCallback must succeed against the stand-in")
 }
 
+/// Deliver a callback carrying a SPECIFIC nonce to a lease from the stand-in's
+/// (authorised) address (#636). Lets a driver replay the original packet's
+/// nonce as a stale duplicate, or deliver a healed re-emission's fresh nonce.
+pub fn inject_callback_with_nonce(
+    app: &mut App,
+    controller: &Addr,
+    lease: &Addr,
+    nonce: u64,
+    outcome: RemoteOperationOutcome,
+) -> sdk::cw_multi_test::AppResponse {
+    let msg = StubExecuteMsg::InjectCallbackWithNonce {
+        to: lease.clone(),
+        nonce,
+        outcome,
+    };
+    app.execute(sdk::testing::user(ADMIN), controller.clone(), &msg, &[])
+        .map(|response| response.unwrap_response())
+        .expect("InjectCallbackWithNonce must succeed against the stand-in")
+}
+
 /// Report every `SwapParams` the given lease has emitted.
 pub fn recorded_swaps(app: &App, controller: &Addr, lease: &Addr) -> Vec<SwapParams> {
     app.query()
@@ -668,6 +770,19 @@ pub fn recorded_swaps(app: &App, controller: &Addr, lease: &Addr) -> Vec<SwapPar
             },
         )
         .expect("RecordedSwaps must succeed against the stand-in")
+}
+
+/// Report the per-emission nonce of every `Swap` the given lease has emitted
+/// (#636), parallel to [`recorded_swaps`].
+pub fn recorded_swap_nonces(app: &App, controller: &Addr, lease: &Addr) -> Vec<u64> {
+    app.query()
+        .query_wasm_smart(
+            controller.clone(),
+            &StubQueryMsg::RecordedSwapNonces {
+                lease: lease.clone(),
+            },
+        )
+        .expect("RecordedSwapNonces must succeed against the stand-in")
 }
 
 /// Report every `TransferOutParams` the given lease has emitted.

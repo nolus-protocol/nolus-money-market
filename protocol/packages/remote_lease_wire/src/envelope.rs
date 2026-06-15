@@ -11,12 +11,22 @@ use crate::{msg::Operation, version::ProtocolVersion};
 /// consumers MUST validate the string through their own `Addr` constructor
 /// before using it for dispatch — the type prevents accidental use of the raw
 /// string as an authenticated address.
+///
+/// `nonce` is a per-emission identifier the Nolus lease chooses; the
+/// controller reads it back from its own committed outbound packet on
+/// ack/timeout and returns it in the callback, letting the lease reject a
+/// callback that does not match the in-flight emission. `#[serde(default)]`
+/// keeps the field optional at decode so an envelope authored before the
+/// field existed (nonce absent) decodes to `0`; the counterparty neither
+/// inspects nor echoes it.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 #[serde(deny_unknown_fields)]
 pub struct PacketEnvelope {
     pub lease: LeaseAddrOnWire,
     pub operation: Operation,
     pub version: ProtocolVersion,
+    #[serde(default)]
+    pub nonce: u64,
 }
 
 /// On-wire encoding of a Nolus lease address.

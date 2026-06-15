@@ -383,27 +383,28 @@ mod impl_handler {
         fn on_remote_response(
             self,
             data: Binary,
+            nonce: u64,
             querier: QuerierWrapper<'_>,
             env: Env,
         ) -> Result<Self> {
             match self {
                 State::OpenIca(inner) => {
-                    Handler::on_remote_response(inner, data, querier, env).map_into()
+                    Handler::on_remote_response(inner, data, nonce, querier, env).map_into()
                 }
                 State::OpenIcaRespDelivery(inner) => {
-                    Handler::on_remote_response(inner, data, querier, env).map_into()
+                    Handler::on_remote_response(inner, data, nonce, querier, env).map_into()
                 }
                 State::TransferOut(inner) => {
-                    Handler::on_remote_response(inner, data, querier, env).map_into()
+                    Handler::on_remote_response(inner, data, nonce, querier, env).map_into()
                 }
                 State::TransferOutRespDelivery(inner) => {
-                    Handler::on_remote_response(inner, data, querier, env).map_into()
+                    Handler::on_remote_response(inner, data, nonce, querier, env).map_into()
                 }
                 State::RemoteSwap(inner) => {
-                    Handler::on_remote_response(inner, data, querier, env).map_into()
+                    Handler::on_remote_response(inner, data, nonce, querier, env).map_into()
                 }
                 State::SlippageAnomaly(inner) => {
-                    Handler::on_remote_response(inner, data, querier, env).map_into()
+                    Handler::on_remote_response(inner, data, nonce, querier, env).map_into()
                 }
             }
         }
@@ -411,48 +412,56 @@ mod impl_handler {
         fn on_remote_error(
             self,
             response: ICAErrorResponse,
+            nonce: u64,
             querier: QuerierWrapper<'_>,
             env: Env,
         ) -> Result<Self> {
             match self {
                 State::OpenIca(inner) => {
-                    Handler::on_remote_error(inner, response, querier, env).map_into()
+                    Handler::on_remote_error(inner, response, nonce, querier, env).map_into()
                 }
                 State::OpenIcaRespDelivery(inner) => {
-                    Handler::on_remote_error(inner, response, querier, env).map_into()
+                    Handler::on_remote_error(inner, response, nonce, querier, env).map_into()
                 }
                 State::TransferOut(inner) => {
-                    Handler::on_remote_error(inner, response, querier, env).map_into()
+                    Handler::on_remote_error(inner, response, nonce, querier, env).map_into()
                 }
                 State::TransferOutRespDelivery(inner) => {
-                    Handler::on_remote_error(inner, response, querier, env).map_into()
+                    Handler::on_remote_error(inner, response, nonce, querier, env).map_into()
                 }
                 State::RemoteSwap(inner) => {
-                    Handler::on_remote_error(inner, response, querier, env).map_into()
+                    Handler::on_remote_error(inner, response, nonce, querier, env).map_into()
                 }
                 State::SlippageAnomaly(inner) => {
-                    Handler::on_remote_error(inner, response, querier, env).map_into()
+                    Handler::on_remote_error(inner, response, nonce, querier, env).map_into()
                 }
             }
         }
 
-        fn on_remote_timeout(self, querier: QuerierWrapper<'_>, env: Env) -> Result<Self> {
+        fn on_remote_timeout(
+            self,
+            nonce: u64,
+            querier: QuerierWrapper<'_>,
+            env: Env,
+        ) -> Result<Self> {
             match self {
-                State::OpenIca(inner) => Handler::on_remote_timeout(inner, querier, env).map_into(),
+                State::OpenIca(inner) => {
+                    Handler::on_remote_timeout(inner, nonce, querier, env).map_into()
+                }
                 State::OpenIcaRespDelivery(inner) => {
-                    Handler::on_remote_timeout(inner, querier, env).map_into()
+                    Handler::on_remote_timeout(inner, nonce, querier, env).map_into()
                 }
                 State::TransferOut(inner) => {
-                    Handler::on_remote_timeout(inner, querier, env).map_into()
+                    Handler::on_remote_timeout(inner, nonce, querier, env).map_into()
                 }
                 State::TransferOutRespDelivery(inner) => {
-                    Handler::on_remote_timeout(inner, querier, env).map_into()
+                    Handler::on_remote_timeout(inner, nonce, querier, env).map_into()
                 }
                 State::RemoteSwap(inner) => {
-                    Handler::on_remote_timeout(inner, querier, env).map_into()
+                    Handler::on_remote_timeout(inner, nonce, querier, env).map_into()
                 }
                 State::SlippageAnomaly(inner) => {
-                    Handler::on_remote_timeout(inner, querier, env).map_into()
+                    Handler::on_remote_timeout(inner, nonce, querier, env).map_into()
                 }
             }
         }

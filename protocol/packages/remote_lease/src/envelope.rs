@@ -14,12 +14,20 @@ use crate::msg::Operation;
 /// receiver MUST convert it through [`NolusLeaseAddr::into_validated`] before
 /// using it for dispatch — the type prevents accidental use of the raw string
 /// as a `cosmwasm_std::Addr`.
+///
+/// `nonce` is a per-emission identifier the lease chooses; the controller
+/// reads it back from its own committed outbound packet on ack/timeout and
+/// returns it in the callback, letting the lease reject a callback that does
+/// not match the in-flight emission. `#[serde(default)]` keeps it optional at
+/// decode so a packet authored before the field existed decodes to `0`.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 #[serde(deny_unknown_fields)]
 pub struct PacketEnvelope {
     pub lease: LeaseAddrOnWire,
     pub operation: Operation,
     pub version: ProtocolVersion,
+    #[serde(default)]
+    pub nonce: u64,
 }
 
 /// Nolus-side validation extension for [`LeaseAddrOnWire`].

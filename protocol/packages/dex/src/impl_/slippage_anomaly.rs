@@ -4,17 +4,18 @@
 //! `OperationTimeout`s past the per-op retry budget - parks here instead of
 //! retrying forever. The node carries exactly what a [`Handler::heal`] needs
 //! to resume the SAME in-flight leg: the swap `spec`, the `acks_left`
-//! countdown identifying the leg, the accumulated `total_out`, and the floor
-//! `in_flight_min_out` pinned when the leg was last opened.
+//! countdown identifying the leg, the accumulated `total_out`, the floor
+//! `in_flight_min_out` pinned when the leg was last opened, and the
+//! `in_flight_nonce` the parked packet carried.
 //!
 //! While parked the lease answers state queries with
 //! `SlippageProtectionActivated` and absorbs any late acknowledgment of the
-//! original packet - reverting would strand the relayer. The at-most-once
-//! transport makes such a late callback a defensive case rather than an
-//! expected one. The operator-only heal re-quotes the leg against a fresh
-//! oracle floor and transitions back to the live [`RemoteSwap`] sequence;
-//! operators must invoke it only once the original in-flight operation is
-//! known to be unresolvable, mirroring the [`RemoteSwap`] heal contract.
+//! original packet - reverting would strand the relayer. The operator-only
+//! heal re-quotes the leg against a fresh oracle floor, bumps the nonce above
+//! the parked value, and transitions back to the live [`RemoteSwap`] sequence;
+//! the bumped nonce makes the heal idempotent - the original parked packet's
+//! late ack is absorbed as stale rather than mis-credited - so it is safe
+//! regardless of operator timing, mirroring the [`RemoteSwap`] heal contract.
 
 use std::{
     fmt::{Display, Formatter, Result as FmtResult},
@@ -74,6 +75,10 @@ where
     acks_left: CoinsNb,
     total_out: CoinDTO<SwapTask::OutG>,
     in_flight_min_out: CoinDTO<SwapTask::OutG>,
+    /// The nonce the parked leg was last emitted with (#636). A heal bumps
+    /// above this value, never resetting, so a late ack of the original parked
+    /// packet stays recognisable as stale.
+    in_flight_nonce: u64,
     #[serde(skip)]
     _variant_set: PhantomData<SEnum>,
 }
@@ -96,6 +101,11 @@ where
     acks_left: CoinsNb,
     total_out: CoinDTO<SwapTask::OutG>,
     in_flight_min_out: CoinDTO<SwapTask::OutG>,
+    /// `#[serde(default)]` lets a terminal parked before #636 restore with a
+    /// zero nonce, matching the zero its old, nonce-less in-flight packet
+    /// decodes to.
+    #[serde(default)]
+    in_flight_nonce: u64,
     #[serde(skip)]
     _variant_set: PhantomData<SEnum>,
 }
@@ -113,6 +123,7 @@ where
             acks_left: raw.acks_left,
             total_out: raw.total_out,
             in_flight_min_out: raw.in_flight_min_out,
+            in_flight_nonce: raw.in_flight_nonce,
             _variant_set: PhantomData,
         };
         if ret.invariant_held() {
@@ -132,12 +143,14 @@ where
         acks_left: CoinsNb,
         total_out: CoinDTO<SwapTask::OutG>,
         in_flight_min_out: CoinDTO<SwapTask::OutG>,
+        in_flight_nonce: u64,
     ) -> Self {
         let ret = Self {
             spec,
             acks_left,
             total_out,
             in_flight_min_out,
+            in_flight_nonce,
             _variant_set: PhantomData,
         };
         debug_assert!(ret.invariant_held());
@@ -189,6 +202,14 @@ where
         &self.in_flight_min_out
     }
 
+    // #636: the persisted nonce the parked leg last emitted with. A heal must
+    // bump above this value, never reset, so a late ack of the original parked
+    // packet is still recognised as stale.
+    #[cfg(test)]
+    pub(super) fn in_flight_nonce(&self) -> u64 {
+        self.in_flight_nonce
+    }
+
     #[cfg(test)]
     pub(super) fn spec_mut(&mut self) -> &mut SwapTask {
         &mut self.spec
@@ -231,6 +252,7 @@ where
     fn on_remote_response(
         self,
         _data: Binary,
+        _nonce: u64,
         _querier: QuerierWrapper<'_>,
         _env: Env,
     ) -> HandlerResult<Self> {
@@ -240,13 +262,19 @@ where
     fn on_remote_error(
         self,
         _response: ICAErrorResponse,
+        _nonce: u64,
         _querier: QuerierWrapper<'_>,
         _env: Env,
     ) -> HandlerResult<Self> {
         self.absorb(ABSORB_PARKED_ERROR)
     }
 
-    fn on_remote_timeout(self, _querier: QuerierWrapper<'_>, _env: Env) -> HandlerResult<Self> {
+    fn on_remote_timeout(
+        self,
+        _nonce: u64,
+        _querier: QuerierWrapper<'_>,
+        _env: Env,
+    ) -> HandlerResult<Self> {
         self.absorb(ABSORB_PARKED_TIMEOUT)
     }
 
@@ -258,8 +286,11 @@ where
     /// transition back to the live swap sequence with the retry counters
     /// reset. `acks_left` is unchanged - the leg is re-opened, never
     /// advanced - so the heal re-emission promises a floor freshly pinned by
-    /// `RemoteSwap::open_leg`. Operator-only: an unauthorised caller is
-    /// rejected before any re-quote, leaving the leg parked.
+    /// `RemoteSwap::open_leg`. The persisted `in_flight_nonce` seeds the
+    /// re-open so the healed emission carries a strictly greater nonce and the
+    /// original parked packet's late ack is absorbed. Operator-only: an
+    /// unauthorised caller is rejected before any re-quote, leaving the leg
+    /// parked.
     fn heal(
         self,
         querier: QuerierWrapper<'_>,
@@ -272,6 +303,7 @@ where
                 self.acks_left,
                 self.total_out,
                 querier,
+                self.in_flight_nonce,
             )
             .and_then(RemoteSwap::reemit_healed)
             .into(),
@@ -340,6 +372,7 @@ where
             self.acks_left,
             self.total_out,
             self.in_flight_min_out,
+            self.in_flight_nonce,
         )
     }
 }

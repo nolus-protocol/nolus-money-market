@@ -27,7 +27,7 @@ use lease::{
     error::ContractError,
 };
 use remote_lease::{
-    callback::{RemoteErrorMessage, RemoteLeaseCallback},
+    callback::{RemoteErrorMessage, RemoteLeaseCallback, RemoteOperationOutcome},
     response::{CloseLeaseResponse, WireOperationResponse},
 };
 use sdk::{
@@ -175,7 +175,10 @@ fn close_timeout_reemits() {
         &mut test_case.app,
         &controller,
         &lease,
-        RemoteLeaseCallback::OperationTimeout,
+        RemoteLeaseCallback {
+            nonce: 0,
+            outcome: RemoteOperationOutcome::OperationTimeout,
+        },
     );
     timeout_response.assert_event(
         &Event::new(CLOSING_REMOTE_LEASE_EVENT)
@@ -337,7 +340,12 @@ fn completion_event(lease: &Addr) -> Event {
 }
 
 fn close_lease_ack() -> RemoteLeaseCallback {
-    RemoteLeaseCallback::OperationOk(WireOperationResponse::CloseLease(CloseLeaseResponse {}))
+    RemoteLeaseCallback {
+        nonce: 0,
+        outcome: RemoteOperationOutcome::OperationOk(WireOperationResponse::CloseLease(
+            CloseLeaseResponse {},
+        )),
+    }
 }
 
 fn deliver_price_alarm(test_case: &mut LeaseTestCase, lease: Addr) -> AppResponse {

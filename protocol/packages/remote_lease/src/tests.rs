@@ -19,7 +19,9 @@ use finance::coin::Coin;
 
 use crate::{
     PORT_PREFIX, VERSION,
-    callback::{OPERATION_ERR_MAX_BYTES, RemoteErrorMessage, RemoteLeaseCallback},
+    callback::{
+        OPERATION_ERR_MAX_BYTES, RemoteErrorMessage, RemoteLeaseCallback, RemoteOperationOutcome,
+    },
     envelope::{LeaseAddrOnWire, PacketEnvelope},
     error::Error,
     msg::{CloseLeaseParams, OpenLeaseParams, Operation, SwapParams, TransferOutParams},
@@ -112,14 +114,15 @@ fn transfer_out_response_serde() {
 
 #[test]
 fn callback_operation_ok_serde() {
-    let value =
-        RemoteLeaseCallback::OperationOk(WireOperationResponse::CloseLease(CloseLeaseResponse {}));
+    let value = RemoteOperationOutcome::OperationOk(WireOperationResponse::CloseLease(
+        CloseLeaseResponse {},
+    ));
     assert_round_trip_eq(r#"{"operation_ok":{"close_lease":{}}}"#, &value);
 }
 
 #[test]
 fn callback_operation_err_serde() {
-    let value = RemoteLeaseCallback::OperationErr(
+    let value = RemoteOperationOutcome::OperationErr(
         RemoteErrorMessage::new("dex pool drained").expect("short message must be accepted"),
     );
     assert_round_trip_eq(r#"{"operation_err":"dex pool drained"}"#, &value);
@@ -127,7 +130,7 @@ fn callback_operation_err_serde() {
 
 #[test]
 fn callback_operation_timeout_serde() {
-    let value = RemoteLeaseCallback::OperationTimeout;
+    let value = RemoteOperationOutcome::OperationTimeout;
     assert_round_trip_eq(r#""operation_timeout""#, &value);
 }
 
@@ -157,6 +160,23 @@ fn callback_error_message_deserialize_over_cap_rejected() {
         .expect_err("over-cap payload must fail deserialization");
 }
 
+// AC (#636): the typed callback carries the per-emission `nonce` alongside the
+// outcome and round-trips byte-identically to the wire shape the controller
+// dispatches into the lease.
+#[test]
+fn callback_round_trips_with_nonce() {
+    let value = RemoteLeaseCallback {
+        nonce: 7,
+        outcome: RemoteOperationOutcome::OperationOk(WireOperationResponse::CloseLease(
+            CloseLeaseResponse {},
+        )),
+    };
+    assert_round_trip_eq(
+        r#"{"nonce":7,"outcome":{"operation_ok":{"close_lease":{}}}}"#,
+        &value,
+    );
+}
+
 // ---------------------------------------------------------------------------
 // 4. PacketEnvelope — round-trip + literal JSON
 // ---------------------------------------------------------------------------
@@ -167,9 +187,10 @@ fn packet_envelope_serde() {
         lease: LeaseAddrOnWire::new("nolus1leaseaddr"),
         operation: Operation::CloseLease(CloseLeaseParams {}),
         version: ProtocolVersion,
+        nonce: 0,
     };
     assert_round_trip_eq(
-        r#"{"lease":"nolus1leaseaddr","operation":{"close_lease":{}},"version":"nls-remote-lease.v1"}"#,
+        r#"{"lease":"nolus1leaseaddr","operation":{"close_lease":{}},"version":"nls-remote-lease.v1","nonce":0}"#,
         &value,
     );
 }
@@ -192,6 +213,33 @@ fn packet_envelope_missing_version_rejected() {
 fn lease_addr_on_wire_round_trip_is_bare_string() {
     let value = LeaseAddrOnWire::new("nolus1leaseaddr");
     assert_round_trip_eq(r#""nolus1leaseaddr""#, &value);
+}
+
+// AC (#636): the typed envelope carries `nonce` as its last field (after
+// `version`) and a non-zero nonce round-trips byte-identically to the wire
+// JSON the Solana side consumes.
+#[test]
+fn packet_envelope_round_trips_with_nonce() {
+    let value = PacketEnvelope {
+        lease: LeaseAddrOnWire::new("nolus1leaseaddr"),
+        operation: Operation::CloseLease(CloseLeaseParams {}),
+        version: ProtocolVersion,
+        nonce: 7,
+    };
+    assert_round_trip_eq(
+        r#"{"lease":"nolus1leaseaddr","operation":{"close_lease":{}},"version":"nls-remote-lease.v1","nonce":7}"#,
+        &value,
+    );
+}
+
+// AC (#636): `nonce` is `#[serde(default)]`, so a packet that predates the
+// field decodes with `nonce == 0` instead of being rejected.
+#[test]
+fn packet_envelope_decodes_without_nonce_to_zero() {
+    let wire = r#"{"lease":"nolus1leaseaddr","operation":{"close_lease":{}},"version":"nls-remote-lease.v1"}"#;
+    let envelope: PacketEnvelope =
+        serde_json::from_str(wire).expect("a payload without nonce must default it to zero");
+    assert_eq!(0, envelope.nonce);
 }
 
 // ---------------------------------------------------------------------------

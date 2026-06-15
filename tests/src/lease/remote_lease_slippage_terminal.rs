@@ -39,7 +39,7 @@ use lease::{
     },
     error::ContractError,
 };
-use remote_lease::callback::{RemoteErrorMessage, RemoteLeaseCallback};
+use remote_lease::callback::{RemoteErrorMessage, RemoteLeaseCallback, RemoteOperationOutcome};
 use sdk::{
     cosmwasm_std::{Addr, Event},
     testing,
@@ -79,7 +79,10 @@ fn error_routes_immediately_to_terminal() {
         &mut test_case.app,
         &controller,
         &lease,
-        RemoteLeaseCallback::OperationErr(reason),
+        RemoteLeaseCallback {
+            nonce: 0,
+            outcome: RemoteOperationOutcome::OperationErr(reason),
+        },
     );
 
     // an error must NOT re-emit the leg - it parks immediately
@@ -323,7 +326,10 @@ fn buy_asset_timeout_reemits_unbounded() {
             &mut test_case.app,
             &controller,
             &lease,
-            RemoteLeaseCallback::OperationTimeout,
+            RemoteLeaseCallback {
+                nonce: 0,
+                outcome: RemoteOperationOutcome::OperationTimeout,
+            },
         );
     }
 
@@ -348,7 +354,10 @@ fn buy_asset_error_reemits() {
         &mut test_case.app,
         &controller,
         &lease,
-        RemoteLeaseCallback::OperationErr(reason),
+        RemoteLeaseCallback {
+            nonce: 0,
+            outcome: RemoteOperationOutcome::OperationErr(reason),
+        },
     );
 
     assert_eq!(
@@ -504,7 +513,10 @@ fn assert_parks_after_budget(test_case: &mut LeaseTestCase, lease: &Addr, budget
             &mut test_case.app,
             &controller,
             lease,
-            RemoteLeaseCallback::OperationTimeout,
+            RemoteLeaseCallback {
+                nonce: 0,
+                outcome: RemoteOperationOutcome::OperationTimeout,
+            },
         );
         // each timeout within budget re-emits exactly one swap and the lease
         // keeps retrying (NOT parked yet)
@@ -527,7 +539,10 @@ fn assert_parks_after_budget(test_case: &mut LeaseTestCase, lease: &Addr, budget
         &mut test_case.app,
         &controller,
         lease,
-        RemoteLeaseCallback::OperationTimeout,
+        RemoteLeaseCallback {
+            nonce: 0,
+            outcome: RemoteOperationOutcome::OperationTimeout,
+        },
     );
     assert_eq!(
         swaps_at_budget,
@@ -546,7 +561,10 @@ fn exhaust_budget(test_case: &mut LeaseTestCase, lease: &Addr, budget: u8) {
             &mut test_case.app,
             &controller,
             lease,
-            RemoteLeaseCallback::OperationTimeout,
+            RemoteLeaseCallback {
+                nonce: 0,
+                outcome: RemoteOperationOutcome::OperationTimeout,
+            },
         );
     }
     assert_slippage_protection_activated(test_case, lease);

@@ -292,6 +292,7 @@ where
     fn on_remote_response(
         self,
         data: Binary,
+        _nonce: u64,
         querier: QuerierWrapper<'_>,
         env: Env,
     ) -> HandlerResult<Self> {
@@ -308,13 +309,19 @@ where
     fn on_remote_error(
         self,
         _response: ICAErrorResponse,
+        _nonce: u64,
         _querier: QuerierWrapper<'_>,
         _env: Env,
     ) -> HandlerResult<Self> {
         self.absorb(ABSORB_REMOTE_ERROR).into()
     }
 
-    fn on_remote_timeout(self, querier: QuerierWrapper<'_>, env: Env) -> HandlerResult<Self> {
+    fn on_remote_timeout(
+        self,
+        _nonce: u64,
+        querier: QuerierWrapper<'_>,
+        env: Env,
+    ) -> HandlerResult<Self> {
         let state_label = self.spec.label();
         timeout::on_timeout_retry(self, state_label, querier, env).into()
     }
@@ -325,8 +332,11 @@ where
     /// absorbed error acknowledgment. See the module doc of
     /// [`RemoteSwap`][super::remote_swap::RemoteSwap] for the
     /// duplicate-acknowledgment risk a heal issued while the original
-    /// operation is still resolvable creates - with no payload to
-    /// cross-check, this transport is credulous to it by construction.
+    /// operation is still resolvable creates. `RemoteSwap` now closes that
+    /// window with a per-emission nonce; this payload-less transport does
+    /// not yet carry one - its adoption is deferred to the remaining
+    /// ibc-solray#142 phases - so it stays credulous to the risk by
+    /// construction until it does.
     fn heal(
         self,
         _querier: QuerierWrapper<'_>,
@@ -576,7 +586,7 @@ mod tests {
         let querier = QuerierWrapper::new(&mock_querier);
 
         let (response, node) =
-            continued(started().on_remote_response(ok_payload(), querier, testing::mock_env()));
+            continued(started().on_remote_response(ok_payload(), 0, querier, testing::mock_env()));
         assert_eq!(transfer_response(&coin2(70), 1), response);
         assert_acks_left(1, &node);
     }
@@ -588,7 +598,7 @@ mod tests {
         let env = testing::mock_env();
 
         let node = after_first_ack(querier);
-        let resp = match node.on_remote_response(ok_payload(), querier, env.clone()) {
+        let resp = match node.on_remote_response(ok_payload(), 0, querier, env.clone()) {
             HandlerResult::Continue(Ok(resp)) => resp,
             HandlerResult::Continue(Err(err)) => panic!("expected a continuation, got {err}"),
             HandlerResult::Finished(_result) => panic!("expected a continuation, got a finish"),
@@ -606,7 +616,7 @@ mod tests {
         node.spec.set_received(true);
         assert_eq!(
             mock::FINISH_RESULT,
-            finished(node.on_remote_response(ok_payload(), querier, testing::mock_env()))
+            finished(node.on_remote_response(ok_payload(), 0, querier, testing::mock_env()))
         );
     }
 
@@ -619,6 +629,7 @@ mod tests {
 
         let (response, node) = continued(started().on_remote_error(
             ICAErrorResponse::from(String::from("transfer failed")),
+            0,
             querier,
             testing::mock_env(),
         ));
@@ -632,7 +643,7 @@ mod tests {
         let querier = QuerierWrapper::new(&mock_querier);
         let env = testing::mock_env();
 
-        let (response, node) = continued(started().on_remote_timeout(querier, env.clone()));
+        let (response, node) = continued(started().on_remote_timeout(0, querier, env.clone()));
         assert_eq!(timeout_response(&coin1(100), &env), response);
         assert_acks_left(2, &node);
     }
@@ -644,6 +655,7 @@ mod tests {
 
         let (response, node) = continued(started().on_remote_response(
             Binary::from(b"garbage".as_slice()),
+            0,
             querier,
             testing::mock_env(),
         ));
@@ -658,6 +670,7 @@ mod tests {
 
         let (response, node) = continued(started().on_remote_response(
             Binary::from(mock::WRONG_VARIANT_PAYLOAD),
+            0,
             querier,
             testing::mock_env(),
         ));
@@ -724,7 +737,7 @@ mod tests {
 
     fn after_first_ack(querier: QuerierWrapper<'_>) -> Node {
         let (_response, node) =
-            continued(started().on_remote_response(ok_payload(), querier, testing::mock_env()));
+            continued(started().on_remote_response(ok_payload(), 0, querier, testing::mock_env()));
         node
     }
 

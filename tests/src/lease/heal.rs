@@ -9,7 +9,7 @@ use lease::{
     error::ContractError,
 };
 use remote_lease::{
-    callback::RemoteLeaseCallback,
+    callback::{RemoteLeaseCallback, RemoteOperationOutcome},
     response::{TransferOutResponse, WireOperationResponse},
 };
 use sdk::{
@@ -105,9 +105,12 @@ fn swap_on_repay() {
     );
     assert_repay_swap_in_flight(&test_case, &lease);
 
-    let wrong_variant = RemoteLeaseCallback::OperationOk(WireOperationResponse::TransferOut(
-        TransferOutResponse {},
-    ));
+    let wrong_variant = RemoteLeaseCallback {
+        nonce: 0,
+        outcome: RemoteOperationOutcome::OperationOk(WireOperationResponse::TransferOut(
+            TransferOutResponse {},
+        )),
+    };
     let absorbed = stub::inject_callback(&mut test_case.app, &controller, &lease, wrong_variant);
     expect_attribute(
         &absorbed.events,

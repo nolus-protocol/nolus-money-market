@@ -4,6 +4,20 @@ pub use remote_lease_wire::callback::{OPERATION_ERR_MAX_BYTES, RemoteErrorMessag
 
 use crate::response::WireOperationResponse;
 
+/// A remote operation outcome paired with the nonce of the emission it
+/// resolves.
+///
+/// The controller reads `nonce` back from its own committed outbound packet
+/// on ack/timeout (never from the counterparty's reply) and returns it here,
+/// so the addressee lease can credit the outcome to the exact in-flight
+/// emission and reject a duplicate, stale, or heal-superseded callback.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[serde(deny_unknown_fields, rename_all = "snake_case")]
+pub struct RemoteLeaseCallback {
+    pub nonce: u64,
+    pub outcome: RemoteOperationOutcome,
+}
+
 /// Outcome of a remote operation as reported back to the Nolus controller.
 ///
 /// `OperationOk` carries the wire-shaped response verbatim when Solana
@@ -19,7 +33,7 @@ use crate::response::WireOperationResponse;
 /// side until the channel times out).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
-pub enum RemoteLeaseCallback {
+pub enum RemoteOperationOutcome {
     OperationOk(WireOperationResponse),
     OperationErr(RemoteErrorMessage),
     OperationTimeout,

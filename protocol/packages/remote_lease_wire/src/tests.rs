@@ -14,7 +14,9 @@ use serde::de::DeserializeOwned;
 
 use crate::{
     PORT_PREFIX, VERSION,
-    callback::{OPERATION_ERR_MAX_BYTES, RemoteErrorMessage, RemoteLeaseCallback},
+    callback::{
+        OPERATION_ERR_MAX_BYTES, RemoteErrorMessage, RemoteLeaseCallback, RemoteOperationOutcome,
+    },
     coin::WireCoin,
     envelope::{LeaseAddrOnWire, PacketEnvelope},
     error::Error,
@@ -110,13 +112,13 @@ fn transfer_out_response_serde() {
 #[test]
 fn callback_operation_ok_serde() {
     let value =
-        RemoteLeaseCallback::OperationOk(OperationResponse::CloseLease(CloseLeaseResponse {}));
+        RemoteOperationOutcome::OperationOk(OperationResponse::CloseLease(CloseLeaseResponse {}));
     assert_round_trip_eq(r#"{"operation_ok":{"close_lease":{}}}"#, &value);
 }
 
 #[test]
 fn callback_operation_err_serde() {
-    let value = RemoteLeaseCallback::OperationErr(
+    let value = RemoteOperationOutcome::OperationErr(
         RemoteErrorMessage::new("dex pool drained").expect("short message must be accepted"),
     );
     assert_round_trip_eq(r#"{"operation_err":"dex pool drained"}"#, &value);
@@ -124,7 +126,7 @@ fn callback_operation_err_serde() {
 
 #[test]
 fn callback_operation_timeout_serde() {
-    let value = RemoteLeaseCallback::OperationTimeout;
+    let value = RemoteOperationOutcome::OperationTimeout;
     assert_round_trip_eq(r#""operation_timeout""#, &value);
 }
 
@@ -160,7 +162,7 @@ fn callback_error_message_from_static_accepted() {
     assert_eq!("timeout", value.as_str());
     assert_round_trip_eq(
         r#"{"operation_err":"timeout"}"#,
-        &RemoteLeaseCallback::OperationErr(value),
+        &RemoteOperationOutcome::OperationErr(value),
     );
 }
 
@@ -175,6 +177,23 @@ fn callback_error_message_from_static_over_cap_panics_in_debug() {
     let _ = RemoteErrorMessage::from_static(over_cap);
 }
 
+// AC (#636): the callback wraps a per-emission `nonce` alongside the outcome,
+// so the controller can correlate an acknowledgment to the exact packet that
+// solicited it; the nonce round-trips on the wire.
+#[test]
+fn callback_round_trips_with_nonce() {
+    let value = RemoteLeaseCallback {
+        nonce: 7,
+        outcome: RemoteOperationOutcome::OperationOk(OperationResponse::CloseLease(
+            CloseLeaseResponse {},
+        )),
+    };
+    assert_round_trip_eq(
+        r#"{"nonce":7,"outcome":{"operation_ok":{"close_lease":{}}}}"#,
+        &value,
+    );
+}
+
 // ---------------------------------------------------------------------------
 // 4. PacketEnvelope — round-trip + literal JSON
 // ---------------------------------------------------------------------------
@@ -185,9 +204,10 @@ fn packet_envelope_serde() {
         lease: LeaseAddrOnWire::new("nolus1leaseaddr"),
         operation: Operation::CloseLease(CloseLeaseParams {}),
         version: ProtocolVersion,
+        nonce: 0,
     };
     assert_round_trip_eq(
-        r#"{"lease":"nolus1leaseaddr","operation":{"close_lease":{}},"version":"nls-remote-lease.v1"}"#,
+        r#"{"lease":"nolus1leaseaddr","operation":{"close_lease":{}},"version":"nls-remote-lease.v1","nonce":0}"#,
         &value,
     );
 }
@@ -210,6 +230,34 @@ fn packet_envelope_missing_version_rejected() {
 fn lease_addr_on_wire_round_trip_is_bare_string() {
     let value = LeaseAddrOnWire::new("nolus1leaseaddr");
     assert_round_trip_eq(r#""nolus1leaseaddr""#, &value);
+}
+
+// AC (#636): the envelope carries a per-emission `nonce` as its last field
+// (after `version`); a non-zero nonce round-trips byte-identically so the
+// Solana side can echo it back unchanged on the acknowledgment.
+#[test]
+fn packet_envelope_round_trips_with_nonce() {
+    let value = PacketEnvelope {
+        lease: LeaseAddrOnWire::new("nolus1leaseaddr"),
+        operation: Operation::CloseLease(CloseLeaseParams {}),
+        version: ProtocolVersion,
+        nonce: 7,
+    };
+    assert_round_trip_eq(
+        r#"{"lease":"nolus1leaseaddr","operation":{"close_lease":{}},"version":"nls-remote-lease.v1","nonce":7}"#,
+        &value,
+    );
+}
+
+// AC (#636): `nonce` is `#[serde(default)]`, so a payload that predates the
+// field — a legacy packet from a counterparty that has not yet upgraded —
+// decodes with `nonce == 0` rather than being rejected.
+#[test]
+fn packet_envelope_decodes_without_nonce_to_zero() {
+    let wire = r#"{"lease":"nolus1leaseaddr","operation":{"close_lease":{}},"version":"nls-remote-lease.v1"}"#;
+    let envelope: PacketEnvelope =
+        serde_json::from_str(wire).expect("a payload without nonce must default it to zero");
+    assert_eq!(0, envelope.nonce);
 }
 
 // ---------------------------------------------------------------------------

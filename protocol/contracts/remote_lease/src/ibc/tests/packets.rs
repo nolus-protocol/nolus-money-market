@@ -1,5 +1,7 @@
 use remote_lease::{
-    callback::{OPERATION_ERR_MAX_BYTES, RemoteErrorMessage, RemoteLeaseCallback},
+    callback::{
+        OPERATION_ERR_MAX_BYTES, RemoteErrorMessage, RemoteLeaseCallback, RemoteOperationOutcome,
+    },
     envelope::{LeaseAddrOnWire, PacketEnvelope},
     msg::{CloseLeaseParams, Operation},
     response::{
@@ -71,7 +73,10 @@ fn packet_ack_success_dispatches_operation_ok() {
 
     assert_dispatched_callback(
         &lease,
-        RemoteLeaseCallback::OperationOk(response),
+        RemoteLeaseCallback {
+            nonce: 0,
+            outcome: RemoteOperationOutcome::OperationOk(response),
+        },
         &res.messages,
     );
 }
@@ -94,9 +99,12 @@ fn packet_ack_error_dispatches_operation_err() {
 
     assert_dispatched_callback(
         &lease,
-        RemoteLeaseCallback::OperationErr(
-            RemoteErrorMessage::new(ERROR_MESSAGE).expect("test fixture under the cap"),
-        ),
+        RemoteLeaseCallback {
+            nonce: 0,
+            outcome: RemoteOperationOutcome::OperationErr(
+                RemoteErrorMessage::new(ERROR_MESSAGE).expect("test fixture under the cap"),
+            ),
+        },
         &res.messages,
     );
 }
@@ -114,7 +122,14 @@ fn packet_timeout_dispatches_operation_timeout() {
     )
     .unwrap();
 
-    assert_dispatched_callback(&lease, RemoteLeaseCallback::OperationTimeout, &res.messages);
+    assert_dispatched_callback(
+        &lease,
+        RemoteLeaseCallback {
+            nonce: 0,
+            outcome: RemoteOperationOutcome::OperationTimeout,
+        },
+        &res.messages,
+    );
 }
 
 #[test]
@@ -187,7 +202,10 @@ fn packet_ack_out_of_registry_ticker_dispatches_ok() {
 
     assert_dispatched_callback(
         &lease,
-        RemoteLeaseCallback::OperationOk(response),
+        RemoteLeaseCallback {
+            nonce: 0,
+            outcome: RemoteOperationOutcome::OperationOk(response),
+        },
         &res.messages,
     );
 }
@@ -228,10 +246,11 @@ fn dispatched_callback_wire_shape_pinned() {
     };
 
     // Pin the JSON the lease contract must accept. Any drift in the enum tag
-    // breaks the wire contract between this controller and the lease-side
-    // `ExecuteMsg::RemoteLeaseCallback` variant.
+    // or the `{ nonce, outcome }` envelope breaks the wire contract between
+    // this controller and the lease-side `ExecuteMsg::RemoteLeaseCallback`
+    // variant. The timeout fixture rides a zero nonce (`envelope_with_close_lease`).
     assert_eq!(
-        br#"{"remote_lease_callback":"operation_timeout"}"#,
+        br#"{"remote_lease_callback":{"nonce":0,"outcome":"operation_timeout"}}"#,
         msg.as_slice(),
     );
 }
@@ -243,6 +262,7 @@ fn packet_ack_malformed_lease_addr_in_envelope_errors() {
         lease: LeaseAddrOnWire::new("NOT_BECH32!"),
         operation: Operation::CloseLease(CloseLeaseParams {}),
         version: ProtocolVersion,
+        nonce: 0,
     };
     let envelope_bytes = cosmwasm_std::to_json_binary(&envelope).expect("envelope serialises");
     let response = WireOperationResponse::CloseLease(CloseLeaseResponse {});
@@ -265,6 +285,7 @@ fn packet_timeout_malformed_lease_addr_in_envelope_errors() {
         lease: LeaseAddrOnWire::new("NOT_BECH32!"),
         operation: Operation::CloseLease(CloseLeaseParams {}),
         version: ProtocolVersion,
+        nonce: 0,
     };
     let envelope_bytes = cosmwasm_std::to_json_binary(&envelope).expect("envelope serialises");
 
@@ -310,7 +331,10 @@ fn fixture_stdack_success_open_lease_decodes_to_callback() {
     .unwrap();
     assert_dispatched_callback(
         &lease,
-        RemoteLeaseCallback::OperationOk(response),
+        RemoteLeaseCallback {
+            nonce: 0,
+            outcome: RemoteOperationOutcome::OperationOk(response),
+        },
         &res.messages,
     );
 }
@@ -338,9 +362,12 @@ fn fixture_stdack_error_decodes_to_callback() {
     .unwrap();
     assert_dispatched_callback(
         &lease,
-        RemoteLeaseCallback::OperationErr(
-            RemoteErrorMessage::new(FIXTURE_ERROR_MESSAGE).expect("under the cap"),
-        ),
+        RemoteLeaseCallback {
+            nonce: 0,
+            outcome: RemoteOperationOutcome::OperationErr(
+                RemoteErrorMessage::new(FIXTURE_ERROR_MESSAGE).expect("under the cap"),
+            ),
+        },
         &res.messages,
     );
 }
@@ -363,11 +390,75 @@ fn packet_ack_oversized_error_message_errors() {
     assert!(matches!(err, Error::RemoteCallback(_)), "got {err:?}");
 }
 
+// AC (#636): on an acknowledgment the controller decodes the ORIGINAL outbound
+// packet's envelope and forwards its `nonce` into the dispatched
+// `RemoteLeaseCallback`, so the lease can correlate the ack to the exact packet
+// it emitted.
+#[test]
+fn packet_ack_forwards_envelope_nonce_into_callback() {
+    const NONCE: u64 = 7;
+
+    let mut deps = deps_with_config();
+    let lease = sdk_testing::user("lease-nonce-ack");
+    let envelope_bytes = encode_envelope(&envelope_with_nonce(&lease, NONCE));
+    let response = WireOperationResponse::CloseLease(CloseLeaseResponse {});
+    let ack_bytes = StdAck::Success(cosmwasm_std::to_json_binary(&response).unwrap()).to_binary();
+
+    let res = ibc_packet_ack(
+        deps.as_mut(),
+        testing::mock_env(),
+        ack_msg(envelope_bytes, ack_bytes),
+    )
+    .unwrap();
+
+    assert_dispatched_callback(
+        &lease,
+        RemoteLeaseCallback {
+            nonce: NONCE,
+            outcome: RemoteOperationOutcome::OperationOk(response),
+        },
+        &res.messages,
+    );
+}
+
+// AC (#636): on a timeout the controller likewise decodes the original
+// packet's envelope and forwards its `nonce` into the `OperationTimeout`
+// callback.
+#[test]
+fn packet_timeout_forwards_envelope_nonce_into_callback() {
+    const NONCE: u64 = 7;
+
+    let mut deps = deps_with_config();
+    let lease = sdk_testing::user("lease-nonce-timeout");
+    let envelope_bytes = encode_envelope(&envelope_with_nonce(&lease, NONCE));
+
+    let res = ibc_packet_timeout(
+        deps.as_mut(),
+        testing::mock_env(),
+        timeout_msg(envelope_bytes),
+    )
+    .unwrap();
+
+    assert_dispatched_callback(
+        &lease,
+        RemoteLeaseCallback {
+            nonce: NONCE,
+            outcome: RemoteOperationOutcome::OperationTimeout,
+        },
+        &res.messages,
+    );
+}
+
 fn envelope_with_close_lease(lease: &Addr) -> PacketEnvelope {
+    envelope_with_nonce(lease, 0)
+}
+
+fn envelope_with_nonce(lease: &Addr, nonce: u64) -> PacketEnvelope {
     PacketEnvelope {
         lease: LeaseAddrOnWire::new(lease.as_str()),
         operation: Operation::CloseLease(CloseLeaseParams {}),
         version: ProtocolVersion,
+        nonce,
     }
 }
 

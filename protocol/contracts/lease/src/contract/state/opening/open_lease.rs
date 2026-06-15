@@ -14,7 +14,7 @@ use platform::{
     state_machine::Response as StateMachineResponse,
 };
 use remote_lease::{
-    callback::{RemoteErrorMessage, RemoteLeaseCallback},
+    callback::{RemoteErrorMessage, RemoteLeaseCallback, RemoteOperationOutcome},
     msg::OpenLeaseParams,
     response::{OpenLeaseResponse, RemoteLeaseId, WireOperationResponse},
     stub::{ControllerInnerMessage, Factory},
@@ -218,12 +218,15 @@ impl Contract for OpenLease {
         querier: QuerierWrapper<'_>,
         env: Env,
     ) -> ContractResult<Response> {
+        // OpenLease is a single-shot operation with no duplicate-callback
+        // exposure to close, so its callback nonce is not yet correlated; the
+        // matching arrives when this flow converts to a remote leg.
         self.authz_callback(querier, &info)
-            .and_then(|()| match callback {
-                RemoteLeaseCallback::OperationOk(WireOperationResponse::OpenLease(
+            .and_then(|()| match callback.outcome {
+                RemoteOperationOutcome::OperationOk(WireOperationResponse::OpenLease(
                     OpenLeaseResponse { remote_lease_id },
                 )) => self.on_open_lease_ack(remote_lease_id, querier, &env),
-                RemoteLeaseCallback::OperationOk(_unexpected) => {
+                RemoteOperationOutcome::OperationOk(_unexpected) => {
                     // A success ack for a non-`OpenLease` operation can only
                     // come from a buggy or hostile counterparty. Returning
                     // `Err` here would revert the controller's
@@ -238,10 +241,10 @@ impl Contract for OpenLease {
                         RemoteErrorMessage::from_static(UNEXPECTED_OPERATION_REASON),
                     )
                 }
-                RemoteLeaseCallback::OperationErr(reason) => {
+                RemoteOperationOutcome::OperationErr(reason) => {
                     self.on_open_failed(querier, &env, reason)
                 }
-                RemoteLeaseCallback::OperationTimeout => self.on_open_failed(
+                RemoteOperationOutcome::OperationTimeout => self.on_open_failed(
                     querier,
                     &env,
                     RemoteErrorMessage::from_static(TIMEOUT_REASON),

@@ -48,7 +48,7 @@ use lease::{
     error::ContractError,
 };
 use remote_lease::{
-    callback::{RemoteErrorMessage, RemoteLeaseCallback},
+    callback::{RemoteErrorMessage, RemoteLeaseCallback, RemoteOperationOutcome},
     response::{TransferOutResponse, WireOperationResponse},
 };
 use sdk::{
@@ -336,5 +336,10 @@ fn open_and_close(test_case: &mut LeaseTestCase) -> Addr {
 }
 
 fn transfer_out_ack() -> RemoteLeaseCallback {
-    RemoteLeaseCallback::OperationOk(WireOperationResponse::TransferOut(TransferOutResponse {}))
+    RemoteLeaseCallback {
+        nonce: 0,
+        outcome: RemoteOperationOutcome::OperationOk(WireOperationResponse::TransferOut(
+            TransferOutResponse {},
+        )),
+    }
 }

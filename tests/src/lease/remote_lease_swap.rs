@@ -40,6 +40,12 @@
 //! - `out_of_registry_ticker_absorbed_at_lease` — a success ack naming a
 //!   ticker outside the currency registry passes the controller
 //!   wire-shaped and is absorbed at the lease (`undecodable-response`).
+//! - `duplicate_ack_not_miscredited` — replaying a leg's superseded nonce
+//!   after the sequence advances is absorbed (`nonce-mismatch`); no second
+//!   leg is mis-credited (#636).
+//! - `heal_race_original_ack_absorbed` — a `Heal()` re-emits with a fresh
+//!   nonce; the original packet's late ack (old nonce) is absorbed while the
+//!   healed re-emission's ack (new nonce) credits exactly once (#636).
 
 use currencies::PaymentGroup;
 use currency::{CurrencyDef, MemberOf};
@@ -55,7 +61,7 @@ use lease::api::{
     query::{StateResponse, opening::OngoingTrx as OpeningOngoingTrx},
 };
 use remote_lease::{
-    callback::RemoteLeaseCallback,
+    callback::{RemoteLeaseCallback, RemoteOperationOutcome},
     response::{
         OperationResponse, SwapResponse, Ticker, TransferOutResponse, WireCoin,
         WireOperationResponse, WireSwapResponse,
@@ -251,12 +257,15 @@ fn swap_ack_in_transfer_leg_absorbed() {
     // a swap acknowledgment arrives while both transfer acknowledgments
     // are still outstanding - it must neither error nor advance the
     // transfer countdown
-    let unexpected = RemoteLeaseCallback::OperationOk(
-        OperationResponse::Swap(SwapResponse {
-            amount_out: Coin::<LeaseCurrency>::new(1).into(),
-        })
-        .into(),
-    );
+    let unexpected = RemoteLeaseCallback {
+        nonce: 0,
+        outcome: RemoteOperationOutcome::OperationOk(
+            OperationResponse::Swap(SwapResponse {
+                amount_out: Coin::<LeaseCurrency>::new(1).into(),
+            })
+            .into(),
+        ),
+    };
     let injected = stub::inject_callback(&mut test_case.app, &controller, &lease, unexpected);
     expect_attribute(&injected.events, ABSORB_EVENT, "absorbed", "response");
     assert_transfers_pending(&test_case, lease.clone());
@@ -296,9 +305,12 @@ fn wrong_variant_callback_absorbed_then_heal_recovers() {
     let _response = transfer_funds(&mut test_case, &lease, DOWNPAYMENT);
     assert_eq!(2, opening_acks_left(&test_case, lease.clone()));
 
-    let wrong_variant = RemoteLeaseCallback::OperationOk(WireOperationResponse::TransferOut(
-        TransferOutResponse {},
-    ));
+    let wrong_variant = RemoteLeaseCallback {
+        nonce: 0,
+        outcome: RemoteOperationOutcome::OperationOk(WireOperationResponse::TransferOut(
+            TransferOutResponse {},
+        )),
+    };
     let injected = stub::inject_callback(&mut test_case.app, &controller, &lease, wrong_variant);
     expect_attribute(
         &injected.events,
@@ -329,6 +341,149 @@ fn wrong_variant_callback_absorbed_then_heal_recovers() {
     let _amount = opened_amount(&test_case, lease);
 }
 
+// AC (#636): a stale/duplicate ack must not be miscredited. The first leg's
+// ack credits normally and the sequence advances; replaying that leg's (now
+// superseded) nonce after the advance is absorbed with `nonce-mismatch` - no
+// second leg is mis-credited, the countdown and the recorded-swap set are
+// unchanged.
+#[test]
+fn duplicate_ack_not_miscredited() {
+    let (mut test_case, lease, controller) = start_open(DOWNPAYMENT);
+    stub::set_response_mode(
+        &mut test_case.app,
+        &controller,
+        op_tag::SWAP,
+        ResponseMode::Delayed,
+    );
+
+    let _response = transfer_funds(&mut test_case, &lease, DOWNPAYMENT);
+    assert_eq!(2, opening_acks_left(&test_case, lease.clone()));
+
+    // the first leg's ack credits normally and advances to the second leg
+    let _delivery = stub::deliver_pending_callback(&mut test_case.app, &controller, op_tag::SWAP);
+    assert_eq!(1, opening_acks_left(&test_case, lease.clone()));
+
+    let swaps_before = stub::recorded_swaps(&test_case.app, &controller, &lease).len();
+    let nonces = stub::recorded_swap_nonces(&test_case.app, &controller, &lease);
+    let stale_nonce = nonces[0];
+
+    // replay the first leg's now-superseded nonce with an otherwise-creditable
+    // amount: only the nonce check stops it from advancing the second leg
+    let duplicate = RemoteOperationOutcome::OperationOk(
+        OperationResponse::Swap(SwapResponse {
+            amount_out: Coin::<LeaseCurrency>::new(1_000).into(),
+        })
+        .into(),
+    );
+    let injected = stub::inject_callback_with_nonce(
+        &mut test_case.app,
+        &controller,
+        &lease,
+        stale_nonce,
+        duplicate,
+    );
+    expect_attribute(
+        &injected.events,
+        OPENING_SWAP_EVENT,
+        "absorbed",
+        "nonce-mismatch",
+    );
+
+    // no second leg mis-credited: the countdown and the recorded-swap set are
+    // untouched by the stale duplicate
+    assert_eq!(1, opening_acks_left(&test_case, lease.clone()));
+    assert_eq!(
+        swaps_before,
+        stub::recorded_swaps(&test_case.app, &controller, &lease).len()
+    );
+}
+
+// AC (#636) - core race: an operator Heal() re-emits the in-flight leg with a
+// fresh nonce. The ORIGINAL packet's late ack (old nonce) is then absorbed
+// while the healed re-emission's ack (new nonce) is credited - proving no
+// double-credit when a heal races a still-resolvable original packet.
+#[test]
+fn heal_race_original_ack_absorbed() {
+    let (mut test_case, lease, controller) = start_open(DOWNPAYMENT);
+    stub::set_response_mode(
+        &mut test_case.app,
+        &controller,
+        op_tag::SWAP,
+        ResponseMode::Delayed,
+    );
+
+    let _response = transfer_funds(&mut test_case, &lease, DOWNPAYMENT);
+    assert_eq!(2, opening_acks_left(&test_case, lease.clone()));
+    let original_nonce = stub::recorded_swap_nonces(&test_case.app, &controller, &lease)[0];
+
+    // the operator heals the still-in-flight leg, re-emitting it with a fresh
+    // nonce
+    let healed = test_case
+        .app
+        .execute(
+            testing::user(ADMIN),
+            lease.clone(),
+            &ExecuteMsg::Heal(),
+            &[],
+        )
+        .expect("heal must re-emit the in-flight leg")
+        .unwrap_response();
+    expect_attribute(&healed.events, OPENING_SWAP_EVENT, "heal", "re-emit");
+
+    let nonces = stub::recorded_swap_nonces(&test_case.app, &controller, &lease);
+    let healed_nonce = nonces[1];
+    assert!(
+        original_nonce < healed_nonce,
+        "heal must re-emit with a strictly greater nonce"
+    );
+
+    // the original packet's late ack carries the now-stale nonce → absorbed
+    let stale = RemoteOperationOutcome::OperationOk(
+        OperationResponse::Swap(SwapResponse {
+            amount_out: Coin::<LeaseCurrency>::new(1_000).into(),
+        })
+        .into(),
+    );
+    let injected = stub::inject_callback_with_nonce(
+        &mut test_case.app,
+        &controller,
+        &lease,
+        original_nonce,
+        stale,
+    );
+    expect_attribute(
+        &injected.events,
+        OPENING_SWAP_EVENT,
+        "absorbed",
+        "nonce-mismatch",
+    );
+    assert_eq!(2, opening_acks_left(&test_case, lease.clone()));
+
+    // the healed re-emission's ack (fresh nonce) credits exactly once. The
+    // amount must clear the healed leg's pinned floor (`min_out`), or production
+    // would treat it as under-min-out and re-emit instead of crediting - the
+    // amount a real counterparty pays is always at or above that floor.
+    let healed_floor = stub::recorded_swaps(&test_case.app, &controller, &lease)
+        .last()
+        .expect("the healed re-emission was recorded")
+        .min_out()
+        .amount();
+    let fresh = RemoteOperationOutcome::OperationOk(
+        OperationResponse::Swap(SwapResponse {
+            amount_out: Coin::<LeaseCurrency>::new(healed_floor).into(),
+        })
+        .into(),
+    );
+    let _credited = stub::inject_callback_with_nonce(
+        &mut test_case.app,
+        &controller,
+        &lease,
+        healed_nonce,
+        fresh,
+    );
+    assert_eq!(1, opening_acks_left(&test_case, lease.clone()));
+}
+
 // The controller forwards success acks wire-shaped (issue #637): a ticker
 // outside the currency registry reaches the lease, whose typed decode fails
 // and absorbs the callback - the controller's ack tx commits.
@@ -345,10 +500,14 @@ fn out_of_registry_ticker_absorbed_at_lease() {
     let _response = transfer_funds(&mut test_case, &lease, DOWNPAYMENT);
     assert_eq!(2, opening_acks_left(&test_case, lease.clone()));
 
-    let alien_ticker =
-        RemoteLeaseCallback::OperationOk(WireOperationResponse::Swap(WireSwapResponse {
-            amount_out: WireCoin::new(42, Ticker::new("NOT_IN_REGISTRY")),
-        }));
+    let alien_ticker = RemoteLeaseCallback {
+        nonce: 0,
+        outcome: RemoteOperationOutcome::OperationOk(WireOperationResponse::Swap(
+            WireSwapResponse {
+                amount_out: WireCoin::new(42, Ticker::new("NOT_IN_REGISTRY")),
+            },
+        )),
+    };
     let injected = stub::inject_callback(&mut test_case.app, &controller, &lease, alien_ticker);
     expect_attribute(
         &injected.events,
