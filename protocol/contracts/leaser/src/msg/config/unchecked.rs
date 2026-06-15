@@ -63,6 +63,7 @@ mod test {
         );
 
         let max_slippages = MaxSlippages {
+            opening: MaxSlippage::unchecked(Percent100::from_permille(100)), // (100%-10%) of 10 LPN = 9 LPN != 0 LPN
             liquidation: MaxSlippage::unchecked(Percent100::from_permille(200)), // (100%-20%) of 10 LPN = 8 LPN != 0 LPN
         };
 
@@ -95,7 +96,40 @@ mod test {
         );
 
         let max_slippages = MaxSlippages {
+            opening: MaxSlippage::unchecked(Percent100::from_permille(100)),
             liquidation: MaxSlippage::unchecked(Percent100::from_percent(91)), //(100%-91%) of 10 LPN = 0.9 LPN == 0 LPN
+        };
+
+        assert!(
+            platform_tests::ser_de::<_, ValidatedConfig>(&NonvalidatedConfig {
+                lease_interest_rate_margin: INTEREST_RATE_MARGIN,
+                lease_position_spec: spec,
+                lease_due_period: DUE_PERIOD,
+                lease_max_slippages: max_slippages,
+            })
+            .is_err()
+        );
+    }
+
+    #[test]
+    fn read_invalid_opening() {
+        let spec = PositionSpecDTO::new(
+            Liability::new(
+                Percent100::from_percent(65),
+                Percent100::from_percent(70),
+                Percent100::from_percent(73),
+                Percent100::from_percent(75),
+                Percent100::from_percent(78),
+                Percent100::from_percent(80),
+                Duration::from_hours(1),
+            ),
+            tests::lpn_coin_dto(1000),
+            tests::lpn_coin_dto(10),
+        );
+
+        let max_slippages = MaxSlippages {
+            opening: MaxSlippage::unchecked(Percent100::from_percent(91)), //(100%-91%) of 10 LPN = 0.9 LPN == 0 LPN
+            liquidation: MaxSlippage::unchecked(Percent100::from_permille(200)),
         };
 
         assert!(

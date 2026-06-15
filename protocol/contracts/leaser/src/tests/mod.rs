@@ -36,6 +36,7 @@ pub(crate) fn new_config() -> NewConfig {
         ),
         lease_due_period: Duration::from_secs(100),
         lease_max_slippages: MaxSlippages {
+            opening: MaxSlippage::unchecked(Percent100::from_percent(10)),
             liquidation: MaxSlippage::unchecked(Percent100::from_percent(13)),
         },
     }
@@ -70,6 +71,7 @@ fn dummy_instantiate_msg() -> InstantiateMsg {
         lease_interest_rate_margin: Percent100::from_percent(3),
         lease_due_period: Duration::from_days(14),
         lease_max_slippages: MaxSlippages {
+            opening: MaxSlippage::unchecked(Percent100::from_percent(15)),
             liquidation: MaxSlippage::unchecked(Percent100::from_percent(20)),
         },
         lease_admin: Addr::unchecked("lease_admin_XYZ"),

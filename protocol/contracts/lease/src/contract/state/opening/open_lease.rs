@@ -111,12 +111,10 @@ impl OpenLease {
         querier: QuerierWrapper<'_>,
         _env: &Env,
     ) -> ContractResult<Response> {
-        // The liquidation bound doubles as the opening-swap bound until a
-        // dedicated opening max-slippage limit gets introduced.
         self.deps
             .3
             .max_slippage(querier)
-            .map(|max_slippages| max_slippages.liquidation)
+            .map(|max_slippages| max_slippages.opening)
             .map(|max_slippage| {
                 let next = super::buy_asset::start(
                     self.new_lease,

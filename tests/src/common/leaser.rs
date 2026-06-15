@@ -75,6 +75,7 @@ impl Instantiator {
             lease_interest_rate_margin: Instantiator::INTEREST_RATE_MARGIN,
             lease_due_period: Instantiator::REPAYMENT_PERIOD,
             lease_max_slippages: MaxSlippages {
+                opening: MaxSlippage::unchecked(Instantiator::MAX_SLIPPAGE),
                 liquidation: MaxSlippage::unchecked(Instantiator::MAX_SLIPPAGE),
             },
         }
@@ -121,6 +122,7 @@ impl Instantiator {
             lease_position_spec: Self::position_spec(),
             lease_due_period: Self::REPAYMENT_PERIOD,
             lease_max_slippages: MaxSlippages {
+                opening: MaxSlippage::unchecked(Self::MAX_SLIPPAGE),
                 liquidation: MaxSlippage::unchecked(Self::MAX_SLIPPAGE),
             },
             lease_admin: testing::user(LEASE_ADMIN),

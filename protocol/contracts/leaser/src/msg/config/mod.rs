@@ -30,7 +30,12 @@ impl NewConfig {
             self.lease_max_slippages
                 .liquidation
                 .min_out(min_transaction)
-                .is_zero(),
+                .is_zero()
+                || self
+                    .lease_max_slippages
+                    .opening
+                    .min_out(min_transaction)
+                    .is_zero(),
             "The min output from a dex transaction of the min transaction amount should be positive",
         )
     }
