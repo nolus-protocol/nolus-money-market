@@ -32,6 +32,14 @@ use crate::{
 };
 
 const CONTRACT_STORAGE_VERSION: VersionSegment = 0;
+
+/// Envelope nonce for operations that are not yet callback-correlated.
+///
+/// Only the `Swap` operation carries a per-emission nonce today (issue #636);
+/// the single-packet `OpenLease`/`CloseLease`/`TransferOut` flows have no
+/// duplicate-callback exposure to close, so they ride a zero nonce until they
+/// convert in the remaining ibc-solray#142 phases.
+const NO_NONCE: u64 = 0;
 const CURRENT_RELEASE: ProtocolPackageRelease = ProtocolPackageRelease::current(
     package_name!(),
     package_version!(),
@@ -124,6 +132,7 @@ pub fn execute(
             info.sender,
             Operation::OpenLease(params),
             timeout,
+            NO_NONCE,
         ),
         ExecuteMsg::CloseLease { params, timeout } => send_operation(
             deps,
@@ -131,16 +140,27 @@ pub fn execute(
             info.sender,
             Operation::CloseLease(params),
             timeout,
+            NO_NONCE,
         ),
-        ExecuteMsg::Swap { params, timeout } => {
-            send_operation(deps, &env, info.sender, Operation::Swap(params), timeout)
-        }
+        ExecuteMsg::Swap {
+            params,
+            timeout,
+            nonce,
+        } => send_operation(
+            deps,
+            &env,
+            info.sender,
+            Operation::Swap(params),
+            timeout,
+            nonce,
+        ),
         ExecuteMsg::TransferOut { params, timeout } => send_operation(
             deps,
             &env,
             info.sender,
             Operation::TransferOut(params),
             timeout,
+            NO_NONCE,
         ),
     }
     .map(response::response_only_messages)
@@ -221,6 +241,7 @@ fn send_operation(
     caller: Addr,
     operation: Operation,
     timeout: Duration,
+    nonce: u64,
 ) -> Result<PlatformResponse> {
     let DepsMut {
         storage, querier, ..
@@ -232,6 +253,7 @@ fn send_operation(
             lease,
             operation,
             timeout,
+            nonce,
         )
     })
 }
@@ -256,11 +278,13 @@ fn build_packet(
     lease: Addr,
     operation: Operation,
     timeout: Duration,
+    nonce: u64,
 ) -> Result<PlatformResponse> {
     let envelope = PacketEnvelope {
         lease: LeaseAddrOnWire::new(lease),
         operation,
         version: ProtocolVersion,
+        nonce,
     };
     cosmwasm_std::to_json_binary(&envelope)
         .map_err(Error::from)

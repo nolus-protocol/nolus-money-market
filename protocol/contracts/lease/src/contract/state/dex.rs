@@ -8,7 +8,7 @@ use platform::{
     state_machine,
 };
 use remote_lease::{
-    callback::{RemoteErrorMessage, RemoteLeaseCallback},
+    callback::{RemoteErrorMessage, RemoteLeaseCallback, RemoteOperationOutcome},
     response::WireOperationResponse,
 };
 use sdk::cosmwasm_std::{self, Binary, Env, MessageInfo, QuerierWrapper, Reply};
@@ -177,15 +177,16 @@ where
         querier: QuerierWrapper<'_>,
         env: Env,
     ) -> ContractResult<Response> {
-        match callback {
-            RemoteLeaseCallback::OperationOk(response) => {
-                self.deliver_remote_ok(&response, querier, env)
+        let RemoteLeaseCallback { nonce, outcome } = callback;
+        match outcome {
+            RemoteOperationOutcome::OperationOk(response) => {
+                self.deliver_remote_ok(&response, nonce, querier, env)
             }
-            RemoteLeaseCallback::OperationErr(message) => {
-                self.deliver_remote_err(&message, querier, env)
+            RemoteOperationOutcome::OperationErr(message) => {
+                self.deliver_remote_err(&message, nonce, querier, env)
             }
-            RemoteLeaseCallback::OperationTimeout => {
-                self.handler.on_remote_timeout(querier, env).into()
+            RemoteOperationOutcome::OperationTimeout => {
+                self.handler.on_remote_timeout(nonce, querier, env).into()
             }
         }
     }
@@ -193,23 +194,30 @@ where
     fn deliver_remote_ok(
         self,
         response: &WireOperationResponse,
+        nonce: u64,
         querier: QuerierWrapper<'_>,
         env: Env,
     ) -> ContractResult<Response> {
         cosmwasm_std::to_json_binary(response)
             .map_err(Into::into)
-            .and_then(|data| self.handler.on_remote_response(data, querier, env).into())
+            .and_then(|data| {
+                self.handler
+                    .on_remote_response(data, nonce, querier, env)
+                    .into()
+            })
     }
 
     fn deliver_remote_err(
         self,
         message: &RemoteErrorMessage,
+        nonce: u64,
         querier: QuerierWrapper<'_>,
         env: Env,
     ) -> ContractResult<Response> {
         self.handler
             .on_remote_error(
                 ICAErrorResponse::from(message.as_str().to_owned()),
+                nonce,
                 querier,
                 env,
             )

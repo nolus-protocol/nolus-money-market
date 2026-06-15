@@ -1,5 +1,5 @@
 use remote_lease::{
-    callback::RemoteLeaseCallback,
+    callback::{RemoteLeaseCallback, RemoteOperationOutcome},
     response::{OpenLeaseResponse, RemoteLeaseId, WireOperationResponse},
 };
 use sdk::{
@@ -51,7 +51,10 @@ fn scenario_open_channel_through_ack_dispatches_callback() {
 
     assert_callback_to(
         &sdk_testing::user(LEASE),
-        RemoteLeaseCallback::OperationOk(response),
+        RemoteLeaseCallback {
+            nonce: 0,
+            outcome: RemoteOperationOutcome::OperationOk(response),
+        },
         &res.messages,
     );
 }

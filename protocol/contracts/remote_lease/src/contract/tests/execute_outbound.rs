@@ -36,7 +36,7 @@ fn open_lease_emits_send_packet() {
         },
     )
     .unwrap();
-    assert_send_packet(&Operation::OpenLease(params), &res.messages);
+    assert_send_packet(&Operation::OpenLease(params), 0, &res.messages);
 }
 
 #[test]
@@ -56,11 +56,13 @@ fn close_lease_emits_send_packet() {
         },
     )
     .unwrap();
-    assert_send_packet(&Operation::CloseLease(params), &res.messages);
+    assert_send_packet(&Operation::CloseLease(params), 0, &res.messages);
 }
 
 #[test]
 fn swap_emits_send_packet() {
+    const SWAP_NONCE: u64 = 7;
+
     let mut deps = deps_with_lease();
     instantiate_default(deps.as_mut());
     store_open_channel(deps.as_mut());
@@ -73,10 +75,11 @@ fn swap_emits_send_packet() {
         ExecuteMsg::Swap {
             params: params.clone(),
             timeout: PACKET_TIMEOUT,
+            nonce: SWAP_NONCE,
         },
     )
     .unwrap();
-    assert_send_packet(&Operation::Swap(params), &res.messages);
+    assert_send_packet(&Operation::Swap(params), SWAP_NONCE, &res.messages);
 }
 
 #[test]
@@ -96,7 +99,7 @@ fn transfer_out_emits_send_packet() {
         },
     )
     .unwrap();
-    assert_send_packet(&Operation::TransferOut(params), &res.messages);
+    assert_send_packet(&Operation::TransferOut(params), 0, &res.messages);
 }
 
 #[test]
@@ -182,7 +185,7 @@ fn sample_transfer_out_params() -> TransferOutParams {
         .expect("sample uses a non-zero amount")
 }
 
-fn assert_send_packet(expected_operation: &Operation, messages: &[SubMsg]) {
+fn assert_send_packet(expected_operation: &Operation, expected_nonce: u64, messages: &[SubMsg]) {
     assert_eq!(1, messages.len(), "expected exactly one outbound message");
     match &messages[0].msg {
         CosmosMsg::Ibc(IbcMsg::SendPacket {
@@ -199,6 +202,7 @@ fn assert_send_packet(expected_operation: &Operation, messages: &[SubMsg]) {
             );
             assert_eq!(expected_operation, &envelope.operation);
             assert_eq!(ProtocolVersion, envelope.version);
+            assert_eq!(expected_nonce, envelope.nonce);
         }
         other => panic!("expected CosmosMsg::Ibc(IbcMsg::SendPacket {{..}}), got {other:?}"),
     }

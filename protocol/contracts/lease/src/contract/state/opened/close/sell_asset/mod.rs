@@ -247,13 +247,18 @@ where
         &self,
         coin_in: &CoinDTO<Self::InG>,
         min_out: &CoinDTO<Self::OutG>,
+        nonce: u64,
     ) -> dex::DexResult<Batch> {
         SwapParams::new(coin_in.into_super_group(), min_out.into_super_group())
             .map_err(DexError::remote_swap_client)
             .and_then(|params| {
                 ControllerLease::new(&self.lease.lease.remote_lease_controller)
                     .swap(params, SwapParams::TIMEOUT, |params, timeout| {
-                        ControllerExecuteMsg::Swap { params, timeout }
+                        ControllerExecuteMsg::Swap {
+                            params,
+                            timeout,
+                            nonce,
+                        }
                     })
                     .map_err(Into::into)
             })
@@ -318,6 +323,7 @@ enum ControllerExecuteMsg {
     Swap {
         params: SwapParams,
         timeout: Duration,
+        nonce: u64,
     },
 }
 

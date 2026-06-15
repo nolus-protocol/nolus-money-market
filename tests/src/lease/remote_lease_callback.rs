@@ -22,7 +22,7 @@ use lease::{
     error::ContractError,
 };
 use remote_lease::{
-    callback::{RemoteErrorMessage, RemoteLeaseCallback},
+    callback::{RemoteErrorMessage, RemoteLeaseCallback, RemoteOperationOutcome},
     response::{CloseLeaseResponse, WireOperationResponse},
 };
 use sdk::{
@@ -50,7 +50,10 @@ fn rejects_mismatched_sender_at_swap_state() {
         &mut test_case.app,
         &lease,
         testing::user(common::USER),
-        RemoteLeaseCallback::OperationTimeout,
+        RemoteLeaseCallback {
+            nonce: 0,
+            outcome: RemoteOperationOutcome::OperationTimeout,
+        },
     );
 
     let contract_err = err
@@ -69,13 +72,17 @@ fn rejects_mismatched_sender_at_swap_state() {
 fn operation_timeout_retries_the_in_flight_leg() {
     let (mut test_case, lease) = drive_to_swap_pending();
     let controller = controller_addr(&test_case);
+    let nonce = in_flight_nonce(&test_case, &controller, &lease);
 
     let response = test_case
         .app
         .execute(
             controller,
             lease.clone(),
-            &ExecuteMsg::RemoteLeaseCallback(RemoteLeaseCallback::OperationTimeout),
+            &ExecuteMsg::RemoteLeaseCallback(RemoteLeaseCallback {
+                nonce,
+                outcome: RemoteOperationOutcome::OperationTimeout,
+            }),
             &[],
         )
         .expect("authorised OperationTimeout must re-emit the leg and return Ok")
@@ -88,6 +95,7 @@ fn operation_timeout_retries_the_in_flight_leg() {
 fn operation_err_retries_the_in_flight_leg() {
     let (mut test_case, lease) = drive_to_swap_pending();
     let controller = controller_addr(&test_case);
+    let nonce = in_flight_nonce(&test_case, &controller, &lease);
     let payload = RemoteErrorMessage::new("solana side rejected").expect("within the length cap");
 
     let response = test_case
@@ -95,7 +103,10 @@ fn operation_err_retries_the_in_flight_leg() {
         .execute(
             controller,
             lease.clone(),
-            &ExecuteMsg::RemoteLeaseCallback(RemoteLeaseCallback::OperationErr(payload)),
+            &ExecuteMsg::RemoteLeaseCallback(RemoteLeaseCallback {
+                nonce,
+                outcome: RemoteOperationOutcome::OperationErr(payload),
+            }),
             &[],
         )
         .expect("authorised OperationErr must re-emit the leg and return Ok")
@@ -108,6 +119,7 @@ fn operation_err_retries_the_in_flight_leg() {
 fn non_swap_operation_ok_is_absorbed() {
     let (mut test_case, lease) = drive_to_swap_pending();
     let controller = controller_addr(&test_case);
+    let nonce = in_flight_nonce(&test_case, &controller, &lease);
     let payload = WireOperationResponse::CloseLease(CloseLeaseResponse {});
 
     let response = test_case
@@ -115,7 +127,10 @@ fn non_swap_operation_ok_is_absorbed() {
         .execute(
             controller,
             lease.clone(),
-            &ExecuteMsg::RemoteLeaseCallback(RemoteLeaseCallback::OperationOk(payload)),
+            &ExecuteMsg::RemoteLeaseCallback(RemoteLeaseCallback {
+                nonce,
+                outcome: RemoteOperationOutcome::OperationOk(payload),
+            }),
             &[],
         )
         .expect("a non-swap success ack must be absorbed, committing the controller's tx")
@@ -182,6 +197,14 @@ fn assert_swap_pending(test_case: &LeaseTestCase, lease: Addr) {
 
 fn controller_addr(test_case: &LeaseTestCase) -> Addr {
     test_case.address_book.remote_lease_controller().clone()
+}
+
+/// The nonce the in-flight swap leg was last emitted with (#636): a callback
+/// must carry it to be credited rather than absorbed as `nonce-mismatch`.
+fn in_flight_nonce(test_case: &LeaseTestCase, controller: &Addr, lease: &Addr) -> u64 {
+    *stub::recorded_swap_nonces(&test_case.app, controller, lease)
+        .last()
+        .expect("the in-flight swap leg must have recorded a nonce")
 }
 
 fn send_callback(

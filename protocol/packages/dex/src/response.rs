@@ -126,9 +126,14 @@ where
     /// the counterparty controller's acknowledgment transaction and strand
     /// the relayer, while advancing the current leg would corrupt its
     /// progress. Only legs that schedule remote operations override this.
+    ///
+    /// `nonce` is the per-emission identifier the controller read back from the
+    /// original outbound packet; overriding handlers match it against the
+    /// in-flight emission. The absorbing default ignores it.
     fn on_remote_response(
         self,
         _data: Binary,
+        _nonce: u64,
         _querier: QuerierWrapper<'_>,
         _env: Env,
     ) -> Result<Self>
@@ -140,10 +145,12 @@ where
 
     /// The entry point of a remote, non-ICA counterparty error
     ///
-    /// See [`Handler::on_remote_response`] for the absorbing default.
+    /// See [`Handler::on_remote_response`] for the absorbing default and the
+    /// `nonce` semantics.
     fn on_remote_error(
         self,
         _response: ICAErrorResponse,
+        _nonce: u64,
         _querier: QuerierWrapper<'_>,
         _env: Env,
     ) -> Result<Self>
@@ -155,8 +162,9 @@ where
 
     /// The entry point of a remote, non-ICA counterparty timeout
     ///
-    /// See [`Handler::on_remote_response`] for the absorbing default.
-    fn on_remote_timeout(self, _querier: QuerierWrapper<'_>, _env: Env) -> Result<Self>
+    /// See [`Handler::on_remote_response`] for the absorbing default and the
+    /// `nonce` semantics.
+    fn on_remote_timeout(self, _nonce: u64, _querier: QuerierWrapper<'_>, _env: Env) -> Result<Self>
     where
         Self: Into<Self::Response>,
     {

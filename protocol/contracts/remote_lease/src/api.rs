@@ -49,9 +49,16 @@ pub enum ExecuteMsg {
         timeout: Duration,
     },
     /// Outbound `Swap` packet. See [`ExecuteMsg::OpenLease`] for `timeout` semantics.
+    ///
+    /// `nonce` is the lease's per-emission correlation identifier; it rides the
+    /// packet envelope and is returned in the callback so the lease can match
+    /// the acknowledgment to the exact in-flight leg. `#[serde(default)]` keeps
+    /// it optional at decode for callers that predate the field.
     Swap {
         params: SwapParams,
         timeout: Duration,
+        #[serde(default)]
+        nonce: u64,
     },
     /// Outbound `TransferOut` packet. See [`ExecuteMsg::OpenLease`] for `timeout` semantics.
     TransferOut {

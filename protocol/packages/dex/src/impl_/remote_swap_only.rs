@@ -30,6 +30,22 @@ where
 
 pub type StartSwapState<SwapTask> = RemoteSwap<SwapTask, State<SwapTask>>;
 
+#[cfg(test)]
+impl<SwapTask> State<SwapTask>
+where
+    SwapTask: SwapTaskT,
+{
+    /// The in-flight nonce of whichever inner node currently drives the
+    /// composite, so a test can thread the current packet's nonce into the
+    /// callbacks it forwards.
+    fn in_flight_nonce(&self) -> u64 {
+        match self {
+            State::RemoteSwap(inner) => inner.in_flight_nonce(),
+            State::SlippageAnomaly(inner) => inner.in_flight_nonce(),
+        }
+    }
+}
+
 /// Build the workflow's entry state over the swap specification
 ///
 /// Folds the coins already in the output currency and schedules the first
@@ -207,15 +223,16 @@ mod impl_handler {
         fn on_remote_response(
             self,
             data: Binary,
+            nonce: u64,
             querier: QuerierWrapper<'_>,
             env: Env,
         ) -> Result<Self> {
             match self {
                 State::RemoteSwap(inner) => {
-                    Handler::on_remote_response(inner, data, querier, env).map_into()
+                    Handler::on_remote_response(inner, data, nonce, querier, env).map_into()
                 }
                 State::SlippageAnomaly(inner) => {
-                    Handler::on_remote_response(inner, data, querier, env).map_into()
+                    Handler::on_remote_response(inner, data, nonce, querier, env).map_into()
                 }
             }
         }
@@ -223,26 +240,32 @@ mod impl_handler {
         fn on_remote_error(
             self,
             response: ICAErrorResponse,
+            nonce: u64,
             querier: QuerierWrapper<'_>,
             env: Env,
         ) -> Result<Self> {
             match self {
                 State::RemoteSwap(inner) => {
-                    Handler::on_remote_error(inner, response, querier, env).map_into()
+                    Handler::on_remote_error(inner, response, nonce, querier, env).map_into()
                 }
                 State::SlippageAnomaly(inner) => {
-                    Handler::on_remote_error(inner, response, querier, env).map_into()
+                    Handler::on_remote_error(inner, response, nonce, querier, env).map_into()
                 }
             }
         }
 
-        fn on_remote_timeout(self, querier: QuerierWrapper<'_>, env: Env) -> Result<Self> {
+        fn on_remote_timeout(
+            self,
+            nonce: u64,
+            querier: QuerierWrapper<'_>,
+            env: Env,
+        ) -> Result<Self> {
             match self {
                 State::RemoteSwap(inner) => {
-                    Handler::on_remote_timeout(inner, querier, env).map_into()
+                    Handler::on_remote_timeout(inner, nonce, querier, env).map_into()
                 }
                 State::SlippageAnomaly(inner) => {
-                    Handler::on_remote_timeout(inner, querier, env).map_into()
+                    Handler::on_remote_timeout(inner, nonce, querier, env).map_into()
                 }
             }
         }
@@ -374,10 +397,12 @@ mod test {
         let querier = QuerierWrapper::new(&mock_querier);
 
         let state = after_first_ack(querier);
+        let nonce = state.in_flight_nonce();
         assert_eq!(
             coin_out(120),
             finished(state.on_remote_response(
                 payload(&coin_out(40)),
+                nonce,
                 querier,
                 testing::mock_env()
             ))
@@ -422,10 +447,12 @@ mod test {
             serialized,
             sdk::cosmwasm_std::to_json_vec(&restored).expect("a serializable arm"),
         );
+        let nonce = restored.in_flight_nonce();
         assert_eq!(
             coin_out(120),
             finished(restored.on_remote_response(
                 payload(&coin_out(40)),
+                nonce,
                 querier,
                 testing::mock_env(),
             ))
@@ -444,8 +471,10 @@ mod test {
         spec.set_floor(ANOMALY_FLOOR);
         let (_response, state) = continued(start(spec, &testing::mock_env(), querier).map_into());
 
+        let nonce = state.in_flight_nonce();
         let (response, _state) = continued(state.on_remote_response(
             payload(&coin_out(ANOMALY_FLOOR - 1)),
+            nonce,
             querier,
             testing::mock_env(),
         ));
@@ -468,8 +497,11 @@ mod test {
         let mock_querier = MockQuerier::default();
         let querier = QuerierWrapper::new(&mock_querier);
 
-        let (response, state) = continued(after_first_ack(querier).on_remote_error(
+        let state = after_first_ack(querier);
+        let nonce = state.in_flight_nonce();
+        let (response, state) = continued(state.on_remote_error(
             ICAErrorResponse::from(String::from("swap reverted")),
+            nonce,
             querier,
             testing::mock_env(),
         ));
@@ -492,8 +524,11 @@ mod test {
         let mock_querier = MockQuerier::default();
         let querier = QuerierWrapper::new(&mock_querier);
 
-        let (_response, parked) = continued(after_first_ack(querier).on_remote_error(
+        let state = after_first_ack(querier);
+        let nonce = state.in_flight_nonce();
+        let (_response, parked) = continued(state.on_remote_error(
             ICAErrorResponse::from(String::from("swap reverted")),
+            nonce,
             querier,
             testing::mock_env(),
         ));
@@ -508,8 +543,10 @@ mod test {
         );
         assert!(matches!(restored, State::SlippageAnomaly(_)));
 
+        let nonce = restored.in_flight_nonce();
         let (_response, still_parked) = continued(restored.on_remote_response(
             payload(&coin_out(40)),
+            nonce,
             querier,
             testing::mock_env(),
         ));
@@ -569,7 +606,14 @@ mod test {
     fn after_first_ack(querier: QuerierWrapper<'_>) -> State<MockSpec> {
         let (_response, state) =
             continued(start(spec3(), &testing::mock_env(), querier).map_into());
-        continued(state.on_remote_response(payload(&coin_out(30)), querier, testing::mock_env())).1
+        let nonce = state.in_flight_nonce();
+        continued(state.on_remote_response(
+            payload(&coin_out(30)),
+            nonce,
+            querier,
+            testing::mock_env(),
+        ))
+        .1
     }
 
     fn spec3() -> MockSpec {

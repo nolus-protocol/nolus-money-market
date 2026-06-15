@@ -19,7 +19,7 @@ use currencies::{
 use finance::coin::Coin;
 
 use remote_lease::{
-    callback::{RemoteErrorMessage, RemoteLeaseCallback},
+    callback::{RemoteErrorMessage, RemoteLeaseCallback, RemoteOperationOutcome},
     envelope::{LeaseAddrOnWire, PacketEnvelope},
     msg::{CloseLeaseParams, OpenLeaseParams, Operation, SwapParams, TransferOutParams},
     response::{
@@ -30,8 +30,10 @@ use remote_lease::{
 };
 
 use remote_lease_wire::{
-    callback::RemoteLeaseCallback as WireCallback, envelope::PacketEnvelope as WireEnvelope,
-    msg::Operation as WireOperation, response::OperationResponse as WireResponse,
+    callback::{RemoteLeaseCallback as WireCallback, RemoteOperationOutcome as WireOutcome},
+    envelope::PacketEnvelope as WireEnvelope,
+    msg::Operation as WireOperation,
+    response::OperationResponse as WireResponse,
 };
 
 #[test]
@@ -86,32 +88,51 @@ fn response_transfer_out_byte_identical() {
 
 #[test]
 fn callback_operation_ok_byte_identical() {
-    let typed = RemoteLeaseCallback::OperationOk(WireResponse::CloseLease(CloseLeaseResponse {}));
-    assert_cross_surface_eq::<RemoteLeaseCallback, WireCallback>(&typed);
+    let typed =
+        RemoteOperationOutcome::OperationOk(WireResponse::CloseLease(CloseLeaseResponse {}));
+    assert_cross_surface_eq::<RemoteOperationOutcome, WireOutcome>(&typed);
 }
 
 #[test]
 fn callback_operation_err_byte_identical() {
-    let typed = RemoteLeaseCallback::OperationErr(
+    let typed = RemoteOperationOutcome::OperationErr(
         RemoteErrorMessage::new("dex pool drained").expect("short message"),
     );
-    assert_cross_surface_eq::<RemoteLeaseCallback, WireCallback>(&typed);
+    assert_cross_surface_eq::<RemoteOperationOutcome, WireOutcome>(&typed);
 }
 
 #[test]
 fn callback_operation_timeout_byte_identical() {
-    let typed = RemoteLeaseCallback::OperationTimeout;
-    assert_cross_surface_eq::<RemoteLeaseCallback, WireCallback>(&typed);
+    let typed = RemoteOperationOutcome::OperationTimeout;
+    assert_cross_surface_eq::<RemoteOperationOutcome, WireOutcome>(&typed);
 }
 
+// AC (#636): a NON-ZERO nonce on the envelope crosses the typed→JSON→wire→JSON
+// surface byte-identically, so field-order drift between the typed and wire
+// `PacketEnvelope` (nonce must be the last field, after `version`) is caught.
 #[test]
 fn packet_envelope_byte_identical() {
     let typed = PacketEnvelope {
         lease: LeaseAddrOnWire::new("nolus1leaseaddr"),
         operation: Operation::Swap(swap()),
         version: ProtocolVersion,
+        nonce: 7,
     };
     assert_cross_surface_eq::<PacketEnvelope, WireEnvelope>(&typed);
+}
+
+// AC (#636): a NON-ZERO nonce on the callback crosses the typed→wire surface
+// byte-identically, so the `{ nonce, outcome }` field order stays in lockstep
+// between the typed and wire `RemoteLeaseCallback`.
+#[test]
+fn callback_carries_nonce_byte_identical() {
+    let typed = RemoteLeaseCallback {
+        nonce: 7,
+        outcome: RemoteOperationOutcome::OperationOk(WireResponse::CloseLease(
+            CloseLeaseResponse {},
+        )),
+    };
+    assert_cross_surface_eq::<RemoteLeaseCallback, WireCallback>(&typed);
 }
 
 fn assert_cross_surface_eq<T, W>(typed: &T)

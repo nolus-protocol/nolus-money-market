@@ -1,5 +1,5 @@
 use remote_lease::{
-    callback::{RemoteErrorMessage, RemoteLeaseCallback},
+    callback::{RemoteErrorMessage, RemoteLeaseCallback, RemoteOperationOutcome},
     envelope::{NolusLeaseAddr, PacketEnvelope},
     response::WireOperationResponse,
 };
@@ -167,8 +167,8 @@ pub fn ibc_packet_ack(
         .and_then(|envelope| {
             cosmwasm_std::from_json::<StdAck>(&msg.acknowledgement.data)
                 .map_err(Error::from)
-                .and_then(ack_to_callback)
-                .and_then(|callback| dispatch_lease_callback(deps.api, envelope, callback))
+                .and_then(ack_to_outcome)
+                .and_then(|outcome| dispatch_lease_callback(deps.api, envelope, outcome))
         })
 }
 
@@ -181,7 +181,7 @@ pub fn ibc_packet_timeout(
     cosmwasm_std::from_json::<PacketEnvelope>(&msg.packet.data)
         .map_err(Error::from)
         .and_then(|envelope| {
-            dispatch_lease_callback(deps.api, envelope, RemoteLeaseCallback::OperationTimeout)
+            dispatch_lease_callback(deps.api, envelope, RemoteOperationOutcome::OperationTimeout)
         })
 }
 
@@ -189,13 +189,13 @@ pub fn ibc_packet_timeout(
 // validation belongs to the addressee lease, which absorbs content failures.
 // Erring here on a registry mismatch would make the relayer retry the ack
 // forever, turning counterparty content drift into a stuck packet.
-fn ack_to_callback(ack: StdAck) -> Result<RemoteLeaseCallback> {
+fn ack_to_outcome(ack: StdAck) -> Result<RemoteOperationOutcome> {
     match ack {
         StdAck::Success(data) => cosmwasm_std::from_json::<WireOperationResponse>(&data)
-            .map(RemoteLeaseCallback::OperationOk)
+            .map(RemoteOperationOutcome::OperationOk)
             .map_err(Error::from),
         StdAck::Error(message) => RemoteErrorMessage::new(message)
-            .map(RemoteLeaseCallback::OperationErr)
+            .map(RemoteOperationOutcome::OperationErr)
             .map_err(Error::from),
     }
 }
@@ -210,8 +210,12 @@ fn ack_to_callback(ack: StdAck) -> Result<RemoteLeaseCallback> {
 fn dispatch_lease_callback(
     api: &dyn Api,
     envelope: PacketEnvelope,
-    callback: RemoteLeaseCallback,
+    outcome: RemoteOperationOutcome,
 ) -> Result<IbcBasicResponse> {
+    let callback = RemoteLeaseCallback {
+        nonce: envelope.nonce,
+        outcome,
+    };
     envelope
         .lease
         .into_validated(api)
