@@ -42,6 +42,7 @@ fn privileged() {
     let mut new_config = Instantiator::new_config();
     new_config.lease_max_slippages.liquidation =
         MaxSlippage::unchecked(Percent100::from_permille(128));
+    new_config.lease_max_slippages.opening = MaxSlippage::unchecked(Percent100::from_permille(96));
 
     let expected_slippages = new_config.lease_max_slippages;
 

@@ -16,6 +16,7 @@ use versioning::ProtocolPackageReleaseId;
 use crate::finance::LeaseCurrencies;
 pub use crate::state::config::Config;
 pub use config::NewConfig;
+pub(crate) use config::slippages_admit_min_transaction;
 
 mod config;
 

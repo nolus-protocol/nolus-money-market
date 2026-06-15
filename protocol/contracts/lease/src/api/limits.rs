@@ -17,5 +17,8 @@ pub enum PositionLimits {
 #[cfg_attr(feature = "skel_testing", derive(Debug))]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub struct MaxSlippages {
+    /// Bounds the opening swap — buying the lease asset at open.
+    pub opening: MaxSlippage,
+    /// Bounds the liquidation swap — a forced sell under time pressure.
     pub liquidation: MaxSlippage,
 }

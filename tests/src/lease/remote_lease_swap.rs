@@ -16,6 +16,10 @@
 //!   countdown observable via `OngoingTrx` between the acks.
 //! - `swap_delayed_ack_visible_in_query` — with `ResponseMode::Delayed`
 //!   the in-flight leg stays observable across block advances.
+//! - `opening_swap_pins_the_opening_bound` — a tightened
+//!   `MaxSlippages::opening` (below the unchanged liquidation bound) makes the
+//!   opening leg's floor match the opening bound, proving the swap reads
+//!   `opening`, not `liquidation`.
 //!
 //! Hardening drivers:
 //!
@@ -39,9 +43,12 @@
 
 use currencies::PaymentGroup;
 use currency::{CurrencyDef, MemberOf};
+use dex::MaxSlippage;
 use finance::{
     coin::{Coin, CoinDTO},
     duration::Duration,
+    percent::Percent100,
+    price,
 };
 use lease::api::{
     ExecuteMsg,
@@ -61,12 +68,14 @@ use sdk::{
 };
 
 use crate::common::{
-    self, ADMIN,
+    self, ADMIN, LEASE_ADMIN,
     remote_lease_controller_stub::{self as stub, ResponseMode, op_tag},
     test_case::TestCase,
 };
 
-use super::{DOWNPAYMENT, LeaseCoin, LeaseCurrency, LeaseTestCase, LpnCoin, LpnCurrency};
+use super::{
+    DOWNPAYMENT, LeaseCoin, LeaseCurrency, LeaseTestCase, LpnCoin, LpnCurrency, PaymentCurrency,
+};
 
 const OPENING_SWAP_EVENT: &str = "wasm-ls-open-swap";
 const ABSORB_EVENT: &str = "wasm-remote-callback";
@@ -348,6 +357,53 @@ fn out_of_registry_ticker_absorbed_at_lease() {
         "undecodable-response",
     );
     assert_eq!(2, opening_acks_left(&test_case, lease.clone()));
+}
+
+// The opening swap must bound itself by `MaxSlippages::opening`, not the
+// liquidation bound it borrowed before #639. Tighten only `opening` (leaving
+// liquidation at the fixture default), open, and assert the emitted opening
+// leg pins the opening-bound floor — a value the looser liquidation bound
+// could not produce.
+#[test]
+fn opening_swap_pins_the_opening_bound() {
+    const OPENING_SLIPPAGE: Percent100 = Percent100::from_permille(50);
+
+    let mut test_case = super::create_test_case::<PaymentCurrency>();
+    set_opening_slippage(&mut test_case, OPENING_SLIPPAGE);
+
+    let lease = super::try_init_lease(&mut test_case, DOWNPAYMENT, None);
+    let controller = test_case.address_book.remote_lease_controller().clone();
+    let exp_borrow = borrow_quote(&test_case, DOWNPAYMENT);
+
+    let _response = transfer_funds(&mut test_case, &lease, DOWNPAYMENT);
+
+    let swaps = stub::recorded_swaps(&test_case.app, &controller, &lease);
+    assert_eq!(2, swaps.len());
+    let borrow_quote_in_asset =
+        price::total(exp_borrow, super::price_lpn_of::<LeaseCurrency>().inv()).unwrap();
+    let opening_floor = CoinDTO::<PaymentGroup>::from(
+        MaxSlippage::unchecked(OPENING_SLIPPAGE).min_out(borrow_quote_in_asset),
+    );
+    let liquidation_floor =
+        CoinDTO::<PaymentGroup>::from(super::swap_min_out(borrow_quote_in_asset));
+
+    assert_eq!(&opening_floor, swaps[1].min_out());
+    assert_ne!(&liquidation_floor, swaps[1].min_out());
+}
+
+fn set_opening_slippage(test_case: &mut LeaseTestCase, opening: Percent100) {
+    let leaser_addr = test_case.address_book.leaser().clone();
+    let mut new_config = common::leaser::Instantiator::new_config();
+    new_config.lease_max_slippages.opening = MaxSlippage::unchecked(opening);
+    let _response = test_case
+        .app
+        .execute(
+            testing::user(LEASE_ADMIN),
+            leaser_addr,
+            &leaser::msg::ExecuteMsg::ConfigLeases(new_config),
+            &[],
+        )
+        .unwrap();
 }
 
 fn start_open<DownpaymentC>(downpayment: Coin<DownpaymentC>) -> (LeaseTestCase, Addr, Addr)
