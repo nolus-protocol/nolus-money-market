@@ -92,7 +92,7 @@ fn operation_timeout_retries_the_in_flight_leg() {
 }
 
 #[test]
-fn operation_err_retries_the_in_flight_leg() {
+fn operation_err_parks_the_in_flight_leg() {
     let (mut test_case, lease) = drive_to_swap_pending();
     let controller = controller_addr(&test_case);
     let nonce = in_flight_nonce(&test_case, &controller, &lease);
@@ -109,10 +109,15 @@ fn operation_err_retries_the_in_flight_leg() {
             }),
             &[],
         )
-        .expect("authorised OperationErr must re-emit the leg and return Ok")
+        .expect("authorised OperationErr must park the leg and return Ok")
         .unwrap_response();
-    expect_attribute(&response.events, OPENING_SWAP_EVENT, "timeout", "retry");
-    assert_swap_pending(&test_case, lease);
+    expect_attribute(
+        &response.events,
+        OPENING_SWAP_EVENT,
+        "anomaly",
+        "slippage-anomaly-parked",
+    );
+    assert_parked(&test_case, lease);
 }
 
 #[test]
@@ -192,6 +197,16 @@ fn assert_swap_pending(test_case: &LeaseTestCase, lease: Addr) {
             ..
         } => assert_eq!(1, acks_left),
         other => panic!("expected the in-flight swap leg, got {other:?}"),
+    }
+}
+
+fn assert_parked(test_case: &LeaseTestCase, lease: Addr) {
+    match super::state_query(test_case, lease) {
+        StateResponse::Opening {
+            in_progress: OpeningOngoingTrx::SlippageProtectionActivated,
+            ..
+        } => {}
+        other => panic!("expected the parked opening leg, got {other:?}"),
     }
 }
 
