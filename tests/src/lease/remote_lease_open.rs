@@ -35,7 +35,15 @@ fn open_lifecycle_happy_path() {
     let remote_lease = match state {
         StateResponse::Opening { in_progress, .. } => match in_progress {
             OpeningOngoingTrx::OpenLease { remote_lease } => remote_lease,
-            other => panic!("expected OngoingTrx::OpenLease, got {other:?}"),
+            // #638 (FM4): the parked opening terminal is a distinct opening
+            // sub-state; name it so the happy path's expectation stays exact
+            // and a future variant is not silently caught by a wildcard.
+            in_progress @ (OpeningOngoingTrx::RequestingOpenLease
+            | OpeningOngoingTrx::TransferOut { .. }
+            | OpeningOngoingTrx::BuyAsset { .. }
+            | OpeningOngoingTrx::SlippageProtectionActivated) => {
+                panic!("expected OngoingTrx::OpenLease, got {in_progress:?}")
+            }
         },
         other => panic!("expected StateResponse::Opening, got {other:?}"),
     };

@@ -8,14 +8,16 @@ use crate::{Account, AnomalyTreatment, error::Result as DexResult, slippage::Wit
 
 pub type CoinsNb = u8;
 
-/// How a remote swap leg escalates a slippage anomaly once its in-flight
-/// leg keeps failing - an error, or a timeout past the per-op retry budget.
+/// How a remote swap leg escalates once its in-flight leg keeps timing out
+/// past the per-op retry budget. An explicit swap *error* is an under-floor
+/// rejection and parks unconditionally; this policy governs the timeout path
+/// only.
 pub enum SlippageEscalation {
-    /// Park the leg at the slippage-anomaly terminal: opened legs freeze and
-    /// wait for an operator heal instead of retrying forever.
+    /// Park the leg at the slippage-anomaly terminal: the leg freezes and
+    /// waits for an operator heal instead of retrying forever.
     Park,
     /// Re-emit the in-flight leg verbatim, unbounded: the opening swap keeps
-    /// the legacy behaviour - it has no terminal in this phase.
+    /// re-driving a timed-out leg rather than parking it.
     ReEmit,
 }
 
@@ -67,9 +69,10 @@ where
     /// before the slippage-anomaly terminal is entered.
     fn timeout_retry_budget(&self) -> CoinsNb;
 
-    /// How a slippage anomaly on this task's in-flight leg escalates once the
-    /// retry budget is spent - parking the opened legs while the opening swap
-    /// keeps re-emitting verbatim.
+    /// How this task's in-flight leg escalates once the timeout retry budget
+    /// is spent - parking the opened legs while the opening swap keeps
+    /// re-emitting verbatim. An explicit swap error parks unconditionally and
+    /// does not consult this.
     fn slippage_escalation(&self) -> SlippageEscalation;
 
     /// Provide the coins, at least one, this swap is about.

@@ -341,16 +341,17 @@ fn buy_asset_timeout_reemits_unbounded() {
     assert_opening_swap_in_flight(&test_case, &lease);
 }
 
-/// An `OperationErr` on an opening-swap leg re-emits verbatim (the legacy
-/// error==timeout behaviour) - opening is byte-identical to today.
+/// An `OperationErr` on an opening-swap leg parks at the slippage-anomaly
+/// terminal instead of re-emitting (#638); the error and timeout paths are
+/// structurally separate - the opening timeout still re-emits unbounded.
 /// Regression guard.
 #[test]
-fn buy_asset_error_reemits() {
+fn buy_asset_error_parks() {
     let (mut test_case, lease, controller) = start_open_with_delayed_swap();
     let swaps_before = recorded_swap_count(&test_case, &lease);
 
     let reason = RemoteErrorMessage::new("opening swap failed").expect("within length cap");
-    let _reemit = stub::inject_callback(
+    let _parked = stub::inject_callback(
         &mut test_case.app,
         &controller,
         &lease,
@@ -361,11 +362,11 @@ fn buy_asset_error_reemits() {
     );
 
     assert_eq!(
-        swaps_before + 1,
+        swaps_before,
         recorded_swap_count(&test_case, &lease),
-        "an opening swap error must re-emit, not park"
+        "an opening swap error must park, not re-emit"
     );
-    assert_opening_swap_in_flight(&test_case, &lease);
+    assert_opening_parked(&test_case, &lease);
 }
 
 // === drivers =============================================================
@@ -665,6 +666,18 @@ fn assert_opening_swap_in_flight(test_case: &LeaseTestCase, lease: &Addr) {
             ..
         } => (),
         other => panic!("expected the opening swap in flight, got {other:?}"),
+    }
+}
+
+#[track_caller]
+fn assert_opening_parked(test_case: &LeaseTestCase, lease: &Addr) {
+    use lease::api::query::opening::OngoingTrx;
+    match super::state_query(test_case, lease.clone()) {
+        StateResponse::Opening {
+            in_progress: OngoingTrx::SlippageProtectionActivated,
+            ..
+        } => (),
+        other => panic!("expected the parked opening leg, got {other:?}"),
     }
 }
 

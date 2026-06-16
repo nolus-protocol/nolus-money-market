@@ -108,6 +108,12 @@ pub mod opening {
         BuyAsset {
             acks_left: u8,
         },
+        /// A swap leg hit a hard remote error and parked at the
+        /// slippage-anomaly terminal; the lease is pre-`Active` and an
+        /// operator `Heal` re-drives the pending leg. Distinct from
+        /// `BuyAsset`, whose `acks_left` means a leg is still in flight
+        /// rather than frozen.
+        SlippageProtectionActivated,
     }
 }
 

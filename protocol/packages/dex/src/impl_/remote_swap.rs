@@ -480,9 +480,10 @@ where
     Self: Into<SEnum>,
     SlippageAnomaly<SwapTask, SEnum>: Into<SEnum>,
 {
-    /// Escalate a spent in-flight leg per the spec's policy: park the opened
-    /// legs at the slippage-anomaly terminal, or re-emit the opening swap
-    /// verbatim.
+    /// Escalate a leg whose timeout retry budget is spent, per the spec's
+    /// policy: park the opened legs at the slippage-anomaly terminal, or
+    /// re-emit the opening swap verbatim. An explicit error never reaches
+    /// here - it parks unconditionally (see `on_remote_error`).
     fn escalate(self, querier: QuerierWrapper<'_>, env: Env) -> HandlerResult<Self> {
         match self.spec.slippage_escalation() {
             SlippageEscalation::ReEmit => self.reemit_in_flight(querier, env),
@@ -547,26 +548,26 @@ where
         }
     }
 
-    /// An error on the in-flight leg escalates immediately - there is no
-    /// retry budget for an explicit under-floor rejection. Opened legs park
-    /// at the slippage-anomaly terminal; the opening swap re-emits verbatim,
-    /// the legacy error-equals-timeout behaviour, and never parks.
+    /// An explicit error on the in-flight leg is an under-floor rejection: it
+    /// parks at the slippage-anomaly terminal unconditionally, with no retry
+    /// budget and without consulting the spec's timeout escalation policy. An
+    /// operator `heal` re-drives the parked leg.
     ///
     /// Anomalies are deliberately not routed through the spec's `on_anomaly`,
     /// whose `Retry` treatment rebuilds the node from the spec and would
-    /// re-issue the already-acknowledged legs. Only the in-flight leg is
-    /// re-emitted, preserving the accumulated progress.
+    /// re-issue the already-acknowledged legs. Only the in-flight leg's
+    /// accumulated progress carries into the terminal.
     fn on_remote_error(
         self,
         _response: ICAErrorResponse,
         nonce: u64,
-        querier: QuerierWrapper<'_>,
-        env: Env,
+        _querier: QuerierWrapper<'_>,
+        _env: Env,
     ) -> HandlerResult<Self> {
         if nonce != self.in_flight_nonce {
             return self.absorb(ABSORB_NONCE_MISMATCH).into();
         }
-        self.with_incremented_errors().escalate(querier, env)
+        self.with_incremented_errors().park()
     }
 
     /// A timeout re-emits the in-flight leg up to the spec's per-op retry
@@ -1379,6 +1380,75 @@ mod tests {
         assert_terminal(1, &coin_out(80), &min_out(), &terminal);
     }
 
+    /// #638 (TARGET): an explicit error parks UNCONDITIONALLY at the
+    /// node level - even for a spec whose `slippage_escalation()` is
+    /// `ReEmit` (the opening swap). An under-floor rejection is a slippage
+    /// anomaly regardless of the spec's timeout-escalation policy, so the
+    /// in-flight leg freezes at the terminal rather than re-emitting.
+    ///
+    /// FAILS against the current code (a `ReEmit` spec re-emits on error via
+    /// `escalate`); the #638 change routes `on_remote_error` straight to
+    /// `park`, ignoring the spec policy.
+    #[test]
+    fn error_parks_even_when_spec_reemits() {
+        let mock_querier = MockQuerier::default();
+        let querier = QuerierWrapper::new(&mock_querier);
+        let env = testing::mock_env();
+
+        let mut spec = spec3();
+        spec.set_reemit();
+        let (_response, node) = continued(Node::start(spec, &testing::mock_env(), querier));
+        let nonce = node.in_flight_nonce;
+        let (_response, node) = continued(node.on_remote_response(
+            payload(&coin_out(30)),
+            nonce,
+            querier,
+            testing::mock_env(),
+        ));
+
+        let nonce = node.in_flight_nonce;
+        let (response, terminal) = parked(node.on_remote_error(
+            ICAErrorResponse::from(String::from("opening swap under floor")),
+            nonce,
+            querier,
+            env,
+        ));
+        assert_eq!(parked_response(), response);
+        assert_terminal(1, &coin_out(80), &min_out(), &terminal);
+    }
+
+    /// #638 (D2 contrast): with a `ReEmit` spec a TIMEOUT still follows the
+    /// spec policy - it re-emits past the budget and never parks - while an
+    /// error parks (see `error_parks_even_when_spec_reemits`). Error and
+    /// timeout escalation are decoupled: the spec knob governs the
+    /// timeout-past-budget path only.
+    #[test]
+    fn timeout_reemits_when_spec_reemits() {
+        let mock_querier = MockQuerier::default();
+        let querier = QuerierWrapper::new(&mock_querier);
+
+        let mut spec = spec3();
+        spec.set_reemit();
+        let (_response, node) = continued(Node::start(spec, &testing::mock_env(), querier));
+        let nonce = node.in_flight_nonce;
+        let (_response, mut node) = continued(node.on_remote_response(
+            payload(&coin_out(30)),
+            nonce,
+            querier,
+            testing::mock_env(),
+        ));
+
+        // re-emit well past the budget - a `ReEmit` spec never parks on timeout
+        let rounds = u16::from(mock_budget()) + 3;
+        for _ in 0..rounds {
+            let nonce = node.in_flight_nonce;
+            let (_response, next) =
+                continued(node.on_remote_timeout(nonce, querier, testing::mock_env()));
+            node = next;
+        }
+        assert_node(1, &coin_out(80), &min_out(), &node);
+    }
+
     #[test]
     fn garbage_payload_absorbed_without_state_change() {
         let mock_querier = MockQuerier::default();
@@ -1480,8 +1550,10 @@ mod tests {
         assert_terminal(1, &coin_out(80), &min_out(), &terminal);
     }
 
-    /// The opening swap escalation re-emits past the budget instead of
-    /// parking - opening keeps the legacy unbounded behaviour.
+    /// The `ReEmit` timeout-escalation policy re-emits past the budget
+    /// instead of parking - the opening swap keeps the legacy unbounded
+    /// behaviour on TIMEOUT (an error, by contrast, parks unconditionally
+    /// after #638 - see `error_parks_even_when_spec_reemits`).
     #[test]
     fn reemit_escalation_never_parks() {
         let mock_querier = MockQuerier::default();
