@@ -284,10 +284,11 @@ gives no hint which applies — **query the lease state first**:
 
 ### 4.5 Idempotency — why `Heal` is safe to repeat
 
-Each swap leg carries a strictly-monotonic nonce, bumped on every emission/re-emission/
-`Heal`. On callback, a stale (smaller-nonce) packet's late ack is absorbed as
-`nonce-mismatch` and never double-credited. So `Heal` is **safe to repeat regardless of
-timing** — you need not wait for the original timeout.
+Each swap leg carries a per-emission nonce, incremented by one on every
+emission/re-emission/`Heal` (it saturates at `u64::MAX` — a bound unreachable in
+practice). On callback, a superseded packet's late ack carries a lower nonce and is
+absorbed as `nonce-mismatch`, never double-credited. So `Heal` is **safe to repeat
+regardless of timing** — you need not wait for the original timeout.
 
 **Caveat:** only `Swap` carries a real nonce; `OpenLease`/`CloseLease`/`TransferOut` use
 nonce `0` and rely on the IBC at-most-once single-packet property instead of nonce
