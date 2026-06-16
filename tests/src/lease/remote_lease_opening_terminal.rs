@@ -174,7 +174,12 @@ fn parked_opening_absorbs_late_acks() {
             ),
         },
     );
-    expect_attribute(&late_ok.events, OPENING_SWAP_EVENT, "absorbed", "parked-response");
+    expect_attribute(
+        &late_ok.events,
+        OPENING_SWAP_EVENT,
+        "absorbed",
+        "parked-response",
+    );
 
     // a late error of the original packet is absorbed too
     let reason = RemoteErrorMessage::new("late error").expect("within length cap");
@@ -187,7 +192,12 @@ fn parked_opening_absorbs_late_acks() {
             outcome: RemoteOperationOutcome::OperationErr(reason),
         },
     );
-    expect_attribute(&late_err.events, OPENING_SWAP_EVENT, "absorbed", "parked-error");
+    expect_attribute(
+        &late_err.events,
+        OPENING_SWAP_EVENT,
+        "absorbed",
+        "parked-error",
+    );
 
     // neither absorbed callback re-emitted or left the terminal
     assert_eq!(
@@ -308,7 +318,12 @@ fn heal_rejects_non_lease_admin() {
 
     let err = test_case
         .app
-        .execute(testing::user(ADMIN), lease.clone(), &ExecuteMsg::Heal(), &[])
+        .execute(
+            testing::user(ADMIN),
+            lease.clone(),
+            &ExecuteMsg::Heal(),
+            &[],
+        )
         .expect_err("a non-lease-admin heal of a parked opening lease must be rejected");
     assert!(
         matches!(
@@ -339,7 +354,12 @@ fn leg_one_error_parks_forward_only() {
         "leg 1 parks with no acked proceeds yet (total_out == 0)",
     );
 
-    inject_opening_error(&mut test_case, &controller, &lease, "downpayment leg under floor");
+    inject_opening_error(
+        &mut test_case,
+        &controller,
+        &lease,
+        "downpayment leg under floor",
+    );
 
     // forward-only park: a queryable terminal, NOT a refund / OpenFailed
     match super::state_query(&test_case, lease.clone()) {
@@ -392,7 +412,12 @@ fn nonce_interleave_stale_error_absorbed_current_error_parks() {
         stale_nonce,
         RemoteOperationOutcome::OperationErr(stale_reason),
     );
-    expect_attribute(&stale_err.events, OPENING_SWAP_EVENT, "absorbed", "nonce-mismatch");
+    expect_attribute(
+        &stale_err.events,
+        OPENING_SWAP_EVENT,
+        "absorbed",
+        "nonce-mismatch",
+    );
     assert_eq!(
         swaps_after_reemit,
         recorded_swap_count(&test_case, &lease),
