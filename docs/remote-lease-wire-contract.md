@@ -12,7 +12,7 @@ The `remote_lease` crate defines the IBC packet types exchanged between the Nolu
 
 ## Envelope
 
-`PacketEnvelope { lease: LeaseAddrOnWire, operation: Operation, version: ProtocolVersion }`. `deny_unknown_fields` everywhere. The lease address is wrapped in `LeaseAddrOnWire`; receivers must call `into_validated(api)` (CosmWasm) before treating it as an `Addr`.
+`PacketEnvelope { lease: LeaseAddrOnWire, operation: Operation, version: ProtocolVersion, nonce: u64 }`. `deny_unknown_fields` everywhere. The lease address is wrapped in `LeaseAddrOnWire`; receivers must call `into_validated(api)` (CosmWasm) before treating it as an `Addr`. `nonce` is the last field and `#[serde(default)]` — the lease's per-emission identifier, optional-at-decode so it requires no channel-version bump (see "Correlation nonce (#636)").
 
 ## Operations
 
@@ -25,7 +25,7 @@ Invariants are enforced both in constructors (`new`) and on the deserialiser pat
 
 ## Callback
 
-`RemoteLeaseCallback::{OperationOk(OperationResponse), OperationErr(RemoteErrorMessage), OperationTimeout}`. Timeout is structurally separate from error — recovery paths differ.
+`RemoteLeaseCallback { nonce: u64, outcome: RemoteOperationOutcome }`, where `RemoteOperationOutcome::{OperationOk(OperationResponse), OperationErr(RemoteErrorMessage), OperationTimeout}`. Timeout is structurally separate from error — recovery paths differ. The `nonce` carries the per-emission identifier back to the lease (see "Correlation nonce (#636)").
 
 ## Controller surface (Nolus side)
 
@@ -40,24 +40,28 @@ Each call:
 
 1. Authorises the sender against `Config.lease_code` — the caller must be a contract instance of the configured lease code id. Non-contract callers and contracts with a different code id collapse to a single `UnauthorisedCaller`; the controller does not distinguish them on the protocol surface.
 2. Loads the channel and rejects anything other than `Open` (absent → `ChannelNotOpen`, `Closing` → `ChannelNotOperational`).
-3. Wraps the operation in `PacketEnvelope { lease, operation, version }` and emits `IbcMsg::SendPacket` on the locally stored channel id.
+3. Wraps the operation in `PacketEnvelope { lease, operation, version, nonce }` and emits `IbcMsg::SendPacket` on the locally stored channel id.
 4. Sets the packet timeout to `env.block.time + timeout` — the caller owns its own retry cadence.
 
 ## Controller → Lease callback dispatch
 
-On `ibc_packet_ack` and `ibc_packet_timeout` the controller decodes the original packet's `PacketEnvelope`, builds the appropriate `RemoteLeaseCallback` variant, and forwards it to the originating lease via a plain `WasmMsg::Execute` — `add_message`, not `SubMsg::reply_*`. The dispatched payload is:
+On `ibc_packet_ack` and `ibc_packet_timeout` the controller decodes the original packet's `PacketEnvelope`, reads the `nonce` back from its own light-client-committed outbound packet (never from the counterparty's reply), builds the appropriate `RemoteOperationOutcome` variant, and forwards both as `RemoteLeaseCallback { nonce, outcome }` to the originating lease via a plain `WasmMsg::Execute` — `add_message`, not `SubMsg::reply_*`. The dispatched payload is:
 
 ```json
-{"remote_lease_callback": <RemoteLeaseCallback>}
+{"remote_lease_callback": {"nonce": N, "outcome": <RemoteOperationOutcome>}}
 ```
 
-mapping the IBC outcomes:
+mapping the IBC outcomes (the `nonce` is forwarded from the original packet's envelope in every case):
 
-- `StdAck::Success(data)` → `RemoteLeaseCallback::OperationOk(OperationResponse)` — decoded from `data` as the **wire shape only** (#637): the controller validates that the payload is a well-formed response, while currency-registry validation belongs to the addressee lease, which absorbs content failures so the ack commits.
-- `StdAck::Error(message)` → `RemoteLeaseCallback::OperationErr(RemoteErrorMessage)` (rejected if > 512 bytes).
-- timeout → `RemoteLeaseCallback::OperationTimeout` (unit; the original `Operation` is recoverable from the lease's own pending-state).
+- `StdAck::Success(data)` → `RemoteOperationOutcome::OperationOk(OperationResponse)` — decoded from `data` as the **wire shape only** (#637): the controller validates that the payload is a well-formed response, while currency-registry validation belongs to the addressee lease, which absorbs content failures so the ack commits.
+- `StdAck::Error(message)` → `RemoteOperationOutcome::OperationErr(RemoteErrorMessage)` (rejected if > 512 bytes).
+- timeout → `RemoteOperationOutcome::OperationTimeout` (unit; the original `Operation` is recoverable from the lease's own pending-state).
 
-The lease address travels with the packet (`envelope.lease`) — the controller keeps no per-packet correlation map. The lease contract authorises the call by querying its leaser (`QueryMsg::CheckRemoteLeaseCallbackPermission { by: info.sender }`); the leaser compares the caller against its protocol-wide `Config.remote_lease_controller`, set at leaser instantiation. That address is immutable — no `ExecuteMsg` or `SudoMsg` variant updates `remote_lease_controller` — so the live-query semantic is equivalent to a pin set at lease open. The controller does not retry on the lease's behalf. See ADR 0001 §3.7 in `nolus-protocol/ibc-solray` for the atomicity model.
+The lease address travels with the packet (`envelope.lease`) — the controller keeps no per-packet correlation map. The per-emission `nonce` also rides the envelope, so the controller still stores no correlation state of its own; it simply reads the nonce back from its committed outbound packet and forwards it, giving the lease emission-level correlation (so a duplicate, stale, or heal-superseded callback is rejected at the lease — see "Correlation nonce (#636)"). The lease contract authorises the call by querying its leaser (`QueryMsg::CheckRemoteLeaseCallbackPermission { by: info.sender }`); the leaser compares the caller against its protocol-wide `Config.remote_lease_controller`, set at leaser instantiation. That address is immutable — no `ExecuteMsg` or `SudoMsg` variant updates `remote_lease_controller` — so the live-query semantic is equivalent to a pin set at lease open. The controller does not retry on the lease's behalf. See ADR 0001 §3.7 in `nolus-protocol/ibc-solray` for the atomicity model.
+
+## Correlation nonce (#636)
+
+`PacketEnvelope.nonce` is a per-emission `u64` set by the lease — the lease's identifier for *this* emission of an operation. The controller never invents or stores it: on `ibc_packet_ack` / `ibc_packet_timeout` it reads the nonce back from its own light-client-committed outbound packet (**never** from the counterparty's reply) and returns it in `RemoteLeaseCallback { nonce, outcome }`. The lease's dex `RemoteSwap` node records the in-flight leg's nonce and absorbs — via a dedicated `nonce-mismatch` event — any callback whose nonce differs, collapsing duplicate, out-of-order, and heal-re-emission-race callbacks into one rejected class and making the operator `Heal()` idempotent (a stale late ack from a superseded emission lands on a nonce that no longer matches). Non-swap operations (`OpenLease` / `CloseLease` / `TransferOut`) ride a zero nonce for now. The field is `#[serde(default)]` and last in the envelope, so a counterparty that omits it decodes as nonce `0` — no channel-version bump.
 
 ## Design principle
 
