@@ -6,6 +6,8 @@ use sdk::cosmwasm_std::{Addr, CodeInfoResponse, ContractInfoResponse, QuerierWra
 
 use crate::{error::Error, result::Result};
 
+pub mod external;
+
 pub type CodeId = u64;
 
 /// Abstracts the platform specific validation of smart cotract codes and instances
@@ -69,8 +71,8 @@ impl Validator for CosmwasmValidator<'_> {
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
 #[serde(deny_unknown_fields, rename_all = "snake_case", transparent)]
 /// A valid Cosmwasm code that may be stored and transferred
-/// Not indended to be used in external APIs since there is no way to integrate validation on deserialization!
-/// Instead, use [CodeId], or Uint64, in APIs and [Code::try_new] to validate the input.
+/// Not intended to be used directly in external APIs since there is no way to integrate validation on deserialization!
+/// Instead, use [external::Code] in external APIs and [external::Code::try_validate] to validate the input.
 pub struct Code {
     id: CodeId,
 }
