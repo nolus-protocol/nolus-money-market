@@ -8,7 +8,7 @@ use finance::coin::Coin;
 use platform::{
     bank::{self, BankAccount, BankAccountView},
     batch::{Emit, Emitter},
-    contract::{self, Code, Validator},
+    contract::{self, Validator},
     error as platform_error,
     message::Response as PlatformResponse,
     response,
@@ -57,11 +57,10 @@ pub fn instantiate(
             .map_err(Into::into)
         })
         .and_then(|()| {
-            Code::try_new(
-                new_reserve.lease_code.into(),
-                &platform::contract::validator(deps.querier),
-            )
-            .map_err(Into::into)
+            new_reserve
+                .lease_code
+                .try_validate(&platform::contract::validator(deps.querier))
+                .map_err(Into::into)
         })
         .and_then(|lease_code| Config::new(lease_code).store(deps.storage))
         .map(|()| response::empty_response())

@@ -1,5 +1,9 @@
 use access_control::ContractOwnerAccess;
-use platform::{batch::Batch, response};
+use platform::{
+    batch::Batch,
+    contract::{self, CodeId},
+    response,
+};
 use sdk::{
     cosmwasm_ext::Response as CwResponse,
     cosmwasm_std::{
@@ -83,14 +87,16 @@ pub fn execute(
         } => {
             ensure_sender_is_owner(deps.storage, &info)?;
 
-            ExpectedInstantiation::new(code_id.u64(), expected_address).store(deps.storage)?;
+            let code_id = CodeId::from(code_id.try_validate(&contract::validator(deps.querier))?);
+
+            ExpectedInstantiation::new(code_id, expected_address).store(deps.storage)?;
 
             let mut batch: Batch = Batch::default();
 
             batch.schedule_execute_reply_on_success(
                 WasmMsg::Instantiate2 {
                     admin: Some(env.contract.address.into_string()),
-                    code_id: code_id.u64(),
+                    code_id,
                     label,
                     msg: Binary::new(message.into_bytes()),
                     funds: info.funds,
@@ -159,8 +165,9 @@ pub fn reply(deps: DepsMut<'_>, _: Env, msg: Reply) -> ContractResult<CwResponse
 pub fn query(deps: Deps<'_>, env: Env, msg: QueryMsg) -> ContractResult<Binary> {
     match msg {
         QueryMsg::InstantiateAddress { code_id, protocol } => {
-            let CodeInfoResponse { checksum, .. } =
-                deps.querier.query_wasm_code_info(code_id.u64())?;
+            let code_id = CodeId::from(code_id.try_validate(&contract::validator(deps.querier))?);
+
+            let CodeInfoResponse { checksum, .. } = deps.querier.query_wasm_code_info(code_id)?;
 
             let creator = deps.api.addr_canonicalize(env.contract.address.as_str())?;
 

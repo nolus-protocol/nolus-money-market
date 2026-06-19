@@ -5,7 +5,7 @@ use serde::Serialize;
 use access_control::ContractOwnerAccess;
 use lease::api::MigrateMsg as LeaseMigrateMsg;
 use platform::{
-    contract::{self, Code, CodeId, Validator},
+    contract::{self, Code, Validator, external},
     error as platform_error,
     message::Response as MessageResponse,
     reply, response,
@@ -300,12 +300,11 @@ fn check_no_leases(storage: &dyn Storage) -> ContractResult<()> {
     }
 }
 
-fn new_code<C, V>(new_code_id: C, addr_validator: &V) -> ContractResult<Code>
+fn new_code<V>(new_code_id: external::Code, addr_validator: &V) -> ContractResult<Code>
 where
-    C: Into<CodeId>,
     V: Validator,
 {
-    Code::try_new(new_code_id.into(), addr_validator).map_err(Into::into)
+    new_code_id.try_validate(addr_validator).map_err(Into::into)
 }
 
 fn migrate_msg(

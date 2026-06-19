@@ -12,9 +12,7 @@ use currencies::{
 };
 use cw_time::IntoInstant;
 
-use platform::{
-    bank, contract::Code, error as platform_error, message::Response as PlatformResponse, response,
-};
+use platform::{bank, error as platform_error, message::Response as PlatformResponse, response};
 use sdk::{
     cosmwasm_ext::Response as CwResponse,
     cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, QuerierWrapper, entry_point},
@@ -66,24 +64,22 @@ pub fn instantiate(
             .map_err(Into::into)
         })?;
 
-    Code::try_new(
-        msg.lease_code.into(),
-        &platform::contract::validator(deps.querier),
-    )
-    .map_err(Into::into)
-    .and_then(|lease_code| {
-        let config = ApiConfig::new(lease_code, msg.borrow_rate, msg.min_utilization);
-        Config::store(&config, deps.storage).map(|()| config)
-    })
-    .and_then(|ref config| {
-        LiquidityPool::<LpnCurrency, _>::new(
-            config,
-            &bank::account_view(&env.contract.address, deps.querier),
-        )
-        .save(deps.storage)
-    })
-    .map(|()| response::empty_response())
-    .inspect_err(platform_error::log(deps.api))
+    msg.lease_code
+        .try_validate(&platform::contract::validator(deps.querier))
+        .map_err(Into::into)
+        .and_then(|lease_code| {
+            let config = ApiConfig::new(lease_code, msg.borrow_rate, msg.min_utilization);
+            Config::store(&config, deps.storage).map(|()| config)
+        })
+        .and_then(|ref config| {
+            LiquidityPool::<LpnCurrency, _>::new(
+                config,
+                &bank::account_view(&env.contract.address, deps.querier),
+            )
+            .save(deps.storage)
+        })
+        .map(|()| response::empty_response())
+        .inspect_err(platform_error::log(deps.api))
 }
 
 #[entry_point]

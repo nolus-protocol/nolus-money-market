@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
-use platform::contract::CodeId;
-use sdk::cosmwasm_std::{Addr, Uint64};
+use platform::contract::external;
+use sdk::cosmwasm_std::Addr;
 use versioning::ReleaseId;
 
 pub use crate::contracts::{
@@ -25,13 +25,9 @@ pub struct MigrateMsg {}
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
-pub enum ExecuteMsg
-where
-    Uint64: Into<CodeId>,
-    CodeId: Into<Uint64>,
-{
+pub enum ExecuteMsg {
     Instantiate {
-        code_id: Uint64,
+        code_id: external::Code,
         expected_address: Addr,
         protocol: String,
         label: String,
@@ -73,13 +69,9 @@ pub struct MigrateContracts {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case", deny_unknown_fields)]
-pub enum QueryMsg
-where
-    Uint64: Into<CodeId>,
-    CodeId: Into<Uint64>,
-{
+pub enum QueryMsg {
     InstantiateAddress {
-        code_id: Uint64,
+        code_id: external::Code,
         protocol: String,
     },
     Protocols {},

@@ -1,7 +1,7 @@
-use platform::contract::{Code, CodeId};
+use platform::contract::{Code, CodeId, external};
 use sdk::{
     cosmwasm_std::{
-        OwnedDeps, SystemError, SystemResult, Uint64, WasmQuery,
+        OwnedDeps, SystemError, SystemResult, WasmQuery,
         testing::{self, MockApi, MockQuerier, MockStorage},
     },
     testing as sdk_testing,
@@ -31,7 +31,7 @@ fn proper_initialization() {
     assert_eq!(DEX_LABEL, config.dex_label);
     assert_eq!(TRANSFER_CHANNEL, config.transfer_channel);
     assert_eq!(
-        Uint64::from(CodeId::from(Code::unchecked(LEASE_CODE_ID))),
+        external::Code::from(CodeId::from(Code::unchecked(LEASE_CODE_ID))),
         config.lease_code_id,
     );
 

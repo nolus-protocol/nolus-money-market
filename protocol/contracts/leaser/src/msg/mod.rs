@@ -10,7 +10,8 @@ use finance::{
 use lease::api::{
     DownpaymentCoin, LeaseCoin, LpnCoinDTO, limits::MaxSlippages, open::PositionSpecDTO,
 };
-use sdk::cosmwasm_std::{Addr, Uint64};
+use platform::contract::external;
+use sdk::cosmwasm_std::Addr;
 use versioning::ProtocolPackageReleaseId;
 
 use crate::finance::LeaseCurrencies;
@@ -24,7 +25,7 @@ mod config;
 #[cfg_attr(feature = "testing", derive(Debug))]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub struct InstantiateMsg {
-    pub lease_code: Uint64,
+    pub lease_code: external::Code,
     pub lpp: Addr,
     pub profit: Addr,
     pub reserve: Addr,
@@ -78,8 +79,7 @@ pub enum ExecuteMsg {
     /// a continuation key with the same event and the procedure continues until
     /// no key is provided and 'wasm-migrate-leases.status=done'.
     MigrateLeases {
-        // Since this is an external system API we should not use [Code].
-        new_code_id: Uint64,
+        new_code_id: external::Code,
         /// The release ID the new lease code is part of.
         ///
         /// Most of the times this matches the release of the leaser.

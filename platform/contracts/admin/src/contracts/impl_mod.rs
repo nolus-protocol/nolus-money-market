@@ -1,6 +1,10 @@
 use serde::{Serialize, de::DeserializeOwned};
 
-use platform::{batch::Batch, message::Response as MessageResponse};
+use platform::{
+    batch::Batch,
+    contract::{self, CodeId, external},
+    message::Response as MessageResponse,
+};
 use sdk::cosmwasm_std::{self, Addr, Binary, QuerierWrapper, Storage, WasmMsg};
 use versioning::{
     MigrationMessage, PlatformPackageRelease, ProtocolPackageRelease, ProtocolPackageReleaseId,
@@ -62,7 +66,7 @@ where
     Package: UpdatablePackage + Serialize + DeserializeOwned,
     Package::ReleaseId: Serialize,
 {
-    schedule_migration_message::<Package>(
+    validate_and_schedule_migration::<Package>(
         querier,
         migration_batch,
         address.clone(),
@@ -71,13 +75,44 @@ where
         migrate_message,
     )
     .and_then(|()| {
-        post_migrate_execute.map_or(const { Ok(()) }, |post_migrate_execute_msg| {
-            schedule_execute_message(
-                post_migration_execute_batch,
+        schedule_post_migrate_execute(post_migration_execute_batch, address, post_migrate_execute)
+    })
+}
+
+fn validate_and_schedule_migration<Package>(
+    querier: QuerierWrapper<'_>,
+    migration_batch: &mut Batch,
+    address: Addr,
+    to_release: <Package as UpdatablePackage>::ReleaseId,
+    code_id: external::Code,
+    migrate_message: json_value::JsonValue,
+) -> Result<()>
+where
+    Package: UpdatablePackage + Serialize + DeserializeOwned,
+    Package::ReleaseId: Serialize,
+{
+    code_id
+        .try_validate(&contract::validator(querier))
+        .map_err(Into::into)
+        .and_then(|code_id| {
+            schedule_migration_message::<Package>(
+                querier,
+                migration_batch,
                 address,
-                post_migrate_execute_msg,
+                to_release,
+                CodeId::from(code_id),
+                migrate_message,
             )
         })
+}
+
+fn schedule_post_migrate_execute(
+    batch: &mut Batch,
+    address: Addr,
+    post_migrate_execute: Option<ExecuteSpec>,
+) -> Result<()> {
+    post_migrate_execute.map_or(const { Ok(()) }, |post_migrate_execute_msg| {
+        schedule_execute_message(batch, address, post_migrate_execute_msg)
     })
 }
 
@@ -284,7 +319,7 @@ fn schedule_migration_message<Package>(
     migration_batch: &mut Batch,
     address: Addr,
     to_release: <Package as UpdatablePackage>::ReleaseId,
-    code_id: cosmwasm_std::Uint64,
+    code_id: CodeId,
     migrate_message: json_value::JsonValue,
 ) -> Result<()>
 where
@@ -303,7 +338,7 @@ where
         .map(|message| {
             migration_batch.schedule_execute_no_reply(WasmMsg::Migrate {
                 contract_addr: address.into_string(),
-                new_code_id: code_id.u64(),
+                new_code_id: code_id,
                 msg: Binary::new(message),
             })
         })

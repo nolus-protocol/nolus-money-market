@@ -3,8 +3,8 @@ use serde::{Deserialize, Serialize};
 pub(crate) use currencies::Lpns as LpnCurrencies;
 use currency::CurrencyDTO;
 use finance::coin::CoinDTO;
-use platform::contract::{Code, CodeId};
-use sdk::cosmwasm_std::{Addr, Uint64};
+use platform::contract::{Code, CodeId, external};
+use sdk::cosmwasm_std::Addr;
 
 pub type LpnCurrencyDTO = CurrencyDTO<LpnCurrencies>;
 pub type LpnCoin = CoinDTO<LpnCurrencies>;
@@ -14,8 +14,7 @@ pub type LpnCoin = CoinDTO<LpnCurrencies>;
 pub struct InstantiateMsg {
     /// Unchecked address of the protocol admin user that can change the lease code Id and dump balances
     pub protocol_admin: String,
-    // Since this is an external system API we should not use [Code].
-    pub lease_code: Uint64,
+    pub lease_code: external::Code,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
@@ -53,7 +52,7 @@ pub enum QueryMsg {
 #[derive(Serialize, Deserialize, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "testing", derive(Debug))]
 pub struct ConfigResponse {
-    lease_code_id: Uint64,
+    lease_code_id: external::Code,
 }
 
 impl ConfigResponse {

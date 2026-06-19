@@ -4,9 +4,7 @@ use access_control::SingleUserAccess;
 use cosmwasm_std::Storage;
 use cw_time::{IntoInstant as _, IntoTimestamp as _};
 use finance::{duration::Duration, instant::Instant};
-use platform::{
-    contract::Code, error as platform_error, message::Response as PlatformResponse, response,
-};
+use platform::{error as platform_error, message::Response as PlatformResponse, response};
 use remote_lease::{
     envelope::{LeaseAddrOnWire, PacketEnvelope},
     msg::Operation,
@@ -71,11 +69,10 @@ pub fn instantiate(
             .map_err(Into::into)
         })
         .and_then(|()| {
-            Code::try_new(
-                new_controller.lease_code.into(),
-                &platform::contract::validator(deps.querier),
-            )
-            .map_err(Into::into)
+            new_controller
+                .lease_code
+                .try_validate(&platform::contract::validator(deps.querier))
+                .map_err(Into::into)
         })
         .and_then(|lease_code| {
             Config::new(
