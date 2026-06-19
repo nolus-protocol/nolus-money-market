@@ -1,9 +1,8 @@
 use serde::{Deserialize, Serialize};
 
 use finance::duration::Duration;
-use platform::contract::{Code, CodeId};
+use platform::contract::{Code, CodeId, external};
 use remote_lease::msg::{CloseLeaseParams, OpenLeaseParams, SwapParams, TransferOutParams};
-use sdk::cosmwasm_std::Uint64;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
@@ -17,8 +16,7 @@ pub struct InstantiateMsg {
     /// channel, in canonical `channel-<N>` form. Proposed to the counterparty in
     /// the lease channel's handshake version (ADR-0002 §3.3).
     pub transfer_channel: String,
-    // External system API — accept `Uint64`; the contract wraps it in `Code` after validation.
-    pub lease_code: Uint64,
+    pub lease_code: external::Code,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
@@ -85,7 +83,7 @@ pub struct ConfigResponse {
     pub connection_id: String,
     pub dex_label: String,
     pub transfer_channel: String,
-    pub lease_code_id: Uint64,
+    pub lease_code_id: external::Code,
 }
 
 impl ConfigResponse {
@@ -130,8 +128,10 @@ pub struct ChannelResponse {
 
 #[cfg(test)]
 mod test {
-    use platform::{contract::Code, tests as platform_tests};
-    use sdk::cosmwasm_std::Uint64;
+    use platform::{
+        contract::{Code, external},
+        tests as platform_tests,
+    };
 
     use super::{ConfigResponse, QueryMsg};
 
@@ -154,6 +154,6 @@ mod test {
         assert_eq!("connection-7", response.connection_id);
         assert_eq!("osmosis", response.dex_label);
         assert_eq!("channel-3", response.transfer_channel);
-        assert_eq!(Uint64::new(9), response.lease_code_id);
+        assert_eq!(external::Code::from(9), response.lease_code_id);
     }
 }

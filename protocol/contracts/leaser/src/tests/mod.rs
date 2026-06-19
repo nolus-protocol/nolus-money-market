@@ -48,7 +48,7 @@ pub(super) fn lpn_coin_dto(amount: Amount) -> LpnCoinDTO {
 
 fn dummy_instantiate_msg() -> InstantiateMsg {
     InstantiateMsg {
-        lease_code: 10u16.into(),
+        lease_code: 10u64.into(),
         lpp: Addr::unchecked("LPP"),
         profit: Addr::unchecked("Profit"),
         reserve: Addr::unchecked("reserve"),

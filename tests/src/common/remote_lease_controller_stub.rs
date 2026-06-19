@@ -51,7 +51,7 @@ use serde::{Deserialize, Serialize};
 use currencies::{Lpn, PaymentGroup};
 use currency::{self, CurrencyDef, Group, MemberOf};
 use finance::coin::{Amount, Coin, CoinDTO, WithCoin};
-use platform::contract::{Code, CodeId};
+use platform::contract::{Code, CodeId, external};
 use remote_lease::{
     callback::{RemoteErrorMessage, RemoteLeaseCallback, RemoteOperationOutcome},
     msg::{CloseLeaseParams, OpenLeaseParams, SwapParams, TransferOutParams},
@@ -66,7 +66,7 @@ use remote_lease_controller::api::{
 use sdk::{
     cosmwasm_ext::Response as CwResponse,
     cosmwasm_std::{
-        self, Addr, Binary, Deps, Env, MessageInfo, StdError, StdResult, Storage, Uint64, WasmMsg,
+        self, Addr, Binary, Deps, Env, MessageInfo, StdError, StdResult, Storage, WasmMsg,
         to_json_binary,
     },
     cw_storage_plus::{Item, Map},
@@ -262,6 +262,8 @@ pub enum StubError {
     NoPending { op: String },
     #[error("op `{op}` is configured to fail synchronously")]
     SyncFailure { op: String },
+    #[error("platform: {0}")]
+    Platform(#[from] platform::error::Error),
     #[error("std: {0}")]
     Std(#[from] StdError),
 }
@@ -272,7 +274,9 @@ pub fn instantiate(
     _info: MessageInfo,
     msg: ControllerInstantiateMsg,
 ) -> Result<CwResponse, StubError> {
-    let lease_code = Code::unchecked(u64::from(msg.lease_code));
+    let lease_code = msg
+        .lease_code
+        .try_validate(&platform::contract::validator(deps.querier))?;
     let config = StubConfig {
         connection_id: msg.connection_id,
         dex_label: msg.dex_label,
@@ -671,7 +675,7 @@ impl Instantiator {
             connection_id: super::test_case::TestCase::DEX_CONNECTION_ID.into(),
             dex_label: "test-dex".into(),
             transfer_channel: "channel-0".into(),
-            lease_code: Uint64::from(CodeId::from(lease_code)),
+            lease_code: external::Code::from(CodeId::from(lease_code)),
         };
 
         app.instantiate(

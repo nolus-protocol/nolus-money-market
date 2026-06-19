@@ -7,8 +7,8 @@ use finance::{
     price::Price,
 };
 use lpp_platform::NLpn;
-use platform::contract::Code;
-use sdk::cosmwasm_std::{Addr, Uint64};
+use platform::contract::{Code, external};
+use sdk::cosmwasm_std::Addr;
 
 use crate::{borrow::InterestRate, config::Config, loan::Loan};
 
@@ -20,8 +20,7 @@ pub struct InstantiateMsg {
     /// and close all deposits.
     /// In the current protocol architecture, it is the leaser contract
     pub protocol_admin: Addr,
-    // Since this is an external system API we should not use [Code].
-    pub lease_code: Uint64,
+    pub lease_code: external::Code,
     pub borrow_rate: InterestRate,
     pub min_utilization: Percent100,
 }

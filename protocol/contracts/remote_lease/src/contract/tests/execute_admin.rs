@@ -1,8 +1,8 @@
-use platform::contract::{Code, CodeId};
+use platform::contract::{Code, CodeId, external};
 use sdk::{
     cosmos_sdk_proto::prost::Message as _,
     cosmwasm_ext::{CosmosMsg, SubMsg},
-    cosmwasm_std::{AnyMsg, IbcMsg, Uint64, testing},
+    cosmwasm_std::{AnyMsg, IbcMsg, testing},
     ibc_proto::ibc::core::channel::v1::MsgChannelOpenInit,
 };
 
@@ -43,7 +43,10 @@ fn new_lease_code_admin_succeeds() {
     assert_eq!(0, res.messages.len());
 
     let config = query_config(deps.as_ref());
-    assert_eq!(Uint64::from(CodeId::from(new_code)), config.lease_code_id);
+    assert_eq!(
+        external::Code::from(CodeId::from(new_code)),
+        config.lease_code_id
+    );
 }
 
 #[test]
@@ -206,5 +209,5 @@ fn new_lease_code_non_admin_rejected() {
     assert!(matches!(err, Error::Unauthorized(_)), "got {err:?}");
 
     let config = query_config(deps.as_ref());
-    assert_eq!(Uint64::from(LEASE_CODE_ID), config.lease_code_id);
+    assert_eq!(external::Code::from(LEASE_CODE_ID), config.lease_code_id);
 }
