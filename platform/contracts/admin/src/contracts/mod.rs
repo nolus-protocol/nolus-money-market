@@ -2,9 +2,9 @@ use std::collections::BTreeMap;
 
 use serde::{Deserialize, Serialize};
 
-use ::platform::contract::CodeId;
+use ::platform::contract::external;
 use json_value::JsonValue;
-use sdk::cosmwasm_std::{Addr, Uint64};
+use sdk::cosmwasm_std::Addr;
 use versioning::ReleaseId;
 
 #[cfg(feature = "contract")]
@@ -109,12 +109,8 @@ pub type ContractsExecute =
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case", deny_unknown_fields)]
-pub struct MigrationSpec
-where
-    Uint64: Into<CodeId>,
-    CodeId: Into<Uint64>,
-{
-    pub code_id: Uint64,
+pub struct MigrationSpec {
+    pub code_id: external::Code,
     pub migrate_message: JsonValue,
     pub post_migrate_execute: Option<ExecuteSpec>,
 }
