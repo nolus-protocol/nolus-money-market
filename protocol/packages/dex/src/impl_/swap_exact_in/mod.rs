@@ -38,7 +38,7 @@ use crate::{
 };
 
 #[cfg(feature = "migration")]
-use super::migration::{InspectSpec, MigrateSpec};
+use super::migration::MigrateSpec;
 use cw_time::IntoInstant;
 
 mod decode_resp;
@@ -246,18 +246,6 @@ where
         MigrateFn: FnOnce(SwapTask) -> SwapTaskNew,
     {
         Self::Out::new(migrate_fn(self.spec))
-    }
-}
-
-#[cfg(feature = "migration")]
-impl<SwapTask, R, SEnum, SwapClient> InspectSpec<SwapTask, R>
-    for SwapExactIn<SwapTask, SEnum, SwapClient>
-{
-    fn inspect_spec<InspectFn>(&self, inspect_fn: InspectFn) -> R
-    where
-        InspectFn: FnOnce(&SwapTask) -> R,
-    {
-        inspect_fn(&self.spec)
     }
 }
 
