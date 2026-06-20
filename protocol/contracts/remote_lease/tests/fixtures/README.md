@@ -6,7 +6,7 @@ two `StdAck` variants the Solana-side Remote Lease App emits per
 
 ## Files
 
-- `stdack_success_open_lease.bin` — `StdAck::Success(<JSON of OperationResponse::OpenLease>)` wrapped by `to_binary()`. The inner snake-case-tagged `OperationResponse::OpenLease` carries `remote_lease_id = "LeaseAuthFundingTarget1"` — a representative **LeaseAuthority** address, the funding target the Cosmos side sends ICS-20 to (ibc-solray #486, ADR 0002 §3.4 step 9), **not** the Lease PDA. Outer JSON is the cosmwasm-std `StdAck` wire shape (`{"result":"<base64>"}`); the id is a base58 string per the `RemoteLeaseId` wire invariant.
+- `stdack_success_open_lease.bin` — `StdAck::Success(<JSON of OperationResponse::OpenLease>)` wrapped by `to_binary()`. The inner snake-case-tagged `OperationResponse::OpenLease` carries `remote_lease_id = "CkymGXksQYqyYZrdvFTWwFhvMNBqENvKfKQN4e7CwBxF"` — a representative **LeaseAuthority** address, the funding target the Cosmos side sends ICS-20 to (ibc-solray #486, ADR 0002 §3.4 step 9), **not** the Lease PDA. It is a canonical base58 encoding of a 32-byte PDA pubkey (44 chars), in the `remote_lease_id` range documented in `docs/remote-lease-wire-contract.md`. Outer JSON is the cosmwasm-std `StdAck` wire shape (`{"result":"<base64>"}`).
 - `stdack_error.bin` — an error ack `{"error":"ibc-solray: dex pool drained"}`. The Solana side prefixes every error-ack content with `ibc-solray: ` (ibc-solray `src/app/remote_lease/ack.rs`), so the controller lifts the full prefixed string into `RemoteErrorMessage`.
 
 ## Cross-side contract
@@ -31,5 +31,7 @@ inner   = serde_json::to_string(&OperationResponse::OpenLease(OpenLeaseResponse 
 success = r#"{"result":"<base64-standard(inner)>"}"#     // == StdAck::Success(Binary::from(inner)).to_binary()
 error   = r#"{"error":"ibc-solray: <message>"}"#          // == StdAck::error("ibc-solray: <message>").to_binary()
 ```
+
+The example `remote_lease_id` is deterministic: it is `base58(sha256("nolus-remote-lease-authority-fixture"))` — a stand-in 32-byte PDA pubkey, not a live address. Regenerate with the same label to reproduce it.
 
 The consumer tests live in `protocol/contracts/remote_lease/src/ibc/tests/packets.rs` under names prefixed `fixture_…`; each asserts the fixture equals the value re-encoded through the wire crate, then drives `ibc_packet_ack` over it.

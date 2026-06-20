@@ -311,7 +311,10 @@ fn packet_timeout_malformed_lease_addr_in_envelope_errors() {
 // §3.4 step 9), not the Lease PDA.
 #[test]
 fn fixture_stdack_success_open_lease_decodes_to_callback() {
-    const FIXTURE_REMOTE_LEASE_ID: &str = "LeaseAuthFundingTarget1";
+    // A representative 32-byte PDA pubkey in canonical base58 (44 chars), in the
+    // documented `remote_lease_id` range — deterministic so the fixture is
+    // reproducible (see `tests/fixtures/README.md`).
+    const FIXTURE_REMOTE_LEASE_ID: &str = "CkymGXksQYqyYZrdvFTWwFhvMNBqENvKfKQN4e7CwBxF";
     const ACK_BYTES: &[u8] =
         include_bytes!("../../../tests/fixtures/stdack_success_open_lease.bin");
     let response = WireOperationResponse::OpenLease(OpenLeaseResponse {
