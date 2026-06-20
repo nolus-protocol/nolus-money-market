@@ -32,6 +32,6 @@ success = r#"{"result":"<base64-standard(inner)>"}"#     // == StdAck::Success(B
 error   = r#"{"error":"ibc-solray: <message>"}"#          // == StdAck::error("ibc-solray: <message>").to_binary()
 ```
 
-The example `remote_lease_id` is deterministic: it is `base58(sha256("nolus-remote-lease-authority-fixture"))` — a stand-in 32-byte PDA pubkey, not a live address. Regenerate with the same label to reproduce it.
+The example `remote_lease_id` is a fixed stand-in — a 32-byte PDA pubkey in canonical base58 (44 chars), not a live address. Any valid 32-byte base58 value works; if you change it, regenerate the `.bin` with the formula above.
 
 The consumer tests live in `protocol/contracts/remote_lease/src/ibc/tests/packets.rs` under names prefixed `fixture_…`; each asserts the fixture equals the value re-encoded through the wire crate, then drives `ibc_packet_ack` over it.

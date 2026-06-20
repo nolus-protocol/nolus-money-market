@@ -312,8 +312,7 @@ fn packet_timeout_malformed_lease_addr_in_envelope_errors() {
 #[test]
 fn fixture_stdack_success_open_lease_decodes_to_callback() {
     // A representative 32-byte PDA pubkey in canonical base58 (44 chars), in the
-    // documented `remote_lease_id` range — deterministic so the fixture is
-    // reproducible (see `tests/fixtures/README.md`).
+    // documented `remote_lease_id` range — a fixed stand-in, not a live address.
     const FIXTURE_REMOTE_LEASE_ID: &str = "CkymGXksQYqyYZrdvFTWwFhvMNBqENvKfKQN4e7CwBxF";
     const ACK_BYTES: &[u8] =
         include_bytes!("../../../tests/fixtures/stdack_success_open_lease.bin");
