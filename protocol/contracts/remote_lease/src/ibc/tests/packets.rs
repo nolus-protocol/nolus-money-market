@@ -299,14 +299,19 @@ fn packet_timeout_malformed_lease_addr_in_envelope_errors() {
     assert!(matches!(err, Error::Std(_)), "got {err:?}");
 }
 
-// Inbound-ack fixtures per ADR 0001 §3.5. The bytes the controller must accept
-// from the Solana counterparty live under `tests/fixtures/` so they survive as
-// a frozen, byte-exact reference even if the inline wire-types tests in the
-// shared `remote_lease` crate ever drift. See `tests/fixtures/README.md` for
-// regeneration steps and the placeholder note (Solana-emitted bytes are TBD).
+// Inbound-ack fixtures per ADR 0001 §3.5, pinned to the bytes the Solana-side
+// Remote Lease App emits at `nolus-protocol/ibc-solray` main `73a8b163`. They
+// live under `tests/fixtures/` as a frozen, byte-exact reference so cross-side
+// drift between the Solana emitter and this controller is caught here even if
+// the inline wire-types tests in the shared `remote_lease` crate stay green.
+// See `tests/fixtures/README.md` for the emission path and regeneration steps.
+//
+// The OpenLease success ack's `remote_lease_id` is the lease's `LeaseAuthority`
+// — the address the Cosmos side funds via ICS-20 (ibc-solray #486, ADR 0002
+// §3.4 step 9), not the Lease PDA.
 #[test]
 fn fixture_stdack_success_open_lease_decodes_to_callback() {
-    const FIXTURE_REMOTE_LEASE_ID: &str = "So1RayF1xtureLease1";
+    const FIXTURE_REMOTE_LEASE_ID: &str = "LeaseAuthFundingTarget1";
     const ACK_BYTES: &[u8] =
         include_bytes!("../../../tests/fixtures/stdack_success_open_lease.bin");
     let response = WireOperationResponse::OpenLease(OpenLeaseResponse {
@@ -341,7 +346,10 @@ fn fixture_stdack_success_open_lease_decodes_to_callback() {
 
 #[test]
 fn fixture_stdack_error_decodes_to_callback() {
-    const FIXTURE_ERROR_MESSAGE: &str = "dex pool drained";
+    // The Solana side prefixes every error-ack content with `ibc-solray: `
+    // (ibc-solray `src/app/remote_lease/ack.rs`), so the full content the
+    // controller receives — and lifts into `RemoteErrorMessage` — carries it.
+    const FIXTURE_ERROR_MESSAGE: &str = "ibc-solray: dex pool drained";
     const ACK_BYTES: &[u8] = include_bytes!("../../../tests/fixtures/stdack_error.bin");
 
     let computed = StdAck::error(FIXTURE_ERROR_MESSAGE).to_binary();
