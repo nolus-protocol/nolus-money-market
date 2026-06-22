@@ -91,7 +91,7 @@ fn open_multiple_loans() {
             )
             .unwrap();
 
-        response.expect_register_ica(TestCase::DEX_CONNECTION_ID, TestCase::LEASE_ICA_ID);
+        let _funding = response.take_ibc_transfer(TestCase::LEASER_IBC_CHANNEL);
 
         let response: AppResponse = response.unwrap_response();
 
@@ -118,7 +118,7 @@ fn open_multiple_loans() {
         )
         .unwrap();
 
-    response.expect_register_ica(TestCase::DEX_CONNECTION_ID, TestCase::LEASE_ICA_ID);
+    let _funding = response.take_ibc_transfer(TestCase::LEASER_IBC_CHANNEL);
 
     let response: AppResponse = response.unwrap_response();
 
@@ -293,14 +293,13 @@ where
         )
         .unwrap();
 
-    response.expect_register_ica(TestCase::DEX_CONNECTION_ID, TestCase::LEASE_ICA_ID);
+    let _funding = response.take_ibc_transfer(TestCase::LEASER_IBC_CHANNEL);
 
     let lease = lease_addr(&response.unwrap_response().events);
 
     let controller = test_case.address_book.remote_lease_controller().clone();
     lease_mod::complete_initialization(
         &mut test_case.app,
-        TestCase::DEX_CONNECTION_ID,
         &controller,
         lease,
         downpayment,

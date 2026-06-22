@@ -13,7 +13,13 @@ use crate::{Connectable, ConnectionParams, error::Result};
 pub struct Account {
     /// The contract at Nolus that owns the account
     owner: Addr,
-    host: HostAccount,
+    /// The Interchain Account host on the DEX chain.
+    ///
+    /// `None` for remote-lease leases — they fund and drain over the paired
+    /// ICS-20 transfer channel addressed to the Solana-side `LeaseAuthority`
+    /// and never open an ICA. Set only on the legacy ICA path
+    /// (`from_register_response`), whose machinery #649 removes.
+    host: Option<HostAccount>,
     dex: ConnectionParams,
 }
 
@@ -22,8 +28,8 @@ impl Account {
         &self.owner
     }
 
-    pub(super) fn host(&self) -> &HostAccount {
-        &self.host
+    pub(super) fn host(&self) -> Option<&HostAccount> {
+        self.host.as_ref()
     }
 
     pub(super) fn register_request(dex: &ConnectionParams) -> LocalBatch {
@@ -36,18 +42,31 @@ impl Account {
         dex: ConnectionParams,
     ) -> Result<Self> {
         let host = ica::parse_register_response(response)?;
-        Ok(Self { owner, host, dex })
+        Ok(Self {
+            owner,
+            host: Some(host),
+            dex,
+        })
+    }
+
+    /// Build an account for a remote-lease lease, which has no Interchain
+    /// Account: funding and draining ride the paired ICS-20 transfer channel
+    /// addressed to the lease's Solana-side `LeaseAuthority`.
+    pub fn funding(owner: Addr, dex: ConnectionParams) -> Self {
+        Self {
+            owner,
+            host: None,
+            dex,
+        }
     }
 
     #[cfg(feature = "testing")]
     pub fn unchecked(owner: Addr, host: HostAccount, dex: ConnectionParams) -> Self {
-        Self { owner, host, dex }
-    }
-}
-
-impl From<Account> for HostAccount {
-    fn from(account: Account) -> Self {
-        account.host
+        Self {
+            owner,
+            host: Some(host),
+            dex,
+        }
     }
 }
 

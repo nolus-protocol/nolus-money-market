@@ -129,7 +129,12 @@ where
         env: Env,
     ) -> ContinueResult<Self> {
         let ica = self.build_account(counterparty_version, &env)?;
-        let event = Self::emit_ok(env.contract.address, ica.host().clone());
+        let event = Self::emit_ok(
+            env.contract.address,
+            ica.host()
+                .expect("ICA host present on the legacy ICA path")
+                .clone(),
+        );
         let next_state = self.connectee.connected(ica);
         next_state
             .enter(env.block.time.into_instant(), querier)

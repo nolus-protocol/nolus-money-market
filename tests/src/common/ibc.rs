@@ -35,6 +35,18 @@ pub(crate) fn expect_transfer<T>(
     response.expect_ibc_transfer(channel, addr, ica_addr)
 }
 
+/// Consume the next IBC transfer asserting only its `channel`, returning its
+/// token. Unlike [`expect_transfer`] the receiver is not pinned: a funding
+/// transfer is addressed to the per-lease `LeaseAuthority`, which the test
+/// decouples from the holdings stand-in (`ica_addr`) it lands the funds on.
+pub(crate) fn take_transfer<T>(
+    response: &mut ResponseWithInterChainMsgs<'_, T>,
+    channel: &str,
+) -> CwCoin {
+    let (_sender, _receiver, token) = response.take_ibc_transfer(channel);
+    token
+}
+
 pub(crate) fn expect_remote_transfer<T>(
     response: &mut ResponseWithInterChainMsgs<'_, T>,
     connection_id: &str,
@@ -123,6 +135,30 @@ pub(super) fn send_response(
 
 fn send_blank_response(app: &mut App, addr: Addr) -> ResponseWithInterChainMsgs<'_, AppResponse> {
     send_response(app, addr, Binary::new(vec![]))
+}
+
+/// Deliver an ICS-20 transfer timeout to `contract_addr` over the sudo path -
+/// the signal the funding leg re-emits its single in-flight coin on.
+pub(crate) fn timeout_transfer(
+    app: &mut App,
+    contract_addr: Addr,
+) -> ResponseWithInterChainMsgs<'_, AppResponse> {
+    app.sudo(
+        contract_addr,
+        &SudoMsg::Timeout {
+            request: RequestPacket {
+                sequence: None,
+                source_port: None,
+                source_channel: None,
+                destination_port: None,
+                destination_channel: None,
+                data: None,
+                timeout_height: None,
+                timeout_timestamp: None,
+            },
+        },
+    )
+    .unwrap()
 }
 
 fn dex_to_bank(symbol: &str) -> SymbolStatic {

@@ -44,6 +44,7 @@ mod liquidation;
 mod open;
 mod remote_lease_callback;
 mod remote_lease_close;
+mod remote_lease_funding;
 // TODO #142 Phase 3: enable when the OpenLease state + Status::OpenFailed land.
 mod remote_lease_open;
 mod remote_lease_opening_terminal;
@@ -236,7 +237,12 @@ where
         )
         .unwrap();
 
-    response.expect_register_ica(TestCase::DEX_CONNECTION_ID, TestCase::LEASE_ICA_ID);
+    // The OpenLease ack settles inline, so the lease has already emitted the
+    // first funding transfer (the downpayment, to the Solana-side
+    // `LeaseAuthority`); consume it here. The funding sequence is driven from
+    // `complete_initialization`.
+    let (_sender, _receiver, _downpayment) =
+        response.take_ibc_transfer(TestCase::LEASER_IBC_CHANNEL);
     () = response.ignore_response().unwrap_response();
 
     leaser_mod::expect_a_lease(
@@ -284,7 +290,6 @@ pub(super) fn complete_init_lease<
     let controller = test_case.address_book.remote_lease_controller().clone();
     common::lease::complete_initialization(
         &mut test_case.app,
-        TestCase::DEX_CONNECTION_ID,
         &controller,
         lease.clone(),
         downpayment,

@@ -20,10 +20,17 @@ feature-groups = { contract = { members = ["contract", "contract_testing", "inte
 crate-type = ["cdylib", "rlib"]
 
 [features]
-dex-astroport_main = ["swap/dex-astroport_main"]
-dex-astroport_test = ["swap/dex-astroport_test"]
-dex-osmosis = ["swap/dex-osmosis"]
-dex-test_impl = ["swap/dex-test_impl"]
+# Swaps now execute remotely on the remote-lease controller (#647), so the lease
+# no longer pulls the DEX-specific `swap` client and these per-DEX selectors are
+# no-ops. The lease still carries the DEX `ConnectionParams` at runtime to address
+# the ICS-20 transfer channel it funds the lease over, so it is not fully
+# DEX-agnostic. The selectors are kept so the per-DEX build matrix and the
+# downstream `lease/dex-*` forwarding (tests, etc.) still resolve; the whole axis
+# can be dropped when the per-DEX lease build is retired.
+dex-astroport_main = []
+dex-astroport_test = []
+dex-osmosis = []
+dex-test_impl = []
 
 contract = [
     "cosmwasm-std/exports",
@@ -86,7 +93,6 @@ oracle-platform = { workspace = true }
 platform = { workspace = true, optional = true }
 remote_lease = { workspace = true }
 sdk = { workspace = true }
-swap = { workspace = true, optional = true }
 versioning = { workspace = true, optional = true, features = ["protocol_contract"] }
 
 # Required as a dependency by `entry_point` attribute macro

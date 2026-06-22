@@ -931,8 +931,6 @@ fn instantiate_lease<ProtReg, Tr>(
             liability_init_percent, // simplify case: borrow == downpayment
             ..LeaseInstantiatorConfig::default()
         },
-        TestCase::DEX_CONNECTION_ID,
-        TestCase::LEASE_ICA_ID,
     )
 }
 

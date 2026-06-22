@@ -1,6 +1,7 @@
 use currencies::PaymentGroup;
 use currency::{CurrencyDef, Group, MemberOf};
 use cw_time::IntoInstant;
+use dex::{Account, Enterable};
 use finance::{
     coin::{Coin, WithCoin},
     duration::Duration,
@@ -109,28 +110,36 @@ impl OpenLease {
         self,
         remote_lease_id: RemoteLeaseId,
         querier: QuerierWrapper<'_>,
-        _env: &Env,
+        env: &Env,
     ) -> ContractResult<Response> {
-        self.deps
-            .3
-            .max_slippage(querier)
-            .map(|max_slippages| max_slippages.opening)
-            .map(|max_slippage| {
-                let next = super::buy_asset::start(
-                    self.new_lease,
-                    self.downpayment,
-                    self.loan,
-                    self.deps,
-                    self.start_opening_at,
-                    remote_lease_id,
-                    max_slippage,
-                );
-                let batch = next.enter();
-                StateMachineResponse::from(
-                    MessageResponse::messages_only(batch),
-                    State::from(super::buy_asset::DexState::from(next)),
-                )
-            })
+        let transport = super::buy_asset::open_transport(
+            &self.deps.3,
+            self.new_lease.remote_lease_controller,
+            remote_lease_id,
+            querier,
+        )?;
+        let account = Account::funding(env.contract.address.clone(), self.new_lease.dex);
+        let next = super::buy_asset::start(
+            self.new_lease.form,
+            account,
+            self.downpayment,
+            self.loan,
+            self.deps,
+            self.start_opening_at,
+            transport,
+        )?;
+        next.enter(env.block.time.into_instant(), querier)
+            .map_err(Into::into)
+            .map(|batch| Self::opening_response(next, batch))
+    }
+
+    /// Wrap the funding leg's entry batch and its dex state into the lease's
+    /// state-machine response.
+    fn opening_response(next: super::buy_asset::StartState, batch: Batch) -> Response {
+        StateMachineResponse::from(
+            MessageResponse::messages_only(batch),
+            State::from(super::buy_asset::DexState::from(next)),
+        )
     }
 
     fn on_open_failed(

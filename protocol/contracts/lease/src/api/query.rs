@@ -95,19 +95,16 @@ pub mod opening {
         /// known at this point.
         RequestingOpenLease,
         /// The controller has acked; the lease holds the Solana-side
-        /// PDA and is progressing toward the live `Active` state.
-        OpenLease {
-            remote_lease: RemoteLeaseId,
-        },
-        TransferOut {
-            ica_account: String,
-        },
-        /// The funds are on the DEX-chain ICA account and the swap legs
+        /// `LeaseAuthority` and is progressing toward the live `Active` state.
+        OpenLease { remote_lease: RemoteLeaseId },
+        /// The lease is funding the Solana-side lease over the paired ICS-20
+        /// transfer channel: `receiver` is the `LeaseAuthority` the downpayment
+        /// and principal are sent to before the opening swaps run.
+        Funding { receiver: String },
+        /// The funds have arrived on the Solana-side lease and the swap legs
         /// run through the remote-lease controller. `acks_left` counts the
         /// swap legs still awaiting a controller acknowledgment.
-        BuyAsset {
-            acks_left: u8,
-        },
+        BuyAsset { acks_left: u8 },
         /// A swap leg hit a hard remote error and parked at the
         /// slippage-anomaly terminal; the lease is pre-`Active` and an
         /// operator `Heal` re-drives the pending leg. Distinct from

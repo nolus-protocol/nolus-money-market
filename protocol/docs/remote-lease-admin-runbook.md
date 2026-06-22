@@ -251,9 +251,12 @@ lease's dex state machine.**
   error *only* on synchronous infra faults — auth/serialize/storage — which reverts the
   ack so the relayer retries). Every content/protocol fault is **absorbed** as `Ok` + an
   event so the ack commits and the relayer loop unblocks.
-- **Lease** auto-recovers: timeouts re-emit up to a per-operation budget then park at the
-  slippage-anomaly terminal; under-floor errors escalate per policy; underpaid acks
-  re-emit with a bumped nonce.
+- **Lease** auto-recovers: on a swap leg, timeouts re-emit up to a per-operation budget
+  then park at the slippage-anomaly terminal; under-floor errors escalate per policy;
+  underpaid acks re-emit with a bumped nonce. The opening/repay **funding** legs are
+  forward-only instead — a timeout or error ack re-emits the single in-flight ICS-20
+  transfer verbatim, with no budget and no park (the refunded coin must go out again for
+  the open/repay to progress).
 - **Controller** never retries on the lease's behalf.
 - Relayer retry **cadence/max-retries** is hermes-lite relayer configuration, not a
   contract property — consult the relayer for the actual numbers.
@@ -266,11 +269,13 @@ flight** until the channel-level timeout — treat as potentially-pending, not f
 
 `{"heal":[]}` *(unit-tuple variant on the lease; no fields, no funds)*
 
-States that expose `Heal`: a live `RemoteSwap` leg (re-emits the in-flight leg with a
-**pinned** floor and bumped nonce), the parked slippage-anomaly terminal (re-quotes a
-**fresh** oracle floor and resets counters), `ClosingRemoteLease` (re-emits
-`CloseLease`), `Closed` (drain), and an opened/active lease (re-run a stuck final repay).
-All other states reject `Heal`.
+States that expose `Heal`: a live `Funding` leg (re-emits the single in-flight ICS-20
+funding transfer to the `LeaseAuthority` verbatim — opening downpayment/principal or the
+repay payment), a live `RemoteSwap` leg (re-emits the in-flight leg with a **pinned**
+floor and bumped nonce), the parked slippage-anomaly terminal (re-quotes a **fresh**
+oracle floor and resets counters), `ClosingRemoteLease` (re-emits `CloseLease`), `Closed`
+(drain), and an opened/active lease (re-run a stuck final repay). All other states reject
+`Heal`.
 
 ### 4.4 State-dependent authorization (critical)
 
@@ -292,12 +297,19 @@ regardless of timing** — you need not wait for the original timeout.
 
 **Caveat:** only `Swap` carries a real nonce; `OpenLease`/`CloseLease`/`TransferOut` use
 nonce `0` and rely on the IBC at-most-once single-packet property instead of nonce
-matching.
+matching. The opening/repay **funding** transfers (the ICS-20 transfers to the
+`LeaseAuthority`) likewise carry no per-emission nonce yet: a `Heal` issued while the
+original funding packet is still resolvable can solicit a *duplicate* success-ack and
+advance the funding `acks-left` countdown one step early. The residual is bounded and
+forward-only (no fund loss — each coin's ICS-20 packet either lands or is refunded to the
+lease), tracked to ibc-solray#142; on a still-resolvable funding leg, prefer waiting out
+the channel-level timeout over an eager `Heal`.
 
 ### 4.6 Recovery playbook by symptom
 
 | Symptom | Action |
 |---|---|
+| Stuck `Funding` leg, no transfer ack | `Heal()` on the lease (permissionless) re-emits the in-flight funding transfer; forward-only, no fund loss — but on a still-resolvable packet prefer waiting out the timeout (no nonce yet, §4.5) |
 | Stuck `Swap` leg, no callback | `Heal()` on the lease (permissionless); safe to repeat |
 | `StateResponse = SlippageProtectionActivated` (parked) | `Heal()` from **`lease_admin`** — re-quotes a fresh floor + resets counters |
 | Stuck `ClosingRemoteLease` (best-effort Solana close failed) | permissionless `Heal()` re-emits `CloseLease`; customer payout already done, funds not stranded |

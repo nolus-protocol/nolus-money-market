@@ -41,6 +41,14 @@ pub(crate) trait RemoteChain {
     #[track_caller]
     fn expect_ibc_transfer(&mut self, channel: &str, sender: &str, receiver: &str) -> CwCoin;
 
+    /// Consume the next IBC transfer, asserting only its `channel`, and return
+    /// its `(sender, receiver, token)`. Unlike [`Self::expect_ibc_transfer`]
+    /// the receiver is returned rather than asserted - the funding receiver is
+    /// the per-lease `LeaseAuthority` the stand-in mints fresh, so callers that
+    /// do not pin it capture it here.
+    #[track_caller]
+    fn take_ibc_transfer(&mut self, channel: &str) -> (String, String, CwCoin);
+
     #[track_caller]
     fn expect_submit_tx(
         &mut self,
@@ -96,6 +104,29 @@ impl<T> RemoteChain for ResponseWithInterChainMsgs<'_, T> {
             assert_eq!(actual_receiver, receiver);
 
             token
+        } else {
+            panic!("Expected message for IBC transfer, got {message:?}!");
+        }
+    }
+
+    #[track_caller]
+    fn take_ibc_transfer(&mut self, channel: &str) -> (String, String, CwCoin) {
+        let message = self
+            .receiver
+            .try_recv()
+            .expect("Expected message for IBC transfer!");
+
+        if let InterChainMsg::IbcTransfer {
+            source_channel,
+            token,
+            sender,
+            receiver,
+            ..
+        } = message
+        {
+            assert_eq!(source_channel, channel);
+
+            (sender, receiver, token)
         } else {
             panic!("Expected message for IBC transfer, got {message:?}!");
         }

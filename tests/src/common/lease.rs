@@ -16,7 +16,6 @@ use lease::{
 };
 use platform::{coin_legacy, contract::Code};
 use sdk::{
-    api::SudoMsg,
     cosmwasm_std::{Addr, Coin as CwCoin},
     cw_multi_test::AppResponse,
     testing,
@@ -50,8 +49,6 @@ impl Instantiator {
         addresses: InstantiatorAddresses,
         lease_config: InitConfig<D>,
         config: InstantiatorConfig,
-        dex_connection_id: &str,
-        lease_ica_id: &str,
     ) -> Addr
     where
         D: CurrencyDef,
@@ -74,7 +71,10 @@ impl Instantiator {
             )
             .unwrap();
 
-        response.expect_register_ica(dex_connection_id, lease_ica_id);
+        // The synchronous `OpenLease` ack progresses the opening straight to
+        // funding, which emits the downpayment transfer to the lease's
+        // `LeaseAuthority`; consume it so the response unwraps clean.
+        let _funding = response.take_ibc_transfer(TestCase::LEASER_IBC_CHANNEL);
 
         response.unwrap_response()
     }
@@ -204,7 +204,6 @@ pub struct InstantiatorAddresses {
 
 pub(crate) fn complete_initialization<DownpaymentC, Lpn>(
     app: &mut App,
-    connection_id: &str,
     controller: &Addr,
     lease_addr: Addr,
     downpayment: Coin<DownpaymentC>,
@@ -216,17 +215,14 @@ pub(crate) fn complete_initialization<DownpaymentC, Lpn>(
     check_state_opening(app, lease_addr.clone());
 
     let ica_addr: Addr = TestCase::ica_addr(&lease_addr, TestCase::LEASE_ICA_ID);
-    let ica_port: String = format!("icacontroller-{ica_addr}");
-    let ica_channel: String = format!("channel-{ica_addr}");
 
-    // The last transfer acknowledgment hands off to the remote swap leg;
-    // the controller stand-in acknowledges each emitted `Swap` inline, so
-    // the whole opening settles within this call.
-    let response = confirm_ica_and_transfer_funds(
+    // The last funding acknowledgment hands off to the remote swap leg; the
+    // controller stand-in acknowledges each emitted `Swap` inline, so the
+    // whole opening settles within this call.
+    let response = fund_remote_lease(
         app,
         lease_addr.clone(),
-        connection_id,
-        (&ica_channel, &ica_port, ica_addr.clone()),
+        ica_addr.clone(),
         (downpayment, exp_borrow),
     );
     () = response.ignore_response().unwrap_response();
@@ -273,93 +269,47 @@ fn settle_remote_swaps_on_ica(app: &mut App, controller: &Addr, lease: &Addr, ic
         });
 }
 
-pub(crate) fn confirm_ica_and_transfer_funds<'r, DownpaymentC, Lpn>(
+/// Drive the two-coin funding of the remote lease and return the response of
+/// the principal's acknowledgment.
+///
+/// The opening's `OpenLease` ack already scheduled the downpayment transfer
+/// inline, and the caller consumed it. This acknowledges the downpayment
+/// (which schedules the principal), asserts the principal's amount, then
+/// acknowledges it too — the last acknowledgment releases the arrival gate and
+/// the opening swaps settle inline through the controller stand-in.
+///
+/// `ica_addr` is the holdings stand-in the funds land on inside the test app
+/// (the non-base58 ICA address the opened-state simulations expect). The wire
+/// receiver — the per-lease `LeaseAuthority` — rides the emitted transfer and
+/// is asserted only by the dedicated funding drivers, not here.
+pub(crate) fn fund_remote_lease<'r, DownpaymentC, Lpn>(
     app: &'r mut App,
     lease_addr: Addr,
-    connection_id: &str,
-    (ica_channel, ica_port, ica_addr): (&str, &str, Addr),
+    ica_addr: Addr,
     (exp_downpayment, exp_borrow): (Coin<DownpaymentC>, Coin<Lpn>),
 ) -> ResponseWithInterChainMsgs<'r, AppResponse>
 where
     DownpaymentC: CurrencyDef,
     Lpn: CurrencyDef,
 {
-    let mut response: ResponseWithInterChainMsgs<'_, ()> = send_open_ica_response(
-        app,
-        lease_addr.clone(),
-        connection_id,
-        ica_channel,
-        ica_port,
-        ica_addr.as_str(),
-    )
-    .ignore_response();
+    let downpayment_cw: CwCoin = coin_legacy::to_cosmwasm_on_nolus(exp_downpayment);
+    let borrow_cw: CwCoin = coin_legacy::to_cosmwasm_on_nolus(exp_borrow);
 
-    let downpayment: CwCoin = ibc::expect_transfer(
-        &mut response,
-        TestCase::LEASER_IBC_CHANNEL,
-        lease_addr.as_str(),
-        ica_addr.as_str(),
-    );
-
-    assert_eq!(
-        downpayment,
-        coin_legacy::to_cosmwasm_on_nolus(exp_downpayment)
-    );
-
-    let borrow: CwCoin = ibc::expect_transfer(
-        &mut response,
-        TestCase::LEASER_IBC_CHANNEL,
-        lease_addr.as_str(),
-        ica_addr.as_str(),
-    );
-
-    assert_eq!(borrow, coin_legacy::to_cosmwasm_on_nolus(exp_borrow));
-
-    () = response.unwrap_response();
-
-    check_state_opening(app, lease_addr.clone());
-
-    () = ibc::do_transfer(
+    let mut after_downpayment = ibc::do_transfer(
         app,
         lease_addr.clone(),
         ica_addr.clone(),
         false,
-        &downpayment,
-    )
-    .ignore_response()
-    .unwrap_response();
+        &downpayment_cw,
+    );
+    let (_sender, _receiver, principal) =
+        after_downpayment.take_ibc_transfer(TestCase::LEASER_IBC_CHANNEL);
+    assert_eq!(principal, borrow_cw);
+    () = after_downpayment.ignore_response().unwrap_response();
 
-    ibc::do_transfer(app, lease_addr.clone(), ica_addr.clone(), false, &borrow)
-}
+    check_state_opening(app, lease_addr.clone());
 
-pub(crate) fn send_open_ica_response<'r>(
-    app: &'r mut App,
-    lease_addr: Addr,
-    connection_id: &str,
-    ica_channel: &str,
-    ica_port: &str,
-    ica_addr: &str,
-) -> ResponseWithInterChainMsgs<'r, AppResponse> {
-    app.sudo(
-        lease_addr,
-        &SudoMsg::OpenAck {
-            port_id: ica_port.to_string(),
-            channel_id: ica_channel.to_string(),
-            counterparty_channel_id: format!("counter-{ica_channel}"),
-            counterparty_version: format!(
-                // TODO fill-in with real/valid `OpenAck` data
-                r#"{{
-                        "version":"???",
-                        "controller_connection_id":"{connection_id}",
-                        "host_connection_id":"???",
-                        "address":"{ica_addr}",
-                        "encoding":"???",
-                        "tx_type":"???"
-                    }}"#
-            ),
-        },
-    )
-    .unwrap()
+    ibc::do_transfer(app, lease_addr, ica_addr, false, &borrow_cw)
 }
 
 pub(crate) fn assert_lease_balance_eq(app: &App, lease: &Addr, balance: CwCoin) {

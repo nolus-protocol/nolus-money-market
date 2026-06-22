@@ -4,8 +4,10 @@ use crate::{ContinueResult, ForwardToInner, Handler, Result, SwapTask, response}
 
 pub use self::{
     drain::{StartDrainState, State as StateDrain, start as start_drain},
+    funding::{Funding, FundingClient},
     funds_arrival::FundsArrival,
     ica_connector::IcaConnector,
+    out_fund_remote::{StartFundRemoteState, State as StateFundRemote, start as start_fund_remote},
     out_local::{
         StartLocalLocalState, StartTransferInState, State as StateLocalOut, start_local_local,
         start_remote_local,
@@ -25,11 +27,13 @@ pub use self::{
 };
 
 mod drain;
+mod funding;
 mod funds_arrival;
 mod ica_connector;
 #[cfg(feature = "migration")]
 mod migration;
 mod next_leg;
+mod out_fund_remote;
 mod out_local;
 mod out_remote;
 mod out_swap;
@@ -54,6 +58,9 @@ pub type TransferOutRespDelivery<
     ForwardToInnerMsg,
     NextLeg = SwapExactIn<SwapTask, SEnum, SwapClient>,
 > = ResponseDelivery<TransferOut<SwapTask, SEnum, SwapClient, NextLeg>, ForwardToInnerMsg>;
+
+pub type FundingRespDelivery<SwapTask, SEnum, ForwardToInnerMsg, NextLeg> =
+    ResponseDelivery<Funding<SwapTask, SEnum, NextLeg>, ForwardToInnerMsg>;
 
 pub type SwapExactInRespDelivery<SwapTask, SEnum, SwapClient, ForwardToInnerMsg> =
     ResponseDelivery<SwapExactIn<SwapTask, SEnum, SwapClient>, ForwardToInnerMsg>;

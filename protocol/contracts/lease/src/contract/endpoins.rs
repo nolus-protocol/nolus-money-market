@@ -26,7 +26,7 @@ use crate::{
 
 use super::state::{self, Response, State};
 
-const CONTRACT_STORAGE_VERSION: VersionSegment = 12;
+const CONTRACT_STORAGE_VERSION: VersionSegment = 13;
 const CURRENT_RELEASE: ProtocolPackageRelease = ProtocolPackageRelease::current(
     package_name!(),
     package_version!(),
@@ -87,6 +87,13 @@ pub fn migrate(
     // non-optional `remote_lease_controller` so the post-opening legs can
     // emit operations without re-querying the leaser. No live v11
     // remote-lease population exists, so the refusal stays.
+    //
+    // v13 funds the opening lease by an ICS-20 transfer to the Solana-side
+    // `LeaseAuthority` instead of opening an ICA: the dex `Account.host`
+    // becomes optional (`None` for remote-lease leases), the opening
+    // composite drops the ICA-open and ICA transfer-out legs for a sequential
+    // funding leg, and the `BuyAsset` spec gains the bridged funding receiver.
+    // No live v12 remote-lease population exists, so the refusal stays.
     Err(ContractError::UnsupportedMigration).inspect_err(platform_error::log(deps.api))
 }
 

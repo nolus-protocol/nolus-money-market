@@ -32,25 +32,26 @@ fn open_lifecycle_happy_path() {
 
     let state = super::state_query(&test_case, lease);
 
-    let remote_lease = match state {
+    // The synchronous `OpenLease` ack progresses the opening straight to the
+    // funding leg, so the observable sub-state is `Funding`; its `receiver` is
+    // the `LeaseAuthority` the ack returned, named so a future variant is not
+    // silently caught by a wildcard.
+    let receiver = match state {
         StateResponse::Opening { in_progress, .. } => match in_progress {
-            OpeningOngoingTrx::OpenLease { remote_lease } => remote_lease,
-            // #638 (FM4): the parked opening terminal is a distinct opening
-            // sub-state; name it so the happy path's expectation stays exact
-            // and a future variant is not silently caught by a wildcard.
+            OpeningOngoingTrx::Funding { receiver } => receiver,
             in_progress @ (OpeningOngoingTrx::RequestingOpenLease
-            | OpeningOngoingTrx::TransferOut { .. }
+            | OpeningOngoingTrx::OpenLease { .. }
             | OpeningOngoingTrx::BuyAsset { .. }
             | OpeningOngoingTrx::SlippageProtectionActivated) => {
-                panic!("expected OngoingTrx::OpenLease, got {in_progress:?}")
+                panic!("expected OngoingTrx::Funding, got {in_progress:?}")
             }
         },
         other => panic!("expected StateResponse::Opening, got {other:?}"),
     };
 
     assert!(
-        remote_lease.as_str().starts_with("StubPda"),
-        "expected stand-in PDA prefix, got {remote_lease:?}",
+        receiver.starts_with("StubPda"),
+        "expected stand-in PDA prefix, got {receiver:?}",
     );
 }
 

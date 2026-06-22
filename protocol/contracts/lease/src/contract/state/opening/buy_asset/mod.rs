@@ -6,9 +6,9 @@ use serde::{Deserialize, Serialize};
 
 use dex::MaxSlippage;
 use dex::{
-    Account, CoinsNb, ContractInRemoteSwap, ContractInSwap, Error as DexError, RemoteSwapClient,
-    SlippageEscalation, Stage, StartLocalRemoteState, SwapOutputTask, SwapTask, WithCalculator,
-    WithOutputTask,
+    Account, CoinsNb, Connectable, ContractInRemoteSwap, ContractInSwap, Error as DexError,
+    FundingClient, RemoteSwapClient, SlippageEscalation, Stage, SwapOutputTask, SwapTask,
+    WithCalculator, WithOutputTask,
 };
 use finance::coin::{Amount, Coin};
 use finance::instant::Instant;
@@ -26,24 +26,23 @@ use timealarms::stub::TimeAlarmsRef;
 use crate::{
     api::{
         DownpaymentCoin, LeaseAssetCurrencies, LeasePaymentCurrencies,
-        open::{NewLeaseContract, NewLeaseForm},
+        open::NewLeaseForm,
         query::{StateResponse as QueryStateResponse, opening::OngoingTrx},
     },
     contract::{
         cmd::OpenLoanRespResult,
         finalize::LeasesRef,
         state::{
-            SwapClient, SwapResult,
+            SwapResult,
             out_task::{OutTaskFactory, WithOutCurrency},
-            resp_delivery::{ForwardToDexEntry, ForwardToDexEntryContinue},
+            remote_lease_host,
+            resp_delivery::ForwardToDexEntry,
         },
     },
     error::ContractResult,
     event::Type,
     finance::{LppRef, OracleRef},
 };
-
-use super::open_ica::OpenIcaAccount;
 
 mod calculator;
 mod finish;
@@ -60,33 +59,49 @@ const OUT_NOT_AN_ASSET: &str = "swapped-out currency is not a lease asset";
 const TIMEOUT_RETRY_BUDGET: CoinsNb = 3;
 
 type AssetGroup = LeaseAssetCurrencies;
-pub(super) type StartState = StartLocalRemoteState<OpenIcaAccount, BuyAsset>;
-pub(in super::super) type DexState = dex::StateRemoteOut<
-    OpenIcaAccount,
-    BuyAsset,
-    SwapClient,
-    ForwardToDexEntry,
-    ForwardToDexEntryContinue,
->;
+pub(super) type StartState = dex::StartFundRemoteState<BuyAsset, ForwardToDexEntry>;
+pub(in super::super) type DexState = dex::StateFundRemote<BuyAsset, ForwardToDexEntry>;
 
 pub(super) fn start(
-    new_lease: NewLeaseContract,
+    form: NewLeaseForm,
+    account: Account,
     downpayment: DownpaymentCoin,
     loan: OpenLoanRespResult,
     deps: (LppRef, OracleRef, TimeAlarmsRef, LeasesRef),
     start_opening_at: Instant,
-    remote_lease_id: RemoteLeaseId,
-    max_slippage: MaxSlippage,
-) -> StartState {
-    dex::start_local_remote::<_, BuyAsset>(OpenIcaAccount::new(
-        new_lease,
+    transport: RemoteSwapTransport,
+) -> ContractResult<StartState> {
+    let spec = BuyAsset::new(
+        form,
+        account,
         downpayment,
         loan,
-        max_slippage,
+        transport,
         deps,
         start_opening_at,
+    );
+    dex::start_fund_remote::<_, ForwardToDexEntry>(spec).map_err(Into::into)
+}
+
+/// Assemble the opening's remote-lease transport from the `OpenLease`
+/// acknowledgment: the controller swaps are forwarded through, the
+/// `LeaseAuthority` the funding transfers address, and the opening slippage
+/// bound frozen for the whole opening. Takes the controller by value so the
+/// caller moves it out of the `NewLeaseContract` rather than cloning it.
+pub(super) fn open_transport(
+    leases: &LeasesRef,
+    remote_lease_controller: Addr,
+    remote_lease_id: RemoteLeaseId,
+    querier: QuerierWrapper<'_>,
+) -> ContractResult<RemoteSwapTransport> {
+    let max_slippage = leases.max_slippage(querier)?.opening;
+    let funding_receiver = remote_lease_host(&remote_lease_id)?;
+    Ok(RemoteSwapTransport {
+        remote_lease_controller,
         remote_lease_id,
-    ))
+        funding_receiver,
+        max_slippage,
+    })
 }
 
 type BuyAssetStateResponse = <BuyAsset as SwapTask>::StateResponse;
@@ -102,14 +117,20 @@ pub struct BuyAsset {
     deps: (LppRef, OracleRef, TimeAlarmsRef, LeasesRef),
     start_opening_at: Instant,
     remote_lease_id: RemoteLeaseId,
+    /// The `LeaseAuthority` the funding transfers are addressed to, bridged
+    /// from `remote_lease_id` at the start of funding so it can be lent as a
+    /// `&HostAccount` to the ICS-20 sender.
+    funding_receiver: HostAccount,
 }
 
-/// The remote-transport coordinates of the opening swap: which controller
-/// to send the legs through, which remote lease they act on, and the
-/// slippage bound frozen for the whole opening.
+/// The remote-lease coordinates of the opening: which controller to send the
+/// swap legs through, which remote lease they act on, the `LeaseAuthority` the
+/// funding transfers are addressed to, and the slippage bound frozen for the
+/// whole opening.
 pub(super) struct RemoteSwapTransport {
     pub remote_lease_controller: Addr,
     pub remote_lease_id: RemoteLeaseId,
+    pub funding_receiver: HostAccount,
     pub max_slippage: MaxSlippage,
 }
 
@@ -126,6 +147,7 @@ impl BuyAsset {
         let RemoteSwapTransport {
             remote_lease_controller,
             remote_lease_id,
+            funding_receiver,
             max_slippage,
         } = transport;
         Self {
@@ -138,6 +160,7 @@ impl BuyAsset {
             deps,
             start_opening_at,
             remote_lease_id,
+            funding_receiver,
         }
     }
 
@@ -150,7 +173,7 @@ impl BuyAsset {
             downpayment: self.downpayment,
             loan: self.loan.principal,
             loan_interest_rate: self.loan.annual_interest_rate,
-            in_progress: in_progress_fn(HostAccount::from(self.dex_account).into()),
+            in_progress: in_progress_fn(self.funding_receiver.into()),
         })
     }
 }
@@ -286,6 +309,24 @@ impl RemoteSwapClient for BuyAsset {
     }
 }
 
+impl FundingClient for BuyAsset {
+    fn funding_sender(&self) -> &Addr {
+        self.dex_account.owner()
+    }
+
+    fn funding_receiver(&self) -> &HostAccount {
+        &self.funding_receiver
+    }
+
+    fn transfer_channel(&self) -> &str {
+        self.dex_account
+            .dex()
+            .transfer_channel
+            .local_endpoint
+            .as_str()
+    }
+}
+
 impl ContractInSwap for BuyAsset {
     type StateResponse = <Self as SwapTask>::StateResponse;
 
@@ -297,7 +338,7 @@ impl ContractInSwap for BuyAsset {
         _querier: QuerierWrapper<'_>,
     ) -> Self::StateResponse {
         match in_progress {
-            Stage::TransferOut => self.state(|ica_account| OngoingTrx::TransferOut { ica_account }),
+            Stage::TransferOut => self.state(|receiver| OngoingTrx::Funding { receiver }),
             Stage::Swap => unimplemented!("the opening swap runs over the remote-lease transport"),
             Stage::TransferInInit => unimplemented!(),
             Stage::TransferInFinish => unimplemented!(),
@@ -386,6 +427,7 @@ mod tests {
         price::base::BasePrice,
     };
     use lpp::stub::LppRef as LppGenericRef;
+    use platform::ica::HostAccount;
     use remote_lease::{
         msg::SwapParams,
         response::{
@@ -599,6 +641,7 @@ mod tests {
             RemoteSwapTransport {
                 remote_lease_controller: Addr::unchecked("controller"),
                 remote_lease_id: remote_lease_id(),
+                funding_receiver: funding_receiver(),
                 max_slippage: MaxSlippage::unchecked(Percent100::from_percent(
                     MAX_SLIPPAGE_PERCENT,
                 )),
@@ -611,6 +654,14 @@ mod tests {
             ),
             Instant::from_seconds(1_000_000),
         )
+    }
+
+    fn funding_receiver() -> HostAccount {
+        remote_lease_id()
+            .as_str()
+            .to_owned()
+            .try_into()
+            .expect("a valid host account")
     }
 
     fn form() -> NewLeaseForm {
