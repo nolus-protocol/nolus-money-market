@@ -10,9 +10,10 @@ Trace of a callback delivered to the Lease contract via
    with events so the controller's ack always commits.
 2. **Safe-delivery segment** (`ResponseDelivery` + `reply_on_error` +
    `TimeAlarms` retry loop, boxes **A**–**D**) — applies to the
-   **still-ICA legs** driven by `SudoMsg` (the opening ICA transfer-out
-   and the repay/liquidation swaps with their transfer stages).
-   Controller callbacks never route through it.
+   **sudo-delivered legs** driven by `SudoMsg` (the opening and repay
+   funding transfers to the Solana-side `LeaseAuthority`, and the
+   drain-home transfers — all riding the paired ICS-20 transfer channel,
+   no Interchain Account). Controller callbacks never route through it.
 
 ## Controller → lease dispatch
 
@@ -38,11 +39,11 @@ flowchart TD
         Classify["deliver_remote_callback:<br/>OperationOk → on_remote_response(bytes) · OperationErr → on_remote_error · OperationTimeout → on_remote_timeout"]:::lease
         RemoteLeg["RemoteSwap leg (overrides on_remote_*):<br/>decode_response — typed, registry-validating — credits the in-flight leg<br/>absorbed with event on undecodable-response / unexpected-response-variant /<br/>out-currency-mismatch / output-overflow; under-min-out re-emits the leg"]:::ok
         DrainLeg["RemoteTransferOut leg (overrides on_remote_*):<br/>decode_response — variant check only, the payload carries no data —<br/>advances the acks_left countdown; absorbed with event on<br/>undecodable-response / unexpected-response-variant / remote-error<br/>(an error ack is NOT auto-retried — recovery is the operator heal)"]:::ok
-        IcaLeg["ICA legs (default on_remote_*):<br/>absorb with `remote-callback` event — never advance the ICA ack countdown"]:::ok
+        DefaultLeg["any non-overriding state (default on_remote_*):<br/>absorb with `remote-callback` event — never advance any ack countdown.<br/>The remote-lease path's callback legs all override on_remote_*; this is the safety fallback"]:::ok
         ExecEntry --> Auth -->|granted| Classify
         Classify --> RemoteLeg
         Classify --> DrainLeg
-        Classify --> IcaLeg
+        Classify --> DefaultLeg
         Auth -. denied .-> AuthErr["DexError::Unauthorized<br/>← Err propagates to controller, its ibc_packet_ack reverts, relayer retries"]:::err
     end
 
@@ -56,7 +57,7 @@ decode, names a currency outside the registry, carries the wrong
 operation variant, or overflows — is absorbed with a distinct event
 reason so the controller's `ibc_packet_ack` commits.
 
-## Safe-delivery segment — still-ICA legs (`SudoMsg` path)
+## Safe-delivery segment — sudo-delivered transfer legs (`SudoMsg` path)
 
 ```mermaid
 flowchart TD
@@ -71,8 +72,8 @@ flowchart TD
 
     subgraph SafeDelivery[Safe-delivery segment]
         direction TB
-        A["<b>A. Persist + schedule (outer tx)</b><br/>Wrap into ResponseDelivery {handler: SwapExactIn, response: data}<br/>Emit SubMsg::reply_on_error(WasmMsg::Execute(self, DexCallback))<br/>Return Ok ⇒ outer tx commits<br/>Persisted: state = SwapExactInRespDelivery"]:::safeA
-        B["<b>B. Inner attempt (same tx)</b><br/>execute(DexCallback) — SameContractOnly<br/>load ResponseDelivery → resp_delivery.on_inner → do_deliver<br/>Adapter decodes response, computes amount_out, state →<br/>· BuyAsset → TransferInInit<br/>· BuyLpn → settle / TransferIn<br/>· SellAsset → TransferInInit"]:::safeB
+        A["<b>A. Persist + schedule (outer tx)</b><br/>Wrap into ResponseDelivery {handler, response: data}<br/>handler = Funding (opening/repay funding) or RemoteTransferOut (drain)<br/>Emit SubMsg::reply_on_error(WasmMsg::Execute(self, DexCallback))<br/>Return Ok ⇒ outer tx commits<br/>Persisted: state = FundingRespDelivery / drain RespDelivery"]:::safeA
+        B["<b>B. Inner attempt (same tx)</b><br/>execute(DexCallback) — SameContractOnly<br/>load ResponseDelivery → resp_delivery.on_inner → do_deliver<br/>Funding::deliver_ack credits the in-flight coin via acks_left, state →<br/>· another coin in flight → next Funding leg<br/>· last funding ack → opening/repay RemoteSwap leg<br/>· drain transfer acked → FundsArrival"]:::safeB
         BSplit{DexCallback}
         BOk["Ok — new state persisted<br/>outer tx commits with transition<br/>ack to controller committed"]:::ok
         C["<b>C. Capture failure, schedule retry</b><br/>outer SubMsg's reply_on_error fires → contract::reply(REPLY_ID, err)<br/>ResponseDelivery::reply → setup_next_delivery(now + 1ns)<br/>TimeAlarmsRef::setup_alarm<br/>ResponseDelivery state stays persisted<br/>outer tx commits — controller's ibc_packet_ack already done"]:::safeC
@@ -103,10 +104,13 @@ infallibility contract the implementation upholds).
 ### B — Inner attempt (same tx, sub-message)
 
 `DexCallback` runs as a sub-message of the outer tx. It loads the
-persisted `ResponseDelivery`, decodes the buffered response, computes
-the swap outcome (e.g. `amount_out`), and transitions to the next state.
-If this branch succeeds, the outer tx commits with the new state and
-the `ResponseDelivery` wrapper is gone in one atomic step.
+persisted `ResponseDelivery` and runs the wrapped handler against the
+buffered response: the `Funding` leg credits the in-flight coin via
+`acks_left` (the ICS-20 success payload carries nothing to decode) and
+either schedules the next coin or, on the last ack, advances to the
+opening/repay `RemoteSwap` leg; the drain's `RemoteTransferOut` advances
+toward `FundsArrival`. If this branch succeeds, the outer tx commits with
+the new state and the `ResponseDelivery` wrapper is gone in one atomic step.
 
 Permission is `SameContractOnly` — `DexCallback` is unreachable from
 any external caller.
@@ -152,13 +156,13 @@ on a permanently-unrecoverable state.
    concern of the lease + `TimeAlarms` contract. The controller is
    never invoked again for the same packet.
 
-## Transport comparison (ICA legs vs. remote legs)
+## Transport comparison (transfer legs vs. remote legs)
 
-| Stage | ICA legs (SudoMsg) | Remote legs (ExecuteMsg::RemoteLeaseCallback) |
+| Stage | Transfer legs (SudoMsg) | Remote legs (ExecuteMsg::RemoteLeaseCallback) |
 |-------|--------------------|-----------------------------------------------|
-| Outer transport | `SudoMsg::Response` (chain-delivered) | `WasmMsg::Execute` from the controller's `ibc_packet_ack` / `ibc_packet_timeout` |
+| Outer transport | `SudoMsg::Response` (chain-delivered ICS-20 transfer ack — funding + drain) | `WasmMsg::Execute` from the controller's `ibc_packet_ack` / `ibc_packet_timeout` |
 | Auth gate | Implicit (Sudo privilege) | Leaser query (`CheckRemoteLeaseCallbackPermission` vs `Config.remote_lease_controller`) |
-| Dispatch | `data` enters `on_dex_response` → safe-delivery boxes A–D | `deliver_remote_callback` → `on_remote_response/error/timeout`; `RemoteSwap` processes directly, ICA legs absorb |
+| Dispatch | `data` enters `on_dex_response` → safe-delivery boxes A–D | `deliver_remote_callback` → `on_remote_response/error/timeout`; `RemoteSwap` processes directly, the drain leg absorbs |
 | Content failure | retried locally via the A–D loop | absorbed with a distinct event reason; ack commits |
 
 ## Outbound open-side lifecycle (issue #142)
@@ -184,13 +188,16 @@ RequestLoan ──open loan──▶ OpenLease
                      │             │
                      ▼             ▼
         super::buy_asset::start    OpenFailed  (terminal)
-        (ICA open + transfer-out,  authenticated late-ack absorber:
-        swap legs via RemoteSwap)  emits `wasm-ls-remote-lease-late-ack`
+        (Funding: ICS-20 transfers authenticated late-ack absorber:
+        to LeaseAuthority, no ICA;   emits `wasm-ls-remote-lease-late-ack`
+        then swap legs via RemoteSwap)
 ```
 
 `OpenLease::on_remote_lease_callback` authenticates `info.sender` via `LeasesRef::remote_lease_callback_permission` before dispatching, identical to the in-flight DexState gate documented above. `OpenFailed` runs the same check — every callback handler that returns `Ok` is authz-gated, regardless of idempotence.
 
-`super::buy_asset::start` still opens the ICA account and transfers the funds out over ICA, but the swap legs run through the remote-lease controller (`RemoteSwap` — sequential single-coin legs, `acks_left` countdown, pinned per-leg `min_out`). The paid-close drain and the `CloseLease` run through the controller as well (next section); the repay/liquidation swaps still ride ICA and migrate in later phases.
+`super::buy_asset::start` no longer opens an Interchain Account. It funds the open by ICS-20-transferring the downpayment and the principal to the lease's Solana-side `LeaseAuthority` over the paired transfer channel — the `Funding` leg (`dex::StateFundRemote`, one coin in flight at a time, `acks_left` countdown). Only after the last funding transfer's success-ack does the workflow advance to the opening swap legs, which run through the remote-lease controller (`RemoteSwap` — sequential single-coin legs, `acks_left` countdown, pinned per-leg `min_out`). The opened-state repay funds the same way (`buy_lpn` now also uses `dex::StateFundRemote`, bridging `remote_lease_id → LeaseAuthority` via `contract::state::remote_lease_host`), then swaps through the controller. The paid-close drain and the `CloseLease` run through the controller as well (next section); the liquidation and sell-asset customer-close swap legs are controller-based too (`dex::StateSwap`). What remains on the ICA machinery is only the now-dead legacy trx builders (`dex::Account.host` is `None` on the remote-lease path); their wholesale removal is deferred to #649.
+
+**Funding-leg heal carries no per-emission nonce yet.** A timeout or error ack re-emits the single in-flight coin verbatim, and `Heal` does the same — but unlike the `RemoteSwap` leg, the funding transfer carries no per-emission nonce. So a heal issued while the original ICS-20 packet is still resolvable can solicit a *duplicate* success-ack and advance the `acks_left` countdown one step early. The residual is bounded and forward-only — no fund loss, since each coin's ICS-20 packet either lands or is refunded to the lease — but an early countdown can hand off to the swap before a coin physically arrives. Nonce adoption for the transfer legs is tracked to ibc-solray#142; until then, prefer waiting out the channel-level timeout over an eager heal on a still-resolvable funding packet.
 
 ## Outbound close-side lifecycle — drain-home (issue #142)
 
@@ -238,15 +245,15 @@ Opened ──final repay──▶ paid::start_close
 
 `ClosingRemoteLease` reports `Closed()` on the state query — the customer-facing close completed with the payout; the pending remote cleanup is observable through the `wasm-ls-close-remote-lease` events only. Operational notes that follow from this: (a) the leaser finalizes before the close acknowledgment arrives, so a protocol teardown check that counts registered leases cannot see a lease between finalize and the close ack — close the channel only after the `ClosingRemoteLease` population is drained; (b) a heal issued while the original packet is still resolvable can solicit a duplicate acknowledgment — the `Closed` terminal absorbs it, and the Solana side is assumed to reject a `CloseLease` for an already-closed lease account with an error acknowledgment (it already gates closes on residual balances the same way), which the lease likewise absorbs.
 
-Only this paid-close path closes the Solana-side account. The other terminals — `OpenFailed` (the account was never created), `Liquidated` and the sell-asset customer closes (still ICA-based, migrating in a later phase) — leave it open, as every close did before this phase.
+Only this paid-close path closes the Solana-side account. The other terminals — `OpenFailed` (the account was never created), `Liquidated` and the sell-asset customer closes (their swap legs are controller-based, `dex::StateSwap`, but no remote-account cleanup runs) — leave it open, as every close did before this phase.
 
 The whole drain leg, the `ClosingRemoteLease` state, and the `Closed` terminal authorise callbacks against the controller address pinned in `LeaseDTO` (`SingleUserPermission`) instead of the leaser query the opening/swap legs use — the same pin the drain and the close emit to. A leaser re-configuration mid-drain therefore can neither wedge a live drain (the original controller's acks stay authorised) nor let the new controller inject synthetic acks into it.
 
 An `OperationOk` ack carrying any operation other than `OpenLease` (a `CloseLease` / `Swap` / `TransferOut` response against an in-flight open) can only originate from a buggy or hostile counterparty. The lease treats it exactly like `OperationErr`: it refunds the customer, finalises, and moves to `OpenFailed` with a synthesised `unexpected operation response: …` reason. It does **not** return `Err` — an error would revert the controller's `ibc_packet_ack`, stranding the relayer and freezing the lease in `OpenLease`. Operators see the same `wasm-ls-remote-lease-open-failed` event and audit the counterparty per the runbook.
 
-## Storage: v9 → v10 → v11 → v12 (refuse-migrate)
+## Storage: v9 → v10 → v11 → v12 → v13 (refuse-migrate)
 
-v10 makes `LeaseDTO.remote_lease_id` a non-optional Solana PDA, which is binary-incompatible with the v9 layout. v11 reshapes the opening-swap state: the `BuyAsset` spec gains the controller address and slippage bound, and the swap leg moves from the ICA `SwapExactIn` to the `RemoteSwap` transport. v12 gives `LeaseDTO` the non-optional `remote_lease_controller`, pinned at open, so the post-opening legs emit operations without re-querying the leaser. The `ClosingRemoteLease` state is additive within v12 — a new externally-tagged variant alongside the existing ones, no stored layout reshaped. The `migrate` entry point **rejects unconditionally** (`ContractError::UnsupportedMigration`):
+v10 makes `LeaseDTO.remote_lease_id` a non-optional Solana PDA, which is binary-incompatible with the v9 layout. v11 reshapes the opening-swap state: the `BuyAsset` spec gains the controller address and slippage bound, and the swap leg moves from the ICA `SwapExactIn` to the `RemoteSwap` transport. v12 gives `LeaseDTO` the non-optional `remote_lease_controller`, pinned at open, so the post-opening legs emit operations without re-querying the leaser. The `ClosingRemoteLease` state is additive within v12 — a new externally-tagged variant alongside the existing ones, no stored layout reshaped. v13 makes `dex::Account.host` optional (`None` on the remote-lease path, which opens no ICA) and switches the opening and repay funding off the ICA transfer-out onto the `Funding` leg (`dex::StateFundRemote`) over the paired transfer channel — both the `Account` shape and the persisted opening/repay state layouts change. The `migrate` entry point **rejects unconditionally** (`ContractError::UnsupportedMigration`):
 
 - **Mainnet** carries zero pre-v11 remote-lease positions, so refusing is strictly safer than risking a silent deserialise failure on the first post-upgrade load.
 - A v9 lease has no meaningful `remote_lease_id` to synthesise — its `dex_account` is an ICA host on the DEX chain, not a Solana PDA — and a pre-v11 opening state has no transport to resume on, so a "real" migration would only invent permanent sentinels.

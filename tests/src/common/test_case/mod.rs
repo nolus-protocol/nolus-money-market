@@ -113,8 +113,6 @@ impl<ProtocolsRegistry, Treasury>
             },
             InitConfig::new(lease_currency, common::coin(1000), None),
             LeaseInstantiatorConfig::default(),
-            TestCase::DEX_CONNECTION_ID,
-            TestCase::LEASE_ICA_ID,
         )
     }
 }

@@ -486,14 +486,11 @@ fn start_open_with_delayed_swap() -> (LeaseTestCase, Addr, Addr) {
     );
 
     let ica_addr = TestCase::ica_addr(&lease, TestCase::LEASE_ICA_ID);
-    let ica_port = format!("icacontroller-{ica_addr}");
-    let ica_channel = format!("channel-{ica_addr}");
     let exp_borrow = super::quote_borrow(&test_case, DOWNPAYMENT);
-    let _ = common::lease::confirm_ica_and_transfer_funds::<PaymentCurrency, LpnCurrency>(
+    let _ = common::lease::fund_remote_lease::<PaymentCurrency, LpnCurrency>(
         &mut test_case.app,
         lease.clone(),
-        TestCase::DEX_CONNECTION_ID,
-        (&ica_channel, &ica_port, ica_addr),
+        ica_addr,
         (DOWNPAYMENT, exp_borrow),
     )
     .unwrap_response();

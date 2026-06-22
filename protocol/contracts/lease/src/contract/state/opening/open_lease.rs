@@ -1,6 +1,7 @@
 use currencies::PaymentGroup;
 use currency::{CurrencyDef, Group, MemberOf};
 use cw_time::IntoInstant;
+use dex::Enterable;
 use finance::{
     coin::{Coin, WithCoin},
     duration::Duration,
@@ -33,7 +34,7 @@ use crate::{
         api::Contract,
         cmd::OpenLoanRespResult,
         finalize::LeasesRef,
-        state::{Response, State, open_failed::OpenFailed},
+        state::{Response, State, open_failed::OpenFailed, remote_lease_host},
     },
     error::{ContractError, ContractResult},
     finance::{LpnCoin, LpnCurrency, LppRef, OracleRef},
@@ -109,23 +110,28 @@ impl OpenLease {
         self,
         remote_lease_id: RemoteLeaseId,
         querier: QuerierWrapper<'_>,
-        _env: &Env,
+        env: &Env,
     ) -> ContractResult<Response> {
-        self.deps
-            .3
-            .max_slippage(querier)
-            .map(|max_slippages| max_slippages.opening)
-            .map(|max_slippage| {
-                let next = super::buy_asset::start(
-                    self.new_lease,
-                    self.downpayment,
-                    self.loan,
-                    self.deps,
-                    self.start_opening_at,
-                    remote_lease_id,
-                    max_slippage,
-                );
-                let batch = next.enter();
+        let max_slippage = self.deps.3.max_slippage(querier)?.opening;
+        let funding_receiver = remote_lease_host(&remote_lease_id)?;
+        let transport = super::buy_asset::RemoteSwapTransport {
+            remote_lease_controller: self.new_lease.remote_lease_controller.clone(),
+            remote_lease_id,
+            funding_receiver,
+            max_slippage,
+        };
+        let next = super::buy_asset::start(
+            self.new_lease,
+            self.downpayment,
+            self.loan,
+            self.deps,
+            self.start_opening_at,
+            transport,
+            env.contract.address.clone(),
+        )?;
+        next.enter(env.block.time.into_instant(), querier)
+            .map_err(Into::into)
+            .map(|batch| {
                 StateMachineResponse::from(
                     MessageResponse::messages_only(batch),
                     State::from(super::buy_asset::DexState::from(next)),

@@ -17,22 +17,28 @@ use crate::{Account, Connectable, error::Result, swap::ExactAmountIn};
 
 pub(super) const IBC_TIMEOUT: Duration = Duration::from_days(1); //enough for the relayers to process
 
+/// The ICA host is present on every leg of the legacy ICA path. Remote-lease
+/// leases carry no host (`Account::funding`) but never reach these trx
+/// builders; the whole ICA path is removed by #649.
+const ICA_HOST_REQUIRED: &str = "ICA host present on the legacy ICA path";
+
 pub(super) struct TransferOutTrx<'ica> {
     sender: LocalSender<'ica>,
 }
 
 impl<'ica> TransferOutTrx<'ica> {
     pub(super) fn new(ica: &'ica Account, now: Instant) -> Self {
+        let host = ica.host().expect(ICA_HOST_REQUIRED);
         Self {
             sender: LocalSender::new(
                 &ica.dex().transfer_channel.local_endpoint,
                 ica.owner(),
-                ica.host(),
+                host,
                 (now + IBC_TIMEOUT).into_timestamp(),
                 format!(
                     "Transfer out: {sender} -> {receiver}",
                     sender = ica.owner(),
-                    receiver = ica.host()
+                    receiver = host
                 ),
             ),
         }
@@ -74,7 +80,7 @@ where
     ) -> Self {
         Self {
             conn: &ica.dex().connection_id,
-            ica_account: ica.host(),
+            ica_account: ica.host().expect(ICA_HOST_REQUIRED),
             trx: Transaction::default(),
             swap_path,
             querier,
@@ -127,7 +133,7 @@ impl<'ica> TransferInTrx<'ica> {
     pub(super) fn new(ica: &'ica Account, now: Instant) -> Self {
         let sender = RemoteSender::new(
             &ica.dex().transfer_channel.remote_endpoint,
-            ica.host(),
+            ica.host().expect(ICA_HOST_REQUIRED),
             ica.owner(),
             (now + IBC_TIMEOUT).into_timestamp(),
         );

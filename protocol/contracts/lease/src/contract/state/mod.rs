@@ -6,14 +6,15 @@ use enum_dispatch::enum_dispatch;
 
 use finance::duration::Duration;
 use platform::{
-    batch::Batch, ica::ErrorResponse as ICAErrorResponse, message::Response as MessageResponse,
+    batch::Batch,
+    ica::{ErrorResponse as ICAErrorResponse, HostAccount},
+    message::Response as MessageResponse,
 };
-use remote_lease::callback::RemoteLeaseCallback;
+use remote_lease::{callback::RemoteLeaseCallback, response::RemoteLeaseId};
 use sdk::{
     cosmwasm_std::{Binary, Env, MessageInfo, QuerierWrapper, Reply, Storage},
     cw_storage_plus::Item,
 };
-use swap::Impl;
 
 use crate::{
     api::{
@@ -83,7 +84,14 @@ type Liquidated = LeaseState<liquidated::Liquidated>;
 
 type SwapResult = ContractResult<Response>;
 
-type SwapClient = Impl;
+/// Bridge a Solana-side `LeaseAuthority` from the wire `RemoteLeaseId` into the
+/// `HostAccount` the funding ICS-20 transfers address. The base58
+/// `RemoteLeaseId` is always non-empty, so the host-account validation never
+/// rejects it. Shared by the opening funding leg (downpayment + principal) and
+/// the repay funding leg (the payment).
+pub(crate) fn remote_lease_host(remote_lease_id: &RemoteLeaseId) -> ContractResult<HostAccount> {
+    HostAccount::try_from(remote_lease_id.as_str().to_owned()).map_err(Into::into)
+}
 
 #[enum_dispatch(Contract)]
 #[derive(Serialize, Deserialize)]

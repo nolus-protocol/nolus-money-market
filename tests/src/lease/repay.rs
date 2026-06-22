@@ -334,12 +334,7 @@ fn repay_funds_the_swap_before_swapping() {
         .unwrap();
 
     // The payment is pushed to the remote account before any swap is scheduled.
-    let funded: CwCoin = common::ibc::expect_transfer(
-        &mut response,
-        TestCase::LEASER_IBC_CHANNEL,
-        lease.as_str(),
-        ica_addr.as_str(),
-    );
+    let funded: CwCoin = common::ibc::take_transfer(&mut response, TestCase::LEASER_IBC_CHANNEL);
     assert_eq!(payment_cw, funded);
     let _ = response.unwrap_response();
 
@@ -470,12 +465,7 @@ pub(crate) fn send_repay<ProtocolsRegistry, Treasury, Profit, Reserve, Leaser, L
         )
         .unwrap();
 
-    let funded: CwCoin = common::ibc::expect_transfer(
-        &mut response,
-        TestCase::LEASER_IBC_CHANNEL,
-        lease.as_str(),
-        ica_addr.as_str(),
-    );
+    let funded: CwCoin = common::ibc::take_transfer(&mut response, TestCase::LEASER_IBC_CHANNEL);
     assert_eq!(payment_cw, funded);
     let _ = response.unwrap_response();
 

@@ -207,7 +207,7 @@ fn open_lease<ProtocolsRegistry, Treasury, Profit, Reserve, Lpp, Oracle, TimeAla
         )
         .unwrap();
 
-    response.expect_register_ica(TestCase::DEX_CONNECTION_ID, TestCase::LEASE_ICA_ID);
+    let _funding = response.take_ibc_transfer(TestCase::LEASER_IBC_CHANNEL);
 
     () = response.ignore_response().unwrap_response();
 

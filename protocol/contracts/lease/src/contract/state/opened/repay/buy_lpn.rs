@@ -6,22 +6,22 @@ use oracle::stub::SwapPath;
 use serde::{Deserialize, Serialize};
 
 use dex::{
-    AcceptAnyNonZeroSwap, Account, AnomalyTreatment, CoinsNb, ContractInRemoteSwap, ContractInSwap,
-    Enterable, Error as DexError, RemoteSwapClient, SlippageEscalation, Stage, SwapOutputTask,
-    SwapTask, WithCalculator, WithOutputTask,
+    AcceptAnyNonZeroSwap, Account, AnomalyTreatment, CoinsNb, Connectable, ContractInRemoteSwap,
+    ContractInSwap, Enterable, Error as DexError, FundingClient, RemoteSwapClient,
+    SlippageEscalation, Stage, SwapOutputTask, SwapTask, WithCalculator, WithOutputTask,
 };
 use finance::instant::Instant;
 use finance::{
     coin::{Coin, CoinDTO},
     duration::Duration,
 };
-use platform::batch::Batch;
+use platform::{batch::Batch, ica::HostAccount};
 use remote_lease::{
     msg::SwapParams,
     response::{OperationResponse, SwapResponse},
     stub::{ControllerInnerMessage, Lease as ControllerLease},
 };
-use sdk::cosmwasm_std::{self, Env, MessageInfo, QuerierWrapper};
+use sdk::cosmwasm_std::{self, Addr, Env, MessageInfo, QuerierWrapper};
 use timealarms::stub::TimeAlarmsRef;
 
 use crate::{
@@ -35,11 +35,12 @@ use crate::{
     contract::{
         Lease,
         state::{
-            Response, StateResponse as ContractStateResponse, SwapClient, SwapResult,
+            Response, StateResponse as ContractStateResponse, SwapResult,
             opened::{
                 self,
                 proceeds_drain::{RepayDrain, RepayFinish},
             },
+            remote_lease_host,
             resp_delivery::ForwardToDexEntry,
         },
     },
@@ -59,7 +60,7 @@ const OUT_NOT_LPN: &str = "swapped-out currency is not the lease LPN";
 
 const TIMEOUT_RETRY_BUDGET: CoinsNb = 3;
 
-pub(crate) type DexState = dex::StateOutSwap<BuyLpn, SwapClient, ForwardToDexEntry>;
+pub(crate) type DexState = dex::StateFundRemote<BuyLpn, ForwardToDexEntry>;
 pub(crate) type DrainState = dex::StateDrain<RepayDrain<RepayFinish>>;
 
 pub(in super::super) fn start(
@@ -68,8 +69,9 @@ pub(in super::super) fn start(
     env: &Env,
     querier: QuerierWrapper<'_>,
 ) -> SwapResult {
-    let start_state =
-        dex::start_out_swap::<BuyLpn, SwapClient, ForwardToDexEntry>(BuyLpn::new(lease, payment));
+    let start_state = BuyLpn::new(lease, payment).and_then(|spec| {
+        dex::start_fund_remote::<_, ForwardToDexEntry>(spec).map_err(Into::into)
+    })?;
     start_state
         .enter(env.block.time.into_instant(), querier)
         .map(|funding_msgs| Response::from(funding_msgs, DexState::from(start_state)))
@@ -80,11 +82,20 @@ pub(in super::super) fn start(
 pub(crate) struct BuyLpn {
     lease: Lease,
     payment: PaymentCoin,
+    /// The `LeaseAuthority` the repay funding transfer is addressed to, bridged
+    /// from the lease's persisted `remote_lease_id` so it can be lent as a
+    /// `&HostAccount` to the ICS-20 sender — exactly as the opening funds the
+    /// downpayment and principal.
+    funding_receiver: HostAccount,
 }
 
 impl BuyLpn {
-    fn new(lease: Lease, payment: PaymentCoin) -> Self {
-        Self { lease, payment }
+    fn new(lease: Lease, payment: PaymentCoin) -> ContractResult<Self> {
+        remote_lease_host(&lease.lease.remote_lease_id).map(|funding_receiver| Self {
+            lease,
+            payment,
+            funding_receiver,
+        })
     }
 
     fn query(
@@ -262,6 +273,24 @@ impl RemoteSwapClient for BuyLpn {
                     Err(DexError::unexpected_response_variant(NON_SWAP_RESPONSE))
                 }
             })
+    }
+}
+
+impl FundingClient for BuyLpn {
+    fn funding_sender(&self) -> &Addr {
+        self.dex_account().owner()
+    }
+
+    fn funding_receiver(&self) -> &HostAccount {
+        &self.funding_receiver
+    }
+
+    fn transfer_channel(&self) -> &str {
+        self.dex_account()
+            .dex()
+            .transfer_channel
+            .local_endpoint
+            .as_str()
     }
 }
 

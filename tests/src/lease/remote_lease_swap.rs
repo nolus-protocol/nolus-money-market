@@ -226,37 +226,11 @@ fn underpaid_leg_retries_in_place() {
 fn swap_ack_in_transfer_leg_absorbed() {
     let (mut test_case, lease, controller) = start_open(DOWNPAYMENT);
 
-    let ica_addr = TestCase::ica_addr(&lease, TestCase::LEASE_ICA_ID);
-    let ica_port = format!("icacontroller-{ica_addr}");
-    let ica_channel = format!("channel-{ica_addr}");
-
-    let mut response = common::lease::send_open_ica_response(
-        &mut test_case.app,
-        lease.clone(),
-        TestCase::DEX_CONNECTION_ID,
-        &ica_channel,
-        &ica_port,
-        ica_addr.as_str(),
-    )
-    .ignore_response();
-    let downpayment_cw = common::ibc::expect_transfer(
-        &mut response,
-        TestCase::LEASER_IBC_CHANNEL,
-        lease.as_str(),
-        ica_addr.as_str(),
-    );
-    let borrow_cw = common::ibc::expect_transfer(
-        &mut response,
-        TestCase::LEASER_IBC_CHANNEL,
-        lease.as_str(),
-        ica_addr.as_str(),
-    );
-    () = response.unwrap_response();
+    // The opening sits in the funding leg - the downpayment transfer is in
+    // flight. A swap acknowledgment arriving now must neither error nor
+    // advance the funding leg; only the swap leg credits a remote callback.
     assert_transfers_pending(&test_case, lease.clone());
 
-    // a swap acknowledgment arrives while both transfer acknowledgments
-    // are still outstanding - it must neither error nor advance the
-    // transfer countdown
     let unexpected = RemoteLeaseCallback {
         nonce: 0,
         outcome: RemoteOperationOutcome::OperationOk(
@@ -270,24 +244,7 @@ fn swap_ack_in_transfer_leg_absorbed() {
     expect_attribute(&injected.events, ABSORB_EVENT, "absorbed", "response");
     assert_transfers_pending(&test_case, lease.clone());
 
-    () = common::ibc::do_transfer(
-        &mut test_case.app,
-        lease.clone(),
-        ica_addr.clone(),
-        false,
-        &downpayment_cw,
-    )
-    .ignore_response()
-    .unwrap_response();
-    () = common::ibc::do_transfer(
-        &mut test_case.app,
-        lease.clone(),
-        ica_addr,
-        false,
-        &borrow_cw,
-    )
-    .ignore_response()
-    .unwrap_response();
+    let _response = transfer_funds(&mut test_case, &lease, DOWNPAYMENT);
 
     let _amount = opened_amount(&test_case, lease);
 }
@@ -602,14 +559,11 @@ where
 {
     let exp_borrow = borrow_quote(test_case, downpayment);
     let ica_addr = TestCase::ica_addr(lease, TestCase::LEASE_ICA_ID);
-    let ica_port = format!("icacontroller-{ica_addr}");
-    let ica_channel = format!("channel-{ica_addr}");
 
-    common::lease::confirm_ica_and_transfer_funds::<DownpaymentC, LpnCurrency>(
+    common::lease::fund_remote_lease::<DownpaymentC, LpnCurrency>(
         &mut test_case.app,
         lease.clone(),
-        TestCase::DEX_CONNECTION_ID,
-        (&ica_channel, &ica_port, ica_addr),
+        ica_addr,
         (downpayment, exp_borrow),
     )
     .unwrap_response()
@@ -635,10 +589,10 @@ fn opened_amount(test_case: &LeaseTestCase, lease: Addr) -> LeaseCoin {
 fn assert_transfers_pending(test_case: &LeaseTestCase, lease: Addr) {
     match super::state_query(test_case, lease) {
         StateResponse::Opening {
-            in_progress: OpeningOngoingTrx::TransferOut { .. },
+            in_progress: OpeningOngoingTrx::Funding { .. },
             ..
         } => (),
-        other => panic!("expected the transfer-out leg, got {other:?}"),
+        other => panic!("expected the funding leg, got {other:?}"),
     }
 }
 
