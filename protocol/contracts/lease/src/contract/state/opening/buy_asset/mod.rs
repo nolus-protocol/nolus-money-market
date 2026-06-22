@@ -26,7 +26,7 @@ use timealarms::stub::TimeAlarmsRef;
 use crate::{
     api::{
         DownpaymentCoin, LeaseAssetCurrencies, LeasePaymentCurrencies,
-        open::{NewLeaseContract, NewLeaseForm},
+        open::NewLeaseForm,
         query::{StateResponse as QueryStateResponse, opening::OngoingTrx},
     },
     contract::{
@@ -35,6 +35,7 @@ use crate::{
         state::{
             SwapResult,
             out_task::{OutTaskFactory, WithOutCurrency},
+            remote_lease_host,
             resp_delivery::ForwardToDexEntry,
         },
     },
@@ -62,18 +63,17 @@ pub(super) type StartState = dex::StartFundRemoteState<BuyAsset, ForwardToDexEnt
 pub(in super::super) type DexState = dex::StateFundRemote<BuyAsset, ForwardToDexEntry>;
 
 pub(super) fn start(
-    new_lease: NewLeaseContract,
+    form: NewLeaseForm,
+    account: Account,
     downpayment: DownpaymentCoin,
     loan: OpenLoanRespResult,
     deps: (LppRef, OracleRef, TimeAlarmsRef, LeasesRef),
     start_opening_at: Instant,
     transport: RemoteSwapTransport,
-    lease: Addr,
 ) -> ContractResult<StartState> {
-    let NewLeaseContract { form, dex, .. } = new_lease;
     let spec = BuyAsset::new(
         form,
-        Account::funding(lease, dex),
+        account,
         downpayment,
         loan,
         transport,
@@ -81,6 +81,27 @@ pub(super) fn start(
         start_opening_at,
     );
     dex::start_fund_remote::<_, ForwardToDexEntry>(spec).map_err(Into::into)
+}
+
+/// Assemble the opening's remote-lease transport from the `OpenLease`
+/// acknowledgment: the controller swaps are forwarded through, the
+/// `LeaseAuthority` the funding transfers address, and the opening slippage
+/// bound frozen for the whole opening. Takes the controller by value so the
+/// caller moves it out of the `NewLeaseContract` rather than cloning it.
+pub(super) fn open_transport(
+    leases: &LeasesRef,
+    remote_lease_controller: Addr,
+    remote_lease_id: RemoteLeaseId,
+    querier: QuerierWrapper<'_>,
+) -> ContractResult<RemoteSwapTransport> {
+    let max_slippage = leases.max_slippage(querier)?.opening;
+    let funding_receiver = remote_lease_host(&remote_lease_id)?;
+    Ok(RemoteSwapTransport {
+        remote_lease_controller,
+        remote_lease_id,
+        funding_receiver,
+        max_slippage,
+    })
 }
 
 type BuyAssetStateResponse = <BuyAsset as SwapTask>::StateResponse;

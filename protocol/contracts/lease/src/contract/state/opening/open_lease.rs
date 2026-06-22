@@ -1,7 +1,7 @@
 use currencies::PaymentGroup;
 use currency::{CurrencyDef, Group, MemberOf};
 use cw_time::IntoInstant;
-use dex::Enterable;
+use dex::{Account, Enterable};
 use finance::{
     coin::{Coin, WithCoin},
     duration::Duration,
@@ -34,7 +34,7 @@ use crate::{
         api::Contract,
         cmd::OpenLoanRespResult,
         finalize::LeasesRef,
-        state::{Response, State, open_failed::OpenFailed, remote_lease_host},
+        state::{Response, State, open_failed::OpenFailed},
     },
     error::{ContractError, ContractResult},
     finance::{LpnCoin, LpnCurrency, LppRef, OracleRef},
@@ -112,31 +112,34 @@ impl OpenLease {
         querier: QuerierWrapper<'_>,
         env: &Env,
     ) -> ContractResult<Response> {
-        let max_slippage = self.deps.3.max_slippage(querier)?.opening;
-        let funding_receiver = remote_lease_host(&remote_lease_id)?;
-        let transport = super::buy_asset::RemoteSwapTransport {
-            remote_lease_controller: self.new_lease.remote_lease_controller.clone(),
+        let transport = super::buy_asset::open_transport(
+            &self.deps.3,
+            self.new_lease.remote_lease_controller,
             remote_lease_id,
-            funding_receiver,
-            max_slippage,
-        };
+            querier,
+        )?;
+        let account = Account::funding(env.contract.address.clone(), self.new_lease.dex);
         let next = super::buy_asset::start(
-            self.new_lease,
+            self.new_lease.form,
+            account,
             self.downpayment,
             self.loan,
             self.deps,
             self.start_opening_at,
             transport,
-            env.contract.address.clone(),
         )?;
         next.enter(env.block.time.into_instant(), querier)
             .map_err(Into::into)
-            .map(|batch| {
-                StateMachineResponse::from(
-                    MessageResponse::messages_only(batch),
-                    State::from(super::buy_asset::DexState::from(next)),
-                )
-            })
+            .map(|batch| Self::opening_response(next, batch))
+    }
+
+    /// Wrap the funding leg's entry batch and its dex state into the lease's
+    /// state-machine response.
+    fn opening_response(next: super::buy_asset::StartState, batch: Batch) -> Response {
+        StateMachineResponse::from(
+            MessageResponse::messages_only(batch),
+            State::from(super::buy_asset::DexState::from(next)),
+        )
     }
 
     fn on_open_failed(
