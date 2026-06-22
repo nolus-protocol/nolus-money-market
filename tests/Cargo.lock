@@ -1051,7 +1051,6 @@ dependencies = [
  "reserve",
  "sdk",
  "serde",
- "swap",
  "thiserror 2.0.18",
  "timealarms",
  "versioning",
