@@ -9,9 +9,15 @@
 //! retries forever. #638 reuses the opened-leg `SlippageAnomaly` terminal
 //! for the opening leg, parking it on a hard error:
 //!
-//! - an `OperationErr` parks the in-flight opening leg immediately at the
+//! - an `OperationErr` on a PARTIAL leg (`total_out > 0`, a leg already
+//!   acknowledged) parks the in-flight opening leg immediately at the
 //!   `SlippageProtectionActivated` terminal (no retry), preserving the
 //!   accumulated `total_out` of the already-acked legs (complete-forward),
+//! - an `OperationErr` on the FIRST leg (`total_out == 0`, nothing
+//!   acknowledged) instead CLEAN-UNWINDS (issue #658): it enters the
+//!   `OpeningUnwind` drain (`OngoingTrx::Unwinding`) rather than parking -
+//!   reversing #638's uniform-park for the zero-acked case (see
+//!   `leg_one_error_unwinds_clean`),
 //! - an `OperationTimeout` is UNCHANGED - it re-emits the in-flight leg
 //!   verbatim, unbounded, never parking (D2: error and timeout are
 //!   structurally separate),
@@ -45,7 +51,7 @@
 //!   `opening_error_reason_dropped_on_park` (#5),
 //!   `heal_completes_forward_to_active` (#6),
 //!   `heal_rejects_non_lease_admin` (#7),
-//!   `leg_one_error_parks_forward_only` (#8),
+//!   `leg_one_error_unwinds_clean` (#8, issue #658),
 //!   `nonce_interleave_stale_error_absorbed_current_error_parks` (#9).
 
 use access_control::error::Error as AccessError;
@@ -337,21 +343,34 @@ fn heal_rejects_non_lease_admin() {
     assert_opening_slippage_protection_activated(&test_case, &lease);
 }
 
-// === #8 leg-1 forward-only park =========================================
+// === #8 leg-1 zero-acked error -> clean unwind ==========================
 
-/// TARGET (#8, Ivan's uniform-park decision): an `OperationErr` on LEG 1
-/// (the downpayment leg, total_out == 0) parks forward-only - it must reach
-/// the queryable terminal, NOT a clean refund and NOT `OpenFailed`. This
-/// locks in the uniform-park decision so a future "add a refund for leg 1"
-/// change is caught as a regression.
+/// TARGET (#8, issue #658): an `OperationErr` on LEG 1 (the downpayment leg,
+/// `total_out == 0` - nothing acknowledged) CLEAN-UNWINDS rather than parks.
+/// The zero-acked opening error enters the `OpeningUnwind` drain
+/// (`OngoingTrx::Unwinding`), emitting the FIRST transfer-out leg to drain the
+/// inputs home - it is NOT the parked `SlippageProtectionActivated` terminal
+/// and NOT yet a refund into `OpenFailed`. This reverses #638's uniform-park
+/// for the zero-acked case (a leg-2 partial error, `total_out > 0`, still
+/// parks - see `opening_error_parks`).
 #[test]
-fn leg_one_error_parks_forward_only() {
+fn leg_one_error_unwinds_clean() {
     let (mut test_case, lease, controller) = start_opening_leg_one_in_flight();
     let total_before = recorded_total_out(&test_case, &lease);
     assert_eq!(
         LeaseCoin::ZERO,
         total_before,
-        "leg 1 parks with no acked proceeds yet (total_out == 0)",
+        "leg 1 unwinds with no acked proceeds yet (total_out == 0)",
+    );
+
+    // Hold the drain's transfer-out in flight so only the FIRST leg is emitted
+    // on entry; under the default `Ok` mode the stand-in would ack inline and
+    // chain straight to the second leg, all in one transaction.
+    stub::set_response_mode(
+        &mut test_case.app,
+        &controller,
+        op_tag::TRANSFER_OUT,
+        ResponseMode::Delayed,
     );
 
     inject_opening_error(
@@ -361,17 +380,32 @@ fn leg_one_error_parks_forward_only() {
         "downpayment leg under floor",
     );
 
-    // forward-only park: a queryable terminal, NOT a refund / OpenFailed
+    // the zero-acked error enters the drain, NOT the parked terminal and NOT a
+    // refund / OpenFailed yet
     match super::state_query(&test_case, lease.clone()) {
+        StateResponse::Opening {
+            in_progress: OpeningOngoingTrx::Unwinding,
+            ..
+        } => (),
         StateResponse::Opening {
             in_progress: OpeningOngoingTrx::SlippageProtectionActivated,
             ..
-        } => (),
-        StateResponse::OpenFailed { .. } => {
-            panic!("leg 1 must PARK forward-only, not refund into OpenFailed")
+        } => {
+            panic!("a zero-acked leg-1 error must UNWIND, not park at the slippage terminal")
         }
-        other => panic!("expected the parked opening terminal, got {other:?}"),
+        StateResponse::OpenFailed { .. } => {
+            panic!("the unwind drain has not finished yet - it must still be Opening")
+        }
+        other => panic!("expected the opening unwind drain, got {other:?}"),
     }
+
+    // entering the drain emits exactly the FIRST transfer-out leg - the inputs
+    // are being drained home, not refunded in place
+    assert_eq!(
+        1,
+        stub::recorded_transfer_outs(&test_case.app, &controller, &lease).len(),
+        "the unwind must emit exactly the first drain transfer-out on entry",
+    );
 }
 
 // === #9 nonce interleave ================================================

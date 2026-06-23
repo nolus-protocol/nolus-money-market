@@ -42,7 +42,8 @@ fn open_lifecycle_happy_path() {
             in_progress @ (OpeningOngoingTrx::RequestingOpenLease
             | OpeningOngoingTrx::OpenLease { .. }
             | OpeningOngoingTrx::BuyAsset { .. }
-            | OpeningOngoingTrx::SlippageProtectionActivated) => {
+            | OpeningOngoingTrx::SlippageProtectionActivated
+            | OpeningOngoingTrx::Unwinding) => {
                 panic!("expected OngoingTrx::Funding, got {in_progress:?}")
             }
         },

@@ -1,14 +1,15 @@
 use calculator::Factory as CalculatorFactory;
 use currency::{AnyVisitor, CurrencyDTO, CurrencyDef, Group, MemberOf};
+use cw_time::IntoInstant;
 use finish::BuyAssetFinish;
 use oracle::stub::SwapPath;
 use serde::{Deserialize, Serialize};
 
 use dex::MaxSlippage;
 use dex::{
-    Account, CoinsNb, Connectable, ContractInRemoteSwap, ContractInSwap, Error as DexError,
-    FundingClient, RemoteSwapClient, SlippageEscalation, Stage, SwapOutputTask, SwapTask,
-    WithCalculator, WithOutputTask,
+    Account, CoinsNb, Connectable, ContractInRemoteSwap, ContractInSwap, Enterable,
+    Error as DexError, FundingClient, RemoteSwapClient, SlippageEscalation, Stage, SwapOutputTask,
+    SwapTask, WithCalculator, WithOutputTask,
 };
 use finance::coin::{Amount, Coin};
 use finance::instant::Instant;
@@ -20,7 +21,7 @@ use remote_lease::{
     response::{OperationResponse, RemoteLeaseId, SwapResponse},
     stub::{ControllerInnerMessage, Lease as ControllerLease},
 };
-use sdk::cosmwasm_std::{self, Addr, MessageInfo, QuerierWrapper};
+use sdk::cosmwasm_std::{self, Addr, Env, MessageInfo, QuerierWrapper};
 use timealarms::stub::TimeAlarmsRef;
 
 use crate::{
@@ -33,7 +34,7 @@ use crate::{
         cmd::OpenLoanRespResult,
         finalize::LeasesRef,
         state::{
-            SwapResult,
+            Response, State, SwapResult,
             out_task::{OutTaskFactory, WithOutCurrency},
             remote_lease_host,
             resp_delivery::ForwardToDexEntry,
@@ -61,6 +62,7 @@ const TIMEOUT_RETRY_BUDGET: CoinsNb = 3;
 type AssetGroup = LeaseAssetCurrencies;
 pub(super) type StartState = dex::StartFundRemoteState<BuyAsset, ForwardToDexEntry>;
 pub(in super::super) type DexState = dex::StateFundRemote<BuyAsset, ForwardToDexEntry>;
+pub(in super::super) type UnwindDrainState = dex::StateDrain<super::unwind::OpeningUnwindTask>;
 
 pub(super) fn start(
     form: NewLeaseForm,
@@ -176,6 +178,38 @@ impl BuyAsset {
             in_progress: in_progress_fn(self.funding_receiver.into()),
         })
     }
+
+    fn into_unwind_task(
+        self,
+        querier: QuerierWrapper<'_>,
+    ) -> ContractResult<super::unwind::OpeningUnwindTask> {
+        super::unwind::OpeningUnwindTask::enter(
+            self.form,
+            self.downpayment,
+            self.loan,
+            self.deps,
+            self.remote_lease_controller,
+            self.dex_account.owner(),
+            querier,
+        )
+    }
+
+    fn start_unwind_drain(
+        task: super::unwind::OpeningUnwindTask,
+        now: Instant,
+        querier: QuerierWrapper<'_>,
+    ) -> <Self as SwapTask>::Result {
+        dex::start_drain(task)
+            .map_err(Into::into)
+            .and_then(|start_drain| {
+                start_drain
+                    .enter(now, querier)
+                    .map_err(Into::into)
+                    .map(|drain_msgs| {
+                        Response::from(drain_msgs, State::from(UnwindDrainState::from(start_drain)))
+                    })
+            })
+    }
 }
 
 impl SwapTask for BuyAsset {
@@ -224,11 +258,20 @@ impl SwapTask for BuyAsset {
     }
 
     /// The opening swap re-emits a timed-out leg verbatim rather than parking
-    /// it - it must make forward progress to open. An explicit error still
-    /// parks at the slippage-anomaly terminal (see `RemoteSwap::on_remote_error`);
-    /// this governs only the timeout path.
+    /// it - it must make forward progress to open. An explicit error with a leg
+    /// already acked still parks at the slippage-anomaly terminal (see
+    /// `RemoteSwap::on_remote_error`); this governs only the timeout path.
     fn slippage_escalation(&self) -> SlippageEscalation {
         SlippageEscalation::ReEmit
+    }
+
+    /// A zero-acked opening error clean-unwinds instead of parking: nothing has
+    /// swapped on the remote side yet, and a failed open has no live lease to
+    /// park into, so the inputs are drained home and refunded. Only the opening
+    /// overrides the default - close, liquidation and repay swaps have a live
+    /// lease to recover into and park.
+    fn unwind_on_zero_acked(&self) -> bool {
+        true
     }
 
     fn coins(&self) -> impl IntoIterator<Item = CoinDTO<Self::InG>> {
@@ -306,6 +349,18 @@ impl RemoteSwapClient for BuyAsset {
                     Err(DexError::unexpected_response_variant(NON_SWAP_RESPONSE))
                 }
             })
+    }
+
+    /// Enter the clean-unwind drain after a zero-acked opening error
+    ///
+    /// Snapshots the local-account baseline before scheduling the first
+    /// transfer-out, so the arrival check measures the drained delta rather than
+    /// an absolute balance, then enters the drain and returns the lease's
+    /// state-machine transition into the `OpeningUnwind` state.
+    fn unwind(self, querier: QuerierWrapper<'_>, env: &Env) -> <Self as SwapTask>::Result {
+        let now = env.block.time.into_instant();
+        self.into_unwind_task(querier)
+            .and_then(|task| Self::start_unwind_drain(task, now, querier))
     }
 }
 

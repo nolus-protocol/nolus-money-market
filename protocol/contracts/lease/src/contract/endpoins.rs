@@ -26,7 +26,7 @@ use crate::{
 
 use super::state::{self, Response, State};
 
-const CONTRACT_STORAGE_VERSION: VersionSegment = 13;
+const CONTRACT_STORAGE_VERSION: VersionSegment = 14;
 const CURRENT_RELEASE: ProtocolPackageRelease = ProtocolPackageRelease::current(
     package_name!(),
     package_version!(),
@@ -94,6 +94,15 @@ pub fn migrate(
     // composite drops the ICA-open and ICA transfer-out legs for a sequential
     // funding leg, and the `BuyAsset` spec gains the bridged funding receiver.
     // No live v12 remote-lease population exists, so the refusal stays.
+    //
+    // v14 adds the `OpeningUnwind` in-flight state: a zero-acked opening-swap
+    // error now drains the downpayment and principal back from the
+    // `LeaseAuthority` and refunds before reaching `OpenFailed`, instead of
+    // parking. The persisted `State` enum gains the variant; the change is
+    // forward-only with no data transform. Once any lease persists as
+    // `OpeningUnwind` a rolled-back v13 binary cannot load it — the enum layout
+    // is binary-incompatible — so v14 is not rollback-safe past that point. No
+    // live v13 remote-lease population exists, so the refusal stays.
     Err(ContractError::UnsupportedMigration).inspect_err(platform_error::log(deps.api))
 }
 
@@ -183,13 +192,6 @@ fn process_execute(
             )?;
             state.on_dex_inner(querier, env)
         }
-        ExecuteMsg::DexCallbackContinue() => {
-            access_control::check(
-                &DexResponseSafeDeliveryPermission::new(&env.contract),
-                &info,
-            )?;
-            state.on_dex_inner_continue(querier, env)
-        }
         ExecuteMsg::RemoteLeaseCallback(callback) => {
             state.on_remote_lease_callback(callback, info, querier, env)
         }
@@ -215,11 +217,8 @@ fn process_sudo(
             state.on_dex_error(resp, querier, env)
         }
         SudoMsg::Timeout { request: _ } => state.on_dex_timeout(querier, env),
-        SudoMsg::OpenAck {
-            port_id: _,
-            channel_id: _,
-            counterparty_channel_id: _,
-            counterparty_version,
-        } => state.on_open_ica(counterparty_version, querier, env),
+        // The lease funds over the ICS-20 transfer channel and never registers
+        // an ICA, so it can never receive an `OpenAck`.
+        SudoMsg::OpenAck { .. } => Err(ContractError::unsupported_operation("open ica response")),
     }
 }

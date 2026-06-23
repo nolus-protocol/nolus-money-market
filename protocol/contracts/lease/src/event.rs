@@ -1,7 +1,7 @@
 pub enum Type {
     RequestLoan,
-    OpenIcaAccount,
     OpeningSwap,
+    OpeningUnwind,
     OpenedActive,
     RepaymentSwap,
     RepaymentTransferOut,
@@ -21,8 +21,8 @@ impl Type {
     pub const fn as_str(&self) -> &'static str {
         match self {
             Self::RequestLoan => "ls-request-loan",
-            Self::OpenIcaAccount => "ls-open-dex-account",
             Self::OpeningSwap => "ls-open-swap",
+            Self::OpeningUnwind => "ls-open-unwind",
             Self::OpenedActive => "ls-open",
             Self::RepaymentSwap => "ls-repay-swap",
             Self::RepaymentTransferOut => "ls-repay-transfer-out",

@@ -309,7 +309,8 @@ fn full_park_drops_price_alarm() {
     assert_slippage_protection_activated(&test_case, &lease);
 }
 
-// --- A3 regression: opening (BuyAsset) stays unbounded -------------------
+// --- A3 regression: opening (BuyAsset) timeout stays unbounded; a
+//     zero-acked error unwinds (issue #658) -----------------------------
 
 /// Opening is DEFERRED in Phase 1: an opening-swap leg keeps re-emitting on
 /// every `OperationTimeout`, well past any of the opened-leg budgets, and
@@ -341,17 +342,31 @@ fn buy_asset_timeout_reemits_unbounded() {
     assert_opening_swap_in_flight(&test_case, &lease);
 }
 
-/// An `OperationErr` on an opening-swap leg parks at the slippage-anomaly
-/// terminal instead of re-emitting (#638); the error and timeout paths are
-/// structurally separate - the opening timeout still re-emits unbounded.
-/// Regression guard.
+/// An `OperationErr` on the FIRST opening-swap leg (zero-acked,
+/// `total_out == 0`) CLEAN-UNWINDS (issue #658) instead of re-emitting or
+/// parking: it enters the `OpeningUnwind` drain (`OngoingTrx::Unwinding`) and
+/// emits the first transfer-out to drain the inputs home. The error and
+/// timeout paths stay structurally separate - the opening timeout still
+/// re-emits unbounded (`buy_asset_timeout_reemits_unbounded`). The partial
+/// (leg-2, `total_out > 0`) error still parks - see
+/// `remote_lease_opening_terminal::opening_error_parks`.
 #[test]
-fn buy_asset_error_parks() {
+fn buy_asset_zero_acked_error_unwinds() {
     let (mut test_case, lease, controller) = start_open_with_delayed_swap();
     let swaps_before = recorded_swap_count(&test_case, &lease);
 
+    // Hold the drain's transfer-out in flight so only the FIRST leg is emitted
+    // on entry; under the default `Ok` mode the stand-in would ack inline and
+    // chain straight to the second leg.
+    stub::set_response_mode(
+        &mut test_case.app,
+        &controller,
+        op_tag::TRANSFER_OUT,
+        ResponseMode::Delayed,
+    );
+
     let reason = RemoteErrorMessage::new("opening swap failed").expect("within length cap");
-    let _parked = stub::inject_callback(
+    let _unwound = stub::inject_callback(
         &mut test_case.app,
         &controller,
         &lease,
@@ -361,12 +376,19 @@ fn buy_asset_error_parks() {
         },
     );
 
+    // a zero-acked opening error does not re-emit the swap - it unwinds
     assert_eq!(
         swaps_before,
         recorded_swap_count(&test_case, &lease),
-        "an opening swap error must park, not re-emit"
+        "a zero-acked opening swap error must unwind, not re-emit"
     );
-    assert_opening_parked(&test_case, &lease);
+    assert_opening_unwinding(&test_case, &lease);
+    // the unwind drains the inputs home: the first transfer-out is emitted
+    assert_eq!(
+        1,
+        stub::recorded_transfer_outs(&test_case.app, &controller, &lease).len(),
+        "the unwind must emit the first drain transfer-out on entry",
+    );
 }
 
 // === drivers =============================================================
@@ -667,14 +689,14 @@ fn assert_opening_swap_in_flight(test_case: &LeaseTestCase, lease: &Addr) {
 }
 
 #[track_caller]
-fn assert_opening_parked(test_case: &LeaseTestCase, lease: &Addr) {
+fn assert_opening_unwinding(test_case: &LeaseTestCase, lease: &Addr) {
     use lease::api::query::opening::OngoingTrx;
     match super::state_query(test_case, lease.clone()) {
         StateResponse::Opening {
-            in_progress: OngoingTrx::SlippageProtectionActivated,
+            in_progress: OngoingTrx::Unwinding,
             ..
         } => (),
-        other => panic!("expected the parked opening leg, got {other:?}"),
+        other => panic!("expected the opening unwind drain, got {other:?}"),
     }
 }
 
