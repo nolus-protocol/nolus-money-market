@@ -47,6 +47,7 @@ mod remote_lease_close;
 mod remote_lease_funding;
 // TODO #142 Phase 3: enable when the OpenLease state + Status::OpenFailed land.
 mod remote_lease_open;
+mod remote_lease_open_unwind;
 mod remote_lease_opening_terminal;
 mod remote_lease_slippage_terminal;
 mod remote_lease_swap;
