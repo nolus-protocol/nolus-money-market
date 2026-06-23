@@ -62,17 +62,21 @@ pub(super) fn refund_to_open_failed(
     reason: RemoteErrorMessage,
     querier: QuerierWrapper<'_>,
 ) -> ContractResult<Response> {
-    repay_loan_with_reserve(&refund, querier)
+    let OpenFailureRefund {
+        downpayment,
+        principal,
+        customer,
+        reserve,
+        lpp_ref,
+        leases_ref,
+        lease_addr,
+        now,
+    } = refund;
+    repay_loan_with_reserve(lpp_ref, principal, &lease_addr, now, reserve, querier)
         .and_then(|(lpp_batch, reserve_batch)| {
-            refund_and_finalize(
-                refund.downpayment,
-                refund.customer,
-                &refund.leases_ref,
-                reserve_batch,
-                lpp_batch,
-            )
+            refund_and_finalize(downpayment, customer, &leases_ref, reserve_batch, lpp_batch)
         })
-        .map(|batch| open_failed_response(batch, refund.lease_addr, reason, refund.leases_ref))
+        .map(|batch| open_failed_response(batch, lease_addr, reason, leases_ref))
 }
 
 /// Repay the failed-open loan in full and cover its interest from the reserve
@@ -81,18 +85,17 @@ pub(super) fn refund_to_open_failed(
 /// the residual interest, scheduled reserve-first by the caller so the LPN lands
 /// before the repay pulls it.
 fn repay_loan_with_reserve(
-    refund: &OpenFailureRefund,
+    lpp_ref: LppRef,
+    principal: LpnCoin,
+    lease_addr: &Addr,
+    now: Instant,
+    reserve: ReserveRef,
     querier: QuerierWrapper<'_>,
 ) -> ContractResult<(Batch, Batch)> {
-    refund
-        .lpp_ref
-        .clone()
+    lpp_ref
         .execute_loan(
-            RepayOpenLoan {
-                principal: refund.principal,
-                now: refund.now,
-            },
-            refund.lease_addr.clone(),
+            RepayOpenLoan { principal, now },
+            lease_addr.clone(),
             querier,
         )
         .and_then(
@@ -100,8 +103,7 @@ fn repay_loan_with_reserve(
                  batch: lpp_batch,
                  interest,
              }| {
-                cover_interest(refund.reserve.clone(), interest)
-                    .map(|reserve_batch| (lpp_batch, reserve_batch))
+                cover_interest(reserve, interest).map(|reserve_batch| (lpp_batch, reserve_batch))
             },
         )
 }

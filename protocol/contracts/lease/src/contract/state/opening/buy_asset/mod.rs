@@ -110,19 +110,19 @@ type BuyAssetStateResponse = <BuyAsset as SwapTask>::StateResponse;
 
 #[derive(Serialize, Deserialize)]
 pub struct BuyAsset {
-    pub(super) form: NewLeaseForm,
-    pub(super) dex_account: Account,
-    pub(super) downpayment: DownpaymentCoin,
-    pub(super) loan: OpenLoanRespResult,
-    pub(super) max_slippage: MaxSlippage,
-    pub(super) remote_lease_controller: Addr,
-    pub(super) deps: (LppRef, OracleRef, TimeAlarmsRef, LeasesRef),
-    pub(super) start_opening_at: Instant,
-    pub(super) remote_lease_id: RemoteLeaseId,
+    form: NewLeaseForm,
+    dex_account: Account,
+    downpayment: DownpaymentCoin,
+    loan: OpenLoanRespResult,
+    max_slippage: MaxSlippage,
+    remote_lease_controller: Addr,
+    deps: (LppRef, OracleRef, TimeAlarmsRef, LeasesRef),
+    start_opening_at: Instant,
+    remote_lease_id: RemoteLeaseId,
     /// The `LeaseAuthority` the funding transfers are addressed to, bridged
     /// from `remote_lease_id` at the start of funding so it can be lent as a
     /// `&HostAccount` to the ICS-20 sender.
-    pub(super) funding_receiver: HostAccount,
+    funding_receiver: HostAccount,
 }
 
 /// The remote-lease coordinates of the opening: which controller to send the
@@ -177,6 +177,21 @@ impl BuyAsset {
             loan_interest_rate: self.loan.annual_interest_rate,
             in_progress: in_progress_fn(self.funding_receiver.into()),
         })
+    }
+
+    fn into_unwind_task(
+        self,
+        querier: QuerierWrapper<'_>,
+    ) -> ContractResult<super::unwind::OpeningUnwindTask> {
+        super::unwind::OpeningUnwindTask::enter(
+            self.form,
+            self.downpayment,
+            self.loan,
+            self.deps,
+            self.remote_lease_controller,
+            self.dex_account.owner(),
+            querier,
+        )
     }
 
     fn start_unwind_drain(
@@ -344,7 +359,7 @@ impl RemoteSwapClient for BuyAsset {
     /// state-machine transition into the `OpeningUnwind` state.
     fn unwind(self, querier: QuerierWrapper<'_>, env: &Env) -> <Self as SwapTask>::Result {
         let now = env.block.time.into_instant();
-        super::unwind::OpeningUnwindTask::enter(self, querier)
+        self.into_unwind_task(querier)
             .and_then(|task| Self::start_unwind_drain(task, now, querier))
     }
 }

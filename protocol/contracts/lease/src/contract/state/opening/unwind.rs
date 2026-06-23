@@ -29,10 +29,7 @@ use crate::{
         finalize::LeasesRef,
         state::{
             SwapResult,
-            opening::{
-                buy_asset::BuyAsset,
-                refund::{OpenFailureRefund, refund_to_open_failed},
-            },
+            opening::refund::{OpenFailureRefund, refund_to_open_failed},
         },
     },
     error::{ContractError, ContractResult},
@@ -77,32 +74,12 @@ pub(crate) struct OpeningUnwindTask {
 }
 
 impl OpeningUnwindTask {
-    /// Build the unwind task off the failed opening swap
-    ///
-    /// Consumes the `BuyAsset` so the failed opening's funds and references move
-    /// straight into the drain task; the inputs drain back to the dex account's
-    /// owner.
-    pub(in super::super) fn enter(
-        buy_asset: BuyAsset,
-        querier: QuerierWrapper<'_>,
-    ) -> ContractResult<Self> {
-        Self::from_inputs(
-            buy_asset.form,
-            buy_asset.downpayment,
-            buy_asset.loan,
-            buy_asset.deps,
-            buy_asset.remote_lease_controller,
-            buy_asset.dex_account.owner(),
-            querier,
-        )
-    }
-
     /// Snapshot the local-account baseline and assemble the task
     ///
     /// The snapshot must run synchronously while the failed opening error is
     /// handled, before any drain transfer dispatches, so it reflects the
     /// pre-drain balances.
-    fn from_inputs(
+    pub(in super::super) fn enter(
         form: NewLeaseForm,
         downpayment: DownpaymentCoin,
         loan: OpenLoanRespResult,
@@ -484,7 +461,7 @@ mod tests {
         downpayment: DownpaymentCoin,
         baseline_querier: &MockQuerier<Empty>,
     ) -> OpeningUnwindTask {
-        OpeningUnwindTask::from_inputs(
+        OpeningUnwindTask::enter(
             form(),
             downpayment,
             OpenLoanRespResult {
