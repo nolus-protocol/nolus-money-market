@@ -1,6 +1,6 @@
 use sdk::cosmwasm_std::{Binary, Env};
 
-use crate::{ContinueResult, ForwardToInner, Handler, Result, SwapTask, response};
+use crate::{ForwardToInner, Handler, Result, SwapTask, response};
 
 pub use self::{
     drain::{StartDrainState, State as StateDrain, start as start_drain},
@@ -12,12 +12,11 @@ pub use self::{
         StartLocalLocalState, StartTransferInState, State as StateLocalOut, start_local_local,
         start_remote_local,
     },
-    out_remote::{StartLocalRemoteState, State as StateRemoteOut, start as start_local_remote},
     out_swap::{StartOutSwapState, State as StateOutSwap, start as start_out_swap},
     remote_swap::{RemoteSwap, RemoteSwapClient},
     remote_swap_only::{StartSwapState, State as StateSwap, start as start_swap},
     remote_transfer_out::{DrainStage, RemoteTransferOut, RemoteTransferOutTask},
-    resp_delivery::{ICAOpenResponseDelivery, ResponseDelivery},
+    resp_delivery::ResponseDelivery,
     slippage::{AcceptAnyNonZeroSwap, Calculator as AcceptUpToMaxSlippage, MaxSlippage},
     slippage_anomaly::SlippageAnomaly,
     swap_exact_in::SwapExactIn,
@@ -35,7 +34,6 @@ mod migration;
 mod next_leg;
 mod out_fund_remote;
 mod out_local;
-mod out_remote;
 mod out_swap;
 mod remote_swap;
 mod remote_swap_only;
@@ -83,21 +81,4 @@ where
         .enter(env.contract.address)
         .and_then(|msgs| response::res_continue::<_, _, SEnum>(msgs, next_state))
         .into()
-}
-
-fn forward_to_inner_ica<H, ForwardToInnerContinueMsg, SEnum>(
-    inner: H,
-    counterparty_version: String,
-    env: Env,
-) -> ContinueResult<SEnum>
-where
-    ForwardToInnerContinueMsg: ForwardToInner,
-    SEnum: Handler,
-    ICAOpenResponseDelivery<H, ForwardToInnerContinueMsg>: Into<SEnum::Response>,
-{
-    let next_state =
-        ICAOpenResponseDelivery::<H, ForwardToInnerContinueMsg>::new(inner, counterparty_version);
-    next_state
-        .enter(env.contract.address)
-        .and_then(|msgs| response::res_continue::<_, _, SEnum>(msgs, next_state))
 }
