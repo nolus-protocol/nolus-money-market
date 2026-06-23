@@ -183,13 +183,6 @@ fn process_execute(
             )?;
             state.on_dex_inner(querier, env)
         }
-        ExecuteMsg::DexCallbackContinue() => {
-            access_control::check(
-                &DexResponseSafeDeliveryPermission::new(&env.contract),
-                &info,
-            )?;
-            state.on_dex_inner_continue(querier, env)
-        }
         ExecuteMsg::RemoteLeaseCallback(callback) => {
             state.on_remote_lease_callback(callback, info, querier, env)
         }
@@ -215,11 +208,8 @@ fn process_sudo(
             state.on_dex_error(resp, querier, env)
         }
         SudoMsg::Timeout { request: _ } => state.on_dex_timeout(querier, env),
-        SudoMsg::OpenAck {
-            port_id: _,
-            channel_id: _,
-            counterparty_channel_id: _,
-            counterparty_version,
-        } => state.on_open_ica(counterparty_version, querier, env),
+        // The lease funds over the ICS-20 transfer channel and never registers
+        // an ICA, so it can never receive an `OpenAck`.
+        SudoMsg::OpenAck { .. } => Err(ContractError::unsupported_operation("open ica response")),
     }
 }

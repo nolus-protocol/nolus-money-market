@@ -79,11 +79,6 @@ pub enum ExecuteMsg {
     /// Invoked always by the same contract instance.
     DexCallback(),
 
-    /// An entry point for safe delivery of an ICA open response, error or timeout
-    ///
-    /// Invoked always by the same contract instance.
-    DexCallbackContinue(),
-
     /// A callback delivering the outcome of a remote-lease operation
     ///
     /// Invoked by the configured `remote_lease` controller contract after it
