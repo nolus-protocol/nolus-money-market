@@ -43,7 +43,7 @@ use crate::{
             },
         },
     },
-    error::ContractResult,
+    error::{ContractError, ContractResult},
     event::Type,
     finance::{LpnCurrencies, LpnCurrency},
 };
@@ -279,6 +279,17 @@ where
                     Err(DexError::unexpected_response_variant(NON_SWAP_RESPONSE))
                 }
             })
+    }
+
+    /// A position-close swap parks a zero-acked error rather than unwinding: it
+    /// has a live lease to recover into, so it keeps the default
+    /// `unwind_on_zero_acked` of `false`. This path is therefore unreachable;
+    /// it returns a visible error rather than driving an unwind the close flow
+    /// has no inputs to drain.
+    fn unwind(self, _querier: QuerierWrapper<'_>, _env: &Env) -> <Self as SwapTask>::Result {
+        Err(ContractError::unsupported_operation(
+            "position-close swap does not unwind on a zero-acked error",
+        ))
     }
 }
 

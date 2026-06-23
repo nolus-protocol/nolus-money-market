@@ -108,6 +108,21 @@ where
 
     /// Decode a swap response payload into the swapped-out coin
     fn decode_response(&self, payload: &[u8]) -> Result<CoinDTO<Self::OutG>>;
+
+    /// Clean-unwind the swap inputs home after a zero-acked hard error
+    ///
+    /// Invoked by [`RemoteSwap::on_remote_error`] only when
+    /// [`SwapTask::unwind_on_zero_acked`][crate::SwapTask::unwind_on_zero_acked]
+    /// returns `true` and no leg has acknowledged yet, so nothing has been
+    /// swapped on the remote side and every input is still recoverable. The
+    /// spec owns the transition because the unwind drains over a transport the
+    /// node has no view of; it returns the task's regular [`SwapTask::Result`]
+    /// so the caller finishes the swap workflow into whatever next state the
+    /// unwind enters.
+    ///
+    /// Specs that do not opt in never reach this path - the predicate gates it
+    /// - so they return a visible error rather than driving an unwind.
+    fn unwind(self, querier: QuerierWrapper<'_>, env: &Env) -> Self::Result;
 }
 
 /// Swap a list of coins on a remote network, one in-flight leg at a time
@@ -548,10 +563,18 @@ where
         }
     }
 
-    /// An explicit error on the in-flight leg is an under-floor rejection: it
-    /// parks at the slippage-anomaly terminal unconditionally, with no retry
-    /// budget and without consulting the spec's timeout escalation policy. An
-    /// operator `heal` re-drives the parked leg.
+    /// An explicit error on the in-flight leg is an under-floor rejection. With
+    /// a leg already acknowledged (`total_out > 0`) it parks at the
+    /// slippage-anomaly terminal unconditionally, with no retry budget and
+    /// without consulting the spec's timeout escalation policy; an operator
+    /// `heal` re-drives the parked leg.
+    ///
+    /// With nothing acknowledged yet (`total_out == 0`) a spec that opts in via
+    /// [`SwapTask::unwind_on_zero_acked`][crate::SwapTask::unwind_on_zero_acked]
+    /// clean-unwinds instead - the inputs are still wholly on the remote
+    /// account, so the spec drains them home rather than freezing them. A
+    /// folded output-currency input leaves `total_out` non-zero at entry, so it
+    /// parks like an acknowledged leg: only a genuinely zero-acked open unwinds.
     ///
     /// Anomalies are deliberately not routed through the spec's `on_anomaly`,
     /// whose `Retry` treatment rebuilds the node from the spec and would
@@ -561,13 +584,17 @@ where
         self,
         _response: ICAErrorResponse,
         nonce: u64,
-        _querier: QuerierWrapper<'_>,
-        _env: Env,
+        querier: QuerierWrapper<'_>,
+        env: Env,
     ) -> HandlerResult<Self> {
         if nonce != self.in_flight_nonce {
             return self.absorb(ABSORB_NONCE_MISMATCH).into();
         }
-        self.with_incremented_errors().park()
+        if self.total_out.is_zero() && self.spec.unwind_on_zero_acked() {
+            response::res_finished(self.spec.unwind(querier, &env))
+        } else {
+            self.with_incremented_errors().park()
+        }
     }
 
     /// A timeout re-emits the in-flight leg up to the spec's per-op retry
@@ -905,6 +932,10 @@ pub(super) mod mock {
     pub const CONTROLLER: &str = "controller";
     pub const WRONG_VARIANT_PAYLOAD: &[u8] = b"wrong-variant";
     pub const SLIPPAGE_PROTECTION_SENTINEL: CoinsNb = CoinsNb::MAX;
+    /// The distinctive [`SwapTask::Result`] the mock's
+    /// [`RemoteSwapClient::unwind`] returns, so a test can tell the unwind
+    /// path apart from a regular swap finish.
+    pub const UNWIND_SENTINEL: Amount = 777;
 
     const DEFAULT_FLOOR: Amount = 1;
     const DEFAULT_BUDGET: CoinsNb = 3;
@@ -927,6 +958,8 @@ pub(super) mod mock {
         escalation: Escalation,
         #[serde(default)]
         anomaly_resolution_authorised: bool,
+        #[serde(default)]
+        unwinds_on_zero_acked: bool,
     }
 
     #[derive(Serialize)]
@@ -949,6 +982,7 @@ pub(super) mod mock {
                 budget: DEFAULT_BUDGET,
                 escalation: Escalation::Park,
                 anomaly_resolution_authorised: true,
+                unwinds_on_zero_acked: false,
             }
         }
 
@@ -966,6 +1000,10 @@ pub(super) mod mock {
 
         pub fn deny_anomaly_resolution(&mut self) {
             self.anomaly_resolution_authorised = false;
+        }
+
+        pub fn set_unwinds_on_zero_acked(&mut self) {
+            self.unwinds_on_zero_acked = true;
         }
     }
 
@@ -1023,6 +1061,10 @@ pub(super) mod mock {
                 Escalation::Park => SlippageEscalation::Park,
                 Escalation::ReEmit => SlippageEscalation::ReEmit,
             }
+        }
+
+        fn unwind_on_zero_acked(&self) -> bool {
+            self.unwinds_on_zero_acked
         }
 
         fn coins(&self) -> impl IntoIterator<Item = CoinDTO<SuperGroup>> {
@@ -1117,6 +1159,10 @@ pub(super) mod mock {
             } else {
                 sdk::cosmwasm_std::from_json(payload).map_err(Error::remote_swap_client)
             }
+        }
+
+        fn unwind(self, _querier: QuerierWrapper<'_>, _env: &Env) -> Self::Result {
+            Coin::<SuperGroupTestC1>::new(UNWIND_SENTINEL).into()
         }
     }
 
@@ -1415,6 +1461,86 @@ mod tests {
         ));
         assert_eq!(parked_response(), response);
         assert_terminal(1, &coin_out(80), &min_out(), &terminal);
+    }
+
+    /// #658: a hard error with nothing acknowledged yet (`total_out == 0`) on a
+    /// spec that opts into the zero-acked unwind finishes through the spec's
+    /// `unwind` hook instead of parking - the inputs are still wholly on the
+    /// remote account, so the spec drains them home.
+    #[test]
+    fn zero_acked_error_unwinds_when_spec_opts_in() {
+        let mock_querier = MockQuerier::default();
+        let querier = QuerierWrapper::new(&mock_querier);
+        let env = testing::mock_env();
+
+        let mut spec = two_swap_legs();
+        spec.set_unwinds_on_zero_acked();
+        let (_response, node) = continued(Node::start(spec, &testing::mock_env(), querier));
+        let nonce = node.in_flight_nonce;
+
+        let unwound = finished(node.on_remote_error(
+            ICAErrorResponse::from(String::from("downpayment leg under floor")),
+            nonce,
+            querier,
+            env,
+        ));
+        assert_eq!(
+            CoinDTO::<OutG>::from(Coin::<SuperGroupTestC1>::new(mock::UNWIND_SENTINEL)),
+            unwound,
+        );
+    }
+
+    /// #658: the opt-in alone is not enough - a hard error parks once a leg has
+    /// acknowledged (`total_out > 0`), because some output is already committed
+    /// on the remote side and cannot be unwound by draining the inputs.
+    #[test]
+    fn acked_leg_error_parks_even_when_spec_opts_into_unwind() {
+        let mock_querier = MockQuerier::default();
+        let querier = QuerierWrapper::new(&mock_querier);
+        let env = testing::mock_env();
+
+        let mut spec = two_swap_legs();
+        spec.set_unwinds_on_zero_acked();
+        let (_response, node) = continued(Node::start(spec, &testing::mock_env(), querier));
+        let nonce = node.in_flight_nonce;
+        let (_response, node) = continued(node.on_remote_response(
+            payload(&coin_out(30)),
+            nonce,
+            querier,
+            testing::mock_env(),
+        ));
+
+        let nonce = node.in_flight_nonce;
+        let (response, terminal) = parked(node.on_remote_error(
+            ICAErrorResponse::from(String::from("principal leg under floor")),
+            nonce,
+            querier,
+            env,
+        ));
+        assert_eq!(parked_response(), response);
+        assert_terminal(1, &coin_out(30), &min_out(), &terminal);
+    }
+
+    /// #658: a spec that does NOT opt in parks a zero-acked error - the default
+    /// behaviour for close, liquidation and repay specs is unchanged.
+    #[test]
+    fn zero_acked_error_parks_when_spec_does_not_opt_in() {
+        let mock_querier = MockQuerier::default();
+        let querier = QuerierWrapper::new(&mock_querier);
+        let env = testing::mock_env();
+
+        let (_response, node) =
+            continued(Node::start(two_swap_legs(), &testing::mock_env(), querier));
+        let nonce = node.in_flight_nonce;
+
+        let (response, terminal) = parked(node.on_remote_error(
+            ICAErrorResponse::from(String::from("downpayment leg under floor")),
+            nonce,
+            querier,
+            env,
+        ));
+        assert_eq!(parked_response(), response);
+        assert_terminal(2, &coin_out(0), &min_out(), &terminal);
     }
 
     /// #638 (D2 contrast): with a `ReEmit` spec a TIMEOUT still follows the
@@ -2178,6 +2304,13 @@ mod tests {
 
     fn spec3() -> MockSpec {
         MockSpec::new(vec![coin_in(100), coin_out(50), coin_in(70)])
+    }
+
+    /// Two swap legs and no output-currency coin to fold, so the node starts
+    /// with `total_out == 0` - the zero-acked precondition the unwind path
+    /// gates on.
+    fn two_swap_legs() -> MockSpec {
+        MockSpec::new(vec![coin_in(100), coin_in(70)])
     }
 
     fn healer() -> MessageInfo {

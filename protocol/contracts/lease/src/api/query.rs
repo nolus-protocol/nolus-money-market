@@ -111,6 +111,13 @@ pub mod opening {
         /// `BuyAsset`, whose `acks_left` means a leg is still in flight
         /// rather than frozen.
         SlippageProtectionActivated,
+        /// The opening swap hit a hard remote error with no leg acknowledged
+        /// yet, so the lease is unwinding: it drains the downpayment and
+        /// principal back from the Solana-side `LeaseAuthority`, then refunds
+        /// the customer and repays the LPP loan in full, ending in
+        /// `OpenFailed`. Distinct from `SlippageProtectionActivated` (a parked,
+        /// heal-to-resume leg) — this terminal moves forward on its own.
+        Unwinding,
     }
 }
 

@@ -26,7 +26,7 @@ use crate::{
 
 use super::state::{self, Response, State};
 
-const CONTRACT_STORAGE_VERSION: VersionSegment = 13;
+const CONTRACT_STORAGE_VERSION: VersionSegment = 14;
 const CURRENT_RELEASE: ProtocolPackageRelease = ProtocolPackageRelease::current(
     package_name!(),
     package_version!(),
@@ -94,6 +94,15 @@ pub fn migrate(
     // composite drops the ICA-open and ICA transfer-out legs for a sequential
     // funding leg, and the `BuyAsset` spec gains the bridged funding receiver.
     // No live v12 remote-lease population exists, so the refusal stays.
+    //
+    // v14 adds the `OpeningUnwind` in-flight state: a zero-acked opening-swap
+    // error now drains the downpayment and principal back from the
+    // `LeaseAuthority` and refunds before reaching `OpenFailed`, instead of
+    // parking. The persisted `State` enum gains the variant; the change is
+    // forward-only with no data transform. Once any lease persists as
+    // `OpeningUnwind` a rolled-back v13 binary cannot load it — the enum layout
+    // is binary-incompatible — so v14 is not rollback-safe past that point. No
+    // live v13 remote-lease population exists, so the refusal stays.
     Err(ContractError::UnsupportedMigration).inspect_err(platform_error::log(deps.api))
 }
 

@@ -44,7 +44,7 @@ use crate::{
             resp_delivery::ForwardToDexEntry,
         },
     },
-    error::ContractResult,
+    error::{ContractError, ContractResult},
     event::Type,
     finance::{LpnCurrencies, LpnCurrency},
 };
@@ -273,6 +273,17 @@ impl RemoteSwapClient for BuyLpn {
                     Err(DexError::unexpected_response_variant(NON_SWAP_RESPONSE))
                 }
             })
+    }
+
+    /// The repay swap parks a zero-acked error rather than unwinding: a repay
+    /// has a live lease to recover into, so it does not opt into the opening's
+    /// drain-home unwind (`unwind_on_zero_acked` keeps its `false` default).
+    /// This path is therefore unreachable; it returns a visible error rather
+    /// than driving an unwind the repay flow has no inputs to drain.
+    fn unwind(self, _querier: QuerierWrapper<'_>, _env: &Env) -> <Self as SwapTask>::Result {
+        Err(ContractError::unsupported_operation(
+            "repay swap does not unwind on a zero-acked error",
+        ))
     }
 }
 

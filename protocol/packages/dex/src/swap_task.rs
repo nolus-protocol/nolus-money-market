@@ -75,6 +75,23 @@ where
     /// does not consult this.
     fn slippage_escalation(&self) -> SlippageEscalation;
 
+    /// Whether an explicit swap error with no leg yet acknowledged
+    /// (`total_out == 0`) should clean-unwind the inputs home instead of
+    /// parking at the slippage-anomaly terminal.
+    ///
+    /// Defaults to `false`: close, liquidation and repay specs park a hard
+    /// error unconditionally. Only the opening swap overrides it - a failed
+    /// open with nothing swapped yet has no live lease to park into, so it
+    /// drains the inputs back and refunds rather than freezing them on the
+    /// remote account. The unwind itself is produced by
+    /// [`RemoteSwapClient::unwind`][crate::RemoteSwapClient::unwind]; this
+    /// predicate only gates whether that path is taken. With a leg already
+    /// acknowledged (`total_out > 0`) the error parks regardless of this
+    /// predicate - some output is already committed on the remote side.
+    fn unwind_on_zero_acked(&self) -> bool {
+        false
+    }
+
     /// Provide the coins, at least one, this swap is about.
     /// The iteration is done always in the same order.
     //

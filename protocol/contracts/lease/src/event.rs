@@ -1,6 +1,7 @@
 pub enum Type {
     RequestLoan,
     OpeningSwap,
+    OpeningUnwind,
     OpenedActive,
     RepaymentSwap,
     RepaymentTransferOut,
@@ -21,6 +22,7 @@ impl Type {
         match self {
             Self::RequestLoan => "ls-request-loan",
             Self::OpeningSwap => "ls-open-swap",
+            Self::OpeningUnwind => "ls-open-unwind",
             Self::OpenedActive => "ls-open",
             Self::RepaymentSwap => "ls-repay-swap",
             Self::RepaymentTransferOut => "ls-repay-transfer-out",

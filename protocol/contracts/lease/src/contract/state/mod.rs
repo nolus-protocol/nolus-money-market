@@ -52,6 +52,8 @@ type OpenFailed = open_failed::OpenFailed;
 
 type BuyAsset = DexState<opening::buy_asset::DexState>;
 
+type OpeningUnwind = DexState<opening::buy_asset::UnwindState>;
+
 type OpenedActive = LeaseState<opened::active::Active>;
 
 type BuyLpn = DexState<opened::repay::buy_lpn::DexState>;
@@ -100,6 +102,7 @@ pub enum State {
     OpenLease,
     OpenFailed,
     BuyAsset,
+    OpeningUnwind,
     OpenedActive,
     BuyLpn,
     BuyLpnDrain,
@@ -147,8 +150,8 @@ mod impl_from {
     use super::{
         BuyAsset, BuyLpn, BuyLpnDrain, Closed, ClosingRemoteLease, ClosingTransferOut, FullClose,
         FullCloseDrain, FullLiquidation, FullLiquidationDrain, Liquidated, OpenedActive,
-        PartialClose, PartialCloseDrain, PartialLiquidation, PartialLiquidationDrain, RequestLoan,
-        State,
+        OpeningUnwind, PartialClose, PartialCloseDrain, PartialLiquidation,
+        PartialLiquidationDrain, RequestLoan, State,
     };
 
     impl From<super::opening::request_loan::RequestLoan> for State {
@@ -160,6 +163,12 @@ mod impl_from {
     impl From<super::opening::buy_asset::DexState> for State {
         fn from(value: super::opening::buy_asset::DexState) -> Self {
             BuyAsset::new(value).into()
+        }
+    }
+
+    impl From<super::opening::buy_asset::UnwindState> for State {
+        fn from(value: super::opening::buy_asset::UnwindState) -> Self {
+            OpeningUnwind::new(value).into()
         }
     }
 
