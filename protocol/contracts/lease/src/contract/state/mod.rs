@@ -52,7 +52,7 @@ type OpenFailed = open_failed::OpenFailed;
 
 type BuyAsset = DexState<opening::buy_asset::DexState>;
 
-type OpeningUnwind = DexState<opening::buy_asset::UnwindState>;
+type OpeningUnwind = DexState<opening::buy_asset::UnwindDrainState>;
 
 type OpenedActive = LeaseState<opened::active::Active>;
 
@@ -166,8 +166,8 @@ mod impl_from {
         }
     }
 
-    impl From<super::opening::buy_asset::UnwindState> for State {
-        fn from(value: super::opening::buy_asset::UnwindState) -> Self {
+    impl From<super::opening::buy_asset::UnwindDrainState> for State {
+        fn from(value: super::opening::buy_asset::UnwindDrainState) -> Self {
             OpeningUnwind::new(value).into()
         }
     }

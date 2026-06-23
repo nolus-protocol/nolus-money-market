@@ -87,19 +87,32 @@ pub(super) fn refund_to_open_failed(
             },
         )
         .and_then(|(lpp_batch, reserve_batch)| {
-            let customer_batch = downpayment.with_coin(SendToCustomer {
-                customer: customer.clone(),
-            });
-            leases_ref.finalize_lease(customer).map(|finalize_batch| {
-                // The reserve covers the interest before the LPP pulls it, so its
-                // message must precede the repay; the refund and finalize follow.
-                reserve_batch
-                    .merge(lpp_batch)
-                    .merge(customer_batch)
-                    .merge(finalize_batch)
-            })
+            refund_and_finalize(downpayment, customer, &leases_ref, reserve_batch, lpp_batch)
         })
         .map(|batch| open_failed_response(batch, lease_addr, reason, leases_ref))
+}
+
+/// Refund the downpayment, finalise the lease, and merge the batches reserve-first
+///
+/// The reserve covers the interest before the LPP pulls it, so its message must
+/// precede the repay; the customer refund and the finalize follow, preserving
+/// the `reserve → lpp → customer → finalize` ordering.
+fn refund_and_finalize(
+    downpayment: DownpaymentCoin,
+    customer: Addr,
+    leases_ref: &LeasesRef,
+    reserve_batch: Batch,
+    lpp_batch: Batch,
+) -> ContractResult<Batch> {
+    let customer_batch = downpayment.with_coin(SendToCustomer {
+        customer: customer.clone(),
+    });
+    leases_ref.finalize_lease(customer).map(|finalize_batch| {
+        reserve_batch
+            .merge(lpp_batch)
+            .merge(customer_batch)
+            .merge(finalize_batch)
+    })
 }
 
 fn cover_interest(reserve: ReserveRef, interest: LpnCoin) -> ContractResult<Batch> {

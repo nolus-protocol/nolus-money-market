@@ -62,7 +62,7 @@ const TIMEOUT_RETRY_BUDGET: CoinsNb = 3;
 type AssetGroup = LeaseAssetCurrencies;
 pub(super) type StartState = dex::StartFundRemoteState<BuyAsset, ForwardToDexEntry>;
 pub(in super::super) type DexState = dex::StateFundRemote<BuyAsset, ForwardToDexEntry>;
-pub(in super::super) type UnwindState = dex::StateDrain<super::unwind::OpeningUnwindTask>;
+pub(in super::super) type UnwindDrainState = dex::StateDrain<super::unwind::OpeningUnwindTask>;
 
 pub(super) fn start(
     form: NewLeaseForm,
@@ -177,6 +177,25 @@ impl BuyAsset {
             loan_interest_rate: self.loan.annual_interest_rate,
             in_progress: in_progress_fn(self.funding_receiver.into()),
         })
+    }
+
+    /// Snapshot the local-account baseline, schedule the first transfer-out, and
+    /// return the lease's transition into the `OpeningUnwind` state.
+    fn start_unwind_drain(
+        task: super::unwind::OpeningUnwindTask,
+        now: Instant,
+        querier: QuerierWrapper<'_>,
+    ) -> <Self as SwapTask>::Result {
+        dex::start_drain(task)
+            .map_err(Into::into)
+            .and_then(|start_drain| {
+                start_drain
+                    .enter(now, querier)
+                    .map_err(Into::into)
+                    .map(|drain_msgs| {
+                        Response::from(drain_msgs, State::from(UnwindDrainState::from(start_drain)))
+                    })
+            })
     }
 }
 
@@ -326,11 +345,10 @@ impl RemoteSwapClient for BuyAsset {
     /// an absolute balance, then enters the drain and returns the lease's
     /// state-machine transition into the `OpeningUnwind` state.
     fn unwind(self, querier: QuerierWrapper<'_>, env: &Env) -> <Self as SwapTask>::Result {
-        let lease_addr = self.dex_account.owner().clone();
         let now = env.block.time.into_instant();
         let BuyAsset {
             form,
-            dex_account: _,
+            dex_account,
             downpayment,
             loan,
             max_slippage: _,
@@ -340,27 +358,17 @@ impl RemoteSwapClient for BuyAsset {
             remote_lease_id: _,
             funding_receiver: _,
         } = self;
+        let lease_addr = dex_account.owner();
         super::unwind::OpeningUnwindTask::enter(
             form,
             downpayment,
             loan,
             deps,
             remote_lease_controller,
-            &lease_addr,
+            lease_addr,
             querier,
         )
-        .and_then(|task| {
-            dex::start_drain(task)
-                .map_err(Into::into)
-                .and_then(|start_drain| {
-                    start_drain
-                        .enter(now, querier)
-                        .map_err(Into::into)
-                        .map(|drain_msgs| {
-                            Response::from(drain_msgs, State::from(UnwindState::from(start_drain)))
-                        })
-                })
-        })
+        .and_then(|task| Self::start_unwind_drain(task, now, querier))
     }
 }
 
