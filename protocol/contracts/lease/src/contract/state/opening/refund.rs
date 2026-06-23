@@ -62,20 +62,37 @@ pub(super) fn refund_to_open_failed(
     reason: RemoteErrorMessage,
     querier: QuerierWrapper<'_>,
 ) -> ContractResult<Response> {
-    let OpenFailureRefund {
-        downpayment,
-        principal,
-        customer,
-        reserve,
-        lpp_ref,
-        leases_ref,
-        lease_addr,
-        now,
-    } = refund;
-    lpp_ref
+    repay_loan_with_reserve(&refund, querier)
+        .and_then(|(lpp_batch, reserve_batch)| {
+            refund_and_finalize(
+                refund.downpayment,
+                refund.customer,
+                &refund.leases_ref,
+                reserve_batch,
+                lpp_batch,
+            )
+        })
+        .map(|batch| open_failed_response(batch, refund.lease_addr, reason, refund.leases_ref))
+}
+
+/// Repay the failed-open loan in full and cover its interest from the reserve
+///
+/// Returns `(lpp_batch, reserve_batch)`: the LPP repay and the reserve cover for
+/// the residual interest, scheduled reserve-first by the caller so the LPN lands
+/// before the repay pulls it.
+fn repay_loan_with_reserve(
+    refund: &OpenFailureRefund,
+    querier: QuerierWrapper<'_>,
+) -> ContractResult<(Batch, Batch)> {
+    refund
+        .lpp_ref
+        .clone()
         .execute_loan(
-            RepayOpenLoan { principal, now },
-            lease_addr.clone(),
+            RepayOpenLoan {
+                principal: refund.principal,
+                now: refund.now,
+            },
+            refund.lease_addr.clone(),
             querier,
         )
         .and_then(
@@ -83,13 +100,10 @@ pub(super) fn refund_to_open_failed(
                  batch: lpp_batch,
                  interest,
              }| {
-                cover_interest(reserve, interest).map(|reserve_batch| (lpp_batch, reserve_batch))
+                cover_interest(refund.reserve.clone(), interest)
+                    .map(|reserve_batch| (lpp_batch, reserve_batch))
             },
         )
-        .and_then(|(lpp_batch, reserve_batch)| {
-            refund_and_finalize(downpayment, customer, &leases_ref, reserve_batch, lpp_batch)
-        })
-        .map(|batch| open_failed_response(batch, lease_addr, reason, leases_ref))
 }
 
 /// Refund the downpayment, finalise the lease, and merge the batches reserve-first
