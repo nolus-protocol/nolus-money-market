@@ -3,14 +3,9 @@ use std::iter;
 use serde::{Deserialize, Serialize};
 
 use access_control::permissions::SingleUserPermission;
-use currency::CurrencyDef;
 use dex::{DrainStage, Error as DexError, RemoteTransferOutTask};
-use finance::{
-    coin::{Coin, CoinDTO, WithCoin},
-    duration::Duration,
-    instant::Instant,
-};
-use platform::{bank, batch::Batch};
+use finance::{coin::CoinDTO, duration::Duration, instant::Instant};
+use platform::batch::Batch;
 use remote_lease::{
     msg::TransferOutParams,
     response::OperationResponse,
@@ -29,9 +24,9 @@ use crate::{
     },
     contract::{
         Lease,
-        state::{SwapResult, opened},
+        state::{SwapResult, arrival, opened},
     },
-    error::ContractResult,
+    error::{ContractError, ContractResult},
     event::Type,
     finance::{LpnCoinDTO, LpnCurrencies},
 };
@@ -55,15 +50,31 @@ pub(crate) struct RepayDrain<Finisher> {
     lease: Lease,
     proceeds: LpnCoinDTO,
     finisher: Finisher,
+    /// The local-account balance in the proceeds' currency at the moment the
+    /// drain was entered — before any coin had been drained back. The arrival
+    /// check measures against this baseline, never an absolute balance, so a
+    /// balance the lease already held cannot be mistaken for the proceeds
+    /// arriving. Persisted with the task so it survives every callback's serde
+    /// round-trip; captured once at construction and never recomputed.
+    baseline: Vec<LpnCoinDTO>,
 }
 
 impl<Finisher> RepayDrain<Finisher> {
-    pub(in super::super) fn new(lease: Lease, proceeds: LpnCoinDTO, finisher: Finisher) -> Self {
-        Self {
-            lease,
-            proceeds,
-            finisher,
-        }
+    pub(in super::super) fn new(
+        lease: Lease,
+        proceeds: LpnCoinDTO,
+        finisher: Finisher,
+        account: &Addr,
+        querier: QuerierWrapper<'_>,
+    ) -> ContractResult<Self> {
+        arrival::snapshot_baseline(&[proceeds], account, querier)
+            .map_err(ContractError::from)
+            .map(|baseline| Self {
+                lease,
+                proceeds,
+                finisher,
+                baseline,
+            })
     }
 }
 
@@ -112,7 +123,7 @@ where
     }
 
     fn all_received(&self, account: &Addr, querier: QuerierWrapper<'_>) -> dex::DexResult<bool> {
-        received(&self.proceeds, account, querier)
+        arrival::arrived_over_baseline(&[self.proceeds], &self.baseline, account, querier)
     }
 
     fn finish(self, env: &Env, querier: QuerierWrapper<'_>) -> Self::Result {
@@ -288,32 +299,6 @@ fn decode_response(payload: &[u8]) -> dex::DexResult<()> {
         })
 }
 
-fn received(
-    expected: &CoinDTO<ProceedsGroup>,
-    account: &Addr,
-    querier: QuerierWrapper<'_>,
-) -> dex::DexResult<bool> {
-    struct CheckBalance<'account, 'querier> {
-        account: &'account Addr,
-        querier: QuerierWrapper<'querier>,
-    }
-
-    impl WithCoin<ProceedsGroup> for CheckBalance<'_, '_> {
-        type Outcome = dex::DexResult<bool>;
-
-        fn on<C>(self, expected: Coin<C>) -> Self::Outcome
-        where
-            C: CurrencyDef,
-        {
-            bank::balance::<C>(self.account, self.querier)
-                .map_err(Into::into)
-                .map(|ref balance| expected <= *balance)
-        }
-    }
-
-    expected.with_coin(CheckBalance { account, querier })
-}
-
 #[cfg(all(feature = "internal.test.contract", test))]
 mod tests {
     use currencies::testing::LeaseC2;
@@ -390,14 +375,20 @@ mod tests {
         });
     }
 
+    /// The proceeds have arrived only once the balance rises over its entry
+    /// baseline by the full proceeds amount: a pre-existing balance equal to
+    /// the proceeds is not mistaken for an arrival, while the zero-baseline
+    /// case is unchanged from an absolute balance check.
     #[test]
-    fn received_only_when_balance_covers_the_proceeds() {
-        let expected: CoinDTO<LpnCurrencies> = Coin::<LpnCurrency>::new(1000).into();
-        let account = Addr::unchecked(LEASE);
+    fn proceeds_arrival_measured_over_baseline() {
+        const PROCEEDS: u128 = 1_000;
+        let expected: CoinDTO<LpnCurrencies> = Coin::<LpnCurrency>::new(PROCEEDS).into();
 
-        assert_eq!(Ok(false), query_received(&expected, &account, 999));
-        assert_eq!(Ok(true), query_received(&expected, &account, 1000));
-        assert_eq!(Ok(true), query_received(&expected, &account, 1500));
+        assert_eq!(Ok(false), arrived(&expected, 0, PROCEEDS - 1));
+        assert_eq!(Ok(true), arrived(&expected, 0, PROCEEDS));
+
+        assert_eq!(Ok(false), arrived(&expected, PROCEEDS, PROCEEDS));
+        assert_eq!(Ok(true), arrived(&expected, PROCEEDS, PROCEEDS + PROCEEDS));
     }
 
     fn decode(payload: &OperationResponse) -> dex::DexResult<()> {
@@ -406,20 +397,37 @@ mod tests {
             .and_then(|payload| super::decode_response(&payload))
     }
 
-    fn query_received(
+    fn arrived(
         expected: &CoinDTO<LpnCurrencies>,
-        account: &Addr,
-        balance: u128,
+        baseline_balance: u128,
+        arrival_balance: u128,
     ) -> Result<bool, String> {
-        let mock_querier = MockQuerier::<Empty>::new(&[(
+        let account = Addr::unchecked(LEASE);
+        super::arrival::snapshot_baseline(
+            &[*expected],
+            &account,
+            QuerierWrapper::new(&held(baseline_balance)),
+        )
+        .map_err(|err| err.to_string())
+        .and_then(|baseline| {
+            super::arrival::arrived_over_baseline(
+                &[*expected],
+                &baseline,
+                &account,
+                QuerierWrapper::new(&held(arrival_balance)),
+            )
+            .map_err(|err| err.to_string())
+        })
+    }
+
+    fn held(balance: u128) -> MockQuerier<Empty> {
+        MockQuerier::<Empty>::new(&[(
             LEASE,
             &[CwCoin::new(
                 balance,
                 LpnCurrency::dto().definition().bank_symbol,
             )],
-        )]);
-        super::received(expected, account, QuerierWrapper::new(&mock_querier))
-            .map_err(|err| err.to_string())
+        )])
     }
 
     fn remote_lease_id() -> RemoteLeaseId {

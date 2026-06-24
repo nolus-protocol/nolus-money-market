@@ -26,7 +26,7 @@ use crate::{
 
 use super::state::{self, Response, State};
 
-const CONTRACT_STORAGE_VERSION: VersionSegment = 14;
+const CONTRACT_STORAGE_VERSION: VersionSegment = 15;
 const CURRENT_RELEASE: ProtocolPackageRelease = ProtocolPackageRelease::current(
     package_name!(),
     package_version!(),
@@ -103,6 +103,16 @@ pub fn migrate(
     // `OpeningUnwind` a rolled-back v13 binary cannot load it — the enum layout
     // is binary-incompatible — so v14 is not rollback-safe past that point. No
     // live v13 remote-lease population exists, so the refusal stays.
+    //
+    // v15 gives the two sibling home-bound drains — the opened-lease proceeds
+    // drain and the paid-lease asset transfer-out — the same persisted
+    // per-currency `baseline` the v14 `OpeningUnwind` drain carries, so their
+    // arrival check measures every coin against its pre-drain balance instead
+    // of an absolute one. The persisted drain `State` variants gain the field;
+    // the change is forward-only with no data transform. Once any lease
+    // persists mid-drain a rolled-back v14 binary cannot load it — the drain
+    // layout is binary-incompatible — so v15 is not rollback-safe past that
+    // point. No live v14 remote-lease population exists, so the refusal stays.
     Err(ContractError::UnsupportedMigration).inspect_err(platform_error::log(deps.api))
 }
 

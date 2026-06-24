@@ -221,18 +221,22 @@ impl SwapOutputTask<Self> for BuyLpn {
         env: &Env,
         querier: QuerierWrapper<'_>,
     ) -> <Self as SwapTask>::Result {
-        let drain = RepayDrain::new(
+        RepayDrain::new(
             self.lease,
             amount_out.into(),
             RepayFinish::new(self.payment),
-        );
-        dex::start_drain(drain)
-            .and_then(|start_drain| {
-                start_drain
-                    .enter(env.block.time.into_instant(), querier)
-                    .map(|drain_msgs| Response::from(drain_msgs, DrainState::from(start_drain)))
-            })
-            .map_err(Into::into)
+            &env.contract.address,
+            querier,
+        )
+        .and_then(|drain| {
+            dex::start_drain(drain)
+                .and_then(|start_drain| {
+                    start_drain
+                        .enter(env.block.time.into_instant(), querier)
+                        .map(|drain_msgs| Response::from(drain_msgs, DrainState::from(start_drain)))
+                })
+                .map_err(Into::into)
+        })
     }
 }
 
