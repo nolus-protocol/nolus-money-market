@@ -3,7 +3,8 @@ use std::iter;
 use serde::{Deserialize, Serialize};
 
 use access_control::permissions::SingleUserPermission;
-use dex::{DrainStage, Error as DexError, RemoteTransferOutTask};
+use cw_time::IntoInstant;
+use dex::{DrainStage, Enterable, Error as DexError, RemoteTransferOutTask};
 use finance::{coin::CoinDTO, duration::Duration, instant::Instant};
 use platform::batch::Batch;
 use remote_lease::{
@@ -24,7 +25,7 @@ use crate::{
     },
     contract::{
         Lease,
-        state::{SwapResult, arrival, opened},
+        state::{Response, State, SwapResult, arrival, opened},
     },
     error::{ContractError, ContractResult},
     event::Type,
@@ -75,6 +76,24 @@ impl<Finisher> RepayDrain<Finisher> {
                 finisher,
                 baseline,
             })
+    }
+}
+
+impl<Finisher> RepayDrain<Finisher>
+where
+    Finisher: ProceedsFinish,
+    dex::StateDrain<RepayDrain<Finisher>>: Into<State>,
+{
+    pub(in super::super) fn start(self, env: &Env, querier: QuerierWrapper<'_>) -> SwapResult {
+        dex::start_drain(self)
+            .and_then(|start_drain| {
+                start_drain
+                    .enter(env.block.time.into_instant(), querier)
+                    .map(|drain_msgs| {
+                        Response::from(drain_msgs, dex::StateDrain::from(start_drain))
+                    })
+            })
+            .map_err(Into::into)
     }
 }
 

@@ -45,17 +45,19 @@ pub fn arrived_over_baseline<G>(
 where
     G: Group,
 {
-    debug_assert!(
-        !expected.is_empty(),
-        "a drain always transfers at least one coin, so the arrival check is never vacuous"
-    );
+    // A drain always carries at least one coin; an empty `expected` would let
+    // the `try_fold` seed report a no-transfer drain as complete, so fail closed
+    // in release rather than rely on a debug-only invariant.
+    if expected.is_empty() {
+        return Ok(false);
+    }
     unique_currencies(expected.iter().copied()).try_fold(true, |all_received, currency| {
         let expected_amount = aggregate_amount(expected.iter().copied(), &currency);
         let baseline_amount = aggregate_amount(baseline.iter().copied(), &currency);
         account_balance(&currency, account, querier)
             .map_err(Into::into)
             .map(|arrived| {
-                all_received && arrived.amount().saturating_sub(baseline_amount) >= expected_amount
+                all_received && expected_amount <= arrived.amount().saturating_sub(baseline_amount)
             })
     })
 }
@@ -79,7 +81,6 @@ where
     seen.into_iter()
 }
 
-/// Sum the amounts of every coin matching `currency`
 fn aggregate_amount<G, I>(coins: I, currency: &CoinDTO<G>) -> Amount
 where
     G: Group,
@@ -92,7 +93,8 @@ where
         .fold(Amount::ZERO, Amount::saturating_add)
 }
 
-/// Snapshot the local-account balance in `coin`'s currency
+/// Returns the raw bank error so each caller maps it into its own type — the
+/// entry snapshot into `ContractError`, the arrival check into `dex::Error`.
 fn account_balance<G>(
     coin: &CoinDTO<G>,
     account: &Addr,
@@ -222,6 +224,14 @@ mod tests {
             (Lpn::dto().definition().bank_symbol, PRINCIPAL),
         ]);
         assert_eq!(Ok(true), arrived(&distinct(), &baseline, &both));
+    }
+
+    /// An empty drain fails closed in release: the gate never reports a
+    /// no-transfer drain as complete, the release-safe replacement for the
+    /// former debug-only non-vacuity assertion.
+    #[test]
+    fn empty_expected_never_completes() {
+        assert_eq!(Ok(false), arrived(&[], &[], &balances(&[])));
     }
 
     // PaymentC1 and Lpn are distinct currencies; PaymentC2 aliases Lpn.

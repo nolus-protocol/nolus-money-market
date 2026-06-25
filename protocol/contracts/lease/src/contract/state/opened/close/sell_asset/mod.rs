@@ -1,12 +1,11 @@
 use std::iter;
 
 use currency::Group;
-use cw_time::IntoInstant;
 use oracle::stub::SwapPath;
 use serde::{Deserialize, Serialize};
 
 use dex::{
-    Account, CoinsNb, ContractInRemoteSwap, Enterable, Error as DexError, RemoteSwapClient,
+    Account, CoinsNb, ContractInRemoteSwap, Error as DexError, RemoteSwapClient,
     SlippageCalculator, SlippageEscalation, SwapOutputTask, SwapTask, WithCalculator,
     WithOutputTask,
 };
@@ -35,7 +34,7 @@ use crate::{
     contract::{
         Lease,
         state::{
-            Response, State, SwapResult,
+            State, SwapResult,
             opened::{
                 self,
                 payment::Repayable,
@@ -227,17 +226,7 @@ where
             &env.contract.address,
             querier,
         )
-        .and_then(|drain| {
-            dex::start_drain(drain)
-                .and_then(|start_drain| {
-                    start_drain
-                        .enter(env.block.time.into_instant(), querier)
-                        .map(|drain_msgs| {
-                            Response::from(drain_msgs, DrainState::<RepayableT>::from(start_drain))
-                        })
-                })
-                .map_err(Into::into)
-        })
+        .and_then(|drain| drain.start(env, querier))
     }
 }
 
