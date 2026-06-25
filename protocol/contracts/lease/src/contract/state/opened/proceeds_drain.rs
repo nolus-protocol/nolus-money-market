@@ -85,10 +85,8 @@ where
     dex::StateDrain<RepayDrain<Finisher>>: Into<State>,
 {
     pub(in super::super) fn start(self, env: &Env, querier: QuerierWrapper<'_>) -> SwapResult {
-        let start_drain = dex::start_drain(self)?;
-        start_drain
-            .enter(env.block.time.into_instant(), querier)
-            .map(|drain_msgs| Response::from(drain_msgs, dex::StateDrain::from(start_drain)))
+        dex::start_drain(self)
+            .and_then(|start_drain| enter_drain(start_drain, env, querier))
             .map_err(Into::into)
     }
 }
@@ -288,6 +286,20 @@ enum ControllerExecuteMsg {
 }
 
 impl ControllerInnerMessage for ControllerExecuteMsg {}
+
+fn enter_drain<Finisher>(
+    start_drain: dex::StartDrainState<RepayDrain<Finisher>>,
+    env: &Env,
+    querier: QuerierWrapper<'_>,
+) -> dex::DexResult<Response>
+where
+    Finisher: ProceedsFinish,
+    dex::StateDrain<RepayDrain<Finisher>>: Into<State>,
+{
+    start_drain
+        .enter(env.block.time.into_instant(), querier)
+        .map(|drain_msgs| Response::from(drain_msgs, dex::StateDrain::from(start_drain)))
+}
 
 fn transfer_out_msg(controller: &Addr, coin: &CoinDTO<ProceedsGroup>) -> dex::DexResult<Batch> {
     TransferOutParams::new(coin.into_super_group())
