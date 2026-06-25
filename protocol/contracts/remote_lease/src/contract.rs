@@ -31,12 +31,13 @@ use crate::{
 
 const CONTRACT_STORAGE_VERSION: VersionSegment = 0;
 
-/// Envelope nonce for operations that are not yet callback-correlated.
+/// Envelope nonce for the single-packet operations that have no duplicate-
+/// callback window to close.
 ///
-/// Only the `Swap` operation carries a per-emission nonce today (issue #636);
-/// the single-packet `OpenLease`/`CloseLease`/`TransferOut` flows have no
-/// duplicate-callback exposure to close, so they ride a zero nonce until they
-/// convert in the remaining ibc-solray#142 phases.
+/// `OpenLease`/`CloseLease` solicit exactly one callback, so a superseded-packet
+/// race cannot arise and they ride a zero nonce. `Swap` (#636) and the multi-leg
+/// `TransferOut` drain (#671) instead carry a real per-emission nonce the lease
+/// assigns, so a packet superseded by a re-emission or heal is rejected.
 const NO_NONCE: u64 = 0;
 const CURRENT_RELEASE: ProtocolPackageRelease = ProtocolPackageRelease::current(
     package_name!(),
@@ -151,13 +152,17 @@ pub fn execute(
             timeout,
             nonce,
         ),
-        ExecuteMsg::TransferOut { params, timeout } => send_operation(
+        ExecuteMsg::TransferOut {
+            params,
+            timeout,
+            nonce,
+        } => send_operation(
             deps,
             &env,
             info.sender,
             Operation::TransferOut(params),
             timeout,
-            NO_NONCE,
+            nonce,
         ),
     }
     .map(response::response_only_messages)

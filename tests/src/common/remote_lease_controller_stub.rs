@@ -141,9 +141,14 @@ pub enum StubExecuteMsg {
         #[serde(default)]
         nonce: u64,
     },
+    // #671: `TransferOut` carries the per-emission `nonce` the same way `Swap`
+    // does; the stand-in echoes it into the synthesised callback exactly as the
+    // production controller forwards `envelope.nonce`.
     TransferOut {
         params: TransferOutParams,
         timeout: finance::duration::Duration,
+        #[serde(default)]
+        nonce: u64,
     },
     /// Test-only: configure the stand-in's reply for a given op tag.
     SetResponseMode {
@@ -325,9 +330,9 @@ pub fn execute(
                 }))
             })
         }
-        StubExecuteMsg::TransferOut { params, .. } => {
+        StubExecuteMsg::TransferOut { params, nonce, .. } => {
             record_transfer_out(deps.storage, &info.sender, &params)?;
-            handle_outbound(deps, info, op_tag::TRANSFER_OUT, 0, |_storage| {
+            handle_outbound(deps, info, op_tag::TRANSFER_OUT, nonce, |_storage| {
                 Ok(OperationResponse::TransferOut(TransferOutResponse {}))
             })
         }
@@ -345,8 +350,8 @@ pub fn execute(
             // current in-flight nonce so a live swap leg matches it (the leg
             // absorbs any other nonce as `nonce-mismatch`). Stamp the last
             // recorded swap nonce for `to` over the caller's placeholder; if the
-            // lease has emitted no swap yet (open/close/transfer-out flows that
-            // ignore the nonce), fall back to the caller's value.
+            // lease has emitted no swap yet (open/close flows that ignore the
+            // nonce), fall back to the caller's value.
             let nonce = last_recorded_swap_nonce(deps.storage, &to)?.unwrap_or(callback.nonce);
             Ok(CwResponse::new().add_message(callback_msg(
                 to,

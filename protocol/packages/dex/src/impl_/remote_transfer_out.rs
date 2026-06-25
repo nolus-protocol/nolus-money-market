@@ -1,15 +1,31 @@
 //! # Acknowledgment-to-transfer correlation trust model
 //!
-//! `OperationResponse::TransferOut` carries no payload at all, so
-//! acknowledgments correlate to transfers purely positionally: each one is
-//! credited to the single in-flight transfer the `acks_left` countdown
-//! tracks. This is a strictly weaker correlation than the swap leg's -
-//! there is not even a `min_out`-style cross-check on the credited value.
-//! The wire contract is frozen; a per-operation nonce is a cross-repo
-//! follow-up. The positional assumption rests on the same pillars as
-//! [`RemoteSwap`][super::remote_swap::RemoteSwap]: authorization of the
-//! callback sender, the controller's exactly-one-packet delivery, and the
-//! sequential one-in-flight emission.
+//! `OperationResponse::TransferOut` carries no payload at all, so an
+//! acknowledgment cannot identify its transfer from content - there is not
+//! even a `min_out`-style cross-check on a credited value. Each emission
+//! instead rides a per-emission `nonce` on the packet envelope. The controller
+//! reads it back from the original outbound packet on ack/timeout and returns
+//! it in the callback, so an acknowledgment is credited to the exact emission
+//! that solicited it: a callback whose nonce differs from the in-flight one is
+//! absorbed (`nonce-mismatch`) without touching progress. The node still tracks
+//! the in-flight transfer positionally through the `acks_left` countdown; the
+//! nonce disambiguates *which emission* of that transfer a callback belongs to.
+//! Correctness rests on the same pillars as
+//! [`RemoteSwap`][super::remote_swap::RemoteSwap]:
+//!
+//! - authorization - only the remote-lease controller passes
+//!   [`Handler::authz_remote_callback`], so callbacks cannot be forged;
+//! - the controller's delivery semantics - every emitted transfer becomes
+//!   exactly one IBC packet addressed back to this contract, its ack and
+//!   timeout paths mutually exclusive and at-most-once;
+//! - the strictly-monotonic `in_flight_nonce` - every emission, including each
+//!   re-emission and operator [`Handler::heal`], bumps it, so a packet
+//!   superseded by a later emission carries a smaller nonce and its late
+//!   callback is rejected. This closes the duplicate-acknowledgment window that
+//!   a `heal` issued while the original packet is still resolvable would
+//!   otherwise open: the original's late ack no longer matches the in-flight
+//!   emission and is absorbed instead of positionally mis-credited to a
+//!   consecutive transfer.
 //!
 //! # Acknowledgment does not mean arrival
 //!
@@ -64,6 +80,10 @@ const EVENT_VALUE_REEMIT: &str = "re-emit";
 const ABSORB_UNDECODABLE: &str = "undecodable-response";
 const ABSORB_UNEXPECTED_VARIANT: &str = "unexpected-response-variant";
 const ABSORB_REMOTE_ERROR: &str = "remote-error";
+const ABSORB_NONCE_MISMATCH: &str = "nonce-mismatch";
+/// Predecessor nonce for the very first emission of a node: nothing has been
+/// emitted yet, so the first transfer opens at `NO_PRIOR_NONCE + 1`.
+const NO_PRIOR_NONCE: u64 = 0;
 
 /// Specification of a remote-account drain
 ///
@@ -95,8 +115,11 @@ where
     /// Schedule a transfer of `coin` out of the remote account
     ///
     /// The transport guarantees a single response, error, or timeout
-    /// per scheduled transfer.
-    fn schedule_transfer_out(&self, coin: &CoinDTO<Self::G>) -> Result<Batch>;
+    /// per scheduled transfer. `nonce` is the per-emission correlation
+    /// identifier the node assigns; it must ride the packet envelope so the
+    /// controller can return it in the callback and the node can match the
+    /// acknowledgment to this emission.
+    fn schedule_transfer_out(&self, coin: &CoinDTO<Self::G>, nonce: u64) -> Result<Batch>;
 
     /// Validate a transfer response payload
     ///
@@ -153,6 +176,12 @@ where
 {
     spec: Task,
     acks_left: CoinsNb,
+    /// Strictly-monotonic per-emission correlation nonce; bumped on every
+    /// emission and re-emission, matched against the callback. `#[serde(default)]`
+    /// lets a node persisted before the nonce existed load with a zero nonce,
+    /// matching the zero an old, nonce-less in-flight packet decodes to.
+    #[serde(default)]
+    in_flight_nonce: u64,
     #[serde(skip)]
     _state_enum: PhantomData<SEnum>,
 }
@@ -170,16 +199,32 @@ where
                 if acks_left == 0 {
                     Err(Error::MissingTransferOutLeg)
                 } else {
-                    Ok(Self::internal_new(spec, acks_left))
+                    Ok(Self::internal_new(
+                        spec,
+                        acks_left,
+                        NO_PRIOR_NONCE.saturating_add(1),
+                    ))
                 }
             })
     }
 
-    fn internal_new(spec: Task, acks_left: CoinsNb) -> Self {
+    fn internal_new(spec: Task, acks_left: CoinsNb, in_flight_nonce: u64) -> Self {
         let ret = Self {
             spec,
             acks_left,
+            in_flight_nonce,
             _state_enum: PhantomData,
+        };
+        debug_assert!(ret.invariant_held());
+        ret
+    }
+
+    /// Advance the in-flight nonce ahead of a same-transfer re-emission, so the
+    /// superseded packet's late callback no longer matches and is absorbed.
+    fn with_bumped_nonce(self) -> Self {
+        let ret = Self {
+            in_flight_nonce: self.in_flight_nonce.saturating_add(1),
+            ..self
         };
         debug_assert!(ret.invariant_held());
         ret
@@ -208,7 +253,7 @@ where
     /// recovery paths idempotent.
     fn schedule(&self) -> Result<Batch> {
         self.in_flight_transfer()
-            .and_then(|coin| self.spec.schedule_transfer_out(&coin))
+            .and_then(|coin| self.spec.schedule_transfer_out(&coin, self.in_flight_nonce))
     }
 
     fn emit_acks_left(&self) -> Emitter {
@@ -239,9 +284,11 @@ where
             Some(0) => FundsArrival::new(self.spec)
                 .try_complete(querier, env)
                 .map_into(),
-            Some(acks_left) => Self::internal_new(self.spec, acks_left)
-                .schedule_and_continue()
-                .into(),
+            Some(acks_left) => {
+                Self::internal_new(self.spec, acks_left, self.in_flight_nonce.saturating_add(1))
+                    .schedule_and_continue()
+                    .into()
+            }
         }
     }
 
@@ -292,10 +339,13 @@ where
     fn on_remote_response(
         self,
         data: Binary,
-        _nonce: u64,
+        nonce: u64,
         querier: QuerierWrapper<'_>,
         env: Env,
     ) -> HandlerResult<Self> {
+        if nonce != self.in_flight_nonce {
+            return self.absorb(ABSORB_NONCE_MISMATCH).into();
+        }
         match self.spec.decode_response(data.as_slice()) {
             Ok(()) => self.deliver_ack(querier, env),
             Err(Error::UnexpectedResponseVariant(_details)) => {
@@ -309,45 +359,50 @@ where
     fn on_remote_error(
         self,
         _response: ICAErrorResponse,
-        _nonce: u64,
+        nonce: u64,
         _querier: QuerierWrapper<'_>,
         _env: Env,
     ) -> HandlerResult<Self> {
+        if nonce != self.in_flight_nonce {
+            return self.absorb(ABSORB_NONCE_MISMATCH).into();
+        }
         self.absorb(ABSORB_REMOTE_ERROR).into()
     }
 
     fn on_remote_timeout(
         self,
-        _nonce: u64,
+        nonce: u64,
         querier: QuerierWrapper<'_>,
         env: Env,
     ) -> HandlerResult<Self> {
-        let state_label = self.spec.label();
-        timeout::on_timeout_retry(self, state_label, querier, env).into()
+        if nonce != self.in_flight_nonce {
+            return self.absorb(ABSORB_NONCE_MISMATCH).into();
+        }
+        let node = self.with_bumped_nonce();
+        let state_label = node.spec.label();
+        timeout::on_timeout_retry(node, state_label, querier, env).into()
     }
 
     /// Re-emit the in-flight transfer verbatim
     ///
-    /// The operator recovery for both an unresolvable packet and an
-    /// absorbed error acknowledgment. See the module doc of
-    /// [`RemoteSwap`][super::remote_swap::RemoteSwap] for the
-    /// duplicate-acknowledgment risk a heal issued while the original
-    /// operation is still resolvable creates. `RemoteSwap` now closes that
-    /// window with a per-emission nonce; this payload-less transport does
-    /// not yet carry one - its adoption is deferred to the remaining
-    /// ibc-solray#142 phases - so it stays credulous to the risk by
-    /// construction until it does.
+    /// The operator recovery for both an unresolvable packet and an absorbed
+    /// error acknowledgment. The re-emission carries a fresh nonce (via
+    /// [`RemoteTransferOut::with_bumped_nonce`]) so the original packet's late
+    /// callback is absorbed as `nonce-mismatch` rather than positionally
+    /// mis-credited - the heal is idempotent regardless of operator timing
+    /// (see the module doc).
     fn heal(
         self,
         _querier: QuerierWrapper<'_>,
         _env: Env,
         _info: &MessageInfo,
     ) -> HandlerResult<Self> {
-        self.schedule()
+        let node = self.with_bumped_nonce();
+        node.schedule()
             .and_then(|batch| {
                 response::res_continue::<_, _, Self>(
-                    MessageResponse::messages_with_event(batch, self.emit_heal()),
-                    self,
+                    MessageResponse::messages_with_event(batch, node.emit_heal()),
+                    node,
                 )
             })
             .into()
@@ -475,7 +530,13 @@ pub(super) mod mock {
             self.coins.clone()
         }
 
-        fn schedule_transfer_out(&self, coin: &CoinDTO<SuperGroup>) -> Result<Batch> {
+        // The mock ignores the nonce in the emitted batch — the production
+        // controller puts it on the packet envelope, but the mock's
+        // `TransferOutRequest` payload keeps the pre-nonce coin shape so the
+        // existing transfer/timeout response assertions stay byte-identical. The
+        // nonce is exercised through the node's callback-matching, not the
+        // emitted batch.
+        fn schedule_transfer_out(&self, coin: &CoinDTO<SuperGroup>, _nonce: u64) -> Result<Batch> {
             transfer_request(coin)
         }
 
@@ -585,10 +646,13 @@ mod tests {
         let mock_querier = MockQuerier::default();
         let querier = QuerierWrapper::new(&mock_querier);
 
+        let node = started();
+        let nonce = node.in_flight_nonce;
         let (response, node) =
-            continued(started().on_remote_response(ok_payload(), 0, querier, testing::mock_env()));
+            continued(node.on_remote_response(ok_payload(), nonce, querier, testing::mock_env()));
         assert_eq!(transfer_response(&coin2(70), 1), response);
         assert_acks_left(1, &node);
+        assert_eq!(2, node.in_flight_nonce);
     }
 
     #[test]
@@ -598,7 +662,8 @@ mod tests {
         let env = testing::mock_env();
 
         let node = after_first_ack(querier);
-        let resp = match node.on_remote_response(ok_payload(), 0, querier, env.clone()) {
+        let nonce = node.in_flight_nonce;
+        let resp = match node.on_remote_response(ok_payload(), nonce, querier, env.clone()) {
             HandlerResult::Continue(Ok(resp)) => resp,
             HandlerResult::Continue(Err(err)) => panic!("expected a continuation, got {err}"),
             HandlerResult::Finished(_result) => panic!("expected a continuation, got a finish"),
@@ -614,9 +679,10 @@ mod tests {
 
         let mut node = after_first_ack(querier);
         node.spec.set_received(true);
+        let nonce = node.in_flight_nonce;
         assert_eq!(
             mock::FINISH_RESULT,
-            finished(node.on_remote_response(ok_payload(), 0, querier, testing::mock_env()))
+            finished(node.on_remote_response(ok_payload(), nonce, querier, testing::mock_env()))
         );
     }
 
@@ -627,9 +693,11 @@ mod tests {
         let mock_querier = MockQuerier::default();
         let querier = QuerierWrapper::new(&mock_querier);
 
-        let (response, node) = continued(started().on_remote_error(
+        let node = started();
+        let nonce = node.in_flight_nonce;
+        let (response, node) = continued(node.on_remote_error(
             ICAErrorResponse::from(String::from("transfer failed")),
-            0,
+            nonce,
             querier,
             testing::mock_env(),
         ));
@@ -643,9 +711,12 @@ mod tests {
         let querier = QuerierWrapper::new(&mock_querier);
         let env = testing::mock_env();
 
-        let (response, node) = continued(started().on_remote_timeout(0, querier, env.clone()));
+        let node = started();
+        let nonce = node.in_flight_nonce;
+        let (response, node) = continued(node.on_remote_timeout(nonce, querier, env.clone()));
         assert_eq!(timeout_response(&coin1(100), &env), response);
         assert_acks_left(2, &node);
+        assert_eq!(2, node.in_flight_nonce);
     }
 
     #[test]
@@ -653,9 +724,11 @@ mod tests {
         let mock_querier = MockQuerier::default();
         let querier = QuerierWrapper::new(&mock_querier);
 
-        let (response, node) = continued(started().on_remote_response(
+        let node = started();
+        let nonce = node.in_flight_nonce;
+        let (response, node) = continued(node.on_remote_response(
             Binary::from(b"garbage".as_slice()),
-            0,
+            nonce,
             querier,
             testing::mock_env(),
         ));
@@ -668,9 +741,11 @@ mod tests {
         let mock_querier = MockQuerier::default();
         let querier = QuerierWrapper::new(&mock_querier);
 
-        let (response, node) = continued(started().on_remote_response(
+        let node = started();
+        let nonce = node.in_flight_nonce;
+        let (response, node) = continued(node.on_remote_response(
             Binary::from(mock::WRONG_VARIANT_PAYLOAD),
-            0,
+            nonce,
             querier,
             testing::mock_env(),
         ));
@@ -697,6 +772,77 @@ mod tests {
             response
         );
         assert_acks_left(1, &node);
+        assert_eq!(3, node.in_flight_nonce);
+    }
+
+    #[test]
+    fn stale_response_nonce_absorbed() {
+        let mock_querier = MockQuerier::default();
+        let querier = QuerierWrapper::new(&mock_querier);
+
+        let node = started();
+        let stale = node.in_flight_nonce.saturating_sub(1);
+        let (response, node) =
+            continued(node.on_remote_response(ok_payload(), stale, querier, testing::mock_env()));
+        assert_eq!(absorb_response("nonce-mismatch"), response);
+        assert_acks_left(2, &node);
+        assert_eq!(1, node.in_flight_nonce);
+    }
+
+    #[test]
+    fn stale_error_nonce_absorbed() {
+        let mock_querier = MockQuerier::default();
+        let querier = QuerierWrapper::new(&mock_querier);
+
+        let node = started();
+        let stale = node.in_flight_nonce.saturating_sub(1);
+        let (response, node) = continued(node.on_remote_error(
+            ICAErrorResponse::from(String::from("transfer failed")),
+            stale,
+            querier,
+            testing::mock_env(),
+        ));
+        assert_eq!(absorb_response("nonce-mismatch"), response);
+        assert_acks_left(2, &node);
+    }
+
+    #[test]
+    fn stale_timeout_nonce_absorbed() {
+        let mock_querier = MockQuerier::default();
+        let querier = QuerierWrapper::new(&mock_querier);
+
+        let node = started();
+        let stale = node.in_flight_nonce.saturating_sub(1);
+        let (response, node) =
+            continued(node.on_remote_timeout(stale, querier, testing::mock_env()));
+        assert_eq!(absorb_response("nonce-mismatch"), response);
+        assert_acks_left(2, &node);
+        assert_eq!(1, node.in_flight_nonce);
+    }
+
+    /// A heal bumps the nonce, so the original packet's late acknowledgment no
+    /// longer matches the in-flight emission - it is absorbed instead of
+    /// advancing the countdown, closing the duplicate-acknowledgment window.
+    #[test]
+    fn heal_supersedes_the_original_packet_ack() {
+        let mock_querier = MockQuerier::default();
+        let querier = QuerierWrapper::new(&mock_querier);
+
+        let node = started();
+        let original_nonce = node.in_flight_nonce;
+        let info = MessageInfo {
+            sender: Addr::unchecked(mock::CONTROLLER),
+            funds: vec![],
+        };
+        let (_response, node) = continued(node.heal(querier, testing::mock_env(), &info));
+        let (response, node) = continued(node.on_remote_response(
+            ok_payload(),
+            original_nonce,
+            querier,
+            testing::mock_env(),
+        ));
+        assert_eq!(absorb_response("nonce-mismatch"), response);
+        assert_acks_left(2, &node);
     }
 
     #[test]
@@ -709,6 +855,7 @@ mod tests {
         let restored: Node =
             sdk::cosmwasm_std::from_json(&serialized).expect("the state should round-trip");
         assert_acks_left(node.acks_left, &restored);
+        assert_eq!(node.in_flight_nonce, restored.in_flight_nonce);
         assert_eq!(
             serialized,
             sdk::cosmwasm_std::to_json_vec(&restored).expect("a serializable state")
@@ -736,8 +883,10 @@ mod tests {
     }
 
     fn after_first_ack(querier: QuerierWrapper<'_>) -> Node {
+        let node = started();
+        let nonce = node.in_flight_nonce;
         let (_response, node) =
-            continued(started().on_remote_response(ok_payload(), 0, querier, testing::mock_env()));
+            continued(node.on_remote_response(ok_payload(), nonce, querier, testing::mock_env()));
         node
     }
 

@@ -84,6 +84,8 @@ fn swap_emits_send_packet() {
 
 #[test]
 fn transfer_out_emits_send_packet() {
+    const TRANSFER_OUT_NONCE: u64 = 5;
+
     let mut deps = deps_with_lease();
     instantiate_default(deps.as_mut());
     store_open_channel(deps.as_mut());
@@ -96,10 +98,15 @@ fn transfer_out_emits_send_packet() {
         ExecuteMsg::TransferOut {
             params: params.clone(),
             timeout: PACKET_TIMEOUT,
+            nonce: TRANSFER_OUT_NONCE,
         },
     )
     .unwrap();
-    assert_send_packet(&Operation::TransferOut(params), 0, &res.messages);
+    assert_send_packet(
+        &Operation::TransferOut(params),
+        TRANSFER_OUT_NONCE,
+        &res.messages,
+    );
 }
 
 #[test]
