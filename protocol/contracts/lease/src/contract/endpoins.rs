@@ -26,7 +26,7 @@ use crate::{
 
 use super::state::{self, Response, State};
 
-const CONTRACT_STORAGE_VERSION: VersionSegment = 15;
+const CONTRACT_STORAGE_VERSION: VersionSegment = 10;
 const CURRENT_RELEASE: ProtocolPackageRelease = ProtocolPackageRelease::current(
     package_name!(),
     package_version!(),
@@ -62,57 +62,31 @@ pub fn migrate(
     _env: Env,
     _msg: ProtocolMigrationMessage<MigrateMsg>,
 ) -> ContractResult<CwResponse> {
-    // v10 reshapes the persisted `LeaseDTO` to carry the Solana-side
-    // remote-lease PDA as a non-optional field, so a pre-v10 lease cannot
-    // be deserialised under the new layout. A v9 lease has no meaningful
-    // `remote_lease_id` to synthesise — its `dex_account` is an ICA host on
-    // the DEX chain, not a Solana PDA — so a real v9→v10 migration would
-    // have to invent a sentinel and leave the lease permanently Cosmos-side
-    // only. Mainnet v9-lease population is zero (plan §10.A.1), so no
-    // in-flight state is at risk there; reject any migrate attempt loudly
-    // rather than silently failing the first post-upgrade load.
+    // The remote-lease feature reshaped the lease's persisted state end
+    // to end: `LeaseDTO` gained the non-optional Solana `remote_lease_id`
+    // and `remote_lease_controller`, opening and repay moved off the ICA
+    // onto the transfer-channel funding leg (`Account.host` became
+    // optional), and `State` gained the `OpeningUnwind` variant plus
+    // per-currency drain baselines. None of these shapes ever persisted in
+    // a released lease — the last released storage version is v9 (v0.8.x);
+    // every step above it is unreleased remote-lease work — so they
+    // collapse into a single v9 -> v10 step.
     //
-    // Operational posture for non-mainnet (devnet/testnet/local): drain all
-    // v9 leases to a terminal state before upgrading the lease code to v10.
-    // There is no `ExecuteMsg` escape hatch for a stranded v9 lease — the
-    // storage layout is binary-incompatible — so the drain is a prerequisite,
-    // not a recovery step. See `protocol/docs/remote-lease-callback-flow.md`.
+    // A v9 lease cannot be deserialised under the v10 layout — a v9 record
+    // lacks the now-required `remote_lease_id` and `remote_lease_controller`
+    // fields — and it has no meaningful `remote_lease_id` to synthesise (its
+    // account is a DEX-chain ICA host, not a Solana PDA), so a real migration
+    // could only invent permanent sentinels. Remote-lease protocols are
+    // instantiated fresh (the leaser's `remote_lease_controller` binding is
+    // immutable, so an existing protocol cannot be retrofitted); an existing
+    // v9 lease is never pointed at this code. Reject any migrate attempt
+    // loudly rather than silently mis-loading state.
     //
-    // v11 reshapes the opening-swap state: the BuyAsset spec gains the
-    // controller address and slippage bound, and the swap leg moved from the
-    // ICA `SwapExactIn` to the `RemoteSwap` transport; no live v10
-    // remote-lease population exists, so the refusal stays.
-    //
-    // v12 reshapes the persisted `LeaseDTO` again: it gains the
-    // non-optional `remote_lease_controller` so the post-opening legs can
-    // emit operations without re-querying the leaser. No live v11
-    // remote-lease population exists, so the refusal stays.
-    //
-    // v13 funds the opening lease by an ICS-20 transfer to the Solana-side
-    // `LeaseAuthority` instead of opening an ICA: the dex `Account.host`
-    // becomes optional (`None` for remote-lease leases), the opening
-    // composite drops the ICA-open and ICA transfer-out legs for a sequential
-    // funding leg, and the `BuyAsset` spec gains the bridged funding receiver.
-    // No live v12 remote-lease population exists, so the refusal stays.
-    //
-    // v14 adds the `OpeningUnwind` in-flight state: a zero-acked opening-swap
-    // error now drains the downpayment and principal back from the
-    // `LeaseAuthority` and refunds before reaching `OpenFailed`, instead of
-    // parking. The persisted `State` enum gains the variant; the change is
-    // forward-only with no data transform. Once any lease persists as
-    // `OpeningUnwind` a rolled-back v13 binary cannot load it — the enum layout
-    // is binary-incompatible — so v14 is not rollback-safe past that point. No
-    // live v13 remote-lease population exists, so the refusal stays.
-    //
-    // v15 gives the two sibling home-bound drains — the opened-lease proceeds
-    // drain and the paid-lease asset transfer-out — the same persisted
-    // per-currency `baseline` the v14 `OpeningUnwind` drain carries, so their
-    // arrival check measures every coin against its pre-drain balance instead
-    // of an absolute one. The persisted drain `State` variants gain the field;
-    // the change is forward-only with no data transform. Once any lease
-    // persists mid-drain a rolled-back v14 binary cannot load it — the drain
-    // layout is binary-incompatible — so v15 is not rollback-safe past that
-    // point. No live v14 remote-lease population exists, so the refusal stays.
+    // Non-mainnet (devnet/testnet/local): drain all pre-v10 leases to a
+    // terminal state before upgrading the lease code — the layout is
+    // binary-incompatible and there is no `ExecuteMsg` escape hatch, so the
+    // drain is a prerequisite, not a recovery step. See
+    // `protocol/docs/remote-lease-callback-flow.md`.
     Err(ContractError::UnsupportedMigration).inspect_err(platform_error::log(deps.api))
 }
 

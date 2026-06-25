@@ -33,9 +33,9 @@ pub struct LeaseDTO {
     pub(crate) reserve: ReserveRef,
     /// Solana-side Lease PDA, populated from the remote-lease
     /// controller's OpenLease ack before the live lease is ever
-    /// constructed. Every `LeaseDTO` carries a value — see plan §10.A.1
-    /// (mainnet v9-lease population = 0, so there are no legacy leases
-    /// to deserialise without this field).
+    /// constructed. Every `LeaseDTO` carries a value: remote-lease
+    /// protocols are instantiated fresh, so no pre-remote-lease (v9)
+    /// lease is ever deserialised under this layout.
     pub(crate) remote_lease_id: RemoteLeaseId,
     /// The remote-lease controller the post-opening legs emit operations
     /// to, pinned at lease open from the opening spec. Persisted rather
