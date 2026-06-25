@@ -18,7 +18,7 @@ pub fn start_close(
     env: &Env,
     querier: QuerierWrapper<'_>,
 ) -> ContractResult<Response> {
-    transfer_out::start(lease).and_then(|start_drain| {
+    transfer_out::start(lease, &env.contract.address, querier).and_then(|start_drain| {
         start_drain
             .enter(env.block.time.into_instant(), querier)
             .map(|drain_msgs| curr_request_response.merge_with(drain_msgs))

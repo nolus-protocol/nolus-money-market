@@ -1,15 +1,13 @@
 use serde::{Deserialize, Serialize};
 
 use access_control::permissions::SingleUserPermission;
-use currency::{CurrencyDef, Group, MemberOf};
 use dex::{DrainStage, Error as DexError, RemoteTransferOutTask};
 use finance::{
-    coin::{Amount, Coin, CoinDTO, WithCoin},
+    coin::{Coin, CoinDTO},
     duration::Duration,
     instant::Instant,
-    zero::Zero,
 };
-use platform::{bank, batch::Batch, error::Error as PlatformError};
+use platform::batch::Batch;
 use remote_lease::{
     msg::TransferOutParams,
     response::OperationResponse,
@@ -28,7 +26,7 @@ use crate::{
         cmd::OpenLoanRespResult,
         finalize::LeasesRef,
         state::{
-            SwapResult,
+            SwapResult, arrival,
             opening::refund::{OpenFailureRefund, refund_to_open_failed},
         },
     },
@@ -90,20 +88,18 @@ impl OpeningUnwindTask {
     ) -> ContractResult<Self> {
         let (lpp_ref, _oracle, time_alarms, leases_ref) = deps;
         let principal_in = loan.principal.into_super_group::<LeasePaymentCurrencies>();
-        let baseline = unique_currencies([downpayment, principal_in])
-            .map(|coin| account_balance(&coin, lease_addr, querier))
-            .collect::<Result<Vec<_>, PlatformError>>()
-            .map_err(ContractError::from)?;
-        Ok(Self {
-            form,
-            downpayment,
-            loan,
-            lpp_ref,
-            leases_ref,
-            time_alarms,
-            remote_lease_controller,
-            baseline,
-        })
+        arrival::snapshot_baseline(&[downpayment, principal_in], lease_addr, querier)
+            .map_err(ContractError::from)
+            .map(|baseline| Self {
+                form,
+                downpayment,
+                loan,
+                lpp_ref,
+                leases_ref,
+                time_alarms,
+                remote_lease_controller,
+                baseline,
+            })
     }
 
     fn drained(&self) -> [DownpaymentCoin; 2] {
@@ -176,15 +172,7 @@ impl RemoteTransferOutTask for OpeningUnwindTask {
     /// currency and summed, so a downpayment and a principal in the same
     /// currency must BOTH land before the check passes.
     fn all_received(&self, account: &Addr, querier: QuerierWrapper<'_>) -> dex::DexResult<bool> {
-        unique_currencies(self.drained()).try_fold(true, |all_received, expected_currency| {
-            let aggregate = aggregate_amount(self.drained(), &expected_currency);
-            let baseline = aggregate_amount(self.baseline.iter().copied(), &expected_currency);
-            account_balance(&expected_currency, account, querier)
-                .map_err(Into::into)
-                .map(|arrived| {
-                    all_received && arrived.amount().saturating_sub(baseline) >= aggregate
-                })
-        })
+        arrival::arrived_over_baseline(&self.drained(), &self.baseline, account, querier)
     }
 
     fn finish(self, env: &Env, querier: QuerierWrapper<'_>) -> Self::Result {
@@ -224,65 +212,6 @@ impl RemoteTransferOutTask for OpeningUnwindTask {
     ) -> Self::StateResponse {
         self.state_envelope()
     }
-}
-
-/// Deduplicate a coin list down to one representative per currency
-///
-/// The drain handles at most two coins, so the linear scan is trivial; the
-/// representative carries the currency only — its amount is irrelevant to the
-/// per-currency aggregation done by [`aggregate_amount`].
-fn unique_currencies(
-    coins: impl IntoIterator<Item = DownpaymentCoin>,
-) -> impl Iterator<Item = DownpaymentCoin> {
-    let mut seen: Vec<DownpaymentCoin> = Vec::new();
-    for coin in coins {
-        if !seen.iter().any(|kept| kept.currency() == coin.currency()) {
-            seen.push(coin);
-        }
-    }
-    seen.into_iter()
-}
-
-/// Sum the amounts of every coin matching `currency`
-fn aggregate_amount(
-    coins: impl IntoIterator<Item = DownpaymentCoin>,
-    currency: &DownpaymentCoin,
-) -> Amount {
-    coins
-        .into_iter()
-        .filter(|coin| coin.currency() == currency.currency())
-        .map(|coin| coin.amount())
-        .fold(Amount::ZERO, Amount::saturating_add)
-}
-
-/// Snapshot the local-account balance in `coin`'s currency
-///
-/// Returns the raw bank error so each caller maps it into its own error type:
-/// the entry snapshot into `ContractError`, the arrival check into `dex::Error`.
-fn account_balance(
-    coin: &DownpaymentCoin,
-    account: &Addr,
-    querier: QuerierWrapper<'_>,
-) -> Result<DownpaymentCoin, PlatformError> {
-    struct Balance<'account, 'querier> {
-        account: &'account Addr,
-        querier: QuerierWrapper<'querier>,
-    }
-
-    impl WithCoin<LeasePaymentCurrencies> for Balance<'_, '_> {
-        type Outcome = Result<DownpaymentCoin, PlatformError>;
-
-        fn on<C>(self, _coin: Coin<C>) -> Self::Outcome
-        where
-            C: CurrencyDef,
-            C::Group: MemberOf<LeasePaymentCurrencies>
-                + MemberOf<<LeasePaymentCurrencies as Group>::TopG>,
-        {
-            bank::balance::<C>(self.account, self.querier).map(CoinDTO::from)
-        }
-    }
-
-    coin.with_coin(Balance { account, querier })
 }
 
 #[derive(Serialize)]

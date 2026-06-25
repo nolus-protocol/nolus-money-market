@@ -30,6 +30,7 @@ pub(crate) use self::handler::{Handler, Response};
 use self::{dex::State as DexState, lease::State as LeaseState};
 use finance::instant::Instant;
 
+mod arrival;
 mod closed;
 mod dex;
 mod drain;
