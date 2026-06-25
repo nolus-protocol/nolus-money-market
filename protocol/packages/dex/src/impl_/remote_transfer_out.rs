@@ -222,10 +222,16 @@ where
     /// Advance the in-flight nonce ahead of a same-transfer re-emission, so the
     /// superseded packet's late callback no longer matches and is absorbed.
     fn with_bumped_nonce(self) -> Self {
+        let prev_nonce = self.in_flight_nonce;
         let ret = Self {
-            in_flight_nonce: self.in_flight_nonce.saturating_add(1),
+            in_flight_nonce: prev_nonce.saturating_add(1),
             ..self
         };
+        // The module doc's strict-monotonicity pillar, made executable: a bump
+        // must strictly increase the nonce or the mismatch guard would credit a
+        // superseded packet's late callback. Trips in debug/test if a refactor
+        // (or the unreachable u64::MAX saturation) ever breaks it.
+        debug_assert!(prev_nonce < ret.in_flight_nonce);
         debug_assert!(ret.invariant_held());
         ret
     }
@@ -285,7 +291,9 @@ where
                 .try_complete(querier, env)
                 .map_into(),
             Some(acks_left) => {
-                Self::internal_new(self.spec, acks_left, self.in_flight_nonce.saturating_add(1))
+                let next_nonce = self.in_flight_nonce.saturating_add(1);
+                debug_assert!(self.in_flight_nonce < next_nonce);
+                Self::internal_new(self.spec, acks_left, next_nonce)
                     .schedule_and_continue()
                     .into()
             }
