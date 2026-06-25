@@ -85,14 +85,10 @@ where
     dex::StateDrain<RepayDrain<Finisher>>: Into<State>,
 {
     pub(in super::super) fn start(self, env: &Env, querier: QuerierWrapper<'_>) -> SwapResult {
-        dex::start_drain(self)
-            .and_then(|start_drain| {
-                start_drain
-                    .enter(env.block.time.into_instant(), querier)
-                    .map(|drain_msgs| {
-                        Response::from(drain_msgs, dex::StateDrain::from(start_drain))
-                    })
-            })
+        let start_drain = dex::start_drain(self)?;
+        start_drain
+            .enter(env.block.time.into_instant(), querier)
+            .map(|drain_msgs| Response::from(drain_msgs, dex::StateDrain::from(start_drain)))
             .map_err(Into::into)
     }
 }
