@@ -200,9 +200,10 @@ impl Handler for ClosingRemoteLease {
         _querier: QuerierWrapper<'_>,
         env: Env,
     ) -> ContractResult<Response> {
-        // CloseLease/TransferOut over this transport are not yet
-        // nonce-correlated (they convert in a later phase), so the callback
-        // nonce is not consulted here.
+        // CloseLease is a single-packet operation that rides a zero nonce - no
+        // duplicate-callback window to close - so the callback nonce is not
+        // consulted here; a stray transfer-out ack landing after the drain is
+        // absorbed below as an unexpected variant.
         self.authz_callback(&info)
             .and_then(|()| match callback.outcome {
                 RemoteOperationOutcome::OperationOk(WireOperationResponse::CloseLease(

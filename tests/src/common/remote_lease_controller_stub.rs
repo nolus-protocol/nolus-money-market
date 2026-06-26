@@ -141,9 +141,14 @@ pub enum StubExecuteMsg {
         #[serde(default)]
         nonce: u64,
     },
+    // #671: `TransferOut` carries the per-emission `nonce` the same way `Swap`
+    // does; the stand-in echoes it into the synthesised callback exactly as the
+    // production controller forwards `envelope.nonce`.
     TransferOut {
         params: TransferOutParams,
         timeout: finance::duration::Duration,
+        #[serde(default)]
+        nonce: u64,
     },
     /// Test-only: configure the stand-in's reply for a given op tag.
     SetResponseMode {
@@ -228,6 +233,10 @@ const RECORDED_SWAPS: Map<&Addr, Vec<SwapParams>> = Map::new("stub_recorded_swap
 /// [`RECORDED_SWAPS`]. Lets a driver replay the in-flight nonce (matching) or
 /// the superseded one after a heal (stale).
 const RECORDED_SWAP_NONCES: Map<&Addr, Vec<u64>> = Map::new("stub_recorded_swap_nonces");
+/// The last nonce the lease emitted on any nonce-bearing operation (swap or
+/// transfer-out) — its current in-flight nonce regardless of which transport is
+/// active, so an injected callback can be stamped to match whatever leg is live.
+const LAST_INFLIGHT_NONCE: Map<&Addr, u64> = Map::new("stub_last_inflight_nonce");
 const RECORDED_TRANSFER_OUTS: Map<&Addr, Vec<TransferOutParams>> =
     Map::new("stub_recorded_transfer_outs");
 const RECORDED_CLOSES: Map<&Addr, u32> = Map::new("stub_recorded_closes");
@@ -319,15 +328,17 @@ pub fn execute(
         StubExecuteMsg::Swap { params, nonce, .. } => {
             record_swap(deps.storage, &info.sender, &params)?;
             record_swap_nonce(deps.storage, &info.sender, nonce)?;
+            record_inflight_nonce(deps.storage, &info.sender, nonce)?;
             handle_outbound(deps, info, op_tag::SWAP, nonce, |storage| {
                 Ok(OperationResponse::Swap(SwapResponse {
                     amount_out: next_swap_output(storage, &params)?,
                 }))
             })
         }
-        StubExecuteMsg::TransferOut { params, .. } => {
+        StubExecuteMsg::TransferOut { params, nonce, .. } => {
             record_transfer_out(deps.storage, &info.sender, &params)?;
-            handle_outbound(deps, info, op_tag::TRANSFER_OUT, 0, |_storage| {
+            record_inflight_nonce(deps.storage, &info.sender, nonce)?;
+            handle_outbound(deps, info, op_tag::TRANSFER_OUT, nonce, |_storage| {
                 Ok(OperationResponse::TransferOut(TransferOutResponse {}))
             })
         }
@@ -341,13 +352,15 @@ pub fn execute(
         }
         StubExecuteMsg::DeliverPending { op } => deliver_pending(deps.storage, op.as_str()),
         StubExecuteMsg::InjectCallback { to, callback } => {
-            // #636: a manually-injected "valid" callback must carry the lease's
-            // current in-flight nonce so a live swap leg matches it (the leg
-            // absorbs any other nonce as `nonce-mismatch`). Stamp the last
-            // recorded swap nonce for `to` over the caller's placeholder; if the
-            // lease has emitted no swap yet (open/close/transfer-out flows that
-            // ignore the nonce), fall back to the caller's value.
-            let nonce = last_recorded_swap_nonce(deps.storage, &to)?.unwrap_or(callback.nonce);
+            // A manually-injected "valid" callback must carry the lease's current
+            // in-flight nonce so a live leg matches it (any other nonce is
+            // absorbed as `nonce-mismatch`). Stamp the last nonce the lease
+            // emitted on any nonce-bearing op — swap or transfer-out — over the
+            // caller's placeholder; fall back to the caller's value when the
+            // lease has emitted none yet (a bare open/close flow).
+            let nonce = LAST_INFLIGHT_NONCE
+                .may_load(deps.storage, &to)?
+                .unwrap_or(callback.nonce);
             Ok(CwResponse::new().add_message(callback_msg(
                 to,
                 RemoteLeaseCallback {
@@ -575,13 +588,14 @@ fn record_swap_nonce(
         .map_err(Into::into)
 }
 
-/// #636: the last `nonce` the given lease emitted a swap with, i.e. its
-/// current in-flight swap nonce. `None` when the lease has emitted no swap
-/// yet (open/close/transfer-out flows that ignore the nonce).
-fn last_recorded_swap_nonce(storage: &dyn Storage, lease: &Addr) -> Result<Option<u64>, StubError> {
-    Ok(RECORDED_SWAP_NONCES
-        .may_load(storage, lease)?
-        .and_then(|nonces| nonces.last().copied()))
+fn record_inflight_nonce(
+    storage: &mut dyn Storage,
+    sender: &Addr,
+    nonce: u64,
+) -> Result<(), StubError> {
+    LAST_INFLIGHT_NONCE
+        .save(storage, sender, &nonce)
+        .map_err(Into::into)
 }
 
 fn record_close(storage: &mut dyn Storage, sender: &Addr) -> Result<(), StubError> {

@@ -127,8 +127,8 @@ where
         iter::once(self.proceeds)
     }
 
-    fn schedule_transfer_out(&self, coin: &CoinDTO<Self::G>) -> dex::DexResult<Batch> {
-        transfer_out_msg(&self.lease.lease.remote_lease_controller, coin)
+    fn schedule_transfer_out(&self, coin: &CoinDTO<Self::G>, nonce: u64) -> dex::DexResult<Batch> {
+        transfer_out_msg(&self.lease.lease.remote_lease_controller, coin, nonce)
     }
 
     fn decode_response(&self, payload: &[u8]) -> dex::DexResult<()> {
@@ -282,6 +282,7 @@ enum ControllerExecuteMsg {
     TransferOut {
         params: TransferOutParams,
         timeout: Duration,
+        nonce: u64,
     },
 }
 
@@ -301,13 +302,21 @@ where
         .map(|drain_msgs| Response::from(drain_msgs, dex::StateDrain::from(start_drain)))
 }
 
-fn transfer_out_msg(controller: &Addr, coin: &CoinDTO<ProceedsGroup>) -> dex::DexResult<Batch> {
+fn transfer_out_msg(
+    controller: &Addr,
+    coin: &CoinDTO<ProceedsGroup>,
+    nonce: u64,
+) -> dex::DexResult<Batch> {
     TransferOutParams::new(coin.into_super_group())
         .map_err(DexError::remote_swap_client)
         .and_then(|params| {
             ControllerLease::new(controller)
                 .transfer_out(params, TransferOutParams::TIMEOUT, |params, timeout| {
-                    ControllerExecuteMsg::TransferOut { params, timeout }
+                    ControllerExecuteMsg::TransferOut {
+                        params,
+                        timeout,
+                        nonce,
+                    }
                 })
                 .map_err(Into::into)
         })
@@ -349,19 +358,22 @@ mod tests {
 
     #[test]
     fn transfer_out_msg_shape_matches_the_controller_wire() {
+        const NONCE: u64 = 7;
         let proceeds: CoinDTO<LpnCurrencies> = Coin::<LpnCurrency>::new(1000).into();
         let params =
             TransferOutParams::new(proceeds.into_super_group()).expect("a non-zero amount");
         let msg = super::ControllerExecuteMsg::TransferOut {
             params: params.clone(),
             timeout: TransferOutParams::TIMEOUT,
+            nonce: NONCE,
         };
 
         let expected = format!(
-            r#"{{"transfer_out":{{"params":{},"timeout":{}}}}}"#,
+            r#"{{"transfer_out":{{"params":{},"timeout":{},"nonce":{}}}}}"#,
             cosmwasm_std::to_json_string(&params).expect("the params should serialize"),
             cosmwasm_std::to_json_string(&TransferOutParams::TIMEOUT)
                 .expect("the timeout should serialize"),
+            NONCE,
         );
         assert_eq!(
             expected,
@@ -372,7 +384,7 @@ mod tests {
     #[test]
     fn transfer_out_msg_targets_the_controller() {
         let coin: CoinDTO<LpnCurrencies> = Coin::<LpnCurrency>::new(1000).into();
-        let batch = super::transfer_out_msg(&Addr::unchecked(CONTROLLER), &coin)
+        let batch = super::transfer_out_msg(&Addr::unchecked(CONTROLLER), &coin, 7)
             .expect("a valid transfer-out message");
         assert_eq!(1, batch.len());
     }

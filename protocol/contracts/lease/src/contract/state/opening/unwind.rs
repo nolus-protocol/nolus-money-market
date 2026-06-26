@@ -155,8 +155,8 @@ impl RemoteTransferOutTask for OpeningUnwindTask {
         self.drained()
     }
 
-    fn schedule_transfer_out(&self, coin: &CoinDTO<Self::G>) -> dex::DexResult<Batch> {
-        transfer_out_msg(&self.remote_lease_controller, coin)
+    fn schedule_transfer_out(&self, coin: &CoinDTO<Self::G>, nonce: u64) -> dex::DexResult<Batch> {
+        transfer_out_msg(&self.remote_lease_controller, coin, nonce)
     }
 
     fn decode_response(&self, payload: &[u8]) -> dex::DexResult<()> {
@@ -220,6 +220,7 @@ enum ControllerExecuteMsg {
     TransferOut {
         params: TransferOutParams,
         timeout: Duration,
+        nonce: u64,
     },
 }
 
@@ -228,13 +229,18 @@ impl ControllerInnerMessage for ControllerExecuteMsg {}
 fn transfer_out_msg(
     controller: &Addr,
     coin: &CoinDTO<LeasePaymentCurrencies>,
+    nonce: u64,
 ) -> dex::DexResult<Batch> {
     TransferOutParams::new(*coin)
         .map_err(DexError::remote_swap_client)
         .and_then(|params| {
             ControllerLease::new(controller)
                 .transfer_out(params, TransferOutParams::TIMEOUT, |params, timeout| {
-                    ControllerExecuteMsg::TransferOut { params, timeout }
+                    ControllerExecuteMsg::TransferOut {
+                        params,
+                        timeout,
+                        nonce,
+                    }
                 })
                 .map_err(Into::into)
         })

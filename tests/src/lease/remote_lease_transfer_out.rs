@@ -28,6 +28,11 @@
 //!   error-bound re-emission has no packet-lifetime cadence);
 //!   `ExecuteMsg::Heal` re-emits the in-flight transfer verbatim and the
 //!   close completes.
+//! - `transfer_out_heal_supersedes_original_ack` — a heal re-emits the
+//!   in-flight transfer with a fresh nonce; the original packet's late
+//!   acknowledgment (the superseded nonce) is then absorbed as
+//!   `nonce-mismatch` instead of advancing the drain, and the healed
+//!   re-emission's acknowledgment completes the close.
 //! - `late_ack_on_closed_absorbed` / `late_ack_from_stranger_rejected` —
 //!   the `Closed` terminal absorbs a late `TransferOut` acknowledgment
 //!   from the controller pinned at lease open (late-ack event, no state
@@ -190,6 +195,75 @@ fn transfer_out_error_ack_absorbed_until_heal() {
         3,
         stub::recorded_transfer_outs(&test_case.app, &controller, &lease).len()
     );
+    assert_closing(
+        expected_funds,
+        ClosingTrx::TransferInFinish,
+        &test_case,
+        &lease,
+    );
+
+    super::settle_arrival(&mut test_case, &lease, expected_funds);
+    let _arrival = repay::deliver_funds_arrival_alarm(&mut test_case, lease.clone());
+    assert_eq!(
+        StateResponse::Closed(),
+        super::state_query(&test_case, lease)
+    );
+}
+
+// A heal bumps the in-flight nonce, so the original packet's late acknowledgment
+// no longer matches and is absorbed instead of advancing the drain; the healed
+// re-emission's ack then completes the close. End-to-end proof that the
+// duplicate-acknowledgment window is closed.
+#[test]
+fn transfer_out_heal_supersedes_original_ack() {
+    // The close-leg drain is a fresh single-coin transfer-out, so its first
+    // emission carries nonce 1; the heal below re-emits with nonce 2.
+    const ORIGINAL_NONCE: u64 = 1;
+
+    let mut test_case = super::create_test_case::<PaymentCurrency>();
+    let controller = test_case.address_book.remote_lease_controller().clone();
+
+    // Hold only the close-leg transfer-out in flight: the repay-proceeds drain
+    // has already acked when the hook runs.
+    let (lease, expected_funds, _repay_response) = {
+        let controller = controller.clone();
+        super::open_and_repay_fully_then(&mut test_case, move |app| {
+            stub::set_response_mode(
+                app,
+                &controller,
+                op_tag::TRANSFER_OUT,
+                ResponseMode::Delayed,
+            );
+        })
+    };
+    assert_closing(expected_funds, ClosingTrx::TransferOut, &test_case, &lease);
+
+    // The operator heals the still-in-flight transfer, re-emitting it with a
+    // fresh nonce that supersedes the original packet.
+    let heal_response = super::heal(&mut test_case, lease.clone());
+    heal_response
+        .assert_event(&Event::new(CLOSING_TRANSFER_OUT_EVENT).add_attribute("heal", "re-emit"));
+
+    // The original packet's late ack carries the now-superseded nonce: it is
+    // absorbed, not credited, and the drain stays in transfer-out.
+    let stale = stub::inject_callback_with_nonce(
+        &mut test_case.app,
+        &controller,
+        &lease,
+        ORIGINAL_NONCE,
+        RemoteOperationOutcome::OperationOk(WireOperationResponse::TransferOut(
+            TransferOutResponse {},
+        )),
+    );
+    stale.assert_event(
+        &Event::new(CLOSING_TRANSFER_OUT_EVENT).add_attribute("absorbed", "nonce-mismatch"),
+    );
+    assert_closing(expected_funds, ClosingTrx::TransferOut, &test_case, &lease);
+
+    // The healed re-emission's ack (the fresh nonce the stand-in holds pending)
+    // matches the in-flight transfer and completes the drain.
+    let _delivery =
+        stub::deliver_pending_callback(&mut test_case.app, &controller, op_tag::TRANSFER_OUT);
     assert_closing(
         expected_funds,
         ClosingTrx::TransferInFinish,
