@@ -9,6 +9,7 @@ rust-version = "1.94"
 
 [package.metadata.cargo-each]
 combinations = [
+    { tags = ["ci", "@agnostic"], always-on = ["dex-test_impl"], include-rest = false },
     { tags = ["ci", "$dex"], always-on = ["$dex"], include-rest = false, generics = { "$dex" = ["dex-astroport_test", "dex-astroport_main", "dex-osmosis"] } },
 ]
 
@@ -36,6 +37,7 @@ warnings = "deny"
 dex-astroport_test = ["profit/dex-astroport_test"]
 dex-astroport_main = ["profit/dex-astroport_main"]
 dex-osmosis = ["profit/dex-osmosis"]
+dex-test_impl = ["profit/dex-test_impl"]
 
 [dev-dependencies]
 admin_contract = { path = "../platform/contracts/admin", features = ["contract"], default-features = false }

@@ -40,6 +40,7 @@ pub mod profit;
 pub mod protocols;
 pub mod remote_lease_controller_stub;
 pub mod reserve;
+#[cfg(not(feature = "dex-test_impl"))]
 pub mod swap;
 pub mod test_case;
 pub mod timealarms;
