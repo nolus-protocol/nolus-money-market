@@ -1444,6 +1444,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "remote_profit"
+version = "0.1.0"
+dependencies = [
+ "currencies",
+ "currency",
+ "finance",
+ "platform",
+ "remote_profit_wire",
+ "sdk",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.18",
+]
+
+[[package]]
 name = "remote_profit_wire"
 version = "0.1.0"
 dependencies = [
