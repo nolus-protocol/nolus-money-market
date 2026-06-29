@@ -20,7 +20,7 @@ use crate::{
 };
 
 #[cfg(feature = "migration")]
-use super::migration::{InspectSpec, MigrateSpec};
+use super::migration::MigrateSpec;
 use super::{
     next_leg::NextLeg as NextLegT,
     response::{self, ContinueResult, Handler, Result as HandlerResult},
@@ -249,18 +249,6 @@ where
         MigrateFn: FnOnce(SwapTask) -> SwapTaskNew,
     {
         Self::Out::new(migrate_fn(self.spec))
-    }
-}
-
-#[cfg(feature = "migration")]
-impl<SwapTask, R, SEnum, SwapClient, NextLeg> InspectSpec<SwapTask, R>
-    for TransferOut<SwapTask, SEnum, SwapClient, NextLeg>
-{
-    fn inspect_spec<InspectFn>(&self, inspect_fn: InspectFn) -> R
-    where
-        InspectFn: FnOnce(&SwapTask) -> R,
-    {
-        inspect_fn(&self.spec)
     }
 }
 

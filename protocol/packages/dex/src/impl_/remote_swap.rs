@@ -65,7 +65,7 @@ use crate::{
 };
 
 #[cfg(feature = "migration")]
-use super::migration::{InspectSpec, MigrateSpec};
+use super::migration::MigrateSpec;
 
 const EVENT_KEY_ABSORBED: &str = "absorbed";
 const EVENT_KEY_ANOMALY: &str = "anomaly";
@@ -712,19 +712,6 @@ where
             self.errors,
             self.in_flight_nonce,
         )
-    }
-}
-
-#[cfg(feature = "migration")]
-impl<SwapTask, R, SEnum> InspectSpec<SwapTask, R> for RemoteSwap<SwapTask, SEnum>
-where
-    SwapTask: SwapTaskT,
-{
-    fn inspect_spec<InspectFn>(&self, inspect_fn: InspectFn) -> R
-    where
-        InspectFn: FnOnce(&SwapTask) -> R,
-    {
-        inspect_fn(&self.spec)
     }
 }
 

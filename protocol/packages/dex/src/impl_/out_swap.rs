@@ -444,7 +444,7 @@ mod impl_display {
 
 #[cfg(feature = "migration")]
 mod impl_migration {
-    use super::{super::migration::InspectSpec, State};
+    use super::State;
     use crate::{
         SwapTask as SwapTaskT,
         impl_::{ForwardToInner, migration::MigrateSpec},
@@ -469,25 +469,6 @@ mod impl_migration {
                 State::TransferOutRespDelivery(inner) => inner.migrate_spec(migrate_fn).into(),
                 State::RemoteSwap(inner) => inner.migrate_spec(migrate_fn).into(),
                 State::SlippageAnomaly(inner) => inner.migrate_spec(migrate_fn).into(),
-            }
-        }
-    }
-
-    impl<SwapTask, R, SwapClient, ForwardToInnerMsg> InspectSpec<SwapTask, R>
-        for State<SwapTask, SwapClient, ForwardToInnerMsg>
-    where
-        SwapTask: SwapTaskT,
-        ForwardToInnerMsg: ForwardToInner,
-    {
-        fn inspect_spec<InspectFn>(&self, inspect_fn: InspectFn) -> R
-        where
-            InspectFn: FnOnce(&SwapTask) -> R,
-        {
-            match self {
-                State::TransferOut(inner) => inner.inspect_spec(inspect_fn),
-                State::TransferOutRespDelivery(inner) => inner.inspect_spec(inspect_fn),
-                State::RemoteSwap(inner) => inner.inspect_spec(inspect_fn),
-                State::SlippageAnomaly(inner) => inner.inspect_spec(inspect_fn),
             }
         }
     }

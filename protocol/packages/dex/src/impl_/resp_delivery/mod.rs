@@ -20,7 +20,7 @@ use crate::{
 };
 
 #[cfg(feature = "migration")]
-use super::migration::{InspectSpec, MigrateSpec};
+use super::migration::MigrateSpec;
 
 use self::adapter::{DeliveryAdapter, ResponseDeliveryAdapter};
 use cw_time::IntoInstant;
@@ -82,20 +82,6 @@ where
         MigrateFn: FnOnce(SwapTask) -> SwapTaskNew,
     {
         Self::Out::new(self.handler.migrate_spec(migrate_fn), self.response)
-    }
-}
-
-#[cfg(feature = "migration")]
-impl<SwapTask, RInspect, H, ForwardToInnerMsg, R, Delivery> InspectSpec<SwapTask, RInspect>
-    for ResponseDeliveryImpl<H, ForwardToInnerMsg, R, Delivery>
-where
-    H: InspectSpec<SwapTask, RInspect>,
-{
-    fn inspect_spec<InspectFn>(&self, inspect_fn: InspectFn) -> RInspect
-    where
-        InspectFn: FnOnce(&SwapTask) -> RInspect,
-    {
-        self.handler.inspect_spec(inspect_fn)
     }
 }
 

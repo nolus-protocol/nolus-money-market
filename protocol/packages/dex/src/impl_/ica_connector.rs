@@ -20,7 +20,7 @@ use crate::{
 };
 
 #[cfg(feature = "migration")]
-use super::migration::{InspectSpec, MigrateSpec};
+use super::migration::MigrateSpec;
 use cw_time::IntoInstant;
 
 #[derive(Serialize, Deserialize)]
@@ -81,20 +81,6 @@ where
         MigrateFn: FnOnce(SwapTask) -> SwapTaskNew,
     {
         Self::Out::new(self.connectee.migrate_spec(migrate_fn))
-    }
-}
-
-#[cfg(feature = "migration")]
-impl<SwapTask, R, Connectee, SwapResult> InspectSpec<SwapTask, R>
-    for IcaConnector<Connectee, SwapResult>
-where
-    Connectee: InspectSpec<SwapTask, R>,
-{
-    fn inspect_spec<InspectFn>(&self, inspect_fn: InspectFn) -> R
-    where
-        InspectFn: FnOnce(&SwapTask) -> R,
-    {
-        self.connectee.inspect_spec(inspect_fn)
     }
 }
 
