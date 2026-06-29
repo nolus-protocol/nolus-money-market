@@ -19,8 +19,6 @@ use crate::{
     error::Result,
 };
 
-#[cfg(feature = "migration")]
-use super::migration::MigrateSpec;
 use super::{
     next_leg::NextLeg as NextLegT,
     response::{self, ContinueResult, Handler, Result as HandlerResult},
@@ -229,26 +227,6 @@ where
             .time_alarm()
             .setup_alarm(r#for)
             .map_err(Into::into)
-    }
-}
-
-#[cfg(feature = "migration")]
-impl<SwapTask, SwapTaskNew, SEnum, SEnumNew, SwapClient, NextLeg>
-    MigrateSpec<SwapTask, SwapTaskNew, SEnumNew>
-    for TransferOut<SwapTask, SEnum, SwapClient, NextLeg>
-where
-    Self: Sized,
-    SwapTaskNew: SwapTaskT,
-    NextLeg: MigrateSpec<SwapTask, SwapTaskNew, SEnumNew>,
-    TransferOut<SwapTaskNew, SEnumNew, SwapClient, NextLeg::Out>: Into<SEnumNew>,
-{
-    type Out = TransferOut<SwapTaskNew, SEnumNew, SwapClient, NextLeg::Out>;
-
-    fn migrate_spec<MigrateFn>(self, migrate_fn: MigrateFn) -> Self::Out
-    where
-        MigrateFn: FnOnce(SwapTask) -> SwapTaskNew,
-    {
-        Self::Out::new(migrate_fn(self.spec))
     }
 }
 

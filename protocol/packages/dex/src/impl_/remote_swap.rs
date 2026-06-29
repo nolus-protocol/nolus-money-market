@@ -64,9 +64,6 @@ use crate::{
     },
 };
 
-#[cfg(feature = "migration")]
-use super::migration::MigrateSpec;
-
 const EVENT_KEY_ABSORBED: &str = "absorbed";
 const EVENT_KEY_ANOMALY: &str = "anomaly";
 const EVENT_KEY_HEAL: &str = "heal";
@@ -679,39 +676,6 @@ where
             .time_alarm()
             .setup_alarm(r#for)
             .map_err(Into::into)
-    }
-}
-
-#[cfg(feature = "migration")]
-impl<SwapTask, SwapTaskNew, SEnum, SEnumNew> MigrateSpec<SwapTask, SwapTaskNew, SEnumNew>
-    for RemoteSwap<SwapTask, SEnum>
-where
-    Self: Sized,
-    SwapTask: SwapTaskT,
-    SwapTaskNew: SwapTaskT<OutG = SwapTask::OutG>,
-    RemoteSwap<SwapTaskNew, SEnumNew>: Into<SEnumNew>,
-{
-    type Out = RemoteSwap<SwapTaskNew, SEnumNew>;
-
-    /// The in-flight progress - `acks_left`, `total_out`, the pinned
-    /// `in_flight_min_out`, and the `in_flight_nonce` - is carried over instead
-    /// of rebuilding from the spec: a rebuild would re-issue the
-    /// already-acknowledged legs, re-price the promise made for the in-flight
-    /// one, and reset the nonce so the pre-migration packet's callback would
-    /// no longer match.
-    fn migrate_spec<MigrateFn>(self, migrate_fn: MigrateFn) -> Self::Out
-    where
-        MigrateFn: FnOnce(SwapTask) -> SwapTaskNew,
-    {
-        Self::Out::internal_new(
-            migrate_fn(self.spec),
-            self.acks_left,
-            self.total_out,
-            self.in_flight_min_out,
-            self.timeouts,
-            self.errors,
-            self.in_flight_nonce,
-        )
     }
 }
 
@@ -1925,22 +1889,6 @@ mod tests {
         assert_eq!(7, spec.timeout_retry_budget());
     }
 
-    #[cfg(feature = "migration")]
-    #[test]
-    fn migrate_preserves_counters() {
-        use crate::impl_::migration::MigrateSpec;
-
-        let mock_querier = MockQuerier::default();
-        let querier = QuerierWrapper::new(&mock_querier);
-
-        let mut node = after_first_ack(querier);
-        node.timeouts = 4;
-        node.errors = 2;
-        let migrated: Node = node.migrate_spec(|spec| spec);
-        assert_eq!(4, migrated.timeouts);
-        assert_eq!(2, migrated.errors);
-    }
-
     #[test]
     fn contract_state_reports_acks_left() {
         let mock_querier = MockQuerier::default();
@@ -2132,23 +2080,6 @@ mod tests {
         ));
         assert_eq!(absorb_response("nonce-mismatch"), response);
         assert_node(1, &coin_out(80), &min_out(), &node);
-    }
-
-    /// AC (#636): a migration carries the in-flight nonce over instead of
-    /// resetting it, so a packet emitted by the pre-migration code-id is still
-    /// matched correctly after the upgrade.
-    #[cfg(feature = "migration")]
-    #[test]
-    fn migrate_preserves_nonce() {
-        use crate::impl_::migration::MigrateSpec;
-
-        let mock_querier = MockQuerier::default();
-        let querier = QuerierWrapper::new(&mock_querier);
-
-        let node = after_first_ack(querier);
-        let nonce = node.in_flight_nonce;
-        let migrated: Node = node.migrate_spec(|spec| spec);
-        assert_eq!(nonce, migrated.in_flight_nonce);
     }
 
     /// AC (#636): a lease persisted before #636 carries no `in_flight_nonce`

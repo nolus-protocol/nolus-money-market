@@ -14,8 +14,6 @@ use crate::{
     error::Result,
 };
 
-#[cfg(feature = "migration")]
-use super::migration::MigrateSpec;
 use super::{
     SwapTask as SwapTaskT,
     response::{ContinueResult, Handler, Result as HandlerResult},
@@ -48,23 +46,6 @@ where
             amount_in,
             _state_enum: Default::default(),
         }
-    }
-}
-
-#[cfg(feature = "migration")]
-impl<SwapTask, SwapTaskNew, SEnum, SEnumNew> MigrateSpec<SwapTask, SwapTaskNew, SEnumNew>
-    for TransferInInit<SwapTask, SEnum>
-where
-    SwapTask: SwapTaskT,
-    SwapTaskNew: SwapTaskT<OutG = SwapTask::OutG>,
-{
-    type Out = TransferInInit<SwapTaskNew, SEnumNew>;
-
-    fn migrate_spec<MigrateFn>(self, migrate_fn: MigrateFn) -> Self::Out
-    where
-        MigrateFn: FnOnce(SwapTask) -> SwapTaskNew,
-    {
-        Self::Out::new(migrate_fn(self.spec), self.amount_in)
     }
 }
 

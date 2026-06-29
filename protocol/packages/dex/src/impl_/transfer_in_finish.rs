@@ -20,8 +20,6 @@ use crate::{
     SwapTask as SwapTaskT, WithOutputTask,
 };
 
-#[cfg(feature = "migration")]
-use super::migration::MigrateSpec;
 use super::{
     response::{self, Handler as HandlerT, Result as HandlerResult},
     transfer_in,
@@ -56,33 +54,6 @@ where
             timeout,
             _state_enum: Default::default(),
         }
-    }
-}
-
-#[cfg(feature = "migration")]
-impl<SwapTask, SEnum> TransferInFinish<SwapTask, SEnum>
-where
-    SwapTask: SwapTaskT,
-{
-    pub fn into_init(self) -> TransferInInit<SwapTask, SEnum> {
-        TransferInInit::new(self.spec, self.amount_in)
-    }
-}
-
-#[cfg(feature = "migration")]
-impl<SwapTask, SwapTaskNew, SEnum, SEnumNew> MigrateSpec<SwapTask, SwapTaskNew, SEnumNew>
-    for TransferInFinish<SwapTask, SEnum>
-where
-    SwapTask: SwapTaskT,
-    SwapTaskNew: SwapTaskT<OutG = SwapTask::OutG>,
-{
-    type Out = TransferInFinish<SwapTaskNew, SEnumNew>;
-
-    fn migrate_spec<MigrateFn>(self, migrate_fn: MigrateFn) -> Self::Out
-    where
-        MigrateFn: FnOnce(SwapTask) -> SwapTaskNew,
-    {
-        Self::Out::new(migrate_fn(self.spec), self.amount_in, self.timeout)
     }
 }
 
