@@ -244,7 +244,7 @@ jobs:
             "${image_tag:?}" \
             "${workspace:?}"
   check-remote-lease-wire-msrv:
-    name: "Check remote_lease_wire MSRV (Rust 1.89)"
+    name: "Check wire-crate MSRV (Rust 1.89)"
     runs-on: ["self-hosted", "nolus-ci"]
     steps:
       - name: "Checkout repository"
