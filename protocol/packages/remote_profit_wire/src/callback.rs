@@ -49,10 +49,7 @@ pub enum RemoteOperationOutcome {
 /// Serialises as a bare JSON string. The counterparty-facing paths —
 /// deserialisation and the fallible [`new`](Self::new) — reject payloads
 /// above [`OPERATION_ERR_MAX_BYTES`], so any string sourced from over the
-/// wire is bounded before it reaches downstream storage. The
-/// [`from_static`](Self::from_static) constructor is the one exception: it
-/// trusts the (compile-time-known) caller and only `debug_assert!`s the
-/// bound, so it must be fed provably-in-range literals.
+/// wire is bounded before it reaches downstream storage.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct RemoteErrorMessage(String);
 
@@ -64,7 +61,9 @@ impl RemoteErrorMessage {
         let message: String = message.into();
         let actual = message.len();
         if actual <= OPERATION_ERR_MAX_BYTES {
-            Ok(Self(message))
+            let value = Self(message);
+            debug_assert!(value.invariant_held());
+            Ok(value)
         } else {
             Err(Error::CallbackErrorTooLong {
                 actual,
@@ -73,34 +72,12 @@ impl RemoteErrorMessage {
         }
     }
 
-    /// Construct from a compile-time-known string literal that is statically
-    /// known to be within [`OPERATION_ERR_MAX_BYTES`].
-    ///
-    /// For fixed internal reasons (e.g. `"timeout"`) where threading a
-    /// fallible [`new`](Self::new) through the call site would add error
-    /// plumbing for a value that is provably in range.
-    ///
-    /// Precondition (caller's responsibility): `message` must be a genuine
-    /// literal whose length is verifiable by inspection, never a
-    /// runtime-produced `&'static str` (e.g. a `Box::leak`ed value). The
-    /// length is only `debug_assert!`ed, so an over-cap input that slips past
-    /// review would bypass the bound in release builds — unlike [`new`] and
-    /// deserialisation, which reject it. When the length is not statically
-    /// obvious, use [`new`] instead.
-    ///
-    /// # Panics
-    ///
-    /// In debug builds, panics if `message` exceeds [`OPERATION_ERR_MAX_BYTES`].
-    pub fn from_static(message: &'static str) -> Self {
-        debug_assert!(
-            message.len() <= OPERATION_ERR_MAX_BYTES,
-            "RemoteErrorMessage::from_static exceeds OPERATION_ERR_MAX_BYTES"
-        );
-        Self(message.to_owned())
-    }
-
     pub fn as_str(&self) -> &str {
         self.0.as_str()
+    }
+
+    pub fn invariant_held(&self) -> bool {
+        self.0.len() <= OPERATION_ERR_MAX_BYTES
     }
 }
 

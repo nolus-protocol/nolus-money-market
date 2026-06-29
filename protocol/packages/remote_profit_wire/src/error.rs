@@ -22,10 +22,4 @@ pub enum Error {
 
     #[error("remote-profit-id contains a non-base58 byte 0x{byte:02x}")]
     RemoteProfitIdInvalidCharacter { byte: u8 },
-
-    #[error("protocol version mismatch: expected {expected}, got {actual}")]
-    ProtocolVersionMismatch {
-        expected: &'static str,
-        actual: String,
-    },
 }

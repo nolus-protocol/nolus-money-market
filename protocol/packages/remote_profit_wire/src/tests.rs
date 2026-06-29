@@ -155,27 +155,6 @@ fn callback_error_message_deserialize_over_cap_rejected() {
         .expect_err("over-cap payload must fail deserialization");
 }
 
-#[test]
-fn callback_error_message_from_static_accepted() {
-    let value = RemoteErrorMessage::from_static("timeout");
-    assert_eq!("timeout", value.as_str());
-    assert_round_trip_eq(
-        r#"{"operation_err":"timeout"}"#,
-        &RemoteOperationOutcome::OperationErr(value),
-    );
-}
-
-// `from_static` only `debug_assert!`s its length contract, so the panic is
-// observable solely in debug builds — the test is gated to match.
-#[cfg(debug_assertions)]
-#[test]
-#[should_panic(expected = "OPERATION_ERR_MAX_BYTES")]
-fn callback_error_message_from_static_over_cap_panics_in_debug() {
-    let over_cap: &'static str =
-        Box::leak("x".repeat(OPERATION_ERR_MAX_BYTES + 1).into_boxed_str());
-    let _ = RemoteErrorMessage::from_static(over_cap);
-}
-
 // The callback wraps a per-emission `nonce` alongside the outcome, so the
 // controller can correlate an acknowledgment to the exact packet that
 // solicited it; the nonce is the FIRST field and round-trips on the wire.
