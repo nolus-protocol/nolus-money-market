@@ -37,8 +37,6 @@ use crate::{
     },
 };
 
-#[cfg(feature = "migration")]
-use super::migration::MigrateSpec;
 use cw_time::IntoInstant;
 
 mod decode_resp;
@@ -229,23 +227,6 @@ where
 {
     fn setup_alarm(&self, forr: Instant) -> Result<Batch> {
         self.spec.time_alarm().setup_alarm(forr).map_err(Into::into)
-    }
-}
-
-#[cfg(feature = "migration")]
-impl<SwapTask, SwapTaskNew, SEnum, SEnumNew, SwapClient>
-    MigrateSpec<SwapTask, SwapTaskNew, SEnumNew> for SwapExactIn<SwapTask, SEnum, SwapClient>
-where
-    Self: Sized,
-    SwapExactIn<SwapTaskNew, SEnumNew, SwapClient>: Into<SEnumNew>,
-{
-    type Out = SwapExactIn<SwapTaskNew, SEnumNew, SwapClient>;
-
-    fn migrate_spec<MigrateFn>(self, migrate_fn: MigrateFn) -> Self::Out
-    where
-        MigrateFn: FnOnce(SwapTask) -> SwapTaskNew,
-    {
-        Self::Out::new(migrate_fn(self.spec))
     }
 }
 

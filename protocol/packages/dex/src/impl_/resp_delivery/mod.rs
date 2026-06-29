@@ -19,9 +19,6 @@ use crate::{
     impl_::{ForwardToInner, Handler, response::Result},
 };
 
-#[cfg(feature = "migration")]
-use super::migration::MigrateSpec;
-
 use self::adapter::{DeliveryAdapter, ResponseDeliveryAdapter};
 use cw_time::IntoInstant;
 
@@ -58,30 +55,6 @@ impl<H, ForwardToInnerMsg, R, Delivery> ResponseDeliveryImpl<H, ForwardToInnerMs
             _forward_to_inner_msg: PhantomData,
             _delivery_adapter: PhantomData,
         }
-    }
-
-    #[cfg(feature = "migration")]
-    pub fn patch_response(mut self, new_response: R) -> Self {
-        self.response = new_response;
-        self
-    }
-}
-
-#[cfg(feature = "migration")]
-impl<SwapTask, SwapTaskNew, SEnumNew, H, ForwardToInnerMsg, R, Delivery>
-    MigrateSpec<SwapTask, SwapTaskNew, SEnumNew>
-    for ResponseDeliveryImpl<H, ForwardToInnerMsg, R, Delivery>
-where
-    H: MigrateSpec<SwapTask, SwapTaskNew, SEnumNew>,
-    H::Out: Into<SEnumNew>,
-{
-    type Out = ResponseDeliveryImpl<H::Out, ForwardToInnerMsg, R, Delivery>;
-
-    fn migrate_spec<MigrateFn>(self, migrate_fn: MigrateFn) -> Self::Out
-    where
-        MigrateFn: FnOnce(SwapTask) -> SwapTaskNew,
-    {
-        Self::Out::new(self.handler.migrate_spec(migrate_fn), self.response)
     }
 }
 

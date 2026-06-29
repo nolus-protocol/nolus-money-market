@@ -441,35 +441,3 @@ mod impl_display {
         }
     }
 }
-
-#[cfg(feature = "migration")]
-mod impl_migration {
-    use super::State;
-    use crate::{
-        SwapTask as SwapTaskT,
-        impl_::{ForwardToInner, migration::MigrateSpec},
-    };
-
-    impl<SwapTask, SwapTaskNew, SwapClient, ForwardToInnerMsg>
-        MigrateSpec<SwapTask, SwapTaskNew, State<SwapTaskNew, SwapClient, ForwardToInnerMsg>>
-        for State<SwapTask, SwapClient, ForwardToInnerMsg>
-    where
-        SwapTask: SwapTaskT,
-        ForwardToInnerMsg: ForwardToInner,
-        SwapTaskNew: SwapTaskT<OutG = SwapTask::OutG>,
-    {
-        type Out = State<SwapTaskNew, SwapClient, ForwardToInnerMsg>;
-
-        fn migrate_spec<MigrateFn>(self, migrate_fn: MigrateFn) -> Self::Out
-        where
-            MigrateFn: FnOnce(SwapTask) -> SwapTaskNew,
-        {
-            match self {
-                State::TransferOut(inner) => inner.migrate_spec(migrate_fn).into(),
-                State::TransferOutRespDelivery(inner) => inner.migrate_spec(migrate_fn).into(),
-                State::RemoteSwap(inner) => inner.migrate_spec(migrate_fn).into(),
-                State::SlippageAnomaly(inner) => inner.migrate_spec(migrate_fn).into(),
-            }
-        }
-    }
-}

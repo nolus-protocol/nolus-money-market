@@ -41,9 +41,6 @@ use crate::{
     },
 };
 
-#[cfg(feature = "migration")]
-use super::migration::MigrateSpec;
-
 const EVENT_KEY_ANOMALY: &str = "anomaly";
 const EVENT_KEY_ABSORBED: &str = "absorbed";
 const ANOMALY_PARKED: &str = "slippage-anomaly-parked";
@@ -349,30 +346,5 @@ where
             .time_alarm()
             .setup_alarm(r#for)
             .map_err(Into::into)
-    }
-}
-
-#[cfg(feature = "migration")]
-impl<SwapTask, SwapTaskNew, SEnum, SEnumNew> MigrateSpec<SwapTask, SwapTaskNew, SEnumNew>
-    for SlippageAnomaly<SwapTask, SEnum>
-where
-    Self: Sized,
-    SwapTask: SwapTaskT,
-    SwapTaskNew: SwapTaskT<OutG = SwapTask::OutG>,
-    SlippageAnomaly<SwapTaskNew, SEnumNew>: Into<SEnumNew>,
-{
-    type Out = SlippageAnomaly<SwapTaskNew, SEnumNew>;
-
-    fn migrate_spec<MigrateFn>(self, migrate_fn: MigrateFn) -> Self::Out
-    where
-        MigrateFn: FnOnce(SwapTask) -> SwapTaskNew,
-    {
-        SlippageAnomaly::new(
-            migrate_fn(self.spec),
-            self.acks_left,
-            self.total_out,
-            self.in_flight_min_out,
-            self.in_flight_nonce,
-        )
     }
 }

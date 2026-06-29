@@ -30,7 +30,6 @@ impl = [
     "oracle/stub_price",
     "dep:timealarms",
 ]
-migration = []
 testing = ["finance/testing"]
 
 [dependencies]

@@ -48,8 +48,6 @@ use crate::{
     error::{Error, Result},
 };
 
-#[cfg(feature = "migration")]
-use super::migration::{InspectSpec, MigrateSpec};
 use super::{
     next_leg::NextLeg as NextLegT,
     response::{self, ContinueResult, Handler, Result as HandlerResult},
@@ -322,37 +320,6 @@ where
             .time_alarm()
             .setup_alarm(r#for)
             .map_err(Into::into)
-    }
-}
-
-#[cfg(feature = "migration")]
-impl<SwapTask, SwapTaskNew, SEnum, SEnumNew, NextLeg> MigrateSpec<SwapTask, SwapTaskNew, SEnumNew>
-    for Funding<SwapTask, SEnum, NextLeg>
-where
-    Self: Sized,
-    SwapTaskNew: SwapTaskT + FundingClient,
-    NextLeg: MigrateSpec<SwapTask, SwapTaskNew, SEnumNew>,
-    Funding<SwapTaskNew, SEnumNew, NextLeg::Out>: Into<SEnumNew>,
-{
-    type Out = Funding<SwapTaskNew, SEnumNew, NextLeg::Out>;
-
-    /// `acks_left` is carried over instead of rebuilt from the spec: a rebuild
-    /// would rewind the in-flight cursor and re-emit the already-landed coins.
-    fn migrate_spec<MigrateFn>(self, migrate_fn: MigrateFn) -> Self::Out
-    where
-        MigrateFn: FnOnce(SwapTask) -> SwapTaskNew,
-    {
-        Self::Out::internal_new(migrate_fn(self.spec), self.acks_left)
-    }
-}
-
-#[cfg(feature = "migration")]
-impl<SwapTask, R, SEnum, NextLeg> InspectSpec<SwapTask, R> for Funding<SwapTask, SEnum, NextLeg> {
-    fn inspect_spec<InspectFn>(&self, inspect_fn: InspectFn) -> R
-    where
-        InspectFn: FnOnce(&SwapTask) -> R,
-    {
-        inspect_fn(&self.spec)
     }
 }
 

@@ -29,8 +29,6 @@ mod drain;
 mod funding;
 mod funds_arrival;
 mod ica_connector;
-#[cfg(feature = "migration")]
-mod migration;
 mod next_leg;
 mod out_fund_remote;
 mod out_local;

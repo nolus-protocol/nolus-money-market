@@ -19,8 +19,6 @@ use crate::{
     TimeAlarm, error::Result,
 };
 
-#[cfg(feature = "migration")]
-use super::migration::MigrateSpec;
 use cw_time::IntoInstant;
 
 #[derive(Serialize, Deserialize)]
@@ -64,23 +62,6 @@ where
         Emitter::of_type(Self::STATE_LABEL)
             .emit("id", contract)
             .emit("ica_host", ica_host)
-    }
-}
-
-#[cfg(feature = "migration")]
-impl<SwapTask, SwapTaskNew, SEnumNew, Connectee, SwapResult>
-    MigrateSpec<SwapTask, SwapTaskNew, SEnumNew> for IcaConnector<Connectee, SwapResult>
-where
-    Connectee: MigrateSpec<SwapTask, SwapTaskNew, SEnumNew>,
-    Connectee::Out: IcaConnectee + Connectable,
-{
-    type Out = IcaConnector<Connectee::Out, SwapResult>;
-
-    fn migrate_spec<MigrateFn>(self, migrate_fn: MigrateFn) -> Self::Out
-    where
-        MigrateFn: FnOnce(SwapTask) -> SwapTaskNew,
-    {
-        Self::Out::new(self.connectee.migrate_spec(migrate_fn))
     }
 }
 
