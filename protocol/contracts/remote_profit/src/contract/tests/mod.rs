@@ -16,7 +16,7 @@ use sdk::{
 };
 use versioning::VersionSegment;
 
-use remote_profit::msg::OpenProfitParams;
+use remote_profit::msg::{NolusReceiver, OpenProfitParams};
 
 use crate::{
     api::{ChannelResponse, ConfigResponse, InstantiateMsg, QueryMsg},
@@ -158,6 +158,13 @@ fn query_channel(deps: Deps<'_>) -> ChannelResponse {
     sdk::cosmwasm_std::from_json(raw).unwrap()
 }
 
+const SAMPLE_NOLUS_RECEIVER: &str =
+    "nolus1mf6ptkssddfmxvhdx0ech0k03ktp6kf9yk59renau2gvht3nq2gqkxgywu";
+
 fn sample_open_profit_params() -> OpenProfitParams {
-    OpenProfitParams::new(7)
+    OpenProfitParams::new(
+        7,
+        NolusReceiver::new(SAMPLE_NOLUS_RECEIVER)
+            .expect("sample address is a valid bech32 Nolus addr"),
+    )
 }

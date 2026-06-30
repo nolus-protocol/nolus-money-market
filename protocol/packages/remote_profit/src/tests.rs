@@ -18,6 +18,7 @@ use serde::de::DeserializeOwned;
 
 use currencies::testing::{PaymentC1, PaymentC2, PaymentC3};
 use finance::coin::Coin;
+use remote_profit_wire::nolus_receiver::NolusReceiver;
 
 use crate::{
     PORT_PREFIX, VERSION,
@@ -42,7 +43,10 @@ use crate::{
 #[test]
 fn open_profit_msg_serde() {
     let value = Operation::OpenProfit(sample_open_profit_params());
-    assert_round_trip_eq(r#"{"open_profit":{"expected_instance_ordinal":7}}"#, &value);
+    assert_round_trip_eq(
+        r#"{"open_profit":{"expected_instance_ordinal":7,"nolus_receiver":"nolus1mf6ptkssddfmxvhdx0ech0k03ktp6kf9yk59renau2gvht3nq2gqkxgywu"}}"#,
+        &value,
+    );
 }
 
 #[test]
@@ -238,16 +242,49 @@ fn packet_envelope_decodes_without_nonce_to_zero() {
 // ---------------------------------------------------------------------------
 
 #[test]
+fn open_profit_params_round_trips_with_nolus_receiver() {
+    let value = OpenProfitParams::new(7, sample_nolus_receiver());
+    assert_round_trip_eq(
+        r#"{"expected_instance_ordinal":7,"nolus_receiver":"nolus1mf6ptkssddfmxvhdx0ech0k03ktp6kf9yk59renau2gvht3nq2gqkxgywu"}"#,
+        &value,
+    );
+    assert_eq!(SAMPLE_NOLUS_RECEIVER, value.nolus_receiver().as_str());
+}
+
+#[test]
 fn open_profit_params_max_ordinal_accepted() {
-    let params = OpenProfitParams::new(u16::MAX);
+    let params = OpenProfitParams::new(u16::MAX, sample_nolus_receiver());
     assert_eq!(u16::MAX, params.expected_instance_ordinal());
 }
 
 #[test]
 fn open_profit_params_deserialize_above_u16_rejected() {
-    let bad_wire = r#"{"expected_instance_ordinal":65536}"#;
+    let bad_wire = r#"{"expected_instance_ordinal":65536,"nolus_receiver":"nolus1mf6ptkssddfmxvhdx0ech0k03ktp6kf9yk59renau2gvht3nq2gqkxgywu"}"#;
     serde_json::from_str::<OpenProfitParams>(bad_wire)
         .expect_err("ordinal above u16 range must fail deserialization");
+}
+
+// `nolus_receiver` is a plain required field (no `#[serde(default)]`): the old
+// single-field shape must be rejected outright.
+#[test]
+fn open_profit_params_rejects_missing_nolus_receiver() {
+    let bad_wire = r#"{"expected_instance_ordinal":7}"#;
+    serde_json::from_str::<OpenProfitParams>(bad_wire)
+        .expect_err("a payload missing nolus_receiver must fail deserialization");
+}
+
+// The typed→wire `From` threads `nolus_receiver` unchanged: building a typed
+// `OpenProfitParams`, converting to the wire shape, and serialising yields the
+// same receiver the typed value carried.
+#[test]
+fn typed_to_wire_threads_nolus_receiver() {
+    let typed = OpenProfitParams::new(7, sample_nolus_receiver());
+    let wire = remote_profit_wire::msg::OpenProfitParams::from(&typed);
+    assert_eq!(SAMPLE_NOLUS_RECEIVER, wire.nolus_receiver().as_str());
+    assert_eq!(
+        typed.expected_instance_ordinal(),
+        wire.expected_instance_ordinal(),
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -371,8 +408,16 @@ where
     assert_eq!(value, &decoded);
 }
 
+/// A real bech32 Nolus account address (32-byte witness), valid checksum.
+const SAMPLE_NOLUS_RECEIVER: &str =
+    "nolus1mf6ptkssddfmxvhdx0ech0k03ktp6kf9yk59renau2gvht3nq2gqkxgywu";
+
 fn sample_open_profit_params() -> OpenProfitParams {
-    OpenProfitParams::new(7)
+    OpenProfitParams::new(7, sample_nolus_receiver())
+}
+
+fn sample_nolus_receiver() -> NolusReceiver {
+    NolusReceiver::new(SAMPLE_NOLUS_RECEIVER).expect("sample address is a valid bech32 Nolus addr")
 }
 
 fn sample_swap_params() -> SwapParams {

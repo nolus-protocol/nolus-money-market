@@ -30,6 +30,7 @@ use remote_profit_wire::{
     callback::{RemoteOperationOutcome as WireOutcome, RemoteProfitCallback as WireCallback},
     envelope::PacketEnvelope as WireEnvelope,
     msg::Operation as WireOperation,
+    nolus_receiver::NolusReceiver,
     response::OperationResponse as WireResponse,
 };
 
@@ -147,7 +148,11 @@ where
 }
 
 fn open_profit() -> OpenProfitParams {
-    OpenProfitParams::new(7)
+    OpenProfitParams::new(
+        7,
+        NolusReceiver::new("nolus1mf6ptkssddfmxvhdx0ech0k03ktp6kf9yk59renau2gvht3nq2gqkxgywu")
+            .expect("sample address is a valid bech32 Nolus addr"),
+    )
 }
 
 fn swap() -> SwapParams {
