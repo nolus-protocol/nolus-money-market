@@ -127,6 +127,16 @@ where
     /// the scheduled transfer's and not another operation's.
     fn decode_response(&self, payload: &[u8]) -> Result<()>;
 
+    /// The local account the arrival gate polls for the drained coins.
+    ///
+    /// Defaults to the draining contract's own address. A drain landing in a
+    /// dedicated sub-account overrides this — and must snapshot its arrival
+    /// baseline against that same account, so the gate's baseline and poll
+    /// stay on one account.
+    fn arrival_account<'a>(&'a self, contract: &'a Addr) -> &'a Addr {
+        contract
+    }
+
     /// Have all the transferred coins arrived on the local `account`
     fn all_received(&self, account: &Addr, querier: QuerierWrapper<'_>) -> Result<bool>;
 
@@ -491,6 +501,8 @@ pub(super) mod mock {
         coins: Vec<CoinDTO<SuperGroup>>,
         received: bool,
         time_alarms: TimeAlarmsRef,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        arrival_account: Option<Addr>,
     }
 
     #[derive(Serialize)]
@@ -504,11 +516,16 @@ pub(super) mod mock {
                 coins,
                 received: false,
                 time_alarms: TimeAlarmsRef::unchecked(TIME_ALARMS),
+                arrival_account: None,
             }
         }
 
         pub fn set_received(&mut self, received: bool) {
             self.received = received;
+        }
+
+        pub fn set_arrival_account(&mut self, account: Addr) {
+            self.arrival_account = Some(account);
         }
     }
 
@@ -560,8 +577,19 @@ pub(super) mod mock {
             }
         }
 
-        fn all_received(&self, _account: &Addr, _querier: QuerierWrapper<'_>) -> Result<bool> {
-            Ok(self.received)
+        fn arrival_account<'a>(&'a self, contract: &'a Addr) -> &'a Addr {
+            self.arrival_account.as_ref().unwrap_or(contract)
+        }
+
+        // When an arrival account is set, report arrival only if polled with
+        // that account — so a test can prove the gate routes the poll through
+        // `arrival_account` rather than the contract's own address.
+        fn all_received(&self, account: &Addr, _querier: QuerierWrapper<'_>) -> Result<bool> {
+            let polled_expected = self
+                .arrival_account
+                .as_ref()
+                .is_none_or(|expected| account == expected);
+            Ok(self.received && polled_expected)
         }
 
         fn finish(self, _env: &Env, _querier: QuerierWrapper<'_>) -> Self::Result {

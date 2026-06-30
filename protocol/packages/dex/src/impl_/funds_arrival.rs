@@ -80,7 +80,7 @@ where
 {
     pub(super) fn try_complete(self, querier: QuerierWrapper<'_>, env: Env) -> HandlerResult<Self> {
         self.spec
-            .all_received(&env.contract.address, querier)
+            .all_received(self.spec.arrival_account(&env.contract.address), querier)
             .map_or_else(Into::into, |received| {
                 if received {
                     response::res_finished(self.spec.finish(&env, querier))
@@ -225,6 +225,27 @@ mod tests {
         assert_eq!(
             mock::FINISH_RESULT,
             finished(arrival(true).on_time_alarm(querier, testing::mock_env(), alarms_delivery()))
+        );
+    }
+
+    #[test]
+    fn arrival_polls_the_task_supplied_account() {
+        let mock_querier = MockQuerier::default();
+        let querier = QuerierWrapper::new(&mock_querier);
+        let env = testing::mock_env();
+
+        // The mock reports arrival only when polled with this sub-account,
+        // which differs from `env.contract.address`; completing proves the gate
+        // routes the poll through `arrival_account`, not the contract address.
+        let sub_account = Addr::unchecked("drain-sub-account");
+        assert_ne!(sub_account, env.contract.address);
+        let mut spec = MockSpec::new(vec![coin(100)]);
+        spec.set_received(true);
+        spec.set_arrival_account(sub_account);
+
+        assert_eq!(
+            mock::FINISH_RESULT,
+            finished(Arrival::new(spec).on_time_alarm(querier, env, alarms_delivery()))
         );
     }
 
