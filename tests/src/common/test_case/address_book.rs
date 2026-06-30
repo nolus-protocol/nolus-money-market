@@ -14,7 +14,7 @@ pub(crate) struct AddressBook<
     protocols_registry: ProtocolsRegistry,
     treasury_addr: Treasury,
     profit_addr: Profit,
-    profit_ica_addr: Profit,
+    remote_profit_controller_addr: Profit,
     reserve: Reserve,
     leaser_addr: Leaser,
     lpp_addr: Lpp,
@@ -25,6 +25,9 @@ pub(crate) struct AddressBook<
     /// for the lease-side integration tests. `None` until the leaser
     /// builder step has run; readers should `expect`.
     remote_lease_controller: Option<Addr>,
+    /// The profit's deterministic drain vault, instantiated alongside the
+    /// profit (`init_profit`). `None` until that builder step has run.
+    profit_drain_vault: Option<Addr>,
 }
 
 impl AddressBook<(), (), (), (), (), (), (), ()> {
@@ -33,7 +36,7 @@ impl AddressBook<(), (), (), (), (), (), (), ()> {
             protocols_registry: (),
             treasury_addr: (),
             profit_addr: (),
-            profit_ica_addr: (),
+            remote_profit_controller_addr: (),
             reserve: (),
             leaser_addr: (),
             lpp_addr: (),
@@ -41,6 +44,7 @@ impl AddressBook<(), (), (), (), (), (), (), ()> {
             time_alarms_addr: (),
             lease_code,
             remote_lease_controller: None,
+            profit_drain_vault: None,
         }
     }
 }
@@ -56,7 +60,7 @@ impl<Treasury, Profit, Reserve, Leaser, Lpp, Oracle, TimeAlarms>
             protocols_registry: protocols_registry_addr,
             treasury_addr: self.treasury_addr,
             profit_addr: self.profit_addr,
-            profit_ica_addr: self.profit_ica_addr,
+            remote_profit_controller_addr: self.remote_profit_controller_addr,
             reserve: self.reserve,
             leaser_addr: self.leaser_addr,
             lpp_addr: self.lpp_addr,
@@ -64,6 +68,7 @@ impl<Treasury, Profit, Reserve, Leaser, Lpp, Oracle, TimeAlarms>
             time_alarms_addr: self.time_alarms_addr,
             lease_code: self.lease_code,
             remote_lease_controller: self.remote_lease_controller,
+            profit_drain_vault: self.profit_drain_vault,
         }
     }
 }
@@ -88,7 +93,7 @@ impl<ProtocolsRegistry, Profit, Reserve, Leaser, Lpp, Oracle, TimeAlarms>
             protocols_registry: self.protocols_registry,
             treasury_addr,
             profit_addr: self.profit_addr,
-            profit_ica_addr: self.profit_ica_addr,
+            remote_profit_controller_addr: self.remote_profit_controller_addr,
             reserve: self.reserve,
             leaser_addr: self.leaser_addr,
             lpp_addr: self.lpp_addr,
@@ -96,6 +101,7 @@ impl<ProtocolsRegistry, Profit, Reserve, Leaser, Lpp, Oracle, TimeAlarms>
             time_alarms_addr: self.time_alarms_addr,
             lease_code: self.lease_code,
             remote_lease_controller: self.remote_lease_controller,
+            profit_drain_vault: self.profit_drain_vault,
         }
     }
 }
@@ -114,14 +120,14 @@ impl<ProtocolsRegistry, Treasury, Reserve, Leaser, Lpp, Oracle, TimeAlarms>
     pub(super) fn with_profit(
         self,
         profit_addr: Addr,
-        profit_ica_addr: Addr,
+        remote_profit_controller_addr: Addr,
     ) -> AddressBook<ProtocolsRegistry, Treasury, Addr, Reserve, Leaser, Lpp, Oracle, TimeAlarms>
     {
         AddressBook {
             protocols_registry: self.protocols_registry,
             treasury_addr: self.treasury_addr,
             profit_addr,
-            profit_ica_addr,
+            remote_profit_controller_addr,
             reserve: self.reserve,
             leaser_addr: self.leaser_addr,
             lpp_addr: self.lpp_addr,
@@ -129,6 +135,7 @@ impl<ProtocolsRegistry, Treasury, Reserve, Leaser, Lpp, Oracle, TimeAlarms>
             time_alarms_addr: self.time_alarms_addr,
             lease_code: self.lease_code,
             remote_lease_controller: self.remote_lease_controller,
+            profit_drain_vault: self.profit_drain_vault,
         }
     }
 }
@@ -140,8 +147,10 @@ impl<ProtocolsRegistry, Treasury, Reserve, Leaser, Lpp, Oracle, TimeAlarms>
         &self.profit_addr
     }
 
-    pub const fn profit_ica(&self) -> &Addr {
-        &self.profit_ica_addr
+    /// The stand-in remote-profit controller instantiated alongside the profit
+    /// (`init_profit`). Authorised to deliver every `RemoteProfitCallback`.
+    pub const fn remote_profit_controller(&self) -> &Addr {
+        &self.remote_profit_controller_addr
     }
 }
 
@@ -157,7 +166,7 @@ impl<ProtocolsRegistry, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>
             protocols_registry: self.protocols_registry,
             treasury_addr: self.treasury_addr,
             profit_addr: self.profit_addr,
-            profit_ica_addr: self.profit_ica_addr,
+            remote_profit_controller_addr: self.remote_profit_controller_addr,
             reserve,
             leaser_addr: self.leaser_addr,
             lpp_addr: self.lpp_addr,
@@ -165,6 +174,7 @@ impl<ProtocolsRegistry, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>
             time_alarms_addr: self.time_alarms_addr,
             lease_code: self.lease_code,
             remote_lease_controller: self.remote_lease_controller,
+            profit_drain_vault: self.profit_drain_vault,
         }
     }
 }
@@ -189,7 +199,7 @@ impl<ProtocolsRegistry, Treasury, Profit, Reserve, Lpp, Oracle, TimeAlarms>
             protocols_registry: self.protocols_registry,
             treasury_addr: self.treasury_addr,
             profit_addr: self.profit_addr,
-            profit_ica_addr: self.profit_ica_addr,
+            remote_profit_controller_addr: self.remote_profit_controller_addr,
             reserve: self.reserve,
             leaser_addr,
             lpp_addr: self.lpp_addr,
@@ -197,6 +207,7 @@ impl<ProtocolsRegistry, Treasury, Profit, Reserve, Lpp, Oracle, TimeAlarms>
             time_alarms_addr: self.time_alarms_addr,
             lease_code: self.lease_code,
             remote_lease_controller: self.remote_lease_controller,
+            profit_drain_vault: self.profit_drain_vault,
         }
     }
 }
@@ -222,7 +233,7 @@ impl<ProtocolsRegistry, Treasury, Profit, Reserve, Leaser, Oracle, TimeAlarms>
 
             treasury_addr: self.treasury_addr,
             profit_addr: self.profit_addr,
-            profit_ica_addr: self.profit_ica_addr,
+            remote_profit_controller_addr: self.remote_profit_controller_addr,
             reserve: self.reserve,
             leaser_addr: self.leaser_addr,
             lpp_addr,
@@ -230,6 +241,7 @@ impl<ProtocolsRegistry, Treasury, Profit, Reserve, Leaser, Oracle, TimeAlarms>
             time_alarms_addr: self.time_alarms_addr,
             lease_code: self.lease_code,
             remote_lease_controller: self.remote_lease_controller,
+            profit_drain_vault: self.profit_drain_vault,
         }
     }
 }
@@ -255,7 +267,7 @@ impl<ProtocolsRegistry, Treasury, Profit, Reserve, Leaser, Lpp, TimeAlarms>
 
             treasury_addr: self.treasury_addr,
             profit_addr: self.profit_addr,
-            profit_ica_addr: self.profit_ica_addr,
+            remote_profit_controller_addr: self.remote_profit_controller_addr,
             reserve: self.reserve,
             leaser_addr: self.leaser_addr,
             lpp_addr: self.lpp_addr,
@@ -263,6 +275,7 @@ impl<ProtocolsRegistry, Treasury, Profit, Reserve, Leaser, Lpp, TimeAlarms>
             time_alarms_addr: self.time_alarms_addr,
             lease_code: self.lease_code,
             remote_lease_controller: self.remote_lease_controller,
+            profit_drain_vault: self.profit_drain_vault,
         }
     }
 }
@@ -286,7 +299,7 @@ impl<ProtocolsRegistry, Treasury, Profit, Reserve, Leaser, Lpp, Oracle>
             protocols_registry: self.protocols_registry,
             treasury_addr: self.treasury_addr,
             profit_addr: self.profit_addr,
-            profit_ica_addr: self.profit_ica_addr,
+            remote_profit_controller_addr: self.remote_profit_controller_addr,
             reserve: self.reserve,
             leaser_addr: self.leaser_addr,
             lpp_addr: self.lpp_addr,
@@ -294,6 +307,7 @@ impl<ProtocolsRegistry, Treasury, Profit, Reserve, Leaser, Lpp, Oracle>
             time_alarms_addr,
             lease_code: self.lease_code,
             remote_lease_controller: self.remote_lease_controller,
+            profit_drain_vault: self.profit_drain_vault,
         }
     }
 }
@@ -329,5 +343,23 @@ impl<ProtocolsRegistry, Treasury, Profit, Reserve, Leaser, Lpp, Oracle, TimeAlar
             "remote-lease controller already installed",
         );
         self.remote_lease_controller = Some(controller);
+    }
+
+    /// The profit's drain-vault address.
+    ///
+    /// Panics if accessed before the profit builder step has run — that step
+    /// is what precomputes and instantiates the vault.
+    pub fn profit_drain_vault(&self) -> &Addr {
+        self.profit_drain_vault
+            .as_ref()
+            .expect("profit drain vault must be initialised before access")
+    }
+
+    pub(super) fn set_profit_drain_vault(&mut self, drain_vault: Addr) {
+        debug_assert!(
+            self.profit_drain_vault.is_none(),
+            "profit drain vault already installed",
+        );
+        self.profit_drain_vault = Some(drain_vault);
     }
 }

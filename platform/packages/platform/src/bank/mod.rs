@@ -30,7 +30,7 @@ mod test {
     };
     use sdk::{
         cosmwasm_std::{Addr, Coin as CwCoin, QuerierWrapper, coin as cw_coin},
-        cw_multi_test::BasicApp,
+        cw_multi_test::BasicAppBuilder,
         testing,
     };
 
@@ -244,9 +244,14 @@ mod test {
     {
         let user = testing::user(USER);
 
-        let app = BasicApp::new(|router, _, storage| {
-            router.bank.init_balance(storage, &user, coins).unwrap();
-        });
+        // The app's `Api` must carry the Nolus HRP that `testing::user` mints
+        // under, or the bank querier rejects the address as a wrong prefix.
+        let app =
+            BasicAppBuilder::new()
+                .with_api(testing::nolus_api())
+                .build(|router, _, storage| {
+                    router.bank.init_balance(storage, &user, coins).unwrap();
+                });
         let querier: QuerierWrapper<'_> = app.wrap();
 
         let bank_view = view::account_view(&user, querier);
@@ -333,9 +338,12 @@ mod test {
         let from: Addr = testing::user(USER);
         let to = from.clone();
 
-        let app = BasicApp::new(|router, _, storage| {
-            router.bank.init_balance(storage, &from, coins).unwrap();
-        });
+        let app =
+            BasicAppBuilder::new()
+                .with_api(testing::nolus_api())
+                .build(|router, _, storage| {
+                    router.bank.init_balance(storage, &from, coins).unwrap();
+                });
         let querier: QuerierWrapper<'_> = app.wrap();
 
         let msgs = send::bank_send_all::<G>(&from, to, querier).unwrap();

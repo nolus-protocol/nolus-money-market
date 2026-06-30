@@ -8,9 +8,14 @@ resolver = "3"
 rust-version = "1.94"
 
 [package.metadata.cargo-each]
+# Every suite — lease, leaser, lpp, oracle, reserve, timealarms, treasury, and
+# (post-#652 PR4b) profit — drives its remote leg exclusively through a
+# controller stand-in, never a real per-DEX swap client. The whole suite is
+# therefore DEX-agnostic and compiles+runs once under the placeholder DEX. The
+# former per-DEX matrix existed only for the local-DEX profit swap, which the
+# remote-swap rewrite retired.
 combinations = [
     { tags = ["ci", "@agnostic"], always-on = ["dex-test_impl"], include-rest = false },
-    { tags = ["ci", "$dex"], always-on = ["$dex"], include-rest = false, generics = { "$dex" = ["dex-astroport_test", "dex-astroport_main", "dex-osmosis"] } },
 ]
 
 ### [SYNC WITH OTHER WORKSPACES : START]
@@ -59,8 +64,12 @@ finance = { path = "../platform/packages/finance", features = ["testing"], defau
 lpp-platform = { path = "../platform/packages/lpp", features = ["testing"], default-features = false }
 marketprice = { path = "../protocol/packages/marketprice", features = ["testing"], default-features = false }
 platform = { path = "../platform/packages/platform", features = ["testing"], default-features = false }
+drain_vault = { path = "../protocol/contracts/drain_vault", features = ["contract"], default-features = false }
 remote_lease = { path = "../protocol/packages/remote_lease", default-features = false }
 remote_lease_controller = { path = "../protocol/contracts/remote_lease", default-features = false }
+remote_profit = { path = "../protocol/packages/remote_profit", default-features = false }
+remote_profit_controller = { path = "../protocol/contracts/remote_profit", default-features = false }
+remote_profit_wire = { path = "../protocol/packages/remote_profit_wire", default-features = false }
 sdk = { path = "../platform/packages/sdk", features = ["testing"], default-features = false }
 swap = { path = "../protocol/packages/swap", features = ["testing"], default-features = false }
 tree = { path = "../platform/packages/tree", features = ["testing"], default-features = false }

@@ -55,6 +55,10 @@ pub fn customized_mock_deps_with_contracts<const N: usize>(
     mut deps: OwnedDeps<MockStorage, MockApi, MockQuerier>,
     contracts: [Addr; N],
 ) -> OwnedDeps<MockStorage, MockApi, MockQuerier> {
+    // The harness mints addresses under the Nolus HRP (`nolus_api`); a
+    // contract's `addr_validate` of such an address must run against a matching
+    // `Api`, so override the default (`cosmwasm`-prefixed) mock api here.
+    deps.api = nolus_api();
     deps.querier.update_wasm(move |query| match query {
         WasmQuery::ContractInfo { contract_addr }
             if contracts.contains(&Addr::unchecked(contract_addr)) =>
@@ -92,14 +96,29 @@ pub fn customized_mock_deps_with_contracts<const N: usize>(
     deps
 }
 
+/// The Nolus chain bech32 prefix. The test harness mints every address —
+/// users, contracts, and `Instantiate2`-predicted addresses — under it so the
+/// contracts that bech32-validate a Nolus address (e.g. the remote-profit
+/// `NolusReceiver`, which only accepts a `nolus1…` HRP) work in-harness.
+pub const NOLUS_BECH32_PREFIX: &str = "nolus";
+
+/// A [`MockApi`] configured with the Nolus HRP. The single source of the test
+/// harness's address prefix — shared by [`user`], [`new_app`], the mock
+/// dependencies, and any hand-rolled `cw-multi-test` app so a contract sees
+/// consistent `nolus1…` addresses everywhere.
+pub fn nolus_api() -> MockApi {
+    MockApi::default().with_prefix(NOLUS_BECH32_PREFIX)
+}
+
 pub fn new_app(message_sender: InterChainMsgSender) -> CwAppBuilder {
     BasicCwAppBuilder::<InterChainMsg, Empty>::new_custom()
+        .with_api(nolus_api())
         .with_custom(CustomMsgModule::new(message_sender))
         .with_wasm(WasmKeeper::new().with_address_generator(TestAddressGenerator))
 }
 
 pub fn user(addr: &str) -> Addr {
-    MockApi::default().addr_make(addr)
+    nolus_api().addr_make(addr)
 }
 
 pub fn contract(code_id: u64, instance_id: u64) -> Addr {
