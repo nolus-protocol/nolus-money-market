@@ -1459,6 +1459,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "remote_profit_controller"
+version = "0.1.0"
+dependencies = [
+ "access-control",
+ "cosmwasm-std",
+ "currencies",
+ "currency",
+ "cw-time",
+ "finance",
+ "platform",
+ "remote_profit",
+ "sdk",
+ "serde",
+ "thiserror 2.0.18",
+ "versioning",
+]
+
+[[package]]
 name = "remote_profit_wire"
 version = "0.1.0"
 dependencies = [
