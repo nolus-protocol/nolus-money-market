@@ -104,7 +104,7 @@ fn validate(value: &str) -> Result<(), Error> {
             .iter()
             .position(|candidate| *candidate == byte)
             .ok_or(Error::NolusReceiverInvalidBech32)?;
-        symbols.push(symbol as u8);
+        symbols.push(u8::try_from(symbol).map_err(|_| Error::NolusReceiverInvalidBech32)?);
     }
 
     checksum_holds(hrp, &symbols)
