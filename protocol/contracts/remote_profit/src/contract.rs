@@ -207,7 +207,6 @@ fn grant_protocol_admin(
         })
 }
 
-/// Validate the profit identity inputs and assemble the stored [`Config`].
 fn build_config(
     api: &dyn Api,
     querier: QuerierWrapper<'_>,
