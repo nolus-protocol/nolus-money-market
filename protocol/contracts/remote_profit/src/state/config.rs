@@ -71,7 +71,7 @@ impl Config {
     /// per port/channel, so the callback target is fixed at instantiation rather
     /// than carried on the packet envelope (the way the multi-instance remote
     /// lease carries its addressee).
-    pub fn profit_contract(&self) -> &Addr {
+    pub const fn profit_contract(&self) -> &Addr {
         &self.profit_contract
     }
 
@@ -134,7 +134,7 @@ impl Config {
     pub fn auth_caller(&self, querier: QuerierWrapper<'_>, caller: Addr) -> Result<Addr> {
         contract::validator(querier)
             .check_contract_code(caller, &self.profit_code)
-            .map_err(|_| Error::UnauthorisedCaller)
+            .map_err(|_err| Error::UnauthorisedCaller)
     }
 }
 

@@ -4,13 +4,19 @@ use access_control::SingleUserAccess;
 use cosmwasm_std::Storage;
 use cw_time::{IntoInstant as _, IntoTimestamp as _};
 use finance::{duration::Duration, instant::Instant};
-use platform::{error as platform_error, message::Response as PlatformResponse, response};
+use platform::{
+    batch::Batch,
+    contract::{self, Code, CodeId},
+    error as platform_error,
+    message::Response as PlatformResponse,
+    response,
+};
 use remote_profit::{envelope::PacketEnvelope, msg::Operation, version::ProtocolVersion};
 use sdk::{
     cosmwasm_ext::{CosmosMsg, Response as CwResponse},
     cosmwasm_std::{
-        self, Addr, Binary, Deps, DepsMut, Env, IbcMsg, IbcTimeout, MessageInfo, QuerierWrapper,
-        entry_point,
+        self, Addr, Api, Binary, Deps, DepsMut, Env, IbcMsg, IbcTimeout, MessageInfo,
+        QuerierWrapper, entry_point,
     },
 };
 use versioning::{
@@ -53,41 +59,14 @@ pub fn instantiate(
         .and_then(|()| require_non_empty("dex_label", &new_controller.dex_label))
         .and_then(|()| require_canonical_transfer_channel(&new_controller.transfer_channel))
         .and_then(|()| {
-            deps.api
-                .addr_validate(new_controller.protocol_admin.as_str())
-                .map_err(Error::from)
-        })
-        // cannot validate the protocol admin contract for existence, since it is not yet instantiated
-        .and_then(|protocol_admin| {
-            SingleUserAccess::new(
+            grant_protocol_admin(
                 deps.storage.deref_mut(),
-                crate::access_control::PROTOCOL_ADMIN_KEY,
+                deps.api,
+                new_controller.protocol_admin.as_str(),
             )
-            .grant_to(&protocol_admin)
-            .map_err(Into::into)
         })
-        .and_then(|()| {
-            deps.api
-                .addr_validate(new_controller.profit_contract.as_str())
-                .map_err(Error::from)
-        })
-        .and_then(|profit_contract| {
-            new_controller
-                .profit_code
-                .try_validate(&platform::contract::validator(deps.querier))
-                .map_err(Error::from)
-                .map(|profit_code| (profit_contract, profit_code))
-        })
-        .and_then(|(profit_contract, profit_code)| {
-            Config::new(
-                new_controller.connection_id,
-                new_controller.dex_label,
-                new_controller.transfer_channel,
-                profit_code,
-                profit_contract,
-            )
-            .store(deps.storage)
-        })
+        .and_then(|()| build_config(deps.api, deps.querier, new_controller))
+        .and_then(|config| config.store(deps.storage))
         .map(|()| response::empty_response())
         .inspect_err(platform_error::log(deps.api))
 }
@@ -126,7 +105,7 @@ pub fn execute(
         ExecuteMsg::NewProfitCode {
             profit_code: new_profit_code,
         } => authorize_protocol_admin_only(deps.storage.deref(), &info)
-            .and_then(|()| Config::update_profit_code(deps.storage, new_profit_code))
+            .and_then(|()| set_profit_code(deps, new_profit_code))
             .map(|()| PlatformResponse::default()),
         ExecuteMsg::OpenProfit { params, timeout } => send_operation(
             deps,
@@ -213,6 +192,65 @@ fn authorize_protocol_admin_only(store: &dyn Storage, call_message: &MessageInfo
         .map_err(Into::into)
 }
 
+fn grant_protocol_admin(
+    storage: &mut dyn Storage,
+    api: &dyn Api,
+    protocol_admin: &str,
+) -> Result<()> {
+    api.addr_validate(protocol_admin)
+        .map_err(Error::from)
+        // cannot validate the protocol admin contract for existence, since it is not yet instantiated
+        .and_then(|admin| {
+            SingleUserAccess::new(storage, crate::access_control::PROTOCOL_ADMIN_KEY)
+                .grant_to(&admin)
+                .map_err(Into::into)
+        })
+}
+
+/// Validate the profit identity inputs and assemble the stored [`Config`].
+fn build_config(
+    api: &dyn Api,
+    querier: QuerierWrapper<'_>,
+    new_controller: InstantiateMsg,
+) -> Result<Config> {
+    // The profit contract is a deploy-supplied trusted input: its address is
+    // bech32-validated but NOT checked to be an instance of `profit_code`. The
+    // coordinated cutover may instantiate this controller before the profit
+    // instance exists (as with the protocol admin), so a misconfigured target is
+    // surfaced by the first callback's `WasmMsg::Execute` rather than here.
+    api.addr_validate(new_controller.profit_contract.as_str())
+        .map_err(Error::from)
+        .and_then(|profit_contract| {
+            new_controller
+                .profit_code
+                .try_validate(&contract::validator(querier))
+                .map_err(Error::from)
+                .map(|profit_code| {
+                    Config::new(
+                        new_controller.connection_id,
+                        new_controller.dex_label,
+                        new_controller.transfer_channel,
+                        profit_code,
+                        profit_contract,
+                    )
+                })
+        })
+}
+
+/// Confirm the rotated profit code exists on-chain before persisting it.
+///
+/// `instantiate` validates `profit_code` through `try_validate`; this mirrors
+/// that check on the update path so an admin cannot persist a non-existent code
+/// id that would then reject every authorised caller and brick outbound emission.
+fn set_profit_code(deps: DepsMut<'_>, new_profit_code: Code) -> Result<()> {
+    Code::try_new(
+        CodeId::from(new_profit_code),
+        &contract::validator(deps.querier),
+    )
+    .map_err(Error::from)
+    .and_then(|validated_code| Config::update_profit_code(deps.storage, validated_code))
+}
+
 fn open_channel(storage: &mut dyn Storage, env: &Env) -> Result<PlatformResponse> {
     Channel::may_load(storage)
         .and_then(|existing| match existing {
@@ -221,7 +259,7 @@ fn open_channel(storage: &mut dyn Storage, env: &Env) -> Result<PlatformResponse
         })
         .map(|config| {
             let open_init: CosmosMsg = ibc_msg::build_channel_open_init(env, &config);
-            let mut batch = platform::batch::Batch::default();
+            let mut batch = Batch::default();
             batch.schedule_execute_no_reply(open_init);
             PlatformResponse::messages_only(batch)
         })
@@ -234,7 +272,7 @@ fn close_channel(storage: &mut dyn Storage) -> Result<PlatformResponse> {
         .and_then(|closing| {
             closing.store(storage).map(|()| {
                 let close_msg: CosmosMsg = ibc_msg::build_channel_close(&closing);
-                let mut batch = platform::batch::Batch::default();
+                let mut batch = Batch::default();
                 batch.schedule_execute_no_reply(close_msg);
                 PlatformResponse::messages_only(batch)
             })
@@ -307,7 +345,7 @@ fn build_packet(
                 data,
                 timeout: IbcTimeout::with_timestamp((now + timeout).into_timestamp()),
             });
-            let mut batch = platform::batch::Batch::default();
+            let mut batch = Batch::default();
             batch.schedule_execute_no_reply(send);
             PlatformResponse::messages_only(batch)
         })
