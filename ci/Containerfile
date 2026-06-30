@@ -40,9 +40,9 @@ ARG protocol_contracts_count="8"
 ### 1.94.0-alpine3.23
 ARG rust_image_digest="sha256:ef7b340d4201444fa2757dfddfd4c03be9d2bde468de7b7a68b0e9fabb794334"
 
-### 1.89-alpine (pinned MSRV for the `remote_lease_wire` wire crate, consumed by
-### the external `ibc-solray` repo). Bump in lockstep with `rust-version` in
-### `protocol/packages/remote_lease_wire/Cargo.toml`.
+### 1.89-alpine (pinned MSRV for the `remote_lease_wire` and `remote_profit_wire`
+### wire crates, consumed by the external `ibc-solray` repo). Bump in lockstep with
+### `rust-version` in their `Cargo.toml` files.
 ARG msrv_rust_image_digest="sha256:4b800f2e72e04be908e5f634c504c741bd943b763d1d8ad7b096cc340e1b5b46"
 
 ### 1.96.0
@@ -98,7 +98,8 @@ ENTRYPOINT [ \
   "cargo", "check", \
   "--locked", \
   "--all-targets", \
-  "--package", "remote_lease_wire" \
+  "--package", "remote_lease_wire", \
+  "--package", "remote_profit_wire" \
 ]
 
 FROM docker.io/library/rust@${tooling_rust_image_digest:?} AS tooling-rust
