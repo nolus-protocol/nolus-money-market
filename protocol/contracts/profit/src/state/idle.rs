@@ -8,8 +8,8 @@ use serde::{Deserialize, Serialize};
 use currencies::{Nls, PaymentGroup};
 use currency::{Currency, CurrencyDef, Group, MemberOf};
 use dex::{
-    Account, Contract, DexResult, Enterable, Error as DexError, Handler, Response as DexResponse,
-    Result as SwapDecision, StartLocalLocalState,
+    Contract, DexResult, Enterable, Error as DexError, Handler, Response as DexResponse,
+    Result as SwapDecision,
 };
 use finance::instant::Instant;
 use finance::{
@@ -22,26 +22,24 @@ use platform::{
     message::Response as PlatformResponse,
     state_machine::Response as StateMachineResponse,
 };
-use sdk::cosmwasm_std::{Addr, Env, MessageInfo, QuerierWrapper};
+use sdk::cosmwasm_std::{Env, MessageInfo, QuerierWrapper};
 use timealarms::stub::Result as TimeAlarmsResult;
 
 use crate::{CadenceHours, msg::ConfigResponse, profit::Profit, result::ContractResult};
 use cw_time::IntoInstant;
 
 use super::{
-    Config, ConfigManagement, State, StateEnum, SwapClient, buy_back::BuyBack,
-    resp_delivery::ForwardToDexEntry,
+    Config, ConfigManagement, State, StateEnum, buy_back::BuyBack, resp_delivery::ForwardToDexEntry,
 };
 
 #[derive(Serialize, Deserialize)]
 pub(super) struct Idle {
     config: Config,
-    account: Account,
 }
 
 impl Idle {
-    pub fn new(config: Config, account: Account) -> Self {
-        Self { config, account }
+    pub fn new(config: Config) -> Self {
+        Self { config }
     }
 
     pub(super) fn send_nls<B>(
@@ -74,6 +72,12 @@ impl Idle {
             .balances::<PaymentGroup, _>(CoinToDTO(PhantomData, PhantomData))?
             .unwrap_or_default();
 
+        // FM8: with no non-NLS profit to buy back, no remote leg is entered; the
+        // cadence is re-armed and any NLS is paid to the treasury locally. The
+        // dust filter the buy-back applies — coins below a swappable amount never
+        // become legs — is enforced by the remote-swap floor calculator
+        // downstream; here the empty-`rest` case short-circuits the remote leg
+        // entirely.
         if balances.rest.is_empty() {
             self.send_nls(&env, querier, account, balances.filtered)
                 .map(|response: PlatformResponse| DexResponse::<Self> {
@@ -81,35 +85,25 @@ impl Idle {
                     next_state: State(StateEnum::Idle(self)),
                 })
         } else {
-            self.try_enter_buy_back(
-                querier,
-                env.contract.address.clone(),
-                env.block.time.into_instant(),
-                balances.rest,
-            )
+            self.try_enter_buy_back(querier, env.block.time.into_instant(), balances.rest)
         }
     }
 
     fn try_enter_buy_back(
         self,
         querier: QuerierWrapper<'_>,
-        profit_addr: Addr,
         now: Instant,
         balances: Vec<CoinDTO<PaymentGroup>>,
     ) -> ContractResult<DexResponse<Self>> {
-        let state: StartLocalLocalState<BuyBack, SwapClient, ForwardToDexEntry> =
-            dex::start_local_local(BuyBack::new(
-                profit_addr,
-                self.config,
-                self.account,
-                balances,
-            ));
+        let start_state = BuyBack::new(self.config, balances).and_then(|spec| {
+            dex::start_fund_remote::<_, ForwardToDexEntry>(spec).map_err(Into::into)
+        })?;
 
-        state
+        start_state
             .enter(now, querier)
             .map(|batch: Batch| DexResponse::<Self> {
                 response: PlatformResponse::messages_only(batch),
-                next_state: State(StateEnum::BuyBack(state.into())),
+                next_state: State(StateEnum::FundRemote(start_state.into())),
             })
             .map_err(Into::into)
     }
@@ -154,7 +148,7 @@ impl ConfigManagement for Idle {
             .map(PlatformResponse::messages_only)
             .map(|response: PlatformResponse| StateMachineResponse {
                 response,
-                next_state: Self { config, ..self },
+                next_state: Self { config },
             })
             .map_err(Into::into)
     }
@@ -164,6 +158,8 @@ impl Handler for Idle {
     type Response = State;
     type SwapResult = ContractResult<DexResponse<State>>;
 
+    /// `Idle` schedules no remote operation, so it can never legitimately
+    /// receive a controller callback.
     fn authz_remote_callback(
         &self,
         _querier: QuerierWrapper<'_>,

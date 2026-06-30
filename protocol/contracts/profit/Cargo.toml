@@ -32,10 +32,11 @@ contract = [
     "dep:currencies",
     "dep:currency",
     "dex/impl",
+    "dep:drain_vault",
     "dep:finance",
     "dep:oracle",
     "dep:oracle-platform",
-    "dep:platform",
+    "remote_profit/stub",
     "dep:timealarms",
     "dep:thiserror",
     "dep:versioning",
@@ -52,7 +53,6 @@ contract_testing = [
     "timealarms/testing",
 ]
 stub = [
-    "dep:platform",
     "dep:thiserror",
 ]
 stub_testing = [
@@ -65,7 +65,6 @@ testing = [
 ]
 "internal.test.testing" = [
     "testing",
-    "dep:platform",
     "platform/testing",
     "dep:versioning",
 ]
@@ -76,10 +75,13 @@ access-control = { workspace = true, optional = true }
 currencies = { workspace = true, optional = true }
 currency = { workspace = true, optional = true }
 dex = { workspace = true, features = ["impl"] }
+drain_vault = { workspace = true, optional = true }
 finance = { workspace = true, optional = true }
 oracle = { workspace = true, optional = true }
 oracle-platform = { workspace = true, optional = true }
-platform = { workspace = true, optional = true }
+platform = { workspace = true }
+remote_profit = { workspace = true }
+remote_profit_wire = { workspace = true }
 sdk = { workspace = true }
 swap = { workspace = true, optional = true }
 timealarms = { workspace = true, optional = true, features = ["stub"] }
@@ -90,3 +92,6 @@ cosmwasm-std = { workspace = true, optional = true }
 
 thiserror = { workspace = true, optional = true }
 serde = { workspace = true, features = ["derive"] }
+
+[dev-dependencies]
+versioning = { workspace = true, features = ["protocol_contract", "testing"] }
