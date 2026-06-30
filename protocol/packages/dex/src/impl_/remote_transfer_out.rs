@@ -133,7 +133,7 @@ where
     /// dedicated sub-account overrides this — and must snapshot its arrival
     /// baseline against that same account, so the gate's baseline and poll
     /// stay on one account.
-    fn arrival_account<'a>(&'a self, contract: &'a Addr) -> &'a Addr {
+    fn arrival_account<'arrival>(&'arrival self, contract: &'arrival Addr) -> &'arrival Addr {
         contract
     }
 
@@ -577,7 +577,7 @@ pub(super) mod mock {
             }
         }
 
-        fn arrival_account<'a>(&'a self, contract: &'a Addr) -> &'a Addr {
+        fn arrival_account<'arrival>(&'arrival self, contract: &'arrival Addr) -> &'arrival Addr {
             self.arrival_account.as_ref().unwrap_or(contract)
         }
 
