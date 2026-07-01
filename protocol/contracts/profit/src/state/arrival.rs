@@ -72,13 +72,15 @@ where
     G: Group,
     I: IntoIterator<Item = CoinDTO<G>>,
 {
-    let mut seen: Vec<CoinDTO<G>> = Vec::new();
-    for coin in coins {
-        if !seen.iter().any(|kept| kept.currency() == coin.currency()) {
-            seen.push(coin);
-        }
-    }
-    seen.into_iter()
+    coins
+        .into_iter()
+        .fold(Vec::new(), |mut seen: Vec<CoinDTO<G>>, coin| {
+            if !seen.iter().any(|kept| kept.currency() == coin.currency()) {
+                seen.push(coin);
+            }
+            seen
+        })
+        .into_iter()
 }
 
 fn aggregate_amount<G, I>(coins: I, currency: &CoinDTO<G>) -> Amount

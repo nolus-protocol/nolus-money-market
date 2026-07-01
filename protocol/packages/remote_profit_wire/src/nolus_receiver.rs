@@ -18,6 +18,11 @@ const NOLUS_HRP: &str = "nolus";
 /// bech32 data-part alphabet (BIP-173). Excludes `1`, `b`, `i`, `o`.
 const BECH32_CHARSET: &[u8] = b"qpzry9x8gf2tvdw0s3jn54khce6mua7l";
 
+/// Number of trailing bech32 symbols reserved for the BIP-173 checksum. The
+/// data part must carry at least this many symbols, or there is no address
+/// payload left once the checksum is accounted for.
+const BECH32_CHECKSUM_LEN: usize = 6;
+
 /// Typed wrapper around the Nolus address the funded profit drains into,
 /// travelling on the wire at `open_profit` so the Solana side learns the
 /// store-once receiver up front (subsequent `TransferOut` packets stay
@@ -93,19 +98,23 @@ fn validate(value: &str) -> Result<(), Error> {
     }
 
     let data = &value[separator + 1..];
-    // The data part holds at least the 6-symbol checksum.
-    if data.len() < 6 {
+    // The data part holds at least the checksum symbols.
+    if data.len() < BECH32_CHECKSUM_LEN {
         return Err(Error::NolusReceiverInvalidBech32);
     }
 
-    let mut symbols = Vec::with_capacity(data.len());
-    for byte in data.bytes() {
-        let symbol = BECH32_CHARSET
-            .iter()
-            .position(|candidate| *candidate == byte)
-            .ok_or(Error::NolusReceiverInvalidBech32)?;
-        symbols.push(u8::try_from(symbol).map_err(|_| Error::NolusReceiverInvalidBech32)?);
-    }
+    let symbols = data
+        .bytes()
+        .map(|byte| {
+            BECH32_CHARSET
+                .iter()
+                .position(|candidate| *candidate == byte)
+                .ok_or(Error::NolusReceiverInvalidBech32)
+                .and_then(|symbol| {
+                    u8::try_from(symbol).map_err(|_| Error::NolusReceiverInvalidBech32)
+                })
+        })
+        .collect::<Result<Vec<_>, _>>()?;
 
     checksum_holds(hrp, &symbols)
         .then_some(())

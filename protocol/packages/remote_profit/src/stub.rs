@@ -130,9 +130,14 @@ mod tests {
     use finance::{coin::Coin, duration::Duration};
     use sdk::cosmwasm_std::Addr;
 
-    use crate::msg::{CloseProfitParams, OpenProfitParams, SwapParams, TransferOutParams};
+    use crate::msg::{
+        CloseProfitParams, NolusReceiver, OpenProfitParams, SwapParams, TransferOutParams,
+    };
 
     use super::{ControllerInnerMessage, Factory, Profit};
+
+    const SAMPLE_NOLUS_RECEIVER: &str =
+        "nolus1mf6ptkssddfmxvhdx0ech0k03ktp6kf9yk59renau2gvht3nq2gqkxgywu";
 
     /// Mirrors the production controller's `ExecuteMsg` per-variant struct
     /// shape (`protocol/contracts/remote_profit/src/api.rs`).
@@ -217,7 +222,11 @@ mod tests {
     }
 
     fn sample_open_profit_params() -> OpenProfitParams {
-        OpenProfitParams::new(7)
+        OpenProfitParams::new(
+            7,
+            NolusReceiver::new(SAMPLE_NOLUS_RECEIVER)
+                .expect("sample address is a valid bech32 Nolus addr"),
+        )
     }
 
     fn sample_swap_params() -> SwapParams {
