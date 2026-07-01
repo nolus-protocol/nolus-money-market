@@ -5,9 +5,8 @@
 //! state polls the local account on a time-alarm cadence until every
 //! transferred coin has landed, then finishes the task. There is nothing
 //! to re-emit on this side - the remote account has already initiated the
-//! transfers - so unlike
-//! [`TransferInFinish`][super::transfer_in_finish::TransferInFinish] the
-//! poll never re-enters an init stage; it only waits.
+//! transfers - so unlike the legacy transfer-in finish stage the poll never
+//! re-enters an init stage; it only waits.
 
 use std::{
     fmt::{Display, Formatter, Result as FmtResult},

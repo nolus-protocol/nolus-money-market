@@ -4,8 +4,8 @@ use crate::SwapTask as SwapTaskT;
 
 use super::response::{Handler, Result as HandlerResult};
 
-/// Successor leg [`TransferOut`](super::transfer_out::TransferOut) hands off
-/// to once the last transfer acknowledgment arrives
+/// Successor leg the predecessor hands off to once the last transfer
+/// acknowledgment arrives
 pub trait NextLeg<SwapTask>
 where
     SwapTask: SwapTaskT,

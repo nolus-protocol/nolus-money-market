@@ -22,10 +22,6 @@ impl Transaction {
 
         self.msgs.push(ProtobufAny::new(msg_type, buf));
     }
-
-    pub(super) fn into_msgs(self) -> Vec<ProtobufAny> {
-        self.msgs
-    }
 }
 
 #[cfg(feature = "testing")]

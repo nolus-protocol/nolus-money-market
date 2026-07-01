@@ -1,8 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use cosmwasm_std::{Binary, Coin as CwCoin, CosmosMsg, CustomMsg, StdResult};
-
-use crate::api::ProtobufAny;
+use cosmwasm_std::{Binary, Coin as CwCoin, CosmosMsg, CustomMsg};
 
 /// IbcFee defines struct for fees that refund the relayer for `SudoMsg` messages submission.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
@@ -26,21 +24,6 @@ pub struct RequestPacketTimeoutHeight {
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum InterChainMsg {
-    RegisterInterchainAccount {
-        connection_id: String,
-        interchain_account_id: String,
-        register_fee: Option<Vec<CwCoin>>,
-    },
-
-    SubmitTx {
-        connection_id: String,
-        interchain_account_id: String,
-        msgs: Vec<ProtobufAny>,
-        memo: String,
-        timeout: u64,
-        fee: IbcFee,
-    },
-
     IbcTransfer {
         source_port: String,
         source_channel: String,
@@ -54,38 +37,6 @@ pub enum InterChainMsg {
     },
 }
 
-impl InterChainMsg {
-    pub fn register_interchain_account(
-        connection_id: String,
-        interchain_account_id: String,
-        register_fee: Option<Vec<CwCoin>>,
-    ) -> Self {
-        InterChainMsg::RegisterInterchainAccount {
-            connection_id,
-            interchain_account_id,
-            register_fee,
-        }
-    }
-
-    pub fn submit_tx(
-        connection_id: String,
-        interchain_account_id: String,
-        msgs: Vec<ProtobufAny>,
-        memo: String,
-        timeout: u64,
-        fee: IbcFee,
-    ) -> Self {
-        InterChainMsg::SubmitTx {
-            connection_id,
-            interchain_account_id,
-            msgs,
-            memo,
-            timeout,
-            fee,
-        }
-    }
-}
-
 impl From<InterChainMsg> for CosmosMsg<InterChainMsg> {
     fn from(msg: InterChainMsg) -> Self {
         CosmosMsg::Custom(msg)
@@ -93,23 +44,6 @@ impl From<InterChainMsg> for CosmosMsg<InterChainMsg> {
 }
 
 impl CustomMsg for InterChainMsg {}
-
-#[derive(Serialize, Deserialize, Debug)]
-#[serde(rename_all = "snake_case")]
-pub struct OpenAckVersion {
-    pub version: String,
-    pub controller_connection_id: String,
-    pub host_connection_id: String,
-    pub address: String,
-    pub encoding: String,
-    pub tx_type: String,
-}
-
-impl OpenAckVersion {
-    pub fn parse(response: &str) -> StdResult<Self> {
-        cosmwasm_std::from_json(response)
-    }
-}
 
 // Minimal replacement for `neutron_sdk::sudo::msg::RequestPacket`.
 #[derive(Clone, Deserialize, PartialEq, Serialize)]

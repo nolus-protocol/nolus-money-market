@@ -3,15 +3,9 @@ use std::slice;
 use super::testing;
 use currencies::PaymentGroup;
 use currency::{BankSymbols, CurrencyDTO, DexSymbols, Symbol, SymbolStatic};
-use finance::coin::Amount;
 use sdk::{
-    api::ProtobufAny,
-    cosmos_sdk_proto::traits::Name,
     cosmwasm_std::{Addr, Binary},
     cw_multi_test::AppResponse,
-    ibc_proto::{
-        cosmos::base::v1beta1::Coin as ProtobufCoin, ibc::applications::transfer::v1::MsgTransfer,
-    },
     ica::{RequestPacket, SudoMsg},
 };
 
@@ -45,24 +39,6 @@ pub(crate) fn take_transfer<T>(
 ) -> CwCoin {
     let (_sender, _receiver, token) = response.take_ibc_transfer(channel);
     token
-}
-
-pub(crate) fn expect_remote_transfer<T>(
-    response: &mut ResponseWithInterChainMsgs<'_, T>,
-    connection_id: &str,
-    ica_id: &str,
-) -> CwCoin where
-{
-    let messages: Vec<ProtobufAny> = response.expect_submit_tx(connection_id, ica_id);
-
-    let message: MsgTransfer = match messages.as_slice() {
-        [message] if message.of_type(&MsgTransfer::type_url()) => message.decode().unwrap(),
-        _ => unimplemented!(),
-    };
-
-    let token: ProtobufCoin = message.token.unwrap();
-
-    CwCoin::new(token.amount.parse::<Amount>().unwrap(), token.denom)
 }
 
 pub(crate) fn do_transfer<'r>(
