@@ -51,7 +51,6 @@ remote_lease = { path = "packages/remote_lease", default-features = false }
 remote_lease_wire = { path = "packages/remote_lease_wire", default-features = false }
 remote_profit = { path = "packages/remote_profit", default-features = false }
 remote_profit_wire = { path = "packages/remote_profit_wire", default-features = false }
-swap = { path = "packages/swap", default-features = false }
 
 # Platform Contracts
 admin_contract = { path = "../platform/contracts/admin", default-features = false }

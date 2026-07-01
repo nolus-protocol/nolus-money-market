@@ -42,7 +42,6 @@ mod response;
 mod slippage;
 #[cfg(feature = "impl")]
 mod state;
-pub mod swap;
 #[cfg(feature = "impl")]
 mod swap_task;
 #[cfg(feature = "impl")]

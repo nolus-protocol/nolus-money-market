@@ -2,15 +2,12 @@ use std::fmt::Display;
 
 use thiserror::Error;
 
-use crate::{swap, swap_task::CoinsNb};
+use crate::swap_task::CoinsNb;
 
 #[derive(Error, Debug)]
 pub enum Error {
     #[error("[Dex] {0}")]
     Platform(#[from] platform::error::Error),
-
-    #[error("[Dex] {0}")]
-    Swap(#[from] swap::Error),
 
     #[error("[Dex] The operation '{0}' is not supported in the current state '{1}'")]
     UnsupportedOperation(String, String),

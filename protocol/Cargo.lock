@@ -1799,21 +1799,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "swap"
-version = "0.1.3"
-dependencies = [
- "base64",
- "currency",
- "dex",
- "finance",
- "oracle",
- "platform",
- "prost 0.13.5",
- "sdk",
- "serde",
-]
-
-[[package]]
 name = "syn"
 version = "2.0.117"
 source = "registry+https://github.com/rust-lang/crates.io-index"
