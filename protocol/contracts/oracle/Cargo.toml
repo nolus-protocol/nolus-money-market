@@ -85,7 +85,6 @@ stub_price_testing = [
 stub_swap = [
     "dep:currency",
     "dep:serde",
-    "dep:thiserror",
 ]
 stub_swap_testing = [
     "stub_swap",
