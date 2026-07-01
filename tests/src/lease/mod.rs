@@ -1,3 +1,4 @@
+use crate::common::testing;
 use currencies::{
     LeaseGroup, Lpn, PaymentGroup,
     testing::{LeaseC2, PaymentC1},
@@ -20,7 +21,6 @@ use platform::coin_legacy;
 use sdk::{
     cosmwasm_std::{Addr, coin},
     cw_multi_test::AppResponse,
-    testing,
 };
 
 use crate::common::{

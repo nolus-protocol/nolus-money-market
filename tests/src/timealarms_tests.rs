@@ -1,5 +1,6 @@
 use std::array;
 
+use crate::common::testing;
 use currencies::{Lpn, Nls};
 use currency::CurrencyDef;
 use finance::{coin::Coin, duration::Duration, instant::Instant};
@@ -7,7 +8,6 @@ use platform::tests;
 use sdk::{
     cosmwasm_std::{Addr, Attribute, Event, Timestamp, coin},
     cw_multi_test::AppResponse,
-    testing,
 };
 use timealarms::msg::{AlarmsCount, DispatchAlarmsResponse};
 
@@ -31,11 +31,14 @@ mod mock_lease {
         cosmwasm_ext::Response,
         cosmwasm_std::{self, Addr, Binary, Deps, DepsMut, Env, MessageInfo, StdError, StdResult},
         cw_storage_plus::Item,
-        testing::{self, CwContract, CwContractWrapper},
     };
     use timealarms::stub::TimeAlarmsRef;
 
-    use crate::common::{ADMIN, test_case::app::App};
+    use crate::common::{
+        ADMIN,
+        test_case::app::App,
+        testing::{self, CwContract, CwContractWrapper},
+    };
 
     const GATE: Item<bool> = Item::new("alarm gate");
     const TIMEALARMS_ADDR: Item<Addr> = Item::new("ta_addr");

@@ -1,14 +1,13 @@
-use dex::{ConnectionParams, Ics20Channel};
-use platform::contract::{Code, CodeId};
-use profit::{CadenceHours, contract, msg::InstantiateMsg};
-use sdk::cosmwasm_std::{Addr, QuerierWrapper, instantiate2_address};
-use sdk::testing;
-
+use super::testing;
 use super::{
     ADMIN, CwContractWrapper,
     remote_profit_controller_stub::Instantiator as RemoteProfitControllerStubInstantiator,
     test_case::{TestCase, app::App},
 };
+use dex::{ConnectionParams, Ics20Channel};
+use platform::contract::{Code, CodeId};
+use profit::{CadenceHours, contract, msg::InstantiateMsg};
+use sdk::cosmwasm_std::{Addr, QuerierWrapper, instantiate2_address};
 
 /// The `Instantiate2` salt the profit precomputes and instantiates its drain
 /// vault under — must match `profit::contract`'s `VAULT_SALT`.

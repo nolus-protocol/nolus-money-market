@@ -21,6 +21,7 @@
 //! - once `Closed`, a late `CloseLease` acknowledgment is absorbed by
 //!   the terminal's late-ack absorber.
 
+use crate::common::testing;
 use access_control::error::Error as AccessError;
 use lease::{
     api::{ExecuteMsg, query::StateResponse},
@@ -33,7 +34,6 @@ use remote_lease::{
 use sdk::{
     cosmwasm_std::{Addr, Event},
     cw_multi_test::AppResponse,
-    testing,
 };
 
 use crate::common::{

@@ -1,3 +1,4 @@
+use crate::common::testing;
 use currencies::PaymentGroup;
 use currency::CurrencyDef as _;
 use finance::{
@@ -9,7 +10,6 @@ use lease::api::query::StateResponse;
 use sdk::{
     cosmwasm_std::{Addr, Event},
     cw_multi_test::AppResponse,
-    testing,
 };
 
 use crate::{

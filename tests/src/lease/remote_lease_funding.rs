@@ -26,6 +26,7 @@
 //! - `opening_emits_no_interchain_account` — the opening emits a funding
 //!   transfer over the paired channel and no `RegisterInterchainAccount`.
 
+use crate::common::testing;
 use currency::CurrencyDef;
 use finance::coin::Coin;
 use lease::api::{
@@ -34,10 +35,7 @@ use lease::api::{
 };
 use platform::coin_legacy;
 use remote_lease::callback::RemoteErrorMessage;
-use sdk::{
-    cosmwasm_std::{Addr, Coin as CwCoin, Event},
-    testing,
-};
+use sdk::cosmwasm_std::{Addr, Coin as CwCoin, Event};
 
 use crate::common::{
     self, USER,

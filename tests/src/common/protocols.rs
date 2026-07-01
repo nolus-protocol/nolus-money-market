@@ -1,3 +1,4 @@
+use super::testing;
 use admin_contract::{
     msg::{
         Dex, Network, ProtocolContractAddresses, ProtocolQueryResponse, ProtocolsQueryResponse,
@@ -8,7 +9,6 @@ use admin_contract::{
 use sdk::{
     cosmwasm_ext::Response as CwResponse,
     cosmwasm_std::{self, Addr, Binary, Deps, DepsMut, Empty, Env, MessageInfo},
-    testing,
 };
 
 use super::{ADMIN, CwContractWrapper, MockQueryMsg, test_case::app::App};

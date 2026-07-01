@@ -54,6 +54,7 @@
 //!   `leg_one_error_unwinds_clean` (#8, issue #658),
 //!   `nonce_interleave_stale_error_absorbed_current_error_parks` (#9).
 
+use crate::common::testing;
 use access_control::error::Error as AccessError;
 use dex::Error as DexError;
 use finance::{coin::Amount, zero::Zero};
@@ -69,7 +70,6 @@ use remote_lease::response::{OperationResponse, SwapResponse};
 use sdk::{
     cosmwasm_std::{Addr, Event},
     cw_multi_test::AppResponse,
-    testing,
 };
 
 use crate::common::{

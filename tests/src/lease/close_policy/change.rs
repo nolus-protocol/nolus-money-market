@@ -1,3 +1,4 @@
+use crate::common::testing;
 use ::lease::{
     CloseStrategy,
     api::{
@@ -7,10 +8,7 @@ use ::lease::{
     error::{ContractError, PositionError},
 };
 use finance::{coin::Coin, percent::Percent100};
-use sdk::{
-    cosmwasm_std::{Addr, StdError},
-    testing,
-};
+use sdk::cosmwasm_std::{Addr, StdError};
 
 use crate::{
     common::{ADMIN, oracle},

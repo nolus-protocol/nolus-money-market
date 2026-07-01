@@ -1,3 +1,4 @@
+use crate::common::testing;
 use currencies::{Lpn, Lpns, Nls, testing::LeaseC1};
 use currency::CurrencyDef;
 use finance::{
@@ -22,7 +23,6 @@ use platform::{bank, coin_legacy};
 use sdk::{
     cosmwasm_std::{Addr, Event, StdError as CosmStdError, StdResult},
     cw_multi_test::AppResponse,
-    testing,
 };
 
 use crate::{

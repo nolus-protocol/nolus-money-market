@@ -1,3 +1,4 @@
+use super::testing;
 use currencies::{LeaseGroup, PaymentGroup};
 use currency::{Currency, CurrencyDTO, CurrencyDef, DexSymbols};
 use dex::{ConnectionParams, Ics20Channel};
@@ -18,7 +19,6 @@ use platform::{coin_legacy, contract::Code};
 use sdk::{
     cosmwasm_std::{Addr, Coin as CwCoin},
     cw_multi_test::AppResponse,
-    testing,
 };
 
 use super::{

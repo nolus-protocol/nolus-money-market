@@ -21,6 +21,7 @@
 //! cadence re-arm, alarm-sender authz, the zero-balance no-op) is preserved;
 //! only the swap *transport* changed from the retired ICA path.
 
+use crate::common::testing;
 use currencies::{Lpn, Lpns, Nls, PaymentGroup};
 use currency::{CurrencyDef, MemberOf};
 use finance::{
@@ -32,7 +33,6 @@ use platform::bank;
 use sdk::{
     cosmwasm_std::{Addr, Event},
     cw_multi_test::AppResponse,
-    testing,
 };
 use timealarms::msg::DispatchAlarmsResponse;
 

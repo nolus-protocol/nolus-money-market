@@ -81,7 +81,7 @@ const OPEN_FAILED_EVENT: &str = "wasm-ls-remote-lease-open-failed";
 #[test]
 fn unwind_drains_and_open_fails_with_full_refund() {
     let (mut test_case, lease, controller) = start_opening_leg_one_in_flight();
-    let customer = sdk::testing::user(USER);
+    let customer = crate::common::testing::user(USER);
     let downpayment_before = balance::<PaymentCurrency>(&test_case, &customer);
     // capture the drained principal while the oracle price is still fresh -
     // the time-shift below expires the feed

@@ -1,3 +1,4 @@
+use crate::common::testing::{self, CwContractWrapper};
 use currencies::{
     LeaseGroup as LeaseCurrencies, Lpn, Lpns, PaymentGroup as PriceCurrencies,
     testing::{LeaseC1, LeaseC2, LeaseC6, LeaseC7},
@@ -8,7 +9,6 @@ use sdk::{
     cosmwasm_ext::Response,
     cosmwasm_std::{Addr, DepsMut, Env, Event, MessageInfo},
     cw_multi_test::{self as cw_test, AppResponse},
-    testing::{self, CwContractWrapper},
 };
 
 use crate::common::{

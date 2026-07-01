@@ -4,6 +4,11 @@
 //! OpenFailed`, `OngoingTrx::OpenLease`) and the
 //! `wasm-remote-lease-open-failed` / `wasm-remote-lease-late-ack` events.
 
+use crate::common::testing;
+use crate::common::{
+    self, USER,
+    remote_lease_controller_stub::{self as stub, ResponseMode, op_tag},
+};
 use currencies::Lpn;
 use finance::coin::Coin;
 use lease::api::{
@@ -14,12 +19,7 @@ use remote_lease::{
     callback::{RemoteErrorMessage, RemoteLeaseCallback, RemoteOperationOutcome},
     response::{CloseLeaseResponse, OpenLeaseResponse, RemoteLeaseId, WireOperationResponse},
 };
-use sdk::{cosmwasm_std::Addr, testing};
-
-use crate::common::{
-    self, USER,
-    remote_lease_controller_stub::{self as stub, ResponseMode, op_tag},
-};
+use sdk::cosmwasm_std::Addr;
 
 use super::{LeaseCoin, LeaseCurrency};
 

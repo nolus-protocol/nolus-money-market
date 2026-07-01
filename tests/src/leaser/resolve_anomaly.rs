@@ -1,7 +1,4 @@
-use lease::api::authz::AccessGranted;
-use leaser::msg::QueryMsg;
-use sdk::{cosmwasm_std::Addr, testing};
-
+use crate::common::testing;
 use crate::{
     common::{
         LEASE_ADMIN, USER,
@@ -10,6 +7,9 @@ use crate::{
     },
     leaser::change_admin,
 };
+use lease::api::authz::AccessGranted;
+use leaser::msg::QueryMsg;
+use sdk::cosmwasm_std::Addr;
 
 #[test]
 fn not_privileged() {

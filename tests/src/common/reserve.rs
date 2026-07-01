@@ -1,10 +1,10 @@
-use platform::contract::{Code, CodeId};
-use reserve::{api::InstantiateMsg, contract};
-use sdk::{cosmwasm_std::Addr, testing};
-
+use super::testing;
 use super::{
     ADMIN, CwContractWrapper, leaser::Instantiator as LeaserInstantiator, test_case::app::App,
 };
+use platform::contract::{Code, CodeId};
+use reserve::{api::InstantiateMsg, contract};
+use sdk::cosmwasm_std::Addr;
 
 pub(crate) struct Instantiator;
 

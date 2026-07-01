@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 
+use crate::common::testing::{self, CwContractWrapper};
 use currencies::{
     LeaseGroup, LeaseGroup as AlarmCurrencies, Lpn as BaseCurrency, Lpn, Lpns,
     Lpns as BaseCurrencies, PaymentGroup, PaymentGroup as PriceCurrencies,
@@ -27,7 +28,6 @@ use sdk::{
     },
     cw_multi_test::{AppResponse, Contract as CwContract},
     cw_storage_plus::Item,
-    testing::{self, CwContractWrapper},
 };
 use tree::HumanReadableTree;
 use versioning::{

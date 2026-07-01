@@ -1,3 +1,4 @@
+use crate::common::testing;
 use ::lease::{
     api::{
         ExecuteMsg,
@@ -8,7 +9,6 @@ use ::lease::{
 use sdk::{
     cosmwasm_std::{Addr, StdError, StdResult},
     cw_multi_test::AppResponse,
-    testing,
 };
 
 use crate::{

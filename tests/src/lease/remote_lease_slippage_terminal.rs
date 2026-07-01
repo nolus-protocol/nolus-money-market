@@ -28,6 +28,7 @@
 //! modes - so they compile against the current code and FAIL until the
 //! Phase-1 behaviour lands.
 
+use crate::common::testing;
 use access_control::error::Error as AccessError;
 use dex::Error as DexError;
 use finance::coin::Amount;
@@ -40,10 +41,7 @@ use lease::{
     error::ContractError,
 };
 use remote_lease::callback::{RemoteErrorMessage, RemoteLeaseCallback, RemoteOperationOutcome};
-use sdk::{
-    cosmwasm_std::{Addr, Event},
-    testing,
-};
+use sdk::cosmwasm_std::{Addr, Event};
 
 use crate::common::{
     self, LEASE_ADMIN, USER,

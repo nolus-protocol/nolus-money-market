@@ -12,6 +12,7 @@
 //!   `absorbed = undecodable-response` event; the state does not advance
 //!   and the controller's acknowledgment transaction commits.
 
+use crate::common::testing;
 use access_control::error::Error as AccessError;
 use dex::Error as DexError;
 use lease::{
@@ -25,10 +26,7 @@ use remote_lease::{
     callback::{RemoteErrorMessage, RemoteLeaseCallback, RemoteOperationOutcome},
     response::{CloseLeaseResponse, WireOperationResponse},
 };
-use sdk::{
-    cosmwasm_std::{Addr, Event, StdError},
-    testing,
-};
+use sdk::cosmwasm_std::{Addr, Event, StdError};
 
 use crate::{
     common::{

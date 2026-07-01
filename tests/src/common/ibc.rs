@@ -1,5 +1,6 @@
 use std::slice;
 
+use super::testing;
 use currencies::PaymentGroup;
 use currency::{BankSymbols, CurrencyDTO, DexSymbols, Symbol, SymbolStatic};
 use finance::coin::Amount;
@@ -12,7 +13,6 @@ use sdk::{
         cosmos::base::v1beta1::Coin as ProtobufCoin, ibc::applications::transfer::v1::MsgTransfer,
     },
     ica::{RequestPacket, SudoMsg},
-    testing,
 };
 
 use crate::common::ADMIN;
