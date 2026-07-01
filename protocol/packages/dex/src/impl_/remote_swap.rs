@@ -858,15 +858,8 @@ where
 pub(super) mod mock {
     use serde::{Deserialize, Serialize};
 
-    use currency::{
-        CurrencyDTO, Group, MemberOf,
-        test::{SuperGroup, SuperGroupTestC1},
-    };
+    use currency::test::{SuperGroup, SuperGroupTestC1};
     use finance::coin::{Amount, Coin, CoinDTO};
-    use oracle::{
-        api::swap::{Result as SwapPathResult, SwapTarget},
-        stub::SwapPath,
-    };
     use platform::batch::Batch;
     use sdk::cosmwasm_std::{Addr, Env, MessageInfo, QuerierWrapper};
     use timealarms::stub::TimeAlarmsRef;
@@ -923,8 +916,6 @@ pub(super) mod mock {
         floor: Amount,
     }
 
-    struct NoSwapPath;
-
     impl MockSpec {
         pub fn new(coins: Vec<CoinDTO<SuperGroup>>) -> Self {
             Self {
@@ -971,10 +962,6 @@ pub(super) mod mock {
 
         fn dex_account(&self) -> &Account {
             unimplemented!("the remote swap node must not use the ICA account")
-        }
-
-        fn oracle(&self) -> &impl SwapPath<SuperGroup> {
-            &NoSwapPath
         }
 
         fn time_alarm(&self) -> &TimeAlarmsRef {
@@ -1126,21 +1113,6 @@ pub(super) mod mock {
             _querier: QuerierWrapper<'_>,
         ) -> Result<Coin<SuperGroupTestC1>> {
             Ok(Coin::new(self.floor))
-        }
-    }
-
-    impl SwapPath<SuperGroup> for NoSwapPath {
-        fn swap_path<SwapIn, SwapOut>(
-            &self,
-            _from: CurrencyDTO<SwapIn>,
-            _to: CurrencyDTO<SwapOut>,
-            _querier: QuerierWrapper<'_>,
-        ) -> SwapPathResult<Vec<SwapTarget<SuperGroup>>>
-        where
-            SwapIn: Group + MemberOf<SuperGroup>,
-            SwapOut: Group + MemberOf<SuperGroup>,
-        {
-            unimplemented!("the remote swap node must not consult the swap path oracle")
         }
     }
 

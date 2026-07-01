@@ -328,16 +328,9 @@ where
 mod tests {
     use serde::{Deserialize, Serialize};
 
-    use currency::{
-        CurrencyDTO, Group, MemberOf,
-        test::{SuperGroup, SuperGroupTestC1, SuperGroupTestC2},
-    };
+    use currency::test::{SuperGroup, SuperGroupTestC1, SuperGroupTestC2};
     use cw_time::IntoInstant;
     use finance::coin::{Coin, CoinDTO};
-    use oracle::{
-        api::swap::{Result as SwapPathResult, SwapTarget},
-        stub::SwapPath,
-    };
     use platform::ica::HostAccount;
     use sdk::cosmwasm_std::{
         Addr, MessageInfo, QuerierWrapper,
@@ -411,8 +404,6 @@ mod tests {
         coins: Vec<CoinDTO<SuperGroup>>,
     }
 
-    struct NoSwapPath;
-
     impl MockSpec {
         fn new(coins: Vec<CoinDTO<SuperGroup>>) -> Self {
             Self { coins }
@@ -432,10 +423,6 @@ mod tests {
 
         fn dex_account(&self) -> &crate::Account {
             unimplemented!("the funding node addresses the LeaseAuthority, not an ICA account")
-        }
-
-        fn oracle(&self) -> &impl SwapPath<SuperGroup> {
-            &NoSwapPath
         }
 
         fn time_alarm(&self) -> &timealarms::stub::TimeAlarmsRef {
@@ -496,21 +483,6 @@ mod tests {
 
         fn transfer_channel(&self) -> &str {
             CHANNEL
-        }
-    }
-
-    impl SwapPath<SuperGroup> for NoSwapPath {
-        fn swap_path<SwapIn, SwapOut>(
-            &self,
-            _from: CurrencyDTO<SwapIn>,
-            _to: CurrencyDTO<SwapOut>,
-            _querier: QuerierWrapper<'_>,
-        ) -> SwapPathResult<Vec<SwapTarget<SuperGroup>>>
-        where
-            SwapIn: Group + MemberOf<SuperGroup>,
-            SwapOut: Group + MemberOf<SuperGroup>,
-        {
-            unimplemented!("the funding node must not consult the swap path oracle")
         }
     }
 

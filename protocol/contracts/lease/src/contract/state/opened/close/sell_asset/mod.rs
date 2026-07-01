@@ -1,7 +1,5 @@
 use std::iter;
 
-use currency::Group;
-use oracle::stub::SwapPath;
 use serde::{Deserialize, Serialize};
 
 use dex::{
@@ -127,10 +125,6 @@ where
 
     fn dex_account(&self) -> &Account {
         &self.lease.dex
-    }
-
-    fn oracle(&self) -> &impl SwapPath<<Self::InG as Group>::TopG> {
-        &self.lease.lease.oracle
     }
 
     fn time_alarm(&self) -> &TimeAlarmsRef {

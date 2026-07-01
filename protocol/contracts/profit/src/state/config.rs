@@ -1,9 +1,7 @@
-use currency::Group;
 use serde::{Deserialize, Serialize};
 
 use currencies::{Lpn as QuoteC, Lpns as QuoteG};
 use dex::Account;
-use oracle::stub::SwapPath;
 use platform::{contract::Code, ica::HostAccount};
 use remote_profit_wire::profit_id::RemoteProfitId;
 use sdk::cosmwasm_std::Addr;
@@ -92,13 +90,6 @@ impl Config {
 
     pub fn treasury(&self) -> &Addr {
         &self.treasury
-    }
-
-    pub fn oracle<GSwap>(&self) -> &(impl SwapPath<GSwap> + use<GSwap>)
-    where
-        GSwap: Group,
-    {
-        &self.oracle
     }
 
     pub fn time_alarms(&self) -> &TimeAlarmsRef {
