@@ -10,17 +10,14 @@ rust-version.workspace = true
 
 [package.metadata.cargo-each]
 combinations = [{ tags = ["ci", "@agnostic"], feature-groups = ["impl-or-testing"], include-rest = false }]
-feature-groups = { impl-or-testing = { members = ["impl","testing",], at-least-one = false, mutually-exclusive = true }}
+feature-groups = { impl-or-testing = { members = ["impl","testing",], at-least-one = true, mutually-exclusive = true }}
 
-# the drain tests need `timealarms/testing` (`TimeAlarmsRef::unchecked`), but
-# dev-dependencies cannot be feature-gated, so under the feature-less
-# combination — where every timealarms-consuming module is `impl`-gated out —
-# cargo-udeps sees the dev-dependency as unused, and its presence in the
-# resolved graph makes the optional regular dependency (off without
-# `dep:timealarms`) get reported as unused too
+# the drain tests need `timealarms/testing` (`TimeAlarmsRef::unchecked`) and are
+# `testing`-gated, but dev-dependencies cannot be feature-gated. Under the
+# `impl`-only combination those tests are cfg'd out, so cargo-udeps sees the
+# `timealarms` dev-dependency as unused.
 [package.metadata.cargo-udeps.ignore]
 development = ["timealarms"]
-normal = ["timealarms"]
 
 
 [features]
@@ -30,7 +27,7 @@ impl = [
     "oracle/stub_price",
     "dep:timealarms",
 ]
-testing = ["finance/testing"]
+testing = ["impl", "finance/testing"]
 
 [dependencies]
 cw-time = { workspace = true }

@@ -11,11 +11,10 @@ rust-version = "1.94"
 # Every suite — lease, leaser, lpp, oracle, reserve, timealarms, treasury, and
 # (post-#652 PR4b) profit — drives its remote leg exclusively through a
 # controller stand-in, never a real per-DEX swap client. The whole suite is
-# therefore DEX-agnostic and compiles+runs once under the placeholder DEX. The
-# former per-DEX matrix existed only for the local-DEX profit swap, which the
-# remote-swap rewrite retired.
+# therefore DEX-agnostic and compiles+runs once. The former per-DEX matrix and
+# its placeholder DEX feature were retired with the `swap` package (#700).
 combinations = [
-    { tags = ["ci", "@agnostic"], always-on = ["dex-test_impl"], include-rest = false },
+    { tags = ["ci", "@agnostic"], include-rest = false },
 ]
 
 ### [SYNC WITH OTHER WORKSPACES : START]
@@ -37,13 +36,6 @@ unfulfilled_lint_expectations = { level = "forbid", priority = 1 }
 unused = "deny"
 warnings = "deny"
 ### [SYNC WITH OTHER WORKSPACES : END]
-
-[features]
-# The suite gate: selects the DEX-agnostic module set (see the note above the
-# `cargo-each` combos). The profit contract retired its per-DEX local-swap client
-# for the remote-swap transport, so this no longer forwards to a `profit/dex-*`
-# feature — it is a self-contained switch the module `#[cfg]`s in `src/lib.rs` key off.
-dex-test_impl = []
 
 [dev-dependencies]
 admin_contract = { path = "../platform/contracts/admin", features = ["contract"], default-features = false }
