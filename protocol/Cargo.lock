@@ -1282,7 +1282,6 @@ dependencies = [
  "remote_profit_wire",
  "sdk",
  "serde",
- "swap",
  "thiserror 2.0.18",
  "timealarms",
  "versioning",

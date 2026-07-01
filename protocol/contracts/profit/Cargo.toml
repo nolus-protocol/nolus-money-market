@@ -10,9 +10,9 @@ rust-version.workspace = true
 
 [package.metadata.cargo-each]
 combinations = [
-    { tags = ["build", "$dex"], always-on = ["contract", "$dex"], include-rest = false, generics = { "$dex" = ["dex-astroport_main", "dex-astroport_test", "dex-osmosis"] } },
+    { tags = ["build", "@agnostic"], always-on = ["contract"], include-rest = false },
     { tags = ["ci", "@agnostic"], feature-groups = ["stub", "testing"], include-rest = false },
-    { tags = ["ci", "@agnostic"], always-on = ["dex-test_impl"], feature-groups = ["contract"], include-rest = false },
+    { tags = ["ci", "@agnostic"], feature-groups = ["contract"], include-rest = false },
 ]
 feature-groups = { contract = { members = ["contract", "contract_testing", "internal.test.contract"], at-least-one = true, mutually-exclusive = true }, stub = { members = ["stub", "stub_testing", "internal.test.stub"], at-least-one = false, mutually-exclusive = true }, testing = { members = ["testing", "internal.test.testing"], at-least-one = false, mutually-exclusive = true } }
 
@@ -20,11 +20,6 @@ feature-groups = { contract = { members = ["contract", "contract_testing", "inte
 crate-type = ["cdylib", "rlib"]
 
 [features]
-dex-astroport_main = ["swap/dex-astroport_main"]
-dex-astroport_test = ["swap/dex-astroport_test"]
-dex-osmosis = ["swap/dex-osmosis"]
-dex-test_impl = ["swap/dex-test_impl"]
-
 contract = [
     "dep:access-control",
     "cosmwasm-std/exports",
@@ -83,7 +78,6 @@ platform = { workspace = true }
 remote_profit = { workspace = true }
 remote_profit_wire = { workspace = true }
 sdk = { workspace = true }
-swap = { workspace = true, optional = true }
 timealarms = { workspace = true, optional = true, features = ["stub"] }
 versioning = { workspace = true, optional = true, features = ["protocol_contract"] }
 

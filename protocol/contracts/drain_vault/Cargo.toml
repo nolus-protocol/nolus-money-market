@@ -15,6 +15,14 @@ combinations = [
 ]
 feature-groups = { contract-or-stub = { members = ["contract", "stub"], at-least-one = false, mutually-exclusive = true }, testing = { members = ["testing"], at-least-one = false, mutually-exclusive = false } }
 
+# The contract logic — and the currency/bank types it drives — is `contract`-gated
+# (see `lib.rs`); only `api` compiles feature-less. `currencies`/`currency`/`finance`/
+# `platform` therefore appear unused in the feature-less udeps combination as regular
+# deps (fixed by gating them behind `contract` below) and as dev-deps (dev-deps cannot
+# be feature-gated, so udeps still reports them unused where the tests are cfg'd out).
+[package.metadata.cargo-udeps.ignore]
+development = ["currencies", "currency", "finance", "platform"]
+
 [lib]
 crate-type = ["cdylib", "rlib"]
 
@@ -23,6 +31,10 @@ contract = [
     "dep:access-control",
     "dep:cosmwasm-std",
     "cosmwasm-std/exports",
+    "dep:currencies",
+    "dep:currency",
+    "dep:finance",
+    "dep:platform",
     "sdk/contract",
     "stub",
 ]
@@ -31,10 +43,10 @@ testing = []
 
 [dependencies]
 access-control = { workspace = true, optional = true }
-currencies = { workspace = true }
-currency = { workspace = true }
-finance = { workspace = true }
-platform = { workspace = true }
+currencies = { workspace = true, optional = true }
+currency = { workspace = true, optional = true }
+finance = { workspace = true, optional = true }
+platform = { workspace = true, optional = true }
 sdk = { workspace = true }
 versioning = { workspace = true, features = ["protocol_contract"] }
 
