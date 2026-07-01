@@ -22,8 +22,9 @@ use sdk::{
         self, Addr, Binary, BlockInfo, Deps, Empty, Env, QuerierWrapper, StdResult as CwResult,
         Timestamp, testing as cosmwasm_test,
     },
-    testing::{self, CwApp, InterChainMsgSender},
 };
+
+use self::testing::{CwApp, InterChainMsgSender};
 
 pub(crate) const BASE_INTEREST_RATE: Percent100 = Percent100::from_permille(70);
 pub(crate) const UTILIZATION_OPTIMAL: Percent100 = Percent100::from_permille(700);
@@ -39,10 +40,10 @@ pub mod oracle;
 pub mod profit;
 pub mod protocols;
 pub mod remote_lease_controller_stub;
+pub mod remote_profit_controller_stub;
 pub mod reserve;
-#[cfg(not(feature = "dex-test_impl"))]
-pub mod swap;
 pub mod test_case;
+pub mod testing;
 pub mod timealarms;
 pub mod treasury;
 

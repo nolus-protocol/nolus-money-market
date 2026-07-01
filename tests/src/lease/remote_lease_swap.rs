@@ -47,6 +47,7 @@
 //!   nonce; the original packet's late ack (old nonce) is absorbed while the
 //!   healed re-emission's ack (new nonce) credits exactly once (#636).
 
+use crate::common::testing;
 use currencies::PaymentGroup;
 use currency::{CurrencyDef, MemberOf};
 use dex::MaxSlippage;
@@ -70,7 +71,6 @@ use remote_lease::{
 use sdk::{
     cosmwasm_std::{Addr, Event},
     cw_multi_test::AppResponse,
-    testing,
 };
 
 use crate::common::{

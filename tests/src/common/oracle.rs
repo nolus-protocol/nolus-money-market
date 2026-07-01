@@ -1,5 +1,6 @@
 use serde::Serialize;
 
+use crate::common::testing::{self, CwContract, CwContractWrapper};
 use currencies::{
     LeaseGroup as AlarmCurrencies, Lpn as BaseCurrency, Lpns as BaseCurrencies, Nls,
     PaymentGroup as PriceCurrencies,
@@ -22,7 +23,6 @@ use oracle::{
 use sdk::{
     cosmwasm_std::{self, Addr, Binary, Deps, Empty, Env, Event, QuerierWrapper, StdResult},
     cw_multi_test::AppResponse,
-    testing::{self, CwContract, CwContractWrapper},
 };
 
 use super::{

@@ -12,10 +12,12 @@ use finance::instant::Instant;
 
 mod common;
 
-// The DEX-agnostic suites swap exclusively through the remote-lease controller
-// stand-in, so they are compiled and run once under the placeholder DEX. Only
-// `profit_tests` drives the real per-DEX swap client, so it alone crosses the
-// per-DEX matrix (every real `dex-*` feature implies `not(dex-test_impl)`).
+// Every suite swaps exclusively through a controller stand-in (the remote-lease
+// controller for the lease suites, the remote-profit controller for
+// `profit_tests` post-#652 PR4b), so the whole suite is DEX-agnostic and is
+// compiled and run once under the placeholder DEX. `profit_tests` joined this
+// axis when the profit contract retired its local-DEX ICA swap for the
+// remote-swap transport — it no longer needs a real `dex-*` flag.
 #[cfg(feature = "dex-test_impl")]
 mod lease;
 #[cfg(feature = "dex-test_impl")]
@@ -25,14 +27,13 @@ mod lpp_tests;
 #[cfg(feature = "dex-test_impl")]
 mod oracle_tests;
 #[cfg(feature = "dex-test_impl")]
+mod profit_tests;
+#[cfg(feature = "dex-test_impl")]
 mod reserve;
 #[cfg(feature = "dex-test_impl")]
 mod timealarms_tests;
 #[cfg(feature = "dex-test_impl")]
 mod treasury_tests;
-
-#[cfg(not(feature = "dex-test_impl"))]
-mod profit_tests;
 
 fn block_time<ProtocolsRegistry, Treasury, Profit, Reserve, Leaser, Lpp, Oracle, TimeAlarms>(
     test_case: &TestCase<

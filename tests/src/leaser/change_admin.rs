@@ -1,8 +1,8 @@
+use crate::common::testing;
 use leaser::ContractError;
 use sdk::{
     cosmwasm_std::{Addr, StdResult},
     cw_multi_test::AppResponse,
-    testing,
 };
 
 use crate::common::{

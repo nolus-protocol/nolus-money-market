@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::{coin::WireCoin, error::Error};
+use crate::{coin::WireCoin, error::Error, nolus_receiver::NolusReceiver};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
@@ -21,21 +21,32 @@ pub enum Operation {
 /// lease ordinal: the Nolus side stamps the ordinal it expects the remote
 /// singleton to be established as, so a stale or replayed open against a
 /// superseded instance is rejected.
+///
+/// `nolus_receiver` is the store-once drain receiver — the Nolus address the
+/// funded profit ultimately drains into. It is committed to the Solana side at
+/// `open_profit` so subsequent `TransferOut` packets stay amount-only, the
+/// recipient derived from this stored value rather than re-sent per packet.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub struct OpenProfitParams {
     expected_instance_ordinal: u16,
+    nolus_receiver: NolusReceiver,
 }
 
 impl OpenProfitParams {
-    pub const fn new(expected_instance_ordinal: u16) -> Self {
+    pub const fn new(expected_instance_ordinal: u16, nolus_receiver: NolusReceiver) -> Self {
         Self {
             expected_instance_ordinal,
+            nolus_receiver,
         }
     }
 
     pub const fn expected_instance_ordinal(&self) -> u16 {
         self.expected_instance_ordinal
+    }
+
+    pub const fn nolus_receiver(&self) -> &NolusReceiver {
+        &self.nolus_receiver
     }
 }
 

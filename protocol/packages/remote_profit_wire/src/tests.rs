@@ -22,6 +22,7 @@ use crate::{
     envelope::PacketEnvelope,
     error::Error,
     msg::{CloseProfitParams, OpenProfitParams, Operation, SwapParams, TransferOutParams},
+    nolus_receiver::{NOLUS_RECEIVER_MAX_BYTES, NolusReceiver},
     port_id_for,
     profit_id::{REMOTE_PROFIT_ID_MAX_BYTES, RemoteProfitId},
     response::{
@@ -39,7 +40,10 @@ use crate::{
 #[test]
 fn open_profit_msg_serde() {
     let value = Operation::OpenProfit(sample_open_profit_params());
-    assert_round_trip_eq(r#"{"open_profit":{"expected_instance_ordinal":7}}"#, &value);
+    assert_round_trip_eq(
+        r#"{"open_profit":{"expected_instance_ordinal":7,"nolus_receiver":"nolus1mf6ptkssddfmxvhdx0ech0k03ktp6kf9yk59renau2gvht3nq2gqkxgywu"}}"#,
+        &value,
+    );
 }
 
 #[test]
@@ -235,30 +239,44 @@ fn packet_envelope_decodes_without_nonce_to_zero() {
 // ---------------------------------------------------------------------------
 
 #[test]
-fn open_profit_params_round_trip() {
-    let value = OpenProfitParams::new(7);
-    assert_round_trip_eq(r#"{"expected_instance_ordinal":7}"#, &value);
+fn open_profit_params_round_trips_with_nolus_receiver() {
+    let value = OpenProfitParams::new(7, sample_nolus_receiver());
+    assert_round_trip_eq(
+        r#"{"expected_instance_ordinal":7,"nolus_receiver":"nolus1mf6ptkssddfmxvhdx0ech0k03ktp6kf9yk59renau2gvht3nq2gqkxgywu"}"#,
+        &value,
+    );
     assert_eq!(7, value.expected_instance_ordinal());
+    assert_eq!(SAMPLE_NOLUS_RECEIVER, value.nolus_receiver().as_str());
 }
 
 #[test]
 fn open_profit_params_max_ordinal_accepted() {
-    let params = OpenProfitParams::new(u16::MAX);
+    let params = OpenProfitParams::new(u16::MAX, sample_nolus_receiver());
     assert_eq!(u16::MAX, params.expected_instance_ordinal());
 }
 
 #[test]
 fn open_profit_params_deserialize_above_u16_rejected() {
-    let bad_wire = r#"{"expected_instance_ordinal":65536}"#;
+    let bad_wire = r#"{"expected_instance_ordinal":65536,"nolus_receiver":"nolus1mf6ptkssddfmxvhdx0ech0k03ktp6kf9yk59renau2gvht3nq2gqkxgywu"}"#;
     serde_json::from_str::<OpenProfitParams>(bad_wire)
         .expect_err("ordinal above u16 range must fail deserialization");
 }
 
 #[test]
-fn open_profit_params_deserialize_unknown_field_rejected() {
-    let bad_wire = r#"{"expected_instance_ordinal":7,"lpn_currency":"LPN"}"#;
+fn open_profit_params_rejects_unknown_field() {
+    let bad_wire = r#"{"expected_instance_ordinal":7,"nolus_receiver":"nolus1mf6ptkssddfmxvhdx0ech0k03ktp6kf9yk59renau2gvht3nq2gqkxgywu","lpn_currency":"LPN"}"#;
     serde_json::from_str::<OpenProfitParams>(bad_wire)
         .expect_err("an unknown field must fail deserialization");
+}
+
+// `nolus_receiver` is a plain required field (no `#[serde(default)]`): the
+// remote_profit crates are undeployed, so the old single-field shape must be
+// rejected outright rather than decoded with a defaulted receiver.
+#[test]
+fn open_profit_params_rejects_missing_nolus_receiver() {
+    let bad_wire = r#"{"expected_instance_ordinal":7}"#;
+    serde_json::from_str::<OpenProfitParams>(bad_wire)
+        .expect_err("a payload missing nolus_receiver must fail deserialization");
 }
 
 // ---------------------------------------------------------------------------
@@ -401,6 +419,61 @@ fn remote_profit_id_deserialize_over_cap_rejected() {
 }
 
 // ---------------------------------------------------------------------------
+// 6c. NolusReceiver — bech32 round-trip + validation
+// ---------------------------------------------------------------------------
+
+#[test]
+fn nolus_receiver_accepts_a_valid_bech32() {
+    let receiver =
+        NolusReceiver::new(SAMPLE_NOLUS_RECEIVER).expect("a valid bech32 Nolus addr is accepted");
+    assert_eq!(SAMPLE_NOLUS_RECEIVER, receiver.as_str());
+    assert_round_trip_eq(
+        r#""nolus1mf6ptkssddfmxvhdx0ech0k03ktp6kf9yk59renau2gvht3nq2gqkxgywu""#,
+        &receiver,
+    );
+}
+
+#[test]
+fn nolus_receiver_rejects_a_malformed_address() {
+    // empty → wrong HRP → corrupted checksum → non-bech32 char → mixed case:
+    // each is a malformed address that must be rejected before construction.
+    let cases = [
+        "",
+        "cosmos1mf6ptkssddfmxvhdx0ech0k03ktp6kf9yk59renau2gvht3nq2gqkxgywu",
+        "nolus1mf6ptkssddfmxvhdx0ech0k03ktp6kf9yk59renau2gvht3nq2gqkxgywv",
+        "nolus1bio",
+        "NOLUS1MF6PTKSSDDFMXVHDX0ECH0K03KTP6KF9YK59RENAU2GVHT3NQ2GQKXGYWU",
+    ];
+    for bad in cases {
+        let res = NolusReceiver::new(bad);
+        assert!(
+            matches!(
+                res,
+                Err(Error::NolusReceiverEmpty
+                    | Error::NolusReceiverWrongHrp
+                    | Error::NolusReceiverInvalidBech32)
+            ),
+            "expected typed rejection for {bad:?}, got {res:?}",
+        );
+    }
+
+    let over_cap = format!("nolus1{}", "q".repeat(NOLUS_RECEIVER_MAX_BYTES));
+    assert!(matches!(
+        NolusReceiver::new(over_cap.clone()),
+        Err(Error::NolusReceiverTooLong {
+            actual,
+            max: NOLUS_RECEIVER_MAX_BYTES,
+        }) if actual == over_cap.len(),
+    ));
+}
+
+#[test]
+fn nolus_receiver_deserialize_malformed_rejected() {
+    serde_json::from_str::<NolusReceiver>(r#""cosmos1qqqqqqqq""#)
+        .expect_err("a wrong-HRP address must fail deserialization");
+}
+
+// ---------------------------------------------------------------------------
 // 7. TransferOutParams invariant: amount > 0
 // ---------------------------------------------------------------------------
 
@@ -525,8 +598,16 @@ where
     assert_eq!(value, &decoded);
 }
 
+/// A real bech32 Nolus account address (32-byte witness), valid checksum.
+const SAMPLE_NOLUS_RECEIVER: &str =
+    "nolus1mf6ptkssddfmxvhdx0ech0k03ktp6kf9yk59renau2gvht3nq2gqkxgywu";
+
 fn sample_open_profit_params() -> OpenProfitParams {
-    OpenProfitParams::new(7)
+    OpenProfitParams::new(7, sample_nolus_receiver())
+}
+
+fn sample_nolus_receiver() -> NolusReceiver {
+    NolusReceiver::new(SAMPLE_NOLUS_RECEIVER).expect("sample address is a valid bech32 Nolus addr")
 }
 
 fn sample_swap_params() -> SwapParams {

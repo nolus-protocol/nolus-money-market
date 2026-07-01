@@ -1,3 +1,4 @@
+use crate::common::testing;
 use access_control::error::Error as AccessControlError;
 use currencies::Lpn;
 use finance::{
@@ -12,7 +13,6 @@ use reserve::{
 use sdk::{
     cosmwasm_std::{Addr, StdError, StdResult},
     cw_multi_test::AppResponse,
-    testing,
 };
 
 use crate::{

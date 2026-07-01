@@ -644,6 +644,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "drain_vault"
+version = "0.1.0"
+dependencies = [
+ "access-control",
+ "cosmwasm-std",
+ "currencies",
+ "currency",
+ "finance",
+ "platform",
+ "sdk",
+ "serde",
+ "thiserror 2.0.18",
+ "versioning",
+]
+
+[[package]]
 name = "dyn-clone"
 version = "1.0.20"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1257,13 +1273,15 @@ dependencies = [
  "currency",
  "cw-time",
  "dex",
+ "drain_vault",
  "finance",
  "oracle",
  "oracle-platform",
  "platform",
+ "remote_profit",
+ "remote_profit_wire",
  "sdk",
  "serde",
- "swap",
  "thiserror 2.0.18",
  "timealarms",
  "versioning",

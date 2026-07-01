@@ -1,14 +1,20 @@
 use thiserror::Error;
 
-use sdk::cosmwasm_std::{Addr, StdError};
+use sdk::cosmwasm_std::{Addr, Instantiate2AddressError, StdError};
 
 #[derive(Debug, Error)]
 pub enum ContractError {
     #[error("[Profit] [Std] {0}")]
     Std(#[from] StdError),
 
+    #[error("[Profit] [Std] [Instantiate2] {0}")]
+    StdInstantiate2Addr(#[from] Instantiate2AddressError),
+
     #[error("[Profit] {0}")]
     Dex(#[from] dex::Error),
+
+    #[error("[Profit] remote-profit wire: {0}")]
+    RemoteProfit(#[from] remote_profit_wire::error::Error),
 
     #[error("[Profit] {0}")]
     PriceOracle(#[from] oracle_platform::error::Error),
@@ -19,8 +25,20 @@ pub enum ContractError {
     #[error("[Profit] {0}")]
     Unauthorized(#[from] access_control::error::Error),
 
-    #[error("[Profit] Failed to update software! Cause: {0}")]
-    UpdateSoftware(versioning::Error),
+    #[error(
+        "[Profit] Migration is not supported. The remote-swap profit is deployed fresh, never migrated from the ICA profit."
+    )]
+    MigrationUnsupported,
+
+    #[error(
+        "[Profit] The instantiated drain-vault address {reported} differs from the precomputed {expected}"
+    )]
+    DifferentInstantiatedAddress { reported: Addr, expected: Addr },
+
+    #[error(
+        "[Profit] No funding cycle can start before the Solana profit authority is learned from the open-profit acknowledgment"
+    )]
+    SolanaAuthorityNotLearned,
 
     #[error("[Profit] {0}")]
     TimeAlarm(#[from] timealarms::stub::Error),

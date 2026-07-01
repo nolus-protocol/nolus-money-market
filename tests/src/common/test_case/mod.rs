@@ -2,12 +2,12 @@ use currencies::LeaseGroup as AssetCurrencies;
 use currency::{CurrencyDTO, CurrencyDef};
 use finance::percent::Percent100;
 use platform::contract::Code;
-use sdk::{
-    cosmwasm_std::{Addr, Coin as CwCoin},
+use sdk::cosmwasm_std::{Addr, Coin as CwCoin};
+
+use crate::common::{
+    self,
     testing::{self, InterChainMsgReceiver, InterChainMsgSender},
 };
-
-use crate::common;
 
 use super::{
     ADMIN, CwContractWrapper,

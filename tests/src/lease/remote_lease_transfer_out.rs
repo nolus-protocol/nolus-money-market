@@ -41,6 +41,7 @@
 //!   authorises callbacks against the same pinned controller; a stranger
 //!   is rejected and the in-flight transfer stays put.
 
+use crate::common::testing;
 use access_control::error::Error as AccessError;
 use currencies::PaymentGroup;
 use dex::Error as DexError;
@@ -56,10 +57,7 @@ use remote_lease::{
     callback::{RemoteErrorMessage, RemoteLeaseCallback, RemoteOperationOutcome},
     response::{TransferOutResponse, WireOperationResponse},
 };
-use sdk::{
-    cosmwasm_std::{Addr, Event},
-    testing,
-};
+use sdk::cosmwasm_std::{Addr, Event};
 
 use crate::common::{
     USER,

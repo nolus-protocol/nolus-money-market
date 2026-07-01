@@ -35,6 +35,7 @@ rust-version = "1.94"
 
 [workspace.dependencies]
 # Own Contracts
+drain_vault = { path = "contracts/drain_vault", default-features = false }
 lease = { path = "contracts/lease", default-features = false }
 leaser = { path = "contracts/leaser", default-features = false }
 lpp = { path = "contracts/lpp", default-features = false }
@@ -86,6 +87,7 @@ thiserror = { version = "2", default-features = false }
 # CosmWasm
 # Required as a dependency by `entry_point` attribute macro
 cosmwasm-std = { version = "3", default-features = false, features = [
+    "cosmwasm_1_2",
     "exports",
     "iterator",
     "std",

@@ -10,6 +10,7 @@ pub mod coin;
 pub mod envelope;
 pub mod error;
 pub mod msg;
+pub mod nolus_receiver;
 pub mod profit_id;
 pub mod response;
 pub mod ticker;

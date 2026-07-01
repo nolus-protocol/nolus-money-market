@@ -1,4 +1,5 @@
-use sdk::{cosmwasm_std::Addr, testing};
+use super::testing;
+use sdk::cosmwasm_std::Addr;
 use timealarms::{contract, msg::InstantiateMsg};
 
 use super::{ADMIN, CwContractWrapper, test_case::app::App};

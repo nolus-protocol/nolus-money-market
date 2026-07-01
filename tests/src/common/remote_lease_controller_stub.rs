@@ -685,7 +685,7 @@ impl Instantiator {
         let code_id = app.store_code(Box::new(endpoints));
 
         let msg = ControllerInstantiateMsg {
-            protocol_admin: sdk::testing::user(ADMIN).into_string(),
+            protocol_admin: crate::common::testing::user(ADMIN).into_string(),
             connection_id: super::test_case::TestCase::DEX_CONNECTION_ID.into(),
             dex_label: "test-dex".into(),
             transfer_channel: "channel-0".into(),
@@ -694,7 +694,7 @@ impl Instantiator {
 
         app.instantiate(
             code_id,
-            sdk::testing::user(ADMIN),
+            crate::common::testing::user(ADMIN),
             &msg,
             &[],
             "remote_lease_controller_stub",
@@ -711,21 +711,31 @@ pub fn set_response_mode(app: &mut App, controller: &Addr, op: &str, mode: Respo
         op: op.to_owned(),
         mode,
     };
-    app.execute(sdk::testing::user(ADMIN), controller.clone(), &msg, &[])
-        .map(|response| {
-            let _ = response.unwrap_response();
-        })
-        .expect("SetResponseMode must succeed against the stand-in");
+    app.execute(
+        crate::common::testing::user(ADMIN),
+        controller.clone(),
+        &msg,
+        &[],
+    )
+    .map(|response| {
+        let _ = response.unwrap_response();
+    })
+    .expect("SetResponseMode must succeed against the stand-in");
 }
 
 /// Override the output the next happy-path swap pays, consumed on use.
 pub fn set_next_swap_output(app: &mut App, controller: &Addr, amount_out: CoinDTO<PaymentGroup>) {
     let msg = StubExecuteMsg::SetNextSwapOutput { amount_out };
-    app.execute(sdk::testing::user(ADMIN), controller.clone(), &msg, &[])
-        .map(|response| {
-            let _ = response.unwrap_response();
-        })
-        .expect("SetNextSwapOutput must succeed against the stand-in");
+    app.execute(
+        crate::common::testing::user(ADMIN),
+        controller.clone(),
+        &msg,
+        &[],
+    )
+    .map(|response| {
+        let _ = response.unwrap_response();
+    })
+    .expect("SetNextSwapOutput must succeed against the stand-in");
 }
 
 /// Trigger delivery of a previously stored Delayed callback for the
@@ -736,9 +746,14 @@ pub fn deliver_pending_callback(
     op: &str,
 ) -> sdk::cw_multi_test::AppResponse {
     let msg = StubExecuteMsg::DeliverPending { op: op.to_owned() };
-    app.execute(sdk::testing::user(ADMIN), controller.clone(), &msg, &[])
-        .map(|response| response.unwrap_response())
-        .expect("DeliverPending must succeed against the stand-in")
+    app.execute(
+        crate::common::testing::user(ADMIN),
+        controller.clone(),
+        &msg,
+        &[],
+    )
+    .map(|response| response.unwrap_response())
+    .expect("DeliverPending must succeed against the stand-in")
 }
 
 /// Deliver an arbitrary callback to a lease from the stand-in's
@@ -753,9 +768,14 @@ pub fn inject_callback(
         to: lease.clone(),
         callback,
     };
-    app.execute(sdk::testing::user(ADMIN), controller.clone(), &msg, &[])
-        .map(|response| response.unwrap_response())
-        .expect("InjectCallback must succeed against the stand-in")
+    app.execute(
+        crate::common::testing::user(ADMIN),
+        controller.clone(),
+        &msg,
+        &[],
+    )
+    .map(|response| response.unwrap_response())
+    .expect("InjectCallback must succeed against the stand-in")
 }
 
 /// Deliver a callback carrying a SPECIFIC nonce to a lease from the stand-in's
@@ -773,9 +793,14 @@ pub fn inject_callback_with_nonce(
         nonce,
         outcome,
     };
-    app.execute(sdk::testing::user(ADMIN), controller.clone(), &msg, &[])
-        .map(|response| response.unwrap_response())
-        .expect("InjectCallbackWithNonce must succeed against the stand-in")
+    app.execute(
+        crate::common::testing::user(ADMIN),
+        controller.clone(),
+        &msg,
+        &[],
+    )
+    .map(|response| response.unwrap_response())
+    .expect("InjectCallbackWithNonce must succeed against the stand-in")
 }
 
 /// Report every `SwapParams` the given lease has emitted.

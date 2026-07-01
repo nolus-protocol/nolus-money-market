@@ -2,7 +2,7 @@ use currencies::testing::{PaymentC1, PaymentC2, PaymentC3};
 use finance::{coin::Coin, instant::Instant};
 use remote_profit::{
     envelope::PacketEnvelope,
-    msg::{CloseProfitParams, Operation, SwapParams, TransferOutParams},
+    msg::{CloseProfitParams, OpenProfitParams, Operation, SwapParams, TransferOutParams},
     version::ProtocolVersion,
 };
 use sdk::{
@@ -36,6 +36,28 @@ fn open_profit_emits_send_packet() {
     )
     .unwrap();
     assert_send_packet(&Operation::OpenProfit(params), 0, &res.messages);
+}
+
+// The controller stores no `OpenProfitParams` of its own; this pins that the
+// outbound `OpenProfit` packet carries the `nolus_receiver` through verbatim.
+#[test]
+fn controller_open_profit_accepts_receiver_field() {
+    let mut deps = deps_with_profit();
+    instantiate_default(deps.as_mut());
+    store_open_channel(deps.as_mut());
+
+    let params = sample_open_profit_params();
+    let res = execute(
+        deps.as_mut(),
+        testing::mock_env(),
+        sender(PROFIT),
+        ExecuteMsg::OpenProfit {
+            params: params.clone(),
+            timeout: PACKET_TIMEOUT,
+        },
+    )
+    .unwrap();
+    assert_open_profit_receiver(&params, &res.messages);
 }
 
 #[test]
@@ -208,6 +230,23 @@ fn assert_send_packet(expected_operation: &Operation, expected_nonce: u64, messa
             assert_eq!(expected_operation, &envelope.operation);
             assert_eq!(ProtocolVersion, envelope.version);
             assert_eq!(expected_nonce, envelope.nonce);
+        }
+        other => panic!("expected CosmosMsg::Ibc(IbcMsg::SendPacket {{..}}), got {other:?}"),
+    }
+}
+
+fn assert_open_profit_receiver(expected: &OpenProfitParams, messages: &[SubMsg]) {
+    assert_eq!(1, messages.len(), "expected exactly one outbound message");
+    match &messages[0].msg {
+        CosmosMsg::Ibc(IbcMsg::SendPacket { data, .. }) => {
+            let envelope: PacketEnvelope = sdk::cosmwasm_std::from_json(data).unwrap();
+            match envelope.operation {
+                Operation::OpenProfit(params) => assert_eq!(
+                    expected.nolus_receiver().as_str(),
+                    params.nolus_receiver().as_str(),
+                ),
+                other => panic!("expected Operation::OpenProfit, got {other:?}"),
+            }
         }
         other => panic!("expected CosmosMsg::Ibc(IbcMsg::SendPacket {{..}}), got {other:?}"),
     }

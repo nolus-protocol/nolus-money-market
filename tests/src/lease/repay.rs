@@ -1,5 +1,6 @@
 use std::slice;
 
+use crate::common::testing;
 use currencies::PaymentGroup;
 use finance::instant::Instant;
 use finance::{
@@ -20,7 +21,6 @@ use platform::coin_legacy;
 use sdk::{
     cosmwasm_std::{Addr, Event},
     cw_multi_test::AppResponse,
-    testing,
 };
 
 use crate::{

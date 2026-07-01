@@ -1,5 +1,6 @@
 use std::slice;
 
+use crate::common::testing::{self, CwContractWrapper};
 use currencies::{
     Lpn,
     testing::{LeaseC1, LeaseC2, LeaseC3, LeaseC7, PaymentC1},
@@ -10,10 +11,7 @@ use finance::{
     percent::Percent100,
     price::{self, Price},
 };
-use sdk::{
-    cosmwasm_std::{Addr, coin},
-    testing::{self, CwContractWrapper},
-};
+use sdk::cosmwasm_std::{Addr, coin};
 
 use crate::common::{
     self, ADDON_OPTIMAL_INTEREST_RATE, BASE_INTEREST_RATE, USER, UTILIZATION_OPTIMAL,

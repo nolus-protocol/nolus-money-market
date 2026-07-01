@@ -35,7 +35,7 @@ ARG production_network_build_profile_directory="production_nets_release"
 ### 5 MiB
 ARG production_network_max_binary_size="5242880"
 
-ARG protocol_contracts_count="9"
+ARG protocol_contracts_count="10"
 
 ### 1.94.0-alpine3.23
 ARG rust_image_digest="sha256:ef7b340d4201444fa2757dfddfd4c03be9d2bde468de7b7a68b0e9fabb794334"

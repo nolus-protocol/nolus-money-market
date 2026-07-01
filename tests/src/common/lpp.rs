@@ -1,3 +1,4 @@
+use crate::common::testing::{self, CwContract};
 use currencies::Lpns;
 use currency::{CurrencyDef, MemberOf};
 use finance::percent::Percent100;
@@ -7,10 +8,7 @@ use lpp::{
     msg::{ExecuteMsg, InstantiateMsg, QueryMsg},
 };
 use platform::contract::{Code, CodeId};
-use sdk::{
-    cosmwasm_std::{self, Addr, Binary, Coin as CwCoin, Deps, Env},
-    testing::{self, CwContract},
-};
+use sdk::cosmwasm_std::{self, Addr, Binary, Coin as CwCoin, Deps, Env};
 
 use super::{
     ADMIN, CwContractWrapper, leaser::Instantiator as LeaserInstantiator, test_case::app::App,

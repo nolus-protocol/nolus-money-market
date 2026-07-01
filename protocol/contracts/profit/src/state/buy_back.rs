@@ -3,9 +3,9 @@ use serde::{Deserialize, Serialize};
 
 use currencies::{Native, Nls, PaymentGroup};
 use dex::{
-    AcceptAnyNonZeroSwap, Account, AnomalyTreatment, CoinsNb, ContractInSwap, DexResult,
-    Error as DexError, Response as DexResponse, SlippageEscalation, Stage, StateLocalOut,
-    SwapOutputTask, SwapTask, WithCalculator, WithOutputTask,
+    AcceptAnyNonZeroSwap, Account, AnomalyTreatment, CoinsNb, Connectable, ContractInRemoteSwap,
+    ContractInSwap, DexResult, Error as DexError, Response as DexResponse, SlippageEscalation,
+    Stage, SwapOutputTask, SwapTask, WithCalculator, WithOutputTask,
 };
 use finance::instant::Instant;
 use finance::{
@@ -13,38 +13,42 @@ use finance::{
     duration::Duration,
 };
 use oracle::stub::SwapPath;
-use platform::bank::{self, BankAccountView};
-use sdk::cosmwasm_std::{Addr, Env, MessageInfo, QuerierWrapper};
+use platform::ica::HostAccount;
+use remote_profit::{
+    msg::SwapParams,
+    response::{OperationResponse, SwapResponse},
+    stub::{ControllerInnerMessage, Profit as ControllerProfit},
+};
+use sdk::cosmwasm_std::{self, Addr, Env, MessageInfo, QuerierWrapper};
 use timealarms::stub::TimeAlarmsRef;
 
-use crate::{msg::ConfigResponse, result::ContractResult};
+use crate::{error::ContractError, msg::ConfigResponse, result::ContractResult};
 
-use super::{
-    Config, ConfigManagement, State, StateEnum, SwapClient, idle::Idle,
-    resp_delivery::ForwardToDexEntry,
-};
+use super::{Config, State, drain::ProfitDrain};
+
+/// A non-`Swap` success acknowledgment can only come from a buggy or hostile
+/// counterparty. The fixed reason keeps the unexpected, counterparty-controlled
+/// variant out of stored state and events.
+const NON_SWAP_RESPONSE: &str = "non-swap operation response";
+
+/// The acknowledged output currency is not NLS, so the response cannot have
+/// originated from the scheduled buy-back swap.
+const OUT_NOT_NLS: &str = "swapped-out currency is not NLS";
 
 const TIMEOUT_RETRY_BUDGET: CoinsNb = 3;
 
 #[derive(Serialize, Deserialize)]
 pub(super) struct BuyBack {
-    profit_contract: Addr,
     config: Config,
-    account: Account,
     coins: Vec<CoinDTO<PaymentGroup>>,
+    /// The Solana profit authority the funding transfers are addressed to,
+    /// bridged from the learned authority. Resolved once at construction, so a
+    /// cycle that reached here proved the authority was already learned.
+    funding_receiver: HostAccount,
 }
 
 impl BuyBack {
-    /// Until [issue #7](https://github.com/nolus-protocol/nolus-money-market/issues/7)
-    /// is closed, best action is to verify the pinkie-promise
-    /// to not pass in [native currencies](Native) via a debug
-    /// assertion.
-    pub fn new(
-        profit_contract: Addr,
-        config: Config,
-        account: Account,
-        coins: Vec<CoinDTO<PaymentGroup>>,
-    ) -> Self {
+    pub fn new(config: Config, coins: Vec<CoinDTO<PaymentGroup>>) -> ContractResult<Self> {
         debug_assert!(
             coins
                 .iter()
@@ -54,12 +58,11 @@ impl BuyBack {
             "{coins:?}",
         );
 
-        Self {
-            profit_contract,
+        config.funding_receiver().map(|funding_receiver| Self {
             config,
-            account,
             coins,
-        }
+            funding_receiver,
+        })
     }
 }
 
@@ -75,7 +78,7 @@ impl SwapTask for BuyBack {
     }
 
     fn dex_account(&self) -> &Account {
-        &self.account
+        self.config.account()
     }
 
     fn oracle(&self) -> &impl SwapPath<<Self::InG as Group>::TopG> {
@@ -86,23 +89,30 @@ impl SwapTask for BuyBack {
         self.config.time_alarms()
     }
 
+    /// Authorised against the controller pinned in `Config`: only the
+    /// remote-profit controller can advance the in-flight swap leg.
     fn authz_remote_callback(
         &self,
         _querier: QuerierWrapper<'_>,
-        _info: &MessageInfo,
+        info: &MessageInfo,
     ) -> DexResult<()> {
-        // Profit does not participate in the remote-lease protocol.
-        Err(DexError::Unauthorized(
-            access_control::error::Error::Unauthorized {},
-        ))
+        access_control::check(
+            &access_control::permissions::SingleUserPermission::new(
+                self.config.remote_profit_controller(),
+            ),
+            info,
+        )
+        .map_err(DexError::Unauthorized)
     }
 
+    /// The buy-back parks at the slippage-anomaly terminal on an under-floor
+    /// rejection and is re-driven by an operator heal; it never opens a
+    /// permissionless anomaly-resolution path.
     fn authz_anomaly_resolution(
         &self,
         _querier: QuerierWrapper<'_>,
         _info: &MessageInfo,
     ) -> DexResult<()> {
-        // Profit's buy-back never parks at the remote-swap terminal.
         Err(DexError::Unauthorized(
             access_control::error::Error::Unauthorized {},
         ))
@@ -112,11 +122,8 @@ impl SwapTask for BuyBack {
         TIMEOUT_RETRY_BUDGET
     }
 
-    /// Profit's buy-back runs over the ICA transport, never the remote-lease
-    /// swap, so its anomaly escalation is never consulted; re-emitting keeps
-    /// it aligned with the unbounded local-swap retry.
     fn slippage_escalation(&self) -> SlippageEscalation {
-        SlippageEscalation::ReEmit
+        SlippageEscalation::Park
     }
 
     fn coins(&self) -> impl IntoIterator<Item = CoinDTO<Self::InG>> {
@@ -158,24 +165,79 @@ impl SwapOutputTask<Self> for BuyBack {
 
     fn finish(
         self,
-        _amount_out: Coin<Self::OutC>,
+        amount_out: Coin<Self::OutC>,
         env: &Env,
         querier: QuerierWrapper<'_>,
     ) -> <Self as SwapTask>::Result {
-        let account = bank::account(&self.profit_contract, querier);
+        ProfitDrain::new(self.config, amount_out, querier)
+            .and_then(|drain| drain.start(env, querier))
+    }
+}
 
-        account
-            .balance()
-            .map_err(Into::into)
-            .and_then(|balance_nls| {
-                let next_state = Idle::new(self.config, self.account);
-
-                next_state
-                    .send_nls(env, querier, account, balance_nls)
-                    .map(|response| {
-                        DexResponse::<State>::from(response, State(StateEnum::Idle(next_state)))
+impl dex::RemoteSwapClient for BuyBack {
+    fn schedule_swap(
+        &self,
+        coin_in: &CoinDTO<Self::InG>,
+        min_out: &CoinDTO<Self::OutG>,
+        nonce: u64,
+    ) -> DexResult<platform::batch::Batch> {
+        SwapParams::new(*coin_in, min_out.into_super_group())
+            .map_err(DexError::remote_swap_client)
+            .and_then(|params| {
+                ControllerProfit::new(self.config.remote_profit_controller())
+                    .swap(params, SwapParams::TIMEOUT, |params, timeout| {
+                        ControllerExecuteMsg::Swap {
+                            params,
+                            timeout,
+                            nonce,
+                        }
                     })
+                    .map_err(Into::into)
             })
+    }
+
+    fn decode_response(&self, payload: &[u8]) -> DexResult<CoinDTO<Self::OutG>> {
+        cosmwasm_std::from_json::<OperationResponse>(payload)
+            .map_err(DexError::remote_swap_client)
+            .and_then(|response| match response {
+                OperationResponse::Swap(SwapResponse { amount_out }) => {
+                    Coin::<Nls>::try_from(amount_out)
+                        .map(Into::into)
+                        .map_err(|_not_nls| DexError::unexpected_response_variant(OUT_NOT_NLS))
+                }
+                OperationResponse::OpenProfit(_)
+                | OperationResponse::CloseProfit(_)
+                | OperationResponse::TransferOut(_) => {
+                    Err(DexError::unexpected_response_variant(NON_SWAP_RESPONSE))
+                }
+            })
+    }
+
+    /// The buy-back never opts into the zero-acked unwind, so this path is
+    /// unreachable; it returns a visible error rather than driving an unwind the
+    /// profit flow has no inputs to drain.
+    fn unwind(self, _querier: QuerierWrapper<'_>, _env: &Env) -> <Self as SwapTask>::Result {
+        Err(ContractError::unsupported_operation(
+            "the buy-back swap does not unwind on a zero-acked error",
+        ))
+    }
+}
+
+impl dex::FundingClient for BuyBack {
+    fn funding_sender(&self) -> &Addr {
+        self.dex_account().owner()
+    }
+
+    fn funding_receiver(&self) -> &HostAccount {
+        &self.funding_receiver
+    }
+
+    fn transfer_channel(&self) -> &str {
+        self.dex_account()
+            .dex()
+            .transfer_channel
+            .local_endpoint
+            .as_str()
     }
 }
 
@@ -188,11 +250,49 @@ impl ContractInSwap for BuyBack {
         _now: Instant,
         _due_projection: Duration,
         _querier: QuerierWrapper<'_>,
-    ) -> <Self as SwapTask>::StateResponse {
+    ) -> Self::StateResponse {
         ConfigResponse {
             cadence_hours: self.config.cadence_hours(),
         }
     }
 }
 
-impl ConfigManagement for StateLocalOut<BuyBack, SwapClient, ForwardToDexEntry> {}
+impl ContractInRemoteSwap for BuyBack {
+    type StateResponse = <Self as SwapTask>::StateResponse;
+
+    fn state(
+        self,
+        _acks_left: CoinsNb,
+        _now: Instant,
+        _due_projection: Duration,
+        _querier: QuerierWrapper<'_>,
+    ) -> Self::StateResponse {
+        ConfigResponse {
+            cadence_hours: self.config.cadence_hours(),
+        }
+    }
+
+    fn anomaly_response(
+        self,
+        _acks_left: CoinsNb,
+        _now: Instant,
+        _due_projection: Duration,
+        _querier: QuerierWrapper<'_>,
+    ) -> Self::StateResponse {
+        ConfigResponse {
+            cadence_hours: self.config.cadence_hours(),
+        }
+    }
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "snake_case")]
+enum ControllerExecuteMsg {
+    Swap {
+        params: SwapParams,
+        timeout: Duration,
+        nonce: u64,
+    },
+}
+
+impl ControllerInnerMessage for ControllerExecuteMsg {}

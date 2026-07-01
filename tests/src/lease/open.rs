@@ -1,10 +1,9 @@
-use finance::{coin::Coin, zero::Zero};
-use sdk::testing;
-
+use crate::common::testing;
 use crate::{
     common::{USER, leaser::Instantiator},
     lease::heal,
 };
+use finance::{coin::Coin, zero::Zero};
 
 use super::{DOWNPAYMENT, LeaseCoin, LeaseCurrency, PaymentCurrency};
 

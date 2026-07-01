@@ -92,8 +92,23 @@ pub fn customized_mock_deps_with_contracts<const N: usize>(
     deps
 }
 
+/// The Nolus chain bech32 prefix. Opt-in: a suite whose contract bech32-validates
+/// a Nolus address (e.g. the remote-profit `NolusReceiver`, which only accepts a
+/// `nolus1…` HRP) mints under it via [`nolus_api`]; the default harness `Api` keeps
+/// the `cosmwasm` prefix so crates whose unit tests pair a raw `mock_dependencies`
+/// with [`user`] stay consistent.
+pub const NOLUS_BECH32_PREFIX: &str = "nolus";
+
+/// A [`MockApi`] configured with the Nolus HRP. The explicit opt-in used by the
+/// integration harness and by any hand-rolled `cw-multi-test` app that must see
+/// `nolus1…` addresses; not the harness default.
+pub fn nolus_api() -> MockApi {
+    MockApi::default().with_prefix(NOLUS_BECH32_PREFIX)
+}
+
 pub fn new_app(message_sender: InterChainMsgSender) -> CwAppBuilder {
     BasicCwAppBuilder::<InterChainMsg, Empty>::new_custom()
+        .with_api(nolus_api())
         .with_custom(CustomMsgModule::new(message_sender))
         .with_wasm(WasmKeeper::new().with_address_generator(TestAddressGenerator))
 }
@@ -102,8 +117,13 @@ pub fn user(addr: &str) -> Addr {
     MockApi::default().addr_make(addr)
 }
 
+/// A deterministic contract address under the Nolus HRP, matching the [`nolus_api`]
+/// the integration app ([`new_app`]) canonicalizes against. Kept on the Nolus prefix
+/// (not the default [`user`]) because the integration app that mints these addresses
+/// runs on `nolus_api`, and a profit drain vault so minted must pass the remote-profit
+/// `NolusReceiver` bech32 check.
 pub fn contract(code_id: u64, instance_id: u64) -> Addr {
-    user(&format!("contract_{code_id}_{instance_id}"))
+    nolus_api().addr_make(&format!("contract_{code_id}_{instance_id}"))
 }
 
 struct TestAddressGenerator;

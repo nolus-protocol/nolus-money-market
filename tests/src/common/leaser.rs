@@ -1,5 +1,12 @@
 use std::collections::HashSet;
 
+use super::testing;
+use super::{
+    ADDON_OPTIMAL_INTEREST_RATE, ADMIN, BASE_INTEREST_RATE, CwContractWrapper, LEASE_ADMIN,
+    UTILIZATION_OPTIMAL,
+    protocols::Registry,
+    test_case::{TestCase, app::App, builder::BlankBuilder as TestCaseBuilder},
+};
 use currencies::{LeaseGroup, Lpn, PaymentGroup};
 use currency::{CurrencyDef, MemberOf};
 use dex::{ConnectionParams, Ics20Channel, MaxSlippage};
@@ -14,14 +21,7 @@ use finance::{
 use lease::api::{LpnCoinDTO, limits::MaxSlippages, open::PositionSpecDTO};
 use leaser::msg::{InstantiateMsg, NewConfig, QueryMsg, QuoteResponse};
 use platform::contract::{Code, CodeId};
-use sdk::{cosmwasm_std::Addr, testing};
-
-use super::{
-    ADDON_OPTIMAL_INTEREST_RATE, ADMIN, BASE_INTEREST_RATE, CwContractWrapper, LEASE_ADMIN,
-    UTILIZATION_OPTIMAL,
-    protocols::Registry,
-    test_case::{TestCase, app::App, builder::BlankBuilder as TestCaseBuilder},
-};
+use sdk::cosmwasm_std::Addr;
 
 pub(crate) struct Instantiator;
 

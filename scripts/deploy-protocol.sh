@@ -149,6 +149,7 @@ deploy_contracts() {
   local -r timealarms_contract_address="${17}"
   local swap_tree="${18}"
   swap_tree="$(echo "$swap_tree" | sed 's/^"\(.*\)"$/\1/')"
+  local -r remote_profit_controller_address="${19}"
 
   to_screaming_snake_case() {
     echo "${1}" \
@@ -184,9 +185,16 @@ deploy_contracts() {
     local -r oracle_init_msg='{"config":{"price_config":{"min_feeders":500,"sample_period_secs":50,"samples_number":12,"discount_factor":650}},"swap_tree":'"$swap_tree"'}'
     local -r oracle_contract_address=$(_deploy_contract "$nolus_net" "$nolus_home_dir" "$dex_admin_wallet_key" "$store_code_privileged_wallet_key" "$admin_contract_address" "$wasm_path/oracle.wasm" "$oracle_init_msg" "$protocol-oracle" "$protocol")
 
-    # upload and instantiate Profit
-    local -r profit_init_msg='{"cadence_hours":12,"treasury":"'"$treasury_contract_address"'","oracle":"'"$oracle_contract_address"'","timealarms":"'"$timealarms_contract_address"'","dex":{"connection_id":"'"$dex_connection"'","transfer_channel":{"local_endpoint":"'"$dex_channel_local"'","remote_endpoint":"'"$dex_channel_remote"'"}}}'
-    local -r profit_contract_address=$(_deploy_contract "$nolus_net" "$nolus_home_dir" "$dex_admin_wallet_key" "$store_code_privileged_wallet_key" "$admin_contract_address" "$wasm_path/profit.wasm" "$profit_init_msg" "$protocol-profit" "$protocol")
+    # upload Profit code
+    local -r profit_code_id=$(store_code "$nolus_net" "$nolus_home_dir" "$store_code_privileged_wallet_key" "$wasm_path/profit.wasm" "--instantiate-anyof-addresses $admin_contract_address")
+    local -r profit_expected_address=$(_get_predictable_contract_address "$nolus_net" "$nolus_home_dir" "$admin_contract_address" "$profit_code_id" "$protocol")
+
+    # upload the drain_vault code Profit instantiates (via Instantiate2) and drains into
+    local -r vault_code_id=$(store_code "$nolus_net" "$nolus_home_dir" "$store_code_privileged_wallet_key" "$wasm_path/drain_vault.wasm" "--instantiate-anyof-addresses $profit_expected_address")
+
+    # instantiate Profit
+    local -r profit_init_msg='{"cadence_hours":12,"treasury":"'"$treasury_contract_address"'","oracle":"'"$oracle_contract_address"'","timealarms":"'"$timealarms_contract_address"'","dex":{"connection_id":"'"$dex_connection"'","transfer_channel":{"local_endpoint":"'"$dex_channel_local"'","remote_endpoint":"'"$dex_channel_remote"'"}},"remote_profit_controller":"'"$remote_profit_controller_address"'","vault_code_id":"'"$vault_code_id"'"}'
+    local -r profit_contract_address=$(_instantiate "$nolus_net" "$nolus_home_dir" "$dex_admin_wallet_key" "$profit_code_id" "$profit_init_msg" "$protocol-profit" "$protocol" "$profit_expected_address" "$admin_contract_address")
 
     # upload and instantiate Reserve
     local -r reserve_init_msg='{"protocol_admin":"'"$leaser_expected_address"'","lease_code":"'"$lease_code_id"'"}'
@@ -206,7 +214,7 @@ if [ "$#" -ne 0 ]; then
   case "$1" in
     deploy_contracts)
       shift
-      deploy_contracts "$1" "$2" "$3" "$4" "$5" "$6" "$7" "$8" "$9" "${10}" "${11}" "${12}" "${13}" "${14}" "${15}" "${16}" "${17}" "${18}"
+      deploy_contracts "$1" "$2" "$3" "$4" "$5" "$6" "$7" "$8" "$9" "${10}" "${11}" "${12}" "${13}" "${14}" "${15}" "${16}" "${17}" "${18}" "${19}"
       ;;
     *)
       echo "Unknown function: $1"

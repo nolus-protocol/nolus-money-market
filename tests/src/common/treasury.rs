@@ -1,5 +1,6 @@
+use super::testing;
 use finance::percent::Percent100;
-use sdk::{cosmwasm_std::Addr, testing};
+use sdk::cosmwasm_std::Addr;
 use treasury::{
     msg::InstantiateMsg,
     state::reward_scale::{Bar, RewardScale, TotalValueLocked},

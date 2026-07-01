@@ -1,10 +1,10 @@
+use crate::common::testing::{self, CwContractWrapper};
 use currencies::{Lpn, Nls as NlsProtocol};
 use currency::{CurrencyDef, platform::Nls as NlsPlatform};
 use finance::{coin::Coin, duration::Duration, price};
 use sdk::{
     cosmwasm_std::{Addr, Event, QuerierWrapper},
     cw_multi_test::AppResponse,
-    testing::{self, CwContractWrapper},
 };
 use treasury::msg::ConfigResponse;
 

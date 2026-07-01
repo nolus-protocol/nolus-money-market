@@ -22,4 +22,16 @@ pub enum Error {
 
     #[error("remote-profit-id contains a non-base58 byte 0x{byte:02x}")]
     RemoteProfitIdInvalidCharacter { byte: u8 },
+
+    #[error("nolus-receiver must not be empty")]
+    NolusReceiverEmpty,
+
+    #[error("nolus-receiver exceeds the {max}-byte cap (was {actual})")]
+    NolusReceiverTooLong { actual: usize, max: usize },
+
+    #[error("nolus-receiver must carry the `nolus` human-readable part")]
+    NolusReceiverWrongHrp,
+
+    #[error("nolus-receiver is not a valid bech32 address")]
+    NolusReceiverInvalidBech32,
 }

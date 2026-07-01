@@ -1,3 +1,4 @@
+use crate::common::testing;
 use dex::MaxSlippage;
 use finance::percent::Percent100;
 use lease::api::limits::MaxSlippages;
@@ -8,7 +9,6 @@ use leaser::{
 use sdk::{
     cosmwasm_std::{Addr, StdResult},
     cw_multi_test::AppResponse,
-    testing,
 };
 
 use crate::common::{
