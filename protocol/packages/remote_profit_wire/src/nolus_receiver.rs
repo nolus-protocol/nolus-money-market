@@ -111,7 +111,7 @@ fn validate(value: &str) -> Result<(), Error> {
                 .position(|candidate| *candidate == byte)
                 .ok_or(Error::NolusReceiverInvalidBech32)
                 .and_then(|symbol| {
-                    u8::try_from(symbol).map_err(|_| Error::NolusReceiverInvalidBech32)
+                    u8::try_from(symbol).map_err(|_err| Error::NolusReceiverInvalidBech32)
                 })
         })
         .collect::<Result<Vec<_>, _>>()?;
