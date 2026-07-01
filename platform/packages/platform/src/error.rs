@@ -4,7 +4,6 @@ use thiserror::Error;
 
 use currency::{CurrencyDef, SymbolStatic};
 use sdk::{
-    api::ProtobufAny,
     cosmos_sdk_proto::prost::DecodeError,
     cosmwasm_std::{Addr, Api, StdError},
 };
@@ -59,9 +58,6 @@ pub enum Error {
     #[error("[Platform] [ProtobufDecode] {0}")]
     ProtobufDecode(#[from] DecodeError),
 
-    #[error("[Platform] Got message {1:?} that is not of the expected type {0}")]
-    ProtobufInvalidType(String, ProtobufAny),
-
     #[error("[Platform] Error returned in reply! Cause: {0}")]
     ReplyResultError(String),
 
@@ -89,13 +85,6 @@ impl Error {
         A: Into<Addr>,
     {
         Self::UnexpectedCode(exp_code_id.to_string(), instance.into().into())
-    }
-
-    pub fn protobuf_invalid_type<ExpType>(exp_type: ExpType, instance: ProtobufAny) -> Self
-    where
-        ExpType: Into<String>,
-    {
-        Self::ProtobufInvalidType(exp_type.into(), instance)
     }
 }
 
