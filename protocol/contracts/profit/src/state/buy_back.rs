@@ -1,4 +1,4 @@
-use currency::{CurrencyDef, Group};
+use currency::CurrencyDef;
 use serde::{Deserialize, Serialize};
 
 use currencies::{Native, Nls, PaymentGroup};
@@ -12,7 +12,6 @@ use finance::{
     coin::{Coin, CoinDTO},
     duration::Duration,
 };
-use oracle::stub::SwapPath;
 use platform::ica::HostAccount;
 use remote_profit::{
     msg::SwapParams,
@@ -79,10 +78,6 @@ impl SwapTask for BuyBack {
 
     fn dex_account(&self) -> &Account {
         self.config.account()
-    }
-
-    fn oracle(&self) -> &impl SwapPath<<Self::InG as Group>::TopG> {
-        self.config.oracle()
     }
 
     fn time_alarm(&self) -> &TimeAlarmsRef {

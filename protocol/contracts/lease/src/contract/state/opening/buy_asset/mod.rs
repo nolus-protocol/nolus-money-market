@@ -2,7 +2,6 @@ use calculator::Factory as CalculatorFactory;
 use currency::{AnyVisitor, CurrencyDTO, CurrencyDef, Group, MemberOf};
 use cw_time::IntoInstant;
 use finish::BuyAssetFinish;
-use oracle::stub::SwapPath;
 use serde::{Deserialize, Serialize};
 
 use dex::MaxSlippage;
@@ -225,10 +224,6 @@ impl SwapTask for BuyAsset {
 
     fn dex_account(&self) -> &Account {
         &self.dex_account
-    }
-
-    fn oracle(&self) -> &impl SwapPath<<Self::InG as Group>::TopG> {
-        &self.deps.1
     }
 
     fn time_alarm(&self) -> &TimeAlarmsRef {

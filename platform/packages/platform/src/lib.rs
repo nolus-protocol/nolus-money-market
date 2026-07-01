@@ -14,4 +14,3 @@ pub mod result;
 pub mod state_machine;
 #[cfg(feature = "testing")]
 pub mod tests;
-pub mod trx;

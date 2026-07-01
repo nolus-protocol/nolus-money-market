@@ -1,10 +1,7 @@
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::result::Result as StdResult;
 
-use thiserror::Error;
-
 use currency::{CurrencyDTO, Group};
-use sdk::cosmwasm_std::StdError;
 
 pub type PoolId = u64;
 
@@ -26,14 +23,6 @@ where
         from: CurrencyDTO<PriceCurrencies>,
         to: CurrencyDTO<PriceCurrencies>,
     },
-}
-
-pub type Result<T> = StdResult<T, Error>;
-
-#[derive(Error, Debug)]
-pub enum Error {
-    #[error("[Oracle; Stub] Failed to query swap path! Cause: {0}")]
-    StubSwapPathQuery(StdError),
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]

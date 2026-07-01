@@ -13,9 +13,6 @@ pub enum Error {
     UnsupportedOperation(String, String),
 
     #[error("[Dex] {0}")]
-    OracleSwapError(#[from] oracle::api::swap::Error),
-
-    #[error("[Dex] {0}")]
     MinOutput(oracle::stub::Error),
 
     #[error("[Dex] {0}")]

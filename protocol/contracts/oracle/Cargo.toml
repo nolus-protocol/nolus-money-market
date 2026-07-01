@@ -84,15 +84,13 @@ stub_price_testing = [
 ]
 stub_swap = [
     "dep:currency",
-    "dep:oracle-platform",
-    "dep:sdk",
     "dep:serde",
-    "dep:thiserror",
 ]
 stub_swap_testing = [
     "stub_swap",
     "dep:currencies",
     "currencies/testing",
+    "dep:sdk",
     "dep:tree",
 ]
 "internal.test.stub_swap" = [
