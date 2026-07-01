@@ -57,15 +57,6 @@ where
         info: &MessageInfo,
     ) -> DexResult<()>;
 
-    fn on_open_ica(
-        self,
-        _counterparty_version: String,
-        _querier: QuerierWrapper<'_>,
-        _env: Env,
-    ) -> ContinueResult<Self> {
-        Err(err(self, "handle open ica response"))
-    }
-
     /// The entry point of a response delivery
     fn on_response(self, _data: Binary, _querier: QuerierWrapper<'_>, _env: Env) -> Result<Self> {
         Err(err(self, "handle transaction response")).into()

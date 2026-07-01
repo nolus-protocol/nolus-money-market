@@ -24,7 +24,7 @@
 //!   downpayment and emits no funding transfer at all (the refund path is
 //!   reachable only before any coin is sent).
 //! - `opening_emits_no_interchain_account` — the opening emits a funding
-//!   transfer over the paired channel and no `RegisterInterchainAccount`.
+//!   transfer over the paired channel and opens no interchain account.
 
 use crate::common::testing;
 use currency::CurrencyDef;
@@ -292,9 +292,9 @@ fn opening_emits_no_interchain_account() {
         .unwrap();
 
     // The opening's only interchain message is the funding transfer over the
-    // paired channel, addressed to the `LeaseAuthority`. `take_ibc_transfer`
-    // panics on a `RegisterInterchainAccount`, and `unwrap_response` asserts
-    // nothing else was emitted - so no ICA is ever registered on this path.
+    // paired channel, addressed to the `LeaseAuthority`; `unwrap_response`
+    // asserts nothing else was emitted - so no interchain account is ever
+    // opened on this path.
     let (_sender, receiver, _token) = response.take_ibc_transfer(TestCase::LEASER_IBC_CHANNEL);
     assert!(receiver.starts_with("StubPda"), "got receiver {receiver:?}");
     () = response.ignore_response().unwrap_response();

@@ -52,8 +52,9 @@ use super::{
     next_leg::NextLeg as NextLegT,
     response::{self, ContinueResult, Handler, Result as HandlerResult},
     timeout,
-    trx::IBC_TIMEOUT,
 };
+
+pub(super) const IBC_TIMEOUT: Duration = Duration::from_days(1); //enough for the relayers to process
 
 const EVENT_KEY_ACKS_LEFT: &str = "acks-left";
 const EVENT_KEY_HEAL: &str = "heal";

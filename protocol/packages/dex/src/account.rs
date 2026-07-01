@@ -1,12 +1,9 @@
 use serde::{Deserialize, Serialize};
 
-use platform::{
-    batch::Batch as LocalBatch,
-    ica::{self, HostAccount},
-};
+use platform::ica::HostAccount;
 use sdk::cosmwasm_std::Addr;
 
-use crate::{Connectable, ConnectionParams, error::Result};
+use crate::{Connectable, ConnectionParams};
 
 #[derive(Serialize, Deserialize)]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
@@ -15,10 +12,12 @@ pub struct Account {
     owner: Addr,
     /// The Interchain Account host on the DEX chain.
     ///
-    /// `None` for remote-lease leases — they fund and drain over the paired
-    /// ICS-20 transfer channel addressed to the Solana-side `LeaseAuthority`
-    /// and never open an ICA. Set only on the legacy ICA path
-    /// (`from_register_response`), whose machinery #649 removes.
+    /// Always `None` since the legacy ICA path was retired — remote-lease
+    /// leases fund and drain over the paired ICS-20 transfer channel addressed
+    /// to the Solana-side `LeaseAuthority` and never open an ICA. The field is
+    /// retained because `Account` is persisted on-chain state and
+    /// `deny_unknown_fields` deserialization must still accept stored records
+    /// that carry it.
     host: Option<HostAccount>,
     dex: ConnectionParams,
 }
@@ -26,27 +25,6 @@ pub struct Account {
 impl Account {
     pub fn owner(&self) -> &Addr {
         &self.owner
-    }
-
-    pub(super) fn host(&self) -> Option<&HostAccount> {
-        self.host.as_ref()
-    }
-
-    pub(super) fn register_request(dex: &ConnectionParams) -> LocalBatch {
-        ica::register_account(&dex.connection_id)
-    }
-
-    pub(super) fn from_register_response(
-        response: &str,
-        owner: Addr,
-        dex: ConnectionParams,
-    ) -> Result<Self> {
-        let host = ica::parse_register_response(response)?;
-        Ok(Self {
-            owner,
-            host: Some(host),
-            dex,
-        })
     }
 
     /// Build an account for a remote-lease lease, which has no Interchain
