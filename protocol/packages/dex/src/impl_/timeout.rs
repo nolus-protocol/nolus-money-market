@@ -22,7 +22,7 @@ where
 }
 
 /// Re-emit like [`on_timeout_retry`], with `extend` appending extra
-/// attributes to the retry event. The #660 liquidation requote carries the
+/// attributes to the retry event. The liquidation requote carries the
 /// previous and the freshly re-quoted floor there, or marks a skipped
 /// requote, on top of the base `timeout = retry`.
 pub(crate) fn on_timeout_retry_extended<S, SEnum, L, Extend>(

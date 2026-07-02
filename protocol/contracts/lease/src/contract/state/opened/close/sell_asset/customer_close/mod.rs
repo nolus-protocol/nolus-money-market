@@ -76,11 +76,10 @@ mod tests {
 
     use super::Calculator;
 
-    /// Truth table (#660): the customer-close legs run `AcceptAnyNonZeroSwap`,
+    /// Truth table: the customer-close legs run `AcceptAnyNonZeroSwap`,
     /// which keeps the `REQUOTES_ON_TIMEOUT` default of `false` — a
     /// customer-close timeout re-emits the pinned floor verbatim, unlike the
     /// liquidation legs sharing the same `SellAsset` spec.
-    /// COMPILE-RED: blocked on `SlippageCalculator::REQUOTES_ON_TIMEOUT`.
     #[test]
     fn customer_close_calculator_does_not_requote_on_timeout() {
         assert!(!<Calculator as SlippageCalculator<LeaseAssetCurrencies>>::REQUOTES_ON_TIMEOUT);

@@ -305,10 +305,9 @@ mod tests {
 
     use super::{BuyBack, Config};
 
-    /// Truth table (#660): the profit buy-back runs `AcceptAnyNonZeroSwap`
+    /// Truth table: the profit buy-back runs `AcceptAnyNonZeroSwap`
     /// and keeps the verbatim re-emission class — `requote_on_timeout` stays
     /// at its `false` default.
-    /// COMPILE-RED: blocked on `SwapTask::requote_on_timeout`.
     #[test]
     fn buy_back_does_not_requote_on_timeout() {
         assert!(!spec().requote_on_timeout());

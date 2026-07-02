@@ -400,18 +400,10 @@ fn buy_asset_zero_acked_error_unwinds() {
     );
 }
 
-// --- #660 liquidation auto-requote on timeout ----------------------------
-//
-// On each bounded timeout of a LIQUIDATION swap the floor re-quotes from the
-// live oracle (`AcceptUpToMaxSlippage(max_slippage.liquidation)` per round,
-// no episode cap, no monotonic clamp); every other flow keeps the verbatim
-// pinned-floor re-emission. RED-behavioral tests fail on the floor staying
-// pinned; the verbatim guards are green today and must stay green.
-
-/// #660 (I1): an in-budget timeout of a liquidation leg re-quotes the floor
+/// An in-budget timeout of a liquidation leg re-quotes the floor
 /// from the live oracle. The price DROPPED between emissions, so the fresh
 /// floor is LOWER than the pinned one — no monotonic clamp; the liquidation
-/// lowers its promise to clear. RED until #660 lands.
+/// lowers its promise to clear.
 #[test]
 fn liquidation_timeout_requotes_the_floor_down() {
     let mut test_case = create_test_case();
@@ -435,8 +427,8 @@ fn liquidation_timeout_requotes_the_floor_down() {
     assert_liquidation_swap_in_flight(&test_case, &lease);
 }
 
-/// #660 (I2): the requote also tracks the oracle UP — a risen price tightens
-/// the promise of the re-emitted leg. RED until #660 lands.
+/// The requote also tracks the oracle UP — a risen price tightens
+/// the promise of the re-emitted leg.
 #[test]
 fn liquidation_timeout_requotes_the_floor_up() {
     let mut test_case = create_test_case();
@@ -460,12 +452,11 @@ fn liquidation_timeout_requotes_the_floor_up() {
     assert_liquidation_swap_in_flight(&test_case, &lease);
 }
 
-/// #660 (I3): a partial (overdue) liquidation that requotes DOWN on a
+/// A partial (overdue) liquidation that requotes DOWN on a
 /// timeout and then CLEARS at the fresh floor settles exactly as an
 /// untimed-out one: the proceeds repay the overdue+due interest in full and
 /// the position continues with the liquidated slice removed (mirrors
-/// `liquidation::time`). RED until #660 lands (the floor stays pinned on the
-/// way).
+/// `liquidation::time`).
 #[test]
 fn partial_liquidation_requote_then_clear_settles_the_position() {
     const DOWNPAYMENT_AMOUNT: Amount = 1_000_000_000;
@@ -569,10 +560,9 @@ fn partial_liquidation_requote_then_clear_settles_the_position() {
     }
 }
 
-/// #660 (I4): a FULL liquidation that requotes DOWN on a timeout and then
+/// A FULL liquidation that requotes DOWN on a timeout and then
 /// CLEARS at the fresh floor drives to the `Liquidated` end state exactly as
-/// an untimed-out one (mirrors `liquidation::price::full_liquidation`). RED
-/// until #660 lands (the floor stays pinned on the way).
+/// an untimed-out one (mirrors `liquidation::price::full_liquidation`).
 #[test]
 fn full_liquidation_requote_then_clear_liquidates() {
     let mut test_case = create_test_case();
@@ -605,7 +595,7 @@ fn full_liquidation_requote_then_clear_liquidates() {
     );
 }
 
-/// #660 (I5): a customer-close leg keeps the verbatim pinned floor across
+/// A customer-close leg keeps the verbatim pinned floor across
 /// timeouts — the `AcceptAnyNonZeroSwap` constant floor of 1 never moves,
 /// oracle move or not. Green today; must stay green.
 #[test]
@@ -627,7 +617,7 @@ fn customer_close_floor_stays_verbatim_across_timeouts() {
     assert_customer_close_swap_in_flight(&test_case, &lease);
 }
 
-/// #660 (I6): a repay (`BuyLpn`) leg keeps the verbatim pinned floor across
+/// A repay (`BuyLpn`) leg keeps the verbatim pinned floor across
 /// timeouts — the constant floor of 1 never moves. This is the behavioral
 /// pin of `BuyLpn::requote_on_timeout() == false`. Green today; must stay
 /// green.
@@ -649,7 +639,7 @@ fn repay_floor_stays_verbatim_across_timeouts() {
     assert_repay_swap_in_flight(&test_case, &lease);
 }
 
-/// #660 (I7): an opening (`BuyAsset`) leg keeps the verbatim pinned floor
+/// An opening (`BuyAsset`) leg keeps the verbatim pinned floor
 /// across timeouts even though its calculator reads the oracle — a moved
 /// price must NOT leak into the re-emission; detection-first opening
 /// semantics are preserved. Green today; must stay green.
@@ -670,10 +660,9 @@ fn opening_floor_stays_verbatim_across_timeouts() {
     assert_opening_swap_in_flight(&test_case, &lease);
 }
 
-/// #660 (I8): requote rounds spend the same timeout budget; the round past
+/// Requote rounds spend the same timeout budget; the round past
 /// it parks with the LAST requoted floor still promised, and the parked
-/// query keeps the `SlippageProtectionActivated` shape. RED until #660
-/// lands.
+/// query keeps the `SlippageProtectionActivated` shape.
 #[test]
 fn park_after_budget_holds_the_last_requoted_floor() {
     let mut test_case = create_test_case();
@@ -714,7 +703,7 @@ fn park_after_budget_holds_the_last_requoted_floor() {
     assert_eq!(last_floor, latest_min_out(&test_case, &lease));
 }
 
-/// #660 (I9): the operator heal of a parked liquidation is UNCHANGED by the
+/// The operator heal of a parked liquidation is UNCHANGED by the
 /// auto-requote: it still re-quotes from the live oracle, resets the
 /// counters, and re-enters the live swap sequence. Green today; must stay
 /// green — and it pins the exact fresh-quote floor arithmetic the requote
@@ -746,9 +735,9 @@ fn heal_after_park_still_requotes_and_resets() {
     assert_liquidation_swap_in_flight(&test_case, &lease);
 }
 
-/// #660 (I10): a requote round's retry event carries the previous and the
+/// A requote round's retry event carries the previous and the
 /// fresh floor as coin attributes — `min-out-prev-*` and `min-out-*`,
-/// additive to the existing `timeout = retry`. RED until #660 lands.
+/// additive to the existing `timeout = retry`.
 #[test]
 fn requote_round_emits_previous_and_fresh_floor() {
     let mut test_case = create_test_case();
@@ -774,10 +763,10 @@ fn requote_round_emits_previous_and_fresh_floor() {
     );
 }
 
-/// #660 (I10, fallback): with the oracle's price EXPIRED (feed validity is
+/// With the oracle's price EXPIRED (feed validity is
 /// 5s x 12 samples in the test oracle), the requote's quote fails; the round
 /// falls back to the pinned floor, still goes out, and marks the skipped
-/// requote with `requote = skipped`. RED until #660 lands.
+/// requote with `requote = skipped`.
 #[test]
 fn expired_price_requote_falls_back_to_the_pinned_floor() {
     let mut test_case = create_test_case();
@@ -805,7 +794,7 @@ fn create_test_case() -> LeaseTestCase {
 }
 
 /// Feed a fresh `base <-> quote` observation WITHOUT dispatching price
-/// alarms — the #660 requote reads the oracle synchronously at timeout
+/// alarms — the requote reads the oracle synchronously at timeout
 /// delivery, so no alarm round-trip is involved and the in-flight swap state
 /// stays untouched.
 fn feed_price_quietly(test_case: &mut LeaseTestCase, base: LeaseCoin, quote: LpnCoin) {

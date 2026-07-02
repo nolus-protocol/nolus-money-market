@@ -99,9 +99,16 @@ where
     /// stable across retries. Only the liquidation `SellAsset` spec overrides
     /// it, forwarding its calculator's `SlippageCalculator::REQUOTES_ON_TIMEOUT`
     /// so a liquidation leg re-quotes bounded by `MaxSlippages.liquidation`
-    /// and clears against a moving price. Re-quoting is only meaningful with a
-    /// `SlippageEscalation::Park` escalation - the past-budget re-emission is
-    /// always verbatim.
+    /// and clears against a moving price. The re-quote applies only to
+    /// in-budget timeout re-emissions and is escalation-agnostic; floor
+    /// erosion stays bounded by the retry budget under any escalation policy,
+    /// because the past-budget path never re-quotes. A requote-class spec is
+    /// nonetheless expected to pair with `SlippageEscalation::Park` so the
+    /// anomaly terminal fires past budget - the only production requote class,
+    /// liquidation `SellAsset`, hardcodes `Park`. A hypothetical `ReEmit`
+    /// pairing would freeze the last requoted floor past budget and re-emit it
+    /// unbounded without ever parking, which is why new requote-class specs
+    /// should pair with `Park`.
     fn requote_on_timeout(&self) -> bool {
         false
     }
