@@ -47,10 +47,21 @@
 //!   drain window the LPP loan accrues interest; after the unwind the loan is
 //!   CLOSED (`principal_due == 0` / loan absent), proving the reserve covered
 //!   the interest and the full principal was repaid.
+//! - `unwind_drain_callback_from_stranger_rejected` - a stranger's callback on
+//!   the in-flight unwind drain is rejected by the pinned-controller auth gate
+//!   (`SingleUserPermission`), and the drain stays `Unwinding`.
 
+use access_control::error::Error as AccessError;
 use currencies::Lpn;
+use dex::Error as DexError;
 use finance::{coin::Coin, duration::Duration};
-use lease::api::query::{StateResponse, opening::OngoingTrx as OpeningOngoingTrx};
+use lease::{
+    api::{
+        ExecuteMsg,
+        query::{StateResponse, opening::OngoingTrx as OpeningOngoingTrx},
+    },
+    error::ContractError,
+};
 use remote_lease::callback::{RemoteErrorMessage, RemoteLeaseCallback, RemoteOperationOutcome};
 use sdk::cosmwasm_std::{Addr, Event};
 
@@ -286,6 +297,52 @@ fn unwind_over_nonzero_window_closes_lpp_loan() {
         loan_of(&test_case, &lease).is_none(),
         "the LPP loan must be CLOSED after the reserve-covered full repay",
     );
+}
+
+// === auth: a stranger's unwind-drain callback is rejected ===============
+
+/// A stranger's callback on the in-flight OpeningUnwind drain is rejected by
+/// the pinned-controller auth gate (`SingleUserPermission`), surfacing the
+/// same `DexError::Unauthorized` shape the paid-close drain does, and the
+/// in-flight drain leg stays `Unwinding`.
+#[test]
+fn unwind_drain_callback_from_stranger_rejected() {
+    let (mut test_case, lease, controller) = start_opening_leg_one_in_flight();
+
+    // hold the first drain transfer-out in flight
+    stub::set_response_mode(
+        &mut test_case.app,
+        &controller,
+        op_tag::TRANSFER_OUT,
+        ResponseMode::Delayed,
+    );
+    inject_opening_error(&mut test_case, &controller, &lease, "leg one under floor");
+    assert_unwinding(&test_case, &lease);
+
+    let err = test_case
+        .app
+        .execute(
+            crate::common::testing::user(USER),
+            lease.clone(),
+            &ExecuteMsg::RemoteLeaseCallback(RemoteLeaseCallback {
+                nonce: 0,
+                outcome: RemoteOperationOutcome::OperationTimeout,
+            }),
+            &[],
+        )
+        .expect_err("a stranger's unwind-drain callback must be rejected");
+
+    let contract_err = err
+        .downcast_ref::<ContractError>()
+        .expect("must surface as lease ContractError");
+    assert!(
+        matches!(
+            contract_err,
+            ContractError::DexError(DexError::Unauthorized(AccessError::Unauthorized {}))
+        ),
+        "expected DexError::Unauthorized, got {contract_err:?}"
+    );
+    assert_unwinding(&test_case, &lease);
 }
 
 // === drivers ============================================================
