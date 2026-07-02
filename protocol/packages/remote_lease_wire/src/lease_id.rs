@@ -30,11 +30,17 @@ impl RemoteLeaseId {
         S: Into<String>,
     {
         let value: String = value.into();
-        validate(&value).map(|()| Self(value))
+        validate(&value)
+            .map(|()| Self(value))
+            .inspect(|id| debug_assert!(id.invariant_held()))
     }
 
     pub fn as_str(&self) -> &str {
         self.0.as_str()
+    }
+
+    pub fn invariant_held(&self) -> bool {
+        validate(&self.0).is_ok()
     }
 }
 

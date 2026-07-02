@@ -137,7 +137,8 @@ fn callback_operation_timeout_serde() {
 #[test]
 fn callback_error_message_at_cap_accepted() {
     let payload = "x".repeat(OPERATION_ERR_MAX_BYTES);
-    RemoteErrorMessage::new(payload).expect("payload at the cap must be accepted");
+    let value = RemoteErrorMessage::new(payload).expect("payload at the cap must be accepted");
+    assert!(value.invariant_held());
 }
 
 #[test]
@@ -164,6 +165,7 @@ fn callback_error_message_deserialize_over_cap_rejected() {
 fn callback_error_message_from_static_accepted() {
     let value = RemoteErrorMessage::from_static("timeout");
     assert_eq!("timeout", value.as_str());
+    assert!(value.invariant_held());
     assert_round_trip_eq(
         r#"{"operation_err":"timeout"}"#,
         &RemoteOperationOutcome::OperationErr(value),
@@ -423,7 +425,8 @@ fn remote_lease_id_empty_rejected() {
 #[test]
 fn remote_lease_id_at_cap_accepted() {
     let payload = "a".repeat(REMOTE_LEASE_ID_MAX_BYTES);
-    RemoteLeaseId::new(payload).expect("payload at the cap must be accepted");
+    let id = RemoteLeaseId::new(payload).expect("payload at the cap must be accepted");
+    assert!(id.invariant_held());
 }
 
 #[test]
