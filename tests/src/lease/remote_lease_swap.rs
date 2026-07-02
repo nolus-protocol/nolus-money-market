@@ -46,9 +46,16 @@
 //! - `heal_race_original_ack_absorbed` — a `Heal()` re-emits with a fresh
 //!   nonce; the original packet's late ack (old nonce) is absorbed while the
 //!   healed re-emission's ack (new nonce) credits exactly once (#636).
+//! - `opening_swap_out_currency_mismatch_absorbed` — a success ack in a valid
+//!   lease-asset currency that is not the opening's output currency trips the
+//!   deliver-ack currency guard and is absorbed (`out-currency-mismatch`); the
+//!   leg countdown does not advance (round-2 #644 backfill).
+//! - `opening_swap_stale_nonce_timeout_absorbed` — a timeout callback carrying a
+//!   superseded nonce is absorbed (`nonce-mismatch`) before the timeout arm, so
+//!   the in-flight leg is neither re-emitted nor advanced (round-2 #644 backfill).
 
 use crate::common::testing;
-use currencies::PaymentGroup;
+use currencies::{PaymentGroup, testing::LeaseC1};
 use currency::{CurrencyDef, MemberOf};
 use dex::MaxSlippage;
 use finance::{
@@ -505,6 +512,79 @@ fn opening_swap_pins_the_opening_bound() {
 
     assert_eq!(&opening_floor, swaps[1].min_out());
     assert_ne!(&liquidation_floor, swaps[1].min_out());
+}
+
+// A decodable success ack whose output is a valid lease asset but not the
+// opening's output currency is absorbed at deliver-ack's currency guard, before
+// the amount is inspected. The behaviour already ships; this closes the arm's
+// integration gap (#644).
+#[test]
+fn opening_swap_out_currency_mismatch_absorbed() {
+    const MISMATCHED_OUTPUT: u128 = 1_000_000;
+
+    let (mut test_case, lease, controller) = start_open(DOWNPAYMENT);
+    stub::set_response_mode(
+        &mut test_case.app,
+        &controller,
+        op_tag::SWAP,
+        ResponseMode::Delayed,
+    );
+    // Consumed when the first swap leg is emitted, so its pending ack pays a
+    // lease-asset currency (LeaseC1) other than the opening's output (LeaseC2).
+    stub::set_next_swap_output(
+        &mut test_case.app,
+        &controller,
+        Coin::<LeaseC1>::new(MISMATCHED_OUTPUT).into(),
+    );
+
+    let _response = transfer_funds(&mut test_case, &lease, DOWNPAYMENT);
+    assert_eq!(2, opening_acks_left(&test_case, lease.clone()));
+
+    let absorbed = stub::deliver_pending_callback(&mut test_case.app, &controller, op_tag::SWAP);
+    expect_attribute(
+        &absorbed.events,
+        OPENING_SWAP_EVENT,
+        "absorbed",
+        "out-currency-mismatch",
+    );
+    assert_eq!(2, opening_acks_left(&test_case, lease.clone()));
+}
+
+// A timeout callback carrying a superseded nonce is rejected by the nonce gate
+// before the timeout retry arm, so the in-flight leg is neither re-emitted nor
+// advanced. The behaviour already ships; this closes the arm's integration gap.
+#[test]
+fn opening_swap_stale_nonce_timeout_absorbed() {
+    let (mut test_case, lease, controller) = start_open(DOWNPAYMENT);
+    stub::set_response_mode(
+        &mut test_case.app,
+        &controller,
+        op_tag::SWAP,
+        ResponseMode::Delayed,
+    );
+
+    let _response = transfer_funds(&mut test_case, &lease, DOWNPAYMENT);
+    assert_eq!(2, opening_acks_left(&test_case, lease.clone()));
+
+    let in_flight = stub::recorded_swap_nonces(&test_case.app, &controller, &lease)
+        .last()
+        .copied()
+        .expect("the in-flight swap leg recorded a nonce");
+    let stale = in_flight - 1;
+    let absorbed = stub::inject_callback_with_nonce(
+        &mut test_case.app,
+        &controller,
+        &lease,
+        stale,
+        RemoteOperationOutcome::OperationTimeout,
+    );
+    expect_attribute(
+        &absorbed.events,
+        OPENING_SWAP_EVENT,
+        "absorbed",
+        "nonce-mismatch",
+    );
+    assert_eq!(2, opening_acks_left(&test_case, lease.clone()));
 }
 
 fn set_opening_slippage(test_case: &mut LeaseTestCase, opening: Percent100) {
