@@ -69,6 +69,32 @@ if it survives on 1.94. Bump the pinned version here in lockstep with
 Tried first (did not work): treating local 1.95-only findings as CI blockers
 and patching untouched code to silence them.
 
+### `cargo lint` / `cargo run-test` from the repo root silently match 0 packages
+
+**Symptom:** Running `cargo lint` or `cargo run-test` from the checkout **root** exits
+`0` with no output — it reads like a clean pass. It isn't: nothing was linted or tested.
+
+**Cause:** These are `cargo each` aliases that select packages by cargo-each **tag**, and
+the tags live in the per-workspace members. The repo root has **no `Cargo.toml`** (the
+workspaces are `protocol/`, `tests/`, `platform/`, plus tooling in `tools/`), so the tag
+match resolves to the empty set and `each` exits `0`. Worse, a stray `Cargo.toml`
+**above** the checkout hijacks cargo's upward manifest walk and runs against the wrong
+tree entirely.
+
+**Fix:** Always run the gates **inside** a workspace dir — `protocol/`, `tests/`,
+`platform/`, or `tools/` — never from the repo root. Real CI iterates the workspaces via
+`ci/for-each-workspace.sh`; mirror that. Two corollaries:
+
+- `cargo lint` runs **without** `--all-targets`, so it does not compile `#[cfg(test)]`
+  modules. When the change adds test code, lint it explicitly:
+  `cargo clippy -p <crate> --features <...> --all-targets` (or `cargo lint-all` — see the
+  Cargo section's "Pre-push lint" entry).
+- **Exit `0` with zero output is not a PASS.** A real test run prints per-suite counts;
+  require that evidence before calling it green.
+
+Tried first (did not work): `cargo lint` / `cargo run-test` from the repo root and
+reading the `0` exit as success.
+
 ## CosmWasm
 
 ### `CosmosMsg::Any` rejected by the WASM optimizer's `cosmwasm-check` step
