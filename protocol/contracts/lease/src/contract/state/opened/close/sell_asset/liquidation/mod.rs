@@ -71,6 +71,6 @@ mod tests {
     /// every in-budget timeout.
     #[test]
     fn liquidation_calculator_requotes_on_timeout() {
-        assert!(<Calculator as SlippageCalculator<LeaseAssetCurrencies>>::REQUOTES_ON_TIMEOUT);
+        const { assert!(<Calculator as SlippageCalculator<LeaseAssetCurrencies>>::REQUOTES_ON_TIMEOUT) }
     }
 }

@@ -82,6 +82,6 @@ mod tests {
     /// liquidation legs sharing the same `SellAsset` spec.
     #[test]
     fn customer_close_calculator_does_not_requote_on_timeout() {
-        assert!(!<Calculator as SlippageCalculator<LeaseAssetCurrencies>>::REQUOTES_ON_TIMEOUT);
+        const { assert!(!<Calculator as SlippageCalculator<LeaseAssetCurrencies>>::REQUOTES_ON_TIMEOUT) }
     }
 }
