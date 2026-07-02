@@ -207,6 +207,8 @@ where
     _finisher: PhantomData<HandlerT>,
 }
 
+struct ClampToMin;
+
 impl<SwapTask, SEnum> RemoteSwap<SwapTask, SEnum>
 where
     SwapTask: SwapTaskT + RemoteSwapClient,
@@ -344,14 +346,18 @@ where
     }
 
     /// Re-quote the in-flight liquidation leg's floor from the live oracle and
-    /// re-emit against it, falling back to the verbatim pinned floor when the
-    /// oracle query fails. Either way the re-emission goes out, the nonce
-    /// bumps once and the retry budget is spent, so the timeout handler never
-    /// errors and the park safety net stays reachable.
+    /// re-emit against it. An oracle-query failure falls back to the verbatim
+    /// pinned floor - the re-emission still goes out, the nonce bumps once and
+    /// the budget is spent, so the park safety net stays reachable. A
+    /// leg-lookup failure, by contrast, is an internal invariant breach: it
+    /// propagates as a typed error out of the handler, exactly as the verbatim
+    /// re-emission path's identical lookup does, rather than masquerading as a
+    /// benign skipped re-quote.
     fn reemit_requoted(self, querier: QuerierWrapper<'_>, env: Env) -> HandlerResult<Self> {
         match self.requoted_floor(querier) {
-            Some(fresh_floor) => self.reemit_with_requote(fresh_floor, querier, env),
-            None => self.reemit_skipping_requote(querier, env),
+            Ok(Some(fresh_floor)) => self.reemit_with_requote(fresh_floor, querier, env),
+            Ok(None) => self.reemit_skipping_requote(querier, env),
+            Err(leg_lookup_failed) => leg_lookup_failed.into(),
         }
     }
 
@@ -497,16 +503,21 @@ where
     }
 
     /// Re-quote the in-flight leg's floor from the live oracle, clamped so a
-    /// collapsed quote never promises below [`REQUOTE_FLOOR_MIN`]. Returns
-    /// `None` when the leg lookup or the oracle query fails, so the caller
-    /// falls back to the pinned floor rather than surfacing an error.
-    fn requoted_floor(&self, querier: QuerierWrapper<'_>) -> Option<CoinDTO<SwapTask::OutG>> {
-        self.in_flight_leg()
-            .and_then(|coin_in| {
-                leg_min_out(&self.spec, coin_in, self.total_out.currency(), querier)
-            })
-            .map(clamp_floor)
-            .ok()
+    /// collapsed quote never promises below [`REQUOTE_FLOOR_MIN`]. An oracle
+    /// query failure yields `Ok(None)`, so the caller falls back to the pinned
+    /// floor and marks the re-quote skipped. A leg-lookup failure is an
+    /// internal invariant breach, not a benign skip: it surfaces as `Err` and
+    /// propagates out of the handler exactly as the verbatim re-emission path's
+    /// identical lookup does.
+    fn requoted_floor(
+        &self,
+        querier: QuerierWrapper<'_>,
+    ) -> Result<Option<CoinDTO<SwapTask::OutG>>> {
+        self.in_flight_leg().map(|coin_in| {
+            leg_min_out(&self.spec, coin_in, self.total_out.currency(), querier)
+                .map(clamp_floor)
+                .ok()
+        })
     }
 
     /// Rebuild the node for a re-quote re-emission: the freshly re-quoted
@@ -865,6 +876,21 @@ where
     }
 }
 
+impl<G> WithCoin<G> for ClampToMin
+where
+    G: Group,
+{
+    type Outcome = CoinDTO<G>;
+
+    fn on<C>(self, floor: Coin<C>) -> Self::Outcome
+    where
+        C: CurrencyDef,
+        C::Group: MemberOf<G> + MemberOf<G::TopG>,
+    {
+        floor.max(Coin::new(REQUOTE_FLOOR_MIN)).into()
+    }
+}
+
 pub(super) fn swappable_coins<SwapTask>(
     spec: &SwapTask,
     out_currency: CurrencyDTO<SwapTask::OutG>,
@@ -968,23 +994,6 @@ fn clamp_floor<G>(floor: CoinDTO<G>) -> CoinDTO<G>
 where
     G: Group,
 {
-    struct ClampToMin;
-
-    impl<G> WithCoin<G> for ClampToMin
-    where
-        G: Group,
-    {
-        type Outcome = CoinDTO<G>;
-
-        fn on<C>(self, floor: Coin<C>) -> Self::Outcome
-        where
-            C: CurrencyDef,
-            C::Group: MemberOf<G> + MemberOf<G::TopG>,
-        {
-            floor.max(Coin::new(REQUOTE_FLOOR_MIN)).into()
-        }
-    }
-
     floor.with_coin(ClampToMin)
 }
 
