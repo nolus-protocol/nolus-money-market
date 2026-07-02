@@ -981,7 +981,7 @@ where
             C: CurrencyDef,
             C::Group: MemberOf<G> + MemberOf<G::TopG>,
         {
-            Ord::max(floor, Coin::new(REQUOTE_FLOOR_MIN)).into()
+            floor.max(Coin::new(REQUOTE_FLOOR_MIN)).into()
         }
     }
 
