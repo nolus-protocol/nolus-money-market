@@ -595,6 +595,15 @@ mod tests {
         assert_eq!(Ok(expected), min_out);
     }
 
+    /// Truth table: the opening swap keeps the verbatim re-emission
+    /// class — `requote_on_timeout` stays at its `false` default even though
+    /// the opening calculator reads the oracle. The detection-first opening
+    /// timeout semantics are unchanged.
+    #[test]
+    fn opening_spec_does_not_requote_on_timeout() {
+        assert!(!spec().requote_on_timeout());
+    }
+
     struct ProbeMinOut<'querier, Task>
     where
         Task: SwapTask,

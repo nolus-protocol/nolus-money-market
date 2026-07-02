@@ -163,6 +163,10 @@ where
         SlippageEscalation::Park
     }
 
+    fn requote_on_timeout(&self) -> bool {
+        <CalculatorT as SlippageCalculator<Self::InG>>::REQUOTES_ON_TIMEOUT
+    }
+
     fn coins(&self) -> impl IntoIterator<Item = CoinDTO<Self::InG>> {
         iter::once(*self.repayable.amount(&self.lease))
     }

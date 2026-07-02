@@ -30,8 +30,8 @@
 
 use crate::common::testing;
 use access_control::error::Error as AccessError;
-use dex::Error as DexError;
-use finance::coin::Amount;
+use dex::{Error as DexError, MaxSlippage};
+use finance::{coin::Amount, duration::Duration, fraction::Unit, price};
 use lease::{
     api::{
         ExecuteMsg,
@@ -41,10 +41,14 @@ use lease::{
     error::ContractError,
 };
 use remote_lease::callback::{RemoteErrorMessage, RemoteLeaseCallback, RemoteOperationOutcome};
-use sdk::cosmwasm_std::{Addr, Event};
+use sdk::{
+    cosmwasm_std::{Addr, Event},
+    cw_multi_test::AppResponse,
+};
 
 use crate::common::{
-    self, LEASE_ADMIN, USER,
+    self, ADMIN, LEASE_ADMIN, USER,
+    leaser::Instantiator as LeaserInstantiator,
     remote_lease_controller_stub::{self as stub, ResponseMode, op_tag},
     test_case::TestCase,
 };
@@ -59,6 +63,13 @@ const CLOSE_POSITION_EVENT: &str = "wasm-ls-close-position";
 const LIQUIDATION_BUDGET: u8 = 5;
 const CUSTOMER_CLOSE_BUDGET: u8 = 2;
 const REPAY_BUDGET: u8 = 3;
+
+/// The literal-floor opening amounts of the full-liquidation driver: the base
+/// is chosen close to the asset amount to trigger a full liquidation (mirrors
+/// `liquidation::price`). The close swap sells the whole
+/// `FULL_LIQ_LEASE_AMOUNT`.
+const FULL_LIQ_LEASE_AMOUNT: Amount = 2428571428570;
+const FULL_LIQ_BORROWED_AMOUNT: Amount = 1857142857142;
 
 // --- #3 error -> immediate terminal -------------------------------------
 
@@ -389,10 +400,430 @@ fn buy_asset_zero_acked_error_unwinds() {
     );
 }
 
+/// An in-budget timeout of a liquidation leg re-quotes the floor
+/// from the live oracle. The price DROPPED between emissions, so the fresh
+/// floor is LOWER than the pinned one — no monotonic clamp; the liquidation
+/// lowers its promise to clear.
+#[test]
+fn liquidation_timeout_requotes_the_floor_down() {
+    let mut test_case = create_test_case();
+    let lease = drive_into_liquidation_swap(&mut test_case);
+    let floor_before = latest_min_out(&test_case, &lease);
+
+    let (base, quote) = (LeaseCoin::new(2), LpnCoin::new(1));
+    feed_price_quietly(&mut test_case, base, quote);
+    let _reemit = inject_timeout(&mut test_case, &lease);
+
+    let floor_after = latest_min_out(&test_case, &lease);
+    let expected = liquidation_floor_at(LeaseCoin::new(FULL_LIQ_LEASE_AMOUNT), base, quote);
+    assert_eq!(
+        expected, floor_after,
+        "the re-emission must promise the fresh-quote floor, was {floor_before}",
+    );
+    assert!(
+        floor_after < floor_before,
+        "a dropped price must LOWER the requoted floor, was {floor_before}, now {floor_after}",
+    );
+    assert_liquidation_swap_in_flight(&test_case, &lease);
+}
+
+/// The requote also tracks the oracle UP — a risen price tightens
+/// the promise of the re-emitted leg.
+#[test]
+fn liquidation_timeout_requotes_the_floor_up() {
+    let mut test_case = create_test_case();
+    let lease = drive_into_liquidation_swap(&mut test_case);
+    let floor_before = latest_min_out(&test_case, &lease);
+
+    let (base, quote) = (LeaseCoin::new(1), LpnCoin::new(2));
+    feed_price_quietly(&mut test_case, base, quote);
+    let _reemit = inject_timeout(&mut test_case, &lease);
+
+    let floor_after = latest_min_out(&test_case, &lease);
+    let expected = liquidation_floor_at(LeaseCoin::new(FULL_LIQ_LEASE_AMOUNT), base, quote);
+    assert_eq!(
+        expected, floor_after,
+        "the re-emission must promise the fresh-quote floor, was {floor_before}",
+    );
+    assert!(
+        floor_before < floor_after,
+        "a risen price must RAISE the requoted floor, was {floor_before}, now {floor_after}",
+    );
+    assert_liquidation_swap_in_flight(&test_case, &lease);
+}
+
+/// A partial (overdue) liquidation that requotes DOWN on a
+/// timeout and then CLEARS at the fresh floor settles exactly as an
+/// untimed-out one: the proceeds repay the overdue+due interest in full and
+/// the position continues with the liquidated slice removed (mirrors
+/// `liquidation::time`).
+#[test]
+fn partial_liquidation_requote_then_clear_settles_the_position() {
+    const DOWNPAYMENT_AMOUNT: Amount = 1_000_000_000;
+    // the total interest due for LeaserInstantiator::REPAYMENT_PERIOD =
+    // (7% + 3%) * 65/(100-65) * downpayment * REPAYMENT_PERIOD/365
+    const LIQUIDATION_AMOUNT: Amount = 45792562;
+    let mut test_case = create_test_case();
+    let lease = super::open_lease(
+        &mut test_case,
+        common::coin::<PaymentCurrency>(DOWNPAYMENT_AMOUNT),
+        None,
+    );
+    let controller = test_case.address_book.remote_lease_controller().clone();
+
+    let StateResponse::Opened {
+        amount: lease_amount,
+        ..
+    } = super::state_query(&test_case, lease.clone())
+    else {
+        unreachable!()
+    };
+    let lease_amount: LeaseCoin = lease_amount.try_into().unwrap();
+
+    test_case
+        .app
+        .time_shift(LeaserInstantiator::REPAYMENT_PERIOD);
+    super::feed_price(&mut test_case);
+    stub::set_response_mode(
+        &mut test_case.app,
+        &controller,
+        op_tag::SWAP,
+        ResponseMode::Delayed,
+    );
+    // the time alarm starts the overdue partial liquidation; the sell-asset
+    // swap is held in flight by the Delayed mode
+    let () = test_case
+        .app
+        .execute(
+            test_case.address_book.time_alarms().clone(),
+            lease.clone(),
+            &ExecuteMsg::TimeAlarm {},
+            &[],
+        )
+        .unwrap()
+        .ignore_response()
+        .unwrap_response();
+    assert_liquidation_swap_in_flight(&test_case, &lease);
+    assert_eq!(
+        LIQUIDATION_AMOUNT,
+        super::recorded_close_swap(&test_case, &lease)
+            .coin_in()
+            .amount(),
+        "the overdue liquidation must sell exactly the interest-due slice",
+    );
+
+    // the price halves; the timeout requotes the slice's floor down
+    let (base, quote) = (LeaseCoin::new(2), LpnCoin::new(1));
+    feed_price_quietly(&mut test_case, base, quote);
+    let _reemit = inject_timeout(&mut test_case, &lease);
+    assert_eq!(
+        liquidation_floor_at(LeaseCoin::new(LIQUIDATION_AMOUNT), base, quote),
+        latest_min_out(&test_case, &lease),
+        "the re-emission must promise the fresh-quote floor",
+    );
+
+    // restore the identity price so the settlement mirrors the untimed-out
+    // flow, then clear the re-emitted leg — the identity payout is well
+    // above the requoted floor
+    super::feed_price(&mut test_case);
+    let _ack = stub::deliver_pending_callback(&mut test_case.app, &controller, op_tag::SWAP);
+    let (proceeds, liquidation_end): (LpnCoin, AppResponse) =
+        super::settle_close_proceeds(&mut test_case, &lease);
+    assert_eq!(LpnCoin::new(LIQUIDATION_AMOUNT), proceeds);
+    expect_attribute(
+        &liquidation_end.events,
+        "wasm-ls-liquidation",
+        "amount-amount",
+        &LIQUIDATION_AMOUNT.to_string(),
+    );
+
+    // the slice is gone, the dues are settled, the position lives on
+    match super::state_query(&test_case, lease) {
+        StateResponse::Opened {
+            amount,
+            due_interest,
+            due_margin,
+            overdue_interest,
+            overdue_margin,
+            ..
+        } => {
+            assert_eq!(
+                lease_amount - LeaseCoin::new(LIQUIDATION_AMOUNT),
+                LeaseCoin::try_from(amount).unwrap(),
+            );
+            assert!(due_interest.is_zero());
+            assert!(due_margin.is_zero());
+            assert!(overdue_interest.is_zero());
+            assert!(overdue_margin.is_zero());
+        }
+        other => panic!("expected the position to continue opened, got {other:?}"),
+    }
+}
+
+/// A FULL liquidation that requotes DOWN on a timeout and then
+/// CLEARS at the fresh floor drives to the `Liquidated` end state exactly as
+/// an untimed-out one (mirrors `liquidation::price::full_liquidation`).
+#[test]
+fn full_liquidation_requote_then_clear_liquidates() {
+    let mut test_case = create_test_case();
+    let lease = drive_into_liquidation_swap(&mut test_case);
+    let controller = test_case.address_book.remote_lease_controller().clone();
+
+    let (base, quote) = (LeaseCoin::new(2), LpnCoin::new(1));
+    feed_price_quietly(&mut test_case, base, quote);
+    let _reemit = inject_timeout(&mut test_case, &lease);
+    assert_eq!(
+        liquidation_floor_at(LeaseCoin::new(FULL_LIQ_LEASE_AMOUNT), base, quote),
+        latest_min_out(&test_case, &lease),
+        "the re-emission must promise the fresh-quote floor",
+    );
+
+    // the counterparty clears the re-emitted leg; the identity payout is
+    // well above the requoted floor
+    let _ack = stub::deliver_pending_callback(&mut test_case.app, &controller, op_tag::SWAP);
+    let (proceeds, arrival): (LpnCoin, AppResponse) =
+        super::settle_close_proceeds(&mut test_case, &lease);
+    assert_eq!(LpnCoin::new(FULL_LIQ_LEASE_AMOUNT), proceeds);
+    arrival.assert_event(&Event::new("wasm-ls-liquidation").add_attribute("loan-close", "true"));
+
+    assert!(
+        matches!(
+            super::state_query(&test_case, lease),
+            StateResponse::Liquidated()
+        ),
+        "the requoted-then-cleared full liquidation must end Liquidated",
+    );
+}
+
+/// A customer-close leg keeps the verbatim pinned floor across
+/// timeouts — the `AcceptAnyNonZeroSwap` constant floor of 1 never moves,
+/// oracle move or not. Green today; must stay green.
+#[test]
+fn customer_close_floor_stays_verbatim_across_timeouts() {
+    let mut test_case = create_test_case();
+    let lease = drive_into_customer_close_swap(&mut test_case);
+    let floor_before = latest_min_out(&test_case, &lease);
+    assert_eq!(1, floor_before, "AcceptAnyNonZeroSwap pins a floor of 1");
+
+    feed_price_quietly(&mut test_case, LeaseCoin::new(1), LpnCoin::new(2));
+    let _first = inject_timeout(&mut test_case, &lease);
+    let _second = inject_timeout(&mut test_case, &lease);
+
+    assert_eq!(
+        floor_before,
+        latest_min_out(&test_case, &lease),
+        "a customer-close timeout must re-emit the pinned floor verbatim",
+    );
+    assert_customer_close_swap_in_flight(&test_case, &lease);
+}
+
+/// A repay (`BuyLpn`) leg keeps the verbatim pinned floor across
+/// timeouts — the constant floor of 1 never moves. This is the behavioral
+/// pin of `BuyLpn::requote_on_timeout() == false`. Green today; must stay
+/// green.
+#[test]
+fn repay_floor_stays_verbatim_across_timeouts() {
+    let mut test_case = create_test_case();
+    let lease = drive_into_repay_swap(&mut test_case);
+    let floor_before = latest_min_out(&test_case, &lease);
+    assert_eq!(1, floor_before, "AcceptAnyNonZeroSwap pins a floor of 1");
+
+    feed_price_quietly(&mut test_case, LeaseCoin::new(1), LpnCoin::new(2));
+    let _reemit = inject_timeout(&mut test_case, &lease);
+
+    assert_eq!(
+        floor_before,
+        latest_min_out(&test_case, &lease),
+        "a repay timeout must re-emit the pinned floor verbatim",
+    );
+    assert_repay_swap_in_flight(&test_case, &lease);
+}
+
+/// An opening (`BuyAsset`) leg keeps the verbatim pinned floor
+/// across timeouts even though its calculator reads the oracle — a moved
+/// price must NOT leak into the re-emission; detection-first opening
+/// semantics are preserved. Green today; must stay green.
+#[test]
+fn opening_floor_stays_verbatim_across_timeouts() {
+    let (mut test_case, lease, _controller) = start_open_with_delayed_swap();
+    let floor_before = latest_min_out(&test_case, &lease);
+
+    // move the asset price so a requote WOULD change the floor
+    feed_price_quietly(&mut test_case, LeaseCoin::new(1), LpnCoin::new(2));
+    let _reemit = inject_timeout(&mut test_case, &lease);
+
+    assert_eq!(
+        floor_before,
+        latest_min_out(&test_case, &lease),
+        "an opening timeout must re-emit the pinned floor verbatim",
+    );
+    assert_opening_swap_in_flight(&test_case, &lease);
+}
+
+/// Requote rounds spend the same timeout budget; the round past
+/// it parks with the LAST requoted floor still promised, and the parked
+/// query keeps the `SlippageProtectionActivated` shape.
+#[test]
+fn park_after_budget_holds_the_last_requoted_floor() {
+    let mut test_case = create_test_case();
+    let lease = drive_into_liquidation_swap(&mut test_case);
+
+    feed_price_quietly(&mut test_case, LeaseCoin::new(2), LpnCoin::new(1));
+    for round in 0..(LIQUIDATION_BUDGET - 1) {
+        let _reemit = inject_timeout(&mut test_case, &lease);
+        assert!(
+            !is_slippage_protection_activated(&test_case, &lease),
+            "the lease must still be retrying within budget, round {}",
+            round + 1,
+        );
+    }
+
+    // the price moves once more before the last in-budget round
+    let (base, quote) = (LeaseCoin::new(4), LpnCoin::new(1));
+    feed_price_quietly(&mut test_case, base, quote);
+    let _reemit = inject_timeout(&mut test_case, &lease);
+    assert!(!is_slippage_protection_activated(&test_case, &lease));
+    let last_floor = latest_min_out(&test_case, &lease);
+    assert_eq!(
+        liquidation_floor_at(LeaseCoin::new(FULL_LIQ_LEASE_AMOUNT), base, quote),
+        last_floor,
+        "the last in-budget round must promise the fresh-quote floor",
+    );
+
+    // the round past the budget parks without re-emitting — the last
+    // requoted floor stays the standing promise
+    let swaps_at_budget = recorded_swap_count(&test_case, &lease);
+    let _park = inject_timeout(&mut test_case, &lease);
+    assert_eq!(
+        swaps_at_budget,
+        recorded_swap_count(&test_case, &lease),
+        "the timeout past the budget must park, not re-emit",
+    );
+    assert_slippage_protection_activated(&test_case, &lease);
+    assert_eq!(last_floor, latest_min_out(&test_case, &lease));
+}
+
+/// The operator heal of a parked liquidation is UNCHANGED by the
+/// auto-requote: it still re-quotes from the live oracle, resets the
+/// counters, and re-enters the live swap sequence. Green today; must stay
+/// green — and it pins the exact fresh-quote floor arithmetic the requote
+/// tests reuse.
+#[test]
+fn heal_after_park_still_requotes_and_resets() {
+    let mut test_case = create_test_case();
+    let lease = park_liquidation(&mut test_case);
+
+    let (base, quote) = (LeaseCoin::new(1), LpnCoin::new(2));
+    feed_price_quietly(&mut test_case, base, quote);
+    let healed = test_case
+        .app
+        .execute(
+            testing::user(LEASE_ADMIN),
+            lease.clone(),
+            &ExecuteMsg::Heal(),
+            &[],
+        )
+        .expect("the lease admin must heal a parked lease")
+        .unwrap_response();
+    expect_attribute(&healed.events, LIQUIDATION_SWAP_EVENT, "heal", "re-emit");
+
+    assert_eq!(
+        liquidation_floor_at(LeaseCoin::new(FULL_LIQ_LEASE_AMOUNT), base, quote),
+        latest_min_out(&test_case, &lease),
+        "the heal must re-quote the floor from the live oracle",
+    );
+    assert_liquidation_swap_in_flight(&test_case, &lease);
+}
+
+/// A requote round's retry event carries the previous and the
+/// fresh floor as coin attributes — `min-out-prev-*` and `min-out-*`,
+/// additive to the existing `timeout = retry`.
+#[test]
+fn requote_round_emits_previous_and_fresh_floor() {
+    let mut test_case = create_test_case();
+    let lease = drive_into_liquidation_swap(&mut test_case);
+    let floor_before = latest_min_out(&test_case, &lease);
+
+    let (base, quote) = (LeaseCoin::new(2), LpnCoin::new(1));
+    feed_price_quietly(&mut test_case, base, quote);
+    let reemit = inject_timeout(&mut test_case, &lease);
+
+    expect_attribute(&reemit.events, LIQUIDATION_SWAP_EVENT, "timeout", "retry");
+    expect_attribute(
+        &reemit.events,
+        LIQUIDATION_SWAP_EVENT,
+        "min-out-prev-amount",
+        &floor_before.to_string(),
+    );
+    expect_attribute(
+        &reemit.events,
+        LIQUIDATION_SWAP_EVENT,
+        "min-out-amount",
+        &liquidation_floor_at(LeaseCoin::new(FULL_LIQ_LEASE_AMOUNT), base, quote).to_string(),
+    );
+}
+
+/// With the oracle's price EXPIRED (feed validity is
+/// 5s x 12 samples in the test oracle), the requote's quote fails; the round
+/// falls back to the pinned floor, still goes out, and marks the skipped
+/// requote with `requote = skipped`.
+#[test]
+fn expired_price_requote_falls_back_to_the_pinned_floor() {
+    let mut test_case = create_test_case();
+    let lease = drive_into_liquidation_swap(&mut test_case);
+    let floor_before = latest_min_out(&test_case, &lease);
+
+    // outlive the feed validity so the synchronous quote at the timeout
+    // delivery fails
+    test_case.app.time_shift(Duration::from_secs(3_600));
+    let reemit = inject_timeout(&mut test_case, &lease);
+
+    expect_attribute(&reemit.events, LIQUIDATION_SWAP_EVENT, "requote", "skipped");
+    assert_eq!(
+        floor_before,
+        latest_min_out(&test_case, &lease),
+        "an oracle failure at requote must fall back to the pinned floor",
+    );
+    assert_liquidation_swap_in_flight(&test_case, &lease);
+}
+
 // === drivers =============================================================
 
 fn create_test_case() -> LeaseTestCase {
     super::create_test_case::<PaymentCurrency>()
+}
+
+/// Feed a fresh `base <-> quote` observation WITHOUT dispatching price
+/// alarms — the requote reads the oracle synchronously at timeout
+/// delivery, so no alarm round-trip is involved and the in-flight swap state
+/// stays untouched.
+fn feed_price_quietly(test_case: &mut LeaseTestCase, base: LeaseCoin, quote: LpnCoin) {
+    let _feed = common::oracle::feed_price(test_case, testing::user(ADMIN), base, quote);
+}
+
+/// Inject an `OperationTimeout` for the lease's in-flight leg (the stub
+/// remaps the nonce onto the last emitted one).
+fn inject_timeout(test_case: &mut LeaseTestCase, lease: &Addr) -> AppResponse {
+    let controller = test_case.address_book.remote_lease_controller().clone();
+    stub::inject_callback(
+        &mut test_case.app,
+        &controller,
+        lease,
+        RemoteLeaseCallback {
+            nonce: 0,
+            outcome: RemoteOperationOutcome::OperationTimeout,
+        },
+    )
+}
+
+/// The floor a fresh liquidation (re-)quote must pin: the liquidation
+/// max-slippage bound applied to the live-oracle quote of the in-flight leg.
+fn liquidation_floor_at(coin_in: LeaseCoin, base: LeaseCoin, quote: LpnCoin) -> Amount {
+    MaxSlippage::unchecked(LeaserInstantiator::MAX_SLIPPAGE)
+        .min_out(
+            price::total(coin_in, price::total_of(base).is(quote)).expect("a representable quote"),
+        )
+        .to_primitive()
 }
 
 /// Open a lease and drop the price into a full-liquidation, holding the
@@ -408,14 +839,10 @@ fn drive_into_liquidation_swap(test_case: &mut LeaseTestCase) -> Addr {
         ResponseMode::Delayed,
     );
 
-    // the literal-floor opening amounts; the base is chosen close to the
-    // asset amount to trigger a full liquidation (mirrors liquidation::price)
-    let lease_amount: Amount = 2428571428570;
-    let borrowed_amount: Amount = 1857142857142;
     let () = super::deliver_new_price(
         test_case,
-        common::coin(lease_amount - 2),
-        common::coin(borrowed_amount),
+        common::coin(FULL_LIQ_LEASE_AMOUNT - 2),
+        common::coin(FULL_LIQ_BORROWED_AMOUNT),
     )
     .ignore_response()
     .unwrap_response();

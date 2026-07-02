@@ -55,3 +55,22 @@ impl From<Cause> for ApiCause {
         }
     }
 }
+
+#[cfg(all(feature = "internal.test.contract", test))]
+mod tests {
+    use dex::SlippageCalculator;
+
+    use crate::api::LeaseAssetCurrencies;
+
+    use super::Calculator;
+
+    /// Truth table: the liquidation legs run `AcceptUpToMaxSlippage`,
+    /// the ONLY requote-on-timeout calculator class. The `SellAsset` spec
+    /// forwards `CalculatorT::REQUOTES_ON_TIMEOUT`, so a liquidation leg —
+    /// full and partial alike — re-quotes its floor from the live oracle on
+    /// every in-budget timeout.
+    #[test]
+    fn liquidation_calculator_requotes_on_timeout() {
+        const { assert!(<Calculator as SlippageCalculator<LeaseAssetCurrencies>>::REQUOTES_ON_TIMEOUT) }
+    }
+}

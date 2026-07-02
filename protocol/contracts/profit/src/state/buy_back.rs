@@ -291,3 +291,60 @@ enum ControllerExecuteMsg {
 }
 
 impl ControllerInnerMessage for ControllerExecuteMsg {}
+
+#[cfg(all(feature = "internal.test.contract", test))]
+mod tests {
+    use currencies::testing::PaymentC3;
+    use dex::{Account, ConnectionParams, Ics20Channel, SwapTask};
+    use finance::coin::Coin;
+    use remote_profit_wire::profit_id::RemoteProfitId;
+    use sdk::cosmwasm_std::{self, Addr};
+    use timealarms::stub::TimeAlarmsRef;
+
+    use crate::state::VaultConfig;
+
+    use super::{BuyBack, Config};
+
+    /// Truth table: the profit buy-back runs `AcceptAnyNonZeroSwap`
+    /// and keeps the verbatim re-emission class — `requote_on_timeout` stays
+    /// at its `false` default.
+    #[test]
+    fn buy_back_does_not_requote_on_timeout() {
+        assert!(!spec().requote_on_timeout());
+    }
+
+    fn spec() -> BuyBack {
+        BuyBack::new(config(), vec![Coin::<PaymentC3>::new(1_000).into()])
+            .expect("the buy-back spec should build")
+    }
+
+    fn config() -> Config {
+        Config::new(
+            24,
+            Addr::unchecked("treasury"),
+            oracle_platform::OracleRef::unchecked(Addr::unchecked("oracle")),
+            TimeAlarmsRef::unchecked("timealarms"),
+            Account::funding(
+                Addr::unchecked("profit"),
+                ConnectionParams {
+                    connection_id: "connection-0".to_owned(),
+                    transfer_channel: Ics20Channel {
+                        local_endpoint: "channel-0".to_owned(),
+                        remote_endpoint: "channel-2048".to_owned(),
+                    },
+                },
+            ),
+            Addr::unchecked("controller"),
+            VaultConfig {
+                code_id: cosmwasm_std::from_json(b"3").expect("a valid code id"),
+                address: Addr::unchecked("drain-vault"),
+            },
+        )
+        .with_profit_authority(profit_authority())
+    }
+
+    fn profit_authority() -> RemoteProfitId {
+        RemoteProfitId::new("StubPda1111111111111111111111111111".to_owned())
+            .expect("a base58 sample")
+    }
+}
