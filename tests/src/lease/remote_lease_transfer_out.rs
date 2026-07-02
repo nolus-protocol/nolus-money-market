@@ -41,7 +41,7 @@
 //!   authorises callbacks against the same pinned controller; a stranger
 //!   is rejected and the in-flight transfer stays put.
 //!
-//! Absorb-arm coverage (round-2 #644 backfill; the behaviour already ships):
+//! Absorb-arm coverage (the behaviour already ships):
 //!
 //! - `funds_arrival_absorbs_remote_error_callback` /
 //!   `funds_arrival_absorbs_remote_timeout_callback` /

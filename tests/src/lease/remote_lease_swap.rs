@@ -49,10 +49,10 @@
 //! - `opening_swap_out_currency_mismatch_absorbed` — a success ack in a valid
 //!   lease-asset currency that is not the opening's output currency trips the
 //!   deliver-ack currency guard and is absorbed (`out-currency-mismatch`); the
-//!   leg countdown does not advance (round-2 #644 backfill).
+//!   leg countdown does not advance.
 //! - `opening_swap_stale_nonce_timeout_absorbed` — a timeout callback carrying a
 //!   superseded nonce is absorbed (`nonce-mismatch`) before the timeout arm, so
-//!   the in-flight leg is neither re-emitted nor advanced (round-2 #644 backfill).
+//!   the in-flight leg is neither re-emitted nor advanced.
 
 use crate::common::testing;
 use currencies::{PaymentGroup, testing::LeaseC1};
