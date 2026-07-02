@@ -67,3 +67,22 @@ pub fn auto_start(
     let events = event::emit_auto_close(strategy, env, &lease.lease.addr);
     FullClose {}.start(lease, events.into(), Calculator::default(), env, querier)
 }
+
+#[cfg(all(feature = "internal.test.contract", test))]
+mod tests {
+    use dex::SlippageCalculator;
+
+    use crate::api::LeaseAssetCurrencies;
+
+    use super::Calculator;
+
+    /// Truth table (#660): the customer-close legs run `AcceptAnyNonZeroSwap`,
+    /// which keeps the `REQUOTES_ON_TIMEOUT` default of `false` — a
+    /// customer-close timeout re-emits the pinned floor verbatim, unlike the
+    /// liquidation legs sharing the same `SellAsset` spec.
+    /// COMPILE-RED: blocked on `SlippageCalculator::REQUOTES_ON_TIMEOUT`.
+    #[test]
+    fn customer_close_calculator_does_not_requote_on_timeout() {
+        assert!(!<Calculator as SlippageCalculator<LeaseAssetCurrencies>>::REQUOTES_ON_TIMEOUT);
+    }
+}
