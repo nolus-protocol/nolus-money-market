@@ -64,7 +64,9 @@ impl RemoteErrorMessage {
         let message: String = message.into();
         let actual = message.len();
         if actual <= OPERATION_ERR_MAX_BYTES {
-            Ok(Self(message))
+            let value = Self(message);
+            debug_assert!(value.invariant_held());
+            Ok(value)
         } else {
             Err(Error::CallbackErrorTooLong {
                 actual,
@@ -92,15 +94,20 @@ impl RemoteErrorMessage {
     ///
     /// In debug builds, panics if `message` exceeds [`OPERATION_ERR_MAX_BYTES`].
     pub fn from_static(message: &'static str) -> Self {
+        let value = Self(message.to_owned());
         debug_assert!(
-            message.len() <= OPERATION_ERR_MAX_BYTES,
+            value.invariant_held(),
             "RemoteErrorMessage::from_static exceeds OPERATION_ERR_MAX_BYTES"
         );
-        Self(message.to_owned())
+        value
     }
 
     pub fn as_str(&self) -> &str {
         self.0.as_str()
+    }
+
+    pub fn invariant_held(&self) -> bool {
+        self.0.len() <= OPERATION_ERR_MAX_BYTES
     }
 }
 
