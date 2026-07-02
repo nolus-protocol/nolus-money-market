@@ -339,6 +339,21 @@ mod tests {
         ));
     }
 
+    // The authorized ack clears the permission gate and reaches
+    // `on_open_lease_ack`, but `open_transport`'s max-slippages query fails, so
+    // the error propagates at that `?` instead of the funding leg starting.
+    #[test]
+    fn open_transport_query_failure_propagates() {
+        assert!(matches!(
+            deliver(
+                open_lease_ack(),
+                CONTROLLER,
+                &max_slippage_failing_querier()
+            ),
+            Err(ContractError::PositionLimitsQuery(_))
+        ));
+    }
+
     fn deliver(
         callback: RemoteLeaseCallback,
         sender: &str,
@@ -437,6 +452,33 @@ mod tests {
                 cosmwasm_std::to_json_binary(&AccessGranted::No)
                     .expect("the verdict should serialize"),
             ))
+        });
+        mock_querier
+    }
+
+    /// Grants the callback-permission check so the ack reaches
+    /// `on_open_lease_ack`, then fails the leaser's max-slippages query so
+    /// `open_transport` propagates the error rather than starting the funding
+    /// leg.
+    fn max_slippage_failing_querier() -> MockQuerier<Empty> {
+        let mut mock_querier = MockQuerier::<Empty>::default();
+        mock_querier.update_wasm(|query| {
+            let WasmQuery::Smart { contract_addr, msg } = query else {
+                unimplemented!("only smart queries are expected")
+            };
+            assert_eq!(LEASER, contract_addr.as_str());
+            if cosmwasm_std::from_json::<AccessCheck>(msg).is_ok() {
+                SystemResult::Ok(CwContractResult::Ok(
+                    cosmwasm_std::to_json_binary(&AccessGranted::Yes)
+                        .expect("the verdict should serialize"),
+                ))
+            } else {
+                let _: PositionLimits =
+                    cosmwasm_std::from_json(msg).expect("a max-slippages query");
+                SystemResult::Ok(CwContractResult::Err(
+                    "the leaser is unavailable".to_owned(),
+                ))
+            }
         });
         mock_querier
     }
