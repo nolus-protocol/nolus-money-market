@@ -42,6 +42,8 @@ mod borrow;
 mod error;
 mod lender;
 mod rewards;
+#[cfg(test)]
+mod tests;
 
 const CONTRACT_STORAGE_VERSION: VersionSegment = 3;
 const CURRENT_RELEASE: ProtocolPackageRelease = ProtocolPackageRelease::current(
@@ -326,9 +328,6 @@ fn set_lease_code(deps: DepsMut<'_>, new_lease_code: Code) -> Result<()> {
     .map_err(ContractError::from)
     .and_then(|validated_code| Config::update_lease_code(deps.storage, validated_code))
 }
-
-#[cfg(test)]
-mod tests;
 
 #[cfg(test)]
 pub(crate) mod test {

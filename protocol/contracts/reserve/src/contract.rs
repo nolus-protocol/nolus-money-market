@@ -30,6 +30,9 @@ use crate::{
     state::Config,
 };
 
+#[cfg(test)]
+mod tests;
+
 const CONTRACT_STORAGE_VERSION: VersionSegment = 0;
 const CURRENT_RELEASE: ProtocolPackageRelease = ProtocolPackageRelease::current(
     package_name!(),
@@ -195,6 +198,3 @@ fn dump_balance_to(
             PlatformResponse::messages_only(reserve_account.into())
         })
 }
-
-#[cfg(test)]
-mod tests;
