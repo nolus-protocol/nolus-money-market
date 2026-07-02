@@ -84,6 +84,8 @@ where
 {
     type OutC = OutC;
 
+    const REQUOTES_ON_TIMEOUT: bool = true;
+
     fn min_output(
         &self,
         input: &CoinDTO<InG>,

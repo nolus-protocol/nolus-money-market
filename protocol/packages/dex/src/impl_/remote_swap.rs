@@ -25,7 +25,15 @@
 //!   consecutive leg sharing the input currency;
 //! - the pinned per-leg floor (`in_flight_min_out`) - a re-emission repeats the
 //!   exact promise of the original, so the counterparty enforces one and the
-//!   same floor however many times the leg goes out.
+//!   same floor however many times the leg goes out. The one carve-out is the
+//!   liquidation timeout re-quote (#660): a spec whose
+//!   [`SwapTask::requote_on_timeout`][crate::SwapTask::requote_on_timeout] is
+//!   `true` re-quotes the floor from the live oracle on each in-budget timeout
+//!   and overwrites `in_flight_min_out` before re-emitting, so the promise
+//!   tracks the moving price. Each re-quote is still coupled to a single nonce
+//!   bump, so a superseded packet's late callback is absorbed exactly as under
+//!   the verbatim path; correctness rests on the nonce, not on the floor being
+//!   constant.
 //!
 //! `heal` therefore stays permissionless and re-emits the leg verbatim - same
 //! coin-in, same pinned floor, fresh nonce - leaving idempotency to the nonce
@@ -40,7 +48,7 @@ use serde::{Deserialize, Serialize};
 
 use currency::{CurrencyDTO, CurrencyDef, Group, MemberOf};
 use finance::{
-    coin::{Coin, CoinDTO, WithCoin},
+    coin::{Amount, Coin, CoinDTO, WithCoin},
     duration::Duration,
     instant::Instant,
     zero::Zero,
@@ -68,7 +76,14 @@ const EVENT_KEY_ABSORBED: &str = "absorbed";
 const EVENT_KEY_ANOMALY: &str = "anomaly";
 const EVENT_KEY_HEAL: &str = "heal";
 const EVENT_KEY_TOTAL_OUT: &str = "total-out";
+const EVENT_KEY_MIN_OUT_PREV: &str = "min-out-prev";
+const EVENT_KEY_MIN_OUT: &str = "min-out";
+const EVENT_KEY_REQUOTE: &str = "requote";
 const EVENT_VALUE_REEMIT: &str = "re-emit";
+const EVENT_VALUE_REQUOTE_SKIPPED: &str = "skipped";
+/// A collapsed re-quote clamps to this floor - a zero `min_out` would revert
+/// the counterparty's swap-params validation.
+const REQUOTE_FLOOR_MIN: Amount = 1;
 const ABSORB_UNDECODABLE: &str = "undecodable-response";
 const ABSORB_UNEXPECTED_VARIANT: &str = "unexpected-response-variant";
 const ABSORB_CURRENCY_MISMATCH: &str = "out-currency-mismatch";
@@ -132,7 +147,10 @@ where
 /// coin list is persisted. The slippage floor promised for the in-flight
 /// leg is pinned in `in_flight_min_out` when the leg is opened and reused
 /// verbatim by every re-emission - acknowledgment validation never
-/// consults the live oracle.
+/// consults the live oracle. A requote-class spec (liquidation, #660) is the
+/// exception on the timeout path only: it re-quotes the floor from the live
+/// oracle and overwrites `in_flight_min_out` before each in-budget
+/// re-emission; acknowledgment validation still uses the pinned value.
 #[derive(Serialize, Deserialize)]
 #[serde(
     bound(
@@ -303,6 +321,19 @@ where
         })
     }
 
+    /// Re-emit the in-flight leg on an in-budget timeout. A liquidation
+    /// (requote-class) spec re-quotes the floor from the live oracle before
+    /// the re-emission; every other class re-emits the pinned floor verbatim.
+    /// The past-budget escalation is always verbatim, so this dispatch is
+    /// reached only within budget.
+    fn reemit_on_timeout(self, querier: QuerierWrapper<'_>, env: Env) -> HandlerResult<Self> {
+        if self.spec.requote_on_timeout() {
+            self.reemit_requoted(querier, env)
+        } else {
+            self.reemit_in_flight(querier, env)
+        }
+    }
+
     /// Re-emit the in-flight leg verbatim after a transient failure, keeping
     /// the pinned floor and the accumulated progress intact. The fresh nonce
     /// supersedes the timed-out packet so a late callback for it is absorbed.
@@ -310,6 +341,50 @@ where
         let node = self.with_bumped_nonce();
         let leg_label = node.spec.label();
         timeout::on_timeout_retry(node, leg_label, querier, env).into()
+    }
+
+    /// Re-quote the in-flight liquidation leg's floor from the live oracle and
+    /// re-emit against it, falling back to the verbatim pinned floor when the
+    /// oracle query fails. Either way the re-emission goes out, the nonce
+    /// bumps once and the retry budget is spent, so the timeout handler never
+    /// errors and the park safety net stays reachable.
+    fn reemit_requoted(self, querier: QuerierWrapper<'_>, env: Env) -> HandlerResult<Self> {
+        match self.requoted_floor(querier) {
+            Some(fresh_floor) => self.reemit_with_requote(fresh_floor, querier, env),
+            None => self.reemit_skipping_requote(querier, env),
+        }
+    }
+
+    /// Re-emit promising the freshly re-quoted floor, tagging the retry event
+    /// with the previous and the fresh floor. The nonce bumps once and the
+    /// retry counters carry across, so a requote spends the same budget as a
+    /// verbatim re-emission.
+    fn reemit_with_requote(
+        self,
+        fresh_floor: CoinDTO<SwapTask::OutG>,
+        querier: QuerierWrapper<'_>,
+        env: Env,
+    ) -> HandlerResult<Self> {
+        let prev_floor = self.in_flight_min_out;
+        let node = self.requoted(fresh_floor);
+        let leg_label = node.spec.label();
+        timeout::on_timeout_retry_extended(node, leg_label, querier, env, |emitter| {
+            emitter
+                .emit_coin_dto(EVENT_KEY_MIN_OUT_PREV, &prev_floor)
+                .emit_coin_dto(EVENT_KEY_MIN_OUT, &fresh_floor)
+        })
+        .into()
+    }
+
+    /// Fall back to the verbatim pinned floor when the oracle query fails at
+    /// re-quote time, marking the skipped requote on the retry event.
+    fn reemit_skipping_requote(self, querier: QuerierWrapper<'_>, env: Env) -> HandlerResult<Self> {
+        let node = self.with_bumped_nonce();
+        let leg_label = node.spec.label();
+        timeout::on_timeout_retry_extended(node, leg_label, querier, env, |emitter| {
+            emitter.emit(EVENT_KEY_REQUOTE, EVENT_VALUE_REQUOTE_SKIPPED)
+        })
+        .into()
     }
 
     /// Re-emit the in-flight leg after a heal, signalling the recovery with
@@ -345,11 +420,14 @@ impl<SwapTask, SEnum> RemoteSwap<SwapTask, SEnum>
 where
     SwapTask: SwapTaskT + RemoteSwapClient,
 {
-    /// Emit, or re-emit, the in-flight leg with its pinned floor
+    /// Emit, or re-emit, the in-flight leg with the floor currently held in
+    /// `in_flight_min_out`
     ///
-    /// Re-emissions repeat the exact promise of the original emission so
-    /// the counterparty enforces one and the same floor however many
-    /// times the leg goes out.
+    /// A verbatim re-emission repeats the exact promise of the original
+    /// emission so the counterparty enforces one and the same floor however
+    /// many times the leg goes out. A liquidation timeout re-quote (#660)
+    /// overwrites `in_flight_min_out` before scheduling, so the re-emitted
+    /// floor tracks the live oracle rather than the original promise.
     fn schedule(&self) -> Result<Batch> {
         self.in_flight_leg().and_then(|coin_in| {
             self.spec
@@ -416,6 +494,36 @@ where
         };
         debug_assert!(ret.invariant_held());
         ret
+    }
+
+    /// Re-quote the in-flight leg's floor from the live oracle, clamped so a
+    /// collapsed quote never promises below [`REQUOTE_FLOOR_MIN`]. Returns
+    /// `None` when the leg lookup or the oracle query fails, so the caller
+    /// falls back to the pinned floor rather than surfacing an error.
+    fn requoted_floor(&self, querier: QuerierWrapper<'_>) -> Option<CoinDTO<SwapTask::OutG>> {
+        self.in_flight_leg()
+            .and_then(|coin_in| {
+                leg_min_out(&self.spec, coin_in, self.total_out.currency(), querier)
+            })
+            .map(clamp_floor)
+            .ok()
+    }
+
+    /// Rebuild the node for a re-quote re-emission: the freshly re-quoted
+    /// floor replaces the pinned one, the nonce bumps once so the superseded
+    /// packet's late callback is absorbed, and the retry counters carry across
+    /// unchanged - a re-quote must spend the same budget as a verbatim
+    /// re-emission, unlike [`RemoteSwap::open_leg`] which resets them.
+    fn requoted(self, fresh_floor: CoinDTO<SwapTask::OutG>) -> Self {
+        Self::internal_new(
+            self.spec,
+            self.acks_left,
+            self.total_out,
+            fresh_floor,
+            self.timeouts,
+            self.errors,
+            self.in_flight_nonce.saturating_add(1),
+        )
     }
 
     fn internal_new(
@@ -596,7 +704,9 @@ where
 
     /// A timeout re-emits the in-flight leg up to the spec's per-op retry
     /// budget and escalates past it - the opened legs park while the opening
-    /// swap keeps re-emitting unbounded.
+    /// swap keeps re-emitting unbounded. Within budget a requote-class spec
+    /// (liquidation, #660) re-quotes the floor from the live oracle first; the
+    /// past-budget escalation is always verbatim.
     fn on_remote_timeout(
         self,
         nonce: u64,
@@ -608,7 +718,7 @@ where
         }
         let bumped = self.with_incremented_timeouts();
         if bumped.timeouts <= bumped.spec.timeout_retry_budget() {
-            bumped.reemit_in_flight(querier, env)
+            bumped.reemit_on_timeout(querier, env)
         } else {
             bumped.escalate(querier, env)
         }
@@ -854,6 +964,30 @@ where
     total.with_coin(AddOther { more })
 }
 
+fn clamp_floor<G>(floor: CoinDTO<G>) -> CoinDTO<G>
+where
+    G: Group,
+{
+    struct ClampToMin;
+
+    impl<G> WithCoin<G> for ClampToMin
+    where
+        G: Group,
+    {
+        type Outcome = CoinDTO<G>;
+
+        fn on<C>(self, floor: Coin<C>) -> Self::Outcome
+        where
+            C: CurrencyDef,
+            C::Group: MemberOf<G> + MemberOf<G::TopG>,
+        {
+            Ord::max(floor, Coin::new(REQUOTE_FLOOR_MIN)).into()
+        }
+    }
+
+    floor.with_coin(ClampToMin)
+}
+
 #[cfg(test)]
 pub(super) mod mock {
     use serde::{Deserialize, Serialize};
@@ -875,6 +1009,10 @@ pub(super) mod mock {
     pub const LABEL: &str = "RemoteSwapMock";
     pub const CONTROLLER: &str = "controller";
     pub const WRONG_VARIANT_PAYLOAD: &[u8] = b"wrong-variant";
+    /// The failure reason the mock's calculator reports once a test arms
+    /// [`MockSpec::set_quote_failure`] — the #660 stand-in for an oracle
+    /// query error during a timeout requote.
+    pub const FAILING_QUOTE: &str = "mock quote failure";
     pub const SLIPPAGE_PROTECTION_SENTINEL: CoinsNb = CoinsNb::MAX;
     /// The distinctive [`SwapTask::Result`] the mock's
     /// [`RemoteSwapClient::unwind`] returns, so a test can tell the unwind
@@ -904,6 +1042,16 @@ pub(super) mod mock {
         anomaly_resolution_authorised: bool,
         #[serde(default)]
         unwinds_on_zero_acked: bool,
+        /// #660: opts the spec into the requote-on-timeout class. Read by the
+        /// spec's `SwapTask::requote_on_timeout` override once the seam
+        /// lands; `#[serde(default)]` keeps the legacy fixtures
+        /// deserializing to the verbatim class.
+        #[serde(default)]
+        requotes_on_timeout: bool,
+        /// #660: makes the calculator's `min_output` fail, standing in for
+        /// an oracle query error during a timeout requote.
+        #[serde(default)]
+        quote_fails: bool,
     }
 
     #[derive(Serialize)]
@@ -914,6 +1062,7 @@ pub(super) mod mock {
 
     struct FloorCalculator {
         floor: Amount,
+        fails: bool,
     }
 
     impl MockSpec {
@@ -925,6 +1074,8 @@ pub(super) mod mock {
                 escalation: Escalation::Park,
                 anomaly_resolution_authorised: true,
                 unwinds_on_zero_acked: false,
+                requotes_on_timeout: false,
+                quote_fails: false,
             }
         }
 
@@ -946,6 +1097,14 @@ pub(super) mod mock {
 
         pub fn set_unwinds_on_zero_acked(&mut self) {
             self.unwinds_on_zero_acked = true;
+        }
+
+        pub fn set_requotes_on_timeout(&mut self) {
+            self.requotes_on_timeout = true;
+        }
+
+        pub fn set_quote_failure(&mut self) {
+            self.quote_fails = true;
         }
     }
 
@@ -1005,6 +1164,10 @@ pub(super) mod mock {
             self.unwinds_on_zero_acked
         }
 
+        fn requote_on_timeout(&self) -> bool {
+            self.requotes_on_timeout
+        }
+
         fn coins(&self) -> impl IntoIterator<Item = CoinDTO<SuperGroup>> {
             self.coins.clone()
         }
@@ -1013,7 +1176,10 @@ pub(super) mod mock {
         where
             WithCalc: WithCalculator<Self>,
         {
-            with_calc.on(&FloorCalculator { floor: self.floor })
+            with_calc.on(&FloorCalculator {
+                floor: self.floor,
+                fails: self.quote_fails,
+            })
         }
 
         fn into_output_task<Cmd>(self, cmd: Cmd) -> Cmd::Output
@@ -1112,7 +1278,11 @@ pub(super) mod mock {
             _input: &CoinDTO<SuperGroup>,
             _querier: QuerierWrapper<'_>,
         ) -> Result<Coin<SuperGroupTestC1>> {
-            Ok(Coin::new(self.floor))
+            if self.fails {
+                Err(Error::remote_swap_client(FAILING_QUOTE))
+            } else {
+                Ok(Coin::new(self.floor))
+            }
         }
     }
 
@@ -2066,6 +2236,386 @@ mod tests {
         assert_eq!(0, restored.in_flight_nonce);
     }
 
+    // -----------------------------------------------------------------------
+    // #660 — liquidation auto-requote: an in-budget TIMEOUT of a requote-class
+    // spec re-quotes the in-flight leg's floor from the live oracle before the
+    // re-emission (no monotonic clamp, floor >= 1, oracle failure falls back
+    // to the pinned floor). Every other trigger — underpaid ack, default-class
+    // timeout, past-budget escalation, heal — re-emits the pinned floor
+    // verbatim. Seam (not yet implemented): `SwapTask::requote_on_timeout`
+    // defaulted `false` + MockSpec override reading `requotes_on_timeout`, and
+    // `SlippageCalculator::REQUOTES_ON_TIMEOUT` defaulted `false`.
+    // -----------------------------------------------------------------------
+
+    /// AC (#660 / U1): an in-budget timeout of a requote-class spec re-quotes
+    /// the floor from the live oracle — DOWN, with no monotonic clamp — and
+    /// the re-emission both promises and pins the fresh floor. The retry
+    /// event carries the previous and the requoted floor.
+    /// RED-behavioral until the requote lands in `on_remote_timeout`.
+    #[test]
+    fn timeout_requotes_the_floor_down() {
+        const PINNED_FLOOR: Amount = 40;
+        const DROPPED_FLOOR: Amount = 25;
+        let mock_querier = MockQuerier::default();
+        let querier = QuerierWrapper::new(&mock_querier);
+        let env = testing::mock_env();
+
+        let mut spec = requoting_spec3();
+        spec.set_floor(PINNED_FLOOR);
+        let (_response, mut node) = continued(Node::start(spec, &env, querier));
+        node.spec.set_floor(DROPPED_FLOOR);
+
+        let nonce = node.in_flight_nonce;
+        let (response, node) = continued(node.on_remote_timeout(nonce, querier, env.clone()));
+        assert_eq!(
+            requote_timeout_response(
+                &coin_in(100),
+                &coin_out(PINNED_FLOOR),
+                &coin_out(DROPPED_FLOOR),
+                &env,
+            ),
+            response
+        );
+        assert_node(2, &coin_out(50), &coin_out(DROPPED_FLOOR), &node);
+        assert_eq!(1, node.timeouts);
+    }
+
+    /// AC (#660 / U2): the requote also tracks the oracle UP — the promise
+    /// tightens when the live quote demands more.
+    /// RED-behavioral until the requote lands.
+    #[test]
+    fn timeout_requotes_the_floor_up() {
+        const PINNED_FLOOR: Amount = 40;
+        const RAISED_FLOOR: Amount = 90;
+        let mock_querier = MockQuerier::default();
+        let querier = QuerierWrapper::new(&mock_querier);
+        let env = testing::mock_env();
+
+        let mut spec = requoting_spec3();
+        spec.set_floor(PINNED_FLOOR);
+        let (_response, mut node) = continued(Node::start(spec, &env, querier));
+        node.spec.set_floor(RAISED_FLOOR);
+
+        let nonce = node.in_flight_nonce;
+        let (response, node) = continued(node.on_remote_timeout(nonce, querier, env.clone()));
+        assert_eq!(
+            requote_timeout_response(
+                &coin_in(100),
+                &coin_out(PINNED_FLOOR),
+                &coin_out(RAISED_FLOOR),
+                &env,
+            ),
+            response
+        );
+        assert_node(2, &coin_out(50), &coin_out(RAISED_FLOOR), &node);
+        assert_eq!(1, node.timeouts);
+    }
+
+    /// AC (#660 / U3): requote rounds spend the same timeout budget as
+    /// verbatim re-emissions — `acks_left`, `total_out` and the counters
+    /// carry across requotes — and the round past the budget parks WITHOUT
+    /// requoting, freezing the LAST requoted floor at the terminal.
+    /// RED-behavioral until the requote lands.
+    #[test]
+    fn requote_rounds_spend_the_budget_and_park_with_the_last_floor() {
+        const BASE_FLOOR: Amount = 40;
+        let mock_querier = MockQuerier::default();
+        let querier = QuerierWrapper::new(&mock_querier);
+
+        let mut spec = requoting_spec3();
+        spec.set_floor(BASE_FLOOR);
+        let (_response, mut node) = continued(Node::start(spec, &testing::mock_env(), querier));
+
+        let budget = mock_budget();
+        for round in 1..=budget {
+            let fresh = BASE_FLOOR + Amount::from(round);
+            node.spec.set_floor(fresh);
+            let nonce = node.in_flight_nonce;
+            let (_response, next) =
+                continued(node.on_remote_timeout(nonce, querier, testing::mock_env()));
+            node = next;
+            assert_node(2, &coin_out(50), &coin_out(fresh), &node);
+            assert_eq!(round, node.timeouts);
+        }
+
+        // the oracle moves again, yet the past-budget round parks verbatim —
+        // no requote on the way into the terminal
+        let last_floor = BASE_FLOOR + Amount::from(budget);
+        node.spec.set_floor(BASE_FLOOR * 100);
+        let nonce = node.in_flight_nonce;
+        let (response, terminal) =
+            parked(node.on_remote_timeout(nonce, querier, testing::mock_env()));
+        assert_eq!(parked_response(), response);
+        assert_terminal(2, &coin_out(50), &coin_out(last_floor), &terminal);
+    }
+
+    /// AC (#660 / U4): every requote round re-emits with a strictly greater
+    /// nonce, so the superseded packet's late acknowledgment is absorbed —
+    /// the floor overwrite stays coupled to the nonce bump.
+    #[test]
+    fn requote_reemission_bumps_the_nonce_each_round() {
+        const PINNED_FLOOR: Amount = 40;
+        let mock_querier = MockQuerier::default();
+        let querier = QuerierWrapper::new(&mock_querier);
+
+        let mut spec = requoting_spec3();
+        spec.set_floor(PINNED_FLOOR);
+        let (_response, mut node) = continued(Node::start(spec, &testing::mock_env(), querier));
+
+        node.spec.set_floor(PINNED_FLOOR - 15);
+        let first_nonce = node.in_flight_nonce;
+        let (_response, mut node) =
+            continued(node.on_remote_timeout(first_nonce, querier, testing::mock_env()));
+        assert!(
+            first_nonce < node.in_flight_nonce,
+            "the first requote round must re-emit with a strictly greater nonce"
+        );
+
+        node.spec.set_floor(PINNED_FLOOR - 10);
+        let second_nonce = node.in_flight_nonce;
+        let (_response, node) =
+            continued(node.on_remote_timeout(second_nonce, querier, testing::mock_env()));
+        assert!(
+            second_nonce < node.in_flight_nonce,
+            "every requote round must re-emit with a strictly greater nonce"
+        );
+
+        // the first packet's late ack carries a stale nonce → absorbed
+        let (response, node) = continued(node.on_remote_response(
+            payload(&coin_out(PINNED_FLOOR)),
+            first_nonce,
+            querier,
+            testing::mock_env(),
+        ));
+        assert_eq!(absorb_response("nonce-mismatch"), response);
+        assert_node(2, &coin_out(50), &coin_out(PINNED_FLOOR - 10), &node);
+    }
+
+    /// AC (#660 / U5): an UNDERPAID-ack re-emission stays pinned even for a
+    /// requote-class spec — the requote is triggered by a timeout, never by
+    /// an under-floor acknowledgment. GREEN today; must stay green.
+    #[test]
+    fn underpaid_ack_stays_pinned_for_a_requote_class_spec() {
+        const PINNED_FLOOR: Amount = 40;
+        const RAISED_FLOOR: Amount = 100;
+        let mock_querier = MockQuerier::default();
+        let querier = QuerierWrapper::new(&mock_querier);
+
+        let mut spec = requoting_spec3();
+        spec.set_floor(PINNED_FLOOR);
+        let (_response, mut node) = continued(Node::start(spec, &testing::mock_env(), querier));
+        node.spec.set_floor(RAISED_FLOOR);
+
+        let nonce = node.in_flight_nonce;
+        let (response, node) = continued(node.on_remote_response(
+            payload(&coin_out(PINNED_FLOOR - 1)),
+            nonce,
+            querier,
+            testing::mock_env(),
+        ));
+        assert_eq!(
+            MessageResponse::messages_with_event(
+                mock::swap_request(&coin_in(100), &coin_out(PINNED_FLOOR))
+                    .expect("a valid swap request"),
+                Emitter::of_type(mock::LABEL).emit("anomaly", "under-min-out"),
+            ),
+            response
+        );
+        assert_node(2, &coin_out(50), &coin_out(PINNED_FLOOR), &node);
+    }
+
+    /// AC (#660 / U6): a default-class spec re-emits the PINNED floor on
+    /// timeout even when the live oracle has moved — the requote is opt-in
+    /// per spec. GREEN today; must stay green.
+    #[test]
+    fn timeout_stays_pinned_for_a_default_class_spec() {
+        const PINNED_FLOOR: Amount = 40;
+        const DROPPED_FLOOR: Amount = 25;
+        let mock_querier = MockQuerier::default();
+        let querier = QuerierWrapper::new(&mock_querier);
+        let env = testing::mock_env();
+
+        let mut spec = spec3();
+        spec.set_floor(PINNED_FLOOR);
+        let (_response, mut node) = continued(Node::start(spec, &env, querier));
+        node.spec.set_floor(DROPPED_FLOOR);
+
+        let nonce = node.in_flight_nonce;
+        let (response, node) = continued(node.on_remote_timeout(nonce, querier, env.clone()));
+        assert_eq!(
+            timeout_response_with_floor(&coin_in(100), &coin_out(PINNED_FLOOR), &env),
+            response
+        );
+        assert_node(2, &coin_out(50), &coin_out(PINNED_FLOOR), &node);
+    }
+
+    /// AC (#660 / U7): a `ReEmit`-escalation, requote-class spec requotes
+    /// only WITHIN the budget — the escalation's past-budget re-emission
+    /// repeats the last requoted floor verbatim, however the oracle has
+    /// moved since. RED-behavioral until the in-budget requote lands.
+    #[test]
+    fn reemit_escalation_past_budget_stays_verbatim() {
+        const PINNED_FLOOR: Amount = 40;
+        const REQUOTED_FLOOR: Amount = 25;
+        const MOVED_AGAIN_FLOOR: Amount = 90;
+        let mock_querier = MockQuerier::default();
+        let querier = QuerierWrapper::new(&mock_querier);
+
+        let mut spec = requoting_spec3();
+        spec.set_reemit();
+        spec.set_floor(PINNED_FLOOR);
+        let (_response, mut node) = continued(Node::start(spec, &testing::mock_env(), querier));
+
+        node.spec.set_floor(REQUOTED_FLOOR);
+        let budget = mock_budget();
+        for _round in 0..budget {
+            let nonce = node.in_flight_nonce;
+            let (_response, next) =
+                continued(node.on_remote_timeout(nonce, querier, testing::mock_env()));
+            node = next;
+        }
+        assert_node(2, &coin_out(50), &coin_out(REQUOTED_FLOOR), &node);
+        assert_eq!(budget, node.timeouts);
+
+        // past the budget the ReEmit escalation repeats the last floor
+        // verbatim — a moved oracle must NOT leak into it
+        node.spec.set_floor(MOVED_AGAIN_FLOOR);
+        let env = testing::mock_env();
+        let nonce = node.in_flight_nonce;
+        let (response, node) = continued(node.on_remote_timeout(nonce, querier, env.clone()));
+        assert_eq!(
+            timeout_response_with_floor(&coin_in(100), &coin_out(REQUOTED_FLOOR), &env),
+            response
+        );
+        assert_node(2, &coin_out(50), &coin_out(REQUOTED_FLOOR), &node);
+    }
+
+    /// AC (#660 / U8): a collapsed quote requotes the floor to the minimum
+    /// of 1, never 0 — a zero `min_out` would revert the counterparty's swap
+    /// params. RED-behavioral until the requote lands.
+    #[test]
+    fn requote_of_a_collapsed_quote_clamps_the_floor_to_one() {
+        const PINNED_FLOOR: Amount = 40;
+        const CLAMPED_FLOOR: Amount = 1;
+        let mock_querier = MockQuerier::default();
+        let querier = QuerierWrapper::new(&mock_querier);
+        let env = testing::mock_env();
+
+        let mut spec = requoting_spec3();
+        spec.set_floor(PINNED_FLOOR);
+        let (_response, mut node) = continued(Node::start(spec, &env, querier));
+        node.spec.set_floor(0);
+
+        let nonce = node.in_flight_nonce;
+        let (response, node) = continued(node.on_remote_timeout(nonce, querier, env.clone()));
+        assert_eq!(
+            requote_timeout_response(
+                &coin_in(100),
+                &coin_out(PINNED_FLOOR),
+                &coin_out(CLAMPED_FLOOR),
+                &env,
+            ),
+            response
+        );
+        assert_node(2, &coin_out(50), &coin_out(CLAMPED_FLOOR), &node);
+    }
+
+    /// AC (#660 / U9): an oracle failure during the requote falls back to
+    /// the pinned floor for that round — the re-emission still goes out, the
+    /// budget is still consumed, the event marks the skipped requote, and
+    /// the park stays reachable. RED-behavioral until the requote lands.
+    #[test]
+    fn failed_quote_falls_back_to_the_pinned_floor() {
+        const PINNED_FLOOR: Amount = 40;
+        let mock_querier = MockQuerier::default();
+        let querier = QuerierWrapper::new(&mock_querier);
+        let env = testing::mock_env();
+
+        let mut spec = requoting_spec3();
+        spec.set_floor(PINNED_FLOOR);
+        let (_response, mut node) = continued(Node::start(spec, &env, querier));
+        node.spec.set_quote_failure();
+
+        let nonce = node.in_flight_nonce;
+        let (response, node) = continued(node.on_remote_timeout(nonce, querier, env.clone()));
+        assert_eq!(
+            skipped_requote_timeout_response(&coin_in(100), &coin_out(PINNED_FLOOR), &env),
+            response
+        );
+        assert_node(2, &coin_out(50), &coin_out(PINNED_FLOOR), &node);
+        assert_eq!(1, node.timeouts);
+
+        // the skip rounds consumed budget all the same: the remaining rounds
+        // keep retrying and the round past the budget parks
+        let budget = mock_budget();
+        let node = (1..budget).fold(node, |node, _round| {
+            let nonce = node.in_flight_nonce;
+            continued(node.on_remote_timeout(nonce, querier, testing::mock_env())).1
+        });
+        let nonce = node.in_flight_nonce;
+        let (_response, terminal) =
+            parked(node.on_remote_timeout(nonce, querier, testing::mock_env()));
+        assert_terminal(2, &coin_out(50), &coin_out(PINNED_FLOOR), &terminal);
+    }
+
+    /// AC (#660 / U10): a node persisted before #660 carries no requote
+    /// toggle in the spec; the defaulted field must load `false` so legacy
+    /// leases keep the verbatim re-emission class.
+    /// COMPILE-RED: blocked on `SwapTask::requote_on_timeout`.
+    #[test]
+    fn legacy_remote_swap_without_requote_toggle_stays_verbatim_class() {
+        use crate::SwapTask;
+
+        let legacy_remote_swap = br#"{"spec":{"coins":[{"amount":"100","ticker":"ticker#2"},{"amount":"50","ticker":"ticker#1"},{"amount":"70","ticker":"ticker#2"}],"floor":1,"budget":3},"acks_left":1,"total_out":{"amount":"80","ticker":"ticker#1"},"in_flight_min_out":{"amount":"1","ticker":"ticker#1"},"timeouts":0,"errors":0,"in_flight_nonce":3}"#;
+
+        let restored: Node = sdk::cosmwasm_std::from_json(legacy_remote_swap.as_slice())
+            .expect("the pre-#660 state should deserialize");
+        assert!(!restored.spec.requote_on_timeout());
+    }
+
+    /// Truth table (#660): the MockSpec defaults to the verbatim class; the
+    /// toggle flips it into the requote class.
+    /// COMPILE-RED: blocked on `SwapTask::requote_on_timeout` + the MockSpec
+    /// override reading `requotes_on_timeout`.
+    #[test]
+    fn mock_spec_requote_class_follows_its_toggle() {
+        use crate::SwapTask;
+
+        assert!(!spec3().requote_on_timeout());
+        assert!(requoting_spec3().requote_on_timeout());
+    }
+
+    /// Truth table (#660): a calculator that does not override
+    /// `REQUOTES_ON_TIMEOUT` inherits the `false` default — only
+    /// `AcceptUpToMaxSlippage` opts in (pinned in the lease crate against the
+    /// production alias).
+    /// COMPILE-RED: blocked on `SlippageCalculator::REQUOTES_ON_TIMEOUT`.
+    #[test]
+    fn calculator_default_is_no_requote_on_timeout() {
+        use currency::{CurrencyDef, Group, MemberOf};
+
+        use crate::{SlippageCalculator, SwapTask, WithCalculator};
+
+        struct ProbeRequoteClass;
+        impl<Task> WithCalculator<Task> for ProbeRequoteClass
+        where
+            Task: SwapTask,
+        {
+            type Output = bool;
+
+            fn on<CalculatorT>(self, _calculator: &CalculatorT) -> Self::Output
+            where
+                CalculatorT: SlippageCalculator<Task::InG>,
+                <<CalculatorT as SlippageCalculator<Task::InG>>::OutC as CurrencyDef>::Group:
+                    MemberOf<Task::OutG> + MemberOf<<Task::InG as Group>::TopG>,
+            {
+                CalculatorT::REQUOTES_ON_TIMEOUT
+            }
+        }
+
+        assert!(!spec3().with_slippage_calc(ProbeRequoteClass));
+    }
+
     fn assert_node(
         expected_acks: CoinsNb,
         expected_total: &CoinDTO<OutG>,
@@ -2196,6 +2746,13 @@ mod tests {
         MockSpec::new(vec![coin_in(100), coin_out(50), coin_in(70)])
     }
 
+    /// [`spec3`] opted into the #660 requote-on-timeout class.
+    fn requoting_spec3() -> MockSpec {
+        let mut spec = spec3();
+        spec.set_requotes_on_timeout();
+        spec
+    }
+
     /// Two swap legs and no output-currency coin to fold, so the node starts
     /// with `total_out == 0` - the zero-acked precondition the unwind path
     /// gates on.
@@ -2227,6 +2784,57 @@ mod tests {
             Emitter::of_type(mock::LABEL)
                 .emit("id", env.contract.address.clone())
                 .emit("timeout", "retry"),
+        )
+    }
+
+    /// The verbatim timeout retry: the pinned floor re-emitted, no requote
+    /// attributes on the event (#660).
+    fn timeout_response_with_floor(
+        leg: &CoinDTO<OutG>,
+        pinned_floor: &CoinDTO<OutG>,
+        env: &Env,
+    ) -> MessageResponse {
+        MessageResponse::messages_with_event(
+            mock::swap_request(leg, pinned_floor).expect("a valid swap request"),
+            Emitter::of_type(mock::LABEL)
+                .emit("id", env.contract.address.clone())
+                .emit("timeout", "retry"),
+        )
+    }
+
+    /// The requoting timeout retry (#660): the fresh floor is promised on the
+    /// wire, and the retry event gains the additive `min-out-prev` /
+    /// `min-out` coin attributes — the SPEC of the event keys.
+    fn requote_timeout_response(
+        leg: &CoinDTO<OutG>,
+        prev_floor: &CoinDTO<OutG>,
+        fresh_floor: &CoinDTO<OutG>,
+        env: &Env,
+    ) -> MessageResponse {
+        MessageResponse::messages_with_event(
+            mock::swap_request(leg, fresh_floor).expect("a valid swap request"),
+            Emitter::of_type(mock::LABEL)
+                .emit("id", env.contract.address.clone())
+                .emit("timeout", "retry")
+                .emit_coin_dto("min-out-prev", prev_floor)
+                .emit_coin_dto("min-out", fresh_floor),
+        )
+    }
+
+    /// The oracle-failure fallback round (#660): the pinned floor re-emitted
+    /// and the skipped requote marked with `requote = skipped` — the SPEC of
+    /// the skip-marker key.
+    fn skipped_requote_timeout_response(
+        leg: &CoinDTO<OutG>,
+        pinned_floor: &CoinDTO<OutG>,
+        env: &Env,
+    ) -> MessageResponse {
+        MessageResponse::messages_with_event(
+            mock::swap_request(leg, pinned_floor).expect("a valid swap request"),
+            Emitter::of_type(mock::LABEL)
+                .emit("id", env.contract.address.clone())
+                .emit("timeout", "retry")
+                .emit("requote", "skipped"),
         )
     }
 

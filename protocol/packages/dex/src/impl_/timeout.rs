@@ -18,10 +18,29 @@ where
     S: Enterable + Into<SEnum>,
     L: Into<String>,
 {
+    on_timeout_retry_extended(current_state, state_label, querier, env, |emitter| emitter)
+}
+
+/// Re-emit like [`on_timeout_retry`], with `extend` appending extra
+/// attributes to the retry event. The #660 liquidation requote carries the
+/// previous and the freshly re-quoted floor there, or marks a skipped
+/// requote, on top of the base `timeout = retry`.
+pub(crate) fn on_timeout_retry_extended<S, SEnum, L, Extend>(
+    current_state: S,
+    state_label: L,
+    querier: QuerierWrapper<'_>,
+    env: Env,
+    extend: Extend,
+) -> Result<StateMachineResponse<SEnum>>
+where
+    S: Enterable + Into<SEnum>,
+    L: Into<String>,
+    Extend: FnOnce(Emitter) -> Emitter,
+{
     current_state
         .enter(env.block.time.into_instant(), querier)
         .map(|batch| {
-            let emitter = emit_timeout(state_label, env.contract.address);
+            let emitter = extend(emit_timeout(state_label, env.contract.address));
 
             StateMachineResponse::from(
                 MessageResponse::messages_with_event(batch, emitter),

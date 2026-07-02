@@ -32,6 +32,16 @@ where
     /// The output swap currency
     type OutC: CurrencyDef;
 
+    /// Whether a leg quoted by this calculator re-quotes its floor from the
+    /// live oracle on each in-budget timeout, instead of re-emitting the
+    /// floor pinned at the leg's first emission.
+    ///
+    /// Defaults to `false` - the pinned floor is re-emitted verbatim. Only
+    /// the bounded max-slippage liquidation calculator opts in, so a
+    /// liquidation leg tracks the live price down and up as it retries while
+    /// every other class keeps its original promise.
+    const REQUOTES_ON_TIMEOUT: bool = false;
+
     /// Determine the minimum output amount of a swap
     ///
     /// An anomaly is triggered if the output amount cannot be satisfied. The

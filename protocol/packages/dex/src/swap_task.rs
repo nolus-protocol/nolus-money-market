@@ -90,6 +90,22 @@ where
         false
     }
 
+    /// Whether an in-flight leg re-quotes its floor from the live oracle on
+    /// each in-budget timeout, instead of re-emitting the floor pinned at the
+    /// leg's first emission.
+    ///
+    /// Defaults to `false`: opening, repay, customer-close and profit
+    /// buy-back legs re-emit the pinned floor verbatim, so their promise is
+    /// stable across retries. Only the liquidation `SellAsset` spec overrides
+    /// it, forwarding its calculator's `SlippageCalculator::REQUOTES_ON_TIMEOUT`
+    /// so a liquidation leg re-quotes bounded by `MaxSlippages.liquidation`
+    /// and clears against a moving price. Re-quoting is only meaningful with a
+    /// `SlippageEscalation::Park` escalation - the past-budget re-emission is
+    /// always verbatim.
+    fn requote_on_timeout(&self) -> bool {
+        false
+    }
+
     /// Provide the coins, at least one, this swap is about.
     /// The iteration is done always in the same order.
     //
