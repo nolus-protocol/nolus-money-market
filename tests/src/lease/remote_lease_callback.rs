@@ -147,7 +147,7 @@ fn non_swap_operation_ok_is_absorbed() {
     assert_swap_pending(&test_case, lease);
 }
 
-// Round-2 #644 backfill: a fully-opened, active lease has no in-flight remote
+// A fully-opened, active lease has no in-flight remote
 // operation and no override for `on_remote_lease_callback`, so the lease
 // `Handler` default rejects the callback as an unsupported operation — even one
 // from the pinned controller. This pins today's contract; the reverting-ack

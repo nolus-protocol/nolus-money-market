@@ -15,6 +15,7 @@ use finance::{
     rational::Rational,
     zero::Zero,
 };
+use lease::api::query::opened::RepayTrx;
 use lease::{
     api::{
         ExecuteMsg,
@@ -355,11 +356,9 @@ fn repay_funds_the_swap_before_swapping() {
 /// `DexError::Unauthorized` shape the dex leg surfaces, and the swap stays put.
 #[test]
 fn repay_swap_callback_from_stranger_rejected() {
-    use lease::api::query::opened::RepayTrx;
-
     let mut test_case: LeaseTestCase = super::create_test_case::<PaymentCurrency>();
     let (lease, _controller) = open_and_hold_repay_swap(&mut test_case);
-    assert_repay_trx(&test_case, &lease, RepayTrx::Swap);
+    assert_repay_trx(RepayTrx::Swap, &test_case, &lease);
 
     let err = test_case
         .app
@@ -384,7 +383,7 @@ fn repay_swap_callback_from_stranger_rejected() {
         ),
         "expected DexError::Unauthorized, got {contract_err:?}"
     );
-    assert_repay_trx(&test_case, &lease, RepayTrx::Swap);
+    assert_repay_trx(RepayTrx::Swap, &test_case, &lease);
 }
 
 /// The in-flight repay proceeds drain authorises callbacks against the pinned
@@ -393,8 +392,6 @@ fn repay_swap_callback_from_stranger_rejected() {
 /// in its transfer-out.
 #[test]
 fn repay_proceeds_drain_callback_from_stranger_rejected() {
-    use lease::api::query::opened::RepayTrx;
-
     let mut test_case: LeaseTestCase = super::create_test_case::<PaymentCurrency>();
     let (lease, controller) = open_and_hold_repay_swap(&mut test_case);
 
@@ -402,7 +399,7 @@ fn repay_proceeds_drain_callback_from_stranger_rejected() {
     // `Delayed` TRANSFER_OUT mode then holds in flight.
     let _swap_ack =
         stub::deliver_pending_callback(&mut test_case.app, &controller, stub::op_tag::SWAP);
-    assert_repay_trx(&test_case, &lease, RepayTrx::TransferOut);
+    assert_repay_trx(RepayTrx::TransferOut, &test_case, &lease);
 
     let err = test_case
         .app
@@ -427,7 +424,7 @@ fn repay_proceeds_drain_callback_from_stranger_rejected() {
         ),
         "expected DexError::Unauthorized, got {contract_err:?}"
     );
-    assert_repay_trx(&test_case, &lease, RepayTrx::TransferOut);
+    assert_repay_trx(RepayTrx::TransferOut, &test_case, &lease);
 }
 
 pub(crate) fn repay_partial<ProtocolsRegistry, Treasury, Profit, Reserve, Leaser, Lpp, Oracle>(
@@ -890,11 +887,7 @@ fn open_and_hold_repay_swap(test_case: &mut LeaseTestCase) -> (Addr, Addr) {
 }
 
 #[track_caller]
-fn assert_repay_trx(
-    test_case: &LeaseTestCase,
-    lease: &Addr,
-    expected: lease::api::query::opened::RepayTrx,
-) {
+fn assert_repay_trx(expected: RepayTrx, test_case: &LeaseTestCase, lease: &Addr) {
     use lease::api::query::opened::OngoingTrx;
 
     match super::state_query(test_case, lease.clone()) {

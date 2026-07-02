@@ -517,7 +517,7 @@ fn opening_swap_pins_the_opening_bound() {
 // A decodable success ack whose output is a valid lease asset but not the
 // opening's output currency is absorbed at deliver-ack's currency guard, before
 // the amount is inspected. The behaviour already ships; this closes the arm's
-// integration gap (#644).
+// integration gap.
 #[test]
 fn opening_swap_out_currency_mismatch_absorbed() {
     const MISMATCHED_OUTPUT: u128 = 1_000_000;
