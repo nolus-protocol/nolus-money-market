@@ -4,7 +4,12 @@ use access_control::SingleUserAccess;
 use cosmwasm_std::Storage;
 use cw_time::{IntoInstant as _, IntoTimestamp as _};
 use finance::{duration::Duration, instant::Instant};
-use platform::{error as platform_error, message::Response as PlatformResponse, response};
+use platform::{
+    contract::{self, Code, CodeId},
+    error as platform_error,
+    message::Response as PlatformResponse,
+    response,
+};
 use remote_lease::{
     envelope::{LeaseAddrOnWire, PacketEnvelope},
     msg::Operation,
@@ -122,7 +127,7 @@ pub fn execute(
         ExecuteMsg::NewLeaseCode {
             lease_code: new_lease_code,
         } => authorize_protocol_admin_only(deps.storage.deref(), &info)
-            .and_then(|()| Config::update_lease_code(deps.storage, new_lease_code))
+            .and_then(|()| set_lease_code(deps, new_lease_code))
             .map(|()| PlatformResponse::default()),
         ExecuteMsg::OpenLease { params, timeout } => send_operation(
             deps,
@@ -207,6 +212,20 @@ fn authorize_protocol_admin_only(store: &dyn Storage, call_message: &MessageInfo
     SingleUserAccess::new(store, crate::access_control::PROTOCOL_ADMIN_KEY)
         .check(call_message)
         .map_err(Into::into)
+}
+
+/// Confirm the rotated lease code exists on-chain before persisting it.
+///
+/// `instantiate` validates `lease_code` through `try_validate`; this mirrors
+/// that check on the update path so an admin cannot persist a non-existent code
+/// id that would then reject every authorised caller and brick outbound emission.
+fn set_lease_code(deps: DepsMut<'_>, new_lease_code: Code) -> Result<()> {
+    Code::try_new(
+        CodeId::from(new_lease_code),
+        &contract::validator(deps.querier),
+    )
+    .map_err(Error::from)
+    .and_then(|validated_code| Config::update_lease_code(deps.storage, validated_code))
 }
 
 fn open_channel(storage: &mut dyn Storage, env: &Env) -> Result<PlatformResponse> {
