@@ -253,10 +253,19 @@ lease's dex state machine.**
   event so the ack commits and the relayer loop unblocks.
 - **Lease** auto-recovers: on a swap leg, timeouts re-emit up to a per-operation budget
   then park at the slippage-anomaly terminal; under-floor errors escalate per policy;
-  underpaid acks re-emit with a bumped nonce. The opening/repay **funding** legs are
-  forward-only instead — a timeout or error ack re-emits the single in-flight ICS-20
-  transfer verbatim, with no budget and no park (the refunded coin must go out again for
-  the open/repay to progress).
+  underpaid acks re-emit with a bumped nonce. **Liquidation** swap legs re-quote their
+  floor from the live oracle on each in-budget timeout re-emission — bounded by
+  `MaxSlippages.liquidation`, tracking the price both down and up, clamped to `>= 1` —
+  so a stale floor cannot strand a liquidation as the market moves; the opening, repay,
+  customer-close, and profit buy-back legs instead re-emit the **pinned** floor verbatim.
+  An oracle-query failure at re-quote time falls back to the pinned floor and marks the
+  retry event `requote = skipped`. The re-quote is escalation-agnostic — the past-budget
+  escalation never re-quotes — so floor erosion stays bounded by the retry budget and the
+  leg still parks at the slippage-anomaly terminal intact, carrying the last re-quoted
+  floor. `Heal` on a live swap leg is unaffected: it re-emits the pinned floor (§4.3).
+  The opening/repay **funding** legs are forward-only instead — a timeout or error ack
+  re-emits the single in-flight ICS-20 transfer verbatim, with no budget and no park (the
+  refunded coin must go out again for the open/repay to progress).
 - **Controller** never retries on the lease's behalf.
 - Relayer retry **cadence/max-retries** is hermes-lite relayer configuration, not a
   contract property — consult the relayer for the actual numbers.
@@ -320,8 +329,10 @@ the channel-level timeout over an eager `Heal`.
 
 There is no contract query for the in-flight nonce. Diagnose via emitted events:
 `heal`/re-emit, `anomaly/under-min-out`, `anomaly/slippage-anomaly-parked`,
-`anomaly/price-alarm-dropped`, `timeout/retry`, and `absorbed/<reason>` (reasons include
-`nonce-mismatch`, `parked-response`/`-error`/`-timeout`, `undecodable-response`,
+`anomaly/price-alarm-dropped`, `timeout/retry` (on a liquidation leg it additionally
+carries `min-out-prev` + `min-out` when it re-quoted, or `requote = skipped` when the
+oracle query failed and the pinned floor was reused), and `absorbed/<reason>` (reasons
+include `nonce-mismatch`, `parked-response`/`-error`/`-timeout`, `undecodable-response`,
 `out-currency-mismatch`) — plus `StateResponse`.
 
 ---
