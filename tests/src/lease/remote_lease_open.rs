@@ -1,19 +1,25 @@
 //! Open-lifecycle E2E for the remote-lease lifecycle: happy path,
-//! `OperationErr` auto-refund, and late-ack absorber on the `OpenFailed`
-//! terminal. Targets the post-refactor query surface (`StateResponse::
-//! OpenFailed`, `OngoingTrx::OpenLease`) and the
-//! `wasm-remote-lease-open-failed` / `wasm-remote-lease-late-ack` events.
+//! `OperationErr` and `OperationTimeout` auto-refund, late-ack absorber on
+//! the `OpenFailed` terminal, and unauthorized-caller rejection at the
+//! in-flight `OpenLease` and terminal `OpenFailed` callback boundaries.
+//! Targets the post-refactor query surface (`StateResponse::OpenFailed`,
+//! `OngoingTrx::OpenLease`) and the `wasm-remote-lease-open-failed` /
+//! `wasm-remote-lease-late-ack` events.
 
 use crate::common::testing;
 use crate::common::{
     self, USER,
     remote_lease_controller_stub::{self as stub, ResponseMode, op_tag},
 };
+use access_control::error::Error as AccessError;
 use currencies::Lpn;
 use finance::coin::Coin;
-use lease::api::{
-    ExecuteMsg,
-    query::{StateResponse, opening::OngoingTrx as OpeningOngoingTrx},
+use lease::{
+    api::{
+        ExecuteMsg,
+        query::{StateResponse, opening::OngoingTrx as OpeningOngoingTrx},
+    },
+    error::ContractError,
 };
 use remote_lease::{
     callback::{RemoteErrorMessage, RemoteLeaseCallback, RemoteOperationOutcome},
@@ -24,6 +30,10 @@ use sdk::cosmwasm_std::Addr;
 use super::{LeaseCoin, LeaseCurrency};
 
 const DOWNPAYMENT: LeaseCoin = LeaseCoin::new(10_000);
+
+/// The reason the `OpenLease` timeout arm records — mirrors the production
+/// `open_lease::TIMEOUT_REASON`.
+const TIMEOUT_REASON: &str = "timeout";
 
 #[test]
 fn open_lifecycle_happy_path() {
@@ -274,6 +284,194 @@ fn late_open_lease_ack_after_open_failed_is_absorbed() {
         } => assert_eq!(reason.as_str(), state_reason.as_str()),
         other => panic!("expected StateResponse::OpenFailed, got {other:?}"),
     }
+}
+
+#[test]
+fn open_failed_on_timeout_refunds_and_finalises() {
+    let mut test_case = super::create_test_case::<LeaseCurrency>();
+    let controller = test_case.address_book.remote_lease_controller().clone();
+    let leaser = test_case.address_book.leaser().clone();
+    // Hold the lease pre-ack in `OpenLease` so the timeout below reaches the
+    // in-flight OpenLease operation rather than the auto-synthesised happy path.
+    stub::set_response_mode(
+        &mut test_case.app,
+        &controller,
+        op_tag::OPEN_LEASE,
+        ResponseMode::Delayed,
+    );
+
+    let customer = testing::user(USER);
+    let balance_before = balance::<LeaseCurrency>(&test_case, &customer);
+
+    let response = test_case
+        .app
+        .execute(
+            customer.clone(),
+            leaser.clone(),
+            &leaser::msg::ExecuteMsg::OpenLease {
+                currency: currency::dto::<LeaseCurrency, _>(),
+                max_ltd: None,
+            },
+            &[common::cwcoin::<LeaseCurrency>(DOWNPAYMENT)],
+        )
+        .unwrap()
+        .unwrap_response();
+
+    let lease = lease_address_from(&response.events).expect("instantiate event carries the addr");
+
+    // The IBC layer reports the OpenLease packet was never acknowledged; the
+    // lease must refund and finalise exactly as it does on an `OperationErr`.
+    let timeout = RemoteLeaseCallback {
+        nonce: 0,
+        outcome: RemoteOperationOutcome::OperationTimeout,
+    };
+    let failed = test_case
+        .app
+        .execute(
+            controller.clone(),
+            lease.clone(),
+            &ExecuteMsg::RemoteLeaseCallback(timeout),
+            &[],
+        )
+        .expect("a timeout must be absorbed as an open failure")
+        .unwrap_response();
+
+    let event_reason = failed
+        .events
+        .iter()
+        .find(|event| event.ty == "wasm-ls-remote-lease-open-failed")
+        .and_then(|event| event.attributes.iter().find(|attr| attr.key == "reason"))
+        .map(|attr| attr.value.as_str())
+        .expect("a timeout must emit the open-failed event with a reason");
+    assert_eq!(TIMEOUT_REASON, event_reason);
+
+    let balance_after = balance::<LeaseCurrency>(&test_case, &customer);
+    assert_eq!(
+        balance_before, balance_after,
+        "downpayment must be refunded in full",
+    );
+
+    let leases = leases_of(&test_case, &leaser, &customer);
+    assert!(leases.is_empty(), "leaser must show no live lease");
+
+    match super::state_query(&test_case, lease) {
+        StateResponse::OpenFailed { reason } => assert_eq!(TIMEOUT_REASON, reason.as_str()),
+        other => panic!("expected StateResponse::OpenFailed, got {other:?}"),
+    }
+}
+
+#[test]
+fn open_lease_callback_from_stranger_rejected() {
+    let mut test_case = super::create_test_case::<LeaseCurrency>();
+    let controller = test_case.address_book.remote_lease_controller().clone();
+    let leaser = test_case.address_book.leaser().clone();
+    // Hold the lease pre-ack in `OpenLease` so the stranger's callback lands on
+    // the in-flight OpenLease operation.
+    stub::set_response_mode(
+        &mut test_case.app,
+        &controller,
+        op_tag::OPEN_LEASE,
+        ResponseMode::Delayed,
+    );
+
+    let customer = testing::user(USER);
+    let response = test_case
+        .app
+        .execute(
+            customer.clone(),
+            leaser.clone(),
+            &leaser::msg::ExecuteMsg::OpenLease {
+                currency: currency::dto::<LeaseCurrency, _>(),
+                max_ltd: None,
+            },
+            &[common::cwcoin::<LeaseCurrency>(DOWNPAYMENT)],
+        )
+        .unwrap()
+        .unwrap_response();
+
+    let lease = lease_address_from(&response.events).expect("instantiate event carries the addr");
+
+    let err = test_case
+        .app
+        .execute(
+            testing::user(USER),
+            lease.clone(),
+            &ExecuteMsg::RemoteLeaseCallback(RemoteLeaseCallback {
+                nonce: 0,
+                outcome: RemoteOperationOutcome::OperationTimeout,
+            }),
+            &[],
+        )
+        .expect_err("a stranger's open-lease callback must be rejected");
+
+    let contract_err = err
+        .downcast_ref::<ContractError>()
+        .expect("must surface as lease ContractError");
+    assert!(
+        matches!(
+            contract_err,
+            ContractError::Unauthorized(AccessError::Unauthorized {})
+        ),
+        "expected ContractError::Unauthorized, got {contract_err:?}"
+    );
+}
+
+#[test]
+fn open_failed_late_ack_from_stranger_rejected() {
+    let mut test_case = super::create_test_case::<LeaseCurrency>();
+    let controller = test_case.address_book.remote_lease_controller().clone();
+    let leaser = test_case.address_book.leaser().clone();
+    let reason = RemoteErrorMessage::new("solana side rejected").expect("within length cap");
+    stub::set_response_mode(
+        &mut test_case.app,
+        &controller,
+        op_tag::OPEN_LEASE,
+        ResponseMode::Err(reason),
+    );
+
+    let customer = testing::user(USER);
+    let response = test_case
+        .app
+        .execute(
+            customer.clone(),
+            leaser.clone(),
+            &leaser::msg::ExecuteMsg::OpenLease {
+                currency: currency::dto::<LeaseCurrency, _>(),
+                max_ltd: None,
+            },
+            &[common::cwcoin::<LeaseCurrency>(DOWNPAYMENT)],
+        )
+        .unwrap()
+        .unwrap_response();
+
+    let lease = lease_address_from(&response.events).expect("instantiate event carries the addr");
+
+    // The Err mode already drove the lease to the `OpenFailed` terminal; a
+    // stranger's late ack is rejected by the same auth gate the in-flight
+    // states use, before the late-ack absorber can run.
+    let err = test_case
+        .app
+        .execute(
+            testing::user(USER),
+            lease.clone(),
+            &ExecuteMsg::RemoteLeaseCallback(RemoteLeaseCallback {
+                nonce: 0,
+                outcome: RemoteOperationOutcome::OperationTimeout,
+            }),
+            &[],
+        )
+        .expect_err("a stranger's late ack must be rejected");
+
+    let contract_err = err
+        .downcast_ref::<ContractError>()
+        .expect("must surface as lease ContractError");
+    assert!(
+        matches!(
+            contract_err,
+            ContractError::Unauthorized(AccessError::Unauthorized {})
+        ),
+        "expected ContractError::Unauthorized, got {contract_err:?}"
+    );
 }
 
 fn balance<C>(test_case: &super::LeaseTestCase, account: &Addr) -> Coin<C>
