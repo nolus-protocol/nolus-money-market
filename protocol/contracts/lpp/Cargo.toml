@@ -54,3 +54,4 @@ serde = { workspace = true, features = ["derive"] }
 currencies = { workspace = true, features = ["testing"] }
 finance = { workspace = true, features = ["testing"] }
 platform = { workspace = true, features = ["testing"] }
+sdk = { workspace = true, features = ["testing"] }

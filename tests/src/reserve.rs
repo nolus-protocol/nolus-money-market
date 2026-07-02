@@ -18,6 +18,7 @@ use sdk::{
 use crate::{
     common::{
         self,
+        lease::Instantiator as LeaseInstantiator,
         leaser::Instantiator as LeaserInstantiator,
         test_case::{
             TestCase, app::App, builder::BlankBuilder as TestCaseBuilder,
@@ -47,7 +48,7 @@ fn instantiate() {
 fn new_lease_code() {
     let mut test_case = TestCaseBuilder::<Lpn>::new().init_reserve().into_generic();
     let reserve = test_case.address_book.reserve().clone();
-    let new_lease_code = Code::unchecked(12);
+    let new_lease_code = LeaseInstantiator::store(&mut test_case.app);
     let err = set_new_lease_code(
         &mut test_case.app,
         reserve.clone(),
@@ -72,6 +73,30 @@ fn new_lease_code() {
 
     assert_lpn(&test_case, reserve.clone(), &currency::dto::<Lpn, _>());
     assert_config(&test_case, reserve, &ConfigResponse::new(new_lease_code));
+}
+
+#[test]
+fn new_lease_code_rejects_unknown_code() {
+    let mut test_case = TestCaseBuilder::<Lpn>::new().init_reserve().into_generic();
+    let reserve = test_case.address_book.reserve().clone();
+    let stored_lease_code = test_case.address_book.lease_code();
+    let unknown_lease_code = Code::unchecked(u64::from(stored_lease_code) + 100);
+
+    let err = set_new_lease_code(
+        &mut test_case.app,
+        reserve.clone(),
+        LeaserInstantiator::expected_addr(),
+        unknown_lease_code,
+    )
+    .unwrap_err();
+    assert!(matches!(
+        err.downcast_ref::<ReserveError>(),
+        Some(&ReserveError::Platform(
+            PlatformError::CosmWasmQueryCodeInfo(_)
+        ))
+    ));
+
+    assert_config(&test_case, reserve, &ConfigResponse::new(stored_lease_code));
 }
 
 #[test]

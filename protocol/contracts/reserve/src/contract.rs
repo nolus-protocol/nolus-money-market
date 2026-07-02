@@ -8,7 +8,7 @@ use finance::coin::Coin;
 use platform::{
     bank::{self, BankAccount, BankAccountView},
     batch::{Emit, Emitter},
-    contract::{self, Validator},
+    contract::{self, Code, CodeId, Validator},
     error as platform_error,
     message::Response as PlatformResponse,
     response,
@@ -29,6 +29,9 @@ use crate::{
     error::{Error, Result},
     state::Config,
 };
+
+#[cfg(test)]
+mod tests;
 
 const CONTRACT_STORAGE_VERSION: VersionSegment = 0;
 const CURRENT_RELEASE: ProtocolPackageRelease = ProtocolPackageRelease::current(
@@ -91,10 +94,11 @@ pub fn execute(
     info: MessageInfo,
     msg: ExecuteMsg,
 ) -> Result<CwResponse> {
+    let api = deps.api;
     match msg {
         ExecuteMsg::NewLeaseCode(code) => {
             authorize_protocol_admin_only(deps.storage.deref(), &info)
-                .and_then(|()| Config::update_lease_code(deps.storage, code))
+                .and_then(|()| set_lease_code(deps, code))
                 .map(|()| PlatformResponse::default())
         }
         ExecuteMsg::CoverLiquidationLosses(amount) => Config::load(deps.storage)
@@ -114,7 +118,7 @@ pub fn execute(
         }
     }
     .map(response::response_only_messages)
-    .inspect_err(platform_error::log(deps.api))
+    .inspect_err(platform_error::log(api))
 }
 
 #[entry_point]
@@ -138,6 +142,21 @@ fn authorize_protocol_admin_only(store: &dyn Storage, call_message: &MessageInfo
     SingleUserAccess::new(store, crate::access_control::PROTOCOL_ADMIN_KEY)
         .check(call_message)
         .map_err(Into::into)
+}
+
+/// Confirm the rotated lease code exists on-chain before persisting it.
+///
+/// `instantiate` validates `lease_code` through `try_validate`; this mirrors
+/// that check on the update path so an admin cannot persist a non-existent code
+/// id that would then reject every authorised caller and brick downstream lease
+/// loss coverage.
+fn set_lease_code(deps: DepsMut<'_>, new_lease_code: Code) -> Result<()> {
+    Code::try_new(
+        CodeId::from(new_lease_code),
+        &contract::validator(deps.querier),
+    )
+    .map_err(Error::from)
+    .and_then(|validated_code| Config::update_lease_code(deps.storage, validated_code))
 }
 
 fn do_cover_losses(

@@ -12,7 +12,13 @@ use currencies::{
 };
 use cw_time::IntoInstant;
 
-use platform::{bank, error as platform_error, message::Response as PlatformResponse, response};
+use platform::{
+    bank,
+    contract::{self, Code, CodeId},
+    error as platform_error,
+    message::Response as PlatformResponse,
+    response,
+};
 use sdk::{
     cosmwasm_ext::Response as CwResponse,
     cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, QuerierWrapper, entry_point},
@@ -36,6 +42,8 @@ mod borrow;
 mod error;
 mod lender;
 mod rewards;
+#[cfg(test)]
+mod tests;
 
 const CONTRACT_STORAGE_VERSION: VersionSegment = 3;
 const CURRENT_RELEASE: ProtocolPackageRelease = ProtocolPackageRelease::current(
@@ -117,7 +125,7 @@ pub fn execute(
             )
             .check(&info)?;
 
-            Config::update_lease_code(deps.storage, new_lease_code)
+            set_lease_code(deps, new_lease_code)
                 .map(|()| PlatformResponse::default())
                 .map(response::response_only_messages)
         }
@@ -305,6 +313,20 @@ fn to_stable(
 ) -> Result<Coin<StableCurrency>> {
     stub::from_quote::<_, LpnCurrencies, StableCurrency, PaymentGroup>(oracle, total, querier)
         .map_err(ContractError::ConvertFromQuote)
+}
+
+/// Confirm the rotated lease code exists on-chain before persisting it.
+///
+/// `instantiate` validates `lease_code` through `try_validate`; this mirrors
+/// that check on the update path so an admin cannot persist a non-existent code
+/// id that would then reject every lease authorising against the pool.
+fn set_lease_code(deps: DepsMut<'_>, new_lease_code: Code) -> Result<()> {
+    Code::try_new(
+        CodeId::from(new_lease_code),
+        &contract::validator(deps.querier),
+    )
+    .map_err(ContractError::from)
+    .and_then(|validated_code| Config::update_lease_code(deps.storage, validated_code))
 }
 
 #[cfg(test)]

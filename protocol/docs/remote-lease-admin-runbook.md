@@ -186,13 +186,27 @@ lease-side `wasm-ls-close-remote-lease` events out-of-band until none remain in 
 Updates **only** `Config.lease_code` and emits **zero** messages. No channel impact.
 `protocol_admin` only.
 
-### 3.2 The silent-success trap
+### 3.2 Rotation is existence-checked (the former silent-success trap)
 
-`Code` deserializes with **no on-chain existence check** — a typo'd or non-existent code
-id **succeeds silently**. The only later symptom is that **every** legitimate lease call
-fails with `UnauthorisedCaller` (the controller authorizes packet senders against
-`Config.lease_code`). **Mandatory:** immediately after `NewLeaseCode`, run
-`QueryMsg::Config()` and confirm `lease_code_id` equals the redeployed Lease code id.
+`NewLeaseCode` confirms the rotated id exists on-chain (`WasmQuery::CodeInfo` via
+`Code::try_new`) **before** persisting — the same check `instantiate` runs on
+`lease_code`. A typo'd or non-existent id is **rejected with a typed error and the stored
+`lease_code` is left unchanged**; the rotation simply does not take effect. The
+remote_lease controller, `reserve`, and `lpp` all validate on rotation now (`leaser` and
+`remote_profit` already did), so a bad id can no longer slip through any of them.
+
+This closes the old trap: previously `Code` deserialized with **no** existence check, so a
+typo'd id **succeeded silently** and **bricked the contract until a corrective rotation** —
+every legitimate lease call then failed with `UnauthorisedCaller` (the controller
+authorizes packet senders against `Config.lease_code`). The failure mode has shifted: a
+bad rotation now **fails closed with state unchanged** instead of leaving a bricked
+contract behind.
+
+**Existence is not correctness.** The check proves the id resolves to *some* uploaded
+code, not that it is the *right* redeployed Lease. A valid-but-wrong id still passes and
+still strands lease calls with `UnauthorisedCaller`. **Still recommended:** immediately
+after `NewLeaseCode`, run `QueryMsg::Config()` and confirm `lease_code_id` equals the
+redeployed Lease code id.
 
 ### 3.3 Coordination with a Lease redeploy
 
@@ -229,7 +243,11 @@ old-code lease to a terminal state before rotating.**
 
 ### 3.6 Failure & recovery
 
-- **Wrong id** → re-issue `NewLeaseCode` with the correct id (no other state touched).
+- **Non-existent id** → rejected up-front with a typed error; nothing is persisted and the
+  live `lease_code` is unchanged (§3.2). Re-issue `NewLeaseCode` with a real id.
+- **Valid-but-wrong id** (resolves on-chain, but not the redeployed Lease) → passes the
+  existence check and is persisted; the symptom is `UnauthorisedCaller` on lease ops.
+  Re-issue `NewLeaseCode` with the correct id (no other state touched).
 - **Stranded old-code lease** → none after the fact; it must reach terminal via the
   existing callback flows. It cannot be upgraded.
 - `NewLeaseCode` on an uninstantiated/corrupted config → `Std` error (config stays unset).

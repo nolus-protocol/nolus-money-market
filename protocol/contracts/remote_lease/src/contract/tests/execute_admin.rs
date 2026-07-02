@@ -2,7 +2,7 @@ use platform::contract::{Code, CodeId, external};
 use sdk::{
     cosmos_sdk_proto::prost::Message as _,
     cosmwasm_ext::{CosmosMsg, SubMsg},
-    cosmwasm_std::{AnyMsg, IbcMsg, testing},
+    cosmwasm_std::{AnyMsg, IbcMsg, SystemError, SystemResult, WasmQuery, testing},
     ibc_proto::ibc::core::channel::v1::MsgChannelOpenInit,
 };
 
@@ -207,6 +207,41 @@ fn new_lease_code_non_admin_rejected() {
     )
     .unwrap_err();
     assert!(matches!(err, Error::Unauthorized(_)), "got {err:?}");
+
+    let config = query_config(deps.as_ref());
+    assert_eq!(external::Code::from(LEASE_CODE_ID), config.lease_code_id);
+}
+
+#[test]
+fn new_lease_code_rejects_unknown_code() {
+    let mut deps = deps();
+    instantiate(
+        deps.as_mut(),
+        testing::mock_env(),
+        sender(super::CREATOR),
+        instantiate_msg(),
+    )
+    .unwrap();
+
+    // The rotated code id now resolves to no on-chain code, so the existence
+    // check must reject it and leave the stored code untouched.
+    deps.querier.update_wasm(|query| match query {
+        WasmQuery::CodeInfo { code_id } => {
+            SystemResult::Err(SystemError::NoSuchCode { code_id: *code_id })
+        }
+        _ => unimplemented!("unexpected wasm query in this test"),
+    });
+
+    let err = execute(
+        deps.as_mut(),
+        testing::mock_env(),
+        sender(ADMIN),
+        ExecuteMsg::NewLeaseCode {
+            lease_code: Code::unchecked(LEASE_CODE_ID + 9),
+        },
+    )
+    .unwrap_err();
+    assert!(matches!(err, Error::Platform(_)), "got {err:?}");
 
     let config = query_config(deps.as_ref());
     assert_eq!(external::Code::from(LEASE_CODE_ID), config.lease_code_id);
