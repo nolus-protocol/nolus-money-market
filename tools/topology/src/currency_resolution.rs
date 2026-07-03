@@ -139,8 +139,8 @@ impl Topology {
         } else {
             overriden_symbol = overriden_symbol.or_else(|| ibc.overriden_symbol());
 
-            if overriden_symbol.is_none() {
-                if let Some(channel_id) = channels
+            if overriden_symbol.is_none()
+                && let Some(channel_id) = channels
                     .get(traversed_networks.last().unwrap_or_else(
                         #[inline]
                         || {
@@ -151,12 +151,11 @@ impl Topology {
                         },
                     ))
                     .and_then(|connected_networks| connected_networks.get(ibc.network()))
-                {
-                    dex_symbol.add_channel(channel_id);
-                }
-
-                traversed_networks.push(ibc.network());
+            {
+                dex_symbol.add_channel(channel_id);
             }
+
+            traversed_networks.push(ibc.network());
 
             networks
                 .get(ibc.network())

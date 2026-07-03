@@ -30,3 +30,33 @@ impl Ibc {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::Ibc;
+
+    #[test]
+    fn overriden_symbol_present() {
+        const SOURCE: &str =
+            r#"{"network": "NetA", "currency": "CUR", "override_symbol": "myovr"}"#;
+
+        let ibc = serde_json::from_str::<'_, Ibc>(SOURCE)
+            .expect("Ibc with an override symbol should deserialize!");
+
+        assert_eq!(
+            ibc.overriden_symbol().map(|id| id.as_ref()),
+            Some("myovr"),
+            "{ibc:?}"
+        );
+    }
+
+    #[test]
+    fn overriden_symbol_absent() {
+        const SOURCE: &str = r#"{"network": "NetA", "currency": "CUR"}"#;
+
+        let ibc = serde_json::from_str::<'_, Ibc>(SOURCE)
+            .expect("Ibc without an override symbol should deserialize!");
+
+        assert!(ibc.overriden_symbol().is_none(), "{ibc:?}");
+    }
+}
