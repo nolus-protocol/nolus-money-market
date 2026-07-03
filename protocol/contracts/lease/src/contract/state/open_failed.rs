@@ -115,7 +115,7 @@ mod tests {
     fn absorb_response() -> MessageResponse {
         let emitter = Emitter::of_type("ls-remote-lease-late-ack")
             .emit("id", testing::mock_env().contract.address)
-            .emit("terminal", "open_failed");
+            .emit("state", "open_failed");
         MessageResponse::messages_with_event(Batch::default(), emitter)
     }
 }
@@ -170,7 +170,7 @@ impl Contract for OpenFailed {
         .map_err(ContractError::from)?;
         let emitter = Emitter::of_type(LATE_ACK_EVENT)
             .emit("id", env.contract.address)
-            .emit("terminal", "open_failed");
+            .emit("state", "open_failed");
         Ok(StateMachineResponse::from(
             MessageResponse::messages_with_event(Batch::default(), emitter),
             super::State::from(self),

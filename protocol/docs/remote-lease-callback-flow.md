@@ -231,7 +231,7 @@ Opened ──final repay──▶ paid::start_close
         OperationOk(CloseLease) ──▶ Closed (authenticated late-ack
                    │                absorber, like OpenFailed: emits
                    │                `wasm-ls-remote-lease-late-ack`,
-                   │                terminal = closed)
+                   │                state = closed)
                    │
         OperationErr / unexpected OperationOk → absorbed (`absorbed =
         remote-error` / `unexpected-response-variant`), NOT auto-retried —

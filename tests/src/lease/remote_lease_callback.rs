@@ -147,13 +147,13 @@ fn non_swap_operation_ok_is_absorbed() {
     assert_swap_pending(&test_case, lease);
 }
 
-// A fully-opened, active lease has no in-flight remote
-// operation and no override for `on_remote_lease_callback`, so the lease
-// `Handler` default rejects the callback as an unsupported operation — even one
-// from the pinned controller. This pins today's contract; the reverting-ack
-// behaviour on a genuinely-late callback is a known soundness-review candidate.
+// A fully-opened, active lease has no in-flight remote operation, so a
+// genuinely-late controller callback (superseded by a completed drain on the
+// UNORDERED channel) is absorbed with a late-ack event and no state change —
+// an error would revert the controller's acknowledgment transaction and
+// strand the relayer. A stranger is still rejected before absorption.
 #[test]
-fn active_lease_rejects_remote_callback_as_unsupported() {
+fn active_lease_absorbs_late_remote_callback() {
     let mut test_case = super::create_test_case::<PaymentCurrency>();
     let lease = super::open_lease(&mut test_case, super::DOWNPAYMENT, None);
     assert!(
@@ -165,10 +165,43 @@ fn active_lease_rejects_remote_callback_as_unsupported() {
     );
 
     let controller = controller_addr(&test_case);
+    let response = test_case
+        .app
+        .execute(
+            controller,
+            lease.clone(),
+            &ExecuteMsg::RemoteLeaseCallback(RemoteLeaseCallback {
+                nonce: 0,
+                outcome: RemoteOperationOutcome::OperationTimeout,
+            }),
+            &[],
+        )
+        .expect("a late callback from the pinned controller must be absorbed")
+        .unwrap_response();
+    expect_attribute(
+        &response.events,
+        "wasm-ls-remote-lease-late-ack",
+        "state",
+        "active",
+    );
+    assert!(
+        matches!(
+            super::state_query(&test_case, lease),
+            StateResponse::Opened { .. }
+        ),
+        "absorbing the late callback must not change the lease state"
+    );
+}
+
+#[test]
+fn active_lease_rejects_remote_callback_from_stranger() {
+    let mut test_case = super::create_test_case::<PaymentCurrency>();
+    let lease = super::open_lease(&mut test_case, super::DOWNPAYMENT, None);
+
     let err = send_callback(
         &mut test_case.app,
         &lease,
-        controller,
+        testing::user(common::USER),
         RemoteLeaseCallback {
             nonce: 0,
             outcome: RemoteOperationOutcome::OperationTimeout,
@@ -179,8 +212,8 @@ fn active_lease_rejects_remote_callback_as_unsupported() {
         .downcast_ref::<ContractError>()
         .expect("must surface as lease ContractError");
     assert!(
-        matches!(contract_err, ContractError::UnsupportedOperation(_)),
-        "expected UnsupportedOperation, got {contract_err:?}"
+        matches!(contract_err, ContractError::Unauthorized(_)),
+        "expected Unauthorized, got {contract_err:?}"
     );
 }
 

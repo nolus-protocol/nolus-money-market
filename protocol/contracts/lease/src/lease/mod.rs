@@ -212,26 +212,28 @@ pub(crate) mod tests {
     };
     use oracle_platform::{Oracle, error::Result as PriceOracleResult};
     use platform::batch::Batch;
+    use profit::stub::ProfitRef;
     use remote_lease::response::RemoteLeaseId;
     use sdk::cosmwasm_std::Addr;
+    use timealarms::stub::TimeAlarmsRef;
 
     use crate::{
         api::{
             position::{ChangeCmd, ClosePolicyChange},
             query::opened::ClosePolicy,
         },
-        finance::{LpnCurrencies, OracleRef},
+        finance::{LpnCurrencies, OracleRef, ReserveRef},
         loan::Loan,
         position::{Position, Spec as PositionSpec},
     };
 
-    use super::{Lease, State};
+    use super::{Lease, LeaseDTO, State};
 
     const CUSTOMER: &str = "customer";
     const LEASE_ADDR: &str = "lease_addr";
     const ORACLE_ADDR: &str = "oracle_addr";
     const REMOTE_LEASE_ID: &str = "StubPda11111111111111111111111111111";
-    const REMOTE_LEASE_CONTROLLER: &str = "remote_lease_controller";
+    pub(crate) const REMOTE_LEASE_CONTROLLER: &str = "remote_lease_controller";
     const MARGIN_INTEREST_RATE: Percent100 = Percent100::from_permille(23);
     pub(super) const LEASE_START: Instant = Instant::from_nanos(100);
     pub(super) const DUE_PERIOD: Duration = Duration::from_days(100);
@@ -364,6 +366,25 @@ pub(crate) mod tests {
             oracle,
             RemoteLeaseId::new(REMOTE_LEASE_ID.to_owned()).expect("base58 sample"),
             Addr::unchecked(REMOTE_LEASE_CONTROLLER),
+        )
+    }
+
+    /// A representative opened `LeaseDTO` pinned to [`REMOTE_LEASE_CONTROLLER`],
+    /// for the contract-state tests that need a real lease but only read its
+    /// controller — the settled states absorbing a late remote-lease callback.
+    pub(crate) fn open_lease_dto() -> LeaseDTO {
+        const LEASE_AMOUNT: Amount = 1_000;
+        const PRINCIPAL: Amount = 100_000;
+
+        let loan = LoanResponse {
+            principal_due: lpn_coin(PRINCIPAL),
+            annual_interest_rate: Percent100::from_permille(50),
+            interest_paid: LEASE_START,
+        };
+        open_lease(Coin::new(LEASE_AMOUNT), loan).into_dto(
+            ProfitRef::unchecked("profit"),
+            TimeAlarmsRef::unchecked("timealarms"),
+            ReserveRef::unchecked(Addr::unchecked("reserve")),
         )
     }
 
