@@ -54,8 +54,8 @@ pub enum RemoteOperationOutcome {
 /// [`truncated`](Self::truncated) cuts an over-cap counterparty string down
 /// to the cap on a UTF-8 char boundary — used where the ack path must never
 /// reject and strand a committed packet — and
-/// [`from_static`](Self::from_static) trusts a compile-time literal and only
-/// `debug_assert!`s the bound.
+/// [`from_static`](Self::from_static) trusts a compile-time literal and
+/// hard-`assert!`s the bound.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct RemoteErrorMessage(String);
 
@@ -112,17 +112,18 @@ impl RemoteErrorMessage {
     /// Precondition (caller's responsibility): `message` must be a genuine
     /// literal whose length is verifiable by inspection, never a
     /// runtime-produced `&'static str` (e.g. a `Box::leak`ed value). The
-    /// length is only `debug_assert!`ed, so an over-cap input that slips past
-    /// review would bypass the bound in release builds — unlike [`new`] and
-    /// deserialisation, which reject it. When the length is not statically
-    /// obvious, use [`new`] instead.
+    /// bound is enforced with a hard [`assert!`], so an over-cap input that
+    /// slips past review is caught deterministically on first execution in
+    /// release builds too — not just under `debug_assert!`. When the length is
+    /// not statically obvious, use [`new`] instead, which returns a typed
+    /// error rather than panicking.
     ///
     /// # Panics
     ///
-    /// In debug builds, panics if `message` exceeds [`OPERATION_ERR_MAX_BYTES`].
+    /// Panics if `message` exceeds [`OPERATION_ERR_MAX_BYTES`].
     pub fn from_static(message: &'static str) -> Self {
         let value = Self(message.to_owned());
-        debug_assert!(
+        assert!(
             value.invariant_held(),
             "RemoteErrorMessage::from_static exceeds OPERATION_ERR_MAX_BYTES"
         );

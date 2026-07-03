@@ -199,12 +199,11 @@ fn callback_error_message_from_static_accepted() {
     );
 }
 
-// `from_static` only `debug_assert!`s its length contract, so the panic is
-// observable solely in debug builds — the test is gated to match.
-#[cfg(debug_assertions)]
+// `from_static` hard-`assert!`s its length contract, so the panic fires in
+// release builds too — no debug-only gating.
 #[test]
 #[should_panic(expected = "OPERATION_ERR_MAX_BYTES")]
-fn callback_error_message_from_static_over_cap_panics_in_debug() {
+fn callback_error_message_from_static_over_cap_panics() {
     let over_cap: &'static str =
         Box::leak("x".repeat(OPERATION_ERR_MAX_BYTES + 1).into_boxed_str());
     let _ = RemoteErrorMessage::from_static(over_cap);
