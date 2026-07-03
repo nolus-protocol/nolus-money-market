@@ -1,7 +1,9 @@
 use std::slice;
 
 use crate::common::testing;
+use access_control::error::Error as AccessError;
 use currencies::PaymentGroup;
+use dex::Error as DexError;
 use finance::instant::Instant;
 use finance::{
     coin::CoinDTO,
@@ -13,11 +15,16 @@ use finance::{
     rational::Rational,
     zero::Zero,
 };
-use lease::api::{
-    ExecuteMsg,
-    query::{ClosePolicy, StateResponse, opened::Status, paid::ClosingTrx},
+use lease::api::query::opened::RepayTrx;
+use lease::{
+    api::{
+        ExecuteMsg,
+        query::{ClosePolicy, StateResponse, opened::Status, paid::ClosingTrx},
+    },
+    error::ContractError,
 };
 use platform::coin_legacy;
+use remote_lease::callback::{RemoteLeaseCallback, RemoteOperationOutcome};
 use sdk::{
     cosmwasm_std::{Addr, Event},
     cw_multi_test::AppResponse,
@@ -342,6 +349,82 @@ fn repay_funds_the_swap_before_swapping() {
     let _ = common::ibc::do_transfer(&mut test_case.app, lease.clone(), ica_addr, false, &funded)
         .unwrap_response();
     assert_swap_recorded(&test_case, &lease, payment);
+}
+
+/// The in-flight repay `BuyLpn` swap authorises callbacks via the leaser
+/// query (`Config.remote_lease_controller`); a stranger is rejected with the
+/// `DexError::Unauthorized` shape the dex leg surfaces, and the swap stays put.
+#[test]
+fn repay_swap_callback_from_stranger_rejected() {
+    let mut test_case: LeaseTestCase = super::create_test_case::<PaymentCurrency>();
+    let (lease, _controller) = open_and_hold_repay_swap(&mut test_case);
+    assert_repay_trx(RepayTrx::Swap, &test_case, &lease);
+
+    let err = test_case
+        .app
+        .execute(
+            testing::user(USER),
+            lease.clone(),
+            &ExecuteMsg::RemoteLeaseCallback(RemoteLeaseCallback {
+                nonce: 0,
+                outcome: RemoteOperationOutcome::OperationTimeout,
+            }),
+            &[],
+        )
+        .expect_err("a stranger's repay-swap callback must be rejected");
+
+    let contract_err = err
+        .downcast_ref::<ContractError>()
+        .expect("must surface as lease ContractError");
+    assert!(
+        matches!(
+            contract_err,
+            ContractError::DexError(DexError::Unauthorized(AccessError::Unauthorized {}))
+        ),
+        "expected DexError::Unauthorized, got {contract_err:?}"
+    );
+    assert_repay_trx(RepayTrx::Swap, &test_case, &lease);
+}
+
+/// The in-flight repay proceeds drain authorises callbacks against the pinned
+/// `LeaseDTO.remote_lease_controller` (`SingleUserPermission`); a stranger is
+/// rejected with the same `DexError::Unauthorized` shape, and the drain stays
+/// in its transfer-out.
+#[test]
+fn repay_proceeds_drain_callback_from_stranger_rejected() {
+    let mut test_case: LeaseTestCase = super::create_test_case::<PaymentCurrency>();
+    let (lease, controller) = open_and_hold_repay_swap(&mut test_case);
+
+    // Ack the swap so the lease advances to the proceeds drain, which the
+    // `Delayed` TRANSFER_OUT mode then holds in flight.
+    let _swap_ack =
+        stub::deliver_pending_callback(&mut test_case.app, &controller, stub::op_tag::SWAP);
+    assert_repay_trx(RepayTrx::TransferOut, &test_case, &lease);
+
+    let err = test_case
+        .app
+        .execute(
+            testing::user(USER),
+            lease.clone(),
+            &ExecuteMsg::RemoteLeaseCallback(RemoteLeaseCallback {
+                nonce: 0,
+                outcome: RemoteOperationOutcome::OperationTimeout,
+            }),
+            &[],
+        )
+        .expect_err("a stranger's proceeds-drain callback must be rejected");
+
+    let contract_err = err
+        .downcast_ref::<ContractError>()
+        .expect("must surface as lease ContractError");
+    assert!(
+        matches!(
+            contract_err,
+            ContractError::DexError(DexError::Unauthorized(AccessError::Unauthorized {}))
+        ),
+        "expected DexError::Unauthorized, got {contract_err:?}"
+    );
+    assert_repay_trx(RepayTrx::TransferOut, &test_case, &lease);
 }
 
 pub(crate) fn repay_partial<ProtocolsRegistry, Treasury, Profit, Reserve, Leaser, Lpp, Oracle>(
@@ -770,4 +853,48 @@ pub(crate) fn deliver_funds_arrival_alarm<
         .execute(time_alarms, lease, &ExecuteMsg::TimeAlarm {}, &[])
         .unwrap()
         .unwrap_response()
+}
+
+/// Open a lease and drive a partial repay to the in-flight `BuyLpn` swap leg,
+/// holding both the swap and the following proceeds drain via `Delayed`. The
+/// lease sits at `RepayTrx::Swap`; delivering the pending swap ack advances it
+/// to the held proceeds drain (`RepayTrx::TransferOut`).
+fn open_and_hold_repay_swap(test_case: &mut LeaseTestCase) -> (Addr, Addr) {
+    let downpayment = DOWNPAYMENT;
+    let amount = super::quote_borrow(test_case, downpayment).to_primitive();
+    let payment: PaymentCoin = Fraction::<PaymentCoin>::of(
+        &Ratio::new(common::coin(1), common::coin(2)),
+        super::create_payment_coin(amount),
+    );
+
+    let lease = super::open_lease(test_case, downpayment, None);
+    let controller = test_case.address_book.remote_lease_controller().clone();
+    stub::set_response_mode(
+        &mut test_case.app,
+        &controller,
+        stub::op_tag::SWAP,
+        stub::ResponseMode::Delayed,
+    );
+    stub::set_response_mode(
+        &mut test_case.app,
+        &controller,
+        stub::op_tag::TRANSFER_OUT,
+        stub::ResponseMode::Delayed,
+    );
+
+    let _swap_response = send_repay(test_case, lease.clone(), payment);
+    (lease, controller)
+}
+
+#[track_caller]
+fn assert_repay_trx(expected: RepayTrx, test_case: &LeaseTestCase, lease: &Addr) {
+    use lease::api::query::opened::OngoingTrx;
+
+    match super::state_query(test_case, lease.clone()) {
+        StateResponse::Opened {
+            status: Status::InProgress(OngoingTrx::Repayment { in_progress, .. }),
+            ..
+        } => assert_eq!(expected, in_progress),
+        other => panic!("expected a repayment in progress, got {other:?}"),
+    }
 }

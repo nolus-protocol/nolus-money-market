@@ -34,7 +34,7 @@ use crate::{
         remote_lease_controller_stub::{self as stub, ResponseMode, op_tag},
         test_case::app::App,
     },
-    lease::{LeaseCoin, LeaseCurrency, LpnCoin, LpnCurrency},
+    lease::{LeaseCoin, LeaseCurrency, LpnCoin, LpnCurrency, PaymentCurrency},
 };
 
 type LeaseTestCase = super::TestCase<Addr, Addr, Addr, Addr, Addr, Addr, Addr, Addr>;
@@ -145,6 +145,43 @@ fn non_swap_operation_ok_is_absorbed() {
         "unexpected-response-variant",
     );
     assert_swap_pending(&test_case, lease);
+}
+
+// A fully-opened, active lease has no in-flight remote
+// operation and no override for `on_remote_lease_callback`, so the lease
+// `Handler` default rejects the callback as an unsupported operation — even one
+// from the pinned controller. This pins today's contract; the reverting-ack
+// behaviour on a genuinely-late callback is a known soundness-review candidate.
+#[test]
+fn active_lease_rejects_remote_callback_as_unsupported() {
+    let mut test_case = super::create_test_case::<PaymentCurrency>();
+    let lease = super::open_lease(&mut test_case, super::DOWNPAYMENT, None);
+    assert!(
+        matches!(
+            super::state_query(&test_case, lease.clone()),
+            StateResponse::Opened { .. }
+        ),
+        "the lease must sit active before the callback"
+    );
+
+    let controller = controller_addr(&test_case);
+    let err = send_callback(
+        &mut test_case.app,
+        &lease,
+        controller,
+        RemoteLeaseCallback {
+            nonce: 0,
+            outcome: RemoteOperationOutcome::OperationTimeout,
+        },
+    );
+
+    let contract_err = err
+        .downcast_ref::<ContractError>()
+        .expect("must surface as lease ContractError");
+    assert!(
+        matches!(contract_err, ContractError::UnsupportedOperation(_)),
+        "expected UnsupportedOperation, got {contract_err:?}"
+    );
 }
 
 fn drive_to_swap_pending() -> (LeaseTestCase, Addr) {

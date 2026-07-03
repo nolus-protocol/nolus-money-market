@@ -19,6 +19,85 @@ use crate::{
 
 use super::{Handler, Response, drain::DrainAll};
 
+#[cfg(all(feature = "internal.test.contract", test))]
+mod tests {
+    use platform::{
+        batch::{Batch, Emit, Emitter},
+        message::Response as MessageResponse,
+    };
+    use remote_lease::{
+        callback::{RemoteLeaseCallback, RemoteOperationOutcome},
+        response::{TransferOutResponse, WireOperationResponse},
+    };
+    use sdk::cosmwasm_std::{
+        Addr, Empty, MessageInfo, QuerierWrapper,
+        testing::{self, MockQuerier},
+    };
+
+    use crate::{
+        contract::state::{Response, State, handler::Handler},
+        error::ContractError,
+    };
+
+    use super::Closed;
+
+    const CONTROLLER: &str = "controller";
+    const STRANGER: &str = "stranger";
+
+    #[test]
+    fn late_ack_from_the_controller_is_absorbed() {
+        let response = deliver(info(CONTROLLER)).expect("the late ack should be absorbed");
+
+        assert!(matches!(response.next_state, State::Closed(_)));
+        assert_eq!(absorb_response(), response.response);
+    }
+
+    #[test]
+    fn late_ack_from_a_stranger_rejected() {
+        assert!(matches!(
+            deliver(info(STRANGER)),
+            Err(ContractError::Unauthorized(_))
+        ));
+    }
+
+    fn deliver(info: MessageInfo) -> Result<Response, ContractError> {
+        let mock_querier = MockQuerier::<Empty>::default();
+        closed().on_remote_lease_callback(
+            late_transfer_out_ack(),
+            info,
+            QuerierWrapper::new(&mock_querier),
+            testing::mock_env(),
+        )
+    }
+
+    fn closed() -> Closed {
+        Closed::new(Addr::unchecked(CONTROLLER))
+    }
+
+    fn late_transfer_out_ack() -> RemoteLeaseCallback {
+        RemoteLeaseCallback {
+            nonce: 0,
+            outcome: RemoteOperationOutcome::OperationOk(WireOperationResponse::TransferOut(
+                TransferOutResponse {},
+            )),
+        }
+    }
+
+    fn info(sender: &str) -> MessageInfo {
+        MessageInfo {
+            sender: Addr::unchecked(sender),
+            funds: vec![],
+        }
+    }
+
+    fn absorb_response() -> MessageResponse {
+        let emitter = Emitter::of_type("ls-remote-lease-late-ack")
+            .emit("id", testing::mock_env().contract.address)
+            .emit("terminal", "closed");
+        MessageResponse::messages_with_event(Batch::default(), emitter)
+    }
+}
+
 const LATE_ACK_EVENT: &str = "ls-remote-lease-late-ack";
 const EVENT_KEY_ID: &str = "id";
 const EVENT_KEY_TERMINAL: &str = "terminal";

@@ -33,6 +33,367 @@ use crate::{
 
 use super::refund::{OpenFailureRefund, refund_to_open_failed};
 
+#[cfg(all(feature = "internal.test.contract", test))]
+mod tests {
+    use currencies::testing::{LeaseC2, PaymentC1};
+    use cw_time::IntoInstant;
+    use dex::{ConnectionParams, Ics20Channel, MaxSlippage};
+    use finance::{
+        coin::Coin, duration::Duration, instant::Instant, liability::Liability, percent::Percent100,
+    };
+    use lpp::{msg::LoanResponse, stub::LppRef as LppGenericRef};
+    use remote_lease::{
+        callback::{RemoteErrorMessage, RemoteLeaseCallback, RemoteOperationOutcome},
+        response::{OpenLeaseResponse, RemoteLeaseId, TransferOutResponse, WireOperationResponse},
+    };
+    use sdk::cosmwasm_std::{
+        self, Addr, ContractResult as CwContractResult, Empty, MessageInfo, QuerierResult,
+        QuerierWrapper, SystemResult, WasmQuery,
+        testing::{self, MockQuerier},
+    };
+    use timealarms::stub::TimeAlarmsRef;
+
+    use crate::{
+        api::{
+            authz::{AccessCheck, AccessGranted},
+            limits::{MaxSlippages, PositionLimits},
+            open::{LoanForm, NewLeaseContract, NewLeaseForm, PositionSpecDTO},
+            query::StateResponse as QueryStateResponse,
+        },
+        contract::{
+            api::Contract,
+            cmd::OpenLoanRespResult,
+            finalize::LeasesRef,
+            state::{Response, State},
+        },
+        error::ContractError,
+        finance::{LpnCurrencies, LpnCurrency, OracleRef},
+    };
+
+    use super::OpenLease;
+
+    const CONTROLLER: &str = "controller";
+    const LEASER: &str = "leaser";
+    const LPP: &str = "lpp";
+    const RESERVE: &str = "reserve";
+    const STRANGER: &str = "stranger";
+    const REMOTE_LEASE_ID: &str = "StubPda1111111111111111111111111111";
+    const DOWNPAYMENT: u128 = 100;
+    const PRINCIPAL: u128 = 500;
+    const INTEREST_RATE_PERCENT: u32 = 5;
+    const MAX_SLIPPAGE_PERCENT: u32 = 20;
+    const INSTANCE_ORDINAL: u16 = 1;
+
+    #[test]
+    fn open_lease_ack_starts_the_funding_leg() {
+        let response = deliver(open_lease_ack(), CONTROLLER, &authorized_querier())
+            .expect("the open-lease ack should start funding");
+
+        assert!(matches!(response.next_state, State::BuyAsset(_)));
+    }
+
+    #[test]
+    fn unexpected_ok_ack_fails_the_open_with_a_fixed_reason() {
+        let response = deliver(unexpected_ok_ack(), CONTROLLER, &authorized_querier())
+            .expect("the unexpected ack should fail the open");
+
+        assert_eq!(
+            "unexpected operation response",
+            open_failed_reason(response)
+        );
+    }
+
+    #[test]
+    fn error_ack_fails_the_open_echoing_the_reason() {
+        const REASON: &str = "solana rejected the open";
+
+        let response = deliver(error_ack(REASON), CONTROLLER, &authorized_querier())
+            .expect("the error ack should fail the open");
+
+        assert_eq!(REASON, open_failed_reason(response));
+    }
+
+    #[test]
+    fn timeout_fails_the_open_with_the_timeout_reason() {
+        let response = deliver(timeout_ack(), CONTROLLER, &authorized_querier())
+            .expect("the timeout should fail the open");
+
+        assert_eq!("timeout", open_failed_reason(response));
+    }
+
+    #[test]
+    fn callback_from_unauthorized_sender_rejected() {
+        assert!(matches!(
+            deliver(open_lease_ack(), STRANGER, &rejecting_querier()),
+            Err(ContractError::Unauthorized(_))
+        ));
+    }
+
+    // The authorized ack clears the permission gate and reaches
+    // `on_open_lease_ack`, but `open_transport`'s max-slippages query fails, so
+    // the error propagates at that `?` instead of the funding leg starting.
+    #[test]
+    fn open_transport_query_failure_propagates() {
+        assert!(matches!(
+            deliver(
+                open_lease_ack(),
+                CONTROLLER,
+                &max_slippage_failing_querier()
+            ),
+            Err(ContractError::PositionLimitsQuery(_))
+        ));
+    }
+
+    fn deliver(
+        callback: RemoteLeaseCallback,
+        sender: &str,
+        querier: &MockQuerier<Empty>,
+    ) -> Result<Response, ContractError> {
+        open_lease().on_remote_lease_callback(
+            callback,
+            info(sender),
+            QuerierWrapper::new(querier),
+            testing::mock_env(),
+        )
+    }
+
+    fn open_failed_reason(response: Response) -> String {
+        let mock_querier = MockQuerier::<Empty>::default();
+        match response.next_state {
+            State::OpenFailed(failed) => match failed
+                .state(
+                    testing::mock_env().block.time.into_instant(),
+                    Duration::from_secs(0),
+                    QuerierWrapper::new(&mock_querier),
+                )
+                .expect("the open-failed state query succeeds")
+            {
+                QueryStateResponse::OpenFailed { reason } => reason.as_str().to_owned(),
+                _ => panic!("the open-failed state should report an OpenFailed response"),
+            },
+            _ => panic!("the callback should land the lease in OpenFailed"),
+        }
+    }
+
+    fn open_lease() -> OpenLease {
+        OpenLease::new(
+            new_lease_contract(),
+            Coin::<PaymentC1>::new(DOWNPAYMENT).into(),
+            OpenLoanRespResult {
+                principal: Coin::<LpnCurrency>::new(PRINCIPAL).into(),
+                annual_interest_rate: Percent100::from_percent(INTEREST_RATE_PERCENT),
+            },
+            deps(),
+            Instant::from_seconds(1_000_000),
+        )
+    }
+
+    fn open_lease_ack() -> RemoteLeaseCallback {
+        RemoteLeaseCallback {
+            nonce: 0,
+            outcome: RemoteOperationOutcome::OperationOk(WireOperationResponse::OpenLease(
+                OpenLeaseResponse {
+                    remote_lease_id: remote_lease_id(),
+                },
+            )),
+        }
+    }
+
+    fn unexpected_ok_ack() -> RemoteLeaseCallback {
+        RemoteLeaseCallback {
+            nonce: 0,
+            outcome: RemoteOperationOutcome::OperationOk(WireOperationResponse::TransferOut(
+                TransferOutResponse {},
+            )),
+        }
+    }
+
+    fn error_ack(reason: &str) -> RemoteLeaseCallback {
+        RemoteLeaseCallback {
+            nonce: 0,
+            outcome: RemoteOperationOutcome::OperationErr(
+                RemoteErrorMessage::new(reason).expect("within the cap"),
+            ),
+        }
+    }
+
+    fn timeout_ack() -> RemoteLeaseCallback {
+        RemoteLeaseCallback {
+            nonce: 0,
+            outcome: RemoteOperationOutcome::OperationTimeout,
+        }
+    }
+
+    fn authorized_querier() -> MockQuerier<Empty> {
+        let mut mock_querier = MockQuerier::<Empty>::default();
+        mock_querier.update_wasm(answer_authorized_queries);
+        mock_querier
+    }
+
+    fn rejecting_querier() -> MockQuerier<Empty> {
+        let mut mock_querier = MockQuerier::<Empty>::default();
+        mock_querier.update_wasm(|query| {
+            let WasmQuery::Smart { msg, .. } = query else {
+                unimplemented!("only smart queries are expected")
+            };
+            let _: AccessCheck =
+                cosmwasm_std::from_json(msg).expect("a remote-lease callback permission query");
+            SystemResult::Ok(CwContractResult::Ok(
+                cosmwasm_std::to_json_binary(&AccessGranted::No)
+                    .expect("the verdict should serialize"),
+            ))
+        });
+        mock_querier
+    }
+
+    /// Grants the callback-permission check so the ack reaches
+    /// `on_open_lease_ack`, then fails the leaser's max-slippages query so
+    /// `open_transport` propagates the error rather than starting the funding
+    /// leg.
+    fn max_slippage_failing_querier() -> MockQuerier<Empty> {
+        let mut mock_querier = MockQuerier::<Empty>::default();
+        mock_querier.update_wasm(|query| {
+            let WasmQuery::Smart { contract_addr, msg } = query else {
+                unimplemented!("only smart queries are expected")
+            };
+            assert_eq!(LEASER, contract_addr.as_str());
+            if cosmwasm_std::from_json::<AccessCheck>(msg).is_ok() {
+                SystemResult::Ok(CwContractResult::Ok(
+                    cosmwasm_std::to_json_binary(&AccessGranted::Yes)
+                        .expect("the verdict should serialize"),
+                ))
+            } else {
+                let _: PositionLimits =
+                    cosmwasm_std::from_json(msg).expect("a max-slippages query");
+                SystemResult::Ok(CwContractResult::Err(
+                    "the leaser is unavailable".to_owned(),
+                ))
+            }
+        });
+        mock_querier
+    }
+
+    /// Answers every query the authorized open-failure and funding paths make:
+    /// the leaser's callback-permission grant and opening slippage bound, the
+    /// reserve's Lpn, and the LPP loan. The loan's interest was last paid at the
+    /// callback instant, so no interest is due and the reserve cover is skipped.
+    fn answer_authorized_queries(query: &WasmQuery) -> QuerierResult {
+        let WasmQuery::Smart { contract_addr, msg } = query else {
+            unimplemented!("only smart queries are expected")
+        };
+        let response = match contract_addr.as_str() {
+            LEASER => {
+                if cosmwasm_std::from_json::<AccessCheck>(msg).is_ok() {
+                    cosmwasm_std::to_json_binary(&AccessGranted::Yes)
+                } else {
+                    let _: PositionLimits =
+                        cosmwasm_std::from_json(msg).expect("a max-slippages query");
+                    cosmwasm_std::to_json_binary(&max_slippages())
+                }
+            }
+            RESERVE => cosmwasm_std::to_json_binary(&currency::dto::<LpnCurrency, LpnCurrencies>()),
+            LPP => cosmwasm_std::to_json_binary(&Some(loan_response())),
+            other => unimplemented!("no query is expected against {other}"),
+        }
+        .expect("the response should serialize");
+        SystemResult::Ok(CwContractResult::Ok(response))
+    }
+
+    fn max_slippages() -> MaxSlippages {
+        MaxSlippages {
+            opening: MaxSlippage::unchecked(Percent100::from_percent(MAX_SLIPPAGE_PERCENT)),
+            liquidation: MaxSlippage::unchecked(Percent100::from_percent(MAX_SLIPPAGE_PERCENT)),
+        }
+    }
+
+    fn loan_response() -> LoanResponse<LpnCurrency> {
+        LoanResponse {
+            principal_due: Coin::new(PRINCIPAL),
+            annual_interest_rate: Percent100::from_percent(INTEREST_RATE_PERCENT),
+            interest_paid: testing::mock_env().block.time.into_instant(),
+        }
+    }
+
+    fn new_lease_contract() -> NewLeaseContract {
+        NewLeaseContract {
+            form: form(),
+            dex: connection_params(),
+            finalizer: Addr::unchecked("finalizer"),
+            remote_lease_controller: Addr::unchecked(CONTROLLER),
+            expected_instance_ordinal: INSTANCE_ORDINAL,
+        }
+    }
+
+    fn form() -> NewLeaseForm {
+        NewLeaseForm {
+            customer: Addr::unchecked("customer"),
+            currency: currency::dto::<LeaseC2, _>(),
+            max_ltd: None,
+            position_spec: PositionSpecDTO::new(
+                liability(),
+                Coin::<LpnCurrency>::new(1_000).into(),
+                Coin::<LpnCurrency>::new(100).into(),
+            ),
+            loan: LoanForm {
+                lpp: Addr::unchecked(LPP),
+                profit: Addr::unchecked("profit"),
+                annual_margin_interest: Percent100::from_permille(31),
+                due_period: Duration::from_secs(100),
+            },
+            reserve: Addr::unchecked(RESERVE),
+            time_alarms: Addr::unchecked("timealarms"),
+            market_price_oracle: Addr::unchecked("oracle"),
+        }
+    }
+
+    fn liability() -> Liability {
+        Liability::new(
+            Percent100::from_percent(65),
+            Percent100::from_percent(70),
+            Percent100::from_percent(73),
+            Percent100::from_percent(75),
+            Percent100::from_percent(78),
+            Percent100::from_percent(80),
+            Duration::from_days(20),
+        )
+    }
+
+    fn deps() -> (
+        LppGenericRef<LpnCurrency>,
+        OracleRef,
+        TimeAlarmsRef,
+        LeasesRef,
+    ) {
+        (
+            LppGenericRef::unchecked(LPP),
+            OracleRef::unchecked(Addr::unchecked("oracle")),
+            TimeAlarmsRef::unchecked("timealarms"),
+            LeasesRef::unchecked(Addr::unchecked(LEASER)),
+        )
+    }
+
+    fn connection_params() -> ConnectionParams {
+        ConnectionParams {
+            connection_id: "connection-0".to_owned(),
+            transfer_channel: Ics20Channel {
+                local_endpoint: "channel-0".to_owned(),
+                remote_endpoint: "channel-2048".to_owned(),
+            },
+        }
+    }
+
+    fn remote_lease_id() -> RemoteLeaseId {
+        RemoteLeaseId::new(REMOTE_LEASE_ID.to_owned()).expect("a base58 sample")
+    }
+
+    fn info(sender: &str) -> MessageInfo {
+        MessageInfo {
+            sender: Addr::unchecked(sender),
+            funds: vec![],
+        }
+    }
+}
+
 /// Open-failure reason recorded when the IBC layer reports the OpenLease
 /// packet was never acknowledged.
 const TIMEOUT_REASON: &str = "timeout";

@@ -40,6 +40,27 @@
 //! - `drain_callback_from_stranger_rejected` — the in-flight drain
 //!   authorises callbacks against the same pinned controller; a stranger
 //!   is rejected and the in-flight transfer stays put.
+//!
+//! Absorb-arm coverage (the behaviour already ships):
+//!
+//! - `funds_arrival_absorbs_remote_error_callback` /
+//!   `funds_arrival_absorbs_remote_timeout_callback` /
+//!   `funds_arrival_absorbs_stray_ok_callback` — once every transfer has
+//!   acknowledged the drain sits at `FundsArrival` (`ClosingTrx::TransferInFinish`),
+//!   which scheduled no remote operation; an error, a timeout, or a stray
+//!   success callback delivered now is absorbed with the generic
+//!   `wasm-remote-callback` event (`absorbed = error|timeout|response`), the
+//!   controller's ack commits, and the stage is unchanged.
+//! - `transfer_out_wrong_variant_ack_absorbed` — a decodable success ack for a
+//!   non-transfer-out operation, carrying the in-flight nonce, is rejected by
+//!   the transfer decode and absorbed (`unexpected-response-variant`).
+//! - `transfer_out_undecodable_ack_absorbed` — a success ack whose swap payload
+//!   names a ticker outside the registry fails the typed decode and is absorbed
+//!   (`undecodable-response`).
+//! - `transfer_out_stale_nonce_error_absorbed` /
+//!   `transfer_out_stale_nonce_timeout_absorbed` — an error or a timeout callback
+//!   carrying a superseded nonce is absorbed (`nonce-mismatch`) before the
+//!   error/timeout arm runs, leaving the in-flight transfer put.
 
 use crate::common::testing;
 use access_control::error::Error as AccessError;
@@ -55,7 +76,10 @@ use lease::{
 };
 use remote_lease::{
     callback::{RemoteErrorMessage, RemoteLeaseCallback, RemoteOperationOutcome},
-    response::{TransferOutResponse, WireOperationResponse},
+    response::{
+        CloseLeaseResponse, Ticker, TransferOutResponse, WireCoin, WireOperationResponse,
+        WireSwapResponse,
+    },
 };
 use sdk::cosmwasm_std::{Addr, Event};
 
@@ -68,6 +92,14 @@ use super::{LeaseCoin, LeaseTestCase, PaymentCurrency, repay};
 
 const CLOSING_TRANSFER_OUT_EVENT: &str = "wasm-ls-close-transfer-out";
 const LATE_ACK_EVENT: &str = "wasm-ls-remote-lease-late-ack";
+/// The generic absorb event the drain's `FundsArrival` stage emits through the
+/// `Handler` defaults for any callback that reaches it — the arrival stage
+/// scheduled no remote operation, so every kind is absorbed with this event.
+const REMOTE_CALLBACK_ABSORB_EVENT: &str = "wasm-remote-callback";
+/// A nonce below the close-leg drain's first-emission nonce (`1`), so a callback
+/// stamped with it can never match the in-flight transfer and is absorbed as a
+/// stale duplicate.
+const STALE_NONCE: u64 = 0;
 
 #[test]
 fn transfer_out_single_coin_drain_acks() {
@@ -378,6 +410,255 @@ fn late_ack_from_stranger_rejected() {
         StateResponse::Closed(),
         super::state_query(&test_case, lease)
     );
+}
+
+#[test]
+fn funds_arrival_absorbs_remote_error_callback() {
+    let mut test_case = super::create_test_case::<PaymentCurrency>();
+    let controller = test_case.address_book.remote_lease_controller().clone();
+
+    // The default `Ok` mode acks the close transfer-out inline, so the drain
+    // already sits at the funds-arrival poll.
+    let (lease, expected_funds, _repay_response) = super::open_and_repay_fully(&mut test_case);
+    assert_closing(
+        expected_funds,
+        ClosingTrx::TransferInFinish,
+        &test_case,
+        &lease,
+    );
+
+    let reason = RemoteErrorMessage::new("late error at arrival").expect("within length cap");
+    let absorbed = stub::inject_callback(
+        &mut test_case.app,
+        &controller,
+        &lease,
+        RemoteLeaseCallback {
+            nonce: 0,
+            outcome: RemoteOperationOutcome::OperationErr(reason),
+        },
+    );
+    absorbed
+        .assert_event(&Event::new(REMOTE_CALLBACK_ABSORB_EVENT).add_attribute("absorbed", "error"));
+    assert_closing(
+        expected_funds,
+        ClosingTrx::TransferInFinish,
+        &test_case,
+        &lease,
+    );
+}
+
+#[test]
+fn funds_arrival_absorbs_remote_timeout_callback() {
+    let mut test_case = super::create_test_case::<PaymentCurrency>();
+    let controller = test_case.address_book.remote_lease_controller().clone();
+
+    let (lease, expected_funds, _repay_response) = super::open_and_repay_fully(&mut test_case);
+    assert_closing(
+        expected_funds,
+        ClosingTrx::TransferInFinish,
+        &test_case,
+        &lease,
+    );
+
+    let absorbed = stub::inject_callback(
+        &mut test_case.app,
+        &controller,
+        &lease,
+        RemoteLeaseCallback {
+            nonce: 0,
+            outcome: RemoteOperationOutcome::OperationTimeout,
+        },
+    );
+    absorbed.assert_event(
+        &Event::new(REMOTE_CALLBACK_ABSORB_EVENT).add_attribute("absorbed", "timeout"),
+    );
+    assert_closing(
+        expected_funds,
+        ClosingTrx::TransferInFinish,
+        &test_case,
+        &lease,
+    );
+}
+
+#[test]
+fn funds_arrival_absorbs_stray_ok_callback() {
+    let mut test_case = super::create_test_case::<PaymentCurrency>();
+    let controller = test_case.address_book.remote_lease_controller().clone();
+
+    let (lease, expected_funds, _repay_response) = super::open_and_repay_fully(&mut test_case);
+    assert_closing(
+        expected_funds,
+        ClosingTrx::TransferInFinish,
+        &test_case,
+        &lease,
+    );
+
+    let absorbed = stub::inject_callback(
+        &mut test_case.app,
+        &controller,
+        &lease,
+        RemoteLeaseCallback {
+            nonce: 0,
+            outcome: RemoteOperationOutcome::OperationOk(WireOperationResponse::TransferOut(
+                TransferOutResponse {},
+            )),
+        },
+    );
+    absorbed.assert_event(
+        &Event::new(REMOTE_CALLBACK_ABSORB_EVENT).add_attribute("absorbed", "response"),
+    );
+    assert_closing(
+        expected_funds,
+        ClosingTrx::TransferInFinish,
+        &test_case,
+        &lease,
+    );
+}
+
+#[test]
+fn transfer_out_wrong_variant_ack_absorbed() {
+    let mut test_case = super::create_test_case::<PaymentCurrency>();
+    let controller = test_case.address_book.remote_lease_controller().clone();
+
+    let (lease, expected_funds, _repay_response) = {
+        let controller = controller.clone();
+        super::open_and_repay_fully_then(&mut test_case, move |app| {
+            stub::set_response_mode(
+                app,
+                &controller,
+                op_tag::TRANSFER_OUT,
+                ResponseMode::Delayed,
+            );
+        })
+    };
+    assert_closing(expected_funds, ClosingTrx::TransferOut, &test_case, &lease);
+
+    // The injected callback is stamped with the in-flight transfer's nonce, so
+    // it clears the nonce gate and reaches the transfer decode, which rejects a
+    // decodable non-transfer-out response as the wrong variant.
+    let absorbed = stub::inject_callback(
+        &mut test_case.app,
+        &controller,
+        &lease,
+        RemoteLeaseCallback {
+            nonce: 0,
+            outcome: RemoteOperationOutcome::OperationOk(WireOperationResponse::CloseLease(
+                CloseLeaseResponse {},
+            )),
+        },
+    );
+    absorbed.assert_event(
+        &Event::new(CLOSING_TRANSFER_OUT_EVENT)
+            .add_attribute("absorbed", "unexpected-response-variant"),
+    );
+    assert_closing(expected_funds, ClosingTrx::TransferOut, &test_case, &lease);
+}
+
+#[test]
+fn transfer_out_undecodable_ack_absorbed() {
+    let mut test_case = super::create_test_case::<PaymentCurrency>();
+    let controller = test_case.address_book.remote_lease_controller().clone();
+
+    let (lease, expected_funds, _repay_response) = {
+        let controller = controller.clone();
+        super::open_and_repay_fully_then(&mut test_case, move |app| {
+            stub::set_response_mode(
+                app,
+                &controller,
+                op_tag::TRANSFER_OUT,
+                ResponseMode::Delayed,
+            );
+        })
+    };
+    assert_closing(expected_funds, ClosingTrx::TransferOut, &test_case, &lease);
+
+    // A swap payload naming a ticker outside the currency registry passes the
+    // controller wire-shaped but fails the lease's typed decode outright — an
+    // undecodable payload, distinct from a decodable wrong variant.
+    let absorbed = stub::inject_callback(
+        &mut test_case.app,
+        &controller,
+        &lease,
+        RemoteLeaseCallback {
+            nonce: 0,
+            outcome: RemoteOperationOutcome::OperationOk(WireOperationResponse::Swap(
+                WireSwapResponse {
+                    amount_out: WireCoin::new(42, Ticker::new("NOT_IN_REGISTRY")),
+                },
+            )),
+        },
+    );
+    absorbed.assert_event(
+        &Event::new(CLOSING_TRANSFER_OUT_EVENT).add_attribute("absorbed", "undecodable-response"),
+    );
+    assert_closing(expected_funds, ClosingTrx::TransferOut, &test_case, &lease);
+}
+
+#[test]
+fn transfer_out_stale_nonce_error_absorbed() {
+    let mut test_case = super::create_test_case::<PaymentCurrency>();
+    let controller = test_case.address_book.remote_lease_controller().clone();
+
+    let (lease, expected_funds, _repay_response) = {
+        let controller = controller.clone();
+        super::open_and_repay_fully_then(&mut test_case, move |app| {
+            stub::set_response_mode(
+                app,
+                &controller,
+                op_tag::TRANSFER_OUT,
+                ResponseMode::Delayed,
+            );
+        })
+    };
+    assert_closing(expected_funds, ClosingTrx::TransferOut, &test_case, &lease);
+
+    // The nonce gate runs before the error arm, so a superseded-nonce error is
+    // absorbed as a stale duplicate rather than as a remote error.
+    let reason = RemoteErrorMessage::new("stale error ack").expect("within length cap");
+    let absorbed = stub::inject_callback_with_nonce(
+        &mut test_case.app,
+        &controller,
+        &lease,
+        STALE_NONCE,
+        RemoteOperationOutcome::OperationErr(reason),
+    );
+    absorbed.assert_event(
+        &Event::new(CLOSING_TRANSFER_OUT_EVENT).add_attribute("absorbed", "nonce-mismatch"),
+    );
+    assert_closing(expected_funds, ClosingTrx::TransferOut, &test_case, &lease);
+}
+
+#[test]
+fn transfer_out_stale_nonce_timeout_absorbed() {
+    let mut test_case = super::create_test_case::<PaymentCurrency>();
+    let controller = test_case.address_book.remote_lease_controller().clone();
+
+    let (lease, expected_funds, _repay_response) = {
+        let controller = controller.clone();
+        super::open_and_repay_fully_then(&mut test_case, move |app| {
+            stub::set_response_mode(
+                app,
+                &controller,
+                op_tag::TRANSFER_OUT,
+                ResponseMode::Delayed,
+            );
+        })
+    };
+    assert_closing(expected_funds, ClosingTrx::TransferOut, &test_case, &lease);
+
+    // The nonce gate runs before the timeout arm, so a superseded-nonce timeout
+    // is absorbed as a stale duplicate rather than re-emitting the transfer.
+    let absorbed = stub::inject_callback_with_nonce(
+        &mut test_case.app,
+        &controller,
+        &lease,
+        STALE_NONCE,
+        RemoteOperationOutcome::OperationTimeout,
+    );
+    absorbed.assert_event(
+        &Event::new(CLOSING_TRANSFER_OUT_EVENT).add_attribute("absorbed", "nonce-mismatch"),
+    );
+    assert_closing(expected_funds, ClosingTrx::TransferOut, &test_case, &lease);
 }
 
 fn assert_closing(
