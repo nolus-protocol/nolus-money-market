@@ -46,6 +46,112 @@ use super::{
     repay::{self, buy_lpn},
 };
 
+#[cfg(all(feature = "internal.test.contract", test))]
+mod tests {
+    use dex::{Account, ConnectionParams, Ics20Channel};
+    use platform::{
+        batch::{Batch, Emit, Emitter},
+        message::Response as MessageResponse,
+    };
+    use remote_lease::{
+        callback::{RemoteLeaseCallback, RemoteOperationOutcome},
+        response::{TransferOutResponse, WireOperationResponse},
+    };
+    use sdk::cosmwasm_std::{
+        Addr, Empty, MessageInfo, QuerierWrapper,
+        testing::{self, MockQuerier},
+    };
+
+    use crate::{
+        contract::{
+            Lease,
+            finalize::LeasesRef,
+            state::{Response, State, handler::Handler},
+        },
+        error::ContractError,
+        lease::tests::{REMOTE_LEASE_CONTROLLER, open_lease_dto},
+    };
+
+    use super::Active;
+
+    const STRANGER: &str = "stranger";
+
+    #[test]
+    fn late_ack_from_the_controller_is_absorbed() {
+        let response =
+            deliver(info(REMOTE_LEASE_CONTROLLER)).expect("the late ack should be absorbed");
+
+        assert!(matches!(response.next_state, State::OpenedActive(_)));
+        assert_eq!(absorb_response(), response.response);
+    }
+
+    #[test]
+    fn late_ack_from_a_stranger_rejected() {
+        assert!(matches!(
+            deliver(info(STRANGER)),
+            Err(ContractError::Unauthorized(_))
+        ));
+    }
+
+    fn deliver(info: MessageInfo) -> Result<Response, ContractError> {
+        let mock_querier = MockQuerier::<Empty>::default();
+        active().on_remote_lease_callback(
+            late_transfer_out_ack(),
+            info,
+            QuerierWrapper::new(&mock_querier),
+            testing::mock_env(),
+        )
+    }
+
+    fn active() -> Active {
+        Active::new(Lease::new(
+            open_lease_dto(),
+            account(),
+            LeasesRef::unchecked(Addr::unchecked("leaser")),
+        ))
+    }
+
+    fn account() -> Account {
+        Account::unchecked(
+            Addr::unchecked("lease"),
+            "ica0"
+                .to_owned()
+                .try_into()
+                .expect("a non-empty host account"),
+            ConnectionParams {
+                connection_id: "connection-0".to_owned(),
+                transfer_channel: Ics20Channel {
+                    local_endpoint: "channel-0".to_owned(),
+                    remote_endpoint: "channel-2048".to_owned(),
+                },
+            },
+        )
+    }
+
+    fn late_transfer_out_ack() -> RemoteLeaseCallback {
+        RemoteLeaseCallback {
+            nonce: 0,
+            outcome: RemoteOperationOutcome::OperationOk(WireOperationResponse::TransferOut(
+                TransferOutResponse {},
+            )),
+        }
+    }
+
+    fn info(sender: &str) -> MessageInfo {
+        MessageInfo {
+            sender: Addr::unchecked(sender),
+            funds: vec![],
+        }
+    }
+
+    fn absorb_response() -> MessageResponse {
+        let emitter = Emitter::of_type("ls-remote-lease-late-ack")
+            .emit("id", testing::mock_env().contract.address)
+            .emit("state", "active");
+        MessageResponse::messages_with_event(Batch::default(), emitter)
+    }
+}
+
 const LATE_ACK_EVENT: &str = "ls-remote-lease-late-ack";
 const EVENT_KEY_ID: &str = "id";
 const EVENT_KEY_STATE: &str = "state";
@@ -304,111 +410,5 @@ impl Handler for Active {
                 self,
             )
         })
-    }
-}
-
-#[cfg(all(feature = "internal.test.contract", test))]
-mod tests {
-    use dex::{Account, ConnectionParams, Ics20Channel};
-    use platform::{
-        batch::{Batch, Emit, Emitter},
-        message::Response as MessageResponse,
-    };
-    use remote_lease::{
-        callback::{RemoteLeaseCallback, RemoteOperationOutcome},
-        response::{TransferOutResponse, WireOperationResponse},
-    };
-    use sdk::cosmwasm_std::{
-        Addr, Empty, MessageInfo, QuerierWrapper,
-        testing::{self, MockQuerier},
-    };
-
-    use crate::{
-        contract::{
-            Lease,
-            finalize::LeasesRef,
-            state::{Response, State, handler::Handler},
-        },
-        error::ContractError,
-        lease::tests::{REMOTE_LEASE_CONTROLLER, open_lease_dto},
-    };
-
-    use super::Active;
-
-    const STRANGER: &str = "stranger";
-
-    #[test]
-    fn late_ack_from_the_controller_is_absorbed() {
-        let response =
-            deliver(info(REMOTE_LEASE_CONTROLLER)).expect("the late ack should be absorbed");
-
-        assert!(matches!(response.next_state, State::OpenedActive(_)));
-        assert_eq!(absorb_response(), response.response);
-    }
-
-    #[test]
-    fn late_ack_from_a_stranger_rejected() {
-        assert!(matches!(
-            deliver(info(STRANGER)),
-            Err(ContractError::Unauthorized(_))
-        ));
-    }
-
-    fn deliver(info: MessageInfo) -> Result<Response, ContractError> {
-        let mock_querier = MockQuerier::<Empty>::default();
-        active().on_remote_lease_callback(
-            late_transfer_out_ack(),
-            info,
-            QuerierWrapper::new(&mock_querier),
-            testing::mock_env(),
-        )
-    }
-
-    fn active() -> Active {
-        Active::new(Lease::new(
-            open_lease_dto(),
-            account(),
-            LeasesRef::unchecked(Addr::unchecked("leaser")),
-        ))
-    }
-
-    fn account() -> Account {
-        Account::unchecked(
-            Addr::unchecked("lease"),
-            "ica0"
-                .to_owned()
-                .try_into()
-                .expect("a non-empty host account"),
-            ConnectionParams {
-                connection_id: "connection-0".to_owned(),
-                transfer_channel: Ics20Channel {
-                    local_endpoint: "channel-0".to_owned(),
-                    remote_endpoint: "channel-2048".to_owned(),
-                },
-            },
-        )
-    }
-
-    fn late_transfer_out_ack() -> RemoteLeaseCallback {
-        RemoteLeaseCallback {
-            nonce: 0,
-            outcome: RemoteOperationOutcome::OperationOk(WireOperationResponse::TransferOut(
-                TransferOutResponse {},
-            )),
-        }
-    }
-
-    fn info(sender: &str) -> MessageInfo {
-        MessageInfo {
-            sender: Addr::unchecked(sender),
-            funds: vec![],
-        }
-    }
-
-    fn absorb_response() -> MessageResponse {
-        let emitter = Emitter::of_type("ls-remote-lease-late-ack")
-            .emit("id", testing::mock_env().contract.address)
-            .emit("state", "active");
-        MessageResponse::messages_with_event(Batch::default(), emitter)
     }
 }

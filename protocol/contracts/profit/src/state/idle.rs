@@ -33,6 +33,111 @@ use super::{
     Config, ConfigManagement, State, StateEnum, buy_back::BuyBack, resp_delivery::ForwardToDexEntry,
 };
 
+#[cfg(all(feature = "internal.test.contract", test))]
+mod tests {
+    use dex::{
+        Account, ConnectionParams, Error as DexError, Handler, Ics20Channel, Result as SwapDecision,
+    };
+    use remote_profit::callback::{RemoteOperationOutcome, RemoteProfitCallback};
+    use remote_profit_wire::profit_id::RemoteProfitId;
+    use sdk::cosmwasm_std::{
+        self, Addr, Empty, MessageInfo, QuerierWrapper,
+        testing::{self, MockQuerier},
+    };
+    use timealarms::stub::TimeAlarmsRef;
+
+    use crate::state::{Config, State, StateEnum, VaultConfig};
+
+    use super::Idle;
+
+    const CONTROLLER: &str = "controller";
+    const STRANGER: &str = "stranger";
+
+    #[test]
+    fn late_callback_from_the_controller_is_absorbed() {
+        let mock_querier = MockQuerier::<Empty>::default();
+        match State::from(idle()).on_remote_profit_callback(
+            late_timeout(),
+            info(CONTROLLER),
+            QuerierWrapper::new(&mock_querier),
+            testing::mock_env(),
+        ) {
+            SwapDecision::Continue(Ok(response)) => {
+                assert!(matches!(response.next_state, State(StateEnum::Idle(_))));
+            }
+            _ => panic!("the late callback should be absorbed as an ok no-op"),
+        }
+    }
+
+    #[test]
+    fn authz_accepts_the_pinned_controller() {
+        let mock_querier = MockQuerier::<Empty>::default();
+        assert_eq!(
+            Ok(()),
+            idle()
+                .authz_remote_callback(QuerierWrapper::new(&mock_querier), &info(CONTROLLER))
+                .map_err(|err| err.to_string())
+        );
+    }
+
+    #[test]
+    fn authz_rejects_a_stranger() {
+        let mock_querier = MockQuerier::<Empty>::default();
+        assert!(matches!(
+            idle().authz_remote_callback(QuerierWrapper::new(&mock_querier), &info(STRANGER)),
+            Err(DexError::Unauthorized(_))
+        ));
+    }
+
+    fn idle() -> Idle {
+        Idle::new(config())
+    }
+
+    fn late_timeout() -> RemoteProfitCallback {
+        RemoteProfitCallback {
+            nonce: 0,
+            outcome: RemoteOperationOutcome::OperationTimeout,
+        }
+    }
+
+    fn info(sender: &str) -> MessageInfo {
+        MessageInfo {
+            sender: Addr::unchecked(sender),
+            funds: vec![],
+        }
+    }
+
+    fn config() -> Config {
+        Config::new(
+            24,
+            Addr::unchecked("treasury"),
+            oracle_platform::OracleRef::unchecked(Addr::unchecked("oracle")),
+            TimeAlarmsRef::unchecked("timealarms"),
+            Account::funding(
+                Addr::unchecked("profit"),
+                ConnectionParams {
+                    connection_id: "connection-0".to_owned(),
+                    transfer_channel: Ics20Channel {
+                        local_endpoint: "channel-0".to_owned(),
+                        remote_endpoint: "channel-2048".to_owned(),
+                    },
+                },
+            ),
+            Addr::unchecked(CONTROLLER),
+            VaultConfig {
+                code_id: cosmwasm_std::from_json(b"3").expect("a valid code id"),
+                address: Addr::unchecked("drain-vault"),
+            },
+        )
+        .with_profit_authority(profit_authority())
+    }
+
+    fn profit_authority() -> RemoteProfitId {
+        RemoteProfitId::new("StubPda1111111111111111111111111111".to_owned())
+            .expect("a base58 sample")
+    }
+}
+
 #[derive(Serialize, Deserialize)]
 pub(super) struct Idle {
     config: Config,
@@ -259,110 +364,5 @@ where
             filtered: self.filtered + other.filtered,
             rest: self.rest.aggregate(other.rest),
         }
-    }
-}
-
-#[cfg(all(feature = "internal.test.contract", test))]
-mod tests {
-    use dex::{
-        Account, ConnectionParams, Error as DexError, Handler, Ics20Channel, Result as SwapDecision,
-    };
-    use remote_profit::callback::{RemoteOperationOutcome, RemoteProfitCallback};
-    use remote_profit_wire::profit_id::RemoteProfitId;
-    use sdk::cosmwasm_std::{
-        self, Addr, Empty, MessageInfo, QuerierWrapper,
-        testing::{self, MockQuerier},
-    };
-    use timealarms::stub::TimeAlarmsRef;
-
-    use crate::state::{Config, State, StateEnum, VaultConfig};
-
-    use super::Idle;
-
-    const CONTROLLER: &str = "controller";
-    const STRANGER: &str = "stranger";
-
-    #[test]
-    fn late_callback_from_the_controller_is_absorbed() {
-        let mock_querier = MockQuerier::<Empty>::default();
-        match State::from(idle()).on_remote_profit_callback(
-            late_timeout(),
-            info(CONTROLLER),
-            QuerierWrapper::new(&mock_querier),
-            testing::mock_env(),
-        ) {
-            SwapDecision::Continue(Ok(response)) => {
-                assert!(matches!(response.next_state, State(StateEnum::Idle(_))));
-            }
-            _ => panic!("the late callback should be absorbed as an ok no-op"),
-        }
-    }
-
-    #[test]
-    fn authz_accepts_the_pinned_controller() {
-        let mock_querier = MockQuerier::<Empty>::default();
-        assert_eq!(
-            Ok(()),
-            idle()
-                .authz_remote_callback(QuerierWrapper::new(&mock_querier), &info(CONTROLLER))
-                .map_err(|err| err.to_string())
-        );
-    }
-
-    #[test]
-    fn authz_rejects_a_stranger() {
-        let mock_querier = MockQuerier::<Empty>::default();
-        assert!(matches!(
-            idle().authz_remote_callback(QuerierWrapper::new(&mock_querier), &info(STRANGER)),
-            Err(DexError::Unauthorized(_))
-        ));
-    }
-
-    fn idle() -> Idle {
-        Idle::new(config())
-    }
-
-    fn late_timeout() -> RemoteProfitCallback {
-        RemoteProfitCallback {
-            nonce: 0,
-            outcome: RemoteOperationOutcome::OperationTimeout,
-        }
-    }
-
-    fn info(sender: &str) -> MessageInfo {
-        MessageInfo {
-            sender: Addr::unchecked(sender),
-            funds: vec![],
-        }
-    }
-
-    fn config() -> Config {
-        Config::new(
-            24,
-            Addr::unchecked("treasury"),
-            oracle_platform::OracleRef::unchecked(Addr::unchecked("oracle")),
-            TimeAlarmsRef::unchecked("timealarms"),
-            Account::funding(
-                Addr::unchecked("profit"),
-                ConnectionParams {
-                    connection_id: "connection-0".to_owned(),
-                    transfer_channel: Ics20Channel {
-                        local_endpoint: "channel-0".to_owned(),
-                        remote_endpoint: "channel-2048".to_owned(),
-                    },
-                },
-            ),
-            Addr::unchecked(CONTROLLER),
-            VaultConfig {
-                code_id: cosmwasm_std::from_json(b"3").expect("a valid code id"),
-                address: Addr::unchecked("drain-vault"),
-            },
-        )
-        .with_profit_authority(profit_authority())
-    }
-
-    fn profit_authority() -> RemoteProfitId {
-        RemoteProfitId::new("StubPda1111111111111111111111111111".to_owned())
-            .expect("a base58 sample")
     }
 }

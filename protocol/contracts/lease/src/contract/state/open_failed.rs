@@ -121,6 +121,9 @@ mod tests {
 }
 
 const LATE_ACK_EVENT: &str = "ls-remote-lease-late-ack";
+const EVENT_KEY_ID: &str = "id";
+const EVENT_KEY_STATE: &str = "state";
+const EVENT_VALUE_STATE: &str = "open_failed";
 
 #[derive(Serialize, Deserialize)]
 pub(crate) struct OpenFailed {
@@ -169,8 +172,8 @@ impl Contract for OpenFailed {
         )
         .map_err(ContractError::from)?;
         let emitter = Emitter::of_type(LATE_ACK_EVENT)
-            .emit("id", env.contract.address)
-            .emit("state", "open_failed");
+            .emit(EVENT_KEY_ID, env.contract.address)
+            .emit(EVENT_KEY_STATE, EVENT_VALUE_STATE);
         Ok(StateMachineResponse::from(
             MessageResponse::messages_with_event(Batch::default(), emitter),
             super::State::from(self),
