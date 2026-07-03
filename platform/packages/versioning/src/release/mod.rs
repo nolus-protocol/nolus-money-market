@@ -65,6 +65,12 @@ impl ProtocolPackageReleaseId {
     }
 }
 
+impl ProtocolPackageRelease {
+    pub const fn same_storage(&self, other: &Self) -> bool {
+        self.software.same_storage(&other.software)
+    }
+}
+
 impl UpdatablePackage for ProtocolPackageRelease {
     type VersionQuery = ProtocolPackage;
 

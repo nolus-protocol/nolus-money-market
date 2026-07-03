@@ -89,3 +89,6 @@ cosmwasm-std = { workspace = true, optional = true }
 enum_dispatch = { workspace = true, optional = true }
 thiserror = { workspace = true, optional = true }
 serde = { workspace = true, features = ["derive"] }
+
+[dev-dependencies]
+versioning = { workspace = true, features = ["protocol_contract", "testing"] }

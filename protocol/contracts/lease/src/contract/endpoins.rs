@@ -15,7 +15,8 @@ use sdk::{
     },
 };
 use versioning::{
-    ProtocolMigrationMessage, ProtocolPackageRelease, VersionSegment, package_name, package_version,
+    ProtocolMigrationMessage, ProtocolPackageRelease, UpdatablePackage as _, VersionSegment,
+    package_name, package_version,
 };
 
 use crate::{
@@ -60,34 +61,33 @@ pub fn instantiate(
 pub fn migrate(
     deps: DepsMut<'_>,
     _env: Env,
-    _msg: ProtocolMigrationMessage<MigrateMsg>,
+    ProtocolMigrationMessage {
+        migrate_from,
+        to_release,
+        message: MigrateMsg {},
+    }: ProtocolMigrationMessage<MigrateMsg>,
 ) -> ContractResult<CwResponse> {
-    // The remote-lease feature reshaped the lease's persisted state end
-    // to end: `LeaseDTO` gained the non-optional Solana `remote_lease_id`
-    // and `remote_lease_controller`, opening and repay moved off the ICA
-    // onto the transfer-channel funding leg (`Account.host` became
-    // optional), and `State` gained the `OpeningUnwind` variant plus
-    // per-currency drain baselines. None of these shapes ever persisted in
-    // a released lease — the last released storage version is v9 (v0.8.x);
-    // every step above it is unreleased remote-lease work — so they
-    // collapse into a single v9 -> v10 step.
+    // A pre-v10 (v9) lease persisted a state shape the v10 layout cannot load:
+    // the remote-lease reshape made `remote_lease_id` / `remote_lease_controller`
+    // required, turned `Account.host` optional, and added the `OpeningUnwind`
+    // variant and per-currency drain baselines. Such a record has no meaningful
+    // `remote_lease_id` to synthesise, so it is refused outright. In-family
+    // upgrades (v10 -> v10.x -> v11) keep the storage version and run the
+    // standard software update the leaser's `migrate_leases` batch drives, as
+    // every sibling contract does.
     //
-    // A v9 lease cannot be deserialised under the v10 layout — a v9 record
-    // lacks the now-required `remote_lease_id` and `remote_lease_controller`
-    // fields — and it has no meaningful `remote_lease_id` to synthesise (its
-    // account is a DEX-chain ICA host, not a Solana PDA), so a real migration
-    // could only invent permanent sentinels. Remote-lease protocols are
-    // instantiated fresh (the leaser's `remote_lease_controller` binding is
-    // immutable, so an existing protocol cannot be retrofitted); an existing
-    // v9 lease is never pointed at this code. Reject any migrate attempt
-    // loudly rather than silently mis-loading state.
-    //
-    // Non-mainnet (devnet/testnet/local): drain all pre-v10 leases to a
-    // terminal state before upgrading the lease code — the layout is
-    // binary-incompatible and there is no `ExecuteMsg` escape hatch, so the
-    // drain is a prerequisite, not a recovery step. See
-    // `protocol/docs/remote-lease-callback-flow.md`.
-    Err(ContractError::UnsupportedMigration).inspect_err(platform_error::log(deps.api))
+    // The storage gate must precede `update_software`: that path checks code
+    // monotonicity first, so a real older-semver v9 lease would surface as
+    // `OlderPackageCode` instead of the deliberate `UnsupportedMigration`.
+    if migrate_from.same_storage(&CURRENT_RELEASE) {
+        migrate_from
+            .update_software(&CURRENT_RELEASE, &to_release)
+            .map_err(ContractError::UpdateSoftware)
+            .map(|()| response::empty_response())
+    } else {
+        Err(ContractError::UnsupportedMigration)
+    }
+    .inspect_err(platform_error::log(deps.api))
 }
 
 #[entry_point]
@@ -204,5 +204,60 @@ fn process_sudo(
         // The lease funds over the ICS-20 transfer channel and never registers
         // an ICA, so it can never receive an `OpenAck`.
         SudoMsg::OpenAck { .. } => Err(ContractError::unsupported_operation("open ica response")),
+    }
+}
+
+#[cfg(all(feature = "internal.test.contract", test))]
+mod tests {
+    use sdk::cosmwasm_std::testing::{mock_dependencies, mock_env};
+    use versioning::{
+        ProtocolMigrationMessage, ProtocolPackageRelease, ProtocolPackageReleaseId, ReleaseId,
+        VersionSegment, package_name, package_version,
+    };
+
+    use crate::{api::MigrateMsg, error::ContractError};
+
+    use super::{CONTRACT_STORAGE_VERSION, migrate};
+
+    #[test]
+    fn migrate_in_family_runs_update_software() {
+        let mut deps = mock_dependencies();
+        let res = migrate(
+            deps.as_mut(),
+            mock_env(),
+            migrate_msg(CONTRACT_STORAGE_VERSION),
+        )
+        .unwrap();
+        assert_eq!(0, res.messages.len());
+    }
+
+    #[test]
+    fn migrate_pre_v10_storage_rejected() {
+        const PRE_V10_STORAGE: VersionSegment = CONTRACT_STORAGE_VERSION - 1;
+
+        let mut deps = mock_dependencies();
+        let err = migrate(deps.as_mut(), mock_env(), migrate_msg(PRE_V10_STORAGE)).unwrap_err();
+        assert!(
+            matches!(err, ContractError::UnsupportedMigration),
+            "got {err:?}",
+        );
+    }
+
+    fn migrate_msg(from_storage: VersionSegment) -> ProtocolMigrationMessage<MigrateMsg> {
+        const SOFTWARE_ID: &str = env!("SOFTWARE_RELEASE_ID");
+        const PROTOCOL_ID: &str = env!("PROTOCOL_RELEASE_ID");
+
+        ProtocolMigrationMessage {
+            migrate_from: ProtocolPackageRelease::current(
+                package_name!(),
+                package_version!(),
+                from_storage,
+            ),
+            to_release: ProtocolPackageReleaseId::new(
+                ReleaseId::new_test(SOFTWARE_ID),
+                ReleaseId::new_test(PROTOCOL_ID),
+            ),
+            message: MigrateMsg {},
+        }
     }
 }
