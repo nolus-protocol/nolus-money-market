@@ -234,23 +234,28 @@ id. This two-tx coordination is enforced nowhere; do it deliberately.
 controller's `NewLeaseCode` is gated by `protocol_admin`. Line them up before you start —
 using the `protocol_admin` key for the `MigrateLeases` step will be rejected.
 
-### 3.4 Drain old-code leases first
+### 3.4 Drain only pre-v10 (v9) leases first
 
-The Lease contract's `migrate` returns `UnsupportedMigration` **unconditionally**
-(layouts are binary-incompatible; no escape hatch). After rotation, old-code leases can
-no longer emit packets (`UnauthorisedCaller`) and cannot be migrated — though they can
-still *finish* via callbacks (acks/timeouts do not re-check the code). **Drain every
-old-code lease to a terminal state before rotating.**
+The Lease contract's `migrate` is **gated on the storage version**, not refused
+unconditionally: a same-storage in-family upgrade runs the standard `update_software`
+(exactly as the leaser's `MigrateLeases` batch drives it), so an in-family old-code lease
+**can** be migrated in the batch and need not be drained. Only a pre-v10 (v9) record —
+whose layout is binary-incompatible with the remote-lease layout — is refused with
+`UnsupportedMigration` (no escape hatch). Those pre-v10 leases can no longer emit packets
+(`UnauthorisedCaller`) and cannot be migrated — though they can still *finish* via
+callbacks (acks/timeouts do not re-check the code). **Drain every pre-v10 (v9) lease to a
+terminal state before rotating.**
 
 ### 3.5 Procedure
 
-1. Drain all old-code leases to terminal (§3.4).
+1. Drain any pre-v10 (v9) leases to terminal (§3.4).
 2. Redeploy the Lease wasm; note the new code id.
 3. leaser `MigrateLeases { new_code_id, … }` — signed by the leaser **`ContractOwner`**
    (governance / wasm-admin), **not** `protocol_admin`. This rotates the leaser's own
-   `lease_code` and its LPP/Reserve references; it does **not** migrate remote leases (the
-   Lease `migrate` is unconditionally refused and §3.4 already drained them), so for this
-   protocol the step is leaser-side bookkeeping only.
+   `lease_code` and its LPP/Reserve references; for an in-family (same-storage) redeploy it
+   also migrates each remote lease via the standard `update_software`. Only pre-v10 (v9)
+   records are refused by the Lease `migrate` (§3.4 already drained those), so beyond the
+   in-family migrations the step is leaser-side bookkeeping.
 4. controller `NewLeaseCode { lease_code: <new id> }` — signed by `protocol_admin`.
 5. `QueryMsg::Config()` → confirm `lease_code_id == <new id>` (§3.2).
 
@@ -261,8 +266,9 @@ old-code lease to a terminal state before rotating.**
 - **Valid-but-wrong id** (resolves on-chain, but not the redeployed Lease) → passes the
   existence check and is persisted; the symptom is `UnauthorisedCaller` on lease ops.
   Re-issue `NewLeaseCode` with the correct id (no other state touched).
-- **Stranded old-code lease** → none after the fact; it must reach terminal via the
-  existing callback flows. It cannot be upgraded.
+- **Stranded pre-v10 (v9) lease** → none after the fact; it must reach terminal via the
+  existing callback flows. It cannot be upgraded (an in-family old-code lease, by contrast,
+  migrates in the batch — only the pre-v10 layout is refused).
 - `NewLeaseCode` on an uninstantiated/corrupted config → `Std` error (config stays unset).
 
 ---
@@ -283,8 +289,12 @@ lease's dex state machine.**
   ack so the relayer retries). Every content/protocol fault is **absorbed** as `Ok` + an
   event so the ack commits and the relayer loop unblocks.
 - **Lease** auto-recovers: on a swap leg, timeouts re-emit up to a per-operation budget
-  then park at the slippage-anomaly terminal; under-floor errors escalate per policy;
-  underpaid acks re-emit with a bumped nonce. **Liquidation** swap legs re-quote their
+  then park at the slippage-anomaly terminal; an under-floor (underpaid) OK-ack spends that
+  **same** budget — re-emitting the leg with a bumped nonce while within budget, then
+  escalating once it is spent (park the opened legs at the slippage-anomaly terminal, or
+  re-emit for a ReEmit-spec opening leg), exactly as a timeout does — so a persistently
+  under-paying counterparty parks (needing a `lease_admin` `Heal`), it does not loop
+  forever. **Liquidation** swap legs re-quote their
   floor from the live oracle on each in-budget timeout re-emission — bounded by
   `MaxSlippages.liquidation`, tracking the price both down and up, clamped to `>= 1` —
   so a stale floor cannot strand a liquidation as the market moves; the opening, repay,
@@ -335,9 +345,11 @@ practice). On callback, a superseded packet's late ack carries a lower nonce and
 absorbed as `nonce-mismatch`, never double-credited. So `Heal` is **safe to repeat
 regardless of timing** — you need not wait for the original timeout.
 
-**Caveat:** only `Swap` carries a real nonce; `OpenLease`/`CloseLease`/`TransferOut` use
-nonce `0` and rely on the IBC at-most-once single-packet property instead of nonce
-matching. The opening/repay **funding** transfers (the ICS-20 transfers to the
+**Caveat:** `Swap` and the multi-leg `TransferOut` drain (#671) each carry a real
+per-emission nonce (so a drain `Heal` is likewise safe to repeat — the drain nonce closes
+the same duplicate-ack window); only `OpenLease`/`CloseLease` use nonce `0` and rely on
+the IBC at-most-once single-packet property instead of nonce matching. The
+opening/repay **funding** transfers (the ICS-20 transfers to the
 `LeaseAuthority`) likewise carry no per-emission nonce yet: a `Heal` issued while the
 original funding packet is still resolvable can solicit a *duplicate* success-ack and
 advance the funding `acks-left` countdown one step early. The residual is bounded and
