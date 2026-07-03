@@ -33,14 +33,17 @@ use crate::{
 
 const CONTRACT_STORAGE_VERSION: VersionSegment = 0;
 
-/// Envelope nonce for the single-packet operations that have no duplicate-
-/// callback window to close.
+/// Envelope nonce for the single-packet operations that carry no
+/// per-emission correlation.
 ///
-/// `OpenProfit`/`CloseProfit` solicit exactly one callback, so a superseded-
-/// packet race cannot arise and they ride a zero nonce. `Swap` (#636) and the
-/// multi-leg `TransferOut` drain (#671) instead carry a real per-emission nonce
-/// the profit assigns, so a packet superseded by a re-emission or heal is
-/// rejected.
+/// `OpenProfit`/`CloseProfit` ride a zero nonce. A heal re-emission of the
+/// establishment can leave a superseded packet in flight; its eventual
+/// callback (ack, error, or timeout) lands after the transition and is
+/// absorbed by the receiving state — `Idle` authorizes the controller and
+/// swallows it with an event — so the acknowledgment always commits. `Swap`
+/// (#636) and the multi-leg `TransferOut` drain (#671) instead carry a real
+/// per-emission nonce the profit assigns, so a superseded packet is rejected
+/// by nonce-mismatch while a leg is still in flight.
 const NO_NONCE: u64 = 0;
 const CURRENT_RELEASE: ProtocolPackageRelease = ProtocolPackageRelease::current(
     package_name!(),
