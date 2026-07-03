@@ -220,7 +220,7 @@ fn ack_to_outcome(ack: StdAck) -> RemoteOperationOutcome {
         StdAck::Success(data) => cosmwasm_std::from_json::<WireOperationResponse>(&data)
             .map(RemoteOperationOutcome::OperationOk)
             .unwrap_or_else(|_err| {
-                RemoteOperationOutcome::OperationErr(RemoteErrorMessage::from_static(
+                RemoteOperationOutcome::OperationErr(RemoteErrorMessage::truncated(
                     UNDECODABLE_ACK_REASON,
                 ))
             }),
