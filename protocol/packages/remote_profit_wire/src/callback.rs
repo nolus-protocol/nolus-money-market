@@ -49,7 +49,13 @@ pub enum RemoteOperationOutcome {
 /// Serialises as a bare JSON string. The counterparty-facing paths —
 /// deserialisation and the fallible [`new`](Self::new) — reject payloads
 /// above [`OPERATION_ERR_MAX_BYTES`], so any string sourced from over the
-/// wire is bounded before it reaches downstream storage.
+/// wire is bounded before it reaches downstream storage. Two infallible
+/// constructors complement [`new`](Self::new):
+/// [`truncated`](Self::truncated) cuts an over-cap counterparty string down
+/// to the cap on a UTF-8 char boundary — used where the ack path must never
+/// reject and strand a committed packet — and
+/// [`from_static`](Self::from_static) trusts a compile-time literal and only
+/// `debug_assert!`s the bound.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct RemoteErrorMessage(String);
 
@@ -70,6 +76,57 @@ impl RemoteErrorMessage {
                 max: OPERATION_ERR_MAX_BYTES,
             })
         }
+    }
+
+    /// Construct from a counterparty-authored string, cutting it down to at
+    /// most [`OPERATION_ERR_MAX_BYTES`] on a UTF-8 char boundary.
+    ///
+    /// Unlike [`new`](Self::new), this is total: an over-cap message is
+    /// truncated rather than rejected. The ack path uses it so a counterparty
+    /// error string can never fail construction and strand an already-committed
+    /// packet behind an endless relayer retry.
+    pub fn truncated<S>(message: S) -> Self
+    where
+        S: Into<String>,
+    {
+        let mut message: String = message.into();
+        let end = message
+            .char_indices()
+            .map(|(start, ch)| start + ch.len_utf8())
+            .take_while(|boundary| *boundary <= OPERATION_ERR_MAX_BYTES)
+            .last()
+            .unwrap_or(0);
+        message.truncate(end);
+        let value = Self(message);
+        debug_assert!(value.invariant_held());
+        value
+    }
+
+    /// Construct from a compile-time-known string literal that is statically
+    /// known to be within [`OPERATION_ERR_MAX_BYTES`].
+    ///
+    /// For fixed internal reasons (e.g. `"timeout"`) where threading a
+    /// fallible [`new`](Self::new) through the call site would add error
+    /// plumbing for a value that is provably in range.
+    ///
+    /// Precondition (caller's responsibility): `message` must be a genuine
+    /// literal whose length is verifiable by inspection, never a
+    /// runtime-produced `&'static str` (e.g. a `Box::leak`ed value). The
+    /// length is only `debug_assert!`ed, so an over-cap input that slips past
+    /// review would bypass the bound in release builds — unlike [`new`] and
+    /// deserialisation, which reject it. When the length is not statically
+    /// obvious, use [`new`] instead.
+    ///
+    /// # Panics
+    ///
+    /// In debug builds, panics if `message` exceeds [`OPERATION_ERR_MAX_BYTES`].
+    pub fn from_static(message: &'static str) -> Self {
+        let value = Self(message.to_owned());
+        debug_assert!(
+            value.invariant_held(),
+            "RemoteErrorMessage::from_static exceeds OPERATION_ERR_MAX_BYTES"
+        );
+        value
     }
 
     pub fn as_str(&self) -> &str {
