@@ -341,7 +341,7 @@ fn connect_rejects_invalid_handshake_params() {
 }
 
 #[test]
-fn close_init_when_closing_accepted() {
+fn close_init_when_closing_clears_channel() {
     let mut deps = deps_with_config();
     persist_existing_closing_channel(deps.as_mut());
 
@@ -359,7 +359,7 @@ fn close_init_when_closing_accepted() {
     )
     .unwrap();
 
-    assert!(Channel::may_load(&deps.storage).unwrap().is_some());
+    assert!(Channel::may_load(&deps.storage).unwrap().is_none());
 }
 
 #[test]

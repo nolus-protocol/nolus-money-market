@@ -137,7 +137,10 @@ pub fn ibc_channel_close(
                 Some(channel) if channel.state() == ChannelState::Closing => Ok(()),
                 _ => Err(Error::UnsolicitedChannelClose),
             })
-            .map(|()| IbcBasicResponse::new()),
+            .map(|()| {
+                Channel::clear(deps.storage);
+                IbcBasicResponse::new()
+            }),
         IbcChannelCloseMsg::CloseConfirm { .. } => {
             Channel::clear(deps.storage);
             Ok(IbcBasicResponse::new())
