@@ -134,11 +134,10 @@ impl OpenProfit {
     /// bad ack.
     fn reemit_establishment(self) -> SwapDecision<Self> {
         match self.open_profit_msg() {
-            Ok(batch) => {
-                let event = Emitter::of_type(EVENT_TYPE_ESTABLISHMENT)
-                    .emit(EVENT_KEY_HEAL, EVENT_VALUE_REEMIT);
-                self.stay_open(batch, event)
-            }
+            Ok(batch) => self.stay_open(
+                batch,
+                Emitter::of_type(EVENT_TYPE_ESTABLISHMENT).emit(EVENT_KEY_HEAL, EVENT_VALUE_REEMIT),
+            ),
             Err(err) => SwapDecision::Finished(Err(err)),
         }
     }
@@ -257,6 +256,7 @@ mod tests {
     const DRAIN_VAULT: &str = "nolus1mf6ptkssddfmxvhdx0ech0k03ktp6kf9yk59renau2gvht3nq2gqkxgywu";
     const CONTROLLER: &str = "controller";
     const CADENCE_HOURS: u16 = 24;
+    const NONCE: u64 = 1;
 
     /// A decodable non-`OpenProfit` acknowledgment is committed, not errored, and
     /// leaves the profit in the establishment state so the relayer stops
@@ -313,6 +313,22 @@ mod tests {
         );
     }
 
+    /// A heal whose config cannot build the establishment packet reverts the
+    /// heal transaction rather than absorbing, so the profit is left untouched
+    /// for a later retry — a synchronous heal error reverts only the heal tx.
+    #[test]
+    fn heal_with_unbuildable_packet_reverts() {
+        let mock_querier = MockQuerier::default();
+        let querier = QuerierWrapper::new(&mock_querier);
+
+        let unhealable = OpenProfit::new(config_with_vault("not-a-nolus-address"));
+
+        assert!(matches!(
+            unhealable.heal(querier, testing::mock_env(), &healer()),
+            SwapDecision::Finished(Err(_))
+        ));
+    }
+
     /// The happy path is unchanged: a well-formed `OpenProfit` acknowledgment
     /// learns the authority and transitions to `Idle`.
     #[test]
@@ -331,8 +347,6 @@ mod tests {
 
         assert_eq!("Idle", next.to_string());
     }
-
-    const NONCE: u64 = 1;
 
     fn assert_absorbed(reason: &str, response: &CwResponse) {
         assert_eq!(0, response.messages.len());
@@ -368,6 +382,10 @@ mod tests {
     }
 
     fn config() -> Config {
+        config_with_vault(DRAIN_VAULT)
+    }
+
+    fn config_with_vault(vault: &str) -> Config {
         Config::new(
             CADENCE_HOURS,
             Addr::unchecked("treasury"),
@@ -386,7 +404,7 @@ mod tests {
             Addr::unchecked(CONTROLLER),
             VaultConfig {
                 code_id: cosmwasm_std::from_json(b"3").expect("a valid code id"),
-                address: Addr::unchecked(DRAIN_VAULT),
+                address: Addr::unchecked(vault),
             },
         )
     }
