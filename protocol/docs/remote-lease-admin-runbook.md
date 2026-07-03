@@ -159,15 +159,21 @@ lease-side `wasm-ls-close-remote-lease` events out-of-band until none remain in 
 
 ### 2.5 Verifying
 
-`Channel()` reports `state: "closing"` immediately, then `{"channel": null}` once the
-solicited `CloseInit` clears the record — an admin close no longer waits on the
-counterparty's `CloseConfirm`.
+On a solicited (admin) close, `Channel()` never externally reports `state: "closing"` —
+it goes straight from the open record to `{"channel": null}`. `CloseChannel` stores
+`Closing` and schedules the `IbcMsg::CloseChannel` (`schedule_execute_no_reply`) for the
+*same* transaction; the IBC module processes it before commit, so
+`ibc_channel_close(CloseInit)` clears the record in that same tx. The transient `Closing`
+state therefore exists only intra-tx — an external query would observe it solely if the
+clear did *not* happen (the old behavior). Verify success by polling `Channel()` until it
+returns `{"channel": null}`; an admin close does not wait on the counterparty's
+`CloseConfirm`.
 
 ### 2.6 Failure & recovery
 
 - **No channel** → `ChannelNotOpen`. **Already `Closing`** → `ChannelNotOperational`
   (this is idempotency protection — do **not** retry; the solicited `CloseInit` clears
-  the record shortly).
+  the record within the same transaction).
 - **Reopen after a solicited close** — the solicited `CloseInit` (the local close-init
   step the admin `CloseChannel` triggers) clears the record, so an admin close no longer
   lingers in `Closing` or blocks reopening: once `Channel()` reports `{"channel": null}`,
