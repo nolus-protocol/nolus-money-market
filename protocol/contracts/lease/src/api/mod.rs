@@ -86,8 +86,10 @@ pub enum ExecuteMsg {
     /// lease's behalf. The lease authorises the caller before delivery: the
     /// swap legs and `OpenFailed` check the live leaser permission query,
     /// while the drain legs and the settled-state absorbers check the
-    /// `remote_lease_controller` pinned at lease open — both compare against
-    /// the same immutable leaser value, so the two forms agree. It then
+    /// `remote_lease_controller` pinned at lease open. The leaser value has
+    /// no update path today, so the two forms agree; the pin additionally
+    /// guarantees that a leaser re-configuration, should one ever be added,
+    /// can never repoint a live lease mid-workflow. It then
     /// classifies the variant and routes it into the state's dedicated `on_remote_response` /
     /// `on_remote_error` / `on_remote_timeout` entry points: the leg that
     /// scheduled the remote operation processes the acknowledgment directly,
