@@ -27,6 +27,61 @@ use crate::{
 
 use super::state::{self, Response, State};
 
+#[cfg(all(feature = "internal.test.contract", test))]
+mod tests {
+    use sdk::cosmwasm_std::testing::{mock_dependencies, mock_env};
+    use versioning::{
+        ProtocolMigrationMessage, ProtocolPackageRelease, ProtocolPackageReleaseId, ReleaseId,
+        VersionSegment, package_name, package_version,
+    };
+
+    use crate::{api::MigrateMsg, error::ContractError};
+
+    use super::{CONTRACT_STORAGE_VERSION, migrate};
+
+    #[test]
+    fn migrate_in_family_runs_update_software() {
+        let mut deps = mock_dependencies();
+        let res = migrate(
+            deps.as_mut(),
+            mock_env(),
+            migrate_msg(CONTRACT_STORAGE_VERSION),
+        )
+        .unwrap();
+        assert_eq!(0, res.messages.len());
+    }
+
+    #[test]
+    fn migrate_pre_v10_storage_rejected() {
+        const PRE_V10_STORAGE: VersionSegment = CONTRACT_STORAGE_VERSION - 1;
+
+        let mut deps = mock_dependencies();
+        let err = migrate(deps.as_mut(), mock_env(), migrate_msg(PRE_V10_STORAGE)).unwrap_err();
+        assert!(
+            matches!(err, ContractError::UnsupportedMigration),
+            "got {err:?}",
+        );
+    }
+
+    fn migrate_msg(from_storage: VersionSegment) -> ProtocolMigrationMessage<MigrateMsg> {
+        const SOFTWARE_ID: &str = env!("SOFTWARE_RELEASE_ID");
+        const PROTOCOL_ID: &str = env!("PROTOCOL_RELEASE_ID");
+
+        ProtocolMigrationMessage {
+            migrate_from: ProtocolPackageRelease::current(
+                package_name!(),
+                package_version!(),
+                from_storage,
+            ),
+            to_release: ProtocolPackageReleaseId::new(
+                ReleaseId::new_test(SOFTWARE_ID),
+                ReleaseId::new_test(PROTOCOL_ID),
+            ),
+            message: MigrateMsg {},
+        }
+    }
+}
+
 const CONTRACT_STORAGE_VERSION: VersionSegment = 10;
 const CURRENT_RELEASE: ProtocolPackageRelease = ProtocolPackageRelease::current(
     package_name!(),
@@ -72,9 +127,13 @@ pub fn migrate(
     // required, turned `Account.host` optional, and added the `OpeningUnwind`
     // variant and per-currency drain baselines. Such a record has no meaningful
     // `remote_lease_id` to synthesise, so it is refused outright. In-family
-    // upgrades (v10 -> v10.x -> v11) keep the storage version and run the
-    // standard software update the leaser's `migrate_leases` batch drives, as
-    // every sibling contract does.
+    // upgrades are same-storage code bumps (v10 -> v10.x): they keep the storage
+    // version and run the standard software update the leaser's `migrate_leases`
+    // batch drives, as every sibling contract does. A future storage-layout bump
+    // (a v11 that reshapes the persisted state) is NOT in-family — it must add
+    // its own dedicated storage-migration arm here, and until that arm exists the
+    // `same_storage` gate deliberately refuses it rather than run
+    // `update_software` over an incompatible layout.
     //
     // The storage gate must precede `update_software`: that path checks code
     // monotonicity first, so a real older-semver v9 lease would surface as
@@ -204,60 +263,5 @@ fn process_sudo(
         // The lease funds over the ICS-20 transfer channel and never registers
         // an ICA, so it can never receive an `OpenAck`.
         SudoMsg::OpenAck { .. } => Err(ContractError::unsupported_operation("open ica response")),
-    }
-}
-
-#[cfg(all(feature = "internal.test.contract", test))]
-mod tests {
-    use sdk::cosmwasm_std::testing::{mock_dependencies, mock_env};
-    use versioning::{
-        ProtocolMigrationMessage, ProtocolPackageRelease, ProtocolPackageReleaseId, ReleaseId,
-        VersionSegment, package_name, package_version,
-    };
-
-    use crate::{api::MigrateMsg, error::ContractError};
-
-    use super::{CONTRACT_STORAGE_VERSION, migrate};
-
-    #[test]
-    fn migrate_in_family_runs_update_software() {
-        let mut deps = mock_dependencies();
-        let res = migrate(
-            deps.as_mut(),
-            mock_env(),
-            migrate_msg(CONTRACT_STORAGE_VERSION),
-        )
-        .unwrap();
-        assert_eq!(0, res.messages.len());
-    }
-
-    #[test]
-    fn migrate_pre_v10_storage_rejected() {
-        const PRE_V10_STORAGE: VersionSegment = CONTRACT_STORAGE_VERSION - 1;
-
-        let mut deps = mock_dependencies();
-        let err = migrate(deps.as_mut(), mock_env(), migrate_msg(PRE_V10_STORAGE)).unwrap_err();
-        assert!(
-            matches!(err, ContractError::UnsupportedMigration),
-            "got {err:?}",
-        );
-    }
-
-    fn migrate_msg(from_storage: VersionSegment) -> ProtocolMigrationMessage<MigrateMsg> {
-        const SOFTWARE_ID: &str = env!("SOFTWARE_RELEASE_ID");
-        const PROTOCOL_ID: &str = env!("PROTOCOL_RELEASE_ID");
-
-        ProtocolMigrationMessage {
-            migrate_from: ProtocolPackageRelease::current(
-                package_name!(),
-                package_version!(),
-                from_storage,
-            ),
-            to_release: ProtocolPackageReleaseId::new(
-                ReleaseId::new_test(SOFTWARE_ID),
-                ReleaseId::new_test(PROTOCOL_ID),
-            ),
-            message: MigrateMsg {},
-        }
     }
 }
