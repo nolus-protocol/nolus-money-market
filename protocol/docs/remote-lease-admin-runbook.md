@@ -133,8 +133,11 @@ counterparty_port_id, version, state: "open" }`.
 Moves the recorded channel `Open → Closing` (a one-way local soft-lock) and emits one
 `IbcMsg::CloseChannel`. Once `Closing`, the controller rejects **every** new outbound
 operation (`OpenLease`/`CloseLease`/`Swap`/`TransferOut`) with `ChannelNotOperational`.
-The record is removed only when the counterparty's `CloseConfirm` arrives. There are
-only two stored states — `Open` and `Closing`; "closed" means the record is gone.
+The **solicited** `CloseInit` — the local close-init step the admin `CloseChannel`
+triggers — now clears the record, so an admin close frees the slot without waiting on
+the counterparty's `CloseConfirm` (which still clears it on a counterparty-initiated
+close). There are only two stored states — `Open` and `Closing`; "closed" means the
+record is gone, and a fresh `OpenChannel()` can reopen.
 
 ### 2.3 Drain first — the invisible-lease window
 
@@ -156,17 +159,20 @@ lease-side `wasm-ls-close-remote-lease` events out-of-band until none remain in 
 
 ### 2.5 Verifying
 
-`Channel()` reports `state: "closing"` immediately, then `{"channel": null}` once
-`CloseConfirm` clears the record.
+`Channel()` reports `state: "closing"` immediately, then `{"channel": null}` once the
+solicited `CloseInit` clears the record — an admin close no longer waits on the
+counterparty's `CloseConfirm`.
 
 ### 2.6 Failure & recovery
 
 - **No channel** → `ChannelNotOpen`. **Already `Closing`** → `ChannelNotOperational`
-  (this is idempotency protection — do **not** retry; wait for `CloseConfirm`).
-- **Stuck/zombie `Closing`** (counterparty never confirms) — the channel stays `Closing`
-  indefinitely; there is **no controller-side timeout or force-clear**. Recovery is
-  purely at the relayer/IBC layer. While `Closing`, no outbound packets are possible and
-  `OpenChannel` is blocked (record still present).
+  (this is idempotency protection — do **not** retry; the solicited `CloseInit` clears
+  the record shortly).
+- **Reopen after a solicited close** — the solicited `CloseInit` (the local close-init
+  step the admin `CloseChannel` triggers) clears the record, so an admin close no longer
+  lingers in `Closing` or blocks reopening: once `Channel()` reports `{"channel": null}`,
+  a fresh `OpenChannel()` reopens the channel. A counterparty-initiated close clears via
+  `CloseConfirm` instead.
 - **Unsolicited counterparty `CloseInit`** on a healthy `Open` channel →
   `UnsolicitedChannelClose`. A relayer cannot force-close an `Open` channel; the operator
   must `CloseChannel()` first. (ADR 0001 §6.)
@@ -458,7 +464,7 @@ the instance **intact** (no brick).
 | `Unauthorized` | caller is not `protocol_admin` | send from the admin key |
 | `ChannelAlreadyExists` | channel already recorded | none needed; this is the idempotency guard |
 | `ChannelNotOpen` | `CloseChannel` with no recorded channel | nothing to close |
-| `ChannelNotOperational` | op while `Closing` | wait for `CloseConfirm`; do not retry |
+| `ChannelNotOperational` | op while `Closing` | wait for the close to clear the record; do not retry |
 | `UnsolicitedChannelClose` | counterparty `CloseInit` on a healthy channel | `CloseChannel()` first if intended |
 | `UnauthorisedCaller` (on lease ops) | `lease_code` points at the wrong id | re-issue `NewLeaseCode` with the correct id |
 | `IncompatibleStoredConfig`/`MalformedStoredConfig`, `UpdateSoftware` | migrate drift | fix the migration target; instance is intact |
