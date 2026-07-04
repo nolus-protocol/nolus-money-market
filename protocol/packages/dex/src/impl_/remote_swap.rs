@@ -227,32 +227,6 @@ where
         })
     }
 
-    /// An acknowledgment below the leg's pinned floor is a counterparty
-    /// contract violation - the remote side enforces the very `min_out`
-    /// this node emitted, persisted in `in_flight_min_out`. Validating
-    /// against the pinned value rather than a fresh oracle quote keeps the
-    /// check aligned with the promise actually made: price drift can
-    /// neither retroactively reclassify a compliant, already-executed swap
-    /// as underpaid nor admit an amount below the promised floor. The leg
-    /// is re-emitted instead of accepted or absorbed, mirroring the error
-    /// treatment: only the in-flight leg retries, the accumulated progress
-    /// stays intact.
-    fn deliver_ack(
-        self,
-        coin_out: CoinDTO<SwapTask::OutG>,
-        querier: QuerierWrapper<'_>,
-        env: Env,
-    ) -> HandlerResult<Self> {
-        if coin_out.currency() != self.total_out.currency() {
-            return self.absorb(ABSORB_CURRENCY_MISMATCH).into();
-        }
-        if coin_out.amount() < self.in_flight_min_out.amount() {
-            self.reemit_underpaid().into()
-        } else {
-            self.apply_ack(coin_out, querier, env)
-        }
-    }
-
     /// An acknowledgment overflowing the accumulated total comes from a
     /// counterparty in breach of the coin amount bounds and is absorbed
     /// like the other malformed payloads - an error would revert the
@@ -611,6 +585,61 @@ where
     Self: Into<SEnum>,
     SlippageAnomaly<SwapTask, SEnum>: Into<SEnum>,
 {
+    /// An acknowledgment below the leg's pinned floor is a counterparty
+    /// contract violation - the remote side enforces the very `min_out`
+    /// this node emitted, persisted in `in_flight_min_out`. Validating
+    /// against the pinned value rather than a fresh oracle quote keeps the
+    /// check aligned with the promise actually made: price drift can
+    /// neither retroactively reclassify a compliant, already-executed swap
+    /// as underpaid nor admit an amount below the promised floor. The leg
+    /// re-emits within the shared timeout retry budget — always verbatim,
+    /// re-promising the pinned floor (unlike an in-budget liquidation
+    /// timeout, which re-quotes the floor from the live oracle) — and past
+    /// budget escalates per the spec's slippage policy exactly as a timeout
+    /// does: a Park-spec leg (liquidation/close/repay) freezes at the
+    /// slippage-anomaly terminal, bounding the re-emission loop, while a
+    /// ReEmit-spec leg (opening swap) keeps re-emitting the pinned floor
+    /// verbatim as its optimistic self-heal.
+    /// Either way only the in-flight leg retries and the accumulated progress
+    /// stays intact.
+    fn deliver_ack(
+        self,
+        coin_out: CoinDTO<SwapTask::OutG>,
+        querier: QuerierWrapper<'_>,
+        env: Env,
+    ) -> HandlerResult<Self> {
+        if coin_out.currency() != self.total_out.currency() {
+            return self.absorb(ABSORB_CURRENCY_MISMATCH).into();
+        }
+        if coin_out.amount() < self.in_flight_min_out.amount() {
+            self.reemit_or_escalate_underpaid(querier, env)
+        } else {
+            self.apply_ack(coin_out, querier, env)
+        }
+    }
+
+    /// An under-floor OK-ack consumes the same retry budget as a timeout:
+    /// within budget it re-emits the in-flight leg — verbatim, never
+    /// re-quoting the floor the way an in-budget liquidation timeout does —
+    /// and past budget it escalates per the spec's slippage policy, exactly
+    /// as the timeout path does: a Park spec freezes at the slippage-anomaly
+    /// terminal, a ReEmit spec (opening swap) re-emits verbatim. Sharing the
+    /// `timeouts` budget bounds the re-emission loop for Park-spec legs; a
+    /// ReEmit leg still re-emits unbounded, exactly as it does on repeated
+    /// timeouts.
+    fn reemit_or_escalate_underpaid(
+        self,
+        querier: QuerierWrapper<'_>,
+        env: Env,
+    ) -> HandlerResult<Self> {
+        let bumped = self.with_incremented_timeouts();
+        if bumped.timeouts <= bumped.spec.timeout_retry_budget() {
+            bumped.reemit_underpaid().into()
+        } else {
+            bumped.escalate(querier, env)
+        }
+    }
+
     /// Escalate a leg whose timeout retry budget is spent, per the spec's
     /// policy: park the opened legs at the slippage-anomaly terminal, or
     /// re-emit the opening swap verbatim. An explicit error never reaches
@@ -1505,6 +1534,75 @@ mod tests {
             ),
             response
         );
+        assert_node(2, &coin_out(50), &coin_out(PINNED_FLOOR), &node);
+    }
+
+    /// Repeated under-floor OK-acks consume the same retry budget as
+    /// timeouts: each in-budget under-floor ack re-emits and advances the
+    /// counter, and the round past the budget parks at the slippage-anomaly
+    /// terminal carrying the pinned floor - a counterparty returning
+    /// persistently under-floor acks can no longer drive an unbounded
+    /// re-emission loop.
+    #[test]
+    fn repeated_underpaid_acks_spend_the_budget_and_park() {
+        const PINNED_FLOOR: Amount = 40;
+        let mock_querier = MockQuerier::default();
+        let querier = QuerierWrapper::new(&mock_querier);
+
+        let mut spec = spec3();
+        spec.set_floor(PINNED_FLOOR);
+        let (_response, mut node) = continued(Node::start(spec, &testing::mock_env(), querier));
+
+        let budget = mock_budget();
+        for round in 1..=budget {
+            let nonce = node.in_flight_nonce;
+            let (_response, next) = continued(node.on_remote_response(
+                payload(&coin_out(PINNED_FLOOR - 1)),
+                nonce,
+                querier,
+                testing::mock_env(),
+            ));
+            node = next;
+            assert_eq!(round, node.timeouts);
+            assert_node(2, &coin_out(50), &coin_out(PINNED_FLOOR), &node);
+        }
+
+        let nonce = node.in_flight_nonce;
+        let (response, terminal) = parked(node.on_remote_response(
+            payload(&coin_out(PINNED_FLOOR - 1)),
+            nonce,
+            querier,
+            testing::mock_env(),
+        ));
+        assert_eq!(parked_response(), response);
+        assert_terminal(2, &coin_out(50), &coin_out(PINNED_FLOOR), &terminal);
+    }
+
+    /// An under-floor ack follows the spec's escalation policy past the
+    /// budget exactly as a timeout does: a `ReEmit` spec re-emits verbatim
+    /// instead of parking, keeping the opening swap's optimistic self-heal.
+    #[test]
+    fn repeated_underpaid_acks_reemit_past_budget_when_spec_reemits() {
+        const PINNED_FLOOR: Amount = 40;
+        let mock_querier = MockQuerier::default();
+        let querier = QuerierWrapper::new(&mock_querier);
+
+        let mut spec = spec3();
+        spec.set_reemit();
+        spec.set_floor(PINNED_FLOOR);
+        let (_response, mut node) = continued(Node::start(spec, &testing::mock_env(), querier));
+
+        let rounds = u16::from(mock_budget()) + 3;
+        for _ in 0..rounds {
+            let nonce = node.in_flight_nonce;
+            let (_response, next) = continued(node.on_remote_response(
+                payload(&coin_out(PINNED_FLOOR - 1)),
+                nonce,
+                querier,
+                testing::mock_env(),
+            ));
+            node = next;
+        }
         assert_node(2, &coin_out(50), &coin_out(PINNED_FLOOR), &node);
     }
 
