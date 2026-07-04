@@ -37,7 +37,7 @@ flowchart TD
         ExecEntry["contract::endpoins::execute → state.on_remote_lease_callback"]:::lease
         Auth["Handler::authz_remote_callback<br/>LeasesRef::remote_lease_callback_permission<br/>← leaser query CheckRemoteLeaseCallbackPermission"]:::lease
         Classify["deliver_remote_callback:<br/>OperationOk → on_remote_response(bytes) · OperationErr → on_remote_error · OperationTimeout → on_remote_timeout"]:::lease
-        RemoteLeg["RemoteSwap leg (overrides on_remote_*):<br/>decode_response — typed, registry-validating — credits the in-flight leg<br/>absorbed with event on undecodable-response / unexpected-response-variant /<br/>out-currency-mismatch / output-overflow; under-min-out re-emits the leg"]:::ok
+        RemoteLeg["RemoteSwap leg (overrides on_remote_*):<br/>decode_response — typed, registry-validating — credits the in-flight leg<br/>absorbed with event on undecodable-response / unexpected-response-variant /<br/>out-currency-mismatch / output-overflow; under-min-out re-emits within the shared timeout retry budget, then parks at the slippage-anomaly terminal"]:::ok
         DrainLeg["RemoteTransferOut leg (overrides on_remote_*):<br/>decode_response — variant check only, the payload carries no data —<br/>advances the acks_left countdown; absorbed with event on<br/>undecodable-response / unexpected-response-variant / remote-error<br/>(an error ack is NOT auto-retried — recovery is the operator heal)"]:::ok
         DefaultLeg["any non-overriding state (default on_remote_*):<br/>absorb with `remote-callback` event — never advance any ack countdown.<br/>The remote-lease path's callback legs all override on_remote_*; this is the safety fallback"]:::ok
         ExecEntry --> Auth -->|granted| Classify
@@ -276,10 +276,14 @@ wire-shaped `OperationResponse` (#637), and the `RemoteSwap` leg's
 `decode_response` parses the typed, registry-validating twin from those
 bytes — a registry miss is absorbed as `undecodable-response` rather
 than erred. The drain leg decodes the same way but its `TransferOut`
-variant carries no payload — the decode is a pure variant check, so the
-acknowledgment's only information is positional (the `acks_left`
-countdown), an even weaker correlation than the swap leg's pinned-floor
-cross-check. The close leg needs no decode at all: as a plain state
+variant carries no payload — the decode is a pure variant check. The
+acknowledgment is nonce-correlated all the same: each drain emission
+rides a per-emission `nonce` on the envelope (#671), so a callback is
+credited to the exact emission and a differing nonce is absorbed as
+`nonce-mismatch` — the same correctness pillars as the swap leg, not a
+weaker positional-only correlation. The `acks_left` countdown tracks the
+transfer positionally; the nonce disambiguates which emission a callback
+belongs to. The close leg needs no decode at all: as a plain state
 (like `OpenLease`) it receives the already-typed callback and matches
 on the `CloseLease` variant, whose response is empty — a single
 in-flight operation, correlated by the state itself.
