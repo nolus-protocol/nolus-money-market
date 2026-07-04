@@ -231,7 +231,7 @@ fn packet_ack_success_with_malformed_response_dispatches_synthetic_err() {
         &lease,
         RemoteLeaseCallback {
             nonce: 0,
-            outcome: RemoteOperationOutcome::OperationErr(RemoteErrorMessage::from_static(
+            outcome: RemoteOperationOutcome::OperationErr(RemoteErrorMessage::truncated(
                 crate::ibc::UNDECODABLE_ACK_REASON,
             )),
         },

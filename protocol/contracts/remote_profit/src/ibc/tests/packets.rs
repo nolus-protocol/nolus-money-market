@@ -158,7 +158,7 @@ fn packet_ack_never_yields_timeout_from_success_payload() {
         &sdk_testing::user(PROFIT_CONTRACT),
         RemoteProfitCallback {
             nonce: 0,
-            outcome: RemoteOperationOutcome::OperationErr(RemoteErrorMessage::from_static(
+            outcome: RemoteOperationOutcome::OperationErr(RemoteErrorMessage::truncated(
                 crate::ibc::UNDECODABLE_ACK_REASON,
             )),
         },
@@ -290,7 +290,7 @@ fn packet_ack_success_with_malformed_response_dispatches_synthetic_err() {
         &sdk_testing::user(PROFIT_CONTRACT),
         RemoteProfitCallback {
             nonce: 0,
-            outcome: RemoteOperationOutcome::OperationErr(RemoteErrorMessage::from_static(
+            outcome: RemoteOperationOutcome::OperationErr(RemoteErrorMessage::truncated(
                 crate::ibc::UNDECODABLE_ACK_REASON,
             )),
         },

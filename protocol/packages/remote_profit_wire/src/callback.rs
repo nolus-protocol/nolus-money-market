@@ -46,16 +46,13 @@ pub enum RemoteOperationOutcome {
 
 /// Length-capped error string returned by the Solana counterparty.
 ///
-/// Serialises as a bare JSON string. The counterparty-facing paths —
-/// deserialisation and the fallible [`new`](Self::new) — reject payloads
-/// above [`OPERATION_ERR_MAX_BYTES`], so any string sourced from over the
-/// wire is bounded before it reaches downstream storage. Two infallible
-/// constructors complement [`new`](Self::new):
-/// [`truncated`](Self::truncated) cuts an over-cap counterparty string down
-/// to the cap on a UTF-8 char boundary — used where the ack path must never
-/// reject and strand a committed packet — and
-/// [`from_static`](Self::from_static) trusts a compile-time literal and
-/// hard-`assert!`s the bound.
+/// Serialises as a bare JSON string. Two constructors keep the payload
+/// within [`OPERATION_ERR_MAX_BYTES`]: the fallible [`new`](Self::new)
+/// rejects an over-cap string with a typed `Err`, while the infallible
+/// [`truncated`](Self::truncated) cuts one down to the cap on a UTF-8 char
+/// boundary — used where the ack path must never reject and strand a
+/// committed packet. Deserialisation applies the same bound, so any string
+/// sourced from over the wire is bounded before it reaches downstream storage.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct RemoteErrorMessage(String);
 
@@ -99,34 +96,6 @@ impl RemoteErrorMessage {
         message.truncate(end);
         let value = Self(message);
         debug_assert!(value.invariant_held());
-        value
-    }
-
-    /// Construct from a compile-time-known string literal that is statically
-    /// known to be within [`OPERATION_ERR_MAX_BYTES`].
-    ///
-    /// For fixed internal reasons (e.g. `"timeout"`) where threading a
-    /// fallible [`new`](Self::new) through the call site would add error
-    /// plumbing for a value that is provably in range.
-    ///
-    /// Precondition (caller's responsibility): `message` must be a genuine
-    /// literal whose length is verifiable by inspection, never a
-    /// runtime-produced `&'static str` (e.g. a `Box::leak`ed value). The
-    /// bound is enforced with a hard [`assert!`], so an over-cap input that
-    /// slips past review is caught deterministically on first execution in
-    /// release builds too — not just under `debug_assert!`. When the length is
-    /// not statically obvious, use [`new`] instead, which returns a typed
-    /// error rather than panicking.
-    ///
-    /// # Panics
-    ///
-    /// Panics if `message` exceeds [`OPERATION_ERR_MAX_BYTES`].
-    pub fn from_static(message: &'static str) -> Self {
-        let value = Self(message.to_owned());
-        assert!(
-            value.invariant_held(),
-            "RemoteErrorMessage::from_static exceeds OPERATION_ERR_MAX_BYTES"
-        );
         value
     }
 

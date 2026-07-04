@@ -73,7 +73,7 @@ mod tests {
 
     fn open_failed() -> OpenFailed {
         OpenFailed::new(
-            RemoteErrorMessage::from_static("a prior open failure"),
+            RemoteErrorMessage::truncated("a prior open failure"),
             LeasesRef::unchecked(Addr::unchecked(LEASER)),
         )
     }

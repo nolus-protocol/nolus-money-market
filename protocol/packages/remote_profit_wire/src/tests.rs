@@ -188,27 +188,6 @@ fn callback_error_message_truncated_respects_char_boundary() {
     assert_eq!(510, value.as_str().len());
 }
 
-#[test]
-fn callback_error_message_from_static_accepted() {
-    let value = RemoteErrorMessage::from_static("timeout");
-    assert_eq!("timeout", value.as_str());
-    assert!(value.invariant_held());
-    assert_round_trip_eq(
-        r#"{"operation_err":"timeout"}"#,
-        &RemoteOperationOutcome::OperationErr(value),
-    );
-}
-
-// `from_static` hard-`assert!`s its length contract, so the panic fires in
-// release builds too — no debug-only gating.
-#[test]
-#[should_panic(expected = "OPERATION_ERR_MAX_BYTES")]
-fn callback_error_message_from_static_over_cap_panics() {
-    let over_cap: &'static str =
-        Box::leak("x".repeat(OPERATION_ERR_MAX_BYTES + 1).into_boxed_str());
-    let _ = RemoteErrorMessage::from_static(over_cap);
-}
-
 // The callback wraps a per-emission `nonce` alongside the outcome, so the
 // controller can correlate an acknowledgment to the exact packet that
 // solicited it; the nonce is the FIRST field and round-trips on the wire.
