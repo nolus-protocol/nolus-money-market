@@ -44,6 +44,10 @@ impl PackageRelease {
         self.code.version()
     }
 
+    pub const fn same_storage(&self, other: &Self) -> bool {
+        self.code.same_storage(&other.code)
+    }
+
     fn check_software_update_allowed<F>(&self, to: &Self, storage_check: F) -> Result<(), Error>
     where
         F: FnOnce(&Self, &Package) -> Result<(), Error>,
