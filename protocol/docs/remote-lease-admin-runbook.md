@@ -164,8 +164,9 @@ it goes straight from the open record to `{"channel": null}`. `CloseChannel` sto
 `Closing` and schedules the `IbcMsg::CloseChannel` (`schedule_execute_no_reply`) for the
 *same* transaction; the IBC module processes it before commit, so
 `ibc_channel_close(CloseInit)` clears the record in that same tx. The transient `Closing`
-state therefore exists only intra-tx — an external query would observe it solely if the
-clear did *not* happen (the old behavior). Verify success by polling `Channel()` until it
+state therefore exists only intra-tx and is never externally observable in either
+direction: a failed `IbcMsg::CloseChannel` submessage reverts the whole transaction, so
+the record returns to its open state rather than sticking at `Closing`. Verify success by polling `Channel()` until it
 returns `{"channel": null}`; an admin close does not wait on the counterparty's
 `CloseConfirm`.
 
