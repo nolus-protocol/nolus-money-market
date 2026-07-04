@@ -119,6 +119,34 @@ fn snapshot() {
 }
 
 #[test]
+fn override_ibc_currency() {
+    let mut currencies =
+        currency_definitions_generator(include_str!("override_ibc_currency.json"), "Dex");
+
+    expect(
+        &mut currencies,
+        "HostC",
+        "chostc",
+        "chostc",
+        "transfer/channel-1/chostc",
+        "ibc/3F6F41139E8D08E9F1727144C2DF3AF942135B5AAE0477DB829DA3E57C33AA01",
+        2,
+    );
+
+    expect(
+        &mut currencies,
+        "OverC",
+        "transfer/channel-0/transfer/channel-2/myovr",
+        "ibc/030DD264FB3821719EAF5F7750204C1FF6E169F329B0855B60CF7FD563A28F53",
+        "myovr",
+        "myovr",
+        6,
+    );
+
+    expect_end(currencies);
+}
+
+#[test]
 fn with_intermediates() {
     let mut currencies =
         currency_definitions_generator(include_str!("with_intermediates.json"), "Dex");

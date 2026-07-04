@@ -48,6 +48,19 @@ fn ibc_currency_cycle() {
 }
 
 #[test]
+fn override_ibc_currency_cycle() {
+    let error = currency_definitions_error(include_str!("override_ibc_currency_cycle.json"), "Dex");
+
+    assert!(
+        matches!(
+            error,
+            error::CurrencyDefinitions::ResolveCurrency(error::ResolveCurrency::CycleCreated)
+        ),
+        "{error}"
+    );
+}
+
+#[test]
 fn non_existent_currency() {
     let error = currency_definitions_error(include_str!("non_existent_currency_1.json"), "Dex");
 

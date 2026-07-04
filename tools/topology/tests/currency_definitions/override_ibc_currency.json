@@ -1,0 +1,55 @@
+{
+  "host_network": {
+    "name": "Host",
+    "currency": {
+      "id": "HOST_C",
+      "native": {
+        "name": "Host Currency",
+        "symbol": "chostc",
+        "decimal_digits": 2
+      }
+    }
+  },
+  "networks": {
+    "Dex": {
+      "currencies": {
+        "HostC": {
+          "ibc": {
+            "network": "Host",
+            "currency": "HOST_C"
+          }
+        },
+        "OverC": {
+          "ibc": {
+            "network": "Remote",
+            "currency": "REMOTE_C",
+            "override_symbol": "myovr"
+          }
+        }
+      }
+    },
+    "Remote": {
+      "currencies": {
+        "REMOTE_C": {
+          "native": {
+            "name": "Remote Currency",
+            "symbol": "uremotec",
+            "decimal_digits": 6
+          }
+        }
+      }
+    }
+  },
+  "channels": {
+    "Host": {
+      "Dex": "channel-0"
+    },
+    "Dex": {
+      "Host": "channel-1",
+      "Remote": "channel-2"
+    },
+    "Remote": {
+      "Dex": "channel-3"
+    }
+  }
+}

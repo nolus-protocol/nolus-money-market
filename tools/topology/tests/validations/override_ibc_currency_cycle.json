@@ -1,0 +1,60 @@
+{
+  "host_network": {
+    "name": "Host",
+    "currency": {
+      "id": "HOST_C",
+      "native": {
+        "name": "Host Currency",
+        "symbol": "chostc",
+        "decimal_digits": 2
+      }
+    }
+  },
+  "networks": {
+    "Dex": {
+      "currencies": {
+        "HostC": {
+          "ibc": {
+            "network": "Host",
+            "currency": "HOST_C"
+          }
+        },
+        "CycleC": {
+          "ibc": {
+            "network": "NetA",
+            "currency": "CYC",
+            "override_symbol": "myovr"
+          }
+        }
+      }
+    },
+    "NetA": {
+      "currencies": {
+        "CYC": {
+          "ibc": {
+            "network": "NetB",
+            "currency": "CYC"
+          }
+        }
+      }
+    },
+    "NetB": {
+      "currencies": {
+        "CYC": {
+          "ibc": {
+            "network": "NetA",
+            "currency": "CYC"
+          }
+        }
+      }
+    }
+  },
+  "channels": {
+    "Host": {
+      "Dex": "channel-0"
+    },
+    "Dex": {
+      "Host": "channel-1"
+    }
+  }
+}
