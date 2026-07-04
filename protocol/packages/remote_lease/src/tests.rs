@@ -427,6 +427,38 @@ fn protocol_version_round_trip_pinned() {
 }
 
 // ---------------------------------------------------------------------------
+// 9. Cross-crate typed↔wire envelope byte-equality (drift tripwire)
+//
+// The typed `PacketEnvelope` (decoded in production) and the wire
+// `PacketEnvelope` (consumed by the Solana counterpart) each declare their own
+// field list and serde attributes. For every `Operation` variant, the
+// semantically-equivalent typed and wire envelopes must serialize
+// byte-identically, and the wire bytes must decode into the typed envelope.
+// Any drift in either side's field order, field name, or serde attribute
+// breaks these.
+// ---------------------------------------------------------------------------
+
+#[test]
+fn envelope_open_lease_typed_matches_wire() {
+    assert_typed_wire_envelopes_match(Operation::OpenLease(sample_open_lease_params()));
+}
+
+#[test]
+fn envelope_close_lease_typed_matches_wire() {
+    assert_typed_wire_envelopes_match(Operation::CloseLease(CloseLeaseParams {}));
+}
+
+#[test]
+fn envelope_swap_typed_matches_wire() {
+    assert_typed_wire_envelopes_match(Operation::Swap(sample_swap_params()));
+}
+
+#[test]
+fn envelope_transfer_out_typed_matches_wire() {
+    assert_typed_wire_envelopes_match(Operation::TransferOut(sample_transfer_out_params()));
+}
+
+// ---------------------------------------------------------------------------
 // helpers — expected value first per project rule 17
 // ---------------------------------------------------------------------------
 
@@ -440,6 +472,34 @@ where
     let decoded: T =
         serde_json::from_str(&encoded).expect("decoding the freshly-encoded value must succeed");
     assert_eq!(value, &decoded);
+}
+
+fn assert_typed_wire_envelopes_match(operation: Operation) {
+    const LEASE: &str = "nolus1leaseaddr";
+    const NONCE: u64 = 7;
+
+    let wire = remote_lease_wire::envelope::PacketEnvelope {
+        lease: LeaseAddrOnWire::new(LEASE),
+        operation: remote_lease_wire::msg::Operation::from(&operation),
+        version: ProtocolVersion,
+        nonce: NONCE,
+    };
+    let typed = PacketEnvelope {
+        lease: LeaseAddrOnWire::new(LEASE),
+        operation,
+        version: ProtocolVersion,
+        nonce: NONCE,
+    };
+
+    let wire_json = serde_json::to_string(&wire).expect("the wire envelope must serialize");
+    assert_eq!(
+        wire_json,
+        serde_json::to_string(&typed).expect("the typed envelope must serialize"),
+    );
+
+    let decoded: PacketEnvelope =
+        serde_json::from_str(&wire_json).expect("wire bytes must decode into the typed envelope");
+    assert_eq!(typed, decoded);
 }
 
 fn sample_open_lease_params() -> OpenLeaseParams {

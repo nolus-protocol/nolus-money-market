@@ -263,17 +263,22 @@ fn decode_response(payload: &[u8]) -> dex::DexResult<()> {
 mod tests {
     use currencies::{
         Lpn,
-        testing::{PaymentC1, PaymentC2},
+        testing::{LeaseC2, PaymentC1, PaymentC2},
     };
     use currency::CurrencyDef;
     use dex::RemoteTransferOutTask;
     use finance::{
-        coin::{Amount, Coin},
+        coin::{Amount, Coin, CoinDTO},
         duration::Duration,
         percent::Percent100,
     };
     use lpp::stub::LppRef as LppGenericRef;
-    use sdk::cosmwasm_std::{Addr, Coin as CwCoin, Empty, QuerierWrapper, testing::MockQuerier};
+    use remote_lease::response::{
+        CloseLeaseResponse, OpenLeaseResponse, OperationResponse, RemoteLeaseId, SwapResponse,
+    };
+    use sdk::cosmwasm_std::{
+        self, Addr, Coin as CwCoin, Empty, QuerierWrapper, testing::MockQuerier,
+    };
     use timealarms::stub::TimeAlarmsRef;
 
     use crate::{
@@ -290,6 +295,24 @@ mod tests {
     const LEASE: &str = "lease";
     const DOWNPAYMENT: Amount = 1_000;
     const PRINCIPAL: Amount = 4_000;
+
+    #[test]
+    fn decode_rejects_non_transfer_out_responses() {
+        let amount_out: CoinDTO<currencies::PaymentGroup> = Coin::<LeaseC2>::new(1000).into();
+        let unexpected = [
+            OperationResponse::OpenLease(OpenLeaseResponse {
+                remote_lease_id: remote_lease_id(),
+            }),
+            OperationResponse::CloseLease(CloseLeaseResponse {}),
+            OperationResponse::Swap(SwapResponse { amount_out }),
+        ];
+        unexpected.into_iter().for_each(|payload| {
+            assert!(matches!(
+                decode(&payload),
+                Err(dex::Error::UnexpectedResponseVariant(_reason))
+            ));
+        });
+    }
 
     /// The baseline is persisted, not `#[serde(skip)]`: it must survive every
     /// callback's serde round-trip, since a baseline reset to a post-arrival
@@ -377,6 +400,12 @@ mod tests {
         assert_eq!(Ok(true), received(&task, &both));
     }
 
+    fn decode(payload: &OperationResponse) -> dex::DexResult<()> {
+        cosmwasm_std::to_json_vec(payload)
+            .map_err(dex::Error::remote_swap_client)
+            .and_then(|payload| super::decode_response(&payload))
+    }
+
     fn received(task: &OpeningUnwindTask, querier: &MockQuerier<Empty>) -> Result<bool, String> {
         task.all_received(&Addr::unchecked(LEASE), QuerierWrapper::new(querier))
             .map_err(|err| err.to_string())
@@ -461,5 +490,10 @@ mod tests {
             time_alarms: Addr::unchecked("timealarms"),
             market_price_oracle: Addr::unchecked("oracle"),
         }
+    }
+
+    fn remote_lease_id() -> RemoteLeaseId {
+        RemoteLeaseId::new(String::from("StubPda11111111111111111111111111111"))
+            .expect("a base58 sample")
     }
 }
