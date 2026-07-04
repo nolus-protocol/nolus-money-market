@@ -1336,10 +1336,6 @@ dependencies = [
 [[package]]
 name = "protocol_tests"
 version = "0.1.0"
-dependencies = [
- "oracle",
- "sdk",
-]
 
 [[package]]
 name = "quote"

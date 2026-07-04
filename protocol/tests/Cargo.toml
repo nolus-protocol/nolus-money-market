@@ -13,11 +13,4 @@ combinations = [
     { tags = ["ci", "@agnostic"], include-rest = false },
 ]
 
-[[test]]
-name = "oracle"
-required-features = [ "oracle/contract", "sdk/testing" ]
-
-[dependencies]
-oracle = { workspace = true, optional = true }
-sdk = { workspace = true, optional = true }
 
