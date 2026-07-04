@@ -187,8 +187,11 @@ impl Handler for OpenProfit {
     /// The one operator recovery out of a wedged establishment: an absorbed bad
     /// ack consumed the one-shot `OpenProfit` packet without transitioning, so
     /// no further callback will arrive. Re-emitting the packet re-solicits the
-    /// acknowledgment. Permissionless, like the remote-swap heal — the
-    /// controller still authorises the callback it answers with.
+    /// acknowledgment. Permissionless, like the live-leg transfer-out heal
+    /// (the admin-gated heal is the parked slippage-anomaly terminal's, which
+    /// forfeits a pinned floor — re-emitting an establishment packet forfeits
+    /// nothing) — the controller still authorises the callback it answers
+    /// with, and the caller pays the gas.
     fn heal(
         self,
         _querier: QuerierWrapper<'_>,
