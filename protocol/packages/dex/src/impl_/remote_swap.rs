@@ -592,11 +592,14 @@ where
     /// check aligned with the promise actually made: price drift can
     /// neither retroactively reclassify a compliant, already-executed swap
     /// as underpaid nor admit an amount below the promised floor. The leg
-    /// re-emits within the shared timeout retry budget and escalates per the
-    /// spec's slippage policy past it, exactly as a timeout does: a Park-spec
-    /// leg (liquidation/close/repay) freezes at the slippage-anomaly terminal,
-    /// bounding the re-emission loop, while a ReEmit-spec leg (opening swap)
-    /// keeps re-emitting the pinned floor verbatim as its optimistic self-heal.
+    /// re-emits within the shared timeout retry budget — always verbatim,
+    /// re-promising the pinned floor (unlike an in-budget liquidation
+    /// timeout, which re-quotes the floor from the live oracle) — and past
+    /// budget escalates per the spec's slippage policy exactly as a timeout
+    /// does: a Park-spec leg (liquidation/close/repay) freezes at the
+    /// slippage-anomaly terminal, bounding the re-emission loop, while a
+    /// ReEmit-spec leg (opening swap) keeps re-emitting the pinned floor
+    /// verbatim as its optimistic self-heal.
     /// Either way only the in-flight leg retries and the accumulated progress
     /// stays intact.
     fn deliver_ack(
@@ -616,12 +619,14 @@ where
     }
 
     /// An under-floor OK-ack consumes the same retry budget as a timeout:
-    /// within budget it re-emits the in-flight leg, past budget it escalates
-    /// per the spec's slippage policy, exactly as the timeout path does - a
-    /// Park spec freezes at the slippage-anomaly terminal, a ReEmit spec
-    /// (opening swap) re-emits verbatim. Sharing the `timeouts` budget bounds
-    /// the re-emission loop for Park-spec legs; a ReEmit leg still re-emits
-    /// unbounded, exactly as it does on repeated timeouts.
+    /// within budget it re-emits the in-flight leg — verbatim, never
+    /// re-quoting the floor the way an in-budget liquidation timeout does —
+    /// and past budget it escalates per the spec's slippage policy, exactly
+    /// as the timeout path does: a Park spec freezes at the slippage-anomaly
+    /// terminal, a ReEmit spec (opening swap) re-emits verbatim. Sharing the
+    /// `timeouts` budget bounds the re-emission loop for Park-spec legs; a
+    /// ReEmit leg still re-emits unbounded, exactly as it does on repeated
+    /// timeouts.
     fn reemit_or_escalate_underpaid(
         self,
         querier: QuerierWrapper<'_>,
