@@ -1,5 +1,8 @@
 use serde::{Deserialize, Serialize};
 
+#[cfg(feature = "stub")]
+use sdk::cosmwasm_std::{Addr, Api, StdResult};
+
 pub use remote_lease_wire::envelope::LeaseAddrOnWire;
 use remote_lease_wire::version::ProtocolVersion;
 
@@ -41,18 +44,12 @@ pub struct PacketEnvelope {
 /// logic.
 #[cfg(feature = "stub")]
 pub trait NolusLeaseAddr {
-    fn into_validated(
-        self,
-        api: &dyn sdk::cosmwasm_std::Api,
-    ) -> sdk::cosmwasm_std::StdResult<sdk::cosmwasm_std::Addr>;
+    fn into_validated(self, api: &dyn Api) -> StdResult<Addr>;
 }
 
 #[cfg(feature = "stub")]
 impl NolusLeaseAddr for LeaseAddrOnWire {
-    fn into_validated(
-        self,
-        api: &dyn sdk::cosmwasm_std::Api,
-    ) -> sdk::cosmwasm_std::StdResult<sdk::cosmwasm_std::Addr> {
+    fn into_validated(self, api: &dyn Api) -> StdResult<Addr> {
         api.addr_validate(self.as_str())
     }
 }
