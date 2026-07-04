@@ -231,7 +231,7 @@ impl From<&OpenLeaseParams> for remote_lease_wire::msg::OpenLeaseParams {
             wire_ticker(typed.lpn_currency()),
             wire_ticker(typed.asset_currency()),
         )
-        .expect("typed OpenLeaseParams already upholds the pairwise-distinct invariant")
+        .expect("typed OpenLeaseParams already upholds the distinct lpn/asset-currency invariant")
     }
 }
 
