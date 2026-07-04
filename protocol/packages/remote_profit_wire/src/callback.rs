@@ -46,10 +46,13 @@ pub enum RemoteOperationOutcome {
 
 /// Length-capped error string returned by the Solana counterparty.
 ///
-/// Serialises as a bare JSON string. The counterparty-facing paths —
-/// deserialisation and the fallible [`new`](Self::new) — reject payloads
-/// above [`OPERATION_ERR_MAX_BYTES`], so any string sourced from over the
-/// wire is bounded before it reaches downstream storage.
+/// Serialises as a bare JSON string. Two constructors keep the payload
+/// within [`OPERATION_ERR_MAX_BYTES`]: the fallible [`new`](Self::new)
+/// rejects an over-cap string with a typed `Err`, while the infallible
+/// [`truncated`](Self::truncated) cuts one down to the cap on a UTF-8 char
+/// boundary — used where the ack path must never reject and strand a
+/// committed packet. Deserialisation applies the same bound, so any string
+/// sourced from over the wire is bounded before it reaches downstream storage.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct RemoteErrorMessage(String);
 
@@ -70,6 +73,30 @@ impl RemoteErrorMessage {
                 max: OPERATION_ERR_MAX_BYTES,
             })
         }
+    }
+
+    /// Construct from a counterparty-authored string, cutting it down to at
+    /// most [`OPERATION_ERR_MAX_BYTES`] on a UTF-8 char boundary.
+    ///
+    /// Unlike [`new`](Self::new), this is total: an over-cap message is
+    /// truncated rather than rejected. The ack path uses it so a counterparty
+    /// error string can never fail construction and strand an already-committed
+    /// packet behind an endless relayer retry.
+    pub fn truncated<S>(message: S) -> Self
+    where
+        S: Into<String>,
+    {
+        let mut message: String = message.into();
+        let end = message
+            .char_indices()
+            .map(|(start, ch)| start + ch.len_utf8())
+            .take_while(|boundary| *boundary <= OPERATION_ERR_MAX_BYTES)
+            .last()
+            .unwrap_or(0);
+        message.truncate(end);
+        let value = Self(message);
+        debug_assert!(value.invariant_held());
+        value
     }
 
     pub fn as_str(&self) -> &str {

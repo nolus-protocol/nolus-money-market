@@ -210,21 +210,33 @@ fn packet_ack_out_of_registry_ticker_dispatches_ok() {
     );
 }
 
+// An undecodable success payload must not strand the packet: the ack commits a
+// synthetic `OperationErr` (the named `UNDECODABLE_ACK_REASON`) so the lease
+// receives a normal failure callback instead of an endless relayer retry.
 #[test]
-fn packet_ack_success_with_malformed_response_errors() {
+fn packet_ack_success_with_malformed_response_dispatches_synthetic_err() {
     let mut deps = deps_with_config();
     let lease = sdk_testing::user("lease-5");
     let envelope_bytes = encode_envelope(&envelope_with_close_lease(&lease));
     let ack_bytes = StdAck::Success(Binary::new(b"not-an-operation-response".to_vec())).to_binary();
 
-    let err = ibc_packet_ack(
+    let res = ibc_packet_ack(
         deps.as_mut(),
         testing::mock_env(),
         ack_msg(envelope_bytes, ack_bytes),
     )
-    .unwrap_err();
+    .unwrap();
 
-    assert!(matches!(err, Error::Std(_)), "got {err:?}");
+    assert_dispatched_callback(
+        &lease,
+        RemoteLeaseCallback {
+            nonce: 0,
+            outcome: RemoteOperationOutcome::OperationErr(RemoteErrorMessage::truncated(
+                crate::ibc::UNDECODABLE_ACK_REASON,
+            )),
+        },
+        &res.messages,
+    );
 }
 
 #[test]
@@ -382,22 +394,35 @@ fn fixture_stdack_error_decodes_to_callback() {
     );
 }
 
+// An over-cap counterparty error string must not strand the packet: the ack
+// commits an `OperationErr` truncated to the byte cap, so the lease receives a
+// normal failure callback instead of an endless relayer retry.
 #[test]
-fn packet_ack_oversized_error_message_errors() {
+fn packet_ack_oversized_error_message_dispatches_truncated_err() {
     let mut deps = deps_with_config();
     let lease = sdk_testing::user("lease-6");
     let envelope_bytes = encode_envelope(&envelope_with_close_lease(&lease));
     let oversized = "x".repeat(OPERATION_ERR_MAX_BYTES + 1);
     let ack_bytes = StdAck::error(oversized).to_binary();
 
-    let err = ibc_packet_ack(
+    let res = ibc_packet_ack(
         deps.as_mut(),
         testing::mock_env(),
         ack_msg(envelope_bytes, ack_bytes),
     )
-    .unwrap_err();
+    .unwrap();
 
-    assert!(matches!(err, Error::RemoteCallback(_)), "got {err:?}");
+    assert_dispatched_callback(
+        &lease,
+        RemoteLeaseCallback {
+            nonce: 0,
+            outcome: RemoteOperationOutcome::OperationErr(
+                RemoteErrorMessage::new("x".repeat(OPERATION_ERR_MAX_BYTES))
+                    .expect("the truncated fixture is exactly at the cap"),
+            ),
+        },
+        &res.messages,
+    );
 }
 
 // AC (#636): on an acknowledgment the controller decodes the ORIGINAL outbound

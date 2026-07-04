@@ -197,7 +197,7 @@ impl RemoteTransferOutTask for OpeningUnwindTask {
                         lease_addr,
                         now,
                     },
-                    remote_lease::callback::RemoteErrorMessage::from_static(UNWIND_REASON),
+                    remote_lease::callback::RemoteErrorMessage::truncated(UNWIND_REASON),
                     querier,
                 )
             })

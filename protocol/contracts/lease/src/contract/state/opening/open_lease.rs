@@ -578,7 +578,7 @@ impl Contract for OpenLease {
                     self.on_open_failed(
                         querier,
                         &env,
-                        RemoteErrorMessage::from_static(UNEXPECTED_OPERATION_REASON),
+                        RemoteErrorMessage::truncated(UNEXPECTED_OPERATION_REASON),
                     )
                 }
                 RemoteOperationOutcome::OperationErr(reason) => {
@@ -587,7 +587,7 @@ impl Contract for OpenLease {
                 RemoteOperationOutcome::OperationTimeout => self.on_open_failed(
                     querier,
                     &env,
-                    RemoteErrorMessage::from_static(TIMEOUT_REASON),
+                    RemoteErrorMessage::truncated(TIMEOUT_REASON),
                 ),
             })
     }

@@ -162,25 +162,32 @@ fn callback_error_message_deserialize_over_cap_rejected() {
 }
 
 #[test]
-fn callback_error_message_from_static_accepted() {
-    let value = RemoteErrorMessage::from_static("timeout");
-    assert_eq!("timeout", value.as_str());
+fn callback_error_message_truncated_within_cap_is_verbatim() {
+    const MESSAGE: &str = "dex pool drained";
+    let value = RemoteErrorMessage::truncated(MESSAGE);
+    assert_eq!(MESSAGE, value.as_str());
     assert!(value.invariant_held());
-    assert_round_trip_eq(
-        r#"{"operation_err":"timeout"}"#,
-        &RemoteOperationOutcome::OperationErr(value),
-    );
 }
 
-// `from_static` only `debug_assert!`s its length contract, so the panic is
-// observable solely in debug builds — the test is gated to match.
-#[cfg(debug_assertions)]
 #[test]
-#[should_panic(expected = "OPERATION_ERR_MAX_BYTES")]
-fn callback_error_message_from_static_over_cap_panics_in_debug() {
-    let over_cap: &'static str =
-        Box::leak("x".repeat(OPERATION_ERR_MAX_BYTES + 1).into_boxed_str());
-    let _ = RemoteErrorMessage::from_static(over_cap);
+fn callback_error_message_truncated_over_cap_is_capped() {
+    let payload = "x".repeat(OPERATION_ERR_MAX_BYTES + 10);
+    let value = RemoteErrorMessage::truncated(payload);
+    assert_eq!(OPERATION_ERR_MAX_BYTES, value.as_str().len());
+    assert!(value.invariant_held());
+}
+
+#[test]
+fn callback_error_message_truncated_respects_char_boundary() {
+    // '€' is three UTF-8 bytes and the cap is not a multiple of three, so a
+    // naive byte cut would split the trailing code point. `truncated` must stop
+    // on a char boundary — keeping 510 bytes (170 whole '€'), the largest
+    // multiple of three within the 512-byte cap.
+    let payload = "€".repeat(OPERATION_ERR_MAX_BYTES);
+    let value = RemoteErrorMessage::truncated(payload);
+    assert!(value.invariant_held());
+    assert!(value.as_str().chars().all(|ch| ch == '€'));
+    assert_eq!(510, value.as_str().len());
 }
 
 // AC (#636): the callback wraps a per-emission `nonce` alongside the outcome,

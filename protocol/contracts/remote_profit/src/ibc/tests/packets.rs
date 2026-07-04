@@ -131,12 +131,11 @@ fn packet_timeout_dispatches_operation_timeout() {
 
 // SECURITY (FM5): the ack path must NEVER produce or trust a wire-supplied
 // `OperationTimeout`. `OperationTimeout` serialises as the bare string
-// `"operation_timeout"`. We feed that exact value to the ack path two ways —
-// as the success payload and as the (over-cap-irrelevant) error payload — and
-// assert that NEITHER yields an `OperationTimeout` callback. The success arm
-// fails to decode it as a `WireOperationResponse` (a hard error), and the error
-// arm lifts it verbatim into an `OperationErr` string, never a timeout. The
-// only producer of `OperationTimeout` is `ibc_packet_timeout`.
+// `"operation_timeout"`; we feed that exact value as the success payload and
+// assert the ack COMMITS a synthetic `OperationErr` (the undecodable-success
+// path) rather than an `OperationTimeout`. The error arm is covered by
+// `packet_ack_timeout_string_in_error_stays_operation_err`. The only producer
+// of `OperationTimeout` is `ibc_packet_timeout`.
 #[test]
 fn packet_ack_never_yields_timeout_from_success_payload() {
     let mut deps = deps_with_config();
@@ -145,16 +144,26 @@ fn packet_ack_never_yields_timeout_from_success_payload() {
     let forged = Binary::new(br#""operation_timeout""#.to_vec());
     let ack_bytes = StdAck::Success(forged).to_binary();
 
-    // A counterparty cannot smuggle a timeout through the success arm: the
-    // bare string is not a valid `WireOperationResponse`, so the ack errors
-    // out rather than dispatching a timeout.
-    let err = ibc_packet_ack(
+    let res = ibc_packet_ack(
         deps.as_mut(),
         testing::mock_env(),
         ack_msg(envelope_bytes, ack_bytes),
     )
-    .unwrap_err();
-    assert!(matches!(err, Error::Std(_)), "got {err:?}");
+    .unwrap();
+
+    // The bare string is not a valid `WireOperationResponse`, so the ack
+    // commits a synthetic `OperationErr` — never an `OperationTimeout` — and
+    // the packet is acknowledged rather than retried forever.
+    assert_dispatched_callback(
+        &sdk_testing::user(PROFIT_CONTRACT),
+        RemoteProfitCallback {
+            nonce: 0,
+            outcome: RemoteOperationOutcome::OperationErr(RemoteErrorMessage::truncated(
+                crate::ibc::UNDECODABLE_ACK_REASON,
+            )),
+        },
+        &res.messages,
+    );
 }
 
 #[test]
@@ -261,20 +270,32 @@ fn packet_ack_out_of_registry_ticker_dispatches_ok() {
     );
 }
 
+// An undecodable success payload must not strand the packet: the ack commits a
+// synthetic `OperationErr` (the named `UNDECODABLE_ACK_REASON`) so the profit
+// receives a normal failure callback instead of an endless relayer retry.
 #[test]
-fn packet_ack_success_with_malformed_response_errors() {
+fn packet_ack_success_with_malformed_response_dispatches_synthetic_err() {
     let mut deps = deps_with_config();
     let envelope_bytes = encode_envelope(&envelope_with_close_profit());
     let ack_bytes = StdAck::Success(Binary::new(b"not-an-operation-response".to_vec())).to_binary();
 
-    let err = ibc_packet_ack(
+    let res = ibc_packet_ack(
         deps.as_mut(),
         testing::mock_env(),
         ack_msg(envelope_bytes, ack_bytes),
     )
-    .unwrap_err();
+    .unwrap();
 
-    assert!(matches!(err, Error::Std(_)), "got {err:?}");
+    assert_dispatched_callback(
+        &sdk_testing::user(PROFIT_CONTRACT),
+        RemoteProfitCallback {
+            nonce: 0,
+            outcome: RemoteOperationOutcome::OperationErr(RemoteErrorMessage::truncated(
+                crate::ibc::UNDECODABLE_ACK_REASON,
+            )),
+        },
+        &res.messages,
+    );
 }
 
 #[test]
@@ -425,21 +446,34 @@ fn fixture_stdack_error_decodes_to_callback() {
     );
 }
 
+// An over-cap counterparty error string must not strand the packet: the ack
+// commits an `OperationErr` truncated to the byte cap, so the profit receives a
+// normal failure callback instead of an endless relayer retry.
 #[test]
-fn packet_ack_oversized_error_message_errors() {
+fn packet_ack_oversized_error_message_dispatches_truncated_err() {
     let mut deps = deps_with_config();
     let envelope_bytes = encode_envelope(&envelope_with_close_profit());
     let oversized = "x".repeat(OPERATION_ERR_MAX_BYTES + 1);
     let ack_bytes = StdAck::error(oversized).to_binary();
 
-    let err = ibc_packet_ack(
+    let res = ibc_packet_ack(
         deps.as_mut(),
         testing::mock_env(),
         ack_msg(envelope_bytes, ack_bytes),
     )
-    .unwrap_err();
+    .unwrap();
 
-    assert!(matches!(err, Error::RemoteCallback(_)), "got {err:?}");
+    assert_dispatched_callback(
+        &sdk_testing::user(PROFIT_CONTRACT),
+        RemoteProfitCallback {
+            nonce: 0,
+            outcome: RemoteOperationOutcome::OperationErr(
+                RemoteErrorMessage::new("x".repeat(OPERATION_ERR_MAX_BYTES))
+                    .expect("the truncated fixture is exactly at the cap"),
+            ),
+        },
+        &res.messages,
+    );
 }
 
 // AC (#636): on an acknowledgment the controller decodes the ORIGINAL outbound

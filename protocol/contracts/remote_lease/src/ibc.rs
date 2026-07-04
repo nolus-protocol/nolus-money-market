@@ -29,6 +29,11 @@ const VERSION_TRANSFER_KEY: &str = "+transfer=";
 // Diagnostic bound on the counterparty-authored version echoed into the
 // handshake error — a legitimate version is ~45 characters.
 const COUNTERPARTY_VERSION_ECHO_MAX_CHARS: usize = 64;
+// Synthetic `OperationErr` reason surfaced when a counterparty `StdAck::Success`
+// payload does not decode to our wire response. Absorbing it — rather than
+// erring — keeps an already-committed packet from being stranded behind an
+// endless relayer retry.
+const UNDECODABLE_ACK_REASON: &str = "undecodable success acknowledgement";
 
 /// Compose the channel handshake version: the protocol version extended with
 /// the paired Solana-side ICS-20 transfer channel (ADR-0002 §3.3).
@@ -167,7 +172,7 @@ pub fn ibc_packet_ack(
         .and_then(|envelope| {
             cosmwasm_std::from_json::<StdAck>(&msg.acknowledgement.data)
                 .map_err(Error::from)
-                .and_then(ack_to_outcome)
+                .map(ack_to_outcome)
                 .and_then(|outcome| dispatch_lease_callback(deps.api, envelope, outcome))
         })
 }
@@ -185,18 +190,26 @@ pub fn ibc_packet_timeout(
         })
 }
 
-// The success payload is decoded as the wire shape only — currency-registry
-// validation belongs to the addressee lease, which absorbs content failures.
-// Erring here on a registry mismatch would make the relayer retry the ack
-// forever, turning counterparty content drift into a stuck packet.
-fn ack_to_outcome(ack: StdAck) -> Result<RemoteOperationOutcome> {
+// Total by construction so the ack always commits: a counterparty can author
+// neither a `StdAck::Error` string that strands the packet (an over-cap string
+// is truncated to the byte cap on a char boundary) nor a `StdAck::Success`
+// payload that does (an undecodable response becomes a synthetic
+// `OperationErr`). The success payload is decoded as the wire shape only —
+// currency-registry validation belongs to the addressee lease, which absorbs
+// content failures. Erring here on counterparty content would make the relayer
+// retry the ack forever, turning content drift into a stuck packet.
+fn ack_to_outcome(ack: StdAck) -> RemoteOperationOutcome {
     match ack {
         StdAck::Success(data) => cosmwasm_std::from_json::<WireOperationResponse>(&data)
             .map(RemoteOperationOutcome::OperationOk)
-            .map_err(Error::from),
-        StdAck::Error(message) => RemoteErrorMessage::new(message)
-            .map(RemoteOperationOutcome::OperationErr)
-            .map_err(Error::from),
+            .unwrap_or_else(|_err| {
+                RemoteOperationOutcome::OperationErr(RemoteErrorMessage::truncated(
+                    UNDECODABLE_ACK_REASON,
+                ))
+            }),
+        StdAck::Error(message) => {
+            RemoteOperationOutcome::OperationErr(RemoteErrorMessage::truncated(message))
+        }
     }
 }
 
