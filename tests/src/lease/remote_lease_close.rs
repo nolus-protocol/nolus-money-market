@@ -314,7 +314,7 @@ fn assert_closed_terminal(test_case: &mut LeaseTestCase, controller: &Addr, leas
     late.assert_event(
         &Event::new(LATE_ACK_EVENT)
             .add_attribute("id", lease.clone())
-            .add_attribute("terminal", "closed"),
+            .add_attribute("state", "closed"),
     );
     assert_eq!(
         StateResponse::Closed(),

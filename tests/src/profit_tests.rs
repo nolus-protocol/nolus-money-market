@@ -702,18 +702,47 @@ fn remote_profit_callback_rejects_any_other_sender() {
 }
 
 /// C-CB1/C-CB3 (Idle authz): an `Idle` profit schedules no remote operation, so
-/// even the configured controller's callback is rejected — `Idle` can never
-/// legitimately receive one.
+/// a genuinely-late callback from the configured controller is absorbed with
+/// an event and no state change — an error would revert the controller's
+/// acknowledgment transaction and strand the relayer. A stranger is still
+/// rejected by the authorization gate.
 #[test]
-fn remote_profit_callback_rejected_while_idle() {
+fn remote_profit_callback_absorbed_while_idle() {
     let mut test_case = test_case::<Lpn>();
     let profit = test_case.address_book.profit().clone();
     let controller = test_case.address_book.remote_profit_controller().clone();
 
-    let err = test_case
+    let response = test_case
         .app
         .execute(
             controller,
+            profit,
+            &ExecuteMsg::RemoteProfitCallback(RemoteProfitCallback {
+                nonce: 0,
+                outcome: RemoteOperationOutcome::OperationTimeout,
+            }),
+            &[],
+        )
+        .expect("a late callback from the pinned controller must be absorbed")
+        .unwrap_response();
+    response.assert_event(
+        &Event::new("wasm-remote-callback")
+            .add_attribute("absorbed", "timeout")
+            .add_attribute("state", "Idle"),
+    );
+}
+
+/// C-CB1 (Idle authz): a non-controller sender is rejected by the
+/// authorization gate before any absorption can occur.
+#[test]
+fn remote_profit_callback_from_stranger_rejected_while_idle() {
+    let mut test_case = test_case::<Lpn>();
+    let profit = test_case.address_book.profit().clone();
+
+    let err = test_case
+        .app
+        .execute(
+            testing::user(USER),
             profit,
             &ExecuteMsg::RemoteProfitCallback(RemoteProfitCallback {
                 nonce: 0,

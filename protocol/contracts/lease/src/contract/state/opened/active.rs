@@ -1,11 +1,19 @@
 use serde::{Deserialize, Serialize};
 
-use access_control::composite::Permission as CompositePermission;
+use access_control::{
+    composite::Permission as CompositePermission, permissions::SingleUserPermission,
+};
 use currency::CurrencyDef;
 use cw_time::IntoInstant;
 use finance::instant::Instant;
 use finance::{coin::IntoDTO, duration::Duration};
-use platform::{bank, batch::Emitter, message::Response as MessageResponse};
+use platform::{
+    bank,
+    batch::{Batch, Emit, Emitter},
+    message::Response as MessageResponse,
+    state_machine::Response as StateMachineResponse,
+};
+use remote_lease::callback::RemoteLeaseCallback;
 use sdk::cosmwasm_std::{Coin as CwCoin, Env, MessageInfo, QuerierWrapper};
 use timealarms::stub::TimeAlarmDelivery;
 
@@ -37,6 +45,117 @@ use super::{
     event,
     repay::{self, buy_lpn},
 };
+
+#[cfg(all(feature = "internal.test.contract", test))]
+mod tests {
+    use dex::{Account, ConnectionParams, Ics20Channel};
+    use platform::{
+        batch::{Batch, Emit, Emitter},
+        message::Response as MessageResponse,
+    };
+    use remote_lease::{
+        callback::{RemoteLeaseCallback, RemoteOperationOutcome},
+        response::{TransferOutResponse, WireOperationResponse},
+    };
+    use sdk::cosmwasm_std::{
+        Addr, Empty, MessageInfo, QuerierWrapper,
+        testing::{self, MockQuerier},
+    };
+
+    use crate::{
+        contract::{
+            Lease,
+            finalize::LeasesRef,
+            state::{Response, State, handler::Handler},
+        },
+        error::ContractError,
+        lease::tests::{REMOTE_LEASE_CONTROLLER, open_lease_dto},
+    };
+
+    use super::Active;
+
+    const STRANGER: &str = "stranger";
+
+    #[test]
+    fn late_ack_from_the_controller_is_absorbed() {
+        let response =
+            deliver(info(REMOTE_LEASE_CONTROLLER)).expect("the late ack should be absorbed");
+
+        assert!(matches!(response.next_state, State::OpenedActive(_)));
+        assert_eq!(absorb_response(), response.response);
+    }
+
+    #[test]
+    fn late_ack_from_a_stranger_rejected() {
+        assert!(matches!(
+            deliver(info(STRANGER)),
+            Err(ContractError::Unauthorized(_))
+        ));
+    }
+
+    fn deliver(info: MessageInfo) -> Result<Response, ContractError> {
+        let mock_querier = MockQuerier::<Empty>::default();
+        active().on_remote_lease_callback(
+            late_transfer_out_ack(),
+            info,
+            QuerierWrapper::new(&mock_querier),
+            testing::mock_env(),
+        )
+    }
+
+    fn active() -> Active {
+        Active::new(Lease::new(
+            open_lease_dto(),
+            account(),
+            LeasesRef::unchecked(Addr::unchecked("leaser")),
+        ))
+    }
+
+    fn account() -> Account {
+        Account::unchecked(
+            Addr::unchecked("lease"),
+            "ica0"
+                .to_owned()
+                .try_into()
+                .expect("a non-empty host account"),
+            ConnectionParams {
+                connection_id: "connection-0".to_owned(),
+                transfer_channel: Ics20Channel {
+                    local_endpoint: "channel-0".to_owned(),
+                    remote_endpoint: "channel-2048".to_owned(),
+                },
+            },
+        )
+    }
+
+    fn late_transfer_out_ack() -> RemoteLeaseCallback {
+        RemoteLeaseCallback {
+            nonce: 0,
+            outcome: RemoteOperationOutcome::OperationOk(WireOperationResponse::TransferOut(
+                TransferOutResponse {},
+            )),
+        }
+    }
+
+    fn info(sender: &str) -> MessageInfo {
+        MessageInfo {
+            sender: Addr::unchecked(sender),
+            funds: vec![],
+        }
+    }
+
+    fn absorb_response() -> MessageResponse {
+        let emitter = Emitter::of_type("ls-remote-lease-late-ack")
+            .emit("id", testing::mock_env().contract.address)
+            .emit("state", "active");
+        MessageResponse::messages_with_event(Batch::default(), emitter)
+    }
+}
+
+const LATE_ACK_EVENT: &str = "ls-remote-lease-late-ack";
+const EVENT_KEY_ID: &str = "id";
+const EVENT_KEY_STATE: &str = "state";
+const EVENT_VALUE_STATE: &str = "active";
 
 #[derive(Serialize, Deserialize)]
 pub struct Active {
@@ -258,6 +377,38 @@ impl Handler for Active {
             } else {
                 repay::repay(self.lease, balance, &env, querier)
             }
+        })
+    }
+
+    /// Absorbs a superseded remote-lease callback. `Active` holds nothing in
+    /// flight remotely — the opening, repay and liquidation legs schedule their
+    /// own callbacks and settle back here — so a callback reaching it is a late
+    /// or retried acknowledgment of an already-resolved leg. Return `Ok` with an
+    /// observability event so the controller's `ibc_packet_ack` commits and the
+    /// relayer's retry loop unblocks. Idempotent — no state mutation.
+    ///
+    /// Authorised against the controller pinned in the lease — the same pin the
+    /// in-flight legs authorise their callbacks against.
+    fn on_remote_lease_callback(
+        self,
+        _callback: RemoteLeaseCallback,
+        info: MessageInfo,
+        _querier: QuerierWrapper<'_>,
+        env: Env,
+    ) -> ContractResult<Response> {
+        access_control::check(
+            &SingleUserPermission::new(&self.lease.lease.remote_lease_controller),
+            &info,
+        )
+        .map_err(ContractError::from)
+        .map(|()| {
+            let emitter = Emitter::of_type(LATE_ACK_EVENT)
+                .emit(EVENT_KEY_ID, env.contract.address)
+                .emit(EVENT_KEY_STATE, EVENT_VALUE_STATE);
+            StateMachineResponse::from(
+                MessageResponse::messages_with_event(Batch::default(), emitter),
+                self,
+            )
         })
     }
 }

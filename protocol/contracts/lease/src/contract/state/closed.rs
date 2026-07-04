@@ -93,15 +93,15 @@ mod tests {
     fn absorb_response() -> MessageResponse {
         let emitter = Emitter::of_type("ls-remote-lease-late-ack")
             .emit("id", testing::mock_env().contract.address)
-            .emit("terminal", "closed");
+            .emit("state", "closed");
         MessageResponse::messages_with_event(Batch::default(), emitter)
     }
 }
 
 const LATE_ACK_EVENT: &str = "ls-remote-lease-late-ack";
 const EVENT_KEY_ID: &str = "id";
-const EVENT_KEY_TERMINAL: &str = "terminal";
-const EVENT_VALUE_TERMINAL: &str = "closed";
+const EVENT_KEY_STATE: &str = "state";
+const EVENT_VALUE_STATE: &str = "closed";
 
 #[derive(Serialize, Deserialize)]
 pub struct Closed {
@@ -187,7 +187,7 @@ impl Handler for Closed {
         .map(|()| {
             let emitter = Emitter::of_type(LATE_ACK_EVENT)
                 .emit(EVENT_KEY_ID, env.contract.address)
-                .emit(EVENT_KEY_TERMINAL, EVENT_VALUE_TERMINAL);
+                .emit(EVENT_KEY_STATE, EVENT_VALUE_STATE);
             StateMachineResponse::from(
                 MessageResponse::messages_with_event(Batch::default(), emitter),
                 self,

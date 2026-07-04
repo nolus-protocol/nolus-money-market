@@ -83,9 +83,15 @@ pub enum ExecuteMsg {
     ///
     /// Invoked by the configured `remote_lease` controller contract after it
     /// receives an IBC ack or timeout for an operation it dispatched on this
-    /// lease's behalf. The lease authorises the caller through its leaser
-    /// (`CheckRemoteLeaseCallbackPermission`), classifies the variant, and
-    /// routes it into the state's dedicated `on_remote_response` /
+    /// lease's behalf. The lease authorises the caller before delivery: the
+    /// swap legs and `OpenFailed` check the live leaser permission query,
+    /// while the drain legs and the settled-state absorbers check the
+    /// `remote_lease_controller` pinned at lease open. The leaser value has
+    /// no update path today, so the two forms agree; the pin-checking
+    /// handlers never re-query, so they would keep the original controller
+    /// even if a leaser re-configuration path were ever added, while the
+    /// leaser-query handlers would track the new value. It then
+    /// classifies the variant and routes it into the state's dedicated `on_remote_response` /
     /// `on_remote_error` / `on_remote_timeout` entry points: the leg that
     /// scheduled the remote operation processes the acknowledgment directly,
     /// while every other state absorbs the callback with an event — never an

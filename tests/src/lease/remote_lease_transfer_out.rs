@@ -372,7 +372,7 @@ fn late_ack_on_closed_absorbed() {
     late.assert_event(
         &Event::new(LATE_ACK_EVENT)
             .add_attribute("id", lease.clone())
-            .add_attribute("terminal", "closed"),
+            .add_attribute("state", "closed"),
     );
     assert_eq!(
         StateResponse::Closed(),
