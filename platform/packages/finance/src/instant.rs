@@ -3,6 +3,7 @@ use std::fmt;
 use serde::{Deserialize, Deserializer, Serialize, Serializer, de};
 
 const NANOS_PER_SECOND: u64 = 1_000_000_000;
+const SECONDS_PER_DAY: u64 = 86_400;
 
 /// Wall-clock instant denominated in nanoseconds since the Unix epoch.
 ///
@@ -44,7 +45,7 @@ impl Instant {
     }
 
     pub const fn plus_days(&self, days: u64) -> Self {
-        self.plus_seconds(days * 86_400)
+        self.plus_seconds(days * SECONDS_PER_DAY)
     }
 }
 

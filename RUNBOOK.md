@@ -4,17 +4,17 @@ Discovery-tax patterns. Grouped by domain. Append on first re-encounter.
 
 ## Build
 
-### `cargo build` fails in a fresh worktree: missing `build-configuration/protocol.json`
+### `cargo build` fails in a fresh worktree: missing `build-configuration/` (`protocol.json` + `topology.json`)
 
-**Symptom:** A fresh `git worktree add` checkout fails at build time because the build script reads `build-configuration/protocol.json` and the file is absent.
+**Symptom:** A fresh `git worktree add` checkout fails at build time because the currencies build script reads `build-configuration/protocol.json` and `build-configuration/topology.json` and the files are absent.
 
-**Cause:** `build-configuration/protocol.json` is git-ignored and is populated locally per checkout. New worktrees inherit the workspace but not that file.
+**Cause:** The whole `/build-configuration` directory is git-ignored (`.gitignore:2`) and populated locally per checkout. New worktrees inherit the workspace tree but not that directory's contents.
 
-**Fix:** Copy it from a working checkout:
+**Fix:** Copy its JSON definitions from a working checkout:
 
 ```
-cp <main-checkout>/build-configuration/protocol.json \
-   <new-worktree>/build-configuration/protocol.json
+cp <main-checkout>/build-configuration/*.json \
+   <new-worktree>/build-configuration/
 ```
 
 Then re-run `SOFTWARE_RELEASE_ID=dev-release cargo build`.

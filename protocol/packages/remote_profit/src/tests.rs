@@ -393,6 +393,38 @@ fn protocol_version_round_trip_pinned() {
 }
 
 // ---------------------------------------------------------------------------
+// 9. Cross-crate typed↔wire envelope byte-equality (drift tripwire)
+//
+// The typed `PacketEnvelope` (decoded in production) and the wire
+// `PacketEnvelope` (consumed by the Solana counterpart) each declare their own
+// field list and serde attributes. For every `Operation` variant, the
+// semantically-equivalent typed and wire envelopes must serialize
+// byte-identically, and the wire bytes must decode into the typed envelope.
+// Any drift in either side's field order, field name, or serde attribute
+// breaks these.
+// ---------------------------------------------------------------------------
+
+#[test]
+fn envelope_open_profit_typed_matches_wire() {
+    assert_typed_wire_envelopes_match(Operation::OpenProfit(sample_open_profit_params()));
+}
+
+#[test]
+fn envelope_swap_typed_matches_wire() {
+    assert_typed_wire_envelopes_match(Operation::Swap(sample_swap_params()));
+}
+
+#[test]
+fn envelope_transfer_out_typed_matches_wire() {
+    assert_typed_wire_envelopes_match(Operation::TransferOut(sample_transfer_out_params()));
+}
+
+#[test]
+fn envelope_close_profit_typed_matches_wire() {
+    assert_typed_wire_envelopes_match(Operation::CloseProfit(CloseProfitParams {}));
+}
+
+// ---------------------------------------------------------------------------
 // helpers — expected value first per project rule 17
 // ---------------------------------------------------------------------------
 
@@ -406,6 +438,31 @@ where
     let decoded: T =
         serde_json::from_str(&encoded).expect("decoding the freshly-encoded value must succeed");
     assert_eq!(value, &decoded);
+}
+
+fn assert_typed_wire_envelopes_match(operation: Operation) {
+    const NONCE: u64 = 7;
+
+    let wire = remote_profit_wire::envelope::PacketEnvelope {
+        operation: remote_profit_wire::msg::Operation::from(&operation),
+        version: ProtocolVersion,
+        nonce: NONCE,
+    };
+    let typed = PacketEnvelope {
+        operation,
+        version: ProtocolVersion,
+        nonce: NONCE,
+    };
+
+    let wire_json = serde_json::to_string(&wire).expect("the wire envelope must serialize");
+    assert_eq!(
+        wire_json,
+        serde_json::to_string(&typed).expect("the typed envelope must serialize"),
+    );
+
+    let decoded: PacketEnvelope =
+        serde_json::from_str(&wire_json).expect("wire bytes must decode into the typed envelope");
+    assert_eq!(typed, decoded);
 }
 
 /// A real bech32 Nolus account address (32-byte witness), valid checksum.
