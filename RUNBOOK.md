@@ -10,7 +10,7 @@ Discovery-tax patterns. Grouped by domain. Append on first re-encounter.
 
 **Cause:** The whole `/build-configuration` directory is git-ignored (`.gitignore:2`) and populated locally per checkout. New worktrees inherit the workspace tree but not that directory's contents.
 
-**Fix:** Copy the whole directory from a working checkout:
+**Fix:** Copy its JSON definitions from a working checkout:
 
 ```
 cp <main-checkout>/build-configuration/*.json \
