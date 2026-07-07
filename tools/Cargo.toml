@@ -23,7 +23,7 @@ keyword-idents = { level = "deny", priority = 1 }
 nonstandard-style = { level = "deny", priority = 1 }
 refining-impl-trait = { level = "deny", priority = 1 }
 rust-2018-idioms = { level = "deny", priority = 1 }
-unexpected_cfgs = { level = "forbid", priority = 1, check-cfg = ["cfg(test)"] }
+unexpected_cfgs = { level = "forbid", priority = 1, check-cfg = ["cfg(test)", 'cfg(target_os, values("solana"))'] }
 unfulfilled_lint_expectations = { level = "forbid", priority = 1 }
 unused = "deny"
 warnings = "deny"
