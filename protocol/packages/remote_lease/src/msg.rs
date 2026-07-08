@@ -3,8 +3,44 @@ use serde::{Deserialize, Serialize};
 use currencies::PaymentGroup;
 use currency::CurrencyDTO;
 use finance::{coin::CoinDTO, duration::Duration};
+use platform::contract::Code;
 
 use crate::error::Error;
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[serde(deny_unknown_fields, rename_all = "snake_case")]
+pub enum ExecuteMsg {
+    /// Initiate the channel handshake. Allowed only when no channel is recorded.
+    OpenChannel(),
+    /// Begin closing the recorded channel. Allowed only when it is currently `Open`.
+    CloseChannel(),
+    NewLeaseCode {
+        // This is an internal system API and we use [Code]
+        lease_code: Code,
+    },
+    /// Outbound `OpenLease` packet. Caller must be an instance of `Config.lease_code`.
+    /// `timeout` is the relative duration after which the ICS-04 packet expires;
+    /// the controller anchors it to its own block time at send.
+    OpenLease {
+        params: OpenLeaseParams,
+        timeout: Duration,
+    },
+    /// Outbound `CloseLease` packet. See [`ExecuteMsg::OpenLease`] for `timeout` semantics.
+    CloseLease {
+        params: CloseLeaseParams,
+        timeout: Duration,
+    },
+    /// Outbound `Swap` packet. See [`ExecuteMsg::OpenLease`] for `timeout` semantics.
+    Swap {
+        params: SwapParams,
+        timeout: Duration,
+    },
+    /// Outbound `TransferOut` packet. See [`ExecuteMsg::OpenLease`] for `timeout` semantics.
+    TransferOut {
+        params: TransferOutParams,
+        timeout: Duration,
+    },
+}
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
@@ -259,5 +295,42 @@ impl From<&Operation> for remote_lease_wire::msg::Operation {
             Operation::Swap(p) => Self::Swap(p.into()),
             Operation::TransferOut(p) => Self::TransferOut(p.into()),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use currencies::{
+        PaymentGroup,
+        testing::{PaymentC1, PaymentC2, PaymentC3},
+    };
+
+    use super::{ExecuteMsg, OpenLeaseParams};
+
+    #[test]
+    fn open_lease_wire_shape() {
+        let params = OpenLeaseParams::new(
+            7,
+            currency::dto::<PaymentC1, PaymentGroup>(),
+            currency::dto::<PaymentC2, PaymentGroup>(),
+            currency::dto::<PaymentC3, PaymentGroup>(),
+        )
+        .expect("three distinct currencies");
+        let msg = ExecuteMsg::OpenLease {
+            params,
+            timeout: OpenLeaseParams::TIMEOUT,
+        };
+
+        let json: serde_json::Value =
+            serde_json::to_value(&msg).expect("serialization must succeed");
+        let object = json.as_object().expect("top level must be an object");
+        assert_eq!(1, object.len());
+
+        let open_lease = object
+            .get("open_lease")
+            .and_then(serde_json::Value::as_object)
+            .expect("single key must be open_lease");
+        assert!(open_lease.contains_key("params"));
+        assert!(open_lease.contains_key("timeout"));
     }
 }

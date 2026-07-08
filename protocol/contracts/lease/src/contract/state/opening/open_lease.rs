@@ -17,7 +17,7 @@ use remote_lease::{
     callback::{RemoteErrorMessage, RemoteLeaseCallback},
     msg::OpenLeaseParams,
     response::{OpenLeaseResponse, OperationResponse, RemoteLeaseId},
-    stub::{ControllerInnerMessage, Factory},
+    stub::Factory,
 };
 use sdk::cosmwasm_std::{Addr, Env, MessageInfo, QuerierWrapper};
 use serde::{Deserialize, Serialize};
@@ -89,9 +89,7 @@ impl OpenLease {
         .map_err(ContractError::OpenLeaseParams)
         .and_then(|params| {
             Factory::new(&self.new_lease.remote_lease_controller)
-                .open(params, OpenLeaseParams::TIMEOUT, |params, timeout| {
-                    ControllerExecuteMsg::OpenLease { params, timeout }
-                })
+                .open(params, OpenLeaseParams::TIMEOUT)
                 .map_err(ContractError::from)
         })
     }
@@ -241,17 +239,6 @@ impl Contract for OpenLease {
             })
     }
 }
-
-#[derive(Serialize)]
-#[serde(rename_all = "snake_case")]
-enum ControllerExecuteMsg {
-    OpenLease {
-        params: OpenLeaseParams,
-        timeout: Duration,
-    },
-}
-
-impl ControllerInnerMessage for ControllerExecuteMsg {}
 
 struct RepayOpenLoan {
     principal: LpnCoin,
