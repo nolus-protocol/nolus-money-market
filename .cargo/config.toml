@@ -5,4 +5,8 @@ lint-all = "each --tag ci run --print-command -- clippy --all-targets --locked"
 run-test = "each --tag ci run --print-command -- test --all-targets --locked"
 
 [target.wasm32-unknown-unknown]
-rustflags = ["-C", "link-arg=-s"]
+# `--import-undefined` makes wasm-ld emit CosmWasm host functions (db_*, addr_*,
+# crypto-verify, abort, debug, query_chain) as wasm imports instead of failing the
+# link on them as undefined symbols. Rust 1.96 no longer does this by default.
+# Revert once https://github.com/CosmWasm/cosmwasm/issues/2695 is fixed upstream.
+rustflags = ["-C", "link-arg=-s", "-C", "link-arg=--import-undefined"]
