@@ -88,7 +88,7 @@ mod tests {
         )
         .unwrap();
         let mut value: Vec<SwapLeg<PriceCurrencies>> = cosmwasm_std::from_json(res).unwrap();
-        value.sort_by(|a, b| a.from.cmp(&b.from));
+        value.sort_by_key(|a| a.from);
 
         let mut expected = vec![SwapLeg::<PriceCurrencies> {
             from: currency::dto::<PaymentC9, PriceCurrencies>().into_super_group(),
@@ -97,7 +97,7 @@ mod tests {
                 target: currency::dto::<Lpn, PriceCurrencies>().into_super_group(),
             },
         }];
-        expected.sort_by(|a, b| a.from.cmp(&b.from));
+        expected.sort_by_key(|a| a.from);
 
         assert_eq!(value, expected);
     }
