@@ -304,33 +304,112 @@ mod tests {
         PaymentGroup,
         testing::{PaymentC1, PaymentC2, PaymentC3},
     };
+    use finance::coin::Coin;
+    use platform::contract::Code;
 
-    use super::{ExecuteMsg, OpenLeaseParams};
+    use super::{CloseLeaseParams, ExecuteMsg, OpenLeaseParams, SwapParams, TransferOutParams};
+
+    // Each variant of `ExecuteMsg` carries its own serde encoding, so a
+    // regression in one variant's attributes (`rename_all`, the tuple-vs-struct
+    // shape) is invisible to the others. Every variant therefore gets its own
+    // wire-shape assertion; the inner param types are byte-pinned separately by
+    // `tests/cross_surface.rs`.
+
+    #[test]
+    fn open_channel_wire_shape() {
+        assert_eq!(
+            serde_json::json!([]),
+            variant_body("open_channel", &ExecuteMsg::OpenChannel())
+        );
+    }
+
+    #[test]
+    fn close_channel_wire_shape() {
+        assert_eq!(
+            serde_json::json!([]),
+            variant_body("close_channel", &ExecuteMsg::CloseChannel())
+        );
+    }
+
+    #[test]
+    fn new_lease_code_wire_shape() {
+        let msg = ExecuteMsg::NewLeaseCode {
+            lease_code: Code::unchecked(20),
+        };
+        assert_struct_fields(&["lease_code"], &variant_body("new_lease_code", &msg));
+    }
 
     #[test]
     fn open_lease_wire_shape() {
-        let params = OpenLeaseParams::new(
+        let msg = ExecuteMsg::OpenLease {
+            params: open_lease_params(),
+            timeout: OpenLeaseParams::TIMEOUT,
+        };
+        assert_struct_fields(&["params", "timeout"], &variant_body("open_lease", &msg));
+    }
+
+    #[test]
+    fn close_lease_wire_shape() {
+        let msg = ExecuteMsg::CloseLease {
+            params: CloseLeaseParams {},
+            timeout: CloseLeaseParams::TIMEOUT,
+        };
+        assert_struct_fields(&["params", "timeout"], &variant_body("close_lease", &msg));
+    }
+
+    #[test]
+    fn swap_wire_shape() {
+        let msg = ExecuteMsg::Swap {
+            params: SwapParams::new(
+                Coin::<PaymentC1>::new(1000).into(),
+                Coin::<PaymentC2>::new(42).into(),
+            )
+            .expect("distinct non-zero amounts"),
+            timeout: SwapParams::TIMEOUT,
+        };
+        assert_struct_fields(&["params", "timeout"], &variant_body("swap", &msg));
+    }
+
+    #[test]
+    fn transfer_out_wire_shape() {
+        let msg = ExecuteMsg::TransferOut {
+            params: TransferOutParams::new(Coin::<PaymentC3>::new(1000).into())
+                .expect("non-zero amount"),
+            timeout: TransferOutParams::TIMEOUT,
+        };
+        assert_struct_fields(&["params", "timeout"], &variant_body("transfer_out", &msg));
+    }
+
+    fn open_lease_params() -> OpenLeaseParams {
+        OpenLeaseParams::new(
             7,
             currency::dto::<PaymentC1, PaymentGroup>(),
             currency::dto::<PaymentC2, PaymentGroup>(),
             currency::dto::<PaymentC3, PaymentGroup>(),
         )
-        .expect("three distinct currencies");
-        let msg = ExecuteMsg::OpenLease {
-            params,
-            timeout: OpenLeaseParams::TIMEOUT,
-        };
+        .expect("three distinct currencies")
+    }
 
+    fn variant_body(expected_tag: &str, msg: &ExecuteMsg) -> serde_json::Value {
         let json: serde_json::Value =
-            serde_json::to_value(&msg).expect("serialization must succeed");
-        let object = json.as_object().expect("top level must be an object");
-        assert_eq!(1, object.len());
+            serde_json::to_value(msg).expect("serialization must succeed");
+        let mut object = json
+            .as_object()
+            .expect("externally-tagged variant must be an object")
+            .clone();
+        assert_eq!(1, object.len(), "exactly one variant tag");
+        object
+            .remove(expected_tag)
+            .expect("variant tag must match its snake_case name")
+    }
 
-        let open_lease = object
-            .get("open_lease")
-            .and_then(serde_json::Value::as_object)
-            .expect("single key must be open_lease");
-        assert!(open_lease.contains_key("params"));
-        assert!(open_lease.contains_key("timeout"));
+    fn assert_struct_fields(expected_fields: &[&str], body: &serde_json::Value) {
+        let object = body
+            .as_object()
+            .expect("struct-style variant body must be an object");
+        assert_eq!(expected_fields.len(), object.len());
+        expected_fields
+            .iter()
+            .for_each(|field| assert!(object.contains_key(*field), "missing field {field}"));
     }
 }
