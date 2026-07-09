@@ -38,28 +38,29 @@ SOFTWARE_RELEASE_ID = "dev-release"
 
 Tried first (rejected at review): editing the tracked `/.cargo/config.toml`.
 
-### Local clippy (1.96) diverges from CI clippy (1.94)
+### Local clippy diverges from CI clippy
 
 **Symptom:** `cargo lint` / `cargo lint-all` fails locally on lints CI does not
 run (e.g. `unnecessary_sort_by` in the untouched oracle contract), or passes
 locally while CI fails — the verdicts differ on identical code.
 
 **Cause:** There is no `rust-toolchain.toml`; CI pins its toolchain via the
-`rust_image_digest` build argument in `ci/Containerfile` (currently 1.96),
-while the local default toolchain follows `rustup` (currently 1.96). Clippy
-adds and tightens lints between minor releases.
+`rust_image_digest` build argument in `ci/Containerfile` (currently 1.96.1),
+while the local default toolchain follows `rustup`. Clippy adds and tightens
+lints between releases, so a local toolchain that differs from the CI pin
+produces different verdicts.
 
 **Fix:** Run the gate on the CI-pinned toolchain:
 
 ```
-rustup toolchain install 1.96.0
-cargo +1.96.0 lint
-cargo +1.96.0 lint-all
-cargo +1.96.0 run-test
+rustup toolchain install 1.96.1
+cargo +1.96.1 lint
+cargo +1.96.1 lint-all
+cargo +1.96.1 run-test
 ```
 
 A local-only finding from a newer clippy is not a gate failure — fix it only
-if it survives on 1.96. Bump the pinned version here in lockstep with
+if it survives on 1.96.1. Bump the pinned version here in lockstep with
 `ci/Containerfile`.
 
 Tried first (did not work): treating local 1.96-only findings as CI blockers
