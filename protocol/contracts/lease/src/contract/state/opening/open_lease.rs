@@ -284,13 +284,7 @@ impl WithLppLoan<LpnCurrency> for RepayOpenLoan {
                 "Open-loan refund due total repay overflow",
             ))?;
 
-        let reserve_batch = if !interest.is_zero() {
-            let mut reserve = self.reserve.into_reserve();
-            reserve.cover_liquidation_losses(interest);
-            reserve.try_into().map_err(ContractError::from)?
-        } else {
-            Batch::default()
-        };
+        let reserve_batch = reserve_batch(self.reserve, interest)?;
 
         let receipt = loan.repay(&self.now, total_repay);
         debug_assert_eq!(
@@ -308,6 +302,19 @@ impl WithLppLoan<LpnCurrency> for RepayOpenLoan {
             // the reserve cover must precede the repay so the interest lands
             // before Lpp pulls the combined principal and interest
             .map(|lpp_batch| reserve_batch.merge(lpp_batch))
+    }
+}
+
+fn reserve_batch(
+    reserve: ReserveRef,
+    interest: Coin<LpnCurrency>,
+) -> Result<Batch, <RepayOpenLoan as WithLppLoan<LpnCurrency>>::Error> {
+    if !interest.is_zero() {
+        let mut reserve = reserve.into_reserve();
+        reserve.cover_liquidation_losses(interest);
+        reserve.try_into().map_err(ContractError::from)
+    } else {
+        Ok(Batch::default())
     }
 }
 
