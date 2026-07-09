@@ -4,9 +4,26 @@ lint-all = "each --tag ci run --print-command -- clippy --all-targets --locked"
 
 run-test = "each --tag ci run --print-command -- test --all-targets --locked"
 
-[target.wasm32-unknown-unknown]
+# Single source of truth for the Wasm32 build flags, honoured by both local
+# `cargo build --target wasm32-unknown-unknown` and the containerised `ci/build.sh`.
+# Do NOT set `RUSTFLAGS` for the Wasm build elsewhere: that env var replaces this
+# whole `rustflags` array rather than merging with it.
+#
+# target-cpu / target-feature: in accordance with the LLVM project's defaults [1]
+# and Rust's features [2].
+#
 # `--import-undefined` makes wasm-ld emit CosmWasm host functions (db_*, addr_*,
-# crypto-verify, abort, debug, query_chain) as wasm imports instead of failing the
+# crypto-verify, abort, debug, query_chain) as Wasm imports instead of failing the
 # link on them as undefined symbols. Rust 1.96 no longer does this by default.
-# Revert once https://github.com/CosmWasm/cosmwasm/issues/2695 is fixed upstream.
-rustflags = ["-C", "link-arg=-s", "-C", "link-arg=--import-undefined"]
+# Remove that flag once https://github.com/CosmWasm/cosmwasm/issues/2695 is fixed
+# upstream.
+#
+# [1] https://github.com/aheejin/llvm-project/blob/fb7d25556a3ac6b48deaa63a9195cf47b830e372/clang/lib/Basic/Targets/WebAssembly.cpp#L173
+# [2] `rustc --print target-features --target wasm32-unknown-unknown`
+[target.wasm32-unknown-unknown]
+rustflags = [
+    "-C", "target-cpu=mvp",
+    "-C", "target-feature=+multivalue,+mutable-globals,+nontrapping-fptoint,+reference-types,+sign-ext",
+    "-C", "link-arg=-s",
+    "-C", "link-arg=--import-undefined",
+]
