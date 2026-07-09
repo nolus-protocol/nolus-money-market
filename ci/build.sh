@@ -166,12 +166,11 @@ EOF
 )
 
 ___build_unoptimized() {
-  # In accordance with the LLVM project's defaults [1] and Rust's features [2].
-  #
-  # [1] https://github.com/aheejin/llvm-project/blob/fb7d25556a3ac6b48deaa63a9195cf47b830e372/clang/lib/Basic/Targets/WebAssembly.cpp#L173
-  # [2] `rustc --print target-features --target wasm32-unknown-unknown`
+  # Wasm32 build flags (target-cpu, target-feature, link-args) live in the
+  # workspace `.cargo/config.toml` so local and containerised builds share one
+  # source of truth. Do not reintroduce `RUSTFLAGS` here: it would replace that
+  # config's `rustflags` array wholesale rather than merge with it.
   RUSTC_BOOTSTRAP="1" \
-    RUSTFLAGS="-Ctarget-cpu=mvp -Ctarget-feature=+multivalue,+mutable-globals,+nontrapping-fptoint,+reference-types,+sign-ext" \
     "cargo" \
     "each" \
     --tag "build" \
