@@ -14,7 +14,7 @@ combinations = [
 ]
 
 [features]
-stub = ["dep:platform", "dep:sdk"]
+stub = ["dep:sdk"]
 
 [dependencies]
 currencies = { workspace = true }
@@ -22,7 +22,7 @@ currency = { workspace = true }
 finance = { workspace = true }
 remote_lease_wire = { workspace = true }
 sdk = { workspace = true, optional = true, features = ["contract"] }
-platform = { workspace = true, optional = true }
+platform = { workspace = true }
 
 serde = { workspace = true, features = ["derive"] }
 thiserror = { workspace = true }
@@ -31,4 +31,5 @@ thiserror = { workspace = true }
 currencies = { workspace = true, features = ["testing"] }
 currency = { workspace = true, features = ["testing"] }
 finance = { workspace = true, features = ["testing"] }
+platform = { workspace = true, features = ["testing"] }
 serde_json = { workspace = true }

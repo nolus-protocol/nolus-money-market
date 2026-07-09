@@ -4,22 +4,7 @@ use finance::duration::Duration;
 use platform::{batch::Batch, result::Result as PlatformResult};
 use sdk::cosmwasm_std::Addr;
 
-use crate::msg::{CloseLeaseParams, OpenLeaseParams, SwapParams, TransferOutParams};
-
-/// Marker trait the consuming controller must implement on its own
-/// `ExecuteMsg` (or whichever outer enum carries the per-operation
-/// `{ params, timeout }` variants).
-///
-/// Why a marker: the stub builders accept a `msg` closure that wraps the
-/// typed `*Params` and the `Duration` into the controller's outer message
-/// before it goes onto the wire. Without this bound, any `Serialize` value
-/// would work — including raw `*Params` — which would let the controller
-/// (or a contributor) accidentally emit a flat-embedded params payload that
-/// bypasses the controller's own authorisation layer. By requiring the
-/// closure's output to implement `ControllerInnerMessage` the crate forces
-/// a deliberate one-line opt-in on the consumer side; the orphan rule
-/// prevents the consumer from implementing it on the `*Params` types.
-pub trait ControllerInnerMessage: Serialize {}
+use crate::msg::{CloseLeaseParams, ExecuteMsg, OpenLeaseParams, SwapParams, TransferOutParams};
 
 pub struct Factory<'controller> {
     controller: &'controller Addr,
@@ -30,30 +15,12 @@ impl<'controller> Factory<'controller> {
         Self { controller }
     }
 
-    pub fn open<F, M>(
-        &self,
-        params: OpenLeaseParams,
-        timeout: Duration,
-        msg: F,
-    ) -> PlatformResult<Batch>
-    where
-        F: FnOnce(OpenLeaseParams, Duration) -> M,
-        M: ControllerInnerMessage,
-    {
-        schedule(self.controller, &msg(params, timeout))
+    pub fn open(&self, params: OpenLeaseParams, timeout: Duration) -> PlatformResult<Batch> {
+        schedule(self.controller, &ExecuteMsg::OpenLease { params, timeout })
     }
 
-    pub fn close<F, M>(
-        &self,
-        params: CloseLeaseParams,
-        timeout: Duration,
-        msg: F,
-    ) -> PlatformResult<Batch>
-    where
-        F: FnOnce(CloseLeaseParams, Duration) -> M,
-        M: ControllerInnerMessage,
-    {
-        schedule(self.controller, &msg(params, timeout))
+    pub fn close(&self, params: CloseLeaseParams, timeout: Duration) -> PlatformResult<Batch> {
+        schedule(self.controller, &ExecuteMsg::CloseLease { params, timeout })
     }
 }
 
@@ -66,25 +33,19 @@ impl<'controller> Lease<'controller> {
         Self { controller }
     }
 
-    pub fn swap<F, M>(&self, params: SwapParams, timeout: Duration, msg: F) -> PlatformResult<Batch>
-    where
-        F: FnOnce(SwapParams, Duration) -> M,
-        M: ControllerInnerMessage,
-    {
-        schedule(self.controller, &msg(params, timeout))
+    pub fn swap(&self, params: SwapParams, timeout: Duration) -> PlatformResult<Batch> {
+        schedule(self.controller, &ExecuteMsg::Swap { params, timeout })
     }
 
-    pub fn transfer_out<F, M>(
+    pub fn transfer_out(
         &self,
         params: TransferOutParams,
         timeout: Duration,
-        msg: F,
-    ) -> PlatformResult<Batch>
-    where
-        F: FnOnce(TransferOutParams, Duration) -> M,
-        M: ControllerInnerMessage,
-    {
-        schedule(self.controller, &msg(params, timeout))
+    ) -> PlatformResult<Batch> {
+        schedule(
+            self.controller,
+            &ExecuteMsg::TransferOut { params, timeout },
+        )
     }
 }
 
@@ -100,54 +61,23 @@ where
 
 #[cfg(test)]
 mod tests {
-    use serde::Serialize;
-
     use currencies::{
         PaymentGroup,
         testing::{PaymentC1, PaymentC2, PaymentC3},
     };
-    use finance::{coin::Coin, duration::Duration};
+    use finance::coin::Coin;
     use sdk::cosmwasm_std::Addr;
 
     use crate::msg::{CloseLeaseParams, OpenLeaseParams, SwapParams, TransferOutParams};
 
-    use super::{ControllerInnerMessage, Factory, Lease};
-
-    /// Mirrors the production controller's `ExecuteMsg` per-variant struct
-    /// shape (`protocol/contracts/remote_lease/src/api.rs`).
-    #[derive(Serialize)]
-    #[serde(rename_all = "snake_case")]
-    enum OuterExecuteMsg {
-        OpenLease {
-            params: OpenLeaseParams,
-            timeout: Duration,
-        },
-        CloseLease {
-            params: CloseLeaseParams,
-            timeout: Duration,
-        },
-        Swap {
-            params: SwapParams,
-            timeout: Duration,
-        },
-        TransferOut {
-            params: TransferOutParams,
-            timeout: Duration,
-        },
-    }
-
-    impl ControllerInnerMessage for OuterExecuteMsg {}
+    use super::{Factory, Lease};
 
     #[test]
     fn factory_open_schedules_one_message() {
         let controller = Addr::unchecked("controller");
         let factory = Factory::new(&controller);
         let batch = factory
-            .open(
-                sample_open_lease_params(),
-                OpenLeaseParams::TIMEOUT,
-                |params, timeout| OuterExecuteMsg::OpenLease { params, timeout },
-            )
+            .open(sample_open_lease_params(), OpenLeaseParams::TIMEOUT)
             .expect("scheduling must succeed");
         assert_eq!(1, batch.len());
     }
@@ -157,11 +87,7 @@ mod tests {
         let controller = Addr::unchecked("controller");
         let factory = Factory::new(&controller);
         let batch = factory
-            .close(
-                CloseLeaseParams {},
-                CloseLeaseParams::TIMEOUT,
-                |params, timeout| OuterExecuteMsg::CloseLease { params, timeout },
-            )
+            .close(CloseLeaseParams {}, CloseLeaseParams::TIMEOUT)
             .expect("scheduling must succeed");
         assert_eq!(1, batch.len());
     }
@@ -171,11 +97,7 @@ mod tests {
         let controller = Addr::unchecked("controller");
         let lease = Lease::new(&controller);
         let batch = lease
-            .swap(
-                sample_swap_params(),
-                SwapParams::TIMEOUT,
-                |params, timeout| OuterExecuteMsg::Swap { params, timeout },
-            )
+            .swap(sample_swap_params(), SwapParams::TIMEOUT)
             .expect("scheduling must succeed");
         assert_eq!(1, batch.len());
     }
@@ -185,11 +107,7 @@ mod tests {
         let controller = Addr::unchecked("controller");
         let lease = Lease::new(&controller);
         let batch = lease
-            .transfer_out(
-                sample_transfer_out_params(),
-                TransferOutParams::TIMEOUT,
-                |params, timeout| OuterExecuteMsg::TransferOut { params, timeout },
-            )
+            .transfer_out(sample_transfer_out_params(), TransferOutParams::TIMEOUT)
             .expect("scheduling must succeed");
         assert_eq!(1, batch.len());
     }

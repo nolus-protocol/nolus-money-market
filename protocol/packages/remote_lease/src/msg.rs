@@ -3,8 +3,44 @@ use serde::{Deserialize, Serialize};
 use currencies::PaymentGroup;
 use currency::CurrencyDTO;
 use finance::{coin::CoinDTO, duration::Duration};
+use platform::contract::Code;
 
 use crate::error::Error;
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[serde(deny_unknown_fields, rename_all = "snake_case")]
+pub enum ExecuteMsg {
+    /// Initiate the channel handshake. Allowed only when no channel is recorded.
+    OpenChannel(),
+    /// Begin closing the recorded channel. Allowed only when it is currently `Open`.
+    CloseChannel(),
+    NewLeaseCode {
+        // This is an internal system API and we use [Code]
+        lease_code: Code,
+    },
+    /// Outbound `OpenLease` packet. Caller must be an instance of `Config.lease_code`.
+    /// `timeout` is the relative duration after which the ICS-04 packet expires;
+    /// the controller anchors it to its own block time at send.
+    OpenLease {
+        params: OpenLeaseParams,
+        timeout: Duration,
+    },
+    /// Outbound `CloseLease` packet. See [`ExecuteMsg::OpenLease`] for `timeout` semantics.
+    CloseLease {
+        params: CloseLeaseParams,
+        timeout: Duration,
+    },
+    /// Outbound `Swap` packet. See [`ExecuteMsg::OpenLease`] for `timeout` semantics.
+    Swap {
+        params: SwapParams,
+        timeout: Duration,
+    },
+    /// Outbound `TransferOut` packet. See [`ExecuteMsg::OpenLease`] for `timeout` semantics.
+    TransferOut {
+        params: TransferOutParams,
+        timeout: Duration,
+    },
+}
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
@@ -259,5 +295,121 @@ impl From<&Operation> for remote_lease_wire::msg::Operation {
             Operation::Swap(p) => Self::Swap(p.into()),
             Operation::TransferOut(p) => Self::TransferOut(p.into()),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use currencies::{
+        PaymentGroup,
+        testing::{PaymentC1, PaymentC2, PaymentC3},
+    };
+    use finance::coin::Coin;
+    use platform::contract::Code;
+
+    use super::{CloseLeaseParams, ExecuteMsg, OpenLeaseParams, SwapParams, TransferOutParams};
+
+    // Each variant of `ExecuteMsg` carries its own serde encoding, so a
+    // regression in one variant's attributes (`rename_all`, the tuple-vs-struct
+    // shape) is invisible to the others. Every variant therefore gets its own
+    // wire-shape assertion; the inner param types are byte-pinned separately by
+    // `tests/cross_surface.rs`.
+
+    #[test]
+    fn open_channel_wire_shape() {
+        assert_eq!(
+            serde_json::json!([]),
+            variant_body("open_channel", &ExecuteMsg::OpenChannel())
+        );
+    }
+
+    #[test]
+    fn close_channel_wire_shape() {
+        assert_eq!(
+            serde_json::json!([]),
+            variant_body("close_channel", &ExecuteMsg::CloseChannel())
+        );
+    }
+
+    #[test]
+    fn new_lease_code_wire_shape() {
+        let msg = ExecuteMsg::NewLeaseCode {
+            lease_code: Code::unchecked(20),
+        };
+        assert_struct_fields(&["lease_code"], &variant_body("new_lease_code", &msg));
+    }
+
+    #[test]
+    fn open_lease_wire_shape() {
+        let msg = ExecuteMsg::OpenLease {
+            params: open_lease_params(),
+            timeout: OpenLeaseParams::TIMEOUT,
+        };
+        assert_struct_fields(&["params", "timeout"], &variant_body("open_lease", &msg));
+    }
+
+    #[test]
+    fn close_lease_wire_shape() {
+        let msg = ExecuteMsg::CloseLease {
+            params: CloseLeaseParams {},
+            timeout: CloseLeaseParams::TIMEOUT,
+        };
+        assert_struct_fields(&["params", "timeout"], &variant_body("close_lease", &msg));
+    }
+
+    #[test]
+    fn swap_wire_shape() {
+        let msg = ExecuteMsg::Swap {
+            params: SwapParams::new(
+                Coin::<PaymentC1>::new(1000).into(),
+                Coin::<PaymentC2>::new(42).into(),
+            )
+            .expect("distinct non-zero amounts"),
+            timeout: SwapParams::TIMEOUT,
+        };
+        assert_struct_fields(&["params", "timeout"], &variant_body("swap", &msg));
+    }
+
+    #[test]
+    fn transfer_out_wire_shape() {
+        let msg = ExecuteMsg::TransferOut {
+            params: TransferOutParams::new(Coin::<PaymentC3>::new(1000).into())
+                .expect("non-zero amount"),
+            timeout: TransferOutParams::TIMEOUT,
+        };
+        assert_struct_fields(&["params", "timeout"], &variant_body("transfer_out", &msg));
+    }
+
+    fn open_lease_params() -> OpenLeaseParams {
+        OpenLeaseParams::new(
+            7,
+            currency::dto::<PaymentC1, PaymentGroup>(),
+            currency::dto::<PaymentC2, PaymentGroup>(),
+            currency::dto::<PaymentC3, PaymentGroup>(),
+        )
+        .expect("three distinct currencies")
+    }
+
+    fn variant_body(expected_tag: &str, msg: &ExecuteMsg) -> serde_json::Value {
+        let json: serde_json::Value =
+            serde_json::to_value(msg).expect("serialization must succeed");
+        let mut object = json
+            .as_object()
+            .expect("externally-tagged variant must be an object")
+            .clone();
+        assert_eq!(1, object.len(), "exactly one variant tag");
+        object
+            .remove(expected_tag)
+            .expect("variant tag must match its snake_case name")
+    }
+
+    fn assert_struct_fields(expected_fields: &[&str], body: &serde_json::Value) {
+        let object = body
+            .as_object()
+            .expect("struct-style variant body must be an object");
+        assert_eq!(expected_fields.len(), object.len());
+        expected_fields
+            .iter()
+            .for_each(|field| assert!(object.contains_key(*field), "missing field {field}"));
     }
 }
