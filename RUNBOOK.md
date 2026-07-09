@@ -63,7 +63,7 @@ A local-only finding from a newer clippy is not a gate failure — fix it only
 if it survives on 1.96.1. Bump the pinned version here in lockstep with
 `ci/Containerfile`.
 
-Tried first (did not work): treating local 1.96-only findings as CI blockers
+Tried first (did not work): treating local-only findings as CI blockers
 and patching untouched code to silence them.
 
 ### `cargo lint` / `cargo run-test` from the repo root silently match 0 packages
