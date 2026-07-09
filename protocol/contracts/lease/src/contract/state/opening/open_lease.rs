@@ -277,6 +277,12 @@ impl WithLppLoan<LpnCurrency> for RepayOpenLoan {
         let interest = loan.interest_due(&self.now).ok_or(ContractError::Overflow(
             "Open-loan refund due interest overflow",
         ))?;
+        let total_repay = self
+            .principal
+            .checked_add(interest)
+            .ok_or(ContractError::Overflow(
+                "Open-loan refund due total repay overflow",
+            ))?;
 
         let reserve_batch = if !interest.is_zero() {
             let mut reserve = self.reserve.into_reserve();
@@ -286,7 +292,7 @@ impl WithLppLoan<LpnCurrency> for RepayOpenLoan {
             Batch::default()
         };
 
-        let receipt = loan.repay(&self.now, self.principal + interest);
+        let receipt = loan.repay(&self.now, total_repay);
         debug_assert_eq!(
             Some(RepayShares {
                 principal: self.principal,
