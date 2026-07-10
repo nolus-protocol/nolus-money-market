@@ -14,7 +14,7 @@ pub(crate) struct AddressBook<
     protocols_registry: ProtocolsRegistry,
     treasury_addr: Treasury,
     profit_addr: Profit,
-    profit_ica_addr: Profit,
+    settlement_addr: Profit,
     reserve: Reserve,
     leaser_addr: Leaser,
     lpp_addr: Lpp,
@@ -33,7 +33,7 @@ impl AddressBook<(), (), (), (), (), (), (), ()> {
             protocols_registry: (),
             treasury_addr: (),
             profit_addr: (),
-            profit_ica_addr: (),
+            settlement_addr: (),
             reserve: (),
             leaser_addr: (),
             lpp_addr: (),
@@ -56,7 +56,7 @@ impl<Treasury, Profit, Reserve, Leaser, Lpp, Oracle, TimeAlarms>
             protocols_registry: protocols_registry_addr,
             treasury_addr: self.treasury_addr,
             profit_addr: self.profit_addr,
-            profit_ica_addr: self.profit_ica_addr,
+            settlement_addr: self.settlement_addr,
             reserve: self.reserve,
             leaser_addr: self.leaser_addr,
             lpp_addr: self.lpp_addr,
@@ -88,7 +88,7 @@ impl<ProtocolsRegistry, Profit, Reserve, Leaser, Lpp, Oracle, TimeAlarms>
             protocols_registry: self.protocols_registry,
             treasury_addr,
             profit_addr: self.profit_addr,
-            profit_ica_addr: self.profit_ica_addr,
+            settlement_addr: self.settlement_addr,
             reserve: self.reserve,
             leaser_addr: self.leaser_addr,
             lpp_addr: self.lpp_addr,
@@ -114,14 +114,14 @@ impl<ProtocolsRegistry, Treasury, Reserve, Leaser, Lpp, Oracle, TimeAlarms>
     pub(super) fn with_profit(
         self,
         profit_addr: Addr,
-        profit_ica_addr: Addr,
+        settlement_addr: Addr,
     ) -> AddressBook<ProtocolsRegistry, Treasury, Addr, Reserve, Leaser, Lpp, Oracle, TimeAlarms>
     {
         AddressBook {
             protocols_registry: self.protocols_registry,
             treasury_addr: self.treasury_addr,
             profit_addr,
-            profit_ica_addr,
+            settlement_addr,
             reserve: self.reserve,
             leaser_addr: self.leaser_addr,
             lpp_addr: self.lpp_addr,
@@ -140,8 +140,8 @@ impl<ProtocolsRegistry, Treasury, Reserve, Leaser, Lpp, Oracle, TimeAlarms>
         &self.profit_addr
     }
 
-    pub const fn profit_ica(&self) -> &Addr {
-        &self.profit_ica_addr
+    pub const fn settlement(&self) -> &Addr {
+        &self.settlement_addr
     }
 }
 
@@ -157,7 +157,7 @@ impl<ProtocolsRegistry, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>
             protocols_registry: self.protocols_registry,
             treasury_addr: self.treasury_addr,
             profit_addr: self.profit_addr,
-            profit_ica_addr: self.profit_ica_addr,
+            settlement_addr: self.settlement_addr,
             reserve,
             leaser_addr: self.leaser_addr,
             lpp_addr: self.lpp_addr,
@@ -189,7 +189,7 @@ impl<ProtocolsRegistry, Treasury, Profit, Reserve, Lpp, Oracle, TimeAlarms>
             protocols_registry: self.protocols_registry,
             treasury_addr: self.treasury_addr,
             profit_addr: self.profit_addr,
-            profit_ica_addr: self.profit_ica_addr,
+            settlement_addr: self.settlement_addr,
             reserve: self.reserve,
             leaser_addr,
             lpp_addr: self.lpp_addr,
@@ -222,7 +222,7 @@ impl<ProtocolsRegistry, Treasury, Profit, Reserve, Leaser, Oracle, TimeAlarms>
 
             treasury_addr: self.treasury_addr,
             profit_addr: self.profit_addr,
-            profit_ica_addr: self.profit_ica_addr,
+            settlement_addr: self.settlement_addr,
             reserve: self.reserve,
             leaser_addr: self.leaser_addr,
             lpp_addr,
@@ -255,7 +255,7 @@ impl<ProtocolsRegistry, Treasury, Profit, Reserve, Leaser, Lpp, TimeAlarms>
 
             treasury_addr: self.treasury_addr,
             profit_addr: self.profit_addr,
-            profit_ica_addr: self.profit_ica_addr,
+            settlement_addr: self.settlement_addr,
             reserve: self.reserve,
             leaser_addr: self.leaser_addr,
             lpp_addr: self.lpp_addr,
@@ -286,7 +286,7 @@ impl<ProtocolsRegistry, Treasury, Profit, Reserve, Leaser, Lpp, Oracle>
             protocols_registry: self.protocols_registry,
             treasury_addr: self.treasury_addr,
             profit_addr: self.profit_addr,
-            profit_ica_addr: self.profit_ica_addr,
+            settlement_addr: self.settlement_addr,
             reserve: self.reserve,
             leaser_addr: self.leaser_addr,
             lpp_addr: self.lpp_addr,

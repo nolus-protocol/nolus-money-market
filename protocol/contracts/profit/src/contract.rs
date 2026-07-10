@@ -1,23 +1,14 @@
-use std::ops::{Deref, DerefMut};
+use std::ops::Deref;
 
-use access_control::{
-    ContractOwnerAccess, SingleUserAccess, permissions::DexResponseSafeDeliveryPermission,
-};
+use access_control::{ContractOwnerAccess, SingleUserAccess};
 use cw_time::IntoInstant;
-use dex::{ContinueResult as DexResult, Handler as _, Response as DexResponse};
-use oracle_platform::OracleRef;
 use platform::{
-    contract::{self, Validator},
-    error as platform_error,
-    message::Response as MessageResponse,
-    response,
-    state_machine::Response as StateMachineResponse,
+    batch::Batch, contract, error as platform_error, message::Response as MessageResponse, response,
 };
 use sdk::{
-    api::SudoMsg,
     cosmwasm_ext::Response as CwResponse,
     cosmwasm_std::{
-        Api, Binary, Deps, DepsMut, Env, MessageInfo, QuerierWrapper, Reply, entry_point,
+        Api, Binary, Deps, DepsMut, Env, MessageInfo, QuerierWrapper, Storage, entry_point,
     },
 };
 use timealarms::stub::TimeAlarmsRef;
@@ -27,11 +18,12 @@ use versioning::{
 };
 
 use crate::{
+    CadenceHours,
     error::ContractError,
-    msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg},
-    profit::Profit,
+    msg::{ConfigResponse, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg},
+    profit,
     result::ContractResult,
-    state::{Config, ConfigManagement as _, State},
+    state::Config,
 };
 
 const CONTRACT_STORAGE_VERSION: VersionSegment = 1;
@@ -43,39 +35,21 @@ const CURRENT_RELEASE: ProtocolPackageRelease = ProtocolPackageRelease::current(
 
 #[entry_point]
 pub fn instantiate(
-    mut deps: DepsMut<'_>,
-    _env: Env,
+    deps: DepsMut<'_>,
+    env: Env,
     info: MessageInfo,
     msg: InstantiateMsg,
 ) -> ContractResult<CwResponse> {
-    let addr_validator = contract::validator(deps.querier);
-    addr_validator.check_contract(&msg.treasury)?;
-    addr_validator.check_contract(&msg.oracle)?;
-    // msg.timealarms is validated on TimeAlarmsRef instantiation
-
-    ContractOwnerAccess::new(deps.storage.deref_mut()).grant_to(&info)?;
-
-    SingleUserAccess::new(
-        deps.storage.deref_mut(),
-        crate::access_control::TIMEALARMS_NAMESPACE,
-    )
-    .grant_to(&msg.timealarms)?;
-
-    let (state, response) = State::start(
-        Config::new(
-            msg.cadence_hours,
-            msg.treasury,
-            OracleRef::try_from_base(msg.oracle, deps.querier)?,
-            TimeAlarmsRef::new(msg.timealarms, &addr_validator)?,
-        ),
-        msg.dex,
-    );
-
-    state
-        .store(deps.storage)
-        .map(|()| response::response_only_messages(response))
+    setup(deps.storage, deps.querier, deps.api, &env, info, msg)
+        .map(response::response_only_messages)
+        .inspect_err(platform_error::log(deps.api))
 }
 
+/// Fresh-deploy only. The new [`Config`] reuses the `"contract_state"` storage
+/// key of the pre-settlement `State` without bumping `CONTRACT_STORAGE_VERSION`,
+/// so an in-place upgrade of a running instance would leave old `State` bytes
+/// that the new `Config` cannot deserialize. Profit is redeployed as a fresh
+/// instance; there is no live state to migrate.
 #[entry_point]
 pub fn migrate(
     deps: DepsMut<'_>,
@@ -108,139 +82,75 @@ pub fn execute(
             )
             .check(&info)?;
 
-            try_handle_execute_message(deps, env, |state, querier, env| {
-                State::on_time_alarm(state, querier, env, info)
-            })
-            .map(response::response_only_messages)
+            Config::load(deps.storage)
+                .and_then(|config: Config| profit::on_time_alarm(&config, &env, deps.querier))
+                .map(response::response_only_messages)
         }
         ExecuteMsg::Config { cadence_hours } => {
             ContractOwnerAccess::new(deps.storage.deref()).check(&info)?;
 
-            let StateMachineResponse {
-                response,
-                next_state,
-            } = State::load(deps.storage)?
-                .try_update_config(env.block.time.into_instant(), cadence_hours)?;
-
-            next_state.store(deps.storage)?;
-
-            Ok(response::response_only_messages(response))
+            update_cadence(deps.storage, &env, cadence_hours).map(response::response_only_messages)
         }
-        ExecuteMsg::DexCallback() => {
-            access_control::check(
-                &DexResponseSafeDeliveryPermission::new(&env.contract),
-                &info,
-            )?;
+    }
+    .inspect_err(platform_error::log(deps.api))
+}
 
-            try_handle_execute_message(deps, env, State::on_inner)
-                .map(response::response_only_messages)
-        }
-        ExecuteMsg::DexCallbackContinue() => {
-            access_control::check(
-                &DexResponseSafeDeliveryPermission::new(&env.contract),
-                &info,
-            )?;
-
-            try_handle_execute_message(deps, env, State::on_inner_continue)
-                .map(response::response_only_messages)
-        }
-        ExecuteMsg::Heal() => {
-            try_handle_execute_message(deps, env, State::heal).map(response::response_only_messages)
+#[entry_point]
+pub fn query(deps: Deps<'_>, _env: Env, msg: QueryMsg) -> ContractResult<Binary> {
+    match msg {
+        QueryMsg::Config {} => Config::load(deps.storage)
+            .map(|config: Config| ConfigResponse {
+                cadence_hours: config.cadence_hours(),
+            })
+            .and_then(|resp: ConfigResponse| {
+                cosmwasm_std::to_json_binary(&resp).map_err(Into::into)
+            }),
+        QueryMsg::ProtocolPackageRelease {} => {
+            cosmwasm_std::to_json_binary(&CURRENT_RELEASE).map_err(Into::into)
         }
     }
 }
 
-#[entry_point]
-pub fn sudo(deps: DepsMut<'_>, env: Env, msg: SudoMsg) -> ContractResult<CwResponse> {
-    State::load(deps.storage)
-        .and_then(|state| try_handle_neutron_msg(deps.api, deps.as_ref(), env, msg, state))
-        .and_then(
-            |DexResponse::<State> {
-                 response,
-                 next_state,
-             }| { next_state.store(deps.storage).map(|()| response) },
-        )
-        .map(response::response_only_messages)
-        .inspect_err(platform_error::log(deps.api))
-}
-
-#[entry_point]
-pub fn reply(deps: DepsMut<'_>, env: Env, msg: Reply) -> ContractResult<CwResponse> {
-    try_handle_reply_message(deps, env, msg, State::reply).map(response::response_only_messages)
-}
-
-fn try_handle_neutron_msg(
+fn setup(
+    storage: &mut dyn Storage,
+    querier: QuerierWrapper<'_>,
     api: &dyn Api,
-    deps: Deps<'_>,
-    env: Env,
-    msg: SudoMsg,
-    state: State,
-) -> ContractResult<DexResponse<State>> {
-    match msg {
-        SudoMsg::Response { data, .. } => state.on_response(data, deps.querier, env).into(),
-        SudoMsg::Error { details, .. } => {
-            let resp = details.into();
-            api.debug(&format!("SudoMsg::Error({resp})",));
-            state.on_error(resp, deps.querier, env).into()
-        }
-        SudoMsg::Timeout { .. } => state.on_timeout(deps.querier, env).map_err(Into::into),
-        SudoMsg::OpenAck {
-            counterparty_version,
-            ..
-        } => state
-            .on_open_ica(counterparty_version, deps.querier, env)
-            .map_err(Into::into),
-    }
+    env: &Env,
+    info: MessageInfo,
+    msg: InstantiateMsg,
+) -> ContractResult<MessageResponse> {
+    api.addr_validate(msg.settlement.as_str())?;
+
+    ContractOwnerAccess::new(&mut *storage).grant_to(&info)?;
+    SingleUserAccess::new(&mut *storage, crate::access_control::TIMEALARMS_NAMESPACE)
+        .grant_to(&msg.timealarms)?;
+
+    TimeAlarmsRef::new(msg.timealarms, &contract::validator(querier))
+        .map_err(ContractError::from)
+        .map(|time_alarms: TimeAlarmsRef| {
+            Config::new(msg.cadence_hours, msg.settlement, time_alarms)
+        })
+        .and_then(|config: Config| store_and_arm(storage, env, config))
 }
 
-fn try_handle_execute_message<F, R, E>(
-    deps: DepsMut<'_>,
-    env: Env,
-    handler: F,
-) -> ContractResult<MessageResponse>
-where
-    F: FnOnce(State, QuerierWrapper<'_>, Env) -> R,
-    R: Into<Result<DexResponse<State>, E>>,
-    ContractError: From<E>,
-{
-    let state: State = State::load(deps.storage)?;
-
-    let DexResponse::<State> {
-        response,
-        next_state,
-    } = handler(state, deps.querier, env).into()?;
-
-    next_state.store(deps.storage).map(|()| response)
+fn update_cadence(
+    storage: &mut dyn Storage,
+    env: &Env,
+    cadence_hours: CadenceHours,
+) -> ContractResult<MessageResponse> {
+    Config::load(storage)
+        .map(|config: Config| config.update_cadence_hours(cadence_hours))
+        .and_then(|config: Config| store_and_arm(storage, env, config))
 }
 
-fn try_handle_reply_message<F>(
-    deps: DepsMut<'_>,
-    env: Env,
-    msg: Reply,
-    handler: F,
-) -> ContractResult<MessageResponse>
-where
-    F: FnOnce(State, QuerierWrapper<'_>, Env, Reply) -> DexResult<State>,
-{
-    let state: State = State::load(deps.storage)?;
-
-    let DexResponse::<State> {
-        response,
-        next_state,
-    } = handler(state, deps.querier, env, msg)?;
-
-    next_state.store(deps.storage).map(|()| response)
-}
-
-#[entry_point]
-pub fn query(deps: Deps<'_>, env: Env, msg: QueryMsg) -> ContractResult<Binary> {
-    match msg {
-        QueryMsg::Config {} => cosmwasm_std::to_json_binary(&Profit::query_config(
-            deps.storage,
-            env.block.time.into_instant(),
-            deps.querier,
-        )?),
-        QueryMsg::ProtocolPackageRelease {} => cosmwasm_std::to_json_binary(&CURRENT_RELEASE),
-    }
-    .map_err(Into::into)
+fn store_and_arm(
+    storage: &mut dyn Storage,
+    env: &Env,
+    config: Config,
+) -> ContractResult<MessageResponse> {
+    profit::setup_alarm(&config, env.block.time.into_instant()).and_then(|alarm: Batch| {
+        config
+            .store(storage)
+            .map(|()| MessageResponse::messages_only(alarm))
+    })
 }

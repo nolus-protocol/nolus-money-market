@@ -1,61 +1,56 @@
-use currency::Group;
 use serde::{Deserialize, Serialize};
 
-use currencies::{Lpn as QuoteC, Lpns as QuoteG};
-use oracle::stub::SwapPath;
-use sdk::cosmwasm_std::Addr;
+use sdk::{
+    cosmwasm_std::{Addr, Storage},
+    cw_storage_plus::Item,
+};
 use timealarms::stub::TimeAlarmsRef;
 
-use crate::CadenceHours;
+use crate::{CadenceHours, result::ContractResult};
 
-type OracleRef = oracle_platform::OracleRef<QuoteC, QuoteG>;
+const CONFIG: Item<Config> = Item::new("contract_state");
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone)]
+#[cfg_attr(feature = "testing", derive(Debug))]
 pub(crate) struct Config {
     cadence_hours: CadenceHours,
-    treasury: Addr,
-    oracle: OracleRef,
+    settlement: Addr,
     time_alarms: TimeAlarmsRef,
 }
 
 impl Config {
-    pub fn new(
-        cadence_hours: CadenceHours,
-        treasury: Addr,
-        oracle: OracleRef,
-        time_alarms: TimeAlarmsRef,
-    ) -> Self {
+    pub fn new(cadence_hours: CadenceHours, settlement: Addr, time_alarms: TimeAlarmsRef) -> Self {
         Self {
             cadence_hours,
-            treasury,
-            oracle,
+            settlement,
             time_alarms,
         }
     }
 
-    pub fn update(self, cadence_hours: CadenceHours) -> Self {
+    pub fn update_cadence_hours(self, cadence_hours: CadenceHours) -> Self {
         Self {
             cadence_hours,
             ..self
         }
     }
 
-    pub fn cadence_hours(&self) -> CadenceHours {
+    pub const fn cadence_hours(&self) -> CadenceHours {
         self.cadence_hours
     }
 
-    pub fn treasury(&self) -> &Addr {
-        &self.treasury
+    pub const fn settlement(&self) -> &Addr {
+        &self.settlement
     }
 
-    pub fn oracle<GSwap>(&self) -> &(impl SwapPath<GSwap> + use<GSwap>)
-    where
-        GSwap: Group,
-    {
-        &self.oracle
-    }
-
-    pub fn time_alarms(&self) -> &TimeAlarmsRef {
+    pub const fn time_alarms(&self) -> &TimeAlarmsRef {
         &self.time_alarms
+    }
+
+    pub fn load(storage: &dyn Storage) -> ContractResult<Self> {
+        CONFIG.load(storage).map_err(Into::into)
+    }
+
+    pub fn store(&self, storage: &mut dyn Storage) -> ContractResult<()> {
+        CONFIG.save(storage, self).map_err(Into::into)
     }
 }
