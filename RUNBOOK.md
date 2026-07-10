@@ -6,9 +6,9 @@ Discovery-tax patterns. Grouped by domain. Append on first re-encounter.
 
 ### `cargo build` fails in a fresh worktree: missing `build-configuration/protocol.json`
 
-**Symptom:** A fresh `git worktree add` checkout fails at build time because the build script reads `build-configuration/protocol.json` and the file is absent.
+**Symptom:** Fresh `git worktree add` checkout fails at build time: build script reads `build-configuration/protocol.json`, file absent.
 
-**Cause:** `build-configuration/protocol.json` is git-ignored and is populated locally per checkout. New worktrees inherit the workspace but not that file.
+**Cause:** `build-configuration/protocol.json` is git-ignored, populated locally per checkout. New worktrees inherit the workspace but not that file.
 
 **Fix:** Copy it from a working checkout:
 
@@ -40,15 +40,9 @@ Tried first (rejected at review): editing the tracked `/.cargo/config.toml`.
 
 ### Local clippy diverges from CI clippy
 
-**Symptom:** `cargo lint` / `cargo lint-all` fails locally on lints CI does not
-run (e.g. `unnecessary_sort_by` in the untouched oracle contract), or passes
-locally while CI fails — the verdicts differ on identical code.
+**Symptom:** `cargo lint` / `cargo lint-all` fails locally on lints CI does not run (e.g. `unnecessary_sort_by` in the untouched oracle contract), or passes locally while CI fails — verdicts differ on identical code.
 
-**Cause:** There is no `rust-toolchain.toml`; CI pins its toolchain via the
-`rust_image_digest` build argument in `ci/Containerfile` (currently 1.96.1),
-while the local default toolchain follows `rustup`. Clippy adds and tightens
-lints between releases, so a local toolchain that differs from the CI pin
-produces different verdicts.
+**Cause:** No `rust-toolchain.toml`; CI pins its toolchain via the `rust_image_digest` build argument in `ci/Containerfile` (currently 1.96.1), while the local default toolchain follows `rustup`. Clippy adds/tightens lints between releases, so a toolchain mismatch produces different verdicts.
 
 **Fix:** Run the gate on the CI-pinned toolchain:
 
@@ -59,38 +53,22 @@ cargo +1.96.1 lint-all
 cargo +1.96.1 run-test
 ```
 
-A local-only finding from a newer clippy is not a gate failure — fix it only
-if it survives on 1.96.1. Bump the pinned version here in lockstep with
-`ci/Containerfile`.
+A local-only finding from a newer clippy is not a gate failure — fix it only if it survives on 1.96.1. Bump the pinned version here in lockstep with `ci/Containerfile`.
 
-Tried first (did not work): treating local-only findings as CI blockers
-and patching untouched code to silence them.
+Tried first (did not work): treating local-only findings as CI blockers and patching untouched code to silence them.
 
 ### `cargo lint` / `cargo run-test` from the repo root silently match 0 packages
 
-**Symptom:** Running `cargo lint` or `cargo run-test` from the checkout **root** exits
-`0` with no output — it reads like a clean pass. It isn't: nothing was linted or tested.
+**Symptom:** Running `cargo lint` or `cargo run-test` from the checkout **root** exits `0` with no output — reads like a clean pass. It isn't: nothing was linted or tested.
 
-**Cause:** These are `cargo each` aliases that select packages by cargo-each **tag**, and
-the tags live in the per-workspace members. The repo root has **no `Cargo.toml`** (the
-workspaces are `protocol/`, `tests/`, `platform/`, plus tooling in `tools/`), so the tag
-match resolves to the empty set and `each` exits `0`. Worse, a stray `Cargo.toml`
-**above** the checkout hijacks cargo's upward manifest walk and runs against the wrong
-tree entirely.
+**Cause:** These are `cargo each` aliases that select packages by cargo-each **tag**, and the tags live in the per-workspace members. The repo root has **no `Cargo.toml`** (workspaces are `protocol/`, `tests/`, `platform/`, plus tooling in `tools/`), so the tag match resolves to the empty set and `each` exits `0`. Worse, a stray `Cargo.toml` **above** the checkout hijacks cargo's upward manifest walk and runs against the wrong tree entirely.
 
-**Fix:** Always run the gates **inside** a workspace dir — `protocol/`, `tests/`,
-`platform/`, or `tools/` — never from the repo root. Real CI iterates the workspaces via
-`ci/for-each-workspace.sh`; mirror that. Two corollaries:
+**Fix:** Always run the gates **inside** a workspace dir — `protocol/`, `tests/`, `platform/`, or `tools/` — never from the repo root. Real CI iterates the workspaces via `ci/for-each-workspace.sh`; mirror that. Two corollaries:
 
-- `cargo lint` runs **without** `--all-targets`, so it does not compile `#[cfg(test)]`
-  modules. When the change adds test code, lint it explicitly:
-  `cargo clippy -p <crate> --features <...> --all-targets` (or `cargo lint-all` — see the
-  Cargo section's "Pre-push lint" entry).
-- **Exit `0` with zero output is not a PASS.** A real test run prints per-suite counts;
-  require that evidence before calling it green.
+- `cargo lint` runs **without** `--all-targets`, so it does not compile `#[cfg(test)]` modules. When the change adds test code, lint it explicitly: `cargo clippy -p <crate> --features <...> --all-targets` (or `cargo lint-all` — see the Cargo section's "Pre-push lint" entry).
+- **Exit `0` with zero output is not a PASS.** A real test run prints per-suite counts; require that evidence before calling it green.
 
-Tried first (did not work): `cargo lint` / `cargo run-test` from the repo root and
-reading the `0` exit as success.
+Tried first (did not work): `cargo lint` / `cargo run-test` from the repo root, reading the `0` exit as success.
 
 ## CosmWasm
 
@@ -117,9 +95,9 @@ Tried first (did not work): enabling only `cosmwasm-std/stargate`; adding only `
 
 ### A workspace dep's feature does not propagate from a consumer's same-named feature
 
-**Symptom:** Contract crate `A` declares `feature = "stub"` and depends on workspace crate `B` which also has `feature = "stub"` (typically gating test or mock helpers). `cargo build --features stub` on `A` compiles, but the stub-gated items in `B` are unreachable — the items behind `#[cfg(feature = "stub")]` in `B` never compile in. Or: tests in `A` that rely on `B`'s stub helpers fail to find symbols.
+**Symptom:** Contract crate `A` declares `feature = "stub"` and depends on workspace crate `B` which also has `feature = "stub"` (typically gating test or mock helpers). `cargo build --features stub` on `A` compiles, but the stub-gated items in `B` are unreachable — items behind `#[cfg(feature = "stub")]` in `B` never compile in. Or: tests in `A` relying on `B`'s stub helpers fail to find symbols.
 
-**Cause:** Cargo features do not propagate by name. Declaring `[features] stub = []` in `A` does not turn on `stub` in `A`'s deps. The propagation must be spelled explicitly: `stub = ["B/stub"]`.
+**Cause:** Cargo features do not propagate by name. Declaring `[features] stub = []` in `A` does not turn on `stub` in `A`'s deps. Propagation must be spelled explicitly: `stub = ["B/stub"]`.
 
 **Fix:** In `A`'s Cargo.toml:
 
@@ -128,7 +106,7 @@ Tried first (did not work): enabling only `cosmwasm-std/stargate`; adding only `
 stub = ["B/stub"]
 ```
 
-If `A` also has a higher-level feature (e.g. `contract = [..., "stub"]`) that already lists `stub`, the propagation rides along automatically once the line above is in place — no extra work.
+If `A` also has a higher-level feature (e.g. `contract = [..., "stub"]`) that already lists `stub`, propagation rides along automatically once the line above is in place — no extra work.
 
 **Reviewer check:** any new `stub` (or test-helper / mock) feature on a contract crate that depends on a workspace crate exposing the same-named feature must propagate explicitly. Greppable: `git grep -n '^stub = \[\]$' protocol/contracts` should be empty.
 
@@ -138,16 +116,16 @@ Tried first (did not work): `stub = []` on the contract crate, expecting Cargo t
 
 **Symptom:** `cargo lint` passes locally, CI's "Lint codebase with tests" job fails with errors in `#[cfg(test)]` code — e.g. an unresolved test-only path like `versioning::ReleaseId::new_test` under a feature combination that does not activate `versioning/testing`.
 
-**Cause:** The repo has two distinct CI lint jobs, mirroring two distinct aliases in `/.cargo/config.toml`:
+**Cause:** Two distinct CI lint jobs, mirroring two distinct aliases in `/.cargo/config.toml`:
 
-- `lint = "each --tag ci run --print-command -- clippy --locked"` — runs every cargo-each feature combination **without** `--all-targets`. Test binaries are not compiled. `cfg(test) = false`. Any compile error gated `#[cfg(test)]` is invisible.
-- `lint-all = "each --tag ci run --print-command -- clippy --all-targets --locked"` — same matrix, **with** `--all-targets`. Test binaries compile under every combination. `cfg(test) = true`. This catches errors in `mod tests {}` blocks that only surface under feature combinations the test was not authored against.
+- `lint = "each --tag ci run --print-command -- clippy --locked"` — runs every cargo-each feature combination **without** `--all-targets`. Test binaries not compiled. `cfg(test) = false`. Any compile error gated `#[cfg(test)]` is invisible.
+- `lint-all = "each --tag ci run --print-command -- clippy --all-targets --locked"` — same matrix, **with** `--all-targets`. Test binaries compile under every combination. `cfg(test) = true`. Catches errors in `mod tests {}` blocks that only surface under feature combinations the test was not authored against.
 
 CI runs both. Running only `cargo lint` locally and assuming "lint passes ⇒ ready to push" misses every cross-combination test-compile bug.
 
-A second trap: `cargo test --features contract,testing` and `cargo clippy --features contract,testing --all-targets` both exercise test code, but only in the union combo. Test code that references symbols gated on `versioning/testing` (or any other dev-only feature) will compile under `contract,testing` but fail under `contract` alone — which CI's lint-with-tests matrix exercises.
+A second trap: `cargo test --features contract,testing` and `cargo clippy --features contract,testing --all-targets` both exercise test code, but only in the union combo. Test code referencing symbols gated on `versioning/testing` (or any other dev-only feature) will compile under `contract,testing` but fail under `contract` alone — which CI's lint-with-tests matrix exercises.
 
-**Fix / pre-push checklist:** before `git push` on any branch that touches `#[cfg(test)]` or `[dev-dependencies]`, run **both**:
+**Fix / pre-push checklist:** before `git push` on any branch touching `#[cfg(test)]` or `[dev-dependencies]`, run **both**:
 
 ```
 cargo lint           # all combos, library only
@@ -157,4 +135,4 @@ cargo run-test       # tests across every CI feature combo
 
 If `cargo lint-all` errors only under specific combinations, fix the root cause by activating the needed dev-only feature via `[dev-dependencies]` (Cargo unifies dev-dep features with regular-dep features whenever test/all-targets builds run) rather than wiring the test-only feature into the crate's own `[features]` table — the latter only helps when the consumer explicitly passes that feature flag, and CI's matrix doesn't.
 
-Tried first (did not catch the bug): `cargo lint` + `cargo clippy --features contract,testing --all-targets` + `cargo test --features contract,testing`. None of these compile test code under the `--features contract` (alone) combination that CI exercises.
+Tried first (did not catch the bug): `cargo lint` + `cargo clippy --features contract,testing --all-targets` + `cargo test --features contract,testing`. None compile test code under the `--features contract` (alone) combination that CI exercises.
