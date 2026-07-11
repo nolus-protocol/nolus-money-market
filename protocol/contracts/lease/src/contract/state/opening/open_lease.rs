@@ -1,3 +1,5 @@
+use serde::{Deserialize, Serialize};
+
 use currencies::PaymentGroup;
 use currency::{CurrencyDef, Group, MemberOf};
 use cw_time::IntoInstant;
@@ -5,8 +7,12 @@ use finance::{
     coin::{Coin, WithCoin},
     duration::Duration,
     instant::Instant,
+    zero::Zero,
 };
-use lpp::stub::loan::{LppLoan, WithLppLoan};
+use lpp::{
+    loan::RepayShares,
+    stub::loan::{LppLoan, WithLppLoan},
+};
 use platform::{
     bank::{FixedAddressSender, LazySenderStub},
     batch::{Batch, Emit, Emitter},
@@ -19,8 +25,8 @@ use remote_lease::{
     response::{OpenLeaseResponse, OperationResponse, RemoteLeaseId},
     stub::Factory,
 };
+use reserve::stub::Reserve as ReserveTrait;
 use sdk::cosmwasm_std::{Addr, Env, MessageInfo, QuerierWrapper};
-use serde::{Deserialize, Serialize};
 use timealarms::stub::TimeAlarmsRef;
 
 use crate::{
@@ -36,7 +42,7 @@ use crate::{
         state::{Response, State, open_failed::OpenFailed},
     },
     error::{ContractError, ContractResult},
-    finance::{LpnCoin, LpnCurrency, LppRef, OracleRef},
+    finance::{LpnCoin, LpnCurrency, LppRef, OracleRef, ReserveRef},
 };
 
 const OPEN_FAILED_EVENT: &str = "ls-remote-lease-open-failed";
@@ -142,30 +148,44 @@ impl OpenLease {
         lease_addr: &Addr,
         now: Instant,
     ) -> ContractResult<Batch> {
-        let Self {
-            new_lease,
-            downpayment,
-            loan,
-            deps: (lpp_ref, _oracle, _time_alarms, leases_ref),
-            start_opening_at: _,
-        } = self;
-        let customer = new_lease.form.customer;
-        Coin::<LpnCurrency>::try_from(loan.principal)
-            .map_err(ContractError::from)
-            .and_then(|principal| {
-                lpp_ref.execute_loan(
-                    RepayOpenLoan { principal, now },
-                    lease_addr.clone(),
-                    querier,
-                )
-            })
-            .and_then(|lpp_batch| {
+        let customer = self.new_lease.form.customer.clone();
+        let downpayment = self.downpayment;
+        let leases_ref = self.deps.3.clone();
+        self.repay_loan(querier, lease_addr, now)
+            .and_then(|reserve_lpp_batch| {
                 let customer_batch = downpayment.with_coin(SendToCustomer {
                     customer: customer.clone(),
                 });
-                leases_ref
-                    .finalize_lease(customer)
-                    .map(|finalize_batch| lpp_batch.merge(customer_batch).merge(finalize_batch))
+                leases_ref.finalize_lease(customer).map(|finalize_batch| {
+                    reserve_lpp_batch
+                        .merge(customer_batch)
+                        .merge(finalize_batch)
+                })
+            })
+    }
+
+    fn repay_loan(
+        self,
+        querier: QuerierWrapper<'_>,
+        lease_addr: &Addr,
+        now: Instant,
+    ) -> Result<Batch, ContractError> {
+        Coin::<LpnCurrency>::try_from(self.loan.principal)
+            .map_err(ContractError::from)
+            .and_then(|principal| {
+                ReserveRef::try_new(self.new_lease.form.reserve, &querier)
+                    .map_err(ContractError::ReserveError)
+                    .and_then(|reserve| {
+                        self.deps.0.execute_loan(
+                            RepayOpenLoan {
+                                principal,
+                                now,
+                                reserve,
+                            },
+                            lease_addr.clone(),
+                            querier,
+                        )
+                    })
             })
     }
 
@@ -243,6 +263,7 @@ impl Contract for OpenLease {
 struct RepayOpenLoan {
     principal: LpnCoin,
     now: Instant,
+    reserve: ReserveRef,
 }
 
 impl WithLppLoan<LpnCurrency> for RepayOpenLoan {
@@ -253,10 +274,34 @@ impl WithLppLoan<LpnCurrency> for RepayOpenLoan {
     where
         Loan: LppLoan<LpnCurrency>,
     {
-        let _receipt = loan.repay(&self.now, self.principal);
+        let interest = loan.interest_due(&self.now).ok_or(ContractError::Overflow(
+            "Open-loan refund due interest overflow",
+        ))?;
+
+        let reserve_batch = if !interest.is_zero() {
+            let mut reserve = self.reserve.into_reserve();
+            reserve.cover_liquidation_losses(interest);
+            reserve.try_into().map_err(ContractError::from)?
+        } else {
+            Batch::default()
+        };
+
+        let receipt = loan.repay(&self.now, self.principal + interest);
+        debug_assert_eq!(
+            Some(RepayShares {
+                principal: self.principal,
+                interest,
+                excess: Coin::new(Zero::ZERO),
+            }),
+            receipt
+        );
+
         loan.try_into()
             .map(|batch: lpp::stub::LppBatch<lpp::stub::LppRef<LpnCurrency>>| batch.batch)
-            .map_err(Into::into)
+            .map_err(ContractError::from)
+            // the reserve cover must precede the repay so the interest lands
+            // before Lpp pulls the combined principal and interest
+            .map(|lpp_batch| reserve_batch.merge(lpp_batch))
     }
 }
 
