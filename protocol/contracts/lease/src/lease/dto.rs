@@ -25,41 +25,36 @@ use super::{
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub struct LeaseDTO {
     pub(crate) addr: Addr,
+    pub(crate) remote_lease: RemoteLeaseId,
     pub(crate) customer: Addr,
     pub(crate) position: PositionDTO,
     pub(crate) loan: LoanDTO,
     pub(crate) time_alarms: TimeAlarmsRef,
     pub(crate) oracle: OracleRef,
     pub(crate) reserve: ReserveRef,
-    /// Solana-side Lease PDA, populated from the remote-lease
-    /// controller's OpenLease ack before the live lease is ever
-    /// constructed. Every `LeaseDTO` carries a value — see plan §10.A.1
-    /// (mainnet v9-lease population = 0, so there are no legacy leases
-    /// to deserialise without this field).
-    pub(crate) remote_lease_id: RemoteLeaseId,
 }
 
 impl LeaseDTO {
     #[allow(clippy::too_many_arguments)]
     pub(crate) fn new(
         addr: Addr,
+        remote_lease: RemoteLeaseId,
         customer: Addr,
         position: PositionDTO,
         loan: LoanDTO,
         time_alarms: TimeAlarmsRef,
         oracle: OracleRef,
         reserve: ReserveRef,
-        remote_lease_id: RemoteLeaseId,
     ) -> Self {
         Self {
             addr,
+            remote_lease,
             customer,
             position,
             loan,
             time_alarms,
             oracle,
             reserve,
-            remote_lease_id,
         }
     }
 

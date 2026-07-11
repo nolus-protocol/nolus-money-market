@@ -9,7 +9,7 @@ pub use self::{
         start_remote_local,
     },
     out_remote::{StartLocalRemoteState, State as StateRemoteOut, start as start_local_remote},
-    resp_delivery::{ICAOpenResponseDelivery, ResponseDelivery},
+    resp_delivery::ResponseDelivery,
     slippage::{AcceptAnyNonZeroSwap, Calculator as AcceptUpToMaxSlippage, MaxSlippage},
     swap_exact_in::SwapExactIn,
     transfer_in_finish::TransferInFinish,
@@ -56,21 +56,4 @@ where
         .enter(env.contract.address)
         .and_then(|msgs| response::res_continue::<_, _, SEnum>(msgs, next_state))
         .into()
-}
-
-fn forward_to_inner_ica<H, ForwardToInnerContinueMsg, SEnum>(
-    inner: H,
-    counterparty_version: String,
-    env: Env,
-) -> ContinueResult<SEnum>
-where
-    ForwardToInnerContinueMsg: ForwardToInner,
-    SEnum: Handler,
-    ICAOpenResponseDelivery<H, ForwardToInnerContinueMsg>: Into<SEnum::Response>,
-{
-    let next_state =
-        ICAOpenResponseDelivery::<H, ForwardToInnerContinueMsg>::new(inner, counterparty_version);
-    next_state
-        .enter(env.contract.address)
-        .and_then(|msgs| response::res_continue::<_, _, SEnum>(msgs, next_state))
 }

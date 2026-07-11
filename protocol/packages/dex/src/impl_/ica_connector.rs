@@ -15,8 +15,8 @@ use platform::{
 use sdk::cosmwasm_std::{Addr, Env, QuerierWrapper};
 
 use crate::{
-    Account, Connectable, ContinueResult, Contract, Enterable, Handler, IcaConnectee, Response,
-    TimeAlarm, error::Result,
+    Account, Connectable, ContinueResult, Contract, Enterable, Error, Handler, IcaConnectee,
+    Response, TimeAlarm, error::Result,
 };
 
 #[cfg(feature = "migration")]
@@ -53,11 +53,10 @@ where
 
     fn build_account(&self, counterparty_version: String, env: &Env) -> Result<Account> {
         let contract = env.contract.address.clone();
-        Account::from_register_response(
-            &counterparty_version,
-            contract,
-            self.connectee.dex().clone(),
-        )
+        counterparty_version
+            .try_into()
+            .map_err(Error::from)
+            .map(|remote| Account::new(contract, remote, self.connectee.dex().clone()))
     }
 
     fn emit_ok(contract: Addr, ica_host: HostAccount) -> Emitter {
@@ -129,7 +128,7 @@ where
         env: Env,
     ) -> ContinueResult<Self> {
         let ica = self.build_account(counterparty_version, &env)?;
-        let event = Self::emit_ok(env.contract.address, ica.host().clone());
+        let event = Self::emit_ok(env.contract.address, ica.remote().clone());
         let next_state = self.connectee.connected(ica);
         next_state
             .enter(env.block.time.into_instant(), querier)

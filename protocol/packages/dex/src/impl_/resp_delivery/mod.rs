@@ -22,7 +22,7 @@ use crate::{
 #[cfg(feature = "migration")]
 use super::migration::{InspectSpec, MigrateSpec};
 
-use self::adapter::{DeliveryAdapter, ICAOpenDeliveryAdapter, ResponseDeliveryAdapter};
+use self::adapter::{DeliveryAdapter, ResponseDeliveryAdapter};
 use cw_time::IntoInstant;
 
 mod adapter;
@@ -31,9 +31,6 @@ const REPLY_ID: u64 = 12345678901;
 
 pub type ResponseDelivery<H, ForwardToInnerMsg> =
     ResponseDeliveryImpl<H, ForwardToInnerMsg, Binary, ResponseDeliveryAdapter>;
-
-pub type ICAOpenResponseDelivery<H, ForwardToInnerMsg> =
-    ResponseDeliveryImpl<H, ForwardToInnerMsg, String, ICAOpenDeliveryAdapter>;
 
 /// Provides guaranteed response delivery
 ///

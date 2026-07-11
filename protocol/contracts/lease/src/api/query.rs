@@ -100,10 +100,10 @@ pub mod opening {
             remote_lease: RemoteLeaseId,
         },
         TransferOut {
-            ica_account: String,
+            remote_lease: RemoteLeaseId,
         },
         BuyAsset {
-            ica_account: String,
+            remote_lease: RemoteLeaseId,
         },
     }
 }

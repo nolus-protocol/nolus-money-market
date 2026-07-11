@@ -27,12 +27,12 @@ impl<'ica> TransferOutTrx<'ica> {
             sender: LocalSender::new(
                 &ica.dex().transfer_channel.local_endpoint,
                 ica.owner(),
-                ica.host(),
+                ica.remote(),
                 (now + IBC_TIMEOUT).into_timestamp(),
                 format!(
                     "Transfer out: {sender} -> {receiver}",
                     sender = ica.owner(),
-                    receiver = ica.host()
+                    receiver = ica.remote()
                 ),
             ),
         }
@@ -74,7 +74,7 @@ where
     ) -> Self {
         Self {
             conn: &ica.dex().connection_id,
-            ica_account: ica.host(),
+            ica_account: ica.remote(),
             trx: Transaction::default(),
             swap_path,
             querier,
@@ -127,7 +127,7 @@ impl<'ica> TransferInTrx<'ica> {
     pub(super) fn new(ica: &'ica Account, now: Instant) -> Self {
         let sender = RemoteSender::new(
             &ica.dex().transfer_channel.remote_endpoint,
-            ica.host(),
+            ica.remote(),
             ica.owner(),
             (now + IBC_TIMEOUT).into_timestamp(),
         );

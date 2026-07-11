@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 use currencies::PaymentGroup;
 use currency::{CurrencyDef, Group, MemberOf};
 use cw_time::IntoInstant;
+use dex::{Account, Enterable};
 use finance::{
     coin::{Coin, WithCoin},
     duration::Duration,
@@ -16,6 +17,7 @@ use lpp::{
 use platform::{
     bank::{FixedAddressSender, LazySenderStub},
     batch::{Batch, Emit, Emitter},
+    ica::HostAccount,
     message::Response as MessageResponse,
     state_machine::Response as StateMachineResponse,
 };
@@ -111,31 +113,42 @@ impl OpenLease {
 
     fn on_open_lease_ack(
         self,
-        remote_lease_id: RemoteLeaseId,
-        _env: &Env,
+        remote_lease: RemoteLeaseId,
+        querier: QuerierWrapper<'_>,
+        env: Env,
     ) -> ContractResult<Response> {
-        let next = super::buy_asset::start(
-            self.new_lease,
-            self.downpayment,
-            self.loan,
-            self.deps,
-            self.start_opening_at,
-            remote_lease_id,
-        );
-        let batch = next.enter();
-        Ok(StateMachineResponse::from(
-            MessageResponse::messages_only(batch),
-            State::from(super::buy_asset::DexState::from(next)),
-        ))
+        HostAccount::try_from(remote_lease.as_str().to_owned())
+            .map_err(ContractError::PlatformError)
+            .and_then(|remote_account| {
+                let dex_account =
+                    Account::new(env.contract.address, remote_account, self.new_lease.dex);
+                let next = super::buy_asset::start(
+                    self.new_lease.form,
+                    dex_account,
+                    remote_lease,
+                    self.downpayment,
+                    self.loan,
+                    self.deps,
+                    self.start_opening_at,
+                );
+                next.enter(env.block.time.into_instant(), querier)
+                    .map_err(ContractError::DexError)
+                    .map(|batch| {
+                        StateMachineResponse::from(
+                            MessageResponse::messages_only(batch),
+                            State::from(super::buy_asset::DexState::from(next)),
+                        )
+                    })
+            })
     }
 
     fn on_open_failed(
         self,
         querier: QuerierWrapper<'_>,
-        env: &Env,
+        env: Env,
         reason: RemoteErrorMessage,
     ) -> ContractResult<Response> {
-        let lease_addr = env.contract.address.clone();
+        let lease_addr = env.contract.address;
         let now = env.block.time.into_instant();
         let leases_ref = self.deps.3.clone();
         self.refund_batch(querier, &lease_addr, now)
@@ -232,7 +245,7 @@ impl Contract for OpenLease {
             .and_then(|()| match callback {
                 RemoteLeaseCallback::OperationOk(OperationResponse::OpenLease(
                     OpenLeaseResponse { remote_lease_id },
-                )) => self.on_open_lease_ack(remote_lease_id, &env),
+                )) => self.on_open_lease_ack(remote_lease_id, querier, env),
                 RemoteLeaseCallback::OperationOk(_unexpected) => {
                     // A success ack for a non-`OpenLease` operation can only
                     // come from a buggy or hostile counterparty. Returning
@@ -244,16 +257,16 @@ impl Contract for OpenLease {
                     // `wasm-ls-remote-lease-open-failed` event to audit.
                     self.on_open_failed(
                         querier,
-                        &env,
+                        env,
                         RemoteErrorMessage::from_static(UNEXPECTED_OPERATION_REASON),
                     )
                 }
                 RemoteLeaseCallback::OperationErr(reason) => {
-                    self.on_open_failed(querier, &env, reason)
+                    self.on_open_failed(querier, env, reason)
                 }
                 RemoteLeaseCallback::OperationTimeout => self.on_open_failed(
                     querier,
-                    &env,
+                    env,
                     RemoteErrorMessage::from_static(TIMEOUT_REASON),
                 ),
             })
