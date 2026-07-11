@@ -1,13 +1,9 @@
-use dex::{ConnectionParams, Ics20Channel};
 use profit::{CadenceHours, contract, msg::InstantiateMsg};
 use sdk::{cosmwasm_std::Addr, testing};
 
-use crate::common::test_case::response::RemoteChain;
+use super::{ADMIN, CwContractWrapper, test_case::app::App};
 
-use super::{
-    ADMIN, CwContractWrapper,
-    test_case::{TestCase, app::App},
-};
+pub(crate) const SETTLEMENT: &str = "profit_settlement";
 
 pub(crate) struct Instantiator;
 
@@ -16,37 +12,23 @@ impl Instantiator {
     pub fn instantiate(
         app: &mut App,
         cadence_hours: CadenceHours,
-        treasury: Addr,
-        oracle: Addr,
+        settlement: Addr,
         timealarms: Addr,
     ) -> Addr {
         // TODO [Rust 1.70] Convert to static item with OnceCell
         let endpoints =
-            CwContractWrapper::new(contract::execute, contract::instantiate, contract::query)
-                .with_reply(contract::reply)
-                .with_sudo(contract::sudo);
+            CwContractWrapper::new(contract::execute, contract::instantiate, contract::query);
 
         let code_id = app.store_code(Box::new(endpoints));
 
         let msg = InstantiateMsg {
             cadence_hours,
-            treasury,
-            oracle,
+            settlement,
             timealarms,
-            dex: ConnectionParams {
-                connection_id: TestCase::DEX_CONNECTION_ID.into(),
-                transfer_channel: Ics20Channel {
-                    local_endpoint: TestCase::PROFIT_IBC_CHANNEL.into(),
-                    remote_endpoint: "channel-262".into(),
-                },
-            },
         };
 
         app.instantiate(code_id, testing::user(ADMIN), &msg, &[], "profit", None)
-            .map(|mut response| {
-                response.expect_register_ica(TestCase::DEX_CONNECTION_ID, TestCase::PROFIT_ICA_ID);
-                response.unwrap_response()
-            })
             .unwrap()
+            .unwrap_response()
     }
 }

@@ -1247,21 +1247,17 @@ dependencies = [
 
 [[package]]
 name = "profit"
-version = "0.7.3"
+version = "0.8.0"
 dependencies = [
  "access-control",
  "cosmwasm-std",
  "currencies",
  "currency",
  "cw-time",
- "dex",
  "finance",
- "oracle",
- "oracle-platform",
  "platform",
  "sdk",
  "serde",
- "swap",
  "thiserror 2.0.18",
  "timealarms",
  "versioning",

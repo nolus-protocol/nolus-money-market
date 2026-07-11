@@ -1,6 +1,5 @@
 use serde::{Deserialize, Serialize};
 
-use dex::ConnectionParams;
 use sdk::cosmwasm_std::Addr;
 
 use crate::CadenceHours;
@@ -10,10 +9,8 @@ use crate::CadenceHours;
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub struct InstantiateMsg {
     pub cadence_hours: CadenceHours,
-    pub treasury: Addr,
-    pub oracle: Addr,
+    pub settlement: Addr,
     pub timealarms: Addr,
-    pub dex: ConnectionParams,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -25,22 +22,7 @@ pub struct MigrateMsg {}
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub enum ExecuteMsg {
     TimeAlarm {},
-    Config {
-        cadence_hours: CadenceHours,
-    },
-
-    /// An entry point for safe delivery of a Dex response
-    ///
-    /// Invoked always by the same contract instance.
-    DexCallback(),
-
-    /// An entry point for safe delivery of a ICA Open response, error or timeout
-    ///
-    /// Invoked always by the same contract instance.
-    DexCallbackContinue(),
-
-    /// Heal the profit past a middleware failure
-    Heal(),
+    Config { cadence_hours: CadenceHours },
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Eq)]

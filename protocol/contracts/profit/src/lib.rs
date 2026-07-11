@@ -16,9 +16,6 @@ pub mod msg;
 mod profit;
 
 #[cfg(feature = "contract")]
-pub mod reserve;
-
-#[cfg(feature = "contract")]
 pub mod result;
 
 #[cfg(feature = "contract")]

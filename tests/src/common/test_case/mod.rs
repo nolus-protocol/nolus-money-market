@@ -51,9 +51,6 @@ impl TestCase<(), (), (), (), (), (), (), ()> {
 
     pub const LEASE_ICA_ID: &'static str = "0";
 
-    pub const PROFIT_IBC_CHANNEL: &'static str = "channel-1";
-    pub const PROFIT_ICA_ID: &'static str = "0";
-
     pub const DEFAULT_LPP_MIN_UTILIZATION: Percent100 = Percent100::ZERO;
 
     pub fn ica_addr(local: &Addr, id: &str) -> Addr {

@@ -33,9 +33,9 @@ warnings = "deny"
 ### [SYNC WITH OTHER WORKSPACES : END]
 
 [features]
-dex-astroport_test = ["lease/dex-astroport_test", "profit/dex-astroport_test"]
-dex-astroport_main = ["lease/dex-astroport_main", "profit/dex-astroport_main"]
-dex-osmosis = ["lease/dex-osmosis", "profit/dex-osmosis"]
+dex-astroport_test = ["lease/dex-astroport_test"]
+dex-astroport_main = ["lease/dex-astroport_main"]
+dex-osmosis = ["lease/dex-osmosis"]
 
 [dev-dependencies]
 admin_contract = { path = "../platform/contracts/admin", features = ["contract"], default-features = false }

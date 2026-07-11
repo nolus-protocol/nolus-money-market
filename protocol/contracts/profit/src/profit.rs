@@ -1,49 +1,47 @@
-use currencies::Nls;
-use dex::Contract;
-use finance::instant::Instant;
-use finance::{coin::Coin, duration::Duration};
+use currencies::PaymentGroup;
+use cw_time::IntoInstant as _;
+use finance::{duration::Duration, instant::Instant};
 use platform::{
-    bank::BankAccount,
-    batch::{Emit as _, Emitter},
+    bank,
+    batch::{Batch, Emit as _, Emitter},
     message::Response as PlatformResponse,
 };
-use sdk::cosmwasm_std::{Addr, Env, QuerierWrapper, Storage};
+use sdk::cosmwasm_std::{Addr, Env, QuerierWrapper};
 
-use crate::{msg::ConfigResponse, reserve::IBC_FEE_RESERVE, result::ContractResult, state::State};
+use crate::{result::ContractResult, state::Config};
 
-pub struct Profit;
+const PROFIT_EVENT_TYPE: &str = "tr-profit";
 
-impl Profit {
-    pub(crate) fn transfer_nls<B>(
-        mut from_my_account: B,
-        to_treasury: Addr,
-        mut amount: Coin<Nls>,
-        env: &Env,
-    ) -> PlatformResponse
-    where
-        B: BankAccount,
-    {
-        amount = amount.saturating_sub(IBC_FEE_RESERVE);
+pub(crate) fn on_time_alarm(
+    config: &Config,
+    env: &Env,
+    querier: QuerierWrapper<'_>,
+) -> ContractResult<PlatformResponse> {
+    setup_alarm(config, env.block.time.into_instant()).and_then(|alarm: Batch| {
+        sweep(config.settlement(), &env.contract.address, querier, env)
+            .map(|sweep: PlatformResponse| sweep.merge_with(PlatformResponse::messages_only(alarm)))
+    })
+}
 
-        if amount.is_zero() {
-            PlatformResponse::messages_only(from_my_account.into())
-        } else {
-            from_my_account.send(amount, to_treasury);
+pub(crate) fn setup_alarm(config: &Config, now: Instant) -> ContractResult<Batch> {
+    config
+        .time_alarms()
+        .setup_alarm(now + Duration::from_hours(config.cadence_hours()))
+        .map_err(Into::into)
+}
 
+fn sweep(
+    settlement: &Addr,
+    profit: &Addr,
+    querier: QuerierWrapper<'_>,
+    env: &Env,
+) -> ContractResult<PlatformResponse> {
+    bank::bank_send_all::<PaymentGroup>(profit, settlement.clone(), querier)
+        .map(|batch: Batch| {
             PlatformResponse::messages_with_event(
-                from_my_account.into(),
-                Emitter::of_type("tr-profit")
-                    .emit_tx_info(env)
-                    .emit_coin("profit-amount", amount),
+                batch,
+                Emitter::of_type(PROFIT_EVENT_TYPE).emit_tx_info(env),
             )
-        }
-    }
-
-    pub fn query_config(
-        storage: &dyn Storage,
-        now: Instant,
-        querier: QuerierWrapper<'_>,
-    ) -> ContractResult<ConfigResponse> {
-        State::load(storage).map(|state: State| state.state(now, Duration::default(), querier))
-    }
+        })
+        .map_err(Into::into)
 }

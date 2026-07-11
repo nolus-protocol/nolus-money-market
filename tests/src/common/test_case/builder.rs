@@ -9,10 +9,9 @@ use profit::{
     msg::{ConfigResponse as ProfitConfigResponse, QueryMsg as ProfitQueryMsg},
 };
 use sdk::{
-    api::SudoMsg,
-    cosmwasm_std::{self, Addr, Coin as CwCoin},
+    cosmwasm_std::{Addr, Coin as CwCoin},
     cw_multi_test::{self as cw_test},
-    ica::OpenAckVersion,
+    testing,
 };
 
 use crate::common::{
@@ -20,7 +19,7 @@ use crate::common::{
     leaser::{Alarms, Instantiator as LeaserInstantiator, LeaserPeers},
     lpp::Instantiator as LppInstantiator,
     oracle::Instantiator as OracleInstantiator,
-    profit::Instantiator as ProfitInstantiator,
+    profit::{Instantiator as ProfitInstantiator, SETTLEMENT},
     protocols::{Instantiator as ProtocolsInstantiator, Registry},
     remote_lease_controller_stub::Instantiator as RemoteLeaseControllerStubInstantiator,
     reserve::Instantiator as ReserveInstantiator,
@@ -156,27 +155,23 @@ where
             _lpn,
         } = self;
 
+        let settlement: Addr = testing::user(SETTLEMENT);
+
         let profit_addr = ProfitInstantiator::instantiate(
             &mut test_case.app,
             cadence_hours,
-            test_case.address_book.treasury().clone(),
-            test_case.address_book.oracle().clone(),
+            settlement.clone(),
             test_case.address_book.time_alarms().clone(),
         );
 
-        Self::send_open_ica_response(&mut test_case, profit_addr.clone());
         Self::test_config(&mut test_case, profit_addr.clone(), cadence_hours);
 
         test_case.app.update_block(cw_test::next_block);
 
-        let profit_ica_addr: Addr = TestCase::ica_addr(&profit_addr, TestCase::PROFIT_ICA_ID);
-
         Builder {
             test_case: TestCase {
                 app: test_case.app,
-                address_book: test_case
-                    .address_book
-                    .with_profit(profit_addr, profit_ica_addr),
+                address_book: test_case.address_book.with_profit(profit_addr, settlement),
             },
             _lpn,
         }
@@ -196,36 +191,6 @@ where
             .unwrap();
 
         assert_eq!(reported_cadence_hours, cadence_hours);
-    }
-
-    fn send_open_ica_response(
-        test_case: &mut TestCase<ProtocolsRegistry, Addr, (), Reserve, Leaser, Lpp, Addr, Addr>,
-        profit_addr: Addr,
-    ) {
-        let ica_addr: Addr = TestCase::ica_addr(&profit_addr, TestCase::PROFIT_ICA_ID);
-
-        test_case
-            .app
-            .sudo(
-                profit_addr.clone(),
-                &SudoMsg::OpenAck {
-                    port_id: "ica-port".into(),
-                    channel_id: TestCase::PROFIT_IBC_CHANNEL.into(),
-                    counterparty_channel_id: TestCase::PROFIT_IBC_CHANNEL.into(),
-                    counterparty_version: cosmwasm_std::to_json_string(&OpenAckVersion {
-                        version: "1".into(),
-                        controller_connection_id: TestCase::DEX_CONNECTION_ID.into(),
-                        host_connection_id: "DEADCODE".into(),
-                        address: ica_addr.into_string(),
-                        encoding: "DEADCODE".into(),
-                        tx_type: "DEADCODE".into(),
-                    })
-                    .unwrap(),
-                },
-            )
-            .unwrap()
-            .ignore_response()
-            .unwrap_response()
     }
 }
 
