@@ -1,5 +1,5 @@
 use currencies::PaymentGroup;
-use cw_time::IntoInstant;
+use cw_time::IntoInstant as _;
 use finance::{duration::Duration, instant::Instant};
 use platform::{
     bank,

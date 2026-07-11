@@ -2,7 +2,7 @@ lints = { workspace = true }
 
 [package]
 name = "profit"
-version = "0.7.3"
+version = "0.8.0"
 edition.workspace = true
 authors.workspace = true
 license.workspace = true
@@ -26,6 +26,7 @@ contract = [
     "dep:cosmwasm-std",
     "dep:currencies",
     "dep:currency",
+    "dep:cw-time",
     "dep:finance",
     "dep:platform",
     "dep:timealarms",
@@ -61,10 +62,10 @@ testing = [
 ]
 
 [dependencies]
-cw-time = { workspace = true }
 access-control = { workspace = true, optional = true }
 currencies = { workspace = true, optional = true }
 currency = { workspace = true, optional = true }
+cw-time = { workspace = true, optional = true }
 finance = { workspace = true, optional = true }
 platform = { workspace = true, optional = true }
 sdk = { workspace = true }

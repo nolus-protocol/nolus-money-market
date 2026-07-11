@@ -1,7 +1,7 @@
 use std::ops::Deref;
 
 use access_control::{ContractOwnerAccess, SingleUserAccess};
-use cw_time::IntoInstant;
+use cw_time::IntoInstant as _;
 use platform::{
     batch::Batch, contract, error as platform_error, message::Response as MessageResponse, response,
 };
@@ -26,7 +26,7 @@ use crate::{
     state::Config,
 };
 
-const CONTRACT_STORAGE_VERSION: VersionSegment = 1;
+const CONTRACT_STORAGE_VERSION: VersionSegment = 2;
 const CURRENT_RELEASE: ProtocolPackageRelease = ProtocolPackageRelease::current(
     package_name!(),
     package_version!(),
@@ -46,10 +46,11 @@ pub fn instantiate(
 }
 
 /// Fresh-deploy only. The new [`Config`] reuses the `"contract_state"` storage
-/// key of the pre-settlement `State` without bumping `CONTRACT_STORAGE_VERSION`,
-/// so an in-place upgrade of a running instance would leave old `State` bytes
-/// that the new `Config` cannot deserialize. Profit is redeployed as a fresh
-/// instance; there is no live state to migrate.
+/// key with an incompatible layout, so `CONTRACT_STORAGE_VERSION` is bumped to 2:
+/// `update_software` refuses to migrate a pre-settlement (storage v1) instance on
+/// the storage-version mismatch rather than letting `Config::load` read the old
+/// `State` bytes. Profit is redeployed as a fresh instance; there is no live
+/// state to migrate.
 #[entry_point]
 pub fn migrate(
     deps: DepsMut<'_>,
