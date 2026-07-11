@@ -45,12 +45,9 @@ pub fn instantiate(
         .inspect_err(platform_error::log(deps.api))
 }
 
-/// Fresh-deploy only. The new [`Config`] reuses the `"contract_state"` storage
-/// key with an incompatible layout, so `CONTRACT_STORAGE_VERSION` is bumped to 2:
-/// `update_software` refuses to migrate a pre-settlement (storage v1) instance on
-/// the storage-version mismatch rather than letting `Config::load` read the old
-/// `State` bytes. Profit is redeployed as a fresh instance; there is no live
-/// state to migrate.
+/// Fresh-deploy only: rejects any instance whose stored data format is
+/// incompatible with the current one. Profit offers no upgrade path from an
+/// earlier layout and is deployed as a new instance.
 #[entry_point]
 pub fn migrate(
     deps: DepsMut<'_>,
