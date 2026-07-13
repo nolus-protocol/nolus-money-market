@@ -207,15 +207,22 @@ fn open_lease<ProtocolsRegistry, Treasury, Profit, Reserve, Lpp, Oracle, TimeAla
         )
         .unwrap();
 
-    response.expect_register_ica(TestCase::DEX_CONNECTION_ID, TestCase::LEASE_ICA_ID);
+    let transfers = [
+        response.unwrap_ibc_transfer(),
+        response.unwrap_ibc_transfer(),
+    ];
 
     () = response.ignore_response().unwrap_response();
 
-    leaser_mod::expect_a_lease(
+    let lease = leaser_mod::expect_a_lease(
         &test_case.app,
         test_case.address_book.leaser().clone(),
         customer,
-    )
+    );
+
+    crate::common::lease::assert_open_funding(&test_case.app, &lease, downpayment, transfers);
+
+    lease
 }
 
 #[test]

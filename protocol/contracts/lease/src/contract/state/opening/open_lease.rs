@@ -230,7 +230,7 @@ impl Contract for OpenLease {
             downpayment: self.downpayment,
             loan: self.loan.principal,
             loan_interest_rate: self.loan.annual_interest_rate,
-            in_progress: OngoingTrx::RequestingOpenLease {},
+            in_progress: OngoingTrx::OpenLease {},
         })
     }
 

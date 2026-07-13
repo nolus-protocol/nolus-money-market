@@ -91,9 +91,16 @@ fn open_multiple_loans() {
             )
             .unwrap();
 
-        response.expect_register_ica(TestCase::DEX_CONNECTION_ID, TestCase::LEASE_ICA_ID);
+        let transfers = [
+            response.unwrap_ibc_transfer(),
+            response.unwrap_ibc_transfer(),
+        ];
 
         let response: AppResponse = response.unwrap_response();
+
+        let lease = lease_addr(&response.events);
+
+        lease_mod::assert_open_funding(&test_case.app, &lease, Coin::<Lpn>::new(75), transfers);
 
         test_case.app.update_block(cw_test::next_block);
 
@@ -101,7 +108,7 @@ fn open_multiple_loans() {
             &test_case.app,
             test_case.address_book.leaser().clone(),
             user_addr.clone(),
-            &lease_addr(&response.events),
+            &lease,
         );
     }
 
@@ -118,9 +125,16 @@ fn open_multiple_loans() {
         )
         .unwrap();
 
-    response.expect_register_ica(TestCase::DEX_CONNECTION_ID, TestCase::LEASE_ICA_ID);
+    let transfers = [
+        response.unwrap_ibc_transfer(),
+        response.unwrap_ibc_transfer(),
+    ];
 
     let response: AppResponse = response.unwrap_response();
+
+    let lease = lease_addr(&response.events);
+
+    lease_mod::assert_open_funding(&test_case.app, &lease, Coin::<Lpn>::new(78), transfers);
 
     test_case.app.update_block(cw_test::next_block);
 
@@ -128,7 +142,7 @@ fn open_multiple_loans() {
         &test_case.app,
         test_case.address_book.leaser().clone(),
         other_user_addr,
-        &lease_addr(&response.events),
+        &lease,
     );
 }
 
@@ -293,9 +307,14 @@ where
         )
         .unwrap();
 
-    response.expect_register_ica(TestCase::DEX_CONNECTION_ID, TestCase::LEASE_ICA_ID);
+    let transfers = [
+        response.unwrap_ibc_transfer(),
+        response.unwrap_ibc_transfer(),
+    ];
 
     let lease = lease_addr(&response.unwrap_response().events);
+
+    lease_mod::assert_open_funding(&test_case.app, &lease, downpayment, transfers);
 
     lease_mod::complete_initialization(
         &mut test_case.app,

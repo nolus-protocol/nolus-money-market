@@ -3,7 +3,7 @@ use std::fmt::{Display, Formatter, Result as FmtResult};
 use serde::{Deserialize, Serialize};
 
 use finance::duration::Duration;
-use sdk::ica::{IbcFee, InterChainMsg, OpenAckVersion};
+use sdk::ica::{IbcFee, InterChainMsg};
 
 use crate::{batch::Batch, error::Error, result::Result, trx::Transaction};
 
@@ -58,25 +58,6 @@ impl From<String> for ErrorResponse {
     fn from(details: String) -> Self {
         Self { details }
     }
-}
-
-pub fn register_account<C>(connection: C) -> Batch
-where
-    C: Into<String>,
-{
-    let mut batch = Batch::default();
-    batch.schedule_execute_no_reply(InterChainMsg::register_interchain_account(
-        connection.into(),
-        ICA_ACCOUNT_ID.into(),
-        None,
-    ));
-    batch
-}
-
-pub fn parse_register_response(response: &str) -> Result<HostAccount> {
-    OpenAckVersion::parse(response)
-        .map_err(Error::Deserialization)
-        .and_then(|open_ack| open_ack.address.try_into())
 }
 
 pub fn submit_transaction<Conn, M>(

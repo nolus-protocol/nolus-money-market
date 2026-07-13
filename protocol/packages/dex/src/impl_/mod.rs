@@ -3,7 +3,6 @@ use sdk::cosmwasm_std::{Binary, Env};
 use crate::{ContinueResult, ForwardToInner, Handler, Result, SwapTask, response};
 
 pub use self::{
-    ica_connector::IcaConnector,
     out_local::{
         StartLocalLocalState, StartTransferInState, State as StateLocalOut, start_local_local,
         start_remote_local,
@@ -17,7 +16,6 @@ pub use self::{
     transfer_out::TransferOut,
 };
 
-mod ica_connector;
 #[cfg(feature = "migration")]
 mod migration;
 mod out_local;

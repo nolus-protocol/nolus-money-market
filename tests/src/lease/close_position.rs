@@ -270,7 +270,7 @@ fn do_close(
 ) -> Addr {
     let user_balance_before: PaymentCoin = user_balance(customer_addr, test_case);
     let lease_addr: Addr = super::open_lease(test_case, DOWNPAYMENT, None);
-    let lease_ica = TestCase::ica_addr(&lease_addr, TestCase::LEASE_ICA_ID);
+    let lease_ica = TestCase::stub_pda(1);
 
     assert!(matches!(
         super::expected_newly_opened_state(test_case, DOWNPAYMENT, Coin::<LpnCurrency>::ZERO),
@@ -356,11 +356,10 @@ fn do_close(
         user_balance_before - DOWNPAYMENT,
     );
 
-    common_lease::assert_lease_balance_eq(
-        &test_case.app,
-        &lease_ica,
-        coin_legacy::to_cosmwasm_on_dex(exp_lease_amount_after),
-    );
+    // The residual collateral left on the remote (StubPda) is `exp_lease_amount_after`.
+    // The StubPda is not a bech32 address, so its balance cannot be queried; the residual
+    // is pinned by the caller's `StateResponse` `amount` assertion together with the
+    // intercepted close `submit_tx` transfers asserted above.
 
     lease_addr
 }

@@ -36,10 +36,14 @@ pub(crate) trait RemoteChain {
     fn expect_empty(&mut self);
 
     #[track_caller]
-    fn expect_register_ica(&mut self, expected_connection_id: &str, expected_ica_id: &str);
-
-    #[track_caller]
     fn expect_ibc_transfer(&mut self, channel: &str, sender: &str, receiver: &str) -> CwCoin;
+
+    /// Pop the next `IbcTransfer` without asserting its parties, returning
+    /// `(source_channel, sender, receiver, token)`. Used by the open flow,
+    /// where the remote account (the minted StubPda) is only known after the
+    /// lease state can be queried — the parties are asserted by the caller.
+    #[track_caller]
+    fn unwrap_ibc_transfer(&mut self) -> (String, String, String, CwCoin);
 
     #[track_caller]
     fn expect_submit_tx(
@@ -56,23 +60,23 @@ impl<T> RemoteChain for ResponseWithInterChainMsgs<'_, T> {
     }
 
     #[track_caller]
-    fn expect_register_ica(&mut self, expected_connection_id: &str, expected_ica_id: &str) {
+    fn unwrap_ibc_transfer(&mut self) -> (String, String, String, CwCoin) {
         let message = self
             .receiver
             .try_recv()
-            .expect("Expected message for ICA registration!");
+            .expect("Expected message for IBC transfer!");
 
-        if let InterChainMsg::RegisterInterchainAccount {
-            connection_id,
-            interchain_account_id,
-            register_fee,
+        if let InterChainMsg::IbcTransfer {
+            source_channel,
+            token,
+            sender,
+            receiver,
+            ..
         } = message
         {
-            assert_eq!(connection_id, expected_connection_id);
-            assert_eq!(interchain_account_id, expected_ica_id);
-            assert_eq!(register_fee, None);
+            (source_channel, sender, receiver, token)
         } else {
-            panic!("Expected message for ICA registration, got {message:?}!");
+            panic!("Expected message for IBC transfer, got {message:?}!");
         }
     }
 

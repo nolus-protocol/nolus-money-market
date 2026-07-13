@@ -1,9 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use platform::{
-    batch::Batch as LocalBatch,
-    ica::{self, HostAccount},
-};
+use platform::ica::HostAccount;
 use sdk::cosmwasm_std::Addr;
 
 use crate::{Connectable, ConnectionParams};
@@ -26,10 +23,6 @@ impl Account {
 
     pub(super) fn remote(&self) -> &HostAccount {
         &self.remote
-    }
-
-    pub(super) fn register_request(dex: &ConnectionParams) -> LocalBatch {
-        ica::register_account(&dex.connection_id)
     }
 
     pub fn new(owner: Addr, remote: HostAccount, dex: ConnectionParams) -> Self {

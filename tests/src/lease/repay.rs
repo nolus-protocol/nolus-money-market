@@ -278,7 +278,7 @@ pub(crate) fn repay_full<ProtocolsRegistry, Treasury, Profit, Reserve, Lpp, Orac
         repay_with_hook_on_swap(test_case, lease.clone(), payment, no_op_hook).ignore_response();
     expect_started_closing(repay_response, expected_funds);
     expect_paid(test_case, lease.clone(), expected_funds);
-    expect_lease_amounts(test_case, lease.clone(), expected_funds, excess_balance);
+    expect_lease_amounts(test_case, lease.clone(), excess_balance);
     finish_closing(test_case, lease, expected_funds)
 }
 
@@ -330,7 +330,7 @@ where
 
     swap_pre_hook(&mut test_case.app);
 
-    let lease_ica = TestCase::ica_addr(&lease, TestCase::LEASE_ICA_ID);
+    let lease_ica = TestCase::stub_pda(1);
 
     let mut response = swap::do_swap(
         &mut test_case.app,
@@ -397,7 +397,7 @@ where
         .unwrap()
         .ignore_response();
 
-    let ica_addr: Addr = TestCase::ica_addr(&lease_addr, TestCase::LEASE_ICA_ID);
+    let ica_addr: Addr = TestCase::stub_pda(1);
 
     let transfer_amount: CwCoin = ibc::expect_transfer(
         &mut response,
@@ -470,16 +470,15 @@ fn expect_lease_amounts<ProtocolsRegistry, Treasury, Profit, Reserve, Lpp, Oracl
         TimeAlarms,
     >,
     lease: Addr,
-    expected_funds: LeaseCoin,
     excess_balance: LpnCoin,
 ) {
+    // The remote (StubPda) collateral is `expected_funds`, pinned with exact
+    // equality by `expect_started_closing` (the close `submit_tx` transfers
+    // exactly `to_cosmwasm_on_dex(expected_funds)` out of the remote) and by
+    // `finish_closing` (the customer's balance grows by exactly
+    // `expected_funds`). Both are Cosmos-observable, so the non-bech32 remote
+    // balance need not be read here.
     common_lease::assert_lease_balance_eq(&test_case.app, &lease, common::cwcoin(excess_balance));
-
-    common_lease::assert_lease_balance_eq(
-        &test_case.app,
-        &TestCase::ica_addr(&lease, TestCase::LEASE_ICA_ID),
-        coin_legacy::to_cosmwasm_on_dex(expected_funds),
-    );
 }
 
 fn finish_closing<ProtocolsRegistry, Treasury, Profit, Reserve, Lpp, Oracle, TimeAlarms>(
@@ -497,7 +496,7 @@ fn finish_closing<ProtocolsRegistry, Treasury, Profit, Reserve, Lpp, Oracle, Tim
     expected_funds: LeaseCoin,
 ) -> AppResponse {
     let customer_addr: Addr = testing::user(USER);
-    let ica_addr: Addr = TestCase::ica_addr(&lease, TestCase::LEASE_ICA_ID);
+    let ica_addr: Addr = TestCase::stub_pda(1);
 
     let user_balance: LeaseCoin =
         platform::bank::balance(&customer_addr, test_case.app.query()).unwrap();

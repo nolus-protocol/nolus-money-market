@@ -34,18 +34,6 @@ where
     H::Response: Into<ContractState>,
     Self: Into<ContractState>,
 {
-    fn on_open_ica(
-        self,
-        counterparty_version: String,
-        querier: QuerierWrapper<'_>,
-        env: Env,
-    ) -> ContractResult<Response> {
-        self.handler
-            .on_open_ica(counterparty_version, querier, env)
-            .map(state_machine::from)
-            .map_err(Into::into)
-    }
-
     fn on_dex_response(
         self,
         data: Binary,
@@ -98,17 +86,6 @@ where
 
     fn on_dex_inner(self, querier: QuerierWrapper<'_>, env: Env) -> ContractResult<Response> {
         self.handler.on_inner(querier, env).into()
-    }
-
-    fn on_dex_inner_continue(
-        self,
-        querier: QuerierWrapper<'_>,
-        env: Env,
-    ) -> ContractResult<Response> {
-        self.handler
-            .on_inner_continue(querier, env)
-            .map(state_machine::from)
-            .map_err(Into::into)
     }
 
     fn heal(
