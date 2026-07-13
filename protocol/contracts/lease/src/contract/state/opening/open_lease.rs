@@ -25,7 +25,7 @@ use remote_lease::{
     response::{OpenLeaseResponse, OperationResponse, RemoteLeaseId},
     stub::Factory,
 };
-use reserve::stub::Reserve as ReserveTrait;
+use reserve::stub::Reserve as _;
 use sdk::cosmwasm_std::{Addr, Env, MessageInfo, QuerierWrapper};
 use timealarms::stub::TimeAlarmsRef;
 
@@ -284,7 +284,7 @@ impl WithLppLoan<LpnCurrency> for RepayOpenLoan {
                 "Open-loan refund due total repay overflow",
             ))?;
 
-        let reserve_batch = reserve_batch(self.reserve, interest)?;
+        let reserve_cover_batch = reserve_batch(self.reserve, interest)?;
 
         let receipt = loan.repay(&self.now, total_repay);
         debug_assert_eq!(
@@ -301,14 +301,11 @@ impl WithLppLoan<LpnCurrency> for RepayOpenLoan {
             .map_err(ContractError::from)
             // the reserve cover must precede the repay so the interest lands
             // before Lpp pulls the combined principal and interest
-            .map(|lpp_batch| reserve_batch.merge(lpp_batch))
+            .map(|lpp_batch| reserve_cover_batch.merge(lpp_batch))
     }
 }
 
-fn reserve_batch(
-    reserve: ReserveRef,
-    interest: Coin<LpnCurrency>,
-) -> Result<Batch, <RepayOpenLoan as WithLppLoan<LpnCurrency>>::Error> {
+fn reserve_batch(reserve: ReserveRef, interest: Coin<LpnCurrency>) -> Result<Batch, ContractError> {
     if !interest.is_zero() {
         let mut reserve = reserve.into_reserve();
         reserve.cover_liquidation_losses(interest);
