@@ -5,7 +5,7 @@
 //! `wasm-remote-lease-open-failed` / `wasm-remote-lease-late-ack` events.
 
 use currencies::Lpn;
-use finance::coin::Coin;
+use finance::{coin::Coin, duration::Duration};
 use lease::api::{
     ExecuteMsg,
     query::{StateResponse, opening::OngoingTrx as OpeningOngoingTrx},
@@ -249,6 +249,110 @@ fn late_open_lease_ack_after_open_failed_is_absorbed() {
 
     let balance_after = balance::<LeaseCurrency>(&test_case, &customer);
     assert_eq!(balance_before, balance_after, "absorber must be idempotent");
+
+    match super::state_query(&test_case, lease) {
+        StateResponse::OpenFailed {
+            reason: state_reason,
+        } => assert_eq!(reason.as_str(), state_reason.as_str()),
+        other => panic!("expected StateResponse::OpenFailed, got {other:?}"),
+    }
+}
+
+#[test]
+fn open_failed_after_interest_accrual_covers_interest_from_reserve() {
+    let mut test_case = super::create_test_case::<LeaseCurrency>();
+    let controller = test_case.address_book.remote_lease_controller().clone();
+    let leaser = test_case.address_book.leaser().clone();
+    let reserve = test_case.address_book.reserve().clone();
+
+    // Hold the lease in the pre-ack `OpenLease` state so time can pass before
+    // the failure callback, accruing interest on the drawn Lpp loan.
+    stub::set_response_mode(
+        &mut test_case.app,
+        &controller,
+        op_tag::OPEN_LEASE,
+        ResponseMode::Delayed,
+    );
+
+    let customer = testing::user(USER);
+    let downpayment_before = balance::<LeaseCurrency>(&test_case, &customer);
+
+    let response = test_case
+        .app
+        .execute(
+            customer.clone(),
+            leaser.clone(),
+            &leaser::msg::ExecuteMsg::OpenLease {
+                currency: currency::dto::<LeaseCurrency, _>(),
+                max_ltd: None,
+            },
+            &[common::cwcoin::<LeaseCurrency>(DOWNPAYMENT)],
+        )
+        .unwrap()
+        .unwrap_response();
+
+    let lease = lease_address_from(&response.events).expect("instantiate event carries the addr");
+
+    let (principal, interest_rate) = match super::state_query(&test_case, lease.clone()) {
+        StateResponse::Opening {
+            loan,
+            loan_interest_rate,
+            ..
+        } => (
+            Coin::<Lpn>::try_from(loan).expect("drawn principal is an Lpn amount"),
+            loan_interest_rate,
+        ),
+        other => panic!("expected StateResponse::Opening, got {other:?}"),
+    };
+
+    let accrual = Duration::YEAR;
+    let expected_interest = super::calculate_interest(principal, interest_rate, accrual);
+    assert!(
+        !expected_interest.is_zero(),
+        "the test must accrue non-zero interest to exercise the reserve cover",
+    );
+
+    // Fund the reserve with exactly the interest to be covered, so a zero
+    // balance afterwards proves it disbursed precisely the accrued interest.
+    test_case.send_funds_from_admin(reserve.clone(), &[common::cwcoin::<Lpn>(expected_interest)]);
+    let reserve_before = balance::<Lpn>(&test_case, &reserve);
+
+    test_case.app.time_shift(accrual);
+
+    let reason = RemoteErrorMessage::new("solana side rejected").expect("within length cap");
+    let failed = test_case
+        .app
+        .execute(
+            controller.clone(),
+            lease.clone(),
+            &ExecuteMsg::RemoteLeaseCallback(RemoteLeaseCallback::OperationErr(reason.clone())),
+            &[],
+        )
+        .expect("open failure must be absorbed after interest accrual")
+        .unwrap_response();
+
+    assert!(
+        failed
+            .events
+            .iter()
+            .any(|event| event.ty == "wasm-ls-remote-lease-open-failed"),
+        "auto-refund must emit the open-failed event",
+    );
+
+    // The reserve must cover exactly the accrued loan interest ...
+    let reserve_after = balance::<Lpn>(&test_case, &reserve);
+    assert_eq!(
+        reserve_before - reserve_after,
+        expected_interest,
+        "reserve must cover exactly the accrued loan interest",
+    );
+
+    // ... while the customer's downpayment is still refunded in full.
+    let downpayment_after = balance::<LeaseCurrency>(&test_case, &customer);
+    assert_eq!(
+        downpayment_before, downpayment_after,
+        "downpayment must be refunded in full",
+    );
 
     match super::state_query(&test_case, lease) {
         StateResponse::OpenFailed {
