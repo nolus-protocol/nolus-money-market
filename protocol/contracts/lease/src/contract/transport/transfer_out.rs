@@ -2,11 +2,9 @@ use serde::{Deserialize, Serialize};
 
 use currency::Group;
 use cw_time::IntoTimestamp;
-use dex::{Connectable, SwapTask, TransportOut, TransportOutFactory};
-use finance::{coin::CoinDTO, duration::Duration, instant::Instant};
+use dex::{Connectable, IBC_TIMEOUT, SwapTask, TransportOut, TransportOutFactory};
+use finance::{coin::CoinDTO, instant::Instant};
 use platform::{bank_ibc::local::Sender as LocalSender, batch::Batch};
-
-const IBC_TIMEOUT: Duration = Duration::from_days(1);
 
 #[derive(Default, Serialize, Deserialize)]
 pub struct TransferOutFactory {}

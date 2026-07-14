@@ -1,17 +1,15 @@
 use std::fmt::{Display, Formatter, Result as FmtResult};
 use std::marker::PhantomData;
 
-use finance::duration::Duration;
 use serde::{Deserialize, Serialize};
 
-use finance::coin::CoinDTO;
-use finance::instant::Instant;
+use finance::{coin::CoinDTO, duration::Duration, instant::Instant};
 use platform::batch::Batch;
 use sdk::cosmwasm_std::{Binary, Env, QuerierWrapper};
 
 use crate::{
-    Connectable, ConnectionParams, Contract, ContractInSwap, Enterable, Stage, TimeAlarm,
-    error::Result,
+    Connectable, ConnectionParams, Contract, ContractInSwap, Enterable, IBC_TIMEOUT, Stage,
+    TimeAlarm, error::Result,
 };
 
 #[cfg(feature = "migration")]
@@ -21,7 +19,7 @@ use super::{
     response::{ContinueResult, Handler, Result as HandlerResult},
     timeout,
     transfer_in_finish::TransferInFinish,
-    trx::{IBC_TIMEOUT, TransferInTrx},
+    trx::TransferInTrx,
 };
 use cw_time::IntoInstant;
 

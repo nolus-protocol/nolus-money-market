@@ -2,8 +2,7 @@ use std::marker::PhantomData;
 
 use currency::{Group, MemberOf};
 use cw_time::IntoTimestamp;
-use finance::instant::Instant;
-use finance::{coin::CoinDTO, duration::Duration};
+use finance::{coin::CoinDTO, instant::Instant};
 use oracle::stub::SwapPath;
 use platform::{
     bank_ibc::remote::Sender as RemoteSender,
@@ -13,9 +12,7 @@ use platform::{
 };
 use sdk::cosmwasm_std::QuerierWrapper;
 
-use crate::{Account, Connectable, error::Result, swap::ExactAmountIn};
-
-pub(super) const IBC_TIMEOUT: Duration = Duration::from_days(1); //enough for the relayers to process
+use crate::{Account, Connectable, IBC_TIMEOUT, error::Result, swap::ExactAmountIn};
 
 pub(super) struct SwapTrx<'ica, 'swap_path, 'querier, SwapGroup, SwapPathImpl> {
     conn: &'ica str,
