@@ -52,6 +52,17 @@ fn operation_swap_byte_identical() {
 }
 
 #[test]
+fn operation_swap_two_byte_identical() {
+    let params = SwapParams::two(
+        Coin::<PaymentC1>::new(1000).into(),
+        Coin::<PaymentC3>::new(500).into(),
+        Coin::<PaymentC2>::new(42).into(),
+    )
+    .expect("three distinct non-zero amounts");
+    assert_cross_surface_eq::<Operation, WireOperation>(&Operation::Swap(params));
+}
+
+#[test]
 fn operation_transfer_out_byte_identical() {
     assert_cross_surface_eq::<Operation, WireOperation>(&Operation::TransferOut(transfer_out()));
 }
@@ -141,7 +152,7 @@ fn open_lease() -> OpenLeaseParams {
 }
 
 fn swap() -> SwapParams {
-    SwapParams::new(
+    SwapParams::one(
         Coin::<PaymentC1>::new(1000).into(),
         Coin::<PaymentC2>::new(42).into(),
     )

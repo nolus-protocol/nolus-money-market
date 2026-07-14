@@ -54,7 +54,23 @@ fn close_lease_msg_serde() {
 fn swap_msg_serde() {
     let value = Operation::Swap(sample_swap_params());
     assert_round_trip_eq(
-        r#"{"swap":{"coin_in":{"amount":"1000","ticker":"NLS"},"min_out":{"amount":"42","ticker":"LPN"}}}"#,
+        r#"{"swap":{"one":{"coin_in":{"amount":"1000","ticker":"NLS"},"min_out":{"amount":"42","ticker":"LPN"}}}}"#,
+        &value,
+    );
+}
+
+#[test]
+fn swap_msg_two_serde() {
+    let value = Operation::Swap(
+        SwapParams::two(
+            Coin::<PaymentC1>::new(1000).into(),
+            Coin::<PaymentC3>::new(500).into(),
+            Coin::<PaymentC2>::new(42).into(),
+        )
+        .expect("sample uses three distinct non-zero amounts"),
+    );
+    assert_round_trip_eq(
+        r#"{"swap":{"two":{"coin_in_1":{"amount":"1000","ticker":"NLS"},"coin_in_2":{"amount":"500","ticker":"LC1"},"min_out":{"amount":"42","ticker":"LPN"}}}}"#,
         &value,
     );
 }
@@ -274,8 +290,8 @@ fn open_lease_params_deserialize_above_u16_rejected() {
 // ---------------------------------------------------------------------------
 
 #[test]
-fn swap_params_distinct_currencies_ok() {
-    let params = SwapParams::new(
+fn swap_params_one_distinct_currencies_ok() {
+    let params = SwapParams::one(
         Coin::<PaymentC1>::new(1000).into(),
         Coin::<PaymentC2>::new(42).into(),
     )
@@ -284,8 +300,8 @@ fn swap_params_distinct_currencies_ok() {
 }
 
 #[test]
-fn swap_params_same_currency_rejected() {
-    let res = SwapParams::new(
+fn swap_params_one_same_currency_rejected() {
+    let res = SwapParams::one(
         Coin::<PaymentC1>::new(1000).into(),
         Coin::<PaymentC1>::new(42).into(),
     );
@@ -293,8 +309,8 @@ fn swap_params_same_currency_rejected() {
 }
 
 #[test]
-fn swap_params_zero_coin_in_rejected() {
-    let res = SwapParams::new(
+fn swap_params_one_zero_coin_in_rejected() {
+    let res = SwapParams::one(
         Coin::<PaymentC1>::new(0).into(),
         Coin::<PaymentC2>::new(42).into(),
     );
@@ -302,8 +318,8 @@ fn swap_params_zero_coin_in_rejected() {
 }
 
 #[test]
-fn swap_params_zero_min_out_rejected() {
-    let res = SwapParams::new(
+fn swap_params_one_zero_min_out_rejected() {
+    let res = SwapParams::one(
         Coin::<PaymentC1>::new(1000).into(),
         Coin::<PaymentC2>::new(0).into(),
     );
@@ -311,19 +327,85 @@ fn swap_params_zero_min_out_rejected() {
 }
 
 #[test]
-fn swap_params_deserialize_invariant_violation_rejected() {
-    let bad_wire =
-        r#"{"coin_in":{"amount":"1000","ticker":"NLS"},"min_out":{"amount":"42","ticker":"NLS"}}"#;
+fn swap_params_one_deserialize_invariant_violation_rejected() {
+    let bad_wire = r#"{"one":{"coin_in":{"amount":"1000","ticker":"NLS"},"min_out":{"amount":"42","ticker":"NLS"}}}"#;
     serde_json::from_str::<SwapParams>(bad_wire)
         .expect_err("invariant violation must fail deserialization");
 }
 
 #[test]
-fn swap_params_deserialize_zero_amount_rejected() {
-    let bad_wire =
-        r#"{"coin_in":{"amount":"0","ticker":"NLS"},"min_out":{"amount":"42","ticker":"LPN"}}"#;
+fn swap_params_one_deserialize_zero_amount_rejected() {
+    let bad_wire = r#"{"one":{"coin_in":{"amount":"0","ticker":"NLS"},"min_out":{"amount":"42","ticker":"LPN"}}}"#;
     serde_json::from_str::<SwapParams>(bad_wire)
         .expect_err("zero coin_in must fail deserialization");
+}
+
+#[test]
+fn swap_params_two_distinct_currencies_ok() {
+    let params = SwapParams::two(
+        Coin::<PaymentC1>::new(1000).into(),
+        Coin::<PaymentC3>::new(500).into(),
+        Coin::<PaymentC2>::new(42).into(),
+    )
+    .expect("three distinct non-zero amounts must be accepted");
+    assert!(params.invariant_held());
+}
+
+#[test]
+fn swap_params_two_zero_coin_in_1_rejected() {
+    let res = SwapParams::two(
+        Coin::<PaymentC1>::new(0).into(),
+        Coin::<PaymentC3>::new(500).into(),
+        Coin::<PaymentC2>::new(42).into(),
+    );
+    assert!(matches!(res, Err(Error::ZeroSwapAmount)));
+}
+
+#[test]
+fn swap_params_two_zero_coin_in_2_rejected() {
+    let res = SwapParams::two(
+        Coin::<PaymentC1>::new(1000).into(),
+        Coin::<PaymentC3>::new(0).into(),
+        Coin::<PaymentC2>::new(42).into(),
+    );
+    assert!(matches!(res, Err(Error::ZeroSwapAmount)));
+}
+
+#[test]
+fn swap_params_two_coin_in_1_same_as_min_out_rejected() {
+    let res = SwapParams::two(
+        Coin::<PaymentC2>::new(1000).into(),
+        Coin::<PaymentC3>::new(500).into(),
+        Coin::<PaymentC2>::new(42).into(),
+    );
+    assert!(matches!(res, Err(Error::SameSwapCurrency)));
+}
+
+#[test]
+fn swap_params_two_coin_in_2_same_as_min_out_rejected() {
+    let res = SwapParams::two(
+        Coin::<PaymentC1>::new(1000).into(),
+        Coin::<PaymentC2>::new(500).into(),
+        Coin::<PaymentC2>::new(42).into(),
+    );
+    assert!(matches!(res, Err(Error::SameSwapCurrency)));
+}
+
+#[test]
+fn swap_params_two_coin_in_1_same_as_coin_in_2_rejected() {
+    let res = SwapParams::two(
+        Coin::<PaymentC1>::new(1000).into(),
+        Coin::<PaymentC1>::new(500).into(),
+        Coin::<PaymentC2>::new(42).into(),
+    );
+    assert!(matches!(res, Err(Error::DuplicateSwapInputCurrency)));
+}
+
+#[test]
+fn swap_params_two_deserialize_invariant_violation_rejected() {
+    let bad_wire = r#"{"two":{"coin_in_1":{"amount":"1000","ticker":"NLS"},"coin_in_2":{"amount":"500","ticker":"NLS"},"min_out":{"amount":"42","ticker":"LPN"}}}"#;
+    serde_json::from_str::<SwapParams>(bad_wire)
+        .expect_err("duplicate input currencies must fail deserialization");
 }
 
 // ---------------------------------------------------------------------------
@@ -401,7 +483,7 @@ fn sample_open_lease_params() -> OpenLeaseParams {
 }
 
 fn sample_swap_params() -> SwapParams {
-    SwapParams::new(
+    SwapParams::one(
         Coin::<PaymentC1>::new(1000).into(),
         Coin::<PaymentC2>::new(42).into(),
     )

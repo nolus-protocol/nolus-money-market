@@ -123,7 +123,7 @@ mod tests {
     }
 
     fn sample_swap_params() -> SwapParams {
-        SwapParams::new(
+        SwapParams::one(
             Coin::<PaymentC1>::new(1000).into(),
             Coin::<PaymentC2>::new(42).into(),
         )
