@@ -44,7 +44,7 @@ Monorepo with three interconnected Cargo workspaces:
 - **`cw-time`** - Bridge crate converting between `finance::Instant` and cosmwasm `Timestamp` (`IntoInstant` / `IntoTimestamp` extension traits).
 - **`currency`** - Type-safe currency system with compile-time mismatch prevention. Core traits: `Currency` (type marker), `CurrencyDef` (group associations). Visitor pattern for runtime currency dispatch.
 - **`sdk`** - CosmWasm SDK wrapper with feature-gated re-exports (`contract`, `storage`, `testing`, `cosmos_ibc`, `cosmos_proto`). Abstracts external dependencies.
-- **`platform`** - Contract orchestration: state machine, banking operations, response/reply handling, protobuf transactions (`trx`), Interchain-Account registration and transaction submission (`ica`).
+- **`platform`** - Contract orchestration: state machine, banking operations, response/reply handling, protobuf transactions (`trx`), Interchain-Account transaction submission (`ica`).
 - **`versioning`** - Contract migration and version management. Supports semver with separate storage versioning.
 - **`access-control`** - Permission management.
 - **`lpp`** - Liquidity Provider Pool abstractions.
@@ -76,7 +76,7 @@ Cross-workspace integration tests. The suite builds per DEX: `tests/Cargo.toml` 
 
 2. **Type-safe currency system**: Currencies are compile-time types, not runtime strings. The `Currency` trait + `CurrencyDef` with group associations prevent financial operation mismatches at compile time.
 
-3. **DEX and remote-swap abstraction**: The `dex` package drives asynchronous swaps over IBC Interchain Accounts (`dex::Account`, `ica_connectee`); the per-DEX request builders live in the `swap` package (`astroport`, `osmosis`). The `remote_lease` contract is the IBC controller paired with the Solana-side Remote Lease App (ADR 0001/0002); its typed operations and wire types live in the `remote_lease` and `remote_lease_wire` packages.
+3. **DEX and remote-swap abstraction**: The `dex` package drives asynchronous swaps over IBC Interchain Accounts (`dex::Account`); the per-DEX request builders live in the `swap` package (`astroport`, `osmosis`). The `remote_lease` contract is the IBC controller paired with the Solana-side Remote Lease App (ADR 0001/0002); its typed operations and wire types live in the `remote_lease` and `remote_lease_wire` packages. Lease **open** derives its `dex::Account` from the controller's `OpenLease` ack (`RemoteLeaseId` → `platform::ica::HostAccount`) rather than registering a Cosmos ICA; swap/repay/close transport still submits over ICA (`submit_tx`).
 
 4. **`cargo-each` tag system**: Workspace members declare tags in `[package.metadata.cargo-each]` in their Cargo.toml. CI uses these tags to select which packages to build/test for each configuration. New workspace members must declare appropriate tags.
 
