@@ -517,18 +517,20 @@ mod impl_migration {
         SwapTask as SwapTaskT,
         impl_::{ForwardToInner, migration::MigrateSpec},
         swap::ExactAmountIn,
+        transport::TransferOutFactory as TransportOutFactoryT,
     };
 
-    impl<SwapTask, SwapTaskNew, SEnumNew, SwapClient, ForwardToInnerMsg>
+    impl<SwapTask, SwapTaskNew, SEnumNew, TransportOutFactory, SwapClient, ForwardToInnerMsg>
         MigrateSpec<SwapTask, SwapTaskNew, SEnumNew>
-        for State<SwapTask, SwapClient, ForwardToInnerMsg>
+        for State<SwapTask, TransportOutFactory, SwapClient, ForwardToInnerMsg>
     where
         SwapTask: SwapTaskT,
+        TransportOutFactory: TransportOutFactoryT,
         SwapClient: ExactAmountIn,
         ForwardToInnerMsg: ForwardToInner,
         SwapTaskNew: SwapTaskT<OutG = SwapTask::OutG>,
     {
-        type Out = State<SwapTaskNew, SwapClient, ForwardToInnerMsg>;
+        type Out = State<SwapTaskNew, TransportOutFactory, SwapClient, ForwardToInnerMsg>;
 
         fn migrate_spec<MigrateFn>(self, migrate_fn: MigrateFn) -> Self::Out
         where
@@ -546,8 +548,8 @@ mod impl_migration {
         }
     }
 
-    impl<SwapTask, R, SwapClient, ForwardToInnerMsg> InspectSpec<SwapTask, R>
-        for State<SwapTask, SwapClient, ForwardToInnerMsg>
+    impl<SwapTask, R, TransportOutFactory, SwapClient, ForwardToInnerMsg> InspectSpec<SwapTask, R>
+        for State<SwapTask, TransportOutFactory, SwapClient, ForwardToInnerMsg>
     where
         SwapTask: SwapTaskT,
         ForwardToInnerMsg: ForwardToInner,

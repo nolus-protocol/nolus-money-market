@@ -1,5 +1,7 @@
 #[cfg(feature = "impl")]
 pub use self::error::Error;
+#[cfg(all(feature = "impl", feature = "migration"))]
+pub use self::impl_::migration::{InspectSpec, MigrateSpec};
 #[cfg(feature = "impl")]
 pub use self::{
     account::Account,

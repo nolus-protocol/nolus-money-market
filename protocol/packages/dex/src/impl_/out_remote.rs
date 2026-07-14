@@ -371,7 +371,7 @@ mod impl_display {
 mod impl_migration {
     use super::State;
     use crate::{
-        SwapTask as SwapTaskT,
+        SwapTask as SwapTaskT, TransportOutFactory as TransportOutFactoryT,
         impl_::{ForwardToInner, migration::MigrateSpec},
         swap::ExactAmountIn,
     };
@@ -381,6 +381,7 @@ mod impl_migration {
         for State<SwapTask, TransportOutFactory, SwapClient, ForwardToInnerMsg>
     where
         SwapTask: SwapTaskT,
+        TransportOutFactory: TransportOutFactoryT,
         SwapClient: ExactAmountIn,
         ForwardToInnerMsg: ForwardToInner,
         SwapTaskNew: SwapTaskT<OutG = SwapTask::OutG>,

@@ -269,6 +269,7 @@ impl<SwapTask, SwapTaskNew, SEnum, SEnumNew, TransportOutFactory, SwapClient>
 where
     Self: Sized,
     SwapTaskNew: SwapTaskT,
+    TransportOutFactory: TransportOutFactoryT,
     TransferOut<SwapTaskNew, SEnumNew, TransportOutFactory, SwapClient>: Into<SEnumNew>,
 {
     type Out = TransferOut<SwapTaskNew, SEnumNew, TransportOutFactory, SwapClient>;
@@ -277,7 +278,7 @@ where
     where
         MigrateFn: FnOnce(SwapTask) -> SwapTaskNew,
     {
-        Self::Out::new(migrate_fn(self.spec))
+        Self::Out::new(migrate_fn(self.spec), self.transport_out_fry)
     }
 }
 
