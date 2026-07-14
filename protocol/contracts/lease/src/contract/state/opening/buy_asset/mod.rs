@@ -28,6 +28,7 @@ use crate::{
             out_task::{OutTaskFactory, WithOutCurrency},
             resp_delivery::ForwardToDexEntry,
         },
+        transport::TransferOutFactory,
     },
     error::ContractResult,
     event::Type,
@@ -39,8 +40,10 @@ mod finish;
 
 type AssetGroup = LeaseAssetCurrencies;
 #[allow(dead_code)]
-pub(super) type StartState = StartLocalRemoteState<BuyAsset, SwapClient, ForwardToDexEntry>;
-pub(in super::super) type DexState = dex::StateRemoteOut<BuyAsset, SwapClient, ForwardToDexEntry>;
+pub(super) type StartState =
+    StartLocalRemoteState<BuyAsset, TransferOutFactory, SwapClient, ForwardToDexEntry>;
+pub(in super::super) type DexState =
+    dex::StateRemoteOut<BuyAsset, TransferOutFactory, SwapClient, ForwardToDexEntry>;
 
 pub(super) fn start(
     new_lease: NewLeaseForm,
@@ -51,15 +54,18 @@ pub(super) fn start(
     deps: (LppRef, OracleRef, TimeAlarmsRef, LeasesRef),
     start_opening_at: Instant,
 ) -> StartState {
-    dex::start_local_remote(BuyAsset::new(
-        new_lease,
-        dex_account,
-        remote_lease,
-        downpayment,
-        loan,
-        deps,
-        start_opening_at,
-    ))
+    dex::start_local_remote(
+        BuyAsset::new(
+            new_lease,
+            dex_account,
+            remote_lease,
+            downpayment,
+            loan,
+            deps,
+            start_opening_at,
+        ),
+        TransferOutFactory::default(),
+    )
 }
 
 type BuyAssetStateResponse = <BuyAsset as SwapTask>::StateResponse;

@@ -16,7 +16,8 @@ use sdk::cosmwasm_std::{Binary, Env, QuerierWrapper};
 
 use crate::{
     CoinsNb, Contract, ContractInSwap, Enterable, Stage, SwapTask as SwapTaskT, TimeAlarm,
-    error::Result, swap::ExactAmountIn,
+    TransportOut as TransportOutT, TransportOutFactory as TransportOutFactoryT, error::Result,
+    swap::ExactAmountIn,
 };
 
 #[cfg(feature = "migration")]
@@ -25,7 +26,6 @@ use super::{
     response::{self, ContinueResult, Handler, Result as HandlerResult},
     swap_exact_in::SwapExactIn,
     timeout,
-    trx::TransferOutTrx,
 };
 use cw_time::IntoInstant;
 
@@ -38,14 +38,17 @@ use cw_time::IntoInstant;
 #[cfg_attr(test, derive(Clone, Debug, PartialEq, Eq))]
 #[serde(
     bound(
-        serialize = "SwapTask: Serialize",
-        deserialize = "SwapTask: Deserialize<'de> + SwapTaskT"
+        serialize = "SwapTask: Serialize,
+                        TransportOutFactory: Serialize",
+        deserialize = "SwapTask: Deserialize<'de> + SwapTaskT,
+                        TransportOutFactory: Deserialize<'de>"
     ),
     deny_unknown_fields,
     rename_all = "snake_case"
 )]
-pub struct TransferOut<SwapTask, SEnum, SwapClient> {
+pub struct TransferOut<SwapTask, SEnum, TransportOutFactory, SwapClient> {
     spec: SwapTask,
+    transport_out_fry: TransportOutFactory,
     acks_left: CoinsNb,
     #[serde(skip)]
     _state_enum: PhantomData<SEnum>,
@@ -53,18 +56,25 @@ pub struct TransferOut<SwapTask, SEnum, SwapClient> {
     _swap_client: PhantomData<SwapClient>,
 }
 
-impl<SwapTask, SEnum, SwapClient> TransferOut<SwapTask, SEnum, SwapClient>
+impl<SwapTask, SEnum, TransportOutFactory, SwapClient>
+    TransferOut<SwapTask, SEnum, TransportOutFactory, SwapClient>
 where
     SwapTask: SwapTaskT,
+    TransportOutFactory: TransportOutFactoryT,
 {
-    pub fn new(spec: SwapTask) -> Self {
+    pub fn new(spec: SwapTask, transport: TransportOutFactory) -> Self {
         let acks_left = Self::coins_len(&spec);
-        Self::internal_new(spec, acks_left)
+        Self::internal_new(spec, transport, acks_left)
     }
 
-    fn internal_new(spec: SwapTask, acks_left: CoinsNb) -> Self {
+    fn internal_new(
+        spec: SwapTask,
+        transport_out_fry: TransportOutFactory,
+        acks_left: CoinsNb,
+    ) -> Self {
         let ret = Self {
             spec,
+            transport_out_fry,
             acks_left,
             _state_enum: PhantomData,
             _swap_client: PhantomData,
@@ -91,13 +101,14 @@ where
             self.acks_left,
             "calling 'enter_state' past initialization"
         );
-        let mut trx = TransferOutTrx::new(self.spec.dex_account(), now);
+
+        let mut transport = self.transport_out_fry.transport(&self.spec, now);
 
         self.spec
             .coins()
             .into_iter()
-            .for_each(|coin| trx.send(&coin));
-        trx.into()
+            .for_each(|coin| transport.send(&coin));
+        transport.into()
     }
 
     fn next(self) -> Self {
@@ -107,7 +118,7 @@ where
             "the method contract precondition `!self.last_ack()` should have been respected",
         );
 
-        Self::internal_new(self.spec, acks_left)
+        Self::internal_new(self.spec, self.transport_out_fry, acks_left)
     }
 
     fn last_ack(&self) -> bool {
@@ -116,9 +127,11 @@ where
     }
 }
 
-impl<SwapTask, SEnum, SwapClient> TransferOut<SwapTask, SEnum, SwapClient>
+impl<SwapTask, SEnum, TransportOutFactory, SwapClient>
+    TransferOut<SwapTask, SEnum, TransportOutFactory, SwapClient>
 where
     SwapTask: SwapTaskT,
+    TransportOutFactory: TransportOutFactoryT,
     SwapClient: ExactAmountIn,
     Self: Into<SEnum>,
     SwapExactIn<SwapTask, SEnum, SwapClient>: Into<SEnum>,
@@ -140,9 +153,11 @@ where
     }
 }
 
-impl<SwapTask, SEnum, SwapClient> Enterable for TransferOut<SwapTask, SEnum, SwapClient>
+impl<SwapTask, SEnum, TransportOutFactory, SwapClient> Enterable
+    for TransferOut<SwapTask, SEnum, TransportOutFactory, SwapClient>
 where
     SwapTask: SwapTaskT,
+    TransportOutFactory: TransportOutFactoryT,
     SwapClient: ExactAmountIn,
     Self: Into<SEnum>,
     SwapExactIn<SwapTask, SEnum, SwapClient>: Into<SEnum>,
@@ -152,9 +167,11 @@ where
     }
 }
 
-impl<SwapTask, SEnum, SwapClient> Handler for TransferOut<SwapTask, SEnum, SwapClient>
+impl<SwapTask, SEnum, TransportOutFactory, SwapClient> Handler
+    for TransferOut<SwapTask, SEnum, TransportOutFactory, SwapClient>
 where
     SwapTask: SwapTaskT,
+    TransportOutFactory: TransportOutFactoryT,
     SwapClient: ExactAmountIn,
     Self: Into<SEnum>,
     SwapExactIn<SwapTask, SEnum, SwapClient>: Into<SEnum>,
@@ -204,7 +221,8 @@ where
     }
 }
 
-impl<SwapTask, SEnum, SwapClient> Contract for TransferOut<SwapTask, SEnum, SwapClient>
+impl<SwapTask, SEnum, TransportOutFactory, SwapClient> Contract
+    for TransferOut<SwapTask, SEnum, TransportOutFactory, SwapClient>
 where
     SwapTask: SwapTaskT + ContractInSwap<StateResponse = <SwapTask as SwapTaskT>::StateResponse>,
 {
@@ -221,7 +239,8 @@ where
     }
 }
 
-impl<SwapTask, SEnum, SwapClient> Display for TransferOut<SwapTask, SEnum, SwapClient>
+impl<SwapTask, SEnum, TransportOutFactory, SwapClient> Display
+    for TransferOut<SwapTask, SEnum, TransportOutFactory, SwapClient>
 where
     SwapTask: SwapTaskT,
 {
@@ -230,7 +249,8 @@ where
     }
 }
 
-impl<SwapTask, SEnum, SwapClient> TimeAlarm for TransferOut<SwapTask, SEnum, SwapClient>
+impl<SwapTask, SEnum, TransportOutFactory, SwapClient> TimeAlarm
+    for TransferOut<SwapTask, SEnum, TransportOutFactory, SwapClient>
 where
     SwapTask: SwapTaskT,
 {
@@ -243,14 +263,15 @@ where
 }
 
 #[cfg(feature = "migration")]
-impl<SwapTask, SwapTaskNew, SEnum, SEnumNew, SwapClient>
-    MigrateSpec<SwapTask, SwapTaskNew, SEnumNew> for TransferOut<SwapTask, SEnum, SwapClient>
+impl<SwapTask, SwapTaskNew, SEnum, SEnumNew, TransportOutFactory, SwapClient>
+    MigrateSpec<SwapTask, SwapTaskNew, SEnumNew>
+    for TransferOut<SwapTask, SEnum, TransportOutFactory, SwapClient>
 where
     Self: Sized,
     SwapTaskNew: SwapTaskT,
-    TransferOut<SwapTaskNew, SEnumNew, SwapClient>: Into<SEnumNew>,
+    TransferOut<SwapTaskNew, SEnumNew, TransportOutFactory, SwapClient>: Into<SEnumNew>,
 {
-    type Out = TransferOut<SwapTaskNew, SEnumNew, SwapClient>;
+    type Out = TransferOut<SwapTaskNew, SEnumNew, TransportOutFactory, SwapClient>;
 
     fn migrate_spec<MigrateFn>(self, migrate_fn: MigrateFn) -> Self::Out
     where
@@ -261,8 +282,8 @@ where
 }
 
 #[cfg(feature = "migration")]
-impl<SwapTask, R, SEnum, SwapClient> InspectSpec<SwapTask, R>
-    for TransferOut<SwapTask, SEnum, SwapClient>
+impl<SwapTask, R, SEnum, TransportOutFactory, SwapClient> InspectSpec<SwapTask, R>
+    for TransferOut<SwapTask, SEnum, TransportOutFactory, SwapClient>
 {
     fn inspect_spec<InspectFn>(&self, inspect_fn: InspectFn) -> R
     where

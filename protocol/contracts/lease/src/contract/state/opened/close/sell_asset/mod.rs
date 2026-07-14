@@ -31,6 +31,7 @@ use crate::{
             opened::{self, payment::Repayable},
             resp_delivery::ForwardToDexEntry,
         },
+        transport::TransferOutFactory,
     },
     error::ContractResult,
     event::Type,
@@ -44,8 +45,12 @@ pub(in crate::contract::state) mod liquidation;
 mod task;
 
 type Task<RepayableT, CalculatorT> = SellAsset<RepayableT, CalculatorT>;
-type DexState<Repayable, CalculatorT> =
-    dex::StateLocalOut<Task<Repayable, CalculatorT>, SwapClient, ForwardToDexEntry>;
+type DexState<Repayable, CalculatorT> = dex::StateLocalOut<
+    Task<Repayable, CalculatorT>,
+    TransferOutFactory,
+    SwapClient,
+    ForwardToDexEntry,
+>;
 
 #[derive(Serialize, Deserialize)]
 pub(crate) struct SellAsset<RepayableT, CalculatorT> {
