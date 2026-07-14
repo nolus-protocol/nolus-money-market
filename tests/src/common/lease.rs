@@ -231,8 +231,12 @@ pub(crate) fn complete_initialization<DownpaymentC, Lpn>(
         (downpayment, exp_borrow),
     );
 
-    let requests: Vec<SwapRequest<PaymentGroup, PaymentGroup>> =
-        super::swap::expect_swap(response, connection_id, TestCase::LEASE_ICA_ID, |_| {});
+    let requests: Vec<SwapRequest<PaymentGroup, PaymentGroup>> = super::swap::expect_swap(
+        response,
+        connection_id,
+        TestCase::LEASE_ICA_ID,
+        |_response| {},
+    );
 
     check_state_opening(app, lease_addr.clone());
 

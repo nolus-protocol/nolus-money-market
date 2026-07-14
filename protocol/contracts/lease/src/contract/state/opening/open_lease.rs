@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use currencies::PaymentGroup;
 use currency::{CurrencyDef, Group, MemberOf};
 use cw_time::IntoInstant;
-use dex::{Account, Enterable};
+use dex::{Account, Enterable as _};
 use finance::{
     coin::{Coin, WithCoin},
     duration::Duration,
