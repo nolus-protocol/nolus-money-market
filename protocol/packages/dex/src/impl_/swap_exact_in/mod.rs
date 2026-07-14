@@ -19,20 +19,19 @@ use report_anomaly::ReportAnomalyCmd;
 use sdk::cosmwasm_std::{Binary, Env, QuerierWrapper};
 
 use crate::{
-    AnomalyTreatment, ConnectionParams, Contract, Stage, error::Result, swap::ExactAmountIn,
-};
-
-use crate::{
-    Connectable, ContractInSwap, Enterable, SwapTask as SwapTaskT, TimeAlarm,
+    AnomalyTreatment, Connectable, ConnectionParams, Contract, ContractInSwap, Enterable, Stage,
+    SwapTask as SwapTaskT, TimeAlarm, TransportOutFactory as TransportOutFactoryT,
+    error::Result,
     impl_::{
         ForwardToInner,
         response::{self, ContinueResult, Handler, Result as HandlerResult},
         timeout,
     },
+    swap::ExactAmountIn,
 };
 
 #[cfg(feature = "migration")]
-use super::migration::{InspectSpec, MigrateSpec};
+use super::migration::{_InspectSpec, _MigrateSpec};
 use cw_time::IntoInstant;
 
 mod decode_resp;
@@ -117,18 +116,20 @@ where
     }
 }
 
-impl<SwapTask, SwapClient, ForwardToInnerMsg> Handler
+impl<SwapTask, TransportOutFactory, SwapClient, ForwardToInnerMsg> Handler
     for SwapExactIn<
         SwapTask,
-        super::out_local::State<SwapTask, SwapClient, ForwardToInnerMsg>,
+        super::out_local::State<SwapTask, TransportOutFactory, SwapClient, ForwardToInnerMsg>,
         SwapClient,
     >
 where
     SwapTask: SwapTaskT,
+    TransportOutFactory: TransportOutFactoryT,
     SwapClient: ExactAmountIn,
     ForwardToInnerMsg: ForwardToInner,
 {
-    type Response = super::out_local::State<SwapTask, SwapClient, ForwardToInnerMsg>;
+    type Response =
+        super::out_local::State<SwapTask, TransportOutFactory, SwapClient, ForwardToInnerMsg>;
     type SwapResult = SwapTask::Result;
 
     fn authz_remote_callback(
@@ -172,17 +173,18 @@ where
     }
 }
 
-impl<SwapTask, SwapClient, ForwardToInnerMsg> Handler
+impl<SwapTask, TransportOutFactory, SwapClient, ForwardToInnerMsg> Handler
     for SwapExactIn<
         SwapTask,
-        super::out_remote::State<SwapTask, SwapClient, ForwardToInnerMsg>,
+        super::out_remote::State<SwapTask, TransportOutFactory, SwapClient, ForwardToInnerMsg>,
         SwapClient,
     >
 where
     SwapTask: SwapTaskT,
     SwapClient: ExactAmountIn,
 {
-    type Response = super::out_remote::State<SwapTask, SwapClient, ForwardToInnerMsg>;
+    type Response =
+        super::out_remote::State<SwapTask, TransportOutFactory, SwapClient, ForwardToInnerMsg>;
     type SwapResult = SwapTask::Result;
 
     fn authz_remote_callback(
@@ -258,7 +260,7 @@ where
 
 #[cfg(feature = "migration")]
 impl<SwapTask, SwapTaskNew, SEnum, SEnumNew, SwapClient>
-    MigrateSpec<SwapTask, SwapTaskNew, SEnumNew> for SwapExactIn<SwapTask, SEnum, SwapClient>
+    _MigrateSpec<SwapTask, SwapTaskNew, SEnumNew> for SwapExactIn<SwapTask, SEnum, SwapClient>
 where
     Self: Sized,
     SwapExactIn<SwapTaskNew, SEnumNew, SwapClient>: Into<SEnumNew>,
@@ -274,7 +276,7 @@ where
 }
 
 #[cfg(feature = "migration")]
-impl<SwapTask, R, SEnum, SwapClient> InspectSpec<SwapTask, R>
+impl<SwapTask, R, SEnum, SwapClient> _InspectSpec<SwapTask, R>
     for SwapExactIn<SwapTask, SEnum, SwapClient>
 {
     fn inspect_spec<InspectFn>(&self, inspect_fn: InspectFn) -> R

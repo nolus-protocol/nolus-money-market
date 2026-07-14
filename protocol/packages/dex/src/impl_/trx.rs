@@ -2,55 +2,17 @@ use std::marker::PhantomData;
 
 use currency::{Group, MemberOf};
 use cw_time::IntoTimestamp;
-use finance::instant::Instant;
-use finance::{coin::CoinDTO, duration::Duration};
+use finance::{coin::CoinDTO, instant::Instant};
 use oracle::stub::SwapPath;
 use platform::{
-    bank_ibc::{local::Sender as LocalSender, remote::Sender as RemoteSender},
+    bank_ibc::remote::Sender as RemoteSender,
     batch::Batch as LocalBatch,
     ica::{self, HostAccount},
     trx::Transaction,
 };
 use sdk::cosmwasm_std::QuerierWrapper;
 
-use crate::{Account, Connectable, error::Result, swap::ExactAmountIn};
-
-pub(super) const IBC_TIMEOUT: Duration = Duration::from_days(1); //enough for the relayers to process
-
-pub(super) struct TransferOutTrx<'ica> {
-    sender: LocalSender<'ica>,
-}
-
-impl<'ica> TransferOutTrx<'ica> {
-    pub(super) fn new(ica: &'ica Account, now: Instant) -> Self {
-        Self {
-            sender: LocalSender::new(
-                &ica.dex().transfer_channel.local_endpoint,
-                ica.owner(),
-                ica.remote(),
-                (now + IBC_TIMEOUT).into_timestamp(),
-                format!(
-                    "Transfer out: {sender} -> {receiver}",
-                    sender = ica.owner(),
-                    receiver = ica.remote()
-                ),
-            ),
-        }
-    }
-
-    pub fn send<G>(&mut self, amount: &CoinDTO<G>)
-    where
-        G: Group,
-    {
-        self.sender.send(amount)
-    }
-}
-
-impl<'ica> From<TransferOutTrx<'ica>> for LocalBatch {
-    fn from(value: TransferOutTrx<'ica>) -> Self {
-        value.sender.into()
-    }
-}
+use crate::{Account, Connectable, IBC_TIMEOUT, error::Result, swap::ExactAmountIn};
 
 pub(super) struct SwapTrx<'ica, 'swap_path, 'querier, SwapGroup, SwapPathImpl> {
     conn: &'ica str,

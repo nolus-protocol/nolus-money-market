@@ -16,6 +16,7 @@ use finance::{
 use sdk::cosmwasm_std::{Env, MessageInfo, QuerierWrapper};
 use timealarms::stub::TimeAlarmsRef;
 
+use crate::contract::transport::TransferOutFactory;
 use crate::{
     api::{
         LeasePaymentCurrencies, PaymentCoin,
@@ -37,11 +38,13 @@ use crate::{
     finance::{LpnCurrencies, LpnCurrency},
 };
 
-pub(super) type StartState = StartLocalLocalState<BuyLpn, SwapClient, ForwardToDexEntry>;
-pub(crate) type DexState = dex::StateLocalOut<BuyLpn, SwapClient, ForwardToDexEntry>;
+pub(super) type StartState =
+    StartLocalLocalState<BuyLpn, TransferOutFactory, SwapClient, ForwardToDexEntry>;
+pub(crate) type DexState =
+    dex::StateLocalOut<BuyLpn, TransferOutFactory, SwapClient, ForwardToDexEntry>;
 
 pub(in super::super) fn start(lease: Lease, payment: PaymentCoin) -> StartState {
-    dex::start_local_local(BuyLpn::new(lease, payment))
+    dex::start_local_local(BuyLpn::new(lease, payment), TransferOutFactory::default())
 }
 
 #[derive(Serialize, Deserialize)]

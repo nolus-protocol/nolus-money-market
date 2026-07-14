@@ -21,7 +21,7 @@ impl Account {
         &self.owner
     }
 
-    pub(super) fn remote(&self) -> &HostAccount {
+    pub fn remote(&self) -> &HostAccount {
         &self.remote
     }
 

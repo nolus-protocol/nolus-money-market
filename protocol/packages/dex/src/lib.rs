@@ -18,6 +18,9 @@ pub use self::{
     state::{Contract, ContractInSwap, Stage},
     swap_task::{CoinsNb, SwapOutputTask, SwapTask, WithOutputTask},
     time_alarm::TimeAlarm,
+    transport::{
+        IBC_TIMEOUT, TransferOut as TransportOut, TransferOutFactory as TransportOutFactory,
+    },
 };
 
 #[cfg(feature = "impl")]
@@ -45,3 +48,5 @@ pub mod swap;
 mod swap_task;
 #[cfg(feature = "impl")]
 mod time_alarm;
+#[cfg(feature = "impl")]
+mod transport;
