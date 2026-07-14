@@ -21,7 +21,7 @@ use crate::{
 };
 
 #[cfg(feature = "migration")]
-use super::migration::{InspectSpec, MigrateSpec};
+use super::migration::{_InspectSpec, _MigrateSpec};
 use super::{
     response::{self, ContinueResult, Handler, Result as HandlerResult},
     swap_exact_in::SwapExactIn,
@@ -264,7 +264,7 @@ where
 
 #[cfg(feature = "migration")]
 impl<SwapTask, SwapTaskNew, SEnum, SEnumNew, TransportOutFactory, SwapClient>
-    MigrateSpec<SwapTask, SwapTaskNew, SEnumNew>
+    _MigrateSpec<SwapTask, SwapTaskNew, SEnumNew>
     for TransferOut<SwapTask, SEnum, TransportOutFactory, SwapClient>
 where
     Self: Sized,
@@ -283,7 +283,7 @@ where
 }
 
 #[cfg(feature = "migration")]
-impl<SwapTask, R, SEnum, TransportOutFactory, SwapClient> InspectSpec<SwapTask, R>
+impl<SwapTask, R, SEnum, TransportOutFactory, SwapClient> _InspectSpec<SwapTask, R>
     for TransferOut<SwapTask, SEnum, TransportOutFactory, SwapClient>
 {
     fn inspect_spec<InspectFn>(&self, inspect_fn: InspectFn) -> R

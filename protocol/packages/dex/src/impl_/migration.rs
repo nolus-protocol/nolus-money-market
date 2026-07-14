@@ -1,4 +1,4 @@
-pub trait MigrateSpec<SwapTask, SwapTaskNew, SEnumNew>
+pub trait _MigrateSpec<SwapTask, SwapTaskNew, SEnumNew>
 where
     Self: Sized,
 {
@@ -9,7 +9,7 @@ where
         MigrateFn: FnOnce(SwapTask) -> SwapTaskNew;
 }
 
-pub trait InspectSpec<SwapTask, R> {
+pub trait _InspectSpec<SwapTask, R> {
     fn inspect_spec<InspectFn>(&self, inspect_fn: InspectFn) -> R
     where
         InspectFn: FnOnce(&SwapTask) -> R;

@@ -4,7 +4,8 @@ use platform::batch::Batch;
 
 use crate::SwapTask;
 
-pub const IBC_TIMEOUT: Duration = Duration::from_days(1); //enough for the relayers to process
+/// IBC transfer timeout — long enough for relayers to process.
+pub const IBC_TIMEOUT: Duration = Duration::from_days(1);
 
 pub trait TransferOut
 where

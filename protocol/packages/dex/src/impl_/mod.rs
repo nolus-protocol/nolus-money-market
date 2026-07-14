@@ -17,7 +17,7 @@ pub use self::{
 };
 
 #[cfg(feature = "migration")]
-pub mod migration;
+mod migration;
 mod out_local;
 mod out_remote;
 mod resp_delivery;

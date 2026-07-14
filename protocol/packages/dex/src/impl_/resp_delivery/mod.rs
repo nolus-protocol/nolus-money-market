@@ -20,7 +20,7 @@ use crate::{
 };
 
 #[cfg(feature = "migration")]
-use super::migration::{InspectSpec, MigrateSpec};
+use super::migration::{_InspectSpec, _MigrateSpec};
 
 use self::adapter::{DeliveryAdapter, ResponseDeliveryAdapter};
 use cw_time::IntoInstant;
@@ -69,10 +69,10 @@ impl<H, ForwardToInnerMsg, R, Delivery> ResponseDeliveryImpl<H, ForwardToInnerMs
 
 #[cfg(feature = "migration")]
 impl<SwapTask, SwapTaskNew, SEnumNew, H, ForwardToInnerMsg, R, Delivery>
-    MigrateSpec<SwapTask, SwapTaskNew, SEnumNew>
+    _MigrateSpec<SwapTask, SwapTaskNew, SEnumNew>
     for ResponseDeliveryImpl<H, ForwardToInnerMsg, R, Delivery>
 where
-    H: MigrateSpec<SwapTask, SwapTaskNew, SEnumNew>,
+    H: _MigrateSpec<SwapTask, SwapTaskNew, SEnumNew>,
     H::Out: Into<SEnumNew>,
 {
     type Out = ResponseDeliveryImpl<H::Out, ForwardToInnerMsg, R, Delivery>;
@@ -86,10 +86,10 @@ where
 }
 
 #[cfg(feature = "migration")]
-impl<SwapTask, RInspect, H, ForwardToInnerMsg, R, Delivery> InspectSpec<SwapTask, RInspect>
+impl<SwapTask, RInspect, H, ForwardToInnerMsg, R, Delivery> _InspectSpec<SwapTask, RInspect>
     for ResponseDeliveryImpl<H, ForwardToInnerMsg, R, Delivery>
 where
-    H: InspectSpec<SwapTask, RInspect>,
+    H: _InspectSpec<SwapTask, RInspect>,
 {
     fn inspect_spec<InspectFn>(&self, inspect_fn: InspectFn) -> RInspect
     where

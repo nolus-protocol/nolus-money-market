@@ -13,7 +13,7 @@ use crate::{
 };
 
 #[cfg(feature = "migration")]
-use super::migration::{InspectSpec, MigrateSpec};
+use super::migration::{_InspectSpec, _MigrateSpec};
 use super::{
     SwapTask as SwapTaskT,
     response::{ContinueResult, Handler, Result as HandlerResult},
@@ -50,7 +50,7 @@ where
 }
 
 #[cfg(feature = "migration")]
-impl<SwapTask, SwapTaskNew, SEnum, SEnumNew> MigrateSpec<SwapTask, SwapTaskNew, SEnumNew>
+impl<SwapTask, SwapTaskNew, SEnum, SEnumNew> _MigrateSpec<SwapTask, SwapTaskNew, SEnumNew>
     for TransferInInit<SwapTask, SEnum>
 where
     SwapTask: SwapTaskT,
@@ -67,7 +67,7 @@ where
 }
 
 #[cfg(feature = "migration")]
-impl<SwapTask, R, SEnum> InspectSpec<SwapTask, R> for TransferInInit<SwapTask, SEnum>
+impl<SwapTask, R, SEnum> _InspectSpec<SwapTask, R> for TransferInInit<SwapTask, SEnum>
 where
     SwapTask: SwapTaskT,
 {

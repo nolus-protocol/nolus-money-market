@@ -372,12 +372,12 @@ mod impl_migration {
     use super::State;
     use crate::{
         SwapTask as SwapTaskT, TransportOutFactory as TransportOutFactoryT,
-        impl_::{ForwardToInner, migration::MigrateSpec},
+        impl_::{ForwardToInner, migration::_MigrateSpec},
         swap::ExactAmountIn,
     };
 
     impl<SwapTask, SwapTaskNew, SEnumNew, TransportOutFactory, SwapClient, ForwardToInnerMsg>
-        MigrateSpec<SwapTask, SwapTaskNew, SEnumNew>
+        _MigrateSpec<SwapTask, SwapTaskNew, SEnumNew>
         for State<SwapTask, TransportOutFactory, SwapClient, ForwardToInnerMsg>
     where
         SwapTask: SwapTaskT,

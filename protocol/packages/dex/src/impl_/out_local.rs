@@ -512,16 +512,16 @@ mod impl_display {
 #[cfg(feature = "migration")]
 mod impl_migration {
 
-    use super::{super::migration::InspectSpec, State};
+    use super::{super::migration::_InspectSpec, State};
     use crate::{
         SwapTask as SwapTaskT,
-        impl_::{ForwardToInner, migration::MigrateSpec},
+        impl_::{ForwardToInner, migration::_MigrateSpec},
         swap::ExactAmountIn,
         transport::TransferOutFactory as TransportOutFactoryT,
     };
 
     impl<SwapTask, SwapTaskNew, SEnumNew, TransportOutFactory, SwapClient, ForwardToInnerMsg>
-        MigrateSpec<SwapTask, SwapTaskNew, SEnumNew>
+        _MigrateSpec<SwapTask, SwapTaskNew, SEnumNew>
         for State<SwapTask, TransportOutFactory, SwapClient, ForwardToInnerMsg>
     where
         SwapTask: SwapTaskT,
@@ -548,7 +548,7 @@ mod impl_migration {
         }
     }
 
-    impl<SwapTask, R, TransportOutFactory, SwapClient, ForwardToInnerMsg> InspectSpec<SwapTask, R>
+    impl<SwapTask, R, TransportOutFactory, SwapClient, ForwardToInnerMsg> _InspectSpec<SwapTask, R>
         for State<SwapTask, TransportOutFactory, SwapClient, ForwardToInnerMsg>
     where
         SwapTask: SwapTaskT,
