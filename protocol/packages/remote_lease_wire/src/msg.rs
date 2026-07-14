@@ -97,6 +97,10 @@ pub struct CloseLeaseParams {}
     rename_all = "snake_case",
     try_from = "SwapParamsRaw"
 )]
+/// Swap parameters for the remote lease protocol.
+///
+/// `One` carries a single input coin; `Two` carries two input coins.
+/// All coins must be non-zero and all tickers pairwise distinct.
 pub enum SwapParams {
     One {
         coin_in: WireCoin,
@@ -110,6 +114,8 @@ pub enum SwapParams {
 }
 
 impl SwapParams {
+    /// Single-input swap. Returns `Err(ZeroSwapAmount)` if either coin is
+    /// zero, or `Err(SameSwapCurrency)` if the tickers match.
     pub fn one(coin_in: WireCoin, min_out: WireCoin) -> Result<Self, Error> {
         if coin_in.is_zero() || min_out.is_zero() {
             return Err(Error::ZeroSwapAmount);
@@ -122,6 +128,9 @@ impl SwapParams {
         Ok(params)
     }
 
+    /// Two-input swap. Returns `Err(ZeroSwapAmount)` if any coin is zero,
+    /// `Err(SameSwapCurrency)` if an input ticker equals the output ticker,
+    /// or `Err(DuplicateSwapInputCurrency)` if the two input tickers match.
     pub fn two(coin_in_1: WireCoin, coin_in_2: WireCoin, min_out: WireCoin) -> Result<Self, Error> {
         if coin_in_1.is_zero() || coin_in_2.is_zero() || min_out.is_zero() {
             return Err(Error::ZeroSwapAmount);
@@ -141,7 +150,8 @@ impl SwapParams {
         Ok(params)
     }
 
-    pub fn min_out(&self) -> &WireCoin {
+    /// Returns the minimum output coin, common to both variants.
+    pub const fn min_out(&self) -> &WireCoin {
         match self {
             Self::One { min_out, .. } | Self::Two { min_out, .. } => min_out,
         }

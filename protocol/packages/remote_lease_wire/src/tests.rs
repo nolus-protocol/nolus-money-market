@@ -390,6 +390,16 @@ fn swap_params_two_zero_coin_in_2_rejected() {
 }
 
 #[test]
+fn swap_params_two_zero_min_out_rejected() {
+    let res = SwapParams::two(
+        WireCoin::new(1000, Ticker::new("NLS")),
+        WireCoin::new(500, Ticker::new("LC1")),
+        WireCoin::new(0, Ticker::new("LPN")),
+    );
+    assert!(matches!(res, Err(Error::ZeroSwapAmount)));
+}
+
+#[test]
 fn swap_params_two_coin_in_1_same_as_min_out_rejected() {
     let res = SwapParams::two(
         WireCoin::new(1000, Ticker::new("LPN")),

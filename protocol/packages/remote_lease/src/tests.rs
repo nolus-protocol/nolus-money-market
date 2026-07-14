@@ -372,6 +372,16 @@ fn swap_params_two_zero_coin_in_2_rejected() {
 }
 
 #[test]
+fn swap_params_two_zero_min_out_rejected() {
+    let res = SwapParams::two(
+        Coin::<PaymentC1>::new(1000).into(),
+        Coin::<PaymentC3>::new(500).into(),
+        Coin::<PaymentC2>::new(0).into(),
+    );
+    assert!(matches!(res, Err(Error::ZeroSwapAmount)));
+}
+
+#[test]
 fn swap_params_two_coin_in_1_same_as_min_out_rejected() {
     let res = SwapParams::two(
         Coin::<PaymentC2>::new(1000).into(),

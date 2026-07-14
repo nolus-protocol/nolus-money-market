@@ -143,6 +143,10 @@ impl CloseLeaseParams {
     rename_all = "snake_case",
     try_from = "SwapParamsRaw"
 )]
+/// Swap parameters for the remote lease protocol.
+///
+/// `One` carries a single input coin; `Two` carries two input coins.
+/// All coins must be non-zero and all currencies pairwise distinct.
 pub enum SwapParams {
     One {
         coin_in: CoinDTO<PaymentGroup>,
@@ -158,6 +162,8 @@ pub enum SwapParams {
 impl SwapParams {
     pub const TIMEOUT: Duration = Duration::from_secs(300);
 
+    /// Single-input swap. Returns `Err(ZeroSwapAmount)` if either coin is
+    /// zero, or `Err(SameSwapCurrency)` if the currencies match.
     pub fn one(
         coin_in: CoinDTO<PaymentGroup>,
         min_out: CoinDTO<PaymentGroup>,
@@ -173,6 +179,9 @@ impl SwapParams {
         Ok(params)
     }
 
+    /// Two-input swap. Returns `Err(ZeroSwapAmount)` if any coin is zero,
+    /// `Err(SameSwapCurrency)` if an input currency equals the output currency,
+    /// or `Err(DuplicateSwapInputCurrency)` if the two input currencies match.
     pub fn two(
         coin_in_1: CoinDTO<PaymentGroup>,
         coin_in_2: CoinDTO<PaymentGroup>,
@@ -197,7 +206,8 @@ impl SwapParams {
         Ok(params)
     }
 
-    pub fn min_out(&self) -> &CoinDTO<PaymentGroup> {
+    /// Returns the minimum output coin, common to both variants.
+    pub const fn min_out(&self) -> &CoinDTO<PaymentGroup> {
         match self {
             Self::One { min_out, .. } | Self::Two { min_out, .. } => min_out,
         }
