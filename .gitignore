@@ -36,3 +36,6 @@ accounts
 nolusd
 contracts-schemas
 target.tar.gz
+
+# Claude
+.claude/

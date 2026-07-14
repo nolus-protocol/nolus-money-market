@@ -7,11 +7,10 @@ pub use self::{
     connect::{Connectable, ConnectionParams, Ics20Channel},
     enterable::Enterable,
     error::Result as DexResult,
-    ica_connectee::IcaConnectee,
     impl_::{
-        AcceptAnyNonZeroSwap, AcceptUpToMaxSlippage, IcaConnector, MaxSlippage,
-        StartLocalLocalState, StartLocalRemoteState, StartTransferInState, StateLocalOut,
-        StateRemoteOut, TransferOut, start_local_local, start_local_remote, start_remote_local,
+        AcceptAnyNonZeroSwap, AcceptUpToMaxSlippage, MaxSlippage, StartLocalLocalState,
+        StartLocalRemoteState, StartTransferInState, StateLocalOut, StateRemoteOut, TransferOut,
+        start_local_local, start_local_remote, start_remote_local,
     },
     resp_delivery::ForwardToInner,
     response::{ContinueResult, Handler, Response, Result},
@@ -31,8 +30,6 @@ mod connect;
 mod enterable;
 #[cfg(feature = "impl")]
 mod error;
-#[cfg(feature = "impl")]
-mod ica_connectee;
 #[cfg(feature = "impl")]
 mod impl_;
 #[cfg(feature = "impl")]

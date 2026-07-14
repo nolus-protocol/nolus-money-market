@@ -76,7 +76,7 @@ fn full_liquidation() {
 
     let reserve: Addr = test_case.address_book.reserve().clone();
 
-    let ica_addr: Addr = TestCase::ica_addr(&lease_addr, TestCase::LEASE_ICA_ID);
+    let ica_addr: Addr = TestCase::stub_pda(1);
 
     let lease_amount: Amount = 2857142857142;
     let borrowed_amount: Amount = 1857142857142;

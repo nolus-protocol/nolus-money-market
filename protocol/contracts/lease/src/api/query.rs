@@ -90,21 +90,9 @@ pub mod opening {
     )]
     #[serde(deny_unknown_fields, rename_all = "snake_case")]
     pub enum OngoingTrx {
-        /// The lease has emitted `Factory::open` and is waiting for the
-        /// controller's `OpenLease` ack. The Solana-side PDA is not yet
-        /// known at this point.
-        RequestingOpenLease,
-        /// The controller has acked; the lease holds the Solana-side
-        /// PDA and is progressing toward the live `Active` state.
-        OpenLease {
-            remote_lease: RemoteLeaseId,
-        },
-        TransferOut {
-            ica_account: String,
-        },
-        BuyAsset {
-            ica_account: String,
-        },
+        OpenLease,
+        TransferOut { remote_lease: RemoteLeaseId },
+        BuyAsset { remote_lease: RemoteLeaseId },
     }
 }
 

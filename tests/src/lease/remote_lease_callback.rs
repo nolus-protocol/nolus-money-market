@@ -159,15 +159,13 @@ fn drive_to_swap_pending() -> (
     );
     let exp_borrow: LpnCoin = quote.borrow.try_into().unwrap();
 
-    let ica_addr = super::TestCase::ica_addr(&lease, super::TestCase::LEASE_ICA_ID);
-    let ica_port = format!("icacontroller-{ica_addr}");
-    let ica_channel = format!("channel-{ica_addr}");
+    // Single lease per test case, so the stand-in mints the first PDA.
+    let remote = super::TestCase::stub_pda(1);
 
-    let response = common::lease::confirm_ica_and_transfer_funds::<LeaseCurrency, LpnCurrency>(
+    let response = common::lease::transfer_out_and_reach_swap::<LeaseCurrency, LpnCurrency>(
         &mut test_case.app,
         lease.clone(),
-        super::TestCase::DEX_CONNECTION_ID,
-        (&ica_channel, &ica_port, ica_addr),
+        remote,
         (downpayment, exp_borrow),
     );
 

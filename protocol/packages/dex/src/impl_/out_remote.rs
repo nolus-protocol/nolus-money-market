@@ -1,82 +1,49 @@
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    Connectable, IcaConnectee, SwapTask as SwapTaskT,
-    impl_::{
-        IcaConnector, SwapExactIn, SwapExactInRespDelivery, TransferOut, TransferOutRespDelivery,
-        resp_delivery::ICAOpenResponseDelivery,
-    },
+    ForwardToInner, SwapTask as SwapTaskT,
+    impl_::{SwapExactIn, SwapExactInRespDelivery, TransferOut, TransferOutRespDelivery},
 };
-
-pub type OpenIcaRespDelivery<OpenIca, SwapResult, ForwardToInnerMsg> =
-    ICAOpenResponseDelivery<IcaConnector<OpenIca, SwapResult>, ForwardToInnerMsg>;
 
 #[derive(Serialize, Deserialize)]
 #[serde(bound(
-    serialize = "OpenIca: Serialize, SwapTask: Serialize",
-    deserialize = "OpenIca: Deserialize<'de>, SwapTask: Deserialize<'de>",
+    serialize = "SwapTask: Serialize",
+    deserialize = "SwapTask: Deserialize<'de>",
 ))]
-pub enum State<OpenIca, SwapTask, SwapClient, ForwardToInnerMsg, ForwardToInnerContinueMsg>
+pub enum State<SwapTask, SwapClient, ForwardToInnerMsg>
 where
     SwapTask: SwapTaskT,
 {
-    OpenIca(IcaConnector<OpenIca, SwapTask::Result>),
-    OpenIcaRespDelivery(OpenIcaRespDelivery<OpenIca, SwapTask::Result, ForwardToInnerContinueMsg>),
     TransferOut(TransferOut<SwapTask, Self, SwapClient>),
     TransferOutRespDelivery(TransferOutRespDelivery<SwapTask, Self, SwapClient, ForwardToInnerMsg>),
     SwapExactIn(SwapExactIn<SwapTask, Self, SwapClient>),
     SwapExactInRespDelivery(SwapExactInRespDelivery<SwapTask, Self, SwapClient, ForwardToInnerMsg>),
 }
 
-pub type StartLocalRemoteState<OpenIca, SwapTask> =
-    IcaConnector<OpenIca, <SwapTask as SwapTaskT>::Result>;
+pub type StartLocalRemoteState<SwapTask, SwapClient, ForwardToInnerMsg> =
+    TransferOut<SwapTask, State<SwapTask, SwapClient, ForwardToInnerMsg>, SwapClient>;
 
-pub fn start<OpenIca, SwapTask>(connectee: OpenIca) -> StartLocalRemoteState<OpenIca, SwapTask>
+pub fn start<SwapTask, SwapClient, ForwardToInnerMsg>(
+    spec: SwapTask,
+) -> StartLocalRemoteState<SwapTask, SwapClient, ForwardToInnerMsg>
 where
-    OpenIca: IcaConnectee + Connectable,
     SwapTask: SwapTaskT,
+    ForwardToInnerMsg: ForwardToInner,
 {
-    StartLocalRemoteState::<OpenIca, SwapTask>::new(connectee)
+    StartLocalRemoteState::new(spec)
 }
 
 mod impl_into {
     use crate::{
         SwapTask as SwapTaskT,
-        impl_::{
-            IcaConnector, SwapExactIn, SwapExactInRespDelivery, TransferOut,
-            TransferOutRespDelivery,
-        },
+        impl_::{SwapExactIn, SwapExactInRespDelivery, TransferOut, TransferOutRespDelivery},
     };
 
-    use super::{OpenIcaRespDelivery, State};
+    use super::State;
 
-    impl<OpenIca, SwapTask, SwapClient, ForwardToInnerMsg, ForwardToInnerContinueMsg>
-        From<IcaConnector<OpenIca, SwapTask::Result>>
-        for State<OpenIca, SwapTask, SwapClient, ForwardToInnerMsg, ForwardToInnerContinueMsg>
-    where
-        SwapTask: SwapTaskT,
-    {
-        fn from(value: IcaConnector<OpenIca, SwapTask::Result>) -> Self {
-            Self::OpenIca(value)
-        }
-    }
-
-    impl<OpenIca, SwapTask, SwapClient, ForwardToInnerMsg, ForwardToInnerContinueMsg>
-        From<OpenIcaRespDelivery<OpenIca, SwapTask::Result, ForwardToInnerContinueMsg>>
-        for State<OpenIca, SwapTask, SwapClient, ForwardToInnerMsg, ForwardToInnerContinueMsg>
-    where
-        SwapTask: SwapTaskT,
-    {
-        fn from(
-            value: OpenIcaRespDelivery<OpenIca, SwapTask::Result, ForwardToInnerContinueMsg>,
-        ) -> Self {
-            Self::OpenIcaRespDelivery(value)
-        }
-    }
-
-    impl<OpenIca, SwapTask, SwapClient, ForwardToInnerMsg, ForwardToInnerContinueMsg>
-        From<TransferOut<SwapTask, Self, SwapClient>>
-        for State<OpenIca, SwapTask, SwapClient, ForwardToInnerMsg, ForwardToInnerContinueMsg>
+    impl<SwapTask, SwapClient, ForwardToInnerMsg>
+        From<TransferOut<SwapTask, State<SwapTask, SwapClient, ForwardToInnerMsg>, SwapClient>>
+        for State<SwapTask, SwapClient, ForwardToInnerMsg>
     where
         SwapTask: SwapTaskT,
     {
@@ -85,9 +52,15 @@ mod impl_into {
         }
     }
 
-    impl<OpenIca, SwapTask, SwapClient, ForwardToInnerMsg, ForwardToInnerContinueMsg>
-        From<TransferOutRespDelivery<SwapTask, Self, SwapClient, ForwardToInnerMsg>>
-        for State<OpenIca, SwapTask, SwapClient, ForwardToInnerMsg, ForwardToInnerContinueMsg>
+    impl<SwapTask, SwapClient, ForwardToInnerMsg>
+        From<
+            TransferOutRespDelivery<
+                SwapTask,
+                State<SwapTask, SwapClient, ForwardToInnerMsg>,
+                SwapClient,
+                ForwardToInnerMsg,
+            >,
+        > for State<SwapTask, SwapClient, ForwardToInnerMsg>
     where
         SwapTask: SwapTaskT,
     {
@@ -98,9 +71,8 @@ mod impl_into {
         }
     }
 
-    impl<OpenIca, SwapTask, SwapClient, ForwardToInnerMsg, ForwardToInnerContinueMsg>
-        From<SwapExactIn<SwapTask, Self, SwapClient>>
-        for State<OpenIca, SwapTask, SwapClient, ForwardToInnerMsg, ForwardToInnerContinueMsg>
+    impl<SwapTask, SwapClient, ForwardToInnerMsg> From<SwapExactIn<SwapTask, Self, SwapClient>>
+        for State<SwapTask, SwapClient, ForwardToInnerMsg>
     where
         SwapTask: SwapTaskT,
     {
@@ -109,9 +81,9 @@ mod impl_into {
         }
     }
 
-    impl<OpenIca, SwapTask, SwapClient, ForwardToInnerMsg, ForwardToInnerContinueMsg>
+    impl<SwapTask, SwapClient, ForwardToInnerMsg>
         From<SwapExactInRespDelivery<SwapTask, Self, SwapClient, ForwardToInnerMsg>>
-        for State<OpenIca, SwapTask, SwapClient, ForwardToInnerMsg, ForwardToInnerContinueMsg>
+        for State<SwapTask, SwapClient, ForwardToInnerMsg>
     where
         SwapTask: SwapTaskT,
     {
@@ -124,13 +96,11 @@ mod impl_into {
 }
 
 mod impl_handler {
-    use std::fmt::Display;
-
     use platform::ica::ErrorResponse as ICAErrorResponse;
     use sdk::cosmwasm_std::{Binary, Env, MessageInfo, QuerierWrapper, Reply};
 
     use crate::{
-        Connectable, IcaConnectee, SwapTask as SwapTaskT, TimeAlarm,
+        SwapTask as SwapTaskT,
         impl_::{
             self, ForwardToInner, Handler,
             response::{ContinueResult, Result},
@@ -140,14 +110,12 @@ mod impl_handler {
 
     use super::State;
 
-    impl<OpenIca, SwapTask, SwapClient, ForwardToInnerMsg, ForwardToInnerContinueMsg> Handler
-        for State<OpenIca, SwapTask, SwapClient, ForwardToInnerMsg, ForwardToInnerContinueMsg>
+    impl<SwapTask, SwapClient, ForwardToInnerMsg> Handler
+        for State<SwapTask, SwapClient, ForwardToInnerMsg>
     where
-        OpenIca: Connectable + IcaConnectee<State = Self> + TimeAlarm + Display,
         SwapTask: SwapTaskT,
         SwapClient: ExactAmountIn,
         ForwardToInnerMsg: ForwardToInner,
-        ForwardToInnerContinueMsg: ForwardToInner,
     {
         type Response = Self;
         type SwapResult = SwapTask::Result;
@@ -158,8 +126,6 @@ mod impl_handler {
             info: &MessageInfo,
         ) -> crate::error::Result<()> {
             match self {
-                State::OpenIca(inner) => inner.authz_remote_callback(querier, info),
-                State::OpenIcaRespDelivery(inner) => inner.authz_remote_callback(querier, info),
                 State::TransferOut(inner) => inner.authz_remote_callback(querier, info),
                 State::TransferOutRespDelivery(inner) => inner.authz_remote_callback(querier, info),
                 State::SwapExactIn(inner) => inner.authz_remote_callback(querier, info),
@@ -174,14 +140,6 @@ mod impl_handler {
             env: Env,
         ) -> ContinueResult<Self> {
             match self {
-                State::OpenIca(inner) => impl_::forward_to_inner_ica::<
-                    _,
-                    ForwardToInnerContinueMsg,
-                    Self,
-                >(inner, counterparty_version, env),
-                State::OpenIcaRespDelivery(inner) => {
-                    Handler::on_open_ica(inner, counterparty_version, querier, env)
-                }
                 State::TransferOut(inner) => {
                     Handler::on_open_ica(inner, counterparty_version, querier, env)
                 }
@@ -204,12 +162,6 @@ mod impl_handler {
             env: Env,
         ) -> Result<Self> {
             match self {
-                State::OpenIca(inner) => {
-                    Handler::on_response(inner, response, querier, env).map_into()
-                }
-                State::OpenIcaRespDelivery(inner) => {
-                    Handler::on_response(inner, response, querier, env).map_into()
-                }
                 State::TransferOut(inner) => {
                     impl_::forward_to_inner::<_, ForwardToInnerMsg, Self>(inner, response, env)
                 }
@@ -233,12 +185,6 @@ mod impl_handler {
             env: Env,
         ) -> Result<Self> {
             match self {
-                State::OpenIca(inner) => {
-                    Handler::on_error(inner, response, querier, env).map_into()
-                }
-                State::OpenIcaRespDelivery(inner) => {
-                    Handler::on_error(inner, response, querier, env).map_into()
-                }
                 State::TransferOut(inner) => {
                     Handler::on_error(inner, response, querier, env).map_into()
                 }
@@ -256,8 +202,6 @@ mod impl_handler {
 
         fn on_timeout(self, querier: QuerierWrapper<'_>, env: Env) -> ContinueResult<Self> {
             match self {
-                State::OpenIca(inner) => Handler::on_timeout(inner, querier, env),
-                State::OpenIcaRespDelivery(inner) => Handler::on_timeout(inner, querier, env),
                 State::TransferOut(inner) => Handler::on_timeout(inner, querier, env),
                 State::TransferOutRespDelivery(inner) => Handler::on_timeout(inner, querier, env),
                 State::SwapExactIn(inner) => Handler::on_timeout(inner, querier, env),
@@ -267,10 +211,6 @@ mod impl_handler {
 
         fn on_inner(self, querier: QuerierWrapper<'_>, env: Env) -> Result<Self> {
             match self {
-                State::OpenIca(inner) => Handler::on_inner(inner, querier, env).map_into(),
-                State::OpenIcaRespDelivery(inner) => {
-                    Handler::on_inner(inner, querier, env).map_into()
-                }
                 State::TransferOut(inner) => Handler::on_inner(inner, querier, env).map_into(),
                 State::TransferOutRespDelivery(inner) => {
                     Handler::on_inner(inner, querier, env).map_into()
@@ -284,10 +224,6 @@ mod impl_handler {
 
         fn on_inner_continue(self, querier: QuerierWrapper<'_>, env: Env) -> ContinueResult<Self> {
             match self {
-                State::OpenIca(inner) => Handler::on_inner_continue(inner, querier, env),
-                State::OpenIcaRespDelivery(inner) => {
-                    Handler::on_inner_continue(inner, querier, env)
-                }
                 State::TransferOut(inner) => Handler::on_inner_continue(inner, querier, env),
                 State::TransferOutRespDelivery(inner) => {
                     Handler::on_inner_continue(inner, querier, env)
@@ -301,8 +237,6 @@ mod impl_handler {
 
         fn heal(self, querier: QuerierWrapper<'_>, env: Env) -> Result<Self> {
             match self {
-                State::OpenIca(inner) => Handler::heal(inner, querier, env).map_into(),
-                State::OpenIcaRespDelivery(inner) => Handler::heal(inner, querier, env).map_into(),
                 State::TransferOut(inner) => Handler::heal(inner, querier, env).map_into(),
                 State::TransferOutRespDelivery(inner) => {
                     Handler::heal(inner, querier, env).map_into()
@@ -316,8 +250,6 @@ mod impl_handler {
 
         fn reply(self, querier: QuerierWrapper<'_>, env: Env, msg: Reply) -> ContinueResult<Self> {
             match self {
-                State::OpenIca(inner) => Handler::reply(inner, querier, env, msg),
-                State::OpenIcaRespDelivery(inner) => Handler::reply(inner, querier, env, msg),
                 State::TransferOut(inner) => Handler::reply(inner, querier, env, msg),
                 State::TransferOutRespDelivery(inner) => Handler::reply(inner, querier, env, msg),
                 State::SwapExactIn(inner) => Handler::reply(inner, querier, env, msg),
@@ -332,12 +264,6 @@ mod impl_handler {
             info: MessageInfo,
         ) -> Result<Self> {
             match self {
-                State::OpenIca(inner) => {
-                    Handler::on_time_alarm(inner, querier, env, info).map_into()
-                }
-                State::OpenIcaRespDelivery(inner) => {
-                    Handler::on_time_alarm(inner, querier, env, info).map_into()
-                }
                 State::TransferOut(inner) => {
                     Handler::on_time_alarm(inner, querier, env, info).map_into()
                 }
@@ -364,14 +290,13 @@ mod impl_contract {
 
     use super::State;
 
-    impl<OpenIca, SwapTask, SwapClient, ForwardToInnerMsg, ForwardToInnerContinueMsg> Contract
-        for State<OpenIca, SwapTask, SwapClient, ForwardToInnerMsg, ForwardToInnerContinueMsg>
+    impl<SwapTask, SwapClient, ForwardToInnerMsg> Contract
+        for State<SwapTask, SwapClient, ForwardToInnerMsg>
     where
-        OpenIca: Contract,
-        SwapTask: SwapTaskT<StateResponse = OpenIca::StateResponse>
-            + ContractInSwap<StateResponse = OpenIca::StateResponse>,
+        SwapTask:
+            SwapTaskT + ContractInSwap<StateResponse = <SwapTask as SwapTaskT>::StateResponse>,
     {
-        type StateResponse = OpenIca::StateResponse;
+        type StateResponse = <SwapTask as SwapTaskT>::StateResponse;
 
         fn state(
             self,
@@ -380,10 +305,6 @@ mod impl_contract {
             querier: QuerierWrapper<'_>,
         ) -> Self::StateResponse {
             match self {
-                State::OpenIca(inner) => Contract::state(inner, now, due_projection, querier),
-                State::OpenIcaRespDelivery(inner) => {
-                    Contract::state(inner, now, due_projection, querier)
-                }
                 State::TransferOut(inner) => Contract::state(inner, now, due_projection, querier),
                 State::TransferOutRespDelivery(inner) => {
                     Contract::state(inner, now, due_projection, querier)
@@ -404,16 +325,13 @@ mod impl_display {
 
     use super::State;
 
-    impl<OpenIca, SwapTask, SwapClient, ForwardToInnerMsg, ForwardToInnerContinueMsg> Display
-        for State<OpenIca, SwapTask, SwapClient, ForwardToInnerMsg, ForwardToInnerContinueMsg>
+    impl<SwapTask, SwapClient, ForwardToInnerMsg> Display
+        for State<SwapTask, SwapClient, ForwardToInnerMsg>
     where
-        OpenIca: Display,
         SwapTask: SwapTaskT,
     {
         fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
             match self {
-                State::OpenIca(inner) => Display::fmt(inner, f),
-                State::OpenIcaRespDelivery(inner) => Display::fmt(inner, f),
                 State::TransferOut(inner) => Display::fmt(inner, f),
                 State::TransferOutRespDelivery(inner) => Display::fmt(inner, f),
                 State::SwapExactIn(inner) => Display::fmt(inner, f),
@@ -425,69 +343,33 @@ mod impl_display {
 
 #[cfg(feature = "migration")]
 mod impl_migration {
-
-    use super::{OpenIcaRespDelivery, State};
+    use super::State;
     use crate::{
-        Connectable, IcaConnectee, SwapTask as SwapTaskT,
-        impl_::{ForwardToInner, IcaConnector, migration::MigrateSpec},
+        SwapTask as SwapTaskT,
+        impl_::{ForwardToInner, migration::MigrateSpec},
         swap::ExactAmountIn,
     };
 
-    //cannot impl MigrateSpec due to the need to migrate OpenIca as well
-    impl<SwapTask, OpenIca, SwapClient, ForwardToInnerMsg, ForwardToInnerContinueMsg>
-        State<OpenIca, SwapTask, SwapClient, ForwardToInnerMsg, ForwardToInnerContinueMsg>
+    impl<SwapTask, SwapTaskNew, SEnumNew, SwapClient, ForwardToInnerMsg>
+        MigrateSpec<SwapTask, SwapTaskNew, SEnumNew>
+        for State<SwapTask, SwapClient, ForwardToInnerMsg>
     where
         SwapTask: SwapTaskT,
         SwapClient: ExactAmountIn,
         ForwardToInnerMsg: ForwardToInner,
+        SwapTaskNew: SwapTaskT<OutG = SwapTask::OutG>,
     {
-        pub fn migrate<MigrateOpenIcaFn, MigrateSpecFn, OpenIcaNew, SwapTaskNew>(
-            self,
-            migrate_open_ica: MigrateOpenIcaFn,
-            migrate_spec: MigrateSpecFn,
-        ) -> State<OpenIcaNew, SwapTaskNew, SwapClient, ForwardToInnerMsg, ForwardToInnerContinueMsg>
+        type Out = State<SwapTaskNew, SwapClient, ForwardToInnerMsg>;
+
+        fn migrate_spec<MigrateFn>(self, migrate_fn: MigrateFn) -> Self::Out
         where
-            OpenIca: MigrateSpec<
-                    OpenIca,
-                    OpenIcaNew,
-                    State<
-                        OpenIcaNew,
-                        SwapTaskNew,
-                        SwapClient,
-                        ForwardToInnerMsg,
-                        ForwardToInnerContinueMsg,
-                    >,
-                >,
-            OpenIca::Out: IcaConnectee + Connectable,
-            IcaConnector<OpenIca::Out, SwapTask::Result>: Into<
-                State<
-                    OpenIcaNew,
-                    SwapTaskNew,
-                    SwapClient,
-                    ForwardToInnerMsg,
-                    ForwardToInnerContinueMsg,
-                >,
-            >,
-            OpenIcaRespDelivery<OpenIca::Out, SwapTask::Result, ForwardToInnerContinueMsg>: Into<
-                State<
-                    OpenIcaNew,
-                    SwapTaskNew,
-                    SwapClient,
-                    ForwardToInnerMsg,
-                    ForwardToInnerContinueMsg,
-                >,
-            >,
-            MigrateOpenIcaFn: FnOnce(OpenIca) -> OpenIcaNew,
-            MigrateSpecFn: FnOnce(SwapTask) -> SwapTaskNew,
-            SwapTaskNew: SwapTaskT,
+            MigrateFn: FnOnce(SwapTask) -> SwapTaskNew,
         {
             match self {
-                State::OpenIca(inner) => inner.migrate_spec(migrate_open_ica).into(),
-                State::OpenIcaRespDelivery(inner) => inner.migrate_spec(migrate_open_ica).into(),
-                State::TransferOut(inner) => inner.migrate_spec(migrate_spec).into(),
-                State::TransferOutRespDelivery(inner) => inner.migrate_spec(migrate_spec).into(),
-                State::SwapExactIn(inner) => inner.migrate_spec(migrate_spec).into(),
-                State::SwapExactInRespDelivery(inner) => inner.migrate_spec(migrate_spec).into(),
+                State::TransferOut(inner) => inner.migrate_spec(migrate_fn).into(),
+                State::TransferOutRespDelivery(inner) => inner.migrate_spec(migrate_fn).into(),
+                State::SwapExactIn(inner) => inner.migrate_spec(migrate_fn).into(),
+                State::SwapExactInRespDelivery(inner) => inner.migrate_spec(migrate_fn).into(),
             }
         }
     }

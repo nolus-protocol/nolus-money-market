@@ -53,8 +53,14 @@ impl TestCase<(), (), (), (), (), (), (), ()> {
 
     pub const DEFAULT_LPP_MIN_UTILIZATION: Percent100 = Percent100::ZERO;
 
-    pub fn ica_addr(local: &Addr, id: &str) -> Addr {
-        testing::user(&format!("{local}-ica{id}"))
+    /// The Solana-side remote-lease PDA the controller stand-in mints for the
+    /// `ordinal`-th `OpenLease` of a test case (`ordinal` starts at 1).
+    ///
+    /// Mirrors `remote_lease_controller_stub::synth_open_lease_response`
+    /// verbatim so assertions and swap/transfer simulations target the exact
+    /// address the lease derives its remote account from.
+    pub fn stub_pda(ordinal: u64) -> Addr {
+        Addr::unchecked(format!("StubPda{ordinal:1>32}"))
     }
 
     fn with_reserve(reserve: &[CwCoin]) -> Self {
@@ -110,8 +116,6 @@ impl<ProtocolsRegistry, Treasury>
             },
             InitConfig::new(lease_currency, common::coin(1000), None),
             LeaseInstantiatorConfig::default(),
-            TestCase::DEX_CONNECTION_ID,
-            TestCase::LEASE_ICA_ID,
         )
     }
 }

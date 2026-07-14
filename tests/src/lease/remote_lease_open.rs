@@ -34,8 +34,8 @@ fn open_lifecycle_happy_path() {
 
     let remote_lease = match state {
         StateResponse::Opening { in_progress, .. } => match in_progress {
-            OpeningOngoingTrx::OpenLease { remote_lease } => remote_lease,
-            other => panic!("expected OngoingTrx::OpenLease, got {other:?}"),
+            OpeningOngoingTrx::TransferOut { remote_lease } => remote_lease,
+            other => panic!("expected OngoingTrx::TransferOut, got {other:?}"),
         },
         other => panic!("expected StateResponse::Opening, got {other:?}"),
     };

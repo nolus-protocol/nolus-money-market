@@ -64,7 +64,7 @@ fn liquidation_time_alarm(
         |_| {},
     );
 
-    let ica_addr: Addr = TestCase::ica_addr(&lease_addr, TestCase::LEASE_ICA_ID);
+    let ica_addr: Addr = TestCase::stub_pda(1);
 
     let mut response: ResponseWithInterChainMsgs<'_, ()> = crate::common::swap::do_swap(
         &mut test_case.app,

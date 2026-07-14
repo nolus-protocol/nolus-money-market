@@ -2,6 +2,7 @@ use calculator::Factory as CalculatorFactory;
 use currency::{CurrencyDef, Group, MemberOf};
 use finish::BuyAssetFinish;
 use oracle::stub::SwapPath;
+use remote_lease::response::RemoteLeaseId;
 use serde::{Deserialize, Serialize};
 
 use dex::{
@@ -10,15 +11,13 @@ use dex::{
 };
 use finance::instant::Instant;
 use finance::{coin::CoinDTO, duration::Duration};
-use platform::ica::HostAccount;
-use remote_lease::response::RemoteLeaseId;
 use sdk::cosmwasm_std::{MessageInfo, QuerierWrapper};
 use timealarms::stub::TimeAlarmsRef;
 
 use crate::{
     api::{
         DownpaymentCoin, LeaseAssetCurrencies, LeasePaymentCurrencies,
-        open::{NewLeaseContract, NewLeaseForm},
+        open::NewLeaseForm,
         query::{StateResponse as QueryStateResponse, opening::OngoingTrx},
     },
     contract::{
@@ -27,7 +26,7 @@ use crate::{
         state::{
             SwapClient, SwapResult,
             out_task::{OutTaskFactory, WithOutCurrency},
-            resp_delivery::{ForwardToDexEntry, ForwardToDexEntryContinue},
+            resp_delivery::ForwardToDexEntry,
         },
     },
     error::ContractResult,
@@ -35,37 +34,31 @@ use crate::{
     finance::{LppRef, OracleRef},
 };
 
-use super::open_ica::OpenIcaAccount;
-
 mod calculator;
 mod finish;
 
 type AssetGroup = LeaseAssetCurrencies;
 #[allow(dead_code)]
-pub(super) type StartState = StartLocalRemoteState<OpenIcaAccount, BuyAsset>;
-pub(in super::super) type DexState = dex::StateRemoteOut<
-    OpenIcaAccount,
-    BuyAsset,
-    SwapClient,
-    ForwardToDexEntry,
-    ForwardToDexEntryContinue,
->;
+pub(super) type StartState = StartLocalRemoteState<BuyAsset, SwapClient, ForwardToDexEntry>;
+pub(in super::super) type DexState = dex::StateRemoteOut<BuyAsset, SwapClient, ForwardToDexEntry>;
 
 pub(super) fn start(
-    new_lease: NewLeaseContract,
+    new_lease: NewLeaseForm,
+    dex_account: Account,
+    remote_lease: RemoteLeaseId,
     downpayment: DownpaymentCoin,
     loan: OpenLoanRespResult,
     deps: (LppRef, OracleRef, TimeAlarmsRef, LeasesRef),
     start_opening_at: Instant,
-    remote_lease_id: RemoteLeaseId,
 ) -> StartState {
-    dex::start_local_remote::<_, BuyAsset>(OpenIcaAccount::new(
+    dex::start_local_remote(BuyAsset::new(
         new_lease,
+        dex_account,
+        remote_lease,
         downpayment,
         loan,
         deps,
         start_opening_at,
-        remote_lease_id,
     ))
 }
 
@@ -75,44 +68,44 @@ type BuyAssetStateResponse = <BuyAsset as SwapTask>::StateResponse;
 pub struct BuyAsset {
     form: NewLeaseForm,
     dex_account: Account,
+    remote_lease: RemoteLeaseId,
     downpayment: DownpaymentCoin,
     loan: OpenLoanRespResult,
     deps: (LppRef, OracleRef, TimeAlarmsRef, LeasesRef),
     start_opening_at: Instant,
-    remote_lease_id: RemoteLeaseId,
 }
 
 impl BuyAsset {
     pub(super) fn new(
         form: NewLeaseForm,
         dex_account: Account,
+        remote_lease: RemoteLeaseId,
         downpayment: DownpaymentCoin,
         loan: OpenLoanRespResult,
         deps: (LppRef, OracleRef, TimeAlarmsRef, LeasesRef),
         start_opening_at: Instant,
-        remote_lease_id: RemoteLeaseId,
     ) -> Self {
         Self {
             form,
             dex_account,
+            remote_lease,
             downpayment,
             loan,
             deps,
             start_opening_at,
-            remote_lease_id,
         }
     }
 
-    fn state<InP>(self, in_progress_fn: InP) -> BuyAssetStateResponse
+    fn state<InP>(self, in_progress: InP) -> BuyAssetStateResponse
     where
-        InP: FnOnce(String) -> OngoingTrx,
+        InP: FnOnce(RemoteLeaseId) -> OngoingTrx,
     {
         Ok(QueryStateResponse::Opening {
             currency: self.form.currency,
             downpayment: self.downpayment,
             loan: self.loan.principal,
             loan_interest_rate: self.loan.annual_interest_rate,
-            in_progress: in_progress_fn(HostAccount::from(self.dex_account).into()),
+            in_progress: in_progress(self.remote_lease),
         })
     }
 }
@@ -196,8 +189,10 @@ impl ContractInSwap for BuyAsset {
         _querier: QuerierWrapper<'_>,
     ) -> Self::StateResponse {
         match in_progress {
-            Stage::TransferOut => self.state(|ica_account| OngoingTrx::TransferOut { ica_account }),
-            Stage::Swap => self.state(|ica_account| OngoingTrx::BuyAsset { ica_account }),
+            Stage::TransferOut => {
+                self.state(|remote_lease| OngoingTrx::TransferOut { remote_lease })
+            }
+            Stage::Swap => self.state(|remote_lease| OngoingTrx::BuyAsset { remote_lease }),
             Stage::TransferInInit => unimplemented!(),
             Stage::TransferInFinish => unimplemented!(),
         }

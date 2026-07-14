@@ -61,27 +61,3 @@ where
         Self::deliver(handler, response, querier, env)
     }
 }
-
-pub struct ICAOpenDeliveryAdapter();
-impl<H> DeliveryAdapter<H, String> for ICAOpenDeliveryAdapter
-where
-    H: Handler,
-{
-    fn deliver_continue(
-        handler: H,
-        counterparty_version: String,
-        querier: QuerierWrapper<'_>,
-        env: Env,
-    ) -> ResponseContinueResult<H> {
-        handler.on_open_ica(counterparty_version, querier, env)
-    }
-
-    fn deliver_again(
-        handler: H,
-        response: String,
-        querier: QuerierWrapper<'_>,
-        env: Env,
-    ) -> ResponseResult<H> {
-        Self::deliver_continue(handler, response, querier, env).into()
-    }
-}

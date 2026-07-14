@@ -91,12 +91,12 @@ where
             LeaseFactory::new(
                 spec.form,
                 lease_addr.clone(),
+                spec.remote_lease,
                 profit,
                 reserve,
                 (spec.deps.2, spec.deps.1.clone()),
                 spec.start_opening_at,
                 &now,
-                spec.remote_lease_id,
             )
         };
         let OpenLeaseResult {

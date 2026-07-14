@@ -39,11 +39,11 @@ pub(crate) mod with_lease_paid;
 // and those that take `self` into `&mut self` or `&self`
 pub struct Lease<Asset, Lpp, Oracle> {
     addr: Addr,
+    remote_lease: RemoteLeaseId,
     customer: Addr,
     position: Position<Asset>,
     loan: Loan<Lpp>,
     oracle: Oracle,
-    remote_lease_id: RemoteLeaseId,
 }
 
 pub type IntoDTOResult = LeaseDTOResult<Batch>;
@@ -62,22 +62,22 @@ where
 {
     pub(super) fn new(
         addr: Addr,
+        remote_lease: RemoteLeaseId,
         customer: Addr,
         position: Position<Asset>,
         loan: Loan<LppLoan>,
         oracle: Oracle,
-        remote_lease_id: RemoteLeaseId,
     ) -> Self {
         debug_assert!(!currency::equal::<LpnCurrency, Asset>());
         // TODO specify that Lpn is of Lpns and Asset is of LeaseGroup
 
         Self {
             addr,
+            remote_lease,
             customer,
             position,
             loan,
             oracle,
-            remote_lease_id,
         }
     }
 
@@ -89,11 +89,11 @@ where
     ) -> Self {
         Self::new(
             dto.addr,
+            dto.remote_lease,
             dto.customer,
             position,
             Loan::from_dto(dto.loan, lpp_loan),
             oracle,
-            dto.remote_lease_id,
         )
     }
 
@@ -136,13 +136,13 @@ where
     ) -> LeaseDTO {
         LeaseDTO::new(
             self.addr,
+            self.remote_lease,
             self.customer,
             self.position.into(),
             self.loan.into_dto(profit),
             time_alarms,
             self.oracle.into(),
             reserve,
-            self.remote_lease_id,
         )
     }
 
@@ -152,19 +152,18 @@ where
         time_alarms: TimeAlarmsRef,
         reserve: ReserveRef,
     ) -> ContractResult<IntoDTOResult> {
-        let remote_lease_id = self.remote_lease_id.clone();
         self.loan
             .try_into_dto(profit)
             .map(|(loan_dto, loan_batch)| IntoDTOResult {
                 lease: LeaseDTO::new(
                     self.addr,
+                    self.remote_lease,
                     self.customer,
                     self.position.into(),
                     loan_dto,
                     time_alarms,
                     self.oracle.into(),
                     reserve,
-                    remote_lease_id,
                 ),
                 result: loan_batch,
             })
@@ -349,11 +348,11 @@ pub(crate) mod tests {
             PositionSpec::no_close(liability, lpn_coin(15_000_000), MIN_TRANSACTION);
         Lease::new(
             lease,
+            RemoteLeaseId::new(REMOTE_LEASE_ID.to_owned()).expect("base58 sample"),
             Addr::unchecked(CUSTOMER),
             Position::new(amount, position_spec),
             loan,
             oracle,
-            RemoteLeaseId::new(REMOTE_LEASE_ID.to_owned()).expect("base58 sample"),
         )
     }
 

@@ -22,13 +22,13 @@ use super::{CloseStatusDTO, close_policy::check};
 pub struct LeaseFactory<'a> {
     form: NewLeaseForm,
     lease_addr: Addr,
+    remote_lease: RemoteLeaseId,
     profit: ProfitRef,
     reserve: ReserveRef,
     time_alarms: TimeAlarmsRef,
     price_alarms: OracleRef,
     start_at: Instant,
     now: &'a Instant,
-    remote_lease_id: RemoteLeaseId,
 }
 
 pub type OpenLeaseResult = LeaseDTOResult<CloseStatusDTO>;
@@ -38,23 +38,23 @@ impl<'a> LeaseFactory<'a> {
     pub(crate) fn new(
         form: NewLeaseForm,
         lease_addr: Addr,
+        remote_lease: RemoteLeaseId,
         profit: ProfitRef,
         reserve: ReserveRef,
         alarms: (TimeAlarmsRef, OracleRef),
         start_at: Instant,
         now: &'a Instant,
-        remote_lease_id: RemoteLeaseId,
     ) -> Self {
         Self {
             form,
             lease_addr,
+            remote_lease,
             profit,
             reserve,
             time_alarms: alarms.0,
             price_alarms: alarms.1,
             start_at,
             now,
-            remote_lease_id,
         }
     }
 }
@@ -85,11 +85,11 @@ impl WithLeaseDeps for LeaseFactory<'_> {
             );
             Lease::new(
                 self.lease_addr,
+                self.remote_lease,
                 self.form.customer,
                 position,
                 loan,
                 oracle,
-                self.remote_lease_id,
             )
         };
 

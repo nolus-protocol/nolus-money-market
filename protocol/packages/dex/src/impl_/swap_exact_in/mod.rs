@@ -172,29 +172,17 @@ where
     }
 }
 
-impl<OpenIca, SwapTask, SwapClient, ForwardToInnerMsg, ForwardToInnerContinueMsg> Handler
+impl<SwapTask, SwapClient, ForwardToInnerMsg> Handler
     for SwapExactIn<
         SwapTask,
-        super::out_remote::State<
-            OpenIca,
-            SwapTask,
-            SwapClient,
-            ForwardToInnerMsg,
-            ForwardToInnerContinueMsg,
-        >,
+        super::out_remote::State<SwapTask, SwapClient, ForwardToInnerMsg>,
         SwapClient,
     >
 where
     SwapTask: SwapTaskT,
     SwapClient: ExactAmountIn,
 {
-    type Response = super::out_remote::State<
-        OpenIca,
-        SwapTask,
-        SwapClient,
-        ForwardToInnerMsg,
-        ForwardToInnerContinueMsg,
-    >;
+    type Response = super::out_remote::State<SwapTask, SwapClient, ForwardToInnerMsg>;
     type SwapResult = SwapTask::Result;
 
     fn authz_remote_callback(

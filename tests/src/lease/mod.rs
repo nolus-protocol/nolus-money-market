@@ -217,7 +217,7 @@ pub(super) fn try_init_lease<
 where
     D: CurrencyDef,
 {
-    let downpayment = (!downpayment.is_zero()).then(|| common::cwcoin::<D>(downpayment));
+    let downpayment_funds = (!downpayment.is_zero()).then(|| common::cwcoin::<D>(downpayment));
 
     let mut response = test_case
         .app
@@ -228,18 +228,28 @@ where
                 currency: currency::dto::<LeaseCurrency, _>(),
                 max_ltd,
             },
-            downpayment.as_slice(),
+            downpayment_funds.as_slice(),
         )
         .unwrap();
 
-    response.expect_register_ica(TestCase::DEX_CONNECTION_ID, TestCase::LEASE_ICA_ID);
+    // The Ok-mode controller stand-in acks `OpenLease` inline, so the lease
+    // converts the minted PDA to its remote account and funds it with the
+    // downpayment and the drawn principal in the same tx.
+    let transfers = [
+        response.unwrap_ibc_transfer(),
+        response.unwrap_ibc_transfer(),
+    ];
     () = response.ignore_response().unwrap_response();
 
-    leaser_mod::expect_a_lease(
+    let lease = leaser_mod::expect_a_lease(
         &test_case.app,
         test_case.address_book.leaser().clone(),
         testing::user(USER),
-    )
+    );
+
+    common::lease::assert_open_funding(&test_case.app, &lease, downpayment, transfers);
+
+    lease
 }
 
 pub(super) fn complete_init_lease<

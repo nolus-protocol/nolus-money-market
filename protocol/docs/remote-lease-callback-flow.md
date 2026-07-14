@@ -154,13 +154,13 @@ RequestLoan ──open loan──▶ OpenLease
                      │             │
                      ▼             ▼
         super::buy_asset::start    OpenFailed  (terminal)
-        (legacy ICA-open cascade)  authenticated late-ack absorber:
-                                   emits `wasm-ls-remote-lease-late-ack`
+        (derives dex::Account      authenticated late-ack absorber:
+        from remote_lease, no ICA) emits `wasm-ls-remote-lease-late-ack`
 ```
 
 `OpenLease::on_remote_lease_callback` authenticates `info.sender` via `LeasesRef::remote_lease_callback_permission` before dispatching, identical to the in-flight DexState gate documented above. `OpenFailed` runs the same check — every callback handler that returns `Ok` is authz-gated, regardless of idempotence.
 
-The legacy ICA-open + DEX swap cascade entered via `super::buy_asset::start` is retained additively; later phases (swap replacement, TransferOut, CloseLease) migrate the remaining lifecycle stages off it.
+`super::buy_asset::start` no longer opens a Cosmos ICA: `on_open_lease_ack` converts the acked `RemoteLeaseId` directly into a `platform::ica::HostAccount`, builds `dex::Account` from it, funds that account via `IbcTransfer`, then buys the asset. Swap/repay/close transport still submits over ICA (`submit_tx`) — only account acquisition at open moved off ICA registration; later phases migrate the remaining transport off it.
 
 An `OperationOk` ack carrying any operation other than `OpenLease` (a `CloseLease` / `Swap` / `TransferOut` response against an in-flight open) can only originate from a buggy or hostile counterparty. The lease treats it exactly like `OperationErr`: it refunds the customer, finalises, and moves to `OpenFailed` with a synthesised `unexpected operation response: …` reason. It does **not** return `Err` — an error would revert the controller's `ibc_packet_ack`, stranding the relayer and freezing the lease in `OpenLease`. Operators see the same `wasm-ls-remote-lease-open-failed` event and audit the counterparty per the runbook.
 
