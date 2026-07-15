@@ -31,7 +31,7 @@ use cw_time::IntoInstant;
 
 /// Transfer out a list of coins to DEX
 ///
-/// Supports up to `CoinsNb::MAX` number of coins.
+/// Supports one or two coins.
 /// In does it in a single transaction with multiple messages expecting
 /// an acknowledgment per message.
 #[derive(Serialize, Deserialize)]
@@ -89,10 +89,7 @@ where
     }
 
     fn coins_len(spec: &SwapTask) -> CoinsNb {
-        let ret = spec.coins().into_iter().count();
-        assert!(ret > 0, "The swap task did not provide any coins!");
-        ret.try_into()
-            .expect("Functionality doesn't support this many coins!")
+        spec.coins().len()
     }
 
     fn generate_requests(&self, now: Instant) -> Batch {
