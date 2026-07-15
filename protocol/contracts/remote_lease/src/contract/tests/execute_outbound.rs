@@ -170,7 +170,7 @@ fn open_lease_execute() -> ExecuteMsg {
 }
 
 fn sample_swap_params() -> SwapParams {
-    SwapParams::new(
+    SwapParams::one(
         Coin::<PaymentC1>::new(1_000).into(),
         Coin::<PaymentC2>::new(42).into(),
     )

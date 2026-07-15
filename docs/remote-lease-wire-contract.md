@@ -17,10 +17,14 @@ The `remote_lease` crate defines the IBC packet types exchanged between the Nolu
 
 - `OpenLease { expected_instance_ordinal: u16, downpayment_currency, lpn_currency, asset_currency }` — the only enforced inequality is `lpn_currency != asset_currency`. `downpayment_currency == lpn_currency` and `downpayment_currency == asset_currency` are both permitted; the Solana side does not constrain those pairs. The wire-level invariant is intentionally permissive — any tighter constraint belongs in the Nolus-side caller, not the wire.
 - `CloseLease {}`
-- `Swap { coin_in, min_out }` — both amounts non-zero, currencies distinct.
+- `Swap` — externally-tagged enum, one variant per input arity:
+  - `One { coin_in, min_out }` — single input coin; wire shape `{"swap":{"one":{"coin_in":…,"min_out":…}}}`.
+  - `Two { coin_in_1, coin_in_2, min_out }` — two input coins; wire shape `{"swap":{"two":{"coin_in_1":…,"coin_in_2":…,"min_out":…}}}`.
+
+  All coins non-zero; each input currency distinct from `min_out`; for `Two`, the two inputs are also distinct from each other (else `DuplicateSwapInputCurrency`).
 - `TransferOut { amount }` — amount non-zero.
 
-Invariants are enforced both in constructors (`new`) and on the deserialiser path via `try_from` raw shadows.
+Invariants are enforced both in constructors (`new`, or `one` / `two` for `Swap`) and on the deserialiser path via `try_from` raw shadows.
 
 ## Callback
 

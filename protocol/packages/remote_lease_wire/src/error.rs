@@ -10,6 +10,9 @@ pub enum Error {
     #[error("swap input and output currencies must differ")]
     SameSwapCurrency,
 
+    #[error("the two swap input currencies must differ")]
+    DuplicateSwapInputCurrency,
+
     #[error("swap input amount and minimum output must be greater than zero")]
     ZeroSwapAmount,
 

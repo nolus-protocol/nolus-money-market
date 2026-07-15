@@ -97,51 +97,113 @@ pub struct CloseLeaseParams {}
     rename_all = "snake_case",
     try_from = "SwapParamsRaw"
 )]
-pub struct SwapParams {
-    coin_in: WireCoin,
-    min_out: WireCoin,
+/// Swap parameters for the remote lease protocol.
+///
+/// `One` carries a single input coin; `Two` carries two input coins.
+/// All coins must be non-zero and all tickers pairwise distinct.
+pub enum SwapParams {
+    One {
+        coin_in: WireCoin,
+        min_out: WireCoin,
+    },
+    Two {
+        coin_in_1: WireCoin,
+        coin_in_2: WireCoin,
+        min_out: WireCoin,
+    },
 }
 
 impl SwapParams {
-    pub fn new(coin_in: WireCoin, min_out: WireCoin) -> Result<Self, Error> {
+    /// Single-input swap. Returns `Err(ZeroSwapAmount)` if either coin is
+    /// zero, or `Err(SameSwapCurrency)` if the tickers match.
+    pub fn one(coin_in: WireCoin, min_out: WireCoin) -> Result<Self, Error> {
         if coin_in.is_zero() || min_out.is_zero() {
             return Err(Error::ZeroSwapAmount);
         }
-        let params = Self { coin_in, min_out };
-        params
-            .invariant_held()
-            .then_some(params)
-            .ok_or(Error::SameSwapCurrency)
-            .inspect(|p| debug_assert!(p.invariant_held()))
+        if coin_in.ticker() == min_out.ticker() {
+            return Err(Error::SameSwapCurrency);
+        }
+        let params = Self::One { coin_in, min_out };
+        debug_assert!(params.invariant_held());
+        Ok(params)
     }
 
-    pub const fn coin_in(&self) -> &WireCoin {
-        &self.coin_in
+    /// Two-input swap. Returns `Err(ZeroSwapAmount)` if any coin is zero,
+    /// `Err(SameSwapCurrency)` if an input ticker equals the output ticker,
+    /// or `Err(DuplicateSwapInputCurrency)` if the two input tickers match.
+    pub fn two(coin_in_1: WireCoin, coin_in_2: WireCoin, min_out: WireCoin) -> Result<Self, Error> {
+        if coin_in_1.is_zero() || coin_in_2.is_zero() || min_out.is_zero() {
+            return Err(Error::ZeroSwapAmount);
+        }
+        if coin_in_1.ticker() == min_out.ticker() || coin_in_2.ticker() == min_out.ticker() {
+            return Err(Error::SameSwapCurrency);
+        }
+        if coin_in_1.ticker() == coin_in_2.ticker() {
+            return Err(Error::DuplicateSwapInputCurrency);
+        }
+        let params = Self::Two {
+            coin_in_1,
+            coin_in_2,
+            min_out,
+        };
+        debug_assert!(params.invariant_held());
+        Ok(params)
     }
 
+    /// Returns the minimum output coin, common to both variants.
     pub const fn min_out(&self) -> &WireCoin {
-        &self.min_out
+        match self {
+            Self::One { min_out, .. } | Self::Two { min_out, .. } => min_out,
+        }
     }
 
     pub fn invariant_held(&self) -> bool {
-        !self.coin_in.is_zero()
-            && !self.min_out.is_zero()
-            && self.coin_in.ticker() != self.min_out.ticker()
+        match self {
+            Self::One { coin_in, min_out } => {
+                !coin_in.is_zero() && !min_out.is_zero() && coin_in.ticker() != min_out.ticker()
+            }
+            Self::Two {
+                coin_in_1,
+                coin_in_2,
+                min_out,
+            } => {
+                !coin_in_1.is_zero()
+                    && !coin_in_2.is_zero()
+                    && !min_out.is_zero()
+                    && coin_in_1.ticker() != min_out.ticker()
+                    && coin_in_2.ticker() != min_out.ticker()
+                    && coin_in_1.ticker() != coin_in_2.ticker()
+            }
+        }
     }
 }
 
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
-struct SwapParamsRaw {
-    coin_in: WireCoin,
-    min_out: WireCoin,
+enum SwapParamsRaw {
+    One {
+        coin_in: WireCoin,
+        min_out: WireCoin,
+    },
+    Two {
+        coin_in_1: WireCoin,
+        coin_in_2: WireCoin,
+        min_out: WireCoin,
+    },
 }
 
 impl TryFrom<SwapParamsRaw> for SwapParams {
     type Error = Error;
 
     fn try_from(raw: SwapParamsRaw) -> Result<Self, Self::Error> {
-        SwapParams::new(raw.coin_in, raw.min_out)
+        match raw {
+            SwapParamsRaw::One { coin_in, min_out } => SwapParams::one(coin_in, min_out),
+            SwapParamsRaw::Two {
+                coin_in_1,
+                coin_in_2,
+                min_out,
+            } => SwapParams::two(coin_in_1, coin_in_2, min_out),
+        }
     }
 }
 

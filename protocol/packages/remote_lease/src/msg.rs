@@ -143,56 +143,123 @@ impl CloseLeaseParams {
     rename_all = "snake_case",
     try_from = "SwapParamsRaw"
 )]
-pub struct SwapParams {
-    coin_in: CoinDTO<PaymentGroup>,
-    min_out: CoinDTO<PaymentGroup>,
+/// Swap parameters for the remote lease protocol.
+///
+/// `One` carries a single input coin; `Two` carries two input coins.
+/// All coins must be non-zero and all currencies pairwise distinct.
+pub enum SwapParams {
+    One {
+        coin_in: CoinDTO<PaymentGroup>,
+        min_out: CoinDTO<PaymentGroup>,
+    },
+    Two {
+        coin_in_1: CoinDTO<PaymentGroup>,
+        coin_in_2: CoinDTO<PaymentGroup>,
+        min_out: CoinDTO<PaymentGroup>,
+    },
 }
 
 impl SwapParams {
     pub const TIMEOUT: Duration = Duration::from_secs(300);
 
-    pub fn new(
+    /// Single-input swap. Returns `Err(ZeroSwapAmount)` if either coin is
+    /// zero, or `Err(SameSwapCurrency)` if the currencies match.
+    pub fn one(
         coin_in: CoinDTO<PaymentGroup>,
         min_out: CoinDTO<PaymentGroup>,
     ) -> Result<Self, Error> {
         if coin_in.is_zero() || min_out.is_zero() {
             return Err(Error::ZeroSwapAmount);
         }
-        let params = Self { coin_in, min_out };
-        params
-            .invariant_held()
-            .then_some(params)
-            .ok_or(Error::SameSwapCurrency)
-            .inspect(|p| debug_assert!(p.invariant_held()))
+        if coin_in.currency() == min_out.currency() {
+            return Err(Error::SameSwapCurrency);
+        }
+        let params = Self::One { coin_in, min_out };
+        debug_assert!(params.invariant_held());
+        Ok(params)
     }
 
-    pub const fn coin_in(&self) -> &CoinDTO<PaymentGroup> {
-        &self.coin_in
+    /// Two-input swap. Returns `Err(ZeroSwapAmount)` if any coin is zero,
+    /// `Err(SameSwapCurrency)` if an input currency equals the output currency,
+    /// or `Err(DuplicateSwapInputCurrency)` if the two input currencies match.
+    pub fn two(
+        coin_in_1: CoinDTO<PaymentGroup>,
+        coin_in_2: CoinDTO<PaymentGroup>,
+        min_out: CoinDTO<PaymentGroup>,
+    ) -> Result<Self, Error> {
+        if coin_in_1.is_zero() || coin_in_2.is_zero() || min_out.is_zero() {
+            return Err(Error::ZeroSwapAmount);
+        }
+        if coin_in_1.currency() == min_out.currency() || coin_in_2.currency() == min_out.currency()
+        {
+            return Err(Error::SameSwapCurrency);
+        }
+        if coin_in_1.currency() == coin_in_2.currency() {
+            return Err(Error::DuplicateSwapInputCurrency);
+        }
+        let params = Self::Two {
+            coin_in_1,
+            coin_in_2,
+            min_out,
+        };
+        debug_assert!(params.invariant_held());
+        Ok(params)
     }
 
+    /// Returns the minimum output coin, common to both variants.
     pub const fn min_out(&self) -> &CoinDTO<PaymentGroup> {
-        &self.min_out
+        match self {
+            Self::One { min_out, .. } | Self::Two { min_out, .. } => min_out,
+        }
     }
 
     pub fn invariant_held(&self) -> bool {
-        !self.coin_in.is_zero()
-            && !self.min_out.is_zero()
-            && self.coin_in.currency() != self.min_out.currency()
+        match self {
+            Self::One { coin_in, min_out } => {
+                !coin_in.is_zero() && !min_out.is_zero() && coin_in.currency() != min_out.currency()
+            }
+            Self::Two {
+                coin_in_1,
+                coin_in_2,
+                min_out,
+            } => {
+                !coin_in_1.is_zero()
+                    && !coin_in_2.is_zero()
+                    && !min_out.is_zero()
+                    && coin_in_1.currency() != min_out.currency()
+                    && coin_in_2.currency() != min_out.currency()
+                    && coin_in_1.currency() != coin_in_2.currency()
+            }
+        }
     }
 }
 
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
-struct SwapParamsRaw {
-    coin_in: CoinDTO<PaymentGroup>,
-    min_out: CoinDTO<PaymentGroup>,
+enum SwapParamsRaw {
+    One {
+        coin_in: CoinDTO<PaymentGroup>,
+        min_out: CoinDTO<PaymentGroup>,
+    },
+    Two {
+        coin_in_1: CoinDTO<PaymentGroup>,
+        coin_in_2: CoinDTO<PaymentGroup>,
+        min_out: CoinDTO<PaymentGroup>,
+    },
 }
 
 impl TryFrom<SwapParamsRaw> for SwapParams {
     type Error = Error;
 
     fn try_from(raw: SwapParamsRaw) -> Result<Self, Self::Error> {
-        SwapParams::new(raw.coin_in, raw.min_out)
+        match raw {
+            SwapParamsRaw::One { coin_in, min_out } => SwapParams::one(coin_in, min_out),
+            SwapParamsRaw::Two {
+                coin_in_1,
+                coin_in_2,
+                min_out,
+            } => SwapParams::two(coin_in_1, coin_in_2, min_out),
+        }
     }
 }
 
@@ -273,8 +340,21 @@ impl From<&OpenLeaseParams> for remote_lease_wire::msg::OpenLeaseParams {
 
 impl From<&SwapParams> for remote_lease_wire::msg::SwapParams {
     fn from(typed: &SwapParams) -> Self {
-        Self::new(wire_coin(typed.coin_in()), wire_coin(typed.min_out()))
-            .expect("typed SwapParams already upholds the non-zero distinct-currency invariant")
+        match typed {
+            SwapParams::One { coin_in, min_out } => {
+                Self::one(wire_coin(coin_in), wire_coin(min_out))
+            }
+            SwapParams::Two {
+                coin_in_1,
+                coin_in_2,
+                min_out,
+            } => Self::two(
+                wire_coin(coin_in_1),
+                wire_coin(coin_in_2),
+                wire_coin(min_out),
+            ),
+        }
+        .expect("typed SwapParams already upholds the non-zero distinct-currency invariant")
     }
 }
 
@@ -360,7 +440,7 @@ mod tests {
     #[test]
     fn swap_wire_shape() {
         let msg = ExecuteMsg::Swap {
-            params: SwapParams::new(
+            params: SwapParams::one(
                 Coin::<PaymentC1>::new(1000).into(),
                 Coin::<PaymentC2>::new(42).into(),
             )
