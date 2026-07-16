@@ -9,7 +9,11 @@ use crate::CoinsNb;
 ///
 /// The design limits a swap to a single input coin or a pair, so the bound is
 /// modelled as an enum — a compile-time invariant rather than a runtime length
-/// check. Mirrors the `One`/`Two` shape of the wire-level `SwapParams`.
+/// check. The variants share only the structural `One`/`Two` shape of the
+/// wire-level `SwapParams`, not its invariants: the swap engine sums inputs
+/// already in the output currency and swaps the rest, so repeated or
+/// output-matching input currencies are accepted — provided at least one
+/// input still needs swapping.
 pub enum SwapCoins<G>
 where
     G: Group,
