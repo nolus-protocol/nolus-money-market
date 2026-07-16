@@ -1,18 +1,13 @@
-use std::iter;
-
 use currency::Group;
 use oracle::stub::SwapPath;
 use serde::{Deserialize, Serialize};
 
 use dex::{
     Account, AnomalyTreatment, ContractInSwap, Error as DexError, SlippageCalculator, Stage,
-    SwapOutputTask, SwapTask, WithCalculator, WithOutputTask,
+    SwapCoins, SwapOutputTask, SwapTask, WithCalculator, WithOutputTask,
 };
 use finance::instant::Instant;
-use finance::{
-    coin::{Coin, CoinDTO},
-    duration::Duration,
-};
+use finance::{coin::Coin, duration::Duration};
 use sdk::cosmwasm_std::{Env, MessageInfo, QuerierWrapper};
 use timealarms::stub::TimeAlarmsRef;
 
@@ -135,8 +130,8 @@ where
         .map_err(DexError::Unauthorized)
     }
 
-    fn coins(&self) -> impl IntoIterator<Item = CoinDTO<Self::InG>> {
-        iter::once(*self.repayable.amount(&self.lease))
+    fn coins(&self) -> SwapCoins<Self::InG> {
+        SwapCoins::One(*self.repayable.amount(&self.lease))
     }
 
     fn with_slippage_calc<WithCalc>(&self, with_calc: WithCalc) -> WithCalc::Output

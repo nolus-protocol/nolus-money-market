@@ -1,4 +1,4 @@
-use std::{iter, marker::PhantomData};
+use std::marker::PhantomData;
 
 use oracle::stub::SwapPath;
 use serde::{Deserialize, Serialize};
@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use currency::{CurrencyDef, Group, MemberOf};
 use dex::{
     Account, AnomalyTreatment, ContractInSwap, Error as DexError, Stage, StartTransferInState,
-    SwapOutputTask, SwapTask, WithCalculator, WithOutputTask,
+    SwapCoins, SwapOutputTask, SwapTask, WithCalculator, WithOutputTask,
 };
 use finance::instant::Instant;
 use finance::{
@@ -118,8 +118,8 @@ impl SwapTask for TransferIn {
         .map_err(DexError::Unauthorized)
     }
 
-    fn coins(&self) -> impl IntoIterator<Item = CoinDTO<Self::InG>> {
-        iter::once(*self.amount())
+    fn coins(&self) -> SwapCoins<Self::InG> {
+        SwapCoins::One(*self.amount())
     }
 
     fn with_slippage_calc<Cmd>(&self, _cmd: Cmd) -> Cmd::Output

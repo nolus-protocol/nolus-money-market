@@ -6,11 +6,11 @@ use remote_lease::response::RemoteLeaseId;
 use serde::{Deserialize, Serialize};
 
 use dex::{
-    Account, ContractInSwap, Error as DexError, Stage, StartLocalRemoteState, SwapOutputTask,
-    SwapTask, WithCalculator, WithOutputTask,
+    Account, ContractInSwap, Error as DexError, Stage, StartLocalRemoteState, SwapCoins,
+    SwapOutputTask, SwapTask, WithCalculator, WithOutputTask,
 };
+use finance::duration::Duration;
 use finance::instant::Instant;
-use finance::{coin::CoinDTO, duration::Duration};
 use sdk::cosmwasm_std::{MessageInfo, QuerierWrapper};
 use timealarms::stub::TimeAlarmsRef;
 
@@ -148,8 +148,8 @@ impl SwapTask for BuyAsset {
             .map_err(DexError::Unauthorized)
     }
 
-    fn coins(&self) -> impl IntoIterator<Item = CoinDTO<Self::InG>> {
-        [self.downpayment, self.loan.principal.into_super_group()].into_iter()
+    fn coins(&self) -> SwapCoins<Self::InG> {
+        SwapCoins::Two(self.downpayment, self.loan.principal.into_super_group())
     }
 
     fn with_slippage_calc<WithCalc>(&self, with_calc: WithCalc) -> WithCalc::Output

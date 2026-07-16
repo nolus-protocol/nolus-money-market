@@ -4,6 +4,7 @@ pub use self::error::Error;
 pub use self::{
     account::Account,
     anomaly::{Handler as AnomalyHandler, Treatment as AnomalyTreatment},
+    coins_in::SwapCoins,
     connect::{Connectable, ConnectionParams, Ics20Channel},
     enterable::Enterable,
     error::Result as DexResult,
@@ -27,6 +28,8 @@ pub use self::{
 mod account;
 #[cfg(feature = "impl")]
 mod anomaly;
+#[cfg(feature = "impl")]
+mod coins_in;
 #[cfg(feature = "impl")]
 mod connect;
 #[cfg(feature = "impl")]

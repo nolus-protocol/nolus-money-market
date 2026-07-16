@@ -1,16 +1,18 @@
 use currency::{CurrencyDef, Group, MemberOf};
-use finance::coin::{Coin, CoinDTO};
+use finance::coin::Coin;
 use oracle::stub::SwapPath;
 use sdk::cosmwasm_std::{Env, MessageInfo, QuerierWrapper};
 use timealarms::stub::TimeAlarmsRef;
 
-use crate::{Account, AnomalyTreatment, error::Result as DexResult, slippage::WithCalculator};
+use crate::{
+    Account, AnomalyTreatment, SwapCoins, error::Result as DexResult, slippage::WithCalculator,
+};
 
 pub type CoinsNb = u8;
 
 /// Specification of a swap process
 ///
-/// Supports up to `CoinsNb::MAX` coins.
+/// A swap operates on one or two input coins; see [`SwapCoins`].
 pub trait SwapTask
 where
     Self: Sized,
@@ -39,13 +41,8 @@ where
         info: &MessageInfo,
     ) -> DexResult<()>;
 
-    /// Provide the coins, at least one, this swap is about.
-    /// The iteration is done always in the same order.
-    //
-    // TODO define the Item type as an associative : AsRef<CoinDTO<Self::InG>> to allow iterating over values and references.
-    // This would avoid clone-ing of values kept in the task. At the same time, we cannot iterate over '&' due to
-    // having temporary instances in some of the tasks.
-    fn coins(&self) -> impl IntoIterator<Item = CoinDTO<Self::InG>>;
+    /// The one or two input coins this swap is about, always in the same order.
+    fn coins(&self) -> SwapCoins<Self::InG>;
 
     fn with_slippage_calc<WithCalc>(&self, with_calc: WithCalc) -> WithCalc::Output
     where
