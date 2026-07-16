@@ -6,7 +6,7 @@ mod query;
 mod scenarios;
 
 use currencies::{
-    PaymentGroup,
+    LeaseGroup, Lpns as LpnGroup, PaymentGroup,
     testing::{PaymentC1, PaymentC2, PaymentC3},
 };
 use finance::duration::Duration;
@@ -27,6 +27,8 @@ use crate::{
     contract::{instantiate, query},
     state::Channel,
 };
+
+type OpenLeaseParamsT = OpenLeaseParams<LeaseGroup, LpnGroup, PaymentGroup>;
 
 const ADMIN: &str = "admin";
 const NON_ADMIN: &str = "intruder";
@@ -158,12 +160,12 @@ fn query_channel(deps: Deps<'_>) -> ChannelResponse {
     sdk::cosmwasm_std::from_json(raw).unwrap()
 }
 
-fn sample_open_lease_params() -> OpenLeaseParams {
+fn sample_open_lease_params() -> OpenLeaseParamsT {
     OpenLeaseParams::new(
         7,
         currency::dto::<PaymentC1, PaymentGroup>(),
-        currency::dto::<PaymentC2, PaymentGroup>(),
-        currency::dto::<PaymentC3, PaymentGroup>(),
+        currency::dto::<PaymentC2, LpnGroup>(),
+        currency::dto::<PaymentC3, LeaseGroup>(),
     )
     .expect("sample uses three distinct currencies")
 }

@@ -1,3 +1,4 @@
+use currencies::{LeaseGroup, Lpns as LpnGroup, PaymentGroup};
 use remote_lease::{
     callback::{RemoteErrorMessage, RemoteLeaseCallback},
     envelope::{NolusLeaseAddr, PacketEnvelope},
@@ -131,7 +132,7 @@ pub fn ibc_packet_ack(
     _env: Env,
     msg: IbcPacketAckMsg,
 ) -> Result<IbcBasicResponse> {
-    cosmwasm_std::from_json::<PacketEnvelope>(&msg.original_packet.data)
+    cosmwasm_std::from_json(&msg.original_packet.data)
         .map_err(Error::from)
         .and_then(|envelope| {
             cosmwasm_std::from_json::<StdAck>(&msg.acknowledgement.data)
@@ -147,7 +148,7 @@ pub fn ibc_packet_timeout(
     _env: Env,
     msg: IbcPacketTimeoutMsg,
 ) -> Result<IbcBasicResponse> {
-    cosmwasm_std::from_json::<PacketEnvelope>(&msg.packet.data)
+    cosmwasm_std::from_json(&msg.packet.data)
         .map_err(Error::from)
         .and_then(|envelope| {
             dispatch_lease_callback(deps.api, envelope, RemoteLeaseCallback::OperationTimeout)
@@ -174,7 +175,7 @@ fn ack_to_callback(ack: StdAck) -> Result<RemoteLeaseCallback> {
 // port uniqueness, not from a per-packet whitelist.
 fn dispatch_lease_callback(
     api: &dyn Api,
-    envelope: PacketEnvelope,
+    envelope: PacketEnvelope<LeaseGroup, LpnGroup, PaymentGroup>,
     callback: RemoteLeaseCallback,
 ) -> Result<IbcBasicResponse> {
     envelope

@@ -2,6 +2,7 @@ use std::ops::{Deref, DerefMut};
 
 use access_control::SingleUserAccess;
 use cosmwasm_std::Storage;
+use currencies::{LeaseGroup, Lpns as LpnGroup, PaymentGroup};
 use cw_time::{IntoInstant as _, IntoTimestamp as _};
 use finance::{duration::Duration, instant::Instant};
 use platform::{
@@ -102,7 +103,7 @@ pub fn execute(
     deps: DepsMut<'_>,
     env: Env,
     info: MessageInfo,
-    msg: ExecuteMsg,
+    msg: ExecuteMsg<LeaseGroup, LpnGroup, PaymentGroup>,
 ) -> Result<CwResponse> {
     let api = deps.api;
     match msg {
@@ -206,7 +207,7 @@ fn send_operation(
     deps: DepsMut<'_>,
     env: &Env,
     caller: Addr,
-    operation: Operation,
+    operation: Operation<LeaseGroup, LpnGroup, PaymentGroup>,
     timeout: Duration,
 ) -> Result<PlatformResponse> {
     let DepsMut {
@@ -241,7 +242,7 @@ fn build_packet(
     now: Instant,
     channel: &Channel,
     lease: Addr,
-    operation: Operation,
+    operation: Operation<LeaseGroup, LpnGroup, PaymentGroup>,
     timeout: Duration,
 ) -> Result<PlatformResponse> {
     let envelope = PacketEnvelope {

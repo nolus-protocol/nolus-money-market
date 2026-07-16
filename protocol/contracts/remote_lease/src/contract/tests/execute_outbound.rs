@@ -1,4 +1,7 @@
-use currencies::testing::{PaymentC1, PaymentC2, PaymentC3};
+use currencies::{
+    LeaseGroup, Lpns as LpnGroup, PaymentGroup,
+    testing::{PaymentC1, PaymentC2, PaymentC3},
+};
 use finance::{coin::Coin, instant::Instant};
 use remote_lease::{
     envelope::{LeaseAddrOnWire, PacketEnvelope},
@@ -18,6 +21,12 @@ use super::{
     deps_with_lease, instantiate_default, sample_open_lease_params, sender, store_closing_channel,
     store_open_channel,
 };
+
+type ExecuteMsgT = ExecuteMsg<LeaseGroup, LpnGroup, PaymentGroup>;
+type OperationT = Operation<LeaseGroup, LpnGroup, PaymentGroup>;
+type PacketEnvelopeT = PacketEnvelope<LeaseGroup, LpnGroup, PaymentGroup>;
+type SwapParamsT = SwapParams<PaymentGroup, PaymentGroup>;
+type TransferOutParamsT = TransferOutParams<PaymentGroup>;
 
 #[test]
 fn open_lease_emits_send_packet() {
@@ -162,14 +171,14 @@ fn outbound_non_contract_caller_rejected() {
     assert!(matches!(err, Error::UnauthorisedCaller), "got {err:?}");
 }
 
-fn open_lease_execute() -> ExecuteMsg {
+fn open_lease_execute() -> ExecuteMsgT {
     ExecuteMsg::OpenLease {
         params: sample_open_lease_params(),
         timeout: PACKET_TIMEOUT,
     }
 }
 
-fn sample_swap_params() -> SwapParams {
+fn sample_swap_params() -> SwapParamsT {
     SwapParams::one(
         Coin::<PaymentC1>::new(1_000).into(),
         Coin::<PaymentC2>::new(42).into(),
@@ -177,12 +186,12 @@ fn sample_swap_params() -> SwapParams {
     .expect("sample uses two distinct non-zero amounts")
 }
 
-fn sample_transfer_out_params() -> TransferOutParams {
+fn sample_transfer_out_params() -> TransferOutParamsT {
     TransferOutParams::new(Coin::<PaymentC3>::new(1_000).into())
         .expect("sample uses a non-zero amount")
 }
 
-fn assert_send_packet(expected_operation: &Operation, messages: &[SubMsg]) {
+fn assert_send_packet(expected_operation: &OperationT, messages: &[SubMsg]) {
     assert_eq!(1, messages.len(), "expected exactly one outbound message");
     match &messages[0].msg {
         CosmosMsg::Ibc(IbcMsg::SendPacket {
@@ -192,7 +201,7 @@ fn assert_send_packet(expected_operation: &Operation, messages: &[SubMsg]) {
         }) => {
             assert_eq!(LOCAL_CHANNEL_ID, channel_id);
             assert_eq!(&expected_timeout(), timeout);
-            let envelope: PacketEnvelope = sdk::cosmwasm_std::from_json(data).unwrap();
+            let envelope: PacketEnvelopeT = sdk::cosmwasm_std::from_json(data).unwrap();
             assert_eq!(
                 LeaseAddrOnWire::new(sdk_testing::user(LEASE)),
                 envelope.lease,

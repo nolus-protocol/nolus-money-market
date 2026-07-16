@@ -31,13 +31,19 @@ use crate::{
     version::ProtocolVersion,
 };
 
+type OperationP2P = Operation<PaymentGroup, PaymentGroup, PaymentGroup>;
+type PacketEnvelopeP2P = PacketEnvelope<PaymentGroup, PaymentGroup, PaymentGroup>;
+type SwapP2P = SwapParams<PaymentGroup, PaymentGroup>;
+type OpenLeaseP2P = OpenLeaseParams<PaymentGroup, PaymentGroup, PaymentGroup>;
+type TransferOutP2P = TransferOutParams<PaymentGroup>;
+
 // ---------------------------------------------------------------------------
 // 1. Operation variants — round-trip + literal JSON
 // ---------------------------------------------------------------------------
 
 #[test]
 fn open_lease_msg_serde() {
-    let value = Operation::OpenLease(sample_open_lease_params());
+    let value = OperationP2P::OpenLease(sample_open_lease_params());
     assert_round_trip_eq(
         r#"{"open_lease":{"expected_instance_ordinal":7,"downpayment_currency":"NLS","lpn_currency":"LPN","asset_currency":"LC1"}}"#,
         &value,
@@ -46,13 +52,13 @@ fn open_lease_msg_serde() {
 
 #[test]
 fn close_lease_msg_serde() {
-    let value = Operation::CloseLease(CloseLeaseParams {});
+    let value = OperationP2P::CloseLease(CloseLeaseParams {});
     assert_round_trip_eq(r#"{"close_lease":{}}"#, &value);
 }
 
 #[test]
 fn swap_msg_serde() {
-    let value = Operation::Swap(sample_swap_params());
+    let value = OperationP2P::Swap(sample_swap_params());
     assert_round_trip_eq(
         r#"{"swap":{"one":{"coin_in":{"amount":"1000","ticker":"NLS"},"min_out":{"amount":"42","ticker":"LPN"}}}}"#,
         &value,
@@ -61,7 +67,7 @@ fn swap_msg_serde() {
 
 #[test]
 fn swap_msg_two_serde() {
-    let value = Operation::Swap(
+    let value = OperationP2P::Swap(
         SwapParams::two(
             Coin::<PaymentC1>::new(1000).into(),
             Coin::<PaymentC3>::new(500).into(),
@@ -77,7 +83,7 @@ fn swap_msg_two_serde() {
 
 #[test]
 fn transfer_out_msg_serde() {
-    let value = Operation::TransferOut(sample_transfer_out_params());
+    let value = OperationP2P::TransferOut(sample_transfer_out_params());
     assert_round_trip_eq(
         r#"{"transfer_out":{"amount":{"amount":"1000","ticker":"LC1"}}}"#,
         &value,
@@ -179,9 +185,9 @@ fn callback_error_message_deserialize_over_cap_rejected() {
 
 #[test]
 fn packet_envelope_serde() {
-    let value = PacketEnvelope {
+    let value = PacketEnvelopeP2P {
         lease: LeaseAddrOnWire::new("nolus1leaseaddr"),
-        operation: Operation::CloseLease(CloseLeaseParams {}),
+        operation: OperationP2P::CloseLease(CloseLeaseParams {}),
         version: ProtocolVersion,
     };
     assert_round_trip_eq(
@@ -193,14 +199,14 @@ fn packet_envelope_serde() {
 #[test]
 fn packet_envelope_version_mismatch_rejected() {
     let bad_wire = r#"{"lease":"nolus1leaseaddr","operation":{"close_lease":{}},"version":"nls-remote-lease.v2"}"#;
-    serde_json::from_str::<PacketEnvelope>(bad_wire)
+    serde_json::from_str::<PacketEnvelopeP2P>(bad_wire)
         .expect_err("mismatched protocol version must fail deserialization");
 }
 
 #[test]
 fn packet_envelope_missing_version_rejected() {
     let bad_wire = r#"{"lease":"nolus1leaseaddr","operation":{"close_lease":{}}}"#;
-    serde_json::from_str::<PacketEnvelope>(bad_wire)
+    serde_json::from_str::<PacketEnvelopeP2P>(bad_wire)
         .expect_err("missing version field must fail deserialization");
 }
 
@@ -262,7 +268,7 @@ fn open_lease_params_lpn_equals_asset_rejected() {
 #[test]
 fn open_lease_params_deserialize_invariant_violation_rejected() {
     let bad_wire = r#"{"expected_instance_ordinal":7,"downpayment_currency":"NLS","lpn_currency":"LPN","asset_currency":"LPN"}"#;
-    serde_json::from_str::<OpenLeaseParams>(bad_wire)
+    serde_json::from_str::<OpenLeaseP2P>(bad_wire)
         .expect_err("lpn==asset must fail deserialization");
 }
 
@@ -281,7 +287,7 @@ fn open_lease_params_max_ordinal_accepted() {
 #[test]
 fn open_lease_params_deserialize_above_u16_rejected() {
     let bad_wire = r#"{"expected_instance_ordinal":65536,"downpayment_currency":"NLS","lpn_currency":"LPN","asset_currency":"LC1"}"#;
-    serde_json::from_str::<OpenLeaseParams>(bad_wire)
+    serde_json::from_str::<OpenLeaseP2P>(bad_wire)
         .expect_err("ordinal above u16 range must fail deserialization");
 }
 
@@ -291,7 +297,7 @@ fn open_lease_params_deserialize_above_u16_rejected() {
 
 #[test]
 fn swap_params_one_distinct_currencies_ok() {
-    let params = SwapParams::one(
+    let params = SwapP2P::one(
         Coin::<PaymentC1>::new(1000).into(),
         Coin::<PaymentC2>::new(42).into(),
     )
@@ -301,7 +307,7 @@ fn swap_params_one_distinct_currencies_ok() {
 
 #[test]
 fn swap_params_one_same_currency_rejected() {
-    let res = SwapParams::one(
+    let res = SwapP2P::one(
         Coin::<PaymentC1>::new(1000).into(),
         Coin::<PaymentC1>::new(42).into(),
     );
@@ -310,7 +316,7 @@ fn swap_params_one_same_currency_rejected() {
 
 #[test]
 fn swap_params_one_zero_coin_in_rejected() {
-    let res = SwapParams::one(
+    let res = SwapP2P::one(
         Coin::<PaymentC1>::new(0).into(),
         Coin::<PaymentC2>::new(42).into(),
     );
@@ -319,7 +325,7 @@ fn swap_params_one_zero_coin_in_rejected() {
 
 #[test]
 fn swap_params_one_zero_min_out_rejected() {
-    let res = SwapParams::one(
+    let res = SwapP2P::one(
         Coin::<PaymentC1>::new(1000).into(),
         Coin::<PaymentC2>::new(0).into(),
     );
@@ -329,20 +335,19 @@ fn swap_params_one_zero_min_out_rejected() {
 #[test]
 fn swap_params_one_deserialize_invariant_violation_rejected() {
     let bad_wire = r#"{"one":{"coin_in":{"amount":"1000","ticker":"NLS"},"min_out":{"amount":"42","ticker":"NLS"}}}"#;
-    serde_json::from_str::<SwapParams>(bad_wire)
+    serde_json::from_str::<SwapP2P>(bad_wire)
         .expect_err("invariant violation must fail deserialization");
 }
 
 #[test]
 fn swap_params_one_deserialize_zero_amount_rejected() {
     let bad_wire = r#"{"one":{"coin_in":{"amount":"0","ticker":"NLS"},"min_out":{"amount":"42","ticker":"LPN"}}}"#;
-    serde_json::from_str::<SwapParams>(bad_wire)
-        .expect_err("zero coin_in must fail deserialization");
+    serde_json::from_str::<SwapP2P>(bad_wire).expect_err("zero coin_in must fail deserialization");
 }
 
 #[test]
 fn swap_params_two_distinct_currencies_ok() {
-    let params = SwapParams::two(
+    let params = SwapP2P::two(
         Coin::<PaymentC1>::new(1000).into(),
         Coin::<PaymentC3>::new(500).into(),
         Coin::<PaymentC2>::new(42).into(),
@@ -353,7 +358,7 @@ fn swap_params_two_distinct_currencies_ok() {
 
 #[test]
 fn swap_params_two_zero_coin_in_1_rejected() {
-    let res = SwapParams::two(
+    let res = SwapP2P::two(
         Coin::<PaymentC1>::new(0).into(),
         Coin::<PaymentC3>::new(500).into(),
         Coin::<PaymentC2>::new(42).into(),
@@ -363,7 +368,7 @@ fn swap_params_two_zero_coin_in_1_rejected() {
 
 #[test]
 fn swap_params_two_zero_coin_in_2_rejected() {
-    let res = SwapParams::two(
+    let res = SwapP2P::two(
         Coin::<PaymentC1>::new(1000).into(),
         Coin::<PaymentC3>::new(0).into(),
         Coin::<PaymentC2>::new(42).into(),
@@ -373,7 +378,7 @@ fn swap_params_two_zero_coin_in_2_rejected() {
 
 #[test]
 fn swap_params_two_zero_min_out_rejected() {
-    let res = SwapParams::two(
+    let res = SwapP2P::two(
         Coin::<PaymentC1>::new(1000).into(),
         Coin::<PaymentC3>::new(500).into(),
         Coin::<PaymentC2>::new(0).into(),
@@ -383,7 +388,7 @@ fn swap_params_two_zero_min_out_rejected() {
 
 #[test]
 fn swap_params_two_coin_in_1_same_as_min_out_rejected() {
-    let res = SwapParams::two(
+    let res = SwapP2P::two(
         Coin::<PaymentC2>::new(1000).into(),
         Coin::<PaymentC3>::new(500).into(),
         Coin::<PaymentC2>::new(42).into(),
@@ -393,7 +398,7 @@ fn swap_params_two_coin_in_1_same_as_min_out_rejected() {
 
 #[test]
 fn swap_params_two_coin_in_2_same_as_min_out_rejected() {
-    let res = SwapParams::two(
+    let res = SwapP2P::two(
         Coin::<PaymentC1>::new(1000).into(),
         Coin::<PaymentC2>::new(500).into(),
         Coin::<PaymentC2>::new(42).into(),
@@ -403,7 +408,7 @@ fn swap_params_two_coin_in_2_same_as_min_out_rejected() {
 
 #[test]
 fn swap_params_two_coin_in_1_same_as_coin_in_2_rejected() {
-    let res = SwapParams::two(
+    let res = SwapP2P::two(
         Coin::<PaymentC1>::new(1000).into(),
         Coin::<PaymentC1>::new(500).into(),
         Coin::<PaymentC2>::new(42).into(),
@@ -414,7 +419,7 @@ fn swap_params_two_coin_in_1_same_as_coin_in_2_rejected() {
 #[test]
 fn swap_params_two_deserialize_invariant_violation_rejected() {
     let bad_wire = r#"{"two":{"coin_in_1":{"amount":"1000","ticker":"NLS"},"coin_in_2":{"amount":"500","ticker":"NLS"},"min_out":{"amount":"42","ticker":"LPN"}}}"#;
-    serde_json::from_str::<SwapParams>(bad_wire)
+    serde_json::from_str::<SwapP2P>(bad_wire)
         .expect_err("duplicate input currencies must fail deserialization");
 }
 
@@ -424,21 +429,21 @@ fn swap_params_two_deserialize_invariant_violation_rejected() {
 
 #[test]
 fn transfer_out_params_non_zero_ok() {
-    let params = TransferOutParams::new(Coin::<PaymentC3>::new(1000).into())
+    let params = TransferOutP2P::new(Coin::<PaymentC3>::new(1000).into())
         .expect("non-zero amount must be accepted");
     assert!(params.invariant_held());
 }
 
 #[test]
 fn transfer_out_params_zero_rejected() {
-    let res = TransferOutParams::new(Coin::<PaymentC3>::new(0).into());
+    let res = TransferOutP2P::new(Coin::<PaymentC3>::new(0).into());
     assert!(matches!(res, Err(Error::ZeroTransferAmount)));
 }
 
 #[test]
 fn transfer_out_params_deserialize_zero_rejected() {
     let bad_wire = r#"{"amount":{"amount":"0","ticker":"LC1"}}"#;
-    serde_json::from_str::<TransferOutParams>(bad_wire)
+    serde_json::from_str::<TransferOutP2P>(bad_wire)
         .expect_err("zero amount must fail deserialization");
 }
 
@@ -482,8 +487,8 @@ where
     assert_eq!(value, &decoded);
 }
 
-fn sample_open_lease_params() -> OpenLeaseParams {
-    OpenLeaseParams::new(
+fn sample_open_lease_params() -> OpenLeaseP2P {
+    OpenLeaseP2P::new(
         7,
         currency::dto::<PaymentC1, PaymentGroup>(),
         currency::dto::<PaymentC2, PaymentGroup>(),
@@ -492,15 +497,14 @@ fn sample_open_lease_params() -> OpenLeaseParams {
     .expect("sample uses three distinct currencies")
 }
 
-fn sample_swap_params() -> SwapParams {
-    SwapParams::one(
+fn sample_swap_params() -> SwapP2P {
+    SwapP2P::one(
         Coin::<PaymentC1>::new(1000).into(),
         Coin::<PaymentC2>::new(42).into(),
     )
     .expect("sample uses two distinct non-zero amounts")
 }
 
-fn sample_transfer_out_params() -> TransferOutParams {
-    TransferOutParams::new(Coin::<PaymentC3>::new(1000).into())
-        .expect("sample uses a non-zero amount")
+fn sample_transfer_out_params() -> TransferOutP2P {
+    TransferOutP2P::new(Coin::<PaymentC3>::new(1000).into()).expect("sample uses a non-zero amount")
 }

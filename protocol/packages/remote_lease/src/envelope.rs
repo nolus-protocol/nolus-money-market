@@ -1,3 +1,4 @@
+use currency::Group;
 use serde::{Deserialize, Serialize};
 
 pub use remote_lease_wire::envelope::LeaseAddrOnWire;
@@ -16,9 +17,14 @@ use crate::msg::Operation;
 /// as a `cosmwasm_std::Addr`.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 #[serde(deny_unknown_fields)]
-pub struct PacketEnvelope {
+pub struct PacketEnvelope<LeaseG, LpnG, PaymentG>
+where
+    LeaseG: Group,
+    LpnG: Group,
+    PaymentG: Group,
+{
     pub lease: LeaseAddrOnWire,
-    pub operation: Operation,
+    pub operation: Operation<LeaseG, LpnG, PaymentG>,
     pub version: ProtocolVersion,
 }
 

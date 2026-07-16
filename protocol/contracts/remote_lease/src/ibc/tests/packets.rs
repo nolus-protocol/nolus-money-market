@@ -1,3 +1,4 @@
+use currencies::{LeaseGroup, Lpns as LpnGroup, PaymentGroup};
 use remote_lease::{
     callback::{OPERATION_ERR_MAX_BYTES, RemoteErrorMessage, RemoteLeaseCallback},
     envelope::{LeaseAddrOnWire, PacketEnvelope},
@@ -24,6 +25,8 @@ use super::{
     COUNTERPARTY_CHANNEL_ID, COUNTERPARTY_PORT_ID, LOCAL_CHANNEL_ID, LOCAL_PORT_ID,
     deps_with_config,
 };
+
+type PacketEnvelopeT = PacketEnvelope<LeaseGroup, LpnGroup, PaymentGroup>;
 
 #[test]
 fn packet_receive_returns_error_ack() {
@@ -209,7 +212,7 @@ fn dispatched_callback_wire_shape_pinned() {
 #[test]
 fn packet_ack_malformed_lease_addr_in_envelope_errors() {
     let mut deps = deps_with_config();
-    let envelope = PacketEnvelope {
+    let envelope = PacketEnvelopeT {
         lease: LeaseAddrOnWire::new("NOT_BECH32!"),
         operation: Operation::CloseLease(CloseLeaseParams {}),
         version: ProtocolVersion,
@@ -231,7 +234,7 @@ fn packet_ack_malformed_lease_addr_in_envelope_errors() {
 #[test]
 fn packet_timeout_malformed_lease_addr_in_envelope_errors() {
     let mut deps = deps_with_config();
-    let envelope = PacketEnvelope {
+    let envelope = PacketEnvelopeT {
         lease: LeaseAddrOnWire::new("NOT_BECH32!"),
         operation: Operation::CloseLease(CloseLeaseParams {}),
         version: ProtocolVersion,
@@ -333,15 +336,15 @@ fn packet_ack_oversized_error_message_errors() {
     assert!(matches!(err, Error::RemoteCallback(_)), "got {err:?}");
 }
 
-fn envelope_with_close_lease(lease: &Addr) -> PacketEnvelope {
-    PacketEnvelope {
+fn envelope_with_close_lease(lease: &Addr) -> PacketEnvelopeT {
+    PacketEnvelopeT {
         lease: LeaseAddrOnWire::new(lease.as_str()),
         operation: Operation::CloseLease(CloseLeaseParams {}),
         version: ProtocolVersion,
     }
 }
 
-fn encode_envelope(envelope: &PacketEnvelope) -> Binary {
+fn encode_envelope(envelope: &PacketEnvelopeT) -> Binary {
     cosmwasm_std::to_json_binary(envelope).expect("envelope must serialise")
 }
 

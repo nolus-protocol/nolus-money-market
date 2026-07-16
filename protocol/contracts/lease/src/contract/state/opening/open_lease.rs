@@ -33,7 +33,7 @@ use timealarms::stub::TimeAlarmsRef;
 
 use crate::{
     api::{
-        DownpaymentCoin,
+        DownpaymentCoin, LeaseAssetCurrencies, LeasePaymentCurrencies,
         open::NewLeaseContract,
         query::{StateResponse as QueryStateResponse, opening::OngoingTrx},
     },
@@ -44,7 +44,7 @@ use crate::{
         state::{Response, State, open_failed::OpenFailed},
     },
     error::{ContractError, ContractResult},
-    finance::{LpnCoin, LpnCurrency, LppRef, OracleRef, ReserveRef},
+    finance::{LpnCoin, LpnCurrencies, LpnCurrency, LppRef, OracleRef, ReserveRef},
 };
 
 const OPEN_FAILED_EVENT: &str = "ls-remote-lease-open-failed";
@@ -88,7 +88,9 @@ impl OpenLease {
     }
 
     pub(super) fn enter(&self) -> ContractResult<Batch> {
-        OpenLeaseParams::new(
+        type OpenLease =
+            OpenLeaseParams<LeaseAssetCurrencies, LpnCurrencies, LeasePaymentCurrencies>;
+        OpenLease::new(
             self.new_lease.expected_instance_ordinal,
             self.downpayment.currency(),
             self.loan.principal.currency().into_super_group(),
@@ -97,7 +99,7 @@ impl OpenLease {
         .map_err(ContractError::OpenLeaseParams)
         .and_then(|params| {
             Factory::new(&self.new_lease.remote_lease_controller)
-                .open(params, OpenLeaseParams::TIMEOUT)
+                .open(params, OpenLease::TIMEOUT)
                 .map_err(ContractError::from)
         })
     }
