@@ -34,37 +34,43 @@ use remote_lease_wire::{
     msg::Operation as WireOperation, response::OperationResponse as WireResponse,
 };
 
+type OperationP = Operation<PaymentGroup, PaymentGroup, PaymentGroup>;
+type SwapParamsP = SwapParams<PaymentGroup, PaymentGroup>;
+type OpenLeaseParamsP = OpenLeaseParams<PaymentGroup, PaymentGroup, PaymentGroup>;
+type TransferOutParamsP = TransferOutParams<PaymentGroup>;
+type PacketEnvelopeP = PacketEnvelope<PaymentGroup, PaymentGroup, PaymentGroup>;
+
 #[test]
 fn operation_open_lease_byte_identical() {
-    assert_cross_surface_eq::<Operation, WireOperation>(&Operation::OpenLease(open_lease()));
+    assert_cross_surface_eq::<OperationP, WireOperation>(&OperationP::OpenLease(open_lease()));
 }
 
 #[test]
 fn operation_close_lease_byte_identical() {
-    assert_cross_surface_eq::<Operation, WireOperation>(&Operation::CloseLease(
+    assert_cross_surface_eq::<OperationP, WireOperation>(&OperationP::CloseLease(
         CloseLeaseParams {},
     ));
 }
 
 #[test]
 fn operation_swap_byte_identical() {
-    assert_cross_surface_eq::<Operation, WireOperation>(&Operation::Swap(swap()));
+    assert_cross_surface_eq::<OperationP, WireOperation>(&OperationP::Swap(swap()));
 }
 
 #[test]
 fn operation_swap_two_byte_identical() {
-    let params = SwapParams::two(
+    let params = SwapParamsP::two(
         Coin::<PaymentC1>::new(1000).into(),
         Coin::<PaymentC3>::new(500).into(),
         Coin::<PaymentC2>::new(42).into(),
     )
     .expect("three distinct non-zero amounts");
-    assert_cross_surface_eq::<Operation, WireOperation>(&Operation::Swap(params));
+    assert_cross_surface_eq::<OperationP, WireOperation>(&OperationP::Swap(params));
 }
 
 #[test]
 fn operation_transfer_out_byte_identical() {
-    assert_cross_surface_eq::<Operation, WireOperation>(&Operation::TransferOut(transfer_out()));
+    assert_cross_surface_eq::<OperationP, WireOperation>(&OperationP::TransferOut(transfer_out()));
 }
 
 #[test]
@@ -118,12 +124,12 @@ fn callback_operation_timeout_byte_identical() {
 
 #[test]
 fn packet_envelope_byte_identical() {
-    let typed = PacketEnvelope {
+    let typed = PacketEnvelopeP {
         lease: LeaseAddrOnWire::new("nolus1leaseaddr"),
-        operation: Operation::Swap(swap()),
+        operation: OperationP::Swap(swap()),
         version: ProtocolVersion,
     };
-    assert_cross_surface_eq::<PacketEnvelope, WireEnvelope>(&typed);
+    assert_cross_surface_eq::<PacketEnvelopeP, WireEnvelope>(&typed);
 }
 
 fn assert_cross_surface_eq<T, W>(typed: &T)
@@ -141,7 +147,7 @@ where
     );
 }
 
-fn open_lease() -> OpenLeaseParams {
+fn open_lease() -> OpenLeaseParamsP {
     OpenLeaseParams::new(
         7,
         currency::dto::<PaymentC1, PaymentGroup>(),
@@ -151,7 +157,7 @@ fn open_lease() -> OpenLeaseParams {
     .expect("three distinct currencies")
 }
 
-fn swap() -> SwapParams {
+fn swap() -> SwapParamsP {
     SwapParams::one(
         Coin::<PaymentC1>::new(1000).into(),
         Coin::<PaymentC2>::new(42).into(),
@@ -159,6 +165,6 @@ fn swap() -> SwapParams {
     .expect("distinct non-zero amounts")
 }
 
-fn transfer_out() -> TransferOutParams {
+fn transfer_out() -> TransferOutParamsP {
     TransferOutParams::new(Coin::<PaymentC3>::new(1000).into()).expect("non-zero amount")
 }

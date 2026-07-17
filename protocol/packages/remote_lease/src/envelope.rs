@@ -1,3 +1,4 @@
+use currency::Group;
 use serde::{Deserialize, Serialize};
 
 pub use remote_lease_wire::envelope::LeaseAddrOnWire;
@@ -14,11 +15,19 @@ use crate::msg::Operation;
 /// receiver MUST convert it through [`NolusLeaseAddr::into_validated`] before
 /// using it for dispatch — the type prevents accidental use of the raw string
 /// as a `cosmwasm_std::Addr`.
+///
+/// `operation` is generic over the lease's asset (`LeaseG`), LPN (`LpnG`), and
+/// payment (`PaymentG`) currency groups; see [`Operation`].
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 #[serde(deny_unknown_fields)]
-pub struct PacketEnvelope {
+pub struct PacketEnvelope<LeaseG, LpnG, PaymentG>
+where
+    LeaseG: Group,
+    LpnG: Group,
+    PaymentG: Group,
+{
     pub lease: LeaseAddrOnWire,
-    pub operation: Operation,
+    pub operation: Operation<LeaseG, LpnG, PaymentG>,
     pub version: ProtocolVersion,
 }
 

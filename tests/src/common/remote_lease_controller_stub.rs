@@ -41,6 +41,7 @@
 
 use serde::{Deserialize, Serialize};
 
+use currencies::{LeaseGroup, Lpns, PaymentGroup};
 use platform::contract::{Code, CodeId};
 use remote_lease::{
     callback::{RemoteErrorMessage, RemoteLeaseCallback},
@@ -108,7 +109,7 @@ pub enum StubExecuteMsg {
         lease_code: Code,
     },
     OpenLease {
-        params: OpenLeaseParams,
+        params: OpenLeaseParams<LeaseGroup, Lpns, PaymentGroup>,
         timeout: finance::duration::Duration,
     },
     CloseLease {
@@ -116,11 +117,11 @@ pub enum StubExecuteMsg {
         timeout: finance::duration::Duration,
     },
     Swap {
-        params: SwapParams,
+        params: SwapParams<PaymentGroup, PaymentGroup>,
         timeout: finance::duration::Duration,
     },
     TransferOut {
-        params: TransferOutParams,
+        params: TransferOutParams<PaymentGroup>,
         timeout: finance::duration::Duration,
     },
     /// Test-only: configure the stand-in's reply for a given op tag.
@@ -313,7 +314,7 @@ fn require_lease_code(
 
 fn synth_open_lease_response(
     storage: &mut dyn Storage,
-    _params: &OpenLeaseParams,
+    _params: &OpenLeaseParams<LeaseGroup, Lpns, PaymentGroup>,
 ) -> Result<OperationResponse, StubError> {
     let next = LEASE_PDA_COUNTER.may_load(storage)?.unwrap_or(0) + 1;
     LEASE_PDA_COUNTER.save(storage, &next)?;
