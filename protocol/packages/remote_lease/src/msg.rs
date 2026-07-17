@@ -6,6 +6,12 @@ use platform::contract::Code;
 
 use crate::error::Error;
 
+/// The `remote_lease` controller's execute interface.
+///
+/// The currency-group parameters flow into the outbound-packet variants:
+/// `LeaseG` is the leased-asset group, `LpnG` the LPN group, `PaymentG` the
+/// payment/downpayment group (also the group `Swap` and `TransferOut` operate
+/// in). See [`OpenLeaseParams`] for the per-field mapping.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub enum ExecuteMsg<LeaseG, LpnG, PaymentG>
@@ -46,6 +52,10 @@ where
     },
 }
 
+/// A single cross-chain lease operation on the wire.
+///
+/// The group parameters carry the lease's asset (`LeaseG`), LPN (`LpnG`), and
+/// payment (`PaymentG`) currency groups — see [`OpenLeaseParams`].
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub enum Operation<LeaseG, LpnG, PaymentG>
@@ -60,9 +70,14 @@ where
     TransferOut(TransferOutParams<PaymentG>),
 }
 
+/// Parameters of an `OpenLease` operation.
+///
+/// The three currency groups fix which currency each field accepts: `PaymentG`
+/// for `downpayment_currency`, `LpnG` for `lpn_currency`, `LeaseG` for
+/// `asset_currency`. The only enforced inequality is
+/// `lpn_currency != asset_currency`.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 #[serde(
-    bound(serialize = "LeaseG: Serialize, LpnG: Serialize, PaymentG: Serialize"),
     deny_unknown_fields,
     rename_all = "snake_case",
     try_from = "OpenLeaseParamsRaw<LeaseG, LpnG, PaymentG>"
@@ -176,6 +191,7 @@ impl CloseLeaseParams {
 )]
 /// Swap parameters for the remote lease protocol.
 ///
+/// `GIn` is the input-coin group, `GOut` the output (`min_out`) group.
 /// `One` carries a single input coin; `Two` carries two input coins.
 /// All coins must be non-zero and all currencies pairwise distinct.
 pub enum SwapParams<GIn, GOut>
@@ -307,6 +323,8 @@ where
     }
 }
 
+/// Parameters of a `TransferOut` operation: the non-zero `amount` to send out,
+/// in the output group `GOut`.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 #[serde(
     deny_unknown_fields,
@@ -440,14 +458,14 @@ where
     }
 }
 
-impl<LeaseG, Lpns, PaymentG> From<&Operation<LeaseG, Lpns, PaymentG>>
+impl<LeaseG, LpnG, PaymentG> From<&Operation<LeaseG, LpnG, PaymentG>>
     for remote_lease_wire::msg::Operation
 where
     LeaseG: Group,
-    Lpns: Group,
+    LpnG: Group,
     PaymentG: Group,
 {
-    fn from(typed: &Operation<LeaseG, Lpns, PaymentG>) -> Self {
+    fn from(typed: &Operation<LeaseG, LpnG, PaymentG>) -> Self {
         match typed {
             Operation::OpenLease(p) => Self::OpenLease(p.into()),
             Operation::CloseLease(CloseLeaseParams {}) => {

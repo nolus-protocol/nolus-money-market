@@ -15,6 +15,9 @@ use crate::msg::Operation;
 /// receiver MUST convert it through [`NolusLeaseAddr::into_validated`] before
 /// using it for dispatch — the type prevents accidental use of the raw string
 /// as a `cosmwasm_std::Addr`.
+///
+/// `operation` is generic over the lease's asset (`LeaseG`), LPN (`LpnG`), and
+/// payment (`PaymentG`) currency groups; see [`Operation`].
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 #[serde(deny_unknown_fields)]
 pub struct PacketEnvelope<LeaseG, LpnG, PaymentG>

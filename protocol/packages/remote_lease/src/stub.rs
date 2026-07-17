@@ -9,6 +9,11 @@ use sdk::cosmwasm_std::Addr;
 
 use crate::msg::{CloseLeaseParams, ExecuteMsg, OpenLeaseParams, SwapParams, TransferOutParams};
 
+/// Builds outbound `OpenLease` / `CloseLease` batches addressed to the
+/// `remote_lease` controller.
+///
+/// Generic over the lease's asset (`LeaseG`), LPN (`LpnG`), and payment
+/// (`PaymentG`) currency groups; see [`OpenLeaseParams`].
 pub struct Factory<'controller, LeaseG, LpnG, PaymentG>
 where
     LeaseG: Group,
@@ -52,6 +57,12 @@ where
     }
 }
 
+/// Builds outbound `Swap` / `TransferOut` batches addressed to the
+/// `remote_lease` controller.
+///
+/// Generic over the lease's asset (`LeaseG`), LPN (`LpnG`), and payment
+/// (`PaymentG`) currency groups; `Swap` and `TransferOut` operate in
+/// `PaymentG`.
 pub struct Lease<'controller, LeaseG, LpnG, PaymentG>
 where
     LeaseG: Group,

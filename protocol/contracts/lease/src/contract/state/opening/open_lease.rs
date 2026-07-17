@@ -88,18 +88,17 @@ impl OpenLease {
     }
 
     pub(super) fn enter(&self) -> ContractResult<Batch> {
-        type OpenLease =
-            OpenLeaseParams<LeaseAssetCurrencies, LpnCurrencies, LeasePaymentCurrencies>;
-        OpenLease::new(
+        type Params = OpenLeaseParams<LeaseAssetCurrencies, LpnCurrencies, LeasePaymentCurrencies>;
+        Params::new(
             self.new_lease.expected_instance_ordinal,
             self.downpayment.currency(),
-            self.loan.principal.currency().into_super_group(),
-            self.new_lease.form.currency.into_super_group(),
+            self.loan.principal.currency(),
+            self.new_lease.form.currency,
         )
         .map_err(ContractError::OpenLeaseParams)
         .and_then(|params| {
             Factory::new(&self.new_lease.remote_lease_controller)
-                .open(params, OpenLease::TIMEOUT)
+                .open(params, Params::TIMEOUT)
                 .map_err(ContractError::from)
         })
     }
