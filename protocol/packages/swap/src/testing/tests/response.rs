@@ -1,4 +1,4 @@
-use dex::swap::ExactAmountIn;
+use dex::transport::ExactAmountIn;
 use finance::coin::Amount;
 
 use crate::{Impl, testing::ExactAmountInSkel};

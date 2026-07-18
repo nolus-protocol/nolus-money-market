@@ -1,5 +1,5 @@
 use currency::{DexSymbols, Group};
-use dex::swap::{Error, ExactAmountIn, Result, SwapPathSlice};
+use dex::transport::{ExactAmountIn, SwapError, SwapPathSlice, SwapResult};
 use finance::coin::{Amount, CoinDTO};
 use oracle::api::swap::SwapTarget;
 use platform::{
@@ -36,7 +36,7 @@ impl ExactAmountIn for Impl {
         amount_in: &CoinDTO<GIn>,
         min_amount_out: &CoinDTO<GOut>,
         swap_path: SwapPathSlice<'_, GSwap>,
-    ) -> Result<()>
+    ) -> SwapResult<()>
     where
         GIn: Group,
         GOut: Group,
@@ -63,19 +63,19 @@ impl ExactAmountIn for Impl {
         })
     }
 
-    fn parse_response<I>(trx_resps: &mut I) -> Result<Amount>
+    fn parse_response<I>(trx_resps: &mut I) -> SwapResult<Amount>
     where
         I: Iterator<Item = ProtobufAny>,
     {
         trx_resps
             .next()
-            .ok_or_else(|| Error::MissingResponse("swap of exact amount request".into()))
+            .ok_or_else(|| SwapError::MissingResponse("swap of exact amount request".into()))
             .and_then(|response| {
                 trx::decode_msg_response::<_, ResponseMsg>(response, ResponseMsg::TYPE_URL)
                     .map_err(Into::into)
             })
             .map(|response| response.token_out_amount)
-            .and_then(|amount| amount.parse().map_err(|_| Error::InvalidAmount(amount)))
+            .and_then(|amount| amount.parse().map_err(|_| SwapError::InvalidAmount(amount)))
     }
 }
 
@@ -99,7 +99,7 @@ where
     coin_legacy::to_cosmwasm_on_network::<DexSymbols<G>>(token)
 }
 
-fn to_osmosis_coin(cw_coin: CwCoin) -> Result<ProtoCoin> {
+fn to_osmosis_coin(cw_coin: CwCoin) -> SwapResult<ProtoCoin> {
     let amount_str = cw_coin.amount.to_string();
     // cosmwasm_std::to_json_string(&cw_coin.amount)
     //     .map_err(Into::into)

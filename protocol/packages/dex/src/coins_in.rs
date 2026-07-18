@@ -3,6 +3,7 @@ use std::{iter, option};
 use currency::Group;
 use finance::coin::CoinDTO;
 
+#[cfg(any(test, feature = "impl"))]
 use crate::CoinsNb;
 
 /// The one or two input coins a swap operates on.
@@ -19,6 +20,7 @@ where
     Two(CoinDTO<G>, CoinDTO<G>),
 }
 
+#[cfg(any(test, feature = "impl"))]
 impl<G> SwapCoins<G>
 where
     G: Group,

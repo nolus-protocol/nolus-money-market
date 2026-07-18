@@ -1,7 +1,7 @@
 use std::marker::PhantomData;
 
 use currency::{self, DexSymbols, Group};
-use dex::swap::{Error, ExactAmountIn, Result, SwapPathSlice};
+use dex::transport::{ExactAmountIn, SwapError, SwapPathSlice, SwapResult};
 use finance::coin::{Amount, CoinDTO};
 use platform::{
     coin_legacy,
@@ -57,7 +57,7 @@ where
         token_in: &CoinDTO<GIn>,
         min_amount_out: &CoinDTO<GOut>,
         swap_path: SwapPathSlice<'_, GSwap>,
-    ) -> Result<()>
+    ) -> SwapResult<()>
     where
         GIn: Group,
         GOut: Group,
@@ -85,13 +85,13 @@ where
         })
     }
 
-    fn parse_response<I>(trx_resps: &mut I) -> Result<Amount>
+    fn parse_response<I>(trx_resps: &mut I) -> SwapResult<Amount>
     where
         I: Iterator<Item = ProtobufAny>,
     {
         trx_resps
             .next()
-            .ok_or_else(|| Error::MissingResponse("router swap".into()))
+            .ok_or_else(|| SwapError::MissingResponse("router swap".into()))
             .and_then(|resp| {
                 trx::decode_msg_response::<_, ResponseMsg>(resp, ResponseMsg::type_url())
                     .map_err(Into::into)

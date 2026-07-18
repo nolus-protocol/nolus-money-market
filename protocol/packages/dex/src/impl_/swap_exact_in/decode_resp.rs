@@ -3,7 +3,7 @@ use std::marker::PhantomData;
 use currency::{CurrencyDef, Group, MemberOf};
 use sdk::cosmwasm_std::{Env, QuerierWrapper};
 
-use crate::{SwapOutputTask, error::Result, swap::ExactAmountIn};
+use crate::{SwapOutputTask, error::Result, transport::ExactAmountIn};
 
 use crate::{
     SwapTask as SwapTaskT, WithOutputTask,
