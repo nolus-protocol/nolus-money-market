@@ -17,8 +17,8 @@ use lpp::{
 use platform::{
     bank::{FixedAddressSender, LazySenderStub},
     batch::{Batch, Emit, Emitter},
-    ica::HostAccount,
     message::Response as MessageResponse,
+    remote::Account as RemoteAccount,
     state_machine::Response as StateMachineResponse,
 };
 use remote_lease::{
@@ -118,7 +118,7 @@ impl OpenLease {
         querier: QuerierWrapper<'_>,
         env: Env,
     ) -> ContractResult<Response> {
-        HostAccount::try_from(remote_lease.as_str().to_owned())
+        RemoteAccount::try_from(remote_lease.as_str().to_owned())
             .map_err(ContractError::PlatformError)
             .and_then(|remote_account| {
                 let dex_account =

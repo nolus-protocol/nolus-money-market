@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use dex::{Contract as DexContract, Handler as DexHandler};
 use finance::duration::Duration;
 use finance::instant::Instant;
-use platform::{ica::ErrorResponse as ICAErrorResponse, state_machine};
+use platform::{remote::ErrorResponse as ICAErrorResponse, state_machine};
 use remote_lease::callback::RemoteLeaseCallback;
 use sdk::cosmwasm_std::{self, Binary, Env, MessageInfo, QuerierWrapper, Reply};
 

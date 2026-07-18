@@ -27,6 +27,7 @@
 .idea
 .vscode
 .serena/
+.zed
 
 # Deploying process
 setup-dev-network.zip

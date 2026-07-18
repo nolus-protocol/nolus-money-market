@@ -121,7 +121,7 @@ mod impl_into {
 }
 
 mod impl_handler {
-    use platform::ica::ErrorResponse as ICAErrorResponse;
+    use platform::remote::ErrorResponse as ICAErrorResponse;
     use sdk::cosmwasm_std::{Binary, Env, MessageInfo, QuerierWrapper, Reply};
 
     use crate::{

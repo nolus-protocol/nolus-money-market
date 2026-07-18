@@ -1,8 +1,8 @@
 use std::{fmt::Display, result::Result as StdResult};
 
 use platform::{
-    ica::ErrorResponse as ICAErrorResponse,
     message::Response as MessageResponse,
+    remote::ErrorResponse as ICAErrorResponse,
     state_machine::{self, Response as StateMachineResponse},
 };
 use sdk::cosmwasm_std::{Binary, Env, MessageInfo, QuerierWrapper, Reply};

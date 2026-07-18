@@ -5,7 +5,7 @@ use dex::swap::{Error, ExactAmountIn, Result, SwapPathSlice};
 use finance::coin::{Amount, CoinDTO};
 use platform::{
     coin_legacy,
-    ica::HostAccount,
+    remote::Account as HostAccount,
     trx::{self, Transaction},
 };
 use sdk::{

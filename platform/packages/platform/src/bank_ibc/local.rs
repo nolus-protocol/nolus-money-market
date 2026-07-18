@@ -6,12 +6,12 @@ use sdk::{
     ica::{IbcFee, InterChainMsg, RequestPacketTimeoutHeight},
 };
 
-use crate::{batch::Batch, coin_legacy, ica::HostAccount};
+use crate::{batch::Batch, coin_legacy, remote::Account};
 
 pub struct Sender<'conn> {
     channel: &'conn str,
     sender: &'conn Addr,
-    receiver: &'conn HostAccount,
+    receiver: &'conn Account,
     timeout: Timestamp,
     amounts: Vec<CwCoin>,
     memo: String,
@@ -21,7 +21,7 @@ impl<'conn> Sender<'conn> {
     pub fn new(
         channel: &'conn str,
         sender: &'conn Addr,
-        receiver: &'conn HostAccount,
+        receiver: &'conn Account,
         timeout: Timestamp,
         memo: String,
     ) -> Self {
@@ -73,7 +73,7 @@ const ICS20_PORT_AT_NOLUS: &str = "transfer";
 fn new_msg(
     channel: &str,
     sender: Addr,
-    receiver: HostAccount,
+    receiver: Account,
     amount: CwCoin,
     timeout: Timestamp,
     memo: String,
@@ -120,7 +120,7 @@ mod test {
         bank_ibc::local::{self, Sender},
         batch::Batch,
         coin_legacy,
-        ica::HostAccount,
+        remoteote::HostAccount,
     };
 
     #[test]

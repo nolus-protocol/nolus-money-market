@@ -4,7 +4,7 @@ use finance::coin::{Amount, CoinDTO};
 use oracle::api::swap::SwapTarget;
 use platform::{
     coin_legacy,
-    ica::HostAccount,
+    remote::Account as HostAccount,
     trx::{self, Transaction},
 };
 use sdk::{

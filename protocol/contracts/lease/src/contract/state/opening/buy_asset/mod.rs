@@ -2,7 +2,7 @@ use calculator::Factory as CalculatorFactory;
 use currency::{CurrencyDef, Group, MemberOf};
 use finish::BuyAssetFinish;
 use oracle::stub::SwapPath;
-use platform::ica::HostAccount;
+use platform::remote::Account as RemoteAccount;
 use serde::{Deserialize, Serialize};
 
 use dex::{
@@ -99,7 +99,7 @@ impl BuyAsset {
 
     fn state<InP>(self, in_progress: InP) -> BuyAssetStateResponse
     where
-        InP: FnOnce(HostAccount) -> OngoingTrx,
+        InP: FnOnce(RemoteAccount) -> OngoingTrx,
     {
         Ok(QueryStateResponse::Opening {
             currency: self.form.currency,

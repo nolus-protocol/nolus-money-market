@@ -9,8 +9,8 @@ use finance::duration::Duration;
 use finance::instant::Instant;
 use platform::{
     batch::{Batch, Emitter},
-    ica::ErrorResponse as ICAErrorResponse,
     message::Response as MessageResponse,
+    remote::ErrorResponse as ICAErrorResponse,
 };
 use sdk::cosmwasm_std::{Binary, Env, QuerierWrapper};
 

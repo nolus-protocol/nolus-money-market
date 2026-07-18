@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use platform::ica::HostAccount;
+use platform::remote::Account as RemoteAccount;
 use sdk::cosmwasm_std::Addr;
 
 use crate::{Connectable, ConnectionParams};
@@ -12,7 +12,7 @@ pub struct Account {
     owner: Addr,
     // converted from the Remote Lease Id, used as destination for outgoing transfers
     // cannot use Remote Account Id because `dex` is protocol-agnostic
-    remote: HostAccount,
+    remote: RemoteAccount,
     dex: ConnectionParams,
 }
 
@@ -21,11 +21,11 @@ impl Account {
         &self.owner
     }
 
-    pub fn remote(&self) -> &HostAccount {
+    pub fn remote(&self) -> &RemoteAccount {
         &self.remote
     }
 
-    pub fn new(owner: Addr, remote: HostAccount, dex: ConnectionParams) -> Self {
+    pub fn new(owner: Addr, remote: RemoteAccount, dex: ConnectionParams) -> Self {
         Self { owner, remote, dex }
     }
 }
@@ -36,7 +36,7 @@ impl Connectable for Account {
     }
 }
 
-impl From<Account> for HostAccount {
+impl From<Account> for RemoteAccount {
     fn from(value: Account) -> Self {
         value.remote
     }

@@ -11,15 +11,15 @@ use crate::{batch::Batch, error::Error, result::Result, trx::Transaction};
 /// It is unique for a lease and allows the support of multiple accounts per lease
 const ICA_ACCOUNT_ID: &str = "0";
 
-/// ICA Host Account
+/// Remote Chain Account
 ///
-/// Holds the address on the ICA host network
+/// Holds the address on the remote chain
 #[derive(Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "testing", derive(PartialEq, Eq, Debug))]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
-pub struct HostAccount(String);
+pub struct Account(String);
 
-/// Error response to an ICA request
+/// Error response to a remote account request
 ///
 /// Contains an unstructured text, that is helpful for manual troubleshooting.
 pub struct ErrorResponse {
@@ -27,13 +27,13 @@ pub struct ErrorResponse {
 }
 
 #[cfg(feature = "testing")]
-impl AsRef<str> for HostAccount {
+impl AsRef<str> for Account {
     fn as_ref(&self) -> &str {
         &self.0
     }
 }
 
-impl TryFrom<String> for HostAccount {
+impl TryFrom<String> for Account {
     type Error = Error;
     fn try_from(addr: String) -> Result<Self> {
         if addr.is_empty() {
@@ -44,13 +44,13 @@ impl TryFrom<String> for HostAccount {
     }
 }
 
-impl From<HostAccount> for String {
-    fn from(account: HostAccount) -> Self {
+impl From<Account> for String {
+    fn from(account: Account) -> Self {
         account.0
     }
 }
 
-impl Display for HostAccount {
+impl Display for Account {
     fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
         f.write_str(self.0.as_str())
     }

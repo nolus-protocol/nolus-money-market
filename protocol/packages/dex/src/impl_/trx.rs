@@ -7,7 +7,7 @@ use oracle::stub::SwapPath;
 use platform::{
     bank_ibc::remote::Sender as RemoteSender,
     batch::Batch as LocalBatch,
-    ica::{self, HostAccount},
+    remote::{self, Account as RemoteAccount},
     trx::Transaction,
 };
 use sdk::cosmwasm_std::QuerierWrapper;
@@ -16,7 +16,7 @@ use crate::{Account, Connectable, IBC_TIMEOUT, error::Result, swap::ExactAmountI
 
 pub(super) struct SwapTrx<'ica, 'swap_path, 'querier, SwapGroup, SwapPathImpl> {
     conn: &'ica str,
-    ica_account: &'ica HostAccount,
+    ica_account: &'ica RemoteAccount,
     trx: Transaction,
     swap_path: &'swap_path SwapPathImpl,
     querier: QuerierWrapper<'querier>,
@@ -76,7 +76,7 @@ where
 
 impl<SwapGroup, SwapPathImpl> From<SwapTrx<'_, '_, '_, SwapGroup, SwapPathImpl>> for LocalBatch {
     fn from(value: SwapTrx<'_, '_, '_, SwapGroup, SwapPathImpl>) -> Self {
-        ica::submit_transaction(value.conn, value.trx, "memo", IBC_TIMEOUT)
+        remote::submit_transaction(value.conn, value.trx, "memo", IBC_TIMEOUT)
     }
 }
 
@@ -109,6 +109,6 @@ impl<'ica> TransferInTrx<'ica> {
 
 impl<'r> From<TransferInTrx<'r>> for LocalBatch {
     fn from(value: TransferInTrx<'r>) -> Self {
-        ica::submit_transaction(value.conn, value.sender.into(), "memo", IBC_TIMEOUT)
+        remote::submit_transaction(value.conn, value.sender.into(), "memo", IBC_TIMEOUT)
     }
 }

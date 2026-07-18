@@ -78,7 +78,7 @@ pub enum StateResponse {
 }
 
 pub mod opening {
-    use platform::ica::HostAccount;
+    use platform::remote::Account as RemoteAccount;
     #[cfg(feature = "skel_testing")]
     use serde::Deserialize;
     use serde::Serialize;
@@ -91,8 +91,8 @@ pub mod opening {
     #[serde(deny_unknown_fields, rename_all = "snake_case")]
     pub enum OngoingTrx {
         OpenLease,
-        TransferOut { remote_lease: HostAccount },
-        BuyAsset { remote_lease: HostAccount },
+        TransferOut { remote_lease: RemoteAccount },
+        BuyAsset { remote_lease: RemoteAccount },
     }
 }
 

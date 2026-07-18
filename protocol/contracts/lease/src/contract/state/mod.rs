@@ -6,7 +6,7 @@ use enum_dispatch::enum_dispatch;
 
 use finance::duration::Duration;
 use platform::{
-    batch::Batch, ica::ErrorResponse as ICAErrorResponse, message::Response as MessageResponse,
+    batch::Batch, message::Response as MessageResponse, remote::ErrorResponse as ICAErrorResponse,
 };
 use remote_lease::callback::RemoteLeaseCallback;
 use sdk::{
