@@ -13,6 +13,8 @@ pub struct Account {
     // converted from the Remote Lease Id, used as destination for outgoing transfers
     // cannot use Remote Account Id because `dex` is protocol-agnostic
     remote: RemoteAccount,
+    /// The Remote Lease controller contract that opened this account,
+    /// retained for the upcoming callback-authorization path.
     remote_controller: Addr,
     dex: ConnectionParams,
 }
@@ -47,8 +49,42 @@ impl Connectable for Account {
     }
 }
 
-impl From<Account> for RemoteAccount {
-    fn from(value: Account) -> Self {
-        value.remote
+#[cfg(test)]
+mod test {
+    use platform::remote::Account as RemoteAccount;
+    use sdk::cosmwasm_std::{Addr, from_json, to_json_string};
+
+    use crate::{ConnectionParams, Ics20Channel};
+
+    use super::Account;
+
+    #[test]
+    fn new_serializes_expected_wire_shape() {
+        assert_eq!(
+            r#"{"owner":"owner-contract","remote":"remote-account","remote_controller":"remote-lease-controller","dex":{"connection_id":"connection-0","transfer_channel":{"local_endpoint":"channel-0","remote_endpoint":"channel-2048"}}}"#,
+            to_json_string(&account()).unwrap()
+        );
+    }
+
+    #[test]
+    fn serde_round_trip() {
+        let serialized = to_json_string(&account()).unwrap();
+        let restored: Account = from_json(&serialized).unwrap();
+        assert_eq!(serialized, to_json_string(&restored).unwrap());
+    }
+
+    fn account() -> Account {
+        Account::new(
+            Addr::unchecked("owner-contract"),
+            RemoteAccount::try_from("remote-account".to_string()).unwrap(),
+            Addr::unchecked("remote-lease-controller"),
+            ConnectionParams {
+                connection_id: "connection-0".into(),
+                transfer_channel: Ics20Channel {
+                    local_endpoint: "channel-0".into(),
+                    remote_endpoint: "channel-2048".into(),
+                },
+            },
+        )
     }
 }
