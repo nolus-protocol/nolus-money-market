@@ -14,7 +14,7 @@ use finance::{
     duration::Duration,
     zero::Zero,
 };
-use platform::{batch::Batch, ica::ErrorResponse as ICAErrorResponse, trx};
+use platform::{batch::Batch, remote::ErrorResponse as ICAErrorResponse, trx};
 use report_anomaly::ReportAnomalyCmd;
 use sdk::cosmwasm_std::{Binary, Env, QuerierWrapper};
 

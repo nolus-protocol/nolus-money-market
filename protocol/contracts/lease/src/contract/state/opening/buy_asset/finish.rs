@@ -91,7 +91,6 @@ where
             LeaseFactory::new(
                 spec.form,
                 lease_addr.clone(),
-                spec.remote_lease,
                 profit,
                 reserve,
                 (spec.deps.2, spec.deps.1.clone()),

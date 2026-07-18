@@ -2,7 +2,7 @@ use calculator::Factory as CalculatorFactory;
 use currency::{CurrencyDef, Group, MemberOf};
 use finish::BuyAssetFinish;
 use oracle::stub::SwapPath;
-use remote_lease::response::RemoteLeaseId;
+use platform::remote::Account as RemoteAccount;
 use serde::{Deserialize, Serialize};
 
 use dex::{
@@ -48,7 +48,6 @@ pub(in super::super) type DexState =
 pub(super) fn start(
     new_lease: NewLeaseForm,
     dex_account: Account,
-    remote_lease: RemoteLeaseId,
     downpayment: DownpaymentCoin,
     loan: OpenLoanRespResult,
     deps: (LppRef, OracleRef, TimeAlarmsRef, LeasesRef),
@@ -58,7 +57,6 @@ pub(super) fn start(
         BuyAsset::new(
             new_lease,
             dex_account,
-            remote_lease,
             downpayment,
             loan,
             deps,
@@ -74,7 +72,6 @@ type BuyAssetStateResponse = <BuyAsset as SwapTask>::StateResponse;
 pub struct BuyAsset {
     form: NewLeaseForm,
     dex_account: Account,
-    remote_lease: RemoteLeaseId,
     downpayment: DownpaymentCoin,
     loan: OpenLoanRespResult,
     deps: (LppRef, OracleRef, TimeAlarmsRef, LeasesRef),
@@ -85,7 +82,6 @@ impl BuyAsset {
     pub(super) fn new(
         form: NewLeaseForm,
         dex_account: Account,
-        remote_lease: RemoteLeaseId,
         downpayment: DownpaymentCoin,
         loan: OpenLoanRespResult,
         deps: (LppRef, OracleRef, TimeAlarmsRef, LeasesRef),
@@ -94,7 +90,6 @@ impl BuyAsset {
         Self {
             form,
             dex_account,
-            remote_lease,
             downpayment,
             loan,
             deps,
@@ -104,14 +99,14 @@ impl BuyAsset {
 
     fn state<InP>(self, in_progress: InP) -> BuyAssetStateResponse
     where
-        InP: FnOnce(RemoteLeaseId) -> OngoingTrx,
+        InP: FnOnce(RemoteAccount) -> OngoingTrx,
     {
         Ok(QueryStateResponse::Opening {
             currency: self.form.currency,
             downpayment: self.downpayment,
             loan: self.loan.principal,
             loan_interest_rate: self.loan.annual_interest_rate,
-            in_progress: in_progress(self.remote_lease),
+            in_progress: in_progress(self.dex_account.into()),
         })
     }
 }

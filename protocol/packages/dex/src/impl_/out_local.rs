@@ -182,7 +182,7 @@ mod impl_into {
 mod impl_handler {
     use sdk::cosmwasm_std::{Binary, Env, MessageInfo, QuerierWrapper, Reply};
 
-    use platform::ica::ErrorResponse as ICAErrorResponse;
+    use platform::remote::ErrorResponse as ICAErrorResponse;
 
     use crate::{
         SwapTask as SwapTaskT, TransportOutFactory as TransportOutFactoryT,

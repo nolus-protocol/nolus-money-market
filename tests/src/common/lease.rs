@@ -331,7 +331,7 @@ fn opening_remote_and_principal(app: &App, lease: Addr) -> (Addr, Coin<Lpn>) {
             let remote = match in_progress {
                 OpeningOngoingTrx::TransferOut { remote_lease }
                 | OpeningOngoingTrx::BuyAsset { remote_lease } => {
-                    Addr::unchecked(remote_lease.as_str())
+                    Addr::unchecked(String::from(remote_lease))
                 }
                 other => panic!("expected a funded opening trx, got {other:?}"),
             };

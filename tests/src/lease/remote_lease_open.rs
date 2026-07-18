@@ -41,7 +41,7 @@ fn open_lifecycle_happy_path() {
     };
 
     assert!(
-        remote_lease.as_str().starts_with("StubPda"),
+        remote_lease.as_ref().starts_with("StubPda"),
         "expected stand-in PDA prefix, got {remote_lease:?}",
     );
 }

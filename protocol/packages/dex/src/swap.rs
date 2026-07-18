@@ -3,7 +3,7 @@ use thiserror::Error;
 use currency::Group;
 use finance::coin::{Amount, CoinDTO};
 use oracle::api::swap::SwapTarget;
-use platform::{ica::HostAccount, trx::Transaction};
+use platform::{remote::Account as RemoteAccount, trx::Transaction};
 use sdk::{api::ProtobufAny, cosmwasm_std::StdError};
 
 pub type SwapPathSlice<'a, G> = &'a [SwapTarget<G>];
@@ -16,7 +16,7 @@ pub trait ExactAmountIn {
     /// `GSwap` - the group common for all tokens in the swap path
     fn build_request<GIn, GOut, GSwap>(
         trx: &mut Transaction,
-        sender: HostAccount,
+        sender: RemoteAccount,
         amount_in: &CoinDTO<GIn>,
         min_amount_out: &CoinDTO<GOut>,
         swap_path: SwapPathSlice<'_, GSwap>,

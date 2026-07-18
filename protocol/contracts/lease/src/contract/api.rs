@@ -2,7 +2,7 @@ use enum_dispatch::enum_dispatch;
 
 use finance::duration::Duration;
 use finance::instant::Instant;
-use platform::ica::ErrorResponse as ICAErrorResponse;
+use platform::remote::ErrorResponse as ICAErrorResponse;
 use remote_lease::callback::RemoteLeaseCallback;
 use sdk::cosmwasm_std::{Binary, Env, MessageInfo, QuerierWrapper, Reply};
 
