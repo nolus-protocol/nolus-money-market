@@ -20,14 +20,6 @@ pub struct Account {
 }
 
 impl Account {
-    pub fn owner(&self) -> &Addr {
-        &self.owner
-    }
-
-    pub fn remote(&self) -> &RemoteAccount {
-        &self.remote
-    }
-
     pub fn new(
         owner: Addr,
         remote: RemoteAccount,
@@ -41,11 +33,25 @@ impl Account {
             dex,
         }
     }
+
+    pub fn owner(&self) -> &Addr {
+        &self.owner
+    }
+
+    pub fn remote(&self) -> &RemoteAccount {
+        &self.remote
+    }
 }
 
 impl Connectable for Account {
     fn dex(&self) -> &ConnectionParams {
         &self.dex
+    }
+}
+
+impl From<Account> for RemoteAccount {
+    fn from(account: Account) -> Self {
+        account.remote
     }
 }
 
