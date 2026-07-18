@@ -3,7 +3,6 @@ use finance::instant::Instant;
 use lpp::stub::loan::LppLoan as LppLoanTrait;
 use oracle_platform::Oracle as OracleTrait;
 use profit::stub::ProfitRef;
-use remote_lease::response::RemoteLeaseId;
 use sdk::cosmwasm_std::Addr;
 use timealarms::stub::TimeAlarmsRef;
 
@@ -22,7 +21,6 @@ use super::{CloseStatusDTO, close_policy::check};
 pub struct LeaseFactory<'a> {
     form: NewLeaseForm,
     lease_addr: Addr,
-    remote_lease: RemoteLeaseId,
     profit: ProfitRef,
     reserve: ReserveRef,
     time_alarms: TimeAlarmsRef,
@@ -38,7 +36,6 @@ impl<'a> LeaseFactory<'a> {
     pub(crate) fn new(
         form: NewLeaseForm,
         lease_addr: Addr,
-        remote_lease: RemoteLeaseId,
         profit: ProfitRef,
         reserve: ReserveRef,
         alarms: (TimeAlarmsRef, OracleRef),
@@ -48,7 +45,6 @@ impl<'a> LeaseFactory<'a> {
         Self {
             form,
             lease_addr,
-            remote_lease,
             profit,
             reserve,
             time_alarms: alarms.0,
@@ -83,14 +79,7 @@ impl WithLeaseDeps for LeaseFactory<'_> {
                 self.form.loan.annual_margin_interest,
                 self.form.loan.due_period,
             );
-            Lease::new(
-                self.lease_addr,
-                self.remote_lease,
-                self.form.customer,
-                position,
-                loan,
-                oracle,
-            )
+            Lease::new(self.lease_addr, self.form.customer, position, loan, oracle)
         };
 
         check::check(&lease, self.now, &self.time_alarms, &self.price_alarms).map(|status| {

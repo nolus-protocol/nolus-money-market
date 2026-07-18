@@ -15,6 +15,7 @@ const ICA_ACCOUNT_ID: &str = "0";
 ///
 /// Holds the address on the ICA host network
 #[derive(Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "testing", derive(PartialEq, Eq, Debug))]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub struct HostAccount(String);
 

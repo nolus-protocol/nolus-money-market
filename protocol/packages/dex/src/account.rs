@@ -35,3 +35,9 @@ impl Connectable for Account {
         &self.dex
     }
 }
+
+impl From<Account> for HostAccount {
+    fn from(value: Account) -> Self {
+        value.remote
+    }
+}

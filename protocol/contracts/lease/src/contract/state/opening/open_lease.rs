@@ -126,7 +126,6 @@ impl OpenLease {
                 let next = super::buy_asset::start(
                     self.new_lease.form,
                     dex_account,
-                    remote_lease,
                     self.downpayment,
                     self.loan,
                     self.deps,

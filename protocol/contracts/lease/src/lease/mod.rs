@@ -5,7 +5,6 @@ use lpp::stub::loan::LppLoan as LppLoanTrait;
 use oracle_platform::Oracle as OracleTrait;
 use platform::batch::Batch;
 use profit::stub::ProfitRef;
-use remote_lease::response::RemoteLeaseId;
 use sdk::cosmwasm_std::Addr;
 use timealarms::stub::TimeAlarmsRef;
 
@@ -39,7 +38,6 @@ pub(crate) mod with_lease_paid;
 // and those that take `self` into `&mut self` or `&self`
 pub struct Lease<Asset, Lpp, Oracle> {
     addr: Addr,
-    remote_lease: RemoteLeaseId,
     customer: Addr,
     position: Position<Asset>,
     loan: Loan<Lpp>,
@@ -62,7 +60,6 @@ where
 {
     pub(super) fn new(
         addr: Addr,
-        remote_lease: RemoteLeaseId,
         customer: Addr,
         position: Position<Asset>,
         loan: Loan<LppLoan>,
@@ -73,7 +70,6 @@ where
 
         Self {
             addr,
-            remote_lease,
             customer,
             position,
             loan,
@@ -89,7 +85,6 @@ where
     ) -> Self {
         Self::new(
             dto.addr,
-            dto.remote_lease,
             dto.customer,
             position,
             Loan::from_dto(dto.loan, lpp_loan),
@@ -136,7 +131,6 @@ where
     ) -> LeaseDTO {
         LeaseDTO::new(
             self.addr,
-            self.remote_lease,
             self.customer,
             self.position.into(),
             self.loan.into_dto(profit),
@@ -157,7 +151,6 @@ where
             .map(|(loan_dto, loan_batch)| IntoDTOResult {
                 lease: LeaseDTO::new(
                     self.addr,
-                    self.remote_lease,
                     self.customer,
                     self.position.into(),
                     loan_dto,
@@ -203,7 +196,6 @@ pub(crate) mod tests {
     };
     use oracle_platform::{Oracle, error::Result as PriceOracleResult};
     use platform::batch::Batch;
-    use remote_lease::response::RemoteLeaseId;
     use sdk::cosmwasm_std::Addr;
 
     use crate::{
@@ -221,7 +213,6 @@ pub(crate) mod tests {
     const CUSTOMER: &str = "customer";
     const LEASE_ADDR: &str = "lease_addr";
     const ORACLE_ADDR: &str = "oracle_addr";
-    const REMOTE_LEASE_ID: &str = "StubPda11111111111111111111111111111";
     const MARGIN_INTEREST_RATE: Percent100 = Percent100::from_permille(23);
     pub(super) const LEASE_START: Instant = Instant::from_nanos(100);
     pub(super) const DUE_PERIOD: Duration = Duration::from_days(100);
@@ -348,7 +339,6 @@ pub(crate) mod tests {
             PositionSpec::no_close(liability, lpn_coin(15_000_000), MIN_TRANSACTION);
         Lease::new(
             lease,
-            RemoteLeaseId::new(REMOTE_LEASE_ID.to_owned()).expect("base58 sample"),
             Addr::unchecked(CUSTOMER),
             Position::new(amount, position_spec),
             loan,

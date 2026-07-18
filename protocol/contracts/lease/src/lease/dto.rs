@@ -3,7 +3,6 @@ use serde::{Deserialize, Serialize};
 use currency::{CurrencyDef, MemberOf};
 use lpp::stub::loan::LppLoan as LppLoanTrait;
 use oracle_platform::Oracle as OracleTrait;
-use remote_lease::response::RemoteLeaseId;
 use sdk::cosmwasm_std::{Addr, QuerierWrapper};
 use timealarms::stub::TimeAlarmsRef;
 
@@ -25,7 +24,6 @@ use super::{
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub struct LeaseDTO {
     pub(crate) addr: Addr,
-    pub(crate) remote_lease: RemoteLeaseId,
     pub(crate) customer: Addr,
     pub(crate) position: PositionDTO,
     pub(crate) loan: LoanDTO,
@@ -38,7 +36,6 @@ impl LeaseDTO {
     #[allow(clippy::too_many_arguments)]
     pub(crate) fn new(
         addr: Addr,
-        remote_lease: RemoteLeaseId,
         customer: Addr,
         position: PositionDTO,
         loan: LoanDTO,
@@ -48,7 +45,6 @@ impl LeaseDTO {
     ) -> Self {
         Self {
             addr,
-            remote_lease,
             customer,
             position,
             loan,
