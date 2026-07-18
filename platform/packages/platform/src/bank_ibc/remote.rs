@@ -111,14 +111,14 @@ mod test {
 
     use crate::{
         bank_ibc::remote::{Sender, new_msg},
-        ica::HostAccount,
+        remote::Account as RemoteAccount,
         trx::Transaction,
     };
 
     #[test]
     fn send() {
         let channel = "channel-1045";
-        let sender = HostAccount::try_from(String::from("sender")).unwrap();
+        let sender = RemoteAccount::try_from(String::from("sender")).unwrap();
         let receiver = Addr::unchecked("receiver");
         let timeout = Timestamp::from_seconds(100);
         let mut funds_sender = Sender::new(channel, &sender, &receiver, timeout);

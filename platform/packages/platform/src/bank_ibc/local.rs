@@ -120,14 +120,14 @@ mod test {
         bank_ibc::local::{self, Sender},
         batch::Batch,
         coin_legacy,
-        remoteote::HostAccount,
+        remote::Account as RemoteAccount,
     };
 
     #[test]
     fn send() {
         let channel = "channel-0";
         let sender = Addr::unchecked("sender");
-        let receiver = HostAccount::try_from(String::from("receiver")).unwrap();
+        let receiver = RemoteAccount::try_from(String::from("receiver")).unwrap();
         let timeout = Timestamp::from_seconds(100);
         let mut funds_sender = Sender::new(channel, &sender, &receiver, timeout, "MEMO".into());
 
