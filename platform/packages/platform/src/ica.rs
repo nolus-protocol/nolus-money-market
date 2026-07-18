@@ -26,6 +26,13 @@ pub struct ErrorResponse {
     details: String,
 }
 
+#[cfg(feature = "testing")]
+impl AsRef<str> for HostAccount {
+    fn as_ref(&self) -> &str {
+        &self.0
+    }
+}
+
 impl TryFrom<String> for HostAccount {
     type Error = Error;
     fn try_from(addr: String) -> Result<Self> {
