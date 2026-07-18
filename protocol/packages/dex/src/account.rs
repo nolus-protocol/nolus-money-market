@@ -13,6 +13,7 @@ pub struct Account {
     // converted from the Remote Lease Id, used as destination for outgoing transfers
     // cannot use Remote Account Id because `dex` is protocol-agnostic
     remote: RemoteAccount,
+    remote_controller: Addr,
     dex: ConnectionParams,
 }
 
@@ -25,8 +26,18 @@ impl Account {
         &self.remote
     }
 
-    pub fn new(owner: Addr, remote: RemoteAccount, dex: ConnectionParams) -> Self {
-        Self { owner, remote, dex }
+    pub fn new(
+        owner: Addr,
+        remote: RemoteAccount,
+        remote_controller: Addr,
+        dex: ConnectionParams,
+    ) -> Self {
+        Self {
+            owner,
+            remote,
+            remote_controller,
+            dex,
+        }
     }
 }
 

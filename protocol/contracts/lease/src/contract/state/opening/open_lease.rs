@@ -121,8 +121,12 @@ impl OpenLease {
         RemoteAccount::try_from(remote_lease.as_str().to_owned())
             .map_err(ContractError::PlatformError)
             .and_then(|remote_account| {
-                let dex_account =
-                    Account::new(env.contract.address, remote_account, self.new_lease.dex);
+                let dex_account = Account::new(
+                    env.contract.address,
+                    remote_account,
+                    self.new_lease.remote_lease_controller,
+                    self.new_lease.dex,
+                );
                 let next = super::buy_asset::start(
                     self.new_lease.form,
                     dex_account,
