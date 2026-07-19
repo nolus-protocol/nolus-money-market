@@ -1,5 +1,5 @@
 use currency::{DexSymbols, Group};
-use dex::transport::{ExactAmountIn, SwapError, SwapPathSlice, SwapResult};
+use dex::{ExactAmountIn, SwapError, SwapPathSlice, SwapResult};
 use finance::coin::{Amount, CoinDTO};
 use oracle::api::swap::SwapTarget;
 use platform::{

@@ -1,7 +1,7 @@
 use std::marker::PhantomData;
 
 use currency::{self, DexSymbols, Group};
-use dex::transport::{ExactAmountIn, SwapError, SwapPathSlice, SwapResult};
+use dex::{ExactAmountIn, SwapError, SwapPathSlice, SwapResult};
 use finance::coin::{Amount, CoinDTO};
 use platform::{
     coin_legacy,

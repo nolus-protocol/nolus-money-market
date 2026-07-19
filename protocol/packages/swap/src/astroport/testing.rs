@@ -1,7 +1,7 @@
 use std::any;
 
 use currency::{CurrencyDTO, Group, MemberOf};
-use dex::transport::ExactAmountIn;
+use dex::ExactAmountIn;
 use finance::coin::{Amount, CoinDTO};
 use oracle::api::swap::SwapTarget;
 use sdk::{
