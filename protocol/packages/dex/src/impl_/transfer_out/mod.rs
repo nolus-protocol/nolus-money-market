@@ -17,7 +17,7 @@ use sdk::cosmwasm_std::{Binary, Env, QuerierWrapper};
 use crate::{
     CoinsNb, Contract, ContractInSwap, Enterable, Stage, SwapTask as SwapTaskT, TimeAlarm,
     TransportOut as TransportOutT, TransportOutFactory as TransportOutFactoryT, error::Result,
-    swap::ExactAmountIn,
+    transport::ExactAmountIn,
 };
 
 #[cfg(feature = "migration")]

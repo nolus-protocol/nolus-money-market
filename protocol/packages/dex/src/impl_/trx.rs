@@ -12,7 +12,7 @@ use platform::{
 };
 use sdk::cosmwasm_std::QuerierWrapper;
 
-use crate::{Account, Connectable, IBC_TIMEOUT, error::Result, swap::ExactAmountIn};
+use crate::{Account, Connectable, IBC_TIMEOUT, error::Result, transport::ExactAmountIn};
 
 pub(super) struct SwapTrx<'ica, 'swap_path, 'querier, SwapGroup, SwapPathImpl> {
     conn: &'ica str,

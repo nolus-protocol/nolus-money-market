@@ -6,7 +6,7 @@ use sdk::cosmwasm_std::QuerierWrapper;
 
 use crate::{
     SlippageCalculator, SwapTask as SwapTaskT, WithCalculator, error::Result, impl_::trx::SwapTrx,
-    swap::ExactAmountIn,
+    transport::ExactAmountIn,
 };
 
 pub struct EncodeRequest<'spec, 'querier, SwapTask, SwapClient> {

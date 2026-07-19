@@ -15,22 +15,19 @@ feature-groups = { impl-or-testing = { members = ["impl","testing",], at-least-o
 
 [features]
 impl = [
-    "dep:access-control",
     "dep:oracle-platform",
-    "oracle/stub_price",
-    "dep:timealarms",
 ]
 migration = []
 testing = ["finance/testing"]
 
 [dependencies]
 cw-time = { workspace = true }
-access-control = { workspace = true, optional = true }
+access-control = { workspace = true }
 currency = { workspace = true }
 finance = { workspace = true }
-oracle = { workspace = true, features = ["stub_swap"] }
+oracle = { workspace = true, features = [ "stub_price", "stub_swap",] }
 oracle-platform = { workspace = true, optional = true }
-timealarms = { workspace = true, optional = true, features = ["stub"] }
+timealarms = { workspace = true, features = ["stub"] }
 platform = { workspace = true }
 sdk = { workspace = true }
 

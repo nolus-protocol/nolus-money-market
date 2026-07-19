@@ -190,7 +190,7 @@ mod impl_handler {
             self, Handler,
             response::{ContinueResult, Result},
         },
-        swap::ExactAmountIn,
+        transport::ExactAmountIn,
     };
 
     use super::{ForwardToInner, State};
@@ -516,8 +516,7 @@ mod impl_migration {
     use crate::{
         SwapTask as SwapTaskT,
         impl_::{ForwardToInner, migration::_MigrateSpec},
-        swap::ExactAmountIn,
-        transport::TransferOutFactory as TransportOutFactoryT,
+        transport::{ExactAmountIn, TransferOutFactory as TransportOutFactoryT},
     };
 
     impl<SwapTask, SwapTaskNew, SEnumNew, TransportOutFactory, SwapClient, ForwardToInnerMsg>
