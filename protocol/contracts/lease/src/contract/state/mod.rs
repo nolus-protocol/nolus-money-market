@@ -13,7 +13,6 @@ use sdk::{
     cosmwasm_std::{Binary, Env, MessageInfo, QuerierWrapper, Reply, Storage},
     cw_storage_plus::Item,
 };
-use swap::Impl;
 
 use crate::{
     api::{
@@ -72,8 +71,6 @@ type Closed = LeaseState<closed::Closed>;
 type Liquidated = LeaseState<liquidated::Liquidated>;
 
 type SwapResult = ContractResult<Response>;
-
-type SwapClient = Impl;
 
 #[enum_dispatch(Contract)]
 #[derive(Serialize, Deserialize)]

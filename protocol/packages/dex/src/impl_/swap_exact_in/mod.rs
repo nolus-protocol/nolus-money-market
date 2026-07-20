@@ -19,8 +19,9 @@ use report_anomaly::ReportAnomalyCmd;
 use sdk::cosmwasm_std::{Binary, Env, QuerierWrapper};
 
 use crate::{
-    AnomalyTreatment, Connectable, ConnectionParams, Contract, ContractInSwap, Enterable, Stage,
-    SwapTask as SwapTaskT, TimeAlarm, TransportOutFactory as TransportOutFactoryT,
+    AnomalyTreatment, Connectable, ConnectionParams, Contract, ContractInSwap, Enterable,
+    RemoteLeaseTransportFactory as RemoteLeaseTransportFactoryT, Stage, SwapTask as SwapTaskT,
+    TimeAlarm, TransportOutFactory as TransportOutFactoryT,
     error::Result,
     impl_::{
         ForwardToInner,
@@ -40,53 +41,56 @@ mod report_anomaly;
 
 #[derive(Serialize, Deserialize)]
 #[serde(bound(
-    serialize = "SwapTask: Serialize",
-    deserialize = "SwapTask: Deserialize<'de>",
+    serialize = "SwapTask: Serialize,
+                    RemoteLeaseTransportFactory: Serialize",
+    deserialize = "SwapTask: Deserialize<'de>,
+                    RemoteLeaseTransportFactory: Deserialize<'de>",
 ))]
-pub struct SwapExactIn<SwapTask, SEnum, SwapClient> {
+pub struct SwapExactIn<SwapTask, SEnum, RemoteLeaseTransportFactory> {
     spec: SwapTask,
+    transport_factory: RemoteLeaseTransportFactory,
     #[serde(skip)]
     _state_enum: PhantomData<SEnum>,
-    #[serde(skip)]
-    _swap_client: PhantomData<SwapClient>,
 }
 
-impl<SwapTask, SEnum, SwapClient> SwapExactIn<SwapTask, SEnum, SwapClient>
+impl<SwapTask, SEnum, RemoteLeaseTransportFactory>
+    SwapExactIn<SwapTask, SEnum, RemoteLeaseTransportFactory>
 where
     Self: Into<SEnum>,
 {
-    pub(super) fn new(spec: SwapTask) -> Self {
+    pub(super) fn new(spec: SwapTask, transport_factory: RemoteLeaseTransportFactory) -> Self {
         Self {
             spec,
+            transport_factory,
             _state_enum: PhantomData,
-            _swap_client: PhantomData,
         }
     }
 }
 
-impl<SwapTask, SEnum, SwapClient> SwapExactIn<SwapTask, SEnum, SwapClient>
+impl<SwapTask, SEnum, RemoteLeaseTransportFactory>
+    SwapExactIn<SwapTask, SEnum, RemoteLeaseTransportFactory>
 where
     SwapTask: SwapTaskT,
-    SwapClient: ExactAmountIn,
+    RemoteLeaseTransportFactory: RemoteLeaseTransportFactoryT,
 {
     pub(super) fn enter_state(&self, _now: Instant, querier: QuerierWrapper<'_>) -> Result<Batch> {
-        self.spec
-            .with_slippage_calc(EncodeRequest::<'_, '_, _, SwapClient>::from(
-                &self.spec, querier,
-            ))
+        self.spec.with_slippage_calc(
+            EncodeRequest::<'_, '_, _, RemoteLeaseTransportFactory>::from(&self.spec, querier),
+        )
     }
 }
 
-impl<SwapTask, SEnum, SwapClient> SwapExactIn<SwapTask, SEnum, SwapClient>
+impl<SwapTask, SEnum, RemoteLeaseTransportFactory>
+    SwapExactIn<SwapTask, SEnum, RemoteLeaseTransportFactory>
 where
     SwapTask: SwapTaskT,
-    SwapClient: ExactAmountIn,
+    RemoteLeaseTransportFactory: RemoteLeaseTransportFactoryT,
     Self: Handler<Response = SEnum, SwapResult = SwapTask::Result> + Into<SEnum>,
 {
     fn handle_error(self, querier: QuerierWrapper<'_>, env: Env) -> HandlerResult<Self> {
         match self.spec.into_output_task(ReportAnomalyCmd::default()) {
             AnomalyTreatment::Retry(spec) => {
-                let swap_exact_in = SwapExactIn::new(spec);
+                let swap_exact_in = SwapExactIn::new(spec, self.transport_factory);
                 swap_exact_in
                     .enter(env.block.time.into_instant(), querier)
                     .and_then(|batch| response::res_continue::<_, _, Self>(batch, swap_exact_in))
@@ -97,39 +101,51 @@ where
     }
 }
 
-impl<SwapTask, SEnum, SwapClient> Enterable for SwapExactIn<SwapTask, SEnum, SwapClient>
+impl<SwapTask, SEnum, RemoteLeaseTransportFactory> Enterable
+    for SwapExactIn<SwapTask, SEnum, RemoteLeaseTransportFactory>
 where
     SwapTask: SwapTaskT,
-    SwapClient: ExactAmountIn,
+    RemoteLeaseTransportFactory: RemoteLeaseTransportFactoryT,
 {
     fn enter(&self, now: Instant, querier: QuerierWrapper<'_>) -> Result<Batch> {
         self.enter_state(now, querier)
     }
 }
 
-impl<SwapTask, SEnum, SwapClient> Connectable for SwapExactIn<SwapTask, SEnum, SwapClient>
+impl<SwapTask, SEnum, RemoteLeaseTransportFactory> Connectable
+    for SwapExactIn<SwapTask, SEnum, RemoteLeaseTransportFactory>
 where
     SwapTask: SwapTaskT,
+    RemoteLeaseTransportFactory: RemoteLeaseTransportFactoryT,
 {
     fn dex(&self) -> &ConnectionParams {
         self.spec.dex_account().dex()
     }
 }
 
-impl<SwapTask, TransportOutFactory, SwapClient, ForwardToInnerMsg> Handler
+impl<SwapTask, TransportOutFactory, RemoteLeaseTransportFactory, ForwardToInnerMsg> Handler
     for SwapExactIn<
         SwapTask,
-        super::out_local::State<SwapTask, TransportOutFactory, SwapClient, ForwardToInnerMsg>,
-        SwapClient,
+        super::out_local::State<
+            SwapTask,
+            TransportOutFactory,
+            RemoteLeaseTransportFactory,
+            ForwardToInnerMsg,
+        >,
+        RemoteLeaseTransportFactory,
     >
 where
     SwapTask: SwapTaskT,
     TransportOutFactory: TransportOutFactoryT,
-    SwapClient: ExactAmountIn,
+    RemoteLeaseTransportFactory: RemoteLeaseTransportFactoryT,
     ForwardToInnerMsg: ForwardToInner,
 {
-    type Response =
-        super::out_local::State<SwapTask, TransportOutFactory, SwapClient, ForwardToInnerMsg>;
+    type Response = super::out_local::State<
+        SwapTask,
+        TransportOutFactory,
+        RemoteLeaseTransportFactory,
+        ForwardToInnerMsg,
+    >;
     type SwapResult = SwapTask::Result;
 
     fn authz_remote_callback(
@@ -147,9 +163,11 @@ where
         env: Env,
     ) -> HandlerResult<Self> {
         self.spec
-            .into_output_task(DecodeThenTransferIn::<'_, _, _, SwapClient>::from(
-                resp.as_slice(),
-            ))
+            .into_output_task(
+                DecodeThenTransferIn::<'_, _, _, RemoteLeaseTransportFactory>::from(
+                    resp.as_slice(),
+                ),
+            )
             .and_then(|next_state| {
                 next_state
                     .enter(env.block.time.into_instant(), querier)
@@ -173,18 +191,27 @@ where
     }
 }
 
-impl<SwapTask, TransportOutFactory, SwapClient, ForwardToInnerMsg> Handler
+impl<SwapTask, TransportOutFactory, RemoteLeaseTransportFactory, ForwardToInnerMsg> Handler
     for SwapExactIn<
         SwapTask,
-        super::out_remote::State<SwapTask, TransportOutFactory, SwapClient, ForwardToInnerMsg>,
-        SwapClient,
+        super::out_remote::State<
+            SwapTask,
+            TransportOutFactory,
+            RemoteLeaseTransportFactory,
+            ForwardToInnerMsg,
+        >,
+        RemoteLeaseTransportFactory,
     >
 where
     SwapTask: SwapTaskT,
-    SwapClient: ExactAmountIn,
+    RemoteLeaseTransportFactory: RemoteLeaseTransportFactoryT,
 {
-    type Response =
-        super::out_remote::State<SwapTask, TransportOutFactory, SwapClient, ForwardToInnerMsg>;
+    type Response = super::out_remote::State<
+        SwapTask,
+        TransportOutFactory,
+        RemoteLeaseTransportFactory,
+        ForwardToInnerMsg,
+    >;
     type SwapResult = SwapTask::Result;
 
     fn authz_remote_callback(
@@ -201,12 +228,14 @@ where
         querier: QuerierWrapper<'_>,
         env: Env,
     ) -> HandlerResult<Self> {
-        self.spec
-            .into_output_task(DecodeThenFinish::<'_, '_, '_, _, _, SwapClient>::from(
-                resp.as_slice(),
-                querier,
-                &env,
-            ))
+        self.spec.into_output_task(DecodeThenFinish::<
+            '_,
+            '_,
+            '_,
+            _,
+            _,
+            RemoteLeaseTransportFactory,
+        >::from(resp.as_slice(), querier, &env))
     }
 
     fn on_error(
@@ -224,7 +253,8 @@ where
     }
 }
 
-impl<SwapTask, SEnum, SwapClient> Contract for SwapExactIn<SwapTask, SEnum, SwapClient>
+impl<SwapTask, SEnum, RemoteLeaseTransportFactory> Contract
+    for SwapExactIn<SwapTask, SEnum, RemoteLeaseTransportFactory>
 where
     SwapTask: SwapTaskT + ContractInSwap<StateResponse = <SwapTask as SwapTaskT>::StateResponse>,
 {
@@ -240,7 +270,8 @@ where
     }
 }
 
-impl<SwapTask, SEnum, SwapClient> Display for SwapExactIn<SwapTask, SEnum, SwapClient>
+impl<SwapTask, SEnum, RemoteLeaseTransportFactory> Display
+    for SwapExactIn<SwapTask, SEnum, RemoteLeaseTransportFactory>
 where
     SwapTask: SwapTaskT,
 {
@@ -249,7 +280,8 @@ where
     }
 }
 
-impl<SwapTask, SEnum, SwapClient> TimeAlarm for SwapExactIn<SwapTask, SEnum, SwapClient>
+impl<SwapTask, SEnum, RemoteLeaseTransportFactory> TimeAlarm
+    for SwapExactIn<SwapTask, SEnum, RemoteLeaseTransportFactory>
 where
     SwapTask: SwapTaskT,
 {
@@ -259,25 +291,26 @@ where
 }
 
 #[cfg(feature = "migration")]
-impl<SwapTask, SwapTaskNew, SEnum, SEnumNew, SwapClient>
-    _MigrateSpec<SwapTask, SwapTaskNew, SEnumNew> for SwapExactIn<SwapTask, SEnum, SwapClient>
+impl<SwapTask, SwapTaskNew, SEnum, SEnumNew, RemoteLeaseTransportFactory>
+    _MigrateSpec<SwapTask, SwapTaskNew, SEnumNew>
+    for SwapExactIn<SwapTask, SEnum, RemoteLeaseTransportFactory>
 where
     Self: Sized,
-    SwapExactIn<SwapTaskNew, SEnumNew, SwapClient>: Into<SEnumNew>,
+    SwapExactIn<SwapTaskNew, SEnumNew, RemoteLeaseTransportFactory>: Into<SEnumNew>,
 {
-    type Out = SwapExactIn<SwapTaskNew, SEnumNew, SwapClient>;
+    type Out = SwapExactIn<SwapTaskNew, SEnumNew, RemoteLeaseTransportFactory>;
 
     fn migrate_spec<MigrateFn>(self, migrate_fn: MigrateFn) -> Self::Out
     where
         MigrateFn: FnOnce(SwapTask) -> SwapTaskNew,
     {
-        Self::Out::new(migrate_fn(self.spec))
+        Self::Out::new(migrate_fn(self.spec), self.transport_factory)
     }
 }
 
 #[cfg(feature = "migration")]
-impl<SwapTask, R, SEnum, SwapClient> _InspectSpec<SwapTask, R>
-    for SwapExactIn<SwapTask, SEnum, SwapClient>
+impl<SwapTask, R, SEnum, RemoteLeaseTransportFactory> _InspectSpec<SwapTask, R>
+    for SwapExactIn<SwapTask, SEnum, RemoteLeaseTransportFactory>
 {
     fn inspect_spec<InspectFn>(&self, inspect_fn: InspectFn) -> R
     where
@@ -287,12 +320,12 @@ impl<SwapTask, R, SEnum, SwapClient> _InspectSpec<SwapTask, R>
     }
 }
 
-fn decode_response<OutC, SwapTask, SwapClient>(spec: &SwapTask, resp: &[u8]) -> Result<Coin<OutC>>
+fn decode_response<OutC, SwapTask, Transport>(spec: &SwapTask, resp: &[u8]) -> Result<Coin<OutC>>
 where
     OutC: CurrencyDef,
     OutC::Group: MemberOf<<SwapTask::OutG as Group>::TopG>,
     SwapTask: SwapTaskT,
-    SwapClient: ExactAmountIn,
+    Transport: ExactAmountIn,
 {
     let out_currency = OutC::dto().into_super_group();
     try_filter_fold_coins(
@@ -318,7 +351,7 @@ where
                     non_swapped,
                     |total_out, _in| {
                         filtered = true;
-                        SwapClient::parse_response(&mut responses)
+                        Transport::parse_response(&mut responses)
                             .map(|out| total_out + Coin::new(out))
                             .map_err(Into::into)
                     },

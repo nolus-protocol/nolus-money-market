@@ -24,11 +24,11 @@ use crate::{
         cmd::OpenLoanRespResult,
         finalize::LeasesRef,
         state::{
-            SwapClient, SwapResult,
+            SwapResult,
             out_task::{OutTaskFactory, WithOutCurrency},
             resp_delivery::ForwardToDexEntry,
         },
-        transport::TransferOutFactory,
+        transport::{SwapClientFactory, TransferOutFactory},
     },
     error::ContractResult,
     event::Type,
@@ -41,9 +41,9 @@ mod finish;
 type AssetGroup = LeaseAssetCurrencies;
 #[allow(dead_code)]
 pub(super) type StartState =
-    StartLocalRemoteState<BuyAsset, TransferOutFactory, SwapClient, ForwardToDexEntry>;
+    StartLocalRemoteState<BuyAsset, TransferOutFactory, SwapClientFactory, ForwardToDexEntry>;
 pub(in super::super) type DexState =
-    dex::StateRemoteOut<BuyAsset, TransferOutFactory, SwapClient, ForwardToDexEntry>;
+    dex::StateRemoteOut<BuyAsset, TransferOutFactory, SwapClientFactory, ForwardToDexEntry>;
 
 pub(super) fn start(
     new_lease: NewLeaseForm,
@@ -63,6 +63,7 @@ pub(super) fn start(
             start_opening_at,
         ),
         TransferOutFactory::default(),
+        SwapClientFactory::default(),
     )
 }
 
