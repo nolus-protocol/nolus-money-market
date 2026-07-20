@@ -322,6 +322,7 @@ where
         lease,
         downpayment,
         exp_borrow,
+        LeaseC::dex(),
     );
 }
 

@@ -2,7 +2,6 @@ use thiserror::Error;
 
 use currency::Group;
 use finance::coin::{Amount, CoinDTO};
-use oracle::api::swap::SwapTarget;
 use platform::{remote::Account as RemoteAccount, trx::Transaction};
 use sdk::{api::ProtobufAny, cosmwasm_std::StdError};
 
@@ -28,29 +27,22 @@ pub trait Factory {
         Task: SwapTask;
 }
 
-pub type SwapPathSlice<'a, G> = &'a [SwapTarget<G>];
-
 /// A swap-exact-in against a specific DEX: the request messages it is made of
 /// and the amount read back from its responses.
 ///
 /// Implemented once per supported DEX.
 pub trait Transport {
-    /// `swap_path` should be a non-empty list
-    ///
     /// `GIn` - the group of the input token
     /// `GOut` - the group of the output token
-    /// `GSwap` - the group common for all tokens in the swap path
-    fn build_request<GIn, GOut, GSwap>(
+    fn build_request<GIn, GOut>(
         trx: &mut Transaction,
         sender: RemoteAccount,
         amount_in: &CoinDTO<GIn>,
         min_amount_out: &CoinDTO<GOut>,
-        swap_path: SwapPathSlice<'_, GSwap>,
     ) -> Result<()>
     where
         GIn: Group,
-        GOut: Group,
-        GSwap: Group;
+        GOut: Group;
 
     fn parse_response<I>(trx_resps: &mut I) -> Result<Amount>
     where

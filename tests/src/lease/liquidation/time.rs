@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use currencies::PaymentGroup;
+use currency::CurrencyDef as _;
 use finance::{coin::Amount, duration::Duration, price, zero::Zero};
 use lease::api::{ExecuteMsg, query::StateResponse};
 use platform::coin_legacy;
@@ -13,7 +14,7 @@ use crate::{
         leaser::Instantiator as LeaserInstantiator,
         test_case::{TestCase, response::ResponseWithInterChainMsgs},
     },
-    lease::{self as lease_test, LeaseCoin, PaymentCurrency},
+    lease::{self as lease_test, LeaseCoin, LpnCurrency, PaymentCurrency},
 };
 
 use super::super::LeaseTestCase;
@@ -57,7 +58,7 @@ fn liquidation_time_alarm(
         return;
     };
 
-    let requests: Vec<SwapRequest<PaymentGroup, PaymentGroup>> = crate::common::swap::expect_swap(
+    let requests: Vec<SwapRequest<PaymentGroup>> = crate::common::swap::expect_swap(
         response,
         TestCase::DEX_CONNECTION_ID,
         TestCase::LEASE_ICA_ID,
@@ -71,6 +72,7 @@ fn liquidation_time_alarm(
         lease_addr.clone(),
         ica_addr.clone(),
         requests.into_iter(),
+        LpnCurrency::dex(),
         |amount, _, _| amount,
     )
     .ignore_response();

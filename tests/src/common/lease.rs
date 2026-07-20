@@ -1,5 +1,5 @@
 use currencies::{LeaseGroup, Lpn, PaymentGroup};
-use currency::{Currency, CurrencyDTO, CurrencyDef};
+use currency::{Currency, CurrencyDTO, CurrencyDef, SymbolStatic};
 use dex::{ConnectionParams, Ics20Channel};
 use finance::{
     coin::Coin,
@@ -216,6 +216,7 @@ pub(crate) fn complete_initialization<DownpaymentC, Lpn>(
     lease_addr: Addr,
     downpayment: Coin<DownpaymentC>,
     exp_borrow: Coin<Lpn>,
+    out_denom: SymbolStatic,
 ) where
     DownpaymentC: CurrencyDef,
     Lpn: CurrencyDef,
@@ -231,7 +232,7 @@ pub(crate) fn complete_initialization<DownpaymentC, Lpn>(
         (downpayment, exp_borrow),
     );
 
-    let requests: Vec<SwapRequest<PaymentGroup, PaymentGroup>> = super::swap::expect_swap(
+    let requests: Vec<SwapRequest<PaymentGroup>> = super::swap::expect_swap(
         response,
         connection_id,
         TestCase::LEASE_ICA_ID,
@@ -247,6 +248,7 @@ pub(crate) fn complete_initialization<DownpaymentC, Lpn>(
         lease_addr.clone(),
         remote,
         requests.into_iter(),
+        out_denom,
         |price, _, _| price,
     )
     .ignore_response()

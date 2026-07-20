@@ -1,9 +1,8 @@
 use std::any;
 
-use currency::{CurrencyDTO, Group, MemberOf};
+use currency::Group;
 use dex::Transport;
 use finance::coin::{Amount, CoinDTO};
-use oracle::api::swap::SwapTarget;
 use sdk::{
     api::ProtobufAny,
     cosmos_sdk_proto::{
@@ -17,7 +16,7 @@ use crate::testing::{self, ExactAmountInSkel, SwapRequest};
 
 use super::{
     GenericImpl, RequestMsg, ResponseMsg,
-    api::{AssetInfo, ExecuteMsg, SwapOperation, SwapResponseData},
+    api::{ExecuteMsg, SwapResponseData},
     router::Router,
 };
 
@@ -26,10 +25,9 @@ where
     Self: Transport,
     R: Router,
 {
-    fn parse_request<GIn, GSwap>(request: ProtobufAny) -> SwapRequest<GIn, GSwap>
+    fn parse_request<GIn>(request: ProtobufAny) -> SwapRequest<GIn>
     where
-        GIn: Group + MemberOf<GSwap>,
-        GSwap: Group,
+        GIn: Group,
     {
         let RequestMsg {
             sender: _,
@@ -47,7 +45,7 @@ where
         let token_in = parse_one_token_from_vec::<GIn>(funds);
 
         let ExecuteMsg::ExecuteSwapOperations {
-            operations,
+            operations: _operations,
             minimum_receive: Some(min_token_out),
             to: None,
             max_spread: Some(super::MAX_IMPACT),
@@ -61,13 +59,9 @@ where
             testing::pattern_match_else(any::type_name::<RequestMsg>())
         };
 
-        let swap_path =
-            collect_swap_path::<GSwap>(operations, token_in.currency().into_super_group());
-
         SwapRequest {
             token_in,
             min_token_out: min_token_out.into(),
-            swap_path,
         }
     }
 
@@ -82,56 +76,6 @@ where
             (ResponseMsg { data: swap_resp }).encode_to_vec(),
         )
     }
-}
-
-fn collect_swap_path<GSwap>(
-    operations: Vec<SwapOperation>,
-    expected_first_currency: CurrencyDTO<GSwap>,
-) -> Vec<SwapTarget<GSwap>>
-where
-    GSwap: Group,
-{
-    operations
-        .into_iter()
-        .scan(
-            expected_first_currency,
-            |expected_offer_currency, operation| {
-                let SwapOperation::AstroSwap {
-                    offer_asset_info:
-                        AssetInfo::NativeToken {
-                            denom: offer_dex_denom,
-                        },
-                    ask_asset_info:
-                        AssetInfo::NativeToken {
-                            denom: ask_dex_denom,
-                        },
-                } = operation
-                else {
-                    unimplemented!(
-                        r#"Expected "AstroSwap" operation with both assets being native tokens!"#
-                    );
-                };
-
-                let offer_currency = testing::from_dex_symbol::<GSwap>(&offer_dex_denom)
-                    .expect("Offered asset doesn't belong to swapping currency group!");
-                let ask_currency = testing::from_dex_symbol::<GSwap>(&ask_dex_denom)
-                    .expect("Asked asset doesn't belong to swapping currency group!")
-                    .to_owned();
-
-                assert_eq!(
-                    offer_currency, *expected_offer_currency,
-                    "Expected operation's offered denom to be the same as the last asked denom!"
-                );
-
-                *expected_offer_currency = ask_currency;
-
-                Some(SwapTarget {
-                    pool_id: Default::default(),
-                    target: ask_currency,
-                })
-            },
-        )
-        .collect()
 }
 
 fn parse_request_from_any(request: ProtobufAny) -> RequestMsg {

@@ -48,11 +48,11 @@ pub(crate) fn expect_swap<InspectFn>(
     connection_id: &str,
     ica_id: &str,
     inspect_fn: InspectFn,
-) -> Vec<SwapRequest<PaymentGroup, PaymentGroup>>
+) -> Vec<SwapRequest<PaymentGroup>>
 where
     InspectFn: FnOnce(&AppResponse),
 {
-    let requests: Vec<SwapRequest<PaymentGroup, PaymentGroup>> = response
+    let requests: Vec<SwapRequest<PaymentGroup>> = response
         .expect_submit_tx(connection_id, ica_id)
         .into_iter()
         .map(|msg: ProtobufAny| <Impl as ExactAmountInSkel>::parse_request(msg))
@@ -68,37 +68,39 @@ pub(crate) fn do_swap<I, F>(
     initiator_contract_addr: Addr,
     ica_addr: Addr,
     requests: I,
+    out_denom: SymbolStatic,
     price_f: F,
 ) -> ResponseWithInterChainMsgs<'_, AppResponse>
 where
-    I: Iterator<Item = SwapRequest<PaymentGroup, PaymentGroup>>,
+    I: Iterator<Item = SwapRequest<PaymentGroup>>,
     F: for<'r, 't> FnMut(Amount, DexDenom<'r>, DexDenom<'t>) -> Amount,
 {
-    do_swap_with::<PaymentGroup, PaymentGroup, I, F>(
+    do_swap_with::<PaymentGroup, I, F>(
         app,
         initiator_contract_addr,
         ica_addr,
         requests,
+        out_denom,
         price_f,
     )
 }
 
-pub(crate) fn do_swap_with<GIn, GSwap, I, F>(
+pub(crate) fn do_swap_with<GIn, I, F>(
     app: &mut App,
     initiator_contract_addr: Addr,
     ica_addr: Addr,
     requests: I,
+    out_denom: SymbolStatic,
     mut price_f: F,
 ) -> ResponseWithInterChainMsgs<'_, AppResponse>
 where
     GIn: Group,
-    GSwap: Group,
-    I: Iterator<Item = SwapRequest<GIn, GSwap>>,
+    I: Iterator<Item = SwapRequest<GIn>>,
     F: for<'r, 't> FnMut(Amount, DexDenom<'r>, DexDenom<'t>) -> Amount,
 {
     let amounts: Vec<Amount> = requests
-        .map(|request: SwapRequest<GIn, GSwap>| {
-            do_swap_internal::<GIn, GSwap, _>(app, ica_addr.clone(), request, &mut price_f)
+        .map(|request: SwapRequest<GIn>| {
+            do_swap_internal::<GIn, _>(app, ica_addr.clone(), request, out_denom, &mut price_f)
         })
         .collect();
 
@@ -112,19 +114,17 @@ pub(crate) fn do_swap_with_error(
     send_error_response(app, requester_contract)
 }
 
-fn do_swap_internal<GIn, GSwap, F>(
+fn do_swap_internal<GIn, F>(
     app: &mut App,
     ica_addr: Addr,
-    request: SwapRequest<GIn, GSwap>,
+    request: SwapRequest<GIn>,
+    out_denom: SymbolStatic,
     price_f: &mut F,
 ) -> Amount
 where
     GIn: Group,
-    GSwap: Group,
     F: for<'r, 't> FnMut(Amount, DexDenom<'r>, DexDenom<'t>) -> Amount,
 {
-    assert!(!request.swap_path.is_empty());
-
     let dex_denom_in: SymbolStatic = request.token_in.currency().into_symbol::<DexSymbols<GIn>>();
     let amount_in = request.token_in.amount();
 
@@ -135,21 +135,12 @@ where
     )
     .unwrap();
 
-    let (amount_out, dex_denom_out) = request.swap_path.iter().fold(
-        (amount_in, dex_denom_in),
-        |(amount_in, dex_denom_in), swap_target| {
-            let dex_denom_out = swap_target.target.into_symbol::<DexSymbols<GSwap>>();
-
-            let amount_out = price_f(amount_in, DexDenom(dex_denom_in), DexDenom(dex_denom_out));
-
-            (amount_out, dex_denom_out)
-        },
-    );
+    let amount_out = price_f(amount_in, DexDenom(dex_denom_in), DexDenom(out_denom));
 
     app.send_tokens(
         testing::user(ADMIN),
         ica_addr,
-        &[CwCoin::new(amount_out, dex_denom_out)],
+        &[CwCoin::new(amount_out, out_denom)],
     )
     .unwrap();
 

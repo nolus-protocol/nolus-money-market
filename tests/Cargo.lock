@@ -1755,7 +1755,6 @@ dependencies = [
  "currency",
  "dex",
  "finance",
- "oracle",
  "platform",
  "prost 0.13.5",
  "sdk",

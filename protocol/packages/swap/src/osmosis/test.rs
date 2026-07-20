@@ -7,8 +7,6 @@ use sdk::cosmwasm_std::Coin as CwCoin;
 
 use crate::testing;
 
-use super::{SwapTarget, api::SwapAmountInRoute};
-
 #[test]
 fn to_dex_cwcoin() {
     let coin: Coin<SuperGroupTestC1> = Coin::new(3541415);
@@ -16,19 +14,6 @@ fn to_dex_cwcoin() {
         CwCoin::new(coin.to_primitive(), SuperGroupTestC1::dex()),
         super::to_dex_cwcoin::<SuperGroup>(&coin.into())
     );
-}
-
-#[test]
-fn into_route() {
-    let path = vec![SwapTarget {
-        pool_id: 2,
-        target: currency::dto::<SuperGroupTestC1, _>(),
-    }];
-    let expected = vec![SwapAmountInRoute {
-        pool_id: 2,
-        token_out_denom: SuperGroupTestC1::dex().into(),
-    }];
-    assert_eq!(expected, super::to_route::<SuperGroup>(&path));
 }
 
 #[test]

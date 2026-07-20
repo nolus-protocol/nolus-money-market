@@ -70,7 +70,7 @@ fn trigger_close(
         common::coin::<LpnCurrency>(quote),
     );
 
-    let requests: Vec<SwapRequest<PaymentGroup, PaymentGroup>> = swap::expect_swap(
+    let requests: Vec<SwapRequest<PaymentGroup>> = swap::expect_swap(
         response,
         TestCase::DEX_CONNECTION_ID,
         TestCase::LEASE_ICA_ID,

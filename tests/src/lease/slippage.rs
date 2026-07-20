@@ -110,7 +110,7 @@ fn full_liquidation_heal_sl_close() {
             testing::user(LEASE_ADMIN),
         );
 
-        let requests: Vec<SwapRequest<PaymentGroup, PaymentGroup>> = common::swap::expect_swap(
+        let requests: Vec<SwapRequest<PaymentGroup>> = common::swap::expect_swap(
             heal_response,
             TestCase::DEX_CONNECTION_ID,
             TestCase::LEASE_ICA_ID,
@@ -145,7 +145,7 @@ fn full_liquidation_heal_full_liquidation() {
             testing::user(LEASE_ADMIN),
         );
 
-        let requests: Vec<SwapRequest<PaymentGroup, PaymentGroup>> = common::swap::expect_swap(
+        let requests: Vec<SwapRequest<PaymentGroup>> = common::swap::expect_swap(
             heal_response,
             TestCase::DEX_CONNECTION_ID,
             TestCase::LEASE_ICA_ID,
@@ -171,7 +171,7 @@ fn trigger_full_liquidation(
     // the base is chosen to be close to the position amount to trigger a full liquidation
     let response =
         lease_mod::deliver_new_price(test_case, lease_amount + common::coin(10), borrowed_amount);
-    let requests: Vec<SwapRequest<PaymentGroup, PaymentGroup>> = common::swap::expect_swap(
+    let requests: Vec<SwapRequest<PaymentGroup>> = common::swap::expect_swap(
         response,
         TestCase::DEX_CONNECTION_ID,
         TestCase::LEASE_ICA_ID,
@@ -228,7 +228,7 @@ fn deliver_high_price(
 
 fn assert_min_out(
     test_case: &LeaseTestCase,
-    requests: &[SwapRequest<PaymentGroup, PaymentGroup>],
+    requests: &[SwapRequest<PaymentGroup>],
     lease_amount: LeaseCoin,
 ) {
     let price: Price<_, _> = oracle_mod::fetch_price::<LeaseCurrency, LeaseGroup, Lpn, Lpns>(
@@ -246,6 +246,6 @@ fn assert_min_out(
     );
 }
 
-fn assert_any_min_out(requests: &[SwapRequest<PaymentGroup, PaymentGroup>]) {
+fn assert_any_min_out(requests: &[SwapRequest<PaymentGroup>]) {
     assert_eq!(LeaseCoin::new(1), common::coin(requests[0].min_token_out));
 }

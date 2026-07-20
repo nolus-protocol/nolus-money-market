@@ -2,29 +2,25 @@ use std::marker::PhantomData;
 
 use currency::{AnyVisitor, CurrencyDTO, CurrencyDef, DexSymbols, Group, GroupVisit, MemberOf};
 use finance::coin::{Amount, Coin, CoinDTO, NonZeroAmount};
-use oracle::api::swap::SwapTarget;
 use sdk::api::ProtobufAny;
 
 #[cfg(test)]
 mod tests;
 
 pub trait ExactAmountInSkel {
-    fn parse_request<GIn, GSwap>(request: ProtobufAny) -> SwapRequest<GIn, GSwap>
+    fn parse_request<GIn>(request: ProtobufAny) -> SwapRequest<GIn>
     where
-        GIn: Group + MemberOf<GSwap>,
-        GSwap: Group;
+        GIn: Group;
 
     fn build_response(amount_out: Amount) -> ProtobufAny;
 }
 
-pub struct SwapRequest<GIn, GSwap>
+pub struct SwapRequest<GIn>
 where
     GIn: Group,
-    GSwap: Group,
 {
     pub token_in: CoinDTO<GIn>,
     pub min_token_out: Amount,
-    pub swap_path: Vec<SwapTarget<GSwap>>,
 }
 
 pub(crate) fn parse_dex_token<G>(amount: &str, denom: &str) -> CoinDTO<G>
