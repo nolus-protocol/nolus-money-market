@@ -1,5 +1,5 @@
 use currency::{DexSymbols, Group};
-use dex::{ExactAmountIn, SwapError, SwapPathSlice, SwapResult};
+use dex::{SwapError, SwapPathSlice, SwapResult, Transport};
 use finance::coin::{Amount, CoinDTO};
 use oracle::api::swap::SwapTarget;
 use platform::{
@@ -28,9 +28,9 @@ type ResponseMsg = MsgSwapExactAmountInResponse;
 #[derive(Default)]
 pub struct Impl
 where
-    Self: ExactAmountIn;
+    Self: Transport;
 
-impl ExactAmountIn for Impl {
+impl Transport for Impl {
     fn build_request<GIn, GOut, GSwap>(
         trx: &mut Transaction,
         sender: HostAccount,

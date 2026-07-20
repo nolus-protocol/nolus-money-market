@@ -6,9 +6,26 @@ use oracle::api::swap::SwapTarget;
 use platform::{remote::Account as RemoteAccount, trx::Transaction};
 use sdk::{api::ProtobufAny, cosmwasm_std::StdError};
 
+#[cfg(feature = "impl")]
+use finance::instant::Instant;
+
+#[cfg(feature = "impl")]
+use crate::SwapTask;
+
+#[cfg(feature = "impl")]
+pub trait Factory {
+    type TransportImpl<'this>: Transport
+    where
+        Self: 'this;
+
+    fn transport<'task, Task>(&self, task: &'task Task, now: Instant) -> Self::TransportImpl<'task>
+    where
+        Task: SwapTask;
+}
+
 pub type SwapPathSlice<'a, G> = &'a [SwapTarget<G>];
 
-pub trait ExactAmountIn {
+pub trait Transport {
     /// `swap_path` should be a non-empty list
     ///
     /// `GIn` - the group of the input token

@@ -1,11 +1,14 @@
 #[cfg(feature = "impl")]
 use finance::duration::Duration;
 
-pub use swap::{Error as SwapError, ExactAmountIn, Result as SwapResult, SwapPathSlice};
+pub use self::remote_lease::{Error as SwapError, Result as SwapResult, SwapPathSlice, Transport};
 #[cfg(feature = "impl")]
-pub use transfer::{TransferOut, TransferOutFactory};
+pub use self::{
+    remote_lease::Factory as RemoteLeaseTransportFactory,
+    transfer::{TransferOut, TransferOutFactory},
+};
 
-mod swap;
+mod remote_lease;
 #[cfg(feature = "impl")]
 mod transfer;
 

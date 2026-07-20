@@ -12,7 +12,7 @@ use platform::{
 };
 use sdk::cosmwasm_std::QuerierWrapper;
 
-use crate::{Account, Connectable, IBC_TIMEOUT, error::Result, transport::ExactAmountIn};
+use crate::{Account, Connectable, IBC_TIMEOUT, error::Result, transport::Transport};
 
 pub(super) struct SwapTrx<'ica, 'swap_path, 'querier, SwapGroup, SwapPathImpl> {
     conn: &'ica str,
@@ -44,7 +44,7 @@ where
         }
     }
 
-    pub fn swap_exact_in<SwapGIn, SwapGOut, Transport>(
+    pub fn swap_exact_in<SwapGIn, SwapGOut, TransportImpl>(
         &mut self,
         amount_in: &CoinDTO<SwapGIn>,
         min_amount_out: &CoinDTO<SwapGOut>,
@@ -52,7 +52,7 @@ where
     where
         SwapGIn: Group + MemberOf<SwapGroup>,
         SwapGOut: Group + MemberOf<SwapGroup>,
-        Transport: ExactAmountIn,
+        TransportImpl: Transport,
     {
         self.swap_path
             .swap_path(
@@ -62,7 +62,7 @@ where
             )
             .map_err(Into::into)
             .and_then(|ref swap_path| {
-                Transport::build_request(
+                TransportImpl::build_request(
                     &mut self.trx,
                     self.ica_account.clone(),
                     amount_in,

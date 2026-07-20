@@ -1,4 +1,4 @@
-use dex::ExactAmountIn;
+use dex::Transport;
 use finance::coin::Amount;
 
 use crate::{Impl, testing::ExactAmountInSkel};
@@ -10,7 +10,7 @@ fn build_and_parse() {
     let mut iter = Some(<Impl as ExactAmountInSkel>::build_response(EXPECTED_AMOUNT)).into_iter();
 
     assert_eq!(
-        <Impl as ExactAmountIn>::parse_response(&mut iter).unwrap(),
+        <Impl as Transport>::parse_response(&mut iter).unwrap(),
         EXPECTED_AMOUNT
     );
 

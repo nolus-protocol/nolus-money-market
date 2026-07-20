@@ -8,9 +8,13 @@ use swap::Impl as SwapClient;
 pub struct SwapClientFactory {}
 
 impl RemoteLeaseTransportFactory for SwapClientFactory {
-    type Transport<'this> = SwapClient;
+    type TransportImpl<'this> = SwapClient;
 
-    fn transport<'task, Task>(&self, _task: &'task Task, _now: Instant) -> Self::Transport<'task>
+    fn transport<'task, Task>(
+        &self,
+        _task: &'task Task,
+        _now: Instant,
+    ) -> Self::TransportImpl<'task>
     where
         Task: SwapTask,
     {
