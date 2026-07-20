@@ -12,12 +12,17 @@ use finance::instant::Instant;
 #[cfg(feature = "impl")]
 use crate::SwapTask;
 
+/// Yields the `Transport` a swap task should use.
+///
+/// Supplied by the host contract so a swap workflow stays generic over the DEX
+/// it runs against.
 #[cfg(feature = "impl")]
 pub trait Factory {
     type TransportImpl<'this>: Transport
     where
         Self: 'this;
 
+    /// The `Transport` to carry out `task`'s swap, as chosen for the moment `now`.
     fn transport<'task, Task>(&self, task: &'task Task, now: Instant) -> Self::TransportImpl<'task>
     where
         Task: SwapTask;
@@ -25,6 +30,10 @@ pub trait Factory {
 
 pub type SwapPathSlice<'a, G> = &'a [SwapTarget<G>];
 
+/// A swap-exact-in against a specific DEX: the request messages it is made of
+/// and the amount read back from its responses.
+///
+/// Implemented once per supported DEX.
 pub trait Transport {
     /// `swap_path` should be a non-empty list
     ///
