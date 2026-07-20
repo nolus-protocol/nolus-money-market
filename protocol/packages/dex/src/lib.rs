@@ -13,6 +13,7 @@ pub use self::{
         StartLocalRemoteState, StartTransferInState, StateLocalOut, StateRemoteOut, TransferOut,
         start_local_local, start_local_remote, start_remote_local,
     },
+    remote_lease::Factory as RemoteLeaseTransportFactory,
     resp_delivery::ForwardToInner,
     response::{ContinueResult, Handler, Response, Result},
     slippage::{Calculator as SlippageCalculator, WithCalculator},
@@ -38,6 +39,8 @@ mod enterable;
 mod error;
 #[cfg(feature = "impl")]
 mod impl_;
+#[cfg(feature = "impl")]
+mod remote_lease;
 #[cfg(feature = "impl")]
 mod resp_delivery;
 #[cfg(feature = "impl")]

@@ -34,15 +34,15 @@ pub type TransferOutRespDelivery<
     SwapTask,
     SEnum,
     TransportOutFactory,
-    SwapClient,
+    RemoteLeaseTransportFactory,
     ForwardToInnerMsg,
 > = ResponseDelivery<
-    TransferOut<SwapTask, SEnum, TransportOutFactory, SwapClient>,
+    TransferOut<SwapTask, SEnum, TransportOutFactory, RemoteLeaseTransportFactory>,
     ForwardToInnerMsg,
 >;
 
-pub type SwapExactInRespDelivery<SwapTask, SEnum, SwapClient, ForwardToInnerMsg> =
-    ResponseDelivery<SwapExactIn<SwapTask, SEnum, SwapClient>, ForwardToInnerMsg>;
+pub type SwapExactInRespDelivery<SwapTask, SEnum, RemoteLeaseTransportFactory, ForwardToInnerMsg> =
+    ResponseDelivery<SwapExactIn<SwapTask, SEnum, RemoteLeaseTransportFactory>, ForwardToInnerMsg>;
 
 pub type TransferInInitRespDelivery<SwapTask, SEnum, ForwardToInnerMsg> =
     ResponseDelivery<TransferInInit<SwapTask, SEnum>, ForwardToInnerMsg>;

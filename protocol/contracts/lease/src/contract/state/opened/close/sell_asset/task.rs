@@ -9,6 +9,7 @@ use crate::{
             Response, State,
             opened::close::{Calculator, IntoRepayable},
         },
+        transport::SwapClientFactory,
     },
     error::ContractResult,
 };
@@ -32,7 +33,10 @@ where
         querier: QuerierWrapper<'_>,
     ) -> ContractResult<Response>
 where {
-        let start_state = dex::start_remote_local(Task::new(lease, self.into(), slippage_calc));
+        let start_state = dex::start_remote_local(
+            Task::new(lease, self.into(), slippage_calc),
+            SwapClientFactory::default(),
+        );
         start_state
             .enter(env.block.time.into_instant(), querier)
             .map(|swap_msg| curr_request_response.merge_with(swap_msg))

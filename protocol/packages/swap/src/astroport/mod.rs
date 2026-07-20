@@ -44,7 +44,17 @@ where
     R: Router,
 {
     _router: PhantomData<R>,
-    _never: Never,
+}
+
+impl<R> Default for GenericImpl<R>
+where
+    R: Router,
+{
+    fn default() -> Self {
+        Self {
+            _router: PhantomData,
+        }
+    }
 }
 
 impl<R> ExactAmountIn for GenericImpl<R>
@@ -102,8 +112,6 @@ where
             .map(|swap_resp| swap_resp.return_amount.into())
     }
 }
-
-enum Never {}
 
 fn to_operations<G>(token_in_denom: &str, swap_path: SwapPathSlice<'_, G>) -> Vec<SwapOperation>
 where

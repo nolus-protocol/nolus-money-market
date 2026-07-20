@@ -5,29 +5,32 @@ use platform::batch::Batch;
 use sdk::cosmwasm_std::QuerierWrapper;
 
 use crate::{
-    SlippageCalculator, SwapTask as SwapTaskT, WithCalculator, error::Result, impl_::trx::SwapTrx,
-    swap::ExactAmountIn,
+    RemoteLeaseTransportFactory as RemoteLeaseTransportFactoryT, SlippageCalculator,
+    SwapTask as SwapTaskT, WithCalculator, error::Result, impl_::trx::SwapTrx,
 };
 
-pub struct EncodeRequest<'spec, 'querier, SwapTask, SwapClient> {
+pub struct EncodeRequest<'spec, 'querier, SwapTask, RemoteLeaseTransportFactory> {
     spec: &'spec SwapTask,
     querier: QuerierWrapper<'querier>,
-    _client: PhantomData<SwapClient>,
+    _factory: PhantomData<RemoteLeaseTransportFactory>,
 }
 
-impl<'spec, 'querier, SwapTask, SwapClient> EncodeRequest<'spec, 'querier, SwapTask, SwapClient> {
+impl<'spec, 'querier, SwapTask, RemoteLeaseTransportFactory>
+    EncodeRequest<'spec, 'querier, SwapTask, RemoteLeaseTransportFactory>
+{
     pub fn from(spec: &'spec SwapTask, querier: QuerierWrapper<'querier>) -> Self {
         Self {
             spec,
             querier,
-            _client: PhantomData,
+            _factory: PhantomData,
         }
     }
 }
-impl<SwapTask, SwapClient> WithCalculator<SwapTask> for EncodeRequest<'_, '_, SwapTask, SwapClient>
+impl<SwapTask, RemoteLeaseTransportFactory> WithCalculator<SwapTask>
+    for EncodeRequest<'_, '_, SwapTask, RemoteLeaseTransportFactory>
 where
     SwapTask: SwapTaskT,
-    SwapClient: ExactAmountIn,
+    RemoteLeaseTransportFactory: RemoteLeaseTransportFactoryT,
 {
     type Output = Result<Batch>;
 
@@ -54,7 +57,10 @@ where
                 filtered = true;
                 calc.min_output(&coin_in, self.querier)
                     .and_then(|min_output| {
-                        trx.swap_exact_in::<_, _, SwapClient>(&coin_in, &min_output.into())
+                        trx.swap_exact_in::<_, _, RemoteLeaseTransportFactory::Transport<'_>>(
+                            &coin_in,
+                            &min_output.into(),
+                        )
                     })
                     .map(|()| trx)
             },

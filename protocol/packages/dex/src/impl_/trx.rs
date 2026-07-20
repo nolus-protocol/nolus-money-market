@@ -44,7 +44,7 @@ where
         }
     }
 
-    pub fn swap_exact_in<SwapGIn, SwapGOut, SwapClient>(
+    pub fn swap_exact_in<SwapGIn, SwapGOut, Transport>(
         &mut self,
         amount_in: &CoinDTO<SwapGIn>,
         min_amount_out: &CoinDTO<SwapGOut>,
@@ -52,7 +52,7 @@ where
     where
         SwapGIn: Group + MemberOf<SwapGroup>,
         SwapGOut: Group + MemberOf<SwapGroup>,
-        SwapClient: ExactAmountIn,
+        Transport: ExactAmountIn,
     {
         self.swap_path
             .swap_path(
@@ -62,7 +62,7 @@ where
             )
             .map_err(Into::into)
             .and_then(|ref swap_path| {
-                SwapClient::build_request(
+                Transport::build_request(
                     &mut self.trx,
                     self.ica_account.clone(),
                     amount_in,

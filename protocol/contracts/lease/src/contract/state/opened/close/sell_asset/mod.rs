@@ -22,11 +22,11 @@ use crate::{
     contract::{
         Lease,
         state::{
-            SwapClient, SwapResult,
+            SwapResult,
             opened::{self, payment::Repayable},
             resp_delivery::ForwardToDexEntry,
         },
-        transport::TransferOutFactory,
+        transport::{SwapClientFactory, TransferOutFactory},
     },
     error::ContractResult,
     event::Type,
@@ -43,7 +43,7 @@ type Task<RepayableT, CalculatorT> = SellAsset<RepayableT, CalculatorT>;
 type DexState<Repayable, CalculatorT> = dex::StateLocalOut<
     Task<Repayable, CalculatorT>,
     TransferOutFactory,
-    SwapClient,
+    SwapClientFactory,
     ForwardToDexEntry,
 >;
 

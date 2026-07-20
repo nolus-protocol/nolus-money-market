@@ -63,8 +63,9 @@ pub fn migrate(
     _msg: ProtocolMigrationMessage<MigrateMsg>,
 ) -> ContractResult<CwResponse> {
     // v10 reshapes the persisted `LeaseDTO` to carry the Solana-side
-    // remote-lease PDA as a non-optional field and adds `transport_out_fry`
-    // to `TransferOut`'s persisted layout, so a pre-v10 lease cannot
+    // remote-lease PDA as a non-optional field and adds the transport
+    // factories to the `TransferOut` and `SwapExactIn` persisted layouts,
+    // so a pre-v10 lease cannot
     // be deserialised under the new layout. A v9 lease has no meaningful
     // `remote_lease_id` to synthesise — its `dex_account` is an ICA host on
     // the DEX chain, not a Solana PDA — so a real v9→v10 migration would
