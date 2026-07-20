@@ -1,7 +1,6 @@
 use currency::{DexSymbols, Group};
-use dex::{SwapError, SwapPathSlice, SwapResult, Transport};
+use dex::{SwapError, SwapResult, Transport};
 use finance::coin::{Amount, CoinDTO};
-use oracle::api::swap::SwapTarget;
 use platform::{
     coin_legacy,
     remote::Account as HostAccount,
@@ -12,9 +11,7 @@ use sdk::{
     cosmwasm_std::Coin as CwCoin,
 };
 
-use self::api::{
-    MsgSwapExactAmountIn, MsgSwapExactAmountInResponse, SwapAmountInRoute, TypeUrl as _,
-};
+use self::api::{MsgSwapExactAmountIn, MsgSwapExactAmountInResponse, TypeUrl as _};
 
 mod api;
 #[cfg(test)]
@@ -31,24 +28,21 @@ where
     Self: Transport;
 
 impl Transport for Impl {
-    fn build_request<GIn, GOut, GSwap>(
+    fn build_request<GIn, GOut>(
         trx: &mut Transaction,
         sender: HostAccount,
         amount_in: &CoinDTO<GIn>,
         min_amount_out: &CoinDTO<GOut>,
-        swap_path: SwapPathSlice<'_, GSwap>,
     ) -> SwapResult<()>
     where
         GIn: Group,
         GOut: Group,
-        GSwap: Group,
     {
         // TODO bring the token balances, weights and swapFee-s from the DEX pools
         // into the oracle in order to calculate the tokenOut as per the formula at
         // https://docs.osmosis.zone/osmosis-core/modules/gamm/#swap.
         // Then apply the parameterized maximum slippage to get the minimum amount.
         // For the first version, we accept whatever price impact and slippage.
-        let routes = to_route::<GSwap>(swap_path);
         let token_in = to_dex_cwcoin(amount_in);
         let token_out_min_amount = min_amount_out.amount().to_string();
         to_osmosis_coin(token_in).map(|osmosis_coin| {
@@ -56,7 +50,7 @@ impl Transport for Impl {
                 RequestMsg::TYPE_URL,
                 RequestMsg {
                     sender: sender.into(),
-                    routes,
+                    routes: Default::default(),
                     token_in: Some(osmosis_coin),
                     token_out_min_amount,
                 },
@@ -78,19 +72,6 @@ impl Transport for Impl {
             .map(|response| response.token_out_amount)
             .and_then(|amount| amount.parse().map_err(|_| SwapError::InvalidAmount(amount)))
     }
-}
-
-fn to_route<GSwap>(swap_path: &[SwapTarget<GSwap>]) -> Vec<SwapAmountInRoute>
-where
-    GSwap: Group,
-{
-    swap_path
-        .iter()
-        .map(|swap_target| SwapAmountInRoute {
-            pool_id: swap_target.pool_id,
-            token_out_denom: swap_target.target.into_symbol::<DexSymbols<GSwap>>().into(),
-        })
-        .collect()
 }
 
 fn to_dex_cwcoin<G>(token: &CoinDTO<G>) -> CwCoin

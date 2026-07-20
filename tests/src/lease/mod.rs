@@ -293,6 +293,7 @@ pub(super) fn complete_init_lease<
         lease.clone(),
         downpayment,
         exp_borrow,
+        LeaseCurrency::dex(),
     );
 }
 

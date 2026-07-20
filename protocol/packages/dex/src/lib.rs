@@ -10,7 +10,7 @@ pub use self::{
     slippage::{Calculator as SlippageCalculator, WithCalculator},
     swap_task::{CoinsNb, SwapOutputTask, SwapTask, WithOutputTask},
     time_alarm::TimeAlarm,
-    transport::{SwapError, SwapPathSlice, SwapResult, Transport},
+    transport::{SwapError, SwapResult, Transport},
 };
 
 #[cfg(feature = "impl")]

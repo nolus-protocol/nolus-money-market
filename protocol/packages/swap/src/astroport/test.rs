@@ -1,14 +1,11 @@
 use currency::{
     CurrencyDef as _,
-    test::{SubGroupTestC6, SubGroupTestC10, SuperGroup, SuperGroupTestC1},
+    test::{SuperGroup, SuperGroupTestC1},
 };
 use finance::coin::Coin;
-use oracle::api::swap::SwapTarget;
 use sdk::cosmos_sdk_proto::cosmos::base::v1beta1::Coin as ProtoCoin;
 
 use crate::testing;
-
-use super::api::{AssetInfo, SwapOperation};
 
 #[test]
 fn to_dex_cwcoin() {
@@ -20,51 +17,6 @@ fn to_dex_cwcoin() {
             amount: coin_amount.to_string(),
         },
         super::to_dex_proto_coin::<SuperGroup>(&coin.into())
-    );
-}
-
-#[test]
-fn to_operations() {
-    type StartSwapCurrency = SubGroupTestC10;
-    let path = vec![
-        SwapTarget {
-            pool_id: 2,
-            target: currency::dto::<SuperGroupTestC1, _>(),
-        },
-        SwapTarget {
-            pool_id: 12,
-            target: currency::dto::<SubGroupTestC6, _>(),
-        },
-    ];
-    let expected = vec![
-        SwapOperation::AstroSwap {
-            offer_asset_info: AssetInfo::NativeToken {
-                denom: StartSwapCurrency::dex().into(),
-            },
-            ask_asset_info: AssetInfo::NativeToken {
-                denom: SuperGroupTestC1::dex().into(),
-            },
-        },
-        SwapOperation::AstroSwap {
-            offer_asset_info: AssetInfo::NativeToken {
-                denom: SuperGroupTestC1::dex().into(),
-            },
-            ask_asset_info: AssetInfo::NativeToken {
-                denom: SubGroupTestC6::dex().into(),
-            },
-        },
-    ];
-    assert_eq!(
-        super::to_operations::<SuperGroup>(StartSwapCurrency::dex(), &path[0..0]),
-        vec![]
-    );
-    assert_eq!(
-        expected[0..1].to_vec(),
-        super::to_operations::<SuperGroup>(StartSwapCurrency::dex(), &path[0..1])
-    );
-    assert_eq!(
-        expected,
-        super::to_operations::<SuperGroup>(StartSwapCurrency::dex(), &path)
     );
 }
 

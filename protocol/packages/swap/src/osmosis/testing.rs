@@ -2,25 +2,20 @@ use std::any::type_name;
 
 use currency::Group;
 use finance::coin::Amount;
-use oracle::api::swap::SwapTarget;
 use sdk::{api::ProtobufAny, cosmos_sdk_proto::prost::Message as _};
 
 use crate::testing::{self, ExactAmountInSkel, SwapRequest};
 
-use super::{
-    Impl, RequestMsg, ResponseMsg,
-    api::{SwapAmountInRoute, TypeUrl as _},
-};
+use super::{Impl, RequestMsg, ResponseMsg, api::TypeUrl as _};
 
 impl ExactAmountInSkel for Impl {
-    fn parse_request<GIn, GSwap>(request: ProtobufAny) -> SwapRequest<GIn, GSwap>
+    fn parse_request<GIn>(request: ProtobufAny) -> SwapRequest<GIn>
     where
         GIn: Group,
-        GSwap: Group,
     {
         let RequestMsg {
             sender: _,
-            routes,
+            routes: _,
             token_in: Some(token_in),
             token_out_min_amount,
         } = parse_request_from_any_and_type_url(request)
@@ -33,21 +28,6 @@ impl ExactAmountInSkel for Impl {
         SwapRequest {
             token_in,
             min_token_out: token_out_min_amount.parse().expect("valid amount integer"),
-            swap_path: routes
-                .into_iter()
-                .map(
-                    |SwapAmountInRoute {
-                         pool_id,
-                         token_out_denom: target,
-                     }| {
-                        SwapTarget {
-                            pool_id,
-                            target: testing::from_dex_symbol(&target)
-                                .expect("Asked asset doesn't belong to swapping currency group!"),
-                        }
-                    },
-                )
-                .collect(),
         }
     }
 

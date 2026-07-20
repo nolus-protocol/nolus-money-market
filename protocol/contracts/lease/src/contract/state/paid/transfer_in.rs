@@ -1,6 +1,5 @@
 use std::marker::PhantomData;
 
-use oracle::stub::SwapPath;
 use serde::{Deserialize, Serialize};
 
 use currency::{CurrencyDef, Group, MemberOf};
@@ -96,10 +95,6 @@ impl SwapTask for TransferIn {
 
     fn dex_account(&self) -> &Account {
         &self.lease.dex
-    }
-
-    fn oracle(&self) -> &impl SwapPath<<Self::InG as Group>::TopG> {
-        &self.lease.lease.oracle
     }
 
     fn time_alarm(&self) -> &TimeAlarmsRef {

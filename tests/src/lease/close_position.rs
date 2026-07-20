@@ -284,7 +284,7 @@ fn do_close(
         &ExecuteMsg::ClosePosition(close_msg),
     );
 
-    let requests: Vec<SwapRequest<PaymentGroup, PaymentGroup>> = common::swap::expect_swap(
+    let requests: Vec<SwapRequest<PaymentGroup>> = common::swap::expect_swap(
         response_close,
         TestCase::DEX_CONNECTION_ID,
         TestCase::LEASE_ICA_ID,
@@ -296,6 +296,7 @@ fn do_close(
         lease_addr.clone(),
         lease_ica.clone(),
         requests.into_iter(),
+        LpnCurrency::dex(),
         |amount: Amount, _, _| {
             assert_eq!(amount, close_amount.to_primitive());
 

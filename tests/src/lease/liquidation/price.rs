@@ -95,7 +95,7 @@ fn full_liquidation() {
         common::coin(borrowed_amount),
     );
 
-    let requests: Vec<SwapRequest<PaymentGroup, PaymentGroup>> = common::swap::expect_swap(
+    let requests: Vec<SwapRequest<PaymentGroup>> = common::swap::expect_swap(
         response,
         TestCase::DEX_CONNECTION_ID,
         TestCase::LEASE_ICA_ID,
@@ -107,6 +107,7 @@ fn full_liquidation() {
         lease_addr.clone(),
         ica_addr.clone(),
         requests.into_iter(),
+        LpnCurrency::dex(),
         |amount, _, _| {
             assert_eq!(amount, lease_amount);
 

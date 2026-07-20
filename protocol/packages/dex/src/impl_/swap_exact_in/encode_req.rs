@@ -42,11 +42,7 @@ where
     {
         let mut filtered = false;
 
-        let swap_trx = SwapTrx::<'_, '_, '_, <SwapTask::InG as Group>::TopG, _>::new(
-            self.spec.dex_account(),
-            self.spec.oracle(),
-            self.querier,
-        );
+        let swap_trx = SwapTrx::<'_>::new(self.spec.dex_account());
 
         let out_currency = CalculatorT::OutC::dto().into_super_group();
         super::try_filter_fold_coins(

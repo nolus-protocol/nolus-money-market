@@ -315,7 +315,7 @@ where
 
     let paid = price::total(payment, super::price_lpn_of()).unwrap();
 
-    let requests: Vec<SwapRequest<PaymentGroup, PaymentGroup>> = swap::expect_swap(
+    let requests: Vec<SwapRequest<PaymentGroup>> = swap::expect_swap(
         response,
         TestCase::DEX_CONNECTION_ID,
         TestCase::LEASE_ICA_ID,
@@ -337,6 +337,7 @@ where
         lease.clone(),
         lease_ica.clone(),
         requests.into_iter(),
+        LpnCurrency::dex(),
         |amount_in, in_denom, out_denom| {
             assert_eq!(amount_in, payment.to_primitive());
             assert_eq!(in_denom, PaymentCurrency::dex());

@@ -1,7 +1,6 @@
 use calculator::Factory as CalculatorFactory;
 use currency::{CurrencyDef, Group, MemberOf};
 use finish::BuyAssetFinish;
-use oracle::stub::SwapPath;
 use platform::remote::Account as RemoteAccount;
 use serde::{Deserialize, Serialize};
 
@@ -125,10 +124,6 @@ impl SwapTask for BuyAsset {
 
     fn dex_account(&self) -> &Account {
         &self.dex_account
-    }
-
-    fn oracle(&self) -> &impl SwapPath<<Self::InG as Group>::TopG> {
-        &self.deps.1
     }
 
     fn time_alarm(&self) -> &TimeAlarmsRef {

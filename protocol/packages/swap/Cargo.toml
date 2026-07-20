@@ -39,7 +39,6 @@ testing = [
 
 [dependencies]
 dex = { workspace = true }
-oracle = { workspace = true, features = ["stub_swap"] }
 
 currency = { workspace = true }
 finance = { workspace = true }

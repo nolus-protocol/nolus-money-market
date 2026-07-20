@@ -1,6 +1,5 @@
 use currency::{CurrencyDef, Group, MemberOf};
 use finance::coin::Coin;
-use oracle::stub::SwapPath;
 use sdk::cosmwasm_std::{Env, MessageInfo, QuerierWrapper};
 use timealarms::stub::TimeAlarmsRef;
 
@@ -25,7 +24,6 @@ where
 
     fn label(&self) -> Self::Label;
     fn dex_account(&self) -> &Account;
-    fn oracle(&self) -> &impl SwapPath<<Self::InG as Group>::TopG>;
     fn time_alarm(&self) -> &TimeAlarmsRef;
 
     /// Authorise an inbound `RemoteLeaseCallback` against this task's

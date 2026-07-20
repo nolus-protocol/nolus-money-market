@@ -1,7 +1,7 @@
 use std::marker::PhantomData;
 
 use currency::{self, DexSymbols, Group};
-use dex::{SwapError, SwapPathSlice, SwapResult, Transport};
+use dex::{SwapError, SwapResult, Transport};
 use finance::coin::{Amount, CoinDTO};
 use platform::{
     coin_legacy,
@@ -19,7 +19,7 @@ use sdk::{
 };
 
 use self::{
-    api::{AssetInfo, ExecuteMsg, SwapOperation, SwapResponseData},
+    api::{ExecuteMsg, SwapResponseData},
     router::Router,
 };
 
@@ -61,23 +61,20 @@ impl<R> Transport for GenericImpl<R>
 where
     R: Router,
 {
-    fn build_request<GIn, GOut, GSwap>(
+    fn build_request<GIn, GOut>(
         trx: &mut Transaction,
         sender: HostAccount,
         token_in: &CoinDTO<GIn>,
         min_amount_out: &CoinDTO<GOut>,
-        swap_path: SwapPathSlice<'_, GSwap>,
     ) -> SwapResult<()>
     where
         GIn: Group,
         GOut: Group,
-        GSwap: Group,
     {
-        debug_assert!(!swap_path.is_empty());
         let token_in = to_dex_proto_coin(token_in);
 
         cosmwasm_std::to_json_vec(&ExecuteMsg::ExecuteSwapOperations {
-            operations: to_operations::<GSwap>(&token_in.denom, swap_path),
+            operations: Default::default(),
             minimum_receive: Some(min_amount_out.amount().into()), // request a check on the received amount
             to: None,                                              // means the sender
             max_spread: Some(MAX_IMPACT), // checked on each individual swap operation, if None that would be equivalent to `astroport::pair::DEFAULT_SLIPPAGE`, i.e. 0.5%,
@@ -111,38 +108,6 @@ where
             })
             .map(|swap_resp| swap_resp.return_amount.into())
     }
-}
-
-fn to_operations<G>(token_in_denom: &str, swap_path: SwapPathSlice<'_, G>) -> Vec<SwapOperation>
-where
-    G: Group,
-{
-    struct OperationScan<'a> {
-        last_denom: &'a str,
-    }
-
-    let scanner = OperationScan {
-        last_denom: token_in_denom,
-    };
-
-    swap_path
-        .iter()
-        .map(|swap_target| swap_target.target.into_symbol::<DexSymbols<G>>())
-        .scan(scanner, |scanner, next_denom| {
-            Some({
-                let op = SwapOperation::AstroSwap {
-                    offer_asset_info: AssetInfo::NativeToken {
-                        denom: scanner.last_denom.into(),
-                    },
-                    ask_asset_info: AssetInfo::NativeToken {
-                        denom: next_denom.into(),
-                    },
-                };
-                scanner.last_denom = next_denom;
-                op
-            })
-        })
-        .collect()
 }
 
 fn to_dex_proto_coin<G>(token: &CoinDTO<G>) -> ProtoCoin
