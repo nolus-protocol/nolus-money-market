@@ -10,7 +10,7 @@ pub use self::{
     slippage::{Calculator as SlippageCalculator, WithCalculator},
     swap_task::{CoinsNb, SwapOutputTask, SwapTask, WithOutputTask},
     time_alarm::TimeAlarm,
-    transport::{ExactAmountIn, SwapError, SwapPathSlice, SwapResult},
+    transport::{SwapError, SwapPathSlice, SwapResult, Transport},
 };
 
 #[cfg(feature = "impl")]
@@ -21,12 +21,12 @@ pub use self::{
         StartLocalRemoteState, StartTransferInState, StateLocalOut, StateRemoteOut, TransferOut,
         start_local_local, start_local_remote, start_remote_local,
     },
-    remote_lease::Factory as RemoteLeaseTransportFactory,
     resp_delivery::ForwardToInner,
     response::{ContinueResult, Handler, Response, Result},
     state::{Contract, ContractInSwap, Stage},
     transport::{
-        IBC_TIMEOUT, TransferOut as TransportOut, TransferOutFactory as TransportOutFactory,
+        IBC_TIMEOUT, RemoteLeaseTransportFactory, TransferOut as TransportOut,
+        TransferOutFactory as TransportOutFactory,
     },
 };
 
@@ -39,8 +39,6 @@ mod enterable;
 mod error;
 #[cfg(feature = "impl")]
 mod impl_;
-#[cfg(feature = "impl")]
-mod remote_lease;
 #[cfg(feature = "impl")]
 mod resp_delivery;
 #[cfg(feature = "impl")]

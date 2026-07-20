@@ -28,7 +28,7 @@ use crate::{
         response::{self, ContinueResult, Handler, Result as HandlerResult},
         timeout,
     },
-    transport::ExactAmountIn,
+    transport::Transport,
 };
 
 #[cfg(feature = "migration")]
@@ -320,12 +320,15 @@ impl<SwapTask, R, SEnum, RemoteLeaseTransportFactory> _InspectSpec<SwapTask, R>
     }
 }
 
-fn decode_response<OutC, SwapTask, Transport>(spec: &SwapTask, resp: &[u8]) -> Result<Coin<OutC>>
+fn decode_response<OutC, SwapTask, TransportImpl>(
+    spec: &SwapTask,
+    resp: &[u8],
+) -> Result<Coin<OutC>>
 where
     OutC: CurrencyDef,
     OutC::Group: MemberOf<<SwapTask::OutG as Group>::TopG>,
     SwapTask: SwapTaskT,
-    Transport: ExactAmountIn,
+    TransportImpl: Transport,
 {
     let out_currency = OutC::dto().into_super_group();
     try_filter_fold_coins(
@@ -351,7 +354,7 @@ where
                     non_swapped,
                     |total_out, _in| {
                         filtered = true;
-                        Transport::parse_response(&mut responses)
+                        TransportImpl::parse_response(&mut responses)
                             .map(|out| total_out + Coin::new(out))
                             .map_err(Into::into)
                     },

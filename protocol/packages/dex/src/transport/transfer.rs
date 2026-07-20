@@ -14,11 +14,11 @@ where
 }
 
 pub trait TransferOutFactory {
-    type Transport<'this>: TransferOut
+    type TransportImpl<'this>: TransferOut
     where
         Self: 'this;
 
-    fn transport<'task, Task>(&self, task: &'task Task, now: Instant) -> Self::Transport<'task>
+    fn transport<'task, Task>(&self, task: &'task Task, now: Instant) -> Self::TransportImpl<'task>
     where
         Task: SwapTask;
 }

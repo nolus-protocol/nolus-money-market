@@ -57,7 +57,7 @@ where
                 filtered = true;
                 calc.min_output(&coin_in, self.querier)
                     .and_then(|min_output| {
-                        trx.swap_exact_in::<_, _, RemoteLeaseTransportFactory::Transport<'_>>(
+                        trx.swap_exact_in::<_, _, RemoteLeaseTransportFactory::TransportImpl<'_>>(
                             &coin_in,
                             &min_output.into(),
                         )

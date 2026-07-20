@@ -1,7 +1,7 @@
 use std::any;
 
 use currency::{CurrencyDTO, Group, MemberOf};
-use dex::ExactAmountIn;
+use dex::Transport;
 use finance::coin::{Amount, CoinDTO};
 use oracle::api::swap::SwapTarget;
 use sdk::{
@@ -23,7 +23,7 @@ use super::{
 
 impl<R> ExactAmountInSkel for GenericImpl<R>
 where
-    Self: ExactAmountIn,
+    Self: Transport,
     R: Router,
 {
     fn parse_request<GIn, GSwap>(request: ProtobufAny) -> SwapRequest<GIn, GSwap>

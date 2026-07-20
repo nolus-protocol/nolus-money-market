@@ -1,5 +1,5 @@
 use currency::test::{SubGroup, SubGroupTestC10, SuperGroup, SuperGroupTestC2, SuperGroupTestC3};
-use dex::{ExactAmountIn, SwapPathSlice};
+use dex::{SwapPathSlice, Transport};
 use finance::coin::{Coin, CoinDTO};
 use oracle::api::swap::SwapTarget;
 use platform::trx::Transaction;
@@ -47,7 +47,7 @@ fn build_request(
 ) -> ProtobufAny {
     let mut tx = Transaction::default();
 
-    <Impl as ExactAmountIn>::build_request(
+    <Impl as Transport>::build_request(
         &mut tx,
         String::from("host_account").try_into().unwrap(),
         expected_token_in,

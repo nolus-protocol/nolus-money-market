@@ -1,7 +1,7 @@
 use std::marker::PhantomData;
 
 use currency::{self, DexSymbols, Group};
-use dex::{ExactAmountIn, SwapError, SwapPathSlice, SwapResult};
+use dex::{SwapError, SwapPathSlice, SwapResult, Transport};
 use finance::coin::{Amount, CoinDTO};
 use platform::{
     coin_legacy,
@@ -40,7 +40,7 @@ const MAX_IMPACT: Decimal = Decimal::percent(50);
 
 pub struct GenericImpl<R>
 where
-    Self: ExactAmountIn,
+    Self: Transport,
     R: Router,
 {
     _router: PhantomData<R>,
@@ -57,7 +57,7 @@ where
     }
 }
 
-impl<R> ExactAmountIn for GenericImpl<R>
+impl<R> Transport for GenericImpl<R>
 where
     R: Router,
 {

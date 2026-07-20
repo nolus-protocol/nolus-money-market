@@ -62,7 +62,7 @@ pub(crate) fn pattern_match_else(message_name: &str) -> ! {
 pub(crate) fn validate_a_response(resp_base64: &str, exp_amount1: Amount, exp_amount2: Amount) {
     use base64::{Engine, engine::general_purpose};
 
-    use dex::ExactAmountIn;
+    use dex::Transport;
     use platform::trx;
 
     use crate::Impl;
@@ -80,7 +80,7 @@ pub(crate) fn validate_a_response(resp_base64: &str, exp_amount1: Amount, exp_am
         (exp_amount2, "Expected response for second swapped amount!"),
     ]) {
         assert_eq!(
-            <Impl as ExactAmountIn>::parse_response(&mut resp_messages).expect(error),
+            <Impl as Transport>::parse_response(&mut resp_messages).expect(error),
             expected_amount,
         );
     }
