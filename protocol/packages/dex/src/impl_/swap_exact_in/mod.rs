@@ -28,7 +28,7 @@ use crate::{
         response::{self, ContinueResult, Handler, Result as HandlerResult},
         timeout,
     },
-    swap::ExactAmountIn,
+    transport::ExactAmountIn,
 };
 
 #[cfg(feature = "migration")]

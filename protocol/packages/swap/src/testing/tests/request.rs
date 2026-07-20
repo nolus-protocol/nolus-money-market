@@ -1,5 +1,5 @@
 use currency::test::{SubGroup, SubGroupTestC10, SuperGroup, SuperGroupTestC2, SuperGroupTestC3};
-use dex::swap::{ExactAmountIn, SwapPathSlice};
+use dex::{ExactAmountIn, SwapPathSlice};
 use finance::coin::{Coin, CoinDTO};
 use oracle::api::swap::SwapTarget;
 use platform::trx::Transaction;

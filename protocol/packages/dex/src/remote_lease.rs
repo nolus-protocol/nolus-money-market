@@ -1,6 +1,6 @@
 use finance::instant::Instant;
 
-use crate::{SwapTask, swap::ExactAmountIn};
+use crate::{SwapTask, transport::ExactAmountIn};
 
 pub trait Factory {
     type Transport<'this>: ExactAmountIn

@@ -1,6 +1,6 @@
 use thiserror::Error;
 
-use crate::swap;
+use crate::transport::SwapError;
 
 #[derive(Error, Debug)]
 pub enum Error {
@@ -8,19 +8,19 @@ pub enum Error {
     Platform(#[from] platform::error::Error),
 
     #[error("[Dex] {0}")]
-    Swap(#[from] swap::Error),
+    Swap(#[from] SwapError),
 
     #[error("[Dex] The operation '{0}' is not supported in the current state '{1}'")]
     UnsupportedOperation(String, String),
 
     #[error("[Dex] {0}")]
-    OracleSwapError(#[from] oracle::api::swap::Error),
+    OracleSwap(#[from] oracle::api::swap::Error),
 
     #[error("[Dex] {0}")]
     MinOutput(oracle::stub::Error),
 
     #[error("[Dex] {0}")]
-    TimeAlarmError(#[from] timealarms::stub::Error),
+    TimeAlarm(#[from] timealarms::stub::Error),
 
     #[error("[Dex] {0}")]
     Unauthorized(access_control::error::Error),
@@ -28,6 +28,7 @@ pub enum Error {
 
 pub type Result<T> = core::result::Result<T, Error>;
 
+#[cfg(feature = "impl")]
 impl Error {
     pub(crate) fn unsupported_operation<Op, State>(op: Op, state: State) -> Self
     where
