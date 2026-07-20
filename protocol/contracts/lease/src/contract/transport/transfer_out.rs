@@ -10,13 +10,13 @@ use platform::{bank_ibc::local::Sender as LocalSender, batch::Batch};
 pub struct TransferOutFactory {}
 
 impl TransportOutFactory for TransferOutFactory {
-    type Transport<'this> = TransferOutTrx<'this>;
+    type TransportImpl<'this> = TransferOutTrx<'this>;
 
-    fn transport<'task, Task>(&self, task: &'task Task, now: Instant) -> Self::Transport<'task>
+    fn transport<'task, Task>(&self, task: &'task Task, now: Instant) -> Self::TransportImpl<'task>
     where
         Task: SwapTask,
     {
-        Self::Transport::new(LocalSender::new(
+        Self::TransportImpl::new(LocalSender::new(
             &task.dex_account().dex().transfer_channel.local_endpoint,
             task.dex_account().owner(),
             task.dex_account().remote(),
