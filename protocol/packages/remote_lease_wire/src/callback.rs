@@ -9,9 +9,9 @@ use crate::{error::Error, response::OperationResponse};
 /// Why a cap: the string is authored by the Solana counterparty and consumed
 /// by Nolus storage / event emission. Without a bound, a hostile or
 /// misbehaving counterparty can inflate event sizes and storage rows
-/// arbitrarily. 512 bytes is enough to carry a structured short message
+/// arbitrarily. 200 bytes is enough to carry a structured short message
 /// ("dex error: <code> <reason>") but small enough to forbid abuse.
-pub const OPERATION_ERR_MAX_BYTES: usize = 512;
+pub const OPERATION_ERR_MAX_BYTES: usize = 200;
 
 /// Outcome of a remote operation as reported back to the Nolus controller.
 ///
