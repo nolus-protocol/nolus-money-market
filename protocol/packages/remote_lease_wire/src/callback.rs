@@ -11,7 +11,6 @@ use crate::{error::Error, response::OperationResponse};
 /// misbehaving counterparty can inflate event sizes and storage rows
 /// arbitrarily. 200 bytes is enough to carry a structured short message
 /// ("dex error: <code> <reason>") but small enough to forbid abuse.
-/// The length is limited also by the max Solana return data size, 1024 bytes.
 pub const OPERATION_ERR_MAX_BYTES: usize = 200;
 
 /// Outcome of a remote operation as reported back to the Nolus controller.

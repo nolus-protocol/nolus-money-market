@@ -6,7 +6,7 @@ The `remote_lease` crate defines the IBC packet types exchanged between the Nolu
 
 - Protocol version: `nls-remote-lease.v1` (`remote_lease::VERSION`). Encoded on every packet as the `ProtocolVersion` ZST; mismatches are rejected at deserialisation, not in business code.
 - IBC port: `nls-remote-lease.<dex>` — built via `remote_lease::port_id_for`.
-- Callback error payload: max 200 bytes (`OPERATION_ERR_MAX_BYTES`); enforced in the `RemoteErrorMessage` visitor before allocation.
+- Callback error payload: max 200 bytes (`OPERATION_ERR_MAX_BYTES`); enforced in the `RemoteErrorMessage` visitor before allocation. The payload length is limited to allow message acknowledgements to fit in the Solana return data, max size = 1024 bytes.
 - Remote-lease id: the Solana lease PDA, carried on `OperationResponse::OpenLease.remote_lease_id` as a `RemoteLeaseId`. The Solana Remote Lease App MUST emit it as the canonical base58 encoding of the 32-byte PDA pubkey (32–44 chars); the controller rejects any non-base58 or over-64-byte value (`REMOTE_LEASE_ID_MAX_BYTES`) at ack-decode. This id is **load-bearing** — it is the recipient of the Nolus→Solana funds push, not merely observability — so a non-conforming value fails closed (the lease strands at the OpenLease ack, before any funds move) rather than risk a transfer to a bad address. A conforming counterparty never trips the check; the only path to a reject is a Solana-side bug, which the light-client trust model already excludes from normal operation.
 
 ## Envelope
@@ -57,7 +57,7 @@ On `ibc_packet_ack` and `ibc_packet_timeout` the controller decodes the original
 mapping the IBC outcomes:
 
 - `StdAck::Success(data)` → `RemoteLeaseCallback::OperationOk(OperationResponse)` (decoded from `data`).
-- `StdAck::Error(message)` → `RemoteLeaseCallback::OperationErr(RemoteErrorMessage)` (rejected if > 512 bytes).
+- `StdAck::Error(message)` → `RemoteLeaseCallback::OperationErr(RemoteErrorMessage)` (rejected if > 200 bytes).
 - timeout → `RemoteLeaseCallback::OperationTimeout` (unit; the original `Operation` is recoverable from the lease's own pending-state).
 
 The lease address travels with the packet (`envelope.lease`) — the controller keeps no per-packet correlation map. The lease contract authorises the call by querying its leaser (`QueryMsg::CheckRemoteLeaseCallbackPermission { by: info.sender }`); the leaser compares the caller against its protocol-wide `Config.remote_lease_controller`, set at leaser instantiation. That address is immutable — no `ExecuteMsg` or `SudoMsg` variant updates `remote_lease_controller` — so the live-query semantic is equivalent to a pin set at lease open. The controller does not retry on the lease's behalf. See ADR 0001 §3.7 in `nolus-protocol/ibc-solray` for the atomicity model.
