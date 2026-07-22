@@ -3,6 +3,7 @@ use std::{
     marker::PhantomData,
 };
 
+use remote_lease::response::OperationResponse;
 use serde::{Deserialize, Serialize};
 
 use currency::{CurrencyDTO, CurrencyDef, Group, MemberOf};
@@ -12,14 +13,13 @@ use finance::instant::Instant;
 use finance::{
     coin::{Coin, CoinDTO},
     duration::Duration,
-    zero::Zero,
 };
-use platform::{batch::Batch, remote::ErrorResponse as ICAErrorResponse, trx};
+use platform::{batch::Batch, remote::ErrorResponse as ICAErrorResponse};
 use report_anomaly::ReportAnomalyCmd;
-use sdk::cosmwasm_std::{Binary, Env, QuerierWrapper};
+use sdk::cosmwasm_std::{self, Binary, Env, QuerierWrapper};
 
 use crate::{
-    AnomalyTreatment, Connectable, ConnectionParams, Contract, ContractInSwap, Enterable,
+    AnomalyTreatment, Connectable, ConnectionParams, Contract, ContractInSwap, Enterable, Error,
     RemoteLeaseTransportFactory as RemoteLeaseTransportFactoryT, Stage, SwapTask as SwapTaskT,
     TimeAlarm, TransportOutFactory as TransportOutFactoryT,
     error::Result,
@@ -28,7 +28,6 @@ use crate::{
         response::{self, ContinueResult, Handler, Result as HandlerResult},
         timeout,
     },
-    transport::Transport,
 };
 
 #[cfg(feature = "migration")]
@@ -71,12 +70,17 @@ impl<SwapTask, SEnum, RemoteLeaseTransportFactory>
     SwapExactIn<SwapTask, SEnum, RemoteLeaseTransportFactory>
 where
     SwapTask: SwapTaskT,
-    RemoteLeaseTransportFactory: RemoteLeaseTransportFactoryT,
+    RemoteLeaseTransportFactory:
+        RemoteLeaseTransportFactoryT<TopG = <SwapTask::InG as Group>::TopG>,
 {
-    pub(super) fn enter_state(&self, _now: Instant, querier: QuerierWrapper<'_>) -> Result<Batch> {
-        self.spec.with_slippage_calc(
-            EncodeRequest::<'_, '_, _, RemoteLeaseTransportFactory>::from(&self.spec, querier),
-        )
+    pub(super) fn enter_state(&self, now: Instant, querier: QuerierWrapper<'_>) -> Result<Batch> {
+        let transport = self.transport_factory.transport(&self.spec, now);
+        self.spec.with_slippage_calc(EncodeRequest::<
+            '_,
+            '_,
+            _,
+            RemoteLeaseTransportFactory::TransportImpl<'_>,
+        >::from(&self.spec, transport, querier))
     }
 }
 
@@ -84,7 +88,8 @@ impl<SwapTask, SEnum, RemoteLeaseTransportFactory>
     SwapExactIn<SwapTask, SEnum, RemoteLeaseTransportFactory>
 where
     SwapTask: SwapTaskT,
-    RemoteLeaseTransportFactory: RemoteLeaseTransportFactoryT,
+    RemoteLeaseTransportFactory:
+        RemoteLeaseTransportFactoryT<TopG = <SwapTask::InG as Group>::TopG>,
     Self: Handler<Response = SEnum, SwapResult = SwapTask::Result> + Into<SEnum>,
 {
     fn handle_error(self, querier: QuerierWrapper<'_>, env: Env) -> HandlerResult<Self> {
@@ -105,7 +110,8 @@ impl<SwapTask, SEnum, RemoteLeaseTransportFactory> Enterable
     for SwapExactIn<SwapTask, SEnum, RemoteLeaseTransportFactory>
 where
     SwapTask: SwapTaskT,
-    RemoteLeaseTransportFactory: RemoteLeaseTransportFactoryT,
+    RemoteLeaseTransportFactory:
+        RemoteLeaseTransportFactoryT<TopG = <SwapTask::InG as Group>::TopG>,
 {
     fn enter(&self, now: Instant, querier: QuerierWrapper<'_>) -> Result<Batch> {
         self.enter_state(now, querier)
@@ -137,7 +143,8 @@ impl<SwapTask, TransportOutFactory, RemoteLeaseTransportFactory, ForwardToInnerM
 where
     SwapTask: SwapTaskT,
     TransportOutFactory: TransportOutFactoryT,
-    RemoteLeaseTransportFactory: RemoteLeaseTransportFactoryT,
+    RemoteLeaseTransportFactory:
+        RemoteLeaseTransportFactoryT<TopG = <SwapTask::InG as Group>::TopG>,
     ForwardToInnerMsg: ForwardToInner,
 {
     type Response = super::out_local::State<
@@ -204,7 +211,8 @@ impl<SwapTask, TransportOutFactory, RemoteLeaseTransportFactory, ForwardToInnerM
     >
 where
     SwapTask: SwapTaskT,
-    RemoteLeaseTransportFactory: RemoteLeaseTransportFactoryT,
+    RemoteLeaseTransportFactory:
+        RemoteLeaseTransportFactoryT<TopG = <SwapTask::InG as Group>::TopG>,
 {
     type Response = super::out_remote::State<
         SwapTask,
@@ -320,50 +328,35 @@ impl<SwapTask, R, SEnum, RemoteLeaseTransportFactory> _InspectSpec<SwapTask, R>
     }
 }
 
-fn decode_response<OutC, SwapTask, TransportImpl>(
-    spec: &SwapTask,
-    resp: &[u8],
-) -> Result<Coin<OutC>>
+fn decode_swap_response<OutC, SwapTask>(resp: &[u8]) -> Result<Coin<OutC>>
 where
     OutC: CurrencyDef,
     OutC::Group: MemberOf<<SwapTask::OutG as Group>::TopG>,
     SwapTask: SwapTaskT,
-    TransportImpl: Transport,
 {
-    let out_currency = OutC::dto().into_super_group();
-    try_filter_fold_coins(
-        spec,
-        out_coins_filter(&out_currency),
-        Coin::<OutC>::ZERO,
-        |total_out, inn| {
-            Ok(total_out
-                + inn
-                    .into_super_group::<<SwapTask::OutG as Group>::TopG>()
-                    .as_specific(OutC::dto()))
-        },
-    )
-    .and_then(|non_swapped| {
-        trx::decode_msg_responses(resp)
-            .map_err(Into::into)
-            .and_then(|mut responses| {
-                let mut filtered = false;
-
-                try_filter_fold_coins(
-                    spec,
-                    not_out_coins_filter(&out_currency),
-                    non_swapped,
-                    |total_out, _in| {
-                        filtered = true;
-                        TransportImpl::parse_response(&mut responses)
-                            .map(|out| total_out + Coin::new(out))
-                            .map_err(Into::into)
-                    },
+    let out_c_dto = OutC::dto();
+    let res: OperationResponse<<SwapTask::OutG as Group>::TopG> =
+        cosmwasm_std::from_json(resp).map_err(platform::error::Error::Deserialization)?;
+    // `amount_out` is the full post-swap output: coins already in the output
+    // currency are excluded from the request (`not_out_coins_filter`) and folded
+    // in by the counterparty, so no non-swapped term is re-added here.
+    match res {
+        OperationResponse::Swap(swap_resp) => Ok(swap_resp.amount_out),
+        _ => Err(Error::NotSwapResponse(format!("{res:?}"))),
+    }
+    .and_then(|amount_dto_out| {
+        amount_dto_out
+            .of_currency_dto(out_c_dto)
+            .map_err(|err| {
+                Error::IncorrectSwapOutCurrency(
+                    amount_dto_out.to_string(),
+                    out_c_dto.to_string(),
+                    err,
                 )
-                .inspect(|_| {
-                    expect_at_lease_one_filtered(filtered, &out_currency);
-                })
             })
+            .map(|()| amount_dto_out)
     })
+    .map(|amount_dto_out| amount_dto_out.as_specific(out_c_dto))
 }
 
 fn try_filter_fold_coins<SwapTask, FilterFn, Acc, FoldFn>(
@@ -399,11 +392,4 @@ where
     InOutG: Group,
 {
     |coin_in| !out_coins_filter::<InG, InOutG>(out_c)(coin_in)
-}
-
-fn expect_at_lease_one_filtered<G>(filtered: bool, out_c: &CurrencyDTO<G>)
-where
-    G: Group,
-{
-    assert!(filtered, "No coins with currency != {out_c}")
 }

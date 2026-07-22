@@ -5,7 +5,8 @@ use currencies::{
 use finance::{coin::Coin, instant::Instant};
 use remote_lease::{
     envelope::{LeaseAddrOnWire, PacketEnvelope},
-    msg::{CloseLeaseParams, Operation, SwapParams, TransferOutParams},
+    msg::{CloseLeaseParams, Operation, TransferOutParams},
+    swap::SwapParams,
     version::ProtocolVersion,
 };
 use sdk::{

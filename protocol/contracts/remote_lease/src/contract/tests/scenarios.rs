@@ -1,3 +1,4 @@
+use currencies::PaymentGroup;
 use remote_lease::{
     callback::RemoteLeaseCallback,
     response::{OpenLeaseResponse, OperationResponse, RemoteLeaseId},
@@ -187,7 +188,7 @@ fn ack_msg_with(envelope_bytes: Binary, ack_bytes: Binary) -> IbcPacketAckMsg {
 
 fn assert_callback_to(
     expected_lease: &Addr,
-    expected_callback: RemoteLeaseCallback,
+    expected_callback: RemoteLeaseCallback<PaymentGroup>,
     messages: &[StdSubMsg],
 ) {
     assert_eq!(1, messages.len(), "expected one dispatched callback");

@@ -21,11 +21,12 @@ use finance::coin::Coin;
 use remote_lease::{
     callback::{RemoteErrorMessage, RemoteLeaseCallback},
     envelope::{LeaseAddrOnWire, PacketEnvelope},
-    msg::{CloseLeaseParams, OpenLeaseParams, Operation, SwapParams, TransferOutParams},
+    msg::{CloseLeaseParams, OpenLeaseParams, Operation, TransferOutParams},
     response::{
         CloseLeaseResponse, OpenLeaseResponse, OperationResponse, RemoteLeaseId, SwapResponse,
         TransferOutResponse,
     },
+    swap::SwapParams,
     version::ProtocolVersion,
 };
 
@@ -78,13 +79,13 @@ fn response_open_lease_byte_identical() {
     let typed = OperationResponse::OpenLease(OpenLeaseResponse {
         remote_lease_id: RemoteLeaseId::new("So1RayLease1").expect("base58 lease id"),
     });
-    assert_cross_surface_eq::<OperationResponse, WireResponse>(&typed);
+    assert_cross_surface_eq::<OperationResponse<PaymentGroup>, WireResponse>(&typed);
 }
 
 #[test]
 fn response_close_lease_byte_identical() {
     let typed = OperationResponse::CloseLease(CloseLeaseResponse {});
-    assert_cross_surface_eq::<OperationResponse, WireResponse>(&typed);
+    assert_cross_surface_eq::<OperationResponse<PaymentGroup>, WireResponse>(&typed);
 }
 
 #[test]
@@ -92,20 +93,20 @@ fn response_swap_byte_identical() {
     let typed = OperationResponse::Swap(SwapResponse {
         amount_out: Coin::<PaymentC2>::new(42).into(),
     });
-    assert_cross_surface_eq::<OperationResponse, WireResponse>(&typed);
+    assert_cross_surface_eq::<OperationResponse<PaymentGroup>, WireResponse>(&typed);
 }
 
 #[test]
 fn response_transfer_out_byte_identical() {
     let typed = OperationResponse::TransferOut(TransferOutResponse {});
-    assert_cross_surface_eq::<OperationResponse, WireResponse>(&typed);
+    assert_cross_surface_eq::<OperationResponse<PaymentGroup>, WireResponse>(&typed);
 }
 
 #[test]
 fn callback_operation_ok_byte_identical() {
     let typed =
         RemoteLeaseCallback::OperationOk(OperationResponse::CloseLease(CloseLeaseResponse {}));
-    assert_cross_surface_eq::<RemoteLeaseCallback, WireCallback>(&typed);
+    assert_cross_surface_eq::<RemoteLeaseCallback<PaymentGroup>, WireCallback>(&typed);
 }
 
 #[test]
@@ -113,13 +114,13 @@ fn callback_operation_err_byte_identical() {
     let typed = RemoteLeaseCallback::OperationErr(
         RemoteErrorMessage::new("dex pool drained").expect("short message"),
     );
-    assert_cross_surface_eq::<RemoteLeaseCallback, WireCallback>(&typed);
+    assert_cross_surface_eq::<RemoteLeaseCallback<PaymentGroup>, WireCallback>(&typed);
 }
 
 #[test]
 fn callback_operation_timeout_byte_identical() {
     let typed = RemoteLeaseCallback::OperationTimeout;
-    assert_cross_surface_eq::<RemoteLeaseCallback, WireCallback>(&typed);
+    assert_cross_surface_eq::<RemoteLeaseCallback<PaymentGroup>, WireCallback>(&typed);
 }
 
 #[test]

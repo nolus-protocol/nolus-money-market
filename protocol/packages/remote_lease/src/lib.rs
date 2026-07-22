@@ -3,6 +3,7 @@ pub mod envelope;
 pub mod error;
 pub mod msg;
 pub mod response;
+pub mod swap;
 
 pub mod version {
     pub use remote_lease_wire::version::ProtocolVersion;

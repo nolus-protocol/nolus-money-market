@@ -1,3 +1,4 @@
+use crate::api::LeasePaymentCurrencies;
 use finance::{duration::Duration, instant::Instant};
 use platform::{
     batch::{Batch, Emit, Emitter},
@@ -54,7 +55,7 @@ impl Contract for OpenFailed {
     /// events against a terminal lease.
     fn on_remote_lease_callback(
         self,
-        _callback: RemoteLeaseCallback,
+        _callback: RemoteLeaseCallback<LeasePaymentCurrencies>,
         info: MessageInfo,
         querier: QuerierWrapper<'_>,
         env: Env,

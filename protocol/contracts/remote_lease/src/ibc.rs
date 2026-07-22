@@ -155,9 +155,9 @@ pub fn ibc_packet_timeout(
         })
 }
 
-fn ack_to_callback(ack: StdAck) -> Result<RemoteLeaseCallback> {
+fn ack_to_callback(ack: StdAck) -> Result<RemoteLeaseCallback<PaymentGroup>> {
     match ack {
-        StdAck::Success(data) => cosmwasm_std::from_json::<OperationResponse>(&data)
+        StdAck::Success(data) => cosmwasm_std::from_json::<OperationResponse<PaymentGroup>>(&data)
             .map(RemoteLeaseCallback::OperationOk)
             .map_err(Error::from),
         StdAck::Error(message) => RemoteErrorMessage::new(message)
@@ -176,7 +176,7 @@ fn ack_to_callback(ack: StdAck) -> Result<RemoteLeaseCallback> {
 fn dispatch_lease_callback(
     api: &dyn Api,
     envelope: PacketEnvelope<LeaseGroup, LpnGroup, PaymentGroup>,
-    callback: RemoteLeaseCallback,
+    callback: RemoteLeaseCallback<PaymentGroup>,
 ) -> Result<IbcBasicResponse> {
     envelope
         .lease

@@ -1,5 +1,6 @@
 use serde::Serialize;
 
+use currency::Group;
 use remote_lease::callback::RemoteLeaseCallback;
 
 /// On-wire shape of the lease contract's `ExecuteMsg` variant that consumes
@@ -11,6 +12,9 @@ use remote_lease::callback::RemoteLeaseCallback;
 /// this payload byte-for-byte.
 #[derive(Serialize)]
 #[serde(rename_all = "snake_case")]
-pub(crate) enum LeaseExecuteMsg {
-    RemoteLeaseCallback(RemoteLeaseCallback),
+pub(crate) enum LeaseExecuteMsg<G>
+where
+    G: Group,
+{
+    RemoteLeaseCallback(RemoteLeaseCallback<G>),
 }

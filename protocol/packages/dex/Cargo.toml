@@ -27,6 +27,7 @@ currency = { workspace = true }
 finance = { workspace = true }
 oracle = { workspace = true, features = [ "stub_price", "stub_swap",] }
 oracle-platform = { workspace = true, optional = true }
+remote_lease = { workspace = true }
 timealarms = { workspace = true, features = ["stub"] }
 platform = { workspace = true }
 sdk = { workspace = true }

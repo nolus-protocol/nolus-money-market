@@ -17,7 +17,6 @@ combinations = [
 stub = ["dep:sdk"]
 
 [dependencies]
-currencies = { workspace = true }
 currency = { workspace = true }
 finance = { workspace = true }
 remote_lease_wire = { workspace = true }

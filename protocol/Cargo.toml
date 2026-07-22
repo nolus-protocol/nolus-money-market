@@ -48,7 +48,6 @@ dex = { path = "packages/dex", default-features = false }
 marketprice = { path = "packages/marketprice", default-features = false }
 remote_lease = { path = "packages/remote_lease", default-features = false }
 remote_lease_wire = { path = "packages/remote_lease_wire", default-features = false }
-swap = { path = "packages/swap", default-features = false }
 
 # Platform Contracts
 admin_contract = { path = "../platform/contracts/admin", default-features = false }

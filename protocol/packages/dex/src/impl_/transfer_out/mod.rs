@@ -5,6 +5,7 @@ use std::{
 
 use serde::{Deserialize, Serialize};
 
+use currency::Group;
 use finance::duration::Duration;
 use finance::instant::Instant;
 use platform::{
@@ -147,7 +148,8 @@ impl<SwapTask, SEnum, TransportOutFactory, RemoteLeaseTransportFactory>
 where
     SwapTask: SwapTaskT,
     TransportOutFactory: TransportOutFactoryT,
-    RemoteLeaseTransportFactory: RemoteLeaseTransportFactoryT,
+    RemoteLeaseTransportFactory:
+        RemoteLeaseTransportFactoryT<TopG = <SwapTask::InG as Group>::TopG>,
     Self: Into<SEnum>,
     SwapExactIn<SwapTask, SEnum, RemoteLeaseTransportFactory>: Into<SEnum>,
 {
@@ -187,7 +189,8 @@ impl<SwapTask, SEnum, TransportOutFactory, RemoteLeaseTransportFactory> Handler
 where
     SwapTask: SwapTaskT,
     TransportOutFactory: TransportOutFactoryT,
-    RemoteLeaseTransportFactory: RemoteLeaseTransportFactoryT,
+    RemoteLeaseTransportFactory:
+        RemoteLeaseTransportFactoryT<TopG = <SwapTask::InG as Group>::TopG>,
     Self: Into<SEnum>,
     SwapExactIn<SwapTask, SEnum, RemoteLeaseTransportFactory>: Into<SEnum>,
 {

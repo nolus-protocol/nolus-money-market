@@ -1,36 +1,39 @@
-use std::marker::PhantomData;
-
-use currency::{CurrencyDef, Group, MemberOf};
+use currency::{CurrencyDTO, CurrencyDef, Group, MemberOf};
 use platform::batch::Batch;
+use remote_lease::swap::Builder as SwapBuilder;
 use sdk::cosmwasm_std::QuerierWrapper;
 
 use crate::{
-    RemoteLeaseTransportFactory as RemoteLeaseTransportFactoryT, SlippageCalculator,
-    SwapTask as SwapTaskT, WithCalculator, error::Result, impl_::trx::SwapTrx,
+    Error, RemoteLeaseTransport as RemoteLeaseTransportT, SlippageCalculator,
+    SwapTask as SwapTaskT, WithCalculator, error::Result,
 };
 
-pub struct EncodeRequest<'spec, 'querier, SwapTask, RemoteLeaseTransportFactory> {
+pub struct EncodeRequest<'spec, 'querier, SwapTask, RemoteLeaseTransport> {
     spec: &'spec SwapTask,
+    transport: RemoteLeaseTransport,
     querier: QuerierWrapper<'querier>,
-    _factory: PhantomData<RemoteLeaseTransportFactory>,
 }
 
-impl<'spec, 'querier, SwapTask, RemoteLeaseTransportFactory>
-    EncodeRequest<'spec, 'querier, SwapTask, RemoteLeaseTransportFactory>
+impl<'spec, 'querier, SwapTask, RemoteLeaseTransport>
+    EncodeRequest<'spec, 'querier, SwapTask, RemoteLeaseTransport>
 {
-    pub fn from(spec: &'spec SwapTask, querier: QuerierWrapper<'querier>) -> Self {
+    pub fn from(
+        spec: &'spec SwapTask,
+        transport: RemoteLeaseTransport,
+        querier: QuerierWrapper<'querier>,
+    ) -> Self {
         Self {
             spec,
+            transport,
             querier,
-            _factory: PhantomData,
         }
     }
 }
-impl<SwapTask, RemoteLeaseTransportFactory> WithCalculator<SwapTask>
-    for EncodeRequest<'_, '_, SwapTask, RemoteLeaseTransportFactory>
+impl<SwapTask, RemoteLeaseTransport> WithCalculator<SwapTask>
+    for EncodeRequest<'_, '_, SwapTask, RemoteLeaseTransport>
 where
     SwapTask: SwapTaskT,
-    RemoteLeaseTransportFactory: RemoteLeaseTransportFactoryT,
+    RemoteLeaseTransport: RemoteLeaseTransportT<<SwapTask::InG as Group>::TopG>,
 {
     type Output = Result<Batch>;
 
@@ -38,32 +41,28 @@ where
     where
         CalculatorT: SlippageCalculator<SwapTask::InG>,
         <<CalculatorT as SlippageCalculator<SwapTask::InG>>::OutC as CurrencyDef>::Group:
-            MemberOf<<SwapTask::InG as Group>::TopG>,
+            MemberOf<<SwapTask::InG as Group>::TopG> + MemberOf<SwapTask::OutG>,
     {
-        let mut filtered = false;
-
-        let swap_trx = SwapTrx::<'_>::new(self.spec.dex_account());
-
-        let out_currency = CalculatorT::OutC::dto().into_super_group();
+        let out_currency: CurrencyDTO<<SwapTask::InG as Group>::TopG> =
+            CalculatorT::OutC::dto().into_super_group();
         super::try_filter_fold_coins(
             self.spec,
             super::not_out_coins_filter(&out_currency),
-            swap_trx,
-            |mut trx, coin_in| {
-                filtered = true;
+            SwapBuilder::new(),
+            |builder, coin_in| {
                 calc.min_output(&coin_in, self.querier)
                     .and_then(|min_output| {
-                        trx.swap_exact_in::<_, _, RemoteLeaseTransportFactory::TransportImpl<'_>>(
-                            &coin_in,
-                            &min_output.into(),
-                        )
+                        builder
+                            .add_coin(coin_in, min_output)
+                            .ok_or_else(|| Error::Overflow("calculating minimum swap output"))
                     })
-                    .map(|()| trx)
             },
         )
-        .inspect(|_| {
-            super::expect_at_lease_one_filtered(filtered, &out_currency);
+        .and_then(|builder| {
+            builder
+                .build::<<SwapTask::InG as Group>::TopG>()
+                .map_err(Error::BuildSwapRequest)
         })
-        .map(Into::into)
+        .and_then(|swap_params| self.transport.swap(swap_params).map_err(Error::Transport))
     }
 }

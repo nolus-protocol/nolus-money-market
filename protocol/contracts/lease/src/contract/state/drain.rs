@@ -1,4 +1,4 @@
-use currencies::PaymentGroup;
+use crate::api::LeasePaymentCurrencies;
 use platform::bank;
 use sdk::cosmwasm_std::{Addr, QuerierWrapper};
 
@@ -11,7 +11,7 @@ where
     Self: Into<State>,
 {
     fn drain(self, from: &Addr, to: Addr, querier: QuerierWrapper<'_>) -> ContractResult<Response> {
-        bank::bank_send_all::<PaymentGroup>(from, to, querier)
+        bank::bank_send_all::<LeasePaymentCurrencies>(from, to, querier)
             .map_err(Into::into)
             .and_then(|msgs| {
                 if msgs.is_empty() {

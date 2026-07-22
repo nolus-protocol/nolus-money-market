@@ -49,10 +49,8 @@ where
         SwapOutTask: SwapOutputTask<SwapTask, OutC = OutC>,
     {
         let spec = task.into_spec();
-        super::decode_response::<OutC, _, RemoteLeaseTransportFactory::TransportImpl<'_>>(
-            &spec, self.resp,
-        )
-        .map(|amount_out| TransferInInit::new(spec, amount_out.into()))
+        super::decode_swap_response::<OutC, SwapTask>(self.resp)
+            .map(|amount_out| TransferInInit::new(spec, amount_out.into()))
     }
 }
 
@@ -94,11 +92,7 @@ where
         OutC::Group: MemberOf<<SwapTask::OutG as Group>::TopG> + MemberOf<SwapTask::OutG>,
         SwapOutTask: SwapOutputTask<SwapTask, OutC = OutC>,
     {
-        super::decode_response::<OutC, _, RemoteLeaseTransportFactory::TransportImpl<'_>>(
-            task.as_spec(),
-            self.resp,
-        )
-        .map_or_else(
+        super::decode_swap_response::<OutC, SwapTask>(self.resp).map_or_else(
             |err| HandlerResult::Continue(Err(err)),
             |amount_out| response::res_finished(task.finish(amount_out, self.env, self.querier)),
         )

@@ -1,3 +1,4 @@
+use currency::Group;
 use serde::{Deserialize, Serialize};
 
 pub use remote_lease_wire::callback::{OPERATION_ERR_MAX_BYTES, RemoteErrorMessage};
@@ -15,8 +16,11 @@ use crate::response::OperationResponse;
 /// be in flight on the Solana side until the channel times out).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
-pub enum RemoteLeaseCallback {
-    OperationOk(OperationResponse),
+pub enum RemoteLeaseCallback<G>
+where
+    G: Group,
+{
+    OperationOk(OperationResponse<G>),
     OperationErr(RemoteErrorMessage),
     OperationTimeout,
 }

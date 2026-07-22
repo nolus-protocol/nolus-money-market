@@ -4,7 +4,7 @@ use finance::duration::Duration;
 pub use self::remote_lease::{Error as SwapError, Result as SwapResult, Transport};
 #[cfg(feature = "impl")]
 pub use self::{
-    remote_lease::Factory as RemoteLeaseTransportFactory,
+    remote_lease::{Factory as RemoteLeaseTransportFactory, Transport as RemoteLeaseTransport},
     transfer::{TransferOut, TransferOutFactory},
 };
 

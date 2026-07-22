@@ -1,5 +1,6 @@
 use enum_dispatch::enum_dispatch;
 
+use crate::api::LeasePaymentCurrencies;
 use finance::duration::Duration;
 use finance::instant::Instant;
 use platform::remote::ErrorResponse as ICAErrorResponse;
@@ -53,7 +54,7 @@ where
     /// the callback through `on_dex_response` / `on_dex_error` / `on_dex_timeout`.
     fn on_remote_lease_callback(
         self,
-        _callback: RemoteLeaseCallback,
+        _callback: RemoteLeaseCallback<LeasePaymentCurrencies>,
         _info: MessageInfo,
         _querier: QuerierWrapper<'_>,
         _env: Env,

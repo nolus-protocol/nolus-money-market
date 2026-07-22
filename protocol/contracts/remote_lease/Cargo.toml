@@ -23,6 +23,7 @@ contract = [
     "dep:access-control",
     "dep:cosmwasm-std",
     "dep:currencies",
+    "dep:currency",
     "cosmwasm-std/exports",
     "cosmwasm-std/stargate",
     "cosmwasm-std/cosmwasm_2_0",
@@ -36,6 +37,7 @@ testing = []
 [dependencies]
 access-control = { workspace = true, optional = true }
 currencies = { workspace = true, optional = true }
+currency = { workspace = true, optional = true }
 cw-time = { workspace = true }
 finance = { workspace = true }
 platform = { workspace = true }
