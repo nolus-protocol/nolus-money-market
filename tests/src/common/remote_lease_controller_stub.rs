@@ -29,9 +29,11 @@
 //!   with a synthetic but valid PDA-looking string (the stub mints a fresh
 //!   one per `OpenLease` call to mirror Solana's unique-per-lease PDA),
 //! - `Swap` → `OperationResponse::Swap { amount_out }` where `amount_out`
-//!   equals the request's configured `min_out` (the literal-floor model
-//!   confirmed in plan §10.A.3 — a happy-path counterparty pays exactly
-//!   the configured floor),
+//!   is governed by the test-settable [`SwapFill`] (default [`SwapFill::MinOut`]
+//!   pays the request's `min_out`; [`SwapFill::InputAmount`] pays the summed
+//!   input in the `min_out` currency — an identity DEX fill; [`SwapFill::Fixed`]
+//!   pays a caller-chosen absolute amount). Every `Swap` request is captured
+//!   and exposed via the test-only [`StubQueryMsg::CapturedSwap`],
 //! - `TransferOut` → `OperationResponse::TransferOut(TransferOutResponse {})`,
 //!   `CloseLease` → `OperationResponse::CloseLease(CloseLeaseResponse {})`.
 //!
@@ -42,18 +44,20 @@
 use serde::{Deserialize, Serialize};
 
 use currencies::{LeaseGroup, Lpns, PaymentGroup};
+use currency::{CurrencyDef, Group, MemberOf};
+use finance::coin::{Amount, Coin, CoinDTO, WithCoin};
 use platform::contract::{Code, CodeId};
 use remote_lease::{
     callback::{RemoteErrorMessage, RemoteLeaseCallback},
-    msg::{CloseLeaseParams, OpenLeaseParams, SwapParams, TransferOutParams},
+    msg::{CloseLeaseParams, OpenLeaseParams, TransferOutParams},
     response::{
         CloseLeaseResponse, OpenLeaseResponse, OperationResponse, RemoteLeaseId, SwapResponse,
         TransferOutResponse,
     },
+    swap::SwapParams,
 };
 use remote_lease_controller::api::{
     ChannelResponse, ConfigResponse, InstantiateMsg as ControllerInstantiateMsg,
-    QueryMsg as ControllerQueryMsg,
 };
 use sdk::{
     cosmwasm_ext::Response as CwResponse,
@@ -61,11 +65,15 @@ use sdk::{
         self, Addr, Binary, Deps, Env, MessageInfo, StdError, StdResult, Storage, Uint64, WasmMsg,
         to_json_binary,
     },
+    cw_multi_test::AppResponse,
     cw_storage_plus::{Item, Map},
 };
 use thiserror::Error;
 
-use super::{ADMIN, CwContractWrapper, test_case::app::App};
+use super::{
+    ADMIN, CwContractWrapper,
+    test_case::{app::App, response::ResponseWithInterChainMsgs},
+};
 
 /// Operation tag used both as the storage key (`ResponseModes`,
 /// `PendingCallbacks`) and as the `op` argument of the test-only
@@ -90,6 +98,24 @@ pub enum ResponseMode {
     Ok,
     Err(RemoteErrorMessage),
     Delayed,
+}
+
+/// The `amount_out` a happy-path `Swap` ack pays back, in the request's
+/// `min_out` currency.
+///
+/// The remote (Solana) DEX fill is opaque to the lease — it learns the output
+/// only from the ack — so the stand-in must be told what to pay. `MinOut` (the
+/// default) keeps the literal-floor model some tests rely on; `InputAmount`
+/// reproduces the legacy identity fill (`|price, _, _| price`) the open flow
+/// and repay use; `Fixed` names an exact outcome for close/liquidation tests
+/// that pinned a specific `price_f` result.
+#[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum SwapFill {
+    #[default]
+    MinOut,
+    InputAmount,
+    Fixed(Amount),
 }
 
 /// Public stand-in `ExecuteMsg` — production variants come straight from
@@ -134,6 +160,27 @@ pub enum StubExecuteMsg {
     DeliverPending {
         op: String,
     },
+    /// Test-only: set the `amount_out` a happy-path `Swap` ack pays back.
+    SetSwapFill {
+        fill: SwapFill,
+    },
+}
+
+/// Public stand-in `QueryMsg` — a superset of
+/// `remote_lease_controller::api::QueryMsg` (mirrored variant-for-variant so
+/// production queries still resolve) plus the test-only `CapturedSwap`. As with
+/// [`StubExecuteMsg`], `#[serde(deny_unknown_fields)]` is intentionally omitted
+/// so the additive variant coexists with the real controller enum.
+#[derive(Serialize, Deserialize, Clone, Debug)]
+#[serde(rename_all = "snake_case")]
+pub enum StubQueryMsg {
+    Config(),
+    Channel(),
+    ProtocolPackageRelease {},
+    /// Test-only: return the `SwapParams` of the most recent `Swap` request.
+    CapturedSwap {},
+    /// Test-only: return the number of `Swap` requests received so far.
+    SwapCount {},
 }
 
 /// Stand-in state.
@@ -147,6 +194,9 @@ const CONFIG: Item<StubConfig> = Item::new("stub_config");
 const MODES: Map<&str, ResponseMode> = Map::new("stub_modes");
 const PENDING: Map<&str, PendingCallback> = Map::new("stub_pending");
 const LEASE_PDA_COUNTER: Item<u64> = Item::new("stub_pda_counter");
+const SWAP_FILL: Item<SwapFill> = Item::new("stub_swap_fill");
+const SWAP_CAPTURED: Item<SwapParams<PaymentGroup, PaymentGroup>> = Item::new("stub_swap_captured");
+const SWAP_COUNT: Item<u64> = Item::new("stub_swap_count");
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 struct StubConfig {
@@ -158,7 +208,7 @@ struct StubConfig {
 #[derive(Serialize, Deserialize, Clone, Debug)]
 struct PendingCallback {
     sender: Addr,
-    callback: RemoteLeaseCallback,
+    callback: RemoteLeaseCallback<PaymentGroup>,
 }
 
 #[derive(Error, Debug)]
@@ -218,10 +268,13 @@ pub fn execute(
             })
         }
         StubExecuteMsg::Swap { params, .. } => {
-            handle_outbound(deps, info, op_tag::SWAP, |_storage| {
-                Ok(OperationResponse::Swap(SwapResponse {
-                    amount_out: *params.min_out(),
-                }))
+            let fill = SWAP_FILL.may_load(deps.storage)?.unwrap_or_default();
+            let amount_out = swap_amount_out(&params, &fill);
+            SWAP_CAPTURED.save(deps.storage, &params)?;
+            let count = SWAP_COUNT.may_load(deps.storage)?.unwrap_or(0) + 1;
+            SWAP_COUNT.save(deps.storage, &count)?;
+            handle_outbound(deps, info, op_tag::SWAP, move |_storage| {
+                Ok(OperationResponse::Swap(SwapResponse { amount_out }))
             })
         }
         StubExecuteMsg::TransferOut { .. } => {
@@ -234,12 +287,16 @@ pub fn execute(
             Ok(CwResponse::new())
         }
         StubExecuteMsg::DeliverPending { op } => deliver_pending(deps.storage, op.as_str()),
+        StubExecuteMsg::SetSwapFill { fill } => {
+            SWAP_FILL.save(deps.storage, &fill)?;
+            Ok(CwResponse::new())
+        }
     }
 }
 
-pub fn query(deps: Deps<'_>, _env: Env, msg: ControllerQueryMsg) -> StdResult<Binary> {
+pub fn query(deps: Deps<'_>, _env: Env, msg: StubQueryMsg) -> StdResult<Binary> {
     match msg {
-        ControllerQueryMsg::Config() => {
+        StubQueryMsg::Config() => {
             let config = CONFIG
                 .load(deps.storage)
                 .map_err(|_err| StubError::NotInitialised)?;
@@ -249,14 +306,23 @@ pub fn query(deps: Deps<'_>, _env: Env, msg: ControllerQueryMsg) -> StdResult<Bi
                 lease_code_id: CodeId::from(config.lease_code).into(),
             })
         }
-        ControllerQueryMsg::Channel() => {
+        StubQueryMsg::Channel() => {
             // Channel state is not exercised by the lease-side tests —
             // the stand-in synthesises the round-trip in-process.
             to_json_binary(&ChannelResponse { channel: None })
         }
-        ControllerQueryMsg::ProtocolPackageRelease {} => Err(StdError::msg(
+        StubQueryMsg::ProtocolPackageRelease {} => Err(StdError::msg(
             "stand-in does not implement ProtocolPackageRelease",
         )),
+        StubQueryMsg::CapturedSwap {} => {
+            let captured = SWAP_CAPTURED
+                .may_load(deps.storage)?
+                .ok_or_else(|| StdError::msg("no swap captured by the stand-in yet"))?;
+            to_json_binary(&captured)
+        }
+        StubQueryMsg::SwapCount {} => {
+            to_json_binary(&SWAP_COUNT.may_load(deps.storage)?.unwrap_or(0))
+        }
     }
 }
 
@@ -267,7 +333,7 @@ fn handle_outbound<F>(
     build_ok: F,
 ) -> Result<CwResponse, StubError>
 where
-    F: FnOnce(&mut dyn Storage) -> Result<OperationResponse, StubError>,
+    F: FnOnce(&mut dyn Storage) -> Result<OperationResponse<PaymentGroup>, StubError>,
 {
     let config = CONFIG
         .load(deps.storage)
@@ -315,7 +381,7 @@ fn require_lease_code(
 fn synth_open_lease_response(
     storage: &mut dyn Storage,
     _params: &OpenLeaseParams<LeaseGroup, Lpns, PaymentGroup>,
-) -> Result<OperationResponse, StubError> {
+) -> Result<OperationResponse<PaymentGroup>, StubError> {
     let next = LEASE_PDA_COUNTER.may_load(storage)?.unwrap_or(0) + 1;
     LEASE_PDA_COUNTER.save(storage, &next)?;
     // PDA-shaped base58 placeholder; the validation in `RemoteLeaseId::new`
@@ -332,6 +398,54 @@ fn synth_open_lease_response(
     }))
 }
 
+fn swap_amount_out(
+    params: &SwapParams<PaymentGroup, PaymentGroup>,
+    fill: &SwapFill,
+) -> CoinDTO<PaymentGroup> {
+    match fill {
+        SwapFill::MinOut => *params.min_out(),
+        SwapFill::InputAmount => coin_out(input_sum(params), params.min_out()),
+        SwapFill::Fixed(amount) => coin_out(*amount, params.min_out()),
+    }
+}
+
+fn input_sum(params: &SwapParams<PaymentGroup, PaymentGroup>) -> Amount {
+    match params {
+        SwapParams::One { coin_in, .. } => coin_in.amount(),
+        SwapParams::Two {
+            coin_in_1,
+            coin_in_2,
+            ..
+        } => coin_in_1
+            .amount()
+            .checked_add(coin_in_2.amount())
+            .expect("swap input amounts must not overflow"),
+    }
+}
+
+/// Build a `CoinDTO` carrying `amount` in the currency of `witness`. Dispatches
+/// on `witness`'s runtime currency so the coin is typed with the matching
+/// currency — never a wrong-currency witness.
+fn coin_out(amount: Amount, witness: &CoinDTO<PaymentGroup>) -> CoinDTO<PaymentGroup> {
+    witness.with_coin(WithAmount { amount })
+}
+
+struct WithAmount {
+    amount: Amount,
+}
+
+impl WithCoin<PaymentGroup> for WithAmount {
+    type Outcome = CoinDTO<PaymentGroup>;
+
+    fn on<C>(self, _coin: Coin<C>) -> Self::Outcome
+    where
+        C: CurrencyDef,
+        C::Group: MemberOf<PaymentGroup> + MemberOf<<PaymentGroup as Group>::TopG>,
+    {
+        Coin::<C>::new(self.amount).into()
+    }
+}
+
 fn deliver_pending(storage: &mut dyn Storage, op: &str) -> Result<CwResponse, StubError> {
     let pending = PENDING
         .may_load(storage, op)?
@@ -340,7 +454,7 @@ fn deliver_pending(storage: &mut dyn Storage, op: &str) -> Result<CwResponse, St
     Ok(CwResponse::new().add_message(callback_msg(pending.sender, pending.callback)?))
 }
 
-fn callback_msg(lease: Addr, callback: RemoteLeaseCallback) -> StdResult<WasmMsg> {
+fn callback_msg(lease: Addr, callback: RemoteLeaseCallback<PaymentGroup>) -> StdResult<WasmMsg> {
     let payload = lease::api::ExecuteMsg::RemoteLeaseCallback(callback);
     to_json_binary(&payload).map(|encoded| WasmMsg::Execute {
         contract_addr: lease.into_string(),
@@ -381,13 +495,6 @@ impl Instantiator {
 }
 
 /// Helper for tests: send a `SetResponseMode` to the stub.
-///
-/// `#[allow(dead_code)]` because the four lease-lifecycle test modules
-/// that consume this helper (`remote_lease_open`, `remote_lease_swap`,
-/// `remote_lease_transfer_out`, `remote_lease_close`) target the
-/// post-refactor lease state machine and ship un-registered until issue
-/// #142 Phases 3-6 land. Re-enable the consumers, drop the allow.
-#[allow(dead_code)]
 pub fn set_response_mode(app: &mut App, controller: &Addr, op: &str, mode: ResponseMode) {
     let msg = StubExecuteMsg::SetResponseMode {
         op: op.to_owned(),
@@ -401,14 +508,42 @@ pub fn set_response_mode(app: &mut App, controller: &Addr, op: &str, mode: Respo
 }
 
 /// Helper for tests: trigger delivery of a previously stored Delayed
-/// callback for the given op tag. See [`set_response_mode`] for the
-/// `dead_code` rationale.
-#[allow(dead_code)]
-pub fn deliver_pending_callback(app: &mut App, controller: &Addr, op: &str) {
+/// callback for the given op tag, returning the lease's response so the caller
+/// can drain any follow-up messages (e.g. a local-output swap's transfer-in).
+#[track_caller]
+pub fn deliver_pending_callback<'r>(
+    app: &'r mut App,
+    controller: &Addr,
+    op: &str,
+) -> ResponseWithInterChainMsgs<'r, AppResponse> {
     let msg = StubExecuteMsg::DeliverPending { op: op.to_owned() };
+    app.execute(sdk::testing::user(ADMIN), controller.clone(), &msg, &[])
+        .expect("DeliverPending must succeed against the stand-in")
+}
+
+/// Helper for tests: set the `amount_out` a happy-path `Swap` ack pays back.
+pub fn set_swap_fill(app: &mut App, controller: &Addr, fill: SwapFill) {
+    let msg = StubExecuteMsg::SetSwapFill { fill };
     app.execute(sdk::testing::user(ADMIN), controller.clone(), &msg, &[])
         .map(|response| {
             let _ = response.unwrap_response();
         })
-        .expect("DeliverPending must succeed against the stand-in");
+        .expect("SetSwapFill must succeed against the stand-in");
+}
+
+/// Helper for tests: read the `SwapParams` of the most recent `Swap` request
+/// the stand-in received.
+#[track_caller]
+pub fn captured_swap(app: &App, controller: &Addr) -> SwapParams<PaymentGroup, PaymentGroup> {
+    app.query()
+        .query_wasm_smart(controller.clone(), &StubQueryMsg::CapturedSwap {})
+        .expect("CapturedSwap query must succeed against the stand-in")
+}
+
+/// Helper for tests: the number of `Swap` requests the stand-in has received.
+#[track_caller]
+pub fn swap_count(app: &App, controller: &Addr) -> u64 {
+    app.query()
+        .query_wasm_smart(controller.clone(), &StubQueryMsg::SwapCount {})
+        .expect("SwapCount query must succeed against the stand-in")
 }

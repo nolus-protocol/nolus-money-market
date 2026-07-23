@@ -1,6 +1,5 @@
 use serde::{Deserialize, Serialize};
 
-use currencies::PaymentGroup;
 use currency::{CurrencyDef, Group, MemberOf};
 use cw_time::IntoInstant;
 use dex::{Account, Enterable as _};
@@ -240,7 +239,7 @@ impl Contract for OpenLease {
 
     fn on_remote_lease_callback(
         self,
-        callback: RemoteLeaseCallback,
+        callback: RemoteLeaseCallback<LeasePaymentCurrencies>,
         info: MessageInfo,
         querier: QuerierWrapper<'_>,
         env: Env,
@@ -336,13 +335,14 @@ struct SendToCustomer {
     customer: Addr,
 }
 
-impl WithCoin<PaymentGroup> for SendToCustomer {
+impl WithCoin<LeasePaymentCurrencies> for SendToCustomer {
     type Outcome = Batch;
 
     fn on<C>(self, amount: Coin<C>) -> Self::Outcome
     where
         C: CurrencyDef,
-        C::Group: MemberOf<PaymentGroup> + MemberOf<<PaymentGroup as Group>::TopG>,
+        C::Group:
+            MemberOf<LeasePaymentCurrencies> + MemberOf<<LeasePaymentCurrencies as Group>::TopG>,
     {
         let mut sender = LazySenderStub::new(self.customer);
         sender.send(amount);

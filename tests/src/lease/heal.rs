@@ -1,4 +1,7 @@
+use finance::price;
 use lease::{api::ExecuteMsg, error::ContractError};
+use platform::coin_legacy;
+use remote_lease::callback::{RemoteErrorMessage, RemoteLeaseCallback};
 use sdk::{
     cosmwasm_std::{Addr, StdResult},
     cw_multi_test::AppResponse,
@@ -7,7 +10,9 @@ use sdk::{
 
 use crate::{
     common::{
-        self, USER, swap as test_swap,
+        self, USER, ibc,
+        remote_lease_controller_stub::{self as stub, ResponseMode, SwapFill, op_tag},
+        swap as test_swap,
         test_case::{
             TestCase,
             app::App,
@@ -62,17 +67,56 @@ fn swap_on_repay() {
     let payment = super::create_payment_coin(1_000);
     test_case.send_funds_from_admin(testing::user(USER), &[common::cwcoin(payment)]);
 
-    () = repay::repay_with_hook_on_swap(&mut test_case, lease.clone(), payment, |ref mut app| {
-        let swap_response_retry = common::swap::do_swap_with_error(app, lease.clone())
-            .expect("on error should have retried again the swap");
+    let controller = test_case.address_book.remote_lease_controller().clone();
+    // Hold the buy-LPN swap pending so the failure-then-retry can be driven by
+    // hand; the eventual identity fill yields the payment's LPN value.
+    stub::set_response_mode(
+        &mut test_case.app,
+        &controller,
+        op_tag::SWAP,
+        ResponseMode::Delayed,
+    );
+    stub::set_swap_fill(&mut test_case.app, &controller, SwapFill::InputAmount);
 
-        test_swap::expect_swap(
-            swap_response_retry,
-            TestCase::DEX_CONNECTION_ID,
-            TestCase::LEASE_ICA_ID,
-            |_| {},
-        );
-    })
+    // The payment is transferred out and the buy-LPN swap emitted, then held.
+    () = repay::send_payment_and_transfer(&mut test_case, lease.clone(), payment)
+        .ignore_response()
+        .unwrap_response();
+
+    // The counterparty rejects the first swap; the buy-LPN task retries,
+    // re-emitting the swap (again held pending by the stand-in).
+    let reason = RemoteErrorMessage::new("min output not fulfilled").expect("within length cap");
+    () = test_case
+        .app
+        .execute(
+            controller.clone(),
+            lease.clone(),
+            &ExecuteMsg::RemoteLeaseCallback(RemoteLeaseCallback::OperationErr(reason)),
+            &[],
+        )
+        .expect("authorised swap error must retry, not revert")
+        .ignore_response()
+        .unwrap_response();
+
+    // The retry succeeds: deliver the held OK ack, then bring the proceeds in.
+    let paid: LpnCoin = price::total(payment, super::price_lpn_of()).unwrap();
+    let mut delivered =
+        stub::deliver_pending_callback(&mut test_case.app, &controller, op_tag::SWAP);
+    let transfer_amount = ibc::expect_remote_transfer(
+        &mut delivered,
+        TestCase::DEX_CONNECTION_ID,
+        TestCase::LEASE_ICA_ID,
+    );
+    assert_eq!(transfer_amount, coin_legacy::to_cosmwasm_on_dex(paid));
+    let _ = delivered.unwrap_response();
+
+    let lease_ica = TestCase::stub_pda(1);
+    () = test_swap::deliver_transfer_in(
+        &mut test_case.app,
+        lease_ica,
+        lease.clone(),
+        &transfer_amount,
+    )
     .ignore_response()
     .unwrap_response();
 

@@ -10,9 +10,9 @@ rust-version.workspace = true
 
 [package.metadata.cargo-each]
 combinations = [
-    { tags = ["build", "$dex"], always-on = ["contract", "$dex"], include-rest = false, generics = { "$dex" = ["dex-astroport_main", "dex-astroport_test", "dex-osmosis"] } },
+    { tags = ["build", "@agnostic"], always-on = ["contract"], include-rest = false },
     { tags = ["ci", "@agnostic"], feature-groups = ["skel"], include-rest = false },
-    { tags = ["ci", "@agnostic"], always-on = ["dex-test_impl"], feature-groups = ["contract"], include-rest = false },
+    { tags = ["ci", "@agnostic"], feature-groups = ["contract"], include-rest = false },
 ]
 feature-groups = { contract = { members = ["contract", "contract_testing", "internal.test.contract"], at-least-one = true, mutually-exclusive = true }, skel = { members = ["skel", "skel_testing", "internal.test.skel"], at-least-one = false, mutually-exclusive = true } }
 
@@ -20,11 +20,6 @@ feature-groups = { contract = { members = ["contract", "contract_testing", "inte
 crate-type = ["cdylib", "rlib"]
 
 [features]
-dex-astroport_main = ["swap/dex-astroport_main"]
-dex-astroport_test = ["swap/dex-astroport_test"]
-dex-osmosis = ["swap/dex-osmosis"]
-dex-test_impl = ["swap/dex-test_impl"]
-
 contract = [
     "cosmwasm-std/exports",
     "skel",
@@ -85,7 +80,6 @@ oracle-platform = { workspace = true }
 platform = { workspace = true }
 remote_lease = { workspace = true }
 sdk = { workspace = true }
-swap = { workspace = true, optional = true }
 versioning = { workspace = true, optional = true, features = ["protocol_contract"] }
 
 # Required as a dependency by `entry_point` attribute macro

@@ -1,20 +1,25 @@
 use std::collections::HashMap;
 
 use currencies::PaymentGroup;
-use currency::CurrencyDef as _;
-use finance::{coin::Amount, duration::Duration, price, zero::Zero};
+use finance::{
+    coin::{Amount, CoinDTO},
+    duration::Duration,
+    price,
+    zero::Zero,
+};
 use lease::api::{ExecuteMsg, query::StateResponse};
 use platform::coin_legacy;
 use sdk::{cosmwasm_std::Addr, cw_multi_test::AppResponse};
-use swap::testing::SwapRequest;
 
 use crate::{
     common::{
         self, CwCoin, ibc, lease as common_lease,
         leaser::Instantiator as LeaserInstantiator,
+        remote_lease_controller_stub::SwapFill,
+        swap,
         test_case::{TestCase, response::ResponseWithInterChainMsgs},
     },
-    lease::{self as lease_test, LeaseCoin, LpnCurrency, PaymentCurrency},
+    lease::{self as lease_test, LeaseCoin, PaymentCurrency},
 };
 
 use super::super::LeaseTestCase;
@@ -44,7 +49,11 @@ fn liquidation_time_alarm(
 
     lease_test::feed_price(&mut test_case);
 
-    let response = test_case
+    let controller = test_case.address_book.remote_lease_controller().clone();
+    // Identity DEX fill: the liquidated collateral yields its LPN value.
+    swap::set_fill(&mut test_case.app, &controller, SwapFill::InputAmount);
+
+    let mut response = test_case
         .app
         .execute(
             test_case.address_book.time_alarms().clone(),
@@ -58,32 +67,17 @@ fn liquidation_time_alarm(
         return;
     };
 
-    let requests: Vec<SwapRequest<PaymentGroup>> = crate::common::swap::expect_swap(
-        response,
-        TestCase::DEX_CONNECTION_ID,
-        TestCase::LEASE_ICA_ID,
-        |_| {},
-    );
-
     let ica_addr: Addr = TestCase::stub_pda(1);
 
-    let mut response: ResponseWithInterChainMsgs<'_, ()> = crate::common::swap::do_swap(
-        &mut test_case.app,
-        lease_addr.clone(),
-        ica_addr.clone(),
-        requests.into_iter(),
-        LpnCurrency::dex(),
-        |amount, _, _| amount,
-    )
-    .ignore_response();
-
+    // The liquidation sell-asset swap fired inline on the time-alarm; the lease
+    // (local-output) has emitted the transfer-in of the LPN proceeds.
     let transfer_amount: CwCoin = ibc::expect_remote_transfer(
         &mut response,
         TestCase::DEX_CONNECTION_ID,
         TestCase::LEASE_ICA_ID,
     );
 
-    () = response.unwrap_response();
+    let _ = response.unwrap_response();
 
     assert_eq!(
         transfer_amount,
@@ -92,11 +86,17 @@ fn liquidation_time_alarm(
         )
     );
 
-    let response: ResponseWithInterChainMsgs<'_, AppResponse> = ibc::do_transfer(
+    // Fidelity: the swap input is exactly the liquidated amount.
+    let captured = swap::captured(&test_case.app, &controller);
+    assert_eq!(
+        Into::<CoinDTO<PaymentGroup>>::into(liquidation_amount),
+        swap::token_in(&captured),
+    );
+
+    let response: ResponseWithInterChainMsgs<'_, AppResponse> = swap::deliver_transfer_in(
         &mut test_case.app,
         ica_addr,
         lease_addr.clone(),
-        true,
         &transfer_amount,
     );
 

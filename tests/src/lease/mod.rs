@@ -39,8 +39,7 @@ mod open;
 mod remote_lease_callback;
 // TODO #142 Phase 3: enable when the OpenLease state + Status::OpenFailed land.
 mod remote_lease_open;
-// TODO #142 Phase 4: enable when SwapExactIn routes through Lease::swap (single-coin per call).
-// mod remote_lease_swap;
+mod remote_lease_swap;
 // TODO #142 Phase 5: enable when transfer_in_init / transfer_in_finish route through Lease::transfer_out.
 // mod remote_lease_transfer_out;
 // TODO #142 Phase 6: enable when the CloseLease state + divergence terminal land.
@@ -287,13 +286,13 @@ pub(super) fn complete_init_lease<
     );
     let exp_borrow: LpnCoin = quote.borrow.try_into().unwrap();
 
+    let controller = test_case.address_book.remote_lease_controller().clone();
     common::lease::complete_initialization(
         &mut test_case.app,
-        TestCase::DEX_CONNECTION_ID,
+        &controller,
         lease.clone(),
         downpayment,
         exp_borrow,
-        LeaseCurrency::dex(),
     );
 }
 

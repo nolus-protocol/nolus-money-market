@@ -1,5 +1,5 @@
-pub use swap_client::SwapClientFactory;
+pub use remote_lease::SwapClientFactory;
 pub use transfer_out::TransferOutFactory;
 
-mod swap_client;
+mod remote_lease;
 mod transfer_out;

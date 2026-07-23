@@ -25,8 +25,8 @@ pub use self::{
     response::{ContinueResult, Handler, Response, Result},
     state::{Contract, ContractInSwap, Stage},
     transport::{
-        IBC_TIMEOUT, RemoteLeaseTransportFactory, TransferOut as TransportOut,
-        TransferOutFactory as TransportOutFactory,
+        IBC_TIMEOUT, RemoteLeaseTransport, RemoteLeaseTransportFactory,
+        TransferOut as TransportOut, TransferOutFactory as TransportOutFactory,
     },
 };
 

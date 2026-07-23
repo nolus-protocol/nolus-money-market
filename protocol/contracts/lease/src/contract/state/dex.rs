@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 
+use crate::api::LeasePaymentCurrencies;
 use dex::{Contract as DexContract, Handler as DexHandler};
 use finance::duration::Duration;
 use finance::instant::Instant;
@@ -61,7 +62,7 @@ where
 
     fn on_remote_lease_callback(
         self,
-        callback: RemoteLeaseCallback,
+        callback: RemoteLeaseCallback<LeasePaymentCurrencies>,
         info: MessageInfo,
         querier: QuerierWrapper<'_>,
         env: Env,

@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use enum_dispatch::enum_dispatch;
 
+use crate::api::LeasePaymentCurrencies;
 use finance::duration::Duration;
 use platform::{
     batch::Batch, message::Response as MessageResponse, remote::ErrorResponse as ICAErrorResponse,

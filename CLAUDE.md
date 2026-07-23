@@ -56,13 +56,13 @@ Monorepo with three interconnected Cargo workspaces:
 
 ### `protocol/` - Network and DEX-specific implementations
 
-**Packages:** `currencies` (protocol-specific definitions), `dex` (DEX abstraction layer), `marketprice`, `swap` (per-DEX request builders: `astroport`, `osmosis`), `remote_lease` (typed cross-chain lease operations: stub client, callback classification, envelope/response types), `remote_lease_wire` (standalone wire-types crate shared with the Solana-side Remote Lease App per ADR 0001/0002 — no internal deps, MSRV 1.89 enforced in CI, hardened deserialization)
+**Packages:** `currencies` (protocol-specific definitions), `dex` (DEX abstraction layer), `marketprice`, `remote_lease` (typed cross-chain lease operations: stub client, callback classification, envelope/response types, and the `swap::SwapParams` request builder), `remote_lease_wire` (standalone wire-types crate shared with the Solana-side Remote Lease App per ADR 0001/0002 — no internal deps, MSRV 1.89 enforced in CI, hardened deserialization)
 
 **Contracts:** `lease` (loan positions), `leaser` (lease origination), `lpp` (lending pool), `oracle` (price feeds), `profit` (distribution), `remote_lease` (IBC controller paired with the Solana Remote Lease App per ADR 0001/0002), `reserve`, `void`
 
 ### `tests/` - Integration tests
 
-Cross-workspace integration tests. The suite builds per DEX: `tests/Cargo.toml` declares a `{ tags = ["ci", "$dex"], include-rest = false }` combination with `$dex` generics over `dex-astroport_test`, `dex-astroport_main`, and `dex-osmosis`.
+Cross-workspace integration tests. `tests/Cargo.toml` declares a single `{ tags = ["ci", "@agnostic"], include-rest = false }` combination; the concrete network/DEX is chosen at compile time by the `currencies` build (driven by `PROTOCOL_NETWORK` / `PROTOCOL_NAME` / `PROTOCOL_RELEASE_ID`), not by a Cargo feature.
 
 ### `tools/` - Build tooling
 
@@ -76,7 +76,7 @@ Cross-workspace integration tests. The suite builds per DEX: `tests/Cargo.toml` 
 
 2. **Type-safe currency system**: Currencies are compile-time types, not runtime strings. The `Currency` trait + `CurrencyDef` with group associations prevent financial operation mismatches at compile time.
 
-3. **DEX and remote-swap abstraction**: The `dex` package drives asynchronous swaps over IBC Interchain Accounts (`dex::Account`); the per-DEX request builders live in the `swap` package (`astroport`, `osmosis`). The `remote_lease` contract is the IBC controller paired with the Solana-side Remote Lease App (ADR 0001/0002); its typed operations and wire types live in the `remote_lease` and `remote_lease_wire` packages. Lease **open** derives its `dex::Account` from the controller's `OpenLease` ack (`RemoteLeaseId` → `platform::ica::HostAccount`) rather than registering a Cosmos ICA; swap/repay/close transport still submits over ICA (`submit_tx`).
+3. **DEX and remote-swap abstraction**: The `dex` package orchestrates asynchronous swap and transfer workflows (`dex::Account`), building swap requests as `remote_lease::swap::SwapParams`. The `remote_lease` contract is the IBC controller paired with the Solana-side Remote Lease App (ADR 0001/0002); its typed operations and wire types live in the `remote_lease` and `remote_lease_wire` packages. Lease **open** derives its `dex::Account` from the controller's `OpenLease` ack (`RemoteLeaseId` → `platform::ica::HostAccount`) rather than registering a Cosmos ICA; the swap transport now routes over the remote-lease controller (a `WasmMsg::Execute` of `remote_lease::msg::ExecuteMsg::Swap`, no ICA), while the repay/close collateral transfers (transfer-in/out) still submit over ICA (`submit_tx`).
 
 4. **`cargo-each` tag system**: Workspace members declare tags in `[package.metadata.cargo-each]` in their Cargo.toml. CI uses these tags to select which packages to build/test for each configuration. New workspace members must declare appropriate tags.
 
@@ -108,7 +108,6 @@ Imports below reference a private toolkit and won't resolve for external contrib
 - **`const fn` / `Addr`**: `Addr` is not `Copy` (it wraps `String`), so methods returning `Addr` by value cannot be `const fn`.
 - **Carve-out — `dex` composite state-machine vocabulary (issue #657)**, exception to *Avoid parasite words in names*: The `dex` crate's composite-workflow layer uses a deliberate, uniform vocabulary that is domain terminology here, not parasite words. Do not flag these names: the per-composite `pub enum State` and its disambiguating `State as StateXxx` re-exports (`out_local`→`StateLocalOut`, `out_remote`→`StateRemoteOut`), the `StartXxxState` start-state aliases (`StartLocalLocalState`, `StartLocalRemoteState`, `StartTransferInState`), and the lease-side `DexState` aliases that name those workflows. These are the established state-machine vocabulary of `protocol/packages/dex/src/impl_/` and its consumers; renaming one composite in isolation only fragments the convention. The fully-qualified `Handler::method(inner, …)` call style is likewise uniform across these composites and intentional — treat it as the established convention here, not a *Method syntax over fully-qualified trait calls* violation. New, unrelated abstractions remain subject to the rule.
 - **Prefix unused-yet items with `_`; never `#[allow(dead_code)]`**: When adding an item that has no caller yet (because the calling code lands in a follow-up PR), prefix the item's name with `_` rather than attaching `#[allow(dead_code)]`. Example: `fn _build_lease_id(ordinal: u64) -> LeaseId { … }`. The leading underscore is local, mechanical, and disappears the moment a real caller arrives. `#[allow]` is invisible to grep, survives forever, and tends to be forgotten when the caller eventually lands.
-- **Doc-comments on private items only when the *why* is non-obvious**: Public API items (`pub` / `pub(crate)` re-exports) use doc-comments to document their contract. Private items (private fns, private structs, inherent impls of private types) default to no doc-comment. A private item gets a doc-comment only when the comment encodes a non-obvious *why* — a hidden invariant, a workaround for a specific CosmWasm / IBC / DEX behaviour, a non-trivial choice between two reasonable implementations. The function's own name and signature carry the *what*. The word "helper" is banned **in identifiers and doc-comments** — it carries no information the function's own name and signature do not already convey. (Prose use of "helper" as a descriptive noun is fine.)
 
 ### Review checklist additions
 

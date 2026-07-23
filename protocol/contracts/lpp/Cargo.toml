@@ -25,6 +25,7 @@ contract = [
     "sdk/contract",
     "dep:access-control",
     "dep:cosmwasm-std",
+    "dep:currencies",
     "dep:oracle",
     "dep:oracle-platform",
 ]
@@ -34,7 +35,7 @@ testing = ["currency/testing", "finance/testing"]
 [dependencies]
 cw-time = { workspace = true }
 access-control = { workspace = true, optional = true }
-currencies = { workspace = true }
+currencies = { workspace = true, optional = true }
 currency = { workspace = true }
 finance = { workspace = true }
 lpp-platform = { workspace = true }

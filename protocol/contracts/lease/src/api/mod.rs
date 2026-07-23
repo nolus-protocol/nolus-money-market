@@ -94,7 +94,7 @@ pub enum ExecuteMsg {
     /// ack; once `ResponseDelivery` state is persisted the controller's ack
     /// commits and the inner work runs via the lease's own time-alarm
     /// fallback on error.
-    RemoteLeaseCallback(RemoteLeaseCallback),
+    RemoteLeaseCallback(RemoteLeaseCallback<LeasePaymentCurrencies>),
 
     /// Heal a lease past a middleware failure
     ///

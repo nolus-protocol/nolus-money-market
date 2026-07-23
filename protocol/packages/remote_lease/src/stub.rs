@@ -7,7 +7,8 @@ use finance::duration::Duration;
 use platform::{batch::Batch, result::Result as PlatformResult};
 use sdk::cosmwasm_std::Addr;
 
-use crate::msg::{CloseLeaseParams, ExecuteMsg, OpenLeaseParams, SwapParams, TransferOutParams};
+use crate::msg::{CloseLeaseParams, ExecuteMsg, OpenLeaseParams, TransferOutParams};
+use crate::swap::SwapParams;
 
 /// Builds outbound `OpenLease` / `CloseLease` batches addressed to the
 /// `remote_lease` controller.
@@ -132,7 +133,8 @@ mod tests {
     use finance::coin::Coin;
     use sdk::cosmwasm_std::Addr;
 
-    use crate::msg::{CloseLeaseParams, OpenLeaseParams, SwapParams, TransferOutParams};
+    use crate::msg::{CloseLeaseParams, OpenLeaseParams, TransferOutParams};
+    use crate::swap::SwapParams;
 
     use super::{Factory, Lease};
 

@@ -244,6 +244,8 @@ mod impl_handler {
 
     use platform::remote::ErrorResponse as ICAErrorResponse;
 
+    use currency::Group;
+
     use crate::{
         RemoteLeaseTransportFactory as RemoteLeaseTransportFactoryT, SwapTask as SwapTaskT,
         TransportOutFactory as TransportOutFactoryT,
@@ -260,7 +262,8 @@ mod impl_handler {
     where
         SwapTask: SwapTaskT,
         TransportOutFactory: TransportOutFactoryT,
-        RemoteLeaseTransportFactory: RemoteLeaseTransportFactoryT,
+        RemoteLeaseTransportFactory:
+            RemoteLeaseTransportFactoryT<TopG = <SwapTask::InG as Group>::TopG>,
         ForwardToInnerMsg: ForwardToInner,
     {
         type Response = Self;

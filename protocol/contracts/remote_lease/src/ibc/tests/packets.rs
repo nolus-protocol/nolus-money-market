@@ -218,7 +218,8 @@ fn packet_ack_malformed_lease_addr_in_envelope_errors() {
         version: ProtocolVersion,
     };
     let envelope_bytes = cosmwasm_std::to_json_binary(&envelope).expect("envelope serialises");
-    let response = OperationResponse::CloseLease(CloseLeaseResponse {});
+    let response: OperationResponse<PaymentGroup> =
+        OperationResponse::CloseLease(CloseLeaseResponse {});
     let ack_bytes = StdAck::Success(cosmwasm_std::to_json_binary(&response).unwrap()).to_binary();
 
     let err = ibc_packet_ack(
@@ -381,7 +382,7 @@ fn outbound_packet(data: Binary) -> IbcPacket {
 
 fn assert_dispatched_callback(
     expected_lease: &Addr,
-    expected_callback: RemoteLeaseCallback,
+    expected_callback: RemoteLeaseCallback<PaymentGroup>,
     messages: &[SubMsg],
 ) {
     assert_eq!(1, messages.len(), "expected one dispatched message");

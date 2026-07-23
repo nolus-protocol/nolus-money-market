@@ -41,6 +41,10 @@ impl Account {
     pub fn remote(&self) -> &RemoteAccount {
         &self.remote
     }
+
+    pub fn remote_controller(&self) -> &Addr {
+        &self.remote_controller
+    }
 }
 
 impl Connectable for Account {

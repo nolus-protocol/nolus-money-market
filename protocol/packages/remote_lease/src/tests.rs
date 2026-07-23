@@ -22,12 +22,13 @@ use crate::{
     callback::{OPERATION_ERR_MAX_BYTES, RemoteErrorMessage, RemoteLeaseCallback},
     envelope::{LeaseAddrOnWire, PacketEnvelope},
     error::Error,
-    msg::{CloseLeaseParams, OpenLeaseParams, Operation, SwapParams, TransferOutParams},
+    msg::{CloseLeaseParams, OpenLeaseParams, Operation, TransferOutParams},
     port_id_for,
     response::{
         CloseLeaseResponse, OpenLeaseResponse, OperationResponse, RemoteLeaseId, SwapResponse,
         TransferOutResponse,
     },
+    swap::SwapParams,
     version::ProtocolVersion,
 };
 
@@ -36,6 +37,8 @@ type PacketEnvelopeP2P = PacketEnvelope<PaymentGroup, PaymentGroup, PaymentGroup
 type SwapP2P = SwapParams<PaymentGroup, PaymentGroup>;
 type OpenLeaseP2P = OpenLeaseParams<PaymentGroup, PaymentGroup, PaymentGroup>;
 type TransferOutP2P = TransferOutParams<PaymentGroup>;
+type OperationResponseP2P = OperationResponse<PaymentGroup>;
+type RemoteLeaseCallbackP2P = RemoteLeaseCallback<PaymentGroup>;
 
 // ---------------------------------------------------------------------------
 // 1. Operation variants — round-trip + literal JSON
@@ -96,7 +99,7 @@ fn transfer_out_msg_serde() {
 
 #[test]
 fn open_lease_response_serde() {
-    let value = OperationResponse::OpenLease(OpenLeaseResponse {
+    let value = OperationResponseP2P::OpenLease(OpenLeaseResponse {
         remote_lease_id: RemoteLeaseId::new("So1RayLease1").expect("base58 lease id"),
     });
     assert_round_trip_eq(
@@ -107,13 +110,13 @@ fn open_lease_response_serde() {
 
 #[test]
 fn close_lease_response_serde() {
-    let value = OperationResponse::CloseLease(CloseLeaseResponse {});
+    let value = OperationResponseP2P::CloseLease(CloseLeaseResponse {});
     assert_round_trip_eq(r#"{"close_lease":{}}"#, &value);
 }
 
 #[test]
 fn swap_response_serde() {
-    let value = OperationResponse::Swap(SwapResponse {
+    let value = OperationResponseP2P::Swap(SwapResponse {
         amount_out: Coin::<PaymentC2>::new(42).into(),
     });
     assert_round_trip_eq(
@@ -124,7 +127,7 @@ fn swap_response_serde() {
 
 #[test]
 fn transfer_out_response_serde() {
-    let value = OperationResponse::TransferOut(TransferOutResponse {});
+    let value = OperationResponseP2P::TransferOut(TransferOutResponse {});
     assert_round_trip_eq(r#"{"transfer_out":{}}"#, &value);
 }
 
@@ -135,13 +138,13 @@ fn transfer_out_response_serde() {
 #[test]
 fn callback_operation_ok_serde() {
     let value =
-        RemoteLeaseCallback::OperationOk(OperationResponse::CloseLease(CloseLeaseResponse {}));
+        RemoteLeaseCallbackP2P::OperationOk(OperationResponse::CloseLease(CloseLeaseResponse {}));
     assert_round_trip_eq(r#"{"operation_ok":{"close_lease":{}}}"#, &value);
 }
 
 #[test]
 fn callback_operation_err_serde() {
-    let value = RemoteLeaseCallback::OperationErr(
+    let value = RemoteLeaseCallbackP2P::OperationErr(
         RemoteErrorMessage::new("dex pool drained").expect("short message must be accepted"),
     );
     assert_round_trip_eq(r#"{"operation_err":"dex pool drained"}"#, &value);
@@ -149,7 +152,7 @@ fn callback_operation_err_serde() {
 
 #[test]
 fn callback_operation_timeout_serde() {
-    let value = RemoteLeaseCallback::OperationTimeout;
+    let value = RemoteLeaseCallbackP2P::OperationTimeout;
     assert_round_trip_eq(r#""operation_timeout""#, &value);
 }
 

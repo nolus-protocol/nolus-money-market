@@ -1,9 +1,9 @@
 use thiserror::Error;
 
 use currency::Group;
-use finance::coin::{Amount, CoinDTO};
-use platform::{remote::Account as RemoteAccount, trx::Transaction};
-use sdk::{api::ProtobufAny, cosmwasm_std::StdError};
+use platform::batch::Batch;
+use remote_lease::swap::SwapParams;
+use sdk::cosmwasm_std::StdError;
 
 #[cfg(feature = "impl")]
 use finance::instant::Instant;
@@ -17,7 +17,8 @@ use crate::SwapTask;
 /// it runs against.
 #[cfg(feature = "impl")]
 pub trait Factory {
-    type TransportImpl<'this>: Transport
+    type TopG: Group;
+    type TransportImpl<'this>: Transport<Self::TopG>
     where
         Self: 'this;
 
@@ -27,26 +28,15 @@ pub trait Factory {
         Task: SwapTask;
 }
 
-/// A swap-exact-in against a specific DEX: the request messages it is made of
-/// and the amount read back from its responses.
-///
-/// Implemented once per supported DEX.
-pub trait Transport {
-    /// `GIn` - the group of the input token
-    /// `GOut` - the group of the output token
-    fn build_request<GIn, GOut>(
-        trx: &mut Transaction,
-        sender: RemoteAccount,
-        amount_in: &CoinDTO<GIn>,
-        min_amount_out: &CoinDTO<GOut>,
-    ) -> Result<()>
-    where
-        GIn: Group,
-        GOut: Group;
-
-    fn parse_response<I>(trx_resps: &mut I) -> Result<Amount>
-    where
-        I: Iterator<Item = ProtobufAny>;
+/// A swap-exact-in against a specific DEX.
+pub trait Transport<TopG>
+where
+    TopG: Group,
+{
+    /// Turn the swap request into the `Batch` of messages that execute it,
+    /// consuming `self`. `params` are already widened to `TopG`. Errors if the
+    /// request cannot be encoded for the target DEX.
+    fn swap(self, params: SwapParams<TopG, TopG>) -> Result<Batch>;
 }
 
 pub type Result<T> = core::result::Result<T, Error>;
