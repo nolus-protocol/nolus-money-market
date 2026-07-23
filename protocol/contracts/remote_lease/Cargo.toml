@@ -15,6 +15,9 @@ combinations = [
 ]
 feature-groups = { contract-or-stub = { members = ["contract", "stub"], at-least-one = false, mutually-exclusive = true }, testing = { members = ["testing"], at-least-one = false, mutually-exclusive = false } }
 
+[package.metadata.cargo-udeps.ignore]
+development = ["currencies"]
+
 [lib]
 crate-type = ["cdylib", "rlib"]
 
