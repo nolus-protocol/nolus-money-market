@@ -316,13 +316,13 @@ where
 
     lease_mod::assert_open_funding(&test_case.app, &lease, downpayment, transfers);
 
+    let controller = test_case.address_book.remote_lease_controller().clone();
     lease_mod::complete_initialization(
         &mut test_case.app,
-        TestCase::DEX_CONNECTION_ID,
+        &controller,
         lease,
         downpayment,
         exp_borrow,
-        LeaseC::dex(),
     );
 }
 

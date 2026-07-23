@@ -6,24 +6,30 @@ use finance::{
     price::{self, Price},
 };
 use lease::api::{
+    ExecuteMsg,
     position::ChangeCmd,
     query::{
         StateResponse,
         opened::{OngoingTrx, Status},
     },
 };
+use remote_lease::{
+    callback::{RemoteErrorMessage, RemoteLeaseCallback},
+    swap::SwapParams,
+};
 use sdk::{
     cosmwasm_std::{Addr, Event},
     testing,
 };
-use swap::testing::SwapRequest;
 
 use crate::{
     common::{
         self, LEASE_ADMIN, USER,
         leaser::Instantiator as LeaserInstantiator,
         oracle as oracle_mod,
-        test_case::{TestCase, response::RemoteChain},
+        remote_lease_controller_stub::{self as stub, ResponseMode, op_tag},
+        swap,
+        test_case::response::RemoteChain,
     },
     lease::{self as lease_mod, heal},
 };
@@ -104,19 +110,18 @@ fn full_liquidation_heal_sl_close() {
 
     //heal to SL close
     {
+        let controller = test_case.address_book.remote_lease_controller().clone();
         let heal_response = heal::heal_ok(
             &mut test_case.app,
             lease.clone(),
             testing::user(LEASE_ADMIN),
         );
+        // The heal re-emits the sell-asset swap, held pending by the stand-in,
+        // so no interchain messages accompany it.
+        let _ = heal_response.unwrap_response();
 
-        let requests: Vec<SwapRequest<PaymentGroup>> = common::swap::expect_swap(
-            heal_response,
-            TestCase::DEX_CONNECTION_ID,
-            TestCase::LEASE_ICA_ID,
-            |_| {},
-        );
-        assert_any_min_out(&requests);
+        let captured = swap::captured(&test_case.app, &controller);
+        assert_any_min_out(&captured);
 
         assert!(matches!(
             super::state_query(&test_case, lease),
@@ -139,19 +144,18 @@ fn full_liquidation_heal_full_liquidation() {
 
     //heal to full liquidation
     {
+        let controller = test_case.address_book.remote_lease_controller().clone();
         let heal_response = heal::heal_ok(
             &mut test_case.app,
             lease.clone(),
             testing::user(LEASE_ADMIN),
         );
+        // The heal re-emits the sell-asset swap, held pending by the stand-in,
+        // so no interchain messages accompany it.
+        let _ = heal_response.unwrap_response();
 
-        let requests: Vec<SwapRequest<PaymentGroup>> = common::swap::expect_swap(
-            heal_response,
-            TestCase::DEX_CONNECTION_ID,
-            TestCase::LEASE_ICA_ID,
-            |_| {},
-        );
-        assert_min_out(&test_case, &requests, LEASE_AMOUNT);
+        let captured = swap::captured(&test_case.app, &controller);
+        assert_min_out(&test_case, &captured, LEASE_AMOUNT);
 
         assert!(matches!(
             super::state_query(&test_case, lease),
@@ -168,25 +172,44 @@ fn trigger_full_liquidation(
     lease_amount: LeaseCoin,
     borrowed_amount: LpnCoin,
 ) {
+    let controller = test_case.address_book.remote_lease_controller().clone();
+    // Hold the sell-asset swap pending so `simulate_min_out_not_satisfied` can
+    // reject it by hand.
+    stub::set_response_mode(
+        &mut test_case.app,
+        &controller,
+        op_tag::SWAP,
+        ResponseMode::Delayed,
+    );
+
     // the base is chosen to be close to the position amount to trigger a full liquidation
     let response =
         lease_mod::deliver_new_price(test_case, lease_amount + common::coin(10), borrowed_amount);
-    let requests: Vec<SwapRequest<PaymentGroup>> = common::swap::expect_swap(
-        response,
-        TestCase::DEX_CONNECTION_ID,
-        TestCase::LEASE_ICA_ID,
-        |_| {},
-    );
-    //the `expect_swap` postconditions guarantee there is at least one item
+    // The swap is emitted (a `WasmMsg`, held pending), so the price-delivery
+    // response carries no interchain messages.
+    let _ = response.unwrap_response();
+
+    let captured = swap::captured(&test_case.app, &controller);
     assert_eq!(
         Into::<CoinDTO<PaymentGroup>>::into(lease_amount),
-        requests[0].token_in
+        swap::token_in(&captured),
     );
-    assert_min_out(test_case, &requests, lease_amount);
+    assert_min_out(test_case, &captured, lease_amount);
 }
 
 fn simulate_min_out_not_satisfied(test_case: &mut LeaseTestCase, lease: Addr) {
-    let mut swap_response = common::swap::do_swap_with_error(&mut test_case.app, lease.clone())
+    let controller = test_case.address_book.remote_lease_controller().clone();
+    let reason = RemoteErrorMessage::new("min output amount not fulfilled").expect("within cap");
+    // The counterparty rejects the held swap; a sell-asset anomaly drives the
+    // lease into the slippage-protected state (no retry).
+    let mut swap_response = test_case
+        .app
+        .execute(
+            controller,
+            lease.clone(),
+            &ExecuteMsg::RemoteLeaseCallback(RemoteLeaseCallback::OperationErr(reason)),
+            &[],
+        )
         .expect("on error should have gone into a protected state");
     swap_response.expect_empty();
     let app_response = swap_response.unwrap_response();
@@ -228,7 +251,7 @@ fn deliver_high_price(
 
 fn assert_min_out(
     test_case: &LeaseTestCase,
-    requests: &[SwapRequest<PaymentGroup>],
+    params: &SwapParams<PaymentGroup, PaymentGroup>,
     lease_amount: LeaseCoin,
 ) {
     let price: Price<_, _> = oracle_mod::fetch_price::<LeaseCurrency, LeaseGroup, Lpn, Lpns>(
@@ -242,10 +265,10 @@ fn assert_min_out(
     let position_in_lpn = price::total(lease_amount, price).unwrap();
     assert_eq!(
         MaxSlippage::unchecked(LeaserInstantiator::MAX_SLIPPAGE).min_out(position_in_lpn),
-        common::coin(requests[0].min_token_out)
+        common::coin(swap::min_out(params))
     );
 }
 
-fn assert_any_min_out(requests: &[SwapRequest<PaymentGroup>]) {
-    assert_eq!(LeaseCoin::new(1), common::coin(requests[0].min_token_out));
+fn assert_any_min_out(params: &SwapParams<PaymentGroup, PaymentGroup>) {
+    assert_eq!(LeaseCoin::new(1), common::coin(swap::min_out(params)));
 }

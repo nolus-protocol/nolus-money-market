@@ -56,13 +56,13 @@ Monorepo with three interconnected Cargo workspaces:
 
 ### `protocol/` - Network and DEX-specific implementations
 
-**Packages:** `currencies` (protocol-specific definitions), `dex` (DEX abstraction layer), `marketprice`, `swap` (per-DEX request builders: `astroport`, `osmosis`), `remote_lease` (typed cross-chain lease operations: stub client, callback classification, envelope/response types), `remote_lease_wire` (standalone wire-types crate shared with the Solana-side Remote Lease App per ADR 0001/0002 — no internal deps, MSRV 1.89 enforced in CI, hardened deserialization)
+**Packages:** `currencies` (protocol-specific definitions), `dex` (DEX abstraction layer), `marketprice`, `remote_lease` (typed cross-chain lease operations: stub client, callback classification, envelope/response types, and the `swap::SwapParams` request builder), `remote_lease_wire` (standalone wire-types crate shared with the Solana-side Remote Lease App per ADR 0001/0002 — no internal deps, MSRV 1.89 enforced in CI, hardened deserialization)
 
 **Contracts:** `lease` (loan positions), `leaser` (lease origination), `lpp` (lending pool), `oracle` (price feeds), `profit` (distribution), `remote_lease` (IBC controller paired with the Solana Remote Lease App per ADR 0001/0002), `reserve`, `void`
 
 ### `tests/` - Integration tests
 
-Cross-workspace integration tests. The suite builds per DEX: `tests/Cargo.toml` declares a `{ tags = ["ci", "$dex"], include-rest = false }` combination with `$dex` generics over `dex-astroport_test`, `dex-astroport_main`, and `dex-osmosis`.
+Cross-workspace integration tests. `tests/Cargo.toml` declares a single `{ tags = ["ci", "@agnostic"], include-rest = false }` combination; the concrete network/DEX is chosen at compile time by the `currencies` build (driven by `PROTOCOL_NETWORK` / `PROTOCOL_NAME` / `PROTOCOL_RELEASE_ID`), not by a Cargo feature.
 
 ### `tools/` - Build tooling
 
@@ -76,7 +76,7 @@ Cross-workspace integration tests. The suite builds per DEX: `tests/Cargo.toml` 
 
 2. **Type-safe currency system**: Currencies are compile-time types, not runtime strings. The `Currency` trait + `CurrencyDef` with group associations prevent financial operation mismatches at compile time.
 
-3. **DEX and remote-swap abstraction**: The `dex` package drives asynchronous swaps over IBC Interchain Accounts (`dex::Account`); the per-DEX request builders live in the `swap` package (`astroport`, `osmosis`). The `remote_lease` contract is the IBC controller paired with the Solana-side Remote Lease App (ADR 0001/0002); its typed operations and wire types live in the `remote_lease` and `remote_lease_wire` packages. Lease **open** derives its `dex::Account` from the controller's `OpenLease` ack (`RemoteLeaseId` → `platform::ica::HostAccount`) rather than registering a Cosmos ICA; swap/repay/close transport still submits over ICA (`submit_tx`).
+3. **DEX and remote-swap abstraction**: The `dex` package orchestrates asynchronous swap and transfer workflows (`dex::Account`), building swap requests as `remote_lease::swap::SwapParams`. The `remote_lease` contract is the IBC controller paired with the Solana-side Remote Lease App (ADR 0001/0002); its typed operations and wire types live in the `remote_lease` and `remote_lease_wire` packages. Lease **open** derives its `dex::Account` from the controller's `OpenLease` ack (`RemoteLeaseId` → `platform::ica::HostAccount`) rather than registering a Cosmos ICA; the swap transport now routes over the remote-lease controller (a `WasmMsg::Execute` of `remote_lease::msg::ExecuteMsg::Swap`, no ICA), while the repay/close collateral transfers (transfer-in/out) still submit over ICA (`submit_tx`).
 
 4. **`cargo-each` tag system**: Workspace members declare tags in `[package.metadata.cargo-each]` in their Cargo.toml. CI uses these tags to select which packages to build/test for each configuration. New workspace members must declare appropriate tags.
 

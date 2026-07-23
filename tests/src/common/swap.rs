@@ -1,171 +1,91 @@
-use std::ops::Deref;
+//! Swap harness for the remote-lease transport.
+//!
+//! Post-refactor a lease swap is a plain `WasmMsg::Execute` to the remote-lease
+//! controller (see `lease::contract::transport::remote_lease`), not an ICA
+//! `submit_tx`. The controller stand-in
+//! ([`super::remote_lease_controller_stub`]) synthesises the `OperationResponse`
+//! ack in-process, so the whole swap round-trip resolves inline within the
+//! transaction that drives the lease into `SwapExactIn` — there is no separate
+//! "observe the swap packet, then answer it" step any more.
+//!
+//! This module is the ergonomic surface the lifecycle tests use to:
+//! - pre-configure the ack the counterparty will pay ([`set_fill`]),
+//! - read back the swap request the lease actually emitted ([`captured`],
+//!   [`token_in`], [`min_out`]) for `token_in` / `min_out` assertions,
+//! - and, for the local-output swaps (repay / close / liquidation), credit the
+//!   remote account with the DEX proceeds and run the follow-up transfer-in
+//!   ([`deliver_transfer_in`]).
+//!
+//! Error and delayed acks are driven through the controller stand-in directly
+//! ([`super::remote_lease_controller_stub::set_response_mode`]).
+
+use std::slice;
 
 use currencies::PaymentGroup;
-use currency::{DexSymbols, Group, SymbolStatic};
-use finance::coin::Amount;
+use finance::coin::{Amount, CoinDTO};
+use remote_lease::swap::SwapParams;
 use sdk::{
-    api::ProtobufAny,
-    cosmwasm_std::{Addr, Binary, Coin as CwCoin},
+    cosmwasm_std::{Addr, Coin as CwCoin},
     cw_multi_test::AppResponse,
     testing,
-};
-use swap::{
-    Impl,
-    testing::{ExactAmountInSkel, SwapRequest},
 };
 
 use super::{
     ADMIN, ibc,
-    test_case::{
-        app::App,
-        response::{RemoteChain as _, ResponseWithInterChainMsgs},
-    },
+    remote_lease_controller_stub::{self as stub, SwapFill},
+    test_case::{app::App, response::ResponseWithInterChainMsgs},
 };
 
-#[derive(Debug, Eq)]
-pub struct DexDenom<'r>(&'r str);
+/// Configure the `amount_out` a happy-path swap ack pays back.
+pub(crate) fn set_fill(app: &mut App, controller: &Addr, fill: SwapFill) {
+    stub::set_swap_fill(app, controller, fill);
+}
 
-impl PartialEq<DexDenom<'_>> for DexDenom<'_> {
-    #[inline]
-    fn eq(&self, other: &DexDenom<'_>) -> bool {
-        self.0 == other.0
+/// The `SwapParams` of the most recent swap request the lease emitted, as
+/// captured by the stand-in.
+#[track_caller]
+pub(crate) fn captured(app: &App, controller: &Addr) -> SwapParams<PaymentGroup, PaymentGroup> {
+    stub::captured_swap(app, controller)
+}
+
+/// The number of swap requests the lease has emitted, as counted by the
+/// stand-in — lets a test pin the exact swap-message cardinality.
+#[track_caller]
+pub(crate) fn count(app: &App, controller: &Addr) -> u64 {
+    stub::swap_count(app, controller)
+}
+
+/// The first input coin of a captured swap — the successor of the legacy
+/// `SwapRequest::token_in`.
+pub(crate) fn token_in(params: &SwapParams<PaymentGroup, PaymentGroup>) -> CoinDTO<PaymentGroup> {
+    match params {
+        SwapParams::One { coin_in, .. } => *coin_in,
+        SwapParams::Two { coin_in_1, .. } => *coin_in_1,
     }
 }
 
-impl<Rhs> PartialEq<Rhs> for DexDenom<'_>
-where
-    str: PartialEq<Rhs::Target>,
-    Rhs: Deref + ?Sized,
-{
-    #[inline]
-    fn eq(&self, other: &Rhs) -> bool {
-        *self.0 == **other
-    }
+/// The `min_out` amount of a captured swap — the successor of the legacy
+/// `SwapRequest::min_token_out`.
+pub(crate) fn min_out(params: &SwapParams<PaymentGroup, PaymentGroup>) -> Amount {
+    params.min_out().amount()
 }
 
-pub(crate) fn expect_swap<InspectFn>(
-    mut response: ResponseWithInterChainMsgs<'_, AppResponse>,
-    connection_id: &str,
-    ica_id: &str,
-    inspect_fn: InspectFn,
-) -> Vec<SwapRequest<PaymentGroup>>
-where
-    InspectFn: FnOnce(&AppResponse),
-{
-    let requests: Vec<SwapRequest<PaymentGroup>> = response
-        .expect_submit_tx(connection_id, ica_id)
-        .into_iter()
-        .map(|msg: ProtobufAny| <Impl as ExactAmountInSkel>::parse_request(msg))
-        .collect();
-
-    assert!(!requests.is_empty());
-    inspect_fn(&response.unwrap_response());
-    requests
-}
-
-pub(crate) fn do_swap<I, F>(
-    app: &mut App,
-    initiator_contract_addr: Addr,
-    ica_addr: Addr,
-    requests: I,
-    out_denom: SymbolStatic,
-    price_f: F,
-) -> ResponseWithInterChainMsgs<'_, AppResponse>
-where
-    I: Iterator<Item = SwapRequest<PaymentGroup>>,
-    F: for<'r, 't> FnMut(Amount, DexDenom<'r>, DexDenom<'t>) -> Amount,
-{
-    do_swap_with::<PaymentGroup, I, F>(
-        app,
-        initiator_contract_addr,
-        ica_addr,
-        requests,
-        out_denom,
-        price_f,
-    )
-}
-
-pub(crate) fn do_swap_with<GIn, I, F>(
-    app: &mut App,
-    initiator_contract_addr: Addr,
-    ica_addr: Addr,
-    requests: I,
-    out_denom: SymbolStatic,
-    mut price_f: F,
-) -> ResponseWithInterChainMsgs<'_, AppResponse>
-where
-    GIn: Group,
-    I: Iterator<Item = SwapRequest<GIn>>,
-    F: for<'r, 't> FnMut(Amount, DexDenom<'r>, DexDenom<'t>) -> Amount,
-{
-    let amounts: Vec<Amount> = requests
-        .map(|request: SwapRequest<GIn>| {
-            do_swap_internal::<GIn, _>(app, ica_addr.clone(), request, out_denom, &mut price_f)
-        })
-        .collect();
-
-    send_response(app, initiator_contract_addr, &amounts)
-}
-
-pub(crate) fn do_swap_with_error(
-    app: &mut App,
-    requester_contract: Addr,
-) -> sdk::cosmwasm_std::StdResult<ResponseWithInterChainMsgs<'_, AppResponse>> {
-    send_error_response(app, requester_contract)
-}
-
-fn do_swap_internal<GIn, F>(
-    app: &mut App,
-    ica_addr: Addr,
-    request: SwapRequest<GIn>,
-    out_denom: SymbolStatic,
-    price_f: &mut F,
-) -> Amount
-where
-    GIn: Group,
-    F: for<'r, 't> FnMut(Amount, DexDenom<'r>, DexDenom<'t>) -> Amount,
-{
-    let dex_denom_in: SymbolStatic = request.token_in.currency().into_symbol::<DexSymbols<GIn>>();
-    let amount_in = request.token_in.amount();
-
-    app.send_tokens(
-        ica_addr.clone(),
-        testing::user(ADMIN),
-        &[CwCoin::new(amount_in, dex_denom_in)],
-    )
-    .unwrap();
-
-    let amount_out = price_f(amount_in, DexDenom(dex_denom_in), DexDenom(out_denom));
-
-    app.send_tokens(
-        testing::user(ADMIN),
-        ica_addr,
-        &[CwCoin::new(amount_out, out_denom)],
-    )
-    .unwrap();
-
-    amount_out
-}
-
-fn send_response<'r>(
+/// Complete a local-output swap: credit the remote account (StubPda) with the
+/// DEX proceeds — mirroring the Solana side depositing the swap output — then
+/// run the IBC transfer-in that brings them back to the lease. `proceeds` is the
+/// on-dex coin the lease's transfer-in moves (`to_cosmwasm_on_dex(amount_out)`).
+pub(crate) fn deliver_transfer_in<'r>(
     app: &'r mut App,
-    initiator_contract_addr: Addr,
-    amounts: &[Amount],
+    remote: Addr,
+    lease: Addr,
+    proceeds: &CwCoin,
 ) -> ResponseWithInterChainMsgs<'r, AppResponse> {
-    use swap::testing::ExactAmountInSkel as _;
-
-    ibc::send_response(
-        app,
-        initiator_contract_addr.clone(),
-        Binary::new(platform::trx::encode_msg_responses(
-            amounts.iter().copied().map(Impl::build_response),
-        )),
+    app.send_tokens(
+        testing::user(ADMIN),
+        remote.clone(),
+        slice::from_ref(proceeds),
     )
-}
+    .unwrap();
 
-fn send_error_response(
-    app: &mut App,
-    requester_contract: Addr,
-) -> sdk::cosmwasm_std::StdResult<ResponseWithInterChainMsgs<'_, AppResponse>> {
-    ibc::send_error(app, requester_contract.clone())
+    ibc::do_transfer(app, remote, lease, true, proceeds)
 }

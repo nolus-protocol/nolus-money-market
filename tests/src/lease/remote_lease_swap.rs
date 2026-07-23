@@ -1,66 +1,209 @@
-//! Swap E2E (issue #142 Phase 4).
+//! Swap E2E for the remote-lease transport (issue #142 Phase 4).
 //!
-//! ⚠️ UNREGISTERED ⚠️ — this module targets the **post-refactor** lease
-//! state machine and will not compile on `main`. Registration in
-//! `tests/src/lease/mod.rs` is intentionally **omitted**; Phase 4
-//! un-comments it once the post-refactor `SwapExactIn` path lands. See
-//! `.claude/handoffs/2026-05-25-issue142-plan.md`, §5 Phase 4 and
-//! amendment banner 2026-05-27 (swap stays single-coin per call).
+//! Post-refactor `SwapExactIn` folds the swap-input coins into a single
+//! `remote_lease::swap::SwapParams` (`One` for a lone input currency, `Two` for
+//! two) and emits ONE `ExecuteMsg::Swap { params, timeout }` to the controller.
+//! There is no per-currency sequential call and no `acks_left` countdown — the
+//! shipped design batches; a single `OperationResponse::Swap` ack drives the
+//! transition. (The pre-refactor "single-coin per call" amendment these tests
+//! were sketched against never shipped.)
 //!
-//! Atomicity model (amendment banner 2026-05-27):
+//! The opening buy-asset swap is the natural driver:
+//! - a same-currency downpayment (== the lease asset) is excluded from the
+//!   swap, leaving a single-input (`One`) loan swap;
+//! - a payment-currency downpayment leaves a two-input (`Two`) swap of
+//!   downpayment + loan.
 //!
-//! `Operation::Swap` is **single-coin per call**. If the lease's
-//! `SwapExactIn` path needs to swap multiple currencies, it emits N
-//! sequential single-coin `Lease::swap` calls and decrements
-//! `acks_left = N` per ack (mirroring TransferOut). There is NO batched
-//! `Vec<SwapLeg>` packet. Tests in this file MUST NOT assume a multi-leg
-//! shape.
-//!
-//! Acceptance criteria (plan §5 Phase 2):
-//!
-//! - `swap_single_coin_happy_path` — the post-refactor `SwapExactIn`
-//!   state-enter emits a single `ExecuteMsg::Swap { params, timeout }`
-//!   carrying the lease's coin-in / min-out; the stand-in's
-//!   `OperationResponse::Swap { amount_out = min_out }` ack drives the
-//!   transition to the next state.
-//! - `swap_multi_currency_sequential_acks` — when the lease holds two
-//!   currencies that both need swapping, `SwapExactIn` emits two
-//!   sequential single-coin `Swap` calls; the lease tracks
-//!   `acks_left = 2` and exposes the intermediate state via
-//!   `OngoingTrx`; only after the second ack does it transition.
-//! - `swap_delayed_ack_visible_in_query` — using
-//!   `ResponseMode::Delayed`, the lease's `OngoingTrx` is observable at
-//!   intermediate blocks (the test advances the block before
-//!   `DeliverPending`).
+//! Coverage:
+//! - `swap_single_coin_happy_path` — one `One`-variant `Swap` is emitted with
+//!   the loan as coin-in and a positive min-out; the ack drives the transition.
+//! - `swap_multi_currency_single_call` — a two-currency position emits one
+//!   `Two`-variant `Swap`; a single ack transitions (no countdown).
+//! - `swap_delayed_ack_visible_in_query` — with `ResponseMode::Delayed` the
+//!   in-flight swap is observable via `OngoingTrx` across blocks until the ack
+//!   is delivered.
 
-use lease::api::query::{StateResponse, opened::OngoingTrx as OpenedOngoingTrx};
-use remote_lease::{callback::RemoteLeaseCallback, response::OperationResponse};
+use currencies::PaymentGroup;
+use currency::{CurrencyDef, MemberOf};
+use finance::{
+    coin::{Coin, CoinDTO},
+    duration::Duration,
+    fraction::Unit,
+};
+use lease::api::query::{StateResponse, opened::Status, opening::OngoingTrx as OpeningOngoingTrx};
+use remote_lease::swap::SwapParams;
 use sdk::cosmwasm_std::Addr;
 
-use crate::common::remote_lease_controller_stub::{self as stub, ResponseMode, op_tag};
+use crate::common::{
+    self,
+    remote_lease_controller_stub::{self as stub, ResponseMode, SwapFill, op_tag},
+    swap,
+};
 
-use super::{LeaseCurrency, LeaseTestCase};
+use super::{LeaseCoin, LeaseCurrency, LeaseTestCase, LpnCurrency, PaymentCurrency};
 
 #[test]
 fn swap_single_coin_happy_path() {
-    let _test_case = super::create_test_case::<LeaseCurrency>();
-    panic!("Phase 4 must implement single-coin Swap driver");
+    let mut test_case = super::create_test_case::<LeaseCurrency>();
+    // A same-currency downpayment is already the asset, so only the loan is
+    // swapped — a single-input swap.
+    let downpayment = LeaseCoin::new(10_000);
+    let (lease, controller, exp_borrow) = drive_to_buy_asset_swap(&mut test_case, downpayment);
+
+    let captured = swap::captured(&test_case.app, &controller);
+    match captured {
+        SwapParams::One { coin_in, min_out } => {
+            assert_eq!(Into::<CoinDTO<PaymentGroup>>::into(exp_borrow), coin_in);
+            assert!(
+                !min_out.is_zero(),
+                "the slippage min-out floor must be positive"
+            );
+        }
+        other => panic!("expected a single-coin (`One`) swap, got {other:?}"),
+    }
+    assert!(matches!(
+        super::state_query(&test_case, lease.clone()),
+        StateResponse::Opening {
+            in_progress: OpeningOngoingTrx::BuyAsset { .. },
+            ..
+        }
+    ));
+
+    // The ack drives the transition to the next state.
+    deliver_open_swap(&mut test_case, &controller);
+    let final_state = super::state_query(&test_case, lease);
+    assert!(
+        matches!(
+            final_state,
+            StateResponse::Opened {
+                status: Status::Idle,
+                ..
+            }
+        ),
+        "the swap ack must cleanly open the lease, got {final_state:?}"
+    );
 }
 
 #[test]
-fn swap_multi_currency_sequential_acks() {
-    let _test_case = super::create_test_case::<LeaseCurrency>();
-    // Drive the lease into a SwapExactIn state where it holds two
-    // currencies (the buy-asset path or the close path with mixed
-    // balances). Assert: two sequential `ExecuteMsg::Swap` calls, an
-    // `acks_left = 2 → 1 → 0` countdown visible via OngoingTrx.
-    panic!("Phase 4 must implement multi-currency sequential-call assertion");
+fn swap_multi_currency_single_call() {
+    let mut test_case = super::create_test_case::<PaymentCurrency>();
+    // A payment-currency downpayment is swapped alongside the loan — a
+    // two-input swap batched into ONE call (not two sequential calls).
+    let downpayment = super::DOWNPAYMENT;
+    let (lease, controller, exp_borrow) = drive_to_buy_asset_swap(&mut test_case, downpayment);
+
+    let captured = swap::captured(&test_case.app, &controller);
+    match captured {
+        SwapParams::Two {
+            coin_in_1,
+            coin_in_2,
+            min_out,
+        } => {
+            assert_eq!(Into::<CoinDTO<PaymentGroup>>::into(downpayment), coin_in_1);
+            assert_eq!(Into::<CoinDTO<PaymentGroup>>::into(exp_borrow), coin_in_2);
+            assert!(
+                !min_out.is_zero(),
+                "the slippage min-out floor must be positive"
+            );
+        }
+        other => panic!("expected a two-coin (`Two`) batched swap, got {other:?}"),
+    }
+    assert_eq!(
+        1,
+        swap::count(&test_case.app, &controller),
+        "a multi-currency swap must be ONE batched call, not two sequential calls",
+    );
+    assert!(matches!(
+        super::state_query(&test_case, lease.clone()),
+        StateResponse::Opening {
+            in_progress: OpeningOngoingTrx::BuyAsset { .. },
+            ..
+        }
+    ));
+
+    // A single ack transitions the lease — there is no per-currency countdown.
+    deliver_open_swap(&mut test_case, &controller);
+    let final_state = super::state_query(&test_case, lease);
+    assert!(
+        matches!(
+            final_state,
+            StateResponse::Opened {
+                status: Status::Idle,
+                ..
+            }
+        ),
+        "the swap ack must cleanly open the lease, got {final_state:?}"
+    );
 }
 
 #[test]
 fn swap_delayed_ack_visible_in_query() {
     let mut test_case = super::create_test_case::<LeaseCurrency>();
+    let downpayment = LeaseCoin::new(10_000);
+    let (lease, controller, _exp_borrow) = drive_to_buy_asset_swap(&mut test_case, downpayment);
+
+    // The swap ack is held (Delayed); the in-flight swap stays observable while
+    // blocks advance.
+    for _ in 0..2 {
+        assert!(
+            matches!(
+                super::state_query(&test_case, lease.clone()),
+                StateResponse::Opening {
+                    in_progress: OpeningOngoingTrx::BuyAsset { .. },
+                    ..
+                }
+            ),
+            "the in-flight swap must remain visible while its ack is pending",
+        );
+        test_case.app.time_shift(Duration::from_secs(5));
+    }
+
+    // Delivering the delayed ack advances the lease.
+    deliver_open_swap(&mut test_case, &controller);
+    let final_state = super::state_query(&test_case, lease);
+    assert!(
+        matches!(
+            final_state,
+            StateResponse::Opened {
+                status: Status::Idle,
+                ..
+            }
+        ),
+        "the swap ack must cleanly open the lease, got {final_state:?}"
+    );
+}
+
+/// Drive a fresh lease to the opening buy-asset swap and hold that swap pending
+/// (`ResponseMode::Delayed`). Returns the lease, the controller stand-in, and
+/// the drawn principal.
+fn drive_to_buy_asset_swap<DownpaymentC>(
+    test_case: &mut LeaseTestCase,
+    downpayment: Coin<DownpaymentC>,
+) -> (Addr, Addr, Coin<LpnCurrency>)
+where
+    DownpaymentC: CurrencyDef,
+    DownpaymentC::Group: MemberOf<PaymentGroup>,
+{
+    let lease = super::try_init_lease(test_case, downpayment, None);
+
+    let quote = common::leaser::query_quote::<DownpaymentC, LeaseCurrency>(
+        &test_case.app,
+        test_case.address_book.leaser().clone(),
+        downpayment,
+        None,
+    );
+    let exp_borrow: Coin<LpnCurrency> = quote.borrow.try_into().unwrap();
+
+    let remote = super::TestCase::stub_pda(1);
     let controller = test_case.address_book.remote_lease_controller().clone();
+    // Pre-set the full-position identity fill AND the delayed mode before the
+    // swap fires: `Delayed` snapshots the ack (amount_out included) at emission
+    // time, so the fill must already be in place.
+    swap::set_fill(
+        &mut test_case.app,
+        &controller,
+        SwapFill::Fixed(downpayment.to_primitive() + exp_borrow.to_primitive()),
+    );
     stub::set_response_mode(
         &mut test_case.app,
         &controller,
@@ -68,21 +211,22 @@ fn swap_delayed_ack_visible_in_query() {
         ResponseMode::Delayed,
     );
 
-    // Advance two blocks between the swap emission and the delayed
-    // delivery; assert the lease's OngoingTrx reports the in-flight
-    // swap throughout.
+    () = common::lease::transfer_out_and_reach_swap::<DownpaymentC, LpnCurrency>(
+        &mut test_case.app,
+        lease.clone(),
+        remote,
+        (downpayment, exp_borrow),
+    )
+    .ignore_response()
+    .unwrap_response();
 
-    panic!("Phase 4 must implement delayed-ack visibility driver");
+    (lease, controller, exp_borrow)
 }
 
-// Silence "unused import" warnings while the module is unregistered.
-#[allow(dead_code)]
-fn _unused_imports_anchor(
-    _: StateResponse,
-    _: OpenedOngoingTrx,
-    _: RemoteLeaseCallback,
-    _: OperationResponse,
-    _: Addr,
-    _: LeaseTestCase,
-) {
+/// Deliver the held buy-asset swap ack (whose full-position fill was set at
+/// emission time by [`drive_to_buy_asset_swap`]).
+fn deliver_open_swap(test_case: &mut LeaseTestCase, controller: &Addr) {
+    () = stub::deliver_pending_callback(&mut test_case.app, controller, op_tag::SWAP)
+        .ignore_response()
+        .unwrap_response();
 }

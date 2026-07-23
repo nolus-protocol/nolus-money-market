@@ -1,8 +1,7 @@
 use currencies::{PaymentGroup, testing::PaymentC5};
 use currency::CurrencyDef;
 use finance::{
-    coin::{Amount, Coin},
-    fraction::Unit,
+    coin::{Coin, CoinDTO},
     price,
     zero::Zero,
 };
@@ -20,11 +19,12 @@ use sdk::{
     cw_multi_test::AppResponse,
     testing,
 };
-use swap::testing::SwapRequest;
 
 use crate::common::{
     self, ADMIN, CwCoin, USER, ibc, lease as common_lease,
     leaser::{self, Instantiator},
+    remote_lease_controller_stub::SwapFill,
+    swap,
     test_case::{TestCase, response::ResponseWithInterChainMsgs},
 };
 
@@ -277,50 +277,42 @@ fn do_close(
         StateResponse::Opened { .. }
     ));
 
+    let controller = test_case.address_book.remote_lease_controller().clone();
     let close_amount_in_lpn: LpnCoin = price::total(close_amount, super::price_lpn_of()).unwrap();
-    let response_close = send_close(
+
+    // Identity DEX fill: the sold collateral yields its LPN value.
+    swap::set_fill(&mut test_case.app, &controller, SwapFill::InputAmount);
+
+    let mut response_close = send_close(
         test_case,
         lease_addr.clone(),
         &ExecuteMsg::ClosePosition(close_msg),
     );
 
-    let requests: Vec<SwapRequest<PaymentGroup>> = common::swap::expect_swap(
-        response_close,
-        TestCase::DEX_CONNECTION_ID,
-        TestCase::LEASE_ICA_ID,
-        |_| {},
-    );
-
-    let mut response_swap: ResponseWithInterChainMsgs<'_, ()> = common::swap::do_swap(
-        &mut test_case.app,
-        lease_addr.clone(),
-        lease_ica.clone(),
-        requests.into_iter(),
-        LpnCurrency::dex(),
-        |amount: Amount, _, _| {
-            assert_eq!(amount, close_amount.to_primitive());
-
-            close_amount_in_lpn.to_primitive()
-        },
-    )
-    .ignore_response();
-
+    // The sell-asset swap fired inline on the ClosePosition execute; the lease
+    // (local-output) has emitted the transfer-in of the LPN proceeds.
     let transfer_amount: CwCoin = ibc::expect_remote_transfer(
-        &mut response_swap,
+        &mut response_close,
         TestCase::DEX_CONNECTION_ID,
         TestCase::LEASE_ICA_ID,
     );
-
     assert_eq!(
         transfer_amount,
         coin_legacy::to_cosmwasm_on_dex(close_amount_in_lpn)
     );
+    let _ = response_close.unwrap_response();
 
-    let mut response_transfer_in = ibc::do_transfer(
+    // Fidelity: the swap input is exactly the close amount.
+    let captured = swap::captured(&test_case.app, &controller);
+    assert_eq!(
+        <Coin<LeaseCurrency> as Into<CoinDTO<PaymentGroup>>>::into(close_amount),
+        swap::token_in(&captured),
+    );
+
+    let mut response_transfer_in = swap::deliver_transfer_in(
         &mut test_case.app,
         lease_ica.clone(),
         lease_addr.clone(),
-        true,
         &transfer_amount,
     );
 

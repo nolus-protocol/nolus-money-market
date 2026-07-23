@@ -9,7 +9,7 @@ rust-version = "1.96"
 
 [package.metadata.cargo-each]
 combinations = [
-    { tags = ["ci", "$dex"], always-on = ["$dex"], include-rest = false, generics = { "$dex" = ["dex-astroport_test", "dex-astroport_main", "dex-osmosis"] } },
+    { tags = ["ci", "@agnostic"], include-rest = false },
 ]
 
 ### [SYNC WITH OTHER WORKSPACES : START]
@@ -31,11 +31,6 @@ unfulfilled_lint_expectations = { level = "forbid", priority = 1 }
 unused = "deny"
 warnings = "deny"
 ### [SYNC WITH OTHER WORKSPACES : END]
-
-[features]
-dex-astroport_test = ["lease/dex-astroport_test"]
-dex-astroport_main = ["lease/dex-astroport_main"]
-dex-osmosis = ["lease/dex-osmosis"]
 
 [dev-dependencies]
 admin_contract = { path = "../platform/contracts/admin", features = ["contract"], default-features = false }
@@ -60,7 +55,6 @@ platform = { path = "../platform/packages/platform", features = ["testing"], def
 remote_lease = { path = "../protocol/packages/remote_lease", default-features = false }
 remote_lease_controller = { path = "../protocol/contracts/remote_lease", default-features = false }
 sdk = { path = "../platform/packages/sdk", features = ["testing"], default-features = false }
-swap = { path = "../protocol/packages/swap", features = ["testing"], default-features = false }
 tree = { path = "../platform/packages/tree", features = ["testing"], default-features = false }
 versioning = { path = "../platform/packages/versioning", features = ["testing"], default-features = false }
 

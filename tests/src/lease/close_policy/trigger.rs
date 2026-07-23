@@ -1,18 +1,18 @@
 use ::lease::api::position::ChangeCmd;
-use ::swap::testing::SwapRequest;
-use currencies::PaymentGroup;
 use finance::{coin::Amount, percent::Percent100};
+use remote_lease::swap::SwapParams;
 use sdk::{
     cosmwasm_std::{Addr, Event},
     cw_multi_test::AppResponse,
 };
 
 use crate::{
-    common::{self, swap},
-    lease::{
-        self, DOWNPAYMENT, LeaseCurrency, LeaserInstantiator, LpnCurrency, PaymentCurrency,
-        TestCase,
+    common::{
+        self,
+        remote_lease_controller_stub::{self as stub, ResponseMode, op_tag},
+        swap,
     },
+    lease::{self, DOWNPAYMENT, LeaseCurrency, LeaserInstantiator, LpnCurrency, PaymentCurrency},
 };
 
 use super::LeaseTestCase;
@@ -64,21 +64,39 @@ fn trigger_close(
     exp_strategy_key: &str,
     exp_ltv: Percent100,
 ) {
+    let controller = test_case.address_book.remote_lease_controller().clone();
+    // Hold the auto-close swap pending so this test observes only the trigger:
+    // exactly one swap request and the auto-close event.
+    stub::set_response_mode(
+        &mut test_case.app,
+        &controller,
+        op_tag::SWAP,
+        ResponseMode::Delayed,
+    );
+
+    // Count only the swap the auto-close emits, not the earlier opening swap.
+    let swaps_before = swap::count(&test_case.app, &controller);
     let response = lease::deliver_new_price(
         &mut test_case,
         common::coin::<LeaseCurrency>(base),
         common::coin::<LpnCurrency>(quote),
     );
 
-    let requests: Vec<SwapRequest<PaymentGroup>> = swap::expect_swap(
-        response,
-        TestCase::DEX_CONNECTION_ID,
-        TestCase::LEASE_ICA_ID,
-        |app_response| {
-            assert_events(app_response, &lease, exp_strategy_key, exp_ltv);
-        },
+    // The auto-close emits a single sell-asset swap (held pending), so the
+    // price-delivery response carries only the auto-close event.
+    let app_response = response.unwrap_response();
+    assert_events(&app_response, &lease, exp_strategy_key, exp_ltv);
+
+    let captured = swap::captured(&test_case.app, &controller);
+    assert!(
+        matches!(captured, SwapParams::One { .. }),
+        "auto-close must emit exactly one single-coin swap, got {captured:?}",
     );
-    assert_eq!(1, requests.len());
+    assert_eq!(
+        swaps_before + 1,
+        swap::count(&test_case.app, &controller),
+        "the auto-close must emit exactly one swap request",
+    );
 }
 
 fn assert_events(resp: &AppResponse, lease: &Addr, exp_strategy_key: &str, exp_ltv: Percent100) {

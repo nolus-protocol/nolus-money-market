@@ -1,9 +1,10 @@
-use currencies::{LeaseGroup, Lpn, PaymentGroup};
-use currency::{Currency, CurrencyDTO, CurrencyDef, SymbolStatic};
+use currencies::{LeaseGroup, Lpn};
+use currency::{Currency, CurrencyDTO, CurrencyDef};
 use dex::{ConnectionParams, Ics20Channel};
 use finance::{
     coin::Coin,
     duration::{Duration, Seconds},
+    fraction::Unit,
     liability::Liability,
     percent::{Percent, Percent100},
 };
@@ -20,10 +21,10 @@ use sdk::{
     cw_multi_test::AppResponse,
     testing,
 };
-use swap::testing::SwapRequest;
 
 use super::{
     ADMIN, CwContractWrapper, USER, ibc,
+    remote_lease_controller_stub::SwapFill,
     test_case::{
         TestCase,
         app::App,
@@ -212,11 +213,10 @@ pub struct InstantiatorAddresses {
 
 pub(crate) fn complete_initialization<DownpaymentC, Lpn>(
     app: &mut App,
-    connection_id: &str,
+    controller: &Addr,
     lease_addr: Addr,
     downpayment: Coin<DownpaymentC>,
     exp_borrow: Coin<Lpn>,
-    out_denom: SymbolStatic,
 ) where
     DownpaymentC: CurrencyDef,
     Lpn: CurrencyDef,
@@ -225,41 +225,35 @@ pub(crate) fn complete_initialization<DownpaymentC, Lpn>(
 
     let remote: Addr = opening_remote(app, lease_addr.clone());
 
-    let response = transfer_out_and_reach_swap(
+    // The buy-asset swap is a remote-output swap (`StateRemoteOut`): the asset
+    // stays remote (no transfer-in). `amount_out` is the FULL position the
+    // counterparty reports — it folds in the coins already in the asset currency
+    // (a same-currency downpayment is excluded from the swap request), so the
+    // fill cannot be derived from the swapped inputs alone. Under the tests'
+    // identity prices the position equals downpayment + drawn principal.
+    super::swap::set_fill(
         app,
-        lease_addr.clone(),
-        remote.clone(),
-        (downpayment, exp_borrow),
+        controller,
+        SwapFill::Fixed(exp_borrow.to_primitive() + downpayment.to_primitive()),
     );
 
-    let requests: Vec<SwapRequest<PaymentGroup>> = super::swap::expect_swap(
-        response,
-        connection_id,
-        TestCase::LEASE_ICA_ID,
-        |_response| {},
-    );
-
-    check_state_opening(app, lease_addr.clone());
+    // The swap fires and finishes inline on the second funding transfer's ack,
+    // driving the lease straight to `Opened`.
+    () = transfer_out_and_reach_swap(app, lease_addr.clone(), remote, (downpayment, exp_borrow))
+        .ignore_response()
+        .unwrap_response();
 
     assert_lease_balance_eq(app, &lease_addr, super::native_cwcoin(0));
-
-    () = super::swap::do_swap(
-        app,
-        lease_addr.clone(),
-        remote,
-        requests.into_iter(),
-        out_denom,
-        |price, _, _| price,
-    )
-    .ignore_response()
-    .unwrap_response();
 
     check_state_opened(app, lease_addr);
 }
 
 /// Simulate the completion of the two funding transfers (downpayment and
 /// drawn principal) the lease emits on the `OpenLease` ack, advancing it to
-/// the buy-asset swap. Returns the response carrying that swap `submit_tx`.
+/// the buy-asset swap. With the controller stand-in in `Ok` mode the swap ack
+/// arrives inline and the returned response is post-swap; callers that need to
+/// observe the swap-pending state set the controller's swap op to
+/// `ResponseMode::Delayed` beforehand.
 pub(crate) fn transfer_out_and_reach_swap<DownpaymentC, Lpn>(
     app: &mut App,
     lease_addr: Addr,
