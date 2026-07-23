@@ -22,6 +22,9 @@
 //! - `swap_delayed_ack_visible_in_query` — with `ResponseMode::Delayed` the
 //!   in-flight swap is observable via `OngoingTrx` across blocks until the ack
 //!   is delivered.
+//! - `swap_folds_same_currency_downpayment_into_output` — a same-currency
+//!   downpayment is excluded from the swap, yet the opened lease's asset is the
+//!   full position, proving the non-swapped coin is re-added to the swap output.
 
 use currencies::PaymentGroup;
 use currency::{CurrencyDef, MemberOf};
@@ -81,6 +84,29 @@ fn swap_single_coin_happy_path() {
             }
         ),
         "the swap ack must cleanly open the lease, got {final_state:?}"
+    );
+}
+
+#[test]
+fn swap_folds_same_currency_downpayment_into_output() {
+    let mut test_case = super::create_test_case::<LeaseCurrency>();
+    // The downpayment is already the asset currency, so it is excluded from the
+    // swap and only the loan is swapped. The opened lease's asset must be the
+    // full position — the non-swapped downpayment re-added to the swap output.
+    let downpayment = LeaseCoin::new(10_000);
+    let (lease, controller, exp_borrow) = drive_to_buy_asset_swap(&mut test_case, downpayment);
+
+    deliver_open_swap(&mut test_case, &controller);
+
+    let final_state = super::state_query(&test_case, lease);
+    let StateResponse::Opened { amount, status, .. } = final_state else {
+        panic!("the swap ack must open the lease, got {final_state:?}");
+    };
+    assert_eq!(Status::Idle, status);
+    assert_eq!(
+        downpayment.to_primitive() + exp_borrow.to_primitive(),
+        amount.amount(),
+        "the same-currency downpayment must be folded into the swap output",
     );
 }
 
@@ -196,14 +222,12 @@ where
 
     let remote = super::TestCase::stub_pda(1);
     let controller = test_case.address_book.remote_lease_controller().clone();
-    // Pre-set the full-position identity fill AND the delayed mode before the
-    // swap fires: `Delayed` snapshots the ack (amount_out included) at emission
-    // time, so the fill must already be in place.
-    swap::set_fill(
-        &mut test_case.app,
-        &controller,
-        SwapFill::Fixed(downpayment.to_primitive() + exp_borrow.to_primitive()),
-    );
+    // Pre-set the passive-vault fill (the counterparty returns only the swapped
+    // inputs; coins already in the output currency are re-added on the Nolus
+    // side) AND the delayed mode before the swap fires: `Delayed` snapshots the
+    // ack (amount_out included) at emission time, so the fill must already be in
+    // place.
+    swap::set_fill(&mut test_case.app, &controller, SwapFill::InputAmount);
     stub::set_response_mode(
         &mut test_case.app,
         &controller,
@@ -223,7 +247,7 @@ where
     (lease, controller, exp_borrow)
 }
 
-/// Deliver the held buy-asset swap ack (whose full-position fill was set at
+/// Deliver the held buy-asset swap ack (whose passive-vault fill was set at
 /// emission time by [`drive_to_buy_asset_swap`]).
 fn deliver_open_swap(test_case: &mut LeaseTestCase, controller: &Addr) {
     () = stub::deliver_pending_callback(&mut test_case.app, controller, op_tag::SWAP)

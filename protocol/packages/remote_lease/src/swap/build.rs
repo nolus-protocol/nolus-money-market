@@ -5,12 +5,11 @@ use crate::{error::Error, swap::SwapParams};
 
 const MAX_IN_COINS: usize = 2;
 
-// A builder of swap parameters
-//
-// Unifies coins of the same currency into a single input, so e.g.,
-// an Lpn downpayment plus an Lpn loan yield a single-input swap
-// rather than a rejected two-input one.
+/// Accumulates swap inputs, merging coins of the same currency into a single
+/// input — e.g. an Lpn downpayment plus an Lpn loan become one input rather
+/// than a rejected two-input swap.
 #[derive(Default)]
+#[must_use]
 pub struct Builder<GIn, OutC>
 where
     GIn: Group,

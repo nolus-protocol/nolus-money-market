@@ -28,15 +28,14 @@ pub trait Factory {
         Task: SwapTask;
 }
 
-/// A swap-exact-in against a specific DEX: the request messages it is made of
-/// and the amount read back from its responses.
-///
-/// Implemented once per supported DEX. The swap parameters arrive already
-/// widened to `TopG`, so the transport only forwards them to its DEX.
+/// A swap-exact-in against a specific DEX.
 pub trait Transport<TopG>
 where
     TopG: Group,
 {
+    /// Turn the swap request into the `Batch` of messages that execute it,
+    /// consuming `self`. `params` are already widened to `TopG`. Errors if the
+    /// request cannot be encoded for the target DEX.
     fn swap(self, params: SwapParams<TopG, TopG>) -> Result<Batch>;
 }
 

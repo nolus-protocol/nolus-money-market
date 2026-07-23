@@ -397,7 +397,6 @@ mod impl_handler {
 
         fn on_inner(self, querier: QuerierWrapper<'_>, env: Env) -> Result<Self> {
             match self {
-                // TODO panic on all non *RespDelivery states?
                 State::TransferOut(inner) => Handler::on_inner(inner, querier, env).map_into(),
                 State::TransferOutRespDelivery(inner) => {
                     Handler::on_inner(inner, querier, env).map_into()

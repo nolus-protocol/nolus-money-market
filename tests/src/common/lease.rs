@@ -226,16 +226,13 @@ pub(crate) fn complete_initialization<DownpaymentC, Lpn>(
     let remote: Addr = opening_remote(app, lease_addr.clone());
 
     // The buy-asset swap is a remote-output swap (`StateRemoteOut`): the asset
-    // stays remote (no transfer-in). `amount_out` is the FULL position the
-    // counterparty reports — it folds in the coins already in the asset currency
-    // (a same-currency downpayment is excluded from the swap request), so the
-    // fill cannot be derived from the swapped inputs alone. Under the tests'
-    // identity prices the position equals downpayment + drawn principal.
-    super::swap::set_fill(
-        app,
-        controller,
-        SwapFill::Fixed(exp_borrow.to_primitive() + downpayment.to_primitive()),
-    );
+    // stays remote (no transfer-in). The counterparty is a passive vault — it
+    // returns ONLY the swapped coins; coins already in the asset currency (a
+    // same-currency downpayment is excluded from the swap request) are re-added
+    // on the Nolus side. `InputAmount` models that faithfully: the ack pays the
+    // summed swap inputs, and the same-currency downpayment (if any) is folded
+    // back in by the lease.
+    super::swap::set_fill(app, controller, SwapFill::InputAmount);
 
     // The swap fires and finishes inline on the second funding transfer's ack,
     // driving the lease straight to `Opened`.

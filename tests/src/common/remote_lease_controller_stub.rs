@@ -43,9 +43,9 @@
 
 use serde::{Deserialize, Serialize};
 
-use currencies::{LeaseGroup, Lpns, PaymentGroup, testing::PaymentC1};
-use currency::CurrencyDTO;
-use finance::coin::{Amount, Coin, CoinDTO};
+use currencies::{LeaseGroup, Lpns, PaymentGroup};
+use currency::{CurrencyDef, Group, MemberOf};
+use finance::coin::{Amount, Coin, CoinDTO, WithCoin};
 use platform::contract::{Code, CodeId};
 use remote_lease::{
     callback::{RemoteErrorMessage, RemoteLeaseCallback},
@@ -404,8 +404,8 @@ fn swap_amount_out(
 ) -> CoinDTO<PaymentGroup> {
     match fill {
         SwapFill::MinOut => *params.min_out(),
-        SwapFill::InputAmount => coin_out(input_sum(params), params.min_out().currency()),
-        SwapFill::Fixed(amount) => coin_out(*amount, params.min_out().currency()),
+        SwapFill::InputAmount => coin_out(input_sum(params), params.min_out()),
+        SwapFill::Fixed(amount) => coin_out(*amount, params.min_out()),
     }
 }
 
@@ -416,15 +416,34 @@ fn input_sum(params: &SwapParams<PaymentGroup, PaymentGroup>) -> Amount {
             coin_in_1,
             coin_in_2,
             ..
-        } => coin_in_1.amount() + coin_in_2.amount(),
+        } => coin_in_1
+            .amount()
+            .checked_add(coin_in_2.amount())
+            .expect("swap input amounts must not overflow"),
     }
 }
 
-/// Build a `CoinDTO` carrying `amount` in `currency`. `from_coin`'s `C` type
-/// parameter is erased — only `coin.amount` is read — so any PaymentGroup member
-/// serves as the witness for the requested (runtime) currency.
-fn coin_out(amount: Amount, currency: CurrencyDTO<PaymentGroup>) -> CoinDTO<PaymentGroup> {
-    CoinDTO::from_coin(Coin::<PaymentC1>::new(amount), currency)
+/// Build a `CoinDTO` carrying `amount` in the currency of `witness`. Dispatches
+/// on `witness`'s runtime currency so the coin is typed with the matching
+/// currency — never a wrong-currency witness.
+fn coin_out(amount: Amount, witness: &CoinDTO<PaymentGroup>) -> CoinDTO<PaymentGroup> {
+    witness.with_coin(WithAmount { amount })
+}
+
+struct WithAmount {
+    amount: Amount,
+}
+
+impl WithCoin<PaymentGroup> for WithAmount {
+    type Outcome = CoinDTO<PaymentGroup>;
+
+    fn on<C>(self, _coin: Coin<C>) -> Self::Outcome
+    where
+        C: CurrencyDef,
+        C::Group: MemberOf<PaymentGroup> + MemberOf<<PaymentGroup as Group>::TopG>,
+    {
+        Coin::<C>::new(self.amount).into()
+    }
 }
 
 fn deliver_pending(storage: &mut dyn Storage, op: &str) -> Result<CwResponse, StubError> {

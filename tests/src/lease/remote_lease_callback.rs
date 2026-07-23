@@ -160,20 +160,17 @@ fn drive_to_swap_pending() -> (LeaseTestCase, Addr) {
 
     let controller = test_case.address_book.remote_lease_controller().clone();
     // Hold the buy-asset swap pending so the callback entry point can be driven
-    // by hand. The fill is the full opening position (downpayment + drawn
-    // principal), so the eventual OK opens a healthy lease rather than a
-    // 100%-LTV one that would transition straight into liquidation.
+    // by hand. The passive-vault fill pays only the swapped inputs (the
+    // same-currency downpayment is re-added on the Nolus side), so the eventual
+    // OK opens a healthy lease rather than a 100%-LTV one that would transition
+    // straight into liquidation.
     stub::set_response_mode(
         &mut test_case.app,
         &controller,
         op_tag::SWAP,
         ResponseMode::Delayed,
     );
-    stub::set_swap_fill(
-        &mut test_case.app,
-        &controller,
-        SwapFill::Fixed(downpayment.to_primitive() + exp_borrow.to_primitive()),
-    );
+    stub::set_swap_fill(&mut test_case.app, &controller, SwapFill::InputAmount);
 
     () = common::lease::transfer_out_and_reach_swap::<LeaseCurrency, LpnCurrency>(
         &mut test_case.app,

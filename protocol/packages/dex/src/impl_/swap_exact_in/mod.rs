@@ -3,23 +3,18 @@ use std::{
     marker::PhantomData,
 };
 
-use remote_lease::response::OperationResponse;
 use serde::{Deserialize, Serialize};
 
-use currency::{CurrencyDTO, CurrencyDef, Group, MemberOf};
+use currency::{CurrencyDTO, Group, MemberOf};
 use decode_resp::{DecodeThenFinish, DecodeThenTransferIn};
 use encode_req::EncodeRequest;
-use finance::instant::Instant;
-use finance::{
-    coin::{Coin, CoinDTO},
-    duration::Duration,
-};
+use finance::{coin::CoinDTO, duration::Duration, instant::Instant};
 use platform::{batch::Batch, remote::ErrorResponse as ICAErrorResponse};
 use report_anomaly::ReportAnomalyCmd;
-use sdk::cosmwasm_std::{self, Binary, Env, QuerierWrapper};
+use sdk::cosmwasm_std::{Binary, Env, QuerierWrapper};
 
 use crate::{
-    AnomalyTreatment, Connectable, ConnectionParams, Contract, ContractInSwap, Enterable, Error,
+    AnomalyTreatment, Connectable, ConnectionParams, Contract, ContractInSwap, Enterable,
     RemoteLeaseTransportFactory as RemoteLeaseTransportFactoryT, Stage, SwapTask as SwapTaskT,
     TimeAlarm, TransportOutFactory as TransportOutFactoryT,
     error::Result,
@@ -326,37 +321,6 @@ impl<SwapTask, R, SEnum, RemoteLeaseTransportFactory> _InspectSpec<SwapTask, R>
     {
         inspect_fn(&self.spec)
     }
-}
-
-fn decode_swap_response<OutC, SwapTask>(resp: &[u8]) -> Result<Coin<OutC>>
-where
-    OutC: CurrencyDef,
-    OutC::Group: MemberOf<<SwapTask::OutG as Group>::TopG>,
-    SwapTask: SwapTaskT,
-{
-    let out_c_dto = OutC::dto();
-    let res: OperationResponse<<SwapTask::OutG as Group>::TopG> =
-        cosmwasm_std::from_json(resp).map_err(platform::error::Error::Deserialization)?;
-    // `amount_out` is the full post-swap output: coins already in the output
-    // currency are excluded from the request (`not_out_coins_filter`) and folded
-    // in by the counterparty, so no non-swapped term is re-added here.
-    match res {
-        OperationResponse::Swap(swap_resp) => Ok(swap_resp.amount_out),
-        _ => Err(Error::NotSwapResponse(format!("{res:?}"))),
-    }
-    .and_then(|amount_dto_out| {
-        amount_dto_out
-            .of_currency_dto(out_c_dto)
-            .map_err(|err| {
-                Error::IncorrectSwapOutCurrency(
-                    amount_dto_out.to_string(),
-                    out_c_dto.to_string(),
-                    err,
-                )
-            })
-            .map(|()| amount_dto_out)
-    })
-    .map(|amount_dto_out| amount_dto_out.as_specific(out_c_dto))
 }
 
 fn try_filter_fold_coins<SwapTask, FilterFn, Acc, FoldFn>(
