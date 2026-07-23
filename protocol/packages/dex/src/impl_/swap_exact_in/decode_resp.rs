@@ -2,7 +2,7 @@ use std::marker::PhantomData;
 
 use currency::{CurrencyDef, Group, MemberOf};
 use finance::coin::Coin;
-use finance::zero::Zero;
+use finance::zero::Zero as _;
 use remote_lease::response::OperationResponse;
 use sdk::cosmwasm_std::{self, Env, QuerierWrapper};
 
@@ -129,11 +129,14 @@ where
         spec,
         super::out_coins_filter(&out_currency),
         Coin::<OutC>::ZERO,
-        |total_out, inn| {
-            Ok(total_out
-                + inn
-                    .into_super_group::<<SwapTask::OutG as Group>::TopG>()
-                    .as_specific(OutC::dto()))
+        |total_out, non_swapped_dto| {
+            total_out
+                .checked_add(
+                    non_swapped_dto
+                        .into_super_group::<<SwapTask::OutG as Group>::TopG>()
+                        .as_specific(OutC::dto()),
+                )
+                .ok_or_else(|| Error::Overflow("calculating the total output"))
         },
     )
 }

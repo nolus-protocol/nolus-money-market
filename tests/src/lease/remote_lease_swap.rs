@@ -104,7 +104,10 @@ fn swap_folds_same_currency_downpayment_into_output() {
     };
     assert_eq!(Status::Idle, status);
     assert_eq!(
-        downpayment.to_primitive() + exp_borrow.to_primitive(),
+        downpayment
+            .to_primitive()
+            .checked_add(exp_borrow.to_primitive())
+            .expect("the test position must not overflow"),
         amount.amount(),
         "the same-currency downpayment must be folded into the swap output",
     );
