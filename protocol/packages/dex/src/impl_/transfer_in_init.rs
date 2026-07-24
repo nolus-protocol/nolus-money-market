@@ -106,7 +106,7 @@ where
             .into_super_group::<<SwapTask::OutG as Group>::TopG>();
         self.transport_factory
             .transport(&self.spec, now)
-            .transfer_back(&amount)
+            .transfer_back(amount)
             .map_err(Error::Transport)
     }
 }

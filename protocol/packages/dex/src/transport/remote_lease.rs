@@ -39,7 +39,7 @@ where
     /// request cannot be encoded for the target DEX.
     fn swap(self, params: SwapParams<TopG, TopG>) -> Result<Batch>;
 
-    fn transfer_back(self, amount: &CoinDTO<TopG>) -> Result<Batch>;
+    fn transfer_back(self, amount: CoinDTO<TopG>) -> Result<Batch>;
 }
 
 pub type Result<T> = core::result::Result<T, Error>;

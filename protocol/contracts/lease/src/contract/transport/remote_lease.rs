@@ -47,11 +47,13 @@ impl RemoteLeaseTransport<LeasePaymentCurrencies> for SwapClientTransport<'_> {
             .map_err(SwapError::from)
     }
 
-    fn transfer_back(self, amount: &CoinDTO<LeasePaymentCurrencies>) -> SwapResult<Batch> {
-        let params = TransferOutParams::new(*amount)
-            .map_err(|err| SwapError::InvalidAmount(err.to_string()))?;
-        Lease::<LeaseGroup, Lpns, LeasePaymentCurrencies>::new(self.controller)
-            .transfer_out(params, TransferOutParams::<LeasePaymentCurrencies>::TIMEOUT)
-            .map_err(SwapError::from)
+    fn transfer_back(self, amount: CoinDTO<LeasePaymentCurrencies>) -> SwapResult<Batch> {
+        TransferOutParams::new(amount)
+            .map_err(|err| SwapError::InvalidAmount(err.to_string()))
+            .and_then(|params| {
+                Lease::<LeaseGroup, Lpns, LeasePaymentCurrencies>::new(self.controller)
+                    .transfer_out(params, TransferOutParams::<LeasePaymentCurrencies>::TIMEOUT)
+                    .map_err(SwapError::from)
+            })
     }
 }
