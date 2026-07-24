@@ -13,7 +13,6 @@ use lease::{
     },
     error::{ContractError, PositionError},
 };
-use platform::coin_legacy;
 use sdk::{
     cosmwasm_std::{Addr, Event},
     cw_multi_test::AppResponse,
@@ -21,11 +20,11 @@ use sdk::{
 };
 
 use crate::common::{
-    self, ADMIN, CwCoin, USER, ibc, lease as common_lease,
+    self, ADMIN, USER, lease as common_lease,
     leaser::{self, Instantiator},
     remote_lease_controller_stub::SwapFill,
     swap,
-    test_case::{TestCase, response::ResponseWithInterChainMsgs},
+    test_case::response::ResponseWithInterChainMsgs,
 };
 
 use super::{
@@ -165,7 +164,7 @@ fn partial_close_loan_closed() {
     assert_eq!(
         StateResponse::Closing {
             amount: (lease_amount - close_amount).into(),
-            in_progress: ClosingTrx::TransferInInit
+            in_progress: ClosingTrx::TransferInFinish
         },
         state
     );
@@ -270,7 +269,7 @@ fn do_close(
 ) -> Addr {
     let user_balance_before: PaymentCoin = user_balance(customer_addr, test_case);
     let lease_addr: Addr = super::open_lease(test_case, DOWNPAYMENT, None);
-    let lease_ica = TestCase::stub_pda(1);
+    let time_alarms = test_case.address_book.time_alarms().clone();
 
     assert!(matches!(
         super::expected_newly_opened_state(test_case, DOWNPAYMENT, Coin::<LpnCurrency>::ZERO),
@@ -283,23 +282,15 @@ fn do_close(
     // Identity DEX fill: the sold collateral yields its LPN value.
     swap::set_fill(&mut test_case.app, &controller, SwapFill::InputAmount);
 
-    let mut response_close = send_close(
+    let response_close = send_close(
         test_case,
         lease_addr.clone(),
         &ExecuteMsg::ClosePosition(close_msg),
     );
 
-    // The sell-asset swap fired inline on the ClosePosition execute; the lease
-    // (local-output) has emitted the transfer-in of the LPN proceeds.
-    let transfer_amount: CwCoin = ibc::expect_remote_transfer(
-        &mut response_close,
-        TestCase::DEX_CONNECTION_ID,
-        TestCase::LEASE_ICA_ID,
-    );
-    assert_eq!(
-        transfer_amount,
-        coin_legacy::to_cosmwasm_on_dex(close_amount_in_lpn)
-    );
+    // The sell-asset swap and the proceeds transfer-out fired inline on the
+    // ClosePosition execute; the lease (local-output) is now in
+    // TransferInFinish, polling its bank balance for the returning LPN proceeds.
     let _ = response_close.unwrap_response();
 
     // Fidelity: the swap input is exactly the close amount.
@@ -309,25 +300,22 @@ fn do_close(
         swap::token_in(&captured),
     );
 
-    let mut response_transfer_in = swap::deliver_transfer_in(
-        &mut test_case.app,
-        lease_ica.clone(),
-        lease_addr.clone(),
-        &transfer_amount,
+    // Fidelity: the emitted transfer-out returns exactly the LPN proceeds.
+    assert_eq!(
+        Into::<CoinDTO<PaymentGroup>>::into(close_amount_in_lpn),
+        swap::captured_transfer_out(&test_case.app, &controller),
     );
 
-    if exp_loan_close && !exp_lease_amount_after.is_zero() {
-        let lease_amount_after = ibc::expect_remote_transfer(
-            &mut response_transfer_in,
-            TestCase::DEX_CONNECTION_ID,
-            TestCase::LEASE_ICA_ID,
-        );
-
-        assert_eq!(
-            coin_legacy::to_cosmwasm_on_dex(exp_lease_amount_after),
-            lease_amount_after
-        );
-    }
+    // Bring the LPN proceeds in. For a full loan close with residual collateral
+    // this settlement starts the collateral return (a fresh transfer-out,
+    // answered inline), leaving the lease in `Closing { TransferInFinish }` —
+    // the residual amount is pinned by the caller's `StateResponse` assertion.
+    let response_transfer_in = swap::deliver_transfer_in(
+        &mut test_case.app,
+        time_alarms,
+        lease_addr.clone(),
+        &common::cwcoin(close_amount_in_lpn),
+    );
 
     response_transfer_in.unwrap_response().assert_event(
         &Event::new("wasm-ls-close-position")
@@ -349,10 +337,17 @@ fn do_close(
         user_balance_before - DOWNPAYMENT,
     );
 
-    // The residual collateral left on the remote (StubPda) is `exp_lease_amount_after`.
-    // The StubPda is not a bech32 address, so its balance cannot be queried; the residual
-    // is pinned by the caller's `StateResponse` `amount` assertion together with the
-    // intercepted close `submit_tx` transfers asserted above.
+    // For a full loan close with residual collateral, settlement emits a second
+    // transfer-out returning the unsold collateral — assert its emitted amount
+    // directly (the StubPda holding it is not a bech32 address, so its balance
+    // cannot be queried; the residual is also pinned by the caller's
+    // `StateResponse` `amount` assertion).
+    if exp_loan_close && !exp_lease_amount_after.is_zero() {
+        assert_eq!(
+            Into::<CoinDTO<PaymentGroup>>::into(exp_lease_amount_after),
+            swap::captured_transfer_out(&test_case.app, &controller),
+        );
+    }
 
     lease_addr
 }

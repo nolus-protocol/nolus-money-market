@@ -313,7 +313,7 @@ where
     GOut: Group,
 {
     fn from(typed: &TransferOutParams<GOut>) -> Self {
-        Self::new(wire_coin(typed.amount()))
+        Self::new(wire_coin(&typed.amount))
             .expect("typed TransferOutParams already upholds the non-zero invariant")
     }
 }

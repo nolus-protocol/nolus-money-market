@@ -1,3 +1,4 @@
+use finance::coin::CoinDTO;
 use thiserror::Error;
 
 use currency::Group;
@@ -37,6 +38,11 @@ where
     /// consuming `self`. `params` are already widened to `TopG`. Errors if the
     /// request cannot be encoded for the target DEX.
     fn swap(self, params: SwapParams<TopG, TopG>) -> Result<Batch>;
+
+    /// Bring `amount` back from the DEX to the local chain, consuming `self`.
+    /// `amount` is already widened to `TopG`. Errors if the request cannot be
+    /// encoded for the target DEX.
+    fn transfer_back(self, amount: CoinDTO<TopG>) -> Result<Batch>;
 }
 
 pub type Result<T> = core::result::Result<T, Error>;

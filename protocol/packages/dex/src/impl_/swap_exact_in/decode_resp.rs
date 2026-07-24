@@ -1,7 +1,7 @@
 use std::marker::PhantomData;
 
 use currency::{CurrencyDef, Group, MemberOf};
-use finance::coin::Coin;
+use finance::coin::{Coin, CoinDTO};
 use finance::zero::Zero as _;
 use remote_lease::response::OperationResponse;
 use sdk::cosmwasm_std::{self, Env, QuerierWrapper};
@@ -21,20 +21,20 @@ use crate::{
 
 pub struct DecodeThenTransferIn<'resp, SwapTask, SEnum, RemoteLeaseTransportFactory> {
     resp: &'resp [u8],
+    transport_factory: RemoteLeaseTransportFactory,
     _spec: PhantomData<SwapTask>,
     _senum: PhantomData<SEnum>,
-    _factory: PhantomData<RemoteLeaseTransportFactory>,
 }
 
 impl<'resp, SwapTask, SEnum, RemoteLeaseTransportFactory>
     DecodeThenTransferIn<'resp, SwapTask, SEnum, RemoteLeaseTransportFactory>
 {
-    pub fn from(resp: &'resp [u8]) -> Self {
+    pub fn from(resp: &'resp [u8], transport_factory: RemoteLeaseTransportFactory) -> Self {
         Self {
             resp,
+            transport_factory,
             _spec: PhantomData,
             _senum: PhantomData,
-            _factory: PhantomData,
         }
     }
 }
@@ -44,7 +44,7 @@ where
     SwapTask: SwapTaskT,
     RemoteLeaseTransportFactory: RemoteLeaseTransportFactoryT,
 {
-    type Output = Result<TransferInInit<SwapTask, SEnum>>;
+    type Output = Result<TransferInInit<SwapTask, SEnum, RemoteLeaseTransportFactory>>;
 
     fn on<OutC, SwapOutTask>(self, task: SwapOutTask) -> Self::Output
     where
@@ -54,7 +54,7 @@ where
     {
         let spec = task.into_spec();
         total_output::<OutC, _>(&spec, self.resp)
-            .map(|amount_out| TransferInInit::new(spec, amount_out.into()))
+            .map(|amount_out| TransferInInit::new(spec, amount_out.into(), self.transport_factory))
     }
 }
 
@@ -147,7 +147,6 @@ where
     OutC::Group: MemberOf<<SwapTask::OutG as Group>::TopG>,
     SwapTask: SwapTaskT,
 {
-    let out_c_dto = OutC::dto();
     let res: OperationResponse<<SwapTask::OutG as Group>::TopG> =
         cosmwasm_std::from_json(resp).map_err(platform::error::Error::Deserialization)?;
     // `amount_out` covers only the swapped coins: coins already in the output
@@ -158,17 +157,21 @@ where
         OperationResponse::Swap(swap_resp) => Ok(swap_resp.amount_out),
         _ => Err(Error::NotSwapResponse(format!("{res:?}"))),
     }
-    .and_then(|amount_dto_out| {
-        amount_dto_out
-            .of_currency_dto(out_c_dto)
-            .map_err(|err| {
-                Error::IncorrectSwapOutCurrency(
-                    amount_dto_out.to_string(),
-                    out_c_dto.to_string(),
-                    err,
-                )
-            })
-            .map(|()| amount_dto_out)
-    })
-    .map(|amount_dto_out| amount_dto_out.as_specific(out_c_dto))
+    .and_then(|amount_dto| to_specific_coin(amount_dto))
+}
+
+fn to_specific_coin<C, G>(amount_dto: CoinDTO<G>) -> Result<Coin<C>>
+where
+    C: CurrencyDef,
+    C::Group: MemberOf<G>,
+    G: Group,
+{
+    let c_dto = C::dto();
+    amount_dto
+        .of_currency_dto(c_dto)
+        .map_err(|err| {
+            Error::IncorrectSwapOutCurrency(amount_dto.to_string(), c_dto.to_string(), err)
+        })
+        .map(|()| amount_dto)
+        .map(|amount_dto_checked| amount_dto_checked.as_specific(c_dto))
 }
