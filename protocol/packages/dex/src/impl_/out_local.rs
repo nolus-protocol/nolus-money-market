@@ -382,24 +382,6 @@ mod impl_handler {
             }
         }
 
-        fn on_inner_continue(self, querier: QuerierWrapper<'_>, env: Env) -> ContinueResult<Self> {
-            match self {
-                State::TransferOut(inner) => Handler::on_inner_continue(inner, querier, env),
-                State::TransferOutRespDelivery(inner) => {
-                    Handler::on_inner_continue(inner, querier, env)
-                }
-                State::SwapExactIn(inner) => Handler::on_inner_continue(inner, querier, env),
-                State::SwapExactInRespDelivery(inner) => {
-                    Handler::on_inner_continue(inner, querier, env)
-                }
-                State::TransferInInit(inner) => Handler::on_inner_continue(inner, querier, env),
-                State::TransferInInitRespDelivery(inner) => {
-                    Handler::on_inner_continue(inner, querier, env)
-                }
-                State::TransferInFinish(inner) => Handler::on_inner_continue(inner, querier, env),
-            }
-        }
-
         fn heal(self, querier: QuerierWrapper<'_>, env: Env) -> Result<Self> {
             match self {
                 State::TransferOut(inner) => Handler::heal(inner, querier, env).map_into(),

@@ -76,15 +76,6 @@ where
         Err(err(self, "handle inner")).into()
     }
 
-    /// The actual delivery of an ICA open response, error, and timeout
-    ///
-    /// They are separated from the regular response delivery because they cannot bring the state machine into a final state.
-    ///
-    /// Intended to act as a level of indirection allowing a common error handling
-    fn on_inner_continue(self, _querier: QuerierWrapper<'_>, _env: Env) -> ContinueResult<Self> {
-        Err(err(self, "handle inner to 'Continue' response"))
-    }
-
     fn heal(self, _querier: QuerierWrapper<'_>, _env: Env) -> Result<Self> {
         Err(err(self, "handle heal")).into()
     }
