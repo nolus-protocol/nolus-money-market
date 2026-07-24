@@ -2,9 +2,9 @@ use serde::{Deserialize, Serialize};
 
 use currencies::{LeaseGroup, Lpns};
 use dex::{RemoteLeaseTransport, RemoteLeaseTransportFactory, SwapError, SwapResult, SwapTask};
-use finance::instant::Instant;
+use finance::{coin::CoinDTO, instant::Instant};
 use platform::batch::Batch;
-use remote_lease::{stub::Lease, swap::SwapParams};
+use remote_lease::{msg::TransferOutParams, stub::Lease, swap::SwapParams};
 use sdk::cosmwasm_std::Addr;
 
 use crate::api::LeasePaymentCurrencies;
@@ -45,5 +45,15 @@ impl RemoteLeaseTransport<LeasePaymentCurrencies> for SwapClientTransport<'_> {
                 SwapParams::<LeasePaymentCurrencies, LeasePaymentCurrencies>::TIMEOUT,
             )
             .map_err(SwapError::from)
+    }
+
+    fn transfer_back(self, amount: CoinDTO<LeasePaymentCurrencies>) -> SwapResult<Batch> {
+        TransferOutParams::new(amount)
+            .map_err(|err| SwapError::InvalidAmount(err.to_string()))
+            .and_then(|params| {
+                Lease::<LeaseGroup, Lpns, LeasePaymentCurrencies>::new(self.controller)
+                    .transfer_out(params, TransferOutParams::<LeasePaymentCurrencies>::TIMEOUT)
+                    .map_err(SwapError::from)
+            })
     }
 }

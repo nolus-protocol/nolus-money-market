@@ -22,7 +22,9 @@ The `remote_lease` crate defines the IBC packet types exchanged between the Nolu
   - `Two { coin_in_1, coin_in_2, min_out }` — two input coins; wire shape `{"swap":{"two":{"coin_in_1":…,"coin_in_2":…,"min_out":…}}}`.
 
   All coins non-zero; each input currency distinct from `min_out`; for `Two`, the two inputs are also distinct from each other (else `DuplicateSwapInputCurrency`).
-- `TransferOut { amount }` — amount non-zero.
+
+  `amount_out` on the response covers only the swapped inputs. Any coin already in the output currency is excluded from the request and — the counterparty being a passive vault that only executes the swap it is asked for — is never returned by it either; the Nolus-side caller re-adds such non-swapped coins to the decoded `amount_out` itself.
+- `TransferOut { amount }` — amount non-zero. The funds-return leg (Solana vault → Nolus). **Cross-repo timeout invariant:** the Solana-side return-transfer IBC timeout MUST be shorter than the Nolus-side re-issue window (`dex::IBC_TIMEOUT`, 1 day) — otherwise a return transfer still in flight when Nolus re-issues `TransferOut` on timeout could double-credit. Enforced Solana-side per ADR 0001/0002; Nolus confirms arrival by idempotent bank-balance polling, so an early vault refund only delays, never loses, funds.
 
 Invariants are enforced both in constructors (`new`, or `one` / `two` for `Swap`) and on the deserialiser path via `try_from` raw shadows.
 

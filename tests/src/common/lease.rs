@@ -4,7 +4,6 @@ use dex::{ConnectionParams, Ics20Channel};
 use finance::{
     coin::Coin,
     duration::{Duration, Seconds},
-    fraction::Unit,
     liability::Liability,
     percent::{Percent, Percent100},
 };

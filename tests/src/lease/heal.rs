@@ -1,6 +1,6 @@
-use finance::price;
+use currencies::PaymentGroup;
+use finance::{coin::CoinDTO, price};
 use lease::{api::ExecuteMsg, error::ContractError};
-use platform::coin_legacy;
 use remote_lease::callback::{RemoteErrorMessage, RemoteLeaseCallback};
 use sdk::{
     cosmwasm_std::{Addr, StdResult},
@@ -10,11 +10,10 @@ use sdk::{
 
 use crate::{
     common::{
-        self, USER, ibc,
+        self, USER,
         remote_lease_controller_stub::{self as stub, ResponseMode, SwapFill, op_tag},
         swap as test_swap,
         test_case::{
-            TestCase,
             app::App,
             response::{RemoteChain, ResponseWithInterChainMsgs},
         },
@@ -98,24 +97,25 @@ fn swap_on_repay() {
         .ignore_response()
         .unwrap_response();
 
-    // The retry succeeds: deliver the held OK ack, then bring the proceeds in.
+    // The retry succeeds: deliver the held OK ack — the swap and the proceeds
+    // transfer-out fire inline, parking the lease in TransferInFinish — then
+    // bring the proceeds in.
     let paid: LpnCoin = price::total(payment, super::price_lpn_of()).unwrap();
-    let mut delivered =
-        stub::deliver_pending_callback(&mut test_case.app, &controller, op_tag::SWAP);
-    let transfer_amount = ibc::expect_remote_transfer(
-        &mut delivered,
-        TestCase::DEX_CONNECTION_ID,
-        TestCase::LEASE_ICA_ID,
-    );
-    assert_eq!(transfer_amount, coin_legacy::to_cosmwasm_on_dex(paid));
-    let _ = delivered.unwrap_response();
+    let _ = stub::deliver_pending_callback(&mut test_case.app, &controller, op_tag::SWAP)
+        .unwrap_response();
 
-    let lease_ica = TestCase::stub_pda(1);
+    // Fidelity: the emitted transfer-out returns exactly the LPN proceeds.
+    assert_eq!(
+        Into::<CoinDTO<PaymentGroup>>::into(paid),
+        test_swap::captured_transfer_out(&test_case.app, &controller),
+    );
+
+    let time_alarms = test_case.address_book.time_alarms().clone();
     () = test_swap::deliver_transfer_in(
         &mut test_case.app,
-        lease_ica,
+        time_alarms,
         lease.clone(),
-        &transfer_amount,
+        &common::cwcoin(paid),
     )
     .ignore_response()
     .unwrap_response();

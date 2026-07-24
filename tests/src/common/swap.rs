@@ -13,8 +13,8 @@
 //! - read back the swap request the lease actually emitted ([`captured`],
 //!   [`token_in`], [`min_out`]) for `token_in` / `min_out` assertions,
 //! - and, for the local-output swaps (repay / close / liquidation), credit the
-//!   remote account with the DEX proceeds and run the follow-up transfer-in
-//!   ([`deliver_transfer_in`]).
+//!   lease with the returning proceeds and fire the time alarm that finishes
+//!   the transfer-in ([`deliver_transfer_in`]).
 //!
 //! Error and delayed acks are driven through the controller stand-in directly
 //! ([`super::remote_lease_controller_stub::set_response_mode`]).
@@ -23,6 +23,7 @@ use std::slice;
 
 use currencies::PaymentGroup;
 use finance::coin::{Amount, CoinDTO};
+use lease::api::ExecuteMsg;
 use remote_lease::swap::SwapParams;
 use sdk::{
     cosmwasm_std::{Addr, Coin as CwCoin},
@@ -31,7 +32,7 @@ use sdk::{
 };
 
 use super::{
-    ADMIN, ibc,
+    ADMIN,
     remote_lease_controller_stub::{self as stub, SwapFill},
     test_case::{app::App, response::ResponseWithInterChainMsgs},
 };
@@ -70,22 +71,37 @@ pub(crate) fn min_out(params: &SwapParams<PaymentGroup, PaymentGroup>) -> Amount
     params.min_out().amount()
 }
 
-/// Complete a local-output swap: credit the remote account (StubPda) with the
-/// DEX proceeds — mirroring the Solana side depositing the swap output — then
-/// run the IBC transfer-in that brings them back to the lease. `proceeds` is the
-/// on-dex coin the lease's transfer-in moves (`to_cosmwasm_on_dex(amount_out)`).
+/// The `amount` (with currency) of the most recent transfer-out request the
+/// lease emitted, as captured by the stand-in — the successor of the amount the
+/// legacy transfer-in `submit_tx` carried.
+pub(crate) fn captured_transfer_out(app: &App, controller: &Addr) -> CoinDTO<PaymentGroup> {
+    *stub::captured_transfer_out(app, controller).amount()
+}
+
+/// Complete a lease transfer-in that is parked in `TransferInFinish`.
+///
+/// Post-refactor the lease requests the returning funds through the
+/// controller's `TransferOut` (answered inline by the stand-in) and then polls
+/// its own bank balance for their arrival, retrying on a 5s time alarm. This
+/// mirrors the Solana vault's IBC transfer landing on Nolus by crediting the
+/// lease directly with `proceeds` — the bank-denom coin the poll expects
+/// (`common::cwcoin(amount_out)`) — then firing the lease's time alarm from
+/// `time_alarms` so `TransferInFinish` re-runs its poll and finishes. Returns
+/// the alarm response so the caller can assert the finish events and any
+/// follow-up (e.g. a full repay's position close).
 pub(crate) fn deliver_transfer_in<'r>(
     app: &'r mut App,
-    remote: Addr,
+    time_alarms: Addr,
     lease: Addr,
     proceeds: &CwCoin,
 ) -> ResponseWithInterChainMsgs<'r, AppResponse> {
     app.send_tokens(
         testing::user(ADMIN),
-        remote.clone(),
+        lease.clone(),
         slice::from_ref(proceeds),
     )
     .unwrap();
 
-    ibc::do_transfer(app, remote, lease, true, proceeds)
+    app.execute(time_alarms, lease, &ExecuteMsg::TimeAlarm {}, &[])
+        .unwrap()
 }

@@ -37,9 +37,11 @@ where
     SwapExactInRespDelivery(
         SwapExactInRespDelivery<SwapTask, Self, RemoteLeaseTransportFactory, ForwardToInnerMsg>,
     ),
-    TransferInInit(TransferInInit<SwapTask, Self>),
-    TransferInInitRespDelivery(TransferInInitRespDelivery<SwapTask, Self, ForwardToInnerMsg>),
-    TransferInFinish(TransferInFinish<SwapTask, Self>),
+    TransferInInit(TransferInInit<SwapTask, Self, RemoteLeaseTransportFactory>),
+    TransferInInitRespDelivery(
+        TransferInInitRespDelivery<SwapTask, Self, RemoteLeaseTransportFactory, ForwardToInnerMsg>,
+    ),
+    TransferInFinish(TransferInFinish<SwapTask, Self, RemoteLeaseTransportFactory>),
 }
 
 pub type StartLocalLocalState<
@@ -71,6 +73,7 @@ pub type StartTransferInState<
 > = TransferInInit<
     SwapTask,
     State<SwapTask, TransportOutFactory, RemoteLeaseTransportFactory, ForwardToInnerMsg>,
+    RemoteLeaseTransportFactory,
 >;
 
 pub fn start_local_local<
@@ -203,37 +206,50 @@ mod impl_into {
     }
 
     impl<SwapTask, TransportOutFactory, RemoteLeaseTransportFactory, ForwardToInnerMsg>
-        From<TransferInInit<SwapTask, Self>>
+        From<TransferInInit<SwapTask, Self, RemoteLeaseTransportFactory>>
         for State<SwapTask, TransportOutFactory, RemoteLeaseTransportFactory, ForwardToInnerMsg>
     where
         SwapTask: SwapTaskT,
         ForwardToInnerMsg: ForwardToInner,
     {
-        fn from(value: TransferInInit<SwapTask, Self>) -> Self {
+        fn from(value: TransferInInit<SwapTask, Self, RemoteLeaseTransportFactory>) -> Self {
             Self::TransferInInit(value)
         }
     }
 
     impl<SwapTask, TransportOutFactory, RemoteLeaseTransportFactory, ForwardToInnerMsg>
-        From<TransferInInitRespDelivery<SwapTask, Self, ForwardToInnerMsg>>
-        for State<SwapTask, TransportOutFactory, RemoteLeaseTransportFactory, ForwardToInnerMsg>
+        From<
+            TransferInInitRespDelivery<
+                SwapTask,
+                Self,
+                RemoteLeaseTransportFactory,
+                ForwardToInnerMsg,
+            >,
+        > for State<SwapTask, TransportOutFactory, RemoteLeaseTransportFactory, ForwardToInnerMsg>
     where
         SwapTask: SwapTaskT,
         ForwardToInnerMsg: ForwardToInner,
     {
-        fn from(value: TransferInInitRespDelivery<SwapTask, Self, ForwardToInnerMsg>) -> Self {
+        fn from(
+            value: TransferInInitRespDelivery<
+                SwapTask,
+                Self,
+                RemoteLeaseTransportFactory,
+                ForwardToInnerMsg,
+            >,
+        ) -> Self {
             Self::TransferInInitRespDelivery(value)
         }
     }
 
     impl<SwapTask, TransportOutFactory, RemoteLeaseTransportFactory, ForwardToInnerMsg>
-        From<TransferInFinish<SwapTask, Self>>
+        From<TransferInFinish<SwapTask, Self, RemoteLeaseTransportFactory>>
         for State<SwapTask, TransportOutFactory, RemoteLeaseTransportFactory, ForwardToInnerMsg>
     where
         SwapTask: SwapTaskT,
         ForwardToInnerMsg: ForwardToInner,
     {
-        fn from(value: TransferInFinish<SwapTask, Self>) -> Self {
+        fn from(value: TransferInFinish<SwapTask, Self, RemoteLeaseTransportFactory>) -> Self {
             Self::TransferInFinish(value)
         }
     }
