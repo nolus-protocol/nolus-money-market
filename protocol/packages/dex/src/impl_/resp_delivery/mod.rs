@@ -130,10 +130,6 @@ where
         Delivery::deliver(self.handler, self.response, querier, env).map_into()
     }
 
-    fn do_deliver_continue(self, querier: QuerierWrapper<'_>, env: Env) -> ContinueResult<Self> {
-        Delivery::deliver_continue(self.handler, self.response, querier, env)
-    }
-
     fn do_redeliver(self, querier: QuerierWrapper<'_>, env: Env) -> Result<Self> {
         Delivery::deliver_again(self.handler, self.response, querier, env).map_into()
     }
@@ -172,11 +168,6 @@ where
         // the errors from the response delivery herebelow and from a sub-message would be
         // reported in the `fn reply`
         self.do_deliver(querier, env)
-    }
-
-    fn on_inner_continue(self, querier: QuerierWrapper<'_>, env: Env) -> ContinueResult<Self> {
-        // see the `on_inner` comment
-        self.do_deliver_continue(querier, env)
     }
 
     fn reply(self, _querier: QuerierWrapper<'_>, env: Env, msg: Reply) -> ContinueResult<Self> {

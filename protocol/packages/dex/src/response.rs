@@ -49,15 +49,6 @@ where
         info: &MessageInfo,
     ) -> DexResult<()>;
 
-    fn on_open_ica(
-        self,
-        _counterparty_version: String,
-        _querier: QuerierWrapper<'_>,
-        _env: Env,
-    ) -> ContinueResult<Self> {
-        Err(err(self, "handle open ica response"))
-    }
-
     /// The entry point of a response delivery
     fn on_response(self, _data: Binary, _querier: QuerierWrapper<'_>, _env: Env) -> Result<Self> {
         Err(err(self, "handle transaction response")).into()
@@ -83,15 +74,6 @@ where
     /// Intended to act as a level of indirection allowing a common error handling
     fn on_inner(self, _querier: QuerierWrapper<'_>, _env: Env) -> Result<Self> {
         Err(err(self, "handle inner")).into()
-    }
-
-    /// The actual delivery of an ICA open response, error, and timeout
-    ///
-    /// They are separated from the regular response delivery because they cannot bring the state machine into a final state.
-    ///
-    /// Intended to act as a level of indirection allowing a common error handling
-    fn on_inner_continue(self, _querier: QuerierWrapper<'_>, _env: Env) -> ContinueResult<Self> {
-        Err(err(self, "handle inner to 'Continue' response"))
     }
 
     fn heal(self, _querier: QuerierWrapper<'_>, _env: Env) -> Result<Self> {
