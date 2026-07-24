@@ -287,37 +287,6 @@ mod impl_handler {
             }
         }
 
-        fn on_open_ica(
-            self,
-            counterparty_version: String,
-            querier: QuerierWrapper<'_>,
-            env: Env,
-        ) -> ContinueResult<Self> {
-            match self {
-                State::TransferOut(inner) => {
-                    Handler::on_open_ica(inner, counterparty_version, querier, env)
-                }
-                State::TransferOutRespDelivery(inner) => {
-                    Handler::on_open_ica(inner, counterparty_version, querier, env)
-                }
-                State::SwapExactIn(inner) => {
-                    Handler::on_open_ica(inner, counterparty_version, querier, env)
-                }
-                State::SwapExactInRespDelivery(inner) => {
-                    Handler::on_open_ica(inner, counterparty_version, querier, env)
-                }
-                State::TransferInInit(inner) => {
-                    Handler::on_open_ica(inner, counterparty_version, querier, env)
-                }
-                State::TransferInInitRespDelivery(inner) => {
-                    Handler::on_open_ica(inner, counterparty_version, querier, env)
-                }
-                State::TransferInFinish(inner) => {
-                    Handler::on_open_ica(inner, counterparty_version, querier, env)
-                }
-            }
-        }
-
         fn on_response(
             self,
             response: Binary,
