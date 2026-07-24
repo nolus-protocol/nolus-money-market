@@ -5,7 +5,7 @@ use std::{
 
 use serde::{Deserialize, Serialize};
 
-use currency::{CurrencyDef, MemberOf};
+use currency::{CurrencyDef, Group, MemberOf};
 use finance::instant::Instant;
 use finance::{coin::CoinDTO, duration::Duration};
 use platform::{
@@ -16,7 +16,8 @@ use sdk::cosmwasm_std::{Env, MessageInfo, QuerierWrapper};
 use timealarms::stub::TimeAlarmDelivery;
 
 use crate::{
-    Contract, ContractInSwap, Enterable, Error as DexError, Stage, SwapOutputTask,
+    Contract, ContractInSwap, Enterable, Error as DexError,
+    RemoteLeaseTransportFactory as RemoteLeaseTransportFactoryT, Stage, SwapOutputTask,
     SwapTask as SwapTaskT, WithOutputTask,
 };
 
@@ -30,18 +31,20 @@ use super::{
 use cw_time::IntoInstant;
 
 #[derive(Serialize, Deserialize)]
-pub struct TransferInFinish<SwapTask, SEnum>
+pub struct TransferInFinish<SwapTask, SEnum, RemoteLeaseTransportFactory>
 where
     SwapTask: SwapTaskT,
 {
     spec: SwapTask,
     amount_in: CoinDTO<SwapTask::OutG>,
     timeout: Instant,
+    transport_factory: RemoteLeaseTransportFactory,
     #[serde(skip)]
     _state_enum: PhantomData<SEnum>,
 }
 
-impl<SwapTask, SEnum> TransferInFinish<SwapTask, SEnum>
+impl<SwapTask, SEnum, RemoteLeaseTransportFactory>
+    TransferInFinish<SwapTask, SEnum, RemoteLeaseTransportFactory>
 where
     SwapTask: SwapTaskT,
 {
@@ -49,45 +52,55 @@ where
         spec: SwapTask,
         amount_in: CoinDTO<SwapTask::OutG>,
         timeout: Instant,
+        transport_factory: RemoteLeaseTransportFactory,
     ) -> Self {
         Self {
             spec,
             amount_in,
             timeout,
+            transport_factory,
             _state_enum: Default::default(),
         }
     }
 }
 
 #[cfg(feature = "migration")]
-impl<SwapTask, SEnum> TransferInFinish<SwapTask, SEnum>
+impl<SwapTask, SEnum, RemoteLeaseTransportFactory>
+    TransferInFinish<SwapTask, SEnum, RemoteLeaseTransportFactory>
 where
     SwapTask: SwapTaskT,
 {
-    pub fn into_init(self) -> TransferInInit<SwapTask, SEnum> {
-        TransferInInit::new(self.spec, self.amount_in)
+    pub fn into_init(self) -> TransferInInit<SwapTask, SEnum, RemoteLeaseTransportFactory> {
+        TransferInInit::new(self.spec, self.amount_in, self.transport_factory)
     }
 }
 
 #[cfg(feature = "migration")]
-impl<SwapTask, SwapTaskNew, SEnum, SEnumNew> _MigrateSpec<SwapTask, SwapTaskNew, SEnumNew>
-    for TransferInFinish<SwapTask, SEnum>
+impl<SwapTask, SwapTaskNew, SEnum, SEnumNew, RemoteLeaseTransportFactory>
+    _MigrateSpec<SwapTask, SwapTaskNew, SEnumNew>
+    for TransferInFinish<SwapTask, SEnum, RemoteLeaseTransportFactory>
 where
     SwapTask: SwapTaskT,
     SwapTaskNew: SwapTaskT<OutG = SwapTask::OutG>,
 {
-    type Out = TransferInFinish<SwapTaskNew, SEnumNew>;
+    type Out = TransferInFinish<SwapTaskNew, SEnumNew, RemoteLeaseTransportFactory>;
 
     fn migrate_spec<MigrateFn>(self, migrate_fn: MigrateFn) -> Self::Out
     where
         MigrateFn: FnOnce(SwapTask) -> SwapTaskNew,
     {
-        Self::Out::new(migrate_fn(self.spec), self.amount_in, self.timeout)
+        Self::Out::new(
+            migrate_fn(self.spec),
+            self.amount_in,
+            self.timeout,
+            self.transport_factory,
+        )
     }
 }
 
 #[cfg(feature = "migration")]
-impl<SwapTask, R, SEnum> _InspectSpec<SwapTask, R> for TransferInFinish<SwapTask, SEnum>
+impl<SwapTask, R, SEnum, RemoteLeaseTransportFactory> _InspectSpec<SwapTask, R>
+    for TransferInFinish<SwapTask, SEnum, RemoteLeaseTransportFactory>
 where
     SwapTask: SwapTaskT,
 {
@@ -99,38 +112,45 @@ where
     }
 }
 
-impl<SwapTask, SEnum> TransferInFinish<SwapTask, SEnum>
+impl<SwapTask, SEnum, RemoteLeaseTransportFactory>
+    TransferInFinish<SwapTask, SEnum, RemoteLeaseTransportFactory>
 where
     SwapTask: SwapTaskT,
+    RemoteLeaseTransportFactory:
+        RemoteLeaseTransportFactoryT<TopG = <SwapTask::InG as Group>::TopG>,
     Self: Into<SEnum>,
-    TransferInInit<SwapTask, SEnum>: Into<SEnum>,
+    TransferInInit<SwapTask, SEnum, RemoteLeaseTransportFactory>: Into<SEnum>,
 {
     pub(super) fn try_complete(self, querier: QuerierWrapper<'_>, env: Env) -> HandlerResult<Self> {
-        struct FinishOrTryAgainCmd<'querier, SwapTask, Handler>
+        struct FinishOrTryAgainCmd<'querier, SwapTask, Handler, RemoteLeaseTransportFactory>
         where
             SwapTask: SwapTaskT,
         {
             amount_in: CoinDTO<SwapTask::OutG>,
             timeout: Instant,
+            transport_factory: RemoteLeaseTransportFactory,
             querier: QuerierWrapper<'querier>,
             env: Env,
             _task: PhantomData<SwapTask>,
             _handler: PhantomData<Handler>,
         }
 
-        impl<'querier, SwapTask, Handler> FinishOrTryAgainCmd<'querier, SwapTask, Handler>
+        impl<'querier, SwapTask, Handler, RemoteLeaseTransportFactory>
+            FinishOrTryAgainCmd<'querier, SwapTask, Handler, RemoteLeaseTransportFactory>
         where
             SwapTask: SwapTaskT,
         {
             fn from(
                 amount_in: CoinDTO<SwapTask::OutG>,
                 timeout: Instant,
+                transport_factory: RemoteLeaseTransportFactory,
                 querier: QuerierWrapper<'querier>,
                 env: Env,
             ) -> Self {
                 Self {
                     amount_in,
                     timeout,
+                    transport_factory,
                     querier,
                     env,
                     _task: PhantomData,
@@ -139,18 +159,24 @@ where
             }
         }
 
-        impl<SwapTask, Handler> FinishOrTryAgainCmd<'_, SwapTask, Handler>
+        impl<SwapTask, Handler, RemoteLeaseTransportFactory>
+            FinishOrTryAgainCmd<'_, SwapTask, Handler, RemoteLeaseTransportFactory>
         where
             SwapTask: SwapTaskT,
             Handler: HandlerT<SwapResult = SwapTask::Result>,
-            TransferInInit<SwapTask, Handler::Response>: Into<Handler::Response>,
-            TransferInFinish<SwapTask, Handler::Response>: Into<Handler::Response>,
+            RemoteLeaseTransportFactory:
+                RemoteLeaseTransportFactoryT<TopG = <SwapTask::InG as Group>::TopG>,
+            TransferInInit<SwapTask, Handler::Response, RemoteLeaseTransportFactory>:
+                Into<Handler::Response>,
+            TransferInFinish<SwapTask, Handler::Response, RemoteLeaseTransportFactory>:
+                Into<Handler::Response>,
         {
             fn try_again(self, spec: SwapTask) -> HandlerResult<Handler> {
                 let now = self.env.block.time.into_instant();
                 let emitter = self.emit_ok(&spec);
                 if now >= self.timeout {
-                    let next_state = TransferInInit::new(spec, self.amount_in);
+                    let next_state =
+                        TransferInInit::new(spec, self.amount_in, self.transport_factory);
                     next_state
                         .enter(now, self.querier)
                         .map(|batch| MessageResponse::messages_with_event(batch, emitter))
@@ -172,17 +198,26 @@ where
                     .emit_coin_dto("amount", &self.amount_in)
             }
 
-            fn back_to_spec(self, spec: SwapTask) -> TransferInFinish<SwapTask, Handler::Response> {
-                TransferInFinish::new(spec, self.amount_in, self.timeout)
+            fn back_to_spec(
+                self,
+                spec: SwapTask,
+            ) -> TransferInFinish<SwapTask, Handler::Response, RemoteLeaseTransportFactory>
+            {
+                TransferInFinish::new(spec, self.amount_in, self.timeout, self.transport_factory)
             }
         }
 
-        impl<SwapTask, Handler> WithOutputTask<SwapTask> for FinishOrTryAgainCmd<'_, SwapTask, Handler>
+        impl<SwapTask, Handler, RemoteLeaseTransportFactory> WithOutputTask<SwapTask>
+            for FinishOrTryAgainCmd<'_, SwapTask, Handler, RemoteLeaseTransportFactory>
         where
             SwapTask: SwapTaskT,
             Handler: HandlerT<SwapResult = SwapTask::Result>,
-            TransferInInit<SwapTask, Handler::Response>: Into<Handler::Response>,
-            TransferInFinish<SwapTask, Handler::Response>: Into<Handler::Response>,
+            RemoteLeaseTransportFactory:
+                RemoteLeaseTransportFactoryT<TopG = <SwapTask::InG as Group>::TopG>,
+            TransferInInit<SwapTask, Handler::Response, RemoteLeaseTransportFactory>:
+                Into<Handler::Response>,
+            TransferInFinish<SwapTask, Handler::Response, RemoteLeaseTransportFactory>:
+                Into<Handler::Response>,
         {
             type Output = HandlerResult<Handler>;
 
@@ -218,17 +253,21 @@ where
         self.spec.into_output_task(FinishOrTryAgainCmd::from(
             self.amount_in,
             self.timeout,
+            self.transport_factory,
             querier,
             env,
         ))
     }
 }
 
-impl<SwapTask, SEnum> HandlerT for TransferInFinish<SwapTask, SEnum>
+impl<SwapTask, SEnum, RemoteLeaseTransportFactory> HandlerT
+    for TransferInFinish<SwapTask, SEnum, RemoteLeaseTransportFactory>
 where
     SwapTask: SwapTaskT,
+    RemoteLeaseTransportFactory:
+        RemoteLeaseTransportFactoryT<TopG = <SwapTask::InG as Group>::TopG>,
     Self: Into<SEnum>,
-    TransferInInit<SwapTask, SEnum>: Into<SEnum>,
+    TransferInInit<SwapTask, SEnum, RemoteLeaseTransportFactory>: Into<SEnum>,
 {
     type Response = SEnum;
     type SwapResult = SwapTask::Result;
@@ -257,7 +296,8 @@ where
     }
 }
 
-impl<SwapTask, SEnum> Contract for TransferInFinish<SwapTask, SEnum>
+impl<SwapTask, SEnum, RemoteLeaseTransportFactory> Contract
+    for TransferInFinish<SwapTask, SEnum, RemoteLeaseTransportFactory>
 where
     SwapTask: SwapTaskT + ContractInSwap<StateResponse = <SwapTask as SwapTaskT>::StateResponse>,
 {
@@ -274,7 +314,8 @@ where
     }
 }
 
-impl<SwapTask, ForwardToInnerMsg> Display for TransferInFinish<SwapTask, ForwardToInnerMsg>
+impl<SwapTask, ForwardToInnerMsg, RemoteLeaseTransportFactory> Display
+    for TransferInFinish<SwapTask, ForwardToInnerMsg, RemoteLeaseTransportFactory>
 where
     SwapTask: SwapTaskT,
 {

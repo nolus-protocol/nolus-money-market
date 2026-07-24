@@ -28,7 +28,6 @@ mod transfer_in;
 mod transfer_in_finish;
 mod transfer_in_init;
 mod transfer_out;
-mod trx;
 
 pub type TransferOutRespDelivery<
     SwapTask,
@@ -44,8 +43,15 @@ pub type TransferOutRespDelivery<
 pub type SwapExactInRespDelivery<SwapTask, SEnum, RemoteLeaseTransportFactory, ForwardToInnerMsg> =
     ResponseDelivery<SwapExactIn<SwapTask, SEnum, RemoteLeaseTransportFactory>, ForwardToInnerMsg>;
 
-pub type TransferInInitRespDelivery<SwapTask, SEnum, ForwardToInnerMsg> =
-    ResponseDelivery<TransferInInit<SwapTask, SEnum>, ForwardToInnerMsg>;
+pub type TransferInInitRespDelivery<
+    SwapTask,
+    SEnum,
+    RemoteLeaseTransportFactory,
+    ForwardToInnerMsg,
+> = ResponseDelivery<
+    TransferInInit<SwapTask, SEnum, RemoteLeaseTransportFactory>,
+    ForwardToInnerMsg,
+>;
 
 fn forward_to_inner<H, ForwardToInnerMsg, SEnum>(
     inner: H,

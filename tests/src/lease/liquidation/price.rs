@@ -6,7 +6,6 @@ use finance::{
     zero::Zero as _,
 };
 use lease::api::query::StateResponse;
-use platform::coin_legacy;
 use sdk::{
     cosmwasm_std::{Addr, Event},
     cw_multi_test::AppResponse,
@@ -15,11 +14,10 @@ use sdk::{
 
 use crate::{
     common::{
-        self, CwCoin, USER, ibc, lease as common_lease,
+        self, USER, lease as common_lease,
         leaser::{self, Instantiator as LeaserInstantiator},
         remote_lease_controller_stub::SwapFill,
         swap,
-        test_case::TestCase,
     },
     lease as lease_mod,
 };
@@ -81,8 +79,6 @@ fn full_liquidation() {
 
     let reserve: Addr = test_case.address_book.reserve().clone();
 
-    let ica_addr: Addr = TestCase::stub_pda(1);
-
     let lease_amount: Amount = 2857142857142;
     let borrowed_amount: Amount = 1857142857142;
     let liq_outcome = borrowed_amount - 11123; // to trigger an interaction with Reserve
@@ -103,26 +99,16 @@ fn full_liquidation() {
     );
 
     // the base is chosen to be close to the asset amount to trigger a full liquidation
-    let mut response = lease_mod::deliver_new_price(
+    let response = lease_mod::deliver_new_price(
         &mut test_case,
         common::coin(lease_amount - 2),
         common::coin(borrowed_amount),
     );
 
-    // The liquidation sell-asset swap fired inline on the price delivery; the
-    // lease (local-output) has emitted the transfer-in of the LPN proceeds.
-    let transfer_amount: CwCoin = ibc::expect_remote_transfer(
-        &mut response,
-        TestCase::DEX_CONNECTION_ID,
-        TestCase::LEASE_ICA_ID,
-    );
-
+    // The liquidation sell-asset swap and the proceeds transfer-out fired inline
+    // on the price delivery; the lease (local-output) is now in TransferInFinish,
+    // polling its bank balance for the returning LPN proceeds.
     let _ = response.unwrap_response();
-
-    assert_eq!(
-        transfer_amount,
-        coin_legacy::to_cosmwasm_on_dex(LpnCoin::new(liq_outcome))
-    );
 
     // Fidelity: the swap input is the full liquidated collateral.
     let captured = swap::captured(&test_case.app, &controller);
@@ -131,11 +117,18 @@ fn full_liquidation() {
         swap::token_in(&captured),
     );
 
+    // Fidelity: the emitted transfer-out returns exactly the LPN proceeds.
+    assert_eq!(
+        Into::<CoinDTO<PaymentGroup>>::into(LpnCoin::new(liq_outcome)),
+        swap::captured_transfer_out(&test_case.app, &controller),
+    );
+
+    let time_alarms = test_case.address_book.time_alarms().clone();
     let response: AppResponse = swap::deliver_transfer_in(
         &mut test_case.app,
-        ica_addr,
+        time_alarms,
         lease_addr.clone(),
-        &transfer_amount,
+        &common::cwcoin(LpnCoin::new(liq_outcome)),
     )
     .unwrap_response();
 

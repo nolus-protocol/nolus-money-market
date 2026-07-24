@@ -49,8 +49,6 @@ impl TestCase<(), (), (), (), (), (), (), ()> {
 
     pub const LEASER_IBC_CHANNEL: &'static str = "channel-0";
 
-    pub const LEASE_ICA_ID: &'static str = "0";
-
     pub const DEFAULT_LPP_MIN_UTILIZATION: Percent100 = Percent100::ZERO;
 
     /// The Solana-side remote-lease PDA the controller stand-in mints for the

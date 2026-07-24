@@ -3,13 +3,15 @@ use std::marker::PhantomData;
 
 use serde::{Deserialize, Serialize};
 
+use currency::Group;
 use finance::{coin::CoinDTO, duration::Duration, instant::Instant};
 use platform::batch::Batch;
 use sdk::cosmwasm_std::{Binary, Env, QuerierWrapper};
 
 use crate::{
-    Connectable, ConnectionParams, Contract, ContractInSwap, Enterable, IBC_TIMEOUT, Stage,
-    TimeAlarm, error::Result,
+    Connectable, ConnectionParams, Contract, ContractInSwap, Enterable, Error, IBC_TIMEOUT,
+    RemoteLeaseTransport as RemoteLeaseTransportT,
+    RemoteLeaseTransportFactory as RemoteLeaseTransportFactoryT, Stage, TimeAlarm, error::Result,
 };
 
 #[cfg(feature = "migration")]
@@ -19,55 +21,67 @@ use super::{
     response::{ContinueResult, Handler, Result as HandlerResult},
     timeout,
     transfer_in_finish::TransferInFinish,
-    trx::TransferInTrx,
 };
 use cw_time::IntoInstant;
 
 /// Transfer in a coin from DEX
 ///
 #[derive(Serialize, Deserialize)]
-pub struct TransferInInit<SwapTask, SEnum>
+pub struct TransferInInit<SwapTask, SEnum, RemoteLeaseTransportFactory>
 where
     SwapTask: SwapTaskT,
 {
     spec: SwapTask,
     amount_in: CoinDTO<SwapTask::OutG>,
+    transport_factory: RemoteLeaseTransportFactory,
     #[serde(skip)]
     _state_enum: PhantomData<SEnum>,
 }
 
-impl<SwapTask, SEnum> TransferInInit<SwapTask, SEnum>
+impl<SwapTask, SEnum, RemoteLeaseTransportFactory>
+    TransferInInit<SwapTask, SEnum, RemoteLeaseTransportFactory>
 where
     SwapTask: SwapTaskT,
 {
-    pub fn new(spec: SwapTask, amount_in: CoinDTO<SwapTask::OutG>) -> Self {
+    pub fn new(
+        spec: SwapTask,
+        amount_in: CoinDTO<SwapTask::OutG>,
+        transport_factory: RemoteLeaseTransportFactory,
+    ) -> Self {
         Self {
             spec,
             amount_in,
+            transport_factory,
             _state_enum: Default::default(),
         }
     }
 }
 
 #[cfg(feature = "migration")]
-impl<SwapTask, SwapTaskNew, SEnum, SEnumNew> _MigrateSpec<SwapTask, SwapTaskNew, SEnumNew>
-    for TransferInInit<SwapTask, SEnum>
+impl<SwapTask, SwapTaskNew, SEnum, SEnumNew, RemoteLeaseTransportFactory>
+    _MigrateSpec<SwapTask, SwapTaskNew, SEnumNew>
+    for TransferInInit<SwapTask, SEnum, RemoteLeaseTransportFactory>
 where
     SwapTask: SwapTaskT,
     SwapTaskNew: SwapTaskT<OutG = SwapTask::OutG>,
 {
-    type Out = TransferInInit<SwapTaskNew, SEnumNew>;
+    type Out = TransferInInit<SwapTaskNew, SEnumNew, RemoteLeaseTransportFactory>;
 
     fn migrate_spec<MigrateFn>(self, migrate_fn: MigrateFn) -> Self::Out
     where
         MigrateFn: FnOnce(SwapTask) -> SwapTaskNew,
     {
-        Self::Out::new(migrate_fn(self.spec), self.amount_in)
+        Self::Out::new(
+            migrate_fn(self.spec),
+            self.amount_in,
+            self.transport_factory,
+        )
     }
 }
 
 #[cfg(feature = "migration")]
-impl<SwapTask, R, SEnum> _InspectSpec<SwapTask, R> for TransferInInit<SwapTask, SEnum>
+impl<SwapTask, R, SEnum, RemoteLeaseTransportFactory> _InspectSpec<SwapTask, R>
+    for TransferInInit<SwapTask, SEnum, RemoteLeaseTransportFactory>
 where
     SwapTask: SwapTaskT,
 {
@@ -79,34 +93,47 @@ where
     }
 }
 
-impl<SwapTask, SEnum> TransferInInit<SwapTask, SEnum>
+impl<SwapTask, SEnum, RemoteLeaseTransportFactory>
+    TransferInInit<SwapTask, SEnum, RemoteLeaseTransportFactory>
 where
     SwapTask: SwapTaskT,
+    RemoteLeaseTransportFactory:
+        RemoteLeaseTransportFactoryT<TopG = <SwapTask::InG as Group>::TopG>,
 {
     fn enter_state(&self, now: Instant) -> Result<Batch> {
-        let mut sender = TransferInTrx::new(self.spec.dex_account(), now);
-        sender.send(&self.amount_in);
-        Ok(sender.into())
+        let amount = self
+            .amount_in
+            .into_super_group::<<SwapTask::OutG as Group>::TopG>();
+        self.transport_factory
+            .transport(&self.spec, now)
+            .transfer_back(&amount)
+            .map_err(Error::Transport)
     }
 }
 
-impl<SwapTask, SEnum> TransferInInit<SwapTask, SEnum>
+impl<SwapTask, SEnum, RemoteLeaseTransportFactory>
+    TransferInInit<SwapTask, SEnum, RemoteLeaseTransportFactory>
 where
     SwapTask: SwapTaskT,
+    RemoteLeaseTransportFactory:
+        RemoteLeaseTransportFactoryT<TopG = <SwapTask::InG as Group>::TopG>,
     Self: Into<SEnum>,
-    TransferInFinish<SwapTask, SEnum>: Into<SEnum>,
+    TransferInFinish<SwapTask, SEnum, RemoteLeaseTransportFactory>: Into<SEnum>,
 {
     fn on_response(self, querier: QuerierWrapper<'_>, env: Env) -> HandlerResult<Self> {
-        let finish: TransferInFinish<SwapTask, SEnum> = TransferInFinish::new(
-            self.spec,
-            self.amount_in,
-            env.block.time.into_instant() + IBC_TIMEOUT,
-        );
+        let finish: TransferInFinish<SwapTask, SEnum, RemoteLeaseTransportFactory> =
+            TransferInFinish::new(
+                self.spec,
+                self.amount_in,
+                env.block.time.into_instant() + IBC_TIMEOUT,
+                self.transport_factory,
+            );
         finish.try_complete(querier, env).map_into()
     }
 }
 
-impl<SwapTask, SEnum> Connectable for TransferInInit<SwapTask, SEnum>
+impl<SwapTask, SEnum, RemoteLeaseTransportFactory> Connectable
+    for TransferInInit<SwapTask, SEnum, RemoteLeaseTransportFactory>
 where
     SwapTask: SwapTaskT,
 {
@@ -115,20 +142,26 @@ where
     }
 }
 
-impl<SwapTask, SEnum> Enterable for TransferInInit<SwapTask, SEnum>
+impl<SwapTask, SEnum, RemoteLeaseTransportFactory> Enterable
+    for TransferInInit<SwapTask, SEnum, RemoteLeaseTransportFactory>
 where
     SwapTask: SwapTaskT,
+    RemoteLeaseTransportFactory:
+        RemoteLeaseTransportFactoryT<TopG = <SwapTask::InG as Group>::TopG>,
 {
     fn enter(&self, now: Instant, _querier: QuerierWrapper<'_>) -> Result<Batch> {
         self.enter_state(now)
     }
 }
 
-impl<SwapTask, SEnum> Handler for TransferInInit<SwapTask, SEnum>
+impl<SwapTask, SEnum, RemoteLeaseTransportFactory> Handler
+    for TransferInInit<SwapTask, SEnum, RemoteLeaseTransportFactory>
 where
     SwapTask: SwapTaskT,
+    RemoteLeaseTransportFactory:
+        RemoteLeaseTransportFactoryT<TopG = <SwapTask::InG as Group>::TopG>,
     Self: Into<SEnum>,
-    TransferInFinish<SwapTask, SEnum>: Into<SEnum>,
+    TransferInFinish<SwapTask, SEnum, RemoteLeaseTransportFactory>: Into<SEnum>,
 {
     type Response = SEnum;
     type SwapResult = SwapTask::Result;
@@ -159,7 +192,8 @@ where
     }
 }
 
-impl<SwapTask, SEnum> Contract for TransferInInit<SwapTask, SEnum>
+impl<SwapTask, SEnum, RemoteLeaseTransportFactory> Contract
+    for TransferInInit<SwapTask, SEnum, RemoteLeaseTransportFactory>
 where
     SwapTask: SwapTaskT + ContractInSwap<StateResponse = <SwapTask as SwapTaskT>::StateResponse>,
 {
@@ -176,7 +210,8 @@ where
     }
 }
 
-impl<SwapTask, ForwardToInnerMsg> Display for TransferInInit<SwapTask, ForwardToInnerMsg>
+impl<SwapTask, ForwardToInnerMsg, RemoteLeaseTransportFactory> Display
+    for TransferInInit<SwapTask, ForwardToInnerMsg, RemoteLeaseTransportFactory>
 where
     SwapTask: SwapTaskT,
 {
@@ -188,7 +223,8 @@ where
     }
 }
 
-impl<SwapTask, SEnum> TimeAlarm for TransferInInit<SwapTask, SEnum>
+impl<SwapTask, SEnum, RemoteLeaseTransportFactory> TimeAlarm
+    for TransferInInit<SwapTask, SEnum, RemoteLeaseTransportFactory>
 where
     SwapTask: SwapTaskT,
 {

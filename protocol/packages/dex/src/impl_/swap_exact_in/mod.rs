@@ -168,6 +168,7 @@ where
             .into_output_task(
                 DecodeThenTransferIn::<'_, _, _, RemoteLeaseTransportFactory>::from(
                     resp.as_slice(),
+                    self.transport_factory,
                 ),
             )
             .and_then(|next_state| {

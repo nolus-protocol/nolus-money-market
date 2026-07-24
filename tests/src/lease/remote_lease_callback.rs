@@ -20,7 +20,7 @@
 use access_control::error::Error as AccessError;
 use currencies::PaymentGroup;
 use dex::Error as DexError;
-use finance::{coin::Coin, fraction::Unit};
+use finance::coin::Coin;
 use lease::{
     api::{
         ExecuteMsg,
