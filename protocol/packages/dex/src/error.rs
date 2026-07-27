@@ -22,9 +22,6 @@ pub enum Error {
     IncorrectSwapOutCurrency(String, String, finance::error::Error),
 
     #[error("[Dex] {0}")]
-    OracleSwap(#[from] oracle::api::swap::Error),
-
-    #[error("[Dex] {0}")]
     MinOutput(oracle::stub::Error),
 
     #[error("[Dex] {0}")]

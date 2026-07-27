@@ -2,7 +2,7 @@ lints = { workspace = true }
 
 [package]
 name = "dex"
-version = "0.3.1"
+version = "0.3.2"
 edition.workspace = true
 authors.workspace = true
 license.workspace = true
@@ -25,7 +25,7 @@ cw-time = { workspace = true }
 access-control = { workspace = true }
 currency = { workspace = true }
 finance = { workspace = true }
-oracle = { workspace = true, features = [ "stub_price", "stub_swap",] }
+oracle = { workspace = true, features = [ "stub_price",] }
 oracle-platform = { workspace = true, optional = true }
 remote_lease = { workspace = true }
 timealarms = { workspace = true, features = ["stub"] }

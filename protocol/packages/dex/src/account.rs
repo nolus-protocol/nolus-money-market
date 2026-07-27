@@ -13,8 +13,8 @@ pub struct Account {
     // converted from the Remote Lease Id, used as destination for outgoing transfers
     // cannot use Remote Account Id because `dex` is protocol-agnostic
     remote: RemoteAccount,
-    /// The Remote Lease controller contract that opened this account,
-    /// retained for the upcoming callback-authorization path.
+    /// The Remote Lease controller contract that opened this account;
+    /// outgoing swap and transfer-out messages are addressed to it.
     remote_controller: Addr,
     dex: ConnectionParams,
 }

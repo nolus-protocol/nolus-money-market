@@ -62,17 +62,12 @@ pub fn migrate(
     _env: Env,
     _msg: ProtocolMigrationMessage<MigrateMsg>,
 ) -> ContractResult<CwResponse> {
-    // v10 reshapes the persisted `LeaseDTO` to carry the Solana-side
-    // remote-lease PDA as a non-optional field and adds the transport
-    // factories to the `TransferOut` and `SwapExactIn` persisted layouts,
-    // so a pre-v10 lease cannot
-    // be deserialised under the new layout. A v9 lease has no meaningful
-    // `remote_lease_id` to synthesise — its `dex_account` is an ICA host on
-    // the DEX chain, not a Solana PDA — so a real v9→v10 migration would
-    // have to invent a sentinel and leave the lease permanently Cosmos-side
-    // only. Mainnet v9-lease population is zero (plan §10.A.1), so no
-    // in-flight state is at risk there; reject any migrate attempt loudly
-    // rather than silently failing the first post-upgrade load.
+    // v10 adds the transport factories to the `TransferOut` and
+    // `SwapExactIn` persisted layouts, so a pre-v10 lease cannot be
+    // deserialised under the new layout. Mainnet v9-lease population is
+    // zero (plan §10.A.1), so no in-flight state is at risk there; reject
+    // any migrate attempt loudly rather than silently failing the first
+    // post-upgrade load.
     //
     // Operational posture for non-mainnet (devnet/testnet/local): drain all
     // v9 leases to a terminal state before upgrading the lease code to v10.

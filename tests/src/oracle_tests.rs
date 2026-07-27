@@ -312,38 +312,6 @@ fn test_config_update() {
 }
 
 #[test]
-fn test_swap_path() {
-    let mut test_case = create_test_case();
-
-    update_tree(&mut test_case, swap_tree());
-
-    let resp: Vec<SwapTarget<PriceCurrencies>> = test_case
-        .app
-        .query()
-        .query_wasm_smart(
-            test_case.address_book.oracle().clone(),
-            &OracleQ::<PriceCurrencies>::SwapPath {
-                from: currency::dto::<BaseC, _>(),
-                to: currency::dto::<PaymentC1, _>(),
-            },
-        )
-        .unwrap();
-
-    let expect = vec![
-        SwapTarget {
-            pool_id: 1,
-            target: currency::dto::<Lpn, _>(),
-        },
-        SwapTarget {
-            pool_id: 11,
-            target: currency::dto::<PaymentC1, _>(),
-        },
-    ];
-
-    assert_eq!(resp, expect);
-}
-
-#[test]
 fn test_query_swap_tree() {
     let mut test_case = create_test_case();
 

@@ -70,48 +70,6 @@ where
             .map(|iter| iter.map(|node| &node.value().target))
     }
 
-    pub fn load_swap_path(
-        &self,
-        from: &CurrencyDTO<PriceG>,
-        to: &CurrencyDTO<PriceG>,
-    ) -> Result<Vec<SwapTarget<PriceG>>, PriceG> {
-        let path_from = self.internal_load_path(from)?;
-
-        let mut path_to: Vec<_> = self.internal_load_path(to)?.collect();
-
-        let mut path = vec![];
-
-        path.extend(
-            path_from
-                .take_while(|node| {
-                    if let Some((index, _)) = path_to
-                        .iter()
-                        .enumerate()
-                        .rfind(|&(_, to_node)| node.value() == to_node.value())
-                    {
-                        path_to.truncate(index);
-
-                        return false;
-                    }
-
-                    true
-                })
-                .filter_map(|node| {
-                    Some(SwapTarget {
-                        pool_id: node.value().pool_id,
-                        target: node.parent()?.value().target,
-                    })
-                }),
-        );
-
-        path_to
-            .into_iter()
-            .rev()
-            .for_each(|node| path.push(node.value().clone()));
-
-        Ok(path)
-    }
-
     pub fn swap_pairs_df(&self) -> impl Iterator<Item = SwapLeg<PriceG>> {
         self.tree
             .iter()
@@ -358,67 +316,6 @@ mod tests {
                 &currency_dto::<TheCurrency>(),
             ]
         );
-    }
-
-    #[test]
-    fn test_load_swap_path() {
-        let tree = SupportedPairs::new::<TheCurrency>(test_case().into_tree()).unwrap();
-
-        assert!(
-            tree.load_swap_path(&currency_dto::<LeaseC5>(), &currency_dto::<LeaseC5>())
-                .unwrap()
-                .is_empty()
-        );
-
-        let resp = tree
-            .load_swap_path(&currency_dto::<LeaseC5>(), &currency_dto::<TheCurrency>())
-            .unwrap();
-        let expect = vec![
-            SwapTarget {
-                pool_id: 5,
-                target: currency_dto::<LeaseC1>(),
-            },
-            SwapTarget {
-                pool_id: 1,
-                target: currency_dto::<LeaseC2>(),
-            },
-            SwapTarget {
-                pool_id: 2,
-                target: currency_dto::<TheCurrency>(),
-            },
-        ];
-
-        assert_eq!(resp, expect);
-
-        let resp = tree
-            .load_swap_path(&currency_dto::<Nls>(), &currency_dto::<LeaseC5>())
-            .unwrap();
-        let expect = vec![
-            SwapTarget {
-                pool_id: 6,
-                target: currency_dto::<LeaseC1>(),
-            },
-            SwapTarget {
-                pool_id: 5,
-                target: currency_dto::<LeaseC5>(),
-            },
-        ];
-        assert_eq!(resp, expect);
-
-        let resp = tree
-            .load_swap_path(&currency_dto::<LeaseC2>(), &currency_dto::<LeaseC4>())
-            .unwrap();
-        let expect = vec![
-            SwapTarget {
-                pool_id: 2,
-                target: currency_dto::<TheCurrency>(),
-            },
-            SwapTarget {
-                pool_id: 4,
-                target: currency_dto::<LeaseC4>(),
-            },
-        ];
-        assert_eq!(resp, expect);
     }
 
     #[test]
