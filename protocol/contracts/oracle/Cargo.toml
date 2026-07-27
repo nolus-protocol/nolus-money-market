@@ -2,7 +2,7 @@ lints = { workspace = true }
 
 [package]
 name = "oracle"
-version = "0.6.3"
+version = "0.7.0"
 edition.workspace = true
 authors.workspace = true
 license.workspace = true
@@ -12,14 +12,13 @@ rust-version.workspace = true
 combinations = [
     { tags = ["build", "@agnostic"], always-on = ["contract"], include-rest = false },
     { tags = ["ci", "@agnostic"], feature-groups = ["contract"], include-rest = false },
-    { tags = ["ci", "@agnostic"], feature-groups = ["stub_alarms", "stub_price", "stub_swap"], include-rest = false, generics = { "stubs" = ["stub_alarms", "stub_price", "stub_swap"] } },
+    { tags = ["ci", "@agnostic"], feature-groups = ["stub_alarms", "stub_price"], include-rest = false, generics = { "stubs" = ["stub_alarms", "stub_price"] } },
 ]
 
 [package.metadata.cargo-each.feature-groups]
 contract = { members = ["contract", "contract_testing", "internal.test.contract"], at-least-one = true, mutually-exclusive = true }
 stub_alarms = { members = ["stub_alarms", "stub_alarms_testing", "internal.test.stub_alarms"], at-least-one = false, mutually-exclusive = true }
 stub_price = { members = ["stub_price", "stub_price_testing", "internal.test.stub_price"], at-least-one = false, mutually-exclusive = true }
-stub_swap = { members = ["stub_swap", "stub_swap_testing", "internal.test.stub_swap"], at-least-one = false, mutually-exclusive = true }
 
 [lib]
 crate-type = ["cdylib", "rlib"]
@@ -29,7 +28,6 @@ contract = [
     "cosmwasm-std/exports",
     "stub_alarms",
     "stub_price",
-    "stub_swap",
     "dep:cosmwasm-std",
     "dep:currencies",
     "dep:cw-time",
@@ -43,7 +41,7 @@ contract_testing = [
     "contract",
     "stub_alarms_testing",
     "stub_price_testing",
-    "stub_swap_testing",
+    "currencies/testing",
     "marketprice/testing",
 ]
 "internal.test.contract" = [
@@ -81,22 +79,6 @@ stub_price_testing = [
 ]
 "internal.test.stub_price" = [
     "stub_price_testing",
-]
-stub_swap = [
-    "dep:currency",
-    "dep:oracle-platform",
-    "dep:sdk",
-    "dep:serde",
-    "dep:thiserror",
-]
-stub_swap_testing = [
-    "stub_swap",
-    "dep:currencies",
-    "currencies/testing",
-    "dep:tree",
-]
-"internal.test.stub_swap" = [
-    "stub_swap_testing",
 ]
 
 [dependencies]

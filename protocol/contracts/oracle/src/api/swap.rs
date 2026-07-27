@@ -1,40 +1,9 @@
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::result::Result as StdResult;
 
-use thiserror::Error;
-
 use currency::{CurrencyDTO, Group};
-use sdk::cosmwasm_std::StdError;
 
 pub type PoolId = u64;
-
-#[derive(Serialize, Deserialize, Clone, PartialEq, Eq)]
-#[cfg_attr(any(test, feature = "stub_swap_testing"), derive(Debug))]
-#[serde(
-    deny_unknown_fields,
-    rename_all = "snake_case",
-    bound(serialize = "", deserialize = "")
-)]
-pub enum QueryMsg<PriceCurrencies>
-where
-    PriceCurrencies: Group,
-{
-    /// Provides a path in the swap tree between two arbitrary currencies
-    ///
-    /// Returns [`Vec<SwapTarget>`]
-    SwapPath {
-        from: CurrencyDTO<PriceCurrencies>,
-        to: CurrencyDTO<PriceCurrencies>,
-    },
-}
-
-pub type Result<T> = StdResult<T, Error>;
-
-#[derive(Error, Debug)]
-pub enum Error {
-    #[error("[Oracle; Stub] Failed to query swap path! Cause: {0}")]
-    StubSwapPathQuery(StdError),
-}
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct SwapTarget<G>

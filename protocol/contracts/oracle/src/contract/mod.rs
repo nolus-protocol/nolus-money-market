@@ -132,10 +132,6 @@ pub fn query(
 
             to_json_binary(&PricesResponse { prices })
         }
-        QueryMsg::SwapPath { from, to } => to_json_binary(
-            &SupportedPairs::<PriceCurrencies, BaseCurrency>::load(deps.storage)?
-                .load_swap_path(&from, &to)?,
-        ),
         QueryMsg::SwapTree {} => to_json_binary(&SwapTreeResponse::<PriceCurrencies> {
             tree: SupportedPairs::<PriceCurrencies, BaseCurrency>::load(deps.storage)?
                 .query_swap_tree()
@@ -225,7 +221,7 @@ where
 mod tests {
     use currencies::{
         LeaseGroup, Lpn, Lpns, PaymentGroup,
-        testing::{LeaseC1, PaymentC1, PaymentC9},
+        testing::{LeaseC1, PaymentC9},
     };
     use finance::{
         coin::{Amount, Coin},
@@ -284,20 +280,6 @@ mod tests {
         }];
 
         assert_eq!(expected, value);
-    }
-
-    #[test]
-    fn impl_swap_path() {
-        use crate::api::swap::QueryMsg as QueryMsgApi;
-
-        let from = currency::dto::<PaymentC1, PriceCurrencies>().into_super_group();
-        let to = currency::dto::<Lpn, PriceCurrencies>().into_super_group();
-        let query_impl = QueryMsg::SwapPath { from, to };
-        let query_api = cosmwasm_std::from_json::<QueryMsgApi<PriceCurrencies>>(
-            &cosmwasm_std::to_json_vec(&query_impl).unwrap(),
-        )
-        .unwrap();
-        assert_eq!(QueryMsgApi::SwapPath { from, to }, query_api);
     }
 
     #[test]
