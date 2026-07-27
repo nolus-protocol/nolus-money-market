@@ -5,40 +5,6 @@ use sdk::{
 
 use crate::{error::Error, result::Result};
 
-#[derive(Default)]
-#[cfg_attr(any(test, feature = "testing"), derive(Debug, PartialEq))]
-pub struct Transaction {
-    msgs: Vec<ProtobufAny>,
-}
-
-impl Transaction {
-    pub fn add_message<T, M>(&mut self, msg_type: T, msg: M)
-    where
-        T: Into<String>,
-        M: Message,
-    {
-        let mut buf = Vec::with_capacity(msg.encoded_len());
-        msg.encode_raw(&mut buf);
-
-        self.msgs.push(ProtobufAny::new(msg_type, buf));
-    }
-
-    pub(super) fn into_msgs(self) -> Vec<ProtobufAny> {
-        self.msgs
-    }
-}
-
-#[cfg(feature = "testing")]
-impl IntoIterator for Transaction {
-    type Item = ProtobufAny;
-
-    type IntoIter = std::vec::IntoIter<ProtobufAny>;
-
-    fn into_iter(self) -> Self::IntoIter {
-        self.msgs.into_iter()
-    }
-}
-
 pub fn decode_msg_responses(data: &[u8]) -> Result<impl Iterator<Item = ProtobufAny> + use<>> {
     TxMsgData::decode(data)
         .map(|tx_msg_data| tx_msg_data.msg_responses.into_iter().map(Into::into))
