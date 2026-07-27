@@ -2,14 +2,7 @@ use std::fmt::{Display, Formatter, Result as FmtResult};
 
 use serde::{Deserialize, Serialize};
 
-use finance::duration::Duration;
-use sdk::ica::{IbcFee, InterChainMsg};
-
-use crate::{batch::Batch, error::Error, result::Result, trx::Transaction};
-
-/// Identifier of the ICA account opened by a lease
-/// It is unique for a lease and allows the support of multiple accounts per lease
-const ICA_ACCOUNT_ID: &str = "0";
+use crate::{error::Error, result::Result};
 
 /// Remote Chain Account
 ///
@@ -66,31 +59,4 @@ impl From<String> for ErrorResponse {
     fn from(details: String) -> Self {
         Self { details }
     }
-}
-
-pub fn submit_transaction<Conn, M>(
-    connection: Conn,
-    trx: Transaction,
-    memo: M,
-    timeout: Duration,
-) -> Batch
-where
-    Conn: Into<String>,
-    M: Into<String>,
-{
-    let mut batch = Batch::default();
-
-    batch.schedule_execute_no_reply(InterChainMsg::submit_tx(
-        connection.into(),
-        ICA_ACCOUNT_ID.into(),
-        trx.into_msgs(),
-        memo.into(),
-        timeout.secs(),
-        IbcFee {
-            recv_fee: vec![],
-            ack_fee: vec![],
-            timeout_fee: vec![],
-        },
-    ));
-    batch
 }

@@ -2,8 +2,6 @@ use serde::{Deserialize, Serialize};
 
 use cosmwasm_std::{Binary, Coin as CwCoin, CosmosMsg, CustomMsg};
 
-use crate::api::ProtobufAny;
-
 /// IbcFee defines struct for fees that refund the relayer for `SudoMsg` messages submission.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "snake_case")]
@@ -26,15 +24,6 @@ pub struct RequestPacketTimeoutHeight {
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum InterChainMsg {
-    SubmitTx {
-        connection_id: String,
-        interchain_account_id: String,
-        msgs: Vec<ProtobufAny>,
-        memo: String,
-        timeout: u64,
-        fee: IbcFee,
-    },
-
     IbcTransfer {
         source_port: String,
         source_channel: String,
@@ -46,26 +35,6 @@ pub enum InterChainMsg {
         memo: String,
         fee: IbcFee,
     },
-}
-
-impl InterChainMsg {
-    pub fn submit_tx(
-        connection_id: String,
-        interchain_account_id: String,
-        msgs: Vec<ProtobufAny>,
-        memo: String,
-        timeout: u64,
-        fee: IbcFee,
-    ) -> Self {
-        InterChainMsg::SubmitTx {
-            connection_id,
-            interchain_account_id,
-            msgs,
-            memo,
-            timeout,
-            fee,
-        }
-    }
 }
 
 impl From<InterChainMsg> for CosmosMsg<InterChainMsg> {
