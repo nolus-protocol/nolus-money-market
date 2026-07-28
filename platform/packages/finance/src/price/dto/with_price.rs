@@ -5,7 +5,6 @@ use currency::{AnyVisitorPair, Currency, CurrencyDTO, CurrencyDef, Group, InPool
 use crate::{
     coin::{Coin, CoinDTO},
     error::Result,
-    flatten::Flatten,
     price::Price,
 };
 
@@ -60,7 +59,7 @@ where
         },
     )
     .map_err(Into::into)
-    .flatten_pre_1_89()
+    .flatten()
 }
 
 /// Construct a price and executes a command

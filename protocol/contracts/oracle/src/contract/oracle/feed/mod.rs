@@ -2,10 +2,7 @@ use std::marker::PhantomData;
 
 use currency::{CurrencyDTO, CurrencyDef, Group, MemberOf};
 use finance::instant::Instant;
-use finance::{
-    flatten::Flatten,
-    price::{base::BasePrice, dto::PriceDTO},
-};
+use finance::price::{base::BasePrice, dto::PriceDTO};
 use marketprice::{
     FeederCount, ObservationsReadRepo, ObservationsRepo, config::Config, market_price::PriceFeeds,
 };
@@ -68,7 +65,7 @@ where
                 Some(
                     currency::visit_any_on_currencies(leg.from, leg.to.target, cmd)
                         .map_err(Into::into)
-                        .flatten_pre_1_89()
+                        .flatten()
                         .transpose(),
                 )
             })
