@@ -2,7 +2,6 @@ use serde::{Deserialize, Serialize};
 
 use admin_contract::msg::{MigrationSpec, ProtocolContracts};
 use currency::CurrencyDTO;
-use dex::ConnectionParams;
 use finance::{
     duration::Duration,
     percent::{Percent, Percent100},
@@ -35,7 +34,7 @@ pub struct InstantiateMsg {
     pub lease_due_period: Duration,
     pub lease_max_slippages: MaxSlippages,
     pub lease_admin: Addr,
-    pub dex: ConnectionParams,
+    pub ics20_channel_local: String,
     pub remote_lease_controller: Addr,
     pub expected_instance_ordinal: u16,
 }

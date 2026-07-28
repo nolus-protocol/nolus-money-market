@@ -124,7 +124,7 @@ impl OpenLease {
                     env.contract.address,
                     remote_account,
                     self.new_lease.remote_lease_controller,
-                    self.new_lease.dex,
+                    self.new_lease.ics20_channel_local,
                 );
                 let next = super::buy_asset::start(
                     self.new_lease.form,

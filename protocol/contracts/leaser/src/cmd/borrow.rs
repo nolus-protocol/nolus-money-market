@@ -64,7 +64,7 @@ impl Borrow {
                 time_alarms: config.time_alarms,
                 market_price_oracle: config.market_price_oracle,
             },
-            dex: config.dex,
+            ics20_channel_local: config.ics20_channel_local,
             finalizer,
             remote_lease_controller: config.remote_lease_controller,
             expected_instance_ordinal: config.expected_instance_ordinal,

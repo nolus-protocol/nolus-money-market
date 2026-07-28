@@ -14,7 +14,7 @@ use report_anomaly::ReportAnomalyCmd;
 use sdk::cosmwasm_std::{Binary, Env, QuerierWrapper};
 
 use crate::{
-    AnomalyTreatment, Connectable, ConnectionParams, Contract, ContractInSwap, Enterable,
+    AnomalyTreatment, Contract, ContractInSwap, Enterable,
     RemoteLeaseTransportFactory as RemoteLeaseTransportFactoryT, Stage, SwapTask as SwapTaskT,
     TimeAlarm, TransportOutFactory as TransportOutFactoryT,
     error::Result,
@@ -110,17 +110,6 @@ where
 {
     fn enter(&self, now: Instant, querier: QuerierWrapper<'_>) -> Result<Batch> {
         self.enter_state(now, querier)
-    }
-}
-
-impl<SwapTask, SEnum, RemoteLeaseTransportFactory> Connectable
-    for SwapExactIn<SwapTask, SEnum, RemoteLeaseTransportFactory>
-where
-    SwapTask: SwapTaskT,
-    RemoteLeaseTransportFactory: RemoteLeaseTransportFactoryT,
-{
-    fn dex(&self) -> &ConnectionParams {
-        self.spec.dex_account().dex()
     }
 }
 

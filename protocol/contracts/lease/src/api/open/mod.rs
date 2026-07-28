@@ -3,7 +3,6 @@ use serde::Deserialize;
 use serde::Serialize;
 
 use currency::CurrencyDTO;
-use dex::ConnectionParams;
 use finance::{
     duration::Duration,
     liability::Liability,
@@ -32,8 +31,8 @@ mod unchecked;
 pub struct NewLeaseContract {
     /// An application form for opening a new lease
     pub form: NewLeaseForm,
-    /// Connection parameters of a Dex capable to perform currency swaps
-    pub dex: ConnectionParams,
+    /// The local ICS-20 transfer channel used to push funds out to the DEX
+    pub ics20_channel_local: String,
     /// A contract to be notified when a lease just went into a final state
     ///
     /// The finalizer API should provide all `FinalizerExecuteMsg` variants.

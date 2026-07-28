@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 
 use currency::Group;
 use cw_time::IntoTimestamp;
-use dex::{Connectable, IBC_TIMEOUT, SwapTask, TransportOut, TransportOutFactory};
+use dex::{IBC_TIMEOUT, SwapTask, TransportOut, TransportOutFactory};
 use finance::{coin::CoinDTO, instant::Instant};
 use platform::{bank_ibc::local::Sender as LocalSender, batch::Batch};
 
@@ -17,7 +17,7 @@ impl TransportOutFactory for TransferOutFactory {
         Task: SwapTask,
     {
         Self::TransportImpl::new(LocalSender::new(
-            &task.dex_account().dex().transfer_channel.local_endpoint,
+            task.dex_account().ics20_channel_local(),
             task.dex_account().owner(),
             task.dex_account().remote(),
             (now + IBC_TIMEOUT).into_timestamp(),

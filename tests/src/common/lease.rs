@@ -1,6 +1,5 @@
 use currencies::{LeaseGroup, Lpn};
 use currency::{Currency, CurrencyDTO, CurrencyDef};
-use dex::{ConnectionParams, Ics20Channel};
 use finance::{
     coin::Coin,
     duration::{Duration, Seconds},
@@ -121,7 +120,7 @@ impl Instantiator {
                 time_alarms: addresses.time_alarms,
                 market_price_oracle: addresses.oracle,
             },
-            dex: config.dex,
+            ics20_channel_local: config.ics20_channel_local,
             finalizer: addresses.finalizer,
             remote_lease_controller: addresses.remote_lease_controller,
             expected_instance_ordinal: 1,
@@ -170,7 +169,7 @@ pub(crate) struct InstantiatorConfig {
     pub annual_margin_interest: Percent100,
     pub lease_due_period: Duration,
     // Dex
-    pub dex: ConnectionParams,
+    pub ics20_channel_local: String,
 }
 
 impl Default for InstantiatorConfig {
@@ -188,13 +187,7 @@ impl Default for InstantiatorConfig {
             annual_margin_interest: Percent100::from_permille(31),
             lease_due_period: Duration::from_secs(100),
 
-            dex: ConnectionParams {
-                connection_id: "connection-0".into(),
-                transfer_channel: Ics20Channel {
-                    local_endpoint: "channel-0".into(),
-                    remote_endpoint: "channel-2048".into(),
-                },
-            },
+            ics20_channel_local: "channel-0".into(),
         }
     }
 }
