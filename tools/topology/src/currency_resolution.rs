@@ -45,7 +45,7 @@ impl Topology {
         try_trampoline(
             ResolvedNonHostIbcCurrency {
                 traversed_networks: vec![dex_network],
-                dex_symbol: symbol::Builder::NEW,
+                dex_symbol: symbol::Builder::new(),
                 overriden_symbol: None,
                 currency,
             },
@@ -258,7 +258,7 @@ where
         impl Iterator<Item = [&'traversed_network_id network::Id; 2]>
         + use<'traversed_networks, 'traversed_network_id>,
     ) {
-        let mut bank_symbol = symbol::Builder::NEW;
+        let mut bank_symbol = symbol::Builder::new();
 
         let traversal_start = traversed_networks
             .iter()
