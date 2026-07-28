@@ -2,7 +2,7 @@ use std::collections::HashSet;
 
 use currencies::{LeaseGroup, Lpn, PaymentGroup};
 use currency::{CurrencyDef, MemberOf};
-use dex::{ConnectionParams, Ics20Channel, MaxSlippage};
+use dex::MaxSlippage;
 use finance::{
     coin::Coin,
     duration::Duration,
@@ -126,13 +126,7 @@ impl Instantiator {
             lease_admin: testing::user(LEASE_ADMIN),
             time_alarms: alarms.time_alarm,
             market_price_oracle: alarms.market_price_oracle,
-            dex: ConnectionParams {
-                connection_id: TestCase::DEX_CONNECTION_ID.into(),
-                transfer_channel: Ics20Channel {
-                    local_endpoint: TestCase::LEASER_IBC_CHANNEL.into(),
-                    remote_endpoint: "channel-422".into(),
-                },
-            },
+            ics20_channel_local: TestCase::LEASER_IBC_CHANNEL.into(),
             remote_lease_controller,
             expected_instance_ordinal: Self::EXPECTED_INSTANCE_ORDINAL,
         };

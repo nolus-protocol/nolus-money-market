@@ -2,7 +2,6 @@ use std::mem;
 
 use serde::{Deserialize, Serialize};
 
-use dex::ConnectionParams;
 use finance::{duration::Duration, percent::Percent100};
 use lease::api::{limits::MaxSlippages, open::PositionSpecDTO};
 use platform::contract::Code;
@@ -32,7 +31,7 @@ pub struct Config {
     pub lease_due_period: Duration,
     pub lease_max_slippages: MaxSlippages,
     pub lease_admin: Addr,
-    pub dex: ConnectionParams,
+    pub ics20_channel_local: String,
     pub remote_lease_controller: Addr,
     pub expected_instance_ordinal: u16,
 }
@@ -54,7 +53,7 @@ impl Config {
             lease_due_period: msg.lease_due_period,
             lease_max_slippages: msg.lease_max_slippages,
             lease_admin: msg.lease_admin,
-            dex: msg.dex,
+            ics20_channel_local: msg.ics20_channel_local,
             remote_lease_controller: msg.remote_lease_controller,
             expected_instance_ordinal: msg.expected_instance_ordinal,
         }

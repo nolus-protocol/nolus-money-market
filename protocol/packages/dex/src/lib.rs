@@ -5,7 +5,6 @@ pub use self::{
     account::Account,
     anomaly::{Handler as AnomalyHandler, Treatment as AnomalyTreatment},
     coins_in::SwapCoins,
-    connect::{Connectable, ConnectionParams, Ics20Channel},
     error::Result as DexResult,
     slippage::{Calculator as SlippageCalculator, WithCalculator},
     swap_task::{CoinsNb, SwapOutputTask, SwapTask, WithOutputTask},
@@ -33,7 +32,6 @@ pub use self::{
 mod account;
 mod anomaly;
 mod coins_in;
-mod connect;
 #[cfg(feature = "impl")]
 mod enterable;
 mod error;

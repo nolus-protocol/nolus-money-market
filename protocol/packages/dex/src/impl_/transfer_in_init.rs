@@ -9,7 +9,7 @@ use platform::batch::Batch;
 use sdk::cosmwasm_std::{Binary, Env, QuerierWrapper};
 
 use crate::{
-    Connectable, ConnectionParams, Contract, ContractInSwap, Enterable, Error, IBC_TIMEOUT,
+    Contract, ContractInSwap, Enterable, Error, IBC_TIMEOUT,
     RemoteLeaseTransport as RemoteLeaseTransportT,
     RemoteLeaseTransportFactory as RemoteLeaseTransportFactoryT, Stage, TimeAlarm, error::Result,
 };
@@ -129,16 +129,6 @@ where
                 self.transport_factory,
             );
         finish.try_complete(querier, env).map_into()
-    }
-}
-
-impl<SwapTask, SEnum, RemoteLeaseTransportFactory> Connectable
-    for TransferInInit<SwapTask, SEnum, RemoteLeaseTransportFactory>
-where
-    SwapTask: SwapTaskT,
-{
-    fn dex(&self) -> &ConnectionParams {
-        self.spec.dex_account().dex()
     }
 }
 

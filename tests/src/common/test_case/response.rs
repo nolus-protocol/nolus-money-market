@@ -56,18 +56,15 @@ impl<T> RemoteChain for ResponseWithInterChainMsgs<'_, T> {
             .try_recv()
             .expect("Expected message for IBC transfer!");
 
-        if let InterChainMsg::IbcTransfer {
+        let InterChainMsg::IbcTransfer {
             source_channel,
             token,
             sender,
             receiver,
             ..
-        } = message
-        {
-            (source_channel, sender, receiver, token)
-        } else {
-            panic!("Expected message for IBC transfer, got {message:?}!");
-        }
+        } = message;
+
+        (source_channel, sender, receiver, token)
     }
 
     #[track_caller]
@@ -77,21 +74,18 @@ impl<T> RemoteChain for ResponseWithInterChainMsgs<'_, T> {
             .try_recv()
             .expect("Expected message for IBC transfer!");
 
-        if let InterChainMsg::IbcTransfer {
+        let InterChainMsg::IbcTransfer {
             source_channel,
             token,
             sender: actual_sender,
             receiver: actual_receiver,
             ..
-        } = message
-        {
-            assert_eq!(source_channel, channel);
-            assert_eq!(actual_sender, sender);
-            assert_eq!(actual_receiver, receiver);
+        } = message;
 
-            token
-        } else {
-            panic!("Expected message for IBC transfer, got {message:?}!");
-        }
+        assert_eq!(source_channel, channel);
+        assert_eq!(actual_sender, sender);
+        assert_eq!(actual_receiver, receiver);
+
+        token
     }
 }

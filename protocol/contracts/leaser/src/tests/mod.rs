@@ -1,5 +1,5 @@
 use currencies::Lpn;
-use dex::{ConnectionParams, Ics20Channel, MaxSlippage};
+use dex::MaxSlippage;
 use finance::{
     coin::{Amount, Coin},
     duration::Duration,
@@ -73,13 +73,7 @@ fn dummy_instantiate_msg() -> InstantiateMsg {
             liquidation: MaxSlippage::unchecked(Percent100::from_percent(20)),
         },
         lease_admin: Addr::unchecked("lease_admin_XYZ"),
-        dex: ConnectionParams {
-            connection_id: "conn-12".into(),
-            transfer_channel: Ics20Channel {
-                local_endpoint: "chan-1".into(),
-                remote_endpoint: "chan-13".into(),
-            },
-        },
+        ics20_channel_local: "chan-1".into(),
         remote_lease_controller: Addr::unchecked("remote_lease_controller"),
         expected_instance_ordinal: 1,
     }

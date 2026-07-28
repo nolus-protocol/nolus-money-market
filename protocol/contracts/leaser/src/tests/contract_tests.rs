@@ -1,6 +1,6 @@
 use currencies::{LeaseGroup, Lpn, testing::LeaseC1};
 use currency::{CurrencyDTO, CurrencyDef as _};
-use dex::{ConnectionParams, Ics20Channel, MaxSlippage};
+use dex::MaxSlippage;
 use finance::{
     duration::Duration,
     liability::Liability,
@@ -67,7 +67,7 @@ fn leaser_instantiate_msg(lease_code: Code, lpp: Addr) -> crate::msg::Instantiat
             liquidation: MaxSlippage::unchecked(Percent100::from_percent(20)),
         },
         lease_admin: sdk_testing::user(LEASE_ADMIN),
-        dex: dex_params(),
+        ics20_channel_local: dex_params(),
         remote_lease_controller: sdk_testing::user("remote_lease_controller"),
         expected_instance_ordinal: 1,
     }
@@ -101,14 +101,8 @@ fn query_config(deps: Deps<'_>) -> Config {
     config_response.config
 }
 
-fn dex_params() -> ConnectionParams {
-    ConnectionParams {
-        connection_id: "connection-0".into(),
-        transfer_channel: Ics20Channel {
-            local_endpoint: "channel-0".into(),
-            remote_endpoint: "channel-2048".into(),
-        },
-    }
+fn dex_params() -> String {
+    "channel-0".into()
 }
 
 #[test]
