@@ -1,9 +1,9 @@
 use enum_dispatch::enum_dispatch;
 
 use crate::api::LeasePaymentCurrencies;
+use dex::ErrorAck;
 use finance::duration::Duration;
 use finance::instant::Instant;
-use platform::remote::ErrorResponse as ICAErrorResponse;
 use remote_lease::callback::RemoteLeaseCallback;
 use sdk::cosmwasm_std::{Binary, Env, MessageInfo, QuerierWrapper, Reply};
 
@@ -33,11 +33,11 @@ where
 
     fn on_dex_error(
         self,
-        resp: ICAErrorResponse,
+        error: ErrorAck,
         _querier: QuerierWrapper<'_>,
         _env: Env,
     ) -> ContractResult<Response> {
-        err(format!("dex error({resp})",))
+        err(format!("dex error({error})",))
     }
 
     fn on_dex_timeout(self, _querier: QuerierWrapper<'_>, _env: Env) -> ContractResult<Response> {

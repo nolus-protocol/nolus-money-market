@@ -258,7 +258,7 @@ mod impl_into {
 mod impl_handler {
     use sdk::cosmwasm_std::{Binary, Env, MessageInfo, QuerierWrapper, Reply};
 
-    use platform::remote::ErrorResponse as ICAErrorResponse;
+    use crate::ErrorAck;
 
     use currency::Group;
 
@@ -335,33 +335,28 @@ mod impl_handler {
             }
         }
 
-        fn on_error(
-            self,
-            response: ICAErrorResponse,
-            querier: QuerierWrapper<'_>,
-            env: Env,
-        ) -> Result<Self> {
+        fn on_error(self, error: ErrorAck, querier: QuerierWrapper<'_>, env: Env) -> Result<Self> {
             match self {
                 State::TransferOut(inner) => {
-                    Handler::on_error(inner, response, querier, env).map_into()
+                    Handler::on_error(inner, error, querier, env).map_into()
                 }
                 State::TransferOutRespDelivery(inner) => {
-                    Handler::on_error(inner, response, querier, env).map_into()
+                    Handler::on_error(inner, error, querier, env).map_into()
                 }
                 State::SwapExactIn(inner) => {
-                    Handler::on_error(inner, response, querier, env).map_into()
+                    Handler::on_error(inner, error, querier, env).map_into()
                 }
                 State::SwapExactInRespDelivery(inner) => {
-                    Handler::on_error(inner, response, querier, env).map_into()
+                    Handler::on_error(inner, error, querier, env).map_into()
                 }
                 State::TransferInInit(inner) => {
-                    Handler::on_error(inner, response, querier, env).map_into()
+                    Handler::on_error(inner, error, querier, env).map_into()
                 }
                 State::TransferInInitRespDelivery(inner) => {
-                    Handler::on_error(inner, response, querier, env).map_into()
+                    Handler::on_error(inner, error, querier, env).map_into()
                 }
                 State::TransferInFinish(inner) => {
-                    Handler::on_error(inner, response, querier, env).map_into()
+                    Handler::on_error(inner, error, querier, env).map_into()
                 }
             }
         }

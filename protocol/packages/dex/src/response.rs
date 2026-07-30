@@ -2,12 +2,14 @@ use std::{fmt::Display, result::Result as StdResult};
 
 use platform::{
     message::Response as MessageResponse,
-    remote::ErrorResponse as ICAErrorResponse,
     state_machine::{self, Response as StateMachineResponse},
 };
 use sdk::cosmwasm_std::{Binary, Env, MessageInfo, QuerierWrapper, Reply};
 
-use crate::error::{Error, Result as DexResult};
+use crate::{
+    ErrorAck,
+    error::{Error, Result as DexResult},
+};
 
 pub type Response<H> = StateMachineResponse<<H as Handler>::Response>;
 pub type ContinueResult<H> = DexResult<Response<H>>;
@@ -55,13 +57,8 @@ where
     }
 
     /// The entry point of an error delivery
-    fn on_error(
-        self,
-        response: ICAErrorResponse,
-        _querier: QuerierWrapper<'_>,
-        _env: Env,
-    ) -> Result<Self> {
-        Err(err(self, &format!("handle {response}"))).into()
+    fn on_error(self, error: ErrorAck, _querier: QuerierWrapper<'_>, _env: Env) -> Result<Self> {
+        Err(err(self, &format!("handle {error}"))).into()
     }
 
     /// The entry point of a timeout delivery

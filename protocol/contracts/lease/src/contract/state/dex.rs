@@ -1,11 +1,11 @@
 use serde::{Deserialize, Serialize};
 
 use crate::api::LeasePaymentCurrencies;
-use dex::{Contract as DexContract, Handler as DexHandler};
+use dex::{AnomalyCause, Contract as DexContract, ErrorAck, Handler as DexHandler};
 use finance::duration::Duration;
 use finance::instant::Instant;
 use platform::{remote::ErrorResponse as ICAErrorResponse, state_machine};
-use remote_lease::callback::RemoteLeaseCallback;
+use remote_lease::callback::{RemoteErrorKind, RemoteLeaseCallback};
 use sdk::cosmwasm_std::{self, Binary, Env, MessageInfo, QuerierWrapper, Reply};
 
 use crate::{
@@ -46,11 +46,11 @@ where
 
     fn on_dex_error(
         self,
-        details: ICAErrorResponse,
+        error: ErrorAck,
         querier: QuerierWrapper<'_>,
         env: Env,
     ) -> ContractResult<Response> {
-        self.handler.on_error(details, querier, env).into()
+        self.handler.on_error(error, querier, env).into()
     }
 
     fn on_dex_timeout(self, querier: QuerierWrapper<'_>, env: Env) -> ContractResult<Response> {
@@ -77,7 +77,10 @@ where
                         .and_then(|data| self.on_dex_response(data, querier, env))
                 }
                 RemoteLeaseCallback::OperationErr(error) => self.on_dex_error(
-                    ICAErrorResponse::from(error.message().as_str().to_owned()),
+                    ErrorAck::new(
+                        classify(error.kind()),
+                        ICAErrorResponse::from(error.message().as_str().to_owned()),
+                    ),
                     querier,
                     env,
                 ),
@@ -130,5 +133,15 @@ where
         _info: MessageInfo,
     ) -> ContractResult<Response> {
         super::ignore_msg(self)
+    }
+}
+
+// Project the counterparty's cause onto the coarser vocabulary the swap
+// workflow branches on. Exhaustive by construction — no wildcard arm — so a new
+// kind on the wire becomes a compile error here rather than a silent `Other`.
+const fn classify(kind: RemoteErrorKind) -> AnomalyCause {
+    match kind {
+        RemoteErrorKind::MinOutUnmet => AnomalyCause::MinOutputNotFulfilled,
+        RemoteErrorKind::Permanent | RemoteErrorKind::Transient => AnomalyCause::Other,
     }
 }

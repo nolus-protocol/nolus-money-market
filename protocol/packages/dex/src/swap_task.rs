@@ -4,7 +4,8 @@ use sdk::cosmwasm_std::{Env, MessageInfo, QuerierWrapper};
 use timealarms::stub::TimeAlarmsRef;
 
 use crate::{
-    Account, AnomalyTreatment, SwapCoins, error::Result as DexResult, slippage::WithCalculator,
+    Account, AnomalyCause, AnomalyTreatment, SwapCoins, error::Result as DexResult,
+    slippage::WithCalculator,
 };
 
 pub type CoinsNb = u8;
@@ -84,7 +85,7 @@ where
     /// Due to the immaturity of the DEX Swap APIs' the particular error cannot be determined.
     /// If/once the APIs' get more mature we may want to recognize the error cause.
     /// An unsatisfied minimum output amount is always assumed whenever a swap error is received.
-    fn on_anomaly(self) -> AnomalyTreatment<SwapTaskT>
+    fn on_anomaly(self, cause: AnomalyCause) -> AnomalyTreatment<SwapTaskT>
     where
         Self: Sized;
 

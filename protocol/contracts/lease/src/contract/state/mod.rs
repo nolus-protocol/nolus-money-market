@@ -5,10 +5,9 @@ use serde::{Deserialize, Serialize};
 use enum_dispatch::enum_dispatch;
 
 use crate::api::LeasePaymentCurrencies;
+use ::dex::ErrorAck;
 use finance::duration::Duration;
-use platform::{
-    batch::Batch, message::Response as MessageResponse, remote::ErrorResponse as ICAErrorResponse,
-};
+use platform::{batch::Batch, message::Response as MessageResponse};
 use remote_lease::callback::RemoteLeaseCallback;
 use sdk::{
     cosmwasm_std::{Binary, Env, MessageInfo, QuerierWrapper, Reply, Storage},

@@ -2,16 +2,22 @@ use std::marker::PhantomData;
 
 use currency::{CurrencyDef, Group, MemberOf};
 
-use crate::{AnomalyTreatment, SwapOutputTask, SwapTask as SwapTaskT, WithOutputTask};
+use crate::{
+    AnomalyCause, AnomalyTreatment, SwapOutputTask, SwapTask as SwapTaskT, WithOutputTask,
+};
 
+// No `Default`: the cause is the whole point of this command, so a causeless
+// report must not be constructible.
 pub struct ReportAnomalyCmd<SwapTask> {
+    cause: AnomalyCause,
     _spec: PhantomData<SwapTask>,
 }
 
-impl<SwapTask> Default for ReportAnomalyCmd<SwapTask> {
-    fn default() -> Self {
+impl<SwapTask> ReportAnomalyCmd<SwapTask> {
+    pub const fn new(cause: AnomalyCause) -> Self {
         Self {
-            _spec: Default::default(),
+            cause,
+            _spec: PhantomData,
         }
     }
 }
@@ -28,6 +34,6 @@ where
         OutC::Group: MemberOf<<SwapTask::OutG as Group>::TopG>,
         OutputTaskT: SwapOutputTask<SwapTask, OutC = OutC>,
     {
-        task.on_anomaly()
+        task.on_anomaly(self.cause)
     }
 }

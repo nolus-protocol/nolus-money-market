@@ -68,5 +68,7 @@ pub trait Handler<SwapTaskT>
 where
     SwapTaskT: SwapTask,
 {
-    fn on_anomaly(self) -> Treatment<SwapTaskT>;
+    /// `cause` is advisory: a leg is free to ignore it and treat every anomaly
+    /// alike, which is what a leg without a meaningful output floor does.
+    fn on_anomaly(self, cause: Cause) -> Treatment<SwapTaskT>;
 }

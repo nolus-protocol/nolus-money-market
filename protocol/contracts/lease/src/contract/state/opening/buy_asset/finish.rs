@@ -3,7 +3,7 @@ use std::marker::PhantomData;
 use currency::{CurrencyDef, Group, MemberOf};
 use profit::stub::ProfitRef;
 
-use dex::{AnomalyTreatment, SwapOutputTask, SwapTask};
+use dex::{AnomalyCause, AnomalyTreatment, SwapOutputTask, SwapTask};
 use finance::coin::Coin;
 use platform::{
     message::Response as MessageResponse, state_machine::Response as StateMachineResponse,
@@ -54,7 +54,9 @@ where
         self.swap_task
     }
 
-    fn on_anomaly(self) -> AnomalyTreatment<BuyAsset>
+    // Retries on every cause, including a below-floor one: this leg's
+    // calculator accepts any non-zero swap, so it has no floor to be below.
+    fn on_anomaly(self, _cause: AnomalyCause) -> AnomalyTreatment<BuyAsset>
     where
         Self: Sized,
     {
