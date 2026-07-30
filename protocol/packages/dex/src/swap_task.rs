@@ -77,7 +77,7 @@ where
     /// Called when an anomaly is detected
     ///
     /// Determine how the current workflow should procceed.
-    /// Simmilarly to [`SwapTask::finish`], this function may exit the current DEX swap task,
+    /// Simmilarly to [`Self::finish`], this function may exit the current DEX swap task,
     /// a state composed of TransferOut, SwapExactIn, TransferIn, etc., and transition to a next state,
     /// or ask for a retry of the last operation.
     ///
@@ -92,7 +92,7 @@ where
     ///
     /// The states involve TransferOut, SwapExactIn, TransferIn, etc. This transition originates from one of them,
     /// and should point to a next state, sibling to this one in the higher-level state machine.
-    /// For example, the DEX [`Lease::BuyAsset`] state transition to [`Lease::Active`] on finish.
+    /// For example, the DEX `Lease::BuyAsset` state transition to `Lease::Active` on finish.
     ///
     fn finish(
         self,

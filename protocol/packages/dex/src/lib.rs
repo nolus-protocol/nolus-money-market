@@ -3,7 +3,9 @@ pub use self::error::Error;
 
 pub use self::{
     account::Account,
-    anomaly::{Handler as AnomalyHandler, Treatment as AnomalyTreatment},
+    anomaly::{
+        Cause as AnomalyCause, ErrorAck, Handler as AnomalyHandler, Treatment as AnomalyTreatment,
+    },
     coins_in::SwapCoins,
     error::Result as DexResult,
     slippage::{Calculator as SlippageCalculator, WithCalculator},
