@@ -12,7 +12,7 @@ rust-version.workspace = true
 combinations = [
     { tags = ["build"], always-on = ["contract"], include-rest = false },
     { tags = ["ci"], feature-groups = ["contract"], include-rest = false },
-    { tags = ["ci"], feature-groups = ["stub_alarms", "stub_price"], include-rest = false, generics = { "stubs" = ["stub_alarms", "stub_price"] } },
+    { tags = ["ci"], feature-groups = ["stub_alarms", "stub_price"], include-rest = false },
 ]
 
 [package.metadata.cargo-each.feature-groups]
