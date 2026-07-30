@@ -4,8 +4,18 @@
 //! the JSON the typed `remote_lease` crate emits for the same logical value.
 //! The cross-surface integration test under `remote_lease/tests/` validates
 //! that equivalence end-to-end; this module locks the wire encoding so the
-//! Solana side can rely on a stable surface — **any edit to a literal pin is
-//! a breaking protocol change and MUST bump [`crate::VERSION`]**.
+//! Solana side can rely on a stable surface.
+//!
+//! **Editing a pin.** For the pins that cross the IBC channel — §1 `Operation`,
+//! §2 `OperationResponse`, §4 `PacketEnvelope` — an edit is a breaking protocol
+//! change. While [`crate::VERSION`] is unreleased those land **in place**: the
+//! breaking-change signal is a minor bump of this crate's version plus the
+//! paired `rev` bump on the counterparty side, both reviewable diffs.
+//! [`crate::VERSION`] itself is bumped only once the protocol is live and two
+//! generations must coexist, because [`crate::version::ProtocolVersion`]
+//! rejects a mismatch at the deserialiser and a bump therefore breaks every
+//! in-flight packet. §3 `RemoteLeaseCallback` is the controller-to-lease
+//! `ExecuteMsg` payload and never crosses the channel at all.
 
 use std::fmt::Debug;
 
@@ -14,7 +24,10 @@ use serde::de::DeserializeOwned;
 
 use crate::{
     PORT_PREFIX, VERSION,
-    callback::{OPERATION_ERR_MAX_BYTES, RemoteErrorMessage, RemoteLeaseCallback},
+    callback::{
+        OPERATION_ERR_MAX_BYTES, REMOTE_ERROR_CODE_MAX_BYTES, RemoteError, RemoteErrorKind,
+        RemoteErrorMessage, RemoteLeaseCallback,
+    },
     coin::WireCoin,
     envelope::{LeaseAddrOnWire, PacketEnvelope},
     error::Error,
@@ -131,17 +144,224 @@ fn callback_operation_ok_serde() {
 }
 
 #[test]
-fn callback_operation_err_serde() {
-    let value = RemoteLeaseCallback::OperationErr(
-        RemoteErrorMessage::new("dex pool drained").expect("short message must be accepted"),
+fn callback_operation_err_min_out_unmet_serde() {
+    assert_round_trip_eq(
+        r#"{"operation_err":{"kind":"min_out_unmet","message":"ibc-solray: credit below min"}}"#,
+        &operation_err(RemoteErrorKind::MinOutUnmet, "ibc-solray: credit below min"),
     );
-    assert_round_trip_eq(r#"{"operation_err":"dex pool drained"}"#, &value);
+}
+
+#[test]
+fn callback_operation_err_permanent_serde() {
+    assert_round_trip_eq(
+        r#"{"operation_err":{"kind":"permanent","message":"dex pool drained"}}"#,
+        &operation_err(RemoteErrorKind::Permanent, "dex pool drained"),
+    );
+}
+
+#[test]
+fn callback_operation_err_transient_serde() {
+    assert_round_trip_eq(
+        r#"{"operation_err":{"kind":"transient","message":"host clock unavailable"}}"#,
+        &operation_err(RemoteErrorKind::Transient, "host clock unavailable"),
+    );
 }
 
 #[test]
 fn callback_operation_timeout_serde() {
     let value = RemoteLeaseCallback::OperationTimeout;
     assert_round_trip_eq(r#""operation_timeout""#, &value);
+}
+
+// ---------------------------------------------------------------------------
+// 3a. RemoteErrorKind — the published token vocabulary
+// ---------------------------------------------------------------------------
+
+// The counterparty frames acknowledgements with `as_wire`; this crate decodes
+// the same tokens through serde. Pinning both against one literal is what keeps
+// the two representations from drifting apart.
+#[test]
+fn error_kind_tokens_pin_the_published_contract() {
+    fn assert_token(expected: &str, kind: RemoteErrorKind) {
+        assert_eq!(expected, kind.as_wire());
+        assert_eq!(
+            format!(r#""{expected}""#),
+            serde_json::to_string(&kind).expect("a unit variant must serialize"),
+        );
+    }
+
+    assert_token("min_out_unmet", RemoteErrorKind::MinOutUnmet);
+    assert_token("permanent", RemoteErrorKind::Permanent);
+    assert_token("transient", RemoteErrorKind::Transient);
+}
+
+#[test]
+fn error_kind_tokens_are_frame_safe() {
+    for kind in [
+        RemoteErrorKind::MinOutUnmet,
+        RemoteErrorKind::Permanent,
+        RemoteErrorKind::Transient,
+    ] {
+        let token = kind.as_wire();
+        assert!(!token.is_empty(), "{token} must not be empty");
+        assert!(
+            token.len() <= REMOTE_ERROR_CODE_MAX_BYTES,
+            "{token} must fit the code cap",
+        );
+        assert!(
+            token
+                .bytes()
+                .all(|byte| byte.is_ascii_lowercase() || byte.is_ascii_digit() || byte == b'_'),
+            "{token} must stay within the frame charset",
+        );
+    }
+}
+
+// An unknown kind must FAIL, not degrade to a default. A default would invent a
+// meaning the counterparty never sent and then route funds with it; the two
+// ends deploy in lockstep, so an unknown token is a deployment fault.
+#[test]
+fn callback_operation_err_unknown_kind_rejected() {
+    serde_json::from_str::<RemoteLeaseCallback>(
+        r#"{"operation_err":{"kind":"future_class","message":"x"}}"#,
+    )
+    .expect_err("an unrecognised kind must not decode");
+}
+
+#[test]
+fn callback_operation_err_missing_kind_rejected() {
+    serde_json::from_str::<RemoteLeaseCallback>(r#"{"operation_err":{"message":"x"}}"#)
+        .expect_err("a producer omitting the kind is not speaking this wire generation");
+}
+
+#[test]
+fn callback_operation_err_unknown_field_rejected() {
+    serde_json::from_str::<RemoteLeaseCallback>(
+        r#"{"operation_err":{"kind":"permanent","message":"x","extra":1}}"#,
+    )
+    .expect_err("`deny_unknown_fields` must reach the inner object, not just the enum");
+}
+
+// ---------------------------------------------------------------------------
+// 3b. The acknowledgement code frame — `format_ack` / `parse_ack`
+// ---------------------------------------------------------------------------
+
+#[test]
+fn ack_frame_round_trips_every_kind() {
+    for kind in [
+        RemoteErrorKind::MinOutUnmet,
+        RemoteErrorKind::Permanent,
+        RemoteErrorKind::Transient,
+    ] {
+        let parsed = RemoteError::parse_ack(RemoteError::format_ack(kind, "ibc-solray: boom"))
+            .expect("a self-rendered frame must parse back");
+
+        assert_eq!(kind, parsed.kind());
+        assert_eq!("ibc-solray: boom", parsed.message().as_str());
+    }
+}
+
+#[test]
+fn ack_frame_strips_the_code_from_the_retained_prose() {
+    let parsed = RemoteError::parse_ack("[min_out_unmet] ibc-solray: credit below min")
+        .expect("a well-formed frame must parse");
+
+    assert_eq!(RemoteErrorKind::MinOutUnmet, parsed.kind());
+    assert_eq!("ibc-solray: credit below min", parsed.message().as_str());
+}
+
+#[test]
+fn ack_frame_without_trailing_prose_parses_to_an_empty_message() {
+    let parsed = RemoteError::parse_ack("[permanent]").expect("a bare frame must parse");
+
+    assert_eq!(RemoteErrorKind::Permanent, parsed.kind());
+    assert_eq!("", parsed.message().as_str());
+}
+
+#[test]
+fn ack_frame_malformed_rejected() {
+    // Every shape that is not exactly `[<known token>]`: absent, unclosed, no
+    // opening sigil, empty, wrong case, over-long, and a multi-byte char in the
+    // token position — the last one guards the byte-indexed scan against a
+    // char-boundary panic.
+    for ack in [
+        "dex pool drained",
+        "[min_out_unmet ibc-solray: x",
+        "min_out_unmet] x",
+        "[] x",
+        "[MIN_OUT_UNMET] x",
+        "[min out unmet] x",
+        "[aaaaaaaaaaaaaaaaa] x",
+        "[Мin_out_unmet] x",
+    ] {
+        assert!(
+            matches!(
+                RemoteError::parse_ack(ack),
+                Err(Error::CallbackErrorCodeMissing {
+                    max: REMOTE_ERROR_CODE_MAX_BYTES
+                }),
+            ),
+            "{ack:?} must be rejected as a malformed frame",
+        );
+    }
+}
+
+#[test]
+fn ack_frame_unknown_code_rejected() {
+    assert!(matches!(
+        RemoteError::parse_ack("[future_class] ibc-solray: x"),
+        Err(Error::CallbackErrorCodeUnknown { code }) if code == "future_class",
+    ));
+}
+
+// The counterparty truncates the TAIL to fit the cap, so a head-position code
+// survives structurally. This pins that property rather than leaving it to luck.
+#[test]
+fn ack_frame_code_survives_a_message_at_the_cap() {
+    let framed = RemoteError::format_ack(RemoteErrorKind::MinOutUnmet, "");
+    let ack = format!(
+        "{framed}{}",
+        "x".repeat(OPERATION_ERR_MAX_BYTES - framed.len())
+    );
+    assert_eq!(OPERATION_ERR_MAX_BYTES, ack.len());
+
+    assert_eq!(
+        RemoteErrorKind::MinOutUnmet,
+        RemoteError::parse_ack(ack)
+            .expect("an acknowledgement at the cap must parse")
+            .kind(),
+    );
+}
+
+// The cap applies to the prose AFTER the frame is stripped, so an
+// acknowledgement over-long only by its frame is now accepted.
+#[test]
+fn ack_frame_prose_at_cap_accepted_and_over_cap_rejected() {
+    let at_cap = RemoteError::format_ack(
+        RemoteErrorKind::Transient,
+        &"x".repeat(OPERATION_ERR_MAX_BYTES),
+    );
+    assert!(at_cap.len() > OPERATION_ERR_MAX_BYTES);
+    assert_eq!(
+        OPERATION_ERR_MAX_BYTES,
+        RemoteError::parse_ack(at_cap)
+            .expect("prose at the cap must be accepted once the frame is stripped")
+            .message()
+            .as_str()
+            .len(),
+    );
+
+    let over_cap = RemoteError::format_ack(
+        RemoteErrorKind::Transient,
+        &"x".repeat(OPERATION_ERR_MAX_BYTES + 1),
+    );
+    assert!(matches!(
+        RemoteError::parse_ack(over_cap),
+        Err(Error::CallbackErrorTooLong {
+            actual,
+            max: OPERATION_ERR_MAX_BYTES,
+        }) if actual == OPERATION_ERR_MAX_BYTES + 1,
+    ));
 }
 
 #[test]
@@ -175,8 +395,8 @@ fn callback_error_message_from_static_accepted() {
     let value = RemoteErrorMessage::from_static("timeout");
     assert_eq!("timeout", value.as_str());
     assert_round_trip_eq(
-        r#"{"operation_err":"timeout"}"#,
-        &RemoteLeaseCallback::OperationErr(value),
+        r#"{"operation_err":{"kind":"transient","message":"timeout"}}"#,
+        &RemoteLeaseCallback::OperationErr(RemoteError::new(RemoteErrorKind::Transient, value)),
     );
 }
 
@@ -618,6 +838,13 @@ where
     let decoded: T =
         serde_json::from_str(&encoded).expect("decoding the freshly-encoded value must succeed");
     assert_eq!(value, &decoded);
+}
+
+fn operation_err(kind: RemoteErrorKind, message: &str) -> RemoteLeaseCallback {
+    RemoteLeaseCallback::OperationErr(RemoteError::new(
+        kind,
+        RemoteErrorMessage::new(message).expect("a short message must be accepted"),
+    ))
 }
 
 fn sample_open_lease_params() -> OpenLeaseParams {
