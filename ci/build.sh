@@ -24,7 +24,6 @@
 ## cargo [with:]                                                              ##
 ##   * Rust compiler                                                          ##
 ##   * Rust compiler [target=wasm32-unknown-unknown]                          ##
-## jq                                                                         ##
 ################################################################################
 
 set -eu
@@ -319,22 +318,6 @@ ${unoptimized_binaries:?}
 EOF
 )
 
-get_dex_type() {
-  protocol="$(
-    "jq" \
-      -c \
-      "." \
-      <"/src/build-configuration/protocol.json"
-  )"
-
-  "jq" \
-    --argjson "protocol" "${protocol:?}" \
-    --exit-status \
-    --raw-output \
-    ".networks[\$protocol.dex_network].dexes[\$protocol.dex].type | select(. != null)" \
-    <"/src/build-configuration/topology.json"
-}
-
 check_optimized_binaries_count() (
   cd "${optimized_binaries_directory:?}"
 
@@ -484,10 +467,6 @@ case "${workspace:?}" in
     readonly outputs_directory
 
     "mkdir" "${outputs_directory:?}"
-
-    dex_type="$("get_dex_type")"
-
-    "build" "dex-${dex_type:?}"
 
     directories="$(
       directories="$("cat" "${BUILD_OUT_DIR_PATHS:?}")"

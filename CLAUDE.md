@@ -140,5 +140,3 @@ Any agent performing a coding task must pass `cargo build`, `cargo fmt --all -- 
 
 - `SOFTWARE_RELEASE_ID` (required) - Release identifier string
 - `PROTOCOL_NETWORK`, `PROTOCOL_NAME`, `PROTOCOL_RELEASE_ID` - Compile-time `env!` requirements of the protocol release in `versioning` (arbitrary strings; CI uses `ci-network` / `ci-protocol` / `ci-protocol-release`). Export them alongside `SOFTWARE_RELEASE_ID` before any protocol/tests workspace gate (`cargo lint`, `cargo lint-all`, `cargo run-test`); a missing one is a compile error.
-- `NET` - Target network (e.g., `dev`, `main`)
-- `PROTOCOL` - Protocol identifier (e.g., `osmosis-osmosis-usdc_axelar`, `neutron-astroport-usdc_noble`)

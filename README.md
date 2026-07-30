@@ -47,17 +47,12 @@ In the instructions below this value is stored in *WORKSPACE_DIR_NAME*.
 
 #### A non-optimized version
 
-From the `protocols` directory select the directory with the protocol specific definitions and execute
-```sh
-cp -r --update=all packages/currencies/src_by_protocol/<protocol>/<net>/* packages/currencies/src/
-```
-
 The command below builds the protocol contracts if ran from the contract directory,
 or builds the contracts of the workspace from within which it is ran:
 
 ```sh
 
-SOFTWARE_RELEASE_ID='dev-release' cargo each run -x -t build -t <protocol> -t <net> --exact -- cargo build --profile "production_nets_release" --lib --locked --target=wasm32-unknown-unknown
+SOFTWARE_RELEASE_ID='dev-release' cargo each run -x -t build --exact -- cargo build --profile "production_nets_release" --lib --locked --target=wasm32-unknown-unknown
 ```
 
 One way to avoid having to set those environment variables is to
@@ -101,8 +96,7 @@ file, located at the root of the project!
 
 The command shown below builds an optimized and verifiable version of
 each set of contracts, depending on their workspace (indicated by
-`WORKSPACE_DIR_NAME`), the targeted protocol (indicated by `PROTOCOL`) and targeted network
-(indicated by `NET`):
+`WORKSPACE_DIR_NAME`):
 
 * ```sh
   export WORKSPACE_DIR_NAME='platform'
@@ -115,9 +109,7 @@ each set of contracts, depending on their workspace (indicated by
   ```
 
 * ```sh
-  export NET='dev'
-  export PROTOCOL='osmosis-osmosis-usdc_axelar'
-  export ARTIFACTS_SUBDIR="$([[ $WORKSPACE_DIR_NAME == 'protocol' ]] && echo $PROTOCOL || echo 'platform')"
+  export ARTIFACTS_SUBDIR="$WORKSPACE_DIR_NAME"
   ```
 
   ```sh
@@ -125,16 +117,15 @@ each set of contracts, depending on their workspace (indicated by
     docker run --rm -v "$(pwd)/platform/:/platform/:ro" \
     -v "$(pwd)/${WORKSPACE_DIR_NAME}/:/code/:ro" \
     -v "$(pwd)/artifacts/${ARTIFACTS_SUBDIR}/:/artifacts/:rw" \
+    $(if test "${WORKSPACE_DIR_NAME}" = 'protocol'; then echo "-v $(pwd)/build-configuration/:/src/build-configuration/:ro"; fi) \
     --env "SOFTWARE_RELEASE_ID=`git describe`-`date -Iminute`" \
-    --env "features=contract$(if test "${WORKSPACE_DIR_NAME}" = 'protocol'; then echo ",net_${NET}"; fi)$(if test "${WORKSPACE_DIR_NAME}" = 'protocol'; then echo ",${PROTOCOL}"; fi)" \
+    --env "features=contract" \
     wasm-optimizer
   ```
 
 **NOTE:** As one might set those environment variables in the settings
 of their editor/IDE, those environment variables still must be provided
 as arguments to the `docker run` command.
-Exception to this should be the `platform` workspace, as it strives to
-be agnostic to the targeted network and protocol.
 
 **NOTE:** Builds are reproducable *as long as* all environment variables
 passed to the container are the exact same. If it is desired to build
@@ -166,28 +157,22 @@ done
 Run the following in a package directory or any workspace.
 
 ```sh
-cargo test --features "net_${NET},${PROTOCOL}" --all-targets
+cargo test --all-targets
 ```
 
 ### Lint
 
-Run the following in the `platform` workspace.
+Run the following in a workspace.
 
 ```sh
 ./lint.sh
-```
-
-Run the following in the `protocol` and `tests` workspaces.
-
-```sh
-./lint.sh "net_${NET},${PROTOCOL}"
 ```
 
 ### Troubleshoot
 
 #### Explore the number and size of instantiations of each generic function
 ```sh
-SOFTWARE_RELEASE_ID=dev cargo llvm-lines -p <package> --features net_main,osmosis-osmosis-usdc_axelar  --profile production_nets_release --target "wasm32-unknown-unknown"
+SOFTWARE_RELEASE_ID=dev cargo llvm-lines -p <package> --profile production_nets_release --target "wasm32-unknown-unknown"
 ```
 #### Check the generated WASM code
 First, install the checker:
