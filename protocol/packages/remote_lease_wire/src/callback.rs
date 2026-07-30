@@ -22,16 +22,30 @@ pub const OPERATION_ERR_MAX_BYTES: usize = 200;
 pub const REMOTE_ERROR_CODE_MAX_BYTES: usize = 16;
 
 /// Maximum byte length of the whole code frame: `[`, the token, `]`, one space.
-pub const REMOTE_ERROR_CODE_FRAME_MAX_BYTES: usize = REMOTE_ERROR_CODE_MAX_BYTES + 3;
-
-// The counterparty renders the frame ahead of its prose and truncates the tail
-// to `OPERATION_ERR_MAX_BYTES` with a 3-byte marker. Unless the cap exceeds a
-// full frame plus that marker, truncation could eat the code itself.
-const _: () = assert!(OPERATION_ERR_MAX_BYTES > REMOTE_ERROR_CODE_FRAME_MAX_BYTES + 3);
+pub const REMOTE_ERROR_CODE_FRAME_MAX_BYTES: usize =
+    REMOTE_ERROR_CODE_MAX_BYTES + CODE_FRAME_DELIMITER_BYTES;
 
 const CODE_OPEN: u8 = b'[';
 const CODE_CLOSE: u8 = b']';
 const CODE_SEPARATOR: u8 = b' ';
+
+// The two brackets around the token, without the space that follows them.
+const CODE_BRACKET_BYTES: usize = 2;
+
+// Everything in the frame that is not the token: both brackets and the
+// separating space.
+const CODE_FRAME_DELIMITER_BYTES: usize = CODE_BRACKET_BYTES + 1;
+
+// What the counterparty appends in place of the prose it drops when truncating.
+const COUNTERPARTY_TRUNCATION_MARKER_BYTES: usize = 3;
+
+// The counterparty renders the frame ahead of its prose and truncates the tail
+// to `OPERATION_ERR_MAX_BYTES` with a marker. Unless the cap exceeds a full
+// frame plus that marker, truncation could eat the code itself.
+const _: () = assert!(
+    REMOTE_ERROR_CODE_FRAME_MAX_BYTES + COUNTERPARTY_TRUNCATION_MARKER_BYTES
+        < OPERATION_ERR_MAX_BYTES
+);
 
 /// Outcome of a remote operation as reported back to the Nolus controller.
 ///
@@ -90,7 +104,7 @@ impl RemoteErrorKind {
         Self::ALL.into_iter().find(|kind| kind.as_wire() == token)
     }
 
-    fn is_token_byte(byte: u8) -> bool {
+    const fn is_token_byte(byte: u8) -> bool {
         byte.is_ascii_lowercase() || byte.is_ascii_digit() || byte == b'_'
     }
 }
@@ -159,54 +173,63 @@ impl RemoteError {
     {
         let ack: String = ack.into();
 
-        Self::split_code(&ack).and_then(|(kind, prose_at)| {
+        Self::split_code(&ack).and_then(|ParsedCode { kind, prose_at }| {
             RemoteErrorMessage::new(&ack[prose_at..]).map(|message| Self::new(kind, message))
         })
     }
 
-    /// The acknowledgement's kind, and the byte offset its prose starts at.
-    ///
-    /// Every comparison is ASCII, so each returned offset is a char boundary
-    /// even when the prose is not ASCII.
-    fn split_code(ack: &str) -> Result<(RemoteErrorKind, usize), Error> {
-        let missing = || Error::CallbackErrorCodeMissing {
-            max: REMOTE_ERROR_CODE_MAX_BYTES,
-        };
-
-        let framed = ack
-            .strip_prefix(char::from(CODE_OPEN))
-            .ok_or_else(missing)?;
-
-        // One byte past the cap: enough to tell "over-long token" from "no
-        // closing delimiter at all", without scanning the rest of the string.
-        let window = framed
-            .len()
-            .min(REMOTE_ERROR_CODE_MAX_BYTES.saturating_add(1));
-
-        let close_at = framed.as_bytes()[..window]
-            .iter()
-            .position(|&byte| byte == CODE_CLOSE)
-            .ok_or_else(missing)?;
-
-        let token = framed.get(..close_at).ok_or_else(missing)?;
-
-        if token.is_empty() || !token.bytes().all(RemoteErrorKind::is_token_byte) {
-            return Err(missing());
-        }
-
-        RemoteErrorKind::try_from_wire(token)
-            .ok_or_else(|| Error::CallbackErrorCodeUnknown {
-                code: token.to_owned(),
+    fn split_code(ack: &str) -> Result<ParsedCode, Error> {
+        Self::scan_token(ack)
+            .ok_or(Error::CallbackErrorCodeMissing {
+                max: REMOTE_ERROR_CODE_MAX_BYTES,
             })
-            .map(|kind| {
-                // `[` + token + `]`, then the single separating space when present.
-                let after_frame = close_at + 2;
-                let separated =
-                    usize::from(ack.as_bytes().get(after_frame) == Some(&CODE_SEPARATOR));
-
-                (kind, after_frame + separated)
+            .and_then(|token| {
+                RemoteErrorKind::try_from_wire(token)
+                    .ok_or_else(|| Error::CallbackErrorCodeUnknown {
+                        code: token.to_owned(),
+                    })
+                    .map(|kind| ParsedCode {
+                        kind,
+                        prose_at: Self::prose_offset(ack, token.len()),
+                    })
             })
     }
+
+    // A single `None` covers every malformed frame alike — no opening bracket,
+    // no closing one within the token cap, a slice landing off a char boundary,
+    // an empty token, a byte outside the token alphabet — because the caller
+    // reports them all as one non-conformance.
+    fn scan_token(ack: &str) -> Option<&str> {
+        ack.strip_prefix(char::from(CODE_OPEN))
+            .and_then(|framed| {
+                // One byte past the cap: enough to tell "over-long token" from
+                // "no closing delimiter at all", without scanning the rest of
+                // the string.
+                let window = framed
+                    .len()
+                    .min(REMOTE_ERROR_CODE_MAX_BYTES.saturating_add(1));
+
+                framed.as_bytes()[..window]
+                    .iter()
+                    .position(|&byte| byte == CODE_CLOSE)
+                    .and_then(|close_at| framed.get(..close_at))
+            })
+            .filter(|token| !token.is_empty() && token.bytes().all(RemoteErrorKind::is_token_byte))
+    }
+
+    // The prose starts past `[` + token + `]`, plus the single separating space
+    // when the counterparty sent one. Every comparison is ASCII, so the result
+    // is a char boundary even when the prose is not.
+    fn prose_offset(ack: &str, token_len: usize) -> usize {
+        let after_frame = token_len + CODE_BRACKET_BYTES;
+
+        after_frame + usize::from(ack.as_bytes().get(after_frame) == Some(&CODE_SEPARATOR))
+    }
+}
+
+struct ParsedCode {
+    kind: RemoteErrorKind,
+    prose_at: usize,
 }
 
 /// Length-capped error string returned by the Solana counterparty.

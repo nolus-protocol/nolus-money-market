@@ -82,30 +82,30 @@ fn packet_ack_success_dispatches_operation_ok() {
 #[test]
 fn packet_ack_error_dispatches_operation_err() {
     assert_error_ack_dispatches(
-        "lease-2",
-        "[permanent] dex pool drained",
         RemoteErrorKind::Permanent,
         "dex pool drained",
+        "lease-2",
+        "[permanent] dex pool drained",
     );
 }
 
 #[test]
 fn packet_ack_min_out_error_dispatches_min_out_kind() {
     assert_error_ack_dispatches(
-        "lease-2-min-out",
-        "[min_out_unmet] ibc-solray: credit below min",
         RemoteErrorKind::MinOutUnmet,
         "ibc-solray: credit below min",
+        "lease-2-min-out",
+        "[min_out_unmet] ibc-solray: credit below min",
     );
 }
 
 #[test]
 fn packet_ack_code_only_error_dispatches_an_empty_message() {
     assert_error_ack_dispatches(
-        "lease-2-bare",
-        "[transient]",
         RemoteErrorKind::Transient,
         "",
+        "lease-2-bare",
+        "[transient]",
     );
 }
 
@@ -151,10 +151,10 @@ fn packet_ack_error_at_cap_after_stripping_dispatches() {
     assert!(framed.len() > OPERATION_ERR_MAX_BYTES);
 
     assert_error_ack_dispatches(
-        "lease-2-at-cap",
-        &framed,
         RemoteErrorKind::Transient,
         &prose,
+        "lease-2-at-cap",
+        &framed,
     );
 }
 
@@ -359,10 +359,10 @@ fn fixture_stdack_error_decodes_to_callback() {
     );
 
     assert_error_ack_dispatches(
-        "lease-fixture-err",
-        FIXTURE_ACK,
         RemoteErrorKind::Permanent,
         "dex pool drained",
+        "lease-fixture-err",
+        FIXTURE_ACK,
     );
 }
 
@@ -379,10 +379,10 @@ fn fixture_stdack_error_min_out_decodes_to_callback() {
     );
 
     assert_error_ack_dispatches(
-        "lease-fixture-err-min-out",
-        FIXTURE_ACK,
         RemoteErrorKind::MinOutUnmet,
         "ibc-solray: credit below min",
+        "lease-fixture-err-min-out",
+        FIXTURE_ACK,
     );
 }
 
@@ -407,10 +407,10 @@ fn packet_ack_oversized_error_message_errors() {
 // Drives the real `ibc_packet_ack`, so each caller proves both the
 // classification and that the handler committed the acknowledgement.
 fn assert_error_ack_dispatches(
-    lease_id: &str,
-    ack: &str,
     expected_kind: RemoteErrorKind,
     expected_message: &str,
+    lease_id: &str,
+    ack: &str,
 ) {
     let mut deps = deps_with_config();
     let lease = sdk_testing::user(lease_id);

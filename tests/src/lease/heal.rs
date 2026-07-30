@@ -83,8 +83,9 @@ fn swap_on_repay() {
         .unwrap_response();
 
     // The counterparty rejects the first swap; the buy-LPN task retries,
-    // re-emitting the swap (again held pending by the stand-in). The classified
-    // cause is what the lease routes on — the token, not the prose, decides.
+    // re-emitting the swap (again held pending by the stand-in). The retry comes
+    // from the leg's anomaly treatment, not from the cause; the `Permanent`
+    // framing keeps the injection honest for when the lease does route on it.
     () = test_case
         .app
         .execute(

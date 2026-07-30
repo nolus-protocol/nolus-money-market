@@ -98,7 +98,7 @@ pub mod op_tag {
 pub enum ResponseMode {
     #[default]
     Ok,
-    Err(RemoteErrorMessage),
+    Err(String),
     Delayed,
 }
 
@@ -520,9 +520,15 @@ impl Instantiator {
 /// [`error_ack`] for the typed value the lease ends up seeing. The frame is
 /// stripped on the way in, so `prose` — not the return value — is what a test
 /// asserts against an emitted `reason` attribute.
-pub fn error_reason(kind: RemoteErrorKind, prose: &str) -> RemoteErrorMessage {
-    RemoteErrorMessage::new(RemoteError::format_ack(kind, prose))
-        .expect("a framed test reason must be within the length cap")
+///
+/// The cap is checked against `prose` alone, matching production, where
+/// `parse_ack` strips the frame before bounding what it keeps. A framed reason
+/// may therefore run past `OPERATION_ERR_MAX_BYTES` — the boundary case a
+/// `RemoteErrorMessage` return type could not express.
+pub fn error_reason(kind: RemoteErrorKind, prose: &str) -> String {
+    RemoteErrorMessage::new(prose)
+        .map(|prose| RemoteError::format_ack(kind, prose.as_str()))
+        .expect("a test reason's prose must be within the length cap")
 }
 
 /// The typed failure a framed reason parses to, for tests that execute a

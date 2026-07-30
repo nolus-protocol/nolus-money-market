@@ -33,7 +33,7 @@ Invariants are enforced both in constructors (`new`, or `one` / `two` for `Swap`
 
 `RemoteLeaseCallback::{OperationOk(OperationResponse), OperationErr(RemoteError), OperationTimeout}`. Timeout is structurally separate from error — recovery paths differ.
 
-`RemoteError { kind: RemoteErrorKind, message: RemoteErrorMessage }` pairs a machine-readable cause with the counterparty's prose. **Consumers branch on `kind` and never on `message`:** the counterparty's rendered text tracks an upstream DEX API whose wording changes across minor releases, so it is not a stable key.
+`RemoteError { kind: RemoteErrorKind, message: RemoteErrorMessage }` pairs a machine-readable cause with the counterparty's prose. **A consumer that branches at all branches on `kind`, never on `message`:** the counterparty's rendered text tracks an upstream DEX API whose wording changes across minor releases, so it is not a stable key. Keeping only the prose is legitimate where the outcome is unconditional — a failed lease open refunds and terminates whatever the cause, so it retains `message` for the audit event alone.
 
 ### Error code frame
 

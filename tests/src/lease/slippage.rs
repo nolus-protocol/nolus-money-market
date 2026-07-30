@@ -201,7 +201,9 @@ fn simulate_min_out_not_satisfied(test_case: &mut LeaseTestCase, lease: Addr) {
     let controller = test_case.address_book.remote_lease_controller().clone();
     // The counterparty rejects the held swap against the floor we pinned; a
     // sell-asset anomaly drives the lease into the slippage-protected state (no
-    // retry). The `MinOutUnmet` classification is what selects that branch.
+    // retry). The leg's own anomaly treatment picks that branch today; the
+    // `MinOutUnmet` framing is what must keep picking it once the lease routes
+    // on the cause, so this test is the tripwire for that change.
     let mut swap_response = test_case
         .app
         .execute(
