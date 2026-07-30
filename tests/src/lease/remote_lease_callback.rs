@@ -28,7 +28,7 @@ use lease::{
     },
     error::ContractError,
 };
-use remote_lease::callback::{RemoteErrorMessage, RemoteLeaseCallback};
+use remote_lease::callback::{RemoteErrorKind, RemoteLeaseCallback};
 use sdk::{
     cosmwasm_std::{Addr, StdError},
     testing,
@@ -97,14 +97,16 @@ fn operation_timeout_reaches_on_dex_timeout() {
 fn operation_err_reaches_on_dex_error() {
     let (mut test_case, lease) = drive_to_swap_pending();
     let controller = controller_addr(&test_case);
-    let payload = RemoteErrorMessage::new("solana side rejected").expect("within the length cap");
 
     let response = test_case
         .app
         .execute(
             controller,
             lease.clone(),
-            &ExecuteMsg::RemoteLeaseCallback(RemoteLeaseCallback::OperationErr(payload)),
+            &ExecuteMsg::RemoteLeaseCallback(RemoteLeaseCallback::OperationErr(stub::error_ack(
+                RemoteErrorKind::Permanent,
+                "solana side rejected",
+            ))),
             &[],
         )
         .expect("authorised OperationErr must reach on_dex_error and return Ok");

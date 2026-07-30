@@ -48,7 +48,7 @@ use currency::{CurrencyDef, Group, MemberOf};
 use finance::coin::{Amount, Coin, CoinDTO, WithCoin};
 use platform::contract::{Code, CodeId};
 use remote_lease::{
-    callback::{RemoteErrorMessage, RemoteLeaseCallback},
+    callback::{RemoteError, RemoteErrorKind, RemoteErrorMessage, RemoteLeaseCallback},
     msg::{CloseLeaseParams, OpenLeaseParams, TransferOutParams},
     response::{
         CloseLeaseResponse, OpenLeaseResponse, OperationResponse, RemoteLeaseId, SwapResponse,
@@ -89,7 +89,9 @@ pub mod op_tag {
 /// How the stand-in answers a given outbound operation.
 ///
 /// Default for every operation is [`ResponseMode::Ok`]. `Err` stores the
-/// reason on the same wire shape Solana would use; `Delayed` persists the
+/// reason on the same wire shape Solana would use — including its leading
+/// `[<code>] ` frame, which the stub feeds to the production parser, so the
+/// injected token is what selects the failure cause. `Delayed` persists the
 /// callback for later dispatch via [`StubExecuteMsg::DeliverPending`].
 #[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
@@ -358,7 +360,13 @@ where
 
     let callback = match mode {
         ResponseMode::Ok => RemoteLeaseCallback::OperationOk(build_ok(deps.storage)?),
-        ResponseMode::Err(reason) => RemoteLeaseCallback::OperationErr(reason),
+        // Runs the production parser, exactly as the real controller's
+        // `ack_to_callback` does, so a test picks a cause by writing the code
+        // frame into the reason — the same way the counterparty will.
+        ResponseMode::Err(reason) => RemoteLeaseCallback::OperationErr(
+            RemoteError::parse_ack(reason.as_str())
+                .expect("an injected stub reason must carry a valid code frame"),
+        ),
         ResponseMode::Delayed => {
             let payload = RemoteLeaseCallback::OperationOk(build_ok(deps.storage)?);
             PENDING.save(
@@ -504,6 +512,24 @@ impl Instantiator {
         .map(|response| response.unwrap_response())
         .expect("stub controller must instantiate")
     }
+}
+
+/// A framed error reason, byte-for-byte as the counterparty would emit it.
+///
+/// Feed this to [`ResponseMode::Err`], or execute a callback with
+/// [`error_ack`] for the typed value the lease ends up seeing. The frame is
+/// stripped on the way in, so `prose` — not the return value — is what a test
+/// asserts against an emitted `reason` attribute.
+pub fn error_reason(kind: RemoteErrorKind, prose: &str) -> RemoteErrorMessage {
+    RemoteErrorMessage::new(RemoteError::format_ack(kind, prose))
+        .expect("a framed test reason must be within the length cap")
+}
+
+/// The typed failure a framed reason parses to, for tests that execute a
+/// `RemoteLeaseCallback` directly instead of going through the stub's modes.
+pub fn error_ack(kind: RemoteErrorKind, prose: &str) -> RemoteError {
+    RemoteError::parse_ack(RemoteError::format_ack(kind, prose))
+        .expect("a self-framed test reason must parse")
 }
 
 /// Helper for tests: send a `SetResponseMode` to the stub.

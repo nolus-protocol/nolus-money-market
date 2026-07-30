@@ -1,7 +1,7 @@
 use currencies::PaymentGroup;
 use finance::{coin::CoinDTO, price};
 use lease::{api::ExecuteMsg, error::ContractError};
-use remote_lease::callback::{RemoteErrorMessage, RemoteLeaseCallback};
+use remote_lease::callback::{RemoteErrorKind, RemoteLeaseCallback};
 use sdk::{
     cosmwasm_std::{Addr, StdResult},
     cw_multi_test::AppResponse,
@@ -83,14 +83,17 @@ fn swap_on_repay() {
         .unwrap_response();
 
     // The counterparty rejects the first swap; the buy-LPN task retries,
-    // re-emitting the swap (again held pending by the stand-in).
-    let reason = RemoteErrorMessage::new("min output not fulfilled").expect("within length cap");
+    // re-emitting the swap (again held pending by the stand-in). The classified
+    // cause is what the lease routes on — the token, not the prose, decides.
     () = test_case
         .app
         .execute(
             controller.clone(),
             lease.clone(),
-            &ExecuteMsg::RemoteLeaseCallback(RemoteLeaseCallback::OperationErr(reason)),
+            &ExecuteMsg::RemoteLeaseCallback(RemoteLeaseCallback::OperationErr(stub::error_ack(
+                RemoteErrorKind::Permanent,
+                "jupiter route decode failed",
+            ))),
             &[],
         )
         .expect("authorised swap error must retry, not revert")

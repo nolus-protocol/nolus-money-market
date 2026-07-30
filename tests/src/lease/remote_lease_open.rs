@@ -11,7 +11,7 @@ use lease::api::{
     query::{StateResponse, opening::OngoingTrx as OpeningOngoingTrx},
 };
 use remote_lease::{
-    callback::{RemoteErrorMessage, RemoteLeaseCallback},
+    callback::{RemoteErrorKind, RemoteLeaseCallback},
     response::{CloseLeaseResponse, OpenLeaseResponse, OperationResponse, RemoteLeaseId},
 };
 use sdk::{cosmwasm_std::Addr, testing};
@@ -51,12 +51,12 @@ fn open_failed_on_error_refunds_and_finalises() {
     let mut test_case = super::create_test_case::<LeaseCurrency>();
     let controller = test_case.address_book.remote_lease_controller().clone();
     let leaser = test_case.address_book.leaser().clone();
-    let reason = RemoteErrorMessage::new("solana side rejected").expect("within length cap");
+    const REASON: &str = "solana side rejected";
     stub::set_response_mode(
         &mut test_case.app,
         &controller,
         op_tag::OPEN_LEASE,
-        ResponseMode::Err(reason.clone()),
+        ResponseMode::Err(stub::error_reason(RemoteErrorKind::Permanent, REASON)),
     );
 
     let customer = testing::user(USER);
@@ -87,7 +87,9 @@ fn open_failed_on_error_refunds_and_finalises() {
         .find(|attr| attr.key == "reason")
         .map(|attr| attr.value.as_str())
         .expect("event must carry the counterparty reason");
-    assert_eq!(reason.as_str(), event_reason);
+    // The code frame is consumed by the classification, so the retained reason
+    // is the counterparty's prose alone.
+    assert_eq!(REASON, event_reason);
 
     let downpayment_after = balance::<LeaseCurrency>(&test_case, &customer);
     assert_eq!(
@@ -103,7 +105,7 @@ fn open_failed_on_error_refunds_and_finalises() {
     match state {
         StateResponse::OpenFailed {
             reason: ref state_reason,
-        } => assert_eq!(reason.as_str(), state_reason.as_str()),
+        } => assert_eq!(REASON, state_reason.as_str()),
         other => panic!("expected StateResponse::OpenFailed, got {other:?}"),
     }
 }
@@ -194,12 +196,12 @@ fn late_open_lease_ack_after_open_failed_is_absorbed() {
     let mut test_case = super::create_test_case::<LeaseCurrency>();
     let controller = test_case.address_book.remote_lease_controller().clone();
     let leaser = test_case.address_book.leaser().clone();
-    let reason = RemoteErrorMessage::new("solana side rejected").expect("within length cap");
+    const REASON: &str = "solana side rejected";
     stub::set_response_mode(
         &mut test_case.app,
         &controller,
         op_tag::OPEN_LEASE,
-        ResponseMode::Err(reason.clone()),
+        ResponseMode::Err(stub::error_reason(RemoteErrorKind::Permanent, REASON)),
     );
 
     let customer = testing::user(USER);
@@ -253,7 +255,7 @@ fn late_open_lease_ack_after_open_failed_is_absorbed() {
     match super::state_query(&test_case, lease) {
         StateResponse::OpenFailed {
             reason: state_reason,
-        } => assert_eq!(reason.as_str(), state_reason.as_str()),
+        } => assert_eq!(REASON, state_reason.as_str()),
         other => panic!("expected StateResponse::OpenFailed, got {other:?}"),
     }
 }
@@ -319,13 +321,16 @@ fn open_failed_after_interest_accrual_covers_interest_from_reserve() {
 
     test_case.app.time_shift(accrual);
 
-    let reason = RemoteErrorMessage::new("solana side rejected").expect("within length cap");
+    const REASON: &str = "solana side rejected";
     let failed = test_case
         .app
         .execute(
             controller.clone(),
             lease.clone(),
-            &ExecuteMsg::RemoteLeaseCallback(RemoteLeaseCallback::OperationErr(reason.clone())),
+            &ExecuteMsg::RemoteLeaseCallback(RemoteLeaseCallback::OperationErr(stub::error_ack(
+                RemoteErrorKind::Permanent,
+                REASON,
+            ))),
             &[],
         )
         .expect("open failure must be absorbed after interest accrual")
@@ -357,7 +362,7 @@ fn open_failed_after_interest_accrual_covers_interest_from_reserve() {
     match super::state_query(&test_case, lease) {
         StateResponse::OpenFailed {
             reason: state_reason,
-        } => assert_eq!(reason.as_str(), state_reason.as_str()),
+        } => assert_eq!(REASON, state_reason.as_str()),
         other => panic!("expected StateResponse::OpenFailed, got {other:?}"),
     }
 }
