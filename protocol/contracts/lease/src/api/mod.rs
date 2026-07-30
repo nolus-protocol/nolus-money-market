@@ -115,7 +115,7 @@ pub enum FinalizerExecuteMsg {
 #[cfg(all(feature = "internal.test.skel", test))]
 mod test {
     use remote_lease::{
-        callback::{RemoteErrorMessage, RemoteLeaseCallback},
+        callback::{RemoteError, RemoteErrorKind, RemoteErrorMessage, RemoteLeaseCallback},
         response::{CloseLeaseResponse, OperationResponse},
     };
     use sdk::cosmwasm_std;
@@ -163,9 +163,11 @@ mod test {
 
     #[test]
     fn test_remote_lease_callback_operation_err_representation() {
-        let msg = ExecuteMsg::RemoteLeaseCallback(RemoteLeaseCallback::OperationErr(
-            RemoteErrorMessage::new("solana side rejected").expect("within length cap"),
-        ));
+        let msg =
+            ExecuteMsg::RemoteLeaseCallback(RemoteLeaseCallback::OperationErr(RemoteError::new(
+                RemoteErrorKind::Permanent,
+                RemoteErrorMessage::new("solana side rejected").expect("within length cap"),
+            )));
         let bin = cosmwasm_std::to_json_vec(&msg).expect("serialization failed");
         assert_eq!(
             msg,
@@ -175,7 +177,7 @@ mod test {
         assert_eq!(
             msg,
             cosmwasm_std::from_json(
-                "{\"remote_lease_callback\":{\"operation_err\":\"solana side rejected\"}}"
+                "{\"remote_lease_callback\":{\"operation_err\":{\"kind\":\"permanent\",\"message\":\"solana side rejected\"}}}"
             )
             .expect("deserialization failed"),
         );

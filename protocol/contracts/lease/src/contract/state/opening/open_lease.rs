@@ -265,7 +265,10 @@ impl Contract for OpenLease {
                     )
                 }
                 RemoteLeaseCallback::OperationErr(reason) => {
-                    self.on_open_failed(querier, env, reason)
+                    // The classified kind is not consulted: an open failure is
+                    // unconditional whatever the counterparty's cause, so only
+                    // the prose is kept, for the audit event and the terminal.
+                    self.on_open_failed(querier, env, reason.into_message())
                 }
                 RemoteLeaseCallback::OperationTimeout => self.on_open_failed(
                     querier,

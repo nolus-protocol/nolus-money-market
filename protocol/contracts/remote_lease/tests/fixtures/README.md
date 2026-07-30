@@ -7,7 +7,12 @@ two `StdAck` variants emitted by the Solana-side Remote Lease App per
 ## Files
 
 - `stdack_success_open_lease.bin` — `StdAck::Success(<JSON of OperationResponse::OpenLease(remote_lease_id = "So1RayF1xtureLease1")>)` wrapped by `to_binary()`. Outer JSON is the cosmwasm-std `StdAck` wire shape (`{"result":"<base64>"}`); inner is the snake-case-tagged `OperationResponse` enum. The id is a base58 string per the `RemoteLeaseId` wire invariant.
-- `stdack_error.bin` — `StdAck::Error("dex pool drained")` wrapped by `to_binary()`. Outer JSON is `{"error":"<msg>"}`.
+- `stdack_error.bin` — `StdAck::Error("[permanent] dex pool drained")` wrapped by `to_binary()`. Outer JSON is `{"error":"<msg>"}`.
+- `stdack_error_min_out.bin` — `StdAck::Error("[min_out_unmet] ibc-solray: credit below min")`, the below-floor classification the lease routes to its slippage terminal.
+
+## The error-ack code frame
+
+An error acknowledgement carries a leading `[<code>] ` frame naming a `RemoteErrorKind`, ahead of the counterparty's prose. The frame is the cross-language contract these two error fixtures exist to pin: **a drift in the token vocabulary is exactly what they surface**, and the controller rejects any acknowledgement whose code is absent, malformed, or unknown rather than guessing a kind. The frame precedes the prose because the counterparty truncates the tail to fit the byte cap, so a leading code survives truncation structurally.
 
 ## Status
 

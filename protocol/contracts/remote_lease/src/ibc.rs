@@ -1,6 +1,6 @@
 use currencies::{LeaseGroup, Lpns as LpnGroup, PaymentGroup};
 use remote_lease::{
-    callback::{RemoteErrorMessage, RemoteLeaseCallback},
+    callback::{RemoteError, RemoteLeaseCallback},
     envelope::{NolusLeaseAddr, PacketEnvelope},
     response::OperationResponse,
 };
@@ -155,12 +155,22 @@ pub fn ibc_packet_timeout(
         })
 }
 
+// `StdAck::Error` is a bare string, so this is the single point where the
+// counterparty's failure becomes typed: every consumer downstream branches on
+// `RemoteErrorKind` instead of re-reading prose. Both fallible steps —
+// `parse_ack`'s code frame and its length cap — reject counterparty
+// non-conformance rather than guessing a kind. That does mean an `Err` here
+// reverts `ibc_packet_ack` (the dispatch below is a plain `add_message`) and
+// leaves the relayer redelivering, which is the intended loud failure: the two
+// ends of this protocol deploy in lockstep, so an unparseable code is a
+// deployment fault to fix, not a case to absorb. A *classified* failure never
+// returns `Err` from here.
 fn ack_to_callback(ack: StdAck) -> Result<RemoteLeaseCallback<PaymentGroup>> {
     match ack {
         StdAck::Success(data) => cosmwasm_std::from_json::<OperationResponse<PaymentGroup>>(&data)
             .map(RemoteLeaseCallback::OperationOk)
             .map_err(Error::from),
-        StdAck::Error(message) => RemoteErrorMessage::new(message)
+        StdAck::Error(message) => RemoteError::parse_ack(message)
             .map(RemoteLeaseCallback::OperationErr)
             .map_err(Error::from),
     }

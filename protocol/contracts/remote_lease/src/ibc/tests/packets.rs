@@ -1,6 +1,9 @@
 use currencies::{LeaseGroup, Lpns as LpnGroup, PaymentGroup};
 use remote_lease::{
-    callback::{OPERATION_ERR_MAX_BYTES, RemoteErrorMessage, RemoteLeaseCallback},
+    callback::{
+        OPERATION_ERR_MAX_BYTES, RemoteError, RemoteErrorKind, RemoteErrorMessage,
+        RemoteLeaseCallback,
+    },
     envelope::{LeaseAddrOnWire, PacketEnvelope},
     msg::{CloseLeaseParams, Operation},
     response::{CloseLeaseResponse, OpenLeaseResponse, OperationResponse, RemoteLeaseId},
@@ -78,26 +81,80 @@ fn packet_ack_success_dispatches_operation_ok() {
 
 #[test]
 fn packet_ack_error_dispatches_operation_err() {
-    const ERROR_MESSAGE: &str = "dex pool drained";
+    assert_error_ack_dispatches(
+        "lease-2",
+        "[permanent] dex pool drained",
+        RemoteErrorKind::Permanent,
+        "dex pool drained",
+    );
+}
 
-    let mut deps = deps_with_config();
-    let lease = sdk_testing::user("lease-2");
-    let envelope_bytes = encode_envelope(&envelope_with_close_lease(&lease));
-    let ack_bytes = StdAck::error(ERROR_MESSAGE).to_binary();
+#[test]
+fn packet_ack_min_out_error_dispatches_min_out_kind() {
+    assert_error_ack_dispatches(
+        "lease-2-min-out",
+        "[min_out_unmet] ibc-solray: credit below min",
+        RemoteErrorKind::MinOutUnmet,
+        "ibc-solray: credit below min",
+    );
+}
 
-    let res = ibc_packet_ack(
-        deps.as_mut(),
-        testing::mock_env(),
-        ack_msg(envelope_bytes, ack_bytes),
-    )
-    .unwrap();
+#[test]
+fn packet_ack_code_only_error_dispatches_an_empty_message() {
+    assert_error_ack_dispatches(
+        "lease-2-bare",
+        "[transient]",
+        RemoteErrorKind::Transient,
+        "",
+    );
+}
 
-    assert_dispatched_callback(
-        &lease,
-        RemoteLeaseCallback::OperationErr(
-            RemoteErrorMessage::new(ERROR_MESSAGE).expect("test fixture under the cap"),
-        ),
-        &res.messages,
+// A non-conforming acknowledgement is rejected, not coerced into some default
+// kind: guessing would invent a meaning the counterparty never sent and then
+// route funds with it. The cost is deliberate — an `Err` here reverts
+// `ibc_packet_ack` and the relayer redelivers until the fault is deployed away.
+#[test]
+fn packet_ack_non_conforming_error_code_errors() {
+    for ack in [
+        "dex pool drained",
+        "[min_out_unmet dex pool drained",
+        "min_out_unmet] dex pool drained",
+        "[] dex pool drained",
+        "[MIN_OUT_UNMET] dex pool drained",
+        "[future_class] dex pool drained",
+    ] {
+        let mut deps = deps_with_config();
+        let lease = sdk_testing::user("lease-non-conforming");
+        let envelope_bytes = encode_envelope(&envelope_with_close_lease(&lease));
+
+        let err = ibc_packet_ack(
+            deps.as_mut(),
+            testing::mock_env(),
+            ack_msg(envelope_bytes, StdAck::error(ack).to_binary()),
+        )
+        .unwrap_err();
+
+        assert!(
+            matches!(err, Error::RemoteCallback(_)),
+            "{ack:?} must be rejected, got {err:?}",
+        );
+    }
+}
+
+// The cap applies to the prose once the frame is stripped, so an
+// acknowledgement over-long only by its frame is accepted where it previously
+// would not have been.
+#[test]
+fn packet_ack_error_at_cap_after_stripping_dispatches() {
+    let prose = "x".repeat(OPERATION_ERR_MAX_BYTES);
+    let framed = RemoteError::format_ack(RemoteErrorKind::Transient, &prose);
+    assert!(framed.len() > OPERATION_ERR_MAX_BYTES);
+
+    assert_error_ack_dispatches(
+        "lease-2-at-cap",
+        &framed,
+        RemoteErrorKind::Transient,
+        &prose,
     );
 }
 
@@ -291,31 +348,41 @@ fn fixture_stdack_success_open_lease_decodes_to_callback() {
 
 #[test]
 fn fixture_stdack_error_decodes_to_callback() {
-    const FIXTURE_ERROR_MESSAGE: &str = "dex pool drained";
+    const FIXTURE_ACK: &str = "[permanent] dex pool drained";
     const ACK_BYTES: &[u8] = include_bytes!("../../../tests/fixtures/stdack_error.bin");
 
-    let computed = StdAck::error(FIXTURE_ERROR_MESSAGE).to_binary();
+    let computed = StdAck::error(FIXTURE_ACK).to_binary();
     assert_eq!(
         ACK_BYTES,
         computed.as_slice(),
         "fixture must match the canonical wire shape"
     );
 
-    let mut deps = deps_with_config();
-    let lease = sdk_testing::user("lease-fixture-err");
-    let envelope_bytes = encode_envelope(&envelope_with_close_lease(&lease));
-    let res = ibc_packet_ack(
-        deps.as_mut(),
-        testing::mock_env(),
-        ack_msg(envelope_bytes, Binary::new(ACK_BYTES.to_vec())),
-    )
-    .unwrap();
-    assert_dispatched_callback(
-        &lease,
-        RemoteLeaseCallback::OperationErr(
-            RemoteErrorMessage::new(FIXTURE_ERROR_MESSAGE).expect("under the cap"),
-        ),
-        &res.messages,
+    assert_error_ack_dispatches(
+        "lease-fixture-err",
+        FIXTURE_ACK,
+        RemoteErrorKind::Permanent,
+        "dex pool drained",
+    );
+}
+
+#[test]
+fn fixture_stdack_error_min_out_decodes_to_callback() {
+    const FIXTURE_ACK: &str = "[min_out_unmet] ibc-solray: credit below min";
+    const ACK_BYTES: &[u8] = include_bytes!("../../../tests/fixtures/stdack_error_min_out.bin");
+
+    let computed = StdAck::error(FIXTURE_ACK).to_binary();
+    assert_eq!(
+        ACK_BYTES,
+        computed.as_slice(),
+        "fixture must match the canonical wire shape"
+    );
+
+    assert_error_ack_dispatches(
+        "lease-fixture-err-min-out",
+        FIXTURE_ACK,
+        RemoteErrorKind::MinOutUnmet,
+        "ibc-solray: credit below min",
     );
 }
 
@@ -335,6 +402,35 @@ fn packet_ack_oversized_error_message_errors() {
     .unwrap_err();
 
     assert!(matches!(err, Error::RemoteCallback(_)), "got {err:?}");
+}
+
+// Drives the real `ibc_packet_ack`, so each caller proves both the
+// classification and that the handler committed the acknowledgement.
+fn assert_error_ack_dispatches(
+    lease_id: &str,
+    ack: &str,
+    expected_kind: RemoteErrorKind,
+    expected_message: &str,
+) {
+    let mut deps = deps_with_config();
+    let lease = sdk_testing::user(lease_id);
+    let envelope_bytes = encode_envelope(&envelope_with_close_lease(&lease));
+
+    let res = ibc_packet_ack(
+        deps.as_mut(),
+        testing::mock_env(),
+        ack_msg(envelope_bytes, StdAck::error(ack).to_binary()),
+    )
+    .unwrap();
+
+    assert_dispatched_callback(
+        &lease,
+        RemoteLeaseCallback::OperationErr(RemoteError::new(
+            expected_kind,
+            RemoteErrorMessage::new(expected_message).expect("test fixture under the cap"),
+        )),
+        &res.messages,
+    );
 }
 
 fn envelope_with_close_lease(lease: &Addr) -> PacketEnvelopeT {

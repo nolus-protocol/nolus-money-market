@@ -19,7 +19,7 @@ use currencies::{
 use finance::coin::Coin;
 
 use remote_lease::{
-    callback::{RemoteErrorMessage, RemoteLeaseCallback},
+    callback::{RemoteError, RemoteErrorKind, RemoteErrorMessage, RemoteLeaseCallback},
     envelope::{LeaseAddrOnWire, PacketEnvelope},
     msg::{CloseLeaseParams, OpenLeaseParams, Operation, TransferOutParams},
     response::{
@@ -109,12 +109,21 @@ fn callback_operation_ok_byte_identical() {
     assert_cross_surface_eq::<RemoteLeaseCallback<PaymentGroup>, WireCallback>(&typed);
 }
 
+// `kind` is added on both surfaces independently, so every variant of it is
+// worth a byte-identity case rather than just one representative.
 #[test]
 fn callback_operation_err_byte_identical() {
-    let typed = RemoteLeaseCallback::OperationErr(
-        RemoteErrorMessage::new("dex pool drained").expect("short message"),
-    );
-    assert_cross_surface_eq::<RemoteLeaseCallback<PaymentGroup>, WireCallback>(&typed);
+    for kind in [
+        RemoteErrorKind::MinOutUnmet,
+        RemoteErrorKind::Permanent,
+        RemoteErrorKind::Transient,
+    ] {
+        let typed = RemoteLeaseCallback::OperationErr(RemoteError::new(
+            kind,
+            RemoteErrorMessage::new("dex pool drained").expect("short message"),
+        ));
+        assert_cross_surface_eq::<RemoteLeaseCallback<PaymentGroup>, WireCallback>(&typed);
+    }
 }
 
 #[test]
