@@ -25,7 +25,7 @@ cargo run-test
 cargo test --all-features test_name
 
 # Build optimized WASM (from the protocol workspace; full pipeline incl. RUSTFLAGS in ci/build.sh)
-RUSTC_BOOTSTRAP=1 SOFTWARE_RELEASE_ID='dev-release' cargo each --tag build --tag @agnostic run --exact -- build -Zbuild-std="panic_abort,std" --profile "production_nets_release" --lib --locked --target wasm32-unknown-unknown
+RUSTC_BOOTSTRAP=1 SOFTWARE_RELEASE_ID='dev-release' cargo each --tag build run --exact -- build -Zbuild-std="panic_abort,std" --profile "production_nets_release" --lib --locked --target wasm32-unknown-unknown
 
 # CI-equivalent lint of one workspace (two args: workspace + lint subcommand; PROFILE required)
 PROFILE=ci_dev ci/lint.sh protocol lint
@@ -62,7 +62,7 @@ Monorepo with three interconnected Cargo workspaces:
 
 ### `tests/` - Integration tests
 
-Cross-workspace integration tests. `tests/Cargo.toml` declares a single `{ tags = ["ci", "@agnostic"], include-rest = false }` combination; the concrete network/DEX is chosen at compile time by the `currencies` build (driven by `PROTOCOL_NETWORK` / `PROTOCOL_NAME` / `PROTOCOL_RELEASE_ID`), not by a Cargo feature.
+Cross-workspace integration tests. `tests/Cargo.toml` declares a single `{ tags = ["ci"], include-rest = false }` combination; the concrete network/DEX is chosen at compile time by the `currencies` build (driven by `PROTOCOL_NETWORK` / `PROTOCOL_NAME` / `PROTOCOL_RELEASE_ID`), not by a Cargo feature.
 
 ### `tools/` - Build tooling
 

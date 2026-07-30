@@ -173,7 +173,6 @@ ___build_unoptimized() {
     "cargo" \
     "each" \
     --tag "build" \
-    --tag "${dex_type:?}" \
     "run" \
     --exact \
     --print-command \
@@ -276,19 +275,6 @@ ___calculate_optimized_binary_checksum() (
 )
 
 build() (
-  case "${#}" in
-    ("1")
-      dex_type="${1:?}"
-      shift
-      ;;
-    (*)
-      "echo" \
-        "The \"build\" function takes exactly one argument, the DEX type tag!" \
-        >&2
-
-      exit "1"
-  esac
-
   "___build_unoptimized"
 
   unoptimized_binaries="$("___list_unoptimized_binaries")"
@@ -459,7 +445,7 @@ case "${workspace:?}" in
     exit "1"
 esac
 
-"build" "@agnostic"
+"build"
 
 case "${workspace:?}" in
   ("protocol")

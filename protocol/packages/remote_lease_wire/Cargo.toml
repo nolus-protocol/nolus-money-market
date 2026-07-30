@@ -10,7 +10,7 @@ rust-version = "1.89"
 
 [package.metadata.cargo-each]
 combinations = [
-    { tags = ["ci", "@agnostic"], include-rest = true },
+    { tags = ["ci"], include-rest = true },
 ]
 
 [dependencies]

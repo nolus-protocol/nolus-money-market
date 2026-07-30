@@ -9,7 +9,7 @@ rust-version = "1.96"
 
 [package.metadata.cargo-each]
 combinations = [
-    { tags = ["ci", "@agnostic"], include-rest = false },
+    { tags = ["ci"], include-rest = false },
 ]
 
 ### [SYNC WITH OTHER WORKSPACES : START]
