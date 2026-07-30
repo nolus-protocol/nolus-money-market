@@ -82,9 +82,9 @@ where
     /// a state composed of TransferOut, SwapExactIn, TransferIn, etc., and transition to a next state,
     /// or ask for a retry of the last operation.
     ///
-    /// Due to the immaturity of the DEX Swap APIs' the particular error cannot be determined.
-    /// If/once the APIs' get more mature we may want to recognize the error cause.
-    /// An unsatisfied minimum output amount is always assumed whenever a swap error is received.
+    /// `cause` carries what the counterparty reported, so the decision no longer
+    /// has to assume an unsatisfied minimum output. A leg without a real output
+    /// floor has nothing to distinguish and may ignore it.
     fn on_anomaly(self, cause: AnomalyCause) -> AnomalyTreatment<SwapTaskT>
     where
         Self: Sized;

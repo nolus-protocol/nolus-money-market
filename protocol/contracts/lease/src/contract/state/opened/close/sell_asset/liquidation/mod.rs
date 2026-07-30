@@ -69,13 +69,23 @@ impl<RepayableImpl> AnomalyHandler<SellAsset<RepayableImpl, Calculator>>
 where
     RepayableImpl: Closable + Repayable,
 {
+    // The only leg with a real output floor, so the only one for which parking
+    // carries information. Slippage protection is claimed solely for a genuine
+    // below-floor rejection; any other cause is a failure of the swap itself,
+    // which the anomaly manager cannot resolve and which must not be reported
+    // to the customer as slippage.
     fn on_anomaly(
         self,
-        _cause: AnomalyCause,
+        cause: AnomalyCause,
     ) -> AnomalyTreatment<SellAsset<RepayableImpl, Calculator>> {
-        let emitter =
-            event::emit_slippage_anomaly(&self.lease.lease, self.slippage_calc.threshold());
-        let next_state = SlippageAnomaly::new(self.lease);
-        AnomalyTreatment::Exit(Ok(Response::from(emitter, next_state)))
+        match cause {
+            AnomalyCause::MinOutputNotFulfilled => {
+                let emitter =
+                    event::emit_slippage_anomaly(&self.lease.lease, self.slippage_calc.threshold());
+                let next_state = SlippageAnomaly::new(self.lease);
+                AnomalyTreatment::Exit(Ok(Response::from(emitter, next_state)))
+            }
+            AnomalyCause::Other => AnomalyTreatment::Retry(self),
+        }
     }
 }

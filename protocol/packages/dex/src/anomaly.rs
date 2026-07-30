@@ -72,3 +72,37 @@ where
     /// alike, which is what a leg without a meaningful output floor does.
     fn on_anomaly(self, cause: Cause) -> Treatment<SwapTaskT>;
 }
+
+#[cfg(test)]
+mod test {
+    use platform::remote::ErrorResponse as ICAErrorResponse;
+
+    use super::{Cause, ErrorAck};
+
+    #[test]
+    fn cause_survives_the_wrapper() {
+        assert!(matches!(
+            ErrorAck::new(Cause::MinOutputNotFulfilled, details()).cause(),
+            Cause::MinOutputNotFulfilled
+        ));
+        assert!(matches!(
+            ErrorAck::new(Cause::Other, details()).cause(),
+            Cause::Other
+        ));
+    }
+
+    // Threading `ErrorAck` through `on_error` left every existing error message
+    // untouched only because the rendering stays the bare response. Pin it, so a
+    // later urge to prepend the cause has to break this test first.
+    #[test]
+    fn display_renders_the_response_alone() {
+        assert_eq!(
+            details().to_string(),
+            ErrorAck::new(Cause::MinOutputNotFulfilled, details()).to_string(),
+        );
+    }
+
+    fn details() -> ICAErrorResponse {
+        ICAErrorResponse::from("dex pool drained".to_owned())
+    }
+}
