@@ -14,7 +14,7 @@ use lease::api::{
     },
 };
 use remote_lease::{
-    callback::{RemoteErrorMessage, RemoteLeaseCallback},
+    callback::{RemoteErrorKind, RemoteLeaseCallback},
     swap::SwapParams,
 };
 use sdk::{
@@ -199,15 +199,20 @@ fn trigger_full_liquidation(
 
 fn simulate_min_out_not_satisfied(test_case: &mut LeaseTestCase, lease: Addr) {
     let controller = test_case.address_book.remote_lease_controller().clone();
-    let reason = RemoteErrorMessage::new("min output amount not fulfilled").expect("within cap");
-    // The counterparty rejects the held swap; a sell-asset anomaly drives the
-    // lease into the slippage-protected state (no retry).
+    // The counterparty rejects the held swap against the floor we pinned; a
+    // sell-asset anomaly drives the lease into the slippage-protected state (no
+    // retry). The leg's own anomaly treatment picks that branch today; the
+    // `MinOutUnmet` framing is what must keep picking it once the lease routes
+    // on the cause, so this test is the tripwire for that change.
     let mut swap_response = test_case
         .app
         .execute(
             controller,
             lease.clone(),
-            &ExecuteMsg::RemoteLeaseCallback(RemoteLeaseCallback::OperationErr(reason)),
+            &ExecuteMsg::RemoteLeaseCallback(RemoteLeaseCallback::OperationErr(stub::error_ack(
+                RemoteErrorKind::MinOutUnmet,
+                "ibc-solray: post-swap credit below required min",
+            ))),
             &[],
         )
         .expect("on error should have gone into a protected state");

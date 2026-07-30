@@ -22,6 +22,17 @@ pub enum Error {
     #[error("callback error message exceeds the {max}-byte cap (was {actual})")]
     CallbackErrorTooLong { actual: usize, max: usize },
 
+    #[error(
+        "callback error acknowledgement is missing its leading '[<code>]' frame, or the code is empty, over {max} bytes, or not lower-case alphanumeric"
+    )]
+    CallbackErrorCodeMissing { max: usize },
+
+    /// Bounded by construction: the parser only reads a code of at most
+    /// [`crate::callback::REMOTE_ERROR_CODE_MAX_BYTES`], so retaining it here
+    /// cannot echo an unbounded counterparty string.
+    #[error("callback error acknowledgement carries the unrecognised code '{code}'")]
+    CallbackErrorCodeUnknown { code: String },
+
     #[error("remote-lease-id must not be empty")]
     RemoteLeaseIdEmpty,
 

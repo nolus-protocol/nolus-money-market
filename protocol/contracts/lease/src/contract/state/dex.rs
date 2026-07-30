@@ -76,8 +76,8 @@ where
                         .map_err(Into::into)
                         .and_then(|data| self.on_dex_response(data, querier, env))
                 }
-                RemoteLeaseCallback::OperationErr(message) => self.on_dex_error(
-                    ICAErrorResponse::from(message.as_str().to_owned()),
+                RemoteLeaseCallback::OperationErr(error) => self.on_dex_error(
+                    ICAErrorResponse::from(error.message().as_str().to_owned()),
                     querier,
                     env,
                 ),

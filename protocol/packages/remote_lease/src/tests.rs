@@ -2,9 +2,13 @@
 //!
 //! Acceptance criterion (ibc-solray#134): round-trip serde tests for every
 //! variant against `cosmwasm_std::to_json_binary` output. The Solana-side
-//! consumer is a foreign codebase, so every literal-JSON pin below is part of
-//! the wire contract — **any edit to a literal pin is a breaking protocol
-//! change and MUST bump [`crate::VERSION`]**.
+//! consumer is a foreign codebase, so every literal-JSON pin below that crosses
+//! the IBC channel is part of the wire contract. See the editing rules in
+//! `remote_lease_wire::tests` — in short, while [`crate::VERSION`] is
+//! unreleased a pin edit lands in place and the breaking-change signal is the
+//! wire crate's version plus the counterparty's paired `rev` bump. §3
+//! `RemoteLeaseCallback` is the controller-to-lease `ExecuteMsg` payload and
+//! never crosses the channel.
 
 use std::fmt::Debug;
 
@@ -19,7 +23,10 @@ use finance::coin::Coin;
 
 use crate::{
     PORT_PREFIX, VERSION,
-    callback::{OPERATION_ERR_MAX_BYTES, RemoteErrorMessage, RemoteLeaseCallback},
+    callback::{
+        OPERATION_ERR_MAX_BYTES, RemoteError, RemoteErrorKind, RemoteErrorMessage,
+        RemoteLeaseCallback,
+    },
     envelope::{LeaseAddrOnWire, PacketEnvelope},
     error::Error,
     msg::{CloseLeaseParams, OpenLeaseParams, Operation, TransferOutParams},
@@ -143,11 +150,27 @@ fn callback_operation_ok_serde() {
 }
 
 #[test]
-fn callback_operation_err_serde() {
-    let value = RemoteLeaseCallbackP2P::OperationErr(
-        RemoteErrorMessage::new("dex pool drained").expect("short message must be accepted"),
+fn callback_operation_err_min_out_unmet_serde() {
+    assert_round_trip_eq(
+        r#"{"operation_err":{"kind":"min_out_unmet","message":"ibc-solray: credit below min"}}"#,
+        &operation_err(RemoteErrorKind::MinOutUnmet, "ibc-solray: credit below min"),
     );
-    assert_round_trip_eq(r#"{"operation_err":"dex pool drained"}"#, &value);
+}
+
+#[test]
+fn callback_operation_err_permanent_serde() {
+    assert_round_trip_eq(
+        r#"{"operation_err":{"kind":"permanent","message":"dex pool drained"}}"#,
+        &operation_err(RemoteErrorKind::Permanent, "dex pool drained"),
+    );
+}
+
+#[test]
+fn callback_operation_err_transient_serde() {
+    assert_round_trip_eq(
+        r#"{"operation_err":{"kind":"transient","message":"host clock unavailable"}}"#,
+        &operation_err(RemoteErrorKind::Transient, "host clock unavailable"),
+    );
 }
 
 #[test]
@@ -488,6 +511,13 @@ where
     let decoded: T =
         serde_json::from_str(&encoded).expect("decoding the freshly-encoded value must succeed");
     assert_eq!(value, &decoded);
+}
+
+fn operation_err(kind: RemoteErrorKind, message: &str) -> RemoteLeaseCallbackP2P {
+    RemoteLeaseCallbackP2P::OperationErr(RemoteError::new(
+        kind,
+        RemoteErrorMessage::new(message).expect("a short message must be accepted"),
+    ))
 }
 
 fn sample_open_lease_params() -> OpenLeaseP2P {
