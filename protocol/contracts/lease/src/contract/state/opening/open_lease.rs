@@ -153,9 +153,8 @@ impl OpenLease {
     ) -> ContractResult<Response> {
         let lease_addr = env.contract.address;
         let now = env.block.time.into_instant();
-        let leases_ref = self.deps.3.clone();
         self.refund_batch(querier, &lease_addr, now)
-            .map(|batch| Self::open_failed_response(batch, lease_addr, reason, leases_ref))
+            .map(|batch| Self::open_failed_response(batch, lease_addr, reason))
     }
 
     fn refund_batch(
@@ -209,14 +208,13 @@ impl OpenLease {
         batch: Batch,
         lease_addr: Addr,
         reason: RemoteErrorMessage,
-        leases_ref: LeasesRef,
     ) -> Response {
         let emitter = Emitter::of_type(OPEN_FAILED_EVENT)
             .emit("id", lease_addr)
             .emit("reason", reason.as_str().to_owned());
         StateMachineResponse::from(
             MessageResponse::messages_with_event(batch, emitter),
-            State::from(OpenFailed::new(reason, leases_ref)),
+            State::from(OpenFailed::new(reason)),
         )
     }
 }
