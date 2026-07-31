@@ -40,6 +40,7 @@ use super::{
 
 const LEASE_AMOUNT: LeaseCoin = LeaseCoin::new(2857142857142);
 const BORROWED_AMOUNT: LpnCoin = LpnCoin::new(1857142857142);
+const MIN_OUT_UNMET_REASON: &str = "ibc-solray: post-swap credit below required min";
 
 #[test]
 fn full_liquidation_heal_no_rights() {
@@ -222,6 +223,54 @@ fn full_liquidation_non_floor_cause_retries() {
     ));
 }
 
+// The remote-lease channel is UNORDERED, so ibc-go may redeliver the very packet
+// that parked the lease. The terminal must commit that redelivery: an `Err` here
+// reverts the controller's `ibc_packet_ack`, and the relayer then retries the
+// same packet forever without the ack ever committing.
+#[test]
+fn late_ack_after_slippage_anomaly_is_absorbed() {
+    let mut test_case = lease_mod::create_test_case::<PaymentCurrency>();
+
+    let lease = lease_mod::open_lease(&mut test_case, DOWNPAYMENT, None);
+    let controller = test_case.address_book.remote_lease_controller().clone();
+
+    trigger_full_liquidation(&mut test_case, LEASE_AMOUNT, BORROWED_AMOUNT);
+    simulate_min_out_not_satisfied(&mut test_case, lease.clone());
+
+    let swaps_before = swap::count(&test_case.app, &controller);
+
+    let mut late_response = test_case
+        .app
+        .execute(
+            controller.clone(),
+            lease.clone(),
+            &ExecuteMsg::RemoteLeaseCallback(RemoteLeaseCallback::OperationErr(stub::error_ack(
+                RemoteErrorKind::MinOutUnmet,
+                MIN_OUT_UNMET_REASON,
+            ))),
+            &[],
+        )
+        .expect("a redelivered ack must be absorbed, not reverted");
+    late_response.expect_empty();
+    let _ = late_response.unwrap_response();
+
+    // `expect_empty()` alone cannot witness absorption, for the reason spelled
+    // out above `full_liquidation_non_floor_cause_retries`: a re-emitted swap is
+    // a `WasmMsg`, invisible to an interchain-batch assertion.
+    assert_eq!(
+        swaps_before,
+        swap::count(&test_case.app, &controller),
+        "absorbing must not re-emit the sell-asset swap",
+    );
+    assert!(matches!(
+        super::state_query(&test_case, lease),
+        StateResponse::Opened {
+            status: Status::SlippageProtectionActivated,
+            ..
+        }
+    ));
+}
+
 fn trigger_full_liquidation(
     test_case: &mut LeaseTestCase,
     lease_amount: LeaseCoin,
@@ -266,7 +315,7 @@ fn simulate_min_out_not_satisfied(test_case: &mut LeaseTestCase, lease: Addr) {
             lease.clone(),
             &ExecuteMsg::RemoteLeaseCallback(RemoteLeaseCallback::OperationErr(stub::error_ack(
                 RemoteErrorKind::MinOutUnmet,
-                "ibc-solray: post-swap credit below required min",
+                MIN_OUT_UNMET_REASON,
             ))),
             &[],
         )

@@ -174,6 +174,41 @@ fn operation_ok_finishes_buy_asset() {
     );
 }
 
+// The swap ack that opens the Lease leaves it `Opened`, so a redelivery of that
+// same packet lands on the idle Lease rather than on a dex state. Committing it
+// is what keeps the controller's `ibc_packet_ack` from reverting forever.
+#[test]
+fn late_ack_after_open_is_absorbed() {
+    let (mut test_case, lease) = drive_to_swap_pending();
+    let controller = controller_addr(&test_case);
+
+    let response = stub::deliver_pending_callback(&mut test_case.app, &controller, op_tag::SWAP);
+    () = response.ignore_response().unwrap_response();
+
+    let late = test_case
+        .app
+        .execute(
+            controller,
+            lease.clone(),
+            &ExecuteMsg::RemoteLeaseCallback(RemoteLeaseCallback::OperationTimeout),
+            &[],
+        )
+        .expect("a redelivered ack must be absorbed, not reverted");
+    () = late.ignore_response().unwrap_response();
+
+    let final_state = super::state_query(&test_case, lease);
+    assert!(
+        matches!(
+            final_state,
+            StateResponse::Opened {
+                status: Status::Idle,
+                ..
+            }
+        ),
+        "absorbing must leave the Lease untouched, got {final_state:?}",
+    );
+}
+
 fn drive_to_swap_pending() -> (LeaseTestCase, Addr) {
     let mut test_case = super::create_test_case::<LeaseCurrency>();
     let downpayment = LeaseCoin::new(10_000);

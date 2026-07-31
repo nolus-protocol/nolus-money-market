@@ -2,17 +2,19 @@ use serde::{Deserialize, Serialize};
 
 use finance::duration::Duration;
 use finance::instant::Instant;
+use remote_lease::callback::RemoteLeaseCallback;
 use sdk::cosmwasm_std::{Env, MessageInfo, QuerierWrapper, Reply};
 
 use crate::{
     api::{
+        LeasePaymentCurrencies,
         position::{ClosePolicyChange, PositionClose},
         query::StateResponse,
     },
     error::ContractResult,
 };
 
-use super::{Contract, Response, handler::Handler as LeaseHandler};
+use super::{Contract, Response, State as ContractState, handler::Handler as LeaseHandler};
 
 #[derive(Serialize, Deserialize)]
 #[serde(transparent)]
@@ -29,6 +31,7 @@ impl<H> State<H> {
 impl<H> Contract for State<H>
 where
     H: LeaseHandler,
+    Self: Into<ContractState>,
 {
     fn state(
         self,
@@ -97,5 +100,23 @@ where
         info: MessageInfo,
     ) -> ContractResult<Response> {
         self.handler.heal(querier, env, info)
+    }
+
+    /// Accepts the callback and drops it: the Lease is left unchanged and no
+    /// messages or events are produced
+    fn on_remote_lease_callback(
+        self,
+        _callback: RemoteLeaseCallback<LeasePaymentCurrencies>,
+        _info: MessageInfo,
+        _querier: QuerierWrapper<'_>,
+        _env: Env,
+    ) -> ContractResult<Response> {
+        // Every callback reaching this wrapper is a redelivery of an operation
+        // that already resolved: an in-flight one parks the Lease in a
+        // `super::dex::State`, and `OpenLease`, the one opening state owning a
+        // live packet, is not wrapped here either. Erring would revert the
+        // controller's `ibc_packet_ack` and leave the relayer retrying that
+        // packet forever.
+        super::ignore_msg(self)
     }
 }

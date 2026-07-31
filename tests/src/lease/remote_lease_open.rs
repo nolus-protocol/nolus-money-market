@@ -240,14 +240,8 @@ fn late_open_lease_ack_after_open_failed_is_absorbed() {
             &ExecuteMsg::RemoteLeaseCallback(late_callback),
             &[],
         )
-        .expect("late ack must be absorbed by the OpenFailed terminal")
-        .unwrap_response();
-
-    let absorbed = late
-        .events
-        .iter()
-        .any(|event| event.ty == "wasm-ls-remote-lease-late-ack");
-    assert!(absorbed, "OpenFailed must emit the late-ack event");
+        .expect("late ack must be absorbed by the OpenFailed terminal");
+    () = late.ignore_response().unwrap_response();
 
     let balance_after = balance::<LeaseCurrency>(&test_case, &customer);
     assert_eq!(balance_before, balance_after, "absorber must be idempotent");
