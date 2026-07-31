@@ -1,4 +1,4 @@
-use dex::{AcceptUpToMaxSlippage, AnomalyHandler, AnomalyTreatment};
+use dex::{AcceptUpToMaxSlippage, AnomalyCause, AnomalyHandler, AnomalyTreatment};
 use platform::message::Response as MessageResponse;
 use sdk::cosmwasm_std::{Env, QuerierWrapper};
 
@@ -69,10 +69,18 @@ impl<RepayableImpl> AnomalyHandler<SellAsset<RepayableImpl, Calculator>>
 where
     RepayableImpl: Closable + Repayable,
 {
-    fn on_anomaly(self) -> AnomalyTreatment<SellAsset<RepayableImpl, Calculator>> {
-        let emitter =
-            event::emit_slippage_anomaly(&self.lease.lease, self.slippage_calc.threshold());
-        let next_state = SlippageAnomaly::new(self.lease);
-        AnomalyTreatment::Exit(Ok(Response::from(emitter, next_state)))
+    fn on_anomaly(
+        self,
+        cause: AnomalyCause,
+    ) -> AnomalyTreatment<SellAsset<RepayableImpl, Calculator>> {
+        match cause {
+            AnomalyCause::MinOutputNotFulfilled => {
+                let emitter =
+                    event::emit_slippage_anomaly(&self.lease.lease, self.slippage_calc.threshold());
+                let next_state = SlippageAnomaly::new(self.lease);
+                AnomalyTreatment::Exit(Ok(Response::from(emitter, next_state)))
+            }
+            AnomalyCause::Other => AnomalyTreatment::Retry(self),
+        }
     }
 }

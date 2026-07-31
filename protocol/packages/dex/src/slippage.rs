@@ -35,7 +35,8 @@ where
     /// Determine the minimum output amount of a swap
     ///
     /// An anomaly is triggered if the output amount cannot be satisfied. The
-    /// workflow will continue as per the result of [`Policy::on_anomaly`].
+    /// workflow will continue as per the result of
+    /// [`crate::SwapOutputTask::on_anomaly`].
     fn min_output(
         &self,
         input: &CoinDTO<G>,

@@ -1,8 +1,8 @@
 use serde::{Deserialize, Serialize};
 
 use dex::{
-    Account, AnomalyTreatment, ContractInSwap, Error as DexError, SlippageCalculator, Stage,
-    SwapCoins, SwapOutputTask, SwapTask, WithCalculator, WithOutputTask,
+    Account, AnomalyCause, AnomalyTreatment, ContractInSwap, Error as DexError, SlippageCalculator,
+    Stage, SwapCoins, SwapOutputTask, SwapTask, WithCalculator, WithOutputTask,
 };
 use finance::instant::Instant;
 use finance::{coin::Coin, duration::Duration};
@@ -159,11 +159,11 @@ where
         self
     }
 
-    fn on_anomaly(self) -> AnomalyTreatment<Self>
+    fn on_anomaly(self, cause: AnomalyCause) -> AnomalyTreatment<Self>
     where
         Self: Sized,
     {
-        <Self as AnomalyHandler<Self>>::on_anomaly(self)
+        <Self as AnomalyHandler<Self>>::on_anomaly(self, cause)
     }
 
     fn finish(

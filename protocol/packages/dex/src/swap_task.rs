@@ -4,7 +4,8 @@ use sdk::cosmwasm_std::{Env, MessageInfo, QuerierWrapper};
 use timealarms::stub::TimeAlarmsRef;
 
 use crate::{
-    Account, AnomalyTreatment, SwapCoins, error::Result as DexResult, slippage::WithCalculator,
+    Account, AnomalyCause, AnomalyTreatment, SwapCoins, error::Result as DexResult,
+    slippage::WithCalculator,
 };
 
 pub type CoinsNb = u8;
@@ -77,14 +78,14 @@ where
     /// Called when an anomaly is detected
     ///
     /// Determine how the current workflow should procceed.
-    /// Simmilarly to [`SwapTask::finish`], this function may exit the current DEX swap task,
+    /// Simmilarly to [`Self::finish`], this function may exit the current DEX swap task,
     /// a state composed of TransferOut, SwapExactIn, TransferIn, etc., and transition to a next state,
     /// or ask for a retry of the last operation.
     ///
-    /// Due to the immaturity of the DEX Swap APIs' the particular error cannot be determined.
-    /// If/once the APIs' get more mature we may want to recognize the error cause.
-    /// An unsatisfied minimum output amount is always assumed whenever a swap error is received.
-    fn on_anomaly(self) -> AnomalyTreatment<SwapTaskT>
+    /// `cause` carries what the counterparty reported, so the decision no longer
+    /// has to assume an unsatisfied minimum output. A leg without a real output
+    /// floor has nothing to distinguish and may ignore it.
+    fn on_anomaly(self, cause: AnomalyCause) -> AnomalyTreatment<SwapTaskT>
     where
         Self: Sized;
 
@@ -92,7 +93,7 @@ where
     ///
     /// The states involve TransferOut, SwapExactIn, TransferIn, etc. This transition originates from one of them,
     /// and should point to a next state, sibling to this one in the higher-level state machine.
-    /// For example, the DEX [`Lease::BuyAsset`] state transition to [`Lease::Active`] on finish.
+    /// For example, the DEX `Lease::BuyAsset` state transition to `Lease::Active` on finish.
     ///
     fn finish(
         self,

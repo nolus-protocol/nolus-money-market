@@ -11,12 +11,11 @@ use finance::instant::Instant;
 use platform::{
     batch::{Batch, Emitter},
     message::Response as MessageResponse,
-    remote::ErrorResponse as ICAErrorResponse,
 };
 use sdk::cosmwasm_std::{Binary, Env, QuerierWrapper};
 
 use crate::{
-    CoinsNb, Contract, ContractInSwap, Enterable,
+    CoinsNb, Contract, ContractInSwap, Enterable, ErrorAck,
     RemoteLeaseTransportFactory as RemoteLeaseTransportFactoryT, Stage, SwapTask as SwapTaskT,
     TimeAlarm, TransportOut as TransportOutT, TransportOutFactory as TransportOutFactoryT,
     error::Result,
@@ -231,7 +230,7 @@ where
     // we cannot do anything else except keep trying to transfer again
     fn on_error(
         self,
-        _response: ICAErrorResponse,
+        _error: ErrorAck,
         querier: QuerierWrapper<'_>,
         env: Env,
     ) -> HandlerResult<Self> {

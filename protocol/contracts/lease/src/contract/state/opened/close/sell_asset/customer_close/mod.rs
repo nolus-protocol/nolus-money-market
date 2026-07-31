@@ -1,4 +1,4 @@
-use dex::{AcceptAnyNonZeroSwap, AnomalyHandler, AnomalyTreatment};
+use dex::{AcceptAnyNonZeroSwap, AnomalyCause, AnomalyHandler, AnomalyTreatment};
 use platform::message::Response as MessageResponse;
 use sdk::cosmwasm_std::{Env, QuerierWrapper};
 
@@ -73,7 +73,10 @@ impl<RepayableImpl> AnomalyHandler<SellAsset<RepayableImpl, Calculator>>
 where
     RepayableImpl: Closable + Repayable,
 {
-    fn on_anomaly(self) -> AnomalyTreatment<SellAsset<RepayableImpl, Calculator>> {
+    fn on_anomaly(
+        self,
+        _cause: AnomalyCause,
+    ) -> AnomalyTreatment<SellAsset<RepayableImpl, Calculator>> {
         AnomalyTreatment::Retry(self)
     }
 }

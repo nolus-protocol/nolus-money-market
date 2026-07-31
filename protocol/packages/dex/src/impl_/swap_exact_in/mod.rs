@@ -9,12 +9,12 @@ use currency::{CurrencyDTO, Group, MemberOf};
 use decode_resp::{DecodeThenFinish, DecodeThenTransferIn};
 use encode_req::EncodeRequest;
 use finance::{coin::CoinDTO, duration::Duration, instant::Instant};
-use platform::{batch::Batch, remote::ErrorResponse as ICAErrorResponse};
+use platform::batch::Batch;
 use report_anomaly::ReportAnomalyCmd;
 use sdk::cosmwasm_std::{Binary, Env, QuerierWrapper};
 
 use crate::{
-    AnomalyTreatment, Contract, ContractInSwap, Enterable,
+    AnomalyCause, AnomalyTreatment, Contract, ContractInSwap, Enterable, ErrorAck,
     RemoteLeaseTransportFactory as RemoteLeaseTransportFactoryT, Stage, SwapTask as SwapTaskT,
     TimeAlarm, TransportOutFactory as TransportOutFactoryT,
     error::Result,
@@ -87,8 +87,13 @@ where
         RemoteLeaseTransportFactoryT<TopG = <SwapTask::InG as Group>::TopG>,
     Self: Handler<Response = SEnum, SwapResult = SwapTask::Result> + Into<SEnum>,
 {
-    fn handle_error(self, querier: QuerierWrapper<'_>, env: Env) -> HandlerResult<Self> {
-        match self.spec.into_output_task(ReportAnomalyCmd::default()) {
+    fn handle_error(
+        self,
+        cause: AnomalyCause,
+        querier: QuerierWrapper<'_>,
+        env: Env,
+    ) -> HandlerResult<Self> {
+        match self.spec.into_output_task(ReportAnomalyCmd::new(cause)) {
             AnomalyTreatment::Retry(spec) => {
                 let swap_exact_in = SwapExactIn::new(spec, self.transport_factory);
                 swap_exact_in
@@ -170,11 +175,11 @@ where
 
     fn on_error(
         self,
-        _response: ICAErrorResponse,
+        error: ErrorAck,
         querier: QuerierWrapper<'_>,
         env: Env,
     ) -> HandlerResult<Self> {
-        self.handle_error(querier, env)
+        self.handle_error(error.cause(), querier, env)
     }
 
     fn on_timeout(self, querier: QuerierWrapper<'_>, env: Env) -> ContinueResult<Self> {
@@ -233,11 +238,11 @@ where
 
     fn on_error(
         self,
-        _response: ICAErrorResponse,
+        error: ErrorAck,
         querier: QuerierWrapper<'_>,
         env: Env,
     ) -> HandlerResult<Self> {
-        self.handle_error(querier, env)
+        self.handle_error(error.cause(), querier, env)
     }
 
     fn on_timeout(self, querier: QuerierWrapper<'_>, env: Env) -> ContinueResult<Self> {

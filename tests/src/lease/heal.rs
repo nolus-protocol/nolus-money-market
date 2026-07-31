@@ -52,6 +52,64 @@ fn active_state() {
     heal_no_inconsistency(&mut test_case.app, lease, testing::user(USER));
 }
 
+// Pins decision D7 on the repay buy-LPN leg. Its calculator accepts any
+// non-zero swap, so there is no floor for an output to fall below and a
+// `MinOutUnmet` ack must be treated exactly like any other cause — retry, never
+// park. The sibling `swap_on_repay` injects `Permanent`, which maps to
+// `AnomalyCause::Other`, so it stays green even if the below-floor cause were
+// wrongly made to park on every leg; only this injection discriminates.
+#[test]
+fn min_out_unmet_still_retries_on_repay() {
+    let mut test_case = super::create_test_case::<LeaseCurrency>();
+    let downpayment = LeaseCoin::new(10_000);
+    let lease = super::open_lease(&mut test_case, downpayment, None);
+
+    let payment = super::create_payment_coin(1_000);
+    test_case.send_funds_from_admin(testing::user(USER), &[common::cwcoin(payment)]);
+
+    let controller = test_case.address_book.remote_lease_controller().clone();
+    stub::set_response_mode(
+        &mut test_case.app,
+        &controller,
+        op_tag::SWAP,
+        ResponseMode::Delayed,
+    );
+    stub::set_swap_fill(&mut test_case.app, &controller, SwapFill::InputAmount);
+
+    () = repay::send_payment_and_transfer(&mut test_case, lease.clone(), payment)
+        .ignore_response()
+        .unwrap_response();
+
+    let swaps_before = test_swap::count(&test_case.app, &controller);
+
+    let app_response = test_case
+        .app
+        .execute(
+            controller.clone(),
+            lease,
+            &ExecuteMsg::RemoteLeaseCallback(RemoteLeaseCallback::OperationErr(stub::error_ack(
+                RemoteErrorKind::MinOutUnmet,
+                "ibc-solray: post-swap credit below required min",
+            ))),
+            &[],
+        )
+        .expect("a below-floor ack on a floorless leg must retry, not revert")
+        .unwrap_response();
+
+    assert_eq!(
+        swaps_before + 1,
+        test_swap::count(&test_case.app, &controller),
+        "the buy-LPN swap must be re-emitted",
+    );
+    assert!(
+        !app_response
+            .events
+            .iter()
+            .any(|event| event.ty == "wasm-ls-slippage-anomaly"),
+        "the repay leg must never claim slippage protection",
+    );
+}
+
 #[test]
 fn swap_on_repay() {
     let mut test_case = super::create_test_case::<LeaseCurrency>();

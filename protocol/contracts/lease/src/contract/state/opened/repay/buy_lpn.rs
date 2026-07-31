@@ -1,8 +1,9 @@
 use serde::{Deserialize, Serialize};
 
 use dex::{
-    AcceptAnyNonZeroSwap, Account, AnomalyTreatment, ContractInSwap, Error as DexError, Stage,
-    StartLocalLocalState, SwapCoins, SwapOutputTask, SwapTask, WithCalculator, WithOutputTask,
+    AcceptAnyNonZeroSwap, Account, AnomalyCause, AnomalyTreatment, ContractInSwap,
+    Error as DexError, Stage, StartLocalLocalState, SwapCoins, SwapOutputTask, SwapTask,
+    WithCalculator, WithOutputTask,
 };
 use finance::instant::Instant;
 use finance::{coin::Coin, duration::Duration};
@@ -141,7 +142,9 @@ impl SwapOutputTask<Self> for BuyLpn {
         self
     }
 
-    fn on_anomaly(self) -> AnomalyTreatment<Self>
+    // Retries on every cause, including a below-floor one: this leg's
+    // calculator accepts any non-zero swap, so it has no floor to be below.
+    fn on_anomaly(self, _cause: AnomalyCause) -> AnomalyTreatment<Self>
     where
         Self: Sized,
     {

@@ -167,6 +167,61 @@ fn full_liquidation_heal_full_liquidation() {
     }
 }
 
+// The counterparty rejects the held sell-asset swap for a reason that is not a
+// below-floor outcome. Parking would mislabel the lease as slippage-protected
+// and demand a privileged human for a fault they cannot fix, so the leg
+// re-emits instead and stays in liquidation.
+//
+// `expect_empty()` cannot witness any of this: a re-emitted swap is a `WasmMsg`,
+// not an interchain message, so an empty interchain batch is equally consistent
+// with parking. The swap count and the absence of the anomaly event are what
+// discriminate the two outcomes.
+#[test]
+fn full_liquidation_non_floor_cause_retries() {
+    let mut test_case = lease_mod::create_test_case::<PaymentCurrency>();
+
+    let lease = lease_mod::open_lease(&mut test_case, DOWNPAYMENT, None);
+    let controller = test_case.address_book.remote_lease_controller().clone();
+
+    trigger_full_liquidation(&mut test_case, LEASE_AMOUNT, BORROWED_AMOUNT);
+
+    let swaps_before = swap::count(&test_case.app, &controller);
+
+    let app_response = test_case
+        .app
+        .execute(
+            controller.clone(),
+            lease.clone(),
+            &ExecuteMsg::RemoteLeaseCallback(RemoteLeaseCallback::OperationErr(stub::error_ack(
+                RemoteErrorKind::Permanent,
+                "ibc-solray: jupiter route decode failed",
+            ))),
+            &[],
+        )
+        .expect("a non-floor cause must retry, not revert")
+        .unwrap_response();
+
+    assert_eq!(
+        swaps_before + 1,
+        swap::count(&test_case.app, &controller),
+        "the sell-asset swap must be re-emitted",
+    );
+    assert!(
+        !app_response
+            .events
+            .iter()
+            .any(|event| event.ty == "wasm-ls-slippage-anomaly"),
+        "a non-floor cause must not claim slippage protection",
+    );
+    assert!(matches!(
+        super::state_query(&test_case, lease),
+        StateResponse::Opened {
+            status: Status::InProgress(OngoingTrx::Liquidation { .. }),
+            ..
+        }
+    ));
+}
+
 fn trigger_full_liquidation(
     test_case: &mut LeaseTestCase,
     lease_amount: LeaseCoin,

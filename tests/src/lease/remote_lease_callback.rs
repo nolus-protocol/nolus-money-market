@@ -121,6 +121,36 @@ fn operation_err_reaches_on_dex_error() {
     );
 }
 
+// Pins decision D7: only the liquidation leg routes on the cause. The opening
+// buy-asset leg accepts any non-zero swap, so it has no floor to be below and a
+// `MinOutUnmet` ack must be treated exactly like any other — retry, never park.
+#[test]
+fn min_out_unmet_still_retries_on_opening() {
+    let (mut test_case, lease) = drive_to_swap_pending();
+    let controller = controller_addr(&test_case);
+
+    let response = test_case
+        .app
+        .execute(
+            controller,
+            lease.clone(),
+            &ExecuteMsg::RemoteLeaseCallback(RemoteLeaseCallback::OperationErr(stub::error_ack(
+                RemoteErrorKind::MinOutUnmet,
+                "ibc-solray: post-swap credit below required min",
+            ))),
+            &[],
+        )
+        .expect("a below-floor ack on a floorless leg must retry, not revert");
+    () = response.ignore_response().unwrap_response();
+    assert!(
+        matches!(
+            super::state_query(&test_case, lease),
+            StateResponse::Opening { .. }
+        ),
+        "the opening leg must retry on every cause, keeping the lease opening",
+    );
+}
+
 #[test]
 fn operation_ok_finishes_buy_asset() {
     let (mut test_case, lease) = drive_to_swap_pending();

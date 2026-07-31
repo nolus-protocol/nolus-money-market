@@ -4,8 +4,8 @@ use serde::{Deserialize, Serialize};
 
 use currency::{CurrencyDef, Group, MemberOf};
 use dex::{
-    Account, AnomalyTreatment, ContractInSwap, Error as DexError, Stage, StartTransferInState,
-    SwapCoins, SwapOutputTask, SwapTask, WithCalculator, WithOutputTask,
+    Account, AnomalyCause, AnomalyTreatment, ContractInSwap, Error as DexError, Stage,
+    StartTransferInState, SwapCoins, SwapOutputTask, SwapTask, WithCalculator, WithOutputTask,
 };
 use finance::instant::Instant;
 use finance::{
@@ -210,7 +210,7 @@ where
         self.swap_task
     }
 
-    fn on_anomaly(self) -> AnomalyTreatment<TransferIn>
+    fn on_anomaly(self, _cause: AnomalyCause) -> AnomalyTreatment<TransferIn>
     where
         Self: Sized,
     {

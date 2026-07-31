@@ -13,6 +13,7 @@ use lease::{
     },
     error::{ContractError, PositionError},
 };
+use remote_lease::callback::{RemoteErrorKind, RemoteLeaseCallback};
 use sdk::{
     cosmwasm_std::{Addr, Event},
     cw_multi_test::AppResponse,
@@ -22,7 +23,7 @@ use sdk::{
 use crate::common::{
     self, ADMIN, USER, lease as common_lease,
     leaser::{self, Instantiator},
-    remote_lease_controller_stub::SwapFill,
+    remote_lease_controller_stub::{self as stub, ResponseMode, SwapFill, op_tag},
     swap,
     test_case::response::ResponseWithInterChainMsgs,
 };
@@ -256,6 +257,64 @@ fn partial_close_min_transaction() {
         &ContractError::PositionError(PositionError::PositionCloseAmountTooSmall(coin
        )) if coin == LpnCoinDTO::from(min_transaction_lpn)
     ));
+}
+
+// Pins decision D7 on the customer-close sell-asset leg. Like the other
+// floorless legs it accepts any non-zero swap, so a `MinOutUnmet` ack must
+// retry rather than park; only liquidation carries a real floor and routes on
+// the cause. Asserted through the swap count and the absent anomaly event,
+// because a re-emitted swap is a `WasmMsg` and so leaves the interchain batch
+// empty either way.
+#[test]
+fn min_out_unmet_still_retries_on_customer_close() {
+    let mut test_case = super::create_test_case::<PaymentCurrency>();
+    let lease = super::open_lease(&mut test_case, DOWNPAYMENT, None);
+    let controller = test_case.address_book.remote_lease_controller().clone();
+
+    swap::set_fill(&mut test_case.app, &controller, SwapFill::InputAmount);
+    // Hold the sell-asset swap so the rejection can be driven by hand.
+    stub::set_response_mode(
+        &mut test_case.app,
+        &controller,
+        op_tag::SWAP,
+        ResponseMode::Delayed,
+    );
+
+    let _ = send_close(
+        &mut test_case,
+        lease.clone(),
+        &ExecuteMsg::ClosePosition(PositionClose::FullClose(FullClose {})),
+    )
+    .unwrap_response();
+
+    let swaps_before = swap::count(&test_case.app, &controller);
+
+    let app_response = test_case
+        .app
+        .execute(
+            controller.clone(),
+            lease,
+            &ExecuteMsg::RemoteLeaseCallback(RemoteLeaseCallback::OperationErr(stub::error_ack(
+                RemoteErrorKind::MinOutUnmet,
+                "ibc-solray: post-swap credit below required min",
+            ))),
+            &[],
+        )
+        .expect("a below-floor ack on a floorless leg must retry, not revert")
+        .unwrap_response();
+
+    assert_eq!(
+        swaps_before + 1,
+        swap::count(&test_case.app, &controller),
+        "the sell-asset swap must be re-emitted",
+    );
+    assert!(
+        !app_response
+            .events
+            .iter()
+            .any(|event| event.ty == "wasm-ls-slippage-anomaly"),
+        "the customer-close leg must never claim slippage protection",
+    );
 }
 
 fn do_close(

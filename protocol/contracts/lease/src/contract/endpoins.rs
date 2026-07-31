@@ -1,5 +1,6 @@
 use access_control::permissions::DexResponseSafeDeliveryPermission;
 use cw_time::IntoInstant;
+use dex::{AnomalyCause, ErrorAck};
 use finance::duration::Duration;
 use platform::{
     contract::{self, Validator},
@@ -183,9 +184,11 @@ fn process_sudo(
             request: _,
             details,
         } => {
-            let resp = details.into();
-            api.debug(&format!("SudoMsg::Error({resp})"));
-            state.on_dex_error(resp, querier, env)
+            // Not a swap ack: the ICA path carries no classified cause, and the
+            // only leg reachable through it re-emits regardless of one.
+            let error = ErrorAck::new(AnomalyCause::Other, details.into());
+            api.debug(&format!("SudoMsg::Error({error})"));
+            state.on_dex_error(error, querier, env)
         }
         SudoMsg::Timeout { request: _ } => state.on_dex_timeout(querier, env),
         SudoMsg::OpenAck { .. } => Err(ContractError::unsupported_operation("sudo open ack")),
