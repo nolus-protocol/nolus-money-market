@@ -12,7 +12,7 @@ build = "build/main.rs"
 
 [package.metadata.cargo-each]
 combinations = [
-    { tags = ["ci", "@agnostic"], include-rest = true },
+    { tags = ["ci"], include-rest = true },
 ]
 
 [lib]

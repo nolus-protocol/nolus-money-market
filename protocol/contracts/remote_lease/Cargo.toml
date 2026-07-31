@@ -10,8 +10,8 @@ rust-version.workspace = true
 
 [package.metadata.cargo-each]
 combinations = [
-    { tags = ["build", "@agnostic"], always-on = ["contract"], include-rest = false },
-    { tags = ["ci", "@agnostic"], feature-groups = ["contract-or-stub", "testing"], include-rest = false },
+    { tags = ["build"], always-on = ["contract"], include-rest = false },
+    { tags = ["ci"], feature-groups = ["contract-or-stub", "testing"], include-rest = false },
 ]
 feature-groups = { contract-or-stub = { members = ["contract", "stub"], at-least-one = false, mutually-exclusive = true }, testing = { members = ["testing"], at-least-one = false, mutually-exclusive = false } }
 

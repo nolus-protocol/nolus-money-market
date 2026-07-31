@@ -392,8 +392,6 @@ VOLUME ["/src/build-configuration"]
 
 WORKDIR "/src/protocol"
 
-RUN "apk" "add" "jq"
-
 ARG protocol_contracts_count
 
 ENV CONTRACTS_COUNT="${protocol_contracts_count:?}"

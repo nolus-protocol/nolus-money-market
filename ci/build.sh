@@ -24,7 +24,6 @@
 ## cargo [with:]                                                              ##
 ##   * Rust compiler                                                          ##
 ##   * Rust compiler [target=wasm32-unknown-unknown]                          ##
-## jq                                                                         ##
 ################################################################################
 
 set -eu
@@ -174,7 +173,6 @@ ___build_unoptimized() {
     "cargo" \
     "each" \
     --tag "build" \
-    --tag "${dex_type:?}" \
     "run" \
     --exact \
     --print-command \
@@ -277,19 +275,6 @@ ___calculate_optimized_binary_checksum() (
 )
 
 build() (
-  case "${#}" in
-    ("1")
-      dex_type="${1:?}"
-      shift
-      ;;
-    (*)
-      "echo" \
-        "The \"build\" function takes exactly one argument, the DEX type tag!" \
-        >&2
-
-      exit "1"
-  esac
-
   "___build_unoptimized"
 
   unoptimized_binaries="$("___list_unoptimized_binaries")"
@@ -318,22 +303,6 @@ build() (
 ${unoptimized_binaries:?}
 EOF
 )
-
-get_dex_type() {
-  protocol="$(
-    "jq" \
-      -c \
-      "." \
-      <"/src/build-configuration/protocol.json"
-  )"
-
-  "jq" \
-    --argjson "protocol" "${protocol:?}" \
-    --exit-status \
-    --raw-output \
-    ".networks[\$protocol.dex_network].dexes[\$protocol.dex].type | select(. != null)" \
-    <"/src/build-configuration/topology.json"
-}
 
 check_optimized_binaries_count() (
   cd "${optimized_binaries_directory:?}"
@@ -476,7 +445,7 @@ case "${workspace:?}" in
     exit "1"
 esac
 
-"build" "@agnostic"
+"build"
 
 case "${workspace:?}" in
   ("protocol")
@@ -484,10 +453,6 @@ case "${workspace:?}" in
     readonly outputs_directory
 
     "mkdir" "${outputs_directory:?}"
-
-    dex_type="$("get_dex_type")"
-
-    "build" "dex-${dex_type:?}"
 
     directories="$(
       directories="$("cat" "${BUILD_OUT_DIR_PATHS:?}")"
