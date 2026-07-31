@@ -33,9 +33,8 @@ impl Contract for OpenFailed {
         })
     }
 
-    /// Absorbs late-after-terminal callbacks. The original packet's
-    /// success ack may still land here after a timeout already moved us
-    /// to this terminal.
+    /// Accepts the callback and drops it: the Lease is left unchanged and no
+    /// messages or events are produced
     fn on_remote_lease_callback(
         self,
         _callback: RemoteLeaseCallback<LeasePaymentCurrencies>,
@@ -43,6 +42,8 @@ impl Contract for OpenFailed {
         _querier: QuerierWrapper<'_>,
         _env: Env,
     ) -> ContractResult<Response> {
+        // A success ack for the OpenLease packet may still arrive after a
+        // timeout already drove the Lease into this terminal.
         super::ignore_msg(self)
     }
 }

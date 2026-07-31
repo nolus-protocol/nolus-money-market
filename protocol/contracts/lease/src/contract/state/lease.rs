@@ -14,9 +14,7 @@ use crate::{
     error::ContractResult,
 };
 
-use super::{
-    Contract, Response, State as ContractState, handler::Handler as LeaseHandler, ignore_msg,
-};
+use super::{Contract, Response, State as ContractState, handler::Handler as LeaseHandler};
 
 #[derive(Serialize, Deserialize)]
 #[serde(transparent)]
@@ -104,18 +102,8 @@ where
         self.handler.heal(querier, env, info)
     }
 
-    /// Absorbs a stale remote-lease callback
-    ///
-    /// A Lease with a remote operation in flight sits in a [`super::dex::State`],
-    /// and the one opening state that owns a live packet, `OpenLease`, is not
-    /// wrapped here either. So no `H` this wrapper carries can be awaiting a
-    /// callback, which makes every callback reaching it a redelivery of an
-    /// operation that already resolved.
-    ///
-    /// The remote-lease channel is UNORDERED, so such a redelivery is expected
-    /// rather than exceptional. Erring would revert the controller's
-    /// `ibc_packet_ack` and leave the relayer retrying that packet forever, so
-    /// drop it and commit instead.
+    /// Accepts the callback and drops it: the Lease is left unchanged and no
+    /// messages or events are produced
     fn on_remote_lease_callback(
         self,
         _callback: RemoteLeaseCallback<LeasePaymentCurrencies>,
@@ -123,6 +111,12 @@ where
         _querier: QuerierWrapper<'_>,
         _env: Env,
     ) -> ContractResult<Response> {
-        ignore_msg(self)
+        // Every callback reaching this wrapper is a redelivery of an operation
+        // that already resolved: an in-flight one parks the Lease in a
+        // `super::dex::State`, and `OpenLease`, the one opening state owning a
+        // live packet, is not wrapped here either. Erring would revert the
+        // controller's `ibc_packet_ack` and leave the relayer retrying that
+        // packet forever.
+        super::ignore_msg(self)
     }
 }
