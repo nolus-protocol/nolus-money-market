@@ -69,11 +69,6 @@ impl<RepayableImpl> AnomalyHandler<SellAsset<RepayableImpl, Calculator>>
 where
     RepayableImpl: Closable + Repayable,
 {
-    // The only leg with a real output floor, so the only one for which parking
-    // carries information. Slippage protection is claimed solely for a genuine
-    // below-floor rejection; any other cause is a failure of the swap itself,
-    // which the anomaly manager cannot resolve and which must not be reported
-    // to the customer as slippage.
     fn on_anomaly(
         self,
         cause: AnomalyCause,

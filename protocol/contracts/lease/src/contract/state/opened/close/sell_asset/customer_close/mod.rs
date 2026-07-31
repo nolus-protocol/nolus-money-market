@@ -73,8 +73,6 @@ impl<RepayableImpl> AnomalyHandler<SellAsset<RepayableImpl, Calculator>>
 where
     RepayableImpl: Closable + Repayable,
 {
-    // Retries on every cause, including a below-floor one: this leg's
-    // calculator accepts any non-zero swap, so it has no floor to be below.
     fn on_anomaly(
         self,
         _cause: AnomalyCause,
