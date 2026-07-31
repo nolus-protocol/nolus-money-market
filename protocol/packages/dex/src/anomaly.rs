@@ -1,6 +1,6 @@
 use std::fmt::{Display, Formatter, Result as FmtResult};
 
-use platform::remote::ErrorResponse as ICAErrorResponse;
+use platform::remote::ErrorDetails as RemoteErrorDetails;
 
 use crate::SwapTask;
 
@@ -31,11 +31,11 @@ pub enum Cause {
 /// value crosses no message boundary and adds nothing to any persisted layout.
 pub struct ErrorAck {
     cause: Cause,
-    details: ICAErrorResponse,
+    details: RemoteErrorDetails,
 }
 
 impl ErrorAck {
-    pub const fn new(cause: Cause, details: ICAErrorResponse) -> Self {
+    pub const fn new(cause: Cause, details: RemoteErrorDetails) -> Self {
         Self { cause, details }
     }
 
@@ -75,7 +75,7 @@ where
 
 #[cfg(test)]
 mod test {
-    use platform::remote::ErrorResponse as ICAErrorResponse;
+    use platform::remote::ErrorDetails as RemoteErrorDetails;
 
     use super::{Cause, ErrorAck};
 
@@ -102,7 +102,7 @@ mod test {
         );
     }
 
-    fn details() -> ICAErrorResponse {
-        ICAErrorResponse::from("dex pool drained".to_owned())
+    fn details() -> RemoteErrorDetails {
+        RemoteErrorDetails::from("dex pool drained".to_owned())
     }
 }

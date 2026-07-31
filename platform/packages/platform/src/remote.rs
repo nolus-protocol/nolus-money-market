@@ -12,10 +12,12 @@ use crate::{error::Error, result::Result};
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub struct Account(String);
 
-/// Error response to a remote account request
+/// Why a remote-chain operation failed, as the remote side described it
 ///
 /// Contains an unstructured text, that is helpful for manual troubleshooting.
-pub struct ErrorResponse {
+/// Deliberately says nothing about which transport carried the failure — an
+/// interchain account and the remote-lease controller both report through it.
+pub struct ErrorDetails {
     details: String,
 }
 
@@ -49,13 +51,13 @@ impl Display for Account {
     }
 }
 
-impl Display for ErrorResponse {
+impl Display for ErrorDetails {
     fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
-        f.write_fmt(format_args!("ICA error with details '{}'", self.details))
+        f.write_fmt(format_args!("remote error with details '{}'", self.details))
     }
 }
 
-impl From<String> for ErrorResponse {
+impl From<String> for ErrorDetails {
     fn from(details: String) -> Self {
         Self { details }
     }

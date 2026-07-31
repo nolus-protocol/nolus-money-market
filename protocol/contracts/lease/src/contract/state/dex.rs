@@ -4,7 +4,7 @@ use crate::api::LeasePaymentCurrencies;
 use dex::{AnomalyCause, Contract as DexContract, ErrorAck, Handler as DexHandler};
 use finance::duration::Duration;
 use finance::instant::Instant;
-use platform::{remote::ErrorResponse as ICAErrorResponse, state_machine};
+use platform::{remote::ErrorDetails as RemoteErrorDetails, state_machine};
 use remote_lease::callback::{RemoteErrorKind, RemoteLeaseCallback};
 use sdk::cosmwasm_std::{self, Binary, Env, MessageInfo, QuerierWrapper, Reply};
 
@@ -79,7 +79,7 @@ where
                 RemoteLeaseCallback::OperationErr(error) => self.on_dex_error(
                     ErrorAck::new(
                         classify(error.kind()),
-                        ICAErrorResponse::from(error.message().as_str().to_owned()),
+                        RemoteErrorDetails::from(error.message().as_str().to_owned()),
                     ),
                     querier,
                     env,
