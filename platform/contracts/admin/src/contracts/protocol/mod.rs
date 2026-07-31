@@ -45,6 +45,7 @@ impl<T> FirstOrderType<higher_order_type::Protocol> for Protocol<T> {
 pub enum Network {
     Neutron,
     Osmosis,
+    Solana,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -55,6 +56,7 @@ pub enum Network {
 )]
 pub enum Dex {
     Astroport { router_address: String },
+    Metis,
     Osmosis,
 }
 
@@ -81,8 +83,31 @@ mod tests {
         );
 
         assert_eq!(
+            cosmwasm_std::from_json::<super::Dex>(r#""Metis""#).unwrap(),
+            super::Dex::Metis {}
+        );
+
+        assert_eq!(
             cosmwasm_std::from_json::<super::Dex>(r#""Osmosis""#).unwrap(),
             super::Dex::Osmosis {}
+        );
+    }
+
+    #[test]
+    fn test_network_serde() {
+        assert_eq!(
+            cosmwasm_std::from_json::<super::Network>(r#""Neutron""#).unwrap(),
+            super::Network::Neutron {}
+        );
+
+        assert_eq!(
+            cosmwasm_std::from_json::<super::Network>(r#""Osmosis""#).unwrap(),
+            super::Network::Osmosis {}
+        );
+
+        assert_eq!(
+            cosmwasm_std::from_json::<super::Network>(r#""Solana""#).unwrap(),
+            super::Network::Solana {}
         );
     }
 }
