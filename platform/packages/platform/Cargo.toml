@@ -2,7 +2,7 @@ lints = { workspace = true }
 
 [package]
 name = "platform"
-version = "0.5.0"
+version = "0.6.0"
 edition.workspace = true
 authors.workspace = true
 license.workspace = true

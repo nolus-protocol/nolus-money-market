@@ -2,7 +2,7 @@ lints = { workspace = true }
 
 [package]
 name = "leaser"
-version = "0.13.1"
+version = "0.13.2"
 edition.workspace = true
 authors.workspace = true
 license.workspace = true
