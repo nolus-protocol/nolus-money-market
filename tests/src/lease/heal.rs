@@ -1,6 +1,15 @@
 use currencies::PaymentGroup;
 use finance::{coin::CoinDTO, price};
-use lease::{api::ExecuteMsg, error::ContractError};
+use lease::{
+    api::{
+        ExecuteMsg,
+        query::{
+            StateResponse,
+            opened::{OngoingTrx, RepayTrx, Status},
+        },
+    },
+    error::ContractError,
+};
 use remote_lease::callback::{RemoteErrorKind, RemoteLeaseCallback};
 use sdk::{
     cosmwasm_std::{Addr, StdResult},
@@ -86,7 +95,7 @@ fn min_out_unmet_still_retries_on_repay() {
         .app
         .execute(
             controller.clone(),
-            lease,
+            lease.clone(),
             &ExecuteMsg::RemoteLeaseCallback(RemoteLeaseCallback::OperationErr(stub::error_ack(
                 RemoteErrorKind::MinOutUnmet,
                 "ibc-solray: post-swap credit below required min",
@@ -108,6 +117,18 @@ fn min_out_unmet_still_retries_on_repay() {
             .any(|event| event.ty == "wasm-ls-slippage-anomaly"),
         "the repay leg must never claim slippage protection",
     );
+    // The queried state is the second, independent witness: parking would answer
+    // `Status::SlippageProtectionActivated` here, whatever the event stream says.
+    assert!(matches!(
+        super::state_query(&test_case, lease),
+        StateResponse::Opened {
+            status: Status::InProgress(OngoingTrx::Repayment {
+                in_progress: RepayTrx::Swap,
+                ..
+            }),
+            ..
+        }
+    ));
 }
 
 #[test]

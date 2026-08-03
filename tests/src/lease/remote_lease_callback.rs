@@ -38,6 +38,7 @@ use crate::{
     common::{
         self,
         remote_lease_controller_stub::{self as stub, ResponseMode, SwapFill, op_tag},
+        swap,
         test_case::app::App,
     },
     lease::{LeaseCoin, LeaseCurrency, LpnCurrency},
@@ -124,15 +125,20 @@ fn operation_err_reaches_on_dex_error() {
 // Pins decision D7: only the liquidation leg routes on the cause. The opening
 // buy-asset leg accepts any non-zero swap, so it has no floor to be below and a
 // `MinOutUnmet` ack must be treated exactly like any other — retry, never park.
+//
+// The state assertion alone cannot witness the retry — the lease stays `Opening`
+// whether or not the swap went back out — so the swap count carries that half.
 #[test]
 fn min_out_unmet_still_retries_on_opening() {
     let (mut test_case, lease) = drive_to_swap_pending();
     let controller = controller_addr(&test_case);
 
+    let swaps_before = swap::count(&test_case.app, &controller);
+
     let response = test_case
         .app
         .execute(
-            controller,
+            controller.clone(),
             lease.clone(),
             &ExecuteMsg::RemoteLeaseCallback(RemoteLeaseCallback::OperationErr(stub::error_ack(
                 RemoteErrorKind::MinOutUnmet,
@@ -142,6 +148,11 @@ fn min_out_unmet_still_retries_on_opening() {
         )
         .expect("a below-floor ack on a floorless leg must retry, not revert");
     () = response.ignore_response().unwrap_response();
+    assert_eq!(
+        swaps_before + 1,
+        swap::count(&test_case.app, &controller),
+        "the buy-asset swap must be re-emitted",
+    );
     assert!(
         matches!(
             super::state_query(&test_case, lease),
