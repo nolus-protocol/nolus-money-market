@@ -346,9 +346,22 @@ fn fixture_stdack_success_open_lease_decodes_to_callback() {
     );
 }
 
+// Both error fixtures below are counterparty output, not authored here: the
+// bytes are what `ibc-solray`'s `app::remote_lease::ack::error` emitted at
+// `ec40d50d` for a real `api::Error` value, captured verbatim. That is what makes
+// the byte assertion a cross-repo agreement rather than a restatement of this
+// crate's own rendering — it fails if either end changes how the frame, the
+// provenance prefix or the ICS-26 envelope is composed.
+//
+// To regenerate: for the chosen `Error` variant, print
+// `ack::error(&e, OPERATION_ERR_MAX_BYTES).as_bytes()` from that tree and
+// replace the `.bin` plus the prose below.
 #[test]
 fn fixture_stdack_error_decodes_to_callback() {
-    const FIXTURE_ACK: &str = "[permanent] dex pool drained";
+    // `Error::SwapAmountInMismatch { expected: 1_000, got: 999 }` — a
+    // `Disposition::PermanentInput` variant, so it frames as `permanent`.
+    const FIXTURE_ACK: &str =
+        "[permanent] ibc-solray: Swap amount_in mismatch: expected '1000', got '999'";
     const ACK_BYTES: &[u8] = include_bytes!("../../../tests/fixtures/stdack_error.bin");
 
     let computed = StdAck::error(FIXTURE_ACK).to_binary();
@@ -360,7 +373,7 @@ fn fixture_stdack_error_decodes_to_callback() {
 
     assert_error_ack_dispatches(
         RemoteErrorKind::Permanent,
-        "dex pool drained",
+        "ibc-solray: Swap amount_in mismatch: expected '1000', got '999'",
         "lease-fixture-err",
         FIXTURE_ACK,
     );
@@ -368,7 +381,10 @@ fn fixture_stdack_error_decodes_to_callback() {
 
 #[test]
 fn fixture_stdack_error_min_out_decodes_to_callback() {
-    const FIXTURE_ACK: &str = "[min_out_unmet] ibc-solray: credit below min";
+    // `Error::SwapPostBalanceCreditBelowMin { min_required: 42, got: 41 }` — the
+    // post-CPI floor check, which the counterparty frames as `min_out_unmet`
+    // despite its `Disposition::Stale` class.
+    const FIXTURE_ACK: &str = "[min_out_unmet] ibc-solray: Swap post-balance credit below required min: min_required '42', got '41'";
     const ACK_BYTES: &[u8] = include_bytes!("../../../tests/fixtures/stdack_error_min_out.bin");
 
     let computed = StdAck::error(FIXTURE_ACK).to_binary();
@@ -380,7 +396,7 @@ fn fixture_stdack_error_min_out_decodes_to_callback() {
 
     assert_error_ack_dispatches(
         RemoteErrorKind::MinOutUnmet,
-        "ibc-solray: credit below min",
+        "ibc-solray: Swap post-balance credit below required min: min_required '42', got '41'",
         "lease-fixture-err-min-out",
         FIXTURE_ACK,
     );

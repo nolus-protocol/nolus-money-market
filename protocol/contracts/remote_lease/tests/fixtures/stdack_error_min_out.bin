@@ -1,1 +1,1 @@
-{"error":"[min_out_unmet] ibc-solray: credit below min"}
+{"error":"[min_out_unmet] ibc-solray: Swap post-balance credit below required min: min_required '42', got '41'"}
