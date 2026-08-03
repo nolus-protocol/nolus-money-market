@@ -9,7 +9,11 @@ use lease::{
     api::{
         ExecuteMsg, LpnCoinDTO,
         position::{FullClose, PartialClose, PositionClose},
-        query::{StateResponse, paid::ClosingTrx},
+        query::{
+            StateResponse,
+            opened::{OngoingTrx, PositionCloseTrx, Status},
+            paid::ClosingTrx,
+        },
     },
     error::{ContractError, PositionError},
 };
@@ -293,7 +297,7 @@ fn min_out_unmet_still_retries_on_customer_close() {
         .app
         .execute(
             controller.clone(),
-            lease,
+            lease.clone(),
             &ExecuteMsg::RemoteLeaseCallback(RemoteLeaseCallback::OperationErr(stub::error_ack(
                 RemoteErrorKind::MinOutUnmet,
                 "ibc-solray: post-swap credit below required min",
@@ -315,6 +319,18 @@ fn min_out_unmet_still_retries_on_customer_close() {
             .any(|event| event.ty == "wasm-ls-slippage-anomaly"),
         "the customer-close leg must never claim slippage protection",
     );
+    // The queried state is the second, independent witness: parking would answer
+    // `Status::SlippageProtectionActivated` here, whatever the event stream says.
+    assert!(matches!(
+        super::state_query(&test_case, lease),
+        StateResponse::Opened {
+            status: Status::InProgress(OngoingTrx::Close {
+                in_progress: PositionCloseTrx::Swap,
+                ..
+            }),
+            ..
+        }
+    ));
 }
 
 fn do_close(

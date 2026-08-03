@@ -31,7 +31,7 @@ flowchart TD
     subgraph LeaseEntry[Lease — entry & dispatch]
         direction TB
         ExecEntry["contract::endpoins::execute → state.on_remote_lease_callback"]:::lease
-        Auth["DexState&lt;H&gt;::authz_remote_lease_callback<br/>check_remote_lease_callback(h.remote_lease, info)<br/>← SingleUserPermission ↔ info.sender"]:::lease
+        Auth["DexState&lt;H&gt;::on_remote_lease_callback → H::authz_remote_callback<br/>access_control::check(leases.remote_lease_callback_permission(querier), info)<br/>← RemotelyGrantedPermission: the leaser answers AccessCheck::RemoteLeaseCallback for info.sender"]:::lease
         Classify["inline 3-arm match on the callback<br/>OperationOk → to_json_binary(resp) → on_dex_response<br/>OperationErr → ErrorAck::new(classify(kind), details) → on_dex_error<br/>OperationTimeout → on_dex_timeout"]:::lease
         DispatchResp["on_dex_response(data) → H::on_response → SwapExactIn::on_response"]:::lease
         DispatchErr["on_dex_error(ErrorAck) → SwapExactIn::on_error → ReportAnomalyCmd(cause) → on_anomaly<br/>liquidation + MinOutputNotFulfilled → Exit → SlippageAnomaly<br/>every other leg, and every other cause → Retry, re-emitting the swap"]:::lease
