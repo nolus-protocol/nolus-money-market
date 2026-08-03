@@ -32,9 +32,12 @@ flowchart TD
         direction TB
         ExecEntry["contract::endpoins::execute → state.on_remote_lease_callback"]:::lease
         Auth["DexState&lt;H&gt;::authz_remote_lease_callback<br/>check_remote_lease_callback(h.remote_lease, info)<br/>← SingleUserPermission ↔ info.sender"]:::lease
-        Classify["classify_callback(cb) → CallbackDispatch::Response(to_json_binary(swap_resp))"]:::lease
+        Classify["inline 3-arm match on the callback<br/>OperationOk → to_json_binary(resp) → on_dex_response<br/>OperationErr → ErrorAck::new(classify(kind), details) → on_dex_error<br/>OperationTimeout → on_dex_timeout"]:::lease
         DispatchResp["on_dex_response(data) → H::on_response → SwapExactIn::on_response"]:::lease
-        ExecEntry --> Auth -->|matches| Classify --> DispatchResp
+        DispatchErr["on_dex_error(ErrorAck) → SwapExactIn::on_error → ReportAnomalyCmd(cause) → on_anomaly<br/>liquidation + MinOutputNotFulfilled → Exit → SlippageAnomaly<br/>every other leg, and every other cause → Retry, re-emitting the swap"]:::lease
+        ExecEntry --> Auth -->|matches| Classify
+        Classify -->|OperationOk| DispatchResp
+        Classify -->|OperationErr| DispatchErr
         Auth -. mismatch / no controller .-> AuthErr["DexError::Unauthorized / UnsupportedOperation<br/>← Err propagates to controller, relayer retries"]:::err
     end
 
@@ -122,13 +125,52 @@ on a permanently-unrecoverable state.
    concern of the lease + `TimeAlarms` contract. The controller is
    never invoked again for the same packet.
 
+## Error acknowledgements — the classification seam
+
+`ExecuteMsg::RemoteLeaseCallback` carries a `RemoteError { kind, message }`,
+already parsed from the acknowledgement's `[<token>] ` frame by the
+controller's `ack_to_callback` (see `docs/remote-lease-wire-contract.md`).
+`DexState<H>::on_remote_lease_callback` is where that typed value stops:
+`classify` projects the three wire kinds onto the two-valued
+`dex::AnomalyCause`, and the pair travels on as `dex::ErrorAck` — the cause
+to branch on plus a `platform::remote::ErrorDetails` for troubleshooting.
+The projection is exhaustive with no wildcard arm, so a fourth wire kind is
+a compile error here rather than a silent `Other`. Below the seam `dex`
+knows nothing of the counterparty's error vocabulary.
+
+`SwapExactIn::on_error` hands the cause to the leg through
+`ReportAnomalyCmd`, and the leg answers with an `AnomalyTreatment`:
+
+- **Liquidation sell-asset** is the only leg that reads the cause, because
+  it is the only one whose calculator quotes a real floor from the oracle.
+  `MinOutputNotFulfilled` exits to the `SlippageAnomaly` terminal, which
+  emits `ls-slippage-anomaly` and is resolvable only through the
+  anomaly-manager-gated `heal`. Any other cause retries.
+- **Opening buy-asset, repay buy-LPN, and customer / auto close** accept any
+  non-zero swap, so no output can be below their floor and every cause —
+  including `MinOutputNotFulfilled` — retries (#756, decisions D4/D6/D7).
+
+Two constraints hold the retry branch in place. It must return `Ok` and
+re-emit: the controller dispatches the callback with a plain `add_message`,
+so an `Err` reverts `ibc_packet_ack` and leaves the relayer redelivering the
+same acknowledgement forever. And it is unbounded — there is no attempt
+counter anywhere, so a deterministic non-floor cause re-emits until an
+operator intervenes.
+
+`ErrorAck` deliberately carries no serde. The error path runs synchronously
+inside one message execution and never hops through `ResponseDelivery`, so
+the cause crosses no message or storage boundary. The remaining ICA path
+(`SudoMsg::Error`, the outbound transfer-out) has no code frame to parse and
+constructs `AnomalyCause::Other`; the only leg reachable through it re-emits
+regardless of the cause.
+
 ## What changed in #141 (vs. today's SudoMsg path)
 
 | Stage | Today (SudoMsg) | After #141 (ExecuteMsg::RemoteLeaseCallback) |
 |-------|-----------------|----------------------------------------------|
 | Outer transport | `SudoMsg::Response` (chain-delivered) | `ExecuteMsg::RemoteLeaseCallback` (controller-delivered via `WasmMsg::Execute`) |
 | Auth gate | Implicit (Sudo privilege) | `info.sender == remote_lease` at `DexState::on_remote_lease_callback` |
-| Classify | `data` enters directly into `on_dex_response` | `classify_callback` projects variant → `CallbackDispatch::Response/Error/Timeout` |
+| Classify | `data` enters directly into `on_dex_response` | an inline 3-arm `match` on the callback variant → `on_dex_response` / `on_dex_error(ErrorAck)` / `on_dex_timeout` |
 | A–D safe-delivery boxes | unchanged | unchanged |
 
 ## Outbound open-side lifecycle (issue #142)

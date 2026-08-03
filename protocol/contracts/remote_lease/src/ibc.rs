@@ -157,9 +157,8 @@ pub fn ibc_packet_timeout(
 
 // `StdAck::Error` is a bare string, so this is the single point where the
 // counterparty's failure becomes typed: the kind is parsed once here, leaving
-// consumers a value to branch on rather than prose to re-parse. No consumer
-// reads it yet — the lease still routes on the prose alone. Both fallible steps —
-// `parse_ack`'s code frame and its length cap — reject counterparty
+// consumers a value to branch on rather than prose to re-parse. Both fallible
+// steps — `parse_ack`'s code frame and its length cap — reject counterparty
 // non-conformance rather than guessing a kind. That does mean an `Err` here
 // reverts `ibc_packet_ack` (the dispatch below is a plain `add_message`) and
 // leaves the relayer redelivering, which is the intended loud failure: the two
