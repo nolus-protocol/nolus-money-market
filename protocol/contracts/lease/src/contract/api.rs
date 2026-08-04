@@ -46,12 +46,13 @@ where
 
     /// The entry point for a remote-lease callback
     ///
-    /// Only the states that have initiated remote chain operations should
-    /// implement it. The default implementation rejects the callback with
-    /// `UnsupportedOperation`;
-    /// That same states should enter the existing
-    /// `ResponseDelivery` + `DexCallback` safe-delivery mechanism forwarding
-    /// the callback through `on_dex_response` / `on_dex_error` / `on_dex_timeout`.
+    /// States that have initiated remote chain operations implement it to
+    /// authorise the sender and process the callback synchronously through
+    /// `on_dex_response` / `on_dex_error` / `on_dex_timeout`; an `Err` reverts
+    /// the controller's `ibc_packet_ack` and the relayer redelivers the ack.
+    /// States with nothing in flight absorb the callback as stale, with no
+    /// state change. The default implementation rejects the callback with
+    /// `UnsupportedOperation`.
     fn on_remote_lease_callback(
         self,
         _callback: RemoteLeaseCallback<LeasePaymentCurrencies>,
