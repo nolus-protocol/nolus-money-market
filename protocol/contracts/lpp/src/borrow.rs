@@ -55,7 +55,7 @@ impl InterestRate {
         self.addon_optimal_interest_rate
     }
 
-    /// For more ref see: https://hub.nolus.io/en/articles/9680324-borrow
+    /// For more ref see: https://docs.nolus.io/docs/protocol/borrowing/opening
     pub fn calculate<Lpn>(&self, total_liability: Coin<Lpn>, balance: Coin<Lpn>) -> Percent100 {
         // TODO migrate to using SimpleFraction once it starts implementing Ord
         let utilization_factor_max = self.utilization_factor_max();
