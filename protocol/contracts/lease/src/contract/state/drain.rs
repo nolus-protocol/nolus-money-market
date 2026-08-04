@@ -6,13 +6,9 @@ use crate::error::{ContractError, ContractResult};
 
 use super::{Response, State};
 
-/// Sweep any funds stranded on a terminal lease to whoever calls `Heal()`.
-///
-/// Deliberately unauthenticated: a terminal lease should hold nothing, so a
-/// non-empty balance is an inconsistency with no owner to return it to, and
-/// the caller-takes-all sweep is the incentive for someone to clean it up.
-/// The lease state does not change; with nothing to sweep the call fails
-/// with `InconsistencyNotDetected`.
+// Deliberately unauthenticated caller-takes-all sweep: a terminal lease
+// should hold nothing, an inconsistent balance has no owner to return it
+// to, and rewarding whoever calls `Heal()` is the incentive to clean it up.
 pub(super) trait DrainAll
 where
     Self: Into<State>,
