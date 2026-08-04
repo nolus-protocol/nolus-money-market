@@ -11,7 +11,7 @@ use sdk::cosmwasm_std::{Binary, Env, QuerierWrapper};
 use crate::{
     Contract, ContractInSwap, Enterable, Error, IBC_TIMEOUT,
     RemoteLeaseTransport as RemoteLeaseTransportT,
-    RemoteLeaseTransportFactory as RemoteLeaseTransportFactoryT, Stage, TimeAlarm, error::Result,
+    RemoteLeaseTransportFactory as RemoteLeaseTransportFactoryT, Stage, error::Result,
 };
 
 #[cfg(feature = "migration")]
@@ -210,18 +210,5 @@ where
             "TransferInInit at {}",
             self.spec.label().into()
         ))
-    }
-}
-
-impl<SwapTask, SEnum, RemoteLeaseTransportFactory> TimeAlarm
-    for TransferInInit<SwapTask, SEnum, RemoteLeaseTransportFactory>
-where
-    SwapTask: SwapTaskT,
-{
-    fn setup_alarm(&self, r#for: Instant) -> Result<Batch> {
-        self.spec
-            .time_alarm()
-            .setup_alarm(r#for)
-            .map_err(Into::into)
     }
 }

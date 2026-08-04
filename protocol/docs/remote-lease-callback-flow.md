@@ -1,11 +1,14 @@
 # Remote-Lease Callback — Execution Flow inside a Lease Instance
 
 Trace of a swap callback delivered to the Lease contract via
-`ExecuteMsg::RemoteLeaseCallback`. The focus is the **safe-delivery
-segment** (`ResponseDelivery` + `reply_on_error` + `TimeAlarms` retry
-loop) — boxes **A**–**D** below. Preserved verbatim from today's
-SudoMsg path per ADR `0001-remote-lease-protocol.md` §3.7.1 / §9.5; only
-the outer transport and the auth gate change with #141.
+`ExecuteMsg::RemoteLeaseCallback`. Controller-delivered callbacks are
+processed **synchronously**: the real decode/transition runs inside the
+`RemoteLeaseCallback` execute, and an `Err` reverts the controller's
+`ibc_packet_ack`, so the relayer redelivers the same ack — native
+"error ⇒ try again". The **safe-delivery segment** (`ResponseDelivery`
++ `reply_on_error` + `TimeAlarms` retry loop, boxes **A**–**D** below)
+remains only on the one leg still answered over Neutron `SudoMsg`: the
+outbound transfer-out (#763).
 
 ## Whole flow
 
@@ -41,89 +44,62 @@ flowchart TD
         Auth -. mismatch / no controller .-> AuthErr["DexError::Unauthorized / UnsupportedOperation<br/>← Err propagates to controller, relayer retries"]:::err
     end
 
-    subgraph SafeDelivery[Safe-delivery segment]
+    subgraph SyncProcessing[Synchronous processing — same tx as ibc_packet_ack]
         direction TB
-        A["<b>A. Persist + schedule (outer tx)</b><br/>Wrap into ResponseDelivery {handler: SwapExactIn, response: data}<br/>Emit SubMsg::reply_on_error(WasmMsg::Execute(self, DexCallback))<br/>Return Ok ⇒ outer tx commits<br/>Persisted: state = SwapExactInRespDelivery"]:::safeA
-        B["<b>B. Inner attempt (same tx)</b><br/>execute(DexCallback) — SameContractOnly<br/>load ResponseDelivery → resp_delivery.on_inner → do_deliver<br/>Adapter decodes response, computes amount_out, state →<br/>· BuyAsset → TransferInInit<br/>· BuyLpn → settle / TransferIn<br/>· SellAsset → TransferInInit"]:::safeB
-        BSplit{DexCallback}
-        BOk["Ok — new state persisted<br/>outer tx commits with transition<br/>ack to controller committed"]:::ok
-        C["<b>C. Capture failure, schedule retry</b><br/>outer SubMsg's reply_on_error fires → contract::reply(REPLY_ID, err)<br/>ResponseDelivery::reply → setup_next_delivery(now + 1ns)<br/>TimeAlarmsRef::setup_alarm<br/>ResponseDelivery state stays persisted<br/>outer tx commits — controller's ibc_packet_ack already done"]:::safeC
-        D["<b>D. Retry loop</b><br/>TimeAlarms contract fires alarm 1ns later<br/>sudo(TimeAlarm) → on_time_alarm → ResponseDelivery::on_inner<br/>do_deliver runs again (same as B)"]:::safeD
+        S["SwapExactIn::on_response decodes the buffered response,<br/>computes amount_out, transitions →<br/>· BuyAsset → TransferInInit<br/>· BuyLpn → settle / TransferIn<br/>· SellAsset → TransferInInit"]:::safeB
+        SSplit{outcome}
+        SOk["Ok — new state persisted<br/>controller's ibc_packet_ack commits<br/>packet commitment deleted — no redelivery"]:::ok
+        SErr["Err — the whole tx reverts, ibc_packet_ack included<br/>packet commitment retained → relayer redelivers the same ack<br/>transient failure ⇒ retries natively<br/>deterministic failure ⇒ a bug: the lease freezes, unchanged,<br/>until a fixed code deploy lets the next redelivery succeed"]:::err
 
-        A --> B --> BSplit
-        BSplit -->|Ok| BOk
-        BSplit -->|Err| C --> D
-        D -->|do_deliver| B
+        S --> SSplit
+        SSplit -->|Ok| SOk
+        SSplit -->|Err| SErr
     end
 
     WasmExec --> ExecEntry
-    DispatchResp --> A
+    DispatchResp --> S
 ```
 
-## What the four safe-delivery boxes guarantee
+## Why synchronous processing is safe on the controller legs
 
-### A — Persist + schedule (outer tx)
+1. **`Ok` and the ack commit together.** The lease transition and the
+   controller's `ibc_packet_ack` write live in the same transaction: both
+   advance or neither does. On `Ok` the packet commitment is deleted, so
+   the same ack can never be delivered twice.
 
-The lease's `on_response` does the absolute minimum: store the raw
-response inside `ResponseDelivery` state, emit a *self-call* `SubMsg::reply_on_error(DexCallback)`, return `Ok`.
+2. **`Err` retains the commitment against unchanged state.** A revert
+   rolls back every write in the tx, so the relayer redelivers the same
+   ack against exactly the state that failed — re-running the handler is
+   idempotent by construction.
 
-Once this returns `Ok`, the outer transaction — which also contains the
-controller's `ibc_packet_ack` write — commits atomically. The controller
-**never sees an `Err`** originating in the inner business logic; only
-storage / serialization errors here could propagate (and that's the
-infallibility contract the implementation upholds).
+3. **Failure classification is the contract.** A transient failure
+   succeeds on a later redelivery. A deterministic failure is a bug: the
+   lease freezes, unchanged and observable, until a fixed code deploy
+   lets the next redelivery succeed. No absorber hides it, no local
+   retry loop burns alarms on it.
 
-### B — Inner attempt (same tx, sub-message)
+## The safe-delivery segment — outbound transfer-out only
 
-`DexCallback` runs as a sub-message of the outer tx. It loads the
-persisted `ResponseDelivery`, decodes the buffered response, computes
-the swap outcome (e.g. `amount_out`), and transitions to the next state.
-If this branch succeeds, the outer tx commits with the new state and
-the `ResponseDelivery` wrapper is gone in one atomic step.
+The outbound transfer-out (Nolus→DEX: funding the account at open,
+forwarding the repay payment) is still emitted as a Neutron
+`InterChainMsg::IbcTransfer` and answered over `SudoMsg`. A Neutron sudo
+callback runs under a fixed `contractmanager` gas cap and, on failure,
+the packet is parked in Neutron's failure queue awaiting a manual
+`ResubmitFailure` — it is **not** relayer-retried. That leg therefore
+keeps the four-box safe-delivery machinery (`TransferOutRespDelivery`):
 
-Permission is `SameContractOnly` — `DexCallback` is unreachable from
-any external caller.
-
-### C — Capture failure, schedule retry
-
-If `DexCallback` returns `Err`, the **outer** SubMsg's
-`reply_on_error` fires `contract::reply(REPLY_ID, err)`. `ResponseDelivery::reply` calls `setup_next_delivery` which schedules a
-`TimeAlarms` alarm `now + 1ns`. The `ResponseDelivery` state stays
-persisted (response still buffered, no transition yet); the outer tx
-still commits cleanly with the alarm scheduled.
-
-Critical property: the controller's `ibc_packet_ack` is **already
-done**. The relayer is not involved in recovery. From this point on,
-the retry is a purely local concern of the lease + `TimeAlarms`.
-
-### D — Retry loop
-
-The `TimeAlarms` contract fires the alarm. The lease's `on_time_alarm`
-routes into `ResponseDelivery::on_inner` again, which re-runs the same
-`do_deliver` step as B. Either it succeeds — transition out, normal
-state — or `reply_on_error` fires again and schedules another `now +
-1ns` alarm. The loop continues until success.
-
-`ExecuteMsg::Heal()` is the operator escape hatch if the loop is stuck
-on a permanently-unrecoverable state.
-
-## Three properties that make this safe
-
-1. **Outer `Ok` is unconditional.** The lease's `on_response` is
-   engineered so its only failure paths are storage / serialization
-   errors. Real business-logic failure is deferred to B/C. The
-   controller's ack-commit is decoupled from inner success.
-
-2. **No duplicate state writes on failure.** B's failure rolls back its
-   sub-message's state mutations — only the C path
-   (`setup_next_delivery`) commits to the outer tx, alongside the
-   still-buffered `ResponseDelivery`. There are no half-applied
-   transitions ever visible on-chain.
-
-3. **The retry is host-driven, not relayer-driven.** Once the outer ack
-   commits, the relayer is done with this packet. Recovery is a local
-   concern of the lease + `TimeAlarms` contract. The controller is
-   never invoked again for the same packet.
+- **A — persist + schedule (outer tx).** `on_response` stores the raw
+  response inside `ResponseDelivery`, emits a self-call
+  `SubMsg::reply_on_error(DexCallback)`, returns `Ok`; the gas-capped
+  sudo callback does no business logic.
+- **B — inner attempt (same tx).** `execute(DexCallback)` —
+  `SameContractOnly` — loads the persisted wrapper and runs the real
+  transition; on `Ok` the wrapper is gone in one atomic step.
+- **C — capture failure, schedule retry.** `reply_on_error` fires
+  `contract::reply(REPLY_ID, err)`; `setup_next_delivery` schedules a
+  `TimeAlarms` alarm `now + 1ns`; the outer tx still commits.
+- **D — retry loop.** The alarm re-runs delivery until success;
+  `ExecuteMsg::Heal()` is the operator escape hatch.
 
 ## Error acknowledgements — the classification seam
 
@@ -158,7 +134,7 @@ counter anywhere, so a deterministic non-floor cause re-emits until an
 operator intervenes.
 
 `ErrorAck` deliberately carries no serde. The error path runs synchronously
-inside one message execution and never hops through `ResponseDelivery`, so
+inside one message execution — as does, since #763, the success path — so
 the cause crosses no message or storage boundary. The remaining ICA path
 (`SudoMsg::Error`, the outbound transfer-out) has no code frame to parse and
 constructs `AnomalyCause::Other`; the only leg reachable through it re-emits
@@ -171,7 +147,7 @@ regardless of the cause.
 | Outer transport | `SudoMsg::Response` (chain-delivered) | `ExecuteMsg::RemoteLeaseCallback` (controller-delivered via `WasmMsg::Execute`) |
 | Auth gate | Implicit (Sudo privilege) | `info.sender == remote_lease` at `DexState::on_remote_lease_callback` |
 | Classify | `data` enters directly into `on_dex_response` | an inline 3-arm `match` on the callback variant → `on_dex_response` / `on_dex_error(ErrorAck)` / `on_dex_timeout` |
-| A–D safe-delivery boxes | unchanged | unchanged |
+| A–D safe-delivery boxes | on every leg | dropped from the controller legs (#763); retained only for the outbound transfer-out (`SudoMsg`) |
 
 ## Outbound open-side lifecycle (issue #142)
 
@@ -217,6 +193,6 @@ v10 makes `LeaseDTO.remote_lease_id` a non-optional Solana PDA, which is binary-
 
 ## Closed: in-lease decoder shape
 
-The `OperationOk(SwapResponse)` decoder still feeds the safe-delivery
-boxes A–D above; the protobuf-vs-JSON shape switch tracked here previously
-moves with the Phase-4 swap replacement work.
+The `OperationOk(SwapResponse)` decoder runs synchronously inside the
+`RemoteLeaseCallback` execute (#763); the protobuf-vs-JSON shape switch
+tracked here previously moves with the Phase-4 swap replacement work.

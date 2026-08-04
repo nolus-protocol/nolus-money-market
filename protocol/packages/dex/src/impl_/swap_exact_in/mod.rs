@@ -16,7 +16,7 @@ use sdk::cosmwasm_std::{Binary, Env, QuerierWrapper};
 use crate::{
     AnomalyCause, AnomalyTreatment, Contract, ContractInSwap, Enterable, ErrorAck,
     RemoteLeaseTransportFactory as RemoteLeaseTransportFactoryT, Stage, SwapTask as SwapTaskT,
-    TimeAlarm, TransportOutFactory as TransportOutFactoryT,
+    TransportOutFactory as TransportOutFactoryT,
     error::Result,
     impl_::{
         ForwardToInner,
@@ -275,16 +275,6 @@ where
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
         f.write_fmt(format_args!("SwapExactIn at {}", self.spec.label().into()))
-    }
-}
-
-impl<SwapTask, SEnum, RemoteLeaseTransportFactory> TimeAlarm
-    for SwapExactIn<SwapTask, SEnum, RemoteLeaseTransportFactory>
-where
-    SwapTask: SwapTaskT,
-{
-    fn setup_alarm(&self, forr: Instant) -> Result<Batch> {
-        self.spec.time_alarm().setup_alarm(forr).map_err(Into::into)
     }
 }
 

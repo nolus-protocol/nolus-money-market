@@ -83,17 +83,15 @@ pub enum ExecuteMsg {
     ///
     /// Invoked by the configured `remote_lease` controller contract after it
     /// receives an IBC ack or timeout for an operation it dispatched on this
-    /// lease's behalf. Only the currently-pending dex sub-state of the lease
-    /// accepts the callback; it authorises `info.sender == remote_lease`,
-    /// classifies the variant, and forwards it through the existing
-    /// `on_dex_response` / `on_dex_error` / `on_dex_timeout` pipeline — which
-    /// itself enters the `ResponseDelivery` + `DexCallback` safe-delivery
-    /// machinery. Synchronous failures (auth mismatch, serialisation,
-    /// pre-`ResponseDelivery` storage faults) propagate as `Err` and revert
-    /// the controller's `ibc_packet_ack`, letting the relayer retry the same
-    /// ack; once `ResponseDelivery` state is persisted the controller's ack
-    /// commits and the inner work runs via the lease's own time-alarm
-    /// fallback on error.
+    /// lease's behalf. A dex sub-state with the operation in flight authorises
+    /// `info.sender == remote_lease`, classifies the variant, and processes it
+    /// synchronously through the `on_dex_response` / `on_dex_error` /
+    /// `on_dex_timeout` pipeline; any other state absorbs the callback as
+    /// stale, with no state change. An `Err` at any point reverts the
+    /// controller's `ibc_packet_ack`, so the relayer redelivers the same ack —
+    /// transient failures retry natively, while a deterministic failure is a
+    /// bug that freezes the lease, unchanged, until a fixed code deploy lets
+    /// the next redelivery succeed.
     RemoteLeaseCallback(RemoteLeaseCallback<LeasePaymentCurrencies>),
 
     /// Heal a lease past a middleware failure
