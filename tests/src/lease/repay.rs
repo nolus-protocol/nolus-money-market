@@ -2,6 +2,7 @@ use std::slice;
 
 use currencies::PaymentGroup;
 use currency::CurrencyDef;
+use dex::Error as DexError;
 use finance::instant::Instant;
 use finance::{
     coin::{Coin, CoinDTO},
@@ -15,8 +16,13 @@ use finance::{
 };
 use lease::api::{
     ExecuteMsg,
-    query::{ClosePolicy, StateResponse, opened::Status, paid::ClosingTrx},
+    query::{
+        ClosePolicy, StateResponse,
+        opened::{OngoingTrx, RepayTrx, Status},
+        paid::ClosingTrx,
+    },
 };
+use lease::error::ContractError;
 use remote_lease::callback::{RemoteErrorKind, RemoteLeaseCallback};
 use sdk::{cosmwasm_std::Addr, cw_multi_test::AppResponse, testing};
 
@@ -65,27 +71,8 @@ fn partial_repay() {
 // transfer-out count carries that half.
 #[test]
 fn transfer_back_error_ack_retries() {
-    let mut test_case: LeaseTestCase = super::create_test_case::<PaymentCurrency>();
-    let downpayment = DOWNPAYMENT;
-    let lease = super::open_lease(&mut test_case, downpayment, None);
+    let (mut test_case, lease) = park_repay_in_transfer_back();
     let controller = test_case.address_book.remote_lease_controller().clone();
-
-    // Hold the transfer-back ack so the repay parks in `TransferInInit`.
-    stub::set_response_mode(
-        &mut test_case.app,
-        &controller,
-        op_tag::TRANSFER_OUT,
-        ResponseMode::Delayed,
-    );
-    swap::set_fill(&mut test_case.app, &controller, SwapFill::InputAmount);
-
-    let amount = super::quote_borrow(&test_case, downpayment).to_primitive();
-    let partial_payment: PaymentCoin = Fraction::<PaymentCoin>::of(
-        &Ratio::new(common::coin(1), common::coin(2)),
-        super::create_payment_coin(amount),
-    );
-    let _ =
-        send_payment_and_transfer(&mut test_case, lease.clone(), partial_payment).unwrap_response();
 
     let transfers_before = swap::transfer_out_count(&test_case.app, &controller);
 
@@ -111,10 +98,81 @@ fn transfer_back_error_ack_retries() {
     assert!(
         matches!(
             super::state_query(&test_case, lease),
-            StateResponse::Opened { .. }
+            StateResponse::Opened {
+                status: Status::InProgress(OngoingTrx::Repayment {
+                    in_progress: RepayTrx::TransferInInit,
+                    ..
+                }),
+                ..
+            }
         ),
-        "the retry must keep the lease in the in-flight repay state",
+        "the retry must keep the lease in the transfer-back repay stage",
     );
+}
+
+// While the transfer-back is in flight there is nothing to heal — the pending
+// operation re-drives itself through the error/timeout retries — so `Heal()`
+// must be rejected rather than pretend the transfer completed and abandon the
+// pending ack.
+#[test]
+fn heal_in_transfer_back_is_unsupported() {
+    let (mut test_case, lease) = park_repay_in_transfer_back();
+
+    let err = test_case
+        .app
+        .execute(testing::user(USER), lease.clone(), &ExecuteMsg::Heal(), &[])
+        .expect_err("heal must be rejected while the transfer-back is pending");
+    let contract_err = err
+        .downcast_ref::<ContractError>()
+        .expect("must surface as lease ContractError");
+    assert!(
+        matches!(
+            contract_err,
+            ContractError::DexError(DexError::UnsupportedOperation(..))
+        ),
+        "expected DexError::UnsupportedOperation, got {contract_err:?}"
+    );
+    assert!(
+        matches!(
+            super::state_query(&test_case, lease),
+            StateResponse::Opened {
+                status: Status::InProgress(OngoingTrx::Repayment {
+                    in_progress: RepayTrx::TransferInInit,
+                    ..
+                }),
+                ..
+            }
+        ),
+        "the rejected heal must leave the lease in the transfer-back repay stage",
+    );
+}
+
+/// Open a lease and drive a partial repay up to the transfer-back: the swap
+/// ack resolves inline while the controller stand-in holds the
+/// `ExecuteMsg::TransferOut` ack, parking the lease in `TransferInInit`.
+fn park_repay_in_transfer_back() -> (LeaseTestCase, Addr) {
+    let mut test_case: LeaseTestCase = super::create_test_case::<PaymentCurrency>();
+    let downpayment = DOWNPAYMENT;
+    let lease = super::open_lease(&mut test_case, downpayment, None);
+    let controller = test_case.address_book.remote_lease_controller().clone();
+
+    stub::set_response_mode(
+        &mut test_case.app,
+        &controller,
+        op_tag::TRANSFER_OUT,
+        ResponseMode::Delayed,
+    );
+    swap::set_fill(&mut test_case.app, &controller, SwapFill::InputAmount);
+
+    let amount = super::quote_borrow(&test_case, downpayment).to_primitive();
+    let partial_payment: PaymentCoin = Fraction::<PaymentCoin>::of(
+        &Ratio::new(common::coin(1), common::coin(2)),
+        super::create_payment_coin(amount),
+    );
+    let _ =
+        send_payment_and_transfer(&mut test_case, lease.clone(), partial_payment).unwrap_response();
+
+    (test_case, lease)
 }
 
 #[test]

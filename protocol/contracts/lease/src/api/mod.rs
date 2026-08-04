@@ -98,7 +98,9 @@ pub enum ExecuteMsg {
     ///
     /// It cures a lease in the following cases:
     /// - on the final repay transaction, when an error, usually an out-of-gas, occurs on the Lpp's ExecuteMsg::RepayLoan sub-message
-    /// - on the final repay transaction, when an error occurs on the Lease's SudoMsg::Response message
+    /// - while polling for swap proceeds to arrive back, when the poll alarm has been lost — re-runs the idempotent balance poll
+    /// - on a liquidation halted by slippage protection — gated by the anomaly-resolution permission
+    /// - on a closed or liquidated lease holding stranded funds — sweeps them to the caller
     Heal(),
 }
 

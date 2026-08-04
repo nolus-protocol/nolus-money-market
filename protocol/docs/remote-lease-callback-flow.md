@@ -98,15 +98,18 @@ keeps the four-box safe-delivery machinery (`TransferOutRespDelivery`):
 - **C — capture failure, schedule retry.** `reply_on_error` fires
   `contract::reply(REPLY_ID, err)`; `setup_next_delivery` schedules a
   `TimeAlarms` alarm `now + 1ns`; the outer tx still commits.
-- **D — retry loop.** The alarm re-runs delivery until success;
-  `ExecuteMsg::Heal()` is the operator escape hatch.
+- **D — retry loop.** The alarm re-runs delivery until success. The loop is
+  the only driver: the wrapper implements no `heal`, so `ExecuteMsg::Heal()`
+  on a persisted wrapper is rejected rather than acting as an escape hatch.
 
 Operator note: while a `TransferOutRespDelivery` persists (box B failed and
 box D is retrying), a sibling funding ack dispatching on it fails and parks
-in Neutron's failure queue. Resubmit it with `ResubmitFailure` once the
-lease's state query shows `TransferOut`/`SwapExactIn` again — the retry loop
-unwraps the state by itself once the transient (typically an oracle outage)
-clears.
+in Neutron's failure queue. The retry loop unwraps the state by itself once
+the transient (typically an oracle outage) clears — but a stuck wrapper
+reports the same stage as its inner `TransferOut`, so the current stage is
+not the all-clear. Resubmit with `ResubmitFailure` only once the state
+query has advanced to the *next* stage (`SwapExactIn`), which observably
+proves the unwrap.
 
 ## Error acknowledgements — the classification seam
 
