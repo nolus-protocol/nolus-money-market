@@ -101,6 +101,13 @@ keeps the four-box safe-delivery machinery (`TransferOutRespDelivery`):
 - **D — retry loop.** The alarm re-runs delivery until success;
   `ExecuteMsg::Heal()` is the operator escape hatch.
 
+Operator note: while a `TransferOutRespDelivery` persists (box B failed and
+box D is retrying), a sibling funding ack dispatching on it fails and parks
+in Neutron's failure queue. Resubmit it with `ResubmitFailure` once the
+lease's state query shows `TransferOut`/`SwapExactIn` again — the retry loop
+unwraps the state by itself once the transient (typically an oracle outage)
+clears.
+
 ## Error acknowledgements — the classification seam
 
 `ExecuteMsg::RemoteLeaseCallback` carries a `RemoteError { kind, message }`,
