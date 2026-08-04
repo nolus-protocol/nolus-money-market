@@ -5,10 +5,7 @@ use crate::{
     SwapTask as SwapTaskT, TransportOutFactory as TransportOutFactoryT,
 };
 
-use super::{
-    SwapExactIn, SwapExactInRespDelivery, TransferInFinish, TransferInInit,
-    TransferInInitRespDelivery, TransferOut, TransferOutRespDelivery,
-};
+use super::{SwapExactIn, TransferInFinish, TransferInInit, TransferOut, TransferOutRespDelivery};
 
 #[derive(Serialize, Deserialize)]
 #[serde(bound(
@@ -34,13 +31,7 @@ where
         >,
     ),
     SwapExactIn(SwapExactIn<SwapTask, Self, RemoteLeaseTransportFactory>),
-    SwapExactInRespDelivery(
-        SwapExactInRespDelivery<SwapTask, Self, RemoteLeaseTransportFactory, ForwardToInnerMsg>,
-    ),
     TransferInInit(TransferInInit<SwapTask, Self, RemoteLeaseTransportFactory>),
-    TransferInInitRespDelivery(
-        TransferInInitRespDelivery<SwapTask, Self, RemoteLeaseTransportFactory, ForwardToInnerMsg>,
-    ),
     TransferInFinish(TransferInFinish<SwapTask, Self, RemoteLeaseTransportFactory>),
 }
 
@@ -127,12 +118,12 @@ mod impl_into {
     use crate::{
         SwapTask as SwapTaskT,
         impl_::{
-            ForwardToInner, SwapExactIn, TransferInFinish, TransferInInit,
-            TransferInInitRespDelivery, TransferOut, TransferOutRespDelivery,
+            ForwardToInner, SwapExactIn, TransferInFinish, TransferInInit, TransferOut,
+            TransferOutRespDelivery,
         },
     };
 
-    use super::{State, SwapExactInRespDelivery};
+    use super::State;
 
     impl<SwapTask, TransportOutFactory, RemoteLeaseTransportFactory, ForwardToInnerMsg>
         From<TransferOut<SwapTask, Self, TransportOutFactory, RemoteLeaseTransportFactory>>
@@ -187,25 +178,6 @@ mod impl_into {
     }
 
     impl<SwapTask, TransportOutFactory, RemoteLeaseTransportFactory, ForwardToInnerMsg>
-        From<
-            SwapExactInRespDelivery<SwapTask, Self, RemoteLeaseTransportFactory, ForwardToInnerMsg>,
-        > for State<SwapTask, TransportOutFactory, RemoteLeaseTransportFactory, ForwardToInnerMsg>
-    where
-        SwapTask: SwapTaskT,
-    {
-        fn from(
-            value: SwapExactInRespDelivery<
-                SwapTask,
-                Self,
-                RemoteLeaseTransportFactory,
-                ForwardToInnerMsg,
-            >,
-        ) -> Self {
-            Self::SwapExactInRespDelivery(value)
-        }
-    }
-
-    impl<SwapTask, TransportOutFactory, RemoteLeaseTransportFactory, ForwardToInnerMsg>
         From<TransferInInit<SwapTask, Self, RemoteLeaseTransportFactory>>
         for State<SwapTask, TransportOutFactory, RemoteLeaseTransportFactory, ForwardToInnerMsg>
     where
@@ -214,31 +186,6 @@ mod impl_into {
     {
         fn from(value: TransferInInit<SwapTask, Self, RemoteLeaseTransportFactory>) -> Self {
             Self::TransferInInit(value)
-        }
-    }
-
-    impl<SwapTask, TransportOutFactory, RemoteLeaseTransportFactory, ForwardToInnerMsg>
-        From<
-            TransferInInitRespDelivery<
-                SwapTask,
-                Self,
-                RemoteLeaseTransportFactory,
-                ForwardToInnerMsg,
-            >,
-        > for State<SwapTask, TransportOutFactory, RemoteLeaseTransportFactory, ForwardToInnerMsg>
-    where
-        SwapTask: SwapTaskT,
-        ForwardToInnerMsg: ForwardToInner,
-    {
-        fn from(
-            value: TransferInInitRespDelivery<
-                SwapTask,
-                Self,
-                RemoteLeaseTransportFactory,
-                ForwardToInnerMsg,
-            >,
-        ) -> Self {
-            Self::TransferInInitRespDelivery(value)
         }
     }
 
@@ -294,11 +241,7 @@ mod impl_handler {
                 State::TransferOut(inner) => inner.authz_remote_callback(querier, info),
                 State::TransferOutRespDelivery(inner) => inner.authz_remote_callback(querier, info),
                 State::SwapExactIn(inner) => inner.authz_remote_callback(querier, info),
-                State::SwapExactInRespDelivery(inner) => inner.authz_remote_callback(querier, info),
                 State::TransferInInit(inner) => inner.authz_remote_callback(querier, info),
-                State::TransferInInitRespDelivery(inner) => {
-                    inner.authz_remote_callback(querier, info)
-                }
                 State::TransferInFinish(inner) => inner.authz_remote_callback(querier, info),
             }
         }
@@ -317,16 +260,9 @@ mod impl_handler {
                     Handler::on_response(inner, response, querier, env).map_into()
                 }
                 State::SwapExactIn(inner) => {
-                    impl_::forward_to_inner::<_, ForwardToInnerMsg, Self>(inner, response, env)
-                }
-                State::SwapExactInRespDelivery(inner) => {
                     Handler::on_response(inner, response, querier, env).map_into()
                 }
                 State::TransferInInit(inner) => {
-                    impl_::forward_to_inner::<_, ForwardToInnerMsg, Self>(inner, response, env)
-                }
-
-                State::TransferInInitRespDelivery(inner) => {
                     Handler::on_response(inner, response, querier, env).map_into()
                 }
                 State::TransferInFinish(inner) => {
@@ -346,13 +282,7 @@ mod impl_handler {
                 State::SwapExactIn(inner) => {
                     Handler::on_error(inner, error, querier, env).map_into()
                 }
-                State::SwapExactInRespDelivery(inner) => {
-                    Handler::on_error(inner, error, querier, env).map_into()
-                }
                 State::TransferInInit(inner) => {
-                    Handler::on_error(inner, error, querier, env).map_into()
-                }
-                State::TransferInInitRespDelivery(inner) => {
                     Handler::on_error(inner, error, querier, env).map_into()
                 }
                 State::TransferInFinish(inner) => {
@@ -366,11 +296,7 @@ mod impl_handler {
                 State::TransferOut(inner) => Handler::on_timeout(inner, querier, env),
                 State::TransferOutRespDelivery(inner) => Handler::on_timeout(inner, querier, env),
                 State::SwapExactIn(inner) => Handler::on_timeout(inner, querier, env),
-                State::SwapExactInRespDelivery(inner) => Handler::on_timeout(inner, querier, env),
                 State::TransferInInit(inner) => Handler::on_timeout(inner, querier, env),
-                State::TransferInInitRespDelivery(inner) => {
-                    Handler::on_timeout(inner, querier, env)
-                }
                 State::TransferInFinish(inner) => Handler::on_timeout(inner, querier, env),
             }
         }
@@ -382,13 +308,7 @@ mod impl_handler {
                     Handler::on_inner(inner, querier, env).map_into()
                 }
                 State::SwapExactIn(inner) => Handler::on_inner(inner, querier, env).map_into(),
-                State::SwapExactInRespDelivery(inner) => {
-                    Handler::on_inner(inner, querier, env).map_into()
-                }
                 State::TransferInInit(inner) => Handler::on_inner(inner, querier, env).map_into(),
-                State::TransferInInitRespDelivery(inner) => {
-                    Handler::on_inner(inner, querier, env).map_into()
-                }
                 State::TransferInFinish(inner) => Handler::on_inner(inner, querier, env).map_into(),
             }
         }
@@ -400,13 +320,7 @@ mod impl_handler {
                     Handler::heal(inner, querier, env).map_into()
                 }
                 State::SwapExactIn(inner) => Handler::heal(inner, querier, env).map_into(),
-                State::SwapExactInRespDelivery(inner) => {
-                    Handler::heal(inner, querier, env).map_into()
-                }
                 State::TransferInInit(inner) => Handler::heal(inner, querier, env).map_into(),
-                State::TransferInInitRespDelivery(inner) => {
-                    Handler::heal(inner, querier, env).map_into()
-                }
                 State::TransferInFinish(inner) => Handler::heal(inner, querier, env).map_into(),
             }
         }
@@ -416,11 +330,7 @@ mod impl_handler {
                 State::TransferOut(inner) => Handler::reply(inner, querier, env, msg),
                 State::TransferOutRespDelivery(inner) => Handler::reply(inner, querier, env, msg),
                 State::SwapExactIn(inner) => Handler::reply(inner, querier, env, msg),
-                State::SwapExactInRespDelivery(inner) => Handler::reply(inner, querier, env, msg),
                 State::TransferInInit(inner) => Handler::reply(inner, querier, env, msg),
-                State::TransferInInitRespDelivery(inner) => {
-                    Handler::reply(inner, querier, env, msg)
-                }
                 State::TransferInFinish(inner) => Handler::reply(inner, querier, env, msg),
             }
         }
@@ -441,13 +351,7 @@ mod impl_handler {
                 State::SwapExactIn(inner) => {
                     Handler::on_time_alarm(inner, querier, env, info).map_into()
                 }
-                State::SwapExactInRespDelivery(inner) => {
-                    Handler::on_time_alarm(inner, querier, env, info).map_into()
-                }
                 State::TransferInInit(inner) => {
-                    Handler::on_time_alarm(inner, querier, env, info).map_into()
-                }
-                State::TransferInInitRespDelivery(inner) => {
                     Handler::on_time_alarm(inner, querier, env, info).map_into()
                 }
                 State::TransferInFinish(inner) => {
@@ -492,13 +396,7 @@ mod impl_contract {
                     Contract::state(inner, now, due_projection, querier)
                 }
                 State::SwapExactIn(inner) => Contract::state(inner, now, due_projection, querier),
-                State::SwapExactInRespDelivery(inner) => {
-                    Contract::state(inner, now, due_projection, querier)
-                }
                 State::TransferInInit(inner) => {
-                    Contract::state(inner, now, due_projection, querier)
-                }
-                State::TransferInInitRespDelivery(inner) => {
                     Contract::state(inner, now, due_projection, querier)
                 }
                 State::TransferInFinish(inner) => {
@@ -525,9 +423,7 @@ mod impl_display {
                 State::TransferOut(inner) => Display::fmt(inner, f),
                 State::TransferOutRespDelivery(inner) => Display::fmt(inner, f),
                 State::SwapExactIn(inner) => Display::fmt(inner, f),
-                State::SwapExactInRespDelivery(inner) => Display::fmt(inner, f),
                 State::TransferInInit(inner) => Display::fmt(inner, f),
-                State::TransferInInitRespDelivery(inner) => Display::fmt(inner, f),
                 State::TransferInFinish(inner) => Display::fmt(inner, f),
             }
         }
@@ -571,9 +467,7 @@ mod impl_migration {
                 State::TransferOut(inner) => inner.migrate_spec(migrate_fn).into(),
                 State::TransferOutRespDelivery(inner) => inner.migrate_spec(migrate_fn).into(),
                 State::SwapExactIn(inner) => inner.migrate_spec(migrate_fn).into(),
-                State::SwapExactInRespDelivery(inner) => inner.migrate_spec(migrate_fn).into(),
                 State::TransferInInit(inner) => inner.migrate_spec(migrate_fn).into(),
-                State::TransferInInitRespDelivery(inner) => inner.migrate_spec(migrate_fn).into(),
                 State::TransferInFinish(inner) => inner.migrate_spec(migrate_fn).into(),
             }
         }
@@ -594,9 +488,7 @@ mod impl_migration {
                 State::TransferOut(inner) => inner.inspect_spec(inspect_fn),
                 State::TransferOutRespDelivery(inner) => inner.inspect_spec(inspect_fn),
                 State::SwapExactIn(inner) => inner.inspect_spec(inspect_fn),
-                State::SwapExactInRespDelivery(inner) => inner.inspect_spec(inspect_fn),
                 State::TransferInInit(inner) => inner.inspect_spec(inspect_fn),
-                State::TransferInInitRespDelivery(inner) => inner.inspect_spec(inspect_fn),
                 State::TransferInFinish(inner) => inner.inspect_spec(inspect_fn),
             }
         }

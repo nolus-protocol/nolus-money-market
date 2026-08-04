@@ -40,19 +40,6 @@ pub type TransferOutRespDelivery<
     ForwardToInnerMsg,
 >;
 
-pub type SwapExactInRespDelivery<SwapTask, SEnum, RemoteLeaseTransportFactory, ForwardToInnerMsg> =
-    ResponseDelivery<SwapExactIn<SwapTask, SEnum, RemoteLeaseTransportFactory>, ForwardToInnerMsg>;
-
-pub type TransferInInitRespDelivery<
-    SwapTask,
-    SEnum,
-    RemoteLeaseTransportFactory,
-    ForwardToInnerMsg,
-> = ResponseDelivery<
-    TransferInInit<SwapTask, SEnum, RemoteLeaseTransportFactory>,
-    ForwardToInnerMsg,
->;
-
 fn forward_to_inner<H, ForwardToInnerMsg, SEnum>(
     inner: H,
     response: Binary,
