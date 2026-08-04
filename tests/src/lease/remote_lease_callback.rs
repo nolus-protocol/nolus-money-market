@@ -16,6 +16,9 @@
 //!   `Opened`. (Pre-#142 this ack was decoded as protobuf and the success path
 //!   could only be stubbed; the decoder is JSON now, so the real transition is
 //!   asserted.)
+//! - matched sender + a `Swap` OK paying the wrong out-currency → the decode
+//!   fails deterministically and the call reverts, freezing the lease
+//!   unchanged (#763: no safe-delivery wrapper absorbs it any more).
 
 use access_control::error::Error as AccessError;
 use currencies::PaymentGroup;
@@ -28,7 +31,10 @@ use lease::{
     },
     error::ContractError,
 };
-use remote_lease::callback::{RemoteErrorKind, RemoteLeaseCallback};
+use remote_lease::{
+    callback::{RemoteErrorKind, RemoteLeaseCallback},
+    response::{OperationResponse, SwapResponse},
+};
 use sdk::{
     cosmwasm_std::{Addr, StdError},
     testing,
@@ -182,6 +188,55 @@ fn operation_ok_finishes_buy_asset() {
             }
         ),
         "a valid swap ack must finish the buy-asset swap and open a healthy lease, got {final_state:?}",
+    );
+}
+
+// Pins the #763 semantics: a deterministic decode failure of a SUCCESS ack is a
+// bug, so the callback must `Err` — reverting the controller's `ibc_packet_ack`
+// and freezing the lease, unchanged, until a fixed deploy lets a redelivery
+// succeed. Pre-#763 this same ack returned `Ok`: the raw response was absorbed
+// into `SwapExactInRespDelivery` and the decode failure spun on a local time
+// alarm after the ack had already committed — this test failed on that code.
+#[test]
+fn wrong_out_currency_ack_reverts_and_freezes() {
+    let (mut test_case, lease) = drive_to_swap_pending();
+    let controller = controller_addr(&test_case);
+
+    let swaps_before = swap::count(&test_case.app, &controller);
+
+    // A valid `PaymentGroup` coin in the borrow currency, not the lease asset
+    // the buy-asset swap must pay out in — deterministically undecodable.
+    let wrong_out: Coin<LpnCurrency> = Coin::new(10_000);
+    let err = send_callback(
+        &mut test_case.app,
+        &lease,
+        controller.clone(),
+        RemoteLeaseCallback::OperationOk(OperationResponse::Swap(SwapResponse {
+            amount_out: wrong_out.into(),
+        })),
+    );
+
+    let contract_err = err
+        .downcast_ref::<ContractError>()
+        .expect("must surface as lease ContractError");
+    assert!(
+        matches!(
+            contract_err,
+            ContractError::DexError(DexError::IncorrectSwapOutCurrency(..))
+        ),
+        "expected DexError::IncorrectSwapOutCurrency, got {contract_err:?}"
+    );
+    assert_eq!(
+        swaps_before,
+        swap::count(&test_case.app, &controller),
+        "a revert must not re-emit the swap",
+    );
+    assert!(
+        matches!(
+            super::state_query(&test_case, lease),
+            StateResponse::Opening { .. }
+        ),
+        "the revert must leave the lease frozen in the opening buy-asset state",
     );
 }
 
