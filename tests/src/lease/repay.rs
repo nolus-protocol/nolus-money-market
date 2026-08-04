@@ -17,13 +17,14 @@ use lease::api::{
     ExecuteMsg,
     query::{ClosePolicy, StateResponse, opened::Status, paid::ClosingTrx},
 };
+use remote_lease::callback::{RemoteErrorKind, RemoteLeaseCallback};
 use sdk::{cosmwasm_std::Addr, cw_multi_test::AppResponse, testing};
 
 use crate::{
     common::{
         self, CwCoin, USER, ibc, lease as common_lease,
         leaser::{self as leaser_mod, Instantiator as LeaserInstantiator},
-        remote_lease_controller_stub::SwapFill,
+        remote_lease_controller_stub::{self as stub, ResponseMode, SwapFill, op_tag},
         swap,
         test_case::{TestCase, response::ResponseWithInterChainMsgs},
     },
@@ -55,6 +56,65 @@ fn partial_repay() {
     let query_result = super::state_query(&test_case, lease);
 
     assert_eq!(query_result, expected_result);
+}
+
+// Pins the uniform retry posture on the repay transfer-back: an error ack
+// leaves the proceeds in the vault, so `TransferInInit::on_error` must retry
+// exactly like `on_timeout` — re-emit the transfer-back and keep the lease in
+// flight. The state assertion alone cannot witness the retry, so the
+// transfer-out count carries that half.
+#[test]
+fn transfer_back_error_ack_retries() {
+    let mut test_case: LeaseTestCase = super::create_test_case::<PaymentCurrency>();
+    let downpayment = DOWNPAYMENT;
+    let lease = super::open_lease(&mut test_case, downpayment, None);
+    let controller = test_case.address_book.remote_lease_controller().clone();
+
+    // Hold the transfer-back ack so the repay parks in `TransferInInit`.
+    stub::set_response_mode(
+        &mut test_case.app,
+        &controller,
+        op_tag::TRANSFER_OUT,
+        ResponseMode::Delayed,
+    );
+    swap::set_fill(&mut test_case.app, &controller, SwapFill::InputAmount);
+
+    let amount = super::quote_borrow(&test_case, downpayment).to_primitive();
+    let partial_payment: PaymentCoin = Fraction::<PaymentCoin>::of(
+        &Ratio::new(common::coin(1), common::coin(2)),
+        super::create_payment_coin(amount),
+    );
+    let _ =
+        send_payment_and_transfer(&mut test_case, lease.clone(), partial_payment).unwrap_response();
+
+    let transfers_before = swap::transfer_out_count(&test_case.app, &controller);
+
+    let response = test_case
+        .app
+        .execute(
+            controller.clone(),
+            lease.clone(),
+            &ExecuteMsg::RemoteLeaseCallback(RemoteLeaseCallback::OperationErr(stub::error_ack(
+                RemoteErrorKind::Permanent,
+                "ibc-solray: transfer-back rejected",
+            ))),
+            &[],
+        )
+        .expect("a transfer-back error ack must retry, not revert");
+    () = response.ignore_response().unwrap_response();
+
+    assert_eq!(
+        transfers_before + 1,
+        swap::transfer_out_count(&test_case.app, &controller),
+        "the transfer-back must be re-emitted",
+    );
+    assert!(
+        matches!(
+            super::state_query(&test_case, lease),
+            StateResponse::Opened { .. }
+        ),
+        "the retry must keep the lease in the in-flight repay state",
+    );
 }
 
 #[test]
