@@ -9,7 +9,7 @@ use platform::batch::Batch;
 use sdk::cosmwasm_std::{Binary, Env, QuerierWrapper};
 
 use crate::{
-    Contract, ContractInSwap, Enterable, Error, IBC_TIMEOUT,
+    Contract, ContractInSwap, Enterable, Error, ErrorAck, IBC_TIMEOUT,
     RemoteLeaseTransport as RemoteLeaseTransportT,
     RemoteLeaseTransportFactory as RemoteLeaseTransportFactoryT, Stage, error::Result,
 };
@@ -173,12 +173,20 @@ where
         self.on_response(querier, env)
     }
 
+    // a transfer-back rejection leaves the proceeds in the vault, so
+    // re-requesting the same send is safe; keep trying as on timeout
+    fn on_error(
+        self,
+        _error: ErrorAck,
+        querier: QuerierWrapper<'_>,
+        env: Env,
+    ) -> HandlerResult<Self> {
+        self.on_timeout(querier, env).into()
+    }
+
     fn on_timeout(self, querier: QuerierWrapper<'_>, env: Env) -> ContinueResult<Self> {
         let state_label = self.spec.label();
         timeout::on_timeout_retry(self, state_label, querier, env)
-    }
-    fn heal(self, querier: QuerierWrapper<'_>, env: Env) -> HandlerResult<Self> {
-        self.on_response(querier, env)
     }
 }
 

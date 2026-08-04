@@ -6,6 +6,9 @@ use crate::error::{ContractError, ContractResult};
 
 use super::{Response, State};
 
+// Deliberately unauthenticated caller-takes-all sweep: a terminal lease
+// should hold nothing, an inconsistent balance has no owner to return it
+// to, and rewarding whoever calls `Heal()` is the incentive to clean it up.
 pub(super) trait DrainAll
 where
     Self: Into<State>,

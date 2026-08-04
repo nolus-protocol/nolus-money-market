@@ -56,6 +56,13 @@ pub(crate) fn count(app: &App, controller: &Addr) -> u64 {
     stub::swap_count(app, controller)
 }
 
+/// The number of transfer-out (transfer-back) requests the lease has emitted,
+/// as counted by the stand-in — the transfer-back mirror of [`count`].
+#[track_caller]
+pub(crate) fn transfer_out_count(app: &App, controller: &Addr) -> u64 {
+    stub::transfer_out_count(app, controller)
+}
+
 /// The first input coin of a captured swap — the successor of the legacy
 /// `SwapRequest::token_in`.
 pub(crate) fn token_in(params: &SwapParams<PaymentGroup, PaymentGroup>) -> CoinDTO<PaymentGroup> {

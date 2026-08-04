@@ -186,6 +186,8 @@ pub enum StubQueryMsg {
     /// Test-only: return the `TransferOutParams` of the most recent
     /// `TransferOut` request.
     CapturedTransferOut {},
+    /// Test-only: return the number of `TransferOut` requests received so far.
+    TransferOutCount {},
 }
 
 /// Stand-in state.
@@ -204,6 +206,7 @@ const SWAP_CAPTURED: Item<SwapParams<PaymentGroup, PaymentGroup>> = Item::new("s
 const SWAP_COUNT: Item<u64> = Item::new("stub_swap_count");
 const TRANSFER_OUT_CAPTURED: Item<TransferOutParams<PaymentGroup>> =
     Item::new("stub_transfer_out_captured");
+const TRANSFER_OUT_COUNT: Item<u64> = Item::new("stub_transfer_out_count");
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 struct StubConfig {
@@ -286,6 +289,8 @@ pub fn execute(
         }
         StubExecuteMsg::TransferOut { params, .. } => {
             TRANSFER_OUT_CAPTURED.save(deps.storage, &params)?;
+            let count = TRANSFER_OUT_COUNT.may_load(deps.storage)?.unwrap_or(0) + 1;
+            TRANSFER_OUT_COUNT.save(deps.storage, &count)?;
             handle_outbound(deps, info, op_tag::TRANSFER_OUT, |_storage| {
                 Ok(OperationResponse::TransferOut(TransferOutResponse {}))
             })
@@ -336,6 +341,9 @@ pub fn query(deps: Deps<'_>, _env: Env, msg: StubQueryMsg) -> StdResult<Binary> 
                 .may_load(deps.storage)?
                 .ok_or_else(|| StdError::msg("no transfer-out captured by the stand-in yet"))?;
             to_json_binary(&captured)
+        }
+        StubQueryMsg::TransferOutCount {} => {
+            to_json_binary(&TRANSFER_OUT_COUNT.may_load(deps.storage)?.unwrap_or(0))
         }
     }
 }
@@ -599,4 +607,13 @@ pub fn captured_transfer_out(app: &App, controller: &Addr) -> TransferOutParams<
     app.query()
         .query_wasm_smart(controller.clone(), &StubQueryMsg::CapturedTransferOut {})
         .expect("CapturedTransferOut query must succeed against the stand-in")
+}
+
+/// Helper for tests: the number of `TransferOut` requests the stand-in has
+/// received.
+#[track_caller]
+pub fn transfer_out_count(app: &App, controller: &Addr) -> u64 {
+    app.query()
+        .query_wasm_smart(controller.clone(), &StubQueryMsg::TransferOutCount {})
+        .expect("TransferOutCount query must succeed against the stand-in")
 }
