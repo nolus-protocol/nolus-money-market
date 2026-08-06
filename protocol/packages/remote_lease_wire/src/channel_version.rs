@@ -38,9 +38,16 @@ const ICS20_CHANNEL_PREFIX: &str = "channel-";
 
 const U16_MAX_DIGITS: usize = u16_max_digits();
 
-// `usize::try_from` is not const-stable; the widening cast is isolated here.
+const _: () = assert!(U16_MAX_DIGITS == 5);
+
 const fn u16_max_digits() -> usize {
-    (u16::MAX.ilog10() + 1) as usize
+    let mut digits = 0;
+    let mut value = u16::MAX;
+    while value != 0 {
+        digits += 1;
+        value /= 10;
+    }
+    digits
 }
 
 /// A canonical ICS-20 channel identifier.
