@@ -36,9 +36,12 @@ const CHANNEL_VERSION_TRANSFER_TAG: &str = "+transfer=";
 
 const ICS20_CHANNEL_PREFIX: &str = "channel-";
 
-const U16_MAX_DIGITS: usize = 5;
+const U16_MAX_DIGITS: usize = u16_max_digits();
 
-const _: () = assert!(U16_MAX_DIGITS == u16::MAX.ilog10() as usize + 1);
+// `usize::try_from` is not const-stable; the widening cast is isolated here.
+const fn u16_max_digits() -> usize {
+    (u16::MAX.ilog10() + 1) as usize
+}
 
 /// A canonical ICS-20 channel identifier.
 ///
@@ -103,7 +106,8 @@ impl FromStr for Ics20ChannelId {
 
 impl fmt::Display for Ics20ChannelId {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{ICS20_CHANNEL_PREFIX}{}", self.0)
+        f.write_str(ICS20_CHANNEL_PREFIX)
+            .and_then(|()| fmt::Display::fmt(&self.0, f))
     }
 }
 

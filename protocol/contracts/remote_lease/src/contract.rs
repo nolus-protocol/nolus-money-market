@@ -206,14 +206,11 @@ fn open_channel(
         })
 }
 
-/// Abandon a handshake still in flight, freeing the controller to propose
-/// another. The only escape from a counterparty that never acks.
-///
-/// Past `OpenInit` the chain has already allocated a channel, so dropping the
-/// record alone would strand it in INIT forever; the cancel closes it too.
-/// `Proposed` has no channel yet — it is transient, consumed by the `OpenInit`
-/// callback in the same transaction that emitted the open-init — so there is
-/// nothing to close.
+// Past `OpenInit` the chain has already allocated a channel, so dropping the
+// record alone would strand it in INIT forever; the cancel closes it too.
+// `Proposed` has no channel yet — it is transient, consumed by the `OpenInit`
+// callback in the same transaction that emitted the open-init — so there is
+// nothing to close.
 fn cancel_channel_proposal(storage: &mut dyn Storage) -> Result<PlatformResponse> {
     Channel::may_load(storage)
         .and_then(|maybe_channel| maybe_channel.ok_or(Error::NoProposalToCancel))

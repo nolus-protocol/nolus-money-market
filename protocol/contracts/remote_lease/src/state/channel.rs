@@ -31,33 +31,33 @@ pub enum ChannelState {
 ///                                   (absent)
 /// ```
 ///
-/// `InitAccepted` is what makes the `OpenInit` callback single-use. wasmd
-/// dispatches the `MsgChannelOpenInit` this contract emits within the same
-/// transaction, so the callback consumes `Proposed` atomically with the
-/// emission: a second `OpenInit` — whoever submits it — finds no proposal and
-/// is rejected. It also records the chain-assigned local channel id, which
-/// `OpenAck` then pins, so an ack for a different channel cannot be mistaken
-/// for ours.
+/// `InitAccepted` is what makes the `OpenInit` callback single-use: a second
+/// `OpenInit` — whoever submits it — finds no proposal and is rejected. It
+/// also records the chain-assigned local channel id, which `OpenAck` then
+/// pins, so an ack for a different channel cannot be mistaken for ours.
+// Single-use holds because wasmd dispatches the `MsgChannelOpenInit` this
+// contract emits within the same transaction, so the callback consumes
+// `Proposed` atomically with the emission.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum Channel {
     Proposed {
-        /// The transfer channel proposed for pairing, stored as the typed id
-        /// rather than the composed version string: the id is canonical by
-        /// construction and [`Ics20ChannelId::channel_version`] is a pure
-        /// function of it, so recomposition is byte-stable. Two bytes of state
-        /// carrying the invariant beats 42 carrying the same one. Obtain the
-        /// derived version through [`Channel::version`].
+        /// The transfer channel proposed for pairing; the derived handshake
+        /// version is obtained through [`Channel::version`].
+        // Stored as the typed id rather than the composed version string: the
+        // id is canonical by construction and `channel_version()` is a pure
+        // function of it, so recomposition is byte-stable. Two bytes of state
+        // carrying the invariant beat 42 carrying the same one.
         ics20_channel_remote: Ics20ChannelId,
     },
     InitAccepted {
         ics20_channel_remote: Ics20ChannelId,
-        /// Chain-assigned channel identifier, deliberately left an opaque
-        /// `String` — it is only stored, compared, and echoed here.
-        /// [`Ics20ChannelId`] would be the *wrong* type for it and for
-        /// `counterparty_channel_id`: its `u16` bound is a Solana seed-level
-        /// constraint on the transfer channel, whereas ibc-go channel ordinals
-        /// are `u64` and a busy chain can exceed 65535.
+        /// The chain-assigned channel identifier.
+        // Deliberately an opaque `String` — it is only stored, compared, and
+        // echoed. `Ics20ChannelId` would be the *wrong* type for it and for
+        // `counterparty_channel_id`: its `u16` bound is a Solana seed-level
+        // constraint on the transfer channel, whereas ibc-go channel ordinals
+        // are `u64` and a busy chain can exceed 65535.
         local_channel_id: String,
     },
     Established {
@@ -72,7 +72,7 @@ pub enum Channel {
 impl Channel {
     const STORAGE: Item<Self> = Item::new("channel");
 
-    pub fn proposed(ics20_channel_remote: Ics20ChannelId) -> Self {
+    pub const fn proposed(ics20_channel_remote: Ics20ChannelId) -> Self {
         Self::Proposed {
             ics20_channel_remote,
         }
@@ -92,7 +92,7 @@ impl Channel {
 
     /// The transfer channel this record proposes pairing with. Fixed at
     /// proposal and carried through every transition unchanged.
-    pub fn ics20_channel_remote(&self) -> Ics20ChannelId {
+    pub const fn ics20_channel_remote(&self) -> Ics20ChannelId {
         match self {
             Self::Proposed {
                 ics20_channel_remote,

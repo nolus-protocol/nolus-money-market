@@ -70,17 +70,16 @@ pub enum ChannelStateResponse {
 /// as the first-class value, and `version` as the exact bytes on the wire. The
 /// first is what an operator checks the deployment against; the second is what
 /// they diff against the counterparty's own logs.
-///
-/// Why this mirrors `state::Channel` rather than serialising it directly:
-///
-/// - This module compiles in the API-only build, so a client can deserialise a
-///   query response without pulling in the contract stack. `state::Channel` is
-///   storage code behind the `contract` feature and would drag it along.
-/// - Storage layout and query wire format answer to different disciplines — the
-///   first breaks on migration, the second breaks clients — so the mirror lets
-///   either move without forcing the other. The exhaustive mapping match in
-///   `state` is what keeps the two honest: adding a phase there fails to
-///   compile until it is reflected here.
+// Why this mirrors `state::Channel` rather than serialising it directly:
+//
+// - This module compiles in the API-only build, so a client can deserialise a
+//   query response without pulling in the contract stack. `state::Channel` is
+//   storage code behind the `contract` feature and would drag it along.
+// - Storage layout and query wire format answer to different disciplines — the
+//   first breaks on migration, the second breaks clients — so the mirror lets
+//   either move without forcing the other. The exhaustive mapping match in
+//   `state` is what keeps the two honest: adding a phase there fails to
+//   compile until it is reflected here.
 #[derive(Serialize, Deserialize, Clone, Eq, PartialEq)]
 #[cfg_attr(any(test, feature = "testing"), derive(Debug))]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
