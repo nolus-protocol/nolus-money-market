@@ -38,7 +38,10 @@ const ICS20_CHANNEL_PREFIX: &str = "channel-";
 
 const U16_MAX_DIGITS: usize = u16_max_digits();
 
-const _: () = assert!(U16_MAX_DIGITS == 5);
+// The independent pin of the computed digit count: `u16::MAX` is 65535.
+const U16_MAX_DIGITS_EXPECTED: usize = 5;
+
+const _: () = assert!(U16_MAX_DIGITS == U16_MAX_DIGITS_EXPECTED);
 
 const fn u16_max_digits() -> usize {
     let mut digits = 0;
