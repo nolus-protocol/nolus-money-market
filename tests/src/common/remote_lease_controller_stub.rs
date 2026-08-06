@@ -48,6 +48,7 @@ use currency::{CurrencyDef, Group, MemberOf};
 use finance::coin::{Amount, Coin, CoinDTO, WithCoin};
 use platform::contract::{Code, CodeId};
 use remote_lease::{
+    Ics20ChannelId,
     callback::{RemoteError, RemoteErrorKind, RemoteErrorMessage, RemoteLeaseCallback},
     msg::{CloseLeaseParams, OpenLeaseParams, TransferOutParams},
     response::{
@@ -131,7 +132,10 @@ pub enum SwapFill {
 #[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(rename_all = "snake_case")]
 pub enum StubExecuteMsg {
-    OpenChannel(),
+    OpenChannel {
+        ics20_channel_remote: Ics20ChannelId,
+    },
+    CancelChannelProposal(),
     CloseChannel(),
     NewLeaseCode {
         lease_code: Code,
@@ -257,7 +261,9 @@ pub fn execute(
     msg: StubExecuteMsg,
 ) -> Result<CwResponse, StubError> {
     match msg {
-        StubExecuteMsg::OpenChannel() | StubExecuteMsg::CloseChannel() => Ok(CwResponse::new()),
+        StubExecuteMsg::OpenChannel { .. }
+        | StubExecuteMsg::CancelChannelProposal()
+        | StubExecuteMsg::CloseChannel() => Ok(CwResponse::new()),
         StubExecuteMsg::NewLeaseCode { lease_code } => {
             CONFIG.update(deps.storage, |existing| -> Result<_, StubError> {
                 Ok(StubConfig {

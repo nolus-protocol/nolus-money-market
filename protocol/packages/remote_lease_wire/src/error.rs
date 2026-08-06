@@ -42,6 +42,24 @@ pub enum Error {
     #[error("remote-lease-id contains a non-base58 byte 0x{byte:02x}")]
     RemoteLeaseIdInvalidCharacter { byte: u8 },
 
+    #[error(
+        "the paired ICS-20 channel id must read 'channel-<n>' with a canonical, u16-bounded ordinal"
+    )]
+    Ics20ChannelIdNonCanonical,
+
+    #[error("the paired ICS-20 channel id exceeds the {max}-byte cap (was {actual})")]
+    Ics20ChannelIdTooLong { actual: usize, max: usize },
+
+    /// Deliberately payload-free: the offending value is a counterparty string,
+    /// and retaining it would echo an input of unbounded length. A caller that
+    /// needs the value for diagnostics bounds it itself through
+    /// [`crate::channel_version::bounded_channel_version`].
+    #[error("the channel handshake version must read '<protocol version>+transfer=channel-<n>'")]
+    ChannelVersionMalformed,
+
+    #[error("the channel handshake version exceeds the {max}-byte cap (was {actual})")]
+    ChannelVersionTooLong { actual: usize, max: usize },
+
     #[error("protocol version mismatch: expected {expected}, got {actual}")]
     ProtocolVersionMismatch {
         expected: &'static str,

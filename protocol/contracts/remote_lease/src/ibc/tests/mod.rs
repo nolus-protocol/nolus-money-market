@@ -9,7 +9,7 @@ use sdk::{
     testing as sdk_testing,
 };
 
-use crate::{api::InstantiateMsg, contract::instantiate};
+use crate::{api::InstantiateMsg, contract::instantiate, state::Channel};
 
 const ADMIN: &str = "admin";
 const CREATOR: &str = "creator";
@@ -21,9 +21,41 @@ const LOCAL_CHANNEL_ID: &str = "channel-0";
 const COUNTERPARTY_CHANNEL_ID: &str = "channel-77";
 const COUNTERPARTY_PORT_ID: &str = "nls-remote-lease.osmosis";
 const WRONG_COUNTERPARTY_PORT_ID: &str = "nls-remote-lease.evil";
+// The bare protocol version — legal on a packet, never in the handshake.
 const VERSION: &str = "nls-remote-lease.v1";
-const WRONG_VERSION: &str = "nls-remote-lease.v2";
+// Literal on purpose: composing these from the wire crate would let a grammar
+// regression rewrite the expectations along with the code.
+const PROPOSED_VERSION: &str = "nls-remote-lease.v1+transfer=channel-5";
+const OTHER_PROPOSED_VERSION: &str = "nls-remote-lease.v1+transfer=channel-6";
+const PROPOSED_CHANNEL: &str = "channel-5";
+const WRONG_VERSION: &str = "nls-remote-lease.v2+transfer=channel-5";
 const LEASE_CODE_ID: u64 = 17;
+
+/// Config plus a recorded proposal — the state `OpenChannel` leaves behind, and
+/// the only state the `OpenInit` callback accepts.
+fn deps_with_proposal() -> OwnedDeps<MockStorage, MockApi, MockQuerier> {
+    let mut deps = deps_with_config();
+    proposal()
+        .store(&mut deps.storage)
+        .expect("storing a fresh proposal");
+    deps
+}
+
+/// The state after the `OpenInit` callback has consumed the proposal — where an
+/// `OpenAck` legitimately arrives.
+fn deps_with_init_accepted() -> OwnedDeps<MockStorage, MockApi, MockQuerier> {
+    let mut deps = deps_with_config();
+    proposal()
+        .into_init_accepted(LOCAL_CHANNEL_ID.into())
+        .expect("a fresh proposal accepts its init")
+        .store(&mut deps.storage)
+        .expect("storing the accepted init");
+    deps
+}
+
+fn proposal() -> Channel {
+    Channel::proposed(PROPOSED_CHANNEL.parse().expect("a canonical channel id"))
+}
 
 fn deps_with_config() -> OwnedDeps<MockStorage, MockApi, MockQuerier> {
     let mut deps = sdk_testing::mock_deps_with_contracts([]);
@@ -51,10 +83,26 @@ fn channel(
     connection_id: &str,
     counterparty_port_id: &str,
 ) -> IbcChannel {
+    channel_on(
+        LOCAL_CHANNEL_ID,
+        order,
+        version,
+        connection_id,
+        counterparty_port_id,
+    )
+}
+
+fn channel_on(
+    local_channel_id: &str,
+    order: IbcOrder,
+    version: &str,
+    connection_id: &str,
+    counterparty_port_id: &str,
+) -> IbcChannel {
     IbcChannel::new(
         IbcEndpoint {
             port_id: LOCAL_PORT_ID.into(),
-            channel_id: LOCAL_CHANNEL_ID.into(),
+            channel_id: local_channel_id.into(),
         },
         IbcEndpoint {
             port_id: counterparty_port_id.into(),

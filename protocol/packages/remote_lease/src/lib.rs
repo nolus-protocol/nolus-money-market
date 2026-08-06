@@ -15,4 +15,6 @@ pub mod stub;
 #[cfg(test)]
 mod tests;
 
-pub use remote_lease_wire::{PORT_PREFIX, VERSION, port_id_for};
+pub use remote_lease_wire::{
+    PORT_PREFIX, VERSION, channel_version, channel_version::Ics20ChannelId, port_id_for,
+};

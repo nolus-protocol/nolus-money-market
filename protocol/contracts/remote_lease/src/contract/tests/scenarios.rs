@@ -6,34 +6,36 @@ use remote_lease::{
 use sdk::{
     cosmwasm_ext::CosmosMsg,
     cosmwasm_std::{
-        self, Addr, Binary, DepsMut, IbcAcknowledgement, IbcChannel, IbcChannelCloseMsg,
-        IbcChannelConnectMsg, IbcEndpoint, IbcMsg, IbcOrder, IbcPacket, IbcPacketAckMsg,
-        IbcTimeout, StdAck, SubMsg as StdSubMsg, Timestamp, WasmMsg, testing,
+        self, Addr, Binary, Deps, DepsMut, IbcAcknowledgement, IbcChannel, IbcChannelCloseMsg,
+        IbcChannelConnectMsg, IbcChannelOpenMsg, IbcEndpoint, IbcMsg, IbcOrder, IbcPacket,
+        IbcPacketAckMsg, IbcTimeout, StdAck, SubMsg as StdSubMsg, Timestamp, WasmMsg, testing,
     },
     testing as sdk_testing,
 };
 
 use crate::{
-    api::ExecuteMsg,
+    api::{ChannelInfo, ExecuteMsg},
     contract::execute,
     error::Error,
-    ibc::{ibc_channel_close, ibc_channel_connect},
+    ibc::{ibc_channel_close, ibc_channel_connect, ibc_channel_open},
     lease_callback::LeaseExecuteMsg,
     state::Channel,
 };
 
 use super::{
-    ADMIN, CONNECTION_ID, COUNTERPARTY_CHANNEL_ID, COUNTERPARTY_PORT_ID, LEASE, LOCAL_CHANNEL_ID,
-    PACKET_TIMEOUT, VERSION, deps, deps_with_lease, instantiate_default, sample_open_lease_params,
-    sender,
+    ADMIN, CONNECTION_ID, COUNTERPARTY_CHANNEL_ID, COUNTERPARTY_PORT_ID, ICS20_CHANNEL_REMOTE,
+    LEASE, LOCAL_CHANNEL_ID, PACKET_TIMEOUT, PROPOSED_VERSION, deps, deps_with_lease,
+    ics20_channel_remote, instantiate_default, query_channel, sample_open_lease_params, sender,
 };
 
 #[test]
 fn scenario_open_channel_through_ack_dispatches_callback() {
     let mut deps = deps_with_lease();
     instantiate_default(deps.as_mut());
-    open_channel_via_admin(deps.as_mut());
-    drive_open_ack(deps.as_mut());
+    drive_full_handshake(deps.as_mut());
+
+    // The suffixed version is what the established channel reports.
+    assert_established_on(PROPOSED_VERSION, deps.as_ref());
 
     let packet_data = drive_open_lease(deps.as_mut());
 
@@ -61,8 +63,7 @@ fn scenario_open_channel_through_ack_dispatches_callback() {
 fn scenario_close_channel_full_handshake_clears_state() {
     let mut deps = deps();
     instantiate_default(deps.as_mut());
-    open_channel_via_admin(deps.as_mut());
-    drive_open_ack(deps.as_mut());
+    drive_full_handshake(deps.as_mut());
 
     let res = execute(
         deps.as_mut(),
@@ -80,7 +81,7 @@ fn scenario_close_channel_full_handshake_clears_state() {
     ibc_channel_close(
         deps.as_mut(),
         testing::mock_env(),
-        IbcChannelCloseMsg::CloseConfirm {
+        IbcChannelCloseMsg::CloseInit {
             channel: handshake_channel(),
         },
     )
@@ -93,8 +94,7 @@ fn scenario_close_channel_full_handshake_clears_state() {
 fn scenario_unsolicited_close_init_while_open_rejected() {
     let mut deps = deps();
     instantiate_default(deps.as_mut());
-    open_channel_via_admin(deps.as_mut());
-    drive_open_ack(deps.as_mut());
+    drive_full_handshake(deps.as_mut());
 
     let err = ibc_channel_close(
         deps.as_mut(),
@@ -107,12 +107,35 @@ fn scenario_unsolicited_close_init_while_open_rejected() {
     assert!(matches!(err, Error::UnsolicitedChannelClose), "got {err:?}");
 }
 
+/// Walks the whole `Proposed` → `InitAccepted` → `Established` sequence the way
+/// the chain does: the admin call emits `MsgChannelOpenInit`, wasmd dispatches
+/// it in the same transaction (the `OpenInit` callback below), and the
+/// counterparty's ack completes the handshake.
+fn drive_full_handshake(mut deps: DepsMut<'_>) {
+    open_channel_via_admin(deps.branch());
+    drive_open_init(deps.branch());
+    drive_open_ack(deps);
+}
+
+fn drive_open_init(deps: DepsMut<'_>) {
+    ibc_channel_open(
+        deps,
+        testing::mock_env(),
+        IbcChannelOpenMsg::OpenInit {
+            channel: handshake_channel(),
+        },
+    )
+    .expect("our own OpenInit must consume the proposal");
+}
+
 fn open_channel_via_admin(deps: DepsMut<'_>) {
     let res = execute(
         deps,
         testing::mock_env(),
         sender(ADMIN),
-        ExecuteMsg::OpenChannel(),
+        ExecuteMsg::OpenChannel {
+            ics20_channel_remote: ics20_channel_remote(ICS20_CHANNEL_REMOTE),
+        },
     )
     .expect("OpenChannel from admin must succeed");
     assert_eq!(1, res.messages.len());
@@ -124,7 +147,7 @@ fn drive_open_ack(deps: DepsMut<'_>) {
         testing::mock_env(),
         IbcChannelConnectMsg::OpenAck {
             channel: handshake_channel(),
-            counterparty_version: VERSION.into(),
+            counterparty_version: PROPOSED_VERSION.into(),
         },
     )
     .expect("OpenAck must persist the channel");
@@ -156,7 +179,7 @@ fn handshake_channel() -> IbcChannel {
             channel_id: COUNTERPARTY_CHANNEL_ID.into(),
         },
         IbcOrder::Unordered,
-        VERSION,
+        PROPOSED_VERSION,
         CONNECTION_ID,
     )
 }
@@ -207,5 +230,22 @@ fn assert_callback_to(
             assert_eq!(&expected, msg);
         }
         other => panic!("expected WasmMsg::Execute, got {other:?}"),
+    }
+}
+
+fn assert_established_on(expected_version: &str, deps: Deps<'_>) {
+    match query_channel(deps)
+        .channel
+        .expect("the handshake completed")
+    {
+        ChannelInfo::Established {
+            version,
+            local_channel_id,
+            ..
+        } => {
+            assert_eq!(expected_version, version);
+            assert_eq!(LOCAL_CHANNEL_ID, local_channel_id);
+        }
+        other => panic!("expected an established channel, got {other:?}"),
     }
 }

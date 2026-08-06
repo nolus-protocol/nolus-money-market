@@ -25,14 +25,36 @@ impl From<Option<Channel>> for ChannelResponse {
 
 impl From<Channel> for ChannelInfo {
     fn from(channel: Channel) -> Self {
-        let (local_channel_id, counterparty_channel_id, counterparty_port_id, version, state) =
-            channel.into_parts();
-        Self {
-            local_channel_id,
-            counterparty_channel_id,
-            counterparty_port_id,
-            version,
-            state: state.into(),
+        let version = channel.version();
+        match channel {
+            Channel::Proposed {
+                ics20_channel_remote,
+            } => Self::Proposed {
+                ics20_channel_remote,
+                version,
+            },
+            Channel::InitAccepted {
+                ics20_channel_remote,
+                local_channel_id,
+            } => Self::InitAccepted {
+                ics20_channel_remote,
+                version,
+                local_channel_id,
+            },
+            Channel::Established {
+                local_channel_id,
+                counterparty_channel_id,
+                counterparty_port_id,
+                ics20_channel_remote,
+                state,
+            } => Self::Established {
+                local_channel_id,
+                counterparty_channel_id,
+                counterparty_port_id,
+                ics20_channel_remote,
+                version,
+                state: state.into(),
+            },
         }
     }
 }
