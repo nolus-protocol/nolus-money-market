@@ -18,6 +18,7 @@ const WRONG_CONNECTION_ID: &str = "connection-9";
 const DEX_LABEL: &str = "osmosis";
 const LOCAL_PORT_ID: &str = "wasm.controller";
 const LOCAL_CHANNEL_ID: &str = "channel-0";
+const OTHER_LOCAL_CHANNEL_ID: &str = "channel-9";
 const COUNTERPARTY_CHANNEL_ID: &str = "channel-77";
 const COUNTERPARTY_PORT_ID: &str = "nls-remote-lease.osmosis";
 const WRONG_COUNTERPARTY_PORT_ID: &str = "nls-remote-lease.evil";

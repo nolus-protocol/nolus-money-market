@@ -10,14 +10,12 @@ use crate::{
 
 use super::{
     CONNECTION_ID, COUNTERPARTY_CHANNEL_ID, COUNTERPARTY_PORT_ID, LOCAL_CHANNEL_ID,
-    OTHER_PROPOSED_VERSION, PROPOSED_CHANNEL, PROPOSED_VERSION, VERSION, WRONG_CONNECTION_ID,
-    WRONG_COUNTERPARTY_PORT_ID, WRONG_VERSION, channel, channel_on, deps_with_config,
-    deps_with_init_accepted, deps_with_proposal,
+    OTHER_LOCAL_CHANNEL_ID, OTHER_PROPOSED_VERSION, PROPOSED_CHANNEL, PROPOSED_VERSION, VERSION,
+    WRONG_CONNECTION_ID, WRONG_COUNTERPARTY_PORT_ID, WRONG_VERSION, channel, channel_on,
+    deps_with_config, deps_with_init_accepted, deps_with_proposal,
 };
 
 use crate::ibc::{ibc_channel_close, ibc_channel_connect, ibc_channel_open};
-
-const OTHER_LOCAL_CHANNEL_ID: &str = "channel-9";
 
 // ---------------------------------------------------------------------------
 // OpenInit — consumes `Proposed`, records the chain-assigned local channel id
@@ -431,6 +429,39 @@ fn close_init_on_our_in_flight_handshake_rejected() {
     assert!(matches!(
         Channel::may_load(&deps.storage).unwrap().unwrap(),
         Channel::InitAccepted { .. },
+    ));
+}
+
+// The scenario the identity check exists for: a cancel left an orphan, the
+// operator re-proposed, and a relayer then closes the old orphan while the new
+// handshake is in flight — the record must survive.
+#[test]
+fn close_init_for_an_orphan_while_handshake_in_flight_is_a_noop() {
+    let mut deps = deps_with_init_accepted();
+    drive_close_init_on(deps.as_mut(), OTHER_LOCAL_CHANNEL_ID)
+        .expect("closing an orphan leaves the in-flight handshake alone");
+
+    assert!(matches!(
+        Channel::may_load(&deps.storage).unwrap().unwrap(),
+        Channel::InitAccepted { .. },
+    ));
+}
+
+// An orphan close arriving while our own close is in flight must not clear the
+// record early.
+#[test]
+fn close_init_for_an_orphan_while_closing_is_a_noop() {
+    let mut deps = deps_with_config();
+    persist_closing_channel(deps.as_mut());
+    drive_close_init_on(deps.as_mut(), OTHER_LOCAL_CHANNEL_ID)
+        .expect("closing an orphan leaves our own close alone");
+
+    assert!(matches!(
+        Channel::may_load(&deps.storage).unwrap().unwrap(),
+        Channel::Established {
+            state: ChannelState::Closing,
+            ..
+        },
     ));
 }
 

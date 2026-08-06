@@ -26,16 +26,14 @@ use crate::{
 
 use super::{
     COUNTERPARTY_CHANNEL_ID, COUNTERPARTY_PORT_ID, LOCAL_CHANNEL_ID, LOCAL_PORT_ID,
-    deps_with_config, deps_with_established,
+    OTHER_LOCAL_CHANNEL_ID, deps_with_config, deps_with_established,
 };
-
-const OTHER_LOCAL_CHANNEL_ID: &str = "channel-99";
 
 type PacketEnvelopeT = PacketEnvelope<LeaseGroup, LpnGroup, PaymentGroup>;
 
 #[test]
 fn packet_receive_returns_error_ack() {
-    let mut deps = deps_with_established();
+    let mut deps = deps_with_config();
     let packet = IbcPacket::new(
         Binary::new(b"anything".to_vec()),
         IbcEndpoint {

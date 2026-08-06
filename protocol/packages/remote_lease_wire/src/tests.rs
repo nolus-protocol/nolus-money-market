@@ -455,13 +455,12 @@ fn packet_envelope_version_mismatch_error_is_bounded() {
         .to_string();
 
     assert!(
-        message.len() < oversized.len(),
-        "the echo must be capped, got {} bytes",
-        message.len(),
+        message.contains(&oversized[..CHANNEL_VERSION_MAX_BYTES]),
+        "the capped echo must be retained",
     );
     assert!(
-        !message.contains(&oversized),
-        "the full counterparty string must not be retained",
+        !message.contains(&oversized[..CHANNEL_VERSION_MAX_BYTES + 1]),
+        "not one byte past the cap may be retained",
     );
 }
 

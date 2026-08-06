@@ -129,7 +129,7 @@ Channel lifecycle is separate and protocol-admin only:
   **Cancel, then reopen.** A proposal is never replaced silently — abandoning one is an explicit operator act. This is the only escape from a counterparty that never acknowledges: without it the controller would hold the proposal forever.
 
   From `InitAccepted` the cancel also emits `IbcMsg::CloseChannel` for the channel ibc-go already allocated, so it is not stranded in INIT forever; the record is cleared *before* the message, so the same-transaction `CloseInit` callback sees an untracked channel and lets it close. From `Proposed` there is no channel yet, so the cancel is pure bookkeeping.
-- `ExecuteMsg::CloseChannel()` — begins closing a channel that is currently `Open`.
+- `ExecuteMsg::CloseChannel()` — begins closing a channel that is currently `Open`. **Drain in-flight operations first**: the close completes at the same-transaction `CloseInit` callback, which drops the channel record, and a packet still in flight at that point is rejected at its ack or timeout (`ChannelNotOpen`) — its lease never receives the callback and its relayer redelivers a deterministically failing message.
 
 ## Controller → Lease callback dispatch
 

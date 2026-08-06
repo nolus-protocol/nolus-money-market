@@ -44,8 +44,15 @@ where
     ///
     /// This is the operator's only escape from a counterparty that never
     /// acknowledges: without it the controller would hold a proposal forever.
+    /// Once the local `OpenInit` has run, the chain has already allocated a
+    /// channel; the cancel then also emits the close for it, so no INIT-phase
+    /// orphan is left behind.
     CancelChannelProposal(),
     /// Begin closing the recorded channel. Allowed only when it is currently `Open`.
+    ///
+    /// Drain in-flight operations first: completing the close drops the
+    /// channel record, after which a still-in-flight packet's ack or timeout
+    /// is rejected and its lease never receives the callback.
     CloseChannel(),
     NewLeaseCode {
         // This is an internal system API and we use [Code]

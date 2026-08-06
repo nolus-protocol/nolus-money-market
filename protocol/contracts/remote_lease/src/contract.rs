@@ -219,7 +219,7 @@ fn cancel_channel_proposal(storage: &mut dyn Storage) -> Result<PlatformResponse
         .and_then(|maybe_channel| maybe_channel.ok_or(Error::NoProposalToCancel))
         .and_then(|channel| channel.cancellable_or_err().map(|()| channel))
         .map(|channel| {
-            let orphan = channel.local_channel_id().ok().map(ToString::to_string);
+            let orphan = channel.local_channel_id().ok();
             // Clear before emitting: wasmd dispatches the close within this
             // transaction, and the `CloseInit` callback must find no record so
             // it treats the channel as an orphan rather than rejecting a close
@@ -227,7 +227,7 @@ fn cancel_channel_proposal(storage: &mut dyn Storage) -> Result<PlatformResponse
             Channel::clear(storage);
             orphan.map_or_else(PlatformResponse::default, |channel_id| {
                 let mut batch = platform::batch::Batch::default();
-                batch.schedule_execute_no_reply(ibc_msg::build_channel_close(&channel_id));
+                batch.schedule_execute_no_reply(ibc_msg::build_channel_close(channel_id));
                 PlatformResponse::messages_only(batch)
             })
         })
