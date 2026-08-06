@@ -6,6 +6,7 @@
 //! crate, which has wider deps for compile-time ticker enforcement.
 
 pub mod callback;
+pub mod channel_version;
 pub mod coin;
 pub mod envelope;
 pub mod error;

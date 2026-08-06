@@ -9,6 +9,7 @@ use platform::{
     contract::Code, error as platform_error, message::Response as PlatformResponse, response,
 };
 use remote_lease::{
+    Ics20ChannelId,
     envelope::{LeaseAddrOnWire, PacketEnvelope},
     msg::Operation,
     version::ProtocolVersion,
@@ -107,8 +108,14 @@ pub fn execute(
 ) -> Result<CwResponse> {
     let api = deps.api;
     match msg {
-        ExecuteMsg::OpenChannel() => authorize_protocol_admin_only(deps.storage.deref(), &info)
-            .and_then(|()| open_channel(deps.storage, &env)),
+        ExecuteMsg::OpenChannel {
+            ics20_channel_remote,
+        } => authorize_protocol_admin_only(deps.storage.deref(), &info)
+            .and_then(|()| open_channel(deps.storage, &env, ics20_channel_remote)),
+        ExecuteMsg::CancelChannelProposal() => {
+            authorize_protocol_admin_only(deps.storage.deref(), &info)
+                .and_then(|()| cancel_channel_proposal(deps.storage))
+        }
         ExecuteMsg::CloseChannel() => authorize_protocol_admin_only(deps.storage.deref(), &info)
             .and_then(|()| close_channel(deps.storage)),
         ExecuteMsg::NewLeaseCode {
@@ -175,17 +182,51 @@ fn authorize_protocol_admin_only(store: &dyn Storage, call_message: &MessageInfo
         .map_err(Into::into)
 }
 
-fn open_channel(storage: &mut dyn Storage, env: &Env) -> Result<PlatformResponse> {
+fn open_channel(
+    storage: &mut dyn Storage,
+    env: &Env,
+    ics20_channel_remote: Ics20ChannelId,
+) -> Result<PlatformResponse> {
     Channel::may_load(storage)
-        .and_then(|existing| match existing {
-            Some(_) => Err(Error::ChannelAlreadyExists),
-            None => Config::load(storage),
+        .and_then(|existing| {
+            existing.map_or_else(
+                || Config::load(storage),
+                |channel| Err(channel.new_proposal_rejection()),
+            )
         })
-        .map(|config| {
-            let open_init: CosmosMsg = ibc_msg::build_channel_open_init(env, &config);
-            let mut batch = platform::batch::Batch::default();
-            batch.schedule_execute_no_reply(open_init);
-            PlatformResponse::messages_only(batch)
+        .and_then(|config| {
+            let proposal = Channel::proposed(ics20_channel_remote);
+            let version = proposal.version();
+            proposal.store(storage).map(|()| {
+                let open_init: CosmosMsg = ibc_msg::build_channel_open_init(env, &config, &version);
+                let mut batch = platform::batch::Batch::default();
+                batch.schedule_execute_no_reply(open_init);
+                PlatformResponse::messages_only(batch)
+            })
+        })
+}
+
+// Past `OpenInit` the chain has already allocated a channel, so dropping the
+// record alone would strand it in INIT forever; the cancel closes it too.
+// `Proposed` has no channel yet — it is transient, consumed by the `OpenInit`
+// callback in the same transaction that emitted the open-init — so there is
+// nothing to close.
+fn cancel_channel_proposal(storage: &mut dyn Storage) -> Result<PlatformResponse> {
+    Channel::may_load(storage)
+        .and_then(|maybe_channel| maybe_channel.ok_or(Error::NoProposalToCancel))
+        .and_then(|channel| channel.cancellable_or_err().map(|()| channel))
+        .map(|channel| {
+            let orphan = channel.local_channel_id().ok();
+            // Clear before emitting: wasmd dispatches the close within this
+            // transaction, and the `CloseInit` callback must find no record so
+            // it treats the channel as an orphan rather than rejecting a close
+            // this controller just asked for.
+            Channel::clear(storage);
+            orphan.map_or_else(PlatformResponse::default, |channel_id| {
+                let mut batch = platform::batch::Batch::default();
+                batch.schedule_execute_no_reply(ibc_msg::build_channel_close(channel_id));
+                PlatformResponse::messages_only(batch)
+            })
         })
 }
 
@@ -194,12 +235,15 @@ fn close_channel(storage: &mut dyn Storage) -> Result<PlatformResponse> {
         .and_then(|maybe_channel| maybe_channel.ok_or(Error::ChannelNotOpen))
         .and_then(Channel::into_closing)
         .and_then(|closing| {
-            closing.store(storage).map(|()| {
-                let close_msg: CosmosMsg = ibc_msg::build_channel_close(&closing);
-                let mut batch = platform::batch::Batch::default();
-                batch.schedule_execute_no_reply(close_msg);
-                PlatformResponse::messages_only(batch)
-            })
+            closing
+                .local_channel_id()
+                .map(ibc_msg::build_channel_close)
+                .and_then(|close_msg| closing.store(storage).map(|()| close_msg))
+        })
+        .map(|close_msg: CosmosMsg| {
+            let mut batch = platform::batch::Batch::default();
+            batch.schedule_execute_no_reply(close_msg);
+            PlatformResponse::messages_only(batch)
         })
 }
 
@@ -234,7 +278,7 @@ fn authorise_and_load_channel(
         .and_then(|lease| {
             Channel::may_load(storage)
                 .and_then(|maybe| maybe.ok_or(Error::ChannelNotOpen))
-                .and_then(|channel| channel.usable_or_err().map(|()| (lease, channel)))
+                .map(|channel| (lease, channel))
         })
 }
 
@@ -250,18 +294,20 @@ fn build_packet(
         operation,
         version: ProtocolVersion,
     };
-    cosmwasm_std::to_json_binary(&envelope)
-        .map_err(Error::from)
-        .map(|data| {
-            let send = CosmosMsg::Ibc(IbcMsg::SendPacket {
-                channel_id: channel.local_channel_id().to_string(),
-                data,
-                timeout: IbcTimeout::with_timestamp((now + timeout).into_timestamp()),
-            });
-            let mut batch = platform::batch::Batch::default();
-            batch.schedule_execute_no_reply(send);
-            PlatformResponse::messages_only(batch)
-        })
+    channel.usable_channel_id().and_then(|channel_id| {
+        cosmwasm_std::to_json_binary(&envelope)
+            .map_err(Error::from)
+            .map(|data| {
+                let send = CosmosMsg::Ibc(IbcMsg::SendPacket {
+                    channel_id: channel_id.to_string(),
+                    data,
+                    timeout: IbcTimeout::with_timestamp((now + timeout).into_timestamp()),
+                });
+                let mut batch = platform::batch::Batch::default();
+                batch.schedule_execute_no_reply(send);
+                PlatformResponse::messages_only(batch)
+            })
+    })
 }
 
 #[cfg(test)]

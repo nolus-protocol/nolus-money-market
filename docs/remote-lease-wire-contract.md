@@ -10,6 +10,52 @@ The `remote_lease` crate defines the IBC packet types exchanged between the Nolu
 - Error code token: max 16 bytes (`REMOTE_ERROR_CODE_MAX_BYTES`), max 19 bytes framed (`REMOTE_ERROR_CODE_FRAME_MAX_BYTES`). Bounds the controller's parse scan, so a hostile 200-byte acknowledgement cannot make it walk the whole string.
 - Remote-lease id: the Solana lease PDA, carried on `OperationResponse::OpenLease.remote_lease_id` as a `RemoteLeaseId`. The Solana Remote Lease App MUST emit it as the canonical base58 encoding of the 32-byte PDA pubkey (32–44 chars); the controller rejects any non-base58 or over-64-byte value (`REMOTE_LEASE_ID_MAX_BYTES`) at ack-decode. This id is **load-bearing** — it is the recipient of the Nolus→Solana funds push, not merely observability — so a non-conforming value fails closed (the lease strands at the OpenLease ack, before any funds move) rather than risk a transfer to a bad address. A conforming counterparty never trips the check; the only path to a reject is a Solana-side bug, which the light-client trust model already excludes from normal operation.
 
+### Channel handshake version
+
+The lease channel's **handshake** version is not the bare protocol version — it carries the paired ICS-20 transfer channel as a suffix:
+
+```
+nls-remote-lease.v1+transfer=channel-5
+```
+
+The channel is a **type**, not a string: `remote_lease::Ics20ChannelId` wraps the ordinal alone, so a non-canonical value is unrepresentable and a parse-then-render round-trip is the identity. It lives in the dep-free wire crate so the two repositories cannot drift, and it carries the grammar in both directions — `FromStr`/`Display` for the id itself, `channel_version()` to compose the handshake version (infallible, since the id is already canonical) and `Ics20ChannelId::from_channel_version` to recover it.
+
+`channel-<n>` is canonical when it is ASCII digits only, with no leading zero unless the ordinal is exactly `0`, no sign or whitespace, and `<n>` within `u16` — the counterparty derives a program address from the ordinal at that width. That caps an id at 13 bytes (`ICS20_CHANNEL_ID_MAX_BYTES`) and a whole version string at 42 (`CHANNEL_VERSION_MAX_BYTES`); a longer input is rejected before any of it is retained, and a rejected version echoed in an error is first passed through `bounded_channel_version`.
+
+Serde goes through the same grammar — the JSON form is the rendered string `"channel-5"`, and a non-canonical id is refused by the deserialiser. That is what makes `ExecuteMsg::OpenChannel` fail at decode rather than in the controller, so the controller carries no error variant for a malformed id at all.
+
+**Handshake layer only.** Packets keep carrying the bare `VERSION` through the `ProtocolVersion` ZST. The two must never be mixed: a suffixed version on a packet fails the envelope deserialiser, and a bare version in the handshake fails the checks below. `VERSION` and `ProtocolVersion` are unchanged by this suffix.
+
+### Channel state machine
+
+The controller keeps one channel record, under one storage key, as a three-phase state machine. The handshake phases and the live channel are mutually exclusive, so a single item is what makes states like "a proposal beside an open channel" unrepresentable:
+
+```
+(absent) --OpenChannel--> Proposed --OnChanOpenInit--> InitAccepted --OpenAck--> Established{Open}
+                              |                             |                          |
+                              +------ CancelChannelProposal -+                    CloseChannel
+                                                                                       v
+                                                                              Established{Closing}
+                                                                                       |
+                                                                                 OnChanCloseInit
+                                                                                       v
+                                                                                   (absent)
+```
+
+Every transition validates, and every other combination is a typed error. The close completes at the `CloseInit` callback: ibc-go closes the local end within the `MsgChannelCloseInit` the controller emits, and no later callback arrives on the initiating side — `CloseConfirm` belongs to the passive side of a close handshake, which this controller never is (the counterparty rejects close-inits of its own), so it is rejected like `OpenConfirm`.
+
+`MsgChannelCloseInit` is permissionless, so the `CloseInit` callback decides by channel **identity** first and state second. A close naming the recorded channel is accepted only when this controller already asked for it (`Established{Closing}`) and otherwise rejected as `UnsolicitedChannelClose` — that is what stops a third party tearing down the live channel or an in-flight handshake. A close naming any *other* channel is accepted as a no-op: the only such channels on this port are INIT-phase orphans left by cancelled handshakes, they hold no funds, and the record is untouched either way. What the record stores is the typed `Ics20ChannelId`, never the composed version: the id is canonical by construction and `channel_version()` is a pure function of it, so recomposition is byte-stable and the emitted open-init, the `OpenInit` check, and the `OpenAck` check cannot drift apart. Two bytes of state carrying the invariant beats a 42-byte string carrying the same one. The pairing is fixed once, at `Proposed`, and every later phase carries it unchanged.
+
+Three checks defend the handshake, all against that one stored expectation:
+
+1. On the local `OpenInit` callback, `channel.version` must equal the recorded version exactly, and the record must be in `Proposed` — anything else is `UnsolicitedChannelOpen`. The callback then **consumes** `Proposed` into `InitAccepted`, recording the chain-assigned local channel id.
+2. On `OpenAck` the record must be in `InitAccepted`, and `counterparty_version` must equal the recorded version exactly. The Solana responder echoes the version it accepted verbatim (ADR 0002 §3.3), so an exact match is what proves it bound the transfer channel that was proposed rather than one of its own choosing; a mismatch is `InvalidCounterpartyVersion`.
+3. Also on `OpenAck`, `channel.endpoint.channel_id` must equal the id recorded at `OpenInit`, else `LocalChannelIdMismatch` — an ack belonging to some other channel cannot complete this handshake.
+
+**Why `InitAccepted` exists.** Consuming the proposal in the `OpenInit` callback makes that callback single-use. wasmd dispatches the `MsgChannelOpenInit` the controller emits within the same transaction that emitted it, so consumption is atomic with the emission: a second `OpenInit` against the same proposal — including one an attacker submits against the controller's port — finds nothing left to consume and is rejected. That assumption on wasmd's in-transaction dispatch is what the guarantee rests on; the unit tests simulate it by driving the callbacks in sequence.
+
+The query surface reports the phase, so an operator can tell a proposal still awaiting its own `OpenInit` from one awaiting the counterparty's ack. Every phase — not just `Established` — also exposes the proposed pairing twice over: `ics20_channel_remote` as a first-class `"channel-<n>"` value to check the deployment against, and `version` as the exact bytes to diff against the counterparty's own logs. A misconfigured pairing is therefore visible from the moment it is proposed, rather than only once the channel opens.
+
 ## Envelope
 
 `PacketEnvelope { lease: LeaseAddrOnWire, operation: Operation, version: ProtocolVersion }`. `deny_unknown_fields` everywhere. The lease address is wrapped in `LeaseAddrOnWire`; receivers must call `into_validated(api)` (CosmWasm) before treating it as an `Addr`.
@@ -72,6 +118,18 @@ Each call:
 2. Loads the channel and rejects anything other than `Open` (absent → `ChannelNotOpen`, `Closing` → `ChannelNotOperational`).
 3. Wraps the operation in `PacketEnvelope { lease, operation, version }` and emits `IbcMsg::SendPacket` on the locally stored channel id.
 4. Sets the packet timeout to `env.block.time + timeout` — the caller owns its own retry cadence.
+
+Channel lifecycle is separate and protocol-admin only:
+
+- `ExecuteMsg::OpenChannel { ics20_channel_remote: Ics20ChannelId }` — starts the handshake, proposing `ics20_channel_remote` (the **counterparty-side** ICS-20 transfer channel) in the handshake version. Requires that **no** channel record exists: a handshake already in flight gives `ProposalPending`, an established channel `ChannelAlreadyExists`. The field is typed, so a non-canonical id fails at message decode rather than here.
+
+  **Operator ordering:** that transfer channel must already be **fully open** when this call is made — per ADR 0002 §3.3 the counterparty binds the pair while validating the handshake version and cannot revisit the binding afterwards.
+- `ExecuteMsg::CancelChannelProposal()` — abandons a handshake still in flight (`Proposed` or `InitAccepted`), clearing the record so a fresh `OpenChannel` can be issued. Rejected once the channel is `Established` (`ChannelAlreadyExists`) and when nothing is pending (`NoProposalToCancel`).
+
+  **Cancel, then reopen.** A proposal is never replaced silently — abandoning one is an explicit operator act. This is the only escape from a counterparty that never acknowledges: without it the controller would hold the proposal forever.
+
+  From `InitAccepted` the cancel also emits `IbcMsg::CloseChannel` for the channel ibc-go already allocated, so it is not stranded in INIT forever; the record is cleared *before* the message, so the same-transaction `CloseInit` callback sees an untracked channel and lets it close. From `Proposed` there is no channel yet, so the cancel is pure bookkeeping.
+- `ExecuteMsg::CloseChannel()` — begins closing a channel that is currently `Open`. **Drain in-flight operations first**: the close completes at the same-transaction `CloseInit` callback, which drops the channel record, and a packet still in flight at that point is rejected at its ack or timeout (`ChannelNotOpen`) — its lease never receives the callback and its relayer redelivers a deterministically failing message.
 
 ## Controller → Lease callback dispatch
 

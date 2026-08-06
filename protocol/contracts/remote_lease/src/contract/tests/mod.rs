@@ -20,15 +20,16 @@ use sdk::{
 };
 use versioning::VersionSegment;
 
-use remote_lease::msg::OpenLeaseParams;
+use remote_lease::{Ics20ChannelId, msg::OpenLeaseParams};
 
 use crate::{
-    api::{ChannelResponse, ConfigResponse, InstantiateMsg, QueryMsg},
+    api::{ChannelResponse, ConfigResponse, ExecuteMsg, InstantiateMsg, QueryMsg},
     contract::{instantiate, query},
-    state::Channel,
+    state::{Channel, ChannelState},
 };
 
 type OpenLeaseParamsT = OpenLeaseParams<LeaseGroup, LpnGroup, PaymentGroup>;
+type ExecuteMsgT = ExecuteMsg<LeaseGroup, LpnGroup, PaymentGroup>;
 
 const ADMIN: &str = "admin";
 const NON_ADMIN: &str = "intruder";
@@ -44,7 +45,10 @@ const PACKET_TIMEOUT: Duration = Duration::from_secs(600);
 const LOCAL_CHANNEL_ID: &str = "channel-0";
 const COUNTERPARTY_CHANNEL_ID: &str = "channel-77";
 const COUNTERPARTY_PORT_ID: &str = "nls-remote-lease.osmosis";
-const VERSION: &str = "nls-remote-lease.v1";
+const ICS20_CHANNEL_REMOTE: &str = "channel-5";
+// Literal on purpose: composing it from the wire crate here would let a
+// grammar regression rewrite the expectation along with the code.
+const PROPOSED_VERSION: &str = "nls-remote-lease.v1+transfer=channel-5";
 const CONTRACT_STORAGE_VERSION: VersionSegment = 0;
 
 fn deps() -> OwnedDeps<MockStorage, MockApi, MockQuerier> {
@@ -110,28 +114,40 @@ fn instantiate_default(deps: DepsMut<'_>) {
     .unwrap();
 }
 
+fn established_channel() -> Channel {
+    Channel::Established {
+        local_channel_id: LOCAL_CHANNEL_ID.into(),
+        counterparty_channel_id: COUNTERPARTY_CHANNEL_ID.into(),
+        counterparty_port_id: COUNTERPARTY_PORT_ID.into(),
+        ics20_channel_remote: ics20_channel_remote(ICS20_CHANNEL_REMOTE),
+        state: ChannelState::Open,
+    }
+}
+
 fn store_open_channel(deps: DepsMut<'_>) {
-    Channel::new_open(
-        LOCAL_CHANNEL_ID.into(),
-        COUNTERPARTY_CHANNEL_ID.into(),
-        COUNTERPARTY_PORT_ID.into(),
-        VERSION.into(),
-    )
-    .store(deps.storage)
-    .unwrap();
+    established_channel().store(deps.storage).unwrap();
 }
 
 fn store_closing_channel(deps: DepsMut<'_>) {
-    Channel::new_open(
-        LOCAL_CHANNEL_ID.into(),
-        COUNTERPARTY_CHANNEL_ID.into(),
-        COUNTERPARTY_PORT_ID.into(),
-        VERSION.into(),
-    )
-    .into_closing()
-    .unwrap()
-    .store(deps.storage)
-    .unwrap();
+    established_channel()
+        .into_closing()
+        .unwrap()
+        .store(deps.storage)
+        .unwrap();
+}
+
+fn store_proposal(deps: DepsMut<'_>) {
+    Channel::proposed(ics20_channel_remote(ICS20_CHANNEL_REMOTE))
+        .store(deps.storage)
+        .unwrap();
+}
+
+fn store_init_accepted(deps: DepsMut<'_>) {
+    Channel::proposed(ics20_channel_remote(ICS20_CHANNEL_REMOTE))
+        .into_init_accepted(LOCAL_CHANNEL_ID.into())
+        .unwrap()
+        .store(deps.storage)
+        .unwrap();
 }
 
 fn instantiate_msg() -> InstantiateMsg {
@@ -158,6 +174,10 @@ fn query_config(deps: Deps<'_>) -> ConfigResponse {
 fn query_channel(deps: Deps<'_>) -> ChannelResponse {
     let raw = query(deps, testing::mock_env(), QueryMsg::Channel()).unwrap();
     sdk::cosmwasm_std::from_json(raw).unwrap()
+}
+
+fn ics20_channel_remote(ics20_channel: &str) -> Ics20ChannelId {
+    ics20_channel.parse().expect("a canonical channel id")
 }
 
 fn sample_open_lease_params() -> OpenLeaseParamsT {

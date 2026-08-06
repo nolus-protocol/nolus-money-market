@@ -31,6 +31,27 @@ pub enum Error {
     #[error("[RemoteLease] No channel is recorded for this controller")]
     ChannelNotOpen,
 
+    #[error("[RemoteLease] The channel-open handshake is still in flight")]
+    ChannelNotEstablished,
+
+    #[error(
+        "[RemoteLease] A channel-open handshake is already in flight; cancel it before proposing another"
+    )]
+    ProposalPending,
+
+    #[error("[RemoteLease] No channel-open handshake is in flight to cancel")]
+    NoProposalToCancel,
+
+    /// Both sides are chain-assigned channel ids, not counterparty free text —
+    /// ibc-go allocates the local one before the callback runs.
+    #[error("[RemoteLease] Local channel id mismatch: expected '{expected}', got '{actual}'")]
+    LocalChannelIdMismatch { expected: String, actual: String },
+
+    /// As with [`Self::LocalChannelIdMismatch`], both ids are chain-assigned:
+    /// ibc-go commits the packet's source channel at send time.
+    #[error("[RemoteLease] Packet channel mismatch: expected '{expected}', got '{actual}'")]
+    PacketChannelMismatch { expected: String, actual: String },
+
     #[error("[RemoteLease] The recorded channel is not operational")]
     ChannelNotOperational,
 
@@ -40,6 +61,13 @@ pub enum Error {
     #[error("[RemoteLease] Channel version mismatch: expected '{expected}', got '{actual}'")]
     InvalidChannelVersion { expected: String, actual: String },
 
+    /// `actual` is bounded before it reaches here — see
+    /// [`remote_lease::channel_version::bounded_channel_version`].
+    #[error(
+        "[RemoteLease] Counterparty channel version mismatch: expected '{expected}', got '{actual}'"
+    )]
+    InvalidCounterpartyVersion { expected: String, actual: String },
+
     #[error("[RemoteLease] Channel ordering must be UNORDERED")]
     InvalidChannelOrdering,
 
@@ -48,6 +76,9 @@ pub enum Error {
 
     #[error("[RemoteLease] Counterparty-initiated channel-open handshakes are not supported")]
     UnsupportedCounterpartyOpen,
+
+    #[error("[RemoteLease] Unsolicited channel open attempt rejected")]
+    UnsolicitedChannelOpen,
 
     #[error("[RemoteLease] Unsolicited channel close attempt rejected")]
     UnsolicitedChannelClose,

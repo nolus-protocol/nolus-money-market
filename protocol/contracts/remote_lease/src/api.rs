@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 use platform::contract::{Code, CodeId};
+use remote_lease::Ics20ChannelId;
 use sdk::cosmwasm_std::Uint64;
 
 pub use remote_lease::msg::ExecuteMsg;
@@ -59,14 +60,47 @@ pub enum ChannelStateResponse {
     Closing,
 }
 
+/// The channel record's phase, as observed from outside.
+///
+/// The handshake phases are visible so an operator can tell a proposal awaiting
+/// its `OpenInit` from one awaiting the counterparty's ack — the two need
+/// different interventions, and only the latter is waiting on the counterparty.
+///
+/// Every phase reports the proposed pairing twice over: `ics20_channel_remote`
+/// as the first-class value, and `version` as the exact bytes on the wire. The
+/// first is what an operator checks the deployment against; the second is what
+/// they diff against the counterparty's own logs.
+// Why this mirrors `state::Channel` rather than serialising it directly:
+//
+// - This module compiles in the API-only build, so a client can deserialise a
+//   query response without pulling in the contract stack. `state::Channel` is
+//   storage code behind the `contract` feature and would drag it along.
+// - Storage layout and query wire format answer to different disciplines — the
+//   first breaks on migration, the second breaks clients — so the mirror lets
+//   either move without forcing the other. The exhaustive mapping match in
+//   `state` is what keeps the two honest: adding a phase there fails to
+//   compile until it is reflected here.
 #[derive(Serialize, Deserialize, Clone, Eq, PartialEq)]
 #[cfg_attr(any(test, feature = "testing"), derive(Debug))]
-pub struct ChannelInfo {
-    pub local_channel_id: String,
-    pub counterparty_channel_id: String,
-    pub counterparty_port_id: String,
-    pub version: String,
-    pub state: ChannelStateResponse,
+#[serde(deny_unknown_fields, rename_all = "snake_case")]
+pub enum ChannelInfo {
+    Proposed {
+        ics20_channel_remote: Ics20ChannelId,
+        version: String,
+    },
+    InitAccepted {
+        ics20_channel_remote: Ics20ChannelId,
+        version: String,
+        local_channel_id: String,
+    },
+    Established {
+        local_channel_id: String,
+        counterparty_channel_id: String,
+        counterparty_port_id: String,
+        ics20_channel_remote: Ics20ChannelId,
+        version: String,
+        state: ChannelStateResponse,
+    },
 }
 
 #[derive(Serialize, Deserialize, Clone, Eq, PartialEq)]

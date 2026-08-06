@@ -4,6 +4,8 @@ use currency::{CurrencyDTO, Group};
 use finance::{coin::CoinDTO, duration::Duration};
 use platform::contract::Code;
 
+use remote_lease_wire::channel_version::Ics20ChannelId;
+
 use crate::{error::Error, swap::SwapParams};
 
 /// The `remote_lease` controller's execute interface.
@@ -20,9 +22,37 @@ where
     LpnG: Group,
     PaymentG: Group,
 {
-    /// Initiate the channel handshake. Allowed only when no channel is recorded.
-    OpenChannel(),
+    /// Initiate the channel handshake, proposing `ics20_channel_remote` as the
+    /// paired transfer channel. Allowed only when no channel is recorded.
+    ///
+    /// `ics20_channel_remote` is the **counterparty-side** ICS-20 transfer
+    /// channel over which lease funds move. Being typed, a non-canonical id is
+    /// refused while decoding this message rather than by the controller. Per
+    /// ADR 0002 §3.3 that transfer channel must already be **fully open** when
+    /// this call is made — the counterparty binds the pair while validating the
+    /// handshake version and cannot revisit the binding afterwards.
+    ///
+    /// Requires that no channel record exists at all: a handshake still in
+    /// flight is never replaced silently, so abandoning one is an explicit
+    /// [`ExecuteMsg::CancelChannelProposal`].
+    OpenChannel {
+        ics20_channel_remote: Ics20ChannelId,
+    },
+    /// Abandon a channel-open handshake still in flight, freeing the controller
+    /// to propose another. Rejected once the channel is established, and when
+    /// there is no handshake to cancel.
+    ///
+    /// This is the operator's only escape from a counterparty that never
+    /// acknowledges: without it the controller would hold a proposal forever.
+    /// Once the local `OpenInit` has run, the chain has already allocated a
+    /// channel; the cancel then also emits the close for it, so no INIT-phase
+    /// orphan is left behind.
+    CancelChannelProposal(),
     /// Begin closing the recorded channel. Allowed only when it is currently `Open`.
+    ///
+    /// Drain in-flight operations first: completing the close drops the
+    /// channel record, after which a still-in-flight packet's ack or timeout
+    /// is rejected and its lease never receives the callback.
     CloseChannel(),
     NewLeaseCode {
         // This is an internal system API and we use [Code]
@@ -363,9 +393,34 @@ mod tests {
 
     #[test]
     fn open_channel_wire_shape() {
+        let msg = ExecuteP2P::OpenChannel {
+            ics20_channel_remote: "channel-5".parse().expect("a canonical channel id"),
+        };
+        let body = variant_body("open_channel", &msg);
+        assert_struct_fields(&["ics20_channel_remote"], &body);
+        // The typed field still travels as the rendered id, so operator tooling
+        // and the counterparty keep speaking `channel-<n>`.
+        assert_eq!(serde_json::json!("channel-5"), body["ics20_channel_remote"],);
+    }
+
+    // A non-canonical id never reaches the controller: the typed field refuses
+    // it while the message decodes.
+    #[test]
+    fn open_channel_non_canonical_id_rejected_at_decode() {
+        serde_json::from_str::<ExecuteP2P>(
+            r#"{"open_channel":{"ics20_channel_remote":"channel-65536"}}"#,
+        )
+        .expect_err("an out-of-range ordinal must fail deserialization");
+    }
+
+    #[test]
+    fn cancel_channel_proposal_wire_shape() {
         assert_eq!(
             serde_json::json!([]),
-            variant_body("open_channel", &ExecuteP2P::OpenChannel())
+            variant_body(
+                "cancel_channel_proposal",
+                &ExecuteP2P::CancelChannelProposal()
+            )
         );
     }
 

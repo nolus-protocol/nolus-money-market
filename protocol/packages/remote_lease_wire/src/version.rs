@@ -2,7 +2,7 @@ use std::fmt;
 
 use serde::{Deserialize, Deserializer, Serialize, Serializer, de};
 
-use crate::VERSION;
+use crate::{VERSION, channel_version};
 
 /// Zero-sized wire-format marker that always serialises as [`crate::VERSION`]
 /// and rejects any other value at deserialisation time.
@@ -41,8 +41,12 @@ impl<'de> Deserialize<'de> for ProtocolVersion {
             if actual == VERSION {
                 Ok(Self)
             } else {
+                // The rejected value is counterparty bytes and the error text
+                // travels into logs and events, so it is bounded before it is
+                // rendered rather than after.
                 Err(de::Error::custom(format!(
-                    "protocol version mismatch: expected {VERSION}, got {actual}",
+                    "protocol version mismatch: expected {VERSION}, got {}",
+                    channel_version::bounded_channel_version(actual),
                 )))
             }
         })

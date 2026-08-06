@@ -15,7 +15,10 @@
 //! generations must coexist, because [`crate::version::ProtocolVersion`]
 //! rejects a mismatch at the deserialiser and a bump therefore breaks every
 //! in-flight packet. §3 `RemoteLeaseCallback` is the controller-to-lease
-//! `ExecuteMsg` payload and never crosses the channel at all.
+//! `ExecuteMsg` payload and never crosses the channel at all. §10 is the
+//! handshake version grammar: it too is a paired cross-repo change, and it is
+//! the one pin the counterparty *parses* rather than deserialises, so its
+//! literals are what keep the two renderings byte-identical.
 
 use std::fmt::Debug;
 
@@ -27,6 +30,10 @@ use crate::{
     callback::{
         OPERATION_ERR_MAX_BYTES, REMOTE_ERROR_CODE_MAX_BYTES, RemoteError, RemoteErrorKind,
         RemoteErrorMessage, RemoteLeaseCallback,
+    },
+    channel_version::{
+        CHANNEL_VERSION_MAX_BYTES, ICS20_CHANNEL_ID_MAX_BYTES, Ics20ChannelId,
+        bounded_channel_version,
     },
     coin::WireCoin,
     envelope::{LeaseAddrOnWire, PacketEnvelope},
@@ -435,6 +442,28 @@ fn packet_envelope_version_mismatch_rejected() {
         .expect_err("mismatched protocol version must fail deserialization");
 }
 
+// The rejected version is counterparty bytes and the serde error text reaches
+// logs and events, so it must not carry an unbounded echo.
+#[test]
+fn packet_envelope_version_mismatch_error_is_bounded() {
+    let oversized = "v".repeat(CHANNEL_VERSION_MAX_BYTES * 8);
+    let bad_wire = format!(
+        r#"{{"lease":"nolus1leaseaddr","operation":{{"close_lease":{{}}}},"version":"{oversized}"}}"#
+    );
+    let message = serde_json::from_str::<PacketEnvelope>(&bad_wire)
+        .expect_err("mismatched protocol version must fail deserialization")
+        .to_string();
+
+    assert!(
+        message.contains(&oversized[..CHANNEL_VERSION_MAX_BYTES]),
+        "the capped echo must be retained",
+    );
+    assert!(
+        !message.contains(&oversized[..CHANNEL_VERSION_MAX_BYTES + 1]),
+        "not one byte past the cap may be retained",
+    );
+}
+
 #[test]
 fn packet_envelope_missing_version_rejected() {
     let bad_wire = r#"{"lease":"nolus1leaseaddr","operation":{"close_lease":{}}}"#;
@@ -825,6 +854,180 @@ fn protocol_version_round_trip_pinned() {
 }
 
 // ---------------------------------------------------------------------------
+// 10. Ics20ChannelId and the `+transfer=` suffixed handshake version
+// ---------------------------------------------------------------------------
+
+#[test]
+fn ics20_channel_id_caps_pinned() {
+    assert_eq!(13, ICS20_CHANNEL_ID_MAX_BYTES);
+    assert_eq!(42, CHANNEL_VERSION_MAX_BYTES);
+}
+
+#[test]
+fn ics20_channel_id_render_round_trips_the_ordinal_bounds() {
+    for ics20_channel in ["channel-0", "channel-1", "channel-65535"] {
+        assert_eq!(ics20_channel, channel_id(ics20_channel).to_string());
+    }
+}
+
+#[test]
+fn channel_version_composition_pinned() {
+    assert_eq!(
+        "nls-remote-lease.v1+transfer=channel-5",
+        channel_id("channel-5").channel_version(),
+    );
+}
+
+// The handshake carries the suffixed version and every packet carries the bare
+// one. A change that let the two converge would silently make a bare-version
+// handshake acceptable, so the separation is asserted rather than assumed.
+#[test]
+fn channel_version_never_equals_the_bare_packet_version() {
+    assert_ne!(VERSION, channel_id("channel-0").channel_version().as_str());
+    assert_eq!(VERSION, ProtocolVersion.to_string());
+}
+
+#[test]
+fn channel_version_round_trips_the_ordinal_bounds() {
+    for ics20_channel in ["channel-0", "channel-1", "channel-65535"] {
+        let id = channel_id(ics20_channel);
+        assert_eq!(
+            id,
+            Ics20ChannelId::from_channel_version(&id.channel_version())
+                .expect("a self-composed version must parse back"),
+        );
+    }
+}
+
+#[test]
+fn ics20_channel_id_rejects_a_non_canonical_form() {
+    // Above u16, leading zero, absent ordinal, non-digit tail, wrong prefix
+    // case, empty, a sign, whitespace, and a multi-byte char in the ordinal
+    // position — the last guards the digit scan against a char-boundary panic.
+    for ics20_channel in [
+        "channel-65536",
+        "channel-01",
+        "channel-",
+        "channel-1a",
+        "Channel-1",
+        "",
+        "channel-+1",
+        "channel- 1",
+        "channel-١",
+    ] {
+        assert!(
+            matches!(
+                ics20_channel.parse::<Ics20ChannelId>(),
+                Err(Error::Ics20ChannelIdNonCanonical),
+            ),
+            "{ics20_channel:?} must be rejected as non-canonical",
+        );
+    }
+}
+
+#[test]
+fn ics20_channel_id_rejects_an_over_long_form() {
+    let over_cap = format!("channel-{}", "9".repeat(ICS20_CHANNEL_ID_MAX_BYTES));
+    assert!(matches!(
+        over_cap.parse::<Ics20ChannelId>(),
+        Err(Error::Ics20ChannelIdTooLong {
+            actual,
+            max: ICS20_CHANNEL_ID_MAX_BYTES,
+        }) if actual == over_cap.len(),
+    ));
+}
+
+#[test]
+fn channel_version_parse_rejects_a_malformed_version() {
+    // The bare packet version, a missing tag, a foreign protocol, a suffix on a
+    // foreign protocol, and a non-canonical id behind a well-formed prefix. A
+    // doubled tag cannot fit the cap and is covered by
+    // `channel_version_parse_rejects_an_over_long_version`.
+    for version in [
+        VERSION,
+        "nls-remote-lease.v1channel-5",
+        "ics20-1",
+        "ics20-1+transfer=channel-5",
+        "nls-remote-lease.v1+transfer=channel-01",
+        "nls-remote-lease.v1+transfer=channel-65536",
+    ] {
+        assert!(
+            matches!(
+                Ics20ChannelId::from_channel_version(version),
+                Err(Error::ChannelVersionMalformed),
+            ),
+            "{version:?} must be rejected as malformed",
+        );
+    }
+}
+
+#[test]
+fn channel_version_parse_rejects_an_over_long_version() {
+    // Two ways past the cap: bulk padding, and the doubled tag or suffix a
+    // recomposition bug would produce — the grammar admits neither.
+    for version in [
+        "x".repeat(CHANNEL_VERSION_MAX_BYTES + 1),
+        "nls-remote-lease.v1+transfer=+transfer=channel-5".to_string(),
+        "nls-remote-lease.v1+transfer=channel-5+transfer=channel-6".to_string(),
+    ] {
+        assert!(
+            matches!(
+                Ics20ChannelId::from_channel_version(&version),
+                Err(Error::ChannelVersionTooLong {
+                    actual,
+                    max: CHANNEL_VERSION_MAX_BYTES,
+                }) if actual == version.len(),
+            ),
+            "{version:?} must be rejected as over-long",
+        );
+    }
+}
+
+// The JSON form is the rendered id, not the bare ordinal — the counterparty and
+// every operator tool speak `channel-<n>`.
+#[test]
+fn ics20_channel_id_round_trip_is_the_rendered_string() {
+    assert_round_trip_eq(r#""channel-5""#, &channel_id("channel-5"));
+}
+
+#[test]
+fn ics20_channel_id_deserialize_non_canonical_rejected() {
+    for bad_wire in [
+        r#""channel-01""#,
+        r#""channel-65536""#,
+        r#""Channel-1""#,
+        r#""5""#,
+        r#""""#,
+    ] {
+        serde_json::from_str::<Ics20ChannelId>(bad_wire)
+            .expect_err("a non-canonical id must fail deserialization");
+    }
+}
+
+#[test]
+fn ics20_channel_id_deserialize_non_string_rejected() {
+    serde_json::from_str::<Ics20ChannelId>("5")
+        .expect_err("the wire form is a string, never a bare number");
+}
+
+#[test]
+fn channel_version_at_cap_passes_through_the_bound_unchanged() {
+    let at_cap = channel_id("channel-65535").channel_version();
+    assert_eq!(CHANNEL_VERSION_MAX_BYTES, at_cap.len());
+    assert_eq!(at_cap.as_str(), bounded_channel_version(&at_cap));
+}
+
+#[test]
+fn channel_version_bound_truncates_on_a_char_boundary() {
+    // A multi-byte char straddling the cap must be dropped whole, not split.
+    let over_cap = format!("{}€", "x".repeat(CHANNEL_VERSION_MAX_BYTES - 1));
+    assert_eq!(
+        "x".repeat(CHANNEL_VERSION_MAX_BYTES - 1),
+        bounded_channel_version(&over_cap),
+    );
+}
+
+// ---------------------------------------------------------------------------
 // helpers — expected value first per project rule 17
 // ---------------------------------------------------------------------------
 
@@ -845,6 +1048,12 @@ fn operation_err(kind: RemoteErrorKind, message: &str) -> RemoteLeaseCallback {
         kind,
         RemoteErrorMessage::new(message).expect("a short message must be accepted"),
     ))
+}
+
+fn channel_id(ics20_channel: &str) -> Ics20ChannelId {
+    ics20_channel
+        .parse()
+        .expect("a canonical channel id must be accepted")
 }
 
 fn sample_open_lease_params() -> OpenLeaseParams {
