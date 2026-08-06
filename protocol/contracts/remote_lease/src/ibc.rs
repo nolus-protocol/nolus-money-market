@@ -125,14 +125,16 @@ pub fn ibc_channel_close(
         // the passive side only — never reached here, since the counterparty
         // rejects close-inits of its own — so it fails closed like
         // `OpenConfirm`.
-        IbcChannelCloseMsg::CloseInit { .. } => Channel::may_load(deps.storage)
-            .and_then(|maybe_channel| {
-                maybe_channel.map_or(Err(Error::UnsolicitedChannelClose), |channel| {
-                    channel.close_init_or_err()
-                })
-            })
-            .map(|()| {
-                Channel::clear(deps.storage);
+        //
+        // Which channel is closing decides the outcome, because
+        // `MsgChannelCloseInit` is permissionless — see
+        // [`closes_recorded_channel`].
+        IbcChannelCloseMsg::CloseInit { channel } => Channel::may_load(deps.storage)
+            .and_then(|recorded| closes_recorded_channel(recorded, &channel.endpoint.channel_id))
+            .map(|is_recorded| {
+                if is_recorded {
+                    Channel::clear(deps.storage);
+                }
                 IbcBasicResponse::new()
             }),
         IbcChannelCloseMsg::CloseConfirm { .. } => Err(Error::UnsolicitedChannelClose),
@@ -156,8 +158,8 @@ pub fn ibc_packet_ack(
     _env: Env,
     msg: IbcPacketAckMsg,
 ) -> Result<IbcBasicResponse> {
-    cosmwasm_std::from_json(&msg.original_packet.data)
-        .map_err(Error::from)
+    require_packet_channel(deps.storage, &msg.original_packet.src.channel_id)
+        .and_then(|()| cosmwasm_std::from_json(&msg.original_packet.data).map_err(Error::from))
         .and_then(|envelope| {
             cosmwasm_std::from_json::<StdAck>(&msg.acknowledgement.data)
                 .map_err(Error::from)
@@ -172,10 +174,56 @@ pub fn ibc_packet_timeout(
     _env: Env,
     msg: IbcPacketTimeoutMsg,
 ) -> Result<IbcBasicResponse> {
-    cosmwasm_std::from_json(&msg.packet.data)
-        .map_err(Error::from)
+    require_packet_channel(deps.storage, &msg.packet.src.channel_id)
+        .and_then(|()| cosmwasm_std::from_json(&msg.packet.data).map_err(Error::from))
         .and_then(|envelope| {
             dispatch_lease_callback(deps.api, envelope, RemoteLeaseCallback::OperationTimeout)
+        })
+}
+
+// Anyone may submit `MsgChannelCloseInit` for any channel on this port, so the
+// callback decides by identity first and state second.
+//
+// The recorded channel is the only one that can affect the record, and closing
+// it is accepted solely when this controller already asked for the close —
+// otherwise a third party could tear down the live channel, or an in-flight
+// handshake, at will. Every *other* channel on the port is an INIT-phase orphan
+// left by a cancelled handshake; it holds no funds and is not the record, so
+// letting it close is cleanup and the record stays untouched.
+fn closes_recorded_channel(recorded: Option<Channel>, closing_channel_id: &str) -> Result<bool> {
+    match recorded {
+        Some(channel)
+            if channel
+                .local_channel_id()
+                .is_ok_and(|recorded_id| recorded_id == closing_channel_id) =>
+        {
+            channel.close_init_or_err().map(|()| true)
+        }
+        Some(_) | None => Ok(false),
+    }
+}
+
+// Bind the packet to the recorded channel before its bytes are trusted for
+// anything. Nothing else ties a callback to this controller's own channel: the
+// envelope names a lease, not a channel, so an unbound packet on another
+// channel of this port would dispatch a callback the lease then acts on. The
+// gate is `local_channel_id`, not `usable_channel_id` — a packet already in
+// flight when the close began still deserves its callback, since it may be
+// carrying funds.
+fn require_packet_channel(storage: &dyn Storage, actual: &str) -> Result<()> {
+    Channel::may_load(storage)
+        .and_then(|maybe_channel| maybe_channel.ok_or(Error::ChannelNotOpen))
+        .and_then(|channel| {
+            channel.local_channel_id().and_then(|expected| {
+                if expected == actual {
+                    Ok(())
+                } else {
+                    Err(Error::PacketChannelMismatch {
+                        expected: expected.to_string(),
+                        actual: actual.to_string(),
+                    })
+                }
+            })
         })
 }
 
@@ -295,13 +343,16 @@ fn bounded(version: &str) -> String {
     remote_lease::channel_version::bounded_channel_version(version).to_string()
 }
 
+// ibc-go caps connection and port identifiers upstream, but a handler that
+// retains a counterparty-influenced string should not depend on someone else's
+// bound — `bounded` makes the retention self-evidently finite here.
 fn require_connection_id(actual: &str, expected: &str) -> Result<()> {
     if actual == expected {
         Ok(())
     } else {
         Err(Error::InvalidConnectionId {
             expected: expected.to_string(),
-            actual: actual.to_string(),
+            actual: bounded(actual),
         })
     }
 }
@@ -313,7 +364,7 @@ fn require_counterparty_port(actual: &str, dex_label: &str) -> Result<()> {
     } else {
         Err(Error::InvalidCounterpartyPort {
             expected,
-            actual: actual.to_string(),
+            actual: bounded(actual),
         })
     }
 }

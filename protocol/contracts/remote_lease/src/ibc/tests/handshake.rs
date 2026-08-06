@@ -1,6 +1,6 @@
 use sdk::cosmwasm_std::{
-    DepsMut, IbcChannel, IbcChannelCloseMsg, IbcChannelConnectMsg, IbcChannelOpenMsg, IbcOrder,
-    testing,
+    DepsMut, IbcBasicResponse, IbcChannel, IbcChannelCloseMsg, IbcChannelConnectMsg,
+    IbcChannelOpenMsg, IbcOrder, testing,
 };
 
 use crate::{
@@ -397,20 +397,53 @@ fn close_init_when_open_rejected() {
 }
 
 #[test]
-fn close_init_when_no_channel_rejected() {
+// `MsgChannelCloseInit` is permissionless, so a close arriving for a channel
+// this controller does not track is not an attack on it — the only such
+// channels on this port are INIT-phase orphans from cancelled handshakes.
+// Letting them close is cleanup; the record (here, absent) is untouched.
+fn close_init_for_an_untracked_channel_is_a_noop() {
     let mut deps = deps_with_config();
-    assert_close_init_rejected(deps.as_mut());
+    drive_close_init(deps.as_mut()).expect("closing an untracked channel is accepted");
+    assert!(Channel::may_load(&deps.storage).unwrap().is_none());
+
+    let mut deps = deps_with_config();
+    persist_established_channel(deps.as_mut());
+    drive_close_init_on(deps.as_mut(), OTHER_LOCAL_CHANNEL_ID)
+        .expect("closing an untracked channel is accepted");
+    assert!(matches!(
+        Channel::may_load(&deps.storage).unwrap().unwrap(),
+        Channel::Established {
+            state: ChannelState::Open,
+            ..
+        },
+    ));
 }
 
 // A close for a handshake that never completed is as unsolicited as one for an
 // open channel we did not ask to close.
 #[test]
-fn close_init_while_handshake_in_flight_rejected() {
-    let mut deps = deps_with_proposal();
-    assert_close_init_rejected(deps.as_mut());
-
+// The griefing guard: once our INIT has allocated the channel, a third party
+// must not be able to tear the handshake down with a permissionless close.
+fn close_init_on_our_in_flight_handshake_rejected() {
     let mut deps = deps_with_init_accepted();
     assert_close_init_rejected(deps.as_mut());
+
+    assert!(matches!(
+        Channel::may_load(&deps.storage).unwrap().unwrap(),
+        Channel::InitAccepted { .. },
+    ));
+}
+
+// `Proposed` has no channel allocated yet, so no close can name it.
+#[test]
+fn close_init_while_only_proposed_is_a_noop() {
+    let mut deps = deps_with_proposal();
+    drive_close_init(deps.as_mut()).expect("no channel is allocated to protect yet");
+
+    assert!(matches!(
+        Channel::may_load(&deps.storage).unwrap().unwrap(),
+        Channel::Proposed { .. },
+    ));
 }
 
 // `CloseConfirm` runs on the passive side of a close handshake, and the
@@ -505,15 +538,31 @@ where
 }
 
 fn assert_close_init_rejected(deps: DepsMut<'_>) {
-    let err = ibc_channel_close(
+    let err = drive_close_init(deps).unwrap_err();
+    assert!(matches!(err, Error::UnsolicitedChannelClose), "got {err:?}");
+}
+
+fn drive_close_init(deps: DepsMut<'_>) -> Result<IbcBasicResponse, Error> {
+    drive_close_init_on(deps, LOCAL_CHANNEL_ID)
+}
+
+fn drive_close_init_on(
+    deps: DepsMut<'_>,
+    local_channel_id: &str,
+) -> Result<IbcBasicResponse, Error> {
+    ibc_channel_close(
         deps,
         testing::mock_env(),
         IbcChannelCloseMsg::CloseInit {
-            channel: proposed_channel(),
+            channel: channel_on(
+                local_channel_id,
+                IbcOrder::Unordered,
+                PROPOSED_VERSION,
+                CONNECTION_ID,
+                COUNTERPARTY_PORT_ID,
+            ),
         },
     )
-    .unwrap_err();
-    assert!(matches!(err, Error::UnsolicitedChannelClose), "got {err:?}");
 }
 
 fn persist_established_channel(deps: DepsMut<'_>) {

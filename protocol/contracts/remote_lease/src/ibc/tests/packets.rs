@@ -26,14 +26,16 @@ use crate::{
 
 use super::{
     COUNTERPARTY_CHANNEL_ID, COUNTERPARTY_PORT_ID, LOCAL_CHANNEL_ID, LOCAL_PORT_ID,
-    deps_with_config,
+    deps_with_config, deps_with_established,
 };
+
+const OTHER_LOCAL_CHANNEL_ID: &str = "channel-99";
 
 type PacketEnvelopeT = PacketEnvelope<LeaseGroup, LpnGroup, PaymentGroup>;
 
 #[test]
 fn packet_receive_returns_error_ack() {
-    let mut deps = deps_with_config();
+    let mut deps = deps_with_established();
     let packet = IbcPacket::new(
         Binary::new(b"anything".to_vec()),
         IbcEndpoint {
@@ -59,7 +61,7 @@ fn packet_receive_returns_error_ack() {
 
 #[test]
 fn packet_ack_success_dispatches_operation_ok() {
-    let mut deps = deps_with_config();
+    let mut deps = deps_with_established();
     let lease = sdk_testing::user("lease-1");
     let envelope_bytes = encode_envelope(&envelope_with_close_lease(&lease));
     let response = OperationResponse::CloseLease(CloseLeaseResponse {});
@@ -123,7 +125,7 @@ fn packet_ack_non_conforming_error_code_errors() {
         "[MIN_OUT_UNMET] dex pool drained",
         "[future_class] dex pool drained",
     ] {
-        let mut deps = deps_with_config();
+        let mut deps = deps_with_established();
         let lease = sdk_testing::user("lease-non-conforming");
         let envelope_bytes = encode_envelope(&envelope_with_close_lease(&lease));
 
@@ -160,7 +162,7 @@ fn packet_ack_error_at_cap_after_stripping_dispatches() {
 
 #[test]
 fn packet_timeout_dispatches_operation_timeout() {
-    let mut deps = deps_with_config();
+    let mut deps = deps_with_established();
     let lease = sdk_testing::user("lease-3");
     let envelope_bytes = encode_envelope(&envelope_with_close_lease(&lease));
 
@@ -176,7 +178,7 @@ fn packet_timeout_dispatches_operation_timeout() {
 
 #[test]
 fn packet_ack_malformed_envelope_errors() {
-    let mut deps = deps_with_config();
+    let mut deps = deps_with_established();
     let envelope_bytes = Binary::new(b"not-an-envelope".to_vec());
     let ack_bytes = StdAck::Success(Binary::new(b"{}".to_vec())).to_binary();
 
@@ -192,7 +194,7 @@ fn packet_ack_malformed_envelope_errors() {
 
 #[test]
 fn packet_timeout_malformed_envelope_errors() {
-    let mut deps = deps_with_config();
+    let mut deps = deps_with_established();
     let envelope_bytes = Binary::new(b"not-an-envelope".to_vec());
 
     let err = ibc_packet_timeout(
@@ -207,7 +209,7 @@ fn packet_timeout_malformed_envelope_errors() {
 
 #[test]
 fn packet_ack_malformed_acknowledgement_errors() {
-    let mut deps = deps_with_config();
+    let mut deps = deps_with_established();
     let lease = sdk_testing::user("lease-4");
     let envelope_bytes = encode_envelope(&envelope_with_close_lease(&lease));
     let ack_bytes = Binary::new(b"not-a-std-ack".to_vec());
@@ -224,7 +226,7 @@ fn packet_ack_malformed_acknowledgement_errors() {
 
 #[test]
 fn packet_ack_success_with_malformed_response_errors() {
-    let mut deps = deps_with_config();
+    let mut deps = deps_with_established();
     let lease = sdk_testing::user("lease-5");
     let envelope_bytes = encode_envelope(&envelope_with_close_lease(&lease));
     let ack_bytes = StdAck::Success(Binary::new(b"not-an-operation-response".to_vec())).to_binary();
@@ -241,7 +243,7 @@ fn packet_ack_success_with_malformed_response_errors() {
 
 #[test]
 fn dispatched_callback_wire_shape_pinned() {
-    let mut deps = deps_with_config();
+    let mut deps = deps_with_established();
     let lease = sdk_testing::user("lease-wire");
     let envelope_bytes = encode_envelope(&envelope_with_close_lease(&lease));
 
@@ -268,7 +270,7 @@ fn dispatched_callback_wire_shape_pinned() {
 
 #[test]
 fn packet_ack_malformed_lease_addr_in_envelope_errors() {
-    let mut deps = deps_with_config();
+    let mut deps = deps_with_established();
     let envelope = PacketEnvelopeT {
         lease: LeaseAddrOnWire::new("NOT_BECH32!"),
         operation: Operation::CloseLease(CloseLeaseParams {}),
@@ -291,7 +293,7 @@ fn packet_ack_malformed_lease_addr_in_envelope_errors() {
 
 #[test]
 fn packet_timeout_malformed_lease_addr_in_envelope_errors() {
-    let mut deps = deps_with_config();
+    let mut deps = deps_with_established();
     let envelope = PacketEnvelopeT {
         lease: LeaseAddrOnWire::new("NOT_BECH32!"),
         operation: Operation::CloseLease(CloseLeaseParams {}),
@@ -330,7 +332,7 @@ fn fixture_stdack_success_open_lease_decodes_to_callback() {
         "fixture must match the canonical wire shape"
     );
 
-    let mut deps = deps_with_config();
+    let mut deps = deps_with_established();
     let lease = sdk_testing::user("lease-fixture");
     let envelope_bytes = encode_envelope(&envelope_with_close_lease(&lease));
     let res = ibc_packet_ack(
@@ -404,7 +406,7 @@ fn fixture_stdack_error_min_out_decodes_to_callback() {
 
 #[test]
 fn packet_ack_oversized_error_message_errors() {
-    let mut deps = deps_with_config();
+    let mut deps = deps_with_established();
     let lease = sdk_testing::user("lease-6");
     let envelope_bytes = encode_envelope(&envelope_with_close_lease(&lease));
     let oversized = "x".repeat(OPERATION_ERR_MAX_BYTES + 1);
@@ -420,6 +422,89 @@ fn packet_ack_oversized_error_message_errors() {
     assert!(matches!(err, Error::RemoteCallback(_)), "got {err:?}");
 }
 
+// ---------------------------------------------------------------------------
+// Packet ↔ channel binding
+// ---------------------------------------------------------------------------
+
+// The envelope names a lease, never a channel, so without this binding a packet
+// riding some other channel on this port would dispatch a callback the lease
+// then acts on. The check runs before the envelope is decoded at all.
+#[test]
+fn packet_ack_on_another_channel_rejected() {
+    let mut deps = deps_with_established();
+    let lease = sdk_testing::user("lease-other-channel");
+    let envelope_bytes = encode_envelope(&envelope_with_close_lease(&lease));
+    let response: OperationResponse<PaymentGroup> =
+        OperationResponse::CloseLease(CloseLeaseResponse {});
+    let ack_bytes = StdAck::Success(cosmwasm_std::to_json_binary(&response).unwrap()).to_binary();
+
+    let err = ibc_packet_ack(
+        deps.as_mut(),
+        testing::mock_env(),
+        ack_msg_on(OTHER_LOCAL_CHANNEL_ID, envelope_bytes, ack_bytes),
+    )
+    .unwrap_err();
+
+    assert_packet_channel_mismatch(err);
+}
+
+#[test]
+fn packet_timeout_on_another_channel_rejected() {
+    let mut deps = deps_with_established();
+    let lease = sdk_testing::user("lease-other-channel-timeout");
+    let envelope_bytes = encode_envelope(&envelope_with_close_lease(&lease));
+
+    let err = ibc_packet_timeout(
+        deps.as_mut(),
+        testing::mock_env(),
+        timeout_msg_on(OTHER_LOCAL_CHANNEL_ID, envelope_bytes),
+    )
+    .unwrap_err();
+
+    assert_packet_channel_mismatch(err);
+}
+
+// The binding precedes decoding, so even bytes that would not parse are
+// refused on identity alone.
+#[test]
+fn packet_ack_without_channel_record_rejected() {
+    let mut deps = deps_with_config();
+    let envelope_bytes = Binary::new(b"not-an-envelope".to_vec());
+    let ack_bytes = StdAck::Success(Binary::new(b"{}".to_vec())).to_binary();
+
+    let err = ibc_packet_ack(
+        deps.as_mut(),
+        testing::mock_env(),
+        ack_msg(envelope_bytes, ack_bytes),
+    )
+    .unwrap_err();
+
+    assert!(matches!(err, Error::ChannelNotOpen), "got {err:?}");
+}
+
+#[test]
+fn packet_timeout_without_channel_record_rejected() {
+    let mut deps = deps_with_config();
+    let envelope_bytes = Binary::new(b"not-an-envelope".to_vec());
+
+    let err = ibc_packet_timeout(
+        deps.as_mut(),
+        testing::mock_env(),
+        timeout_msg(envelope_bytes),
+    )
+    .unwrap_err();
+
+    assert!(matches!(err, Error::ChannelNotOpen), "got {err:?}");
+}
+
+fn assert_packet_channel_mismatch(err: Error) {
+    assert!(matches!(
+        err,
+        Error::PacketChannelMismatch { ref expected, ref actual }
+            if expected == LOCAL_CHANNEL_ID && actual == OTHER_LOCAL_CHANNEL_ID,
+    ));
+}
+
 // Drives the real `ibc_packet_ack`, so each caller proves both the
 // classification and that the handler committed the acknowledgement.
 fn assert_error_ack_dispatches(
@@ -428,7 +513,7 @@ fn assert_error_ack_dispatches(
     lease_id: &str,
     ack: &str,
 ) {
-    let mut deps = deps_with_config();
+    let mut deps = deps_with_established();
     let lease = sdk_testing::user(lease_id);
     let envelope_bytes = encode_envelope(&envelope_with_close_lease(&lease));
 
@@ -462,26 +547,38 @@ fn encode_envelope(envelope: &PacketEnvelopeT) -> Binary {
 }
 
 fn ack_msg(envelope_bytes: Binary, ack_bytes: Binary) -> IbcPacketAckMsg {
+    ack_msg_on(LOCAL_CHANNEL_ID, envelope_bytes, ack_bytes)
+}
+
+fn ack_msg_on(
+    local_channel_id: &str,
+    envelope_bytes: Binary,
+    ack_bytes: Binary,
+) -> IbcPacketAckMsg {
     IbcPacketAckMsg::new(
         IbcAcknowledgement::new(ack_bytes),
-        outbound_packet(envelope_bytes),
+        outbound_packet_on(local_channel_id, envelope_bytes),
         sdk_testing::user("relayer"),
     )
 }
 
 fn timeout_msg(envelope_bytes: Binary) -> IbcPacketTimeoutMsg {
+    timeout_msg_on(LOCAL_CHANNEL_ID, envelope_bytes)
+}
+
+fn timeout_msg_on(local_channel_id: &str, envelope_bytes: Binary) -> IbcPacketTimeoutMsg {
     IbcPacketTimeoutMsg::new(
-        outbound_packet(envelope_bytes),
+        outbound_packet_on(local_channel_id, envelope_bytes),
         sdk_testing::user("relayer"),
     )
 }
 
-fn outbound_packet(data: Binary) -> IbcPacket {
+fn outbound_packet_on(local_channel_id: &str, data: Binary) -> IbcPacket {
     IbcPacket::new(
         data,
         IbcEndpoint {
             port_id: LOCAL_PORT_ID.into(),
-            channel_id: LOCAL_CHANNEL_ID.into(),
+            channel_id: local_channel_id.into(),
         },
         IbcEndpoint {
             port_id: COUNTERPARTY_PORT_ID.into(),

@@ -53,6 +53,24 @@ fn deps_with_init_accepted() -> OwnedDeps<MockStorage, MockApi, MockQuerier> {
     deps
 }
 
+/// The state a live channel is in — where packet callbacks legitimately arrive.
+fn deps_with_established() -> OwnedDeps<MockStorage, MockApi, MockQuerier> {
+    let mut deps = deps_with_config();
+    proposal()
+        .into_init_accepted(LOCAL_CHANNEL_ID.into())
+        .and_then(|accepted| {
+            accepted.into_established(
+                LOCAL_CHANNEL_ID.into(),
+                COUNTERPARTY_CHANNEL_ID.into(),
+                COUNTERPARTY_PORT_ID.into(),
+            )
+        })
+        .expect("the fixture walks a valid handshake")
+        .store(&mut deps.storage)
+        .expect("storing the established channel");
+    deps
+}
+
 fn proposal() -> Channel {
     Channel::proposed(PROPOSED_CHANNEL.parse().expect("a canonical channel id"))
 }

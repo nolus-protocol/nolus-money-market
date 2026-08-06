@@ -193,25 +193,43 @@ fn open_channel_when_channel_exists_rejected() {
 // CancelChannelProposal — the operator's escape from a stalled handshake
 // ---------------------------------------------------------------------------
 
+// `Proposed` has no channel allocated yet, so there is nothing to tear down.
 #[test]
-fn cancel_proposal_clears_an_in_flight_handshake() {
-    for store_in_flight in [
-        store_proposal as fn(DepsMut<'_>),
-        store_init_accepted as fn(DepsMut<'_>),
-    ] {
-        let mut deps = deps();
-        instantiate_default(deps.as_mut());
-        store_in_flight(deps.as_mut());
+fn cancel_proposal_before_init_clears_without_a_message() {
+    let mut deps = deps();
+    instantiate_default(deps.as_mut());
+    store_proposal(deps.as_mut());
 
-        let res = cancel_by(deps.as_mut(), ADMIN).expect("an in-flight handshake is cancellable");
-        assert_eq!(0, res.messages.len(), "cancelling is local-only");
+    let res = cancel_by(deps.as_mut(), ADMIN).expect("a fresh proposal is cancellable");
+    assert_eq!(0, res.messages.len(), "no channel exists to close");
 
-        assert!(Channel::may_load(&deps.storage).unwrap().is_none());
+    assert_cancelled_and_reproposable(deps.as_mut());
+}
 
-        // Cancelling is what frees the controller to propose again.
-        open_channel_by(deps.as_mut(), ADMIN, "channel-6")
-            .expect("a cancelled handshake frees a fresh proposal");
-    }
+// Past `OpenInit` the chain has allocated a channel. Dropping the record alone
+// would strand it in INIT forever, so the cancel closes it too.
+#[test]
+fn cancel_proposal_after_init_closes_the_orphaned_channel() {
+    let mut deps = deps();
+    instantiate_default(deps.as_mut());
+    store_init_accepted(deps.as_mut());
+
+    let res = cancel_by(deps.as_mut(), ADMIN).expect("an accepted init is cancellable");
+    assert_eq!(1, res.messages.len());
+    assert!(matches!(
+        &res.messages[0].msg,
+        CosmosMsg::Ibc(IbcMsg::CloseChannel { channel_id }) if channel_id == LOCAL_CHANNEL_ID
+    ));
+
+    assert_cancelled_and_reproposable(deps.as_mut());
+}
+
+fn assert_cancelled_and_reproposable(mut deps: DepsMut<'_>) {
+    assert!(Channel::may_load(deps.storage).unwrap().is_none());
+
+    // Cancelling is what frees the controller to propose again.
+    open_channel_by(deps.branch(), ADMIN, "channel-6")
+        .expect("a cancelled handshake frees a fresh proposal");
 }
 
 #[test]

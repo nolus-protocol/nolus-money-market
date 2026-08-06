@@ -47,6 +47,11 @@ pub enum Error {
     #[error("[RemoteLease] Local channel id mismatch: expected '{expected}', got '{actual}'")]
     LocalChannelIdMismatch { expected: String, actual: String },
 
+    /// As with [`Self::LocalChannelIdMismatch`], both ids are chain-assigned:
+    /// ibc-go commits the packet's source channel at send time.
+    #[error("[RemoteLease] Packet channel mismatch: expected '{expected}', got '{actual}'")]
+    PacketChannelMismatch { expected: String, actual: String },
+
     #[error("[RemoteLease] The recorded channel is not operational")]
     ChannelNotOperational,
 

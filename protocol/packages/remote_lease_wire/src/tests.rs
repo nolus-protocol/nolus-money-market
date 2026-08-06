@@ -442,6 +442,29 @@ fn packet_envelope_version_mismatch_rejected() {
         .expect_err("mismatched protocol version must fail deserialization");
 }
 
+// The rejected version is counterparty bytes and the serde error text reaches
+// logs and events, so it must not carry an unbounded echo.
+#[test]
+fn packet_envelope_version_mismatch_error_is_bounded() {
+    let oversized = "v".repeat(CHANNEL_VERSION_MAX_BYTES * 8);
+    let bad_wire = format!(
+        r#"{{"lease":"nolus1leaseaddr","operation":{{"close_lease":{{}}}},"version":"{oversized}"}}"#
+    );
+    let message = serde_json::from_str::<PacketEnvelope>(&bad_wire)
+        .expect_err("mismatched protocol version must fail deserialization")
+        .to_string();
+
+    assert!(
+        message.len() < oversized.len(),
+        "the echo must be capped, got {} bytes",
+        message.len(),
+    );
+    assert!(
+        !message.contains(&oversized),
+        "the full counterparty string must not be retained",
+    );
+}
+
 #[test]
 fn packet_envelope_missing_version_rejected() {
     let bad_wire = r#"{"lease":"nolus1leaseaddr","operation":{"close_lease":{}}}"#;

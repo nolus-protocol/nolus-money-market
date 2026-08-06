@@ -208,13 +208,28 @@ fn open_channel(
 
 /// Abandon a handshake still in flight, freeing the controller to propose
 /// another. The only escape from a counterparty that never acks.
+///
+/// Past `OpenInit` the chain has already allocated a channel, so dropping the
+/// record alone would strand it in INIT forever; the cancel closes it too.
+/// `Proposed` has no channel yet — it is transient, consumed by the `OpenInit`
+/// callback in the same transaction that emitted the open-init — so there is
+/// nothing to close.
 fn cancel_channel_proposal(storage: &mut dyn Storage) -> Result<PlatformResponse> {
     Channel::may_load(storage)
         .and_then(|maybe_channel| maybe_channel.ok_or(Error::NoProposalToCancel))
-        .and_then(|channel| channel.cancellable_or_err())
-        .map(|()| {
+        .and_then(|channel| channel.cancellable_or_err().map(|()| channel))
+        .map(|channel| {
+            let orphan = channel.local_channel_id().ok().map(ToString::to_string);
+            // Clear before emitting: wasmd dispatches the close within this
+            // transaction, and the `CloseInit` callback must find no record so
+            // it treats the channel as an orphan rather than rejecting a close
+            // this controller just asked for.
             Channel::clear(storage);
-            PlatformResponse::default()
+            orphan.map_or_else(PlatformResponse::default, |channel_id| {
+                let mut batch = platform::batch::Batch::default();
+                batch.schedule_execute_no_reply(ibc_msg::build_channel_close(&channel_id));
+                PlatformResponse::messages_only(batch)
+            })
         })
 }
 
