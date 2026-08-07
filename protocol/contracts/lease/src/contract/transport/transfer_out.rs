@@ -21,11 +21,6 @@ impl TransportOutFactory for TransferOutFactory {
             task.dex_account().owner(),
             task.dex_account().remote(),
             (now + IBC_TIMEOUT).into_timestamp(),
-            format!(
-                "Transfer out: {sender} -> {receiver}",
-                sender = task.dex_account().owner(),
-                receiver = task.dex_account().remote()
-            ),
         ))
     }
 }
