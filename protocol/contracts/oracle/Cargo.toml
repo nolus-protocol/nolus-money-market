@@ -72,6 +72,7 @@ stub_price = [
     "dep:finance",
     "dep:oracle-platform",
     "dep:sdk",
+    "dep:serde",
     "dep:thiserror",
 ]
 stub_price_testing = [

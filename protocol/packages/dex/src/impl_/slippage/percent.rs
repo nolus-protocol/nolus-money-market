@@ -2,14 +2,13 @@ use std::marker::PhantomData;
 
 use serde::{Deserialize, Serialize};
 
-use currency::{Currency, CurrencyDef, Group, MemberOf};
+use currency::Group;
 use finance::{
-    coin::{Coin, CoinDTO, WithCoin},
+    coin::{Coin, CoinDTO},
     fraction::Fraction,
     percent::Percent100,
 };
-use oracle::stub;
-use oracle_platform::OracleRef;
+use oracle::stub::CoinToOut;
 use platform::batch::{Emit, Emitter};
 use sdk::cosmwasm_std::QuerierWrapper;
 
@@ -44,28 +43,24 @@ impl MaxSlippage {
 #[derive(Serialize, Deserialize)]
 #[cfg_attr(feature = "testing", derive(Debug))]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
-pub struct Calculator<InG, OutC, OutG>
+pub struct Calculator<InG, ConverterT>
 where
     InG: Group,
-    OutC: Currency + MemberOf<OutG>,
-    OutG: Group,
 {
     max_slippage: MaxSlippage,
-    oracle: OracleRef<OutC, OutG>,
+    converter: ConverterT,
     #[serde(skip)]
     _in_g: PhantomData<InG>,
 }
 
-impl<InG, OutC, OutG> Calculator<InG, OutC, OutG>
+impl<InG, ConverterT> Calculator<InG, ConverterT>
 where
     InG: Group,
-    OutC: Currency + MemberOf<OutG>,
-    OutG: Group,
 {
-    pub const fn with(max_slippage: MaxSlippage, oracle: OracleRef<OutC, OutG>) -> Self {
+    pub const fn new(max_slippage: MaxSlippage, converter: ConverterT) -> Self {
         Self {
             max_slippage,
-            oracle,
+            converter,
             _in_g: PhantomData,
         }
     }
@@ -75,72 +70,38 @@ where
     }
 }
 
-impl<InG, OutC, OutG> SlippageCalculator<InG> for Calculator<InG, OutC, OutG>
+impl<InG, ConverterT> SlippageCalculator<InG> for Calculator<InG, ConverterT>
 where
     InG: Group,
-    OutC: CurrencyDef,
-    OutC::Group: MemberOf<OutG> + MemberOf<InG::TopG>,
-    OutG: Group,
+    ConverterT: CoinToOut<InG>,
 {
-    type OutC = OutC;
+    type OutC = ConverterT::OutC;
 
     fn min_output(
         &self,
         input: &CoinDTO<InG>,
         querier: QuerierWrapper<'_>,
     ) -> Result<Coin<Self::OutC>> {
-        struct InCoinResolve<'querier, InG, OutC, OutG>
-        where
-            InG: Group,
-            OutC: CurrencyDef,
-            OutC::Group: MemberOf<OutG> + MemberOf<InG::TopG>,
-            OutG: Group,
-        {
-            max_slippage: MaxSlippage,
-            oracle: OracleRef<OutC, OutG>,
-            querier: QuerierWrapper<'querier>,
-            _in_g: PhantomData<InG>,
-        }
-
-        impl<InG, OutC, OutG> WithCoin<InG> for InCoinResolve<'_, InG, OutC, OutG>
-        where
-            InG: Group,
-            OutC: CurrencyDef,
-            OutC::Group: MemberOf<OutG> + MemberOf<InG::TopG>,
-            OutG: Group,
-        {
-            type Outcome = Result<Coin<OutC>>;
-
-            fn on<C>(self, input: Coin<C>) -> Self::Outcome
-            where
-                C: CurrencyDef,
-                C::Group: MemberOf<InG> + MemberOf<<InG as Group>::TopG>,
-            {
-                stub::to_quote::<_, InG, _, _>(self.oracle, input, self.querier)
-                    .map_err(Error::MinOutput)
-                    .map(|input_in_out_c| self.max_slippage.min_out(input_in_out_c))
-            }
-        }
-
-        input.with_coin(InCoinResolve {
-            max_slippage: self.max_slippage,
-            oracle: self.oracle.clone(),
-            querier,
-            _in_g: PhantomData,
-        })
+        self.converter
+            .to_out(input, querier)
+            .map_err(Error::MinOutput)
+            .map(|input_in_out_c| self.max_slippage.min_out(input_in_out_c))
     }
 }
 
 #[cfg(test)]
 mod test {
-    use currency::test::SuperGroupTestC1;
+    use currency::test::{SuperGroup, SuperGroupTestC1};
     use finance::{
         coin::{Amount, Coin},
         fraction::Fraction,
         percent::Percent100,
     };
+    use oracle::stub::ToQuote;
+    use oracle_platform::OracleRef;
+    use sdk::cosmwasm_std::{Addr, from_json, to_json_string};
 
-    use super::MaxSlippage;
+    use super::{Calculator, MaxSlippage};
 
     #[test]
     fn zero() {
@@ -161,6 +122,23 @@ mod test {
             slippage.complement().of(coin_in),
             calc_min_out(coin_in, slippage)
         );
+    }
+
+    #[test]
+    fn to_quote_calc_wire_shape() {
+        const WIRE: &str = r#"{"max_slippage":150,"converter":{"addr":"oracle_addr"}}"#;
+
+        let max_slippage = MaxSlippage(Percent100::from_percent(15));
+        let oracle =
+            OracleRef::<SuperGroupTestC1, SuperGroup>::unchecked(Addr::unchecked("oracle_addr"));
+        let calc: Calculator<SuperGroup, ToQuote<SuperGroupTestC1, SuperGroup>> =
+            Calculator::new(max_slippage, ToQuote::new(oracle));
+
+        assert_eq!(WIRE, to_json_string(&calc).unwrap());
+
+        let from_wire: Calculator<SuperGroup, ToQuote<SuperGroupTestC1, SuperGroup>> =
+            from_json(WIRE.as_bytes()).unwrap();
+        assert_eq!(WIRE, to_json_string(&from_wire).unwrap());
     }
 
     fn coin(amount: Amount) -> Coin<SuperGroupTestC1> {

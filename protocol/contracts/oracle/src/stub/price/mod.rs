@@ -4,8 +4,10 @@ use thiserror::Error;
 
 use oracle_platform::error::Error as PlatformError;
 
+pub use coin_to_out::{CoinToOut, ToQuote};
 pub use convert::{from_quote, to_quote};
 
+mod coin_to_out;
 mod convert;
 
 pub type Result<T> = StdResult<T, Error>;
