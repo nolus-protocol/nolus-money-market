@@ -2,8 +2,6 @@ use std::mem;
 
 use serde::{Deserialize, Serialize};
 
-use finance::{duration::Duration, percent::Percent100};
-use lease::api::{limits::MaxSlippages, open::PositionSpecDTO};
 use platform::contract::Code;
 use sdk::{
     cosmwasm_std::{Addr, StdError as SdkError, Storage},
@@ -12,7 +10,7 @@ use sdk::{
 
 use crate::{
     ContractError,
-    msg::{InstantiateMsg, NewConfig},
+    msg::{InstantiateMsg, LeaseConfig, LeaseConfigExternal},
     result::ContractResult,
 };
 
@@ -26,14 +24,11 @@ pub struct Config {
     pub time_alarms: Addr,
     pub market_price_oracle: Addr,
     pub protocols_registry: Addr,
-    pub lease_position_spec: PositionSpecDTO,
-    pub lease_interest_rate_margin: Percent100,
-    pub lease_due_period: Duration,
-    pub lease_max_slippages: MaxSlippages,
     pub lease_admin: Addr,
     pub ics20_channel_local: String,
     pub remote_lease_controller: Addr,
     pub expected_instance_ordinal: u16,
+    pub lease_config: LeaseConfig,
 }
 
 impl Config {
@@ -48,14 +43,11 @@ impl Config {
             time_alarms: msg.time_alarms,
             market_price_oracle: msg.market_price_oracle,
             protocols_registry: msg.protocols_registry,
-            lease_position_spec: msg.lease_position_spec,
-            lease_interest_rate_margin: msg.lease_interest_rate_margin,
-            lease_due_period: msg.lease_due_period,
-            lease_max_slippages: msg.lease_max_slippages,
             lease_admin: msg.lease_admin,
             ics20_channel_local: msg.ics20_channel_local,
             remote_lease_controller: msg.remote_lease_controller,
             expected_instance_ordinal: msg.expected_instance_ordinal,
+            lease_config: msg.lease_config.into(),
         }
     }
 
@@ -71,14 +63,14 @@ impl Config {
             .map_err(ContractError::LoadConfigFailure)
     }
 
-    pub fn update(storage: &mut dyn Storage, new_config: NewConfig) -> ContractResult<()> {
+    pub fn update(
+        storage: &mut dyn Storage,
+        new_config: LeaseConfigExternal,
+    ) -> ContractResult<()> {
         Self::STORAGE
             .update::<_, UpdateDataError>(storage, |c| {
                 Ok(Self {
-                    lease_interest_rate_margin: new_config.lease_interest_rate_margin,
-                    lease_position_spec: new_config.lease_position_spec,
-                    lease_due_period: new_config.lease_due_period,
-                    lease_max_slippages: new_config.lease_max_slippages,
+                    lease_config: new_config.into(),
                     ..c
                 })
             })

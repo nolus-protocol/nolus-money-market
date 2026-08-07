@@ -27,7 +27,7 @@ use crate::{
     finance::{LpnCurrencies, LpnCurrency, OracleRef},
     lease::Release as LeaseReleaseTrait,
     migrate::{self, MigrationResult},
-    msg::{MaxLeases, NewConfig, QuoteResponse},
+    msg::{LeaseConfigExternal, MaxLeases, QuoteResponse},
     result::ContractResult,
     state::{config::Config, leases::Leases},
 };
@@ -67,8 +67,8 @@ impl<'a> Leaser<'a> {
                 downpayment,
                 lease_asset,
                 oracle,
-                config.lease_position_spec.liability,
-                config.lease_interest_rate_margin,
+                config.lease_config.position_spec.liability,
+                config.lease_config.interest_rate_margin,
                 max_ltd,
             ),
             self.deps.querier,
@@ -78,7 +78,7 @@ impl<'a> Leaser<'a> {
 
 pub(super) fn try_configure(
     storage: &mut dyn Storage,
-    new_config: NewConfig,
+    new_config: LeaseConfigExternal,
 ) -> ContractResult<MessageResponse> {
     Config::update(storage, new_config).map(|()| MessageResponse::default())
 }

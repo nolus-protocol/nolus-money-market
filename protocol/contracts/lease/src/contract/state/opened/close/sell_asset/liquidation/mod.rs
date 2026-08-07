@@ -1,4 +1,5 @@
 use dex::{AcceptUpToMaxSlippage, AnomalyCause, AnomalyHandler, AnomalyTreatment};
+use oracle::stub::ToQuote;
 use platform::message::Response as MessageResponse;
 use sdk::cosmwasm_std::{Env, QuerierWrapper};
 
@@ -26,7 +27,7 @@ use super::{SellAsset, task::ClosePositionTask};
 pub mod full;
 pub mod partial;
 
-type Calculator = AcceptUpToMaxSlippage<LeaseAssetCurrencies, LpnCurrency, LpnCurrencies>;
+type Calculator = AcceptUpToMaxSlippage<LeaseAssetCurrencies, ToQuote<LpnCurrency, LpnCurrencies>>;
 impl super::Calculator for Calculator {}
 
 pub fn start(
@@ -40,7 +41,10 @@ pub fn start(
         .leases
         .max_slippage(querier)
         .map(|max_slippage| {
-            AcceptUpToMaxSlippage::with(max_slippage.liquidation, lease.lease.oracle.clone())
+            AcceptUpToMaxSlippage::new(
+                max_slippage.liquidation,
+                ToQuote::new(lease.lease.oracle.clone()),
+            )
         })
         .and_then(|slippage_calc| match liquidation {
             LiquidationDTO::Partial(spec) => {

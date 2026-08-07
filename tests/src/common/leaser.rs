@@ -12,7 +12,7 @@ use finance::{
     test,
 };
 use lease::api::{LpnCoinDTO, limits::MaxSlippages, open::PositionSpecDTO};
-use leaser::msg::{InstantiateMsg, NewConfig, QueryMsg, QuoteResponse};
+use leaser::msg::{InstantiateMsg, LeaseConfig, LeaseConfigExternal, QueryMsg, QuoteResponse};
 use platform::contract::{Code, CodeId};
 use sdk::{cosmwasm_std::Addr, testing};
 
@@ -39,7 +39,19 @@ impl Instantiator {
     pub const MAX_LTV: Percent100 = Percent100::from_permille(800);
     pub const RECALC_TIME: Duration = Duration::from_hours(1);
 
+    pub const MAX_SLIPPAGE_OPEN: Percent100 = Percent100::from_permille(120);
+    pub const MAX_SLIPPAGE_REPAY: Percent100 = Percent100::from_permille(130);
+    pub const MAX_SLIPPAGE_CLOSE: Percent100 = Percent100::from_permille(140);
     pub const MAX_SLIPPAGE: Percent100 = Percent100::from_permille(150);
+
+    pub fn max_slippages() -> MaxSlippages {
+        MaxSlippages {
+            open: MaxSlippage::unchecked(Self::MAX_SLIPPAGE_OPEN),
+            repay: MaxSlippage::unchecked(Self::MAX_SLIPPAGE_REPAY),
+            close: MaxSlippage::unchecked(Self::MAX_SLIPPAGE_CLOSE),
+            liquidation: MaxSlippage::unchecked(Self::MAX_SLIPPAGE),
+        }
+    }
 
     pub fn liability() -> Liability {
         Liability::new(
@@ -69,15 +81,14 @@ impl Instantiator {
         )
     }
 
-    pub fn new_config() -> NewConfig {
-        NewConfig {
-            lease_position_spec: Instantiator::position_spec(),
-            lease_interest_rate_margin: Instantiator::INTEREST_RATE_MARGIN,
-            lease_due_period: Instantiator::REPAYMENT_PERIOD,
-            lease_max_slippages: MaxSlippages {
-                liquidation: MaxSlippage::unchecked(Instantiator::MAX_SLIPPAGE),
-            },
-        }
+    pub fn new_config() -> LeaseConfigExternal {
+        LeaseConfigExternal::try_from(LeaseConfig {
+            position_spec: Instantiator::position_spec(),
+            interest_rate_margin: Instantiator::INTEREST_RATE_MARGIN,
+            due_period: Instantiator::REPAYMENT_PERIOD,
+            max_slippages: Instantiator::max_slippages(),
+        })
+        .unwrap()
     }
 
     /// The expected address of the leaser contract
@@ -117,18 +128,13 @@ impl Instantiator {
             profit,
             reserve,
             protocols_registry,
-            lease_interest_rate_margin: Self::INTEREST_RATE_MARGIN,
-            lease_position_spec: Self::position_spec(),
-            lease_due_period: Self::REPAYMENT_PERIOD,
-            lease_max_slippages: MaxSlippages {
-                liquidation: MaxSlippage::unchecked(Self::MAX_SLIPPAGE),
-            },
             lease_admin: testing::user(LEASE_ADMIN),
             time_alarms: alarms.time_alarm,
             market_price_oracle: alarms.market_price_oracle,
             ics20_channel_local: TestCase::LEASER_IBC_CHANNEL.into(),
             remote_lease_controller,
             expected_instance_ordinal: Self::EXPECTED_INSTANCE_ORDINAL,
+            lease_config: Self::new_config(),
         };
 
         app.instantiate(code_id, testing::user(ADMIN), &msg, &[], "leaser", None)

@@ -3,7 +3,7 @@ use finance::percent::Percent100;
 use lease::api::limits::MaxSlippages;
 use leaser::{
     ContractError,
-    msg::{NewConfig, QueryMsg},
+    msg::{LeaseConfig, LeaseConfigExternal, QueryMsg},
 };
 use sdk::{
     cosmwasm_std::{Addr, StdResult},
@@ -39,11 +39,19 @@ fn privileged() {
     let admin = testing::user(LEASE_ADMIN);
     let leaser = test_case.address_book.leaser().clone();
 
-    let mut new_config = Instantiator::new_config();
-    new_config.lease_max_slippages.liquidation =
-        MaxSlippage::unchecked(Percent100::from_permille(128));
-
-    let expected_slippages = new_config.lease_max_slippages;
+    let expected_slippages = MaxSlippages {
+        open: MaxSlippage::unchecked(Percent100::from_permille(125)),
+        repay: MaxSlippage::unchecked(Percent100::from_permille(126)),
+        close: MaxSlippage::unchecked(Percent100::from_permille(127)),
+        liquidation: MaxSlippage::unchecked(Percent100::from_permille(128)),
+    };
+    let new_config = LeaseConfigExternal::try_from(LeaseConfig {
+        interest_rate_margin: Instantiator::INTEREST_RATE_MARGIN,
+        position_spec: Instantiator::position_spec(),
+        due_period: Instantiator::REPAYMENT_PERIOD,
+        max_slippages: expected_slippages,
+    })
+    .unwrap();
 
     assert!(config_leases(&mut test_case.app, leaser.clone(), admin, new_config).is_ok());
     assert_eq!(expected_slippages, max_slippages(&test_case.app, leaser));
@@ -53,7 +61,7 @@ fn config_leases(
     app: &mut App,
     leaser: Addr,
     caller: Addr,
-    new_config: NewConfig,
+    new_config: LeaseConfigExternal,
 ) -> StdResult<ResponseWithInterChainMsgs<'_, AppResponse>> {
     app.execute(
         caller,

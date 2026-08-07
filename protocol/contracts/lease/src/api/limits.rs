@@ -17,5 +17,8 @@ pub enum PositionLimits {
 #[cfg_attr(feature = "skel_testing", derive(Debug))]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub struct MaxSlippages {
+    pub open: MaxSlippage,
+    pub repay: MaxSlippage,
+    pub close: MaxSlippage,
     pub liquidation: MaxSlippage,
 }
