@@ -19,7 +19,7 @@ use sdk::{
 use crate::{
     cmd::Borrow,
     contract::{execute, instantiate, query, sudo},
-    msg::{ConfigResponse, ExecuteMsg, NewConfig, QueryMsg, SudoMsg},
+    msg::{ConfigResponse, ExecuteMsg, LeaseConfig, LeaseConfigExternal, QueryMsg, SudoMsg},
     state::config::Config,
     tests,
 };
@@ -48,28 +48,34 @@ fn leaser_instantiate_msg(lease_code: Code, lpp: Addr) -> crate::msg::Instantiat
         time_alarms: sdk_testing::user(TIMEALARMS_ADDR),
         market_price_oracle: sdk_testing::user(ORACLE_ADDR),
         protocols_registry: sdk_testing::user(PROTOCOLS_REGISTRY_ADDR),
-        lease_position_spec: PositionSpecDTO::new(
-            Liability::new(
-                Percent100::from_percent(65),
-                Percent100::from_percent(70),
-                Percent100::from_percent(73),
-                Percent100::from_percent(75),
-                Percent100::from_percent(78),
-                Percent100::from_percent(80),
-                Duration::from_hours(1),
-            ),
-            tests::lpn_coin_dto(1000),
-            tests::lpn_coin_dto(10),
-        ),
-        lease_interest_rate_margin: MARGIN_INTEREST_RATE,
-        lease_due_period: Duration::from_days(90),
-        lease_max_slippages: MaxSlippages {
-            liquidation: MaxSlippage::unchecked(Percent100::from_percent(20)),
-        },
         lease_admin: sdk_testing::user(LEASE_ADMIN),
         ics20_channel_local: dex_params(),
         remote_lease_controller: sdk_testing::user("remote_lease_controller"),
         expected_instance_ordinal: 1,
+        lease_config: LeaseConfigExternal::try_from(LeaseConfig {
+            interest_rate_margin: MARGIN_INTEREST_RATE,
+            position_spec: PositionSpecDTO::new(
+                Liability::new(
+                    Percent100::from_percent(65),
+                    Percent100::from_percent(70),
+                    Percent100::from_percent(73),
+                    Percent100::from_percent(75),
+                    Percent100::from_percent(78),
+                    Percent100::from_percent(80),
+                    Duration::from_hours(1),
+                ),
+                tests::lpn_coin_dto(1000),
+                tests::lpn_coin_dto(10),
+            ),
+            due_period: Duration::from_days(90),
+            max_slippages: MaxSlippages {
+                open: MaxSlippage::unchecked(Percent100::from_percent(17)),
+                repay: MaxSlippage::unchecked(Percent100::from_percent(18)),
+                close: MaxSlippage::unchecked(Percent100::from_percent(19)),
+                liquidation: MaxSlippage::unchecked(Percent100::from_percent(20)),
+            },
+        })
+        .unwrap(),
     }
 }
 
@@ -130,21 +136,12 @@ fn test_update_config() {
 
     setup_test_case(deps.as_mut());
 
-    let new_config = tests::new_config();
-    let msg = SudoMsg::Config(new_config.clone());
+    let msg = SudoMsg::Config(tests::new_config());
 
     sudo(deps.as_mut(), testing::mock_env(), msg).unwrap();
 
     let config = query_config(deps.as_ref());
-    assert_eq!(
-        new_config,
-        NewConfig {
-            lease_due_period: config.lease_due_period,
-            lease_interest_rate_margin: config.lease_interest_rate_margin,
-            lease_max_slippages: config.lease_max_slippages,
-            lease_position_spec: config.lease_position_spec,
-        }
-    );
+    assert_eq!(tests::new_lease_config(), config.lease_config);
 }
 
 fn open_lease_with(max_ltd: Option<Percent>) {

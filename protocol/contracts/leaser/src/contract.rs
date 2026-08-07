@@ -79,11 +79,18 @@ pub fn migrate(
     _env: Env,
     _msg: ProtocolMigrationMessage<MigrateMsg>,
 ) -> ContractResult<Response> {
-    // v7 adds the `remote_lease` controller address to the on-chain Config.
-    // No existing pre-v7 instance is planned to be carried across the
-    // protocol cut-over — a fresh deployment is required. Reject any migrate
-    // call explicitly so an accidental upgrade attempt fails loudly rather
-    // than silently failing to deserialise the v6 Config on first read.
+    // v7 adds the `remote_lease` controller address and the per-scenario
+    // max slippages (`open`/`repay`/`close` next to `liquidation`) to the
+    // on-chain Config. No existing pre-v7 instance is planned to be carried
+    // across the protocol cut-over — a fresh deployment is required. Reject
+    // any migrate call explicitly so an accidental upgrade attempt fails
+    // loudly rather than silently failing to deserialise the v6 Config on
+    // first read.
+    //
+    // The `MaxSlippages` shape is also the response of `QueryMsg::MaxSlippages`
+    // consumed by the lease contract on its liquidation path, under
+    // `deny_unknown_fields` — leaser and lease must be deployed in lockstep;
+    // a version-skewed pair fails that query in both directions.
     Err(ContractError::UnsupportedMigration).inspect_err(platform_error::log(deps.api))
 }
 
@@ -225,7 +232,7 @@ pub fn query(deps: Deps<'_>, _env: Env, msg: QueryMsg) -> ContractResult<Binary>
             .and_then(serialize_to_json),
         QueryMsg::MaxSlippages {} => Leaser::new(deps)
             .config()
-            .map(|cfg| cfg.lease_max_slippages)
+            .map(|cfg| cfg.lease_config.max_slippages)
             .and_then(serialize_to_json),
         QueryMsg::ProtocolPackageRelease {} => serialize_to_json(CURRENT_RELEASE),
         QueryMsg::Quote {

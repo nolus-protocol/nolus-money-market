@@ -10,7 +10,7 @@ use lease::api::{LpnCoinDTO, limits::MaxSlippages, open::PositionSpecDTO};
 use platform::contract::Code;
 use sdk::cosmwasm_std::Addr;
 
-use crate::msg::{Config, InstantiateMsg, NewConfig};
+use crate::msg::{Config, InstantiateMsg, LeaseConfig, LeaseConfigExternal};
 
 mod contract_tests;
 
@@ -18,10 +18,14 @@ pub(crate) fn config() -> Config {
     Config::new(Code::unchecked(10), dummy_instantiate_msg())
 }
 
-pub(crate) fn new_config() -> NewConfig {
-    NewConfig {
-        lease_interest_rate_margin: Percent100::from_percent(5),
-        lease_position_spec: PositionSpecDTO::new(
+pub(crate) fn new_config() -> LeaseConfigExternal {
+    LeaseConfigExternal::try_from(new_lease_config()).unwrap()
+}
+
+pub(crate) fn new_lease_config() -> LeaseConfig {
+    LeaseConfig {
+        interest_rate_margin: Percent100::from_percent(5),
+        position_spec: PositionSpecDTO::new(
             Liability::new(
                 Percent100::from_percent(55),
                 Percent100::from_percent(60),
@@ -34,8 +38,11 @@ pub(crate) fn new_config() -> NewConfig {
             lpn_coin_dto(4_211_442_000),
             lpn_coin_dto(100_000),
         ),
-        lease_due_period: Duration::from_secs(100),
-        lease_max_slippages: MaxSlippages {
+        due_period: Duration::from_secs(100),
+        max_slippages: MaxSlippages {
+            open: MaxSlippage::unchecked(Percent100::from_percent(10)),
+            repay: MaxSlippage::unchecked(Percent100::from_percent(11)),
+            close: MaxSlippage::unchecked(Percent100::from_percent(12)),
             liquidation: MaxSlippage::unchecked(Percent100::from_percent(13)),
         },
     }
@@ -54,27 +61,33 @@ fn dummy_instantiate_msg() -> InstantiateMsg {
         time_alarms: Addr::unchecked("time alarms"),
         market_price_oracle: Addr::unchecked("oracle"),
         protocols_registry: Addr::unchecked("protocols"),
-        lease_position_spec: PositionSpecDTO {
-            liability: Liability::new(
-                Percent100::from_percent(10),
-                Percent100::from_percent(65),
-                Percent100::from_percent(72),
-                Percent100::from_percent(74),
-                Percent100::from_percent(76),
-                Percent100::from_percent(80),
-                Duration::from_hours(12),
-            ),
-            min_asset: lpn_coin_dto(120_000),
-            min_transaction: lpn_coin_dto(12_000),
-        },
-        lease_interest_rate_margin: Percent100::from_percent(3),
-        lease_due_period: Duration::from_days(14),
-        lease_max_slippages: MaxSlippages {
-            liquidation: MaxSlippage::unchecked(Percent100::from_percent(20)),
-        },
         lease_admin: Addr::unchecked("lease_admin_XYZ"),
         ics20_channel_local: "chan-1".into(),
         remote_lease_controller: Addr::unchecked("remote_lease_controller"),
         expected_instance_ordinal: 1,
+        lease_config: LeaseConfigExternal::try_from(LeaseConfig {
+            interest_rate_margin: Percent100::from_percent(3),
+            position_spec: PositionSpecDTO {
+                liability: Liability::new(
+                    Percent100::from_percent(10),
+                    Percent100::from_percent(65),
+                    Percent100::from_percent(72),
+                    Percent100::from_percent(74),
+                    Percent100::from_percent(76),
+                    Percent100::from_percent(80),
+                    Duration::from_hours(12),
+                ),
+                min_asset: lpn_coin_dto(120_000),
+                min_transaction: lpn_coin_dto(12_000),
+            },
+            due_period: Duration::from_days(14),
+            max_slippages: MaxSlippages {
+                open: MaxSlippage::unchecked(Percent100::from_percent(17)),
+                repay: MaxSlippage::unchecked(Percent100::from_percent(18)),
+                close: MaxSlippage::unchecked(Percent100::from_percent(19)),
+                liquidation: MaxSlippage::unchecked(Percent100::from_percent(20)),
+            },
+        })
+        .unwrap(),
     }
 }

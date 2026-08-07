@@ -2,19 +2,14 @@ use serde::{Deserialize, Serialize};
 
 use admin_contract::msg::{MigrationSpec, ProtocolContracts};
 use currency::CurrencyDTO;
-use finance::{
-    duration::Duration,
-    percent::{Percent, Percent100},
-};
-use lease::api::{
-    DownpaymentCoin, LeaseCoin, LpnCoinDTO, limits::MaxSlippages, open::PositionSpecDTO,
-};
+use finance::percent::{Percent, Percent100};
+use lease::api::{DownpaymentCoin, LeaseCoin, LpnCoinDTO};
 use sdk::cosmwasm_std::{Addr, Uint64};
 use versioning::ProtocolPackageReleaseId;
 
 use crate::finance::LeaseCurrencies;
 pub use crate::state::config::Config;
-pub use config::NewConfig;
+pub use config::{LeaseConfig, LeaseConfigExternal};
 
 mod config;
 
@@ -29,14 +24,11 @@ pub struct InstantiateMsg {
     pub time_alarms: Addr,
     pub market_price_oracle: Addr,
     pub protocols_registry: Addr,
-    pub lease_position_spec: PositionSpecDTO,
-    pub lease_interest_rate_margin: Percent100,
-    pub lease_due_period: Duration,
-    pub lease_max_slippages: MaxSlippages,
     pub lease_admin: Addr,
     pub ics20_channel_local: String,
     pub remote_lease_controller: Addr,
     pub expected_instance_ordinal: u16,
+    pub lease_config: LeaseConfigExternal,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -58,7 +50,7 @@ pub enum ExecuteMsg {
     /// Configure all lease related parameters
     ///
     /// Only the Lease Admin is permitted to do this
-    ConfigLeases(NewConfig),
+    ConfigLeases(LeaseConfigExternal),
 
     /// A callback from a lease that it has just entered a final state
     ///
@@ -110,7 +102,7 @@ pub enum ExecuteMsg {
 #[cfg_attr(feature = "testing", derive(Debug))]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub enum SudoMsg {
-    Config(NewConfig),
+    Config(LeaseConfigExternal),
 
     /// Change the lease admin
     ChangeLeaseAdmin {
@@ -187,7 +179,7 @@ mod test {
     use serde::Deserialize;
 
     use crate::{
-        msg::{ExecuteMsg, SudoMsg},
+        msg::{ExecuteMsg, LeaseConfig, SudoMsg},
         tests,
     };
 
@@ -254,23 +246,28 @@ mod test {
         #[serde(deny_unknown_fields, rename_all = "snake_case")]
         pub enum ConfigInlineInSudoMsg {
             Config {
-                lease_interest_rate_margin: Percent100,
-                lease_position_spec: PositionSpecDTO,
-                lease_due_period: Duration,
-                lease_max_slippages: MaxSlippages,
+                interest_rate_margin: Percent100,
+                position_spec: PositionSpecDTO,
+                due_period: Duration,
+                max_slippages: MaxSlippages,
             },
         }
 
-        let new_config = tests::new_config();
+        let LeaseConfig {
+            interest_rate_margin,
+            position_spec,
+            due_period,
+            max_slippages,
+        } = tests::new_lease_config();
 
         assert_eq!(
             ConfigInlineInSudoMsg::Config {
-                lease_interest_rate_margin: new_config.lease_interest_rate_margin,
-                lease_position_spec: new_config.lease_position_spec,
-                lease_due_period: new_config.lease_due_period,
-                lease_max_slippages: new_config.lease_max_slippages
+                interest_rate_margin,
+                position_spec,
+                due_period,
+                max_slippages
             },
-            platform_tests::ser_de(&SudoMsg::Config(new_config)).unwrap(),
+            platform_tests::ser_de(&SudoMsg::Config(tests::new_config())).unwrap(),
         );
     }
 
