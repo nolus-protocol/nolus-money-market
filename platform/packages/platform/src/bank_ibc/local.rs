@@ -14,7 +14,6 @@ pub struct Sender<'conn> {
     receiver: &'conn Account,
     timeout: Timestamp,
     amounts: Vec<CwCoin>,
-    memo: String,
 }
 
 impl<'conn> Sender<'conn> {
@@ -23,7 +22,6 @@ impl<'conn> Sender<'conn> {
         sender: &'conn Addr,
         receiver: &'conn Account,
         timeout: Timestamp,
-        memo: String,
     ) -> Self {
         Self {
             channel,
@@ -31,7 +29,6 @@ impl<'conn> Sender<'conn> {
             receiver,
             timeout,
             amounts: vec![],
-            memo,
         }
     }
 
@@ -52,18 +49,10 @@ impl<'conn> Sender<'conn> {
             receiver,
             timeout,
             amounts,
-            memo,
         } = self;
 
         amounts.into_iter().map(move |amount: CwCoin| {
-            new_msg(
-                channel,
-                sender.clone(),
-                receiver.clone(),
-                amount,
-                timeout,
-                memo.clone(),
-            )
+            new_msg(channel, sender.clone(), receiver.clone(), amount, timeout)
         })
     }
 }
@@ -76,7 +65,6 @@ fn new_msg(
     receiver: Account,
     amount: CwCoin,
     timeout: Timestamp,
-    memo: String,
 ) -> InterChainMsg {
     let timeout_height = RequestPacketTimeoutHeight {
         revision_height: None,
@@ -95,7 +83,9 @@ fn new_msg(
             ack_fee: vec![],
             timeout_fee: vec![],
         },
-        memo,
+        // deliberately empty: memo bytes count against the receiving chain's
+        // transaction size budget, 1232 raw bytes on Solana
+        memo: String::new(),
     }
 }
 
@@ -129,7 +119,7 @@ mod test {
         let sender = Addr::unchecked("sender");
         let receiver = RemoteAccount::try_from(String::from("receiver")).unwrap();
         let timeout = Timestamp::from_seconds(100);
-        let mut funds_sender = Sender::new(channel, &sender, &receiver, timeout, "MEMO".into());
+        let mut funds_sender = Sender::new(channel, &sender, &receiver, timeout);
 
         let coin1: Coin<SubGroupTestC10> = Coin::new(234214);
         let coin2 = coin::coin1(234214);
@@ -144,7 +134,6 @@ mod test {
                 receiver.clone(),
                 coin_legacy::to_cosmwasm_on_nolus(coin1),
                 timeout,
-                "MEMO".into(),
             ));
             batch.schedule_execute_no_reply(local::new_msg(
                 channel,
@@ -152,7 +141,6 @@ mod test {
                 receiver,
                 coin_legacy::to_cosmwasm_on_nolus(coin2),
                 timeout,
-                "MEMO".into(),
             ));
             batch
         });
